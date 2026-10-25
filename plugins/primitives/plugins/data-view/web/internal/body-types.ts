@@ -116,6 +116,7 @@ type DataViewSurfaceBundle<TRow> = DistributiveOmit<
   | "viewEdits"
   | "switcherForm"
   | "viewShortcuts"
+  | "viewParam"
 >;
 
 /** Props of the per-active-instance body (`DataViewBody`) — an intersection,

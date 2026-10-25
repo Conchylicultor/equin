@@ -3,7 +3,7 @@ import {
   type HistoryAdapter,
   type LocationChange,
   type PaneHistoryState,
-  type RouteState,
+  type PaneStore,
   type SerializedSlot,
 } from "@plugins/primitives/plugins/pane/web";
 import {
@@ -129,7 +129,13 @@ function projectUrl(url: string): string {
  * entry — the shape `handleLocationChange` reads back. A pane's `hint` is
  * deliberately absent (never serialized).
  */
-export function serializePaneState(state: RouteState): PaneHistoryState {
+export function serializePaneState(
+  store: Pick<PaneStore, "getRouteState" | "getIndexParams">,
+): PaneHistoryState {
+  // Takes the STORE, not its route: a resolved entry also carries the app's
+  // landing-pane params (`index` — its `;view`, which live beside the route),
+  // and a caller handed only the route could not write them.
+  const state = store.getRouteState();
   if (state.kind === "unresolved") return { pending: state.rawPath };
   const route: SerializedSlot[] = state.slots.map((s) => ({
     paneId: s.paneId,
@@ -137,7 +143,8 @@ export function serializePaneState(state: RouteState): PaneHistoryState {
     options: s.options,
     uuid: s.uuid,
   }));
-  return { route };
+  const index = store.getIndexParams();
+  return Object.keys(index).length > 0 ? { route, index } : { route };
 }
 
 /**

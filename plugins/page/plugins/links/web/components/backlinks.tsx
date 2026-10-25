@@ -112,6 +112,8 @@ export function Backlinks({ documentId }: BacklinksProps) {
 
   return (
     <DataView<BacklinkRow>
+      // Device-local view: a section of the page, not what the page's address names.
+      viewParam={false}
       rows={rows}
       fields={fields}
       rowKey={(row) => row.id}

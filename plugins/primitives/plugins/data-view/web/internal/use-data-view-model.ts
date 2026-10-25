@@ -13,6 +13,7 @@ import type {
   ViewGetter,
 } from "@plugins/primitives/plugins/data-view/plugins/view-core/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
+import { usePaneViewParam } from "@plugins/primitives/plugins/pane/web";
 import type {
   AddableSource,
   ViewSourceEntry,
@@ -327,15 +328,38 @@ export function useDataViewModel(
   defaultView: string | undefined,
   pinnedView?: string,
   edits?: ViewEditsOptions,
+  viewParam?: string | false,
 ): ViewModel {
+  // The active view lives in the enclosing pane's URL (its reserved `;view`,
+  // or the keyed param `viewParam` names), unless the host is pinned or opts
+  // out — `null` binds nothing.
+  const pinnedWithParam =
+    pinnedView !== undefined && typeof viewParam === "string";
+  const activeViewUrl = usePaneViewParam(
+    storageKey,
+    pinnedView !== undefined || viewParam === false
+      ? null
+      : (viewParam ?? undefined),
+  );
   const core = useViewModel<DataViewContribution>(
     storageKey,
     dataViewDescriptors,
     entries,
     defaultView,
     pinnedView,
-    { drafts: edits?.drafts === true, canonical: canonicalViewValue },
+    {
+      drafts: edits?.drafts === true,
+      canonical: canonicalViewValue,
+      activeViewUrl,
+    },
   );
+  if (pinnedWithParam) {
+    throw new Error(
+      `DataView "${storageKey}": viewParam "${viewParam}" beside pinnedView "${pinnedView}" — ` +
+        `a pinned host shows one named instance and is not part of the surface's selection, ` +
+        `so it has no view to put in the URL. Drop one of them.`,
+    );
+  }
   const homeViewId = edits?.home ?? null;
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const ephemeral = useViewEphemeral(storageKey);

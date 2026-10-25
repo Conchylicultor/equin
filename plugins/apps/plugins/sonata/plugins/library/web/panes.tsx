@@ -81,14 +81,14 @@ function SonataLibraryBody(): ReactElement {
 }
 
 /**
- * The player pane at `/sonata/song/:songId;bar;view` — a real URL that survives
+ * The player pane at `/sonata/song/:songId;bar;lens` — a real URL that survives
  * reload and back/forward. Both keyed params are views of the song, absent by
  * default: `;bar=12` opens it with the playhead parked at that bar (see
  * {@link useSonataPlayerResolve}; build such a link with
- * {@link sonataSongLink}), and `;view=notation` is the display lens on screen,
+ * {@link sonataSongLink}), and `;lens=notation` is the display lens on screen,
  * absent for the default lens — bound to the player by
  * {@link SonataPlayerSurface}. Named rather than positional, so neither can be
- * read as the other: `/sonata/song/<id>;bar=12;view=notation`. Opened with `mode:"root"` so each open replaces the route
+ * read as the other: `/sonata/song/<id>;bar=12;lens=notation`. Opened with `mode:"root"` so each open replaces the route
  * with a single full-surface pane (a fresh instance, hence a remount). The
  * optimistic `title` rides in `hint` purely as a DISPLAY value for `title.text`
  * (the browser-tab / tab-strip label before the song's live row settles) —
@@ -346,17 +346,17 @@ function SonataPlayerSurface(): ReactElement {
     );
   }
   return (
-    // The display lens lives in the URL's `;view`: the binding wraps the whole
+    // The display lens lives in the URL's `;lens`: the binding wraps the whole
     // surface, so the header's picker and the body's display both read and
     // write it. A pick rewrites the address in place (no remount); the default
     // lens drops the key so the bare song URL stays the canonical one.
     <PlayerDisplayBinding
-      displayId={params.view ?? null}
-      onDisplayChange={(view) =>
+      displayId={params.lens ?? null}
+      onDisplayChange={(lens) =>
         setParams({
           songId: songIdKind.key(params.songId),
           ...(params.bar !== undefined && { bar: params.bar }),
-          ...(view !== null && { view }),
+          ...(lens !== null && { lens }),
         })
       }
     >

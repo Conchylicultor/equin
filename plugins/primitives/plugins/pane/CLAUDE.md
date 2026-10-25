@@ -104,6 +104,38 @@ Rules:
   a pane declaring no keyed params reads a raw `;` as text, as it always did.
   Keyed params do not change a segment's collision shape and do not count
   toward "paramful" (`useResolve`): they view an entity, never address one.
+- **`;view` is reserved — every pane carries it without declaring it**
+  (`RESERVED_VIEW_PARAM`, core): which view of the pane's content is on screen,
+  bound by whatever surface shows one of several views (a DataView's active view
+  instance — see below). `/tasks;view=open`, `/song/a;lens=n;view=all` (after
+  the declared keys). `defineRoute` throws on a declared `;view` or a `:view`,
+  so the name means one thing in every URL. A pane that declares no keyed
+  params strips only an exact trailing `;view=…`; any other raw `;` stays text.
+  It is NOT one of the pane's typed params: `useParams()`, `useResolve`,
+  `MatchEntry.params` / `fullParams` never carry it (the entry's `view` does),
+  an open never supplies it (re-opening the pane already there keeps it —
+  `sameAddress`), `RouteDef.path` never writes it, and `useSetParams` preserves
+  it. Only `fillSegment(…, { ownSlot: true })` writes it, on the slot's own part.
+- **An app's landing pane carries it on the base path: `/sonata;view=all`.** The
+  index pane is not a slot (an empty route shows it), so its keyed params live
+  BESIDE the route in the store (`getIndexParams()`): parsed off a leading `;…`
+  part (`parseUrl` → `index`), saved in `history.state` as `index`, restored on
+  back/forward, carried by `navigate()` / boot, and dropped by any navigation
+  that does not pass them on (`setRoute(route, replace, index)`). `stripBasePath`
+  and the app matchers accept `<base>;…`. A non-index pane with no URL part of
+  its own cannot carry `;view`.
+
+### `usePaneViewParam` — the view on screen, in the URL
+
+`usePaneViewParam(claimant, name = "view")` reads the enclosing pane instance
+(the index pane included) and returns `{ value, set }`, or `null` outside a pane
+or where no address can hold it. `set` writes in place and **replaces** the
+history entry (`store.setKeyedParam`): a view switch is not a navigation Back
+steps through. `name` may instead be a keyed param the pane DECLARES (it throws
+otherwise); `null` binds nothing. One key holds one surface's view: a second,
+different `claimant` of the same name in the same instance throws — give it a
+declared name of its own. DataView binds it automatically (data-view CLAUDE.md,
+"Addressable views").
 - `useResolve` is required exactly when the route's own segment has a `:param`, and
   forbidden when it does not — a paramful pane must be able to say "no such
   entity". Opt out with `useResolve: false`. The key is `use`-named because its
@@ -1167,6 +1199,7 @@ See "Open questions" in the design doc.
     - `usePaneMatch`
     - `usePaneStore`
     - `usePaneTitle`
+    - `usePaneViewParam`
     - `usePathname`
     - `useRenderSync`
     - `useReservesFloatingBar`
@@ -1188,7 +1221,7 @@ See "Open questions" in the design doc.
     - `ui/tokens/density --space-2xs`
     - `ui/tokens/density --space-md`
     - `ui/tokens/shape --spacing`
-  - Imported by: 182 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 183 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×66
     - `conversations` ×30
     - `debug` ×27
@@ -1197,7 +1230,7 @@ See "Open questions" in the design doc.
     - `apps-core` ×6
     - `plugin-meta` ×6
     - `layouts` ×4
-    - `primitives` ×3
+    - `primitives` ×4
     - `infra` ×2
     - `reports` ×2
     - `stats` ×2
@@ -1232,14 +1265,18 @@ See "Open questions" in the design doc.
     - `defineApp`
     - `defineRoute`
     - `fillSegment`
+    - `indexKeyedSuffix`
     - `MissingRouteParamError`
     - `normalizeRoutePath`
     - `parseSegmentParts`
+    - `readIndexKeyedParams`
     - `readKeyedParams`
+    - `RESERVED_VIEW_PARAM`
     - `segmentKeyedParamNames`
     - `segmentMatchPatterns`
     - `segmentParamNames`
     - `segmentRequiredParamNames`
+    - `slotKeyedParamNames`
     - `splitKeyedPart`
 - Test helpers:
   - Web: `@plugins/primitives/plugins/pane/web/testing`

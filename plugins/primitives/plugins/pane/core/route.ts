@@ -272,12 +272,71 @@ export function readKeyedParams(
 
 const KEYED_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
+// ---------------------------------------------------------------------------
+// The reserved `;view` — the keyed param EVERY pane carries without declaring
+// it: which view of the pane's content is on screen (a DataView's active view
+// instance, bound automatically by `usePaneViewParam`). Reserved rather than
+// opt-in so a surface is addressable by default — a pane nobody remembered to
+// wire up would silently not be. No route may declare `view` itself (a keyed
+// `;view` or a positional `:view` — `assertKeyedParams` throws), so the name
+// means one thing in every URL.
+//
+// It is never part of a pane's TYPED params (`useParams`, `useResolve`,
+// `openPane`): it views whatever the pane addresses, and only the binding
+// writes it.
+// ---------------------------------------------------------------------------
+
+export const RESERVED_VIEW_PARAM = "view";
+
+/** The keyed names a pane's OWN URL part carries: its declared ones, then `view`. */
+export function slotKeyedParamNames(segment: string): string[] {
+  return [...segmentKeyedParamNames(segment), RESERVED_VIEW_PARAM];
+}
+
+/** `name=value` pairs for the supplied `names`, in order, encoded. */
+function keyedPairs(
+  names: readonly string[],
+  params: Record<string, string>,
+): string[] {
+  return names.flatMap((name) => {
+    const val = params[name];
+    return val === undefined
+      ? []
+      : [`${encodeURIComponent(name)}=${encodeURIComponent(val)}`];
+  });
+}
+
+/**
+ * The keyed suffix an app's LANDING (index) pane writes on the app's base path
+ * — `;view=all` in `/sonata;view=all` — or `""` when it carries none. An index
+ * pane has no URL part of its own (it is what the bare root shows), so its
+ * keyed params ride the base path; it declares none, so only the reserved
+ * `view` is ever written there.
+ */
+export function indexKeyedSuffix(params: Record<string, string>): string {
+  const pairs = keyedPairs([RESERVED_VIEW_PARAM], params);
+  return pairs.length > 0 ? ";" + pairs.join(";") : "";
+}
+
+/** Read {@link indexKeyedSuffix}'s text back (without its leading `;`). */
+export function readIndexKeyedParams(keyed: string): Record<string, string> {
+  return readKeyedParams(keyed, [RESERVED_VIEW_PARAM]);
+}
+
 /**
  * Throws on a malformed keyed suffix: a name that is not an identifier, one
  * declared twice or also used positionally, or keyed params on a segment with
  * no URL part of its own to carry them. Called by `defineRoute`.
  */
 function assertKeyedParams(id: string, segment: string): void {
+  for (const part of parseSegmentParts(segment)) {
+    if (part.kind !== "static" && part.name === RESERVED_VIEW_PARAM) {
+      throw new Error(
+        `Route "${id}": param ":${part.name}" in segment "${segment}" is reserved — every pane ` +
+          `already carries ";${RESERVED_VIEW_PARAM}" (see RESERVED_VIEW_PARAM). Rename it.`,
+      );
+    }
+  }
   const names = segmentKeyedParamNames(segment);
   if (names.length === 0) return;
   if (parseSegmentParts(segment).length === 0) {
@@ -296,6 +355,13 @@ function assertKeyedParams(id: string, segment: string): void {
     if (!KEYED_NAME.test(name)) {
       throw new Error(
         `Route "${id}": keyed param ";${name}" in segment "${segment}" is not an identifier.`,
+      );
+    }
+    if (name === RESERVED_VIEW_PARAM) {
+      throw new Error(
+        `Route "${id}": keyed param ";${name}" in segment "${segment}" is reserved — every ` +
+          `pane already carries it (the view on screen, see RESERVED_VIEW_PARAM). Name yours ` +
+          `after what it views instead.`,
       );
     }
     if (seen.has(name) || positional.has(name)) {
@@ -346,9 +412,16 @@ export class MissingRouteParamError extends Error {
   }
 }
 
+/**
+ * `segment`'s URL parts for `params`. `ownSlot` also writes the reserved
+ * `;view` — only a slot's own segment carries it, never an ancestor's
+ * (`RouteDef.path` fills every segment of the chain from ONE flat param set,
+ * which would otherwise stamp the same view on each of them).
+ */
 export function fillSegment(
   segment: string,
   params: Record<string, string>,
+  opts?: { ownSlot?: boolean },
 ): string[] {
   if (!segment || segment === "/") return [];
 
@@ -370,14 +443,16 @@ export function fillSegment(
     }
   }
   // Keyed params ride the last part written (`assertKeyedParams` guarantees the
-  // segment has one), in declaration order so a route has ONE spelling.
-  const keyed = segmentKeyedParamNames(segment).flatMap((name) => {
-    const val = params[name];
-    return val === undefined
-      ? []
-      : [`${encodeURIComponent(name)}=${encodeURIComponent(val)}`];
-  });
-  if (keyed.length > 0) {
+  // segment has one for its declared names), in declaration order so a route
+  // has ONE spelling — the reserved `view` last. A segment with no part of its
+  // own cannot carry the reserved one, so it is dropped there.
+  const keyed = keyedPairs(
+    opts?.ownSlot === true
+      ? slotKeyedParamNames(segment)
+      : segmentKeyedParamNames(segment),
+    params,
+  );
+  if (keyed.length > 0 && parts.length > 0) {
     parts[parts.length - 1] += ";" + keyed.join(";");
   }
   return parts;

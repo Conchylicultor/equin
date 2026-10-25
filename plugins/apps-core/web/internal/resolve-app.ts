@@ -35,7 +35,13 @@ export function isListedApp(
 
 /** Path-prefix match: an app owns `pathname` if it equals or parents it. */
 function appMatchesPath(appPath: string, pathname: string): boolean {
-  return pathname === appPath || pathname.startsWith(appPath + "/");
+  // `;` too: an app's landing pane writes its keyed suffix on the base path
+  // itself (`/sonata;view=all`, see `stripBasePath`).
+  return (
+    pathname === appPath ||
+    pathname.startsWith(appPath + "/") ||
+    pathname.startsWith(appPath + ";")
+  );
 }
 
 /**

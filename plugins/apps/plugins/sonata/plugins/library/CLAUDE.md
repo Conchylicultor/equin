@@ -11,10 +11,10 @@ them without a `shell → library` import that would cycle with the existing
 - `sonataLibraryPane` — index pane at bare `/sonata` (`appIndex: true`,
   standard chrome titled "Library"). Renders the gallery via
   `Sonata.Home` inside `PaneChrome`.
-- `sonataPlayerPane` — player pane at `/sonata/song/:songId;bar;view`. Both
+- `sonataPlayerPane` — player pane at `/sonata/song/:songId;bar;lens`. Both
   are keyed (named) views of the song, absent by default: `;bar=12` opens it
-  with the playhead at that bar (`sonataSongLink(id, bar)`), and `;view` is the
-  display lens (`…;view=notation`, absent for the default lens) — the surface
+  with the playhead at that bar (`sonataSongLink(id, bar)`), and `;lens` is the
+  display lens (`…;lens=notation`, absent for the default lens) — the surface
   wraps itself in the player's `PlayerDisplayBinding`, so the toolbar's display
   switcher writes it in place and a reload, bookmark or shared link reopens the
   same lens. Carries the optimistic title in `input`; its `resolve` hook

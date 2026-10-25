@@ -184,8 +184,8 @@ same browser tab from finding the blob. Both call sites are marked for removal.
 
 - Description: Tab manager for the app switcher: the open-tab set, focus model, cross-app navigate(), the focused-placement module store, the focused tab's title as a module signal (useFocusedTabTitle, readable outside TabsProvider), and the surface-written placement-capabilities registry.
 - Web:
-  - Uses: 45 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/pane` ×19
+  - Uses: 44 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/pane` ×18
     - `apps-core` ×9
     - `primitives/scope/app-instance` ×5
     - `primitives/embed` ×3

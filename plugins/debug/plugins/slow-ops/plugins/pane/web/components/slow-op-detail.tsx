@@ -306,6 +306,8 @@ function SamplesView({ samples }: { samples: SlowOpSample[] }): ReactElement {
   );
   return (
     <DataView<SampleRow>
+      // Device-local view: the callers list above owns the pane's ;view.
+      viewParam={false}
       rows={rows}
       fields={sampleFields}
       rowKey={(r) => r.key}

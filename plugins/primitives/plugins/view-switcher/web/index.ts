@@ -6,7 +6,10 @@ export {
   type ViewSwitcherOption,
 } from "./components/view-switcher";
 export { useActiveViewId } from "./internal/use-active-view";
-export type { ActiveViewState } from "./internal/use-active-view";
+export type {
+  ActiveViewState,
+  ActiveViewUrl,
+} from "./internal/use-active-view";
 
 export default {
   description:

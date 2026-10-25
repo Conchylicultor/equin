@@ -11233,8 +11233,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps-core/surface`
     - **`tabs`** — Tab manager for the app switcher: the open-tab set, focus model, cross-app navigate(), the focused-placement module store, the focused tab's title as a module signal (useFocusedTabTitle, readable outside TabsProvider), and the surface-written placement-capabilities registry.
       - Web:
-        - Uses: 45 symbols — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
-          - `primitives/pane` ×19
+        - Uses: 44 symbols — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
+          - `primitives/pane` ×18
           - `apps-core` ×9
           - `primitives/scope/app-instance` ×5
           - `primitives/embed` ×3
@@ -39738,7 +39738,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ×3
           - `DataViewSlots.Setting` ×3
           - `IdKinds.Kind` ×2
-        - Uses: 124 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Uses: 125 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `network/live` ×18
           - `primitives/css/ui-kit` ×17
           - `primitives/data-view/view-core` ×10
@@ -39785,6 +39785,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/dom/web-storage.defineStore`
           - `primitives/icon-button.IconButton`
           - `primitives/overlay/popover.InlinePopover`
+          - `primitives/pane.usePaneViewParam`
           - `ui/icons.Icon`
         - Exports (types):
           - `CardFields`
@@ -40484,7 +40485,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`view-core`** — Type-agnostic named-view-instance engine: instance model + resolver, config-descriptor machinery, debounced write-back, and the editable view-switcher chrome. Type-agnostic named-view-instance engine (server): the per-id `views` config descriptor + a generic registration helper. Consumers register their own ids under their own plugin.
           - Web:
             - Contributes: `IdKinds.Kind` "view"
-            - Uses: 45 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/view-core/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/view-core/REFERENCE.md)
+            - Uses: 46 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/view-core/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/view-core/REFERENCE.md)
               - `primitives/css/ui-kit` ×15
               - `config_v2` ×3
               - `primitives/css/text` ×3
@@ -40492,6 +40493,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/hover-reveal` ×2
               - `primitives/live-state` ×2
               - `primitives/sortable-list` ×2
+              - `primitives/view-switcher` ×2
               - `config_v2/fields.FieldRenderer`
               - `ids.IdKinds`
               - `primitives/css/center.Center`
@@ -40506,7 +40508,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/latest-ref.useLatestRef`
               - `primitives/overlay/popover.InlinePopover`
               - `primitives/overlay/popup-open.PopupOpenScope`
-              - `primitives/view-switcher.useActiveViewId`
               - `ui/icons.Icon`
             - Exports (types):
               - `AssertStableGetters`
@@ -43578,6 +43579,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `usePaneMatch`
           - `usePaneStore`
           - `usePaneTitle`
+          - `usePaneViewParam`
           - `usePathname`
           - `useRenderSync`
           - `useReservesFloatingBar`
@@ -43599,7 +43601,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-2xs`
           - `ui/tokens/density --space-md`
           - `ui/tokens/shape --spacing`
-        - Imported by: 182 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Imported by: 183 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `apps` ×66
           - `conversations` ×30
           - `debug` ×27
@@ -43608,7 +43610,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps-core` ×6
           - `plugin-meta` ×6
           - `layouts` ×4
-          - `primitives` ×3
+          - `primitives` ×4
           - `infra` ×2
           - `reports` ×2
           - `stats` ×2
@@ -43643,14 +43645,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineApp`
           - `defineRoute`
           - `fillSegment`
+          - `indexKeyedSuffix`
           - `MissingRouteParamError`
           - `normalizeRoutePath`
           - `parseSegmentParts`
+          - `readIndexKeyedParams`
           - `readKeyedParams`
+          - `RESERVED_VIEW_PARAM`
           - `segmentKeyedParamNames`
           - `segmentMatchPatterns`
           - `segmentParamNames`
           - `segmentRequiredParamNames`
+          - `slotKeyedParamNames`
           - `splitKeyedPart`
       - Test helpers:
         - Web: `@plugins/primitives/plugins/pane/web/testing`
@@ -45353,6 +45359,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/icons.Icon`
         - Exports (types):
           - `ActiveViewState`
+          - `ActiveViewUrl`
           - `ViewSwitcherOption`
           - `ViewSwitcherProps`
         - Exports (values):

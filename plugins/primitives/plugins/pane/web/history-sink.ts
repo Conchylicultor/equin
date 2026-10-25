@@ -40,7 +40,10 @@ export type SerializedSlot = {
  * rest, so the two runtimes never need to agree on the composite shape.
  */
 export type PaneHistoryState =
-  { route: SerializedSlot[] } | { pending: string };
+  // `index`: the app's landing pane's keyed params (its `;view`), which live
+  // beside the route — see `PaneStore.getIndexParams`.
+  | { route: SerializedSlot[]; index?: Record<string, string> }
+  | { pending: string };
 
 /** An in-memory route change to project onto the browser. */
 export interface LocationChange {

@@ -638,7 +638,7 @@
     },
     {
       "paneId": "sonata-player",
-      "segment": "song/:songId;bar;view",
+      "segment": "song/:songId;bar;lens",
       "appIndex": false,
       "parent": null
     },

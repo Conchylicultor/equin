@@ -36,27 +36,57 @@ function readActive(storageKey: string): string | null {
   return read.kind === "value" ? read.value : null;
 }
 
+/**
+ * Where the URL holds the active view, when it does: the read and write of one
+ * address key (a pane's `;view`, see `usePaneViewParam`). Structural, so this
+ * primitive names no router.
+ */
+export interface ActiveViewUrl {
+  /** The id the address names, `undefined` when it names none. */
+  value: string | undefined;
+  /** Write the id into the address (in place — no history entry). */
+  set: (viewId: string) => void;
+}
+
 export interface ActiveViewState {
   /** Persisted active-instance id (null → caller falls back to defaultView). */
   activeViewId: string | null;
+  /**
+   * The id the URL names, when the selection is bound to one. It outranks the
+   * persisted id — but only once the caller has checked it names a real view.
+   */
+  urlViewId: string | undefined;
+  /** Select a view: written to this device's store AND, when bound, the URL. */
   setActiveView: (viewId: string) => void;
 }
 
-export function useActiveViewId(storageKey: string): ActiveViewState {
+/**
+ * The active view of the surface `storageKey`: the device-local selection —
+ * the per-device default, what a bare address opens — and, with `url`, the
+ * address's own. Selecting writes both, so the address always names what is on
+ * screen while the device still remembers it for next time.
+ */
+export function useActiveViewId(
+  storageKey: string,
+  url?: ActiveViewUrl | null,
+): ActiveViewState {
   const [activeViewId, setActiveViewId] = useState<string | null>(() =>
     readActive(storageKey),
   );
 
+  const setUrl = url?.set;
   const setActiveView = useCallback(
     (viewId: string) => {
       activeViews.write(storageKey, viewId);
       setActiveViewId(viewId);
+      setUrl?.(viewId);
     },
-    [storageKey],
+    [storageKey, setUrl],
   );
 
+  const urlViewId = url?.value;
   return useMemo(
-    () => ({ activeViewId, setActiveView }),
-    [activeViewId, setActiveView],
+    () => ({ activeViewId, urlViewId, setActiveView }),
+    [activeViewId, urlViewId, setActiveView],
   );
 }

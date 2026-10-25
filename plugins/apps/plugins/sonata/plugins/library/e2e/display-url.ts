@@ -1,5 +1,5 @@
-// Verifies the player's display lens lives in the URL (`;view`):
-//   - picking a lens writes `;view=<id>` into the address, in place;
+// Verifies the player's display lens lives in the URL (`;lens`):
+//   - picking a lens writes `;lens=<id>` into the address, in place;
 //   - a reload of that address reopens the same lens;
 //   - picking the default lens drops the key again;
 //   - a `;bar` link opens with both keys, and switching lens keeps the bar.
@@ -38,31 +38,31 @@ await withBrowser(async (h) => {
   await lens("Notation").waitFor({ timeout: 20_000 });
   await page.waitForTimeout(1000);
   const defaultLens = (await pressed("Piano Roll")) ? "Piano Roll" : null;
-  r.ok("opens bare, on the default lens", !path().includes(";view="));
+  r.ok("opens bare, on the default lens", !path().includes(";lens="));
 
   await lens("Notation").click();
   await page.waitForTimeout(800);
-  r.ok("picking a lens writes ;view", path().endsWith(";view=notation"));
+  r.ok("picking a lens writes ;lens", path().endsWith(";lens=notation"));
   r.ok("the picked lens is on", await pressed("Notation"));
   await snap(page, OUT, "1-picked");
 
   await page.reload();
   await lens("Notation").waitFor({ timeout: 20_000 });
   await page.waitForTimeout(1000);
-  r.ok("a reload keeps ;view", path().endsWith(";view=notation"));
+  r.ok("a reload keeps ;lens", path().endsWith(";lens=notation"));
   r.ok("a reload reopens the lens", await pressed("Notation"));
   await snap(page, OUT, "2-reloaded");
 
   if (defaultLens) {
     await lens(defaultLens).click();
     await page.waitForTimeout(800);
-    r.ok("the default lens drops ;view", !path().includes(";view="));
+    r.ok("the default lens drops ;lens", !path().includes(";lens="));
   }
 
-  await page.goto(pathUrl(`/sonata/song/${songId};bar=5;view=notation`));
+  await page.goto(pathUrl(`/sonata/song/${songId};bar=5;lens=notation`));
   await lens("Notation").waitFor({ timeout: 20_000 });
   await page.waitForTimeout(1500);
-  r.ok("a ;bar;view link opens on its lens", await pressed("Notation"));
+  r.ok("a ;bar;lens link opens on its lens", await pressed("Notation"));
   r.ok(
     "the playhead is not at the start",
     !(await page.getByText(/^0:00\.0 \//).count()),
@@ -70,7 +70,7 @@ await withBrowser(async (h) => {
   await snap(page, OUT, "3-bar");
   await lens("Songsheet").click();
   await page.waitForTimeout(800);
-  r.ok("switching lens keeps ;bar", path().endsWith(";bar=5;view=songsheet"));
+  r.ok("switching lens keeps ;bar", path().endsWith(";bar=5;lens=songsheet"));
 
   await r.finish();
 });

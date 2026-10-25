@@ -4,7 +4,11 @@ import {
   defineRoute,
   MissingRouteParamError,
   normalizeRoutePath,
+  fillSegment,
+  indexKeyedSuffix,
+  readIndexKeyedParams,
   readKeyedParams,
+  slotKeyedParamNames,
   segmentMatchPatterns,
   splitKeyedPart,
 } from "./route";
@@ -177,16 +181,16 @@ describe("an optional :param?", () => {
 describe("keyed params (`;name`)", () => {
   const song = defineRoute({
     id: "kp-song",
-    segment: "song/:songId/:bar?;view",
+    segment: "song/:songId/:bar?;lens",
   });
 
   test("are optional keys, written on the pane's last URL part", () => {
     expect(song.path({ songId: "a" })).toBe("/song/a");
-    expect(song.path({ songId: "a", view: "notation" })).toBe(
-      "/song/a;view=notation",
+    expect(song.path({ songId: "a", lens: "notation" })).toBe(
+      "/song/a;lens=notation",
     );
-    expect(song.path({ songId: "a", bar: "12", view: "notation" })).toBe(
-      "/song/a/12;view=notation",
+    expect(song.path({ songId: "a", bar: "12", lens: "notation" })).toBe(
+      "/song/a/12;lens=notation",
     );
   });
 
@@ -198,19 +202,19 @@ describe("keyed params (`;name`)", () => {
   });
 
   test("read back only the declared names", () => {
-    expect(readKeyedParams("view=notation;stale=1;junk", ["view"])).toEqual({
-      view: "notation",
+    expect(readKeyedParams("lens=notation;stale=1;junk", ["lens"])).toEqual({
+      lens: "notation",
     });
     expect(readKeyedParams("b=x%3By%3Dz", ["b"])).toEqual({ b: "x;y=z" });
-    expect(splitKeyedPart("12;view=a")).toEqual({
+    expect(splitKeyedPart("12;lens=a")).toEqual({
       base: "12",
-      keyed: "view=a",
+      keyed: "lens=a",
     });
     expect(splitKeyedPart("12")).toEqual({ base: "12", keyed: null });
   });
 
   test("do not change a segment's URL shape", () => {
-    expect(segmentMatchPatterns("song/:songId/:bar?;view")).toEqual([
+    expect(segmentMatchPatterns("song/:songId/:bar?;lens")).toEqual([
       "song/:",
       "song/:/:",
     ]);
@@ -218,14 +222,67 @@ describe("keyed params (`;name`)", () => {
 
   test("reject a malformed declaration", () => {
     expect(() =>
-      defineRoute({ id: "kp-dup", segment: "t/:view;view" }),
+      defineRoute({ id: "kp-dup", segment: "t/:lens;lens" }),
     ).toThrow(/declared twice/);
     expect(() => defineRoute({ id: "kp-bad", segment: "t;a-b" })).toThrow(
       /not an identifier/,
     );
-    expect(() => defineRoute({ id: "kp-empty", segment: ";view" })).toThrow(
+    expect(() => defineRoute({ id: "kp-empty", segment: ";lens" })).toThrow(
       /URL part/,
     );
+  });
+});
+
+describe("the reserved `;view`", () => {
+  test("no route may declare it, keyed or positional", () => {
+    expect(() =>
+      defineRoute({ id: "rv-keyed", segment: "t/:id;view" }),
+    ).toThrow(/reserved/);
+    expect(() => defineRoute({ id: "rv-pos", segment: "t/:view" })).toThrow(
+      /reserved/,
+    );
+  });
+
+  test("is written on a slot's own segment only, after its declared keys", () => {
+    expect(
+      fillSegment(
+        "song/:id;lens",
+        { id: "a", lens: "n", view: "all" },
+        {
+          ownSlot: true,
+        },
+      ),
+    ).toEqual(["song", "a;lens=n;view=all"]);
+    expect(fillSegment("tasks", { view: "open" }, { ownSlot: true })).toEqual([
+      "tasks;view=open",
+    ]);
+    // An ancestor's segment, filled from the chained set, never carries it.
+    expect(fillSegment("tasks", { view: "open" })).toEqual(["tasks"]);
+    // A segment with no part of its own cannot.
+    expect(fillSegment("", { view: "open" }, { ownSlot: true })).toEqual([]);
+    expect(slotKeyedParamNames("song/:id;lens")).toEqual(["lens", "view"]);
+  });
+
+  test("RouteDef.path never writes it", () => {
+    const tasks = defineRoute({ id: "rv-tasks", segment: "tasks" });
+    const task = defineRoute({
+      id: "rv-task",
+      segment: "t/:id",
+      parent: tasks,
+    });
+    expect(task.path({ id: "1", view: "x" } as { id: string })).toBe(
+      "/tasks/t/1",
+    );
+  });
+
+  test("an index pane's suffix round-trips", () => {
+    expect(indexKeyedSuffix({})).toBe("");
+    expect(indexKeyedSuffix({ view: "recently edited" })).toBe(
+      ";view=recently%20edited",
+    );
+    expect(readIndexKeyedParams("view=recently%20edited;junk=1")).toEqual({
+      view: "recently edited",
+    });
   });
 });
 

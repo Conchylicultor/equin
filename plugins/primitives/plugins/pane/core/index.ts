@@ -3,14 +3,18 @@ export {
   defineApp,
   defineRoute,
   fillSegment,
+  indexKeyedSuffix,
   MissingRouteParamError,
   normalizeRoutePath,
   parseSegmentParts,
+  readIndexKeyedParams,
   readKeyedParams,
+  RESERVED_VIEW_PARAM,
   segmentKeyedParamNames,
   segmentMatchPatterns,
   segmentParamNames,
   segmentRequiredParamNames,
+  slotKeyedParamNames,
   splitKeyedPart,
 } from "./route";
 export type {

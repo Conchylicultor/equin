@@ -3,10 +3,17 @@
   "appSetup": [
     {
       "when": {
+        "layout": "gallery"
+      },
+      "goto": "/prototypes;view=gallery",
+      "note": "the mock's gallery layout is the Gallery view, opened by address so the device's last pick cannot decide"
+    },
+    {
+      "when": {
         "layout": "list"
       },
-      "click": "[data-part~=\"dv.view-chip\"][aria-label=\"Recently edited\"]",
-      "note": "the mock's list layout is its Recently edited view; the app opens on its last active view (device-local)"
+      "goto": "/prototypes;view=recently-edited",
+      "note": "the mock's list layout is its Recently edited view, opened by address"
     }
   ],
   "parts": [

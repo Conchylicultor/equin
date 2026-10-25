@@ -1,7 +1,7 @@
 import { defineRoute } from "@plugins/primitives/plugins/pane/core";
 
 /**
- * The player pane's route, `/sonata/song/:songId;bar;view` (the pane itself is
+ * The player pane's route, `/sonata/song/:songId;bar;lens` (the pane itself is
  * `sonataPlayerPane`, web). In `core/` so a caller outside the app can build a
  * link to a song — `sonataPlayerRoute.link(sonataApp, { songId })` — without
  * importing the library's web barrel, which would pull the library into the
@@ -9,5 +9,5 @@ import { defineRoute } from "@plugins/primitives/plugins/pane/core";
  */
 export const sonataPlayerRoute = defineRoute({
   id: "sonata-player",
-  segment: "song/:songId;bar;view",
+  segment: "song/:songId;bar;lens",
 });

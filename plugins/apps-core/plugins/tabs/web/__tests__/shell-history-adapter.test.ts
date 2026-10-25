@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ActiveApp } from "@plugins/apps-core/web";
 import { getAppInstanceId } from "@plugins/primitives/plugins/scope/plugins/app-instance/web";
-import type { RouteState } from "@plugins/primitives/plugins/pane/web";
+import type { PaneStore } from "@plugins/primitives/plugins/pane/web";
 import {
   makeShellHistoryAdapter,
   serializePaneState,
@@ -161,7 +161,7 @@ describe("serializePaneState", () => {
         },
       ],
     };
-    expect(serializePaneState(state)).toEqual({
+    expect(serializePaneState(storeOf(state))).toEqual({
       route: [
         {
           paneId: "p",
@@ -175,9 +175,23 @@ describe("serializePaneState", () => {
 
   it("serializes an unresolved route to { pending }", () => {
     const state: RouteState = { kind: "unresolved", rawPath: "later/42" };
-    expect(serializePaneState(state)).toEqual({ pending: "later/42" });
+    expect(serializePaneState(storeOf(state))).toEqual({ pending: "later/42" });
+  });
+
+  it("carries the landing pane's params beside a resolved route", () => {
+    const state: RouteState = { kind: "resolved", slots: [] };
+    expect(serializePaneState(storeOf(state, { view: "all" }))).toEqual({
+      route: [],
+      index: { view: "all" },
+    });
   });
 });
+
+type RouteState = ReturnType<PaneStore["getRouteState"]>;
+
+function storeOf(state: RouteState, index: Record<string, string> = {}) {
+  return { getRouteState: () => state, getIndexParams: () => index };
+}
 
 describe("commit — stamps the focused tab's identity onto every entry", () => {
   it("merges { tabId, appId, appInstance } into the route payload and PUSHES on mode push", () => {

@@ -3,10 +3,17 @@
   "appSetup": [
     {
       "when": {
+        "layout": "gallery"
+      },
+      "goto": "/sonata;view=cards",
+      "note": "the mock's gallery layout is the Cards view, opened by address so the device's last pick cannot decide"
+    },
+    {
+      "when": {
         "layout": "list"
       },
-      "click": "[data-part~=\"dv.view-chip\"][aria-label=\"All\"]",
-      "note": "the mock's list layout is its All view; the app opens on its last active view (device-local), so pick All the way a user would"
+      "goto": "/sonata;view=all",
+      "note": "the mock's list layout is its All view, opened by address"
     }
   ],
   "parts": [

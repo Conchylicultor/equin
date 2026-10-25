@@ -182,6 +182,8 @@ export function TagManagerPanel({
         }
         body={
           <DataView<PlaceTag>
+            // Device-local view: a panel over the map, whose presets own the pane's ;view.
+            viewParam={false}
             storageKey={TAGS_VIEW}
             rows={tags}
             collection={placeTags}

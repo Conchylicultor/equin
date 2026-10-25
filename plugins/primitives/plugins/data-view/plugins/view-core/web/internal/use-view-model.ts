@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import type { SealContributions } from "@plugins/framework/plugins/web-sdk/core";
 import type { VariantValue } from "@plugins/fields/plugins/variant/core";
@@ -17,7 +17,10 @@ import {
 import { useViewsConfig, type ViewsConfigHandle } from "./use-views-config";
 import { cleanView, type DraftMap, sameView, withDraft } from "./draft-values";
 import { readDrafts, subscribeDrafts, writeDrafts } from "./view-drafts";
-import { useActiveViewId } from "@plugins/primitives/plugins/view-switcher/web";
+import {
+  useActiveViewId,
+  type ActiveViewUrl,
+} from "@plugins/primitives/plugins/view-switcher/web";
 import { resolveActiveId } from "./resolve-active-id";
 import { usableTypes } from "./usable-types";
 import {
@@ -153,6 +156,12 @@ export interface ViewModelOptions {
    * different (data-view's filter-node ids). Pass a module-level function.
    */
   canonical?: (view: VariantValue) => unknown;
+  /**
+   * Where the URL holds the active view (a pane's `;view`), when it does: a
+   * URL-named view outranks the device-local selection, and selecting writes
+   * both. `null`/absent keeps the selection device-local only.
+   */
+  activeViewUrl?: ActiveViewUrl | null;
 }
 
 const NO_DRAFTS: DraftMap = Object.freeze({});
@@ -184,7 +193,7 @@ export function useViewModel<T extends ViewTypeMeta>(
   // derived straight from each entry's contributions — that is "what view-types
   // exist per source", not "default instances".
   const cfg = useViewsConfig(storageKey, descriptorMap, entries);
-  const active = useActiveViewId(storageKey);
+  const active = useActiveViewId(storageKey, opts?.activeViewUrl);
 
   // The surface's working copies — the tab's shared map (every mount of this
   // surface reads the same one), or none without drafts.
@@ -281,12 +290,22 @@ export function useViewModel<T extends ViewTypeMeta>(
     deriveDirty,
   );
 
-  const activeId = resolveActiveId(
-    instances,
-    active.activeViewId,
+  const activeId = resolveActiveId(instances, {
+    fromUrl: active.urlViewId,
+    persisted: active.activeViewId,
     defaultView,
-    pinnedView,
-  );
+    pinned: pinnedView,
+  });
+
+  // A view the URL opened becomes this device's selection too: should the
+  // address later stop naming it (a link opened beside it), the surface keeps
+  // showing it rather than jumping back to the previous device-local pick.
+  const { urlViewId, activeViewId: persistedId, setActiveView: adopt } = active;
+  useEffect(() => {
+    if (activeId !== "" && activeId === urlViewId && persistedId !== activeId) {
+      adopt(activeId);
+    }
+  }, [activeId, urlViewId, persistedId, adopt]);
 
   // Capability-gated add menu, grouped per source entry: each group is that
   // entry's registered contributions ∩ `views` whitelist (if present). The `views` whitelist gates ADDABILITY only — authored

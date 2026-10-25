@@ -65,7 +65,7 @@ afterEach(() => {
 });
 
 // A pane whose segment also carries VIEWS of its entity: an optional `:tab?`
-// and a keyed `;view`. Its body counts its own mounts.
+// and a keyed `;lens`. Its body counts its own mounts.
 let viewBodyMounts = 0;
 function ViewBody() {
   const [mount] = useState(() => ++viewBodyMounts);
@@ -73,7 +73,7 @@ function ViewBody() {
 }
 const viewRoute = defineRoute({
   id: "sticky-guard-views",
-  segment: "views/:id/:tab?;view",
+  segment: "views/:id/:tab?;lens",
 });
 const viewPane = Pane.define({
   route: viewRoute,
@@ -139,7 +139,7 @@ describe("sticky resolve guard", () => {
     expect(getAllByText("Loading…").length).toBeGreaterThan(0);
   });
 
-  it("keeps the same pane instance when only a view param changes (`:tab?`, `;view`)", () => {
+  it("keeps the same pane instance when only a view param changes (`:tab?`, `;lens`)", () => {
     resolveResult = { status: "found" };
     const views = (params: Record<string, string>) => (
       <TestSurface store={store}>
@@ -149,12 +149,12 @@ describe("sticky resolve guard", () => {
     const { getByTestId, rerender } = render(views({ id: "a" }));
     const first = getByTestId("view-body").textContent;
 
-    rerender(views({ id: "a", view: "grid" }));
-    rerender(views({ id: "a", tab: "notes", view: "roll" }));
+    rerender(views({ id: "a", lens: "grid" }));
+    rerender(views({ id: "a", tab: "notes", lens: "roll" }));
     expect(getByTestId("view-body").textContent).toBe(first);
 
     // The entity's own address still remounts.
-    rerender(views({ id: "b", view: "roll" }));
+    rerender(views({ id: "b", lens: "roll" }));
     expect(getByTestId("view-body").textContent).not.toBe(first);
   });
 

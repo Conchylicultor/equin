@@ -281,7 +281,10 @@ interface BootState {
  * that keeps whatever route the tab already holds.
  */
 type ActivateTarget =
-  { kind: "route"; route: PaneSlot[] } | { kind: "pending"; rawPath: string };
+  // `index`: the landing pane's keyed params a link carried on the base path
+  // (`/sonata;view=all`) — see the pane store's `getIndexParams`.
+  | { kind: "route"; route: PaneSlot[]; index?: Record<string, string> }
+  | { kind: "pending"; rawPath: string };
 
 /**
  * The tabId the CURRENT history entry names, but ONLY on a browser back/forward
@@ -378,7 +381,7 @@ export function bootTabs(
   // preserving the historical "empty route ⇒ index" behavior for the seed tab.
   const parsed: ParsedRoute = resolved
     ? parseUrl(resolved.routePath)
-    : { status: "matched", slots: [] };
+    : { status: "matched", slots: [], index: {} };
 
   // Rebuild every persisted tab as a background tab. Keep-alive must survive a
   // reload, so no other app's tab is dropped; the focused tab is chosen and made
@@ -476,9 +479,10 @@ export function bootTabs(
         persistedFocused.rawPath === normalizeRawPath(resolved.routePath)
         ? keepInstanceIds(parsed.slots, persistedFocused.route)
         : parsed.slots,
+      { index: parsed.index },
     );
   } else if (parsed.status === "matched") {
-    focused.store.clearRoute();
+    focused.store.clearRoute({ index: parsed.index });
   } else if (
     persistedFocused?.route.length &&
     persistedFocused.rawPath === parsed.rawPath
@@ -665,8 +669,9 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
       if (current && current.tabId !== next.tabId) current.store.live = false;
       next.store.setBasePath(appPathFor(next.appId, appsRef.current));
       // Seed the target while still background (in-memory only, no history op).
-      if (target?.kind === "route") next.store.setRoute(target.route);
-      else if (target?.kind === "pending")
+      if (target?.kind === "route") {
+        next.store.setRoute(target.route, false, target.index);
+      } else if (target?.kind === "pending")
         next.store.seedPending(target.rawPath);
       next.store.live = true;
       setLiveStore(next.store);
@@ -686,7 +691,8 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
       if (state.kind === "unresolved") {
         next.store.navigatePending(state.rawPath, replace);
       } else {
-        next.store.setRoute(state.slots, replace);
+        // Re-asserting the route the store holds: its landing-pane params too.
+        next.store.setRoute(state.slots, replace, next.store.getIndexParams());
       }
     },
     [],
@@ -798,8 +804,18 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
   // spawning a tab beside it; a cross-app deep-link lands the focused tab
   // directly on its target route.
   const replaceTabAppWithRoute = useCallback(
-    (tabId: string, appId: string, route: PaneSlot[]) =>
-      rebuildTabApp(tabId, appId, { kind: "route", route }, { mirror: "push" }),
+    (
+      tabId: string,
+      appId: string,
+      route: PaneSlot[],
+      index?: Record<string, string>,
+    ) =>
+      rebuildTabApp(
+        tabId,
+        appId,
+        { kind: "route", route, index },
+        { mirror: "push" },
+      ),
     [rebuildTabApp],
   );
 
@@ -905,23 +921,24 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
         return;
       }
       const route = parsed.slots;
+      const index = parsed.index;
       if (opts?.newTab || !focused) {
         // A new tab is always a fresh tab, even when the target app is the one
         // already focused — that is what makes this the in-app middle-click.
         // An empty surface has no tab to re-route, so the link opens one too.
-        openTabWith(resolved.app.id, { kind: "route", route });
+        openTabWith(resolved.app.id, { kind: "route", route, index });
         return;
       }
       if (focused && focused.appId === resolved.app.id) {
         // Already on this app — set the route on its live store (normal push,
         // preserving a back target).
-        focused.store.setRoute(route);
+        focused.store.setRoute(route, false, index);
         return;
       }
       // Cross-app: swap the focused tab's app in place AND seed the target
       // route, so the focused tab's appId always matches the URL (no desync) —
       // consistent with the rail's in-place app switch.
-      replaceTabAppWithRoute(focused.tabId, resolved.app.id, route);
+      replaceTabAppWithRoute(focused.tabId, resolved.app.id, route, index);
     },
     [replaceTabAppWithRoute, replaceTabAppWithPending, openTabWith],
   );
@@ -1275,7 +1292,7 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
       // place, so a slash-mangled deep link self-heals into a working one.
       adapter.commit({
         url: currentRoutePath(),
-        state: serializePaneState(focused.store.getRouteState()),
+        state: serializePaneState(focused.store),
         mode: "replace",
       });
     }

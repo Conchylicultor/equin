@@ -3,6 +3,7 @@ import {
   createElement,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useSyncExternalStore,
   type ComponentType,
@@ -16,14 +17,18 @@ import { defineInstallSink } from "@plugins/primitives/plugins/scope/plugins/ins
 import { splitRoutePrefix } from "@plugins/primitives/plugins/pane/plugins/route-prefix/web";
 import {
   fillSegment,
+  indexKeyedSuffix,
   MissingRouteParamError,
   normalizeRoutePath,
   parseSegmentParts,
+  readIndexKeyedParams,
   readKeyedParams,
+  RESERVED_VIEW_PARAM,
   segmentKeyedParamNames,
   segmentMatchPatterns,
   segmentParamNames,
   segmentRequiredParamNames,
+  slotKeyedParamNames,
   splitKeyedPart,
   type AppRef,
   type PositionalRouteParams,
@@ -474,6 +479,13 @@ export interface MatchEntry {
   options: PaneOptions;
   /** Ephemeral optimistic hint bag. `{}` on any rebuilt route. See {@link Hint}. */
   hint: PaneHintBag;
+  /**
+   * The reserved `;view` this instance's URL carries — which view of its
+   * content is on screen (see `RESERVED_VIEW_PARAM`) — absent for the default.
+   * Kept out of `params` / `fullParams`, which are the pane's address. Read it
+   * through {@link usePaneViewParam}.
+   */
+  view?: string;
 }
 
 export interface PaneMatch {
@@ -497,17 +509,19 @@ function matchSegmentParts(
   urlSegments: string[],
   cursor: number,
 ): Array<{ params: Record<string, string>; consumed: number }> {
-  const keyedNames = segmentKeyedParamNames(segment);
-  // A segment with no keyed params reads the URL parts as they are — a raw `;`
-  // in them is just text, exactly as before keyed params existed.
-  if (keyedNames.length === 0) {
-    return matchPositionalParts(segment, urlSegments, cursor);
-  }
-  // Otherwise the positional matcher compares each part WITHOUT its keyed
-  // suffix, and each way it matches then reads the suffix off the last part it
-  // consumed — the only part `fillSegment` writes one on. A suffix on any
-  // earlier part is not this pane's spelling, so that way does not match.
-  const split = urlSegments.map(splitKeyedPart);
+  // A segment that declares keyed params splits every part at its first raw
+  // `;`. One that declares none still carries the reserved `;view`, but reads
+  // a raw `;` as text, as it always did — only an exact trailing `;view=…` is
+  // the suffix there, so a hand-typed `;` in a path keeps matching.
+  const declared = segmentKeyedParamNames(segment);
+  const split = urlSegments.map(
+    declared.length > 0 ? splitKeyedPart : splitReservedViewPart,
+  );
+  // The positional matcher compares each part WITHOUT its keyed suffix, and
+  // each way it matches then reads the suffix off the last part it consumed —
+  // the only part `fillSegment` writes one on. A suffix on any earlier part is
+  // not this pane's spelling, so that way does not match.
+  const names = slotKeyedParamNames(segment);
   return matchPositionalParts(
     segment,
     split.map((p) => p.base),
@@ -521,11 +535,24 @@ function matchSegmentParts(
     if (keyed === null) return [m];
     return [
       {
-        params: { ...m.params, ...readKeyedParams(keyed, keyedNames) },
+        params: { ...m.params, ...readKeyedParams(keyed, names) },
         consumed: m.consumed,
       },
     ];
   });
+}
+
+const RESERVED_VIEW_SUFFIX = new RegExp(
+  `^(.+);(${RESERVED_VIEW_PARAM}=[^;]*)$`,
+);
+
+/** {@link splitKeyedPart} for a segment declaring no keyed params: see above. */
+function splitReservedViewPart(part: string): {
+  base: string;
+  keyed: string | null;
+} {
+  const m = RESERVED_VIEW_SUFFIX.exec(part);
+  return m ? { base: m[1]!, keyed: m[2]! } : { base: part, keyed: null };
 }
 
 /** {@link matchSegmentParts} over the positional (`/`-separated) parts only. */
@@ -591,12 +618,21 @@ function matchPositionalParts(
  * loading in the deferred tier) or a genuinely dead link.
  */
 export type ParsedRoute =
-  | { status: "matched"; slots: PaneSlot[] } // slots [] ⇒ bare app root (explicit)
+  // slots [] ⇒ bare app root (explicit). `index`: the landing pane's keyed
+  // params, read off the base path's suffix (`/sonata;view=all`).
+  | { status: "matched"; slots: PaneSlot[]; index: Record<string, string> }
   | { status: "unresolved"; rawPath: string }; // a segment matched no registered pane
 
 export function parseUrl(pathname: string): ParsedRoute {
   const normalized = pathname === "/" ? "" : pathname.replace(/^\/+|\/+$/g, "");
   const urlSegments = normalized ? normalized.split("/") : [];
+  // A first part with nothing before its `;` is the app's LANDING pane's keyed
+  // suffix, written on the base path (`/sonata;view=all` → `;view=all`): the
+  // index pane has no URL part of its own to carry it.
+  const index =
+    urlSegments[0]?.startsWith(";") === true
+      ? readIndexKeyedParams(urlSegments.shift()!.slice(1))
+      : NO_PARAMS;
 
   // Longest match first, falling back to a shorter one only when the longer
   // leaves a remainder no chain of panes can match. Two segments can both claim
@@ -648,19 +684,42 @@ export function parseUrl(pathname: string): ParsedRoute {
   // out of the route store means an overlay host (e.g. Sonata's PaneOverlayHost)
   // sees "nothing opened" at a bare root and renders no overlay, instead of
   // inheriting another app's index pane.
-  return { status: "matched", slots: route };
+  return { status: "matched", slots: route, index };
 }
 
-export function buildRouteUrl(route: PaneSlot[]): string {
-  if (route.length === 0) return "/";
+const NO_PARAMS: Record<string, string> = Object.freeze({}) as Record<
+  string,
+  string
+>;
 
-  const parts: string[] = [];
+/** `index` itself, or the shared {@link NO_PARAMS} when it carries nothing. */
+function nonEmptyIndex(
+  index: Record<string, string> | undefined,
+): Record<string, string> {
+  return index === undefined || Object.keys(index).length === 0
+    ? NO_PARAMS
+    : index;
+}
+
+/**
+ * The app-relative URL of `route`, with the landing pane's `index` params (if
+ * any) as a leading `;…` part — which {@link applyIndexToBase} joins onto the
+ * base path, so the address bar reads `/sonata;view=all`.
+ */
+export function buildRouteUrl(
+  route: PaneSlot[],
+  index: Record<string, string> = NO_PARAMS,
+): string {
+  const suffix = indexKeyedSuffix(index);
+  if (route.length === 0) return suffix ? "/" + suffix : "/";
+
+  const parts: string[] = suffix ? [suffix] : [];
   for (const slot of route) {
     const pane = registry.get(slot.paneId);
     if (!pane) throw new Error(`Unknown pane: ${slot.paneId}`);
     // `fillSegment` owns the `:name`/`:name*`/encode/missing-param logic — the
     // single source of truth shared with `RouteDef.path`.
-    parts.push(...fillSegment(pane.segment, slot.params));
+    parts.push(...fillSegment(pane.segment, slot.params, { ownSlot: true }));
   }
 
   return "/" + parts.join("/") || "/";
@@ -748,8 +807,36 @@ export interface PaneStore {
   getRouteStateSnapshot(): RouteState;
   /** Subscribe to route changes; returns an unsubscribe. */
   subscribeRoute(cb: () => void): () => void;
-  /** Replace the route (resolved). Mirrors to the browser when `live`. */
-  setRoute(route: PaneSlot[], replace?: boolean): void;
+  /**
+   * Replace the route (resolved). Mirrors to the browser when `live`. Drops
+   * the landing pane's index params unless `index` carries them on.
+   */
+  setRoute(
+    route: PaneSlot[],
+    replace?: boolean,
+    index?: Record<string, string>,
+  ): void;
+  /**
+   * The app's LANDING pane's keyed params — its reserved `;view`, written on
+   * the base path (`/sonata;view=all`). The index pane is not a slot (it is
+   * what an empty route shows), so they live here, beside the route: parsed
+   * from the URL, saved in `history.state` as `index`, and dropped by any
+   * navigation that does not carry them on. Identity-stable until changed.
+   */
+  getIndexParams(): Record<string, string>;
+  /**
+   * Set (or, with `undefined`, clear) ONE keyed param of an instance in place,
+   * REPLACING the history entry — the write half of {@link usePaneViewParam}.
+   * `instanceId` may be the app's index pane, whose params live beside the
+   * route ({@link getIndexParams}). Keeps every other param, the instance and
+   * the panes to its right, like `setParams`.
+   */
+  setKeyedParam(
+    internal: PaneInternal,
+    instanceId: number,
+    name: string,
+    value: string | undefined,
+  ): void;
   /**
    * Seed an unresolved (pending) route from a raw app-relative path — NO
    * url/history side-effects. Used at boot and for background tabs, where the URL
@@ -779,8 +866,10 @@ export interface PaneStore {
       /** The pane instance's id to keep; a fresh one when absent. */
       uuid?: string;
     }>,
+    opts?: { index?: Record<string, string> },
   ): void;
-  clearRoute(): void;
+  /** Empty the route — the bare root, showing the index pane (with `index`). */
+  clearRoute(opts?: { index?: Record<string, string> }): void;
   /** Resolve the current route to a `PaneMatch` (memo-friendly, per-store). */
   resolveRoute(route: PaneSlot[]): PaneMatch | null;
   setBasePath(basePath: string): void;
@@ -829,6 +918,7 @@ export interface PaneStore {
 
 function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
   let currentState: RouteState = RESOLVED_EMPTY;
+  let currentIndex: Record<string, string> = NO_PARAMS;
   const routeListeners = new Set<() => void>();
   let currentBasePath = "";
   let prevResolvedByUuid = new Map<string, MatchEntry>();
@@ -848,11 +938,17 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
   function applyBasePath(rawUrl: string): string {
     if (!currentBasePath) return rawUrl;
     if (rawUrl === "/") return currentBasePath;
+    // The index pane's `;…` suffix joins the base path itself
+    // (`/sonata;view=all`), never a part of its own (`/sonata/;view=all`).
+    if (rawUrl.startsWith("/;")) return currentBasePath + rawUrl.slice(1);
     return currentBasePath + rawUrl;
   }
 
-  function routeUrl(route: PaneSlot[]): string {
-    return applyBasePath(buildRouteUrl(route));
+  function routeUrl(
+    route: PaneSlot[],
+    index: Record<string, string> = NO_PARAMS,
+  ): string {
+    return applyBasePath(buildRouteUrl(route, index));
   }
 
   function restoredRouteUrl(
@@ -865,8 +961,13 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
     );
   }
 
-  function setRoute(route: PaneSlot[], replace = false): void {
+  function setRoute(
+    route: PaneSlot[],
+    replace = false,
+    index: Record<string, string> = NO_PARAMS,
+  ): void {
     currentState = { kind: "resolved", slots: route };
+    currentIndex = index;
     // The address bar moves BEFORE any listener hears of the change, so every
     // listener sees one world: a route listener that reads the URL (the tab
     // set persists the address bar as the route's rawPath — the key a reload
@@ -890,7 +991,7 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
       options: s.options,
       uuid: s.uuid,
     }));
-    const fullUrl = routeUrl(route);
+    const fullUrl = routeUrl(route, currentIndex);
     if (fullUrl === currentRoutePath() && replace) return;
     // Emit a push/replace INTENT through the installed history adapter — the
     // pane primitive never touches `window.history` itself. The default adapter
@@ -899,7 +1000,10 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
     // announces `shell:navigate` (never a synthetic popstate).
     historySink.peek().commit({
       url: fullUrl,
-      state: { route: serialized },
+      state:
+        currentIndex === NO_PARAMS
+          ? { route: serialized }
+          : { route: serialized, index: currentIndex },
       mode: replace ? "replace" : "push",
     });
   }
@@ -922,6 +1026,7 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
       options?: PaneOptions;
       uuid?: string;
     }>,
+    restoreOpts?: { index?: Record<string, string> },
   ): void {
     if (typeof window === "undefined") return;
     // A restored slot keeps its uuid: it is the SAME pane instance coming back
@@ -932,21 +1037,23 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
       createSlot(s.paneId, s.params, s.options ?? {}, {}, s.uuid),
     );
     if (route.length === 0) return;
-    setRoute(route);
+    setRoute(route, false, nonEmptyIndex(restoreOpts?.index));
   }
 
-  function clearRoute(): void {
+  function clearRoute(clearOpts?: { index?: Record<string, string> }): void {
     if (typeof window === "undefined") return;
-    setRoute([]);
+    setRoute([], false, nonEmptyIndex(clearOpts?.index));
   }
 
   function seedPending(rawPath: string): void {
     currentState = { kind: "unresolved", rawPath };
+    currentIndex = NO_PARAMS;
     notifyRouteListeners();
   }
 
   function navigatePending(rawPath: string, replace = false): void {
     currentState = { kind: "unresolved", rawPath };
+    currentIndex = NO_PARAMS;
     // URL first, listeners second — see `setRoute`.
     if (store.live) {
       historySink.peek().commit({
@@ -967,13 +1074,16 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
     if (parsed.status === "matched") {
       // A matched parse always wins (equality-guarded, as today) — the URL now
       // resolves to concrete panes.
+      const index = nonEmptyIndex(parsed.index);
       if (
         currentState.kind === "resolved" &&
-        routesEqual(currentState.slots, parsed.slots)
+        routesEqual(currentState.slots, parsed.slots) &&
+        sameParams(currentIndex, index)
       ) {
         return;
       }
       currentState = { kind: "resolved", slots: parsed.slots };
+      currentIndex = index;
       notifyRouteListeners();
       return;
     }
@@ -997,6 +1107,7 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
     const settled = getDeferredLoadState().deferredComplete;
     if (currentState.slots.length > 0 && !settled) return;
     currentState = { kind: "unresolved", rawPath: parsed.rawPath };
+    currentIndex = NO_PARAMS;
     notifyRouteListeners();
   }
 
@@ -1014,7 +1125,11 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
         prevResolvedByUuid = new Map();
         return null;
       }
-      Object.assign(accumulated, slot.params);
+      // The reserved `;view` is not part of the address: `params` /
+      // `fullParams` never carry it, the entry's `view` does.
+      const own = withoutReservedView(slot.params);
+      const view = slot.params[RESERVED_VIEW_PARAM];
+      Object.assign(accumulated, own);
       const prev = prevResolvedByUuid.get(slot.uuid);
       const options = { ...pane.optionDefaults, ...slot.options };
       // A uuid is the pane INSTANCE, not its address: `useSetParams` rewrites an
@@ -1025,7 +1140,8 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
         routeStable &&
         prev &&
         prev.pane === pane &&
-        sameParams(prev.params, slot.params) &&
+        sameParams(prev.params, own) &&
+        prev.view === view &&
         sameOptions(prev.options, options)
       ) {
         entries.push(prev);
@@ -1035,10 +1151,11 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
           instanceId: slot.instanceId,
           uuid: slot.uuid,
           pane,
-          params: { ...slot.params },
+          params: { ...own },
           fullParams: { ...accumulated },
           options,
           hint: slot.hint,
+          ...(view !== undefined && { view }),
         });
       }
     }
@@ -1080,6 +1197,7 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
         options?: PaneOptions;
         uuid?: string;
       }>;
+      index?: Record<string, string>;
       pending?: string;
     } | null;
     if (state?.route) {
@@ -1091,12 +1209,15 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
       const newRoute = state.route.map((s) =>
         createSlot(s.paneId, s.params, s.options ?? {}, {}, s.uuid),
       );
+      const index = nonEmptyIndex(state.index);
       if (
         currentState.kind === "resolved" &&
-        routesEqual(currentState.slots, newRoute)
+        routesEqual(currentState.slots, newRoute) &&
+        sameParams(currentIndex, index)
       )
         return;
       currentState = { kind: "resolved", slots: newRoute };
+      currentIndex = index;
       notifyRouteListeners();
     } else if (typeof state?.pending === "string") {
       // A pending (unresolved) route round-trips through back/forward via
@@ -1183,13 +1304,50 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
     }
     const slot = route[idx]!;
     const own = extractOwnParams(internal, params);
+    // The reserved `;view` is not the pane's to pass — it is whichever view its
+    // content has on screen — so a rewrite of the pane's own params keeps it.
+    const view = slot.params[RESERVED_VIEW_PARAM];
+    if (view !== undefined) own[RESERVED_VIEW_PARAM] = view;
     if (sameParams(own, slot.params)) return;
     // The SAME slot — instanceId, uuid, options, hint and every pane after it
     // kept — so the column neither remounts nor loses its collapse / maximize
     // state; only its address changes.
     const next = [...route];
     next[idx] = { ...slot, params: own };
-    setRoute(next, !internal.chrome.history);
+    setRoute(next, !internal.chrome.history, currentIndex);
+  }
+
+  function setKeyedParam(
+    internal: PaneInternal,
+    instanceId: number,
+    name: string,
+    value: string | undefined,
+  ): void {
+    const withValue = (params: Record<string, string>) => {
+      const next = { ...params };
+      if (value === undefined) delete next[name];
+      else next[name] = value;
+      return next;
+    };
+    if (internal.appIndex && instanceId === indexInstanceIdFor(internal.id)) {
+      const index = nonEmptyIndex(withValue(currentIndex));
+      if (sameParams(index, currentIndex)) return;
+      setRoute(currentSlots(), true, index);
+      return;
+    }
+    const route = currentSlots();
+    const idx = route.findIndex((s) => s.instanceId === instanceId);
+    if (idx < 0) {
+      throw new Error(
+        `Pane "${internal.id}": setKeyedParam on instance ${instanceId}, which is not in the route.`,
+      );
+    }
+    const slot = route[idx]!;
+    const params = withValue(slot.params);
+    if (sameParams(params, slot.params)) return;
+    const next = [...route];
+    next[idx] = { ...slot, params };
+    setRoute(next, true, currentIndex);
   }
 
   const store: PaneStore = {
@@ -1197,6 +1355,8 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
     getRouteSnapshot: () => currentSlots(),
     getRouteState: () => currentState,
     getRouteStateSnapshot: () => currentState,
+    getIndexParams: () => currentIndex,
+    setKeyedParam,
     subscribeRoute: (cb) => {
       routeListeners.add(cb);
       return () => routeListeners.delete(cb);
@@ -1562,6 +1722,28 @@ function sameParams(
   return ak.every((k) => a[k] === b[k]);
 }
 
+/**
+ * Do an open's own params name the address `slotParams` holds? The reserved
+ * `;view` is not part of an address — it is which view of it is on screen, and
+ * an open never supplies it — so it is ignored: re-opening the pane already
+ * there is a no-op that keeps its view, never a rebuild that drops it.
+ */
+function sameAddress(
+  openParams: Record<string, string>,
+  slotParams: Record<string, string>,
+): boolean {
+  return sameParams(openParams, withoutReservedView(slotParams));
+}
+
+/** `params` without the reserved `;view` (the same object when it has none). */
+function withoutReservedView(
+  params: Record<string, string>,
+): Record<string, string> {
+  if (!(RESERVED_VIEW_PARAM in params)) return params;
+  const { [RESERVED_VIEW_PARAM]: _view, ...rest } = params;
+  return rest;
+}
+
 /** Shallow equality over two opener-supplied option partials. */
 function sameOptions(a: PaneOptions, b: PaneOptions): boolean {
   const ak = Object.keys(a);
@@ -1861,7 +2043,7 @@ export function computeOpen(
     const last = currentRoute.at(-1);
     if (
       last?.paneId === target.id &&
-      sameParams(ownParams, last.params) &&
+      sameAddress(ownParams, last.params) &&
       sameOptions(options, last.options)
     )
       return unchanged;
@@ -1893,7 +2075,7 @@ export function computeOpen(
         // opens that differ only by their optimistic hint must dedupe to the
         // same slot, or the pane remounts (or stacks) for a display-only value.
         if (
-          sameParams(ownParams, existing.params) &&
+          sameAddress(ownParams, existing.params) &&
           sameOptions(options, existing.options)
         )
           return unchanged;
@@ -1940,7 +2122,7 @@ export function computeOpen(
     // is a change however the params compare.
     if (
       target.id === caller.paneId &&
-      sameParams(ownParams, caller.params) &&
+      sameAddress(ownParams, caller.params) &&
       sameOptions(options, caller.options)
     )
       return unchanged;
@@ -2084,6 +2266,129 @@ export function useCurrentPane(): PaneInternal | null {
 }
 
 // ---------------------------------------------------------------------------
+// The view on screen, in the URL — `usePaneViewParam`.
+// ---------------------------------------------------------------------------
+
+/** One keyed param of the enclosing pane instance, bound for read and write. */
+export interface PaneViewParam {
+  /** The URL's value, `undefined` when the address names none. */
+  value: string | undefined;
+  /**
+   * Write it (or clear it with `undefined`) in place, REPLACING the history
+   * entry: which view is on screen is not a navigation Back should step through.
+   */
+  set: (value: string | undefined) => void;
+}
+
+// Who holds each (store, instance, name): a URL key means ONE thing, so two
+// surfaces of one pane instance cannot both own it. Refcounted per claimant,
+// since the same surface may legitimately mount twice in one pane.
+const viewParamClaims = new WeakMap<
+  PaneStore,
+  Map<string, { claimant: string; count: number }>
+>();
+
+/**
+ * The enclosing pane instance's `;view` — the reserved keyed param every pane
+ * carries (`RESERVED_VIEW_PARAM`) — or, with `name`, one of the keyed params its
+ * segment DECLARES. So a surface that shows one of several views (a DataView's
+ * active view instance) makes its view part of the pane's address without the
+ * pane declaring anything: `/sonata;view=all`, `/agents/tasks;view=open`.
+ *
+ * `null` where there is no address to hold it: outside every pane (global
+ * chrome, a popover), or in a pane with no URL part of its own that is not its
+ * app's landing pane (whose params ride the base path). The caller then keeps
+ * its view however it did before.
+ *
+ * `claimant` names who binds it (a DataView's storage key). A second, DIFFERENT
+ * claimant of the same name in the same instance throws: one URL key cannot
+ * mean two surfaces' views, so the second must bind a name its pane declares
+ * (`segment: "jobs;history"`) or not bind at all — `name: null`, which binds
+ * nothing and returns `null` (a hook cannot be called conditionally).
+ */
+export function usePaneViewParam(
+  claimant: string,
+  name: string | null = RESERVED_VIEW_PARAM,
+): PaneViewParam | null {
+  const match = useContext(PaneMatchContext);
+  const instanceId = useContext(PaneInstanceContext);
+  const store = useContext(PaneStoreContext);
+  const entry =
+    match && instanceId !== undefined
+      ? match.panes.find((e) => e.instanceId === instanceId)
+      : undefined;
+  const pane = entry?.pane;
+  const reserved = name === RESERVED_VIEW_PARAM;
+  if (
+    pane &&
+    name !== null &&
+    !reserved &&
+    !segmentKeyedParamNames(pane.segment).includes(name)
+  ) {
+    throw new Error(
+      `usePaneViewParam("${claimant}", "${name}"): pane "${pane.id}" declares no keyed ` +
+        `param ";${name}" (segment "${pane.segment}"). Declare it, or bind the reserved ` +
+        `";${RESERVED_VIEW_PARAM}".`,
+    );
+  }
+  const bound =
+    name !== null &&
+    store !== null &&
+    entry !== undefined &&
+    pane !== undefined &&
+    (!reserved ||
+      parseSegmentParts(pane.segment).length > 0 ||
+      (pane.appIndex && instanceId === indexInstanceIdFor(pane.id)));
+  const claimKey = bound ? `${entry.uuid}|${name}` : null;
+
+  useEffect(() => {
+    if (claimKey === null || store === null) return;
+    let claims = viewParamClaims.get(store);
+    if (!claims) {
+      claims = new Map();
+      viewParamClaims.set(store, claims);
+    }
+    const held = claims.get(claimKey);
+    if (held && held.claimant !== claimant) {
+      throw new Error(
+        `Pane "${pane?.id}": ";${name}" is already bound to "${held.claimant}", so ` +
+          `"${claimant}" cannot bind it too — one URL key cannot hold two surfaces' views. ` +
+          `Give the second its own keyed param (declare ";<name>" in the pane's segment and ` +
+          `pass it), or opt it out.`,
+      );
+    }
+    if (held) held.count++;
+    else claims.set(claimKey, { claimant, count: 1 });
+    return () => {
+      const current = claims.get(claimKey);
+      if (current?.claimant !== claimant) return;
+      if (--current.count === 0) claims.delete(claimKey);
+    };
+  }, [store, claimKey, claimant, name, pane?.id]);
+
+  const set = useCallback(
+    (value: string | undefined) => {
+      if (
+        name === null ||
+        store === null ||
+        pane === undefined ||
+        instanceId === undefined
+      ) {
+        return;
+      }
+      store.setKeyedParam(pane, instanceId, name, value);
+    },
+    [store, pane, instanceId, name],
+  );
+  const value = !bound
+    ? undefined
+    : reserved
+      ? entry.view
+      : entry.params[name!];
+  return useMemo(() => (bound ? { value, set } : null), [bound, value, set]);
+}
+
+// ---------------------------------------------------------------------------
 // App-scoped basePath. The active app's path (e.g. "/debug") is an implicit
 // URL prefix: navigate() prepends it, MillerColumns strips it before matching.
 // Pane segments stay app-local — no manual prefix needed.
@@ -2137,6 +2442,8 @@ export function stripBasePath(pathname: string, basePath: string): string {
   if (!bp) return pathname;
   if (pathname === bp) return "/";
   if (pathname.startsWith(bp + "/")) return pathname.slice(bp.length);
+  // The landing pane's keyed suffix rides the base path (`/sonata;view=all`).
+  if (pathname.startsWith(bp + ";")) return "/" + pathname.slice(bp.length);
   return pathname;
 }
 
@@ -3094,6 +3401,13 @@ function indexInstanceIdFor(paneId: string): number {
  */
 export function useIndexMatch(basePath: string): PaneMatch | null {
   const contributions = PaneSlots.Register.useContributions();
+  const store = usePaneStore();
+  const index = useSyncExternalStore(
+    store.subscribeRoute,
+    store.getIndexParams,
+    () => NO_PARAMS,
+  );
+  const view = index[RESERVED_VIEW_PARAM];
   return useMemo(() => {
     const bp = normalizeAppPath(basePath);
     for (const pane of registry.values()) {
@@ -3109,12 +3423,13 @@ export function useIndexMatch(basePath: string): PaneMatch | null {
         fullParams: {},
         options: { ...pane.optionDefaults },
         hint: {},
+        ...(view !== undefined && { view }),
       };
       return { panes: [entry] };
     }
     return null;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `contributions` identity tracks the registry; registry itself is a module-level mutable Map read inside.
-  }, [basePath, contributions]);
+  }, [basePath, contributions, view]);
 }
 
 /**

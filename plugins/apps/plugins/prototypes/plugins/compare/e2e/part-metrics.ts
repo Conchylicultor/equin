@@ -22,6 +22,7 @@ import { z } from "zod";
 import {
   deltaE,
   usage,
+  waitForNetworkIdle,
   type Rgba,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { DATA_VIEW_PARTS } from "@plugins/primitives/plugins/data-view/core";
@@ -234,15 +235,31 @@ const EntrySchema = z
   })
   .strict();
 
-const SetupStepSchema = z
-  .object({
-    /** Only run under these mock picks (`{ "layout": "list" }`). */
-    when: z.record(z.string(), z.string()).optional(),
-    /** CSS selector, in the app's document; must match exactly one element. */
-    click: z.string().min(1),
-    note: z.string().optional(),
-  })
-  .strict();
+const SetupWhen = z.record(z.string(), z.string()).optional();
+
+const SetupStepSchema = z.union([
+  z
+    .object({
+      /** Only run under these mock picks (`{ "layout": "list" }`). */
+      when: SetupWhen,
+      /** CSS selector, in the app's document; must match exactly one element. */
+      click: z.string().min(1),
+      note: z.string().optional(),
+    })
+    .strict(),
+  z
+    .object({
+      when: SetupWhen,
+      /**
+       * An in-app path the framed app is moved to, its query kept
+       * (`/sonata;view=all` — a DataView's view is part of its pane's URL, so
+       * a view is reached by address, never by clicking its chip).
+       */
+      goto: z.string().startsWith("/"),
+      note: z.string().optional(),
+    })
+    .strict(),
+]);
 
 const MappingSchema = z
   .object({
@@ -254,10 +271,9 @@ const MappingSchema = z
   .strict();
 
 /** One app-side setup step that applies to this run's picks. */
-export interface AppSetupStep {
-  click: string;
-  note?: string;
-}
+export type AppSetupStep =
+  | { kind: "click"; click: string; note?: string }
+  | { kind: "goto"; goto: string; note?: string };
 
 /** A mapping resolved for this run. */
 export interface LoadedMapping {
@@ -355,7 +371,12 @@ export function loadMapping(
   const appSetup: AppSetupStep[] = [];
   (mapping.appSetup ?? []).forEach((st, i) => {
     problems.push(...whenProblems(`appSetup.${i}`, st.when, options));
-    if (matches(st.when)) appSetup.push({ click: st.click, note: st.note });
+    if (!matches(st.when)) return;
+    appSetup.push(
+      "click" in st
+        ? { kind: "click", click: st.click, note: st.note }
+        : { kind: "goto", goto: st.goto, note: st.note },
+    );
   });
   mapping.parts.forEach((e, i) => {
     const key = entryKey(e);
@@ -608,6 +629,18 @@ function markClickInPage(arg: {
 
 const CLICK_ATTR = "data-part-metrics-click";
 
+/** After a setup step: load, two animation frames, a pause. */
+async function settleApp(page: Page, scope: MetricsScope): Promise<void> {
+  await scope.frame.waitForLoadState("load");
+  await scope.frame.evaluate(
+    () =>
+      new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      ),
+  );
+  await page.waitForTimeout(500);
+}
+
 /**
  * Make the app-side setup clicks, in order, in the counterpart's scope. Each
  * selector must match exactly one element; after each click the app settles
@@ -620,6 +653,21 @@ export async function runAppSetup(
   steps: readonly AppSetupStep[],
 ): Promise<string[]> {
   for (const step of steps) {
+    if (step.kind === "goto") {
+      if (scope.root !== null) {
+        return [
+          `app setup goto ${step.goto}: the counterpart is not a framed app (an inline exhibit has no URL to move)`,
+        ];
+      }
+      const url = new URL(scope.frame.url());
+      url.pathname = step.goto;
+      console.log(`app setup: goto ${step.goto}`);
+      await scope.frame.goto(url.toString());
+      // A goto reboots the app in the frame: wait for its reads to land too.
+      await waitForNetworkIdle(page);
+      await settleApp(page, scope);
+      continue;
+    }
     const res = await scope.frame.evaluate(markClickInPage, {
       root: scope.root,
       selector: step.click,
@@ -637,14 +685,7 @@ export async function runAppSetup(
     }
     console.log(`app setup: click ${step.click}`);
     await scope.frame.locator(`[${CLICK_ATTR}]`).click({ timeout: 5000 });
-    await scope.frame.waitForLoadState("load");
-    await scope.frame.evaluate(
-      () =>
-        new Promise<void>((resolve) =>
-          requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-        ),
-    );
-    await page.waitForTimeout(500);
+    await settleApp(page, scope);
   }
   await scope.frame.evaluate((attr) => {
     for (const old of document.querySelectorAll(`[${attr}]`)) {

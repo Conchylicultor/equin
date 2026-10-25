@@ -133,6 +133,8 @@ function ReleaseHistory({
 
   return (
     <DataView<ReleaseHistoryRow>
+      // Device-local view: a section card of the composition, beside the closure tree.
+      viewParam={false}
       storageKey={RELEASE_HISTORY_VIEW}
       overrides={overrides}
       views={["list", "table"]}

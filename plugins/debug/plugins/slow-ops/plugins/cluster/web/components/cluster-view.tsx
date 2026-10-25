@@ -288,6 +288,8 @@ export function ClusterView(): ReactElement {
         />
 
         <DataView<TimelineEntry>
+          // Device-local view: the aggregate list above owns the pane's ;view.
+          viewParam={false}
           rows={timeline}
           fields={timelineFields}
           rowKey={(r) => r.key}

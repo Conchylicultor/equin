@@ -105,6 +105,8 @@ export function PagesTrash() {
           <Scroll axis="y" className="max-h-96">
             <PurgeTrashEntryContext.Provider value={setConfirmEntry}>
               <DataView<TrashEntryRow>
+                // Device-local view: a dialog over the pane, not part of its address.
+                viewParam={false}
                 storageKey={TRASH_VIEW}
                 source={trashSource}
                 overrides={overrides}

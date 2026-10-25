@@ -166,7 +166,13 @@ function resolveActiveAppPrefix(
   const pathname = prefix === undefined ? raw : raw.slice(prefix.length);
   const matched = [...apps]
     .sort((a, b) => b.path.length - a.path.length)
-    .find((a) => pathname === a.path || pathname.startsWith(a.path + "/"));
+    .find(
+      (a) =>
+        pathname === a.path ||
+        pathname.startsWith(a.path + "/") ||
+        // An app's landing pane writes its keyed suffix on the base path.
+        pathname.startsWith(a.path + ";"),
+    );
   if (!matched) return null;
   // The matched contribution's pluginPath is the app's shell dir
   // (apps/plugins/<app>/plugins/shell); the app root prefix is

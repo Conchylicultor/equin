@@ -84,10 +84,10 @@ const convPane = Pane.define({
   component: () => null,
 });
 
-/** Keyed `;view`: a view of the song, beside the positional optional bar. */
+/** Keyed `;lens`: a view of the song, beside the positional optional bar. */
 const songRoute = defineRoute({
   id: "opt-song",
-  segment: "song/:id/:bar?;view",
+  segment: "song/:id/:bar?;lens",
 });
 const songPane = Pane.define({
   route: songRoute,
@@ -271,11 +271,11 @@ describe("useSetParams", () => {
 describe("keyed `;name` params", () => {
   it("parse off the pane's last part, beside the positional ones", () => {
     expect(parsed("/song/a")).toEqual([["opt-song", { id: "a" }]]);
-    expect(parsed("/song/a;view=notation")).toEqual([
-      ["opt-song", { id: "a", view: "notation" }],
+    expect(parsed("/song/a;lens=notation")).toEqual([
+      ["opt-song", { id: "a", lens: "notation" }],
     ]);
-    expect(parsed("/song/a/3;view=notation")).toEqual([
-      ["opt-song", { id: "a", bar: "3", view: "notation" }],
+    expect(parsed("/song/a/3;lens=notation")).toEqual([
+      ["opt-song", { id: "a", bar: "3", lens: "notation" }],
     ]);
     expect(parsed("/list;filter=open")).toEqual([
       ["opt-list", { filter: "open" }],
@@ -283,8 +283,8 @@ describe("keyed `;name` params", () => {
   });
 
   it("stay scoped to their pane in a multi-pane URL", () => {
-    expect(parsed("/song/a;view=notation/kid/7")).toEqual([
-      ["opt-song", { id: "a", view: "notation" }],
+    expect(parsed("/song/a;lens=notation/kid/7")).toEqual([
+      ["opt-song", { id: "a", lens: "notation" }],
       ["opt-kid", { id: "7" }],
     ]);
   });
@@ -294,9 +294,9 @@ describe("keyed `;name` params", () => {
   });
 
   it("are not read off a part before the pane's last", () => {
-    // `fillSegment` never writes `/song/a;view=n/3` — the bar arm rejects it,
+    // `fillSegment` never writes `/song/a;lens=n/3` — the bar arm rejects it,
     // and without the bar the trailing `3` matches no pane.
-    expect(parsed("/song/a;view=n/3")).toBe("unresolved");
+    expect(parsed("/song/a;lens=n/3")).toBe("unresolved");
   });
 
   it("leave a pane that declares none reading `;` as plain text", () => {
@@ -305,13 +305,13 @@ describe("keyed `;name` params", () => {
 
   it("round-trip through the builder", () => {
     store.restoreRoute([
-      { paneId: "opt-song", params: { id: "a", bar: "3", view: "notation" } },
+      { paneId: "opt-song", params: { id: "a", bar: "3", lens: "notation" } },
       { paneId: "opt-kid", params: { id: "7" } },
     ]);
     const url = buildRouteUrl(store.getRoute());
-    expect(url).toBe("/song/a/3;view=notation/kid/7");
+    expect(url).toBe("/song/a/3;lens=notation/kid/7");
     expect(parsed(url)).toEqual([
-      ["opt-song", { id: "a", bar: "3", view: "notation" }],
+      ["opt-song", { id: "a", bar: "3", lens: "notation" }],
       ["opt-kid", { id: "7" }],
     ]);
   });
