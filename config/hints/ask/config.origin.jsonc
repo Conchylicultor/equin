@@ -1,7 +1,9 @@
-// @hash ace152291b43
+// @hash 445fb214a65b
 {
   // The model that answers your questions. Sonnet answers fastest; a stronger model digs deeper.
   "model": "sonnet",
   // The model a task Ask equin files for you launches with (in its own worktree, at once).
-  "taskModel": "opus"
+  "taskModel": "opus",
+  // Extra instructions the help agent follows when answering, added to its prompt at each new question (markdown). Empty for none.
+  "guidance": "- The global action bar (top right, on every app) is where the user starts anything an agent should do: changing a prototype, creating an app, fixing or improving what they see. When they want something done, point them to its **Improve** button (with `<show-me>` when it is on their screen) — it files a task from the page they are on and an agent picks it up — rather than to an app's own buttons."
 }

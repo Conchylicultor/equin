@@ -1,5 +1,11 @@
 import { defineScratchProfile } from "@plugins/conversations/plugins/workspace/server";
-import { AskInputSchema, FILE_TASK_TOOL, HELP_ASK_PROFILE } from "../../core";
+import { getConfig } from "@plugins/config_v2/server";
+import {
+  askConfig,
+  AskInputSchema,
+  FILE_TASK_TOOL,
+  HELP_ASK_PROFILE,
+} from "../../core";
 import { checkoutRootPath } from "./checkout";
 import { askInstructions } from "./instructions";
 import { copyRepoContext } from "./repo-context";
@@ -23,7 +29,8 @@ export const helpAskProfile = defineScratchProfile({
   description:
     "Ask equin: a read-only how-to helper answering from equin's own code and history, with the page the user asked from.",
   inputSchema: AskInputSchema,
-  instructions: (input) => askInstructions(input, checkoutRootPath()),
+  instructions: (input) =>
+    askInstructions(input, checkoutRootPath(), getConfig(askConfig).guidance),
   mcpTools: [FILE_TASK_TOOL, "flag_raise"],
   permissions: {
     allow: ["Read", "Grep", "Glob", "Bash"],

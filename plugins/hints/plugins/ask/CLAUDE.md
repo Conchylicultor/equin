@@ -13,13 +13,17 @@ on the computer. The reserved `ask_file_task` tool and the config stay in the
 portable `server/` half.
 
 - **Profile `help.ask`** (`ScratchProfile.define`): an empty scratch dir whose
-  CLAUDE.md is `askInstructions(input, checkout)` — the user's page (app, route,
+  CLAUDE.md is `askInstructions(input, checkout, guidance)` — the user's page (app, route,
   focused tab title), the page outline (`ui-context`'s `formatOutline`), the
   main checkout's path to read (`getMainRepoRoot()`, resolved once in
   `onReadyBlocking` because `instructions` is synchronous), and how to answer:
   `<show-me path element>` copied from an outline entry, next steps as
   `<go>`, anything needing a change filed with `ask_file_task`, end the turn,
   never `exit_clean`.
+- **The user's guidance**: `askConfig.guidance` (Settings → Config → Ask
+  equin, a multiline field; default: send every agent launch through the
+  global action bar's Improve button) is appended as a "The user's guidance"
+  section, read at each launch, so an edit applies to the next question.
 - **The repo's map**: `prepare` copies the checkout's root `CLAUDE.md` and
   every file it imports (its `@path` lines — today `docs/plugins-compact.md`)
   into `<dir>/repo-context/` (`copyRepoContext`, at every launch), and the
@@ -119,7 +123,7 @@ portable `server/` half.
 
 ## Plugin reference
 
-- Description: Ask equin, web half: the ? menu's entry (Ask equin how to… / Back to your question), and the AskHost at Core.Root — a draggable card in the chrome's theme holding one threaded conversation with the help agent (AgentThread; a filed task shows as its live status and title, opening in the Agent Manager), above every tab so it follows the user across apps: suggested questions and a first-question box when empty (the first send attaches the focused app, route, tab title and the page outline), minimized to a pill with the step it is on and an unseen dot, its position kept edge-anchored and snapped only near a corner, and the newest unseen or working run taken back as the pill once per load. A reply sent from another page carries that page (a <page-context> token after the words, drawn as a chip naming the page). Registers the Ask equin config with both model pickers. Ask equin, server half: the help agent's reserved ask_file_task tool (a task with no folder or dependency edges, in the default worktree workspace, filed under Improvements and armed with the configured model so it launches at once), and the Ask equin config (the answering model, the filed tasks' model).
+- Description: Ask equin, web half: the ? menu's entry (Ask equin how to… / Back to your question), and the AskHost at Core.Root — a draggable card in the chrome's theme holding one threaded conversation with the help agent (AgentThread; a filed task shows as its live status and title, opening in the Agent Manager), above every tab so it follows the user across apps: suggested questions and a first-question box when empty (the first send attaches the focused app, route, tab title and the page outline), minimized to a pill with the step it is on and an unseen dot, its position kept edge-anchored and snapped only near a corner, and the newest unseen or working run taken back as the pill once per load. A reply sent from another page carries that page (a <page-context> token after the words, drawn as a chip naming the page). Registers the Ask equin config with both model pickers. Ask equin, server half: the help agent's reserved ask_file_task tool (a task with no folder or dependency edges, in the default worktree workspace, filed under Improvements and armed with the configured model so it launches at once), and the Ask equin config (the answering model, the filed tasks' model, the guidance added to the help agent's prompt).
 - Web:
   - Contributes:
     - `Core.Root` → `AskHost`
@@ -190,6 +194,7 @@ portable `server/` half.
     - `conversations/agent-thread.defineThreadResult`
     - `conversations/model-provider.DEFAULT_MODEL_CHOICE`
     - `fields/dynamic-enum/config.dynamicEnumField`
+    - `fields/multiline-text/config.multilineTextField`
     - `tasks/task-ids.taskIdKind`
   - Exports (types):
     - `AskInput`

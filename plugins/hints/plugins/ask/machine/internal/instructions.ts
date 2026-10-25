@@ -9,11 +9,27 @@ function pageLine(input: AskInput): string {
   return `The user is in ${where} (route \`${input.path}\`)${title}.`;
 }
 
+/** The user's own guidance (Settings → Config → Ask equin), when they set any. */
+function guidanceSection(guidance: string): string {
+  if (guidance.trim() === "") return "";
+  return `
+## The user's guidance
+
+Set by the user in Settings, followed on top of the above:
+
+${guidance.trim()}
+`;
+}
+
 /**
  * The Ask equin agent's CLAUDE.md: a read-only how-to helper over equin's own
  * code, told where the user is and what is on their screen.
  */
-export function askInstructions(input: AskInput, checkout: string): string {
+export function askInstructions(
+  input: AskInput,
+  checkout: string,
+  guidance: string,
+): string {
   const outline =
     input.outline.trim() === ""
       ? "(No named controls were found on the page.)"
@@ -89,7 +105,7 @@ it back to them.
   question you can answer, and file each wish once.
 - When you are done, end your turn. Never call \`exit_clean\`: the user may
   reply.
-
+${guidanceSection(guidance)}
 ## The repo's own map
 
 Below is the checkout's root CLAUDE.md, with what it imports — the map every
