@@ -7,7 +7,7 @@
 //   2. a real mouse drag of the header moves it freely: dropped mid-screen it
 //      stays exactly where it was dropped
 //   3. dropped near the top-left corner it snaps to the corner's inset
-//   4. reload, reopen: the card opens where it was left
+//   4. reload: the card is still open, where it was left
 //   5. Close (×) closes it
 //
 //   ./equin run plugins/hints/plugins/ask/e2e/ask.ts [--out /tmp/ask] [--headed]
@@ -148,13 +148,15 @@ await withBrowser(async (h) => {
   );
   await snap(page, out, "3-snapped");
 
-  // 4. reload → reopen where it was left
+  // 4. reload → still open, where it was left
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.locator("[data-health]").first().waitFor();
-  const c2 = await openEmptyCard(page);
+  const c2 = card(page);
+  await c2.waitFor();
+  r.ok("after a reload the card is still open", await c2.isVisible());
   const b3 = await box(c2);
   r.ok(
-    "after a reload the card reopens where it was left (top-left)",
+    "…where it was left (top-left)",
     near(b3.x, CORNER_MARGIN) && near(b3.y, CORNER_MARGIN),
     `got (${b3.x}, ${b3.y})`,
   );

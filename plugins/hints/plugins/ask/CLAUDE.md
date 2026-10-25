@@ -61,9 +61,13 @@ portable `server/` half.
   apps. A page-global module store (`ask-store.ts`) holds `{ mode: closed |
   open | min, conversationId }`; the help menu's entry reads it ("Back to your
   question" + the question while a run is minimized or closed).
-- **Restore once per load**: the newest `help.ask` run (`useThreadRuns(…,
-  { limit: 1 })`) is taken back as the pill when it is still working or has an
-  unseen answer.
+- **A reload keeps the card**: every change of mode or run is written to
+  `askCardStore` (session storage — the tab's own), and the store starts from
+  it, so a refresh brings the card back open, minimized or closed, on the
+  same run (an empty card's question draft is in `askQuestionDraft`).
+- **Restore once per load** — only without a saved card (a new tab): the
+  newest `help.ask` run (`useThreadRuns(…, { limit: 1 })`) is taken back as
+  the pill when it is still working or has an unseen answer.
 - **Placement**: a `ViewportOverlay` (popover layer — the portaled layers are
   the only ones it offers) holding a `Placed` box in the chrome's fixed theme.
   The position is `AskPosition` `{ h, hx, v, vy }`, anchored to the nearest
@@ -98,8 +102,8 @@ portable `server/` half.
   once the transcript holds that return, so the read (issued after) can only
   miss a task deleted since.
 - **e2e**: `e2e/ask.ts` (asks nothing, so no agent): opens from ?, the
-  corner and the suggestions, a free drag, the corner snap, the position
-  surviving a reload, Close.
+  corner and the suggestions, a free drag, the corner snap, the card still
+  open where it was left after a reload, Close.
 - **Pill**: `useThreadProgress` — the step it is on while working, the question
   once answered, a dot while unseen.
 - The web barrel side-effect-imports the element picker's barrel so its

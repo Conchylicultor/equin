@@ -40,3 +40,26 @@ export const askSeenPageStore = defineStore<string>({
   whenFull: "evict-oldest",
   schema: z.string(),
 });
+
+/**
+ * The card as this tab left it (one entry, `card`): open, minimized or
+ * closed, and the run it held. A reload brings it back as it was; a new tab
+ * (session storage is the tab's own) starts from the once-per-load restore.
+ */
+export const askCardStore = defineStore<AskCardSnapshot>({
+  owner: "hints.ask.card",
+  label: "Ask equin cards",
+  area: "session",
+  cap: "4 KB",
+  ttl: Infinity,
+  whenFull: "evict-oldest",
+  schema: z.object({
+    mode: z.enum(["closed", "open", "min"]),
+    conversationId: z.string().nullable(),
+  }),
+});
+
+export interface AskCardSnapshot {
+  mode: "closed" | "open" | "min";
+  conversationId: string | null;
+}

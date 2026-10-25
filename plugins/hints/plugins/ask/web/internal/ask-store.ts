@@ -1,10 +1,11 @@
 import { useSyncExternalStore } from "react";
+import { askCardStore, type AskCardSnapshot } from "./stores";
 
 /**
  * Where the card is: `closed` (nothing on screen), `open` (the card), `min`
  * (minimized to its pill — only with a run in hand).
  */
-export type AskMode = "closed" | "open" | "min";
+export type AskMode = AskCardSnapshot["mode"];
 
 export interface AskState {
   mode: AskMode;
@@ -22,19 +23,52 @@ export interface AskState {
   restored: boolean;
 }
 
+const CARD_ENTRY = "card";
+
+/**
+ * The state at page load: the card as this tab left it (a reload keeps it —
+ * open, minimized or closed, on the same run), which also settles the
+ * once-per-load restore; else nothing on screen, the restore to come.
+ */
+function initialState(): AskState {
+  const saved = askCardStore.read(CARD_ENTRY);
+  if (saved.kind === "none")
+    return { mode: "closed", conversationId: null, fresh: 0, restored: false };
+  const { conversationId } = saved.value;
+  // `min` is the pill, which only exists with a run in hand.
+  const mode =
+    saved.value.mode === "min" && conversationId === null
+      ? "closed"
+      : saved.value.mode;
+  return { mode, conversationId, fresh: 0, restored: true };
+}
+
 // The page has ONE Ask equin card, mounted at Core.Root above every tab; the
-// help menu's entry and the host both read it.
+// help menu's entry and the host both read it. Read from the tab's storage on
+// first use, not at import.
 // eslint-disable-next-line scoped-store/no-module-mutable-store -- page-global by design: one Ask equin card per page, opened from the ? menu (a popover) and drawn by the Core.Root host, which share no React tree below the root.
-let state: AskState = {
-  mode: "closed",
-  conversationId: null,
-  fresh: 0,
-  restored: false,
-};
+let state: AskState | null = null;
 const listeners = new Set<() => void>();
 
+function current(): AskState {
+  state ??= initialState();
+  return state;
+}
+
 function set(next: Partial<AskState>): void {
-  state = { ...state, ...next };
+  const prev = current();
+  state = { ...prev, ...next };
+  if (
+    state.mode !== prev.mode ||
+    state.conversationId !== prev.conversationId
+  ) {
+    // A refused write is already loud (the store's toast and report); the
+    // card then just won't survive a reload.
+    askCardStore.write(CARD_ENTRY, {
+      mode: state.mode,
+      conversationId: state.conversationId,
+    });
+  }
   for (const l of listeners) l();
 }
 
@@ -45,11 +79,7 @@ function subscribe(cb: () => void): () => void {
 
 /** The card's state, reactive. */
 export function useAskState(): AskState {
-  return useSyncExternalStore(
-    subscribe,
-    () => state,
-    () => state,
-  );
+  return useSyncExternalStore(subscribe, current, current);
 }
 
 /** Open the card — on the run in hand, or empty. */
@@ -64,7 +94,7 @@ export function showRun(conversationId: string): void {
 
 /** Minimize: to the pill with a run in hand, else the card just closes. */
 export function minimizeAsk(): void {
-  set({ mode: state.conversationId === null ? "closed" : "min" });
+  set({ mode: current().conversationId === null ? "closed" : "min" });
 }
 
 /** The pill: back to the card. */
@@ -80,7 +110,7 @@ export function releaseRun(opts: { close: boolean }): void {
   set({
     mode: opts.close ? "closed" : "open",
     conversationId: null,
-    fresh: state.fresh + 1,
+    fresh: current().fresh + 1,
     restored: true,
   });
 }
@@ -91,14 +121,15 @@ export function releaseRun(opts: { close: boolean }): void {
  * A no-op once a run was picked by hand.
  */
 export function settleRestore(conversationId: string | null): void {
-  if (state.restored) return;
-  if (conversationId === null || state.conversationId !== null) {
+  const s = current();
+  if (s.restored) return;
+  if (conversationId === null || s.conversationId !== null) {
     set({ restored: true });
     return;
   }
   set({
     restored: true,
     conversationId,
-    mode: state.mode === "closed" ? "min" : state.mode,
+    mode: s.mode === "closed" ? "min" : s.mode,
   });
 }
