@@ -22,7 +22,7 @@ export function PreviewIndicator() {
       onConfigWriteRefused(() =>
         showToast({
           variant: "error",
-          title: "Config is read-only while previewing git defaults",
+          title: "Config is read-only while previewing the default config",
           description: "Turn the preview off to change it.",
         }),
       ),
@@ -34,7 +34,7 @@ export function PreviewIndicator() {
       icon={previewIcon}
       active
       variant="secondary"
-      label="Previewing git defaults — click to exit"
+      label="Previewing the default config — click to exit"
       onClick={() => setConfigPreview(false)}
     />
   );

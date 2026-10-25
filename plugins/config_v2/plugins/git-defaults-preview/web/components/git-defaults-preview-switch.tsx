@@ -29,7 +29,7 @@ export function GitDefaultsPreviewSwitch() {
       checked={preview}
       onSelect={() => setConfigPreview(!preview)}
     >
-      Preview git defaults
+      Preview default config
     </ControlPanel.Row>
   );
 }

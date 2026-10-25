@@ -50,7 +50,7 @@ boot is unreachable rather than merely rare.
 brand-new user sees, with no user override or runtime fork. Every `useSetConfig` write
 is refused while it is on — announced through `onConfigWriteRefused` (the preview plugin's action-bar mark toasts it; config_v2 cannot import the toast, whose chrome reads config). Kept in session storage (survives a reload, dies
 with the tab); `useConfigPreview()` reads it. Server-side `getConfig` reads are not
-affected. The switch is `config_v2/plugins/git-defaults-preview` (View options,
+affected. The switch is `config_v2/plugins/git-defaults-preview` (View options — "Preview default config",
 developers only — and always while on, since the committed Developer mode is off).
 
 **Server:** `getConfig(myConfig)` reads the current value from the in-memory
