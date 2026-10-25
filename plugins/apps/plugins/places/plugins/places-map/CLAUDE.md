@@ -230,18 +230,19 @@ scrolls, its footer stays):
   `PlaceCard` and `GooglePlaceCard`) swaps its header / body / footer for
   `PhotosHeader` / `PhotosGrid` (the photos header replaces the frame's own,
   Back line included — `cardColumnProps(frame, photos)` in `card-frame.tsx`)
-  and, floating, glides to `PLACE_PHOTOS_WIDTH` (760px, `cardWidthProps` — one
-  element, so the width transitions). Drilled into the side panel it keeps the
-  panel's width (`PANEL_WIDTH`): the panel is a fixed column the map's
-  uncovered area and the pins' padding are measured against, so the photos lay
-  out inside it rather than widening it. It shows every photo Google shares — at most ten, Google's cap, no
+  and glides to `PLACE_PHOTOS_WIDTH` (760px, `cardWidthProps` — one
+  element, so the width transitions) from its frame's width — 340px floating,
+  `PANEL_WIDTH` drilled into the side panel, whose card hugs it and widens
+  leftwards with it. `cardColumnProps` derives the width for every frame, so
+  no frame can draw a card that jumps. It shows every photo Google shares — at most ten, Google's cap, no
   categories — in two columns at their own shape, each credited on hover
   (the place's own uploads marked Owner: the author is named as the place),
   then a "More on Google Maps" tile to the full album; a photo opens the
   viewer (an `ImageGallery`). Back returns to the card. Both share the
   Column's one scroller, so each resets it on mount (`ScrollTopOnMount`). The screen's reach
-  constants still assume the 340px card, so the wider floating panel overlays
-  the map while it is open.
+  constants (and the map's fit-padding probe) keep the resting width — the
+  card's or the panel's — so the wider photos panel overlays the map while it
+  is open, and the camera's padding never moves under the user.
 - **Head**: the name, edited in place (`PlaceTitleInput`: on a Google place it
   writes `title`, and blank or Google's own name clears it, with "On Google:
   <name>" under a title; on a custom place it renames, blank reverts) —

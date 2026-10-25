@@ -142,7 +142,7 @@ export function PlaceCard({
     place.businessStatus !== null && place.businessStatus !== "OPERATIONAL";
 
   // The card and its photos panel are one element, so its width glides
-  // (floating; drilled into the panel it keeps the panel's width).
+  // in every frame (drilled into the side panel, the panel widens with it).
   const showPhotos = photosOpen && rich !== null;
 
   return (

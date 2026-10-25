@@ -37,11 +37,14 @@ function OverlayCard(props: Omit<ComponentProps<typeof Surface>, "level">) {
  * the surface and the card fills it under its Back line.
  *
  * `photos` is the card's photos panel, when open: its header (Back to the
- * card) replaces the frame's own. Floating, the card glides from its width to
- * the photos panel's (`cardWidthProps`: one element, so the width animates).
- * Drilled into the side panel it keeps the panel's width — the panel is a
- * fixed column the map's uncovered area and the pins' padding are measured
- * against, so the photos lay out inside it rather than widening it.
+ * card) replaces the frame's own. In EVERY frame the card glides from its
+ * frame's width to the photos panel's (`cardWidthProps`: one element, so the
+ * width animates) — derived here, once, so no frame can draw a card that
+ * jumps. Drilled into the side panel, the panel's card hugs it and widens
+ * with it (leftwards: the panel is pinned to the right edge). The map's
+ * uncovered area keeps the resting width, like the floating card's: the
+ * photos panel is a transient overlay, and re-measuring would move the
+ * camera's padding under the user while they browse photos.
  */
 export function cardColumnProps(
   frame: CardFrame,
@@ -54,8 +57,11 @@ export function cardColumnProps(
   style: CSSProperties;
 } {
   const clip = clipClasses({ axis: "both", fill: false });
+  const width = cardWidthProps(
+    frame.kind === "floating" ? PLACE_CARD_WIDTH : PANEL_WIDTH,
+    photos !== null,
+  );
   if (frame.kind === "floating") {
-    const width = cardWidthProps(PLACE_CARD_WIDTH, photos !== null);
     return {
       as: OverlayCard,
       ...(photos === null ? {} : { header: photos.header }),
@@ -66,7 +72,7 @@ export function cardColumnProps(
   return {
     fill: true,
     header: photos === null ? frame.back : photos.header,
-    className: clip,
-    style: { width: PANEL_WIDTH },
+    className: cn(clip, width.className),
+    style: width.style,
   };
 }
