@@ -11271,7 +11271,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/icons`
           - `ui/variant-region`
 
-- **`audience`** — Who the user is (user | developer), read live as useAudience() from the Developer mode config; registers that config. ForAudience renders its children only for the audience a feature declares itself for (the gate an audience-aware slot host wraps each contribution in). Registers the Developer mode config and reads the user's audience on the server (getAudience).
+- **`audience`** — Who the user is (user | developer), read live as useAudience() from the Developer mode config; registers that config. Registers the Developer mode config and reads the user's audience on the server (getAudience).
   - Web:
     - Contributes: `ConfigV2.WebRegister` "config"
     - Uses:
@@ -11281,7 +11281,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `primitives/live-state.mapResource`
       - `primitives/live-state.ResourceResult`
     - Exports (values):
-      - `ForAudience`
       - `useAudience`
       - `useSetDeveloperMode`
   - Server:
@@ -11301,25 +11300,28 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Imported by:
       - `apps-core`
       - `apps-core/app-launcher`
+      - `audience/developer-mark`
       - `audience/settings`
       - `audience/view-option`
-      - `config_v2/git-defaults-preview`
       - `hints/ask`
-      - `shell/global-action-bar`
       - `shell/notifications`
       - `shell/toast`
   - Plugins:
-    - **`developer-mark`** — The developer-only mark: DeveloperMark (the developer symbol in the primary tint, inline beside a title or opaque on a corner) DeveloperCorner (the mark overhanging a tile's corner) and DeveloperBadge (the bare symbol on a small control's corner, an action-bar button). Every surface showing something only a developer sees — a developer app's tile, a developer notification or toast — draws it, so one symbol means developer everywhere.
+    - **`developer-mark`** — The developer-only gate and mark: ForAudience (renders its children only for the audience a feature declares, and draws the developer mark on what it shows a developer only, in the form its required `mark` names — badge, label, corner, inline — so nothing is developer-only and unmarked), DeveloperMark (the developer symbol in the primary tint, inline beside a title or opaque on a corner), DeveloperCorner (the mark overhanging a tile's corner) and DeveloperBadge (the bare symbol on a small control's corner, an action-bar button). Every surface showing something only a developer sees — a developer action, app tile, notification or toast — draws the mark, so one symbol means developer everywhere.
       - Web:
         - Uses:
+          - `audience.useAudience`
+          - `primitives/css/control-panel.ControlPanel`
           - `primitives/css/inline.Inline`
           - `primitives/css/pin.Pin`
           - `primitives/css/ui-kit.WithTooltip`
           - `ui/icons.Icon`
+        - Exports (types): `AudienceMark`
         - Exports (values):
           - `DeveloperBadge`
           - `DeveloperCorner`
           - `DeveloperMark`
+          - `ForAudience`
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/color-palette --background`
@@ -13214,14 +13216,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ActionBar.ViewOption` → `GitDefaultsPreviewSwitch`
           - `ActionBar.Item` → `PreviewIndicator`
         - Uses:
-          - `audience.useAudience`
-          - `audience/developer-mark.DeveloperMark`
+          - `audience/developer-mark.ForAudience`
           - `config_v2.onConfigWriteRefused`
           - `config_v2.setConfigPreview`
           - `config_v2.useConfigPreview`
           - `primitives/css/control-panel.ControlPanel`
           - `primitives/icon-button.IconButton`
-          - `primitives/loading.Loading`
           - `shell/action-bar.ActionBar`
           - `shell/toast.showToast`
           - `ui/icons.Icon`
@@ -38293,13 +38293,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×7
               - `ui/tokens/shape` ×2
               - `ui/tokens/shadow --shadow`
-            - Imported by: 44 plugins — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
+            - Imported by: 45 plugins — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
               - `apps` ×15
               - `page` ×5
               - `primitives` ×4
+              - `audience` ×3
               - `config_v2` ×3
               - `tasks` ×3
-              - `audience` ×2
               - `fields` ×2
               - `hints` ×2
               - `ui` ×2
@@ -42116,7 +42116,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-body`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-body`
-        - Imported by: 210 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+        - Imported by: 209 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
           - `apps` ×66
           - `ui` ×22
           - `conversations` ×19
@@ -42131,12 +42131,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `active-data` ×2
           - `apps-core` ×2
           - `audience` ×2
-          - `config_v2` ×2
           - `integrations` ×2
           - `map` ×2
           - `menu-bar` ×2
           - `backup`
           - `code-explorer/commit-detail`
+          - `config_v2/settings`
           - `fields/secret/config`
           - `framework/browser-server/demo/scope`
           - `hints/ask`
@@ -47178,17 +47178,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Apps.TabBarActions` "Tab bar actions" → `DockedActionBarHost`
           - `ActionBar.Item` → `ViewOptionsButton`
           - `ConfigV2.WebRegister` "config"
-        - Uses: 29 symbols — full list in [`plugins/shell/plugins/global-action-bar/REFERENCE.md`](../plugins/shell/plugins/global-action-bar/REFERENCE.md)
+        - Uses: 27 symbols — full list in [`plugins/shell/plugins/global-action-bar/REFERENCE.md`](../plugins/shell/plugins/global-action-bar/REFERENCE.md)
           - `apps-core/tabs` ×3
           - `primitives/css/ui-kit` ×3
           - `audience/developer-mark` ×2
           - `config_v2` ×2
-          - `primitives/css/control-panel` ×2
           - `primitives/overlay/floating-action` ×2
           - `apps-core/chrome-theme.chromeThemeScope`
           - `apps-core.Apps`
-          - `audience.ForAudience`
           - `hints.useHintAnchor`
+          - `primitives/css/control-panel.ControlPanelPopover`
           - `primitives/css/spacing.Stack`
           - `primitives/css/theme-boundary.Theme`
           - `primitives/dom/element-size.useResizeObserver`

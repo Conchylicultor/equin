@@ -10,14 +10,12 @@
     - `ActionBar.ViewOption` → `GitDefaultsPreviewSwitch`
     - `ActionBar.Item` → `PreviewIndicator`
   - Uses:
-    - `audience.useAudience`
-    - `audience/developer-mark.DeveloperMark`
+    - `audience/developer-mark.ForAudience`
     - `config_v2.onConfigWriteRefused`
     - `config_v2.setConfigPreview`
     - `config_v2.useConfigPreview`
     - `primitives/css/control-panel.ControlPanel`
     - `primitives/icon-button.IconButton`
-    - `primitives/loading.Loading`
     - `shell/action-bar.ActionBar`
     - `shell/toast.showToast`
     - `ui/icons.Icon`

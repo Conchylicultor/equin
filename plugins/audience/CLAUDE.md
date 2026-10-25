@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Who the user is (user | developer), read live as useAudience() from the Developer mode config; registers that config. ForAudience renders its children only for the audience a feature declares itself for (the gate an audience-aware slot host wraps each contribution in). Registers the Developer mode config and reads the user's audience on the server (getAudience).
+- Description: Who the user is (user | developer), read live as useAudience() from the Developer mode config; registers that config. Registers the Developer mode config and reads the user's audience on the server (getAudience).
 - Web:
   - Contributes: `ConfigV2.WebRegister` "config"
   - Uses:
@@ -14,7 +14,6 @@
     - `primitives/live-state.mapResource`
     - `primitives/live-state.ResourceResult`
   - Exports (values):
-    - `ForAudience`
     - `useAudience`
     - `useSetDeveloperMode`
 - Server:
@@ -34,15 +33,14 @@
   - Imported by:
     - `apps-core`
     - `apps-core/app-launcher`
+    - `audience/developer-mark`
     - `audience/settings`
     - `audience/view-option`
-    - `config_v2/git-defaults-preview`
     - `hints/ask`
-    - `shell/global-action-bar`
     - `shell/notifications`
     - `shell/toast`
 - Sub-plugins:
-  - **`developer-mark`** — The developer-only mark: DeveloperMark (the developer symbol in the primary tint, inline beside a title or opaque on a corner) DeveloperCorner (the mark overhanging a tile's corner) and…
+  - **`developer-mark`** — The developer-only gate and mark: ForAudience (renders its children only for the audience a feature declares, and draws the developer mark on what it shows a developer only, in the form its required…
   - **`settings`** — The Developer mode switch in Settings: a Profile sidebar entry opening a pane that switches the user's audience (user | developer).
   - **`view-option`** — The Developer mode switch in the action bar's view-options popover — the same setting as Settings → Profile.
 

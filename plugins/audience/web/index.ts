@@ -3,11 +3,10 @@ import { ConfigV2 } from "@plugins/config_v2/web";
 import { audienceConfig } from "../shared/config";
 
 export { useAudience } from "./use-audience";
-export { ForAudience } from "./for-audience";
 export { useSetDeveloperMode } from "./use-set-developer-mode";
 
 export default {
   description:
-    "Who the user is (user | developer), read live as useAudience() from the Developer mode config; registers that config. ForAudience renders its children only for the audience a feature declares itself for (the gate an audience-aware slot host wraps each contribution in).",
+    "Who the user is (user | developer), read live as useAudience() from the Developer mode config; registers that config.",
   contributions: [ConfigV2.WebRegister({ descriptor: audienceConfig })],
 } satisfies PluginDefinition;
