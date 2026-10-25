@@ -65,6 +65,22 @@ describe("ImageGallery", () => {
     ).toHaveProperty("disabled", true);
   });
 
+  it("keeps the keys working once a step disables the focused arrow", () => {
+    render(<Transcript names={["a", "b", "c"]} />);
+    open("b");
+    const next = screen.getByRole("button", { name: "Next image" });
+    next.focus();
+    fireEvent.click(next);
+    showing("c");
+    // The › arrow is now disabled: focus must be back on the viewer, or the
+    // next key lands on <body>, outside its handler.
+    expect(document.activeElement).toBe(viewer());
+    fireEvent.keyDown(document.activeElement ?? document.body, {
+      key: "ArrowLeft",
+    });
+    showing("b");
+  });
+
   it("keeps the open image when another registers before it", () => {
     const { rerender } = render(<Transcript names={["a", "c"]} />);
     open("c");

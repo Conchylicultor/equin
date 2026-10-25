@@ -754,13 +754,19 @@ function ViewerFrame({
   const stripShown = strip && single && !slideshow && navigable;
 
   // A view change can unmount the focused control (a strip thumbnail, a grid
-  // tile). Focus would fall to <body>, outside the viewer's key handler — so
-  // take it back to the viewer root.
+  // tile), and a step can disable it (the › arrow on reaching the last image).
+  // Focus would fall to <body>, outside the viewer's key handler — so take it
+  // back to the viewer root.
   useEffect(() => {
     const root = rootRef.current;
-    if (root && !root.contains(document.activeElement))
+    const active = document.activeElement;
+    if (
+      root &&
+      (!root.contains(active) ||
+        (active instanceof HTMLButtonElement && active.disabled))
+    )
       root.focus({ preventScroll: true });
-  }, [layout, stripShown, slideshow]);
+  }, [layout, stripShown, slideshow, index]);
 
   return (
     <ViewportOverlay
