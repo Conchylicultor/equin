@@ -454,6 +454,10 @@ To CREATE one, use \`edit_page\` on the page that should hold it: a tagless
 \`<agent-page title="…">\` … \`</agent-page>\` mints an agent page there, its
 body becoming the new page's content. There is no separate append tool.
 
+To show a prototype you built (\`proto-…\`), write \`<prototype id="proto-…"/>\` on
+a line of its own: it renders as the mock's preview, playable in place.
+\`read_page\` shows it back as \`<prototype id="…" title="…"/>\`, \`title\` read-only.
+
 \`content\` is the block's CONTENTS, not the block. Write ordinary markdown
 (paragraphs, lists, headings); do not wrap it in an \`<agent-inline>\` tag
 yourself, or you get a card inside this one rather than the contents of this one

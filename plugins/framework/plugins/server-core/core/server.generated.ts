@@ -418,6 +418,7 @@ export const serverEntries: CollectedEntry[] = [
   { pluginPath: "page/plugins/place", id: "page.place", loader: () => import("@plugins/page/plugins/place/server"), dependsOn: ["network/plugins/live", "page/plugins/editor"] },
   { pluginPath: "page/plugins/prompt/plugins/block", id: "page.prompt.block", loader: () => import("@plugins/page/plugins/prompt/plugins/block/server"), dependsOn: ["page/plugins/editor"] },
   { pluginPath: "page/plugins/prompt/plugins/link", id: "page.prompt.link", loader: () => import("@plugins/page/plugins/prompt/plugins/link/server"), dependsOn: ["infra/plugins/endpoints", "infra/plugins/entity-extensions", "network/plugins/live", "tasks/plugins/task-category", "tasks/plugins/task-title", "tasks/plugins/tasks-core"] },
+  { pluginPath: "page/plugins/prototype", id: "page.prototype", loader: () => import("@plugins/page/plugins/prototype/server"), dependsOn: ["apps/plugins/prototypes/plugins/files", "page/plugins/editor"] },
   { pluginPath: "page/plugins/quote", id: "page.quote", loader: () => import("@plugins/page/plugins/quote/server"), dependsOn: ["page/plugins/editor"] },
   { pluginPath: "page/plugins/table", id: "page.table", loader: () => import("@plugins/page/plugins/table/server"), dependsOn: ["page/plugins/editor"] },
   { pluginPath: "page/plugins/tags", id: "page.tags", loader: () => import("@plugins/page/plugins/tags/server"), dependsOn: ["database", "ids", "infra/plugins/endpoints", "infra/plugins/entities", "infra/plugins/entity-extensions", "network/plugins/live", "page/plugins/editor"] },

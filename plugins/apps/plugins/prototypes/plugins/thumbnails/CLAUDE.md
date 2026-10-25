@@ -205,7 +205,9 @@ Design: `research/2026-08-16-apps-prototype-gallery-thumbnails.md`.
     - `ThumbnailStateSchema`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shadow --shadow`
-  - Imported by: `apps/prototypes/gallery`
+  - Imported by:
+    - `apps/prototypes/gallery`
+    - `page/prototype`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/cache.ts`, `server/internal/hash-dir.ts`, `server/internal/render.ts` (debt)
 

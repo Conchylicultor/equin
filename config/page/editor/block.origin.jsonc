@@ -1,4 +1,4 @@
-// @hash af093923bc78
+// @hash 508f5b01245d
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -30,6 +30,7 @@
     "page.page-link:page-link",
     "page.place:place",
     "page.prompt.block:prompt",
+    "page.prototype:prototype",
     "page.quote:quote",
     "page.sub-page:page",
     "page.table:table",

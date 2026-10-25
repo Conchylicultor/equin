@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-page-prototype",
+  "description": "Prototype block type: links a prototype (proto-…) into a page — its rendered preview, played live in place, opened beside the page.",
+  "private": true,
+  "version": "0.0.1"
+}

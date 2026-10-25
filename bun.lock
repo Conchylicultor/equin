@@ -4665,6 +4665,10 @@
       "name": "@equin/plugin-page-prompt-link",
       "version": "0.0.1",
     },
+    "plugins/page/plugins/prototype": {
+      "name": "@equin/plugin-page-prototype",
+      "version": "0.0.1",
+    },
     "plugins/page/plugins/quote": {
       "name": "@equin/plugin-page-quote",
       "version": "0.0.1",
@@ -8948,6 +8952,8 @@
     "@equin/plugin-page-prompt-block": ["@equin/plugin-page-prompt-block@workspace:plugins/page/plugins/prompt/plugins/block"],
 
     "@equin/plugin-page-prompt-link": ["@equin/plugin-page-prompt-link@workspace:plugins/page/plugins/prompt/plugins/link"],
+
+    "@equin/plugin-page-prototype": ["@equin/plugin-page-prototype@workspace:plugins/page/plugins/prototype"],
 
     "@equin/plugin-page-quote": ["@equin/plugin-page-quote@workspace:plugins/page/plugins/quote"],
 

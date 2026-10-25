@@ -244,7 +244,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`watched-memo`** — Watch-authoritative result memo: createWatchedMemo({ name, facts, signatureOf, compute, changes }) keeps one value per key fresh from its change source while anyone watches it — every change runs…
     - **`zod-parser`** — ZodParser<T> — the type of a schema that parses untrusted input into a T — and its enforcing lint rule (no-narrow-zodtype), which bans the one-argument ZodType<T> whose Input silently defaults to…
 
-- **`page`** [test helpers] [exempt] [71 sub-plugins] — Block-based page editor.
+- **`page`** [test helpers] [exempt] [72 sub-plugins] — Block-based page editor.
 
 - **`plugin-meta`** — Plugins about the plugin system itself — browsing, inspecting, and publishing.
   - Plugins:

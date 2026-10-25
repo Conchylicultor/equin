@@ -4443,8 +4443,8 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `Editor.BlockMenuItem`
     - `Editor.FormatAction`
     - `Editor.InsertAction`
-  - Slot contributors: 52 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `Editor.Block` ×30
+  - Slot contributors: 53 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Editor.Block` ×31
     - `Editor.BlockFrame` ×8
     - `Editor.FormatAction` ×7
     - `Editor.InsertAction` ×4
@@ -4907,8 +4907,8 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `ui/tokens/shape` ×2
     - `ui/tokens/font-family --font-mono`
     - `ui/tokens/shadow --shadow`
-  - Imported by: 78 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `page` ×58
+  - Imported by: 79 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `page` ×59
     - `apps` ×9
     - `reports` ×4
     - `active-data` ×3

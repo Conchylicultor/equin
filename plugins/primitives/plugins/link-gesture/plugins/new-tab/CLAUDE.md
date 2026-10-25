@@ -69,6 +69,7 @@ the forms above — or, if the control does not open a browser tab, another glyp
     - `hints/help-menu`
     - `integrations/youtube`
     - `page/embed`
+    - `page/prototype`
     - `primitives/overlay/image-viewer`
     - `primitives/setup-steps`
     - `tasks/task-events`

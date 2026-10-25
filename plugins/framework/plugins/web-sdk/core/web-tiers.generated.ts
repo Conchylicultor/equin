@@ -29,6 +29,7 @@
 //   - apps/plugins/prototypes/plugins/files: dependency closure (imported by an eager plugin)
 //   - apps/plugins/prototypes/plugins/icons: dependency closure (imported by an eager plugin)
 //   - apps/plugins/prototypes/plugins/state: dependency closure (imported by an eager plugin)
+//   - apps/plugins/prototypes/plugins/thumbnails: dependency closure (imported by an eager plugin)
 //   - apps/plugins/sonata/plugins/document: dependency closure (imported by an eager plugin)
 //   - apps/plugins/sonata/plugins/library: dependency closure (imported by an eager plugin)
 //   - apps/plugins/sonata/plugins/player: dependency closure (imported by an eager plugin)
@@ -134,7 +135,6 @@ export const DEFERRED_PLUGIN_PATHS: ReadonlySet<string> = new Set([
   "apps/plugins/prototypes/plugins/copy-id",
   "apps/plugins/prototypes/plugins/gallery",
   "apps/plugins/prototypes/plugins/present",
-  "apps/plugins/prototypes/plugins/thumbnails",
   "apps/plugins/settings/plugins/accounts",
   "apps/plugins/settings/plugins/appearance",
   "apps/plugins/settings/plugins/config",
