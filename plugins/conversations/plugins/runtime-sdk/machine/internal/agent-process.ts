@@ -130,8 +130,14 @@ export function nextLaunchAccount(): string {
 function previousNamedClaudeBin(id: string): string | null {
   const path = agentOptionsPath(id);
   if (!existsSync(path)) return null;
-  return AgentLaunchOptionsSchema.parse(JSON.parse(readFileSync(path, "utf8")))
-    .namedClaudeBin;
+  return readAgentOptions(id).namedClaudeBin;
+}
+
+/** The options file the conversation's last start wrote. */
+export function readAgentOptions(id: string): AgentLaunchOptions {
+  return AgentLaunchOptionsSchema.parse(
+    JSON.parse(readFileSync(agentOptionsPath(id), "utf8")),
+  );
 }
 
 /**

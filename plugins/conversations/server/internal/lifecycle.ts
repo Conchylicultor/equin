@@ -662,10 +662,12 @@ async function preflightResume(
 }
 
 // Shared resume mechanics: clear the stale (dead) pane, reset the row to
-// "starting" so the status reconciler tracks the new session (and the
-// STARTING_TIMEOUT safety net, applied by the status sweep, catches a failed
-// resume → gone), and spawn a fresh `claude --resume`
-// pane. Does NOT touch task hold/drop or the hibernation flag — callers own those.
+// "starting" so the status reconciler tracks the new session, and spawn a fresh
+// `claude --resume` pane. A spawn that throws puts the status back before the
+// error propagates: nothing else would — the status sweep re-hibernates a
+// resumable row without touching its status, so a row left `starting` read as
+// "Starting…" forever and held every turn sent to it (conv-1792870576-sqefl8).
+// Does NOT touch task hold/drop or the hibernation flag — callers own those.
 //
 // Re-runs `preflightResume` as the invariant guard rather than trusting callers:
 // every statement below is destructive (kills the pane, rewrites status), so the
@@ -685,28 +687,45 @@ async function respawnResume(row: Conversation): Promise<void> {
   // "done" rows are skipped and the conversation stays stuck as done.
   await updateConversation(row.id, { status: "starting", endedAt: null });
 
-  await runtime.create(
-    row.id,
-    workspace.path,
-    Workspace.get(workspace.spec.kind).launch(workspace, {
-      conversationId: row.id,
-    }),
-    {
-      resumeSessionId: row.claudeSessionId!,
-      // Not in the transcript: the system prompt is given anew on every spawn.
-      appendSystemPrompt: systemPromptAppend(
-        await getConversationPreprompt(row.id),
-      ),
-      model: row.model,
-      effort: await resolveTaskEffort(row.taskId),
-    },
-  );
+  try {
+    await runtime.create(
+      row.id,
+      workspace.path,
+      Workspace.get(workspace.spec.kind).launch(workspace, {
+        conversationId: row.id,
+      }),
+      {
+        resumeSessionId: row.claudeSessionId!,
+        // Not in the transcript: the system prompt is given anew on every spawn.
+        appendSystemPrompt: systemPromptAppend(
+          await getConversationPreprompt(row.id),
+        ),
+        model: row.model,
+        effort: await resolveTaskEffort(row.taskId),
+      },
+    );
+  } catch (err) {
+    await updateConversation(row.id, {
+      status: statusAfterFailedResume(row.status),
+      endedAt: row.endedAt,
+    });
+    throw err;
+  }
 
   // A turn held while this conversation was last `starting` (a launch that
   // never came up, then went `gone`) is delivered now that a session runs
   // again. The flip out of the `starting` set above enqueues the flush too;
   // dedup folds the two.
   await deliverHeldTurnsJob.enqueue({ conversationId: row.id });
+}
+
+// The status a row whose resume failed goes back to: the one it had, except a
+// live one — the agent was just deleted, so nothing is starting or computing,
+// and `waiting` is what a hibernated conversation shows.
+function statusAfterFailedResume(
+  status: Conversation["status"],
+): Exclude<Conversation["status"], "working"> {
+  return status === "starting" || status === "working" ? "waiting" : status;
 }
 
 export async function resumeConversation(id: string): Promise<Conversation> {

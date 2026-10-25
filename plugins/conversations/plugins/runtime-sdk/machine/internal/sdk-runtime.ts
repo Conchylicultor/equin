@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { z } from "zod";
 import type {
   ConversationRuntime,
@@ -14,11 +14,9 @@ import { agentLaunchPolicy } from "@plugins/conversations/plugins/agent-launch/s
 import { requireClaudeBin } from "@plugins/infra/plugins/claude-cli/plugins/availability/server";
 import { recordReport } from "@plugins/reports/plugins/engine/server";
 import {
-  AgentLaunchOptionsSchema,
   DismissReplySchema,
   TurnReplySchema,
   USAGE_LIMIT_ERROR,
-  type AgentLaunchOptions,
 } from "../../core";
 import {
   continueRelaunchOptions,
@@ -40,13 +38,14 @@ import {
   startConsumer,
   waitForProjection,
 } from "./consumer";
-import { agentEventsPath, agentOptionsPath } from "./paths";
+import { agentEventsPath } from "./paths";
 import {
   attachRunningAgents,
   awaitAgentExit,
   forgetAgentProcess,
   killAgentProcess,
   nextLaunchAccount,
+  readAgentOptions,
   startAgentProcess,
   type StartedAgent,
 } from "./agent-process";
@@ -93,18 +92,6 @@ function eventsExist(id: string): boolean {
   return [path, `${path}.1`, `${path}.2`, `${path}.3`].some((p) =>
     existsSync(p),
   );
-}
-
-function readOptions(id: string): AgentLaunchOptions {
-  const raw = JSON.parse(readFileSync(agentOptionsPath(id), "utf8")) as Record<
-    string,
-    unknown
-  >;
-  // An options file written before launches named their guards root (Oct
-  // 2026). Its settings carry no policy hooks, so the root only bounds the
-  // write guards — its cwd, the workspace itself, is that.
-  if (!("guardsRoot" in raw)) raw.guardsRoot = raw.cwd;
-  return AgentLaunchOptionsSchema.parse(raw);
 }
 
 /**
@@ -269,7 +256,7 @@ async function moveOffSpentAccount(id: string): Promise<void> {
   if (row?.stopError !== USAGE_LIMIT_ERROR || !row.sessionId || row.working)
     return;
   if (nextLaunchAccount() === row.account) return;
-  const relaunch = continueRelaunchOptions(readOptions(id), row.sessionId);
+  const relaunch = continueRelaunchOptions(readAgentOptions(id), row.sessionId);
   await stopAgent(id);
   await recordLaunchSession(id, relaunch.sessionId);
   await awaitStart(id, await startAgentProcess(id, relaunch));
@@ -373,7 +360,7 @@ export const sdkRuntime: ConversationRuntime = {
         `SDK agent ${id}: cannot take the stopped turn back — no session id yet`,
       );
     }
-    const relaunch = rewindRelaunchOptions(readOptions(id), {
+    const relaunch = rewindRelaunchOptions(readAgentOptions(id), {
       sessionId: settled.sessionId,
       anchorUuid: settled.rewindAnchorUuid,
       promptUuid: settled.lastPromptUuid,

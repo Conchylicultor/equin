@@ -220,13 +220,21 @@ const McpServerSchema = z.object({ type: z.literal("http"), url: z.string() });
  * JSON file in the agent's directory — no settings object is ever shell-quoted
  * through tmux. The workspace's typed launch fragment maps onto the SDK's own
  * options one to one.
+ *
+ * Every reader of the file parses it here, so an options file written before a
+ * field existed is defaulted in this one place, never per reader.
  */
-export const AgentLaunchOptionsSchema = z.object({
+export const AgentLaunchOptionsSchema = z.preprocess(
+  defaultLegacyGuardsRoot,
+  z.object({
   cwd: z.string(),
   /**
    * The checkout whose guard scripts the launch's policy hooks run (the
    * workspace's `LaunchFragment.guardsRoot`), delivered to the agent's
-   * environment as `SINGULARITY_GUARDS_ROOT`.
+     * environment as `SINGULARITY_GUARDS_ROOT`. Defaulted to `cwd` for an
+     * options file written before launches named it (Oct 2026): its settings
+     * carry no policy hooks, so the root only bounds the write guards, and its
+     * cwd — the workspace itself — is that.
    */
   guardsRoot: z.string(),
   /** The system `claude` the SDK runs (`pathToClaudeCodeExecutable`). */
@@ -284,5 +292,12 @@ export const AgentLaunchOptionsSchema = z.object({
    * those sessions carry their instructions in the transcript instead.
    */
   appendSystemPrompt: z.string().nullable().default(null),
-});
+  }),
+);
 export type AgentLaunchOptions = z.infer<typeof AgentLaunchOptionsSchema>;
+
+function defaultLegacyGuardsRoot(raw: unknown): unknown {
+  if (typeof raw !== "object" || raw === null || "guardsRoot" in raw)
+    return raw;
+  return { ...raw, guardsRoot: (raw as { cwd?: unknown }).cwd };
+}
