@@ -1,14 +1,16 @@
 // Matches file paths with at least one directory separator, e.g.
-// research/2026-04-26-foo.md, docs/plugins.md, ~/.singularity/worktrees/central.json, ~/.zshrc
+// research/2026-04-26-foo.md, docs/plugins.md, ~/.singularity/worktrees/central.json, ~/.zshrc,
+// /tmp/promo/video.webm
 // Two path shapes:
 //   ~/[dirs/]file  — home-rooted; zero or more extra dir segments after ~/
-//   [~/]dirs/file  — relative or home-rooted with at least one dir segment
+//   [/]dirs/file   — relative or absolute, with at least one dir segment (the
+//                    file peek reads an absolute one from the host)
 // Final segment must either contain a dot (xx.yy, .zshrc, .tmux.conf) or be a
 // well-known extensionless name (Makefile, Dockerfile, …).
-// The : in the lookbehind prevents matching URL port numbers (e.g. localhost:9000/plugins/...)
+// The : and \w in the lookbehind keep URL paths out (localhost:9000/plugins/..., example.com/a/b.png)
 // Optional (?::(\d+)(?!\w))? captures a trailing :N line number (e.g. foo.ts:148).
 export const FILE_PATH_RE =
-  /(?<![\w./~:-])((?:~\/(?:[\w.\-]+\/)*|(?:[\w.\-]+\/)+)(?:[\w\-]*(?:\.[\w\-]+)+|Makefile|Dockerfile|Gemfile|Rakefile|Procfile|Brewfile))(?::(\d+)(?!\w))?(?![\w/-])/g;
+  /(?<![\w./~:-])((?:~\/(?:[\w.\-]+\/)*|\/?(?:[\w.\-]+\/)+)(?:[\w\-]*(?:\.[\w\-]+)+|Makefile|Dockerfile|Gemfile|Rakefile|Procfile|Brewfile))(?::(\d+)(?!\w))?(?![\w/-])/g;
 
 // Matches http/https URLs; strips trailing sentence punctuation.
 export const URL_RE = /https?:\/\/[^\s<>"{}|\\^`[\]]+/g;
