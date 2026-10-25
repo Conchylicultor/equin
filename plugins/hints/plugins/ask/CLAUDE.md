@@ -83,9 +83,10 @@ portable `server/` half.
   top-right corner sits below the action bar.
 - **Empty state**: `pickSuggestions(Math.random)` (two fixed newcomer
   questions + one rotating) and a first-question `TextEditor` (draft in
-  `askQuestionDraft`). For a developer (`useAudience`), an **Agent
+  `askQuestionDraft`). For a developer (`ForAudience`), an **Agent
   instructions** row under the suggestions (`DeveloperMark`) opens the Ask
-  equin config (`useConfigLink(askConfig)`). The first send captures the context — `useActiveApp`,
+  equin config (`useConfigLink(askConfig)`); in a thread the same is a header
+  action (`AgentInstructionsButton`, `DeveloperBadge`). The first send captures the context — `useActiveApp`,
   `usePathname`, `useFocusedTabTitle`, and
   `collectOutline(document.body, { exclude: [card] })` — and starts the run
   with `useStartThread` (Help category, `askConfig.model`). Sends wait while
@@ -100,7 +101,7 @@ portable `server/` half.
   action still clicks: `useDragGesture` drags from a control only past its
   threshold): the mark and the question, then Open in Agent Manager
   (`OpenConversationButton display="icon"`), New question (lets go of the run;
-  it stays in the Agent Manager), Minimize and `EndThreadButton` (Done). No
+  it stays in the Agent Manager), Agent instructions (developer only), Minimize and `EndThreadButton` (Done). No
   status in it — the steps show live in the body, the pill when minimized.
 - **A filed task** renders as `FiledTaskCard`: `useLiveRow(taskRows, taskId)`
   — the live task's status and title, opening its newest conversation (`useTaskConversations`), or its detail pane until a run has started. Loading until
@@ -134,7 +135,7 @@ portable `server/` half.
 
 ## Plugin reference
 
-- Description: Ask equin, web half: the ? menu's entry (Ask equin how to… / Back to your question), and the AskHost at Core.Root — a draggable card in the chrome's theme holding one threaded conversation with the help agent (AgentThread; a filed task shows as its live status and title, opening in the Agent Manager), above every tab so it follows the user across apps: suggested questions (plus, for a developer, an Agent instructions row opening the Ask equin config) and a first-question box when empty (the first send attaches the focused app, route, tab title and the page outline), minimized to a pill with the step it is on and an unseen dot, its position kept edge-anchored and snapped only near a corner, and the newest unseen or working run taken back as the pill once per load. A reply sent from another page carries that page (a <page-context> token after the words, drawn as a chip naming the page). Registers the Ask equin config with both model pickers. Ask equin, server half: the help agent's reserved ask_file_task tool (a task with no folder or dependency edges, in the default worktree workspace, filed under Improvements and armed with the configured model so it launches at once), and the Ask equin config (the answering model, the filed tasks' model, the help agent's whole prompt as an editable template).
+- Description: Ask equin, web half: the ? menu's entry (Ask equin how to… / Back to your question), and the AskHost at Core.Root — a draggable card in the chrome's theme holding one threaded conversation with the help agent (AgentThread; a filed task shows as its live status and title, opening in the Agent Manager), above every tab so it follows the user across apps: suggested questions (plus, for a developer, an Agent instructions row opening the Ask equin config — a header action once a thread runs) and a first-question box when empty (the first send attaches the focused app, route, tab title and the page outline), minimized to a pill with the step it is on and an unseen dot, its position kept edge-anchored and snapped only near a corner, and the newest unseen or working run taken back as the pill once per load. A reply sent from another page carries that page (a <page-context> token after the words, drawn as a chip naming the page). Registers the Ask equin config with both model pickers. Ask equin, server half: the help agent's reserved ask_file_task tool (a task with no folder or dependency edges, in the default worktree workspace, filed under Improvements and armed with the configured model so it launches at once), and the Ask equin config (the answering model, the filed tasks' model, the help agent's whole prompt as an editable template).
 - Web:
   - Contributes:
     - `Core.Root` → `AskHost`
@@ -143,9 +144,10 @@ portable `server/` half.
     - `ConfigV2.WebRegister` "config"
     - `DynamicEnum.Options` "Model for filed tasks"
     - `DynamicEnum.Options` "Model"
-  - Uses: 66 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 67 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations/agent-thread` ×7
     - `apps-core` ×2
+    - `audience/developer-mark` ×2
     - `config_v2` ×2
     - `hints/help-menu` ×2
     - `primitives/css/coords` ×2
@@ -158,8 +160,7 @@ portable `server/` half.
     - `tasks/task-status` ×2
     - `apps-core/chrome-theme.chromeThemeScope`
     - `apps-core/tabs.useFocusedTabTitle`
-    - `audience/developer-mark.DeveloperMark`
-    - `audience.useAudience`
+    - `audience.ForAudience`
     - `config_v2/config-link.useConfigLink`
     - `conversations/conversation-view.conversationPane`
     - `conversations/model-provider.useModelChoiceOptions`

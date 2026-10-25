@@ -28,7 +28,10 @@ import {
 } from "../internal/use-ask";
 import { useRunQuestion } from "../internal/use-question";
 import { FiledTaskCard } from "./filed-task-card";
-import { AgentInstructionsRow } from "./instructions-row";
+import {
+  AgentInstructionsButton,
+  AgentInstructionsRow,
+} from "./instructions-row";
 
 const askIcon = symbol("forum");
 const minimizeIcon = symbol("remove");
@@ -132,6 +135,7 @@ export function AskThreadCard({
                 label="New question"
                 onClick={() => releaseRun({ close: false })}
               />
+              <AgentInstructionsButton />
               <IconButton
                 icon={minimizeIcon}
                 label="Minimize"
