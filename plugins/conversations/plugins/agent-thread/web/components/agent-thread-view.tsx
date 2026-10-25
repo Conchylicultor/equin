@@ -147,26 +147,22 @@ function TurnView<D extends ThreadResultDef>({
   conversationId,
   turn,
   latest,
+  working,
   renderResult,
   resultWords,
 }: {
   conversationId: string;
   turn: ThreadTurn<D>;
   latest: boolean;
+  /** The agent is working on this turn (not waiting on the user). */
+  working: boolean;
   renderResult: RenderThreadResult<D>;
   resultWords: ResultWords;
 }) {
-  // The agent is between tools, thinking: say it is still on it. Words it is
-  // writing say so themselves.
-  const thinking =
-    turn.state === "running" &&
-    !turn.steps.some((s) => s.state === "running") &&
-    !turn.answer?.streaming;
   return (
     <Stack gap="sm">
       <UserBubble text={turn.user.text} />
       <StepList turn={turn} resultWords={resultWords} />
-      {thinking && <BouncingDots />}
       {turn.answer && (
         <AgentProse
           text={turn.answer.text}
@@ -184,6 +180,11 @@ function TurnView<D extends ThreadResultDef>({
           )}
         </Fragment>
       ))}
+      {/* The agent is on this turn: said at its foot for the whole of it, as
+          the transcript's activity line is — through the words it is
+          writing too, so a stalled stream or the gap before a tool call
+          lands never reads as a finished answer. */}
+      {working && <BouncingDots />}
       {turn.state === "failed" && (
         <Text as="div" variant="caption" tone="destructive">
           The agent stopped without an answer — open the conversation to see
@@ -304,6 +305,11 @@ export function AgentThreadView<D extends ThreadResultDef>(
                       key={`${turn.user.at}:${i}`}
                       turn={turn}
                       latest={i === turns.length - 1}
+                      working={
+                        i === turns.length - 1 &&
+                        turn.state === "running" &&
+                        state === "working"
+                      }
                       renderResult={renderResult}
                       resultWords={resultWords}
                     />

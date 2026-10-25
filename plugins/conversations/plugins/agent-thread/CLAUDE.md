@@ -90,8 +90,11 @@ newest turn's finished steps, its running step, its accepted results, and
   `StreamingMessage` makes) and hands it to `groupThread` as `writing`, so the
   running turn's answer is the text as far as it is written
   (`answer.streaming`), revealed steadily with the same fading edge until the
-  transcript holds it. The bouncing dots show only while the agent is between
-  tools and not writing. Hosts reading `useThread*` (a pill) see finished
+  transcript holds it. The bouncing dots sit at the foot of the turn the
+  agent is working on for the whole of it (not while it waits on the user)
+  — the transcript's activity line — streaming included, so a stalled
+  stream or a tool call still being written never reads as a finished
+  answer. Hosts reading `useThread*` (a pill) see finished
   answers only.
   `AgentThreadView` mounts a `PromptComposerProvider` over answers and
   composer, and `ThreadComposer` registers as its prompt
