@@ -1,7 +1,7 @@
-import { ForAudience } from "@plugins/audience/web";
+import { useAudience } from "@plugins/audience/web";
 import {
-  DeveloperBadge,
   DeveloperMark,
+  ForAudience,
 } from "@plugins/audience/plugins/developer-mark/web";
 import { useConfigLink } from "@plugins/config_v2/plugins/config-link/web";
 import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
@@ -32,11 +32,12 @@ function useOpenInstructions() {
  * whole prompt — tune it there, then port the edit back to the code default.
  */
 export function AgentInstructionsRow() {
-  return (
-    <ForAudience audience="developer">
-      <InstructionsRow />
-    </ForAudience>
-  );
+  // Gated by hand, not ForAudience: its mark sits inside the row, after the
+  // label, which none of ForAudience's mark forms draws.
+  const audience = useAudience();
+  if (audience.status === "error") throw audience.error;
+  if (audience.status === "loading") return null;
+  return audience.data === "developer" ? <InstructionsRow /> : null;
 }
 
 function InstructionsRow() {
@@ -71,7 +72,7 @@ function InstructionsRow() {
  */
 export function AgentInstructionsButton() {
   return (
-    <ForAudience audience="developer">
+    <ForAudience audience="developer" mark="badge">
       <InstructionsButton />
     </ForAudience>
   );
@@ -79,9 +80,5 @@ export function AgentInstructionsButton() {
 
 function InstructionsButton() {
   const open = useOpenInstructions();
-  return (
-    <DeveloperBadge>
-      <IconButton icon={instructionsIcon} label={LABEL} {...open} />
-    </DeveloperBadge>
-  );
+  return <IconButton icon={instructionsIcon} label={LABEL} {...open} />;
 }

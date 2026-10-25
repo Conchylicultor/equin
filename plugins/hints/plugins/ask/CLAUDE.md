@@ -83,10 +83,10 @@ portable `server/` half.
   top-right corner sits below the action bar.
 - **Empty state**: `pickSuggestions(Math.random)` (two fixed newcomer
   questions + one rotating) and a first-question `TextEditor` (draft in
-  `askQuestionDraft`). For a developer (`ForAudience`), an **Agent
+  `askQuestionDraft`). For a developer (`useAudience`), an **Agent
   instructions** row under the suggestions (`DeveloperMark`) opens the Ask
   equin config (`useConfigLink(askConfig)`); in a thread the same is a header
-  action (`AgentInstructionsButton`, `DeveloperBadge`). The first send captures the context — `useActiveApp`,
+  action (`AgentInstructionsButton`, gated by `ForAudience mark="badge"`). The first send captures the context — `useActiveApp`,
   `usePathname`, `useFocusedTabTitle`, and
   `collectOutline(document.body, { exclude: [card] })` — and starts the run
   with `useStartThread` (Help category, `askConfig.model`). Sends wait while
@@ -160,7 +160,7 @@ portable `server/` half.
     - `tasks/task-status` ×2
     - `apps-core/chrome-theme.chromeThemeScope`
     - `apps-core/tabs.useFocusedTabTitle`
-    - `audience.ForAudience`
+    - `audience.useAudience`
     - `config_v2/config-link.useConfigLink`
     - `conversations/conversation-view.conversationPane`
     - `conversations/model-provider.useModelChoiceOptions`
