@@ -227,6 +227,24 @@ describe("priceFile", () => {
     });
   });
 
+  test("a model with no tokens is never left unpriced", () => {
+    const zero = { below: 0, above: 0 };
+    const synthetic = {
+      date: "2026-10-08",
+      model: "<synthetic>",
+      speed: "standard" as const,
+      input: zero,
+      output: zero,
+      cacheRead: zero,
+      cacheCreate5m: zero,
+      cacheCreate1h: zero,
+    };
+    expect(priceFile(undefined, [synthetic], TABLE)).toEqual({
+      costUsd: 0,
+      unpricedModels: [],
+    });
+  });
+
   test("a row never priced is priced whole", async () => {
     const path = join(await newDir(), "s.jsonl");
     await writeFile(path, line("m1", { input: 3 }));

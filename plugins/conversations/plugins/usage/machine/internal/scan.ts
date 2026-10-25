@@ -183,12 +183,15 @@ export function priceFile(
     if (!wasUnpriced.has(b.model)) continue;
     const priced = priceBucket(b, table);
     if (priced.ok) costUsd += priced.cost;
-    else unpriced.add(b.model);
+    else if (priced.tokens !== 0) unpriced.add(b.model);
   }
   for (const b of bucketDelta(base.buckets, nextBuckets)) {
     const priced = priceBucket(b, table);
     if (priced.ok) costUsd += priced.cost;
-    else unpriced.add(b.model);
+    // No tokens cost nothing, priced or not (here and above): Claude Code's
+    // `<synthetic>` pseudo-model only ever carries zeros, and no table will
+    // ever price it.
+    else if (priced.tokens !== 0) unpriced.add(b.model);
   }
   return { costUsd, unpricedModels: [...unpriced].sort() };
 }
