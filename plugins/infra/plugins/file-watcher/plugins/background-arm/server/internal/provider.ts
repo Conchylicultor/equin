@@ -72,12 +72,6 @@ function facts(w: FileWatcherSnapshot): BackgroundFact[] {
       value: `${folded} ${folded === 1 ? "batch" : "batches"} landed mid-run and joined the one pending run`,
     });
   }
-  if (w.reconcileMs !== null) {
-    out.push({
-      label: "Reconcile",
-      value: `Every ${Math.round(w.reconcileMs / 1000)} s`,
-    });
-  }
   out.push({
     label: "Runs in",
     value: "This process, in memory — history resets when it restarts",

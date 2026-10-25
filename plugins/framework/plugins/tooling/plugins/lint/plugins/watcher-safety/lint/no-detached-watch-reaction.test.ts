@@ -19,10 +19,10 @@ const FILENAME = `${LINT_DIR}/${VIRTUAL_CASE}`;
 /** The reaction types, declared inline as the engine spells them. */
 const PRELUDE = `
 type WatchReaction<E> = (events: E[]) => void | Promise<void>;
-type WatchReconcile = () => void | Promise<void>;
+type WatchLost = (dir: string, error: unknown) => void | Promise<void>;
 declare function start(opts: {
   onChange: WatchReaction<string>;
-  onReconcile?: WatchReconcile;
+  onLost?: WatchLost;
 }): void;
 declare function work(): Promise<void>;
 declare function notify(): void;
@@ -62,7 +62,7 @@ ruleTester.run(
       // Returned work: the watch coalesces it.
       valid(`start({ onChange: () => work() });`),
       valid(`start({ onChange: async () => { await work(); } });`),
-      valid(`start({ onChange: () => work(), onReconcile: () => work() });`),
+      valid(`start({ onChange: () => work(), onLost: () => work() });`),
       // Sync reactions.
       valid(`start({ onChange: () => notify() });`),
       valid(
@@ -79,7 +79,7 @@ ruleTester.run(
       invalid(`start({ onChange: () => { void work(); } });`),
       invalid(`start({ onChange: () => void work() });`),
       invalid(
-        `start({ onChange: () => notify(), onReconcile: () => { void work(); } });`,
+        `start({ onChange: () => notify(), onLost: () => { void work(); } });`,
       ),
       invalid(
         `start({ onChange: (events) => { if (events.length > 0) void work(); } });`,

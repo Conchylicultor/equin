@@ -17,9 +17,9 @@ import { changedPrototypes, readPrototypesSignature } from "./signature";
 import { classifyTreePath } from "./tree-path";
 
 /**
- * The one watcher over `prototypes/`. Push-based — no polling; the 30s
- * reconcile is a backstop for an fsevent parcel drops, and costs one stat per
- * prototype file because it changes nothing when the signature matches.
+ * The one watcher over `prototypes/`. Push-based — no polling: a dropped
+ * fsevent is reported by the watch (`onLost`), which re-runs the signature
+ * gate (one stat per prototype file, nothing notified when it matches).
  */
 export const prototypesTreeWatcher = defineFileWatcher({
   name: "prototypes-files.tree",
@@ -45,7 +45,6 @@ export const prototypesTreeWatcher = defineFileWatcher({
     ".gif",
     ".woff2",
   ],
-  reconcileMs: 30_000,
 });
 
 let watcher: FileWatcher | null = null;
@@ -85,8 +84,8 @@ export function onPrototypesChanged(
  * open live frames), re-read the history of every prototype that moved and still exists (an edit flips its
  * `dirty` flag) and wake the listeners. Then give any new prototype its `v0`.
  *
- * Everything goes through this one gate — the watcher's events and the
- * reconcile tick alike — because a new `rev` is a RELOAD. A prototype on screen
+ * Everything goes through this one gate — the watcher's events and its
+ * dropped-events report alike — because a new `rev` is a RELOAD. A prototype on screen
  * is a live app the author is clicking through, and a reload throws that state
  * away, so "the watcher woke up" is not enough of a reason: the tree has to
  * have actually changed.
@@ -157,9 +156,8 @@ function onTreeEvents(paths: string[]): Promise<void> | undefined {
 }
 
 /**
- * Watch `prototypes/` for edits. Push-based — no polling; the 30s reconcile is a
- * backstop for an fsevent parcel drops, and costs one stat per prototype file
- * because it changes nothing when the signature matches.
+ * Watch `prototypes/` for edits. Push-based — no polling; a dropped fsevent is
+ * reported by the watch (`onLost`) and answered by the same signature gate.
  */
 export async function startPrototypesWatcher(): Promise<void> {
   if (started) return;
@@ -185,7 +183,7 @@ export async function startPrototypesWatcher(): Promise<void> {
   watcher = await prototypesTreeWatcher.start({
     dirs: [prototypesDir.path],
     onChange: (events) => onTreeEvents(events.map((e) => e.path)),
-    onReconcile: () => refreshes.run(),
+    onLost: () => refreshes.run(),
   });
 }
 

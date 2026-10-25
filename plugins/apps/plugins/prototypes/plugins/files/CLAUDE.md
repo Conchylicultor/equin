@@ -450,7 +450,7 @@ extension a prototype can ship (`.html/.css/.js/.json` plus images and
 `.woff2`); `onShutdown` stops it. No polling.
 
 **Nothing re-broadcasts unless the tree really moved.** Every wake-up — a
-watcher event, the 30s reconcile — runs the same gate: re-read
+watcher event, a dropped-events report (`onLost`) — runs the same gate: re-read
 `readPrototypesSignature()` (every file's size + mtime) and return early when it
 matches the last one. A moved `rev` is a RELOAD of that prototype's open iframes,
 and a prototype is a live app somebody is clicking through, so a reload costs
@@ -458,9 +458,8 @@ the author the state they built up on screen. A watcher event only says
 something *might* have changed (a touch, a chmod, an atomic save's temp file),
 which is not enough of a reason.
 
-That gate is also why the reconcile is affordable at all: it is a backstop for
-an fsevent parcel dropped, and on an idle machine it is a few stats that agree
-with the last few stats and end there.
+There is no timer: a dropped fsevent is reported by the watch itself
+(`onLost`), and answered by this same gate.
 
 **This is the only watcher over that tree, so the signal is exported rather than
 re-derived**: `onPrototypesChanged` (plus `listPrototypeMetas`) is what lets

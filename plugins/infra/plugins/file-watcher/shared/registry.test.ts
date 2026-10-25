@@ -38,7 +38,7 @@ function snapshot(name: string): FileWatcherSnapshot {
 }
 
 /** Resolve once `predicate` holds, re-checked on every registry announcement
- * and on the reconcile ticks that drive most of these tests. */
+ * and on a short tick. */
 function until(predicate: () => boolean, timeoutMs = 5_000): Promise<void> {
   return new Promise((resolve, reject) => {
     const deadline = setTimeout(() => {
@@ -149,7 +149,6 @@ describe("defineFileWatcherIn", () => {
     expect(snapshot("t.instances")).toMatchObject({
       description: "Watches a temp dir.",
       declaredIn: "test.plugin",
-      reconcileMs: null,
     });
     await a.stop();
     await a.stop(); // idempotent
@@ -187,45 +186,40 @@ describe("defineFileWatcherIn", () => {
     expect(seen.some((p) => p.endsWith("a.txt"))).toBe(true);
   });
 
-  test("reconcile ticks are runs, and the ring is capped", async () => {
+  test("handler runs are recorded, and the ring is capped", async () => {
     const w = defineFileWatcherIn(
-      { name: "t.ring", description: "d", reconcileMs: 2 },
+      { name: "t.ring", description: "d", debounceMs: 0 },
       runtime(),
     );
     w.register();
-    let ticks = 0;
-    open.push(
-      await w.start({
-        dirs: [dir],
-        onChange: () => {},
-        onReconcile: () => {
-          ticks += 1;
-        },
-      }),
-    );
-    await until(() => snapshot("t.ring").runs > RECENT_RUNS_MAX + 5);
+    open.push(await w.start({ dirs: [dir], onChange: () => {} }));
+    // One write, then wait for its run, until the ring has overflowed (the
+    // backend may batch writes that land together into one run).
+    for (let n = 0; snapshot("t.ring").runs <= RECENT_RUNS_MAX + 5; n++) {
+      const before = snapshot("t.ring").runs;
+      writeFileSync(join(dir, `f${n}.txt`), "x");
+      await until(() => snapshot("t.ring").runs > before);
+    }
     const s = snapshot("t.ring");
     expect(s.recentRuns).toHaveLength(RECENT_RUNS_MAX);
     expect(await fileWatcherRecentRuns("t.ring")).toHaveLength(RECENT_RUNS_MAX);
-    expect(s.runs).toBeGreaterThanOrEqual(ticks - 1);
-    expect(s.reconcileMs).toBe(2);
-  });
+  }, 30_000);
 
   test("a throwing handler is recorded as failed and handed to onFailure", async () => {
     const w = defineFileWatcherIn(
-      { name: "t.throws", description: "d", reconcileMs: 5 },
+      { name: "t.throws", description: "d", debounceMs: 0 },
       runtime(),
     );
     w.register();
     open.push(
       await w.start({
         dirs: [dir],
-        onChange: () => {},
-        onReconcile: () => {
+        onChange: () => {
           throw new Error("boom");
         },
       }),
     );
+    writeFileSync(join(dir, "a.txt"), "x");
     await until(
       () => snapshot("t.throws").failures >= 1 && failuresSeen.length >= 1,
     );
@@ -239,20 +233,18 @@ describe("defineFileWatcherIn", () => {
 
   test("an async handler's rejection is recorded as failed", async () => {
     const w = defineFileWatcherIn(
-      { name: "t.async-throws", description: "d", reconcileMs: 5 },
+      { name: "t.async-throws", description: "d", debounceMs: 0 },
       runtime(),
     );
     w.register();
     // A handler that returns its promise is timed until it settles.
-    const rejectLater = (() =>
-      Promise.reject(new Error("later"))) as unknown as () => void;
     open.push(
       await w.start({
         dirs: [dir],
-        onChange: () => {},
-        onReconcile: rejectLater,
+        onChange: () => Promise.reject(new Error("later")),
       }),
     );
+    writeFileSync(join(dir, "a.txt"), "x");
     await until(
       () =>
         snapshot("t.async-throws").failures >= 1 && failuresSeen.length >= 1,

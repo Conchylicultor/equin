@@ -8,7 +8,7 @@ import { runEnded, type RunEndedPayload } from "./tables-run-ended";
  *
  * The wait is bounded rather than `unbounded: true`, and the bound is what makes
  * a lost wake-up cost a delay instead of a run. Two independent things already
- * re-announce a live run — the supervising backend's own reconcile pass every
+ * re-announce a live run — the supervising backend's liveness timer every
  * 60 s, and the boot reconcile of whatever backend comes up next — so this only
  * has to cover the case where NEITHER can: a kind whose own CLI stamped its
  * ledger row early (`./equin build` does, ~100 s before its child exits)
@@ -19,7 +19,7 @@ import { runEnded, type RunEndedPayload } from "./tables-run-ended";
  * Five minutes is chosen against that cost, not against a latency target: a wake
  * is two `instant` dispatches and one `stat`, so a 30-minute build pays six of
  * them, and the worst-case lateness of a run's recorded outcome is one interval.
- * Shortening it buys nothing the 60 s reconcile does not already provide on a
+ * Shortening it buys nothing the 60 s liveness timer does not already provide on a
  * live backend; lengthening it delays exactly the restart case it exists for.
  */
 const RUN_ENDED_WAIT_MS = 5 * 60 * 1000;

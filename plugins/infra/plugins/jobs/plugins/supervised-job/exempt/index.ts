@@ -2,6 +2,13 @@ import type { Exemptions } from "@plugins/framework/plugins/tooling/plugins/exem
 
 export default [
   {
+    rule: "timer/no-unlisted-timer",
+    paths: ["server/internal/run/supervisor.ts"],
+    kind: "sanctioned",
+    reason:
+      "The supervised-run liveness check: a SIGKILLed detached child writes no exit marker, so no filesystem event will ever say its run ended — only a look at its pid can. Runs only while a run is live (started and stopped with the runs-dir watcher); real polling awaiting a push replacement.",
+  },
+  {
     rule: "spawn-safety/no-raw-bun-spawn",
     paths: ["server/internal/run/supervisor.ts"],
     kind: "sanctioned",

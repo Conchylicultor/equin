@@ -7,7 +7,7 @@ const createRule = ESLintUtils.RuleCreator<LintRuleDocs>(
 );
 
 /** The reaction types a watch coalesces (`infra/file-watcher`'s engine). */
-const REACTION_ALIASES = new Set(["WatchReaction", "WatchReconcile"]);
+const REACTION_ALIASES = new Set(["WatchReaction", "WatchLost"]);
 
 type FunctionNode =
   | TSESTree.ArrowFunctionExpression
@@ -46,7 +46,7 @@ function isReactionType(t: ts.Type): boolean {
  * (2026-10-12).
  *
  * Scoped by TYPE, not by name: a `void <thenable>` whose nearest enclosing
- * function is contextually typed as a `WatchReaction` / `WatchReconcile`.
+ * function is contextually typed as a `WatchReaction` / `WatchLost`.
  */
 export default createRule({
   name: "no-detached-watch-reaction",

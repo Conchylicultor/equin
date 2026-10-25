@@ -12,6 +12,7 @@ import {
   worktreeArtifacts,
 } from "@plugins/infra/plugins/paths/server";
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
+import { defineTimer } from "@plugins/infra/plugins/background/plugins/timer/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import {
   assertRunId,
@@ -27,18 +28,6 @@ import {
 } from "./registry";
 import { createTranscriptTail, type TranscriptTail } from "./tail";
 import { announceRunChange } from "./observers";
-
-/**
- * How often the watcher re-derives every kind's unfinished set while any run is
- * live.
- *
- * NOT a poller, by the same argument `watch-inflight-build` makes: the timer
- * exists only while a run is unfinished and stops the instant the last one
- * closes. It covers exactly one case the filesystem cannot report — a child
- * SIGKILLed, which writes no marker, so no event will ever arrive to say the
- * run ended. Everything else settles in well under a second off a real event.
- */
-const RECONCILE_MS = 60_000;
 
 /**
  * The runs-dir watcher: one instance, open only while a run is live (see
@@ -60,7 +49,24 @@ export const supervisedRunWatcher = defineFileWatcher({
   // flat and capped by `pruneWorktreeRunArtifacts`, and the watcher exists only
   // while a run is live.
   writesWhileOpen: true,
-  reconcileMs: RECONCILE_MS,
+});
+
+/**
+ * Re-derives every kind's unfinished set every 60 s while any run is live —
+ * started and stopped with {@link supervisedRunWatcher}.
+ *
+ * It covers exactly one case the filesystem cannot report — a child SIGKILLed,
+ * which writes no marker, so no event will ever arrive to say the run ended.
+ * Everything else settles in well under a second off a real event, and a
+ * dropped event is the watcher's `onLost`. It used to be the watcher's own
+ * reconcile tick; process death is not a file-watcher question.
+ */
+export const supervisedRunLivenessTimer = defineTimer({
+  name: "supervised-job.liveness",
+  description:
+    "While a detached child runs, checks every minute that its process is still alive, closing the run when it died without writing its exit marker (a hard kill leaves no file event).",
+  everyMs: 60_000,
+  run: () => reconcileSupervisedRuns(),
 });
 
 /** A run this process is currently tailing. */
@@ -70,7 +76,8 @@ interface LiveRun {
   readonly tail: TranscriptTail;
   /**
    * The pid this process last knew for the run — from the spawn, or refreshed
-   * from the ledger on every reconcile pass.
+   * from the ledger on every reconcile pass (the liveness timer's, a lost
+   * event's, boot's).
    *
    * Remembered rather than re-read, because the one case that needs it is the
    * one where the ledger no longer answers: a run whose row the caller's own CLI
@@ -363,6 +370,7 @@ async function syncWatcher(): Promise<void> {
     if (watcher !== null) {
       const w = watcher;
       watcher = null;
+      supervisedRunLivenessTimer.stop();
       await w.stop();
     }
     return;
@@ -378,11 +386,12 @@ async function syncWatcher(): Promise<void> {
       dirs: [dir],
       onChange: (events) =>
         runTracked("watch:supervised-run", () => onArtifactEvents(events)),
-      onReconcile: () =>
-        runTracked("watch:supervised-run:reconcile", () =>
+      onLost: () =>
+        runTracked("watch:supervised-run:lost", () =>
           reconcileSupervisedRuns(),
         ),
     });
+    supervisedRunLivenessTimer.start();
   })();
   try {
     await watcherStarting;

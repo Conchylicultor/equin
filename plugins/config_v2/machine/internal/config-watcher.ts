@@ -7,7 +7,7 @@ import { notifyConfigDirChange } from "@plugins/config_v2/server";
 import { CONFIG_DIR } from "./config-dir";
 import type { Disposable } from "../../core";
 
-// No reconcile (no `reconcileMs`, so no timer). One re-fired EVERY watched
+// No reconcile timer (the engine has none). One re-fired EVERY watched
 // path (2 per descriptor), each re-reading from disk and re-running a full
 // conflicts recompute, producing an O(N²) idle I/O storm with nothing
 // changed.

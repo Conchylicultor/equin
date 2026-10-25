@@ -13,7 +13,7 @@ catalog's server barrel.
   `writesWhileOpen` watcher on darwin — one descriptor per file), one `Watching`
   fact per open instance (label, dirs, since when; at most 10, then a count),
   `Last change` (event count, time, sample paths), `Reconcile` when declared.
-- **Runs.** Each `onChange` / `onReconcile` dispatch is a run, kept in memory by
+- **Runs.** Each `onChange` / `onLost` dispatch is a run, kept in memory by
   the file-watcher registry (a ring of the last 20 plus counters). No Run now:
   a watcher reacts to the disk, it is not a task.
 - **Pushes.** `onWatcherActivity` — already throttled per declaration (outcome
@@ -23,7 +23,7 @@ catalog's server barrel.
 
 ## Plugin reference
 
-- Description: File watchers in the Background activity catalog: registers the `file-watcher` background kind — every declaration made with defineFileWatcher under File watchers, triggered on file change, its scope from mainOnly, and its facts (open instances and the directories each watches, the native backend, the last change batch, the reconcile period) — plus its handler runs in this process. Pushes the catalog as instances open and close and as runs land (throttled by the file-watcher registry).
+- Description: File watchers in the Background activity catalog: registers the `file-watcher` background kind — every declaration made with defineFileWatcher under File watchers, triggered on file change, its scope from mainOnly, and its facts (open instances and the directories each watches, the native backend, the last change batch) — plus its handler runs in this process. Pushes the catalog as instances open and close and as runs land (throttled by the file-watcher registry).
 - Server:
   - Uses:
     - `infra/background/catalog.defineBackgroundKind`

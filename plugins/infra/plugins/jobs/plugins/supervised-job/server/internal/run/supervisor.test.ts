@@ -36,11 +36,13 @@ import {
   isSupervisedSpawnError,
   reconcileSupervisedRuns,
   startSupervisedRun,
+  supervisedRunLivenessTimer,
   supervisedRunWatcher,
 } from "./supervisor";
 
 // The register phase a real backend runs: without it `start()` refuses.
 supervisedRunWatcher.register();
+supervisedRunLivenessTimer.register();
 
 const worktree = runtimeNamespace();
 

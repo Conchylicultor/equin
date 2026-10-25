@@ -10,7 +10,6 @@ import {
   type FileWatcher,
   type FileWatcherOptions,
   type WatchReaction,
-  type WatchReconcile,
   type WatchDepth,
   type WatchLost,
   type WatcherBackend,
@@ -48,17 +47,10 @@ export interface FileWatcherSpec {
    * dir — its direct entries only). See the engine's `depth`.
    */
   depth?: WatchDepth;
-  /**
-   * Re-derive state a dropped fsevent could have missed, every this many ms.
-   * Declaring it makes `onReconcile` REQUIRED on every `start()`; leaving it
-   * out makes `onReconcile` a type error there. A tick is not a change — it
-   * never reaches `onChange`.
-   */
-  reconcileMs?: number;
 }
 
 /** Per-instance input to `start()`: what to watch and what to call. */
-export type FileWatcherStartOptions<Reconciles extends boolean> = {
+export interface FileWatcherStartOptions {
   /** The directories this instance watches (recursively). */
   dirs: string[];
   /**
@@ -74,21 +66,15 @@ export type FileWatcherStartOptions<Reconciles extends boolean> = {
   onChange: WatchReaction<FileChangeEvent>;
   /**
    * A dir's native watch errored and may have dropped events: re-derive
-   * what it keeps fresh. See the engine's `onLost`.
+   * what it keeps fresh. The only backstop for a missed event — there is no
+   * reconcile timer. Recorded as a run, coalesced like `onChange`. See the
+   * engine's `onLost`.
    */
   onLost?: WatchLost;
-} & (Reconciles extends true
-  ? {
-      /** The declared reconcile tick came round. Coalesced like `onChange`. */
-      onReconcile: WatchReconcile;
-    }
-  : { onReconcile?: never });
-
-/** Whether a spec declares a reconcile (`reconcileMs` present). */
-export type ReconcilesOf<R> = R extends number ? true : false;
+}
 
 /** A declared watcher: mount it in `register: [...]`, then `start()` instances. */
-export interface FileWatcherDecl<Reconciles extends boolean = boolean> {
+export interface FileWatcherDecl {
   readonly name: string;
   readonly _kind: "file-watcher";
   readonly _factory: "defineFileWatcher";
@@ -99,7 +85,7 @@ export interface FileWatcherDecl<Reconciles extends boolean = boolean> {
    * would watch without appearing in the catalog) or if its runtime says it
    * must not run here (`mainOnly` off main).
    */
-  start(opts: FileWatcherStartOptions<Reconciles>): Promise<FileWatcher>;
+  start(opts: FileWatcherStartOptions): Promise<FileWatcher>;
 }
 
 /** How a runtime hosts watchers: where they run and who declared them. */
@@ -145,7 +131,6 @@ export interface FileWatcherSnapshot {
   scope: BackgroundScope;
   runsHere: boolean;
   backend: WatcherBackend;
-  reconcileMs: number | null;
   instances: FileWatcherInstanceInfo[];
   lastBatch: FileWatcherBatch | null;
   /** Newest first, at most RECENT_RUNS_MAX. */
@@ -199,17 +184,14 @@ function announce(name: string): void {
   for (const l of listeners) l(name);
 }
 
-export function defineFileWatcherIn<R extends number | undefined = undefined>(
-  spec: FileWatcherSpec & { reconcileMs?: R },
+export function defineFileWatcherIn(
+  spec: FileWatcherSpec,
   runtime: FileWatcherRuntime,
-): FileWatcherDecl<ReconcilesOf<R>> {
+): FileWatcherDecl {
   if (spec.description.trim() === "") {
     throw new Error(
       `[file-watcher] ${spec.name}: description is required — one sentence saying what it notices and why`,
     );
-  }
-  if (spec.reconcileMs !== undefined && !(spec.reconcileMs > 0)) {
-    throw new Error(`[file-watcher] ${spec.name}: reconcileMs must be > 0`);
   }
   const state: DeclState = {
     spec,
@@ -236,10 +218,7 @@ export function defineFileWatcherIn<R extends number | undefined = undefined>(
       state.declaredIn = runtime.declaredIn();
       declarations.set(spec.name, state);
     },
-    async start(startOpts) {
-      // One reading of the options whatever the declaration's reconcile arm:
-      // the conditional type has done its job at the call site.
-      const opts = startOpts as FileWatcherStartOptions<boolean>;
+    async start(opts) {
       if (declarations.get(spec.name) !== state) {
         throw new Error(
           `[file-watcher] ${spec.name} started before it was registered — mount it in its plugin's \`register: [...]\` so it appears in Background activity`,
@@ -250,9 +229,8 @@ export function defineFileWatcherIn<R extends number | undefined = undefined>(
           `[file-watcher] ${spec.name} is declared main-only and cannot start in this backend`,
         );
       }
-      const { onChange } = opts;
-      const { onReconcile } = opts;
-      const common = {
+      const { onChange, onLost } = opts;
+      const engineOpts: FileWatcherOptions = {
         dirs: opts.dirs,
         name: spec.name,
         extensions: spec.extensions,
@@ -261,20 +239,15 @@ export function defineFileWatcherIn<R extends number | undefined = undefined>(
         ceilingMs: spec.ceilingMs,
         writesWhileOpen: spec.writesWhileOpen,
         depth: spec.depth,
-        onLost: opts.onLost,
+        onLost:
+          onLost === undefined
+            ? undefined
+            : (dir, error) => dispatch(state, () => onLost(dir, error)),
         onChange: (events: FileChangeEvent[]) => {
           noteBatch(state, events);
           return dispatch(state, () => onChange(events));
         },
       };
-      const engineOpts: FileWatcherOptions =
-        onReconcile !== undefined && spec.reconcileMs !== undefined
-          ? {
-              ...common,
-              reconcileMs: spec.reconcileMs,
-              onReconcile: () => dispatch(state, onReconcile),
-            }
-          : common;
       const watcher = await createFileWatcher(engineOpts);
 
       const id = nextInstanceId++;
@@ -401,7 +374,6 @@ export function listFileWatchers(): FileWatcherSnapshot[] {
     scope: s.runtime.scope,
     runsHere: s.runtime.runsHere,
     backend: watcherBackend(s.spec.writesWhileOpen ?? false, s.spec.depth),
-    reconcileMs: s.spec.reconcileMs ?? null,
     // Spread: a snapshot reads each instance's live fold count now.
     instances: [...s.instances.values()].map((i) => ({ ...i })),
     lastBatch: s.lastBatch,

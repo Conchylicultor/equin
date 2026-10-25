@@ -29,7 +29,7 @@ export const midiFoldersWatcher = defineFileWatcher({
   description:
     "Watches your MIDI folders: imports a .mid file when it is added or edited and badges its song when the file is deleted.",
   extensions: [".mid", ".midi"],
-  // NO `reconcileMs`. A reconcile re-walks every watched folder recursively, and
+  // No timer (the file-watcher engine has none). A reconcile re-walks every watched folder recursively, and
   // a watched folder may be a big tree (`~/Downloads`: 26k dirs for 31 MIDI
   // files, 2.6 s of readdir per walk) — on a 30 s timer that was 2.6 s of I/O
   // every 30 s in EVERY backend, to find nothing changed. A dropped fsevent is

@@ -7,7 +7,6 @@ import {
   defineFileWatcherIn,
   type FileWatcherDecl,
   type FileWatcherSpec,
-  type ReconcilesOf,
 } from "../../shared/registry";
 
 export interface ServerFileWatcherSpec extends FileWatcherSpec {
@@ -19,7 +18,7 @@ export interface ServerFileWatcherSpec extends FileWatcherSpec {
  * Declare an in-process file watcher on a worktree backend — the ONE way to
  * watch files in server code (`@parcel/watcher` and `fs.watch` are lint
  * errors elsewhere). The declaration names the watcher, describes it, and
- * fixes its policy; each `start({ dirs, label?, onChange, onReconcile? })`
+ * fixes its policy; each `start({ dirs, label?, onChange, onLost? })`
  * opens one instance of it.
  *
  * Every declaration is an entry under File watchers in Debug → Background
@@ -37,9 +36,9 @@ export interface ServerFileWatcherSpec extends FileWatcherSpec {
  * const w = await configFilesWatcher.start({ dirs: [dir], onChange });
  * ```
  */
-export function defineFileWatcher<R extends number | undefined = undefined>(
-  spec: ServerFileWatcherSpec & { reconcileMs?: R },
-): FileWatcherDecl<ReconcilesOf<R>> & Registration {
+export function defineFileWatcher(
+  spec: ServerFileWatcherSpec,
+): FileWatcherDecl & Registration {
   return defineFileWatcherIn(spec, {
     scope: spec.mainOnly === true ? "main" : "every-worktree",
     get runsHere() {

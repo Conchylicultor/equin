@@ -159,9 +159,9 @@ number, and guessing between them is what once recorded a deploy that never
 exited as "Exited with code 143".
 
 The wait is **bounded** (5 minutes) and loops, rather than `unbounded: true`.
-That is the same argument `RECONCILE_MS` makes inside `supervised-run`: a bounded
-re-look exists only while a run is live and covers exactly the edge nothing can
-report. A lost event costs one interval, never the run.
+That is the same argument the `supervised-job.liveness` timer makes inside
+`supervised-run`: a bounded re-look exists only while a run is live and covers
+exactly the edge nothing can report (a hard-killed child). A lost event costs one interval, never the run.
 
 **Observe before waiting, not after.** `startSupervisedRun` settles a run whose
 marker is already on disk when the spawn returns, so the emit can fire while the
@@ -662,13 +662,14 @@ construction, and the job and the body it spawns cannot drift apart.
 - Description: Out-of-process work as an ordinary job: defineSupervisedJob composes defineJob + a supervised-run kind into a handler that claims, spawns detached and SUSPENDS — so no worker slot is held while the child runs — then wakes on the supervisedRun.ended event, re-reads the child's exit marker (the authority; the event is only a wake-up) and records the outcome, surviving any number of backend restarts in between.
 - Server:
   - Contributes: `fork-data-exclusion` "supervised_job_runs"
-  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra/jobs` ×8
     - `infra/paths` ×5
     - `infra/file-watcher` ×2
     - `infra/host/host-admission` ×2
     - `database/admin.ExcludeFromFork`
     - `database.db`
+    - `infra/background/timer.defineTimer`
     - `infra/events.defineTriggerEvent`
     - `infra/retention.defineRetention`
   - DB schema:
@@ -700,6 +701,7 @@ construction, and the job and the body it spawns cannot drift apart.
     - `defineTriggerEvent('supervisedRun.ended')`
     - `defineJob('retention.supervised_job_runs')`
     - `defineFileWatcher('supervised-job.runs-dir')`
+    - `defineTimer('supervised-job.liveness')`
 - Core:
   - Uses:
     - `infra/paths.worktreeArtifacts`
@@ -743,6 +745,7 @@ construction, and the job and the body it spawns cannot drift apart.
     - `release`
 - Exemptions:
   - Exempts itself from:
+    - `timer/no-unlisted-timer` — `server/internal/run/supervisor.ts` (sanctioned)
     - `spawn-safety/no-raw-bun-spawn` — `server/internal/run/supervisor.ts` (sanctioned)
     - `ids:pk-declared` — `server/internal/tables.ts` (debt)
     - `ids:pk-declared` — `server/internal/tables-run-ended.ts` (debt)

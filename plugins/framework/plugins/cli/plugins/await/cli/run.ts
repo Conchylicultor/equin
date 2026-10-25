@@ -52,8 +52,13 @@ import {
  */
 const RECENT_VERDICT_MS = 10 * 60 * 1000;
 
-/** Re-read on a timer as well as on events, so one missed event cannot hang a wait. */
-const RECONCILE_MS = 15_000;
+/**
+ * Re-check on a heartbeat as well as on events. A dropped event is the
+ * watcher's `onLost`; this is for what no file event can say — an op
+ * SIGKILLed mid-run leaves its marker unlocked and writes nothing, so only a
+ * look tells the wait it vanished — and it paces the progress lines.
+ */
+const HEARTBEAT_MS = 15_000;
 
 function opsDirOf(slug: Namespace): string {
   return `${worktreeDataDir(slug)}/ops`;
@@ -297,8 +302,8 @@ const run: CliAction<[string[]], { maxWait?: string; arm?: string }> = async (
  * Block until `done()` says so, or until `timeoutMs` elapses (0 = no limit).
  *
  * Push-based: the promise settles on a filesystem event, not on a tick. The
- * watcher's own reconcile is the only timer, and it exists because a missed
- * event must cost a few seconds rather than the whole wait — the failure this
+ * heartbeat is the only timer, and it exists because an op that dies without
+ * a word must cost seconds rather than the whole wait — the failure this
  * command was written to remove is precisely something waiting forever on a
  * signal that never comes.
  */
@@ -306,19 +311,15 @@ async function watchUntil(
   dirs: string | string[],
   timeoutMs: number,
   done: () => Promise<boolean>,
-  onReconcile?: () => void,
+  onHeartbeat?: () => void,
 ): Promise<void> {
   const watcher = await watchForCommand({
     dirs: Array.isArray(dirs) ? dirs : [dirs],
     name: "await",
     debounceMs: 50,
     ceilingMs: 500,
-    reconcileMs: RECONCILE_MS,
     onChange: () => check(),
-    onReconcile: () => {
-      onReconcile?.();
-      return check();
-    },
+    onLost: () => check(),
   });
 
   let finish!: () => void;
@@ -337,6 +338,10 @@ async function watchUntil(
   };
 
   const timer = timeoutMs > 0 ? setTimeout(end, timeoutMs) : null;
+  const heartbeat = setInterval(() => {
+    onHeartbeat?.();
+    void check();
+  }, HEARTBEAT_MS);
   // Re-check once after arming: the thing being waited for may have happened
   // between the caller's own read and the subscription going live.
   void check();
@@ -344,6 +349,7 @@ async function watchUntil(
     await finished;
   } finally {
     if (timer) clearTimeout(timer);
+    clearInterval(heartbeat);
     await watcher.stop();
   }
 }

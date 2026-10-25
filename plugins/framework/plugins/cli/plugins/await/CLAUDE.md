@@ -83,9 +83,10 @@ non-zero.
 ## Waiting is push-based
 
 `watchForCommand` (file-watcher's CLI barrel) over two directories — the checkout's `ops/` and the op
-log's — so the wait settles on a filesystem event, not a tick. The watcher's own
-`reconcileMs` is the only timer, and it is a safety net: a missed event must
-cost seconds, not the whole wait. Waiting forever on a signal that never arrives
+log's — so the wait settles on a filesystem event, not a tick; a dropped event
+is the watcher's `onLost`, which re-checks. A 15 s heartbeat is the only timer:
+an op SIGKILLed mid-run leaves its marker unlocked and writes nothing — no file
+event will ever say so — and that must cost seconds, not the whole wait. Waiting forever on a signal that never arrives
 is the exact failure this command was written to remove.
 
 Repeated `await` calls cannot trip the poll-loop guard: the CLI name is in its

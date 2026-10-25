@@ -26,20 +26,23 @@ async function computeTrackedRefs(): Promise<string[]> {
   return refs;
 }
 
-// The reconcile tick (30s) is the safety net for packed-refs-only movement,
-// which writes no loose ref under refs/ and so fires no event.
+// No timer. A ref ADVANCE always writes its loose ref under refs/ (the files
+// backend updates a ref by lockfile + rename, even one that is packed), so the
+// watch hears it; packed-refs alone is rewritten only by `pack-refs` (same sha)
+// and deletions. A dropped event is reported by the watch (`onLost`). The 30 s
+// tick this replaced cost two `git rev-parse` per backend, i.e. ~4 spawns a
+// second across the host.
 export const gitRefsWatcher = defineFileWatcher({
   name: "git-watcher.refs",
   description:
     "Watches the repository's loose git refs and, when main or this worktree's branch moves, re-reads its sha and announces the advance.",
-  reconcileMs: 30_000,
 });
 
 const lastKnownSha = new Map<string, string | null>();
 let watcher: FileWatcher | null = null;
 let started = false;
 
-// One recompute at a time — a change and a reconcile tick included — with the
+// One recompute at a time — a change and a lost-events report included — with the
 // triggers landing mid-run folded into one trailing recompute. Each re-reads
 // every tracked ref's current sha, so overlapping runs would only interleave
 // on `lastKnownSha` (and double-announce an advance).
@@ -93,8 +96,8 @@ export async function startGitWatcher(): Promise<void> {
   //
   // A normal commit/fetch/rebase writes the loose ref under refs/heads/ (or
   // deletes it when packing) → we get the event and re-read the true sha via
-  // `git rev-parse` (which also resolves packed-refs). The reconcile timer is
-  // the safety net for packed-refs-only movement.
+  // `git rev-parse` (which also resolves packed-refs). A dropped event is
+  // reported by the watch (`onLost`), which re-reads every tracked ref.
   //
   // The refs dir is shared by every worktree, so a change is only worth a
   // recompute when it writes a tracked ref (its loose file or its lock).
@@ -107,7 +110,7 @@ export async function startGitWatcher(): Promise<void> {
     dirs: [`${commonDir}/refs`],
     onChange: (events) =>
       events.some((e) => writesTracked(e.path)) ? recomputes.run() : undefined,
-    onReconcile: () => recomputes.run(),
+    onLost: () => recomputes.run(),
   });
 }
 

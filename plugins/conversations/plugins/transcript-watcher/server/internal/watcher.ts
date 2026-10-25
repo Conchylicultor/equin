@@ -18,8 +18,8 @@ import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-sourc
 // ONE `parcel.subscribe(CLAUDE_PROJECTS_DIR)` covers the whole tree — every
 // conversation transcript and every sub-agent transcript beside it. A second
 // subscription over the same root would double the native watch cost for
-// nothing, so every binding below feeds off this one callback and this one 30s
-// reconcile sweep.
+// nothing, so every binding below feeds off this one callback (and its one
+// dropped-events sweep).
 // ---------------------------------------------------------------------------
 
 /** A room's value, together with the signature of the files it was read from. */
@@ -104,18 +104,17 @@ const watchIndex = new Map<string, Set<string>>();
 export const transcriptsWatcher = defineFileWatcher({
   name: "transcript-watcher.transcripts",
   description:
-    "Watches every Claude Code transcript (.jsonl) under the projects directory and re-reads the conversations and sub-agents whose files changed, re-checking all of them every 30 seconds in case an event was missed.",
+    "Watches every Claude Code transcript (.jsonl) under the projects directory and re-reads the conversations and sub-agents whose files changed, re-checking all of them when the watch reports dropped events.",
   extensions: [".jsonl"],
   debounceMs: 0,
-  reconcileMs: 30_000,
 });
 
 let watcher: FileWatcher | null = null;
 
 /**
  * What a room's next run must do: `"read"` re-reads its files; `"resolve"`
- * re-resolves its membership first (a discovered room's event, or the
- * reconcile tick).
+ * re-resolves its membership first (a discovered room's event, or a
+ * dropped-events report).
  */
 type RoomWork = "read" | "resolve";
 
@@ -149,10 +148,10 @@ export async function startTranscriptWatcher(): Promise<void> {
         roomRuns.trigger(room, [room.discovered ? "resolve" : "read"]);
       }
     },
-    onReconcile: () => {
-      // Belt-and-suspenders for a missed parcel event AND for a missed
-      // `refreshConversationChain` call: re-resolving here bounds the staleness of
-      // a session switch to one reconcile period even if the status reconciler never notified.
+    onLost: () => {
+      // The watch dropped events: any room may have missed a write or a new
+      // file. (A session switch is not this path's job: the chain's one writer,
+      // the status reconciler, calls `refreshConversationChain` right after it.)
       for (const room of rooms.values()) roomRuns.trigger(room, ["resolve"]);
     },
   });
@@ -253,7 +252,7 @@ function hasTargets(targets: WatchTargets): boolean {
 }
 
 /**
- * The reconcile sweep's per-room boundary. One room whose targets can't be
+ * The dropped-events sweep's per-room boundary. One room whose targets can't be
  * resolved (DB blip, glob failure) must not abort the sweep for every other room
  * — same reasoning as `processRoom`'s catch.
  */
@@ -268,7 +267,7 @@ async function reconcileRoom(room: Room): Promise<void> {
 
 /**
  * Resolve a room's targets and re-read it: the room's creation, a refresh of its
- * tag, and the reconcile sweep all run this one step.
+ * tag, and the dropped-events sweep all run this one step.
  *
  * A room with NOTHING to watch — no files and no directory — is waiting on
  * something that has not landed on disk yet (a transcript Claude has not
@@ -277,8 +276,7 @@ async function reconcileRoom(room: Room): Promise<void> {
  * that can resolve empty is derived from a conversation's session chain and
  * carries its `refreshOn` tag, and the status reconciler fires that tag the
  * moment it records a session id, which it only does once that session's file
- * exists (its adoption gate). The 30s reconcile is the backstop for a missed
- * notify. (This used to be a 1 s `retryUntil` loop: one chain lookup per second
+ * exists (its adoption gate), right after recording it. (This used to be a 1 s `retryUntil` loop: one chain lookup per second
  * per pending room, for as long as Claude took to start — or for hours, for a
  * conversation whose transcript never lands.)
  *
@@ -400,8 +398,7 @@ export interface TranscriptSnapshot {
  *
  * A consumer that resolves its own files FROM that chain (the sub-agent index,
  * whose directories sit beside the chain's transcripts) declares this tag, so a
- * recorded session switch reaches it too instead of waiting for the next
- * reconcile sweep.
+ * recorded session switch reaches it too — nothing else would re-resolve it.
  */
 export function conversationChainTag(conversationId: string): string {
   return `conversation:${conversationId}`;

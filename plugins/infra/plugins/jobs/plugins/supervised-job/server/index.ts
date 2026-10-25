@@ -3,6 +3,7 @@ import { ExcludeFromFork } from "@plugins/database/plugins/admin/server";
 import { supervisedJobRunsRetention } from "./internal/retention";
 import {
   reconcileSupervisedRuns,
+  supervisedRunLivenessTimer,
   supervisedRunWatcher,
 } from "./internal/run/supervisor";
 import { _supervisedJobRuns } from "./internal/tables";
@@ -53,7 +54,12 @@ export default {
   // The event's own table, mounted here so the register phase completes before
   // any consumer's `onReady` can emit or subscribe. Every supervised job's kind
   // registers itself through its own `defineSupervisedJob` token.
-  register: [runEnded, supervisedJobRunsRetention, supervisedRunWatcher],
+  register: [
+    runEnded,
+    supervisedJobRunsRetention,
+    supervisedRunWatcher,
+    supervisedRunLivenessTimer,
+  ],
   contributions: [
     ExcludeFromFork({
       table: _supervisedJobRuns,

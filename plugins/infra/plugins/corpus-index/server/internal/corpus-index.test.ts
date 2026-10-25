@@ -420,7 +420,7 @@ test("refreshCorpusPaths re-checks only the named paths: edit, new file, removed
   expect(r1.modifiedPaths).toEqual([one]);
   expect([...parseCount.keys()]).toEqual([one]);
   expect(index.files[one]!.partial).toBe("one more");
-  expect(index.files[two]!.partial).toBe("two"); // the reconcile's job
+  expect(index.files[two]!.partial).toBe("two"); // a full walk's job
 
   // A named non-matching path, and one outside the roots, are ignored.
   const r2 = await refreshCorpusPaths(
@@ -449,16 +449,16 @@ test("refreshCorpusPaths re-checks only the named paths: edit, new file, removed
   expect(r4.addedPaths).toEqual([four]);
 });
 
-test("on main a watcher batch re-checks only what it named; the reconcile tick walks everything", async () => {
+test("on main a watcher batch re-checks only what it named; a dropped-events report walks everything", async () => {
   let onChange: ((paths: readonly string[]) => Promise<unknown>) | undefined;
-  let onReconcile: (() => Promise<unknown>) | undefined;
+  let onLost: (() => Promise<unknown>) | undefined;
   const idx = createCorpusIndex(
     spec(),
     env({
       isMain: () => true,
       startFileWatcher: async (opts) => {
         onChange = opts.onChange;
-        onReconcile = opts.onReconcile;
+        onLost = opts.onLost;
       },
     }),
   );
@@ -477,6 +477,6 @@ test("on main a watcher batch re-checks only what it named; the reconcile tick w
   // Nothing named since ⇒ the clean short-circuit.
   expect((await idx.ensureFresh()).modifiedPaths).toEqual([]);
 
-  await onReconcile!(); // the dropped-event backstop catches `two`
+  await onLost!(); // the dropped-event backstop catches `two`
   expect(idx.entries().get(two)).toBe("two!");
 });

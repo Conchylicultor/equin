@@ -1,6 +1,7 @@
 import { mkdirSync } from "node:fs";
 import { basename, dirname } from "node:path";
 import { db } from "@plugins/database/server";
+import { defineTimer } from "@plugins/infra/plugins/background/plugins/timer/server";
 import {
   appendOpLog,
   OP_LOG_FILE,
@@ -17,16 +18,30 @@ import { isOpLive, reconcileOps } from "./reconcile";
 
 // The op store's lifecycle on one serving backend: one serialized PASS —
 // drain the log into this DB, then reconcile dead in-flight rows — run at boot,
-// on every change in the op-log directory, and on a 30 s backstop tick (a
-// SIGKILL leaves no filesystem event; the tick is what notices the dead pid).
+// on every change in the op-log directory, when the watch reports dropped
+// events, and (main only) on the dead-op sweep below.
 
 const LOG_NAME = basename(OP_LOG_FILE);
 
 export const opLogWatcher = defineFileWatcher({
   name: "op-store.op-log",
   description:
-    "Watches the host-global op log and its rotations and ingests new op lines into this backend's op table, re-draining every 30 seconds in case an event was missed.",
-  reconcileMs: 30_000,
+    "Watches the host-global op log and its rotations and ingests new op lines into this backend's op table, re-draining the whole log when the watch reports dropped events.",
+});
+
+// A SIGKILLed op writes no terminal and leaves no filesystem event: its marker
+// simply stops being locked, which only a look can tell. So on MAIN a timer
+// looks — main is the one backend that closes such an op, by appending a
+// reconciler terminal to the log, which every other backend then hears as an
+// ordinary log change. (A worktree closes a row itself only after an ingest
+// gap, which it finds on the drain.) One sweep host-wide, not one per backend.
+export const deadOpSweepTimer = defineTimer({
+  name: "op-store.dead-op-sweep",
+  description:
+    "Closes in-flight ops whose process died without logging its end (a hard kill leaves no file event to react to), by appending their terminal to the op log.",
+  everyMs: 30_000,
+  mainOnly: true,
+  run: () => passes.run(),
 });
 
 let watcher: FileWatcher | null = null;
@@ -48,7 +63,8 @@ async function pass(): Promise<void> {
   }
   // `busy`: another process holds the ingest lock and is draining this DB
   // right now; reconciling against rows it is mid-way through writing would
-  // judge a half-applied state, so leave the pass to it (the tick retries).
+  // judge a half-applied state, so leave the pass to it (it reconciles after
+  // its drain).
   if (drained.kind === "busy") return;
   await reconcileOps({
     db,
@@ -77,13 +93,15 @@ export async function startOpStore(): Promise<void> {
         ? passes.run()
         : undefined;
     },
-    onReconcile: () => passes.run(),
+    onLost: () => passes.run(),
   });
   passes.trigger();
+  if (isMain()) deadOpSweepTimer.start();
 }
 
 export async function stopOpStore(): Promise<void> {
   if (!watcher) return;
+  deadOpSweepTimer.stop();
   await watcher.stop();
   watcher = null;
 }

@@ -113,8 +113,8 @@ export interface CorpusIndex<TPartial> {
   /**
    * Main-only push freshness via `@parcel/watcher`: a change batch marks the
    * paths it named stale and re-checks THOSE in the background (never a full
-   * walk); the reconcile tick re-walks everything as the dropped-event
-   * backstop. No-op off main / if already started.
+   * walk); a dropped-events report from the watch (`onLost`) re-walks
+   * everything. No-op off main / if already started.
    * Requires {@link watcher} to be mounted in the calling plugin's `register`
    * (on main it throws otherwise).
    */
@@ -320,7 +320,7 @@ export async function refreshCorpus<TPartial>(
  * appeared is enumerated (a folder moved in may surface as one event); a file
  * goes through the same fingerprint gate as a full pass. Paths outside the
  * roots, or not matching, are ignored. The full walk ({@link refreshCorpus})
- * stays the cold pass and the reconcile backstop for a dropped event.
+ * stays the cold pass and the answer to a dropped-events report.
  */
 export async function refreshCorpusPaths<TPartial>(
   index: CorpusFile<TPartial>,
@@ -459,8 +459,8 @@ export interface CorpusIndexEnv {
     dirs: string[];
     /** The paths a change batch named; its promise is coalesced by the watch. */
     onChange: (paths: readonly string[]) => Promise<unknown>;
-    /** A reconcile tick (the dropped-event backstop); coalesced likewise. */
-    onReconcile: () => Promise<unknown>;
+    /** The watch reported dropped events (the only backstop); coalesced likewise. */
+    onLost: () => Promise<unknown>;
   }) => Promise<void>;
   /** The declaration `startFileWatcher` opens (surfaced as `CorpusIndex.watcher`). */
   watcherRegistration: Registration;
@@ -480,7 +480,7 @@ export function createCorpusIndex<TPartial>(
   // correctness fallback.
   let index: CorpusFile<TPartial> | null = null;
   // What the next refresh must look at: `"all"` ⇒ walk the whole corpus (cold,
-  // `markDirty`, a reconcile tick, off main); a set ⇒ only the paths a watcher
+  // `markDirty`, a lost-events report, off main); a set ⇒ only the paths a watcher
   // batch named since the last pass (empty ⇒ nothing moved, on main).
   let stale: "all" | Set<string> = "all";
   let refreshInflight: Promise<CorpusDelta> | null = null;
@@ -587,8 +587,8 @@ export function createCorpusIndex<TPartial>(
         markPathsStale(paths);
         return runTracked("corpus-index:ensure-fresh", () => ensureFresh());
       },
-      onReconcile: () => {
-        // The backstop for a dropped event: walk everything.
+      onLost: () => {
+        // The watch says events were dropped: walk everything.
         markDirty();
         return runTracked("corpus-index:ensure-fresh", () => ensureFresh());
       },
@@ -635,7 +635,7 @@ export function createCorpusIndex<TPartial>(
  * corpus index has a second sentence to forget or let drift.
  */
 export function corpusWatcherDescription(indexDescription: string): string {
-  return `Marks the index stale and re-indexes it in the background when a file under its roots changes (every 30 s as a backstop). ${indexDescription}`;
+  return `Marks the index stale and re-indexes it in the background when a file under its roots changes (the whole corpus when the watch reports dropped events). ${indexDescription}`;
 }
 
 /**
@@ -659,27 +659,26 @@ export function defineCorpusIndex<TPartial>(
   // One watcher declaration per index, at define time. Main-only: only main
   // keeps a `host` index fresh by push (startWatcher is isMain()-gated too).
   //
-  // The reconcile tick re-runs the same re-index as a change would; it is a
-  // backstop for a dropped fsevent, and cheap because the pass is
-  // fingerprint-gated (nothing changed ⇒ nothing re-parsed).
+  // No timer: a dropped event is reported by the watch (`onLost`), which
+  // re-walks the corpus. A 30 s re-walk used to cost ~280 ms of stats on main
+  // every tick to find nothing.
   const watcher = defineFileWatcher({
     name: `corpus-index.${spec.name}`,
     description: corpusWatcherDescription(spec.description),
     mainOnly: true,
-    reconcileMs: 30_000,
   });
   return createCorpusIndex(spec, {
     isMain,
     withSlot: withHeavyReadSlot,
     yieldMacrotask,
     watcherRegistration: watcher,
-    startFileWatcher: async ({ dirs, onChange, onReconcile }) => {
+    startFileWatcher: async ({ dirs, onChange, onLost }) => {
       // Process-lifetime watcher — the handle is intentionally discarded (the
       // original stats/cost watcher was likewise fire-and-forget, main-only).
       await watcher.start({
         dirs,
         onChange: (events) => onChange(events.map((e) => e.path)),
-        onReconcile: () => onReconcile(),
+        onLost: () => onLost(),
       });
     },
   });

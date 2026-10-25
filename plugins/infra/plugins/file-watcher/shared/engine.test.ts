@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   createFileWatcher,
+  parcelBatchHandler,
   WRITES_WHILE_OPEN_MAX_ENTRIES,
   type FileWatcher,
 } from "./engine";
@@ -75,5 +76,24 @@ describe("createFileWatcher: writesWhileOpen", () => {
       error = err;
     }
     expect(String(error)).toContain("writesWhileOpen");
+  });
+});
+
+describe("parcelBatchHandler", () => {
+  test("an error batch still delivers its events, then reports the loss", () => {
+    const order: string[] = [];
+    const handler = parcelBatchHandler(
+      (events) => order.push(...events.map((e) => `take:${e.path}`)),
+      (error) => order.push(`lost:${error.message}`),
+    );
+    handler(new Error("Events were dropped by the FSEvents client"), [
+      { type: "update", path: "/d/a" },
+    ]);
+    handler(null, [{ type: "create", path: "/d/b" }]);
+    expect(order).toEqual([
+      "take:/d/a",
+      "lost:Events were dropped by the FSEvents client",
+      "take:/d/b",
+    ]);
   });
 });

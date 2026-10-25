@@ -3,7 +3,8 @@
 Every in-process file watcher is **declared once** with `defineFileWatcher`
 and opened as instances of that declaration. The engine underneath
 (`shared/engine.ts`) is one `@parcel/watcher` subscription per watched dir, with
-the debounce + ceiling flush, an optional reconcile timer and kqueue sizing.
+the debounce + ceiling flush and kqueue sizing — and no timer: a missed event
+is reported by the watch itself (`onLost`).
 
 ## Declaration vs instance
 
@@ -13,7 +14,7 @@ export const allowFilesWatcher = defineFileWatcher({
   name: "conversation-view.allow-files",            // unique per process; a duplicate throws on register
   description: "Notices when a conversation's worktree gains or loses a bypass-permission file.",
   extensions: [".json"], debounceMs: 200,             // extensions?, ignore?, debounceMs?, ceilingMs?,
-  // writesWhileOpen?, reconcileMs?, mainOnly?
+  // writesWhileOpen?, depth?, mainOnly?
 });
 // server/index.ts: register: [allowFilesWatcher]
 
@@ -30,7 +31,7 @@ await w.stop();
   Omit it for a watcher with one instance.
 - Each declaration is one catalog entry (the `background-arm` child): open
   instances and their dirs, the backend (FSEvents / kqueue / inotify), the last
-  change batch, and every `onChange` / `onReconcile` dispatch as a run. A
+  change batch, and every `onChange` / `onLost` dispatch as a run. A
   throwing handler is recorded as failed and still rethrown. Recording is O(1)
   per dispatch and the catalog push is throttled (outcome change, instance
   open/close, or a quiet minute), so a `debounceMs: 0` watcher costs nothing.
@@ -39,7 +40,7 @@ await w.stop();
 
 ## Reactions are coalesced: return the work
 
-A reaction (`onChange`, `onReconcile` — the `WatchReaction` / `WatchReconcile`
+A reaction (`onChange`, `onLost` — the `WatchReaction` / `WatchLost`
 types) may return a promise, and **should return its async work rather than
 detach it**. Every layer that hands a batch to a subscriber — the engine (per
 instance, so `defineFileWatcher` and `watchForCommand`), `acquireDirWatch` (per
@@ -73,36 +74,49 @@ plugin's `shared/`; `watcher-safety/no-raw-fs-watch` bans `fs.watch` /
 `watchFile` / `fs.promises.watch` / chokidar in host-process code, with a
 reasoned `exempt/index.ts` manifest.
 
-## Lost events: `onLost`
+## Lost events: `onLost` — the only backstop, no timer
 
-A native watch that errors (an FSEvents / inotify overflow) may have dropped
-events. The engine logs it and calls the instance's optional `onLost(dir, err)`;
-`acquireDirWatch` fans it out as `onLost(err)` to every watcher riding that
-watch, and `infra/git/checkout-watch` delivers it as `onResync`. A consumer whose
-value is kept fresh by the watch alone must re-derive it there — nothing else
-will. (A `children` watch's error is already reported as its dir gone.)
+A native watch that reports an error may have dropped events. The engine still
+delivers the batch's events (parcel hands the error WITH the rest of the batch),
+logs the error, and calls the instance's optional `onLost(dir, err)` —
+coalesced per dir like `onChange`, since drops come in bursts, and recorded as a
+run. `acquireDirWatch` fans it out as `onLost(err)` to every watcher riding that
+watch, and `infra/git/checkout-watch` delivers it as `onResync`. A consumer
+whose value is kept fresh by the watch alone must re-derive it there — nothing
+else will. (A `children` watch's error is already reported as its dir gone.)
 
-## `onChange` and `onReconcile` are different questions
+There is **no reconcile timer**, and no spelling for one. Which backends report
+a loss, read from `@parcel/watcher` 2.6.0's source:
 
-- `onChange(events)` — the filesystem said these paths moved.
-- `onReconcile()` — the timer came round; re-derive whatever a dropped fsevent
-  could have left stale.
+| backend | a dropped event | reported? |
+|---|---|---|
+| FSEvents (macOS) | `MustScanSubDirs` (client / kernel dropped, or coalesced) | **yes** — "Events were dropped by the FSEvents client…" |
+| kqueue (`writesWhileOpen`) | no queue to overflow; a failed watch | yes |
+| Windows | buffer overflow | yes |
+| inotify (Linux) | `IN_Q_OVERFLOW` | **no** — parcel skips it silently |
 
-The reconcile timer **only exists if the declaration sets `reconcileMs`**,
-which makes `onReconcile` required on every `start()` (and passing one without
-`reconcileMs` a type error); there is no spelling that routes the tick into
-`onChange`. It used to fall back to
-`onChange([])`, which meant every consumer written as `onChange: () => rebuild()`
-— the common shape, since most of them rebuild wholesale and never read the
-events — was told "something changed" every 30 seconds, forever, on an idle
-machine. The prototypes gallery believed it: its version resource is the iframe
-cache-bust, so every open prototype reloaded every 30s and the author lost
-whatever state they had clicked into. A declared `reconcileMs` whose instance
-passes no `onReconcile` is a type error rather than a knob that does nothing.
+Measured on macOS: the gateway logs held ~6,000 `[file-watcher] error on …
+Events were dropped by the FSEvents client` lines across 316 backends — drops
+are real, and they arrive. A 25-minute run of `scripts/measure-reconcile.ts`
+over the five dirs that used to carry a 30 s reconcile found no change a walk
+saw that the watch had not reported. On Linux an inotify queue overflow (more
+than `max_queued_events`, 16,384, while parcel's reader thread lags) leaves a
+value stale until the next change there or a restart.
 
-A reconcile is a *backstop*, not a change poll — if reacting to it is expensive,
-gate it on a cheap signature of the watched tree and return early when nothing
-moved (see `apps/prototypes/files`).
+A 30 s reconcile used to stand in for this: a full re-derive per watcher per
+backend that, in steady state, found nothing (~280 ms of stats per tick for the
+corpus index on main; two `git rev-parse` per backend for the ref watcher). And
+a tick is not a change: it once fell back to `onChange([])`, and the prototypes
+gallery reloaded every open mock every 30 s.
+
+A fact the filesystem cannot report at all — a process that died without
+writing its end — is not a file watcher's question. It gets its own named
+mechanism (`defineTimer`, listed under Timers): `op-store.dead-op-sweep` (main
+only), `supervised-job.liveness` (while a run is live), and `./equin await`'s
+own heartbeat.
+
+Plan and measurements:
+[`research/2026-10-25-infra-file-watcher-reconcile-to-onlost.md`](../../../../research/2026-10-25-infra-file-watcher-reconcile-to-onlost.md).
 
 ## `depth: "children"`: a folder's own entries, and the folder going
 
@@ -135,7 +149,7 @@ Two Bun behaviours a caller of this depth must know (measured on macOS, Bun
 
 ## Plugin reference
 
-- Description: defineFileWatcher: the one declared in-process file watcher — a named, described declaration (static policy: extensions, ignore, debounce, ceiling, writesWhileOpen, depth, reconcile, mainOnly) whose start({dirs, label, onChange, onReconcile}) opens instances over one @parcel/watcher engine (debounce + ceiling flush, reconcile timer, kqueue sizing). Records per declaration its open instances, last change batch and a ring of handler runs for the Background activity catalog (onWatcherActivity / listFileWatchers / fileWatcherRecentRuns). The cli barrel's watchForCommand is the same engine for a foreground command, with no registry. acquireDirWatch({dir, scope, onChange}) is the shared directory-watch hub: one native watch per folder tree, refcounted, a dir under a watched root riding its watch, with subtree or children (depth-1 listing) scope — a children request with no root above it opening only a single-directory watch (depth children, fs.watch), never a recursive one.
+- Description: defineFileWatcher: the one declared in-process file watcher — a named, described declaration (static policy: extensions, ignore, debounce, ceiling, writesWhileOpen, depth, mainOnly) whose start({dirs, label, onChange, onLost}) opens instances over one @parcel/watcher engine (debounce + ceiling flush, kqueue sizing; no timer — a dropped event is reported to onLost, the one backstop). Records per declaration its open instances, last change batch and a ring of handler runs for the Background activity catalog (onWatcherActivity / listFileWatchers / fileWatcherRecentRuns). The cli barrel's watchForCommand is the same engine for a foreground command, with no registry. acquireDirWatch({dir, scope, onChange}) is the shared directory-watch hub: one native watch per folder tree, refcounted, a dir under a watched root riding its watch, with subtree or children (depth-1 listing) scope — a children request with no root above it opening only a single-directory watch (depth children, fs.watch), never a recursive one.
 - Cross-plugin:
   - Imported by: 23 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `debug` ×7
@@ -150,7 +164,6 @@ Two Bun behaviours a caller of this depth must know (measured on macOS, Bun
     - `stats/cost`
 - Exemptions:
   - Exempts itself from:
-    - `detached-work-safety/no-raw-set-interval` — `shared/engine.ts` (sanctioned)
     - `watcher-safety/no-direct-parcel-watcher` — `shared` (sanctioned)
     - `watcher-safety/no-raw-fs-watch` — `shared/engine.ts` (sanctioned)
     - `boundaries/no-platform-api` — `server/internal/dir-hub.ts`, `shared/engine.ts` (debt)
@@ -171,7 +184,6 @@ Two Bun behaviours a caller of this depth must know (measured on macOS, Bun
     - `WatcherBackend`
     - `WatchLost`
     - `WatchReaction`
-    - `WatchReconcile`
   - Exports (values):
     - `acquireDirWatch`
     - `BATCH_SAMPLE_MAX`
@@ -187,8 +199,8 @@ Two Bun behaviours a caller of this depth must know (measured on macOS, Bun
   - Exports (types):
     - `FileWatcher`
     - `WatchForCommandOptions`
+    - `WatchLost`
     - `WatchReaction`
-    - `WatchReconcile`
   - Exports (values): `watchForCommand`
 - Sub-plugins:
   - **`background-arm`** — File watchers in the Background activity catalog: registers the `file-watcher` background kind — every declaration made with defineFileWatcher under File watchers, triggered on file change, its…

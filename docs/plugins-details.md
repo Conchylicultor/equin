@@ -21795,6 +21795,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `debug/profiling/op-log.appendOpLog`
                   - `debug/profiling/op-log.OP_LOG_FILE`
                   - `debug/profiling/op-log.readSleepNow`
+                  - `infra/background/timer.defineTimer`
                   - `infra/entities.defaultNow`
                   - `infra/entities.defineEntity`
                   - `infra/file-watcher.defineFileWatcher`
@@ -21807,6 +21808,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Register:
                   - `defineJob('retention.op_log_ops')`
                   - `defineFileWatcher('op-store.op-log')`
+                  - `defineTimer('op-store.dead-op-sweep')`
                 - Resources:
                   - `op-store.history` (keyed, window)
                   - `op-store.history:groups` (push)
@@ -21844,7 +21846,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `WAIT_KIND_IDS`
                   - `WAIT_RESULTS`
               - Exemptions:
-                - Exempts itself from: `boundaries/no-platform-api` — `server/internal/ingest.ts`, `server/internal/service.ts` (debt)
+                - Exempts itself from:
+                  - `timer/no-unlisted-timer` — `server/internal/service.ts` (sanctioned)
+                  - `boundaries/no-platform-api` — `server/internal/ingest.ts`, `server/internal/service.ts` (debt)
         - **`ops`** — Op contention profiling for the Gantt debug pane: the Profiling section hosting the unified build/push/check/test/e2e Gantt over the live op-store history (last 24 h), the per-worktree Gantt (its ops ± 20 min of everything around them), and the op detail pane — all computed client-side from opsHistory rows.
           - Web:
             - Slots: `opDetailPane.Actions`
@@ -26912,7 +26916,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `framework/central-core` (0 debt)
                   - `framework/server-core` (0 debt)
                   - `infra/background/timer` (0 debt)
-                  - `infra/file-watcher` (0 debt)
             - **`dom-access-safety`** — dom-access-safety lint rule: no-module-scope-dom
             - **`dom-selection-safety`** — dom-selection-safety lint rule: no-raw-selection-range
               - Exemptions:
@@ -28122,15 +28125,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `auth`
               - `debug/health-monitor`
+              - `debug/profiling/op-log/op-store`
               - `debug/stuck-spans`
+              - `infra/jobs/supervised-job`
           - Exemptions:
             - Exempts itself from: `detached-work-safety/no-raw-set-interval` — `shared/timer.ts` (sanctioned)
             - Exempted by:
               - `auth` (0 debt)
               - `debug/health-monitor` (0 debt)
+              - `debug/profiling/op-log/op-store` (0 debt)
               - `debug/queue-health` (0 debt)
               - `debug/stuck-spans` (0 debt)
               - `infra/jobs` (0 debt)
+              - `infra/jobs/supervised-job` (0 debt)
     - **`boot-snapshot`** — Hydrates all boot-critical resources from a single boot snapshot before first paint. Single-request boot snapshot of all boot-critical resources, hydrated client-side before first paint.
       - Web:
         - Contributes: `Core.Boot`
@@ -29352,7 +29359,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `readTailAsync`
           - `sanitizeChannel`
           - `statHistory`
-    - **`file-watcher`** — defineFileWatcher: the one declared in-process file watcher — a named, described declaration (static policy: extensions, ignore, debounce, ceiling, writesWhileOpen, depth, reconcile, mainOnly) whose start({dirs, label, onChange, onReconcile}) opens instances over one @parcel/watcher engine (debounce + ceiling flush, reconcile timer, kqueue sizing). Records per declaration its open instances, last change batch and a ring of handler runs for the Background activity catalog (onWatcherActivity / listFileWatchers / fileWatcherRecentRuns). The cli barrel's watchForCommand is the same engine for a foreground command, with no registry. acquireDirWatch({dir, scope, onChange}) is the shared directory-watch hub: one native watch per folder tree, refcounted, a dir under a watched root riding its watch, with subtree or children (depth-1 listing) scope — a children request with no root above it opening only a single-directory watch (depth children, fs.watch), never a recursive one.
+    - **`file-watcher`** — defineFileWatcher: the one declared in-process file watcher — a named, described declaration (static policy: extensions, ignore, debounce, ceiling, writesWhileOpen, depth, mainOnly) whose start({dirs, label, onChange, onLost}) opens instances over one @parcel/watcher engine (debounce + ceiling flush, kqueue sizing; no timer — a dropped event is reported to onLost, the one backstop). Records per declaration its open instances, last change batch and a ring of handler runs for the Background activity catalog (onWatcherActivity / listFileWatchers / fileWatcherRecentRuns). The cli barrel's watchForCommand is the same engine for a foreground command, with no registry. acquireDirWatch({dir, scope, onChange}) is the shared directory-watch hub: one native watch per folder tree, refcounted, a dir under a watched root riding its watch, with subtree or children (depth-1 listing) scope — a children request with no root above it opening only a single-directory watch (depth children, fs.watch), never a recursive one.
       - Cross-plugin:
         - Imported by: 23 plugins — full list in [`plugins/infra/plugins/file-watcher/REFERENCE.md`](../plugins/infra/plugins/file-watcher/REFERENCE.md)
           - `debug` ×7
@@ -29367,7 +29374,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `stats/cost`
       - Exemptions:
         - Exempts itself from:
-          - `detached-work-safety/no-raw-set-interval` — `shared/engine.ts` (sanctioned)
           - `watcher-safety/no-direct-parcel-watcher` — `shared` (sanctioned)
           - `watcher-safety/no-raw-fs-watch` — `shared/engine.ts` (sanctioned)
           - `boundaries/no-platform-api` — `server/internal/dir-hub.ts`, `shared/engine.ts` (debt)
@@ -29388,7 +29394,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `WatcherBackend`
           - `WatchLost`
           - `WatchReaction`
-          - `WatchReconcile`
         - Exports (values):
           - `acquireDirWatch`
           - `BATCH_SAMPLE_MAX`
@@ -29404,11 +29409,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types):
           - `FileWatcher`
           - `WatchForCommandOptions`
+          - `WatchLost`
           - `WatchReaction`
-          - `WatchReconcile`
         - Exports (values): `watchForCommand`
       - Plugins:
-        - **`background-arm`** — File watchers in the Background activity catalog: registers the `file-watcher` background kind — every declaration made with defineFileWatcher under File watchers, triggered on file change, its scope from mainOnly, and its facts (open instances and the directories each watches, the native backend, the last change batch, the reconcile period) — plus its handler runs in this process. Pushes the catalog as instances open and close and as runs land (throttled by the file-watcher registry).
+        - **`background-arm`** — File watchers in the Background activity catalog: registers the `file-watcher` background kind — every declaration made with defineFileWatcher under File watchers, triggered on file change, its scope from mainOnly, and its facts (open instances and the directories each watches, the native backend, the last change batch) — plus its handler runs in this process. Pushes the catalog as instances open and close and as runs land (throttled by the file-watcher registry).
           - Server:
             - Uses:
               - `infra/background/catalog.defineBackgroundKind`
@@ -30286,13 +30291,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`supervised-job`** — Out-of-process work as an ordinary job: defineSupervisedJob composes defineJob + a supervised-run kind into a handler that claims, spawns detached and SUSPENDS — so no worker slot is held while the child runs — then wakes on the supervisedRun.ended event, re-reads the child's exit marker (the authority; the event is only a wake-up) and records the outcome, surviving any number of backend restarts in between.
           - Server:
             - Contributes: `fork-data-exclusion` "supervised_job_runs"
-            - Uses: 21 symbols — full list in [`plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md`](../plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md)
+            - Uses: 22 symbols — full list in [`plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md`](../plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md)
               - `infra/jobs` ×8
               - `infra/paths` ×5
               - `infra/file-watcher` ×2
               - `infra/host/host-admission` ×2
               - `database/admin.ExcludeFromFork`
               - `database.db`
+              - `infra/background/timer.defineTimer`
               - `infra/events.defineTriggerEvent`
               - `infra/retention.defineRetention`
             - DB schema:
@@ -30324,6 +30330,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `defineTriggerEvent('supervisedRun.ended')`
               - `defineJob('retention.supervised_job_runs')`
               - `defineFileWatcher('supervised-job.runs-dir')`
+              - `defineTimer('supervised-job.liveness')`
           - Core:
             - Uses:
               - `infra/paths.worktreeArtifacts`
@@ -30367,6 +30374,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `release`
           - Exemptions:
             - Exempts itself from:
+              - `timer/no-unlisted-timer` — `server/internal/run/supervisor.ts` (sanctioned)
               - `spawn-safety/no-raw-bun-spawn` — `server/internal/run/supervisor.ts` (sanctioned)
               - `ids:pk-declared` — `server/internal/tables.ts` (debt)
               - `ids:pk-declared` — `server/internal/tables-run-ended.ts` (debt)

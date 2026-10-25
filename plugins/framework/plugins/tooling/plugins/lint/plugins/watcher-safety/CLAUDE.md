@@ -14,7 +14,7 @@ command.
   (tests exempt). Exceptions sit in an `exempt/index.ts` manifest, each with its
   reason — today only the build admission valve's one-latch-file wake.
 - `no-detached-watch-reaction` — a watch callback (typed `WatchReaction` /
-  `WatchReconcile`: `onChange` / `onReconcile` of `defineFileWatcher().start`,
+  `WatchLost`: `onChange` / `onLost` of `defineFileWatcher().start`,
   `acquireDirWatch`, `acquireCheckoutWatch`, `watchForCommand`) never detaches
   async work with `void promise`. It returns it, and the watch runs one
   reaction at a time per subscriber with the batches landing meanwhile folded

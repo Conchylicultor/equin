@@ -2,7 +2,10 @@ import type * as parcel from "@parcel/watcher";
 import { type FSWatcher, readdirSync, watch as fsWatch } from "node:fs";
 import { stat } from "node:fs/promises";
 import { basename, dirname, extname, join } from "node:path";
-import { createCoalescer } from "@plugins/packages/plugins/coalesce/core";
+import {
+  createCoalescer,
+  createKeyedCoalescer,
+} from "@plugins/packages/plugins/coalesce/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 // Pure-JS wrapper: this import loads NO native code — `wrapper.js` only defines
 // functions that close over a `binding` passed in at call time. Safe to import
@@ -78,17 +81,23 @@ export function getParcelWatcher(): Promise<ParcelWatcherApi> {
  */
 export type WatchReaction<E> = (events: E[]) => void | Promise<unknown>;
 
-/** A reconcile tick's reaction — coalesced like {@link WatchReaction}. */
-export type WatchReconcile = () => void | Promise<unknown>;
-
 /**
- * The native watch of `dir` reported an error (an FSEvents / inotify overflow,
- * a dropped stream): events may have been lost, so anything below `dir` may
- * have changed unheard. Re-derive what the watch keeps fresh.
+ * The native watch of `dir` reported an error (FSEvents dropped events, a
+ * kqueue / Windows watch failed): events may have been lost, so anything below
+ * `dir` may have changed unheard. Re-derive what the watch keeps fresh.
+ * Coalesced per dir like {@link WatchReaction} — drops come in bursts, and a
+ * burst costs one running plus one pending reaction, handed the latest error.
+ *
+ * This is the ONLY backstop for a missed event: there is no reconcile timer.
+ * Which backends report a loss (macOS FSEvents does, Linux inotify's queue
+ * overflow does not) is in this plugin's CLAUDE.md.
  */
-export type WatchLost = (dir: string, error: unknown) => void;
+export type WatchLost = (
+  dir: string,
+  error: unknown,
+) => void | Promise<unknown>;
 
-interface FileWatcherBaseOptions {
+export interface FileWatcherOptions {
   dirs: string[];
   onChange: WatchReaction<parcel.Event>;
   /**
@@ -133,40 +142,13 @@ interface FileWatcherBaseOptions {
    */
   depth?: WatchDepth;
   /**
-   * Label for the `bg` span each dispatch (`onChange` / `onReconcile`) runs
+   * Label for the `bg` span each dispatch (`onChange` / `onLost`) runs
    * under, so a watcher callback's synchronous main-thread cost is attributed to
    * `watch:<name>` in the profiler instead of vanishing. Defaults to the first
    * watched dir's basename.
    */
   name?: string;
 }
-
-/**
- * The periodic re-check, which EXISTS ONLY when its own callback is supplied.
- *
- * A reconcile tick is not a change — nothing on disk moved, the timer merely
- * came round. It used to fall back to `onChange([])`, so every consumer that
- * read no events (the common shape: `onChange: () => rebuild()`) was told
- * "something changed" every 30s forever. The prototypes gallery cache-busted its
- * iframes on that tick and reloaded every open mock, losing whatever state the
- * author had built up on screen.
- *
- * So the two signals are now different callbacks, and the tick has no spelling
- * that reaches `onChange`: pass `onReconcile` and get a timer, pass nothing and
- * get none. `reconcileMs` without `onReconcile` is a type error rather than a
- * silently dead knob.
- */
-type FileWatcherReconcileOptions =
-  | {
-      /** Called on the timer to re-derive state a dropped fsevent could have missed. */
-      onReconcile: WatchReconcile;
-      /** How often to reconcile. Default 30s. */
-      reconcileMs?: number;
-    }
-  | { onReconcile?: undefined; reconcileMs?: undefined };
-
-export type FileWatcherOptions = FileWatcherBaseOptions &
-  FileWatcherReconcileOptions;
 
 /**
  * The most entries a `writesWhileOpen` dir may hold when the watcher starts.
@@ -242,11 +224,9 @@ export async function createFileWatcher(
   const {
     dirs,
     onChange,
-    onReconcile,
     onLost,
     debounceMs = 100,
     ceilingMs = 1000,
-    reconcileMs = 30_000,
     extensions,
     ignore,
     writesWhileOpen = false,
@@ -264,18 +244,18 @@ export async function createFileWatcher(
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
   let ceilingTimer: ReturnType<typeof setTimeout> | null = null;
   let lastFlushAt = 0;
-  let reconcileTimer: ReturnType<typeof setInterval> | null = null;
   // One reaction at a time; batches landing mid-run fold into one trailing
   // call. The `bg` span covers the reaction's awaited work, not only its
   // synchronous body.
   const changes = createCoalescer<parcel.Event>({
     run: (events) => runTracked(`watch:${name}`, () => onChange(events)),
   });
-  const reconciles =
-    onReconcile === undefined
+  const losses =
+    onLost === undefined
       ? null
-      : createCoalescer({
-          run: () => runTracked(`watch:${name}:reconcile`, () => onReconcile()),
+      : createKeyedCoalescer<string, unknown>({
+          run: (dir, errors) =>
+            runTracked(`watch:${name}:lost`, () => onLost(dir, errors.at(-1))),
         });
 
   function flush(): void {
@@ -348,14 +328,10 @@ export async function createFileWatcher(
           ? await watchChildren(dir, take)
           : await parcelWatcher.subscribe(
               dir,
-              (err, events) => {
-                if (err) {
-                  console.error(`[file-watcher] error on ${dir}`, err);
-                  onLost?.(dir, err);
-                  return;
-                }
-                take(events);
-              },
+              parcelBatchHandler(take, (error) => {
+                console.error(`[file-watcher] error on ${dir}`, error);
+                losses?.trigger(dir, [error]);
+              }),
               parcelOptions,
             );
       subscriptions.push(sub);
@@ -363,10 +339,6 @@ export async function createFileWatcher(
       console.error(`[file-watcher] failed to subscribe to ${dir}`, err);
       throw err;
     }
-  }
-
-  if (reconciles !== null) {
-    reconcileTimer = setInterval(() => reconciles.trigger(), reconcileMs);
   }
 
   return {
@@ -380,14 +352,26 @@ export async function createFileWatcher(
         clearTimeout(ceilingTimer);
         ceilingTimer = null;
       }
-      if (reconcileTimer) {
-        clearInterval(reconcileTimer);
-        reconcileTimer = null;
-      }
       pending = [];
       await Promise.all(subscriptions.map((s) => s.unsubscribe()));
       subscriptions.length = 0;
     },
+  };
+}
+
+/**
+ * What one parcel subscription does with a callback. parcel hands an error
+ * WITH the rest of its batch — FSEvents flags a drop on one event among many —
+ * so the events are delivered first and the loss reported after: dropping the
+ * batch on error would lose exactly the events that WERE heard.
+ */
+export function parcelBatchHandler(
+  take: (events: parcel.Event[]) => void,
+  lost: (error: Error) => void,
+): parcel.SubscribeCallback {
+  return (err, events) => {
+    take(events);
+    if (err) lost(err);
   };
 }
 
