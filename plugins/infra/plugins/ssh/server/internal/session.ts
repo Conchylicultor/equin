@@ -150,6 +150,8 @@ export async function runHermetic(opts: {
   positionals: (host: string) => string[];
   defaultTimeoutMs: number;
   ownFailureExit: number | null;
+  /** Whole-buffer stdin for the child (`ssh` forwards it to the remote command). */
+  stdin?: string;
 }): Promise<HermeticSuccess | SshFailure> {
   const { program, target, positionals, ownFailureExit } = opts;
   const timeoutMs = target.timeoutMs ?? opts.defaultTimeoutMs;
@@ -177,7 +179,10 @@ export async function runHermetic(opts: {
       ...positionals(target.host),
     ];
 
-    const result = await spawnCaptured(argv, { timeoutMs });
+    const result = await spawnCaptured(argv, {
+      timeoutMs,
+      ...(opts.stdin !== undefined ? { stdin: opts.stdin } : {}),
+    });
     // A signal-killed child (including our own deadline) has no exit status of
     // its own — reporting one would be inventing it.
     const exitCode = result.signalCode === null ? result.exitCode : null;

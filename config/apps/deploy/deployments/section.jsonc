@@ -1,4 +1,4 @@
-// @hash 49160d2ee583
+// @hash cac1b7b2282b
 // @legend — how to write this file (rewritten by ./equin build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -20,16 +20,22 @@
   // output IS the running deploy's own tail, and splitting the two would put a
   // ledger between an action and its result.
   //
+  // Secrets sits just before Deploy: a deploy is held until every secret the
+  // composition needs is approved here, so the decision comes before the button.
+  //
   // Analytics comes last: it is about who uses the site once it is live, not
   // about getting it there, and its dashboard is tall enough that anywhere
-  // earlier would push the deploy workflow below the fold.
+  // earlier would push the deploy workflow below the fold. Messages closes the
+  // page beside it, for the same reason: what visitors wrote once it is live.
   "items": [
     "apps.deploy.composition:composition",
     "apps.deploy.deployments:overview",
     "apps.deploy.local-serve:serve",
+    "apps.deploy.deploy-secrets.approvals:secrets",
     "apps.deploy.remote-deploy:deploy",
     "apps.deploy.remote-deploy:output",
     "apps.deploy.deploy-history:history",
-    "apps.deploy.analytics.dashboard:analytics"
+    "apps.deploy.analytics.dashboard:analytics",
+    "apps.deploy.site-messages.inbox:messages"
   ]
 }

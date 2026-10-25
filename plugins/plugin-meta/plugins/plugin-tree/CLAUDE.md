@@ -109,6 +109,7 @@ dynamic value.
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shadow --shadow`
   - Imported by:
+    - `apps/deploy/deploy-secrets/approvals`
     - `framework/tooling/boundaries`
     - `framework/tooling/checks`
     - `framework/tooling/codegen`

@@ -1,6 +1,6 @@
 {
   "name": "@equin/plugin-apps-deploy-analytics-host-only",
-  "description": "Routes reachable only from the deployed box itself: the /api/host-only/ prefix Caddy refuses publicly, the hostOnly(handler) second guard (404 unless the request made exactly one proxy hop), and requestClientIp(req) — the one place that knows the Caddy → gateway → backend X-Forwarded-For chain.",
+  "description": "Routes reachable only from the deployed box itself, and the guards every public route of a deployed site shares: the /api/host-only/ prefix Caddy refuses publicly, the hostOnly(handler) second guard (404 unless the request made exactly one proxy hop), requestClientIp(req) — the one place that knows the Caddy → gateway → backend X-Forwarded-For chain —, capBodySize (refuse an oversized public body before reading it) and isBotUserAgent.",
   "private": true,
   "version": "0.0.1"
 }

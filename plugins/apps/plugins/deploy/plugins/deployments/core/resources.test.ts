@@ -35,6 +35,7 @@ describe("deploy.run-history", () => {
       "running",
       "succeeded",
       "failed",
+      "needs-approval",
     ]);
     expect(Object.keys(f.verb.options ?? {})).toEqual([
       "update",

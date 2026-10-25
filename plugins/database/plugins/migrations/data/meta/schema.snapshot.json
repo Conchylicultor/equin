@@ -1,6 +1,6 @@
 {
-  "id": "b92275ca-b08c-414c-ae94-6e12a85459b3",
-  "prevId": "50b13286-8c74-4cf7-be6d-b5d4e2f31062",
+  "id": "5219360d-92c5-495c-bcd1-027ba083997d",
+  "prevId": "b92275ca-b08c-414c-ae94-6e12a85459b3",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1608,6 +1608,66 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.deploy_secret_grants": {
+      "name": "deploy_secret_grants",
+      "schema": "",
+      "columns": {
+        "deployment_id": {
+          "name": "deployment_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "key": {
+          "name": "key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "value_fingerprint": {
+          "name": "value_fingerprint",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "approved_at": {
+          "name": "approved_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "deploy_secret_grants_deployment_id_deploy_deployments_id_fk": {
+          "name": "deploy_secret_grants_deployment_id_deploy_deployments_id_fk",
+          "tableFrom": "deploy_secret_grants",
+          "tableTo": "deploy_deployments",
+          "columnsFrom": [
+            "deployment_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "deploy_secret_grants_deployment_id_key_pk": {
+          "name": "deploy_secret_grants_deployment_id_key_pk",
+          "columns": [
+            "deployment_id",
+            "key"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.deploy_deployments": {
       "name": "deploy_deployments",
       "schema": "",
@@ -1806,6 +1866,13 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
+        },
+        "approval_sections": {
+          "name": "approval_sections",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'"
         },
         "launched_from": {
           "name": "launched_from",
@@ -2064,6 +2131,174 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.site_messages": {
+      "name": "site_messages",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "message": {
+          "name": "message",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reply_to": {
+          "name": "reply_to",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "host": {
+          "name": "host",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "page": {
+          "name": "page",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ip_hash": {
+          "name": "ip_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "verdict": {
+          "name": "verdict",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "spam_reason": {
+          "name": "spam_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "notify_state": {
+          "name": "notify_state",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "notify_error": {
+          "name": "notify_error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "notified_at": {
+          "name": "notified_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "site_messages_ip_hash_created_at_idx": {
+          "name": "site_messages_ip_hash_created_at_idx",
+          "columns": [
+            {
+              "expression": "ip_hash",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "site_messages_created_at_idx": {
+          "name": "site_messages_created_at_idx",
+          "columns": [
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "site_messages_notify_state_idx": {
+          "name": "site_messages_notify_state_idx",
+          "columns": [
+            {
+              "expression": "notify_state",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "notified_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.site_messages_salt": {
+      "name": "site_messages_salt",
+      "schema": "",
+      "columns": {
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "salt": {
+          "name": "salt",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
         }
       },
       "indexes": {},

@@ -18,6 +18,7 @@ export {
   useBlockedReason,
 } from "./components/deployment-item-actions";
 export { DeploymentDetail } from "./slots";
+export { ApprovalLinks } from "./components/approval-links";
 export { deploymentDetailPane } from "./panes";
 
 export default {

@@ -18,6 +18,13 @@ import type { FieldOptionMeta } from "@plugins/fields/core";
  * - `failed`    — finished, did not do it. The one outcome a person must act on.
  * - `canceled`  — ended without a verdict, by something other than the work
  *                 itself (superseded, interrupted, killed). Not a defect.
+ * - `needs-approval` — ended BEFORE doing any of the work, because a person
+ *                 has to approve something first. Not a defect either, and
+ *                 not a cancel: nothing will change until someone acts, and
+ *                 the run says what they have to approve. A deploy whose
+ *                 closure needs a deploy secret not yet approved for its box
+ *                 is why this exists; any kind gated on a human decision
+ *                 maps into it.
  *
  * An arm's *finer* status (`superseded` vs `killed`, `ok` vs `partial`) is not
  * lost: it stays an arm field, so precision lives beside the shared axis rather
@@ -33,6 +40,7 @@ export const RUN_OUTCOMES = [
   "partial",
   "failed",
   "canceled",
+  "needs-approval",
 ] as const;
 
 export type RunOutcome = (typeof RUN_OUTCOMES)[number];
@@ -52,7 +60,8 @@ export const RunOutcomeSchema = z.enum(RUN_OUTCOMES);
  * Colour carries one distinction and one only: `failed` is destructive because
  * it is the one outcome someone must act on. `partial` is a warning — it needs
  * a look, not a fix. `canceled` is muted: nothing went wrong, the run simply
- * stopped being the answer.
+ * stopped being the answer. `needs-approval` is a warning: someone has to act,
+ * but nothing is broken.
  */
 export const RUN_OUTCOME_OPTIONS_META = {
   running: { label: "Running", variant: "warning" },
@@ -60,6 +69,7 @@ export const RUN_OUTCOME_OPTIONS_META = {
   partial: { label: "Partial", variant: "warning" },
   failed: { label: "Failed", variant: "destructive" },
   canceled: { label: "Canceled", variant: "muted" },
+  "needs-approval": { label: "Needs approval", variant: "warning" },
 } as const satisfies { readonly [O in RunOutcome]: FieldOptionMeta };
 
 /** Is this run still in flight? The one predicate several surfaces need. */

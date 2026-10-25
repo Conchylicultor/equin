@@ -44,6 +44,7 @@ an empty titled card); a count goes in `summary`, via the shared `SectionCount`.
     - `PluginViewSlots.Section` ← `plugin-meta.facets.contributions.render-detail`
     - `PluginViewSlots.Section` ← `plugin-meta.facets.cross-refs.render-detail`
     - `PluginViewSlots.Section` ← `plugin-meta.facets.db-schema.render-detail`
+    - `PluginViewSlots.Section` ← `plugin-meta.facets.deploy-secrets.render-detail`
     - `PluginViewSlots.Section` ← `plugin-meta.facets.exemptions.render-detail`
     - `PluginViewSlots.Section` ← `plugin-meta.facets.exports.render-detail`
     - `PluginViewSlots.Section` ← `plugin-meta.facets.registrations.render-detail`
@@ -119,8 +120,8 @@ an empty titled card); a count goes in `summary`, via the shared `SectionCount`.
     - `ui/tokens/density` ×5
     - `ui/tokens/color-palette` ×3
     - `ui/tokens/shape --spacing`
-  - Imported by: 23 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `plugin-meta` ×19
+  - Imported by: 24 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `plugin-meta` ×20
     - `apps` ×2
     - `active-data/plugin-link`
     - `debug/mcp-tools`

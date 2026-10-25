@@ -5,8 +5,10 @@
  *
  * Every refusal comes BEFORE the first host mutation, and each is named: a
  * non-Debian host, a hostname a Caddyfile cannot hold, a composition carrying
- * owner data behind a public hostname, or a closure needing `infra/secrets`.
- * Past those, the whole host state is one generated, idempotent script.
+ * owner data behind a public hostname, a closure needing `infra/secrets`, or a
+ * deploy secret the closure declares that the user has not approved for this
+ * deployment. Past those, the whole host state is one generated, idempotent
+ * script, and the approved secrets reach it over the SSH session's stdin.
  */
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import { listenAddress } from "@plugins/apps/plugins/deploy/plugins/deployments/core";
@@ -16,6 +18,7 @@ import {
   assertClosureSafe,
 } from "./internal/closure-guards";
 import { convergeScript } from "./internal/converge-script";
+import { approvedSecretEnv, secretEnvStdin } from "./internal/secret-env";
 import {
   CONVERGE_MS,
   refuse,
@@ -56,6 +59,15 @@ const run: CliAction<[string], { server: string }> = async (
   for (const hostname of deployment.hostnames)
     assertCaddySafeHostname(hostname);
   await assertClosureSafe(target);
+  // The last refusal: a deploy secret the closure needs and the user has not
+  // approved (for exactly its current value) stops converge here, before the
+  // host is touched. Keys are printed; values never are.
+  const secrets = await approvedSecretEnv(deployment.id);
+  console.log(
+    `  Secrets: ${
+      secrets.length > 0 ? secrets.map((s) => s.key).join(", ") : "(none)"
+    }`,
+  );
 
   await runScript(target, {
     script: convergeScript({
@@ -64,10 +76,13 @@ const run: CliAction<[string], { server: string }> = async (
       loopbackPort: deployment.loopbackPort,
       sshPort: server.port,
       sshUser: server.sshUser,
+      secretKeys: secrets.map((s) => s.key),
     }),
     remoteName: `equin-converge-${composition}.sh`,
     timeoutMs: CONVERGE_MS,
     what: "converge",
+    // Values travel ONLY here: the SSH session's stdin.
+    stdin: secretEnvStdin(secrets),
   });
 
   console.log(`\n[done] ${server.name} is converged for "${composition}".`);

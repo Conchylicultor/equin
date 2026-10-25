@@ -1,4 +1,4 @@
-// @hash e73eb266c8d7
+// @hash dd9a6205474e
 // @legend — how to write this file (rewritten by ./equin build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -25,6 +25,7 @@
     "plugin-meta.facets.slots.render-detail:slots",
     "plugin-meta.facets.routes.render-detail:routes",
     "plugin-meta.facets.registrations.render-detail:registrations",
+    "plugin-meta.facets.deploy-secrets.render-detail:deploy-secrets",
     "plugin-meta.facets.structure.render-detail:structure"
   ]
 }

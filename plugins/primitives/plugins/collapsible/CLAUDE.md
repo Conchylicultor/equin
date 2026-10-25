@@ -95,7 +95,9 @@ context, no `region` role — for a fold whose open state lives elsewhere: the
 row's diff. `CollapsibleContent` is `FoldMotion` plus the context's state, id
 and role. Its props land on the moving box, so padding, borders and vertical
 margins go on a box INSIDE it; a sideways bleed (a negative inline margin) may
-sit on it.
+sit on it. `onOpened` fires once an unfold has settled at full height — the
+moment the content's final layout is on screen, e.g. to scroll an action inside
+it into view (the website contact card brings its Send button up this way).
 
 The tween caps `max-height` and its far end is the box's own size measured with
 the cap released, never `scrollHeight` — the same motion for a block, and the
@@ -144,6 +146,7 @@ the scroll plugin's CLAUDE.md and the `css:no-unanchored-has` check).
   - Uses:
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.SingleLineProvider`
+    - `primitives/latest-ref.useLatestRef`
     - `ui/icons.Icon`
   - Exports (types):
     - `CollapsibleChevronProps`
@@ -185,10 +188,10 @@ the scroll plugin's CLAUDE.md and the `css:no-unanchored-has` check).
     - `ui/tokens/type-scale --font-size-caption`
     - `ui/tokens/type-scale --font-weight-normal`
     - `ui/tokens/type-scale --line-height-caption`
-  - Imported by: 58 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 59 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×14
     - `ui` ×12
-    - `apps` ×10
+    - `apps` ×11
     - `primitives` ×8
     - `plugin-meta` ×4
     - `review` ×3

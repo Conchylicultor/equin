@@ -374,6 +374,14 @@
       "name": "@equin/plugin-apps-deploy-deploy-history-investigate-failure",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/deploy/plugins/deploy-secrets": {
+      "name": "@equin/plugin-apps-deploy-deploy-secrets",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/deploy/plugins/deploy-secrets/plugins/approvals": {
+      "name": "@equin/plugin-apps-deploy-deploy-secrets-approvals",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/deploy/plugins/deployments": {
       "name": "@equin/plugin-apps-deploy-deployments",
       "version": "0.0.1",
@@ -384,6 +392,10 @@
     },
     "plugins/apps/plugins/deploy/plugins/health": {
       "name": "@equin/plugin-apps-deploy-health",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/deploy/plugins/host-query": {
+      "name": "@equin/plugin-apps-deploy-host-query",
       "version": "0.0.1",
     },
     "plugins/apps/plugins/deploy/plugins/local-serve": {
@@ -400,6 +412,18 @@
     },
     "plugins/apps/plugins/deploy/plugins/shell": {
       "name": "@equin/plugin-apps-deploy-shell",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/deploy/plugins/site-messages": {
+      "name": "@equin/plugin-apps-deploy-site-messages",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/deploy/plugins/site-messages/plugins/inbox": {
+      "name": "@equin/plugin-apps-deploy-site-messages-inbox",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/deploy/plugins/site-messages/plugins/intake": {
+      "name": "@equin/plugin-apps-deploy-site-messages-intake",
       "version": "0.0.1",
     },
     "plugins/apps/plugins/deploy/plugins/ssh-setup": {
@@ -4145,6 +4169,10 @@
         "@streamparser/json": "^0.0.26",
       },
     },
+    "plugins/integrations/plugins/resend": {
+      "name": "@equin/plugin-integrations-resend",
+      "version": "0.0.1",
+    },
     "plugins/integrations/plugins/youtube": {
       "name": "@equin/plugin-integrations-youtube",
       "version": "0.0.1",
@@ -4756,6 +4784,22 @@
     },
     "plugins/plugin-meta/plugins/facets/plugins/db-schema/plugins/render-diff": {
       "name": "@equin/plugin-plugin-meta-facets-db-schema-render-diff",
+      "version": "0.0.1",
+    },
+    "plugins/plugin-meta/plugins/facets/plugins/deploy-secrets": {
+      "name": "@equin/plugin-plugin-meta-facets-deploy-secrets",
+      "version": "0.0.1",
+    },
+    "plugins/plugin-meta/plugins/facets/plugins/deploy-secrets/plugins/render-contributions": {
+      "name": "@equin/plugin-plugin-meta-facets-deploy-secrets-render-contributions",
+      "version": "0.0.1",
+    },
+    "plugins/plugin-meta/plugins/facets/plugins/deploy-secrets/plugins/render-detail": {
+      "name": "@equin/plugin-plugin-meta-facets-deploy-secrets-render-detail",
+      "version": "0.0.1",
+    },
+    "plugins/plugin-meta/plugins/facets/plugins/deploy-secrets/plugins/render-diff": {
+      "name": "@equin/plugin-plugin-meta-facets-deploy-secrets-render-diff",
       "version": "0.0.1",
     },
     "plugins/plugin-meta/plugins/facets/plugins/exemptions": {
@@ -6855,11 +6899,17 @@
 
     "@equin/plugin-apps-deploy-deploy-history-investigate-failure": ["@equin/plugin-apps-deploy-deploy-history-investigate-failure@workspace:plugins/apps/plugins/deploy/plugins/deploy-history/plugins/investigate-failure"],
 
+    "@equin/plugin-apps-deploy-deploy-secrets": ["@equin/plugin-apps-deploy-deploy-secrets@workspace:plugins/apps/plugins/deploy/plugins/deploy-secrets"],
+
+    "@equin/plugin-apps-deploy-deploy-secrets-approvals": ["@equin/plugin-apps-deploy-deploy-secrets-approvals@workspace:plugins/apps/plugins/deploy/plugins/deploy-secrets/plugins/approvals"],
+
     "@equin/plugin-apps-deploy-deployments": ["@equin/plugin-apps-deploy-deployments@workspace:plugins/apps/plugins/deploy/plugins/deployments"],
 
     "@equin/plugin-apps-deploy-deployments-runs-arm": ["@equin/plugin-apps-deploy-deployments-runs-arm@workspace:plugins/apps/plugins/deploy/plugins/deployments/plugins/runs-arm"],
 
     "@equin/plugin-apps-deploy-health": ["@equin/plugin-apps-deploy-health@workspace:plugins/apps/plugins/deploy/plugins/health"],
+
+    "@equin/plugin-apps-deploy-host-query": ["@equin/plugin-apps-deploy-host-query@workspace:plugins/apps/plugins/deploy/plugins/host-query"],
 
     "@equin/plugin-apps-deploy-local-serve": ["@equin/plugin-apps-deploy-local-serve@workspace:plugins/apps/plugins/deploy/plugins/local-serve"],
 
@@ -6868,6 +6918,12 @@
     "@equin/plugin-apps-deploy-servers": ["@equin/plugin-apps-deploy-servers@workspace:plugins/apps/plugins/deploy/plugins/servers"],
 
     "@equin/plugin-apps-deploy-shell": ["@equin/plugin-apps-deploy-shell@workspace:plugins/apps/plugins/deploy/plugins/shell"],
+
+    "@equin/plugin-apps-deploy-site-messages": ["@equin/plugin-apps-deploy-site-messages@workspace:plugins/apps/plugins/deploy/plugins/site-messages"],
+
+    "@equin/plugin-apps-deploy-site-messages-inbox": ["@equin/plugin-apps-deploy-site-messages-inbox@workspace:plugins/apps/plugins/deploy/plugins/site-messages/plugins/inbox"],
+
+    "@equin/plugin-apps-deploy-site-messages-intake": ["@equin/plugin-apps-deploy-site-messages-intake@workspace:plugins/apps/plugins/deploy/plugins/site-messages/plugins/intake"],
 
     "@equin/plugin-apps-deploy-ssh-setup": ["@equin/plugin-apps-deploy-ssh-setup@workspace:plugins/apps/plugins/deploy/plugins/ssh-setup"],
 
@@ -8667,6 +8723,8 @@
 
     "@equin/plugin-integrations-hooktheory": ["@equin/plugin-integrations-hooktheory@workspace:plugins/integrations/plugins/hooktheory"],
 
+    "@equin/plugin-integrations-resend": ["@equin/plugin-integrations-resend@workspace:plugins/integrations/plugins/resend"],
+
     "@equin/plugin-integrations-youtube": ["@equin/plugin-integrations-youtube@workspace:plugins/integrations/plugins/youtube"],
 
     "@equin/plugin-integrations-youtube-audio-fetch": ["@equin/plugin-integrations-youtube-audio-fetch@workspace:plugins/integrations/plugins/youtube/plugins/audio-fetch"],
@@ -8944,6 +9002,14 @@
     "@equin/plugin-plugin-meta-facets-db-schema-render-detail": ["@equin/plugin-plugin-meta-facets-db-schema-render-detail@workspace:plugins/plugin-meta/plugins/facets/plugins/db-schema/plugins/render-detail"],
 
     "@equin/plugin-plugin-meta-facets-db-schema-render-diff": ["@equin/plugin-plugin-meta-facets-db-schema-render-diff@workspace:plugins/plugin-meta/plugins/facets/plugins/db-schema/plugins/render-diff"],
+
+    "@equin/plugin-plugin-meta-facets-deploy-secrets": ["@equin/plugin-plugin-meta-facets-deploy-secrets@workspace:plugins/plugin-meta/plugins/facets/plugins/deploy-secrets"],
+
+    "@equin/plugin-plugin-meta-facets-deploy-secrets-render-contributions": ["@equin/plugin-plugin-meta-facets-deploy-secrets-render-contributions@workspace:plugins/plugin-meta/plugins/facets/plugins/deploy-secrets/plugins/render-contributions"],
+
+    "@equin/plugin-plugin-meta-facets-deploy-secrets-render-detail": ["@equin/plugin-plugin-meta-facets-deploy-secrets-render-detail@workspace:plugins/plugin-meta/plugins/facets/plugins/deploy-secrets/plugins/render-detail"],
+
+    "@equin/plugin-plugin-meta-facets-deploy-secrets-render-diff": ["@equin/plugin-plugin-meta-facets-deploy-secrets-render-diff@workspace:plugins/plugin-meta/plugins/facets/plugins/deploy-secrets/plugins/render-diff"],
 
     "@equin/plugin-plugin-meta-facets-exemptions": ["@equin/plugin-plugin-meta-facets-exemptions@workspace:plugins/plugin-meta/plugins/facets/plugins/exemptions"],
 

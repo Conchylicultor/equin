@@ -21,7 +21,10 @@ import {
   useServerHealth,
   type ServerHealthRow,
 } from "@plugins/apps/plugins/deploy/plugins/health/web";
-import { useBlockedReason } from "@plugins/apps/plugins/deploy/plugins/deployments/web";
+import {
+  ApprovalLinks,
+  useBlockedReason,
+} from "@plugins/apps/plugins/deploy/plugins/deployments/web";
 import {
   deployments,
   deployRuns,
@@ -199,7 +202,11 @@ function RemoteDeploy({
       {/* Rendered for the whole life of an update — including after it ends —
           because "which leg did it fail on" is the first thing anyone asks, and
           a strip that vanished on failure would answer it by hiding. */}
-      {run?.verb === "update" && <PhaseReport run={run} />}
+      {/* A held run is reported whatever its verb: it ran no phase, and what
+          it waits on is the one thing to act on next. */}
+      {run && (run.verb === "update" || run.status === "needs-approval") && (
+        <PhaseReport run={run} />
+      )}
 
       <Provenance info={info} />
 
@@ -241,6 +248,24 @@ function RemoteDeploy({
  * re-derive. Nothing inside a step is clickable — the sequence is the server's.
  */
 function PhaseReport({ run }: { run: DeployRun }): ReactNode {
+  // A deploy gate held the run before its first leg: there is no phase to
+  // report, only what the user has to approve — the gate's own sentence, which
+  // names the section of this pane where they do it.
+  if (run.status === "needs-approval") {
+    return (
+      <Stack gap="2xs">
+        <Text as="p" variant="label" tone="strong">
+          Waiting for your approval — nothing was converged or shipped.
+        </Text>
+        {run.message && (
+          <Text as="p" variant="caption" className="whitespace-pre-wrap">
+            {run.message}
+          </Text>
+        )}
+        <ApprovalLinks run={run} />
+      </Stack>
+    );
+  }
   const currentIndex = PHASES.findIndex((p) => p.id === run.phase);
   const failed = run.status === "failed";
 

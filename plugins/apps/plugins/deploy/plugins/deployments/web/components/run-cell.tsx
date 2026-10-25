@@ -5,6 +5,7 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import type { DeployRun } from "../../core";
+import { ApprovalLinks } from "./approval-links";
 
 /**
  * A deployment's last run as the row's trailing chip — deliberately one line,
@@ -23,6 +24,8 @@ export function RunCell({ run }: { run: DeployRun | undefined }): ReactElement |
     );
   }
 
+  if (run.status === "needs-approval") return <HeldRunCell run={run} />;
+
   const ok = run.status === "succeeded";
   return (
     <Badge
@@ -30,6 +33,20 @@ export function RunCell({ run }: { run: DeployRun | undefined }): ReactElement |
       tooltip={run.message ?? undefined}
     >
       {run.verb} {ok ? "ok" : "failed"}
+    </Badge>
+  );
+}
+
+/**
+ * A held run's chip: a status, not a control. The row's hover actions sit over
+ * a trailing chip, so a link here could not be clicked by a mouse; the run's
+ * "Open Secrets"-style link lives in the failure notice above the list
+ * (`ApprovalLinks`), which every held run gets.
+ */
+function HeldRunCell({ run }: { run: DeployRun }): ReactElement {
+  return (
+    <Badge variant="warning" tooltip={run.message ?? undefined}>
+      {run.verb} needs approval
     </Badge>
   );
 }
@@ -49,11 +66,29 @@ export function RunFailureNotice({
 }: {
   runs: readonly DeployRun[];
 }): ReactElement | null {
-  const failed = runs
-    .filter((r) => r.status === "failed")
+  const stopped = runs
+    .filter((r) => r.status === "failed" || r.status === "needs-approval")
     .sort((a, b) => (a.finishedAt ?? "").localeCompare(b.finishedAt ?? ""));
-  const last = failed.at(-1);
+  const last = stopped.at(-1);
   if (!last) return null;
+
+  // A run a deploy gate held is not a failure: nothing went wrong, the user has
+  // something to approve — and the message says what, and where.
+  if (last.status === "needs-approval") {
+    return (
+      <Stack gap="2xs">
+        <Text as="p" variant="label" tone="strong">
+          {last.verb} of {last.compositionId} is waiting for your approval
+        </Text>
+        {last.message && (
+          <Text as="p" variant="caption" className="whitespace-pre-wrap">
+            {last.message}
+          </Text>
+        )}
+        <ApprovalLinks run={last} />
+      </Stack>
+    );
+  }
 
   return (
     <Stack gap="2xs">

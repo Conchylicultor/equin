@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-deploy-deploy-secrets",
+  "description": "Secrets a deployed composition needs, delivered only with the user's explicit approval: defineDeploySecret (core) declares one, readDeploySecret (server) reads it on the box from the deployment's env file.",
+  "private": true,
+  "version": "0.0.1"
+}

@@ -112,8 +112,8 @@ verdict is loading, and the SSH-setup card seeds open.
     - `ui/tokens/font-family --font-mono`
     - `ui/tokens/shape --radius`
   - Imported by:
-    - `apps/deploy/analytics/dashboard`
     - `apps/deploy/deployments`
+    - `apps/deploy/host-query`
     - `apps/deploy/remote-deploy`
     - `apps/deploy/ssh-setup`
 - Exemptions:

@@ -1,4 +1,4 @@
-// @hash e73eb266c8d7
+// @hash dd9a6205474e
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -10,6 +10,7 @@
     "plugin-meta.facets.contributions.render-detail:contributions",
     "plugin-meta.facets.cross-refs.render-detail:cross-refs",
     "plugin-meta.facets.db-schema.render-detail:db-schema",
+    "plugin-meta.facets.deploy-secrets.render-detail:deploy-secrets",
     "plugin-meta.facets.exemptions.render-detail:exemptions",
     "plugin-meta.facets.exports.render-detail:exports",
     "plugin-meta.facets.registrations.render-detail:registrations",

@@ -139,6 +139,7 @@ const deployRunsEntity = defineEntity(
         },
       },
       status: { default: "running" },
+      approvalSections: { default: [] },
       launchedFrom: { default: MAIN_WORKTREE_NAME },
       startedAt: { default: defaultNow() },
     },

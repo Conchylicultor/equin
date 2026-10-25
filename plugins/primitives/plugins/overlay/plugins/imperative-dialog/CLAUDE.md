@@ -88,6 +88,7 @@ owns only the content + a `DialogTitle` (for a11y). Never wrap your own
   - Exports (values): `openDialog`
 - Cross-plugin:
   - Imported by:
+    - `apps/deploy/deploy-secrets/approvals`
     - `apps/deploy/deployments`
     - `apps/deploy/servers`
     - `apps/deploy/ssh-setup`

@@ -27,10 +27,16 @@ import { IdKinds } from "@plugins/ids/server";
 import { deploymentIdKind, deployRunIdKind } from "../core";
 
 export { _deployDeployments, _deployRuns } from "./internal/tables";
+export { DeployGates } from "./internal/gate";
+export type {
+  DeployGate,
+  DeployGateSubject,
+  DeployGateVerdict,
+} from "./internal/gate";
 
 export default {
   description:
-    "Owns the deploy_deployments table: where a composition is served and under what URL ((composition × server) → { hostnames, loopbackPort }), its live collection, and the CRUD endpoints. Also launches `./equin deploy converge|ship` for a deployment — and orchestrates the `update` sequence (converge → build a candidate unless one is already current → ship that pinned run id) over the awaitable release engine — streaming the CLI's output into the durable `deploy` log channel, each run's phase and outcome into the in-memory `deploy.runs` live view, and every run into the durable `deploy_runs` ledger it serves back as a live history window — the record that survives the restart the live view does not. The install itself — run user, dir layout, systemd unit, Caddy site — is derived in core/, never stored.",
+    "Owns the deploy_deployments table: where a composition is served and under what URL ((composition × server) → { hostnames, loopbackPort }), its live collection, and the CRUD endpoints. Also launches `./equin deploy converge|ship` for a deployment — and orchestrates the `update` sequence (converge → build a candidate unless one is already current → ship that pinned run id) over the awaitable release engine — streaming the CLI's output into the durable `deploy` log channel, each run's phase and outcome into the in-memory `deploy.runs` live view, and every run into the durable `deploy_runs` ledger it serves back as a live history window — the record that survives the restart the live view does not. Before any leg spawns, every DeployGates.Gate contribution is asked; a run one of them refuses ends needs-approval having converged and shipped nothing. The install itself — run user, dir layout, systemd unit, Caddy site — is derived in core/, never stored.",
   httpRoutes: {
     [listDeployments.route]: handleList,
     [createDeployment.route]: handleCreate,

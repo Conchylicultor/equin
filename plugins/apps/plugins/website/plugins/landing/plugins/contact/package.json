@@ -1,5 +1,6 @@
 {
   "name": "@equin/plugin-apps-website-landing-contact",
+  "description": "The homepage's closing band: the address in the sentence with a copy icon, a Get in touch button that grows the card into a message form (stored and emailed on by the site's server), and GitHub issues for feedback.",
   "private": true,
   "version": "0.0.1"
 }

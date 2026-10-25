@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-plugin-meta-facets-deploy-secrets-render-diff",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Diff renderer for the deploy-secrets facet (PR review)."
+}

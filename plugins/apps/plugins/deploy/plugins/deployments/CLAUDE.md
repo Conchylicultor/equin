@@ -200,6 +200,24 @@ defineSupervisedJob({
 - `hold` is `seconds`: what bounds a dispatch is one `git` read
   (`compareToHead`) plus a few indexed queries.
 
+### Deploy gates — `needs-approval`
+
+Before any leg spawns, for every verb, the sequence asks every `DeployGates.Gate`
+contribution (`server/internal/gate.ts`) — memoized as the `gate` step, so a resumed
+run is not re-judged mid-way. A gate answers `pass` or `needs-approval` with the
+sentence to show; any refusal ends the run `needs-approval` (`holdRunForApproval`,
+beside `failRun` in `run-state.ts`) having converged and shipped nothing, and all
+refusals are reported at once. A refusal also names **where it is resolved**
+(`resolveIn`: a `DeploymentDetail` section id), persisted on the run as
+`approvalSections`; `ApprovalLinks` links there (open the section + scroll to
+it, navigating to the deployment pane when needed) on every surface that shows
+the run — no surface reads the message to find out where. The server list's
+held-run chip stays a plain status: the row's hover actions cover a trailing
+chip, so its link is the failure notice's above the list.
+A gate that throws fails the run. The sequencer names
+no gate; today's one is `apps/deploy/deploy-secrets/approvals` (a deploy secret the
+closure needs and the user has not approved for this deployment).
+
 ### Converge's idempotence contract
 
 A converge on an already-correct host must change nothing — re-running it is how
@@ -373,7 +391,7 @@ any consumer; extra columns of the row are client fields of the `deployments` co
 
 ## Plugin reference
 
-- Description: Deployments section of a server's page: this server's deployments as a DataView (composition, last run, plus contributed columns), an add affordance whose composition picker reads the compositions config, a Deploy row action that launches the CLI's whole converge-build-ship run, and the per-deployment pane whose sections (overview, plus contributed ones) carry the record, its derived install and the remote-deploy surface. Owns the deploy_deployments table: where a composition is served and under what URL ((composition × server) → { hostnames, loopbackPort }), its live collection, and the CRUD endpoints. Also launches `./equin deploy converge|ship` for a deployment — and orchestrates the `update` sequence (converge → build a candidate unless one is already current → ship that pinned run id) over the awaitable release engine — streaming the CLI's output into the durable `deploy` log channel, each run's phase and outcome into the in-memory `deploy.runs` live view, and every run into the durable `deploy_runs` ledger it serves back as a live history window — the record that survives the restart the live view does not. The install itself — run user, dir layout, systemd unit, Caddy site — is derived in core/, never stored.
+- Description: Deployments section of a server's page: this server's deployments as a DataView (composition, last run, plus contributed columns), an add affordance whose composition picker reads the compositions config, a Deploy row action that launches the CLI's whole converge-build-ship run, and the per-deployment pane whose sections (overview, plus contributed ones) carry the record, its derived install and the remote-deploy surface. Owns the deploy_deployments table: where a composition is served and under what URL ((composition × server) → { hostnames, loopbackPort }), its live collection, and the CRUD endpoints. Also launches `./equin deploy converge|ship` for a deployment — and orchestrates the `update` sequence (converge → build a candidate unless one is already current → ship that pinned run id) over the awaitable release engine — streaming the CLI's output into the durable `deploy` log channel, each run's phase and outcome into the in-memory `deploy.runs` live view, and every run into the durable `deploy_runs` ledger it serves back as a live history window — the record that survives the restart the live view does not. Before any leg spawns, every DeployGates.Gate contribution is asked; a run one of them refuses ends needs-approval having converged and shipped nothing. The install itself — run user, dir layout, systemd unit, Caddy site — is derived in core/, never stored.
 - Web:
   - Slots:
     - `DeploymentDetail.Section`
@@ -383,9 +401,11 @@ any consumer; extra columns of the row are client fields of the `deployments` co
     - `DeploymentDetail.Section` ← `apps.deploy.analytics.dashboard`
     - `DeploymentDetail.Section` ← `apps.deploy.composition`
     - `DeploymentDetail.Section` ← `apps.deploy.deploy-history`
+    - `DeploymentDetail.Section` ← `apps.deploy.deploy-secrets.approvals`
     - `DeploymentDetail.Section` ← `apps.deploy.deployments`
     - `DeploymentDetail.Section` ← `apps.deploy.local-serve`
     - `DeploymentDetail.Section` ← `apps.deploy.remote-deploy`
+    - `DeploymentDetail.Section` ← `apps.deploy.site-messages.inbox`
     - `DeploymentItemActions` ← `apps.deploy.deployments`
     - `DeploymentItemActions` ← `apps.deploy.local-serve`
     - `deploymentDetailPane.Actions` ← `primitives.pane`
@@ -397,7 +417,7 @@ any consumer; extra columns of the row are client fields of the `deployments` co
     - `DeploymentDetail.Section` "Overview" → `DeploymentOverview`
     - `DeploymentItemActions` "deploy" → `DeployAction`
     - `DeploymentItemActions` "delete" → `DeleteDeploymentAction`
-  - Uses: 49 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 51 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×9
     - `primitives/data-view` ×7
     - `primitives/pane` ×5
@@ -410,6 +430,7 @@ any consumer; extra columns of the row are client fields of the `deployments` co
     - `plugin-meta/composition.useManifestItems`
     - `primitives/css/badge.Badge`
     - `primitives/css/bouncing-dots.BouncingDots`
+    - `primitives/css/cluster.Cluster`
     - `primitives/css/fill.Fill`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/spacing.Stack`
@@ -417,11 +438,13 @@ any consumer; extra columns of the row are client fields of the `deployments` co
     - `primitives/detail-sections.defineDetailSections`
     - `primitives/editable-field.useEditableField`
     - `primitives/icon-button.IconButton`
+    - `primitives/link-gesture.activationProps`
     - `primitives/loading.Loading`
     - `primitives/overlay/imperative-dialog.openDialog`
     - `primitives/relative-time.RelativeTime`
     - `ui/icons.Icon`
   - Exports (values):
+    - `ApprovalLinks`
     - `DeploymentDetail`
     - `deploymentDetailPane`
     - `DeploymentItemActions`
@@ -454,9 +477,14 @@ any consumer; extra columns of the row are client fields of the `deployments` co
     - `infra/retention.defineRetention`
     - `primitives/log-channels.defineLogSink`
   - DB schema: `plugins/apps/plugins/deploy/plugins/deployments/server/internal/tables.ts`
+  - Exports (types):
+    - `DeployGate`
+    - `DeployGateSubject`
+    - `DeployGateVerdict`
   - Exports (values):
     - `_deployDeployments`
     - `_deployRuns`
+    - `DeployGates`
   - Register:
     - `defineJob('retention.deploy_runs')`
     - `defineSupervisedJob('deploy.run')`
@@ -467,7 +495,7 @@ any consumer; extra columns of the row are client fields of the `deployments` co
     - `deploy.run-history` (keyed, window)
     - `deploy.run-history:groups` (push)
     - `deploy.run-history:rows` (keyed, point)
-    - `deploy.runs` (push, notified, whole: one entry per deployment row — its most recent run)
+    - `deploy.runs` (push, notified, whole: one entry per deployment row — its most recent run, whole: one section id per refusing deploy gate — bounded by the installed DeployGates.Gate contributions)
   - Routes:
     - `GET /api/deploy/deployments`
     - `POST /api/deploy/deployments`
@@ -492,6 +520,7 @@ any consumer; extra columns of the row are client fields of the `deployments` co
     - `network/live.liveCollection`
     - `network/live.LiveRowsCollection`
     - `network/live.liveValue`
+    - `packages/list-bound.wholeList`
     - `packages/list-bound.wholeRecord`
     - `primitives/pane.defineRoute`
   - Exports (types):
@@ -514,6 +543,7 @@ any consumer; extra columns of the row are client fields of the `deployments` co
     - `DEFAULT_LOOPBACK_PORT`
     - `deleteDeployment`
     - `DEPLOY_LOG_CHANNEL`
+    - `DEPLOY_RUN_STATUSES`
     - `deployDeploymentsEntityRef`
     - `deploymentDetailRoute`
     - `deploymentFields`
@@ -551,9 +581,12 @@ any consumer; extra columns of the row are client fields of the `deployments` co
     - `apps/deploy/analytics/dashboard`
     - `apps/deploy/composition`
     - `apps/deploy/deploy-history`
+    - `apps/deploy/deploy-secrets/approvals`
     - `apps/deploy/deployments/runs-arm`
+    - `apps/deploy/host-query`
     - `apps/deploy/local-serve`
     - `apps/deploy/remote-deploy`
+    - `apps/deploy/site-messages/inbox`
 - Exemptions:
   - Exempts itself from:
     - `paths:no-hardcoded-paths` — `core/derive.ts` (sanctioned)

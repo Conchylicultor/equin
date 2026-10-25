@@ -25,10 +25,23 @@ const DEFAULT_TIMEOUT_MS = 15_000;
  * OpenSSH has no argv-preserving remote exec, so callers should keep commands
  * simple and shell-metacharacter-free.
  */
-export async function sshRun(target: SshTarget, command: string[]): Promise<SshRunResult> {
+export async function sshRun(
+  target: SshTarget,
+  command: string[],
+  opts?: {
+    /**
+     * Whole-buffer input for the remote command's stdin — the one channel for
+     * a value that must not appear in any argv (local `ps`, the remote's
+     * process list, the remote shell's history): a deploy secret. Never echoed
+     * or logged here.
+     */
+    stdin?: string;
+  },
+): Promise<SshRunResult> {
   return await runHermetic({
     program: "ssh",
     target,
+    stdin: opts?.stdin,
     // End of options BEFORE the host: everything after the hostname is the
     // remote command, so a `--` placed after it would be sent to the remote
     // shell as a literal word.

@@ -114,6 +114,7 @@ See `plugins/commands/` for the reference implementation.
     - `plugin-meta/facets/contributions`
     - `plugin-meta/facets/cross-refs`
     - `plugin-meta/facets/db-schema`
+    - `plugin-meta/facets/deploy-secrets`
     - `plugin-meta/facets/exemptions`
     - `plugin-meta/facets/exports`
     - `plugin-meta/facets/registrations`
@@ -138,6 +139,11 @@ See `plugins/commands/` for the reference implementation.
       - **`render-contributions`** — Aggregated cross-plugin tables table in the Studio Contributions view.
       - **`render-detail`** — Per-plugin db-schema section in the plugin detail pane.
       - **`render-diff`** (excluded — cascade) — Diff renderer for the db-schema facet (PR review).
+  - **`deploy-secrets`**
+    - Plugins:
+      - **`render-contributions`** — Aggregated deploy-secrets table in the Studio Contributions view.
+      - **`render-detail`** — Per-plugin deploy-secrets section in the plugin detail pane.
+      - **`render-diff`** (excluded — cascade) — Diff renderer for the deploy-secrets facet (PR review).
   - **`exemptions`**
     - Plugins:
       - **`render-contributions`** — Aggregated exemptions table in the Studio Contributions view.

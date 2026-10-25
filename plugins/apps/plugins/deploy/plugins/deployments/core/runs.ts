@@ -2,6 +2,7 @@ import { z } from "zod";
 import { nullable } from "@plugins/fields/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
+import { stringListField } from "@plugins/fields/plugins/string-list/plugins/config/core";
 import {
   enumTextField,
   textField,
@@ -14,7 +15,10 @@ import {
   liveValue,
   type LiveRowsCollection,
 } from "@plugins/network/plugins/live/core";
-import { wholeRecord } from "@plugins/packages/plugins/list-bound/core";
+import {
+  wholeList,
+  wholeRecord,
+} from "@plugins/packages/plugins/list-bound/core";
 import {
   DEPLOY_PHASES,
   DEPLOY_VERBS,
@@ -68,6 +72,28 @@ export const DEPLOY_LOG_CHANNEL = "deploy";
  * Rebuilt at boot and never persisted, so it cannot go stale — the `op-status` /
  * `prototypes/thumbnails` idiom.
  */
+
+/**
+ * Why a run's approval sections load whole: one entry per deploy gate that
+ * refused it, so the list is bounded by the gate contributions installed.
+ */
+const APPROVAL_SECTIONS_WHOLE =
+  "one section id per refusing deploy gate — bounded by the installed DeployGates.Gate contributions";
+
+/**
+ * Every status a run can end in (or be in). `needs-approval` is a run the
+ * deploy gate (`DeployGate`, server) stopped BEFORE any leg spawned: something
+ * this deployment would put on its box — a deploy secret not yet approved for
+ * it — waits on the user's explicit approval. Nothing was converged or shipped;
+ * the run's `message` lists what to approve and where.
+ */
+export const DEPLOY_RUN_STATUSES = [
+  "running",
+  "succeeded",
+  "failed",
+  "needs-approval",
+] as const;
+
 export const DeployRunSchema = z.object({
   /**
    * This run's identity — the same string as its `deploy_runs.id`, so the live
@@ -118,7 +144,7 @@ export const DeployRunSchema = z.object({
    * plausible wrong answer is worse than an absent one.
    */
   commitSha: z.string().nullable(),
-  status: z.enum(["running", "succeeded", "failed"]),
+  status: z.enum(DEPLOY_RUN_STATUSES),
   startedAt: z.string(),
   /** Null while `running`. */
   finishedAt: z.string().nullable(),
@@ -130,6 +156,12 @@ export const DeployRunSchema = z.object({
    * is what it said" reaches the user instead of a generic failure.
    */
   message: z.string().nullable(),
+  /**
+   * A `needs-approval` run's links: the ids of the deployment pane's sections
+   * where what it waits on is approved (`DeployGatesVerdict.resolveIn`). Empty
+   * on every other run.
+   */
+  approvalSections: wholeList(z.string(), { reason: APPROVAL_SECTIONS_WHOLE }),
 });
 export type DeployRun = z.infer<typeof DeployRunSchema>;
 
@@ -165,7 +197,6 @@ export const deployRuns = liveValue("deploy.runs", {
  * - dates, not ISO strings — this shape is fed to a DataView, where a `date`
  *   field sorts and filters on a real `Date`.
  */
-export const DEPLOY_RUN_STATUSES = ["running", "succeeded", "failed"] as const;
 
 export const DeployRunRecordSchema = z.object({
   id: z.string(),
@@ -203,6 +234,8 @@ export const DeployRunRecordSchema = z.object({
   exitCode: z.number().int().nullable(),
   /** On failure: the CLI's own words, stored and rendered verbatim. */
   message: z.string().nullable(),
+  /** Where a held run is approved — as on the live run. */
+  approvalSections: wholeList(z.string(), { reason: APPROVAL_SECTIONS_WHOLE }),
 });
 
 /**
@@ -243,6 +276,7 @@ export const deployRunFields = {
       running: { label: "Running" },
       succeeded: { label: "Succeeded" },
       failed: { label: "Failed" },
+      "needs-approval": { label: "Needs approval" },
     },
   }),
   /** Which leg of an `update` died. Null on a success, and on a single-verb run. */
@@ -262,6 +296,11 @@ export const deployRunFields = {
   exitCode: nullable(intField({ label: "Exit code" })),
   /** On failure: the CLI's own words, stored and rendered verbatim. */
   message: nullable(textField({ label: "Message" })),
+  /**
+   * A `needs-approval` run's links: the deployment-pane section ids where what
+   * it waits on is approved. Empty on every other run.
+   */
+  approvalSections: stringListField({ label: "Approve in" }),
 };
 
 /**
@@ -311,7 +350,14 @@ export const deployRunHistory = liveCollection("deploy.run-history", {
     "finishedAt",
   ],
   carry: {
-    pick: ["id", "serverId", "compositionId", "phaseFailed", "exitCode"],
+    pick: [
+      "id",
+      "serverId",
+      "compositionId",
+      "phaseFailed",
+      "exitCode",
+      "approvalSections",
+    ],
   },
   id: "id",
   sortable: [

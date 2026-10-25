@@ -38,11 +38,13 @@ import {
   claimRun,
   deployRunLedger,
   failRun,
+  holdRunForApproval,
   pinShipBundle,
   setRunPhase,
 } from "./run-state";
 import { _deployRuns } from "./tables";
 import { deployRunIdKind } from "../../core/id-kinds";
+import { checkDeployGates, DeployGates } from "./gate";
 
 /** The target this app deploys. Web is the only implemented remote target. */
 const RELEASE_TARGET = "web";
@@ -127,6 +129,7 @@ export const deployRunJob = defineSupervisedJob({
 interface OpenRun {
   id: string;
   verb: DeployVerb;
+  deploymentId: string;
   compositionId: string;
   serverId: string;
   releaseRunId: string | null;
@@ -152,6 +155,7 @@ async function loadRun(runId: string): Promise<OpenRun> {
     // Parsed rather than cast: a `verb` outside the union would otherwise reach
     // `finalLeg` and decide, silently, that this run has no last leg.
     verb: DeployRunSchema.shape.verb.parse(row.verb),
+    deploymentId: row.deploymentId,
     compositionId: row.compositionId,
     serverId: row.serverId,
     releaseRunId: row.releaseRunId,
@@ -170,6 +174,19 @@ async function runDeploy(
   // anyway so the catch-all below has one honest answer for every verb.
   let phase: DeployPhase = run.verb === "ship" ? "ship" : "converge";
   try {
+    // The gates come before EVERY verb and before anything else: a run one of
+    // them refuses ends `needs-approval` having converged and shipped nothing.
+    // Memoized, so a resumed sequence is not re-judged halfway through.
+    const verdict = await ctx.step("gate", () =>
+      checkDeployGates(
+        { deploymentId: run.deploymentId, compositionId: run.compositionId },
+        DeployGates.Gate.getContributions(),
+      ),
+    );
+    if (verdict.kind === "needs-approval") {
+      await holdRunForApproval(run.id, verdict.message, verdict.resolveIn);
+      return;
+    }
     if (run.verb === "update") {
       await runUpdate(run, step, ctx, (next) => {
         phase = next;

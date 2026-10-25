@@ -18,6 +18,7 @@ cli/ship.ts                     the ship action
 cli/internal/target.ts          `(composition, --server)` → everything both verbs act on
 cli/internal/closure-guards.ts  converge's pre-mutation refusals
 cli/internal/converge-script.ts the generated host state (+ its test)
+cli/internal/secret-env.ts      the approved deploy secrets, fetched and rendered for stdin
 cli/internal/activate-script.ts the generated activation + health gate
 ```
 
@@ -27,6 +28,13 @@ deploy would otherwise discover on the host. The budgets live there together —
 each bounds a different external wait, and `ACTIVATE_MS` has to exceed the
 health gate's own `READY_ATTEMPTS × READY_INTERVAL_SEC`, which is only checkable
 by eye if both are in one place.
+
+**Deploy secrets travel only on stdin.** Converge asks this checkout's backend for
+the deployment's approved env (refusing, before any host mutation, while a secret is
+missing, new or changed — `apps/deploy/deploy-secrets`), generates the script from the
+KEYS alone, and hands the `KEY=value` lines to `runScript`'s `stdin`; the script reads
+them first thing (`SECRET_ENV_SH`) into the 0600 env file. No value is in argv, the
+uploaded script or the transcript.
 
 Both generated scripts send their progress to **stderr** (`exec 1>&2`): a FAILED
 `sshRun` returns stderr only, and the failing run is the one whose log matters.

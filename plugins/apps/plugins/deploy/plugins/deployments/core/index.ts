@@ -23,6 +23,7 @@ export type {
 } from "./endpoints";
 export {
   DEPLOY_LOG_CHANNEL,
+  DEPLOY_RUN_STATUSES,
   DeployRunSchema,
   DeployRunRecordSchema,
   DeployVerbSchema,

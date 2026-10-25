@@ -1761,7 +1761,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `change-feed-exclusion` "analytics_visitor_links"
                   - `change-feed-exclusion` "analytics_visits"
                 - Uses:
+                  - `apps/deploy/analytics/host-only.capBodySize`
                   - `apps/deploy/analytics/host-only.hostOnly`
+                  - `apps/deploy/analytics/host-only.isBotUserAgent`
                   - `apps/deploy/analytics/host-only.requestClientIp`
                   - `apps/deploy/analytics/ip-country.lookupCountry`
                   - `database.db`
@@ -1914,6 +1916,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Cross-plugin:
                 - Imported by:
                   - `apps/deploy/analytics/dashboard`
+                  - `apps/deploy/site-messages/intake`
                   - `apps/website/improve`
                   - `apps/website/pages/download`
                   - `apps/website/pages/foundations`
@@ -1927,16 +1930,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Test helpers:
                 - Core: `@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core/testing`
                   - `ZERO_METRICS`
-            - **`dashboard`** — Analytics section of a deployment's page, shown only when the deployment's composition ships the collect plugin: range and comparison controls, KPI tiles choosing a trend line with a dashed previous period, ranked Pages / Sources / Locations / Devices / Events panels whose rows filter the whole dashboard (one filter on ranges past the raw window), and what one visit records. Reads the report over SSH on demand, with explicit states for every failure. Reads a deployment's analytics report over SSH: resolves the deployment's server and pinned SSH target, curls the install's host-only report through its own gateway on the loopback port, and answers a discriminated result (report, refused, or which of SSH, the request or the answer failed).
+            - **`dashboard`** — Analytics section of a deployment's page, shown only when the deployment's composition ships the collect plugin: range and comparison controls, KPI tiles choosing a trend line with a dashed previous period, ranked Pages / Sources / Locations / Devices / Events panels whose rows filter the whole dashboard (one filter on ranges past the raw window), and what one visit records. Reads the report over SSH on demand, with explicit states for every failure. Reads a deployment's analytics report over SSH through host-query's hostOnlyQueryOverSsh (the install's host-only report, curled through its own gateway on the loopback port) and answers a discriminated result (report, refused, or which of SSH, the request or the answer failed).
               - Web:
                 - Contributes: `DeploymentDetail.Section` "Analytics" → `AnalyticsSection`
-                - Uses: 29 symbols — full list in [`plugins/apps/plugins/deploy/plugins/analytics/plugins/dashboard/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/analytics/plugins/dashboard/REFERENCE.md)
-                  - `network/live` ×3
+                - Uses: 31 symbols — full list in [`plugins/apps/plugins/deploy/plugins/analytics/plugins/dashboard/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/analytics/plugins/dashboard/REFERENCE.md)
+                  - `apps/deploy/host-query` ×5
                   - `primitives/css/coords` ×2
                   - `primitives/css/text` ×2
                   - `primitives/css/ui-kit` ×2
                   - `apps/deploy/deployments.DeploymentDetail`
-                  - `plugin-meta/composition.useCompositionIncludes`
+                  - `network/live.useLive`
                   - `primitives/collapsible.FoldMotion`
                   - `primitives/css/badge.Badge`
                   - `primitives/css/card.Card`
@@ -1958,10 +1961,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Server:
                 - Contributes: `resource.declare` "deploy-analytics.report"
                 - Uses:
-                  - `apps/deploy/deployments._deployDeployments`
-                  - `apps/deploy/health.resolveServerSshTarget`
-                  - `database.db`
-                  - `infra/ssh.sshRun`
+                  - `apps/deploy/host-query.hostOnlyQueryOverSsh`
                   - `network/live.serveValue`
                 - Resources: `deploy-analytics.report` (invalidate, snapshot)
               - Core:
@@ -1969,12 +1969,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/deploy/analytics/collect.AnalyticsFilter`
                   - `apps/deploy/analytics/collect.AnalyticsQueryResultSchema`
                   - `apps/deploy/analytics/collect.AnalyticsQuerySchema`
-                  - `infra/ssh.SshFailureKindSchema`
+                  - `apps/deploy/host-query.HOST_QUERY_FAILURE_ARMS`
                   - `network/live.liveValue`
                   - `packages/canonical-params.canonicalJson`
                 - Exports (types): `DeploymentAnalyticsResult`
                 - Exports (values):
-                  - `CURL_EXIT`
                   - `deploymentAnalytics`
                   - `filtersFit`
               - Cross-plugin:
@@ -1998,12 +1997,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `metrics`
                   - `report`
                   - `row`
-            - **`host-only`** — hostOnly(handler) 404s a /api/host-only/ route unless the request made exactly the gateway's own proxy hop (it came from the box); requestClientIp(req) reads the visitor address Caddy wrote into X-Forwarded-For.
+            - **`host-only`** — The guards of a deployed site's routes: hostOnly(handler) 404s a /api/host-only/ route unless the request made exactly the gateway's own proxy hop (it came from the box); requestClientIp(req) reads the visitor address Caddy wrote into X-Forwarded-For; capBodySize(maxBytes, handler) refuses a public body over its declared length before it is read; isBotUserAgent(ua) names crawlers and HTTP libraries.
               - Cross-plugin:
-                - Imported by: `apps/deploy/analytics/collect`
+                - Imported by:
+                  - `apps/deploy/analytics/collect`
+                  - `apps/deploy/site-messages/intake`
               - Server:
                 - Exports (values):
+                  - `capBodySize`
                   - `hostOnly`
+                  - `isBotUserAgent`
                   - `requestClientIp`
               - Core:
                 - Exports (values): `HOST_ONLY_PREFIX`
@@ -2050,6 +2053,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Slot contributors: `DeployRunItemActions` ← `apps.deploy.deploy-history.investigate-failure`
             - Contributes: `DeploymentDetail.Section` "History" → `DeployHistorySection`
             - Uses:
+              - `apps/deploy/deployments.ApprovalLinks`
               - `apps/deploy/deployments.DeploymentDetail`
               - `primitives/css/badge.Badge`
               - `primitives/css/cluster.Cluster`
@@ -2080,7 +2084,96 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Uses:
                   - `apps/deploy/deploy-history.DeployRunItemActions`
                   - `primitives/launch/investigate.InvestigateAction`
-        - **`deployments`** — Deployments section of a server's page: this server's deployments as a DataView (composition, last run, plus contributed columns), an add affordance whose composition picker reads the compositions config, a Deploy row action that launches the CLI's whole converge-build-ship run, and the per-deployment pane whose sections (overview, plus contributed ones) carry the record, its derived install and the remote-deploy surface. Owns the deploy_deployments table: where a composition is served and under what URL ((composition × server) → { hostnames, loopbackPort }), its live collection, and the CRUD endpoints. Also launches `./equin deploy converge|ship` for a deployment — and orchestrates the `update` sequence (converge → build a candidate unless one is already current → ship that pinned run id) over the awaitable release engine — streaming the CLI's output into the durable `deploy` log channel, each run's phase and outcome into the in-memory `deploy.runs` live view, and every run into the durable `deploy_runs` ledger it serves back as a live history window — the record that survives the restart the live view does not. The install itself — run user, dir layout, systemd unit, Caddy site — is derived in core/, never stored.
+        - **`deploy-secrets`** — readDeploySecret(decl) reads an approved deploy secret from the box's environment, as a set/unset state.
+          - Cross-plugin:
+            - Imported by: `apps/deploy/site-messages/intake`
+          - Server:
+            - Exports (types): `DeploySecretValue`
+            - Exports (values): `readDeploySecret`
+          - Core:
+            - Exports (types): `DeploySecret`
+            - Exports (values):
+              - `defineDeploySecret`
+              - `DEPLOY_SECRET_KEY_PATTERN`
+          - Plugins:
+            - **`approvals`** — Secrets section of a deployment's page: every deploy secret its composition's closure declares as a DataView (key, requesting plugin, description, status approved / new / value changed / missing value) with per-row Set value (a password dialog) and Approve (no approve-all). Shown only when the composition needs a secret, and open by default while one waits on the user. Deploy-secret approvals on the local machine: values in the secrets store (namespace deploy-secrets), per-deployment grants of a value's HMAC fingerprint (deploy_secret_grants), the deploy gate that ends a run needs-approval while any secret its composition's closure declares is missing, new or changed, the deploy-secrets.status live value behind the Secrets section, and the browser-refusing endpoint converge reads the approved env from.
+              - Web:
+                - Slots: `item-actions`
+                - Slot contributors: `item-actions` ← `apps.deploy.deploy-secrets.approvals`
+                - Contributes:
+                  - `DeploymentDetail.Section` "Secrets" → `SecretsSection`
+                  - `item-actions` "set-value" → `SetValueAction`
+                  - `item-actions` "approve" → `ApproveAction`
+                - Uses:
+                  - `apps/deploy/deployments.DeploymentDetail`
+                  - `infra/endpoints.getEndpointErrorMessage`
+                  - `infra/endpoints.useEndpointMutation`
+                  - `network/live.useLive`
+                  - `primitives/css/badge.Badge`
+                  - `primitives/css/cluster.Cluster`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/css/text.Text`
+                  - `primitives/css/ui-kit.Button`
+                  - `primitives/css/ui-kit.DialogDescription`
+                  - `primitives/css/ui-kit.DialogTitle`
+                  - `primitives/css/ui-kit.Input`
+                  - `primitives/data-view.DataView`
+                  - `primitives/data-view.defineDataView`
+                  - `primitives/data-view.defineItemActions`
+                  - `primitives/data-view.FieldDef`
+                  - `primitives/icon-button.IconButton`
+                  - `primitives/live-state.foldResource`
+                  - `primitives/overlay/imperative-dialog.openDialog`
+              - Server:
+                - Contributes:
+                  - `deploy.gate` "deploy-secrets"
+                  - `resource.declare` "deploy-secrets.status"
+                - Uses:
+                  - `apps/deploy/deployments._deployDeployments`
+                  - `apps/deploy/deployments.DeployGates`
+                  - `config_v2.getConfig`
+                  - `database.db`
+                  - `infra/endpoints.HttpError`
+                  - `infra/endpoints.implement`
+                  - `infra/entities.defaultNow`
+                  - `infra/entities.defineEntity`
+                  - `infra/secrets.getSecret`
+                  - `infra/secrets.setSecret`
+                  - `network/live.serveValue`
+                  - `plugin-meta/plugin-tree.getFacetsTreeCached`
+                  - `plugin-meta/plugin-tree.onPluginTreeChanged`
+                - DB schema: `plugins/apps/plugins/deploy/plugins/deploy-secrets/plugins/approvals/server/internal/tables.ts`
+                - Resources: `deploy-secrets.status` (push, notified, whole: one row per deploy secret the deployment's composition closure declares — a handful, whole: the plugins in one closure declaring the same key — normally one)
+                - Routes:
+                  - `PUT /api/deploy-secrets/values/:key`
+                  - `POST /api/deploy-secrets/deployments/:deploymentId/approve`
+                  - `POST /api/deploy-secrets/deployments/:deploymentId/env`
+              - Core:
+                - Uses:
+                  - `apps/deploy/deployments.deploymentIdKind`
+                  - `fields/date/config.dateField`
+                  - `fields/text/config.textField`
+                  - `ids.idKindField`
+                  - `infra/endpoints.defineEndpoint`
+                  - `infra/entities.entityRef`
+                  - `network/live.liveValue`
+                  - `packages/list-bound.wholeList`
+                - Exports (types):
+                  - `DeploySecretRow`
+                  - `DeploySecretStatus`
+                - Exports (values):
+                  - `approveDeploySecret`
+                  - `deliverDeploySecrets`
+                  - `DEPLOY_SECRET_STATUS_LABELS`
+                  - `DEPLOY_SECRET_STATUSES`
+                  - `DEPLOY_SECRET_VALUE_PATTERN`
+                  - `deploySecretGrantsEntityRef`
+                  - `DeploySecretRowSchema`
+                  - `deploySecretsStatus`
+                  - `DeploySecretValueSchema`
+                  - `SECRETS_SECTION_ID`
+                  - `setDeploySecretValue`
+        - **`deployments`** — Deployments section of a server's page: this server's deployments as a DataView (composition, last run, plus contributed columns), an add affordance whose composition picker reads the compositions config, a Deploy row action that launches the CLI's whole converge-build-ship run, and the per-deployment pane whose sections (overview, plus contributed ones) carry the record, its derived install and the remote-deploy surface. Owns the deploy_deployments table: where a composition is served and under what URL ((composition × server) → { hostnames, loopbackPort }), its live collection, and the CRUD endpoints. Also launches `./equin deploy converge|ship` for a deployment — and orchestrates the `update` sequence (converge → build a candidate unless one is already current → ship that pinned run id) over the awaitable release engine — streaming the CLI's output into the durable `deploy` log channel, each run's phase and outcome into the in-memory `deploy.runs` live view, and every run into the durable `deploy_runs` ledger it serves back as a live history window — the record that survives the restart the live view does not. Before any leg spawns, every DeployGates.Gate contribution is asked; a run one of them refuses ends needs-approval having converged and shipped nothing. The install itself — run user, dir layout, systemd unit, Caddy site — is derived in core/, never stored.
           - Web:
             - Slots:
               - `DeploymentDetail.Section`
@@ -2090,9 +2183,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `DeploymentDetail.Section` ← `apps.deploy.analytics.dashboard`
               - `DeploymentDetail.Section` ← `apps.deploy.composition`
               - `DeploymentDetail.Section` ← `apps.deploy.deploy-history`
+              - `DeploymentDetail.Section` ← `apps.deploy.deploy-secrets.approvals`
               - `DeploymentDetail.Section` ← `apps.deploy.deployments`
               - `DeploymentDetail.Section` ← `apps.deploy.local-serve`
               - `DeploymentDetail.Section` ← `apps.deploy.remote-deploy`
+              - `DeploymentDetail.Section` ← `apps.deploy.site-messages.inbox`
               - `DeploymentItemActions` ← `apps.deploy.deployments`
               - `DeploymentItemActions` ← `apps.deploy.local-serve`
               - `deploymentDetailPane.Actions` ← `primitives.pane`
@@ -2104,7 +2199,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `DeploymentDetail.Section` "Overview" → `DeploymentOverview`
               - `DeploymentItemActions` "deploy" → `DeployAction`
               - `DeploymentItemActions` "delete" → `DeleteDeploymentAction`
-            - Uses: 49 symbols — full list in [`plugins/apps/plugins/deploy/plugins/deployments/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/deployments/REFERENCE.md)
+            - Uses: 51 symbols — full list in [`plugins/apps/plugins/deploy/plugins/deployments/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/deployments/REFERENCE.md)
               - `primitives/css/ui-kit` ×9
               - `primitives/data-view` ×7
               - `primitives/pane` ×5
@@ -2117,6 +2212,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta/composition.useManifestItems`
               - `primitives/css/badge.Badge`
               - `primitives/css/bouncing-dots.BouncingDots`
+              - `primitives/css/cluster.Cluster`
               - `primitives/css/fill.Fill`
               - `primitives/css/placeholder.Placeholder`
               - `primitives/css/spacing.Stack`
@@ -2124,11 +2220,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/detail-sections.defineDetailSections`
               - `primitives/editable-field.useEditableField`
               - `primitives/icon-button.IconButton`
+              - `primitives/link-gesture.activationProps`
               - `primitives/loading.Loading`
               - `primitives/overlay/imperative-dialog.openDialog`
               - `primitives/relative-time.RelativeTime`
               - `ui/icons.Icon`
             - Exports (values):
+              - `ApprovalLinks`
               - `DeploymentDetail`
               - `deploymentDetailPane`
               - `DeploymentItemActions`
@@ -2161,9 +2259,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/retention.defineRetention`
               - `primitives/log-channels.defineLogSink`
             - DB schema: `plugins/apps/plugins/deploy/plugins/deployments/server/internal/tables.ts`
+            - Exports (types):
+              - `DeployGate`
+              - `DeployGateSubject`
+              - `DeployGateVerdict`
             - Exports (values):
               - `_deployDeployments`
               - `_deployRuns`
+              - `DeployGates`
             - Register:
               - `defineJob('retention.deploy_runs')`
               - `defineSupervisedJob('deploy.run')`
@@ -2174,7 +2277,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `deploy.run-history` (keyed, window)
               - `deploy.run-history:groups` (push)
               - `deploy.run-history:rows` (keyed, point)
-              - `deploy.runs` (push, notified, whole: one entry per deployment row — its most recent run)
+              - `deploy.runs` (push, notified, whole: one entry per deployment row — its most recent run, whole: one section id per refusing deploy gate — bounded by the installed DeployGates.Gate contributions)
             - Routes:
               - `GET /api/deploy/deployments`
               - `POST /api/deploy/deployments`
@@ -2199,6 +2302,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `network/live.liveCollection`
               - `network/live.LiveRowsCollection`
               - `network/live.liveValue`
+              - `packages/list-bound.wholeList`
               - `packages/list-bound.wholeRecord`
               - `primitives/pane.defineRoute`
             - Exports (types):
@@ -2221,6 +2325,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `DEFAULT_LOOPBACK_PORT`
               - `deleteDeployment`
               - `DEPLOY_LOG_CHANNEL`
+              - `DEPLOY_RUN_STATUSES`
               - `deployDeploymentsEntityRef`
               - `deploymentDetailRoute`
               - `deploymentFields`
@@ -2258,9 +2363,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/deploy/analytics/dashboard`
               - `apps/deploy/composition`
               - `apps/deploy/deploy-history`
+              - `apps/deploy/deploy-secrets/approvals`
               - `apps/deploy/deployments/runs-arm`
+              - `apps/deploy/host-query`
               - `apps/deploy/local-serve`
               - `apps/deploy/remote-deploy`
+              - `apps/deploy/site-messages/inbox`
           - Exemptions:
             - Exempts itself from:
               - `paths:no-hardcoded-paths` — `core/derive.ts` (sanctioned)
@@ -2377,8 +2485,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --radius`
             - Imported by:
-              - `apps/deploy/analytics/dashboard`
               - `apps/deploy/deployments`
+              - `apps/deploy/host-query`
               - `apps/deploy/remote-deploy`
               - `apps/deploy/ssh-setup`
           - Exemptions:
@@ -2394,6 +2502,40 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ServerHealthRowSchema`
               - `serverHealthShape`
               - `SshCheckResultSchema`
+        - **`host-query`** — The deploy app's shared pieces for a section that reads its deployment's box over SSH: HostQueryFailureState renders every way the read can fail (no SSH key, unverified host, SSH failure, failed request, unreadable answer) in one vocabulary, and useDeploymentShips(deploymentId, pluginId) answers whether the deployment's composition closure includes a plugin. hostOnlyQueryOverSsh(deploymentId, path, schema): resolves a deployment's server and pinned SSH target, curls one host-only route of the install through its own gateway on the loopback port (two SSH sessions at most), and answers the parsed answer, which of SSH, the request or the answer failed, or not-found.
+          - Web:
+            - Uses:
+              - `network/live.LiveRowResult`
+              - `network/live.useLiveRow`
+              - `plugin-meta/composition.useCompositionIncludes`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/text.Text`
+            - Exports (types):
+              - `DeploymentShips`
+              - `HostQuerySubject`
+            - Exports (values):
+              - `HostQueryErrorState`
+              - `HostQueryFailureState`
+              - `useDeploymentShips`
+          - Server:
+            - Uses:
+              - `apps/deploy/deployments._deployDeployments`
+              - `apps/deploy/health.resolveServerSshTarget`
+              - `database.db`
+              - `infra/ssh.sshRun`
+            - Exports (types): `HostQueryAnswer`
+            - Exports (values): `hostOnlyQueryOverSsh`
+          - Core:
+            - Uses: `infra/ssh.SshFailureKindSchema`
+            - Exports (types): `HostQueryFailure`
+            - Exports (values):
+              - `CURL_EXIT`
+              - `HOST_QUERY_FAILURE_ARMS`
+              - `isHostQueryFailure`
+          - Cross-plugin:
+            - Imported by:
+              - `apps/deploy/analytics/dashboard`
+              - `apps/deploy/site-messages/inbox`
         - **`local-serve`** — Test locally: the deployment pane's section for the composition served on the shared gateway (its live URL and what it does and does not prove), plus the one-button serve/open shortcut on the deployments list row.
           - Web:
             - Contributes:
@@ -2421,12 +2563,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `DeploymentDetail.Section` "Output" → `OutputSection`
               - `ClientFields.Resolve` "client:deploy.deployments:release" → `ReleaseFieldResolver`
               - `FieldPresentation.Register` "client:deploy.deployments:release"
-            - Uses: 35 symbols — full list in [`plugins/apps/plugins/deploy/plugins/remote-deploy/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/remote-deploy/REFERENCE.md)
+            - Uses: 36 symbols — full list in [`plugins/apps/plugins/deploy/plugins/remote-deploy/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/remote-deploy/REFERENCE.md)
               - `primitives/live-state` ×6
               - `network/live` ×4
               - `primitives/setup-steps` ×4
+              - `apps/deploy/deployments` ×3
               - `apps/deploy/health` ×3
-              - `apps/deploy/deployments` ×2
               - `primitives/view-switcher` ×2
               - `infra/endpoints.useEndpointMutation`
               - `primitives/css/badge.Badge`
@@ -2624,6 +2766,130 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/pane.defineApp`
               - `ui/icons.symbol`
             - Exports (values): `deployApp`
+        - **`site-messages`** — Umbrella for messages a deployed site's visitors send: the intake half that ships inside the site (table, public endpoint, abuse limits, notification email) and the inbox half in the local deploy app (read over SSH).
+          - Plugins:
+            - **`inbox`** — Messages section of a deployment's page, shown only when the deployment's composition ships the site-messages intake: the messages visitors sent through the site, read over SSH from the box on demand, as a DataView (received, from as a reply link, the message with its full text on open, verdict, notification state), with explicit states for every way the read can fail. Reads a deployment's stored site messages over SSH through host-query's hostOnlyQueryOverSsh (the intake's host-only list, newest first) and answers a discriminated result: the page, or which of SSH, the request or the answer failed.
+              - Web:
+                - Contributes: `DeploymentDetail.Section` "Messages" → `MessagesSection`
+                - Uses:
+                  - `apps/deploy/deployments.DeploymentDetail`
+                  - `apps/deploy/host-query.HostQueryFailureState`
+                  - `apps/deploy/host-query.HostQuerySubject`
+                  - `apps/deploy/host-query.useDeploymentShips`
+                  - `network/live.useLive`
+                  - `primitives/css/badge.Badge`
+                  - `primitives/css/card.Card`
+                  - `primitives/css/cluster.Cluster`
+                  - `primitives/css/fill.Fill`
+                  - `primitives/css/line.Line`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/css/text.Text`
+                  - `primitives/css/ui-kit.Button`
+                  - `primitives/data-view.DataView`
+                  - `primitives/data-view.defineDataView`
+                  - `primitives/data-view.FieldDef`
+                  - `primitives/icon-button.IconButton`
+                  - `primitives/live-state.ResourceErrorInline`
+                  - `primitives/loading.Loading`
+                  - `primitives/relative-time.RelativeTime`
+              - Server:
+                - Contributes: `resource.declare` "deploy-site-messages.list"
+                - Uses:
+                  - `apps/deploy/host-query.hostOnlyQueryOverSsh`
+                  - `network/live.serveValue`
+                - Resources: `deploy-site-messages.list` (invalidate, snapshot)
+              - Core:
+                - Uses:
+                  - `apps/deploy/host-query.HOST_QUERY_FAILURE_ARMS`
+                  - `apps/deploy/site-messages/intake.SiteMessagesPageSchema`
+                  - `network/live.liveValue`
+                - Exports (types): `DeploymentSiteMessagesResult`
+                - Exports (values): `deploymentSiteMessages`
+              - Cross-plugin:
+                - Uses tokens: `ui/tokens/color-palette --border`
+            - **`intake`** — useSendSiteMessage() — the contact form's send (sent or rate-limited); a site takes messages by importing this barrel, which pulls the intake's server half into its composition. Registers the site-message id kind (smsg) with the web id registry — the server barrel registers the same kind. Owns site_messages: the public POST /api/site-messages endpoint (body capped at 8 KB; honeypot, a send under three seconds or a bot user agent stored as spam and still answered sent; 3 per 10 minutes and 10 per day per salted IP hash, the IP never stored), the site-messages.notify job emailing each accepted message through Resend from the approved RESEND_API_KEY deploy secret (not-configured without one, at most 30 emails a day, the rest held and counted in the next), the 30-day spam sweep, and the host-only list the deploy app reads over SSH.
+              - Web:
+                - Contributes: `IdKinds.Kind` "smsg"
+                - Uses:
+                  - `ids.IdKinds`
+                  - `infra/endpoints.useFetchEndpoint`
+                - Exports (values): `useSendSiteMessage`
+              - Server:
+                - Contributes:
+                  - `ids.kind` "smsg"
+                  - `change-feed-exclusion` "site_messages"
+                - Uses:
+                  - `apps/deploy/analytics/host-only.capBodySize`
+                  - `apps/deploy/analytics/host-only.hostOnly`
+                  - `apps/deploy/analytics/host-only.isBotUserAgent`
+                  - `apps/deploy/analytics/host-only.requestClientIp`
+                  - `apps/deploy/deploy-secrets.readDeploySecret`
+                  - `database.db`
+                  - `database/change-feed.ExcludeFromChangeFeed`
+                  - `database/sql-column.parsedText`
+                  - `ids.idColumn`
+                  - `ids.IdKinds`
+                  - `infra/endpoints.implement`
+                  - `infra/endpoints.rawEndpointHandler`
+                  - `infra/jobs.defineJob`
+                  - `infra/retention.defineRetention`
+                  - `integrations/resend.sendEmail`
+                - DB schema: `plugins/apps/plugins/deploy/plugins/site-messages/plugins/intake/server/internal/tables.ts`
+                - Register:
+                  - `defineJob('site-messages.notify')`
+                  - `defineJob('retention.site_messages')`
+                - Routes:
+                  - `POST /api/site-messages`
+                  - `GET /api/host-only/site-messages`
+              - Core:
+                - Uses:
+                  - `apps/deploy/analytics/collect.PagePathSchema`
+                  - `apps/deploy/analytics/collect.SiteHostSchema`
+                  - `apps/deploy/deploy-secrets.defineDeploySecret`
+                  - `ids.defineIdKind`
+                  - `ids.IdOf`
+                  - `infra/endpoints.defineEndpoint`
+                  - `packages/list-bound.cappedList`
+                - Exports (types):
+                  - `NotifyState`
+                  - `SiteMessageBody`
+                  - `SiteMessageId`
+                  - `SiteMessageRecord`
+                  - `SiteMessageResponse`
+                  - `SiteMessagesListQuery`
+                  - `SiteMessagesPage`
+                  - `SiteMessageVerdict`
+                  - `SpamReason`
+                - Exports (values):
+                  - `MAX_MESSAGE_LENGTH`
+                  - `MAX_REPLY_TO_LENGTH`
+                  - `MAX_SITE_MESSAGE_BODY_BYTES`
+                  - `MIN_HUMAN_ELAPSED_MS`
+                  - `NOTIFY_STATES`
+                  - `NotifyStateSchema`
+                  - `RESEND_API_KEY`
+                  - `sendSiteMessageEndpoint`
+                  - `SITE_MESSAGE_VERDICTS`
+                  - `SITE_MESSAGES_PAGE_DEFAULT`
+                  - `SITE_MESSAGES_PAGE_MAX`
+                  - `SiteMessageBodySchema`
+                  - `siteMessageIdKind`
+                  - `SiteMessageRecordSchema`
+                  - `SiteMessageResponseSchema`
+                  - `siteMessagesListEndpoint`
+                  - `siteMessagesListPath`
+                  - `SiteMessagesListQuerySchema`
+                  - `SiteMessagesPageSchema`
+                  - `SiteMessageVerdictSchema`
+                  - `SPAM_REASONS`
+                  - `SPAM_RETENTION_DAYS`
+                  - `SpamReasonSchema`
+              - Cross-plugin:
+                - Imported by:
+                  - `apps/deploy/site-messages/inbox`
+                  - `apps/website/landing/contact`
+              - Deploy-secrets:
+                - Deploy secrets: `RESEND_API_KEY` — Resend API key the site uses to email you each message a visitor sends through its contact form.
         - **`ssh-setup`** — SSH setup for deploy servers: owns the whole key flow (generate / paste-and-derive / fingerprint / install command / verify the connection / replace) as a collapsible section that always renders, and decorates it with the matched SshProvider's console prose when the server's console URL identifies one.
           - Web:
             - Slots: `SshProvider`
@@ -10322,22 +10588,35 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-semibold`
         - **`landing`** — Landing-page bands of the public website: the hero, the desktop screenshot, the three layers of equin, the story link, and the contact block.
           - Plugins:
-            - **`contact`** — Getting in touch: the homepage's closing band — an email for anyone who wants to support the vision, and GitHub issues for bug reports, feature requests and questions. The address itself and the source link live in the shell's site footer.
+            - **`contact`** — Getting in touch: the homepage's closing band — for anyone who wants to support the vision, the address in the sentence (copy on hover) and a Get in touch button that grows the card into a message form the site's server stores and emails on (sent, rate-limited and failed states said inline); for bug reports, feature requests and questions, GitHub issues.
               - Web:
                 - Contributes: `Website.Section` "Contact" → `ContactSection`
-                - Uses:
-                  - `apps/website/shell.Website`
-                  - `apps/website/shell.WebsiteArrow`
-                  - `apps/website/shell.WebsiteBand`
+                - Uses: 24 symbols — full list in [`plugins/apps/plugins/website/plugins/landing/plugins/contact/REFERENCE.md`](../plugins/apps/plugins/website/plugins/landing/plugins/contact/REFERENCE.md)
+                  - `primitives/css/ui-kit` ×4
+                  - `apps/website/shell` ×3
+                  - `infra/endpoints` ×2
+                  - `primitives/hover-reveal` ×2
+                  - `apps/deploy/site-messages/intake.useSendSiteMessage`
+                  - `primitives/collapsible.FoldMotion`
+                  - `primitives/copy-to-clipboard.CopyButton`
                   - `primitives/css/card.Card`
+                  - `primitives/css/center.Center`
+                  - `primitives/css/coords.Placed`
                   - `primitives/css/grid.Grid`
+                  - `primitives/css/rigid.rigidClass`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
-                  - `primitives/css/ui-kit.Button`
+                  - `primitives/dom/scroll-reveal.revealElement`
+                  - `primitives/pane.currentRoutePath`
                   - `ui/icons.Icon`
               - Cross-plugin:
                 - Uses tokens:
+                  - `ui/tokens/color-palette --foreground`
+                  - `ui/tokens/color-palette --muted-foreground`
+                  - `ui/tokens/color-palette --success`
                   - `ui/tokens/shape --radius`
+                  - `ui/tokens/shape --spacing`
+                  - `ui/tokens/type-scale --font-weight-medium`
                   - `ui/tokens/type-scale --font-weight-semibold`
             - **`hero`** — Landing hero band: the site's one headline — what equin is — with the lede under it and the three properties the claim rests on (self-evolving, integrated, personal).
               - Web:
@@ -13107,8 +13386,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `validationIssues`
       - `withOverrideLegend`
   - Cross-plugin:
-    - Imported by: 120 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
-      - `apps` ×33
+    - Imported by: 121 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+      - `apps` ×34
       - `backup` ×13
       - `conversations` ×13
       - `debug` ×12
@@ -19383,8 +19662,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `quotedRelationsIn`
       - `readTag`
   - Cross-plugin:
-    - Imported by: 122 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
-      - `apps` ×33
+    - Imported by: 124 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+      - `apps` ×35
       - `page` ×15
       - `infra` ×13
       - `conversations` ×12
@@ -19536,6 +19815,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/chord/song-index`
           - `apps/chord/video-availability`
           - `apps/deploy/analytics/collect`
+          - `apps/deploy/site-messages/intake`
           - `database/live-state-snapshot`
           - `debug/latency-ledger`
           - `debug/slow-ops`
@@ -20069,24 +20349,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens: `ui/tokens/color-palette --muted-foreground`
     - **`sql-column`** — Decoded columns: `parsedText` / `parsedJson` derive a column's type from a zod schema that really decodes it — on every read and every write — so a column can no longer declare a string-literal union, or a jsonb shape, that nothing verifies. `withWire` declares a column type's JSON wire form (a codec applied in JS by whatever projects the column onto the wire), carried on the built column's type so a row schema must match it.
       - Cross-plugin:
-        - Imported by:
-          - `apps/chord/curriculum`
-          - `apps/chord/progress`
-          - `apps/chord/song-index`
-          - `apps/chord/video-availability`
-          - `apps/deploy/analytics/collect`
-          - `conversations/agents`
-          - `conversations/usage`
+        - Imported by: 21 plugins — full list in [`plugins/database/plugins/sql-column/REFERENCE.md`](../plugins/database/plugins/sql-column/REFERENCE.md)
+          - `apps` ×6
+          - `fields` ×5
+          - `infra` ×3
+          - `conversations` ×2
           - `debug/latency-ledger`
-          - `fields/bytes/storage`
-          - `fields/json/storage`
-          - `fields/location/storage`
-          - `fields/tags/storage`
-          - `fields/text/storage`
           - `ids`
-          - `infra/events`
-          - `infra/jobs`
-          - `infra/query-resource`
           - `network/live`
           - `search/engine`
           - `ui/theme-engine/saved-themes`
@@ -23529,8 +23798,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `DateFieldDef`
             - Exports (values): `dateField`
           - Cross-plugin:
-            - Imported by: 48 plugins — full list in [`plugins/fields/plugins/date/plugins/config/REFERENCE.md`](../plugins/fields/plugins/date/plugins/config/REFERENCE.md)
-              - `apps` ×10
+            - Imported by: 49 plugins — full list in [`plugins/fields/plugins/date/plugins/config/REFERENCE.md`](../plugins/fields/plugins/date/plugins/config/REFERENCE.md)
+              - `apps` ×11
               - `conversations` ×9
               - `infra` ×5
               - `tasks` ×5
@@ -24815,8 +25084,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `textField`
               - `textSample`
           - Cross-plugin:
-            - Imported by: 71 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
-              - `apps` ×19
+            - Imported by: 72 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
+              - `apps` ×20
               - `conversations` ×15
               - `tasks` ×9
               - `infra` ×5
@@ -27412,8 +27681,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Slots:
       - `IdKinds.Kind`
       - `IdKinds.Presenter`
-    - Slot contributors: 37 contributors — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
-      - `IdKinds.Kind` ×28
+    - Slot contributors: 38 contributors — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
+      - `IdKinds.Kind` ×29
       - `IdKinds.Presenter` ×9
     - Exports (types):
       - `IdPresenter`
@@ -27465,8 +27734,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `parseKindLabel`
       - `storedIdSchema`
   - Cross-plugin:
-    - Imported by: 34 plugins — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
-      - `apps` ×11
+    - Imported by: 36 plugins — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
+      - `apps` ×13
       - `conversations` ×5
       - `primitives` ×3
       - `build` ×2
@@ -28647,8 +28916,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 231 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
-          - `apps` ×58
+        - Imported by: 234 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+          - `apps` ×61
           - `conversations` ×32
           - `infra` ×20
           - `page` ×20
@@ -28746,8 +29015,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `entityRef`
           - `wireSchema`
       - Cross-plugin:
-        - Imported by: 40 plugins — full list in [`plugins/infra/plugins/entities/REFERENCE.md`](../plugins/infra/plugins/entities/REFERENCE.md)
-          - `apps` ×9
+        - Imported by: 41 plugins — full list in [`plugins/infra/plugins/entities/REFERENCE.md`](../plugins/infra/plugins/entities/REFERENCE.md)
+          - `apps` ×10
           - `conversations` ×7
           - `infra` ×5
           - `debug` ×4
@@ -29911,8 +30180,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `taskFor`
           - `TOTAL_JOB_SLOTS`
       - Cross-plugin:
-        - Imported by: 59 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
-          - `apps` ×18
+        - Imported by: 60 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
+          - `apps` ×19
           - `infra` ×13
           - `debug` ×7
           - `conversations` ×6
@@ -30850,6 +31119,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps/deploy/analytics/collect`
           - `apps/deploy/deployments`
+          - `apps/deploy/site-messages/intake`
           - `apps/events/refresh`
           - `debug/boot-profile`
           - `debug/latency-ledger`
@@ -31040,6 +31310,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `secretsSet`
       - Cross-plugin:
         - Imported by:
+          - `apps/deploy/deploy-secrets/approvals`
           - `apps/deploy/servers`
           - `auth`
           - `auth/apple-signing`
@@ -31175,8 +31446,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`ssh`** — Hermetic SSH client primitive: sshRun (one remote command) and sshUpload (one file, over scp) open a session to (host, port, user) with EXACTLY the private key they are given — IdentitiesOnly + IdentityAgent=none + -F /dev/null keep the machine's own agent, config and multiplexed sessions out, so a connection test proves the key it was handed works — and return a discriminated result whose failures are classified from OpenSSH stderr (dns / unreachable / timeout / auth / host-key-mismatch / command-failed / unknown). Both are built from one shared hermetic invocation, so the isolation flags cannot drift between them. Host-key policy is pinned-or-learn with no 'off'; the key is materialized 0600 into a mkdtemp dir removed in finally. An upload lands on a staging sibling and is renamed over its destination, so it can neither fail because the destination is being executed nor leave a truncated file where a working one was.
       - Cross-plugin:
         - Imported by:
-          - `apps/deploy/analytics/dashboard`
           - `apps/deploy/health`
+          - `apps/deploy/host-query`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `server/internal/session.ts`, `server/internal/upload.ts` (debt)
       - Server:
@@ -31795,6 +32066,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LET_IT_BE_VERSE` — `GET /v1/songs/public/_NgbRXeYgQA?fields=ID,song,jsonData` — the verse of "Let It Be", captured 2026-09-15. `jsonData` is the Hookpad document as a JSON string, editor state (bands, lyrics, cursor, settings, mixer) included; `youtube.id` is a `youtu.be` share link, not a bare id.
           - `TRENDS_NODES_401_HTML` — `GET /v1/trends/nodes?cp=1,4` with no Authorization header, captured 2026-09-16: a 401 whose body is Hooktheory's HTML error page, not its JSON envelope.
           - `UNKNOWN_SECTION_400_JSON` — `GET /v1/songs/public/1?fields=ID,song,jsonData`, captured 2026-09-16: the JSON envelope Hooktheory answers an unknown section id with.
+    - **`resend`** — Stateless Resend client: sendEmail(apiKey, email) makes one POST to Resend's emails API (from, to, reply-to, subject, plain text) and answers { ok: true, id } or { ok: false, status, error } with Resend's own words — no answer at all throws. Takes the key per call; never touches auth or storage.
+      - Cross-plugin:
+        - Imported by: `apps/deploy/site-messages/intake`
+      - Server:
+        - Exports (types):
+          - `ResendEmail`
+          - `ResendSendResult`
+        - Exports (values): `sendEmail`
     - **`youtube`** — Embedded YouTube player the app controls: loadYouTubeIframeApi (the IFrame API, loaded once), <YouTubePlayer controller videoId loop autoplay audio onReady onPlaying onError onStateChange/> bound to a useYouTubePlayer() controller (without controls the iframe takes no pointer and its thumbnail covers it until it first plays, so none of YouTube's chrome shows, and a click opens the video on youtube.com at the playhead) (play, pause, isPlaying, isAdvancing, playRange for one pass then back to the loop, seek — re-cueing a video that has not started rather than starting it — getCurrentTime, getDuration, getPlaybackRate, setPlaybackRate resolving to the rate the video took), useYouTubePlayerState, useYouTubePlayhead (one read per animation frame while playing), and createMediaClock (a smoothed, slewed reading of the playhead for something slaved to it). Loops without polling: one timer to the loop's end, reset on every state change. Server-side YouTube: checkOembed(videoId) asks oEmbed whether a video plays in an embed (status code mapped by the core's statusFromOembedCode, plus the title and channel of a 200), and searchYouTube(query, exec) lists YouTube's results for a query (id, title, channel, duration, views, verified, art track) through yt-dlp's flat search, from the on-demand `youtube-audio` dependency this plugin owns.
       - Web:
         - Uses:
@@ -32710,8 +32989,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveCollectionOn`
           - `serveValueOn`
       - Cross-plugin:
-        - Imported by: 289 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
-          - `apps` ×76
+        - Imported by: 292 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+          - `apps` ×79
           - `conversations` ×50
           - `debug` ×31
           - `tasks` ×28
@@ -32948,8 +33227,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `createKeyedMutex`
     - **`list-bound`** — A list's bound, declared in its zod schema: cappedList / cappedRecord (a checked max) and wholeList / wholeRecord (loaded whole, with a written reason), tagged in _def so the tag survives zod's clones; listShapeOf walks every array, record, map and set a schema reaches and reports each one's bound and the bare ones, listBoundsOf refuses a bare one.
       - Cross-plugin:
-        - Imported by: 85 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
-          - `apps` ×13
+        - Imported by: 87 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
+          - `apps` ×15
           - `conversations` ×13
           - `infra` ×13
           - `debug` ×12
@@ -36159,9 +36438,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveModeLabel`
       - Cross-plugin:
         - Imported by:
-          - `apps/deploy/analytics/dashboard`
           - `apps/deploy/composition`
           - `apps/deploy/deployments`
+          - `apps/deploy/host-query`
           - `apps/deploy/local-serve`
           - `apps/studio/compositions`
           - `apps/studio/compositions/contributors`
@@ -36186,6 +36465,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Contributions.FacetTable` ← `plugin-meta.facets.contributions.render-contributions`
           - `Contributions.FacetTable` ← `plugin-meta.facets.cross-refs.render-contributions`
           - `Contributions.FacetTable` ← `plugin-meta.facets.db-schema.render-contributions`
+          - `Contributions.FacetTable` ← `plugin-meta.facets.deploy-secrets.render-contributions`
           - `Contributions.FacetTable` ← `plugin-meta.facets.exemptions.render-contributions`
           - `Contributions.FacetTable` ← `plugin-meta.facets.exports.render-contributions`
           - `Contributions.FacetTable` ← `plugin-meta.facets.registrations.render-contributions`
@@ -36216,6 +36496,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-meta/facets/contributions/render-contributions`
           - `plugin-meta/facets/cross-refs/render-contributions`
           - `plugin-meta/facets/db-schema/render-contributions`
+          - `plugin-meta/facets/deploy-secrets/render-contributions`
           - `plugin-meta/facets/exemptions/render-contributions`
           - `plugin-meta/facets/exports/render-contributions`
           - `plugin-meta/facets/registrations/render-contributions`
@@ -36321,6 +36602,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-meta/facets/contributions`
           - `plugin-meta/facets/cross-refs`
           - `plugin-meta/facets/db-schema`
+          - `plugin-meta/facets/deploy-secrets`
           - `plugin-meta/facets/exemptions`
           - `plugin-meta/facets/exports`
           - `plugin-meta/facets/registrations`
@@ -36509,6 +36791,47 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - **`render-diff`** (excluded — cascade) — Diff renderer for the db-schema facet (PR review).
               - Web:
                 - Contributes: `PluginChangesSlots.DiffRenderer` "Tables"
+                - Uses: `review/plugin-changes.PluginChangesSlots`
+        - **`deploy-secrets`**
+          - Core:
+            - Uses: `plugin-meta/facets.defineFacet`
+            - Exports (types):
+              - `DeclaredDeploySecret`
+              - `DeploySecretsData`
+            - Exports (values):
+              - `deploySecretsFacetDef`
+              - `deploySecretsToComparable`
+          - Plugins:
+            - **`render-contributions`** — Aggregated deploy-secrets table in the Studio Contributions view.
+              - Web:
+                - Contributes: `Contributions.FacetTable` "Deploy secrets"
+                - Uses:
+                  - `plugin-meta/contributions-table.Contributions`
+                  - `plugin-meta/contributions-table.defineFacetTable`
+                  - `plugin-meta/contributions-table.FacetTableEntry`
+                  - `plugin-meta/contributions-table.PluginChip`
+              - Cross-plugin:
+                - Uses tokens:
+                  - `ui/tokens/color-palette --foreground`
+                  - `ui/tokens/color-palette --muted-foreground`
+                  - `ui/tokens/font-family --font-mono`
+            - **`render-detail`** — Per-plugin deploy-secrets section in the plugin detail pane.
+              - Web:
+                - Contributes: `PluginViewSlots.Section` "Deploy secrets" → `DeploySecretsDetailSection`
+                - Uses:
+                  - `plugin-meta/plugin-view.PluginNode`
+                  - `plugin-meta/plugin-view.PluginViewSlots`
+                  - `plugin-meta/plugin-view.SectionCount`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/css/text.Text`
+              - Cross-plugin:
+                - Uses tokens:
+                  - `ui/tokens/color-palette --foreground`
+                  - `ui/tokens/density --space-xs`
+                  - `ui/tokens/font-family --font-mono`
+            - **`render-diff`** (excluded — cascade) — Diff renderer for the deploy-secrets facet (PR review).
+              - Web:
+                - Contributes: `PluginChangesSlots.DiffRenderer` "Deploy secrets"
                 - Uses: `review/plugin-changes.PluginChangesSlots`
         - **`exemptions`**
           - Core:
@@ -37131,6 +37454,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
         - Imported by:
+          - `apps/deploy/deploy-secrets/approvals`
           - `framework/tooling/boundaries`
           - `framework/tooling/checks`
           - `framework/tooling/codegen`
@@ -37146,6 +37470,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PluginViewSlots.Section` ← `plugin-meta.facets.contributions.render-detail`
           - `PluginViewSlots.Section` ← `plugin-meta.facets.cross-refs.render-detail`
           - `PluginViewSlots.Section` ← `plugin-meta.facets.db-schema.render-detail`
+          - `PluginViewSlots.Section` ← `plugin-meta.facets.deploy-secrets.render-detail`
           - `PluginViewSlots.Section` ← `plugin-meta.facets.exemptions.render-detail`
           - `PluginViewSlots.Section` ← `plugin-meta.facets.exports.render-detail`
           - `PluginViewSlots.Section` ← `plugin-meta.facets.registrations.render-detail`
@@ -37221,8 +37546,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density` ×5
           - `ui/tokens/color-palette` ×3
           - `ui/tokens/shape --spacing`
-        - Imported by: 23 plugins — full list in [`plugins/plugin-meta/plugins/plugin-view/REFERENCE.md`](../plugins/plugin-meta/plugins/plugin-view/REFERENCE.md)
-          - `plugin-meta` ×19
+        - Imported by: 24 plugins — full list in [`plugins/plugin-meta/plugins/plugin-view/REFERENCE.md`](../plugins/plugin-meta/plugins/plugin-view/REFERENCE.md)
+          - `plugin-meta` ×20
           - `apps` ×2
           - `active-data/plugin-link`
           - `debug/mcp-tools`
@@ -37774,6 +38099,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.SingleLineProvider`
+          - `primitives/latest-ref.useLatestRef`
           - `ui/icons.Icon`
         - Exports (types):
           - `CollapsibleChevronProps`
@@ -37815,10 +38141,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-caption`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-caption`
-        - Imported by: 58 plugins — full list in [`plugins/primitives/plugins/collapsible/REFERENCE.md`](../plugins/primitives/plugins/collapsible/REFERENCE.md)
+        - Imported by: 59 plugins — full list in [`plugins/primitives/plugins/collapsible/REFERENCE.md`](../plugins/primitives/plugins/collapsible/REFERENCE.md)
           - `conversations` ×14
           - `ui` ×12
-          - `apps` ×10
+          - `apps` ×11
           - `primitives` ×8
           - `plugin-meta` ×4
           - `review` ×3
@@ -37963,8 +38289,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CopyButton`
           - `useCopyToClipboard`
       - Cross-plugin:
-        - Imported by: 28 plugins — full list in [`plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md`](../plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md)
-          - `apps` ×8
+        - Imported by: 29 plugins — full list in [`plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md`](../plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md)
+          - `apps` ×9
           - `primitives` ×5
           - `page` ×4
           - `conversations` ×3
@@ -38030,8 +38356,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density` ×6
               - `ui/tokens/shape` ×2
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 171 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
-              - `apps` ×38
+            - Imported by: 173 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
+              - `apps` ×40
               - `debug` ×36
               - `conversations` ×24
               - `reports` ×14
@@ -38092,8 +38418,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --primary`
               - `ui/tokens/density --pad-card`
               - `ui/tokens/shadow --shadow`
-            - Imported by: 25 plugins — full list in [`plugins/primitives/plugins/css/plugins/card/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/card/REFERENCE.md)
-              - `apps` ×12
+            - Imported by: 26 plugins — full list in [`plugins/primitives/plugins/css/plugins/card/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/card/REFERENCE.md)
+              - `apps` ×13
               - `page` ×3
               - `primitives` ×3
               - `conversations` ×2
@@ -38110,8 +38436,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CenterProps`
             - Exports (values): `Center`
           - Cross-plugin:
-            - Imported by: 124 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
-              - `apps` ×39
+            - Imported by: 125 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
+              - `apps` ×40
               - `primitives` ×26
               - `page` ×17
               - `conversations` ×7
@@ -38169,8 +38495,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `ClusterProps`
             - Exports (values): `Cluster`
           - Cross-plugin:
-            - Imported by: 65 plugins — full list in [`plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md)
-              - `apps` ×25
+            - Imported by: 68 plugins — full list in [`plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md)
+              - `apps` ×28
               - `debug` ×11
               - `conversations` ×7
               - `plugin-meta` ×6
@@ -38359,8 +38685,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `placedClasses`
               - `placedStyle`
           - Cross-plugin:
-            - Imported by: 40 plugins — full list in [`plugins/primitives/plugins/css/plugins/coords/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/coords/REFERENCE.md)
-              - `apps` ×18
+            - Imported by: 41 plugins — full list in [`plugins/primitives/plugins/css/plugins/coords/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/coords/REFERENCE.md)
+              - `apps` ×19
               - `primitives` ×10
               - `debug` ×3
               - `hints` ×2
@@ -38382,8 +38708,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Fill`
               - `fillClasses`
           - Cross-plugin:
-            - Imported by: 175 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
-              - `apps` ×52
+            - Imported by: 176 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
+              - `apps` ×53
               - `primitives` ×30
               - `conversations` ×24
               - `debug` ×18
@@ -38555,8 +38881,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `LineProps`
             - Exports (values): `Line`
           - Cross-plugin:
-            - Imported by: 121 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
-              - `apps` ×36
+            - Imported by: 122 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
+              - `apps` ×37
               - `primitives` ×18
               - `conversations` ×17
               - `debug` ×8
@@ -38750,8 +39076,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --spacing`
-            - Imported by: 134 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
-              - `apps` ×33
+            - Imported by: 135 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
+              - `apps` ×34
               - `conversations` ×23
               - `primitives` ×17
               - `debug` ×13
@@ -38945,14 +39271,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `selfClass`
               - `Stack`
           - Cross-plugin:
-            - Imported by: 418 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
-              - `apps` ×108
+            - Imported by: 422 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+              - `apps` ×111
               - `conversations` ×64
               - `primitives` ×54
               - `debug` ×38
               - `ui` ×31
               - `page` ×24
-              - `plugin-meta` ×15
+              - `plugin-meta` ×16
               - `tasks` ×13
               - `fields` ×9
               - `apps-core` ×6
@@ -39179,14 +39505,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×37
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family` ×2
-            - Imported by: 398 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
-              - `apps` ×109
+            - Imported by: 402 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+              - `apps` ×112
               - `conversations` ×73
               - `primitives` ×45
               - `debug` ×37
               - `page` ×23
               - `ui` ×18
-              - `plugin-meta` ×14
+              - `plugin-meta` ×15
               - `tasks` ×14
               - `fields` ×9
               - `stats` ×6
@@ -39469,9 +39795,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 439 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 441 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×109
-              - `apps` ×99
+              - `apps` ×101
               - `conversations` ×54
               - `page` ×25
               - `debug` ×24
@@ -39718,8 +40044,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ← `primitives.data-view`
           - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
           - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
-        - Contributes: 92 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ConfigV2.WebRegister` ×82
+        - Contributes: 94 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ConfigV2.WebRegister` ×84
           - `DataViewSlots.Control` ×4
           - `DataViewSlots.Setting` ×4
           - `IdKinds.Kind` ×2
@@ -39975,8 +40301,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useSortController`
           - `useViewRowCounts`
       - Server:
-        - Contributes: 84 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ConfigV2.Register` ×82
+        - Contributes: 86 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ConfigV2.Register` ×84
           - `ids.kind` ×2
         - Uses:
           - `config_v2.getConfig`
@@ -40136,9 +40462,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale` ×8
           - `ui/tokens/shadow` ×3
           - `ui/tokens/shape` ×3
-        - Imported by: 110 plugins — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Imported by: 112 plugins — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `fields` ×31
-          - `apps` ×25
+          - `apps` ×27
           - `debug` ×15
           - `primitives` ×10
           - `conversations` ×8
@@ -40692,14 +41018,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `primitives/css/inline.Inline`
           - `primitives/css/spacing.Stack`
+          - `primitives/dom/scroll-reveal.revealElement`
           - `primitives/dom/web-storage.defineStore`
           - `primitives/persistent-draft.DEFAULT_DRAFT_TTL`
           - `primitives/persistent-draft.useDraft`
+          - `primitives/persistent-draft.writeDraft`
           - `primitives/section-card.SectionCard`
           - `primitives/slot-render.defineRenderSlot`
           - `primitives/slot-render.RenderSlot`
           - `ui/icons.Icon`
         - Exports (types):
+          - `DefaultOpen`
           - `DetailSection`
           - `DetailSections`
           - `DetailSectionsOptions`
@@ -40981,25 +41310,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `revealElement`
               - `useRevealOnActive`
           - Cross-plugin:
-            - Imported by:
+            - Imported by: 21 plugins — full list in [`plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md)
+              - `apps` ×8
+              - `primitives` ×6
+              - `conversations` ×2
+              - `page` ×2
               - `apps-core/tab-bar`
-              - `apps/desktop/launcher`
-              - `apps/places/places-map`
-              - `apps/prototypes/canvas`
-              - `apps/sonata/chord-chart`
-              - `apps/sonata/lyrics-hud`
-              - `apps/sonata/songsheet`
-              - `apps/sonata/sources/ultimate-guitar`
-              - `conversations/conversation-view/jsonl-viewer`
-              - `conversations/conversation-view/jsonl-viewer/outline`
               - `hints`
-              - `page/editor`
-              - `page/map`
-              - `primitives/command-palette`
-              - `primitives/outline/rail`
-              - `primitives/overlay/image-viewer`
-              - `primitives/syntax-highlight`
-              - `primitives/tree`
               - `search/quick-find`
           - Exemptions:
             - Exempts itself from:
@@ -41613,8 +41930,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `hoverRevealTargetWithGroupFocus`
           - `useHoverReveal`
       - Cross-plugin:
-        - Imported by: 36 plugins — full list in [`plugins/primitives/plugins/hover-reveal/REFERENCE.md`](../plugins/primitives/plugins/hover-reveal/REFERENCE.md)
-          - `apps` ×11
+        - Imported by: 37 plugins — full list in [`plugins/primitives/plugins/hover-reveal/REFERENCE.md`](../plugins/primitives/plugins/hover-reveal/REFERENCE.md)
+          - `apps` ×12
           - `page` ×8
           - `primitives` ×7
           - `ui` ×4
@@ -41638,8 +41955,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `IconButton`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 126 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
-          - `apps` ×41
+        - Imported by: 128 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
+          - `apps` ×43
           - `primitives` ×21
           - `conversations` ×20
           - `tasks` ×8
@@ -41748,8 +42065,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SortDirection`
     - **`latest-ref`** — Latest-value ref idiom as a primitive: useLatestRef(value) mirrors the latest value into a ref written in render (read only in callbacks/effects), and useEventCallback(fn) is the stable-identity callback built on it. The single sanctioned home + exemption for the idiom, so react-hooks/refs can be enforced at error.
       - Cross-plugin:
-        - Imported by: 76 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
-          - `primitives` ×34
+        - Imported by: 77 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
+          - `primitives` ×35
           - `apps` ×23
           - `page` ×4
           - `conversations` ×3
@@ -41898,10 +42215,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `linkProps`
           - `openInBrowserTab`
       - Cross-plugin:
-        - Imported by: 47 plugins — full list in [`plugins/primitives/plugins/link-gesture/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/REFERENCE.md)
+        - Imported by: 48 plugins — full list in [`plugins/primitives/plugins/link-gesture/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/REFERENCE.md)
           - `primitives` ×13
           - `conversations` ×11
-          - `apps` ×4
+          - `apps` ×5
           - `apps-core` ×3
           - `page` ×3
           - `tasks` ×3
@@ -42062,8 +42379,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/color-palette --destructive`
           - `ui/tokens/shadow --shadow`
-        - Imported by: 281 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
-          - `apps` ×74
+        - Imported by: 283 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
+          - `apps` ×76
           - `conversations` ×49
           - `debug` ×28
           - `ui` ×25
@@ -42159,8 +42476,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-body`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-body`
-        - Imported by: 211 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
-          - `apps` ×67
+        - Imported by: 212 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+          - `apps` ×68
           - `ui` ×22
           - `conversations` ×19
           - `primitives` ×19
@@ -43199,6 +43516,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `openDialog`
           - Cross-plugin:
             - Imported by:
+              - `apps/deploy/deploy-secrets/approvals`
               - `apps/deploy/deployments`
               - `apps/deploy/servers`
               - `apps/deploy/ssh-setup`
@@ -43602,8 +43920,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-2xs`
           - `ui/tokens/density --space-md`
           - `ui/tokens/shape --spacing`
-        - Imported by: 183 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
-          - `apps` ×66
+        - Imported by: 184 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+          - `apps` ×67
           - `conversations` ×30
           - `debug` ×27
           - `active-data` ×10
@@ -43935,8 +44253,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `sortable-list/no-raw-dnd-kit` — `web` (sanctioned)
     - **`relative-time`** — Formats a Date as a human-readable relative string (just now, Nm ago, Nh ago, Nd ago — or the short now / Nm / Nh / Nd), and a running duration as a clock (m:ss). Exposes formatRelativeTime(), <RelativeTime date={…} />, formatElapsed(), useNow() and <ElapsedTime since={…} />.
       - Cross-plugin:
-        - Imported by: 65 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
-          - `apps` ×23
+        - Imported by: 66 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
+          - `apps` ×24
           - `debug` ×13
           - `conversations` ×8
           - `tasks` ×5
@@ -45644,8 +45962,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
   - Web:
     - Slots: `ReorderSlots.AreaEditor`
     - Slot contributors: `ReorderSlots.AreaEditor` ← `reorder.edit-mode`
-    - Contributes: 251 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×251
+    - Contributes: 252 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×252
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfig`
@@ -45680,8 +45998,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ReorderSlots`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 250 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×250
+    - Contributes: 251 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×251
     - Uses: `config_v2.ConfigV2`
     - Exports (values): `reorderDirectiveDescriptor`
   - Cross-plugin:
@@ -46697,6 +47015,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PluginChangesSlots.DiffRenderer` ← `plugin-meta.facets.contributions.render-diff`
           - `PluginChangesSlots.DiffRenderer` ← `plugin-meta.facets.cross-refs.render-diff`
           - `PluginChangesSlots.DiffRenderer` ← `plugin-meta.facets.db-schema.render-diff`
+          - `PluginChangesSlots.DiffRenderer` ← `plugin-meta.facets.deploy-secrets.render-diff`
           - `PluginChangesSlots.DiffRenderer` ← `plugin-meta.facets.exemptions.render-diff`
           - `PluginChangesSlots.DiffRenderer` ← `plugin-meta.facets.exports.render-diff`
           - `PluginChangesSlots.DiffRenderer` ← `plugin-meta.facets.registrations.render-diff`
@@ -46775,6 +47094,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-meta/facets/contributions/render-diff`
           - `plugin-meta/facets/cross-refs/render-diff`
           - `plugin-meta/facets/db-schema/render-diff`
+          - `plugin-meta/facets/deploy-secrets/render-diff`
           - `plugin-meta/facets/exemptions/render-diff`
           - `plugin-meta/facets/exports/render-diff`
           - `plugin-meta/facets/registrations/render-diff`
@@ -51515,13 +51835,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `colorPaletteGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Tokens used by: 523 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
-              - `apps` ×118
+            - Tokens used by: 527 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+              - `apps` ×120
               - `conversations` ×88
               - `primitives` ×77
               - `debug` ×36
               - `page` ×32
-              - `plugin-meta` ×27
+              - `plugin-meta` ×29
               - `ui` ×26
               - `tasks` ×16
               - `reports` ×13
@@ -51634,14 +51954,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 333 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+            - Tokens used by: 334 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
               - `primitives` ×70
               - `apps` ×69
               - `conversations` ×48
               - `debug` ×28
               - `page` ×20
               - `ui` ×18
-              - `plugin-meta` ×12
+              - `plugin-meta` ×13
               - `tasks` ×8
               - `fields` ×7
               - `reorder` ×7
@@ -51714,10 +52034,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `fontFamilyGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Tokens used by: 151 plugins — full list in [`plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md)
+            - Tokens used by: 153 plugins — full list in [`plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md)
               - `conversations` ×36
+              - `plugin-meta` ×23
               - `apps` ×21
-              - `plugin-meta` ×21
               - `debug` ×20
               - `primitives` ×16
               - `reports` ×7

@@ -61,10 +61,20 @@ order.
 
 **persisted toggle → `useDefaultOpen?.(props)` → `false`**, persisted per device
 via `useDraft` under `` `<slotId>.<sectionId>.open` `` (e.g.
-`sonata.section.chord-readout.open`). `useSectionOpen(sectionId)` (on the
-factory's return) reads and writes that same value from outside the card — a
-rail of section icons opening the one picked. `useDefaultOpen` only *seeds* it — resolved
-once per mount, so a later flip never yanks a card the user has touched.
+`sonata.section.chord-readout.open`). Only a user's toggle (or a reveal) is ever
+written; an absent entry means "never touched". `useSectionOpen(sectionId)` (on
+the factory's return) reads and writes that same value from outside the card — a
+rail of section icons opening the one picked. `useDefaultOpen` only *seeds* it,
+and may answer **`"pending"`** while the fact it decides from is still loading
+(`DefaultOpen`): the card stays closed and the default is latched the first
+render it is known — so a section whose data arrives after the first paint
+still opens on a cold first visit — and is never re-read after, so a later flip
+never yanks a card the user has touched.
+
+`useRevealSection()` returns `(sectionId) => void`: persist the section open and
+scroll its card into view once mounted — from anywhere, including a link on
+another pane that is about to navigate here (the request waits up to 30 s for
+the card, then lapses). Push-based (a per-factory store the card subscribes to).
 
 ## A collapsed body is genuinely UNMOUNTED
 
@@ -102,14 +112,17 @@ DataView dropped in is inset once, by the card. See `data-view/CLAUDE.md`
   - Uses:
     - `primitives/css/inline.Inline`
     - `primitives/css/spacing.Stack`
+    - `primitives/dom/scroll-reveal.revealElement`
     - `primitives/dom/web-storage.defineStore`
     - `primitives/persistent-draft.DEFAULT_DRAFT_TTL`
     - `primitives/persistent-draft.useDraft`
+    - `primitives/persistent-draft.writeDraft`
     - `primitives/section-card.SectionCard`
     - `primitives/slot-render.defineRenderSlot`
     - `primitives/slot-render.RenderSlot`
     - `ui/icons.Icon`
   - Exports (types):
+    - `DefaultOpen`
     - `DetailSection`
     - `DetailSections`
     - `DetailSectionsOptions`

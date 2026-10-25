@@ -18,6 +18,7 @@ import {
   type UseCollapsibleOptions,
 } from "./use-collapsible";
 import { foldTiming } from "../../core";
+import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { prefersReducedMotion, startFold } from "./fold-clock";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
@@ -221,6 +222,12 @@ export interface FoldMotionProps extends ComponentProps<"div"> {
    * Default false: closed content is unmounted.
    */
   warm?: boolean;
+  /**
+   * Called once an unfold has settled at its full height — the moment the
+   * content's final layout is on screen (e.g. to scroll an action inside it
+   * into view). Not called for a fold-away, nor for content that starts open.
+   */
+  onOpened?: () => void;
 }
 
 /**
@@ -239,10 +246,11 @@ export interface FoldMotionProps extends ComponentProps<"div"> {
 export function FoldMotion({
   open,
   warm = false,
+  onOpened,
   children,
   ...props
 }: FoldMotionProps) {
-  const { ref, present } = useFoldMotion(open);
+  const { ref, present } = useFoldMotion(open, onOpened);
   // Warm and closed: the same element, so opening keeps the mounted children.
   if (!present && !warm) return null;
   return (
@@ -290,8 +298,9 @@ export function FoldMotion({
  * `performance.now()` rather than the stale frame stamp. A slow mount delays
  * the motion instead of swallowing it.
  */
-function useFoldMotion(open: boolean) {
+function useFoldMotion(open: boolean, onOpened?: () => void) {
   const ref = useRef<HTMLDivElement>(null);
+  const onOpenedRef = useLatestRef(onOpened);
   /** The tween in flight, and the box it runs on. */
   const running = useRef<{ anim: Animation; el: HTMLElement } | null>(null);
   /** The box is pinned at a tween's first frame, waiting for its start. */
@@ -368,6 +377,7 @@ function useFoldMotion(open: boolean) {
         // Settled open: natural height again, and nothing clipped (a sticky
         // header or a spilling popover inside must not be cut by the fold).
         el.style.overflow = "";
+        onOpenedRef.current?.();
       };
     };
 
@@ -384,7 +394,7 @@ function useFoldMotion(open: boolean) {
     // A flip before the start re-runs this from the pinned frame; an unmount
     // drops the box with it.
     return startFold((startTime) => start(false, startTime));
-  }, [motion]);
+  }, [motion, onOpenedRef]);
 
   return { ref, present };
 }

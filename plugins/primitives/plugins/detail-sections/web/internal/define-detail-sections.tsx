@@ -1,6 +1,14 @@
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import type { IconRef } from "@plugins/ui/plugins/icons/core";
-import type { ComponentType, ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type ComponentType,
+  type ReactNode,
+} from "react";
+import { revealElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { type SpaceStep } from "@plugins/primitives/plugins/css/plugins/space-ramp/core";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -8,6 +16,7 @@ import { railClass } from "@plugins/primitives/plugins/css/plugins/rail/core";
 import {
   DEFAULT_DRAFT_TTL,
   useDraft,
+  writeDraft,
 } from "@plugins/primitives/plugins/persistent-draft/web";
 import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import { z } from "zod";
@@ -26,7 +35,10 @@ const sectionOpenStore = defineStore({
   cap: "32 KB",
   ttl: DEFAULT_DRAFT_TTL,
   whenFull: "evict-oldest",
-  schema: z.boolean(),
+  // `null` is never written: an ABSENT entry is "the user never toggled this
+  // section", which is what lets a section's default arrive late (see
+  // `DefaultOpen`). Nullable only so the read can say so.
+  schema: z.boolean().nullable(),
   // No `legacy`: the old keys (`<prefix>:draft:<slot>.<section>.open`) are
   // indistinguishable from other owners' `*.open` drafts, so they are left to
   // show as unowned; a section's fold state resets once.
@@ -85,14 +97,26 @@ interface DetailSectionCommon<EntityProps> {
   useAvailable?: Hook<(props: EntityProps) => boolean>;
 }
 
+/**
+ * What a section's `useDefaultOpen` answers: open or closed — or `"pending"`
+ * while the fact it decides from has not loaded yet. A pending default leaves
+ * the card closed and is resolved the first render it is known (once — a later
+ * flip never yanks the card), so a section whose data lands after the first
+ * paint still opens on a cold first visit. A user's own toggle always wins.
+ */
+export type DefaultOpen = boolean | "pending";
+
 /** A section with a body: a collapsible card, chevron and all. */
 interface DetailSectionWithBody<
   EntityProps,
 > extends DetailSectionCommon<EntityProps> {
   /** The body. Receives the pane's entity props. */
   component: ComponentType<EntityProps>;
-  /** First-render open state when the user has no persisted choice yet. */
-  useDefaultOpen?: Hook<(props: EntityProps) => boolean>;
+  /**
+   * Open state when the user has no persisted choice yet; `"pending"` until the
+   * fact it reads is known (see {@link DefaultOpen}).
+   */
+  useDefaultOpen?: Hook<(props: EntityProps) => DefaultOpen>;
 }
 
 /**
@@ -169,7 +193,18 @@ export interface DetailSections<EntityProps, Extra extends object = {}> {
   useSectionOpen: Hook<
     (sectionId: string) => [boolean, (open: boolean) => void]
   >;
+  /**
+   * Open a section and scroll it into view — from anywhere, including before
+   * the pane showing it is mounted (a link on another pane that navigates
+   * there): the request waits for the section's card to mount, briefly
+   * ({@link REVEAL_TTL_MS}), then lapses. Persists the open state like a
+   * user's click on the title.
+   */
+  useRevealSection: Hook<() => (sectionId: string) => void>;
 }
+
+/** How long a reveal request waits for its section's card to mount. */
+const REVEAL_TTL_MS = 30_000;
 
 /**
  * A detail pane is ONE render slot whose sections are contributions.
@@ -255,14 +290,52 @@ export function defineDetailSections<
    * module evaluates. It still keys two panes' identically-named sections
    * apart.
    */
+  function useStoredOpen(
+    sectionId: string,
+  ): [boolean | null, (open: boolean) => void] {
+    const [stored, setStored] = useDraft<boolean | null>(
+      sectionOpenStore,
+      null,
+      { scope: `${Section.id}.${sectionId}.open` },
+    );
+    return [stored, setStored];
+  }
+
+  /** The persisted choice, closed when there is none. */
   function useSectionOpen(
     sectionId: string,
-    defaultOpen: boolean,
   ): [boolean, (open: boolean) => void] {
-    const [open, setOpen] = useDraft(sectionOpenStore, defaultOpen, {
+    const [stored, setStored] = useStoredOpen(sectionId);
+    return [stored ?? false, setStored];
+  }
+
+  // The one pending reveal for this pane's sections — module state, because the
+  // link asking for it and the card answering it live in different subtrees
+  // (often different panes), and the card may not exist yet. A store with
+  // subscribers, never a poll.
+  let reveal: { sectionId: string; at: number } | null = null;
+  const revealListeners = new Set<() => void>();
+  function setReveal(next: typeof reveal): void {
+    reveal = next;
+    for (const l of revealListeners) l();
+  }
+  function subscribeReveal(l: () => void): () => void {
+    revealListeners.add(l);
+    return () => revealListeners.delete(l);
+  }
+
+  function useRevealSection(): (sectionId: string) => void {
+    return (sectionId: string) => {
+      writeOpen(sectionId);
+      setReveal({ sectionId, at: Date.now() });
+    };
+  }
+
+  /** Persist "open" for a section from outside a component (the reveal's write). */
+  function writeOpen(sectionId: string): void {
+    writeDraft(sectionOpenStore, true, {
       scope: `${Section.id}.${sectionId}.open`,
     });
-    return [open, setOpen];
   }
 
   interface SectionProps {
@@ -311,14 +384,33 @@ export function defineDetailSections<
     defaultOpen,
     Body,
   }: SectionProps & {
-    defaultOpen: boolean;
+    defaultOpen: DefaultOpen;
     Body: ComponentType<EntityProps>;
   }): ReactNode {
-    const [open, setOpen] = useSectionOpen(section.id, defaultOpen);
+    const [stored, setOpen] = useStoredOpen(section.id);
+    // The default is latched the first render it is KNOWN, never re-read after:
+    // a section whose data arrives late still opens, and a later flip of the
+    // fact behind it never yanks a card the user is reading.
+    const [latched, setLatched] = useState<boolean | null>(
+      defaultOpen === "pending" ? null : defaultOpen,
+    );
+    if (latched === null && defaultOpen !== "pending") setLatched(defaultOpen);
+    const open = stored ?? latched ?? false;
     const icon = section.icon;
+
+    // A pending reveal of THIS section scrolls its card into view once mounted.
+    const ref = useRef<HTMLElement>(null);
+    const pending = useSyncExternalStore(subscribeReveal, () => reveal);
+    useEffect(() => {
+      if (pending === null || pending.sectionId !== section.id) return;
+      setReveal(null);
+      if (Date.now() - pending.at > REVEAL_TTL_MS) return;
+      revealElement(ref.current, { block: "start", behavior: "smooth" });
+    }, [pending, section.id]);
 
     return (
       <SectionCard
+        ref={ref}
         variant={chrome}
         title={section.label}
         icon={icon ? <Icon icon={icon} /> : undefined}
@@ -364,7 +456,7 @@ export function defineDetailSections<
     entityProps,
     Body,
   }: SectionProps & {
-    useDefaultOpen: Hook<(props: EntityProps) => boolean>;
+    useDefaultOpen: Hook<(props: EntityProps) => DefaultOpen>;
     Body: ComponentType<EntityProps>;
   }): ReactNode {
     const defaultOpen = useDefaultOpen(entityProps);
@@ -481,6 +573,7 @@ export function defineDetailSections<
     Host,
     SectionItem: SectionItemHost,
     SectionStack,
-    useSectionOpen: (sectionId: string) => useSectionOpen(sectionId, false),
+    useSectionOpen,
+    useRevealSection,
   };
 }

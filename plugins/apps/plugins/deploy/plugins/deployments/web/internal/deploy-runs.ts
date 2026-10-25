@@ -1,13 +1,19 @@
 import type { DeployRun } from "../../core";
 
 /**
- * The four states a deployment's last run can be in. `never` is its own state
+ * The states a deployment's last run can be in. `never` is its own state
  * rather than an absent value: "we have never deployed this" and "the last
  * deploy failed" are different things to be told — and because the backend
  * forgets its runs on restart, `never` also honestly covers "not since this
  * boot".
  */
-export const RUN_STATES = ["never", "running", "succeeded", "failed"] as const;
+export const RUN_STATES = [
+  "never",
+  "running",
+  "succeeded",
+  "failed",
+  "needs-approval",
+] as const;
 export type RunState = (typeof RUN_STATES)[number];
 
 export const RUN_STATE_OPTIONS: { value: RunState; label: string }[] = [
@@ -15,6 +21,7 @@ export const RUN_STATE_OPTIONS: { value: RunState; label: string }[] = [
   { value: "running", label: "Running" },
   { value: "succeeded", label: "Succeeded" },
   { value: "failed", label: "Failed" },
+  { value: "needs-approval", label: "Needs approval" },
 ];
 
 export function runStateOf(run: DeployRun | undefined): RunState {

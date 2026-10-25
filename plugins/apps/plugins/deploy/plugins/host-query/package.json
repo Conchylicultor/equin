@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-deploy-host-query",
+  "description": "The deploy app's side of a deployed site's host-only routes: hostOnlyQueryOverSsh(deploymentId, path, schema) curls one through the install's own gateway over SSH and answers a discriminated result, the shared failure vocabulary (no-ssh-key, unverified, ssh-failed, request-failed, unreadable-answer) and its rendering, and the gate that asks whether a deployment's composition ships a plugin.",
+  "private": true,
+  "version": "0.0.1"
+}

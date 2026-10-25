@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { isBotUserAgent, parseUserAgent } from "./user-agent";
+import { parseUserAgent } from "./user-agent";
 
 const UA = {
   chromeMac:
@@ -53,29 +53,5 @@ describe("parseUserAgent", () => {
       browser: "Other",
       os: "Other",
     });
-  });
-});
-
-describe("isBotUserAgent", () => {
-  test("crawlers, HTTP libraries and an empty agent are bots", () => {
-    expect(
-      isBotUserAgent(
-        "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
-      ),
-    ).toBe(true);
-    expect(isBotUserAgent("curl/8.5.0")).toBe(true);
-    expect(isBotUserAgent("python-requests/2.32")).toBe(true);
-    expect(isBotUserAgent("")).toBe(true);
-  });
-  test("real browsers, and headless Chrome, are not", () => {
-    expect(isBotUserAgent(UA.chromeMac)).toBe(false);
-    expect(isBotUserAgent(UA.safariIphone)).toBe(false);
-    expect(isBotUserAgent(UA.headless)).toBe(false);
-    // A phone brand ending in "bot" is not a crawler.
-    expect(
-      isBotUserAgent(
-        "Mozilla/5.0 (Linux; Android 12; CUBOT X30) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
-      ),
-    ).toBe(false);
   });
 });

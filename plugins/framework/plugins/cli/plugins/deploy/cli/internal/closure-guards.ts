@@ -49,10 +49,13 @@ const OWNER_DATA_BUNDLES = [
 ];
 
 /**
- * The secrets store is hosted on the CENTRAL runtime, which a released bundle
- * does not have — so a composition that genuinely needs a credential is broken
- * in a way the `env` file cannot fix, and converge refuses rather than writing
- * plaintext credentials onto a box under a scheme nobody reviewed. See the plan,
+ * The secrets STORE is hosted on the CENTRAL runtime, which a released bundle
+ * does not have — so a composition whose closure reaches `infra/secrets` is
+ * broken in a way the `env` file cannot fix, and converge refuses it. A
+ * composition that needs a credential declares a deploy secret instead
+ * (`defineDeploySecret`, `apps/deploy/deploy-secrets`): the user approves its
+ * value per deployment, converge delivers it into `env` over the SSH session's
+ * stdin, and the box reads it with `readDeploySecret`. See the plan,
  * §What goes in `env`.
  */
 const SECRETS_PLUGIN_ID = asPluginId("infra.secrets");
@@ -144,11 +147,12 @@ export async function assertClosureSafe(target: DeployTarget): Promise<void> {
   //    secret at all, so this is broken regardless of who can reach it.
   if (bundle.has(SECRETS_PLUGIN_ID)) {
     refuse(
-      `composition "${composition}" needs ${SECRETS_PLUGIN_ID}, and converge writes no secrets.\n` +
+      `composition "${composition}" needs ${SECRETS_PLUGIN_ID}, which a deployed install cannot have.\n` +
         `The secrets store is hosted on the CENTRAL runtime, which a released bundle does not ` +
-        `have — so this composition cannot work as a deployed install, and an env file cannot ` +
-        `fix it. See research/2026-07-29-global-composition-production-deployment.md, ` +
-        `§What goes in \`env\`.`,
+        `have — so this composition cannot work as a deployed install. A plugin that needs a ` +
+        `credential on the box declares a deploy secret (defineDeploySecret) instead, approved per ` +
+        `deployment and delivered into its env file. See ` +
+        `research/2026-07-29-global-composition-production-deployment.md, §What goes in \`env\`.`,
     );
   }
 

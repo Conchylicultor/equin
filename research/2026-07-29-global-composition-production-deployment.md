@@ -501,18 +501,25 @@ explicit model rather than "from the secrets store":
 - **The per-deployment values converge derives** — today exactly
   `SINGULARITY_LISTEN=127.0.0.1:<loopbackPort>`. These are not secret; they are here
   because the unit template cannot hold per-instance values.
-- **Secrets: none, and that is enforced rather than assumed.** The `website` composition's
-  closure needs no third-party credential, and the `secrets` plugin is hosted on the
-  *central* runtime — a released bundle has no central runtime, so a composition that
-  genuinely needed a secret would be broken in ways this file could not fix. Converge
-  therefore writes no secret keys, and **refuses to converge a composition whose closure
-  includes `infra/secrets`** with a message pointing here.
-
-Provisioning secrets to a deployed host is a real requirement the moment a composition
-needs one — but it is a design question (which keys, chosen by what rule, rotated how)
-and inventing a half-answer now would put plaintext credentials on a box under a scheme
-nobody reviewed. It is filed as a follow-up (§Out of scope). The `env` file exists and is
-already 0600 `root:svc-<c>`, so the seam is there when the answer is.
+- **Deploy secrets, each approved by the user for this deployment.** *(Amended
+  2026-10-24 — `research/2026-10-24-global-website-contact-form.md` §1; the plugin is
+  `apps/deploy/deploy-secrets`.)* A plugin that needs a credential on the box declares it
+  in its `core/` with `defineDeploySecret({ key, description })`; the deploy side finds
+  every declaration in the composition's closure through the `deploy-secrets` facet,
+  never by name. The value is entered locally (the `deploy-secrets` namespace of the
+  secrets store) and **approved per deployment**: a grant records an HMAC fingerprint of
+  the value, so a rotated value is unapproved again. A run whose closure needs a secret
+  that is missing, new or changed ends `needs-approval` before any leg spawns
+  (`DeployGates`), and converge re-checks before touching the host. The approved
+  `KEY=value` lines reach converge over the SSH session's **stdin** — never argv, never
+  the uploaded script, never the transcript (keys only) — and are written into the
+  0600 `root:svc-<c>` env file beside `SINGULARITY_LISTEN`; a key no longer required is
+  simply not written, so removing a secret needs no approval. The box reads it with
+  `readDeploySecret`, which answers `set` / `unset`.
+- **The secrets STORE stays off the box, and that is enforced.** `infra/secrets` is
+  hosted on the *central* runtime, which a released bundle has none of, so converge still
+  **refuses a composition whose closure includes `infra/secrets`**: the local approval
+  plugin that reads it is never in a deployed closure.
 
 ### The public-exposure guard is part of converge, not a follow-up
 
@@ -681,12 +688,11 @@ The acid test is destructive, and it is the only one that proves the claim:
 > which `converge agent-manager` puts conversations, tasks and secrets on the open
 > internet with no auth. See §The public-exposure guard is part of converge.
 
-- **Provisioning secrets to a deployed host.** D3 writes no secret keys and refuses to
-  converge a composition whose closure includes `infra/secrets` (see §What goes in `env`),
-  because the store is central-runtime-hosted and a released bundle has no central
-  runtime. The real answer needs a key-selection model (which keys does *this* composition
-  need, and how are they rotated) — the `env` file, already 0600 `root:svc-<c>`, is the
-  seam it lands on. **Required before any composition needing a credential can deploy.**
+- ~~**Provisioning secrets to a deployed host.**~~ *Done 2026-10-24* — approved deploy
+  secrets (`apps/deploy/deploy-secrets`, see §What goes in `env`): declared by the
+  plugin that needs one, discovered in the closure, approved per deployment and per
+  value, delivered over SSH stdin into the env file. `infra/secrets` itself stays
+  refused in a deployed closure.
 - **Backups.** A `pg_dump` systemd timer written by converge, shipping to an object-store
   target. The existing `plugins/backup` plugin is scoped to the *dev machine*
   (transcripts, Claude settings, project memory) — reuse its target registry concept,

@@ -136,7 +136,9 @@ async function backendBase(): Promise<string> {
  * deployment, port taken) are the validation this transport exists to keep as
  * the single writer.
  */
-async function toBackend<T>(send: (origin: string) => Promise<T>): Promise<T> {
+export async function toBackend<T>(
+  send: (origin: string) => Promise<T>,
+): Promise<T> {
   const origin = await backendBase();
   try {
     return await send(origin);
@@ -344,7 +346,17 @@ export async function remote(
  */
 export async function runScript(
   target: DeployTarget,
-  opts: { script: string; remoteName: string; timeoutMs: number; what: string },
+  opts: {
+    script: string;
+    remoteName: string;
+    timeoutMs: number;
+    what: string;
+    /**
+     * Fed to the remote script's stdin — the one channel for a deploy secret
+     * (converge's approved env): never in argv, never in the uploaded script.
+     */
+    stdin?: string;
+  },
 ): Promise<void> {
   const localPath = join(tmpdir(), opts.remoteName);
   writeFileSync(localPath, opts.script, { mode: 0o700 });
@@ -362,10 +374,11 @@ export async function runScript(
     );
   }
 
-  const result = await sshRun(sshTargetFor(target, opts.timeoutMs), [
-    "bash",
-    remotePath,
-  ]);
+  const result = await sshRun(
+    sshTargetFor(target, opts.timeoutMs),
+    ["bash", remotePath],
+    opts.stdin !== undefined ? { stdin: opts.stdin } : undefined,
+  );
   // Both scripts send ALL their progress to stderr (`exec 1>&2`), because
   // `sshRun`'s FAILURE result carries stderr only — on stdout the record of
   // what ran would be dropped on exactly the path where it matters most.

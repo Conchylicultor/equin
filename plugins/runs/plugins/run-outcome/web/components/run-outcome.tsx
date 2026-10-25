@@ -22,6 +22,7 @@ const DOT_COLOR_CLASS: Record<RunOutcome, string> = {
   partial: "bg-warning",
   failed: "bg-destructive",
   canceled: "bg-muted-foreground/60",
+  "needs-approval": "bg-warning",
 };
 
 export const RUN_OUTCOME_META: Record<

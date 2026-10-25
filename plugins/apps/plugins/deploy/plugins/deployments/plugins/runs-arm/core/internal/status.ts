@@ -1,4 +1,5 @@
 import type { RunOutcome } from "@plugins/runs/plugins/run-outcome/core";
+import type { DEPLOY_RUN_STATUSES } from "@plugins/apps/plugins/deploy/plugins/deployments/core";
 
 /**
  * Every value `deploy_runs.status` can hold, and the shared outcome each means.
@@ -20,6 +21,7 @@ export const DEPLOY_STATUS_OUTCOME = {
   running: "running",
   succeeded: "succeeded",
   failed: "failed",
-} as const satisfies Record<string, RunOutcome>;
+  "needs-approval": "needs-approval",
+} as const satisfies Record<(typeof DEPLOY_RUN_STATUSES)[number], RunOutcome>;
 
 export type DeployRunStatus = keyof typeof DEPLOY_STATUS_OUTCOME;

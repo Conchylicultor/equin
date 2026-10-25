@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-deploy-site-messages",
+  "description": "Umbrella for messages a deployed site's visitors send: the intake half that ships inside the site (table, public endpoint, abuse limits, notification email) and the inbox half in the local deploy app (read over SSH).",
+  "private": true,
+  "version": "0.0.1"
+}

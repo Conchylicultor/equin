@@ -2,6 +2,7 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { and, desc, eq, gt, gte, lte, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { IpCountryResult } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/ip-country/server";
+import { isBotUserAgent } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/host-only/server";
 import {
   IDENTITY_WINDOW_DAYS,
   addDays,
@@ -20,7 +21,7 @@ import {
   analyticsVisitorLinks,
   analyticsVisits,
 } from "./tables";
-import { isBotUserAgent, parseUserAgent } from "./user-agent";
+import { parseUserAgent } from "./user-agent";
 import { liveVisitCutoff } from "./visit-grouping";
 
 /** Any drizzle handle collect can write through: the app's `db`, or a test DB. */

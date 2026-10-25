@@ -42,6 +42,7 @@ const script = (hostnames: string[]) =>
     loopbackPort: 9100,
     sshPort: 22,
     sshUser: "root",
+    secretKeys: ["RESEND_API_KEY"],
   });
 
 /** Run one bash snippet, returning its status and streams. */

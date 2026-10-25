@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-plugin-meta-facets-deploy-secrets-render-contributions",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Aggregated deploy-secrets table in the Studio Contributions view."
+}

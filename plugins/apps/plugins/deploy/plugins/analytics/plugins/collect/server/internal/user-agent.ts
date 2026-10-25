@@ -52,15 +52,3 @@ function deviceOf(ua: string): DeviceFamily {
   if (/\b(iPhone|iPod|Mobi|Windows Phone)\b/.test(ua)) return "Mobile";
   return "Desktop";
 }
-
-/**
- * Automated clients whose requests are not visits. Deliberately narrow: it
- * names crawlers and HTTP libraries, not headless browsers, so the repo's own
- * Playwright checks still record (that is how the tracker is verified).
- */
-const BOT_PATTERN =
-  /\bbot\b|bot[/;-]|crawl|spider|slurp|mediapartners|facebookexternalhit|embedly|preview|curl\/|wget\/|python-requests|python-urllib|aiohttp|go-http-client|okhttp|java\/|libwww|httpclient|node-fetch|axios\/|undici/i;
-
-export function isBotUserAgent(ua: string): boolean {
-  return ua.trim().length === 0 || BOT_PATTERN.test(ua);
-}

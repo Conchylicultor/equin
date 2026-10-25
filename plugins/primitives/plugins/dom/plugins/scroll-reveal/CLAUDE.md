@@ -34,25 +34,13 @@ Extend this primitive rather than hand-rolling `scrollIntoView` again.
     - `revealElement`
     - `useRevealOnActive`
 - Cross-plugin:
-  - Imported by:
+  - Imported by: 21 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×8
+    - `primitives` ×6
+    - `conversations` ×2
+    - `page` ×2
     - `apps-core/tab-bar`
-    - `apps/desktop/launcher`
-    - `apps/places/places-map`
-    - `apps/prototypes/canvas`
-    - `apps/sonata/chord-chart`
-    - `apps/sonata/lyrics-hud`
-    - `apps/sonata/songsheet`
-    - `apps/sonata/sources/ultimate-guitar`
-    - `conversations/conversation-view/jsonl-viewer`
-    - `conversations/conversation-view/jsonl-viewer/outline`
     - `hints`
-    - `page/editor`
-    - `page/map`
-    - `primitives/command-palette`
-    - `primitives/outline/rail`
-    - `primitives/overlay/image-viewer`
-    - `primitives/syntax-highlight`
-    - `primitives/tree`
     - `search/quick-find`
 - Exemptions:
   - Exempts itself from:

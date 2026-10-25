@@ -107,6 +107,7 @@ async function publishLiveRun(
     finishedAt: row.finishedAt?.toISOString() ?? null,
     exitCode: row.exitCode,
     message: row.message,
+    approvalSections: row.approvalSections,
   });
   runs.set(run.deploymentId, run);
   deployRunsServed.notify();
@@ -321,6 +322,38 @@ export async function failRun(
   message: string,
   phase: DeployPhase,
 ): Promise<void> {
+  await endRunBeforeLeg(runId, { status: "failed", message, phase });
+}
+
+/**
+ * End a run that a deploy gate refused (`DeployGates`), before any leg
+ * spawned: `needs-approval`, with the gates' own sentence. Nothing was
+ * converged or shipped, so there is no failed phase to name.
+ */
+export async function holdRunForApproval(
+  runId: string,
+  message: string,
+  approvalSections: readonly string[],
+): Promise<void> {
+  await endRunBeforeLeg(runId, {
+    status: "needs-approval",
+    message,
+    phase: "converge",
+    approvalSections,
+  });
+}
+
+/** The one terminal write for a run that ends at a step spawning nothing. */
+async function endRunBeforeLeg(
+  runId: string,
+  end: {
+    status: "failed" | "needs-approval";
+    message: string;
+    phase: DeployPhase;
+    /** Where a held run is resolved (`DeployGatesVerdict.resolveIn`); none for a failure. */
+    approvalSections?: readonly string[];
+  },
+): Promise<void> {
   const [row] = await db
     .select({
       verb: _deployRuns.verb,
@@ -335,13 +368,16 @@ export async function failRun(
   const updated = await db
     .update(_deployRuns)
     .set({
-      status: "failed",
-      // Only an `update` has legs to name; a single-verb run's failing phase is
-      // its verb, which the row already carries.
-      phaseFailed: verb === "update" ? phase : null,
+      status: end.status,
+      // Only an `update` that FAILED has a leg to name; a single-verb run's
+      // failing phase is its verb, which the row already carries, and a run
+      // held for approval never reached a phase at all.
+      phaseFailed:
+        end.status === "failed" && verb === "update" ? end.phase : null,
       finishedAt: new Date(),
       exitCode: null,
-      message,
+      message: end.message,
+      approvalSections: [...(end.approvalSections ?? [])],
     })
     .where(
       and(
@@ -353,10 +389,12 @@ export async function failRun(
   if (updated.length === 0) return;
 
   deployLog.publish(
-    `[failed] deploy ${verb} ${row.compositionId}: ${message}`,
+    end.status === "failed"
+      ? `[failed] deploy ${verb} ${row.compositionId}: ${end.message}`
+      : `[needs-approval] deploy ${verb} ${row.compositionId}: ${end.message}`,
     "stderr",
   );
-  await publishLiveRun(runId, phase);
+  await publishLiveRun(runId, end.phase);
 }
 
 /**

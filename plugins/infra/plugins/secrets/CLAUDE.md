@@ -85,6 +85,7 @@ On central's first boot after upgrade, `migrateLegacyAuthTokens` decrypts `~/.si
     - `secretsSet`
 - Cross-plugin:
   - Imported by:
+    - `apps/deploy/deploy-secrets/approvals`
     - `apps/deploy/servers`
     - `auth`
     - `auth/apple-signing`

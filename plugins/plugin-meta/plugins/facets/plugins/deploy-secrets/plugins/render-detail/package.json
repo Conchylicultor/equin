@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-plugin-meta-facets-deploy-secrets-render-detail",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Per-plugin deploy-secrets section in the plugin detail pane."
+}

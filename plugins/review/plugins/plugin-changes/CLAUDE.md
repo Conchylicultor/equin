@@ -40,6 +40,7 @@ trees; no ledger read). Refused `missing` (a sha names no commit) and `no-base`
     - `PluginChangesSlots.DiffRenderer` ← `plugin-meta.facets.contributions.render-diff`
     - `PluginChangesSlots.DiffRenderer` ← `plugin-meta.facets.cross-refs.render-diff`
     - `PluginChangesSlots.DiffRenderer` ← `plugin-meta.facets.db-schema.render-diff`
+    - `PluginChangesSlots.DiffRenderer` ← `plugin-meta.facets.deploy-secrets.render-diff`
     - `PluginChangesSlots.DiffRenderer` ← `plugin-meta.facets.exemptions.render-diff`
     - `PluginChangesSlots.DiffRenderer` ← `plugin-meta.facets.exports.render-diff`
     - `PluginChangesSlots.DiffRenderer` ← `plugin-meta.facets.registrations.render-diff`
@@ -118,6 +119,7 @@ trees; no ledger read). Refused `missing` (a sha names no commit) and `no-base`
     - `plugin-meta/facets/contributions/render-diff`
     - `plugin-meta/facets/cross-refs/render-diff`
     - `plugin-meta/facets/db-schema/render-diff`
+    - `plugin-meta/facets/deploy-secrets/render-diff`
     - `plugin-meta/facets/exemptions/render-diff`
     - `plugin-meta/facets/exports/render-diff`
     - `plugin-meta/facets/registrations/render-diff`

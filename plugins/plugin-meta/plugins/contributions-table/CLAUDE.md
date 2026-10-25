@@ -28,6 +28,7 @@ wires rows by matching a table's `facetId` to a `RowActivation` resolver.
     - `Contributions.FacetTable` ← `plugin-meta.facets.contributions.render-contributions`
     - `Contributions.FacetTable` ← `plugin-meta.facets.cross-refs.render-contributions`
     - `Contributions.FacetTable` ← `plugin-meta.facets.db-schema.render-contributions`
+    - `Contributions.FacetTable` ← `plugin-meta.facets.deploy-secrets.render-contributions`
     - `Contributions.FacetTable` ← `plugin-meta.facets.exemptions.render-contributions`
     - `Contributions.FacetTable` ← `plugin-meta.facets.exports.render-contributions`
     - `Contributions.FacetTable` ← `plugin-meta.facets.registrations.render-contributions`
@@ -58,6 +59,7 @@ wires rows by matching a table's `facetId` to a `RowActivation` resolver.
     - `plugin-meta/facets/contributions/render-contributions`
     - `plugin-meta/facets/cross-refs/render-contributions`
     - `plugin-meta/facets/db-schema/render-contributions`
+    - `plugin-meta/facets/deploy-secrets/render-contributions`
     - `plugin-meta/facets/exemptions/render-contributions`
     - `plugin-meta/facets/exports/render-contributions`
     - `plugin-meta/facets/registrations/render-contributions`

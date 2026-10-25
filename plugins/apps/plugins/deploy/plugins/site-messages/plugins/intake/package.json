@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-deploy-site-messages-intake",
+  "description": "Visitor messages on a deployed site: the site_messages table, the public POST /api/site-messages endpoint (honeypot, timing and bot checks filed as spam, per-visitor rate limits), the site-messages.notify email job through Resend under a daily cap, a 30-day spam sweep, and the host-only list the deploy app reads over SSH.",
+  "private": true,
+  "version": "0.0.1"
+}

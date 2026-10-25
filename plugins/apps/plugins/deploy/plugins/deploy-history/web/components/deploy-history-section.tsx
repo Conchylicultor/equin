@@ -1,3 +1,4 @@
+import { ApprovalLinks } from "@plugins/apps/plugins/deploy/plugins/deployments/web";
 import { useMemo, type ReactNode } from "react";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
@@ -48,6 +49,13 @@ function outcomeBadge(run: DeployRunRecord): ReactNode {
     return (
       <Badge variant="success" icon={<StatusDot colorClass="bg-success" />}>
         Succeeded
+      </Badge>
+    );
+  }
+  if (run.status === "needs-approval") {
+    return (
+      <Badge variant="warning" icon={<StatusDot colorClass="bg-warning" />}>
+        Needs approval
       </Badge>
     );
   }
@@ -228,16 +236,18 @@ function HistoryRow({ run }: { run: DeployRunRecord }): ReactNode {
             {durationLabel(run)} · <RelativeTime date={run.startedAt} />
           </Text>
         </Cluster>
-        {run.status === "failed" && run.message && (
+        {(run.status === "failed" || run.status === "needs-approval") &&
+          run.message && (
           <Text
             as="p"
             variant="caption"
-            tone="destructive"
+              tone={run.status === "failed" ? "destructive" : "default"}
             className="whitespace-pre-wrap"
           >
             {run.message}
           </Text>
         )}
+        {run.status === "needs-approval" && <ApprovalLinks run={run} />}
       </Stack>
     </Fill>
   );

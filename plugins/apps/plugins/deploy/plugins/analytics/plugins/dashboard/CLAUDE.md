@@ -10,31 +10,27 @@ typed-query value, question `{ deploymentId, query }`, `load: "snapshot"` —
 is served external with `changes: { snapshot }` (`server/internal/served.ts`):
 the report is the remote site's data, which changes with every visit and has
 no change signal here, so it is measured when a reader asks (each mount, and
-Refresh = `refresh()`), never on a timer. Its loader resolves the
-deployment's server through `health`'s `resolveServerSshTarget(…, "require-pinned")`
-— the same address, key and host-key rules as the connection check — and runs
+Refresh = `refresh()`), never on a timer. Its loader is one call to
+[`host-query`](../../../host-query/CLAUDE.md)'s
+`hostOnlyQueryOverSsh(deploymentId, analyticsQueryPath(query), AnalyticsQueryResultSchema)`,
+which resolves the deployment's server and pinned SSH target and runs
 
 ```
-curl -fsS -m 10 http://127.0.0.1:<loopbackPort>/api/host-only/analytics/query?q=<base64url>
+curl -fsS -m 10 'http://127.0.0.1:<loopbackPort>/api/host-only/analytics/query?q=<base64url>'
 ```
 
-over SSH. It goes through the install's **gateway**, never the backend socket:
-`hostOnly` answers only a request with exactly the gateway's one proxy hop.
+over SSH, through the install's **gateway** (the one hop `hostOnly` accepts).
 
 The answer is a discriminated result, never an empty report:
-`report` / `refused` (collect's own result) · `no-ssh-key` · `unverified` (the host
-key was never pinned; the dashboard never learns one) · `ssh-failed` (with the
-SSH failure kind) · `request-failed` (curl's exit code: 7 site down, 22 HTTP
-error, 28 timeout) · `unreadable-answer`. A missing deployment is refused
-`missing` (the read's error arm, through `ResourceErrorInline`).
+`report` / `refused` (collect's own result) or one of host-query's failure arms
+(`no-ssh-key` · `unverified` · `ssh-failed` · `request-failed` ·
+`unreadable-answer`), rendered by its `HostQueryFailureState`. A missing
+deployment is refused `missing` (the read's error arm, through
+`ResourceErrorInline`).
 
-That resolution reads Postgres (deployment row, server, pinned host key, key
-secret) inside the external loader: the private key and host key may only be
-read server-side at SSH time, so it cannot move out, and a `db` or
-reads-declaring `"notified"` arm would label the remote report fresh. It is
-re-read on every measure, so it is never staler than the report. (The
-`no-db-backed-notify` scan does not see this read: `resolveDeployment` reaches
-the loader as an injected dependency, not a call it follows.)
+That resolution reads Postgres inside the external loader (see host-query's
+CLAUDE.md), so the value stays a `snapshot`: a `db` or reads-declaring
+`"notified"` arm would label the remote report fresh.
 
 **Question size.** A question must fit `LIVE_QUERY_MAX_BYTES` (2 KiB): the
 id is capped at 128 chars and the filters, as canonical JSON, at
@@ -43,14 +39,10 @@ the one rule `clickRow` checks before it adds or replaces a filter (a row that
 would not fit is disabled with the reason). A test pins the worst case under
 the limit.
 
-`server/internal/query-over-ssh.ts` holds the argv and the mapping with the two
-effects injected, so they are tested without a box. The loader is capped at two
-concurrent SSH sessions (a semaphore; more readers queue).
-
 ## When the section shows
 
-`useShipsAnalytics` asks `plugin-meta/composition`'s `useCompositionIncludes`
-whether the deployment's composition resolves to a closure containing the collect
+`useShipsAnalytics` asks host-query's `useDeploymentShips` (over
+`plugin-meta/composition`'s `useCompositionIncludes`) whether the deployment's composition resolves to a closure containing the collect
 plugin (`web/internal/collect-plugin-id.ts`, pinned to the folder by a test). No
 composition is ever named. Loading keeps the card (with a loading body); a
 composition without collect hides it.
@@ -82,8 +74,8 @@ rendered after its note; Countries credits `IP_COUNTRY_SOURCE`.
 
 ## Tests
 
-- `server/internal/query-over-ssh.test.ts` — argv, result mapping, no session
-  when the deployment does not resolve.
+- The SSH argv, result mapping and no-session cases are host-query's
+  (`server/internal/query-over-ssh.test.ts` there).
 - `core/internal/analytics.test.ts` — a question within the filters budget
   always fits `LIVE_QUERY_MAX_BYTES`; over it, the schema refuses.
 - `web/internal/collect-plugin-id.test.ts` — the id names the collect folder.
@@ -100,16 +92,16 @@ Run with `./equin test plugins/apps/plugins/deploy/plugins/analytics/plugins/das
 
 ## Plugin reference
 
-- Description: Analytics section of a deployment's page, shown only when the deployment's composition ships the collect plugin: range and comparison controls, KPI tiles choosing a trend line with a dashed previous period, ranked Pages / Sources / Locations / Devices / Events panels whose rows filter the whole dashboard (one filter on ranges past the raw window), and what one visit records. Reads the report over SSH on demand, with explicit states for every failure. Reads a deployment's analytics report over SSH: resolves the deployment's server and pinned SSH target, curls the install's host-only report through its own gateway on the loopback port, and answers a discriminated result (report, refused, or which of SSH, the request or the answer failed).
+- Description: Analytics section of a deployment's page, shown only when the deployment's composition ships the collect plugin: range and comparison controls, KPI tiles choosing a trend line with a dashed previous period, ranked Pages / Sources / Locations / Devices / Events panels whose rows filter the whole dashboard (one filter on ranges past the raw window), and what one visit records. Reads the report over SSH on demand, with explicit states for every failure. Reads a deployment's analytics report over SSH through host-query's hostOnlyQueryOverSsh (the install's host-only report, curled through its own gateway on the loopback port) and answers a discriminated result (report, refused, or which of SSH, the request or the answer failed).
 - Web:
   - Contributes: `DeploymentDetail.Section` "Analytics" → `AnalyticsSection`
-  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `network/live` ×3
+  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps/deploy/host-query` ×5
     - `primitives/css/coords` ×2
     - `primitives/css/text` ×2
     - `primitives/css/ui-kit` ×2
     - `apps/deploy/deployments.DeploymentDetail`
-    - `plugin-meta/composition.useCompositionIncludes`
+    - `network/live.useLive`
     - `primitives/collapsible.FoldMotion`
     - `primitives/css/badge.Badge`
     - `primitives/css/card.Card`
@@ -131,10 +123,7 @@ Run with `./equin test plugins/apps/plugins/deploy/plugins/analytics/plugins/das
 - Server:
   - Contributes: `resource.declare` "deploy-analytics.report"
   - Uses:
-    - `apps/deploy/deployments._deployDeployments`
-    - `apps/deploy/health.resolveServerSshTarget`
-    - `database.db`
-    - `infra/ssh.sshRun`
+    - `apps/deploy/host-query.hostOnlyQueryOverSsh`
     - `network/live.serveValue`
   - Resources: `deploy-analytics.report` (invalidate, snapshot)
 - Core:
@@ -142,12 +131,11 @@ Run with `./equin test plugins/apps/plugins/deploy/plugins/analytics/plugins/das
     - `apps/deploy/analytics/collect.AnalyticsFilter`
     - `apps/deploy/analytics/collect.AnalyticsQueryResultSchema`
     - `apps/deploy/analytics/collect.AnalyticsQuerySchema`
-    - `infra/ssh.SshFailureKindSchema`
+    - `apps/deploy/host-query.HOST_QUERY_FAILURE_ARMS`
     - `network/live.liveValue`
     - `packages/canonical-params.canonicalJson`
   - Exports (types): `DeploymentAnalyticsResult`
   - Exports (values):
-    - `CURL_EXIT`
     - `deploymentAnalytics`
     - `filtersFit`
 - Cross-plugin:

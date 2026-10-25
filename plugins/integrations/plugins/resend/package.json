@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-integrations-resend",
+  "description": "Stateless Resend client: sendEmail(apiKey, email) makes one POST to Resend's emails API and answers { ok: true, id } or { ok: false, status, error }, its body zod-parsed. Takes the key per call; knows nothing about who sends or why.",
+  "private": true,
+  "version": "0.0.1"
+}

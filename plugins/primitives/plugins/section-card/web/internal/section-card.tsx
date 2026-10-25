@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ReactNode, Ref } from "react";
 import {
   Collapsible,
   CollapsibleContent,
@@ -51,6 +51,11 @@ export interface SectionCardProps {
   defaultOpen?: boolean;
   className?: string;
   /**
+   * The card's outer element — for a host that scrolls a section into view
+   * (`detail-sections`' reveal). Never needed to style or size it.
+   */
+  ref?: Ref<HTMLElement>;
+  /**
    * The collapsible body. Unmounted while collapsed.
    *
    * **Omit it** for a card whose whole content is one line: with no body there
@@ -87,6 +92,7 @@ export function SectionCard({
   onOpenChange,
   defaultOpen,
   className,
+  ref,
   children,
 }: SectionCardProps) {
   // ONE header expression for both shapes, with `collapsible` DERIVED from the
@@ -129,11 +135,13 @@ export function SectionCard({
   // the body rail below are shared, so they cannot drift apart.
   const frame = (content: ReactNode) =>
     inspector ? (
-      <section className={cn("border-b border-border", className)}>
+      <section ref={ref} className={cn("border-b border-border", className)}>
         {content}
       </section>
     ) : (
-      <Card className={cn("rounded-lg p-none", className)}>{content}</Card>
+      <Card ref={ref} className={cn("rounded-lg p-none", className)}>
+        {content}
+      </Card>
     );
 
   if (children === undefined) {

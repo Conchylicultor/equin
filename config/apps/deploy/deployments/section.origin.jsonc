@@ -1,4 +1,4 @@
-// @hash 49160d2ee583
+// @hash cac1b7b2282b
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -10,9 +10,11 @@
     "apps.deploy.analytics.dashboard:analytics",
     "apps.deploy.composition:composition",
     "apps.deploy.deploy-history:history",
+    "apps.deploy.deploy-secrets.approvals:secrets",
     "apps.deploy.deployments:overview",
     "apps.deploy.local-serve:serve",
     "apps.deploy.remote-deploy:deploy",
-    "apps.deploy.remote-deploy:output"
+    "apps.deploy.remote-deploy:output",
+    "apps.deploy.site-messages.inbox:messages"
   ]
 }

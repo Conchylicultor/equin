@@ -71,6 +71,7 @@ with `releaseDetailRoute` and `{ runId }` would make this chip a cross-app link.
   - Slot contributors: `DeployRunItemActions` ← `apps.deploy.deploy-history.investigate-failure`
   - Contributes: `DeploymentDetail.Section` "History" → `DeployHistorySection`
   - Uses:
+    - `apps/deploy/deployments.ApprovalLinks`
     - `apps/deploy/deployments.DeploymentDetail`
     - `primitives/css/badge.Badge`
     - `primitives/css/cluster.Cluster`

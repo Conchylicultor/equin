@@ -389,9 +389,9 @@ Run with `./equin test plugins/plugin-meta/plugins/composition`.
     - `serveModeLabel`
 - Cross-plugin:
   - Imported by:
-    - `apps/deploy/analytics/dashboard`
     - `apps/deploy/composition`
     - `apps/deploy/deployments`
+    - `apps/deploy/host-query`
     - `apps/deploy/local-serve`
     - `apps/studio/compositions`
     - `apps/studio/compositions/contributors`

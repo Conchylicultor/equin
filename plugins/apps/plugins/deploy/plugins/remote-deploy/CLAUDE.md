@@ -140,12 +140,12 @@ remote health gate.
     - `DeploymentDetail.Section` "Output" → `OutputSection`
     - `ClientFields.Resolve` "client:deploy.deployments:release" → `ReleaseFieldResolver`
     - `FieldPresentation.Register` "client:deploy.deployments:release"
-  - Uses: 35 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 36 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/live-state` ×6
     - `network/live` ×4
     - `primitives/setup-steps` ×4
+    - `apps/deploy/deployments` ×3
     - `apps/deploy/health` ×3
-    - `apps/deploy/deployments` ×2
     - `primitives/view-switcher` ×2
     - `infra/endpoints.useEndpointMutation`
     - `primitives/css/badge.Badge`

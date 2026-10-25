@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-deploy-deploy-secrets-approvals",
+  "description": "The local, approval half of deploy secrets: each value in the secrets store, each per-deployment grant of one value's fingerprint, the deploy gate that holds a run until every secret its closure needs is approved, the Secrets section of the deployment pane, and the endpoint converge reads the approved env from.",
+  "private": true,
+  "version": "0.0.1"
+}

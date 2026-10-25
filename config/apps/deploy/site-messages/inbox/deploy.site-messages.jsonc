@@ -1,0 +1,64 @@
+// @hash 6ec84829688d
+{
+  // What visitors sent through the deployed site, newest first. "Messages" is
+  // what a person wrote — the inbox. "Spam" is what the intake filed away
+  // (honeypot, too fast, a bot), kept 30 days so a false positive can still be
+  // found. "All" is the table, for scanning the notification states.
+  "views": [
+    {
+      "id": "messages",
+      "name": "Messages",
+      "icon": "mail",
+      "view": {
+        "type": "list",
+        "sort": [{ "fieldId": "createdAt", "direction": "desc" }],
+        "filter": {
+          "kind": "group",
+          "id": "f-accepted",
+          "conjunction": "and",
+          "children": [
+            {
+              "kind": "rule",
+              "id": "r-accepted",
+              "fieldId": "verdict",
+              "operatorId": "is",
+              "value": "accepted"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "spam",
+      "name": "Spam",
+      "icon": "report",
+      "view": {
+        "type": "list",
+        "sort": [{ "fieldId": "createdAt", "direction": "desc" }],
+        "filter": {
+          "kind": "group",
+          "id": "f-spam",
+          "conjunction": "and",
+          "children": [
+            {
+              "kind": "rule",
+              "id": "r-spam",
+              "fieldId": "verdict",
+              "operatorId": "is",
+              "value": "spam"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "all",
+      "name": "All",
+      "icon": "table-rows",
+      "view": { "type": "table", "sort": [{ "fieldId": "createdAt", "direction": "desc" }] }
+    }
+  ],
+  "sortPresets": [],
+  "filterPresets": [],
+  "customColumns": []
+}

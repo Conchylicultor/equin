@@ -91,7 +91,9 @@ The dashboard's Events panel expands an event into these rows.
     - `change-feed-exclusion` "analytics_visitor_links"
     - `change-feed-exclusion` "analytics_visits"
   - Uses:
+    - `apps/deploy/analytics/host-only.capBodySize`
     - `apps/deploy/analytics/host-only.hostOnly`
+    - `apps/deploy/analytics/host-only.isBotUserAgent`
     - `apps/deploy/analytics/host-only.requestClientIp`
     - `apps/deploy/analytics/ip-country.lookupCountry`
     - `database.db`
@@ -244,6 +246,7 @@ The dashboard's Events panel expands an event into these rows.
 - Cross-plugin:
   - Imported by:
     - `apps/deploy/analytics/dashboard`
+    - `apps/deploy/site-messages/intake`
     - `apps/website/improve`
     - `apps/website/pages/download`
     - `apps/website/pages/foundations`

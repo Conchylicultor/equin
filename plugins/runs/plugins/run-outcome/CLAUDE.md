@@ -2,12 +2,14 @@
 
 The shared status axis every run kind maps into, and its one display.
 
-`running / succeeded / partial / failed / canceled` — deliberately small, because
+`running / succeeded / partial / failed / canceled / needs-approval` — deliberately small, because
 it is the axis a person filters and groups by *across* kinds, so it may only hold
 distinctions true of every kind. `partial` exists because backup is the one kind
 that can half-succeed, and flattening that into either neighbour loses the only
 fact that matters. `canceled` covers superseded / interrupted / killed: nothing
-went wrong, the run stopped being the answer.
+went wrong, the run stopped being the answer. `needs-approval` is a run that
+ended before doing anything because a person must approve something first (a
+deploy whose closure needs a deploy secret not yet approved for its box).
 
 An arm's finer native status is **not** lost — it stays an arm field, so
 precision lives beside the shared axis instead of replacing it.
