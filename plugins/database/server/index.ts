@@ -30,6 +30,7 @@ export { dbLog } from "./internal/db-log";
 export {
   loadKnownRelations,
   quotedRelationsIn,
+  readTag,
 } from "./internal/read-set-capture";
 export { currentTxId, type DbExecutor } from "./internal/current-tx-id";
 

@@ -12,6 +12,7 @@ import {
   type WatchReaction,
   type WatchReconcile,
   type WatchDepth,
+  type WatchLost,
   type WatcherBackend,
 } from "./engine";
 
@@ -71,6 +72,11 @@ export type FileWatcherStartOptions<Reconciles extends boolean> = {
    * trailing call (see {@link WatchReaction}).
    */
   onChange: WatchReaction<FileChangeEvent>;
+  /**
+   * A dir's native watch errored and may have dropped events: re-derive
+   * what it keeps fresh. See the engine's `onLost`.
+   */
+  onLost?: WatchLost;
 } & (Reconciles extends true
   ? {
       /** The declared reconcile tick came round. Coalesced like `onChange`. */
@@ -255,6 +261,7 @@ export function defineFileWatcherIn<R extends number | undefined = undefined>(
         ceilingMs: spec.ceilingMs,
         writesWhileOpen: spec.writesWhileOpen,
         depth: spec.depth,
+        onLost: opts.onLost,
         onChange: (events: FileChangeEvent[]) => {
           noteBatch(state, events);
           return dispatch(state, () => onChange(events));

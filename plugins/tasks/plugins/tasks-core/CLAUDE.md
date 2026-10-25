@@ -309,6 +309,7 @@ serves them.
     - `infra/entities.defaultNow`
     - `infra/entities.defineEntity`
     - `infra/events.defineTriggerEvent`
+    - `infra/query-resource.compileLookup`
     - `network/live.serveCollection`
     - `primitives/rank.nextRankUnder`
     - `primitives/rank.RankExecutor`
@@ -429,6 +430,8 @@ serves them.
     - `updateTask`
     - `updateTaskTitle`
     - `withTaskStatusBatch`
+    - `workspaceOfAttemptLookup`
+    - `workspaceOfConversationLookup`
   - Register:
     - `defineTriggerEvent('pushes.landed')`
     - `defineTriggerEvent('tasks.statusChanged')`

@@ -1,3 +1,6 @@
+import { reportServerError } from "@plugins/framework/plugins/server-core/core";
+import type { LiveQueryParams } from "@plugins/network/plugins/live/core";
+import { createParkedWatches } from "@plugins/packages/plugins/parked-watch/core";
 import { serveValue } from "@plugins/network/plugins/live/machine";
 import { sliceRange } from "@plugins/network/plugins/live/server";
 import { WorktreeGoneError } from "@plugins/primitives/plugins/commit-list/server";
@@ -7,25 +10,44 @@ import {
   type Resolvable,
 } from "@plugins/primitives/plugins/live-state/core";
 import { assertCapability } from "@plugins/conversations/plugins/workspace/core";
-import { findWorkspaceOfConversation } from "@plugins/conversations/plugins/workspace/server";
-import {
-  _attempts,
-  _conversations,
-} from "@plugins/tasks/plugins/tasks-core/server";
+import { workspaceOfConversationLookup } from "@plugins/tasks/plugins/tasks-core/server";
 import { editedFile, editedFiles } from "../../core";
 import type { EditedFile, EditedFilesMeta } from "../../core/protocol";
 import { evictEditedFiles } from "../../server/internal/edited-files-cache";
 import { getEditedFiles } from "../../server/internal/get-edited-files";
 import { watchEditedFiles } from "../../server/internal/watch-edited-files";
 
-// A conversation with no git (a scratch workspace) is a caller bug — a
-// surface that reads edited files is gated on the git capability — so it
-// throws rather than reading as "no worktree" or "no changes".
-async function worktreeFor(conversationId: string): Promise<string | null> {
-  const found = await findWorkspaceOfConversation(conversationId);
+// The conversation's worktree, through tasks-core's compiled lookup — the
+// one read every loader and the watch make (`PAGED_READS`, `FILE_READS`). A
+// conversation with no git (a scratch workspace) is a caller bug — a surface
+// that reads edited files is gated on the git capability — so it throws
+// rather than reading as "no worktree" or "no changes".
+async function resolveWorktree(conversationId: string): Promise<string | null> {
+  const found = await workspaceOfConversationLookup.run(conversationId);
   if (!found.found) return null;
-  assertCapability(found.workspace.spec.kind, "git", "edited-files");
-  return found.workspace.path;
+  assertCapability(found.row.spec.kind, "git", "edited-files");
+  return found.row.path;
+}
+
+// The watches of a conversation subscribed before its row was written,
+// parked until a load resolves its worktree (`watchConversation`). A parked
+// watch that fails to open is reported and parked again: the next load that
+// resolves the worktree retries it.
+const parked = createParkedWatches<string>({
+  onOpenError: (conversationId, err) =>
+    reportServerError({
+      message: `[edited-files] the worktree watch of conversation ${conversationId} failed to open — its edited files hear no change until a load retries it: ${err instanceof Error ? err.message : String(err)}`,
+      stack: err instanceof Error ? (err.stack ?? null) : null,
+      errorType: "EditedFilesWatchOpenError",
+    }),
+});
+
+// The loaders' resolve: a worktree found opens the watches parked on the
+// conversation, so the load its row's insert re-ran opens the watch too.
+async function worktreeFor(conversationId: string): Promise<string | null> {
+  const wt = await resolveWorktree(conversationId);
+  if (wt !== null) parked.resolved(conversationId, wt);
+  return wt;
 }
 
 // A conversation whose worktree we cannot resolve — or whose worktree is reaped
@@ -55,6 +77,8 @@ async function onWorktree<T>(
     return await compute(wt);
   } catch (err) {
     if (!(err instanceof WorktreeGoneError)) throw err;
+    // Drops only the unwatched path's cached list: a watched worktree's held
+    // value is its memo's own (a failed pass already demoted it).
     evictEditedFiles(wt);
     return gone;
   }
@@ -85,45 +109,70 @@ export function editedFilesMetaOf(
   return resolved({ count: files.value.length, additions, deletions });
 }
 
-const READS = {
-  tables: [_conversations, _attempts],
-  reason:
-    "each tuple resolves its conversation's worktree (conversations → attempts) before reading git, and the same lookup runs in whileSubscribed; a write to any conversation or attempt row may move which worktree a tuple reads — whole-table until the path is a param or a db-served value",
+// What every loader reads in Postgres: the conversation's worktree, through
+// the compiled lookup alone (conversations ⋈ attempts by `conversations.id`).
+// A write to a column it does not read (a turn's status) reaches no tuple; a
+// conversation's insert or delete reaches only its own tuples; an attempt's
+// insert or delete every tuple once, at launch rate.
+const READ_REASON =
+  "each tuple resolves its conversation's worktree (conversations → attempts) before reading git; only the lookup's columns can move which worktree it reads";
+
+const PAGED_READS = {
+  tables: [],
+  lookups: [
+    workspaceOfConversationLookup.read<LiveQueryParams>(
+      (p) => editedFiles.query.decodeQuery(p.q).id,
+    ),
+  ],
+  reason: READ_REASON,
+};
+
+const FILE_READS = {
+  tables: [],
+  lookups: [
+    workspaceOfConversationLookup.read<{ id: string; path: string }>(
+      (p) => p.id,
+    ),
+  ],
+  reason: READ_REASON,
 };
 
 // Watch the worktree (and its git dir) while the conversation is on screen. The
-// watch is a refcounted room per worktree (`watchEditedFiles`), so the pages,
-// the meta and a peeked file share one.
-async function watchConversation(
+// watch is the memo's, one per worktree (`watchEditedFiles`), so the pages, the
+// meta and a peeked file share one watch and one pass per change. A
+// conversation whose row is not written yet has no worktree to watch: the
+// watch parks, and the load the row's insert re-runs (the lookup's route)
+// opens it — then notifies, so the loaders read the watched list.
+function watchConversation(
   id: string,
   notify: () => void,
 ): Promise<() => void> {
-  const wt = await worktreeFor(id);
-  if (!wt) return () => {};
-  return watchEditedFiles(wt, notify);
+  return parked.watch(
+    id,
+    () => resolveWorktree(id),
+    (wt) => watchEditedFiles(wt, notify),
+    notify,
+  );
 }
 
-// Every page and the meta read ONE authority: `editedFilesMemo` is a
-// `createSignedMemo` binding `editedFilesSignature` to `computeEditedFiles` (the
-// loader's `getEditedFiles`) at its single declaration site, primed by the
-// watcher before it notifies — so a recompute is a signature probe and a slice
-// of the memoized list, never a second set of git reads per page.
-//
-// The signature is content-addressed and cheap: (headSha, mergeBase) + a per-dirty
-// -file (porcelain code, lstat mtime+size). It moves on an uncommitted save with no
-// SHA change. See edited-files-signature.ts for the faithfulness argument and
-// research/2026-07-09-global-etag-value-coproduction.md.
+// Every page and the meta read ONE authority: `editedFilesMemo`, a watched memo
+// (server/internal/edited-files-cache.ts). While the worktree is watched, its
+// list is set by the pass a change ran before anyone is notified, so a loader
+// run is a slice of the held list — no git spawn. Unwatched, a read probes the
+// content signature (edited-files-signature.ts) and computes on a miss, once
+// per signature. See research/2026-10-25-global-edited-files-paged-cost.md.
 //
 // An unresolvable (or reaped) worktree is one determinate state from the SAME
 // `onWorktree` branch: the meta says `unresolved(…)` and the pages are empty —
 // never a zero count a reader could take for a clean worktree.
 //
 // The pages, the meta and the one-file value all declare the worktree lookup
-// (`READS`): a write there re-reads every subscribed page whole.
+// (`PAGED_READS` / `FILE_READS`): only a write the lookup reads re-reads a
+// tuple, and only the tuples asking about that conversation.
 export const editedFilesServed = serveValue(editedFiles, {
   source: "external",
   changes: "notified",
-  reads: READS,
+  reads: PAGED_READS,
   loader: async ({ id }, range) => {
     const files = await loadEditedFilesFor(id);
     return files.resolved ? sliceRange(editedFiles, files.value, range) : [];
@@ -137,7 +186,7 @@ export const editedFilesServed = serveValue(editedFiles, {
 export const editedFileServed = serveValue(editedFile, {
   source: "external",
   changes: "notified",
-  reads: READS,
+  reads: FILE_READS,
   loader: async ({ id, path }): Promise<Resolvable<EditedFile | null>> => {
     const files = await loadEditedFilesFor(id);
     if (!files.resolved) return files;

@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { mkdtemp, rm, unlink, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, unlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { eq } from "drizzle-orm";
@@ -12,7 +12,12 @@ import {
   createTask,
   insertConversation,
 } from "@plugins/tasks/plugins/tasks-core/server";
-import { editedFilesSignature } from "../../server/internal/edited-files-signature";
+import {
+  editedFilesSignature,
+  readEditedFilesFacts,
+} from "../../server/internal/edited-files-signature";
+import { parsePorcelainZ } from "../../server/internal/edited-files-etag";
+import { computeEditedFiles } from "../../server/internal/compute-edited-files";
 import { sliceRange } from "@plugins/network/plugins/live/server";
 import { checkPagedSource } from "@plugins/network/plugins/live/server/testing";
 import { resolved } from "@plugins/primitives/plugins/live-state/core";
@@ -132,6 +137,82 @@ describe("editedFilesSignature", () => {
     // The merge-base half (after the `|`) is what moved; HEAD is unchanged.
     expect(before).not.toContain(`|${head}`);
     expect(after).toContain(`|${head}`);
+  });
+});
+
+describe("compute and signature read one path set", () => {
+  // Paths git C-quotes in non-`-z` output: a space, a quote, non-ASCII. The
+  // compute once parsed quoted porcelain, so these never matched the diff's
+  // paths and an untracked one counted 0 lines.
+  const QUOTED = 'my "odd" é.txt';
+  const TRACKED = "tracked café.txt";
+
+  test("a C-quoted path is one entry in both, with its real line count", async () => {
+    const repo = await makeRepo();
+    await writeFile(join(repo, TRACKED), "a\n");
+    await runGit(["add", TRACKED], repo);
+    await runGit(["commit", "-q", "-m", "tracked"], repo);
+    await writeFile(join(repo, TRACKED), "a\nb\nc\n"); // dirty, +2
+    await writeFile(join(repo, QUOTED), "1\n2\n3\n"); // untracked, 3 lines
+
+    const facts = await readEditedFilesFacts(repo);
+    const files = await computeEditedFiles(repo, facts);
+    const dirtyPaths = facts.dirty.map((e) => e.path).sort();
+    expect(dirtyPaths).toEqual([QUOTED, TRACKED].sort());
+    // Every dirty path the signature fingerprints is a file of the value, and
+    // the value has no path the facts or the diff did not name.
+    expect(files.map((f) => f.path).sort()).toEqual([QUOTED, TRACKED].sort());
+    expect(files.find((f) => f.path === QUOTED)).toMatchObject({
+      status: "untracked",
+      additions: 3,
+    });
+    expect(files.find((f) => f.path === TRACKED)).toMatchObject({
+      status: "added",
+      additions: 3,
+      deletions: 0,
+    });
+    // The signature names the raw path too.
+    expect(await editedFilesSignature(repo)).toContain(`:${QUOTED}`);
+  });
+});
+
+describe("the facts are `git status -uall`'s entries", () => {
+  // The facts read `-unormal` and expand each untracked dir with `ls-files
+  // --others` (the `-uall` walk is ~3× the paths); the two must agree entry
+  // for entry, or the signature and the value would miss a file.
+  test("untracked dirs expanded, embedded repos and ignored dirs as -uall has them", async () => {
+    const repo = await makeRepo();
+    await writeFile(join(repo, ".gitignore"), "ignored/\n");
+    await runGit(["add", ".gitignore"], repo);
+    await runGit(["commit", "-q", "-m", "ignore"], repo);
+    await mkdir(join(repo, "new/deep"), { recursive: true });
+    await writeFile(join(repo, "new/deep/f.txt"), "x\n");
+    await writeFile(join(repo, "new/top é.txt"), "y\n");
+    await mkdir(join(repo, "new/nested"));
+    await runGit(["init", "-q"], join(repo, "new/nested"));
+    await writeFile(join(repo, "new/nested/g.txt"), "z\n");
+    await mkdir(join(repo, "ignored"));
+    await writeFile(join(repo, "ignored/x.txt"), "q\n");
+    await writeFile(join(repo, "loose.txt"), "w\n");
+    await writeFile(join(repo, "a.txt"), "one\ntwo\n");
+
+    const uall = parsePorcelainZ(
+      await runGit(
+        [
+          "status",
+          "--porcelain",
+          "--no-renames",
+          "--untracked-files=all",
+          "-z",
+        ],
+        repo,
+      ),
+    );
+    const byPath = (a: { path: string }, b: { path: string }) =>
+      a.path < b.path ? -1 : a.path > b.path ? 1 : 0;
+    const facts = await readEditedFilesFacts(repo);
+    expect([...facts.dirty].sort(byPath)).toEqual([...uall].sort(byPath));
+    expect(facts.dirty.map((e) => e.path)).toContain("new/nested/");
   });
 });
 

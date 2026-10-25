@@ -1,11 +1,11 @@
 import { resolve, sep } from "node:path";
 import type { EditedFile, EditedFileStatus } from "../../core/protocol";
 import {
-  parseDiffNameStatusZ,
-  parseDiffNumstatZ,
+  parseDiffRawNumstatZ,
   runGit,
 } from "@plugins/primitives/plugins/commit-list/server";
 import { withHeavyReadSlot } from "@plugins/infra/plugins/host/plugins/host-read-pool/server";
+import type { EditedFilesFacts } from "./edited-files-signature";
 
 const UNTRACKED_MAX_BYTES = 2 * 1024 * 1024;
 
@@ -57,52 +57,45 @@ function ensureEntry(
   return entry;
 }
 
-// The un-memoized, gated compute — the VALUE half of the `edited-files` memo,
-// paired at the `createSignedMemo` declaration (edited-files-cache.ts) with the
-// content signature (edited-files-signature.ts) that fingerprints exactly the
-// inputs read below: HEAD, the merge-base, and every dirty working-tree path.
-//
-// The @parcel watcher calls this DIRECTLY (then primes the memo) so it never
-// reads its own cache; the loader reaches it only on a memo miss.
+// The un-memoized, gated compute — the VALUE half of the `edited-files` watched
+// memo (edited-files-cache.ts). It reads the branch diff and line counts LIVE,
+// and takes the merge-base and the dirty entries from `facts` — the one status
+// scan its pass (or probe) already read — so a compute never re-walks the tree.
 //
 // This module is a LEAF on purpose: the memo declaration imports it, so it must
 // never import the memo back (import cycle).
 export async function computeEditedFiles(
   worktreePath: string,
+  facts: EditedFilesFacts,
 ): Promise<EditedFile[]> {
   return withHeavyReadSlot(async () => {
     const byPath = new Map<string, FileEntry>();
 
-    // A git failure here must NOT be conflated with "no merge-base" — a manufactured
-    // "main" fallback (or an empty diff below) would publish a false-empty edited-files
-    // list that a destructive "Drop & Close" then acts on. runGit throws on failure;
-    // the throw propagates to the resource loader (stale-safe: the live-state cascade
-    // skips the push and keeps the last-known-good).
-    const mergeBase = (
-      await runGit(["merge-base", "main", "HEAD"], worktreePath)
-    ).trim();
-
-    // -M / -C enable rename/copy detection; -z disambiguates the from/to pair.
+    // A git failure here must NOT be conflated with "no changes" — an empty diff
+    // would publish a false-empty edited-files list that a destructive
+    // "Drop & Close" then acts on. runGit throws on failure; the throw reaches
+    // the memo, which demotes and lets the loader raise it.
+    //
+    // ONE diff: -M / -C rename/copy detection, --raw for each path's status,
+    // --numstat for its counts (both committed branch changes and uncommitted
+    // working-tree edits, against the merge-base); -z keeps paths raw.
     const diff = await runGit(
-      ["diff", "-M", "-C", "-z", "--name-status", mergeBase],
+      ["diff", "-M", "-C", "-z", "--raw", "--numstat", facts.mergeBase],
       worktreePath,
     );
-    for (const rec of parseDiffNameStatusZ(diff)) {
-      const entry = ensureEntry(byPath, rec.path, rec.status);
-      if (rec.from) entry.from = rec.from;
+    for (const rec of parseDiffRawNumstatZ(diff)) {
+      byPath.set(rec.path, {
+        status: rec.status,
+        additions: rec.additions,
+        deletions: rec.deletions,
+        ...(rec.from ? { from: rec.from } : {}),
+      });
     }
 
-    // Working-tree changes are layered on top of the branch diff. We pass
-    // --no-renames here because porcelain-v1 rename output is awkward to parse
-    // and uncommitted renames are rare; they degrade to add+delete.
-    const status = await runGit(
-      ["status", "--porcelain", "--no-renames", "--untracked-files=all"],
-      worktreePath,
-    );
-    for (const line of status.split("\n")) {
-      if (!line) continue;
-      const code = line.slice(0, 2);
-      const path = line.slice(3);
+    // Working-tree changes are layered on top of the branch diff. The status
+    // was read with --no-renames (uncommitted renames degrade to add+delete)
+    // and -z, so its paths are the diff's own — never C-quoted.
+    for (const { code, path } of facts.dirty) {
       if (code === "??") {
         ensureEntry(byPath, path, "untracked");
       } else if (code.includes("D")) {
@@ -113,19 +106,6 @@ export async function computeEditedFiles(
       } else {
         ensureEntry(byPath, path, "modified");
       }
-    }
-
-    // Per-file +/- counts: tracked files via numstat against the merge-base (covers
-    // both committed branch changes and uncommitted working-tree edits).
-    const numstat = await runGit(
-      ["diff", "-M", "-C", "-z", "--numstat", mergeBase],
-      worktreePath,
-    );
-    for (const rec of parseDiffNumstatZ(numstat)) {
-      const entry = byPath.get(rec.path);
-      if (!entry) continue;
-      entry.additions = rec.additions;
-      entry.deletions = rec.deletions;
     }
 
     // Untracked files don't appear in numstat — count their lines as additions.

@@ -85,8 +85,24 @@ installProfilingSuppressionRuntime({
 // The loader read-set sink, installed the way server/internal/install.ts wires
 // server-core's runtime-owned read-set: every flush lands here, in order.
 let readSetFlushes: Array<{ label: string; tables: string[] }> = [];
-installLoaderReadSetSink((label, tables) => {
+// The tags a flush carried, when any read was tagged: table → its tags.
+let tagFlushes: Array<{
+  label: string;
+  tags: Record<string, (string | null)[]>;
+}> = [];
+installLoaderReadSetSink((label, tables, tags) => {
   readSetFlushes.push({ label, tables: [...tables].sort() });
+  if (tags !== undefined) {
+    tagFlushes.push({
+      label,
+      tags: Object.fromEntries(
+        [...tags].map(([t, set]) => [
+          t,
+          [...set].sort((a, b) => String(a).localeCompare(String(b))),
+        ]),
+      ),
+    });
+  }
 });
 
 let fakeNow = 0;
@@ -96,6 +112,7 @@ beforeEach(() => {
   installClock(() => fakeNow);
   resetRuntimeProfile();
   readSetFlushes = [];
+  tagFlushes = [];
 });
 
 function agg(kind: SpanKind, label: string): Aggregate {
@@ -873,6 +890,27 @@ describe("loader read-set capture — handed to the installed sink", () => {
       });
     });
     expect(readSetFlushes).toEqual([{ label: "l", tables: ["real_table"] }]);
+  });
+
+  // A compiled lookup's statement is tagged (database's `readTag`): the
+  // drift guard covers its tables only by reads carrying the tag.
+  test("tags: none while every read is untagged; once one is tagged, every table's reads by tag (null = untagged), earlier ones included", async () => {
+    await runLoader("plain", ["a"]);
+    await recordEntrySpan("loader", "tagged", () => {
+      recordReadTables(["a"]);
+      recordReadTables(["b", "c"], "lookup-1");
+      recordReadTables(["c"]);
+    });
+    expect(readSetFlushes).toEqual([
+      { label: "plain", tables: ["a"] },
+      { label: "tagged", tables: ["a", "b", "c"] },
+    ]);
+    expect(tagFlushes).toEqual([
+      {
+        label: "tagged",
+        tags: { a: [null], b: ["lookup-1"], c: ["lookup-1", null] },
+      },
+    ]);
   });
 });
 

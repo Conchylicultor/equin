@@ -13,6 +13,8 @@ export interface NumstatRecord {
   deletions: number;
   path: string;
   from?: string;
+  /** `-\t-`: a binary file, its counts 0. */
+  binary: boolean;
 }
 
 // `git diff -z --name-status` emits NUL-separated fields:
@@ -62,7 +64,9 @@ export function parseDiffNumstatZ(out: string): NumstatRecord[] {
     }
     const add = toCount(parts[0]!);
     const del = toCount(parts[1]!);
-    const path = parts[2]!;
+    const binary = parts[0] === "-" && parts[1] === "-";
+    // A path may itself hold a tab: everything after the second one.
+    const path = parts.slice(2).join("\t");
     if (path === "") {
       const oldPath = tokens[i + 1];
       const newPath = tokens[i + 2];
@@ -72,14 +76,80 @@ export function parseDiffNumstatZ(out: string): NumstatRecord[] {
         deletions: del,
         path: newPath,
         from: oldPath,
+        binary,
       });
       i += 3;
     } else {
-      result.push({ additions: add, deletions: del, path });
+      result.push({ additions: add, deletions: del, path, binary });
       i += 1;
     }
   }
   return result;
+}
+
+/** One path of a `git diff -z --raw --numstat`: its status and its line counts. */
+export interface RawNumstatRecord {
+  status: DiffNameStatus;
+  path: string;
+  from?: string;
+  additions: number;
+  deletions: number;
+  /** Numstat said `-\t-`: a binary file, its counts 0. */
+  binary: boolean;
+}
+
+// `git diff -z --raw --numstat` emits every raw record first, then every
+// numstat record, with no separator between the two sections:
+//   ":<srcmode> <dstmode> <srcsha> <dstsha> <code>\0<path>\0"         A/M/D/T/U/X
+//   ":<srcmode> <dstmode> <srcsha> <dstsha> <code><score>\0<old>\0<new>\0" R/C
+//   "<add>\t<del>\t<path>\0" / "<add>\t<del>\t\0<old>\0<new>\0"  numstat
+// A raw head starts with ":", a numstat head with a digit or "-", and paths
+// are consumed positionally — so a path starting with ":" or holding a tab or
+// newline cannot be misread. One diff gives both the status and the counts.
+export function parseDiffRawNumstatZ(out: string): RawNumstatRecord[] {
+  const tokens = splitNul(out);
+  const byPath = new Map<string, RawNumstatRecord>();
+  let i = 0;
+  while (i < tokens.length && tokens[i]!.startsWith(":")) {
+    const head = tokens[i]!;
+    const code = head.slice(head.lastIndexOf(" ") + 1)[0];
+    if (code === undefined)
+      throw new Error(`[git diff --raw] bad record: ${head}`);
+    const base = { additions: 0, deletions: 0, binary: false };
+    if (code === "R" || code === "C") {
+      const from = tokens[i + 1];
+      const path = tokens[i + 2];
+      if (from === undefined || path === undefined) {
+        throw new Error(`[git diff --raw] truncated ${code} record: ${head}`);
+      }
+      byPath.set(path, {
+        status: code === "R" ? "renamed" : "copied",
+        path,
+        from,
+        ...base,
+      });
+      i += 3;
+    } else {
+      const path = tokens[i + 1];
+      if (path === undefined) {
+        throw new Error(`[git diff --raw] truncated record: ${head}`);
+      }
+      byPath.set(path, { status: mapSimpleStatus(code), path, ...base });
+      i += 2;
+    }
+  }
+  for (const rec of parseDiffNumstatZ(tokens.slice(i).join("\0"))) {
+    const entry = byPath.get(rec.path);
+    // Both sections describe one diff: a count with no status means the
+    // layout is not the one parsed here.
+    if (entry === undefined) {
+      throw new Error(`[git diff --numstat] ${rec.path} has no --raw record`);
+    }
+    entry.additions = rec.additions;
+    entry.deletions = rec.deletions;
+    entry.binary = rec.binary;
+  }
+  return [...byPath.values()];
 }
 
 function splitNul(out: string): string[] {

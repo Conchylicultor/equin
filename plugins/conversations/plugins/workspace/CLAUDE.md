@@ -88,7 +88,6 @@ Orthogonal to the runtime (tmux | sdk): a runtime sees only the cwd and the
     - `parseWorkspaceSpec`
     - `ScratchProfile`
     - `Workspace`
-    - `workspaceOfAttempt`
     - `workspaceOfConversation`
   - Resources: `workspace.catalog` (push, fixed, whole: the worktree plus one entry per registered scratch profile — a handful, fixed at boot, capped: WorkspaceCapabilitySchema.options.length)
 - Core:

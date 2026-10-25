@@ -87,6 +87,29 @@ the same declaration it renders the SQL from, the `RoutePlan` the runtime's
   rollup emits exactly the routes and uses it always did (the compile-SQL golden
   and the union snapshot are byte-identical across the generalization).
 
+## Lookups — `compileLookup` (`server/internal/compile-lookup.ts`)
+
+A by-key read a hand-written value loader makes beside its own truth ("which
+checkout is this conversation in?"), compiled from ONE declaration —
+`compileLookup({ label, from, by, joins?, select, row })` — through the same
+point plan a `:rows` sibling uses (`planArm`, point mode), so the query and
+what it reads cannot disagree:
+
+- **`run(key)`** — the row (`LookupResult`: `found` / not), one statement
+  carrying the lookup's read tag (`database`'s `readTag(label)`, ANDed into
+  its `where`), every row parsed by `row`. `by` is the table's single-column
+  primary key; the joins are N:1 (more than one row throws).
+- **`read(keyOf)`** — what `run` reads for a reader keyed by its params
+  (`LookupRead<P>`, branded: no literal spells one): one `full` route per
+  relation (ids `<label>:<relation>`), `columns` exactly what the SQL reads
+  (projection, join keys, the key), the key table's route `match`ing the key
+  column; `usesOf(p)` names the key `keyOf(p)` asks about (none for `null`).
+- **`compiledValueReach`** folds `reads.lookups` beside `reads.tables`: each
+  lookup's routes join the plan and its tables become `taggedReads` (the
+  runtime's `TaggedRead`), so the drift guard covers them only by the lookup's
+  own statement. A table in both `tables` and a lookup, a lookup twice, and an
+  unminted read are refused. The pinned cases: `compile-lookup.test.ts`.
+
 ## Joins: provenance-driven read-sets (`core/internal/joins.ts`, `server/internal/joins.ts`)
 
 A bounded or grouping compile reads its base table plus declared **joins, as
@@ -926,6 +949,7 @@ importing `db` never touches a worktree — no test env shim needed.
   - Uses:
     - `database.db`
     - `database.quotedRelationsIn`
+    - `database.readTag`
     - `database/sql-column.columnSchema`
     - `database/sql-column.columnWireCodec`
     - `database/sql-projection.decodedRow`
@@ -943,9 +967,13 @@ importing `db` never touches a worktree — no test env shim needed.
     - `CompiledAllCollection`
     - `CompiledCount`
     - `CompiledGroups`
+    - `CompiledLookup`
     - `CompiledOffFeedQuery`
     - `CompiledUnion`
     - `EntitySource`
+    - `LookupRead`
+    - `LookupResult`
+    - `LookupSpec`
     - `PointQueryResourceSpec`
     - `QueryDb`
     - `ReadColumn`
@@ -963,21 +991,23 @@ importing `db` never touches a worktree — no test env shim needed.
   - Exports (values):
     - `compileAllCollection`
     - `compileCountQuery`
-    - `compiledKeyedReads`
     - `compiledValueReach`
     - `compileGroupsQuery`
     - `compileJoins`
+    - `compileLookup`
     - `compileOffFeedQuery`
     - `compileUnionCollection`
     - `deferredWindowQueryResource`
     - `joinRefs`
     - `offFeedReach`
+    - `offFeedTablesReach`
     - `presenceExpr`
     - `windowQueryResource`
 - Cross-plugin:
   - Imported by:
     - `network/live`
     - `runs`
+    - `tasks/tasks-core`
 - Exemptions:
   - Exempts itself from:
     - `resource-runtime:compiled-routes` — `server/internal/routes.ts` (sanctioned)

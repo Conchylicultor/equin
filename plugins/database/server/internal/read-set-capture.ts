@@ -1,4 +1,4 @@
-import { sql as drizzleSql } from "drizzle-orm";
+import { sql as drizzleSql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import type { Db } from "./driver";
@@ -63,6 +63,65 @@ export function extractReadTablesFromSql(text: string): string[] {
       tables.add(relation);
   }
   return Array.from(tables);
+}
+
+// A READ TAG names the code a statement's reads belong to — a compiled
+// lookup (query-resource's `compileLookup`), whose route gates on exactly the
+// columns its own SQL reads. It rides the statement TEXT, as a comment, so the
+// pool chokepoint that captures the tables (`extractReadTablesFromSql`) reads
+// it from the same string, per statement: two concurrent queries of one loader
+// cannot swap tags, and a parameter value can never forge one (parameters are
+// not text). The runtime's drift guard covers a tagged route table only by
+// reads carrying its tag (resource-runtime's `TaggedRead`). The spelling is
+// one comment, `/* read-tag:<tag> */`, the tag a restricted identifier — no
+// space, so no `from <name>` inside it can ever look like a read clause.
+const READ_TAG_RE = /^[A-Za-z0-9][A-Za-z0-9._:-]*$/;
+const READ_TAG_IN_TEXT = /\/\* read-tag:([A-Za-z0-9][A-Za-z0-9._:-]*) \*\//g;
+
+// Every tag minted in this process. A tag is a CLAIM: the drift guard covers a
+// tagged route table by the tag alone, so a second spelling of it — another
+// lookup under the same label, a hand-written query borrowing a lookup's tag —
+// would pass for the claimant's reads while reading columns its routes do not
+// gate. So a tag is minted once, by its one owner, and a second mint throws.
+const mintedReadTags = new Set<string>();
+
+/**
+ * Claim `tag` and return the comment tagging a statement's reads with it —
+ * place it anywhere in the statement's text (a `where` fragment, a leading
+ * chunk). Throws on a tag outside `[A-Za-z0-9._:-]` (leading alphanumeric),
+ * and on a tag already minted in this process: one tag, one owner.
+ */
+export function readTag(tag: string): SQL {
+  if (!READ_TAG_RE.test(tag)) {
+    throw new Error(
+      `readTag: "${tag}" is no read tag — letters, digits and . _ : - only, starting with a letter or digit.`,
+    );
+  }
+  if (mintedReadTags.has(tag)) {
+    throw new Error(
+      `readTag: "${tag}" is already minted — a read tag has one owner (its compiled lookup's label), so a second spelling of it would pass for that owner's reads. Give it its own label.`,
+    );
+  }
+  mintedReadTags.add(tag);
+  return drizzleSql.raw(`/* read-tag:${tag} */`);
+}
+
+/**
+ * The read tag a statement's text carries ({@link readTag}), or `null` for an
+ * untagged one. Throws when it carries two different ones: whose reads they
+ * are would be a guess.
+ */
+export function readTagOf(text: string): string | null {
+  let found: string | null = null;
+  for (const m of text.matchAll(READ_TAG_IN_TEXT)) {
+    if (found !== null && found !== m[1]) {
+      throw new Error(
+        `readTagOf: a statement carries two read tags ("${found}", "${m[1]}") — one statement's reads belong to one tag.`,
+      );
+    }
+    found = m[1]!;
+  }
+  return found;
 }
 
 /**

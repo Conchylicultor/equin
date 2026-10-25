@@ -46,8 +46,7 @@ import {
   type TableLayoutRequirement,
   type TupleRouting,
   type TupleUse,
-  type RelationRead,
-  type UnfedRead,
+  type TaggedRead,
   type UnresolvedReverse,
 } from "./routing";
 
@@ -369,19 +368,6 @@ export interface ResourceDefinition<
    */
   membership?: KeyedMembership<P>;
   /**
-   * An EXTERNAL keyed entry's tables read outside the change feed — see
-   * `ExternalWindowPolicy.unfed`. Refused anywhere else (a throw in
-   * `createResource`): a routed entry routes every table it reads, and a
-   * non-keyed one declares them on its `reach` plan.
-   */
-  unfed?: readonly UnfedRead[];
-  /**
-   * An EXTERNAL keyed entry's relations read whole through the change feed —
-   * see `ExternalWindowPolicy.relations`. Refused anywhere else, as `unfed`
-   * is (a non-keyed entry declares them on its `reach` plan).
-   */
-  relations?: readonly RelationRead[];
-  /**
    * Scoped change routing (see `RoutePlan` in `./routing`): every table
    * occurrence this resource's compiled query may read, and how each tuple reads
    * them. Present ⇒ the entry is ROUTED: `routeTableChange` serves it. Only on a membership entry (`membership` / `scopedMembership`)
@@ -400,7 +386,9 @@ export interface ResourceDefinition<
    * `full` routes (see `ReachPlan`). Present ⇒ the entry is ROUTED exactly like
    * one declaring `routes` (served by `routeTableChange`): a change to a table a tuple reads recomputes that tuple,
    * and a change to any other table reaches nothing. Exclusive with
-   * `routes`; refused on a keyed entry (a throw in `createResource`). Allowed
+   * `routes`; refused on a keyed entry (a throw in `createResource`) — except
+   * an EXTERNAL keyed window or point set (D31, `ExternalKeyedPolicy.reach`),
+   * whose every change is a FULL re-read of the tuple anyway. Allowed
    * on a NON-keyed EXTERNAL entry (D1): an external value whose loader reads
    * Postgres declares those reads, a table write FULL-recomputes its tuples,
    * and its own `notify()` merges into the same pending. Unlike `routes` it
@@ -594,8 +582,7 @@ export type ScopePolicy<P extends ResourceParams = ResourceParams> =
       recomputeOn?: ReadonlyArray<RoutedRecomputeOn>;
       scopedMembership?: never;
       dependsOn?: never;
-      unfed?: never;
-      relations?: never;
+      reach?: never;
     }
   | {
       routes: RoutePlan<P>;
@@ -605,8 +592,7 @@ export type ScopePolicy<P extends ResourceParams = ResourceParams> =
       recomputeOn?: ReadonlyArray<RoutedRecomputeOn>;
       membership?: never;
       dependsOn?: never;
-      unfed?: never;
-      relations?: never;
+      reach?: never;
     };
 
 /**
@@ -649,8 +635,9 @@ export interface ExternalPointMembership<
  * re-reads the tuple whole and diffs it by key against its snapshot
  * (`drainMembershipFull`) — keyed `delta` frames, seeded derivation
  * (`familyOf`) and one client cache path, exactly as a routed window has them.
- * No `routes` (nothing routes into it) and no cascade OUT of it (D32: a
- * membership entry has no downstream); it may itself follow external
+ * No `routes` (no scoped route refills it — it may take a full-only `reach`
+ * plan for the Postgres reads its loader also makes) and no cascade OUT of it
+ * (D32: a membership entry has no downstream); it may itself follow external
  * upstreams (`dependsOn`), each change a FULL re-read. Its point twin is
  * `ExternalPointPolicy`; either is an `ExternalKeyedPolicy`.
  */
@@ -659,34 +646,25 @@ export interface ExternalWindowPolicy<
 > {
   membership: ExternalWindowMembership<P>;
   /**
-   * The Postgres tables the loader reads that have NO change source by
-   * declaration — opted out of the feed (`ExcludeFromChangeFeed`): a table
-   * served off the feed (network/live's `serveCollection` with `changes`),
-   * whose writes arrive as the resource's own `notify`. Stored as an
-   * unfed-only routing record (it routes nothing), so the drift guard (A8 /
-   * D5) accepts the loader's captured reads of them, and listed by
-   * `unfedResourceTables()` — change-feed's boot check refuses one the feed
-   * does cover (a write it reports would reach nothing). Omit when the loader
-   * reads no Postgres table.
+   * The Postgres reads the loader makes beside its own truth, as a
+   * compiler-minted reach plan (`mintReachPlan` — query-resource's
+   * `compiledValueReach` / `offFeedTablesReach`), held to the same rules as a
+   * non-keyed entry's (`ResourceDefinition.reach`) except one: every route is
+   * `full` (asserted), so a change a tuple's uses let through is a FULL
+   * re-read of that tuple (`drainMembershipFull`, merged with its notifies) —
+   * never a scoped refill, which only a routed membership has. So a route's
+   * `columns` gate and its per-tuple `match` narrow WHICH tuples re-read (a
+   * paged value's lookup of its question's row: an UPDATE of a column it
+   * does not read reaches no page, an INSERT of another row reaches only
+   * that row's questions). Its `unfed` tables (read outside the feed — a
+   * table served off it, network/live's `serveCollection` with `changes`)
+   * are accepted by the drift guard and listed by `unfedResourceTables()`;
+   * its `relations` (views read whole) are indexed under their bases. Omit
+   * when the loader reads no Postgres table.
    */
-  unfed?: readonly UnfedRead[];
-  /**
-   * The Postgres relations (tables, views, rollups) the loader reads WHOLE
-   * that the change feed DOES reach — a lookup beside the entry's own truth
-   * (a paged value's declared `reads`: network/live). Stored on the same
-   * routing record as `unfed` and indexed under each relation's bases
-   * (`indexRelationReads`, as a reach plan's relation reads): a write to a
-   * base re-reads every subscribed tuple whole (`drainMembershipFull`, the
-   * runtime's FULL path for an external keyed entry), merged with its
-   * notifies. The drift guard accepts the relation's name, and change-feed's
-   * boot check holds every base to a change source
-   * (`relationResourceReads()`, A1′). Still no `routes`: nothing scopes a
-   * write to some tuples.
-   */
-  relations?: readonly RelationRead[];
+  reach?: ReachPlan<P>;
   routes?: never;
   scopedMembership?: never;
-  reach?: never;
   recomputeOn?: never;
 }
 
@@ -700,13 +678,10 @@ export interface ExternalPointPolicy<
   P extends ResourceParams = ResourceParams,
 > {
   membership: ExternalPointMembership<P>;
-  /** The tables its loader reads outside the change feed — see `ExternalWindowPolicy.unfed`. */
-  unfed?: readonly UnfedRead[];
-  /** The relations its loader reads whole through the feed — see `ExternalWindowPolicy.relations`. */
-  relations?: readonly RelationRead[];
+  /** The Postgres reads its loader makes — see `ExternalWindowPolicy.reach`. */
+  reach?: ReachPlan<P>;
   routes?: never;
   scopedMembership?: never;
-  reach?: never;
   recomputeOn?: never;
 }
 
@@ -759,8 +734,6 @@ type ExternalDefinition<T, P extends ResourceParams> = ResourceDefinition<
   routes?: never;
   reach?: never;
   recomputeOn?: never;
-  unfed?: never;
-  relations?: never;
 };
 
 /**
@@ -928,8 +901,6 @@ function contractToDefinition<T, P extends ResourceParams>(
     routes?: ResourceDefinition<T, P>["routes"];
     reach?: ResourceDefinition<T, P>["reach"];
     recomputeOn?: ResourceDefinition<T, P>["recomputeOn"];
-    unfed?: ResourceDefinition<T, P>["unfed"];
-    relations?: ResourceDefinition<T, P>["relations"];
   },
 ): ResourceDefinition<T, P> {
   refuseLegacyScopeKeys(form, contract.key, opts);
@@ -971,8 +942,6 @@ function contractToDefinition<T, P extends ResourceParams>(
     ...(opts.recomputeOn !== undefined
       ? { recomputeOn: opts.recomputeOn }
       : {}),
-    ...(opts.unfed !== undefined ? { unfed: opts.unfed } : {}),
-    ...(opts.relations !== undefined ? { relations: opts.relations } : {}),
     debounceMs: opts.debounceMs,
     onFirstSubscribe: opts.onFirstSubscribe,
     onLastUnsubscribe: opts.onLastUnsubscribe,
@@ -1209,6 +1178,12 @@ interface RoutingRecord {
    * accepts the relation's own name in a capture.
    */
   relations: ReadonlyMap<string, string>;
+  /**
+   * The route tables a capture covers only through tagged reads
+   * (`ReachPlan.taggedReads`), table → the tags that cover it: a read of one
+   * carrying no tag, or another, is drift (`readCovered`).
+   */
+  tagged: ReadonlyMap<string, ReadonlySet<string>>;
   /**
    * A8: the tables a loader run read that no route names, each reported once
    * and — in a running server — indexed for the router as a FULL read of the
@@ -1587,6 +1562,14 @@ function delivery(
   };
 }
 
+/**
+ * One loader run's reads by tag: each relation the run read, with the tag of
+ * every query that read it — `null` for an untagged one. A query is tagged by
+ * its SQL text (database's `tagReads`), so the capture tells a compiled
+ * lookup's read of a table from any other read of it (`TaggedRead`).
+ */
+export type ReadTags = ReadonlyMap<string, ReadonlySet<string | null>>;
+
 export interface ResourceRuntimeOptions {
   /**
    * The 64-bit content hash a keyed resource's snapshot retains per row (see
@@ -1758,6 +1741,15 @@ export interface ResourceRuntimeOptions {
    * central: omitted (central persists nothing).
    */
   lastReadSet?: (key: string) => string[] | undefined;
+  /**
+   * The tags of the MOST RECENT loader run's reads (`ReadTags`), captured with
+   * `lastReadSet` — or `undefined` when none of them carried a tag. The drift
+   * guard reads it for a plan's tagged reads (`TaggedRead`): a route table
+   * covered only by queries carrying a given tag (a compiled lookup's own SQL).
+   * server: the read-set sink's per-run tags; central / DB-free harness: omit
+   * (every read untagged).
+   */
+  lastReadTags?: (key: string) => ReadTags | undefined;
   /**
    * The route drift guard (A8) throws instead of reporting: a routed entry's
    * loader reading a table none of its routes names fails that load. server:
@@ -1996,7 +1988,8 @@ export interface ResourceRuntime {
    * change arrives. A non-keyed one whose loader ALSO reads Postgres declares
    * those reads as a `reach` plan (D1): a write to one FULL-recomputes its
    * subscribed tuples, merged with its notifies. A keyed external (window /
-   * point) takes no `reach`.
+   * point) may too: every reach route is `full`, so a reached tuple is
+   * re-read whole, as its notify would.
    */
   defineExternalResource: {
     // No `optionalParams` on the flat form: the spelling rule must come from the
@@ -2793,7 +2786,8 @@ export function createResourceRuntime(
   // derived reads (A22: a rollup no route may name (A1), whose every source the
   // plan routes — `mintRoutePlan` asserted it — so a write moving its rows
   // reaches the entry), its unfed tables, its relation reads, or a relation
-  // already found drifted. A miss is reported once per table — or thrown,
+  // already found drifted — a tagged route table (`TaggedRead`) only through
+  // reads carrying its tag (`lastReadTags`). A miss is reported once per table — or thrown,
   // under `strictRoutes` (tests). In a running server it also FAILS OPEN
   // (`failOpenDrift`): the relation's bases (a table is its own; a view or
   // rollup the tables that feed it — the capture records relations, a change
@@ -2834,34 +2828,50 @@ export function createResourceRuntime(
   // Whether a captured `relation` is one the entry's declaration covers — the
   // ONE predicate the drift guard (A8 / D5) and the boot drift seed
   // (`seedRouteDrift`) judge by: routes ∪ derived ∪ unfed ∪ relation reads ∪
-  // already drifted.
+  // already drifted. A tagged route table (`TaggedRead`) is covered only when
+  // every read of it carried one of its tags — judged from the run's `tags`;
+  // `"untracked"` (a persisted `tables_read`, which records no tags) judges
+  // it by its name alone, as a route table.
   function readCovered(
     routing: RoutingRecord | undefined,
     relation: string,
+    tags: ReadTags | undefined | "untracked",
   ): boolean {
+    if (routing === undefined) return false;
+    if (routing.drifted.has(relation)) return true;
+    const only = routing.tagged.get(relation);
+    if (only !== undefined && tags !== "untracked") {
+      const seen = tags?.get(relation);
+      return (
+        seen !== undefined &&
+        [...seen].every((tag) => tag !== null && only.has(tag))
+      );
+    }
     return (
-      routing !== undefined &&
-      (routing.byTable.has(relation) ||
-        routing.derived.has(relation) ||
-        routing.unfed.has(relation) ||
-        routing.relations.has(relation) ||
-        routing.drifted.has(relation))
+      routing.byTable.has(relation) ||
+      routing.derived.has(relation) ||
+      routing.unfed.has(relation) ||
+      routing.relations.has(relation)
     );
   }
 
   function checkRouteDrift(entry: RegistryEntry): (value: unknown) => unknown {
     return (value) => {
       const captured = opts.lastReadSet!(entry.key) ?? [];
+      const tags = opts.lastReadTags?.(entry.key);
       dropUnreadSeeds(entry, captured);
       const unrouted = captured.filter(
-        (table) => !readCovered(entry.routing, table),
+        (table) => !readCovered(entry.routing, table, tags),
       );
       if (unrouted.length === 0) return value;
       const tables = unrouted.map((t) => `"${t}"`).join(", ");
+      const outsideTag = unrouted.filter((t) => entry.routing?.tagged.has(t));
       const err = new Error(
-        entry.routing && entry.routing.plan !== NO_ROUTES
-          ? `routed resource "${entry.key}" read ${tables}, which none of its routes names — a write there never reaches it. Its compiler must emit a route for every table the SQL reads.`
-          : `external resource "${entry.key}" read ${tables}, which it does not declare — a write there never reaches it (only its own notify does). Declare the value's reads, or its freshness if it is never told of a change.`,
+        outsideTag.length > 0
+          ? `resource "${entry.key}" read ${outsideTag.map((t) => `"${t}"`).join(", ")} outside the tagged queries that cover it (${outsideTag.map((t) => `"${t}": ${[...entry.routing!.tagged.get(t)!].map((tag) => `"${tag}"`).join(" | ")}`).join("; ")}) — its route's columns gate only what those queries read, so a write to another column would never reach it. Read the table through that lookup, or declare it whole.`
+          : entry.routing && entry.routing.plan !== NO_ROUTES
+            ? `routed resource "${entry.key}" read ${tables}, which none of its routes names — a write there never reaches it. Its compiler must emit a route for every table the SQL reads.`
+            : `external resource "${entry.key}" read ${tables}, which it does not declare — a write there never reaches it (only its own notify does). Declare the value's reads, or its freshness if it is never told of a change.`,
       );
       if (opts.strictRoutes) throw err;
       failOpenDrift(entry, unrouted);
@@ -2872,7 +2882,9 @@ export function createResourceRuntime(
 
   // The fail-open half of the drift guard: each uncovered relation is recorded
   // as drifted, and its bases are indexed for the router as a FULL read of the
-  // entry. A guarded external with no routing gets a drift-only record first.
+  // entry — a tagged route table included: its gated route no longer decides
+  // (`routeEntryChange` reads `driftBases` first). A guarded external with no
+  // routing gets a drift-only record first.
   function failOpenDrift(
     entry: RegistryEntry,
     relations: readonly string[],
@@ -2925,7 +2937,9 @@ export function createResourceRuntime(
     relation: string,
   ): void {
     for (const base of driftBasesOf(relation)) {
-      if (routing.byTable.has(base)) continue;
+      // A route table is reached through its route — unless the route is
+      // tagged: a read outside its tag may read any column, so it goes FULL.
+      if (routing.byTable.has(base) && !routing.tagged.has(base)) continue;
       routing.driftBases.add(base);
       if (!indexedUnder(base, entry)) indexTable(base, entry);
     }
@@ -2945,62 +2959,13 @@ export function createResourceRuntime(
       derived: new Set(),
       unfed,
       relations: new Map(),
+      tagged: new Map(),
       drifted: new Set(),
       relationBases: new Set(),
       driftBases: new Set(),
       seededDrift: new Set(),
       uses: new Map(),
     };
-  }
-
-  // An external keyed entry's declared reads (`ExternalWindowPolicy.unfed` /
-  // `.relations`): a routing record that routes nothing — the drift guard's
-  // own shape — holding them, so a capture of one is covered (`readCovered`),
-  // `unfedResourceTables()` lists the unfed tables for change-feed's opt-out
-  // check, and the relations are indexed under their bases like a reach
-  // plan's (`indexEntryRelations`: a write re-reads every target FULL). The
-  // types allow them only on the external keyed arms; this holds the line for
-  // an untyped caller or a cast, with `mintReachPlan`'s checks on the lists.
-  function externalKeyedRouting(
-    key: string,
-    reads: {
-      unfed: readonly UnfedRead[];
-      relations: readonly RelationRead[];
-    },
-    membershipField: "membership" | "scopedMembership" | null,
-    externalSource: boolean,
-  ): RoutingRecord {
-    if (!externalSource || membershipField !== "membership") {
-      const field = reads.unfed.length > 0 ? "unfed" : "relations";
-      throw new Error(
-        `defineResource: "${field}" on key "${key}" is the external keyed arm's (a window or point set no route reaches) — a routed entry routes every table it reads, and a non-keyed one declares its reads on its "reach" plan`,
-      );
-    }
-    const named = new Set<string>();
-    const once = (name: string, what: string, reason: string) => {
-      if (name.trim() === "" || named.has(name)) {
-        throw new Error(
-          `defineExternalResource: key "${key}" declares ${name.trim() === "" ? `an unnamed ${what}` : `${what} "${name}" twice`} — one entry per table.`,
-        );
-      }
-      if (reason.trim() === "") {
-        throw new Error(
-          `defineExternalResource: key "${key}" reads "${name}" (${what}) with no reason.`,
-        );
-      }
-      named.add(name);
-    };
-    const tables = new Set<string>();
-    for (const u of reads.unfed) {
-      once(u.table, "unfed table", u.reason);
-      tables.add(u.table);
-    }
-    const relations = new Map<string, string>();
-    for (const r of reads.relations) {
-      once(r.relation, "relation", r.reason);
-      relations.set(r.relation, r.reason);
-    }
-    return { ...driftOnlyRouting(tables), relations };
   }
 
   /**
@@ -3025,7 +2990,7 @@ export function createResourceRuntime(
       const routing = entry?.routing;
       if (!entry || !routing) continue;
       const tables = [...new Set(tablesRead)].filter(
-        (table) => !readCovered(routing, table),
+        (table) => !readCovered(routing, table, "untracked"),
       );
       if (tables.length === 0) continue;
       for (const table of tables) {
@@ -3665,8 +3630,10 @@ export function createResourceRuntime(
   // membership arm, a reach on a keyed entry, a non-`full` reach route, routes
   // beside a `dependsOn`, and an unminted plan; these
   // throws hold the same line for an untyped caller or an `as` cast. A reach
-  // plan on a non-keyed EXTERNAL entry is allowed (D1): the Postgres reads its
-  // loader makes beside its own notify.
+  // plan on an EXTERNAL entry is allowed — non-keyed (D1), or a keyed window /
+  // point set (D31): the Postgres reads its loader makes beside its own
+  // notify. Keyed, it re-reads a reached tuple whole, so every route is `full`
+  // either way.
   // A9: route ids must be unique within the resource — `usesOf` names routes by
   // id, so a duplicate would make a tuple's read-set ambiguous.
   function routingRecordFor(
@@ -3716,9 +3683,15 @@ export function createResourceRuntime(
       );
     }
     if (field === "reach") {
-      if (def.mode === "keyed") {
+      // The one keyed entry a reach plan may serve: an external window or
+      // point set (D31 — its membership was checked by the caller), whose
+      // every change is a FULL re-read of the tuple.
+      if (
+        def.mode === "keyed" &&
+        !(externalSource && membershipField === "membership")
+      ) {
         throw new Error(
-          `defineResource: "reach" is the non-keyed arm, but key "${key}" is keyed — a keyed entry routes through "routes" and a membership`,
+          `defineResource: "reach" is the non-keyed arm, but key "${key}" is keyed — a keyed entry routes through "routes" and a membership; only an external window or point set (no route reaches it) declares its Postgres reads as a "reach" plan`,
         );
       }
       const mapped = plan.routes.find((r) => r.map.kind !== "full");
@@ -3763,12 +3736,30 @@ export function createResourceRuntime(
             )
           : [],
       ),
+      tagged: taggedOf(
+        field === "reach"
+          ? ((plan as ReachPlan<ResourceParams>).taggedReads ?? [])
+          : [],
+      ),
       drifted: new Set(),
       relationBases: new Set(),
       driftBases: new Set(),
       seededDrift: new Set(),
       uses: new Map(),
     };
+  }
+
+  // A reach plan's tagged reads, table → its tags (`RoutingRecord.tagged`).
+  function taggedOf(
+    reads: readonly TaggedRead[],
+  ): ReadonlyMap<string, ReadonlySet<string>> {
+    const out = new Map<string, Set<string>>();
+    for (const { table, tag } of reads) {
+      let tags = out.get(table);
+      if (!tags) out.set(table, (tags = new Set()));
+      tags.add(tag);
+    }
+    return out;
   }
 
   // Single internal builder. Produces the full runtime object (with a working
@@ -4040,19 +4031,11 @@ export function createResourceRuntime(
       }
     }
 
-    const routing =
-      def.unfed !== undefined || def.relations !== undefined
-        ? externalKeyedRouting(
-            def.key,
-            { unfed: def.unfed ?? [], relations: def.relations ?? [] },
-            membershipField,
-            externalSource,
-          )
-        : routingRecordFor(
-            def as ResourceDefinition<unknown, ResourceParams>,
-            membershipField,
-            externalSource,
-          );
+    const routing = routingRecordFor(
+      def as ResourceDefinition<unknown, ResourceParams>,
+      membershipField,
+      externalSource,
+    );
     // The external keyed arm (`ExternalKeyedPolicy`) — never routed: its
     // routes were refused above. The types allow only a bounded window or a
     // point set; this holds the line for a cast.
@@ -4496,8 +4479,9 @@ export function createResourceRuntime(
   // Never keyed-ROUTED (D31): its truth is outside Postgres, so no `routes`
   // plan routes into it — `buildEntry` refuses routes a cast let through; a
   // non-keyed one may declare the Postgres reads its loader also makes as a
-  // `reach` plan (D1). Keyed only as a bounded window or a point set from a
-  // shared keyed contract (`ExternalKeyedPolicy`).
+  // `reach` plan (D1), and so may a keyed one — only as a bounded window or a
+  // point set from a shared keyed contract (`ExternalKeyedPolicy`), its reach
+  // full-only.
   function defineExternalResource<T, P extends ResourceParams = ResourceParams>(
     def: ExternalDefinition<T, P>,
   ): ExternalResource<T, P>;
@@ -7897,9 +7881,10 @@ export function createResourceRuntime(
   function routeEntryChange(entry: RegistryEntry, change: TableChange): void {
     const routing = entry.routing!;
     const routes = routing.byTable.get(change.table);
-    if (routes === undefined) {
-      // A table only the drift guard indexed (A8 fail-open): no route names it,
-      // so nothing scopes it — every target recomputes FULL.
+    if (routes === undefined || routing.driftBases.has(change.table)) {
+      // A table only the drift guard indexed (A8 fail-open): no route names it
+      // — or only a tagged route, read outside its tag — so nothing scopes
+      // it: every target recomputes FULL.
       for (const [pk, params] of routedTargets(entry)) {
         deliverRouted(entry, pk, params, { kind: "full" }, change);
       }

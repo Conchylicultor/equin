@@ -446,6 +446,13 @@ export interface EntryContext {
    * allocate a Set.
    */
   tables?: Set<string>;
+  /**
+   * The tags of the reads behind `tables`, table → each read's tag (`null`
+   * for an untagged one) — created on the first TAGGED read, seeded with
+   * every table read before it as untagged, so absent means "no read was
+   * tagged". Handed to the sink beside `tables`.
+   */
+  tags?: Map<string, Set<string | null>>;
 }
 
 interface SpanContextRuntime {
@@ -771,6 +778,8 @@ let sinceMs = now();
 export type LoaderReadSetSink = (
   label: string,
   tables: ReadonlySet<string>,
+  /** Each table's read tags (`null` = untagged); absent when no read was tagged. */
+  tags?: ReadonlyMap<string, ReadonlySet<string | null>>,
 ) => void;
 let loaderReadSetSink: LoaderReadSetSink | null = null;
 
@@ -1405,12 +1414,31 @@ export function chargeWait(layer: string, ms: number): void {
  * it a structural no-op keeps capture correctness from silently depending on
  * every loader DB read completing before the loader's own return chain settles.
  */
-export function recordReadTables(tables: readonly string[]): void {
+export function recordReadTables(
+  tables: readonly string[],
+  /**
+   * The query's read tag (database's `tagReads`: a compiled lookup's label),
+   * or `null` for an untagged query — what the runtime's drift guard tells a
+   * lookup's read of a table from any other read of it by.
+   */
+  tag: string | null = null,
+): void {
   if (suppressionRuntime.suppressed()) return;
   const cur = contextRuntime.current();
   if (cur && !cur.closed) {
     cur.tables ??= new Set();
-    for (const table of tables) cur.tables.add(table);
+    if (tag !== null && cur.tags === undefined) {
+      cur.tags = new Map(
+        [...cur.tables].map((t) => [t, new Set<string | null>([null])]),
+      );
+    }
+    for (const table of tables) {
+      cur.tables.add(table);
+      if (cur.tags === undefined) continue;
+      let seen = cur.tags.get(table);
+      if (!seen) cur.tags.set(table, (seen = new Set()));
+      seen.add(tag);
+    }
   }
 }
 
@@ -1628,7 +1656,7 @@ export async function recordEntrySpan<T>(
     // under a non-loader entry is never indexed. Done after `record` so it can
     // never affect span recording — and whatever `record` decided to keep.
     if (kind === "loader" && ctx.tables && ctx.tables.size > 0) {
-      loaderReadSetSink?.(label, ctx.tables);
+      loaderReadSetSink?.(label, ctx.tables, ctx.tags);
     }
   }
 }

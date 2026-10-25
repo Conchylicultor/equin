@@ -11,7 +11,6 @@ import type {
   ServerResourceOptions,
 } from "@plugins/framework/plugins/resource-runtime/core";
 import {
-  compiledKeyedReads,
   compiledValueReach,
   type ValueReads,
 } from "@plugins/infra/plugins/query-resource/server";
@@ -125,18 +124,27 @@ export type ServedSilentPagedValue<Item> = ServedValueBase<
 
 /**
  * What a db value's loader reads, declared (see query-resource's `ValueReads`):
- * whole tables and why, compiled to the value's routing plan. A thunk when the
+ * whole tables and why, and the compiled lookups it reads through (each keyed
+ * off the tuple's wire params `P`), compiled to the value's routing plan. A thunk when the
  * tables come from a registry that is complete only once contributions are
  * collected (the value is then bound at `bindDeferredResources`, before the
  * change feed builds its triggers) — such a value must be pushed (`load` not
  * `"on-demand"`).
  */
-export type ServedValueReads = ValueReads | (() => ValueReads);
+export type ServedValueReads<P extends ResourceParams = ResourceParams> =
+  ValueReads<P> | (() => ValueReads<P>);
+
+/**
+ * A value's `reads` under whatever params its lookups key off — what the
+ * untyped serving code holds (each overload types it by the value's params;
+ * `never` because a lookup's `usesOf` takes them, so any `P` narrows to it).
+ */
+type AnyServedValueReads = ServedValueReads<never>;
 
 /** The db arm's declaration of what its loader reads. Required. */
-interface DbReadsOption {
+interface DbReadsOption<P extends ResourceParams> {
   /** Every table the loader reads, and why a write to any row may change any tuple. */
-  reads: ServedValueReads;
+  reads: ServedValueReads<P>;
 }
 
 /**
@@ -148,23 +156,31 @@ interface DbReadsOption {
  * caught by the runtime's undeclared-read guard (D5): reported, thrown under
  * a test runner.
  */
-type ExternalReadsOption<C extends LiveValueChanges> = [C] extends ["notified"]
+type ExternalReadsOption<
+  C extends LiveValueChanges,
+  P extends ResourceParams,
+> = [C] extends ["notified"]
   ? {
       /** Every table the loader reads, and why a write to any row may change any tuple. */
-      reads?: ServedValueReads;
+      reads?: ServedValueReads<P>;
     }
   : { reads?: never };
 
 /**
  * A `"notified"` paged value's Postgres reads, beside its own truth (its
  * pages' loader and its meta's): a static list — the pages are keyed windows
- * registered at once, so there is no deferred bind for a thunk. A write to
- * one re-reads every subscribed page whole and recomputes the meta.
+ * registered at once, so there is no deferred bind for a thunk. Compiled into
+ * ONE reach plan both the pages (an external keyed window, D31) and the meta
+ * register with: a write to a whole table re-reads every subscribed page and
+ * recomputes every meta; a write a lookup reads re-reads only the pages and
+ * meta of the questions asking about its row — and none, when it touched no
+ * column the lookup reads. A lookup's key comes from the question's wire `q`
+ * (`LiveQueryParams`, which every page tuple carries too).
  */
 type PagedReadsOption<C extends LiveValueChanges> = [C] extends ["notified"]
   ? {
       /** Every table the pages and the meta read, and why a write to any row may change any page. */
-      reads?: ValueReads;
+      reads?: ValueReads<LiveQueryParams>;
     }
   : { reads?: never };
 
@@ -228,7 +244,8 @@ export interface ServeValueOverloads<H> {
       SnapshotPairing<"notified"> &
       BytesPairing<"db"> &
       H,
-    opts: ServeValueOptions<NoInfer<T>, NoInfer<Q>, "db", R> & DbReadsOption,
+    opts: ServeValueOptions<NoInfer<T>, NoInfer<Q>, "db", R> &
+      DbReadsOption<LiveQueryParams>,
   ): ServedValue<T, LiveQueryParams>;
   <
     T,
@@ -239,7 +256,7 @@ export interface ServeValueOverloads<H> {
   >(
     value: LiveQueryValue<T, Q, QIn> & SnapshotPairing<C> & H,
     opts: ServeValueOptions<NoInfer<T>, NoInfer<Q>, "external", R, C> &
-      ExternalReadsOption<C>,
+      ExternalReadsOption<C, LiveQueryParams>,
   ): ServedFor<
     C,
     ServedExternalQueryValue<T, Q>,
@@ -252,7 +269,7 @@ export interface ServeValueOverloads<H> {
   >(
     value: LivePreloadedParamValue<T, P> & H,
     opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, "db", R> &
-      DbReadsOption &
+      DbReadsOption<NoInfer<P>> &
       PreloadParamsOption<NoInfer<P>>,
   ): ServedValue<T, P>;
   <
@@ -264,7 +281,7 @@ export interface ServeValueOverloads<H> {
     value: LivePreloadedParamValue<T, P> & SnapshotPairing<C> & H,
     opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, "external", R, C> &
       PreloadParamsOption<NoInfer<P>> &
-      ExternalReadsOption<C>,
+      ExternalReadsOption<C, NoInfer<P>>,
   ): ServedFor<C, ServedExternalValue<T, P>, ServedValue<T, P>>;
   <
     T,
@@ -276,7 +293,7 @@ export interface ServeValueOverloads<H> {
       BytesPairing<"db"> &
       H,
     opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, "db", R> &
-      DbReadsOption & {
+      DbReadsOption<NoInfer<P>> & {
         preloadParams?: never;
       },
   ): ServedValue<T, P>;
@@ -288,7 +305,7 @@ export interface ServeValueOverloads<H> {
   >(
     value: PlainValue<T, P> & SnapshotPairing<C> & H,
     opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, "external", R, C> &
-      ExternalReadsOption<C> & {
+      ExternalReadsOption<C, NoInfer<P>> & {
         preloadParams?: never;
       },
   ): ServedFor<C, ServedExternalValue<T, P>, ServedValue<T, P>>;
@@ -356,7 +373,7 @@ export function serveAnyValue<T, P extends Record<string, string>>(
     | LivePagedPages<any, any, any>,
   opts: AnyServeOptions & {
     preloadParams?: () => P[] | Promise<P[]>;
-    reads?: ServedValueReads;
+    reads?: AnyServedValueReads;
   },
 ):
   | ServedValue<T, P>
@@ -448,7 +465,7 @@ const SERVER_HOST: ValueHost = {
 /** The runtime a served value registers on: server-core's (see {@link valueRuntime}). */
 function runtimeFor(
   key: string,
-  opts: { reads?: ServedValueReads },
+  opts: { reads?: AnyServedValueReads },
 ): LiveRuntime {
   return valueRuntime(key, opts, SERVER_HOST);
 }
@@ -458,23 +475,22 @@ function runtimeFor(
  * compiled into the routing plan (`reach`) its registration carries — at once,
  * or at the host's `bindDeferredResources` for a thunk (an external one through
  * the runtime's deferred-external arm, so it is external, with its freshness,
- * from definition) — or, for a paged value's keyed pages, into whole relation
- * reads of the window (`compiledKeyedReads`: no route reaches an external
- * keyed entry, D31). Checked when the value registers, after its other
+ * from definition) — a paged value's keyed pages included (an external keyed
+ * window takes a full-only reach plan, D31). Checked when the value registers, after its other
  * options: a db value without `reads`, and `reads` on an external value that
  * is not `"notified"`, are refused (tsc pairs them; this is the untyped
  * caller's check).
  */
 export function valueRuntime(
   key: string,
-  opts: { reads?: ServedValueReads },
+  opts: { reads?: AnyServedValueReads },
   host: ValueHost,
 ): LiveRuntime {
   const { defineResource, defineDeferredResource, defineExternalResource } =
     host;
   const label = `serveValue("${key}")`;
   const { reads } = opts;
-  const routed = (options: object, declared: ValueReads) =>
+  const routed = (options: object, declared: ValueReads<never>) =>
     ({
       ...options,
       reach: compiledValueReach(declared, label) as ReachPlan<ResourceParams>,
@@ -502,18 +518,16 @@ export function valueRuntime(
       );
     }
     if ((contract as { keyed?: unknown }).keyed !== undefined) {
-      // A paged value's pages: a keyed external window, which no route
-      // reaches (D31) — its reads are whole relation reads of it.
+      // A paged value's pages: a keyed external window, which no scoped
+      // route reaches (D31) — its reach plan is full-only, every reached
+      // page re-read whole, like every other arm's.
       if (typeof reads === "function") {
         // Unreachable from typed code (`PagedReadsOption` takes no thunk).
         throw new Error(
           `${label}: a paged value's \`reads\` is a static list — its pages register at once, with no deferred bind for a thunk.`,
         );
       }
-      return defineExternalResource(contract, {
-        ...(options as object),
-        ...compiledKeyedReads(reads, label),
-      } as never);
+      return defineExternalResource(contract, routed(options, reads));
     }
     if (typeof reads !== "function") {
       return defineExternalResource(contract, routed(options, reads));
@@ -542,7 +556,7 @@ function servePaged(
   value: LivePagedValue<unknown, unknown, unknown, unknown>,
   opts: AnyServeOptions & {
     preloadParams?: unknown;
-    reads?: ServedValueReads;
+    reads?: AnyServedValueReads;
   },
 ): ServedPagedValue<unknown, unknown> | ServedSilentPagedValue<unknown> {
   if (opts.preloadParams !== undefined) {

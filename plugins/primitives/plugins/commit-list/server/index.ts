@@ -11,10 +11,14 @@ export type { GitResult } from "./internal/run-git";
 export {
   parseDiffNameStatusZ,
   parseDiffNumstatZ,
+  parseDiffRawNumstatZ,
 } from "./internal/parse-diff-z";
-export type { NameStatusRecord } from "./internal/parse-diff-z";
+export type {
+  NameStatusRecord,
+  RawNumstatRecord,
+} from "./internal/parse-diff-z";
 
 export default {
   description:
-    "Git log parser, `git diff -z` name-status / numstat parsers, the runGit invocation and commit row types for reuse across plugins.",
+    "Git log parser, `git diff -z` name-status / numstat / raw+numstat parsers, the runGit invocation and commit row types for reuse across plugins.",
 } satisfies ServerPluginDefinition;

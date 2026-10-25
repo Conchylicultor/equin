@@ -64,6 +64,13 @@ their route — they pass `caller: { kind: "route", label: location.pathname }`,
 which lands on the op's `slow_op_callers` row (`route` · `/agents/c/123` ×N in
 the detail).
 
+An `element` item (`elementSlowOp`, `web/internal/element-slow-op.ts`) follows
+the same identity rule as the latency kinds below: `operation` is the resource
+key alone, and the tuple's `canonicalJson(params)` is its `detail.variant`, so a
+resource slow on many tuples (one per conversation, one per page) is one row and
+one report, its tuples kept in `variants`. Rows recorded before this change name
+`<key> <params>` as their operation and remain as history.
+
 A server span's `detail` lands on the row too: its `variant` merges into
 `variants` (only the top 10 by total time stay named; the rest fold into one
 `(other)` entry, on the batch that creates the row as on every merge) and its

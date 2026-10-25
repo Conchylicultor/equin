@@ -29,6 +29,7 @@ export type {
   FileWatcher,
   WatchReaction,
   WatchReconcile,
+  WatchLost,
   WatcherBackend,
 } from "../shared/engine";
 

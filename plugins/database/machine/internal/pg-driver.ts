@@ -33,7 +33,10 @@ import {
   type Db,
 } from "../../server/internal/driver";
 import { dbLog } from "../../server/internal/db-log";
-import { extractReadTablesFromSql } from "../../server/internal/read-set-capture";
+import {
+  extractReadTablesFromSql,
+  readTagOf,
+} from "../../server/internal/read-set-capture";
 
 // The worktree name is the worktree DB name — the one thing the worktree pool
 // genuinely needs, and it is this process's RUNTIME namespace (`--namespace`
@@ -283,7 +286,7 @@ export function installQueryWrapper(pool: Pool): void {
     // resource-runtime cascade). Observation-only: affects neither timing nor
     // gating.
     if (currentCallerKind() === "loader") {
-      recordReadTables(extractReadTablesFromSql(text));
+      recordReadTables(extractReadTablesFromSql(text), readTagOf(text));
     }
 
     // Gate by ORIGIN class, not caller kind. What changes versus the old
@@ -394,7 +397,8 @@ function wrapClientQueryForReadSet(client: PoolClient): PoolClient {
     // and it has one whether a human or the cascade is driving it. Observation
     // only — the call itself is handed on untouched, callback form included.
     if (currentCallerKind() === "loader") {
-      recordReadTables(extractReadTablesFromSql(queryText(a[0])));
+      const text = queryText(a[0]);
+      recordReadTables(extractReadTablesFromSql(text), readTagOf(text));
     }
     return clientQuery(...a);
   }) as typeof client.query;

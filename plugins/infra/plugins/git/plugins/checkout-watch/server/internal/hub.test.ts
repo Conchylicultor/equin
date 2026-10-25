@@ -4,6 +4,7 @@ import type {
   FileChangeEvent,
 } from "@plugins/infra/plugins/file-watcher/server";
 import {
+  classifyCommonDirEvent,
   classifyGitDirEvent,
   classifyRootEvent,
   createCheckoutWatchHub,
@@ -66,12 +67,14 @@ describe("classifyGitDirEvent", () => {
 /** Fake dir watches: each acquire recorded, emitting by dir on demand. */
 function fakeDirs() {
   const live = new Map<string, DirWatchRequest["onChange"]>();
+  const losers = new Map<string, DirWatchRequest["onLost"]>();
   const acquired: string[] = [];
   const released: string[] = [];
   const acquireDirWatch = async (req: DirWatchRequest) => {
     if (req.dir.includes("missing")) throw new Error(`ENOENT ${req.dir}`);
     acquired.push(req.dir);
     live.set(req.dir, req.onChange);
+    losers.set(req.dir, req.onLost);
     return () => {
       released.push(req.dir);
       live.delete(req.dir);
@@ -80,8 +83,27 @@ function fakeDirs() {
   // The hub's own listeners are synchronous: the dir watch hears no promise.
   const emit = (dir: string, ...paths: string[]) =>
     void live.get(dir)!(paths.map(ev));
-  return { acquireDirWatch, acquired, released, emit };
+  const lose = (dir: string) => {
+    const onLost = losers.get(dir);
+    if (onLost === undefined) throw new Error(`no onLost on ${dir}`);
+    onLost(new Error("overflow"));
+  };
+  return { acquireDirWatch, acquired, released, emit, lose };
 }
+
+describe("classifyCommonDirEvent", () => {
+  test("of a common dir's own entries, only what git status reads there is a change", () => {
+    const cd = "/m/.git";
+    for (const p of ["config", "packed-refs", "info"]) {
+      expect(classifyCommonDirEvent(cd, ev(`${cd}/${p}`))?.area).toBe("git");
+    }
+    // The main checkout's own state, and lock files, are not this checkout's.
+    for (const p of ["HEAD", "index", "FETCH_HEAD", "config.lock", "refs"]) {
+      expect(classifyCommonDirEvent(cd, ev(`${cd}/${p}`))).toBeNull();
+    }
+    expect(classifyCommonDirEvent(cd, ev("/elsewhere/config"))).toBeNull();
+  });
+});
 
 describe("refAt", () => {
   test("a loose ref or its lock is the ref; anything else is none", () => {
@@ -97,6 +119,7 @@ describe("refAt", () => {
 const LINKED = {
   gitDir: "/main/.git/worktrees/wt",
   commonDir: "/main/.git",
+  infoDir: "/main/.git/info",
 };
 const ALSO_NONE: CheckoutRefs = { also: [] };
 const tick = () => new Promise<void>((r) => setTimeout(r, 0));
@@ -135,6 +158,39 @@ const OWN: CheckoutBranch = {
 };
 
 describe("createCheckoutWatchHub", () => {
+  test("a watch losing events is a resync for every reader, from any of its dirs", async () => {
+    const { dirs, hub } = linkedHub();
+    let a = 0;
+    let b = 0;
+    const changes: CheckoutChange[] = [];
+    const ra = await hub.acquire("/wt", {
+      refs: ALSO_NONE,
+      onChange: (c) => void changes.push(...c),
+      onResync: () => void a++,
+    });
+    const rb = await hub.acquire("/wt", {
+      refs: ALSO_NONE,
+      onChange: () => {},
+      onResync: () => void b++,
+    });
+    // A reader with no onResync hears nothing of it.
+    const rc = await hub.acquire("/wt", {
+      refs: ALSO_NONE,
+      onChange: () => {},
+    });
+    dirs.lose("/wt");
+    dirs.lose("/main/.git/worktrees/wt");
+    expect([a, b]).toEqual([2, 2]);
+    // A loss is not a change batch.
+    await tick();
+    expect(changes).toEqual([]);
+    ra();
+    dirs.lose("/wt");
+    expect([a, b]).toEqual([2, 3]);
+    rb();
+    rc();
+  });
+
   test("a linked worktree watches its root plus its git dirs outside; readers share one watch", async () => {
     const { dirs, hub, probes } = linkedHub();
     const a: CheckoutChange[] = [];
@@ -153,6 +209,8 @@ describe("createCheckoutWatchHub", () => {
       "/wt",
       "/main/.git/worktrees/wt",
       "/main/.git/refs",
+      "/main/.git/info",
+      "/main/.git",
     ]);
 
     dirs.emit("/wt", "/wt/src/a.ts", "/wt/node_modules/x");
@@ -181,6 +239,8 @@ describe("createCheckoutWatchHub", () => {
       "/wt",
       "/main/.git/worktrees/wt",
       "/main/.git/refs",
+      "/main/.git/info",
+      "/main/.git",
     ]);
     expect(hub.roots()).toEqual([]);
   });
@@ -296,6 +356,7 @@ describe("createCheckoutWatchHub", () => {
       locate: async () => ({
         gitDir: "/missing/.git",
         commonDir: "/missing/.git",
+        infoDir: null,
       }),
       readBranch: async () => OWN,
       ignored: IGNORES_NONE,
@@ -329,6 +390,40 @@ describe("createCheckoutWatchHub", () => {
     dirs.emit("/wt", "/wt/dist/c.js", "/wt/src/a.ts");
     await tick();
     expect(heard).toEqual(["/wt/src/a.ts"]);
+  });
+
+  test("a linked worktree hears the shared config, packed-refs and info/exclude, not the main checkout's HEAD or index", async () => {
+    const { dirs, hub } = linkedHub();
+    const heard: (string | undefined)[][] = [];
+    await hub.acquire("/wt", {
+      refs: ALSO_NONE,
+      onChange: (c) => void heard.push(...c.map((x) => [x.path, x.ref])),
+    });
+    dirs.emit("/main/.git", "/main/.git/HEAD", "/main/.git/index");
+    dirs.emit("/main/.git", "/main/.git/config", "/main/.git/packed-refs");
+    dirs.emit("/main/.git/info", "/main/.git/info/exclude");
+    expect(heard).toEqual([
+      ["/main/.git/config", undefined],
+      ["/main/.git/packed-refs", undefined],
+      ["/main/.git/info/exclude", undefined],
+    ]);
+  });
+
+  test("a common dir with no info dir watches the rest", async () => {
+    const dirs = fakeDirs();
+    const hub = createCheckoutWatchHub({
+      acquireDirWatch: dirs.acquireDirWatch,
+      locate: async () => ({ ...LINKED, infoDir: null }),
+      readBranch: async () => OWN,
+      ignored: IGNORES_NONE,
+    });
+    await hub.acquire("/wt", { refs: ALSO_NONE, onChange: () => {} });
+    expect(dirs.acquired).toEqual([
+      "/wt",
+      "/main/.git/worktrees/wt",
+      "/main/.git/refs",
+      "/main/.git",
+    ]);
   });
 
   test("a git-dir-only batch asks nothing and is delivered in the same turn", async () => {

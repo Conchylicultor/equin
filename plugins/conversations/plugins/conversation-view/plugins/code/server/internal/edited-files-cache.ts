@@ -1,70 +1,60 @@
 import type { EditedFile } from "../../core/protocol";
-import { createSignedMemo } from "@plugins/infra/plugins/git/plugins/git-read-cache/server";
+import { acquireCheckoutWatch } from "@plugins/infra/plugins/git/plugins/checkout-watch/server";
+import { createWatchedMemo } from "@plugins/packages/plugins/watched-memo/core";
 import { computeEditedFiles } from "./compute-edited-files";
-import { editedFilesSignature } from "./edited-files-signature";
+import {
+  type EditedFilesFacts,
+  editedFilesSignatureOf,
+  readEditedFilesFacts,
+} from "./edited-files-signature";
 
-// ONE module-level memo, shared between the resource (machine/internal/edited-files-resource.ts —
-// BOTH its `revalidate` and its `loader`) and the @parcel watcher
-// (watch-edited-files.ts, the authoritative WRITER).
+// ONE module-level memo per process, keyed by worktree, shared by every reader
+// of a worktree's edited files: the pages, the meta and one file
+// (machine/internal/edited-files-resource.ts), and review/plugin-changes.
 //
-// The signature is the CONTENT signature (edited-files-signature.ts): headSha,
-// merge-base, and each dirty file's (porcelain code, lstat mtime+size). It is a
-// faithful function of every input `computeEditedFiles` reads, so it moves on an
-// uncommitted save even though no SHA changed — the property that a pure git-SHA
-// signature lacks, and the reason this file used to key on a watcher GENERATION
-// COUNTER instead.
+// While a worktree is watched (`watchEditedFiles`), its checkout watch is the
+// freshness authority: each change runs ONE pass — one `git status` (the facts)
+// and one `git diff --raw --numstat` over them — and a read is the held list,
+// with no git spawn. Passes run one at a time, the changes landing mid-pass
+// folded into one trailing pass, and every pass computes (no skip on an equal
+// signature: an edit read mid-pass and undone puts the signature back while
+// the list still shows the edit). The list is set before the watchers are told.
 //
-// The counter was never a fingerprint of git state, only of "how many times the
-// watcher has run". `revalidate` probed git directly (instantly fresh) while the
-// loader read the memo at the last completed watcher recompute (200ms debounce,
-// 2s ceiling, behind withHeavyReadSlot) — so in that window a subscribe shipped
-// (staleValue, freshEtag). This resource is `mode: "invalidate"`, so pushes carry
-// no value: the client's next refetch matched the etag, got a 304, and kept the
-// stale empty list FOREVER. It surfaced as "No edited files." plus a destructive
-// "Drop & Close" over real changes.
+// The checkout watch hears the working tree AND the git dir — the list moves on
+// a `git add` (untracked → added) and on a `main` advance or rebase (the
+// merge-base) — but of the refs every worktree shares only its own branch and
+// `refs/heads/main`: another worktree's commit costs nothing. It drops what git
+// ignores (a build's `dist/`, the main checkout's `.claude/worktrees/`). A watch
+// that lost events is a resync: one more pass.
 //
-// `createSignedMemo` binds signature and compute at construction: `memo.signature`
-// feeds `revalidate`, `memo.get` feeds the `loader`, and they cannot drift because
-// there is nothing to pass.
+// Unwatched (an HTTP read, plugin-changes with nothing open), or after a failed
+// pass, a read takes the probe path: the facts, then the content signature
+// (edited-files-signature.ts) — a hit, or one compute single-flighted per
+// signature over the probe's own facts.
 //
-// Deleting the counter also deletes a hazard class. `evictEditedFiles` used to
-// reset the worktree's counter to 0 alongside the cache entry, so a watcher
-// recompute that started before `closeRoom` and landed after it wrote
-// {generation: N, value} back into a freshly-reset namespace — where a new
-// subscriber probing a low generation could hit that resurrected stale entry.
-// Correctness depended on nobody writing across an evict. A content signature is
-// self-validating: a late write-back stores {contentSig, value}, and any reader
-// probes the CURRENT content signature, so a surviving entry is served only if it
-// actually matches current git state. `evict` is now pure lifecycle cleanup.
+// The list is pushed, so nothing mints an ETag from a fresh probe beside it: a
+// revalidate would have to return the held entry's own signature.
 //
-// See research/2026-07-09-global-etag-value-coproduction.md and
-// research/2026-06-19-global-incremental-git-loaders.md (Stage 4).
-const memo = createSignedMemo<EditedFile[]>({
+// See packages/watched-memo and
+// research/2026-10-25-global-edited-files-paged-cost.md.
+export const editedFilesMemo = createWatchedMemo<
+  EditedFile[],
+  EditedFilesFacts
+>({
   name: "edited-files",
-  signature: editedFilesSignature,
+  passLabel: "watch-edited-files:pass",
+  facts: readEditedFilesFacts,
+  signatureOf: editedFilesSignatureOf,
   compute: computeEditedFiles,
+  changes: (worktreePath, trigger) =>
+    acquireCheckoutWatch(worktreePath, {
+      refs: { also: ["refs/heads/main"] },
+      onChange: () => trigger(),
+      onResync: () => trigger(true),
+    }),
 });
 
-export const editedFilesMemo = memo;
-
-/**
- * Write-through prime from the watcher (the authoritative writer): store the
- * freshly computed list under the signature the watcher captured BEFORE running
- * the compute, so the next `getEditedFiles` read is a pure cache hit.
- *
- * The signature-before-compute ordering is the memo's `prime` contract: a change
- * landing mid-compute leaves the stored signature older than the value, so the
- * next `get` re-probes, misses, and recomputes. Over-invalidates; never serves a
- * torn value under a matching signature.
- */
-export function primeEditedFiles(
-  worktreePath: string,
-  signature: string,
-  files: EditedFile[],
-): void {
-  memo.prime(worktreePath, signature, files);
-}
-
+/** Drop the unwatched path's cached list (a worktree found gone). */
 export function evictEditedFiles(worktreePath: string): void {
-  memo.evict(worktreePath);
+  editedFilesMemo.evict(worktreePath);
 }

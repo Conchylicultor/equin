@@ -15,7 +15,11 @@ import {
 } from "@plugins/framework/plugins/resource-runtime/core";
 import { wholeReach } from "@plugins/framework/plugins/resource-runtime/core/testing";
 import { notificationsWsHandler } from "@plugins/framework/plugins/server-core/core";
-import { liveValue } from "@plugins/network/plugins/live/core";
+import {
+  liveValue,
+  type LiveQueryParams,
+} from "@plugins/network/plugins/live/core";
+import { compileLookup } from "@plugins/infra/plugins/query-resource/server";
 import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import {
   compileValue,
@@ -31,6 +35,11 @@ const counts = pgTable("test_serve_value_counts", {
 const countsView = pgView("test_serve_value_counts_v").as((qb) =>
   qb.select().from(counts),
 );
+const lists = pgTable("test_serve_value_lists", {
+  id: text("id").primaryKey(),
+  root: text("root"),
+  noise: text("noise"),
+});
 const Names = wholeList(z.string(), { reason: "a test's handful of names" });
 const PagedItem = z.object({ id: z.string(), at: z.string().nullable() });
 type PagedItem = z.output<typeof PagedItem>;
@@ -465,7 +474,7 @@ describe("serveValue", () => {
     );
   });
 
-  test("a paged value with reads: its pages read each table whole, its meta is routed — a write re-reads the subscribed page and recomputes the meta", async () => {
+  test("a paged value with reads: its pages and its meta share one full-only reach plan — a write re-reads the subscribed page and recomputes the meta", async () => {
     const v = liveValue(key("served-paged-reads"), {
       query: z.object({ list: z.string() }),
       paged: {
@@ -503,24 +512,25 @@ describe("serveValue", () => {
     runtime.indexRelationReads();
     const pages = await debugOf(runtime, v.key);
     expect(pages.policy).toBe("external");
-    expect(pages.routes).toEqual([]);
-    expect(pages.relationReads.map((r) => r.relation).sort()).toEqual([
+    // The keyed pages take the same reach plan as every other arm (D31: a
+    // full-only plan): a whole-table route, a view as a relation read.
+    expect(pages.routes?.map((r) => r.table)).toEqual([
       "test_serve_value_counts",
+    ]);
+    expect(pages.relationReads.map((r) => r.relation)).toEqual([
       "test_serve_value_counts_v",
     ]);
     const metaEntry = await debugOf(runtime, meta!.resource.key);
     expect(metaEntry.routes?.map((r) => r.table)).toEqual([
       "test_serve_value_counts",
     ]);
-    // Change-feed's A1′ holds the pages' bases to a change source, the meta's
-    // route tables to a trigger.
+    // Change-feed's A1′ holds the view's bases to a change source.
     expect(
       runtime
         .relationResourceReads()
         .filter((r) => r.key === v.key)
-        .map((r) => r.relation)
-        .sort(),
-    ).toEqual(["test_serve_value_counts", "test_serve_value_counts_v"]);
+        .map((r) => r.relation),
+    ).toEqual(["test_serve_value_counts_v"]);
     const page = v.query.encode(
       { list: "x" },
       { after: null, until: null, limit: 2 },
@@ -539,6 +549,106 @@ describe("serveValue", () => {
       () => h.of("delta", resource.key).length > 0,
       "the page's keyed delta",
     );
+  });
+
+  test("a paged value reading through a lookup: a write the lookup's gate skips reaches no page, a write to one question's row only that question's pages and meta", async () => {
+    const v = liveValue(key("served-paged-lookup"), {
+      query: z.object({ list: z.string() }),
+      paged: {
+        item: PagedItem,
+        id: "id",
+        key: { of: (i: PagedItem) => [i.at], order: ["desc"] },
+        limit: 2,
+        maxLimit: 4,
+        meta: Count,
+      },
+    });
+    const listRoot = compileLookup({
+      label: "test.serve-value.list-root",
+      from: lists,
+      by: lists.id,
+      select: { root: { from: "base", col: lists.root } },
+      row: z.object({ root: z.string().nullable() }),
+    });
+    const listOf = (q: string) => (JSON.parse(q) as { list: string }).list;
+    const h = harness();
+    const runtime = h.runtime;
+    const loads: string[] = [];
+    const opts = {
+      source: "external" as const,
+      changes: "notified" as const,
+      reads: {
+        tables: [],
+        lookups: [listRoot.read<LiveQueryParams>((p) => listOf(p.q))],
+        reason: "unused: every read is the lookup's",
+      },
+      loader: (q: { list: string }) => {
+        loads.push(`page ${q.list}`);
+        return [{ id: `${q.list}${loads.length}`, at: "1" }];
+      },
+      meta: (q: { list: string }) => {
+        loads.push(`meta ${q.list}`);
+        return { n: loads.length };
+      },
+    };
+    const { resource, meta } = registerPagedValue(
+      valueRuntime(v.key, opts, runtime),
+      v,
+      opts,
+    );
+    // The pages' reach plan: the lookup's own route, gated on what it reads.
+    const pages = await debugOf(runtime, v.key);
+    expect(pages.routes).toEqual([
+      expect.objectContaining({
+        id: "test.serve-value.list-root:test_serve_value_lists",
+        table: "test_serve_value_lists",
+      }),
+    ]);
+    for (const list of ["x", "y"]) {
+      await h.subscribe(
+        resource.key,
+        v.query.encode({ list }, { after: null, until: null, limit: 2 }),
+      );
+      await h.subscribe(meta!.resource.key, {
+        q: v.query.encodeQuery({ list }),
+      });
+    }
+    const settle = () => new Promise((r) => setTimeout(r, 30));
+    const write = (
+      op: "I" | "U" | "D",
+      id: string,
+      unchanged: string[] | null,
+    ) =>
+      runtime.routeTableChange({
+        source: "feed",
+        table: "test_serve_value_lists",
+        op,
+        ids: [id],
+        keys: { id: [id] },
+        unchanged,
+      });
+    // Every first load in (a meta's sub-ack may land after its frame).
+    await settle();
+    // A column the lookup does not read: gated out, no page or meta re-reads.
+    loads.length = 0;
+    write("U", "x", ["id", "root"]);
+    await settle();
+    expect(loads).toEqual([]);
+    // An insert of question x's row: only x's page and meta.
+    write("I", "x", null);
+    await h.until(() => loads.length >= 2, "x's page and meta");
+    await settle();
+    expect(loads.sort()).toEqual(["meta x", "page x"]);
+    // A write to another row reaches neither question.
+    loads.length = 0;
+    write("D", "z", null);
+    await settle();
+    expect(loads).toEqual([]);
+    // A column it reads, on y's row: only y.
+    write("U", "y", ["id"]);
+    await h.until(() => loads.length >= 2, "y's page and meta");
+    await settle();
+    expect(loads.sort()).toEqual(["meta y", "page y"]);
   });
 
   test("an external thunk binds deferred: external with its freshness from definition, its plan at bindDeferredResources", async () => {

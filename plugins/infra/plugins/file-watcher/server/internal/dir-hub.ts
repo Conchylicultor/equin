@@ -27,6 +27,12 @@ export interface DirWatchRequest {
    * batches landing meanwhile fold into one trailing call.
    */
   onChange: WatchReaction<FileChangeEvent>;
+  /**
+   * The native watch this one rides errored and may have dropped events —
+   * anything in scope may have changed unheard. Every watcher riding that
+   * watch hears it, whatever its dir and scope. The error is already logged.
+   */
+  onLost?: (error: unknown) => void;
 }
 
 /** Give a watch back; the last one on a root stops its native watch. */
@@ -55,7 +61,13 @@ export interface DirWatchHub {
 export type StartRootWatch = (
   root: string,
   onChange: (events: FileChangeEvent[]) => void,
+  onLost: (error: unknown) => void,
 ) => Promise<{ stop(): Promise<void> }>;
+
+/** What one native watch tells its riders: a batch, or that events were lost. */
+type RootSignal =
+  | { kind: "changes"; events: FileChangeEvent[] }
+  | { kind: "lost"; error: unknown };
 
 /** The two native watches the hub opens. */
 export interface DirWatchStarts {
@@ -82,7 +94,7 @@ interface Holder {
   /** The hold it is leaving, kept until the new root's watch is open. */
   previous: HubHold | null;
   /** Its own filtered listener — re-attached as is when it moves roots. */
-  listener: (events: FileChangeEvent[]) => void;
+  listener: (signal: RootSignal) => void;
   /** Set once its first hold is live; only a live holder moves. */
   live: boolean;
   released: boolean;
@@ -111,8 +123,12 @@ interface Holder {
  * matter.
  */
 export function createDirWatchHub(starts: DirWatchStarts): DirWatchHub {
-  const hub = createRefcountHub<FileChangeEvent[]>(async (root, emit) => {
-    const watch = await starts.subtree(root, emit);
+  const hub = createRefcountHub<RootSignal>(async (root, emit) => {
+    const watch = await starts.subtree(
+      root,
+      (events) => emit({ kind: "changes", events }),
+      (error) => emit({ kind: "lost", error }),
+    );
     return () => watch.stop();
   });
   // A single-directory watch, keyed by `${dir}\0${generation}`. Once it
@@ -135,13 +151,17 @@ export function createDirWatchHub(starts: DirWatchStarts): DirWatchHub {
     if (shallowKeys.get(dir) === key) shallowKeys.delete(dir);
   };
   const shallowDirOf = (key: string): string => key.slice(0, key.indexOf("\0"));
-  const shallow = createRefcountHub<FileChangeEvent[]>(async (key, emit) => {
+  const shallow = createRefcountHub<RootSignal>(async (key, emit) => {
     const dir = shallowDirOf(key);
-    const watch = await starts.children(dir, (events) => {
-      const gone = events.some((e) => e.type === "delete" && e.path === dir);
-      if (gone) retireShallow(dir, key);
-      emit(events);
-    });
+    const watch = await starts.children(
+      dir,
+      (events) => {
+        const gone = events.some((e) => e.type === "delete" && e.path === dir);
+        if (gone) retireShallow(dir, key);
+        emit({ kind: "changes", events });
+      },
+      (error) => emit({ kind: "lost", error }),
+    );
     return () => {
       retireShallow(dir, key);
       return watch.stop();
@@ -198,7 +218,7 @@ export function createDirWatchHub(starts: DirWatchStarts): DirWatchHub {
   }
 
   return {
-    async acquire({ dir, scope, onChange }) {
+    async acquire({ dir, scope, onChange, onLost }) {
       const trailingSlash = dir.endsWith("/") && dir !== "/";
       if (!isAbsolute(dir) || normalize(dir) !== dir || trailingSlash) {
         throw new Error(
@@ -212,8 +232,12 @@ export function createDirWatchHub(starts: DirWatchStarts): DirWatchHub {
       const reaction = createCoalescer<FileChangeEvent>({
         run: (events) => (released ? undefined : onChange(events)),
       });
-      const listener = (events: FileChangeEvent[]) => {
-        const mine = events.filter((e) => inScope(dir, scope, e.path));
+      const listener = (signal: RootSignal) => {
+        if (signal.kind === "lost") {
+          if (!released) onLost?.(signal.error);
+          return;
+        }
+        const mine = signal.events.filter((e) => inScope(dir, scope, e.path));
         if (mine.length > 0) reaction.trigger(mine);
       };
       if (scope === "children" && covering === undefined) {

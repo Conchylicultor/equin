@@ -300,6 +300,7 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./equin build`. The bui
     - `isTransientDbError`
     - `loadKnownRelations`
     - `quotedRelationsIn`
+    - `readTag`
 - Cross-plugin:
   - Imported by: 121 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×32

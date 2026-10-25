@@ -20,12 +20,12 @@
     - `resource.declare` "conversations.context-usage"
     - `resource.declare` "conversations.partial-message"
   - Uses: 80 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `tasks/tasks-core` ×24
+    - `tasks/tasks-core` ×25
     - `conversations/turn-ledger` ×13
     - `conversations/transcript-watcher` ×7
-    - `conversations/workspace` ×4
     - `conversations/conversation-preprompt` ×3
     - `conversations/spawn-failure` ×3
+    - `conversations/workspace` ×3
     - `infra/claude-cli/availability` ×3
     - `tasks/auto-start` ×3
     - `conversations/session-chain` ×2

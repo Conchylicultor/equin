@@ -17,6 +17,7 @@ import {
   setConversationHibernated,
   withTaskStatusBatch,
   conversationCreated,
+  workspaceOfAttemptLookup,
   type DbExecutor,
 } from "@plugins/tasks/plugins/tasks-core/server";
 import type { EmitTx } from "@plugins/infra/plugins/events/server";
@@ -53,7 +54,6 @@ import {
 import {
   Workspace,
   parseWorkspaceSpec,
-  workspaceOfAttempt,
   type WorkspaceAt,
 } from "@plugins/conversations/plugins/workspace/server";
 import {
@@ -614,9 +614,13 @@ export class ResumeBlockedError extends Error {
   }
 }
 
-// The workspace a conversation runs in: its attempt's.
-function workspaceOf(row: Conversation): Promise<WorkspaceAt> {
-  return workspaceOfAttempt(row.attemptId);
+// The workspace a conversation runs in: its attempt's (tasks-core's compiled
+// lookup — the one copy of that read). A conversation row names its attempt
+// through a cascade FK, so a missing one is a bug, thrown.
+async function workspaceOf(row: Conversation): Promise<WorkspaceAt> {
+  const found = await workspaceOfAttemptLookup.run(row.attemptId);
+  if (!found.found) throw new Error(`Unknown attempt "${row.attemptId}"`);
+  return found.row;
 }
 
 // Everything that must be true before a conversation can be handed to

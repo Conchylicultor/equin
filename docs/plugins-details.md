@@ -13238,12 +13238,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `resource.declare` "conversations.context-usage"
       - `resource.declare` "conversations.partial-message"
     - Uses: 80 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
-      - `tasks/tasks-core` ×24
+      - `tasks/tasks-core` ×25
       - `conversations/turn-ledger` ×13
       - `conversations/transcript-watcher` ×7
-      - `conversations/workspace` ×4
       - `conversations/conversation-preprompt` ×3
       - `conversations/spawn-failure` ×3
+      - `conversations/workspace` ×3
       - `infra/claude-cli/availability` ×3
       - `tasks/auto-start` ×3
       - `conversations/session-chain` ×2
@@ -14588,10 +14588,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `resource.declare` "edited-files:meta"
             - Uses:
               - `infra/git/checkout-watch.acquireCheckoutWatch`
-              - `infra/git/git-read-cache.createSignedMemo`
               - `infra/host/host-read-pool.withHeavyReadSlot`
-              - `primitives/commit-list.parseDiffNameStatusZ`
-              - `primitives/commit-list.parseDiffNumstatZ`
+              - `primitives/commit-list.parseDiffRawNumstatZ`
               - `primitives/commit-list.runGit`
               - `primitives/commit-list.WorktreeGoneError`
             - Exports (values):
@@ -14651,7 +14649,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `review/plugin-changes`
               - `review/plugin-changes/file-changes`
           - Exemptions:
-            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/compute-edited-files.ts`, `server/internal/edited-files-signature.ts` (debt)
+            - Exempts itself from:
+              - `boundaries/no-platform-api` — `server/internal/compute-edited-files.ts`, `server/internal/edited-files-signature.ts` (debt)
+              - `no-raw-websocket` — `e2e/edited-files-cost.ts` (sanctioned)
           - Plugins:
             - **`file-pane`** — Hosts the file-peek pane: a checkout file opened from a conversation (chat file links, review, commits), shown through primitives/file-viewer with the conversation's edited-file status as context.
               - Web:
@@ -19026,7 +19026,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `parseWorkspaceSpec`
           - `ScratchProfile`
           - `Workspace`
-          - `workspaceOfAttempt`
           - `workspaceOfConversation`
         - Resources: `workspace.catalog` (push, fixed, whole: the worktree plus one entry per registered scratch profile — a handful, fixed at boot, capped: WorkspaceCapabilitySchema.options.length)
       - Core:
@@ -19198,6 +19197,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `isTransientDbError`
       - `loadKnownRelations`
       - `quotedRelationsIn`
+      - `readTag`
   - Cross-plugin:
     - Imported by: 121 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
       - `apps` ×32
@@ -25234,6 +25234,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PersistedValueCheck`
           - `PersistMeta`
           - `ReachPlan`
+          - `ReadTags`
           - `RelationRead`
           - `Resource`
           - `ResourceContract`
@@ -25255,6 +25256,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SnapEntry`
           - `TableChange`
           - `TableLayoutRequirement`
+          - `TaggedRead`
           - `TupleUse`
           - `UnfedRead`
           - `UnfedResourceTable`
@@ -25831,6 +25833,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - **`no-raw-websocket`**
               - Exemptions:
                 - Exempted by:
+                  - `conversations/conversation-view/code` (0 debt)
                   - `conversations/conversation-view/jsonl-viewer` (0 debt)
                   - `network/live` (0 debt)
                   - `primitives/networking` (0 debt)
@@ -26148,11 +26151,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `framework/tooling/guards.MODULE_EXTENSION`
             - Exports (values): `isE2eScriptPath`
           - Cross-plugin:
-            - Imported by: 172 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+            - Imported by: 173 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
               - `apps` ×51
               - `primitives` ×26
+              - `conversations` ×24
               - `page` ×24
-              - `conversations` ×23
               - `debug` ×8
               - `apps-core` ×5
               - `tasks` ×5
@@ -28889,6 +28892,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `FileWatcherStartOptions`
           - `ServerFileWatcherSpec`
           - `WatcherBackend`
+          - `WatchLost`
           - `WatchReaction`
           - `WatchReconcile`
         - Exports (values):
@@ -28949,7 +28953,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `apps/file-explorer/git`
-              - `conversations/conversation-view/code`
               - `conversations/conversation-view/jsonl-viewer`
               - `plugin-meta/plugin-tree`
               - `release`
@@ -30402,6 +30405,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `database.db`
           - `database.quotedRelationsIn`
+          - `database.readTag`
           - `database/sql-column.columnSchema`
           - `database/sql-column.columnWireCodec`
           - `database/sql-projection.decodedRow`
@@ -30419,9 +30423,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CompiledAllCollection`
           - `CompiledCount`
           - `CompiledGroups`
+          - `CompiledLookup`
           - `CompiledOffFeedQuery`
           - `CompiledUnion`
           - `EntitySource`
+          - `LookupRead`
+          - `LookupResult`
+          - `LookupSpec`
           - `PointQueryResourceSpec`
           - `QueryDb`
           - `ReadColumn`
@@ -30439,21 +30447,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `compileAllCollection`
           - `compileCountQuery`
-          - `compiledKeyedReads`
           - `compiledValueReach`
           - `compileGroupsQuery`
           - `compileJoins`
+          - `compileLookup`
           - `compileOffFeedQuery`
           - `compileUnionCollection`
           - `deferredWindowQueryResource`
           - `joinRefs`
           - `offFeedReach`
+          - `offFeedTablesReach`
           - `presenceExpr`
           - `windowQueryResource`
       - Cross-plugin:
         - Imported by:
           - `network/live`
           - `runs`
+          - `tasks/tasks-core`
       - Exemptions:
         - Exempts itself from:
           - `resource-runtime:compiled-routes` — `server/internal/routes.ts` (sanctioned)
@@ -30630,6 +30640,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug/profiling/runtime`
           - `debug/slow-ops`
           - `infra/endpoints`
+          - `packages/watched-memo`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `server/internal/install.ts` (debt)
       - Core:
@@ -32606,6 +32617,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `canonicalJson`
           - `canonicalParams`
     - **`coalesce`** — Trigger coalescer: createCoalescer / createKeyedCoalescer run a reaction at most once at a time per key and fold every trigger that lands mid-run into ONE trailing run (its items merged), so however many triggers arrive the work is bounded to one running plus one pending per key — and a trigger never joins a run that started before it.
+      - Cross-plugin:
+        - Imported by: `packages/watched-memo`
       - Core:
         - Exports (types):
           - `Coalescer`
@@ -32680,6 +32693,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `framework/resource-runtime`
           - `infra/endpoints`
+          - `packages/watched-memo`
       - Core:
         - Exports (types): `Inflight`
         - Exports (values): `createInflight`
@@ -32746,10 +32760,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `createTimeSlicer`
           - `createTurnQueue`
           - `yieldMacrotask`
+    - **`parked-watch`** — Watches parked until their target is known: createParkedWatches({ onOpenError }) holds a watch on a key whose target (a conversation's worktree) is not resolvable yet, and opens it from the first load that resolves the target — the park taken before the subscribe's own resolve, so a target found while that resolve is in flight still opens it; a parked open that fails is reported and re-parked, so the next resolving load retries it.
+      - Core:
+        - Exports (types):
+          - `ParkedWatches`
+          - `ParkedWatchesOptions`
+        - Exports (values): `createParkedWatches`
     - **`partial-json`** — parsePartialJson: the value a prefix of a JSON document already holds — every container closed, an in-progress string value finished, an in-progress key, number or literal cut — for drawing a document while it is still being written (a streamed tool call's input).
       - Core:
         - Exports (values): `parsePartialJson`
     - **`refcount-hub`** — Keyed refcounted subscription hub: createRefcountHub(open) shares ONE underlying subscription per key among every holder — the first acquire opens it (sync or async), each event fans out to every holder, the last release stops it — so N readers of one source cost one watch.
+      - Cross-plugin:
+        - Imported by: `packages/watched-memo`
       - Core:
         - Exports (types):
           - `HubHold`
@@ -32982,6 +33004,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `wallClockToInstant`
           - `zoneOffsetMs`
           - `zoneWallClock`
+    - **`watched-memo`** — Watch-authoritative result memo: createWatchedMemo({ name, facts, signatureOf, compute, changes }) keeps one value per key fresh from its change source while anyone watches it — every change runs one coalesced pass (facts, then compute over them), a get while watched is the held value with no probe — and falls back, unwatched or after a failed pass, to a signature probe whose miss single-flights compute over the probe's own facts.
+      - Core:
+        - Uses:
+          - `infra/runtime-profiler.chargeWait`
+          - `infra/runtime-profiler.runTracked`
+          - `packages/coalesce.createKeyedCoalescer`
+          - `packages/inflight.createInflight`
+          - `packages/refcount-hub.createRefcountHub`
+        - Exports (types):
+          - `WatchedMemo`
+          - `WatchedMemoOptions`
+        - Exports (values): `createWatchedMemo`
     - **`zod-parser`** — ZodParser<T> — the type of a schema that parses untrusted input into a T — and its enforcing lint rule (no-narrow-zodtype), which bans the one-argument ZodType<T> whose Input silently defaults to Output.
       - Core:
         - Exports (types): `ZodParser`
@@ -37611,7 +37645,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --font-weight-semibold`
           - `ui/tokens/type-scale --line-height-body`
-    - **`commit-list`** — Reusable commit row rendering and git log types. Git log parser, `git diff -z` name-status / numstat parsers, the runGit invocation and commit row types for reuse across plugins.
+    - **`commit-list`** — Reusable commit row rendering and git log types. Git log parser, `git diff -z` name-status / numstat / raw+numstat parsers, the runGit invocation and commit row types for reuse across plugins.
       - Web:
         - Uses:
           - `primitives/css/badge.Badge`
@@ -37638,11 +37672,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types):
           - `GitResult`
           - `NameStatusRecord`
+          - `RawNumstatRecord`
         - Exports (values):
           - `GitError`
           - `LOG_FORMAT`
           - `parseDiffNameStatusZ`
           - `parseDiffNumstatZ`
+          - `parseDiffRawNumstatZ`
           - `parseGitLog`
           - `runGit`
           - `tryRunGit`
@@ -49629,6 +49665,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/entities.defaultNow`
           - `infra/entities.defineEntity`
           - `infra/events.defineTriggerEvent`
+          - `infra/query-resource.compileLookup`
           - `network/live.serveCollection`
           - `primitives/rank.nextRankUnder`
           - `primitives/rank.RankExecutor`
@@ -49749,6 +49786,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `updateTask`
           - `updateTaskTitle`
           - `withTaskStatusBatch`
+          - `workspaceOfAttemptLookup`
+          - `workspaceOfConversationLookup`
         - Register:
           - `defineTriggerEvent('pushes.landed')`
           - `defineTriggerEvent('tasks.statusChanged')`

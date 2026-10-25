@@ -4250,6 +4250,10 @@
       "name": "@singularity/plugin-packages-macrotask-yield",
       "version": "0.0.1",
     },
+    "plugins/packages/plugins/parked-watch": {
+      "name": "@singularity/plugin-packages-parked-watch",
+      "version": "0.0.1",
+    },
     "plugins/packages/plugins/partial-json": {
       "name": "@singularity/plugin-packages-partial-json",
       "version": "0.0.1",
@@ -4315,6 +4319,10 @@
     },
     "plugins/packages/plugins/wall-clock": {
       "name": "@singularity/plugin-packages-wall-clock",
+      "version": "0.0.1",
+    },
+    "plugins/packages/plugins/watched-memo": {
+      "name": "@singularity/plugin-packages-watched-memo",
       "version": "0.0.1",
     },
     "plugins/packages/plugins/zod-parser": {
@@ -9224,6 +9232,8 @@
 
     "@singularity/plugin-packages-macrotask-yield": ["@singularity/plugin-packages-macrotask-yield@workspace:plugins/packages/plugins/macrotask-yield"],
 
+    "@singularity/plugin-packages-parked-watch": ["@singularity/plugin-packages-parked-watch@workspace:plugins/packages/plugins/parked-watch"],
+
     "@singularity/plugin-packages-partial-json": ["@singularity/plugin-packages-partial-json@workspace:plugins/packages/plugins/partial-json"],
 
     "@singularity/plugin-packages-refcount-hub": ["@singularity/plugin-packages-refcount-hub@workspace:plugins/packages/plugins/refcount-hub"],
@@ -9255,6 +9265,8 @@
     "@singularity/plugin-packages-value-patch": ["@singularity/plugin-packages-value-patch@workspace:plugins/packages/plugins/value-patch"],
 
     "@singularity/plugin-packages-wall-clock": ["@singularity/plugin-packages-wall-clock@workspace:plugins/packages/plugins/wall-clock"],
+
+    "@singularity/plugin-packages-watched-memo": ["@singularity/plugin-packages-watched-memo@workspace:plugins/packages/plugins/watched-memo"],
 
     "@singularity/plugin-packages-zod-parser": ["@singularity/plugin-packages-zod-parser@workspace:plugins/packages/plugins/zod-parser"],
 

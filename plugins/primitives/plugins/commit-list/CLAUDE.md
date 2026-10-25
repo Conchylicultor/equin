@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Reusable commit row rendering and git log types. Git log parser, `git diff -z` name-status / numstat parsers, the runGit invocation and commit row types for reuse across plugins.
+- Description: Reusable commit row rendering and git log types. Git log parser, `git diff -z` name-status / numstat / raw+numstat parsers, the runGit invocation and commit row types for reuse across plugins.
 - Web:
   - Uses:
     - `primitives/css/badge.Badge`
@@ -31,11 +31,13 @@
   - Exports (types):
     - `GitResult`
     - `NameStatusRecord`
+    - `RawNumstatRecord`
   - Exports (values):
     - `GitError`
     - `LOG_FORMAT`
     - `parseDiffNameStatusZ`
     - `parseDiffNumstatZ`
+    - `parseDiffRawNumstatZ`
     - `parseGitLog`
     - `runGit`
     - `tryRunGit`

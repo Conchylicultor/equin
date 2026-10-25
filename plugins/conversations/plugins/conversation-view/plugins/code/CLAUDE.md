@@ -25,9 +25,8 @@ A conversation with no `worktreePath`, and one whose worktree is reaped
 mid-compute (`WorktreeGoneError`), are the same determinate state — no
 trustworthy worktree to read. Both collapse onto `unresolved("worktree
 unavailable")` through the local `onWorktree` helper (the pages are then
-empty). Every page, the meta and the one-file value read the same signed memo
-(`editedFilesMemo`, primed by the watcher), so they agree, and a recompute is a
-signature probe plus a slice. Consumers cannot reach the files without
+empty). Every page, the meta and the one-file value read the same memo
+(`editedFilesMemo`), so they agree. Consumers cannot reach the files without
 narrowing on `.resolved`, so the destructive default is unreachable by
 construction.
 
@@ -35,6 +34,45 @@ Every *other* git failure still **throws**: that is a transient failure, and
 live-state's readiness gate (`pending` = "no trustworthy value") makes it
 un-absorbable. Do not convert one into an `unresolved(…)` — a retryable failure
 that settles would stop retrying and would render as a permanent answer.
+
+## One git pass per change: the watch is the freshness authority
+
+`editedFilesMemo` is a `packages/watched-memo` keyed by worktree. While a
+conversation shows it (`watchEditedFiles`), the checkout watch drives passes:
+each is ONE status read (the facts: `readEditedFilesFacts` — `git status -unormal -z`
+plus an `ls-files --others` of each untracked dir, entry for entry `-uall`'s at
+a third of its walk) and ONE
+`git diff -M -C -z --raw --numstat <merge-base>` over them
+(`computeEditedFiles(wt, facts)`), and a loader run is a slice of the held list
+with no git spawn. Every pass computes — never skipped on an equal signature (an
+edit read mid-pass and undone would leave the list stale for good). The watch
+is only as complete as what checkout-watch hears: every repo file `git status`
+reads (the git dirs, the shared refs, `config`, `packed-refs`,
+`info/exclude`), but not the global excludes file or global config — an edit
+there shows on the next pass something else triggers. A watch that
+lost events resyncs (one more pass). Unwatched (an HTTP read, plugin-changes) a
+read probes the content signature (`editedFilesSignatureOf` over the facts it
+read) and computes over those same facts on a miss — one status scan per miss.
+The value is pushed, so no ETag is minted beside it; a revalidate would have to
+return the held entry's own signature, never a fresh probe.
+
+## The worktree lookup: gated reads, and a watch parked until the row exists
+
+Every loader and the watch resolve the conversation's worktree through
+tasks-core's compiled `workspaceOfConversationLookup` (`run`), and the pages,
+the meta and the one-file value declare exactly that (`reads.lookups`): a
+conversations/attempts write that touches no column the lookup reads (every
+agent turn's status) re-runs no tuple, and a conversation's insert or delete
+re-runs only its own tuples. Read those tables any other way in a loader and
+the drift guard reports it.
+
+A conversation subscribed before its row exists has no worktree to watch, so
+its watch parks (`packages/parked-watch`): the load the row's insert re-runs
+opens it, then notifies. The park is taken before the subscribe's own resolve,
+so an insert landing while that resolve is in flight still opens it. A parked
+open that fails is reported (`EditedFilesWatchOpenError`) and parked again, so
+the next resolving load retries it.
+`e2e/edited-files-cost.ts` measures all of it on a build.
 
 ## Desktop-only: `needsMachine`
 
@@ -59,10 +97,8 @@ cannot be a `recomputeOn` upstream (a keyed window cascades nothing, D32).
     - `resource.declare` "edited-files:meta"
   - Uses:
     - `infra/git/checkout-watch.acquireCheckoutWatch`
-    - `infra/git/git-read-cache.createSignedMemo`
     - `infra/host/host-read-pool.withHeavyReadSlot`
-    - `primitives/commit-list.parseDiffNameStatusZ`
-    - `primitives/commit-list.parseDiffNumstatZ`
+    - `primitives/commit-list.parseDiffRawNumstatZ`
     - `primitives/commit-list.runGit`
     - `primitives/commit-list.WorktreeGoneError`
   - Exports (values):
@@ -122,7 +158,9 @@ cannot be a `recomputeOn` upstream (a keyed window cascades nothing, D32).
     - `review/plugin-changes`
     - `review/plugin-changes/file-changes`
 - Exemptions:
-  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/compute-edited-files.ts`, `server/internal/edited-files-signature.ts` (debt)
+  - Exempts itself from:
+    - `boundaries/no-platform-api` — `server/internal/compute-edited-files.ts`, `server/internal/edited-files-signature.ts` (debt)
+    - `no-raw-websocket` — `e2e/edited-files-cost.ts` (sanctioned)
 - Sub-plugins:
   - **`file-pane`** — Hosts the file-peek pane: a checkout file opened from a conversation (chat file links, review, commits), shown through primitives/file-viewer with the conversation's edited-file status as context.
 

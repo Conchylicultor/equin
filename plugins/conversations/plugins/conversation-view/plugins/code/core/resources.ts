@@ -27,8 +27,9 @@ const NEEDS_MACHINE = { feature: "Listing the files an agent edited" } as const;
 // `pending` (a value has no placeholder).
 //
 // Pushed, as every paged value is (a page is a keyed window): the git reads
-// (merge-base + two `git diff` passes + untracked reads) run once per change
-// through the signed memo, and every page and the meta slice its one answer.
+// (one status scan + one `git diff --raw --numstat` + untracked reads) run once
+// per change through the watched memo, and every page and the meta slice its
+// one answer.
 //
 // It is measured from git in the worktree on disk, so only the desktop app
 // answers it (`needsMachine`): a reader under an in-browser server gets

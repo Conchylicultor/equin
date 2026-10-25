@@ -34,6 +34,7 @@ import {
   type RecordedFrame,
 } from "./test-support";
 import type { ResourceParams, ResourceRuntimeOptions } from "./runtime";
+import { identityPlan } from "./testing/routed-fixture";
 
 const rowSchema = z.object({
   id: z.string(),
@@ -2253,11 +2254,12 @@ describe("unfed reads — a reach plan's tables read outside the change feed", (
 
   // An external keyed window served off the feed (network/live's
   // `serveCollection` with `changes`): its compiled SQL reads a table the
-  // feed skips, declared `unfed` on the policy.
+  // feed skips, declared `unfed` on the policy's reach plan.
   function offFeedWindow(
     h: ReturnType<typeof createHarness>,
     unfed?: readonly { table: string; reason: string }[],
   ) {
+    const none = new Map<string, never>();
     return h.runtime.defineExternalResource(
       {
         key: "archive",
@@ -2267,7 +2269,9 @@ describe("unfed reads — a reach plan's tables read outside the change feed", (
       },
       {
         membership: { kind: "window", limitOf: () => 10 },
-        ...(unfed !== undefined ? { unfed } : {}),
+        ...(unfed !== undefined
+          ? { reach: mintReachPlan({ routes: [], usesOf: () => none, unfed }) }
+          : {}),
         loader: () => [{ id: "a" }],
         freshness: { kind: "notified" },
       },
@@ -2300,18 +2304,24 @@ describe("unfed reads — a reach plan's tables read outside the change feed", (
     expect(h.runtime.unfedResourceTables()).toEqual([]);
   });
 
-  test("unfed is the external keyed arm's: refused on a routed or non-keyed entry, unnamed, twice, or without a reason", () => {
+  test("a reach plan on a keyed entry is the external window's / point set's alone; its unfed tables are minted once, with a reason", () => {
     const h = createHarness();
     expect(() =>
-      h.runtime.defineExternalResource(
-        { key: "v", schema: z.number(), validateParams: () => {} },
+      h.runtime.defineResource(
         {
-          mode: "push",
-          loader: () => 1,
-          ...({ unfed: [{ table: "t", reason: "r" }] } as object),
+          key: "keyed-reach",
+          schema: z.array(z.object({ id: z.string() })),
+          keyed: { keyOf: (r: unknown) => (r as { id: string }).id },
+          validateParams: () => {},
         },
+        {
+          loader: () => [],
+          routes: identityPlan("t", ["id"]),
+          membership: { kind: "point", idsOf: () => [] },
+          ...({ reach: unfedValue([]) } as object),
+        } as never,
       ),
-    ).toThrow(/external keyed arm/);
+    ).toThrow(/"routes" and "reach" are exclusive/);
     expect(() =>
       offFeedWindow(h, [
         { table: "t", reason: "r" },
@@ -2323,7 +2333,7 @@ describe("unfed reads — a reach plan's tables read outside the change feed", (
     ).toThrow(/no reason/);
   });
 
-  test("an external keyed window's declared relations: covered by the drift guard, listed for A1′, a write re-reads every tuple whole", async () => {
+  test("an external keyed window's reach relations: covered by the drift guard, listed for A1′, a write re-reads every tuple whole", async () => {
     const h = createHarness({
       lastReadSet: () => ["lookups"],
       strictRoutes: true,
@@ -2338,9 +2348,13 @@ describe("unfed reads — a reach plan's tables read outside the change feed", (
       },
       {
         membership: { kind: "window", limitOf: () => 10 },
-        relations: [
-          { relation: "lookups", reason: "each page resolves its root" },
-        ],
+        reach: mintReachPlan({
+          routes: [],
+          usesOf: () => new Map(),
+          relations: [
+            { relation: "lookups", reason: "each page resolves its root" },
+          ],
+        }),
         loader: () => [{ id: `r${++loads}` }],
         freshness: { kind: "notified" },
       },
@@ -2363,16 +2377,6 @@ describe("unfed reads — a reach plan's tables read outside the change feed", (
     await settle();
     expect(loads).toBe(before + 1);
     expect(h.frames.map((f) => f.kind)).toContain("delta");
-    expect(() =>
-      h.runtime.defineExternalResource(
-        { key: "v2", schema: z.number(), validateParams: () => {} },
-        {
-          mode: "push",
-          loader: () => 1,
-          ...({ relations: [{ relation: "t", reason: "r" }] } as object),
-        },
-      ),
-    ).toThrow(/"relations" on key "v2" is the external keyed arm's/);
   });
 
   test("minting refuses an unfed table a route names, one listed twice, or one with no reason", () => {

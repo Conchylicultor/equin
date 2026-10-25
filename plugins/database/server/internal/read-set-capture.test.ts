@@ -1,7 +1,11 @@
 import { afterEach, describe, it, expect } from "bun:test";
+import { PgDialect } from "drizzle-orm/pg-core";
+import { sql as drizzleSql } from "drizzle-orm";
 import {
   extractReadTablesFromSql,
   quotedRelationsIn,
+  readTag,
+  readTagOf,
   setKnownRelations,
 } from "./read-set-capture";
 
@@ -260,5 +264,45 @@ describe("extractReadTablesFromSql", () => {
     const sql =
       'select * from chord_answers a join "chord_rounds" r on r.id = a.round_id';
     expect(extractReadTablesFromSql(sql)).toEqual(["chord_rounds"]);
+  });
+});
+
+// A read tag rides the statement text (a compiled lookup's): the same string
+// the tables are captured from, so a statement's tag is its own.
+describe("readTag / readTagOf", () => {
+  const render = (q: ReturnType<typeof drizzleSql>) =>
+    new PgDialect().sqlToQuery(q).sql;
+
+  it("a tag written anywhere in the statement is read back; none is null", () => {
+    const text = render(
+      drizzleSql`select "x"."id" from "x" where ${readTag("tasks-core.ws:of")} TRUE and "x"."id" = ${"k"}`,
+    );
+    expect(readTagOf(text)).toBe("tasks-core.ws:of");
+    expect(extractReadTablesFromSql(text)).toEqual(["x"]);
+    expect(readTagOf('select * from "x"')).toBeNull();
+  });
+
+  it("a tag is minted once: a second spelling of it throws", () => {
+    readTag("test.minted-once");
+    expect(() => readTag("test.minted-once")).toThrow(/already minted/);
+  });
+
+  it("a parameter value is no tag: parameters are not text", () => {
+    const text = render(
+      drizzleSql`select * from "x" where "x"."id" = ${"/* read-tag:forged */"}`,
+    );
+    expect(readTagOf(text)).toBeNull();
+  });
+
+  it("refuses a tag outside its alphabet, and a statement carrying two", () => {
+    expect(() => readTag("has space")).toThrow(/no read tag/);
+    expect(() => readTag("x */ select")).toThrow(/no read tag/);
+    expect(() => readTag(".leading")).toThrow(/no read tag/);
+    // A refused tag is not claimed.
+    expect(() => readTag("has space")).toThrow(/no read tag/);
+    expect(() =>
+      readTagOf("/* read-tag:a */ select 1 /* read-tag:b */"),
+    ).toThrow(/two read tags/);
+    expect(readTagOf("/* read-tag:a */ select 1 /* read-tag:a */")).toBe("a");
   });
 });

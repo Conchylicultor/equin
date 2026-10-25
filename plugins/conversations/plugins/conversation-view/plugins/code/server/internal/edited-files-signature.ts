@@ -23,9 +23,81 @@ async function statEntry(
 }
 
 /**
- * The CONTENT signature of `edited-files` for one worktree — the single
- * authority behind both the resource's `revalidate` and its `loader` (they are
- * the two bound halves of one `createSignedMemo`; see edited-files-cache.ts).
+ * What one `git status` (and the merge-base beside it) says about a worktree —
+ * read ONCE per pass and shared: `computeEditedFiles` layers the dirty entries
+ * over the branch diff, and `editedFilesSignatureOf` fingerprints them.
+ */
+export interface EditedFilesFacts {
+  mergeBase: string;
+  /** `git status --porcelain --no-renames -uall -z`'s entries: raw paths, never C-quoted. */
+  dirty: ReadonlyArray<{ code: string; path: string }>;
+}
+
+/**
+ * Read the facts: `merge-base main HEAD` ‖ the dirty entries. Ungated (no
+ * heavy slot) — the status walk is the expensive half of a probe, so each pass
+ * or probe reads it once and hands it on. runGit throws on failure (never a
+ * manufactured value), so a failed read can never stand in for a clean tree.
+ *
+ * The entries are exactly `git status --porcelain --no-renames -uall -z`'s,
+ * read as `-unormal` plus an `ls-files --others` of each untracked directory it
+ * names: `-uall` matches every path of the checkout against the excludes (~3×
+ * the paths a `-unormal` walk visits on this repo, 0.7 s vs 0.2 s), where the
+ * two-step read walks only the untracked directories again. An embedded repo
+ * stays one `dir/` entry either way.
+ */
+export async function readEditedFilesFacts(
+  worktreePath: string,
+): Promise<EditedFilesFacts> {
+  const [mergeBase, statusZ] = await Promise.all([
+    runGit(["merge-base", "main", "HEAD"], worktreePath),
+    runGit(
+      [
+        "status",
+        "--porcelain",
+        "--no-renames",
+        "--untracked-files=normal",
+        "-z",
+      ],
+      worktreePath,
+    ),
+  ]);
+  const entries = parsePorcelainZ(statusZ);
+  const untrackedDirs = entries
+    .filter((e) => e.code === "??" && e.path.endsWith("/"))
+    .map((e) => e.path);
+  if (untrackedDirs.length === 0) {
+    return { mergeBase: mergeBase.trim(), dirty: entries };
+  }
+  const othersZ = await runGit(
+    [
+      "ls-files",
+      "-z",
+      "--others",
+      "--exclude-standard",
+      "--",
+      ...untrackedDirs,
+    ],
+    worktreePath,
+  );
+  const expanded = othersZ
+    .split("\0")
+    .filter((path) => path !== "")
+    .map((path) => ({ code: "??", path }));
+  const dirs = new Set(untrackedDirs);
+  return {
+    mergeBase: mergeBase.trim(),
+    dirty: [
+      ...entries.filter((e) => !(e.code === "??" && dirs.has(e.path))),
+      ...expanded,
+    ],
+  };
+}
+
+/**
+ * The CONTENT signature of `edited-files` for one worktree, over facts already
+ * read — the unwatched path's fingerprint in the watched memo
+ * (edited-files-cache.ts).
  *
  * It is a faithful, conservative over-approximation: it changes whenever
  * `computeEditedFiles`' value could change (serving stale is a correctness bug;
@@ -40,37 +112,34 @@ async function statEntry(
  *     enough: a file already `M` can gain more edits while its status line stays
  *     identical, yet its numstat (and thus the value) changes. Folding in git's
  *     own stat-cache dirty signal catches that with one `lstat` per dirty file
- *     (no content read) — strictly cheaper than the loader's two `git diff`
- *     passes plus untracked line counts.
+ *     (no content read).
  *
- * Because it moves on an uncommitted save with no SHA change, this — and not the
- * watcher generation counter it replaced — is the correct memo signature. Keeping
- * it content-addressed also keeps the wire ETag stable across a server restart,
- * preserving the cross-restart 304 herd-collapse `revalidate` exists for.
- *
- * Cheap and UNGATED: 1 `rev-parse` + 1 `merge-base` + 1 `git status` + an `lstat`
- * per dirty file. It runs on every read, so it must never acquire a heavy slot.
- *
- * This module is a LEAF on purpose: the memo declaration imports it, so it must
- * never import the memo back (import cycle).
+ * Adds 1 `rev-parse HEAD` + an `lstat` per dirty file to the facts. Ungated.
  *
  * See research/2026-07-09-global-etag-value-coproduction.md.
  */
-export async function editedFilesSignature(worktreePath: string): Promise<string> {
-  // runGit throws on failure (never a manufactured value) — the throw propagates
-  // into the revalidate path, which the live-state cascade treats as stale-safe
-  // (recompute skipped, prior ETag retained). This keeps the signature from ever
-  // being built from a failed read and colliding across two different failures.
-  const [headSha, mergeBase, statusZ] = await Promise.all([
+export async function editedFilesSignatureOf(
+  worktreePath: string,
+  facts: EditedFilesFacts,
+): Promise<string> {
+  const [headSha, entries] = await Promise.all([
     runGit(["rev-parse", "HEAD"], worktreePath),
-    runGit(["merge-base", "main", "HEAD"], worktreePath),
-    runGit(
-      ["status", "--porcelain", "--no-renames", "--untracked-files=all", "-z"],
-      worktreePath,
-    ),
+    Promise.all(facts.dirty.map((e) => statEntry(worktreePath, e))),
   ]);
-  const entries = await Promise.all(
-    parsePorcelainZ(statusZ).map((e) => statEntry(worktreePath, e)),
+  return editedFilesEtag(headSha, facts.mergeBase, entries);
+}
+
+/**
+ * The content signature read from scratch: {@link readEditedFilesFacts} then
+ * {@link editedFilesSignatureOf}. For a reader keying its own memo on the
+ * edited-file set (review/plugin-changes).
+ *
+ * This module is a LEAF on purpose: the memo declaration imports it, so it must
+ * never import the memo back (import cycle).
+ */
+export async function editedFilesSignature(worktreePath: string): Promise<string> {
+  return editedFilesSignatureOf(
+    worktreePath,
+    await readEditedFilesFacts(worktreePath),
   );
-  return editedFilesEtag(headSha, mergeBase.trim(), entries);
 }

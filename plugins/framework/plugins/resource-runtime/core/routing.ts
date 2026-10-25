@@ -312,6 +312,22 @@ export interface UnfedRead {
   reason: string;
 }
 
+/**
+ * A route table a loader may read ONLY through queries carrying `tag` — a
+ * compiled lookup's own SQL (query-resource's `compileLookup`), whose route
+ * `columns` gate on exactly what that SQL reads. Any other read of the table
+ * (a hand-written query, untagged) reads columns the gate does not know, so
+ * the drift guard (A8 / D5) does not count it as covered: it is reported and
+ * failed open (the table then reaches the entry FULL, ungated). The capture
+ * names each read's tag (the read-set's per-run tags — `lastReadTags`).
+ */
+export interface TaggedRead {
+  /** The route table, as the capture names it. */
+  table: string;
+  /** The tag a covered read of it carries (the lookup's label). */
+  tag: string;
+}
+
 /** The fields of a `ReachPlan`, before it is minted (see `mintReachPlan`). */
 export interface ReachPlanInput<
   P extends Record<string, string> = Record<string, string>,
@@ -336,6 +352,8 @@ export interface ReachPlanInput<
   unfed?: readonly UnfedRead[];
   /** Views / rollups read whole, reached through their bases — see `RelationRead`. */
   relations?: readonly RelationRead[];
+  /** Route tables covered only by tagged reads — see `TaggedRead`. */
+  taggedReads?: readonly TaggedRead[];
 }
 
 /**
@@ -354,6 +372,7 @@ export interface ReachPlan<
   derivedReads?: never;
   unfed?: readonly UnfedRead[];
   relations?: readonly RelationRead[];
+  taggedReads?: readonly TaggedRead[];
 }
 
 /**
@@ -424,10 +443,12 @@ export function mintRoutePlan<P extends Record<string, string>>(
 }
 
 /**
- * Mint a non-keyed entry's reach plan (see `mintRoutePlan`). Throws on an
- * `unfed` table a route names (it is either routed or read outside the feed),
- * listed twice, or with no reason — and on a relation read that is also a
- * route or unfed table, listed twice, or with no reason.
+ * Mint a reach plan (see `mintRoutePlan`) — a non-keyed entry's, or an
+ * external keyed window's / point set's. Throws on an `unfed` table a route
+ * names (it is either routed or read outside the feed), listed twice, or with
+ * no reason; on a relation read that is also a route or unfed table, listed
+ * twice, or with no reason; and on a tagged read of no route table, with an
+ * empty tag, or listed twice.
  */
 export function mintReachPlan<P extends Record<string, string>>(
   plan: ReachPlanInput<P>,
@@ -468,6 +489,27 @@ export function mintReachPlan<P extends Record<string, string>>(
     }
     relationSeen.add(r.relation);
   }
+  const taggedReads = plan.taggedReads ?? [];
+  const taggedSeen = new Set<string>();
+  for (const t of taggedReads) {
+    if (!routed.has(t.table)) {
+      throw new Error(
+        `mintReachPlan: tagged read "${t.table}" is no route table — a tagged read narrows how a ROUTED table's reads are covered.`,
+      );
+    }
+    if (t.tag.trim() === "") {
+      throw new Error(
+        `mintReachPlan: tagged read "${t.table}" has an empty tag.`,
+      );
+    }
+    const id = `${t.table}\0${t.tag}`;
+    if (taggedSeen.has(id)) {
+      throw new Error(
+        `mintReachPlan: tagged read "${t.table}" under "${t.tag}" is listed twice.`,
+      );
+    }
+    taggedSeen.add(id);
+  }
   return {
     routes: plan.routes,
     usesOf: plan.usesOf,
@@ -475,6 +517,7 @@ export function mintReachPlan<P extends Record<string, string>>(
     // Only when non-empty, like `unfed`: a plan reading no relation is the
     // shape it always was.
     ...(relations.length > 0 ? { relations } : {}),
+    ...(taggedReads.length > 0 ? { taggedReads } : {}),
     [MINTED]: true,
   };
 }

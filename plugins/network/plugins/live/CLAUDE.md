@@ -1691,11 +1691,21 @@ useLive(folderListing, expanded.map((dir) => ({ dir })));  // MANY tuples → on
       notifies. An undeclared read is caught by the runtime's D5 guard
       (reported and routed FULL from then on; thrown under a test runner). A
       paged value takes them too, as a static list (a thunk is a tsc error
-      and a throw): its meta sibling is routed like a plain value, and its
-      pages — keyed windows no route reaches (D31) — read each table whole
-      (query-resource's `compiledKeyedReads` → the runtime's
-      `ExternalWindowPolicy.relations`): a write re-reads every subscribed
-      page (`edited-files`, `subagent-transcript`).
+      and a throw): its meta sibling and its pages — keyed windows no
+      scoped route refills (D31) — register with the ONE plan
+      (`compiledValueReach` → the runtime's `ExternalWindowPolicy.reach`,
+      full-only): a write to a whole table re-reads every subscribed page
+      (`subagent-transcript`).
+    - **`reads.lookups`** — a by-key read compiled from one declaration
+      (query-resource's `compileLookup`: `run(key)` is the loader's read,
+      `read(keyOf)` what it declares, `keyOf` decoding the tuple's params —
+      a paged value's `q`). Its routes gate on exactly the columns its SQL
+      reads and match the key table per tuple, so a write reaches only the
+      tuples asking about the row it touched, and only when it touched a
+      column the lookup reads (`tasks-core`'s `workspaceOfConversationLookup`:
+      a conversation's turn re-reads no `edited-files` page). Its tables are
+      covered by the lookup's tagged statement alone — a loader reading one
+      another way is drift. A table is in `tables` or a lookup, never both.
     - `{ immutable: { reason } }` — a tuple's answer can never change
       (sha-keyed, a terminal run's artifact).
     - `{ fixed: { reason } }` — constant for the process lifetime (a

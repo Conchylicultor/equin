@@ -6,9 +6,9 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 export { getEditedFiles } from "./internal/get-edited-files";
 export { editedFilesSignature } from "./internal/edited-files-signature";
 // The worktree watch behind `edited-files`: notifies when the edited list
-// changes. A value that moves with it follows this watch — the paged
-// `edited-files` cannot be a `recomputeOn` upstream (a keyed window cascades
-// nothing, D32).
+// changes, and keeps `getEditedFiles` a held-value read while it is open. A
+// value that moves with it follows this watch — the paged `edited-files`
+// cannot be a `recomputeOn` upstream (a keyed window cascades nothing, D32).
 export { watchEditedFiles } from "./internal/watch-edited-files";
 
 export default {

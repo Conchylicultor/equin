@@ -20,7 +20,6 @@ export type { ScratchProfileDef } from "./internal/scratch-profile";
 export { parseWorkspaceSpec } from "./internal/parse-spec";
 export {
   findWorkspaceOfConversation,
-  workspaceOfAttempt,
   workspaceOfConversation,
 } from "./internal/workspace-of";
 

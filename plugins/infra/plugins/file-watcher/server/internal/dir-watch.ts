@@ -38,8 +38,17 @@ export const dirEntriesWatcher = defineFileWatcher({
 
 const startOf =
   (decl: typeof dirWatcher) =>
-  async (root: string, onChange: (events: FileChangeEvent[]) => void) => {
-    const watch = await decl.start({ dirs: [root], label: root, onChange });
+  async (
+    root: string,
+    onChange: (events: FileChangeEvent[]) => void,
+    onLost: (error: unknown) => void,
+  ) => {
+    const watch = await decl.start({
+      dirs: [root],
+      label: root,
+      onChange,
+      onLost: (_dir, error) => onLost(error),
+    });
     return {
       stop: () => runTracked(`${decl.name}:stop`, () => watch.stop()),
     };

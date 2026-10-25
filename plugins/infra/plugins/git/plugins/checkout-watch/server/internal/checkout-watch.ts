@@ -1,3 +1,4 @@
+import { stat } from "node:fs/promises";
 import { resolve } from "node:path";
 import { acquireDirWatch } from "@plugins/infra/plugins/file-watcher/server";
 import {
@@ -24,7 +25,8 @@ export type {
 /**
  * A main checkout keeps its git dir at `root/.git`, inside the working-tree
  * watch; a linked worktree keeps it in the main repo's `.git/worktrees/<name>`,
- * and its refs (shared by every worktree) in the common dir's `refs/`.
+ * and its refs (shared by every worktree) in the common dir's `refs/`, beside
+ * the `config`, `packed-refs` and `info/exclude` every worktree reads.
  */
 async function locate(root: string): Promise<CheckoutLocation> {
   const out = await runGit(
@@ -35,7 +37,22 @@ async function locate(root: string): Promise<CheckoutLocation> {
   if (gitDir === "" || commonDir === "") {
     throw new Error(`[checkout-watch] no git dir for ${root}: ${out}`);
   }
-  return { gitDir, commonDir: resolve(commonDir) };
+  const common = resolve(commonDir);
+  return {
+    gitDir,
+    commonDir: common,
+    infoDir: await dirOrNull(`${common}/info`),
+  };
+}
+
+/** `dir` when it is a directory, null when nothing is there. */
+async function dirOrNull(dir: string): Promise<string | null> {
+  try {
+    return (await stat(dir)).isDirectory() ? dir : null;
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw err;
+  }
 }
 
 /**

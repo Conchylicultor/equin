@@ -51,6 +51,14 @@ export {
   conversationOwnerJoins,
   conversationOwnerColumns,
 } from "./internal/conversation-owner";
+// Where an attempt / a conversation runs, as compiled lookups: `run(id)` for
+// the read, `read(keyOf)` for a served value's `reads.lookups` — a write
+// reaches only the tuples asking about the row it touched, and only when it
+// touched a column the lookup reads.
+export {
+  workspaceOfAttemptLookup,
+  workspaceOfConversationLookup,
+} from "./internal/workspace-lookups";
 // The derived `tasks_v` relation. A task's `status` is COMPUTED there and exists
 // as no column of `tasks`, so a consumer that needs the status of a SET of tasks
 // in one query has nowhere else to read it — and a `tasks_v` read costs the same

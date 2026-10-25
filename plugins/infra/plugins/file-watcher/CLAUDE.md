@@ -73,6 +73,15 @@ plugin's `shared/`; `watcher-safety/no-raw-fs-watch` bans `fs.watch` /
 `watchFile` / `fs.promises.watch` / chokidar in host-process code, with a
 reasoned `exempt/index.ts` manifest.
 
+## Lost events: `onLost`
+
+A native watch that errors (an FSEvents / inotify overflow) may have dropped
+events. The engine logs it and calls the instance's optional `onLost(dir, err)`;
+`acquireDirWatch` fans it out as `onLost(err)` to every watcher riding that
+watch, and `infra/git/checkout-watch` delivers it as `onResync`. A consumer whose
+value is kept fresh by the watch alone must re-derive it there — nothing else
+will. (A `children` watch's error is already reported as its dir gone.)
+
 ## `onChange` and `onReconcile` are different questions
 
 - `onChange(events)` — the filesystem said these paths moved.
@@ -160,6 +169,7 @@ Two Bun behaviours a caller of this depth must know (measured on macOS, Bun
     - `FileWatcherStartOptions`
     - `ServerFileWatcherSpec`
     - `WatcherBackend`
+    - `WatchLost`
     - `WatchReaction`
     - `WatchReconcile`
   - Exports (values):

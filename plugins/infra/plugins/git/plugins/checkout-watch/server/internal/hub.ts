@@ -47,6 +47,12 @@ export interface CheckoutWatchRequest {
    * into one trailing call.
    */
   onChange: WatchReaction<CheckoutChange>;
+  /**
+   * A watch under the checkout lost events (its native watch errored), so
+   * anything may have moved unheard: re-read the checkout's state whole.
+   * Without it, a reader hears nothing of the loss.
+   */
+  onResync?: () => void;
 }
 
 /** Give a checkout watch back; the checkout's last one stops it. */
@@ -58,6 +64,11 @@ export interface CheckoutLocation {
   gitDir: string;
   /** The repo's common dir, holding the refs every worktree shares. */
   commonDir: string;
+  /**
+   * `<commonDir>/info` when it exists (its `exclude` is one of `git status`'s
+   * ignore sources), else null: a missing dir cannot be watched.
+   */
+  infoDir: string | null;
 }
 
 /** The branch a checkout is on; `own` is null on a detached HEAD. */
@@ -130,6 +141,26 @@ export function classifyGitDirEvent(
 }
 
 /**
+ * The entries of a common dir (outside the root) that move a linked
+ * worktree's state beside its refs: `config` (`core.excludesFile`,
+ * `status.showUntrackedFiles` — what `git status` lists), `packed-refs` (a
+ * ref packed away) and `info` (its `exclude`, watched on its own once it
+ * exists). Everything else there is the main checkout's own (its HEAD, its
+ * index) or noise.
+ */
+const COMMON_DIR_STATE = ["config", "packed-refs", "info"];
+
+/** The change an entry of a common dir outside the root is, or null. */
+export function classifyCommonDirEvent(
+  commonDir: string,
+  event: FileChangeEvent,
+): CheckoutChange | null {
+  const rel = relativeTo(commonDir, event.path);
+  if (rel === null || !COMMON_DIR_STATE.includes(rel)) return null;
+  return { path: event.path, type: event.type, area: "git" };
+}
+
+/**
  * The ref a path under the common dir writes (`refs/heads/x`, from the ref
  * file or its `.lock`), or undefined when it is not a loose ref.
  */
@@ -155,11 +186,13 @@ export function hears(
 /** The branch stand-in while it cannot be read: every ref is heard. */
 const ALL_REFS: CheckoutBranch = Object.freeze({ own: null, upstream: null });
 
-/** One delivery to every reader: the kept changes, and the branch then. */
-interface Delivery {
-  changes: CheckoutChange[];
-  branch: CheckoutBranch;
-}
+/**
+ * One delivery to every reader: the kept changes and the branch then, or
+ * that a watch under the checkout lost events.
+ */
+type Delivery =
+  | { kind: "changes"; changes: CheckoutChange[]; branch: CheckoutBranch }
+  | { kind: "lost" };
 
 /**
  * The checkout watch hub: one watch per checkout root, however many readers
@@ -168,9 +201,22 @@ interface Delivery {
  */
 export function createCheckoutWatchHub(deps: CheckoutWatchDeps) {
   const hub = createRefcountHub<Delivery>(async (root, emit) => {
-    const { gitDir, commonDir } = await deps.locate(root);
+    const { gitDir, commonDir, infoDir } = await deps.locate(root);
     const inside = (dir: string) => relativeTo(root, dir) !== null;
-    const outside = [gitDir, `${commonDir}/refs`].filter((d) => !inside(d));
+    // Outside the root's own watch (a linked worktree): its git dir, the
+    // shared refs, the info dir (`exclude`) — each whole — and the common
+    // dir's own entries, one level deep, kept to what `git status` reads
+    // there (`classifyCommonDirEvent`). What stays unheard is outside the
+    // repo: the global excludes file and global config.
+    const watches: Pick<DirWatchRequest, "dir" | "scope">[] = [
+      { dir: gitDir, scope: "subtree" },
+      { dir: `${commonDir}/refs`, scope: "subtree" },
+      ...(infoDir === null
+        ? []
+        : [{ dir: infoDir, scope: "subtree" } as const]),
+      { dir: commonDir, scope: "children" },
+    ];
+    const outside = watches.filter((w) => !inside(w.dir));
     let branch = await deps.readBranch(root);
     const headFiles = new Set([`${gitDir}/HEAD`, `${gitDir}/HEAD.lock`]);
 
@@ -193,7 +239,7 @@ export function createCheckoutWatchHub(deps: CheckoutWatchDeps) {
         // reaches the readers in the same turn, and never waits behind a
         // microtask.
         if (treePaths.size === 0 && !movesHead) {
-          emit({ changes, branch });
+          emit({ kind: "changes", changes, branch });
           return undefined;
         }
         return settleThenEmit(changes, [...treePaths], movesHead);
@@ -233,7 +279,7 @@ export function createCheckoutWatchHub(deps: CheckoutWatchDeps) {
           failures.push(err);
         }
       }
-      if (kept.length > 0) emit({ changes: kept, branch });
+      if (kept.length > 0) emit({ kind: "changes", changes: kept, branch });
       if (failures.length === 1) throw failures[0];
       if (failures.length > 1) {
         throw new AggregateError(
@@ -251,6 +297,9 @@ export function createCheckoutWatchHub(deps: CheckoutWatchDeps) {
       }
       if (kept.length > 0) deliver.trigger(kept);
     };
+    // A loss skips the batch queue: a resync re-reads everything, so it need
+    // not wait behind (or be filtered with) the batches still being read.
+    const lost = (): void => emit({ kind: "lost" });
     const releases: DirWatchRelease[] = [];
     const releaseAll = (): void => {
       for (const release of releases) release();
@@ -262,15 +311,18 @@ export function createCheckoutWatchHub(deps: CheckoutWatchDeps) {
           scope: "subtree",
           onChange: (events) =>
             forward(events.map((e) => classifyRootEvent(root, e))),
+          onLost: lost,
         }),
       );
-      for (const dir of outside) {
+      for (const { dir, scope } of outside) {
+        const classify =
+          dir === commonDir ? classifyCommonDirEvent : classifyGitDirEvent;
         releases.push(
           await deps.acquireDirWatch({
             dir,
-            scope: "subtree",
-            onChange: (events) =>
-              forward(events.map((e) => classifyGitDirEvent(dir, e))),
+            scope,
+            onChange: (events) => forward(events.map((e) => classify(dir, e))),
+            onLost: lost,
           }),
         );
       }
@@ -296,7 +348,12 @@ export function createCheckoutWatchHub(deps: CheckoutWatchDeps) {
       const reaction = createCoalescer<CheckoutChange>({
         run: (changes) => (released ? undefined : request.onChange(changes)),
       });
-      const hold = hub.acquire(root, ({ changes, branch }) => {
+      const hold = hub.acquire(root, (delivery) => {
+        if (delivery.kind === "lost") {
+          if (!released) request.onResync?.();
+          return;
+        }
+        const { changes, branch } = delivery;
         const mine =
           branch === ALL_REFS
             ? changes

@@ -33,6 +33,7 @@ export type {
   WsHandler,
   RuntimeSocket,
   ResourceDelivery,
+  ReadTags,
 } from "./runtime";
 export {
   mintReachPlan,
@@ -50,6 +51,7 @@ export type {
   RoutePlan,
   TableChange,
   TableLayoutRequirement,
+  TaggedRead,
   TupleUse,
   UnfedRead,
 } from "./routing";

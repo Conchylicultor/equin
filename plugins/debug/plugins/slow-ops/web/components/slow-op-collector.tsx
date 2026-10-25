@@ -7,7 +7,7 @@ import { clientLatencySink } from "@plugins/primitives/plugins/perfs/plugins/lat
 import { currentRoutePath } from "@plugins/primitives/plugins/pane/web";
 import { toClientBootSection } from "@plugins/debug/plugins/trace/plugins/client-boot/core";
 import { clientSlowOpSink, slowOpConfig } from "../../core";
-import { TRANSPORT_LAYER } from "../../shared/endpoints";
+import { elementSlowOp } from "../internal/element-slow-op";
 import { latencySlowOp } from "../internal/latency-slow-op";
 import { enqueueSlowOp } from "../internal/slow-op-queue";
 
@@ -71,28 +71,8 @@ export function SlowOpCollector() {
       // swap means readiness flipped before the backend could serve fast. Fix
       // that at the source; never suppress this signal. Batching below is a
       // transport change only — every signal still reaches the recorder.
-      const t = cfgRef.current.elementMs;
-      if (info.durationMs <= t) return;
-      const durationMs = Math.round(info.durationMs);
-      enqueueSlowOp({
-        operationKind: "element",
-        operation: `${info.key} ${JSON.stringify(info.params)}`,
-        durationMs,
-        thresholdMs: t,
-        // The route under which the element settled is the cheap, reliable
-        // "who mounted this resource" attribution (resource key + params are
-        // already in `operation`).
-        caller: { kind: "route", label: currentRoutePath() },
-        // Additive root-cause attribution: was the notifications transport
-        // still coming up when this resource mounted, and how much of the
-        // settle window was transport bring-up? The wait is charged to its own
-        // layer so the report says WHY it was slow (transport cold-start vs
-        // resource compute).
-        transportColdStart: info.transportColdStart,
-        ...(info.transportWaitMs > 0
-          ? { waits: { [TRANSPORT_LAYER]: info.transportWaitMs } }
-          : {}),
-      });
+      const item = elementSlowOp(info, cfgRef.current, currentRoutePath());
+      if (item) enqueueSlowOp(item);
     });
     return () => slowResourceReportSink.register(null);
   }, []);

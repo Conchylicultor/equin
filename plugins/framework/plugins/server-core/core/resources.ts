@@ -26,7 +26,11 @@ import {
   getRuntimeProfile,
   registerGateGauge,
 } from "./profiler-hooks";
-import { getLastLoaderReadSet, readSetOf } from "./read-set";
+import {
+  getLastLoaderReadSet,
+  getLastLoaderReadTags,
+  readSetOf,
+} from "./read-set";
 import { defineServerContribution } from "./contributions";
 import { reportServerError, type ServerErrorReport } from "./error-reporter";
 
@@ -458,6 +462,9 @@ const runtime = createResourceRuntime({
   // dependency is shed from the durable `tables_read` seed instead of carried
   // forever. central: omitted (undefined → persist falls back to `readSet`).
   lastReadSet: (key) => getLastLoaderReadSet(key),
+  // The same run's read tags: a compiled lookup's reads of a table, told from
+  // any other read of it (the drift guard's tagged reads).
+  lastReadTags: (key) => getLastLoaderReadTags(key),
   // A8: a routed resource reading a table none of its routes names fails its
   // load under a test runner (bun:test sets NODE_ENV=test), and is reported
   // once per table in a running server.

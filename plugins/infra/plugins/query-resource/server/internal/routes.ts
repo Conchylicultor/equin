@@ -17,8 +17,8 @@ import {
   type ResourceParams,
   type Route,
   type RoutePlan,
+  type TaggedRead,
   type TupleUse,
-  type UnfedRead,
 } from "@plugins/framework/plugins/resource-runtime/core";
 import {
   armKeyCodec,
@@ -26,6 +26,7 @@ import {
   type ArmKeyCodec,
 } from "@plugins/infra/plugins/query-resource/core";
 import type { EntitySource, RoutedSource } from "./spec";
+import { isLookupRead, type LookupRead } from "./compile-lookup";
 
 // The routed half of a compiled read: the `RoutePlan` (or, for a non-keyed
 // aggregate, the `ReachPlan`) the runtime's `routeTableChange` serves the
@@ -275,22 +276,37 @@ function encodedMap(
 
 /**
  * What a hand-written loader declares it reads (a served value's `reads` —
- * `network/live`'s `serveValue`). Whole tables only: a loader's SQL is not
- * compiled here, so nothing could keep a per-row filter in step with it — a
- * write to any row of a declared table recomputes every tuple. Row-level
- * narrowing exists only where the SQL is compiled from the same declaration
- * (a collection).
+ * `network/live`'s `serveValue`). Two kinds:
+ *
+ * - `tables` — WHOLE: the loader's SQL is not compiled here, so nothing could
+ *   keep a per-row filter (or a column gate) in step with it — a write to any
+ *   column of any row of a declared table recomputes every tuple.
+ * - `lookups` — compiled: a by-key read the loader runs through
+ *   `compileLookup`'s `run`, whose SQL and routes come from one declaration —
+ *   so a write reaches only the tuples asking about the row it touched, and
+ *   only when it touched a column the lookup reads.
+ *
+ * Row-level narrowing exists only where the SQL is compiled from the same
+ * declaration: a lookup, or a collection.
  */
-export interface ValueReads {
+export interface ValueReads<P extends ResourceParams = ResourceParams> {
   /**
-   * Every relation the loader reads — base tables, entities, or views. A view
-   * has no trigger, so it is no route: it is a relation read (`RelationRead`)
-   * the runtime reaches through its base tables once they are known, and the
-   * drift guard accepts under its own name. Empty when everything the loader
-   * reads is `outsideFeed`.
+   * Every relation the loader reads whole — base tables, entities, or views.
+   * A view has no trigger, so it is no route: it is a relation read
+   * (`RelationRead`) the runtime reaches through its base tables once they
+   * are known, and the drift guard accepts under its own name. Empty when
+   * everything the loader reads is a lookup or `outsideFeed`.
    */
   tables: readonly (RoutedSource | PgView)[];
-  /** Why a write to any row of them may change any tuple (the pane shows it). */
+  /**
+   * The compiled lookups the loader reads through (`compileLookup(…).read`),
+   * each read ONLY through its `run`: its tables are covered in the loader's
+   * capture by its tagged statement alone (resource-runtime's `TaggedRead`),
+   * so a loader that reads one of them another way is drift. A table is
+   * listed in `tables` or reached by lookups, never both.
+   */
+  lookups?: readonly LookupRead<P>[];
+  /** Why a write to any row of `tables` may change any tuple (the pane shows it). */
   reason: string;
   /**
    * Tables the loader reads that the change feed skips by declaration
@@ -302,15 +318,18 @@ export interface ValueReads {
 }
 
 /**
- * A served value's plan from its declared `reads`: one `full` route per table,
- * reading every column (so no update is skipped by the gate — a hand-written
- * loader's columns are unknown), read by every tuple; one relation read per
- * view, with the same reason. The drift guard (A8) holds the loader to it: a
- * captured table outside it is reported and, in a running server, routed FULL
- * from then on.
+ * A served value's plan from its declared `reads`: one `full` route per
+ * table, reading every column (so no update is skipped by the gate — a
+ * hand-written loader's columns are unknown), read by every tuple; one
+ * relation read per view, with the same reason; and each lookup's own routes
+ * — `full`, gated by the columns its SQL reads, matched per tuple — with its
+ * tables tagged (covered only by its own statement). The drift guard (A8)
+ * holds the loader to it: a captured table outside it is reported and, in a
+ * running server, routed FULL from then on. Serves a non-keyed value and an
+ * external keyed one (a paged value's pages) alike: every route is `full`.
  */
 export function compiledValueReach<P extends ResourceParams>(
-  reads: ValueReads,
+  reads: ValueReads<P>,
   label: string,
 ): ReachPlan<P> {
   const where = `${label}: reads`;
@@ -346,6 +365,31 @@ export function compiledValueReach<P extends ResourceParams>(
       ).map((c) => c.name),
     });
   }
+  const whole = routes.length;
+  const lookups = reads.lookups ?? [];
+  const taggedReads: TaggedRead[] = [];
+  const lookupLabels = new Set<string>();
+  for (const lookup of lookups) {
+    // Minted only by `compileLookup`: its routes' columns gate updates.
+    if (!isLookupRead(lookup)) {
+      throw new Error(
+        `${where}.lookups holds a read compileLookup did not mint — a lookup's routes gate updates, so only its compile may state them.`,
+      );
+    }
+    if (lookupLabels.has(lookup.label)) {
+      throw new Error(`${where}.lookups lists "${lookup.label}" twice.`);
+    }
+    lookupLabels.add(lookup.label);
+    for (const route of lookup.routes) {
+      if (listed.has(route.table)) {
+        throw new Error(
+          `${where}: "${route.table}" is read whole (\`tables\`) and through the lookup "${lookup.label}" — the whole-table route would reach every write the lookup's gates skip. List it in one place.`,
+        );
+      }
+      routes.push(route);
+      taggedReads.push({ table: route.table, tag: lookup.label });
+    }
+  }
   const outside = reads.outsideFeed;
   if (outside !== undefined && outside.tables.length === 0) {
     throw new Error(`${where}.outsideFeed.tables is empty — omit it.`);
@@ -354,33 +398,46 @@ export function compiledValueReach<P extends ResourceParams>(
     table: routedBase(source, label).name,
     reason: outside!.reason,
   }));
-  const uses: ReadonlyMap<string, TupleUse> = new Map(
-    routes.map((r) => [r.id, { role: "membership" as const }]),
+  const wholeUses: ReadonlyMap<string, TupleUse> = new Map(
+    routes.slice(0, whole).map((r) => [r.id, { role: "membership" as const }]),
   );
-  return mintReachPlan<P>({ routes, usesOf: () => uses, unfed, relations });
+  const usesOf =
+    lookups.length === 0
+      ? () => wholeUses
+      : (params: P): ReadonlyMap<string, TupleUse> => {
+          const uses = new Map(wholeUses);
+          for (const lookup of lookups) {
+            for (const [id, use] of lookup.usesOf(params)) uses.set(id, use);
+          }
+          return uses;
+        };
+  return mintReachPlan<P>({
+    routes,
+    usesOf,
+    unfed,
+    relations,
+    ...(taggedReads.length > 0 ? { taggedReads } : {}),
+  });
 }
 
 /**
- * A value's declared reads for an EXTERNAL KEYED entry (a paged value's
- * pages: network/live), which no route may reach (D31): the same compile as
- * {@link compiledValueReach}, each routed table and each view read handed back
- * as a relation read WHOLE (the runtime's `ExternalWindowPolicy.relations` —
- * a write to a base re-reads every subscribed page), the `outsideFeed`
- * tables as its `unfed`.
+ * The reach plan of a compile served OFF the change feed whose SQL reads
+ * `tables` (an external keyed window / point set — network/live's
+ * `serveCollection` with `changes` — whose loader is the compiled SQL): every
+ * one `unfed`, no route — so the drift guard accepts the loader's reads, and
+ * change-feed's boot check holds each table to its opt-out
+ * (`ExcludeFromChangeFeed`).
  */
-export function compiledKeyedReads(
-  reads: ValueReads,
-  label: string,
-): { relations: RelationRead[]; unfed?: UnfedRead[] } {
-  const plan = compiledValueReach(reads, label);
-  const unfed = plan.unfed ?? [];
-  return {
-    relations: [
-      ...plan.routes.map((r) => ({ relation: r.table, reason: reads.reason })),
-      ...(plan.relations ?? []),
-    ],
-    ...(unfed.length > 0 ? { unfed: [...unfed] } : {}),
-  };
+export function offFeedTablesReach<P extends ResourceParams>(
+  tables: readonly string[],
+  reason: string,
+): ReachPlan<P> {
+  const none: ReadonlyMap<string, TupleUse> = new Map();
+  return mintReachPlan<P>({
+    routes: [],
+    usesOf: () => none,
+    unfed: [...new Set(tables)].map((table) => ({ table, reason })),
+  });
 }
 
 /**
@@ -400,18 +457,13 @@ export function offFeedReach<P extends ResourceParams>(
       `offFeedReach: the plan reads relations (${reach.relations!.map((r) => `"${r.relation}"`).join(", ")}) — a view or rollup is reached through its bases' change feed, never served off it.`,
     );
   }
-  const tables = [
-    ...new Set([
+  return offFeedTablesReach<P>(
+    [
       ...reach.routes.map((r) => r.table),
       ...(reach.unfed ?? []).map((u) => u.table),
-    ]),
-  ];
-  const none: ReadonlyMap<string, TupleUse> = new Map();
-  return mintReachPlan<P>({
-    routes: [],
-    usesOf: () => none,
-    unfed: tables.map((table) => ({ table, reason })),
-  });
+    ],
+    reason,
+  );
 }
 
 /**

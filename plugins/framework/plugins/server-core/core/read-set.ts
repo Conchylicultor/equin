@@ -24,6 +24,15 @@ const readSetIndex = new Map<string, Set<string>>();
 // nothing never replaces a real set with an empty one.
 const lastLoaderReadSet = new Map<string, Set<string>>();
 
+// The same run's read TAGS (table → each read's tag, `null` = untagged),
+// replaced with `lastLoaderReadSet` — absent for a run none of whose reads was
+// tagged. What the drift guard covers a tagged route table by (a compiled
+// lookup's own SQL — resource-runtime's `TaggedRead`).
+const lastLoaderReadTags = new Map<
+  string,
+  ReadonlyMap<string, ReadonlySet<string | null>>
+>();
+
 /**
  * Record one completed loader run's tables for `key`: unioned into the index,
  * and replacing the key's per-run capture. The loader-entry flush of the
@@ -32,10 +41,13 @@ const lastLoaderReadSet = new Map<string, Set<string>>();
 export function recordLoaderReadSet(
   key: string,
   tables: ReadonlySet<string>,
+  tags?: ReadonlyMap<string, ReadonlySet<string | null>>,
 ): void {
   if (tables.size === 0) return;
   recordUnion(key, tables);
   lastLoaderReadSet.set(key, new Set(tables));
+  if (tags === undefined) lastLoaderReadTags.delete(key);
+  else lastLoaderReadTags.set(key, tags);
 }
 
 /** The tables `key`'s loader has ever read (sorted), or `[]`. */
@@ -62,6 +74,17 @@ export function getReadSetIndex(): Record<string, string[]> {
 export function getLastLoaderReadSet(key: string): string[] | undefined {
   const set = lastLoaderReadSet.get(key);
   return set ? [...set].sort() : undefined;
+}
+
+/**
+ * The read tags of the MOST RECENT loader run for `key` (see
+ * `lastLoaderReadTags`), or `undefined` when none of its reads was tagged.
+ * Read with {@link getLastLoaderReadSet}, synchronously after the loader.
+ */
+export function getLastLoaderReadTags(
+  key: string,
+): ReadonlyMap<string, ReadonlySet<string | null>> | undefined {
+  return lastLoaderReadTags.get(key);
 }
 
 function recordUnion(key: string, tables: Iterable<string>): void {

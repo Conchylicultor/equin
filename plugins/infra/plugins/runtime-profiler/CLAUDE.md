@@ -323,6 +323,7 @@ remaining allocations are one flat band array per completed entry span, and what
     - `debug/profiling/runtime`
     - `debug/slow-ops`
     - `infra/endpoints`
+    - `packages/watched-memo`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/install.ts` (debt)
 - Core:

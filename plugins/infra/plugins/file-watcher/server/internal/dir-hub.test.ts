@@ -28,10 +28,12 @@ function fakeStart() {
   const started: string[] = [];
   const stopped: string[] = [];
   const emitters = new Map<string, (events: FileChangeEvent[]) => void>();
-  const start: StartRootWatch = async (root, onChange) => {
+  const losers = new Map<string, (error: unknown) => void>();
+  const start: StartRootWatch = async (root, onChange, onLost) => {
     if (root.includes("missing")) throw new Error(`ENOENT ${root}`);
     started.push(root);
     emitters.set(root, onChange);
+    losers.set(root, onLost);
     return {
       stop: async () => {
         stopped.push(root);
@@ -41,7 +43,8 @@ function fakeStart() {
   };
   const emit = (root: string, ...paths: string[]) =>
     emitters.get(root)!(paths.map((path) => ({ type: "update", path })));
-  return { start, started, stopped, emit };
+  const lose = (root: string, error: unknown) => losers.get(root)!(error);
+  return { start, started, stopped, emit, lose };
 }
 
 const paths = (events: FileChangeEvent[]) => events.map((e) => e.path);
@@ -52,6 +55,41 @@ const shallowNever: StartRootWatch = async (dir) => {
 };
 
 describe("createDirWatchHub", () => {
+  test("a root's lost events reach every watcher riding it, whatever its scope", async () => {
+    const fake = fakeStart();
+    const hub = createDirWatchHub({
+      subtree: fake.start,
+      children: shallowNever,
+    });
+    const lost: string[] = [];
+    const releaseRoot = await hub.acquire({
+      dir: "/r",
+      scope: "subtree",
+      onChange: () => {},
+      onLost: () => lost.push("root"),
+    });
+    const releaseChild = await hub.acquire({
+      dir: "/r/a/b",
+      scope: "children",
+      onChange: () => {},
+      onLost: () => lost.push("child"),
+    });
+    // One without onLost is simply not told.
+    const releasePlain = await hub.acquire({
+      dir: "/r/a",
+      scope: "subtree",
+      onChange: () => {},
+    });
+    expect(fake.started).toEqual(["/r"]);
+    fake.lose("/r", new Error("overflow"));
+    expect(lost.sort()).toEqual(["child", "root"]);
+    releaseChild();
+    fake.lose("/r", new Error("overflow"));
+    expect(lost.sort()).toEqual(["child", "root", "root"]);
+    releaseRoot();
+    releasePlain();
+  });
+
   test("two watchers of one dir share one native watch; the last release stops it", async () => {
     const fake = fakeStart();
     const hub = createDirWatchHub({

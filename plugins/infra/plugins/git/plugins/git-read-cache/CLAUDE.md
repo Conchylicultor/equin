@@ -185,7 +185,6 @@ primitive and Stage 2.1).
 - Cross-plugin:
   - Imported by:
     - `apps/file-explorer/git`
-    - `conversations/conversation-view/code`
     - `conversations/conversation-view/jsonl-viewer`
     - `plugin-meta/plugin-tree`
     - `release`

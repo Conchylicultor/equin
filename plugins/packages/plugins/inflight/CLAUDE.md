@@ -65,6 +65,7 @@ See `research/2026-06-15-global-live-state-cascade-contention.md` (Change 5) and
   - Imported by:
     - `framework/resource-runtime`
     - `infra/endpoints`
+    - `packages/watched-memo`
 - Core:
   - Exports (types): `Inflight`
   - Exports (values): `createInflight`

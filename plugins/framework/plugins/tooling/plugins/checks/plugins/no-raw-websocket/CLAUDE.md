@@ -6,6 +6,7 @@
 
 - Exemptions:
   - Exempted by:
+    - `conversations/conversation-view/code` (0 debt)
     - `conversations/conversation-view/jsonl-viewer` (0 debt)
     - `network/live` (0 debt)
     - `primitives/networking` (0 debt)

@@ -146,8 +146,9 @@ the backstop for anything that still slips past.
 
 **D31 — the external window or point set (`ExternalKeyedPolicy` =
 `ExternalWindowPolicy` | `ExternalPointPolicy`).** An
-external resource's truth is outside Postgres, so nothing routes into it — but
-it may be keyed: `defineExternalResource(keyedContract, { loader, membership:
+external resource's truth is outside Postgres, so it is never SCOPED — no
+route refills some of its rows — but it may be keyed, and it may take a
+full-only reach plan: `defineExternalResource(keyedContract, { loader, membership:
 { kind: "window", limitOf, familyOf? } })` (network/live compiles a paged
 value's pages to it), or `membership: { kind: "point", idsOf }`
 (`ExternalPointPolicy` / `ExternalPointMembership` — the tuple names an id set through the caller's
@@ -160,17 +161,21 @@ It has no `windowIdsOf` (the runtime derives it from the loader — the tuple's
 own read, its ids mapped — for the paths that call one; none does today, a
 scoped pending exists only through routes) and no `orderSignatureOf` (every
 change is FULL). No `routes`, no alias (throws, beside the type).
-Its loader may read Postgres tables the feed skips by declaration: `unfed`
-on the policy (`UnfedRead[]`, network/live's SQL arm served off the feed)
-is stored on a routing record that routes nothing (`externalKeyedRouting`),
-so the drift guard accepts those reads and `unfedResourceTables()` lists them
-for change-feed's opt-out check. Postgres relations it reads whole that the
-feed DOES reach (a paged value's declared `reads` — a lookup beside its own
-truth) are `relations` on the policy (`RelationRead[]`), held on the same
-record and indexed under their relation bases like a reach plan's: a write to
-a base re-reads every subscribed tuple whole, the drift guard accepts them,
-and change-feed's A1′ holds each base to a change source
-(`relationResourceReads()`). Both are refused on any other entry.
+The Postgres reads its loader makes beside its own truth are a **`reach`
+plan** on the policy, minted like a non-keyed entry's and held to the same
+checks by `routingRecordFor` — which refuses `reach` on every other keyed
+entry and keeps its every-route-`full` assert here too. A change a tuple's
+uses let through is a FULL pending of that tuple (`drainMembershipFull`,
+merged with its notifies), so the plan's gates (`Route.columns`) and per-tuple
+`match` decide WHICH tuples re-read: a paged value reading through a compiled
+lookup (query-resource's `compileLookup`, network/live's `reads.lookups`) is
+reached only by a write to its question's row, and only when it moved a
+column the lookup reads; the change feed's trigger layout derives the carry
+and gate columns from those routes like any other. Its `unfed` tables
+(network/live's SQL arm served off the feed, `offFeedTablesReach`) are
+accepted by the drift guard and listed by `unfedResourceTables()`; its
+`relations` (a view read whole) are indexed under their bases, held to a
+change source by change-feed's A1′ (`relationResourceReads()`).
 It may follow external upstreams (`dependsOn`), each change a FULL re-read;
 nothing may cascade OUT of it (D32 — a membership drain cascades nothing), a
 throw in both registration orders. It is never L2-persisted (external and
@@ -579,6 +584,17 @@ the deletion of the old read-set router:
   moves it to `routeDrifted`), and one that does not drops it and its bases
   stop routing to the entry (`dropUnreadSeeds`). A reach
   plan's `unfed` tables pass.
+  **Tagged reads** (`ReachPlan.taggedReads`, `TaggedRead`): a route table a
+  plan declares covered only by statements carrying a tag — a compiled
+  lookup's, whose route gates on exactly the columns its own SQL reads. The
+  per-run capture carries each read's tag (`lastReadTags`, `ReadTags`: the
+  statement text's `/* read-tag:… */`, database's `readTag`, read at the pool
+  chokepoint), and `readCovered` accepts such a table only when every read of
+  it carried one of its tags: a read outside it may read any column, so it is
+  drift — reported, thrown under `strictRoutes`, and failed open past the gate
+  (the table joins `driftBases`, which `routeEntryChange` serves FULL before
+  any route). A persisted `tables_read` records no tags, so the D7 seed judges
+  a tagged table by its name (covered).
   **D5 — the undeclared-read guard:** the same check arms on every external
   that declared a `reach` plan and on every external whose freshness is
   `notified` (or undeclared) — snapshot / fixed / immutable ones claim no
@@ -1242,6 +1258,7 @@ and those plugins' `CLAUDE.md`.
     - `PersistedValueCheck`
     - `PersistMeta`
     - `ReachPlan`
+    - `ReadTags`
     - `RelationRead`
     - `Resource`
     - `ResourceContract`
@@ -1263,6 +1280,7 @@ and those plugins' `CLAUDE.md`.
     - `SnapEntry`
     - `TableChange`
     - `TableLayoutRequirement`
+    - `TaggedRead`
     - `TupleUse`
     - `UnfedRead`
     - `UnfedResourceTable`

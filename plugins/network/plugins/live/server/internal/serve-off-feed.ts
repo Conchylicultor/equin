@@ -8,6 +8,7 @@ import type { FilterScalar } from "@plugins/network/plugins/live/plugins/filter/
 import {
   compileOffFeedQuery,
   offFeedReach,
+  offFeedTablesReach,
   type CompiledOffFeedQuery,
 } from "@plugins/infra/plugins/query-resource/server";
 import type {
@@ -48,8 +49,8 @@ import type {
 // windowed FULL read — so its change is the collection's own `notify`, its
 // keyed deltas and seeded page derivation (`familyOf`) unchanged. `:groups` /
 // `:count` keep their loaders and register as non-keyed externals. Every table
-// the SQL reads is declared `unfed` (the keyed policies' `unfed`, the non-keyed
-// ones' `offFeedReach`): the drift guard accepts the reads, and change-feed's
+// the SQL reads is declared `unfed` on its reach plan (the keyed policies'
+// `offFeedTablesReach`, the non-keyed ones' `offFeedReach`): the drift guard accepts the reads, and change-feed's
 // boot check refuses a table the feed covers — so the from table must be
 // opted out, and a table served routed must not be (A1′), each by the boot
 // assertions both ways. The notify / `whileSubscribed` / `throttleMs` plumbing
@@ -101,7 +102,7 @@ export function serveOffFeed<Row>(
   ): ExternalKeyedPolicy<P> =>
     ({
       membership: compiled.membership,
-      unfed: compiled.reads.map((table) => ({ table, reason })),
+      reach: offFeedTablesReach<P>(compiled.reads, reason),
     }) as ExternalKeyedPolicy<P>;
 
   // ── :rows (every form) ──

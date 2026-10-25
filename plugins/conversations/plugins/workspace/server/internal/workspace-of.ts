@@ -9,29 +9,21 @@ import type { WorkspaceAt } from "./registry";
 // table handles: tasks-core's field record imports this plugin's `core` (the
 // spec it stores), so importing tasks-core back from here would be a cycle.
 // The two columns read are this plugin's own concern — the attempt's
-// workspace path and spec.
+// workspace path and spec. For this plugin's own callers (the scratch MCP
+// scope) and the MCP tools that resolve an agent's directory. A served value
+// that can import tasks-core reads through its compiled lookups
+// (`workspaceOfConversationLookup` / `workspaceOfAttemptLookup`) instead, so
+// its read is gated by the columns it reads. One served value still reads
+// here: `review/plugin-changes` (excluded from the composition), which
+// declares both tables whole (`reads.tables`) — ungated, every conversations
+// or attempts write re-runs it — until it moves to the lookup. So the join is
+// spelled twice: here (for the callers the cycle keeps off tasks-core) and in
+// the compiled lookup.
 const WorkspaceRowSchema = z.object({
   attemptId: z.string(),
   path: z.string(),
   spec: WorkspaceSpecSchema,
 });
-
-/** The workspace an attempt runs in. Throws for an unknown attempt. */
-export async function workspaceOfAttempt(
-  attemptId: string,
-): Promise<WorkspaceAt> {
-  const [row] = await executeRows(db, {
-    query: sql`
-      SELECT id AS "attemptId", worktree_path AS path, workspace AS spec
-      FROM attempts
-      WHERE id = ${attemptId}
-    `,
-    row: WorkspaceRowSchema,
-    label: "workspace of attempt",
-  });
-  if (!row) throw new Error(`Unknown attempt "${attemptId}"`);
-  return row;
-}
 
 /**
  * The workspace a conversation runs in — its attempt's. For an MCP tool that

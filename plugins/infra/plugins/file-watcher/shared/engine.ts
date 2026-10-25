@@ -81,9 +81,22 @@ export type WatchReaction<E> = (events: E[]) => void | Promise<unknown>;
 /** A reconcile tick's reaction — coalesced like {@link WatchReaction}. */
 export type WatchReconcile = () => void | Promise<unknown>;
 
+/**
+ * The native watch of `dir` reported an error (an FSEvents / inotify overflow,
+ * a dropped stream): events may have been lost, so anything below `dir` may
+ * have changed unheard. Re-derive what the watch keeps fresh.
+ */
+export type WatchLost = (dir: string, error: unknown) => void;
+
 interface FileWatcherBaseOptions {
   dirs: string[];
   onChange: WatchReaction<parcel.Event>;
+  /**
+   * Called when a watched dir's native watch errored and may have dropped
+   * events (the error is still logged). Not called for a `children` watch: a
+   * failing one already reports its dir gone (see `depth`).
+   */
+  onLost?: WatchLost;
   debounceMs?: number;
   ceilingMs?: number;
   extensions?: string[];
@@ -230,6 +243,7 @@ export async function createFileWatcher(
     dirs,
     onChange,
     onReconcile,
+    onLost,
     debounceMs = 100,
     ceilingMs = 1000,
     reconcileMs = 30_000,
@@ -337,6 +351,7 @@ export async function createFileWatcher(
               (err, events) => {
                 if (err) {
                   console.error(`[file-watcher] error on ${dir}`, err);
+                  onLost?.(dir, err);
                   return;
                 }
                 take(events);

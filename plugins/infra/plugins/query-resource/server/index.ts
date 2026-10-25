@@ -28,11 +28,18 @@ export type {
 } from "./internal/compile-union-window";
 export { compileJoins, joinRefs, presenceExpr } from "./internal/joins";
 export {
-  compiledKeyedReads,
   compiledValueReach,
   offFeedReach,
+  offFeedTablesReach,
 } from "./internal/routes";
 export type { ValueReads } from "./internal/routes";
+export { compileLookup } from "./internal/compile-lookup";
+export type {
+  CompiledLookup,
+  LookupRead,
+  LookupResult,
+  LookupSpec,
+} from "./internal/compile-lookup";
 export type { ReadColumn } from "./internal/joins";
 export type { CompiledGroups } from "./internal/compile-groups";
 export type {
