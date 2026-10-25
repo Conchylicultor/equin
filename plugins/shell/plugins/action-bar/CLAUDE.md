@@ -24,6 +24,7 @@ inherit whichever the host chose, so every item in a host shares one height.
     - `ActionBar.Glance`
   - Slot contributors:
     - `ActionBar.Item` ← `build`
+    - `ActionBar.Item` ← `config_v2.git-defaults-preview`
     - `ActionBar.Item` ← `hints.help-menu`
     - `ActionBar.Item` ← `improve`
     - `ActionBar.Item` ← `screenshot`
@@ -33,6 +34,7 @@ inherit whichever the host chose, so every item in a host shares one height.
     - `ActionBar.Item` ← `ui.theme-engine.quick-theme`
     - `ActionBar.ViewOption` ← `apps-core.surface`
     - `ActionBar.ViewOption` ← `audience.view-option`
+    - `ActionBar.ViewOption` ← `config_v2.git-defaults-preview`
     - `ActionBar.ViewOption` ← `fullscreen`
     - `ActionBar.ViewOption` ← `reorder.edit-mode`
     - `ActionBar.Activity` ← `build`
@@ -44,6 +46,7 @@ inherit whichever the host chose, so every item in a host shares one height.
     - `apps-core/surface`
     - `audience/view-option`
     - `build`
+    - `config_v2/git-defaults-preview`
     - `fullscreen`
     - `hints/help-menu`
     - `improve`

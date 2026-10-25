@@ -6,6 +6,7 @@ import type { ConfigDescriptor } from "../../core";
 import type { FieldsRecord } from "@plugins/fields/core";
 import { storePathOf } from "./store-path";
 import { ConfigV2 } from "./slots";
+import { announceRefusedWrite, useConfigPreview } from "./config-preview";
 
 export function useSetConfig<F extends FieldsRecord>(
   descriptor: ConfigDescriptor<F>,
@@ -16,6 +17,7 @@ export function useSetConfig<F extends FieldsRecord>(
   // the global error toast instead of escaping as an unhandled rejection.
   // Called before the throw below to keep hook order unconditional.
   const { mutate } = useEndpointMutation(setConfigField);
+  const preview = useConfigPreview();
   const reg = registrations.find((c) => c.descriptor === descriptor);
   const storePath = reg ? storePathOf(reg) : null;
 
@@ -30,12 +32,18 @@ export function useSetConfig<F extends FieldsRecord>(
 
   return useCallback(
     (key: keyof F & string, value: unknown) => {
+      // The preview shows the committed layer, read-only: a write would land
+      // in the user's config, invisible behind the preview.
+      if (preview) {
+        announceRefusedWrite();
+        return;
+      }
       mutate({
         body: scopeId
           ? { storePath, key, value, scopeId }
           : { storePath, key, value },
       });
     },
-    [mutate, storePath, scopeId],
+    [mutate, storePath, scopeId, preview],
   );
 }

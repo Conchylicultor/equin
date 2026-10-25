@@ -1585,6 +1585,10 @@
     "plugins/config_v2/plugins/fields": {
       "name": "@singularity/plugin-config_v2-fields",
     },
+    "plugins/config_v2/plugins/git-defaults-preview": {
+      "name": "@singularity/plugin-config_v2-git-defaults-preview",
+      "version": "0.0.1",
+    },
     "plugins/config_v2/plugins/ledger": {
       "name": "@singularity/plugin-config_v2-ledger",
     },
@@ -7961,6 +7965,8 @@
     "@singularity/plugin-config_v2-config-link": ["@singularity/plugin-config_v2-config-link@workspace:plugins/config_v2/plugins/config-link"],
 
     "@singularity/plugin-config_v2-fields": ["@singularity/plugin-config_v2-fields@workspace:plugins/config_v2/plugins/fields"],
+
+    "@singularity/plugin-config_v2-git-defaults-preview": ["@singularity/plugin-config_v2-git-defaults-preview@workspace:plugins/config_v2/plugins/git-defaults-preview"],
 
     "@singularity/plugin-config_v2-ledger": ["@singularity/plugin-config_v2-ledger@workspace:plugins/config_v2/plugins/ledger"],
 

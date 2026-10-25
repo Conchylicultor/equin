@@ -7,7 +7,11 @@ import {
   mapResource,
 } from "@plugins/primitives/plugins/live-state/web";
 import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
-import { configScopes, configValues } from "@plugins/config_v2/core";
+import {
+  configGitValues,
+  configScopes,
+  configValues,
+} from "@plugins/config_v2/core";
 import type {
   ConfigDescriptor,
   ConfigValues,
@@ -15,6 +19,7 @@ import type {
 } from "@plugins/config_v2/core";
 import type { FieldsRecord } from "@plugins/fields/core";
 import { useStorePath } from "./use-store-path";
+import { useConfigPreview } from "./config-preview";
 
 /**
  * The server-registered storePaths as each live-state pipeline first saw them:
@@ -112,6 +117,14 @@ export function useConfigResult<F extends FieldsRecord>(
     (map[path] ?? []).includes(scopeId);
   const globalRes = useLive(configValues, { path });
   const scopedRes = useLive(configValues, member ? { path, scopeId } : null);
+  // The git-defaults preview reads the committed document instead — the server
+  // resolves the scope against the committed layer alone (a scope the repo
+  // does not commit is the base), so no membership is consulted.
+  const preview = useConfigPreview();
+  const gitRes = useLive(
+    configGitValues,
+    preview ? (scopeId ? { path, scopeId } : { path }) : null,
+  );
 
   // A member scope's document still LOADING falls back to the GLOBAL value
   // (the value currently on screen), never to defaults — the scope only ever
@@ -148,6 +161,7 @@ export function useConfigResult<F extends FieldsRecord>(
       }
     }
   }, [scopeId, scopes, chosen]);
+  if (preview) return gitRes as ResourceResult<ConfigValues<F>>;
   return mapUnknown ?? (chosen as ResourceResult<ConfigValues<F>>);
 }
 

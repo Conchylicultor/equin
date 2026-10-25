@@ -1,4 +1,4 @@
-// @hash 551d9532f8c3
+// @hash 75227f7cc060
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -9,6 +9,7 @@
   "items": [
     "apps-core.surface:placement-control",
     "audience.view-option:developer-mode",
+    "config_v2.git-defaults-preview:git-defaults-preview",
     "fullscreen:fullscreen-toggle",
     "reorder.edit-mode:reorder-pen"
   ]

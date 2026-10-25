@@ -1,6 +1,7 @@
 import { serveValue } from "@plugins/network/plugins/live/server";
 import {
   configValues,
+  configGitValues,
   configConflict,
   configTiers,
   configScopes,
@@ -11,6 +12,7 @@ import {
   effective,
   threeWayMerge,
   readTypedConfigWithLayer,
+  scopeAppId,
 } from "../../core";
 import type {
   ConfigV2Values,
@@ -24,7 +26,7 @@ import type {
 import type { ConfigDescriptor, ConfigValues, JsonValue } from "../../core";
 import type { FieldsRecord } from "@plugins/fields/core";
 import { documentFiles } from "./scope-paths";
-import { ConfigStore } from "./host-services";
+import { ConfigGitLayer, ConfigStore } from "./host-services";
 import { hasFieldStorageProvider } from "./field-storage-providers";
 import { computeFieldTiers } from "./field-tiers";
 
@@ -113,7 +115,16 @@ function resolveRedactedConfig(
   if (!configGetter) {
     throw new Error("[config-v2] config getter not initialized");
   }
-  const values = configGetter(descriptor, scopeId) as ConfigV2Values;
+  return redactSecrets(
+    descriptor,
+    configGetter(descriptor, scopeId) as ConfigV2Values,
+  );
+}
+
+function redactSecrets(
+  descriptor: ConfigDescriptor,
+  values: ConfigV2Values,
+): ConfigV2Values {
   const redacted = { ...values };
   for (const [key, field] of Object.entries(descriptor.fields)) {
     if (hasFieldStorageProvider(field.type.id)) {
@@ -155,6 +166,49 @@ export const configValuesServed = serveValue(configValues, {
     }
     return tuples;
   },
+});
+
+// One descriptor's committed document for one scope — the git layer alone, as a
+// brand-new user would resolve it (no user override, no runtime fork). A scope
+// the repo does not commit reads the base, as an uncustomized scope does. A
+// descriptor the repo commits nothing for resolves to its code defaults (what a
+// fresh propagation leaves it at); a committed document that fails its schema
+// is a broken commit — thrown, never papered over with defaults.
+function resolveGitDocument(path: string, scopeId?: string): ConfigV2Values {
+  const descriptor = descriptorByPath.get(path);
+  if (!descriptor) {
+    throw new Error(
+      `[config-v2] no descriptor registered for git-values path "${path}"`,
+    );
+  }
+  const doc = ConfigGitLayer.get().document(path);
+  if (!doc) return redactSecrets(descriptor, { ...descriptor.defaults });
+  const appId = scopeAppId(scopeId);
+  const content =
+    (appId !== undefined ? doc.scopes[appId] : undefined) ?? doc.base;
+  const parsed = descriptor.schema.safeParse(content);
+  if (!parsed.success) {
+    throw new Error(
+      `[config-v2] committed config for "${path}"${appId ? ` (@app/${appId})` : ""} fails its schema: ` +
+        parsed.error.issues
+          .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
+          .join("; "),
+    );
+  }
+  return redactSecrets(descriptor, parsed.data as ConfigV2Values);
+}
+
+// Read only by the git-defaults preview. Its truth is the committed layer,
+// which a build never touches on the desktop (it is the checkout's `config/`):
+// watched while subscribed, through the layer's own watch.
+export const configGitValuesServed = serveValue(configGitValues, {
+  source: "external",
+  changes: "notified",
+  loader: whenRegistryReady(({ path, scopeId }) =>
+    resolveGitDocument(path, scopeId),
+  ),
+  whileSubscribed: ({ path }, notify) =>
+    ConfigGitLayer.get().watch(path, notify),
 });
 
 // The three user-layer files a descriptor's conflict state is a function of, for

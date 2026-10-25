@@ -91,6 +91,12 @@ export interface ConfigStoreImpl {
  */
 export interface ConfigGitLayerImpl {
   document(storePath: string): GitLayerDocument | undefined;
+  /**
+   * Call `onChange` whenever `storePath`'s committed files may have changed,
+   * until the returned stop is called. The checkout's `config/` is edited in
+   * place (an agent override, a pull); a bundled layer never changes.
+   */
+  watch(storePath: string, onChange: () => void): Promise<() => void>;
 }
 
 const FILE_SUFFIX: Record<ConfigDocumentFile, string> = {

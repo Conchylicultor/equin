@@ -3,6 +3,11 @@ import { ConfigV2 } from "./internal/slots";
 
 export { useConfig, useConfigResult } from "./internal/use-config";
 export { useSetConfig } from "./internal/use-set-config";
+export {
+  useConfigPreview,
+  setConfigPreview,
+  onConfigWriteRefused,
+} from "./internal/config-preview";
 export { useScopeMembership } from "./internal/use-scope-membership";
 export { useConfigRegistrations } from "./internal/use-config-registrations";
 export type { ConfigRegistration } from "./internal/use-config-registrations";

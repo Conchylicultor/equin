@@ -28,6 +28,18 @@ export const configValues = liveValue("config-v2.values", {
   preload: "boot-and-keep",
 });
 
+// One descriptor's COMMITTED document — what a brand-new user resolves it to:
+// the git layer (`ConfigGitLayer`: the repo's origin ⊕ committed override, an
+// `@app/<id>` scope's delta over it), with no user layer at all. Keyed like
+// `configValues`; a scope the repo does not commit reads the base. What the
+// web's git-defaults preview (`useConfigPreview`) reads instead of
+// `configValues`. Not preloaded: nothing reads it until a developer turns the
+// preview on, and the switch is the one moment every reader may show loading.
+export const configGitValues = liveValue("config-v2.git-values", {
+  schema: configV2ValuesSchema,
+  params: ["path", "scopeId?"],
+});
+
 // A single structured validation failure. `path` is the zod issue path as an
 // array (`["items", 6]`) so consumers can drill the offending value out of the
 // stored document and render it inline; `message` is the human zod message.

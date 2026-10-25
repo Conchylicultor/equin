@@ -8,6 +8,7 @@ import {
 import { initRegistry, shutdownRegistry } from "./internal/registry";
 import {
   configValuesServed,
+  configGitValuesServed,
   configConflictServed,
   configScopesServed,
   configConflictLocationsServed,
@@ -69,6 +70,7 @@ export default {
   portable: true,
   contributions: [
     ...configValuesServed.declare,
+    ...configGitValuesServed.declare,
     ...configConflictServed.declare,
     ...configScopesServed.declare,
     ...configConflictLocationsServed.declare,

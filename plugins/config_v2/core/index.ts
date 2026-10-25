@@ -11,6 +11,7 @@ export type {
 } from "./internal/types";
 export {
   configValues,
+  configGitValues,
   configV2ValuesSchema,
   configV2ValidationIssueSchema,
   configV2ConflictEntrySchema,

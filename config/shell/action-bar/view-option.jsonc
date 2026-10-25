@@ -1,4 +1,4 @@
-// @hash 551d9532f8c3
+// @hash 75227f7cc060
 // @legend — how to write this file (rewritten by ./equin build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -19,11 +19,13 @@
 {
   // Vertical list of rows in the action bar's gear popover, read top → bottom:
   // how the tab is laid out first, then the whole-window and editing toggles,
-  // then who the user is (Developer mode).
+  // then who the user is (Developer mode) and, beside it, the developer's
+  // preview of the app as a new user sees it (git defaults).
   "items": [
     "apps-core.surface:placement-control",
     "fullscreen:fullscreen-toggle",
     "reorder.edit-mode:reorder-pen",
-    "audience.view-option:developer-mode"
+    "audience.view-option:developer-mode",
+    "config_v2.git-defaults-preview:git-defaults-preview"
   ]
 }

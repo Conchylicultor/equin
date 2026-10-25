@@ -43,6 +43,16 @@ reads (`configValues`, `configScopes`) are `preload: "boot-and-keep"`: every doc
 paint can read rides the boot snapshot and is never evicted, so `loading` after a successful
 boot is unreachable rather than merely rare.
 
+**Git-defaults preview (web, per tab).** `setConfigPreview(true)` makes every
+`useConfig` / `useConfigResult` read in this tab resolve to the committed layer —
+`configGitValues` (`config-v2.git-values`, `{ path, scopeId? }`), served from
+`ConfigGitLayer.document` and watched through `ConfigGitLayer.watch` — i.e. what a
+brand-new user sees, with no user override or runtime fork. Every `useSetConfig` write
+is refused while it is on — announced through `onConfigWriteRefused` (the preview plugin's action-bar mark toasts it; config_v2 cannot import the toast, whose chrome reads config). Kept in session storage (survives a reload, dies
+with the tab); `useConfigPreview()` reads it. Server-side `getConfig` reads are not
+affected. The switch is `config_v2/plugins/git-defaults-preview` (View options,
+developers only — and always while on, since the committed Developer mode is off).
+
 **Server:** `getConfig(myConfig)` reads the current value from the in-memory
 cache. `watchConfig(myConfig, cb)` notifies on changes.
 
@@ -399,13 +409,17 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
   - Uses:
     - `infra/endpoints.useEndpointMutation`
     - `network/live.useLive`
+    - `primitives/dom/web-storage.defineStore`
     - `primitives/live-state.combineResources`
     - `primitives/live-state.foldResource`
     - `primitives/live-state.mapResource`
   - Exports (types): `ConfigRegistration`
   - Exports (values):
     - `ConfigV2`
+    - `onConfigWriteRefused`
+    - `setConfigPreview`
     - `useConfig`
+    - `useConfigPreview`
     - `useConfigRegistrations`
     - `useConfigResult`
     - `useScopeMembership`
@@ -414,6 +428,7 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
   - Contributes:
     - `resource.declare` "config-v2.conflict-locations"
     - `resource.declare` "config-v2.conflicts"
+    - `resource.declare` "config-v2.git-values"
     - `resource.declare` "config-v2.modified-counts"
     - `resource.declare` "config-v2.raw-file"
     - `resource.declare` "config-v2.scopes"
@@ -460,6 +475,7 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
   - Resources:
     - `config-v2.conflict-locations` (push, notified, whole: one entry per registered config descriptor in conflict (~250 at most), whole: the app scopes one descriptor conflicts in — a handful of apps)
     - `config-v2.conflicts` (push, notified, whole: one per schema violation of one config document, whole: a subset of one config document's field keys, whole: one config document's fields — its descriptor's declared schema, whole: one zod issue path — as deep as the document it points into)
+    - `config-v2.git-values` (push, notified, whole: one config document's fields — its descriptor's declared schema)
     - `config-v2.modified-counts` (push, notified, whole: one entry per registered config descriptor the user changed (~250 at most))
     - `config-v2.raw-file` (push, notified)
     - `config-v2.scopes` (push, notified, whole: one entry per registered config descriptor (~250), whole: the app scopes one descriptor is customized for — a handful of apps)
@@ -527,6 +543,7 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `configConflictLocations`
     - `configFileOwner`
     - `configFileRelPath`
+    - `configGitValues`
     - `configModifiedCounts`
     - `configRawFile`
     - `configScopes`
@@ -577,14 +594,14 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `validationIssues`
     - `withOverrideLegend`
 - Cross-plugin:
-  - Imported by: 119 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 120 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×33
     - `backup` ×13
     - `conversations` ×13
     - `debug` ×12
     - `ui` ×11
     - `auth` ×6
-    - `config_v2` ×5
+    - `config_v2` ×6
     - `tasks` ×5
     - `primitives` ×3
     - `infra` ×2
@@ -608,6 +625,7 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
   - **`bundled-layer`** (excluded) — The committed config layer bundled as text: provides the ConfigGitLayer host service from the repo's config/ inlined at build time, for a host without the repo on disk (a browser worker host). Never…
   - **`config-link`** — Deep-link affordances from any config-backed surface to its settings section. useConfigLink() links a descriptor to its config pane; ConfigGearButton and ConfigPopoverHeader surface it as a gear…
   - **`fields`** — Field type registry. Sub-plugins contribute field types with core factories and web renderers.
+  - **`git-defaults-preview`** — The git-defaults preview, for developers: a switch in the action bar's view-options popover makes this tab read every config from the committed layer (what a brand-new user sees) instead of the…
   - **`ledger`** [exempt] — The rewrite-saved-config-once ledger: replays keyed entries (plugin moves, config migrations) onto a namespace's user-layer config before propagation, recording each per namespace and keeping the…
   - **`settings`** — Settings UI for config_v2: two-pane nav + detail surface for viewing and editing typed config fields. Surfaced inside the Settings app. HTTP endpoints for setting and resetting config_v2 field…
     - Plugins:

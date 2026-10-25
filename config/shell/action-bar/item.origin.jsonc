@@ -1,4 +1,4 @@
-// @hash d1f626b25b4c
+// @hash 9d86882e37de
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -8,6 +8,7 @@
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
     "build:build",
+    "config_v2.git-defaults-preview:git-defaults-preview",
     "hints.help-menu:help",
     "improve:improve",
     "screenshot:screenshot",

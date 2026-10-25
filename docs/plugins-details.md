@@ -11298,6 +11298,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `apps-core/app-launcher`
       - `audience/settings`
       - `audience/view-option`
+      - `config_v2/git-defaults-preview`
       - `shell/notifications`
   - Plugins:
     - **`developer-mark`** — The developer-only mark: DeveloperMark (the developer symbol in the primary tint, inline beside a title or opaque on a corner) and DeveloperCorner (the mark overhanging a tile's corner). Every surface showing something only a developer sees — a developer app's tile, a developer notification or toast — draws it, so one symbol means developer everywhere.
@@ -12876,13 +12877,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Uses:
       - `infra/endpoints.useEndpointMutation`
       - `network/live.useLive`
+      - `primitives/dom/web-storage.defineStore`
       - `primitives/live-state.combineResources`
       - `primitives/live-state.foldResource`
       - `primitives/live-state.mapResource`
     - Exports (types): `ConfigRegistration`
     - Exports (values):
       - `ConfigV2`
+      - `onConfigWriteRefused`
+      - `setConfigPreview`
       - `useConfig`
+      - `useConfigPreview`
       - `useConfigRegistrations`
       - `useConfigResult`
       - `useScopeMembership`
@@ -12891,6 +12896,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Contributes:
       - `resource.declare` "config-v2.conflict-locations"
       - `resource.declare` "config-v2.conflicts"
+      - `resource.declare` "config-v2.git-values"
       - `resource.declare` "config-v2.modified-counts"
       - `resource.declare` "config-v2.raw-file"
       - `resource.declare` "config-v2.scopes"
@@ -12937,6 +12943,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Resources:
       - `config-v2.conflict-locations` (push, notified, whole: one entry per registered config descriptor in conflict (~250 at most), whole: the app scopes one descriptor conflicts in — a handful of apps)
       - `config-v2.conflicts` (push, notified, whole: one per schema violation of one config document, whole: a subset of one config document's field keys, whole: one config document's fields — its descriptor's declared schema, whole: one zod issue path — as deep as the document it points into)
+      - `config-v2.git-values` (push, notified, whole: one config document's fields — its descriptor's declared schema)
       - `config-v2.modified-counts` (push, notified, whole: one entry per registered config descriptor the user changed (~250 at most))
       - `config-v2.raw-file` (push, notified)
       - `config-v2.scopes` (push, notified, whole: one entry per registered config descriptor (~250), whole: the app scopes one descriptor is customized for — a handful of apps)
@@ -13004,6 +13011,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `configConflictLocations`
       - `configFileOwner`
       - `configFileRelPath`
+      - `configGitValues`
       - `configModifiedCounts`
       - `configRawFile`
       - `configScopes`
@@ -13054,14 +13062,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `validationIssues`
       - `withOverrideLegend`
   - Cross-plugin:
-    - Imported by: 119 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+    - Imported by: 120 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
       - `apps` ×33
       - `backup` ×13
       - `conversations` ×13
       - `debug` ×12
       - `ui` ×11
       - `auth` ×6
-      - `config_v2` ×5
+      - `config_v2` ×6
       - `tasks` ×5
       - `primitives` ×3
       - `infra` ×2
@@ -13185,6 +13193,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `FieldShapeProps`
           - `FieldShapeRenderer`
         - Exports (values): `fieldSample`
+    - **`git-defaults-preview`** — The git-defaults preview, for developers: a switch in the action bar's view-options popover makes this tab read every config from the committed layer (what a brand-new user sees) instead of the user's own, read-only, and an action-bar mark shows while it is on (click to exit; it toasts a refused write).
+      - Web:
+        - Contributes:
+          - `ActionBar.ViewOption` → `GitDefaultsPreviewSwitch`
+          - `ActionBar.Item` → `PreviewIndicator`
+        - Uses:
+          - `audience.useAudience`
+          - `config_v2.onConfigWriteRefused`
+          - `config_v2.setConfigPreview`
+          - `config_v2.useConfigPreview`
+          - `primitives/css/control-panel.ControlPanel`
+          - `primitives/icon-button.IconButton`
+          - `primitives/loading.Loading`
+          - `shell/action-bar.ActionBar`
+          - `shell/toast.showToast`
+          - `ui/icons.Icon`
     - **`ledger`** — The rewrite-saved-config-once ledger: replays keyed entries (plugin moves, config migrations) onto a namespace's user-layer config before propagation, recording each per namespace and keeping the @hash chain.
       - Core:
         - Uses:
@@ -38197,13 +38221,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×7
               - `ui/tokens/shape` ×2
               - `ui/tokens/shadow --shadow`
-            - Imported by: 43 plugins — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
+            - Imported by: 44 plugins — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
               - `apps` ×15
               - `page` ×5
               - `primitives` ×4
+              - `config_v2` ×3
               - `tasks` ×3
               - `audience` ×2
-              - `config_v2` ×2
               - `fields` ×2
               - `hints` ×2
               - `ui` ×2
@@ -40898,12 +40922,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useStorageUsage`
               - `WebStorageSlots`
           - Cross-plugin:
-            - Imported by: 42 plugins — full list in [`plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md)
+            - Imported by: 43 plugins — full list in [`plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md)
               - `primitives` ×15
               - `apps` ×11
               - `conversations` ×5
               - `apps-core` ×2
               - `reports` ×2
+              - `config_v2`
               - `hints/ask`
               - `layouts/miller`
               - `map`
@@ -41498,14 +41523,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `IconButton`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 125 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
+        - Imported by: 126 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
           - `apps` ×41
           - `primitives` ×21
           - `conversations` ×20
           - `tasks` ×8
           - `page` ×7
           - `debug` ×5
-          - `config_v2` ×3
+          - `config_v2` ×4
           - `infra` ×3
           - `build` ×2
           - `hints` ×2
@@ -42018,7 +42043,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-body`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-body`
-        - Imported by: 209 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+        - Imported by: 210 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
           - `apps` ×66
           - `ui` ×22
           - `conversations` ×19
@@ -42033,12 +42058,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `active-data` ×2
           - `apps-core` ×2
           - `audience` ×2
+          - `config_v2` ×2
           - `integrations` ×2
           - `map` ×2
           - `menu-bar` ×2
           - `backup`
           - `code-explorer/commit-detail`
-          - `config_v2/settings`
           - `fields/secret/config`
           - `framework/browser-server/demo/scope`
           - `hints/ask`
@@ -47023,6 +47048,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ActionBar.Glance`
         - Slot contributors:
           - `ActionBar.Item` ← `build`
+          - `ActionBar.Item` ← `config_v2.git-defaults-preview`
           - `ActionBar.Item` ← `hints.help-menu`
           - `ActionBar.Item` ← `improve`
           - `ActionBar.Item` ← `screenshot`
@@ -47032,6 +47058,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ActionBar.Item` ← `ui.theme-engine.quick-theme`
           - `ActionBar.ViewOption` ← `apps-core.surface`
           - `ActionBar.ViewOption` ← `audience.view-option`
+          - `ActionBar.ViewOption` ← `config_v2.git-defaults-preview`
           - `ActionBar.ViewOption` ← `fullscreen`
           - `ActionBar.ViewOption` ← `reorder.edit-mode`
           - `ActionBar.Activity` ← `build`
@@ -47043,6 +47070,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps-core/surface`
           - `audience/view-option`
           - `build`
+          - `config_v2/git-defaults-preview`
           - `fullscreen`
           - `hints/help-menu`
           - `improve`
@@ -47409,16 +47437,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --popover`
           - `ui/tokens/color-palette --popover-foreground`
           - `ui/tokens/shape --radius`
-        - Imported by: 29 plugins — full list in [`plugins/shell/plugins/toast/REFERENCE.md`](../plugins/shell/plugins/toast/REFERENCE.md)
+        - Imported by: 30 plugins — full list in [`plugins/shell/plugins/toast/REFERENCE.md`](../plugins/shell/plugins/toast/REFERENCE.md)
           - `apps` ×10
           - `conversations` ×3
           - `primitives` ×3
+          - `config_v2` ×2
           - `hints` ×2
           - `page` ×2
           - `active-data/show-me`
           - `apps-core/app-embed`
           - `build/serve-composition`
-          - `config_v2/settings`
           - `debug/profiling/ops`
           - `infra/health`
           - `menu-bar`
@@ -50233,7 +50261,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/shadow --shadow`
           - `ui/tokens/shape --spacing`
-        - Imported by: 345 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 346 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×89
           - `conversations` ×58
           - `primitives` ×42
@@ -50249,10 +50277,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `review` ×4
           - `apps-core` ×3
           - `build` ×3
+          - `config_v2` ×3
           - `hints` ×3
           - `shell` ×3
           - `backup` ×2
-          - `config_v2` ×2
           - `infra` ×2
           - `reports` ×2
           - `auth`

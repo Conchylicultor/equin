@@ -157,6 +157,7 @@ const diskGitLayer: Entry = {
       contributions: [
         ConfigGitLayer.provide({
           document: (storePath) => committedDocument(storePath, committedFiles),
+          watch: () => Promise.resolve(() => {}),
         }),
       ],
     } satisfies ServerPluginDefinition,

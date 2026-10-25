@@ -89,6 +89,7 @@ const providers = [
           .map(([, appId]) => [appId!, {}]),
       ),
     }),
+    watch: () => Promise.resolve(() => {}),
   }),
 ];
 const run = <T>(fn: () => T | Promise<T>) => withHostServices(providers, fn);

@@ -733,6 +733,7 @@ export const hostReads: readonly {
   { key: "commits-graph.graph", needsMachine: true },
   { key: "config-v2.conflict-locations", needsMachine: false },
   { key: "config-v2.conflicts", needsMachine: false },
+  { key: "config-v2.git-values", needsMachine: false },
   { key: "config-v2.modified-counts", needsMachine: false },
   { key: "config-v2.raw-file", needsMachine: true },
   { key: "config-v2.scopes", needsMachine: false },

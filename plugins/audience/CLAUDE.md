@@ -35,6 +35,7 @@
     - `apps-core/app-launcher`
     - `audience/settings`
     - `audience/view-option`
+    - `config_v2/git-defaults-preview`
     - `shell/notifications`
 - Sub-plugins:
   - **`developer-mark`** — The developer-only mark: DeveloperMark (the developer symbol in the primary tint, inline beside a title or opaque on a corner) and DeveloperCorner (the mark overhanging a tile's corner). Every…

@@ -1,4 +1,4 @@
-// @hash d1f626b25b4c
+// @hash 9d86882e37de
 // @legend — how to write this file (rewritten by ./equin build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -24,8 +24,11 @@
   // Picking a UI element is a segment of the Improve pill, not its own button.
   // Light/dark is a switch INSIDE the palette popover; the surface mode,
   // browser fullscreen and edit-layout controls live in the gear's popover (the
-  // `view-option` slot).
+  // `view-option` slot). Leftmost of all, the git-defaults preview's mark —
+  // shown only while this tab previews the committed config, first so a
+  // preview is never mistaken for the user's own app.
   "items": [
+    "config_v2.git-defaults-preview:git-defaults-preview",
     "shell.notifications:notifications",
     { "type": "divider", "id": "divider-1" },
     { "item": "screenshot:screenshot", "hidden": true },

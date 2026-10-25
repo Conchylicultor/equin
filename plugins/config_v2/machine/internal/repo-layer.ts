@@ -1,5 +1,5 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, sep } from "node:path";
 import {
   APP_SCOPE_DIR,
   committedDocument,
@@ -8,6 +8,7 @@ import {
 } from "../../core";
 import type { CommittedFiles, ConfigGitLayerImpl } from "../../core";
 import { repoConfigDir } from "@plugins/infra/plugins/paths/server";
+import { acquireDirWatch } from "@plugins/infra/plugins/file-watcher/server";
 
 /** The checkout's `config/` (or a release's, `SINGULARITY_REPO_CONFIG_DIR`) as raw files. */
 function fsCommittedFiles(dir: string): CommittedFiles {
@@ -37,4 +38,17 @@ function fsCommittedFiles(dir: string): CommittedFiles {
 export const repoConfigLayer: ConfigGitLayerImpl = {
   document: (storePath) =>
     committedDocument(storePath, fsCommittedFiles(repoConfigDir())),
+  // The descriptor's committed files all sit under its hierarchy dir (origin,
+  // override, `@app/<id>` deltas); a child plugin's files under it only cost a
+  // spurious re-read.
+  async watch(storePath, onChange) {
+    const hierDir = join(repoConfigDir(), storePathParts(storePath).hier) + sep;
+    return acquireDirWatch({
+      dir: repoConfigDir(),
+      scope: "subtree",
+      onChange: (events) => {
+        if (events.some((e) => e.path.startsWith(hierDir))) onChange();
+      },
+    });
+  },
 };
