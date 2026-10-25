@@ -7,7 +7,14 @@ import {
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/subagents/machine";
 import { currentPriceTable } from "@plugins/stats/plugins/cost/server";
 import { _conversations } from "@plugins/tasks/plugins/tasks-core/server";
-import { advanceFile, totalsOf, type FileScan } from "./scan";
+import {
+  advanceFile,
+  priceFile,
+  totalsOf,
+  type FilePricing,
+  type FileScan,
+  type PricedFile,
+} from "./scan";
 import {
   _conversationUsageFiles,
   conversationUsage,
@@ -25,12 +32,17 @@ import {
 //      or — when a session file joins the chain — re-read every session file
 //      through ONE seen-set, because a resumed / forked session's new file
 //      copies the history before it;
-//   3. sum every file row (vanished files included — the totals never shrink
-//      when Claude Code sweeps a transcript), price it, and write only what
-//      changed.
+//   3. price each file row's newly counted tokens with today's price table —
+//      what was priced before keeps its cost (`priceFile`), so a price change
+//      never re-prices history — and price a model it could not price before
+//      once the table knows it;
+//   4. sum every file row (vanished files included — the totals never shrink
+//      when Claude Code sweeps a transcript) and write only what changed.
 //
 // Counting and pricing are stats/cost's (`foldUsageEntry`, `priceBucket`), so a
-// conversation's Cost column and the Stats → Cost page agree by construction.
+// conversation's Cost column and the Stats → Cost page agree while the price
+// table holds still; after a known model's price changes, the Cost column keeps
+// what the tokens cost when they were spent, the page re-prices at today's.
 
 /**
  * Bring one conversation's usage up to date (see the header). A conversation
@@ -53,6 +65,9 @@ async function syncConversationUsage(conversationId: string): Promise<void> {
     .select()
     .from(_conversationUsageFiles)
     .where(eq(_conversationUsageFiles.conversationId, conversationId));
+  const storedByPath = new Map<string, PricedFile>(
+    stored.map((r) => [r.path, r]),
+  );
   const byPath = new Map<string, FileScan>(stored.map((r) => [r.path, r]));
 
   const changed: FileScan[] = [];
@@ -75,7 +90,21 @@ async function syncConversationUsage(conversationId: string): Promise<void> {
   for (const agent of agents) await advance(agent.transcriptPath, "subagent");
 
   for (const scan of changed) byPath.set(scan.path, scan);
-  const totals = totalsOf(byPath.values(), await currentPriceTable());
+  const table = await currentPriceTable();
+  const rows: (FileScan & FilePricing)[] = [];
+  const toWrite: (FileScan & FilePricing)[] = [];
+  const changedPaths = new Set(changed.map((scan) => scan.path));
+  for (const scan of byPath.values()) {
+    const prev = storedByPath.get(scan.path);
+    const row = { ...scan, ...priceFile(prev, scan.buckets, table) };
+    rows.push(row);
+    const repriced =
+      prev === undefined ||
+      prev.costUsd !== row.costUsd ||
+      prev.unpricedModels.join("\0") !== row.unpricedModels.join("\0");
+    if (changedPaths.has(scan.path) || repriced) toWrite.push(row);
+  }
+  const totals = totalsOf(rows);
   const current = await conversationUsage.get(conversationId);
   const same =
     current !== undefined &&
@@ -83,13 +112,13 @@ async function syncConversationUsage(conversationId: string): Promise<void> {
     current.tokens === totals.tokens &&
     current.cacheReadTokens === totals.cacheReadTokens &&
     current.agentCount === totals.agentCount;
-  if (changed.length === 0 && same) return;
+  if (toWrite.length === 0 && same) return;
 
   await db.transaction(async (tx) => {
-    if (changed.length > 0) {
+    if (toWrite.length > 0) {
       await tx
         .insert(_conversationUsageFiles)
-        .values(changed.map((scan) => ({ conversationId, ...scan })))
+        .values(toWrite.map((row) => ({ conversationId, ...row })))
         .onConflictDoUpdate({
           target: [
             _conversationUsageFiles.conversationId,
@@ -100,6 +129,8 @@ async function syncConversationUsage(conversationId: string): Promise<void> {
             offset: sql`excluded.offset`,
             buckets: sql`excluded.buckets`,
             tailHashes: sql`excluded.tail_hashes`,
+            costUsd: sql`excluded.cost_usd`,
+            unpricedModels: sql`excluded.unpriced_models`,
           },
         });
     }

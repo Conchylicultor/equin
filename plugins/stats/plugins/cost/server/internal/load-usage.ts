@@ -159,7 +159,10 @@ export async function refreshPriceTable(): Promise<{ models: number }> {
   const next = mergePriceTable(existing, fetched);
   await savePriceTable(PRICE_TABLE_PATH, next);
   priceTable = next;
-  for (const listener of priceTableListeners) listener();
+  // Most days BerriAI's table has not moved: nothing priced differs, so no
+  // listener has anything to redo.
+  if (JSON.stringify(next.models) !== JSON.stringify(existing.models))
+    for (const listener of priceTableListeners) listener();
   return { models: Object.keys(next.models).length };
 }
 
@@ -174,8 +177,9 @@ export async function currentPriceTable(): Promise<PriceTable> {
 }
 
 /**
- * Hear when the daily refresh adopts a new price table, so a consumer that
- * stores priced totals re-prices them. Called synchronously after the save: a
+ * Hear when the daily refresh adopts a price table whose prices differ from the
+ * one it replaces (a refresh that changed nothing stays silent), so a consumer
+ * that stores priced totals can price what it could not before. Called synchronously after the save: a
  * listener must be cheap (enqueue its work) and must not throw. Returns the
  * unsubscribe.
  */

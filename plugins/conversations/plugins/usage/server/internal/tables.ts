@@ -1,5 +1,12 @@
 import { z } from "zod";
-import { bigint, index, pgTable, primaryKey, text } from "drizzle-orm/pg-core";
+import {
+  bigint,
+  doublePrecision,
+  index,
+  pgTable,
+  primaryKey,
+  text,
+} from "drizzle-orm/pg-core";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import {
   parsedJson,
@@ -47,8 +54,7 @@ export type UsageFileKind = z.infer<typeof UsageFileKindSchema>;
 
 // Scan state: one row per transcript file counted toward a conversation — how
 // far it has been read (`offset`, always a line start) and the token buckets
-// folded from those bytes (pricing-free, so a price change re-prices from here
-// without reading a file). The conversation's totals are the sum of its rows.
+// folded from those bytes. The conversation's totals are the sum of its rows.
 //
 // A row outlives its file on purpose: Claude Code deletes transcripts after
 // `cleanupPeriodDays`, and the conversation's totals must not shrink when it
@@ -58,6 +64,14 @@ export type UsageFileKind = z.infer<typeof UsageFileKindSchema>;
 // one assistant message are adjacent, so this bounded tail is all an append
 // read needs to dedupe across a restart (the full seen-set is rebuilt only when
 // a whole chain is re-read).
+//
+// `costUsd` — the cost of the counted tokens, priced ONCE, when they were
+// counted, with the price table of that moment: a later price-table refresh
+// never re-prices history. `null` only on a row counted before costs were
+// frozen, priced once by `conversations.usage.reprice`.
+// `unpricedModels` — the models of this row's buckets the table could not price
+// when they were counted (they add nothing to `costUsd`); the reprice after a
+// price-table change prices them once the table knows them.
 export const _conversationUsageFiles = pgTable(
   "conversation_usage_files",
   {
@@ -69,6 +83,10 @@ export const _conversationUsageFiles = pgTable(
     offset: bigint("offset", { mode: "number" }).notNull(),
     buckets: parsedJson("buckets", z.array(DayBucketSchema)).notNull(),
     tailHashes: parsedJson("tail_hashes", z.array(z.string())).notNull(),
+    costUsd: doublePrecision("cost_usd"),
+    unpricedModels: parsedJson("unpriced_models", z.array(z.string()))
+      .notNull()
+      .default([]),
   },
   (t) => [
     primaryKey({ columns: [t.conversationId, t.path] }),

@@ -1,6 +1,6 @@
 {
-  "id": "50b13286-8c74-4cf7-be6d-b5d4e2f31062",
-  "prevId": "de4900c5-46ab-4a25-9228-bd763dfdb474",
+  "id": "b92275ca-b08c-414c-ae94-6e12a85459b3",
+  "prevId": "50b13286-8c74-4cf7-be6d-b5d4e2f31062",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -7196,6 +7196,19 @@
           "type": "jsonb",
           "primaryKey": false,
           "notNull": true
+        },
+        "cost_usd": {
+          "name": "cost_usd",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "unpriced_models": {
+          "name": "unpriced_models",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
         }
       },
       "indexes": {

@@ -3,7 +3,7 @@ import { appendFile, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { PriceTable } from "@plugins/stats/plugins/cost/core";
-import { advanceFile, totalsOf, type FileScan } from "./scan";
+import { advanceFile, priceFile, totalsOf, type FileScan } from "./scan";
 
 const dirs: string[] = [];
 afterAll(async () => {
@@ -53,10 +53,14 @@ const TABLE: PriceTable = {
   },
 };
 
+const NO_PRICES: PriceTable = { fetchedAt: 0, models: {} };
+
+/** Each scan priced whole with TABLE, then summed. */
 const totals = (...scans: (FileScan | null)[]) =>
   totalsOf(
-    scans.filter((s): s is FileScan => s !== null),
-    TABLE,
+    scans
+      .filter((s): s is FileScan => s !== null)
+      .map((s) => ({ ...s, ...priceFile(undefined, s.buckets, TABLE) })),
   );
 
 describe("advanceFile", () => {
@@ -171,8 +175,63 @@ describe("totalsOf", () => {
     const path = join(await newDir(), "s.jsonl");
     await writeFile(path, line("m1", { output: 5 }));
     const scan = await advanceFile(path, "session", undefined);
-    const result = totalsOf([scan!], { fetchedAt: 0, models: {} });
+    const pricing = priceFile(undefined, scan!.buckets, NO_PRICES);
+    expect(pricing).toEqual({ costUsd: 0, unpricedModels: ["claude-test"] });
+    const result = totalsOf([{ ...scan!, ...pricing }]);
     expect(result.tokens).toBe(5);
     expect(result.costUsd).toBe(0);
+  });
+});
+
+describe("priceFile", () => {
+  test("keeps what was priced, and prices only what was appended", async () => {
+    const path = join(await newDir(), "s.jsonl");
+    await writeFile(path, line("m1", { input: 1, output: 10 }));
+    const first = await advanceFile(path, "session", undefined);
+    const firstPricing = priceFile(undefined, first!.buckets, TABLE);
+    expect(firstPricing.costUsd).toBe(21);
+
+    // The price doubles; the tokens already counted keep their cost.
+    const doubled: PriceTable = {
+      fetchedAt: 1,
+      models: {
+        "claude-test": { ...TABLE.models["claude-test"]!, input: 2, output: 4 },
+      },
+    };
+    const stored = { ...first!, ...firstPricing };
+    expect(priceFile(stored, first!.buckets, doubled)).toEqual(firstPricing);
+
+    await appendFile(path, line("m2", { input: 2, output: 5 }));
+    const second = await advanceFile(path, "session", first!);
+    expect(priceFile(stored, second!.buckets, doubled)).toEqual({
+      costUsd: 21 + 2 * 2 + 5 * 4,
+      unpricedModels: [],
+    });
+  });
+
+  test("prices an unpriced model once the table knows it", async () => {
+    const path = join(await newDir(), "s.jsonl");
+    await writeFile(path, line("m1", { output: 5 }));
+    const scan = await advanceFile(path, "session", undefined);
+    const unpriced = {
+      ...scan!,
+      ...priceFile(undefined, scan!.buckets, NO_PRICES),
+    };
+    expect(priceFile(unpriced, scan!.buckets, NO_PRICES)).toEqual({
+      costUsd: 0,
+      unpricedModels: ["claude-test"],
+    });
+    expect(priceFile(unpriced, scan!.buckets, TABLE)).toEqual({
+      costUsd: 10,
+      unpricedModels: [],
+    });
+  });
+
+  test("a row never priced is priced whole", async () => {
+    const path = join(await newDir(), "s.jsonl");
+    await writeFile(path, line("m1", { input: 3 }));
+    const scan = await advanceFile(path, "session", undefined);
+    const legacy = { ...scan!, costUsd: null, unpricedModels: [] };
+    expect(priceFile(legacy, scan!.buckets, TABLE).costUsd).toBe(3);
   });
 });

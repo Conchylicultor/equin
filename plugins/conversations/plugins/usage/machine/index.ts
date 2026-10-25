@@ -11,7 +11,7 @@ import { startLiveUsage, stopLiveUsage } from "./internal/live";
 
 export default {
   description:
-    "Per-conversation usage, desktop-only half: counted incrementally from the transcripts on disk (the anchored session chain plus every sub-agent) — the sync, backfill and reprice jobs, the backfill warm-up and the live recount on every transcript append.",
+    "Per-conversation usage, desktop-only half: counted incrementally from the transcripts on disk (the anchored session chain plus every sub-agent) — each file's cost priced once when counted, the sync, backfill and reprice (pricing what is still unpriced) jobs, the backfill warm-up and the live recount on every transcript append.",
   register: [
     usageSyncJob,
     usageBackfillJob,

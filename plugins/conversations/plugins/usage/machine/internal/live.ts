@@ -36,7 +36,8 @@ let stop: (() => void) | null = null;
 /**
  * Keep usage live: every write to a session or sub-agent transcript re-syncs
  * the conversation it belongs to (an append read of the new bytes), and a
- * price-table refresh re-prices them all.
+ * price-table change prices what an older table could not (never re-pricing
+ * what was already priced).
  *
  * On the host singleton only (main in dev, the one backend in a release):
  * every backend hears every transcript write, and N worktree backends
