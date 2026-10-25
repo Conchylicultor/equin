@@ -9,7 +9,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 - **`apps`** — Container for the installed apps (agent-manager, pages, settings, …). The switcher infrastructure lives in apps-core.
   - Plugins:
     - **`agent-manager`** [5 sub-plugins] — Agent manager app shell and layout.
-    - **`browser`** [exempt] [9 sub-plugins] — Minimal iframe-based web browser app.
+    - **`browser`** [exempt] [9 sub-plugins] — Web browser app: each tab is a page in a real Chromium on the machine (persistent profile, so logins stick), streamed to a canvas with input sent back.
     - **`chord`** [exempt] [8 sub-plugins] — Chord — a chord ear trainer that plays loops of real songs whose chords you have turned on, asks you to name each chord, and keeps track of how well you know each one.
     - **`debug`** [1 sub-plugin] — Debug app.
     - **`demo`** — Demo — a temporary sandbox app hosting the in-app demo (the Agent Manager on made-up data) while it is prototyped, before it ships on the website.

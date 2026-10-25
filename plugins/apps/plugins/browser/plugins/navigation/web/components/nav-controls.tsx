@@ -13,8 +13,16 @@ const stopIcon = symbol("close");
  * bar. There is no Home button: as in Chrome, a new tab is the start page.
  */
 export function NavControls() {
-  const { current, canGoBack, canGoForward, loading, back, forward, reload, stop } =
-    useBrowserNav();
+  const {
+    current,
+    canGoBack,
+    canGoForward,
+    loading,
+    back,
+    forward,
+    reload,
+    stop,
+  } = useBrowserNav();
   return (
     <Stack direction="row" gap="xs" align="center">
       <IconButton

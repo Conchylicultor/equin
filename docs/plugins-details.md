@@ -626,7 +626,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --space-lg`
               - `ui/tokens/density --space-xl`
               - `ui/tokens/density --space-xs`
-    - **`browser`** — Minimal iframe-based web browser app.
+    - **`browser`** — Web browser app: each tab is a page in a real Chromium on the machine (persistent profile, so logins stick), streamed to a canvas with input sent back.
       - Plugins:
         - **`bookmarks`** — Browser bookmarks UI: a star toggle inside the address pill and a bookmarks bar of clickable chips below the omnibox. Browser bookmarks: the browser_bookmarks table, the browser-bookmarks live collection, and add/delete endpoints backing the star toggle and bookmarks bar.
           - Web:
@@ -709,6 +709,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --primary-text`
             - Imported by: `apps/browser/start-page`
             - Endpoint callers: `history`
+        - **`engine`** — The Browser app's engine, backend half: relays each viewed tab's socket (ENGINE_WS_PATH) byte for byte to the machine's engine host over its Unix socket — launching the host (a detached `bin/host.ts`, Chromium on a persistent profile in apps/browser/profile) when there is none, after checking Chromium is installed (requesting the install when not), and replacing it when it runs other code and this backend is main or the namespace that launched it.
+          - Exemptions:
+            - Exempts itself from:
+              - `no-raw-websocket` — `machine/internal/relay.ts` (sanctioned)
+              - `boundaries/no-platform-api` — `shared/code-id.ts` (sanctioned)
+          - Core:
+            - Exports (types):
+              - `ClientMessage`
+              - `EngineViewport`
+              - `HostEvent`
+              - `PageState`
+            - Exports (values):
+              - `ClientMessageSchema`
+              - `ENGINE_PROTOCOL`
+              - `ENGINE_WS_PATH`
+              - `HostEventSchema`
+              - `PageStateSchema`
+          - Machine:
+            - Register:
+              - `defineDaemon('browser-engine.host')`
+              - `defineFileWatcher('browser-engine.host-status')`
         - **`history`** — Browser history: a headless recorder that logs every navigation to the history store, plus the browserRecents live value (read with useLive). Browser history store (browser_history table), the distinct-by-url recents live value, and the POST /api/browser/history record endpoint.
           - Web:
             - Contributes:
@@ -748,7 +769,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `browserVisitIdKind`
           - Cross-plugin:
             - Imported by: `apps/browser/start-page`
-        - **`navigation`** — Browser navigation controls: back / forward / reload buttons in the chrome bar.
+        - **`navigation`** — Browser navigation controls: back / forward / reload (stop while the page loads) buttons in the chrome bar.
           - Web:
             - Contributes: `Browser.NavControls` "Navigation controls" → `NavControls`
             - Uses:
@@ -763,7 +784,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/browser/shell.Browser`
               - `apps/browser/shell.Favicon`
               - `apps/browser/shell.useBrowserNav`
-              - `apps/browser/shell.useBrowserProxy`
               - `primitives/css/center.Center`
               - `primitives/css/fill.Fill`
               - `primitives/css/line.Line`
@@ -794,41 +814,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-body`
             - Imported by: `apps/browser/start-page`
-        - **`proxy`** — Browser proxy-mode toggle: a switch row in the address pill's site-info popover that flips the framing-stripping proxy on/off for the surface. Framing-stripping browser proxy: fetches the target server-side (SSRF-guarded, anonymous), strips X-Frame-Options/CSP and credential headers, and rewrites HTML to inject a <base> + nav-interception script so framing-blocked sites render in the in-app browser.
-          - Web:
-            - Contributes: `Browser.SiteInfo` "Site info" → `ProxyToggle`
-            - Uses:
-              - `apps/browser/shell.Browser`
-              - `apps/browser/shell.useBrowserProxy`
-              - `primitives/css/fill.Fill`
-              - `primitives/css/line.Line`
-              - `primitives/css/spacing.Stack`
-              - `primitives/css/switch.Switch`
-              - `primitives/css/text.Text`
-          - Server:
-            - Uses:
-              - `infra/endpoints.rawEndpointHandler`
-              - `infra/safe-fetch.safeFetch`
-              - `infra/safe-fetch.SsrfError`
-            - Routes:
-              - `GET /api/browser/proxy`
-              - `POST /api/browser/proxy`
-          - Core:
-            - Uses: `framework/product-name.LEGACY_IDS`
-            - Exports (types):
-              - `BrowserProxyNavKind`
-              - `BrowserProxyNavMessage`
-              - `MetaRefreshDirective`
-            - Exports (values):
-              - `BROWSER_PROXY_NAV_MESSAGE`
-              - `BROWSER_PROXY_PATH`
-              - `isProxyUrl`
-              - `parseBrowserProxyNavMessage`
-              - `parseMetaRefresh`
-              - `proxyUrl`
-          - Cross-plugin:
-            - Uses tokens: `ui/tokens/density --space-sm`
-        - **`shell`** — App shell for the Browser app. Registers the /browser app entry, owns the per-surface tab store (each tab an independent nav stack), defines the Browser.* slots, exports the <Favicon> component, and contributes the app's own theme (the mockup's palette in both modes, the system font at 13px, Lucide icons, its control geometry), which the browser app selects.
+        - **`shell`** — App shell for the Browser app. Registers the /browser app entry, owns the per-surface tab store (each tab a page in the engine's Chromium, addressed by key: navigation requests out, host-reported page state in), defines the Browser.* slots, exports the <Favicon> component, and contributes the app's own theme (the mockup's palette in both modes, the system font at 13px, Lucide icons, its control geometry), which the browser app selects.
           - Web:
             - Slots:
               - `Browser.TabStrip`
@@ -846,7 +832,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Browser.NavControls` ← `apps.browser.navigation`
               - `Browser.Omnibox` ← `apps.browser.omnibox`
               - `Browser.OmniboxAction` ← `apps.browser.bookmarks`
-              - `Browser.SiteInfo` ← `apps.browser.proxy`
               - `Browser.Actions` ← `apps.browser.webview`
               - `Browser.SubBar` ← `apps.browser.bookmarks`
               - `Browser.Viewport` ← `apps.browser.webview`
@@ -874,7 +859,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/theme-engine.ThemeEngine`
             - Exports (types):
               - `BrowserNavApi`
-              - `BrowserProxyApi`
+              - `BrowserNavCommand`
+              - `BrowserNavRequest`
+              - `BrowserOpenOptions`
+              - `BrowserRemoteApi`
               - `BrowserTab`
               - `BrowserTabsApi`
               - `BrowserTabsState`
@@ -885,7 +873,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `BrowserTabsStore`
               - `Favicon`
               - `useBrowserNav`
-              - `useBrowserProxy`
+              - `useBrowserRemote`
               - `useBrowserTabs`
           - Core:
             - Uses:
@@ -905,7 +893,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/browser/history`
               - `apps/browser/navigation`
               - `apps/browser/omnibox`
-              - `apps/browser/proxy`
               - `apps/browser/start-page`
               - `apps/browser/tabs`
               - `apps/browser/webview`
@@ -948,7 +935,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --font-weight-semibold`
               - `ui/tokens/type-scale --line-height-subheading`
-        - **`tabs`** — Browser tab strip: an in-app row of tabs, each an independent navigation stack, with a new-tab button. Renders above the chrome bar.
+        - **`tabs`** — Browser tab strip: an in-app row of tabs, each a page in the engine's Chromium showing its title and favicon, with a new-tab button. Renders above the chrome bar.
           - Web:
             - Contributes: `Browser.TabStrip` "Tab strip" → `TabStrip`
             - Uses:
@@ -972,29 +959,28 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --foreground`
               - `ui/tokens/color-palette --muted-foreground`
               - `ui/tokens/color-palette --ring`
-        - **`webview`** — Browser webview: the iframe viewport with a loading bar and start-page fallback, plus an open-in-new-tab chrome action.
+        - **`webview`** — Browser webview: the active tab's page streamed from the engine's Chromium — JPEG screencast frames drawn on a canvas, mouse / wheel / keyboard / IME / clipboard input sent back over the tab's engine socket, the page's dialogs, <select> menus, popups and downloads rendered with app primitives — with a loading bar, the start page for an empty tab, closed tabs' remote pages closed on the host, plus an open-in-system-browser chrome action.
           - Web:
             - Contributes:
               - `Browser.Viewport` "Viewport" → `Viewport`
               - `Browser.Actions` "Chrome actions" → `OpenExternal`
-            - Uses:
-              - `apps/browser/shell.Browser`
-              - `apps/browser/shell.useBrowserNav`
-              - `apps/browser/shell.useBrowserProxy`
-              - `apps/browser/shell.useBrowserTabs`
+            - Uses: 32 symbols — full list in [`plugins/apps/plugins/browser/plugins/webview/REFERENCE.md`](../plugins/apps/plugins/browser/plugins/webview/REFERENCE.md)
+              - `primitives/css/ui-kit` ×8
+              - `apps/browser/shell` ×6
+              - `primitives/css/overlay` ×2
+              - `primitives/css/spacing` ×2
+              - `primitives/networking` ×2
+              - `primitives/overlay/cursor-menu` ×2
               - `primitives/css/center.Center`
-              - `primitives/css/overlay.Overlay`
-              - `primitives/css/pin.Pin`
+              - `primitives/css/fill.Fill`
               - `primitives/css/placeholder.Placeholder`
-              - `primitives/css/spacing.Inset`
-              - `primitives/css/spacing.Stack`
               - `primitives/css/surface.Surface`
               - `primitives/css/text.Text`
-              - `primitives/css/ui-kit.Button`
-              - `primitives/css/ui-kit.cn`
-              - `primitives/icon-button.IconButton`
+              - `primitives/dom/element-size.useResizeObserver`
+              - `primitives/latest-ref.useLatestRef`
               - `primitives/link-gesture/new-tab.NewTabButton`
-              - `ui/icons.Icon`
+              - `primitives/log-channels.clientLog`
+              - `shell/toast.showToast`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --background`
@@ -25420,7 +25406,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`product-name`** — The product's own name, as data: PRODUCT_NAME (`equin`, always lowercase — what every person and agent reads) and LEGACY_PRODUCT_NAMES (the names it went by before, never written again), enforced by the product-name:legacy check over every tracked file; and LEGACY_IDS, the identifiers built from the old name that are kept for good (stored state, cross-version contracts), the one place they are spelled — enforced by product-name:legacy-id (and its mirrors by product-name:legacy-ids-in-sync). A dependency-free leaf, so a browser bundle, a server or a script can import it.
       - Cross-plugin:
         - Imported by:
-          - `apps/browser/proxy`
           - `apps/website/shell`
           - `conversations/workspace/scratch`
           - `database/derived-views`
@@ -25795,6 +25780,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `core/check.ts`, `core/resolve.ts` (debt)
             - Exempted by:
+              - `apps/browser/engine` (0 debt)
               - `apps/chord/song-index` (3 debt)
               - `apps/deploy/analytics/collect` (2 debt)
               - `apps/deploy/analytics/ip-country` (2 debt)
@@ -26082,6 +26068,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - **`no-raw-websocket`**
               - Exemptions:
                 - Exempted by:
+                  - `apps/browser/engine` (0 debt)
                   - `conversations/conversation-view/code` (0 debt)
                   - `conversations/conversation-view/jsonl-viewer` (0 debt)
                   - `network/live` (0 debt)
@@ -28450,11 +28437,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Deps:
             - Exports (types):
               - `ChromiumLaunchOptions`
+              - `PersistentChromiumLaunchOptions`
               - `PlaywrightBrowserName`
               - `PlaywrightBrowserSource`
             - Exports (values):
               - `connectChromium`
               - `launchChromium`
+              - `launchPersistentChromium`
               - `playwrightBrowser`
         - **`python`** — The python installer kind of infra/deps (pythonEnv, runPython, PythonEntryError) over uv, with its caches as declared data dirs Its uv-updater sub-plugin keeps every python/ project's uv.lock and .python-version current.
           - Cross-plugin:
@@ -28658,8 +28647,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 232 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
-          - `apps` ×59
+        - Imported by: 231 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+          - `apps` ×58
           - `conversations` ×32
           - `infra` ×20
           - `page` ×20
@@ -30959,7 +30948,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`safe-fetch`** — SSRF-guarded fetch primitive: parsePublicUrl + DNS-resolution checks (isPrivateIp/assertResolvesPublic) and safeFetch, which dials the validated IP directly (closing the DNS-rebinding TOCTOU) while preserving Host/SNI/cert via Bun fetch tls.serverName, following redirects with per-hop revalidation so a target can never reach loopback/private/link-local/metadata addresses.
       - Cross-plugin:
         - Imported by:
-          - `apps/browser/proxy`
           - `apps/desktop/wallpaper`
           - `apps/desktop/wallpaper/openverse`
           - `apps/events/sources/coworkmeet`
@@ -38567,8 +38555,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `LineProps`
             - Exports (values): `Line`
           - Cross-plugin:
-            - Imported by: 122 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
-              - `apps` ×37
+            - Imported by: 121 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
+              - `apps` ×36
               - `primitives` ×18
               - `conversations` ×17
               - `debug` ×8
@@ -38664,9 +38652,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `pinClasses`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 58 plugins — full list in [`plugins/primitives/plugins/css/plugins/pin/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/pin/REFERENCE.md)
+            - Imported by: 57 plugins — full list in [`plugins/primitives/plugins/css/plugins/pin/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/pin/REFERENCE.md)
               - `primitives` ×18
-              - `apps` ×17
+              - `apps` ×16
               - `page` ×9
               - `conversations` ×4
               - `tasks` ×2
@@ -38957,8 +38945,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `selfClass`
               - `Stack`
           - Cross-plugin:
-            - Imported by: 419 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
-              - `apps` ×109
+            - Imported by: 418 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+              - `apps` ×108
               - `conversations` ×64
               - `primitives` ×54
               - `debug` ×38
@@ -39151,7 +39139,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shadow --shadow-sm`
               - `ui/tokens/shape --spacing`
             - Imported by:
-              - `apps/browser/proxy`
               - `apps/deploy/analytics/dashboard`
               - `apps/events/sources`
               - `apps/prototypes/canvas`
@@ -39192,8 +39179,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×37
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family` ×2
-            - Imported by: 399 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
-              - `apps` ×110
+            - Imported by: 398 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+              - `apps` ×109
               - `conversations` ×73
               - `primitives` ×45
               - `debug` ×37
@@ -40908,9 +40895,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useResizeObserver`
               - `useResizeObserverSet`
           - Cross-plugin:
-            - Imported by: 38 plugins — full list in [`plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md)
+            - Imported by: 39 plugins — full list in [`plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md)
               - `primitives` ×21
-              - `apps` ×8
+              - `apps` ×9
               - `shell` ×2
               - `active-data/go`
               - `conversations/conversation-view/jsonl-viewer`
@@ -41651,8 +41638,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `IconButton`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 127 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
-          - `apps` ×42
+        - Imported by: 126 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
+          - `apps` ×41
           - `primitives` ×21
           - `conversations` ×20
           - `tasks` ×8
@@ -41761,9 +41748,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SortDirection`
     - **`latest-ref`** — Latest-value ref idiom as a primitive: useLatestRef(value) mirrors the latest value into a ref written in render (read only in callbacks/effects), and useEventCallback(fn) is the stable-identity callback built on it. The single sanctioned home + exemption for the idiom, so react-hooks/refs can be enforced at error.
       - Cross-plugin:
-        - Imported by: 75 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
+        - Imported by: 76 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
           - `primitives` ×34
-          - `apps` ×22
+          - `apps` ×23
           - `page` ×4
           - `conversations` ×3
           - `map` ×2
@@ -42274,8 +42261,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
-        - Imported by: 54 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
-          - `apps` ×11
+        - Imported by: 55 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
+          - `apps` ×12
           - `debug` ×9
           - `database` ×7
           - `infra` ×7
@@ -42737,6 +42724,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `NetDiagEvent`
           - `PageLifecycleLike`
           - `ReconnectingEventSourceOptions`
+          - `ReconnectingWsData`
           - `ReconnectingWsHandle`
           - `ReconnectingWsOptions`
           - `SharedWebSocketHooks`
@@ -42763,8 +42751,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useTransport`
           - `useTransportScoped`
       - Cross-plugin:
-        - Imported by: 28 plugins — full list in [`plugins/primitives/plugins/networking/REFERENCE.md`](../plugins/primitives/plugins/networking/REFERENCE.md)
-          - `apps` ×6
+        - Imported by: 29 plugins — full list in [`plugins/primitives/plugins/networking/REFERENCE.md`](../plugins/primitives/plugins/networking/REFERENCE.md)
+          - `apps` ×7
           - `primitives` ×6
           - `conversations` ×5
           - `framework` ×3
@@ -42942,6 +42930,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `CursorAnchoredMenu`
           - Cross-plugin:
             - Imported by:
+              - `apps/browser/webview`
               - `apps/desktop/launcher`
               - `apps/desktop/shelf`
               - `apps/desktop/wallpaper`
@@ -47576,8 +47565,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --popover`
           - `ui/tokens/color-palette --popover-foreground`
           - `ui/tokens/shape --radius`
-        - Imported by: 31 plugins — full list in [`plugins/shell/plugins/toast/REFERENCE.md`](../plugins/shell/plugins/toast/REFERENCE.md)
-          - `apps` ×10
+        - Imported by: 32 plugins — full list in [`plugins/shell/plugins/toast/REFERENCE.md`](../plugins/shell/plugins/toast/REFERENCE.md)
+          - `apps` ×11
           - `conversations` ×3
           - `primitives` ×3
           - `config_v2` ×2
@@ -50399,8 +50388,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/shadow --shadow`
           - `ui/tokens/shape --spacing`
-        - Imported by: 347 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
-          - `apps` ×90
+        - Imported by: 346 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+          - `apps` ×89
           - `conversations` ×58
           - `primitives` ×42
           - `page` ×40
@@ -51645,9 +51634,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 334 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
-              - `apps` ×70
+            - Tokens used by: 333 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
               - `primitives` ×70
+              - `apps` ×69
               - `conversations` ×48
               - `debug` ×28
               - `page` ×20

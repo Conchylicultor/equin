@@ -160,6 +160,7 @@ built on them — see
     - `NetDiagEvent`
     - `PageLifecycleLike`
     - `ReconnectingEventSourceOptions`
+    - `ReconnectingWsData`
     - `ReconnectingWsHandle`
     - `ReconnectingWsOptions`
     - `SharedWebSocketHooks`
@@ -186,8 +187,8 @@ built on them — see
     - `useTransport`
     - `useTransportScoped`
 - Cross-plugin:
-  - Imported by: 28 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×6
+  - Imported by: 29 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×7
     - `primitives` ×6
     - `conversations` ×5
     - `framework` ×3
