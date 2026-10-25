@@ -3281,7 +3281,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Desktop.Overlay` ← `apps.desktop.shelf`
               - `Desktop.Overlay` ← `apps.desktop.switcher`
             - Contributes:
-              - `Surface.Placement`
+              - `Surface.Placement` "Desktop"
               - `Shortcuts.Shortcut` "desktop.overview (f3)"
               - `Shortcuts.Shortcut` "desktop.overview-exit (escape)"
               - `Shortcuts.Shortcut` "floating.close (mod+w)"
@@ -8095,7 +8095,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/ui-kit.cn`
                   - `primitives/hover-reveal.hoverRevealGroup`
                   - `primitives/overlay/floating-surface.FloatingSurface`
+                  - `primitives/slot-render.defineRenderSlot`
                   - `primitives/slot-render.renderIsolated`
+                  - `primitives/slot-render.useSlotOrder`
                 - Exports (types):
                   - `BeatSpan`
                   - `ProgressLabel`
@@ -11410,6 +11412,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/toggle-chip.SegmentedOption`
           - `primitives/css/ui-kit.cn`
           - `primitives/css/viewport-overlay.useViewportEscape`
+          - `primitives/slot-render.defineRenderSlot`
+          - `primitives/slot-render.useSlotOrder`
           - `shell/action-bar.ActionBar`
           - `ui/icons.Icon`
         - Exports (types):
@@ -11429,12 +11433,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Plugins:
         - **`docked`** — Docked surface placement — the full-area tab that fills the surface below the tab strip.
           - Web:
-            - Contributes: `Surface.Placement`
+            - Contributes: `Surface.Placement` "Dock in tab strip"
             - Uses: `apps-core/surface.Surface`
         - **`solo`** — Solo (fullscreen) surface mode — the default boot mode: only the focused tab, full-viewport (the tab bar and app rail hidden, the global action bar floating), with an Esc shortcut back to the previous mode.
           - Web:
             - Contributes:
-              - `Surface.Placement`
+              - `Surface.Placement` "Fullscreen (solo)"
               - `Shortcuts.Shortcut` "surface.exit-solo (Escape)"
             - Uses:
               - `apps-core/surface.Surface`
@@ -40058,13 +40062,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ×4
           - `DataViewSlots.Setting` ×4
           - `IdKinds.Kind` ×2
-        - Uses: 127 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Uses: 128 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `network/live` ×18
           - `primitives/css/ui-kit` ×17
           - `primitives/data-view/view-core` ×10
           - `primitives/live-state` ×6
+          - `primitives/slot-render` ×5
           - `primitives/css/control-panel` ×4
-          - `primitives/slot-render` ×4
           - `primitives/collapsible` ×3
           - `primitives/css/text` ×3
           - `primitives/css/toggle-chip` ×3
@@ -44627,6 +44631,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SlotRender.ListMiddleware`
           - `SlotRender.ItemMiddleware`
           - `SlotRender.ItemAttrs`
+          - `SlotRender.Order`
         - Slot contributors:
           - `SlotRender.ListMiddleware` ← `reorder.slot-middleware`
           - `SlotRender.ItemMiddleware` ← `primitives.error-boundary`
@@ -44634,6 +44639,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SlotRender.ItemMiddleware` ← `primitives.ui-context.element-picker`
           - `SlotRender.ItemMiddleware` ← `reorder.slot-middleware`
           - `SlotRender.ItemAttrs` ← `primitives.ui-context.element-picker`
+          - `SlotRender.Order` ← `reorder.slot-middleware`
         - Uses:
           - `primitives/css/grow-relay.GrowRelay`
           - `primitives/css/ui-kit.ControlSize`
@@ -44641,6 +44647,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/dom/layout-host.flowAxis`
           - `primitives/dom/layout-host.layoutHost`
         - Exports (types):
+          - `DerivedIdRenderSlot`
           - `DispatchContribution`
           - `DispatchOutcome`
           - `DispatchSlot`
@@ -44657,6 +44664,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SlotItemMiddleware`
           - `SlotItemOrientation`
           - `SlotListMiddleware`
+          - `SlotOrder`
           - `WrapContribution`
           - `WrapperSlot`
           - `WrapperSlotConfig`
@@ -44666,21 +44674,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineOrderedDispatchSlot`
           - `defineRenderSlot`
           - `defineWrapperSlot`
+          - `renderAsContribution`
           - `RenderCoreRoot`
           - `renderIsolated`
           - `RenderSlotSubIdContext`
           - `SlotItemLayout`
           - `SlotRender`
           - `useDispatchOutcome`
+          - `useSlotOrder`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/density --control-height-sm`
-        - Imported by: 87 plugins — full list in [`plugins/primitives/plugins/slot-render/REFERENCE.md`](../plugins/primitives/plugins/slot-render/REFERENCE.md)
+        - Imported by: 88 plugins — full list in [`plugins/primitives/plugins/slot-render/REFERENCE.md`](../plugins/primitives/plugins/slot-render/REFERENCE.md)
           - `apps` ×28
           - `conversations` ×13
           - `primitives` ×13
           - `ui` ×5
+          - `apps-core` ×4
           - `shell` ×4
-          - `apps-core` ×3
           - `tasks` ×3
           - `config_v2` ×2
           - `debug` ×2
@@ -44932,7 +44942,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `primitives/css/column.Column`
           - `primitives/css/spacing.Stack`
+          - `primitives/slot-render.defineRenderSlot`
           - `primitives/slot-render.renderIsolated`
+          - `primitives/slot-render.RenderSlot`
+          - `primitives/slot-render.useSlotOrder`
           - `primitives/view-switcher.useActiveViewId`
           - `primitives/view-switcher.ViewSwitcher`
         - Exports (types):
@@ -45971,8 +45984,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
   - Web:
     - Slots: `ReorderSlots.AreaEditor`
     - Slot contributors: `ReorderSlots.AreaEditor` ← `reorder.edit-mode`
-    - Contributes: 252 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×252
+    - Contributes: 261 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×261
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfig`
@@ -46005,10 +46018,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ReorderLayoutContext`
       - `ReorderListMiddleware`
       - `ReorderSlots`
+      - `useLayoutOrder`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 251 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×251
+    - Contributes: 260 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×260
     - Uses: `config_v2.ConfigV2`
     - Exports (values): `reorderDirectiveDescriptor`
   - Cross-plugin:
@@ -46257,10 +46271,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes:
           - `SlotRender.ListMiddleware`
           - `SlotRender.ItemMiddleware`
+          - `SlotRender.Order`
         - Uses:
           - `primitives/slot-render.SlotRender`
           - `reorder.ReorderItemMiddleware`
           - `reorder.ReorderListMiddleware`
+          - `reorder.useLayoutOrder`
 
 - **`reports`** — Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. The reports table and its live read (reports.list), the ReportKind / ReportNoiseRule slots every kind and rule contributes to, and the fan-out ceiling config; recording is the engine's (reports/plugins/engine).
   - Web:
@@ -47498,6 +47514,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots:
           - `ActionBar.Item`
           - `ActionBar.ViewOption`
+          - `ActionBar.Lead`
           - `ActionBar.Activity`
           - `ActionBar.Glance`
         - Slot contributors:
@@ -47515,10 +47532,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ActionBar.ViewOption` ← `config_v2.git-defaults-preview`
           - `ActionBar.ViewOption` ← `fullscreen`
           - `ActionBar.ViewOption` ← `reorder.edit-mode`
+          - `ActionBar.Lead` ← `shell.health-report`
           - `ActionBar.Activity` ← `build`
           - `ActionBar.Glance` ← `build`
         - Uses: `primitives/slot-render.defineRenderSlot`
-        - Exports (types): `ActionBarContribution`
+        - Exports (types):
+          - `ActionBarContribution`
+          - `ActionBarLeadProps`
         - Exports (values): `ActionBar`
       - Cross-plugin:
         - Imported by:
@@ -47533,6 +47553,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `screenshot`
           - `screenshot/draw-on-app`
           - `shell/global-action-bar`
+          - `shell/health-report`
           - `shell/notifications`
           - `ui/theme-engine/quick-theme`
     - **`document-head`** — What the SPA shell's <head> must carry before the first frame, per app path: the DocumentHead.Fragment contribution a server plugin renders its head HTML through (the theme's CSS), and the merge of every source into one fragment per path.
@@ -47555,11 +47576,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Apps.TabBarActions` "Tab bar actions" → `DockedActionBarHost`
           - `ActionBar.Item` → `ViewOptionsButton`
           - `ConfigV2.WebRegister` "config"
-        - Uses: 27 symbols — full list in [`plugins/shell/plugins/global-action-bar/REFERENCE.md`](../plugins/shell/plugins/global-action-bar/REFERENCE.md)
+        - Uses: 25 symbols — full list in [`plugins/shell/plugins/global-action-bar/REFERENCE.md`](../plugins/shell/plugins/global-action-bar/REFERENCE.md)
           - `apps-core/tabs` ×3
-          - `primitives/css/ui-kit` ×3
           - `audience/developer-mark` ×2
           - `config_v2` ×2
+          - `primitives/css/ui-kit` ×2
           - `primitives/overlay/floating-action` ×2
           - `apps-core/chrome-theme.chromeThemeScope`
           - `apps-core.Apps`
@@ -47575,7 +47596,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/icon-button.IconButton`
           - `primitives/slot-render.SlotItemLayout`
           - `shell/action-bar.ActionBar`
-          - `shell/health-report.HealthReportButton`
         - Exports (values): `useActionBarPinned`
       - Server:
         - Contributes: `ConfigV2.Register` "config"
@@ -47598,7 +47618,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `hints/ask`
           - `reorder/edit-mode`
           - `shell/notifications`
-    - **`health-report`** — Unified health report: one dot merging every HealthReport.Row contribution (critical > attention > unknown > ok, with a count of rows needing a look), opening a popover that lists info rows first, then status rows in a fixed order. Owns the slot and the HealthReportButton; knows no contributor.
+    - **`health-report`** — Unified health report: one dot merging every HealthReport.Row contribution (critical > attention > unknown > ok, with a count of rows needing a look), opening a popover that lists info rows first, then status rows in the slot's reorder layout order. Owns the slot, and contributes its button as the action bar's leading mark (ActionBar.Lead); knows no contributor.
       - Web:
         - Slots: `HealthReport.Row`
         - Slot contributors:
@@ -47612,8 +47632,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HealthReport.Row` ← `primitives.dom.web-storage.health`
           - `HealthReport.Row` ← `reports.resource-errors`
           - `HealthReport.Row` ← `tasks.worktree-identity`
-        - Uses: 25 symbols — full list in [`plugins/shell/plugins/health-report/REFERENCE.md`](../plugins/shell/plugins/health-report/REFERENCE.md)
+        - Contributes: `ActionBar.Lead` → `HealthReportButton`
+        - Uses: 29 symbols — full list in [`plugins/shell/plugins/health-report/REFERENCE.md`](../plugins/shell/plugins/health-report/REFERENCE.md)
           - `primitives/collapsible` ×4
+          - `primitives/slot-render` ×4
           - `primitives/css/activity-ring` ×3
           - `primitives/css/ui-kit` ×3
           - `primitives/error-boundary` ×2
@@ -47628,7 +47650,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/overlay/popover.InlinePopover`
           - `primitives/row-actions.RowActions`
           - `primitives/scope/scoped-store.defineScopedStore`
-          - `primitives/slot-render.renderIsolated`
+          - `shell/action-bar.ActionBar`
           - `ui/icons.Icon`
         - Exports (types):
           - `HealthInfo`
@@ -47637,9 +47659,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HealthStatus`
           - `InfoRow`
           - `StatusRow`
-        - Exports (values):
-          - `HealthReport`
-          - `HealthReportButton`
+        - Exports (values): `HealthReport`
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/color-palette --destructive`
@@ -47665,7 +47685,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/mcp/browser`
           - `primitives/dom/web-storage/health`
           - `reports/resource-errors`
-          - `shell/global-action-bar`
           - `tasks/worktree-identity`
       - Core:
         - Exports (types):

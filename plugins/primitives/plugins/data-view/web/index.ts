@@ -294,7 +294,6 @@ export default {
     DataViewSlots.Setting({
       id: "data-view.expand-all",
       scope: "view",
-      order: 3,
       isApplicable: (ctx) => ctx.expandAll !== null,
       component: ExpandAllSetting,
     }),
@@ -313,7 +312,6 @@ export default {
     // otherwise, and no trigger is drawn.
     DataViewSlots.Control({
       id: "data-view.expand-all",
-      order: -1,
       action: expandAllAction,
     }),
     DataViewSlots.Control({

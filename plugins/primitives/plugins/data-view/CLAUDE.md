@@ -1606,15 +1606,15 @@ of them.
 It used to name all three, as `sortControl` / `filterControl` / `fieldsControl`
 ReactNode props built by the host: the collection-consumer rule broken in the most
 literal way, and the reason no plugin could add a fourth control. Now the toolbar
-reads the slot, drops the contributions whose `isApplicable` says no, sorts by
-`order`, and builds one identical trigger per survivor.
+reads the slot in its layout order (`useSlotOrder` over
+`config/primitives/data-view/control.jsonc`), drops the contributions whose
+`isApplicable` says no, and builds one identical trigger per survivor.
 
 ```ts
 DataViewSlots.Control({
   id: "data-view.filter",
   label: "Filter",              // tooltip + accessible name, compact-fold row
   icon: MdFilterList,           // label, and a pushed sub-panel's back title
-  order: 0,
   isApplicable: (ctx) => ctx.filter.filterableFields.length > 0,
   summary: (ctx) => summarizeFilter(…),   // pure; see below
   component: FilterControlPanel,           // prop-less; reads useDataViewControls()
@@ -1640,7 +1640,7 @@ A control is one of two kinds (`DataViewControlContribution` is a union):
 cannot forget the action kind (tsc).
 
 **The expand-all is the built-in action control** (`data-view.expand-all`,
-`order: -1`, first in the tools): "Expand all" / "Collapse all" with
+first in the control layout): "Expand all" / "Collapse all" with
 unfold-more / unfold-less, over `useDataViewControls().expandAll`. The view
 settings carry the same capability as a "Rows" section with both rows
 (`data-view.expand-all` Setting). Neither names a view type: the capability
@@ -1656,19 +1656,15 @@ row in scope that has children), so the control exists exactly while the
 active view nests a hierarchy with something to fold. There is no toolbar
 row above a tree's rows any more.
 
-### `defineSlot` + `renderIsolated`, not `defineRenderSlot`
+### A render slot the toolbar never `.Render`s
 
-The `View` / `Setting` precedent, for two reasons that are not stylistic:
-
-- A render slot mounts **every** contribution. That would mount every control's
-  panel on every DataView on every page — each running `useFilterPresets`, the
-  live custom-values resource, and so on — merely to draw a **closed** trigger.
-  With a plain slot the host reads metadata and mounts exactly the one panel that
-  is open.
-- A render slot is unconditionally reorderable, so it would owe an authored
-  `config/primitives/data-view/primitives.data-view.control.jsonc` carrying a
-  build-blocking `// @review` marker — for a fixed reading order that `order`
-  already expresses. **This slot owes no config override.**
+`.Render` mounts **every** contribution. That would mount every control's panel
+on every DataView on every page — each running `useFilterPresets`, the live
+custom-values resource, and so on — merely to draw a **closed** trigger. So the
+host reads each contribution's metadata in the slot's layout order
+(`useSlotOrder`) and mounts exactly the one panel that is open
+(`renderIsolated`). The order is the committed reorder layout, never a number on
+a contribution (`defineSlot` rejects one).
 
 `DataViewSlots.Setting` survives unchanged, one level down: a *control* is a
 toolbar affordance, a *setting* is a section inside one control's panel. Flattening
@@ -3186,13 +3182,13 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `DataViewSlots.Control` ×4
     - `DataViewSlots.Setting` ×4
     - `IdKinds.Kind` ×2
-  - Uses: 127 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 128 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live` ×18
     - `primitives/css/ui-kit` ×17
     - `primitives/data-view/view-core` ×10
     - `primitives/live-state` ×6
+    - `primitives/slot-render` ×5
     - `primitives/css/control-panel` ×4
-    - `primitives/slot-render` ×4
     - `primitives/collapsible` ×3
     - `primitives/css/text` ×3
     - `primitives/css/toggle-chip` ×3

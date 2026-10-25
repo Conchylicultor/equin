@@ -32,7 +32,6 @@ const plugin = {
   contributions: [
     DataViewSlots.Control({
       id: "data-view.expand-all",
-      order: -1,
       action: expandAllAction,
     }),
   ],
