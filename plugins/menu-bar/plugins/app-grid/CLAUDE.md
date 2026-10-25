@@ -4,19 +4,19 @@
 
 ## Plugin reference
 
-- Description: The menu-bar panel's app grid (MenuBar.Section 'apps'): every Apps.App but the current app and the home app (the desktop included: its URL is its base path as a route prefix) — as the icons DataView over the installedApp row kind, laid out as a menu's grid (viewOptions.icons.menu: four cells sharing the panel's width) (the tile and name Home and the launcher draw), each tile wearing its app's badge. Scrolling past four rows; drag reorders it, persisted per view (defineDataView('menu-bar.apps')). A tile opens its app in its own OS window through the helper (launchApp) — every app has its shim, kept by main ahead of any click (menu-bar.installed); in the default browser (openUrl) only for an app whose shim is not written yet; in this tab when the panel is not inside the helper. On hover a tile offers a pin (AppGridActions 'pin'): keeps the app in the Dock / GNOME dash through POST /api/menu-bar/pin/:appId — hidden once pinned (menu-bar.pinned, which follows the Dock itself) or where the host cannot pin (menu-bar.capabilities), a spinner while pending, an error mark when the pin failed.
+- Description: The menu-bar panel's app grid (MenuBar.Section 'apps'): every Apps.App but the current app and the home app (the desktop included: its URL is its base path as a route prefix) — as the icons DataView over the installedApp row kind, laid out as a menu's grid (viewOptions.icons.menu: four cells sharing the panel's width) (the tile and name Home and the launcher draw), each tile wearing its app's badge, filtered by name as the panel's field is typed (usePanelInput). Scrolling past four rows; drag reorders it, persisted per view (defineDataView('menu-bar.apps')). A tile opens its app in its own OS window through the helper (launchApp) — every app has its shim, kept by main ahead of any click (menu-bar.installed); in the default browser (openUrl) only for an app whose shim is not written yet; in this tab when the panel is not inside the helper. On hover a tile offers a pin (AppGridActions 'pin'): keeps the app in the Dock / GNOME dash through POST /api/menu-bar/pin/:appId — hidden once pinned (menu-bar.pinned, which follows the Dock itself) or where the host cannot pin (menu-bar.capabilities), a spinner while pending, an error mark when the pin failed.
 - Web:
   - Slots: `item-actions`
   - Slot contributors: `item-actions` ← `menu-bar.app-grid`
   - Contributes:
     - `MenuBar.Section` "Apps" → `MenuBarAppGrid`
     - `item-actions` "pin" → `PinAppAction`
-  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×5
     - `apps-core` ×4
     - `apps-core/app-launcher` ×3
+    - `menu-bar` ×3
     - `primitives/live-state` ×3
-    - `menu-bar` ×2
     - `primitives/css/ui-kit` ×2
     - `apps-core/tabs.useActivateApp`
     - `infra/endpoints.useFetchEndpoint`

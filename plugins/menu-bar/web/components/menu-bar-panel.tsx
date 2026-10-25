@@ -12,6 +12,7 @@ import { MenuBar } from "../slots";
 import { useNativeHost } from "../native-host";
 import { PanelStatus } from "../internal/panel-status";
 import { useWindowMaterial } from "../internal/window-material";
+import { StaleReload } from "../internal/stale-reload";
 import "../internal/window-material.css";
 
 /**
@@ -22,8 +23,9 @@ import "../internal/window-material.css";
  * panel and showed through its translucent fill. Its body is the
  * `MenuBar.Section` slot and nothing else: the panel names no section.
  *
- * It shows no toasts: the app-wide stack does not belong in a menu (it drew
- * over the app grid), so its sections say their outcomes inline.
+ * It shows no toasts (the app-wide stack does not belong in a menu: its
+ * sections say their outcomes inline), and it reloads itself while hidden once
+ * main serves a newer web bundle (`StaleReload`).
  */
 export function MenuBarPanel() {
   useSuppressToasts();
@@ -47,6 +49,7 @@ export function MenuBarPanel() {
             <PanelSections />
           </Scroll>
           <MenuBar.Mount.Mount />
+          <StaleReload />
         </PanelStatus>
       </Surface>
     </Clip>

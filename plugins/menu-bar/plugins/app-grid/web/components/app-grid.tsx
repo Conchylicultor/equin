@@ -28,7 +28,7 @@ import { insetClass } from "@plugins/primitives/plugins/css/plugins/spacing/web"
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { useNativeHost } from "@plugins/menu-bar/web";
+import { useNativeHost, usePanelInput } from "@plugins/menu-bar/web";
 import { menuBarInstalled } from "@plugins/menu-bar/core";
 import { useLive } from "@plugins/network/plugins/live/web";
 import {
@@ -69,6 +69,14 @@ function GridFrame({ body }: HostedToolbarParts) {
 
 const GRID_TOOLBAR: HostedToolbar = { kind: "hosted", frame: GridFrame };
 
+/** The grid draws no search box, so nothing inside it edits the query. */
+function noQueryEdit(): void {}
+
+/** A tile matches on its app's name. */
+function appName(row: AppRow): string {
+  return row.name;
+}
+
 /** A menu's grid: four cells sharing the panel's width. */
 const GRID_VIEW_OPTIONS: { icons: IconsViewOptions<AppRow> } = {
   icons: { menu: { columns: 4 } },
@@ -92,6 +100,9 @@ function appUrl(basePath: string): string {
  *
  * The desktop (a surface-mode app) is a tile like any other: its URL is its
  * base path as a route prefix (`/desktop` — the desktop with no window open).
+ *
+ * The grid follows what is typed in the panel's field (`usePanelInput`): the
+ * tiles whose name contains it, as it is typed.
  */
 export function MenuBarAppGrid() {
   const apps = Apps.App.useContributions();
@@ -104,6 +115,8 @@ export function MenuBarAppGrid() {
   const host = useNativeHost();
   const installed = useLive(menuBarInstalled);
   const listing = useAppListing();
+  const [input] = usePanelInput();
+  const query = input.trim();
   const rows = useMemo(
     () =>
       mapResource(listing, (isListed) =>
@@ -174,7 +187,10 @@ export function MenuBarAppGrid() {
         storageKey={MENU_BAR_APPS_VIEW}
         rowActivation={rowActivation}
         itemActions={AppGridActions}
-        emptyState="No apps installed."
+        // The panel's field drives the query; the grid has no box of its own.
+        search={{ query, onQueryChange: noQueryEdit }}
+        searchAccessor={appName}
+        emptyState={query === "" ? "No apps installed." : "No matching app."}
       />
     </Scroll>
   );

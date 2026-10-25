@@ -12235,6 +12235,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `build/build-profiling`
       - `build/runs-arm`
       - `debug/reports`
+      - `menu-bar`
   - Shared:
     - Exports (types): `BuildRun`
     - Exports (values):
@@ -32121,7 +32122,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by: `map/google`
 
-- **`menu-bar`** — The menu-bar panel the native helper opens: the menu-bar app (unlisted, colorMode light — the panel is designed light) mounted at /home/menu-bar, whose whole layout is the panel (no pane; chromeless under ?embed=1), whose body is the MenuBar.Section slot, drawn in its own theme (a native menu's: the system font, 13px rows, a 2–16px spacing ramp, the menu palette), plus the header (the spiral and a status line joined from MenuBar.Status parts, whose attention lights the menu-bar icon's dot) and the footer ('Running · <host>', opening equin). useNativeHost() reads the helper's bridge (window.equinNative): pending, absent (a plain browser), or present with its platform, capabilities and methods — a capability the host lacks has no method. MenuBar.Mount runs headless work while the panel page is alive; the panel reports its content height to the helper.
+- **`menu-bar`** — The menu-bar panel the native helper opens: the menu-bar app (unlisted, colorMode light — the panel is designed light) mounted at /home/menu-bar, whose whole layout is the panel (no pane; chromeless under ?embed=1), whose body is the MenuBar.Section slot, drawn in its own theme (a native menu's: the system font, 13px rows, a 2–16px spacing ramp, the menu palette), plus the header (the spiral and a status line joined from MenuBar.Status parts, whose attention lights the menu-bar icon's dot) and the footer ('Running · <host>', opening equin). useNativeHost() reads the helper's bridge (window.equinNative): pending, absent (a plain browser), or present with its platform, capabilities and methods — a capability the host lacks has no method. usePanelInput() is the panel's typed text (the task field writes it, the app grid filters by it), kept as a draft across reloads. MenuBar.Mount runs headless work while the panel page is alive; the panel reports its content height to the helper, shows no toasts, and reloads itself while hidden once main serves a newer web bundle.
   - Web:
     - Slots:
       - `MenuBar.Section`
@@ -32139,24 +32140,25 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ThemeEngine.Theme` "Menu bar"
       - `MenuBar.Section` "Header" → `PanelHeader`
       - `MenuBar.Section` "Footer" → `PanelFooter`
-    - Uses:
+    - Uses: 24 symbols — full list in [`plugins/menu-bar/REFERENCE.md`](../plugins/menu-bar/REFERENCE.md)
+      - `primitives/css/spacing` ×3
+      - `primitives/persistent-draft` ×2
+      - `primitives/slot-render` ×2
       - `apps-core.Apps`
+      - `build.useStaleFrontend`
       - `primitives/css/clip.Clip`
       - `primitives/css/fill.Fill`
       - `primitives/css/rigid.rigidClass`
       - `primitives/css/row.Row`
       - `primitives/css/scroll.Scroll`
-      - `primitives/css/spacing.Inset`
-      - `primitives/css/spacing.insetClass`
-      - `primitives/css/spacing.Stack`
       - `primitives/css/status-dot.StatusDot`
       - `primitives/css/surface.Surface`
       - `primitives/css/text.Text`
       - `primitives/css/ui-kit.cn`
       - `primitives/dom/element-size.useResizeObserver`
+      - `primitives/dom/web-storage.defineStore`
       - `primitives/loading.Loading`
-      - `primitives/slot-render.defineMountSlot`
-      - `primitives/slot-render.defineRenderSlot`
+      - `primitives/log-channels.clientLog`
       - `shell/toast.useSuppressToasts`
       - `ui/theme-engine.ThemeEngine`
     - Exports (types):
@@ -32165,6 +32167,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Exports (values):
       - `MenuBar`
       - `useNativeHost`
+      - `usePanelInput`
   - Server:
     - Contributes:
       - `resource.declare` "menu-bar.capabilities"
@@ -32242,19 +32245,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `tasks/menu-bar-task`
     - Endpoint callers: `app-grid`
   - Plugins:
-    - **`app-grid`** — The menu-bar panel's app grid (MenuBar.Section 'apps'): every Apps.App but the current app and the home app (the desktop included: its URL is its base path as a route prefix) — as the icons DataView over the installedApp row kind, laid out as a menu's grid (viewOptions.icons.menu: four cells sharing the panel's width) (the tile and name Home and the launcher draw), each tile wearing its app's badge. Scrolling past four rows; drag reorders it, persisted per view (defineDataView('menu-bar.apps')). A tile opens its app in its own OS window through the helper (launchApp) — every app has its shim, kept by main ahead of any click (menu-bar.installed); in the default browser (openUrl) only for an app whose shim is not written yet; in this tab when the panel is not inside the helper. On hover a tile offers a pin (AppGridActions 'pin'): keeps the app in the Dock / GNOME dash through POST /api/menu-bar/pin/:appId — hidden once pinned (menu-bar.pinned, which follows the Dock itself) or where the host cannot pin (menu-bar.capabilities), a spinner while pending, an error mark when the pin failed.
+    - **`app-grid`** — The menu-bar panel's app grid (MenuBar.Section 'apps'): every Apps.App but the current app and the home app (the desktop included: its URL is its base path as a route prefix) — as the icons DataView over the installedApp row kind, laid out as a menu's grid (viewOptions.icons.menu: four cells sharing the panel's width) (the tile and name Home and the launcher draw), each tile wearing its app's badge, filtered by name as the panel's field is typed (usePanelInput). Scrolling past four rows; drag reorders it, persisted per view (defineDataView('menu-bar.apps')). A tile opens its app in its own OS window through the helper (launchApp) — every app has its shim, kept by main ahead of any click (menu-bar.installed); in the default browser (openUrl) only for an app whose shim is not written yet; in this tab when the panel is not inside the helper. On hover a tile offers a pin (AppGridActions 'pin'): keeps the app in the Dock / GNOME dash through POST /api/menu-bar/pin/:appId — hidden once pinned (menu-bar.pinned, which follows the Dock itself) or where the host cannot pin (menu-bar.capabilities), a spinner while pending, an error mark when the pin failed.
       - Web:
         - Slots: `item-actions`
         - Slot contributors: `item-actions` ← `menu-bar.app-grid`
         - Contributes:
           - `MenuBar.Section` "Apps" → `MenuBarAppGrid`
           - `item-actions` "pin" → `PinAppAction`
-        - Uses: 27 symbols — full list in [`plugins/menu-bar/plugins/app-grid/REFERENCE.md`](../plugins/menu-bar/plugins/app-grid/REFERENCE.md)
+        - Uses: 28 symbols — full list in [`plugins/menu-bar/plugins/app-grid/REFERENCE.md`](../plugins/menu-bar/plugins/app-grid/REFERENCE.md)
           - `primitives/data-view` ×5
           - `apps-core` ×4
           - `apps-core/app-launcher` ×3
+          - `menu-bar` ×3
           - `primitives/live-state` ×3
-          - `menu-bar` ×2
           - `primitives/css/ui-kit` ×2
           - `apps-core/tabs.useActivateApp`
           - `infra/endpoints.useFetchEndpoint`
@@ -40924,7 +40927,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useStorageUsage`
               - `WebStorageSlots`
           - Cross-plugin:
-            - Imported by: 43 plugins — full list in [`plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md)
+            - Imported by: 44 plugins — full list in [`plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md)
               - `primitives` ×15
               - `apps` ×11
               - `conversations` ×5
@@ -40934,6 +40937,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `hints/ask`
               - `layouts/miller`
               - `map`
+              - `menu-bar`
               - `page/editor`
               - `shell/global-action-bar`
               - `tasks/task-draft-form`
@@ -42147,7 +42151,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
-        - Imported by: 53 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
+        - Imported by: 54 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
           - `apps` ×11
           - `debug` ×9
           - `database` ×7
@@ -42160,6 +42164,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks` ×2
           - `backup`
           - `integrations/youtube/audio-fetch`
+          - `menu-bar`
           - `network/live`
           - `page/annotations/agent-access`
           - `release`
@@ -43674,12 +43679,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `yieldToMain`
     - **`persistent-draft`** — Drafts over a web-storage store: useDraft is the reactive useState drop-in (all calls on one store and scope stay in sync within and across tabs); readDraft/writeDraft are the render-free imperative twin for callers writing at input frequency; onDraftWritten observes every write and clear in the tab; legacyDraftKeys carries drafts written before web-storage into a store. The store (defineStore) owns the cap, TTL and loud refusal.
       - Cross-plugin:
-        - Imported by: 28 plugins — full list in [`plugins/primitives/plugins/persistent-draft/REFERENCE.md`](../plugins/primitives/plugins/persistent-draft/REFERENCE.md)
+        - Imported by: 29 plugins — full list in [`plugins/primitives/plugins/persistent-draft/REFERENCE.md`](../plugins/primitives/plugins/persistent-draft/REFERENCE.md)
           - `apps` ×10
           - `conversations` ×7
           - `primitives` ×7
           - `hints/ask`
           - `map`
+          - `menu-bar`
           - `page/editor`
           - `tasks/task-draft-form`
       - Web:
@@ -48622,12 +48628,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Core:
         - Exports (types): `LaunchOptionDef`
         - Exports (values): `defineLaunchOption`
-    - **`menu-bar-task`** — The menu-bar panel's task field (MenuBar.Section 'task'): an autogrowing textarea (up to six lines, then it scrolls) — Enter files the text as one top-level task through the task-draft form's submitChain (POST /api/tasks/chain) with every launch option at its default, so auto-start behaves as in Improve; Shift+Enter adds a line, Escape clears. The field confirms inline ('Filed — …') or shows why the submit failed.
+    - **`menu-bar-task`** — The menu-bar panel's task field (MenuBar.Section 'task'): an autogrowing textarea (up to six lines, then it scrolls) — Enter files the text as one top-level task through the task-draft form's submitChain (POST /api/tasks/chain) with every launch option at its default, so auto-start behaves as in Improve; Shift+Enter adds a line, Escape clears. Its text is the panel's input (usePanelInput): the app grid filters by it as it is typed, and it is kept as a draft across reloads. The field confirms inline ('Filed — …') or shows why the submit failed.
       - Web:
         - Contributes: `MenuBar.Section` "Task" → `MenuBarTaskField`
         - Uses:
           - `infra/endpoints.useFetchEndpoint`
           - `menu-bar.MenuBar`
+          - `menu-bar.usePanelInput`
           - `primitives/css/center.Center`
           - `primitives/css/fill.fillClasses`
           - `primitives/css/rigid.rigidClass`

@@ -30,12 +30,13 @@ carries them over, so no unsent text is lost — drop it once browsers migrated.
 
 - Description: Drafts over a web-storage store: useDraft is the reactive useState drop-in (all calls on one store and scope stay in sync within and across tabs); readDraft/writeDraft are the render-free imperative twin for callers writing at input frequency; onDraftWritten observes every write and clear in the tab; legacyDraftKeys carries drafts written before web-storage into a store. The store (defineStore) owns the cap, TTL and loud refusal.
 - Cross-plugin:
-  - Imported by: 28 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 29 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×10
     - `conversations` ×7
     - `primitives` ×7
     - `hints/ask`
     - `map`
+    - `menu-bar`
     - `page/editor`
     - `tasks/task-draft-form`
 - Web:

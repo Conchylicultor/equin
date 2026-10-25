@@ -18,6 +18,7 @@ import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { usePanelInput } from "@plugins/menu-bar/web";
 
 const fileIcon = symbol("bolt");
 const filedIcon = symbol("check-circle");
@@ -48,6 +49,10 @@ function firstLine(text: string): string {
  * default — so auto-start and the rest behave exactly as when filed from
  * Improve. No page URL is attached: the panel is not a page the task is about.
  *
+ * Its text is the panel's input (`usePanelInput`): the app grid filters its
+ * tiles by it as it is typed, and it is a draft, so a reload of the panel
+ * (which happens while it is hidden, when main ships new web) keeps it.
+ *
  * The field grows with its text up to six lines. WebKit (the helper's webview)
  * has no `field-sizing`, so the height is set from the text's own scroll height
  * on each change.
@@ -55,7 +60,7 @@ function firstLine(text: string): string {
 export function MenuBarTaskField() {
   const fetchEndpoint = useFetchEndpoint();
   const launchOptions = TaskLaunch.Option.useContributions();
-  const [text, setText] = useState("");
+  const [text, setText] = usePanelInput();
   const [submitting, setSubmitting] = useState(false);
   const [outcome, setOutcome] = useState<Outcome>({ kind: "idle" });
   const field = useRef<HTMLTextAreaElement>(null);

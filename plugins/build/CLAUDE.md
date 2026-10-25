@@ -392,6 +392,7 @@ fills to navy and oxblood — see `apps-core/chrome-theme`.
     - `build/build-profiling`
     - `build/runs-arm`
     - `debug/reports`
+    - `menu-bar`
 - Shared:
   - Exports (types): `BuildRun`
   - Exports (values):
