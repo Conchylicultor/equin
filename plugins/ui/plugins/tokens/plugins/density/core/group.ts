@@ -182,6 +182,19 @@ export const densityGroup = defineTokenGroup("density", {
     default: "17.5rem",
     label: "Described-menu popover width",
   },
+  // A settings card (`ControlPanelCard`): a titled card of settings sections
+  // whose prose wraps and whose fields span it — wide enough for a path and a
+  // two-line description. Default = the Sonata settings mock's 440px card.
+  popoverWidthSettings: {
+    default: "27.5rem",
+    label: "Settings card width",
+  },
+  // Its inset: the card's content sits this far plus a row's own inline pad
+  // (`padRowX`) from its edges, and its title row this far from the top.
+  settingsCardPad: {
+    default: "var(--space-md)",
+    label: "Settings card padding",
+  },
   // A popover's own inset — the `panel` padding role (`rail-panel`), the
   // default of `PopoverContent` / `OverlayPanel`. A call site that names a
   // step (a menu's `xs`, a dialog's `lg`) keeps it. Default = the `md` step

@@ -9,6 +9,7 @@ const DirPathRenderer = defineFieldShape({
     fit: "field",
     control: (
       <FolderPickerPopover
+        purpose="edit"
         key={value}
         value={value}
         onChange={onChange}

@@ -65,6 +65,8 @@ wraps `FolderPickerPopover`, not the other way around.
     - `ui/tokens/density --space-md`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/density --space-xs`
+    - `ui/tokens/font-family --font-mono`
+    - `ui/tokens/font-family --font-sans`
     - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/sonata/sources/midi/folders`

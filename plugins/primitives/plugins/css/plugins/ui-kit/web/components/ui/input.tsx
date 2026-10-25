@@ -15,9 +15,17 @@ import { fieldChromeClass } from "./field-chrome";
 function Input({
   className,
   type,
+  outline = "solid",
   ...props
 }: Omit<React.ComponentProps<"input">, "size"> &
   DensityControlled & {
+    /**
+     * The field's hairline. `dashed` is the OPTIONAL field — "add one more"
+     * (a folder, a tag) beside a list of the real ones — the twin of
+     * `Button variant="dashed"`; it turns solid while focused, once it is
+     * being filled in.
+     */
+    outline?: "solid" | "dashed";
     /** Draw the field through another input element that owns its own state
      * (a headless library's search input), keeping this field's chrome. */
     render?: React.ReactElement;
@@ -31,6 +39,7 @@ function Input({
         fieldChromeClass,
         "file:inline-flex file:h-full file:border-0 file:bg-transparent file:text-label file:text-foreground",
         fieldSizeClassFor(density),
+        outline === "dashed" && "border-dashed focus:border-solid",
         className,
       )}
       {...props}

@@ -1,13 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import {
-  absolutePath,
-  baseName,
-  displayPath,
-  isWithin,
-  joinPath,
-  parentPath,
-  pathChain,
-} from "./paths";
+import { baseName, isWithin, joinPath, parentPath, pathChain } from "./paths";
 import { decodeOpenParam, encodeOpenParam } from "./location";
 import { formatCount, formatModified, formatSize } from "./format";
 
@@ -32,15 +24,6 @@ describe("paths", () => {
     expect(parentPath("~", HOME_ABS)).toBe("/h");
     expect(parentPath("/h", HOME_ABS)).toBe("/");
     expect(parentPath("/", HOME_ABS)).toBeNull();
-  });
-
-  test("tilde expansion and collapse round-trip", () => {
-    expect(absolutePath("~/a", HOME_ABS)).toBe("/h/me/a");
-    expect(absolutePath("~", HOME_ABS)).toBe(HOME_ABS);
-    expect(displayPath("/h/me/a", HOME_ABS)).toBe("~/a");
-    expect(displayPath("/h/me", HOME_ABS)).toBe("~");
-    expect(displayPath("/h/meow", HOME_ABS)).toBe("/h/meow");
-    expect(displayPath("~/a", HOME_ABS)).toBe("~/a");
   });
 
   test("within", () => {

@@ -1,8 +1,8 @@
+import { displayPath } from "@plugins/infra/plugins/host-account/core";
 import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import { hostFsVolumeInfo } from "@plugins/infra/plugins/host-fs/core";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { useHomeDir } from "@plugins/apps/plugins/file-explorer/plugins/browser/web";
-import { displayPath } from "@plugins/apps/plugins/file-explorer/plugins/browser/core";
 import {
   FileExplorer,
   type PlacesState,

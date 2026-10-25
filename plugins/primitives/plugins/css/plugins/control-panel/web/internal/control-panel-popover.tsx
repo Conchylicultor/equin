@@ -12,7 +12,7 @@ import { ControlPanelHostProvider, type ControlPanelHost } from "./host";
 import { ControlPanelStack } from "./panel-stack";
 import { usePanelStackState } from "./stack-context";
 
-type Positioning = Pick<
+export type ControlPanelPositioning = Pick<
   ComponentProps<typeof PopoverContent>,
   "align" | "side"
 >;
@@ -25,7 +25,7 @@ type Positioning = Pick<
  * cannot be the trigger of two popups without one click opening both, so the
  * panel takes that element as a position only and the caller owns `open`.
  */
-type Anchoring =
+export type ControlPanelAnchoring =
   | {
       /** The trigger element — open/close is merged in via base-ui's render prop. */
       trigger: React.ReactElement;
@@ -39,8 +39,8 @@ type Anchoring =
       onOpenChange: (open: boolean) => void;
     };
 
-export type ControlPanelPopoverProps = Positioning &
-  Anchoring &
+export type ControlPanelPopoverProps = ControlPanelPositioning &
+  ControlPanelAnchoring &
   ControlPanelPopoverOwnProps;
 
 interface ControlPanelPopoverOwnProps {
@@ -144,4 +144,5 @@ const POPOVER_HOST: ControlPanelHost = {
   nesting: "push",
   inlineDepth: 0,
   descriptions: "hint",
+  sections: "label",
 };

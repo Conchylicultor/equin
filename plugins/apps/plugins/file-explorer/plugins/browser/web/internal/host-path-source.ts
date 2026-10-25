@@ -4,21 +4,19 @@ import {
   hostFsStat,
   isBrowsable,
 } from "@plugins/infra/plugins/host-fs/core";
-import { hostHome } from "@plugins/infra/plugins/host-account/core";
+import {
+  HOME,
+  absolutePath,
+  displayPath,
+  hostHome,
+} from "@plugins/infra/plugins/host-account/core";
 import { useLive } from "@plugins/network/plugins/live/web";
 import type { ResourceError } from "@plugins/primitives/plugins/live-state/web";
 import type {
   PathBarSource,
   PathResolution,
 } from "@plugins/primitives/plugins/path-bar/web";
-import {
-  absolutePath,
-  baseName,
-  displayPath,
-  HOME,
-  isWithin,
-  pathChain,
-} from "../../core";
+import { baseName, isWithin, pathChain } from "../../core";
 
 /**
  * The user's home directory, absolute — what `~` stands for. Every comparison

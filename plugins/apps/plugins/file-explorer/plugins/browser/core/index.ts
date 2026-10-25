@@ -1,8 +1,5 @@
 export {
-  HOME,
-  absolutePath,
   baseName,
-  displayPath,
   isWithin,
   joinPath,
   parentPath,

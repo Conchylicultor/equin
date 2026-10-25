@@ -1,3 +1,4 @@
+import { absolutePath } from "@plugins/infra/plugins/host-account/core";
 import { useMemo, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
@@ -31,7 +32,6 @@ import { FileTypeIcon } from "@plugins/primitives/plugins/file-type/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { Activation } from "@plugins/primitives/plugins/link-gesture/core";
 import {
-  absolutePath,
   ENTRY_CATEGORY_OPTIONS,
   entryCategory,
   entryExtension,

@@ -8,6 +8,7 @@ import { typeScaleGroup } from "@plugins/ui/plugins/tokens/plugins/type-scale/co
 import { densityGroup } from "@plugins/ui/plugins/tokens/plugins/density/core";
 import { iconsGroup } from "@plugins/ui/plugins/tokens/plugins/icons/core";
 import { materialGroup } from "@plugins/ui/plugins/tokens/plugins/material/core";
+import { overlayGroup } from "@plugins/ui/plugins/tokens/plugins/overlay/core";
 import { dataViewGroup } from "@plugins/ui/plugins/tokens/plugins/data-view/core";
 
 // The immersive player's night (proto-1792113547-2qr6g7): a blue-black stage,
@@ -210,6 +211,27 @@ const density = densityGroup.fragment(
     contentInset: "max(clamp(16px, 3cqi, 40px), calc((100cqi - 1520px) / 2))",
     // The toolbar's pill items (view chips, icon triggers, search, Add): 32px.
     controlHeightSm: "2rem",
+    // The Sonata settings card (proto-1792907625-p861lr, `.sheet`): 440px
+    // wide, its content 18px in — this inset plus the 8px row pad.
+    popoverWidthSettings: "27.5rem",
+    settingsCardPad: "0.625rem",
+  }),
+);
+
+/**
+ * The Sonata settings card's words (proto-1792907625-p861lr): a 14.5px bold
+ * title (the 15px subheading, bold), a section heading at 13.5px bold, and its
+ * 12px prose (the 12px / 17px tag rung, regular sans).
+ */
+const overlay = overlayGroup.fragment(
+  both({
+    settingsTitleRole: "subheading",
+    settingsTitleEmphasis: "bold",
+    settingsHeadingRole: "heading",
+    settingsHeadingEmphasis: "bold",
+    settingsProseRole: "tag",
+    settingsProseEmphasis: "normal",
+    settingsProseFamily: "sans",
   }),
 );
 
@@ -386,6 +408,7 @@ export const sonataTheme = defineTheme({
     material,
     density,
     dataView,
+    overlay,
     icons,
   ],
 });

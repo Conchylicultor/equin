@@ -76,6 +76,7 @@
 - Core:
   - Uses:
     - `fields/text/config.textField`
+    - `infra/host-account.HOME`
     - `network/live.rowKind`
     - `primitives/file-type.FilePreview`
     - `primitives/file-type.fileTypeOf`
@@ -90,10 +91,8 @@
     - `LensHideRule`
     - `ListedFolder`
   - Exports (values):
-    - `absolutePath`
     - `baseName`
     - `decodeOpenParam`
-    - `displayPath`
     - `encodeOpenParam`
     - `ENTRY_CATEGORY_OPTIONS`
     - `entryCategory`
@@ -104,7 +103,6 @@
     - `formatModified`
     - `formatModifiedFull`
     - `formatSize`
-    - `HOME`
     - `isWithin`
     - `itemCount`
     - `joinPath`

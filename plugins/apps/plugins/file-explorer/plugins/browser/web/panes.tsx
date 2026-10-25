@@ -1,3 +1,4 @@
+import { HOME } from "@plugins/infra/plugins/host-account/core";
 import { useMemo, type ReactNode } from "react";
 import {
   Pane,
@@ -10,7 +11,6 @@ import {
   baseName,
   decodeOpenParam,
   encodeOpenParam,
-  HOME,
   type ExplorerLocation,
 } from "../core";
 import { FileBrowser } from "./components/file-browser";

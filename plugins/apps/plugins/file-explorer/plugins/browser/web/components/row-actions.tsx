@@ -1,3 +1,4 @@
+import { absolutePath } from "@plugins/infra/plugins/host-account/core";
 import type { ReactNode } from "react";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useCopyToClipboard } from "@plugins/primitives/plugins/copy-to-clipboard/web";
@@ -10,7 +11,7 @@ import {
 } from "@plugins/infra/plugins/host-fs/core";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
-import { absolutePath, baseName, type EntryRow } from "../../core";
+import { baseName, type EntryRow } from "../../core";
 import { useHomeDir } from "../internal/host-path-source";
 
 const unarchiveIcon = symbol("unarchive");

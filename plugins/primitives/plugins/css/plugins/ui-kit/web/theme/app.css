@@ -1619,6 +1619,28 @@
   }
 }
 
+@utility cp-card {
+  /* twmerge: standalone -- Re-declares the panel geometry vars for a settings card's subtree; no single-value built-in group to conflict with. */
+  /* THE SETTINGS CARD SURFACE (`ControlPanelCard`) — on the popup, so its
+     title row (the popover's `header`, outside the panel body) and the body
+     read one inset. A card is roomier than a menu: its inset is the density
+     token `settingsCardPad`, and the panel's rail follows from it exactly as it
+     follows from `panelPad` in a popover (chrome pad + a row's own pad), so
+     rows, loose content and band rules all keep the contract. Its foot pads by
+     the whole rail, so the content sits in an even frame on three sides; the
+     top is the title row's. */
+  --cp-panel-pad: var(--settings-card-pad);
+  & .cp-panel {
+    padding-block-end: calc(var(--cp-panel-pad) + var(--cp-row-pad-x));
+  }
+  /* The title row: its words on the panel's start rail, its close button the
+     bare inset off the corner (a button carries its own hit area). */
+  & [data-cp-card-head] {
+    padding: calc(var(--cp-panel-pad) + var(--space-xs)) var(--cp-panel-pad) 0
+      calc(var(--cp-panel-pad) + var(--cp-row-pad-x));
+  }
+}
+
 @utility cp-body {
   /* twmerge: standalone -- Composite band container (flex column + gap + the positioned first-rule mask); no single-value built-in group to conflict with. */
   /* THE BAND CONTAINER — half one of the separator mechanism (half two is

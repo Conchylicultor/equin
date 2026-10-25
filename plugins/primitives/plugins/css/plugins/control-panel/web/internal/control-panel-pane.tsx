@@ -52,4 +52,5 @@ const PANE_HOST: ControlPanelHost = {
   nesting: "inline",
   inlineDepth: 1,
   descriptions: "band",
+  sections: "label",
 };

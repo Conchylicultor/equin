@@ -1,3 +1,4 @@
+import { displayPath } from "@plugins/infra/plugins/host-account/core";
 import { useCallback } from "react";
 import { useConfigResult, useSetConfig } from "@plugins/config_v2/web";
 import { foldResource } from "@plugins/primitives/plugins/live-state/web";
@@ -7,7 +8,6 @@ import { showToast } from "@plugins/shell/plugins/toast/web";
 import { useHomeDir } from "@plugins/apps/plugins/file-explorer/plugins/browser/web";
 import {
   baseName,
-  displayPath,
   parentPath,
 } from "@plugins/apps/plugins/file-explorer/plugins/browser/core";
 import type { PlacesState } from "@plugins/apps/plugins/file-explorer/plugins/shell/web";

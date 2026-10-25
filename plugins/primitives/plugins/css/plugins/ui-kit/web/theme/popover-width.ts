@@ -88,6 +88,10 @@
 // same card when it holds a row of side-by-side columns (a stepper's step names):
 // at least the card width, growing to fit them (to a cap) so no column overflows
 // into its neighbour.
+//
+// `settings` is a settings card (`ControlPanelCard`, control-panel): a titled
+// card of settings sections — prose that wraps, fields that span it. Fixed,
+// like a dialog's size: the surface IS the role, so no call site names it.
 export type PopoverWidth =
   | "content"
   | "fit"
@@ -101,6 +105,7 @@ export type PopoverWidth =
   | "picker"
   | "card"
   | "card-wide"
+  | "settings"
   | "xs"
   | "sm"
   | "md"
@@ -132,6 +137,7 @@ export const POPOVER_WIDTH: Record<PopoverWidth, string> = {
   builder: "w-(--popover-width-builder) max-w-(--available-width)", // a six-track rule row
   picker: "w-(--popover-width-picker) max-w-(--available-width)", // a panel whose body is a grid
   card: "w-(--popover-width-card) max-w-(--available-width)", // a hover card describing one thing
+  settings: "w-(--popover-width-settings) max-w-(--available-width)", // a titled card of settings sections
   "card-wide":
     "w-max min-w-[min(var(--popover-width-card),var(--available-width,100vw))] max-w-[min(28rem,var(--available-width,100vw))]", // a hover card holding side-by-side columns
   xs: "w-48 max-w-(--available-width)",

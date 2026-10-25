@@ -1,3 +1,8 @@
+import {
+  PICK_EMPHASES,
+  PICK_FAMILIES,
+  PICK_RUNGS,
+} from "@plugins/primitives/plugins/css/plugins/text/core";
 import { defineTokenGroup } from "@plugins/ui/plugins/theme-engine/core";
 
 /**
@@ -61,6 +66,57 @@ export const overlayGroup = defineTokenGroup("overlay", {
   tooltipEmphasis: { default: "regular", label: "Tooltip emphasis" },
   // The arrow's square (`tooltip-arrow`); `0px` draws no arrow.
   tooltipArrowSize: { default: "0.625rem", label: "Tooltip arrow size" },
+  // The settings card's words (`ControlPanelCard`): the type each part picks
+  // — a rung of the closed ladder, a shared weight, a family — read through
+  // `<Text pick>` by var name (control-panel's `settings-picks.ts`, which
+  // cannot import this group: theme-engine reaches back to it through
+  // config_v2). Defaults = the rungs a control panel's own band label and
+  // prose sit near, one step up for the title.
+  settingsTitleRole: {
+    default: "subheading",
+    label: "Settings card title type role",
+    values: PICK_RUNGS,
+  },
+  settingsTitleEmphasis: {
+    default: "role",
+    label: "Settings card title emphasis",
+    values: PICK_EMPHASES,
+  },
+  settingsTitleFamily: {
+    default: "role",
+    label: "Settings card title family",
+    values: PICK_FAMILIES,
+  },
+  settingsHeadingRole: {
+    default: "label",
+    label: "Settings section heading type role",
+    values: PICK_RUNGS,
+  },
+  settingsHeadingEmphasis: {
+    default: "semibold",
+    label: "Settings section heading emphasis",
+    values: PICK_EMPHASES,
+  },
+  settingsHeadingFamily: {
+    default: "role",
+    label: "Settings section heading family",
+    values: PICK_FAMILIES,
+  },
+  settingsProseRole: {
+    default: "caption",
+    label: "Settings section prose type role",
+    values: PICK_RUNGS,
+  },
+  settingsProseEmphasis: {
+    default: "role",
+    label: "Settings section prose emphasis",
+    values: PICK_EMPHASES,
+  },
+  settingsProseFamily: {
+    default: "role",
+    label: "Settings section prose family",
+    values: PICK_FAMILIES,
+  },
 });
 
 export type OverlayTokenValues = {

@@ -1,9 +1,8 @@
-import { useState } from "react";
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import {
   ControlPanel,
-  ControlPanelPopover,
+  ControlPanelCard,
 } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
@@ -33,6 +32,7 @@ import {
   shortStatus,
 } from "./folder-copy";
 import { isUnreadable } from "./folder-notice";
+import { useShownPath } from "./folder-path";
 import { useCheckAgain } from "./use-check-again";
 
 const settingsIcon = symbol("settings");
@@ -41,31 +41,30 @@ const midiIcon = symbol("music-note");
 
 /**
  * Sonata's settings, in the library pane's header (`sonataLibraryPane.Actions`):
- * a gear opening a card under it. Its one section is the watched MIDI
- * folders — each with its status (watching N songs, or why it cannot be read
- * with the way out inline), remove, and add with the folder picker. The same
- * `midi-folders` config Settings → Config edits.
+ * a gear opening the Sonata settings card under it. Its one section is the
+ * watched MIDI folders — each with its status (watching N songs, or why it
+ * cannot be read with the way out inline), remove, and add with the folder
+ * picker. The same `midi-folders` config Settings → Config edits.
  */
 export function MidiFoldersSettingsButton() {
   return (
-    <ControlPanelPopover
+    <ControlPanelCard
       align="end"
-      label="Sonata settings"
+      title="Sonata settings"
       trigger={<IconButton icon={settingsIcon} label="Sonata settings" />}
     >
       <ControlPanel.Section
-        needs="described"
         label={
-          <Inline gap="xs" align="center">
+          <>
             <Icon icon={midiIcon} className="size-4 text-muted-foreground" />
             MIDI folders
-          </Inline>
+          </>
         }
         description="MIDI files in these folders join your library and stay in sync as you add, edit or delete them."
       >
         <FolderList />
       </ControlPanel.Section>
-    </ControlPanelPopover>
+    </ControlPanelCard>
   );
 }
 
@@ -73,8 +72,6 @@ function FolderList() {
   const statuses = useLive(midiFoldersStatus);
   const { folders } = useConfig(midiFoldersConfig);
   const setConfig = useSetConfig(midiFoldersConfig);
-  // Re-keyed on every add, so the picker starts empty again.
-  const [addKey, setAddKey] = useState(0);
 
   const remove = (path: string) =>
     setConfig(
@@ -82,15 +79,12 @@ function FolderList() {
       folders.filter((f) => f.path !== path),
     );
   const add = (path: string) => {
-    const trimmed = path.trim();
-    if (trimmed.length === 0) return;
-    setAddKey((k) => k + 1);
-    if (folders.some((f) => f.path === trimmed)) return;
-    setConfig("folders", [...folders, { path: trimmed }]);
+    if (folders.some((f) => f.path === path)) return;
+    setConfig("folders", [...folders, { path }]);
   };
 
   return (
-    <Stack gap="xs">
+    <Stack gap="sm">
       {foldResource(statuses, {
         loading: () => <Loading variant="rows" count={2} />,
         error: (error) => <ResourceErrorInline error={error} variant="block" />,
@@ -113,9 +107,8 @@ function FolderList() {
           ),
       })}
       <FolderPickerPopover
-        key={addKey}
-        value=""
-        onChange={add}
+        purpose="add"
+        onAdd={add}
         placeholder="Add a folder — type a path or browse"
       />
     </Stack>
@@ -130,14 +123,15 @@ function FolderRow({
   onRemove: () => void;
 }) {
   const bad = isUnreadable(status);
+  const shownPath = useShownPath(status.path);
   return (
     <Stack
       direction="row"
       gap="sm"
       align="center"
       className={cn(
-        "rounded-lg border py-xs pr-2xs pl-xs",
-        bad ? "border-warning/30 bg-warning/5" : "border-border bg-muted/40",
+        "rounded-lg border p-sm",
+        bad ? "border-warning/30 bg-warning/5" : "border-border bg-field-fill",
       )}
     >
       <Center
@@ -150,7 +144,9 @@ function FolderRow({
       </Center>
       <Fill>
         <Stack gap="none">
-          <Text variant="code">{status.path}</Text>
+          <Text variant="code" className="font-medium" title={status.path}>
+            {shownPath}
+          </Text>
           {status.state === "ok" ? (
             <WatchingCount dir={status.dir} />
           ) : (
@@ -158,7 +154,12 @@ function FolderRow({
           )}
         </Stack>
       </Fill>
-      <IconButton icon={removeIcon} label="Stop watching" onClick={onRemove} />
+      <IconButton
+        icon={removeIcon}
+        label="Stop watching"
+        onClick={onRemove}
+        className="text-muted-foreground hover:text-foreground"
+      />
     </Stack>
   );
 }

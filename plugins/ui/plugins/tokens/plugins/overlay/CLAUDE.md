@@ -36,6 +36,14 @@ control's `tooltip` prop draws; not the hover card, which is an `OverlayPanel`):
   stay the type-scale group's. Without style-query support a browser draws
   `caption`.
 
+**Settings card type** — read by control-panel's `ControlPanelCard` through
+`<Text pick>` (by CSS var, control-panel's `settings-picks.ts`): the card's title
+(`settingsTitle*`, default `subheading`), a section's heading
+(`settingsHeading*`, default `label` semibold) and its prose
+(`settingsProse*`, default `caption`) — each a rung, an emphasis and a family
+from the closed `PICK_*` vocabulary, never a size. The card's width and inset
+are density's (`popoverWidthSettings`, `settingsCardPad`).
+
 A popover's own padding is not here: it is density's `popoverPad`, beside the
 popover width roles (the `panel` padding role).
 
@@ -60,7 +68,11 @@ popover width roles (the `panel` padding role).
     - `ui/theme-engine/theme-customizer.TokenRows`
     - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
 - Core:
-  - Uses: `ui/theme-engine.defineTokenGroup`
+  - Uses:
+    - `primitives/css/text.PICK_EMPHASES`
+    - `primitives/css/text.PICK_FAMILIES`
+    - `primitives/css/text.PICK_RUNGS`
+    - `ui/theme-engine.defineTokenGroup`
   - Exports (types): `OverlayTokenValues`
   - Exports (values): `overlayGroup`
 - Cross-plugin:

@@ -152,6 +152,7 @@ export const CUSTOM_UTILITY_REGISTRY = [
   { classes: ["floating-bar-boundary"], standalone: true, reason: "Scopes the floating-bar safe-area var and anchor name to this box; no built-in group sets anchor-scope." },
   { classes: ["cp-panel"], extend: "p" },
   { classes: ["cp-surface"], extend: "w" },
+  { classes: ["cp-card"], standalone: true, reason: "Re-declares the panel geometry vars for a settings card's subtree; no single-value built-in group to conflict with." },
   { classes: ["cp-body"], standalone: true, reason: "Composite band container (flex column + gap + the positioned first-rule mask); no single-value built-in group to conflict with." },
   { classes: ["cp-band"], standalone: true, reason: "Composite band marker (positioning context + the full-bleed ::before hairline); no single-value built-in group to conflict with." },
   { classes: ["cp-row"], standalone: true, reason: "Composite row grid (display + tracks + gap + min-height + inline padding + radius); not a single-property utility another class should selectively override." },

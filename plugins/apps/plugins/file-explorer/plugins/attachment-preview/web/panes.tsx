@@ -21,7 +21,7 @@ import {
   PreviewPane,
   useHomeDir,
 } from "@plugins/apps/plugins/file-explorer/plugins/browser/web";
-import { displayPath } from "@plugins/apps/plugins/file-explorer/plugins/browser/core";
+import { displayPath } from "@plugins/infra/plugins/host-account/core";
 
 /**
  * `attachment/:id` — a file someone attached (to a prompt, a task), previewed

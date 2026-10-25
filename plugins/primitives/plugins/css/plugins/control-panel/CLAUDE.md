@@ -4,8 +4,8 @@ The vocabulary for a **data-control panel** — the body of a Filter popover, a
 Sort popover, a view-settings menu, a settings pane, a per-field editor. One
 compound namespace (`ControlPanel` plus `.Section` / `.Subhead` / `.Row` /
 `.Setting` / `.Block` / `.Group` / `.RuleList` / `.RuleRow` / `.Field` /
-`.Footer` / `.Empty` / `.Stack`) and two surfaces (`ControlPanelPopover`,
-`ControlPanelPane`).
+`.Footer` / `.Empty` / `.Stack`) and three surfaces (`ControlPanelPopover`,
+`ControlPanelPane`, `ControlPanelCard`).
 
 Read the members as a set: **four ways to be one field** — `Row` (the row *is*
 the control), `Setting` (the row *holds* the control), `Block` (the control is
@@ -294,6 +294,41 @@ contract — so it is equally correct in a region that is not a panel. Gated by
 `subhead-rail` (a panel with an icon column, where the two rails are genuinely
 apart).
 
+## Three surfaces, picked by what the thing IS
+
+| surface | it is | sections draw | descriptions | width |
+|---|---|---|---|---|
+| `ControlPanelPopover` | a menu of choices (filter, sort, view settings) | the menu section label | `hint` | the showing page's need (`cp-surface`) |
+| `ControlPanelPane` | a settings pane | the menu section label | on the band | the pane's |
+| `ControlPanelCard` | a titled settings card under a gear (an app's own settings) | a **heading** over body prose | on the band | `settings` (density `popoverWidthSettings`) |
+
+**The card exists because the vocabulary had no form for it.** Sonata's settings
+gear was built as a `ControlPanelPopover` — the only "popover of settings" there
+was — and came out a menu: a faint caption label, the 280px `described` wrap,
+caption prose, no title, focus ringing the first row's trash button. Every one
+of those was the popover doing its job. The fix is the missing ROLE, not knobs
+on the popover: a `headingStyle` or `width` prop would reopen exactly the
+escapes this vocabulary removed, and the next author would still pick wrong.
+So the card owns everything that makes it a card, and a call site writes the
+same `<ControlPanel.Section label description>` it writes anywhere:
+
+- **A required `title`**, drawn in a title row with a close button (above the
+  body, on its rail — not the popover's sticky `header`, whose rule and inset
+  are a menu's), and the panel's accessible name.
+- **`sections: "heading"`** in its host policy: `Section` draws its label as a
+  heading and its description as prose, through the overlay token group's
+  `settingsTitle` / `settingsHeading` / `settingsProse` role picks
+  (`<Text pick>`), so a theme sets the card's type to its mock.
+- **`cp-card`** on the popup: the card inset (density `settingsCardPad`) as
+  `--cp-panel-pad`, so the rail, rows and band rules keep the contract one step
+  roomier; its foot pads by the whole rail.
+- **Initial focus on the title row** when opened by pointer, so no row action
+  opens ringed; a keyboard open lands on the first control.
+
+It takes no `width`, `padding` or `className`, the same absences as its
+siblings. A `Section` outside any host (a bare `<ControlPanel>` in a dialog)
+draws the label it always did (`useSectionStyle`).
+
 ## The host owns the presentation, and throws when absent
 
 ```ts
@@ -301,13 +336,14 @@ interface ControlPanelHost {
   nesting: "push" | "inline";
   inlineDepth: number;
   descriptions: "band" | "hint";
+  sections: "label" | "heading";
 }
 ```
 
-`ControlPanelPopover` publishes `{ push, 0, hint }` — a popover passes field
+`ControlPanelPopover` publishes `{ push, 0, hint, label }` — a popover passes field
 subsets precisely because it wants short labels rather than prose, and
 `usePanelStack().push` replacing the whole body is right there. `ControlPanelPane`
-publishes `{ inline, 1, band }` **and still wraps its children in a
+publishes `{ inline, 1, band, label }` (`ControlPanelCard`: `{ inline, 1, band, heading }`) **and still wraps its children in a
 `ControlPanel.Stack`**, so depth ≥ 2 falls back to a push rather than collapsing
 into nothing.
 
@@ -673,11 +709,12 @@ The primitive needs **no** new lint exemptions: it inherits the
 
 ## Plugin reference
 
-- Description: The control-panel vocabulary: ControlPanel plus its closed set of members (Section, Subhead, Row, Setting, Block, Group, RuleList, RuleRow, Field, Footer, Empty, Stack, LabelMark) and its two surfaces, ControlPanelPopover and ControlPanelPane. The container draws the hairlines, the row is a grid so every label starts at one x, selection has one language per meaning, and width is a role rather than a measurement.
+- Description: The control-panel vocabulary: ControlPanel plus its closed set of members (Section, Subhead, Row, Setting, Block, Group, RuleList, RuleRow, Field, Footer, Empty, Stack, LabelMark) and its three surfaces: ControlPanelPopover (a menu of choices), ControlPanelPane (a settings pane) and ControlPanelCard (a titled settings card under a gear — sections drawn as headings over prose). The container draws the hairlines, the row is a grid so every label starts at one x, selection has one language per meaning, and width is a role rather than a measurement.
 - Web:
-  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×12
     - `primitives/row-actions` ×2
+    - `primitives/css/fill.Fill`
     - `primitives/css/rail.useRailGuard`
     - `primitives/css/selection-indicator.CheckboxIndicator`
     - `primitives/css/spacing.Stack`
@@ -689,6 +726,7 @@ The primitive needs **no** new lint exemptions: it inherits the
     - `ui/icons.Icon`
   - Exports (types):
     - `ControlPanelBlockProps`
+    - `ControlPanelCardProps`
     - `ControlPanelEmptyProps`
     - `ControlPanelFieldProps`
     - `ControlPanelFit`
@@ -716,15 +754,16 @@ The primitive needs **no** new lint exemptions: it inherits the
     - `PanelStackEntry`
   - Exports (values):
     - `ControlPanel`
+    - `ControlPanelCard`
     - `ControlPanelPane`
     - `ControlPanelPopover`
     - `panelOverflowReportSink`
     - `useControlPanelHost`
     - `usePanelStack`
 - Cross-plugin:
-  - Uses tokens: 29 vars — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ui/tokens/color-palette` ×11
-    - `ui/tokens/density` ×8
+  - Uses tokens: 33 vars — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui/tokens/color-palette` ×12
+    - `ui/tokens/density` ×11
     - `ui/tokens/type-scale` ×7
     - `ui/tokens/shape` ×2
     - `ui/tokens/shadow --shadow`
@@ -745,7 +784,9 @@ The primitive needs **no** new lint exemptions: it inherits the
     - `reports/panel-overflow`
     - `shell/global-action-bar`
 - Exemptions:
-  - Exempts itself from: `control-panel/no-adhoc-panel-body` — `web/internal/control-panel-popover.tsx` (sanctioned)
+  - Exempts itself from:
+    - `control-panel/no-adhoc-panel-body` — `web/internal/control-panel-popover.tsx` (sanctioned)
+    - `control-panel/no-adhoc-panel-body` — `web/internal/control-panel-card.tsx` (sanctioned)
   - Exempted by: `primitives/css/control-panel` (0 debt)
 
 <!-- AUTOGENERATED:END -->

@@ -1,4 +1,9 @@
 import {
+  HOME,
+  absolutePath,
+  displayPath,
+} from "@plugins/infra/plugins/host-account/core";
+import {
   useCallback,
   useContext,
   useMemo,
@@ -59,11 +64,8 @@ import { useLive } from "@plugins/network/plugins/live/web";
 import type { RowSelectionState } from "@plugins/primitives/plugins/tree/core";
 import { DROP_TARGET_RING } from "@plugins/primitives/plugins/data-view/web";
 import {
-  absolutePath,
   baseName,
-  displayPath,
   formatCount,
-  HOME,
   isWithin,
   joinPath,
   parentPath,

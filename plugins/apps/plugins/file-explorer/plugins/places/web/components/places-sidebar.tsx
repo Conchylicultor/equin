@@ -1,3 +1,4 @@
+import { absolutePath } from "@plugins/infra/plugins/host-account/core";
 import { useMemo, type CSSProperties, type ReactNode } from "react";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
@@ -21,7 +22,6 @@ import {
   useHomeDir,
   useExplorerFolderTarget,
 } from "@plugins/apps/plugins/file-explorer/plugins/browser/web";
-import { absolutePath } from "@plugins/apps/plugins/file-explorer/plugins/browser/core";
 import {
   FileExplorer,
   type PlacesSource,

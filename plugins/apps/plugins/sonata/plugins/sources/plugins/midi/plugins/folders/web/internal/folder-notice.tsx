@@ -5,10 +5,14 @@ import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  selfClass,
+  Stack,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
   Button,
+  cn,
   ControlSizeProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { FolderPicker } from "@plugins/primitives/plugins/folder-picker/web";
@@ -106,14 +110,21 @@ function FolderNoticeRow({ folder }: { folder: UnreadableFolder }) {
       direction="row"
       gap="md"
       align="center"
-      className="border-t border-border p-md first:border-t-0"
+      className="border-t border-border px-lg py-md first:border-t-0"
     >
-      <Center className="size-9 rounded-lg bg-warning/15 text-warning">
+      {/* The tile sits at the top of the row (beside the title), the actions
+          stay centred on it. */}
+      <Center
+        className={cn(
+          "size-9 rounded-lg bg-warning/15 text-warning",
+          selfClass("start"),
+        )}
+      >
         <Icon icon={folderStateIcon(folder)} className="size-4.5" />
       </Center>
       <Fill>
         <Stack gap="2xs" align="start">
-          <Text variant="label" className="font-semibold">
+          <Text variant="heading">
             {folder.state === "denied" ? (
               <>
                 Sonata can't open <b>{name}</b>
@@ -129,7 +140,11 @@ function FolderNoticeRow({ folder }: { folder: UnreadableFolder }) {
             )}
           </Text>
           <FolderPath path={folder.path} />
-          <Text variant="caption" tone="muted" className="text-pretty">
+          <Text
+            variant="label"
+            tone="muted"
+            className="font-normal text-pretty"
+          >
             {unreadableReason(folder)} <ImportedStay dir={folder.dir} />
           </Text>
           {check.result !== null ? (

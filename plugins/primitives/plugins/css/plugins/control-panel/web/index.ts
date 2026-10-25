@@ -42,12 +42,16 @@ export {
 } from "./internal/setting-row";
 export { useControlPanelHost, type ControlPanelHost } from "./internal/host";
 export {
+  ControlPanelCard,
+  type ControlPanelCardProps,
+} from "./internal/control-panel-card";
+export {
   ControlPanelPane,
   type ControlPanelPaneProps,
 } from "./internal/control-panel-pane";
 
 export default {
   description:
-    "The control-panel vocabulary: ControlPanel plus its closed set of members (Section, Subhead, Row, Setting, Block, Group, RuleList, RuleRow, Field, Footer, Empty, Stack, LabelMark) and its two surfaces, ControlPanelPopover and ControlPanelPane. The container draws the hairlines, the row is a grid so every label starts at one x, selection has one language per meaning, and width is a role rather than a measurement.",
+    "The control-panel vocabulary: ControlPanel plus its closed set of members (Section, Subhead, Row, Setting, Block, Group, RuleList, RuleRow, Field, Footer, Empty, Stack, LabelMark) and its three surfaces: ControlPanelPopover (a menu of choices), ControlPanelPane (a settings pane) and ControlPanelCard (a titled settings card under a gear — sections drawn as headings over prose). The container draws the hairlines, the row is a grid so every label starts at one x, selection has one language per meaning, and width is a role rather than a measurement.",
   contributions: [],
 } satisfies PluginDefinition;

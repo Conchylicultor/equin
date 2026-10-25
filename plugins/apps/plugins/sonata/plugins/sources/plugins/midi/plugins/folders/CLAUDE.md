@@ -94,12 +94,13 @@ is drift repair, not a correctness dependency.
     - `FieldPresentation.Register` "exposure:sonata_songs_ext_midi"
     - `Library.Notice` "midi-folders" → `MidiFoldersNotice`
     - `sonataLibraryPane.Actions` "midi-folders" → `MidiFoldersSettingsButton`
-  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `config_v2` ×3
     - `primitives/css/ui-kit` ×3
     - `apps/sonata/library` ×2
     - `network/live` ×2
     - `primitives/css/control-panel` ×2
+    - `primitives/css/spacing` ×2
     - `primitives/folder-picker` ×2
     - `primitives/live-state` ×2
     - `infra/endpoints.useFetchEndpoint`
@@ -109,7 +110,6 @@ is drift repair, not a correctness dependency.
     - `primitives/css/fill.Fill`
     - `primitives/css/inline.Inline`
     - `primitives/css/rigid.rigidClass`
-    - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/icon-button.IconButton`
     - `primitives/loading.Loading`
@@ -159,13 +159,14 @@ is drift repair, not a correctness dependency.
     - `ui/tokens/density --space-2xs`
     - `ui/tokens/density --space-lg`
     - `ui/tokens/density --space-md`
+    - `ui/tokens/density --space-sm`
     - `ui/tokens/density --space-xs`
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-scale`
     - `ui/tokens/type-scale --font-size-caption`
+    - `ui/tokens/type-scale --font-weight-medium`
     - `ui/tokens/type-scale --font-weight-normal`
-    - `ui/tokens/type-scale --font-weight-semibold`
     - `ui/tokens/type-scale --line-height-caption`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/import-job.ts`, `server/internal/reconcile.ts`, `server/internal/folder-status.ts` (debt)

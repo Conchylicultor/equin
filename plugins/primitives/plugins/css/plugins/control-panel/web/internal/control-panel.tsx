@@ -5,7 +5,11 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useRailGuard } from "@plugins/primitives/plugins/css/plugins/rail/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+
 import type React from "react";
+
+import { useSectionStyle } from "./host";
+import { SETTINGS_HEADING, SETTINGS_PROSE } from "./settings-picks";
 
 import { usePanelOverflowGuard } from "./overflow-guard";
 import type { ControlPanelWidthNeed } from "./width-need";
@@ -110,15 +114,19 @@ export function ControlPanel({
 
 export interface ControlPanelSectionProps {
   /**
-   * The section's label on the panel's own content rail — the icon rail. It
-   * wears the shared menu section label (ui-kit `MENU_LABEL_PAINT`: faint
-   * caption, semibold, sentence case), the same as a dropdown's or a
-   * `Subhead`'s, so every menu surface names its runs alike. There used to be an
-   * `eyebrow` (small caps) / `group` choice here; one label is the point.
+   * The section's label on the panel's own content rail — the icon rail. In a
+   * popover or a pane it wears the shared menu section label (ui-kit
+   * `MENU_LABEL_PAINT`: faint caption, semibold, sentence case), the same as a
+   * dropdown's or a `Subhead`'s, so every menu surface names its runs alike. In
+   * a settings card (`ControlPanelCard`) it is the card's section HEADING (the
+   * overlay group's `settingsHeading` pick; a leading icon sits in it). The
+   * host decides (`sections`), never this call site: there used to be an
+   * `eyebrow` / `group` choice here, and one answer per surface is the point.
    */
   label?: React.ReactNode;
   /**
-   * A muted line under the label, INSIDE the band. It is prose about the
+   * A muted line under the label, INSIDE the band (a card's section prose, the
+   * `settingsProse` pick, in a settings card). It is prose about the
    * band, not a row — so it reserves no track, takes no row height, and
    * invariant #2 never sees it. It lands on the panel's rail beside the label
    * above it by doing nothing at all.
@@ -163,22 +171,54 @@ export function ControlPanelSection({
   className,
   children,
 }: ControlPanelSectionProps) {
+  const style = useSectionStyle();
   return (
     <div data-cp-needs={needs} className={cn("cp-band", className)}>
-      {label != null ? (
-        <Text
-          as="div"
-          variant="caption"
-          className={cn(MENU_LABEL_PAINT, "flex control-min-xs items-center")}
-        >
-          {label}
-        </Text>
-      ) : null}
-      {description != null ? (
-        <Text as="div" variant="caption" tone="muted" className="pb-2xs">
-          {description}
-        </Text>
-      ) : null}
+      {style === "heading" ? (
+        <>
+          {label != null ? (
+            <Text
+              as="h3"
+              pick={SETTINGS_HEADING}
+              step="base"
+              className="flex items-center gap-sm"
+            >
+              {label}
+            </Text>
+          ) : null}
+          {description != null ? (
+            <Text
+              as="p"
+              pick={SETTINGS_PROSE}
+              step="base"
+              tone="muted"
+              className="pt-2xs pb-md text-pretty"
+            >
+              {description}
+            </Text>
+          ) : null}
+        </>
+      ) : (
+        <>
+          {label != null ? (
+            <Text
+              as="div"
+              variant="caption"
+              className={cn(
+                MENU_LABEL_PAINT,
+                "flex control-min-xs items-center",
+              )}
+            >
+              {label}
+            </Text>
+          ) : null}
+          {description != null ? (
+            <Text as="div" variant="caption" tone="muted" className="pb-2xs">
+              {description}
+            </Text>
+          ) : null}
+        </>
+      )}
       {children}
     </div>
   );

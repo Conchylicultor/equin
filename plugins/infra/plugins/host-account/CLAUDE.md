@@ -81,13 +81,17 @@ be a claim about the user that then reverses itself.
   - Uses: `network/live.liveValue`
   - Exports (types): `HostAccount`
   - Exports (values):
+    - `absolutePath`
     - `accountFirstName`
     - `accountInitial`
+    - `displayPath`
+    - `HOME`
     - `hostAccount`
     - `HostAccountSchema`
     - `hostHome`
 - Cross-plugin:
   - Imported by:
+    - `apps/file-explorer/browser`
     - `apps/pages/shell`
     - `infra/host-account/guest`
 - Sub-plugins:

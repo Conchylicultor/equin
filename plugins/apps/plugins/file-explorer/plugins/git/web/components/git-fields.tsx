@@ -1,3 +1,4 @@
+import { absolutePath } from "@plugins/infra/plugins/host-account/core";
 import { useMemo, type ReactNode } from "react";
 import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
 import type {
@@ -7,7 +8,6 @@ import type {
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { WithTooltip } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { absolutePath } from "@plugins/apps/plugins/file-explorer/plugins/browser/core";
 import {
   useExplorerDir,
   useHomeDir,

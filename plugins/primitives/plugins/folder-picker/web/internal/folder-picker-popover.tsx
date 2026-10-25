@@ -1,4 +1,7 @@
-import { Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  Button,
+  Input,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState } from "react";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
@@ -18,11 +21,28 @@ const folderOpenIcon = symbol("folder-open");
 
 type Verdict = { valid: true } | { valid: false; reason: string };
 
-export interface FolderPickerPopoverProps {
-  value: string;
-  onChange: (value: string) => void;
-  placeholder?: string;
-}
+export type FolderPickerPopoverProps =
+  | {
+      /**
+       * `edit` — the field HOLDS a folder (a config value): its path, a
+       * validity mark, an icon-only browse button.
+       */
+      purpose: "edit";
+      value: string;
+      onChange: (value: string) => void;
+      placeholder?: string;
+    }
+  | {
+      /**
+       * `add` — the field ADDS a folder to a list beside it: an empty dashed
+       * field (the optional affordance) and a labelled "Browse…" button. A
+       * typed path is handed over on Enter or blur, a browsed one on pick, and
+       * the field empties itself again.
+       */
+      purpose: "add";
+      onAdd: (path: string) => void;
+      placeholder?: string;
+    };
 
 /**
  * A typeable/pasteable absolute-path input with a live validity indicator
@@ -30,11 +50,81 @@ export interface FolderPickerPopoverProps {
  * host filesystem. Self-contained — no config_v2 dependency — so any surface
  * can pick a host folder.
  */
-export function FolderPickerPopover({
+export function FolderPickerPopover(props: FolderPickerPopoverProps) {
+  return props.purpose === "add" ? (
+    <AddFolderField onAdd={props.onAdd} placeholder={props.placeholder} />
+  ) : (
+    <EditFolderField
+      value={props.value}
+      onChange={props.onChange}
+      placeholder={props.placeholder}
+    />
+  );
+}
+
+function AddFolderField({
+  onAdd,
+  placeholder,
+}: {
+  onAdd: (path: string) => void;
+  placeholder?: string;
+}) {
+  const [local, setLocal] = useState("");
+  const [open, setOpen] = useState(false);
+  const add = (path: string) => {
+    const trimmed = path.trim();
+    setLocal("");
+    if (trimmed.length > 0) onAdd(trimmed);
+  };
+  return (
+    <Stack direction="row" gap="xs" align="center">
+      <Fill>
+        <Input
+          outline="dashed"
+          // A path is typed in the path face; the hint before it is prose.
+          className="font-mono placeholder:font-sans"
+          value={local}
+          placeholder={placeholder ?? "Add a folder — type a path or browse"}
+          onChange={(e) => setLocal(e.target.value)}
+          onBlur={() => add(local)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") add(local);
+          }}
+        />
+      </Fill>
+      <InlinePopover
+        resetOnClose
+        open={open}
+        onOpenChange={setOpen}
+        align="end"
+        width="xl"
+        padding="none"
+        trigger={
+          <Button variant="secondary" shape="pill">
+            Browse…
+          </Button>
+        }
+      >
+        <FolderPicker
+          onSelect={(path) => {
+            add(path);
+            setOpen(false);
+          }}
+        />
+      </InlinePopover>
+    </Stack>
+  );
+}
+
+function EditFolderField({
   value,
   onChange,
   placeholder,
-}: FolderPickerPopoverProps) {
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+}) {
   // `local` is seeded from `value` and re-initialized naturally on external
   // value changes by the caller remounting this component with `key={value}`
   // (the directory-path field renderer) — so no mirror effect is needed.

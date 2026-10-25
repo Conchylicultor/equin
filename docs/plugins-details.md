@@ -3971,6 +3971,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Core:
             - Uses:
               - `fields/text/config.textField`
+              - `infra/host-account.HOME`
               - `network/live.rowKind`
               - `primitives/file-type.FilePreview`
               - `primitives/file-type.fileTypeOf`
@@ -3985,10 +3986,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `LensHideRule`
               - `ListedFolder`
             - Exports (values):
-              - `absolutePath`
               - `baseName`
               - `decodeOpenParam`
-              - `displayPath`
               - `encodeOpenParam`
               - `ENTRY_CATEGORY_OPTIONS`
               - `entryCategory`
@@ -3999,7 +3998,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `formatModified`
               - `formatModifiedFull`
               - `formatSize`
-              - `HOME`
               - `isWithin`
               - `itemCount`
               - `joinPath`
@@ -8842,12 +8840,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `FieldPresentation.Register` "exposure:sonata_songs_ext_midi"
                       - `Library.Notice` "midi-folders" → `MidiFoldersNotice`
                       - `sonataLibraryPane.Actions` "midi-folders" → `MidiFoldersSettingsButton`
-                    - Uses: 29 symbols — full list in [`plugins/apps/plugins/sonata/plugins/sources/plugins/midi/plugins/folders/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/sources/plugins/midi/plugins/folders/REFERENCE.md)
+                    - Uses: 30 symbols — full list in [`plugins/apps/plugins/sonata/plugins/sources/plugins/midi/plugins/folders/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/sources/plugins/midi/plugins/folders/REFERENCE.md)
                       - `config_v2` ×3
                       - `primitives/css/ui-kit` ×3
                       - `apps/sonata/library` ×2
                       - `network/live` ×2
                       - `primitives/css/control-panel` ×2
+                      - `primitives/css/spacing` ×2
                       - `primitives/folder-picker` ×2
                       - `primitives/live-state` ×2
                       - `infra/endpoints.useFetchEndpoint`
@@ -8857,7 +8856,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `primitives/css/fill.Fill`
                       - `primitives/css/inline.Inline`
                       - `primitives/css/rigid.rigidClass`
-                      - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
                       - `primitives/icon-button.IconButton`
                       - `primitives/loading.Loading`
@@ -8907,13 +8905,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `ui/tokens/density --space-2xs`
                       - `ui/tokens/density --space-lg`
                       - `ui/tokens/density --space-md`
+                      - `ui/tokens/density --space-sm`
                       - `ui/tokens/density --space-xs`
                       - `ui/tokens/shape --radius`
                       - `ui/tokens/shape --spacing`
                       - `ui/tokens/type-scale --font-scale`
                       - `ui/tokens/type-scale --font-size-caption`
+                      - `ui/tokens/type-scale --font-weight-medium`
                       - `ui/tokens/type-scale --font-weight-normal`
-                      - `ui/tokens/type-scale --font-weight-semibold`
                       - `ui/tokens/type-scale --line-height-caption`
                   - Exemptions:
                     - Exempts itself from: `boundaries/no-platform-api` — `server/internal/import-job.ts`, `server/internal/reconcile.ts`, `server/internal/folder-status.ts` (debt)
@@ -29526,13 +29525,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses: `network/live.liveValue`
         - Exports (types): `HostAccount`
         - Exports (values):
+          - `absolutePath`
           - `accountFirstName`
           - `accountInitial`
+          - `displayPath`
+          - `HOME`
           - `hostAccount`
           - `HostAccountSchema`
           - `hostHome`
       - Cross-plugin:
         - Imported by:
+          - `apps/file-explorer/browser`
           - `apps/pages/shell`
           - `infra/host-account/guest`
       - Plugins:
@@ -38275,11 +38278,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `config_v2/settings`
               - `hints/ask`
               - `history/dialog`
-        - **`control-panel`** — The control-panel vocabulary: ControlPanel plus its closed set of members (Section, Subhead, Row, Setting, Block, Group, RuleList, RuleRow, Field, Footer, Empty, Stack, LabelMark) and its two surfaces, ControlPanelPopover and ControlPanelPane. The container draws the hairlines, the row is a grid so every label starts at one x, selection has one language per meaning, and width is a role rather than a measurement.
+        - **`control-panel`** — The control-panel vocabulary: ControlPanel plus its closed set of members (Section, Subhead, Row, Setting, Block, Group, RuleList, RuleRow, Field, Footer, Empty, Stack, LabelMark) and its three surfaces: ControlPanelPopover (a menu of choices), ControlPanelPane (a settings pane) and ControlPanelCard (a titled settings card under a gear — sections drawn as headings over prose). The container draws the hairlines, the row is a grid so every label starts at one x, selection has one language per meaning, and width is a role rather than a measurement.
           - Web:
-            - Uses: 23 symbols — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
+            - Uses: 24 symbols — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
               - `primitives/css/ui-kit` ×12
               - `primitives/row-actions` ×2
+              - `primitives/css/fill.Fill`
               - `primitives/css/rail.useRailGuard`
               - `primitives/css/selection-indicator.CheckboxIndicator`
               - `primitives/css/spacing.Stack`
@@ -38291,6 +38295,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/icons.Icon`
             - Exports (types):
               - `ControlPanelBlockProps`
+              - `ControlPanelCardProps`
               - `ControlPanelEmptyProps`
               - `ControlPanelFieldProps`
               - `ControlPanelFit`
@@ -38318,15 +38323,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PanelStackEntry`
             - Exports (values):
               - `ControlPanel`
+              - `ControlPanelCard`
               - `ControlPanelPane`
               - `ControlPanelPopover`
               - `panelOverflowReportSink`
               - `useControlPanelHost`
               - `usePanelStack`
           - Cross-plugin:
-            - Uses tokens: 29 vars — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
-              - `ui/tokens/color-palette` ×11
-              - `ui/tokens/density` ×8
+            - Uses tokens: 33 vars — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
+              - `ui/tokens/color-palette` ×12
+              - `ui/tokens/density` ×11
               - `ui/tokens/type-scale` ×7
               - `ui/tokens/shape` ×2
               - `ui/tokens/shadow --shadow`
@@ -38347,7 +38353,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `reports/panel-overflow`
               - `shell/global-action-bar`
           - Exemptions:
-            - Exempts itself from: `control-panel/no-adhoc-panel-body` — `web/internal/control-panel-popover.tsx` (sanctioned)
+            - Exempts itself from:
+              - `control-panel/no-adhoc-panel-body` — `web/internal/control-panel-popover.tsx` (sanctioned)
+              - `control-panel/no-adhoc-panel-body` — `web/internal/control-panel-card.tsx` (sanctioned)
             - Exempted by: `primitives/css/control-panel` (0 debt)
         - **`control-size`** — Control-size standard: the shared control-* height scale and its enforcing lint rule (no-adhoc-control).
         - **`coords`** — Coordinate-space positioning primitive: <Placed x y> / placedStyle() places a box by runtime numbers on both axes, plus pct() for fractional coordinates.
@@ -38390,9 +38398,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Fill`
               - `fillClasses`
           - Cross-plugin:
-            - Imported by: 174 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
+            - Imported by: 175 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
               - `apps` ×52
-              - `primitives` ×29
+              - `primitives` ×30
               - `conversations` ×24
               - `debug` ×18
               - `page` ×10
@@ -39188,13 +39196,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×37
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family` ×2
-            - Imported by: 398 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 399 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×110
               - `conversations` ×73
               - `primitives` ×45
               - `debug` ×37
               - `page` ×23
-              - `ui` ×17
+              - `ui` ×18
               - `plugin-meta` ×14
               - `tasks` ×14
               - `fields` ×9
@@ -39463,9 +39471,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useSingleLine`
               - `WithTooltip`
           - Cross-plugin:
-            - Uses tokens: 368 vars — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Uses tokens: 370 vars — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `ui/tokens/data-view` ×97
-              - `ui/tokens/density` ×80
+              - `ui/tokens/density` ×82
               - `ui/tokens/color-palette` ×61
               - `ui/tokens/type-scale` ×42
               - `ui/tokens/shape` ×15
@@ -41561,6 +41569,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-md`
           - `ui/tokens/density --space-sm`
           - `ui/tokens/density --space-xs`
+          - `ui/tokens/font-family --font-mono`
+          - `ui/tokens/font-family --font-sans`
           - `ui/tokens/shape --spacing`
         - Imported by:
           - `apps/sonata/sources/midi/folders`
@@ -51727,12 +51737,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `fontFamilyGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Tokens used by: 150 plugins — full list in [`plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md)
+            - Tokens used by: 151 plugins — full list in [`plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md)
               - `conversations` ×36
               - `apps` ×21
               - `plugin-meta` ×21
               - `debug` ×20
-              - `primitives` ×15
+              - `primitives` ×16
               - `reports` ×7
               - `ui` ×5
               - `tasks` ×4
@@ -51846,7 +51856,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/theme-engine/theme-customizer.TokenRows`
               - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
           - Core:
-            - Uses: `ui/theme-engine.defineTokenGroup`
+            - Uses:
+              - `primitives/css/text.PICK_EMPHASES`
+              - `primitives/css/text.PICK_FAMILIES`
+              - `primitives/css/text.PICK_RUNGS`
+              - `ui/theme-engine.defineTokenGroup`
             - Exports (types): `OverlayTokenValues`
             - Exports (values): `overlayGroup`
           - Cross-plugin:
