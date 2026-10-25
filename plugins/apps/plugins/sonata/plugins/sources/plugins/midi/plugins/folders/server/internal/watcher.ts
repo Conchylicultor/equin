@@ -12,7 +12,12 @@ import {
 } from "@plugins/apps/plugins/sonata/plugins/sources/plugins/midi/server";
 import { midiFoldersConfig } from "../../shared/config";
 import { importMidiFileJob } from "./import-job";
-import { reconcile, watchedDirsSync } from "./reconcile";
+import { reconcile } from "./reconcile";
+import {
+  onFolderStatusChange,
+  readableDirs,
+  refreshFolderStatuses,
+} from "./folder-status";
 
 /**
  * One instance over the configured folders, re-opened (stop + start) whenever
@@ -32,7 +37,11 @@ export const midiFoldersWatcher = defineFileWatcher({
 // folder list changes (via watchConfig) — config_v2 drives the dir set, so
 // there is no polling.
 let watcher: FileWatcher | null = null;
+// The readable dirs the current watcher was mounted over (`[]`: none).
+let mountedDirs: string[] = [];
 let configSub: Disposable | null = null;
+let statusSub: (() => void) | null = null;
+let mounting = false;
 let started = false;
 
 // Serialize reconfigure runs: overlapping config changes (or a config change
@@ -65,7 +74,17 @@ async function reconfigure(opts: { reconcile: boolean }): Promise<void> {
       await watcher.stop();
       watcher = null;
     }
-    const dirs = watchedDirsSync();
+    // Probe first: only readable folders are watched — an unreadable one would
+    // fail the watcher for every folder; it is shown in the library instead.
+    // (`mounting` keeps this probe's own change from queueing a second remount.)
+    mounting = true;
+    try {
+      refreshFolderStatuses();
+    } finally {
+      mounting = false;
+    }
+    const dirs = readableDirs();
+    mountedDirs = dirs;
     if (dirs.length > 0) {
       watcher = await midiFoldersWatcher.start({
         dirs,
@@ -88,6 +107,15 @@ export async function startMidiFolderWatcher(): Promise<void> {
   // walk is a separate warm-up) — do NOT also call reconfigure() separately
   // (that would double-mount). Genuine later config-changes reconcile inline.
   let firstCall = true;
+  // A re-probe that changes WHICH folders are readable (access granted, a drive
+  // plugged back in — found by a reconcile or the user's Check again) re-mounts
+  // the watcher and reconciles, so the folder's files are imported now.
+  statusSub = onFolderStatusChange(() => {
+    if (mounting || sameDirs(readableDirs(), mountedDirs)) return;
+    void runTracked("midi-folders:reconfigure", () =>
+      reconfigure({ reconcile: true }),
+    );
+  });
   configSub = watchConfig(midiFoldersConfig, () => {
     const reconcileNow = !firstCall;
     firstCall = false;
@@ -104,6 +132,10 @@ export async function stopMidiFolderWatcher(): Promise<void> {
     configSub.dispose();
     configSub = null;
   }
+  if (statusSub) {
+    statusSub();
+    statusSub = null;
+  }
   // Wait for any in-flight reconfigure to settle before tearing the watcher
   // down, so we don't leak a watcher created by a racing run.
   await reconfiguring;
@@ -111,4 +143,8 @@ export async function stopMidiFolderWatcher(): Promise<void> {
     await watcher.stop();
     watcher = null;
   }
+}
+
+function sameDirs(a: readonly string[], b: readonly string[]): boolean {
+  return a.length === b.length && a.every((dir, i) => dir === b[i]);
 }

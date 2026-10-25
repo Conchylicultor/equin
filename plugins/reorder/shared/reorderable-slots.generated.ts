@@ -96,6 +96,7 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "apps.settings.config.settings-config-index.actions", pluginId: "apps.settings.config", configName: "settings-config-index.actions" },
   { slotId: "apps.settings.shell.rail-badge", pluginId: "apps.settings.shell", configName: "rail-badge" },
   { slotId: "apps.settings.shell.sidebar", pluginId: "apps.settings.shell", configName: "sidebar" },
+  { slotId: "apps.sonata.library.notice", pluginId: "apps.sonata.library", configName: "notice" },
   { slotId: "apps.sonata.library.sonata-library.actions", pluginId: "apps.sonata.library", configName: "sonata-library.actions" },
   { slotId: "apps.sonata.library.sonata-player.actions", pluginId: "apps.sonata.library", configName: "sonata-player.actions" },
   { slotId: "apps.sonata.library.song-actions", pluginId: "apps.sonata.library", configName: "song-actions" },

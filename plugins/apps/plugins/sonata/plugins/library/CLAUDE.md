@@ -238,28 +238,16 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `Library.Source`
     - `Library.Cover`
     - `Library.SongActions`
+    - `Library.Notice`
     - `sonataLibraryPane.Actions`
     - `sonataPlayerPane.Actions`
-  - Slot contributors:
-    - `Library.Source` ← `apps.sonata.sources.chord-grid`
-    - `Library.Source` ← `apps.sonata.sources.midi`
-    - `Library.Source` ← `apps.sonata.sources.musicxml`
-    - `Library.Source` ← `apps.sonata.sources.ultimate-guitar`
-    - `Library.Source` ← `apps.sonata.transcription`
-    - `Library.Cover` ← `apps.sonata.sources.chord-grid`
-    - `Library.Cover` ← `apps.sonata.sources.midi`
-    - `Library.Cover` ← `apps.sonata.sources.musicxml`
-    - `Library.Cover` ← `apps.sonata.sources.ultimate-guitar`
-    - `Library.Cover` ← `apps.sonata.transcription`
+  - Slot contributors: 21 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `sonataPlayerPane.Actions` ×7
+    - `Library.Cover` ×5
+    - `Library.Source` ×5
+    - `sonataLibraryPane.Actions` ×2
+    - `Library.Notice` ← `apps.sonata.sources.midi.folders`
     - `Library.SongActions` ← `apps.sonata.library`
-    - `sonataLibraryPane.Actions` ← `primitives.pane`
-    - `sonataPlayerPane.Actions` ← `apps.sonata.audio.engine`
-    - `sonataPlayerPane.Actions` ← `apps.sonata.audio.metronome`
-    - `sonataPlayerPane.Actions` ← `apps.sonata.library`
-    - `sonataPlayerPane.Actions` ← `apps.sonata.piano-roll`
-    - `sonataPlayerPane.Actions` ← `apps.sonata.transport-bar`
-    - `sonataPlayerPane.Actions` ← `apps.sonata.transpose`
-    - `sonataPlayerPane.Actions` ← `primitives.pane`
   - Contributes:
     - `IdKinds.Kind` "song|seed"
     - `FieldPresentation.Register` "entity:sonata_songs"
@@ -270,7 +258,7 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `Library.SongActions` "delete" → `DeleteSongAction`
     - `Pane.Register` "sonata-library"
     - `Pane.Register` "sonata-player"
-  - Uses: 87 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 88 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×13
     - `primitives/data-view` ×7
     - `apps/sonata/shell` ×6
@@ -309,6 +297,7 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `primitives/link-gesture.linkProps`
     - `primitives/loading.Loading`
     - `primitives/relative-time.formatRelativeTime`
+    - `primitives/slot-render.defineRenderSlot`
     - `ui/icons.Icon`
   - Exports (types):
     - `SongCoverAnswer`
@@ -385,9 +374,9 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `songsEntityRef`
     - `updateSong`
 - Cross-plugin:
-  - Uses tokens: 35 vars — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses tokens: 36 vars — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui/tokens/density` ×11
     - `ui/tokens/categorical` ×10
-    - `ui/tokens/density` ×10
     - `ui/tokens/type-scale` ×6
     - `ui/tokens/color-palette` ×5
     - `ui/tokens/shadow` ×2
@@ -405,6 +394,7 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `apps/sonata/sources/chord-grid`
     - `apps/sonata/sources/midi`
     - `apps/sonata/sources/midi/file-preview`
+    - `apps/sonata/sources/midi/folders`
     - `apps/sonata/sources/musicxml`
     - `apps/sonata/sources/ultimate-guitar`
     - `apps/sonata/sources/ultimate-guitar/alignment`

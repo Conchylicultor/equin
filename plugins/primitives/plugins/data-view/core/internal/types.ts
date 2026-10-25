@@ -2082,6 +2082,14 @@ export interface DataViewBaseProps<TRow> {
    * with Retry, or Reload when the tab is out of date. Never `emptyState`.
    */
   errorState?: ReactNode;
+  /**
+   * A notice about the surface's data — something the user must act on that
+   * no row can say (a source it cannot read). Drawn between the toolbar and
+   * the rows, on the rail, in every view and every body state (loading,
+   * empty, failed), scrolling with the rows. The host adds no spacing — a
+   * notice that renders nothing leaves no gap, so it owns the room under it.
+   */
+  notice?: ReactNode;
   /** Opaque per-view options channel, keyed by view id. */
   viewOptions?: Record<string, unknown>;
   /**

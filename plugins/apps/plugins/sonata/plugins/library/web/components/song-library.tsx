@@ -8,6 +8,8 @@ import {
 } from "@plugins/primitives/plugins/data-view/web";
 import { formatRelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { useSonataApp } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { songLibrary, updateSong } from "../../core";
@@ -143,6 +145,14 @@ export function SongLibrary() {
     [saveSong],
   );
 
+  // Every `Library.Notice` (a watched folder that cannot be read, …): between
+  // the toolbar and the songs, or above the onboarding when there is no song.
+  const notices = (
+    <Library.Notice.Render>
+      {(n) => <n.component key={n.id} />}
+    </Library.Notice.Render>
+  );
+
   return (
     <Column
       fill
@@ -153,7 +163,12 @@ export function SongLibrary() {
         // owns its loading skeleton and its errors: a loading or failed
         // library never flashes the onboarding.
         confirmedEmpty ? (
-          <SonataOnboarding />
+          <Stack gap="none" className="h-full">
+            <div className="rail-follow pt-md">{notices}</div>
+            <Fill axis="y">
+              <SonataOnboarding />
+            </Fill>
+          </Stack>
         ) : (
           <DataView<Song>
             source={songLibrarySource}
@@ -179,6 +194,7 @@ export function SongLibrary() {
             createLabel="Add"
             rowActivation={songLink}
             emptyState={<>No songs match.</>}
+            notice={notices}
           />
         )
       }

@@ -1,6 +1,4 @@
-import { realpathSync } from "node:fs";
 import { extname, sep } from "node:path";
-import { getConfig } from "@plugins/config_v2/server";
 import {
   defineCorpusIndex,
   type CorpusDelta,
@@ -11,40 +9,10 @@ import {
   listFolderImportedSongs,
 } from "@plugins/apps/plugins/sonata/plugins/sources/plugins/midi/server";
 import { sonataDir } from "@plugins/apps/plugins/sonata/data-dirs";
-import { midiFoldersConfig } from "../../shared/config";
+import { readableDirs, refreshFolderStatuses } from "./folder-status";
 import { importMidiFileJob } from "./import-job";
 
 const MIDI_EXTENSIONS = new Set([".mid", ".midi"]);
-
-/**
- * Configured folder paths, canonicalized to their real (symlink-resolved) form.
- *
- * The OS file-watcher (parcel/FSEvents) reports the canonical path — on macOS
- * `/tmp/x` surfaces as `/private/tmp/x`. If the corpus index enumerated the
- * literal config path while the watcher emitted the canonical one, the same file
- * would be tracked under two `source_path`s and imported twice. Resolving here
- * makes the watcher dirs, the corpus enumeration, and the drift `startsWith`
- * check all agree on one canonical path — the single idempotency key. A dir that
- * doesn't exist yet can't be resolved; we keep its literal path (enumerate then
- * skips it as ENOENT, and the watcher surfaces its own subscribe error).
- *
- * Sync (`realpathSync`) because `defineCorpusIndex`'s `roots` is a synchronous
- * `() => string[]`, resolved fresh on every walk so config edits take effect.
- */
-export function watchedDirsSync(): string[] {
-  const paths = getConfig(midiFoldersConfig).folders.map((f) => f.path);
-  return paths.map((p) => {
-    try {
-      return realpathSync(p);
-    } catch (err) {
-      // Expected: a configured folder that doesn't exist yet can't be resolved.
-      // Keep the literal path (enumerate skips it as ENOENT). Any other error is
-      // unexpected — surface it.
-      if ((err as NodeJS.ErrnoException).code === "ENOENT") return p;
-      throw err;
-    }
-  });
-}
 
 // The incremental, throttled, fingerprint-keyed enumeration of every `.mid`/
 // `.midi` file under the watched folders. The generic mechanics (enumerate →
@@ -66,7 +34,9 @@ const midiIndex = defineCorpusIndex({
   name: "sonata.midi-folders",
   description:
     "Remembers which MIDI files exist in the watched folders so changes can be detected quickly without rescanning.",
-  roots: watchedDirsSync,
+  // Only the readable folders: an unreadable one is shown in the library, never
+  // walked — one bad root would otherwise abort the walk for every folder.
+  roots: readableDirs,
   match: (p) => MIDI_EXTENSIONS.has(extname(p).toLowerCase()),
   indexPath: sonataDir.file("midi-folders-index.json"),
   scope: "host",
@@ -141,8 +111,9 @@ export async function reconcileWith(deps: ReconcileDeps): Promise<void> {
   }
 
   // Drift the other way: a folder-managed song whose file vanished. Only mark
-  // missing when the song's source path is still under a watched dir — a folder
-  // removed from config leaves its songs untouched.
+  // missing when the song's source path is under a READABLE watched dir — a
+  // folder removed from config leaves its songs untouched, and so does one that
+  // cannot be read (its files are not known to be gone).
   const dirs = deps.watchedDirs();
   for (const song of songs) {
     if (song.sourceMissing) continue;
@@ -156,11 +127,15 @@ export async function reconcileWith(deps: ReconcileDeps): Promise<void> {
 
 /** Reconcile the DB against disk, wiring {@link reconcileWith} to the real index + DB. */
 export async function reconcile(): Promise<void> {
+  // Re-probe first: a folder that became readable (access granted, drive
+  // plugged back in) is walked by this very reconcile, and one that stopped
+  // being readable is left out of it.
+  refreshFolderStatuses();
   await reconcileWith({
     markDirty: () => midiIndex.markDirty(),
     ensureFresh: () => midiIndex.ensureFresh(),
     entries: () => midiIndex.entries(),
-    watchedDirs: watchedDirsSync,
+    watchedDirs: readableDirs,
     listImported: listFolderImportedSongs,
     // `enqueue` resolves to the new `{ jobId }`; reconcile has no use for it
     // (the job is fire-and-forget, deduped by sourcePath), so await and discard.

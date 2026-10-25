@@ -22,6 +22,28 @@ Two mechanisms keep the DB in sync with disk:
   that changed while the backend was down, and pre-existing files in a
   newly-added folder (the watcher emits no events for those).
 
+### An unreadable folder is a state, never a skip
+
+Every configured folder is **probed** (`server/internal/folder-status.ts`:
+resolve with `realpathSync`, then open it) into a typed `FolderStatus` —
+`ok`, `missing`, `not-a-folder`, `denied` (EPERM: macOS's Files & Folders
+refused equin; EACCES: the folder's own permissions) or `unreadable` (any
+other errno, with its code and message). Only the `ok` folders' real paths
+(`readableDirs()`) are watched, walked by the corpus index and used by
+reverse drift — so one bad folder can neither crash the backend, abort the
+walk nor fail the watcher for the others, and the songs of an unreadable
+folder are never marked "File missing" (their files are not known to be gone).
+
+The statuses are the `sonata.midi-folders.status` live value (pushed when a
+probe's result changes); the library shows each unreadable folder as a
+`Library.Notice` — which folder, why, and Allow access (EPERM only) / Check
+again / Change folder… / Remove — and the library header's gear lists every
+folder with its status and song count (`sonata.midi-folders.song-count`).
+The probe runs on every config change, at the start of every reconcile, and on
+`POST /api/sonata/midi-folders/recheck` (Check again): macOS sends no signal
+when access is granted. A probe that changes WHICH folders are readable
+re-mounts the watcher and reconciles, so a fixed folder imports at once.
+
 ### Corpus index + boot deferral
 
 The reconcile enumerates the watched folders through a **`defineCorpusIndex`**
@@ -65,37 +87,87 @@ is drift repair, not a correctness dependency.
 
 ## Plugin reference
 
-- Description: Watched-folder UI for the MIDI source: registers the midi-folders config (settings pane renders it for free) and presents the File field (the MIDI exposure's `sourceMissing`) that flags — and lets you filter for — folder-imported songs whose file has been deleted from disk. Watches configured folders for .mid/.midi files and mirrors them into the Sonata library: auto-imports on create/edit (via a per-file job), badges 'source deleted' on removal, and reconciles drift on boot and config change. The watched-folder list is a config_v2 listField rendered for free in the settings pane.
+- Description: Watched-folder UI for the MIDI source: registers the midi-folders config and presents the File field (the MIDI exposure's `sourceMissing`) that flags — and lets you filter for — folder-imported songs whose file has been deleted from disk. Shows every watched folder that cannot be read (denied by macOS, missing, not a folder) as a notice on the library — which folder, why, and Allow access / Check again / Change folder / Remove — and puts the folder list itself, with each folder's status, under a Sonata settings gear in the library header. Watches configured folders for .mid/.midi files and mirrors them into the Sonata library: auto-imports on create/edit (via a per-file job), badges 'source deleted' on removal, and reconciles drift on boot and config change. The watched-folder list is a config_v2 listField. Probes each folder (ok / missing / not a folder / denied / unreadable): only readable folders are watched and walked, and the statuses are served live (sonata.midi-folders.status) with a Check again endpoint, plus each folder's imported-song count.
 - Web:
   - Contributes:
     - `ConfigV2.WebRegister` "midi-folders"
     - `FieldPresentation.Register` "exposure:sonata_songs_ext_midi"
-  - Uses:
-    - `config_v2.ConfigV2`
-    - `network/live.FieldPresentation`
+    - `Library.Notice` "midi-folders" → `MidiFoldersNotice`
+    - `sonataLibraryPane.Actions` "midi-folders" → `MidiFoldersSettingsButton`
+  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `config_v2` ×3
+    - `primitives/css/ui-kit` ×3
+    - `apps/sonata/library` ×2
+    - `network/live` ×2
+    - `primitives/css/control-panel` ×2
+    - `primitives/folder-picker` ×2
+    - `primitives/live-state` ×2
+    - `infra/endpoints.useFetchEndpoint`
     - `primitives/css/badge.Badge`
+    - `primitives/css/card.Card`
+    - `primitives/css/center.Center`
+    - `primitives/css/fill.Fill`
+    - `primitives/css/inline.Inline`
+    - `primitives/css/rigid.rigidClass`
+    - `primitives/css/spacing.Stack`
+    - `primitives/css/text.Text`
+    - `primitives/icon-button.IconButton`
+    - `primitives/loading.Loading`
+    - `primitives/overlay/popover.InlinePopover`
+    - `ui/icons.Icon`
 - Server:
-  - Contributes: `ConfigV2.Register` "midi-folders"
+  - Contributes:
+    - `ConfigV2.Register` "midi-folders"
+    - `resource.declare` "sonata.midi-folders.song-count"
+    - `resource.declare` "sonata.midi-folders.status"
   - Uses:
     - `apps/sonata/sources/midi.getSongMidiBySourcePath`
     - `apps/sonata/sources/midi.importMidiSong`
     - `apps/sonata/sources/midi.listFolderImportedSongs`
     - `apps/sonata/sources/midi.setSourceMissing`
+    - `apps/sonata/sources/midi.songMidi`
     - `config_v2.ConfigV2`
     - `config_v2.getConfig`
     - `config_v2.watchConfig`
+    - `database.db`
     - `infra/corpus-index.CorpusDelta`
     - `infra/corpus-index.defineCorpusIndex`
+    - `infra/endpoints.implement`
     - `infra/file-watcher.defineFileWatcher`
     - `infra/file-watcher.FileChangeEvent`
     - `infra/file-watcher.FileWatcher`
     - `infra/jobs.defineJob`
     - `infra/warmup.defineWarmup`
+    - `network/live.serveValue`
   - Register:
     - `defineJob('sonata.midi.import')`
     - `defineWarmup('sonata.midi-folders.reconcile')`
     - `defineFileWatcher('sonata-midi-folders.folders')`
+  - Resources:
+    - `sonata.midi-folders.song-count` (push)
+    - `sonata.midi-folders.status` (push, notified, whole: one entry per configured watched folder — a handful, user-authored)
+  - Routes: `POST /api/sonata/midi-folders/recheck`
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --background`
+    - `ui/tokens/color-palette --border`
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --muted`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --success`
+    - `ui/tokens/color-palette --warning`
+    - `ui/tokens/density --space-2xs`
+    - `ui/tokens/density --space-lg`
+    - `ui/tokens/density --space-md`
+    - `ui/tokens/density --space-xs`
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-scale`
+    - `ui/tokens/type-scale --font-size-caption`
+    - `ui/tokens/type-scale --font-weight-normal`
+    - `ui/tokens/type-scale --font-weight-semibold`
+    - `ui/tokens/type-scale --line-height-caption`
 - Exemptions:
-  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/import-job.ts`, `server/internal/reconcile.ts` (debt)
+  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/import-job.ts`, `server/internal/reconcile.ts`, `server/internal/folder-status.ts` (debt)
 
 <!-- AUTOGENERATED:END -->

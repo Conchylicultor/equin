@@ -68,8 +68,8 @@ slots-as-props, which is what `<Frame>` did before it was deleted.
   - Uses tokens:
     - `ui/tokens/font-family --font-mono`
     - `ui/tokens/shape --spacing`
-  - Imported by: 133 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×32
+  - Imported by: 134 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×33
     - `conversations` ×23
     - `primitives` ×16
     - `debug` ×13

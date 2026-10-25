@@ -34,7 +34,12 @@ export default {
       id: "notation",
       displays: ["notation"],
       config: notationConfig,
-      fields: ["staffLayout", "showChordSymbols"],
+      fields: [
+        "staffLayout",
+        "showChordSymbols",
+        "separateVoices",
+        "splitPitch",
+      ],
     }),
   ],
 } satisfies PluginDefinition;

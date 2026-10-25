@@ -3,7 +3,11 @@ import type { Exemptions } from "@plugins/framework/plugins/tooling/plugins/exem
 export default [
   {
     rule: "boundaries/no-platform-api",
-    paths: ["server/internal/import-job.ts", "server/internal/reconcile.ts"],
+    paths: [
+      "server/internal/import-job.ts",
+      "server/internal/reconcile.ts",
+      "server/internal/folder-status.ts",
+    ],
     kind: "debt",
     task: "task-1792338443-riwqev",
     reason: "not yet split into server/ + machine/",

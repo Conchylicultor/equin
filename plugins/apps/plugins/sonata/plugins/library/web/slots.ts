@@ -1,6 +1,7 @@
 import type { ComponentType } from "react";
 import type { FetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
+import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
 import {
   defineItemActions,
   type CoverContent,
@@ -123,4 +124,15 @@ export const Library = {
    * button over the cover, at rest while its song plays), Delete on hover.
    */
   SongActions: defineItemActions<Song>(),
+  /**
+   * Notices about the library's songs that no song can say itself — a source
+   * that cannot be read (a watched folder macOS denied). Drawn between the
+   * toolbar and the songs, and above the first-run onboarding when there is no
+   * song (an unreadable folder is exactly why a library can be empty). A
+   * contribution renders nothing when it has nothing to say, and owns the room
+   * under itself (the slot adds no spacing). The library never names a source.
+   */
+  Notice: defineRenderSlot<{ component: ComponentType }>({
+    docLabel: (c) => c.id,
+  }),
 };

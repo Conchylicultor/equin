@@ -161,6 +161,7 @@ export const LUCIDE_MAP = {
   folder: "folder",
   "folder-code": "folder-code",
   "folder-delete": "folder-x",
+  "folder-off": "folder-x",
   "folder-open": "folder-open",
   "folder-special": "folder-heart",
   "folder-zip": "folder-archive",

@@ -163,7 +163,7 @@ readings use it:
     - `apps/prototypes/thumbnails` (3 debt)
     - `apps/sonata/covers` (1 debt)
     - `apps/sonata/sources/midi` (1 debt)
-    - `apps/sonata/sources/midi/folders` (2 debt)
+    - `apps/sonata/sources/midi/folders` (3 debt)
     - `apps/sonata/sources/musicxml` (1 debt)
     - `apps/sonata/sources/ultimate-guitar` (1 debt)
     - `apps/sonata/transcription` (5 debt)

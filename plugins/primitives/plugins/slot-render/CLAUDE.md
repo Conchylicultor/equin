@@ -317,8 +317,8 @@ the outcome too, with no separate code path.
     - `useDispatchOutcome`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/density --control-height-sm`
-  - Imported by: 87 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×27
+  - Imported by: 88 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×28
     - `conversations` ×13
     - `primitives` ×13
     - `ui` ×5

@@ -138,6 +138,7 @@ export const ICON_MANIFEST: {
     "folder",
     "folder-code",
     "folder-delete",
+    "folder-off",
     "folder-open",
     "folder-special",
     "folder-zip",

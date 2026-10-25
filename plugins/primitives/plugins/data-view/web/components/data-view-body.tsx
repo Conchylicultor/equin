@@ -199,6 +199,9 @@ export function DataViewSectionsBody<TRow>(
               <DataViewBodyInner
                 key={instance.instance.id}
                 {...props}
+                // One notice for the surface, above its first section — never
+                // one per section.
+                notice={instance === instances[0] ? props.notice : undefined}
                 activeInstance={instance}
                 fields={fields as FieldDef<TRow>[]}
                 rowKeyOf={rowKeyOf}
@@ -397,6 +400,7 @@ function DataViewBodyInner<TRow>(
     readiness,
     paging: heldPaging,
     errorState,
+    notice,
     hierarchy,
     viewOptions,
     manualOrder,
@@ -1382,6 +1386,13 @@ function DataViewBodyInner<TRow>(
                 the view child (and its loading skeleton): virtualizer measurement
                 caches, inline editors, and local tree expand state are per-instance
                 and must not leak between two instances of the same view type. */}
+            {/* The surface's notice: above every body state, on the rail —
+                outside the measured rows box, so it is never taken for a row.
+                No spacing of its own: a notice with nothing to say renders
+                nothing and must leave no gap, so the notice owns its margin. */}
+            {notice != null ? (
+              <div className="rail-follow">{notice}</div>
+            ) : null}
             <ControlSizeProvider key={activeViewId} size="xs">
               {/* The box the rows on screen are measured in, and the region
                   anchored across a page released or landing above the reader
