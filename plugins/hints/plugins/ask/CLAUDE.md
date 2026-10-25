@@ -88,7 +88,7 @@ portable `server/` half.
   it stays in the Agent Manager), Minimize and `EndThreadButton` (Done). No
   status in it — the steps show live in the body, the pill when minimized.
 - **A filed task** renders as `FiledTaskCard`: `useLiveRow(taskRows, taskId)`
-  — the live task's status and title, opening its detail pane. Loading until
+  — the live task's status and title, opening its newest conversation (`useTaskConversations`), or its detail pane until a run has started. Loading until
   the point read answers; **not found means deleted**, never "not there yet":
   the tool committed the task before it returned, and the card exists only
   once the transcript holds that return, so the read (issued after) can only
@@ -128,7 +128,7 @@ portable `server/` half.
     - `ConfigV2.WebRegister` "config"
     - `DynamicEnum.Options` "Model for filed tasks"
     - `DynamicEnum.Options` "Model"
-  - Uses: 58 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 60 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations/agent-thread` ×7
     - `apps-core` ×2
     - `config_v2` ×2
@@ -142,6 +142,7 @@ portable `server/` half.
     - `tasks/task-status` ×2
     - `apps-core/chrome-theme.chromeThemeScope`
     - `apps-core/tabs.useFocusedTabTitle`
+    - `conversations/conversation-view.conversationPane`
     - `conversations/model-provider.useModelChoiceOptions`
     - `conversations.useConversation`
     - `fields/dynamic-enum/config.DynamicEnum`
@@ -170,6 +171,7 @@ portable `server/` half.
     - `primitives/ui-context/element-picker`
     - `shell/toast.showToast`
     - `tasks/task-detail.taskDetailPane`
+    - `tasks/tasks-core.useTaskConversations`
     - `ui/icons.Icon`
 - Server:
   - Contributes: `ConfigV2.Register` "config"

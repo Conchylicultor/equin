@@ -14428,12 +14428,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-xl`
           - `ui/tokens/density --space-xs`
           - `ui/tokens/type-scale --measure-reading`
-        - Imported by: 62 plugins — full list in [`plugins/conversations/plugins/conversation-view/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/REFERENCE.md)
+        - Imported by: 63 plugins — full list in [`plugins/conversations/plugins/conversation-view/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/REFERENCE.md)
           - `conversations` ×49
           - `active-data` ×5
           - `tasks` ×3
           - `apps/home/tour`
           - `debug/profiling/ops`
+          - `hints/ask`
           - `primitives/launch`
           - `review`
           - `stats/cost`
@@ -27034,7 +27035,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ConfigV2.WebRegister` "config"
           - `DynamicEnum.Options` "Model for filed tasks"
           - `DynamicEnum.Options` "Model"
-        - Uses: 58 symbols — full list in [`plugins/hints/plugins/ask/REFERENCE.md`](../plugins/hints/plugins/ask/REFERENCE.md)
+        - Uses: 60 symbols — full list in [`plugins/hints/plugins/ask/REFERENCE.md`](../plugins/hints/plugins/ask/REFERENCE.md)
           - `conversations/agent-thread` ×7
           - `apps-core` ×2
           - `config_v2` ×2
@@ -27048,6 +27049,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/task-status` ×2
           - `apps-core/chrome-theme.chromeThemeScope`
           - `apps-core/tabs.useFocusedTabTitle`
+          - `conversations/conversation-view.conversationPane`
           - `conversations/model-provider.useModelChoiceOptions`
           - `conversations.useConversation`
           - `fields/dynamic-enum/config.DynamicEnum`
@@ -27076,6 +27078,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/ui-context/element-picker`
           - `shell/toast.showToast`
           - `tasks/task-detail.taskDetailPane`
+          - `tasks/tasks-core.useTaskConversations`
           - `ui/icons.Icon`
       - Server:
         - Contributes: `ConfigV2.Register` "config"
