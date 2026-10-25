@@ -57,6 +57,7 @@ export const conversationTurnsEntity = defineEntity(
         state: true,
         submittedText: true,
         submittedAt: true,
+        promptUuid: true,
         extraText: true,
         error: true,
         id: false,

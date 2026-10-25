@@ -17,6 +17,7 @@ export const conversationTurns = liveCollection("turn-ledger.turns", {
       "extraText",
       "error",
       "submittedAt",
+      "promptUuid",
       "createdAt",
       "updatedAt",
     ],

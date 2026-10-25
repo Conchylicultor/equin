@@ -787,34 +787,52 @@ describe("queue operations", () => {
     ...(content === undefined ? {} : { content }),
   });
 
-  test("a prompt dequeued straight after its enqueue is not a queued prompt", async () => {
-    const path = await writeFixture([
-      queueOp("enqueue", "2026-06-30T00:00:01.000Z", "hi"),
-      queueOp("dequeue", "2026-06-30T00:00:01.001Z"),
-      userLine("u1", null, "hi", "2026-06-30T00:00:01.002Z"),
-    ]);
-    const events = await readJsonlEvents(path);
-    expect(events.map((e) => e.kind)).toEqual(["user-text"]);
-  });
-
-  test("a prompt that waited while the agent worked keeps its markers", async () => {
+  test("a queued prompt's lifecycle lines render nothing; its user line is the message", async () => {
     const path = await writeFixture([
       userLine("u1", null, "first", "2026-06-30T00:00:01.000Z"),
       queueOp("enqueue", "2026-06-30T00:00:02.000Z", "second"),
       assistantLine("a1", "u1", "working", "2026-06-30T00:00:03.000Z"),
       queueOp("dequeue", "2026-06-30T00:00:04.000Z"),
+      userLine("u2", "a1", "second", "2026-06-30T00:00:04.001Z"),
     ]);
     const events = await readJsonlEvents(path);
-    expect(
-      events.map((e) =>
-        e.kind === "queue-operation" ? `queue:${e.operation}` : e.kind,
-      ),
-    ).toEqual([
+    expect(events.map((e) => e.kind)).toEqual([
       "user-text",
-      "queue:enqueue",
       "assistant-text",
-      "queue:dequeue",
+      "user-text",
     ]);
+  });
+
+  test("a prompt folded into the running turn is the user's message, under its uuid", async () => {
+    const path = await writeFixture([
+      userLine("u1", null, "first", "2026-06-30T00:00:01.000Z"),
+      queueOp("enqueue", "2026-06-30T00:00:02.000Z", "second"),
+      assistantLine("a1", "u1", "working", "2026-06-30T00:00:03.000Z"),
+      {
+        type: "attachment",
+        timestamp: "2026-06-30T00:00:02.000Z",
+        attachment: {
+          type: "queued_command",
+          prompt: "second",
+          commandMode: "prompt",
+          source_uuid: "cmd-2",
+        },
+      },
+      queueOp("remove", "2026-06-30T00:00:04.000Z", "second"),
+    ]);
+    const events = await readJsonlEvents(path);
+    expect(events.map((e) => e.kind)).toEqual([
+      "user-text",
+      "assistant-text",
+      "user-text",
+    ]);
+    // Delivered where it sits, not when it was enqueued.
+    expect(events[2]).toMatchObject({
+      kind: "user-text",
+      text: "second",
+      uuid: "cmd-2",
+      at: events[1]!.at,
+    });
   });
 });
 

@@ -1,6 +1,6 @@
 {
-  "id": "5219360d-92c5-495c-bcd1-027ba083997d",
-  "prevId": "b92275ca-b08c-414c-ae94-6e12a85459b3",
+  "id": "48c31ec0-ed1a-4324-8e0f-7e161a4191e4",
+  "prevId": "5219360d-92c5-495c-bcd1-027ba083997d",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -7228,6 +7228,12 @@
         "submitted_at": {
           "name": "submitted_at",
           "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "prompt_uuid": {
+          "name": "prompt_uuid",
+          "type": "text",
           "primaryKey": false,
           "notNull": false
         },

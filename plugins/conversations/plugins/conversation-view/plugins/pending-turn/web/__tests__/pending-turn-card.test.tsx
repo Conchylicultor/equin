@@ -92,6 +92,7 @@ describe("PendingTurnCard", () => {
         conversationId={CONV}
         turn={turn("held")}
         agentStarting={false}
+        turnRunning={false}
       />,
     );
     expect(screen.getByText("fix the build")).toBeTruthy();
@@ -107,6 +108,7 @@ describe("PendingTurnCard", () => {
           conversationId={CONV}
           turn={turn(state)}
           agentStarting
+          turnRunning={false}
         />,
       );
       expect(screen.getByText("Waiting for the agent to start…")).toBeTruthy();
@@ -121,6 +123,7 @@ describe("PendingTurnCard", () => {
         conversationId={CONV}
         turn={turn("typing")}
         agentStarting
+        turnRunning={false}
       />,
     );
     expect(container.querySelector(".animate-bounce")).toBeNull();
@@ -134,6 +137,7 @@ describe("PendingTurnCard", () => {
           conversationId={CONV}
           turn={turn(state)}
           agentStarting={false}
+          turnRunning={false}
         />,
       );
       expect(screen.getByText("Sending…")).toBeTruthy();
@@ -148,6 +152,7 @@ describe("PendingTurnCard", () => {
         conversationId={CONV}
         turn={turn("merged", { extraText: "an old draft" })}
         agentStarting={false}
+        turnRunning={false}
       />,
     );
     expect(screen.getByText("an old draft")).toBeTruthy();
@@ -162,6 +167,7 @@ describe("PendingTurnCard", () => {
         conversationId={CONV}
         turn={turn("failed", { error: "input box not empty" })}
         agentStarting={false}
+        turnRunning={false}
       />,
     );
     expect(
@@ -182,6 +188,7 @@ describe("PendingTurnCard", () => {
         conversationId={CONV}
         turn={turn("unverified")}
         agentStarting={false}
+        turnRunning={false}
       />,
     );
     expect(screen.getByText(/Not confirmed/)).toBeTruthy();
@@ -202,6 +209,7 @@ describe("PendingTurnCard", () => {
         conversationId={CONV}
         turn={turn("unsent", { error: "offline" })}
         agentStarting={false}
+        turnRunning={false}
       />,
     );
     expect(screen.getByText(/Failed to send — offline/)).toBeTruthy();
@@ -216,6 +224,7 @@ describe("PendingTurnCard", () => {
         conversationId={CONV}
         turn={turn("sending")}
         agentStarting={false}
+        turnRunning={false}
       />,
     );
     const echo = screen.getByTestId("echo");
@@ -223,16 +232,37 @@ describe("PendingTurnCard", () => {
     expect(echo.closest(".opacity-70")).toBeNull();
   });
 
-  it("echoes a typed turn as waiting in the agent's queue", () => {
+  it("echoes a typed turn behind a running turn as Queued, with Send now", async () => {
     render(
       <PendingTurnCard
         renderEcho={renderEcho}
         conversationId={CONV}
         turn={turn("typed")}
         agentStarting={false}
+        turnRunning
       />,
     );
-    expect(screen.getByText("Waiting for the agent to take it…")).toBeTruthy();
+    expect(screen.getByText("Queued")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Send now" }));
+    await waitFor(() =>
+      expect(routes()).toContain("POST /api/conversations/:id/interrupt"),
+    );
+  });
+
+  it("echoes a typed turn to an idle agent as on its way", () => {
+    render(
+      <PendingTurnCard
+        renderEcho={renderEcho}
+        conversationId={CONV}
+        turn={turn("typed")}
+        agentStarting={false}
+        turnRunning={false}
+      />,
+    );
+    expect(screen.getByTestId("echo").textContent).toBe(
+      "fix the buildSending…",
+    );
+    expect(screen.queryByText("Queued")).toBeNull();
   });
 
   it("echoes an accepted turn (pendingTurnsOf drops it once the transcript shows it)", () => {
@@ -242,6 +272,7 @@ describe("PendingTurnCard", () => {
         conversationId={CONV}
         turn={turn("accepted")}
         agentStarting={false}
+        turnRunning={false}
       />,
     );
     expect(container.textContent).toContain("Sending…");

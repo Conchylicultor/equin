@@ -22,22 +22,23 @@ export type TurnKind = z.infer<typeof TurnKindSchema>;
 
 /**
  * Where one turn stands. Every verdict comes from an event — the runtime's
- * send, the agent's confirmation (`turn_started`: it took the turn off its
- * input queue), or Stop — never a timer.
+ * send, the agent's confirmation (`turn_started`: its CLI started the turn),
+ * the agent going away, or Stop — never a timer.
  *
  * - `held` — the conversation was still `starting`; delivered once the agent
  *   can take it (as the launch prompt, or sent once it is up).
  * - `typing` — being sent to the agent.
- * - `typed` — the agent's socket took it; waiting on the agent to confirm it
- *   took it off its queue.
+ * - `typed` — the agent's socket took it; waiting on its CLI to start it. A
+ *   busy agent's CLI holds it in its command queue until the next tool
+ *   boundary or the turn's end: the web shows it as Queued.
  * - `accepted` — the agent confirmed exactly this text (also for a busy agent:
- *   it confirms when the turn is dequeued).
+ *   it confirms when the CLI starts it).
  * - `merged` — the agent confirmed this text PLUS other text; `extraText` is
  *   the rest.
  * - `returned` — Stop rewound it: the agent gave it back and the web draft is
  *   now its only copy.
  * - `failed` — it never reached the agent (a resume that was refused, a socket
- *   error). Retry.
+ *   error), or the agent went away before its CLI started it. Retry.
  * - `unverified` — sent, but the runtime cannot tell whether it went in.
  *   Retry; a late confirmation still resolves it.
  * - `withdrawn` — a `failed` / `unverified` turn the user took back into the

@@ -18,7 +18,7 @@ import type {
   ConversationWorkingOn,
 } from "@plugins/tasks/plugins/tasks-core/core";
 import { isTurnRunning } from "@plugins/conversations/core";
-import { isSlashCommand, transcriptReachedAt, transcriptShows } from "./landed";
+import { isSlashCommand, transcriptShows } from "./landed";
 import { useSentTurns, useSettleSentTurns, type SentTurn } from "./send";
 
 /**
@@ -83,14 +83,14 @@ function draws(turn: { kind: TurnKind; state: PendingTurnState }): boolean {
 
 /**
  * Whether a ledger row's echo has nothing left to stand in for: the transcript
- * (reaching `reachedAt`) shows it, or — a slash command, which lands as no
+ * `events` show it, or — a slash command, which lands as no
  * prompt row — the agent confirmed taking it, which is all anything will ever
  * say about it.
  */
-function echoRetired(row: LedgerTurn, reachedAt: number | null): boolean {
+function echoRetired(row: LedgerTurn, events: readonly JsonlEvent[]): boolean {
   if (CARD_OF[row.state] !== "echo") return false;
   return (
-    transcriptShows(row, reachedAt) ||
+    transcriptShows(row, events) ||
     (isSlashCommand(row) && row.state === "accepted")
   );
 }
@@ -112,13 +112,12 @@ export function pendingTurnsOf(
   const ledgerIds = new Set(newestFirst.map((row) => row.id));
   const unseen = sent.filter((turn) => !ledgerIds.has(turn.id));
   const newestId = unseen.length ? null : (newestFirst[0]?.id ?? null);
-  const reachedAt = transcriptReachedAt(events);
   const fromLedger: PendingTurn[] = newestFirst
     .flatMap((row) => {
       const card = CARD_OF[row.state];
       if (
         card === null ||
-        echoRetired(row, reachedAt) ||
+        echoRetired(row, events) ||
         (row.state === "merged" && row.id !== newestId)
       ) {
         return [];

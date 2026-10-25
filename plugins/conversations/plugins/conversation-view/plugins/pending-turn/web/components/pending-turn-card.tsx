@@ -3,7 +3,13 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { WorkingText } from "@plugins/primitives/plugins/css/plugins/working-dots/web";
 import { UserMessageText } from "@plugins/conversations/plugins/conversation-view/plugins/user-message/web";
-import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  Button,
+  cn,
+  ControlSizeProvider,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
 import { useReportSync } from "@plugins/primitives/plugins/sync-status/web";
 import {
   getEndpointErrorMessage,
@@ -14,7 +20,13 @@ import { writeDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import { conversationPromptDraft } from "../internal/prompt-draft";
 import type { PendingTurn } from "../internal/pending";
 import { useDismissSentTurn, useResendTurn } from "../internal/send";
-import { retryLedgerTurn, withdrawLedgerTurn } from "../internal/delivery";
+import {
+  retryLedgerTurn,
+  sendQueuedNow,
+  withdrawLedgerTurn,
+} from "../internal/delivery";
+
+const scheduleIcon = symbol("schedule");
 
 // Restore the turn's text into the conversation's shared prompt draft — the
 // store prompt-input's useDraft reads, which picks the write up through the
@@ -40,6 +52,7 @@ async function act(verb: string, run: () => Promise<void>): Promise<void> {
 interface CardActions {
   retry(turn: PendingTurn): Promise<void>;
   takeBack(turn: PendingTurn): Promise<void>;
+  sendNow(): Promise<void>;
 }
 
 /**
@@ -74,27 +87,36 @@ function useCardActions(conversationId: string): CardActions {
         withdrawLedgerTurn(fetchEndpoint, conversationId, turn.id),
       );
     },
+    sendNow() {
+      return act("Send now", () =>
+        sendQueuedNow(fetchEndpoint, conversationId),
+      );
+    },
   };
 }
 
 const WAITING_FOR_START = "Waiting for the agent to start…";
 
 /**
- * What an echo says where its turn is: `held` before the agent is up, `typed`
- * while it sits in the agent's input queue (a busy agent takes it when its
- * current step ends — the transcript shows it there as Queued); every other
- * echo state is still on its way. While the agent is starting, every echo is
- * waiting for it — the launch message is already `typing` as the agent comes
- * up, which is not "Sending…" to the user.
+ * What an echo says where its turn is: `held` before the agent is up; every
+ * other echo state is still on its way. While the agent is starting, every
+ * echo is waiting for it — the launch message is already `typing` as the agent
+ * comes up, which is not "Sending…" to the user. A `typed` turn while a turn
+ * runs is queued instead (see `isQueued`).
  */
-const ECHO_CAPTION: Partial<Record<PendingTurn["state"], string>> = {
-  held: WAITING_FOR_START,
-  typed: "Waiting for the agent to take it…",
-};
-
 function echoCaption(turn: PendingTurn, agentStarting: boolean): string {
-  if (agentStarting) return WAITING_FOR_START;
-  return ECHO_CAPTION[turn.state] ?? "Sending…";
+  if (agentStarting || turn.state === "held") return WAITING_FOR_START;
+  return "Sending…";
+}
+
+/**
+ * Whether the echo's turn waits in the agent's queue: the agent has it
+ * (`typed`) but a running turn holds it until the next tool boundary or its
+ * end — when the CLI starts it, the ledger confirms it and the transcript's
+ * message takes over.
+ */
+function isQueued(turn: PendingTurn, turnRunning: boolean): boolean {
+  return turnRunning && turn.state === "typed";
 }
 
 /**
@@ -108,6 +130,28 @@ function EchoStatus({ caption }: { caption: string }) {
     <Text as="div" variant="caption">
       <WorkingText>{caption}</WorkingText>
     </Text>
+  );
+}
+
+/**
+ * A queued echo's line: it is not on its way but parked, so it sits still —
+ * Queued, and Send now (interrupt the running turn so it starts at once).
+ */
+function QueuedStatus({ onSendNow }: { onSendNow: () => Promise<void> }) {
+  return (
+    <Stack direction="row" gap="xs" align="center">
+      <Text as="div" variant="caption">
+        <Stack direction="row" gap="xs" align="center">
+          <Icon icon={scheduleIcon} className="size-3" />
+          Queued
+        </Stack>
+      </Text>
+      <ControlSizeProvider size="xs">
+        <Button variant="ghost" onClick={onSendNow}>
+          Send now
+        </Button>
+      </ControlSizeProvider>
+    </Stack>
   );
 }
 
@@ -126,7 +170,9 @@ export type RenderEcho = (turn: PendingTurn, status: ReactNode) => ReactNode;
  *
  * - `sending` / `held` / `typing` / `typed` / `accepted` — the echo, drawn by
  *   the host (`renderEcho`) as its own user row, with the in-flight status
- *   under it, until the transcript shows the turn;
+ *   under it — Queued · Send now while it waits for a running turn — until
+ *   the transcript shows the turn. Mounted after the transcript, it stays
+ *   last as the agent's steps land above it;
  * - `merged` — the CLI submitted this turn together with other text (a draft
  *   its input box still held): a warning naming that text;
  * - `failed` / `unverified` / `unsent` — Retry + Copy to draft, with why.
@@ -138,12 +184,15 @@ export function PendingTurnCard({
   conversationId,
   turn,
   agentStarting,
+  turnRunning,
   renderEcho,
 }: {
   conversationId: string;
   turn: PendingTurn;
   /** The conversation is `starting`: every echo waits for the agent. */
   agentStarting: boolean;
+  /** A turn is running (`isTurnRunning`): a turn the agent has waits for it. */
+  turnRunning: boolean;
   /** The host's own user row, so the echo cannot look unlike the message it becomes. */
   renderEcho: RenderEcho;
 }) {
@@ -161,7 +210,11 @@ export function PendingTurnCard({
   if (inFlight) {
     return renderEcho(
       turn,
-      <EchoStatus caption={echoCaption(turn, agentStarting)} />,
+      isQueued(turn, turnRunning) ? (
+        <QueuedStatus onSendNow={actions.sendNow} />
+      ) : (
+        <EchoStatus caption={echoCaption(turn, agentStarting)} />
+      ),
     );
   }
 

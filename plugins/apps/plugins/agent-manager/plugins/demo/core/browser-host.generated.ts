@@ -152,8 +152,6 @@ export const browserHost = {
     "conversations.conversation-view.jsonl-viewer.meta-prompt",
     "conversations.conversation-view.jsonl-viewer.outline",
     "conversations.conversation-view.jsonl-viewer.preprompt",
-    "conversations.conversation-view.jsonl-viewer.queue-operation",
-    "conversations.conversation-view.jsonl-viewer.queued-prompt-card",
     "conversations.conversation-view.jsonl-viewer.request-shape",
     "conversations.conversation-view.jsonl-viewer.row-actions",
     "conversations.conversation-view.jsonl-viewer.steady-reveal",

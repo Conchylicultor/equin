@@ -87,8 +87,13 @@ export type AgentEffect =
       toolUseId: string;
       outcome: "dismissed" | "aborted";
     }
-  /** The SDK took a turn: the turn ledger confirms it. */
-  | { kind: "prompt-submitted"; text: string; at: Date };
+  /** The CLI started a turn: the turn ledger confirms it. */
+  | { kind: "prompt-submitted"; text: string; promptUuid: string; at: Date }
+  /**
+   * The agent went away: a turn handed to it and not started by then was in
+   * its CLI's queue, which died with it — the turn ledger fails it.
+   */
+  | { kind: "turns-dropped"; at: Date };
 
 /** Lines the file skipped over: more rotations than the sink keeps were missed. */
 export interface SeqGap {
@@ -211,9 +216,15 @@ export function reduceEvents(
             s.turnReplied = false;
             s.stoppedAt = null;
             s.stopError = null;
-            effects.push({ kind: "prompt-submitted", text: p.text, at });
+            effects.push({
+              kind: "prompt-submitted",
+              text: p.text,
+              promptUuid: p.promptUuid,
+              at,
+            });
             break;
           case "exited":
+            effects.push({ kind: "turns-dropped", at });
             // Its background tasks die with it.
             s.working = false;
             s.backgroundTasks = 0;

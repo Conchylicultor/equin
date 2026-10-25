@@ -7,6 +7,7 @@ import { userTurnSent } from "./internal/tables-user-turn-sent-event";
 export {
   acceptTurn,
   applyTurnEvent,
+  dropTypedTurns,
   getTurn,
   hasHeldTurns,
   holdIfStarting,
@@ -19,7 +20,12 @@ export {
   returnTurnsSince,
 } from "./internal/store";
 export { onTurnSubmitted } from "./internal/submit-signal";
-export type { AcceptOutcome, NewTurn, TurnRow } from "./internal/store";
+export type {
+  AcceptOutcome,
+  NewTurn,
+  PromptConfirmation,
+  TurnRow,
+} from "./internal/store";
 export type { TurnEvent } from "./internal/transition";
 export { userTurnSent } from "./internal/tables-user-turn-sent-event";
 export type { UserTurnSentPayload } from "./internal/tables-user-turn-sent-event";

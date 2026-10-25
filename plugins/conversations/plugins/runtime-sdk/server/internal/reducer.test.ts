@@ -152,6 +152,7 @@ describe("reduceEvents", () => {
       {
         kind: "prompt-submitted",
         text: "remember BANANA",
+        promptUuid: expect.any(String),
         at: expect.any(Date),
       },
     ]);
@@ -235,6 +236,11 @@ describe("reduceEvents", () => {
       kind: "question-closed",
       toolUseId: "tq",
       outcome: "aborted",
+    });
+    // A turn still in the dead CLI's queue never runs: the ledger fails it.
+    expect(effects).toContainEqual({
+      kind: "turns-dropped",
+      at: expect.any(Date),
     });
   });
 

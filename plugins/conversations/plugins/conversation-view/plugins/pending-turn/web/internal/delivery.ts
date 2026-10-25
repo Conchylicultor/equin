@@ -7,6 +7,7 @@ import type {
   MachineResult,
 } from "@plugins/infra/plugins/endpoints/core";
 import {
+  interruptConversationTurn,
   postConversationTurn,
   retryConversationTurn,
   withdrawConversationTurn,
@@ -106,5 +107,19 @@ export async function withdrawLedgerTurn(
       id: conversationId,
       turnId,
     }),
+  );
+}
+
+/**
+ * Send now: interrupt the running turn, so the messages waiting in the agent's
+ * queue start at once (the CLI keeps them through an interrupt and runs them
+ * next) — the queued echo's action. Nothing is taken back, unlike Stop.
+ */
+export async function sendQueuedNow(
+  fetchEndpoint: FetchEndpoint,
+  conversationId: string,
+): Promise<void> {
+  delivered(
+    await fetchEndpoint(interruptConversationTurn, { id: conversationId }),
   );
 }

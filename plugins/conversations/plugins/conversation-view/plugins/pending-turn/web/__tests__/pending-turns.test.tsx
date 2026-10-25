@@ -103,6 +103,7 @@ function row(
       state === "accepted" || state === "merged"
         ? new Date(Date.now() - 60_000)
         : null,
+    promptUuid: null,
     createdAt: new Date(Date.now() - 60_000),
     updatedAt: new Date(Date.now() - 60_000),
     ...over,

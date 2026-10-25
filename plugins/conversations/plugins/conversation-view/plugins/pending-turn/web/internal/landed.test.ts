@@ -13,10 +13,18 @@ const typed = (text: string, ms: number): JsonlEvent => ({
   uuid: `u-${text}-${ms}`,
 });
 
-const turn = (state: TurnState, submittedMs: number | null) => ({
+const turn = (
+  state: TurnState,
+  submittedMs: number | null,
+  promptUuid: string | null = null,
+) => ({
   state,
   submittedAt: submittedMs === null ? null : new Date(T0 + submittedMs),
+  promptUuid,
 });
+
+/** A transcript whose newest event was written `ms` after T0. */
+const upTo = (ms: number) => [typed("x", ms)];
 
 describe("transcriptReachedAt", () => {
   test("is the newest event's time, or null for an empty transcript", () => {
@@ -30,10 +38,28 @@ describe("transcriptReachedAt", () => {
 describe("transcriptShows", () => {
   test("a confirmed turn, once the transcript reaches its confirmation", () => {
     for (const state of ["accepted", "merged"] as const) {
-      expect(transcriptShows(turn(state, 500), T0 + 499)).toBe(false);
-      expect(transcriptShows(turn(state, 500), T0 + 500)).toBe(true);
-      expect(transcriptShows(turn(state, 500), null)).toBe(false);
+      expect(transcriptShows(turn(state, 500), upTo(499))).toBe(false);
+      expect(transcriptShows(turn(state, 500), upTo(500))).toBe(true);
+      expect(transcriptShows(turn(state, 500), [])).toBe(false);
     }
+  });
+
+  test("a confirmed turn whose message the transcript holds, whatever its time", () => {
+    // A prompt folded into a running turn is written with its enqueue time,
+    // before the confirmation.
+    const folded: JsonlEvent = {
+      kind: "user-text",
+      at: at(100),
+      text: "also this",
+      uuid: "cmd-1",
+    };
+    expect(transcriptShows(turn("accepted", 500, "cmd-1"), [folded])).toBe(
+      true,
+    );
+    expect(transcriptShows(turn("accepted", 500, "cmd-2"), [folded])).toBe(
+      false,
+    );
+    expect(transcriptShows(turn("typed", null, "cmd-1"), [folded])).toBe(false);
   });
 
   test("never a turn the agent has not confirmed, however far the transcript goes", () => {
@@ -47,7 +73,7 @@ describe("transcriptShows", () => {
       "withdrawn",
     ];
     for (const state of unconfirmed) {
-      expect(transcriptShows(turn(state, null), T0 + 1e9)).toBe(false);
+      expect(transcriptShows(turn(state, null), upTo(1e9))).toBe(false);
     }
   });
 });

@@ -5,7 +5,7 @@ import { QueuedCommandAttachmentView } from "./components/queued-command-attachm
 export default {
   collapsed: true,
   description:
-    "Renders queued_command attachment events — a prompt the user queued while the agent was busy, awaiting delivery on the next turn.",
+    "Renders queued_command attachment events the CLI delivered into a running turn that are not the user's own prompt (a harness control message such as a task notification): a structured key/value card, else the raw command. A queued human prompt is the user's message — the transcript parser makes it one.",
   contributions: [
     ...attachmentRenderer({
       match: "queued_command",

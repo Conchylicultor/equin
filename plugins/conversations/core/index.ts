@@ -41,6 +41,7 @@ export {
   postConversationTurn,
   retryConversationTurn,
   withdrawConversationTurn,
+  interruptConversationTurn,
   stopConversation,
   listConversationTurns,
   closeConversation,

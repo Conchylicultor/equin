@@ -160,9 +160,9 @@ back.
     - `JsonlViewer.ContextRole`
     - `JsonlViewer.Overlay`
     - `JsonlViewer.TranscriptEnd`
-  - Slot contributors: 57 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slot contributors: 56 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `JsonlViewer.ContextRole` ×31
-    - `JsonlViewer.EventRenderer` ×18
+    - `JsonlViewer.EventRenderer` ×17
     - `JsonlViewer.Overlay` ×4
     - `JsonlViewer.EventFilter` ×2
     - `JsonlViewer.PendingPrompt` ← `conversations.question-relay`
@@ -298,8 +298,8 @@ back.
     - `ui/tokens/density` ×5
     - `ui/tokens/shape` ×2
     - `ui/tokens/font-family --font-mono`
-  - Imported by: 46 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `conversations` ×44
+  - Imported by: 45 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×43
     - `apps/places/places-map`
     - `tasks/outcome-report`
 - Exemptions:
@@ -322,8 +322,6 @@ back.
   - **`meta-prompt`** — Renders harness-injected prompt turns (loop/queue wakeups, resumes) distinctly from human user messages.
   - **`outline`** — The transcript's outline: one dash per user turn pinned to the right edge of the conversation, the current turn highlighted, expanding on hover into a clickable list of turns. An adapter over the…
   - **`preprompt`** — Renders the launch special-instructions (preprompt) block as a collapsible section in the JSONL viewer.
-  - **`queue-operation`** — Renders Claude Code prompt-queue events (enqueue/dequeue/remove) in the JSONL viewer.
-  - **`queued-prompt-card`** — Shared appearance for a queued prompt (a message the user parked while the agent was busy). Used by both the queued_command attachment and the prompt-queue enqueue row so the two never diverge.
   - **`request-shape`** — Renders the system prompt and tool set Claude Code logs for model calls (api-request-shape): the agent's tools and prompt on first use, then one row per change — a deferred tool loaded, a tool…
   - **`row-actions`** — Owns WHICH actions a JSONL transcript row carries: the JsonlRowActions.Item slot, the per-event context, and the shared action-button styling. The cluster itself (reveal, guards, popup-hold) is…
   - **`steady-reveal`** — Steady reveal for text an agent is still writing: useSteadyReveal drains a growing text at an even pace over the bursts it arrives in, its newest words fading in through a soft tail painted with the…

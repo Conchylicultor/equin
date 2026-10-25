@@ -11,6 +11,7 @@ import {
 const STATES = TurnStateSchema.options;
 const TYPED = "fix the build";
 const AT = new Date("2026-10-18T15:53:10Z");
+const UUID = "5b9d0c3e-0000-4000-8000-000000000001";
 
 const EVENTS = {
   hold: { kind: "hold" },
@@ -19,17 +20,25 @@ const EVENTS = {
   typed: { kind: "typed" },
   unverified: { kind: "unverified", reason: "box kept text" },
   failed: { kind: "failed", error: "agent exploded" },
-  "confirmed-equal": { kind: "confirmed", prompt: TYPED, at: AT },
+  "confirmed-equal": {
+    kind: "confirmed",
+    prompt: TYPED,
+    promptUuid: UUID,
+    at: AT,
+  },
   "confirmed-merged": {
     kind: "confirmed",
     prompt: `stale draft\n${TYPED}`,
+    promptUuid: UUID,
     at: AT,
   },
   "confirmed-other": {
     kind: "confirmed",
     prompt: "something the user typed",
+    promptUuid: UUID,
     at: AT,
   },
+  dropped: { kind: "dropped" },
   returned: { kind: "returned" },
   withdraw: { kind: "withdraw" },
 } as const satisfies Record<string, TurnEvent>;
@@ -50,6 +59,7 @@ const MATRIX: Record<TurnState, Record<EventName, TurnState | null>> = {
     "confirmed-equal": null,
     "confirmed-merged": null,
     "confirmed-other": null,
+    dropped: null,
     returned: "returned",
     withdraw: null,
   },
@@ -63,6 +73,7 @@ const MATRIX: Record<TurnState, Record<EventName, TurnState | null>> = {
     "confirmed-equal": "accepted",
     "confirmed-merged": "merged",
     "confirmed-other": null,
+    dropped: null,
     returned: null,
     withdraw: null,
   },
@@ -76,6 +87,7 @@ const MATRIX: Record<TurnState, Record<EventName, TurnState | null>> = {
     "confirmed-equal": "accepted",
     "confirmed-merged": "merged",
     "confirmed-other": null,
+    dropped: "failed",
     returned: "returned",
     withdraw: null,
   },
@@ -89,6 +101,7 @@ const MATRIX: Record<TurnState, Record<EventName, TurnState | null>> = {
     "confirmed-equal": null,
     "confirmed-merged": null,
     "confirmed-other": null,
+    dropped: null,
     returned: "returned",
     withdraw: null,
   },
@@ -102,6 +115,7 @@ const MATRIX: Record<TurnState, Record<EventName, TurnState | null>> = {
     "confirmed-equal": null,
     "confirmed-merged": null,
     "confirmed-other": null,
+    dropped: null,
     returned: "returned",
     withdraw: null,
   },
@@ -115,6 +129,7 @@ const MATRIX: Record<TurnState, Record<EventName, TurnState | null>> = {
     "confirmed-equal": null,
     "confirmed-merged": null,
     "confirmed-other": null,
+    dropped: null,
     returned: null,
     withdraw: null,
   },
@@ -128,6 +143,7 @@ const MATRIX: Record<TurnState, Record<EventName, TurnState | null>> = {
     "confirmed-equal": "accepted",
     "confirmed-merged": "merged",
     "confirmed-other": null,
+    dropped: null,
     returned: null,
     withdraw: "withdrawn",
   },
@@ -141,6 +157,7 @@ const MATRIX: Record<TurnState, Record<EventName, TurnState | null>> = {
     "confirmed-equal": "accepted",
     "confirmed-merged": "merged",
     "confirmed-other": null,
+    dropped: null,
     returned: null,
     withdraw: "withdrawn",
   },
@@ -155,6 +172,7 @@ const MATRIX: Record<TurnState, Record<EventName, TurnState | null>> = {
     "confirmed-equal": "accepted",
     "confirmed-merged": null,
     "confirmed-other": null,
+    dropped: null,
     returned: null,
     withdraw: null,
   },
@@ -227,6 +245,7 @@ describe("transitionTurn", () => {
     ).toEqual({
       submittedText: `stale draft\n${TYPED}`,
       submittedAt: AT,
+      promptUuid: UUID,
       extraText: "stale draft",
       error: null,
     });
@@ -237,6 +256,7 @@ describe("transitionTurn", () => {
       transitionTurn(row("typed"), EVENTS["confirmed-equal"])?.patch,
     ).toEqual({
       submittedAt: AT,
+      promptUuid: UUID,
       error: null,
     });
   });

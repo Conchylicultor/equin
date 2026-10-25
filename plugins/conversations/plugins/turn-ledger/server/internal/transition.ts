@@ -27,8 +27,10 @@ import type { TurnState } from "../../core/schemas";
  *   agent existed: it is held again, as `typedText`.
  * - `typed` / `unverified` — the runtime's submit check.
  * - `failed` — the text never reached the box.
- * - `confirmed` — the agent reported taking `prompt` (its `turn_started` event),
- *   `at` the moment it did.
+ * - `confirmed` — the agent reported taking `prompt` (its `turn_started` event:
+ *   its CLI started it), `at` the moment it did, as the message `promptUuid`.
+ * - `dropped` — the agent went away while the turn waited in its CLI's
+ *   queue: it never ran. Fails it (Retry); a late confirmation still wins.
  * - `returned` — the text came back to the user: the CLI gave it back (Stop,
  *   or found in the box), or Stop took a `held` turn back before the agent it
  *   was waiting for was up.
@@ -42,7 +44,8 @@ export type TurnEvent =
   | { kind: "typed" }
   | { kind: "unverified"; reason: string }
   | { kind: "failed"; error: string }
-  | { kind: "confirmed"; prompt: string; at: Date }
+  | { kind: "confirmed"; prompt: string; promptUuid: string; at: Date }
+  | { kind: "dropped" }
   | { kind: "returned" }
   | { kind: "withdraw" };
 
@@ -57,6 +60,7 @@ export interface TurnPatch {
   typedText?: string;
   submittedText?: string;
   submittedAt?: Date;
+  promptUuid?: string;
   extraText?: string | null;
   error?: string | null;
 }
@@ -204,7 +208,11 @@ export function transitionTurn(
       if (match.kind === "equal") {
         return {
           state: "accepted",
-          patch: { submittedAt: event.at, error: null },
+          patch: {
+            submittedAt: event.at,
+            promptUuid: event.promptUuid,
+            error: null,
+          },
         };
       }
       return {
@@ -212,11 +220,21 @@ export function transitionTurn(
         patch: {
           submittedText: event.prompt,
           submittedAt: event.at,
+          promptUuid: event.promptUuid,
           extraText: match.extraText,
           error: null,
         },
       };
     }
+    case "dropped":
+      return state === "typed"
+        ? {
+            state: "failed",
+            patch: {
+              error: "the agent stopped before it took this message",
+            },
+          }
+        : null;
     case "returned":
       return state === "held" ||
         state === "typed" ||

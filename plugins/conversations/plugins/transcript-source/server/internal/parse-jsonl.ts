@@ -163,6 +163,26 @@ export type TranscriptImageReader = (
   path: string,
 ) => Promise<Omit<TranscriptImage, "mime"> | null>;
 
+/**
+ * A `queued_command` attachment carrying a human prompt (`commandMode`
+ * "prompt", or none on older lines) — not a harness control message such as a
+ * task notification — with the uuid it was sent under.
+ */
+function humanQueuedPrompt(
+  att: Record<string, unknown>,
+): { prompt: string; uuid: string | undefined } | null {
+  if (att.type !== "queued_command" || typeof att.prompt !== "string") {
+    return null;
+  }
+  if (att.commandMode !== undefined && att.commandMode !== "prompt") {
+    return null;
+  }
+  return {
+    prompt: att.prompt,
+    uuid: typeof att.source_uuid === "string" ? att.source_uuid : undefined,
+  };
+}
+
 async function pushTextWithImages(
   text: string,
   at: string,
@@ -773,6 +793,19 @@ export async function buildJsonlEvents(
             continue;
           }
         }
+        // A prompt the user sent while the agent worked, folded into the
+        // running turn at a tool boundary: the CLI writes it as this
+        // attachment, never as a user line — so it becomes the user's
+        // message here, under the uuid the agent gave it (`source_uuid`,
+        // what the turn ledger's confirmation names). The line carries the
+        // enqueue time; the message entered the conversation where it sits.
+        const queued = humanQueuedPrompt(att as Record<string, unknown>);
+        if (queued) {
+          const prev = events.at(-1)?.at;
+          const at = prev && Date.parse(prev) > Date.parse(ts) ? prev : ts;
+          await processUserText(queued.prompt, at, queued.uuid);
+          continue;
+        }
         if (subtype === "prompt_snapshot" && !seenPreprompt) {
           const preprompt = snapshotPreprompt(att as Record<string, unknown>);
           if (preprompt) {
@@ -800,37 +833,20 @@ export async function buildJsonlEvents(
     }
 
     if (type === "queue-operation") {
-      const operation =
-        typeof obj.operation === "string" ? (obj.operation as string) : "";
       const content =
         typeof obj.content === "string" ? (obj.content as string) : undefined;
-      if (!operation) continue;
       // A background-task completion is enqueued (and later dequeued) as a raw
       // <task-notification> block, then delivered again in the agent's next
       // user turn — three transcript lines for one event. Parse the block into
       // a structured task-notification here; the dedup pass below collapses all
-      // copies into a single row. Plain queued prompts (no notification block)
-      // keep their lightweight queue-op line ("Queued" / "Sent to agent").
+      // copies into a single row.
       if (content && content.includes("<task-notification>")) {
         extractTaskNotifications(content, ts, events);
-        continue;
       }
-      // A prompt that never waited: its dequeue comes right after its enqueue,
-      // with nothing the transcript shows in between. That is how a prompt
-      // reaches an idle agent through the queue (every Agent SDK turn does), so
-      // the pair is plumbing, not a parked prompt — the turn itself follows as
-      // the user line. Only a prompt that sat in the queue while the agent
-      // worked keeps its "Queued" / "Sent to agent" markers.
-      const prev = events.at(-1);
-      if (
-        operation === "dequeue" &&
-        prev?.kind === "queue-operation" &&
-        prev.operation === "enqueue"
-      ) {
-        events.pop();
-        continue;
-      }
-      events.push({ kind: "queue-operation", at: ts, operation, content });
+      // A queued prompt's own lines are its lifecycle, not a message: while it
+      // waits the page shows its echo (the turn ledger), and once delivered it
+      // is a user line (`dequeue`) or a folded-in `queued_command` attachment
+      // (`remove` — delivered, not discarded).
       continue;
     }
 

@@ -13791,6 +13791,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `POST /api/conversations/:id/turn`
       - `POST /api/conversations/:id/turns/:turnId/retry`
       - `POST /api/conversations/:id/turns/:turnId/withdraw`
+      - `POST /api/conversations/:id/interrupt`
       - `POST /api/conversations/:id/stop`
   - Core:
     - Uses:
@@ -13847,6 +13848,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `getConversation`
       - `hasLiveProcess`
       - `hibernationConfig`
+      - `interruptConversationTurn`
       - `isActiveStatus`
       - `isAgentBusy`
       - `isTurnRunning`
@@ -15391,9 +15393,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `JsonlViewer.ContextRole`
               - `JsonlViewer.Overlay`
               - `JsonlViewer.TranscriptEnd`
-            - Slot contributors: 57 contributors — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
+            - Slot contributors: 56 contributors — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
               - `JsonlViewer.ContextRole` ×31
-              - `JsonlViewer.EventRenderer` ×18
+              - `JsonlViewer.EventRenderer` ×17
               - `JsonlViewer.Overlay` ×4
               - `JsonlViewer.EventFilter` ×2
               - `JsonlViewer.PendingPrompt` ← `conversations.question-relay`
@@ -15529,8 +15531,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density` ×5
               - `ui/tokens/shape` ×2
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 46 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
-              - `conversations` ×44
+            - Imported by: 45 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
+              - `conversations` ×43
               - `apps/places/places-map`
               - `tasks/outcome-report`
           - Exemptions:
@@ -15914,18 +15916,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Uses tokens:
                       - `ui/tokens/color-palette --border`
                       - `ui/tokens/shape --spacing`
-                - **`queued-command`** — Renders queued_command attachment events — a prompt the user queued while the agent was busy, awaiting delivery on the next turn.
+                - **`queued-command`** — Renders queued_command attachment events the CLI delivered into a running turn that are not the user's own prompt (a harness control message such as a task notification): a structured key/value card, else the raw command. A queued human prompt is the user's message — the transcript parser makes it one.
                   - Web:
                     - Contributes:
                       - `JsonlViewerAttachment.Renderer` "queued_command" → `QueuedCommandAttachmentView`
                       - `JsonlViewer.ContextRole` "attachment:queued_command"
                     - Uses:
                       - `conversations/conversation-view/jsonl-viewer/attachment.attachmentRenderer`
+                      - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
                       - `conversations/conversation-view/jsonl-viewer/fields-card.FieldsCard`
-                      - `conversations/conversation-view/jsonl-viewer/queued-prompt-card.QueuedPromptCard`
+                      - `primitives/css/text.Text`
                       - `ui/icons.Icon`
                   - Cross-plugin:
                     - Uses tokens:
+                      - `ui/tokens/color-palette --foreground`
+                      - `ui/tokens/font-family --font-mono`
                       - `ui/tokens/shape --spacing`
                       - `ui/tokens/type-scale --font-weight-medium`
                 - **`remote-session`** — Renders the remote_session_change attachment — the conversation became followed from claude.ai — as a one-line row linking out to the session.
@@ -16378,32 +16383,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/color-palette --primary`
                   - `ui/tokens/color-palette --primary-text`
                   - `ui/tokens/shape --spacing`
-            - **`queue-operation`** — Renders Claude Code prompt-queue events (enqueue/dequeue/remove) in the JSONL viewer.
-              - Web:
-                - Contributes: `JsonlViewer.EventRenderer` "queue-operation" → `QueueOperationRow`
-                - Uses:
-                  - `conversations/conversation-view/jsonl-viewer.EventLine`
-                  - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
-                  - `conversations/conversation-view/jsonl-viewer/queued-prompt-card.QueuedPromptCard`
-                  - `ui/icons.Icon`
-              - Cross-plugin:
-                - Uses tokens: `ui/tokens/shape --spacing`
-            - **`queued-prompt-card`** — Shared appearance for a queued prompt (a message the user parked while the agent was busy). Used by both the queued_command attachment and the prompt-queue enqueue row so the two never diverge.
-              - Web:
-                - Uses:
-                  - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
-                  - `primitives/css/text.Text`
-                  - `primitives/css/ui-kit.cn`
-                  - `ui/icons.Icon`
-                - Exports (values): `QueuedPromptCard`
-              - Cross-plugin:
-                - Uses tokens:
-                  - `ui/tokens/color-palette --foreground`
-                  - `ui/tokens/font-family --font-mono`
-                  - `ui/tokens/shape --spacing`
-                - Imported by:
-                  - `conversations/conversation-view/jsonl-viewer/attachment/queued-command`
-                  - `conversations/conversation-view/jsonl-viewer/queue-operation`
             - **`request-shape`** — Renders the system prompt and tool set Claude Code logs for model calls (api-request-shape): the agent's tools and prompt on first use, then one row per change — a deferred tool loaded, a tool dropped, the prompt edited. Folds with the harness context around it.
               - Web:
                 - Contributes:
@@ -17741,11 +17720,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tryItHint`
         - **`pending-turn`** — The single entry point for sending a turn from the browser (useSendConversationTurn, bound to the subtree's transport: mints the turn's ledger id, shows its echo at once, then runs its delivery), and the view of the server's turn ledger (conversations/turn-ledger): usePendingTurns merges a conversation's live ledger rows with this tab's sends whose row has not arrived, PendingTurnCard renders each by state (echo while held or being typed, a warning when the CLI merged it with leftover text, Retry + Copy to draft when it failed), and useOptimisticConversationStatus reads a conversation as working from the instant a turn is sent. Every surface (prompt input, template chips, Send/Queue/Go, Push & Close, AskUserQuestion answers) sends through it and differs only in its delivery. Contributes the turn-send-safety lint rule.
           - Web:
-            - Uses: 24 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/pending-turn/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/pending-turn/REFERENCE.md)
+            - Uses: 26 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/pending-turn/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/pending-turn/REFERENCE.md)
               - `infra/endpoints` ×5
               - `primitives/live-state` ×4
+              - `primitives/css/ui-kit` ×3
               - `primitives/persistent-draft` ×3
-              - `primitives/css/ui-kit` ×2
               - `primitives/networking` ×2
               - `conversations/conversation-view/user-message.UserMessageText`
               - `network/live.useLive`
@@ -17755,6 +17734,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/dom/web-storage.defineStore`
               - `primitives/sync-status.useReportSync`
               - `shell/toast.showToast`
+              - `ui/icons.Icon`
             - Exports (types):
               - `InFlightTurn`
               - `PendingCard`
@@ -17781,6 +17761,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --space-md`
               - `ui/tokens/density --space-sm`
               - `ui/tokens/shape --radius`
+              - `ui/tokens/shape --spacing`
             - Imported by:
               - `conversations/agent-thread`
               - `conversations/all-conversations`
@@ -19378,12 +19359,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types):
           - `AcceptOutcome`
           - `NewTurn`
+          - `PromptConfirmation`
           - `TurnEvent`
           - `TurnRow`
           - `UserTurnSentPayload`
         - Exports (values):
           - `acceptTurn`
           - `applyTurnEvent`
+          - `dropTypedTurns`
           - `getTurn`
           - `hasHeldTurns`
           - `hasTurnInFlight`
@@ -39854,10 +39837,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 442 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 441 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×109
               - `apps` ×101
-              - `conversations` ×54
+              - `conversations` ×53
               - `page` ×26
               - `debug` ×24
               - `ui` ×21
@@ -50786,9 +50769,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/shadow --shadow`
           - `ui/tokens/shape --spacing`
-        - Imported by: 347 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 346 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×89
-          - `conversations` ×58
+          - `conversations` ×57
           - `primitives` ×42
           - `page` ×41
           - `fields` ×35
@@ -52396,8 +52379,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `shapeGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --radius-chip-compact`
-            - Tokens used by: 432 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
-              - `conversations` ×93
+            - Tokens used by: 430 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+              - `conversations` ×91
               - `apps` ×84
               - `primitives` ×70
               - `page` ×36

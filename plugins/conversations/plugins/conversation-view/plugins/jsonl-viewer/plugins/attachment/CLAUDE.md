@@ -50,7 +50,7 @@
   - **`model`** — Renders the model attachment — which model the harness put behind the session — as a one-line row naming the model, its exact id, and its knowledge cutoff.
   - **`nested-memory`** — Renders nested-memory attachment events showing which CLAUDE.md files were loaded as context.
   - **`prompt-snapshot`** — Renders the snapshot of the exact system prompt an agent was given: its size and tool count on the collapsed line, the prompt sections and the tool names (never their descriptions) in the body.
-  - **`queued-command`** — Renders queued_command attachment events — a prompt the user queued while the agent was busy, awaiting delivery on the next turn.
+  - **`queued-command`** — Renders queued_command attachment events the CLI delivered into a running turn that are not the user's own prompt (a harness control message such as a task notification): a structured key/value…
   - **`remote-session`** — Renders the remote_session_change attachment — the conversation became followed from claude.ai — as a one-line row linking out to the session.
   - **`session-context`** — Renders the session-context attachment — the ambient briefing blocks (user identity, git status, …) the harness injected at launch — as one collapsed card with a section per block.
   - **`session-mode`** — Renders the attachments that announce the rules the session runs under from here on — auto mode and its switches, entering and leaving plan mode, and ultracode.

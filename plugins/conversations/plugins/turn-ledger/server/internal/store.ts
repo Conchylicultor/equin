@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, inArray, max } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, lte, max } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { db } from "@plugins/database/server";
 import {
@@ -247,8 +247,15 @@ export async function hasHeldTurns(
   return row !== undefined;
 }
 
+/** What the agent reported taking: the prompt, as message `promptUuid`, `at`. */
+export interface PromptConfirmation {
+  prompt: string;
+  promptUuid: string;
+  at: Date;
+}
+
 /**
- * Resolve the turn the CLI just reported submitting at `at`: the first of
+ * Resolve the turn the CLI just reported starting: the first of
  * {@link promptCandidates} the confirmation still applies to. A prompt matching
  * nothing — typed in the terminal — is not ours.
  * Returns the resolved row, or null. A resolved row signals
@@ -256,8 +263,7 @@ export async function hasHeldTurns(
  */
 export async function resolvePromptSubmit(
   conversationId: string,
-  prompt: string,
-  at: Date,
+  { prompt, promptUuid, at }: PromptConfirmation,
   conn: NodePgDatabase = db,
 ): Promise<TurnRow | null> {
   const oldestFirst = await conn
@@ -272,7 +278,12 @@ export async function resolvePromptSubmit(
     .orderBy(asc(_conversationTurns.createdAt), asc(_conversationTurns.id));
   for (const candidate of promptCandidates(prompt, oldestFirst)) {
     const applied = await conn.transaction((tx) =>
-      applyInTx(tx, candidate.id, { kind: "confirmed", prompt, at }),
+      applyInTx(tx, candidate.id, {
+        kind: "confirmed",
+        prompt,
+        promptUuid,
+        at,
+      }),
     );
     await afterChange(applied);
     if (applied.changed) {
@@ -331,6 +342,35 @@ export async function returnTurnsSince(
     returned.push(await applyTurnEvent(id, { kind: "returned" }, conn));
   }
   return returned;
+}
+
+/**
+ * Fail every turn still `typed` that was sent before `exitedAt` — the agent
+ * went away with it in its CLI's queue, so it never ran. A turn sent after the
+ * exit went to the agent that replaced it and is left alone.
+ */
+export async function dropTypedTurns(
+  conversationId: string,
+  exitedAt: Date,
+  conn: NodePgDatabase = db,
+): Promise<TurnRow[]> {
+  const waiting = await conn
+    .select({ id: _conversationTurns.id })
+    .from(_conversationTurns)
+    .where(
+      and(
+        eq(_conversationTurns.conversationId, conversationId),
+        eq(_conversationTurns.state, "typed"),
+        lte(_conversationTurns.createdAt, exitedAt),
+      ),
+    )
+    .orderBy(asc(_conversationTurns.createdAt), asc(_conversationTurns.id));
+  const dropped: TurnRow[] = [];
+  for (const { id } of waiting) {
+    const row = await applyTurnEvent(id, { kind: "dropped" }, conn);
+    if (row.state === "failed") dropped.push(row);
+  }
+  return dropped;
 }
 
 /**

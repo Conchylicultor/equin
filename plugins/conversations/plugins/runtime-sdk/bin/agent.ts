@@ -37,7 +37,7 @@ import { defineFileSink } from "@plugins/infra/plugins/file-sink/core";
 import { SAMPLE } from "@plugins/infra/plugins/paths/server";
 import { basename, dirname, join } from "node:path";
 import { parseArgs } from "node:util";
-import { ZodError } from "zod";
+import { ZodError, z } from "zod";
 import { claudeAccountToken } from "@plugins/infra/plugins/claude-cli/plugins/accounts/server";
 import { disclaimArgv } from "@plugins/packages/plugins/spawn-disclaim/core";
 import {
@@ -228,20 +228,73 @@ interface QueuedTurn {
 const pendingInput: QueuedTurn[] = [];
 let wakeInput: (() => void) | undefined;
 let closed = false;
+
+// Handing a turn to the SDK is not the agent taking it: the SDK writes it to
+// the CLI at once, and a busy CLI parks it in its command queue until the next
+// tool boundary (folded into the running turn) or the turn's end. The CLI says
+// when it really starts one — a `command_lifecycle` message (untyped in the
+// SDK) naming our uuid — and only then is the turn `turn_started`. A CLI that
+// never sends one (older than the lifecycle; known once its first `init` came
+// with none seen) confirms at hand-off, as before.
+const inCliQueue = new Map<string, QueuedTurn>();
+let cliReportsLifecycle: boolean | null = null;
+
+function turnStarted(turn: QueuedTurn): void {
+  emit({
+    kind: "agent",
+    payload: {
+      event: "turn_started",
+      turnId: turn.turnId,
+      promptUuid: turn.message.uuid!,
+      text: turn.text,
+    },
+  });
+}
+
+const CommandLifecycleSchema = z.object({
+  type: z.literal("command_lifecycle"),
+  command_uuid: z.string(),
+  state: z.string(),
+});
+
+/** Confirms the turns the CLI's queue lifecycle says it took. */
+function followCliQueue(msg: SDKMessage): void {
+  const lifecycle = CommandLifecycleSchema.safeParse(msg);
+  if (lifecycle.success) {
+    cliReportsLifecycle = true;
+    const { command_uuid: uuid, state } = lifecycle.data;
+    const turn = inCliQueue.get(uuid);
+    if (!turn) return;
+    // `completed` without `started`: a command the CLI ran without a turn.
+    if (state === "started" || state === "completed") {
+      inCliQueue.delete(uuid);
+      turnStarted(turn);
+    } else if (state === "cancelled") {
+      // Nothing here cancels a queued turn; the backend fails it when the
+      // agent exits without having taken it.
+      inCliQueue.delete(uuid);
+      log(`✕ the CLI cancelled a queued turn: ${clip(turn.text)}`);
+    }
+    return;
+  }
+  if (
+    cliReportsLifecycle === null &&
+    msg.type === "system" &&
+    msg.subtype === "init"
+  ) {
+    cliReportsLifecycle = false;
+    log("● this CLI reports no command lifecycle: turns confirm at hand-off");
+    for (const turn of inCliQueue.values()) turnStarted(turn);
+    inCliQueue.clear();
+  }
+}
+
 async function* inputStream(): AsyncGenerator<SDKUserMessage> {
   while (!closed) {
     const next = pendingInput.shift();
     if (next) {
-      // The SDK takes the turn now: it is submitted, and the agent is working.
-      emit({
-        kind: "agent",
-        payload: {
-          event: "turn_started",
-          turnId: next.turnId,
-          promptUuid: next.message.uuid!,
-          text: next.text,
-        },
-      });
+      if (cliReportsLifecycle === false) turnStarted(next);
+      else inCliQueue.set(next.message.uuid!, next);
       yield next.message;
       continue;
     }
@@ -666,6 +719,7 @@ for await (const msg of session) {
     continue;
   }
   emit({ kind: "sdk", payload: msg });
+  followCliQueue(msg);
   recordUsage(msg, Date.now());
   logMessage(msg);
   // A failed turn's message never lands in the transcript. A successful one

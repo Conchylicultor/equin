@@ -130,6 +130,17 @@ export const withdrawConversationTurn = defineEndpoint({
   needsMachine: { feature: "Sending a message to an agent" },
 });
 
+/**
+ * Send now: interrupt the running turn so the messages waiting in the agent's
+ * queue start at once (an interrupt leaves them queued; the CLI runs them
+ * next). Unlike Stop, nothing is taken back.
+ */
+export const interruptConversationTurn = defineEndpoint({
+  route: "POST /api/conversations/:id/interrupt",
+  response: z.object({ ok: z.literal(true) }),
+  needsMachine: { feature: "Sending a queued message now" },
+});
+
 export const stopConversation = defineEndpoint({
   route: "POST /api/conversations/:id/stop",
   response: z.object({ ok: z.boolean(), rewindText: z.string().nullable() }),

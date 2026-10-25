@@ -26,7 +26,10 @@ import {
 import { useInView } from "@plugins/primitives/plugins/dom/plugins/in-view/web";
 import { useMarkConversationViewed } from "@plugins/conversations/plugins/hibernation/web";
 import { useConversation } from "@plugins/conversations/web";
-import type { ConversationEntry } from "@plugins/conversations/core";
+import {
+  isTurnRunning,
+  type ConversationEntry,
+} from "@plugins/conversations/core";
 import {
   groupThread,
   latestOutputAt,
@@ -221,6 +224,7 @@ function LiveThread<D extends ThreadResultDef>({
               conversationId={conversation.id}
               turn={turn}
               agentStarting={status === "starting"}
+                turnRunning={isTurnRunning(conversation)}
                 renderEcho={renderEcho}
             />
             ))}

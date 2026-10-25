@@ -7,6 +7,7 @@ import {
 } from "@plugins/primitives/plugins/live-state/web";
 
 import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
+import { isTurnRunning } from "@plugins/conversations/core";
 import {
   useTranscriptWindow,
   type TranscriptWindow,
@@ -244,6 +245,7 @@ function JsonlPaneInner({
           conversationId={conversation.id}
           turn={turn}
           agentStarting={agentStarting}
+          turnRunning={isTurnRunning(conversation)}
           renderEcho={renderEcho}
         />
       ))}

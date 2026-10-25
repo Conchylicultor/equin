@@ -4,18 +4,21 @@
 
 ## Plugin reference
 
-- Description: Renders queued_command attachment events — a prompt the user queued while the agent was busy, awaiting delivery on the next turn.
+- Description: Renders queued_command attachment events the CLI delivered into a running turn that are not the user's own prompt (a harness control message such as a task notification): a structured key/value card, else the raw command. A queued human prompt is the user's message — the transcript parser makes it one.
 - Web:
   - Contributes:
     - `JsonlViewerAttachment.Renderer` "queued_command" → `QueuedCommandAttachmentView`
     - `JsonlViewer.ContextRole` "attachment:queued_command"
   - Uses:
     - `conversations/conversation-view/jsonl-viewer/attachment.attachmentRenderer`
+    - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
     - `conversations/conversation-view/jsonl-viewer/fields-card.FieldsCard`
-    - `conversations/conversation-view/jsonl-viewer/queued-prompt-card.QueuedPromptCard`
+    - `primitives/css/text.Text`
     - `ui/icons.Icon`
 - Cross-plugin:
   - Uses tokens:
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/font-family --font-mono`
     - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-weight-medium`
 

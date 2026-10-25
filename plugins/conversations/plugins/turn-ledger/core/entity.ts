@@ -38,6 +38,13 @@ export const ledgerTurnFields = {
    * retires the turn's echo once the transcript reaches it.
    */
   submittedAt: nullable(dateField()),
+  /**
+   * `accepted` / `merged`: the uuid the agent gave the message it took — the
+   * transcript entry's (a user line's `uuid`, a prompt folded into a running
+   * turn's `source_uuid`), so the web finds the message that replaced the echo.
+   * Null for a turn confirmed before it was recorded.
+   */
+  promptUuid: nullable(textField()),
   createdAt: dateField(),
   updatedAt: dateField(),
 } satisfies FieldsRecord;

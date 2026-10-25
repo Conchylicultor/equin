@@ -4,7 +4,10 @@ import type { RuntimeSignal } from "@plugins/conversations/server";
 import { defineFileWatcher } from "@plugins/infra/plugins/file-watcher/server";
 import { createKeyedCoalescer } from "@plugins/packages/plugins/coalesce/core";
 import { recordReport } from "@plugins/reports/plugins/engine/server";
-import { resolvePromptSubmit } from "@plugins/conversations/plugins/turn-ledger/server";
+import {
+  dropTypedTurns,
+  resolvePromptSubmit,
+} from "@plugins/conversations/plugins/turn-ledger/server";
 import {
   onQuestionResolved,
   type ResolvedQuestion,
@@ -214,7 +217,14 @@ const QuestionInputSchema = z.object({ questions: z.unknown() });
 async function runEffect(id: string, effect: AgentEffect): Promise<void> {
   switch (effect.kind) {
     case "prompt-submitted":
-      await resolvePromptSubmit(id, effect.text, effect.at);
+      await resolvePromptSubmit(id, {
+        prompt: effect.text,
+        promptUuid: effect.promptUuid,
+        at: effect.at,
+      });
+      return;
+    case "turns-dropped":
+      await dropTypedTurns(id, effect.at);
       return;
     case "question":
       if (effect.pid === null) {

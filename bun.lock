@@ -1954,14 +1954,6 @@
       "name": "@equin/plugin-conversations-conversation-view-jsonl-viewer-preprompt",
       "version": "0.0.1",
     },
-    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/queue-operation": {
-      "name": "@equin/plugin-conversations-conversation-view-jsonl-viewer-queue-operation",
-      "version": "0.0.1",
-    },
-    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/queued-prompt-card": {
-      "name": "@equin/plugin-conversations-conversation-view-jsonl-viewer-queued-prompt-card",
-      "version": "0.0.1",
-    },
     "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/request-shape": {
       "name": "@equin/plugin-conversations-conversation-view-jsonl-viewer-request-shape",
       "version": "0.0.1",
@@ -7676,10 +7668,6 @@
     "@equin/plugin-conversations-conversation-view-jsonl-viewer-outline": ["@equin/plugin-conversations-conversation-view-jsonl-viewer-outline@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/outline"],
 
     "@equin/plugin-conversations-conversation-view-jsonl-viewer-preprompt": ["@equin/plugin-conversations-conversation-view-jsonl-viewer-preprompt@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/preprompt"],
-
-    "@equin/plugin-conversations-conversation-view-jsonl-viewer-queue-operation": ["@equin/plugin-conversations-conversation-view-jsonl-viewer-queue-operation@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/queue-operation"],
-
-    "@equin/plugin-conversations-conversation-view-jsonl-viewer-queued-prompt-card": ["@equin/plugin-conversations-conversation-view-jsonl-viewer-queued-prompt-card@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/queued-prompt-card"],
 
     "@equin/plugin-conversations-conversation-view-jsonl-viewer-request-shape": ["@equin/plugin-conversations-conversation-view-jsonl-viewer-request-shape@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/request-shape"],
 

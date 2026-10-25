@@ -126,6 +126,7 @@
     - `POST /api/conversations/:id/turn`
     - `POST /api/conversations/:id/turns/:turnId/retry`
     - `POST /api/conversations/:id/turns/:turnId/withdraw`
+    - `POST /api/conversations/:id/interrupt`
     - `POST /api/conversations/:id/stop`
 - Core:
   - Uses:
@@ -182,6 +183,7 @@
     - `getConversation`
     - `hasLiveProcess`
     - `hibernationConfig`
+    - `interruptConversationTurn`
     - `isActiveStatus`
     - `isAgentBusy`
     - `isTurnRunning`
@@ -281,8 +283,6 @@
           - **`meta-prompt`** — Renders harness-injected prompt turns (loop/queue wakeups, resumes) distinctly from human user messages.
           - **`outline`** — The transcript's outline: one dash per user turn pinned to the right edge of the conversation, the current turn highlighted, expanding on hover into a clickable list of turns. An adapter over the…
           - **`preprompt`** — Renders the launch special-instructions (preprompt) block as a collapsible section in the JSONL viewer.
-          - **`queue-operation`** — Renders Claude Code prompt-queue events (enqueue/dequeue/remove) in the JSONL viewer.
-          - **`queued-prompt-card`** — Shared appearance for a queued prompt (a message the user parked while the agent was busy). Used by both the queued_command attachment and the prompt-queue enqueue row so the two never diverge.
           - **`request-shape`** — Renders the system prompt and tool set Claude Code logs for model calls (api-request-shape): the agent's tools and prompt on first use, then one row per change — a deferred tool loaded, a tool…
           - **`row-actions`** — Owns WHICH actions a JSONL transcript row carries: the JsonlRowActions.Item slot, the per-event context, and the shared action-button styling. The cluster itself (reveal, guards, popup-hold) is…
           - **`steady-reveal`** — Steady reveal for text an agent is still writing: useSteadyReveal drains a growing text at an even pace over the bursts it arrives in, its newest words fading in through a soft tail painted with the…

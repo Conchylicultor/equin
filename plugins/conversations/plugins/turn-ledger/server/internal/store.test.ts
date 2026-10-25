@@ -167,8 +167,7 @@ describe("acceptTurn", () => {
     await applyTurnEvent(accepted.turn.id, { kind: "typed" }, conn);
     const resolved = await resolvePromptSubmit(
       id,
-      "/compact",
-      new Date(),
+      { prompt: "/compact", promptUuid: crypto.randomUUID(), at: new Date() },
       conn,
     );
     expect(resolved?.state).toBe("accepted");
@@ -291,7 +290,11 @@ describe("resolvePromptSubmit", () => {
     const id = await seedConversation("waiting");
     const first = await acceptTurn(id, turn("same"), conn);
     const second = await acceptTurn(id, turn("same"), conn);
-    const resolved = await resolvePromptSubmit(id, "same", AT, conn);
+    const resolved = await resolvePromptSubmit(
+      id,
+      { prompt: "same", promptUuid: crypto.randomUUID(), at: AT },
+      conn,
+    );
     expect<string | undefined>(resolved?.id).toBe(
       first.kind === "send" ? first.turn.id : "",
     );
@@ -313,7 +316,11 @@ describe("resolvePromptSubmit", () => {
     const id = await seedConversation("waiting");
     const accepted = await acceptTurn(id, turn("hi"), conn);
     const turnId = accepted.kind === "send" ? accepted.turn.id : "";
-    await resolvePromptSubmit(id, "hi", AT, conn);
+    await resolvePromptSubmit(
+      id,
+      { prompt: "hi", promptUuid: crypto.randomUUID(), at: AT },
+      conn,
+    );
     const after = await applyTurnEvent(turnId, { kind: "typed" }, conn);
     expect(after.state).toBe("accepted");
   });
@@ -324,7 +331,11 @@ describe("returnTurnByText", () => {
     const id = await seedConversation("waiting");
     const accepted = await acceptTurn(id, turn("stop me"), conn);
     const turnId = accepted.kind === "send" ? accepted.turn.id : "";
-    await resolvePromptSubmit(id, "stop me", AT, conn);
+    await resolvePromptSubmit(
+      id,
+      { prompt: "stop me", promptUuid: crypto.randomUUID(), at: AT },
+      conn,
+    );
     expect<string | undefined>(
       (await returnTurnByText(id, "stop me\n", conn))?.id,
     ).toBe(turnId);
@@ -343,10 +354,18 @@ describe("latestSubmitAt", () => {
     const id = await seedConversation("waiting");
     await acceptTurn(id, turn("first"), conn);
     expect((await latestSubmitAt([id], conn)).has(id)).toBe(false);
-    await resolvePromptSubmit(id, "first", AT, conn);
+    await resolvePromptSubmit(
+      id,
+      { prompt: "first", promptUuid: crypto.randomUUID(), at: AT },
+      conn,
+    );
     const later = new Date(AT.getTime() + 5_000);
     await acceptTurn(id, turn("second"), conn);
-    await resolvePromptSubmit(id, "second", later, conn);
+    await resolvePromptSubmit(
+      id,
+      { prompt: "second", promptUuid: crypto.randomUUID(), at: later },
+      conn,
+    );
     expect((await latestSubmitAt([id], conn)).get(id)).toEqual(later);
   });
 });
@@ -355,12 +374,20 @@ describe("returnTurnsSince", () => {
   test("returns the delivered turns sent at or after the cut, not before", async () => {
     const id = await seedConversation("waiting");
     const before = await acceptTurn(id, turn("kept"), conn);
-    await resolvePromptSubmit(id, "kept", AT, conn);
+    await resolvePromptSubmit(
+      id,
+      { prompt: "kept", promptUuid: crypto.randomUUID(), at: AT },
+      conn,
+    );
     const [{ now }] = (
       await t.db.execute<{ now: Date }>(sql`SELECT clock_timestamp() AS now`)
     ).rows as [{ now: Date }];
     const after = await acceptTurn(id, turn("cut"), conn);
-    await resolvePromptSubmit(id, "cut", AT, conn);
+    await resolvePromptSubmit(
+      id,
+      { prompt: "cut", promptUuid: crypto.randomUUID(), at: AT },
+      conn,
+    );
     const returned = await returnTurnsSince(id, new Date(now), conn);
     expect<string[]>(returned.map((row) => row.id)).toEqual([
       after.kind === "send" ? after.turn.id : "",

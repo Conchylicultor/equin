@@ -121,8 +121,11 @@ const envelope = { seq: z.number().int(), t: z.number() };
  * - `started` — the process is up (its pid, what it resumed, the Claude
  *   account it runs on — absent from an agent started before it was written);
  * - `ready` — the CLI finished its initialize (its version);
- * - `turn_started` — the SDK took a user turn off the input queue: the turn is
- *   submitted (the ledger confirms it from this) and the agent is working;
+ * - `turn_started` — the CLI started a user turn: the agent has it (the ledger
+ *   confirms it from this). Not when it was handed to the SDK — a busy CLI
+ *   holds it in its command queue until the next tool boundary (folded into
+ *   the running turn) or the turn's end; the agent follows that queue through
+ *   the CLI's `command_lifecycle` messages (bin/agent.ts);
  * - `exited` — the process is going away.
  */
 export const AgentLifecycleSchema = z.discriminatedUnion("event", [

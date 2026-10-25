@@ -23,6 +23,7 @@ event is its successor.
 | `state` | below |
 | `submitted_text`, `extra_text` | `merged` only: the confirmed whole prompt, and the part that was not this turn |
 | `submitted_at` | `accepted` / `merged`: when the agent took it — the event's own time, so a late replay still records the agent's moment |
+| `prompt_uuid` | `accepted` / `merged`: the uuid of the message the agent took — the transcript entry's (a user line's `uuid`, a folded-in prompt's `source_uuid`), so the web retires the echo on the message itself |
 | `error` | `failed` / `unverified`: why |
 
 ## States — one pure function
@@ -38,6 +39,7 @@ held ─▶ typing ─▶ typed ─▶ accepted     confirmed prompt == typed te
   ▲       │         ├────▶ merged       confirmed prompt contains it plus other text
   └─hold──┤         └────▶ returned     Stop rewound it
           ├─▶ failed       never reached the agent — Retry
+typed ─dropped─▶ failed    the agent went away with it still in its CLI's queue
           └─▶ unverified   the runtime cannot tell whether it went in — Retry
 failed / unverified ─withdraw─▶ withdrawn ─exact confirmation─▶ accepted
 held ─Stop while starting─▶ returned
@@ -83,9 +85,18 @@ dropped.
 ## Where the confirmation comes from
 
 The sdk runtime's event consumer calls `resolvePromptSubmit(conversationId,
-prompt, at)` for each `turn_started` its agent writes — replayed from its event
-cursor after a backend restart, so a confirmation is never lost while the
-backend is down.
+{ prompt, promptUuid, at })` for each `turn_started` its agent writes —
+replayed from its event cursor after a backend restart, so a confirmation is
+never lost while the backend is down.
+
+`turn_started` is the CLI **starting** the turn, not the turn being handed to
+it: a busy CLI parks a message in its command queue and starts it at the next
+tool boundary (folded into the running turn) or the turn's end. The agent
+follows that queue through the CLI's `command_lifecycle` messages
+(`runtime-sdk/bin/agent.ts`), so `typed` is exactly "queued in the agent" —
+the web's Queued echo. When the agent exits, every `typed` row sent before the
+exit is `dropped` (→ `failed`, Retry): its CLI's queue died with it. Findings:
+[`research/2026-10-25-conversations-queued-message-state.md`](../../../../research/2026-10-25-conversations-queued-message-state.md).
 
 ## Who writes rows
 
@@ -173,12 +184,14 @@ withdrawn).
   - Exports (types):
     - `AcceptOutcome`
     - `NewTurn`
+    - `PromptConfirmation`
     - `TurnEvent`
     - `TurnRow`
     - `UserTurnSentPayload`
   - Exports (values):
     - `acceptTurn`
     - `applyTurnEvent`
+    - `dropTypedTurns`
     - `getTurn`
     - `hasHeldTurns`
     - `hasTurnInFlight`
