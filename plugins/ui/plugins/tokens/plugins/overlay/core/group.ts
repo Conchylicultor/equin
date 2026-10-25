@@ -20,15 +20,18 @@ export const overlayGroup = defineTokenGroup("overlay", {
   // The panel's entry (`overlay-enter`, app.css): it fades in from 0 while
   // moving from `overlayEnterTranslate` (a CSS `translate` value, e.g.
   // `0 4px` = rising 4px) and growing from `overlayEnterScale`, over
-  // `overlayEnterDuration` along `overlayEnterEasing`. Default 0ms = instant.
-  // Off under `prefers-reduced-motion: reduce`, whatever the theme says.
-  overlayEnterDuration: { default: "0ms", label: "Panel entry duration" },
+  // `overlayEnterDuration` along `overlayEnterEasing`; its exit
+  // (`overlay-exit`) plays it back in three quarters of the time. Floating
+  // surfaces (`surface-enter`, and `<Presence>`'s exit) share the duration,
+  // easing and scale. `0ms` = instant. Off under
+  // `prefers-reduced-motion: reduce`, whatever the theme says.
+  overlayEnterDuration: { default: "140ms", label: "Panel entry duration" },
   overlayEnterEasing: { default: "ease-out", label: "Panel entry easing" },
   overlayEnterTranslate: {
     default: "0px 0px",
     label: "Panel entry offset",
   },
-  overlayEnterScale: { default: "1", label: "Panel entry scale" },
+  overlayEnterScale: { default: "0.98", label: "Panel entry scale" },
   // The tooltip's fill and ink (`bg-tooltip` / `text-tooltip-foreground`).
   // Defaults = the popover's; an inverted tooltip sets the foreground as the
   // fill and the background as the ink.

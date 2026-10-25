@@ -128,7 +128,7 @@ not yet supported — see the open question in
     - `primitives/hover-reveal` ×2
     - `primitives/sortable-list` ×2
     - `layouts/route-fallback.DeferredRouteFallback`
-    - `primitives/collapsible.prefersReducedMotion`
+    - `primitives/css/motion.prefersReducedMotion`
     - `primitives/css/spacing.Stack`
     - `primitives/css/theme-boundary.Theme`
     - `primitives/css/ui-kit.cn`

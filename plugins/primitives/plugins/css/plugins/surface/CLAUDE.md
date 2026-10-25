@@ -50,6 +50,15 @@ Tailwind class strings composed via `cn()`, so a consumer's `className` override
 (`bg-muted/30`, `rounded-lg`, `shadow-none`, …) cleanly replaces just that
 property — it does not nuke the whole surface.
 
+## Floating surfaces move by themselves
+
+`overlay` and `float` surfaces arrive with motion (`surface-enter`: the overlay
+tokens' fade and scale) and tween their size when their content changes it
+(`useSizeMotion`) — a card that becomes a pill, a list that drills into a
+detail. Their exit is `<Presence>`'s, since a surface cannot animate its own
+unmount; `motion={false}` opts one out. See
+[`motion`](../motion/CLAUDE.md).
+
 `<Card>` is now a thin `<Surface level="raised">` + padding wrapper, and the
 shadcn `PopoverContent` / `DropdownMenuContent` consume `SURFACE_LEVELS.overlay` —
 one definition behind all three. Like `<Card>`, `<Surface>` bakes the Ctrl+A
@@ -133,6 +142,7 @@ never be clobbered.
 - Description: Semantic surface elevation primitive: <Surface level> bundles background + border + radius + shadow into a closed set of roles (sunken/base/raised/overlay, and float — glass for floating chrome), plus the no-adhoc-surface lint rule.
 - Web:
   - Uses:
+    - `primitives/css/motion.useSizeMotion`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.SidewaysScrollProvider`
     - `primitives/css/ui-kit.SURFACE_LEVELS`
@@ -142,7 +152,10 @@ never be clobbered.
   - Exports (types): `SurfaceProps`
   - Exports (values): `Surface`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shadow --shadow`
+  - Uses tokens:
+    - `ui/tokens/overlay --overlay-enter-duration`
+    - `ui/tokens/overlay --overlay-enter-easing`
+    - `ui/tokens/shadow --shadow`
   - Imported by: 35 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×14
     - `primitives` ×6

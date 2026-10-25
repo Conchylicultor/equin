@@ -30,7 +30,7 @@ export type {
   UseCollapsibleReturn,
 } from "./internal/use-collapsible";
 
-export { startFold, prefersReducedMotion } from "./internal/fold-clock";
+export { startFold } from "./internal/fold-clock";
 
 export { useExpandAll } from "./internal/use-expand-all";
 export type { UseExpandAllReturn } from "./internal/use-expand-all";

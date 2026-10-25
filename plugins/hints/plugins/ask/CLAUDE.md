@@ -154,7 +154,7 @@ portable `server/` half.
     - `ConfigV2.WebRegister` "config"
     - `DynamicEnum.Options` "Model for filed tasks"
     - `DynamicEnum.Options` "Model"
-  - Uses: 63 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 64 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations/agent-thread` ×7
     - `apps-core` ×2
     - `config_v2` ×2
@@ -181,6 +181,7 @@ portable `server/` half.
     - `primitives/css/control-panel.ControlPanel`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
+    - `primitives/css/motion.Presence`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/spinner.Spinner`
@@ -249,13 +250,11 @@ portable `server/` half.
     - `ui/tokens/color-palette --border`
     - `ui/tokens/color-palette --foreground`
     - `ui/tokens/color-palette --muted-foreground`
-    - `ui/tokens/color-palette --popover`
     - `ui/tokens/color-palette --primary`
     - `ui/tokens/color-palette --primary-text`
     - `ui/tokens/density --space-md`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/density --space-xs`
-    - `ui/tokens/shadow --shadow-popover`
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`
 

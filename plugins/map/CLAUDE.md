@@ -183,6 +183,7 @@ The namespace is `GeoMap`, not `Map`, so it does not shadow the JS global.
     - `primitives/css/coords.Placed`
     - `primitives/css/layer.Layer`
     - `primitives/css/line.Line`
+    - `primitives/css/motion.Presence`
     - `primitives/css/pin.Pin`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/surface.Surface`

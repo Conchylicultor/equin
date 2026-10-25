@@ -79,7 +79,7 @@ export const CUSTOM_UTILITY_REGISTRY = [
   { classes: ["size-soft-thumb"], group: "sg-dv-size", excludes: ["size", "h", "w"], under: [] },
   { classes: ["rounded-soft-thumb", "rounded-inherit"], extend: "rounded" },
   { classes: ["tracking-column-header"], standalone: true, reason: "the column labels' tracking from a token; no tracking class sits beside it on the header." },
-  { classes: ["overlay-enter"], extend: "animate" },
+  { classes: ["overlay-enter", "overlay-exit", "surface-enter"], extend: "animate" },
   { classes: ["rounded-tooltip"], extend: "rounded" },
   { classes: ["p-tooltip"], extend: "p" },
   { classes: ["shadow-tooltip"], extend: "shadow" },

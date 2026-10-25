@@ -20,9 +20,3 @@ export function startFold(start: (startTime: number) => void): () => void {
   const frame = requestAnimationFrame(() => start(performance.now()));
   return () => cancelAnimationFrame(frame);
 }
-
-/** Folds have no duration under `prefers-reduced-motion`: the same states,
- *  no motion. */
-export function prefersReducedMotion(): boolean {
-  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-}

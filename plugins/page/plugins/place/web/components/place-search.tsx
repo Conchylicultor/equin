@@ -6,6 +6,7 @@ import {
   ResourceErrorInline,
 } from "@plugins/primitives/plugins/live-state/web";
 import { cn, Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Presence } from "@plugins/primitives/plugins/css/plugins/motion/web";
 import {
   Inset,
   Stack,
@@ -155,41 +156,43 @@ export function PlaceSearch({ provider, session, onPick }: PlaceSearchProps) {
         </Stack>
       ) : null}
 
-      {searching && suggestions !== null && hasResults ? (
-        <Surface level="overlay">
-          <Scroll axis="y" className="max-h-64">
-            <Inset pad="2xs">
-              <div id={listId} role="listbox" aria-label="Place results">
-                {/* eslint-disable-next-line data-view/no-adhoc-row-list -- transient typeahead chrome: provider predictions that exist only while this dropdown is open and are discarded on selection, not a collection of domain records */}
-                {suggestions.map((suggestion, i) => (
-                  <Row
-                    key={suggestion.placeId}
-                    id={`${listId}-${i}`}
-                    role="option"
-                    aria-selected={i === active}
-                    selected={i === active}
-                    onMouseEnter={() => setActive(i)}
-                    onClick={() => choose(i)}
-                  >
-                    <Fill>
-                      <Line>
-                        <Text variant="label">{suggestion.primary}</Text>
-                      </Line>
-                      {suggestion.secondary ? (
+      <Presence>
+        {searching && suggestions !== null && hasResults ? (
+          <Surface key="results" level="overlay">
+            <Scroll axis="y" className="max-h-64">
+              <Inset pad="2xs">
+                <div id={listId} role="listbox" aria-label="Place results">
+                  {/* eslint-disable-next-line data-view/no-adhoc-row-list -- transient typeahead chrome: provider predictions that exist only while this dropdown is open and are discarded on selection, not a collection of domain records */}
+                  {suggestions.map((suggestion, i) => (
+                    <Row
+                      key={suggestion.placeId}
+                      id={`${listId}-${i}`}
+                      role="option"
+                      aria-selected={i === active}
+                      selected={i === active}
+                      onMouseEnter={() => setActive(i)}
+                      onClick={() => choose(i)}
+                    >
+                      <Fill>
                         <Line>
-                          <Text variant="caption" tone="muted">
-                            {suggestion.secondary}
-                          </Text>
+                          <Text variant="label">{suggestion.primary}</Text>
                         </Line>
-                      ) : null}
-                    </Fill>
-                  </Row>
-                ))}
-              </div>
-            </Inset>
-          </Scroll>
-        </Surface>
-      ) : null}
+                        {suggestion.secondary ? (
+                          <Line>
+                            <Text variant="caption" tone="muted">
+                              {suggestion.secondary}
+                            </Text>
+                          </Line>
+                        ) : null}
+                      </Fill>
+                    </Row>
+                  ))}
+                </div>
+              </Inset>
+            </Scroll>
+          </Surface>
+        ) : null}
+      </Presence>
 
       {searching && search.status === "loading" ? (
         <Loading variant="text" label="Searching…" />

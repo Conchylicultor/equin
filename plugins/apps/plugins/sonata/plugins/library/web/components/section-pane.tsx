@@ -26,11 +26,8 @@ import {
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { useSectionPaneCollapsed } from "./panels-toggle";
-import {
-  DOCK_EASE,
-  DOCK_MS,
-  prefersReducedMotion,
-} from "../internal/dock-motion";
+import { prefersReducedMotion } from "@plugins/primitives/plugins/css/plugins/motion/web";
+import { DOCK_EASE, DOCK_MS } from "../internal/dock-motion";
 import {
   EDGE,
   PANEL_BOTTOM,

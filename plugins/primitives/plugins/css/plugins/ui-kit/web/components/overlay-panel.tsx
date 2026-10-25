@@ -174,13 +174,14 @@ export function OverlayPanel({
       data-fade-bottom={bottom ? "" : undefined}
       className={cn(
         SURFACE_LEVELS.overlay,
-        // The entry is the theme's (`overlay-enter`, app.css: the overlay
-        // token group's duration / easing / offset / scale — instant by
-        // default, off under reduced motion). There is no exit animation: a
-        // closing panel unmounts at once. `data-closed:overflow-hidden`
+        // The entry and exit are the theme's (`overlay-enter` /
+        // `overlay-exit`, app.css: the overlay token group's duration /
+        // easing / offset / scale, off under reduced motion). base-ui marks
+        // a closing popup `data-ending-style` and waits for its animations
+        // before it unmounts or hides it. `data-closed:overflow-hidden`
         // suppresses a scrollbar flash while it goes; `duration-100` times a
         // consumer's own `transition-*` (it arms nothing by itself).
-        "z-popover origin-(--transform-origin) duration-100 outline-none data-open:overlay-enter data-closed:overflow-hidden",
+        "z-popover origin-(--transform-origin) duration-100 outline-none data-open:overlay-enter data-ending-style:overlay-exit data-closed:overflow-hidden",
         POPOVER_WIDTH[width],
         POPOVER_PADDING[padding],
         scroll && [

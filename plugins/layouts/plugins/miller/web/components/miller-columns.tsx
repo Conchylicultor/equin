@@ -1,5 +1,5 @@
 import { useCallback, useContext, useLayoutEffect, useRef } from "react";
-import { prefersReducedMotion } from "@plugins/primitives/plugins/collapsible/web";
+import { prefersReducedMotion } from "@plugins/primitives/plugins/css/plugins/motion/web";
 import { DeferredRouteFallback } from "@plugins/layouts/plugins/route-fallback/web";
 import { scrollChildIntoView } from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
 import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";

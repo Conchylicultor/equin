@@ -5137,6 +5137,10 @@
       "name": "@equin/plugin-primitives-css-link-chip",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/css/plugins/motion": {
+      "name": "@equin/plugin-primitives-css-motion",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/css/plugins/overlay": {
       "name": "@equin/plugin-primitives-css-overlay",
       "version": "0.0.1",
@@ -9168,6 +9172,8 @@
     "@equin/plugin-primitives-css-line": ["@equin/plugin-primitives-css-line@workspace:plugins/primitives/plugins/css/plugins/line"],
 
     "@equin/plugin-primitives-css-link-chip": ["@equin/plugin-primitives-css-link-chip@workspace:plugins/primitives/plugins/css/plugins/link-chip"],
+
+    "@equin/plugin-primitives-css-motion": ["@equin/plugin-primitives-css-motion@workspace:plugins/primitives/plugins/css/plugins/motion"],
 
     "@equin/plugin-primitives-css-overlay": ["@equin/plugin-primitives-css-overlay@workspace:plugins/primitives/plugins/css/plugins/overlay"],
 

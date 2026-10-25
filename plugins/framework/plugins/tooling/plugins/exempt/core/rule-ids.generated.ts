@@ -84,6 +84,7 @@ export type ExemptableRuleId =
   | "marker-scan-safety/no-adhoc-binding-scan"
   | "marker-scan-safety/no-adhoc-marker-scan"
   | "model-provider:no-raw-model-flags"
+  | "motion/no-unanimated-surface-exit"
   | "namespace-identity/no-ambient-worktree-env"
   | "namespace-identity/no-laundered-checkout-namespace"
   | "namespace:legacy-host"

@@ -67,18 +67,18 @@ and a record's cover at rest / under the pointer, `shadow-cover` (`sm`) and
     - `ui/tokens/type-scale --font-weight-normal`
     - `ui/tokens/type-scale --line-height-3xs`
     - `ui/tokens/type-scale --line-height-caption`
-  - Tokens used by: 75 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Tokens used by: 74 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×29
     - `primitives` ×18
     - `ui` ×6
     - `framework` ×5
     - `page` ×3
     - `apps-core` ×2
-    - `hints` ×2
     - `screenshot` ×2
     - `tasks` ×2
     - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
     - `database/derived-tables`
+    - `hints`
     - `map`
     - `menu-bar`
     - `plugin-meta/plugin-tree`

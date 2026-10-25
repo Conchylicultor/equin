@@ -1,3 +1,4 @@
+import { prefersReducedMotion } from "@plugins/primitives/plugins/css/plugins/motion/web";
 import {
   useCallback,
   useEffect,
@@ -106,10 +107,6 @@ const TRANSITION_FADE = "opacity 200ms";
 // The first-open hint shows once per page load, not on every open. A page-wide
 // fact on purpose (not per viewer): it is about whether this user has been told.
 let hintShown = false;
-
-function prefersReducedMotion(): boolean {
-  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-}
 
 /** `el`'s box in stage coordinates, when any of it is on screen. */
 function rectOnStage(el: Element, stage: Element): Rect | null {

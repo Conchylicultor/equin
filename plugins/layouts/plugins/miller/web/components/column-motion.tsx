@@ -1,5 +1,5 @@
 import { Component, type ReactNode, type RefObject } from "react";
-import { prefersReducedMotion } from "@plugins/primitives/plugins/collapsible/web";
+import { prefersReducedMotion } from "@plugins/primitives/plugins/css/plugins/motion/web";
 import {
   cloneWithScroll,
   restoreScrollOffset,

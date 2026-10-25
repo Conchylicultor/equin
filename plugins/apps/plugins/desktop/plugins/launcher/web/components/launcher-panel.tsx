@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { useMemo, useRef, useState, type KeyboardEvent, type Ref } from "react";
 import { Layer } from "@plugins/primitives/plugins/css/plugins/layer/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
@@ -73,25 +73,34 @@ interface AppMenu {
  * selection, Enter runs it (Shift+Enter opens a new window), Esc or a click on
  * the backdrop closes — and hovering an item moves the selection onto it.
  */
-export function LauncherPanel({ onClose }: { onClose(): void }) {
+export function LauncherPanel({
+  onClose,
+  ref,
+}: {
+  onClose(): void;
+  /** The backdrop — the panel's root, which `<Presence>` fades out. */
+  ref?: Ref<HTMLElement>;
+}) {
   const apps = useLauncherApps();
   // The desktop's error boundary shows it: which apps exist is not known.
   if (apps.status === "error") throw apps.error;
   if (apps.status === "loading")
     return (
-      <Layer layer="overlay" onPointerDown={onClose}>
+      <Layer ref={ref} layer="overlay" onPointerDown={onClose}>
         <Loading variant="block" />
       </Layer>
     );
-  return <LauncherPanelBody apps={apps.data} onClose={onClose} />;
+  return <LauncherPanelBody ref={ref} apps={apps.data} onClose={onClose} />;
 }
 
 function LauncherPanelBody({
   apps,
   onClose,
+  ref,
 }: {
   apps: LauncherApp[];
   onClose(): void;
+  ref?: Ref<HTMLElement>;
 }) {
   const commands = useLauncherCommands();
   const { activate, newWindow } = useAppActions();
@@ -144,10 +153,11 @@ function LauncherPanelBody({
   return (
     <>
       <Layer
+        ref={ref}
         layer="overlay"
         // A press anywhere outside the panel closes it; the panel stops its own.
         onPointerDown={onClose}
-        className="bg-black/20 animate-in fade-in-0 duration-100"
+        className="bg-black/20"
       >
         <Stack
           gap="none"
@@ -165,7 +175,6 @@ function LauncherPanelBody({
               "w-full max-w-160 rounded-2xl",
               // The mockup's two-layer lift; no shadow token carries this much spread.
               "shadow-[0_30px_80px_-20px_rgba(0,0,0,0.45),0_4px_12px_rgba(0,0,0,0.1)]",
-              "animate-in fade-in-0 zoom-in-97 slide-in-from-top-1.5 duration-150 ease-out",
             )}
           >
             <Clip className="rounded-2xl">

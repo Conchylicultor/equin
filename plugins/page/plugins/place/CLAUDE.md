@@ -34,7 +34,7 @@ existed, draws a generic pin / neutral circle until the next refresh.
   - Slots: `Place.Provider`
   - Slot contributors: `Place.Provider` ← `page.place.google`
   - Contributes: `Editor.Block` "place" → `PlaceBlock`
-  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `page/editor` ×4
     - `primitives/avatar` ×2
     - `primitives/css/spacing` ×2
@@ -46,6 +46,7 @@ existed, draws a generic pin / neutral circle until the next refresh.
     - `primitives/css/center.Center`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
+    - `primitives/css/motion.Presence`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/row.Row`

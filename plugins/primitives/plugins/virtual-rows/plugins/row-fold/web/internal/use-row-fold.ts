@@ -1,9 +1,7 @@
 import { useId, useLayoutEffect, useMemo, useState } from "react";
 import { foldTiming } from "@plugins/primitives/plugins/collapsible/core";
-import {
-  prefersReducedMotion,
-  startFold,
-} from "@plugins/primitives/plugins/collapsible/web";
+import { startFold } from "@plugins/primitives/plugins/collapsible/web";
+import { prefersReducedMotion } from "@plugins/primitives/plugins/css/plugins/motion/web";
 import {
   awaitedReveal,
   detectContinuation,

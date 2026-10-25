@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { prefersReducedMotion } from "@plugins/primitives/plugins/css/plugins/motion/web";
 
 /**
  * How the section dock folds and unfolds: the panel growing out of the rail
@@ -43,10 +44,6 @@ export function useDockReserve(target: number): number {
     return () => cancelAnimationFrame(frame);
   }, [target]);
   return value;
-}
-
-export function prefersReducedMotion(): boolean {
-  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
 /**

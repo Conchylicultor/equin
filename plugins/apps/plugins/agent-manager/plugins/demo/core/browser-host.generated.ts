@@ -417,6 +417,7 @@ export const browserHost = {
     "primitives.css.layer",
     "primitives.css.line",
     "primitives.css.link-chip",
+    "primitives.css.motion",
     "primitives.css.overlay",
     "primitives.css.pin",
     "primitives.css.placeholder",

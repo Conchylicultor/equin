@@ -2,7 +2,9 @@ import {
   useLayoutEffect,
   useRef,
   type PointerEvent as ReactPointerEvent,
+  type Ref,
 } from "react";
+import { Presence } from "@plugins/primitives/plugins/css/plugins/motion/web";
 
 import {
   Button,
@@ -306,7 +308,7 @@ export function BottomBar({
       style={stripShown ? { marginBottom: STRIP_HEIGHT } : undefined}
     >
       <Stack gap="sm" align="center">
-        {sheet && <ShortcutSheet />}
+        <Presence>{sheet ? <ShortcutSheet key="sheet" /> : null}</Presence>
         {hint && !grid && (
           <Text
             variant="label"
@@ -478,9 +480,10 @@ function SheetRow({
 }
 
 /** The `?` sheet: the pointer gestures, then every row of `VIEWER_KEYS`. */
-function ShortcutSheet() {
+function ShortcutSheet({ ref }: { ref?: Ref<HTMLElement> }) {
   return (
     <Stack
+      ref={ref}
       gap="xs"
       data-viewer-chrome
       className={cn(PANEL, "pointer-events-auto p-md")}

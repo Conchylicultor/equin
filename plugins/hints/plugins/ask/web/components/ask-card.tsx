@@ -40,20 +40,31 @@ const suggestionIcon = symbol("arrow-forward");
 type DragHandle = (e: PointerEvent<HTMLElement>) => void;
 
 /**
- * The card's frame: the chrome's popover material, a fixed width, and a max
- * height its content hugs up to — the card grows with its thread, then the
- * thread scrolls between the header and the composer. Its one child takes the
- * max-height on (`max-h-[inherit]`): AgentThread's `height="hug"`, or the empty
- * card's fit `Column`.
+ * The card's frame, the one surface every state of Ask equin is drawn in:
+ * the card (the chrome's popover material, a fixed width, and a max height
+ * its content hugs up to — it grows with its thread, then the thread scrolls
+ * between the header and the composer) or, minimized, the pill. One surface
+ * for both, so minimizing and restoring morph it (`Surface`'s size motion)
+ * rather than swap one box for another. The card's one child takes the
+ * max-height on (`max-h-[inherit]`): AgentThread's `height="hug"`, or the
+ * empty card's fit `Column`.
  */
-function CardFrame({ children }: { children: ReactNode }) {
+export function CardFrame({
+  pill,
+  children,
+}: {
+  /** Minimized: the frame is the pill around `AskPill`. */
+  pill: boolean;
+  children: ReactNode;
+}) {
   return (
     <Surface
       level="overlay"
-      role="dialog"
-      aria-label="Ask equin"
+      {...(pill ? {} : { role: "dialog", "aria-label": "Ask equin" })}
       className={cn(
-        "w-[24rem] max-w-[calc(100vw-1.5rem)] max-h-[min(37.5rem,calc(100vh-6rem))]",
+        pill
+          ? "max-w-80 rounded-full"
+          : "w-[24rem] max-w-[calc(100vw-1.5rem)] max-h-[min(37.5rem,calc(100vh-6rem))]",
         clipClasses({ axis: "both", fill: false }),
       )}
     >
@@ -94,7 +105,7 @@ function CardHeader({
 }
 
 /**
- * The card holding a run: the thread, its header actions, the reply box. A
+ * The card's content holding a run (drawn in the host's `CardFrame`): the thread, its header actions, the reply box. A
  * reply sent from another page carries it (`useAskPrepareTurn`); `card` is
  * the card's own element, left out of that page's outline.
  */
@@ -110,7 +121,7 @@ export function AskThreadCard({
   const question = useRunQuestion(conversationId) ?? "Ask equin";
   const prepareTurn = useAskPrepareTurn(conversationId, card);
   return (
-    <CardFrame>
+    <>
       {/* The help agent reads the main checkout, so the paths it names are
           main's — and the card sits outside every pane, so nothing else
           would say which workspace they belong to. */}
@@ -153,12 +164,12 @@ export function AskThreadCard({
           )}
         />
       </FileLinksWorkspaceProvider>
-    </CardFrame>
+    </>
   );
 }
 
 /**
- * The empty card: a few suggested questions and the first-question box.
+ * The empty card's content (drawn in the host's `CardFrame`): a few suggested questions and the first-question box.
  * Asking starts the run (with where the user is) and the card shows it.
  * `card` is the card's own element, left out of the page outline.
  */
@@ -189,67 +200,65 @@ export function AskEmptyCard({
   };
 
   return (
-    <CardFrame>
-      <Column
-        fit
-        className="max-h-[inherit]"
-        header={
-          <CardHeader drag={drag} title="Ask equin">
-            <AgentInstructionsButton />
-            <IconButton icon={closeIcon} label="Close" onClick={minimizeAsk} />
-          </CardHeader>
-        }
-        body={
-          <Stack gap="2xs" className="p-sm">
-            {suggestions.map((q) => (
-              <Line
-                key={q}
-                as="button"
-                type="button"
-                disabled={pending || blocked !== null}
-                onClick={() => void send(q, false)}
-                className="w-full gap-xs rounded-md px-sm py-xs text-left text-muted-foreground hover:bg-hover-fill hover:text-foreground disabled:opacity-50"
-              >
-                <Icon icon={suggestionIcon} className="size-4" />
-                <Fill>
-                  <Text variant="body">{q}</Text>
-                </Fill>
-              </Line>
-            ))}
-          </Stack>
-        }
-        footer={
-          <Stack
-            direction="row"
-            gap="xs"
-            align="end"
-            className="border-t border-border p-sm"
-          >
-            <Fill>
-              <TextEditor
-                value={draft}
-                onChange={setDraft}
-                onSubmit={() => void send(draft, true)}
-                submitMode="enter"
-                placeholder={blocked ?? "How do I…?"}
-                disabled={pending || blocked !== null}
-                autoFocus
-                minRows={1}
-                maxHeight="8rem"
-                namespace="hints-ask-question"
-              />
-            </Fill>
-            <IconButton
-              icon={sendIcon}
-              label="Ask"
-              variant="default"
-              loading={pending}
-              disabled={blocked !== null || draft.trim() === ""}
-              onClick={() => void send(draft, true)}
+    <Column
+      fit
+      className="max-h-[inherit]"
+      header={
+        <CardHeader drag={drag} title="Ask equin">
+          <AgentInstructionsButton />
+          <IconButton icon={closeIcon} label="Close" onClick={minimizeAsk} />
+        </CardHeader>
+      }
+      body={
+        <Stack gap="2xs" className="p-sm">
+          {suggestions.map((q) => (
+            <Line
+              key={q}
+              as="button"
+              type="button"
+              disabled={pending || blocked !== null}
+              onClick={() => void send(q, false)}
+              className="w-full gap-xs rounded-md px-sm py-xs text-left text-muted-foreground hover:bg-hover-fill hover:text-foreground disabled:opacity-50"
+            >
+              <Icon icon={suggestionIcon} className="size-4" />
+              <Fill>
+                <Text variant="body">{q}</Text>
+              </Fill>
+            </Line>
+          ))}
+        </Stack>
+      }
+      footer={
+        <Stack
+          direction="row"
+          gap="xs"
+          align="end"
+          className="border-t border-border p-sm"
+        >
+          <Fill>
+            <TextEditor
+              value={draft}
+              onChange={setDraft}
+              onSubmit={() => void send(draft, true)}
+              submitMode="enter"
+              placeholder={blocked ?? "How do I…?"}
+              disabled={pending || blocked !== null}
+              autoFocus
+              minRows={1}
+              maxHeight="8rem"
+              namespace="hints-ask-question"
             />
-          </Stack>
-        }
-      />
-    </CardFrame>
+          </Fill>
+          <IconButton
+            icon={sendIcon}
+            label="Ask"
+            variant="default"
+            loading={pending}
+            disabled={blocked !== null || draft.trim() === ""}
+            onClick={() => void send(draft, true)}
+          />
+        </Stack>
+      }
+    />
   );
 }

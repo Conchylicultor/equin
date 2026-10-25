@@ -263,9 +263,10 @@ structurally unrepresentable.
 
 `web/components/overlay-panel.tsx` is **the** floating panel: the
 `SURFACE_LEVELS.overlay` paint (not via `Surface`, which imports *from* ui-kit →
-cycle), the entry animation (`data-open:overlay-enter` — the `overlay` token
-group's duration / easing / offset / scale, instant by default, off under
-reduced motion; no exit animation), the width/padding/max-height roles (padding
+cycle), the entry and exit animations (`data-open:overlay-enter` /
+`data-ending-style:overlay-exit` — the `overlay` token group's duration /
+easing / offset / scale, off under reduced motion; base-ui waits for the exit
+before it unmounts or hides the popup), the width/padding/max-height roles (padding
 defaults to `panel`, the theme's `popoverPad`), the sticky
 `header`, and the content-context resets (`SingleLineProvider value={false}` +
 `OverlayBoundary`). `PopoverContent`, `DropdownMenuContent`, `SelectContent`,

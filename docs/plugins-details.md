@@ -2948,7 +2948,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `Desktop.Overlay` "Desktop overlay" → `LauncherOverlay`
               - `Shortcuts.Shortcut` "desktop.launcher (mod+k)"
-            - Uses: 50 symbols — full list in [`plugins/apps/plugins/desktop/plugins/launcher/REFERENCE.md`](../plugins/apps/plugins/desktop/plugins/launcher/REFERENCE.md)
+            - Uses: 51 symbols — full list in [`plugins/apps/plugins/desktop/plugins/launcher/REFERENCE.md`](../plugins/apps/plugins/desktop/plugins/launcher/REFERENCE.md)
               - `apps/desktop/windows` ×11
               - `apps-core` ×3
               - `primitives/css/ui-kit` ×3
@@ -2964,6 +2964,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/grid.Grid`
               - `primitives/css/layer.Layer`
               - `primitives/css/line.Line`
+              - `primitives/css/motion.Presence`
               - `primitives/css/rigid.rigidClass`
               - `primitives/css/scroll.Scroll`
               - `primitives/css/spacing.Stack`
@@ -6027,7 +6028,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `AgentThreadSlots.StepLabel` "places_search_text" → `SearchStepLabel`
               - `AgentThreadSlots.StepLabel` "places_show_picks" → `PicksStepLabel`
               - `JsonlViewerTool.Renderer` "mcp__equin__places_show_picks" → `PicksToolView`
-            - Uses: 124 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
+            - Uses: 125 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
               - `primitives/data-view` ×10
               - `map` ×9
               - `apps/places/places-core` ×8
@@ -6066,6 +6067,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/grid.Grid`
               - `primitives/css/inline.Inline`
               - `primitives/css/line.Line`
+              - `primitives/css/motion.Presence`
               - `primitives/css/pin.Pin`
               - `primitives/css/placeholder.Placeholder`
               - `primitives/css/row.Row`
@@ -7215,7 +7217,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Library.SongActions` "delete" → `DeleteSongAction`
               - `Pane.Register` "sonata-library"
               - `Pane.Register` "sonata-player"
-            - Uses: 88 symbols — full list in [`plugins/apps/plugins/sonata/plugins/library/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/library/REFERENCE.md)
+            - Uses: 89 symbols — full list in [`plugins/apps/plugins/sonata/plugins/library/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/library/REFERENCE.md)
               - `primitives/pane` ×13
               - `primitives/data-view` ×7
               - `apps/sonata/shell` ×6
@@ -7244,6 +7246,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/fill.Fill`
               - `primitives/css/grid.Grid`
               - `primitives/css/line.Line`
+              - `primitives/css/motion.prefersReducedMotion`
               - `primitives/css/pin.Pin`
               - `primitives/css/rigid.rigidClass`
               - `primitives/css/text.Text`
@@ -27414,7 +27417,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ConfigV2.WebRegister` "config"
           - `DynamicEnum.Options` "Model for filed tasks"
           - `DynamicEnum.Options` "Model"
-        - Uses: 63 symbols — full list in [`plugins/hints/plugins/ask/REFERENCE.md`](../plugins/hints/plugins/ask/REFERENCE.md)
+        - Uses: 64 symbols — full list in [`plugins/hints/plugins/ask/REFERENCE.md`](../plugins/hints/plugins/ask/REFERENCE.md)
           - `conversations/agent-thread` ×7
           - `apps-core` ×2
           - `config_v2` ×2
@@ -27441,6 +27444,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/control-panel.ControlPanel`
           - `primitives/css/fill.Fill`
           - `primitives/css/line.Line`
+          - `primitives/css/motion.Presence`
           - `primitives/css/rigid.rigidClass`
           - `primitives/css/spacing.Stack`
           - `primitives/css/spinner.Spinner`
@@ -27509,13 +27513,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --border`
           - `ui/tokens/color-palette --foreground`
           - `ui/tokens/color-palette --muted-foreground`
-          - `ui/tokens/color-palette --popover`
           - `ui/tokens/color-palette --primary`
           - `ui/tokens/color-palette --primary-text`
           - `ui/tokens/density --space-md`
           - `ui/tokens/density --space-sm`
           - `ui/tokens/density --space-xs`
-          - `ui/tokens/shadow --shadow-popover`
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
     - **`help-menu`** — The ? "Getting started" menu on the global action bar — the hints engine's help anchor, ringed while a tour end pulses it — rendering the open HelpMenu.Entry slot: Replay the tour (the primary tour), Show tips again (resets every declared tip), and Read the guide (equin.ai, new tab); other plugins add their own entries (Ask equin how to…, from hints/ask). The Help task category: the category questions asked from the ? menu ("Ask equin how to…") are grouped under.
@@ -32243,7 +32245,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/hover-reveal` ×2
           - `primitives/sortable-list` ×2
           - `layouts/route-fallback.DeferredRouteFallback`
-          - `primitives/collapsible.prefersReducedMotion`
+          - `primitives/css/motion.prefersReducedMotion`
           - `primitives/css/spacing.Stack`
           - `primitives/css/theme-boundary.Theme`
           - `primitives/css/ui-kit.cn`
@@ -32315,6 +32317,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `primitives/css/coords.Placed`
       - `primitives/css/layer.Layer`
       - `primitives/css/line.Line`
+      - `primitives/css/motion.Presence`
       - `primitives/css/pin.Pin`
       - `primitives/css/placeholder.Placeholder`
       - `primitives/css/surface.Surface`
@@ -35617,7 +35620,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots: `Place.Provider`
         - Slot contributors: `Place.Provider` ← `page.place.google`
         - Contributes: `Editor.Block` "place" → `PlaceBlock`
-        - Uses: 30 symbols — full list in [`plugins/page/plugins/place/REFERENCE.md`](../plugins/page/plugins/place/REFERENCE.md)
+        - Uses: 31 symbols — full list in [`plugins/page/plugins/place/REFERENCE.md`](../plugins/page/plugins/place/REFERENCE.md)
           - `page/editor` ×4
           - `primitives/avatar` ×2
           - `primitives/css/spacing` ×2
@@ -35629,6 +35632,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/center.Center`
           - `primitives/css/fill.Fill`
           - `primitives/css/line.Line`
+          - `primitives/css/motion.Presence`
           - `primitives/css/placeholder.Placeholder`
           - `primitives/css/rigid.rigidClass`
           - `primitives/css/row.Row`
@@ -38140,6 +38144,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`collapsible`** — Accessible collapsible primitive with controlled/uncontrolled support and a built-in chevron indicator. Compound components for standard layouts; useCollapsible hook for custom triggers.
       - Web:
         - Uses:
+          - `primitives/css/motion.prefersReducedMotion`
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.SingleLineProvider`
           - `primitives/latest-ref.useLatestRef`
@@ -38167,7 +38172,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CollapsibleTrigger`
           - `ExpandAllButton`
           - `FoldMotion`
-          - `prefersReducedMotion`
           - `startFold`
           - `useCollapsible`
           - `useCollapsibleContext`
@@ -38184,7 +38188,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-caption`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-caption`
-        - Imported by: 58 plugins — full list in [`plugins/primitives/plugins/collapsible/REFERENCE.md`](../plugins/primitives/plugins/collapsible/REFERENCE.md)
+        - Imported by: 57 plugins — full list in [`plugins/primitives/plugins/collapsible/REFERENCE.md`](../plugins/primitives/plugins/collapsible/REFERENCE.md)
           - `conversations` ×14
           - `ui` ×12
           - `apps` ×11
@@ -38194,7 +38198,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `auth`
           - `code-explorer/commit-detail`
           - `debug/read-set`
-          - `layouts/miller`
           - `reorder/node-types/header`
           - `shell/health-report`
       - Core:
@@ -38205,6 +38208,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`collapsible-wrap`** — Wraps overflowing children to multiple lines, clamped to N rows by default with a chevron toggle to reveal the rest. Force-expands while reorder edit mode is active.
       - Web:
         - Uses:
+          - `primitives/css/motion.Presence`
           - `primitives/css/surface.Surface`
           - `primitives/css/ui-kit.cn`
           - `primitives/dom/element-size.useResizeObserver`
@@ -38979,6 +38983,33 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page` ×2
               - `plugin-meta` ×2
               - `build/serve-composition`
+        - **`motion`** — How floating surfaces move: <Presence> keeps a leaving surface drawn until its exit has run (and cross-fades a keyed swap), useSizeMotion tweens a surface's size when its content changes, prefersReducedMotion — plus the no-unanimated-surface-exit lint rule.
+          - Web:
+            - Uses: `primitives/dom/element-size.useResizeObserver`
+            - Exports (types):
+              - `PresenceChild`
+              - `PresenceProps`
+            - Exports (values):
+              - `prefersReducedMotion`
+              - `Presence`
+              - `useSizeMotion`
+          - Cross-plugin:
+            - Uses tokens:
+              - `ui/tokens/overlay --overlay-enter-duration`
+              - `ui/tokens/overlay --overlay-enter-easing`
+            - Imported by:
+              - `apps/desktop/launcher`
+              - `apps/places/places-map`
+              - `apps/sonata/library`
+              - `hints/ask`
+              - `layouts/miller`
+              - `map`
+              - `page/place`
+              - `primitives/collapsible`
+              - `primitives/collapsible-wrap`
+              - `primitives/css/surface`
+              - `primitives/overlay/image-viewer`
+              - `primitives/virtual-rows/row-fold`
         - **`overlay`** — In-flow positioning layout primitive: <Overlay behind above clickThrough> paints full-bleed layers under/over its content within its own box, plus the click-through-toggle idiom.
           - Web:
             - Uses:
@@ -39463,6 +39494,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`surface`** — Semantic surface elevation primitive: <Surface level> bundles background + border + radius + shadow into a closed set of roles (sunken/base/raised/overlay, and float — glass for floating chrome), plus the no-adhoc-surface lint rule.
           - Web:
             - Uses:
+              - `primitives/css/motion.useSizeMotion`
               - `primitives/css/ui-kit.cn`
               - `primitives/css/ui-kit.SidewaysScrollProvider`
               - `primitives/css/ui-kit.SURFACE_LEVELS`
@@ -39472,7 +39504,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `SurfaceProps`
             - Exports (values): `Surface`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shadow --shadow`
+            - Uses tokens:
+              - `ui/tokens/overlay --overlay-enter-duration`
+              - `ui/tokens/overlay --overlay-enter-easing`
+              - `ui/tokens/shadow --shadow`
             - Imported by: 35 plugins — full list in [`plugins/primitives/plugins/css/plugins/surface/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/surface/REFERENCE.md)
               - `apps` ×14
               - `primitives` ×6
@@ -41267,8 +41302,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useResizeObserver`
               - `useResizeObserverSet`
           - Cross-plugin:
-            - Imported by: 39 plugins — full list in [`plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md)
-              - `primitives` ×21
+            - Imported by: 40 plugins — full list in [`plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md)
+              - `primitives` ×22
               - `apps` ×9
               - `shell` ×2
               - `active-data/go`
@@ -43410,12 +43445,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `createHoverIntent`
         - **`image-viewer`** — One full-screen image viewer for every image in the app: ViewerThumbnail (the capped inline thumbnail that always shows the whole image, with a tiny-icon shape and a size badge; a given width / height reserves its box before it loads, and a chip is one fixed height) and useImageViewerTrigger (for callers that keep their own <img>) open it; ThumbnailPlaceholder holds a thumbnail's box while its source is not known yet; an image that does not load shows MissingImage (its name, and whether the file is gone or only unreadable, with Retry) and leaves the gallery — useImageLoad gives a caller with its own <img> the same load state, and useImageProbe answers it off-DOM for a caller that must know before it renders; ImageGallery makes every thumbnail inside one ← / → set in page order and renders the viewer inside its own React tree; ImageViewer is the controlled viewer itself — fit, click-to-close, wheel/pinch zoom, drag pan, minimap, copy/download/open, a docked thumbnail strip, a grid of every image with a tile-size slider, a control-less full-screen slideshow, keyboard-isolated. A ViewerThumbnail outside any gallery is its own gallery of one; useImageViewerTrigger requires one.
           - Web:
-            - Uses: 48 symbols — full list in [`plugins/primitives/plugins/overlay/plugins/image-viewer/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/image-viewer/REFERENCE.md)
+            - Uses: 50 symbols — full list in [`plugins/primitives/plugins/overlay/plugins/image-viewer/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/image-viewer/REFERENCE.md)
               - `primitives/css/ui-kit` ×6
               - `primitives/persistent-draft` ×3
               - `infra/endpoints` ×2
               - `primitives/css/clip` ×2
               - `primitives/css/coords` ×2
+              - `primitives/css/motion` ×2
               - `primitives/css/rigid` ×2
               - `primitives/css/spacing` ×2
               - `primitives/hover-reveal` ×2
@@ -45771,8 +45807,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`row-fold`** — Disclosure motion for flat lists: useRowFold — given the rows and the open keys they were flattened under, rows a disclosure reveals grow in, rows it hides fold out (kept drawn until gone) and the rows below slide; any other change (scroll, search, live data, paging) lands as is. Owned by the flat renderers (VirtualRows, DataTable). Core: the pure disclosure diff; the fold timing is collapsible's (foldTiming), one clock for every fold.
           - Web:
             - Uses:
-              - `primitives/collapsible.prefersReducedMotion`
               - `primitives/collapsible.startFold`
+              - `primitives/css/motion.prefersReducedMotion`
             - Exports (types):
               - `RowFold`
               - `RowFoldHostProps`
@@ -52232,7 +52268,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shadow --shadow-md`
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: `primitives/css/ui-kit`
+            - Tokens used by:
+              - `primitives/css/motion`
+              - `primitives/css/surface`
+              - `primitives/css/ui-kit`
         - **`place-palette`** — Place colour token group: the --place-<family> colours place cards are painted with (Google Maps' own pin colours by default), and their customizer section.
           - Web:
             - Contributes:
@@ -52340,18 +52379,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-3xs`
               - `ui/tokens/type-scale --line-height-caption`
-            - Tokens used by: 75 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
+            - Tokens used by: 74 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
               - `apps` ×29
               - `primitives` ×18
               - `ui` ×6
               - `framework` ×5
               - `page` ×3
               - `apps-core` ×2
-              - `hints` ×2
               - `screenshot` ×2
               - `tasks` ×2
               - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
               - `database/derived-tables`
+              - `hints`
               - `map`
               - `menu-bar`
               - `plugin-meta/plugin-tree`

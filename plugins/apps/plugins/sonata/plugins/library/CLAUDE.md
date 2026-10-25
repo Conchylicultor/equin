@@ -258,7 +258,7 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `Library.SongActions` "delete" → `DeleteSongAction`
     - `Pane.Register` "sonata-library"
     - `Pane.Register` "sonata-player"
-  - Uses: 88 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 89 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×13
     - `primitives/data-view` ×7
     - `apps/sonata/shell` ×6
@@ -287,6 +287,7 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `primitives/css/fill.Fill`
     - `primitives/css/grid.Grid`
     - `primitives/css/line.Line`
+    - `primitives/css/motion.prefersReducedMotion`
     - `primitives/css/pin.Pin`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/text.Text`

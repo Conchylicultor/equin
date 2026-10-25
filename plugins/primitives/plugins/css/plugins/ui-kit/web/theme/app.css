@@ -527,8 +527,7 @@
 /* How a floating panel ENTERS (`OverlayPanel` wears `data-open:overlay-enter`):
  * from transparent, offset by `--overlay-enter-translate` (a `translate` value)
  * and scaled by `--overlay-enter-scale`, over `--overlay-enter-duration` along
- * `--overlay-enter-easing` — the overlay token group's, default 0ms (instant,
- * as panels always appeared). The individual `translate` / `scale` properties,
+ * `--overlay-enter-easing` — the overlay token group's. The individual `translate` / `scale` properties,
  * not `transform`, so nothing a panel transforms with is overwritten. Never
  * under `prefers-reduced-motion: reduce`, whatever the theme asks. It writes
  * the whole `animation`, as every `animate-*` class does, so they replace
@@ -539,6 +538,28 @@
 }
 @utility overlay-enter {
   animation: overlay-enter var(--overlay-enter-duration) var(--overlay-enter-easing);
+  @media (prefers-reduced-motion: reduce) { animation: none; }
+} /* twmerge: extend animate */
+/* How it LEAVES (`OverlayPanel` wears `data-ending-style:overlay-exit`): the
+ * entry played back, in three quarters of its time, held at its end until
+ * base-ui — which waits for the popup's animations — unmounts or hides it. */
+@keyframes overlay-exit {
+  to { opacity: 0; translate: var(--overlay-enter-translate); scale: var(--overlay-enter-scale); }
+}
+@utility overlay-exit {
+  animation: overlay-exit calc(var(--overlay-enter-duration) * 0.75) var(--overlay-enter-easing) forwards;
+  @media (prefers-reduced-motion: reduce) { animation: none; }
+} /* twmerge: extend animate */
+/* How a floating SURFACE enters (`Surface` levels overlay / float wear it on
+ * mount): the panel entry's fade and scale, on the same overlay tokens — but
+ * never `translate`, which `Pin` / `Placed` centre a box with: an animated
+ * `translate` would slide a centred surface in from its corner. Its exit is
+ * `<Presence>`'s (primitives/css/motion). */
+@keyframes surface-enter {
+  from { opacity: 0; scale: var(--overlay-enter-scale); }
+}
+@utility surface-enter {
+  animation: surface-enter var(--overlay-enter-duration) var(--overlay-enter-easing);
   @media (prefers-reduced-motion: reduce) { animation: none; }
 } /* twmerge: extend animate */
 /* The one-line tooltip's chrome (`TooltipContent`), the overlay group's: its

@@ -144,6 +144,7 @@ the scroll plugin's CLAUDE.md and the `css:no-unanchored-has` check).
 - Description: Accessible collapsible primitive with controlled/uncontrolled support and a built-in chevron indicator. Compound components for standard layouts; useCollapsible hook for custom triggers.
 - Web:
   - Uses:
+    - `primitives/css/motion.prefersReducedMotion`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.SingleLineProvider`
     - `primitives/latest-ref.useLatestRef`
@@ -171,7 +172,6 @@ the scroll plugin's CLAUDE.md and the `css:no-unanchored-has` check).
     - `CollapsibleTrigger`
     - `ExpandAllButton`
     - `FoldMotion`
-    - `prefersReducedMotion`
     - `startFold`
     - `useCollapsible`
     - `useCollapsibleContext`
@@ -188,7 +188,7 @@ the scroll plugin's CLAUDE.md and the `css:no-unanchored-has` check).
     - `ui/tokens/type-scale --font-size-caption`
     - `ui/tokens/type-scale --font-weight-normal`
     - `ui/tokens/type-scale --line-height-caption`
-  - Imported by: 58 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 57 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×14
     - `ui` ×12
     - `apps` ×11
@@ -198,7 +198,6 @@ the scroll plugin's CLAUDE.md and the `css:no-unanchored-has` check).
     - `auth`
     - `code-explorer/commit-detail`
     - `debug/read-set`
-    - `layouts/miller`
     - `reorder/node-types/header`
     - `shell/health-report`
 - Core:

@@ -48,7 +48,7 @@ defaults.
   - Contributes:
     - `Desktop.Overlay` "Desktop overlay" → `LauncherOverlay`
     - `Shortcuts.Shortcut` "desktop.launcher (mod+k)"
-  - Uses: 50 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 51 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/desktop/windows` ×11
     - `apps-core` ×3
     - `primitives/css/ui-kit` ×3
@@ -64,6 +64,7 @@ defaults.
     - `primitives/css/grid.Grid`
     - `primitives/css/layer.Layer`
     - `primitives/css/line.Line`
+    - `primitives/css/motion.Presence`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`

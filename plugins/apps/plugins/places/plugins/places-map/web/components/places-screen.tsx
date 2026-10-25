@@ -7,6 +7,7 @@ import { floatingToolbar } from "@plugins/primitives/plugins/data-view/plugins/f
 import type { MapViewOptions } from "@plugins/primitives/plugins/data-view/plugins/map/web";
 import { Layer } from "@plugins/primitives/plugins/css/plugins/layer/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
+import { Presence } from "@plugins/primitives/plugins/css/plugins/motion/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { spaceLength } from "@plugins/primitives/plugins/css/plugins/space-ramp/core";
 import {
@@ -601,6 +602,30 @@ function PlacesSurface({
     );
   };
 
+  // The open card floating over the map (when the side panel is hidden),
+  // keyed by what it shows so a different one cross-fades in.
+  const floatingCardNode =
+    showCard && selected !== undefined ? (
+      <PlaceCard
+        key={`place:${selected.id}`}
+        place={selected}
+        places={places}
+        tags={tags}
+        frame={FLOATING}
+        onClose={() => setSelectedId(null)}
+        onMovePin={() => setPinPick({ kind: "move", place: selected })}
+      />
+    ) : showDetail && detail !== null ? (
+      <GooglePlaceCard
+        key={`google:${detail.hit.placeId}`}
+        hit={detail.hit}
+        pick={detail.pick}
+        frame={FLOATING}
+        onClose={() => setDetail(null)}
+        onSave={() => saveDetail(detail)}
+      />
+    ) : null;
+
   const newTag = useCallback(async () => {
     const tag = await createTag({
       name: freeSiblingName("New tag", null, tags),
@@ -736,116 +761,98 @@ function PlacesSurface({
           </Placeholder>
         }
       />
-      {manager !== null ? (
-        <Pin
-          to="right"
-          stretch
-          offset="md"
-          spanOffset="md"
-          layer="float"
-          style={{
-            top: BELOW_TOOLBAR,
-            left: PAST_SIDEBAR,
-            ...(ask.shown ? { right: PAST_THREAD } : {}),
-          }}
-        >
-          <TagManagerPanel
-            places={places}
-            tags={tags}
-            focusTagId={manager.focusTagId}
-            onClose={() => setManager(null)}
-          />
-        </Pin>
-      ) : null}
-      {showCard && floatingCard && selected !== undefined ? (
-        <Pin
-          ref={cardRef}
-          to="right"
-          stretch
-          offset="md"
-          spanOffset="md"
-          layer="float"
-          style={{
-            top: BELOW_TOOLBAR,
-            ...(ask.shown ? { right: PAST_THREAD } : {}),
-          }}
-          // The card hugs its content inside this column: the room below it
-          // is the map's, so clicks there pass through.
-          className="pointer-events-none"
-        >
-          <PlaceCard
-            key={selected.id}
-            place={selected}
-            places={places}
-            tags={tags}
-            frame={FLOATING}
-            onClose={() => setSelectedId(null)}
-            onMovePin={() => setPinPick({ kind: "move", place: selected })}
-          />
-        </Pin>
-      ) : null}
-      {showDetail && floatingCard && detail !== null ? (
-        <Pin
-          ref={cardRef}
-          to="right"
-          stretch
-          offset="md"
-          spanOffset="md"
-          layer="float"
-          style={{
-            top: BELOW_TOOLBAR,
-            ...(ask.shown ? { right: PAST_THREAD } : {}),
-          }}
-          className="pointer-events-none"
-        >
-          <GooglePlaceCard
-            key={detail.hit.placeId}
-            hit={detail.hit}
-            pick={detail.pick}
-            frame={FLOATING}
-            onClose={() => setDetail(null)}
-            onSave={() => saveDetail(detail)}
-          />
-        </Pin>
-      ) : null}
-      {ask.conversationId !== null && ask.shown ? (
-        <Pin
-          ref={threadRef}
-          to="right"
-          stretch
-          offset="md"
-          spanOffset="md"
-          layer="float"
-          style={{ top: BELOW_TOOLBAR }}
-        >
-          <AskThreadCard
-            conversationId={ask.conversationId}
-            tags={tags}
-            bounds={bounds}
-            savedByGoogleId={savedByGoogleId}
-            hoveredGoogleId={hoveredGoogleId}
-            onHoverGoogle={setHoveredGoogleId}
-            onSave={saveCard}
-            onOpenPick={openPick}
-            expanded={expandedIds}
-            onToggleExpanded={toggleExpanded}
-            onHide={ask.hide}
-            onEnded={() => {
-              ask.release();
-              setDetail(null);
+      <Presence>
+        {manager !== null ? (
+          <Pin
+            key="manager"
+            to="right"
+            stretch
+            offset="md"
+            spanOffset="md"
+            layer="float"
+            style={{
+              top: BELOW_TOOLBAR,
+              left: PAST_SIDEBAR,
+              ...(ask.shown ? { right: PAST_THREAD } : {}),
             }}
-          />
-        </Pin>
-      ) : null}
-      {pinPick !== null ? (
-        <Pin to="bottom" offset="lg" layer="float">
-          <PinPickBar
-            pick={pinPick}
-            onNameChange={(name) => setPinPick({ kind: "drop", name })}
-            onCancel={() => setPinPick(null)}
-          />
-        </Pin>
-      ) : null}
+          >
+            <TagManagerPanel
+              places={places}
+              tags={tags}
+              focusTagId={manager.focusTagId}
+              onClose={() => setManager(null)}
+            />
+          </Pin>
+        ) : null}
+      </Presence>
+      {/* The floating card's column: it fades in and out as a whole, and a
+          card swapped for another (a different place, a Google result saved
+          as a place) cross-fades inside it. */}
+      <Presence>
+        {floatingCard && floatingCardNode !== null ? (
+          <Pin
+            key="card"
+            ref={cardRef}
+            to="right"
+            stretch
+            offset="md"
+            spanOffset="md"
+            layer="float"
+            style={{
+              top: BELOW_TOOLBAR,
+              ...(ask.shown ? { right: PAST_THREAD } : {}),
+            }}
+            // The card hugs its content inside this column: the room below it
+            // is the map's, so clicks there pass through.
+            className="pointer-events-none"
+          >
+            <Presence>{floatingCardNode}</Presence>
+          </Pin>
+        ) : null}
+      </Presence>
+      <Presence>
+        {ask.conversationId !== null && ask.shown ? (
+          <Pin
+            key="thread"
+            ref={threadRef}
+            to="right"
+            stretch
+            offset="md"
+            spanOffset="md"
+            layer="float"
+            style={{ top: BELOW_TOOLBAR }}
+          >
+            <AskThreadCard
+              conversationId={ask.conversationId}
+              tags={tags}
+              bounds={bounds}
+              savedByGoogleId={savedByGoogleId}
+              hoveredGoogleId={hoveredGoogleId}
+              onHoverGoogle={setHoveredGoogleId}
+              onSave={saveCard}
+              onOpenPick={openPick}
+              expanded={expandedIds}
+              onToggleExpanded={toggleExpanded}
+              onHide={ask.hide}
+              onEnded={() => {
+                ask.release();
+                setDetail(null);
+              }}
+            />
+          </Pin>
+        ) : null}
+      </Presence>
+      <Presence>
+        {pinPick !== null ? (
+          <Pin key="pin-pick" to="bottom" offset="lg" layer="float">
+            <PinPickBar
+              pick={pinPick}
+              onNameChange={(name) => setPinPick({ kind: "drop", name })}
+              onCancel={() => setPinPick(null)}
+            />
+          </Pin>
+        ) : null}
+      </Presence>
     </div>
   );
 }

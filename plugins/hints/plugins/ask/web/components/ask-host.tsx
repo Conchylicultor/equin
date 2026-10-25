@@ -7,6 +7,7 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/coords/web";
 import { useDragGesture } from "@plugins/primitives/plugins/dom/plugins/movable/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
+import { Presence } from "@plugins/primitives/plugins/css/plugins/motion/web";
 import { chromeThemeScope } from "@plugins/apps-core/plugins/chrome-theme/web";
 import {
   DEFAULT_ASK_POSITION,
@@ -16,7 +17,7 @@ import {
 import { restoreCard, useAskState } from "../internal/ask-store";
 import { askPositionStore } from "../internal/stores";
 import { useRestoreNewestRun } from "../internal/use-ask";
-import { AskEmptyCard, AskThreadCard } from "./ask-card";
+import { AskEmptyCard, AskThreadCard, CardFrame } from "./ask-card";
 import { AskPill } from "./ask-pill";
 
 /**
@@ -95,33 +96,45 @@ export function AskHost() {
     },
   });
 
-  if (mode === "closed") return null;
   const card = () => {
     const box = boxRef.current;
     if (!box) throw new Error("[hints.ask] the card is not mounted");
     return box;
   };
+  const pill = mode === "min" && conversationId !== null;
   return (
     <ViewportOverlay layer="popover" className="pointer-events-none">
       <Theme name={chromeThemeScope} surface="none">
-        <Placed
-          ref={boxRef}
-          x={extentOf(position.h, position.hx, shift?.dx ?? 0)}
-          y={extentOf(position.v, position.vy, shift?.dy ?? 0)}
-          className="pointer-events-auto"
-        >
-          {mode === "min" && conversationId !== null ? (
-            <AskPill conversationId={conversationId} onOpen={restoreCard} />
-          ) : conversationId !== null ? (
-            <AskThreadCard
-              conversationId={conversationId}
-              drag={drag}
-              card={card}
-            />
-          ) : (
-            <AskEmptyCard key={fresh} drag={drag} card={card} />
+        {/* Closing fades the card out (Presence); minimizing and restoring
+            morph the one frame between card and pill. */}
+        <Presence>
+          {mode === "closed" ? null : (
+            <Placed
+              key="ask"
+              ref={boxRef}
+              x={extentOf(position.h, position.hx, shift?.dx ?? 0)}
+              y={extentOf(position.v, position.vy, shift?.dy ?? 0)}
+              className="pointer-events-auto"
+            >
+              <CardFrame pill={pill}>
+                {pill ? (
+                  <AskPill
+                    conversationId={conversationId}
+                    onOpen={restoreCard}
+                  />
+                ) : conversationId !== null ? (
+                  <AskThreadCard
+                    conversationId={conversationId}
+                    drag={drag}
+                    card={card}
+                  />
+                ) : (
+                  <AskEmptyCard key={fresh} drag={drag} card={card} />
+                )}
+              </CardFrame>
+            </Placed>
           )}
-        </Placed>
+        </Presence>
       </Theme>
     </ViewportOverlay>
   );

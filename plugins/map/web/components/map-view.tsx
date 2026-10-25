@@ -4,6 +4,7 @@ import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
+import { Presence } from "@plugins/primitives/plugins/css/plugins/motion/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   legacyDraftKeys,
@@ -244,14 +245,17 @@ export function MapView({
     ...(onCameraRest === undefined ? {} : { onCameraRest }),
     ...(fitRequest === undefined ? {} : { fitRequest }),
   };
-  const notice =
-    overlays.length === 0 && empty !== null ? (
-      <Pin to="center" layer="raised" decorative>
-        <Surface level="overlay" className="p-md">
-          {empty}
-        </Surface>
-      </Pin>
-    ) : null;
+  const notice = (
+    <Presence>
+      {overlays.length === 0 && empty !== null ? (
+        <Pin key="notice" to="center" layer="raised" decorative>
+          <Surface level="overlay" className="p-md">
+            {empty}
+          </Surface>
+        </Pin>
+      ) : null}
+    </Presence>
+  );
   return (
     <MarkHostProvider>
       <MarkedRenderer

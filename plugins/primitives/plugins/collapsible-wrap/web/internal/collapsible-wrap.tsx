@@ -1,5 +1,6 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
+import { Presence } from "@plugins/primitives/plugins/css/plugins/motion/web";
 import {
   useCallback,
   useMemo,
@@ -146,8 +147,10 @@ export function CollapsibleWrap({
   const wrapBox = (
     // eslint-disable-next-line layout/no-adhoc-layout -- flexible leaf of the host's chip-row flex; min-w-0 flex-1 lets the measured wrap box fill and shrink
     <div className={cn("relative min-w-0 flex-1", expanded && "z-popover")}>
-      {showBackdrop && (
+      <Presence>
+        {showBackdrop ? (
         <Surface
+            key="backdrop"
           level="overlay"
           aria-hidden
           // eslint-disable-next-line layout/no-adhoc-layout, z-layers/no-adhoc-zindex -- JS-measured backdrop positioned via computed inline top/left/right/height, so no semantic-ramp anchor applies; `-z-10` paints it BEHIND its own parent, and the z-layers scale (z-raised..z-max) is all positive by design — there is no negative rung to reach for
@@ -159,7 +162,8 @@ export function CollapsibleWrap({
             height: contentHeight + PANEL_PAD * 2,
           }}
         />
-      )}
+        ) : null}
+      </Presence>
       <div
         ref={wrapRef}
         // eslint-disable-next-line layout/no-adhoc-layout -- ResizeObserver-measured flex-wrap clip box; the flex-wrap/content-start/min-w-0 mechanics are integral to the row-clamp behavior and have no primitive equivalent

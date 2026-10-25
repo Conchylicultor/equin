@@ -88,6 +88,7 @@ when `(overflowing || expanded) && !editMode`.
 - Description: Wraps overflowing children to multiple lines, clamped to N rows by default with a chevron toggle to reveal the rest. Force-expands while reorder edit mode is active.
 - Web:
   - Uses:
+    - `primitives/css/motion.Presence`
     - `primitives/css/surface.Surface`
     - `primitives/css/ui-kit.cn`
     - `primitives/dom/element-size.useResizeObserver`

@@ -19,7 +19,8 @@ import {
 } from "./use-collapsible";
 import { foldTiming } from "../../core";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
-import { prefersReducedMotion, startFold } from "./fold-clock";
+import { startFold } from "./fold-clock";
+import { prefersReducedMotion } from "@plugins/primitives/plugins/css/plugins/motion/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 

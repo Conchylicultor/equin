@@ -9,6 +9,8 @@ import {
   scopeSelectAllKeyDown,
 } from "@plugins/primitives/plugins/select-scope/web";
 import type { Passthrough } from "@plugins/primitives/plugins/passthrough/core";
+import { useSizeMotion } from "@plugins/primitives/plugins/css/plugins/motion/web";
+import { useCallback, useRef } from "react";
 import type React from "react";
 
 export interface SurfaceProps extends Passthrough {
@@ -36,6 +38,14 @@ export interface SurfaceProps extends Passthrough {
   tabIndex?: number;
   className?: string;
   children?: React.ReactNode;
+  /**
+   * Whether a floating surface (`overlay` / `float`) moves: it fades and
+   * scales in when it mounts (`surface-enter`, the overlay tokens) and tweens
+   * its size when its content changes it (`useSizeMotion`). Default `true`;
+   * `false` for a surface whose geometry something else already animates.
+   * The other levels never move.
+   */
+  motion?: boolean;
 }
 
 /**
@@ -71,15 +81,28 @@ export function Surface({
   ref,
   onKeyDown,
   tabIndex,
+  motion = true,
   ...rest
 }: SurfaceProps) {
+  const moves = motion && (level === "overlay" || level === "float");
+  // The node, for the size watch, beside whatever ref the caller holds.
+  const node = useRef<HTMLElement | null>(null);
+  const rootRef = useCallback(
+    (el: HTMLElement | null) => {
+      node.current = el;
+      if (typeof ref === "function") ref(el);
+      else if (ref) ref.current = el;
+    },
+    [ref],
+  );
+  useSizeMotion(node, moves);
   const handleKeyDown = (e: React.KeyboardEvent<HTMLElement>) => {
     onKeyDown?.(e);
     scopeSelectAllKeyDown(e);
   };
   return (
     <Comp
-      ref={ref}
+      ref={rootRef}
       tabIndex={tabIndex ?? selectScopeProps.tabIndex}
       {...rest}
       onKeyDown={handleKeyDown}
@@ -104,6 +127,10 @@ export function Surface({
       className={cn(
         BOX_CLASS[Comp === "button" ? "button" : "default"],
         SURFACE_LEVELS[level],
+        // A floating surface arrives with motion (app.css: the overlay
+        // tokens' fade and scale, never `translate`); its exit is
+        // `<Presence>`'s.
+        moves && "surface-enter",
         className,
       )}
     >

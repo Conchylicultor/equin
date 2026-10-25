@@ -14,7 +14,8 @@ import { useRunQuestion } from "../internal/use-question";
 const askIcon = symbol("forum");
 
 /**
- * The minimized card: while the agent works, a spinner and the step it is on;
+ * The minimized card's content, drawn in the host's `CardFrame` as a pill:
+ * while the agent works, a spinner and the step it is on;
  * once it answered, the question — with a dot until you have looked. A click
  * opens the card again where it was.
  */
@@ -31,9 +32,9 @@ export function AskPill({
   const working = p === null || p.state === "working";
   return (
     <Button
-      variant="outline"
+      variant="ghost"
       shape="pill"
-      className="max-w-80 bg-popover shadow-popover"
+      className="max-w-full"
       onClick={onOpen}
       aria-label="Show Ask equin"
     >
