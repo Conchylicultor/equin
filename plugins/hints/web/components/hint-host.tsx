@@ -49,10 +49,10 @@ import {
   type TourRun,
 } from "../internal/tour-machine";
 import { useAnchorElement, useTrackedRect } from "../internal/use-anchor";
-import { pointerCard, type PointerRun } from "../internal/pointer";
+import { POINTER_LIFETIME_MS, type PointerRun } from "../internal/pointer";
 import { hintsThemeScope } from "../internal/hints-theme";
 import { ANCHOR_PADDING, inflate, type HintRect } from "../internal/rect";
-import { HintCard, TourFarewell, WelcomeCard } from "./hint-card";
+import { HintCaption, HintCard, TourFarewell, WelcomeCard } from "./hint-card";
 import {
   EMPTY_SCENE,
   HintStage,
@@ -200,7 +200,7 @@ export function HintHost() {
   const targetKeyOf = stepTarget ?? shownTip?.anchor ?? null;
   // A tip draws on an anchor the user can see (its eligibility); a tour step
   // takes its anchor wherever it is and scrolls it into view. A one-off
-  // spotlight (`pointAt`) brings its own element.
+  // highlight (`pointAt`) brings its own element.
   const anchorEl = useAnchorElement(
     targetKeyOf ? targetKey(targetKeyOf) : null,
     { onScreen: !run },
@@ -285,41 +285,33 @@ function tipScene(
   };
 }
 
-/** `pointAt`'s spotlight: a hole on the element and a caption card beside it. */
+/**
+ * `pointAt`'s highlight: a pulsing ring on the element and its caption beside
+ * it — no scrim and nothing to press, so the page stays the user's.
+ */
 function pointerScene(pointer: PointerRun, rect: HintRect | null): StageScene {
   if (!rect) return EMPTY_SCENE;
-  // One id for every spotlight, so a `pointAt` replacing another glides to it.
+  // One id for every highlight, so a `pointAt` replacing another glides to it.
   const box = boxAround("pointer", pointer.el, rect, ANCHOR_PADDING);
-  const card = pointerCard(pointer.opts);
   return {
     ...EMPTY_SCENE,
-    spot: { mode: "hole", box },
+    halos: [box],
     card: {
-      variant: "step",
+      variant: "caption",
       target: box,
       placement: "bottom",
-      content: (
-        <HintCard
-          body={pointer.opts.body}
-          steps={card.steps}
-          onClose={() => endPointer("close")}
-          closeLabel="Close (Esc)"
-          onBack={card.back ? () => endPointer("back") : undefined}
-          primary={{
-            label: card.primary.label,
-            onClick: () => endPointer(card.primary.end),
-          }}
-        />
-      ),
+      content: <HintCaption body={pointer.opts.body} />,
     },
   };
 }
 
 /**
- * A spotlight's effects on its element: brought into view when it goes up,
- * closed when the element leaves the page (its rect update is the signal —
- * `autoUpdate`'s resize observer fires as its box goes), and a click on it
- * (after its own handlers) is the user doing Next themselves.
+ * A highlight's effects: its element brought into view when it goes up, and
+ * its ends — its lifetime running out, the user's next move (a pointerdown
+ * anywhere, heard in the capture phase and never stopped, so it still does
+ * what it does), and the element leaving the page (its rect update is the
+ * signal — `autoUpdate`'s resize observer fires as its box goes). Esc is the
+ * `hints.pointer-end` shortcut.
  */
 function usePointerEffects(pointer: PointerRun | null, rect: HintRect | null) {
   const id = pointer?.id ?? null;
@@ -329,9 +321,19 @@ function usePointerEffects(pointer: PointerRun | null, rect: HintRect | null) {
       revealElement(el, { block: "center" });
   }, [el, id]);
   useEffect(() => {
-    if (el && rect && !el.isConnected) endPointer("close");
-  }, [el, rect]);
-  useActivation(el, el !== null, () => endPointer("next"));
+    if (id !== null && el && rect && !el.isConnected) endPointer(id);
+  }, [id, el, rect]);
+  useEffect(() => {
+    if (id === null) return;
+    // The highlight's lifetime — one timer per showing, not a poll.
+    const timer = setTimeout(() => endPointer(id), POINTER_LIFETIME_MS);
+    const end = () => endPointer(id);
+    document.addEventListener("pointerdown", end, true);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener("pointerdown", end, true);
+    };
+  }, [id]);
 }
 
 function tourScene(

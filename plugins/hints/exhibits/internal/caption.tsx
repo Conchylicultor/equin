@@ -1,32 +1,43 @@
-import { HintCard } from "../../web/components/hint-card";
-import { EMPTY_SCENE } from "../../web/components/stage";
+import { Placed } from "@plugins/primitives/plugins/css/plugins/coords/web";
+import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { HintCaption } from "../../web/components/hint-card";
+import { EMPTY_SCENE, type StageBox } from "../../web/components/stage";
 import { StageFrame } from "./frame";
 
-const noop = () => {};
+/** Where the fake element sits in the frame, in px. */
+const TARGET = { x: 40, y: 32, width: 96, height: 32 };
+const BOX: StageBox = {
+  id: "pointer",
+  rect: { x: 34, y: 26, width: 108, height: 44 },
+  radius: 22,
+};
 
 /**
- * A `pointAt` caption (Show me): no title, so the body shares the first row
- * with the × — no empty row above it.
+ * A Show me highlight (`pointAt`): a pulsing ring on the element and its
+ * caption beside it — no scrim, nothing to press.
  */
 export default function CaptionExhibit() {
   return (
     <StageFrame
       scene={{
         ...EMPTY_SCENE,
+        halos: [BOX],
         card: {
-          variant: "step",
-          target: null,
+          variant: "caption",
+          target: BOX,
           placement: "bottom",
-          content: (
-            <HintCard
-              body="The Share button — it copies a link to this page."
-              onClose={noop}
-              closeLabel="Close (Esc)"
-              primary={{ label: "Done", onClick: noop }}
-            />
-          ),
+          content: <HintCaption body="The Share button" />,
         },
       }}
-    />
+    >
+      <Placed
+        x={{ start: TARGET.x, size: TARGET.width }}
+        y={{ start: TARGET.y, size: TARGET.height }}
+      >
+        <Button variant="outline" shape="pill" className="size-full">
+          Share
+        </Button>
+      </Placed>
+    </StageFrame>
   );
 }

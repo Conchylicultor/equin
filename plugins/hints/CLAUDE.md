@@ -155,27 +155,33 @@ const ref = useHintAnchor(hintsHelpAnchor);
 const pulsing = useHintAnchorPulse(hintsHelpAnchor);   // draw a ring while true
 ```
 
-## A one-off spotlight: `pointAt`
+## A one-off highlight: `pointAt`
 
 ```ts
-pointAt(() => el, { body: "The Share button", onBack?, onNext?, step?: { index, total } });
+pointAt(() => el, { body: "The Share button" });
 ```
 
 For a caller that found an element itself (`active-data/show-me` via
-`resolveUiContext`): no declared anchor, no seen state. The host draws it as a
-transient scene on the same stage (hole + caption card: body, dots when
-`step`, Back when `onBack`, Next when `onNext` else Done, ×), tracked by the
-same `autoUpdate`, revealed into view when it goes up.
+`resolveUiContext`): no declared anchor, no seen state. The host draws it on
+the same stage as a **non-modal highlight** — a pulsing halo on the element
+and a compact `caption` card beside it (`HintCaption`) — tracked by the same
+`autoUpdate`, revealed into view when it goes up.
 
+- **Never takes the page.** No scrim, no buttons, nothing to dismiss; the
+  caption is click-through. It answers "where is it?" and gets out of the
+  way: modality is for what the user opted into and steps through (a tour),
+  not for a pointer.
+- **Ends by itself**: after `POINTER_LIFETIME_MS` (5 s), or at the user's
+  next move — a `pointerdown` anywhere (capture phase, never stopped, so the
+  click still does what it does), Esc (`hints.pointer-end`), the element
+  leaving the page. A new call replaces the current one; a tour starting
+  ends it. `endPointer(id)` ignores an id already replaced.
 - **Loud, not ignored**: it throws when `target()` is null or not an
   `HTMLElement`, and **while a tour runs** (the tour owns the stage; quietly
-  dropping the call would leave the caller's click doing nothing). A tour
-  starting closes a spotlight. Tips wait while one is up.
-- Ends: Next or a click on the element (after its own handlers) → `onNext`;
-  Back → `onBack`; Done / × / Esc (`hints.pointer-end`) / the element leaving
-  the page → no callback. It closes **before** the callback, so `onNext` may
-  `pointAt` the next element; a new call replaces the current one.
-- The pure part (`pointerCard`, `pointerEndCallback`) is `web/internal/pointer.ts`.
+  dropping the call would leave the caller's click doing nothing). Tips wait
+  while one is up.
+- Stepping through several elements, waiting on each, is a tour
+  (`defineTour`), not a chain of `pointAt`s.
 
 ## Anchors, holding the toolbar open
 
@@ -236,8 +242,9 @@ Reduced motion turns the durations to 0.
 
 - `spot`: `off` · `cover` (the welcome: full scrim, takes the clicks) ·
   `hole` (dim scrim, ringed cut-out) · `ring` (`scrim: "none"`).
-- `halos`: a tip's target, a step's `cue` — a pulsing ring, no scrim.
-- `card`: `step` (dots, ×, footnote, alt, Back, primary) or `tip` (Got it),
+- `halos`: a tip's target, a step's `cue`, a `pointAt` highlight — a pulsing ring, no scrim.
+- `card`: `step` (dots, ×, footnote, alt, Back, primary), `tip` (Got it) or
+  `caption` (`pointAt`'s label: compact, click-through),
   placed by the pure `placeCard` (`web/internal/placement.ts`: the preferred
   side, its opposite, then the cross axis; clamped) or centered (anchor `null`).
 - `welcome` (`intro.icon` on a brand tile, title, body, Show me around / I'll
@@ -253,7 +260,7 @@ every app, whatever theme the app wears. Designed in the "Getting started"
 prototype (`proto-1792668692-5ijcs8`). Rects are tracked with Floating UI's
 `autoUpdate`, so the cut-out, the halo and the card follow the element
 together, including a layout shift that moves it without resizing it.
-Exhibits: `hints/card`, `hints/spotlight`, `hints/welcome`.
+Exhibits: `hints/card`, `hints/caption`, `hints/spotlight`, `hints/welcome`.
 
 ## Logic, tested pure
 
@@ -269,7 +276,7 @@ Exhibits: `hints/card`, `hints/spotlight`, `hints/welcome`.
 
 ## Plugin reference
 
-- Description: The hints engine, web half: Hints.Hint / Hints.Tour declarations, useHintAnchor (ref registration, holding a floating toolbar open while its tip shows), useHintMoment (a tip shown once at its moment, lowest order first, one at a time), startTour / autoStart, pointAt (a one-off spotlight + caption on an element the caller resolved, refused while a tour runs), emitHintSignal, the seen state and catalog reads — and the one HintHost at Core.Root drawing the active tip (halo + card) or the tour's welcome card / spotlit step on one persistent stage — every change of scene a CSS transition of the same elements — in the hints' own fixed theme (the same look in every app), every tour end pulsing ? and toasting where the tour lives. Owns the hint_seen table — one row per hint or tour the user has met (outcome, seen_at) — served as the hints.seen live collection (boot-preloaded), with the mark-seen upsert and the reset-by-ids delete.
+- Description: The hints engine, web half: Hints.Hint / Hints.Tour declarations, useHintAnchor (ref registration, holding a floating toolbar open while its tip shows), useHintMoment (a tip shown once at its moment, lowest order first, one at a time), startTour / autoStart, pointAt (a one-off, non-modal highlight — pulsing ring + click-through caption, gone after a few seconds or at the user's next move — on an element the caller resolved, refused while a tour runs), emitHintSignal, the seen state and catalog reads — and the one HintHost at Core.Root drawing the active tip (halo + card) or the tour's welcome card / spotlit step on one persistent stage — every change of scene a CSS transition of the same elements — in the hints' own fixed theme (the same look in every app), every tour end pulsing ? and toasting where the tour lives. Owns the hint_seen table — one row per hint or tour the user has met (outcome, seen_at) — served as the hints.seen live collection (boot-preloaded), with the mark-seen upsert and the reset-by-ids delete.
 - Web:
   - Slots:
     - `Hints.Hint`

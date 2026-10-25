@@ -17,8 +17,7 @@ export interface HintCardAction {
 }
 
 export interface HintCardProps {
-  /** Absent on a caption (`pointAt`): the body is all there is to say. */
-  readonly title?: ReactNode;
+  readonly title: ReactNode;
   readonly body: ReactNode;
   /** A tour's progress: one dot per step, `index` current. Absent on a tip. */
   readonly steps?: { readonly count: number; readonly index: number };
@@ -58,24 +57,18 @@ export function HintCard({
       <Icon icon={closeIcon} />
     </button>
   );
-  const titleText = title !== undefined && (
+  const titleText = (
     <Text as="h2" variant="subheading" tone="strong">
       {title}
     </Text>
   );
   const bodyText = (
-    <Text
-      as="div"
-      variant="body"
-      tone={title === undefined ? "strong" : "muted"}
-      className="hint-card-body"
-    >
+    <Text as="div" variant="body" tone="muted" className="hint-card-body">
       {body}
     </Text>
   );
   // The × sits on the card's first row, whatever that row holds — the step
-  // dots, else the title, else the body (a caption) — so no row is ever only
-  // the ×, and a card without a title starts with its words.
+  // dots, else the title — so no row is ever only the ×.
   return (
     <ControlSizeProvider size="sm">
       {steps ? (
@@ -87,13 +80,11 @@ export function HintCard({
           {titleText}
           {bodyText}
         </>
-      ) : title !== undefined ? (
+      ) : (
         <>
           <HeadRow close={close}>{titleText}</HeadRow>
           {bodyText}
         </>
-      ) : (
-        <HeadRow close={close}>{bodyText}</HeadRow>
       )}
       <div className="hint-card-foot">
         {footnote && (
@@ -219,5 +210,14 @@ export function TourFarewell() {
         </Text>
       </div>
     </>
+  );
+}
+
+/** The content of a highlight's caption (`pointAt`): its words, nothing to press. */
+export function HintCaption({ body }: { body: ReactNode }) {
+  return (
+    <Text as="div" variant="body" tone="strong">
+      {body}
+    </Text>
   );
 }

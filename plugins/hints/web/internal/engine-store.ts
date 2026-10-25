@@ -8,12 +8,7 @@ import type {
   TourEndOutcome,
   TourTrigger,
 } from "../../core";
-import {
-  pointerEndCallback,
-  type PointAtOptions,
-  type PointerEnd,
-  type PointerRun,
-} from "./pointer";
+import type { PointAtOptions, PointerRun } from "./pointer";
 import {
   emptyTipQueue,
   removeTip,
@@ -288,27 +283,26 @@ export function actOnAnchor(gesture: GestureAdvance): void {
   press({ by: "gesture", gesture });
 }
 
-// ── pointAt: a one-off spotlight ────────────────────────────────────────
+// ── pointAt: a one-off highlight ────────────────────────────────────────
 
 let pointerSeq = 0;
 
 /**
- * Spotlights the element `target()` returns — a hole on it and a caption card
- * beside it (`body`; Back when `onBack`, Next when `onNext`, else Done; dots
- * when `step`) — drawn by the same stage as tours and tracked the same way.
- * No declared anchor, no seen state: the caller has already found the element
- * (`resolveUiContext`, a ref).
+ * Highlights the element `target()` returns — a pulsing ring on it and its
+ * caption (`body`) beside it — drawn by the same stage as tours and tracked
+ * the same way, but never taking the page: no scrim, no buttons, clicks go
+ * through. No declared anchor, no seen state: the caller has already found
+ * the element (`resolveUiContext`, a ref).
  *
- * `target` is called once, now. Fails loudly rather than spotlighting nothing
+ * `target` is called once, now. Fails loudly rather than highlighting nothing
  * or something else: it throws when `target()` returns null (resolve first),
  * when it is not an `HTMLElement`, and while a tour runs (the tour owns the
- * stage; a spotlight over its step would draw a second card on top of it).
+ * stage; a highlight over its step would compete with it).
  *
- * A second call replaces the first (its callbacks unrun). It ends on Back
- * (`onBack`), Next or a click on the spotlit element (`onNext`), and Done / × /
- * Esc / the element leaving the page (no callback). It closes BEFORE the
- * callback runs, so a callback may `pointAt` the next element. A tour starting
- * closes it.
+ * A second call replaces the first. It ends by itself after
+ * `POINTER_LIFETIME_MS`, or at the user's next move: a pointerdown anywhere
+ * (which still does what it does), Esc, the element leaving the page. A tour
+ * starting ends it.
  */
 export function pointAt(
   target: () => Element | null,
@@ -330,12 +324,11 @@ export function pointAt(
   set({ ...state, pointer: { id: ++pointerSeq, el, opts } });
 }
 
-/** Ends the spotlight (a no-op when none is up), then runs that end's callback. */
-export function endPointer(how: PointerEnd): void {
+/** Ends the highlight (a no-op when none is up, or `id` names one already replaced). */
+export function endPointer(id?: number): void {
   const pointer = state.pointer;
-  if (!pointer) return;
+  if (!pointer || (id !== undefined && pointer.id !== id)) return;
   set({ ...state, pointer: null });
-  pointerEndCallback(pointer.opts, how)?.();
 }
 
 export function isPointing(): boolean {

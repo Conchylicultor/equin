@@ -40,8 +40,11 @@ export type StageSpot =
   | { readonly mode: "hole" | "ring"; readonly box: StageBox };
 
 export interface StageCard {
-  /** `step` (a tour step: wider, dots and ×) or `tip` (narrower, Got it). */
-  readonly variant: "step" | "tip";
+  /**
+   * `step` (a tour step: wider, dots and ×), `tip` (narrower, Got it) or
+   * `caption` (a highlight's label: compact, click-through, nothing to press).
+   */
+  readonly variant: "step" | "tip" | "caption";
   /** What the card sits beside; `null` centers it in the frame. */
   readonly target: StageBox | null;
   readonly placement: HintPlacement;
@@ -85,7 +88,7 @@ const GLIDE_MS = 450;
 /**
  * Draws a {@link StageScene} filling its positioned parent (the viewport, via
  * the host's overlay; a framed box in an exhibit). Click-through except the
- * cards and, during the welcome, the scrim.
+ * cards (a caption too is click-through) and, during the welcome, the scrim.
  */
 export function HintStage({ scene }: { scene: StageScene }) {
   const frameRef = useRef<HTMLDivElement>(null);
@@ -172,7 +175,7 @@ function Card({ card, frame }: { card: StageCard | null; frame: Size }) {
   return (
     <Placed
       ref={ref}
-      role="dialog"
+      role={shown.variant === "caption" ? "status" : "dialog"}
       aria-hidden={!on}
       inert={!on}
       data-on={on}

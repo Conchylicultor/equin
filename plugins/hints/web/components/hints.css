@@ -124,6 +124,16 @@
   transform: none;
   pointer-events: auto;
 }
+/* A highlight's caption: a compact label, never in the way of the page. */
+.hint-card[data-variant="caption"] {
+  width: max-content;
+  max-width: min(280px, calc(100% - 24px));
+  padding: 7px 11px;
+  border-radius: 10px;
+}
+.hint-card[data-variant="caption"][data-on="true"] {
+  pointer-events: none;
+}
 /*
  * Following its target (it scrolls, the layout shifts) or appearing: a piece
  * lands where it belongs the same frame — it glides only to a new target.
@@ -164,8 +174,8 @@
 .hint-card-body {
   margin-top: 6px;
 }
-/* A card without step dots starts with its words: the title (or, on a
-   caption, the body) shares the first row with the ×. */
+/* A card without step dots starts with its words: the title shares the
+   first row with the ×. */
 .hint-card-head {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -175,11 +185,6 @@
 /* The 26px × centres on the first line instead of pushing the row taller. */
 .hint-card-head > .hint-close {
   margin: -3px -6px -3px 0;
-}
-/* The first thing in the card takes no gap above it. */
-.hint-card > .hint-card-body:first-child,
-.hint-card-head-text > .hint-card-body {
-  margin-top: 0;
 }
 .hint-footnote {
   display: inline-flex;

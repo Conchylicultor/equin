@@ -10,9 +10,11 @@ descriptor (`button — Share`, without a `×N`). No hand-written anchor labels.
 - **A target chip**, inline wherever it is written (a multi-line body draws
   the same chip). The quoted `path` holds ` > `; active-data's open-tag
   grammar (`TAG_ATTRS_SOURCE`) allows `>` inside quoted values for this.
-- **Click → resolve now → spotlight.** `resolveUiContext` runs at the click
+- **Click → resolve now → highlight.** `resolveUiContext` runs at the click
   (the page may have changed since the agent read it): `found` / `ambiguous`
-  (the first match) → `pointAt(() => el, { body: label })` from `hints/web`.
+  (the first match) → `pointAt(() => el, { body: label })` from `hints/web` —
+  a pulsing ring and the label as caption, non-modal: it fades after a few
+  seconds or at the user's next click, which goes through to the page.
   `gone` → a "Not on this page" toast, and the chip then wears the
   `location-disabled` icon and says so in its tooltip; a later click looks
   again. A tag with no `element` draws a disabled-looking chip whose click
@@ -27,7 +29,7 @@ descriptor (`button — Share`, without a `×N`). No hand-written anchor labels.
 
 ## Plugin reference
 
-- Description: Renders <show-me path="…" element="…">label</show-me> in an agent's reply — an element of the live page named by its ui-context lineage path and element descriptor (an outline entry) — as a target chip: a click resolves it on the page now (resolveUiContext) and spotlights it with the label as caption (hints pointAt); when nothing on the page matches, the chip says "Not on this page" (a toast, then its own look) and nothing is spotlit. One step at a time.
+- Description: Renders <show-me path="…" element="…">label</show-me> in an agent's reply — an element of the live page named by its ui-context lineage path and element descriptor (an outline entry) — as a target chip: a click resolves it on the page now (resolveUiContext) and highlights it — a pulsing ring with the label as caption, non-modal, gone after a few seconds or at the next click (hints pointAt); when nothing on the page matches, the chip says "Not on this page" (a toast, then its own look) and nothing is highlighted. One step at a time.
 - Web:
   - Contributes: `ActiveData.Tag` "show-me" → `ShowMeBlock`
   - Uses:

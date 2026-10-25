@@ -13,7 +13,7 @@ export default [
   }),
   appExhibit({
     id: "hints/caption",
-    label: "Show me caption (no title)",
+    label: "Show me highlight (ring + caption)",
     home: "chrome",
     widths: [360, 640],
     load: () => import("./internal/caption"),

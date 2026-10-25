@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import {
   dispatchTour,
   endPointer,
@@ -10,7 +10,7 @@ import {
 import type { AnyTour } from "../internal/tour-machine";
 
 afterEach(() => {
-  endPointer("close");
+  endPointer();
   if (isTourRunning()) dispatchTour({ type: "end", outcome: "dismissed" });
 });
 
@@ -22,26 +22,14 @@ describe("pointAt", () => {
     expect(isPointing()).toBe(false);
   });
 
-  it("closes before running Next, so the callback may point again", () => {
-    const second = button();
-    const onNext = vi.fn(() => {
-      expect(isPointing()).toBe(false);
-      pointAt(() => second, { body: "second" });
-    });
-    pointAt(button, { body: "first", onNext });
-    endPointer("next");
-    expect(onNext).toHaveBeenCalledOnce();
-    expect(isPointing()).toBe(true);
-  });
-
-  it("runs no callback when closed or replaced", () => {
-    const onNext = vi.fn();
-    const onBack = vi.fn();
-    pointAt(button, { body: "a", onNext, onBack });
+  it("is replaced by a second call, and a stale end leaves the new one up", () => {
+    pointAt(button, { body: "a" });
     pointAt(button, { body: "b" });
-    endPointer("close");
-    expect(onNext).not.toHaveBeenCalled();
-    expect(onBack).not.toHaveBeenCalled();
+    // An end for a showing no longer up (ids start at 1): a replaced one's
+    // lifetime running out must not take the new one down.
+    endPointer(0);
+    expect(isPointing()).toBe(true);
+    endPointer();
     expect(isPointing()).toBe(false);
   });
 
