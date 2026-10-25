@@ -242,7 +242,10 @@ token's own two fields — no hand-written anchor labels anywhere.
   of an outline entry: `found` (one shown match) · `ambiguous` (several; `el`
   is the first in document order, `count`) · `gone` (none — another page, a
   closed popover, a stale name; also an `element` that is not a descriptor).
-  Compared in canonical spellings (parsed and re-formatted). Scoped, so a
+  Compared in canonical spellings (parsed and re-formatted). The path may be
+  **partial**: when no element's lineage is exactly the path, one whose
+  lineage holds its segments in order matches (an agent often copies only
+  the outline line it read the control under); `""` stays exact. Scoped, so a
   click resolves fast: candidates are the descriptor's tag / role / type
   under the markers of the path's innermost node plus every portaled lineage
   host; only those are described and walked.

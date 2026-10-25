@@ -1,5 +1,6 @@
 import {
   formatElementDescriptor,
+  formatLineageNode,
   formatLineagePath,
   parseElementDescriptor,
   parseLineagePath,
@@ -77,11 +78,19 @@ function headSelector(element: string): string | null {
  * whose lineage path and descriptor are `ref`'s, compared in their canonical
  * spellings (parsed and re-formatted, so spacing does not matter).
  *
+ * The path may be partial: an element whose lineage holds the path's segments
+ * in order (a subsequence — an agent copying an outline entry often keeps
+ * only the line it read the control under, not every group line above it)
+ * matches too, but only when no element's lineage IS the path. A precise
+ * name never loses to a looser reading of itself; a partial one still finds
+ * its control, and several are `ambiguous` as usual.
+ *
  * The search is scoped to the markers of the path's innermost node (plus every
  * portaled lineage host, whose content sits outside the markers) and to the
  * descriptor's tag / role / type, so only a handful of elements are described
- * and walked. A `path` of `""` searches the whole document. An `element` that
- * is not a descriptor matches nothing (`gone`).
+ * and walked. A `path` of `""` searches the whole document and is always
+ * exact (outside every lineage node) — read partially, it would name every
+ * element. An `element` that is not a descriptor matches nothing (`gone`).
  */
 export function resolveUiContext(ref: UiContextRef): UiContextResolution {
   const nodes = parseLineagePath(ref.path);
@@ -105,14 +114,19 @@ export function resolveUiContext(ref: UiContextRef): UiContextResolution {
     for (const el of root.querySelectorAll<HTMLElement>(head))
       candidates.add(el);
   }
-  const matches = [...candidates]
-    .filter(
-      (el) =>
-        el instanceof HTMLElement &&
-        describeElement(el) === element &&
-        formatLineagePath(collectLineage(el)) === path &&
-        isShown(el),
-    )
+  const wanted = nodes.map(formatLineageNode);
+  const named = [...candidates]
+    .filter((el) => describeElement(el) === element && isShown(el))
+    .map((el) => ({ el, lineage: collectLineage(el) }));
+  const exact = named.filter((c) => formatLineagePath(c.lineage) === path);
+  const matches = (
+    exact.length > 0 || wanted.length === 0
+      ? exact
+      : named.filter((c) =>
+          isSubsequence(wanted, c.lineage.map(formatLineageNode)),
+        )
+  )
+    .map((c) => c.el)
     .sort((a, b) =>
       a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1,
     );
@@ -121,4 +135,11 @@ export function resolveUiContext(ref: UiContextRef): UiContextResolution {
   return matches.length === 1
     ? { kind: "found", el: first }
     : { kind: "ambiguous", el: first, count: matches.length };
+}
+
+/** Whether `part` appears in `whole` in order (not necessarily adjacent). */
+function isSubsequence(part: readonly string[], whole: readonly string[]) {
+  let i = 0;
+  for (const seg of whole) if (i < part.length && seg === part[i]) i++;
+  return i === part.length;
 }

@@ -132,6 +132,37 @@ describe("resolveUiContext", () => {
     }
   });
 
+  it("finds a control named by a partial path (its segments in order)", () => {
+    mount();
+    const share = document.querySelector('[aria-label="Share"]');
+    // Only the pane line, as an agent copying one outline line writes it.
+    expect(
+      resolveUiContext({
+        path: "pages/page#pane:page[column 1 of 1]",
+        element: "button — Share",
+      }),
+    ).toEqual({ kind: "found", el: share });
+    // Segments out of order are not its lineage.
+    expect(
+      resolveUiContext({
+        path: "pages/share@PaneToolbar.Item > apps.pages.shell@apps.app",
+        element: "button — Share",
+      }),
+    ).toEqual({ kind: "gone" });
+  });
+
+  it("prefers an exact path over a partial reading of it", () => {
+    document.body.innerHTML = `
+      <span ${APP}><span ${PANE}>
+        <button id="direct">Go</button>
+        <div ${SHARE}><button>Go</button></div>
+      </span></span>`;
+    // Both buttons hold the pane's segments; only one's lineage IS the path.
+    expect(
+      resolveUiContext({ path: PANE_PATH, element: "button — Go" }),
+    ).toEqual({ kind: "found", el: document.getElementById("direct") });
+  });
+
   it("is ambiguous when several shown controls match, first in document order", () => {
     mount();
     const opens = [...document.querySelectorAll("button")].filter(
