@@ -4,6 +4,7 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import type React from "react";
+import { useLabelMark } from "./label-mark";
 
 export interface HintedLabelCellProps {
   /**
@@ -61,6 +62,7 @@ export function HintedLabelCell({
   className,
   children,
 }: HintedLabelCellProps) {
+  const mark = useLabelMark();
   if (description !== undefined) {
     return (
       <DescribedLabelCell
@@ -69,12 +71,14 @@ export function HintedLabelCell({
         className={className}
       >
         {children}
+        {mark != null ? <> {mark}</> : null}
       </DescribedLabelCell>
     );
   }
   const cell = (
     <span data-cp-cell="label" className={cn("truncate", className)}>
       {children}
+      {mark != null ? <> {mark}</> : null}
       {hint ? (
         <span aria-hidden id={descriptionId} className="sr-only">
           {hint}

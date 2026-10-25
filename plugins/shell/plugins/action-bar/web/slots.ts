@@ -9,7 +9,8 @@ import type { Audience } from "@plugins/audience/core";
  * An action-bar contribution: its component, and who it is for — `audience:
  * "developer"` keeps it out of the bar (or the gear popover) until Developer
  * mode is on, the same vocabulary as `defineApp({ audience })`. Omitted = everyone.
- * The host gates it (`ForAudience`); the contribution never reads the audience.
+ * The host gates it (`ForAudience`) and draws the developer mark on it; the
+ * contribution never reads the audience nor draws the mark.
  */
 export interface ActionBarContribution {
   component: ComponentType;

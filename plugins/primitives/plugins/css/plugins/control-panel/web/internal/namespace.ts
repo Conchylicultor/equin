@@ -9,6 +9,7 @@ import { ControlPanelRow } from "./control-panel-row";
 import { ControlPanelBlock } from "./block";
 import { ControlPanelField } from "./field-control";
 import { ControlPanelGroup } from "./group";
+import { ControlPanelLabelMark } from "./label-mark";
 import { ControlPanelStack } from "./panel-stack";
 import { ControlPanelRuleRow } from "./rule-row";
 import { ControlPanelSetting } from "./setting";
@@ -22,7 +23,8 @@ import { ControlPanelSubhead } from "./subhead";
  * control is wider than a row) and `Group` (the field is other fields) — plus
  * the builder pair, plus the boxes and bands, plus `Subhead`, which names a RUN
  * of rows rather than any one field and so sits beside `Section` rather than
- * among the four.
+ * among the four — plus `LabelMark`, a mark a host asks every row label under
+ * it to draw.
  *
  * That shape is the API's main affordance: typing `ControlPanel.` shows the
  * author the whole closed set at the point of writing, and says there is no
@@ -45,4 +47,5 @@ export const ControlPanel = Object.assign(ControlPanelRoot, {
   Footer: ControlPanelFooter,
   Empty: ControlPanelEmpty,
   Stack: ControlPanelStack,
+  LabelMark: ControlPanelLabelMark,
 });

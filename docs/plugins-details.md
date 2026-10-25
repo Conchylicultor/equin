@@ -11304,7 +11304,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `shell/notifications`
       - `shell/toast`
   - Plugins:
-    - **`developer-mark`** — The developer-only mark: DeveloperMark (the developer symbol in the primary tint, inline beside a title or opaque on a corner) and DeveloperCorner (the mark overhanging a tile's corner). Every surface showing something only a developer sees — a developer app's tile, a developer notification or toast — draws it, so one symbol means developer everywhere.
+    - **`developer-mark`** — The developer-only mark: DeveloperMark (the developer symbol in the primary tint, inline beside a title or opaque on a corner) DeveloperCorner (the mark overhanging a tile's corner) and DeveloperBadge (the bare symbol on a small control's corner, an action-bar button). Every surface showing something only a developer sees — a developer app's tile, a developer notification or toast — draws it, so one symbol means developer everywhere.
       - Web:
         - Uses:
           - `primitives/css/inline.Inline`
@@ -11312,6 +11312,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/ui-kit.WithTooltip`
           - `ui/icons.Icon`
         - Exports (values):
+          - `DeveloperBadge`
           - `DeveloperCorner`
           - `DeveloperMark`
       - Cross-plugin:
@@ -11322,6 +11323,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shape --spacing`
         - Imported by:
           - `apps-core/app-launcher`
+          - `config_v2/git-defaults-preview`
+          - `shell/global-action-bar`
           - `shell/notifications`
           - `shell/toast`
     - **`settings`** — The Developer mode switch in Settings: a Profile sidebar entry opening a pane that switches the user's audience (user | developer).
@@ -13204,6 +13207,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ActionBar.Item` → `PreviewIndicator`
         - Uses:
           - `audience.useAudience`
+          - `audience/developer-mark.DeveloperMark`
           - `config_v2.onConfigWriteRefused`
           - `config_v2.setConfigPreview`
           - `config_v2.useConfigPreview`
@@ -38172,7 +38176,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `config_v2/settings`
               - `hints/ask`
               - `history/dialog`
-        - **`control-panel`** — The control-panel vocabulary: ControlPanel plus its closed set of members (Section, Subhead, Row, Setting, Block, Group, RuleList, RuleRow, Field, Footer, Empty, Stack) and its two surfaces, ControlPanelPopover and ControlPanelPane. The container draws the hairlines, the row is a grid so every label starts at one x, selection has one language per meaning, and width is a role rather than a measurement.
+        - **`control-panel`** — The control-panel vocabulary: ControlPanel plus its closed set of members (Section, Subhead, Row, Setting, Block, Group, RuleList, RuleRow, Field, Footer, Empty, Stack, LabelMark) and its two surfaces, ControlPanelPopover and ControlPanelPane. The container draws the hairlines, the row is a grid so every label starts at one x, selection has one language per meaning, and width is a role rather than a measurement.
           - Web:
             - Uses: 23 symbols — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
               - `primitives/css/ui-kit` ×12
@@ -47110,16 +47114,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Apps.TabBarActions` "Tab bar actions" → `DockedActionBarHost`
           - `ActionBar.Item` → `ViewOptionsButton`
           - `ConfigV2.WebRegister` "config"
-        - Uses: 26 symbols — full list in [`plugins/shell/plugins/global-action-bar/REFERENCE.md`](../plugins/shell/plugins/global-action-bar/REFERENCE.md)
+        - Uses: 29 symbols — full list in [`plugins/shell/plugins/global-action-bar/REFERENCE.md`](../plugins/shell/plugins/global-action-bar/REFERENCE.md)
           - `apps-core/tabs` ×3
           - `primitives/css/ui-kit` ×3
+          - `audience/developer-mark` ×2
           - `config_v2` ×2
+          - `primitives/css/control-panel` ×2
           - `primitives/overlay/floating-action` ×2
           - `apps-core/chrome-theme.chromeThemeScope`
           - `apps-core.Apps`
           - `audience.ForAudience`
           - `hints.useHintAnchor`
-          - `primitives/css/control-panel.ControlPanelPopover`
           - `primitives/css/spacing.Stack`
           - `primitives/css/theme-boundary.Theme`
           - `primitives/dom/element-size.useResizeObserver`

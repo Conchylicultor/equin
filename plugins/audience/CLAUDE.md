@@ -41,7 +41,7 @@
     - `shell/notifications`
     - `shell/toast`
 - Sub-plugins:
-  - **`developer-mark`** — The developer-only mark: DeveloperMark (the developer symbol in the primary tint, inline beside a title or opaque on a corner) and DeveloperCorner (the mark overhanging a tile's corner). Every…
+  - **`developer-mark`** — The developer-only mark: DeveloperMark (the developer symbol in the primary tint, inline beside a title or opaque on a corner) DeveloperCorner (the mark overhanging a tile's corner) and…
   - **`settings`** — The Developer mode switch in Settings: a Profile sidebar entry opening a pane that switches the user's audience (user | developer).
   - **`view-option`** — The Developer mode switch in the action bar's view-options popover — the same setting as Settings → Profile.
 

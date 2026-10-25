@@ -71,3 +71,28 @@ export function DeveloperCorner({
     </span>
   );
 }
+
+/**
+ * `children` (a toolbar control — an icon button) with the developer symbol as
+ * a small badge on its top-left corner: what a host draws on a developer-only
+ * control too small to carry the {@link DeveloperMark} pill. Inside the
+ * control's box, not overhanging it, because the bars it sits in clip; and
+ * decorative — the control keeps its own tooltip and click target.
+ */
+export function DeveloperBadge({ children }: { children: ReactNode }) {
+  return (
+    <span className="relative inline-block">
+      {children}
+      <Pin to="top-left" decorative>
+        <Inline
+          gap="none"
+          justify="center"
+          aria-hidden
+          className="size-3 rounded-full bg-background text-primary-text"
+        >
+          <Icon icon={developerSymbol} className="size-2.5" />
+        </Inline>
+      </Pin>
+    </span>
+  );
+}

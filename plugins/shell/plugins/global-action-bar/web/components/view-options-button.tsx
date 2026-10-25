@@ -3,7 +3,7 @@ import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { ControlPanelPopover } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { ActionBar } from "@plugins/shell/plugins/action-bar/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
-import { renderForAudience } from "../internal/render-for-audience";
+import { renderViewOptionForAudience } from "../internal/render-for-audience";
 
 const settingsIcon = symbol("settings");
 
@@ -37,7 +37,7 @@ export function ViewOptionsButton() {
       }
     >
       <ActionBar.ViewOption.Render>
-        {renderForAudience}
+        {renderViewOptionForAudience}
       </ActionBar.ViewOption.Render>
     </ControlPanelPopover>
   );

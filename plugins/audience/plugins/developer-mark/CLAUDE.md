@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: The developer-only mark: DeveloperMark (the developer symbol in the primary tint, inline beside a title or opaque on a corner) and DeveloperCorner (the mark overhanging a tile's corner). Every surface showing something only a developer sees — a developer app's tile, a developer notification or toast — draws it, so one symbol means developer everywhere.
+- Description: The developer-only mark: DeveloperMark (the developer symbol in the primary tint, inline beside a title or opaque on a corner) DeveloperCorner (the mark overhanging a tile's corner) and DeveloperBadge (the bare symbol on a small control's corner, an action-bar button). Every surface showing something only a developer sees — a developer app's tile, a developer notification or toast — draws it, so one symbol means developer everywhere.
 - Web:
   - Uses:
     - `primitives/css/inline.Inline`
@@ -12,6 +12,7 @@
     - `primitives/css/ui-kit.WithTooltip`
     - `ui/icons.Icon`
   - Exports (values):
+    - `DeveloperBadge`
     - `DeveloperCorner`
     - `DeveloperMark`
 - Cross-plugin:
@@ -22,6 +23,8 @@
     - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps-core/app-launcher`
+    - `config_v2/git-defaults-preview`
+    - `shell/global-action-bar`
     - `shell/notifications`
     - `shell/toast`
 
