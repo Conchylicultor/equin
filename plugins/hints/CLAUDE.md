@@ -158,7 +158,7 @@ const pulsing = useHintAnchorPulse(hintsHelpAnchor);   // draw a ring while true
 ## A one-off highlight: `pointAt`
 
 ```ts
-pointAt(() => el, { body: "The Share button" });
+pointAt(() => el, { label: "The Share button" });
 ```
 
 For a caller that found an element itself (`active-data/show-me` via
@@ -166,6 +166,11 @@ For a caller that found an element itself (`active-data/show-me` via
 the same stage as a **non-modal highlight** — a pulsing halo on the element
 and a compact `caption` card beside it (`HintCaption`) — tracked by the same
 `autoUpdate`, revealed into view when it goes up.
+
+- **The caption is for what does not name itself.** `label` is drawn only
+  when the element shows no text of its own (`innerText` blank — an
+  icon-only button). Beside a labelled control the ring already says which
+  one, and a caption repeating its label would only cover its neighbours.
 
 - **Never takes the page.** No scrim, no buttons, nothing to dismiss; the
   caption is click-through. It answers "where is it?" and gets out of the
@@ -244,7 +249,7 @@ Reduced motion turns the durations to 0.
   `hole` (dim scrim, ringed cut-out) · `ring` (`scrim: "none"`).
 - `halos`: a tip's target, a step's `cue`, a `pointAt` highlight — a pulsing ring, no scrim.
 - `card`: `step` (dots, ×, footnote, alt, Back, primary), `tip` (Got it) or
-  `caption` (`pointAt`'s label: compact, click-through),
+  `caption` (`pointAt`'s label on an element without text: compact, click-through),
   placed by the pure `placeCard` (`web/internal/placement.ts`: the preferred
   side, its opposite, then the cross axis; clamped) or centered (anchor `null`).
 - `welcome` (`intro.icon` on a brand tile, title, body, Show me around / I'll
@@ -276,7 +281,7 @@ Exhibits: `hints/card`, `hints/caption`, `hints/spotlight`, `hints/welcome`.
 
 ## Plugin reference
 
-- Description: The hints engine, web half: Hints.Hint / Hints.Tour declarations, useHintAnchor (ref registration, holding a floating toolbar open while its tip shows), useHintMoment (a tip shown once at its moment, lowest order first, one at a time), startTour / autoStart, pointAt (a one-off, non-modal highlight — pulsing ring + click-through caption, gone after a few seconds or at the user's next move — on an element the caller resolved, refused while a tour runs), emitHintSignal, the seen state and catalog reads — and the one HintHost at Core.Root drawing the active tip (halo + card) or the tour's welcome card / spotlit step on one persistent stage — every change of scene a CSS transition of the same elements — in the hints' own fixed theme (the same look in every app), every tour end pulsing ? and toasting where the tour lives. Owns the hint_seen table — one row per hint or tour the user has met (outcome, seen_at) — served as the hints.seen live collection (boot-preloaded), with the mark-seen upsert and the reset-by-ids delete.
+- Description: The hints engine, web half: Hints.Hint / Hints.Tour declarations, useHintAnchor (ref registration, holding a floating toolbar open while its tip shows), useHintMoment (a tip shown once at its moment, lowest order first, one at a time), startTour / autoStart, pointAt (a one-off, non-modal highlight — pulsing ring, plus a click-through caption when the element shows no text of its own, gone after a few seconds or at the user's next move — on an element the caller resolved, refused while a tour runs), emitHintSignal, the seen state and catalog reads — and the one HintHost at Core.Root drawing the active tip (halo + card) or the tour's welcome card / spotlit step on one persistent stage — every change of scene a CSS transition of the same elements — in the hints' own fixed theme (the same look in every app), every tour end pulsing ? and toasting where the tour lives. Owns the hint_seen table — one row per hint or tour the user has met (outcome, seen_at) — served as the hints.seen live collection (boot-preloaded), with the mark-seen upsert and the reset-by-ids delete.
 - Web:
   - Slots:
     - `Hints.Hint`

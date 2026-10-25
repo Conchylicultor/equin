@@ -8,7 +8,7 @@ import type {
   TourEndOutcome,
   TourTrigger,
 } from "../../core";
-import type { PointAtOptions, PointerRun } from "./pointer";
+import { captionFor, type PointAtOptions, type PointerRun } from "./pointer";
 import {
   emptyTipQueue,
   removeTip,
@@ -288,8 +288,8 @@ export function actOnAnchor(gesture: GestureAdvance): void {
 let pointerSeq = 0;
 
 /**
- * Highlights the element `target()` returns — a pulsing ring on it and its
- * caption (`body`) beside it — drawn by the same stage as tours and tracked
+ * Highlights the element `target()` returns — a pulsing ring on it and, when
+ * the element shows no text of its own, its `label` as a caption beside it — drawn by the same stage as tours and tracked
  * the same way, but never taking the page: no scrim, no buttons, clicks go
  * through. No declared anchor, no seen state: the caller has already found
  * the element (`resolveUiContext`, a ref).
@@ -321,7 +321,10 @@ export function pointAt(
     throw new Error(
       `pointAt: target() returned a <${el.tagName.toLowerCase()}>, not an HTMLElement`,
     );
-  set({ ...state, pointer: { id: ++pointerSeq, el, opts } });
+  set({
+    ...state,
+    pointer: { id: ++pointerSeq, el, caption: captionFor(el, opts) },
+  });
 }
 
 /** Ends the highlight (a no-op when none is up, or `id` names one already replaced). */

@@ -287,7 +287,8 @@ function tipScene(
 
 /**
  * `pointAt`'s highlight: a pulsing ring on the element and its caption beside
- * it — no scrim and nothing to press, so the page stays the user's.
+ * it (none when the element names itself) — no scrim and nothing to press, so
+ * the page stays the user's.
  */
 function pointerScene(pointer: PointerRun, rect: HintRect | null): StageScene {
   if (!rect) return EMPTY_SCENE;
@@ -296,12 +297,15 @@ function pointerScene(pointer: PointerRun, rect: HintRect | null): StageScene {
   return {
     ...EMPTY_SCENE,
     halos: [box],
-    card: {
-      variant: "caption",
-      target: box,
-      placement: "bottom",
-      content: <HintCaption body={pointer.opts.body} />,
-    },
+    card:
+      pointer.caption === null
+        ? null
+        : {
+            variant: "caption",
+            target: box,
+            placement: "bottom",
+            content: <HintCaption body={pointer.caption} />,
+          },
   };
 }
 

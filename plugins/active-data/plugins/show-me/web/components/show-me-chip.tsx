@@ -17,7 +17,8 @@ const NOT_HERE = "Not on this page";
  * The chip a `<show-me path element>label</show-me>` draws: the label behind
  * a target. A click finds the element NOW (`resolveUiContext` — the page may
  * have changed since the agent read its outline) and highlights it
- * (`pointAt`: a ring and the label as caption that never block the page). When nothing on the page matches, the
+ * (`pointAt`: a ring — plus the label as caption on an element without text of
+ * its own — that never blocks the page). When nothing on the page matches, the
  * chip says so — in a toast and, from then on, its own look and tooltip — and
  * nothing is highlighted. A tag without `element` cannot name anything: it draws
  * as such rather than as a chip that does nothing.
@@ -31,7 +32,7 @@ function ShowMeChip({
   children,
 }: {
   attrs: Record<string, string>;
-  /** The caption: the tag's text. */
+  /** What the target is called: the tag's text. */
   label: string;
   children: ReactNode;
 }) {
@@ -60,7 +61,7 @@ function ShowMeChip({
       return;
     }
     setGone(false);
-    pointAt(() => found.el, { body: label });
+    pointAt(() => found.el, { label });
   };
   return (
     <LinkChip

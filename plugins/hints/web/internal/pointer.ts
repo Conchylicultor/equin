@@ -11,16 +11,30 @@
  */
 
 export interface PointAtOptions {
-  /** The caption beside the highlighted element. */
-  readonly body: string;
+  /**
+   * What the element is called. Drawn as a caption beside it only when the
+   * element shows no text of its own (an icon-only button): next to a
+   * labelled control the ring says which one, and a caption would only repeat
+   * its label over its neighbours.
+   */
+  readonly label: string;
 }
 
 /** The highlight on screen: `id` is one showing (a replacing call is a new id). */
 export interface PointerRun {
   readonly id: number;
   readonly el: HTMLElement;
-  readonly opts: PointAtOptions;
+  /** The caption drawn beside it — `null` when the element names itself. */
+  readonly caption: string | null;
 }
 
-/** How long a highlight stays when the user does nothing — long enough to read its caption. */
+/** The caption a highlight on `el` draws: its label, unless `el` shows text of its own. */
+export function captionFor(
+  el: HTMLElement,
+  opts: PointAtOptions,
+): string | null {
+  return el.innerText.trim() === "" ? opts.label : null;
+}
+
+/** How long a highlight stays when the user does nothing — long enough to find the ring (and read its caption). */
 export const POINTER_LIFETIME_MS = 5000;
