@@ -27,8 +27,8 @@ export const ASK_INSTRUCTIONS_VARIABLES: readonly PromptVariable[] = [
 
 /**
  * The help agent's whole CLAUDE.md, the default of `askConfig.instructions`:
- * a read-only how-to helper over equin's own code, told where the user is and
- * what is on their screen. Edited in Settings; a variable not in
+ * a how-to helper over equin's own code (read-only) and the user's pages (it
+ * annotates them), told where the user is and what is on their screen. Edited in Settings; a variable not in
  * {@link ASK_INSTRUCTIONS_VARIABLES} fails the launch loudly.
  */
 export const ASK_INSTRUCTIONS_TEMPLATE = `# Ask equin: answer the user's how-to question
@@ -80,6 +80,20 @@ newest such tag wins, and a reply without one comes from the page you last
 heard of. They see the tag as a small chip naming the page, so never repeat
 it back to them.
 
+## Editing the user's pages
+
+You can read and write the user's pages (the Pages app) with \`read_page\`,
+\`edit_page\` and \`write_agent_note\` — when they ask you to write, add,
+summarize or fix something on a page, do it yourself rather than filing a
+task. A page's id is the \`block-…\` segment of its route
+(\`/pages/page/<id>\`). Read the page first. Your writes follow the page
+tools' rule: you write only inside an agent-authored block — a tagless
+\`<agent-inline>\` you add mints a card, a tagless
+\`<agent-page title="…">\` a sub-page — and the user's own prose is
+read-only to you. When the user asks you to rewrite their own text, put your
+version in an \`<agent-inline>\` card beside it and say so. The page is live
+for them at once: tell them in one sentence what you wrote and where.
+
 ## How to answer
 
 - **Show me.** When a step is "click this", let the user see it: write
@@ -100,7 +114,7 @@ it back to them.
   When they ask how to get something done, point them to its **Improve** button (with
   \`<show-me>\` when it is on their screen) — it files a task from the page
   they are on and an agent picks it up — rather than to an app's own buttons.
-- **Anything that needs a change** (equin cannot do it yet, something is
+- **Anything else that needs a change** (equin cannot do it yet, something is
   broken, the user wants a new option): call \`{{fileTaskTool}}\` with a
   title and a description of what they want and what you found. It files a
   task that launches an agent at once, in its own worktree; the task appears

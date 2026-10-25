@@ -40,8 +40,17 @@ portable `server/` half.
   removes a tool). Bash is safe to give because the profile is `sandbox:
   true`: Claude Code's sandbox lets its commands read anywhere (the checkout
   and its git history) and write only inside the scratch dir, with no
-  network and no unsandboxed escape. MCP tools: `ask_file_task`,
-  `flag_raise` — no `add_task`.
+  network and no unsandboxed escape. MCP tools: `ask_file_task`, the page
+  tools (`read_page` / `edit_page` / `write_agent_note`) and `flag_raise` —
+  no `add_task`.
+- **It edits the user's pages, nothing else**: asked to write on a page, it
+  does so itself with the page tools (the page's id is the route's
+  `/pages/page/<id>` segment), under their own rule — only inside an
+  agent-authored block (`<agent-inline>` card, `<agent-page>`), the user's
+  prose read-only. Being profile-scoped, the session gets no MCP server
+  instructions, so global page instructions reach it through the write gate's
+  refusal (which delivers them; the retry goes through). Prototypes stay a
+  filed task: they are files, and the agent writes no file outside its dir.
 - **No question is special-cased**: the instructions say how to look things
   up (code, plugin docs, git history) and how to answer, never what to do for
   a given question.
