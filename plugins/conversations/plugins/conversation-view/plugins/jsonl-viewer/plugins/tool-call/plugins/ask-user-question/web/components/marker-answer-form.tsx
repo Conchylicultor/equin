@@ -31,7 +31,8 @@ export function MarkerAnswerForm({
   // An answer is a turn: it reaches the agent through the same input box, so it
   // goes through the one send entry point and gets a ledger row and, should it
   // fail, the Retry card. An `answer` draws no in-flight echo — the question
-  // card is this send's in-flight display, and the delivered turn is hidden
+  // card is this send's in-flight display (it reads the turn back through
+  // `useTurnsInFlight`: the answer, "Sending…" under it), and the delivered turn is hidden
   // from the transcript by our own EventFilter. The send returns synchronously
   // and the ledger owns its fate, so the answer counts as accepted at once.
   const submit = (answer: FormAnswer) => {

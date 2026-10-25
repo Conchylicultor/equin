@@ -8,8 +8,10 @@ export {
   useOptimisticConversationStatus,
   useTurnRunning,
   useTurnAwaitingStart,
+  useTurnsInFlight,
 } from "./internal/pending";
 export type {
+  InFlightTurn,
   PendingCard,
   PendingTurn,
   PendingTurnState,

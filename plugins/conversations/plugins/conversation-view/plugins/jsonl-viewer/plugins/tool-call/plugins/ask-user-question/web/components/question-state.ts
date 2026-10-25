@@ -104,3 +104,38 @@ export function findAnswerTurn(
   }
   return null;
 }
+
+/** What `markerAnswerInFlight` reads of an answer turn still on its way. */
+export interface AnswerTurnInFlight {
+  text: string;
+  sentAt: Date;
+  confirmed: boolean;
+}
+
+/**
+ * The text of the answer turn (the marker path) on its way to this question,
+ * or null — so the card draws the answer as sent, "Sending…" under it, until
+ * the transcript shows the turn (`findAnswerTurn` settles the question).
+ *
+ * - `orphaned`: a turn the agent has not confirmed yet. A confirmed row stays
+ *   `accepted` for good, so one from before a *Change answers* rewind must not
+ *   read as still sending.
+ * - `asking`: the agent took it and is working — any turn sent after the call
+ *   was made, confirmed or not, until its prompt reaches the transcript.
+ *
+ * Only one question is ever orphaned or asking (the latest call), so any
+ * answer turn in flight is its answer. The newest wins.
+ */
+export function markerAnswerInFlight(
+  turns: readonly AnswerTurnInFlight[],
+  state: QuestionState,
+  callAt: string,
+): string | null {
+  const callTime = Date.parse(callAt);
+  const matching = turns.filter((t) =>
+    state.kind === "orphaned"
+      ? !t.confirmed
+      : state.kind === "asking" && t.sentAt.getTime() >= callTime,
+  );
+  return matching.at(-1)?.text ?? null;
+}

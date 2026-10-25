@@ -73,7 +73,10 @@ export const CARD_OF: Record<PendingTurnState, PendingCard | null> = {
   unsent: "failure",
 };
 
-/** An `answer` draws no echo: its question card is its in-flight state. */
+/**
+ * An `answer` draws no echo: its question card is its in-flight state (it
+ * reads the turn through `useTurnsInFlight`).
+ */
 function draws(turn: { kind: TurnKind; state: PendingTurnState }): boolean {
   return !(turn.kind === "answer" && CARD_OF[turn.state] === "echo");
 }
@@ -178,6 +181,75 @@ export function usePendingTurns(
         pendingTurnsOf(data.ledger, sent, data.events),
       ),
     [both, sent],
+  );
+}
+
+/** A turn still on its way to the agent — what its echo would stand in for. */
+export interface InFlightTurn {
+  id: string;
+  text: string;
+  /** When the user sent it. */
+  sentAt: Date;
+  /**
+   * The agent confirmed taking it (`accepted`): its prompt is about to show in
+   * the transcript. A confirmed row stays `accepted` for good, so a reader
+   * that cannot see the transcript take it over must bound it (by time).
+   */
+  confirmed: boolean;
+}
+
+/**
+ * The turns of one kind still on their way, oldest first: ledger rows whose
+ * state draws an echo (`CARD_OF`), then this tab's sends no row stands for yet
+ * and whose request has not failed. A failed one is not in flight — it draws
+ * its failure card.
+ */
+export function inFlightTurnsOf(
+  newestFirst: readonly LedgerTurn[],
+  sent: readonly SentTurn[],
+  kind: TurnKind,
+): InFlightTurn[] {
+  const ledgerIds = new Set(newestFirst.map((row) => row.id));
+  const fromLedger = newestFirst
+    .filter((row) => row.kind === kind && CARD_OF[row.state] === "echo")
+    .reverse()
+    .map((row) => ({
+      id: row.id,
+      text: row.text,
+      sentAt: row.createdAt,
+      confirmed: row.state === "accepted",
+    }));
+  const fromTab = sent
+    .filter(
+      (turn) =>
+        turn.kind === kind &&
+        !ledgerIds.has(turn.id) &&
+        turn.status.kind !== "unsent",
+    )
+    .map((turn) => ({
+      id: turn.id,
+      text: turn.text,
+      sentAt: turn.createdAt,
+      confirmed: false,
+    }));
+  return [...fromLedger, ...fromTab];
+}
+
+/**
+ * A conversation's turns of one kind still on their way — for a kind that
+ * draws no echo of its own (an `answer`: its question card draws it as sent,
+ * "Sending…" under it). The same ledger window and tab sends as
+ * {@link usePendingTurns}, so the two never disagree.
+ */
+export function useTurnsInFlight(
+  conversationId: string,
+  kind: TurnKind,
+): ResourceResult<InFlightTurn[]> {
+  const ledger = useLive(conversationTurns, { where: { conversationId } });
+  const sent = useSentTurns(conversationId);
+  return useMemo(
+    () => mapResource(ledger, (rows) => inFlightTurnsOf(rows, sent, kind)),
+    [ledger, sent, kind],
   );
 }
 

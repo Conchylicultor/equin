@@ -49,6 +49,16 @@ the "Sending…" line goes (the user-message echo contract,
 the call has a result; a failed send drops it, bringing the form back with the
 draft.
 
+The **marker path** (an orphaned question, answered as a turn) keeps no copy:
+its answer is a ledger turn of kind `answer`, which draws no echo of its own,
+and the card reads it back with pending-turn's `useTurnsInFlight` —
+`markerAnswerInFlight` picks the one on its way to this question (orphaned:
+not yet confirmed by the agent, since a confirmed row stays `accepted` for good
+— e.g. one from before a *Change answers* rewind; asking: sent after the
+call). It is drawn from the parsed turn text, "Sending…" under it, until
+`findAnswerTurn` sees it in the transcript; a failed send stops counting, the
+pending-turn failure card offering Retry.
+
 ## `OptionRow` owns the selected look — for both states of the card
 
 The awaiting (`AnswerForm`) and answered (`AskUserQuestionToolView`) branches
@@ -108,14 +118,14 @@ ordinary `MarkerAnswerForm` renders with the old answer already in its draft.
     - `JsonlRowActions.Item` "change-answers" → `ChangeAnswersAction`
     - `JsonlViewer.EventFilter` "ask-user-question:suppress-answer-turn"
     - `JsonlViewer.EventFilter` "ask-user-question:suppress-interrupt-turn"
-  - Uses: 36 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 37 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×9
     - `primitives/persistent-draft` ×4
     - `conversations/conversation-view/jsonl-viewer/tool-call` ×3
     - `conversations/conversation-view/jsonl-viewer/row-actions` ×2
     - `conversations/conversation-view/jsonl-viewer` ×2
+    - `conversations/conversation-view/pending-turn` ×2
     - `primitives/css/selection-indicator` ×2
-    - `conversations/conversation-view/pending-turn.useSendConversationTurn`
     - `conversations/conversation-view/rewind.useGoBackToMessage`
     - `conversations/conversation-view.conversationPane`
     - `conversations.useConversation`

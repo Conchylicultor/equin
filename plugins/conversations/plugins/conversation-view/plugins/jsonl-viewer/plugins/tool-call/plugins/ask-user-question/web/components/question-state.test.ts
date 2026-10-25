@@ -1,6 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
-import { questionState, type QuestionHolderView } from "./question-state";
+import {
+  markerAnswerInFlight,
+  questionState,
+  type QuestionHolderView,
+} from "./question-state";
 import { ANSWER_MARKER } from "../../shared";
 
 const AT = "2026-10-19T00:00:00.000Z";
@@ -152,5 +156,46 @@ describe("questionState", () => {
     expect(kindOf([answeredQuestion], answeredQuestion, holding)).toBe(
       "settled",
     );
+  });
+});
+
+describe("markerAnswerInFlight", () => {
+  const before = new Date(Date.parse(AT) - 60_000);
+  const after = new Date(Date.parse(AT) + 1_000);
+  const turn = (text: string, sentAt: Date, confirmed: boolean) => ({
+    text,
+    sentAt,
+    confirmed,
+  });
+
+  test("orphaned: an unconfirmed answer turn is on its way", () => {
+    expect(
+      markerAnswerInFlight([turn("a", after, false)], { kind: "orphaned" }, AT),
+    ).toBe("a");
+  });
+
+  test("orphaned: a confirmed row (e.g. before a rewind) is not", () => {
+    expect(
+      markerAnswerInFlight([turn("a", after, true)], { kind: "orphaned" }, AT),
+    ).toBeNull();
+  });
+
+  test("asking: a confirmed turn sent after the call, until the transcript shows it", () => {
+    expect(
+      markerAnswerInFlight(
+        [turn("old", before, true), turn("new", after, true)],
+        { kind: "asking" },
+        AT,
+      ),
+    ).toBe("new");
+    expect(
+      markerAnswerInFlight([turn("old", before, true)], { kind: "asking" }, AT),
+    ).toBeNull();
+  });
+
+  test("held and settled questions draw no marker answer", () => {
+    const turns = [turn("a", after, false)];
+    expect(markerAnswerInFlight(turns, { kind: "held" }, AT)).toBeNull();
+    expect(markerAnswerInFlight(turns, { kind: "settled" }, AT)).toBeNull();
   });
 });

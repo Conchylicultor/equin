@@ -54,6 +54,10 @@ loads) — the cards the transcript ends with, oldest first; loading until both
 the ledger and the transcript are in. `jsonl-pane` holds the pane on its loader
 until then, and shows a ledger read error inline where the cards go.
 
+An `answer` turn draws no card while in flight: its question card draws it as
+sent, reading it with `useTurnsInFlight(conversationId, "answer")` (the same
+ledger window and tab sends, filtered to the echo states).
+
 | State | Card |
 |---|---|
 | `sending` (tab only) / `held` / `typing` / `typed` / `accepted` | echo, **until the agent confirmed it and the transcript reached that moment** — "Sending…" under it, "Waiting for the agent to start…" when held, "Waiting for the agent to take it…" when typed (queued behind a busy agent) |
@@ -144,6 +148,7 @@ render (`reports/turn-unconfirmed`).
     - `primitives/sync-status.useReportSync`
     - `shell/toast.showToast`
   - Exports (types):
+    - `InFlightTurn`
     - `PendingCard`
     - `PendingTurn`
     - `PendingTurnState`
@@ -160,6 +165,7 @@ render (`reports/turn-unconfirmed`).
     - `useTurnRunning`
     - `useTurnSendAvailability`
     - `useTurnSendInFlight`
+    - `useTurnsInFlight`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --destructive`

@@ -30,6 +30,7 @@ import type {
 import type { ConversationStatus } from "@plugins/tasks/plugins/tasks-core/core";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import {
+  inFlightTurnsOf,
   pendingTurnsOf,
   useOptimisticConversationStatus,
   usePendingTurns,
@@ -203,6 +204,22 @@ describe("pendingTurnsOf — which ledger states draw a card", () => {
     expect(
       pendingTurnsOf([answer("failed")], [], NO_EVENTS).map((c) => c.state),
     ).toEqual(["failed"]);
+  });
+
+  it("lists an answer in flight for its question card, until it fails", () => {
+    const answer = (id: string, state: TurnState) =>
+      row("c", id, state, { kind: "answer" });
+    expect(
+      inFlightTurnsOf(
+        [answer("b", "typed"), answer("a", "held"), row("c", "t", "typing")],
+        [],
+        "answer",
+      ).map((t) => t.id),
+    ).toEqual(["a", "b"]);
+    expect(inFlightTurnsOf([answer("a", "failed")], [], "answer")).toEqual([]);
+    expect(inFlightTurnsOf([answer("a", "returned")], [], "answer")).toEqual(
+      [],
+    );
   });
 
   it("orders cards oldest first (the window reads newest first)", () => {

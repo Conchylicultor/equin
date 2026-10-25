@@ -20,8 +20,8 @@ export function useAnswerQuestionAvailability(): MachineAvailability {
  * the runtime must first withdraw any open question — a delivery difference,
  * not a lifecycle one.
  *
- * An `answer` draws no in-flight echo — the question card already shows its own
- * answered state, and the delivered turn is hidden from the transcript — but
+ * An `answer` draws no in-flight echo — the question card draws it as sent
+ * (reading the turn through pending-turn's `useTurnsInFlight`), and the delivered turn is hidden from the transcript — but
  * its failure card (Retry, Copy to draft) renders like any other.
  */
 export const answerQuestionDelivery: TurnDelivery = {

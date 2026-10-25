@@ -16407,14 +16407,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `JsonlRowActions.Item` "change-answers" → `ChangeAnswersAction`
                       - `JsonlViewer.EventFilter` "ask-user-question:suppress-answer-turn"
                       - `JsonlViewer.EventFilter` "ask-user-question:suppress-interrupt-turn"
-                    - Uses: 36 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/ask-user-question/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/ask-user-question/REFERENCE.md)
+                    - Uses: 37 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/ask-user-question/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/ask-user-question/REFERENCE.md)
                       - `primitives/css/ui-kit` ×9
                       - `primitives/persistent-draft` ×4
                       - `conversations/conversation-view/jsonl-viewer/tool-call` ×3
                       - `conversations/conversation-view/jsonl-viewer/row-actions` ×2
                       - `conversations/conversation-view/jsonl-viewer` ×2
+                      - `conversations/conversation-view/pending-turn` ×2
                       - `primitives/css/selection-indicator` ×2
-                      - `conversations/conversation-view/pending-turn.useSendConversationTurn`
                       - `conversations/conversation-view/rewind.useGoBackToMessage`
                       - `conversations/conversation-view.conversationPane`
                       - `conversations.useConversation`
@@ -17302,6 +17302,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/sync-status.useReportSync`
               - `shell/toast.showToast`
             - Exports (types):
+              - `InFlightTurn`
               - `PendingCard`
               - `PendingTurn`
               - `PendingTurnState`
@@ -17318,6 +17319,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useTurnRunning`
               - `useTurnSendAvailability`
               - `useTurnSendInFlight`
+              - `useTurnsInFlight`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --destructive`

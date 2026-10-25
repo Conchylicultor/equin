@@ -10,6 +10,7 @@ import {
   replyOf,
 } from "@plugins/conversations/plugins/transcript-source/core";
 import { useConversation } from "@plugins/conversations/web";
+import { useTurnsInFlight } from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
 import { MarkerAnswerForm } from "./marker-answer-form";
 import {
   AnsweredQuestions,
@@ -20,7 +21,11 @@ import {
 } from "./answered-view";
 import { dropSentAnswer, useSentAnswer } from "./sent-answers";
 import { summaryFor } from "./question-card";
-import { findAnswerTurn, questionState } from "./question-state";
+import {
+  findAnswerTurn,
+  markerAnswerInFlight,
+  questionState,
+} from "./question-state";
 import {
   answersFromRecord,
   parseMarkerAnswer,
@@ -41,6 +46,8 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
   const events = useTranscriptEvents();
   const conversation = useConversation(convId);
   const sent = useSentAnswer(event.toolUseId);
+  // Answer turns (the marker path) still on their way to the agent.
+  const answerTurns = useTurnsInFlight(convId, "answer");
   // The transcript now holds this call's outcome: the answer this tab sent is
   // no longer on its way.
   const resolved = event.result != null && event.result.outcomeUnknown !== true;
@@ -48,7 +55,8 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
     if (resolved && sent !== null) dropSentAnswer(event.toolUseId);
   }, [resolved, sent, event.toolUseId]);
 
-  if (conversation.status === "loading") return null;
+  if (conversation.status === "loading" || answerTurns.status === "loading")
+    return null;
 
   const state = questionState(
     events,
@@ -65,6 +73,14 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
       isInterruptContent(event.result.content));
   const showAsError = !resultIsInterrupt && (event.result?.isError ?? false);
   const answerTurn = findAnswerTurn(events, event.toolUseId);
+  // Over a failed ledger read, the last known turns (none: the form shows).
+  const markerSending = markerAnswerInFlight(
+    answerTurns.status === "ready"
+      ? answerTurns.data
+      : (answerTurns.stale ?? []),
+    state,
+    event.at,
+  );
 
   switch (state.kind) {
     case "held":
@@ -73,7 +89,9 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
       // one card.
       return null;
     case "orphaned":
-      // Nothing holds the call any more: the answer goes in as a message.
+      // Nothing holds the call any more: the answer goes in as a message —
+      // drawn as sent below while it is on its way.
+      if (markerSending !== null) break;
       return (
         <ToolCallCard
           event={event}
@@ -115,12 +133,20 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
     answerMap = answersFromRecord(answerRecord);
   }
   let selections = selectionsFromParsed(questions, answerMap);
-  // Answered from this tab and still on its way (the hold let go, the result
-  // not written yet): draw the answer as sent, "Sending…" under it.
-  const inFlight = state.kind === "asking" && sent !== null;
-  if (inFlight) {
+  // An answer still on its way: draw it as sent, "Sending…" under it.
+  // - relay: answered from this tab, the hold let go, the result not written;
+  // - marker: the answer turn not in the transcript yet.
+  let inFlight = false;
+  if (state.kind === "asking" && sent !== null) {
+    inFlight = true;
     selections = selectionsFromForm(questions, sent.answer);
     reply = sent.answer.response;
+  } else if (markerSending !== null) {
+    inFlight = true;
+    selections = selectionsFromParsed(
+      questions,
+      parseMarkerAnswer(markerSending, questions),
+    );
   }
 
   return (
