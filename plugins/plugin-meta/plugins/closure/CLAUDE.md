@@ -27,7 +27,7 @@ never re-walks `extends`.
 **unconditionally, not via `extends`**, and skipped only when the manifest being
 flattened IS that row. That is the point: an exclusion the repo has decided on
 holds for compositions that do not exist yet, rather than for the rows whose
-author remembered to reference it. It is the property `singularity.disabled` in a
+author remembered to reference it. It is the property the old `disabled` flag in a
 `package.json` used to have, now spelled in the vocabulary that already decides
 membership.
 
@@ -314,8 +314,8 @@ dependency of the negated branch stays); the base row inherited with no `extends
 contributor) bundling it back with `unsatisfiedExclusions` empty; naming an
 *importer* NOT being an opt-out (a selected `render-diff` adapter yields a
 non-empty `unsatisfiedExclusions` carrying the import path); and the migration
-itself — real-tree `singularity` (`["**"]` + the inherited base row) bundling
-exactly every plugin minus the twelve `singularity.disabled` used to remove.
+itself — the real-tree main composition (`["**"]` + the inherited base row) bundling
+exactly every plugin minus the twelve the old `disabled` flag used to remove.
 
 Run with `./equin test plugins/plugin-meta/plugins/closure`.
 

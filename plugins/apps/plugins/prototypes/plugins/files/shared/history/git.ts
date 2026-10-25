@@ -1,3 +1,4 @@
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import {
   spawnCaptured,
   spawnExpectOk,
@@ -32,7 +33,7 @@ const GIT_TIMEOUT_MS = 60_000;
 /** Who every version is committed as — the store, never the user. */
 const STORE_IDENTITY = {
   name: "equin prototypes",
-  email: "prototypes@singularity.invalid",
+  email: `prototypes@${LEGACY_IDS.autoIdentityDomain}`,
 };
 
 function hermeticEnv(): Record<string, string | undefined> {

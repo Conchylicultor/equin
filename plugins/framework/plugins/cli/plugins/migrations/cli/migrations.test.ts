@@ -17,6 +17,9 @@ import {
   type DetectedPrompt,
   type MigrationAnswer,
 } from "./migrations";
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
+
+const M = LEGACY_IDS.migrationMarker;
 
 function tablePrompt(name: string, fromName?: string): DetectedPrompt {
   const options: DetectedPrompt["options"] = [
@@ -318,7 +321,7 @@ describe("phaseGeneratedMigrations", () => {
       schemaFile(
         dir,
         PRIOR_SCHEMA,
-        "-- singularity:phase expand\n-- singularity:phase contract\n-- singularity:claims\n-- 20260901_000000__claimed_already\n",
+        `-- ${M}:phase expand\n-- ${M}:phase contract\n-- ${M}:claims\n-- 20260901_000000__claimed_already\n`,
       );
       const fresh =
         'ALTER TABLE "agents" ADD COLUMN "icon" text NOT NULL;--> statement-breakpoint\nALTER TABLE "agents" DROP COLUMN IF EXISTS "icon_svg_nodes";';
@@ -333,13 +336,13 @@ describe("phaseGeneratedMigrations", () => {
 
       expect(readFileSync(join(dir, "0NaN_swap_icons.sql"), "utf8")).toBe(
         [
-          `-- singularity:snapshot id=${LINEAGE.id} parents=${LINEAGE.parents[0]}`,
-          "-- singularity:phase expand",
+          `-- ${M}:snapshot id=${LINEAGE.id} parents=${LINEAGE.parents[0]}`,
+          `-- ${M}:phase expand`,
           'ALTER TABLE "agents" ADD COLUMN "icon" text;',
-          "-- singularity:phase contract",
+          `-- ${M}:phase contract`,
           'ALTER TABLE "agents" ALTER COLUMN "icon" SET NOT NULL;',
           'ALTER TABLE "agents" DROP COLUMN IF EXISTS "icon_svg_nodes";',
-          "-- singularity:claims",
+          `-- ${M}:claims`,
           "-- 20260902_000000__remap_icons",
           "",
         ].join("\n"),

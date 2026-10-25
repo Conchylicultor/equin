@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-tool-call-flag-raise",
+  "name": "@equin/plugin-conversations-conversation-view-jsonl-viewer-tool-call-flag-raise",
   "private": true,
   "version": "0.0.1"
 }

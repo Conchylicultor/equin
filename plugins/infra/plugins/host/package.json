@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-infra-host",
+  "name": "@equin/plugin-infra-host",
   "description": "How much of the shared host machine may I take right now, and is the box still healthy? — the host-wide admission pools (host-admission), the heavy git/filesystem read budget declared through them (host-read-pool), the box's load snapshot (contention), and the 'the box is in trouble' latch plus the shed engine that rides it (duress).",
   "private": true,
   "version": "0.0.1"

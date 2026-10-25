@@ -43,7 +43,7 @@ import { createRequestHandler } from "@plugins/framework/plugins/http-router/cor
 // both boot and serving latency sit above default-priority bulk load (agent
 // builds / type-check fleets) — the same scheduler tier that keeps GUI apps
 // responsive during a build storm. STRICTLY main-only: isMain() is true only
-// when the gateway spawned this backend with `--namespace singularity`;
+// when the gateway spawned this backend with `the main namespace`;
 // an agent-worktree backend runs this same code under its own worktree name
 // and never qualifies. Boosting agent backends would lift the fleet above its
 // own builds and defeat priority isolation. See

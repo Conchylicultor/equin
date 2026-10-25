@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-shell-health-report",
+  "name": "@equin/plugin-shell-health-report",
   "private": true,
   "version": "0.0.1"
 }

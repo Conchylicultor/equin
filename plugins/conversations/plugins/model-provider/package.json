@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-conversations-model-provider",
+  "name": "@equin/plugin-conversations-model-provider",
   "private": true,
   "version": "0.0.1"
 }

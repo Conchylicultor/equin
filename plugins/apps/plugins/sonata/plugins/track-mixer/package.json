@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-sonata-track-mixer",
+  "name": "@equin/plugin-apps-sonata-track-mixer",
   "description": "Sonata track mixer — per-(song, track) color / mute / visibility view-state, persisted, plus the compact control panel.",
   "private": true,
   "version": "0.0.1"

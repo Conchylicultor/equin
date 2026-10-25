@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-tooling-lint-scroll-safety",
+  "name": "@equin/plugin-framework-tooling-lint-scroll-safety",
   "version": "0.0.1",
   "private": true,
   "description": "scroll-safety lint rules: no-adhoc-scroll-into-view, no-adhoc-scroll-write"

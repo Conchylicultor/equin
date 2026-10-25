@@ -3,7 +3,7 @@
  * system leans on:
  *
  *   - the ELISION is total and preserves every URL in use today
- *     (`singularity`, `sonata`, `att-X` all still mint themselves);
+ *     (the main namespace, `sonata`, `att-X` all still mint themselves);
  *   - everything `namespaceFor` can produce is something `asNamespace` accepts,
  *     so a minted namespace is always a legal path segment / DB name.
  *
@@ -26,6 +26,8 @@ import {
   NAMESPACE_HOST_ALIASES,
   NAMESPACE_RE,
   type CheckoutRef,
+  namespaceLabel,
+  resolveNamespaceAlias,
 } from "./namespace";
 
 const MAIN: CheckoutRef = { kind: "main" };
@@ -34,7 +36,7 @@ const WT = (name: string): CheckoutRef => ({ kind: "worktree", name });
 test("the elision rule maps the four (composition, checkout) cases", () => {
   // Main composition on main: the namespace IS the composition id.
   expect(namespaceFor(MAIN_COMPOSITION_ID, MAIN)).toBe(
-    asNamespace("singularity"),
+    asNamespace(MAIN_WORKTREE_NAME),
   );
   // Main composition on a worktree: the prefix elides — today's agent URL.
   expect(namespaceFor(MAIN_COMPOSITION_ID, WT("att-x"))).toBe(
@@ -86,7 +88,13 @@ test("namespaceFor refuses inputs that are not single labels", () => {
 });
 
 test("asNamespace refuses the shapes that would stop being one safe path segment", () => {
-  for (const good of ["singularity", "att-x", "sonata.att-x", "a", "a-1.b-2"]) {
+  for (const good of [
+    MAIN_WORKTREE_NAME,
+    "att-x",
+    "sonata.att-x",
+    "a",
+    "a-1.b-2",
+  ]) {
     expect(() => asNamespace(good)).not.toThrow();
     expect(isNamespace(good)).toBe(true);
   }
@@ -137,7 +145,7 @@ test("namespaceFor refuses a composed namespace over the 63-byte cap", () => {
 });
 
 test("namespaceFromHost round-trips namespaceHost and rejects the loopback hosts", () => {
-  for (const ns of ["singularity", "att-x", "sonata.att-x"] as const) {
+  for (const ns of [MAIN_WORKTREE_NAME, "att-x", "sonata.att-x"] as const) {
     expect(namespaceFromHost(namespaceHost(asNamespace(ns)))).toBe(
       asNamespace(ns),
     );
@@ -173,6 +181,16 @@ test("namespaceFromHost round-trips namespaceHost and rejects the loopback hosts
   expect(namespaceFromHost("singularity.localhost:9000")).toBe(
     MAIN_WORKTREE_NAME,
   );
+});
+
+test("a namespace is shown by its label and typed back by it", () => {
+  expect(namespaceLabel(MAIN_WORKTREE_NAME)).toBe("equin");
+  expect(namespaceLabel(asNamespace("att-x"))).toBe("att-x");
+  expect(resolveNamespaceAlias("equin")).toBe(MAIN_WORKTREE_NAME);
+  // The namespace's own name, and any other, is returned as given.
+  expect(resolveNamespaceAlias(MAIN_WORKTREE_NAME)).toBe(MAIN_WORKTREE_NAME);
+  expect(resolveNamespaceAlias("att-x")).toBe("att-x");
+  expect(resolveNamespaceAlias("not a name")).toBe("not a name");
 });
 
 test("main is handed out under its public host label; others under their own name", () => {

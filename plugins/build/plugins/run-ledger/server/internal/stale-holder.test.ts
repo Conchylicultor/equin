@@ -40,7 +40,10 @@ import {
   worktreeArtifacts,
   worktreeDataDir,
 } from "@plugins/infra/plugins/paths/core";
-import { asNamespace } from "@plugins/infra/plugins/namespace/core";
+import {
+  asNamespace,
+  MAIN_COMPOSITION_ID,
+} from "@plugins/infra/plugins/namespace/core";
 import {
   claimInflightRun,
   closeRunOn,
@@ -87,7 +90,7 @@ let seq = 0;
 function row(pid: number): InsertRunRow {
   return {
     id: `settle-test-${process.pid}-${seq++}`,
-    targets: ["singularity"],
+    targets: [MAIN_COMPOSITION_ID],
     trigger: "manual",
     commitHash: null,
     pid,

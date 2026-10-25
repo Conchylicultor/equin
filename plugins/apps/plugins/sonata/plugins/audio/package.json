@@ -1,7 +1,7 @@
 {
-  "name": "@singularity/plugin-apps-sonata-audio",
+  "name": "@equin/plugin-apps-sonata-audio",
   "description": "Audio playback umbrella for Sonata: engine + instruments.",
   "private": true,
   "version": "0.0.1",
-  "singularity": { "collapsed": true }
+  "equin": { "collapsed": true }
 }

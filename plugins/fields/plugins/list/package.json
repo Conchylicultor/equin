@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-fields-list",
+  "name": "@equin/plugin-fields-list",
   "version": "0.0.1",
   "private": true,
   "description": "Sortable list field type: identity only — value is an array of UUID/rank-keyed items.",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

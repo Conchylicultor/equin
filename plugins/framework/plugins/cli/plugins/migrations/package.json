@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-cli-migrations",
+  "name": "@equin/plugin-framework-cli-migrations",
   "private": true,
   "version": "0.0.1",
   "description": "Drizzle migration generation for the CLI: the generate/rename/journal pipeline and the interactive drizzle-kit prompt driver."

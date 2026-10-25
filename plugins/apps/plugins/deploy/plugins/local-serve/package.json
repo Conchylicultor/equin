@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-deploy-local-serve",
+  "name": "@equin/plugin-apps-deploy-local-serve",
   "description": "Test locally section of the deployment pane, plus the serve shortcut on the deployments list row.",
   "private": true,
   "version": "0.0.1"

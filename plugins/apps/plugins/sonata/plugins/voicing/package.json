@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-sonata-voicing",
+  "name": "@equin/plugin-apps-sonata-voicing",
   "description": "Voicing strategies for Sonata: turn timed chord events into performed notes. Shared by every chord-authoring source (chord-grid, Ultimate Guitar, …) so chord-to-notes voicing has one home.",
   "private": true,
   "version": "0.0.1"

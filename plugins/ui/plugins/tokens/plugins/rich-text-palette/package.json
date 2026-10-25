@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-ui-tokens-rich-text-palette",
+  "name": "@equin/plugin-ui-tokens-rich-text-palette",
   "description": "Rich-text color palette token group: the closed --rt-color-<token> vars backing inline text color in the page block editor.",
   "private": true,
   "version": "0.0.1"

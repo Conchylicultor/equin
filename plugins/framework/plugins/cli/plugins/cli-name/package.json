@@ -1,6 +1,6 @@
 {
-  "name": "@singularity/plugin-framework-cli-cli-name",
+  "name": "@equin/plugin-framework-cli-cli-name",
   "private": true,
   "version": "0.0.1",
-  "description": "The CLI's own name, as data: CLI_NAME (`equin`, what agents type and the CLI calls itself), CLI_NAMES (every repo-root executable that runs it, the legacy `singularity` shim included), isCliName and CLI_NAME_PATTERN for matchers over command text. A dependency-free leaf, so a guard, a spawn site or a browser bundle can import it."
+  "description": "The CLI's own name, as data: CLI_NAME (`equin`, what agents type and the CLI calls itself), CLI_NAMES (every repo-root executable that runs it, the legacy shim included), isCliName and CLI_NAME_PATTERN for matchers over command text. A dependency-free leaf, so a guard, a spawn site or a browser bundle can import it."
 }

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-tooling-guards",
+  "name": "@equin/plugin-framework-tooling-guards",
   "version": "0.0.1",
   "private": true,
   "description": "Claude Code PreToolUse guards: safety checks that intercept tool calls before execution"

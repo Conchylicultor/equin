@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-events-sources-source-detail",
+  "name": "@equin/plugin-apps-events-sources-source-detail",
   "description": "Umbrella for the source side-pane's sections — one sub-plugin per region of a configured source (settings, schedule, status, runs).",
   "private": true,
   "version": "0.0.1"

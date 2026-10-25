@@ -15,6 +15,7 @@
 //      tab from the URL, default surface mode, no window geometry), a reload
 //      preserves it, and Back restores the previous instance in FULL.
 
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import type { Page } from "playwright";
 import {
   arg,
@@ -67,10 +68,10 @@ interface HistoryEntryState {
 // The storage grammar below is `primitives/scope/app-instance`'s, spelled out as
 // literals because this runs INSIDE the page (an e2e script may import only
 // `core`/`e2e` barrels, never `web`). Keys are
-// `<prefix>:<tabId>:<generation>`; `singularity.appInstances:<tabId>` holds the
+// `<prefix>:<tabId>:<generation>`; the `<prefix>.appInstances:<tabId>` key holds the
 // LRU generation list with the active one last.
-const TAB_ID_KEY = "singularity.tabId";
-const REGISTRY_PREFIX = "singularity.appInstances:";
+const TAB_ID_KEY = `${LEGACY_IDS.browserKeyPrefix}.tabId`;
+const REGISTRY_PREFIX = `${LEGACY_IDS.browserKeyPrefix}.appInstances:`;
 
 /**
  * The app instance this document is running as: the generation stamped on the

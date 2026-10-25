@@ -164,7 +164,7 @@ test("every seed carries `home` and the mapper drops it", () => {
     expect("home" in manifestItemToManifest(s)).toBe(false);
   }
   // The homepage is the composition's call, never load order.
-  expect(byName("singularity").home).toBe("home");
+  expect(byName(MAIN_COMPOSITION_ID).home).toBe("home");
   expect(byName("website").home).toBe("website");
 });
 
@@ -207,7 +207,7 @@ test("anchor demo: flattened full \\ lean is exactly the self-improvement pack",
 });
 
 test("the main app is seeded exactly once, as the root composition", () => {
-  // `singularity` is an ORDINARY entry in this registry — that is the whole point
+  // Main is an ORDINARY entry in this registry — that is the whole point
   // of the seed. Exactly one row carries the id, because the id is a namespace and
   // because `plugins-registry-in-sync` resolves "the main composition" by finding
   // it: two rows (or none) and that equivalence proof stops being about main.
@@ -251,7 +251,7 @@ test("the base-exclusions row is seeded exactly once and holds only negatives", 
 });
 
 test("the base-exclusions row carries the migrated plugin-changes exclusion", () => {
-  // The replacement for the `singularity.disabled: true` flag that used to live
+  // The replacement for the old `disabled: true` flag that used to live
   // in plugins/review/plugins/plugin-changes/package.json. The cascade to the two
   // sub-plugins and the nine render-diff adapters is the engine's job — asserted
   // against a real plugin tree in closure.test.ts; here we pin the declaration.

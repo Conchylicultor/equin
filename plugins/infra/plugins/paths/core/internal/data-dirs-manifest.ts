@@ -160,7 +160,7 @@ export function manifestStamps(): string[] {
  *
  * DIRECTORIES only, and that is not belt-and-braces. The worktrees dir also
  * holds loose registry FILES beside the namespace dirs (`central.json`,
- * `singularity.json`, …), and `isNamespace` says yes to those — `central.json`
+ * `<main namespace>.json`, …), and `isNamespace` says yes to those — `central.json`
  * is a perfectly legal two-label namespace name. Filtering by name alone
  * therefore asked for `central.json/data-dirs.json`, which fails with ENOTDIR,
  * and `throwIfNoEntry: false` suppresses only ENOENT — so the audit threw

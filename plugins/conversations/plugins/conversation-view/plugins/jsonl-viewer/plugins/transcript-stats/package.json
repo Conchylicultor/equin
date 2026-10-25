@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-transcript-stats",
+  "name": "@equin/plugin-conversations-conversation-view-jsonl-viewer-transcript-stats",
   "private": true,
   "version": "0.0.1"
 }

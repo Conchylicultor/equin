@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-history-engine",
+  "name": "@equin/plugin-history-engine",
   "description": "Domain-agnostic versioning substrate: entity_versions table, a defineHistorySource registry, time-bucketed recordVersion, and list/get/restore endpoints.",
   "private": true,
   "version": "0.0.1"

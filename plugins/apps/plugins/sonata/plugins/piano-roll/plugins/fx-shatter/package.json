@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-sonata-piano-roll-fx-shatter",
+  "name": "@equin/plugin-apps-sonata-piano-roll-fx-shatter",
   "description": "Fancy piano-roll FX (opt-in): notes shatter into tinted debris that arcs up and falls under gravity at the strike line.",
   "private": true,
   "version": "0.0.1",

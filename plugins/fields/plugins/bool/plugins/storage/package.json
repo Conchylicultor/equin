@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-fields-bool-storage",
+  "name": "@equin/plugin-fields-bool-storage",
   "version": "0.0.1",
   "private": true,
   "description": "Boolean field type: DB storage capability — maps to a Postgres boolean column.",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

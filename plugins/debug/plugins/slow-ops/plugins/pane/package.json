@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-debug-slow-ops-pane",
+  "name": "@equin/plugin-debug-slow-ops-pane",
   "private": true,
   "version": "0.0.1"
 }

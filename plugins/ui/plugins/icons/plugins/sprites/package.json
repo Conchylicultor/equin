@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-ui-icons-sprites",
+  "name": "@equin/plugin-ui-icons-sprites",
   "private": true,
   "version": "0.0.1",
   "description": "Serves and mounts the icon sprites: one <svg> of <symbol>s per style key, built on the server from the Iconify JSON for the manifest's names."

@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-fields-color-table",
+  "name": "@equin/plugin-fields-color-table",
   "version": "0.0.1",
   "private": true,
   "description": "Color field type: data-view table cell (read-only color swatch).",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

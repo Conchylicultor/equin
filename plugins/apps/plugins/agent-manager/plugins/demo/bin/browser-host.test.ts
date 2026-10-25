@@ -30,6 +30,7 @@
  * Run: `./equin test plugins/apps/plugins/agent-manager/plugins/demo`.
  */
 
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import { beforeAll, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
@@ -258,7 +259,9 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
   test("a key the host does not serve is refused as unserved, not as skew", async () => {
     const res = await host.request(
       new Request("http://demo.invalid/api/resources/nope", {
-        headers: { "x-singularity-build-graph": "some-other-build" },
+        headers: {
+          [`${LEGACY_IDS.headerPrefix}build-graph`]: "some-other-build",
+        },
       }),
     );
     expect(res.status).toBe(404);

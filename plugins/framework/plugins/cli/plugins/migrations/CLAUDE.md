@@ -50,7 +50,7 @@ overwrites the tip stays answerable. The run then:
   per-migration `<tag>_snapshot.json` into `legacy-snapshots.json`, delete it)
   when any is left. A no-op on a tree in shape.
 - holds drizzle-kit's emitted snapshot in memory; `phaseGeneratedMigrations`
-  stamps the `-- singularity:snapshot id=… parents=…` header (before
+  stamps the `snapshot` migration-marker header id=… parents=… (before
   `renameMigrations` hashes the file), and the body is written to
   `schema.snapshot.json` only once the schema migration is kept. A
   `--custom-migration` never writes it, and a discarded generation has nothing

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-debug-profiling-runtime",
+  "name": "@equin/plugin-debug-profiling-runtime",
   "private": true,
   "version": "0.0.1",
   "description": "Runtime HTTP/DB/loader profiling tables in the Gantt debug pane."

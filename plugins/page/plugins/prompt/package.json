@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-page-prompt",
+  "name": "@equin/plugin-page-prompt",
   "description": "Umbrella for the `/prompt` page block: the task↔block link data layer and the block type that launches agents from a page.",
   "private": true,
   "version": "0.0.1"

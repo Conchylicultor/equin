@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-cli-test",
+  "name": "@equin/plugin-framework-cli-test",
   "private": true,
   "version": "0.0.1",
   "description": "`./equin test` — the ONLY way to run tests: both runners (bun:test for co-located logic suites, vitest for jsdom suites), with a summary naming both buckets so a green-but-partial result is impossible."

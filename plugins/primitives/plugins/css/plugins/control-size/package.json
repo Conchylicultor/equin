@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-css-control-size",
+  "name": "@equin/plugin-primitives-css-control-size",
   "description": "Control-size standard: the shared control-* height scale and its enforcing lint rule (no-adhoc-control).",
   "private": true,
   "version": "0.0.1"

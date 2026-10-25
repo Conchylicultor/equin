@@ -4,8 +4,9 @@ import { join } from "node:path";
 import { HttpError } from "@plugins/infra/plugins/endpoints/core";
 import { implementMachine } from "@plugins/infra/plugins/endpoints/machine";
 import { saveScreenshotFile } from "../../shared/endpoints";
+import { PRODUCT_NAME } from "@plugins/framework/plugins/product-name/core";
 
-const DIR = join(tmpdir(), "singularity-screenshots");
+const DIR = join(tmpdir(), `${PRODUCT_NAME}-screenshots`);
 
 export const handleSaveFile = implementMachine(
   saveScreenshotFile,

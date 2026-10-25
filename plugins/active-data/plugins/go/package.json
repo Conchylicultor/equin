@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-active-data-go",
+  "name": "@equin/plugin-active-data-go",
   "private": true,
   "version": "0.0.1",
   "dependencies": {

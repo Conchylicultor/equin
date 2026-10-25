@@ -1,6 +1,7 @@
 import { readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { CLAUDE_USER_CONFIG } from "@plugins/infra/plugins/paths/core";
+import { PRODUCT_NAME } from "@plugins/framework/plugins/product-name/core";
 
 // Claude Code's user config: the per-directory trust answers live in its
 // `projects[<dir>].hasTrustDialogAccepted`, and a directory inherits trust from
@@ -79,7 +80,7 @@ export function ensureDirTrusted(dir: string, path = CLAUDE_USER_CONFIG): void {
   // Re-read right before writing: the transform applies to the newest text.
   const fresh = withDirTrusted(readFileSync(path, "utf8"), dir, path);
   if (fresh.kind === "unchanged") return;
-  const tmp = `${path}.singularity-${process.pid}.tmp`;
+  const tmp = `${path}.${PRODUCT_NAME}-${process.pid}.tmp`;
   writeFileSync(tmp, fresh.text, { mode: statSync(path).mode });
   renameSync(tmp, path);
 }

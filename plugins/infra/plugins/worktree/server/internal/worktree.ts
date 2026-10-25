@@ -11,6 +11,7 @@ import { attemptBranchName, attemptBranchRef } from "../../core";
 import { namespaceCollision, probeNamespace } from "./composition-namespace";
 import { withWorktreeMutateSlot } from "./mutate-gate";
 import { isSpareName, SPARE_LOCK_REASON } from "./spare-name";
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 
 let cachedRepoRoot: string | null = null;
 
@@ -217,7 +218,7 @@ export function isCanonicalWorktreePath(
 
 // Stamped into `.git/worktrees/<name>/locked`, so `git worktree list` says who
 // locked it and why rather than leaving a bare marker for a human to explain.
-const WORKTREE_LOCK_REASON = "singularity agent worktree";
+const WORKTREE_LOCK_REASON = LEGACY_IDS.worktreeLockReason;
 
 // One `git worktree lock --reason`, bounded. The outcome is the caller's to
 // read: an agent checkout logs a failed lock (see `ensureWorktreeLocked`), a

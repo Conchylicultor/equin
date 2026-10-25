@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-perfs-boot-trace",
+  "name": "@equin/plugin-primitives-perfs-boot-trace",
   "description": "Module-level client boot-span store (one-clock spans + Navigation/Paint Timing + first React commit), imported eagerly by the framework boot path.",
   "private": true,
   "version": "0.0.1"

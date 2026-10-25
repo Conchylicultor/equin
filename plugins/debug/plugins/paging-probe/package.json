@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-debug-paging-probe",
+  "name": "@equin/plugin-debug-paging-probe",
   "description": "Twin-probe paging-victim discriminator: three main-only child processes with controlled heap shapes measure event-loop lag under host memory pressure, so divergence between them separates scheduling from cold-page-fault mechanisms.",
   "private": true,
   "version": "0.0.1"

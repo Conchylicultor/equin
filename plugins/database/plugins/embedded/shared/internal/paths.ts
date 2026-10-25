@@ -1,5 +1,6 @@
 import { join } from "node:path";
 import { pgClusterDir } from "../../data-dirs";
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 
 // Per-instance port override. Default 5433 (dev cluster). A local release preview
 // runs PG alongside the dev cluster on the same host; PG binds no TCP listener,
@@ -18,16 +19,13 @@ function resolvePgPort(): number {
 }
 
 export const PG_PORT = resolvePgPort();
-export const PG_USER = "singularity";
+export const PG_USER = LEGACY_IDS.pgUser;
 
 // The base database, and main's namespace: the one database that is nobody's
 // copy. Every other database in the app — a worktree's fork, a served
 // composition's — is minted from this one, so the cluster is not usable until
-// it exists. Pinned to `MAIN_WORKTREE_NAME` by `paths.test.ts`: this module is
-// imported by a start script that deliberately reaches for nothing but node
-// builtins and its own `shared/`, so only a test can hold the two spellings
-// together.
-export const PG_BASE_DATABASE = "singularity";
+// it exists. Pinned to `MAIN_WORKTREE_NAME` by `paths.test.ts`.
+export const PG_BASE_DATABASE = LEGACY_IDS.pgBaseDatabase;
 
 export const PG_MAJOR = 18;
 export const MAX_CONNECTIONS = 500;

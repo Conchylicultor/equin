@@ -47,7 +47,7 @@ function resolveHttp(raw: string, base: string): string | null {
  */
 function scheduleRefreshScript(delayMs: number, absUrl: string): string {
   const urlLiteral = JSON.stringify(absUrl).replaceAll("<", "\\u003c");
-  return `<script>window.__singularityProxyScheduleRefresh(${delayMs},${urlLiteral})</script>`;
+  return `<script>window.__equinProxyScheduleRefresh(${delayMs},${urlLiteral})</script>`;
 }
 
 /**
@@ -90,7 +90,7 @@ const NAV_SCRIPT = `(function () {
   // through the same parent-driven \`navigate\` path as link clicks instead of
   // navigating the iframe straight to the (un-proxied) real origin. The URL is
   // already absolute (resolved server-side against the real document base).
-  window.__singularityProxyScheduleRefresh = function (delayMs, url) {
+  window.__equinProxyScheduleRefresh = function (delayMs, url) {
     try {
       if (!isHttp(url)) return;
       setTimeout(function () {

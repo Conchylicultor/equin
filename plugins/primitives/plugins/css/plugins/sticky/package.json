@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-css-sticky",
+  "name": "@equin/plugin-primitives-css-sticky",
   "description": "Sticky positioning layout primitive: <Sticky edge offset layer> pins a header/footer to a scroll edge with a z-layer-aware stacking level.",
   "private": true,
   "version": "0.0.1"

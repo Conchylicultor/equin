@@ -104,7 +104,7 @@ export async function defaultFleetSource(root: string): Promise<FleetSource> {
  * The MAIN composition is not a special case, it is the base case: its registry
  * IS the committed `web.generated.ts`, so this hands back `defaultFleetSource`.
  * Nothing else can be true — `generateCompositionRegistry` refuses to write a
- * `web.composition.singularity.generated.ts`, because a second spelling of the
+ * `web.composition.<main>.generated.ts`, because a second spelling of the
  * committed registry is the file that used to reconfigure main by merely
  * existing. The same equality is stated for the server registry in codegen's
  * `compositionRegistryFileName`.
@@ -113,7 +113,7 @@ export async function defaultFleetSource(root: string): Promise<FleetSource> {
  * every other composition (the artifact is content-addressed and dedups across
  * checkouts, so it is keyed by composition, never by namespace) while main keeps
  * the `composition-web-registry` slug it has always had — which is what makes
- * `build` and `build --composition singularity` produce the same artifact.
+ * a plain `build` and an explicit main-composition build produce the same artifact.
  */
 export async function compositionFleetSource(opts: {
   root: string;

@@ -1,8 +1,9 @@
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import type { ForestGranularity, SerializedBlock } from "../../core";
 
 /** Custom clipboard MIME carrying a serialized block forest (round-trips full
  *  structure); `text/plain` carries a markdown fallback for external apps. */
-export const BLOCKS_MIME = "application/x-singularity-blocks+json";
+export const BLOCKS_MIME = `${LEGACY_IDS.mimePrefix}blocks+json`;
 
 /**
  * The `BLOCKS_MIME` payload: a forest AND what it was copied as.

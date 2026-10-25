@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-virtual-rows",
+  "name": "@equin/plugin-primitives-virtual-rows",
   "private": true,
   "version": "0.0.1",
   "dependencies": {

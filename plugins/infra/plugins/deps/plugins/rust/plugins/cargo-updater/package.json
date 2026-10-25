@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-infra-deps-rust-cargo-updater",
+  "name": "@equin/plugin-infra-deps-rust-cargo-updater",
   "version": "0.0.1",
   "private": true,
   "description": "The cargo updater: keeps every rust/ crate's Cargo.lock current (crates.io releases past a 3-day cooldown, within each Cargo.toml's requirements), through the infra/deps updater registry."

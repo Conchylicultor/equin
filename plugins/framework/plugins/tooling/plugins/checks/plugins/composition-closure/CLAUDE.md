@@ -19,7 +19,7 @@ Fails loudly naming the composition and offending id.
 
 ## The main app's own row
 
-`singularity` (`MAIN_COMPOSITION_ID`) is an ordinary entry in the manifest whose
+The main composition (`MAIN_COMPOSITION_ID`) is an ordinary entry in the manifest whose
 entry points are the root pattern `["**"]` — every plugin. Two manifest-SHAPE
 rules protect it: it must be present **exactly once** (the id is a namespace, and
 `plugins-registry-in-sync` finds "the main composition" by that id to prove its

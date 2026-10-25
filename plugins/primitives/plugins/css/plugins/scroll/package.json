@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-css-scroll",
+  "name": "@equin/plugin-primitives-css-scroll",
   "description": "Scroll-container layout primitive: <Scroll axis fill> owns overflow AND the flex-child fill policy (min-h-0 flex-1) as one role.",
   "private": true,
   "version": "0.0.1"

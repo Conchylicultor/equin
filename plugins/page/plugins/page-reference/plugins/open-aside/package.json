@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-page-page-reference-open-aside",
+  "name": "@equin/plugin-page-page-reference-open-aside",
   "description": "Open-in-side-pane action on a page reference: contributes the one button into PageReference.Actions, present only where the host can actually give a second column.",
   "private": true,
   "version": "0.0.1"

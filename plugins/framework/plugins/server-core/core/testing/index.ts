@@ -35,7 +35,7 @@ export { withHostServices } from "../host-service";
 // portable boot test boots task-category's closure on PGlite).
 export { bootPluginGraph } from "../boot-stages";
 
-// The app's server registry (the committed `singularity` composition), for a
+// The app's server registry (the committed main composition), for a
 // suite that boots a slice of it: each entry's loader and its codegen-derived
 // `dependsOn`, from which a `dependsOn` closure is the graph to boot.
 export { serverEntries } from "../server.generated";

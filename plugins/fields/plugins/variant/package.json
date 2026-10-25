@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-fields-variant",
+  "name": "@equin/plugin-fields-variant",
   "version": "0.0.1",
   "private": true,
   "description": "Variant (discriminated/polymorphic object) field type: identity only — value is `{ type, ...payload }`.",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

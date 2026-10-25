@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-infra-jobs-deadline-audit",
+  "name": "@equin/plugin-infra-jobs-deadline-audit",
   "private": true,
   "version": "0.0.1"
 }

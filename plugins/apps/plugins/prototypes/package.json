@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-apps-prototypes",
+  "name": "@equin/plugin-apps-prototypes",
   "description": "Prototypes — browse, focus, compare, and iterate on throwaway UI design mockups served from the host-global prototypes data dir (the `apps/prototypes` declaration), outside any checkout.",
   "private": true,
   "version": "0.0.1",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

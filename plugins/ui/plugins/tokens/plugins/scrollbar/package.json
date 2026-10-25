@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-ui-tokens-scrollbar",
+  "name": "@equin/plugin-ui-tokens-scrollbar",
   "private": true,
   "version": "0.0.1",
   "description": "Scrollbar token group: the thumb and track colours of the native scrollbar."

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-css-clip",
+  "name": "@equin/plugin-primitives-css-clip",
   "description": "Clipping layout primitive: <Clip axis fill> hides overflow without scrolling. Sibling of Scroll, kept orthogonal.",
   "private": true,
   "version": "0.0.1"

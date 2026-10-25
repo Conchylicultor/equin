@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-pages-page-author",
+  "name": "@equin/plugin-apps-pages-page-author",
   "description": "Page-kind control in the page-detail header: page, agent page, or instructions (global or not).",
   "private": true,
   "version": "0.0.1"

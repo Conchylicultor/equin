@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-sonata-rich-chord-label",
+  "name": "@equin/plugin-apps-sonata-rich-chord-label",
   "description": "Sonata chord-label preference: the shared symbol/numeral/both display mode driving the piano-roll overlay and progression strip.",
   "private": true,
   "version": "0.0.1"

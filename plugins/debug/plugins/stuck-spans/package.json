@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-debug-stuck-spans",
+  "name": "@equin/plugin-debug-stuck-spans",
   "description": "Files a report while an operation is still stuck, instead of only once it finishes.",
   "private": true,
   "version": "0.0.1"

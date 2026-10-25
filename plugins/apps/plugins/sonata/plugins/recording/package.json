@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-sonata-recording",
+  "name": "@equin/plugin-apps-sonata-recording",
   "description": "Sonata recording: a song's YouTube video (RecordingVideo) with its volume, made the transport's clock when the score is timed on it (Score.meta.recording), with a sync offset.",
   "private": true,
   "version": "0.0.1"

@@ -12,7 +12,7 @@ export { databaseForkJob } from "./internal/fork-job";
 
 export default {
   description:
-    "Durable, self-healing worktree DB fork: a graphile job that forks the singularity DB per worktree (idempotent, atomic), plus a scheduled sweep of orphaned temp forks.",
+    "Durable, self-healing worktree DB fork: a graphile job that forks the base DB per worktree (idempotent, atomic), plus a scheduled sweep of orphaned temp forks.",
   httpRoutes: {
     [getForkExclusions.route]: handleGetForkExclusions,
   },

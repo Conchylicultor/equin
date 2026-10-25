@@ -10,16 +10,20 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { listDirNames } from "./worktree-dirs";
+import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
 
 describe("listDirNames", () => {
   test("keeps directories, skips non-directory entries (.DS_Store shape)", () => {
     const dir = mkdtempSync(join(tmpdir(), "worktree-dirs-"));
     try {
       mkdirSync(join(dir, "claude-123"));
-      mkdirSync(join(dir, "singularity"));
+      mkdirSync(join(dir, MAIN_WORKTREE_NAME));
       writeFileSync(join(dir, ".DS_Store"), "finder junk");
       writeFileSync(join(dir, "att-abc.json"), "{}");
-      expect(listDirNames(dir).sort()).toEqual(["claude-123", "singularity"]);
+      expect(listDirNames(dir).sort()).toEqual([
+        "claude-123",
+        MAIN_WORKTREE_NAME,
+      ]);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

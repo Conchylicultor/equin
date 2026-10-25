@@ -55,7 +55,7 @@ advise() {
 if [ "$(id -u)" = "0" ]; then
   miss "Running as root" \
     "Postgres' initdb refuses to run as root, so the embedded cluster (and every backend) cannot start. Run as a non-root user." \
-    "adduser --disabled-password --gecos '' singularity && su - singularity"
+    "adduser --disabled-password --gecos '' equin && su - equin"
 fi
 
 # ── Xcode command-line tools (macOS) and a working git ──────────────────────

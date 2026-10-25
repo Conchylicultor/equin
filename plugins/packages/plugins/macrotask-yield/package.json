@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-packages-macrotask-yield",
+  "name": "@equin/plugin-packages-macrotask-yield",
   "private": true,
   "version": "0.0.1",
   "description": "Macrotask yield: yieldMacrotask() resolves on a later event-loop turn (scheduler.yield, else setImmediate, else setTimeout 0), so due timers and I/O callbacks run first — which a microtask yield never allows; createTurnQueue() gives concurrent callers one turn each, in call order."

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-css-card",
+  "name": "@equin/plugin-primitives-css-card",
   "description": "Card chrome primitive (rounded + border + bg + padding) with the Ctrl+A select-scope baked into its root, so cards are a sanctioned home for ad-hoc card markup.",
   "private": true,
   "version": "0.0.1"

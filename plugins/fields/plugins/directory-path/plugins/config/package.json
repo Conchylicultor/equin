@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-fields-directory-path-config",
+  "name": "@equin/plugin-fields-directory-path-config",
   "description": "Directory-path field type: config-render capability (folder picker) plus the dirPathField factory.",
   "private": true,
   "version": "0.0.1",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

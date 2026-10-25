@@ -252,7 +252,7 @@ const MIGRATION_NAME_REGEX = /^[a-z0-9_]+$/;
 // custom migrations, so is its content hash (b3cc75fa) — and the runner keys
 // applied-state by that hash (the filename's sha8). Two custom migrations would
 // therefore claim the same hash, and the second is silently skipped by the
-// runner (the hash is a PRIMARY KEY in __singularity_migrations). Before hashing
+// runner (the hash is a PRIMARY KEY of the applied-migrations table). Before hashing
 // in renameMigrations we rewrite the placeholder to embed the migration's unique
 // timestamp+slug, giving every custom migration a distinct content hash while
 // preserving the filename-hash == sha256(content) invariant the push-time

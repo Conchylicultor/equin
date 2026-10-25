@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-infra-host-host-admission",
+  "name": "@equin/plugin-infra-host-host-admission",
   "version": "0.0.1",
   "private": true,
   "description": "Host-admission registry: one place a host-wide concurrency pool comes into existence, with one summed CPU/RAM ceiling and true host occupancy."

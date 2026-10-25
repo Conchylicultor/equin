@@ -15,6 +15,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnExpectOk } from "@plugins/infra/plugins/spawn/core";
 import { GIT } from "@plugins/infra/plugins/paths/server";
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import {
   GitError,
   WorktreeGoneError,
@@ -74,7 +75,7 @@ async function commit(
   if (trailers) {
     args.push(
       "-m",
-      `Singularity-Conversation: ${trailers.conv}\nSingularity-Push: ${trailers.push}`,
+      `${LEGACY_IDS.conversationTrailer}: ${trailers.conv}\n${LEGACY_IDS.pushTrailer}: ${trailers.push}`,
     );
   }
   await git(repo, ...args);

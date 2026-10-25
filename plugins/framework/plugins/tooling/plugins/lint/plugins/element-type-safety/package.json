@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-tooling-lint-element-type-safety",
+  "name": "@equin/plugin-framework-tooling-lint-element-type-safety",
   "version": "0.0.1",
   "private": true,
   "description": "element-type-safety lint rule: no-post-mount-element-type"

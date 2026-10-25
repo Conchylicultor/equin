@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-tooling-import-closure",
+  "name": "@equin/plugin-framework-tooling-import-closure",
   "version": "0.0.1",
   "private": true,
   "description": "Static import-closure measurement (importClosure): the exact repo modules an entrypoint loads, the tree-shaken live subset, the npm specifiers it reaches, and the import chain to any one module — measured with Bun.build so it cannot drift from what actually loads."

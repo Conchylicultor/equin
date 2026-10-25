@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-tooling-lint-guard-path-safety",
+  "name": "@equin/plugin-framework-tooling-lint-guard-path-safety",
   "version": "0.0.1",
   "private": true,
   "description": "guard-path-safety lint rule: no-adhoc-path-resolve"

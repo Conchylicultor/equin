@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-fields-list-config",
+  "name": "@equin/plugin-fields-list-config",
   "version": "0.0.1",
   "private": true,
   "description": "List field type: config-render capability (sortable drag-and-drop list) plus the listField factory.",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

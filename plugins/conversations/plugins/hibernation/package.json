@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-conversations-hibernation",
+  "name": "@equin/plugin-conversations-hibernation",
   "private": true,
   "version": "0.0.1"
 }

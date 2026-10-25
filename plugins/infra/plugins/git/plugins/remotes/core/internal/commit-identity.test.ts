@@ -13,6 +13,7 @@ import {
 } from "./commit-identity";
 import { gitConfigGet, gitConfigSet } from "./git-config";
 import type { PublishTarget } from "./types";
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 
 const LOCAL: PublishTarget = { kind: "local", reason: { kind: "no-remote" } };
 const PUBLISH: PublishTarget = {
@@ -81,7 +82,7 @@ describe("ensureCommitIdentity (real git)", () => {
     const first = await ensureCommitIdentity(root, LOCAL);
     expect(first).toMatchObject({ kind: "auto", written: true });
     if (first.kind !== "auto") throw new Error("unreachable");
-    expect(first.email).toEndWith("@singularity.invalid");
+    expect(first.email).toEndWith(`@${LEGACY_IDS.autoIdentityDomain}`);
     expect(await gitConfigGet(AUTO_IDENTITY_KEY, root)).toBe(first.email);
 
     const again = await ensureCommitIdentity(root, LOCAL);

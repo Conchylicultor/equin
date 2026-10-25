@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-sonata-audio-sample-loader",
+  "name": "@equin/plugin-apps-sonata-audio-sample-loader",
   "description": "Sonata audio sample loader: one smplr SampleLoader per AudioContext, shared by every instrument instance so N copies of an instrument cost one download and one decode.",
   "private": true,
   "version": "0.0.1",

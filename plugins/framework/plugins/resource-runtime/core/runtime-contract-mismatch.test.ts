@@ -29,6 +29,7 @@ import { z } from "zod";
 import { ResourceContractError } from "@plugins/packages/plugins/resource-protocol/core";
 import { createHarness, tick } from "./test-support";
 import type { ResourceRuntimeOptions } from "./runtime";
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 
 /** A contract whose tuples must name `limit` — what `build.history` declares. */
 function limitContract(key: string) {
@@ -180,7 +181,9 @@ describe("contract mismatch — HTTP", () => {
     h.runtime.handleResourceHttp(
       new Request(`http://x/api/resources/${path}`, {
         headers:
-          build !== undefined ? { "x-singularity-build-graph": build } : {},
+          build !== undefined
+            ? { [`${LEGACY_IDS.headerPrefix}build-graph`]: build }
+            : {},
       }),
       { key: path.split("?")[0]! },
     );

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-debug-trace-contention",
+  "name": "@equin/plugin-debug-trace-contention",
   "description": "Built-in trace event class: the cluster-wide system-contention snapshot (OS load average + Postgres backend counts) resolved asynchronously during enrich via getContentionSnapshot.",
   "private": true,
   "version": "0.0.1"

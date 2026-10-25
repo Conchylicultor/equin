@@ -93,7 +93,7 @@ import { loadBlockScope, type BlockScopePageRow } from "./read";
  * Provenance: agent-origin does NOT apply, on purpose
  * ---------------------------------------------------------------------------
  *
- * `agentOriginCreateHook` reads the `x-singularity-origin` header off an HTTP
+ * `agentOriginCreateHook` reads the the origin header header off an HTTP
  * `Request` and marks whole PAGES an automated session created, for a 24h
  * retention sweep of e2e debris. A markdown apply has no `Request` (it runs from
  * an MCP tool), and the one page it can create — an agent-authored page minted

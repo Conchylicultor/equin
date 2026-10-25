@@ -31,13 +31,15 @@
 // Pure module: no imports that pull in a DB pool, so it stays import-safe for
 // tooling/check subprocesses (which declare no runtime namespace).
 
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
+
 /**
  * Public table created imperatively by the migration runner
  * (`plugins/database/plugins/migrations/server/internal/runner.ts`) — the
  * applied-state ledger keyed by migration hash. Not present in the drizzle
  * snapshot; the orphaned-db-tables check treats it as declared.
  */
-export const MIGRATIONS_TABLE_NAME = "__singularity_migrations";
+export const MIGRATIONS_TABLE_NAME = `__${LEGACY_IDS.dbObjectPrefix}_migrations`;
 
 /**
  * Public table created imperatively by the derived-view rebuilder

@@ -1,6 +1,6 @@
 import { mkdir, readdir, readFile, rename, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { isSingularityProjectDir } from "./classify-projects";
+import { isRepoProjectDir } from "./classify-projects";
 import type { FilePartial } from "./usage-index";
 
 // ─── What this is ──────────────────────────────────────────────────────────────
@@ -67,7 +67,7 @@ export interface ArchiveEntry {
    * predicate is a match on the encoded project dir against the current repo
    * basename, which stops matching the moment the repo is renamed.
    */
-  isSingularity: boolean;
+  isRepo: boolean;
 }
 
 /** The live conversation metadata `mergeLive` snapshots, keyed by Claude session id. */
@@ -174,7 +174,7 @@ function normalizeEntry(shardPath: string, key: string, value: unknown): Archive
     partial: partial as FilePartial,
     title: typeof title === "string" ? title : null,
     conversationId: typeof conversationId === "string" ? conversationId : null,
-    isSingularity: raw["isSingularity"] === true,
+    isRepo: raw["isRepo"] === true,
   };
 }
 
@@ -185,7 +185,7 @@ function normalizeEntry(shardPath: string, key: string, value: unknown): Archive
  *
  * - a path in the archive and ABSENT from live **survives untouched** — that is
  *   the whole point of the archive, and the entry keeps its own `schemaVersion`,
- *   its snapshotted `isSingularity`, and any unknown future fields;
+ *   its snapshotted `isRepo`, and any unknown future fields;
  * - a path only in live becomes a new entry stamped at `ARCHIVE_SCHEMA_VERSION`;
  * - a path in both takes the live partial, **unless** the live partial carries
  *   fewer total tokens than the banked one. That is an in-place truncation, so the
@@ -217,7 +217,7 @@ export function mergeLive(
     // Recomputed at capture for paths we can still see; an archive-only entry
     // keeps whatever was true when it was captured (a rename must not retroac-
     // tively unclassify years of history).
-    const isSingularity = isSingularityProjectDir(partial.projectDir, repoBasename);
+    const isRepo = isRepoProjectDir(partial.projectDir, repoBasename);
 
     if (archived && partial.totalTokens < archived.partial.totalTokens) {
       shrunk.push({
@@ -228,7 +228,7 @@ export function mergeLive(
       });
       // Keep the banked partial (and its version); still refresh the metadata,
       // which is not what shrank.
-      merged.set(path, { ...archived, title, conversationId, isSingularity });
+      merged.set(path, { ...archived, title, conversationId, isRepo });
       continue;
     }
 
@@ -240,7 +240,7 @@ export function mergeLive(
       partial,
       title,
       conversationId,
-      isSingularity,
+      isRepo,
     });
   }
 

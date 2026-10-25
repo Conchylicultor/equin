@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-fields-bool-table",
+  "name": "@equin/plugin-fields-bool-table",
   "version": "0.0.1",
   "private": true,
   "description": "Boolean field type: data-view table cell (read-only check/dash cell).",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

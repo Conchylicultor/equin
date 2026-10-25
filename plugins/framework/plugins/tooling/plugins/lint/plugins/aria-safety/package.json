@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-tooling-lint-aria-safety",
+  "name": "@equin/plugin-framework-tooling-lint-aria-safety",
   "version": "0.0.1",
   "private": true,
   "description": "aria-safety lint rule: no-orphan-composite-role"

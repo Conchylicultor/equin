@@ -5,7 +5,7 @@ import {
   pendingMigrationFiles,
 } from "./orphaned-tables";
 
-const ALLOWLIST = ["__singularity_migrations", "derived_view_state"] as const;
+const ALLOWLIST = ["__ledger_table", "derived_view_state"] as const;
 
 describe("declaredTablesFromSnapshot", () => {
   test("extracts the bare `name` of each public table", () => {
@@ -29,19 +29,19 @@ describe("declaredTablesFromSnapshot", () => {
 
 describe("computeOrphans", () => {
   test("flags a live table that is neither declared nor allowlisted", () => {
-    const live = ["foo", "bar", "__singularity_migrations", "zombie"];
+    const live = ["foo", "bar", "__ledger_table", "zombie"];
     const declared = new Set(["foo", "bar"]);
     expect(computeOrphans(live, declared, ALLOWLIST)).toEqual(["zombie"]);
   });
 
   test("no orphans when live ⊆ declared ∪ allowlist", () => {
-    const live = ["foo", "bar", "__singularity_migrations", "derived_view_state"];
+    const live = ["foo", "bar", "__ledger_table", "derived_view_state"];
     const declared = new Set(["foo", "bar"]);
     expect(computeOrphans(live, declared, ALLOWLIST)).toEqual([]);
   });
 
   test("allowlist members are never flagged even if undeclared", () => {
-    const live = ["__singularity_migrations", "derived_view_state"];
+    const live = ["__ledger_table", "derived_view_state"];
     const declared = new Set<string>();
     expect(computeOrphans(live, declared, ALLOWLIST)).toEqual([]);
   });

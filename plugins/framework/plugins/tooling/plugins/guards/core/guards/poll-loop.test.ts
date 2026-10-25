@@ -82,7 +82,7 @@ describe("poll-loop guard", () => {
   describe("the loop from conv-1786116592-b70n", () => {
     const polls = [25, 30, 35, 40].map(
       (n) =>
-        `cat ${TASK} 2>/dev/null | tail -${n}; pgrep -f "singularity push" >/dev/null && echo running || echo finished`,
+        `cat ${TASK} 2>/dev/null | tail -${n}; pgrep -f "equin push" >/dev/null && echo running || echo finished`,
     );
 
     test("the first three looks are allowed", () => {

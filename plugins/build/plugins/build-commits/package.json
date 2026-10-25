@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-build-build-commits",
+  "name": "@equin/plugin-build-build-commits",
   "private": true,
   "version": "0.0.1"
 }

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-infra-deps-python-uv-updater",
+  "name": "@equin/plugin-infra-deps-python-uv-updater",
   "version": "0.0.1",
   "private": true,
   "description": "The uv updater: keeps every python/ project's uv.lock and exact .python-version (CPython) current under a 3-day cooldown, through the infra/deps updater registry."

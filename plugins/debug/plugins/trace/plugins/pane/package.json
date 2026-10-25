@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-debug-trace-pane",
+  "name": "@equin/plugin-debug-trace-pane",
   "description": "Debug → Slow Events: the tabbed pane host (Events list + detail Gantt) over the durable trace store, and the SlowEvents.View tab slot the Slow Ops aggregate/cluster views merge into.",
   "private": true,
   "version": "0.0.1"

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-optimistic-mutation",
+  "name": "@equin/plugin-primitives-optimistic-mutation",
   "private": true,
   "version": "0.0.1",
   "description": "Optimistic-mutation primitive over live-state: overlay/replay of pending ops on server truth via useOptimisticResource."

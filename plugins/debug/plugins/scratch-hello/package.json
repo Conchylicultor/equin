@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-debug-scratch-hello",
+  "name": "@equin/plugin-debug-scratch-hello",
   "private": true,
   "version": "0.0.1"
 }

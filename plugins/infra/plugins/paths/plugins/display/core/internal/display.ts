@@ -1,4 +1,4 @@
-// The HUMAN-FACING spelling of the singularity data dirs — what a message, a
+// The HUMAN-FACING spelling of the data dirs — what a message, a
 // UI empty state, or an agent prompt writes when it tells somebody where a
 // directory is. The twin of the resolved absolute paths in
 // `paths/core/internal/paths.ts`: same directory, written the way a person

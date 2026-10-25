@@ -24,7 +24,7 @@ export const getTimeline = defineEndpoint({
 
 // One fan-out unit's result: a (source, worktree) cell. `worktree` is the
 // fork DB name for DB-backed sources — fork DB names ARE worktree slugs (the
-// main DB "singularity" is MAIN_WORKTREE_NAME), the same identity mapping the
+// main DB is MAIN_WORKTREE_NAME), the same identity mapping the
 // cluster tab uses — and the worktree log-dir name for disk-backed sources.
 export const TimelineChunkSchema = z.discriminatedUnion("ok", [
   z.object({

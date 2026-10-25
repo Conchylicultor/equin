@@ -13,7 +13,7 @@ import type {
  * it meant "which namespace is this BACKEND the server for". An agent's pane was
  * spawned by main's backend and inherited the variable through the tmux server's
  * environment, so inside a worktree checkout it was always present and always
- * said `singularity`. A script that read it therefore drove MAIN's app from a
+ * named the main namespace. A script that read it therefore drove MAIN's app from a
  * worktree and printed `ALL CHECKS PASSED` — it did exercise an app, just not
  * the one under test, and the transcript recorded a green run against code the
  * change was not in. That variable is gone now

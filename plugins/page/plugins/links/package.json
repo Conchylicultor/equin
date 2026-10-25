@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-page-links",
+  "name": "@equin/plugin-page-links",
   "description": "Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource.",
   "private": true,
   "version": "0.0.1"

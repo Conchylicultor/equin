@@ -75,7 +75,7 @@ async function loadClosureContext(): Promise<ClosureContext> {
   const values = readEffectiveConfigFromDisk(compositionsConfig, {
     root: REPO_ROOT,
     // The CHECKOUT's namespace, minted from git. A CLI process has no runtime
-    // namespace; reading one used to answer `singularity` from every worktree,
+    // namespace; reading one used to answer the main namespace from every worktree,
     // so a converge launched from a worktree read MAIN's compositions config.
     userConfigDir: configDir.file(await checkoutNamespace(REPO_ROOT)),
     hierarchyPath: COMPOSITIONS_HIERARCHY_PATH,

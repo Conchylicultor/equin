@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-sonata-rhythm",
+  "name": "@equin/plugin-apps-sonata-rhythm",
   "description": "Rhythm-necklace data model for Sonata: preset onset patterns (Tresillo, Son, Bossa Nova, …) plus pure rotate/resample/toggle operations. A framework-free leaf shared by the rhythm circle and the per-hand chord-grid grooves.",
   "private": true,
   "version": "0.0.1"

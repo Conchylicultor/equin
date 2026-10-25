@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-debug-boot-budget",
+  "name": "@equin/plugin-debug-boot-budget",
   "description": "Boot-budget monitor: files a deduped Debug → Reports signal when a server boot hook (onReadyBlocking / onReady / onAllReady) or warmup span exceeds its per-phase wall-time budget, so a heavy boot hook is loud immediately. Includes the boot-budget report-kind renderer and the per-phase budget config.",
   "private": true,
   "version": "0.0.1"

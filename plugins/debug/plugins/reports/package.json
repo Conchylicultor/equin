@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-debug-reports",
+  "name": "@equin/plugin-debug-reports",
   "private": true,
   "version": "0.0.1"
 }

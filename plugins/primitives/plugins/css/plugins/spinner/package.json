@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-css-spinner",
+  "name": "@equin/plugin-primitives-css-spinner",
   "description": "Spinning refresh icon for loading states.",
   "private": true,
   "version": "0.0.1"

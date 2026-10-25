@@ -1,6 +1,6 @@
 // SharedWorker entry: the out-of-thread watchdog for every tab of this origin
 // (one per build — its identity is this script's content-addressed URL plus
-// WATCHDOG_WORKER_NAME). A frozen tab cannot report itself, so this thread pings
+// the name the page starts it under). A frozen tab cannot report itself, so this thread pings
 // each tab at 1 Hz and notices the silence. Built by vite as its own
 // self-contained chunk: import maps do not reach workers, so it imports only
 // this plugin's own files (the web-artifacts inline audit enforces it).
@@ -10,7 +10,13 @@
 // sampler). It runs only while a visible tab is attached or a stall is in
 // flight (needsClock).
 
-import { STALL, portLockName, workerLockName } from "./internal/constants";
+import {
+  STALL,
+  portLockName,
+  prefixOfWorkerName,
+  stallDbName,
+  workerLockName,
+} from "./internal/constants";
 import type { TabToWorker, WorkerToTab } from "./internal/protocol";
 import {
   createStallMachine,
@@ -39,6 +45,11 @@ function boot(): void {
       "main-thread-stall watchdog: navigator.locks is unavailable in this SharedWorker — tab liveness cannot be tracked",
     );
   }
+  // The page names the worker `<prefix>:main-thread-stall`; every lock and the
+  // IndexedDB take the same prefix, so the worker never spells it.
+  const prefix = prefixOfWorkerName(
+    (globalThis as unknown as { name: string }).name,
+  );
   const workerId = crypto.randomUUID();
   const machine = createStallMachine({
     workerId,
@@ -46,7 +57,10 @@ function boot(): void {
   });
   const ports = new Map<string, PortLike>();
   let timer: ReturnType<typeof setInterval> | null = null;
-  const storeReady: Promise<StallStore> = openStallStore(indexedDB);
+  const storeReady: Promise<StallStore> = openStallStore(
+    indexedDB,
+    stallDbName(prefix),
+  );
 
   const fatal = (err: unknown): void => {
     const message = `main-thread-stall watchdog: ${err instanceof Error ? err.message : String(err)}`;
@@ -106,7 +120,7 @@ function boot(): void {
   // Held for this worker's whole life: while held, its stored stalls are its
   // own; once free (the worker died), the next watchdog adopts them.
   void locks.request(
-    workerLockName(workerId),
+    workerLockName(prefix, workerId),
     () => new Promise<void>(() => {}),
   );
 
@@ -118,7 +132,7 @@ function boot(): void {
       for (const rec of await store.all()) {
         if (rec.owner === workerId) continue;
         await locks.request(
-          workerLockName(rec.owner),
+          workerLockName(prefix, rec.owner),
           { ifAvailable: true },
           async (lock) => {
             if (lock === null) return; // its owner is alive
@@ -160,7 +174,7 @@ function boot(): void {
           // Queued behind the tab's own hold of this lock: granted ⇒ the tab is
           // gone (reloaded, closed, killed) — the one liveness signal a
           // SharedWorker gets, and the one a frozen tab still passes.
-          void locks.request(portLockName(id), () => {
+          void locks.request(portLockName(prefix, id), () => {
             if (ports.get(id) === port) {
               ports.delete(id);
               feed({ type: "gone", portId: id, now: Date.now() });

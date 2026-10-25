@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-deploy-deploy-history-investigate-failure",
+  "name": "@equin/plugin-apps-deploy-deploy-history-investigate-failure",
   "description": "Row action on a failed deploy run that launches an agent to investigate it.",
   "private": true,
   "version": "0.0.1"

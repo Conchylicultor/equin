@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
 import {
   copyFileSync,
   existsSync,
@@ -44,7 +45,7 @@ function app(id: string, name: string): ShimApp {
     id,
     name,
     url: `http://equin.localhost:9000/${id}`,
-    namespace: "singularity",
+    namespace: MAIN_WORKTREE_NAME,
     iconSvg: `<svg>${id}</svg>`,
   };
 }

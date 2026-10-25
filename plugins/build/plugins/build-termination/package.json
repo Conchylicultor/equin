@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-build-build-termination",
+  "name": "@equin/plugin-build-build-termination",
   "private": true,
   "version": "0.0.1"
 }

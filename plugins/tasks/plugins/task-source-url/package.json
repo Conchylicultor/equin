@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-tasks-task-source-url",
+  "name": "@equin/plugin-tasks-task-source-url",
   "private": true,
   "version": "0.0.1"
 }

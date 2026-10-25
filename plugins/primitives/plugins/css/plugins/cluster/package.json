@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-css-cluster",
+  "name": "@equin/plugin-primitives-css-cluster",
   "description": "Wrap-friendly chip group layout primitive: <Cluster> lays out a wrapping row of rigid identity chips that never individually shrink, delegating to Stack.",
   "private": true,
   "version": "0.0.1"

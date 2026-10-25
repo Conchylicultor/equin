@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-overlay-floating-action",
+  "name": "@equin/plugin-primitives-overlay-floating-action",
   "description": "CSS group-hover floating action that morphs from a collapsed pill to an expanded panel with animated dimensions, background, and shadow.",
   "private": true,
   "version": "0.0.1"

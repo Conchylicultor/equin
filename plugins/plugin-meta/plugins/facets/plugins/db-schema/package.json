@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-plugin-meta-facets-db-schema",
+  "name": "@equin/plugin-plugin-meta-facets-db-schema",
   "version": "0.0.1",
   "private": true
 }

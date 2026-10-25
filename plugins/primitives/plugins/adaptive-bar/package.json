@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-adaptive-bar",
+  "name": "@equin/plugin-primitives-adaptive-bar",
   "description": "Overflow as relocation: the pure fit math (rung assignment, width ledger, dock move plan) behind a bar that shrinks its widgets and relocates the rest without rendering any of them twice.",
   "private": true,
   "version": "0.0.1",

@@ -23,6 +23,7 @@ import {
   renderEagerTierManifest,
 } from "./eager-tier-gen";
 import type { RegistryGenContext } from "./plugin-registry-gen";
+import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
 
 describe("isAppContent", () => {
   test("app content = apps/plugins/<app>/plugins/<child> with child !== shell", () => {
@@ -388,7 +389,7 @@ describe("the scan over a file set", () => {
       tree,
       graph: classifyEdges(tree),
       mainBundle: new Set(nodes.map((n) => n.id)),
-      main: { id: "singularity", home: null },
+      main: { id: MAIN_COMPOSITION_ID, home: null },
       repo: () => Promise.resolve(repo),
       dirScans: new Map(),
       browserHostGraphs: new Map(),

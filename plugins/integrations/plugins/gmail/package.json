@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-integrations-gmail",
+  "name": "@equin/plugin-integrations-gmail",
   "description": "Gmail OAuth connection: a Settings toggle that requests Gmail scopes on the shared Google connection so other plugins can call the Gmail API.",
   "private": true,
   "version": "0.0.1"

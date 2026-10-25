@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-collapsible-card",
+  "name": "@equin/plugin-conversations-conversation-view-jsonl-viewer-collapsible-card",
   "private": true,
   "version": "0.0.1"
 }

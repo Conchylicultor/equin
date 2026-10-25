@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-database-sql-rows",
+  "name": "@equin/plugin-database-sql-rows",
   "version": "0.0.1",
   "private": true,
   "description": "Parsed raw-SQL row reads: queryRows / executeRows parse every row against a ZodParser and throw a SqlRowError naming the column, the value and its Postgres type OID — closing the pool.query<T>() assertion hole."

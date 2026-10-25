@@ -192,8 +192,7 @@ export function ServeTargetPanel({
                   <>
                     This wipes this composition&apos;s database and config so
                     you see exactly what a new user gets. The main app&apos;s
-                    data (the <code>singularity</code> database and its config)
-                    is not touched.
+                    data (the main database and its config) is not touched.
                   </>
                 ),
                 confirmLabel: "Reset to first-launch",

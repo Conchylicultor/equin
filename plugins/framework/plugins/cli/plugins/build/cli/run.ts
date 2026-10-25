@@ -155,7 +155,7 @@ async function getCurrentBranch(): Promise<string> {
 }
 
 // Self-heal `core.hooksPath`. `.githooks/prepare-commit-msg` is how each
-// commit gets its Singularity-Conversation trailer, which in turn is how the
+// commit gets its conversation trailer, which in turn is how the
 // pushes ledger attributes commits back to the originating task;
 // `.githooks/post-rewrite` is what normalizes generated artifacts after a
 // manual rebase. Drift here is silent in both cases — orphaned pushes, or a
@@ -1105,7 +1105,7 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
   // no fork, no job — so it is checked once and never waited for. The predicate
   // is git's answer (`checkoutRef`), never a comparison against the namespace
   // string: a linked worktree whose directory happens to be named
-  // `singularity` mints the same namespace as main.
+  // `equin` mints the same namespace as main.
   if (targets.some((t) => t.isMainComposition)) {
     const isMainCheckout = checkout.kind === "main";
     endSpan = buildProfilerStart(

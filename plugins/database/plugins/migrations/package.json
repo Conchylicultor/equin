@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-database-migrations",
+  "name": "@equin/plugin-database-migrations",
   "private": true,
   "version": "0.0.1",
   "dependencies": {

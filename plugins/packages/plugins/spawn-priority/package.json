@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-packages-spawn-priority",
+  "name": "@equin/plugin-packages-spawn-priority",
   "private": true,
   "version": "0.0.1"
 }

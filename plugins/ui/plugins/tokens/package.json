@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-ui-tokens",
+  "name": "@equin/plugin-ui-tokens",
   "private": true,
   "version": "0.0.1",
   "description": "Umbrella for CSS token group plugins (color-palette, shape, sidebar-palette)."

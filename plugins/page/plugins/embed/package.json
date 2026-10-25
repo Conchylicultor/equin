@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-page-embed",
+  "name": "@equin/plugin-page-embed",
   "description": "Embed block type: render an external URL (YouTube, Vimeo, …) in a sandboxed iframe.",
   "private": true,
   "version": "0.0.1"

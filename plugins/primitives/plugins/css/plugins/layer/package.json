@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-css-layer",
+  "name": "@equin/plugin-primitives-css-layer",
   "description": "Full-bleed layer layout primitive: <Layer> / layerClasses() is a standalone absolute inset-0 child of a positioned parent. The element-shaped sibling of Overlay's behind/above props.",
   "private": true,
   "version": "0.0.1"

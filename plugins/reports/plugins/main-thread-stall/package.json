@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-reports-main-thread-stall",
+  "name": "@equin/plugin-reports-main-thread-stall",
   "private": true,
   "version": "0.0.1"
 }

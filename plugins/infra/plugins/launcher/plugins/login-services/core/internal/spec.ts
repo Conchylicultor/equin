@@ -15,7 +15,7 @@ export type LoginServiceSession = "background" | "graphical";
 
 /** Which service a manager is asked about: what `stop` knows without ensuring anything. */
 export interface LoginServiceId {
-  /** The service label (launchd `Label`, systemd unit name stem), e.g. `dev.singularity.gateway`. */
+  /** The service label (launchd `Label`, systemd unit name stem), e.g. the gateway's (`LEGACY_IDS.launchdLabel`). */
   label: string;
   session: LoginServiceSession;
 }

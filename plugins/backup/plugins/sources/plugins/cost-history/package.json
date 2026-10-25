@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-backup-sources-cost-history",
+  "name": "@equin/plugin-backup-sources-cost-history",
   "private": true,
   "version": "0.0.1"
 }

@@ -31,7 +31,7 @@ so a checkout that loses write access lands in local mode next time instead of
 failing forever.
 
 `--from-main` in local mode has no rebase at all (there is no `origin/main` to
-replay onto), so the commit carries the `Singularity-Push` trailer itself
+replay onto), so the commit carries the push trailer itself
 instead of receiving it from the rebase's `--exec`.
 
 ## The critical section
@@ -42,7 +42,7 @@ machine's main app is served from, it is the single slot of the `push` host pool
 — `~/.singularity/locks/push/slot-0.lock` — and who holds it and who queues on it
 is read from the op log (the push's `push-mutex` wait and its `granted`), not
 from the lock file. Any other repository (a second clone, an e2e's temp repo)
-locks in its own git dir (`<common-dir>/singularity-locks/push/`), so its push
+locks in its own git dir (`<common-dir>/<git lock dir>/push/`), so its push
 never queues the machine's real pushes. Either way at most one push per
 repository runs at a time, so two agents can never race on one `main`.
 

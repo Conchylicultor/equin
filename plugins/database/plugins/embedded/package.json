@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-database-embedded",
+  "name": "@equin/plugin-database-embedded",
   "private": true,
   "version": "0.0.1",
   "optionalDependencies": {

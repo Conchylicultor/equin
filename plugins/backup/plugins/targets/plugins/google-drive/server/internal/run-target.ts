@@ -1,4 +1,5 @@
 import { basename } from "node:path";
+import { PRODUCT_NAME } from "@plugins/framework/plugins/product-name/core";
 import { getConfig } from "@plugins/config_v2/server";
 import { getTokenFromCentral } from "@plugins/auth/server";
 import type { BackupArchive, BackupTargetResult } from "@plugins/backup/core";
@@ -41,7 +42,7 @@ export async function runGoogleDriveTarget(
   const { accessToken } = tokenResult;
   const folderId = await ensureFolder(accessToken);
 
-  const filename = `singularity-backup-${basename(archive.stagingDir)}.tar.gz`;
+  const filename = `${PRODUCT_NAME}-backup-${basename(archive.stagingDir)}.tar.gz`;
   const { webViewLink } = await uploadToDrive(
     archive.archivePath,
     folderId,

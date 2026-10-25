@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-conversations-agent-launch",
+  "name": "@equin/plugin-conversations-agent-launch",
   "private": true,
   "version": "0.0.1"
 }

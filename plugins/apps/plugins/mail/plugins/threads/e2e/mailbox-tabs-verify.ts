@@ -28,6 +28,7 @@
  * Manual only — nothing runs this automatically.
  *   ./equin run plugins/apps/plugins/mail/plugins/threads/e2e/mailbox-tabs-verify.ts [--headed]
  */
+import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
 import { existsSync, rmSync } from "node:fs";
 import type { Page } from "playwright";
 import { configDir } from "@plugins/config_v2/data-dirs";
@@ -78,7 +79,7 @@ const BOOT_TIMEOUT_MS = 120_000;
  * It used to read `process.env.SINGULARITY_WORKTREE ?? basename(REPO_ROOT)`,
  * with the correct rule stated in the prose immediately above the code that
  * broke it. An agent pane inherited `SINGULARITY_WORKTREE` from the backend that
- * spawned it, so from inside any worktree it answers `singularity`: this script
+ * spawned it, so from inside any worktree it answers the main namespace: this script
  * deleted the user's live Mail config on MAIN, every run, while asserting
  * against a worktree deploy. Nothing about the file made that visible, which is
  * why the harness now owns the answer and `e2e-harness:target-not-env-derived`
@@ -203,7 +204,7 @@ async function listState(page: Page): Promise<ListState> {
 
 // Seed a mailbox when the target has none (a worktree): main's is real.
 const fixture =
-  String(targetNamespace()) === "singularity"
+  String(targetNamespace()) === MAIN_WORKTREE_NAME
     ? null
     : await openThreadFixture();
 if (fixture !== null) onBeforeFinish(() => fixture.cleanup());

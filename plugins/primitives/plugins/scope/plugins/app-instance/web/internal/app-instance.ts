@@ -1,3 +1,4 @@
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import { getTabId } from "@plugins/primitives/plugins/scope/plugins/tab-id/web";
 import { isEmbeddedDocument } from "@plugins/primitives/plugins/embed/web";
 import {
@@ -15,8 +16,8 @@ import { z } from "zod";
 export type NavigationType =
   "navigate" | "reload" | "back_forward" | "prerender";
 
-/** The pre-primitive registry key: `singularity.appInstances:<tabId>`. */
-const LEGACY_REGISTRY_PREFIX = "singularity.appInstances:";
+/** The pre-primitive registry key: `<prefix>.appInstances:<tabId>`. */
+const LEGACY_REGISTRY_PREFIX = `${LEGACY_IDS.browserKeyPrefix}.appInstances:`;
 
 /**
  * LRU registry of this browser tab's live instance generations, active last —

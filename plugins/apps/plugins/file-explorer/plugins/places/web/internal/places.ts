@@ -1,3 +1,4 @@
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import { hostFsVolumeInfo } from "@plugins/infra/plugins/host-fs/core";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { useHomeDir } from "@plugins/apps/plugins/file-explorer/plugins/browser/web";
@@ -33,7 +34,7 @@ function fixedPlace(
 }
 
 /** The equin main checkout — its path is the server's to say. */
-function useSingularityPlace(): PlacesState {
+function useRepoPlace(): PlacesState {
   const checkout = useLive(fileExplorerMainCheckout);
   const home = useHomeDir();
   const label = "equin";
@@ -54,7 +55,9 @@ function useSingularityPlace(): PlacesState {
       : checkout.data;
   return {
     kind: "ready",
-    places: [{ id: "singularity", label, path, icon: folderIcon }],
+    places: [
+      { id: LEGACY_IDS.fileExplorerPlace, label, path, icon: folderIcon },
+    ],
   };
 }
 
@@ -114,9 +117,9 @@ export const placeContributions = [
     ),
   }),
   FileExplorer.Places({
-    id: "singularity",
+    id: LEGACY_IDS.fileExplorerPlace,
     group: "favorites",
-    usePlaces: useSingularityPlace,
+    usePlaces: useRepoPlace,
   }),
   // The user's own pins, after the built-in favorites.
   FileExplorer.Places({

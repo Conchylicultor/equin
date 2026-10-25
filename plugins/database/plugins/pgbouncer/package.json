@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-database-pgbouncer",
+  "name": "@equin/plugin-database-pgbouncer",
   "description": "PgBouncer connection pooler for the embedded Postgres cluster.",
   "private": true,
   "version": "0.0.1",

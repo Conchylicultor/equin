@@ -76,7 +76,7 @@ function runsInCheckout(call: ShellCall, cwd: string): boolean {
   const script = executedModule(call.args);
   if (script === undefined) return false;
   const path = script.startsWith("/") ? script : `${call.cwd || cwd}/${script}`;
-  return classifyRepo(path).kind === "singularity";
+  return classifyRepo(path).kind === "equin";
 }
 
 export const bunScriptGuard = defineGuard<BashInput>({

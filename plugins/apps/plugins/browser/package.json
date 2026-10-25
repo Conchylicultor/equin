@@ -1,8 +1,8 @@
 {
-  "name": "@singularity/plugin-apps-browser",
+  "name": "@equin/plugin-apps-browser",
   "private": true,
   "version": "0.0.1",
-  "singularity": {
+  "equin": {
     "collapsed": true
   },
   "description": "Minimal iframe-based web browser app."

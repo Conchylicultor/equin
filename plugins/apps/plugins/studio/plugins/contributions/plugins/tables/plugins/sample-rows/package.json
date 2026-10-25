@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-studio-contributions-tables-sample-rows",
+  "name": "@equin/plugin-apps-studio-contributions-tables-sample-rows",
   "description": "Sample rows section (first 10 rows) in the table detail view.",
   "private": true,
   "version": "0.0.1"

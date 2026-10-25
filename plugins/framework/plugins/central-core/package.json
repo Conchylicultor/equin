@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-central-core",
+  "name": "@equin/plugin-framework-central-core",
   "private": true,
   "type": "module",
   "devDependencies": {

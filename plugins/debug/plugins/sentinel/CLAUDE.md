@@ -197,7 +197,7 @@ proto-1789664064-nr56).
   (contention's `datname IS NOT NULL` semantics).
 - **Fleet**: `GET /gateway/worktrees` (gateway-served — wakes nothing) for
   running-backend count + active conns; one `ps -axo command=` spawn counting
-  in-flight `equin build/check/push` (or legacy `singularity`) processes.
+  in-flight `equin build/check/push` (or the legacy CLI shim) processes.
 - **Backends**: every 3rd tick, a health.jsonl tail scan (fresh-mtime files
   only) → `backendP99` rollup per live backend.
 
@@ -413,7 +413,6 @@ pane's `GenericEventLane` fallback; a dedicated `Trace.Lane`
   - Imported by: `debug/timeline`
 - Exemptions:
   - Exempts itself from:
-    - `cli:legacy-cli-name` — `server/internal/sample-math.test.ts` (sanctioned)
     - `detached-work-safety/no-raw-set-interval` — `server/internal/worker/entry.ts` (sanctioned)
     - `boundaries/no-platform-api` — `server/internal/status-resource.ts`, `server/internal/worker-host.ts`, `server/internal/worker/pg.ts`, `server/internal/worker/sample.ts` (debt)
 - Sub-plugins:

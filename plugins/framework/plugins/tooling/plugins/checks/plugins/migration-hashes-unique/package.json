@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-tooling-checks-migration-hashes-unique",
+  "name": "@equin/plugin-framework-tooling-checks-migration-hashes-unique",
   "version": "0.0.1",
   "private": true
 }

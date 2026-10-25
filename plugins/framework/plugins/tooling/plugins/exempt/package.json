@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-tooling-exempt",
+  "name": "@equin/plugin-framework-tooling-exempt",
   "version": "0.0.1",
   "private": true,
   "description": "Inverted exemptions: a plugin declares, in its own exempt/index.ts, which of its files may violate which lint rule or check — with a reason, and a task when it is debt. The manifest types, the generated rule-id union, the file-category vocabulary rule owners scope by, and the one loader + hit-recording matcher the ESLint config, the type-check worker and the check runner all read."

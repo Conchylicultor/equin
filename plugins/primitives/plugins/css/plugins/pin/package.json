@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-css-pin",
+  "name": "@equin/plugin-primitives-css-pin",
   "description": "Point-anchored absolute positioning primitive: <Pin to offset> places a child at a corner/edge-center/center of a relative parent. Sibling of Overlay.",
   "private": true,
   "version": "0.0.1"

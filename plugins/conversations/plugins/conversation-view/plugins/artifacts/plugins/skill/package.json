@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-conversations-conversation-view-artifacts-skill",
+  "name": "@equin/plugin-conversations-conversation-view-artifacts-skill",
   "private": true,
   "version": "0.0.1"
 }

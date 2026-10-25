@@ -155,7 +155,7 @@ HOLDERS=$(awk 'NR>1 {print $1":"$2}' "$LSOF_TMP" | sort | uniq -c | sort -rn)
   echo "--- top 10 FD-holding command groups ---"
   awk 'NR>1 {print $1}' "$LSOF_TMP" | sort | uniq -c | sort -rn | head -10
 
-  echo "--- singularity quick stats ---"
+  echo "--- equin quick stats ---"
   GATEWAY_PID=$(pgrep -x gateway 2>/dev/null)
   echo "gateway_pid=${GATEWAY_PID:-none}"
   if [ -n "$GATEWAY_PID" ]; then

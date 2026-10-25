@@ -20,6 +20,7 @@ import {
   type AppComponent,
   type ComponentBuild,
 } from "@plugins/infra/plugins/launcher/plugins/login-services/core";
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 
 /**
  * The bare gateway binary's code-signing identifier: with the signing
@@ -28,7 +29,7 @@ import {
  * runs from the equin app bundle instead (`GATEWAY_APP_COMPONENT`), whose
  * grants are the app's.
  */
-const GATEWAY_CODESIGN_IDENTIFIER = "dev.singularity.gateway";
+const GATEWAY_CODESIGN_IDENTIFIER = LEGACY_IDS.codesignIdentifier;
 
 /**
  * The gateway as a program of the equin app: `equin.app/Contents/MacOS/gateway`
@@ -82,7 +83,7 @@ function goTarget(target: DepTarget): { GOOS: string; GOARCH: string } {
  * Admitted like any install (one background unit): a cold `go build` is tens
  * of seconds of CPU.
  *
- * A darwin build made on a Mac is code-signed as `dev.singularity.gateway` by
+ * A darwin build made on a Mac is code-signed as `GATEWAY_CODESIGN_IDENTIFIER` by
  * this machine's identity (`infra/codesign`), so macOS keeps its permission
  * grants across rebuilds — an ad-hoc binary is keyed by its hash, and every
  * rebuild was a new app to it. The identity is not part of the build's
@@ -135,7 +136,7 @@ export const gatewayBinary = defineDep({
  * - `unsupported` — not macOS: nothing is signed there;
  * - `no-identity` — this machine has no local identity yet (the next build
  *   creates one and signs);
- * - `signed` / `unsigned` — by that identity, as `dev.singularity.gateway`.
+ * - `signed` / `unsigned` — by that identity, as `GATEWAY_CODESIGN_IDENTIFIER`.
  */
 export async function gatewaySignature(
   path: string,

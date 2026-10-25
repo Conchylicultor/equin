@@ -6,7 +6,7 @@ import {
 import type { TimelineEvent, TimelineSource } from "../../../core";
 
 // The per-DB extraction context handed to every DB-backed source. `dbName` is
-// the fork DB name, which IS the worktree slug (the main DB "singularity" is
+// the fork DB name, which IS the worktree slug (the main DB is
 // MAIN_WORKTREE_NAME) — the same identity mapping the slow-ops cluster tab
 // relies on.
 export interface DbSourceCtx {

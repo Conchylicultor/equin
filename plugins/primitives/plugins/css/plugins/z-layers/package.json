@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-css-z-layers",
+  "name": "@equin/plugin-primitives-css-z-layers",
   "description": "Semantic z-layer scale (z-base..z-max) and its enforcing lint rule (no-adhoc-zindex).",
   "private": true,
   "version": "0.0.1"

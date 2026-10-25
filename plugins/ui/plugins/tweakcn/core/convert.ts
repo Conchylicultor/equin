@@ -21,9 +21,9 @@ function pick(
   keyMap: Record<string, string>,
 ): Record<string, string> {
   const out: Record<string, string> = {};
-  for (const [tweakcnKey, singularityKey] of Object.entries(keyMap)) {
+  for (const [tweakcnKey, equinKey] of Object.entries(keyMap)) {
     if (tweakcnKey in source) {
-      out[singularityKey] = source[tweakcnKey]!;
+      out[equinKey] = source[tweakcnKey]!;
     }
   }
   return out;

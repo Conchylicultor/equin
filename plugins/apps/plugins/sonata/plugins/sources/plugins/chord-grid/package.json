@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-sonata-sources-chord-grid",
+  "name": "@equin/plugin-apps-sonata-sources-chord-grid",
   "description": "Chord-grid input source for Sonata: authored chord symbols compiled to chord annotations, with notes generated from them via a selectable voicing strategy.",
   "private": true,
   "version": "0.0.1"

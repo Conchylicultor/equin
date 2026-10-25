@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-ui-tab-bar",
+  "name": "@equin/plugin-ui-tab-bar",
   "description": "Themable tab bar: chip / underline / connected variants.",
   "private": true,
   "version": "0.0.1"

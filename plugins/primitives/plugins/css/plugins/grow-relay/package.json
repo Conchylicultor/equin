@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-css-grow-relay",
+  "name": "@equin/plugin-primitives-css-grow-relay",
   "description": "The grow request: a box that needs the row's slack asks for it, and every box in between relays the ask upward.",
   "private": true,
   "version": "0.0.1"

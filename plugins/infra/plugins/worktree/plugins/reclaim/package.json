@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-infra-worktree-reclaim",
+  "name": "@equin/plugin-infra-worktree-reclaim",
   "private": true,
   "version": "0.0.1"
 }

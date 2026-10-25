@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-fields-date-inline",
+  "name": "@equin/plugin-fields-date-inline",
   "version": "0.0.1",
   "private": true,
   "description": "Date field type: data-view inline cell editor (native date input editor).",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

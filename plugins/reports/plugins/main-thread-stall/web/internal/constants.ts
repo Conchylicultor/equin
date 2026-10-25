@@ -29,15 +29,40 @@ export const STALL = {
   PROTO: 1,
 } as const;
 
+// Every browser-visible name the watchdog takes (the SharedWorker, its Web
+// Locks, its IndexedDB) is `<prefix>:main-thread-stall…`. The prefix is the
+// app's browser-key prefix, which the PAGE chooses (tab-watch.ts) and hands the
+// worker as the worker's own `name` — this file is in the worker bundle, which
+// may import no other plugin, so it never spells the prefix itself.
+const TOPIC = "main-thread-stall";
+
 /** The SharedWorker's name (identity is script URL + name). */
-export const WATCHDOG_WORKER_NAME = "singularity:main-thread-stall";
+export function watchdogWorkerName(prefix: string): string {
+  return `${prefix}:${TOPIC}`;
+}
+
+/** The prefix a worker was started under, read back from its own name. */
+export function prefixOfWorkerName(name: string): string {
+  const suffix = `:${TOPIC}`;
+  if (!name.endsWith(suffix)) {
+    throw new Error(
+      `main-thread-stall watchdog: unexpected worker name ${JSON.stringify(name)}`,
+    );
+  }
+  return name.slice(0, -suffix.length);
+}
 
 /** The Web Lock a tab holds for its port's whole life; granted to the worker ⇒ the tab is gone. */
-export function portLockName(portId: string): string {
-  return `singularity:main-thread-stall-port:${portId}`;
+export function portLockName(prefix: string, portId: string): string {
+  return `${prefix}:${TOPIC}-port:${portId}`;
 }
 
 /** The Web Lock a watchdog holds for its whole life; free ⇒ its stored stalls are orphans. */
-export function workerLockName(workerId: string): string {
-  return `singularity:main-thread-stall-worker:${workerId}`;
+export function workerLockName(prefix: string, workerId: string): string {
+  return `${prefix}:${TOPIC}-worker:${workerId}`;
+}
+
+/** The IndexedDB holding the durable stall records (`<prefix>-main-thread-stall`). */
+export function stallDbName(prefix: string): string {
+  return `${prefix}-${TOPIC}`;
 }

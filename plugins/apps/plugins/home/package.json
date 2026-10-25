@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-home",
+  "name": "@equin/plugin-apps-home",
   "description": "Home — app launcher and entry point.",
   "private": true,
   "version": "0.0.1"

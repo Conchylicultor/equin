@@ -249,6 +249,6 @@ describe("file categories", () => {
     expect(
       isInAnyCategory("plugins/auth/server/x.ts", ["e2e", "central"]),
     ).toBe(false);
-    expect(Object.keys(FILE_CATEGORY_GLOBS).length).toBe(8);
+    expect(Object.keys(FILE_CATEGORY_GLOBS).length).toBe(9);
   });
 });

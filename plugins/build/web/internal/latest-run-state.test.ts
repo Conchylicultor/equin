@@ -4,6 +4,7 @@ import {
   BUILD_EXIT_SUPERSEDED,
 } from "@plugins/build/plugins/build-status/core";
 import { buildRunIdKind } from "@plugins/build/plugins/run-ledger/core";
+import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
 import type { BuildRun } from "../../shared";
 import { latestRunState } from "./latest-run-state";
 
@@ -12,7 +13,7 @@ function run(over: Partial<BuildRun>): BuildRun {
     id: buildRunIdKind.key("b1"),
     trigger: "auto",
     commitHash: null,
-    targets: ["singularity"],
+    targets: [MAIN_COMPOSITION_ID],
     startedAt: new Date(0),
     finishedAt: new Date(1),
     exitCode: 0,

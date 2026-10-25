@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-sonata-lyric-line",
+  "name": "@equin/plugin-apps-sonata-lyric-line",
   "description": "One songsheet lyric line as data and as text: the score's lyric lines in order, the chord sounding at a beat, and the monospace chord-over-words block both the Songsheet and the Chord grid render.",
   "private": true,
   "version": "0.0.1"

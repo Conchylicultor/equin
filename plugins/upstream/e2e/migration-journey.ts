@@ -40,6 +40,7 @@
  * keyed by the new sha8) is mechanical and covered by the runner's own tests.
  */
 import { CLI_NAME } from "@plugins/framework/plugins/cli/plugins/cli-name/core";
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import {
   cpSync,
   mkdirSync,
@@ -722,8 +723,10 @@ async function journey(ctx: Ctx, pristine: boolean): Promise<void> {
       .filter((l) => l.trim() && !l.trimStart().startsWith("--"));
     check(
       "the merge node's SQL is the no-op two-parent snapshot header",
-      /^-- singularity:snapshot id=\S+ parents=\S+,\S+$/m.test(sql) &&
-        statements.length === 0,
+      new RegExp(
+        `^-- ${LEGACY_IDS.migrationMarker}:snapshot id=\\S+ parents=\\S+,\\S+$`,
+        "m",
+      ).test(sql) && statements.length === 0,
       `\n      ${sql.split("\n").join("\n      ")}`,
     );
   }

@@ -15,4 +15,11 @@ export default [
     reason:
       "Pins that a Connect started from main's old address posts its result back there, not to the address main is handed out under.",
   },
+  {
+    rule: "product-name:legacy-id",
+    paths: ["central/internal/oauth-flow.test.ts"],
+    kind: "sanctioned",
+    reason:
+      "Pins that a Connect started from main's old address posts its result back there, not to the address main is handed out under.",
+  },
 ] satisfies Exemptions;

@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-fields-tags-config",
+  "name": "@equin/plugin-fields-tags-config",
   "version": "0.0.1",
   "private": true,
   "description": "Tags field type: config-render capability (multi-select chip renderer for config-v2.fields.renderer).",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

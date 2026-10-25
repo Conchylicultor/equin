@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-latest-ref",
+  "name": "@equin/plugin-primitives-latest-ref",
   "description": "Latest-value ref idiom as a primitive: useLatestRef + useEventCallback.",
   "private": true,
   "version": "0.0.1"

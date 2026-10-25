@@ -13,12 +13,13 @@
  * with `defineStore` (whenFull: "refuse" for what the user typed).
  */
 
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import type {
   LegacyKeys,
   Store,
 } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 
-const DRAFT_SYNC_EVENT = "singularity:draft-updated";
+const DRAFT_SYNC_EVENT = `${LEGACY_IDS.browserKeyPrefix}:draft-updated`;
 export const DEFAULT_DRAFT_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 /**
@@ -92,11 +93,11 @@ export function clearDraft<T>(store: Store<T>, options?: DraftOptions): void {
 
 /**
  * The `legacy` of a store taking over drafts persistent-draft wrote before
- * web-storage (`singularity:draft:<key>[:<scope>]`, envelope `{v, ts}`): each
+ * web-storage (`<prefix>:draft:<key>[:<scope>]`, envelope `{v, ts}`): each
  * old entry is carried over under its scope, so no unsent text is lost.
  */
 export function legacyDraftKeys(key: string): LegacyKeys {
-  const exact = `singularity:draft:${key}`;
+  const exact = `${LEGACY_IDS.browserKeyPrefix}:draft:${key}`;
   const scoped = `${exact}:`;
   return {
     match: (k) => k === exact || k.startsWith(scoped),

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-debug-trace-boot",
+  "name": "@equin/plugin-debug-trace-boot",
   "description": "Built-in trace event class 'boot': the server-boot profile (phase spans + memory checkpoints + optional gateway readiness wait) pre-aggregated by debug/boot-monitor and passed in via the boot trigger's detail, surfaced as a phase-grouped Gantt lane on the boot trace.",
   "private": true,
   "version": "0.0.1"

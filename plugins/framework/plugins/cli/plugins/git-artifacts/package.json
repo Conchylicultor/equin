@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-cli-git-artifacts",
+  "name": "@equin/plugin-framework-cli-git-artifacts",
   "private": true,
   "version": "0.0.1",
   "description": "Generated-artifact merge handling that runs inside a CLI command: re-deriving after a merge driver took the cheap side, and installing the drivers."

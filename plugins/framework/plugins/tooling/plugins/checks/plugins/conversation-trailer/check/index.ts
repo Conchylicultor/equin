@@ -1,4 +1,7 @@
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
+
+const TRAILER = LEGACY_IDS.conversationTrailer;
 
 // Wedge-breaker for a metadata-only git read: far above any real duration,
 // because starvation under a saturated check run is what these suffer, not
@@ -46,7 +49,7 @@ async function commitsAheadOfMain(): Promise<
     "--not",
     "main",
     "--glob=refs/remotes/*/main",
-    "--format=%H%x00%(trailers:key=Singularity-Conversation,valueonly,separator=%x2C)",
+    `--format=%H%x00%(trailers:key=${TRAILER},valueonly,separator=%x2C)`,
   ]);
   if (exitCode !== 0 || !stdout) return [];
   return stdout.split("\n").map((line) => {
@@ -60,13 +63,12 @@ async function commitsAheadOfMain(): Promise<
 // trailer at all": the hook fired, but the line ended up in the body.
 async function hasStrayBodyTrailer(sha: string): Promise<boolean> {
   const { stdout } = await run(["git", "show", "-s", "--format=%B", sha]);
-  return /^Singularity-Conversation:/m.test(stdout);
+  return new RegExp(`^${TRAILER}:`, "m").test(stdout);
 }
 
 const check: Check = {
   id: "conversation-trailer",
-  description:
-    "SINGULARITY_CONVERSATION_ID is set and every commit ahead of every known main (local, and each <remote>/main) carries the Singularity-Conversation trailer",
+  description: `SINGULARITY_CONVERSATION_ID is set and every commit ahead of every known main (local, and each <remote>/main) carries the ${TRAILER} trailer`,
   // Not a pure function of the working tree: reads SINGULARITY_CONVERSATION_ID
   // env and the trailers of this branch's own commits. Never cache.
   cacheSignature: () => null,
@@ -98,7 +100,7 @@ const check: Check = {
       if (absent.length > 0) {
         const list = absent.map((c) => `  ${c.sha.slice(0, 12)}`).join("\n");
         parts.push(
-          `${absent.length} commit(s) ahead of main lack a Singularity-Conversation trailer:\n${list}\n` +
+          `${absent.length} commit(s) ahead of main lack a ${TRAILER} trailer:\n${list}\n` +
             `The prepare-commit-msg hook did not fire for these commits (env missing at commit time, or committed from outside the pane).`,
         );
       }
@@ -107,7 +109,7 @@ const check: Check = {
           .map((sha) => `  ${sha.slice(0, 12)}`)
           .join("\n");
         parts.push(
-          `${stray.size} commit(s) ahead of main carry a Singularity-Conversation line in the message BODY, not in the trailer block (the last paragraph), so git does not read it as a trailer:\n${list}\n` +
+          `${stray.size} commit(s) ahead of main carry a ${TRAILER} line in the message BODY, not in the trailer block (the last paragraph), so git does not read it as a trailer:\n${list}\n` +
             `Typically a reused commit message with text appended after its trailers.`,
         );
       }
@@ -129,7 +131,7 @@ const check: Check = {
         .join("\n");
       return {
         ok: false,
-        message: `${mismatched.length} commit(s) carry a Singularity-Conversation trailer that does not match this pane (SINGULARITY_CONVERSATION_ID=${envId}):\n${list}`,
+        message: `${mismatched.length} commit(s) carry a ${TRAILER} trailer that does not match this pane (SINGULARITY_CONVERSATION_ID=${envId}):\n${list}`,
         hint:
           "If the commit was created by another conversation sharing this worktree, " +
           "you can safely uncommit (git reset HEAD~1) while keeping the changes, " +

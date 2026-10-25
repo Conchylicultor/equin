@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-map-google",
+  "name": "@equin/plugin-map-google",
   "description": "Google Maps JavaScript API renderer for the map primitive: draws GeoMap overlays (overlay pins, polylines, polygons) with Google's own places hidden and gates itself on the Google Maps browser key.",
   "private": true,
   "version": "0.0.1",

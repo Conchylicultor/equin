@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-tool-call-page-tools-read-page",
+  "name": "@equin/plugin-conversations-conversation-view-jsonl-viewer-tool-call-page-tools-read-page",
   "private": true,
   "version": "0.0.1"
 }

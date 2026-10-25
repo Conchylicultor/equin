@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-debug-trace-stall",
+  "name": "@equin/plugin-debug-trace-stall",
   "description": "Built-in trace event class 'stall': the sampled JS call-stack histogram (top leaves + collapsed stack signatures) captured during an event-loop freeze, surfaced as a lane on the stall trace.",
   "private": true,
   "version": "0.0.1"

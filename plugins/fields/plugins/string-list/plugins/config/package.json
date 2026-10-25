@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-fields-string-list-config",
+  "name": "@equin/plugin-fields-string-list-config",
   "version": "0.0.1",
   "private": true,
   "description": "String-list field type: config-render capability (drag-and-drop string list) plus the stringListField factory.",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

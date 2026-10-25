@@ -1,3 +1,4 @@
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import { describe, expect, test } from "bun:test";
 import { parseGitLog } from "./parse-git-log";
 
@@ -20,13 +21,12 @@ describe("parseGitLog", () => {
   test("reads every trailer, in message order", () => {
     const [row] = parseGitLog(
       record({
-        trailers:
-          "Singularity-Conversation\x1econv-1\x1fCo-Authored-By\x1eA: <a@b.c>",
+        trailers: `${LEGACY_IDS.conversationTrailer}\x1econv-1\x1fCo-Authored-By\x1eA: <a@b.c>`,
         subject: "feat: x",
       }),
     );
     expect(row?.trailers).toEqual([
-      { key: "Singularity-Conversation", value: "conv-1" },
+      { key: LEGACY_IDS.conversationTrailer, value: "conv-1" },
       { key: "Co-Authored-By", value: "A: <a@b.c>" },
     ]);
     expect(row?.subject).toBe("feat: x");

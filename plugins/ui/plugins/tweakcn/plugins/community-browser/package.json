@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-ui-tweakcn-community-browser",
+  "name": "@equin/plugin-ui-tweakcn-community-browser",
   "private": true,
   "version": "0.0.1",
   "description": "Community theme browser for tweakcn"

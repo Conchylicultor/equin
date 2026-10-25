@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-cli-start",
+  "name": "@equin/plugin-framework-cli-start",
   "private": true,
   "version": "0.0.1",
   "description": "`./equin start` — build the gateway and register it as a per-user OS service (launchd on macOS, a systemd user unit on Linux) so it comes back after a reboot, then wait for it to actually serve before reporting success."

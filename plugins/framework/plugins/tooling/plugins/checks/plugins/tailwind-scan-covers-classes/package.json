@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-tooling-checks-tailwind-scan-covers-classes",
+  "name": "@equin/plugin-framework-tooling-checks-tailwind-scan-covers-classes",
   "version": "0.0.1",
   "private": true
 }

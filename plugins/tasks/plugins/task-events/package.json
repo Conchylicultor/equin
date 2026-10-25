@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-tasks-task-events",
+  "name": "@equin/plugin-tasks-task-events",
   "private": true,
   "version": "0.0.1"
 }

@@ -11,7 +11,10 @@ import {
   logsDirFor,
 } from "@plugins/primitives/plugins/log-channels/plugins/log-files/server";
 import { gatewayLogs } from "@plugins/infra/plugins/launcher/data-dirs";
-import { isNamespace } from "@plugins/infra/plugins/namespace/core";
+import {
+  isNamespace,
+  resolveNamespaceAlias,
+} from "@plugins/infra/plugins/namespace/core";
 import type { LogScope } from "../../shared/resources";
 
 /** A log the viewer can open: where its live file is and who declared it. */
@@ -42,8 +45,10 @@ const boundOf = (sink: FileSink): LogSource["bound"] => ({
  * they describe the other worktrees' folders too, up to code that differs
  * between their checkouts.
  */
-export async function logSources(worktree: string): Promise<LogSource[]> {
-  if (!isNamespace(worktree)) throw new InvalidWorktree(worktree);
+export async function logSources(typed: string): Promise<LogSource[]> {
+  // A typed name may be a namespace's public label (`equin` for main).
+  const worktree = resolveNamespaceAlias(typed);
+  if (!isNamespace(worktree)) throw new InvalidWorktree(typed);
   const dir = logsDirFor(worktree);
   const ownDir = logsDir();
   const sources: LogSource[] = [];

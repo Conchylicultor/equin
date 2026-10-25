@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-reports-endpoint-errors",
+  "name": "@equin/plugin-reports-endpoint-errors",
   "private": true,
   "version": "0.0.1"
 }

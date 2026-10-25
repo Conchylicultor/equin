@@ -32,7 +32,7 @@ import {
 /** A 4-minute song takes ≈5 s with the defaults and ≈20 s with the slowest settings; ten minutes bounds a long mix on a busy box. */
 const ANALYSIS_TIMEOUT_MS = 10 * 60_000;
 
-/** `singularity_audio.beat_features`'s stdout: a summary (the features go to a file). */
+/** `equin_audio.beat_features`'s stdout: a summary (the features go to a file). */
 const SummarySchema = z.object({
   beats: z.number().int(),
   medianBpm: z.number(),
@@ -164,7 +164,7 @@ async function analyse(
     await phase("analysing");
     const summary = await exec.admit(() =>
       runPython(ready, {
-        module: "singularity_audio.beat_features",
+        module: "equin_audio.beat_features",
         input: {
           audioPath: audio.path,
           outPath: tmp,

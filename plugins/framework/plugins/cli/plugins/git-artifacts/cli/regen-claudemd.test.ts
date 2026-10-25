@@ -9,6 +9,7 @@ import {
 import { tmpdir } from "os";
 import { join } from "path";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 
 // Drives the real driver through a real `git merge` in a throwaway repo: what
 // matters is what GIT concludes from the driver (clean vs `UU`), which no
@@ -89,7 +90,7 @@ async function merge(base: string, ours: string, theirs: string) {
     status,
     merged: readFileSync(file, "utf8"),
     marker: existsSync(
-      join(dir, ".git", "singularity-merge-markers", "generated"),
+      join(dir, ".git", LEGACY_IDS.mergeMarkersDir, "generated"),
     ),
   };
 }

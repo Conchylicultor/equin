@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-tooling-checks-no-db-backed-notify",
+  "name": "@equin/plugin-framework-tooling-checks-no-db-backed-notify",
   "version": "0.0.1",
   "private": true
 }

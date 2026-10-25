@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-fields-dynamic-flags-config",
+  "name": "@equin/plugin-fields-dynamic-flags-config",
   "version": "0.0.1",
   "private": true,
   "description": "Dynamic flags field type: config-render capability (slot-resolved options rendered as toggles) plus the dynamicFlagsField factory.",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

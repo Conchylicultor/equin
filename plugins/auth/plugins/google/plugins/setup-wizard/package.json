@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-auth-google-setup-wizard",
+  "name": "@equin/plugin-auth-google-setup-wizard",
   "private": true,
   "version": "0.0.1"
 }

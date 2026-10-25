@@ -35,7 +35,7 @@ export const worktreeWorkspace: WorkspaceImpl<"worktree"> = {
   // time, so the checkout and `pg_restore` run in parallel.
   async onCommit(tx, { attemptId }) {
     await databaseForkJob.enqueue(
-      { source: "singularity", target: attemptId },
+      { source: MAIN_WORKTREE_NAME, target: attemptId },
       { tx },
     );
   },

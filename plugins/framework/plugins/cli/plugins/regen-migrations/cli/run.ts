@@ -55,7 +55,7 @@ async function assertNoHandEditedBranchLocalMigrations(
 }
 
 // Published migrations are immutable by contract — their hashes are recorded in
-// deployed DBs' `__singularity_migrations`, and their lineage is a link of the
+// deployed DBs' the migrations table, and their lineage is a link of the
 // chain. The rule is the migrations plugin's (`findPublishedMigrationViolations`,
 // also the `published-migrations-immutable` check), asserted here before the
 // destructive reset because the regeneration would bake a violation in.

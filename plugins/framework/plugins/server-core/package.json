@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-server-core",
+  "name": "@equin/plugin-framework-server-core",
   "private": true,
   "type": "module",
   "dependencies": {},

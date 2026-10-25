@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-css-sticky-stack",
+  "name": "@equin/plugin-primitives-css-sticky-stack",
   "description": "Sticky-stack layout primitive: <StickyStack>/<StickyStackItem> pin N sticky siblings sharing one containing block, each below the ones before it (capped; degrades to the swap hand-off).",
   "private": true,
   "version": "0.0.1"

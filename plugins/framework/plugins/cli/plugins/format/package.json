@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-cli-format",
+  "name": "@equin/plugin-framework-cli-format",
   "private": true,
   "version": "0.0.1",
   "description": "`./equin format` — prettier over the .ts/.tsx changed on this branch; the same pass `build` runs, without paying for a build."

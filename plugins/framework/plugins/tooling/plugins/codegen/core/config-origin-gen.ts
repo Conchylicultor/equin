@@ -77,7 +77,7 @@ async function discoverConfigs(root: string): Promise<DiscoveredConfig[]> {
   // config_v2 descriptors never register at runtime. Emitting their origins
   // would make `pruneOrphanedConfigFiles` delete user override files (a
   // generated origin with no live descriptor reads as orphaned). Skip everything
-  // the `singularity` composition does not bundle.
+  // the main composition does not bundle.
   const bundle = mainBundle(tree, root);
 
   const results: DiscoveredConfig[] = [];
@@ -681,7 +681,7 @@ export function readEffectiveConfigFromDisk<F extends FieldsRecord>(
  * Takes the user-config directory ALREADY RESOLVED, never a data root plus a
  * worktree name. The pair form is what this function used to take, and it meant
  * the location of the user config layer was spelled here — as
- * `join(singularityDir, "config", worktreeName)` — a second, silently-drifting
+ * `join(dataRoot, "config", worktreeName)` — a second, silently-drifting
  * copy of a directory config_v2 declares (`state/config`) and reads through that
  * declaration. When the layout moved, the writer kept naming the old path while
  * the reader named the new one, with nothing to fail: on a fresh root the app

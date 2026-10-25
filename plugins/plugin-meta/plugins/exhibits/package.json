@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-plugin-meta-exhibits",
+  "name": "@equin/plugin-plugin-meta-exhibits",
   "description": "Exhibit catalog: one exhibits/ leaf folder per plugin, one generated registry, one API to render a real component standalone (isolated, isolated-region, or app runtime).",
   "private": true,
   "version": "0.0.1"

@@ -19,7 +19,7 @@ export type Standing = "none" | "pending" | "landed";
  *
  * `ledgerPushes` is ORed in, never subtracted: a ledger row PROVES a push
  * happened (invariant I3), which is what keeps a pre-trailer-era attempt — whose
- * commits carry no `Singularity-Conversation` trailer to grep for — from reading
+ * commits carry no conversation trailer to grep for — from reading
  * as droppable. Its absence is not evidence of anything.
  *
  * `delivered` is a scratch workspace's whole landed fact: it has no git to

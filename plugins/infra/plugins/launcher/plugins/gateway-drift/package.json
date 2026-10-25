@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-infra-launcher-gateway-drift",
+  "name": "@equin/plugin-infra-launcher-gateway-drift",
   "private": true,
   "version": "0.0.1"
 }

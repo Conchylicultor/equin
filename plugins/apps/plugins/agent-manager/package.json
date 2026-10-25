@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-apps-agent-manager",
+  "name": "@equin/plugin-apps-agent-manager",
   "description": "Agent manager app shell and layout.",
   "private": true,
   "version": "0.0.1",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

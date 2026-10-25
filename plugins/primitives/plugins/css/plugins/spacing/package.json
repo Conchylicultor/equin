@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-css-spacing",
+  "name": "@equin/plugin-primitives-css-spacing",
   "description": "Layout spacing primitives (<Stack gap> / <Inset pad>) over the density spacing scale, plus the no-adhoc-spacing lint rule banning raw gap/padding/margin Tailwind.",
   "private": true,
   "version": "0.0.1"

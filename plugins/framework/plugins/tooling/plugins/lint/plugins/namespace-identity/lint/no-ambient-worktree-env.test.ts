@@ -37,7 +37,7 @@ ruleTester.run(
       { code: `const ns = await checkoutNamespace(root);` },
       // Passing identity to a child the sanctioned way.
       { code: `argv.push("--namespace", runtimeNamespace());` },
-      // Every OTHER singularity environment variable is somebody else's
+      // Every OTHER product environment variable is somebody else's
       // business — this rule is about the one retired name.
       { code: `if (process.env.SINGULARITY_RELEASE === "1") boot();` },
       { code: `process.env.SINGULARITY_DIR ??= fallback;` },

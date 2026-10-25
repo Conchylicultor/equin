@@ -17,6 +17,7 @@ import {
 import {
   asPluginId,
   type PluginId,
+  PLUGIN_MANIFEST_KEY,
 } from "@plugins/framework/plugins/plugin-id/core";
 import { runWithFsSnapshot } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import {
@@ -260,8 +261,9 @@ async function collectCoreFields(
   if (pkgSrc) {
     try {
       const pkg = JSON.parse(pkgSrc);
-      if (pkg.singularity?.collapsed === true) collapsed = true;
-      if (pkg.singularity?.compositionRoot === true) compositionRoot = true;
+      const own = pkg[PLUGIN_MANIFEST_KEY];
+      if (own?.collapsed === true) collapsed = true;
+      if (own?.compositionRoot === true) compositionRoot = true;
       // eslint-disable-next-line promise-safety/no-bare-catch
     } catch {}
   }

@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-fields-server-capabilities",
+  "name": "@equin/plugin-fields-server-capabilities",
   "version": "0.0.1",
   "private": true,
   "description": "Server-owned field-capability library: the Fields.Storage / Fields.ValueTextCast tokens, the storage eager self-registering index, and the resolveFieldStorage / resolveFieldValueTextCast resolvers. A graph sink — never imports a capability barrel.",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

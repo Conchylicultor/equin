@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-debug-live-state-churn",
+  "name": "@equin/plugin-debug-live-state-churn",
   "description": "Umbrella for live-state churn debugging: the no-op push monitor/detector and the synthetic-push emitter.",
   "private": true,
   "version": "0.0.1"

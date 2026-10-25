@@ -1,3 +1,5 @@
+import { PRODUCT_NAME } from "@plugins/framework/plugins/product-name/core";
+
 /** A plugin's canonical hierarchy id, dot-separated, e.g. "conversations.conversation-view". */
 export type PluginId = string & { readonly __brand: "PluginId" };
 
@@ -14,8 +16,18 @@ export const asFsPath = (id: PluginId): string =>
 /** Segments for breadcrumbs / last-segment matching. */
 export const pluginIdSegments = (id: PluginId): string[] => id.split(".");
 
+/** The workspace package scope every plugin's package name lives in: `@equin`. */
+export const PACKAGE_SCOPE = `@${PRODUCT_NAME}`;
+
+/** The workspace package-name prefix: `@equin/plugin-`. */
+export const PLUGIN_PACKAGE_PREFIX = `${PACKAGE_SCOPE}/plugin-`;
+
+/** The key of a plugin's own settings in its `package.json` (`collapsed`,
+ *  `compositionRoot`): `"equin": { … }`. */
+export const PLUGIN_MANIFEST_KEY = PRODUCT_NAME;
+
 /** The workspace package name of the plugin whose directory is `fsPath` (relative
- *  to `plugins/`, the `asFsPath` form): `@singularity/plugin-<chain>`, the chain
+ *  to `plugins/`, the `asFsPath` form): `@equin/plugin-<chain>`, the chain
  *  joining every non-`plugins` segment with `-` — unique across the nested tree
  *  (`tasks` → `plugin-tasks`, `stats/plugins/tasks` → `plugin-stats-tasks`).
  *
@@ -24,7 +36,7 @@ export const pluginIdSegments = (id: PluginId): string[] => id.split(".");
  *  and the plugin-boundaries check (R1) holds the file to it. Bun needs the field
  *  (a nameless workspace member fails `bun install`), but nothing reads it. */
 export const packageNameFor = (fsPath: string): string =>
-  `@singularity/plugin-${fsPath
+  `${PLUGIN_PACKAGE_PREFIX}${fsPath
     .split("/")
     .filter((s) => s !== "plugins")
     .join("-")}`;
@@ -147,7 +159,7 @@ const RUNTIME_FOLDER_DOCUMENTED: Record<RuntimeFolder, boolean> = {
   // none of them can depend on.
   provision: false,
   // `data-dirs` holds a plugin's declarations of the directories it owns under
-  // the singularity data root. Undocumented not because the facts are private —
+  // the data root. Undocumented not because the facts are private —
   // the folder IS a legal cross-plugin barrel, so two plugins sharing one
   // directory import a single declaration — but because the generated reference
   // is the wrong reader for them. "Who owns this directory, and may I delete

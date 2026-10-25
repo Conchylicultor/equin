@@ -4,6 +4,7 @@ import {
   readDatabaseConfig,
 } from "@plugins/database/core";
 import { targetNamespace } from "./target";
+import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
 
 /**
  * The database of the deploy a run targets, for a script that seeds rows the
@@ -11,7 +12,7 @@ import { targetNamespace } from "./target";
  * corpus): a plain `pg.Pool` on the direct connection, `@plugins/database/core`'s
  * config helpers — the e2e runtime reaches only `core` / `e2e` barrels.
  *
- * It REFUSES main (`singularity`): a seeding script writes into the database
+ * It REFUSES main: a seeding script writes into the database
  * the backend serves, and main's is the user's real data. A script that seeds
  * must also delete what it seeded (`onBeforeFinish`).
  */
@@ -28,7 +29,7 @@ export interface DeployDb {
 
 export function openDeployDb(): DeployDb {
   const namespace = String(targetNamespace());
-  if (namespace === "singularity") {
+  if (namespace === MAIN_WORKTREE_NAME) {
     throw new Error(
       "refusing to seed rows into main's database — run this against a worktree deploy",
     );

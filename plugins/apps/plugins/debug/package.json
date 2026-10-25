@@ -1,7 +1,7 @@
 {
-  "name": "@singularity/plugin-apps-debug",
+  "name": "@equin/plugin-apps-debug",
   "description": "Debug app.",
   "private": true,
   "version": "0.0.1",
-  "singularity": { "collapsed": true }
+  "equin": { "collapsed": true }
 }

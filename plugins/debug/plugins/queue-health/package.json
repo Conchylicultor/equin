@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-debug-queue-health",
+  "name": "@equin/plugin-debug-queue-health",
   "private": true,
   "version": "0.0.1"
 }

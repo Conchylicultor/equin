@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-sonata-rich-chord-readout",
+  "name": "@equin/plugin-apps-sonata-rich-chord-readout",
   "description": "Sonata Section: a large current-chord readout panel that tracks the playback cursor.",
   "private": true,
   "version": "0.0.1"

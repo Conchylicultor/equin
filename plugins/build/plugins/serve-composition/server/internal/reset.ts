@@ -27,7 +27,7 @@
 // instance-per-user.md).
 //
 // Never touches main: `assertServableCompositionNamespace` rejects the reserved
-// {central, singularity, main} namespaces, and three more provenance guards below
+// {central, <main namespace>, main} namespaces, and three more provenance guards below
 // prove the target is a compose-serve-owned namespace before any data is touched.
 
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
@@ -81,7 +81,7 @@ export class CompositionResetError extends Error {
  */
 export async function resetCompositionData(id: string): Promise<void> {
   // Guard 1 — the explicit "never main/central" gate (rejects the reserved
-  // {central, singularity, main} namespaces and enforces a valid name).
+  // {central, <main namespace>, main} namespaces and enforces a valid name).
   assertServableCompositionNamespace(id);
   // The namespace this composition occupies WHEN SERVED FROM HERE — the same
   // mint the serve build made, so the DB, config dir and marker this reset

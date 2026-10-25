@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-tooling-lint-git-grep-safety",
+  "name": "@equin/plugin-framework-tooling-lint-git-grep-safety",
   "version": "0.0.1",
   "private": true,
   "description": "git-grep-safety lint rule: no-adhoc-git-grep"

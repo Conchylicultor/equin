@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-tasks-task-track",
+  "name": "@equin/plugin-tasks-task-track",
   "private": true,
   "version": "0.0.1",
   "dependencies": {

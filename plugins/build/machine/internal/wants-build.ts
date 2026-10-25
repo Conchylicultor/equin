@@ -134,7 +134,7 @@ export async function decideBuilds(now: Date): Promise<BuildDecision> {
   const compositions: string[] = [];
   for (const item of getConfig(compositionsConfig).manifests) {
     // Main's own row can carry a stored mode from any config layer, and it is
-    // inert by construction: `singularity` is the namespace this checkout's own
+    // inert by construction: the main namespace is the namespace this checkout's own
     // build already owns, so a serve build never provisions it.
     if (!isServableCompositionId(item.id)) continue;
     const marker = readCompositionMarker(namespaceFor(item.id, checkout));

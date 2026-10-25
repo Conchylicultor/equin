@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-fields-json-config",
+  "name": "@equin/plugin-fields-json-config",
   "version": "0.0.1",
   "private": true,
   "description": "JSON field type: config-render capability (read-only formatted JSON) plus the jsonField factory.",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

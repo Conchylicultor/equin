@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-tooling-checks-no-gitlinks",
+  "name": "@equin/plugin-framework-tooling-checks-no-gitlinks",
   "version": "0.0.1",
   "private": true
 }

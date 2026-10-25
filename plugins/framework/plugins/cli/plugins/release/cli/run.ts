@@ -128,8 +128,8 @@ const SENTINEL_WORKER_ENTRY =
 //
 // The file name comes from `compositionRegistryFileName`, never spelled here,
 // because the main composition's registry is the COMMITTED `<dir>.generated.ts`
-// — nothing emits a `*.composition.singularity.*` sibling. Spelling the filtered
-// form inline is what would make `release --composition singularity` fail on a
+// — nothing emits a main-named `*.composition.*` sibling. Spelling the filtered
+// form inline is what would make releasing the main composition by name fail on a
 // file that is never written, rather than release the main app.
 const FILTERED_SERVER_REGISTRY = (composition: string): string =>
   `plugins/framework/plugins/server-core/core/${compositionRegistryFileName("server", composition)}`;
@@ -1058,7 +1058,7 @@ const runRelease: CliAction<[], ReleaseOptions> = async (opts) => {
   // closes (research/2026-08-06-global-one-dist-per-namespace.md, S3).
   //
   // `checkoutWorktreeName(root)` — NOT `runtimeNamespace()`, which
-  // answers "singularity" in a hand-run CLI from every worktree. Phase 1
+  // answers the main namespace in a hand-run CLI from every worktree. Phase 1
   // is spawned with `cwd: root`, so its `basename(getWorktreeRoot())`
   // resolves to this same name and the two processes agree by
   // construction rather than by coincidence.

@@ -47,17 +47,17 @@ export function readCompositionManifestsFromDisk(
 }
 
 /**
- * What the app SHIPS, as the manifest declares it: the `singularity`
+ * What the app SHIPS, as the manifest declares it: main
  * composition's resolved closure, plus the ids its negatives name directly.
  *
  * This is the one answer to "is this plugin in the app?". A plugin leaves the app
  * by being negated out of a manifest — there is no second mechanism (the
- * `singularity.disabled` package.json flag it replaced is gone), so codegen
+ * the old package.json `disabled` flag it replaced is gone), so codegen
  * filters every registry, every generated origin and every doc marker by exactly
  * this set.
  */
 export interface MainComposition {
-  /** Every plugin id `singularity`'s hard closure bundles. */
+  /** Every plugin id main's hard closure bundles. */
   bundle: Set<PluginId>;
   /**
    * The ids a negative entry pattern names directly, after the explicit-positive
@@ -71,9 +71,9 @@ export interface MainComposition {
 }
 
 /**
- * Resolve `singularity`'s closure from the committed manifests.
+ * Resolve main's closure from the committed manifests.
  *
- * THROWS when the `singularity` row is missing, and when the resolved
+ * THROWS when the main row is missing, and when the resolved
  * composition carries `unsatisfiedExclusions` — a negative that did not take
  * effect. Neither is a case to degrade around: emitting a registry that
  * contradicts the manifest is exactly the silent divergence this phase removes,

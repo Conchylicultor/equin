@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-page-heading",
+  "name": "@equin/plugin-page-heading",
   "description": "Heading block types (H1/H2/H3) for the page editor.",
   "private": true,
   "version": "0.0.1"

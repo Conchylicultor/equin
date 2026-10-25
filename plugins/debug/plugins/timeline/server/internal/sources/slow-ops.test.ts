@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { mapSlowOpRows, slowOpsSource, type SlowOpRow } from "./slow-ops";
 import type { DbSourceCtx } from "./context";
+import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
 
 const T0 = Date.parse("2026-07-10T09:00:00.000Z");
 const ctx: DbSourceCtx = {
@@ -93,7 +94,7 @@ describe("slowOpsSource.build", () => {
     expect(fork.values).toEqual([T0, "wt-a"]);
     const main = slowOpsSource.build({
       ...ctx,
-      dbName: "singularity",
+      dbName: MAIN_WORKTREE_NAME,
       isMainDb: true,
     });
     expect(main.text).not.toContain("worktree =");

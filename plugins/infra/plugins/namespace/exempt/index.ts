@@ -15,4 +15,11 @@ export default [
     reason:
       "Pins that main's old address still resolves to it, so the legacy host stays a working alias.",
   },
+  {
+    rule: "product-name:legacy-id",
+    paths: ["core/namespace.test.ts"],
+    kind: "sanctioned",
+    reason:
+      "Pins that main's old address still resolves to it, so the legacy host stays a working alias.",
+  },
 ] satisfies Exemptions;

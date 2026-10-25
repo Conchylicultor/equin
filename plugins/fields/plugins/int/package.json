@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-fields-int",
+  "name": "@equin/plugin-fields-int",
   "version": "0.0.1",
   "private": true,
   "description": "Integer field type: identity only, extends number — reuses number's cell and filter via the extends chain.",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

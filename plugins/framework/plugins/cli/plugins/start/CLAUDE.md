@@ -9,14 +9,16 @@ agent workflow: agents run `./equin build`, never this (nor `stop`).
 
 ## macOS: a launchd service
 
-The gateway is a per-user LaunchAgent, `dev.singularity.gateway`
-(`~/Library/LaunchAgents/dev.singularity.gateway.plist`, rendered by
+The gateway is a per-user LaunchAgent, `<gateway-label>`
+(`~/Library/LaunchAgents/<gateway-label>.plist`, rendered by
 `infra/launcher/login-services`' `launchd-plist.ts` from `GATEWAY_SERVICE` +
 `gatewayServiceJob`). launchd starts it at every login —
 which is what brings the app back after a reboot; before this the first reboot
 of a fresh install looked exactly like the install had broken — and relaunches
 it when it exits non-zero. Everything else follows from the gateway: its
 supervisor brings Postgres / PgBouncer back up, and backends spawn on demand.
+
+(`<gateway-label>` is the gateway's launchd label / systemd unit name, `LEGACY_IDS.launchdLabel` in `framework/product-name`.)
 
 A LaunchAgent (login) rather than a boot-time LaunchDaemon because the secrets
 master key is in the login keychain, locked until the user logs in.
@@ -45,7 +47,7 @@ the two launch paths cannot drift. Consequences worth knowing:
 
 ## Linux: a systemd user unit
 
-The same job as a systemd **user** unit, `~/.config/systemd/user/dev.singularity.gateway.service`
+The same job as a systemd **user** unit, `~/.config/systemd/user/<gateway-label>.service`
 (`infra/launcher/login-services`' `systemd.ts`, rendered by the pure `systemd-unit.ts`),
 enabled into `default.target`. Same relaunch policy as the plist. It needs
 **lingering** (`sudo loginctl enable-linger <user>`, once): without it systemd
@@ -72,7 +74,7 @@ unchanged job (`--force` reloads anyway). A
 systemd's `graphical-session.target`) and needs no lingering. With no service
 manager none is started, and `start` says so.
 
-`--only <ids>` (comma-separated: `dev.singularity.gateway` and/or declared ids)
+`--only <ids>` (comma-separated: `<gateway-label>` and/or declared ids)
 restricts `start` to those services — the gateway half runs only when it is
 named — and with `--force` restarts just them:
 `./equin start --only dev.equin.menu-bar --force` leaves the gateway (and every
@@ -106,7 +108,7 @@ the platform, so a Go change is built on the next `start` (no flag) into
 unchanged one costs a hash. It does NOT reach a running gateway: with the
 gateway already running under the manager and no `--force`, `start` only asks
 `LoginService.isCurrent(job)` and, when the written job differs, prints a stale
-notice with `./equin start --only dev.singularity.gateway --force` — the plist
+notice with `./equin start --only <gateway-label> --force` — the plist
 is not rewritten, the binary neither signed nor held, so the plist keeps naming
 the binary that runs and the sweep keeps off it. The health report's Gateway row
 (`infra/launcher/gateway-drift`) says the same from the app, with

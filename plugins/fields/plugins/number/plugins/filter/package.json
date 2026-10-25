@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-fields-number-filter",
+  "name": "@equin/plugin-fields-number-filter",
   "version": "0.0.1",
   "private": true,
   "description": "Number field type: data-view filter (min/max range control).",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

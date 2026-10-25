@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-fields-text-table",
+  "name": "@equin/plugin-fields-text-table",
   "version": "0.0.1",
   "private": true,
   "description": "Text field type: data-view table cell (read-only text cell).",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

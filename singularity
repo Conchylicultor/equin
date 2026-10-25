@@ -1,5 +1,5 @@
 #!/bin/sh
 # Legacy name of ./equin, kept so older docs, hints and muscle memory still work
-# while the app moves off the `singularity` name. Nothing else belongs here:
+# while the app moves off the old name. Nothing else belongs here:
 # ./equin is the CLI's only entry, and its wrapper must stay one step.
 exec "$(dirname "$0")/equin" "$@"

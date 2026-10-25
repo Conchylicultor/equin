@@ -6,7 +6,7 @@ import { attemptIdKind } from "@plugins/tasks/plugins/task-ids/core";
 // `claude-<epoch>` included) and any other form `attemptIdKind` recognises. It
 // is anchored, so the per-build data files that share the registry dir
 // (`<name>-build-profile.json`, `<name>-build-logs-<id>.json`), the reserved
-// `singularity`/`central` namespaces, composition ids, `spare-*` checkouts and
+// main-namespace/`central` namespaces, composition ids, `spare-*` checkouts and
 // `*__forking` temps are all refused.
 //
 // One source of truth for everything that has to tell a worktree checkout's

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-ui-tokens-material",
+  "name": "@equin/plugin-ui-tokens-material",
   "private": true,
   "version": "0.0.1",
   "description": "Material token group: what a floating panel is made of — its fill and the backdrop filter applied to what shows through it."

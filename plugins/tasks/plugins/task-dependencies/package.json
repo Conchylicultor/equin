@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-tasks-task-dependencies",
+  "name": "@equin/plugin-tasks-task-dependencies",
   "private": true,
   "version": "0.0.1"
 }

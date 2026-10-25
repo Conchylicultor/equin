@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-sonata-rich-chord-analyzer",
+  "name": "@equin/plugin-apps-sonata-rich-chord-analyzer",
   "description": "Sonata Analyzer: derives chord annotations from score notes.",
   "private": true,
   "version": "0.0.1"

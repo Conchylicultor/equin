@@ -197,7 +197,7 @@ function assertPageWasConsumed(): void {
  * request the page makes, third parties included. A custom header makes a
  * cross-origin fetch non-simple, so the browser preflights it — and Google
  * Fonts, unpkg, any CDN a prototype loads from, answers the preflight without
- * `x-singularity-origin` in `Access-Control-Allow-Headers`. The font never
+ * the app's origin header in `Access-Control-Allow-Headers`. The font never
  * loads, the page renders in a fallback face, and a picture of it compares
  * against nothing real. Nothing off the target deploy reads these headers, so
  * they are stripped from every request that leaves it. Same-origin requests

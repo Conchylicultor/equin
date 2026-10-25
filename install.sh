@@ -59,7 +59,7 @@ main() {
 
   # ── 0. Say what will happen, before anything does ──────────────────────────
   if [ "$(id -u)" = "0" ]; then
-    die "do not run as root: Postgres' initdb refuses to, so the app cannot start. Run as a normal user (on a server: adduser --disabled-password --gecos '' singularity && su - singularity)."
+    die "do not run as root: Postgres' initdb refuses to, so the app cannot start. Run as a normal user (on a server: adduser --disabled-password --gecos '' equin && su - equin)."
   fi
 
   cat <<EOF

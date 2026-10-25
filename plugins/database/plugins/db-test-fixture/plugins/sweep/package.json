@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-database-db-test-fixture-sweep",
+  "name": "@equin/plugin-database-db-test-fixture-sweep",
   "description": "Reclaims throwaway test databases left behind by a killed test run.",
   "private": true,
   "version": "0.0.1"

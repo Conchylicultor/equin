@@ -126,7 +126,7 @@ export const compositionsConfig = defineConfig({
         // served" has no spelling. An explicit rebuild stays available in every
         // mode.
         //
-        // Main's row can never be served: `singularity` is a reserved namespace
+        // Main's row can never be served: the main namespace is a reserved namespace
         // belonging to the checkout's own build, and `activatedCompositionIds`
         // filters on servability — so a stored non-`off` on that row is inert by
         // construction, from any config layer.
@@ -164,7 +164,7 @@ export const compositionsConfig = defineConfig({
         // `"!apps.sonata.**"` beside the `**` can still remove a branch. (If root
         // named everything, every negative would be a self-cancelling no-op and
         // `composition-closure` would reject it as contradictory.) That is exactly
-        // the spelling Phase 7 needs to replace the `singularity.disabled`
+        // the spelling Phase 7 needs to replace the old `disabled` flag
         // package.json flags with composition negatives.
         //
         // `extends: []` is deliberate, NOT `["served-baseline"]`. `**` already
@@ -172,7 +172,7 @@ export const compositionsConfig = defineConfig({
         // served-baseline's bases into `named` — permanently shielding them from
         // any future negative, for no gain.
         //
-        // Main is not servable as a composition: `singularity` is a reserved
+        // Main is not servable as a composition: the main namespace is a reserved
         // namespace that belongs to the checkout's own `./equin build`, and
         // `activatedCompositionIds` filters on servability, so `serve` on THIS
         // row is inert by construction — a stored mode from any config layer can
@@ -214,7 +214,7 @@ export const compositionsConfig = defineConfig({
         // it rather than guessing which of the two the author meant.
         //
         // `!review.plugin-changes.**` is the migration of the
-        // `singularity.disabled: true` flag that used to live in
+        // the old `disabled: true` flag that used to live in
         // `plugins/review/plugins/plugin-changes/package.json`. That plugin's
         // review-pane summary subscribed to `review.plugin-changes`, firing the
         // worktree-vs-main diff on every render. The negative resolves to the same

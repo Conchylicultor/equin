@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-debug-stall-monitor",
+  "name": "@equin/plugin-debug-stall-monitor",
   "description": "Routes detected event-loop stalls into the reports alert funnel.",
   "private": true,
   "version": "0.0.1"

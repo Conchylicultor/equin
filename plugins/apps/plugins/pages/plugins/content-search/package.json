@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-pages-content-search",
+  "name": "@equin/plugin-apps-pages-content-search",
   "description": "Pages full-text search: indexes pages into the search engine and adds a Search button to the Pages sidebar.",
   "private": true,
   "version": "0.0.1"

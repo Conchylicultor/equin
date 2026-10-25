@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-sonata-rich-rhythm-controls",
+  "name": "@equin/plugin-apps-sonata-rich-rhythm-controls",
   "description": "Sonata Section: per-song rhythm-circle groove — a left-hand (bass) and right-hand (chords) onset necklace that spins with the playhead. Shown only for songs with authored chord annotations.",
   "private": true,
   "version": "0.0.1"

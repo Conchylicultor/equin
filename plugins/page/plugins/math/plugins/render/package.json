@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-page-math-render",
+  "name": "@equin/plugin-page-math-render",
   "description": "Shared KaTeX renderer leaf for the page math plugins: <KatexMath/> plus the single home for KaTeX config and CSS.",
   "private": true,
   "version": "0.0.1",

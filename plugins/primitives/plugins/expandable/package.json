@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-expandable",
+  "name": "@equin/plugin-primitives-expandable",
   "description": "Clamps tall content to a max height and reveals a Show more/less toggle only when the rendered content actually overflows.",
   "private": true,
   "version": "0.0.1"

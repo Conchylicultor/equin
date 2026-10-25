@@ -12,6 +12,7 @@ import {
   isMain,
   runtimeNamespace,
 } from "@plugins/infra/plugins/runtime-identity/core";
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 
 export const REPO_ROOT = resolve(
   import.meta.dir,
@@ -196,7 +197,7 @@ export function checkoutWorktreeName(root: string): string {
 export const HOME_DIR = resolve(homedir());
 
 /**
- * The singularity data root, derived AT CALL TIME.
+ * The data root, derived AT CALL TIME.
  *
  * THE single derivation of the root, and the ONLY read of `SINGULARITY_DIR` in
  * this plugin. Not exported from the barrel on purpose: `dataRoot()`
@@ -219,10 +220,14 @@ export function resolveDataRoot(): string {
   return process.env.SINGULARITY_DIR ?? join(HOME_DIR, ".singularity");
 }
 
-// OUTSIDE the data root on purpose (`~/.backups/singularity`), which is why it
+// OUTSIDE the data root on purpose (`~/.backups/…`), which is why it
 // is a plain constant here rather than a `defineDataDir` declaration: a backup
 // that lived inside the tree it backs up would be reclaimed by the same sweep.
-export const BACKUPS_DIR = join(HOME_DIR, ".backups/singularity");
+export const BACKUPS_DIR = join(
+  HOME_DIR,
+  ".backups",
+  LEGACY_IDS.backupsDirName,
+);
 
 // Everything else under the data root is a DECLARATION, not a constant here.
 // This module used to carry a second spelling of nine of those directories
@@ -234,7 +239,7 @@ export const BACKUPS_DIR = join(HOME_DIR, ".backups/singularity");
 // `data-dirs/index.ts` declaration — never by joining the root again.
 
 /**
- * Root dir holding every worktree's per-worktree singularity state. Each
+ * Root dir holding every worktree's per-worktree state. Each
  * worktree owns `<worktreesDir()>/<name>/` (build/release artifacts, logs, ops
  * markers, …). THE single source of truth for the
  * `worktrees/<name>` layout — server plugins and the CLI both derive from it so
@@ -489,7 +494,7 @@ export const worktreeArtifacts = {
   /**
    * DIRECTORY. The web dist SERVED for namespace `name` — the tree the gateway
    * points at for `<name>.localhost:9000`. `name` is a *namespace*: a worktree
-   * slug (`singularity`, an agent branch) or an auto-served composition id.
+   * slug (the main namespace, an agent branch) or an auto-served composition id.
    */
   webDist: (name: Namespace): string => join(worktreeDataDir(name), "web"),
   /**

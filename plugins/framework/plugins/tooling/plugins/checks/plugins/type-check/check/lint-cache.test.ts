@@ -32,12 +32,12 @@ const LOCK = `{
       "name": "repo",
     },
     "plugins/a": {
-      "name": "@singularity/plugin-a",
+      "name": "@equin/plugin-a",
       "version": "0.0.1",
     },
   },
   "packages": {
-    "@singularity/plugin-a": ["@singularity/plugin-a@workspace:plugins/a"],
+    "@equin/plugin-a": ["@equin/plugin-a@workspace:plugins/a"],
 
     "eslint": ["eslint@9.39.4", "", {}, "sha512-x"],
   }
@@ -47,10 +47,10 @@ const LOCK = `{
 test("a workspace-only lockfile change keeps the lint digest", () => {
   const added = LOCK.replace(
     `  },\n  "packages": {`,
-    `    "plugins/b": {\n      "name": "@singularity/plugin-b",\n      "version": "0.0.1",\n    },\n  },\n  "packages": {`,
+    `    "plugins/b": {\n      "name": "@equin/plugin-b",\n      "version": "0.0.1",\n    },\n  },\n  "packages": {`,
   ).replace(
     `\n    "eslint"`,
-    `\n    "@singularity/plugin-b": ["@singularity/plugin-b@workspace:plugins/b"],\n\n    "eslint"`,
+    `\n    "@equin/plugin-b": ["@equin/plugin-b@workspace:plugins/b"],\n\n    "eslint"`,
   );
   expect(added).not.toBe(LOCK);
   expect(lockfileLintDigest(added)).toBe(lockfileLintDigest(LOCK));

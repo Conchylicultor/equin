@@ -400,7 +400,7 @@ func TestNameRegexRejectsPathUnsafeNames(t *testing.T) {
 		}
 	}
 	for _, good := range []string{
-		"a", "singularity", "att-1787064474-2qcq", "sonata.att-x", "a-1.b-2",
+		"a", mainNamespace, "att-1787064474-2qcq", "sonata.att-x", "a-1.b-2",
 		// Exactly 63 bytes — the longest namespace Postgres stores intact.
 		strings.Repeat("a", 31) + "." + strings.Repeat("b", 31),
 	} {

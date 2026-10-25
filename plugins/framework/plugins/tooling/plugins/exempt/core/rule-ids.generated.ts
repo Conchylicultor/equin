@@ -112,6 +112,7 @@ export type ExemptableRuleId =
   | "plugin-tree/no-uncached-tree-in-checks"
   | "polling-safety/no-refetch-interval"
   | "product-name:legacy"
+  | "product-name:legacy-id"
   | "promise-safety/no-absorbed-failure"
   | "promise-safety/no-bare-catch"
   | "promise-safety/no-floating-promises"

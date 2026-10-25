@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-tooling-checks-migration-metadata-consistent",
+  "name": "@equin/plugin-framework-tooling-checks-migration-metadata-consistent",
   "version": "0.0.1",
   "private": true
 }

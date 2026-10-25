@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { mapReportRows, reportsSource, type ReportRow } from "./reports";
 import type { DbSourceCtx } from "./context";
+import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
 
 const T0 = Date.parse("2026-07-10T09:00:00.000Z");
 const ctx: DbSourceCtx = {
@@ -66,7 +67,7 @@ describe("reportsSource.build", () => {
     expect(fork.values).toEqual([T0, T0 + 60 * 60 * 1000, "wt-a"]);
     const main = reportsSource.build({
       ...ctx,
-      dbName: "singularity",
+      dbName: MAIN_WORKTREE_NAME,
       isMainDb: true,
     });
     expect(main.text).not.toContain("worktree =");

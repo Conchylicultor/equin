@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-chord-progress",
+  "name": "@equin/plugin-apps-chord-progress",
   "description": "What the chord trainer remembers: every checked round and its answers, the mastery rule (last 20 answers, 90 % right, median at most 2 s), and the live chord.progress stats (per chord, today, all time).",
   "private": true,
   "version": "0.0.1"

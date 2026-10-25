@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { asNamespace } from "@plugins/infra/plugins/namespace/core";
+import {
+  asNamespace,
+  MAIN_WORKTREE_NAME,
+} from "@plugins/infra/plugins/namespace/core";
 import {
   identityInfo,
   linkedTaskIdOf,
@@ -22,9 +25,9 @@ describe("placeOf", () => {
   });
 
   test("the main namespace is the main checkout", () => {
-    expect(placeOf(asNamespace("singularity"))).toEqual({
+    expect(placeOf(MAIN_WORKTREE_NAME)).toEqual({
       kind: "main",
-      namespace: asNamespace("singularity"),
+      namespace: MAIN_WORKTREE_NAME,
     });
   });
 
@@ -72,8 +75,8 @@ describe("linkedTaskIdOf", () => {
 describe("summaryOf", () => {
   test("names what kind of place the namespace is", () => {
     expect(summaryOf(placeOf(null))).toBe("Served outside the gateway");
-    expect(summaryOf(placeOf(asNamespace("singularity")))).toBe(
-      "singularity · main checkout",
+    expect(summaryOf(placeOf(MAIN_WORKTREE_NAME))).toBe(
+      "equin · main checkout",
     );
     expect(summaryOf(placeOf(asNamespace("att-1")))).toBe(
       "att-1 · agent worktree",
@@ -106,9 +109,9 @@ describe("identityInfo", () => {
   });
 
   test("the main checkout is titled by its namespace", () => {
-    expect(identityInfo(placeOf(asNamespace("singularity")), NONE)).toEqual({
-      title: "singularity",
-      summary: "singularity · main checkout",
+    expect(identityInfo(placeOf(MAIN_WORKTREE_NAME), NONE)).toEqual({
+      title: "equin",
+      summary: "equin · main checkout",
     });
   });
 });

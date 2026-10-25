@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-fields-dynamic-enum",
+  "name": "@equin/plugin-fields-dynamic-enum",
   "version": "0.0.1",
   "private": true,
   "description": "Dynamic enum (select) field type: identity only — single-choice from a runtime-resolved set of string options.",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

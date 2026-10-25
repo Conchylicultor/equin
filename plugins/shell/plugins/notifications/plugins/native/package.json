@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-shell-notifications-native",
+  "name": "@equin/plugin-shell-notifications-native",
   "description": "Native OS notifications from the menu-bar panel: a switch (off by default) and, while on, every new notification forwarded to the OS through the helper.",
   "private": true,
   "version": "0.0.1"

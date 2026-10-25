@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-fields-date-data-view-group",
+  "name": "@equin/plugin-fields-date-data-view-group",
   "version": "0.0.1",
   "private": true,
   "description": "Date field type: data-view grouping strategies (smart, day, week, month, year).",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

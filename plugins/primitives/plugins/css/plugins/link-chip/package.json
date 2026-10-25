@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-css-link-chip",
+  "name": "@equin/plugin-primitives-css-link-chip",
   "description": "Inline, clickable navigational chip: bg-muted + text-primary-text with hover underline, baseline-aligned for inline-in-text use.",
   "private": true,
   "version": "0.0.1"

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-sonata-rich-readout-keyboard",
+  "name": "@equin/plugin-apps-sonata-rich-readout-keyboard",
   "description": "The one readout-keyboard shape Sonata's rich sections share: a two-octave window (READOUT_WINDOW) voicings are octave-fitted into, the proportional ReadoutKeyboard drawn on it, and the KeyboardCaption row above each keyboard.",
   "private": true,
   "version": "0.0.1"

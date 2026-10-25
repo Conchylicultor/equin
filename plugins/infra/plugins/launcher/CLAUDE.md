@@ -10,7 +10,7 @@ half only, by `./equin start` / `stop`.
 `gatewayLaunchSpec` is the one derivation of how the gateway runs (argv, cwd,
 declared env, stdio log). `spawnGatewayDaemon` spawns it detached; where the host
 has a service manager `./equin start` instead registers it as a per-user
-login service: `GATEWAY_SERVICE` (`dev.singularity.gateway`, session
+login service: `GATEWAY_SERVICE` (`<gateway-label>`, session
 `background`) with the job `gatewayServiceJob(spec)`
 (`server/internal/gateway-service.ts`), written and loaded through the generic
 `LoginService` of the `login-services` sub-plugin — a launchd LaunchAgent on
@@ -22,6 +22,8 @@ agent processes). That is what makes the dev gateway come back after a reboot.
 writes it too, so a gateway that dies before getting that far still leaves its
 dead pid for a preview's reaper. Design:
 [`research/2026-09-25-global-gateway-survives-reboot.md`](../../../../research/2026-09-25-global-gateway-survives-reboot.md).
+
+(`<gateway-label>` is the gateway's launchd label / systemd unit name, `LEGACY_IDS.launchdLabel` in `framework/product-name`.)
 
 ## Login services: the gateway's mechanism, for any plugin
 
@@ -46,7 +48,7 @@ Every declared service a `start` registered **follows main by itself**: main's
 boot reconciles it against main's build of its dependency (see the sub-plugin's
 `CLAUDE.md`). The gateway does not — restarting it restarts every backend — but
 a plain `start` reports it stale (`LoginService.isCurrent`) with the command
-that swaps it: `./equin start --only dev.singularity.gateway --force`.
+that swaps it: `./equin start --only <gateway-label> --force`.
 The health report says so too, without anyone running `start`: the
 `gateway-drift` sub-plugin's **Gateway** row compares the installed definition
 and the running gateway with main's launch (binary, flags, cwd, signature) and

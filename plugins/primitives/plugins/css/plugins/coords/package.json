@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-css-coords",
+  "name": "@equin/plugin-primitives-css-coords",
   "description": "Coordinate-space positioning primitive: <Placed x y> / placedStyle() places a box by runtime numbers on both axes, plus pct() for fractional coordinates.",
   "private": true,
   "version": "0.0.1"

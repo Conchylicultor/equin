@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-primitives",
+  "name": "@equin/plugin-primitives",
   "description": "Umbrella for cross-cutting client-side primitives used by feature plugins: pane router, tree, live state, networking, editable fields, syntax highlighting, launch buttons.",
   "private": true,
   "version": "0.0.1",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

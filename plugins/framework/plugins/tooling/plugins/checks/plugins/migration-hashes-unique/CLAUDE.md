@@ -5,7 +5,7 @@ same `sha8` token in their filename (`<ts>_<sha8>__<slug>.sql`).
 
 The runner (`plugins/database/plugins/migrations/server/internal/runner.ts`)
 keys applied-state by that `sha8` — it is the PRIMARY KEY of
-`__singularity_migrations`. If two files collide on the hash, the runner applies
+`the applied-migrations table (`__<prefix>_migrations`)`. If two files collide on the hash, the runner applies
 the first (by timestamp) and **skips** the rest, logging a loud `stderr` warning.
 
 Each collision group (>1 file sharing a sha8) is classified by reading the files'

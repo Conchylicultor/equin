@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-sonata-sources-musicxml",
+  "name": "@equin/plugin-apps-sonata-sources-musicxml",
   "description": "MusicXML input source for Sonata — fast-xml-parser compile → Score (parts/staves, ties, repeats, harmony, tempo, swing).",
   "private": true,
   "version": "0.0.1",

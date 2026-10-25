@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-sonata-rich-key-mode",
+  "name": "@equin/plugin-apps-sonata-rich-key-mode",
   "description": "Per-song key-source mode: a toggle to override an authored (MIDI) key with auto-detection. Owns the persisted per-song setting and syncs it into the shell's score pipeline.",
   "private": true,
   "version": "0.0.1"

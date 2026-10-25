@@ -2,6 +2,13 @@ import type { Exemptions } from "@plugins/framework/plugins/tooling/plugins/exem
 
 export default [
   {
+    rule: "product-name:legacy-id",
+    paths: ["data"],
+    kind: "sanctioned",
+    reason:
+      "Committed migrations are history: their SQL carries the kept migration marker and DB object names verbatim, and rewriting a published migration changes its hash.",
+  },
+  {
     rule: "imperative-create-table-allowlisted",
     paths: ["check/imperative-create-table-allowlisted.ts"],
     kind: "sanctioned",

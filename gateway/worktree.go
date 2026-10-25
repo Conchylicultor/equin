@@ -76,7 +76,7 @@ type Spec struct {
 	// gateway round-trips a spec: dropping an unknown field here would erase it.
 	// Carried, not decomposed — exactly like Name.
 	//
-	// Deliberately NOT passed as an env var to the spawned backend. `singularity
+	// Deliberately NOT passed as an env var to the spawned backend. `./equin
 	// build` does not rebuild this Go binary (only `./equin start` does), so
 	// a running gateway is routinely older than the backend it spawns; a backend
 	// that depended on a new env line would silently fall back to the full
@@ -791,12 +791,18 @@ func (w *Worktree) promoteBackend(bk *backend) {
 	slog.Info("backend promoted to default priority", "worktree", w.Name, "pid", pid)
 }
 
+// mainNamespace is the main app's namespace — LEGACY_IDS.mainNamespace in
+// plugins/framework/plugins/product-name/core/internal/legacy-ids.ts, kept for
+// good (its database, socket and data dirs are stored under it). KEEP IN SYNC —
+// enforced by the `product-name:legacy-ids-in-sync` check.
+const mainNamespace = "singularity"
+
 // demotes reports whether a spawn for reason runs darwinbg: only a background
-// start, only where taskpolicy exists, and never main ("singularity") or
-// "central" — the interactive / always-on backends.
+// start, only where taskpolicy exists, and never main or "central" — the
+// interactive / always-on backends.
 func (w *Worktree) demotes(reason StartReason) bool {
 	return reason == StartBackground && w.cfg.Taskpolicy != "" &&
-		w.Name != "singularity" && w.Name != "central"
+		w.Name != mainNamespace && w.Name != "central"
 }
 
 // backendLaunch returns what a backend is told at spawn beyond the declared

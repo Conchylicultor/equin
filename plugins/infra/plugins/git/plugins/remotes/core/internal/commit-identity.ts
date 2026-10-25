@@ -2,6 +2,7 @@ import { userInfo } from "node:os";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { gitConfigGet, gitConfigSet, gitConfigUnset } from "./git-config";
 import type { PublishTarget } from "./types";
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 
 // Who signs the commits `push` and `upstream merge` make.
 //
@@ -12,14 +13,14 @@ import type { PublishTarget } from "./types";
 // for one at install would be a manual step with nothing to show for it.
 
 /** Local config key recording the email THIS module wrote (see `ours`). */
-export const AUTO_IDENTITY_KEY = "singularity.autoIdentityEmail";
+export const AUTO_IDENTITY_KEY = `${LEGACY_IDS.gitConfigSection}.autoIdentityEmail`;
 
 /**
  * Domain of the placeholder email. `.invalid` is reserved (RFC 2606): it can
  * never route anywhere or be mistaken for a real address, and it keeps the
  * hostname out of history — which is what git would otherwise put there.
  */
-const AUTO_EMAIL_DOMAIN = "singularity.invalid";
+const AUTO_EMAIL_DOMAIN = LEGACY_IDS.autoIdentityDomain;
 
 const GIT_TIMEOUT_MS = 60_000;
 

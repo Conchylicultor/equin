@@ -4,6 +4,7 @@ import { createServer } from "net";
 import { queryRows } from "@plugins/database/plugins/sql-rows/core";
 import { z } from "zod";
 import { withDirectConnection, withDirectDb } from "./direct-db";
+import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
 
 // The `no-database` / `ok` / propagation cases talk to the live gateway-owned
 // cluster (read-only: nothing is created, so no throwaway-DB fixture is
@@ -47,7 +48,7 @@ describe("withDirectDb", () => {
   test("unreachable: nothing listens at the address — fn never runs", async () => {
     let ran = false;
     const result = await withDirectConnection(
-      `postgres://nobody@127.0.0.1:${await refusedPort()}/singularity`,
+      `postgres://nobody@127.0.0.1:${await refusedPort()}/${MAIN_WORKTREE_NAME}`,
       async () => {
         ran = true;
         return 1;
@@ -74,7 +75,7 @@ describe("withDirectDb", () => {
   });
 
   test("ok: fn's value comes back", async () => {
-    const result = await withDirectDb("singularity", (pool) =>
+    const result = await withDirectDb(MAIN_WORKTREE_NAME, (pool) =>
       queryRows(pool, {
         sql: "SELECT 1::int AS one",
         row: z.object({ one: z.number() }),
@@ -85,7 +86,7 @@ describe("withDirectDb", () => {
 
   test("an error thrown inside fn propagates unclassified", async () => {
     const err = await rejection(
-      withDirectDb("singularity", async () => {
+      withDirectDb(MAIN_WORKTREE_NAME, async () => {
         throw new Error("boom from fn");
       }),
     );
@@ -100,7 +101,7 @@ describe("withDirectDb", () => {
     const coded = Object.assign(new Error("coded from fn"), { code: "3D000" });
     expect(
       await rejection(
-        withDirectDb("singularity", async () => {
+        withDirectDb(MAIN_WORKTREE_NAME, async () => {
           throw coded;
         }),
       ),
@@ -108,7 +109,7 @@ describe("withDirectDb", () => {
 
     expect(
       await rejection(
-        withDirectDb("singularity", (pool) =>
+        withDirectDb(MAIN_WORKTREE_NAME, (pool) =>
           queryRows(pool, {
             sql: "SELECT 1 FROM direct_db_test_no_such_table",
             row: z.object({}),

@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import { templateVariables } from "@plugins/tasks/plugins/automations/core";
 import {
   UPSTREAM_MERGE_PROMPT,
@@ -82,7 +83,7 @@ describe("upstreamMergeInstructions", () => {
     const text = upstreamMergeInstructions(base);
     // The build writes a merge node; the agent must not mistake it for noise.
     expect(text).toContain("merge node");
-    expect(text).toContain("singularity:snapshot id=");
+    expect(text).toContain(`${LEGACY_IDS.migrationMarker}:snapshot id=`);
     // Stop and report, verbatim, on either failure mode.
     expect(text).toContain("snapshot merge conflict");
     expect(text).toContain("migration-applies-clean");

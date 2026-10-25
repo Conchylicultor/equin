@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-debug-profiling-ops",
+  "name": "@equin/plugin-debug-profiling-ops",
   "private": true,
   "version": "0.0.1",
   "description": "Op contention profiling (build / push / check / test / e2e) for the Gantt debug pane."

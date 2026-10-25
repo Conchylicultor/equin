@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-plugin-meta-facets",
+  "name": "@equin/plugin-plugin-meta-facets",
   "version": "0.0.1",
   "private": true,
   "description": "Facet-based plugin metadata extraction and docgen pipeline",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

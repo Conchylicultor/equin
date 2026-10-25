@@ -3,7 +3,7 @@
 Extracts each plugin's on-disk structure: its immediate sub-folders (tagged
 `standard` against the repo's recognized folder set), stray top-level
 `.ts`/`.tsx` source files, and whether it self-declares a composition root
-(`package.json` `singularity.compositionRoot`).
+(the `compositionRoot` key under the package.json plugin-manifest key (`PLUGIN_MANIFEST_KEY`)).
 
 `extract()` reads the plugin directory directly; the standard-folder set is
 answered from the tree build's in-memory FS snapshot (`ctx.fs`) through

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-tooling-lint-format-safety",
+  "name": "@equin/plugin-framework-tooling-lint-format-safety",
   "version": "0.0.1",
   "private": true,
   "description": "format-safety lint rule: no-adhoc-prettier"

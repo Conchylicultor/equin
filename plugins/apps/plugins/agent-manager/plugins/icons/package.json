@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-agent-manager-icons",
+  "name": "@equin/plugin-apps-agent-manager-icons",
   "description": "The agent manager's own icon family (agentIcons): the agent-icons prototype's 24-unit line glyphs, each with a one-shot hover motion played in the sidebar, drawn for the Material names the agent manager's chrome uses in a Mist-themed scope (falling back to Lucide).",
   "private": true,
   "version": "0.0.1"

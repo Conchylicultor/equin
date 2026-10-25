@@ -5,7 +5,7 @@
  *   - may a composition be CALLED this?      → `assertCompositionId`
  *   - may a composition be SERVED under it?  → `assertServableCompositionNamespace`
  *
- * `singularity` and `base-exclusions` are the ids where those answers differ,
+ * The main composition and `base-exclusions` are the ids where those answers differ,
  * and that difference is what lets main become an ordinary manifest entry (and
  * the base row an ordinary negatives-only one) while their namespaces stay
  * off-limits to compose-serve. Pinned here so neither half can drift into the
@@ -52,7 +52,7 @@ test("servable namespace validation additionally rejects the reserved namespaces
     "base-exclusions",
     "central",
     "main",
-    "singularity",
+    MAIN_COMPOSITION_ID,
   ]);
   for (const reserved of RESERVED_COMPOSITION_NAMESPACES) {
     expect(() => assertServableCompositionNamespace(reserved)).toThrow(

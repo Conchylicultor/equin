@@ -56,7 +56,7 @@ Per-instance Postgres with a declarative schema and content-addressed migrations
 - **Schema barrel** — each plugin defines its tables in `schema.ts`; a top-level barrel aggregates them for the typed ORM client.
 - **Typed client** — Drizzle ORM client typed against the union of all plugin schemas.
 - **Migration file** — `YYYYMMDD_HHMMSS_<hash>__<slug>.sql`, generated from schema diffs, committed to git.
-- **Migration runner** — applies any un-applied hash at server start; records applied set in `__singularity_migrations`.
+- **Migration runner** — applies any un-applied hash at server start; records applied set in the applied-migrations table.
 - **DB fork** — `pg_dump | pg_restore` snapshot of a source DB; copies both data and the migration-applied set.
 - **Postgres view** — derived state computed from base tables; the write surface stays small and everything else is read-through.
 

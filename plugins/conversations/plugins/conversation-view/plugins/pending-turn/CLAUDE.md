@@ -121,7 +121,7 @@ shared subscription for every row of a list); a failure retracts it.
 ## Legacy
 
 Until the ledger, this plugin kept a localStorage state machine
-(`singularity:pending-turns:*`) that guessed delivery by matching the
+(`<browser key prefix>:pending-turns:*`) that guessed delivery by matching the
 transcript's text against a 90 s deadline and filed `turn-unconfirmed`
 reports. The keys are removed once per page load (`internal/legacy-cleanup.ts`,
 this plugin's `register`); the report kind stays registered so old rows still

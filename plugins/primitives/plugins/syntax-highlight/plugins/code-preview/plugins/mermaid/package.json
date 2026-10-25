@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-syntax-highlight-code-preview-mermaid",
+  "name": "@equin/plugin-primitives-syntax-highlight-code-preview-mermaid",
   "description": "Mermaid as a code preview: sequence diagrams and flowcharts drawn natively (cards, coloured numbered steps, dagre-laid-out nodes at the conversation's text size); every other diagram type drawn by Mermaid itself.",
   "private": true,
   "version": "0.0.1",

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-database-db-test-fixture",
+  "name": "@equin/plugin-database-db-test-fixture",
   "description": "Shared throwaway-database fixture for DB-backed test suites.",
   "private": true,
   "version": "0.0.1"

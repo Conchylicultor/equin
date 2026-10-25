@@ -15,7 +15,7 @@ import { buildOutcomeExpr, buildStatusExpr } from "./status-sql";
  * `label` is the targets joined, because that is what a build *is of*:
  * `./equin build --composition sonata website` is one invocation carrying
  * two target chips, and the ledger records it as one row. A plain build reads
- * `singularity`.
+ * the main composition id.
  *
  * - `message: null` — `build_runs` has no error column. A build's own words
  *   about why it failed live in its transcript (`build-logs`), a file on disk;

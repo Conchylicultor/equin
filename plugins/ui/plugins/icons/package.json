@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-ui-icons",
+  "name": "@equin/plugin-ui-icons",
   "private": true,
   "version": "0.0.1",
   "description": "Material Symbols icons as data (symbol/brand IconRefs) drawn by one themed <Icon> from inline SVG sprites."

@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto";
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 
 // A spare checkout's directory (and so its `.git/worktrees/<name>` admin dir,
 // which `git worktree move` keeps) is `spare-<ms>-<rand>`. It deliberately FAILS
@@ -13,7 +14,7 @@ const SPARE_PREFIX = "spare-";
  * never claimable; removed by the claim's `unlock`, which is also how two
  * claimers of one spare are told apart.
  */
-export const SPARE_LOCK_REASON = "singularity-spare";
+export const SPARE_LOCK_REASON = LEGACY_IDS.spareLockReason;
 
 export function newSpareName(now = Date.now()): string {
   return `${SPARE_PREFIX}${now}-${randomBytes(3).toString("hex")}`;

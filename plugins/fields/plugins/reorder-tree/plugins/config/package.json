@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-fields-reorder-tree-config",
+  "name": "@equin/plugin-fields-reorder-tree-config",
   "version": "0.0.1",
   "private": true,
   "description": "Reorder-tree field type: config-render capability (read-only tree list) plus the reorderTreeField factory and normalizeNode helper.",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

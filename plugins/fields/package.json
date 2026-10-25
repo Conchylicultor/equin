@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-fields",
+  "name": "@equin/plugin-fields",
   "version": "0.0.1",
   "private": true,
   "description": "Global unified fields primitive: the type-dimension registry (FieldType token + FieldIdentity + extends-chain resolution) shared across data surfaces.",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

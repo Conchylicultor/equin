@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-overlay-floating-surface",
+  "name": "@equin/plugin-primitives-overlay-floating-surface",
   "description": "FloatingSurface: focus-less caret-anchored floating surface positioned via Floating UI, rendering the shared OverlayPanel inside a ViewportOverlay.",
   "private": true,
   "version": "0.0.1",

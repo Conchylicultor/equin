@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-reorder-node-types",
+  "name": "@equin/plugin-reorder-node-types",
   "version": "0.0.1",
   "private": true,
   "description": "Reorder node-type registry: owns the reorder.node-type slot where each node type (spacer, header, …) registers its identity (type, container, payload schema, render, insert).",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

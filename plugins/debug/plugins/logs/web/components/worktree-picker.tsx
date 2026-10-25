@@ -11,9 +11,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  isNamespace,
+  MAIN_WORKTREE_NAME,
+  namespaceLabel,
+  asNamespace,
+} from "@plugins/infra/plugins/namespace/core";
 
-/** Main's namespace: the other worktree whose logs are worth one click. */
-const MAIN = "singularity";
+/** How a worktree name is shown: a namespace by its public label (main reads
+ *  `equin`); anything that is not one, as given. */
+function shown(w: string): string {
+  return isNamespace(w) ? namespaceLabel(asNamespace(w)) : w;
+}
 
 /**
  * Whose logs: this page's worktree, main's, or the one a link named (a report
@@ -29,10 +38,16 @@ export function WorktreePicker({
   onPick: (worktree: string) => void;
 }): ReactElement {
   const options = [
-    ...new Set([served, MAIN, worktree].filter((w) => w !== null)),
+    ...new Set(
+      [served, MAIN_WORKTREE_NAME, worktree].filter((w) => w !== null),
+    ),
   ];
   const label = (w: string): string =>
-    w === served ? `${w} (this one)` : w === MAIN ? `${w} (main)` : w;
+    w === served
+      ? `${shown(w)} (this one)`
+      : w === MAIN_WORKTREE_NAME
+        ? `${shown(w)} (main)`
+        : shown(w);
   return (
     <Inset pad="sm" className="border-b">
       <Stack direction="row" gap="sm" align="center">

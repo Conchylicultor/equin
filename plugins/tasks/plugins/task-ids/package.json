@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-tasks-task-ids",
+  "name": "@equin/plugin-tasks-task-ids",
   "private": true,
   "version": "0.0.1",
   "description": "The task / attempt / conversation id kinds (defineIdKind): mint, branded type, validation and inline recognition for `task-…`, `att-…` and `conv-…` (legacy alias `claude-…`). A leaf, so infra/worktree can read the attempt kind without a cycle through tasks-core."

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-infra-html-decode",
+  "name": "@equin/plugin-infra-html-decode",
   "description": "Decode HTML character references in raw markup source: decodeHtmlText for text, readHtmlAttr for an HTMLRewriter attribute read. Bun's HTMLRewriter decodes nothing, so every scraped value needs decoding exactly once.",
   "private": true,
   "version": "0.0.1",

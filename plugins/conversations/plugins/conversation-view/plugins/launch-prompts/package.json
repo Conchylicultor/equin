@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-conversations-conversation-view-launch-prompts",
+  "name": "@equin/plugin-conversations-conversation-view-launch-prompts",
   "private": true,
   "version": "0.0.1"
 }

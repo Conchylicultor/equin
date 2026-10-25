@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-fields-dynamic-enum-config",
+  "name": "@equin/plugin-fields-dynamic-enum-config",
   "version": "0.0.1",
   "private": true,
   "description": "Dynamic enum field type: config-render capability (slot-resolved options) plus the dynamicEnumField factory.",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

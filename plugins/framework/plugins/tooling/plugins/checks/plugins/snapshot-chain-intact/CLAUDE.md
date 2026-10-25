@@ -2,7 +2,7 @@
 
 Fails unless the schema migrations under `plugins/database/plugins/migrations/data`
 form one snapshot DAG with a single root and a single tip. Each node's lineage is
-its `.sql`'s `-- singularity:snapshot id=… parents=…` header or, for a migration
+its `.sql`'s `snapshot` migration-marker header id=… parents=… or, for a migration
 from before the snapshot cutover, its `meta/legacy-snapshots.json` entry — both
 read through the migrations plugin's `core` (`readSnapshotNodes` /
 `analyzeSnapshotDag`, which reads no snapshot body), the same definition the

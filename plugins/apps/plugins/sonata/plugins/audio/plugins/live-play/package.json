@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-sonata-audio-live-play",
+  "name": "@equin/plugin-apps-sonata-audio-live-play",
   "description": "Sonata live interactive player: a headless effect that turns hand-played key presses into sustaining note-on/note-off voices, routed through the engine's shared context + master gain and the default instrument.",
   "private": true,
   "version": "0.0.1"

@@ -362,11 +362,11 @@ export interface RegistryGenContext {
   // here so the composition resolution below, and the checks that take a ctx,
   // never re-run `classifyEdges` over the same tree.
   graph: EdgeGraph;
-  // What the app ships: the `singularity` composition's resolved closure. There
+  // What the app ships: the main composition's resolved closure. There
   // is no unfiltered registry — every render says which composition it is for,
   // and this is the answer for the committed `<dir>.generated.ts` files.
   mainBundle: Set<PluginId>;
-  // Which composition the committed registries belong to — `singularity`, with
+  // Which composition the committed registries belong to — the main composition, with
   // its resolved home app. Resolved (and validated) once here, alongside
   // `mainBundle`, so every committed render names the same composition.
   main: RegistryComposition;
@@ -950,7 +950,7 @@ function renderRegistry(
 // ── Public API ─────────────────────────────────────────────────────
 
 /**
- * The plugin set `def`'s COMMITTED registry lists: the `singularity`
+ * The plugin set `def`'s COMMITTED registry lists: the main
  * composition's closure for a `composition` dir, every plugin the checkout
  * declares for a `checkout` one (see `CollectedDirMembership`). The one answer
  * the generator and `plugins-registry-in-sync` both render with.
@@ -980,7 +980,7 @@ export async function generatePluginRegistry(opts: {
   for (const def of defs) {
     await writeGenerated({
       file: collectedDirRegistryPath(def),
-      // The committed runtime registries ARE the `singularity` composition's
+      // The committed runtime registries ARE the main composition's
       // registries — `compositionRegistryFileName` says so, and this is where
       // that is made true rather than merely asserted afterwards. A `checkout`
       // dir (source metadata, e.g. `guard`) lists every plugin instead.
@@ -1046,14 +1046,14 @@ export function collectedDirNamedCompositionRegistryPath(
 
 /**
  * The registry FILE NAME for one `<dir>` and one composition — the single fact
- * that `singularity`'s registry is the committed `<dir>.generated.ts` and every
+ * that main's registry is the committed `<dir>.generated.ts` and every
  * other composition's is the gitignored `<dir>.composition.<id>.generated.ts`.
  *
  * That equality is not a carve-out for main. It is exactly what Phase 1's
  * `plugins-registry-in-sync` check proves: the committed registry IS the
- * `singularity` composition's registry, re-derived from the filesystem on every
- * build and asserted byte-identical. So `singularity` is an ordinary composition
- * here, and `build` and `build --composition singularity` are identical by
+ * main composition's registry, re-derived from the filesystem on every
+ * build and asserted byte-identical. So main is an ordinary composition
+ * here, and a plain `build` and an explicit main-composition build are identical by
  * construction rather than by two code paths that agree.
  *
  * Every consumer asks THIS — the codegen writer, the backend's boot-time
@@ -1134,10 +1134,10 @@ export async function generateCompositionRegistry(opts: {
   assertCompositionName(opts.name);
   // The main composition's registry is the COMMITTED `<dir>.generated.ts`
   // (`compositionRegistryFileName`), which `generatePluginRegistry` already
-  // wrote this build. Writing a `<dir>.composition.singularity.generated.ts`
+  // wrote this build. Writing a `<dir>.composition.<main>.generated.ts`
   // beside it would mint a second, gitignored spelling of the same registry —
   // the file that used to reconfigure main's backend on its next spawn purely by
-  // being present, and the reason `--hermetic --composition singularity` was
+  // being present, and the reason a hermetic build of the main composition was
   // refused. Nothing may produce it, so the skip is here, at the one writer,
   // rather than as a guard at each caller.
   if (opts.name === MAIN_COMPOSITION_ID) return;

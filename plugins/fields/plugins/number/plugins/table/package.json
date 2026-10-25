@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-fields-number-table",
+  "name": "@equin/plugin-fields-number-table",
   "version": "0.0.1",
   "private": true,
   "description": "Number field type: data-view table cell (read-only numeric cell).",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

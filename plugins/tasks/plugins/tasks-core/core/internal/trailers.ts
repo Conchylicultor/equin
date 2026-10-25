@@ -1,3 +1,5 @@
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
+
 /**
  * The READER half of the commit-trailer grammar: the two trailer key names, the
  * `git log --format=` fragment that emits them, and the parse of that output.
@@ -21,9 +23,9 @@
  */
 
 /** Written by `.githooks/prepare-commit-msg` from `SINGULARITY_CONVERSATION_ID`. */
-export const CONVERSATION_TRAILER_KEY = "Singularity-Conversation";
+export const CONVERSATION_TRAILER_KEY = LEGACY_IDS.conversationTrailer;
 /** Stamped per `./equin push` invocation by the rebase `--exec`. */
-export const PUSH_TRAILER_KEY = "Singularity-Push";
+export const PUSH_TRAILER_KEY = LEGACY_IDS.pushTrailer;
 
 /**
  * `git log --format=` fragment: NUL-separated fields, each record terminated by

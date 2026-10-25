@@ -7,7 +7,7 @@ import type { LoginServiceSpec } from "../../core";
 import { parseLaunchAgentPlist, renderLaunchAgentPlist } from "./launchd-plist";
 
 const job: LoginServiceSpec = {
-  label: "dev.singularity.gateway",
+  label: "dev.example.service",
   session: "background",
   description: "equin gateway",
   argv: [
@@ -64,7 +64,7 @@ describe("renderLaunchAgentPlist — the gateway's job, byte for byte", () => {
   test("a background job renders exactly the gateway plist", () => {
     expect(
       renderLaunchAgentPlist({
-        label: "dev.singularity.gateway",
+        label: "dev.example.service",
         session: "background",
         description: "equin gateway",
         argv: ["/bin/gw", "-x"],
@@ -77,7 +77,7 @@ describe("renderLaunchAgentPlist — the gateway's job, byte for byte", () => {
 <plist version="1.0">
 <dict>
 \t<key>Label</key>
-\t<string>dev.singularity.gateway</string>
+\t<string>dev.example.service</string>
 \t<key>ProgramArguments</key>
 \t<array>
 \t\t<string>/bin/gw</string>

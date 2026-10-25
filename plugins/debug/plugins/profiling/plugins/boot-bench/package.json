@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-debug-profiling-boot-bench",
+  "name": "@equin/plugin-debug-profiling-boot-bench",
   "private": true,
   "version": "0.0.1",
   "description": "Cold-boot & live-state loader benchmark harness: a POST endpoint that runs the boot burst in-process and a benchmark_boot MCP tool that aggregates it."

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-active-data",
+  "name": "@equin/plugin-active-data",
   "private": true,
   "version": "0.0.1",
   "dependencies": {

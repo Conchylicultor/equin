@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-primitives-css",
+  "name": "@equin/plugin-primitives-css",
   "description": "Umbrella for global CSS layout primitives (named-slot rows, grids, clusters, overlays) with the shrink hierarchy baked into one place.",
   "private": true,
   "version": "0.0.1",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

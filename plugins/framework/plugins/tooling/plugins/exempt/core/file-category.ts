@@ -18,6 +18,7 @@ export const FILE_CATEGORIES = [
   "central",
   "provision",
   "research",
+  "generated",
 ] as const;
 export type FileCategory = (typeof FILE_CATEGORIES)[number];
 
@@ -40,6 +41,14 @@ export const FILE_CATEGORY_GLOBS: Readonly<
   central: ["**/central/**"],
   provision: ["**/provision/**"],
   research: ["research/**"],
+  // Written by `./equin build` / `bun install` from sources that stay in
+  // scope, so a rule over content is enforced at the source, once.
+  generated: [
+    "**/*.generated.ts",
+    "bun.lock",
+    "config/**/*.origin.jsonc",
+    "docs/plugins-*.md",
+  ],
 };
 
 /**

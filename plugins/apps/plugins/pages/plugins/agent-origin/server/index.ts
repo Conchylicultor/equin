@@ -9,7 +9,7 @@ export { pageBlocksOrigin } from "./internal/tables";
 export default {
   portable: true,
   description:
-    "Agent-origin provenance for pages (page_blocks_ext_origin): a create-hook contributor stamps every page written by an automated session (x-singularity-origin: agent) with the script that minted it, the marker's presence is exposed as the `origin` field (agent | user) of every list whose rows are blocks — the Pages sidebar's Private / Scratch sections — and the machine half's 24h retention sweep trashes the marked pages.",
+    "Agent-origin provenance for pages (page_blocks_ext_origin): a create-hook contributor stamps every page written by an automated session (the origin header set to agent) with the script that minted it, the marker's presence is exposed as the `origin` field (agent | user) of every list whose rows are blocks — the Pages sidebar's Private / Scratch sections — and the machine half's 24h retention sweep trashes the marked pages.",
   contributions: [
     // `origin`, folded into every list whose rows are blocks (pages.tree).
     LiveColumns.Expose(pageBlocksOrigin),

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-tooling-lint-repo-walk-safety",
+  "name": "@equin/plugin-framework-tooling-lint-repo-walk-safety",
   "version": "0.0.1",
   "private": true,
   "description": "repo-walk-safety lint rule: no-adhoc-repo-walk"

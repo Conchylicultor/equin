@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-cli-deploy",
+  "name": "@equin/plugin-framework-cli-deploy",
   "private": true,
   "version": "0.0.1",
   "description": "`./equin deploy converge|ship` — converge a host to serve a composition (run user, dirs, env, Caddy, systemd, firewall) and ship release bundles to it behind a health gate."

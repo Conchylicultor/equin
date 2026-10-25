@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-tooling-checks-token-group-vars-in-sync",
+  "name": "@equin/plugin-framework-tooling-checks-token-group-vars-in-sync",
   "version": "0.0.1",
   "private": true
 }

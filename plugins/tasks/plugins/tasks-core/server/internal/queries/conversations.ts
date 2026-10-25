@@ -152,7 +152,7 @@ export function listRetainedConversations(): Promise<Conversation[]> {
 
 // Every conversation id of one attempt — INCLUDING system kinds, unlike every
 // other entry point here. The consumer (attempt-work) greps `main` for commits
-// carrying a `Singularity-Conversation` trailer in this set, and a commit authored
+// carrying a conversation trailer in this set, and a commit authored
 // by a machine-spawned conversation is still that attempt's landed work: an
 // omitted id would read as "nothing landed", which is exactly the false negative
 // the git-derived standing exists to remove.

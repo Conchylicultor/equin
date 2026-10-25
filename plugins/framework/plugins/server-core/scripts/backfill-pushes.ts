@@ -1,17 +1,17 @@
 #!/usr/bin/env bun
 /**
- * One-time backfill: insert push records for commits that have a Singularity-Push
- * trailer but are missing Singularity-Conversation (SINGULARITY_CONVERSATION_ID was
+ * One-time backfill: insert push records for commits that have a push
+ * trailer but are missing the conversation trailer (SINGULARITY_CONVERSATION_ID was
  * unset at commit time, so the hook never wrote the trailer).
  *
  * Strategy: the local worktree directory is named after the conversation ID, and
  * its HEAD matches the rebased commit SHA on main. We iterate all worktrees, find
- * any whose HEAD appears in the git log of main without a Singularity-Conversation
+ * any whose HEAD appears in the git log of main without a conversation
  * trailer, and insert the missing push records.
  *
  * Usage (the namespace whose database to write is stated, never inherited):
- *   ./equin run scripts/backfill-pushes.ts --namespace singularity          # dry run
- *   ./equin run scripts/backfill-pushes.ts --namespace singularity --write  # apply
+ *   ./equin run scripts/backfill-pushes.ts --namespace equin          # dry run
+ *   ./equin run scripts/backfill-pushes.ts --namespace equin --write  # apply
  */
 
 import { drizzle } from "drizzle-orm/node-postgres";
@@ -24,6 +24,7 @@ import {
   index,
 } from "drizzle-orm/pg-core";
 import { spawnExpectOk } from "@plugins/infra/plugins/spawn/core";
+import { resolveNamespaceAlias } from "@plugins/infra/plugins/namespace/core";
 
 const DRY_RUN = !process.argv.includes("--write");
 
@@ -77,8 +78,8 @@ async function getMainWorktree(): Promise<string> {
 async function readAllCommits(cwd: string): Promise<CommitInfo[]> {
   const FORMAT =
     "%H%x00%cI%x00" +
-    "%(trailers:key=Singularity-Conversation,valueonly,separator=%x00)%x00" +
-    "%(trailers:key=Singularity-Push,valueonly,separator=%x00)%x00" +
+    `%(trailers:key=${LEGACY_IDS.conversationTrailer},valueonly,separator=%x00)%x00` +
+    `%(trailers:key=${LEGACY_IDS.pushTrailer},valueonly,separator=%x00)%x00` +
     "%s%x00";
   const raw = await git(
     ["log", "--no-color", `--format=${FORMAT}`, "main"],
@@ -157,7 +158,7 @@ function argNamespace(): string {
     );
     process.exit(1);
   }
-  return value;
+  return resolveNamespaceAlias(value);
 }
 
 const worktree = argNamespace();
@@ -165,6 +166,7 @@ const worktree = argNamespace();
 import { readFileSync } from "node:fs";
 import { GIT } from "@plugins/infra/plugins/paths/server";
 import { DATABASE_CONFIG_PATH } from "@plugins/database/core";
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 
 // Wedge-breaker for this script's local git reads (`log`, `rev-parse`,
 // `worktree list`). One number for all of them: they are metadata reads that

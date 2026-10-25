@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-deploy-analytics-ip-country",
+  "name": "@equin/plugin-apps-deploy-analytics-ip-country",
   "description": "IP-to-country lookup from a local copy of DB-IP IP-to-Country Lite: lookupCountry(ip) answers found / unlisted / unavailable by binary search over an in-memory snapshot, and the weekly ip-country.refresh job downloads the CSV, builds the compact binary snapshot and swaps it in. The IP never leaves the process.",
   "private": true,
   "version": "0.0.1"

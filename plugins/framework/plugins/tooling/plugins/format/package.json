@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-tooling-format",
+  "name": "@equin/plugin-framework-tooling-format",
   "version": "0.0.1",
   "private": true,
   "description": "The repo's byte-format authority: the prettier allowlist, the hardcoded options, and the merge-base changed-file set that build / format / format-clean all share."

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-outline",
+  "name": "@equin/plugin-primitives-outline",
   "description": "Umbrella for the outline primitive: the scroll-spy position half and the rail chrome half.",
   "private": true,
   "version": "0.0.1"

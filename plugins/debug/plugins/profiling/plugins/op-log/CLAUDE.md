@@ -134,7 +134,7 @@ The record used to carry a second field, `worktree`, read from the
 `SINGULARITY_WORKTREE` environment variable — and the reader preferred it. An
 environment variable reaches every descendant forever: once the tmux server
 inherited main's copy, every agent's build, check and test filed itself under
-`singularity`, and each conversation's own Op profiling pane went empty. Two
+`main`, and each conversation's own Op profiling pane went empty. Two
 fields for one thing meant one of them could be wrong while the other was right.
 The variable is gone (see
 [`research/2026-09-15-global-retire-ambient-worktree-env-runtime-identity.md`](../../../../../../research/2026-09-15-global-retire-ambient-worktree-env-runtime-identity.md)),

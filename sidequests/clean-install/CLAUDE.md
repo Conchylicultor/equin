@@ -56,8 +56,8 @@ When the change also touches what the installer clones (e.g. the doctor), the
 guest must install that tree, not `main`. Snapshot it into a git bundle (a
 throwaway repo outside the worktree: tracked + untracked files, one commit,
 `git bundle create x.bundle main`), hand it over with `--upload
-<bundle>:/tmp/singularity.bundle`, and pass `CLEAN_INSTALL_ARGS="--repo
-/tmp/singularity.bundle"` — the installer's own `--repo`, the one a fork uses.
+<bundle>:/tmp/equin.bundle`, and pass `CLEAN_INSTALL_ARGS="--repo
+/tmp/equin.bundle"` — the installer's own `--repo`, the one a fork uses.
 
 A step may set `<fn>_REBOOT=1`: `run.sh` reboots the guest (`sudo shutdown -r
 now`) and records the time until ssh answers again, instead of running the

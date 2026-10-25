@@ -40,7 +40,9 @@ The `scratch` workspace: `state/workspaces/<attemptId>/`, holding the profile's
     - `mcpScope('scope')`
     - `defineJob('workspace.scratch-reap')`
 - Core:
-  - Uses: `infra/paths.CLAUDE_USER_CONFIG`
+  - Uses:
+    - `framework/product-name.PRODUCT_NAME`
+    - `infra/paths.CLAUDE_USER_CONFIG`
   - Exports (values):
     - `assertDirTrusted`
     - `ensureDirTrusted`

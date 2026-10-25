@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-pages-trash",
+  "name": "@equin/plugin-apps-pages-trash",
   "description": "Pages trash consumer: contributes a Trash entry into the Pages sidebar, opening a dialog that lists soft-deleted pages as a live DataView with Restore and Delete permanently row actions.",
   "private": true,
   "version": "0.0.1"

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-backup-sources-project-memory",
+  "name": "@equin/plugin-backup-sources-project-memory",
   "private": true,
   "version": "0.0.1"
 }

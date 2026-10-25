@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-ids",
+  "name": "@equin/plugin-ids",
   "private": true,
   "version": "0.0.1",
   "description": "Prefixed ids, declared once: defineIdKind owns a kind's mint, branded type, parse/validation and inline recognition; the IdKinds slots register kinds (and their presenters/referents) on both runtimes."

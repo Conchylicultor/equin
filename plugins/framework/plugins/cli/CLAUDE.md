@@ -96,7 +96,7 @@ single process, not a wrapper/worker pair.
 `.gitattributes` routes every generated file (registries, plugin docs, plugin
 `CLAUDE.md` autogen blocks, config origins, drizzle migrations) to a merge driver
 in `scripts/`. A driver does the CHEAP half — take the upstream side, drop a
-marker in `$GITDIR/singularity-merge-markers/` — because the file is a pure
+marker in the git dir's merge-markers dir (`LEGACY_IDS.mergeMarkersDir`) — because the file is a pure
 function of sources git just merged correctly. `plugins/git-artifacts/cli/normalize-generated.ts`
 is the other half: re-derive from the merged tree, amend, consume the marker.
 
@@ -142,7 +142,7 @@ schema drift — main changing `schema.ts` without a migration is one-sided;
 
 `ensureDeps()` owns "this checkout's `node_modules` is correct for its inputs":
 freshness-gated on a `(mtimeMs,size)` signature stamped in
-`node_modules/.singularity-deps` (so the common case is ~140 ms and silent),
+`node_modules/.equin-deps` (so the common case is ~140 ms and silent),
 serialized on `.install.lock`, and **loud** — it runs `bun install` with output
 passed through and throws a message naming the phase on failure. Every install
 site routes through it: the `bin/index.ts` bootstrap, `mise.toml`'s setup task,
@@ -421,9 +421,11 @@ ui-kit's `theme/app.css` (JS-sets / CSS-styles split, as with `.dark`).
 
 ## Plugin reference
 
-- Description: The `./equin` CLI (its old name `singularity` is kept as a shim): the command declaration contract, the generated-artifact normalize contract, and every built-in command (build, push, check, test, run, release, deploy, and more).
+- Description: The `./equin` CLI (its old name is kept as a shim): the command declaration contract, the generated-artifact normalize contract, and every built-in command (build, push, check, test, run, release, deploy, and more).
 - Core:
-  - Uses: `framework/tooling/collected-dir.defineCollectedDir`
+  - Uses:
+    - `framework/product-name.LEGACY_IDS`
+    - `framework/tooling/collected-dir.defineCollectedDir`
   - Exports (types):
     - `ClaudeMdRepo`
     - `CliAction`
@@ -452,7 +454,7 @@ ui-kit's `theme/app.css` (JS-sets / CSS-styles split, as with `.dark`).
   - **`bootstrap`** [exempt] — CLI bootstrap — the npm-free half that must run with node_modules absent: ensureDeps, the post-install re-exec, the orphan guard, the build lock.
   - **`build`** — `./equin build` — the deploy command: codegen, migrations, web dist and backend restart for this checkout, or a composition's hermetic artifact set.
   - **`check`** [exempt] — `./equin check` — run the repo validation checks (all, a named subset, or one scope). The only in-process caller of runChecks(): `build` and `push` each spawn it as a subprocess, so their `checks ✓`…
-  - **`cli-name`** — The CLI's own name, as data: CLI_NAME (`equin`, what agents type and the CLI calls itself), CLI_NAMES (every repo-root executable that runs it, the legacy `singularity` shim included), isCliName and…
+  - **`cli-name`** — The CLI's own name, as data: CLI_NAME (`equin`, what agents type and the CLI calls itself), CLI_NAMES (every repo-root executable that runs it, the legacy shim included), isCliName and…
   - **`db`** — `./equin db` — worktree database operations; today just `db fork`, which gives a hand-made `git worktree add` checkout the DB fork it never got.
   - **`deploy`** — `./equin deploy converge|ship` — converge a host to serve a composition (run user, dirs, env, Caddy, systemd, firewall) and ship release bundles to it behind a health gate.
   - **`doctor`** — The prerequisite doctor: doctor.sh names every missing prerequisite (Xcode CLT/git, mise active, the locked toolchain) in one run, with its fix, and advises on Claude Code (installed and signed in)…

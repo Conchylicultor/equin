@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-tasks-outcome-report",
+  "name": "@equin/plugin-tasks-outcome-report",
   "private": true,
   "version": "0.0.1"
 }

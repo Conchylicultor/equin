@@ -1,7 +1,8 @@
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import { z } from "zod";
 import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 
-const LEGACY_KEY = "singularity.tabId";
+const LEGACY_KEY = `${LEGACY_IDS.browserKeyPrefix}.tabId`;
 
 const tabIdStore = defineStore({
   owner: "scope.tab-id",

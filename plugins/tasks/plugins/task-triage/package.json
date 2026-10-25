@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-tasks-task-triage",
+  "name": "@equin/plugin-tasks-task-triage",
   "private": true,
   "version": "0.0.1"
 }

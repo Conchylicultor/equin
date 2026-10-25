@@ -80,6 +80,7 @@ dynamic value.
   - Uses:
     - `framework/plugin-id.asPluginId`
     - `framework/plugin-id.isTestCodePath`
+    - `framework/plugin-id.PLUGIN_MANIFEST_KEY`
     - `framework/plugin-id.PluginId`
     - `framework/plugin-id.TESTING_FOLDER`
     - `framework/plugin-id.TESTS_DIR`

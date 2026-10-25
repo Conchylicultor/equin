@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-page-annotations-agent-notes",
+  "name": "@equin/plugin-page-annotations-agent-notes",
   "description": "Agent-notes block type: a void container holding what an agent wrote back to the page's author.",
   "private": true,
   "version": "0.0.1"

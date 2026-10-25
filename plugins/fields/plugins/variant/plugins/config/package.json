@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-fields-variant-config",
+  "name": "@equin/plugin-fields-variant-config",
   "version": "0.0.1",
   "private": true,
   "description": "Variant field type: config-render capability (type-dispatched renderer) plus the variantField factory and validateVariant helper.",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

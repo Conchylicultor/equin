@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-config_v2-ledger",
+  "name": "@equin/plugin-config_v2-ledger",
   "private": true,
   "description": "The rewrite-saved-config-once ledger: replays keyed entries (plugin moves, config migrations) onto a namespace's user-layer config before propagation, recording each per namespace and keeping the @hash chain."
 }

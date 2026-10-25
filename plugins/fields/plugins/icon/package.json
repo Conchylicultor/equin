@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-fields-icon",
+  "name": "@equin/plugin-fields-icon",
   "version": "0.0.1",
   "private": true,
   "description": "Icon field type: identity only — value is a user-picked Material Symbols name (SavedSymbolName) or null.",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

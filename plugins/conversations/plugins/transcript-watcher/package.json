@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-conversations-transcript-watcher",
+  "name": "@equin/plugin-conversations-transcript-watcher",
   "private": true,
   "version": "0.0.1"
 }

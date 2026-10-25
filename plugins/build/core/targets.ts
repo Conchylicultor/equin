@@ -6,7 +6,7 @@ import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
  *
  * The one place the question is answered, because six surfaces used to answer it
  * by comparing `target === "main"` against a column that defaulted to `"main"`
- * while the row's `namespace` defaulted to `"singularity"` — the same row saying
+ * while the row's `namespace` defaulted to the main namespace — the same row saying
  * both. A build's targets are composition ids now, and the main app is an
  * ordinary composition whose id IS `MAIN_COMPOSITION_ID`, so the literal has no
  * spelling left anywhere.

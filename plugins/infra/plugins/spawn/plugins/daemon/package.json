@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-infra-spawn-daemon",
+  "name": "@equin/plugin-infra-spawn-daemon",
   "private": true,
   "version": "0.0.1"
 }

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-infra-file-watcher-background-arm",
+  "name": "@equin/plugin-infra-file-watcher-background-arm",
   "description": "File watchers in the Background activity catalog: every declared watcher under File watchers, with its open instances, backend, last change and handler runs in this process.",
   "private": true,
   "version": "0.0.1"

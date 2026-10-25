@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-resource-runtime",
+  "name": "@equin/plugin-framework-resource-runtime",
   "private": true,
   "version": "0.0.1"
 }

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-file-explorer-browser",
+  "name": "@equin/plugin-apps-file-explorer-browser",
   "description": "The file explorer's browser: the FileBrowser component and the /files routes.",
   "private": true,
   "version": "0.0.1"

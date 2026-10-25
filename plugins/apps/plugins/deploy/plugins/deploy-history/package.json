@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-deploy-deploy-history",
+  "name": "@equin/plugin-apps-deploy-deploy-history",
   "description": "History section of the deployment pane: this deployment's durable run ledger as a DataView.",
   "private": true,
   "version": "0.0.1"

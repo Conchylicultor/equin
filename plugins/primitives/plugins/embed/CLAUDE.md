@@ -64,7 +64,7 @@ is about:
 The storage guards are a **hazard guard**, not tidiness, and they hold in both
 modes. A same-origin iframe shares
 the host browser tab's `sessionStorage`, so an embedded document would
-otherwise append a generation to the host's `singularity.appInstances`
+otherwise append a generation to the host's `<prefix>.appInstances`
 registry — and at `RETAINED_INSTANCES` it would evict and sweep the host's real
 `app-tabs:` payloads just by being remounted a few times (every `src` change
 remounts a frame). With the guards, an embed leaves no trace in storage.

@@ -30,7 +30,7 @@ That is not fastidiousness. The default used to be
 `$SINGULARITY_WORKTREE ?? basename(REPO_ROOT)`, and that variable answered a
 question about a different process: the gateway set it on the backends it
 spawned, an agent pane inherited it through the tmux server, so from inside any
-worktree it said `singularity`. (The variable itself is gone now — see
+worktree it said the main namespace. (The variable itself is gone now — see
 `infra/runtime-identity` — but the lesson about environment-derived targets is
 what this rule keeps.) Argument-less runs drove MAIN's app
 and printed `ALL CHECKS PASSED` — and, since `withBrowser` opens by POSTing the
@@ -63,7 +63,7 @@ resolution rather than from a call site — 134 of the 165 scripts never bind
 which is why a fleet of green runs against main left no trace in any transcript:
 
 ```
-target: http://att-….localhost:9000  (this checkout's singularity deploy, build-…-kb3y1y, built 4m ago)
+target: http://att-….localhost:9000  (this checkout's deploy, build-…-kb3y1y, built 4m ago)
 ```
 
 `targetNamespace()` is for a script that must read or assert on a per-namespace

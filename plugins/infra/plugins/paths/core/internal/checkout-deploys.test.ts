@@ -8,7 +8,10 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { asNamespace } from "@plugins/infra/plugins/namespace/core";
+import {
+  asNamespace,
+  MAIN_WORKTREE_NAME,
+} from "@plugins/infra/plugins/namespace/core";
 import { deploysForCheckout, resolveCheckoutDeploy } from "./checkout-deploys";
 import { SERVER_CORE_RELATIVE } from "./paths";
 
@@ -98,20 +101,20 @@ afterAll(() => {
 describe("deploysForCheckout", () => {
   test("returns every namespace a checkout serves, its own app first", () => {
     const fx = fixture();
-    const main = fx.checkout("singularity");
+    const main = fx.checkout(MAIN_WORKTREE_NAME);
     fx.register("sonata", {
       server: serverOf(main),
       composition: "sonata",
     });
-    fx.register("singularity", {
+    fx.register(MAIN_WORKTREE_NAME, {
       server: serverOf(main),
-      composition: "singularity",
+      composition: MAIN_WORKTREE_NAME,
     });
 
     expect(deploysForCheckout(main)).toEqual([
       {
-        namespace: asNamespace("singularity"),
-        composition: "singularity",
+        namespace: asNamespace(MAIN_WORKTREE_NAME),
+        composition: MAIN_WORKTREE_NAME,
         isMainComposition: true,
       },
       {
@@ -124,13 +127,13 @@ describe("deploysForCheckout", () => {
 
   test("a spec with no composition key is the main app (the legacy shape)", () => {
     const fx = fixture();
-    const root = fx.checkout("singularity");
-    fx.register("singularity", { server: serverOf(root) });
+    const root = fx.checkout(MAIN_WORKTREE_NAME);
+    fx.register(MAIN_WORKTREE_NAME, { server: serverOf(root) });
 
     expect(deploysForCheckout(root)).toEqual([
       {
-        namespace: asNamespace("singularity"),
-        composition: "singularity",
+        namespace: asNamespace(MAIN_WORKTREE_NAME),
+        composition: MAIN_WORKTREE_NAME,
         isMainComposition: true,
       },
     ]);
@@ -138,9 +141,9 @@ describe("deploysForCheckout", () => {
 
   test("another checkout's spec is not this checkout's deploy", () => {
     const fx = fixture();
-    const main = fx.checkout("singularity");
+    const main = fx.checkout(MAIN_WORKTREE_NAME);
     const worktree = fx.checkout("att-1");
-    fx.register("singularity", { server: serverOf(main) });
+    fx.register(MAIN_WORKTREE_NAME, { server: serverOf(main) });
     fx.register("att-1", { server: serverOf(worktree) });
 
     expect(deploysForCheckout(worktree).map((d) => d.namespace)).toEqual([
@@ -150,7 +153,7 @@ describe("deploysForCheckout", () => {
 
   test("the central namespace is excluded by its server path alone", () => {
     const fx = fixture();
-    const main = fx.checkout("singularity");
+    const main = fx.checkout(MAIN_WORKTREE_NAME);
     mkdirSync(join(main, "plugins/framework/plugins/central-core"), {
       recursive: true,
     });
@@ -163,14 +166,14 @@ describe("deploysForCheckout", () => {
 
   test("a directory name that is not a namespace is skipped, not thrown on", () => {
     const fx = fixture();
-    const root = fx.checkout("singularity");
+    const root = fx.checkout(MAIN_WORKTREE_NAME);
     // A legal directory a human or another tool left behind: `isNamespace` says
     // no, and `asNamespace` would throw and take every caller on the box down.
     fx.register("Not A Namespace", { server: serverOf(root) });
-    fx.register("singularity", { server: serverOf(root) });
+    fx.register(MAIN_WORKTREE_NAME, { server: serverOf(root) });
 
     expect(deploysForCheckout(root).map((d) => d.namespace)).toEqual([
-      asNamespace("singularity"),
+      asNamespace(MAIN_WORKTREE_NAME),
     ]);
   });
 
@@ -185,15 +188,15 @@ describe("deploysForCheckout", () => {
 
   test("a malformed spec is reported, not raised, once something matched", () => {
     const fx = fixture();
-    const root = fx.checkout("singularity");
-    fx.register("singularity", { server: serverOf(root) });
+    const root = fx.checkout(MAIN_WORKTREE_NAME);
+    fx.register(MAIN_WORKTREE_NAME, { server: serverOf(root) });
     const broken = fx.register("att-2", "{ not json");
 
     const { result, warnings } = capturingWarnings(() =>
       deploysForCheckout(root),
     );
     expect(result.map((d) => d.namespace)).toEqual([
-      asNamespace("singularity"),
+      asNamespace(MAIN_WORKTREE_NAME),
     ]);
     expect(warnings.join("\n")).toContain(broken);
   });
@@ -208,8 +211,8 @@ describe("deploysForCheckout", () => {
 
   test("a server path that cannot be resolved is reported, not raised, once something matched", () => {
     const fx = fixture();
-    const root = fx.checkout("singularity");
-    fx.register("singularity", { server: serverOf(root) });
+    const root = fx.checkout(MAIN_WORKTREE_NAME);
+    fx.register(MAIN_WORKTREE_NAME, { server: serverOf(root) });
     // Somebody else's spec, and its fault is somebody else's: letting it out of
     // the scan would break every caller in every checkout on the machine.
     const broken = fx.register("att-tangled", { server: fx.loop("tangled") });
@@ -218,7 +221,7 @@ describe("deploysForCheckout", () => {
       deploysForCheckout(root),
     );
     expect(result.map((d) => d.namespace)).toEqual([
-      asNamespace("singularity"),
+      asNamespace(MAIN_WORKTREE_NAME),
     ]);
     expect(warnings.join("\n")).toContain(
       `${broken}: server path unresolvable (ELOOP)`,
@@ -243,15 +246,15 @@ describe("deploysForCheckout", () => {
 
   test("a checkout reached through a symlink matches its own spec", () => {
     const fx = fixture();
-    const real = fx.checkout("singularity");
-    fx.register("singularity", { server: serverOf(real) });
+    const real = fx.checkout(MAIN_WORKTREE_NAME);
+    fx.register(MAIN_WORKTREE_NAME, { server: serverOf(real) });
     // The writer resolved `server` against git's toplevel; this reader comes in
     // through a symlink, as a `REPO_ROOT` derived from `import.meta.dir` can.
     const linked = join(real, "..", "linked");
     symlinkSync(real, linked);
 
     expect(deploysForCheckout(linked).map((d) => d.namespace)).toEqual([
-      asNamespace("singularity"),
+      asNamespace(MAIN_WORKTREE_NAME),
     ]);
   });
 });
@@ -259,20 +262,20 @@ describe("deploysForCheckout", () => {
 describe("resolveCheckoutDeploy", () => {
   test("with no composition it resolves the checkout's own app", () => {
     const fx = fixture();
-    const root = fx.checkout("singularity");
+    const root = fx.checkout(MAIN_WORKTREE_NAME);
     fx.register("sonata", { server: serverOf(root), composition: "sonata" });
-    fx.register("singularity", { server: serverOf(root) });
+    fx.register(MAIN_WORKTREE_NAME, { server: serverOf(root) });
 
     const resolution = resolveCheckoutDeploy(root);
     expect(resolution.kind).toBe("resolved");
     if (resolution.kind !== "resolved") throw new Error("unreachable");
-    expect(resolution.deploy.namespace).toBe(asNamespace("singularity"));
+    expect(resolution.deploy.namespace).toBe(asNamespace(MAIN_WORKTREE_NAME));
   });
 
   test("a never-built checkout resolves to none, with nothing to offer", () => {
     const fx = fixture();
-    const other = fx.checkout("singularity");
-    fx.register("singularity", { server: serverOf(other) });
+    const other = fx.checkout(MAIN_WORKTREE_NAME);
+    fx.register(MAIN_WORKTREE_NAME, { server: serverOf(other) });
 
     expect(resolveCheckoutDeploy(fx.checkout("att-5"))).toEqual({
       kind: "none",
@@ -284,7 +287,7 @@ describe("resolveCheckoutDeploy", () => {
   test("the none arm counts what it examined, so a full registry cannot read as an empty one", () => {
     const fx = fixture();
     const root = fx.checkout("att-9");
-    fx.register("singularity", { server: serverOf(fx.checkout("main")) });
+    fx.register(MAIN_WORKTREE_NAME, { server: serverOf(fx.checkout("main")) });
     fx.register("sonata", {
       server: serverOf(fx.checkout("other")),
       composition: "sonata",
@@ -365,7 +368,7 @@ describe("resolveCheckoutDeploy", () => {
     expect(resolution.kind).toBe("none");
     if (resolution.kind !== "none") throw new Error("unreachable");
     expect(resolution.others.map((d) => d.composition)).toEqual([
-      "singularity",
+      MAIN_WORKTREE_NAME,
     ]);
   });
 });

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-build-run-ledger",
+  "name": "@equin/plugin-build-run-ledger",
   "private": true,
   "version": "0.0.1"
 }

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-css-inline",
+  "name": "@equin/plugin-primitives-css-inline",
   "description": "Inline-level flow layout primitive: <Inline gap> lays out a baseline-aligned inline-flex row for chips/icons that sit inline in a text run. The inline-level sibling of Stack.",
   "private": true,
   "version": "0.0.1"

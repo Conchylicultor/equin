@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-chord-video-availability",
+  "name": "@equin/plugin-apps-chord-video-availability",
   "description": "Whether a song's YouTube video still plays in an embed: an oEmbed check run on demand for the videos a loop query is about to offer, the player's own reports, and a derived view that resolves the two into one status.",
   "private": true,
   "version": "0.0.1"

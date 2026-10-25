@@ -2,7 +2,7 @@
 # Beat This!, CQT chroma with librosa, decoding with PyAV (resampled with soxr). Installed on first
 # use as the `audio-python` dependency (infra/deps), run with runPython.
 [project]
-name = "singularity-audio"
+name = "equin-audio"
 version = "0.0.0"
 requires-python = ">=3.12"
 dependencies = [

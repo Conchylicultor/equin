@@ -31,7 +31,7 @@ export type CommitSeries = z.infer<typeof CommitSeriesSchema>;
 
 /**
  * The question every commits chart asks. `dedup` collapses the commits of one
- * push (a `Singularity-Push` trailer) into one — the section passes its
+ * push (a push trailer) into one — the section passes its
  * `filterRebases` config, as it passed the old endpoints' `dedup`.
  */
 const CommitsQuerySchema = z.object({
@@ -98,7 +98,7 @@ export const commitsCounts = liveValue("stats.commits.counts", {
 
 /**
  * Commits per series point, broken down by the item each commit's
- * conversation (its `Singularity-Conversation` trailer) carries within one
+ * conversation (its conversation trailer) carries within one
  * category — `Unknown` when it has none. `items` is the category's configured
  * item order, the series order.
  */

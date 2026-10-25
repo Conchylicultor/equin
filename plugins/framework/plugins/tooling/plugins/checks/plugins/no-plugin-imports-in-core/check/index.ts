@@ -1,3 +1,4 @@
+import { PLUGIN_PACKAGE_PREFIX } from "@plugins/framework/plugins/plugin-id/core";
 import { grepImports } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { compositionRoots } from "@plugins/framework/plugins/tooling/plugins/boundaries/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
@@ -6,9 +7,10 @@ type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
 
 // A plugin-runtime specifier: contains `/plugins/`, or starts with the
-// workspace-name (`@singularity/plugin-`) or `@plugins/` alias forms.
-const PLUGIN_IMPORT_SPEC_RE =
-  /(?:\/plugins\/|^@singularity\/plugin-|^@plugins\/)/;
+// workspace-name (`@equin/plugin-`) or `@plugins/` alias forms.
+const PLUGIN_IMPORT_SPEC_RE = new RegExp(
+  `(?:/plugins/|^${PLUGIN_PACKAGE_PREFIX}|^@plugins/)`,
+);
 
 const ALLOWED_PLUGIN_IMPORT_RE =
   /@plugins\/packages\/|@plugins\/plugin-meta\/plugins\/plugin-tree\/|@plugins\/[^'"]*\/core\b/;
@@ -31,7 +33,7 @@ const check: Check = {
     // string/fixture can never match, so no `maskStrings` knob is needed.
     const matches = await grepImports({
       root,
-      grepArg: `(from|require|export \\* from) ['"][^'""]*(\/plugins\/|@singularity\/plugin-|@plugins\/)`,
+      grepArg: `(from|require|export \\* from) ['"][^'""]*(\/plugins\/|${PLUGIN_PACKAGE_PREFIX}|@plugins\/)`,
       filter: (spec) => PLUGIN_IMPORT_SPEC_RE.test(spec),
     });
 

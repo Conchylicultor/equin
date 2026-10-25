@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-css-radius",
+  "name": "@equin/plugin-primitives-css-radius",
   "description": "Corner-radius standard: the token-driven rounded-* scale and its enforcing lint rule (no-adhoc-radius).",
   "private": true,
   "version": "0.0.1"

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-text-editor",
+  "name": "@equin/plugin-primitives-text-editor",
   "private": true,
   "version": "0.0.1",
   "description": "Generic Lexical-based rich text editor primitive with a Plugin slot for invisible Lexical extensions.",

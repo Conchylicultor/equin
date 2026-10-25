@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-page-formatting-strikethrough",
+  "name": "@equin/plugin-page-formatting-strikethrough",
   "description": "Strikethrough mark button for the page editor's selection toolbar.",
   "private": true,
   "version": "0.0.1"

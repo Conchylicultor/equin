@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-debug-trace",
+  "name": "@equin/plugin-debug-trace",
   "description": "Umbrella for the durable slow-event trace engine: the generic perf-event trace registry + storage (engine) and the built-in event classes (spans, gates, contention).",
   "private": true,
   "version": "0.0.1"

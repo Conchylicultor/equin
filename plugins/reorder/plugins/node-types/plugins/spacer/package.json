@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-reorder-node-types-spacer",
+  "name": "@equin/plugin-reorder-node-types-spacer",
   "version": "0.0.1",
   "private": true,
   "description": "Spacer reorder node type: a blank draggable gap (leaf), with an 'Add Spacer' insert affordance.",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

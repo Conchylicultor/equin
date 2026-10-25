@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-css-space-ramp",
+  "name": "@equin/plugin-primitives-css-space-ramp",
   "version": "0.0.1",
   "private": true,
   "description": "The spacing ramp's one declaration: the closed step set and the literal class each step-keyed @utility family gives each step, generated from app.css so a step that exists in TypeScript but has no @utility behind it is unspellable. Read by every consumer (Stack, Inset, Column, railClass, Sticky, Pin) instead of re-spelling the steps."

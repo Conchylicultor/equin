@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-tasks-worktree-identity",
+  "name": "@equin/plugin-tasks-worktree-identity",
   "private": true,
   "version": "0.0.1"
 }

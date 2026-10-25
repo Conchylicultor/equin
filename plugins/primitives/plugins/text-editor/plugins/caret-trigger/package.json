@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-text-editor-caret-trigger",
+  "name": "@equin/plugin-primitives-text-editor-caret-trigger",
   "description": "Caret-anchored trigger primitive for Lexical editors: derives open-state from editor text and a single-owner arbiter.",
   "private": true,
   "version": "0.0.1",

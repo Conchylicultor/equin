@@ -88,7 +88,7 @@ log's — so the wait settles on a filesystem event, not a tick. The watcher's o
 cost seconds, not the whole wait. Waiting forever on a signal that never arrives
 is the exact failure this command was written to remove.
 
-Repeated `await` calls cannot trip the poll-loop guard: `singularity` is in its
+Repeated `await` calls cannot trip the poll-loop guard: the CLI name is in its
 `MUTATORS` set, so every invocation classifies as `mutate` and resets the
 window.
 

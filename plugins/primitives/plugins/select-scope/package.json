@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-select-scope",
+  "name": "@equin/plugin-primitives-select-scope",
   "description": "Scoped Ctrl+A (Select All) for content containers. Prevents page-wide selection when focus is inside a content region.",
   "private": true,
   "version": "0.0.1"

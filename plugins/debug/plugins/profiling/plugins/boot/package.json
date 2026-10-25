@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-debug-profiling-boot",
+  "name": "@equin/plugin-debug-profiling-boot",
   "private": true,
   "version": "0.0.1",
   "description": "Server boot profiling for the Gantt debug pane."

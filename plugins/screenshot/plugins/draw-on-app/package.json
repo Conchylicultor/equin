@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-screenshot-draw-on-app",
+  "name": "@equin/plugin-screenshot-draw-on-app",
   "private": true,
   "version": "0.0.1",
   "dependencies": {

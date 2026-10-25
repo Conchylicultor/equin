@@ -18,6 +18,7 @@
 import { RuleTester } from "eslint";
 import tsParser from "@typescript-eslint/parser";
 import rule from "./no-laundered-checkout-namespace";
+import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
 
 const ruleTester = new RuleTester({
   languageOptions: {
@@ -36,7 +37,7 @@ ruleTester.run(
   {
     valid: [
       // The boundary cast doing its job: a literal, a DB column, a URL host.
-      { code: `const ns = asNamespace("singularity");` },
+      { code: `const ns = asNamespace("${MAIN_WORKTREE_NAME}");` },
       { code: `const ns = asNamespace(row.worktree);` },
       { code: `const ns = asNamespace(url.host.split(".")[0]);` },
       // A spec-directory entry name really is a namespace — the cast is on the

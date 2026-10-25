@@ -127,7 +127,7 @@ reports (STEP 0). → [`plugins/debug/plugins/queue/CLAUDE.md`](../../../plugins
   (survives restarts). `clientLog(channel, line)` to emit; `tail`/`cat` to read.
   → [`plugins/debug/plugins/logs/CLAUDE.md`](../../../plugins/debug/plugins/logs/CLAUDE.md)
 - **Query DB** — `query_db` MCP, read-only SQL (`database` for another worktree /
-  `"singularity"` for main). → [`plugins/database/plugins/query/CLAUDE.md`](../../../plugins/database/plugins/query/CLAUDE.md)
+  `"equin"` for main). → [`plugins/database/plugins/query/CLAUDE.md`](../../../plugins/database/plugins/query/CLAUDE.md)
 - **Claude CLI calls** — every `claude --print` with prompt / output / source /
   duration. → [`plugins/debug/plugins/claude-cli-calls/CLAUDE.md`](../../../plugins/debug/plugins/claude-cli-calls/CLAUDE.md)
 - **Verify in the real app** — scripted Playwright (`plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts`): clicks,

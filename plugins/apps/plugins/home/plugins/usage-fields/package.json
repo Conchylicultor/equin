@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-home-usage-fields",
+  "name": "@equin/plugin-apps-home-usage-fields",
   "description": "Contributes per-app usage stats (opens and active time, 7-day and all-time, last opened) as fields of the Home app grid.",
   "private": true,
   "version": "0.0.1"

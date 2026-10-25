@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-database-live-state-snapshot",
+  "name": "@equin/plugin-database-live-state-snapshot",
   "description": "L2 persisted live-state materialization: durable snapshot + bounded changelog catch-up for instant cold boot.",
   "private": true,
   "version": "0.0.1"

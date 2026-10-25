@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-page-formatting-code",
+  "name": "@equin/plugin-page-formatting-code",
   "description": "Inline-code mark button for the page editor's selection toolbar.",
   "private": true,
   "version": "0.0.1"

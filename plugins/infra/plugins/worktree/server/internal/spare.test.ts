@@ -19,6 +19,7 @@ import {
   listReadySpares,
   listWorktreeEntries,
 } from "./worktree";
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 
 // Every test runs against a throwaway repository — never the real checkout.
 let base: string;
@@ -81,7 +82,7 @@ describe("spare claim", () => {
       await git(repo, "rev-parse", "main"),
     );
     expect(await git(wt, "status", "--porcelain")).toBe("");
-    expect(await lockOf(wt)).toBe("singularity agent worktree");
+    expect(await lockOf(wt)).toBe(LEGACY_IDS.worktreeLockReason);
     expect(await listReadySpares(repo)).toEqual([]);
   });
 
@@ -104,7 +105,7 @@ describe("spare claim", () => {
     expect(await git(wt, "symbolic-ref", "HEAD")).toBe(
       "refs/heads/claude-web/att-3",
     );
-    expect(await lockOf(wt)).toBe("singularity agent worktree");
+    expect(await lockOf(wt)).toBe(LEGACY_IDS.worktreeLockReason);
   });
 
   test("two concurrent claims of one spare: one wins, the other falls back", async () => {
@@ -118,7 +119,7 @@ describe("spare claim", () => {
       expect(await git(wtFor(id), "symbolic-ref", "HEAD")).toBe(
         `refs/heads/claude-web/${id}`,
       );
-      expect(await lockOf(wtFor(id))).toBe("singularity agent worktree");
+      expect(await lockOf(wtFor(id))).toBe(LEGACY_IDS.worktreeLockReason);
     }
   });
 
@@ -164,7 +165,7 @@ describe("crash convergence", () => {
       "refs/heads/claude-web/att-8",
     );
     expect(await git(wt, "status", "--porcelain")).toBe("");
-    expect(await lockOf(wt)).toBe("singularity agent worktree");
+    expect(await lockOf(wt)).toBe(LEGACY_IDS.worktreeLockReason);
     expect(await isUnfinishedSpareClaim(repo, wt)).toBe(false);
   });
 
@@ -209,7 +210,7 @@ describe("crash convergence", () => {
       await git(repo, "rev-parse", "main"),
     );
     expect(await git(wt, "status", "--porcelain")).toBe("");
-    expect(await lockOf(wt)).toBe("singularity agent worktree");
+    expect(await lockOf(wt)).toBe(LEGACY_IDS.worktreeLockReason);
   });
 
   test("a finished checkout is left in place and only re-locked", async () => {
@@ -223,7 +224,7 @@ describe("crash convergence", () => {
       source: "existing",
     });
     expect(existsSync(join(wt, "work.txt"))).toBe(true);
-    expect(await lockOf(wt)).toBe("singularity agent worktree");
+    expect(await lockOf(wt)).toBe(LEGACY_IDS.worktreeLockReason);
   });
 
   test("a finished checkout on a detached HEAD (e.g. mid-rebase) is left alone", async () => {

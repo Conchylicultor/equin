@@ -10,7 +10,7 @@ const registry = vi.hoisted(() => ({
     loader: () => Promise<{ default: unknown }>;
     dependsOn: string[];
   }[],
-  composition: { id: "singularity", home: null },
+  composition: { id: MAIN_COMPOSITION_ID, home: null },
 }));
 vi.mock("@composition-web-registry", () => registry);
 
@@ -47,6 +47,7 @@ import {
 } from "@plugins/framework/plugins/web-sdk/core";
 import { resetDeferredLoadStateForTests } from "@plugins/framework/plugins/web-sdk/core/testing";
 import App from "../App";
+import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
 
 /**
  * Which plugin-load failures get the full-width boot banner.

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-core",
+  "name": "@equin/plugin-apps-core",
   "description": "App-switcher core: the Apps slot contract, tab manager, rail/tab-bar/surface layout, and the surface + app-rail-framing infra.",
   "private": true,
   "version": "0.0.1"

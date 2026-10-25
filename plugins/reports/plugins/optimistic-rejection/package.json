@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-reports-optimistic-rejection",
+  "name": "@equin/plugin-reports-optimistic-rejection",
   "private": true,
   "version": "0.0.1"
 }

@@ -29,6 +29,7 @@ vi.mock(
 
 import { cleanup, fireEvent, render } from "@testing-library/react";
 import { ResourceError } from "@plugins/primitives/plugins/live-state/core";
+import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
 import { BuildButton } from "../components/build-button";
 
 /**
@@ -120,7 +121,7 @@ describe("BuildButton with history", () => {
     id: "r1",
     trigger: "manual",
     commitHash: null,
-    targets: ["singularity"],
+    targets: [MAIN_COMPOSITION_ID],
     startedAt: new Date("2026-10-08T10:00:00Z"),
     finishedAt: new Date("2026-10-08T10:05:00Z"),
     exitCode: 0,

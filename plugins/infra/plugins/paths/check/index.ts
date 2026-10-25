@@ -92,7 +92,7 @@ const noHardcodedPathsCheck: Check = {
     return {
       ok: false,
       message: `hardcoded path found in ${offenders.length} place(s):\n    ${offenders.join("\n    ")}`,
-      hint: "Import path constants from `@plugins/infra/plugins/paths/core` (e.g. HOME_DIR, REPO_ROOT) or `@plugins/infra/plugins/paths/server` (e.g. GIT, resolveClaudeBin) instead of constructing paths from homedir() or hardcoding binary paths. For anything under the singularity data root, declare it with `defineDataDir` — or, for an app's content, use an area of that app's one data dir (`defineAppDataDir` at the app's root, `.subdir(…)` from sub-plugins) — there is no root constant to join.",
+      hint: "Import path constants from `@plugins/infra/plugins/paths/core` (e.g. HOME_DIR, REPO_ROOT) or `@plugins/infra/plugins/paths/server` (e.g. GIT, resolveClaudeBin) instead of constructing paths from homedir() or hardcoding binary paths. For anything under the data root, declare it with `defineDataDir` — or, for an app's content, use an area of that app's one data dir (`defineAppDataDir` at the app's root, `.subdir(…)` from sub-plugins) — there is no root constant to join.",
     };
   },
 };
@@ -595,7 +595,7 @@ function verifyMove(
 const noUndeclaredDataDirsCheck: Check = {
   id: "paths:no-undeclared-data-dirs",
   description:
-    "Every top-level entry under the singularity data root is a declared data dir (defineDataDir), one of the closed set of kinds, or a legacy name verified as the compatibility symlink to its declared target — and every entry INSIDE a kind directory is itself a declared <kind>/<name>, or a declared move's old location (movedFrom) verified as its shim or as a pending move.",
+    "Every top-level entry under the data root is a declared data dir (defineDataDir), one of the closed set of kinds, or a legacy name verified as the compatibility symlink to its declared target — and every entry INSIDE a kind directory is itself a declared <kind>/<name>, or a declared move's old location (movedFrom) verified as its shim or as a pending move.",
   // The subject is the MACHINE — one data root shared by every checkout on this
   // box, holding the union of every branch that has ever run here. Not the tree,
   // and not the dist this build produced, so no per-worktree caller can assert

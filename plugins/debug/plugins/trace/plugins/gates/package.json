@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-debug-trace-gates",
+  "name": "@equin/plugin-debug-trace-gates",
   "description": "Built-in trace event class: per-concurrency-gate occupancy (active / queued / max per layer) read synchronously at the trip instant via readGateGauges.",
   "private": true,
   "version": "0.0.1"

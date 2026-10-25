@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-infra-query-resource",
+  "name": "@equin/plugin-infra-query-resource",
   "private": true,
   "version": "0.0.1"
 }

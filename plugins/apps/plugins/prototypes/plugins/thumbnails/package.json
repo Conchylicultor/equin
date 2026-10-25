@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-prototypes-thumbnails",
+  "name": "@equin/plugin-apps-prototypes-thumbnails",
   "private": true,
   "version": "0.0.1",
   "dependencies": {

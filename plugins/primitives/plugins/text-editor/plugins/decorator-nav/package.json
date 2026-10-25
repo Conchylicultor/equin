@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-text-editor-decorator-nav",
+  "name": "@equin/plugin-primitives-text-editor-decorator-nav",
   "description": "Caret crossing over inline decorator nodes for Lexical editors: one ArrowLeft/ArrowRight steps to the far side instead of stalling on the contenteditable=false span.",
   "private": true,
   "version": "0.0.1",

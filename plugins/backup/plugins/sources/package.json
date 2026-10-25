@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-backup-sources",
+  "name": "@equin/plugin-backup-sources",
   "description": "Umbrella for pluggable backup sources, each a self-gating sub-plugin contributing a BackupSource.",
   "private": true,
   "version": "0.0.1"

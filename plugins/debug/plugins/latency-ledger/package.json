@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-debug-latency-ledger",
+  "name": "@equin/plugin-debug-latency-ledger",
   "private": true,
   "version": "0.0.1",
   "description": "An honest, always-on record of how fast the app feels: every page load, in-app navigation, update delay and thread-lag sample, kept as per-minute histograms so p50/p95 exist for any window, split into calm and under-pressure minutes at query time."

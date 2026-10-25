@@ -18,8 +18,8 @@ import { conversationsEntityRef } from "@plugins/tasks/plugins/tasks-core/core";
 // Postgres: a session's conversation (title, status, link) is read on the
 // web from `sessionConversations` below.
 
-/** Which sessions a chart counts (the `singularityOnly` config toggle). */
-export const COST_SCOPES = ["all", "singularity"] as const;
+/** Which sessions a chart counts (the `repoOnly` config toggle). */
+export const COST_SCOPES = ["all", "repo"] as const;
 export type CostScope = (typeof COST_SCOPES)[number];
 
 const scopeParams = { scope: z.enum(COST_SCOPES) };

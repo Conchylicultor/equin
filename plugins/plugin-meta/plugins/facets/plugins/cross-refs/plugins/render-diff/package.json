@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-plugin-meta-facets-cross-refs-render-diff",
+  "name": "@equin/plugin-plugin-meta-facets-cross-refs-render-diff",
   "version": "0.0.1",
   "private": true,
   "description": "Diff renderer for the cross-refs facet (PR review)."

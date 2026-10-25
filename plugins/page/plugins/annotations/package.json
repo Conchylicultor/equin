@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-page-annotations",
+  "name": "@equin/plugin-page-annotations",
   "description": "Umbrella for the page editor's annotation containers — the party-scoped boxes that carry the human↔agent side-channel of a page: human notes, agent notes, private notes, TODO.",
   "private": true,
   "version": "0.0.1"

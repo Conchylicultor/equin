@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-deploy-deployments-runs-arm",
+  "name": "@equin/plugin-apps-deploy-deployments-runs-arm",
   "description": "The deploy arm of the unified run space: deploy_runs bound into the runs union, its own fields, and the list row carrying the CLI's own refusal text.",
   "private": true,
   "version": "0.0.1"

@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-fields-image-table",
+  "name": "@equin/plugin-fields-image-table",
   "version": "0.0.1",
   "private": true,
   "description": "Image field type: data-view table cell (read-only thumbnail).",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

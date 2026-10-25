@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-network-live-filter",
+  "name": "@equin/plugin-network-live-filter",
   "description": "The one filter language: a closed set of column domains (text, number, boolean, instant, stringArray), ONE op table whose entries carry their in-memory test and a dialect-free SQL template side by side (negatives only via complementOf), and the Filter expression (clauses under and/or, no not) with its canonical form, strict codec and in-memory matchesFilter. server: renderOpSql / filterSql compile it to drizzle SQL over rendered targets.",
   "private": true,
   "version": "0.0.1"

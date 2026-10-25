@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-css-layout-harness-geometry",
+  "name": "@equin/plugin-primitives-css-layout-harness-geometry",
   "description": "Geometry vocabulary of the layout harness, as a types-only leaf: FixtureDims, GeometryInvariant, FixtureMutation, HOST_MARKER_ATTR and GeometrySpec (what an exhibit declares to be geometry-gated). Split out so the exhibit catalog can carry geometry without depending on the harness.",
   "private": true,
   "version": "0.0.1"

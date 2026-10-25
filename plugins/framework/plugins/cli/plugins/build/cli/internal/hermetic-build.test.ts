@@ -9,6 +9,7 @@
  */
 import { describe, expect, test } from "bun:test";
 import { hermeticFlagConflicts } from "./hermetic-build";
+import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
 
 /** The coherent invocation every case below perturbs by exactly one field. */
 const ok = { composition: ["sonata"], restart: true };
@@ -29,17 +30,20 @@ describe("hermeticFlagConflicts", () => {
     }
   });
 
-  test("--composition singularity is an ORDINARY composition, not a refusal", () => {
+  test("the main composition is an ORDINARY composition, not a refusal", () => {
     // It was refused while the backend picked its registry by file presence: the
-    // emitted `server.composition.singularity.generated.ts` would reconfigure
+    // emitted `server.composition.<main>.generated.ts` would reconfigure
     // main's own backend on its next spawn. Selection is by identity now, the
     // main composition's registry IS the committed one and nothing emits a
     // second spelling of it, so releasing the main app is a normal build.
     expect(
-      hermeticFlagConflicts({ ...ok, composition: ["singularity"] }),
+      hermeticFlagConflicts({ ...ok, composition: [MAIN_COMPOSITION_ID] }),
     ).toEqual([]);
     expect(
-      hermeticFlagConflicts({ ...ok, composition: ["sonata", "singularity"] }),
+      hermeticFlagConflicts({
+        ...ok,
+        composition: ["sonata", MAIN_COMPOSITION_ID],
+      }),
     ).toEqual([]);
   });
 

@@ -9,14 +9,16 @@
 //
 //   expand → claimed data migrations (timestamp order) → contract
 //
+// (`<marker>` is `LEGACY_IDS.migrationMarker`, the tag of every marker below.)
+//
 // Every file without the header — everything written before this grammar, and
 // every data migration — is `legacy`: applied whole, at its own timestamp.
 //
-//   -- singularity:phase expand
+//   -- <marker>:phase expand
 //   CREATE TABLE IF NOT EXISTS "x" (...);
-//   -- singularity:phase contract
+//   -- <marker>:phase contract
 //   ALTER TABLE "agents" DROP COLUMN IF EXISTS "icon_svg_nodes";
-//   -- singularity:claims
+//   -- <marker>:claims
 //   -- 20260927_182347__remap_saved_icons_to_symbols
 //
 // A claim names a data migration by `<YYYYMMDD_HHMMSS>__<slug>` — its filename
@@ -27,9 +29,9 @@
 // Every schema migration written since the snapshot cutover names its drizzle
 // snapshot on its first line: the snapshot's id and its parent ids.
 //
-//   -- singularity:snapshot id=<uuid> parents=<uuid>            (ordinary)
-//   -- singularity:snapshot id=<uuid> parents=<uuidA>,<uuidB>   (merge node)
-//   -- singularity:phase expand
+//   -- <marker>:snapshot id=<uuid> parents=<uuid>            (ordinary)
+//   -- <marker>:snapshot id=<uuid> parents=<uuidA>,<uuidB>   (merge node)
+//   -- <marker>:phase expand
 //   ...
 //
 // The header is the schema-migration marker (a file with it is a schema
@@ -42,10 +44,10 @@
 // §3) is a header with two or more parents over an empty phased migration with
 // no claims:
 //
-//   -- singularity:snapshot id=<derived> parents=<snapshotIdA>,<snapshotIdB>
-//   -- singularity:phase expand
-//   -- singularity:phase contract
-//   -- singularity:claims
+//   -- <marker>:snapshot id=<derived> parents=<snapshotIdA>,<snapshotIdB>
+//   -- <marker>:phase expand
+//   -- <marker>:phase contract
+//   -- <marker>:claims
 //
 // Its SQL does nothing — each side's own migrations already apply that side's
 // DDL — and its snapshot is the 3-way merge of the parents.
@@ -56,9 +58,9 @@
 // database that applied the deleted files already carries that delta, and the
 // ledger is keyed by hash — so the new file records which hashes it replaced:
 //
-//   -- singularity:supersedes 38bc8c97 f09303fa
-//   -- singularity:supersedes a1b2c3d4 <- 0badf00d 12345678
-//   -- singularity:phase expand
+//   -- <marker>:supersedes 38bc8c97 f09303fa
+//   -- <marker>:supersedes a1b2c3d4 <- 0badf00d 12345678
+//   -- <marker>:phase expand
 //   ...
 //
 // The first form (exactly one line) lists the files this reset deleted. The
@@ -75,26 +77,29 @@
 // writes an adoption file instead: empty sections, the lineage, and one more
 // line naming the published files whose combined delta the lineage applied:
 //
-//   -- singularity:adopts 5d1f2e3a 77aa01bc
-//   -- singularity:supersedes 38bc8c97 f09303fa
-//   -- singularity:phase expand
-//   -- singularity:phase contract
-//   -- singularity:claims
+//   -- <marker>:adopts 5d1f2e3a 77aa01bc
+//   -- <marker>:supersedes 38bc8c97 f09303fa
+//   -- <marker>:phase expand
+//   -- <marker>:phase contract
+//   -- <marker>:claims
 //
 // Where the lineage is fully applied, the runner records the adopted files
 // without running their DDL; anywhere else the file is a no-op record.
 
-const SNAPSHOT_HEADER = "-- singularity:snapshot";
-const SNAPSHOT_HEADER_RE =
-  /^-- singularity:snapshot id=([0-9a-f-]+) parents=([0-9a-f-]+(?:,[0-9a-f-]+)*)$/;
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
+
+const SNAPSHOT_HEADER = `-- ${LEGACY_IDS.migrationMarker}:snapshot`;
+const SNAPSHOT_HEADER_RE = new RegExp(
+  `^-- ${LEGACY_IDS.migrationMarker}:snapshot id=([0-9a-f-]+) parents=([0-9a-f-]+(?:,[0-9a-f-]+)*)$`,
+);
 const SNAPSHOT_ID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
-const EXPAND = "-- singularity:phase expand";
-const CONTRACT = "-- singularity:phase contract";
-const CLAIMS = "-- singularity:claims";
-const SUPERSEDES = "-- singularity:supersedes";
-const ADOPTS = "-- singularity:adopts";
+const EXPAND = `-- ${LEGACY_IDS.migrationMarker}:phase expand`;
+const CONTRACT = `-- ${LEGACY_IDS.migrationMarker}:phase contract`;
+const CLAIMS = `-- ${LEGACY_IDS.migrationMarker}:claims`;
+const SUPERSEDES = `-- ${LEGACY_IDS.migrationMarker}:supersedes`;
+const ADOPTS = `-- ${LEGACY_IDS.migrationMarker}:adopts`;
 const HASH_RE = /^[0-9a-f]{8}$/;
 
 const MIGRATION_FILE_RE = /^(\d{8})_(\d{6})_([0-9a-f]{8})__(.+)\.sql$/;
@@ -391,7 +396,7 @@ function parsePhasedBody(sql: string): ParsedMigration {
       i !== 0 &&
       i !== contractAt &&
       i !== claimsAt &&
-      l.trimStart().startsWith("-- singularity:")
+      l.trimStart().startsWith(`-- ${LEGACY_IDS.migrationMarker}:`)
     ) {
       throw new Error(
         `phased migration has a duplicate marker at line ${i + 1}: ${l}`,

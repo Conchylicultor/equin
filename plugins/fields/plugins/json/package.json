@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-fields-json",
+  "name": "@equin/plugin-fields-json",
   "version": "0.0.1",
   "private": true,
   "description": "JSON field type: identity only. Typed dynamic-keyed JSON value (Zod-validated); the config-render capability and the jsonField factory live in the plugins/config sub-plugin.",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

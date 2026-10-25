@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-cli-db",
+  "name": "@equin/plugin-framework-cli-db",
   "private": true,
   "version": "0.0.1",
   "description": "`./equin db` — worktree database operations; today just `db fork`, which gives a hand-made `git worktree add` checkout the DB fork it never got."

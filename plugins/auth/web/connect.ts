@@ -1,3 +1,4 @@
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import {
   EndpointError,
   type FetchEndpoint,
@@ -9,7 +10,7 @@ import {
 } from "@plugins/infra/plugins/namespace/core";
 
 /**
- * Open the OAuth popup. Returns a promise that resolves on `singularity.auth.complete`
+ * Open the OAuth popup. Returns a promise that resolves on the auth-complete
  * postMessage from the popup, or rejects on cancellation/timeout.
  *
  * The popup loads `http://localhost:9000/api/auth/start/<provider>` (bare
@@ -28,7 +29,7 @@ export interface ConnectResult {
 }
 
 const POPUP_FEATURES = "width=600,height=720";
-const POPUP_NAME = "singularity-auth";
+const POPUP_NAME = LEGACY_IDS.authPopupName;
 const MAIN_ORIGIN = "http://localhost:9000";
 const POPUP_TIMEOUT_MS = 5 * 60 * 1000;
 
@@ -67,7 +68,7 @@ export function startConnectFlow(args: ConnectArgs): Promise<ConnectResult> {
         identity?: ConnectResult["identity"];
       };
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-      if (!data || data.type !== "singularity.auth.complete") return; // runtime guard on external postMessage data
+      if (!data || data.type !== LEGACY_IDS.authCompleteMessage) return; // runtime guard on external postMessage data
       if (data.providerId && data.providerId !== args.providerId) return;
       cleanup();
       resolve({

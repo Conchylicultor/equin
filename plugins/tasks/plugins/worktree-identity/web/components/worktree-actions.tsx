@@ -8,6 +8,7 @@ import {
   useWorktreePlace,
 } from "../internal/use-worktree-identity";
 import { navIcons } from "@plugins/ui/plugins/icons/core";
+import { namespaceLabel } from "@plugins/infra/plugins/namespace/core";
 
 /**
  * The worktree row's trailing controls: copy the namespace, and open the linked
@@ -21,7 +22,10 @@ export function WorktreeActions() {
   return (
     <>
       {place.kind === "local" ? null : (
-        <CopyButton text={place.namespace} tooltip="Copy namespace" />
+        <CopyButton
+          text={namespaceLabel(place.namespace)}
+          tooltip="Copy namespace"
+        />
       )}
       {task.kind === "linked" ? (
         <IconButton

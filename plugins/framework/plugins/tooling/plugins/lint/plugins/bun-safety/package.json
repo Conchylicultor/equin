@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-tooling-lint-bun-safety",
+  "name": "@equin/plugin-framework-tooling-lint-bun-safety",
   "version": "0.0.1",
   "private": true,
   "description": "bun-safety lint rule: no-declare-identifier"

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-ui-tab-bar-customizer",
+  "name": "@equin/plugin-ui-tab-bar-customizer",
   "description": "Registers the tab-bar variant picker into the theme customizer.",
   "private": true,
   "version": "0.0.1"

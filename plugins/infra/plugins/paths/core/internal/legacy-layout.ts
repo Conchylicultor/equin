@@ -242,7 +242,7 @@ export const LEGACY_LAYOUT: readonly LegacyMove[] = [
     from: "backups",
     move: "quarantine",
     reason:
-      "a hand-made pg dump with no code owner at all — BACKUPS_DIR is ~/.backups/singularity, outside the data root",
+      "a hand-made pg dump with no code owner at all — BACKUPS_DIR is outside the data root",
   },
   {
     from: "build-slots",

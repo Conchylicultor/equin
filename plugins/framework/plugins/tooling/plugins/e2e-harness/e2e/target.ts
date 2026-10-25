@@ -48,7 +48,7 @@
  * `SINGULARITY_WORKTREE` answered "which namespace is this BACKEND the server
  * for" (the gateway set it on the backends it spawned), an agent pane inherited
  * it through the tmux server, and so from inside any worktree it said
- * `singularity`. Runs drove MAIN's app and printed ALL CHECKS PASSED — worse,
+ * the main namespace. Runs drove MAIN's app and printed ALL CHECKS PASSED — worse,
  * `withBrowser` opens by POSTing the config repair to the resolved origin, so
  * every run reverted the user's live documents before doing anything.
  *
@@ -227,7 +227,7 @@ function noDeploy(
   const suggest = first.composition;
   const head =
     composition === undefined
-      ? `No deploy for this checkout's own app (composition "${MAIN_COMPOSITION_ID}").`
+      ? "No deploy for this checkout's own app (the main composition)."
       : `No deploy for composition "${composition}" from this checkout.`;
   const tail =
     composition === undefined
@@ -357,7 +357,13 @@ function describeBuild(namespace: Namespace): string {
 function describeTarget(t: Target): string {
   if (t.kind === "stated") return `target: ${t.origin}  (named by ${t.flag})`;
   const build = describeBuild(t.deploy.namespace);
-  return `target: ${t.origin}  (this checkout's ${t.deploy.composition} deploy, ${build})`;
+  // The main composition's id is a kept internal name: say "deploy", as the
+  // address already names the app.
+  const which =
+    t.deploy.composition === MAIN_COMPOSITION_ID
+      ? "deploy"
+      : `${t.deploy.composition} deploy`;
+  return `target: ${t.origin}  (this checkout's ${which}, ${build})`;
 }
 
 /**

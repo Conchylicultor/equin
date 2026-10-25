@@ -132,7 +132,7 @@ shipped **git-layer** first-launch defaults `serveOne` installs.
 throws `CompositionResetError` (nothing touched) if any fails:
 
 1. `assertServableCompositionNamespace(id)` — rejects the reserved
-   `{central, singularity, main}` namespaces. The explicit "never main" gate.
+   `{central, <main namespace>, main}` namespaces. The explicit "never main" gate.
 2. `hasCompositionMarker(id)` — the `composition.json` provenance marker must
    exist (proves a serve build owns this namespace).
 3. `namespaceCollision(id, probeNamespace(mainRoot, id)) === null` — no real git

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-integrations-youtube-audio-fetch",
+  "name": "@equin/plugin-integrations-youtube-audio-fetch",
   "version": "0.0.1",
   "private": true,
   "description": "Downloads one YouTube video's best audio stream (yt-dlp, JavaScript challenges solved on bun) into a host-wide cache, from the on-demand `youtube-audio` Python dependency; a daily sweep keeps the cache within 30 days and 2 GB."

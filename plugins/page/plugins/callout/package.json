@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-page-callout",
+  "name": "@equin/plugin-page-callout",
   "description": "Callout block type for the page editor: a tinted highlight box with a changeable leading icon and semantic color, for notes/tips/warnings.",
   "private": true,
   "version": "0.0.1"

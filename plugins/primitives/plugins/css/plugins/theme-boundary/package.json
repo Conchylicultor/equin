@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-css-theme-boundary",
+  "name": "@equin/plugin-primitives-css-theme-boundary",
   "description": "Theme-boundary primitive: <Theme name surface> owns all three halves of a theme boundary at once — the data-theme-scope attribute, the portal forward, and the canvas it paints.",
   "private": true,
   "version": "0.0.1"

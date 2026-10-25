@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-hints-help-menu",
+  "name": "@equin/plugin-hints-help-menu",
   "description": "The ? Getting started menu in the global action bar: replay the tour, show tips again, read the guide — an open HelpMenu.Entry slot other plugins add to (hints/ask's Ask equin) — and the Help task category Ask equin questions are filed under.",
   "private": true,
   "version": "0.0.1"

@@ -57,7 +57,7 @@ type Check = {
 };
 
 // WHICH main database. Not a constant: it is the database of the namespace this
-// repository's main checkout runs as — `singularity` for the repository this
+// repository's main checkout runs as — the main namespace for the repository this
 // machine's main app is served from, and the clone's own namespace for any other
 // (a second clone, an e2e's temp repo; `checkoutRef`). Dry-running a clone's
 // pending delta against the machine's main database measured a history the

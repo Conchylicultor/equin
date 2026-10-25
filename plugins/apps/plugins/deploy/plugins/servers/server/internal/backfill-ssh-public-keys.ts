@@ -1,3 +1,4 @@
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import { isNull } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { _deployServers } from "./tables";
@@ -33,7 +34,7 @@ export async function backfillSshPublicKeys(): Promise<void> {
     try {
       const publicKey = await derivePublicKey(
         secret.privateKey,
-        `singularity-deploy-${row.id}`,
+        `${LEGACY_IDS.deployKeyCommentPrefix}${row.id}`,
       );
       await storeSshKey(row.id, { privateKey: secret.privateKey, publicKey });
     } catch (err) {

@@ -10,15 +10,15 @@ const root = mkdtempSync(join(tmpdir(), "git-push-guard-"));
 afterAll(() => rmSync(root, { recursive: true, force: true }));
 
 // An equin checkout: a `.git` FILE (as in a worktree) plus the CLI.
-const singularity = join(root, "singularity-wt");
-mkdirSync(join(singularity, "plugins/framework/plugins/cli/bin"), {
+const equinRepo = join(root, "equin-wt");
+mkdirSync(join(equinRepo, "plugins/framework/plugins/cli/bin"), {
   recursive: true,
 });
-mkdirSync(join(singularity, "src/deep"), { recursive: true });
-writeFileSync(join(singularity, ".git"), "gitdir: elsewhere\n");
-writeFileSync(join(singularity, "singularity"), "#!/bin/sh\n");
+mkdirSync(join(equinRepo, "src/deep"), { recursive: true });
+writeFileSync(join(equinRepo, ".git"), "gitdir: elsewhere\n");
+writeFileSync(join(equinRepo, "equin"), "#!/bin/sh\n");
 writeFileSync(
-  join(singularity, "plugins/framework/plugins/cli/bin/index.ts"),
+  join(equinRepo, "plugins/framework/plugins/cli/bin/index.ts"),
   "",
 );
 
@@ -36,11 +36,11 @@ const blocks = (command: string, cwd: string) =>
 
 describe("git-push guard targets only equin checkouts", () => {
   test("blocks a push from an equin checkout", () => {
-    expect(blocks("git push origin main", singularity)).toBe(true);
+    expect(blocks("git push origin main", equinRepo)).toBe(true);
   });
 
   test("blocks from a subdirectory of an equin checkout", () => {
-    expect(blocks("git push", join(singularity, "src/deep"))).toBe(true);
+    expect(blocks("git push", join(equinRepo, "src/deep"))).toBe(true);
   });
 
   test("allows a push from another repo", () => {
@@ -49,21 +49,21 @@ describe("git-push guard targets only equin checkouts", () => {
   });
 
   test("follows cd into another repo", () => {
-    expect(blocks(`cd ${other} && git push`, singularity)).toBe(false);
+    expect(blocks(`cd ${other} && git push`, equinRepo)).toBe(false);
   });
 
   test("follows cd into an equin checkout", () => {
-    expect(blocks(`cd ${singularity} && git push`, other)).toBe(true);
+    expect(blocks(`cd ${equinRepo} && git push`, other)).toBe(true);
   });
 
   test("follows -C, relative to the call's cwd", () => {
-    expect(blocks(`git -C ${other} push`, singularity)).toBe(false);
-    expect(blocks("git -C ../singularity-wt push", other)).toBe(true);
-    expect(blocks(`git -c a.b=c -C ${singularity} push`, other)).toBe(true);
+    expect(blocks(`git -C ${other} push`, equinRepo)).toBe(false);
+    expect(blocks("git -C ../equin-wt push", other)).toBe(true);
+    expect(blocks(`git -c a.b=c -C ${equinRepo} push`, other)).toBe(true);
   });
 
   test("an equin push later in the chain is still caught", () => {
-    expect(blocks(`git push; git -C ${singularity} push`, other)).toBe(true);
+    expect(blocks(`git push; git -C ${equinRepo} push`, other)).toBe(true);
   });
 
   test("an unfollowed repository spelling is treated as equin", () => {
@@ -76,6 +76,6 @@ describe("git-push guard targets only equin checkouts", () => {
   });
 
   test("other git subcommands are untouched", () => {
-    expect(blocks("git -C . status", singularity)).toBe(false);
+    expect(blocks("git -C . status", equinRepo)).toBe(false);
   });
 });

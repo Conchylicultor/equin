@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-remote-session",
+  "name": "@equin/plugin-conversations-conversation-view-jsonl-viewer-attachment-remote-session",
   "private": true,
   "version": "0.0.1"
 }

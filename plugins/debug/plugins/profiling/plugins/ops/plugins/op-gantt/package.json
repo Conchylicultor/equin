@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-debug-profiling-ops-op-gantt",
+  "name": "@equin/plugin-debug-profiling-ops-op-gantt",
   "private": true,
   "version": "0.0.1"
 }

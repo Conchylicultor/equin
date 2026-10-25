@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-ui-tokens-shadow",
+  "name": "@equin/plugin-ui-tokens-shadow",
   "private": true,
   "version": "0.0.1",
   "description": "Shadow token group with switchable presets."

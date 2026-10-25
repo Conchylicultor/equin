@@ -243,6 +243,7 @@ this plugin implements: [`research/2026-10-02-apps-file-explorer-from-prototype.
     - `POST /api/host-fs/move`
 - Core:
   - Uses:
+    - `framework/product-name.LEGACY_IDS`
     - `infra/endpoints.assetPath`
     - `infra/endpoints.AssetPath`
     - `infra/endpoints.blob`

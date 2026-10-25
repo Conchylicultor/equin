@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * One-time repair: move the singularity data root onto the declared
+ * One-time repair: move the data root onto the declared
  * `<kind>/<name>` layout that `defineDataDir` describes but the disk never had.
  *
  * Two passes, because a bare rename breaks every worktree still running pre-move

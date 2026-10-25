@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-tasks-task-deps-tree",
+  "name": "@equin/plugin-tasks-task-deps-tree",
   "description": "Dependency tree view for the task detail: renders task_dependencies as a nesting = runs-after tree with atomic drag-to-reorder.",
   "private": true,
   "version": "0.0.1"

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-stats-responsiveness",
+  "name": "@equin/plugin-stats-responsiveness",
   "private": true,
   "version": "0.0.1",
   "description": "The Stats card for how fast the app feels: p50 / p95 of page loads, navigations and update delays, calm minutes beside minutes under memory pressure, pass / fail against the responsiveness track's exit criteria, and where the serving thread's time goes."

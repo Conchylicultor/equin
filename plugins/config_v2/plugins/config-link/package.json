@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-config_v2-config-link",
+  "name": "@equin/plugin-config_v2-config-link",
   "private": true,
   "description": "Deep-link affordances from any config-backed surface to its settings section."
 }

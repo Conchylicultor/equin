@@ -6,10 +6,10 @@ import { InvalidSshKeyError } from "./ssh-key-error";
 // fingerprint equals what `ssh-keygen -lf` printed for these exact lines, so
 // the expected value has to be the one a real ssh-keygen produced.
 //
-//   ssh-keygen -t ed25519 -f /tmp/vk -N "" -C singularity-deploy-srv-test
+//   ssh-keygen -t ed25519 -f /tmp/vk -N "" -C equin-deploy-srv-test
 //   ssh-keygen -lf /tmp/vk.pub
 const ED25519_LINE =
-  "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILLeoWQaAHi4URNvoFUp+SXZWcAaZ1yjOFf+mIOTdsJa singularity-deploy-srv-test";
+  "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILLeoWQaAHi4URNvoFUp+SXZWcAaZ1yjOFf+mIOTdsJa equin-deploy-srv-test";
 const ED25519_FINGERPRINT = "SHA256:zHO/2ErzMdugLn6l/AGDHZQ9Iscrg4JaKEEGvKhks0U";
 
 // An RSA key too — the parser validates the blob structurally, so key types it
@@ -23,7 +23,7 @@ describe("parseSshPublicKey", () => {
     expect(parseSshPublicKey(ED25519_LINE)).toEqual({
       algorithm: "ssh-ed25519",
       fingerprint: ED25519_FINGERPRINT,
-      comment: "singularity-deploy-srv-test",
+      comment: "equin-deploy-srv-test",
       publicKey: ED25519_LINE,
     });
   });

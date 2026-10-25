@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-ui-tokens-sidebar-metrics",
+  "name": "@equin/plugin-ui-tokens-sidebar-metrics",
   "private": true,
   "version": "0.0.1",
   "description": "Sidebar metrics token group: the sizes of the app-shell sidebar's chrome."

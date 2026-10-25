@@ -1,3 +1,5 @@
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
+
 /**
  * Provenance for a request, and for the durable writes it causes.
  *
@@ -12,16 +14,16 @@
  * third consumer made that a "these must agree" invariant with nothing
  * enforcing it. This is the one spelling, and the one reading.
  *
- * Deliberately a leaf: string literals plus one `Request` header read, no
+ * Deliberately a leaf: string constants plus one `Request` header read, no
  * `node:*` and no db, so every runtime that needs it can import it — including
  * `e2e`, whose boundary grants `core` barrels only.
  */
 
 /** The header naming who caused a request. Absent means an ordinary user. */
-export const ORIGIN_HEADER = "x-singularity-origin";
+export const ORIGIN_HEADER = `${LEGACY_IDS.headerPrefix}origin`;
 
 /** The header naming WHICH automated session, e.g. `e2e:runs-surface`. */
-export const ORIGIN_SOURCE_HEADER = "x-singularity-origin-source";
+export const ORIGIN_SOURCE_HEADER = `${LEGACY_IDS.headerPrefix}origin-source`;
 
 /** The only value of {@link ORIGIN_HEADER} that means "not a person". */
 export const AGENT_ORIGIN = "agent";
@@ -39,7 +41,7 @@ export const AGENT_ORIGIN = "agent";
  * write whose request made the claim, so a mis-declared endpoint fails loudly
  * instead of leaving a write the revert silently missed.
  */
-export const UNREVERTED_WRITE_HEADER = "x-singularity-unreverted-write";
+export const UNREVERTED_WRITE_HEADER = `${LEGACY_IDS.headerPrefix}unreverted-write`;
 
 /**
  * Who caused a durable write.

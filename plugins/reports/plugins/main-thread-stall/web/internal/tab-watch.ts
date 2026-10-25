@@ -1,9 +1,10 @@
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
 import type { StallFrame, StallTab } from "../../core";
 import {
   STALL,
-  WATCHDOG_WORKER_NAME,
   portLockName,
+  watchdogWorkerName,
   workerLockName,
 } from "./constants";
 import type { TabToWorker, WorkerToTab } from "./protocol";
@@ -16,6 +17,10 @@ import {
   type LoafEntry,
 } from "./loaf";
 import { LOG_CHANNEL } from "./log-channel";
+
+// The prefix of every browser-visible name the watchdog takes; the worker reads
+// it back from the name it is started under (see constants.ts).
+const PREFIX = LEGACY_IDS.browserKeyPrefix;
 
 /** One attachment of this tab to the watchdog: a port plus its liveness lock. */
 interface Session {
@@ -69,15 +74,18 @@ export function installStallWatch(readTab: () => StallTab): StallWatch {
         // The watchdog runs inside some tab's renderer and dies with it (a
         // hung renderer Chrome kills, a crash). Its lifetime lock frees then:
         // re-attach, which starts a fresh watchdog that adopts what it left.
-        void navigator.locks.request(workerLockName(msg.workerId), () => {
-          if (s !== session) return;
-          clientLog(
-            LOG_CHANNEL,
-            JSON.stringify({ kind: "watchdog-lost", workerId: msg.workerId }),
-          );
-          detach();
-          if (!disposed) attach();
-        });
+        void navigator.locks.request(
+          workerLockName(PREFIX, msg.workerId),
+          () => {
+            if (s !== session) return;
+            clientLog(
+              LOG_CHANNEL,
+              JSON.stringify({ kind: "watchdog-lost", workerId: msg.workerId }),
+            );
+            detach();
+            if (!disposed) attach();
+          },
+        );
         return;
       case "ping":
         post({ kind: "pong" });
@@ -99,7 +107,7 @@ export function installStallWatch(readTab: () => StallTab): StallWatch {
   function attach(): void {
     const worker = new SharedWorker(
       new URL("../stall-watchdog.worker.ts", import.meta.url),
-      { type: "module", name: WATCHDOG_WORKER_NAME },
+      { type: "module", name: watchdogWorkerName(PREFIX) },
     );
     const s: Session = {
       worker,
@@ -121,7 +129,7 @@ export function installStallWatch(readTab: () => StallTab): StallWatch {
     // Hold the port's liveness lock for its whole life and attach only once it
     // is held: the worker queues for the same lock, so its grant means "gone".
     void navigator.locks.request(
-      portLockName(s.portId),
+      portLockName(PREFIX, s.portId),
       { mode: "exclusive" },
       () =>
         new Promise<void>((resolve) => {

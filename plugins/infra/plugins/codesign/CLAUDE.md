@@ -14,7 +14,7 @@ Design: [`research/2026-10-24-global-macos-permissions.md`](../../../../research
 import { signBinary } from "@plugins/infra/plugins/codesign/deps";
 
 // in a build's `then` (infra/deps/build) or a CLI command — needs an ExecContext
-const outcome = await signBinary(path, { identifier: "dev.singularity.gateway", exec, log });
+const outcome = await signBinary(path, { identifier: "dev.example.tool", exec, log });
 // → unsupported (not macOS) | already-signed (no-op) | signed
 
 // an app bundle, IN PLACE: the caller signs a staged copy and swaps it in
@@ -84,7 +84,7 @@ rebuilds and re-signs.
 ## The gateway
 
 `infra/launcher`'s `gateway-binary` passes `then: signBinary(built,
-{ identifier: "dev.singularity.gateway" })` to `build()` for darwin targets
+{ identifier: GATEWAY_CODESIGN_IDENTIFIER })` to `build()` for darwin targets
 built on a Mac. The signing identity is **not** part of the dependency's
 identity: it finishes a build, it does not change what was built. That
 signature serves a gateway run where it was built (`serve-app`, a release). The

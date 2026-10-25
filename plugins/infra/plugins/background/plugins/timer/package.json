@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-infra-background-timer",
+  "name": "@equin/plugin-infra-background-timer",
   "description": "defineTimer: the one sanctioned in-process interval for the server and central runtimes — tracked, recorded in memory, and listed in the Background activity catalog as Timers.",
   "private": true,
   "version": "0.0.1"

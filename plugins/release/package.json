@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-release",
+  "name": "@equin/plugin-release",
   "description": "Local composition release lifecycle engine: run, observe, preview F4 artifacts.",
   "private": true,
   "version": "0.0.1"

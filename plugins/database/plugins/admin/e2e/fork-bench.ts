@@ -4,7 +4,7 @@
  *
  * Manual only; nothing runs this automatically.
  *
- *   ./equin run plugins/database/plugins/admin/e2e/fork-bench.ts [--runs 3] [--source singularity]
+ *   ./equin run plugins/database/plugins/admin/e2e/fork-bench.ts [--runs 3] [--source <database>]
  *
  * It drives `./equin db fork <scratch>` as a subprocess rather than
  * importing `forkDatabase` directly, for two reasons. The `e2e` runtime may
@@ -37,9 +37,10 @@ import {
   arg,
   numArg,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
 
 const RUNS = numArg("runs", 3);
-const SOURCE = arg("source", "singularity");
+const SOURCE = arg("source", MAIN_WORKTREE_NAME);
 
 /** `assertSafeName` in admin/server accepts [A-Za-z0-9_-]; hex + `_` satisfies it. */
 function scratchName(): string {

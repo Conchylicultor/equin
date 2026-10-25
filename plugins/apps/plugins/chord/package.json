@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-apps-chord",
+  "name": "@equin/plugin-apps-chord",
   "description": "Chord — a chord ear trainer that plays loops of real songs whose chords you have unlocked, asks you to name each chord, and keeps track of how well you know each one.",
   "private": true,
   "version": "0.0.1",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

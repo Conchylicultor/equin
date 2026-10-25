@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-infra-deps-sweep",
+  "name": "@equin/plugin-infra-deps-sweep",
   "version": "0.0.1",
   "private": true,
   "description": "The daily deps.sweep job: reclaims optional-dependency installs no checkout declares that sat unused for 14 days."

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-data-view-icons",
+  "name": "@equin/plugin-primitives-data-view-icons",
   "description": "Icons view child for the data-view primitive: a centred launcher grid of fixed-size tiles (the row's leading avatar filling a squircle) with the name underneath, drag-to-reorder in manual order.",
   "private": true,
   "version": "0.0.1"

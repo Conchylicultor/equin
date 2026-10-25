@@ -1,8 +1,10 @@
 /**
  * Pure helpers + cross-runtime protocol for the in-app browser proxy. A leaf
- * (no imports) so both the webview consumer and the server handler can depend on
+ * (imports only the product-name leaf) so both the webview consumer and the server handler can depend on
  * it downward without forming a cycle.
  */
+
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 
 /**
  * Route path of the framing-stripping browser proxy. MUST stay in sync with the
@@ -37,7 +39,7 @@ export function isProxyUrl(src: string): boolean {
  * `navigate()` so the omnibox + history stay in sync and the page reloads
  * through the proxy exactly once.
  */
-export const BROWSER_PROXY_NAV_MESSAGE = "singularity:browser-proxy-nav";
+export const BROWSER_PROXY_NAV_MESSAGE = `${LEGACY_IDS.browserKeyPrefix}:browser-proxy-nav`;
 
 /**
  * The kind of in-page navigation the proxied page is reporting:

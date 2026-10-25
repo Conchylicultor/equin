@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-pages-history",
+  "name": "@equin/plugin-apps-pages-history",
   "description": "Pages version history: time-bucketed snapshots, an Edited title-bar label that opens the history dialog, and a faithful diffed preview with restore.",
   "private": true,
   "version": "0.0.1"

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-infra-background",
+  "name": "@equin/plugin-infra-background",
   "description": "Umbrella for what the app runs on its own: the catalog every background mechanism reports into, and the page that lists it.",
   "private": true,
   "version": "0.0.1"

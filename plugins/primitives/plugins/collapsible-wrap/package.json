@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-collapsible-wrap",
+  "name": "@equin/plugin-primitives-collapsible-wrap",
   "description": "Wraps overflowing children to multiple lines, clamped to N rows with a chevron toggle to reveal the rest.",
   "private": true,
   "version": "0.0.1"

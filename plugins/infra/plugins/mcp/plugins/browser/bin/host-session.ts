@@ -22,6 +22,7 @@ import {
 import { browserSessionSource, type HostTarget } from "../shared/protocol";
 import { revertSessionWritesOn } from "../shared/revert";
 import { trackWrites, type WriteDrain } from "./write-drain";
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 
 /**
  * The sessions the host holds — the ONE Chromium, a `BrowserContext` per
@@ -279,7 +280,7 @@ export async function bindEndpoint(): Promise<string> {
   const b = await getBrowser();
   let endpoint = bound.get(b);
   if (!endpoint) {
-    endpoint = b.bind("singularity-agent-browser").then((r) => r.endpoint);
+    endpoint = b.bind(LEGACY_IDS.agentBrowserName).then((r) => r.endpoint);
     bound.set(b, endpoint);
   }
   try {

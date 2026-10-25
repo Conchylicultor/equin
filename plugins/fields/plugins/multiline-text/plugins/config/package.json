@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-fields-multiline-text-config",
+  "name": "@equin/plugin-fields-multiline-text-config",
   "version": "0.0.1",
   "private": true,
   "description": "Long-text field type: config-render capability (textarea) plus the multilineTextField factory.",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

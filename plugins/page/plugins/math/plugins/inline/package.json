@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-page-math-inline",
+  "name": "@equin/plugin-page-math-inline",
   "description": "Inline math: type $$ in any text block to drop a live KaTeX-rendered formula; stored as a \\(latex\\) token, click to edit.",
   "private": true,
   "version": "0.0.1",

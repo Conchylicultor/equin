@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-infra-runtime-profiler",
+  "name": "@equin/plugin-infra-runtime-profiler",
   "private": true,
   "version": "0.0.1"
 }

@@ -13,7 +13,7 @@ import {
 // The namespace variable a backend's environment used to leak into agents. Spelled
 // from its parts so the identifier itself stays out of the tree: the rule that
 // bans it does not need an exception for the test that proves it is gone.
-const LEAKED_NAMESPACE_VAR = ["SINGULARITY", "WORKTREE"].join("_");
+const LEAKED_NAMESPACE_VAR = ["SINGULARITY_", "WORKTREE"].join("");
 
 // Every `NAME=` word the wrapper hands to `env -i`, in order.
 function assignedNames(wrapper: string): string[] {

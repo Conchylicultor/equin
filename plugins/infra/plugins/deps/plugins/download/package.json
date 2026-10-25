@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-infra-deps-download",
+  "name": "@equin/plugin-infra-deps-download",
   "version": "0.0.1",
   "private": true,
   "description": "The download installer kind of infra/deps: download({ files: [{ name, url, sha256 }], derive? }) (its deps barrel) declares a dependency on pinned files — identity = every url + sha256 plus derive.version — fetched with curl into env/<name>.part (progress in the install log), sha256-checked and renamed, then optionally post-processed in place by derive.run; downloadedFile(ready, name) is the path of one of them."

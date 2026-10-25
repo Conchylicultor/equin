@@ -44,6 +44,7 @@ import {
   runtimeShimsDir,
 } from "@plugins/infra/plugins/launcher/core";
 import { spawnPassthrough } from "@plugins/infra/plugins/spawn/core";
+import { PRODUCT_NAME } from "@plugins/framework/plugins/product-name/core";
 
 /**
  * Present ⇒ this process IS the locked-Bun re-exec of its parent. Taken (read
@@ -145,7 +146,7 @@ export async function reexecUnderLockedBun(
   }
   if (!existsSync(lockedBin)) {
     console.error(
-      `singularity: installing bun ${locked}, the release mise.lock records…`,
+      `${PRODUCT_NAME}: installing bun ${locked}, the release mise.lock records…`,
     );
     const exit = await (opts.install ?? installBun)(locked, root);
     if (exit !== 0 || !existsSync(lockedBin)) {

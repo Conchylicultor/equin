@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-studio-compositions-release-release-artifact",
+  "name": "@equin/plugin-apps-studio-compositions-release-release-artifact",
   "description": "Artifact path plus local preview (start/stop + live link) section in the release detail pane.",
   "private": true,
   "version": "0.0.1"

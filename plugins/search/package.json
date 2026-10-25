@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-search",
+  "name": "@equin/plugin-search",
   "description": "Umbrella for the reusable full-text search primitive: the indexed search engine substrate and the reusable quick-find UI.",
   "private": true,
   "version": "0.0.1"

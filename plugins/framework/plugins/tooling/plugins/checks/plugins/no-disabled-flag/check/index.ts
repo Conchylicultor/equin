@@ -1,4 +1,5 @@
 import { listCandidateSources } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { PLUGIN_MANIFEST_KEY } from "@plugins/framework/plugins/plugin-id/core";
 import { BASE_EXCLUSIONS_ID } from "@plugins/infra/plugins/namespace/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
@@ -23,8 +24,7 @@ function pluginIdFor(relPackageJson: string): string {
 
 const check: Check = {
   id: "no-disabled-flag",
-  description:
-    "No plugin package.json may carry `singularity.disabled` — a plugin leaves the app by being negated out of the `base-exclusions` composition row, and nothing reads the flag any more",
+  description: `No plugin package.json may carry \`${PLUGIN_MANIFEST_KEY}.disabled\` — a plugin leaves the app by being negated out of the \`base-exclusions\` composition row, and nothing reads the flag any more`,
   async run() {
     const root = await getWorktreeRoot();
 
@@ -57,15 +57,10 @@ const check: Check = {
           hint: "Fix the file — an unparseable package.json exempts its plugin from every package.json-reading check.",
         };
       }
-      const singularity = (parsed as { singularity?: Record<string, unknown> })
-        .singularity;
+      const own = (parsed as Record<string, unknown>)[PLUGIN_MANIFEST_KEY];
       // Presence, not truthiness. `"disabled": false` is just as inert and just
       // as misleading — the key means nothing at all now.
-      if (
-        singularity &&
-        typeof singularity === "object" &&
-        "disabled" in singularity
-      ) {
+      if (own && typeof own === "object" && "disabled" in own) {
         offenders.push(rel);
       }
     }
@@ -76,12 +71,12 @@ const check: Check = {
     return {
       ok: false,
       message:
-        `\`singularity.disabled\` declared in ${offenders.length} plugin package.json(s):\n    ` +
+        `\`${PLUGIN_MANIFEST_KEY}.disabled\` declared in ${offenders.length} plugin package.json(s):\n    ` +
         lines.join("\n    "),
       hint:
         `The flag is GONE — nothing reads it, so leaving it in place would silently ship the plugin it claims to turn off. ` +
         `One mechanism decides whether a plugin is in the app: the \`${BASE_EXCLUSIONS_ID}\` composition row, whose negatives every composition inherits. ` +
-        `Move each entry above to that row's \`entryPoints\` (the arrow shows the pattern to add) in plugins/plugin-meta/plugins/composition/core/config.ts, and delete the \`singularity.disabled\` block. ` +
+        `Move each entry above to that row's \`entryPoints\` (the arrow shows the pattern to add) in plugins/plugin-meta/plugins/composition/core/config.ts, and delete the \`${PLUGIN_MANIFEST_KEY}.disabled\` block. ` +
         `A negative cascades exactly as the old flag did — the plugin, its subtree, and everything that transitively imports it.`,
     };
   },

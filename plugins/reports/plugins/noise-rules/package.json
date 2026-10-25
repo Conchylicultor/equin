@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-reports-noise-rules",
+  "name": "@equin/plugin-reports-noise-rules",
   "private": true,
   "version": "0.0.1"
 }

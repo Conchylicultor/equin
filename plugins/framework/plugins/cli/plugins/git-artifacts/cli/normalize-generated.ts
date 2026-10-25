@@ -8,6 +8,7 @@ import {
   readMergeMarkers,
 } from "@plugins/framework/plugins/cli/core";
 import { loadRepoFiles } from "@plugins/framework/plugins/tooling/core";
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 
 // Wedge-breaker for the local `git` metadata reads in this file — orders of
 // magnitude above what any of them take, so only a wedged child trips it. A CLI
@@ -91,7 +92,7 @@ async function isDirty(cwd: string): Promise<boolean> {
  *     aborts before resetting anything);
  *   - a conflict marker left in CLAUDE.md PROSE, which no regeneration can fix.
  *
- * @param pushId stamped as a `Singularity-Push` trailer on the amend, so a push
+ * @param pushId stamped as a push trailer on the amend, so a push
  *        that normalizes keeps its commits grouped into one push event. Omitted
  *        by the hook, whose amend must preserve the message exactly as-is.
  * @param force regenerate without consulting the markers (see above).
@@ -169,7 +170,9 @@ export async function normalizeGeneratedArtifacts(
       "commit",
       "--amend",
       "--no-edit",
-      ...(opts.pushId ? ["--trailer", `Singularity-Push=${opts.pushId}`] : []),
+      ...(opts.pushId
+        ? ["--trailer", `${LEGACY_IDS.pushTrailer}=${opts.pushId}`]
+        : []),
     ],
     root,
     env,

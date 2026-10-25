@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-css-rail",
+  "name": "@equin/plugin-primitives-css-rail",
   "version": "0.0.1",
   "private": true,
   "description": "The rail contract: padding is the act of opening a region, and the region publishes where its contents' edge is as --rail-start / --rail-end / --rail-block-start / --rail-block-end. This plugin owns the four var names; the utilities that publish them (rail-<step>, rail-bleed, rail-follow) live in ui-kit's app.css."

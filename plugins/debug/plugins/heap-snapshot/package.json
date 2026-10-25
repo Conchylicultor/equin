@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-debug-heap-snapshot",
+  "name": "@equin/plugin-debug-heap-snapshot",
   "private": true,
   "version": "0.0.1"
 }

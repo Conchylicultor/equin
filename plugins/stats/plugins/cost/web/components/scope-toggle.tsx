@@ -2,13 +2,13 @@ import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/
 import { useScope } from "./use-scope";
 
 export function ScopeToggle() {
-  const { singularityOnly, toggle } = useScope();
+  const { repoOnly, toggle } = useScope();
   return (
     <ToggleChip
-      active={singularityOnly}
+      active={repoOnly}
       onClick={toggle}
       tooltip={
-        singularityOnly
+        repoOnly
           ? "equin sessions only — click to include all Claude Code sessions on this machine"
           : "Including all Claude Code sessions — click to filter to equin only"
       }

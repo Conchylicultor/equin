@@ -16,6 +16,7 @@ import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { z } from "zod";
 import { createHarness } from "./test-support";
 import type { ResourceRuntimeOptions } from "./runtime";
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 
 function setup(opts: ResourceRuntimeOptions = {}) {
   const reported: Array<{ context: string; err: unknown }> = [];
@@ -36,7 +37,7 @@ const closed = { keySet: () => "closed" as const };
 function get(h: ReturnType<typeof setup>["h"], key: string) {
   return h.runtime.handleResourceHttp(
     new Request(`http://x/api/resources/${key}`, {
-      headers: { "x-singularity-build-graph": "g0" },
+      headers: { [`${LEGACY_IDS.headerPrefix}build-graph`]: "g0" },
     }),
     { key },
   );

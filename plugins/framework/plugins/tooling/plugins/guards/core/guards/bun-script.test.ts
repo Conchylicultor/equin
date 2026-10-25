@@ -3,6 +3,7 @@ import { createContext } from "../context";
 import type { Verdict } from "../types";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/core";
 import { bunScriptGuard } from "./bun-script";
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 
 function verdict(command: string, cwd = REPO_ROOT): Verdict {
   // The guard's check is synchronous (hasBypass stats a path), so the result is
@@ -180,7 +181,7 @@ describe("bun-script guard", () => {
   // `exec bun plugins/framework/plugins/cli/bin/index.ts "$@"`. The guard reads
   // the Bash tool's command string, never the wrapper's contents, and
   // parse-shell takes the basename of the executable — so the call is named
-  // `singularity`, not `bun`. If that ever inverted, every CLI verb (`build`,
+  // the legacy CLI name, not `bun`. If that ever inverted, every CLI verb (`build`,
   // `push`, `check`, `test`, and `run` itself) would deny itself: an agent could
   // not even run the command the denial tells it to use.
   describe("the ./equin wrapper can never trip its own guard", () => {
@@ -203,7 +204,7 @@ describe("bun-script guard", () => {
     });
 
     test("invoked by absolute path", () => {
-      expect(blocks(`${USERS}me/repo/singularity build`)).toBe(false);
+      expect(blocks(`${USERS}me/repo/${LEGACY_IDS.cliShim} build`)).toBe(false);
     });
 
     test("chained after a cd, the shape agents actually write", () => {

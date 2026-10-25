@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-debug-boot-events",
+  "name": "@equin/plugin-debug-boot-events",
   "description": "Durable per-boot event line: writes one boot.jsonl log-channel line per backend boot (the wall-clock interval [processStartedAt, readyAt]) and exposes readBootEvents() so deploy-restart bursts are visible on cross-worktree timelines.",
   "private": true,
   "version": "0.0.1"

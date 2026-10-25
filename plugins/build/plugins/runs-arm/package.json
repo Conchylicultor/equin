@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-build-runs-arm",
+  "name": "@equin/plugin-build-runs-arm",
   "description": "The build arm of the merged run space.",
   "private": true,
   "version": "0.0.1"

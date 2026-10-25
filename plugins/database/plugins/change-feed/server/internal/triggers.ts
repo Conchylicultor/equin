@@ -89,7 +89,7 @@ export interface TriggerExclusions {
 // L2 durable outbox DDL. Created INSIDE rebuildTriggers' transaction, before the
 // trigger function is (re)defined, so the table the function INSERTs into is
 // guaranteed to exist before any data-change trigger can fire. Derived-state
-// table (CREATE TABLE IF NOT EXISTS on boot, like __singularity_derived_view_state)
+// table (CREATE TABLE IF NOT EXISTS on boot, like derived_view_state)
 // — NOT a drizzle migration. See
 // research/2026-06-22-global-live-state-l2-persisted-materialization.md §3.1.
 //

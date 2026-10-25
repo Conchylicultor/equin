@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-page-file",
+  "name": "@equin/plugin-page-file",
   "description": "File block type: attach any file as a downloadable card; served via attachments.",
   "private": true,
   "version": "0.0.1"

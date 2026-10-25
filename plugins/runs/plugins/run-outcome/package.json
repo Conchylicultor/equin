@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-runs-run-outcome",
+  "name": "@equin/plugin-runs-run-outcome",
   "description": "The shared run-outcome vocabulary (running / succeeded / partial / failed / canceled) and its one display: options, chip, dot.",
   "private": true,
   "version": "0.0.1"

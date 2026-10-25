@@ -59,6 +59,12 @@ export type WorkerToTab =
    */
   | { kind: "released"; attachedMs: number };
 
+// The prefix of the worker's and its port locks' names. Not a kept id: the
+// worker's URL is content-addressed per networking build, so a tab only ever
+// meets a worker (and a lock) of its own version. Spelled here, not imported:
+// the worker is bundled whole from this plugin alone (web-artifacts).
+const NAME_PREFIX = "equin";
+
 /**
  * The SharedWorker name for one server URL and dialect. SharedWorker identity
  * is (script URL, name), so each URL gets its own worker — and its own socket
@@ -66,8 +72,8 @@ export type WorkerToTab =
  */
 export function sharedWsWorkerName(absUrl: string, dialect?: string): string {
   return dialect === undefined
-    ? `singularity:shared-ws:${absUrl}`
-    : `singularity:shared-ws:${absUrl}:${dialect}`;
+    ? `${NAME_PREFIX}:shared-ws:${absUrl}`
+    : `${NAME_PREFIX}:shared-ws:${absUrl}:${dialect}`;
 }
 
 /**
@@ -76,5 +82,5 @@ export function sharedWsWorkerName(absUrl: string, dialect?: string): string {
  * the one signal a SharedWorker gets — `MessagePort` has no portable close event.
  */
 export function portLivenessLockName(portId: string): string {
-  return `singularity:shared-ws-port:${portId}`;
+  return `${NAME_PREFIX}:shared-ws-port:${portId}`;
 }

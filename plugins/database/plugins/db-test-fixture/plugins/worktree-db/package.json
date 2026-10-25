@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-database-db-test-fixture-worktree-db",
+  "name": "@equin/plugin-database-db-test-fixture-worktree-db",
   "description": "Rolled-back-transaction harness for suites that must drive the REAL worktree DB.",
   "private": true,
   "version": "0.0.1"

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-tooling-lint-detached-work-safety",
+  "name": "@equin/plugin-framework-tooling-lint-detached-work-safety",
   "version": "0.0.1",
   "private": true,
   "description": "detached-work-safety lint rule: no-untracked-detached-work"

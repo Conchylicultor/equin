@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-plugin-meta-facets-contributions-render-diff",
+  "name": "@equin/plugin-plugin-meta-facets-contributions-render-diff",
   "version": "0.0.1",
   "private": true,
   "description": "Diff renderer for the contributions facet (PR review)."

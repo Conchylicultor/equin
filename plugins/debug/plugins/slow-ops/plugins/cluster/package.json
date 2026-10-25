@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-debug-slow-ops-cluster",
+  "name": "@equin/plugin-debug-slow-ops-cluster",
   "description": "Cross-worktree cluster view of slow ops: fans out across every worktree DB fork and merges them into one aggregate + a unified contention timeline.",
   "private": true,
   "version": "0.0.1"

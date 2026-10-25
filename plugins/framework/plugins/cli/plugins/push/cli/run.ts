@@ -43,6 +43,7 @@ import {
   actAsCheckoutNamespace,
   checkoutRef,
 } from "@plugins/infra/plugins/paths/server";
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 
 // One bound for both capture helpers below, because every command they run is
 // LOCAL git: `rev-parse`, `worktree list`, `status`, and the rebase. Nothing
@@ -199,7 +200,7 @@ const rebaseEnv = (): Record<string, string | undefined> => ({
 //   • UNSERIALIZED — it took no `.install.lock`, so it could run concurrently
 //     with any other CLI-mediated install in this checkout, which is exactly the
 //     `clonefileat` race bun 1.3.13 has no mutex for.
-//   • UNSTAMPED — it left `node_modules/.singularity-deps` describing the
+//   • UNSTAMPED — it left `node_modules/.equin-deps` describing the
 //     PRE-rebase inputs, so the very next CLI process saw stale inputs and
 //     reinstalled everything. In this flow that next process is the checks
 //     subprocess, four lines below: every push whose rebase touched the lockfile
@@ -624,7 +625,7 @@ const pushAction: CliAction<
       );
       for (const f of files) console.log(`  ${f}`);
       await exec(["git", "add", "-A"]);
-      // The Singularity-Push trailer is normally stamped by the rebase's
+      // The push trailer is normally stamped by the rebase's
       // `--exec`, once per replayed commit. `--from-main` in local mode is the
       // one flow with no rebase at all — there is no `origin/main` to catch up
       // with, local main IS the trunk — so the commit carries the trailer
@@ -632,7 +633,7 @@ const pushAction: CliAction<
       // pushes ledger has no row for a push that really happened.
       const trailer =
         opts.fromMain && publish.kind === "local"
-          ? ["--trailer", `Singularity-Push=${pushId}`]
+          ? ["--trailer", `${LEGACY_IDS.pushTrailer}=${pushId}`]
           : [];
       await exec(["git", "commit", "-m", opts.message, ...trailer]);
     } else {
@@ -698,7 +699,7 @@ const pushAction: CliAction<
                 "rebase",
                 `${publish.remote}/main`,
                 "--exec",
-                `git -c trailer.ifexists=replace commit --amend --no-edit --trailer Singularity-Push=${pushId}`,
+                `git -c trailer.ifexists=replace commit --amend --no-edit --trailer ${LEGACY_IDS.pushTrailer}=${pushId}`,
               ],
               undefined,
               rebaseEnv(),
@@ -813,7 +814,7 @@ const pushAction: CliAction<
         }
 
         // 3. Make the branch land on main as a fast-forward, and stamp what
-        //    this push contributes with a shared Singularity-Push trailer so
+        //    this push contributes with a shared push trailer so
         //    the server can group it as a single event. Which of three arms
         //    applies is a question about the branch's shape, not a preference.
         const shape = await readLandingShape();
@@ -849,7 +850,7 @@ const pushAction: CliAction<
                 "--amend",
                 "--no-edit",
                 "--trailer",
-                `Singularity-Push=${pushId}`,
+                `${LEGACY_IDS.pushTrailer}=${pushId}`,
               ],
               undefined,
               // Same suppression as push's rebases: `--amend` fires
@@ -891,7 +892,7 @@ const pushAction: CliAction<
               "rebase",
               "main",
               "--exec",
-              `git -c trailer.ifexists=replace commit --amend --no-edit --trailer Singularity-Push=${pushId}`,
+              `git -c trailer.ifexists=replace commit --amend --no-edit --trailer ${LEGACY_IDS.pushTrailer}=${pushId}`,
             ],
             undefined,
             rebaseEnv(),

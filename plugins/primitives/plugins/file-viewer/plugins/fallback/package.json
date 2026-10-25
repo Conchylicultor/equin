@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-file-viewer-fallback",
+  "name": "@equin/plugin-primitives-file-viewer-fallback",
   "private": true,
   "version": "0.0.1"
 }

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-nested-memory",
+  "name": "@equin/plugin-conversations-conversation-view-jsonl-viewer-attachment-nested-memory",
   "private": true,
   "version": "0.0.1"
 }

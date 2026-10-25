@@ -4,7 +4,7 @@ import type { SshKey } from "@plugins/apps/plugins/deploy/plugins/servers/web";
  * A comment we are willing to interpolate into the `sed` address. The `sed`
  * argument is a REGEX, not a literal, so a comment carrying `/`, `.`, `*` or a
  * bracket would silently match — and delete — lines it was never meant to.
- * Our own comments are always `singularity-deploy-<serverId>`, so this always
+ * Our own comments are always `<prefix><serverId>` (the deploy key comment prefix), so this always
  * passes; the point is that the builder refuses rather than blind-interpolates.
  */
 const SAFE_COMMENT = /^[A-Za-z0-9_.-]+$/;

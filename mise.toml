@@ -6,7 +6,7 @@
 # at the end of every `mise install`, and first in `./equin start/build`.
 #
 # Postgres is NOT one: the app ships its own cluster, and the script that
-# starts it creates the base `singularity` database inside it. See
+# starts it creates the base database (`LEGACY_IDS.pgBaseDatabase`) inside it. See
 # docs/setup.md.
 #
 # The `setup` task runs automatically after `mise install`: it trusts every

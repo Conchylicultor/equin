@@ -24,5 +24,5 @@ export { deltaEtag, attemptWorkEtag } from "./internal/etag";
 
 export default {
   description:
-    "The attempt-work authority: where an attempt stands relative to `main`, measured from git (branch counts + Singularity-Conversation trailers on main) rather than from the lagging pushes ledger — the direct read for the server-side exit-drop guard and the git measurements commits-graph shares. The live value is served by the machine half.",
+    "The attempt-work authority: where an attempt stands relative to `main`, measured from git (branch counts + conversation trailers on main) rather than from the lagging pushes ledger — the direct read for the server-side exit-drop guard and the git measurements commits-graph shares. The live value is served by the machine half.",
 } satisfies ServerPluginDefinition;

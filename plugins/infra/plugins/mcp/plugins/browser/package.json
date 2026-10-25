@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-infra-mcp-browser",
+  "name": "@equin/plugin-infra-mcp-browser",
   "private": true,
   "version": "0.0.1",
   "dependencies": {

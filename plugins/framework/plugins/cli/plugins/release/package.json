@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-cli-release",
+  "name": "@equin/plugin-framework-cli-release",
   "private": true,
   "version": "0.0.1",
   "description": "`./equin release` — stage a composition into a portable, self-contained artifact (compiled binaries + vendored native PG/PgBouncer/gateway/parcel-watcher) and pack it as a single-file web binary or a Tauri desktop bundle.",

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-css-radio-group",
+  "name": "@equin/plugin-primitives-css-radio-group",
   "description": "Native radio-group control whose HTML `name` is minted per mount (useId), so two groups on one page can never collide; plus the no-adhoc-radio lint rule.",
   "private": true,
   "version": "0.0.1"

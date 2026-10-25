@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-tabbed-view",
+  "name": "@equin/plugin-primitives-tabbed-view",
   "description": "Factory for slot-backed tab-host views with localStorage persistence.",
   "private": true,
   "version": "0.0.1"

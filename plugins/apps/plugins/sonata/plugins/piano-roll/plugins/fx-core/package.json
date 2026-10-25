@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-sonata-piano-roll-fx-core",
+  "name": "@equin/plugin-apps-sonata-piano-roll-fx-core",
   "description": "Ambient piano-roll FX (on by default): key-strike glow, rising sparks, and an active-note brighten over the sounding bar.",
   "private": true,
   "version": "0.0.1",

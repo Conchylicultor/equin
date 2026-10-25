@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-page-formatting-link",
+  "name": "@equin/plugin-page-formatting-link",
   "description": "Inline links in the page editor: the selection toolbar's link control (⌘K), and a hover card under any link showing its URL with Copy and Edit (URL + title, Remove link).",
   "private": true,
   "version": "0.0.1",

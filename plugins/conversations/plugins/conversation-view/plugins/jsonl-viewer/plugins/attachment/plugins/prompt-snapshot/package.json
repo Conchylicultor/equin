@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-prompt-snapshot",
+  "name": "@equin/plugin-conversations-conversation-view-jsonl-viewer-attachment-prompt-snapshot",
   "private": true,
   "version": "0.0.1"
 }

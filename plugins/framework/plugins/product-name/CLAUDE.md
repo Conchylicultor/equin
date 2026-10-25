@@ -2,16 +2,37 @@
 
 The product's name as data: `PRODUCT_NAME` is `equin`, always lowercase — even
 at the start of a sentence or in a title. Code that puts the name into a value
-(the tab title, the CLI description, a User-Agent, a folder name) reads the
-constant; prose (docs, comments, messages, tool descriptions) just writes
-`equin`.
+(the tab title, the CLI description, a User-Agent, a folder name, a temp
+prefix, the package scope) reads the constant; prose (docs, comments, messages,
+tool descriptions) just writes `equin`.
 
-`product-name:legacy` fails on the old capitalised name (`LEGACY_PRODUCT_NAMES`) as a
-word in any tracked file. Internal identifiers built from the old name (the
-`singularity` namespace and database, `~/.singularity/`, `SINGULARITY_*`,
-package scopes, `Singularity-Conversation:` commit trailers, camelCase code
-identifiers) are out of its scope: they are a separate decision of the rename
-track.
+`product-name:legacy` fails on the old capitalised name (`LEGACY_PRODUCT_NAMES`)
+as a word in any tracked file.
+
+## The kept ids: `LEGACY_IDS`
+
+Some identifiers built from the old name are kept for good, because they are
+stored state (the main namespace and its database, the keychain service, lock
+files, commit trailers in history, browser-local keys, backup source ids) or a
+contract processes on different versions rely on (shared lock dirs, HTTP
+headers a stale tab keeps sending). `LEGACY_IDS` (`core/internal/legacy-ids.ts`)
+spells each one once; every consumer imports it, and each entry's
+`LEGACY_ID_NOTES` says why it is kept. The rule for a new name: produced and
+read by the same build → it is renamed to `PRODUCT_NAME`; stored, or read by
+another version → it is a `LEGACY_IDS` entry.
+
+A file that cannot import the leaf (Go, Rust, shell, a standalone script, a
+plist) is listed in its id's `mirrors`.
+
+- `product-name:legacy-id` fails on the old name, in any case, in any tracked
+  file outside this plugin — except a mirror's line holding its value, committed
+  migrations (`database/migrations` exempts them as history), `research/` and
+  generated files. Two spellings stay allowed until their step of the rename
+  lands: `SINGULARITY_*` env vars (step 6) and the `~/.singularity` data dir
+  (step 7). Repository URLs are allowed too, because the repo keeps its name.
+- `product-name:legacy-ids-in-sync` fails when a mirror stops spelling its value.
+
+Decision: `research/2026-10-25-global-equin-internal-identifiers.md`.
 
 A leaf with no imports, so a browser bundle, a server or a script can import it.
 
@@ -19,13 +40,34 @@ A leaf with no imports, so a browser bundle, a server or a script can import it.
 
 ## Plugin reference
 
-- Description: The product's own name, as data: PRODUCT_NAME (`equin`, always lowercase — what every person and agent reads) and LEGACY_PRODUCT_NAMES (the names it went by before, never written again), enforced by the product-name:legacy check over every tracked file. A dependency-free leaf, so a browser bundle, a server or a script can import it.
+- Description: The product's own name, as data: PRODUCT_NAME (`equin`, always lowercase — what every person and agent reads) and LEGACY_PRODUCT_NAMES (the names it went by before, never written again), enforced by the product-name:legacy check over every tracked file; and LEGACY_IDS, the identifiers built from the old name that are kept for good (stored state, cross-version contracts), the one place they are spelled — enforced by product-name:legacy-id (and its mirrors by product-name:legacy-ids-in-sync). A dependency-free leaf, so a browser bundle, a server or a script can import it.
 - Cross-plugin:
-  - Imported by: `infra/endpoints`
+  - Imported by:
+    - `apps/browser/proxy`
+    - `apps/website/shell`
+    - `conversations/workspace/scratch`
+    - `database/derived-views`
+    - `database/migrations`
+    - `framework/cli`
+    - `framework/cli/cli-name`
+    - `framework/plugin-id`
+    - `infra/endpoints`
+    - `infra/git/remotes`
+    - `infra/host-fs`
+    - `infra/namespace`
+    - `infra/paths`
+    - `infra/request-origin`
+    - `packages/resource-protocol`
+    - `tasks/tasks-core`
 - Exemptions:
-  - Exempts itself from: `product-name:legacy` — `core/internal/product-name.ts`, `check/index.ts` (sanctioned)
+  - Exempts itself from:
+    - `product-name:legacy` — `core/internal/product-name.ts` (sanctioned)
+    - `product-name:legacy-id` — `core/internal/product-name.ts`, `core/internal/legacy-ids.ts`, `check/legacy-id.ts` (sanctioned)
+    - `cli:legacy-cli-name` — `core/internal/legacy-ids.ts` (sanctioned)
 - Core:
+  - Exports (types): `LegacyIdKey`
   - Exports (values):
+    - `LEGACY_IDS`
     - `LEGACY_PRODUCT_NAMES`
     - `PRODUCT_NAME`
 

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-page-place",
+  "name": "@equin/plugin-page-place",
   "description": "Place block type: search an address or business through a registered place provider and render it as a card (name, address, category, map link).",
   "private": true,
   "version": "0.0.1"

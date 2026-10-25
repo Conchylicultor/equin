@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-events-sources-url-extract",
+  "name": "@equin/plugin-apps-events-sources-url-extract",
   "description": "Web-page event source type: read a URL (plain fetch, or a real browser when the page needs one), fingerprint its visible text, and turn it into structured events with a one-shot Sonnet extraction.",
   "private": true,
   "version": "0.0.1",

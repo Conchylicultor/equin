@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-fields-object-config",
+  "name": "@equin/plugin-fields-object-config",
   "version": "0.0.1",
   "private": true,
   "description": "Object field type: config-render capability (collapsible sub-field renderer) plus the objectField factory.",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

@@ -1,3 +1,4 @@
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
@@ -19,7 +20,7 @@ export const handleGenerateKeypair = implement(
     assertReplaceAllowed(row, body.replace);
 
     const keypair = await generateEd25519Keypair(
-      `singularity-deploy-${params.id}`,
+      `${LEGACY_IDS.deployKeyCommentPrefix}${params.id}`,
     );
     return toServer(await storeSshKey(params.id, keypair));
   },

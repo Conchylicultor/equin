@@ -57,7 +57,7 @@ describe("background-timeout guard", () => {
     ).toBe("allow");
   });
 
-  test("foreground and non-singularity commands are untouched", () => {
+  test("foreground and non-equin commands are untouched", () => {
     expect(verdict({ command: "./equin check --list" }).kind).toBe("allow");
     expect(
       verdict({ command: "sleep 5000", run_in_background: true }).kind,

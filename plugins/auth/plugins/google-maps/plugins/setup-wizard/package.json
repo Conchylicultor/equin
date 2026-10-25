@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-auth-google-maps-setup-wizard",
+  "name": "@equin/plugin-auth-google-maps-setup-wizard",
   "private": true,
   "version": "0.0.1",
   "description": "Guided setup pane for the Google Maps Platform API key, plus its Accounts provider row."

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-sonata-look",
+  "name": "@equin/plugin-apps-sonata-look",
   "description": "The Sonata roll's LOOK: one switch parameterising the lane, grid, note pen, and key skin — the palette every roll surface reads instead of hardcoding one set of constants.",
   "private": true,
   "version": "0.0.1"

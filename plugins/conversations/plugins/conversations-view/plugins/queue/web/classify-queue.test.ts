@@ -11,7 +11,7 @@ const conv = (o: Partial<Conversation> & { id: string }): Conversation =>
   ({
     status: "waiting",
     taskId: `task-${o.id}`,
-    spawnedBy: "singularity",
+    spawnedBy: "equin",
     createdAt: new Date(0),
     ...o,
   }) as Conversation;

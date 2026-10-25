@@ -1,5 +1,5 @@
-// @hash 34f3660f9369
+// @hash e76bb8c9e8be
 {
   // When enabled, charts include only Claude sessions launched by equin (joined by claudeSessionId). When disabled, every Claude Code session on this machine is counted — including ad-hoc sessions outside equin.
-  "singularityOnly": true
+  "repoOnly": true
 }

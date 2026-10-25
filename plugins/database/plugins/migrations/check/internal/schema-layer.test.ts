@@ -29,6 +29,7 @@ import {
   type Migration,
   type SchemaLayerInputs,
 } from "../../server/internal/runner";
+import { MIGRATIONS_TABLE_NAME } from "@plugins/database/plugins/derived-views/core";
 
 function mig(
   stamp: string,
@@ -101,7 +102,7 @@ async function columns(t: TestDb): Promise<string[]> {
 
 async function ledger(t: TestDb): Promise<string[]> {
   const rows = await executeRows(t.db, {
-    query: sql`SELECT hash FROM __singularity_migrations ORDER BY hash`,
+    query: sql`SELECT hash FROM ${sql.raw(MIGRATIONS_TABLE_NAME)} ORDER BY hash`,
     row: z.object({ hash: z.string() }),
     label: "test: ledger",
   });

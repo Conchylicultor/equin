@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-conversations-question-relay",
+  "name": "@equin/plugin-conversations-question-relay",
   "description": "Answers AskUserQuestion from the web: a PreToolUse hook (the relay) holds the tool call while the web shows the question, and hands the answer back to the CLI as the tool's own input, so the agent gets a real tool result.",
   "private": true,
   "version": "0.0.1"

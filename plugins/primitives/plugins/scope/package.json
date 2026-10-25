@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-scope",
+  "name": "@equin/plugin-primitives-scope",
   "description": "Which mounted instance does this belong to, and how do I reach mine? — my instance's state (scoped-store), my instance's DOM node (dom-scope), the ids that name an instance (surface-id / tab-id / app-instance), and the deliberate opposite: one implementation for the whole page (install-sink).",
   "private": true,
   "version": "0.0.1"

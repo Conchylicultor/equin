@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-passthrough",
+  "name": "@equin/plugin-primitives-passthrough",
   "description": "The open-passthrough contract: a primitive that accepts props it does not name promises they land on ONE node, and `ref` is that node's name. Owns the Passthrough props marker, the splitPassthrough router for the rare second destination, and the two lint rules that keep the promise true.",
   "private": true,
   "version": "0.0.1"

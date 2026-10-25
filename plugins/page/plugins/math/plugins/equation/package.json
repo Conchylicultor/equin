@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-page-math-equation",
+  "name": "@equin/plugin-page-math-equation",
   "description": "Block-level equation block type for the page editor: a focusable LaTeX source editor with a live KaTeX preview.",
   "private": true,
   "version": "0.0.1"

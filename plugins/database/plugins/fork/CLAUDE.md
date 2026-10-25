@@ -43,7 +43,7 @@ still running is never dropped out from under it.
 
 ## Plugin reference
 
-- Description: Durable, self-healing worktree DB fork: a graphile job that forks the singularity DB per worktree (idempotent, atomic), plus a scheduled sweep of orphaned temp forks.
+- Description: Durable, self-healing worktree DB fork: a graphile job that forks the base DB per worktree (idempotent, atomic), plus a scheduled sweep of orphaned temp forks.
 - Server:
   - Contributes:
     - `report-kind` "db-fork-failed"

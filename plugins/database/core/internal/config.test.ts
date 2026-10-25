@@ -26,11 +26,11 @@ import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 const CONFIG_MODULE = join(import.meta.dir, "config.ts");
 
 const probeDir = mkdtempSync(join(import.meta.dir, ".config-test-"));
-const emptySingularityDir = mkdtempSync(join(tmpdir(), "singularity-empty-"));
+const emptyDataDir = mkdtempSync(join(tmpdir(), "equin-empty-"));
 
 afterAll(() => {
   rmSync(probeDir, { recursive: true, force: true });
-  rmSync(emptySingularityDir, { recursive: true, force: true });
+  rmSync(emptyDataDir, { recursive: true, force: true });
 });
 
 interface Probe {
@@ -80,7 +80,7 @@ const baseEnv = {
   PATH: process.env.PATH ?? "",
   // Bun wants a home for its own caches; HOME_DIR is the sanctioned source.
   HOME: HOME_DIR,
-  SINGULARITY_DIR: emptySingularityDir,
+  SINGULARITY_DIR: emptyDataDir,
 };
 
 describe("readDatabaseConfig / libpqEnv with no database.json", () => {
@@ -130,12 +130,12 @@ describe("readDatabaseConfig / libpqEnv with no database.json", () => {
 
 describe("readDatabaseConfig with a real database.json", () => {
   test("reads the file when it exists", async () => {
-    const dir = mkdtempSync(join(tmpdir(), "singularity-cfg-"));
+    const dir = mkdtempSync(join(tmpdir(), "equin-cfg-"));
     try {
       writeFileSync(
         join(dir, "database.json"),
         JSON.stringify({
-          connection: { host: "/var/run/pg", port: 5433, user: "singularity" },
+          connection: { host: "/var/run/pg", port: 5433, user: "pg-tester" },
           services: [
             {
               name: "postgres",
@@ -149,13 +149,13 @@ describe("readDatabaseConfig with a real database.json", () => {
       expect(config.connection).toEqual({
         host: "/var/run/pg",
         port: 5433,
-        user: "singularity",
+        user: "pg-tester",
       });
       expect(config.services).toHaveLength(1);
       expect(env).toEqual({
         PGHOST: "/var/run/pg",
         PGPORT: "5433",
-        PGUSER: "singularity",
+        PGUSER: "pg-tester",
       });
     } finally {
       rmSync(dir, { recursive: true, force: true });
@@ -163,7 +163,7 @@ describe("readDatabaseConfig with a real database.json", () => {
   });
 
   test("malformed JSON is tolerated the same way a missing file is", async () => {
-    const dir = mkdtempSync(join(tmpdir(), "singularity-bad-"));
+    const dir = mkdtempSync(join(tmpdir(), "equin-bad-"));
     try {
       writeFileSync(join(dir, "database.json"), "{ not json");
       const { config } = await probe({

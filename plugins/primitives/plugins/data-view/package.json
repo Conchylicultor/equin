@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-data-view",
+  "name": "@equin/plugin-primitives-data-view",
   "description": "Notion-like multi-view data surface: one typed field schema rendered through swappable views (gallery, table, …) with per-view sort/search/filter.",
   "private": true,
   "version": "0.0.1"

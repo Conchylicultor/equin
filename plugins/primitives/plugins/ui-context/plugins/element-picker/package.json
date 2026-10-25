@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-ui-context-element-picker",
+  "name": "@equin/plugin-primitives-ui-context-element-picker",
   "private": true,
   "version": "0.0.1",
   "description": "Chrome-inspector-style element picker: point at any element, get its <ui-context> metadata; plus the chip that renders a <ui-context> token."

@@ -46,7 +46,7 @@ imports each by path. So deleting, moving or adding a manifest takes effect on
 the next lint or check, with no build in between — a registry used to break
 every lint and check with `Cannot find package …` until `./equin build`
 regenerated it (`research/2026-10-20-tooling-exempt-manifests-from-disk.md`).
-Every plugin on disk counts, including the ones the `singularity` composition
+Every plugin on disk counts, including the ones the main composition
 excludes, because lint rules and checks scan every plugin: the set a rule can be
 exempted on must be the set it scans, or a violation in an excluded plugin
 (`review/plugin-changes`) has no way to be exempted.

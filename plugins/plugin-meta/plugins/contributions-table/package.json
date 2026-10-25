@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-plugin-meta-contributions-table",
+  "name": "@equin/plugin-plugin-meta-contributions-table",
   "description": "Registry for the Studio Contributions aggregated-table surface: the FacetTable + RowActivation slots, the defineFacetTable/defineRowActivation factories, and the PluginChip.",
   "private": true,
   "version": "0.0.1"

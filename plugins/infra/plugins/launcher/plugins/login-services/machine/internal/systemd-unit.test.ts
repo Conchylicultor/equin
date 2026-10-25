@@ -3,7 +3,7 @@ import type { LoginServiceSpec } from "../../core";
 import { parseSystemdUserUnit, renderSystemdUserUnit } from "./systemd-unit";
 
 const job: LoginServiceSpec = {
-  label: "dev.singularity.gateway",
+  label: "dev.example.service",
   session: "background",
   description: "equin gateway",
   argv: [
@@ -67,7 +67,7 @@ describe("renderSystemdUserUnit — the gateway's unit, byte for byte", () => {
   test("a background unit renders exactly the gateway unit", () => {
     expect(
       renderSystemdUserUnit({
-        label: "dev.singularity.gateway",
+        label: "dev.example.service",
         session: "background",
         description:
           "equin gateway (and through it Postgres, PgBouncer and every backend)",

@@ -10,7 +10,7 @@ cross-references itself. Everything is keyed by the same `<tag>`
   migrations from before the snapshot cutover, whose lineage lives there)
 
 plus the snapshot ids every newer schema migration names in its
-`-- singularity:snapshot` header.
+`snapshot` migration-marker header.
 
 Invariants:
 

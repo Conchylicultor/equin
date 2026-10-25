@@ -33,7 +33,7 @@ lsof_total=11980
    1820 bun
     873 Code
     ...
---- singularity quick stats ---
+--- equin quick stats ---
 gateway_pid=1436
 gateway_fds=429
 bun_backends=2

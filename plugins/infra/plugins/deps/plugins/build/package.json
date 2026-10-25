@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-infra-deps-build",
+  "name": "@equin/plugin-infra-deps-build",
   "version": "0.0.1",
   "private": true,
   "description": "The build installer kind of infra/deps: build({ inputs, tool, output, run }) (its deps barrel) declares something built from this checkout's own source — identity = sha256 of every file the git ls-files input globs match, the tool's version output and the target platform/arch — built by run(ctx) straight into env/<output>, which is what isIntact checks; builtFile(ready) is its path. admission: { none } skips host admission for a build too small to be worth a grant."

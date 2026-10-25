@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-page-annotations-human-notes",
+  "name": "@equin/plugin-page-annotations-human-notes",
   "description": "Human block type: a void container holding the page author's own words, addressed to agents.",
   "private": true,
   "version": "0.0.1"

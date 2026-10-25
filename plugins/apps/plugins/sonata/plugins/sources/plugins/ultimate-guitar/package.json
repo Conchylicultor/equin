@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-sonata-sources-ultimate-guitar",
+  "name": "@equin/plugin-apps-sonata-sources-ultimate-guitar",
   "description": "Ultimate Guitar input source for Sonata (Task 1: fetch only). Resolves a pasted UG tab URL to a numeric tab id and fetches the raw tab content from UG's private mobile API, failing loudly on any breakage.",
   "private": true,
   "version": "0.0.1"

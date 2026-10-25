@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-sonata-pitch-layout",
+  "name": "@equin/plugin-apps-sonata-pitch-layout",
   "description": "How pitch is laid across a Sonata surface: one switch (piano / Jankó) and the closed geometry table behind pitchGeometry() — the pads, note columns and orientation rules every roll, keyboard and readout chip reads instead of each re-deriving a piano.",
   "private": true,
   "version": "0.0.1"

@@ -1,5 +1,6 @@
 import {
   MAIN_COMPOSITION_ID,
+  namespaceLabel,
   namespaceParts,
   type Namespace,
 } from "@plugins/infra/plugins/namespace/core";
@@ -9,12 +10,12 @@ import type { HealthInfo } from "@plugins/shell/plugins/health-report/web";
  * Where this page is served from, as far as its host name says.
  *
  * - `local` — no namespace at all (bare `localhost`, a dev server).
- * - `main` — the main composition on the main checkout (`singularity`).
+ * - `main` — the main composition on the main checkout (`MAIN_COMPOSITION_ID`).
  * - `worktree` — served from a checkout, whose name is what an attempt's
  *   worktree path ends in. `composition` is set for a `<composition>.<checkout>`
  *   namespace and `null` for a lone label.
  *
- * A lone label other than `singularity` is read as the main composition on an
+ * A lone label other than `MAIN_COMPOSITION_ID` is read as the main composition on an
  * agent checkout — the shape every agent worktree has. It could also be another
  * composition served from the main checkout (`sonata`); the name cannot tell
  * the two apart (see `namespaceParts`), and the only cost of guessing wrong is
@@ -77,15 +78,16 @@ export function linkedTaskIdOf(
   );
 }
 
-/** The one-line summary: the namespace, and what kind of place it names. */
+/** The one-line summary: the namespace (as shown — its public label), and what
+ *  kind of place it names. */
 export function summaryOf(place: WorktreePlace): string {
   switch (place.kind) {
     case "local":
       return "Served outside the gateway";
     case "main":
-      return `${place.namespace} · main checkout`;
+      return `${namespaceLabel(place.namespace)} · main checkout`;
     case "worktree":
-      return `${place.namespace} · ${place.composition ?? "agent worktree"}`;
+      return `${namespaceLabel(place.namespace)} · ${place.composition ?? "agent worktree"}`;
   }
 }
 
@@ -101,7 +103,8 @@ export function identityInfo(
   const summary = summaryOf(place);
   if (place.kind === "local") return { title: "Local dev", summary };
   return {
-    title: task.kind === "linked" ? task.title : place.namespace,
+    title:
+      task.kind === "linked" ? task.title : namespaceLabel(place.namespace),
     summary,
   };
 }

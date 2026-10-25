@@ -32,7 +32,7 @@ in that table will ever describe. A complete ledger also still cannot see a comm
 that carries no trailer. So I3 below stands unchanged.
 
 Git has no such lag. Every commit that lands via `./equin push` carries
-`Singularity-Conversation: <convId>` and `Singularity-Push: <uuid>`, and the
+the conversation trailer (`<convId>`) and the push trailer (`<uuid>`), and the
 pre-push `conversation-trailer` check *fails the push* when a commit lacks the
 conversation trailer — so this is an enforced invariant, not a convention. `main`
 is only ever fast-forwarded, so its history is a complete record of what landed.
@@ -125,7 +125,7 @@ Everything that could make the standing merely *unknown* is kept out of that arm
 
 ## Plugin reference
 
-- Description: The attempt-work authority: where an attempt stands relative to `main`, measured from git (branch counts + Singularity-Conversation trailers on main) rather than from the lagging pushes ledger — the direct read for the server-side exit-drop guard and the git measurements commits-graph shares. The live value is served by the machine half.
+- Description: The attempt-work authority: where an attempt stands relative to `main`, measured from git (branch counts + conversation trailers on main) rather than from the lagging pushes ledger — the direct read for the server-side exit-drop guard and the git measurements commits-graph shares. The live value is served by the machine half.
 - Server:
   - Contributes: `resource.declare` "attempt-work"
   - Uses:

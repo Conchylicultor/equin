@@ -55,7 +55,7 @@ renamed in: present ⇒ ready), `.running.json` (counts only while
 lock, the markers and the job's lock are per settings key too, so two settings
 of one video are independent entries.
 
-## The extractor (`python/singularity_audio`)
+## The extractor (`python/equin_audio`)
 
 - Decode: PyAV frames at their native rate, one soxr HQ resample of the whole
   signal to mono 22.05 kHz (no system ffmpeg). PyAV's per-frame resampler cost

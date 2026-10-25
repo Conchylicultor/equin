@@ -25,7 +25,7 @@ checkout. The refill job, its boot warm-up and its daily cron live in the
 - **The lock reason is the readiness marker.** A spare is written
   (`add --detach`, sharing `addCheckout` with the cold path: one
   `checkout.workers=0`, one timeout, one partial-tree cleanup) and only then
-  locked with reason `singularity-spare`. `listReadySpares` lists only spares
+  locked with reason `SPARE_LOCK_REASON` (`LEGACY_IDS.spareLockReason`). `listReadySpares` lists only spares
   locked that way, so a half-written one is never claimed. The lock also keeps
   Claude Code's own `.claude/worktrees` sweep away from it.
 - **`spare-*` is non-canonical on purpose.** It fails `isCanonicalWorktreeName` (not an attempt id), so the

@@ -5,7 +5,7 @@ import { getConfig } from "@plugins/config_v2/server";
 import { legacyAuthDir } from "@plugins/infra/plugins/secrets/data-dirs";
 import { DATABASE_CONFIG_PATH } from "@plugins/database/core";
 import type { BackupSourceReport } from "@plugins/backup/core";
-import { singularityPlatformSourceConfig } from "../../shared/config";
+import { PLATFORM_SOURCE_ID, platformSourceConfig } from "../../shared/config";
 
 async function countFilesAndSize(
   cwd: string,
@@ -20,14 +20,14 @@ async function countFilesAndSize(
   return { count, sizeBytes };
 }
 
-export async function assembleSingularityPlatform(
+export async function assemblePlatform(
   dir: string,
 ): Promise<BackupSourceReport> {
-  const { enabled } = getConfig(singularityPlatformSourceConfig);
+  const { enabled } = getConfig(platformSourceConfig);
 
   if (!enabled) {
     return {
-      id: "singularity-platform",
+      id: PLATFORM_SOURCE_ID,
       name: "equin platform",
       outcome: "skipped",
       items: [],
@@ -68,7 +68,7 @@ export async function assembleSingularityPlatform(
   // so it is not a backup source; it is not re-added here under the new name.
 
   return {
-    id: "singularity-platform",
+    id: PLATFORM_SOURCE_ID,
     name: "equin platform",
     outcome: "included",
     items,

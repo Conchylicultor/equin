@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-history",
+  "name": "@equin/plugin-history",
   "description": "Umbrella for the reusable version-history primitive: the domain-agnostic versioning engine substrate (more sub-plugins to follow).",
   "private": true,
   "version": "0.0.1"

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-perfs-scheduler",
+  "name": "@equin/plugin-primitives-perfs-scheduler",
   "description": "Main-thread scheduling primitives (yieldToMain) for cooperative boot/work batching.",
   "private": true,
   "version": "0.0.1"

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-conversations-menu-bar-status",
+  "name": "@equin/plugin-conversations-menu-bar-status",
   "description": "The agents' part of the menu-bar panel's status line: how many agents are working and how many need you; one waiting lights the menu-bar icon's dot.",
   "private": true,
   "version": "0.0.1"

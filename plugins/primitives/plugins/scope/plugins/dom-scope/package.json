@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-scope-dom-scope",
+  "name": "@equin/plugin-primitives-scope-dom-scope",
   "description": "The DOM node that belongs to ONE mounted instance: defineDomScope declares a scope a descendant publishes its element into and a sibling reads, so a lookup never reaches past its own instance into another mounted copy of the same surface.",
   "private": true,
   "version": "0.0.1"

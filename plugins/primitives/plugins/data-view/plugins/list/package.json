@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-data-view-list",
+  "name": "@equin/plugin-primitives-data-view-list",
   "description": "List view child for the data-view primitive: a compact single-row-per-item list (Row primitive) with field-driven label/subtitle/trailing, active-row highlight, and hover item actions.",
   "private": true,
   "version": "0.0.1"

@@ -17,7 +17,8 @@ export type BackendRegistry = "server" | "machine";
  *
  *   1. No composition, or the main one ⇒ `<registry>.generated.ts`, the
  *      committed full registry. Unconditionally — a stray
- *      `server.composition.singularity.generated.ts` is inert.
+ *      `server.composition.<main>.generated.ts` is inert (`<main>` =
+ *      `MAIN_COMPOSITION_ID`).
  *   2. Any other composition ⇒ `<registry>.composition.<composition>.generated.ts`,
  *      that composition's filtered registry, and a THROW when it is absent.
  *
@@ -25,7 +26,7 @@ export type BackendRegistry = "server" | "machine";
  * same identity, so the two halves a backend boots always belong to one app.
  *
  * Selection is by identity, never by file presence. Presence used to be the rule
- * and it misfired in both directions: a `server.composition.singularity.…` file
+ * and it misfired in both directions: a `server.composition.<main>.…` file
  * silently reconfigured MAIN's backend on its next spawn (which is why building
  * the main composition was refused outright, and why the main app could not be
  * released), and a served composition whose checkout had been `git clean`ed lost

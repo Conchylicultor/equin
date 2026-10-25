@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-ui-tokens-shape",
+  "name": "@equin/plugin-ui-tokens-shape",
   "private": true,
   "version": "0.0.1",
   "description": "Shape token group (border-radius) with switchable presets."

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-tooling-checks-no-reexport-default",
+  "name": "@equin/plugin-framework-tooling-checks-no-reexport-default",
   "version": "0.0.1",
   "private": true
 }

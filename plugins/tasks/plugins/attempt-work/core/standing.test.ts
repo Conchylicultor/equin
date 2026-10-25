@@ -51,7 +51,7 @@ test("landed commits with nothing ahead is landed (D1)", () => {
 });
 
 test("a ledger push alone is landed — the pre-trailer-era corroboration", () => {
-  // Git found nothing (an old commit carries no Singularity-Conversation
+  // Git found nothing (an old commit carries no conversation
   // trailer), but a push row PROVES a push happened. I3: ORed in, never used to
   // conclude the negative.
   expect(standingOf(work({ ledgerPushes: 2 }))).toBe("landed");

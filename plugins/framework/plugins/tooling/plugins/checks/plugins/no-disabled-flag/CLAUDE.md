@@ -1,6 +1,6 @@
 # no-disabled-flag
 
-No plugin `package.json` may carry `singularity.disabled`.
+No plugin `package.json` may carry the old `disabled` flag.
 
 The flag used to be one of two mechanisms answering "is this plugin in the app?".
 It is gone: codegen no longer reads it, `PluginNode` no longer carries it, and a

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-sonata-rich-key-chip",
+  "name": "@equin/plugin-apps-sonata-rich-key-chip",
   "description": "Sonata Hud: current-key chip overlaid on the display, tracking the playback cursor.",
   "private": true,
   "version": "0.0.1"

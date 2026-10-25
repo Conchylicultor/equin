@@ -32,13 +32,11 @@ function modelFamily(canonical: string): string {
 
 function scopedDaily(b: CostBundle, scope: CostScope): DailyRow[] {
   if (scope === "all") return b.daily;
-  return b.daily.filter((r) => b.projectIsSingularity.get(r.project) ?? false);
+  return b.daily.filter((r) => b.projectIsRepo.get(r.project) ?? false);
 }
 
 function scopedSessions(b: CostBundle, scope: CostScope): PerSession[] {
-  return scope === "all"
-    ? b.sessions
-    : b.sessions.filter((s) => s.isSingularity);
+  return scope === "all" ? b.sessions : b.sessions.filter((s) => s.isRepo);
 }
 
 /** The newest `COST_DAYS_MAX` of `days` (ascending by date), and whether older ones were dropped. */

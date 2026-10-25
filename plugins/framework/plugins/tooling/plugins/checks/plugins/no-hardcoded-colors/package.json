@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-tooling-checks-no-hardcoded-colors",
+  "name": "@equin/plugin-framework-tooling-checks-no-hardcoded-colors",
   "version": "0.0.1",
   "private": true
 }

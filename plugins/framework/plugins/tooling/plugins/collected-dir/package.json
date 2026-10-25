@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-tooling-collected-dir",
+  "name": "@equin/plugin-framework-tooling-collected-dir",
   "version": "0.0.1",
   "private": true,
   "description": "Generic loader for build-time collected-dir registries (loadCollectedDir)."

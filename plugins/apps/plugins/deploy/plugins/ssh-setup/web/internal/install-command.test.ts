@@ -15,28 +15,30 @@ function key(comment: string): SshKey {
 
 describe("installCommand", () => {
   test("installs the key with the restrict,pty prefix", () => {
-    const cmd = installCommand(key("singularity-deploy-srv-1"));
-    expect(cmd).toContain(`restrict,pty ssh-ed25519 ${BLOB} singularity-deploy-srv-1`);
+    const cmd = installCommand(key("equin-deploy-srv-1"));
+    expect(cmd).toContain(
+      `restrict,pty ssh-ed25519 ${BLOB} equin-deploy-srv-1`,
+    );
   });
 
   test("appends via printf with a leading newline, never echo", () => {
-    const cmd = installCommand(key("singularity-deploy-srv-1"));
+    const cmd = installCommand(key("equin-deploy-srv-1"));
     expect(cmd).toContain(`printf '\\n%s\\n' `);
     expect(cmd).toContain(">> ~/.ssh/authorized_keys");
     expect(cmd).not.toContain("echo ");
   });
 
   test("self-cleans the previous key via an anchored sed address", () => {
-    const cmd = installCommand(key("singularity-deploy-srv-1"));
+    const cmd = installCommand(key("equin-deploy-srv-1"));
     expect(cmd).toContain(
-      "sed -i.bak '/ singularity-deploy-srv-1$/d' ~/.ssh/authorized_keys",
+      "sed -i.bak '/ equin-deploy-srv-1$/d' ~/.ssh/authorized_keys",
     );
   });
 
   test.each([
-    ["a space", "singularity deploy srv-1"],
-    ["a quote", "singularity-deploy-srv'1"],
-    ["a regex metacharacter", "singularity-deploy-.*"],
+    ["a space", "equin deploy srv-1"],
+    ["a quote", "equin-deploy-srv'1"],
+    ["a regex metacharacter", "equin-deploy-.*"],
   ])("omits the sed clause for a comment with %s", (_label, comment) => {
     const cmd = installCommand(key(comment));
     expect(cmd).not.toContain("sed");
@@ -46,9 +48,9 @@ describe("installCommand", () => {
   });
 
   test("single-quotes the installed line so a quoted comment cannot break out", () => {
-    const cmd = installCommand(key("singularity-deploy-srv'1"));
+    const cmd = installCommand(key("equin-deploy-srv'1"));
     expect(cmd).toContain(
-      `printf '\\n%s\\n' 'restrict,pty ssh-ed25519 ${BLOB} singularity-deploy-srv'\\''1'`,
+      `printf '\\n%s\\n' 'restrict,pty ssh-ed25519 ${BLOB} equin-deploy-srv'\\''1'`,
     );
   });
 });

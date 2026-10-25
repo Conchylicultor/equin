@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-page-annotations-todo",
+  "name": "@equin/plugin-page-annotations-todo",
   "description": "TODO block type: a void container marking a region of work agents still have to do.",
   "private": true,
   "version": "0.0.1"

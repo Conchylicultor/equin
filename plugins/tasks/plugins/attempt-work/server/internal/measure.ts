@@ -193,7 +193,7 @@ export async function readPendingFromBranchRef(
  * lifetime) because a commit cannot predate the attempt that authored it.
  *
  * Returns the distinct push ids alongside the shas: one `./equin push`
- * stamps one `Singularity-Push` value across every commit it rebases, so the
+ * stamps one push-trailer value across every commit it rebases, so the
  * distinct count is the true number of pushes.
  */
 export async function readLanded(

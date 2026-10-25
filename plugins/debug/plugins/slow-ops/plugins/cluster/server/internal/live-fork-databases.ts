@@ -1,5 +1,6 @@
 import { listDatabases } from "@plugins/database/plugins/admin/server";
 import { listAttempts } from "@plugins/tasks/plugins/tasks-core/server";
+import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
 
 // A fork DB is only worth scanning if its attempt is still live: the host
 // accumulates 1000+ finished worktree forks (most without even a `slow_ops`
@@ -12,7 +13,7 @@ export async function listLiveForkDatabases(now: number): Promise<string[]> {
   const [dbNames, attempts] = await Promise.all([listDatabases(), listAttempts()]);
   const dbSet = new Set(dbNames);
   const relevant = new Set<string>();
-  if (dbSet.has("singularity")) relevant.add("singularity");
+  if (dbSet.has(MAIN_WORKTREE_NAME)) relevant.add(MAIN_WORKTREE_NAME);
   for (const a of attempts) {
     if (!dbSet.has(a.id)) continue;
     const live = a.active || now - a.createdAt.getTime() < RECENT_FORK_WINDOW_MS;

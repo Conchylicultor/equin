@@ -2,7 +2,7 @@
 // on a deployed build. A throwaway folder is made under the home directory
 // (the deploy reads the same disk) and removed at the end:
 //
-//   ~/.singularity-e2e-move-<random>/
+//   ~/.equin-e2e-move-<random>/
 //     a.txt b.txt c.txt   → selected, then dragged into Docs
 //     Docs/sub/           → a collapsed folder that springs open; its own child
 //     Target/x.txt        → the name a dropped x.txt collides with
@@ -57,7 +57,7 @@ const out = arg("out") ?? join(tmpdir(), "select-and-move");
 
 const root = join(
   HOME_DIR,
-  `.singularity-e2e-move-${Math.random().toString(36).slice(2, 8)}`,
+  `.equin-e2e-move-${Math.random().toString(36).slice(2, 8)}`,
 );
 const at = (...parts: string[]) => join(root, ...parts);
 mkdirSync(at("Docs", "sub"), { recursive: true });

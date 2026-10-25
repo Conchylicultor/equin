@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-map",
+  "name": "@equin/plugin-map",
   "description": "Vendor-neutral map primitive: the overlay vocabulary (pins, paths, areas with semantic tones), camera framing helpers, the <MapView/> host, and the GeoMap.Renderer / GeoMap.Pin slots a map engine and pin styles contribute to.",
   "private": true,
   "version": "0.0.1"

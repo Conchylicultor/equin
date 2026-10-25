@@ -19,7 +19,7 @@ import {
   type ArchiveEntry,
   type ArchiveShrink,
 } from "./archive";
-import { isSingularityProjectDir } from "./classify-projects";
+import { isRepoProjectDir } from "./classify-projects";
 import { loadFallbackPriceTable } from "./litellm-fallback";
 import {
   fetchPriceTable,
@@ -60,7 +60,7 @@ export interface ArchivedMeta {
 export interface PerSession {
   sessionId: string;
   projectDir: string;
-  isSingularity: boolean;
+  isRepo: boolean;
   totalTokens: number;
   inputTokens: number;
   outputTokens: number;
@@ -75,8 +75,8 @@ export interface PerSession {
 export interface AggregateBundle {
   daily: DailyRow[];
   sessions: PerSession[];
-  // Encoded project dir → isSingularity?
-  projectIsSingularity: Map<string, boolean>;
+  // Encoded project dir → isRepo?
+  projectIsRepo: Map<string, boolean>;
   archivedMeta: Map<string, ArchivedMeta>;
 }
 
@@ -246,16 +246,16 @@ async function buildBundle(
   for (const [path, entry] of merged) partials.set(path, entry.partial);
   const { daily, sessions, unpriced } = rollup(partials, table);
 
-  const projectIsSingularity = classifyProjects(merged.values(), repoBasename);
+  const projectIsRepo = classifyProjects(merged.values(), repoBasename);
   const decorated = sessions.map((s: SessionRollup): PerSession => ({
     ...s,
-    isSingularity: projectIsSingularity.get(s.projectDir) ?? false,
+    isRepo: projectIsRepo.get(s.projectDir) ?? false,
   }));
   return {
     bundle: {
       daily,
       sessions: decorated,
-      projectIsSingularity,
+      projectIsRepo,
       archivedMeta: archivedMetaOf(merged),
     },
     merged,
@@ -529,20 +529,20 @@ function archivedMetaOf(
 
 // Classify every project dir the MERGED set knows about as equin-related
 // or not, by matching the encoded dir name against the main repo basename (see
-// `isSingularityProjectDir` for the encoding and why the user prefix is ignored).
+// `isRepoProjectDir` for the encoding and why the user prefix is ignored).
 //
 // Two things this must not be:
 //
 //   • a `readdir` of `~/.claude/projects` — a dir absent from the listing
 //     resolved to `false` through the callers' `?? false`, and since the default
-//     scope is `"singularity"`, that silently hid a project's sessions from every
+//     scope is `"repo"`, that silently hid a project's sessions from every
 //     chart as soon as its directory left disk;
 //   • live-only — the membership set is the merged partials, so an archived
 //     project whose directory Claude Code has since deleted still classifies.
 //
-// The stored `isSingularity` is the OR-fallback: `repoBasename` comes from the
+// The stored `isRepo` is the OR-fallback: `repoBasename` comes from the
 // current main worktree root, so renaming or relocating the repo would otherwise
-// reclassify all archived history as non-Singularity in one shot.
+// reclassify all archived history as non-repo in one shot.
 function classifyProjects(
   entries: Iterable<ArchiveEntry>,
   repoBasename: string,
@@ -550,9 +550,8 @@ function classifyProjects(
   const out = new Map<string, boolean>();
   for (const e of entries) {
     const dir = e.partial.projectDir;
-    const live =
-      repoBasename !== "" && isSingularityProjectDir(dir, repoBasename);
-    out.set(dir, (out.get(dir) ?? false) || live || e.isSingularity);
+    const live = repoBasename !== "" && isRepoProjectDir(dir, repoBasename);
+    out.set(dir, (out.get(dir) ?? false) || live || e.isRepo);
   }
   return out;
 }

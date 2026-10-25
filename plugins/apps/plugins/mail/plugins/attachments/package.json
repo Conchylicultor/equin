@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-mail-attachments",
+  "name": "@equin/plugin-apps-mail-attachments",
   "private": true,
   "version": "0.0.1"
 }

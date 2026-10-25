@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-ui-icons-emoji",
+  "name": "@equin/plugin-ui-icons-emoji",
   "private": true,
   "version": "0.0.1",
   "description": "The parsed Emoji value (exactly one RGI emoji grapheme) and the <EmojiPicker> that picks one, its emoji data served same-origin through the asset mirror.",

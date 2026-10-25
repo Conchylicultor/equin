@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-plugin-loader",
+  "name": "@equin/plugin-framework-plugin-loader",
   "version": "0.0.1",
   "private": true,
   "description": "Pure plugin-graph algorithms: topological load-wave partitioning and dependsOn topo-sort, shared by the server/central/web plugin loaders."

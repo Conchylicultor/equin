@@ -12,6 +12,7 @@ import type {
 import { createOpProfiler } from "@plugins/debug/plugins/profiling/plugins/op-log/server";
 import type { FlightLeader } from "@plugins/packages/plugins/single-flight/core";
 import { withDirectOp, type DirectOpDeps } from "./direct-op";
+import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
 
 // Pure-logic tests of the direct-op lifecycle: every seam injected (no real
 // flock, no marker file, no op-log append, no signal handler), so what is
@@ -242,7 +243,7 @@ describe("withDirectOp — top-level path", () => {
   });
 
   test("the main worktree is the interactive origin", async () => {
-    const h = makeHarness({ slug: "singularity" });
+    const h = makeHarness({ slug: MAIN_WORKTREE_NAME });
     await withDirectOp("e2e", { max: 1 }, async () => "success", h.deps);
     expect(h.events).toContain("lane:interactive");
     expect(h.events).toContain("acquire-e2e:interactive:normal:1");

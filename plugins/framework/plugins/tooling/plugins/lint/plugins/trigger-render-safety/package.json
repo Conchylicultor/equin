@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-tooling-lint-trigger-render-safety",
+  "name": "@equin/plugin-framework-tooling-lint-trigger-render-safety",
   "version": "0.0.1",
   "private": true,
   "description": "trigger-render-safety lint rule: no-provider-trigger-render"

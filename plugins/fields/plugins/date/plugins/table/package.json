@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-fields-date-table",
+  "name": "@equin/plugin-fields-date-table",
   "version": "0.0.1",
   "private": true,
   "description": "Date field type: data-view table cell (read-only relative-time cell).",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

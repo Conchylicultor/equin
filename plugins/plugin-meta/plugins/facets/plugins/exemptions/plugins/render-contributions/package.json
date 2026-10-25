@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-plugin-meta-facets-exemptions-render-contributions",
+  "name": "@equin/plugin-plugin-meta-facets-exemptions-render-contributions",
   "version": "0.0.1",
   "private": true,
   "description": "Aggregated exemptions table in the Studio Contributions view."

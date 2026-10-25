@@ -60,7 +60,7 @@ def main() -> None:
 
     import numpy as np
 
-    from singularity_audio.decode import decode_mono
+    from equin_audio.decode import decode_mono
 
     started = time.monotonic()
     # Importing the two stacks costs more than using them (torch ≈1.5 s;

@@ -11,6 +11,7 @@ import { join } from "node:path";
 import { spawnExpectOk } from "@plugins/infra/plugins/spawn/core";
 import { checkoutRef } from "./checkout-ref";
 import { SERVER_CORE_RELATIVE } from "./paths";
+import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
 
 // Each case owns a data root and real git repos: `checkoutRef` asks git which
 // checkout is main, and the spec's checkout is matched by its real path.
@@ -30,7 +31,7 @@ function sandbox(): { dir: string; claimMain: (checkout: string) => void } {
   return {
     dir,
     claimMain: (checkout) => {
-      const ns = join(dir, "data", "worktrees", "singularity");
+      const ns = join(dir, "data", "worktrees", MAIN_WORKTREE_NAME);
       mkdirSync(ns, { recursive: true });
       writeFileSync(
         join(ns, "spec.json"),
@@ -80,7 +81,7 @@ describe("checkoutRef", () => {
   test("a second clone named like the main namespace is refused", async () => {
     const { dir, claimMain } = sandbox();
     claimMain(await repo(join(dir, "installed")));
-    const clash = await repo(join(dir, "other", "singularity"));
+    const clash = await repo(join(dir, "other", MAIN_WORKTREE_NAME));
     let caught: unknown;
     try {
       await checkoutRef(clash);
@@ -92,7 +93,7 @@ describe("checkoutRef", () => {
 
   test("an unreadable main spec is an error, never 'unclaimed'", async () => {
     const { dir } = sandbox();
-    const ns = join(dir, "data", "worktrees", "singularity");
+    const ns = join(dir, "data", "worktrees", MAIN_WORKTREE_NAME);
     mkdirSync(ns, { recursive: true });
     writeFileSync(join(ns, "spec.json"), "{not json");
     const root = await repo(join(dir, "any"));

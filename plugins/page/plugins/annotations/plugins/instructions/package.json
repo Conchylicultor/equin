@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-page-annotations-instructions",
+  "name": "@equin/plugin-page-annotations-instructions",
   "description": "Instructions: the human's standing instructions to agents, as an inline card or a page, delivered with reads under the page they cover and at conversation start when global.",
   "private": true,
   "version": "0.0.1"

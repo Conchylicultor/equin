@@ -191,7 +191,7 @@ describe("backup run detail sections", () => {
               error:
                 '1 of 7 databases could not be dumped and is NOT in this archive:\n  - sonata: database "sonata": kept table links to a left-out one',
               // Partly assembled: the six that dumped ARE in the archive.
-              items: [{ label: "singularity", detail: "136 tables" }],
+              items: [{ label: "main", detail: "136 tables" }],
               sizeBytes: 4096,
             },
           ],
@@ -205,7 +205,7 @@ describe("backup run detail sections", () => {
     ).not.toBeNull();
     expect(screen.getByText(/sonata/)).not.toBeNull();
     // What it DID get through is still listed beside the failure.
-    expect(screen.getByText(/singularity — 136 tables/)).not.toBeNull();
+    expect(screen.getByText(/main — 136 tables/)).not.toBeNull();
     // And an unaffected source is untouched.
     expect(screen.getByText("Config")).not.toBeNull();
   });

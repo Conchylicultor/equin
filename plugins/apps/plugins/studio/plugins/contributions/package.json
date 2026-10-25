@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-studio-contributions",
+  "name": "@equin/plugin-apps-studio-contributions",
   "description": "Central view of all plugin contributions aggregated by type (routes, panes, slots, etc.).",
   "private": true,
   "version": "0.0.1"

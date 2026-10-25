@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-sonata-audio-soundfont",
+  "name": "@equin/plugin-apps-sonata-audio-soundfont",
   "description": "Sonata Instruments: the full General MIDI melodic set (programs 1-127) backed by smplr's Soundfont, served same-origin via the asset-mirror (offline after first warm-up).",
   "private": true,
   "version": "0.0.1",

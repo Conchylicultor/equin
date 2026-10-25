@@ -40,6 +40,7 @@ import {
   type SnapshotDag,
   type SnapshotNode,
 } from "@plugins/database/plugins/migrations/core";
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 
 const MIGRATION_TS_RE = /^(\d{8})_(\d{6})_[0-9a-f]{8}__.+\.sql$/;
 
@@ -94,7 +95,9 @@ export function latestMigrationTimestamp(
 /** A deterministic snapshot id for the merge of `parents` (uuid-shaped). */
 export function mergeSnapshotId(parents: readonly string[]): string {
   const h = createHash("sha256")
-    .update(`singularity:merge-snapshot\n${parents.join(",")}`)
+    .update(
+      `${LEGACY_IDS.migrationMarker}:merge-snapshot\n${parents.join(",")}`,
+    )
     .digest("hex");
   // Version 5-shaped (name-based), RFC 4122 variant.
   const variant = ((parseInt(h[16]!, 16) & 0x3) | 0x8).toString(16);

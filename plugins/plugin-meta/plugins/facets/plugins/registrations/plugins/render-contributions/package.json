@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-plugin-meta-facets-registrations-render-contributions",
+  "name": "@equin/plugin-plugin-meta-facets-registrations-render-contributions",
   "version": "0.0.1",
   "private": true,
   "description": "Aggregated cross-plugin registrations table in the Studio Contributions view."

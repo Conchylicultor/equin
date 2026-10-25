@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-infra-file-watcher",
+  "name": "@equin/plugin-infra-file-watcher",
   "private": true,
   "version": "0.0.1"
 }

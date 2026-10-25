@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-page-editor-collab",
+  "name": "@equin/plugin-page-editor-collab",
   "description": "Per-block content-CRDT server: page_block_docs storage, the per-block content live resource, and the doc-init / doc-update merge endpoints.",
   "private": true,
   "version": "0.0.1",

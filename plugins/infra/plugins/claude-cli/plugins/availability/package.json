@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-infra-claude-cli-availability",
+  "name": "@equin/plugin-infra-claude-cli-availability",
   "private": true,
   "version": "0.0.1"
 }

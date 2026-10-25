@@ -8,6 +8,9 @@ import {
   renderSnapshotHeader,
   snapshotLineage,
 } from "./phases";
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
+
+const MARKER = LEGACY_IDS.migrationMarker;
 
 describe("phased migration grammar", () => {
   test("render → parse round-trips", () => {
@@ -45,14 +48,14 @@ describe("phased migration grammar", () => {
 
   test("a phased file missing a marker throws rather than reading as legacy", () => {
     expect(() =>
-      parseMigration("-- singularity:phase expand\nDROP INDEX x;\n"),
+      parseMigration(`-- ${MARKER}:phase expand\nDROP INDEX x;\n`),
     ).toThrow(/malformed/);
   });
 
   test("markers out of order throw", () => {
     expect(() =>
       parseMigration(
-        "-- singularity:phase expand\n-- singularity:claims\n-- singularity:phase contract\n",
+        `-- ${MARKER}:phase expand\n-- ${MARKER}:claims\n-- ${MARKER}:phase contract\n`,
       ),
     ).toThrow(/malformed/);
   });
@@ -60,7 +63,7 @@ describe("phased migration grammar", () => {
   test("a malformed claim throws", () => {
     expect(() =>
       parseMigration(
-        "-- singularity:phase expand\n-- singularity:phase contract\n-- singularity:claims\n-- nope\n",
+        `-- ${MARKER}:phase expand\n-- ${MARKER}:phase contract\n-- ${MARKER}:claims\n-- nope\n`,
       ),
     ).toThrow(/malformed migration claim/);
   });
@@ -97,7 +100,7 @@ describe("snapshot header", () => {
     });
     const sql = renderSnapshotHeader({ id: B, parents: [A] }) + body;
     expect(sql.split("\n")[0]).toBe(
-      `-- singularity:snapshot id=${B} parents=${A}`,
+      `-- ${MARKER}:snapshot id=${B} parents=${A}`,
     );
     expect(snapshotLineage(sql)).toEqual({ id: B, parents: [A] });
     expect(parseMigration(sql)).toEqual(parseMigration(body));
@@ -112,7 +115,7 @@ describe("snapshot header", () => {
   test("a merge node is an empty phased migration behind a two-parent header", () => {
     const sql = renderMergeSnapshotMigration({ id: M, parents: [A, B] });
     expect(sql.split("\n")[0]).toBe(
-      `-- singularity:snapshot id=${M} parents=${A},${B}`,
+      `-- ${MARKER}:snapshot id=${M} parents=${A},${B}`,
     );
     expect(snapshotLineage(sql)).toEqual({ id: M, parents: [A, B] });
     expect(parseMigration(sql)).toEqual(empty);
@@ -134,27 +137,27 @@ describe("snapshot header", () => {
 
   test("a malformed header throws rather than dropping the edge", () => {
     expect(() =>
-      snapshotLineage(`-- singularity:snapshot parents=${A}\n`),
+      snapshotLineage(`-- ${MARKER}:snapshot parents=${A}\n`),
     ).toThrow(/malformed/);
     expect(() =>
-      snapshotLineage(`-- singularity:snapshot id=${M} parents=x,y\n`),
+      snapshotLineage(`-- ${MARKER}:snapshot id=${M} parents=x,y\n`),
     ).toThrow(/malformed/);
     expect(() =>
-      snapshotLineage(`-- singularity:snapshot id=${M} parents=${A},${A}\n`),
+      snapshotLineage(`-- ${MARKER}:snapshot id=${M} parents=${A},${A}\n`),
     ).toThrow(/repeats/);
     expect(() =>
-      snapshotLineage(`-- singularity:snapshot id=${M} parents=${A} \n`),
+      snapshotLineage(`-- ${MARKER}:snapshot id=${M} parents=${A} \n`),
     ).not.toThrow();
   });
 
   test("a header over a legacy body throws", () => {
     expect(() =>
       parseMigration(
-        `-- singularity:snapshot id=${M} parents=${A},${B}\nSELECT 1;\n`,
+        `-- ${MARKER}:snapshot id=${M} parents=${A},${B}\nSELECT 1;\n`,
       ),
     ).toThrow(/must be phased/);
     expect(() =>
-      parseMigration(`-- singularity:snapshot id=${M} parents=${A},${B}`),
+      parseMigration(`-- ${MARKER}:snapshot id=${M} parents=${A},${B}`),
     ).toThrow(/must be phased/);
   });
 
@@ -179,7 +182,7 @@ describe("supersedes header", () => {
     };
     const sql = renderPhasedMigration(m);
     expect(sql.split("\n")[0]).toBe(
-      "-- singularity:supersedes 38bc8c97 f09303fa",
+      `-- ${MARKER}:supersedes 38bc8c97 f09303fa`,
     );
     expect(parseMigration(sql)).toEqual({ kind: "phased", ...m, adopts: [] });
   });
@@ -205,7 +208,7 @@ describe("supersedes header", () => {
   test("a malformed hash throws", () => {
     expect(() =>
       parseMigration(
-        "-- singularity:supersedes nothex\n" +
+        `-- ${MARKER}:supersedes nothex\n` +
           renderPhasedMigration({ ...body, supersedes: null }),
       ),
     ).toThrow(/malformed hash/);
@@ -226,7 +229,7 @@ describe("supersedes header", () => {
   test("inherited lines without a direct line throw", () => {
     expect(() =>
       parseMigration(
-        "-- singularity:supersedes a1a1a1a1 <- b2b2b2b2\n" +
+        `-- ${MARKER}:supersedes a1a1a1a1 <- b2b2b2b2\n` +
           renderPhasedMigration({ ...body, supersedes: null }),
       ),
     ).toThrow(/no direct line/);
@@ -234,14 +237,14 @@ describe("supersedes header", () => {
 
   test("a header over a legacy body throws", () => {
     expect(() =>
-      parseMigration("-- singularity:supersedes a1a1a1a1\nSELECT 1;\n"),
+      parseMigration(`-- ${MARKER}:supersedes a1a1a1a1\nSELECT 1;\n`),
     ).toThrow(/must be phased/);
   });
 
   test("a supersedes line inside the body is a duplicate marker", () => {
     expect(() =>
       parseMigration(
-        "-- singularity:phase expand\n-- singularity:supersedes a1a1a1a1\n-- singularity:phase contract\n-- singularity:claims\n",
+        `-- ${MARKER}:phase expand\n-- ${MARKER}:supersedes a1a1a1a1\n-- ${MARKER}:phase contract\n-- ${MARKER}:claims\n`,
       ),
     ).toThrow(/duplicate marker/);
   });
@@ -253,8 +256,8 @@ describe("adopts header", () => {
   test("an adoption file round-trips: adopts, then the lineage, then empty sections", () => {
     const sql = renderAdoptionMigration(["5d1f2e3a", "77aa01bc"], lineage);
     expect(sql.split("\n").slice(0, 2)).toEqual([
-      "-- singularity:adopts 5d1f2e3a 77aa01bc",
-      "-- singularity:supersedes 38bc8c97 f09303fa",
+      `-- ${MARKER}:adopts 5d1f2e3a 77aa01bc`,
+      `-- ${MARKER}:supersedes 38bc8c97 f09303fa`,
     ]);
     expect(parseMigration(sql)).toEqual({
       kind: "phased",
@@ -269,7 +272,7 @@ describe("adopts header", () => {
   test("adopts without a supersedes header throws", () => {
     expect(() =>
       parseMigration(
-        "-- singularity:adopts 5d1f2e3a\n" +
+        `-- ${MARKER}:adopts 5d1f2e3a\n` +
           renderPhasedMigration({
             expand: "",
             contract: "",
@@ -283,7 +286,7 @@ describe("adopts header", () => {
   test("an adoption file with SQL throws: it only records", () => {
     expect(() =>
       parseMigration(
-        "-- singularity:adopts 5d1f2e3a\n" +
+        `-- ${MARKER}:adopts 5d1f2e3a\n` +
           renderPhasedMigration({
             expand: 'ALTER TABLE "c" ADD COLUMN "w" text;',
             contract: "",

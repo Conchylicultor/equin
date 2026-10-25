@@ -338,7 +338,7 @@ Edit `plugins/{name}/server/internal/tables.ts` (or `schema.ts` for views) → r
 
 ### Migration runner
 
-`plugins/database/plugins/migrations/server/` runs via the database plugin's `onReadyBlocking` hook on every server start: ensure `__singularity_migrations (hash PRIMARY KEY, file, applied_at)`, read the applied hashes, then run each migration file (sorted by filename timestamp) whose hash is not applied, inserting the hash in the same transaction. An applied hash with no file on disk _warns_, never errors. A DB's applied set is whatever `__singularity_migrations` says it is — never infer applied-ness from anything else (drizzle's legacy `drizzle.__drizzle_migrations`, file presence). No bootstrap, no legacy-drizzle branch, no auto-seeding.
+`plugins/database/plugins/migrations/server/` runs via the database plugin's `onReadyBlocking` hook on every server start: ensure `the applied-migrations table (`__<prefix>_migrations`) (hash PRIMARY KEY, file, applied_at)`, read the applied hashes, then run each migration file (sorted by filename timestamp) whose hash is not applied, inserting the hash in the same transaction. An applied hash with no file on disk _warns_, never errors. A DB's applied set is whatever `the applied-migrations table (`__<prefix>_migrations`)` says it is — never infer applied-ness from anything else (drizzle's legacy `drizzle.__drizzle_migrations`, file presence). No bootstrap, no legacy-drizzle branch, no auto-seeding.
 
 A worktree's DB is a `pg_dump | pg_restore` fork of main (`plugins/database/plugins/fork/`) carrying forward **data** _and_ migration state, so a fresh fork no-ops on first start and only migrations committed after the fork timestamp execute in it. Hash-based filenames let parallel agents add migrations without collision; each worktree converges on the same applied _set_, possibly in a different order.
 
@@ -351,7 +351,7 @@ A worktree's DB is a `pg_dump | pg_restore` fork of main (`plugins/database/plug
 
 ### Resetting a worktree DB
 
-Do **not** hand-edit `__singularity_migrations` to "fix" drift — drop and re-fork:
+Do **not** hand-edit `the applied-migrations table (`__<prefix>_migrations`)` to "fix" drift — drop and re-fork:
 
 ```bash
 psql -d postgres -c 'DROP DATABASE IF EXISTS "claude-<timestamp>" WITH (FORCE)'

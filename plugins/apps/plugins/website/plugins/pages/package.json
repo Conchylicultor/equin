@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-website-pages",
+  "name": "@equin/plugin-apps-website-pages",
   "description": "The inner pages of the public website: the apps gallery, the vision for applications, the technical foundations, the story of how equin came to be, the getting-started guide, and how to install it.",
   "private": true,
   "version": "0.0.1"

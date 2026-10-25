@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-sonata-playback-history",
+  "name": "@equin/plugin-apps-sonata-playback-history",
   "description": "Sonata playback history — per-song play count + last-played (entity-extension side-table), card stats, and play-based sort orderings.",
   "private": true,
   "version": "0.0.1"

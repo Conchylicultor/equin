@@ -31,6 +31,7 @@ import { flattenManifest } from "./flatten-manifest";
 import { explainInclusion } from "./explain";
 import { impactOfPruning, impactOfSelecting } from "./impact";
 import type { EdgeGraph, CompositionManifest } from "./types";
+import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
 
 const AGENT_MANAGER = asPluginId("apps.agent-manager");
 const AGENT_MANAGER_SHELL = asPluginId("apps.agent-manager.shell");
@@ -230,7 +231,7 @@ test("resolveComposition under `**`: everything bundled + required, nothing avai
   expect(comp.available).toEqual([]);
 });
 
-// Phase-7 forward guard: `**` plus branch negatives is how `singularity.disabled`
+// Phase-7 forward guard: `**` plus branch negatives is how the old `disabled` flag
 // was replaced, so a negative MUST still bite under a root positive.
 test("a negative trims its subtree even under a root positive", () => {
   const { seeds, negated } = expand(["**", "!apps.sonata.**"], graph);
@@ -847,15 +848,15 @@ test("naming an importer is NOT an opt-out: the contradiction is reported with i
   }
 });
 
-// THE MIGRATION ITSELF. `singularity` is `entryPoints: ["**"]` plus the inherited
+// THE MIGRATION ITSELF. main is `entryPoints: ["**"]` plus the inherited
 // base row, and that must bundle exactly every plugin minus the ones the
-// `singularity.disabled` flag used to remove (twelve then; the exemptions facet's
+// the old `disabled` flag used to remove (twelve then; the exemptions facet's
 // `render-diff` adapter, which imports plugin-changes, has since made it
 // thirteen). This is what makes the swap provable: the same set, from a
 // declaration instead of a package.json key.
-test("real-tree `singularity`: everything except the thirteen excluded plugins", () => {
+test("real-tree main: everything except the thirteen excluded plugins", () => {
   const main: CompositionManifest = {
-    name: "singularity",
+    name: MAIN_COMPOSITION_ID,
     entryPoints: ["**"],
     selectedContributors: [],
     extends: [],
@@ -889,7 +890,7 @@ test("flattenManifest does not fold the base row into itself", () => {
 // "excluded on purpose" from "excluded because something else was".
 test("negatedTargets carries the asserted targets, not the cascade", () => {
   const main: CompositionManifest = {
-    name: "singularity",
+    name: MAIN_COMPOSITION_ID,
     entryPoints: ["**"],
     selectedContributors: [],
     extends: [],

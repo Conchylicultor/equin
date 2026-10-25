@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-ui-tokens-icons",
+  "name": "@equin/plugin-ui-tokens-icons",
   "private": true,
   "version": "0.0.1",
   "description": "Icons token group: the shape, fill, active fill and weight a theme scope draws its Material Symbols in."

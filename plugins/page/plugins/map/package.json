@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-page-map",
+  "name": "@equin/plugin-page-map",
   "description": "Map block type: every located item on the page, drawn on an interactive map by the map primitive, with pins derived from the page's blocks by contributed PageMap.Layer functions.",
   "private": true,
   "version": "0.0.1"

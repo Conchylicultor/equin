@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-page-text",
+  "name": "@equin/plugin-page-text",
   "description": "Plain-text block type for the page editor.",
   "private": true,
   "version": "0.0.1"

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-plugin-meta",
+  "name": "@equin/plugin-plugin-meta",
   "description": "Plugins about the plugin system itself — browsing, inspecting, and publishing.",
   "private": true,
   "version": "0.0.1"

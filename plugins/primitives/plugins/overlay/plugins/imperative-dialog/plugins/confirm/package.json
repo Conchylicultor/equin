@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-overlay-imperative-dialog-confirm",
+  "name": "@equin/plugin-primitives-overlay-imperative-dialog-confirm",
   "description": "confirmDialog(opts) → Promise<boolean>: a destructive-confirm helper over openDialog with inline error + keep-open-on-failure.",
   "private": true,
   "version": "0.0.1"

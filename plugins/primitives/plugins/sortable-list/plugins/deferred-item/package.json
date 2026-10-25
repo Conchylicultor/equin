@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-sortable-list-deferred-item",
+  "name": "@equin/plugin-primitives-sortable-list-deferred-item",
   "private": true,
   "version": "0.0.1"
 }

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-debug-boot-profile",
+  "name": "@equin/plugin-debug-boot-profile",
   "description": "Browser boot profiler Gantt debug page: the request → first-paint timeline plus per-resource wait/work split.",
   "private": true,
   "version": "0.0.1"

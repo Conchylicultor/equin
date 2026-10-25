@@ -169,7 +169,7 @@ grow with the corpus — the two percentages are the invariant.
 
 ## Charts
 
-`singularityOnly` is a per-worktree config field (defaults to `true`). Each chart
+`repoOnly` is a per-worktree config field (defaults to `true`). Each chart
 reads it (`useScope`) and passes it as the `scope` param of its live value, so
 the chart re-reads when the toggle flips. Scope classification is a pure
 predicate over the encoded project-dir name (`classify-projects.ts`) evaluated

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-debug-live-state-churn-monitor",
+  "name": "@equin/plugin-debug-live-state-churn-monitor",
   "description": "Live-state churn monitor: an in-process accumulator fed by every keyed live-state push, plus a per-worktree scheduled job that files deduped reports for resources sustaining a high rate of no-op (empty-diff) pushes, through the existing reports engine. Includes the live-state-noop report-kind renderer (a one-line Debug → Reports summary) and the threshold config registration.",
   "private": true,
   "version": "0.0.1"

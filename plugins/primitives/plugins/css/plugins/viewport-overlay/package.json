@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-css-viewport-overlay",
+  "name": "@equin/plugin-primitives-css-viewport-overlay",
   "description": "Viewport-filling overlay primitive: self-portals to document.body + z-layer + theme-scope so fixed inset-0 fills the real viewport, never a transformed ancestor.",
   "private": true,
   "version": "0.0.1"

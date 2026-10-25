@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-chord-piano",
+  "name": "@equin/plugin-apps-chord-piano",
   "description": "The Chord app's piano: the notes it plays for a chord, the keyboard that draws and plays them, and the choice between hearing a chord in the song or on the piano.",
   "private": true,
   "version": "0.0.1"

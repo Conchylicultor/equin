@@ -4,4 +4,4 @@
 set -eu
 here=$(cd "$(dirname "$0")" && pwd)
 : "${ST_PYTHON:?ST_PYTHON must be the sonata-transcription env python: ensureDep(transcriptionDep).dir + /bin/python}"
-PYTHONPATH="$here/../python" PYTHONDONTWRITEBYTECODE=1 exec "$ST_PYTHON" -m singularity_transcribe "$@"
+PYTHONPATH="$here/../python" PYTHONDONTWRITEBYTECODE=1 exec "$ST_PYTHON" -m equin_transcribe "$@"

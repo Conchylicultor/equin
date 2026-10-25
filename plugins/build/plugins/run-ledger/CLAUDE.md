@@ -44,9 +44,9 @@ server barrel — the entity alone — is portable.
 shared build (one install, one codegen, one migration pass, one checks pass, one
 transcript, one profile, one verdict), so it is one row rendering
 `[sonata] [website]`, not two rows pointing at the same three artifacts. A plain
-build is `{singularity}`; the default is derived from `MAIN_COMPOSITION_ID`, and
+build is `{<main composition id>}`; the default is derived from `MAIN_COMPOSITION_ID`, and
 the `"main"` literal it replaced was a spelling the table itself contradicted
-(`namespace` already defaulted to `"singularity"`).
+(`namespace` already defaulted to the main namespace).
 
 ## The CLI's INSERT names its own columns
 

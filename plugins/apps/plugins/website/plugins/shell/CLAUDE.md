@@ -123,6 +123,7 @@ hover.
     - `WebsiteSoon`
 - Core:
   - Uses:
+    - `framework/product-name.LEGACY_IDS`
     - `infra/namespace.MAIN_WORKTREE_NAME`
     - `infra/namespace.namespaceHost`
     - `infra/namespace.namespaceUrl`

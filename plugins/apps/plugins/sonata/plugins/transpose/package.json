@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-sonata-transpose",
+  "name": "@equin/plugin-apps-sonata-transpose",
   "description": "Per-song global transpose offset: persists a semitone shift and syncs it into the shell's score pipeline, plus a toolbar transpose popover.",
   "private": true,
   "version": "0.0.1"

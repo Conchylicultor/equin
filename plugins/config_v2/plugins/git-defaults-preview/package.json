@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-config_v2-git-defaults-preview",
+  "name": "@equin/plugin-config_v2-git-defaults-preview",
   "description": "The git-defaults preview switch in the action bar's view-options popover (developers only).",
   "private": true,
   "version": "0.0.1"

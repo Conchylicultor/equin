@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-infra-boot-snapshot",
+  "name": "@equin/plugin-infra-boot-snapshot",
   "private": true,
   "version": "0.0.1"
 }

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-file-viewer-image",
+  "name": "@equin/plugin-primitives-file-viewer-image",
   "private": true,
   "version": "0.0.1"
 }

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-reports-outbox",
+  "name": "@equin/plugin-reports-outbox",
   "private": true,
   "version": "0.0.1"
 }

@@ -7,7 +7,7 @@ import type { ShellCall } from "./parse-shell";
  * Guards used to do this with `call.args.filter((a) => !a.startsWith("-"))` and
  * then `resolve(call.cwd, …)` on the survivors. That is not a parse, it is a
  * guess: every token that is not flag-shaped becomes a path. A `sed -i ''
- * 's|resolve(HERE, "../../../..");|…|' cli/singularity.ts` was blocked as a
+ * 's|resolve(HERE, "../../../..");|…|' cli/equin-cli.ts` was blocked as a
  * write to the main checkout, because `path.resolve` normalised the `..`
  * sequences INSIDE the substitution script and landed them under the repo root.
  * The same guess also missed real writes — `cp -t <main> a.ts` treats the

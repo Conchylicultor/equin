@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-events-sources-source-detail-schedule",
+  "name": "@equin/plugin-apps-events-sources-source-detail-schedule",
   "description": "Schedule section of the source side-pane: refresh cadence, scheduling on/off, and Refresh now.",
   "private": true,
   "version": "0.0.1"

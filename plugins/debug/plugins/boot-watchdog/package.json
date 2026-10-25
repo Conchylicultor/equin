@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-debug-boot-watchdog",
+  "name": "@equin/plugin-debug-boot-watchdog",
   "description": "Boot-watchdog monitor: a main-only scheduled job that sweeps every worktree's boot channel and files a deduped Debug → Reports signal when a backend never became ready within its boot budget (a wedged or never-ready boot), so a boot that the timeline only shows as an open-ended bar also reaches the bell. Includes the boot-wedge report-kind renderer and the budget/lookback config.",
   "private": true,
   "version": "0.0.1"

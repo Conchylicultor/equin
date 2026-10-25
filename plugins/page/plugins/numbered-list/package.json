@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-page-numbered-list",
+  "name": "@equin/plugin-page-numbered-list",
   "description": "Numbered-list block type for the page editor.",
   "private": true,
   "version": "0.0.1"

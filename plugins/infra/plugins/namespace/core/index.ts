@@ -8,6 +8,8 @@ export {
   namespaceUrl,
   namespaceFromHost,
   isNamespaceHostAlias,
+  namespaceLabel,
+  resolveNamespaceAlias,
   MAIN_COMPOSITION_ID,
   MAIN_WORKTREE_NAME,
   BASE_EXCLUSIONS_ID,

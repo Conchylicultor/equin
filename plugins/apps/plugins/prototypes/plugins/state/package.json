@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-prototypes-state",
+  "name": "@equin/plugin-apps-prototypes-state",
   "description": "Per-instance prototype state (pinned, Done, one tag) and the prototypes' tag tree, in the instance's DB.",
   "private": true,
   "version": "0.0.1",

@@ -339,7 +339,7 @@ export function resolveCheckoutDeploy(
 }
 
 /**
- * Which checkout this data root's main app (`singularity`) is served from —
+ * Which checkout this data root's main app (the main namespace) is served from —
  * read from the `spec.json` that checkout's build wrote, like every other
  * "who published this?" answer in this file.
  *

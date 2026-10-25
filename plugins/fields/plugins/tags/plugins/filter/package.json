@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-fields-tags-filter",
+  "name": "@equin/plugin-fields-tags-filter",
   "version": "0.0.1",
   "private": true,
   "description": "Tags (multi-value) field type: data-view filter (multi-select tag chips, array-aware match-any).",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

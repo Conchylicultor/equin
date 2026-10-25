@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-page-block-text-write",
+  "name": "@equin/plugin-page-block-text-write",
   "description": "Server-side text writes for a block's content doc: splice or seed it, then write the row's data.text projection.",
   "private": true,
   "version": "0.0.1",

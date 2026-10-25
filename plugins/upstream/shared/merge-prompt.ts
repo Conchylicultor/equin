@@ -1,3 +1,4 @@
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import { WORKTREES_DIR_DISPLAY } from "@plugins/infra/plugins/paths/plugins/display/core";
 import { renderPrompt } from "@plugins/tasks/plugins/automations/core";
 
@@ -83,7 +84,7 @@ Bring them into THIS worktree. You own proving the merged tree works.
 
    **Migrations.** When both sides added schema migrations, the build writes one new
    migration itself: a *merge node* (\`…__merge_snapshot.sql\`, whose SQL is only a
-   \`-- singularity:snapshot id=… parents=…,…\` header, plus the new \`meta/schema.snapshot.json\`) that joins the two
+   \`-- ${LEGACY_IDS.migrationMarker}:snapshot id=… parents=…,…\` header, plus the new \`meta/schema.snapshot.json\`) that joins the two
    snapshot chains. That file is expected — keep it. If the build instead stops on a
    **snapshot merge conflict** (it lists schema paths like
    \`tables.public.<table>.columns.<column>.type\`) or \`migration-applies-clean\` fails, stop

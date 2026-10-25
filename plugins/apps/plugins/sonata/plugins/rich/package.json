@@ -1,7 +1,7 @@
 {
-  "name": "@singularity/plugin-apps-sonata-rich",
+  "name": "@equin/plugin-apps-sonata-rich",
   "description": "Rich annotation umbrella for Sonata: chord analyzer, chord overlay, chord readout.",
   "private": true,
   "version": "0.0.1",
-  "singularity": { "collapsed": true }
+  "equin": { "collapsed": true }
 }

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-integrations",
+  "name": "@equin/plugin-integrations",
   "description": "Umbrella for third-party service integrations that consume an auth connection (Gmail, …).",
   "private": true,
   "version": "0.0.1"

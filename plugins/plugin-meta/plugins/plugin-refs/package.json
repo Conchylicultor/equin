@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-plugin-meta-plugin-refs",
+  "name": "@equin/plugin-plugin-meta-plugin-refs",
   "version": "0.0.1",
   "private": true,
   "description": "The one plugin-reference locator: every place the repo names a plugin (path literals, @plugins specifiers, structurally-read dot ids, relative markdown/CSS links), each with an exact character range a mover rewrites by."

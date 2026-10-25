@@ -3,8 +3,8 @@
 // Whether an app is experimental is a fact the BUILD knows and the browser
 // cannot infer. `<name>.localhost` is the namespace grammar for git-worktree
 // deploys, for composition namespaces, and for local release
-// previews alike — so the old client-side rule ("any subdomain that isn't
-// `singularity`") painted the frame on compositions and releases too.
+// previews alike — so the old client-side rule ("any subdomain that isn't the
+// main namespace") painted the frame on compositions and releases too.
 //
 // The producer stamps it instead: a dist is experimental only because
 // `./equin build` said so — the DEPLOY posture, and only from a non-main

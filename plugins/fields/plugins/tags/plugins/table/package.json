@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-fields-tags-table",
+  "name": "@equin/plugin-fields-tags-table",
   "version": "0.0.1",
   "private": true,
   "description": "Tags (multi-value) field type: data-view table cell (read-only tag chips).",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

@@ -82,7 +82,7 @@ export const commitsGraphServed = serveValue(commitsGraph, {
   // A `main` or branch advance is the COMPLETE refresh signal, and the bare form
   // recomputes every subscribed attempt — exactly the panes on screen. The landed
   // set is derived from `main`'s own history (attempt-work greps the
-  // Singularity-Conversation trailers), so a commit can only join it by landing
+  // conversation trailers), so a commit can only join it by landing
   // on `main` — which git-watcher reports. There is deliberately no pushes
   // dependency: the graph does not read the ledger at all. git-watcher only
   // tracks `main` + this worktree's own branch, so a notify already implies a

@@ -181,9 +181,9 @@ describe("parseArgv", () => {
 
   describe("the reported case: a sed script is not a path", () => {
     test("substitution text with `..` sequences stays out of files", () => {
-      const cmd = `sed -i '' 's|resolve(HERE, "../../../..");|const REPO_ROOT = resolve(HERE, "..");|' cli/singularity.ts`;
-      expect(files(cmd)).toEqual(["cli/singularity.ts"]);
-      expect(paths(cmd)).toEqual([`${WT}/cli/singularity.ts`]);
+      const cmd = `sed -i '' 's|resolve(HERE, "../../../..");|const REPO_ROOT = resolve(HERE, "..");|' cli/equin-cli.ts`;
+      expect(files(cmd)).toEqual(["cli/equin-cli.ts"]);
+      expect(paths(cmd)).toEqual([`${WT}/cli/equin-cli.ts`]);
     });
   });
 

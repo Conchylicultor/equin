@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-tooling-checks-no-raw-websocket",
+  "name": "@equin/plugin-framework-tooling-checks-no-raw-websocket",
   "version": "0.0.1",
   "private": true
 }

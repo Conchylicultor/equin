@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-diff-view",
+  "name": "@equin/plugin-primitives-diff-view",
   "private": true,
   "version": "0.0.1"
 }

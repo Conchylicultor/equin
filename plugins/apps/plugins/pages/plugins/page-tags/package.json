@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-pages-page-tags",
+  "name": "@equin/plugin-apps-pages-page-tags",
   "description": "Page tags in the Pages app: the chips under a page's title with their picker (an Add tag tool in the header's hover row while the page has none), a tags field in the sidebar DataView (filter and group by tag), and colored dots marking each tagged page's sidebar row.",
   "private": true,
   "version": "0.0.1"

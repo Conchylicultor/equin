@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-database-sql-projection",
+  "name": "@equin/plugin-database-sql-projection",
   "version": "0.0.1",
   "private": true,
   "description": "Mapped raw-SQL projections: a `sql` expression selected as a value carries a decoder, so its declared type is derived from what really runs — closing the sql<T> assertion hole one layer below sql-rows."

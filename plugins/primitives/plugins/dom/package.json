@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-dom",
+  "name": "@equin/plugin-primitives-dom",
   "description": "How do I read and drive the real DOM, and where is the one place allowed to do it? — the guarded selection read (dom-selection), element measurement (element-size), on-screen detection (in-view), scroll ownership (auto-scroll), the wasted-scroll bounce (overscroll-hint), reveal-on-activation (scroll-reveal), and copying what an element stands for (copy-source-text).",
   "private": true,
   "version": "0.0.1"

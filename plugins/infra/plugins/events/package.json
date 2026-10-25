@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-infra-events",
+  "name": "@equin/plugin-infra-events",
   "private": true,
   "version": "0.0.1"
 }

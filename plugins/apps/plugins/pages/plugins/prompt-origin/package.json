@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-pages-prompt-origin",
+  "name": "@equin/plugin-apps-pages-prompt-origin",
   "description": "Origin backlink in the task detail: the page a prompt-block-launched task came from, as a clickable chip.",
   "private": true,
   "version": "0.0.1"

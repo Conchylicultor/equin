@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-css-overlay",
+  "name": "@equin/plugin-primitives-css-overlay",
   "description": "In-flow positioning layout primitive: <Overlay behind above clickThrough> paints full-bleed layers under/over its content within its own box, plus the click-through-toggle idiom.",
   "private": true,
   "version": "0.0.1"

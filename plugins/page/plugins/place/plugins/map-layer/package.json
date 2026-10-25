@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-page-place-map-layer",
+  "name": "@equin/plugin-page-place-map-layer",
   "description": "Puts /place blocks on the /map block: a PageMap.Layer turning each located place into a pin (counting the ones without coordinates), and the place pin's look.",
   "private": true,
   "version": "0.0.1"

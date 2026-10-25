@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-chord-vocabulary",
+  "name": "@equin/plugin-apps-chord-vocabulary",
   "description": "What the Chord trainer says about a chord token: its Roman numeral (with quality mark and inversion figure), its scale degree, function and 1–7 key, its notes on a piano in a given key, and the placeholder starting chords.",
   "private": true,
   "version": "0.0.1"

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-core-app-usage",
+  "name": "@equin/plugin-apps-core-app-usage",
   "description": "Per-app usage stats: opens and active time per app per local day, recorded by an event-driven browser tracker and served as a live per-app summary (7-day and all-time).",
   "private": true,
   "version": "0.0.1"

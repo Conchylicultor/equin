@@ -20,6 +20,7 @@ import {
   type TicketLine,
 } from "@plugins/packages/plugins/ticket-line/core";
 import type { DataDir } from "@plugins/infra/plugins/paths/core";
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 
 // Cross-process twin of `createSemaphore` (the in-process counter+queue gate in
 // `packages/semaphore`). Bounds CPU-heavy work *across* the ~16 worktree server
@@ -297,7 +298,7 @@ export interface HostSemaphore {
 
 /**
  * A slot directory inside ONE git repository — for a gate whose scope is that
- * repository rather than the machine: `<gitCommonDir>/singularity-locks/<name>/`.
+ * repository rather than the machine: `<gitCommonDir>/<lock dir>/<name>/` (`LEGACY_IDS.gitLockDir`).
  *
  * The exception to "the caller supplies a declared `DataDir`", and not a way
  * back to minting data-root paths: the directory lives in the repository's own
@@ -325,7 +326,7 @@ function slotAccess(slots: DataDir | RepoLockDir): {
         `createHostSemaphore: repo-lock name must be one lowercase-kebab segment, got ${JSON.stringify(slots.name)}`,
       );
     }
-    const dir = join(slots.gitCommonDir, "singularity-locks", slots.name);
+    const dir = join(slots.gitCommonDir, LEGACY_IDS.gitLockDir, slots.name);
     return {
       spec: { name: `${slots.name} (${slots.gitCommonDir})` },
       file: (rel) => join(dir, rel),

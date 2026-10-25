@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-backup-sources-claude-settings",
+  "name": "@equin/plugin-backup-sources-claude-settings",
   "private": true,
   "version": "0.0.1"
 }

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-network",
+  "name": "@equin/plugin-network",
   "description": "Umbrella for how data moves between the server and the browser: the live-resource API (declare a collection, query it, serve it) and, later, the live-state primitives it is built on.",
   "private": true,
   "version": "0.0.1"

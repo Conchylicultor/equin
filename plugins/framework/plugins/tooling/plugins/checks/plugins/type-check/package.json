@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-tooling-checks-type-check",
+  "name": "@equin/plugin-framework-tooling-checks-type-check",
   "version": "0.0.1",
   "private": true
 }

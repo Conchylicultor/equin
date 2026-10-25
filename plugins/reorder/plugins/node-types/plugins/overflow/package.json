@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-reorder-node-types-overflow",
+  "name": "@equin/plugin-reorder-node-types-overflow",
   "version": "0.0.1",
   "private": true,
   "description": "Overflow reorder node type: a container whose members all relocate behind one ⋯ panel, each rendering the form it declared. Authored per surface in the slot's config.",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

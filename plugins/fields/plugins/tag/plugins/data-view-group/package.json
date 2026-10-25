@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-fields-tag-data-view-group",
+  "name": "@equin/plugin-fields-tag-data-view-group",
   "version": "0.0.1",
   "private": true,
   "description": "Tag field type: data-view grouping strategy — one section per tag, nested along the option forest (`FieldOption.parent`), labelled, ordered and coloured by `field.options`.",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

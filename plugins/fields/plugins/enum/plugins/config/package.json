@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-fields-enum-config",
+  "name": "@equin/plugin-fields-enum-config",
   "version": "0.0.1",
   "private": true,
   "description": "Enum field type: config-render capability (radio/dropdown renderer for config-v2.fields.renderer).",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

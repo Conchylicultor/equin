@@ -1,11 +1,12 @@
 import { z } from "zod";
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 
 /**
  * The drag-and-drop MIME type carrying host paths between surfaces (a file
  * browser row dragged onto a folder, onto a Favorites sidebar, …): JSON
  * `{ paths: string[] }`, every path absolute.
  */
-export const HOST_PATHS_MIME = "application/x-singularity-host-paths+json";
+export const HOST_PATHS_MIME = `${LEGACY_IDS.mimePrefix}host-paths+json`;
 
 const HostPathsPayloadSchema = z.object({
   paths: z.array(z.string()).min(1),

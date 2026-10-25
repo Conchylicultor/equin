@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-cli-upstream",
+  "name": "@equin/plugin-framework-cli-upstream",
   "private": true,
   "version": "0.0.1",
   "description": "`./equin upstream status|merge` — what the repo this checkout was cloned from has that local main does not, and the one sanctioned merge that brings it into a worktree branch."

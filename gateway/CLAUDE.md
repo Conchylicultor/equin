@@ -152,7 +152,7 @@ Every `Ensure` names a `StartReason`, which sets the spawn's priority:
 `POST /gateway/worktrees/<name>/stop` is the idle sweeper's teardown on request (the cold-start benchmark's reset step): the same `Worktree.Stop` (waits out an in-flight spawn or restart, SIGTERM → grace → SIGKILL, socket + sidecar removed), leaving the worktree registered at `idle` so the next page load or `/api/*` / `/ws/*` request cold-starts it.
 
 - `200` + the worktree's `WorktreeStatus` JSON (the `GET /gateway/worktrees` element shape) once the backend has exited. Already idle (or broken) → `200`, no-op.
-- `409` for a pinned worktree (`Worktree.Pinned`, today `central`) — the same rule that keeps the sweeper off it. Main (`singularity`) is not pinned: the sweeper stops it too.
+- `409` for a pinned worktree (`Worktree.Pinned`, today `central`) — the same rule that keeps the sweeper off it. Main (`mainNamespace`) is not pinned: the sweeper stops it too.
 - `503` when another stop is already tearing it down (not yet exited — retry); `404` for an unknown worktree; `500` if the stop fails (e.g. the request's context ends while waiting on a spawn).
 
 ## Service supervision

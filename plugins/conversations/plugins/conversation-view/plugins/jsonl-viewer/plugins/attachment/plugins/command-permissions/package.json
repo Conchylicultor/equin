@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-command-permissions",
+  "name": "@equin/plugin-conversations-conversation-view-jsonl-viewer-attachment-command-permissions",
   "private": true,
   "version": "0.0.1"
 }

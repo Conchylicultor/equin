@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-studio-compositions-entry-points",
+  "name": "@equin/plugin-apps-studio-compositions-entry-points",
   "description": "Entry-point editor section in the composition detail pane: the draft's entry plugins, with add / remove.",
   "private": true,
   "version": "0.0.1"

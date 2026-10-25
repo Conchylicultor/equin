@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-plugin-meta-facets-slots-render-diff",
+  "name": "@equin/plugin-plugin-meta-facets-slots-render-diff",
   "version": "0.0.1",
   "private": true,
   "description": "Diff renderer for the slots facet (PR review)."

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-sonata-piano-roll-fx-comets",
+  "name": "@equin/plugin-apps-sonata-piano-roll-fx-comets",
   "description": "Fancy piano-roll FX (opt-in): a comet arcs along the keyboard line between consecutive notes of the same track, with a fading particle trail.",
   "private": true,
   "version": "0.0.1",

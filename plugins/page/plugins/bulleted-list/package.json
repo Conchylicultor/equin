@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-page-bulleted-list",
+  "name": "@equin/plugin-page-bulleted-list",
   "description": "Bulleted-list block type for the page editor.",
   "private": true,
   "version": "0.0.1"

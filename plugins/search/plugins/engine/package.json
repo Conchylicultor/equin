@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-search-engine",
+  "name": "@equin/plugin-search-engine",
   "description": "Domain-agnostic indexed full-text search substrate: search_documents table (tsvector GIN), generic index API, and the GET /api/search endpoint.",
   "private": true,
   "version": "0.0.1"

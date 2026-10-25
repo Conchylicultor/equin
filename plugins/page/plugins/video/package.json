@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-page-video",
+  "name": "@equin/plugin-page-video",
   "description": "Video block type: upload a video file and play it inline.",
   "private": true,
   "version": "0.0.1"

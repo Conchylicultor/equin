@@ -7,10 +7,16 @@
 // of those are the SAME string, which is exactly why there must be
 // only one function that decides what it is.
 //
-// This file has ZERO imports on purpose, for the same reason
-// `plugin-meta/composition/core/namespace.ts` does: the build-time tooling, the
-// CLI, the server and the browser all have to ask the same questions, and a
-// module with no imports is reachable from every one of those runtimes.
+// This file imports only `framework/product-name` — itself a zero-import leaf —
+// on purpose, for the same reason `plugin-meta/composition/core/namespace.ts`
+// does: the build-time tooling, the CLI, the server and the browser all have to
+// ask the same questions, and a module with no imports is reachable from every
+// one of those runtimes.
+
+import {
+  LEGACY_IDS,
+  PRODUCT_NAME,
+} from "@plugins/framework/plugins/product-name/core";
 //
 // The gateway (Go) deliberately does NOT implement the rule below. It treats a
 // namespace as an opaque directory key — it maps a Host header to a spec dir and
@@ -34,9 +40,9 @@ export type Namespace = string & { readonly __brand: "Namespace" };
  * Which checkout a namespace is served from.
  *
  * A discriminated union rather than a nullable string on purpose. The main
- * checkout's directory basename happens to BE `"singularity"`, so a plain
- * `checkout: string` lets a caller pass that basename and silently mint
- * `sonata.singularity` — a namespace for a checkout that should have elided.
+ * checkout's directory basename happens to BE the main composition id, so a
+ * plain `checkout: string` lets a caller pass that basename and silently mint
+ * `sonata.<that id>` — a namespace for a checkout that should have elided.
  * With this union that spelling does not exist. Minted by `checkoutRef(root)`
  * (`@plugins/infra/plugins/paths/server`), the one place the "is this the main
  * checkout?" comparison is made.
@@ -53,7 +59,7 @@ export type CheckoutRef =
  * `plugin-meta/composition/core/namespace.ts` imports it from here; its
  * zero-import reachability is preserved because this leaf is itself zero-import.
  */
-export const MAIN_COMPOSITION_ID = "singularity";
+export const MAIN_COMPOSITION_ID = LEGACY_IDS.mainNamespace;
 
 /**
  * The id of the manifest row whose NEGATIVES every composition inherits.
@@ -120,10 +126,12 @@ export const NAMESPACE_RE =
  *
  * | composition   | checkout    | namespace          |
  * |---------------|-------------|--------------------|
- * | `singularity` | main        | `singularity`      |
- * | `singularity` | `att-X`     | `att-X`            |
+ * | `<main>`      | main        | `<main>`           |
+ * | `<main>`      | `att-X`     | `att-X`            |
  * | `sonata`      | main        | `sonata`           |
  * | `sonata`      | `att-X`     | `sonata.att-X`     |
+ *
+ * (`<main>` is `MAIN_COMPOSITION_ID`.)
  *
  * Both sentinels elide, which is what preserves every URL in use today. The
  * cost is that a single label is AMBIGUOUS — `foo` could be composition `foo` on
@@ -224,8 +232,8 @@ export function namespaceParts(ns: Namespace): NamespaceParts {
  * The namespace the main app answers to.
  *
  * DERIVED, not a second literal: it is what the elision rule yields for the main
- * composition on the main checkout. Spelling `"singularity"` as a constant a
- * second time is how that string came to mean two different things in two files.
+ * composition on the main checkout. Spelling the id as a constant a second
+ * time is how that string came to mean two different things in two files.
  *
  * It lives here rather than in `paths` because it is namespace data, not a path:
  * nothing about a filesystem takes part in deriving it.
@@ -241,17 +249,20 @@ export const MAIN_WORKTREE_NAME: Namespace = namespaceFor(MAIN_COMPOSITION_ID, {
  * Every address the app produces goes through `namespaceHost` / `namespaceUrl`,
  * which read this table — so build output, e2e and agent-browser targets,
  * agents' MCP URLs and in-app links all say `equin` without naming it. The
- * namespace itself stays what `namespaceFor` minted (`singularity`): its spec
+ * namespace itself stays what `namespaceFor` minted (`LEGACY_IDS.mainNamespace`): its spec
  * dir, socket and database are internal identifiers, and its own name keeps
  * resolving as a host (`namespaceFromHost`), so the old address still opens
  * the app as a quiet alias.
  *
- * Exists to move the app off the `singularity` name gradually.
+ * Exists to move the app off its old name gradually. Every place a namespace
+ * is SHOWN reads it through `namespaceLabel`, and every place one is TYPED
+ * resolves it through `resolveNamespaceAlias`, so people and agents only ever
+ * see and write the label.
  */
 export const NAMESPACE_HOST_LABELS: Readonly<
   Partial<Record<Namespace, string>>
 > = {
-  [MAIN_WORKTREE_NAME]: "equin",
+  [MAIN_WORKTREE_NAME]: PRODUCT_NAME,
 };
 
 /**
@@ -279,6 +290,28 @@ export const NAMESPACE_HOST_ALIASES: Readonly<Record<string, Namespace>> =
 /** Whether `name` is a host alias rather than a namespace of its own. */
 export function isNamespaceHostAlias(name: string): boolean {
   return Object.hasOwn(NAMESPACE_HOST_ALIASES, name);
+}
+
+/**
+ * How a namespace is SHOWN to a person or an agent: its public label
+ * (`NAMESPACE_HOST_LABELS`) — main reads `equin` — or else its own name. The
+ * same spelling its address uses, so what a picker or a row says is what the
+ * user types back.
+ */
+export function namespaceLabel(ns: Namespace): string {
+  return NAMESPACE_HOST_LABELS[ns] ?? ns;
+}
+
+/**
+ * The namespace a TYPED name stands for: a label (`equin`) resolves to the
+ * namespace it is handed out for, anything else is returned as given (still
+ * unvalidated — pass it to `asNamespace` / `isNamespace`). Every input that
+ * takes a namespace (an MCP tool's `database`, a CLI argument) reads it through
+ * this, so the label `namespaceLabel` shows is accepted back, and the
+ * namespace's own name keeps working.
+ */
+export function resolveNamespaceAlias(name: string): string {
+  return isNamespaceHostAlias(name) ? NAMESPACE_HOST_ALIASES[name]! : name;
 }
 
 /**
@@ -323,7 +356,7 @@ export function namespaceHost(
   ns: Namespace,
   port: number = GATEWAY_PORT,
 ): string {
-  return `${NAMESPACE_HOST_LABELS[ns] ?? ns}${NAMESPACE_HOST_SUFFIX}:${port}`;
+  return `${namespaceLabel(ns)}${NAMESPACE_HOST_SUFFIX}:${port}`;
 }
 
 /**
@@ -369,6 +402,6 @@ export function namespaceFromHost(host: string): Namespace | null {
   if (h === "localhost" || h === "127.0.0.1" || h === "::1") return null;
   if (!h.endsWith(NAMESPACE_HOST_SUFFIX)) return null;
   const name = h.slice(0, -NAMESPACE_HOST_SUFFIX.length);
-  if (isNamespaceHostAlias(name)) return NAMESPACE_HOST_ALIASES[name]!;
-  return isNamespace(name) ? (name as Namespace) : null;
+  const resolved = resolveNamespaceAlias(name);
+  return isNamespace(resolved) ? (resolved as Namespace) : null;
 }

@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-fields-text-config",
+  "name": "@equin/plugin-fields-text-config",
   "version": "0.0.1",
   "private": true,
   "description": "Text field type: config-render capability (single-line input) plus the textField factory.",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

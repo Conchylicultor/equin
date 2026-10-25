@@ -7,7 +7,7 @@ const files = { progress: "build-progress.jsonl", opLog: "op-log.jsonl" };
 const run = (over: Partial<BuildRunProgress> = {}): BuildRunProgress => ({
   runId: "r1",
   pid: 42,
-  worktree: "singularity",
+  worktree: "att-test",
   buildId: "build-1",
   startedAt: "2026-09-16T22:00:08.414Z",
   lastActivityAt: "2026-09-16T22:16:39.799Z",

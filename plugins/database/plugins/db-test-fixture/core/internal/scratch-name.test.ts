@@ -8,6 +8,7 @@ import {
   parseTestDbName,
   TEST_DB_SUFFIX,
 } from "./scratch-name";
+import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
 
 describe("mintTestDbName / parseTestDbName", () => {
   test("round-trips prefix, pid and mint time", () => {
@@ -23,7 +24,7 @@ describe("mintTestDbName / parseTestDbName", () => {
 
   test("declines names it did not mint", () => {
     // Every real namespace on the cluster takes this branch.
-    expect(parseTestDbName("singularity")).toBeNull();
+    expect(parseTestDbName(MAIN_WORKTREE_NAME)).toBeNull();
     expect(parseTestDbName("att-1788958976-i7bt")).toBeNull();
     expect(parseTestDbName("sonata.att-1787097707-cveo")).toBeNull();
     expect(parseTestDbName("wedge-repro-1")).toBeNull();

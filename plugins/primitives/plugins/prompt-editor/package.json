@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-prompt-editor",
+  "name": "@equin/plugin-primitives-prompt-editor",
   "private": true,
   "version": "0.0.1",
   "description": "Conversation-scoped prompt editor wrapper adding a FloatingAction slot.",

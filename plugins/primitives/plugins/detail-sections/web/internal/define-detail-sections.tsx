@@ -27,7 +27,7 @@ const sectionOpenStore = defineStore({
   ttl: DEFAULT_DRAFT_TTL,
   whenFull: "evict-oldest",
   schema: z.boolean(),
-  // No `legacy`: the old keys (`singularity:draft:<slot>.<section>.open`) are
+  // No `legacy`: the old keys (`<prefix>:draft:<slot>.<section>.open`) are
   // indistinguishable from other owners' `*.open` drafts, so they are left to
   // show as unowned; a section's fold state resets once.
 });

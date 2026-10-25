@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-runs",
+  "name": "@equin/plugin-runs",
   "description": "The unified run space: one keyset-paginated DataView over every long-running operation's own ledger, federated at read time through arms bound by runsServed.arm.",
   "private": true,
   "version": "0.0.1"

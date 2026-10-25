@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-css-row",
+  "name": "@equin/plugin-primitives-css-row",
   "description": "Generic interactive row primitive (list, menu, nav, tree, and collapsible section-header rows) with a sanctioned home so ad-hoc rounded+padded interactive markup routes through one primitive.",
   "private": true,
   "version": "0.0.1"

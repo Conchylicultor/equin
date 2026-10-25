@@ -115,7 +115,9 @@ yields no latency sample by construction.
 
 - Description: The live-resource wire protocol, shared by the resource runtime (server, central) and the live-state client: the socket's frame vocabulary declared once as data — ServerFrame / ClientFrame / Derivation types derived from it, and PROTOCOL, a pure-JS hash of its canonical JSON that splits the shared socket and gates seeded derivations exactly when the vocabulary changes — plus the failure vocabulary: the sub-error reasons (contract-mismatch included), the contract verdict (skew / same-build / unknown), the HTTP error body, the client build-graph header, ResourceContractError — the typed throw a params decode raises when a subscription does not match the declaration — and ResourceRefusal, the expected caller-caused refusal a loader throws, whose message reaches the reader and is never reported as a server failure.
 - Core:
-  - Uses: `packages/string-hash.hash53`
+  - Uses:
+    - `framework/product-name.LEGACY_IDS`
+    - `packages/string-hash.hash53`
   - Exports (types):
     - `ClientFrame`
     - `ContractVerdict`

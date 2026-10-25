@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-packages-list-bound",
+  "name": "@equin/plugin-packages-list-bound",
   "private": true,
   "version": "0.0.1",
   "description": "A list's bound, declared in its zod schema: cappedList / cappedRecord (a checked max) and wholeList / wholeRecord (loaded whole, with a written reason), tagged in _def so the tag survives zod's clones; listShapeOf walks every array, record, map and set a schema reaches and reports each one's bound and the bare ones, listBoundsOf refuses a bare one."

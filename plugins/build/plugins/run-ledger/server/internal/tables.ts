@@ -30,7 +30,7 @@ import { buildRunsEntityRef } from "../../core/internal/entity";
 //   build --composition sonata website` is ONE shared build — one install, one
 //   codegen, one migration pass, one checks pass, one transcript, one profile,
 //   one verdict — so it is ONE row carrying N target chips, not N rows sharing
-//   a transcript. A plain build is `{singularity}`. The default is derived from
+//   a transcript. A plain build is `{<main composition id>}`. The default is derived from
 //   MAIN_COMPOSITION_ID, never spelled.
 // - `pid` is the building process — supervisor bookkeeping, a server field
 //   (never on the wire).

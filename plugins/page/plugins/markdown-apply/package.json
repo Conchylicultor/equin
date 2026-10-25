@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-page-markdown-apply",
+  "name": "@equin/plugin-page-markdown-apply",
   "description": "Apply an edited markdown document onto an existing page's block forest without re-minting block ids.",
   "private": true,
   "version": "0.0.1"

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-css-line",
+  "name": "@equin/plugin-primitives-css-line",
   "description": "Single-line container primitive: <Line> pairs the structural single-line invariant (region-line) with the ambient SingleLineProvider so children never wrap and <Text> leaves truncate. The bare line-container contract composed by Row/Bar and bespoke strips.",
   "private": true,
   "version": "0.0.1"

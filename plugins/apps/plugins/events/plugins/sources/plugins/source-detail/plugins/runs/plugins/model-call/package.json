@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-events-sources-source-detail-runs-model-call",
+  "name": "@equin/plugin-apps-events-sources-source-detail-runs-model-call",
   "description": "Model call section of the run pane: the prompt and output behind a run.",
   "private": true,
   "version": "0.0.1"

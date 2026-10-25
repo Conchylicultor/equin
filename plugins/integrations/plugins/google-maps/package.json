@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-integrations-google-maps",
+  "name": "@equin/plugin-integrations-google-maps",
   "description": "Google Maps Platform access broker: the server-only Places key, the public browser config (Maps JavaScript API key) for the live map, per-capability readiness and the setup affordances on the web, so consumers never import @plugins/auth directly.",
   "private": true,
   "version": "0.0.1"

@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-fields-date-text-cast",
+  "name": "@equin/plugin-fields-date-text-cast",
   "version": "0.0.1",
   "private": true,
   "description": "Date field type: server text→typed SQL cast capability — presents the raw TEXT storage column as ::timestamptz for server-delegated DataView filter/sort.",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

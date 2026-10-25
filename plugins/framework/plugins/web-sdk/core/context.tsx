@@ -102,7 +102,7 @@ export function useRawContributions(
  * codegen at build time, so reading it never waits on a request.
  */
 export interface CompositionIdentity {
-  /** The composition id (`singularity` for the checkout's own app). */
+  /** The composition id (the main composition id for the checkout's own app). */
   id: string;
   /**
    * The app owning bare `/` (and the app launcher's click) — a `defineApp` id

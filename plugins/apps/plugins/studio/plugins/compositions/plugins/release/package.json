@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-studio-compositions-release",
+  "name": "@equin/plugin-apps-studio-compositions-release",
   "description": "Studio Release pane: pick a composition + target, run a local release, watch live progress, and preview the artifact.",
   "private": true,
   "version": "0.0.1"

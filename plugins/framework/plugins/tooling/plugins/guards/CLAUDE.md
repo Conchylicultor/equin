@@ -150,6 +150,7 @@ can blind or deafen all of them at once.
     - `framework/cli/cli-name.CLI_NAME`
     - `framework/cli/cli-name.CLI_NAMES`
     - `framework/cli/cli-name.isCliName`
+    - `framework/plugin-id.PLUGIN_MANIFEST_KEY`
     - `framework/tooling/collected-dir.defineCollectedDir`
     - `framework/tooling/collected-dir.loadCollectedDir`
     - `framework/tooling/guards/refusal-format.joinRefusal`

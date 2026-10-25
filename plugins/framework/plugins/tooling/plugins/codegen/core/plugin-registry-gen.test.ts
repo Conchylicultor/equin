@@ -39,6 +39,7 @@ import {
   type DiscoveredCollectedDir,
   type RegistryGenContext,
 } from "./plugin-registry-gen";
+import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
 
 // Fixture paths go through `pj(rel)` rather than bare `plugins/<seg>/…`
 // literals — the repo's own `plugin-refs-resolve` check validates that every
@@ -284,11 +285,11 @@ test("per-name registry path renders and round-trips through parse", () => {
 /**
  * The one place that knows main's registry is the committed file.
  *
- * `singularity` is an ordinary composition — it just happens to be the one whose
+ * the main composition is an ordinary composition — it just happens to be the one whose
  * closure is the whole tree, which is exactly what `plugins-registry-in-sync`
  * re-derives and asserts on every build. So asking for its registry must hand
  * back `<dir>.generated.ts`, and nothing may ever emit a
- * `<dir>.composition.singularity.generated.ts` for a backend to pick up by
+ * `<dir>.composition.<main>.generated.ts` for a backend to pick up by
  * presence.
  */
 test("the main composition resolves to the committed registry, every other to a filtered one", () => {
@@ -298,7 +299,7 @@ test("the main composition resolves to the committed registry, every other to a 
     _brand: "CollectedDirDef",
     ownerDir: "/repo/plugins/framework/plugins/server-core",
   };
-  expect(compositionRegistryPath(def, "singularity")).toBe(
+  expect(compositionRegistryPath(def, MAIN_COMPOSITION_ID)).toBe(
     "/repo/plugins/framework/plugins/server-core/core/server.generated.ts",
   );
   expect(compositionRegistryPath(def, "sonata")).toBe(
@@ -306,7 +307,7 @@ test("the main composition resolves to the committed registry, every other to a 
   );
   // The filename half, which `release` asks directly (it holds a repo-relative
   // path, not a DiscoveredCollectedDir).
-  expect(compositionRegistryFileName("web", "singularity")).toBe(
+  expect(compositionRegistryFileName("web", MAIN_COMPOSITION_ID)).toBe(
     "web.generated.ts",
   );
   expect(compositionRegistryFileName("web", "sonata")).toBe(
@@ -380,7 +381,7 @@ test("listNamedCompositionRegistries finds per-name files, skipping singletons",
 //
 //   • the full id set renders every entry, with the dependency graph intact —
 //     this is what the committed `<dir>.generated.ts` files are (rendered with
-//     `ctx.mainBundle`, which for `singularity` is every id it reaches);
+//     `ctx.mainBundle`, which for the main composition is every id it reaches);
 //   • dropping ONE id from the bundle drops exactly that entry, and prunes it out
 //     of any surviving entry's `dependsOn` — a dangling dep would break the
 //     loader's topo-sort.
@@ -451,7 +452,7 @@ function bundleFixture(): {
     // it is on the ctx so every consumer shares one classify pass.
     graph: classifyEdges(tree),
     mainBundle: new Set(nodes.map((n) => n.id)),
-    main: { id: "singularity", home: "alpha" },
+    main: { id: MAIN_COMPOSITION_ID, home: "alpha" },
     repo: () => Promise.resolve(repo),
     dirScans: new Map(),
     browserHostGraphs: new Map(),
@@ -589,7 +590,7 @@ function machineFixture(): {
     tree,
     graph: classifyEdges(tree),
     mainBundle: new Set(nodes.map((n) => n.id)),
-    main: { id: "singularity", home: null },
+    main: { id: MAIN_COMPOSITION_ID, home: null },
     repo: () => Promise.resolve(repo),
     dirScans: new Map(),
     browserHostGraphs: new Map(),

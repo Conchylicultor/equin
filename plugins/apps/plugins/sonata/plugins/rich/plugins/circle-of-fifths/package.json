@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-sonata-rich-circle-of-fifths",
+  "name": "@equin/plugin-apps-sonata-rich-circle-of-fifths",
   "description": "Sonata Section: a small circle-of-fifths wheel (major + relative-minor rings) that highlights the last-played chord.",
   "private": true,
   "version": "0.0.1"

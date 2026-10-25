@@ -10,6 +10,7 @@ import { classifyRemoteFailure, type RemoteFailure } from "./classify";
 import { gitConfigGet, gitConfigSet } from "./git-config";
 import { remoteTransport } from "./remote-url";
 import type { LocalReason, PublishTarget } from "./types";
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 
 /**
  * The remote a publish goes to. Hardcoded, like `push` itself: `git push`
@@ -37,7 +38,7 @@ export type ProbeOutcome = { kind: "writable" } | RemoteFailure;
  * fail and be filed as read-only, and publishing would switch itself off.
  * A ref nobody has creates no such question.
  */
-const PROBE_REF = "refs/heads/singularity-write-probe";
+const PROBE_REF = LEGACY_IDS.writeProbeRef;
 
 /**
  * Wedge-breaker for the probe. This is the one command in the plugin that

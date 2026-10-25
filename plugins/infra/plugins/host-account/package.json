@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-infra-host-account",
+  "name": "@equin/plugin-infra-host-account",
   "private": true,
   "version": "0.0.1"
 }

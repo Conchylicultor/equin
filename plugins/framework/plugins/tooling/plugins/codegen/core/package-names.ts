@@ -14,7 +14,7 @@ import type { PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
  * a file whose name is already right is not written.
  *
  * Skipped, exactly as R1 skips them: composition roots (they self-declare via
- * `singularity.compositionRoot` and carry their own names). A plugin with NO
+ * `equin.compositionRoot` and carry their own names). A plugin with NO
  * `package.json` is left for R1 to report — creating one is an authoring act
  * (the file also carries the plugin's dependencies), not a derivation.
  *

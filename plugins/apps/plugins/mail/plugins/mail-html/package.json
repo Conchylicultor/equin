@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-mail-mail-html",
+  "name": "@equin/plugin-apps-mail-mail-html",
   "private": true,
   "version": "0.0.1",
   "description": "Privacy-safe email HTML renderer: DOMPurify sanitize + remote-image gating + cid resolution + quoted-history collapse.",

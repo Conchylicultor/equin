@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-page-divider",
+  "name": "@equin/plugin-page-divider",
   "description": "Divider block type for the page editor: a thin horizontal rule marking a section break.",
   "private": true,
   "version": "0.0.1"

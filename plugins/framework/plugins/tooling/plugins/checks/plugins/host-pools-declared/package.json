@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-tooling-checks-host-pools-declared",
+  "name": "@equin/plugin-framework-tooling-checks-host-pools-declared",
   "version": "0.0.1",
   "private": true
 }

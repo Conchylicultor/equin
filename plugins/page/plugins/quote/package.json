@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-page-quote",
+  "name": "@equin/plugin-page-quote",
   "description": "Quote / blockquote block type for the page editor.",
   "private": true,
   "version": "0.0.1"

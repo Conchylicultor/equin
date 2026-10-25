@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-sonata-rich-chord-mode",
+  "name": "@equin/plugin-apps-sonata-rich-chord-mode",
   "description": "Per-song chord mode for Sonata: play a MIDI song as its detected chords, voiced through the same voicing + rhythm pipeline a chord grid uses, with the original tracks turned off (re-enable any in the Tracks card).",
   "private": true,
   "version": "0.0.1"

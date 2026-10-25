@@ -122,7 +122,7 @@ const tupleKey = (key: string, params: ResourceParams) =>
 
 /** The serving backend's namespace, and one whose rows it inherited. */
 const NS = "oracle-ns";
-const FOREIGN_NS = "singularity";
+const FOREIGN_NS = "foreign-ns";
 const COMPOSITIONS = ["comp-a", "comp-b"] as const;
 
 beforeAll(async () => {

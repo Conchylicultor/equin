@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-slot-render",
+  "name": "@equin/plugin-primitives-slot-render",
   "private": true,
   "version": "0.0.1"
 }

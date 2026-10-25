@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-tooling-checks-no-plugin-imports-in-core",
+  "name": "@equin/plugin-framework-tooling-checks-no-plugin-imports-in-core",
   "version": "0.0.1",
   "private": true
 }

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-tooling-lint-route-teardown-safety",
+  "name": "@equin/plugin-framework-tooling-lint-route-teardown-safety",
   "version": "0.0.1",
   "private": true,
   "description": "route-teardown-safety lint rule: no-unroute"

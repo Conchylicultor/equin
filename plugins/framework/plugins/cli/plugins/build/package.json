@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-cli-build",
+  "name": "@equin/plugin-framework-cli-build",
   "private": true,
   "version": "0.0.1",
   "description": "`./equin build` — the deploy command: codegen, migrations, web dist and backend restart for this checkout, or a composition's hermetic artifact set.",

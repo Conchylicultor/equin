@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-page-url-paste",
+  "name": "@equin/plugin-page-url-paste",
   "description": "Paste a URL into a text block to make it a link, then keep it, mention it by its page title, or turn the block into a bookmark or embed.",
   "private": true,
   "version": "0.0.1",

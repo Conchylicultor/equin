@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-conversations-conversation-progress",
+  "name": "@equin/plugin-conversations-conversation-progress",
   "private": true,
   "version": "0.0.1"
 }

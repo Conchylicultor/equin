@@ -12,6 +12,7 @@ import {
   stagingName,
 } from "./legacy-layout";
 import type { FsEntry, MigrationStep } from "./legacy-layout";
+import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
 
 // ── the table itself ─────────────────────────────────────────────────────────
 
@@ -104,7 +105,7 @@ function stepsFor(
 // ── behaviour 1: `logs/` nests into itself ───────────────────────────────────
 
 test("the logs row performs the three-step staging dance and plants no shim", () => {
-  const before = fs(dir("logs", "gateway.log", "singularity"));
+  const before = fs(dir("logs", "gateway.log", MAIN_WORKTREE_NAME));
   const steps = stepsFor(planMigration(before, "apply"), "logs");
 
   expect(steps).toEqual([
@@ -181,8 +182,8 @@ test("a logs/ of nothing but plain files (rotations included) dances cleanly", (
 
 test("a destination that already holds content stops the run, keeping neither side", () => {
   const before = fs(
-    dir("config", "singularity", "main-worktree"),
-    dir("state/config", "singularity"),
+    dir("config", MAIN_WORKTREE_NAME, "main-worktree"),
+    dir("state/config", MAIN_WORKTREE_NAME),
   );
   const steps = stepsFor(planMigration(before, "apply"), "config");
 
@@ -197,7 +198,7 @@ test("a destination that already holds content stops the run, keeping neither si
 });
 
 test("an EMPTY destination is removed and the rename takes its place", () => {
-  const before = fs(dir("config", "singularity"), dir("state/config"));
+  const before = fs(dir("config", MAIN_WORKTREE_NAME), dir("state/config"));
   expect(stepsFor(planMigration(before, "apply"), "config")).toEqual([
     {
       action: "unlink",
@@ -214,14 +215,17 @@ test("an EMPTY destination is removed and the rename takes its place", () => {
 test("an un-enumerated destination is treated as non-empty, never as empty", () => {
   // `children` absent means "not enumerated". Reading that as empty would rmdir
   // a directory nobody looked inside.
-  const before = fs(dir("config", "singularity"), opaqueDir("state/config"));
+  const before = fs(
+    dir("config", MAIN_WORKTREE_NAME),
+    opaqueDir("state/config"),
+  );
   const steps = stepsFor(planMigration(before, "apply"), "config");
   expect(steps).toHaveLength(1);
   expect(steps[0]?.action).toBe("blocked");
 });
 
 test("an absent destination is a plain rename plus the shim", () => {
-  const before = fs(dir("reports", "singularity.jsonl"));
+  const before = fs(dir("reports", `${MAIN_WORKTREE_NAME}.jsonl`));
   expect(stepsFor(planMigration(before, "apply"), "reports")).toEqual([
     { action: "rename", row: "reports", from: "reports", to: "state/reports" },
     {
@@ -429,8 +433,8 @@ test("what the check must find at an unshimmable name follows the row's `leaves`
 
 test("re-planning against the state an apply produced yields zero steps", () => {
   const before = fs(
-    dir("config", "singularity"),
-    dir("reports", "singularity.jsonl"),
+    dir("config", MAIN_WORKTREE_NAME),
+    dir("reports", `${MAIN_WORKTREE_NAME}.jsonl`),
     dir("logs", "gateway.log"),
     dir("prototypes", "tasks-v2"),
     dir("push-slots", "slot-0.lock"),
@@ -605,7 +609,7 @@ test("drop-legacy on an un-migrated root refuses, and plans NO removals at all",
   const root = fs(
     file("check-progress.jsonl"),
     file("op-log.jsonl"),
-    dir("config", "singularity"),
+    dir("config", MAIN_WORKTREE_NAME),
     dir("backups", "dump.sql"),
   );
   const steps = planMigration(root, "drop-legacy");
@@ -659,7 +663,7 @@ test("a freshly-applied root sweeps no strays — every pass-2 removal is a shim
   // Nothing can have rotated across a shim planted seconds earlier, so every
   // removal must be a shim removal and none may be a stray sweep.
   const before = fs(
-    dir("config", "singularity"),
+    dir("config", MAIN_WORKTREE_NAME),
     dir("push-slots", "slot-0.lock"),
     file("op-log.jsonl"),
     file("op-log.jsonl.1"),

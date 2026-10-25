@@ -7,7 +7,7 @@ can adopt the same signal later without a second mechanism.
 Design: [`research/2026-07-29-global-agent-origin-provenance-for-pages.md`](../../../../../../research/2026-07-29-global-agent-origin-provenance-for-pages.md).
 
 - **The signal is a request header.** The e2e harness sets
-  `x-singularity-origin: agent` (+ `x-singularity-origin-source`, e.g.
+  the origin header to `agent` (+ the origin-source header, e.g.
   `e2e:copy-paste-verify`) on every request its browser context issues —
   one line in `e2e-harness/e2e/browser.ts` that marks all existing scripts,
   every future script, and ad-hoc `screenshot.ts` drives, with nothing to opt
@@ -56,7 +56,7 @@ Design: [`research/2026-07-29-global-agent-origin-provenance-for-pages.md`](../.
 
 ## Plugin reference
 
-- Description: Agent-origin provenance for pages: presents the exposed `origin` field (Private / Scratch) of the Pages sidebar DataView, so pages written by an automated session land in their own Scratch section of the sidebar. Agent-origin provenance for pages (page_blocks_ext_origin): a create-hook contributor stamps every page written by an automated session (x-singularity-origin: agent) with the script that minted it, the marker's presence is exposed as the `origin` field (agent | user) of every list whose rows are blocks — the Pages sidebar's Private / Scratch sections — and the machine half's 24h retention sweep trashes the marked pages.
+- Description: Agent-origin provenance for pages: presents the exposed `origin` field (Private / Scratch) of the Pages sidebar DataView, so pages written by an automated session land in their own Scratch section of the sidebar. Agent-origin provenance for pages (page_blocks_ext_origin): a create-hook contributor stamps every page written by an automated session (the origin header set to agent) with the script that minted it, the marker's presence is exposed as the `origin` field (agent | user) of every list whose rows are blocks — the Pages sidebar's Private / Scratch sections — and the machine half's 24h retention sweep trashes the marked pages.
 - Web:
   - Contributes: `FieldPresentation.Register` "exposure:page_blocks_ext_origin"
   - Uses: `network/live.FieldPresentation`

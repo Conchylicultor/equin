@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-sonata-sources-ultimate-guitar-tab",
+  "name": "@equin/plugin-apps-sonata-sources-ultimate-guitar-tab",
   "description": "The Ultimate Guitar tab model: the normalized raw tab schema and the chord/lyric markup parser.",
   "private": true,
   "version": "0.0.1"

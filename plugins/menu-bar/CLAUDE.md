@@ -11,7 +11,7 @@ service installs into the ONE equin app bundle — `equin.app`, `dev.equin`
 other permission are the app's; Linux the bare binary). Generic: it knows
 namespaces and URLs, never an app.
 
-- `equin-desktop tray [--namespace <ns>]` (default `singularity`, the main
+- `equin-desktop tray [--namespace <ns>]` (default the main namespace, the main
   checkout): the status icon — macOS an NSStatusItem (Tauri's tray, the mono
   spiral as a template image, accessory activation policy so no Dock icon);
   Linux a StatusNotifierItem through `ksni` (left click = `Activate` = the
@@ -20,8 +20,8 @@ namespaces and URLs, never an app.
   kept alive while hidden) on `http://<ns>.localhost:9000/home/menu-bar?embed=1`,
   under the icon on macOS, top-right on Linux. When nothing answers on :9000
   (probed at start and on every show) it shows the bundled `frontend/index.html`
-  instead, whose Start runs `launchctl kickstart -k gui/$UID/dev.singularity.gateway`
-  / `systemctl --user start dev.singularity.gateway.service` and loads the panel
+  instead, whose Start runs `launchctl kickstart -k gui/$UID/<gateway-label>`
+  / `systemctl --user start <gateway-label>.service` and loads the panel
   once the port answers.
 - **Window mode** — an installed app's process (`rust/src/window.rs`): on macOS
   the binary inside a shim bundle whose Info.plist has `EquinAppId` (its
@@ -68,6 +68,8 @@ namespaces and URLs, never an app.
   codegen requires it; `deps/`'s macOS step makes the `.icns` from it).
 - Iterate on the crate with `cargo build --release` in `rust/` (its own
   `target/`, gitignored); the deps install uses the shared cargo-target cache.
+
+(`<gateway-label>` is the gateway's launchd label / systemd unit name, `LEGACY_IDS.launchdLabel` in `framework/product-name`.)
 
 ## Installed apps (`machine/`)
 

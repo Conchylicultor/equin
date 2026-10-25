@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-page-annotations-instructions-instructions-page",
+  "name": "@equin/plugin-page-annotations-instructions-instructions-page",
   "description": "Instructions pages: the tint and chip on their references, and the /instructions page insert.",
   "private": true,
   "version": "0.0.1"

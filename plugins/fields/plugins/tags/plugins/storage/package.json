@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-fields-tags-storage",
+  "name": "@equin/plugin-fields-tags-storage",
   "version": "0.0.1",
   "private": true,
   "description": "Tags field type: DB storage capability — a Postgres jsonb column, decoded by the field's own schema so its string[] is derived rather than asserted.",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

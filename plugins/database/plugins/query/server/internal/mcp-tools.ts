@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { basename } from "path";
 import { Mcp } from "@plugins/infra/plugins/mcp/server";
+import { resolveNamespaceAlias } from "@plugins/infra/plugins/namespace/core";
 import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
 import {
   openShortLivedClient,
@@ -20,20 +21,20 @@ For debugging and inspection only. All queries run in a READ ONLY transaction.
 Returns up to ${MAX_ROWS} rows.
 
 Default: queries the current conversation's worktree database.
-Pass \`database\` to target a different worktree (e.g. "att-1778089188-7uvf" or "singularity" for main).`,
+Pass \`database\` to target a different worktree (e.g. "att-1778089188-7uvf", or "equin" for main).`,
   inputSchema: {
     sql: z.string().min(1).describe("SQL query to execute (read-only)."),
     database: z
       .string()
       .optional()
       .describe(
-        "Target database name (worktree name). Defaults to the conversation's own worktree DB.",
+        'Target database: a worktree name, or "equin" for main. Defaults to the conversation\'s own worktree DB.',
       ),
   },
   async handler({ sql, database }, { conversationId }) {
     let dbName: string;
     if (database) {
-      dbName = database;
+      dbName = resolveNamespaceAlias(database);
     } else {
       const conv = await getConversation(conversationId);
       if (!conv) throw new Error(`Unknown conversation "${conversationId}"`);

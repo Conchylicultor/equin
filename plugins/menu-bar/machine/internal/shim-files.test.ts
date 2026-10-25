@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
 import {
   dockFileUrl,
   dockPinnedAppIds,
@@ -22,7 +23,7 @@ const MAIL: ShimApp = {
   id: "mail",
   name: "Mail",
   url: "http://equin.localhost:9000/mail",
-  namespace: "singularity",
+  namespace: MAIN_WORKTREE_NAME,
   iconSvg: "<svg>mail</svg>",
 };
 const ROOTS = {
@@ -53,7 +54,7 @@ describe("macOS shim", () => {
     expect(value("CFBundlePackageType")).toBe("APPL");
     expect(value("EquinAppId")).toBe("mail");
     expect(value("EquinUrl")).toBe("http://equin.localhost:9000/mail");
-    expect(value("EquinNamespace")).toBe("singularity");
+    expect(value("EquinNamespace")).toBe(MAIN_WORKTREE_NAME);
     expect(plist).not.toContain("LSUIElement");
     // Without the ATS exception the bundle's WKWebView never loads
     // http://*.localhost:9000.

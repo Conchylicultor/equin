@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-announce",
+  "name": "@equin/plugin-primitives-announce",
   "description": "Screen-reader announcement primitive: announce() writes into a page-global live region mounted at Core.Root.",
   "private": true,
   "version": "0.0.1"

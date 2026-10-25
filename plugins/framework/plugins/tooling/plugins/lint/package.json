@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-framework-tooling-lint",
+  "name": "@equin/plugin-framework-tooling-lint",
   "version": "0.0.1",
   "private": true,
   "description": "Global ESLint rules (promise-safety) and discovery helpers for the ESLint config",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

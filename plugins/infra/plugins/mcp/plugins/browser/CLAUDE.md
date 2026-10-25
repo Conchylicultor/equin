@@ -73,7 +73,7 @@ Files: `services/agent-browser/` (`data-dirs`) — `host.sock`, `host.pid`,
   requests client-side only: a write already sent still lands, and if it lands
   after the revert it sticks. So the session tracks its non-GET requests to the
   deploys from the moment it opens — except those stamped
-  `x-singularity-unreverted-write` (`fetchEndpoint` stamps every write to an
+  `UNREVERTED_WRITE_HEADER` (`fetchEndpoint` stamps every write to an
   endpoint not declaring `agentReverted`: it records nothing the revert undoes,
   and waiting on such writes — an app-usage flush, telemetry — was the
   `drain-writes` false alarm; a ledger refuses a stamped agent write, so the

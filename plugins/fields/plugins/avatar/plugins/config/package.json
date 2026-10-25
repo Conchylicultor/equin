@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-fields-avatar-config",
+  "name": "@equin/plugin-fields-avatar-config",
   "version": "0.0.1",
   "private": true,
   "description": "Avatar field type: config-render capability (icon + color picker) plus the avatarField factory.",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

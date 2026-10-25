@@ -27,7 +27,7 @@ export async function sonifyBeatFeatures(
   const audio = await fetchYouTubeAudio(videoId, exec, { log: opts.log });
   const ready = await ensureDep(audioPythonDep, exec, { log: opts.log });
   await runPython(ready, {
-    module: "singularity_audio.sonify",
+    module: "equin_audio.sonify",
     input: {
       audioPath: audio.path,
       featuresPath: featurePaths(

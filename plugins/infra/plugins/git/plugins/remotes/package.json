@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-infra-git-remotes",
+  "name": "@equin/plugin-infra-git-remotes",
   "version": "0.0.1",
   "private": true,
   "description": "May this checkout publish, and where does it receive from? — the write-access probe (`git push --dry-run`, classified into denied / no-credentials / unreachable rather than one 'no'), its `.git/config` cache of that measurement, the upstream resolution built from the same facts, and who signs the commits push makes (a local placeholder where they cannot leave the machine, a real identity required where they will be public)."

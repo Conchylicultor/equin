@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-data-view-view-order",
+  "name": "@equin/plugin-primitives-data-view-view-order",
   "description": "Per-view-instance manual row order for any DataView: a generic (dataViewId, viewId, rowKey) → rank table with a live resource and a full-replace reorder endpoint, contributed back into data-view's global RowOrder slot.",
   "private": true,
   "version": "0.0.1"

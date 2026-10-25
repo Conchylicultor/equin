@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-cli-await",
+  "name": "@equin/plugin-framework-cli-await",
   "private": true,
   "version": "0.0.1",
   "description": "`./equin await` — block until this checkout's running op writes its verdict, and print it. Starts nothing; the wake-up becomes a tool result instead of a notification that may never arrive."

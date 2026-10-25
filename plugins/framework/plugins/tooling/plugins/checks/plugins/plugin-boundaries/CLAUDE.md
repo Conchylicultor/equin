@@ -17,7 +17,7 @@ What this check owns:
 | R4 | `grammar` | a cross-plugin specifier that ends anywhere but `<runtime>` or `<runtime>/testing` |
 | R5 | `default-import` | a plugin's default export imported outside the registry roots |
 | R6 | `cycle` | a cycle in the cross-plugin import graph (per runtime) |
-| R7 | `workspace-import` | an `@singularity/plugin-*` specifier |
+| R7 | `workspace-import` | an `@equin/plugin-*` specifier |
 | R8 | `relative-cross-plugin` | a relative path escaping into another plugin |
 | R9 | `inline-import` | an inline `import("…")` type expression targeting a barrel |
 | R10 | `cross-plugin-internal`, `shared-use-relative` | another plugin's `shared/`; your own `shared/` via the `@plugins` alias instead of a relative path |
@@ -33,7 +33,7 @@ are fine, and the folder rows are `boundary-rules`' job.
 
 A plugin's `package.json` `"name"` is a pure function of its path —
 `packageNameFor` in `plugins/framework/plugins/plugin-id/core`
-(`@singularity/plugin-<every non-plugins segment, joined with ->`). Nothing reads
+(`@equin/plugin-<every non-plugins segment, joined with ->`). Nothing reads
 it, but bun needs it. The repo-tree codegen (`syncPluginPackageNames` in
 `plugins/framework/plugins/tooling/plugins/codegen/core/package-names.ts`, the
 first step of `regenerateRegistryCodegen`) writes it on every

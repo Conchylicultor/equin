@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-screenshot-draw-canvas",
+  "name": "@equin/plugin-screenshot-draw-canvas",
   "private": true,
   "version": "0.0.1"
 }

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-teammate-message",
+  "name": "@equin/plugin-conversations-conversation-view-jsonl-viewer-teammate-message",
   "private": true,
   "version": "0.0.1"
 }

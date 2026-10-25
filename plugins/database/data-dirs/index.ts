@@ -17,8 +17,7 @@ export const dbConfigDir = defineDataDir({
   owner: "database",
   description:
     "database.json — the connection params and managed-service list the gateway supervisor reads at boot",
-  // Regenerated from the embedded cluster's constants on every `singularity
-  // start`; a missing file already falls back to "plain local Postgres, no
+  // Regenerated from the embedded cluster's constants on every start; a missing file already falls back to "plain local Postgres, no
   // managed services", so losing it costs one start, never data.
   reclaim: { kind: "safe" },
 });

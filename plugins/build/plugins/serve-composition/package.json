@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-build-serve-composition",
+  "name": "@equin/plugin-build-serve-composition",
   "description": "Serve capability for a composition: the Serve live target panel, the serve/stop hook, the served-liveness read, and the reset-to-first-launch endpoint.",
   "private": true,
   "version": "0.0.1"

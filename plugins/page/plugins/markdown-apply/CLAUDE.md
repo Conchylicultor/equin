@@ -453,7 +453,7 @@ second policy (export, share link) reuses it without adding a branch.
 The end-to-end spec moved too — `agent-access/e2e/agent-access-verify.ts`.
 
 **Agent-origin provenance does not apply, on purpose.** That hook reads
-`x-singularity-origin` off an HTTP `Request` and marks whole PAGES an automated
+the origin header off an HTTP `Request` and marks whole PAGES an automated
 session created, for a 24h sweep. An apply has no `Request`, and the page it can
 mint — an agent-authored page — is written through `applyPageBlockPatch`, which
 never fires `BlockLifecycle.AfterCreate`. That is load-bearing: the page is a real

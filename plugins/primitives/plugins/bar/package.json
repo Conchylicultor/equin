@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-bar",
+  "name": "@equin/plugin-primitives-bar",
   "description": "Single-line chrome-strip primitive: the horizontal toolbar/header band (border-b + chrome height + inset, never-wrap via region-line) shared by app/pane toolbars and pane headers. Three tiers (chrome | pane | subpane — a pane's secondary strip under its header); consumers compose it and own what they host.",
   "private": true,
   "version": "0.0.1"

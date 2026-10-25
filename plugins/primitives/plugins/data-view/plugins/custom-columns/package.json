@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-data-view-custom-columns",
+  "name": "@equin/plugin-primitives-data-view-custom-columns",
   "description": "User-defined custom columns for any DataView: per-surface text column definitions (config_v2) plus per-row values keyed by (dataViewId, rowKey, columnId) in a generic DB table with a live resource + upsert endpoint.",
   "private": true,
   "version": "0.0.1"

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-infra-corpus-index",
+  "name": "@equin/plugin-infra-corpus-index",
   "private": true,
   "version": "0.0.1"
 }

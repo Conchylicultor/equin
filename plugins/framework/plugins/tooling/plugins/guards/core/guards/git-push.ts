@@ -39,7 +39,7 @@ export const gitPushGuard = defineGuard<BashInput>({
       blocked:
         "`git push` into the equin repo is not allowed — agents must use the equin CLI.",
       why: "Raw git push bypasses validation checks, worktree-merge flow, and branch protection. A previous agent ran `git push origin main` directly and corrupted shared state.",
-      hint: 'Use `./equin push -m "commit message"` instead. It runs checks, commits, and pushes via the proper worktree-merge flow. (Pushes into a separate, non-Singularity repo are allowed — run them from that repo\'s directory, or with `git -C <dir> push`.)',
+      hint: 'Use `./equin push -m "commit message"` instead. It runs checks, commits, and pushes via the proper worktree-merge flow. (Pushes into a separate, non-equin repo are allowed — run them from that repo\'s directory, or with `git -C <dir> push`.)',
     };
   },
 });

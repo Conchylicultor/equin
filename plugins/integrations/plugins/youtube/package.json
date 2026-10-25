@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-integrations-youtube",
+  "name": "@equin/plugin-integrations-youtube",
   "description": "An embedded YouTube player the app can control: loads the IFrame Player API once, plays a video on a loop between two times without polling (one timer to the loop's end), plays a stretch once and goes back to the loop, and reads the playhead once per animation frame while playing.",
   "private": true,
   "version": "0.0.1"

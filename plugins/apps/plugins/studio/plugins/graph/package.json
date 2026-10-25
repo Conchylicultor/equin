@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-studio-graph",
+  "name": "@equin/plugin-apps-studio-graph",
   "description": "Studio Plugin Graph pane: focused closure subgraph (deps + dependents) around a plugin, tinted by the active composition's membership, with depth / direction controls and click-to-recenter.",
   "private": true,
   "version": "0.0.1"

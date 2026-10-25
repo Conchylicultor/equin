@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-release-runs-arm",
+  "name": "@equin/plugin-release-runs-arm",
   "description": "The release arm of the merged run space.",
   "private": true,
   "version": "0.0.1"

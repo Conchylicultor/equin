@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-fields-color",
+  "name": "@equin/plugin-fields-color",
   "version": "0.0.1",
   "private": true,
   "description": "Color field type: identity plus a read-only swatch cell (no filter, sparse).",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

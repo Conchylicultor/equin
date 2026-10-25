@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-website",
+  "name": "@equin/plugin-apps-website",
   "description": "Website — the public-facing site of equin: the homepage's claim, a picture of it and the three layers of the project, a gallery of its apps, placeholder pages for the vision, the foundations and the story, and how to get in touch.",
   "private": true,
   "version": "0.0.1"

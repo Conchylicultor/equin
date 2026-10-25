@@ -16,7 +16,7 @@ type Check = {
 };
 
 // <ts>_<sha8>__<slug>.sql — the runner (server/internal/runner.ts) keys applied
-// state by the sha8 hash token, which is the PRIMARY KEY of __singularity_migrations.
+// state by the sha8 hash token, which is the PRIMARY KEY of the applied-migrations table.
 const MIGRATION_RE = /^(\d{8})_(\d{6})_([0-9a-f]{8})__(.+)\.sql$/;
 
 // ---------------------------------------------------------------------------
@@ -72,8 +72,8 @@ export function classifyCollisions(
 }
 
 // A published file (`publishedMigrationBasenames`: on any `main` this checkout
-// knows of) is immutable: its hash is recorded in deployed DBs'
-// __singularity_migrations and it can be neither rehashed nor deleted. So only
+// knows of) is immutable: its hash is recorded in deployed DBs' applied-migrations table
+// and it can be neither rehashed nor deleted. So only
 // a group with a branch-local member is flagged, and the fix only ever touches
 // branch-local files — a hint that deleted a published copy would just move
 // the failure to published-migrations-immutable.

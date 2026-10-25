@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-events-sources-dmda",
+  "name": "@equin/plugin-apps-events-sources-dmda",
   "description": "Des Mots et Des Arts event source type: read the site's own paginated JSON listing and map it to events with no model call.",
   "private": true,
   "version": "0.0.1"

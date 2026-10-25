@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-fields-text-filter",
+  "name": "@equin/plugin-fields-text-filter",
   "version": "0.0.1",
   "private": true,
   "description": "Text field type: data-view filter (substring contains control).",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

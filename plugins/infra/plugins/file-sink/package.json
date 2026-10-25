@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-infra-file-sink",
+  "name": "@equin/plugin-infra-file-sink",
   "private": true,
   "version": "0.0.1"
 }

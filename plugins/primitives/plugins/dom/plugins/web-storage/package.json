@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-dom-web-storage",
+  "name": "@equin/plugin-primitives-dom-web-storage",
   "private": true,
   "version": "0.0.1"
 }

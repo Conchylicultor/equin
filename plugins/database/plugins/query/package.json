@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-database-query",
+  "name": "@equin/plugin-database-query",
   "private": true,
   "version": "0.0.1"
 }

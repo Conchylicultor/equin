@@ -11,7 +11,7 @@ import {
 // namespace it must agree with. Written out rather than imported so each half can
 // be perturbed independently below.
 const SAMPLE_MAPPING = {
-  MIGRATIONS_TABLE_NAME: "__singularity_migrations",
+  MIGRATIONS_TABLE_NAME: "__ledger_table",
   DERIVED_VIEW_STATE_TABLE_NAME: "derived_view_state",
   LIVE_STATE_SNAPSHOT_TABLE: "live_state_snapshot",
 };
@@ -55,7 +55,7 @@ describe("allowlistIdentifiers", () => {
   test("throws on a NON-SHORTHAND key (the alias names no export)", () => {
     // `{ ALIAS: MIGRATIONS_TABLE_NAME }` — the value is right, the key is not the
     // identifier a create site spells, so the textual coupling is broken.
-    const aliased = { ...SAMPLE_MAPPING, ALIAS: "__singularity_migrations" };
+    const aliased = { ...SAMPLE_MAPPING, ALIAS: "__ledger_table" };
     expect(() => allowlistIdentifiers(aliased, SAMPLE_EXPORTS)).toThrow(
       /ALIAS/,
     );

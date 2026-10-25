@@ -94,7 +94,7 @@ export function migrationsFrom(
   return migrations;
 }
 
-// The applied-state ledger (__singularity_migrations): hash → the file name it
+// The applied-state ledger (`MIGRATIONS_TABLE_NAME`): hash → the file name it
 // was applied under. Creates the table if absent, so callers can use the
 // result directly.
 async function getAppliedLedger(
@@ -158,7 +158,7 @@ function lineageState(
 // hashes already in the ledger, decide which to apply and which to skip as
 // same-run duplicate-hash siblings. Mutates nothing.
 //
-// WHY skip-by-hash is correct: the ledger (__singularity_migrations) keys applied
+// WHY skip-by-hash is correct: the ledger (`MIGRATIONS_TABLE_NAME`) keys applied
 // state by the filename sha8, which is its PRIMARY KEY. Two files carrying the
 // same sha8 are byte-identical content (e.g. a `CREATE TABLE IF NOT EXISTS` that
 // legitimately recurs in schema history after an add then later remove). The

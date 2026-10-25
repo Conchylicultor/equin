@@ -6,7 +6,7 @@ subcommand help by construction.
 
 ## `db fork`
 
-Forks the main `singularity` database into `[target]` (default: this worktree's
+Forks the main (base) database into `[target]` (default: this worktree's
 name). It exists for checkouts made with a bare `git worktree add`, outside
 equin — those get no fork on creation, so they come up with no database at
 all. Idempotent: a no-op when the DB already exists.

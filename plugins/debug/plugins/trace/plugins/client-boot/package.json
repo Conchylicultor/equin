@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-debug-trace-client-boot",
+  "name": "@equin/plugin-debug-trace-client-boot",
   "description": "Built-in trace event class 'client-boot': the browser boot decomposition carried in the page-load slow-op beacon, surfaced as an embedded Boot Profile Gantt lane on the trace.",
   "private": true,
   "version": "0.0.1"

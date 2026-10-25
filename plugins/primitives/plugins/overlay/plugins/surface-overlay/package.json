@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-overlay-surface-overlay",
+  "name": "@equin/plugin-primitives-overlay-surface-overlay",
   "description": "Surface-filling overlay primitive: portals into the nearest declared surface host so absolute inset-0 fills the app tab's surface, escaping the pane layout without escaping to the viewport.",
   "private": true,
   "version": "0.0.1"

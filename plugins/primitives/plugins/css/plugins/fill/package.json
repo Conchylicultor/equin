@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-css-fill",
+  "name": "@equin/plugin-primitives-css-fill",
   "description": "Flexible-cell layout primitive: <Fill axis> is the single grow+shrink cell of a Line/Row (min-w-0 flex-1). The one home for the slack-absorbing, truncation-enabling cell, so a stray flex-1 never strands the grow slot.",
   "private": true,
   "version": "0.0.1"

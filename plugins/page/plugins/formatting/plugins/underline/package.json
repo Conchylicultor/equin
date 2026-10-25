@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-page-formatting-underline",
+  "name": "@equin/plugin-page-formatting-underline",
   "description": "Underline mark button for the page editor's selection toolbar.",
   "private": true,
   "version": "0.0.1"

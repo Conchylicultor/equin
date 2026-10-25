@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-cli-check",
+  "name": "@equin/plugin-framework-cli-check",
   "private": true,
   "version": "0.0.1",
   "description": "`./equin check` — run the repo validation checks (all, a named subset, or one scope). The only in-process caller of runChecks(): `build` and `push` each spawn it as a subprocess, so their `checks ✓` is one claim."

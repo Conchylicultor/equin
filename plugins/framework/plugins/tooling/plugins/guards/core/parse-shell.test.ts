@@ -9,6 +9,7 @@ import { gitResetMainGuard } from "./guards/git-reset-main";
 import { mainWritesGuard } from "./guards/main-writes";
 import { parseShell } from "./parse-shell";
 import type { Verdict } from "./types";
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 
 const names = (cmd: string) => parseShell(cmd).calls.map((c) => c.name);
 const redirections = (cmd: string) => parseShell(cmd).redirections;
@@ -602,7 +603,7 @@ test("the repo CLI is named canonically under either of its names", () => {
   for (const cmd of [
     "./equin build",
     "./equin build",
-    "/r/repo/singularity build",
+    `/r/repo/${LEGACY_IDS.cliShim} build`,
   ]) {
     expect(parseShell(cmd).calls.map((c) => c.name)).toEqual(["equin"]);
   }

@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-fields-int-config",
+  "name": "@equin/plugin-fields-int-config",
   "version": "0.0.1",
   "private": true,
   "description": "Integer field type: config-render capability (number stepper) plus the intField factory.",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

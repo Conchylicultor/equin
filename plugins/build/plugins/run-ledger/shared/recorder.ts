@@ -59,7 +59,7 @@ export interface BuildRunRecorder {
    * and its tables do not. A missing ledger must degrade to a note, never fail
    * the build it is only observing.
    *
-   * `targets` is WHICH COMPOSITIONS this one invocation builds — `{singularity}`
+   * `targets` is WHICH COMPOSITIONS this one invocation builds — `{<main composition id>}`
    * for a plain build, the requested ids for a `build --composition a b`. One
    * invocation is one row with N targets, so this is an array, not a scalar.
    */

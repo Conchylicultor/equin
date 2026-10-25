@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-sonata-audio-metronome",
+  "name": "@equin/plugin-apps-sonata-audio-metronome",
   "description": "Sonata metronome: a synthesized click track (continuous + count-in lead-in) scheduled on the engine's audio clock, with a toolbar control and an on-screen countdown.",
   "private": true,
   "version": "0.0.1"

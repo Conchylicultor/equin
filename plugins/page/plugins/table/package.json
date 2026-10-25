@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-page-table",
+  "name": "@equin/plugin-page-table",
   "description": "Table block type for the page editor: a GFM pipe table, rendered as a real table and round-tripped losslessly through markdown.",
   "private": true,
   "version": "0.0.1"

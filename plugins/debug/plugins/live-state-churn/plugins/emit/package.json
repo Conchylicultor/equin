@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-debug-live-state-churn-emit",
+  "name": "@equin/plugin-debug-live-state-churn-emit",
   "description": "Live-state synthetic-push emitter: drives N no-op live-state pushes/sec for a chosen resource via triggerResourcePush on a bounded setInterval, drivable from the Debug → Live-State Emit pane, the /api/debug/live-state-emit/* endpoints, and the window.__liveStateEmit API. A hard auto-stop cap prevents a forgotten session from churning forever.",
   "private": true,
   "version": "0.0.1"

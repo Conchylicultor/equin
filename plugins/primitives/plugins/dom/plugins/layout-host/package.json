@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-dom-layout-host",
+  "name": "@equin/plugin-primitives-dom-layout-host",
   "description": "The box that lays a node out (layoutHost, skipping display: contents) and the axis it flows its children along (flowAxis).",
   "private": true,
   "version": "0.0.1"

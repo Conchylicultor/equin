@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-page-page-link",
+  "name": "@equin/plugin-page-page-link",
   "description": "Link-to-page block type: references another page as a clickable block; feeds the backlinks index.",
   "private": true,
   "version": "0.0.1"

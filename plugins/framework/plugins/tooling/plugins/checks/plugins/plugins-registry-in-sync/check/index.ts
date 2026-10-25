@@ -32,7 +32,7 @@ function registryIds(content: string): Set<string> {
 const check: Check = {
   id: "plugins-registry-in-sync",
   description:
-    "All collected dir registries (web, server, central, check, lint, ...) are exactly what the `singularity` composition's closure renders from the current plugin source",
+    "All collected dir registries (web, server, central, check, lint, ...) are exactly what the main composition's closure renders from the current plugin source",
   async run(checkCtx: CheckContext) {
     // Everything this check enumerates or reads goes through the run's file
     // set — the collected dirs, every scanned source, the committed registries.
@@ -43,7 +43,7 @@ const check: Check = {
 
     // ── Identity, not equivalence ────────────────────────────────────────────
     //
-    // `singularity` is an ordinary entry in the compositions manifest, and its
+    // the main composition is an ordinary entry in the compositions manifest, and its
     // resolved closure is HOW the committed registries are built:
     // `generatePluginRegistry` renders each `<dir>.generated.ts` with
     // `ctx.mainBundle` and nothing else. This check compares the committed bytes
@@ -53,7 +53,7 @@ const check: Check = {
     //
     // It used to assert something weaker, and now false: that filtering by main's
     // closure changed NOTHING (`render(bundle: mainBundle) === render(no
-    // bundle)`). That was the right shape while `singularity.disabled` was the
+    // bundle)`). That was the right shape while the old `disabled` flag was the
     // mechanism that removed plugins and the closure merely had to agree with it.
     // Both halves of that are gone. The `base-exclusions` row carries a negative,
     // so main's closure is deliberately not every plugin; and an unfiltered
@@ -79,7 +79,7 @@ const check: Check = {
           ctx,
           def,
           // The same set `generatePluginRegistry` renders with: the
-          // `singularity` composition's closure, or every plugin for a
+          // main composition's closure, or every plugin for a
           // `checkout`-membership dir.
           bundle: committedRegistryBundle(ctx, def),
           composition: ctx.main,

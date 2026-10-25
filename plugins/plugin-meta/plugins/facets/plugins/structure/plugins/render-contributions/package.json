@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-plugin-meta-facets-structure-render-contributions",
+  "name": "@equin/plugin-plugin-meta-facets-structure-render-contributions",
   "version": "0.0.1",
   "private": true,
   "description": "Aggregated cross-plugin structure-anomaly table in the Studio Contributions view."

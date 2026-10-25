@@ -30,6 +30,7 @@ import {
   waitFor,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import type { Page } from "playwright";
 
 interface StallRow extends Record<string, unknown> {
@@ -177,10 +178,12 @@ await withBrowser(async (h) => {
 async function waitAttached(p: Page, which: string): Promise<void> {
   const attached = await waitFor(
     () =>
-      p.evaluate(async () =>
-        (await navigator.locks.query()).held?.some((l) =>
-          l.name?.startsWith("singularity:main-thread-stall-port:"),
-        ),
+      p.evaluate(
+        async (portLockPrefix) =>
+          (await navigator.locks.query()).held?.some((l) =>
+            l.name?.startsWith(portLockPrefix),
+          ),
+        `${LEGACY_IDS.browserKeyPrefix}:main-thread-stall-port:`,
       ),
     (v) => v === true,
     { timeoutMs: 60_000, intervalMs: 500 },

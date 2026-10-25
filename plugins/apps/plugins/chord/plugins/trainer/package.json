@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-chord-trainer",
+  "name": "@equin/plugin-apps-chord-trainer",
   "description": "The Chord training loop: its round model (one answer box per sounding chord of a loop window, placed on the beat grid and in video seconds), the answer sheet and answer-time rules, and the trainer screen — the app's index pane.",
   "private": true,
   "version": "0.0.1"

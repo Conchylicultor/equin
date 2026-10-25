@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-page-tags",
+  "name": "@equin/plugin-page-tags",
   "description": "Page tags: a workspace vocabulary of named, colored tags and the ordered set each page carries — read and written by agents through read_page/edit_page's <page-meta> header, shown and edited by humans as chips.",
   "private": true,
   "version": "0.0.1"

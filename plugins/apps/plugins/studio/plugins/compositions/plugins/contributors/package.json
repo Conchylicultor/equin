@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-studio-compositions-contributors",
+  "name": "@equin/plugin-apps-studio-compositions-contributors",
   "description": "Contributor selection section in the composition detail pane: toggle the available frontier with per-chip impact cost.",
   "private": true,
   "version": "0.0.1"

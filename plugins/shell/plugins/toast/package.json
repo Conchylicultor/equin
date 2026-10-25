@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-shell-toast",
+  "name": "@equin/plugin-shell-toast",
   "private": true,
   "version": "0.0.1",
   "dependencies": {

@@ -22,7 +22,7 @@ column this branch adds, or one it drops, keeps working however far main moved.
 See `database/migrations/CLAUDE.md` → **Phased schema migrations**.
 
 The regenerated file **supersedes** the hashes the reset deleted (a
-`-- singularity:supersedes` header) when it provably carries the same schema, so
+`supersedes` migration-marker header) when it provably carries the same schema, so
 the worktree that built those migrations adopts the merged file on its next
 boot instead of re-running its DDL. When the reset regenerates nothing because
 main already carries the delta under its own migrations, it writes an adoption
@@ -41,7 +41,7 @@ is destructive in exactly two ways:
 - **A published migration changed in the working tree** — deleted, renamed,
   edited, or carrying a filename hash that is not its content's. Published
   migrations (on local `main` or any `<remote>/main`) are immutable by contract —
-  deployed databases record their hashes in `__singularity_migrations` — so this
+  deployed databases record their hashes in `the applied-migrations table (`__<prefix>_migrations`)` — so this
   is always an error. The rule is the migrations plugin's
   `findPublishedMigrationViolations`, the same function the
   `published-migrations-immutable` check runs. It is also what keeps the

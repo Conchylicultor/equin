@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-sonata-rich-chord-overlay",
+  "name": "@equin/plugin-apps-sonata-rich-chord-overlay",
   "description": "Sonata Overlay: draws chord symbols along the timeline (requires the time-axis capability).",
   "private": true,
   "version": "0.0.1"

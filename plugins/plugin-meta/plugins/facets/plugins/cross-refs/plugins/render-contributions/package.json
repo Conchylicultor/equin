@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-plugin-meta-facets-cross-refs-render-contributions",
+  "name": "@equin/plugin-plugin-meta-facets-cross-refs-render-contributions",
   "version": "0.0.1",
   "private": true,
   "description": "Aggregated cross-plugin cross-refs table in the Studio Contributions view."

@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-fields-tags-inline",
+  "name": "@equin/plugin-fields-tags-inline",
   "version": "0.0.1",
   "private": true,
   "description": "Tags (multi-value) field type: data-view inline cell editor (multi-select chip popover).",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

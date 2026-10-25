@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-detail-sections",
+  "name": "@equin/plugin-primitives-detail-sections",
   "description": "Factory for extensible detail-view section slots with built-in Reorder DnD.",
   "private": true,
   "version": "0.0.1"

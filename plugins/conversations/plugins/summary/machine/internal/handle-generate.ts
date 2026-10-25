@@ -9,6 +9,7 @@ import { implementMachine } from "@plugins/infra/plugins/endpoints/machine";
 import { generateConversationSummary } from "../../shared/endpoints";
 import { buildSummarizePayload } from "./prompt";
 import { SUMMARY_MODEL_CHOICE } from "./mcp-tools";
+import { PRODUCT_NAME } from "@plugins/framework/plugins/product-name/core";
 
 // Cap how long the summarising conversation may live before we reap it.
 const CLEANUP_AFTER_MS = 5 * 60 * 1000;
@@ -17,7 +18,7 @@ export const handleGenerate = implementMachine(
   generateConversationSummary,
   async ({ params }) => {
     const { conversationId } = params;
-    const contextPath = `/tmp/singularity-summary-${conversationId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.xml`;
+    const contextPath = `/tmp/${PRODUCT_NAME}-summary-${conversationId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.xml`;
 
     let payload;
     try {

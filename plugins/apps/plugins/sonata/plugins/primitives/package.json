@@ -1,7 +1,7 @@
 {
-  "name": "@singularity/plugin-apps-sonata-primitives",
+  "name": "@equin/plugin-apps-sonata-primitives",
   "description": "Umbrella for Sonata-local client primitives.",
   "private": true,
   "version": "0.0.1",
-  "singularity": { "collapsed": true }
+  "equin": { "collapsed": true }
 }

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import {
   attributeProcesses,
   parsePs,
@@ -44,7 +45,7 @@ describe("attributeProcesses", () => {
     proc(200, 1, "bun bin/host.ts"),
     proc(201, 200, PLAYWRIGHT),
     proc(202, 201, `${PLAYWRIGHT} --type=gpu-process`),
-    proc(300, 1, "bun cli/singularity build"),
+    proc(300, 1, `bun cli/${LEGACY_IDS.cliShim} build`),
     proc(301, 300, "bun vite build"),
     proc(302, 301, CHROME), // an e2e run's own Chrome
     proc(400, 1, "claude --print"),

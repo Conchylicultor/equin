@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-layouts",
+  "name": "@equin/plugin-layouts",
   "description": "Umbrella for layout renderers that map the pane chain to a visible arrangement (columns, tabs, grid, overlays).",
   "private": true,
   "version": "0.0.1"

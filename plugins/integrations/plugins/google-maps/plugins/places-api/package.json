@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-integrations-google-maps-places-api",
+  "name": "@equin/plugin-integrations-google-maps-places-api",
   "description": "Stateless typed Google Places API (New) client: autocomplete, text search + place details. Takes the API key per call; never touches auth or storage.",
   "private": true,
   "version": "0.0.1"

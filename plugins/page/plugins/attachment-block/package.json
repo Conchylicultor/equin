@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-page-attachment-block",
+  "name": "@equin/plugin-page-attachment-block",
   "description": "Shared infra for attachment-owning page blocks: the block↔attachment link, a generic reconcile job, and the reusable upload empty-state.",
   "private": true,
   "version": "0.0.1"

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-database-sql-column",
+  "name": "@equin/plugin-database-sql-column",
   "version": "0.0.1",
   "private": true,
   "description": "Decoded columns: parsedText / parsedJson derive a column's type from a zod decoder that runs on every read and every write, closing the text().$type<Union>() and jsonb-shape assertion holes."

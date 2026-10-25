@@ -110,9 +110,9 @@ export function assertSupportedHost(): void {
       [
         "Refusing to run as root: Postgres' initdb refuses to run as the root OS user, so the embedded cluster (and every backend behind it) cannot start.",
         "Create a non-root user and run this as them, e.g.:",
-        "  adduser --disabled-password --gecos '' singularity",
-        "  chown -R singularity:singularity <bundle dir>",
-        "  su - singularity -c '<bundle dir>/launch'",
+        "  adduser --disabled-password --gecos '' equin",
+        "  chown -R equin:equin <bundle dir>",
+        "  su - equin -c '<bundle dir>/launch'",
       ].join("\n"),
     );
   }

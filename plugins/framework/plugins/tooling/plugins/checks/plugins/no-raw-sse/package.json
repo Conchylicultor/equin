@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-tooling-checks-no-raw-sse",
+  "name": "@equin/plugin-framework-tooling-checks-no-raw-sse",
   "version": "0.0.1",
   "private": true
 }

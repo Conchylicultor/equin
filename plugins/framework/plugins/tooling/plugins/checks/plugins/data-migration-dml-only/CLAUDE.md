@@ -2,7 +2,7 @@
 
 Enforces that **data/backfill migrations are DML-only**. A data migration is a
 `.sql` in `plugins/database/plugins/migrations/data` that is **not** a schema
-migration — no `-- singularity:snapshot` header and no
+migration — no `snapshot` migration-marker header and no
 `meta/legacy-snapshots.json` entry (`isSchemaMigration`, migrations `core`;
 created via `./equin build --custom-migration`).
 Such migrations are intentionally decoupled from the drizzle snapshot chain so

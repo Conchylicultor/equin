@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-css-yield",
+  "name": "@equin/plugin-primitives-css-yield",
   "description": "Yielding-cell layout primitive: yieldClass(axis) is the flex child that falls below its own content width (min-w-0) but never takes slack. The half of <Fill> that gives, without the half that grows.",
   "private": true,
   "version": "0.0.1"

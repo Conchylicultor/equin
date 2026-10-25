@@ -4,6 +4,6 @@ export { OpenCommitConversation } from "./internal/open-commit-conversation";
 
 export default {
   description:
-    "The commit row action that opens the conversation which wrote a commit (its Singularity-Conversation trailer) in a new browser tab.",
+    "The commit row action that opens the conversation which wrote a commit (its conversation trailer) in a new browser tab.",
   contributions: [],
 } satisfies PluginDefinition;

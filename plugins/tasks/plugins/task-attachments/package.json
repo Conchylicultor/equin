@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-tasks-task-attachments",
+  "name": "@equin/plugin-tasks-task-attachments",
   "private": true,
   "version": "0.0.1"
 }

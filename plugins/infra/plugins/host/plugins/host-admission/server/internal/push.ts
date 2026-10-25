@@ -35,7 +35,7 @@ const repoLocks = new Map<string, RepoPushLock>();
  * served from — a second clone, an e2e's temp repo. It guards the same thing
  * `pushPool` does (writes to one repository's `main`), scoped to that
  * repository: its slot lives in the repository's own git dir
- * (`<gitCommonDir>/singularity-locks/push/`), so such a push neither queues the
+ * (`<gitCommonDir>/<lock dir>/push/`, `LEGACY_IDS.gitLockDir`), so such a push neither queues the
  * machine's real pushes behind its check pass nor waits behind theirs.
  *
  * Declared here, beside `pushPool`, so every push mutex comes from this plugin.

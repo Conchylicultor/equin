@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-page-container",
+  "name": "@equin/plugin-page-container",
   "description": "Void container primitive for the page editor: the anchor-container block factory plus its shared row/backdrop/anchor shells.",
   "private": true,
   "version": "0.0.1"

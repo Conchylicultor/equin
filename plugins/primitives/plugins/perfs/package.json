@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-perfs",
+  "name": "@equin/plugin-primitives-perfs",
   "description": "Umbrella for client-side performance primitives.",
   "private": true,
   "version": "0.0.1"

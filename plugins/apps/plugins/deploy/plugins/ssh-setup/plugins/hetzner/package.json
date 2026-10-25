@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-deploy-ssh-setup-hetzner",
+  "name": "@equin/plugin-apps-deploy-ssh-setup-hetzner",
   "private": true,
   "version": "0.0.1"
 }

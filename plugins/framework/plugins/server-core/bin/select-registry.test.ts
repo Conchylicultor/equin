@@ -3,7 +3,7 @@
  * files happen to be on disk.
  *
  * Every arm is asserted, including the two that used to be one silent fallback:
- * a stray `server.composition.singularity.generated.ts` must be inert (it would
+ * a stray `server.composition.<main>.generated.ts` must be inert (it would
  * otherwise reconfigure main's backend on its next spawn), and a missing
  * filtered registry must THROW (it would otherwise boot the full app under a
  * composition's own namespace and database, looking like it worked).
@@ -14,6 +14,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 import { selectRegistry } from "./select-registry";
+import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
 
 const coreDir = mkdtempSync(join(tmpdir(), "select-registry-test-"));
 afterAll(() => rmSync(coreDir, { recursive: true, force: true }));
@@ -27,7 +28,7 @@ write("server.generated.ts");
 write("server.composition.website.generated.ts");
 write("server.composition.generated.ts"); // legacy singleton — must be ignored
 // The file that used to hijack main's backend by merely existing.
-write("server.composition.singularity.generated.ts");
+write(`server.composition.${MAIN_WORKTREE_NAME}.generated.ts`);
 
 test("a composition selects ITS filtered registry", () => {
   expect(selectRegistry(coreDir, "website", "website", "server")).toBe(website);
@@ -39,9 +40,9 @@ test("a composition selects ITS filtered registry", () => {
 });
 
 test("the main composition selects the committed registry, stray file or not", () => {
-  expect(selectRegistry(coreDir, "singularity", "singularity", "server")).toBe(
-    full,
-  );
+  expect(
+    selectRegistry(coreDir, MAIN_WORKTREE_NAME, MAIN_WORKTREE_NAME, "server"),
+  ).toBe(full);
 });
 
 test("no composition in the env is the main app", () => {
@@ -93,9 +94,9 @@ test("the machine registry is selected by the same identity, beside the server o
   expect(selectRegistry(coreDir, "website", "website", "machine")).toBe(
     join(coreDir, "machine.composition.website.generated.ts"),
   );
-  expect(selectRegistry(coreDir, "singularity", undefined, "machine")).toBe(
-    join(coreDir, "machine.generated.ts"),
-  );
+  expect(
+    selectRegistry(coreDir, MAIN_WORKTREE_NAME, undefined, "machine"),
+  ).toBe(join(coreDir, "machine.generated.ts"));
   expect(() => selectRegistry(coreDir, "sonata", "sonata", "machine")).toThrow(
     "has no machine registry at",
   );

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-collab-doc",
+  "name": "@equin/plugin-primitives-collab-doc",
   "private": true,
   "version": "0.0.1",
   "description": "Domain-agnostic headless bridge between a Lexical editor state and the Y.Doc representation @lexical/yjs binds to (yDocFromLexical / readYDoc / yDocContent). A leaf so content-model owners (e.g. the page editor's runs↔XmlText seam) compose it without this primitive knowing any content model.",

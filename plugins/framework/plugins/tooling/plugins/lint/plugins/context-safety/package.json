@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-tooling-lint-context-safety",
+  "name": "@equin/plugin-framework-tooling-lint-context-safety",
   "version": "0.0.1",
   "private": true,
   "description": "context-safety lint rule: no-unstable-context-value"

@@ -15,7 +15,7 @@ function row(data: Record<string, unknown>): ReportRow {
     id: "rep-1",
     kind: "db-query-deadline",
     fingerprint: "fp",
-    worktree: "singularity",
+    worktree: "att-x",
     source: "server-caught",
     message: "m",
     url: null,

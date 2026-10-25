@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-lazy-component",
+  "name": "@equin/plugin-primitives-lazy-component",
   "description": "Pairs React.lazy with its own Suspense boundary so a heavy component is code-split off the eager plugin-boot wave, loading on first mount instead.",
   "private": true,
   "version": "0.0.1"

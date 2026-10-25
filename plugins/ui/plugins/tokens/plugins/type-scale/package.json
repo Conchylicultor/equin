@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-ui-tokens-type-scale",
+  "name": "@equin/plugin-ui-tokens-type-scale",
   "private": true,
   "version": "0.0.1",
   "description": "Type-scale token group (font sizes, line heights, weights) with switchable presets."

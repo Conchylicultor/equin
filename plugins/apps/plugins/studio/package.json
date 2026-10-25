@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-apps-studio",
+  "name": "@equin/plugin-apps-studio",
   "description": "Plugin inspection and visualization; home for the plugin graph and contribution tables.",
   "private": true,
   "version": "0.0.1",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

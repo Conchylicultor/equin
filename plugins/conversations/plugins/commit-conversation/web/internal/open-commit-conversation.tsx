@@ -9,7 +9,7 @@ import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/she
 
 /**
  * A commit row action: open the conversation that wrote this commit — named by
- * its `Singularity-Conversation` trailer — in a new browser tab, leaving the
+ * its conversation trailer — in a new browser tab, leaving the
  * surface the commit is listed on (a popover, a build's detail) where it is.
  *
  * Nothing for a commit no conversation wrote (a hand commit, a `--from-main`

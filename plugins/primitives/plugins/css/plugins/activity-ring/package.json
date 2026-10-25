@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-css-activity-ring",
+  "name": "@equin/plugin-primitives-css-activity-ring",
   "description": "Activity ring around a status dot: a spinning arc while background work runs, a broken destructive ring when it failed.",
   "private": true,
   "version": "0.0.1"

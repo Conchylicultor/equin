@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-tooling-e2e-harness",
+  "name": "@equin/plugin-framework-tooling-e2e-harness",
   "description": "Shared Playwright harness for the per-plugin e2e/ scripts: argv parsing, worktree-derived target URL, browser/session lifecycle, error capture, pass/fail reporting, screenshots, and Chromium on demand (the first run on a machine installs it through `./equin deps install chromium`). Also owns the two generic tools (screenshot, perf).",
   "private": true,
   "version": "0.0.1"

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-config_v2-browser-store",
+  "name": "@equin/plugin-config_v2-browser-store",
   "private": true,
   "version": "0.0.1",
   "description": "The user config layer of a host without the computer: held in memory (ConfigStore), each document propagated from the host's committed layer (ConfigGitLayer) on first touch. Never booted by the desktop."

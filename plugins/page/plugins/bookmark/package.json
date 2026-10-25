@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-page-bookmark",
+  "name": "@equin/plugin-page-bookmark",
   "description": "Bookmark block type: a rich link preview card (title, description, site, favicon, og:image) with server-side metadata scraping and same-origin image caching.",
   "private": true,
   "version": "0.0.1"

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-cli-regen-migrations",
+  "name": "@equin/plugin-framework-cli-regen-migrations",
   "private": true,
   "version": "0.0.1",
   "description": "`./equin regen-migrations` — discard branch-local migrations and re-generate them against the rebased schema, for the post-rebase normalize step in `push`; aborts on hand-edited SQL."

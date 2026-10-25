@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-scope-app-instance",
+  "name": "@equin/plugin-primitives-scope-app-instance",
   "description": "Per-app-instance generation id: which running SPA state a document belongs to, and the storage-key grammar scoped to it.",
   "private": true,
   "version": "0.0.1"

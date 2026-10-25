@@ -261,7 +261,7 @@ describe("signBinary", () => {
     const bin = join(base, "gateway");
     writeFileSync(bin, "binary");
     const outcome = await signBinary(bin, {
-      identifier: "dev.singularity.gateway",
+      identifier: "dev.example.tool",
       exec,
       host: fakeHost({ platform: "linux" }),
     });
@@ -274,14 +274,12 @@ describe("signBinary", () => {
     const bin = join(base, "gateway");
     writeFileSync(bin, "binary", { mode: 0o755 });
     const outcome = await signBinary(bin, {
-      identifier: "dev.singularity.gateway",
+      identifier: "dev.example.tool",
       exec,
       host,
     });
     expect(outcome.kind).toBe("signed");
-    expect(readFileSync(bin, "utf8")).toBe(
-      `signed:dev.singularity.gateway:${DEV_ID}`,
-    );
+    expect(readFileSync(bin, "utf8")).toBe(`signed:dev.example.tool:${DEV_ID}`);
     expect(statSync(bin).mode & 0o777).toBe(0o755);
     expect(
       calls.some((c) => c[0] === "/usr/bin/codesign" && c[1] === "--force"),
@@ -293,7 +291,7 @@ describe("signBinary", () => {
 
     calls = [];
     const again = await signBinary(bin, {
-      identifier: "dev.singularity.gateway",
+      identifier: "dev.example.tool",
       exec,
       host,
     });
@@ -306,7 +304,7 @@ describe("signBinary", () => {
     const bin = join(base, "gateway");
     writeFileSync(bin, "binary");
     const outcome = await signBinary(bin, {
-      identifier: "dev.singularity.gateway",
+      identifier: "dev.example.tool",
       exec,
       host,
     });
@@ -314,7 +312,7 @@ describe("signBinary", () => {
     if (outcome.kind !== "signed" || outcome.identity.kind !== "local")
       throw new Error("expected local");
     expect(readFileSync(bin, "utf8")).toBe(
-      `signed:dev.singularity.gateway:${outcome.identity.sha1}`,
+      `signed:dev.example.tool:${outcome.identity.sha1}`,
     );
     const rc = calls.find((c) => c[0] === "/fake/rcodesign")!;
     expect(rc).toContain("--timestamp-url");
@@ -325,15 +323,15 @@ describe("signBinary", () => {
     expect(
       (
         await signBinary(bin, {
-          identifier: "dev.singularity.gateway",
+          identifier: "dev.example.tool",
           exec,
           host: configured,
         })
       ).kind,
     ).toBe("signed");
-    expect(
-      await isSignedBy(bin, "dev.singularity.gateway", DEV_ID, configured),
-    ).toBe(true);
+    expect(await isSignedBy(bin, "dev.example.tool", DEV_ID, configured)).toBe(
+      true,
+    );
   });
 
   test("a signature that does not verify throws and leaves the original file", async () => {
@@ -352,7 +350,7 @@ describe("signBinary", () => {
       (
         await rejection(
           signBinary(bin, {
-            identifier: "dev.singularity.gateway",
+            identifier: "dev.example.tool",
             exec,
             host: lying,
           }),
@@ -378,7 +376,7 @@ describe("signBinary", () => {
       (
         await rejection(
           signBinary(bin, {
-            identifier: "dev.singularity.gateway",
+            identifier: "dev.example.tool",
             exec,
             host: failing,
           }),
@@ -437,7 +435,7 @@ describe("configuredValidTo", () => {
 });
 
 test("signedByRequirement pins the identifier and the leaf certificate", () => {
-  expect(signedByRequirement("dev.singularity.gateway", DEV_ID)).toBe(
-    `identifier "dev.singularity.gateway" and certificate leaf = H"${DEV_ID.toLowerCase()}"`,
+  expect(signedByRequirement("dev.example.tool", DEV_ID)).toBe(
+    `identifier "dev.example.tool" and certificate leaf = H"${DEV_ID.toLowerCase()}"`,
   );
 });

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-debug-live-state-health",
+  "name": "@equin/plugin-debug-live-state-health",
   "private": true,
   "version": "0.0.1"
 }

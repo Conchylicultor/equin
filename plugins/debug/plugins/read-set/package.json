@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-debug-read-set",
+  "name": "@equin/plugin-debug-read-set",
   "description": "Read-set debug pane: the captured loader→table index and the read-set ceiling — every live-state resource under its change policy (routed, external, unrouted, unbound), with its full routes, relation reads and route drift.",
   "private": true,
   "version": "0.0.1"

@@ -42,7 +42,7 @@ const fail = (message: string, hint?: string): CheckResult => ({
 const check: Check = {
   id: "composition-closure",
   description:
-    "Every declared composition is valid: unique name, all entry/contributor ids resolve, the reserved `singularity` and `base-exclusions` rows are well-formed, every declared exclusion actually took effect, no negative is dead everywhere, each selected contributor is a genuine load-bearing soft option (no redundant selections), every `excludes` bundle stays disjoint from the composition's hard closure (self-containment guard), and every deployable composition's `home` is an app its bundle holds.",
+    "Every declared composition is valid: unique name, all entry/contributor ids resolve, the reserved main and `base-exclusions` rows are well-formed, every declared exclusion actually took effect, no negative is dead everywhere, each selected contributor is a genuine load-bearing soft option (no redundant selections), every `excludes` bundle stays disjoint from the composition's hard closure (self-containment guard), and every deployable composition's `home` is an app its bundle holds.",
   async run() {
     const root = await getWorktreeRoot();
     // The barrel-free faceted tree AND its classified edge graph, taken from the
@@ -107,7 +107,7 @@ const check: Check = {
       seenIds.add(item.id);
     }
 
-    // 0c. The main app is present exactly once. `singularity` is an ordinary
+    // 0c. The main app is present exactly once. the main composition is an ordinary
     //     manifest entry whose closure is every plugin, and
     //     `plugins-registry-in-sync` proves that closure renders the committed
     //     registries byte-for-byte. Delete the row (or duplicate it) and that

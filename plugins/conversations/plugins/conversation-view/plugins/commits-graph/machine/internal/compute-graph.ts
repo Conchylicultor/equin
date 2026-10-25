@@ -62,7 +62,7 @@ async function computeCommitsFromShas(
 // landedCommits = the landedShas log filtered to exclude the pending set, so it
 // must refresh whenever EITHER the pending set (headSha+mergeBase) OR the landed
 // set moves. The landed set is now git-measured (attempt-work greps `main`'s
-// Singularity-Conversation trailers) rather than read off the `pushes` ledger, so
+// conversation trailers) rather than read off the `pushes` ledger, so
 // it is keyed by the shas themselves and cannot lag behind a stalled ingest job.
 
 interface PendingHalf {

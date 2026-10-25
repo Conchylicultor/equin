@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-pages-page-outline",
+  "name": "@equin/plugin-apps-pages-page-outline",
   "description": "The open page's headings as an outline rail pinned to the right edge of the pane.",
   "private": true,
   "version": "0.0.1"

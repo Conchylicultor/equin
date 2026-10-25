@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-cli-run",
+  "name": "@equin/plugin-framework-cli-run",
   "private": true,
   "version": "0.0.1",
   "description": "`./equin run <script.ts> [args…]` — run a repo script against THIS worktree's own dependencies; the correct spelling of `bun <file>`, which silently resolves another checkout's installed tree."

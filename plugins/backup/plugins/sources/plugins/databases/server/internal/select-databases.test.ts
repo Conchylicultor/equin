@@ -6,7 +6,10 @@
 
 import { describe, test, expect } from "bun:test";
 import { mintTestDbName } from "@plugins/database/plugins/db-test-fixture/core/testing";
-import type { Namespace } from "@plugins/infra/plugins/namespace/core";
+import {
+  MAIN_WORKTREE_NAME,
+  type Namespace,
+} from "@plugins/infra/plugins/namespace/core";
 import { classifyDatabase, isBackedUp } from "./select-databases";
 
 /** Namespaces with a `composition.json` marker on disk. */
@@ -17,7 +20,7 @@ const kindOf = (name: string) => classifyDatabase(name, hasMarker);
 
 describe("classifyDatabase", () => {
   test.each([
-    ["singularity", "main"],
+    [MAIN_WORKTREE_NAME, "main"],
     ["sonata", "composition"],
     // A composition whose namespace directory is gone: nothing owns it.
     ["website", "orphan"],

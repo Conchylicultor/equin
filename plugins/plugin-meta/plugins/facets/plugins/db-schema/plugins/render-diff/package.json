@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-plugin-meta-facets-db-schema-render-diff",
+  "name": "@equin/plugin-plugin-meta-facets-db-schema-render-diff",
   "version": "0.0.1",
   "private": true,
   "description": "Diff renderer for the db-schema facet (PR review)."

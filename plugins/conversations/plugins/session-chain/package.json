@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-conversations-session-chain",
+  "name": "@equin/plugin-conversations-session-chain",
   "private": true,
   "version": "0.0.1"
 }

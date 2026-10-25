@@ -1,3 +1,4 @@
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { createServer } from "../../shared/endpoints";
@@ -20,7 +21,7 @@ export const handleCreate = implement(createServer, async ({ body }) => {
   const publicKey = body.sshPrivateKey
     ? await derivePublicKey(
         body.sshPrivateKey,
-        `singularity-deploy-${id}`,
+        `${LEGACY_IDS.deployKeyCommentPrefix}${id}`,
       ).catch(rejectInvalidKey)
     : undefined;
 

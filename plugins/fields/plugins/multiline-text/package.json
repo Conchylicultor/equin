@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-fields-multiline-text",
+  "name": "@equin/plugin-fields-multiline-text",
   "version": "0.0.1",
   "private": true,
   "description": "Long text field type: identity only, extends text — reuses text's cell and filter via the extends chain.",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

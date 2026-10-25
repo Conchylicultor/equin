@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-page-turn-into-page",
+  "name": "@equin/plugin-page-turn-into-page",
   "description": "Turn a block into a sub-page in place, keeping its id, position, and subtree: from Turn into → Page, or from the caret's line with `/page` (the line's other words become its title). The page row renders inline as the link.",
   "private": true,
   "version": "0.0.1"

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-menu-bar",
+  "name": "@equin/plugin-menu-bar",
   "description": "equin in the OS menu bar: the native helper (rust/, built by deps/) and the panel it opens — the /home/menu-bar route, rendered chromeless, whose body is the MenuBar.Section slot.",
   "private": true,
   "version": "0.0.1"

@@ -28,7 +28,7 @@ export type ForkOutcome =
 
 // Deliberately NOT the namespace grammar `databases.ts` uses, and deliberately
 // not shared with it. A fork's source and target are always MAIN-composition
-// namespaces (`singularity` and a checkout's own name), which are single labels
+// namespaces (the main namespace and a checkout's own name), which are single labels
 // — a composition's database is created empty by `ensureDatabase`, never forked
 // — so the dotted two-label form has no way to arrive here. The temp in between
 // never reaches this guard either: `forkTempName` hashes the target to

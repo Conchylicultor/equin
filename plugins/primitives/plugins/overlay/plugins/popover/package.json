@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-overlay-popover",
+  "name": "@equin/plugin-primitives-overlay-popover",
   "description": "InlinePopover wrapper: single-import Popover + Trigger + Content with sensible defaults.",
   "private": true,
   "version": "0.0.1"

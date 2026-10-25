@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-infra-request-origin",
+  "name": "@equin/plugin-infra-request-origin",
   "version": "0.0.1",
   "private": true,
   "description": "Who caused a request: the two provenance headers an automated browser session stamps on every request it issues, the WriteOrigin type a durable write records, and the single reading of those headers. A leaf — string literals and one Request read, no node:*, no db — so the e2e harness that SETS the headers and the server plugins that ACT on them share one spelling."

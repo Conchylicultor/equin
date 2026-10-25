@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-deploy-analytics",
+  "name": "@equin/plugin-apps-deploy-analytics",
   "description": "Umbrella for cookieless site analytics on deployed compositions: the host-only route guard, the collect half that ships inside the deployed site (ingest, tables, nightly rollup, retention, host-only report query), and the dashboard half in the local deploy app.",
   "private": true,
   "version": "0.0.1"

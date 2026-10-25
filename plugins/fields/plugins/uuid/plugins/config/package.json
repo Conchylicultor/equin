@@ -1,7 +1,7 @@
 {
-  "name": "@singularity/plugin-fields-uuid-config",
+  "name": "@equin/plugin-fields-uuid-config",
   "version": "0.0.1",
   "private": true,
   "description": "UUID field factory (uuidField) for building field records.",
-  "singularity": { "collapsed": true }
+  "equin": { "collapsed": true }
 }

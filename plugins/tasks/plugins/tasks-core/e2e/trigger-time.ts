@@ -35,6 +35,7 @@
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import { Client } from "pg";
+import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
 import {
   buildConnectionString,
   readDatabaseConfig,
@@ -53,7 +54,7 @@ const PREFIX = "trigger-time-";
 // ── The connection: ONE session (BEGIN / EXPLAIN / ROLLBACK must share it) ──
 
 const namespace = String(targetNamespace());
-if (namespace === "singularity") {
+if (namespace === MAIN_WORKTREE_NAME) {
   throw new Error(
     "refusing to measure on main's database — this script commits throwaway rows; run it against this checkout's worktree deploy",
   );

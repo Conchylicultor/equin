@@ -18,7 +18,7 @@ whichever checkout runs it — derived exactly as `start` derives it
 | binary | the definition's argv[0] | `builtFile` of main's `gateway-binary` (`readyNow`, main's root); not built yet ⇒ older |
 | flags | the definition's argv[1..] | `gatewayLaunchFlags(...)`, `-log-level` taken from the installed argv (a `start` flag) |
 | cwd | the definition's `WorkingDirectory` | main's checkout |
-| signature | `gatewaySignature(argv[0])` (`launcher/deps`; reads the identity, never mints one) | signed as `dev.singularity.gateway` by this machine's identity |
+| signature | `gatewaySignature(argv[0])` (`launcher/deps`; reads the identity, never mints one) | signed as `GATEWAY_CODESIGN_IDENTIFIER` by this machine's identity |
 | running | the pidfile's process command line (`/proc/<pid>/cmdline`, else `ps -ww -o args=`) | the installed argv, space-joined |
 
 The installed definition is read back through `LoginService.installedJob()`

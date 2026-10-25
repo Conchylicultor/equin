@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-packages-semaphore",
+  "name": "@equin/plugin-packages-semaphore",
   "private": true,
   "version": "0.0.1"
 }

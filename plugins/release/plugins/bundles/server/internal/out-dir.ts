@@ -45,8 +45,8 @@ export function compositionReleaseDir(
  * something this module reads, because the two kinds of producer answer it
  * differently: a backend by its own runtime namespace, a hand-run CLI by the
  * checkout it was invoked from (`checkoutNamespace(root)`). Reading one ambient
- * answer here is what used to put every hand-run release under `singularity/`
- * whichever worktree cut it.
+ * answer here is what used to put every hand-run release under the main
+ * namespace's directory whichever worktree cut it.
  *
  * The 104-byte Unix-socket length cap no longer constrains this path: the
  * launcher (`launcher/bin/launch.ts`) reroots the embedded-PG, PgBouncer, and

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-sonata-progress-bars",
+  "name": "@equin/plugin-apps-sonata-progress-bars",
   "description": "Sonata progress marker: bar notches cut into the progression rail at every bar line (every 4th bar stronger), derived from the score's time signatures, plus the hover preview's bar number.",
   "private": true,
   "version": "0.0.1"

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-shell-document-head",
+  "name": "@equin/plugin-shell-document-head",
   "private": true,
   "version": "0.0.1"
 }

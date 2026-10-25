@@ -258,8 +258,8 @@ describe("package names", () => {
     const p = plan(
       move("a", "z.a"),
       {
-        [P("a/package.json")]: pkg("@singularity/plugin-a"),
-        [P("a/plugins/b/package.json")]: pkg("@singularity/plugin-a-b"),
+        [P("a/package.json")]: pkg("@equin/plugin-a"),
+        [P("a/plugins/b/package.json")]: pkg("@equin/plugin-a-b"),
         [P("a/plugins/r/package.json")]: pkg("root-name"),
       },
       {
@@ -268,10 +268,10 @@ describe("package names", () => {
       },
     );
     expect(p.packages.map((x) => [x.newFile, x.to])).toEqual([
-      [P("z/plugins/a/package.json"), "@singularity/plugin-z-a"],
-      [P("z/plugins/a/plugins/b/package.json"), "@singularity/plugin-z-a-b"],
+      [P("z/plugins/a/package.json"), "@equin/plugin-z-a"],
+      [P("z/plugins/a/plugins/b/package.json"), "@equin/plugin-z-a-b"],
     ]);
-    expect(p.packages[0]!.text).toBe(pkg("@singularity/plugin-z-a"));
+    expect(p.packages[0]!.text).toBe(pkg("@equin/plugin-z-a"));
   });
 });
 

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-page-annotations-agent-notes-agent-page",
+  "name": "@equin/plugin-page-annotations-agent-notes-agent-page",
   "description": "Agent-authored pages: the tint and creator chip on their references, and the /agent-page insert.",
   "private": true,
   "version": "0.0.1"

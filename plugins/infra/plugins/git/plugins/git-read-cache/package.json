@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-infra-git-git-read-cache",
+  "name": "@equin/plugin-infra-git-git-read-cache",
   "private": true,
   "version": "0.0.1"
 }

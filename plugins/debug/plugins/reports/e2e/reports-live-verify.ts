@@ -40,6 +40,7 @@ import {
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
+import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
 import {
   reportDetailRoute,
   reportsList,
@@ -54,7 +55,7 @@ const BURST = 30;
 const KIND = "crash";
 const SOURCE = "browser-error";
 
-if (String(targetNamespace()) === "singularity") {
+if (String(targetNamespace()) === MAIN_WORKTREE_NAME) {
   throw new Error(
     "refusing to file synthetic reports into main — run this against a worktree deploy",
   );

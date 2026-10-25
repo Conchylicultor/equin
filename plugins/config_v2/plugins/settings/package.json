@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-config_v2-settings",
+  "name": "@equin/plugin-config_v2-settings",
   "private": true,
   "description": "Settings UI for config_v2: two-pane nav + detail surface for viewing and editing typed config fields."
 }

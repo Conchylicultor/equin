@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-metrics-chart-kit",
+  "name": "@equin/plugin-primitives-metrics-chart-kit",
   "description": "Hand-rolled SVG chart kit: TimeChart (area / line / stack / mirror / net, with a dashed compare overlay), Sparkline, Histogram and the ChartTable twin, drawn in theme tokens to the dataviz mark specs.",
   "private": true,
   "version": "0.0.1"

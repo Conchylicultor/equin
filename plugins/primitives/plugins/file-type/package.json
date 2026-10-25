@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-file-type",
+  "name": "@equin/plugin-primitives-file-type",
   "private": true,
   "version": "0.0.1",
   "description": "What a file is: the file-name/extension → Seti glyph, colour tone and label table, and the <FileTypeIcon> that draws it."

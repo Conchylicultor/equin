@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-css-slider",
+  "name": "@equin/plugin-primitives-css-slider",
   "description": "Thin-track range slider primitive: normalizes its own fill against (min, max) and owns the optional detent home position — the tick and the magnetic snap.",
   "private": true,
   "version": "0.0.1"

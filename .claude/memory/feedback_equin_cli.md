@@ -1,5 +1,5 @@
 ---
-name: Run singularity CLI after building
+name: Run the CLI after building
 description: Always run ./equin build to deploy after making code changes, don't skip the CLI step
 type: feedback
 originSessionId: 6e28c106-c1b2-4e36-b8c0-650efe8a9cb6

@@ -49,11 +49,13 @@ export default [
   main's backend. Not awaited by boot; one reconcile per service at a time
   (a keyed mutex). A worktree's boot does nothing.
 - `start --only <ids>` (comma-separated declared ids, or the gateway's
-  `dev.singularity.gateway`) touches only those; with `--force` it is the
+  `<gateway-label>`) touches only those; with `--force` it is the
   per-service restart. An unknown id fails before anything runs.
 - `stop`: unloads every declared service, before the gateway. `stop --disable`
   also removes each definition (and so opts it out of following main).
 - A host with no service manager starts none of them, and says so.
+
+(`<gateway-label>` is the gateway's launchd label / systemd unit name, `LEGACY_IDS.launchdLabel` in `framework/product-name`.)
 
 ## One reconcile, three policies
 

@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-fields-float-config",
+  "name": "@equin/plugin-fields-float-config",
   "version": "0.0.1",
   "private": true,
   "description": "Float field type: config-render capability (number stepper) plus the floatField factory.",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

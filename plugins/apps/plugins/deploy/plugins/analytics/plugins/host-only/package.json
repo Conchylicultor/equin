@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-deploy-analytics-host-only",
+  "name": "@equin/plugin-apps-deploy-analytics-host-only",
   "description": "Routes reachable only from the deployed box itself: the /api/host-only/ prefix Caddy refuses publicly, the hostOnly(handler) second guard (404 unless the request made exactly one proxy hop), and requestClientIp(req) — the one place that knows the Caddy → gateway → backend X-Forwarded-For chain.",
   "private": true,
   "version": "0.0.1"

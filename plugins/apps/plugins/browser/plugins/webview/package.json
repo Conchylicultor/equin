@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-browser-webview",
+  "name": "@equin/plugin-apps-browser-webview",
   "private": true,
   "version": "0.0.1"
 }

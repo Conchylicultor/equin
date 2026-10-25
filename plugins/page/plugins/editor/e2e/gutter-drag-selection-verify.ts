@@ -14,7 +14,7 @@
 // (`--page`), before `block-selection-scope.css` existed:
 //
 //   gutter rail, rows 3 -> 5    native selection NON-EMPTY, anchored at row 3:
-//                               "\nsingularity test\n\nSelected.\nsingularity
+//                               "\nequin test\n\nSelected.\nequin
 //                               check\n\nSelected." — the rows' sr-only
 //                               selection markers, which is what a cross-host
 //                               selection copies instead of their text

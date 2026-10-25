@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-shell",
+  "name": "@equin/plugin-shell",
   "private": true,
   "version": "0.0.1",
   "dependencies": {

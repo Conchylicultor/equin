@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-ui-tokens-categorical",
+  "name": "@equin/plugin-ui-tokens-categorical",
   "private": true,
   "version": "0.0.1",
   "description": "Categorical color palette token group with switchable presets."

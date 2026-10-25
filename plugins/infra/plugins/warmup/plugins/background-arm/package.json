@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-infra-warmup-background-arm",
+  "name": "@equin/plugin-infra-warmup-background-arm",
   "description": "Warm-ups in the Background activity catalog: every declared warm-up under After boot, with its scope and its run in this process.",
   "private": true,
   "version": "0.0.1"

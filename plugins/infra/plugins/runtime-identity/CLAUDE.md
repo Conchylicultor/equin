@@ -57,7 +57,7 @@ forever. Main's backend was the first process to talk to the tmux server after a
 restart, so the tmux server kept main's environment, and from then on every agent
 session started life believing it was main. Every `./equin build`, `check`
 and `test` those sessions ran inherited it and filed its records under
-`singularity`. Nothing chose that value.
+the main namespace. Nothing chose that value.
 
 Module state cannot be inherited, which is the whole point of putting the answer
 here. `namespace-identity/no-ambient-worktree-env` (rung 3) keeps the variable

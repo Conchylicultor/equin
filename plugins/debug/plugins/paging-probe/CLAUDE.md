@@ -47,7 +47,7 @@ and `gcMs` time the two suspected fault-storm triggers directly.
 ## Output & data join
 
 Each probe appends one JSON line per tick to
-`~/.singularity/worktrees/singularity/logs/paging-probe-<variant>.jsonl` (main's
+`~/.singularity/worktrees/<main>/logs/paging-probe-<variant>.jsonl` (main's
 log dir) via `appendFileSync` — no DB, no plugin runtime. The sample shape is
 `ProbeSampleSchema` (`core/schema.ts`). There is no bespoke UI: analysis is a
 **timestamp-window join** on `sampledAt` against the existing files — no new join

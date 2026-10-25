@@ -266,7 +266,7 @@ the two came from different snapshots. Reports fire only when a threshold trips:
 - **`get_queue_health`** MCP tool — proxies to the summary endpoint through the
   gateway (the `get_runtime_profile` gateway-proxy pattern), so it always reads
   the target worktree's live backend. `worktree` arg (defaults to the
-  conversation's own worktree; pass `"singularity"` for main). Its description
+  conversation's own worktree; pass `"equin"` for main). Its description
   **interpolates the runner ladder** from `RUNNERS` / `HOLD_SPECS` rather than
   describing it, and states the two things the data cannot answer — an agent
   reads that description to know which question to ask about a stalled queue, so

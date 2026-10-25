@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-reports-turn-unconfirmed",
+  "name": "@equin/plugin-reports-turn-unconfirmed",
   "private": true,
   "version": "0.0.1"
 }

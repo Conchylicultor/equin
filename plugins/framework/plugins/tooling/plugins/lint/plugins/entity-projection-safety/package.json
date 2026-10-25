@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-tooling-lint-entity-projection-safety",
+  "name": "@equin/plugin-framework-tooling-lint-entity-projection-safety",
   "version": "0.0.1",
   "private": true,
   "description": "entity-projection-safety lint rule: no-hand-rolled-entity-projection"

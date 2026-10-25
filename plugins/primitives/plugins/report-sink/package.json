@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-report-sink",
+  "name": "@equin/plugin-primitives-report-sink",
   "description": "Shared soft-reporter slot factories: defineReportSink() (fire-and-forget, held until a handler registers) and defineRequestSink() (answer-returning, never held) single-source the register/emit inversion behind the boundary/endpoint/wedge reporters.",
   "private": true,
   "version": "0.0.1"

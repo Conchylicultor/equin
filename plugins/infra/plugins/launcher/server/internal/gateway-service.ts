@@ -3,6 +3,7 @@ import type {
   LoginServiceJob,
 } from "@plugins/infra/plugins/launcher/plugins/login-services/core";
 import type { gatewayLaunchSpec } from "./boot";
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 
 /**
  * The gateway as a per-user OS service — what makes the app come back after a
@@ -18,7 +19,7 @@ import type { gatewayLaunchSpec } from "./boot";
  * lingering), and its rendered plist / unit is exactly the pre-generic one.
  */
 export const GATEWAY_SERVICE: LoginServiceId = {
-  label: "dev.singularity.gateway",
+  label: LEGACY_IDS.launchdLabel,
   session: "background",
 };
 

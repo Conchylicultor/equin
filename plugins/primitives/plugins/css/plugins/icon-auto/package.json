@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-css-icon-auto",
+  "name": "@equin/plugin-primitives-css-icon-auto",
   "description": "icon-auto slot-icon sizing convention: the icon-auto @utility (em-based, in app.css) plus the no-adhoc-slot-icon-size lint rule.",
   "private": true,
   "version": "0.0.1"

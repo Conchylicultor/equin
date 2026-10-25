@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-css-badge",
+  "name": "@equin/plugin-primitives-css-badge",
   "description": "Semantic badge primitive: variant chip with a colorClass escape hatch, optional leading icon, and a single theme-derived radius.",
   "private": true,
   "version": "0.0.1"

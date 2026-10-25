@@ -1,3 +1,4 @@
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import type { HttpHandler } from "@plugins/framework/plugins/central-core/core";
 import { tryGetProvider } from "../registry";
 import { resolveCredentials } from "../credentials";
@@ -139,7 +140,7 @@ interface ResultPageArgs {
 function renderResultPage(args: ResultPageArgs): string {
   const targetOrigin = args.openerOrigin ? escapeAttr(args.openerOrigin) : "*";
   const payload = {
-    type: "singularity.auth.complete",
+    type: LEGACY_IDS.authCompleteMessage,
     ok: args.ok,
     providerId: args.providerId,
     accountId: args.identity?.accountId,

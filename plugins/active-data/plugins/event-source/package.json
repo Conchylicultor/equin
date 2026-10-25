@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-active-data-event-source",
+  "name": "@equin/plugin-active-data-event-source",
   "private": true,
   "version": "0.0.1"
 }

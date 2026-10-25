@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-file-viewer-diff",
+  "name": "@equin/plugin-primitives-file-viewer-diff",
   "private": true,
   "version": "0.0.1"
 }

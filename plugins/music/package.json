@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-music",
+  "name": "@equin/plugin-music",
   "description": "Umbrella for music building blocks shared across apps, knowing pitch classes and strings only: the chord box (a chord's degree colour, numeral and tile).",
   "private": true,
   "version": "0.0.1"

@@ -53,9 +53,9 @@ describe("declareRuntimeNamespace", () => {
 
   test("throws on a different value, naming both", () => {
     declareRuntimeNamespace(asNamespace("att-1234-abcd"));
-    expect(() => declareRuntimeNamespace(asNamespace("singularity"))).toThrow(
-      /att-1234-abcd/,
-    );
+    expect(() =>
+      declareRuntimeNamespace(asNamespace(MAIN_WORKTREE_NAME)),
+    ).toThrow(/att-1234-abcd/);
     // The first answer stands — a refused redeclare must not half-apply.
     expect(runtimeNamespace()).toBe(asNamespace("att-1234-abcd"));
   });

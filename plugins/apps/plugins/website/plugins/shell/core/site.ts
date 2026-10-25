@@ -1,3 +1,4 @@
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import {
   MAIN_WORKTREE_NAME,
   namespaceHost,
@@ -9,7 +10,7 @@ import {
  * the footer signs off with it on every page, and one address declared twice is
  * one address that drifts.
  */
-const REPO = "Conchylicultor/singularity";
+const REPO = LEGACY_IDS.githubRepo;
 export const SOURCE_URL = `https://github.com/${REPO}`;
 
 /**

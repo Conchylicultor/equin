@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-tooling-checks-class-token-walk-single-source",
+  "name": "@equin/plugin-framework-tooling-checks-class-token-walk-single-source",
   "version": "0.0.1",
   "private": true
 }

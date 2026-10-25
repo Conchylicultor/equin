@@ -15,7 +15,7 @@ import {
 // captured BEFORE the value's reads (the 64-bit xid8 family, stored as numeric).
 //
 // Created via CREATE TABLE IF NOT EXISTS on boot — derived state, NOT a drizzle
-// migration (same pattern as __singularity_derived_view_state). The changelog
+// migration (same pattern as derived_view_state). The changelog
 // table is created by change-feed inside its trigger-rebuild txn (it writes it
 // from the trigger function); the snapshot table is owned here because only the
 // runtime persist hook and the boot read touch it. See

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-css-status-dot",
+  "name": "@equin/plugin-primitives-css-status-dot",
   "description": "Colored status-indicator dot primitive. Composes a fixed-size rounded span with a caller-supplied Tailwind color class.",
   "private": true,
   "version": "0.0.1"

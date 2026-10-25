@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-database-query-deadline",
+  "name": "@equin/plugin-database-query-deadline",
   "private": true,
   "version": "0.0.1"
 }

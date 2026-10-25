@@ -322,7 +322,7 @@ await withBrowser(async (h) => {
   const { page } = await h.session({ label: "A" });
 
   // The scratch page is created through the shared blank-page flow, so it carries
-  // the harness's `x-singularity-origin: agent` header: the agent-origin plugin
+  // the harness's origin header (`agent`): the agent-origin plugin
   // segregates it out of the user's tree and sweeps it after 24h. Same lifecycle
   // as every sibling script — nothing here deletes a page by hand.
   const {

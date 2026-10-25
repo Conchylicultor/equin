@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-prototypes-commands",
+  "name": "@equin/plugin-apps-prototypes-commands",
   "description": "The ./equin prototype command group (new, list, options, log, checkpoint, restore): declared here, above files and state, so list can leave out the prototypes deleted in this checkout's instance.",
   "private": true,
   "version": "0.0.1"

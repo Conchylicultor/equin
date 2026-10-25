@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-integrations-youtube-song-videos-youtube-search",
+  "name": "@equin/plugin-integrations-youtube-song-videos-youtube-search",
   "description": "The YouTube search source of song-videos: the first ten results for \"<artist> <title>\", from yt-dlp's flat search.",
   "private": true,
   "version": "0.0.1"

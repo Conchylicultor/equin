@@ -15,6 +15,7 @@ import {
   namespaceUrl,
   MAIN_WORKTREE_NAME,
 } from "@plugins/infra/plugins/namespace/core";
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 
 // What a fork must not copy is DECLARED by the plugins that own the tables
 // (`ExcludeFromFork` / `ExcludeSchemaDataFromFork`), and those declarations are
@@ -81,8 +82,12 @@ const run: CliAction<[string | undefined], { replace?: boolean }> = async (
     );
     await dropDatabase(name);
   }
-  console.log(`Forking "singularity" → "${name}"...`);
-  const outcome = await forkDatabase("singularity", name, exclusions);
+  console.log(`Forking "${LEGACY_IDS.pgBaseDatabase}" → "${name}"...`);
+  const outcome = await forkDatabase(
+    LEGACY_IDS.pgBaseDatabase,
+    name,
+    exclusions,
+  );
   // A human is watching this terminal, so it is the right place to say what the
   // fork found: declarations that matched nothing (benign) and schemas nobody
   // claimed (their rows just got copied). Neither stops a fork — see `ForkPlan`

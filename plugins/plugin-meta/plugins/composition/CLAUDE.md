@@ -104,7 +104,7 @@ app**, and every composition inherits it: `flattenManifest` folds this row into
 every manifest **unconditionally, not through `extends`**. An exclusion written
 once therefore holds for compositions that do not exist yet, instead of holding
 only for the rows whose author remembered to reference it — the property
-`singularity.disabled` in a `package.json` used to have.
+the old `disabled` flag in a `package.json` used to have.
 
 Three rules, all enforced by `composition-closure`:
 
@@ -129,7 +129,7 @@ hard closure, and `resolveComposition` reports it in `unsatisfiedExclusions` wit
 the import chain rather than guessing which of the two the author meant.
 
 The seed carries one negative, `!review.plugin-changes.**` — the migration of the
-`singularity.disabled: true` flag that used to live in
+the old `disabled: true` flag that used to live in
 `plugins/review/plugins/plugin-changes/package.json`. It resolves to the same
 twelve plugins that flag's closure did (the plugin, its two sub-plugins, and the
 nine `plugin-meta.facets.<f>.render-diff` adapters that import it), because a
@@ -245,7 +245,7 @@ Beyond the registry, this plugin ships the **Studio closure data**:
   absent), so the throw is the loud boundary beneath them, never the
   user-facing refusal.
 - **`web/`** answers "what does the app actually ship?" with `useAppExclusions()`
-  — it resolves the `singularity` composition IN THE BROWSER (`flattenManifest`
+  — it resolves the main composition IN THE BROWSER (`flattenManifest`
   folds the base row's negatives in) and returns `{ kind: "pending" }` or
   `{ kind: "ready", excluded, negatedTargets }`. `excluded` is every id outside
   main's bundle; `negatedTargets` is the subset a manifest negated by name, which
@@ -290,7 +290,7 @@ deliberately does not live there.
 
 `core/namespace.test.ts` pins the split between "may be called this" and "may be
 served under this", including the two ids where the answers differ
-(`singularity`, `base-exclusions`).
+(main, `base-exclusions`).
 
 Run with `./equin test plugins/plugin-meta/plugins/composition`.
 

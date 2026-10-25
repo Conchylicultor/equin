@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-tooling-web-artifacts",
+  "name": "@equin/plugin-framework-tooling-web-artifacts",
   "version": "0.0.1",
   "private": true,
   "description": "Per-plugin web build artifacts: content-addressed vite lib-mode builds composed via an import map",

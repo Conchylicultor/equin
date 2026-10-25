@@ -5,14 +5,15 @@ import {
   LEGACY_PRODUCT_NAMES,
   PRODUCT_NAME,
 } from "../core/internal/product-name";
+import legacyIdChecks from "./legacy-id";
 
 const RULE = "product-name:legacy";
 
 /**
  * The legacy name as a WORD, capitalised: the product name in prose and in
- * strings. Not a lowercase identifier (the `singularity` namespace, a path), not
- * part of a camelCase one (`isSingularity`), and not a `Singularity-Conversation:`
- * style commit trailer — those are wire format, out of the rename's scope.
+ * strings. Not a lowercase identifier, not part of a camelCase one, and not a
+ * commit-trailer key (`<Name>-Conversation:`) — those are
+ * `product-name:legacy-id`'s (`./legacy-id.ts`).
  */
 function legacyWord(name: string): RegExp {
   return new RegExp(String.raw`(?<![\w-])${name}(?![\w]|-[A-Z])`);
@@ -67,4 +68,4 @@ const legacyProductNameCheck: Check = {
   },
 };
 
-export default legacyProductNameCheck;
+export default [legacyProductNameCheck, ...legacyIdChecks];

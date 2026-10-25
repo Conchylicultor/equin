@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-infra-host-account-guest",
+  "name": "@equin/plugin-infra-host-account-guest",
   "private": true,
   "version": "0.0.1",
   "description": "The account of a host without the computer: the HostAccountSource host service as a fixed guest account (login demo), so the Pages brand renders in the browser composition as on the desktop. Never booted by the desktop."

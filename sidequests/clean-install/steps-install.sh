@@ -16,7 +16,7 @@
 # piped to bash the same way.
 #
 # CLEAN_INSTALL_ARGS="<args>" passes options to install.sh (after
-# `bash -s --`), e.g. `--repo /tmp/singularity.bundle` for a snapshot of an
+# `bash -s --`), e.g. `--repo /tmp/equin.bundle` for a snapshot of an
 # unpushed tree handed over with run.sh --upload — the same documented
 # `--repo` a fork uses.
 #

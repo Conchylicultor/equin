@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-data-view-map",
+  "name": "@equin/plugin-primitives-data-view-map",
   "description": "Map view child for the data-view primitive: every row with a location as a pin on a full-bleed map, clustered, with clicking a pin activating its row.",
   "private": true,
   "version": "0.0.1"

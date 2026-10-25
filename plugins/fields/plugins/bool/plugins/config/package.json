@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-fields-bool-config",
+  "name": "@equin/plugin-fields-bool-config",
   "version": "0.0.1",
   "private": true,
   "description": "Boolean field type: config-render capability (checkbox) plus the boolField factory.",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

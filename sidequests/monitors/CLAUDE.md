@@ -16,7 +16,7 @@ exactly the ones that kill it, restart it, or happen while it is down.
   hand, once — see its own `CLAUDE.md`. Deliberate: these run as background
   daemons on the user's machine, some as root.
 - **The plist points at the script's path in the main checkout**
-  (`/Users/epot/__A__/dev/singularity/sidequests/monitors/<name>/…`), never at a
+  (an absolute path into the user's checkout, under `sidequests/monitors/<name>/`), never at a
   worktree. So a monitor only picks up an edit once it is merged to main, and a
   worktree being deleted can never take a monitor down with it.
 - **Logs go to `~/.singularity/logs/monitors/<name>.log|.jsonl`**, in their own

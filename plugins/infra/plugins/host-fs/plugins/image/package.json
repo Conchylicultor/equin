@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-infra-host-fs-image",
+  "name": "@equin/plugin-infra-host-fs-image",
   "description": "Images on the host filesystem: resized copies (cached host-wide, EXIF-rotated) for thumbnails and fitted views, and the true pixel sizes of a folder's images read from their headers.",
   "private": true,
   "version": "0.0.1",

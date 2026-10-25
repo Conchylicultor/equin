@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-infra-warmup",
+  "name": "@equin/plugin-infra-warmup",
   "private": true,
   "version": "0.0.1"
 }

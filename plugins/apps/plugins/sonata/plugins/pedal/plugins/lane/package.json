@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-sonata-pedal-lane",
+  "name": "@equin/plugin-apps-sonata-pedal-lane",
   "description": "Sonata piano-roll sustain-pedal lane: a scroll-synced strip marking pedal-down spans along the falling-note timeline.",
   "private": true,
   "version": "0.0.1"

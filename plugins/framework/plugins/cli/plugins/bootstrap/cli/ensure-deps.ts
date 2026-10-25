@@ -53,6 +53,7 @@ import {
   getWorktreeRoot,
   spawnPassthrough,
 } from "@plugins/infra/plugins/spawn/core";
+import { PRODUCT_NAME } from "@plugins/framework/plugins/product-name/core";
 import { acquireCheckoutLock } from "./checkout-lock";
 
 /**
@@ -60,7 +61,7 @@ import { acquireCheckoutLock } from "./checkout-lock";
  * outlive the thing it describes, so `rm -rf node_modules` always forces a real
  * install. (Already gitignored, being under `node_modules/`.)
  */
-const STAMP_REL = join("node_modules", ".singularity-deps");
+const STAMP_REL = join("node_modules", ".equin-deps");
 
 /**
  * Bumped when the stamp's shape or the signature's inputs change; an older
@@ -166,7 +167,7 @@ export interface EnsureDepsOptions {
   ) => Promise<InstallOutcome>;
 }
 
-/** What `node_modules/.singularity-deps` holds. */
+/** What `node_modules/.equin-deps` holds. */
 interface DepStamp {
   version: number;
   /** sha256 over the sorted `(relPath, mtimeMs, size)` fingerprint of every dep input. */
@@ -217,7 +218,7 @@ function workspaceWalkRoots(root: string): string[] {
   };
   if (!Array.isArray(pkg.workspaces)) {
     throw new Error(
-      `singularity: ${pkgPath} has no "workspaces" array, so ${root} is not the ` +
+      `${PRODUCT_NAME}: ${pkgPath} has no "workspaces" array, so ${root} is not the ` +
         `repo root — refusing to compute a dependency signature over an empty input set.`,
     );
   }
@@ -225,7 +226,7 @@ function workspaceWalkRoots(root: string): string[] {
   for (const glob of pkg.workspaces) {
     if (typeof glob !== "string") {
       throw new Error(
-        `singularity: ${pkgPath} has a non-string "workspaces" entry: ${String(glob)}`,
+        `${PRODUCT_NAME}: ${pkgPath} has a non-string "workspaces" entry: ${String(glob)}`,
       );
     }
     const literal: string[] = [];
@@ -412,7 +413,7 @@ function installFailureMessage(result: InstallOutcome): string {
     ? `killed by ${result.signalCode}`
     : `exited ${result.exitCode}`;
   return (
-    `singularity: dependency install FAILED — \`bun install\` ${how}.\n` +
+    `${PRODUCT_NAME}: dependency install FAILED — \`bun install\` ${how}.\n` +
     `  This is the DEPENDENCY INSTALL phase, not the command you asked for: ` +
     `that command never ran, and its own result is unknown.\n` +
     `  bun install's output is above — it runs with stdout/stderr passed ` +

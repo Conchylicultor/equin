@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-fields-enum-filter",
+  "name": "@equin/plugin-fields-enum-filter",
   "version": "0.0.1",
   "private": true,
   "description": "Enum (select) field type: data-view filter (multi-select option chips).",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

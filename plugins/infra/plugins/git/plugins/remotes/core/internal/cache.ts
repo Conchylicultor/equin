@@ -1,4 +1,5 @@
 import type { PublishTarget } from "./types";
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 
 /**
  * The two `.git/config` keys the probe's answer is recorded under.
@@ -7,11 +8,11 @@ import type { PublishTarget } from "./types";
  * MEASUREMENT, not a setting. A user-editable "may I publish" field would be a
  * claim the remote can contradict — and does, every time it refuses a push.
  */
-export const CACHE_REMOTE_KEY = "singularity.publish.remote";
-export const CACHE_URL_KEY = "singularity.publish.url";
+export const CACHE_REMOTE_KEY = `${LEGACY_IDS.gitConfigSection}.publish.remote`;
+export const CACHE_URL_KEY = `${LEGACY_IDS.gitConfigSection}.publish.url`;
 
 /**
- * What `singularity.publish.remote` holds when the remote answered that we may
+ * What `CACHE_REMOTE_KEY` holds when the remote answered that we may
  * NOT write to it. A sentinel rather than an absent key, because absent means
  * "never probed" and this means "probed, and the answer was no".
  */

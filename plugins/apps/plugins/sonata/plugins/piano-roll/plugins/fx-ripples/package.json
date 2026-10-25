@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-sonata-piano-roll-fx-ripples",
+  "name": "@equin/plugin-apps-sonata-piano-roll-fx-ripples",
   "description": "Fancy piano-roll FX (opt-in): expanding sound-wave ripple rings from each note strike, chords merging into one stronger ripple.",
   "private": true,
   "version": "0.0.1",

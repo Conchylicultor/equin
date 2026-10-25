@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-tooling-resource-vocabulary",
+  "name": "@equin/plugin-framework-tooling-resource-vocabulary",
   "version": "0.0.1",
   "private": true,
   "description": "The closed set of ways a plugin declares a live-state resource, as data every build-time resource scanner reads. Its key set is DERIVED from the barrels' own module types, so a factory that exists but is unlisted is a type error."

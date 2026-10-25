@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-chord-shell",
+  "name": "@equin/plugin-apps-chord-shell",
   "description": "The Chord app's identity (defineApp: id, name, base path, icon), its rail entry and frame (the sidebar-less app shell around the full-pane renderer), and its dark-only theme.",
   "private": true,
   "version": "0.0.1"

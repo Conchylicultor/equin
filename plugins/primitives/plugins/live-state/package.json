@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-live-state",
+  "name": "@equin/plugin-primitives-live-state",
   "private": true,
   "version": "0.0.1"
 }

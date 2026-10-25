@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-file-explorer-git",
+  "name": "@equin/plugin-apps-file-explorer-git",
   "description": "The file explorer's git awareness: status badges, Changed vs main, Show ignored files and the Diff tab for a changed file.",
   "private": true,
   "version": "0.0.1"

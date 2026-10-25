@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-plugin-id",
+  "name": "@equin/plugin-framework-plugin-id",
   "version": "0.0.1",
   "private": true,
   "description": "Canonical plugin identity: the branded PluginId type and its derived path encodings."

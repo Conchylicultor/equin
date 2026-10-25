@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-fields-enum",
+  "name": "@equin/plugin-fields-enum",
   "version": "0.0.1",
   "private": true,
   "description": "Enum (select) field type: identity only — single-choice from a fixed set of string options.",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

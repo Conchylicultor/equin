@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-page-annotations-agent-notes-authorship",
+  "name": "@equin/plugin-page-annotations-agent-notes-authorship",
   "description": "Which conversations wrote an agent-notes card.",
   "private": true,
   "version": "0.0.1"

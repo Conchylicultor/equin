@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-fields-number",
+  "name": "@equin/plugin-fields-number",
   "version": "0.0.1",
   "private": true,
   "description": "Number field type: identity plus the data-view cell and filter (min/max) capabilities.",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

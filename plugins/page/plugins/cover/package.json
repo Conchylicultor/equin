@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-page-cover",
+  "name": "@equin/plugin-page-cover",
   "description": "Registers the page-cover attachment-id collector with the shared attachment-block reconcile so a page's cover image is linked and not orphan-swept.",
   "private": true,
   "version": "0.0.1"

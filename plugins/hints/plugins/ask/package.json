@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-hints-ask",
+  "name": "@equin/plugin-hints-ask",
   "description": "Ask equin: a floating, draggable card holding one threaded how-to conversation, opened from the ? menu on any page — a read-only help agent (the help.ask scratch profile) that answers from equin's code, points at the page with Show me, and files a task that launches at once for anything that needs a change.",
   "private": true,
   "version": "0.0.1"

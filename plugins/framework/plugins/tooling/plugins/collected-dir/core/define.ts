@@ -19,7 +19,7 @@ import type { PluginFolder } from "@plugins/framework/plugins/plugin-id/core";
 /**
  * Which plugins a collected dir's committed registry lists.
  *
- * - `"composition"` (the default): the `singularity` composition's closure —
+ * - `"composition"` (the default): the main composition's closure —
  *   what the app ships. Every runtime registry (web, server, check, lint, …) is
  *   this: an excluded plugin's contribution must not load.
  * - `"checkout"`: every plugin the checkout declares, excluded ones included.

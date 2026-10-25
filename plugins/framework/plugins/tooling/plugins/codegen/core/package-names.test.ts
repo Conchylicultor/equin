@@ -8,13 +8,13 @@ import { describe, expect, test } from "bun:test";
 import { packageNameFor } from "@plugins/framework/plugins/plugin-id/core";
 import { withPackageName } from "./package-names";
 
-const NAME = "@singularity/plugin-a-b";
+const NAME = "@equin/plugin-a-b";
 
 describe("packageNameFor", () => {
   test("joins every non-`plugins` segment with -", () => {
-    expect(packageNameFor("tasks")).toBe("@singularity/plugin-tasks");
+    expect(packageNameFor("tasks")).toBe("@equin/plugin-tasks");
     expect(packageNameFor("stats/plugins/tasks")).toBe(
-      "@singularity/plugin-stats-tasks",
+      "@equin/plugin-stats-tasks",
     );
   });
 });
@@ -27,19 +27,18 @@ describe("withPackageName", () => {
 
   test("wrong name: only the value changes, key order and bytes kept", () => {
     const text =
-      '{\n  "version": "0.0.1",\n  "name": "@singularity/plugin-old",\n' +
+      '{\n  "version": "0.0.1",\n  "name": "@equin/plugin-old",\n' +
       '  "private": true,\n  "dependencies": { "x": "1.0.0" }\n}\n';
     expect(withPackageName(text, NAME)).toBe(
-      '{\n  "version": "0.0.1",\n  "name": "@singularity/plugin-a-b",\n' +
+      '{\n  "version": "0.0.1",\n  "name": "@equin/plugin-a-b",\n' +
         '  "private": true,\n  "dependencies": { "x": "1.0.0" }\n}\n',
     );
   });
 
   test("a nested `name` key is never touched", () => {
-    const text =
-      '{\n  "singularity": { "name": "keep" },\n  "name": "old"\n}\n';
+    const text = '{\n  "other": { "name": "keep" },\n  "name": "old"\n}\n';
     expect(withPackageName(text, NAME)).toBe(
-      `{\n  "singularity": { "name": "keep" },\n  "name": "${NAME}"\n}\n`,
+      `{\n  "other": { "name": "keep" },\n  "name": "${NAME}"\n}\n`,
     );
   });
 

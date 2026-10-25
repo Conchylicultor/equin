@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-ui-icons-saved-names",
+  "name": "@equin/plugin-ui-icons-saved-names",
   "private": true,
   "version": "0.0.1",
   "description": "The membership-checked SavedSymbolName: a user-picked Material Symbols name, parsed against the installed sets before anything stores it."

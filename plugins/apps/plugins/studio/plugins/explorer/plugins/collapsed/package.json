@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-studio-explorer-collapsed",
+  "name": "@equin/plugin-apps-studio-explorer-collapsed",
   "description": "Collapsed badge in the explorer plugin tree row.",
   "private": true,
   "version": "0.0.1"

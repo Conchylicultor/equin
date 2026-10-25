@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-cursor-pagination",
+  "name": "@equin/plugin-primitives-cursor-pagination",
   "description": "Cursor-pagination primitive: the error-gated useInfiniteScroll observer, InfiniteScrollFooter, and the ScrollSentinel component.",
   "private": true,
   "version": "0.0.1"

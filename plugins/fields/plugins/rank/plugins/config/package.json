@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-fields-rank-config",
+  "name": "@equin/plugin-fields-rank-config",
   "version": "0.0.1",
   "private": true,
   "description": "Rank field factory (rankField) for building field records.",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

@@ -44,7 +44,7 @@ beforeAll(async () => {
   // non-source file whose CONTENT never affects the verdict.
   repo = await createReadSetRepo("plugin-boundaries-read-set-", {
     [FOO_INDEX]: "export default {} as unknown;\n",
-    [FOO_PKG]: JSON.stringify({ name: "@singularity/plugin-foo" }) + "\n",
+    [FOO_PKG]: JSON.stringify({ name: "@equin/plugin-foo" }) + "\n",
     [FOO_README]: "# foo\n",
     // A file OUTSIDE plugins/ — must never enter the read-set.
     "package.json": JSON.stringify({ name: "root" }) + "\n",
@@ -137,12 +137,12 @@ test("case 4 (H3): a new plugin dir holding only a non-.ts file is a MISS via me
 
 test("case 5: a package.json content change (R1 naming) is a MISS", async () => {
   const rs = await record();
-  write(FOO_PKG, JSON.stringify({ name: "@singularity/plugin-WRONG" }) + "\n");
+  write(FOO_PKG, JSON.stringify({ name: "@equin/plugin-WRONG" }) + "\n");
   try {
     const v = await repo.revalidate(rs);
     expect(v.hit).toBe(false);
     if (!v.hit) expect(v.reason).toContain(FOO_PKG);
   } finally {
-    write(FOO_PKG, JSON.stringify({ name: "@singularity/plugin-foo" }) + "\n");
+    write(FOO_PKG, JSON.stringify({ name: "@equin/plugin-foo" }) + "\n");
   }
 });

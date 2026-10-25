@@ -6,6 +6,7 @@
 // themselves (`SubErrorFrame` included) are declared in `./frames`.
 
 import { CONTRACT_VERDICTS, SUB_ERROR_REASONS } from "./frames";
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 
 /**
  * Why a subscription (or its HTTP read) was refused.
@@ -58,7 +59,7 @@ export interface ResourceHttpErrorBody {
  * The request header an HTTP resource read names the client's build graph in —
  * the HTTP twin of a `sub` frame's `build` field.
  */
-export const BUILD_GRAPH_HEADER = "x-singularity-build-graph";
+export const BUILD_GRAPH_HEADER = `${LEGACY_IDS.headerPrefix}build-graph`;
 
 /** The build a bundle names when it was not built with a graph hash (a dev server). */
 export const DEV_BUILD = "dev";

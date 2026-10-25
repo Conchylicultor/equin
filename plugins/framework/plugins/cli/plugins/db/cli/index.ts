@@ -20,7 +20,7 @@ export default defineCliCommand({
     defineCliCommand<[string | undefined], { replace?: boolean }>({
       name: "fork",
       description:
-        "Fork the main 'singularity' DB into [target]. For worktrees created " +
+        "Fork the main (base) DB into [target]. For worktrees created " +
         "outside equin (git worktree add), which get no fork on creation. " +
         "Idempotent: a no-op if the DB already exists, unless --replace. " +
         "Requires a running backend (this worktree's, else main's) to read " +

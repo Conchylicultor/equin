@@ -1,5 +1,6 @@
 import { ensureMainWorktreeRoot } from "@plugins/infra/plugins/worktree/server";
 
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import { GIT } from "@plugins/infra/plugins/paths/server";
 import { spawnExpectOk } from "@plugins/infra/plugins/spawn/core";
 
@@ -31,7 +32,7 @@ async function parseGitLog(
       "-C",
       root,
       "log",
-      "--format=__C__%H\x1f%cI\x1f%(trailers:key=Singularity-Push,valueonly)\x1f%(trailers:key=Singularity-Conversation,valueonly)",
+      `--format=__C__%H\x1f%cI\x1f%(trailers:key=${LEGACY_IDS.pushTrailer},valueonly)\x1f%(trailers:key=${LEGACY_IDS.conversationTrailer},valueonly)`,
       "--numstat",
       "--reverse",
       head,
@@ -163,7 +164,7 @@ export async function getCommits(
 }
 
 /**
- * Collapses commits sharing a Singularity-Push trailer into one representative
+ * Collapses commits sharing a push trailer into one representative
  * commit per push group: timestamp of the last commit, line stats summed.
  * Commits without a push id are kept as-is. Never mutates its input (the
  * cached parse).

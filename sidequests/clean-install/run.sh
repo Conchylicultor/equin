@@ -12,7 +12,7 @@
 # --name      VM name. Must start with "si-clean" (safety check below).
 #             Default: si-clean-<YYYYmmdd-HHMMSS>
 # --out       Where logs/summary go. Must NOT be under ~/.singularity.
-#             Default: ~/.singularity-clean-install/<name>
+#             Default: ~/.equin-clean-install/<name>
 # --gui       Open the VM in a window instead of --no-graphics (needed once,
 #             for the interactive Claude Code login — see CLAUDE.md).
 # --keep      Don't stop/delete the VM on success. Combine with --from to
@@ -83,7 +83,7 @@ if [[ -z "$VM_NAME" ]]; then
   VM_NAME="si-clean-$(date +%Y%m%d-%H%M%S)"
 fi
 if [[ -z "$OUT_DIR" ]]; then
-  OUT_DIR="$HOME/.singularity-clean-install/$VM_NAME"
+  OUT_DIR="$HOME/.equin-clean-install/$VM_NAME"
 fi
 
 # ---- safety assertions -------------------------------------------------

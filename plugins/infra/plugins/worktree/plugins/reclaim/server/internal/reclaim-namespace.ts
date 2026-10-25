@@ -108,7 +108,7 @@ export async function reclaimNamespace(
     );
   }
 
-  // Guard 2 — the explicit "never main/central" gate. `central`, `singularity`
+  // Guard 2 — the explicit "never main/central" gate. `central`, the main namespace
   // and `main` can never be served as a composition, so a marker claiming one of
   // them is corrupt provenance, and acting on it would drop the main app's
   // database.

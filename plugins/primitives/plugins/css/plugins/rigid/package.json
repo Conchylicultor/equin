@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-css-rigid",
+  "name": "@equin/plugin-primitives-css-rigid",
   "description": "Rigid-leaf layout primitive: <Rigid> / rigidClass() is the flex child that never shrinks (shrink-0). The missing half of <Fill>, kept a sibling the way <Clip> is to <Scroll>.",
   "private": true,
   "version": "0.0.1"

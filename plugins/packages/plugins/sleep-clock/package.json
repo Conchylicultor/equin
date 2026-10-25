@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-packages-sleep-clock",
+  "name": "@equin/plugin-packages-sleep-clock",
   "private": true,
   "version": "0.0.1",
   "description": "How long the machine slept between two reads: the difference between the OS clock that keeps running through sleep and the one that pauses. Exact, read through bun:ffi on macOS; says so where it cannot tell."

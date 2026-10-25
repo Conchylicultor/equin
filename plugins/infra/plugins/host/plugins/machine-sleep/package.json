@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-infra-host-machine-sleep",
+  "name": "@equin/plugin-infra-host-machine-sleep",
   "private": true,
   "version": "0.0.1",
   "description": "The machine's sleep clock as a live value (machine.sleep): which boot, how long the box has been asleep in total, and when it last woke — published by the backend on wake so a browser can tell a nap from work."

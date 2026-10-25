@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-reports-mutation-errors",
+  "name": "@equin/plugin-reports-mutation-errors",
   "private": true,
   "version": "0.0.1"
 }

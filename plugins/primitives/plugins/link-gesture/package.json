@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-link-gesture",
+  "name": "@equin/plugin-primitives-link-gesture",
   "description": "The browser's link gestures (click here / ⌘-click / middle-click open elsewhere), readable off any control.",
   "private": true,
   "version": "0.0.1"

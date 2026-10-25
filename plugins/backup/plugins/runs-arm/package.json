@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-backup-runs-arm",
+  "name": "@equin/plugin-backup-runs-arm",
   "description": "The backup arm of the unified run space: backup_runs bound into the runs union, its own fields, and the two sections of the backup run-detail pane.",
   "private": true,
   "version": "0.0.1"

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-prototypes-copy-id",
+  "name": "@equin/plugin-apps-prototypes-copy-id",
   "description": "Copy prototype ID button in the prototype detail header.",
   "private": true,
   "version": "0.0.1"

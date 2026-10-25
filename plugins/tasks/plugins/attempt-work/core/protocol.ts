@@ -21,9 +21,9 @@ export type AttemptPending = z.infer<typeof AttemptPendingSchema>;
 export const AttemptWorkSchema = z.object({
   pending: AttemptPendingSchema,
   /** This attempt's commits `main` already contains, found by their
-   *  Singularity-Conversation trailers. Git-measured; cannot lag. */
+   *  conversation trailers. Git-measured; cannot lag. */
   landedCommits: z.number().int().nonnegative(),
-  /** Distinct Singularity-Push trailer values among them — the true push count. */
+  /** Distinct push trailer values among them — the true push count. */
   landedPushes: z.number().int().nonnegative(),
   /** Corroborating ledger evidence (I3). A row PROVES a push; its absence proves
    *  nothing. Only ORed into "landed", never used to conclude "nothing landed" —

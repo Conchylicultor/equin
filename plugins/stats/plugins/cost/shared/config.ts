@@ -3,7 +3,7 @@ import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 
 export const costConfig = defineConfig({
   fields: {
-    singularityOnly: boolField({
+    repoOnly: boolField({
       default: true,
       label: "equin sessions only",
       description:

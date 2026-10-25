@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-infra-deps-updates",
+  "name": "@equin/plugin-infra-deps-updates",
   "version": "0.0.1",
   "private": true,
   "description": "Keeps pinned inputs current, one gated loop for all of them: the Updater contract, the runner (baseline gates, move, candidate gates, retry-to-confirm, verdict, files put back on a regression), the updater registry and the Dependency upgrades automation (weekly by default, configurable) that files one auto-started upgrade task covering every outdated updater."

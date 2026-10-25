@@ -37,7 +37,7 @@ declareRuntimeNamespace(await checkoutNamespace(REPO_ROOT));
 // the job queue) with no `collectContributions` behind them. A `bun test` runs
 // on the desktop, so its providers are the desktop's — the host-service
 // providers among the app's machine halves (`machine.generated.ts`, the
-// committed `singularity` composition). A suite that boots a graph of its own
+// committed main composition). A suite that boots a graph of its own
 // (the PGlite boot test) collects its own providers, which then answer instead.
 //
 // Only the machine halves that PROVIDE a host service are loaded (their barrel

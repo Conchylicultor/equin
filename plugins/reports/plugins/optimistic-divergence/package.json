@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-reports-optimistic-divergence",
+  "name": "@equin/plugin-reports-optimistic-divergence",
   "private": true,
   "version": "0.0.1"
 }

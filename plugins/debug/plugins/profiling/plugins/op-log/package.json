@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-debug-profiling-op-log",
+  "name": "@equin/plugin-debug-profiling-op-log",
   "private": true,
   "version": "0.0.1",
   "description": "Unified op log for every host-contending op (build / push / check / test / e2e): one record, one writer, one reader, one orphan reconciler."

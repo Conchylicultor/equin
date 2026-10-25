@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-data-view-view-core",
+  "name": "@equin/plugin-primitives-data-view-view-core",
   "description": "Type-agnostic named-view-instance engine: instance model + resolver, config-descriptor machinery, debounced write-back, and the editable view-switcher chrome. data-view's render-contract layer consumes it.",
   "private": true,
   "version": "0.0.1"

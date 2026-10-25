@@ -1,3 +1,4 @@
+import { PLUGIN_MANIFEST_KEY } from "@plugins/framework/plugins/plugin-id/core";
 import { readdirSync, type Dirent } from "fs";
 import { dirname, join } from "path";
 import {
@@ -51,12 +52,12 @@ function isIgnoredDir(name: string): boolean {
   );
 }
 
-/** Self-declared SPA/CLI bootstrap root (`package.json` `singularity.compositionRoot`). */
+/** Self-declared SPA/CLI bootstrap root (`package.json` `equin.compositionRoot`). */
 function readCompositionRoot(dir: string): boolean {
   const src = readIfExists(join(dir, "package.json"));
   if (!src) return false;
   try {
-    return JSON.parse(src).singularity?.compositionRoot === true;
+    return JSON.parse(src)[PLUGIN_MANIFEST_KEY]?.compositionRoot === true;
   } catch (err) {
     if (!(err instanceof SyntaxError)) throw err;
     return false;

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-deploy-analytics-dashboard",
+  "name": "@equin/plugin-apps-deploy-analytics-dashboard",
   "description": "Analytics section of a deployment's page: reads the deployed site's analytics report over SSH through the install's own gateway and renders it (range, comparison, KPI tiles, trend chart, ranked panels that filter, and what one visit records) — shown only when the deployment's composition ships the collect plugin.",
   "private": true,
   "version": "0.0.1",

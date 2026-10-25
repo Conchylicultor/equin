@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-infra-worktree-spare-pool",
+  "name": "@equin/plugin-infra-worktree-spare-pool",
   "private": true,
   "version": "0.0.1"
 }

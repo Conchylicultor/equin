@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-text-editor-composer-picker-pill",
+  "name": "@equin/plugin-primitives-text-editor-composer-picker-pill",
   "description": "Picker pill: a pill-shaped trigger reading `icon value(s) chevron` that opens one grouped menu. Several groups in one pill is the fused control — one trigger, one menu.",
   "private": true,
   "version": "0.0.1"

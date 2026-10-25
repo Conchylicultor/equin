@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-fields-avatar-table",
+  "name": "@equin/plugin-fields-avatar-table",
   "version": "0.0.1",
   "private": true,
   "description": "Avatar field type: data-view table cell (icon + color disc) plus the avatarFieldDef authoring helper.",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

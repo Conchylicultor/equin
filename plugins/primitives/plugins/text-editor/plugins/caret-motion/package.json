@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-text-editor-caret-motion",
+  "name": "@equin/plugin-primitives-text-editor-caret-motion",
   "description": "The caret-crossing channel for Lexical editors: a mover that relocates a caret ACROSS something announces it in the direction of travel, and every consumer of a synthesized caret position observes that one command.",
   "private": true,
   "version": "0.0.1",

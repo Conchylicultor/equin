@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-syntax-highlight-overlay-textarea",
+  "name": "@equin/plugin-primitives-syntax-highlight-overlay-textarea",
   "description": "Editable highlighted text: <OverlayTextarea> lays a transparent textarea (visible caret) exactly over an underlay <pre> rendering decorate(value), which sizes the box so the field grows as you type.",
   "private": true,
   "version": "0.0.1"

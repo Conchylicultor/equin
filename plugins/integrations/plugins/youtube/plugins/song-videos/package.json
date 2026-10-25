@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-integrations-youtube-song-videos",
+  "name": "@equin/plugin-integrations-youtube-song-videos",
   "description": "Which YouTube videos are this song? A neutral lookup: sources contribute candidates (a human-synced transcription, a search), merged per video, ranked towards the studio recording, and filtered to the ones that play in an embed.",
   "private": true,
   "version": "0.0.1"

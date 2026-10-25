@@ -9,7 +9,7 @@ import { defineTimer } from "@plugins/infra/plugins/background/plugins/timer/ser
 const VM_STAT_TIMEOUT_MS = 5_000;
 
 // Host-level sampler. Runs only on the main backend (the host is a shared
-// resource — one sampler suffices). Appends to the singularity worktree's
+// resource — one sampler suffices). Appends to the main worktree's
 // health-host.jsonl. Same timer rationale as process-sampler.ts.
 
 const SAMPLE_INTERVAL_MS = 10_000;

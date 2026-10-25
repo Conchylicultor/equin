@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-deploy-analytics-collect",
+  "name": "@equin/plugin-apps-deploy-analytics-collect",
   "description": "Cookieless visit analytics that ship inside a deployed site: the collect/query contracts, closed dimension and family lists, the recorded-field manifest, the ingest endpoint (daily-salted visitor hash, 30-minute visits), the 90-day raw tables, the forever daily totals at every single-filter level, the nightly rollup and the host-only report query.",
   "private": true,
   "version": "0.0.1"

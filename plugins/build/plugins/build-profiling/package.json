@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-build-build-profiling",
+  "name": "@equin/plugin-build-build-profiling",
   "private": true,
   "version": "0.0.1"
 }

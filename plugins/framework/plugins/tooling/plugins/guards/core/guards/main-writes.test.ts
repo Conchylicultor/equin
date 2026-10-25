@@ -119,7 +119,7 @@ describe("main-writes guard", () => {
     test("a sed script whose text contains `..` sequences (the reported false positive)", () => {
       // `path.resolve` used to normalise the `..` inside the SCRIPT and land it
       // under the repo root; the file actually edited is in the worktree.
-      const cmd = `sed -i '' 's|resolve(HERE, "../../../..");|const REPO_ROOT = resolve(HERE, "..");|' cli/singularity.ts`;
+      const cmd = `sed -i '' 's|resolve(HERE, "../../../..");|const REPO_ROOT = resolve(HERE, "..");|' cli/equin-cli.ts`;
       expect(blocks(cmd, WT)).toBe(false);
     });
 

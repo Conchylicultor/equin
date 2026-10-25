@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-tooling-lint-hover-reveal-safety",
+  "name": "@equin/plugin-framework-tooling-lint-hover-reveal-safety",
   "version": "0.0.1",
   "private": true,
   "description": "hover-reveal-safety lint rule: no-uncoupled-hover-reveal"

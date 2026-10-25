@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-cli-doctor",
+  "name": "@equin/plugin-framework-cli-doctor",
   "private": true,
   "version": "0.0.1",
   "description": "The prerequisite doctor: doctor.sh names every missing prerequisite (Xcode CLT/git, mise active, the locked toolchain) in one run, with its fix, and advises on Claude Code (installed and signed in) without failing on it. Run as `mise run doctor` and at the end of every `mise install`; assertPrerequisites() runs it as the first step of `start` and `build`."

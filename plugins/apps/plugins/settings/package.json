@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-settings",
+  "name": "@equin/plugin-apps-settings",
   "description": "Settings app.",
   "private": true,
   "version": "0.0.1"

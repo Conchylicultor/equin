@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-plugin-meta-barrel-import",
+  "name": "@equin/plugin-plugin-meta-barrel-import",
   "description": "Bun runtime stubs for importing web/server barrels outside the browser (docgen, introspection).",
   "private": true,
   "version": "0.0.1"

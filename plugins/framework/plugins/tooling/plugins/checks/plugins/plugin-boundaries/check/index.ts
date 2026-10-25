@@ -7,6 +7,7 @@ import {
   packageNameFor,
   RUNTIME_FOLDERS,
   TESTING_FOLDER,
+  PLUGIN_PACKAGE_PREFIX,
 } from "@plugins/framework/plugins/plugin-id/core";
 import {
   findImports,
@@ -58,7 +59,7 @@ interface PluginDir {
   relPath: string;
   /** Last path segment, e.g. "conversation-view". */
   name: string;
-  /** Self-declared composition root (package.json `singularity.compositionRoot`). */
+  /** Self-declared composition root (package.json `equin.compositionRoot`). */
   compositionRoot: boolean;
 }
 
@@ -128,7 +129,7 @@ const check: Check = {
     const known = await standardPluginDirsIn(repoFiles);
 
     // Composition roots (the SPA bootstrap / CLI entry) self-declare via the
-    // package.json `singularity.compositionRoot` marker. They are exempt from
+    // package.json `equin.compositionRoot` marker. They are exempt from
     // structural conformance (R1 package naming, R3 required barrel, R11 unknown
     // dirs) but still subject to the per-file import grammar (R4–R10).
 
@@ -281,7 +282,7 @@ const check: Check = {
       // R13: which public-barrel names this file takes.
       barrelUses.push(...collectBarrelUses(relFile, src, barrelSet));
 
-      // R7: forbid direct workspace-name imports (`@singularity/plugin-*`).
+      // R7: forbid direct workspace-name imports (`@equin/plugin-*`).
       // Cross-plugin imports must go through `@plugins/...` so R4/R5/R6 can
       // see them; workspace-name imports resolve via node_modules symlinks
       // and silently bypass the boundary system.
@@ -644,7 +645,7 @@ interface Imp {
 function extractWorkspaceImports(rawSrc: string): string[] {
   return findImports(rawSrc)
     .map((i) => i.specifier)
-    .filter((s) => s.startsWith("@singularity/plugin-"));
+    .filter((s) => s.startsWith(PLUGIN_PACKAGE_PREFIX));
 }
 
 function extractRelativeImports(rawSrc: string): string[] {

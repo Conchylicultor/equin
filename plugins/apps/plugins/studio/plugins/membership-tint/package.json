@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-studio-membership-tint",
+  "name": "@equin/plugin-apps-studio-membership-tint",
   "description": "Single source of truth for the membership-state tint + legend (shared by the Explorer membership band and the Studio graph pane).",
   "private": true,
   "version": "0.0.1"

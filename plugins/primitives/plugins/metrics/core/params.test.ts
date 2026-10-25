@@ -9,7 +9,7 @@ import {
 } from "./params";
 
 const specs = {
-  singularityOnly: bool(true),
+  repoOnly: bool(true),
   granularity: enumOf(["file", "dir"], "file"),
   excluded: stringList(["vendor/"]),
 };
@@ -19,7 +19,7 @@ describe("parseParams", () => {
     expect(parseParams(specs, {})).toEqual({
       ok: true,
       values: {
-        singularityOnly: true,
+        repoOnly: true,
         granularity: "file",
         excluded: ["vendor/"],
       },
@@ -28,14 +28,14 @@ describe("parseParams", () => {
 
   test("given values are kept", () => {
     const r = parseParams(specs, {
-      singularityOnly: false,
+      repoOnly: false,
       granularity: "dir",
       excluded: ["a", "b"],
     });
     expect(r).toEqual({
       ok: true,
       values: {
-        singularityOnly: false,
+        repoOnly: false,
         granularity: "dir",
         excluded: ["a", "b"],
       },
@@ -44,7 +44,7 @@ describe("parseParams", () => {
 
   test.each([
     ["an unknown name", { nope: 1 }, /unknown param "nope"/],
-    ["a non-boolean", { singularityOnly: "yes" }, /singularityOnly.*boolean/],
+    ["a non-boolean", { repoOnly: "yes" }, /repoOnly.*boolean/],
     [
       "a value outside the enum",
       { granularity: "line" },
@@ -79,7 +79,7 @@ describe("specs", () => {
 
   test("the wire form names each spec", () => {
     expect(paramSpecsToWire(specs)).toEqual([
-      { id: "singularityOnly", kind: "bool", default: true },
+      { id: "repoOnly", kind: "bool", default: true },
       {
         id: "granularity",
         kind: "enum",
@@ -101,10 +101,10 @@ describe("declarations", () => {
       unit: "usd",
       polarity: "down",
       measure: "flow",
-      params: ["singularityOnly"],
+      params: ["repoOnly"],
     });
     expect(m.id).toBe("cost.spend");
-    expect(m.params).toEqual(["singularityOnly"]);
+    expect(m.params).toEqual(["repoOnly"]);
     expect(Object.isFrozen(m)).toBe(true);
   });
 

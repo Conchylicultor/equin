@@ -50,9 +50,7 @@ describe("watchSubjects", () => {
   });
 
   test("a pgrep pattern", () => {
-    expect(watchSubjects(`pgrep -f "singularity push"`)).toEqual([
-      "proc:singularity push",
-    ]);
+    expect(watchSubjects(`pgrep -f "equin push"`)).toEqual(["proc:equin push"]);
   });
 
   test("kill -0 names the pid", () => {
@@ -138,7 +136,7 @@ describe("classify", () => {
   test("the real loop from conv-1786116592-b70n", () => {
     expect(
       classify(
-        `cat ${TASK} 2>/dev/null | tail -40; pgrep -f "singularity push" >/dev/null && echo running || echo finished`,
+        `cat ${TASK} 2>/dev/null | tail -40; pgrep -f "equin push" >/dev/null && echo running || echo finished`,
       ),
     ).toBe("observe");
   });
@@ -146,7 +144,7 @@ describe("classify", () => {
   test("an until/sleep waiter is an observation, not progress", () => {
     expect(
       classify(
-        `until ! pgrep -f "singularity build" >/dev/null 2>&1; do sleep 5; done`,
+        `until ! pgrep -f "equin build" >/dev/null 2>&1; do sleep 5; done`,
       ),
     ).toBe("observe");
   });
@@ -160,9 +158,9 @@ describe("classify", () => {
   });
 
   test("> /dev/null is not a write", () => {
-    expect(
-      classify(`pgrep -f "singularity build" >/dev/null && echo yes`),
-    ).toBe("observe");
+    expect(classify(`pgrep -f "equin build" >/dev/null && echo yes`)).toBe(
+      "observe",
+    );
   });
 
   test("a writing git subcommand is progress", () => {
@@ -199,7 +197,7 @@ describe("detectPoll", () => {
       firstTrip([
         `cat ${TASK}`,
         `cat ${TASK} | tail -25`,
-        `tail -30 ${TASK}; pgrep -f "singularity push"`,
+        `tail -30 ${TASK}; pgrep -f "equin push"`,
         `wc -l ${TASK}`,
       ]),
     ).toBe(3);

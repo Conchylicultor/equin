@@ -88,7 +88,7 @@ export function refuse(message: string): never {
 // is a CLI process: it declares no runtime namespace, and the value it wants is
 // "which app does the checkout I was invoked from own", which is exactly what
 // `checkoutNamespace` answers. It used to read the environment, which answered
-// `singularity` from every worktree — so a deploy launched from a worktree read
+// the main namespace from every worktree — so a deploy launched from a worktree read
 // main's deployment rows and main's server registry.
 //
 // Memoized because it costs one `git` spawn and is asked on every endpoint call.

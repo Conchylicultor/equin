@@ -72,7 +72,7 @@ exactly that reason.
 
 ## A run has TARGETS, not a target
 
-`build_runs.targets` is a `text[]` of composition ids: `{singularity}` for a
+`build_runs.targets` is a `text[]` of composition ids: `{<main composition id>}` for a
 plain build of this checkout's own app, or the ids of a
 `./equin build --composition a b`. One invocation is one shared build — one
 install, one codegen, one checks pass, one transcript, one profile, one verdict —

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-ui-tokens-density",
+  "name": "@equin/plugin-ui-tokens-density",
   "private": true,
   "version": "0.0.1",
   "description": "Density token group (padding intents) with switchable presets."

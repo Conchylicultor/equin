@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-fields-bool-text-cast",
+  "name": "@equin/plugin-fields-bool-text-cast",
   "version": "0.0.1",
   "private": true,
   "description": "Boolean field type: server text→typed SQL cast capability — presents the raw TEXT storage column as ::boolean for server-delegated DataView filter/sort.",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

@@ -9,9 +9,11 @@ An automated browser session stamps two headers on every request it issues.
 `fetch` calls too — one edit marks every e2e script, every future one, and every
 ad-hoc `screenshot.ts --click` drive, with nothing to opt into.
 
+(`<prefix>` is `LEGACY_IDS.headerPrefix`: a tab open across a deploy keeps sending the old spelling.)
+
 ```
-x-singularity-origin: agent
-x-singularity-origin-source: e2e:runs-surface
+<prefix>origin: agent
+<prefix>origin-source: e2e:runs-surface
 ```
 
 Read them with `originOf(req)`; send them with `agentOriginHeaders(source)`. A
@@ -38,7 +40,7 @@ endpoint-built handlers on a write route, so no raw handler can skip it.
 Worktree deploys are unchanged. Design:
 [`research/2026-10-22-global-main-read-only-for-agent-sessions.md`](../../../../research/2026-10-22-global-main-read-only-for-agent-sessions.md).
 
-`UNREVERTED_WRITE_HEADER` (`x-singularity-unreverted-write`) is the third
+`UNREVERTED_WRITE_HEADER` (`<prefix>unreverted-write`) is the third
 header: `fetchEndpoint` stamps it on every write to an endpoint that does not
 declare `agentReverted` — "this request records nothing an agent-write revert
 undoes". The agent browser's write drain does not wait for such a request
@@ -90,9 +92,8 @@ own server half.)
 ## Plugin reference
 
 - Description: Who caused a request: the two provenance headers an automated browser session stamps on every request it issues, the WriteOrigin type a durable write records, and the single reading of those headers. A leaf — string literals and one Request read, no node:*, no db — so the e2e harness that SETS the headers and the server plugins that ACT on them share one spelling.
-- Cross-plugin:
-  - Imported by: `infra/endpoints`
 - Core:
+  - Uses: `framework/product-name.LEGACY_IDS`
   - Exports (types): `WriteOrigin`
   - Exports (values):
     - `AGENT_ORIGIN`
@@ -102,6 +103,8 @@ own server half.)
     - `originOf`
     - `systemOrigin`
     - `UNREVERTED_WRITE_HEADER`
+- Cross-plugin:
+  - Imported by: `infra/endpoints`
 - Sub-plugins:
   - **`agent-write-ledger`** — Shared agent-write ledger: defineAgentWriteLedger lets a domain snapshot the files an agent-origin request is about to overwrite (first write wins) and put them back on revert, skipping anything a…
 

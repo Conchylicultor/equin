@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-page-math",
+  "name": "@equin/plugin-page-math",
   "description": "Umbrella for KaTeX math in the page editor: block-level equations, inline math, and the shared renderer.",
   "private": true,
   "version": "0.0.1"

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework",
+  "name": "@equin/plugin-framework",
   "description": "Umbrella for framework primitives: web plugin SDK, server, central",
   "private": true,
   "version": "0.0.1"

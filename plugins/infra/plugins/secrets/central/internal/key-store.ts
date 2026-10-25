@@ -8,8 +8,9 @@ import {
 import { randomBytes } from "node:crypto";
 import { keyPath, secretsDir, storePath } from "./paths";
 import { SecretsKeychainLockedError } from "@plugins/infra/plugins/secrets/core";
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 
-const KEYCHAIN_SERVICE = "singularity";
+const KEYCHAIN_SERVICE = LEGACY_IDS.keychainService;
 const KEYCHAIN_ACCOUNT = "secrets-aes-256-gcm-v1";
 
 let cached: Buffer | null = null;

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-slot-declaration",
+  "name": "@equin/plugin-framework-slot-declaration",
   "version": "0.0.1",
   "private": true,
   "description": "The slot self-description + declaration contract: SlotMeta (what kind of slot, and whether it is reorderable), the created-at-construction slot set, and the one normalisation of a plugin's `slots` record declaration. A leaf — it imports no React — so the build-time collectors can read the contract without pulling the web runtime."

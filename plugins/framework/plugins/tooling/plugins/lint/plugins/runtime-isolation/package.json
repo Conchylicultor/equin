@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-tooling-lint-runtime-isolation",
+  "name": "@equin/plugin-framework-tooling-lint-runtime-isolation",
   "version": "0.0.1",
   "private": true,
   "description": "runtime-isolation lint rule: no-deep-own-folder-import"

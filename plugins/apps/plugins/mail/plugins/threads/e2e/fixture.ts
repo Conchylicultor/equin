@@ -8,7 +8,7 @@
  * can never touch a real thread; opening a fixture first sweeps what a killed
  * run left behind (every id under the `e2e-` prefix).
  *
- * It refuses main (`singularity`): seeding writes into the database the
+ * It refuses main: seeding writes into the database the
  * backend serves, and main's is the user's real mailbox. The account it seeds
  * for is the one the app scopes the list to, read from the `mailAccount` value
  * over HTTP rather than restated as SQL.
@@ -17,6 +17,7 @@
  * plain `pg.Pool` (the e2e runtime reaches only `core` / `e2e` barrels) — the
  * shape `database/admin/e2e/fork-bench.ts` uses.
  */
+import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
 import { randomBytes } from "node:crypto";
 import { Pool } from "pg";
 import {
@@ -67,7 +68,7 @@ function connString(database: string): string {
 
 export async function openThreadFixture(): Promise<ThreadFixture> {
   const namespace = String(targetNamespace());
-  if (namespace === "singularity") {
+  if (namespace === MAIN_WORKTREE_NAME) {
     throw new Error(
       "refusing to seed synthetic threads into main's mailbox — run this against a worktree deploy",
     );

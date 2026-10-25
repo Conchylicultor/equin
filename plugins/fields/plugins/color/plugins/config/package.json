@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-fields-color-config",
+  "name": "@equin/plugin-fields-color-config",
   "version": "0.0.1",
   "private": true,
   "description": "Color field type: config-render capability (hex/oklch popover picker) plus the colorField factory.",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

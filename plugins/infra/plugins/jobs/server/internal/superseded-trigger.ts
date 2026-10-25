@@ -2,6 +2,7 @@ import { sha256Hex } from "@plugins/packages/plugins/string-hash/core";
 import { escapeLiteral, type PoolClient } from "pg";
 import { z } from "zod";
 import { queryRows } from "@plugins/database/plugins/sql-rows/core";
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 
 // The one spelling of the flag our trigger writes into graphile's own `flags`
 // column when graphile RETIRES a row that is still locked — the moment a newer
@@ -14,7 +15,7 @@ import { queryRows } from "@plugins/database/plugins/sql-rows/core";
 // graphile reads `flags` only when `forbiddenFlags` is configured, and this repo
 // configures none; a retired row also has `attempts = max_attempts`, so it is
 // never fetched again anyway. See jobs/CLAUDE.md, "Superseded rows".
-export const SUPERSEDED_FLAG = "singularity.superseded";
+export const SUPERSEDED_FLAG = `${LEGACY_IDS.dbObjectPrefix}.superseded`;
 
 // ── Marking a row superseded at the one moment it can be told apart ───────────
 //
@@ -43,10 +44,10 @@ export const SUPERSEDED_FLAG = "singularity.superseded";
 // worktree fork (which copies that schema's DDL and drops only its data — see
 // `ExcludeSchemaDataFromFork` in `../index.ts`) is born with it installed.
 
-const FUNCTION_NAME = "singularity_mark_superseded";
+const FUNCTION_NAME = `${LEGACY_IDS.dbObjectPrefix}_mark_superseded`;
 /** Exported for the regression suite, which drops it out of band to prove a
  * missing trigger is reinstalled. */
-export const SUPERSEDED_TRIGGER_NAME = "singularity_mark_superseded";
+export const SUPERSEDED_TRIGGER_NAME = `${LEGACY_IDS.dbObjectPrefix}_mark_superseded`;
 const TRIGGER_NAME = SUPERSEDED_TRIGGER_NAME;
 
 // `escapeLiteral` rather than a bound parameter because this is DDL: a function

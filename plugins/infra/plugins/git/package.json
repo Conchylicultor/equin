@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-infra-git",
+  "name": "@equin/plugin-infra-git",
   "description": "Umbrella for the two plugins that answer 'has git state moved, and must I read it again?': the ref watcher that reports every advance, and the signature-keyed memo that skips a gated recompute when a cheap probe says nothing changed.",
   "private": true,
   "version": "0.0.1"

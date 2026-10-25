@@ -41,7 +41,7 @@ export const buildRunDebouncedJob = defineJob({
     // ONE invocation with N targets, never N invocations: one install, one
     // codegen, one checks pass, one transcript, one `build_runs` row with N
     // chips. Kept separate from main's own build on purpose — a run whose
-    // `targets` were `{singularity, sonata}` would not match
+    // `targets` were `{<main composition id>, sonata}` would not match
     // `lastClosedAttempt`'s equality predicate, so main's reconciler would
     // conclude main was never built for that commit and build it again.
     if (decision.compositions.length > 0) {

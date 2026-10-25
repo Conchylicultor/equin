@@ -16,7 +16,7 @@
  * The preset clicks write the "All" view's sort and filter into this deploy's
  * library view config; the harness's agent-write ledger (`withBrowser`) puts
  * the file back when the run ends. The play is real: the song keeps it — so
- * the script refuses main (`singularity`), whose play stats are the user's,
+ * the script refuses main, whose play stats are the user's,
  * and runs against a worktree deploy, whose database is a throwaway fork.
  *
  * It reads the whole library in one window (`limit` = the collection's
@@ -28,6 +28,7 @@
  * Manual only — nothing runs this automatically.
  *   ./equin run plugins/apps/plugins/sonata/plugins/library/e2e/library-live-sort.ts [--headed]
  */
+import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
 import type { Page } from "playwright";
 import {
   arg,
@@ -40,7 +41,7 @@ import {
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 
-if (String(targetNamespace()) === "singularity") {
+if (String(targetNamespace()) === MAIN_WORKTREE_NAME) {
   throw new Error(
     "refusing to record a play on main — its play stats are the user's; run this against a worktree deploy",
   );

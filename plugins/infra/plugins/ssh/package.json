@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-infra-ssh",
+  "name": "@equin/plugin-infra-ssh",
   "private": true,
   "version": "0.0.1"
 }

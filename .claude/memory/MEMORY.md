@@ -1,7 +1,7 @@
 - [Understand the why](feedback_understand_why.md) — Always ask about reasoning/context before implementing; v1 experience holds non-obvious considerations
 - [Gateway design](project_gateway_design.md) — Gateway multiplexes agent worktree instances behind port 9000; core architectural piece
 - [Vision: Notion-like composable apps](project_vision_self_evolving_os.md) — Unified surface where agents compose per-user apps from plugin building blocks (Notion-meets-WeChat); agent manager is one composition
-- [Run singularity CLI](feedback_singularity_cli.md) — Always run ./equin build after code changes to deploy
+- [Run the CLI after building](feedback_equin_cli.md) — Always run ./equin build after code changes to deploy
 - [Never push without permission](feedback_never_push.md) — Never git push or equin push without explicit user instruction
 - [Push means CLI](feedback_push_means_cli.md) — "push" always means ./equin push, never raw git commands
 - [Components folder](feedback_components_folder.md) — Plugin React components go in web/components/, not inline in index.ts

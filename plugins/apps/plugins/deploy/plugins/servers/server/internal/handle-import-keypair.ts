@@ -1,3 +1,4 @@
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
@@ -23,7 +24,7 @@ export const handleImportKeypair = implement(
     // clause targets one stable marker whatever the key's provenance.
     const publicKey = await derivePublicKey(
       body.privateKey,
-      `singularity-deploy-${params.id}`,
+      `${LEGACY_IDS.deployKeyCommentPrefix}${params.id}`,
     ).catch(rejectInvalidKey);
 
     return toServer(

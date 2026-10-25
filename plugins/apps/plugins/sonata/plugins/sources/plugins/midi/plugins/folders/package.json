@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-sonata-sources-midi-folders",
+  "name": "@equin/plugin-apps-sonata-sources-midi-folders",
   "description": "Sonata MIDI watched folders — auto-import .mid/.midi files from configured directories into the library, with source-deleted badging and boot reconcile.",
   "private": true,
   "version": "0.0.1"

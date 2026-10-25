@@ -9,7 +9,7 @@ curl -fsSL https://raw.githubusercontent.com/Conchylicultor/singularity/main/ins
 ```
 
 Or `./install.sh` from inside a clone or fork you already have. Options:
-`--dir <path>` (default `~/singularity`), `--repo <url>` (your fork),
+`--dir <path>` (default `~/` + `LEGACY_IDS.defaultCheckoutDir`), `--repo <url>` (your fork),
 `--no-shell-rc`; piped, pass them after `bash -s --`. It runs the steps
 below (the Claude Code sign-in last, offered once the app is up), skipping
 whatever is already done, so re-running it resumes
@@ -36,7 +36,7 @@ curl -fsSL https://claude.ai/install.sh | bash
 claude auth login
 
 # 4. The repo, and its toolchain.
-git clone <repo url> singularity && cd singularity
+git clone <repo url> <dir> && cd <dir>
 mise trust && mise install   # trust this checkout's mise.toml, then install
 
 # 5. The app.
@@ -58,23 +58,25 @@ Don't install Bun or Go another way (Homebrew included): a copy outside mise
 bypasses `mise.lock`, and the build's `toolchain:resolved` check rejects a
 release other than the locked one.
 
-**Do not run as root.** Postgres' `initdb` refuses to run as the root OS user, so the embedded cluster — and therefore every backend behind it — cannot start. `./equin start` and a released bundle's `launch` both refuse outright rather than fail downstream. This bites on fresh servers in particular: the deploy plugin defaults `sshUser` to `root`, so create a non-root user and run as them (`adduser --disabled-password --gecos '' singularity`, `chown -R` the install dir, then `su - singularity`).
+**Do not run as root.** Postgres' `initdb` refuses to run as the root OS user, so the embedded cluster — and therefore every backend behind it — cannot start. `./equin start` and a released bundle's `launch` both refuse outright rather than fail downstream. This bites on fresh servers in particular: the deploy plugin defaults `sshUser` to `root`, so create a non-root user and run as them (`adduser --disabled-password --gecos '' equin`, `chown -R` the install dir, then `su - equin`).
 
 Postgres needs no install. `bun install` brings the server (`embedded-postgres` ships `postgres` / `initdb` / `pg_ctl`) and the client tools the app uses to fork and back up databases (`pg_dump` / `pg_restore`, from [`client-tools`](../plugins/database/plugins/client-tools/CLAUDE.md)). Both come from the same Postgres release.
 
 The app is then at <http://equin.localhost:9000>. `start` is a one-time,
 system-level step. On macOS it registers the gateway with launchd
-(`~/Library/LaunchAgents/dev.singularity.gateway.plist`), so it comes back on
+(`~/Library/LaunchAgents/<gateway-label>.plist`), so it comes back on
 its own at every login — after a reboot too — and is relaunched if it crashes;
 the gateway then brings Postgres and the app back up. `./equin stop` stops
 it until the next login, and `./equin stop --disable` also stops it
 starting at login. On Linux it is a systemd user unit
-(`~/.config/systemd/user/dev.singularity.gateway.service`) that starts at boot,
+(`~/.config/systemd/user/<gateway-label>.service`) that starts at boot,
 nobody logged in — it needs lingering (`sudo loginctl enable-linger $USER`,
 which `install.sh` enables). The gateway listens on loopback only
 (`127.0.0.1` and `::1`); `SINGULARITY_LISTEN=:9000 ./equin start` opens it on
 every interface. Elsewhere (no launchd, no systemd)
 the gateway does not survive a reboot: run `./equin start` again after one.
+
+(`<gateway-label>` is the gateway's launchd label / systemd unit name, `LEGACY_IDS.launchdLabel` in `framework/product-name`.)
 
 **Chromium is not part of the install.** It is an on-demand dependency
 ([`infra/deps`](../plugins/infra/plugins/deps/CLAUDE.md)), installed (~600 MB)
@@ -90,9 +92,9 @@ one root command that installs them (Playwright's own `install-deps chromium`).
 
 equin ships an embedded Postgres 18 cluster, supervised by the gateway — see [`plugins/database/`](../plugins/database/CLAUDE.md). Binaries come from `@embedded-postgres/<platform>` (installed via `bun install`); `initdb` runs on first start, the cluster lives in `~/.singularity/postgres/data-pg18/`, and `postgres` listens on a Unix socket at `~/.singularity/postgres/socket` on port `5433`.
 
-The base database is called `singularity`, and the script that starts the cluster creates it — empty, on every start, so you never create it yourself and a deleted one comes back. The first backend to boot against it applies the migrations.
+The base database (`LEGACY_IDS.pgBaseDatabase`) is created by the script that starts the cluster — empty, on every start, so you never create it yourself and a deleted one comes back. The first backend to boot against it applies the migrations.
 
-Each conversation (worktree) gets its own database inside the same cluster, forked from `singularity` at conversation-creation time via `pg_dump | pg_restore`. The default user is `singularity` with peer/trust auth on the Unix socket — no password to manage.
+Each conversation (worktree) gets its own database inside the same cluster, forked from the base database at conversation-creation time via `pg_dump | pg_restore`. The default user (`LEGACY_IDS.pgUser`) has peer/trust auth on the Unix socket — no password to manage.
 
 ### Using system PG instead of embedded
 
@@ -111,11 +113,11 @@ Edit `~/.singularity/state/db-config/database.json` (auto-generated on first `./
 
 An empty `services` array disables the gateway's embedded-PG supervisor. The `connection` block tells the server and CLI how to reach your system PG. Then restart the gateway with `./equin start --force`.
 
-In this mode the cluster is yours, not the app's, so nothing provisions inside it: you install and run a Postgres 18 server yourself and create the `singularity` database (on macOS, for example, `brew install postgresql@18 && brew services start postgresql@18 && createdb singularity`). The app still forks and backs up with its own bundled client tools, which are Postgres 18.
+In this mode the cluster is yours, not the app's, so nothing provisions inside it: you install and run a Postgres 18 server yourself and create the base database (`LEGACY_IDS.pgBaseDatabase`) (on macOS, for example, `brew install postgresql@18 && brew services start postgresql@18 && createdb <base database>`). The app still forks and backs up with its own bundled client tools, which are Postgres 18.
 
 ## Git hooks
 
-`mise install` sets them (its `setup` task runs `git config core.hooksPath .githooks`). `core.hooksPath` lives in `.git/config` (not tracked), so it cannot be committed, and one setting covers every worktree of the clone. The `.githooks/prepare-commit-msg` hook auto-stamps commits made inside a Claude pane with a `Singularity-Conversation` trailer, so the server can attribute commits to the conversation that authored them.
+`mise install` sets them (its `setup` task runs `git config core.hooksPath .githooks`). `core.hooksPath` lives in `.git/config` (not tracked), so it cannot be committed, and one setting covers every worktree of the clone. The `.githooks/prepare-commit-msg` hook auto-stamps commits made inside a Claude pane with a conversation trailer, so the server can attribute commits to the conversation that authored them.
 
 ## If you cloned someone else's repo
 

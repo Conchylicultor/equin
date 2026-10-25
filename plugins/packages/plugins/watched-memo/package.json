@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-packages-watched-memo",
+  "name": "@equin/plugin-packages-watched-memo",
   "private": true,
   "version": "0.0.1",
   "description": "Watch-authoritative result memo: createWatchedMemo({ name, facts, signatureOf, compute, changes }) keeps one value per key fresh from its change source while anyone watches it — every change runs one coalesced pass (facts, then compute over them), a get while watched is the held value with no probe — and falls back, unwatched or after a failed pass, to a signature probe whose miss single-flights compute over the probe's own facts."

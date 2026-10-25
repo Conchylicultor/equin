@@ -64,7 +64,7 @@ export function readGitInvocation(call: ShellCall): GitInvocation {
 const CLI_ENTRY = "plugins/framework/plugins/cli/bin/index.ts";
 
 export type RepoKind =
-  | { kind: "singularity"; root: string }
+  | { kind: "equin"; root: string }
   | { kind: "other"; root: string }
   | { kind: "not-a-repo" };
 
@@ -77,10 +77,10 @@ export function classifyRepo(dir: string): RepoKind {
   let cur = resolve(dir);
   for (;;) {
     if (existsSync(join(cur, ".git"))) {
-      const isSingularity =
+      const isEquinRepo =
         CLI_NAMES.some((name) => existsSync(join(cur, name))) &&
         existsSync(join(cur, CLI_ENTRY));
-      return { kind: isSingularity ? "singularity" : "other", root: cur };
+      return { kind: isEquinRepo ? "equin" : "other", root: cur };
     }
     const parent = dirname(cur);
     if (parent === cur) return { kind: "not-a-repo" };

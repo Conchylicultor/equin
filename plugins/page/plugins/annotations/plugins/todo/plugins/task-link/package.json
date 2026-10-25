@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-page-annotations-todo-task-link",
+  "name": "@equin/plugin-page-annotations-todo-task-link",
   "description": "The task one TODO card dispatched an agent onto.",
   "private": true,
   "version": "0.0.1"

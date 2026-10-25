@@ -1,6 +1,7 @@
 import { existsSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { resolveGitDir } from "./git-dir";
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 
 /**
  * The marker kinds the `.gitattributes` merge drivers drop when they
@@ -15,7 +16,7 @@ export const MERGE_MARKER_KINDS = ["generated", "migrations"] as const;
 export type MergeMarkerKind = (typeof MERGE_MARKER_KINDS)[number];
 
 export function mergeMarkerDir(root: string): string {
-  return join(resolveGitDir(root), "singularity-merge-markers");
+  return join(resolveGitDir(root), LEGACY_IDS.mergeMarkersDir);
 }
 
 /**

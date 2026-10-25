@@ -4,6 +4,9 @@ import {
   renderMergeSnapshotMigration,
 } from "@plugins/database/plugins/migrations/core";
 import { findPhaseErrors, type MigrationFile } from "./migration-phases-valid";
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
+
+const MARKER = LEGACY_IDS.migrationMarker;
 
 const DATA = "20260902_000000_dddddddd__remap_icons.sql";
 const DATA_ID = "20260902_000000__remap_icons";
@@ -11,9 +14,9 @@ const SCHEMA = "20260903_000000_eeeeeeee__swap_icons.sql";
 
 function phased(expand: string, contract: string, claims: string[]): string {
   return (
-    `-- singularity:phase expand\n${expand}\n` +
-    `-- singularity:phase contract\n${contract}\n` +
-    `-- singularity:claims\n${claims.map((c) => `-- ${c}\n`).join("")}`
+    `-- ${MARKER}:phase expand\n${expand}\n` +
+    `-- ${MARKER}:phase contract\n${contract}\n` +
+    `-- ${MARKER}:claims\n${claims.map((c) => `-- ${c}\n`).join("")}`
   );
 }
 
@@ -59,7 +62,7 @@ describe("findPhaseErrors", () => {
   });
 
   test("a malformed phased file is refused", () => {
-    const broken = "-- singularity:phase expand\nDROP INDEX i;\n";
+    const broken = `-- ${MARKER}:phase expand\nDROP INDEX i;\n`;
     expect(findPhaseErrors([schema(SCHEMA, broken)], new Set())).toEqual([
       expect.stringContaining("malformed"),
     ]);
@@ -78,7 +81,7 @@ describe("findPhaseErrors", () => {
 
   test("a merge node carrying SQL is refused", () => {
     const merge =
-      "-- singularity:snapshot id=33333333-3333-5333-8333-333333333333 parents=11111111-1111-4111-8111-111111111111,22222222-2222-4222-8222-222222222222\n" +
+      `-- ${MARKER}:snapshot id=33333333-3333-5333-8333-333333333333 parents=11111111-1111-4111-8111-111111111111,22222222-2222-4222-8222-222222222222\n` +
       phased('ALTER TABLE "agents" ADD COLUMN "icon" text;', "", []);
     expect(findPhaseErrors([schema(SCHEMA, merge)], new Set())).toEqual([
       expect.stringContaining("a merge node must be a no-op"),
@@ -87,7 +90,7 @@ describe("findPhaseErrors", () => {
 
   test("a superseded hash still on disk is refused, published or not", () => {
     const AUTHORED = "20260901_000000_38bc8c97__add_icon.sql";
-    const merged = `-- singularity:supersedes 38bc8c97\n${GOOD}`;
+    const merged = `-- ${MARKER}:supersedes 38bc8c97\n${GOOD}`;
     const files = [
       schema(
         AUTHORED,

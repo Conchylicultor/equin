@@ -35,7 +35,7 @@ const check: Check = {
     // with an explicit `pluginId`, so an excluded plugin's directive arrives via a
     // bundled barrel.
     //
-    // Membership is `singularity`'s resolved closure — the one answer to "is this
+    // Membership is the main composition's resolved closure — the one answer to "is this
     // plugin in the app?", the same set every registry is filtered by.
     //
     // The server half is the server/ barrel OR the machine/ one: the desktop

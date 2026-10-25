@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-text-editor-inline-chip",
+  "name": "@equin/plugin-primitives-text-editor-inline-chip",
   "private": true,
   "version": "0.0.1",
   "description": "Inline chips for every text surface: the inlineChip() declaration, its module registry, the one generic Lexical node that renders any declared chip, and the per-surface token extension a Lexical host registers.",

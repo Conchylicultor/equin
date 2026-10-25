@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-debug-profiling-op-log-op-store",
+  "name": "@equin/plugin-debug-profiling-op-log-op-store",
   "private": true,
   "version": "0.0.1",
   "description": "DB read model of the unified op log: every serving backend ingests op-log.jsonl into op_log_ops (one folded row per op) behind a durable byte cursor, reconciles dead in-flight ops, and serves opsInFlight / opsHistory as live collections."

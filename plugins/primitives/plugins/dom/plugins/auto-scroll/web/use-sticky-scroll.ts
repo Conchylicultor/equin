@@ -1,3 +1,4 @@
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import {
   createElement,
   useCallback,
@@ -103,12 +104,14 @@ const positionStore = defineStore<PersistedMode>({
       offset: z.number().optional(),
     }),
   ]),
-  // Written before the primitive as `singularity:draft:<persistKey>:<tab>`.
+  // Written before the primitive as `<prefix>:draft:<persistKey>:<tab>`.
   // Positions are not worth carrying over: the old entries are only deleted.
   legacy: {
     match: (k) =>
-      k.startsWith("singularity:draft:conversation-scroll:") ||
-      k.startsWith("singularity:draft:subagent-scroll:"),
+      k.startsWith(
+        `${LEGACY_IDS.browserKeyPrefix}:draft:conversation-scroll:`,
+      ) ||
+      k.startsWith(`${LEGACY_IDS.browserKeyPrefix}:draft:subagent-scroll:`),
   },
 });
 const PERSIST_DEBOUNCE_MS = 150;

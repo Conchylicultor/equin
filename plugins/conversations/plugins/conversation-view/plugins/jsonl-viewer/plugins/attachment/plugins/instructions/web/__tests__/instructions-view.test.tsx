@@ -65,7 +65,7 @@ const { InstructionsView } = await import("../components/instructions-view");
 afterEach(cleanup);
 
 /** The real payloads carry an absolute path under the user's home. */
-const MEMORY = `${HOME_DIR}/.claude/projects/singularity/memory/MEMORY.md`;
+const MEMORY = `${HOME_DIR}/.claude/projects/equin/memory/MEMORY.md`;
 
 function event(attachment: unknown): AttachmentEvent {
   return {

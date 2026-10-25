@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-events-event-date",
+  "name": "@equin/plugin-apps-events-event-date",
   "private": true,
   "version": "0.0.1",
   "description": "The event date format: a schema that states a recurrence once, its pure expander, its human label, its anchor-independent identity key, and the prompt fragment that documents it to the model — one folder so spec, parser and expander cannot drift."

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-tooling-checks-tsconfig-alias-single-owner",
+  "name": "@equin/plugin-framework-tooling-checks-tsconfig-alias-single-owner",
   "version": "0.0.1",
   "private": true
 }

@@ -1,6 +1,6 @@
 # display
 
-The **human-facing spelling** of the singularity data dirs — the `~/…` form a
+The **human-facing spelling** of the data dirs — the `~/…` form a
 message, a UI empty state, or an agent prompt writes when it tells somebody
 where a directory is. The parent `paths` plugin owns the same directories as
 *resolved absolute paths*; this owns how they are *written*.
@@ -33,7 +33,7 @@ paths, and nobody else.
 
 ## Plugin reference
 
-- Description: The human-facing spelling of the singularity data dirs (the `~/…` form a message, an empty state, or an agent prompt writes). Web-safe by construction: string literals only, no node:* and no homedir() — so the browser can name a directory the server resolves.
+- Description: The human-facing spelling of the data dirs (the `~/…` form a message, an empty state, or an agent prompt writes). Web-safe by construction: string literals only, no node:* and no homedir() — so the browser can name a directory the server resolves.
 - Exemptions:
   - Exempts itself from: `paths:no-hardcoded-paths` — `core/internal/display.ts` (sanctioned)
 - Core:

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-infra-host-fs",
+  "name": "@equin/plugin-infra-host-fs",
   "description": "The one host-filesystem API: list / stat / complete / text / raw / volume reads of any path the user account can read, with typed missing / denied / not-a-dir results, plus Open with default app / Reveal in Finder.",
   "private": true,
   "version": "0.0.1"

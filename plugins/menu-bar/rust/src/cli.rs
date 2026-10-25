@@ -95,7 +95,7 @@ mod tests {
     fn tray_defaults_to_main() {
         assert_eq!(
             parse(&args(&["tray"])),
-            Ok(Mode::Tray { namespace: "singularity".into() })
+            Ok(Mode::Tray { namespace: MAIN_NAMESPACE.into() })
         );
         assert_eq!(
             parse(&args(&["tray", "--namespace", "att-1-x"])),

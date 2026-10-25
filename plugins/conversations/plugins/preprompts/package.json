@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-conversations-preprompts",
+  "name": "@equin/plugin-conversations-preprompts",
   "private": true,
   "version": "0.0.1"
 }

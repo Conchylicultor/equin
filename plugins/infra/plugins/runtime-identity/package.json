@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-infra-runtime-identity",
+  "name": "@equin/plugin-infra-runtime-identity",
   "version": "0.0.1",
   "private": true,
   "description": "What the spawner hands a PROCESS at its entry point, declared once there and read everywhere else: the namespace it runs as (`--namespace`, from the gateway or an exec child's spawner) and, for a serving backend, the Unix socket it serves on (`--socket`). Asking for one that was never declared throws."

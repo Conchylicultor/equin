@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-folder-picker",
+  "name": "@equin/plugin-primitives-folder-picker",
   "description": "Folder-picker primitive: browse the host filesystem (through infra/host-fs's list endpoint) and pick a directory; the FolderPickerPopover widget pairs a typeable path input with a breadcrumb browser.",
   "private": true,
   "version": "0.0.1"

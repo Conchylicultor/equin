@@ -12,7 +12,7 @@ import wave
 
 import numpy as np
 
-from singularity_audio.decode import decode_mono
+from equin_audio.decode import decode_mono
 
 RATE = 44100
 

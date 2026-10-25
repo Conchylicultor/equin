@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-review-plugin-changes-api-changes",
+  "name": "@equin/plugin-review-plugin-changes-api-changes",
   "private": true,
   "version": "0.0.1",
   "description": "API surface diff section for per-plugin review cards."

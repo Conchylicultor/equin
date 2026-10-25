@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-page-prompt-block",
+  "name": "@equin/plugin-page-prompt-block",
   "description": "The `prompt` page block: ordinary block text plus a launch control that turns it into an agent run, and chips for the conversations it launched.",
   "private": true,
   "version": "0.0.1"

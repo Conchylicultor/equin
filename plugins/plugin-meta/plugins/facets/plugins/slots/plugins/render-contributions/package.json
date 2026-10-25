@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-plugin-meta-facets-slots-render-contributions",
+  "name": "@equin/plugin-plugin-meta-facets-slots-render-contributions",
   "description": "Aggregated cross-plugin slots table in the Studio Contributions view.",
   "private": true,
   "version": "0.0.1"

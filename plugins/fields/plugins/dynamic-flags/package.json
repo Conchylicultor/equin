@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-fields-dynamic-flags",
+  "name": "@equin/plugin-fields-dynamic-flags",
   "version": "0.0.1",
   "private": true,
   "description": "Dynamic flags field type: identity only — a set of on/off switches keyed by a runtime-resolved set of string options, each with its own default.",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

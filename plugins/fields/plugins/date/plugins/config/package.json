@@ -1,7 +1,7 @@
 {
-  "name": "@singularity/plugin-fields-date-config",
+  "name": "@equin/plugin-fields-date-config",
   "version": "0.0.1",
   "private": true,
   "description": "Date field factory (dateField) for building field records.",
-  "singularity": { "collapsed": true }
+  "equin": { "collapsed": true }
 }

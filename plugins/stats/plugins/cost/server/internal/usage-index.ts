@@ -69,7 +69,7 @@ export interface DailyRow {
   totalCost: number;
 }
 
-/** Per-session rollup (one per file); `isSingularity` is added by the caller. */
+/** Per-session rollup (one per file); `isRepo` is added by the caller. */
 export interface SessionRollup {
   sessionId: string;
   projectDir: string;

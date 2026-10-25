@@ -37,7 +37,7 @@ RULES:
 
 Agents have access to MCP tools provided by the equin server. Key tools:
 
-- `query_db` — Read-only SQL query against the worktree's PostgreSQL database. For **debugging and inspection only** — mutations are rejected at the DB level. Defaults to the agent's own worktree DB; pass `database` to query another worktree or `"singularity"` for main.
+- `query_db` — Read-only SQL query against the worktree's PostgreSQL database. For **debugging and inspection only** — mutations are rejected at the DB level. Defaults to the agent's own worktree DB; pass `database` to query another worktree or `"equin"` for main.
 - `add_task` — **When the user asks to "add a task", always use this MCP tool.** Never use the TaskCreate tool (that is for the agent's own internal task tracking during implementation, not for adding tasks to the equin task system).
 - `read_page` / `edit_page` / `write_agent_note` — pages, shaped like `Read` / `Edit` / `Write`. **These write to the SHARED instance (normally main), not your worktree** — the opposite default from `query_db`, because pages are prod documents you edit collaboratively with the user, not something to test on. **You may only write INSIDE an agent-authored block: an `<agent-inline>` card, or an `<agent-page>`.** `edit_page` takes any block id, but every block its diff creates, rewrites, moves or deletes must sit in one (a tagless `<agent-inline>` in your replacement text mints a card; a tagless `<agent-page title="…">…</agent-page>` mints a sub-page whose whole content is yours, written afterwards by its own id); a page's own prose is read-only — you annotate it, you do not edit it. Pages can carry instructions from their author: `read_page` hands you the ones covering what you read, a write is refused until you have received them, and global ones arrive when the conversation starts.
 
@@ -67,7 +67,7 @@ Enforced by `./equin check boundary-rules` (which folder may import which — th
 - **Known folders only** (vocabulary in `plugins/framework/plugins/plugin-id/core`): barrel folders `web`, `server`, `machine`, `central`, `core`, `shared`, `e2e`, `provision`, `data-dirs`, `cli`, `deps`; leaf folders `check`, `lint`, `facet`, `bin`, `scripts`, `exhibits`, `vite`, `prewarm`, `python`, `rust`, `exempt`, `guard`, `login-services`; plus `plugins/` for children. No loose root `.ts`, no unclaimed file under `plugins/`. A new folder kind = a vocabulary entry + its table row (tsc enforces the row).
 - **One import table, inside and across plugins.** Each folder's row lists the barrel folders it may import (`core` → `core`; `web` → `web`, `core`, `shared`; `e2e` → `e2e`, `core`, `data-dirs`). Relative imports in your own plugin obey it too (`core/` → `../server/x` fails). Leaf folders are never import targets. `core/` is the public channel, `shared/` the plugin-private one.
 - **One barrel per runtime.** `plugins/<name>/<runtime>/index.ts` is the only cross-plugin entry point — no `api.ts`, no deep paths.
-- **Import grammar.** A specifier ends at a barrel folder (`@plugins/<name>/<runtime>`, `@plugins/<name>/plugins/…/<runtime>`) or at `<runtime>/testing`. Forbidden: cross-plugin `shared/` (R10; your own is imported relatively), paths inside a barrel (`/web/components/`, `/server/internal/`), workspace names (`@singularity/plugin-shell`), `../` escapes into another plugin.
+- **Import grammar.** A specifier ends at a barrel folder (`@plugins/<name>/<runtime>`, `@plugins/<name>/plugins/…/<runtime>`) or at `<runtime>/testing`. Forbidden: cross-plugin `shared/` (R10; your own is imported relatively), paths inside a barrel (`/web/components/`, `/server/internal/`), workspace names (`@equin/plugin-shell`), `../` escapes into another plugin.
 - **Test code** = `*.test.ts(x)`, `__tests__/`, or `<runtime>/testing/` (never under `e2e/`). It follows its folder's row; only test code and `check/` may import it (`e2e/` ships, so it may not). A public barrel publishes no test support: no `*ForTest(s)` names, nothing from a test-support module (R12), no name only tests import (R13). Own tests import by relative path; reusable helpers go in `<runtime>/testing/`.
 - **No cross-plugin re-exports** — import the source barrel directly (`@plugins/tasks/plugins/task-draft-form/web`, not a proxy via `@plugins/tasks/web`). Enforced transitively and by name (through an internal file, or import-then-export); no umbrella→descendant exception.
 - **Barrel purity.** `index.ts` holds only imports, re-exports of own files, type aliases, and one `export default { … } satisfies PluginDefinition`. No `const`/`let`, logic, or side effects.
@@ -110,7 +110,7 @@ The project uses bun workspaces (defined in root `package.json`). Run `bun insta
 
 ## CLI
 
-The CLI is `./equin <verb>`. Its old name, `singularity`, is still a shim at the repo root so old muscle memory works — always write `./equin`.
+The CLI is `./equin <verb>`. Its old name is still a shim at the repo root (`LEGACY_IDS.cliShim`) so old muscle memory works — always write `./equin`.
 
 ### Deploy
 
@@ -159,12 +159,12 @@ For a checkout cloned from someone else's repo, that repo is **upstream** (read-
 
 ## Ports
 
-- The gateway listens on **port 9000** for all browser traffic, routed by subdomain (`<name>.localhost:9000`). The main namespace (agent manager app, served from `main`) is always at `equin.localhost:9000` — its public host label (`NAMESPACE_HOST_LABELS` in `plugins/infra/plugins/namespace`); the namespace itself is still named `singularity`, and its old address keeps answering as an alias.
+- The gateway listens on **port 9000** for all browser traffic, routed by subdomain (`<name>.localhost:9000`). The main namespace (agent manager app, served from `main`) is always at `equin.localhost:9000` — its public host label (`NAMESPACE_HOST_LABELS` in `plugins/infra/plugins/namespace`); the namespace itself keeps its internal name (`MAIN_WORKTREE_NAME`), and its old address keeps answering as an alias.
 - Backends do **not** listen on TCP. The gateway hands each backend a per-worktree Unix domain socket at `~/.singularity/sockets/<name>.sock` and dials it directly. There is no backend port range to allocate.
 
 ## Driving the app (screenshots & E2E)
 
-`./equin build` first: every script resolves its target from the deploy registry THIS checkout's build wrote, and refuses when there is none. Never hand-write `http://<worktree>.localhost:9000` — in an agent session the name comes out as `singularity` and the run drives main. Chromium is an on-demand dependency (`infra/deps`), installed on the first browser run (~280 MB).
+`./equin build` first: every script resolves its target from the deploy registry THIS checkout's build wrote, and refuses when there is none. Never hand-write `http://<worktree>.localhost:9000` — in an agent session the name comes out as the main namespace and the run drives main. Chromium is an on-demand dependency (`infra/deps`), installed on the first browser run (~280 MB).
 
 **Main is read-only for agent sessions**: on main, a write from the agent browser or an e2e run is refused with a 403 (telemetry excepted) — to exercise a write, drive your own build.
 

@@ -8,9 +8,9 @@
 export const PRODUCT_NAME = "equin";
 
 /**
- * Names the product went by before. Internal identifiers built from them (the
- * `singularity` namespace and database, `~/.singularity/`, `SINGULARITY_*`) are
- * a separate decision; the capitalised product name is never written again —
- * `product-name:legacy` flags it.
+ * Names the product went by before. The capitalised product name is never
+ * written again — `product-name:legacy` flags it. Identifiers built from them
+ * that are kept for good are `LEGACY_IDS` (`./legacy-ids.ts`), the only place
+ * they are spelled — `product-name:legacy-id` flags any other.
  */
 export const LEGACY_PRODUCT_NAMES: readonly string[] = ["Singularity"];

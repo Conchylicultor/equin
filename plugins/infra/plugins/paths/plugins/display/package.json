@@ -1,6 +1,6 @@
 {
-  "name": "@singularity/plugin-infra-paths-display",
+  "name": "@equin/plugin-infra-paths-display",
   "version": "0.0.1",
   "private": true,
-  "description": "The human-facing spelling of the singularity data dirs (the `~/…` form a message, an empty state, or an agent prompt writes). Web-safe by construction: string literals only, no node:* and no homedir() — so the browser can name a directory the server resolves."
+  "description": "The human-facing spelling of the data dirs (the `~/…` form a message, an empty state, or an agent prompt writes). Web-safe by construction: string literals only, no node:* and no homedir() — so the browser can name a directory the server resolves."
 }

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-search-quick-find",
+  "name": "@equin/plugin-search-quick-find",
   "description": "Reusable quick-find search UI: the debounced useSearch hook and the <QuickFindDialog> dialog (navigation injected via onSelect).",
   "private": true,
   "version": "0.0.1"

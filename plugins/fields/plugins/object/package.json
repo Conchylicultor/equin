@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-fields-object",
+  "name": "@equin/plugin-fields-object",
   "version": "0.0.1",
   "private": true,
   "description": "Object (fixed-structure named sub-fields) field type: identity only.",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

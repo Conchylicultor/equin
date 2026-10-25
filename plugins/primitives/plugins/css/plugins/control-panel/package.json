@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-css-control-panel",
+  "name": "@equin/plugin-primitives-css-control-panel",
   "description": "The control-panel vocabulary: the closed set of rows, sections, rule rows, fields, footers and panel navigation every data-control panel is built from.",
   "private": true,
   "version": "0.0.1"

@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-fields-tags",
+  "name": "@equin/plugin-fields-tags",
   "version": "0.0.1",
   "private": true,
   "description": "Tags (multi-value) field type: identity only — a set of string labels per row.",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

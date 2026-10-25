@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-infra-jobs-background-arm",
+  "name": "@equin/plugin-infra-jobs-background-arm",
   "description": "Jobs in the Background activity catalog: every registered job with its trigger (cron in words and next run, read from the one crontab parse every scheduler matches by), scope, latest run and recent runs from the jobs run history, and Run now for scheduled jobs.",
   "private": true,
   "version": "0.0.1"

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-page-place-google",
+  "name": "@equin/plugin-page-place-google",
   "description": "Google Places provider for the /place block: adapts the Places API client onto the place-provider registry.",
   "private": true,
   "version": "0.0.1"

@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-fields-number-data-view-codec",
+  "name": "@equin/plugin-fields-number-data-view-codec",
   "version": "0.0.1",
   "private": true,
   "description": "Number field type: data-view custom-column value codec (native number ↔ canonical text).",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

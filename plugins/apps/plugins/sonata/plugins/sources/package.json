@@ -1,7 +1,7 @@
 {
-  "name": "@singularity/plugin-apps-sonata-sources",
+  "name": "@equin/plugin-apps-sonata-sources",
   "description": "Input source sub-plugins for Sonata (MIDI, chord-grid, …).",
   "private": true,
   "version": "0.0.1",
-  "singularity": { "collapsed": true }
+  "equin": { "collapsed": true }
 }

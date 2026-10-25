@@ -1,4 +1,4 @@
-module singularity/gateway
+module equin/gateway
 
 go 1.24
 

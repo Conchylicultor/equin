@@ -15,8 +15,8 @@ import type { FilePartial } from "./usage-index";
 
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 
-const REPO = "singularity";
-const SING_DIR = "-Users-x-dev-singularity";
+const REPO = "myrepo";
+const REPO_DIR = "-Users-x-dev-myrepo";
 const OTHER_DIR = "-Users-x-dev-something-else";
 
 // `dayBuckets: []` on purpose — the archive never reads inside a bucket, and an
@@ -24,7 +24,7 @@ const OTHER_DIR = "-Users-x-dev-something-else";
 function partial(over: Partial<FilePartial> = {}): FilePartial {
   return {
     sessionId: "session-a",
-    projectDir: SING_DIR,
+    projectDir: REPO_DIR,
     inputTokens: 10,
     outputTokens: 20,
     cacheCreationTokens: 30,
@@ -46,7 +46,7 @@ function entry(over: Partial<ArchiveEntry> = {}): ArchiveEntry {
     partial: partial(),
     title: "A title",
     conversationId: "conv-1",
-    isSingularity: true,
+    isRepo: true,
     ...over,
   };
 }
@@ -96,7 +96,7 @@ test("flush then load returns an equal map", async () => {
         partial: partial({ sessionId: "session-b", totalTokens: 7, projectDir: OTHER_DIR }),
         title: null,
         conversationId: null,
-        isSingularity: false,
+        isRepo: false,
       }),
     ],
   ]);
@@ -151,7 +151,7 @@ test("an unknown/newer schemaVersion survives load → merge → flush unchanged
     partial: partial({ sessionId: "future" }),
     title: "Written by a newer binary",
     conversationId: "conv-future",
-    isSingularity: true,
+    isRepo: true,
     // A field this version knows nothing about — dropping it would be data loss.
     someFutureField: { nested: [1, 2, 3] },
   };
@@ -183,7 +183,7 @@ test("an entry missing optional fields loads with defaults rather than being dro
     partial: partial({ sessionId: "ancient" }),
     title: null,
     conversationId: null,
-    isSingularity: false,
+    isRepo: false,
   });
 });
 
@@ -331,30 +331,33 @@ test("fresh non-null meta wins over the stored snapshot", async () => {
   expect(merged.get(path)?.conversationId).toBe("conv-2");
 });
 
-test("isSingularity is snapshotted per entry from the live project dir", async () => {
+test("isRepo is snapshotted per entry from the live project dir", async () => {
   const archive = new Map<string, ArchiveEntry>();
   const live = new Map([
-    ["/p/main.jsonl", partial({ sessionId: "m", projectDir: SING_DIR })],
+    ["/p/main.jsonl", partial({ sessionId: "m", projectDir: REPO_DIR })],
     [
       "/p/worktree.jsonl",
-      partial({ sessionId: "w", projectDir: `${SING_DIR}--claude-worktrees-att-1` }),
+      partial({
+        sessionId: "w",
+        projectDir: `${REPO_DIR}--claude-worktrees-att-1`,
+      }),
     ],
     ["/p/other.jsonl", partial({ sessionId: "o", projectDir: OTHER_DIR })],
   ]);
 
   const { merged } = mergeLive(archive, live, NO_META, REPO);
 
-  expect(merged.get("/p/main.jsonl")?.isSingularity).toBe(true);
-  expect(merged.get("/p/worktree.jsonl")?.isSingularity).toBe(true);
-  expect(merged.get("/p/other.jsonl")?.isSingularity).toBe(false);
+  expect(merged.get("/p/main.jsonl")?.isRepo).toBe(true);
+  expect(merged.get("/p/worktree.jsonl")?.isRepo).toBe(true);
+  expect(merged.get("/p/other.jsonl")?.isRepo).toBe(false);
 });
 
-test("an archive-only entry keeps its snapshotted isSingularity after a repo rename", async () => {
+test("an archive-only entry keeps its snapshotted isRepo after a repo rename", async () => {
   const path = "/p/archived.jsonl";
-  const archive = new Map([[path, entry({ isSingularity: true })]]);
+  const archive = new Map([[path, entry({ isRepo: true })]]);
   // The repo has been renamed; nothing in the archive matches the new basename.
   const { merged } = mergeLive(archive, new Map(), NO_META, "renamed-repo");
-  expect(merged.get(path)?.isSingularity).toBe(true);
+  expect(merged.get(path)?.isRepo).toBe(true);
 });
 
 test("an entry that crosses into a new year leaves no stale duplicate behind", async () => {

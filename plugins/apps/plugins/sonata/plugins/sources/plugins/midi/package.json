@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-sonata-sources-midi",
+  "name": "@equin/plugin-apps-sonata-sources-midi",
   "description": "MIDI file input source for Sonata — dropzone + @tonejs/midi compile → Score.",
   "private": true,
   "version": "0.0.1",

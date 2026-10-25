@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-embed",
+  "name": "@equin/plugin-primitives-embed",
   "description": "The declared chromeless-document signal: `?embed=1` opens one route with no app chrome because something else supplies the frame.",
   "private": true,
   "version": "0.0.1"

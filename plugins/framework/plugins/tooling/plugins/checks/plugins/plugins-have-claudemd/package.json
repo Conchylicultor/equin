@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-tooling-checks-plugins-have-claudemd",
+  "name": "@equin/plugin-framework-tooling-checks-plugins-have-claudemd",
   "version": "0.0.1",
   "private": true
 }

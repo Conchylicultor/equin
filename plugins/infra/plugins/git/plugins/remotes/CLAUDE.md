@@ -19,7 +19,7 @@ There is no author/user flag, and nothing to set when you clone. Only the remote
 can say whether you may write to it, so we **ask it** — once — and write down
 what it said.
 
-The question is asked as `git push --dry-run --force <remote> HEAD:refs/heads/singularity-write-probe`.
+The question is asked as `git push --dry-run --force <remote> HEAD:refs/heads/<write-probe ref>`.
 `--dry-run` does everything except send the update, and "everything" includes
 opening the session and requesting `receive-pack`, which is where every hosted
 forge decides whether this identity may write. Three details are load-bearing:
@@ -80,9 +80,11 @@ fetch.
 
 ## Why the answer lives in `.git/config`
 
+(`<section>` is `LEGACY_IDS.gitConfigSection`.)
+
 ```
-singularity.publish.remote = origin | none
-singularity.publish.url    = <the URL that answer was probed for>
+<section>.publish.remote  = origin | none
+<section>.publish.url     = <the URL that answer was probed for>
 ```
 
 Same tier and the same shape as `core.hooksPath` (which `build` self-heals) and
@@ -106,7 +108,7 @@ It is re-probed when:
   newer evidence than the cache: it is the remote answering the exact question
   the cache holds a guess at. A checkout that loses its write access therefore
   heals itself into local mode on the next push instead of failing forever.
-- the user asks: `git config --local --unset singularity.publish.remote`, which
+- the user asks: `git config --local --unset <section>.publish.remote`, which
   the printed local-only line names.
 
 ## Upstream falls out of the same facts
@@ -140,10 +142,10 @@ So the two commands that make commits (`push`, `upstream merge`) call
 | identity \ target | `local` | `publish` |
 |---|---|---|
 | explicit (any config scope, or `EMAIL` / both `GIT_*_EMAIL` in the env) | use it | use it |
-| missing | write a `--local` placeholder: git's own derived name, `<login>@singularity.invalid` | **refuse**, with the `git config --global` commands |
+| missing | write a `--local` placeholder: git's own derived name, `<login>@<auto-identity domain>` | **refuse**, with the `git config --global` commands |
 | ours (the placeholder, still unchanged) | use it | remove it, re-read; explicit ⇒ use it, else **refuse** |
 
-"Ours" is recorded as `singularity.autoIdentityEmail` and only counts while the
+"Ours" is recorded as `<section>.autoIdentityEmail` and only counts while the
 local `user.email` still equals it, so a user who sets their own local email
 has taken it over. The `.invalid` TLD is reserved (RFC 2606): the placeholder
 can never route anywhere or leak the hostname. The refusal tells an agent to
@@ -184,6 +186,7 @@ that fails re-probes and records what comes back.
 - Description: May this checkout publish, and where does it receive from? — the write-access probe (`git push --dry-run`, classified into denied / no-credentials / unreachable rather than one 'no'), its `.git/config` cache of that measurement, the upstream resolution built from the same facts, and who signs the commits push makes (a local placeholder where they cannot leave the machine, a real identity required where they will be public).
 - Core:
   - Uses:
+    - `framework/product-name.LEGACY_IDS`
     - `infra/spawn.spawnCaptured`
     - `infra/spawn.spawnExpectOk`
   - Exports (types):

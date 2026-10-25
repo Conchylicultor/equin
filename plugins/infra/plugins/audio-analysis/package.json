@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-infra-audio-analysis",
+  "name": "@equin/plugin-infra-audio-analysis",
   "version": "0.0.1",
   "private": true,
   "description": "Audio analysis of YouTube videos, out of process on the on-demand `audio-python` dependency: beat features (Beat This! beats and downbeats, beat-synchronous treble and bass chroma, per-beat loudness), cached host-wide per video and analysis version."

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-chord-curriculum",
+  "name": "@equin/plugin-apps-chord-curriculum",
   "description": "The Chord trainer's curriculum: which chords the learner practises, hears or leaves off, how much of a loop is blank, how many other chords a loop may hold, and the catalog — every chord of the song index in tracks and sections — they are chosen from.",
   "private": true,
   "version": "0.0.1"

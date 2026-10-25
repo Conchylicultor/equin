@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-infra-spawn-daemon-background-arm",
+  "name": "@equin/plugin-infra-spawn-daemon-background-arm",
   "description": "Long-lived processes in the Background activity catalog: every declared daemon with its instances, pid, uptime, restarts, memory and CPU, and each incarnation as a run.",
   "private": true,
   "version": "0.0.1"

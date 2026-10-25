@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-events-sources-source-detail-runs-extracted-events",
+  "name": "@equin/plugin-apps-events-sources-source-detail-runs-extracted-events",
   "description": "Extracted events section of the run pane: which events the run touched, and how.",
   "private": true,
   "version": "0.0.1"

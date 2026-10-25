@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-events-sources-source-detail-settings",
+  "name": "@equin/plugin-apps-events-sources-source-detail-settings",
   "description": "Settings section of the source side-pane: the source's name plus the type's own configFields, rendered generically as one form with autosave.",
   "private": true,
   "version": "0.0.1"

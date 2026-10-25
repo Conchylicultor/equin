@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-ui",
+  "name": "@equin/plugin-ui",
   "description": "Umbrella for pluggable UI components with switchable visual variants.",
   "private": true,
   "version": "0.0.1"

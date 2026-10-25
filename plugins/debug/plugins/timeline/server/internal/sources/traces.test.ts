@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { mapTraceRows, tracesSource, type TraceRow } from "./traces";
 import type { DbSourceCtx } from "./context";
+import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
 
 const T0 = Date.parse("2026-07-10T09:00:00.000Z");
 const ctx = (over?: Partial<DbSourceCtx>): DbSourceCtx => ({
@@ -82,7 +83,7 @@ describe("tracesSource.build", () => {
     expect(fork.text).toContain("AND worktree = $3");
     expect(fork.values).toEqual([T0, T0 + 60 * 60 * 1000, "wt-a"]);
     const main = tracesSource.build(
-      ctx({ dbName: "singularity", isMainDb: true }),
+      ctx({ dbName: MAIN_WORKTREE_NAME, isMainDb: true }),
     );
     expect(main.text).not.toContain("worktree =");
     expect(main.values).toEqual([T0, T0 + 60 * 60 * 1000]);

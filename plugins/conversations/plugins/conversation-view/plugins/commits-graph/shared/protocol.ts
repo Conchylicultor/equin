@@ -28,7 +28,7 @@ export const CommitsGraphSchema = z.object({
   commits: cappedList(CommitRowSchema, { max: COMMITS_GRAPH_MAX_COMMITS }),
   /**
    * Commits of this attempt that `main` already contains, newest-first. Measured
-   * from git (the `Singularity-Conversation` trailers on `main`), not from the
+   * from git (the conversation trailers on `main`), not from the
    * `pushes` ledger — see `tasks/attempt-work`.
    */
   landedCommits: wholeList(CommitRowSchema, {

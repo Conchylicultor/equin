@@ -14,11 +14,11 @@ Plans: [`research/2026-09-30-global-metrics-primitive.md`](../../../../research/
 
 ```ts
 export const costSource = defineMetricSource({
-  id: "cost", label: "Spend", params: { singularityOnly: bool(true) },
+  id: "cost", label: "Spend", params: { repoOnly: bool(true) },
 });
 export const spend = defineMetric(costSource, {
   id: "spend", label: "Spend", unit: "usd", polarity: "down", measure: "flow",
-  splits: [{ id: "model", label: "Model" }], params: ["singularityOnly"],
+  splits: [{ id: "model", label: "Model" }], params: ["repoOnly"],
   drill: { label: "Conversations" },
 });                                   // global id "cost.spend"
 export const top = defineBreakdown(costSource, {

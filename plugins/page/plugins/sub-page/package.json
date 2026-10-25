@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-page-sub-page",
+  "name": "@equin/plugin-page-sub-page",
   "description": "Sub-page block type: renders a child page inline in the content editor as a clickable Notion-style page row.",
   "private": true,
   "version": "0.0.1"

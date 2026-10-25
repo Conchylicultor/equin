@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-page-page-reference",
+  "name": "@equin/plugin-page-page-reference",
   "description": "The shared contract for a reference to another page rendered inside a page: the host-declared navigation context every reference reads, and the hover-action frontier other plugins contribute into.",
   "private": true,
   "version": "0.0.1"

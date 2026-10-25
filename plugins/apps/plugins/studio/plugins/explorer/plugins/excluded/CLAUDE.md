@@ -15,7 +15,7 @@ Two labels, because the two cases are answerable and different:
   too (`removalClosure`).
 
 Both come from `useAppExclusions()` (`composition/web`), which resolves the
-`singularity` composition in the browser from the edge graph and the manifests
+main composition in the browser from the edge graph and the manifests
 the client already holds. Nothing about membership travels on the wire, so this
 badge and the codegen that emits the registries read one implementation of one
 rule.

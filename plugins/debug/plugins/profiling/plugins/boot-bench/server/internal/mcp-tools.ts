@@ -7,6 +7,7 @@ import { bootBenchRun, type BootBenchRunBody } from "../../shared/endpoints";
 import {
   asNamespace,
   namespaceUrl,
+  resolveNamespaceAlias,
 } from "@plugins/infra/plugins/namespace/core";
 import { buildReport } from "./aggregate";
 
@@ -25,13 +26,13 @@ Scope = live-server cold: it deliberately EXCLUDES server-boot work (catch-up, d
 
 warm mode runs BEFORE any cold-clear (the snapshot is naturally warm on a running backend); cold per-key sources should be all "loader" (cold mode bypasses the in-memory alias path) and warm mostly "memory"/"persisted" and faster. Discards the first \`warmup\` iterations of each set (GC settle). Returns per-mode { min, median, p95 } aggregates plus the resolved fixtures; the agent saves a baseline run and compares the after run itself.
 
-BLOAT: \`snapshotBloat.{cold,warm}\` reports the \`live_state_snapshot\` table's { tableBytes, deadTuples, liveTuples }, captured ONCE per mode at the start of its set. The persisted-read cost only reproduces against REAL dead-tuple bloat — i.e. warm mode against an already-bloated DB (run with \`worktree: "singularity"\` to hit main). Cold-clearing DELETEs churn the very table being measured, so a fresh worktree shows misleadingly low bloat + low \`persistedReadMs\`; the bloat is captured before any cold delete so it reflects the pre-run state.
+BLOAT: \`snapshotBloat.{cold,warm}\` reports the \`live_state_snapshot\` table's { tableBytes, deadTuples, liveTuples }, captured ONCE per mode at the start of its set. The persisted-read cost only reproduces against REAL dead-tuple bloat — i.e. warm mode against an already-bloated DB (run with \`worktree: "equin"\` to hit main). Cold-clearing DELETEs churn the very table being measured, so a fresh worktree shows misleadingly low bloat + low \`persistedReadMs\`; the bloat is captured before any cold delete so it reflects the pre-run state.
 
 BYTES: \`snapshotBytes.{cold,warm}\` reports the boot snapshot's size as the endpoint serializes it, captured ONCE per mode beside its bloat (outside the timed burst): \`total\` { raw, gzip } of the whole body, \`perKey\` { raw, gzip } of each key's value (gzip at level 6, comparable with \`gzip -6\` on a curl of /api/resources/boot-snapshot), and \`rowKeyBytes\` — for each key whose rows carry the server-minted row key (\`$key\`) — the mean bytes that member adds to one row. Multiply it by a deployment's row count for what the row key costs that key there (e.g. this worktree's per-row figure × main's preloaded row counts, since a worktree's own rows may be few).
 
 LOAD: \`loadConcurrency\` > 0 saturates the HOST-WIDE \`heavy-read\` gate with that many slot-holders during the burst, deterministically manufacturing the cross-worktree storm that serializes loaders. It contends with OTHER live worktrees for the duration of the run (realistic, bounded, auto-released). Use ≥ the host slot count to fully saturate; \`load.peakGateWaitMs\` (per mode) then rises materially vs an isolated run, proving the gate is contended. Default 0 = isolated.
 
-Default: benchmarks the current conversation's worktree server. Pass \`worktree\` to target a different worktree (e.g. "att-1778089188-7uvf" or "singularity" for main). Pass \`conversationId\`/\`attemptId\` to pin the exact same fixtures across a before/after pair.`,
+Default: benchmarks the current conversation's worktree server. Pass \`worktree\` to target a different worktree (e.g. "att-1778089188-7uvf" or "equin" for main). Pass \`conversationId\`/\`attemptId\` to pin the exact same fixtures across a before/after pair.`,
   inputSchema: {
     iterations: z
       .number()
@@ -88,7 +89,7 @@ Default: benchmarks the current conversation's worktree server. Pass \`worktree\
   ) {
     let raw: string;
     if (worktree) {
-      raw = worktree;
+      raw = resolveNamespaceAlias(worktree);
     } else {
       const conv = await getConversation(ctxConversationId);
       if (!conv) throw new Error(`Unknown conversation "${ctxConversationId}"`);

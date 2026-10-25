@@ -40,13 +40,13 @@ export class MainNamespaceCollisionError extends Error {
  *
  * 1. Is `root` its repository's main checkout? A git question
  *    (`getMainRepoRoot`): comparing a basename against the literal
- *    `"singularity"` is only correct while the repo happens to be cloned into a
+ *    main-namespace name is only correct while the repo happens to be cloned into a
  *    directory of that name.
  * 2. Is that repository the one this data root's main app is served from? The
  *    data root serves ONE instance (research/2026-07-02-global-adr-single-
  *    instance-per-user.md), recorded by the `spec.json` its main build wrote
  *    (`mainNamespaceOwner`). Without this, the main checkout of ANY clone on
- *    the machine — a second copy, an e2e's temp repo — minted `singularity` and
+ *    the machine — a second copy, an e2e's temp repo — minted the main namespace and
  *    ran its ops, logs and deploys as main's. Such a checkout is named like any
  *    other non-main one, by its basename, and one whose basename IS the main
  *    namespace is refused ({@link MainNamespaceCollisionError}).
@@ -78,7 +78,7 @@ export async function checkoutRef(root: string): Promise<CheckoutRef> {
  * was hand-spelled at five call sites: `build`, its hermetic posture, `check`,
  * `push` and the prototype URL formatter. Five copies of one derivation is how
  * one of them ends up reading the environment instead, which answers
- * `singularity` from every worktree; naming the mint is what leaves nothing to
+ * the main namespace from every worktree; naming the mint is what leaves nothing to
  * spell differently.
  *
  * It says which namespace this checkout WOULD serve, not that anything is

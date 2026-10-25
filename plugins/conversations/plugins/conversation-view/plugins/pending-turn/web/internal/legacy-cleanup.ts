@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
@@ -16,7 +17,10 @@ const retiredPendingTurns = defineStore({
   ttl: Infinity,
   whenFull: "refuse",
   schema: z.never(),
-  legacy: { match: (key) => key.startsWith("singularity:pending-turns:") },
+  legacy: {
+    match: (key) =>
+      key.startsWith(`${LEGACY_IDS.browserKeyPrefix}:pending-turns:`),
+  },
 });
 
 export const dropLegacyPendingTurns: NonNullable<

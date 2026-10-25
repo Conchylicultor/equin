@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-config_v2-fields",
+  "name": "@equin/plugin-config_v2-fields",
   "private": true,
   "description": "Owns the config-v2.fields.renderer dispatch slot and shared renderer helpers. Field types live in the fields/ matrix and contribute their renderer here."
 }

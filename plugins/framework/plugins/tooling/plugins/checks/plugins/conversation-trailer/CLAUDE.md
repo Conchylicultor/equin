@@ -1,7 +1,7 @@
 # conversation-trailer
 
 Fails unless `SINGULARITY_CONVERSATION_ID` is set and every one of this
-branch's own commits carries a `Singularity-Conversation` trailer naming it
+branch's own commits carries a conversation trailer naming it
 (stamped by `.githooks/prepare-commit-msg`), so the pushes ledger can attribute
 the push to its task.
 

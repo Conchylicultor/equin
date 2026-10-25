@@ -125,7 +125,7 @@ export function useCompositionData(): CompositionDataResult {
  * What the app this repo builds does NOT ship, and which half of that is a
  * decision rather than a consequence.
  *
- * `excluded` is every plugin id outside the `singularity` composition's bundle.
+ * `excluded` is every plugin id outside the main composition's bundle.
  * `negatedTargets` is the subset a manifest negated BY NAME (in practice the
  * `base-exclusions` row every composition inherits) — the rest are ids the
  * removal cascade took because they descend from, or import, one of those. That

@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-fields-enum-column-config",
+  "name": "@equin/plugin-fields-enum-column-config",
   "version": "0.0.1",
   "private": true,
   "description": "Enum field type: data-view custom-column add-time config editor (options add/rename/remove).",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-web-sdk",
+  "name": "@equin/plugin-framework-web-sdk",
   "description": "Web plugin runtime: slots, contributions, loader",
   "private": true,
   "version": "0.0.1",

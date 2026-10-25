@@ -27,7 +27,7 @@ loading the lookup is `pending`, which renders exactly like "no task" (the
 namespace as title, no "Open task"), so nothing on screen claims an answer that
 later reverses.
 
-A lone label other than `singularity` is read as an agent checkout. It could
+A lone label other than the main composition id is read as an agent checkout. It could
 also be another composition served from the main checkout (`sonata`); the name
 alone cannot say which (see the namespace plugin's CLAUDE.md), and a wrong guess
 costs only the summary word and a lookup that finds nothing.

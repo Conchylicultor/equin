@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-overlay-hover-popover",
+  "name": "@equin/plugin-primitives-overlay-hover-popover",
   "description": "Hover-opened popover: a controlled Popover revealed by pointer hover (open intent delay, grace close across trigger and portaled panel) or ArrowDown, leaving the trigger's own click untouched.",
   "private": true,
   "version": "0.0.1"

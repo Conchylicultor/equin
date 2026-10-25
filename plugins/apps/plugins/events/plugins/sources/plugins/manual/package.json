@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-events-sources-manual",
+  "name": "@equin/plugin-apps-events-sources-manual",
   "description": "Hand-entry event source type: the user is the extractor, so refresh vouches for the rows it already has and never imports anything.",
   "private": true,
   "version": "0.0.1"

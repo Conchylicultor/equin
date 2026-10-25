@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-config_v2-settings-conflict-agent",
+  "name": "@equin/plugin-config_v2-settings-conflict-agent",
   "private": true,
   "version": "0.0.1",
   "description": "Ask-an-agent button inside the config detail's conflict banners: launches a task pre-filled with a factual description of the conflict."

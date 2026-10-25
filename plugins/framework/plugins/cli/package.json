@@ -1,6 +1,6 @@
 {
-  "name": "@singularity/plugin-framework-cli",
-  "description": "The `./equin` CLI (its old name `singularity` is kept as a shim): the command declaration contract, the generated-artifact normalize contract, and every built-in command (build, push, check, test, run, release, deploy, and more).",
+  "name": "@equin/plugin-framework-cli",
+  "description": "The `./equin` CLI (its old name is kept as a shim): the command declaration contract, the generated-artifact normalize contract, and every built-in command (build, push, check, test, run, release, deploy, and more).",
   "private": true,
   "type": "module",
   "bin": {
@@ -14,7 +14,7 @@
     "@types/bun": "^1.4.0",
     "typescript": "~6.0.3"
   },
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

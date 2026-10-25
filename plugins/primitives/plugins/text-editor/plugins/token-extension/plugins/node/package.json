@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-text-editor-token-extension-node",
+  "name": "@equin/plugin-primitives-text-editor-token-extension-node",
   "private": true,
   "version": "0.0.1",
   "description": "The Lexical-valued half of the inline-token primitive: defineInlineTokenNode (the DecoratorNode class factory), the caret/line materializers, and the registry-driven paste. Kept out of the parent so the parent stays synchronously loadable by drizzle-kit.",

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-page-formatting-color",
+  "name": "@equin/plugin-page-formatting-color",
   "description": "Inline text-color control for the page editor's selection toolbar.",
   "private": true,
   "version": "0.0.1",

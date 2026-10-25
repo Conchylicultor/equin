@@ -39,6 +39,10 @@ import {
   spawnExpectOk,
   getWorktreeRoot,
 } from "@plugins/infra/plugins/spawn/core";
+import {
+  LEGACY_IDS,
+  PRODUCT_NAME,
+} from "@plugins/framework/plugins/product-name/core";
 import { fetchUpstreamStatus } from "@plugins/upstream/core";
 import { runMigrationJourney } from "./migration-journey";
 
@@ -143,7 +147,7 @@ async function main(): Promise<void> {
     );
     process.exit(2);
   }
-  const tmp = mkdtempSync(join(tmpdir(), "singularity-clone-journey-"));
+  const tmp = mkdtempSync(join(tmpdir(), `${PRODUCT_NAME}-clone-journey-`));
   try {
     // --- the fixture: an upstream repo, and a clone of it whose only remote is
     // --- named `upstream` (the ordinary clone: nothing of its own to publish to).
@@ -251,7 +255,7 @@ async function main(): Promise<void> {
       "--amend",
       "--no-edit",
       "--trailer",
-      "Singularity-Push=e2e-1",
+      `${LEGACY_IDS.pushTrailer}=e2e-1`,
     );
     await git(clone, "checkout", "-q", "main");
     await git(clone, "merge", "--ff-only", "update-1");
@@ -269,7 +273,7 @@ async function main(): Promise<void> {
           clone,
           "log",
           "-1",
-          "--format=%(trailers:key=Singularity-Push,valueonly)",
+          `--format=%(trailers:key=${LEGACY_IDS.pushTrailer},valueonly)`,
           "main",
         )
       ).trim() === "e2e-1",

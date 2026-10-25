@@ -82,7 +82,7 @@ const check: Check = {
 
     // The SAME inputs `generatePluginDocs` renders each CLAUDE.md from: the
     // enriched tree (memoized per root, so this is the very tree docgen used) and
-    // the `singularity` composition resolved off it. The AUTOGEN block annotates
+    // the main composition resolved off it. The AUTOGEN block annotates
     // the plugins main's closure leaves out, so a check that computed membership
     // any other way would disagree with the generator it exists to check.
     const tree = await buildEnrichedTree(root);

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-config_v2",
+  "name": "@equin/plugin-config_v2",
   "private": true,
   "description": "File-based JSONC config system (v2). Umbrella for store, merge, and codegen sub-plugins."
 }

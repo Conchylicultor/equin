@@ -8,7 +8,7 @@ describe("parseStructuredTag", () => {
 <tool-use-id>toolu_01Ss356aqKriGj8vrpZ6A9kU</tool-use-id>
 <output-file>/tmp/out.output</output-file>
 <status>completed</status>
-<summary>Monitor "singularity push to main" stream ended</summary>
+<summary>Monitor "equin push to main" stream ended</summary>
 </task-notification>`;
 
     const parsed = parseStructuredTag(text);
@@ -22,7 +22,7 @@ describe("parseStructuredTag", () => {
     ]);
     expect(parsed?.fields.find((f) => f.key === "status")?.value).toBe("completed");
     expect(parsed?.fields.find((f) => f.key === "summary")?.value).toBe(
-      'Monitor "singularity push to main" stream ended',
+      'Monitor "equin push to main" stream ended',
     );
   });
 

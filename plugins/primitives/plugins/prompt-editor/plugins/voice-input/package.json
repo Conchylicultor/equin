@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-prompt-editor-voice-input",
+  "name": "@equin/plugin-primitives-prompt-editor-voice-input",
   "private": true,
   "version": "0.0.1",
   "description": "Voice dictation for the prompt editor via the Web Speech API."

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-infra-host-contention",
+  "name": "@equin/plugin-infra-host-contention",
   "private": true,
   "version": "0.0.1"
 }

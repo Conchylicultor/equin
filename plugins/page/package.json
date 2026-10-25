@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-page",
+  "name": "@equin/plugin-page",
   "description": "Block-based page editor.",
   "private": true,
   "version": "0.0.1",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

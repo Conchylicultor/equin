@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-shortcuts",
+  "name": "@equin/plugin-primitives-shortcuts",
   "private": true,
   "version": "0.0.1",
   "description": "Central keyboard shortcut registry. Plugins contribute shortcuts via defineShortcut(); a single keydown listener dispatches to the active handler."

@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-tooling-provision",
+  "name": "@equin/plugin-framework-tooling-provision",
   "version": "0.0.1",
   "private": true,
   "description": "Install-time provisioning registry + runner: discovers each plugin's provision/index.ts and runs it during postinstall."

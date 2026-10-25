@@ -6,7 +6,6 @@
 
 import type { StallRecord } from "./stall-machine";
 
-const DB_NAME = "singularity-main-thread-stall";
 const STORE = "stalls";
 
 export interface StallStore {
@@ -20,12 +19,15 @@ function request<T>(req: IDBRequest<T>): Promise<T> {
   return new Promise((resolve, reject) => {
     req.onsuccess = () => resolve(req.result);
     req.onerror = () =>
-      reject(req.error ?? new Error(`IndexedDB ${DB_NAME}: request failed`));
+      reject(req.error ?? new Error("IndexedDB: request failed"));
   });
 }
 
-export async function openStallStore(idb: IDBFactory): Promise<StallStore> {
-  const open = idb.open(DB_NAME, 1);
+export async function openStallStore(
+  idb: IDBFactory,
+  dbName: string,
+): Promise<StallStore> {
+  const open = idb.open(dbName, 1);
   open.onupgradeneeded = () => {
     open.result.createObjectStore(STORE, { keyPath: "id" });
   };

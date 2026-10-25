@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import {
   countBuildProcesses,
   counterDelta,
@@ -67,12 +68,12 @@ describe("countBuildProcesses", () => {
   test("counts CLI build/check/push invocations, ignores noise", () => {
     const ps = [
       "/bin/zsh ./equin build",
-      "/bin/zsh ./singularity build", // the legacy name, still a shim
-      "bun /repo/singularity check type-check",
-      "singularity push -m msg",
-      "vim singularity-notes.md", // not a CLI invocation
-      "vite serve dev/singularity/web", // path mention only, no CLI verb after the name
-      "grep singularity build.log", // 'singularity' is a grep arg... matches shape
+      `/bin/zsh ./${LEGACY_IDS.cliShim} build`, // the legacy name, still a shim
+      `bun /repo/${LEGACY_IDS.cliShim} check type-check`,
+      `${LEGACY_IDS.cliShim} push -m msg`,
+      `vim ${LEGACY_IDS.cliShim}-notes.md`, // not a CLI invocation
+      `vite serve dev/${LEGACY_IDS.cliShim}/web`, // path mention only, no CLI verb after the name
+      `grep ${LEGACY_IDS.cliShim} build.log`, // the shim name is a grep arg... matches shape
     ].join("\n");
     // The grep line legitimately matches the loose shape — the count is a
     // pressure gauge, not an exact census; one-off false positives are noise

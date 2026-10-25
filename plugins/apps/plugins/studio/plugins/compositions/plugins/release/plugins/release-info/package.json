@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-studio-compositions-release-release-info",
+  "name": "@equin/plugin-apps-studio-compositions-release-release-info",
   "description": "Status, composition, target, platform, and timing section in the release detail pane.",
   "private": true,
   "version": "0.0.1"

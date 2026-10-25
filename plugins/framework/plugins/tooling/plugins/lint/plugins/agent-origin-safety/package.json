@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-tooling-lint-agent-origin-safety",
+  "name": "@equin/plugin-framework-tooling-lint-agent-origin-safety",
   "version": "0.0.1",
   "private": true,
   "description": "Lint rule keeping an e2e script's own Node-side calls to the app under test marked with the agent-origin headers, so the writes they cause stay attributable and revertible."

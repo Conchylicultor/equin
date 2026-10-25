@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-database-derived-updated-at",
+  "name": "@equin/plugin-database-derived-updated-at",
   "private": true,
   "version": "0.0.1"
 }

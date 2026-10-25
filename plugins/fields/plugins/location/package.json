@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-fields-location",
+  "name": "@equin/plugin-fields-location",
   "version": "0.0.1",
   "private": true,
   "description": "Location field type: identity only — a lat/lng point with an optional address. Cell, filter and storage live in sub-plugins.",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

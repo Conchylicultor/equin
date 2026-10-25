@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-debug-report-storm",
+  "name": "@equin/plugin-debug-report-storm",
   "description": "The report-storm kind: one rollup per (report kind, window) accounting for the alerts the reports engine's fan-out ceiling collapsed, plus the Debug → Reports summary renderer.",
   "private": true,
   "version": "0.0.1"

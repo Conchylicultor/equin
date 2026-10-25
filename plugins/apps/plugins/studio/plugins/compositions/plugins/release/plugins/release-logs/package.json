@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-studio-compositions-release-release-logs",
+  "name": "@equin/plugin-apps-studio-compositions-release-release-logs",
   "description": "Live + persisted release log stream section in the release detail pane.",
   "private": true,
   "version": "0.0.1"

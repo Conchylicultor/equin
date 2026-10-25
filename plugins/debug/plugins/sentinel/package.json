@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-debug-sentinel",
+  "name": "@equin/plugin-debug-sentinel",
   "description": "Cluster congestion sentinel: a main-only always-on 5s sampler feeding the 'cluster' trace ring (host load, Postgres-side wait/lock/IO pressure, fleet state, per-backend health rollup), so every trace gains a cluster-vitals lane and congestion onset is observable.",
   "private": true,
   "version": "0.0.1"

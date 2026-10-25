@@ -1,9 +1,9 @@
 {
-  "name": "@singularity/plugin-fields-bool-inline",
+  "name": "@equin/plugin-fields-bool-inline",
   "version": "0.0.1",
   "private": true,
   "description": "Boolean field type: data-view inline cell editor (immediate-commit toggle).",
-  "singularity": {
+  "equin": {
     "collapsed": true
   }
 }

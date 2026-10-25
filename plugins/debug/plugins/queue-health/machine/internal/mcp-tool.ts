@@ -5,6 +5,7 @@ import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
 import {
   asNamespace,
   namespaceUrl,
+  resolveNamespaceAlias,
 } from "@plugins/infra/plugins/namespace/core";
 import {
   HOLD_CLASSES,
@@ -75,7 +76,7 @@ Fields:
 - \`running\` — currently-locked jobs, longest-held slot first (\`jobName\`, \`hold\`, \`jobId\`, \`lockedForMs\`, \`lockedBy\`, \`alive\`): **who holds the slots.** \`alive\` is exact worker liveness (a granted advisory lock), not an inference from duration — a long \`lockedForMs\` with \`alive: true\` is a healthy slow job, the same duration with \`alive: false\` is an abandoned row the stuck-lock sweeper will reclaim.
 - \`dead\` — terminally-failed jobs per jobName (\`deadCount\`, \`attempts\`/\`maxAttempts\`, \`lastError\`, \`sampleJobId\`): **the terminal failures** clogging the queue.
 
-Default: reads the current conversation's own worktree. Pass \`worktree\` to target a different one (e.g. "att-1778089188-7uvf" or "singularity" for main).`,
+Default: reads the current conversation's own worktree. Pass \`worktree\` to target a different one (e.g. "att-1778089188-7uvf" or "equin" for main).`,
   inputSchema: {
     worktree: z
       .string()
@@ -87,7 +88,7 @@ Default: reads the current conversation's own worktree. Pass \`worktree\` to tar
   async handler({ worktree }, { conversationId }) {
     let raw: string;
     if (worktree) {
-      raw = worktree;
+      raw = resolveNamespaceAlias(worktree);
     } else {
       const conv = await getConversation(conversationId);
       if (!conv) throw new Error(`Unknown conversation "${conversationId}"`);

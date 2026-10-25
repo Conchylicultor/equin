@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-framework-tooling-checks-data-migration-dml-only",
+  "name": "@equin/plugin-framework-tooling-checks-data-migration-dml-only",
   "version": "0.0.1",
   "private": true
 }

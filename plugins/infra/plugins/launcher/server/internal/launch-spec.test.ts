@@ -16,7 +16,7 @@ describe("gatewayLaunchSpec", () => {
   const dir =
     "/h/me/.singularity/cache/deps/gateway-binary/0123456789abcdef/env";
   const ready = readyForTests(gatewayBinary, dir, "0123456789abcdef");
-  const checkout = "/h/me/src/singularity";
+  const checkout = "/h/me/src/equin";
   const executable = unbundledExecutable(gatewayBuild(ready));
   const spec = gatewayLaunchSpec({
     executable,

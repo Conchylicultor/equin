@@ -1,7 +1,7 @@
 /**
  * A database with no `build_runs` table in it — the machine's VERY FIRST build.
  *
- * The base `singularity` database is created empty when the cluster starts, and
+ * The base database is created empty when the cluster starts, and
  * its schema arrives only when the backend restarts and migrates at the end of
  * the build that is running now. So the CLI's ledger write lands on a database
  * that exists and has no tables, and Postgres answers `42P01` where a
@@ -23,7 +23,10 @@ import {
   createTestDb,
   type TestDb,
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
-import { asNamespace } from "@plugins/infra/plugins/namespace/core";
+import {
+  asNamespace,
+  MAIN_COMPOSITION_ID,
+} from "@plugins/infra/plugins/namespace/core";
 import {
   closeRunOn,
   insertRunOn,
@@ -48,7 +51,7 @@ afterAll(async () => {
 function row(): InsertRunRow {
   return {
     id: `missing-ledger-test-${process.pid}`,
-    targets: ["singularity"],
+    targets: [MAIN_COMPOSITION_ID],
     trigger: "manual",
     commitHash: null,
     pid: process.pid,

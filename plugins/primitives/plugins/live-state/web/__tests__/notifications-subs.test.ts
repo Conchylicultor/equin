@@ -29,6 +29,7 @@
  * buses are shared across the file and cleaned only by proper teardown).
  */
 
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import { describe, test, expect, beforeEach, afterEach, vi } from "vitest";
 
 vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({
@@ -396,7 +397,10 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
     // A same-origin iframe of the app shares its host's sessionStorage — and so
     // `getTabId()`. Keyed by it, the frame's departing `unsub-tab` released every
     // sub the HOST held, freezing the host's live resources server-side.
-    sessionStorage.setItem("singularity.tabId", "shared-with-embedded-frames");
+    sessionStorage.setItem(
+      `${LEGACY_IDS.browserKeyPrefix}.tabId`,
+      "shared-with-embedded-frames",
+    );
     const hub = createTransportHub();
     const qc = new QueryClient();
     const tab = hub.tab();

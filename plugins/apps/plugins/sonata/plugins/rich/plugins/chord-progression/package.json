@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-apps-sonata-rich-chord-progression",
+  "name": "@equin/plugin-apps-sonata-rich-chord-progression",
   "description": "Sonata Section: a rhythm-aware chord-progression strip of chips, highlighting the chord under the playhead.",
   "private": true,
   "version": "0.0.1"
