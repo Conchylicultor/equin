@@ -302,7 +302,7 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./equin build`. The bui
     - `quotedRelationsIn`
     - `readTag`
 - Cross-plugin:
-  - Imported by: 124 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 125 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×35
     - `page` ×15
     - `infra` ×13
@@ -310,7 +310,7 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./equin build`. The bui
     - `tasks` ×9
     - `active-data` ×8
     - `debug` ×6
-    - `database` ×4
+    - `database` ×5
     - `primitives` ×4
     - `reports` ×2
     - `stats` ×2
@@ -353,6 +353,7 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./equin build`. The bui
   - **`derived-views`** — Rebuilds plain DB views from source on every boot, in dependency order. Plain views are derived code (declared via the View contribution), not stateful migration schema.
   - **`embedded`** — Embedded Postgres binaries for the gateway-owned cluster. Provides shared connection constants used by every worktree backend.
   - **`fork`** — Durable, self-healing worktree DB fork: a graphile job that forks the base DB per worktree (idempotent, atomic), plus a scheduled sweep of orphaned temp forks.
+  - **`fork-point`** — Reads when this database was forked from another (databaseForkedAt): the instant the fork stamped on it, or null for a database never forked.
   - **`live-state-snapshot`** — L2 persisted live-state materialization: durable snapshot + xmin watermark for instant cold boot, served only from a usable row (a key the runtime persists now, under its current definition, from a…
   - **`migrations`** — DDL lifecycle: migration runner and SQL files.
   - **`pgbouncer`** — PgBouncer connection pooler for the embedded Postgres cluster. Provides path constants for connection routing.

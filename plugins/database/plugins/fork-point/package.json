@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-database-fork-point",
+  "version": "0.0.1",
+  "private": true,
+  "description": "When this database was forked from another: the instant a DB fork stamps on the database it creates (a per-database setting, FORKED_AT_SETTING), read back by databaseForkedAt — every row created at or before it was copied in from the source, every row after it is this database's own; null for a database never forked."
+}

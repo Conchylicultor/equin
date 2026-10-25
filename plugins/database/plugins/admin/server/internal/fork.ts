@@ -2,6 +2,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pgClientBin } from "@plugins/database/plugins/client-tools/server";
+import { FORKED_AT_SETTING } from "@plugins/database/plugins/fork-point/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { libpqSubprocessEnv } from "./pool";
 import { runDatabaseDdl } from "./database-ddl";
@@ -204,6 +205,17 @@ export async function forkDatabase(
   // its rows (pending jobs, crontab watermarks) stay behind. The forked
   // database is born queue-capable instead of being repaired at first boot.
 
+  // Stamp the fork point: every row is in by now, so each copied row is older
+  // than it and each row the fork's own backend writes is newer. Before the
+  // rename, so the canonical name never exists unstamped; a failure here
+  // reclaims the temp like any other.
+  try {
+    await stampForkPoint(temp);
+  } catch (err) {
+    await dropDatabase(temp);
+    throw err;
+  }
+
   // Atomic publish: rename the fully-populated temp to the canonical name as
   // the last step. ALTER DATABASE … RENAME requires no active connections to
   // the temp — the pg_restore connection is gone, and admin connections go
@@ -235,4 +247,20 @@ export async function forkDatabase(
   }
 
   return { kind: "forked", plan };
+}
+
+/**
+ * Stamp `database` with its fork point (`database/fork-point`): now, on the
+ * cluster's clock — the one every `created_at` default reads — so a worktree
+ * backend can tell the rows it inherited (the conversations main's backend
+ * follows) from the ones it wrote. Seen by every session opened afterwards.
+ */
+async function stampForkPoint(database: string): Promise<void> {
+  assertSafeName(database);
+  // `ALTER DATABASE … SET` takes a literal only, so the clock is read and
+  // spliced in server-side.
+  await runDatabaseDdl(
+    `stamp ${database}'s fork point: ALTER DATABASE SET ${FORKED_AT_SETTING}`,
+    `DO $$ BEGIN EXECUTE format('ALTER DATABASE %I SET ${FORKED_AT_SETTING} = %L', '${database}', clock_timestamp()::text); END $$`,
+  );
 }

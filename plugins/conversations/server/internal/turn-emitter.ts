@@ -16,6 +16,7 @@ import {
   _conversationTurnCompletedTriggers,
   conversationTurnCompleted,
 } from "./tables-turn-completed-event";
+import { ownConversationFilter } from "./conversation-ownership";
 
 // conversationId → unsubscribe
 const subscriptions = new Map<string, () => void>();
@@ -27,13 +28,18 @@ const subscriptions = new Map<string, () => void>();
 // freshest read. A failing turn rejects its own caller and frees the gate.
 const reconcileGate = createSemaphore(1);
 
+// Followed: an active conversation of this database's own. One a fork copied
+// in from main's is main's to follow, whatever its status says here — see
+// `isOwnConversation`.
+//
 // Converges one conversation's subscription on its current DB status. The
 // event that woke it is only a wake-up: out-of-order, duplicate or replayed
 // events all land on the same truth.
 function reconcile(conversationId: string): Promise<void> {
   return reconcileGate.run(async () => {
     const row = await getConversationRuntime(conversationId);
-    const active = row !== null && isActiveStatus(row.status);
+    const own = await ownConversationFilter();
+    const active = row !== null && isActiveStatus(row.status) && own(row);
     const unsub = subscriptions.get(conversationId);
     if (active && !unsub) {
       subscriptions.set(
@@ -53,8 +59,10 @@ function reconcile(conversationId: string): Promise<void> {
 export function startTurnEmitter(): Promise<void> {
   return reconcileGate.run(async () => {
     const convs = await listConversationsForInfra();
+    const own = await ownConversationFilter();
     for (const c of convs) {
-      if (!isActiveStatus(c.status) || subscriptions.has(c.id)) continue;
+      if (!isActiveStatus(c.status) || !own(c) || subscriptions.has(c.id))
+        continue;
       subscriptions.set(c.id, subscribeToConversation(c.id));
     }
   });

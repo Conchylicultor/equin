@@ -93,6 +93,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`derived-views`** — Rebuilds plain DB views from source on every boot, in dependency order. Plain views are derived code (declared via the View contribution), not stateful migration schema.
     - **`embedded`** [load-bearing] [exempt] — Embedded Postgres binaries for the gateway-owned cluster. Provides shared connection constants used by every worktree backend.
     - **`fork`** — Durable, self-healing worktree DB fork: a graphile job that forks the base DB per worktree (idempotent, atomic), plus a scheduled sweep of orphaned temp forks.
+    - **`fork-point`** — Reads when this database was forked from another (databaseForkedAt): the instant the fork stamped on it, or null for a database never forked.
     - **`live-state-snapshot`** [test helpers] — L2 persisted live-state materialization: durable snapshot + xmin watermark for instant cold boot, served only from a usable row (a key the runtime persists now, under its current definition, from a…
     - **`migrations`** [test helpers] [exempt] — DDL lifecycle: migration runner and SQL files.
       - Plugins:

@@ -13692,7 +13692,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `report-kind` "held-turn-undelivered"
       - `resource.declare` "conversations.context-usage"
       - `resource.declare` "conversations.partial-message"
-    - Uses: 80 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
+    - Uses: 81 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
       - `tasks/tasks-core` ×25
       - `conversations/turn-ledger` ×13
       - `conversations/transcript-watcher` ×7
@@ -13709,6 +13709,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `conversations/model-provider/catalog.getModelCatalog`
       - `conversations/preprompts.resolvePrepromptItem`
       - `conversations/workspace/launch-option.getTaskWorkspace`
+      - `database/fork-point.databaseForkedAt`
       - `infra/attachments.getAttachment`
       - `infra/jobs.defineJob`
       - `reports/engine.recordReport`
@@ -19662,7 +19663,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `quotedRelationsIn`
       - `readTag`
   - Cross-plugin:
-    - Imported by: 124 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+    - Imported by: 125 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
       - `apps` ×35
       - `page` ×15
       - `infra` ×13
@@ -19670,7 +19671,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `tasks` ×9
       - `active-data` ×8
       - `debug` ×6
-      - `database` ×4
+      - `database` ×5
       - `primitives` ×4
       - `reports` ×2
       - `stats` ×2
@@ -20096,6 +20097,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `getForkExclusions`
       - Cross-plugin:
         - Imported by: `conversations/workspace/worktree`
+    - **`fork-point`** — Reads when this database was forked from another (databaseForkedAt): the instant the fork stamped on it, or null for a database never forked.
+      - Server:
+        - Uses: `database.db`
+        - Exports (values): `databaseForkedAt`
+      - Cross-plugin:
+        - Imported by: `conversations`
+      - Core:
+        - Exports (values): `FORKED_AT_SETTING`
     - **`live-state-snapshot`** — L2 persisted live-state materialization: durable snapshot + xmin watermark for instant cold boot, served only from a usable row (a key the runtime persists now, under its current definition, from a current writer). Two persist modes (a FULL recompute replaces; a persisted alias's trailing window lowers the floor), an hourly compact job, and a boot catch-up that seeds each persisted alias from its row and replays the changelog by scope — or, when history was pruned past the floor or a rollup was healed, recomputes every persisted key.
       - Server:
         - Contributes:

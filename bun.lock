@@ -2386,6 +2386,10 @@
       "name": "@equin/plugin-database-fork",
       "version": "0.0.1",
     },
+    "plugins/database/plugins/fork-point": {
+      "name": "@equin/plugin-database-fork-point",
+      "version": "0.0.1",
+    },
     "plugins/database/plugins/live-state-snapshot": {
       "name": "@equin/plugin-database-live-state-snapshot",
       "version": "0.0.1",
@@ -7876,6 +7880,8 @@
     "@equin/plugin-database-embedded": ["@equin/plugin-database-embedded@workspace:plugins/database/plugins/embedded"],
 
     "@equin/plugin-database-fork": ["@equin/plugin-database-fork@workspace:plugins/database/plugins/fork"],
+
+    "@equin/plugin-database-fork-point": ["@equin/plugin-database-fork-point@workspace:plugins/database/plugins/fork-point"],
 
     "@equin/plugin-database-live-state-snapshot": ["@equin/plugin-database-live-state-snapshot@workspace:plugins/database/plugins/live-state-snapshot"],
 

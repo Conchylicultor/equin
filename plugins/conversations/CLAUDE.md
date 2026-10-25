@@ -19,7 +19,7 @@
     - `report-kind` "held-turn-undelivered"
     - `resource.declare` "conversations.context-usage"
     - `resource.declare` "conversations.partial-message"
-  - Uses: 80 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 81 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `tasks/tasks-core` ×25
     - `conversations/turn-ledger` ×13
     - `conversations/transcript-watcher` ×7
@@ -36,6 +36,7 @@
     - `conversations/model-provider/catalog.getModelCatalog`
     - `conversations/preprompts.resolvePrepromptItem`
     - `conversations/workspace/launch-option.getTaskWorkspace`
+    - `database/fork-point.databaseForkedAt`
     - `infra/attachments.getAttachment`
     - `infra/jobs.defineJob`
     - `reports/engine.recordReport`
