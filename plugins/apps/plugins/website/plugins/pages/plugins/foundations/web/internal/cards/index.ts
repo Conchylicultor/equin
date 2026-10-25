@@ -1,4 +1,5 @@
 import type { AnyCardDef } from "../kit/types";
+import { askCard } from "./ask";
 import { backgroundCard } from "./background";
 import { blocksCard } from "./blocks";
 import { centralCard } from "./central";
@@ -30,6 +31,7 @@ import { slotsCard } from "./slots";
 import { statusCard } from "./status";
 import { tabsCard } from "./tabs";
 import { themesCard } from "./themes";
+import { trayCard } from "./tray";
 import { triggersCard } from "./triggers";
 import { windowCard } from "./window";
 
@@ -40,6 +42,7 @@ import { windowCard } from "./window";
  * naming a card that does not exist does not type.
  */
 export const CARDS = {
+  ask: askCard,
   background: backgroundCard,
   blocks: blocksCard,
   central: centralCard,
@@ -71,6 +74,7 @@ export const CARDS = {
   status: statusCard,
   tabs: tabsCard,
   themes: themesCard,
+  tray: trayCard,
   triggers: triggersCard,
   window: windowCard,
 } satisfies Record<string, AnyCardDef>;

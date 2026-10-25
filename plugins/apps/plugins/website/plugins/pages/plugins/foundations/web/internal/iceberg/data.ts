@@ -117,6 +117,20 @@ export const LAYERS: readonly IcebergLayer[] = [
         desc: "One notification center for every app and every agent.",
         kind: "component",
       },
+      {
+        name: "Mac & Linux integration",
+        weight: 2,
+        desc: "Every app can be installed as an app of its own, with its own window and its own icon in the Dock. An equin icon in the menu bar opens a panel from wherever you are to file a task or open any app, and notifications show as system notifications.",
+        card: "tray",
+        kind: "component",
+      },
+      {
+        name: "Ask equin",
+        weight: 2,
+        desc: "A chat in every app that answers questions about the app.",
+        card: "ask",
+        kind: "component",
+      },
     ],
   },
   {
