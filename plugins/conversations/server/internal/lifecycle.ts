@@ -683,6 +683,17 @@ async function respawnResume(row: Conversation): Promise<void> {
     throw new ResumeBlockedError(preflight.reason, preflight.message);
   }
 
+  // The user is continuing this conversation, not closing it: a close
+  // requested earlier (`exit_clean`) must be withdrawn before anything here
+  // stops the agent. Left set, the status reconciler closes the row again
+  // while the new agent is still `starting` (planAbsent's "closed while
+  // starting"), the Resume button comes back, and a second resume kills the
+  // first's agent mid-start — "exited during startup (stopped)", the row
+  // `done` over a live agent (conv-1792896432-q4y588).
+  if (row.closeRequested) {
+    await updateConversation(row.id, { closeRequested: false });
+  }
+
   const runtime = Runtime.get(row.runtime);
   // Clear any stale agent for this conversation before re-spawning.
   await runtime.delete(row.id);
@@ -712,6 +723,7 @@ async function respawnResume(row: Conversation): Promise<void> {
     await updateConversation(row.id, {
       status: statusAfterFailedResume(row.status),
       endedAt: row.endedAt,
+      closeRequested: row.closeRequested,
     });
     throw err;
   }
@@ -870,10 +882,6 @@ export async function rewindConversationAt(
   const located = await locateTranscriptCut(id, userMessageUuid);
   if (!located.ok) return refuseRewind(located.reason);
   if (!located.isTail) return refuseRewind("not-in-tail");
-
-  // The user is continuing this conversation, not closing it: a close requested
-  // earlier must not turn the pane restart below into "pane gone → done".
-  await updateConversation(id, { closeRequested: false });
 
   await rename(located.path, backupPath);
   await Bun.write(located.path, serializeTranscript(located.cut.keptLines));
