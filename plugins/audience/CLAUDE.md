@@ -36,7 +36,6 @@
     - `audience/developer-mark`
     - `audience/settings`
     - `audience/view-option`
-    - `hints/ask`
     - `shell/notifications`
     - `shell/toast`
 - Sub-plugins:
