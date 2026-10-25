@@ -41,7 +41,7 @@ picksLedger.noteComplete(writer, id);                           // AFTER it land
 - **Every endpoint that reaches `record` declares `agentReverted: true`**
   (`infra/endpoints`). That is what makes the agent browser's write drain wait
   for its requests before reverting; a write to an undeclared endpoint arrives
-  stamped `x-singularity-unreverted-write` (`writer.claimsUnreverted`), and
+  stamped `UNREVERTED_WRITE_HEADER` (`writer.claimsUnreverted`), and
   `record` throws before the write rather than record one the revert could
   miss.
 - Call `defineAgentWriteLedger` **once, at module eval** of the owning module. A

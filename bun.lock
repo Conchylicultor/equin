@@ -1389,7 +1389,7 @@
       "version": "0.0.1",
     },
     "plugins/audience/plugins/developer-mark": {
-      "name": "@singularity/plugin-audience-developer-mark",
+      "name": "@equin/plugin-audience-developer-mark",
       "version": "0.0.1",
     },
     "plugins/audience/plugins/settings": {
@@ -1586,7 +1586,7 @@
       "name": "@equin/plugin-config_v2-fields",
     },
     "plugins/config_v2/plugins/git-defaults-preview": {
-      "name": "@singularity/plugin-config_v2-git-defaults-preview",
+      "name": "@equin/plugin-config_v2-git-defaults-preview",
       "version": "0.0.1",
     },
     "plugins/config_v2/plugins/ledger": {
@@ -10308,9 +10308,9 @@
 
     "@sindresorhus/merge-streams": ["@sindresorhus/merge-streams@4.0.0", "", {}, "sha512-tlqY9xq5ukxTUZBmoOp+m61cqwQD5pHJtFY3Mn8CA8ps6yghLH/Hw8UPdqg4OLmFW3IFlcXnQNmo/dh8HzXYIQ=="],
 
-    "@singularity/plugin-audience-developer-mark": ["@singularity/plugin-audience-developer-mark@workspace:plugins/audience/plugins/developer-mark"],
+    "@equin/plugin-audience-developer-mark": ["@equin/plugin-audience-developer-mark@workspace:plugins/audience/plugins/developer-mark"],
 
-    "@singularity/plugin-config_v2-git-defaults-preview": ["@singularity/plugin-config_v2-git-defaults-preview@workspace:plugins/config_v2/plugins/git-defaults-preview"],
+    "@equin/plugin-config_v2-git-defaults-preview": ["@equin/plugin-config_v2-git-defaults-preview@workspace:plugins/config_v2/plugins/git-defaults-preview"],
 
     "@stablelib/base64": ["@stablelib/base64@1.0.1", "", {}, "sha512-1bnPQqSxSuc3Ii6MhBysoWCg58j97aUjuCSZrGSmDxNqtytIi0k8utUenAwTZN4V5mXXYGsVUI9zeBqy+jBOSQ=="],
 

@@ -813,9 +813,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Routes:
               - `GET /api/browser/proxy`
               - `POST /api/browser/proxy`
-          - Cross-plugin:
-            - Uses tokens: `ui/tokens/density --space-sm`
           - Core:
+            - Uses: `framework/product-name.LEGACY_IDS`
             - Exports (types):
               - `BrowserProxyNavKind`
               - `BrowserProxyNavMessage`
@@ -827,6 +826,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `parseBrowserProxyNavMessage`
               - `parseMetaRefresh`
               - `proxyUrl`
+          - Cross-plugin:
+            - Uses tokens: `ui/tokens/density --space-sm`
         - **`shell`** — App shell for the Browser app. Registers the /browser app entry, owns the per-surface tab store (each tab an independent nav stack), defines the Browser.* slots, exports the <Favicon> component, and contributes the app's own theme (the mockup's palette in both modes, the system font at 13px, Lucide icons, its control geometry), which the browser app selects.
           - Web:
             - Slots:
@@ -4133,6 +4134,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-medium`
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-label`
+          - Exemptions:
+            - Exempts itself from: `product-name:legacy-id` — `CLAUDE.md` (sanctioned)
         - **`shell`** — App shell for Files (the file explorer): registers the /files app entry with its outline-folder mark, contributes the app's own theme (files: the prototype's zinc palette, blue accent, Lucide icons and metrics), lays the Places sidebar beside one full-surface browser pane, and defines the FileExplorer.Sidebar / Toolbar / Places slots.
           - Web:
             - Slots:
@@ -4930,7 +4933,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by: `apps/mail/search`
     - **`pages`** — Notion-like pages app.
       - Plugins:
-        - **`agent-origin`** — Agent-origin provenance for pages: presents the exposed `origin` field (Private / Scratch) of the Pages sidebar DataView, so pages written by an automated session land in their own Scratch section of the sidebar. Agent-origin provenance for pages (page_blocks_ext_origin): a create-hook contributor stamps every page written by an automated session (x-singularity-origin: agent) with the script that minted it, the marker's presence is exposed as the `origin` field (agent | user) of every list whose rows are blocks — the Pages sidebar's Private / Scratch sections — and the machine half's 24h retention sweep trashes the marked pages.
+        - **`agent-origin`** — Agent-origin provenance for pages: presents the exposed `origin` field (Private / Scratch) of the Pages sidebar DataView, so pages written by an automated session land in their own Scratch section of the sidebar. Agent-origin provenance for pages (page_blocks_ext_origin): a create-hook contributor stamps every page written by an automated session (the origin header set to agent) with the script that minted it, the marker's presence is exposed as the `origin` field (agent | user) of every list whose rows are blocks — the Pages sidebar's Private / Scratch sections — and the machine half's 24h retention sweep trashes the marked pages.
           - Web:
             - Contributes: `FieldPresentation.Register` "exposure:page_blocks_ext_origin"
             - Uses: `network/live.FieldPresentation`
@@ -10643,6 +10646,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `WebsiteSoon`
           - Core:
             - Uses:
+              - `framework/product-name.LEGACY_IDS`
               - `infra/namespace.MAIN_WORKTREE_NAME`
               - `infra/namespace.namespaceHost`
               - `infra/namespace.namespaceUrl`
@@ -11561,6 +11565,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Exempts itself from:
       - `timer/no-unlisted-timer` — `central/internal/refresh-loop.ts` (sanctioned)
       - `namespace:legacy-host` — `central/internal/oauth-flow.test.ts` (sanctioned)
+      - `product-name:legacy-id` — `central/internal/oauth-flow.test.ts` (sanctioned)
   - Plugins:
     - **`apple-signing`** — Apple code-signing config registration (web). The Accounts provider row + setup wizard UI live in the setup-wizard sub-plugin. Apple code-signing credentials: config fields + certificate upload + Tauri release env provider.
       - Web:
@@ -11847,10 +11852,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `backup/sources/config`
       - `backup/sources/cost-history`
       - `backup/sources/databases`
+      - `backup/sources/platform`
       - `backup/sources/project-memory`
       - `backup/sources/prototypes`
       - `backup/sources/secrets`
-      - `backup/sources/singularity-platform`
       - `backup/sources/transcripts`
       - `backup/targets/google-drive`
       - `backup/targets/local`
@@ -11993,6 +11998,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/worktree.isCanonicalWorktreeName`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/assemble-databases.ts` (debt)
+        - **`platform`** — Config UI for the equin platform backup source. Backs up equin platform files (auth, database config) into the backup archive.
+          - Web:
+            - Contributes: `ConfigV2.WebRegister` "config"
+            - Uses: `config_v2.ConfigV2`
+          - Server:
+            - Contributes:
+              - `ConfigV2.Register` "config"
+              - `backup.source` "equin platform"
+            - Uses:
+              - `backup.BackupSource`
+              - `config_v2.ConfigV2`
+              - `config_v2.getConfig`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/assemble-platform.ts` (debt)
         - **`project-memory`** — Config UI for the project memory backup source. Backs up Claude Code project memory files into the backup archive.
           - Web:
             - Contributes: `ConfigV2.WebRegister` "config"
@@ -12036,20 +12055,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `config_v2.getConfig`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/assemble-secrets.ts` (debt)
-        - **`singularity-platform`** — Config UI for the equin platform backup source. Backs up equin platform files (auth, database config) into the backup archive.
-          - Web:
-            - Contributes: `ConfigV2.WebRegister` "config"
-            - Uses: `config_v2.ConfigV2`
-          - Server:
-            - Contributes:
-              - `ConfigV2.Register` "config"
-              - `backup.source` "equin platform"
-            - Uses:
-              - `backup.BackupSource`
-              - `config_v2.ConfigV2`
-              - `config_v2.getConfig`
-          - Exemptions:
-            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/assemble-singularity-platform.ts` (debt)
         - **`transcripts`** — Config UI for the transcripts backup source. Backs up retained-conversation transcripts (active, plus every conversation of a held task) into the backup archive.
           - Web:
             - Contributes: `ConfigV2.WebRegister` "config"
@@ -14042,7 +14047,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `CloseTeardown`
       - Machine:
         - Register: `defineJob('conversations.teardown-closed')`
-    - **`commit-conversation`** — The commit row action that opens the conversation which wrote a commit (its Singularity-Conversation trailer) in a new browser tab.
+    - **`commit-conversation`** — The commit row action that opens the conversation which wrote a commit (its conversation trailer) in a new browser tab.
       - Web:
         - Uses: `primitives/link-gesture/new-tab.NewTabButton`
         - Exports (values): `OpenCommitConversation`
@@ -19296,7 +19301,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `mcpScope('scope')`
               - `defineJob('workspace.scratch-reap')`
           - Core:
-            - Uses: `infra/paths.CLAUDE_USER_CONFIG`
+            - Uses:
+              - `framework/product-name.PRODUCT_NAME`
+              - `infra/paths.CLAUDE_USER_CONFIG`
             - Exports (values):
               - `assertDirTrusted`
               - `ensureDirTrusted`
@@ -19688,15 +19695,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `dropDerivedViews`
           - `rebuildDerivedViews`
           - `View`
-      - Cross-plugin:
-        - Imported by:
-          - `apps/chord/video-availability`
-          - `conversations/agents`
-          - `database`
-          - `database/derived-tables`
-          - `database/migrations`
-          - `tasks/tasks-core`
       - Core:
+        - Uses: `framework/product-name.LEGACY_IDS`
         - Exports (types): `RegisteredView`
         - Exports (values):
           - `assertImperativePublicTable`
@@ -19717,6 +19717,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PAGE_CONTENT_EDITED_AT_TABLE`
           - `TASK_LATEST_CONVERSATION_TABLE`
           - `topoSortViews`
+      - Cross-plugin:
+        - Imported by:
+          - `apps/chord/video-availability`
+          - `conversations/agents`
+          - `database`
+          - `database/derived-tables`
+          - `database/migrations`
+          - `tasks/tasks-core`
     - **`embedded`** — Embedded Postgres binaries for the gateway-owned cluster. Provides shared connection constants used by every worktree backend.
       - Cross-plugin:
         - Imported by:
@@ -19747,7 +19755,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PG_SOCKET_DIR`
           - `PG_USER`
           - `pgPostmasterPidFile`
-    - **`fork`** — Durable, self-healing worktree DB fork: a graphile job that forks the singularity DB per worktree (idempotent, atomic), plus a scheduled sweep of orphaned temp forks.
+    - **`fork`** — Durable, self-healing worktree DB fork: a graphile job that forks the base DB per worktree (idempotent, atomic), plus a scheduled sweep of orphaned temp forks.
       - Server:
         - Contributes:
           - `report-kind` "db-fork-failed"
@@ -19837,6 +19845,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `planSchemaSteps`
       - Core:
         - Uses:
+          - `framework/product-name.LEGACY_IDS`
           - `infra/spawn.spawnCaptured`
           - `infra/spawn.spawnExpectOk`
         - Exports (types):
@@ -19921,6 +19930,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database/migrations/bundled-source`
       - Exemptions:
         - Exempts itself from:
+          - `product-name:legacy-id` — `data` (sanctioned)
           - `imperative-create-table-allowlisted` — `check/imperative-create-table-allowlisted.ts` (sanctioned)
           - `boundaries/no-platform-api` — `core/internal/drizzle-stage.ts`, `core/internal/published-immutable.ts`, `core/internal/schema-load-probe.ts`, `core/internal/schema-snapshot.ts`, `core/internal/snapshot-bodies.ts`, `core/internal/snapshot-dag.ts` (debt)
         - Exempted by: `database/migrations` (0 debt)
@@ -22222,7 +22232,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by: `debug/timeline`
       - Exemptions:
         - Exempts itself from:
-          - `cli:legacy-cli-name` — `server/internal/sample-math.test.ts` (sanctioned)
           - `detached-work-safety/no-raw-set-interval` — `server/internal/worker/entry.ts` (sanctioned)
           - `boundaries/no-platform-api` — `server/internal/status-resource.ts`, `server/internal/worker-host.ts`, `server/internal/worker/pg.ts`, `server/internal/worker/sample.ts` (debt)
       - Plugins:
@@ -24973,9 +24982,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from:
           - `detached-work-safety/no-raw-set-interval` — `bin/index.ts` (sanctioned)
           - `live/no-legacy-resource-spelling` — `.` (sanctioned)
-    - **`cli`** — The `./equin` CLI (its old name `singularity` is kept as a shim): the command declaration contract, the generated-artifact normalize contract, and every built-in command (build, push, check, test, run, release, deploy, and more).
+    - **`cli`** — The `./equin` CLI (its old name is kept as a shim): the command declaration contract, the generated-artifact normalize contract, and every built-in command (build, push, check, test, run, release, deploy, and more).
       - Core:
-        - Uses: `framework/tooling/collected-dir.defineCollectedDir`
+        - Uses:
+          - `framework/product-name.LEGACY_IDS`
+          - `framework/tooling/collected-dir.defineCollectedDir`
         - Exports (types):
           - `ClaudeMdRepo`
           - `CliAction`
@@ -25062,17 +25073,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/cli/op-runtime.withDirectOp`
           - Exemptions:
             - Exempts itself from: `check-runner-safety/no-adhoc-check-runner` — `cli/run.ts` (sanctioned)
-        - **`cli-name`** — The CLI's own name, as data: CLI_NAME (`equin`, what agents type and the CLI calls itself), CLI_NAMES (every repo-root executable that runs it, the legacy `singularity` shim included), isCliName and CLI_NAME_PATTERN for matchers over command text. A dependency-free leaf, so a guard, a spawn site or a browser bundle can import it.
-          - Cross-plugin:
-            - Imported by:
-              - `debug/browser-recordings`
-              - `framework/tooling/guards`
+        - **`cli-name`** — The CLI's own name, as data: CLI_NAME (`equin`, what agents type and the CLI calls itself), CLI_NAMES (every repo-root executable that runs it, the legacy shim included), isCliName and CLI_NAME_PATTERN for matchers over command text. A dependency-free leaf, so a guard, a spawn site or a browser bundle can import it.
           - Core:
+            - Uses: `framework/product-name.LEGACY_IDS`
             - Exports (values):
               - `CLI_NAME`
               - `CLI_NAME_PATTERN`
               - `CLI_NAMES`
               - `isCliName`
+          - Cross-plugin:
+            - Imported by:
+              - `debug/browser-recordings`
+              - `framework/tooling/guards`
         - **`db`** — `./equin db` — worktree database operations; today just `db fork`, which gives a hand-made `git worktree add` checkout the DB fork it never got.
         - **`deploy`** — `./equin deploy converge|ship` — converge a host to serve a composition (run user, dirs, env, Caddy, systemd, firewall) and ship release bundles to it behind a health gate.
         - **`doctor`** — The prerequisite doctor: doctor.sh names every missing prerequisite (Xcode CLT/git, mise active, the locked toolchain) in one run, with its fix, and advises on Claude Code (installed and signed in) without failing on it. Run as `mise run doctor` and at the end of every `mise install`; assertPrerequisites() runs it as the first step of `start` and `build`.
@@ -25293,22 +25305,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `RouteHandler`
         - Exports (values): `createRequestHandler`
     - **`plugin-id`** — Canonical plugin identity: the branded PluginId type and its derived path encodings.
-      - Cross-plugin:
-        - Imported by:
-          - `framework/server-core`
-          - `framework/tooling/boundaries`
-          - `framework/tooling/codegen`
-          - `framework/tooling/web-artifacts`
-          - `framework/web-sdk`
-          - `plugin-meta/closure`
-          - `plugin-meta/facets/cross-refs`
-          - `plugin-meta/facets/exports`
-          - `plugin-meta/parse-utils`
-          - `plugin-meta/plugin-refs`
-          - `plugin-meta/plugin-tree`
-          - `plugin-meta/relocate`
-          - `tasks/automations`
       - Core:
+        - Uses: `framework/product-name.PRODUCT_NAME`
         - Exports (types):
           - `LeafFolder`
           - `PluginFolder`
@@ -25323,8 +25321,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LEAF_FOLDERS`
           - `MACHINE_NODE_SUFFIX`
           - `machineNode`
+          - `PACKAGE_SCOPE`
           - `packageNameFor`
           - `PLUGIN_FOLDERS`
+          - `PLUGIN_MANIFEST_KEY`
+          - `PLUGIN_PACKAGE_PREFIX`
           - `pluginIdSegments`
           - `pluginOfNode`
           - `RUNTIME_FOLDERS`
@@ -25333,6 +25334,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TESTS_DIR`
           - `UNDOCUMENTED_RUNTIME_FOLDERS`
           - `VERIFYING_FOLDERS`
+      - Cross-plugin:
+        - Imported by:
+          - `framework/server-core`
+          - `framework/tooling/boundaries`
+          - `framework/tooling/codegen`
+          - `framework/tooling/guards`
+          - `framework/tooling/web-artifacts`
+          - `framework/web-sdk`
+          - `plugin-meta/closure`
+          - `plugin-meta/facets/cross-refs`
+          - `plugin-meta/facets/exports`
+          - `plugin-meta/parse-utils`
+          - `plugin-meta/plugin-refs`
+          - `plugin-meta/plugin-tree`
+          - `plugin-meta/relocate`
+          - `tasks/automations`
     - **`plugin-loader`** — Pure plugin-graph algorithms: topological load-wave partitioning and dependsOn topo-sort, shared by the server/central/web plugin loaders.
       - Cross-plugin:
         - Imported by:
@@ -25342,13 +25359,34 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `computeLoadWaves`
           - `topoSortPlugins`
-    - **`product-name`** — The product's own name, as data: PRODUCT_NAME (`equin`, always lowercase — what every person and agent reads) and LEGACY_PRODUCT_NAMES (the names it went by before, never written again), enforced by the product-name:legacy check over every tracked file. A dependency-free leaf, so a browser bundle, a server or a script can import it.
+    - **`product-name`** — The product's own name, as data: PRODUCT_NAME (`equin`, always lowercase — what every person and agent reads) and LEGACY_PRODUCT_NAMES (the names it went by before, never written again), enforced by the product-name:legacy check over every tracked file; and LEGACY_IDS, the identifiers built from the old name that are kept for good (stored state, cross-version contracts), the one place they are spelled — enforced by product-name:legacy-id (and its mirrors by product-name:legacy-ids-in-sync). A dependency-free leaf, so a browser bundle, a server or a script can import it.
       - Cross-plugin:
-        - Imported by: `infra/endpoints`
+        - Imported by:
+          - `apps/browser/proxy`
+          - `apps/website/shell`
+          - `conversations/workspace/scratch`
+          - `database/derived-views`
+          - `database/migrations`
+          - `framework/cli`
+          - `framework/cli/cli-name`
+          - `framework/plugin-id`
+          - `infra/endpoints`
+          - `infra/git/remotes`
+          - `infra/host-fs`
+          - `infra/namespace`
+          - `infra/paths`
+          - `infra/request-origin`
+          - `packages/resource-protocol`
+          - `tasks/tasks-core`
       - Exemptions:
-        - Exempts itself from: `product-name:legacy` — `core/internal/product-name.ts`, `check/index.ts` (sanctioned)
+        - Exempts itself from:
+          - `product-name:legacy` — `core/internal/product-name.ts` (sanctioned)
+          - `product-name:legacy-id` — `core/internal/product-name.ts`, `core/internal/legacy-ids.ts`, `check/legacy-id.ts` (sanctioned)
+          - `cli:legacy-cli-name` — `core/internal/legacy-ids.ts` (sanctioned)
       - Core:
+        - Exports (types): `LegacyIdKey`
         - Exports (values):
+          - `LEGACY_IDS`
           - `LEGACY_PRODUCT_NAMES`
           - `PRODUCT_NAME`
     - **`resource-runtime`**
@@ -25728,10 +25766,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `backup/sources/config` (1 debt)
               - `backup/sources/cost-history` (1 debt)
               - `backup/sources/databases` (1 debt)
+              - `backup/sources/platform` (1 debt)
               - `backup/sources/project-memory` (1 debt)
               - `backup/sources/prototypes` (1 debt)
               - `backup/sources/secrets` (1 debt)
-              - `backup/sources/singularity-platform` (1 debt)
               - `backup/sources/transcripts` (1 debt)
               - `backup/targets/google-drive` (2 debt)
               - `backup/targets/local` (1 debt)
@@ -26396,6 +26434,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/cli/cli-name.CLI_NAME`
               - `framework/cli/cli-name.CLI_NAMES`
               - `framework/cli/cli-name.isCliName`
+              - `framework/plugin-id.PLUGIN_MANIFEST_KEY`
               - `framework/tooling/collected-dir.defineCollectedDir`
               - `framework/tooling/collected-dir.loadCollectedDir`
               - `framework/tooling/guards/refusal-format.joinRefusal`
@@ -29166,6 +29205,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`remotes`** — May this checkout publish, and where does it receive from? — the write-access probe (`git push --dry-run`, classified into denied / no-credentials / unreachable rather than one 'no'), its `.git/config` cache of that measurement, the upstream resolution built from the same facts, and who signs the commits push makes (a local placeholder where they cannot leave the machine, a real identity required where they will be public).
           - Core:
             - Uses:
+              - `framework/product-name.LEGACY_IDS`
               - `infra/spawn.spawnCaptured`
               - `infra/spawn.spawnExpectOk`
             - Exports (types):
@@ -29524,6 +29564,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `POST /api/host-fs/move`
       - Core:
         - Uses:
+          - `framework/product-name.LEGACY_IDS`
           - `infra/endpoints.assetPath`
           - `infra/endpoints.AssetPath`
           - `infra/endpoints.blob`
@@ -30343,23 +30384,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `boundaries/no-platform-api` — `server/internal/host-client.ts`, `shared/code-id.ts` (debt)
               - `endpoints/no-raw-web-fetch` — `shared/revert.ts` (sanctioned)
     - **`namespace`** — Canonical namespace identity: the branded Namespace type, the <composition>.<checkout> elision rule that mints one, and the URL/host encodings derived from it.
-      - Cross-plugin:
-        - Imported by:
-          - `apps/website/shell`
-          - `build`
-          - `framework/tooling/codegen`
-          - `framework/tooling/guards`
-          - `framework/tooling/web-artifacts`
-          - `infra/paths`
-          - `infra/runtime-identity`
-          - `plugin-meta/barrel-import`
-          - `plugin-meta/closure`
-          - `plugin-meta/composition`
-      - Exemptions:
-        - Exempts itself from:
-          - `namespace:no-hand-built-url` — `core/namespace.ts`, `check/index.ts` (sanctioned)
-          - `namespace:legacy-host` — `core/namespace.test.ts` (sanctioned)
       - Core:
+        - Uses:
+          - `framework/product-name.LEGACY_IDS`
+          - `framework/product-name.PRODUCT_NAME`
         - Exports (types):
           - `CheckoutRef`
           - `Namespace`
@@ -30380,8 +30408,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `namespaceFor`
           - `namespaceFromHost`
           - `namespaceHost`
+          - `namespaceLabel`
           - `namespaceParts`
           - `namespaceUrl`
+          - `resolveNamespaceAlias`
+      - Cross-plugin:
+        - Imported by:
+          - `apps/website/shell`
+          - `build`
+          - `framework/tooling/codegen`
+          - `framework/tooling/guards`
+          - `framework/tooling/web-artifacts`
+          - `infra/paths`
+          - `infra/runtime-identity`
+          - `plugin-meta/barrel-import`
+          - `plugin-meta/closure`
+          - `plugin-meta/composition`
+      - Exemptions:
+        - Exempts itself from:
+          - `namespace:no-hand-built-url` — `core/namespace.ts`, `check/index.ts` (sanctioned)
+          - `namespace:legacy-host` — `core/namespace.test.ts` (sanctioned)
+          - `product-name:legacy-id` — `core/namespace.test.ts` (sanctioned)
     - **`ndjson-stream`** — Client NDJSON stream reader: an async generator yielding one parsed JSON frame per line from a streamed endpoint over the caller's transport (readNdjson(transport, route, url, init)), guarding res.ok and reporting via EndpointError. NDJSON (application/x-ndjson) streaming Response builder: wrap a frame-emitting producer into a chunked stream that survives Bun's idle timeout and lets clients render rows progressively.
       - Web:
         - Uses:
@@ -30400,6 +30447,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`paths`** — Canonical machine paths, plus the boot-time publication of this namespace's declared data-dir set so an audit running in another checkout can tell one of this branch's directories from an orphan.
       - Core:
         - Uses:
+          - `framework/product-name.LEGACY_IDS`
           - `framework/tooling/collected-dir.defineCollectedDir`
           - `infra/namespace.asNamespace`
           - `infra/namespace.CheckoutRef`
@@ -30549,7 +30597,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreeDataDir`
           - `worktreesDir`
       - Plugins:
-        - **`display`** — The human-facing spelling of the singularity data dirs (the `~/…` form a message, an empty state, or an agent prompt writes). Web-safe by construction: string literals only, no node:* and no homedir() — so the browser can name a directory the server resolves.
+        - **`display`** — The human-facing spelling of the data dirs (the `~/…` form a message, an empty state, or an agent prompt writes). Web-safe by construction: string literals only, no node:* and no homedir() — so the browser can name a directory the server resolves.
           - Exemptions:
             - Exempts itself from: `paths:no-hardcoded-paths` — `core/internal/display.ts` (sanctioned)
           - Core:
@@ -30691,9 +30739,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Core: `@plugins/infra/plugins/query-resource/core/testing`
           - `familyMemberAlias` — A member's join alias: the family id, then the member id with every character outside `[A-Za-z0-9]` spelled `_<hex>_` — injective, so two members can never share an alias (`cc-1` → `custom__cc_2d_1`).
     - **`request-origin`** — Who caused a request: the two provenance headers an automated browser session stamps on every request it issues, the WriteOrigin type a durable write records, and the single reading of those headers. A leaf — string literals and one Request read, no node:*, no db — so the e2e harness that SETS the headers and the server plugins that ACT on them share one spelling.
-      - Cross-plugin:
-        - Imported by: `infra/endpoints`
       - Core:
+        - Uses: `framework/product-name.LEGACY_IDS`
         - Exports (types): `WriteOrigin`
         - Exports (values):
           - `AGENT_ORIGIN`
@@ -30703,6 +30750,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `originOf`
           - `systemOrigin`
           - `UNREVERTED_WRITE_HEADER`
+      - Cross-plugin:
+        - Imported by: `infra/endpoints`
       - Plugins:
         - **`agent-write-ledger`** — Shared agent-write ledger: defineAgentWriteLedger lets a domain snapshot the files an agent-origin request is about to overwrite (first write wins) and put them back on revert, skipping anything a person edited since; GET /api/agent-writes and POST /api/agent-writes/revert aggregate every registered ledger for the e2e harness.
           - Server:
@@ -32940,7 +32989,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `createRefcountHub`
     - **`resource-protocol`** — The live-resource wire protocol, shared by the resource runtime (server, central) and the live-state client: the socket's frame vocabulary declared once as data — ServerFrame / ClientFrame / Derivation types derived from it, and PROTOCOL, a pure-JS hash of its canonical JSON that splits the shared socket and gates seeded derivations exactly when the vocabulary changes — plus the failure vocabulary: the sub-error reasons (contract-mismatch included), the contract verdict (skew / same-build / unknown), the HTTP error body, the client build-graph header, ResourceContractError — the typed throw a params decode raises when a subscription does not match the declaration — and ResourceRefusal, the expected caller-caused refusal a loader throws, whose message reaches the reader and is never reported as a server failure.
       - Core:
-        - Uses: `packages/string-hash.hash53`
+        - Uses:
+          - `framework/product-name.LEGACY_IDS`
+          - `packages/string-hash.hash53`
         - Exports (types):
           - `ClientFrame`
           - `ContractVerdict`
@@ -37028,6 +37079,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `framework/plugin-id.asPluginId`
           - `framework/plugin-id.isTestCodePath`
+          - `framework/plugin-id.PLUGIN_MANIFEST_KEY`
           - `framework/plugin-id.PluginId`
           - `framework/plugin-id.TESTING_FOLDER`
           - `framework/plugin-id.TESTS_DIR`
@@ -37292,7 +37344,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `pluginMoveKey`
           - `readPluginMoves`
       - Exemptions:
-        - Exempts itself from: `boundaries/no-platform-api` — `core/internal/apply-moves.ts`, `core/internal/ledger.ts` (debt)
+        - Exempts itself from:
+          - `product-name:legacy-id` — `core/plugin-moves.json` (sanctioned)
+          - `boundaries/no-platform-api` — `core/internal/apply-moves.ts`, `core/internal/ledger.ts` (debt)
     - **`token-usage`** — Which theme tokens a plugin's source uses, and which plugin owns each one: the static defineTokenGroup reader (owner + CSS vars) and the token-usage scanner (literal var(--x) plus Tailwind classes resolved by Tailwind's own design system over app.css). Feeds the cross-refs facet's tokenUses, which the closure engine turns into hard edges.
       - Core:
         - Uses:
@@ -48199,7 +48253,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `active-data/attempt`
           - `debug/profiling/ops`
-    - **`attempt-work`** — The attempt-work authority: where an attempt stands relative to `main`, measured from git (branch counts + Singularity-Conversation trailers on main) rather than from the lagging pushes ledger — the direct read for the server-side exit-drop guard and the git measurements commits-graph shares. The live value is served by the machine half.
+    - **`attempt-work`** — The attempt-work authority: where an attempt stands relative to `main`, measured from git (branch counts + conversation trailers on main) rather than from the lagging pushes ledger — the direct read for the server-side exit-drop guard and the git measurements commits-graph shares. The live value is served by the machine half.
       - Server:
         - Contributes: `resource.declare` "attempt-work"
         - Uses:
@@ -49997,7 +50051,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks` (keyed)
           - `tasks:rows` (keyed, point)
       - Core:
-        - Uses: 23 symbols — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+        - Uses: 24 symbols — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
           - `conversations/workspace` ×3
           - `fields/text/config` ×3
           - `fields` ×3
@@ -50008,6 +50062,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fields/date/config.dateField`
           - `fields/json/config.jsonField`
           - `fields/string-list/config.stringListField`
+          - `framework/product-name.LEGACY_IDS`
           - `infra/entities.entityRef`
           - `packages/list-bound.wholeList`
           - `primitives/pane.defineRoute`

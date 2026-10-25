@@ -47,7 +47,10 @@ import {
 import { randomUUID } from "node:crypto";
 import { dirname } from "node:path";
 import { z } from "zod";
-import type { WriteOrigin } from "@plugins/infra/plugins/request-origin/core";
+import {
+  UNREVERTED_WRITE_HEADER,
+  type WriteOrigin,
+} from "@plugins/infra/plugins/request-origin/core";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import type {
   AgentWriteEntrySummary,
@@ -308,7 +311,7 @@ export function defineAgentWriteLedger<K extends string>(
         // rather than record one the revert may silently fail to undo.
         throw new Error(
           `[agent-write-ledger] "${id}": ${writer.source}'s write to "${key}" (${operation}) ` +
-            `came in a request stamped as never reverted (x-singularity-unreverted-write). ` +
+            `came in a request stamped as never reverted (${UNREVERTED_WRITE_HEADER}). ` +
             `Declare \`agentReverted: true\` on the endpoint that reaches this write.`,
         );
       }

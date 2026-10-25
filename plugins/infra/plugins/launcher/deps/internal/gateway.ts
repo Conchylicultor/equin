@@ -130,7 +130,7 @@ export const gatewayBinary = defineDep({
 
 /**
  * Whether the BARE gateway binary at `path` carries the signature its build
- * gives it (`then`, as `dev.singularity.gateway`) — asked WITHOUT side effects (the local identity is read,
+ * gives it (`then`, as `GATEWAY_CODESIGN_IDENTIFIER`) — asked WITHOUT side effects (the local identity is read,
  * never minted; nothing is re-signed), for a reader that only reports.
  *
  * - `unsupported` — not macOS: nothing is signed there;
