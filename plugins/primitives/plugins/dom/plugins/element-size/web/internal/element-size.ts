@@ -1,6 +1,7 @@
 import {
   useCallback,
   useLayoutEffect,
+  useRef,
   useState,
   type DependencyList,
 } from "react";
@@ -119,4 +120,62 @@ export function useElementSize<T extends HTMLElement = HTMLElement>(
   );
 
   return [setRef, size];
+}
+
+/**
+ * Observe a CHANGING set of elements — rows a windowed list mounts and unmounts
+ * — through ONE observer. Returns a stable `observe(el)` that starts watching
+ * `el` and returns its own release (a React 19 ref-callback cleanup): spread it
+ * as `ref={(el) => observe(el)}`. `onResize(targets)` runs synchronously once
+ * for each newly observed element (the {@link useResizeObserver} first-measure
+ * rule), then with every element whose size changed, RAF-batched. The observer
+ * is created on first use and disconnected on unmount; `onResize` is
+ * stabilised, so it always sees the latest closure.
+ */
+export function useResizeObserverSet(
+  onResize: (targets: readonly Element[]) => void,
+): (el: Element) => () => void {
+  const handler = useEventCallback(onResize);
+  const ref = useRef<{
+    observer: ResizeObserver | null;
+    pending: Set<Element>;
+    rafId: number | null;
+  }>({ observer: null, pending: new Set(), rafId: null });
+
+  useLayoutEffect(() => {
+    const state = ref.current;
+    return () => {
+      state.observer?.disconnect();
+      state.observer = null;
+      if (state.rafId !== null) cancelAnimationFrame(state.rafId);
+      state.rafId = null;
+      state.pending.clear();
+    };
+  }, []);
+
+  return useCallback(
+    (el: Element) => {
+      const state = ref.current;
+      if (state.observer === null) {
+        state.observer = new ResizeObserver((entries) => {
+          for (const entry of entries) state.pending.add(entry.target);
+          if (state.rafId !== null) return;
+          state.rafId = requestAnimationFrame(() => {
+            state.rafId = null;
+            const targets = [...state.pending].filter((t) => t.isConnected);
+            state.pending.clear();
+            if (targets.length > 0) handler(targets);
+          });
+        });
+      }
+      const observer = state.observer;
+      observer.observe(el);
+      handler([el]); // synchronous first measure — no first-paint flash
+      return () => {
+        observer.unobserve(el);
+        state.pending.delete(el);
+      };
+    },
+    [handler],
+  );
 }

@@ -3,7 +3,10 @@ import type { CSSProperties } from "react";
 /**
  * Where a depth-`depth` row's content starts, from the full-width row's own
  * edge: `depth` indent steps after the row's lead inset (density
- * `treeIndent` / `treeRowPadStart`). Every box that mirrors a tree row's
+ * `treeIndent` / `treeRowPadStart`). The default step is one chevron box plus
+ * the row's cell gap (`--tree-chevron-w` + `--tree-row-gap`), so a row's
+ * content starts where its parent's second cell (the icon, after the chevron
+ * box) does. Every box that mirrors a tree row's
  * geometry (the placeholder row, the aligned-columns header) reads it here, so
  * none re-spells the formula.
  */

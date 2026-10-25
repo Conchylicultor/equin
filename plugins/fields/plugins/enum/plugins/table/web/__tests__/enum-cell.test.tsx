@@ -132,3 +132,54 @@ describe("EnumCell draws a tinted option without a variant as a dot", () => {
     expect(chip?.className).toContain("text-success");
   });
 });
+
+describe("EnumCell, quiet (a row view's term)", () => {
+  const quiet = (field: FieldDef<unknown>, value: string) =>
+    render(
+      <EnumCell field={field} value={value} raw={{}} presentation="quiet" />,
+    );
+  const tinted: FieldDef<unknown> = {
+    id: "source",
+    label: "Source",
+    type: "enum",
+    options: [
+      { value: "web", label: "Web", tint: "--categorical-3", variant: "info" },
+    ],
+  };
+
+  it("draws a dot and the label, never a chip — even for a variant", () => {
+    const { container, getByText } = quiet(
+      FIELD as FieldDef<unknown>,
+      "failed",
+    );
+    const dot = container.querySelector<HTMLElement>("[data-enum-dot]")!;
+    // The variant's ink, as the dot's fill.
+    expect(dot.getAttribute("class")).toContain("bg-destructive");
+    expect(
+      getByText("Failed").closest("[class*='text-destructive']"),
+    ).toBeNull();
+  });
+
+  it("the option's tint wins over its variant", () => {
+    const dot = quiet(tinted, "web").container.querySelector<HTMLElement>(
+      "[data-enum-dot]",
+    )!;
+    expect(dot.style.backgroundColor).toBe("var(--categorical-3)");
+    expect(dot.getAttribute("class")).not.toContain("bg-info");
+  });
+
+  it("a value with no colour gets the faint dot, its hint the label's tooltip", () => {
+    const { container, getByText } = quiet(FIELD as FieldDef<unknown>, "empty");
+    const dot = container.querySelector<HTMLElement>("[data-enum-dot]")!;
+    expect(dot.getAttribute("class")).toContain("bg-faint-foreground");
+    expect(getByText("Empty").getAttribute("title")).toBe(
+      "The run succeeded and found nothing.",
+    );
+  });
+
+  it("a quiet option still draws nothing", () => {
+    expect(
+      quiet(FIELD as FieldDef<unknown>, "manual").container.textContent,
+    ).toBe("");
+  });
+});

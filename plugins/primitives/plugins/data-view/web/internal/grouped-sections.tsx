@@ -12,7 +12,6 @@ import {
   DATA_VIEW_HEADER_OFFSET_VAR,
   visibleSections,
   dataPart,
-  type DataViewGroupHeaders,
   type DataViewSection,
 } from "@plugins/primitives/plugins/data-view/core";
 import { DataViewGroupHeader } from "./group-header";
@@ -51,23 +50,6 @@ export interface GroupedSectionsProps {
    * group, one JS state — on a single row.
    */
   headerActions?: (section: DataViewSection<unknown>) => ReactNode;
-  /**
-   * The header treatment — the surface's `DataViewProps.groupHeaders`, threaded
-   * through the view's render props. Absent ⇒ `"standard"`: the label, its
-   * faint count beside it, a hairline filling the row and the fold chevron at
-   * the far end (always shown, faint, brightening on hover).
-   *
-   * `"quiet"` reads the header as one run — a semibold label, then its count
-   * right beside it ("Queue 6", faint and semibold) — with the fold chevron
-   * trailing that run and shown only on hover / keyboard focus
-   * (`SectionHeaderRow disclosure="trailing"`). The count moves from the
-   * trailing cluster into the label's run; a section's `headerActions` stay in
-   * the trailing cluster, hover-revealed as before. Its label sits on the
-   * rows' TEXT column rather than on their pill edge: the rail is paid by the
-   * sticky band and the header row keeps its own row padding, exactly like a
-   * body row.
-   */
-  headerStyle?: DataViewGroupHeaders;
   /** This section's body — rendered inside the collapsible content, so
    *  collapsing the group hides it. A flat view returns its `SectionBody` here,
    *  which carries the section's fold line. */
@@ -101,16 +83,19 @@ export interface GroupedSectionsProps {
  * the toolbar's `nav` keeps the headers sliding under it at the hand-off.
  *
  * The header's horizontal inset is the ambient **rail** (`rail-follow`),
- * the same rail every view body reads — so a group header and its rows line up on
- * one edge for free, and there is no longer a per-view `headerClassName` axis to
- * keep in sync with each body's padding.
+ * the same rail every view body reads, paid by the sticky BAND while the header
+ * row keeps its own `p-row` inside it — so the label lands on the rows' TEXT
+ * column (rail + row pad), a caption over the rows, and there is no per-view
+ * `headerClassName` axis to keep in sync with each body's padding. A nested
+ * header pays the rail inside its indent instead, so the indent (and its
+ * guides) sit outside the rail like the body's.
  *
  * **The `table` view is the documented exception** and composes `StickyStack`
  * itself (inside `data-table`) under this same policy: its headers are
  * `col-span-full` rows of the subgrid, so the chrome cannot own a `<Stack>` without
  * displacing them out of the grid and breaking column alignment. The header NODE
  * is still the same one: both render `DataViewGroupHeader`, so a table's group
- * header honours `headerStyle` exactly like a list's.
+ * header draws exactly like a list's (the theme's `groupHeaderStyle` included).
  *
  * **Nested sections** (`section.nesting`, a forest-shaped grouping) render
  * flat, in tree order, through the same stack: a collapsed section hides its
@@ -124,10 +109,8 @@ export function GroupedSections({
   collapsedSections,
   setSectionCollapsed,
   headerActions,
-  headerStyle = "standard",
   children,
 }: GroupedSectionsProps): ReactNode {
-  const quiet = headerStyle === "quiet";
   const shown = visibleSections(sections, collapsedSections);
   return (
     <Stack gap="none">
@@ -141,12 +124,7 @@ export function GroupedSections({
           const collapsed = collapsedSections?.has(key) ?? false;
           const action = headerActions?.(section);
           const header = (
-            <DataViewGroupHeader
-              section={section}
-              headerStyle={headerStyle}
-              action={action}
-              className={quiet ? undefined : "rail-follow"}
-            />
+            <DataViewGroupHeader section={section} action={action} />
           );
           // An ancestor of rows only — a nested section with nothing of its
           // own to draw — is its header alone: an empty band would open a gap
@@ -166,15 +144,12 @@ export function GroupedSections({
                 itemKey={key}
                 mask
                 layer="raised"
-                // A quiet header pays the rail on its BAND and keeps the row's
-                // own `p-row` inside it, so its label lands on the rows' TEXT
-                // column (rail + row pad) — a caption over the rows. A standard
-                // header pays the rail on the row itself, which replaces the
-                // row's inline pad, so its label sits on the row pills' edge.
-                // A nested quiet header pays it inside its indent instead, so
-                // the indent (and its guides) sit outside the rail like the
-                // body's.
-                className={quiet && depth === 0 ? "rail-follow" : undefined}
+                // The header pays the rail on its BAND and keeps the row's own
+                // `p-row` inside it, so its label lands on the rows' TEXT
+                // column (rail + row pad) — a caption over the rows. A nested
+                // header pays it inside its indent instead, so the indent (and
+                // its guides) sit outside the rail like the body's.
+                className={depth === 0 ? "rail-follow" : undefined}
                 // The room between two groups (`groupGap`, default 0) opens
                 // above every header but the first. A margin on the header,
                 // not a gap on the Stack: header and body are both its
@@ -183,7 +158,7 @@ export function GroupedSections({
                 style={index === 0 ? undefined : GROUP_GAP_STYLE}
               >
                 <NestedSectionIndent depth={depth}>
-                  {quiet && depth > 0 ? (
+                  {depth > 0 ? (
                     <div className="rail-follow">{header}</div>
                   ) : (
                     header

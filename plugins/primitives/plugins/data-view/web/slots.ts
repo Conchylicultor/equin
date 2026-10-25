@@ -136,24 +136,7 @@ export interface DataViewControlSummary {
   count?: number;
 }
 
-/**
- * One toolbar control: a trigger the user opens, plus the panel behind it.
- *
- * This is what makes the toolbar name no control. It used to take three props —
- * `sortControl`, `filterControl`, `fieldsControl` — which is the collection-consumer
- * rule broken in the most literal way, and meant no plugin could ever add a fourth.
- *
- * It is a plain `defineSlot` + `renderIsolated` (the `View` / `Setting` precedent),
- * NOT a `defineRenderSlot`. A render slot would mount EVERY control's panel on
- * EVERY DataView on every page — each running `useFilterPresets`, the live
- * custom-values resource, and so on — just to draw a closed trigger. The host
- * instead reads the metadata (`label`, `icon`, `isApplicable`, `summary`), builds
- * each trigger itself, and mounts exactly the one panel that is open. A render
- * slot would also be unconditionally reorderable, owing an authored
- * `config/…/primitives.data-view.control.jsonc` with a build-blocking `// @review`
- * marker — for a fixed reading order that `order` already expresses.
- */
-export interface DataViewControlContribution {
+export interface DataViewPanelControlContribution {
   /** Stable id (React key + doc identity), e.g. `data-view.filter`. */
   id: string;
   /** The control's name: trigger tooltip + accessible name, compact-fold row
@@ -177,7 +160,56 @@ export interface DataViewControlContribution {
   ) => DataViewControlSummary | null;
   /** The panel body. Prop-less — it reads `useDataViewControls()`. */
   component: ComponentType;
+  action?: never;
 }
+
+/**
+ * What an action control does right now: its name (tooltip, accessible name,
+ * the compact fold's row), its glyph, and the gesture. Both may follow the
+ * state — "Expand all" ⇄ "Collapse all".
+ */
+export interface DataViewControlAction {
+  label: string;
+  icon: IconRef;
+  run: () => void;
+}
+
+/**
+ * A control with no panel: one click does the thing (the expand-all). Its
+ * `action` is ONE pure function answering both "does it apply" (`null` → no
+ * trigger, no fold row) and "what does it say and do" — two functions could
+ * disagree, the summary lesson again. It narrows nothing, so it carries no
+ * summary and never counts into the fold's badge.
+ */
+export interface DataViewActionControlContribution {
+  /** Stable id (React key + doc identity), e.g. `data-view.expand-all`. */
+  id: string;
+  /** Reading order in the toolbar (ascending; default 0). */
+  order?: number;
+  action: (ctx: DataViewControlsContextValue) => DataViewControlAction | null;
+  component?: never;
+}
+
+/**
+ * One toolbar control — a panel control (a trigger the user opens, plus the
+ * panel behind it) or an action control (a trigger that acts).
+ *
+ * This is what makes the toolbar name no control. It used to take three props —
+ * `sortControl`, `filterControl`, `fieldsControl` — which is the collection-consumer
+ * rule broken in the most literal way, and meant no plugin could ever add a fourth.
+ *
+ * It is a plain `defineSlot` + `renderIsolated` (the `View` / `Setting` precedent),
+ * NOT a `defineRenderSlot`. A render slot would mount EVERY control's panel on
+ * EVERY DataView on every page — each running `useFilterPresets`, the live
+ * custom-values resource, and so on — just to draw a closed trigger. The host
+ * instead reads the metadata (`label`, `icon`, `isApplicable`, `summary`), builds
+ * each trigger itself, and mounts exactly the one panel that is open. A render
+ * slot would also be unconditionally reorderable, owing an authored
+ * `config/…/primitives.data-view.control.jsonc` with a build-blocking `// @review`
+ * marker — for a fixed reading order that `order` already expresses.
+ */
+export type DataViewControlContribution =
+  DataViewPanelControlContribution | DataViewActionControlContribution;
 
 /**
  * A registered control as the toolbar actually reads it. Every declared field
@@ -187,6 +219,9 @@ export interface DataViewControlContribution {
  * error-boundary chain.
  */
 export type DataViewControl = SealContributions<DataViewControlContribution>;
+/** A registered panel control (the one kind with a panel to mount). */
+export type DataViewPanelControl =
+  SealContributions<DataViewPanelControlContribution>;
 
 /**
  * Props a **global** row-order contribution receives. The twin of the global
@@ -319,7 +354,7 @@ export const DataViewSlots = {
    *  plugin adds). Plain data slot: the toolbar reads each contribution's
    *  metadata to build its trigger and mounts only the open panel. */
   Control: defineSlot<DataViewControlContribution>({
-    docLabel: (p) => p.label,
+    docLabel: (p) => ("label" in p ? p.label : p.id),
   }),
   /** Row actions a collection (or a union's arm) declares once, drawn by every
    *  DataView listing it — see `CollectionItemActionContribution`. Plain data

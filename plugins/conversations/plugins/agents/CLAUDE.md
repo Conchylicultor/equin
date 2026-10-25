@@ -86,7 +86,6 @@ rollup (`server/internal/rollup-spec.ts`) on the launch's `task_id`. Read with
 - Web:
   - Slots:
     - `Agents.List`
-    - `Agents.ListActions`
     - `Agents.View`
     - `Agents.AgentActions`
     - `Agents.SystemAgent`

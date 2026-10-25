@@ -29,6 +29,7 @@ import {
   type DataViewPageNotice,
   type DataViewViewportSink,
   type SortRule,
+  type ViewExpandAll,
   type ViewRowDropConfig,
   type ViewState,
 } from "../../core";
@@ -133,6 +134,7 @@ import type { CollectionActivation } from "../internal/fold-activations";
 import {
   DataViewControlsProvider,
   type DataViewControlsContextValue,
+  type DataViewExpandAll,
 } from "./controls/controls-context";
 
 /**
@@ -1191,6 +1193,42 @@ function DataViewBodyInner<TRow>(
       ? reportedOrder.order
       : null;
 
+  // The active view's expand-all, as the view last reported it — filed under
+  // the instance that reported it, so a report from a view switched away from
+  // is never offered for the next one. The toolbar reads the bound form off
+  // the controls context (`expandAll`); it names no view type.
+  const [reportedExpandAll, setReportedExpandAll] = useState<{
+    viewId: string;
+    state: ViewExpandAll;
+  } | null>(null);
+  const reportExpandAll = useCallback(
+    (state: ViewExpandAll | null) => {
+      setReportedExpandAll((prev) => {
+        if (state === null) return prev?.viewId === activeViewId ? null : prev;
+        return prev?.viewId === activeViewId && prev.state === state
+          ? prev
+          : { viewId: activeViewId, state };
+      });
+    },
+    [activeViewId],
+  );
+  const activeExpandAll =
+    reportedExpandAll?.viewId === activeViewId ? reportedExpandAll.state : null;
+  const expandAll = useMemo<DataViewExpandAll | null>(
+    () =>
+      activeExpandAll
+        ? {
+            allExpanded: activeExpandAll.allExpanded,
+            setAll: (next) =>
+              viewModel.setExpanded(
+                activeViewId,
+                activeExpandAll.changes(next),
+              ),
+          }
+        : null,
+    [activeExpandAll, viewModel, activeViewId],
+  );
+
   // A hidden section still runs a sectioned origin's reads: whether it has
   // any section is what those reads answer.
   if (sectionHidden) {
@@ -1294,6 +1332,7 @@ function DataViewBodyInner<TRow>(
           expanded: activeState.expanded,
           setExpanded: (changes) =>
             viewModel.setExpanded(activeViewId, changes),
+          reportExpandAll,
           now,
           groupOrder,
           // In memory without paging the rows are the whole set; a paged read
@@ -1329,7 +1368,6 @@ function DataViewBodyInner<TRow>(
           // The surface's own declaration, straight off the chrome (the ONE
           // place both hosts set it) — the view child decides what to tighten.
           density: chrome.density,
-          groupHeaders: chrome.groupHeaders,
           hoveredRowId,
           onRowHoverChange,
         };
@@ -1365,6 +1403,7 @@ function DataViewBodyInner<TRow>(
             (readiness === undefined || readiness.status === "ready")
               ? effectiveRows
               : null,
+          expandAll,
         };
 
         const onQueryChange =

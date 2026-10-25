@@ -4,7 +4,8 @@ import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { dataPart, type ToolbarPartForms } from "../../../core";
 import { ROUND_AT_REST } from "./round-form";
-import type { DataViewControl } from "../../slots";
+import type { DataViewControlAction, DataViewPanelControl } from "../../slots";
+import type { ToolbarControl } from "./use-toolbar-controls";
 import { useDataViewControls } from "../controls/controls-context";
 import { DataViewControlPanel } from "./control-panel-host";
 
@@ -35,13 +36,55 @@ export function ControlTrigger({
   control,
   form = "ghost",
 }: {
-  control: DataViewControl;
+  control: ToolbarControl;
+  /** The trigger's shape — the arrangement's `forms.controls`. */
+  form?: ToolbarPartForms["controls"];
+}): ReactNode {
+  return control.kind === "panel" ? (
+    <PanelTrigger control={control.control} form={form} />
+  ) : (
+    <ActionTrigger action={control.action} form={form} />
+  );
+}
+
+/**
+ * An action control's trigger: the same ghost `IconButton` as a panel's, but
+ * it acts on click instead of opening a panel. Its label (tooltip + accessible
+ * name) and glyph are the action's current ones — "Expand all" ⇄ "Collapse
+ * all" — and it is never `secondary`: an action narrows nothing.
+ */
+function ActionTrigger({
+  action,
+  form,
+}: {
+  action: DataViewControlAction;
+  form: ToolbarPartForms["controls"];
+}): ReactNode {
+  return (
+    <IconButton
+      icon={action.icon}
+      label={action.label}
+      tooltip={action.label}
+      variant="ghost"
+      shape={form === "round" ? "pill" : "default"}
+      className={cn(form === "round" && ROUND_AT_REST)}
+      onClick={action.run}
+      {...dataPart("dv.control")}
+    />
+  );
+}
+
+function PanelTrigger({
+  control,
+  form,
+}: {
+  control: DataViewPanelControl;
   /**
    * The trigger's shape — the arrangement's `forms.controls`. `round` is the
    * same icon button drawn as a circle (a pill with no label), whose glyph
    * rests in the faint text tier and lifts to the text colour on hover.
    */
-  form?: ToolbarPartForms["controls"];
+  form: ToolbarPartForms["controls"];
 }): ReactNode {
   const ctx = useDataViewControls();
   const [open, setOpen] = useState(false);

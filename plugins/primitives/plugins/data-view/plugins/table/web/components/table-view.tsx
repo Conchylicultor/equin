@@ -40,6 +40,7 @@ import {
 import { visibleSections } from "@plugins/primitives/plugins/data-view/core";
 import type { TableViewOptions } from "../../core";
 import { mapPrimary } from "../internal/map-primary";
+import { tableHeaderOption } from "../internal/column-captions";
 import {
   CoverCell,
   StackedTitleCell,
@@ -328,6 +329,8 @@ function FlatTableView(props: DataViewRenderProps<unknown>): ReactNode {
     // windowing. Sort is already hidden by the host while manual order is on.
     useRowDecoration: manualOrder ? useRowDecoration : undefined,
     columnHeader: options.columnHeader,
+    // The view's Column captions switch, else the code's `header`.
+    header: tableHeaderOption(options),
     density: props.density,
     // A flat table draws `soft` when asked; `grid` / `outline` flat stay the
     // grid it has always drawn (outline is the nested table's sidebar look).
@@ -384,7 +387,7 @@ function FlatTableView(props: DataViewRenderProps<unknown>): ReactNode {
                   </SectionBody>
                 ) : undefined,
               // The same header node the flat views render (GroupedSections),
-              // so `groupHeaders` reads identically here.
+              // so every group-header style reads identically here.
               // A nested section's header steps in by its depth. The band
               // around it already paid the rail, so no guides (they start at it).
               header: (
@@ -394,7 +397,6 @@ function FlatTableView(props: DataViewRenderProps<unknown>): ReactNode {
                 >
                   <DataViewGroupHeader
                     section={section}
-                    headerStyle={props.groupHeaders}
                     open={!collapsed}
                     onClick={() => props.setSectionCollapsed?.(key, !collapsed)}
                   />

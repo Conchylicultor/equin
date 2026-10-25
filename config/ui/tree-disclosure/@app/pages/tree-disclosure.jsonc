@@ -1,4 +1,4 @@
-// @hash a7e652ae7b58
+// @hash 93e6b0aac3c8
 {
   // Pages (proto-1790691924-p8nh) draws a row's chevron in its icon's place,
   // and only on hover — so a page's emoji is the row's one leading mark at rest.

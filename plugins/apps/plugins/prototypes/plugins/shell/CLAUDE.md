@@ -43,6 +43,8 @@ documented with the mockup variable it is.
     - `prototypesGalleryRoute`
 - Cross-plugin:
   - Uses tokens:
+    - `ui/tokens/color-palette --accent`
+    - `ui/tokens/color-palette --accent-foreground`
     - `ui/tokens/color-palette --border`
     - `ui/tokens/color-palette --faint-foreground`
     - `ui/tokens/color-palette --popover`

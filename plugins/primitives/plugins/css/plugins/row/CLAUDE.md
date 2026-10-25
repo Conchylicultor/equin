@@ -139,10 +139,11 @@ chevron:
   (`collapsible={false}`) keeps the chevron's box invisible so a mixed stack
   aligns on one title column.
 - **`"trailing"`** — right after the label run (so a label + count run reads
-  "Queue 6 ›"), shown only while the row is hovered or its control has keyboard
-  focus. The label then starts on the rows' own column — a quiet group header
-  (`DataViewProps.groupHeaders="quiet"`). `aria-expanded`, `aria-controls` and
-  the click target are unchanged.
+  "Queue 6 ›"), shown while the row is hovered or its control has keyboard
+  focus, and for as long as the section is collapsed (a shut section keeps its
+  mark). The label then starts on the rows' own column — a DataView group
+  header, a view section's header. `aria-expanded`, `aria-controls` and the
+  click target are unchanged.
 - **`"none"`** — no chevron and no reserved box. The row is still the
   disclosure control (`aria-expanded`, `aria-controls`, click), and TONE carries
   the state: a collapsed header is muted (its actions re-toned to the
@@ -151,14 +152,17 @@ chevron:
 - **`"end"`** — `none`'s tone, plus a faint, always-visible chevron at the
   row's FAR end, after the header actions, brightening while the header is
   hovered or focused (its own named group, `group/section-header`, so an
-  enclosing `group` never lights it). The inspector card's look, and a
-  DataView's standard group header.
+  enclosing `group` never lights it). The inspector card's look.
 
 **`rule`** draws a decorative hairline in the row's slack: the last thing in
 the label run (a `Fill` holding a `Separator`, both `span`s — the run sits in
 the row's `<button>`), so it fills from the label to the trailing cluster —
-"Queue 6 ──────── ⌄". `aria-hidden`; the click target is unchanged. The
-DataView group header is `variant="group" disclosure="end" rule`.
+"Queue 6 ──────── ⌄". `aria-hidden`; the click target is unchanged. Under a
+`trailing` disclosure the chevron follows the rule, at the row's far end.
+`ruleClassName` lands on the rule's box, for a caller that decides in CSS
+whether it shows (`hidden` gives its slack back): the DataView group header is
+`variant="group" disclosure="trailing" rule`, its rule shown only under the
+theme's `groupHeaderStyle: rule`.
 
 The trailing reveal is `hover-reveal`'s `useHoverReveal` (per-instance state;
 pointer enter/leave on the row box, keyboard-only focus on the control, each

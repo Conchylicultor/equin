@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { TreeDisclosure } from "@plugins/ui/plugins/tree-disclosure/web";
-import { ColumnDisclosure } from "./components/column-disclosure";
+import { TreeColumnDisclosure } from "@plugins/primitives/plugins/tree/web";
 
 export default {
   description:
@@ -10,7 +10,7 @@ export default {
       id: "column",
       label: "Chevron column",
       match: "column",
-      component: ColumnDisclosure,
+      component: TreeColumnDisclosure,
     }),
   ],
 } satisfies PluginDefinition;

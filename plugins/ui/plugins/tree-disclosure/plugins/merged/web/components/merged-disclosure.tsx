@@ -5,9 +5,9 @@ import type { TreeDisclosureProps } from "@plugins/primitives/plugins/tree/core"
 
 /**
  * Merged disclosure (Notion style) — the identity icon and the chevron share
- * one size-5 box: icon at rest, chevron on row hover. Mirrors tree's inline
- * `DefaultMergedDisclosure` byte-for-byte, so loading this plugin changes
- * nothing until another variant is picked.
+ * one size-5 box: icon at rest, chevron on row hover. The box starts where the
+ * column variant's chevron box would, so the default guide (half the chevron
+ * box) lands on the parent's icon centre. Pages and the file explorer pin it.
  *
  * Only a row with children swaps its icon for the chevron: a leaf keeps its
  * icon under the cursor, so hovering is how you tell parents from leaves. The

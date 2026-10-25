@@ -74,7 +74,7 @@ the metrics, so "code" is one decision — do not pair it with `font-mono`. Its
 compact rung is the 2xs size at the caption line height.
 
 `group` is the heading of a group of rows in a list or sidebar — a quiet group
-header ("Queue 14", data-view's `headerStyle="quiet"`). Its own role rather than
+header ("Queue 14", data-view's group header). Its own role rather than
 `label`, so a theme sizes its group heads apart from the rows they head (Mist:
 12.5px over 13px rows). Semibold, frozen; its compact rung is the caption
 metrics at that weight.
@@ -283,7 +283,7 @@ to reconcile them; they never needed reconciling.
     - `ui/tokens/type-scale` ×37
     - `ui/tokens/color-palette` ×6
     - `ui/tokens/font-family` ×2
-  - Imported by: 399 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 398 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×110
     - `conversations` ×73
     - `primitives` ×45
@@ -292,7 +292,7 @@ to reconcile them; they never needed reconciling.
     - `ui` ×17
     - `plugin-meta` ×14
     - `tasks` ×14
-    - `fields` ×10
+    - `fields` ×9
     - `stats` ×6
     - `build` ×5
     - `infra` ×5

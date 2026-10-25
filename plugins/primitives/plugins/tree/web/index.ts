@@ -3,15 +3,10 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
 export { TreeRowActions, treeRowTrailing } from "./internal/tree-row-actions";
 export type { RowMenu, TreeRowActionsProps } from "./internal/tree-row-actions";
-export {
-  groupFoldAction,
-  TreeRootAdd,
-  TreeToolbar,
-} from "./internal/tree-toolbar";
-export type { TreeToolbarProps } from "./internal/tree-toolbar";
+export { groupFoldAction, TreeRootAdd } from "./internal/tree-chrome";
 export { TreeRowChrome } from "./internal/tree-row-chrome";
 export type { TreeRowChromeProps } from "./internal/tree-row-chrome";
-export { TreeLeading } from "./internal/tree-leading";
+export { TreeColumnDisclosure, TreeLeading } from "./internal/tree-leading";
 export type { TreeLeadingProps } from "./internal/tree-leading";
 export { TreeDropZones } from "./internal/tree-drop-zones";
 export type { TreeDropZonesProps } from "./internal/tree-drop-zones";
@@ -44,15 +39,12 @@ export {
 export type { RowControls, TreeContextValue } from "./internal/use-tree-row";
 export type { TreeItem } from "./internal/types";
 
-export { useFlatExpandAll } from "./internal/use-flat-expand-all";
-export type {
-  UseFlatExpandAllReturn,
-  FlatExpandAll,
-} from "./internal/use-flat-expand-all";
+export { flatExpandAll } from "./internal/flat-expand-all";
+export type { FlatExpandAll } from "./internal/flat-expand-all";
 
 export default {
   description:
-    "Tree hierarchy utilities (buildTree, isDescendant, resolveDropParent), the tree model (useTreeModel: flattened visible lines, DnD, lazy children, keyboard) and the tree-row pieces a renderer composes (TreeRowChrome, TreeLeading, useTreeRow, TreeRowActions, TreeToolbar) — drawn by data-view's nested table.",
+    "Tree hierarchy utilities (buildTree, isDescendant, resolveDropParent), the tree model (useTreeModel: flattened visible lines, DnD, lazy children, keyboard) and the tree-row pieces a renderer composes (TreeRowChrome, TreeLeading, useTreeRow, TreeRowActions, TreeRootAdd, flatExpandAll) — drawn by data-view's nested table.",
   contributions: [],
   slots: Tree,
 } satisfies PluginDefinition;

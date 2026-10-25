@@ -91,12 +91,19 @@ async function snapshot(page: Page): Promise<RowInfo[]> {
           x = range.getBoundingClientRect().left;
           break;
         }
+        // `--tree-indent` is a calc over other tokens (chevron + row gap), so
+        // its computed custom-property value is the unresolved expression:
+        // lay out a probe as wide as it and read back the length.
+        const probe = document.createElement("span");
+        probe.style.cssText =
+          "position:absolute;visibility:hidden;width:var(--tree-indent)";
+        el.appendChild(probe);
+        const indent = probe.getBoundingClientRect().width;
+        probe.remove();
         return {
           label,
           pad: Math.round(x),
-          indent: parseFloat(
-            getComputedStyle(el).getPropertyValue("--tree-indent"),
-          ),
+          indent,
           fold:
             el
               .querySelector('button[aria-label$="subtree"]')

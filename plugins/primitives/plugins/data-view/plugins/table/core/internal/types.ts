@@ -56,9 +56,20 @@ export interface TableViewOptions<TRow = unknown> {
    * that keeps its column labels over tree rows (a file listing's Name /
    * Modified / Size — the tree view's `columns: "aligned"`) passes `true`; its
    * columns then give way by `FieldDef.dropOrder` in a narrow box. See
-   * `data-table`'s `DataTableProps.header`.
+   * `data-table`'s `DataTableProps.header`. A view's own `columnCaptions`
+   * wins over it.
    */
   header?: boolean;
+  /**
+   * The view instance's Column captions choice (the table view-type's
+   * `configSchema`, in the view's settings panel): `shown` / `hidden` draw the
+   * column labels or not; `auto` (and unset) keeps `header`, else the
+   * presentation's default (`grid` / `soft` yes, `outline` no) — resolved by
+   * `tableHeaderOption`. A three-way choice, not a switch: a switch has no
+   * "default" position, so it would read off over a table showing its labels.
+   * Code passes `header`; this key is the user's.
+   */
+  columnCaptions?: "auto" | "shown" | "hidden";
 
   // --- Nesting (a hierarchical source only) ---
 
@@ -115,8 +126,12 @@ export interface TableViewOptions<TRow = unknown> {
    * can create, else none. Never under `rootId`.
    */
   addLabel?: string | null;
-  /** The whole-table expand-all toggle in the toolbar row above the rows. */
+  /**
+   * Offer the whole-table expand-all: a control in the DataView's own toolbar
+   * (beside filter / sort / view settings) and Expand all / Collapse all rows
+   * in its view settings — present only while some row in scope has children.
+   * Absent keeps a minimal surface's chrome free of it (a group header's fold
+   * stays either way).
+   */
   expandAll?: boolean;
-  /** Content on the left of that toolbar row (a surface's own actions). */
-  toolbarStart?: ReactNode;
 }

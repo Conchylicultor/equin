@@ -1,4 +1,5 @@
 import { memo, useMemo, type ReactNode } from "react";
+import { resolveTypeChain } from "@plugins/fields/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
@@ -22,11 +23,13 @@ import {
   DropBackground,
   DropInsertLine,
   FieldCell,
+  FieldPresentationProvider,
   GroupedSections,
   PrimaryOverThumbnail,
   SectionBody,
   SubtitleRun,
   drawnSubtitleTerms,
+  isElidedRead,
   leadingSlot,
   resolveCover,
   pickLeadingField,
@@ -35,6 +38,8 @@ import {
   resolveBodyFields,
   rowToneClass,
   useDataViewSections,
+  useFieldIdentities,
+  useFieldPresentation,
   useIsChipField,
   useItemActionZones,
   useResolveCell,
@@ -48,6 +53,7 @@ import {
   type DataViewRenderProps,
   type DataViewSection,
   type FieldDef,
+  type FieldPresentation,
   type ItemActionArms,
   type ItemActionRender,
   type ItemActionsDescriptor,
@@ -71,6 +77,7 @@ import {
 } from "@plugins/primitives/plugins/link-gesture/core";
 import type { ClassName } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import type { ListViewOptions } from "../../core";
+import { slotWidthVar, useSlotWidths, type SlotRef } from "./use-slot-widths";
 
 /**
  * Wraps one list row with its sortable drag wiring: the whole row is the drag
@@ -155,7 +162,14 @@ interface ListRowConfig {
   primary: ItemActionArms<unknown> | null;
   titleField: FieldDef<unknown> | undefined;
   subtitleFields: FieldDef<unknown>[];
+  /** The trailing fields, each in its aligned slot (see {@link useSlotWidths}):
+   *  the row-state indicators, the `align: "end"` fields, and the time-typed
+   *  ones of those last — the row's right edge is its time. */
   trailingFields: FieldDef<unknown>[];
+  /** Per trailing field: its slot's ref (measuring it for the column width),
+   *  whether it presents as a chip (a chip starts its slot, anything else ends
+   *  it), and whether it is time-typed (drawn in the `listTimeInk`). */
+  trailingSlots: { ref: SlotRef; chip: boolean; time: boolean }[];
   /** Which terms of the row's run are chips (resolved once, per schema). */
   titleIsChip: boolean;
   subtitleIsChip: boolean[];
@@ -209,7 +223,10 @@ interface ListEntryProps {
  * choice, not a conditional hook.
  */
 const ListEntry = memo(function ListEntry(props: ListEntryProps): ReactNode {
-  const row = listRowNode(props);
+  // The view's presentation (quiet terms, the elided common values): a
+  // context, so it changes only when the elision does.
+  const presentation = useFieldPresentation();
+  const row = listRowNode(props, presentation);
   const { dnd } = props.config;
   const node = dnd ? (
     <DropRow dnd={dnd} rowKey={props.rowKey} row={props.row}>
@@ -284,6 +301,9 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
   const isChipField = useIsChipField();
   const resolveEditor = useResolveCellEditor();
   const resolveOperatorSet = useResolveOperatorSet();
+  // A time-typed field (`date`, or a type extending it) is the row's right
+  // edge: resolved through the field type chain, like the map's location.
+  const identities = useFieldIdentities();
   // Manual order arrives type-erased; present only when the host activated it.
   const manualOrder = props.manualOrder as
     ManualOrderConfig<unknown> | undefined;
@@ -386,8 +406,10 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
     hoverChange?.(id, hovered),
   );
   const onHover = hoverChange === undefined ? null : reportHover;
-  const config = useMemo<ListRowConfig>(() => {
-    const { leadingField, thumbnail, bodyFields } = layout;
+  // The row's terms, split once per schema: the title, the subtitle run and
+  // the trailing slots.
+  const terms = useMemo(() => {
+    const { bodyFields } = layout;
     const titleField = pickPrimaryField(bodyFields);
     // An indicator (`FieldDef.indicator`) is a row-state mark, not a term of
     // the subtitle sentence: at rest it often draws nothing (a `false` flag),
@@ -396,16 +418,51 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
     const subtitleFields = bodyFields.filter(
       (f) => f.id !== titleField?.id && f.align !== "end" && !f.indicator,
     );
+    const isTime = (f: FieldDef<unknown>) =>
+      resolveTypeChain(f.type ?? "text", identities).includes("date");
+    const trailing = [
+      ...bodyFields.filter((f) => f.indicator && f.id !== titleField?.id),
+      ...bodyFields.filter((f) => f.align === "end" && !f.indicator),
+    ];
+    const trailingFields = [
+      ...trailing.filter((f) => !isTime(f)),
+      ...trailing.filter(isTime),
+    ];
+    return {
+      titleField,
+      subtitleFields,
+      trailingFields,
+      trailingTime: trailingFields.map(isTime),
+      // What the view's presentation may elide: the row's terms, never its
+      // title or leading visual (the row's identity).
+      elisionFields: [...subtitleFields, ...trailingFields],
+    };
+  }, [layout, identities]);
+  // The trailing slots' shared widths, as CSS variables on the list root.
+  const { rootRef: slotRootRef, slotRef } = useSlotWidths(
+    terms.trailingFields.map((f) => f.id).join("\u0000"),
+    terms.trailingFields.length,
+  );
+  const trailingSlots = useMemo(
+    () =>
+      terms.trailingFields.map((f, i) => ({
+        ref: slotRef(i),
+        chip: isChipField(f),
+        time: terms.trailingTime[i]!,
+      })),
+    [terms, slotRef, isChipField],
+  );
+  const config = useMemo<ListRowConfig>(() => {
+    const { leadingField, thumbnail } = layout;
+    const { titleField, subtitleFields, trailingFields } = terms;
     return {
       leadingField,
       thumbnail,
       primary,
       titleField,
       subtitleFields,
-      trailingFields: [
-        ...bodyFields.filter((f) => f.indicator && f.id !== titleField?.id),
-        ...bodyFields.filter((f) => f.align === "end" && !f.indicator),
-      ],
+      trailingFields,
+      trailingSlots,
       // Which terms of the row's run are chips. Resolved once per schema, so a
       // long list pays one lookup per field.
       titleIsChip: titleField != null && isChipField(titleField),
@@ -428,6 +485,8 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
     };
   }, [
     layout,
+    terms,
+    trailingSlots,
     primary,
     isChipField,
     resolveCell,
@@ -551,9 +610,6 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
     activeId: string | null,
   ): ReactNode => {
     const { entries, key: group } = section;
-    // A quiet group header reads as a caption over its rows, so the section body
-    // starts right under it: the header row's own padding is the only gap.
-    const quietGroup = group !== null && props.groupHeaders === "quiet";
     const windowed = entries.length > VIRTUALIZE_THRESHOLD;
     return (
       <DropBackground
@@ -574,8 +630,11 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
             options.rowChrome === "tree"
               ? undefined
               : // The top gap is the theme's (density `sectionBodyPadTop`,
-                // default the `sm` step of the bottom one).
-                cn("pt-section-body pb-sm", quietGroup && "pt-none")
+                // default the `sm` step of the bottom one) — except under a
+                // group header, which reads as a caption over its rows: the
+                // body starts right under it, the header row's own padding the
+                // only gap.
+                cn("pt-section-body pb-sm", group !== null && "pt-none")
           }
         >
           {/* A section whose rows are all folded draws no rows — its header and
@@ -611,11 +670,31 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
         sections={sections}
         collapsedSections={props.collapsedSections}
         setSectionCollapsed={props.setSectionCollapsed}
-        headerStyle={props.groupHeaders}
       >
         {(section) => renderSection(section, activeId)}
       </GroupedSections>
     );
+
+  // Every row's cells present quiet and leave out the value most rows share
+  // (`FieldPresentationProvider` — never the title or the leading visual); the
+  // root carries the trailing slots' widths as CSS variables. `display:
+  // contents`: the root draws no box, so the sticky group headers and the
+  // bands sit exactly where they did.
+  const firstRow = sections.find((s) => s.entries.length > 0)?.entries[0]?.row;
+  const wrap = (body: ReactNode): ReactNode => (
+    <FieldPresentationProvider
+      rows={props.rows}
+      fields={terms.elisionFields}
+      rowsComplete={props.rowsComplete}
+    >
+      <div ref={slotRootRef} className="contents">
+        {options.columnCaptions === true && options.rowChrome !== "tree" ? (
+          <ListCaptions config={config} firstRow={firstRow} />
+        ) : null}
+        {body}
+      </div>
+    </FieldPresentationProvider>
+  );
 
   // Manual order: wrap the rendered sections in a single sortable rank-reorder
   // host covering every section. In-section drags reorder; a drop into ANOTHER
@@ -635,11 +714,104 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
         onMove={onMove}
         onReseat={hasReseat ? onReseat : undefined}
       >
-        {(activeId) => renderBody(activeId)}
+        {(activeId) => wrap(renderBody(activeId))}
       </RankReorderProvider>
     );
   }
-  return renderBody(null);
+  return wrap(renderBody(null));
+}
+
+/**
+ * The list's caption row (`columnCaptions`): the title field's label where the
+ * rows' titles start (behind an invisible copy of the first row's leading
+ * visual, so it lands on their text column), and each trailing field's label
+ * in that field's slot — the same measured slot, so a label wider than its
+ * values widens the column, and every label sits over its values.
+ */
+function ListCaptions({
+  config,
+  firstRow,
+}: {
+  config: ListRowConfig;
+  firstRow: unknown;
+}): ReactNode {
+  const leading = config.thumbnail ? (
+    <CoverFrame size="thumb" content={null} className={rigidClass()} />
+  ) : firstRow === undefined ? undefined : (
+    leadingSlot({
+      field: config.leadingField,
+      row: firstRow,
+      resolveCell: config.resolveCell,
+      resolveEditor: config.resolveEditor,
+      own: config.leading?.(firstRow),
+    })
+  );
+  return (
+    <div className="rail-follow" data-list-captions="">
+      <Row
+        size={config.rowSize}
+        icon={
+          leading === undefined ? undefined : (
+            <span aria-hidden inert className="invisible">
+              {leading}
+            </span>
+          )
+        }
+      >
+        <Text variant="caption" className="text-faint-foreground">
+          {config.titleField?.label ?? ""}
+        </Text>
+        {config.trailingFields.length > 0 ? (
+          <>
+            <Fill />
+            <TrailingSlots config={config}>
+              {(field) => (
+                <Text variant="caption" className="text-faint-foreground">
+                  {field.label}
+                </Text>
+              )}
+            </TrailingSlots>
+          </>
+        ) : null}
+      </Row>
+    </div>
+  );
+}
+
+/**
+ * The trailing fields, each in its aligned slot: `min-width` is the widest
+ * that slot has been on any row (`useSlotWidths`, a CSS variable on the list
+ * root), so the columns line up down the list though a list has no columns. A
+ * chip starts its slot, any other value ends it; a time-typed value (the
+ * row's right edge, always last) wears the `listTimeInk`. An elided value
+ * draws nothing and its slot keeps its width.
+ */
+function TrailingSlots({
+  config,
+  children,
+}: {
+  config: ListRowConfig;
+  children: (field: FieldDef<unknown>) => ReactNode;
+}): ReactNode {
+  return config.trailingFields.map((field, i) => {
+    const slot = config.trailingSlots[i]!;
+    return (
+      <Stack
+        key={field.id}
+        as="span"
+        ref={slot.ref}
+        direction="row"
+        gap="none"
+        align="center"
+        justify={slot.chip ? "start" : "end"}
+        data-list-slot={field.id}
+        className={cn(rigidClass(), slot.time && "text-list-time-ink")}
+        style={{ minWidth: `var(${slotWidthVar(i)})` }}
+      >
+        {children(field)}
+      </Stack>
+    );
+  });
 }
 
 /**
@@ -710,12 +882,12 @@ function renderTrailing(
   return (
     <Stack
       direction="row"
-      gap="xs"
+      gap="none"
       align="center"
-      className={cn(className, rigidClass())}
+      className={cn(className, "gap-list-slot", rigidClass())}
     >
-      {config.trailingFields.map((field) => (
-        <span key={field.id}>
+      <TrailingSlots config={config}>
+        {(field) => (
           <FieldCell
             field={field}
             row={row}
@@ -723,8 +895,8 @@ function renderTrailing(
             resolveEditor={config.resolveEditor}
             display="block"
           />
-        </span>
-      ))}
+        )}
+      </TrailingSlots>
       {aggregateCount && aggregateCount > 1 ? (
         <Badge variant="muted">{`×${aggregateCount}`}</Badge>
       ) : null}
@@ -756,9 +928,14 @@ function titleRead(config: ListRowConfig, row: unknown): ReactNode {
 function renderTreeChromeRow(
   props: ListEntryProps,
   labelClass: string,
+  presentation: FieldPresentation,
 ): ReactNode {
   const { config, row, rowKey: key, aggregateCount } = props;
-  const cellFields = [...config.subtitleFields, ...config.trailingFields];
+  // An elided value is no cell at all here (no gap left for it).
+  const cellFields = [
+    ...config.subtitleFields,
+    ...config.trailingFields,
+  ].filter((f) => !isElidedRead(presentation, f, row));
   const hasCells =
     cellFields.length > 0 || (aggregateCount != null && aggregateCount > 1);
   const activation = config.rowActivation?.(row);
@@ -812,11 +989,18 @@ function renderTreeChromeRow(
 
 // Single source of row markup — shared verbatim by the plain and virtualized
 // branches so the two render identically.
-function listRowNode(props: ListEntryProps): ReactNode {
+function listRowNode(
+  props: ListEntryProps,
+  presentation: FieldPresentation,
+): ReactNode {
   const { config, row, rowKey: key, aggregateCount, open } = props;
   const { titleField, detail, thumbnail } = config;
   const trailing = hasTrailing(config, aggregateCount);
-  const terms = drawnSubtitleTerms(config.subtitleFields, row);
+  // A term whose value is the view's common one is left out of the run,
+  // separator and all — as an empty one is.
+  const terms = drawnSubtitleTerms(config.subtitleFields, row).filter(
+    (i) => !isElidedRead(presentation, config.subtitleFields[i]!, row),
+  );
   // Per-row emphasis: composed ON TOP of the title's own `text-foreground`, so
   // a switched-off / archived / finished row reads inactive. The subtitle and
   // the trailing cell are already muted, so the title is the whole difference.
@@ -826,7 +1010,7 @@ function listRowNode(props: ListEntryProps): ReactNode {
     config.labelClassName?.(row),
   );
   if (config.rowChrome === "tree") {
-    return renderTreeChromeRow(props, toneClass);
+    return renderTreeChromeRow(props, toneClass, presentation);
   }
   const itemActionNodes = config.revealed?.({
     row,

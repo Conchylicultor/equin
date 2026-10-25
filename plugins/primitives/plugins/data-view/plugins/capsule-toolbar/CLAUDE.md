@@ -49,7 +49,6 @@ heading above it. The compact fold (`density="compact"` or a toolbar under
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/css/ui-kit.Separator`
-    - `primitives/shortcuts.useSurfaceShortcuts`
   - Exports (values): `capsuleToolbar`
 - Cross-plugin:
   - Uses tokens:

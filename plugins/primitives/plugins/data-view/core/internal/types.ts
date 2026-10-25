@@ -1161,6 +1161,18 @@ export interface ManualOrderConfig<TRow> {
 }
 
 /**
+ * A view's whole-view expand-all, as it reports it ({@link
+ * DataViewRenderProps.reportExpandAll}): whether every expandable row it draws
+ * is open, and the batch that sets them all to `next` (only the rows that
+ * change). Present only while there IS an expandable row — no capability is
+ * `null`, never an inert value.
+ */
+export interface ViewExpandAll {
+  allExpanded: boolean;
+  changes(next: boolean): ExpandChange[];
+}
+
+/**
  * How much room the hosting surface gives the view. `"comfortable"` (the
  * default) is the full inline toolbar and the roomier row rhythm; `"compact"`
  * folds every toolbar control behind the one options trigger regardless of
@@ -1174,21 +1186,6 @@ export interface ManualOrderConfig<TRow> {
  * genuinely too narrow still folds.
  */
 export type DataViewDensity = "comfortable" | "compact";
-
-/**
- * How a grouped view draws its group headers. `"standard"` (the default) is
- * the chevron-led header with the count at the far right; `"quiet"` is one
- * run — label, then its count right beside it — with the fold chevron trailing
- * it and shown only on hover or keyboard focus. A per-surface declaration like
- * {@link DataViewDensity}: a narrow list that wants its headers to read as
- * captions over the rows asks for `"quiet"`.
- *
- * Honoured by every grouped view: the ones that draw their headers through
- * `GroupedSections` (list, gallery, tree, icons), and the table, which composes
- * its own `col-span-full` header rows inside `data-table` but renders the same
- * `DataViewGroupHeader` node in them.
- */
-export type DataViewGroupHeaders = "standard" | "quiet";
 
 export interface DataViewRenderProps<TRow> {
   /** RAW rows. Each view applies the processing matching its own semantics
@@ -1294,6 +1291,18 @@ export interface DataViewRenderProps<TRow> {
    *  costs one serialization rather than one per row. */
   setExpanded: (changes: readonly ExpandChange[]) => void;
   /**
+   * Report this view's whole-view expand-all capability up to the host, or
+   * `null` when it has none (it draws no hierarchy, or no row it draws has
+   * children). The host files the report under THIS view instance and offers
+   * it to the toolbar as `useDataViewControls().expandAll` — the built-in
+   * expand-all control and the view settings' Expand all / Collapse all rows —
+   * so the toolbar names no view type. Always supplied by the host (optional
+   * only so a fixture rendering a view directly owes none); a view that never
+   * nests simply never calls it. A nesting view reports again whenever its
+   * answer changes, and `null` on unmount.
+   */
+  reportExpandAll?: (state: ViewExpandAll | null) => void;
+  /**
    * Local midnight of the current day, as epoch ms — the `now` every grouping
    * plans against. Quantized and re-armed at the day boundary by the host
    * (`useGroupingClock`), never read from the clock inside a grouping: an
@@ -1382,14 +1391,6 @@ export interface DataViewRenderProps<TRow> {
    */
   density?: DataViewDensity;
   /**
-   * The surface's group-header treatment, threaded from
-   * `DataViewProps.groupHeaders` exactly like `density`. Absent ⇒
-   * `"standard"`. A view hands it to `GroupedSections` as `headerStyle`; the
-   * table renders it through `DataViewGroupHeader` (see
-   * {@link DataViewGroupHeaders}).
-   */
-  groupHeaders?: DataViewGroupHeaders;
-  /**
    * The row the pointer is over — on THIS view or on another surface showing
    * the same rows (a map pin beside a list), threaded from
    * `DataViewProps.hoveredRowId`. A view draws that row in its hovered tone.
@@ -1418,6 +1419,13 @@ export interface TableCellProps {
   data?: unknown;
   field: FieldDef<unknown>;
   raw?: unknown;
+  /**
+   * How the enclosing view presents chip-typed values: `"chip"` (default — a
+   * table cell: a filled `Badge`) or `"quiet"` (a row view's term — a dot and
+   * the label, no chip). Set by `FieldCell` from the view's
+   * `FieldPresentationProvider`; a cell type that draws no chip ignores it.
+   */
+  presentation?: "chip" | "quiet";
 }
 
 /**
@@ -2164,11 +2172,6 @@ export interface DataViewBaseProps<TRow> {
    * `"comfortable"`.
    */
   density?: DataViewDensity;
-  /**
-   * How grouped views draw their group headers — see
-   * {@link DataViewGroupHeaders}. Default `"standard"`.
-   */
-  groupHeaders?: DataViewGroupHeaders;
   /**
    * The search field's placeholder, naming what this surface searches
    * ("Search apps"). Default `"Search…"`.

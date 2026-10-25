@@ -1,4 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+import { enumField } from "@plugins/fields/plugins/enum/plugins/config/core";
 import { DataViewSlots } from "@plugins/primitives/plugins/data-view/web";
 import { TableView } from "./components/table-view";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -24,6 +25,22 @@ export default {
       // Nests its rows over a hierarchical source — the host then applies no
       // fold and no flat manual order to it, and honours its `filterScope`.
       nestsHierarchy: true,
+      // The view's settings panel: the column labels — automatic (the code's
+      // `header` / the presentation's default), shown or hidden. See
+      // `TableViewOptions.columnCaptions`.
+      configSchema: {
+        columnCaptions: enumField({
+          label: "Column captions",
+          description:
+            "Show the column labels above the rows. Automatic: shown, except in an outline.",
+          options: [
+            { value: "auto", label: "Automatic" },
+            { value: "shown", label: "Shown" },
+            { value: "hidden", label: "Hidden" },
+          ],
+          default: "auto",
+        }),
+      },
     }),
   ],
 } satisfies PluginDefinition;

@@ -58,7 +58,7 @@ describe("DataTable soft presentation", () => {
     ).toContain("text-caption");
   });
 
-  it("draws one picked, cased header row and hides unsorted arrows by token", () => {
+  it("draws one picked, cased header row; unsorted arrows follow sortIcon", () => {
     renderTable("soft");
     const h = header();
     expect(h.dataset.part).toBe("h");
@@ -74,6 +74,9 @@ describe("DataTable soft presentation", () => {
     expect(idLabel!.className).toContain("text-column-header-ink");
     expect(nLabel!.className).toContain("text-column-header-sorted-ink");
     expect(idLabel!.innerHTML).toContain("--sort-icon:sorted");
+    expect(idLabel!.innerHTML).toContain(
+      "[@container_style(--sort-icon:hover)]:group-hover/column-header:opacity-100",
+    );
   });
 
   it("puts the box on the rail and owes its contents none", () => {
@@ -88,15 +91,20 @@ describe("DataTable soft presentation", () => {
 });
 
 describe("DataTable grid presentation (unchanged by soft)", () => {
-  it("keeps its header text, rule, rail and row look", () => {
+  it("keeps its rule, rail and row look; its labels read the columnHeader tokens", () => {
     renderTable("grid");
     const h = header();
-    expect(h.className).toContain(
-      "text-3xs font-medium uppercase tracking-wider text-muted-foreground",
-    );
+    // No hard-coded label look: the case, tracking, type and ink are tokens.
+    expect(h.className).not.toMatch(/\buppercase\b|tracking-wider|text-3xs/);
     expect(h.className).toContain("border-b");
     expect(h.className).toContain("rail-follow");
-    expect(h.style.getPropertyValue("--role-pick")).toBe("");
+    expect(h.style.getPropertyValue("--role-pick")).toBe(
+      "var(--column-header-role)",
+    );
+    const [idLabel, nLabel] = [...h.children] as HTMLElement[];
+    expect(idLabel!.className).toContain("tracking-column-header");
+    expect(idLabel!.className).toContain("text-column-header-ink");
+    expect(nLabel!.className).toContain("text-column-header-sorted-ink");
     const r = row("a");
     expect(r.hasAttribute("data-soft-row")).toBe(false);
     expect(r.className).toContain("border-b border-border/30 text-caption");
@@ -105,6 +113,5 @@ describe("DataTable grid presentation (unchanged by soft)", () => {
     expect(box.getAttribute("class")).toBe(null);
     expect(box.getAttribute("style")).toBe(null);
     expect(box.firstElementChild!.className).toBe("grid gap-x-sm");
-    expect(document.body.innerHTML).not.toContain("--sort-icon");
   });
 });

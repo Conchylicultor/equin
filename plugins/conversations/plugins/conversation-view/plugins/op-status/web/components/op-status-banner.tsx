@@ -533,7 +533,6 @@ export function OpStatusBanner({
           storageKey={QUEUE_VIEW}
           readiness={result}
           density="compact"
-          groupHeaders="quiet"
           toolbar={CARD_TOOLBAR}
           selectedRowId={op.opId}
           searchPlaceholder="Search ops"

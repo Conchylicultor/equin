@@ -17,11 +17,13 @@ afterEach(cleanup);
 function Controlled(props: {
   appearance?: SearchInputAppearance;
   initial: string;
+  keyHint?: string;
 }) {
   const [value, setValue] = useState(props.initial);
   return (
     <SearchInput
       appearance={props.appearance}
+      keyHint={props.keyHint}
       value={value}
       onChange={(e) => setValue(e.target.value)}
       placeholder="Search"
@@ -83,6 +85,18 @@ describe("SearchInput appearance", () => {
     expect(cls).toContain("focus-visible:ring-0");
     // Still the field shape: a leading icon box, the input itself the box.
     expect(screen.queryByText("/")).toBeNull();
+  });
+
+  it("filled draws a host's key hint while empty, the clear button once typed", () => {
+    render(<Controlled appearance="filled" initial="" keyHint="/" />);
+    const input = screen.getByPlaceholderText("Search");
+    expect(screen.getByText("/")).toBeTruthy();
+    // The text stops short of the hint.
+    expect(input.className.split(/\s+/)).toContain("pr-xl");
+
+    fireEvent.change(input, { target: { value: "abc" } });
+    expect(screen.queryByText("/")).toBeNull();
+    expect(screen.getByRole("button", { name: "Clear filter" })).toBeTruthy();
   });
 
   it("filled keeps the clear button while it holds a query", () => {

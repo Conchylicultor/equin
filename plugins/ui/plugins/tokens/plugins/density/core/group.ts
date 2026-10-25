@@ -119,11 +119,21 @@ export const densityGroup = defineTokenGroup("density", {
   // that also caps the content width. Default `initial` = UNSET: no pane
   // publishes an inset and every rail falls back to today's chrome pad.
   contentInset: { default: "initial", label: "Pane content inset" },
-  // A tree row (`TreeRowChrome`): its minimum height and the indent per depth
-  // level. Defaults = the old `min-h-7` and 16px step. The indent stays in px:
-  // e2e reads it back as a number.
+  // A tree row (`TreeRowChrome`): its minimum height. Default = the old
+  // `min-h-7`.
   treeRowH: { default: "1.75rem", label: "Tree row height" },
-  treeIndent: { default: "16px", label: "Tree indent" },
+  // The width of a tree row's chevron box (`w-tree-chevron`): the column
+  // disclosure's chevron, an icon-less row's chevron, and the space a leaf
+  // reserves for it. Default = the 20px (`size-5`) box it always had.
+  treeChevronW: { default: "1.25rem", label: "Tree chevron width" },
+  // The indent per depth level. Default = one chevron box plus the row's cell
+  // gap, so a child's chevron starts exactly where its parent's icon does (the
+  // column disclosure lays chevron, gap, icon). A theme sets a length of its
+  // own (Pages: 14px, the file explorer: 24px).
+  treeIndent: {
+    default: "calc(var(--tree-chevron-w) + var(--tree-row-gap))",
+    label: "Tree indent",
+  },
   // A tree row's leading inset (before its icon / chevron slot) and the gap
   // between its cells. Defaults = the 4px lead and `xs` gap it always had.
   treeRowPadStart: { default: "4px", label: "Tree row lead inset" },
@@ -134,9 +144,12 @@ export const densityGroup = defineTokenGroup("density", {
   // nested row's fill starts under its parent's icon. Never above the indent.
   treePillIndent: { default: "0px", label: "Tree pill indent" },
   // Where an indent guide's hairline sits inside its indent step (its centre,
-  // from the step's start). Default = the step's middle.
+  // from the step's start). Default = the chevron box's centre: each level's
+  // guide runs straight down from its parent's chevron (the column
+  // disclosure) — or, under the merged / dimmed-leaf box, which starts where
+  // the chevron box would, from the centre of the parent's icon.
   treeGuideX: {
-    default: "calc(var(--tree-indent) / 2)",
+    default: "calc(var(--tree-chevron-w) / 2)",
     label: "Tree guide offset",
   },
   // The gap between a tree's top-level rows.

@@ -9,6 +9,11 @@ import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web"
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { EditableCell } from "./editable-cell";
 import { useFieldCellContext } from "../internal/field-extents";
+import {
+  isElidedRead,
+  useFieldPresentation,
+  visibleValues,
+} from "../internal/field-presentation";
 
 /**
  * Thrown by `FieldCell` when a field declares `data` but neither a `cell`
@@ -31,7 +36,10 @@ export class MissingDataCellError extends Error {
  * `String(value)`. In the `token` context (a card's token line) the field's
  * own `token` renderer comes first: `field.token` → `field.cell` → the type's
  * cell. Either renderer is handed the field's `extent` when it declares
- * `extent: true` (`FieldExtentsContext`, provided by the body). When the
+ * `extent: true` (`FieldExtentsContext`, provided by the body). Inside a row
+ * view's `FieldPresentationProvider` the type's cell is handed
+ * `presentation: "quiet"`, and the value most of the view's rows share is left
+ * out — a scalar draws nothing, a multi-value field draws the rest. When the
  * field declares a write-back (`onEdit`/`onEditValues`) the read is wrapped
  * in `EditableCell` for click-to-edit; otherwise the read is rendered bare.
  */
@@ -59,6 +67,9 @@ export function FieldCell({
 }: FieldCellProps): ReactNode {
   // A field declaring `extent: true` is handed its extent over the view's rows.
   const cellContext = useFieldCellContext(field);
+  // The enclosing view's presentation: quiet + elision in a row view, the
+  // chip default elsewhere (a table, a lone cell).
+  const presentation = useFieldPresentation();
   // A field whose values failed to load has no value to draw — say so, per
   // cell, rather than draw the decode of `undefined` (an unset-looking cell).
   if (field.readError) {
@@ -76,12 +87,21 @@ export function FieldCell({
   if (field.pending === true) {
     return <Loading variant="block" className="h-4 w-12" />;
   }
+  // A value most of the view's rows share says nothing: the cell draws none
+  // (its slot keeps its width — the list's slots are sized by the view).
+  if (isElidedRead(presentation, field, row)) return null;
   const value = field.value?.(row);
-  const values = field.values?.(row);
+  const values = visibleValues(presentation, field, field.values?.(row));
   const own = context === "token" ? (field.token ?? field.cell) : field.cell;
   const read = own
     ? own(row, cellContext)
-    : (resolveCell(field, value, row, values) ?? readFallback(field, value));
+    : (resolveCell(
+        field,
+        value,
+        row,
+        values,
+        presentation.presentation === "quiet" ? "quiet" : undefined,
+      ) ?? readFallback(field, value));
   if (field.onEdit != null || field.onEditValues != null) {
     return (
       <EditableCell

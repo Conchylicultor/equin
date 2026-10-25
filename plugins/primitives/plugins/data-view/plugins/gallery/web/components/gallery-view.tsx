@@ -1,5 +1,10 @@
 import { type ReactNode } from "react";
-import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  Button,
+  cn,
+  ControlSizeProvider,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Avatar } from "@plugins/primitives/plugins/avatar/web";
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -73,7 +78,8 @@ interface GalleryCell {
  * (`resolveCover` — the surface's accessor, else the cover field), then the
  * card's three text lines (`partitionCardFields`, computed once per view, drawn
  * by `CardMeta`). A row with no cover of its own shows its leading field (the
- * avatar) in the frame, else a blank tint — every card stays the same size.
+ * avatar) in the frame, else a monogram of its title (`coverMonogram`), else a
+ * blank tint — every card stays the same size.
  *
  * `rows`/`fields` arrive type-erased as `unknown`; this is the documented
  * re-cast boundary for the view child.
@@ -162,14 +168,18 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
               onHoverChange: (inside: boolean) => onRowHoverChange(key, inside),
             })}
         onActivate={props.rowActivation?.(row)}
-        cover={coverOf(covers.coverOf(row), cardFields, (field) =>
-          leadingSlot({
-            field,
-            row,
-            resolveCell,
-            resolveEditor,
-            own: undefined,
-          }),
+        cover={coverOf(
+          covers.coverOf(row),
+          cardFields,
+          (field) =>
+            leadingSlot({
+              field,
+              row,
+              resolveCell,
+              resolveEditor,
+              own: undefined,
+            }),
+          titleText(cardFields, row),
         )}
         // Aggregate representative → a `×N` corner mark, top-left, clear of
         // the action chip at top-right.
@@ -244,7 +254,6 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
       sections={sections}
       collapsedSections={props.collapsedSections}
       setSectionCollapsed={props.setSectionCollapsed}
-      headerStyle={props.groupHeaders}
     >
       {(section) => renderSection(section, cellsOf(section))}
     </GroupedSections>
@@ -252,20 +261,59 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
 }
 
 /**
+ * `coverMonogram: hide` drops the monogram, leaving the blank tinted frame
+ * (`show` by default).
+ */
+const MONOGRAM_HIDE_CLASS = "[@container_style(--cover-monogram:hide)]:hidden";
+
+/** The row's title as text — what its monogram is made of — or `null` when
+ *  the title field projects no non-blank string. */
+function titleText(
+  cardFields: CardFields<unknown>,
+  row: unknown,
+): string | null {
+  const value = cardFields.title?.value?.(row);
+  return typeof value === "string" && value.trim() !== "" ? value.trim() : null;
+}
+
+/**
  * What a card's frame shows: the row's cover, else — when the schema has a
- * leading field (the avatar) — that field's cell centred on the tint, else
- * nothing (the blank tinted frame). The leading field is never text.
+ * leading field (the avatar) — that field's cell centred on the tint, else a
+ * monogram of the row's title (its first letter on a tile tinted by the
+ * title's own colour, the `Avatar` auto-colour, at the frame's bottom-left),
+ * else nothing (the blank tinted frame). The leading field is never text.
  */
 function coverOf(
   cover: CoverContent | null,
   cardFields: CardFields<unknown>,
   leading: (field: CardFields<unknown>["leading"]) => ReactNode | undefined,
+  title: string | null,
 ): CoverContent | null {
   if (cover !== null) return cover;
-  if (!cardFields.leading) return null;
+  if (cardFields.leading) {
+    return {
+      kind: "node",
+      node: (
+        <Center className="size-full">{leading(cardFields.leading)}</Center>
+      ),
+    };
+  }
+  if (title === null) return null;
   return {
     kind: "node",
-    node: <Center className="size-full">{leading(cardFields.leading)}</Center>,
+    node: (
+      <Stack
+        gap="none"
+        justify="end"
+        align="start"
+        data-cover-monogram=""
+        className={cn("size-full p-md", MONOGRAM_HIDE_CLASS)}
+      >
+        <ControlSizeProvider size="lg">
+          <Avatar shape="squircle" fallbackGlyph={title} fallbackKey={title} />
+        </ControlSizeProvider>
+      </Stack>
+    ),
   };
 }
 

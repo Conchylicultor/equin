@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
@@ -41,7 +42,7 @@ export function TreeChildPlaceholder({
     >
       {guides && <TreeGuides depth={depth} />}
       {/* The chevron slot's width, so the text starts on the label column. */}
-      <span className="size-5" aria-hidden />
+      <span className={`w-tree-chevron h-5 ${rigidClass()}`} aria-hidden />
       {placeholder.kind === "loading" ? (
         // The shared loading state (delayed, so a fast listing never flashes),
         // flush in the row: the row already owns the inset.

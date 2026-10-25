@@ -80,7 +80,16 @@ The row body maps the `FieldDef` schema (shared `pickPrimaryField` heuristic):
 - fields with **`align: "end"`** → an always-visible trailing region inside the
   row body, right of the title/subtitle and **before** the hover actions
   (`field.cell(row) ?? String(field.value(row))`). This is where a status badge
-  lands.
+  lands. Each trailing field sits in an **aligned slot** (`use-slot-widths.ts`:
+  the widest that slot has been on any row, as a CSS variable on the list root,
+  grow-only, reset when the trailing field set changes), spaced by
+  `listSlotGap`; a time-typed field goes last, in `listTimeInk`. See the
+  data-view CLAUDE.md ("Single-line list rows are the default").
+- **quiet terms, elided common values** — the body is wrapped in data-view's
+  `FieldPresentationProvider` over the subtitle + trailing fields: chip-typed
+  values draw `● label`, and a value ≥ 60% of the rows hold is left out (a
+  subtitle term dropped with its separator, a slot left empty at its width).
+  See the data-view CLAUDE.md ("Quiet rows and common-value elision").
 - **remaining non-primary fields** → the muted subtitle (`Text
   variant="caption"`, truncating), joined with `·` — but see "Chips are not
   middot-ed" below: a term that renders as a chip is parted by spacing instead.
@@ -213,6 +222,9 @@ conditional hook.
 - `renderRow?(row)` — full row-body override (escape hatch); still wrapped in
   the selectable `Row`.
 - `lines?` — rows per item, `1 | 2` (default `1`, one line — see above).
+- `columnCaptions?` — a caption row over the list (title label, each trailing
+  label over its slot). Default off; also the view type's `configSchema`
+  option (a switch in the view's settings).
 - `size?` — row density, `"sm" | "md"`. Default follows the SURFACE's
   `DataViewProps.density`: `"sm"` when it declared itself compact, `"md"`
   otherwise. Setting it here pins a density whatever the surface asked for.
@@ -231,8 +243,8 @@ conditional hook.
 - Description: List view child for the data-view primitive: a compact single-row-per-item list (Row primitive) with field-driven label/subtitle/trailing, active-row highlight, and hover item actions.
 - Web:
   - Contributes: `DataViewSlots.View` "List" → `ListView`
-  - Uses: 59 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/data-view` ×39
+  - Uses: 65 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/data-view` ×44
     - `primitives/rank-reorder` ×3
     - `primitives/css/spacing` ×2
     - `primitives/collapsible.FoldMotion`
@@ -245,6 +257,7 @@ conditional hook.
     - `primitives/css/row.Row`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
+    - `primitives/dom/element-size.useResizeObserverSet`
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useEventCallback`
     - `primitives/link-gesture.activationProps`
@@ -253,8 +266,12 @@ conditional hook.
   - Exports (types): `ListViewOptions`
 - Cross-plugin:
   - Uses tokens:
+    - `ui/tokens/color-palette --faint-foreground`
     - `ui/tokens/color-palette --foreground`
     - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/data-view --list-slot-gap`
+    - `ui/tokens/data-view --list-time-ink`
+    - `ui/tokens/density --chrome-pad-x`
     - `ui/tokens/density --section-body-pad-top`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/density --space-xl`

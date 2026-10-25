@@ -12,7 +12,7 @@ export interface TreeDisclosureContribution {
  * dispatches to its own active variant), so this is a plain `defineSlot` — not
  * a render slot: the disclosure needs structural props (icon/hasChildren/…)
  * the `.Render` map-each pattern can't pass. With no contribution, `tree` falls
- * back to its inline default merged disclosure.
+ * back to its inline default column disclosure (`TreeColumnDisclosure`).
  */
 export const Tree = {
   Disclosure: defineSlot<TreeDisclosureContribution>({

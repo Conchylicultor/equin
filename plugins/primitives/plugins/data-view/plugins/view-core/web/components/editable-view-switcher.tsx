@@ -37,14 +37,15 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 const addIcon = symbol("add");
 
 // ── The view chip's look, from the data-view token group ──────────────────
-// Every default reproduces the plain `ToggleChip variant="ghost"` chip, so a
-// theme that says nothing draws exactly that chip. The `data-part` names are
+// The defaults draw the ghost chip with its icon and name, the active one on a
+// soft neutral fill (`viewChipActiveFill`, a 7% foreground tint) in the
+// foreground ink, on soft 7px corners. The `data-part` names are
 // DataView parts (`DATA_VIEW_PARTS`, data-view core) spelled literally: this
 // plugin sits under data-view's core, which already imports it.
 
-/** The active chip's fill, ink and ring (accent / accent-foreground /
- *  transparent by default — the ghost chip's own active pair). The ring is
- *  inset: a hairline inside the chip's box, so a ringed chip is no larger. */
+/** The active chip's fill, ink and ring (a soft neutral fill / the
+ *  foreground / transparent by default). The ring is inset: a hairline inside
+ *  the chip's box, so a ringed chip is no larger. */
 const ACTIVE_CHIP_CLASS =
   "bg-view-chip-active-fill text-view-chip-active-ink ring-1 ring-inset ring-view-chip-active-ring";
 
@@ -82,6 +83,19 @@ const INACTIVE_LABEL_HIDE_CLASS =
 const INACTIVE_CHIP_GAP_CLASS =
   "[@container_style(--view-chip-label:active)]:gap-none";
 
+/** The strip the add-view button reveals with (`viewAddReveal: hover`). */
+const VIEW_STRIP_GROUP = "group/view-strip";
+
+/**
+ * `viewAddReveal: hover` (the default) shows the add-view button only while
+ * the strip is pointed at, the button holds keyboard focus, or its menu is
+ * open; `always` keeps it at rest. Opacity only: hidden, it still takes its
+ * place in the strip (no reflow on reveal) and stays in the tab order — a
+ * keyboard user tabbing to it sees it.
+ */
+const ADD_REVEAL_CLASS =
+  "transition-opacity [@container_style(--view-add-reveal:hover)]:group-[:not(:hover)]/view-strip:not-focus-visible:not-data-popup-open:opacity-0";
+
 /** `viewAddSeparator: show` draws a rule before the add-view button
  *  (`hide` by default), boxed like the toolbar's pill divider. */
 const ADD_SEPARATOR_CLASS =
@@ -115,8 +129,8 @@ function ChipLabel(props: {
 
 /**
  * Config-mode switcher: drag-reorderable ghost chips (matching the read-only
- * `SegmentedControl variant="ghost"` look so chrome stays identical) + a trailing,
- * always-visible `+` add menu. Click an inactive chip → select; click the **active** chip → open
+ * `SegmentedControl variant="ghost"` look so chrome stays identical) + a trailing
+ * `+` add menu, revealed with the strip (`viewAddReveal`). Click an inactive chip → select; click the **active** chip → open
  * its settings popover (rename / options sub-form / duplicate / delete).
  */
 export function EditableViewSwitcher<T extends ViewTypeMeta>({
@@ -156,7 +170,7 @@ export function EditableViewSwitcher<T extends ViewTypeMeta>({
       direction="row"
       align="center"
       gap="xs"
-      className="gap-view-switcher"
+      className={cn("gap-view-switcher", VIEW_STRIP_GROUP)}
     >
       <SortableList items={ids} onMove={onMove} orientation="horizontal">
         <Stack
@@ -248,8 +262,8 @@ export function EditableViewSwitcher<T extends ViewTypeMeta>({
         </Stack>
       </SortableList>
 
-      {/* The `+` add-view button, always visible: adding a view is a first-class
-          gesture, not chrome to discover by hovering. Ambient size comes from
+      {/* The `+` add-view button — revealed with the strip by default
+          (`ADD_REVEAL_CLASS`), always tabbable. Ambient size comes from
           the surrounding `ControlSizeProvider`, with `IconButton` itself as the
           trigger's `render` target (mirroring CreatorsControl) — a provider as
           the render root would swallow base-ui's trigger wiring. */}
@@ -269,7 +283,10 @@ export function EditableViewSwitcher<T extends ViewTypeMeta>({
                 icon={addIcon}
                 label="Add view"
                 data-part="dv.view-add"
-                className="text-faint-foreground hover:text-foreground [@container_not_style(--view-add-radius:initial)]:rounded-view-add"
+                className={cn(
+                  "text-faint-foreground hover:text-foreground [@container_not_style(--view-add-radius:initial)]:rounded-view-add",
+                  ADD_REVEAL_CLASS,
+                )}
               />
             }
           />

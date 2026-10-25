@@ -25,11 +25,9 @@ its shape (task-track, task-category, automations).
 
 ## Plugin reference
 
-- Description: Tree view of all tasks rendered in the Tasks pane. Defines Tasks.List/TaskActions/ListActions slots and ships the row actions (delete, child-count, launch-agent).
+- Description: Tree view of all tasks rendered in the Tasks pane. Defines Tasks.List/TaskActions slots and ships the row actions (delete, child-count, launch-agent).
 - Web:
-  - Slots:
-    - `Tasks.TaskActions`
-    - `Tasks.ListActions`
+  - Slots: `Tasks.TaskActions`
   - Slot contributors:
     - `Tasks.TaskActions` ← `tasks.auto-start`
     - `Tasks.TaskActions` ← `tasks.task-list`
@@ -53,7 +51,6 @@ its shape (task-track, task-category, automations).
     - `primitives/live-state.foldResource`
     - `primitives/live-state.ResourceView`
     - `primitives/loading.Loading`
-    - `primitives/slot-render.defineRenderSlot`
     - `tasks.patchTask`
     - `tasks/task-status.StatusBadge`
     - `tasks/task-status.StatusIcon`

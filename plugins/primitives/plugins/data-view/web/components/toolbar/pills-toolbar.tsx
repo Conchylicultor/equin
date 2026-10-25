@@ -31,8 +31,31 @@ export interface PillsLayoutProps {
 }
 
 /**
+ * `toolbarPillSurface: flat` (the default): an in-flow pill draws no surface
+ * of its own — the `float` level's fill, sheen, border, shadow, blur and
+ * corners are cleared, and its padding with them — so the band reads as one
+ * flat strip of chips and tools. Its hover and mask tones are the band's
+ * (`inherit`), not the float card's. `float` keeps the boxed pill. An overlay
+ * pill never wears this: over a map it is the only thing the controls stand
+ * on, so it keeps its glass whatever the token says.
+ */
+const FLAT_PILL_CLASS = cn(
+  "[@container_style(--toolbar-pill-surface:flat)]:rounded-none",
+  "[@container_style(--toolbar-pill-surface:flat)]:border-transparent",
+  "[@container_style(--toolbar-pill-surface:flat)]:bg-transparent",
+  "[@container_style(--toolbar-pill-surface:flat)]:bg-none",
+  "[@container_style(--toolbar-pill-surface:flat)]:shadow-none",
+  "[@container_style(--toolbar-pill-surface:flat)]:[backdrop-filter:none]",
+  "[@container_style(--toolbar-pill-surface:flat)]:text-inherit",
+  "[@container_style(--toolbar-pill-surface:flat)]:p-none",
+  "[@container_style(--toolbar-pill-surface:flat)]:[--hover-fill:inherit]",
+  "[@container_style(--toolbar-pill-surface:flat)]:[--chrome-mask:inherit]",
+);
+
+/**
  * One floating pill (`Surface level="float"`), interactive over a
- * click-through band when `overlay`. `give` makes it the cell that yields
+ * click-through band when `overlay`; flat on an in-flow band by default
+ * ({@link FLAT_PILL_CLASS}). `give` makes it the cell that yields
  * (and scrolls its content sideways) when the row runs out of room; every
  * other pill is rigid. `className` lands on the pill's surface (a reveal
  * class, for a pill that is hidden at rest). `part` stamps the surface's
@@ -72,7 +95,7 @@ export function ToolbarPill(props: {
       role="group"
       aria-label={label}
       {...dataPart(part)}
-      className={cn("p-pill", !overlay && sizing, className)}
+      className={cn("p-pill", !overlay && [sizing, FLAT_PILL_CLASS], className)}
     >
       {body}
     </Surface>
@@ -87,9 +110,10 @@ export function ToolbarPill(props: {
 /**
  * The two-pill row every DataView toolbar is drawn as — wide and in the
  * compact fold alike: `[lead] [views pill] [fill] [tools pill]`. Both pills
- * are floating surfaces at ONE control size (`sm`), so they are the same
- * height and centred on one line at every width; the views pill is the one
- * cell that gives (it scrolls sideways), the row never wraps.
+ * (flat by default, see {@link ToolbarPill}) sit at ONE control size (`sm`),
+ * so they are the same height and centred on one line at every width; the
+ * views pill is the one cell that gives (it scrolls sideways), the row never
+ * wraps.
  *
  * `views` / `tools` `null` ⇒ that pill is not drawn at all (no empty pill).
  * `trailing` is a ready-made node in the tools pill's place, for a caller
@@ -167,8 +191,8 @@ export type PillsToolbarProps = ToolbarParts & PillsLayoutProps;
 /**
  * The DataView toolbar's wide layout: one row of
  *
- *     [title] [views pill: the editable switcher strip, "+" always shown]
- *     ··· [tools pill: search · controls · actions | create]
+ *     [title] [views pill: the editable switcher strip, "+" on its hover]
+ *     ··· [tools pill: search [/] · controls · actions | create]
  *
  * the default (`barArrangement`) and the floating arrangement
  * (`floating-toolbar`, `overlay`) alike — they differ only in the row's inset

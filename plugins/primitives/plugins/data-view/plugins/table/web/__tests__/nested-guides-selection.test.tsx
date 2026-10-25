@@ -128,6 +128,9 @@ describe("data-view nested table: indent guides", () => {
     expect(box.getAttribute("aria-hidden")).toBe("true");
     expect(box.style.width).toBe("calc(2 * var(--tree-indent))");
     expect(box.style.backgroundSize).toContain("var(--tree-indent)");
+    // Each level's line sits at the guide offset (default half the chevron
+    // box: under the parent's chevron).
+    expect(box.style.backgroundImage).toContain("var(--tree-guide-x)");
     // In the first cell's head, ahead of the label — never in another column.
     const size = getByText("1 KB");
     expect(
@@ -137,6 +140,19 @@ describe("data-view nested table: indent guides", () => {
       box.compareDocumentPosition(getByText("deep.ts")) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
+  });
+
+  it("heads every row with the chevron box: a faint chevron on a parent, space on a leaf", () => {
+    const { getByText } = renderTable({ guides: true });
+    const chevron = rowOf(getByText, "lib").querySelector<HTMLElement>(
+      "button[aria-label='Collapse']",
+    )!;
+    expect(chevron.className).toContain("w-tree-chevron");
+    expect(chevron.className).toContain("opacity-40");
+    const leaf = rowOf(getByText, "deep.ts");
+    expect(leaf.querySelector("button[aria-label='Expand']")).toBeNull();
+    expect(leaf.querySelector("button[aria-label='Collapse']")).toBeNull();
+    expect(leaf.querySelector(".w-tree-chevron[aria-hidden]")).not.toBeNull();
   });
 
   it("gives an open folder's placeholder row the guides its siblings have", () => {

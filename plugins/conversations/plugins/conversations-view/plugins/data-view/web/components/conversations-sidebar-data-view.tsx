@@ -30,8 +30,9 @@ import { SIDEBAR_TOOLBAR } from "./sidebar-frame";
  *
  * The chrome is the sidebar's own ({@link SIDEBAR_TOOLBAR}): one sticky line
  * holding the view switcher as a full-width row and the options trigger. The
- * group headers are `"quiet"` — "Queue 6", with the fold chevron on hover — so
- * they read as captions over the rows rather than as a second band of chrome.
+ * group headers are DataView's default caption ones — "Queue 6", with the fold
+ * chevron on hover — so they read as captions over the rows rather than as a
+ * second band of chrome.
  */
 export function ConversationsSidebarDataView(
   props: ConversationSidebarProps,
@@ -48,7 +49,6 @@ export function ConversationsSidebarDataView(
           hostProps={props}
           defaultView="queue"
           toolbar={SIDEBAR_TOOLBAR}
-          groupHeaders="quiet"
         />
       </Scroll>
     </Stack>

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import type { DataViewSection } from "../../core";
 import { GroupedSections } from "../internal/grouped-sections";
@@ -19,92 +19,98 @@ const SECTIONS = [
 ] as unknown as DataViewSection<unknown>[];
 
 function renderSections(
-  headerStyle?: "standard" | "quiet",
   headerActions?: (s: DataViewSection<unknown>) => ReactNode,
+  collapsed: string[] = [],
 ) {
   return render(
     <GroupedSections
       sections={SECTIONS}
-      headerStyle={headerStyle}
       headerActions={headerActions}
+      collapsedSections={new Set(collapsed)}
     >
       {(section) => <div>rows of {section.key}</div>}
     </GroupedSections>,
   );
 }
 
-describe("GroupedSections — header style", () => {
-  it("renders the identical node for an absent and a `standard` style", () => {
-    // `useId` mints a fresh id per mount; everything else must match exactly.
-    const html = (el: HTMLElement) => el.innerHTML.replace(/_r_\w+_/g, "_id_");
-    const absent = html(renderSections().container);
-    cleanup();
-    const standard = html(renderSections("standard").container);
-    expect(standard).toBe(absent);
-  });
-
-  it("standard: label, count beside it, a rule, the chevron at the end", () => {
-    renderSections("standard");
-    // The count is part of the label's run, in the code role.
+describe("GroupedSections — group header", () => {
+  it("one run: label, count beside it, the rule, then the chevron", () => {
+    renderSections();
     const header = screen.getByRole("button", { name: "Queue6" });
     expect(header.getAttribute("aria-expanded")).toBe("true");
-    expect(header.querySelector(".text-code")!.textContent).toBe("6");
-    // The hairline fills the slack after the run, out of the a11y tree.
-    const rule = header.querySelector('[data-slot="separator"]')!;
-    expect(rule.closest('[aria-hidden="true"]')).not.toBeNull();
-    // No chevron leads; it sits at the far end, outside the control, faint.
-    expect(header.querySelector("svg")).toBeNull();
-    const chevron = header.parentElement!.querySelector("svg")!;
-    expect(chevron.getAttribute("class")).toContain("text-faint-foreground");
-    expect(chevron.getAttribute("class")).not.toContain("opacity-0");
-  });
-
-  it("standard: keeps a section's header actions before the chevron", () => {
-    renderSections("standard", (s) =>
-      s.key === "queue" ? <button type="button">Fold</button> : null,
+    // The count is part of the label's run, in the group role.
+    const count = header.querySelector('[data-part="dv.group-count"]')!;
+    expect(count.textContent).toBe("6");
+    expect(count.getAttribute("class")).toContain("text-group-count-ink");
+    // The rule's box sits after the count, out of the a11y tree, shown only
+    // under the `rule` style (a style query on the theme token).
+    const rule = header.querySelector('[data-part="dv.group-rule"]')!;
+    const ruleBox = rule.closest('[aria-hidden="true"]')!;
+    expect(ruleBox.getAttribute("class")).toContain("hidden");
+    expect(ruleBox.getAttribute("class")).toContain(
+      "[@container_style(--group-header-style:rule)]:block",
     );
-    const action = screen.getByRole("button", { name: "Fold" });
-    const header = screen.getByRole("button", { name: "Queue6" });
-    expect(header.contains(action)).toBe(false);
-    expect(header.parentElement!.contains(action)).toBe(true);
+    expect(
+      count.compareDocumentPosition(ruleBox) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    // The chevron trails the run, hidden at rest while the section is open.
+    const chevron = header.lastElementChild!;
+    expect(chevron.tagName.toLowerCase()).toBe("svg");
+    expect(chevron.getAttribute("data-part")).toBe("dv.group-chevron");
+    expect(chevron.getAttribute("class")).toContain("opacity-0");
   });
 
-  it("quiet: count right after the label, chevron trailing the run", () => {
-    renderSections("quiet");
+  it("reveals the chevron on hover", () => {
+    renderSections();
     const header = screen.getByRole("button", { name: "Queue6" });
-    expect(header.getAttribute("aria-expanded")).toBe("true");
-    expect(header.lastElementChild?.tagName.toLowerCase()).toBe("svg");
+    fireEvent.pointerEnter(header);
     expect(header.lastElementChild!.getAttribute("class")).toContain(
-      "opacity-0",
+      "opacity-100",
     );
   });
 
-  it("quiet: keeps a section's header actions in the trailing cluster", () => {
-    renderSections("quiet", (s) =>
+  it("a collapsed section keeps its chevron and fades its label", () => {
+    renderSections(undefined, ["queue"]);
+    const header = screen.getByRole("button", { name: "Queue6" });
+    expect(header.getAttribute("aria-expanded")).toBe("false");
+    expect(header.lastElementChild!.getAttribute("class")).toContain(
+      "opacity-100",
+    );
+    const label = header.querySelector('[data-part="dv.group-label"]')!;
+    expect(label.getAttribute("class")).toContain("text-faint-foreground");
+    const open = screen.getByRole("button", { name: "Working2" });
+    expect(
+      open.querySelector('[data-part="dv.group-label"]')!.getAttribute("class"),
+    ).toContain("text-group-label-ink");
+  });
+
+  it("the label wears the pill only under the `pill` style", () => {
+    renderSections();
+    const label = document.querySelector('[data-part="dv.group-label"]')!;
+    expect(label.getAttribute("class")).toContain(
+      "[@container_style(--group-header-style:pill)]:bg-group-pill-fill",
+    );
+  });
+
+  it("keeps a section's header actions in the trailing cluster", () => {
+    renderSections((s) =>
       s.key === "queue" ? <button type="button">Fold</button> : null,
     );
     const action = screen.getByRole("button", { name: "Fold" });
     const header = screen.getByRole("button", { name: "Queue6" });
     // A sibling of the control, never inside it.
     expect(header.contains(action)).toBe(false);
+    expect(header.parentElement!.contains(action)).toBe(true);
   });
 
-  it("quiet: the band pays the rail and the header keeps its row pad", () => {
-    renderSections("quiet");
+  it("the band pays the rail and the header keeps its row pad", () => {
+    renderSections();
     const header = screen.getByRole("button", { name: "Queue6" });
     // The header row itself follows no rail (its own `p-row` stays), so its
     // label lands on the rows' text column; its sticky band pays the rail.
     expect(header.className).not.toContain("rail-follow");
     expect(header.className).toContain("p-row");
     expect(header.closest(".rail-follow")).not.toBeNull();
-  });
-
-  it("standard: the header row itself pays the rail", () => {
-    renderSections("standard");
-    // The count rides the row's actions, so the control is the split path's
-    // inner button and the rail is on the row BOX around it.
-    const header = screen.getByRole("button", { name: "Queue6" });
-    expect(header.parentElement!.className).toContain("rail-follow");
   });
 });
 
@@ -258,32 +264,29 @@ describe("GroupedSections — identity chip", () => {
     },
   ] as unknown as DataViewSection<unknown>[];
 
-  function chips(headerStyle: "standard" | "quiet") {
+  function chips() {
     render(
-      <GroupedSections sections={withIdentity} headerStyle={headerStyle}>
+      <GroupedSections sections={withIdentity}>
         {(section) => <div>rows of {section.key}</div>}
       </GroupedSections>,
     );
     return [...document.querySelectorAll('[data-part="dv.group-chip"]')];
   }
 
-  it("standard and quiet: draws the chip before the label, tinted, only with an icon", () => {
-    for (const style of ["standard", "quiet"] as const) {
-      const found = chips(style);
-      expect(found).toHaveLength(1);
-      const chip = found[0] as HTMLElement;
-      expect(chip.style.color).toBe("var(--categorical-3)");
-      expect(chip.querySelector("svg")).not.toBeNull();
-      // Before the label, in the same run.
-      const label = chip.parentElement!.querySelector(
-        '[data-part="dv.group-label"]',
-      )!;
-      expect(label.textContent).toBe("Doing");
-      expect(
-        chip.compareDocumentPosition(label) & Node.DOCUMENT_POSITION_FOLLOWING,
-      ).toBeTruthy();
-      cleanup();
-    }
+  it("draws the chip before the label, tinted, only with an icon", () => {
+    const found = chips();
+    expect(found).toHaveLength(1);
+    const chip = found[0] as HTMLElement;
+    expect(chip.style.color).toBe("var(--categorical-3)");
+    expect(chip.querySelector("svg")).not.toBeNull();
+    // Before the label, in the same run.
+    const label = chip.parentElement!.querySelector(
+      '[data-part="dv.group-label"]',
+    )!;
+    expect(label.textContent).toBe("Doing");
+    expect(
+      chip.compareDocumentPosition(label) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   it("a colour without a glyph draws the dot, the token's colour through its var", () => {
@@ -300,7 +303,7 @@ describe("GroupedSections — identity chip", () => {
   });
 
   it("no chip for a section without identity (every existing surface)", () => {
-    renderSections("standard");
+    renderSections();
     expect(document.querySelector('[data-part="dv.group-chip"]')).toBeNull();
     // The parts are still stamped for the metrics diff.
     for (const part of [

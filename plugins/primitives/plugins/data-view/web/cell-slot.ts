@@ -28,7 +28,9 @@ export interface CellContributionMeta {
    * between two adjacent NON-chip terms, and separates a chip by spacing alone
    * (three chips strung on middots read worse than the two-line row they
    * replace). Declared per TYPE by the cell's own plugin, so the list names no
-   * field type.
+   * field type. A row view's `FieldPresentationProvider` reads it too: only a
+   * chip-presenting field's common value is elided, and the list starts a
+   * chip in its trailing slot (any other value ends it).
    *
    * It is a statement about the field's TYPE, not about one particular
    * renderer: a consumer's `FieldDef.cell` override on a chip-typed field is
@@ -72,16 +74,19 @@ function useFindCellContribution(): (
   );
 }
 
-/** Returns a renderer that resolves a field's type cell honoring `extends`, or undefined. */
+/** Returns a renderer that resolves a field's type cell honoring `extends`, or
+ *  undefined. `presentation` is the enclosing view's
+ *  (`TableCellProps.presentation`; absent: the chip default). */
 export function useResolveCell(): (
   field: FieldDef<unknown>,
   value: FieldValue,
   raw: unknown,
   values?: readonly string[],
+  presentation?: "chip" | "quiet",
 ) => ReactNode | undefined {
   const find = useFindCellContribution();
   return useCallback(
-    (field, value, row, values) => {
+    (field, value, row, values, presentation) => {
       const contribution = find(field);
       if (!contribution) return undefined;
       return renderIsolated(Cell, contribution, {
@@ -90,6 +95,7 @@ export function useResolveCell(): (
         data: field.data?.(row),
         field,
         raw: row,
+        ...(presentation === undefined ? {} : { presentation }),
       } satisfies TableCellProps);
     },
     [find],

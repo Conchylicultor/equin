@@ -118,12 +118,9 @@ p-soft-row rounded-soft-row`, hovered to `--soft-row-hover-fill` (through
 `--dt-row-tint`, like grid), and a hairline BETWEEN rows — the row's
 `::before` on its top edge, drawn only under another soft row
 (`[data-soft-row]`), from `softRuleStart`, hidden on the hovered row and the
-row after it. One header row (`h-soft-header mb-soft-header`, no rule) whose
-labels take the `columnHeader` pick (`rolePickScope` on the row,
-`rolePickClass(fallback, false)` on each cell — the full rung, not the `xs`
-step), `columnHeaderCase`, `tracking-column-header`, `text-column-header-ink`
-(`-sorted-ink` on the sorted column); `sortIcon: sorted` hides the unsorted
-arrows (a style query). Cells take the `cell` pick the same way. The table's
+row after it. One header row (`h-soft-header mb-soft-header`, no rule; its
+labels as in every look, below). Cells take the `cell` pick (`rolePickScope`
+on the row, `rolePickClass(fallback, false)` on each cell). The table's
 box is the optional frame (`rounded-soft-frame p-soft-frame shadow-soft-frame
 bg-soft-frame-fill border-soft-frame-border`, all none by default, an
 inline-size container) and sits ON the rail as a margin; the grid inside sets
@@ -132,6 +129,17 @@ columns give way by `dropOrder` (`useColumnFit`'s `drop` mode) — it never
 scrolls sideways; a revealed cluster takes the trailing track as in grid. The
 windowed body's first estimate is 48px (`softRowH`'s default). The grid and
 outline looks are untouched by it.
+
+**Column labels, every look** (grid, outline, soft, first-group): no
+hard-coded type — the band carries `rolePickScope(DATA_VIEW_PICKS.columnHeader)`
+and each label `rolePickClass(fallback, false)` (the full rung, not the `xs`
+step), cased by `columnHeaderCase` (a style query), `tracking-column-header`,
+`text-column-header-ink` (`-sorted-ink` on the sorted column and on a sortable
+label's hover). The arrow follows `sortIcon` (style queries on the icon):
+`hover` (default) shows only the sorted column's and reveals an unsorted one
+on its label's hover (`group/column-header`), `sorted` never, `always` faint.
+So every `DataTable` — Studio's, Debug's — takes the theme's look; the old
+uppercase one is `columnHeaderCase: upper` + `sortIcon: always`.
 
 `parts?: DataTableParts` stamps caller-named `data-part`s on the box, the
 header row, each label, row and cell (data-view passes its part vocabulary,
@@ -154,7 +162,7 @@ rows read as a render loop).
 
 **An outline with its labels** (`header: true`): the column-header row a file
 listing wants over tree rows. It takes the outline rows' inset and a tree row's
-height, in a muted caption (an arrow only on the sorted column), a breath under its rule; every column after the first reads
+height, a breath under its rule; every column after the first reads
 as meta (`text-caption text-row-meta`). Its columns give way by `dropOrder` in a
 narrow box (`useColumnFit`'s `drop` mode) — it never scrolls sideways. Nested,
 `tree.headerLeading` puts the first label over the rows' labels (a depth-0
@@ -301,11 +309,11 @@ Verified in Chromium only (the e2e harness drives Chromium).
     - `DATA_TABLE_VIRTUALIZE_THRESHOLD`
     - `DataTable`
 - Cross-plugin:
-  - Uses tokens: 50 vars — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses tokens: 44 vars — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui/tokens/data-view` ×23
-    - `ui/tokens/type-scale` ×11
-    - `ui/tokens/color-palette` ×8
+    - `ui/tokens/color-palette` ×7
     - `ui/tokens/density` ×6
+    - `ui/tokens/type-scale` ×6
     - `ui/tokens/shape` ×2
   - Imported by:
     - `apps/studio/contributions`

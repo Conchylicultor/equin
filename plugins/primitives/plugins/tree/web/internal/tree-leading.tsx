@@ -1,13 +1,14 @@
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { ReactNode } from "react";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
-import { CollapsibleChevron } from "@plugins/primitives/plugins/collapsible/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
-import { layerClasses } from "@plugins/primitives/plugins/css/plugins/layer/web";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import type { TreeDisclosureProps } from "../../core";
 import { Tree } from "../slots";
-import { TreeDisclosureToggle } from "./tree-disclosure-toggle";
+import {
+  TREE_CHEVRON_CLASS,
+  TreeDisclosureToggle,
+} from "./tree-disclosure-toggle";
 import { TreeGuides } from "./tree-guides";
 
 export type TreeLeadingProps = {
@@ -25,48 +26,56 @@ export type TreeLeadingProps = {
 };
 
 /**
- * The current (and default) icon-bearing disclosure, extracted verbatim from
- * the row below. Used when no `Tree.Disclosure` is contributed, so rows render
- * identically even if the tree-disclosure plugin is not loaded. The `merged`
- * variant of tree-disclosure mirrors this byte-for-byte.
- *
- * Notion-style merged slot: icon at rest, chevron on row hover, both sharing
- * one size-5 box — only on a row with children; a leaf keeps its icon. The
- * icon is purely visual (the row click navigates); the overlaid chevron button
- * owns the toggle.
+ * The chevron box (`--tree-chevron-w` wide): a faint chevron on a row with
+ * children, else the box's width reserved for alignment — a leaf renders no
+ * expander (a chevron exists exactly when the row has children, or a lazy row
+ * may have some); dropping onto a leaf still nests under it.
  */
-function DefaultMergedDisclosure({
+function ChevronCell({
+  hasChildren,
+  isOpen,
+  onToggle,
+}: Pick<TreeDisclosureProps, "hasChildren" | "isOpen" | "onToggle">) {
+  return hasChildren ? (
+    <TreeDisclosureToggle
+      isOpen={isOpen}
+      onToggle={onToggle}
+      className={TREE_CHEVRON_CLASS}
+    />
+  ) : (
+    <span className={`w-tree-chevron h-5 ${rigidClass()}`} aria-hidden />
+  );
+}
+
+/**
+ * The column disclosure (Finder / VS Code style) — the tree-disclosure
+ * region's default. The tree owns it because it is also the fallback when no
+ * `Tree.Disclosure` is contributed, so rows render the same whether or not that
+ * plugin is loaded; the region's `column` variant contributes this component.
+ *
+ * Two cells of the row (a fragment, spaced by the row's `gap-tree-row`): the
+ * chevron box — a faint chevron on a row with children, empty space on a leaf
+ * — then the icon. The density defaults are built for it: the indent is one
+ * chevron box plus the gap (a child's chevron under its parent's icon), a guide
+ * sits at half the chevron box (under its parent's chevron).
+ */
+export function TreeColumnDisclosure({
   icon,
   hasChildren,
   isOpen,
   onToggle,
 }: TreeDisclosureProps) {
   return (
-    <Center as="span" axis="both" className="relative size-5">
-      <Center
-        as="span"
-        axis="both"
-        className={cn(
-          hasChildren &&
-            "group-hover/tree-row:opacity-0 group-hover/tree-row:pointer-events-none",
-        )}
-      >
+    <>
+      <ChevronCell
+        hasChildren={hasChildren}
+        isOpen={isOpen}
+        onToggle={onToggle}
+      />
+      <Center as="span" axis="both" className={`size-5 ${rigidClass()}`}>
         {icon}
       </Center>
-      {hasChildren && (
-        <TreeDisclosureToggle
-          isOpen={isOpen}
-          onToggle={onToggle}
-          className={cn(
-            // The chevron button overlays the icon slot full-bleed (icon at
-            // rest, chevron on hover). It is the layer itself, so it takes the
-            // class rather than a wrapping <Layer>.
-            layerClasses(),
-            "opacity-0 pointer-events-none group-hover/tree-row:opacity-100 group-hover/tree-row:pointer-events-auto focus-visible:opacity-100 focus-visible:pointer-events-auto",
-          )}
-        />
-      )}
-    </Center>
+    </>
   );
 }
 
@@ -92,7 +101,7 @@ export function TreeLeading({
   // A UI plugin can contribute the icon-bearing leading disclosure (merged /
   // dimmed-leaf / column). Exactly one is expected — its Region internally
   // dispatches to the active variant. With none, fall back to the inline
-  // default merged disclosure.
+  // default column disclosure.
   const disclosures = Tree.Disclosure.useContributions();
   const disclosure = disclosures[0];
   const disclosureProps: TreeDisclosureProps = {
@@ -115,32 +124,16 @@ export function TreeLeading({
             disclosureProps,
           )
         ) : (
-          <DefaultMergedDisclosure {...disclosureProps} />
+          <TreeColumnDisclosure {...disclosureProps} />
         )
-      ) : hasChildren ? (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggle?.();
-          }}
-          onPointerDown={(e) => e.stopPropagation()}
-          aria-label={isOpen ? "Collapse" : "Expand"}
-          className={cn(
-            "size-5 rounded-md",
-            "hover:bg-background/60",
-            "opacity-40 group-hover/tree-row:opacity-100",
-          )}
-        >
-          <Center axis="both" className="size-full">
-            <CollapsibleChevron open={isOpen} className="size-4" />
-          </Center>
-        </button>
       ) : (
-        // A leaf: reserve the chevron's width for alignment, but render no
-        // expander — a chevron exists exactly when the row has children (or a
-        // lazy row may have some). Dropping onto a leaf still nests under it.
-        <span className="size-5" aria-hidden />
+        // An icon-less row: the chevron box alone, the same cell the column
+        // disclosure draws ahead of an icon.
+        <ChevronCell
+          hasChildren={hasChildren}
+          isOpen={isOpen}
+          onToggle={onToggle}
+        />
       )}
       {leading != null && (
         <Center

@@ -47,7 +47,6 @@ the same two pills, past the aside.
     - `primitives/css/ui-kit.cn`
     - `primitives/data-view.PillsToolbar`
     - `primitives/pane.useReservesFloatingBar`
-    - `primitives/shortcuts.useSurfaceShortcuts`
   - Exports (values): `floatingToolbar`
 - Cross-plugin:
   - Uses tokens:

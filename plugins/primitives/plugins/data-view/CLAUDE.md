@@ -365,6 +365,18 @@ over a hierarchical source the host treats it as the tree it draws: no fold (`ac
 (`activeSupportsManualOrder` — the `RowOrder` contributor is not even mounted),
 and its `filterScope` decides `hideWhenEmpty` (`rootsScoped`).
 
+**Tree geometry is density tokens, built for the column disclosure.** A nested
+row's head is `TreeLeading` (primitives/tree): the chevron box
+(`--tree-chevron-w`, 1.25rem — a faint chevron only on a row with children, a
+leaf reserves the space), then the icon, spaced by the row's `--tree-row-gap`.
+The default indent is that chevron box plus the gap, so a child's chevron sits
+under its parent's icon; the default guide (`--tree-guide-x`) is half the
+chevron box, so a level's guide runs under its parent's chevron. The disclosure
+variant is `ui/tree-disclosure` (default `column`; Pages and the file explorer
+pin `merged`, whose box starts where the chevron box would — the guide lands
+on its icon's centre). A theme that sets its own `treeIndent` owns its own
+rhythm. Pinned by `ui/tokens/density/core/tree-geometry.test.ts`.
+
 **Nesting is per view (`ViewState.nesting`, Notion's Sub-items).** A view type
 that can nest nests only while its row's `nesting` is `nested` (the default,
 absent). `flat` draws every row as a top-level row and `roots` only the
@@ -415,6 +427,11 @@ could catch. The "click a folder to open it" affordance that motivated a
 consumer-side accessor is now the **stateless** `expandOnActivate` predicate on
 the nested table's `options` (see the table child's CLAUDE.md); carrying no state,
 it cannot be half-wired.
+
+**Expand-all is the view's to report, the toolbar's to draw.** A nesting
+view reports its whole-view expand-all up (`reportExpandAll`) and the DataView
+toolbar draws it as an action control — see "Toolbar controls" → "Action
+controls". The toolbar never asks which view type is active.
 
 The `FieldDef.primary` flag selects the nested table's row label field (shared
 `pickPrimaryField` heuristic). Inline rename of the primary label is no longer a
@@ -742,7 +759,6 @@ sections.length === 1 && sections[0]!.key === null ? (
     sections={sections}
     collapsedSections={props.collapsedSections}
     setSectionCollapsed={props.setSectionCollapsed}
-    headerStyle={props.groupHeaders}
   >
     {(section) => renderBody(section.entries)}
   </GroupedSections>
@@ -754,50 +770,45 @@ containing block, the `<StickyStack>` pinned at the host-published
 `--dv-header-offset`, the DOM-less `<CollapsibleProvider>` per section, and the
 `SectionHeaderRow` (label + count). So group headers **pin, and stack up to 5
 groups, degrading to the swap hand-off above that** — in every view, for free.
-There is **no per-view header-inset axis**: `GroupedSections` owns `rail-follow`
-on its `SectionHeaderRow`, so every group header sits on the one rail (see "The
-rail" below) — no view passes a `headerClassName`.
+There is **no per-view header-inset axis**: `GroupedSections` puts `rail-follow`
+on each header's sticky band, so every group header sits on the one rail (see
+"The rail" below) — no view passes a `headerClassName`.
 
-### `groupHeaders` — standard or quiet headers, per surface
+### The group header: one rendering, its style a theme token
 
-`DataViewProps.groupHeaders?: "standard" | "quiet"` is a surface declaration like
-`density`: `DataView` / `DataViewSwitcher` hand it to `DataViewShellFrame`, it
-rides `DataViewShellChrome`, and the body threads it into
-`DataViewRenderProps.groupHeaders`, which every `GroupedSections` view passes as
-`headerStyle`.
+`DataViewGroupHeader` (web barrel) is the ONE group header — no prop picks a
+treatment. It is one run, `SectionHeaderRow variant="group"
+disclosure="trailing" rule`: the section's identity, the `group` label
+(`groupLabelInk`, muted; faint while collapsed), its count right beside it
+(faint, the `groupCount` pick), the rule's box, then the fold chevron trailing
+the run — shown on hover or keyboard focus and **while the section is
+collapsed** (`SectionHeaderRow`'s trailing disclosure keeps a shut section's
+mark). A section's `headerActions` sit in the trailing cluster, hover-revealed.
 
-- **`"standard"`** (default) — `SectionHeaderRow variant="group"
-  disclosure="end" rule`: the label, its count right beside it (faint, the
-  `code` role's mono figures), a hairline filling the rest of the row, then
-  the fold chevron at the far END — always shown, faint, brightening while the
-  header is hovered or focused. A collapsed header's label is muted (the `end`
-  disclosure's tone). A section's `headerActions` sit before the chevron,
-  hover-revealed. Pinned by `web/__tests__/grouped-sections.test.tsx`.
-- **`"quiet"`** — one run: the semibold label, then its count right beside it
-  ("Queue 6", faint semibold), with the fold chevron trailing that run and
-  shown only on hover or keyboard focus (`SectionHeaderRow
-  disclosure="trailing"`). For a narrow list whose headers should read as
-  captions over the rows (the agent-manager conversation sidebar).
-  `headerActions` stay in the trailing cluster. Its label sits on the rows'
-  **text** column, not their pill edge: the sticky band pays the rail
-  (`rail-follow` on the `StickyStackItem`) and the header row keeps its own
-  `p-row`, like a body row. (A standard header puts `rail-follow` on the row
-  itself, which replaces the row's inline pad, so its label sits on the pill
-  edge — one row pad left of the row text.) The list view also drops the
-  section body's top padding under a quiet header, so the rows start right
-  under their caption.
+The theme's **`groupHeaderStyle`** token (`ui/tokens/data-view`) picks the look
+in CSS, through container style queries on the inherited var — never a prop:
 
-list, gallery and icons honour it through `GroupedSections`, and so does
-the **table** (nested or flat): it composes its own `col-span-full` header rows inside
-`data-table`, but the node in them is the same `DataViewGroupHeader` (exported
-from the web barrel) that `GroupedSections` renders — one rendering of either
-treatment, so the table cannot drift from the flat views. See "Table view
-options" below.
+- **`caption`** (default) — the run alone, a caption over the rows ("Queue 6").
+- **`rule`** — the rule's box shows (`ruleClassName` on `SectionHeaderRow`,
+  `hidden` otherwise, so it gives its slack back), a hairline filling the row
+  from the count to the chevron, which then sits at the far end.
+- **`pill`** — the label wears a soft pill (`groupPillFill`, `px-group-pill`),
+  at the foreground ink.
+
+Its label sits on the rows' **text** column, not their pill edge: the sticky
+band pays the rail (`rail-follow` on the `StickyStackItem`; a nested header's
+inside its indent) and the header row keeps its own `p-row`, like a body row.
+Pinned by `web/__tests__/grouped-sections.test.tsx`.
+
+list, gallery, tree and icons draw it through `GroupedSections`, and so does
+the **table** (nested or flat): it composes its own `col-span-full` header rows
+inside `data-table`, but the node in them is the same `DataViewGroupHeader` —
+so the table cannot drift from the flat views. See "Table view options" below.
 
 ### `headerActions` — one affordance, scoped to one section
 
 `headerActions?: (section) => ReactNode` renders in the header's trailing
-cluster — before the chevron of a standard header (the nested table's
+cluster, after the header's run (the nested table's
 fold-this-group toggle, `groupFoldAction`, today). Return `null` for a section with nothing to
 offer — the wrapper is then skipped too, so a view passing no `headerActions`
 (list, gallery) draws the node it always did.
@@ -872,7 +883,7 @@ rest, naming no type (`fields/tag`'s grouping is the one that does today —
   the identity chip (glyph on a tile inked by the colour) when it has an
   `icon`, else a colour dot when it has only a colour (`tint` token, else the
   `swatch` hex from `FieldOption.swatch`) — and a depth ≥ 1 header's label in
-  medium weight (a quiet root header is semibold).
+  medium weight (a root header is semibold).
 - **Sticky**: nested headers stack like flat ones (one `StickyStack` over the
   visible sections), degrading to the swap hand-off past the stack cap.
 - **Body state**: the paging tail counts as hidden when its section — or any
@@ -1203,11 +1214,11 @@ imports and passes — absent, the host uses its own `barArrangement`. The host
 never names or looks up an arrangement, so adding one is a new plugin (e.g.
 `capsule-toolbar`) and no edit here.
 
-### The default: two pills (`PillsToolbar`)
+### The default: a flat strip (`PillsToolbar`)
 
-Every DataView's toolbar, by default, is ONE row:
+Every DataView's toolbar, by default, is ONE flat row:
 
-    [title] [views pill: switcher strip, "+" always shown] ··· [tools pill: search · controls · actions | create]
+    [title] [views: switcher strip, "+" on hover] ··· [tools: search [/] · controls · actions | create]
 
 `PillsToolbar` (`web/components/toolbar/pills-toolbar.tsx`, web barrel) draws
 it — `barArrangement` in flow, `floating-toolbar` over a canvas (`overlay`:
@@ -1215,16 +1226,35 @@ each pill opts back into pointer events; the title rides the views pill).
 `PillsToolbarProps` = `ToolbarParts` + `{ overlay?, className?, style? }` (the
 row's inset; default `py-toolbar rail-follow`).
 
-- **Both pills are floating surfaces** (`Surface level="float"`:
-  `bg-float-fill`, `backdrop-float`, `rounded-float`), under ONE
-  `ControlSizeProvider size="sm"` — so chips, icon triggers, the search field
-  and the create button share `control-sm`, the two pills are the same height
-  and centred on one line at every width.
+- **Both pills are flat by default.** Each is a `Surface level="float"`
+  whose fill, sheen, border, shadow, blur, corners and padding are cleared
+  under the token `toolbarPillSurface: flat` (style queries on the pill;
+  its hover / mask tones inherit the band's) — so the band reads as one strip
+  of chips and tools; `toolbarPillSurface: float` restores the boxed glass
+  pills (`bg-float-fill`, `backdrop-float`, `rounded-float`; the Prototypes
+  theme pins it). **An overlay pill ignores the token** — over a map it is
+  all the controls stand on, so the floating toolbar keeps its glass. Both
+  sit under ONE `ControlSizeProvider size="sm"` — so chips, icon triggers,
+  the search field and the create button share `control-sm` and are
+  centred on one line at every width.
+- **View chips are icon + name** (`viewChipIcon: always`, `viewChipLabel:
+  always`), the active one on a soft neutral fill (`viewChipActiveFill`, a
+  7% foreground tint) in the foreground ink, 7px corners (`viewChipRadius`).
+  The add-view `+` is revealed with the strip (`viewAddReveal: hover`):
+  opacity 0 until the strip is hovered, holds keyboard focus
+  (`:focus-visible` anywhere in it) or the add menu is open — it keeps its
+  place and stays tabbable; `always` shows it at rest.
 - **The views pill is the one cell that gives**: past its room the strip
   scrolls sideways inside it (hidden scrollbar); the tools pill is rigid; the
   row never wraps. A pinned surface (no switcher) draws no views pill.
-- **The search is a quiet well** (`forms.search: "filled"`, fixed `w-48`, `w-80`
-  with suggestions) inside the tools pill, which already draws the edge.
+- **The search is a quiet well, always visible** (`forms.search: "filled"`,
+  fixed `w-48`, `w-80` with suggestions), with a trailing `/` key hint
+  (`SearchInput keyHint`, a `Kbd`) while empty — dropped below the 720px
+  narrow-search width and by `searchShortcutHint: hide`. **`/` focuses the
+  search in every wide arrangement**: the host binds it
+  (`useSurfaceShortcuts`, surface-scoped, yields to a focused text field);
+  the compact fold has no field to focus and binds nothing. Several banded
+  DataViews on one surface: the first mounted answers.
 - **Create follows a divider** — drawn only when the surface declares
   creators: `ToolbarParts.creators` is `null` when there are none. One
   creator is a labelled `Button`; N are a `+` menu — or, given
@@ -1265,7 +1295,7 @@ interface ToolbarArrangement {
   overlay?: true;      // the band floats over the view — see "Floating chrome"
 }
 interface ToolbarParts {
-  title; switcher: { strip; chip }; search; focusSearch(): void; query;
+  title; switcher: { strip; chip }; search; query;
   controls; foldedControls; actions; creators;
   asideInset: string;  // how far the surface's `aside` reaches from the left edge
 }
@@ -1279,8 +1309,8 @@ interface ToolbarParts {
   `CollapsedViewSwitcher` (`chip`), built by the shell. Render exactly one; both
   are `null` on a pinned surface. It is the only way to add/rename/reorder views,
   so every arrangement renders one.
-- **`search` is always rendered** — a non-empty query must stay visible.
-  `focusSearch` focuses it (the capsule binds `/`).
+- **`search` is always rendered** — a non-empty query must stay visible —
+  and the host binds `/` to focus it, so an arrangement binds nothing.
   Its placeholder is the surface's (`DataViewProps.searchPlaceholder`, default
   `"Search…"`), never the arrangement's.
 - **`foldedControls`** is every applicable control behind one always-visible
@@ -1303,7 +1333,8 @@ interface ToolbarParts {
   **runway** (`--sticky-fade-tail` less `sm`), so an unscrolled list's first
   row starts where the tail has faded out. The compact fold and an overlay
   band draw no tail.
-- **The compact fold keeps the two pills**: the views pill (only with more
+- **The compact fold keeps the two pills** (flat or boxed as the token
+  says): the views pill (only with more
   than one view) and a tools pill holding `actions`, the creators and the one
   options trigger (`CompactControls`). With neither actions nor creators the
   pill would be empty at rest, so the PILL is what reveals on hover
@@ -1326,7 +1357,10 @@ tools floating over it — `floating-toolbar` is the reference arrangement).
   scroller", since the band must not scroll away); the band is a `Pin
   to="top" stretch decorative` over it — transparent, `pointer-events: none`,
   no mask. The arrangement draws its parts as floating cards and wraps each in
-  `Overlay.Interactive`, so the gaps stay click-through to the view.
+  `Overlay.Interactive`, so the gaps stay click-through to the view. Those
+  cards keep their glass whatever `toolbarPillSurface` says (`ToolbarPill
+  overlay` never wears the flat override): over a canvas there is no band for
+  a flat strip to sit on.
   `spaceBelow` is ignored. The compact fold floats too — the same two pills,
   past the aside — so the inset below means the same thing at every width.
 - **`DataViewContribution.fullBleed`.** Under an overlay band a `fullBleed`
@@ -1587,6 +1621,41 @@ DataViewSlots.Control({
 });
 ```
 
+### Action controls: a trigger that acts
+
+A control is one of two kinds (`DataViewControlContribution` is a union):
+
+- a **panel control** — `label`, `icon`, `isApplicable`, `summary`,
+  `component`: the trigger opens its panel (filter, sort, view settings);
+- an **action control** — `action(ctx) → { label, icon, run } | null`: the
+  trigger acts on click. ONE pure function answers both "does it apply"
+  (`null` → no trigger, no fold row) and "what does it say and do", so the
+  label can follow the state and the two cannot disagree. It narrows nothing:
+  no summary, never `secondary`, never in the fold's badge.
+
+`useToolbarControls` resolves both into `ToolbarControl` (`kind: "panel" |
+"action"`), the one list every renderer reads — the wide bar
+(`ControlTrigger`), the compact fold and a section's `⋯` panel
+(`CompactRootPanel`: an action is a plain `onSelect` row) — so a renderer
+cannot forget the action kind (tsc).
+
+**The expand-all is the built-in action control** (`data-view.expand-all`,
+`order: -1`, first in the tools): "Expand all" / "Collapse all" with
+unfold-more / unfold-less, over `useDataViewControls().expandAll`. The view
+settings carry the same capability as a "Rows" section with both rows
+(`data-view.expand-all` Setting). Neither names a view type: the capability
+is **reported up by the active view** — `DataViewRenderProps.reportExpandAll(
+{ allExpanded, changes(next) } | null)` — because only the view knows which
+rows it draws (the nested table's `rootId`, its filter scope). The host files
+each report under the instance that sent it (a report from a view switched
+away from is never offered) and binds `setAll(next)` to
+`viewModel.setExpanded(activeViewId, changes(next))` — the per-(surface,
+view, row) expand map stays the only home of collapse state. A view reports
+only what it can fold (the nested table: under `options.expandAll`, with a
+row in scope that has children), so the control exists exactly while the
+active view nests a hierarchy with something to fold. There is no toolbar
+row above a tree's rows any more.
+
 ### `defineSlot` + `renderIsolated`, not `defineRenderSlot`
 
 The `View` / `Setting` precedent, for two reasons that are not stylistic:
@@ -1732,7 +1801,15 @@ concept.
 
 **Deliberate no-ops.** The inline editors and the filter operand input draw
 `ToggleChip`s (`enum-editor`, `tags-editor`, `chip-select-filter-input`) and stay
-untinted: `BadgeVariant` is not `ToggleChip`'s vocabulary. Group-by section
+untinted: `BadgeVariant` is not `ToggleChip`'s vocabulary.
+
+**The chip is the table's presentation; a row view's is quiet.** Inside a
+row view (`TableCellProps.presentation: "quiet"` — see "Quiet rows and
+common-value elision") the same option draws as `● label` through the shared
+`QuietOption` (web barrel): the dot in the option's `tint` token, else its
+`swatch`, else its `variant`'s ink, else faint; the label in the run's own
+ink, the `hint` its tooltip. A tinted option with no `variant` reads that way
+everywhere (its dot is the whole statement). Group-by section
 labels and the control summaries are text-only. Server-side filter SQL never
 reads `label`/`options`, so a tint never reaches the server. User-authored custom
 enum columns get **no colour picker** — muted is the right default for values
@@ -1754,6 +1831,11 @@ enum fields renders `name · [Web page] · [Daily] · [Failed]`, middots glued t
 pills, which is worse than the two-line row a field-driven row replaces. The rule
 covers the title→first-subtitle-term seam too, since on one line the title is
 simply the run's first term.
+
+The same flag decides two more things, still without naming a type: which
+fields a row view may **elide** (only chip-presenting ones — see "Quiet rows
+and common-value elision"), and how a list's trailing slot aligns its value
+(a chip starts its slot, anything else ends it).
 
 The list names **no** field type to do this: it asks the registry, per the
 collection-consumer rule. The flag is a claim about the field's **TYPE**, not
@@ -2080,8 +2162,8 @@ keeps its one shape.
 - **`columnHeader?: "row" | "first-group"`** — where the column labels sit.
   `"row"` (default) is the sticky header row, unchanged. `"first-group"` drops
   that row and puts the labels on the **first group header**: that header's
-  sticky band becomes a subgrid row in which the group label (standard or quiet,
-  still collapsible, with its count) spans the leading tracks up to the first
+  sticky band becomes a subgrid row in which the group label (still
+  collapsible, with its count) spans the leading tracks up to the first
   labelled column, and each labelled column's header sits in its own track — so
   it aligns with the cells by construction and keeps sort-on-click. Every other
   group header is unchanged, and the group headers pin at the toolbar offset (no
@@ -2098,7 +2180,31 @@ keeps its one shape.
   the soft table: borderless token-sized rows, a cover-thumbnail column with
   the primary action over it, a two-line title cell (title + indicators, then
   the `SubtitleRun`). See the table child's CLAUDE.md.
-- The surface's `density` and `groupHeaders` (above) are honoured too.
+- **Column captions** — whether the labels show. The table view-type declares
+  `configSchema: { columnCaptions: enumField("auto" | "shown" | "hidden") }`,
+  so every table view's settings panel carries a **Column captions** choice,
+  stored on the view's config row (merged over the code's
+  `viewOptions.table`). Resolved once (`web/internal/column-captions.ts`,
+  `tableHeaderOption`) for the flat and nested table alike: `shown` / `hidden`
+  win; `auto` (or unset) falls back to `header ?? presentation !== "outline"`
+  (the last step is `DataTable`'s own default). `header` is the code's
+  spelling (an outline file listing passes `true`). It is three-way, not a
+  switch, on purpose: a switch has no "default" position, so it would draw off
+  over a grid table that shows its labels. (The list's `columnCaptions` is a
+  plain switch: its default is off everywhere.)
+- **The labels' look is the theme's**, in every presentation and for every
+  `DataTable` (not only data-view's): the `columnHeader*` tokens of
+  `ui/tokens/data-view` (type pick, `columnHeaderCase`, tracking, ink, the
+  sorted column's `columnHeaderSortedInk`, also a sortable label's hover ink)
+  and `sortIcon` — `hover` (default: the arrow on the sorted column only, an
+  unsorted column's revealed while its label is hovered), `sorted` (never),
+  `always` (faint). The old uppercase look is `columnHeaderCase: upper` +
+  `sortIcon: always`.
+- **An outline's terms present as a row view's**: the nested table under
+  `presentation: "outline"` wraps its body in `FieldPresentationProvider`
+  (quiet chips, the common value elided — terms only, never the label); grid
+  and soft tables never mount it.
+- The surface's `density` (above) is honoured too.
 
 ### The fold rule
 
@@ -2199,10 +2305,67 @@ subtitle, being the `·`-joined metadata run, normally is the longer one. That i
 the intent (the title identifies the row) without a shrink-priority primitive
 invented for one call site.
 
+**Trailing fields sit in aligned slots.** A list has no columns, yet its
+trailing values line up down the list: each trailing field draws in a slot
+whose `min-width` is `var(--list-slot-w-<i>)`, the widest that slot has been on
+any row — measured by one observer over every mounted slot (element-size's
+`useResizeObserverSet`) and written as a CSS variable on the list's box-less
+(`display: contents`) root, so no row re-renders for it. `VirtualRows` positions
+rows absolutely, which rules out a subgrid. The widths only grow (a column that
+shrank as rows scroll away would move every row on screen) and reset when the
+trailing field set changes. Slots are spaced by the `listSlotGap` token; a
+**time-typed** field (its type chain reaches `date`, resolved through the field
+identities like the map's location field) is moved last — the row's right edge
+is its time — and drawn in `listTimeInk`.
+
+**Column captions** (`columnCaptions`, the list's `configSchema` — a switch in
+the view's settings, default off): a caption row over the list, the title
+field's label where the titles start (behind an invisible copy of the first
+row's leading visual) and each trailing field's label in that field's slot —
+the same measured slot, so a label wider than its values widens the column.
+
 **Blast radius is small**: every high-traffic list surface (the conversations
 sidebar, mail threads, the events list, deploy history) overrides the row body
 wholesale through `viewOptions.list.renderRow` and is untouched. What changes is
 the field-driven default.
+
+## Quiet rows and common-value elision
+
+A row view — the list, and the nested table's outline — mounts
+`FieldPresentationProvider({ rows, fields, rowsComplete })` (web barrel,
+`web/internal/field-presentation.tsx`) around its body; the **table never
+does**. Every `FieldCell` inside reads it (the `FieldExtentsContext` pattern:
+computed once per view, one context; outside a provider the constant default —
+chip presentation, nothing elided):
+
+- **Quiet.** The type's cell is handed `TableCellProps.presentation: "quiet"`:
+  enum and tags draw `● label` (`QuietOption`) instead of a filled chip. A row is
+  a sentence of values, and a row of filled chips reads as a toolbar.
+- **Common-value elision.** A value held by **≥ 60%** of the view's rows says
+  nothing — the default, not information — so the rows holding it leave it out:
+  a scalar draws nothing (in a list slot the slot keeps its width; in the
+  subtitle run the term is dropped, separator and all — `isElidedRead`), a
+  multi-value field draws its other values. Three guards, each in
+  `computeElided`:
+  - **candidates** are the fields the view passes (the row's terms — never its
+    title or leading visual) whose resolved cell presents as a chip (the Cell
+    registry's `chip` flag; data-view names no type), that are not editable (an
+    elided cell would take its pencil with it);
+  - **no row of the view may have the field empty** — beside a blank, an elided
+    cell would read as "no value" too;
+  - **only once the rows are complete** (`rowsComplete === true`) — a paged
+    read's shares move as pages land, and a value would appear and vanish as
+    the reader scrolls. Below 3 rows nothing is elided.
+
+  The population is the view's `rows` (not its search result, so typing does
+  not re-flow which values show). The context value keeps its identity while
+  the answer is unchanged, so a new rows array re-renders no memoized row.
+
+Which field a value belongs to still comes from position alone. A field
+**`role`** model (status → leading glyph, time → right edge, path → low
+priority, declared once per entity field) is the planned follow-up
+(task-1792908417-k0dx5p); the time-last rule above is its first, type-derived
+approximation.
 
 ## Per-item actions
 
@@ -2867,9 +3030,13 @@ so every card is the same height; an empty value (`isFieldValueEmpty`) is
 omitted, never drawn as "Empty". The cover comes from `resolveCover(fields,
 DataViewProps.cover)` — accessor → `FieldDef.cover` → first `media` field —
 drawn by `<CoverFrame size="card" | "thumb">` (a coverless row on a covered
-surface gets a blank tinted frame). Every size, type pick and ink of the card text and the
-card cover is a `ui/tokens/data-view` token whose default is the look before
-the group existed (the gallery's CLAUDE.md lists them); token values draw in
+surface gets a blank tinted frame). A gallery card with no cover of its own
+shows its `leading` field in the frame, else a **monogram** of its title (the
+title field's string `value`: its first letter on the `Avatar` tile, tinted by
+the title's auto-colour, at the frame's bottom-left; `coverMonogram: hide`
+keeps the blank frame), else the blank frame. Every size, type pick and ink of
+the card text and the card cover is a `ui/tokens/data-view` token (the
+gallery's CLAUDE.md lists them); token values draw in
 `FieldCell context="token"`.
 
 ## The rail (the inverted topology)
@@ -3014,23 +3181,23 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `DataViewSlots.Control` ← `primitives.data-view`
     - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
     - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
-  - Contributes: 86 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+  - Contributes: 88 contributions — full list in [REFERENCE.md](./REFERENCE.md)
     - `ConfigV2.WebRegister` ×78
-    - `DataViewSlots.Control` ×3
-    - `DataViewSlots.Setting` ×3
+    - `DataViewSlots.Control` ×4
+    - `DataViewSlots.Setting` ×4
     - `IdKinds.Kind` ×2
-  - Uses: 125 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 127 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live` ×18
     - `primitives/css/ui-kit` ×17
     - `primitives/data-view/view-core` ×10
     - `primitives/live-state` ×6
     - `primitives/css/control-panel` ×4
     - `primitives/slot-render` ×4
+    - `primitives/collapsible` ×3
     - `primitives/css/text` ×3
     - `primitives/css/toggle-chip` ×3
     - `primitives/tree` ×3
     - `config_v2` ×2
-    - `primitives/collapsible` ×2
     - `primitives/css/fill` ×2
     - `primitives/css/overlay` ×2
     - `primitives/css/row` ×2
@@ -3066,6 +3233,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `primitives/dom/web-storage.defineStore`
     - `primitives/icon-button.IconButton`
     - `primitives/overlay/popover.InlinePopover`
+    - `primitives/overlay/tooltip.Kbd`
     - `primitives/pane.usePaneViewParam`
     - `ui/icons.Icon`
   - Exports (types):
@@ -3114,6 +3282,8 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `FieldOption`
     - `FieldOverride`
     - `FieldOverrides`
+    - `FieldPresentation`
+    - `FieldPresentationProviderProps`
     - `FieldValue`
     - `FilterConjunction`
     - `FilterController`
@@ -3207,12 +3377,14 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `EditableTreeLabel`
     - `FieldCell`
     - `fieldOverrides`
+    - `FieldPresentationProvider`
     - `FilterValueInput`
     - `getDataViewDescriptor`
     - `GroupedSections`
     - `IDENTITY_CODEC`
     - `IDENTITY_GROUPING`
     - `IDENTITY_GROUPING_SET`
+    - `isElidedRead`
     - `isFilterGroup`
     - `isGroupableField`
     - `leadingSlot`
@@ -3228,6 +3400,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `PillsToolbar`
     - `PrimaryActionSlot`
     - `PrimaryOverThumbnail`
+    - `QuietOption`
     - `readFallback`
     - `resolveBodyFields`
     - `resolveCover`
@@ -3238,6 +3411,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `useDataViewControls`
     - `useDataViewSections`
     - `useFieldIdentities`
+    - `useFieldPresentation`
     - `useFilterClock`
     - `useFilterController`
     - `useFlatRows`
@@ -3294,7 +3468,6 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `DataViewDeclaredSection`
     - `DataViewDensity`
     - `DataViewFoldLines`
-    - `DataViewGroupHeaders`
     - `DataViewId`
     - `DataViewInMemoryOrigin`
     - `DataViewLiveOrigin`
@@ -3388,6 +3561,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `ToolbarPartForms`
     - `ToolbarParts`
     - `ValueCodec`
+    - `ViewExpandAll`
     - `ViewRowDropConfig`
     - `ViewState`
   - Exports (values):
@@ -3418,11 +3592,11 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `UNGROUPED_FOLD_KEY`
     - `visibleSections`
 - Cross-plugin:
-  - Uses tokens: 86 vars — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ui/tokens/data-view` ×44
+  - Uses tokens: 91 vars — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui/tokens/data-view` ×46
     - `ui/tokens/density` ×16
-    - `ui/tokens/color-palette` ×11
-    - `ui/tokens/type-scale` ×9
+    - `ui/tokens/color-palette` ×15
+    - `ui/tokens/type-scale` ×8
     - `ui/tokens/shadow` ×3
     - `ui/tokens/shape` ×3
   - Imported by: 107 plugins — full list in [REFERENCE.md](./REFERENCE.md)

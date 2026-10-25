@@ -198,7 +198,6 @@ export function AgentsList({
             ],
             expandAll: true,
             addLabel: "Agent",
-            toolbarStart: <AgentsSlots.ListActions.Render />,
             dragOverlay: (a: Agent) => a.name || "Untitled",
           },
         }}

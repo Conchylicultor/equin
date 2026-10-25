@@ -9,10 +9,6 @@ export const Agents = {
     id: string;
     component: ComponentType;
   }>({ docLabel: (p) => p.id }),
-  ListActions: defineRenderSlot<{
-    id: string;
-    component: ComponentType;
-  }>({ docLabel: (p) => p.id }),
   View: defineRenderSlot<{
     id: string;
     title?: string;

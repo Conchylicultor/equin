@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
-import { DataViewSlots, type DataViewControl } from "../../slots";
+import { DataViewSlots, type DataViewPanelControl } from "../../slots";
 
 /**
  * Mounts ONE control's panel body, error-boundary-isolated.
@@ -18,7 +18,7 @@ import { DataViewSlots, type DataViewControl } from "../../slots";
 export function DataViewControlPanel({
   control,
 }: {
-  control: DataViewControl;
+  control: DataViewPanelControl;
 }): ReactNode {
   return renderIsolated(
     DataViewSlots.Control,

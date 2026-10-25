@@ -13,8 +13,10 @@ One card shape, everywhere — `DataCard`, built at ONE site in `GalleryView`:
   Its content is `resolveCover(visibleFields, DataViewProps.cover)` — the
   surface's accessor, else the `FieldDef.cover` field, else the first `media`
   field. A row with no cover of its own shows the schema's leading field
-  (`FieldDef.leading`, the avatar) centred in the frame, else the blank tint —
-  so every card of a view is the same size. Hovering anywhere on the card lifts
+  (`FieldDef.leading`, the avatar) centred in the frame, else a monogram of
+  its title (an `Avatar` tile at the bottom-left, the title's first letter on
+  its auto-colour; `coverMonogram: hide` drops it), else the blank tint — so
+  every card of a view is the same size. Hovering anywhere on the card lifts
   the cover (`coverHoverGroup` on the card root).
 - **Its text is `<CardMeta>`**: `partitionCardFields(resolveBodyFields(…))`,
   computed once per view — title (+ indicators), the subtitle (text fields
@@ -140,10 +142,11 @@ taking `{song, onOpen}` never trips it.
 - Description: Gallery view child for the data-view primitive: a responsive grid of cover cards — the cover is the card, its fields three fixed lines under it, its actions on the cover.
 - Web:
   - Contributes: `DataViewSlots.View` "Gallery" → `GalleryView`
-  - Uses: 39 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 41 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×25
-    - `primitives/css/ui-kit` ×2
+    - `primitives/css/ui-kit` ×3
     - `primitives/row-actions` ×2
+    - `primitives/avatar.Avatar`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
     - `primitives/css/grid.Grid`
@@ -176,6 +179,7 @@ taking `{song, onOpen}` never trips it.
     - `ui/tokens/density --gallery-card-min-compact`
     - `ui/tokens/density --gallery-gap-x`
     - `ui/tokens/density --gallery-gap-y`
+    - `ui/tokens/density --space-md`
     - `ui/tokens/density --space-xl`
     - `ui/tokens/shadow --shadow`
     - `ui/tokens/shape --radius-cover`

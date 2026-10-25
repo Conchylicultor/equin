@@ -43,8 +43,11 @@ flat and the nested table do this; `presentation: "outline"` does neither.
 Surface options reach `DataTable` straight through: `viewOptions.table`
 (`TableViewOptions.columnHeader`), `FieldDef.header` (mapped as
 `header: f.header === false ? "" : (f.header ?? f.label)`), the surface's
-`density`, and its `groupHeaders` (each group header is data-view's shared
-`DataViewGroupHeader`). See `data-view/CLAUDE.md` ("Table view options").
+`density`, the view's Column captions choice (`columnCaptions`: auto / shown / hidden, its
+`configSchema`; `web/internal/column-captions.ts` resolves it over `header`),
+and each group header is data-view's shared `DataViewGroupHeader`. An outline
+(nested) body sits in data-view's `FieldPresentationProvider`. See
+`data-view/CLAUDE.md` ("Table view options").
 
 **Paged.** A flat paged read's placeholders are drawn by the body around the
 whole table (`data-view/CLAUDE.md`, "Paging"), so the ungrouped table honours
@@ -113,11 +116,15 @@ drag.
   the subtree, the `rowMenu` `⋯`, add a child (`hierarchy.onCreate`). An alias
   (reference) row has none, no drag, read-only cells and a link glyph; its
   `data-row-key` is left off (the real row marks it).
-- **Around the rows**: the tree primitive's `TreeToolbar` above them
-  (`expandAll`, `toolbarStart`) and `TreeRootAdd` below (`addLabel`; `null`
-  hides it, absent → "Add" when the hierarchy can create; never under
-  `rootId`); grouped, each group header carries `groupFoldAction` (fold /
-  unfold that group's subtrees).
+- **Around the rows**: nothing above them — no toolbar row. The whole-table
+  expand-all (`expandAll`) is **reported up** through
+  `DataViewRenderProps.reportExpandAll` (`flatExpandAll` over the rows in
+  scope; `null` when not asked, with nothing to fold, and on unmount), and the
+  DataView toolbar draws it as an action control beside filter / sort / view
+  settings (see data-view's "Toolbar controls"). `TreeRootAdd` below
+  (`addLabel`; `null` hides it, absent → "Add" when the hierarchy can create;
+  never under `rootId`); grouped, each group header carries
+  `groupFoldAction` (fold / unfold that group's subtrees).
 - **Group-by**: the roots partition, every descendant follows its root; each
   section's slice of the ONE flattened tree is a `DataTableGroup` (not
   windowed). One `RankReorderDndContext` spans every section, so a drop into
@@ -130,7 +137,7 @@ drag.
   `dragOverlay`, `trailing` (at rest, at the row's end),
   `rowAccent` (a wash in the row's overlay layer), `rowMenu`, `labelClassName`
   (on the first column's cell, after the host's `rowTone`), `addLabel`,
-  `expandAll`, `toolbarStart`; `presentation` and `header` apply to both modes.
+  `expandAll`; `presentation` and `header` apply to both modes.
   Column labels over tree rows are an outline table with `header: true`
   (columns dropping by `dropOrder` — the file explorer).
 
@@ -193,8 +200,8 @@ see `data-view/CLAUDE.md` ("The rail") and `data-table/CLAUDE.md`.
 - Web:
   - Contributes: `DataViewSlots.View` "Table" → `TableView`
   - Uses: 81 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/data-view` ×43
-    - `primitives/tree` ×18
+    - `primitives/data-view` ×44
+    - `primitives/tree` ×17
     - `primitives/data-table` ×7
     - `primitives/css/text` ×3
     - `primitives/rank-reorder` ×3

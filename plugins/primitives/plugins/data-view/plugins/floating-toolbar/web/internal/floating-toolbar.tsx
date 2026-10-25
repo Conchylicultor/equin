@@ -1,6 +1,5 @@
-import { type ReactNode, useMemo } from "react";
+import type { ReactNode } from "react";
 import { spaceLength } from "@plugins/primitives/plugins/css/plugins/space-ramp/core";
-import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
 import { useReservesFloatingBar } from "@plugins/primitives/plugins/pane/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type {
@@ -20,21 +19,7 @@ const GUTTER = "md";
  * each pill opts back into pointer events.
  */
 function FloatingToolbar(parts: ToolbarParts): ReactNode {
-  const { focusSearch, asideInset } = parts;
-  // Surface-scoped, so two surfaces in two tabs never fight over `/`. A plain
-  // key, so it yields to any focused text field (the `/` is typed there).
-  const shortcuts = useMemo(
-    () => [
-      {
-        id: "data-view.floating-toolbar.focus-search",
-        keys: "/",
-        label: "Focus search",
-        handler: focusSearch,
-      },
-    ],
-    [focusSearch],
-  );
-  useSurfaceShortcuts(shortcuts);
+  const { asideInset } = parts;
 
   // At the surface's top-right corner the band stands in for the pane header
   // the global floating bar would otherwise sit in: it reserves the bar's safe

@@ -10,6 +10,7 @@ import {
   type DataViewRenderProps,
   type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
+import type { ViewExpandAll } from "@plugins/primitives/plugins/data-view/core";
 import { useOptionalRowControls } from "@plugins/primitives/plugins/tree/web";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { TableView } from "../components/table-view";
@@ -18,7 +19,7 @@ import type { TableViewOptions } from "../../core";
 /**
  * The tree view's options, carried by the nested table (tree-table plan P4):
  * the row menu, the persistent `trailing`, the label class, the row accent,
- * the root Add, the expand-all toolbar — and the tree row's controls reaching
+ * the root Add, the expand-all it reports up to the host — and the tree row's controls reaching
  * whatever renders inside a table row (`useOptionalRowControls`).
  */
 
@@ -172,14 +173,39 @@ describe("data-view nested table: tree options", () => {
     expect(readOnly.queryByRole("button", { name: "Add" })).toBeNull();
   });
 
-  it("draws the expand-all toolbar and the start content when asked", () => {
-    const { getByTestId, getByRole } = renderTable({
-      expandAll: true,
-      toolbarStart: <span data-testid="start" />,
-    });
-    getByTestId("start");
-    expect(
-      getByRole("button", { name: /expand all|collapse all/i }),
-    ).toBeTruthy();
+  it("reports its expand-all up to the host instead of drawing a toolbar row", () => {
+    const reports: (ViewExpandAll | null)[] = [];
+    const { queryByRole, unmount } = renderTable(
+      { expandAll: true },
+      { reportExpandAll: (s) => reports.push(s) },
+    );
+    // No band above the rows: the DataView toolbar draws the control.
+    expect(queryByRole("button", { name: /expand all|collapse all/i })).toBe(
+      null,
+    );
+    // `src` (the one row with a child) is open → all expanded; folding writes
+    // just that row.
+    const last = reports.at(-1)!;
+    expect(last.allExpanded).toBe(true);
+    expect(last.changes(false)).toEqual([{ id: "src", expanded: false }]);
+    expect(last.changes(true)).toEqual([]);
+    unmount();
+    expect(reports.at(-1)).toBe(null);
+  });
+
+  it("reports no expand-all unless asked, or with nothing to fold", () => {
+    const unasked: (ViewExpandAll | null)[] = [];
+    renderTable({}, { reportExpandAll: (s) => unasked.push(s) });
+    expect(unasked.every((s) => s === null)).toBe(true);
+    cleanup();
+    const flat: (ViewExpandAll | null)[] = [];
+    renderTable(
+      { expandAll: true },
+      {
+        rows: ROWS.filter((r) => r.id !== "lib"),
+        reportExpandAll: (s) => flat.push(s),
+      },
+    );
+    expect(flat.every((s) => s === null)).toBe(true);
   });
 });

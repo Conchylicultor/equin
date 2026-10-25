@@ -1,14 +1,13 @@
 import type { ReactNode } from "react";
 import { NULL_OPTION_KEY, optionKey } from "@plugins/fields/core";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
-import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
-import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import type { TableCellProps } from "@plugins/primitives/plugins/data-view/web";
+import {
+  QuietOption,
+  type TableCellProps,
+} from "@plugins/primitives/plugins/data-view/web";
 
 /** Read-only enum cell: the option label as a chip, tinted and explained by the
- *  option itself. */
+ *  option itself — or, quiet, as a dot and the label. */
 export function EnumCell(props: TableCellProps): ReactNode {
   const { value } = props;
   if (value === undefined || value === "") return null;
@@ -28,22 +27,17 @@ export function EnumCell(props: TableCellProps): ReactNode {
   if (value === null && option === undefined) return null;
   // A quiet option labels filters and groups only: no chip in the cell.
   if (option?.quiet === true) return null;
-  // A tinted option with no `variant` reads as a coloured dot beside its label
-  // (no chip): the tint is a declared colour token, so a theme re-colouring the
-  // token re-colours the dot. A `variant` keeps the chip — it is the stronger
-  // statement, and every option before `tint` existed declared one or none.
-  if (option?.tint !== undefined && option.variant === undefined) {
-    return (
-      <Line as="span" className="gap-xs">
-        <span
-          aria-hidden
-          data-enum-dot=""
-          className={cn("inline-block size-[7px] rounded-full", rigidClass())}
-          style={{ backgroundColor: `var(${option.tint})` }}
-        />
-        <Text title={option.hint}>{option.label}</Text>
-      </Line>
-    );
+  // Quiet (a row view's term — `TableCellProps.presentation`): `● label`, the
+  // dot in the option's colour, never a chip. A tinted option with no
+  // `variant` reads that way everywhere: the tint is a declared colour token,
+  // so a theme re-colouring the token re-colours the dot. A `variant` keeps the
+  // chip in a table — it is the stronger statement, and every option before
+  // `tint` existed declared one or none.
+  if (
+    props.presentation === "quiet" ||
+    (option?.tint !== undefined && option.variant === undefined)
+  ) {
+    return <QuietOption option={option} label={option?.label ?? key} />;
   }
   // An option that declares no `variant` is "muted" — the right default for a
   // value with no semantics (every user-authored custom column). `hint` is the

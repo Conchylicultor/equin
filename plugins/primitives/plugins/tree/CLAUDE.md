@@ -3,7 +3,7 @@
 ## Expand state is written in batches
 
 `TreeModelArgs.setExpanded`, `TreeContextValue.setExpanded` and
-`useFlatExpandAll`'s second argument all take a **batch** —
+`flatExpandAll(rows).changes(next)` all take or produce a **batch** —
 `readonly ExpandChange[]` (`{ id, expanded }`, from this plugin's `core` barrel) —
 never a single `(id, next)` pair. Every gesture that changes N nodes issues
 **one** call: the toolbar expand-all, a group header's fold, a row's subtree fold, and the reveal-on-select ancestor walk.
@@ -52,10 +52,12 @@ Two rules the index keeps, and a reimplementation would not:
   hands out clones forced to `expanded: true`; either would make the button
   answer about the slice rather than about the subtree it claims to fold.
 
-**Per set — `useFlatExpandAll(rows, setExpanded)`.** The whole-tree toolbar
-button (`TreeToolbar`) and a group header's per-section toggle
+**Per set — `flatExpandAll(rows)`.** A whole view's expand-all (data-view's
+nested table reports it up to the DataView toolbar — see data-view's
+"Toolbar controls") and a group header's per-section toggle
 (`groupFoldAction`) all hold a flat row array rather than a forest, so this one
-takes rows and derives the expandable set from the parent links.
+takes rows and derives the expandable set from the parent links. It is a pure
+value (`hasExpandable`, `allExpanded`, `changes(next)`), never a hook.
 `hasExpandable` is what decides whether the button is rendered at all — a set
 with no parents is hidden, not shown inert.
 
@@ -189,8 +191,9 @@ any menu open inside it. Consequences to keep in mind:
 - **`TreeModelArgs.guides`** (default false) draws `TreeGuides` on every row and
   placeholder row: ONE decorative `Placed` box per row over its indent padding
   (after the row's `--tree-row-pad-start` lead, `depth × --tree-indent` wide), its background a repeating
-  1px line centred in each indent step, in `--tree-guide` (color-palette,
-  default `var(--border)`). It lives in the padding, so no label, icon or
+  1px line at `--tree-guide-x` into each indent step (default half the
+  `--tree-chevron-w` box: under the parent's chevron), in `--tree-guide`
+  (color-palette, default `var(--border)`). It lives in the padding, so no label, icon or
   column moves.
 - **A selected row's text** wears `text-selected-foreground` (color-palette
   `selectedForeground`, default `currentColor` = unchanged) and publishes
@@ -201,7 +204,10 @@ any menu open inside it. Consequences to keep in mind:
   (it used to hard-code 16px, the token's default).
 - **The row's geometry is density tokens**, read in one place
   (`web/internal/tree-indent.ts`): `treeRowPadStart` (the lead inset before the
-  icon slot, default 4px), `treeRowGap` (between cells, default `xs`) and
+  icon slot, default 4px), `treeRowGap` (between cells, default `xs`),
+  `treeChevronW` (the chevron box, `w-tree-chevron`, default 1.25rem),
+  `treeIndent` (default chevron box + row gap: a child's chevron under its
+  parent's icon — see `ui/tree-disclosure`, default `column`) and
   `treePillIndent` — how much of each level's indent moves the row's PILL (its
   hover / selected fill, as margin) rather than only its content (as padding).
   Default `0px`: full-width pills, the look every tree had. Pages sets it to
@@ -242,8 +248,9 @@ The chrome around a row is shared, not re-drawn per renderer:
 - **`treeRowTrailing` / `TreeRowActions`** — the row's hover cluster (the
   consumer's actions, subtree fold, `⋯` menu, add child). A table row renders the component,
   which reads the published controls (`useRowControls`, throwing outside a row).
-- **`TreeToolbar`** (start content + expand-all) and **`TreeRootAdd`** (the
-  root "Add") — the nested table's toolbar.
+- **`TreeRootAdd`** (the root "Add") — under the nested table's rows. There
+  is no tree toolbar row: the whole-view expand-all is a DataView toolbar
+  control, fed by `flatExpandAll`.
 - **`groupFoldAction(rows, setExpanded)`** — a group header's fold toggle
   (`null` when the group has nothing to fold, so no empty cluster).
 
@@ -267,21 +274,20 @@ that layout — while row-fold moves rows with transform / clip / opacity.
 
 ## Plugin reference
 
-- Description: Tree hierarchy utilities (buildTree, isDescendant, resolveDropParent), the tree model (useTreeModel: flattened visible lines, DnD, lazy children, keyboard) and the tree-row pieces a renderer composes (TreeRowChrome, TreeLeading, useTreeRow, TreeRowActions, TreeToolbar) — drawn by data-view's nested table.
+- Description: Tree hierarchy utilities (buildTree, isDescendant, resolveDropParent), the tree model (useTreeModel: flattened visible lines, DnD, lazy children, keyboard) and the tree-row pieces a renderer composes (TreeRowChrome, TreeLeading, useTreeRow, TreeRowActions, TreeRootAdd, flatExpandAll) — drawn by data-view's nested table.
 - Web:
   - Slots: `Tree.Disclosure`
   - Slot contributors: `Tree.Disclosure` ← `ui.tree-disclosure`
-  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×6
-    - `primitives/collapsible` ×2
     - `primitives/row-actions` ×2
+    - `primitives/collapsible.CollapsibleChevron`
     - `primitives/css/center.Center`
     - `primitives/css/coords.Placed`
     - `primitives/css/fill.Fill`
-    - `primitives/css/layer.layerClasses`
     - `primitives/css/pin.Pin`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
-    - `primitives/css/sticky.Sticky`
     - `primitives/css/text.Text`
     - `primitives/dom/scroll-reveal.useRevealOnActive`
     - `primitives/icon-button.IconButton`
@@ -309,14 +315,14 @@ that layout — while row-fold moves rows with transform / clip / opacity.
     - `TreeModelContext`
     - `TreeRowActionsProps`
     - `TreeRowChromeProps`
-    - `TreeToolbarProps`
-    - `UseFlatExpandAllReturn`
   - Exports (values):
+    - `flatExpandAll`
     - `groupFoldAction`
     - `RowControlsProvider`
     - `SPRING_OPEN_MS`
     - `Tree`
     - `TreeChildPlaceholder`
+    - `TreeColumnDisclosure`
     - `TreeDisclosureToggle`
     - `TreeDropZones`
     - `TreeLeading`
@@ -327,8 +333,6 @@ that layout — while row-fold moves rows with transform / clip / opacity.
     - `treeRowGestures`
     - `treeRowIndentStyle`
     - `treeRowTrailing`
-    - `TreeToolbar`
-    - `useFlatExpandAll`
     - `useOptionalRowControls`
     - `useOptionalTreeContext`
     - `useRowControls`
@@ -370,9 +374,9 @@ that layout — while row-fold moves rows with transform / clip / opacity.
     - `subtreeIds`
     - `treeKeyMove`
 - Cross-plugin:
-  - Uses tokens: 23 vars — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses tokens: 24 vars — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui/tokens/color-palette` ×9
-    - `ui/tokens/density` ×8
+    - `ui/tokens/density` ×9
     - `ui/tokens/type-scale` ×4
     - `ui/tokens/shape` ×2
   - Imported by:

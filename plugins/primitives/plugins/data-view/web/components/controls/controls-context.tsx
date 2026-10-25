@@ -10,6 +10,16 @@ import type { FilterController } from "../../internal/use-filter-controller";
 import type { SortController } from "../../internal/use-sort-controller";
 
 /**
+ * The active view's whole-view expand-all, as the toolbar reads it: whether
+ * every expandable row is open, and the one batched write that opens or folds
+ * them all (into the view's expand map — the ONE home for tree collapse state).
+ */
+export interface DataViewExpandAll {
+  allExpanded: boolean;
+  setAll: (expanded: boolean) => void;
+}
+
+/**
  * Everything a toolbar control or a settings contribution needs, in ONE context.
  *
  * There is one context and not two (a "controls" one for the toolbar and a
@@ -81,6 +91,16 @@ export interface DataViewControlsContextValue {
    * never an empty list.
    */
   rows: readonly unknown[] | null;
+  /**
+   * The active view's expand-all capability, or `null` when it has none — it
+   * draws no hierarchy, or no row it draws has children. Reported UP by the
+   * view (`DataViewRenderProps.reportExpandAll`), since only the view knows
+   * which rows it draws (its `rootId`, its filter scope); the host files the
+   * report under the active instance, so a stale one never leaks across a
+   * view switch. Read by the built-in expand-all control and the view
+   * settings' Expand all / Collapse all rows — neither names a view type.
+   */
+  expandAll: DataViewExpandAll | null;
 }
 
 const DataViewControlsContext =
@@ -110,6 +130,7 @@ export function DataViewControlsProvider({
   filter,
   sort,
   rows,
+  expandAll,
 }: DataViewControlsContextValue & { children: ReactNode }): ReactNode {
   const value = useMemo<DataViewControlsContextValue>(
     () => ({
@@ -128,6 +149,7 @@ export function DataViewControlsProvider({
       filter,
       sort,
       rows,
+      expandAll,
     }),
     [
       storageKey,
@@ -145,6 +167,7 @@ export function DataViewControlsProvider({
       filter,
       sort,
       rows,
+      expandAll,
     ],
   );
   return (

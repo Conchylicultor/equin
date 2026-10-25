@@ -65,4 +65,11 @@ export interface ListViewOptions<TRow> {
    * combining it with `rowChrome: "tree"` throws.
    */
   detail?: (row: TRow) => ReactNode;
+  /**
+   * A caption row over the list: the title field's label on the left, each
+   * trailing field's label over its aligned slot. Default off. Also the view
+   * type's `configSchema` option, so a user turns it on from the view's
+   * settings (the instance's config-row value arrives merged into `options`).
+   */
+  columnCaptions?: boolean;
 }

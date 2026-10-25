@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { SectionHeaderRow } from "../internal/section-header-row";
 
 afterEach(cleanup);
@@ -28,7 +29,7 @@ describe("SectionHeaderRow — disclosure", () => {
   it("trailing: puts the chevron after the label, hidden at rest", () => {
     const onClick = vi.fn();
     render(
-      <SectionHeaderRow open={false} onClick={onClick} disclosure="trailing">
+      <SectionHeaderRow open onClick={onClick} disclosure="trailing">
         <span>Queue</span>
         <span>6</span>
       </SectionHeaderRow>,
@@ -40,7 +41,7 @@ describe("SectionHeaderRow — disclosure", () => {
     expect(chevron.getAttribute("class")).toContain("opacity-0");
     expect(chevron.getAttribute("class")).toContain("pointer-events-none");
     // The disclosure semantics and the click target are unchanged.
-    expect(button.getAttribute("aria-expanded")).toBe("false");
+    expect(button.getAttribute("aria-expanded")).toBe("true");
     fireEvent.click(button);
     expect(onClick).toHaveBeenCalledTimes(1);
   });
@@ -57,6 +58,33 @@ describe("SectionHeaderRow — disclosure", () => {
     expect(chevronOf(button).getAttribute("class")).toContain("opacity-100");
     fireEvent.pointerLeave(button);
     expect(chevronOf(button).getAttribute("class")).toContain("opacity-0");
+  });
+
+  it("trailing: keeps the chevron shown while the section is collapsed", () => {
+    render(
+      <SectionHeaderRow open={false} onClick={() => {}} disclosure="trailing">
+        Queue
+      </SectionHeaderRow>,
+    );
+    const button = screen.getByRole("button", { name: "Queue" });
+    expect(chevronOf(button).getAttribute("class")).toContain("opacity-100");
+  });
+
+  it("rule: ruleClassName lands on the rule's box", () => {
+    render(
+      <SectionHeaderRow
+        open
+        onClick={() => {}}
+        disclosure="trailing"
+        rule
+        ruleClassName={cn("hidden")}
+        parts={{ rule: "the-rule" }}
+      >
+        Queue
+      </SectionHeaderRow>,
+    );
+    const rule = document.querySelector('[data-part="the-rule"]');
+    expect(rule?.parentElement?.getAttribute("class")).toContain("hidden");
   });
 
   it("trailing: still calls a caller's own pointer handler", () => {

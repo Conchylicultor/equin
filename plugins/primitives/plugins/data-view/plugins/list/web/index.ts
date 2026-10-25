@@ -1,4 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import { DataViewSlots } from "@plugins/primitives/plugins/data-view/web";
 import { ListView } from "./components/list-view";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -20,6 +21,15 @@ export default {
       // Opts into flat manual-order (rank-based drag reorder); active only when
       // the consumer supplies `manualOrder`.
       supportsManualOrder: true,
+      // Per view instance, from its settings: a caption row over the list —
+      // the title field's label, and each trailing field's over its slot.
+      configSchema: {
+        columnCaptions: boolField({
+          label: "Column captions",
+          description:
+            "Show a caption row over the list: the title field's label, and each trailing field's label over its column.",
+        }),
+      },
     }),
   ],
 } satisfies PluginDefinition;

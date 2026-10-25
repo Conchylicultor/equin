@@ -4,6 +4,7 @@ import {
   type KeyboardEvent,
   type ReactNode,
   useCallback,
+  useMemo,
   useRef,
 } from "react";
 import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
@@ -17,6 +18,8 @@ import {
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
+import { Kbd } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
+import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
 import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import { hoverRevealGroup } from "@plugins/primitives/plugins/hover-reveal/web";
 import { DATA_VIEW_PICKS } from "@plugins/ui/plugins/tokens/plugins/data-view/core";
@@ -89,6 +92,11 @@ const NARROW_SEARCH_WIDTH_CLASS =
  * child). Every default is the `filled` field's own look.
  */
 const BAND_NARROW = { "--dv-band-narrow": "yes" } as CSSProperties;
+
+/** `searchShortcutHint: hide` drops the search well's trailing `/` hint
+ *  (`show` by default). */
+const SEARCH_HINT_CLASS =
+  "[@container_style(--search-shortcut-hint:hide)]:hidden";
 
 const SEARCH_WELL_CLASS =
   "rounded-search bg-search-fill dark:bg-search-fill pl-search-text";
@@ -189,10 +197,31 @@ export function DataViewToolbar({
     [measureRef, stickyRef],
   );
   const searchRef = useRef<HTMLInputElement>(null);
-  const focusSearch = useCallback(() => searchRef.current?.focus(), []);
   const compact =
     density === "compact" || (width > 0 && width < COMPACT_BREAKPOINT);
   const narrow = width > 0 && width < NARROW_BREAKPOINT;
+  // `/` focuses the search, in every wide arrangement (each renders the field
+  // inline); the compact fold keeps it behind its options trigger, so there
+  // is no field to focus. Surface-scoped, so two surfaces in two tabs never
+  // fight over `/`; a plain key, so it yields to any focused text field (the
+  // `/` is typed there). With several banded DataViews on one surface, the
+  // first mounted one answers.
+  const shortcuts = useMemo(
+    () =>
+      compact
+        ? []
+        : [
+            {
+              id: "data-view.focus-search",
+              keys: "/",
+              label: "Focus search",
+              when: () => searchRef.current !== null,
+              handler: () => searchRef.current?.focus(),
+            },
+          ],
+    [compact],
+  );
+  useSurfaceShortcuts(shortcuts);
   // Applicability, ordering and the badge count, derived the one way the
   // hosted trigger derives them too. A non-empty query counts toward the
   // compact trigger's badge, since the fold hides the search field.
@@ -221,6 +250,14 @@ export function DataViewToolbar({
       />
     );
   const appearance = compact ? "field" : forms.search;
+  // The well's trailing `/` — the key bound above, so only where it works:
+  // the wide row's `filled` well, until the band narrows (where the field's
+  // lane is too short to spend on it). `bare` draws its own.
+  const keyHint =
+    appearance === "filled" &&
+    !(width > 0 && width < NARROW_SEARCH_BREAKPOINT) ? (
+      <Kbd className={SEARCH_HINT_CLASS}>/</Kbd>
+    ) : undefined;
   // The field's text takes the type the theme picks (`DATA_VIEW_PICKS.search`,
   // default the `sm` field's own caption). Not for `bare`, whose text is the
   // body role a pill-filling field draws.
@@ -251,6 +288,7 @@ export function DataViewToolbar({
           })}
       placeholder={searchPlaceholder}
       appearance={appearance}
+      keyHint={keyHint}
       // Wide field: a fixed lane in the inline row — wider when it searches
       // beyond the rows (suggestions). Compact: full width of the options
       // popover (the wrapper's own block box) — hence no width class there.
@@ -373,7 +411,6 @@ export function DataViewToolbar({
       title={titleNode}
       switcher={switcher}
       search={searchInput}
-      focusSearch={focusSearch}
       query={query}
       controls={controls.map((c) => (
         <ControlTrigger key={c.id} control={c} form={forms.controls} />

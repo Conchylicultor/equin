@@ -355,9 +355,17 @@ const dataView = dataViewGroup.fragment(
     cardTokenIconInk: "var(--faint-foreground)",
     columnHeaderInk: "var(--faint-foreground)",
     columnHeaderSortedInk: "var(--faint-foreground)",
+    // The mockup's active `.view`: the accent pair under the line ring (the
+    // DataView's earlier default, pinned against the neutral one).
+    viewChipActiveFill: "var(--accent)",
+    viewChipActiveInk: "var(--accent-foreground)",
     viewChipActiveRing: LINE_2,
     groupLabelInk: TEXT, // `.shead h3`
     // ── Toolbar
+    // `.views` / `.tools` are boxed glass pills, not the flat strip.
+    toolbarPillSurface: "float",
+    // The mockup's search draws no `/` hint.
+    searchShortcutHint: "hide",
     toolbarPadY: "0.75rem",
     toolbarGap: "0.75rem",
     // The first section starts 14px under the row (128px less 48 + 66).
@@ -392,6 +400,7 @@ const dataView = dataViewGroup.fragment(
     viewAddRadius: "0.5rem",
     viewChipLabel: "always",
     viewAddSeparator: "hide",
+    viewAddReveal: "always", // `.add` sits in `.views` at rest
     narrowCreateLabel: "hide",
     // ── Card
     // The cards start right under their header (`.shead`'s 16px is the room).

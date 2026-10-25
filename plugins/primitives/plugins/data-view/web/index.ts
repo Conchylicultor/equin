@@ -4,6 +4,10 @@ import { DataViewSlots } from "./slots";
 import { GroupByControl } from "./components/settings/group-by-control";
 import { PropertiesControl } from "./components/settings/properties-control";
 import { FoldControl } from "./components/settings/fold-control";
+import {
+  ExpandAllSetting,
+  expandAllAction,
+} from "./components/settings/expand-all";
 import { FilterControlPanel } from "./components/filter/filter-control-panel";
 import { SortControlPanel } from "./components/sort/sort-control-panel";
 import { SettingsControlPanel } from "./components/settings/settings-control-panel";
@@ -102,6 +106,16 @@ export { FieldCell } from "./components/field-cell";
 export { EditableTreeLabel } from "./components/editable-tree-label";
 export type { FieldCellProps } from "./components/field-cell";
 export { MissingDataCellError, readFallback } from "./components/field-cell";
+export { QuietOption } from "./components/quiet-option";
+export {
+  FieldPresentationProvider,
+  isElidedRead,
+  useFieldPresentation,
+} from "./internal/field-presentation";
+export type {
+  FieldPresentation,
+  FieldPresentationProviderProps,
+} from "./internal/field-presentation";
 export { leadingSlot } from "./components/leading-slot";
 export type { LeadingSlotProps } from "./components/leading-slot";
 export { FilterValueInput } from "./components/filter/filter-value-input";
@@ -277,7 +291,17 @@ export default {
         ctx.activeSupportsFold && ctx.filter.filterableFields.length > 0,
       component: FoldControl,
     }),
-    // The three built-in toolbar controls. The toolbar names none of them: it
+    // Expand all / Collapse all: over the active view's reported expand-all
+    // capability (a view nesting a hierarchy with a row to fold) — never a
+    // named view type.
+    DataViewSlots.Setting({
+      id: "data-view.expand-all",
+      scope: "view",
+      order: 3,
+      isApplicable: (ctx) => ctx.expandAll !== null,
+      component: ExpandAllSetting,
+    }),
+    // The built-in toolbar controls. The toolbar names none of them: it
     // reads this slot, asks each `isApplicable`, and builds one identical trigger
     // per survivor. A plugin adds a fourth by contributing here.
     //
@@ -286,6 +310,15 @@ export default {
     // `rule-resolution`, `filter-slot`, `sort-presets`) and the evaluator is
     // shared with `useFlatRows`, so extraction would push a large slice of
     // `internal/` out through this barrel for no user-visible gain.
+    // The expand-all: an ACTION control (a click, no panel), first in the
+    // tools so it reads with the rows it folds. Present only while the active
+    // view reports something to fold — `expandAllAction` answers `null`
+    // otherwise, and no trigger is drawn.
+    DataViewSlots.Control({
+      id: "data-view.expand-all",
+      order: -1,
+      action: expandAllAction,
+    }),
     DataViewSlots.Control({
       id: "data-view.filter",
       label: "Filter",

@@ -3,10 +3,10 @@ import { Placed } from "@plugins/primitives/plugins/css/plugins/coords/web";
 
 /**
  * Indent guides for one row: a hairline per ancestor level, each at
- * `--tree-guide-x` (density, default the middle) of its `--tree-indent` step of
- * the row's indent — under the chevron / icon slot of
- * the ancestor that level belongs to — in `--tree-guide` (color-palette,
- * default the border colour).
+ * `--tree-guide-x` (density, default half the `--tree-chevron-w` box) into its
+ * `--tree-indent` step of the row's indent — under the chevron of the ancestor
+ * that level belongs to (the column disclosure; the merged box's icon centre)
+ * — in `--tree-guide` (color-palette, default the border colour).
  *
  * ONE box drawing every level: a repeating background tile the width of one
  * indent step, laid over the row's indent padding (from the row's lead inset

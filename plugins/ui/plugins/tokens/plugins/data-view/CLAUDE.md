@@ -124,18 +124,19 @@ The pane's shared content inset is not here: it is density's `contentInset`
     - `DATA_VIEW_PICKS`
     - `dataViewGroup`
 - Cross-plugin:
-  - Uses tokens: 25 vars — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses tokens: 22 vars — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui/tokens/density` ×11
-    - `ui/tokens/color-palette` ×6
-    - `ui/tokens/type-scale` ×5
+    - `ui/tokens/color-palette` ×7
     - `ui/tokens/shape` ×2
     - `ui/tokens/shadow --shadow`
+    - `ui/tokens/type-scale --font-weight-tag`
   - Tokens used by:
     - `primitives/css/row`
     - `primitives/css/ui-kit`
     - `primitives/data-table`
     - `primitives/data-view`
     - `primitives/data-view/gallery`
+    - `primitives/data-view/list`
     - `primitives/data-view/table`
     - `primitives/data-view/view-core`
     - `ui/theme-engine`

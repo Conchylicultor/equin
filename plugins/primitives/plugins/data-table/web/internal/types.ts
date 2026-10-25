@@ -106,6 +106,10 @@ export type DataTableDensity = "comfortable" | "compact";
 /**
  * How the table looks.
  *
+ * Whatever the look, the column labels take the DataView token group's
+ * `columnHeader*` tokens (type pick, case, tracking, ink, sorted ink) and its
+ * `sortIcon` (an unsorted column's arrow: `always`, `sorted` = never, `hover`).
+ *
  * - **`"grid"`** (default) — the column-header row, a hairline under every row,
  *   a faint hover tint and an accent fill on the selected row.
  * - **`"outline"`** — a sidebar's look: no header row and no row rules; each
@@ -115,9 +119,8 @@ export type DataTableDensity = "comfortable" | "compact";
  *   an outline reads like the tree it replaces.
  * - **`"soft"`** — borderless rows of a minimum height, a rounded hover fill,
  *   a hairline BETWEEN rows (hidden around the hovered one), one header row
- *   (its labels' type picked, cased and inked by tokens; unsorted arrows
- *   optionally hidden), and an optional frame around the whole table — every
- *   metric from the DataView token group's `soft*` / `columnHeader*` / `cell*`
+ *   and an optional frame around the whole table — every metric from the
+ *   DataView token group's `soft*` / `cell*`
  *   tokens (`ui/tokens/data-view`). Its columns give way by `dropOrder` in a
  *   narrow box; it never scrolls sideways.
  */
@@ -284,10 +287,12 @@ export interface DataTableProps<TRow> {
    * Draw the column-header row. Default: yes in `grid`, no in `outline` (a
    * sidebar's look). An outline that keeps its column labels — a file
    * listing's Name / Modified / Size over tree rows — passes `true`: its
-   * header then takes the outline rows' inset and geometry, in the muted
-   * caption (an arrow only on the sorted
-   * column), and its columns give way by `dropOrder` when the box is narrow
-   * (it never scrolls sideways).
+   * header then takes the outline rows' inset and geometry, and its columns
+   * give way by `dropOrder` when the box is narrow (it never scrolls
+   * sideways). `false` drops the labels in any presentation (nor does
+   * `columnHeader="first-group"` put them on the first group). Every
+   * presentation's labels take the DataView `columnHeader*` / `sortIcon`
+   * tokens.
    */
   header?: boolean;
 

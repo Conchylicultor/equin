@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import {
   PluginProvider,
@@ -11,10 +11,28 @@ import type {
   ToolbarParts,
 } from "../../core";
 import { DataViewToolbar } from "../components/toolbar/data-view-toolbar";
+import { ToolbarPill } from "../components/toolbar/pills-toolbar";
 import {
   DataViewControlsProvider,
   type DataViewControlsContextValue,
 } from "../components/controls/controls-context";
+
+/** Every surface shortcut the toolbar registers, newest render last. */
+const surfaceShortcuts: { keys: string; handler: () => void }[][] = [];
+vi.mock(
+  "@plugins/primitives/plugins/shortcuts/web",
+  async (importOriginal) => ({
+    ...(await importOriginal<object>()),
+    useSurfaceShortcuts: (d: { keys: string; handler: () => void }[]) => {
+      surfaceShortcuts.push(d);
+    },
+  }),
+);
+
+/** The `/` binding the latest render registered, if any. */
+function slashShortcut(): { handler: () => void } | undefined {
+  return surfaceShortcuts.at(-1)?.find((d) => d.keys === "/");
+}
 
 /**
  * The arrangement seam: no `toolbar` renders the default inline bar; an
@@ -58,6 +76,7 @@ function renderToolbar(opts: {
   createLabel?: string;
 }) {
   lastParts = null;
+  surfaceShortcuts.length = 0;
   return render(
     <PluginProvider plugins={[plugin]}>
       <DataViewControlsProvider {...({} as DataViewControlsContextValue)}>
@@ -95,12 +114,22 @@ describe("DataViewToolbar arrangements", () => {
     expect(input.parentElement!.className).toContain("w-search");
     const create = screen.getByRole("button", { name: "New thing" });
     expect(create.textContent).toBe("New thing");
-    // Two floating pills: the views (the strip) and the tools (search, then a
-    // divider before create).
+    // The well's trailing `/` — the key the host binds to it.
+    expect(screen.getByText("/").closest("kbd")).not.toBeNull();
+    // Two pills: the views (the strip) and the tools (search, then a divider
+    // before create) — float surfaces that go flat under the default
+    // `toolbarPillSurface: flat`.
     const views = screen.getByRole("group", { name: "Views" });
     const tools = screen.getByRole("group", { name: "Tools" });
-    expect(views.className).toContain("bg-float-fill");
-    expect(tools.className).toContain("bg-float-fill");
+    for (const pill of [views, tools]) {
+      expect(pill.className).toContain("bg-float-fill");
+      expect(pill.className).toContain(
+        "[@container_style(--toolbar-pill-surface:flat)]:bg-transparent",
+      );
+      expect(pill.className).toContain(
+        "[@container_style(--toolbar-pill-surface:flat)]:p-none",
+      );
+    }
     expect(views.contains(screen.getByTestId("strip"))).toBe(true);
     expect(tools.contains(input)).toBe(true);
     expect(tools.contains(create)).toBe(true);
@@ -150,7 +179,8 @@ describe("DataViewToolbar arrangements", () => {
       "",
     );
 
-    act(() => lastParts!.focusSearch());
+    // `/` focuses it, whatever the arrangement.
+    act(() => slashShortcut()!.handler());
     expect(document.activeElement).toBe(input);
   });
 
@@ -189,6 +219,8 @@ describe("DataViewToolbar arrangements", () => {
     // The compact bar shows the strip (more than one view) and folds search away.
     expect(screen.getByTestId("strip")).toBeTruthy();
     expect(screen.queryByPlaceholderText("Search…")).toBeNull();
+    // …so there is no field for `/` to focus.
+    expect(slashShortcut()).toBeUndefined();
     // Still two pills: the views, and the tools holding create + options.
     const views = screen.getByRole("group", { name: "Views" });
     const tools = screen.getByRole("group", { name: "Tools" });
@@ -277,6 +309,17 @@ describe("DataViewToolbar arrangements", () => {
     expect(add.getAttribute("data-part")).toBe("dv.create");
     expect(add.textContent).toBe("Add");
     expect(add.getAttribute("aria-haspopup")).toBe("menu");
+  });
+
+  it("keeps an overlay pill's glass under toolbarPillSurface: flat", () => {
+    render(
+      <ToolbarPill overlay label="Tools" part="dv.tools-pill">
+        <span />
+      </ToolbarPill>,
+    );
+    const pill = screen.getByRole("group", { name: "Tools" });
+    expect(pill.className).toContain("bg-float-fill");
+    expect(pill.className).not.toContain("--toolbar-pill-surface");
   });
 
   it("stamps the toolbar's parts", () => {

@@ -1,7 +1,6 @@
 /**
- * Tests for the whole-set expand-all — the pure half of `useFlatExpandAll`,
- * shared by a tree's toolbar expand-all and a group header's per-section
- * toggle.
+ * Tests for the whole-set expand-all (`flatExpandAll`), shared by a view's
+ * toolbar expand-all and a group header's per-section toggle.
  *
  * Two things it must keep getting right: `hasExpandable` is what decides whether
  * the button is rendered at all (a flat set has nothing to unfold, so it is
@@ -11,7 +10,7 @@
 
 import { describe, expect, test } from "bun:test";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
-import { flatExpandAll } from "./use-flat-expand-all";
+import { flatExpandAll } from "./flat-expand-all";
 
 type Row = {
   id: string;

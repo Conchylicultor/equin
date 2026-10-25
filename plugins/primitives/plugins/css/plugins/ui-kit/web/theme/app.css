@@ -122,6 +122,8 @@
     --color-search-fill: var(--search-fill);
     --color-search-icon-ink: var(--search-icon-ink);
     --color-group-chip-fill: var(--group-chip-fill);
+    --color-group-pill-fill: var(--group-pill-fill);
+    --color-list-time-ink: var(--list-time-ink);
     --color-soft-row-hover-fill: var(--soft-row-hover-fill);
     --color-soft-rule-ink: var(--soft-rule-ink);
     --color-soft-frame-fill: var(--soft-frame-fill);
@@ -494,6 +496,10 @@
 @utility size-group-chip { width: var(--group-chip-size); height: var(--group-chip-size); } /* twmerge: sg-dv-size */
 @utility rounded-group-chip { border-radius: var(--group-chip-radius); } /* twmerge: extend rounded */
 @utility size-group-chip-icon { width: var(--group-chip-icon-size); height: var(--group-chip-icon-size); } /* twmerge: sg-dv-size */
+/* The `pill` group header style's label padding. */
+@utility px-group-pill { padding-inline: var(--group-pill-pad-x); } /* twmerge: extend px */
+/* The gap between a list row's aligned trailing slots. */
+@utility gap-list-slot { gap: var(--list-slot-gap); } /* twmerge: extend gap */
 /* The soft table: a row's minimum height, padding, corners and column gap,
  * the rule's opacity, start and end, the header row's height and the room under it,
  * the optional frame, the cover thumbnail, and the column labels' tracking. */
@@ -1052,6 +1058,9 @@
 /* The gap between a tree row's cells (`TreeRowChrome`) — density `treeRowGap`,
  * default the `xs` step. */
 @utility gap-tree-row { gap: var(--tree-row-gap); } /* twmerge: extend gap */
+/* A tree row's chevron box (the column disclosure, an icon-less row's chevron,
+ * a leaf's reserved space) — density `treeChevronW`, default `1.25rem`. */
+@utility w-tree-chevron { width: var(--tree-chevron-w); } /* twmerge: extend w */
 
 /* ── THE RAIL ─────────────────────────────────────────────────────────────
  * Applying padding is the act of OPENING A REGION, not decorating a box. A box

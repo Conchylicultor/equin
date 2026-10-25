@@ -24,7 +24,6 @@ describe("floatingToolbar", () => {
           chip: <span data-testid="chip" />,
         }}
         search={<span data-testid="search" />}
-        focusSearch={() => {}}
         query=""
         controls={<span data-testid="controls" />}
         foldedControls={<span data-testid="folded" />}

@@ -5,12 +5,12 @@ import { RowActions } from "@plugins/primitives/plugins/row-actions/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { useCollapsibleContext } from "@plugins/primitives/plugins/collapsible/web";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import { DATA_VIEW_PICKS } from "@plugins/ui/plugins/tokens/plugins/data-view/core";
 import {
   dataPart,
   formatSectionCount,
-  type DataViewGroupHeaders,
   type DataViewSection,
   type DataViewSectionIdentity,
 } from "@plugins/primitives/plugins/data-view/core";
@@ -91,17 +91,35 @@ function identityMark(section: DataViewSection<unknown>): ReactNode {
 }
 
 /**
+ * The `groupHeaderStyle` token, read by container style queries: the rule
+ * shows only under `rule`, and the label wears a soft pill only under `pill`.
+ * A style query reads the property off the element's parent, and the token is
+ * inherited from the theme scope, so no wrapper is needed.
+ */
+const RULE_SHOWN = cn(
+  "hidden [@container_style(--group-header-style:rule)]:block",
+);
+const PILL_LABEL =
+  "[@container_style(--group-header-style:pill)]:bg-group-pill-fill [@container_style(--group-header-style:pill)]:px-group-pill [@container_style(--group-header-style:pill)]:rounded-full";
+
+/**
  * The label: the `groupLabel` part, whose default rung is the row's own
  * `group`. `step="base"`: the label inherited the row's non-compact
  * `text-group` before it was picked, so it does not step down in a compact
  * region (a gallery's cards) either.
+ *
+ * Its ink is `groupLabelInk` (muted) while the section is open, faint while
+ * it is shut; inside a `pill` it reads at the foreground (muted when shut), as
+ * the pill's fill already sets it apart.
  */
 function GroupLabel({
   label,
   sub,
+  open,
 }: {
   label: ReactNode;
   sub: boolean;
+  open: boolean;
 }): ReactNode {
   return (
     <Text
@@ -110,7 +128,13 @@ function GroupLabel({
       // A nested sub-section's label steps down to medium; important so it
       // beats the picked rung's own weight (a theme's emphasis pick, also
       // important and later in the sheet, still wins).
-      className={cn("text-group-label-ink", sub && "font-medium!")}
+      className={cn(
+        open
+          ? "text-group-label-ink [@container_style(--group-header-style:pill)]:text-foreground"
+          : "text-faint-foreground [@container_style(--group-header-style:pill)]:text-muted-foreground",
+        PILL_LABEL,
+        sub && "font-medium!",
+      )}
       {...dataPart("dv.group-label")}
     >
       {label}
@@ -121,8 +145,6 @@ function GroupLabel({
 export interface DataViewGroupHeaderProps {
   /** The section this header heads: its `label` and `count` are what it shows. */
   section: DataViewSection<unknown>;
-  /** The header treatment — see {@link DataViewGroupHeaders}. Default `"standard"`. */
-  headerStyle?: DataViewGroupHeaders;
   /**
    * Expanded state and toggle. Optional: absent, both come from the surrounding
    * collapsible context (`GroupedSections` wraps each section in one); the table,
@@ -140,112 +162,70 @@ export interface DataViewGroupHeaderProps {
 }
 
 /**
- * The ONE rendering of a DataView group header, in either treatment — shared by
- * `GroupedSections` (list, gallery, tree, icons) and the table view, which draws
- * its headers inside `data-table`'s subgrid but must look the same.
+ * The ONE rendering of a DataView group header — shared by `GroupedSections`
+ * (list, gallery, tree, icons) and the table view, which draws its headers
+ * inside `data-table`'s subgrid but must look the same.
  *
- * - **standard** — the `group` label, its count right beside it (faint, in
- *   the code role), a hairline filling the rest of the row, and the fold
- *   chevron at the far end — always shown, faint, brightening on hover
- *   (`SectionHeaderRow disclosure="end" rule`). A section's action sits
- *   before the chevron, hover-revealed.
- * - **quiet** — one run: a semibold `group` label, then its count right beside
- *   it (faint, semibold), the fold chevron trailing that run and shown only on
- *   hover / keyboard focus. The count is part of the label's run, so the
- *   trailing cluster holds only an action.
+ * One run, `[identity][label][count][rule][chevron]`, then a section's action
+ * in the trailing cluster (hover-revealed): the section's identity
+ * (`DataViewSection.identity` — the chip when it has an `icon`, else a colour
+ * dot), the `group` label, its count right beside it (faint), and the fold
+ * chevron trailing the run (`SectionHeaderRow disclosure="trailing"`: shown on
+ * hover / keyboard focus and while the section is collapsed). The theme's
+ * `groupHeaderStyle` token picks the treatment in CSS, never in props:
  *
- * Either treatment draws the section's identity (`DataViewSection.identity`)
- * before the label — the chip when it has an `icon`, else a colour dot when it
- * has only a colour — so a section without one renders exactly as before. A
- * nested section below the roots steps its label down to medium. Type, ink and metrics are the
- * `ui/tokens/data-view` group's (`groupLabel` / `groupCount` picks, the
- * `group-header` metrics of `SectionHeaderRow`), every default today's look.
+ * - **caption** (default) — the run alone, a caption over the rows.
+ * - **rule** — a hairline fills the row between the count and the chevron,
+ *   which then sits at the row's far end.
+ * - **pill** — the label wears a soft pill (`groupPillFill`, `groupPillPadX`).
+ *
+ * A nested section below the roots steps its label down to medium. Type, ink
+ * and metrics are the `ui/tokens/data-view` group's (`groupLabel` /
+ * `groupCount` picks, the `group-header` metrics of `SectionHeaderRow`).
  */
 export function DataViewGroupHeader({
   section,
-  headerStyle = "standard",
-  open,
+  open: openProp,
   onClick,
   action,
   className,
 }: DataViewGroupHeaderProps): ReactNode {
+  const ctx = useCollapsibleContext();
+  const open = openProp ?? ctx?.open ?? true;
   // A nested section's header below the roots steps its label down a weight
-  // (medium, against a quiet root's semibold), so the levels read apart.
+  // (medium, against a root's semibold), so the levels read apart.
   const sub = (section.nesting?.depth ?? 0) >= 1;
-  const label = (
-    <>
-      {identityMark(section)}
-      <GroupLabel label={section.label} sub={sub} />
-    </>
-  );
-  if (headerStyle === "quiet") {
-    return (
-      <SectionHeaderRow
-        // The `group` role: the heading of a group of rows (its semibold comes
-        // with the role), sized by the theme apart from the rows it heads.
-        variant="group"
-        disclosure="trailing"
-        metrics="group-header"
-        parts={HEADER_PARTS}
-        open={open}
-        onClick={onClick}
-        className={className}
-        {...dataPart("dv.group-header")}
-        // The count is part of the label's run here, so the trailing cluster
-        // holds only an action — and, like the standard header, nothing at all
-        // when there is none.
-        actions={
-          action == null ? undefined : (
-            <RowActions pin={null}>{action}</RowActions>
-          )
-        }
-      >
-        {label}
-        {/* A quiet header's count is a faint, semibold tally right after its
-            label ("Queue 6"). */}
-        <Text
-          variant="caption"
-          tone="faint"
-          className="font-semibold"
-          {...dataPart("dv.group-count")}
-        >
-          {formatSectionCount(section.count)}
-        </Text>
-      </SectionHeaderRow>
-    );
-  }
   return (
     <SectionHeaderRow
       // The `group` role: the heading of a group of rows, a value out of the
       // data (spelled as the data spells it), sized by the theme apart from
       // the rows it heads.
       variant="group"
-      // The chevron at the END, always shown but faint, brightening while the
-      // header is pointed at; the hairline fills the slack before it.
-      disclosure="end"
+      disclosure="trailing"
       rule
+      ruleClassName={RULE_SHOWN}
       metrics="group-header"
       parts={HEADER_PARTS}
-      open={open}
+      open={openProp}
       onClick={onClick}
       className={className}
       {...dataPart("dv.group-header")}
       // This `null` test is the ONLY thing between a section and an empty
       // `RowActions` — which is not nothing: the cluster is a flex item, so an
-      // empty one still spends the `gap` before the chevron. Hence the
-      // contract that `headerActions` returns `null`, not a component that
-      // renders nothing: a component is an element, and an element is never
-      // `null`.
+      // empty one still spends the row's `gap`. Hence the contract that
+      // `headerActions` returns `null`, not a component that renders nothing:
+      // a component is an element, and an element is never `null`.
       actions={
         action == null ? undefined : (
           <RowActions pin={null}>{action}</RowActions>
         )
       }
     >
-      {label}
+      {identityMark(section)}
+      <GroupLabel label={section.label} sub={sub} open={open} />
       {/* The count right beside its label: a faint tally (`groupCountInk`) in
-          the `groupCount` part (default the code role — mono figures), part of
-          the label's run so the rule starts after it. */}
+          the `groupCount` part, part of the label's run so the rule (under
+          `rule`) starts after it. */}
       <Text
         pick={DATA_VIEW_PICKS.groupCount}
         className="text-group-count-ink"

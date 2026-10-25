@@ -15,7 +15,7 @@ import type { TableViewOptions } from "../../core";
 /**
  * The table's surface options: where the column labels sit
  * (`viewOptions.table.columnHeader`), unlabelled columns (`FieldDef.header:
- * false`), and the surface's `density` / `groupHeaders`.
+ * false`), the surface's `density`, and its group headers.
  */
 
 const plugin = {
@@ -183,7 +183,7 @@ describe("data-view table: FieldDef.header", () => {
   });
 });
 
-describe("data-view table: density and groupHeaders", () => {
+describe("data-view table: density and group headers", () => {
   it("compact density pads rows with the compact row token", () => {
     const comfortable = renderTable({ grouped: false });
     expect(rowOf(comfortable.getByText("alpha")).className).toContain("py-row");
@@ -199,15 +199,9 @@ describe("data-view table: density and groupHeaders", () => {
     );
   });
 
-  it("quiet group headers render the group role with the count in the label's run", () => {
-    const standard = renderTable();
-    const standardHeader = standard
-      .getByText("Queue")
-      .closest<HTMLElement>("[aria-expanded]");
-    expect(standardHeader?.className ?? "").not.toContain("text-group");
-    cleanup();
-    const quiet = renderTable({ groupHeaders: "quiet" });
-    const label = quiet.getByText("Queue");
+  it("group headers render the group role with the count in the label's run", () => {
+    const table = renderTable();
+    const label = table.getByText("Queue");
     const header = label.closest<HTMLElement>("[aria-expanded]");
     // The control's box (or the control itself) carries the `group` role class.
     const box = header?.closest<HTMLElement>(".text-group") ?? null;

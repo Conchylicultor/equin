@@ -19,7 +19,6 @@ import {
   StatusIcon,
   StatusBadge,
 } from "@plugins/tasks/plugins/task-status/web";
-import { Tasks } from "../slots";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 const addIcon = symbol("add");
@@ -141,7 +140,6 @@ export function buildTreeOptions({
     expandAll: true,
     defaultExpanded,
     addLabel: readOnly ? null : "Add",
-    toolbarStart: <Tasks.ListActions.Render />,
     // The per-row "Add item below" is an options-driven create affordance — drop
     // it under readOnly so no dead menu item survives the hierarchy's missing
     // onCreate.

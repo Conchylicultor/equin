@@ -1,4 +1,4 @@
-import { useCallback, useMemo, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, type ReactNode } from "react";
 import {
   DataTable,
   DATA_TABLE_VIRTUALIZE_THRESHOLD,
@@ -14,6 +14,7 @@ import {
   DropBackground,
   EditableTreeLabel,
   FieldCell,
+  FieldPresentationProvider,
   leadingSlot,
   pickLeadingField,
   pickPrimaryField,
@@ -49,8 +50,7 @@ import {
   TreeProvider,
   TreeRootAdd,
   TreeRowActions,
-  TreeToolbar,
-  useFlatExpandAll,
+  flatExpandAll,
   useSpringOpen,
   treeRowGestures,
   treeRowIndentStyle,
@@ -67,6 +67,7 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import type { TableViewOptions } from "../../core";
 import { mapPrimary } from "../internal/map-primary";
+import { tableHeaderOption } from "../internal/column-captions";
 
 const linkIcon = symbol("link");
 
@@ -221,6 +222,14 @@ export function NestedTableView(
     [columnFields],
   );
 
+  // An outline is a row view (a tree's look), so its terms present as one:
+  // quiet chips, and the value most rows share left out. Its label is the
+  // row's identity, never a candidate.
+  const termFields = useMemo(
+    () => columnFields.filter((f) => f !== primaryField),
+    [columnFields, primaryField],
+  );
+
   const hierarchy = useHierarchyTree({ props, primaryField, options });
   const { treeArgs } = hierarchy;
   const model = useTreeModel({
@@ -321,9 +330,25 @@ export function NestedTableView(
       },
     },
   });
-  // The toolbar's whole-table expand-all, over the rows in scope — the same
-  // hook `TreeList` runs over its own.
-  const viewExpandAll = useFlatExpandAll(model.scoped, props.setExpanded);
+  // The whole-table expand-all, over the rows in scope, reported UP to the
+  // DataView host — the toolbar draws it (a control beside filter / sort /
+  // view settings) and names no view type. Only when the surface asks for it
+  // (`options.expandAll`) and some row in scope has children; `null` otherwise
+  // and on unmount, so the control is present exactly while this view nests
+  // something to fold.
+  const wantsExpandAll = !!options.expandAll;
+  const expandAllState = useMemo(() => {
+    if (!wantsExpandAll) return null;
+    const state = flatExpandAll(model.scoped);
+    return state.hasExpandable
+      ? { allExpanded: state.allExpanded, changes: state.changes }
+      : null;
+  }, [wantsExpandAll, model.scoped]);
+  const reportExpandAll = props.reportExpandAll;
+  useEffect(() => {
+    reportExpandAll?.(expandAllState);
+  }, [reportExpandAll, expandAllState]);
+  useEffect(() => () => reportExpandAll?.(null), [reportExpandAll]);
 
   // Grouped: the ROOTS partition into sections and every descendant follows
   // its root (`useHierarchyTree`), so each line's section is its owner row's.
@@ -689,18 +714,14 @@ export function NestedTableView(
     columnHeader: options.columnHeader,
     density: props.density,
     presentation: options.presentation,
-    header: options.header,
+    header: tableHeaderOption(options),
     tree,
     selection: props.selection
       ? { actions: props.selection.bulkActions }
       : undefined,
   };
 
-  // The tree's chrome around the rows: a toolbar row (expand-all, the
-  // surface's own start content) and the root Add — the tree view's, through
-  // the same components.
-  const showExpandAll = !!options.expandAll && viewExpandAll.hasExpandable;
-  const showToolbar = showExpandAll || options.toolbarStart != null;
+  // The tree's chrome under the rows: the root Add.
   // An explicit `null` hides the root Add; only an absent option falls back.
   const addLabel =
     options.rootId === undefined && canCreate && treeArgs.onCreate
@@ -725,7 +746,6 @@ export function NestedTableView(
             header: (
               <DataViewGroupHeader
                 section={section}
-                headerStyle={props.groupHeaders}
                 open={!collapsed}
                 onClick={() => props.setSectionCollapsed?.(key, !collapsed)}
                 // Fold / unfold this group's subtrees (a group holds whole
@@ -763,23 +783,18 @@ export function NestedTableView(
     >
       {(activeId) => (
         <TreeProvider value={model.context}>
-          {showToolbar && (
-            <div className="rail-follow">
-              <TreeToolbar
-                start={options.toolbarStart}
-                expandAll={
-                  showExpandAll
-                    ? {
-                        allExpanded: viewExpandAll.allExpanded,
-                        onToggle: viewExpandAll.toggle,
-                      }
-                    : undefined
-                }
-              />
-            </div>
-          )}
           <DropBackground dnd={dnd} group={null} firstKey={null} lastKey={null}>
-            {renderTable(activeId)}
+            {options.presentation === "outline" ? (
+              <FieldPresentationProvider
+                rows={props.rows}
+                fields={termFields}
+                rowsComplete={props.rowsComplete}
+              >
+                {renderTable(activeId)}
+              </FieldPresentationProvider>
+            ) : (
+              renderTable(activeId)
+            )}
           </DropBackground>
           {addLabel != null && (
             <div className="rail-follow">

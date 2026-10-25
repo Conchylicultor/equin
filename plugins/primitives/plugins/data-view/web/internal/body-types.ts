@@ -3,7 +3,6 @@ import type { ResolvedViewInstance } from "@plugins/primitives/plugins/data-view
 import type { ResourceUnavailable } from "@plugins/primitives/plugins/live-state/core";
 import type {
   DataViewDensity,
-  DataViewGroupHeaders,
   DataViewId,
   DataViewProps,
   DataViewReserve,
@@ -36,9 +35,6 @@ export interface DataViewShellChrome {
    * single place the body reads it from. Absent ⇒ `"comfortable"`.
    */
   density?: DataViewDensity;
-  /** The surface's group-header treatment (`DataViewProps.groupHeaders`), a
-   *  surface property carried like `density`. Absent ⇒ `"standard"`. */
-  groupHeaders?: DataViewGroupHeaders;
   /** The surface's toolbar (`DataViewProps.toolbar`): a band arrangement, or a
    *  hosted frame; absent ⇒ the default bar. A surface property, carried like
    *  `density`. */
@@ -71,7 +67,7 @@ export type DistributiveOmit<T, K extends PropertyKey> = T extends unknown
 /**
  * Everything a data source supplies: the full `DataViewProps` surface minus the
  * per-surface keys the shell owns (`storageKey` / `title` / `actions` /
- * `defaultView` / `views` / `density` / `groupHeaders` / `toolbar` /
+ * `defaultView` / `views` / `density` / `toolbar` /
  * `searchPlaceholder` / `aside` / `backdrop` / `reserve` / `asideEnd` /
  * `viewEdits` / `switcherForm` / `viewShortcuts`).
  *
@@ -106,7 +102,6 @@ type DataViewSurfaceBundle<TRow> = DistributiveOmit<
   | "defaultView"
   | "views"
   | "density"
-  | "groupHeaders"
   | "toolbar"
   | "searchPlaceholder"
   | "aside"

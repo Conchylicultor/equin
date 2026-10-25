@@ -1,12 +1,11 @@
-import { useCallback, useMemo } from "react";
 import type { ExpandChange } from "../../core";
 import type { TreeItem } from "./types";
 
 export type FlatExpandAll = {
   /**
    * Whether an expand-all is meaningful at all — there is at least one row with
-   * children. A flat set has nothing to unfold, and the toolbar button is hidden
-   * rather than shown inert.
+   * children. A flat set has nothing to unfold, and the button is hidden rather
+   * than shown inert.
    */
   hasExpandable: boolean;
   allExpanded: boolean;
@@ -15,7 +14,11 @@ export type FlatExpandAll = {
 };
 
 /**
- * Whole-set expand/collapse over a FLAT row array, as a pure value.
+ * Whole-set expand/collapse over a FLAT row array, as a pure value — ONE
+ * decision ("which rows are expandable / are they all open / write only what
+ * changes") for the two scopes that fold a tree: a whole view (data-view's
+ * nested table reports it up to the DataView toolbar's expand-all) and one
+ * group section (`groupFoldAction`).
  *
  * The set it writes is the rows that some other row names as its parent: a
  * childless row's `expanded` flag paints nothing, so including it would only pad
@@ -44,39 +47,5 @@ export function flatExpandAll<T extends TreeItem>(
       expandable
         .filter((r) => r.expanded !== next)
         .map((r) => ({ id: r.id, expanded: next })),
-  };
-}
-
-export type UseFlatExpandAllReturn = {
-  hasExpandable: boolean;
-  allExpanded: boolean;
-  /** Flip every expandable row, in ONE batched `setExpanded`. */
-  toggle: () => void;
-};
-
-/**
- * The hook form of {@link flatExpandAll}: memoized on `rows`, with the toggle
- * bound to a `setExpanded` sink.
- *
- * Two surfaces converge here — a tree's toolbar expand-all and a group
- * header's per-section toggle — so the
- * "which rows are expandable / are they all open / write only what changes"
- * decision is made once instead of once per surface.
- */
-export function useFlatExpandAll<T extends TreeItem>(
-  rows: readonly T[],
-  setExpanded: (changes: readonly ExpandChange[]) => void | Promise<void>,
-): UseFlatExpandAllReturn {
-  const state = useMemo(() => flatExpandAll(rows), [rows]);
-
-  const toggle = useCallback(() => {
-    // ONE call for the whole set — the reason the seam is batch-shaped.
-    void setExpanded(state.changes(!state.allExpanded));
-  }, [state, setExpanded]);
-
-  return {
-    hasExpandable: state.hasExpandable,
-    allExpanded: state.allExpanded,
-    toggle,
   };
 }

@@ -18,6 +18,13 @@ idiom, hand-rolled inconsistently across the repo before this primitive.
   `debounce: false`. `onResize` is stabilised internally, so the observer never
   re-subscribes on closure churn; use `deps` to force a re-measure.
 
+- `useResizeObserverSet(onResize)` → `observe(el) => release`
+  One observer over a CHANGING set of elements (the rows a windowed list mounts
+  and unmounts): `observe` is stable, returns the element's release (use it as a
+  React 19 ref-callback cleanup), measures the new element synchronously, then
+  hands `onResize` every element whose size changed, RAF-batched. The list
+  view's aligned trailing slots are the consumer.
+
 ## Why a synchronous initial measure
 
 The first `onResize` runs synchronously inside the layout effect (not behind
@@ -44,7 +51,7 @@ different need, extend the primitive rather than allowlisting a copy.
 
 ## Plugin reference
 
-- Description: Element-size ResizeObserver idiom as a primitive: useElementSize(target?) reactively measures an element's size (callback ref, getBoundingClientRect, supports attach-one-node-measure-another via a target getter), and useResizeObserver(target, onResize, {debounce, deps}) is the substrate — synchronous initial measure, RAF-debounced resize callbacks, auto cleanup. The single sanctioned home for the hand-rolled ResizeObserver-for-size idiom.
+- Description: Element-size ResizeObserver idiom as a primitive: useElementSize(target?) reactively measures an element's size (callback ref, getBoundingClientRect, supports attach-one-node-measure-another via a target getter), useResizeObserver(target, onResize, {debounce, deps}) is the substrate, and useResizeObserverSet(onResize) observes a changing set of elements (windowed rows) through one observer — synchronous initial measure, RAF-debounced resize callbacks, auto cleanup. The single sanctioned home for the hand-rolled ResizeObserver-for-size idiom.
 - Web:
   - Uses: `primitives/latest-ref.useEventCallback`
   - Exports (types):
@@ -53,9 +60,10 @@ different need, extend the primitive rather than allowlisting a copy.
   - Exports (values):
     - `useElementSize`
     - `useResizeObserver`
+    - `useResizeObserverSet`
 - Cross-plugin:
-  - Imported by: 37 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives` ×20
+  - Imported by: 38 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives` ×21
     - `apps` ×8
     - `shell` ×2
     - `active-data/go`

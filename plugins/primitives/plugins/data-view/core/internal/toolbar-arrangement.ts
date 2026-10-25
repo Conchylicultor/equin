@@ -39,10 +39,8 @@ export interface ToolbarParts {
    */
   switcher: { strip: ReactNode; chip: ReactNode };
   /** The search input, in `forms.search`. Always render it: a non-empty query
-   *  must stay visible. */
+   *  must stay visible — and the host binds `/` to focus it. */
   search: ReactNode;
-  /** Moves keyboard focus into the search input. */
-  focusSearch: () => void;
   /** The current search query. */
   query: string;
   /** One trigger per applicable `DataViewSlots.Control`, in order, in

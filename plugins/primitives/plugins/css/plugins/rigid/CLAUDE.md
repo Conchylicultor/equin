@@ -71,7 +71,7 @@ slots-as-props, which is what `<Frame>` did before it was deleted.
   - Imported by: 134 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×33
     - `conversations` ×23
-    - `primitives` ×16
+    - `primitives` ×17
     - `debug` ×13
     - `tasks` ×8
     - `page` ×7
@@ -86,7 +86,6 @@ slots-as-props, which is what `<Frame>` did before it was deleted.
     - `active-data/show-me`
     - `auth`
     - `code-explorer/commit-detail`
-    - `fields/enum/table`
     - `hints/ask`
     - `menu-bar`
     - `reorder/node-types/header`

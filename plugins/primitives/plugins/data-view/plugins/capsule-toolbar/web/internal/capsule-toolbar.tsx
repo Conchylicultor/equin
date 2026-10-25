@@ -1,4 +1,4 @@
-import { type ReactNode, useMemo } from "react";
+import type { ReactNode } from "react";
 import {
   cn,
   ControlSizeProvider,
@@ -8,7 +8,6 @@ import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
-import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
 import type {
   ToolbarArrangement,
   ToolbarParts,
@@ -31,27 +30,11 @@ const WIDE = "@min-[560px]/capsule:hidden";
 function CapsuleToolbar({
   switcher,
   search,
-  focusSearch,
   controls,
   foldedControls,
   actions,
   creators,
 }: ToolbarParts): ReactNode {
-  // Surface-scoped, so two capsules in two tabs never fight over `/`. A plain
-  // key, so it yields to any focused text field (the `/` is typed there).
-  const shortcuts = useMemo(
-    () => [
-      {
-        id: "data-view.capsule-toolbar.focus-search",
-        keys: "/",
-        label: "Focus search",
-        handler: focusSearch,
-      },
-    ],
-    [focusSearch],
-  );
-  useSurfaceShortcuts(shortcuts);
-
   return (
     <Center axis="horizontal" className="py-sm rail-follow">
       {/* One padding on every side, and no fixed height: the pill is its

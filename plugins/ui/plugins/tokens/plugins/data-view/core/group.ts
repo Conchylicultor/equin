@@ -26,8 +26,8 @@ const PICKED_PARTS = {
   cardToken: "caption",
   cardTokenNumeric: "code",
   groupLabel: "group",
-  groupCount: "code",
-  columnHeader: "3xs",
+  groupCount: "group",
+  columnHeader: "caption",
   titleCell: "caption",
   titleCellSubtitle: "caption",
   cell: "caption",
@@ -41,11 +41,15 @@ export type DataViewPickedPart = keyof typeof PICKED_PARTS;
  * the metrics of the toolbar, the gallery card and its cover, the group
  * headers, and the soft table presentation.
  *
- * **Every default is the look the app had before the group existed**, so a
- * theme that says nothing about it changes nothing (every DataView surface
- * stays pixel-identical); only an app theme that wants a different DataView
- * (Sonata, Prototypes) sets values. A default of `initial` is UNSET: the
- * consumer's own fallback applies (`var(--x, <today>)`).
+ * **Every default is the modern DataView look** (a flat toolbar strip, soft
+ * neutral view chips, caption group headers, sentence-case faint column
+ * captions, hover-revealed affordances), so a theme that says nothing about
+ * the group gets it; a theme that wants the earlier, heavier chrome (boxed
+ * pills, accent chips, UPPERCASE headers, a sort arrow on every column, ruled
+ * group headers) restores it by setting the values back — and an app theme
+ * that wants a different DataView altogether (Sonata, Prototypes) sets its
+ * own. A default of `initial` is UNSET: the consumer's own fallback applies
+ * (`var(--x, <fallback>)`).
  *
  * Type is picked, never sized: a part's `…Role` names a rung of the closed
  * ladder (or 2xs / 3xs), `…Emphasis` a shared weight (`parent` = the weight of
@@ -61,7 +65,7 @@ export const dataViewGroup = defineTokenGroup("data-view", {
     label: "Type picks in compact regions",
     values: PICK_STEPS,
   },
-  // ── Type picks (defaults = today's spellings) ──────────────────────────
+  // ── Type picks ─────────────────────────────────────────────────────────
   // A view chip's name: the chip's caption size at the chip's (`font-tag`)
   // weight.
   viewChipRole: {
@@ -189,7 +193,7 @@ export const dataViewGroup = defineTokenGroup("data-view", {
     values: PICK_FAMILIES,
   },
   groupCountRole: {
-    default: "code",
+    default: "group",
     label: "Group count type role",
     values: PICK_RUNGS,
   },
@@ -203,9 +207,9 @@ export const dataViewGroup = defineTokenGroup("data-view", {
     label: "Group count family",
     values: PICK_FAMILIES,
   },
-  // The table's column labels (`text-3xs font-medium`).
+  // The table's column labels (the caption role, at a medium weight).
   columnHeaderRole: {
-    default: "3xs",
+    default: "caption",
     label: "Column header type role",
     values: PICK_RUNGS,
   },
@@ -295,8 +299,11 @@ export const dataViewGroup = defineTokenGroup("data-view", {
     default: "var(--muted-foreground)",
     label: "Card token icon ink",
   },
-  // A group header's label (default: the header's own ink, inherited).
-  groupLabelInk: { default: "currentColor", label: "Group label ink" },
+  // A group header's label (muted: the header reads as a caption).
+  groupLabelInk: {
+    default: "var(--muted-foreground)",
+    label: "Group label ink",
+  },
   // A soft row's cells (default: the row's own ink, inherited).
   cellInk: { default: "currentColor", label: "Cell ink" },
   groupCountInk: {
@@ -304,17 +311,22 @@ export const dataViewGroup = defineTokenGroup("data-view", {
     label: "Group count ink",
   },
   columnHeaderInk: {
-    default: "var(--muted-foreground)",
+    default: "var(--faint-foreground)",
     label: "Column header ink",
   },
+  // The sorted column's label stands out from the faint others.
   columnHeaderSortedInk: {
-    default: "var(--muted-foreground)",
+    default: "var(--foreground)",
     label: "Sorted column header ink",
   },
-  // The active view chip (ToggleChip `ghost`: accent fill, no ring).
-  viewChipActiveFill: { default: "var(--accent)", label: "Active view fill" },
+  // The active view chip: a soft neutral fill, the foreground ink, no ring
+  // (the old look: `var(--accent)` / `var(--accent-foreground)`).
+  viewChipActiveFill: {
+    default: "color-mix(in oklab, var(--foreground) 7%, transparent)",
+    label: "Active view fill",
+  },
   viewChipActiveInk: {
-    default: "var(--accent-foreground)",
+    default: "var(--foreground)",
     label: "Active view ink",
   },
   viewChipActiveRing: { default: "transparent", label: "Active view ring" },
@@ -334,6 +346,14 @@ export const dataViewGroup = defineTokenGroup("data-view", {
   },
 
   // ── Toolbar (`PillsToolbar`) ───────────────────────────────────────────
+  // Whether a toolbar pill draws its own surface (`float`: fill, border,
+  // shadow, blur, padding — the old boxed look) or sits flat on the band
+  // (`flat`). An overlay pill (the floating toolbar) keeps its glass either way.
+  toolbarPillSurface: {
+    default: "flat",
+    label: "Toolbar pill surface",
+    values: ["flat", "float"] as const,
+  },
   // The row's block padding (`py-sm`) and the gap between its pills
   // (`gap-sm`); the room under the band (the fade tail's runway).
   toolbarPadY: { default: "var(--space-sm)", label: "Toolbar block padding" },
@@ -393,12 +413,10 @@ export const dataViewGroup = defineTokenGroup("data-view", {
   // between glyph and name (the `md` chip's `gap-control-sm`).
   viewChipIconSize: { default: "1.15em", label: "View chip icon size" },
   viewChipGap: { default: "var(--control-gap-sm)", label: "View chip gap" },
-  // The `md` chip's corners (`rounded-full`) and the add-view button's
-  // (unset = the icon button's own).
-  viewChipRadius: {
-    default: "calc(infinity * 1px)",
-    label: "View chip radius",
-  },
+  // The `md` chip's corners (a soft 7px; the old look: `calc(infinity *
+  // 1px)`, fully round) and the add-view button's (unset = the icon button's
+  // own).
+  viewChipRadius: { default: "0.4375rem", label: "View chip radius" },
   viewAddRadius: { default: "initial", label: "Add-view radius" },
   // The switcher's gaps: between two chips, and around the add-view rule and
   // button (`gap-xs` both).
@@ -408,6 +426,19 @@ export const dataViewGroup = defineTokenGroup("data-view", {
   viewAddSeparator: {
     default: "hide",
     label: "Add-view separator",
+    values: ["show", "hide"] as const,
+  },
+  // Whether the add-view button shows at rest (`always`) or only while the
+  // view strip is hovered or holds focus (`hover`; it stays tabbable).
+  viewAddReveal: {
+    default: "hover",
+    label: "Add-view reveal",
+    values: ["always", "hover"] as const,
+  },
+  // Whether the search well carries its trailing `/` key hint.
+  searchShortcutHint: {
+    default: "show",
+    label: "Search shortcut hint",
     values: ["show", "hide"] as const,
   },
   // Whether a narrow band keeps the create button's label.
@@ -449,6 +480,13 @@ export const dataViewGroup = defineTokenGroup("data-view", {
   },
 
   // ── Cover (`CoverFrame`) ───────────────────────────────────────────────
+  // Whether a card with no cover and no leading field draws a monogram tile
+  // (`show`) or the blank frame (`hide`).
+  coverMonogram: {
+    default: "show",
+    label: "Cover monogram",
+    values: ["show", "hide"] as const,
+  },
   // How far it rises on the card's hover (`-translate-y-0.5`, on the base
   // `--spacing` like the class it replaced), how much it
   // zooms and what filter it takes then.
@@ -476,6 +514,20 @@ export const dataViewGroup = defineTokenGroup("data-view", {
   coverChipInset: { default: "var(--space-sm)", label: "Cover chip inset" },
 
   // ── Group headers (`DataViewGroupHeader`, `GroupedSections`) ───────────
+  // How a group header draws: the label and count as a caption (`caption`),
+  // followed by a hairline to the row's end (`rule`), or the label in a soft
+  // pill (`pill`).
+  groupHeaderStyle: {
+    default: "caption",
+    label: "Group header style",
+    values: ["caption", "rule", "pill"] as const,
+  },
+  // The `pill` style's fill and inline padding.
+  groupPillFill: {
+    default: "color-mix(in oklab, var(--foreground) 7%, transparent)",
+    label: "Group pill fill",
+  },
+  groupPillPadX: { default: "var(--space-sm)", label: "Group pill padding" },
   // The header row's gap (`gap-sm`) and block padding (`p-row`), the room
   // under it, the room between two groups, its chevron (`icon-auto`).
   groupHeaderGap: { default: "var(--space-sm)", label: "Group header gap" },
@@ -552,21 +604,31 @@ export const dataViewGroup = defineTokenGroup("data-view", {
     label: "Soft thumb radius",
   },
   softThumbNarrowW: { default: "initial", label: "Soft thumb width (narrow)" },
-  // The column labels' case and tracking (grid: `uppercase tracking-wider`).
+  // The column labels' case and tracking (sentence case, untracked; the old
+  // look: `upper` / `0.05em`).
   columnHeaderCase: {
-    default: "upper",
+    default: "none",
     label: "Column header case",
     values: ["upper", "none"] as const,
   },
   columnHeaderTracking: {
-    default: "0.05em",
+    default: "0em",
     label: "Column header tracking",
   },
-  // Whether an unsorted column shows its sort arrow.
+  // Whether an unsorted column shows its sort arrow: always, never
+  // (`sorted`: only the sorted column's), or on the header's hover (`hover`).
   sortIcon: {
-    default: "always",
+    default: "hover",
     label: "Sort icon",
-    values: ["always", "sorted"] as const,
+    values: ["always", "sorted", "hover"] as const,
+  },
+  // ── List rows ──────────────────────────────────────────────────────────
+  // The gap between a list row's aligned trailing slots, and the ink of a
+  // time-typed trailing value.
+  listSlotGap: { default: "var(--space-md)", label: "List slot gap" },
+  listTimeInk: {
+    default: "var(--faint-foreground)",
+    label: "List time ink",
   },
 });
 

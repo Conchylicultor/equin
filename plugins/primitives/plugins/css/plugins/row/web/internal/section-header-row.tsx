@@ -4,6 +4,7 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import type { Passthrough } from "@plugins/primitives/plugins/passthrough/core";
+import type { ClassName } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import type React from "react";
 import {
   CollapsibleChevron,
@@ -56,9 +57,11 @@ const VARIANT_CLASS: Record<SectionHeaderVariant, string> = {
  *
  * - **`lead`** (default) — before the label, always visible: the classic
  *   collapsible header, whose chevron column every title in a stack aligns on.
- * - **`trailing`** — right after the label run, and only while the row is
- *   hovered or its control has keyboard focus — the chevron is decoration,
- *   the row itself is the control. For a QUIET
+ * - **`trailing`** — right after the label run, shown while the row is
+ *   hovered or its control has keyboard focus, and for as long as the section
+ *   is COLLAPSED (a shut section keeps the mark that says so; an open one is
+ *   the rows below it) — otherwise the chevron is decoration, the row itself
+ *   is the control. For a QUIET
  *   header whose label should start flush on the rows' own column: a group
  *   header that reads "Queue 6", with the fold affordance appearing where the
  *   pointer already is. `aria-expanded` and the click target are unchanged —
@@ -157,6 +160,13 @@ export interface SectionHeaderRowProps extends Passthrough {
    * (out of the a11y tree); the row's click target is unchanged. Default off.
    */
   rule?: boolean;
+  /**
+   * Classes on the rule's box (the flex filler holding the hairline) — for a
+   * caller that decides in CSS whether the rule shows (a theme token read by a
+   * style query): hiding the box also gives its slack back, so a trailing
+   * chevron sits right after the label run again.
+   */
+  ruleClassName?: ClassName;
   /** Token family — see {@link SectionHeaderMetrics}. Default `"row"`. */
   metrics?: SectionHeaderMetrics;
   /** `data-part`s for the rule and the chevron — see {@link SectionHeaderParts}. */
@@ -185,6 +195,7 @@ export function SectionHeaderRow({
   collapsible = true,
   disclosure = "lead",
   rule = false,
+  ruleClassName,
   metrics = "row",
   parts,
   className: callerClassName,
@@ -207,7 +218,10 @@ export function SectionHeaderRow({
       <Fill
         as="span"
         aria-hidden
-        className={metrics === "group-header" ? "mx-group-rule" : undefined}
+        className={cn(
+          metrics === "group-header" && "mx-group-rule",
+          ruleClassName,
+        )}
       >
         <Separator
           render={<span />}
@@ -319,7 +333,11 @@ export function SectionHeaderRow({
         {children}
         <CollapsibleChevron
           open={open}
-          className={cn(hoverRevealClass(reveal.revealed), chevronSize)}
+          // Revealed by hover / focus, and kept while the section is shut.
+          className={cn(
+            hoverRevealClass(reveal.revealed || !open),
+            chevronSize,
+          )}
           data-part={parts?.chevron}
         />
       </Row>

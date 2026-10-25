@@ -16,7 +16,6 @@ import {
   DATA_VIEW_HEADER_OFFSET_VAR,
   type CreateOption,
   type DataViewDensity,
-  type DataViewGroupHeaders,
   type DataViewId,
   type DataViewProps,
   type DataViewReserve,
@@ -102,7 +101,6 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
       creators={props.creators}
       createLabel={props.createLabel}
       density={props.density}
-      groupHeaders={props.groupHeaders}
       toolbar={props.toolbar}
       searchPlaceholder={props.searchPlaceholder}
       aside={props.aside}
@@ -177,7 +175,6 @@ export function DataViewShellFrame(props: {
   /** `DataViewProps.createLabel` — the stand-in toolbar's create trigger. */
   createLabel?: string | undefined;
   density?: DataViewDensity;
-  groupHeaders?: DataViewGroupHeaders;
   toolbar?: DataViewToolbarSpec;
   searchPlaceholder?: string;
   /** The surface's side panel (`DataViewProps.aside`); the body places it. */
@@ -231,7 +228,6 @@ export function DataViewShellFrame(props: {
     creators,
     createLabel,
     density,
-    groupHeaders,
     toolbar,
     searchPlaceholder,
     aside,
@@ -376,7 +372,6 @@ export function DataViewShellFrame(props: {
       switcher: { strip: null, chip: null },
       switcherCount: instances.length,
       density,
-      groupHeaders,
       toolbar,
       searchPlaceholder,
       stickyRef: toolbarRef,
@@ -474,7 +469,6 @@ export function DataViewShellFrame(props: {
     title,
     actions,
     density,
-    groupHeaders,
     toolbar,
     searchPlaceholder,
     stickyRef: toolbarRef,

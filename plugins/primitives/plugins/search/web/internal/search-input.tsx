@@ -64,12 +64,19 @@ export type SearchInputProps = Omit<
      * library's search input, e.g. frimousse's), keeping this field's chrome.
      * Not for `bare`. */
     render?: React.ReactElement;
+    /**
+     * A trailing key hint drawn inside the box while the field is empty — the
+     * shortcut that focuses it (`<Kbd>/</Kbd>`), placed by the host that binds
+     * that shortcut. `field` / `filled` only (`bare` draws its own `/`).
+     */
+    keyHint?: React.ReactNode;
   };
 
 export function SearchInput({
   className,
   wrapperClassName,
   appearance = "field",
+  keyHint,
   ...props
 }: SearchInputProps) {
   const hasValue = typeof props.value === "string" && props.value.length > 0;
@@ -158,6 +165,7 @@ export function SearchInput({
   }
 
   const filled = appearance === "filled";
+  const hinted = keyHint != null && !hasValue;
   return (
     <div className={cn("relative", wrapperClassName)}>
       {/* off-ramp inset: left-2 (0.5rem) is not on the semantic spacing ramp */}
@@ -173,13 +181,19 @@ export function SearchInput({
         <Input
           className={cn(
             "pl-xl",
-            hasValue && "pr-xl",
+            (hasValue || hinted) && "pr-xl",
             filled && FILLED_INPUT,
             className,
           )}
           {...props}
         />
       </ControlSizeProvider>
+      {hinted ? (
+        // The same inset as the clear button it gives way to.
+        <Pin to="right" decorative style={{ right: "0.375rem" }}>
+          {keyHint}
+        </Pin>
+      ) : null}
       {hasValue && (
         // off-ramp inset: right-1.5 (0.375rem) is not on the semantic spacing ramp
         <Pin to="right" style={{ right: "0.375rem" }}>

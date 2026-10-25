@@ -57,28 +57,27 @@ import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 
-/** The column-label text style — on the header row as a whole in `"row"` mode,
- *  on each label cell when the labels ride the first group's header. */
-const HEADER_TEXT_CLASS =
-  "text-3xs font-medium uppercase tracking-wider text-muted-foreground";
-/** An outline's header: the muted caption over tree rows, a tree row tall,
- *  its rule under it. */
-const OUTLINE_HEADER_CLASS =
-  "min-h-tree-row text-caption-compact font-medium text-faint-foreground";
+/** An outline's header: a tree row tall, its rule under it. */
+const OUTLINE_HEADER_CLASS = "min-h-tree-row";
 /**
- * A soft header's label cell: the DataView `columnHeader` pick (its rung,
- * emphasis and family — the header row carries the scope,
- * `SOFT_HEADER_SCOPE`), cased (`columnHeaderCase`), tracked and inked by
- * tokens. The full rung, never its compact step: the table's `xs` control
- * size is about its controls, not this label.
+ * A column label's cell, in every presentation (the grid's header row, the
+ * first group's labels, an outline's and a soft table's header): the DataView
+ * `columnHeader` pick (its rung, emphasis and family — the band the labels sit
+ * in carries the scope, `HEADER_SCOPE`), cased (`columnHeaderCase`), tracked
+ * and inked by tokens (`ui/tokens/data-view`), so a table that is not a
+ * DataView's — Studio's contribution tables, Debug's — takes the same look.
+ * The full rung, never its compact step: the table's `xs` control size is
+ * about its controls, not this label.
  */
-const SOFT_HEADER_CELL_CLASS = cn(
+const HEADER_CELL_CLASS = cn(
   rolePickClass(DATA_VIEW_PICKS.columnHeader.fallback, false),
   "[@container_style(--column-header-case:upper)]:uppercase tracking-column-header text-column-header-ink",
 );
-const SOFT_HEADER_SCOPE = rolePickScope(DATA_VIEW_PICKS.columnHeader);
-/** The sorted column's label ink. */
-const SOFT_HEADER_SORTED_CLASS = "text-column-header-sorted-ink";
+const HEADER_SCOPE = rolePickScope(DATA_VIEW_PICKS.columnHeader);
+/** The sorted column's label ink — and a sortable label's, while hovered. */
+const HEADER_SORTED_CLASS = "text-column-header-sorted-ink";
+const HEADER_SORTABLE_CLASS =
+  "group/column-header cursor-pointer select-none hover:text-column-header-sorted-ink";
 /** A soft row's cell: the DataView `cell` pick (scoped on the row), in the
  *  `cellInk` (default the row's own). A cell whose value is a number
  *  (`ColumnDef.numeric`) takes the `cellNumeric` pick, scoped on a box-less
@@ -93,8 +92,16 @@ const SOFT_NUMERIC_CELL_CLASS = cn(
 );
 const SOFT_ROW_SCOPE = rolePickScope(DATA_VIEW_PICKS.cell);
 const SOFT_NUMERIC_SCOPE = rolePickScope(DATA_VIEW_PICKS.cellNumeric);
-/** `sortIcon: sorted` — an unsorted column shows no arrow. */
-const SORT_ICON_SORTED_ONLY = "[@container_style(--sort-icon:sorted)]:hidden";
+/**
+ * An unsorted column's arrow, by the `sortIcon` token: `always` shows it
+ * (faint), `sorted` never, `hover` (the default) only while its label is
+ * hovered. Style queries, so a theme switches it without a re-render.
+ */
+const SORT_ICON_UNSORTED_CLASS = cn(
+  "text-muted-foreground/40",
+  "[@container_style(--sort-icon:sorted)]:hidden",
+  "[@container_style(--sort-icon:hover)]:opacity-0 [@container_style(--sort-icon:hover)]:text-muted-foreground [@container_style(--sort-icon:hover)]:group-hover/column-header:opacity-100",
+);
 
 const arrowDownwardIcon = symbol("arrow-downward");
 const arrowUpwardIcon = symbol("arrow-upward");
@@ -460,22 +467,21 @@ export function DataTable<TRow>({
     groups.length > 0 &&
     leadSpan > 0;
 
-  const headerCells = (cellClassName?: string) =>
+  const headerCells = () =>
     shownColumns.map((col, c) => {
       const sortable = col.sortable ?? !!col.value;
       const active = sortState?.columnId === col.id;
       // The fit measures a content-sized column's minimum on its label,
       // which never wraps — so the label is also the narrowest an `auto` track
-      // gets. An inline box, so its width is the label's.
-      // An outline's header shows the arrow on the sorted column only.
+      // gets. An inline box, so its width is the label's. Whether an
+      // unsorted column shows its arrow is the `sortIcon` token's call.
       const label = (
         <span data-column-id={col.id}>
           {col.header}
-          {sortable && (active || !outlineHeader) && (
+          {sortable && (
             <SortIcon
               active={active}
               direction={active ? sortState!.direction : null}
-              hideUnsorted={soft}
             />
           )}
         </span>
@@ -486,10 +492,10 @@ export function DataTable<TRow>({
           : label;
       const cellProps = {
         className: cn(
-          cellClassName,
-          soft && [SOFT_HEADER_CELL_CLASS, active && SOFT_HEADER_SORTED_CLASS],
+          HEADER_CELL_CLASS,
+          active && HEADER_SORTED_CLASS,
           alignClass(col.align),
-          sortable && "cursor-pointer select-none",
+          sortable && HEADER_SORTABLE_CLASS,
         ),
         onClick: sortable ? () => toggleSort(col.id) : undefined,
         "data-part": parts?.columnHeader,
@@ -532,12 +538,12 @@ export function DataTable<TRow>({
         leadSpan,
         cells: (
           <>
-            {headerCells(soft ? undefined : HEADER_TEXT_CLASS).slice(leadSpan)}
+            {headerCells().slice(leadSpan)}
             {hasActionsTrack && <span aria-hidden />}
           </>
         ),
-        // A soft label's pick reads its scope off the band it sits in.
-        style: soft ? SOFT_HEADER_SCOPE : undefined,
+        // A label's pick reads its scope off the band it sits in.
+        style: HEADER_SCOPE,
       }
     : undefined;
   const template = [
@@ -694,7 +700,7 @@ export function DataTable<TRow>({
                   ? [OUTLINE_HEADER_CLASS, "items-center"]
                   : soft
                     ? "h-soft-header mb-soft-header items-center"
-                    : [HEADER_TEXT_CLASS, rowPad, "rail-follow"],
+                    : [rowPad, "rail-follow"],
               )}
               style={{
                 top: stickyHeaderOffset,
@@ -705,9 +711,9 @@ export function DataTable<TRow>({
                       marginBottom: "var(--space-xs)",
                     }
                   : undefined),
-                ...(soft
-                  ? { ...SOFT_HEADER_INSET, ...SOFT_HEADER_SCOPE }
-                  : undefined),
+                ...(soft ? SOFT_HEADER_INSET : undefined),
+                // Every label's pick reads its scope off this row.
+                ...HEADER_SCOPE,
               }}
             >
               {headerCells()}
@@ -1269,8 +1275,8 @@ interface FirstGroupLabels {
   leadSpan: number;
   /** The label cells for the remaining tracks (actions track included). */
   cells: ReactNode;
-  /** The band's own style (a soft label's pick scope). */
-  style?: CSSProperties;
+  /** The band's own style (the labels' pick scope). */
+  style: CSSProperties;
 }
 
 /**
@@ -1540,12 +1546,9 @@ function AlignedCell({
 function SortIcon({
   active,
   direction,
-  hideUnsorted = false,
 }: {
   active: boolean;
   direction: "asc" | "desc" | null;
-  /** Honour `sortIcon: sorted` (a soft header): no arrow while unsorted. */
-  hideUnsorted?: boolean;
 }) {
   const icon =
     direction === "asc"
@@ -1559,8 +1562,7 @@ function SortIcon({
       // eslint-disable-next-line spacing/no-adhoc-spacing -- one-off inline sort-icon offset next to the column header text
       className={cn(
         "mb-px ml-0.5 inline-block size-3 align-middle",
-        active ? "text-foreground" : "text-muted-foreground/40",
-        !active && hideUnsorted && SORT_ICON_SORTED_ONLY,
+        active ? "text-foreground" : SORT_ICON_UNSORTED_CLASS,
       )}
     />
   );

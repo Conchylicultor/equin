@@ -1,6 +1,15 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { CollapsibleChevron } from "@plugins/primitives/plugins/collapsible/web";
 
+/**
+ * A chevron that owns its own box in the row (the column disclosure, an
+ * icon-less row): `--tree-chevron-w` wide — the box a leaf reserves and the
+ * step the default indent is built from — faint at rest (40%), full on row
+ * hover or keyboard focus. Pass it as the toggle's `className`.
+ */
+export const TREE_CHEVRON_CLASS =
+  "w-tree-chevron h-5 shrink-0 opacity-40 group-hover/tree-row:opacity-100 focus-visible:opacity-100";
+
 export interface TreeDisclosureToggleProps {
   isOpen: boolean;
   onToggle?: () => void;
@@ -34,6 +43,9 @@ export function TreeDisclosureToggle({
       className={cn(
         "flex items-center justify-center rounded-md",
         "hover:bg-background/60",
+        // A ring for keyboard focus only: a mouse click focuses the button
+        // too, and must not leave a ring behind on the row.
+        "focus-ring",
         className,
       )}
     >

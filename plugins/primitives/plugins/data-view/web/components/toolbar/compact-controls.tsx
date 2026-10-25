@@ -7,9 +7,9 @@ import {
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { hoverRevealTarget } from "@plugins/primitives/plugins/hover-reveal/web";
 import { dataPart, type ToolbarPartForms } from "../../../core";
-import type { DataViewControl } from "../../slots";
 import { useDataViewControls } from "../controls/controls-context";
 import { DataViewControlPanel } from "./control-panel-host";
+import type { ToolbarControl } from "./use-toolbar-controls";
 import { ROUND_AT_REST } from "./round-form";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
@@ -55,7 +55,7 @@ export function CompactControls({
   frame,
 }: {
   /** The applicable controls, in order — the same list the wide bar renders. */
-  controls: DataViewControl[];
+  controls: ToolbarControl[];
   /** Σ of each control's summary count, plus one for a non-empty query. */
   activeCount: number;
   /** Whether the search query is non-empty — see `alwaysVisible`. */
@@ -175,7 +175,7 @@ export function CompactRootPanel({
   controls,
   search,
 }: {
-  controls: DataViewControl[];
+  controls: ToolbarControl[];
   search?: ReactNode;
 }): ReactNode {
   const ctx = useDataViewControls();
@@ -184,7 +184,22 @@ export function CompactRootPanel({
     <>
       {search ? <ControlPanel.Section>{search}</ControlPanel.Section> : null}
       <ControlPanel.Section>
-        {controls.map((control) => {
+        {controls.map((item) => {
+          // An action acts in place: its row carries the action's current
+          // label and glyph, and nothing to push.
+          if (item.kind === "action") {
+            const { action } = item;
+            return (
+              <ControlPanel.Row
+                key={item.id}
+                icon={<Icon icon={action.icon} />}
+                onSelect={action.run}
+              >
+                {action.label}
+              </ControlPanel.Row>
+            );
+          }
+          const { control } = item;
           // The same pure `summary` the wide bar's trigger reads — so a folded
           // control says exactly what its unfolded twin would say.
           const summary = control.summary?.(ctx) ?? null;
