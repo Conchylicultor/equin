@@ -18,14 +18,15 @@
 // At most one spacer per slot.
 {
   // Vertical list of rows in the action bar's gear popover, read top → bottom:
-  // how the tab is laid out first, then the whole-window and editing toggles,
-  // then who the user is (Developer mode) and, beside it, the developer's
-  // preview of the app as a new user sees it (git defaults).
+  // who the user is (Developer mode) first — for a regular user it is the only
+  // row, every other one being developer-only — then how the tab is laid out,
+  // the whole-window and editing toggles, and the developer's preview of the
+  // app as a new user sees it (git defaults).
   "items": [
+    "audience.view-option:developer-mode",
     "apps-core.surface:placement-control",
     "fullscreen:fullscreen-toggle",
     "reorder.edit-mode:reorder-pen",
-    "audience.view-option:developer-mode",
     "config_v2.git-defaults-preview:git-defaults-preview"
   ]
 }

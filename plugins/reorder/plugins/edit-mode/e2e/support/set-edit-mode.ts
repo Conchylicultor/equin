@@ -27,6 +27,15 @@ export async function setEditMode(page: Page, on: boolean): Promise<void> {
       name: "Edit layout",
       exact: true,
     });
+    // Edit layout is a developer option: a regular user's popover holds only
+    // the Developer mode switch, so turn it on first.
+    const developer = page.getByRole("switch", {
+      name: "Developer mode",
+      exact: true,
+    });
+    if ((await developer.getAttribute("aria-checked")) !== "true") {
+      await developer.click();
+    }
     await toggle.click();
     await toggle.waitFor({ state: "hidden", timeout: 10_000 });
   } else {

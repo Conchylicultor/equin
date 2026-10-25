@@ -25,6 +25,7 @@ export default {
     ActionBar.ViewOption({
       id: "placement-control",
       component: ActionBarPlacementControl,
+      audience: "developer",
     }),
   ],
   slots: Surface,

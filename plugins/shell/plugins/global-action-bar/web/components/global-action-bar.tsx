@@ -23,6 +23,7 @@ import { useActionBarPinned } from "../internal/use-action-bar-pinned";
 import { useFloatingBarSafeArea } from "../internal/use-floating-bar-safe-area";
 import { useBarPlace, useViewportSize } from "../internal/use-bar-place";
 import { useBarActivities } from "../internal/use-bar-activities";
+import { renderForAudience } from "../internal/render-for-audience";
 import type { Activity } from "@plugins/primitives/plugins/css/plugins/activity-ring/web";
 import { useHintAnchor } from "@plugins/hints/web";
 import { actionBarAnchor } from "../../core";
@@ -388,7 +389,9 @@ export function FloatingActionBarHost() {
           >
             {/* eslint-disable-next-line layout/no-adhoc-layout -- animated max-width hover-reveal strip (clipped while collapsed) */}
             <FloatingActionFadeIn className="flex max-w-0 items-center gap-2xs overflow-hidden group-data-open/fa:pl-2xs whitespace-nowrap transition-[max-width] duration-200 group-data-open/fa:max-w-[80rem]">
-              <ActionBar.Item.Render controlSize={FLOATING_SIZE} />
+              <ActionBar.Item.Render controlSize={FLOATING_SIZE}>
+                {renderForAudience}
+              </ActionBar.Item.Render>
             </FloatingActionFadeIn>
           </FloatingAction>
         )}
@@ -419,7 +422,9 @@ export function DockedActionBarHost() {
       className={`shrink-0 pl-sm ${BAR_TONE}`}
     >
       <HealthItem size={DOCKED_SIZE} />
-      <ActionBar.Item.Render controlSize={DOCKED_SIZE} />
+      <ActionBar.Item.Render controlSize={DOCKED_SIZE}>
+        {renderForAudience}
+      </ActionBar.Item.Render>
     </Stack>
   );
 }

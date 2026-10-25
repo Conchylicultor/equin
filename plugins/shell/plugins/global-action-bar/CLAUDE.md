@@ -118,13 +118,14 @@ tab bar, which an embed does not paint.
     - `Apps.TabBarActions` "Tab bar actions" → `DockedActionBarHost`
     - `ActionBar.Item` → `ViewOptionsButton`
     - `ConfigV2.WebRegister` "config"
-  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps-core/tabs` ×3
     - `primitives/css/ui-kit` ×3
     - `config_v2` ×2
     - `primitives/overlay/floating-action` ×2
     - `apps-core/chrome-theme.chromeThemeScope`
     - `apps-core.Apps`
+    - `audience.ForAudience`
     - `hints.useHintAnchor`
     - `primitives/css/control-panel.ControlPanelPopover`
     - `primitives/css/spacing.Stack`

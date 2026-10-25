@@ -11267,7 +11267,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/icons`
           - `ui/variant-region`
 
-- **`audience`** — Who the user is (user | developer), read live as useAudience() from the Developer mode config; registers that config. Registers the Developer mode config and reads the user's audience on the server (getAudience).
+- **`audience`** — Who the user is (user | developer), read live as useAudience() from the Developer mode config; registers that config. ForAudience renders its children only for the audience a feature declares itself for (the gate an audience-aware slot host wraps each contribution in). Registers the Developer mode config and reads the user's audience on the server (getAudience).
   - Web:
     - Contributes: `ConfigV2.WebRegister` "config"
     - Uses:
@@ -11277,6 +11277,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `primitives/live-state.mapResource`
       - `primitives/live-state.ResourceResult`
     - Exports (values):
+      - `ForAudience`
       - `useAudience`
       - `useSetDeveloperMode`
   - Server:
@@ -11299,6 +11300,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `audience/settings`
       - `audience/view-option`
       - `config_v2/git-defaults-preview`
+      - `shell/global-action-bar`
       - `shell/notifications`
   - Plugins:
     - **`developer-mark`** — The developer-only mark: DeveloperMark (the developer symbol in the primary tint, inline beside a title or opaque on a corner) and DeveloperCorner (the mark overhanging a tile's corner). Every surface showing something only a developer sees — a developer app's tile, a developer notification or toast — draws it, so one symbol means developer everywhere.
@@ -47039,7 +47041,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `tasks/automations`
       - `tasks/task-detail`
   - Plugins:
-    - **`action-bar`** — Shared cross-app action set. Defines the ActionBar.Item slot that plugins contribute their toolbar actions to, and the ActionBar.ViewOption slot for view options (surface mode, fullscreen, layout editing) folded behind the bar's gear popover; the global-action-bar plugin renders both. ActionBar.Activity (background work as a ring around the collapsed bar's health dot) and ActionBar.Glance (compact chips beside it) keep that work visible while the floating bar is collapsed.
+    - **`action-bar`** — Shared cross-app action set. Defines the ActionBar.Item slot that plugins contribute their toolbar actions to, and the ActionBar.ViewOption slot for view options (surface mode, fullscreen, layout editing) folded behind the bar's gear popover; the global-action-bar plugin renders both, gating each contribution by the audience it declares (a developer-audience one shows only in Developer mode). ActionBar.Activity (background work as a ring around the collapsed bar's health dot) and ActionBar.Glance (compact chips beside it) keep that work visible while the floating bar is collapsed.
       - Web:
         - Slots:
           - `ActionBar.Item`
@@ -47064,6 +47066,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ActionBar.Activity` ← `build`
           - `ActionBar.Glance` ← `build`
         - Uses: `primitives/slot-render.defineRenderSlot`
+        - Exports (types): `ActionBarContribution`
         - Exports (values): `ActionBar`
       - Cross-plugin:
         - Imported by:
@@ -47100,13 +47103,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Apps.TabBarActions` "Tab bar actions" → `DockedActionBarHost`
           - `ActionBar.Item` → `ViewOptionsButton`
           - `ConfigV2.WebRegister` "config"
-        - Uses: 25 symbols — full list in [`plugins/shell/plugins/global-action-bar/REFERENCE.md`](../plugins/shell/plugins/global-action-bar/REFERENCE.md)
+        - Uses: 26 symbols — full list in [`plugins/shell/plugins/global-action-bar/REFERENCE.md`](../plugins/shell/plugins/global-action-bar/REFERENCE.md)
           - `apps-core/tabs` ×3
           - `primitives/css/ui-kit` ×3
           - `config_v2` ×2
           - `primitives/overlay/floating-action` ×2
           - `apps-core/chrome-theme.chromeThemeScope`
           - `apps-core.Apps`
+          - `audience.ForAudience`
           - `hints.useHintAnchor`
           - `primitives/css/control-panel.ControlPanelPopover`
           - `primitives/css/spacing.Stack`

@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Who the user is (user | developer), read live as useAudience() from the Developer mode config; registers that config. Registers the Developer mode config and reads the user's audience on the server (getAudience).
+- Description: Who the user is (user | developer), read live as useAudience() from the Developer mode config; registers that config. ForAudience renders its children only for the audience a feature declares itself for (the gate an audience-aware slot host wraps each contribution in). Registers the Developer mode config and reads the user's audience on the server (getAudience).
 - Web:
   - Contributes: `ConfigV2.WebRegister` "config"
   - Uses:
@@ -14,6 +14,7 @@
     - `primitives/live-state.mapResource`
     - `primitives/live-state.ResourceResult`
   - Exports (values):
+    - `ForAudience`
     - `useAudience`
     - `useSetDeveloperMode`
 - Server:
@@ -36,6 +37,7 @@
     - `audience/settings`
     - `audience/view-option`
     - `config_v2/git-defaults-preview`
+    - `shell/global-action-bar`
     - `shell/notifications`
 - Sub-plugins:
   - **`developer-mark`** — The developer-only mark: DeveloperMark (the developer symbol in the primary tint, inline beside a title or opaque on a corner) and DeveloperCorner (the mark overhanging a tile's corner). Every…

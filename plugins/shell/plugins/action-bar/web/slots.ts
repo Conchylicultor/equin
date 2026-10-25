@@ -3,6 +3,18 @@ import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 import type { Activity } from "@plugins/primitives/plugins/css/plugins/activity-ring/web";
 import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
+import type { Audience } from "@plugins/audience/core";
+
+/**
+ * An action-bar contribution: its component, and who it is for — `audience:
+ * "developer"` keeps it out of the bar (or the gear popover) until Developer
+ * mode is on, the same vocabulary as `defineApp({ audience })`. Omitted = everyone.
+ * The host gates it (`ForAudience`); the contribution never reads the audience.
+ */
+export interface ActionBarContribution {
+  component: ComponentType;
+  audience?: Audience;
+}
 
 /**
  * The shared set of cross-app action buttons (Improve, Build, Screenshot, …),
@@ -18,7 +30,7 @@ export const ActionBar = {
   // consistent height. `sm` is the DEFAULT: a host may pick another density for
   // the whole slot (`<ActionBar.Item.Render controlSize="md"/>` — the floating
   // capsule does). Contributions should omit `size` and inherit.
-  Item: defineRenderSlot<{ component: ComponentType }>({
+  Item: defineRenderSlot<ActionBarContribution>({
     controlSize: "sm",
   }),
   /**
@@ -29,8 +41,11 @@ export const ActionBar = {
    * The popover body is a `ControlPanel`, so each contribution renders ONE
    * control-panel row (`ControlPanel.Row` — a switch for an on/off option — or
    * `ControlPanel.Setting` for a value picked from a control).
+   *
+   * Most are developer tools (`audience: "developer"`): for a regular user the
+   * popover holds only the Developer mode switch, which order config keeps first.
    */
-  ViewOption: defineRenderSlot<{ component: ComponentType }>(),
+  ViewOption: defineRenderSlot<ActionBarContribution>(),
   /**
    * Background work the COLLAPSED bar should show while every item is hidden:
    * each contribution's hook answers what its work is doing right now (`null`

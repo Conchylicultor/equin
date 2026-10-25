@@ -11,6 +11,7 @@ export default {
     ActionBar.ViewOption({
       id: "fullscreen-toggle",
       component: FullscreenToggle,
+      audience: "developer",
     }),
   ],
 } satisfies PluginDefinition;

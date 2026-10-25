@@ -13,6 +13,7 @@ export default {
     ActionBar.Item({
       id: "quick-theme",
       component: QuickThemeButton,
+      audience: "developer",
     }),
   ],
   slots: QuickTheme,

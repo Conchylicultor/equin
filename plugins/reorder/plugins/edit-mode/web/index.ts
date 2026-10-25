@@ -16,6 +16,7 @@ export default {
   contributions: [
     ActionBar.ViewOption({
       id: "reorder-pen",
+      audience: "developer",
       // In edit mode every reorderable item is a drag target that ignores
       // clicks, so the switch that turns edit mode off must stay out of it.
       excludeFromReorder: true,
