@@ -2,18 +2,17 @@ import type { Exemptions } from "@plugins/framework/plugins/tooling/plugins/exem
 
 export default [
   {
+    rule: "no-db-backed-notify",
+    paths: ["server/internal/scan-served.ts"],
+    kind: "sanctioned",
+    reason:
+      "debug.worktree-cleanup.worktrees joins the attempts / tasks rows with the disk (each checkout's dir and git status) and the cluster's database list, scanned ONCE per question at its instant `at` by the scan its `whileSubscribed` starts — a snapshot frozen by design (Refresh is a new question; this panel's own deletes re-read their rows through refreshScannedRows). Its loader and meta read only the in-memory scan. The lexical scan of the serveValue call reaches the scan's listAttempts / listTasks through whileSubscribed.",
+  },
+  {
     rule: "endpoints:no-raw-json-handlers",
     paths: ["server/internal/handle-delete.ts"],
     kind: "sanctioned",
     reason: "400/404 guards emitted before an NDJSON stream response.",
-  },
-  {
-    rule: "live/no-endpoint-read",
-    paths: ["web/components/worktree-cleanup-panel.tsx"],
-    kind: "debt",
-    task: "task-1791560308-woqgfi",
-    reason:
-      "A request/response server read (a GET fetchEndpoint or NDJSON stream an effect, a hook or a function they call runs) not yet moved onto a liveValue or liveCollection read with useLive.",
   },
   {
     rule: "boundaries/no-platform-api",

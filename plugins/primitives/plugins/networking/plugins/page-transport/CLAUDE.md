@@ -40,7 +40,6 @@ to itself).
     - `infra/health`
     - `primitives/log-channels`
     - `reports`
-    - `ui/icons/sprites`
 - Exemptions:
   - Exempts itself from: `endpoints/no-raw-web-fetch` — `web/page-transport.ts` (sanctioned)
 

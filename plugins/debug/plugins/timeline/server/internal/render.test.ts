@@ -111,9 +111,6 @@ function buildFrames(): TimelineFrame[] {
   for (const source of ["trace", "slow-op", "report", "build"] as const) {
     frames.push({ chunk: { source, worktree: "att-x", ok: false, error: "session open failed" } });
   }
-  // A whole-stream failure auto-frame.
-  frames.push({ error: "fan-out crashed" });
-
   frames.push({ end: true });
   return frames;
 }
@@ -180,9 +177,10 @@ describe("renderTimeline", () => {
     expect(out).toContain("dropped (raise minSeverity / narrow window): slow-op 50 info, report 1 warning");
   });
 
-  test("chunk errors group a worktree's sources and surface the whole-stream failure", () => {
-    expect(out).toContain("att-x  trace, slow-op, report, build: session open failed");
-    expect(out).toContain("** WHOLE-STREAM FAILURE: fan-out crashed **");
+  test("chunk errors group a worktree's sources", () => {
+    expect(out).toContain(
+      "att-x  trace, slow-op, report, build: session open failed",
+    );
   });
 });
 

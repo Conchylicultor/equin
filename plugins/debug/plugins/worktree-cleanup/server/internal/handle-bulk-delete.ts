@@ -2,7 +2,9 @@ import { getAttempt } from "@plugins/tasks/plugins/tasks-core/server";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { bulkDeleteWorktrees } from "../../shared/endpoints";
 import { orphanDirPath } from "./dirs";
+import { rebuildEntries } from "./entries";
 import { reapAttempt } from "./reap";
+import { refreshScannedRows, safeIdsOf } from "./scan-served";
 
 const CONCURRENCY = 4;
 
@@ -21,9 +23,23 @@ async function deleteOne(id: string): Promise<{ id: string; ok: true } | { id: s
   return { id, ok: true };
 }
 
-export const handleBulkDelete = implement(bulkDeleteWorktrees, async ({ body }) => {
-  const { ids } = body;
-  const results: ({ id: string; ok: true } | { id: string; ok: false; error: string })[] = [];
+export const handleBulkDelete = implement(
+  bulkDeleteWorktrees,
+  async ({ body }) => {
+    const scanned = safeIdsOf(body.at);
+    const results: (
+      { id: string; ok: true } | { id: string; ok: false; error: string }
+    )[] = [];
+
+    // The scan's safe set may be hours old (nothing tells it an attempt was
+    // relaunched or a checkout dirtied), so each id is judged again, as it
+    // stands now, before anything destructive runs on it.
+    const current = await rebuildEntries(scanned);
+    const ids: string[] = [];
+    for (const id of scanned) {
+      if (current.get(id)?.isSafe === true) ids.push(id);
+      else results.push({ id, ok: false, error: "no longer safe" });
+    }
 
   // Process with bounded concurrency to avoid overwhelming git locks and Postgres
   let i = 0;
@@ -33,6 +49,10 @@ export const handleBulkDelete = implement(bulkDeleteWorktrees, async ({ body }) 
     results.push(...batchResults);
     i += CONCURRENCY;
   }
+
+    // Whatever each reap got through — and the rows found no longer safe —
+    // the panel's scan re-reads.
+    await refreshScannedRows(scanned);
 
   const succeeded = results.filter((r) => r.ok).length;
   const failed = results.filter(

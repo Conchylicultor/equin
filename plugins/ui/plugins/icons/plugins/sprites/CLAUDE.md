@@ -8,40 +8,57 @@ is in the parent's [`CLAUDE.md`](../../CLAUDE.md) (section "Sprites").
   the computer, so the serving half is `machine/` and a host without the
   computer answers them unavailable — the sprite host then renders the empty
   sheet. The page's sprites come from the page's own server
-  (`IconSpriteHost` is page chrome, a sanctioned `pageTransport` importer).
+  (`IconSpriteHost` is page chrome, mounted outside any demo scope).
 - `core/`: `residentSprites` (`icons.sprites`, preloaded: the default style's
-  two sprites + brands, and the `manifestHash`), `spriteEndpoint` (`GET /api/icons/sprite/:hash/:key`, a blob).
+  two sprites + brands, and the `manifestHash`), `iconSprite` (`icons.sprite`,
+  `{ hash, key }`, on demand: one sprite's `<svg>`, content-addressed by the
+  resident `manifestHash`; refused `unknown-key` and `stale-manifest`).
 - `machine/`: `buildSprite` / `resolveIcon` (Iconify JSON → `<symbol>`s; an alias
   with transforms throws), the per-weight memoized build, the resident value
-  and the sprite route — a raw handler for its immutable cache header; a stale
-  hash → 409. The `seti` sprite is built from the icons plugin's vendored set
-  (`SETI_SET`, its identity folded into `manifestHash`) and served only by the
-  route, never in the resident value. So is the `lucide` sprite: every mapped
+  and the on-demand sprite value — external `fixed` and `immutable` (a pure
+  function of the compiled manifest and the installed sets; the on-demand one
+  answers only this process's `manifestHash`). The `seti` sprite is built
+  from the icons plugin's vendored set (`SETI_SET`, its identity folded into
+  `manifestHash`) and served only by `icons.sprite`, never in the resident
+  value. So is the `lucide` sprite: every mapped
   manifest symbol's Lucide drawing (`@iconify-json/lucide`, embedded in
   `icon-sets.js`), tuned by `lucide.ts` (7/8 box, 1.2px non-scaling stroke);
   the set's identity, `LUCIDE_MAP` and `LUCIDE_TUNING_VERSION` are folded into
   `manifestHash`.
 - `web/`: `IconSpriteHost` (`Core.Root`) provides the resident sprites in a
-  layout effect (so they are on screen at first paint), fetches every other
+  layout effect (so they are on screen at first paint), reads every other
   style key a scope wants and every sprite a mounted icon asked for
-  (`useWantedSprites` — the never-resident `seti` and `lucide` sprites), and renders the
-  icons plugin's `IconSpriteSheet`.
+  (`useWantedSprites` — the never-resident `seti` and `lucide` sprites) as
+  `useLive(iconSprite, [{ hash, key }, …])` (a refusal thrown into its error
+  boundary, a transient failure reported and left unprovided), and renders
+  the icons plugin's `IconSpriteSheet`.
   It also provides the resident saved-icon symbols and installs the runtime
-  symbol loader (`createRuntimeSymbolLoader`: one fetch per style key per
-  frame, deduped, a failed batch released for retry and thrown).
+  symbol loader (`createRuntimeSymbolLoader`: every want of a frame becomes one
+  immutable batch per style key, at most `MAX_RUNTIME_SYMBOLS_PER_READ` (200)
+  sorted names; a name is never batched twice). The host reads the batches in
+  flight as `useLive(runtimeSymbolsValue, [{ hash, key, names }, …])` and drops
+  a batch from the read once its chunk is in the sheet, so the tuples read at
+  once are only the ones in flight — never one per name, never one per name
+  ever seen. A refusal is thrown into its error boundary; a transient failure
+  is reported and leaves that batch's icons on their fallback.
 
 Saved (runtime) symbols — see the parent's "Runtime symbols":
 
 - `core/`: `savedIconSprites` (`icons.saved-sprites`, preloaded: the default
   style's `<symbol id="msr-…">` for every name a source reports, plus
   `symbolsHash`), `savedIconsChanged` (the tick config sources bump),
-  `runtimeSymbolsEndpoint` (`GET /api/icons/symbols/:hash/:key?names=`).
+  `runtimeSymbolsValue` (`icons.runtime-symbols`, `{ hash, key, names }`, on
+  demand: `names` a comma-joined, sorted, duplicate-free list of at most
+  `MAX_RUNTIME_SYMBOLS_PER_READ` saved names, content-addressed by
+  `symbolsHash`; refused `unknown-key`, `stale-symbols`, `invalid-names` and
+  `unknown-name`).
 - `machine/`: the sources' list (`savedIconSources()`, from the portable
   `saved-sources` registry, where every store calls `defineSavedIconSource`), the per-style symbol maps
   (`runtime-symbols.ts`: every saved name's symbol for one style, built in one
   pass over the sets the first time the style is asked for, then kept), the
   resident value (DB-arm: sources' reads are captured; a first subscriber and
-  every config change bump the tick) and the route. The ~19 MB sets are parsed
+  every config change bump the tick) and the on-demand runtime-symbols value
+  (external `immutable`; answers only this process's `symbolsHash`). The ~19 MB sets are parsed
   under one shared lease (`withSymbolSets`) and dropped after.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./equin build` -->
@@ -52,10 +69,7 @@ Saved (runtime) symbols — see the parent's "Runtime symbols":
 - Web:
   - Contributes: `Icons.Root` → `IconSpriteHost`
   - Uses:
-    - `infra/endpoints.fetchEndpointOver`
     - `network/live.useLive`
-    - `primitives/networking/page-transport.pageTransport`
-    - `ui/icons.hasSprite`
     - `ui/icons.Icons`
     - `ui/icons.IconSpriteSheet`
     - `ui/icons.installRuntimeSymbolLoader`
@@ -66,25 +80,22 @@ Saved (runtime) symbols — see the parent's "Runtime symbols":
 - Server:
   - Contributes:
     - `resource.declare` "icons.manifest"
+    - `resource.declare` "icons.runtime-symbols"
     - `resource.declare` "icons.saved-icons-changed"
     - `resource.declare` "icons.saved-sprites"
+    - `resource.declare` "icons.sprite"
     - `resource.declare` "icons.sprites"
   - Resources:
     - `icons.manifest` (push, fixed, whole: the symbol names the build scanned from the code — fixed for the process, and the Icons pane lists them all)
+    - `icons.runtime-symbols` (invalidate, immutable)
     - `icons.saved-icons-changed` (push, notified)
     - `icons.saved-sprites` (push, whole: every saved icon name — each picked by hand, and every one must be drawable at first paint, whole: one sprite per default style key — a handful)
+    - `icons.sprite` (invalidate, immutable)
     - `icons.sprites` (push, fixed, whole: the resident sprites — the default style's two and the brands)
 - Machine:
-  - Uses:
-    - `infra/endpoints.machineHandler`
-    - `network/live.serveValue`
-  - Routes:
-    - `GET /api/icons/sprite/:hash/:key`
-    - `GET /api/icons/symbols/:hash/:key`
+  - Uses: `network/live.serveValue`
 - Core:
   - Uses:
-    - `infra/endpoints.blob`
-    - `infra/endpoints.defineEndpoint`
     - `network/live.liveValue`
     - `packages/list-bound.wholeList`
     - `packages/list-bound.wholeRecord`
@@ -93,16 +104,13 @@ Saved (runtime) symbols — see the parent's "Runtime symbols":
     - `SavedIconSprites`
   - Exports (values):
     - `iconManifest`
+    - `iconSprite`
     - `IconSpritesSchema`
+    - `MAX_RUNTIME_SYMBOLS_PER_READ`
     - `residentSprites`
-    - `runtimeSymbolsEndpoint`
+    - `runtimeSymbolsValue`
     - `savedIconsChanged`
     - `savedIconSprites`
     - `SavedIconSpritesSchema`
-    - `spriteEndpoint`
-- Exemptions:
-  - Exempts itself from:
-    - `live/no-endpoint-read` — `web/internal/sprite-host.tsx` (debt)
-    - `networking/no-page-transport` — `web/internal/sprite-host.tsx` (sanctioned)
 
 <!-- AUTOGENERATED:END -->

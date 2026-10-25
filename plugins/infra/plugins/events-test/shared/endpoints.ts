@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
+import { LogEntrySchema } from "./log";
 
 export const SubscribeBodySchema = z.object({
   userId: z.string().optional(),
@@ -41,14 +42,8 @@ export const directEnqueueEventsTest = defineEndpoint({
   response: z.object({ jobId: z.string() }),
 });
 
-const LogEntrySchema = z.object({
-  label: z.string(),
-  userId: z.string(),
-  message: z.string(),
-  jobId: z.string(),
-  firedAt: z.string(),
-});
-
+// The whole log, kept for the e2e flow (`e2e/events-test-flow.ts`), which
+// asserts on it over HTTP; the pane reads the live `events-test.log` value.
 export const getEventsTestLog = defineEndpoint({
   route: "GET /api/events-test/log",
   response: z.object({ entries: z.array(LogEntrySchema) }),
@@ -67,6 +62,8 @@ export const deleteEventsTestTargeting = defineEndpoint({
   body: DeleteTargetingBodySchema,
 });
 
+// Kept for the e2e flow (`e2e/events-test-flow.ts`), which clears and asserts
+// on the triggers over HTTP; the pane reads events' live `event-triggers` value.
 export const listEventsTestTriggers = defineEndpoint({
   route: "GET /api/events-test/triggers",
   response: z.object({ rows: z.array(z.record(z.unknown())) }),

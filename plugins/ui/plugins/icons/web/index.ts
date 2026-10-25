@@ -14,11 +14,7 @@ export {
   useScopeIconStyles,
   useWantedStyleKeys,
 } from "./internal/style-store";
-export {
-  hasSprite,
-  provideSprite,
-  useWantedSprites,
-} from "./internal/sprite-store";
+export { provideSprite, useWantedSprites } from "./internal/sprite-store";
 export { IconSpriteSheet } from "./internal/sprite-sheet";
 export { Icons } from "./slots";
 export type { IconFamilyContribution } from "./slots";

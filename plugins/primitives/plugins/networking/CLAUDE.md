@@ -186,14 +186,14 @@ built on them — see
     - `useTransport`
     - `useTransportScoped`
 - Cross-plugin:
-  - Imported by: 30 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 28 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×6
     - `primitives` ×6
     - `conversations` ×5
-    - `debug` ×3
     - `framework` ×3
     - `infra` ×2
     - `page` ×2
+    - `debug/worktree-cleanup`
     - `network/live`
     - `shell/notifications`
     - `tasks/tasks-core`
@@ -212,7 +212,6 @@ built on them — see
     - `infra/health` (0 debt)
     - `primitives/log-channels` (0 debt)
     - `reports` (0 debt)
-    - `ui/icons/sprites` (0 debt)
 - Core:
   - Exports (types):
     - `WsTestControls`

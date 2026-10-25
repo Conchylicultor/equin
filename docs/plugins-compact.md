@@ -253,7 +253,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`exhibits`** — Exhibit catalog: a plugin shows one of its REAL components standalone from an exhibits/ folder (isolatedExhibit / regionExhibit / appExhibit), collected into one generated registry. useExhibits() /…
     - **`facets`** [exempt] [40 sub-plugins] — Facet-based plugin metadata extraction and docgen pipeline
     - **`parse-utils`** [exempt]
-    - **`plugin-health`** [exempt] — Displays health review status and staleness in the plugin detail pane. Per-plugin health review tracking.
+    - **`plugin-health`** — Displays health review status and staleness in the plugin detail pane. Per-plugin health review tracking.
     - **`plugin-refs`** [test helpers] [exempt] — The one plugin-reference locator: every place the repo names a plugin (path literals, @plugins specifiers, structurally-read dot ids, relative markdown/CSS links), each with an exact character range…
     - **`plugin-tree`** [exempt] — Cached, watcher-invalidated plugin-tree accessors: structure-only for the hot path and a shared full-faceted build for the two facet consumers.
     - **`plugin-view`** [6 sub-plugins] — Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections.
@@ -286,7 +286,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
   - Plugins:
     - **`run-outcome`** — The shared run-outcome display: the colour/label metadata, the derived filter options, and the dot / chip / badge every run kind renders its outcome through — so a build row and a backup row cannot…
 
-- **`screenshot`** [exempt] — Capture the current page and edit it (crop, draw) in a new tab. Bottom prompt form launches a conversation with the edited screenshot attached. Stores in-flight screenshots (in memory) so a freshly…
+- **`screenshot`** — Capture the current page and edit it (crop, draw) in a new tab. Bottom prompt form launches a conversation with the edited screenshot attached. Stores in-flight screenshots (in memory) so a freshly…
   - Plugins:
     - **`draw-canvas`** — Reusable freehand draw canvas (color/width strokes). Used by the screenshot editor and draw-on-app.
     - **`draw-on-app`** — Toolbar button to draw freehand on the live app, capture as a screenshot with strokes baked in, and pre-attach to +improve.
@@ -367,7 +367,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`emoji`** — The <EmojiPicker>: a searchable, categorized emoji grid over frimousse whose emojibase data is served same-origin by the asset mirror; onSelect hands back a parsed Emoji. Plus <EmojiGlyph>, which…
         - **`saved-names`** — The membership-checked SavedSymbolName: a user-picked Material Symbols name, parsed against the installed sets before anything stores it.
         - **`saved-sources`** — The saved-icon source registry: defineSavedIconSource registers a place that stores user-picked icons (its tables, its names, a watch for a non-DB store), and savedIconSources lists them for the…
-        - **`sprites`** [exempt] — Mounts the page's icon sprites inline: the resident default-style sprites from the boot snapshot (present at first paint) plus, on demand, the sprite of every other style a theme scope picks.
+        - **`sprites`** — Mounts the page's icon sprites inline: the resident default-style sprites from the boot snapshot (present at first paint) plus, on demand, the sprite of every other style a theme scope picks.
     - **`segmented-progress-bar`** — Pluggable segmented progress bar with switchable visual variants.
       - Plugins:
         - **`arc`** — Arc progress: one unbroken arc on a faint ring, filled clockwise from the top through the current step (step 1 of 4 is a quarter, the last step the whole circle); one colour, no segments. Hover or…

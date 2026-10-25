@@ -1,17 +1,29 @@
 import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
+import { serveValue } from "@plugins/network/plugins/live/server";
+import {
+  EVENTS_TEST_LOG_WINDOW,
+  eventsTestLog,
+  type LogEntry,
+} from "../../shared/log";
 
 // In-memory log for verification; cleared via the reset HTTP route.
 // Not persisted — restarts wipe the log.
-export interface LogEntry {
-  label: string;
-  userId: string;
-  message: string;
-  jobId: string;
-  firedAt: string;
-}
-
 export const logEntries: LogEntry[] = [];
+
+/**
+ * The pane's live view of the log: its newest window. The log is this
+ * process's memory, so its only change sources are the two writers below —
+ * the job's append and the reset — and each notifies.
+ */
+export const eventsTestLogServed = serveValue(eventsTestLog, {
+  source: "external",
+  changes: "notified",
+  loader: () => ({
+    entries: logEntries.slice(-EVENTS_TEST_LOG_WINDOW),
+    total: logEntries.length,
+  }),
+});
 
 // Graphile retries on handler throw, so `run` may be invoked more than once
 // per jobId. Idempotency is the job author's contract — here we dedup on
@@ -22,6 +34,7 @@ const seenRuns = new Set<string>();
 export function resetLog(): void {
   logEntries.length = 0;
   seenRuns.clear();
+  eventsTestLogServed.notify();
 }
 
 // `input` carries the subscriber's `with` fields (label); `event` carries
@@ -46,5 +59,6 @@ export const logPing = defineJob({
       jobId: ctx.jobId,
       firedAt: new Date().toISOString(),
     });
+    eventsTestLogServed.notify();
   },
 });

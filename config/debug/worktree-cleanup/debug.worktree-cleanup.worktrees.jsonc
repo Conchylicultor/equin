@@ -1,0 +1,27 @@
+// @hash 6ec84829688d
+{
+  "views": [
+    {
+      "id": "all",
+      "name": "All worktrees",
+      "icon": "folder",
+      // The scan's own order (newest first, paged by scroll): no sort, so
+      // paging follows the scan. No filter view either: the rows are key-range
+      // pages, so a filter (say, safe = true) would see the loaded pages only.
+      // The header's "N safe to delete" counts the whole scan.
+      "view": {
+        "type": "table",
+        "properties": [
+          { "id": "task" },
+          { "id": "createdAt" },
+          { "id": "remains" },
+          { "id": "isSafe" },
+          { "id": "delete" }
+        ]
+      }
+    }
+  ],
+  "sortPresets": [],
+  "filterPresets": [],
+  "customColumns": []
+}

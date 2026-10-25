@@ -43,7 +43,7 @@ const SOURCE_COLOR: Record<TimelineSource, string> = {
   // Duress episodes are always warning severity and render as cross-lane
   // bands, so the semantic token IS their identity color.
   duress: "bg-warning",
-  // `health` never yields TimelineEvents (it rides the stream as series
+  // `health` never yields TimelineEvents (it rides the scan as health
   // frames); listed so the record stays exhaustive over TimelineSource.
   health: "bg-categorical-6",
 };
@@ -103,7 +103,7 @@ export interface WorktreeGroupModel {
 }
 
 /**
- * Buckets the streamed chunks into per-worktree lane groups. `healthLanes`
+ * Buckets the scan's cells into per-worktree lane groups. `healthLanes`
  * (worktrees that only reported health series, no event chunks) still get a
  * group so their heat strip renders; the HOST_LANE is excluded — the host is
  * its own top group owned by the view. Groups sort by event count desc, then

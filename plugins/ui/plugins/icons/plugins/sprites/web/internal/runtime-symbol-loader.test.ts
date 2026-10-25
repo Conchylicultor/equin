@@ -1,85 +1,90 @@
 import { describe, expect, it } from "bun:test";
 import type { StyleKey } from "@plugins/ui/plugins/icons/core";
-import {
-  MAX_NAMES_PER_FETCH,
-  createRuntimeSymbolLoader,
-} from "./runtime-symbol-loader";
+import { MAX_RUNTIME_SYMBOLS_PER_READ } from "../../core";
+import { createRuntimeSymbolLoader } from "./runtime-symbol-loader";
 
 const K: StyleKey = "default-outline-400";
 const R: StyleKey = "rounded-outline-400";
 
-function harness(fail = false) {
-  const fetches: { styleKey: StyleKey; names: readonly string[] }[] = [];
-  const loaded: string[] = [];
-  const errors: Error[] = [];
+function harness() {
   let pending: (() => void) | null = null;
-  const loader = createRuntimeSymbolLoader({
-    fetchSymbols: (styleKey, names) => {
-      fetches.push({ styleKey, names });
-      return fail
-        ? Promise.reject(new Error("boom"))
-        : Promise.resolve(`<svg>${names.join(",")}</svg>`);
-    },
-    schedule: (flush) => {
-      expect(pending).toBeNull();
-      pending = flush;
-    },
-    onLoaded: (chunkId) => loaded.push(chunkId),
-    onError: (err) => errors.push(err),
+  const loader = createRuntimeSymbolLoader((flush) => {
+    expect(pending).toBeNull();
+    pending = flush;
   });
-  const frame = async () => {
+  let notified = 0;
+  loader.subscribe(() => notified++);
+  const frame = () => {
     const f = pending;
     pending = null;
     f?.();
-    await Promise.resolve();
-    await Promise.resolve();
   };
-  return { loader, fetches, loaded, errors, frame };
+  const shape = () =>
+    loader.batches().map((b) => ({ styleKey: b.styleKey, names: b.names }));
+  return { loader, frame, shape, notified: () => notified };
 }
 
 describe("createRuntimeSymbolLoader", () => {
-  it("batches every want of a frame into one sorted fetch per style key", async () => {
+  it("batches every want of a frame into one sorted batch per style key", () => {
     const h = harness();
     h.loader.request({ styleKey: K, name: "rocket" });
     h.loader.request({ styleKey: K, name: "home" });
     h.loader.request({ styleKey: R, name: "home" });
-    await h.frame();
-    expect(h.fetches).toEqual([
+    expect(h.shape()).toEqual([]);
+    h.frame();
+    expect(h.shape()).toEqual([
       { styleKey: K, names: ["home", "rocket"] },
       { styleKey: R, names: ["home"] },
     ]);
-    expect(h.loaded).toHaveLength(2);
+    expect(h.notified()).toBe(1);
   });
 
-  it("dedupes within a batch and never re-requests an in-flight or landed name", async () => {
+  it("dedupes within a batch and never re-batches a wanted name", () => {
     const h = harness();
     h.loader.request({ styleKey: K, name: "home" });
     h.loader.request({ styleKey: K, name: "home" });
-    await h.frame();
+    h.frame();
     h.loader.request({ styleKey: K, name: "home" });
-    await h.frame();
-    expect(h.fetches).toEqual([{ styleKey: K, names: ["home"] }]);
+    h.frame();
+    expect(h.shape()).toEqual([{ styleKey: K, names: ["home"] }]);
   });
 
-  it("splits a batch past the route's cap", async () => {
+  it("leaves earlier batches untouched when a later frame adds one", () => {
     const h = harness();
-    for (let i = 0; i < MAX_NAMES_PER_FETCH + 5; i++) {
+    h.loader.request({ styleKey: K, name: "home" });
+    h.frame();
+    const [first] = h.loader.batches();
+    h.loader.request({ styleKey: K, name: "rocket" });
+    h.frame();
+    expect(h.loader.batches()[0]).toBe(first);
+    expect(h.shape()).toEqual([
+      { styleKey: K, names: ["home"] },
+      { styleKey: K, names: ["rocket"] },
+    ]);
+  });
+
+  it("splits a batch past the read's cap", () => {
+    const h = harness();
+    for (let i = 0; i < MAX_RUNTIME_SYMBOLS_PER_READ + 5; i++) {
       h.loader.request({ styleKey: K, name: `n${String(i).padStart(4, "0")}` });
     }
-    await h.frame();
-    expect(h.fetches.map((f) => f.names.length)).toEqual([
-      MAX_NAMES_PER_FETCH,
+    h.frame();
+    expect(h.shape().map((b) => b.names.length)).toEqual([
+      MAX_RUNTIME_SYMBOLS_PER_READ,
       5,
     ]);
   });
 
-  it("reports a failed batch and lets a later want retry it", async () => {
-    const h = harness(true);
+  it("drops a landed batch, so only in-flight batches are read", () => {
+    const h = harness();
     h.loader.request({ styleKey: K, name: "home" });
-    await h.frame();
-    expect(h.errors.map((e) => e.message)).toEqual(["boom"]);
-    h.loader.request({ styleKey: K, name: "home" });
-    await h.frame();
-    expect(h.fetches).toHaveLength(2);
+    h.loader.request({ styleKey: R, name: "home" });
+    h.frame();
+    const [first] = h.loader.batches();
+    h.loader.landed(first!.chunkId);
+    expect(h.shape()).toEqual([{ styleKey: R, names: ["home"] }]);
+    expect(h.notified()).toBe(2);
+    h.loader.landed(first!.chunkId);
+    expect(h.notified()).toBe(2);
   });
 });

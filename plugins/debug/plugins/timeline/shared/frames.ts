@@ -1,26 +1,15 @@
 import { z } from "zod";
-import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import { TimelineEventSchema, TimelineSourceSchema } from "../core";
 
 // ---------------------------------------------------------------------------
-// NDJSON frame contract for GET /api/debug/timeline — the A3 (server) ↔ A4
-// (web) boundary. Mirrors the slow-ops cluster tab's streamed shape: a
+// The timeline producer's frame vocabulary (server/internal/produce.ts): a
 // determinate `{ total }` first, per-(source, worktree) chunks as they
 // resolve, downsampled health series frames, then `{ end: true }`. One broken
-// fork = one `ok: false` chunk, never a blank view.
+// fork = one `ok: false` chunk, never a blank view. The web tab reads them
+// folded into the `debug.timeline.scan` value (`./scan.ts`); the get_timeline
+// MCP tool collects them into a text report.
 // ---------------------------------------------------------------------------
-
-// PULL, user-triggered (Refresh button) — never live/polled. Streamed as
-// NDJSON (no `response` schema); the client reads it with readNdjson and
-// parses each frame against TimelineFrameSchema.
-export const TimelineQuerySchema = z.object({
-  fromMs: z.coerce.number().finite().positive(), // wall-clock epoch ms
-  toMs: z.coerce.number().finite().positive(), // wall-clock epoch ms; > fromMs
-});
-export const getTimeline = defineEndpoint({
-  route: "GET /api/debug/timeline",
-  query: TimelineQuerySchema,
-});
 
 // One fan-out unit's result: a (source, worktree) cell. `worktree` is the
 // fork DB name for DB-backed sources — fork DB names ARE worktree slugs (the
@@ -71,18 +60,16 @@ export type TimelineHealthPoint = z.infer<typeof TimelineHealthPointSchema>;
 
 export const TimelineHealthFrameSchema = z.object({
   worktree: z.string(), // backend lane name, or HOST_LANE
-  samples: z.array(TimelineHealthPointSchema),
+  samples: wholeList(TimelineHealthPointSchema, {
+    reason:
+      "one lane's series downsampled to ≤ 500 buckets, plus the few sleep-wake points kept beside them",
+  }),
 });
 export type TimelineHealthFrame = z.infer<typeof TimelineHealthFrameSchema>;
 
-// Every line of the stream is exactly one of these. `{ error }` is the
-// ndjsonResponse auto-frame for an unexpected producer throw (whole-stream
-// failure, distinct from a per-chunk `ok: false`).
-export const TimelineFrameSchema = z.union([
-  z.object({ total: z.number() }), // planned chunk count, emitted first
-  z.object({ chunk: TimelineChunkSchema }),
-  z.object({ health: TimelineHealthFrameSchema }),
-  z.object({ end: z.literal(true) }),
-  z.object({ error: z.string() }),
-]);
-export type TimelineFrame = z.infer<typeof TimelineFrameSchema>;
+// Every frame the producer emits is exactly one of these.
+export type TimelineFrame =
+  | { total: number } // planned chunk count, emitted first
+  | { chunk: TimelineChunk }
+  | { health: TimelineHealthFrame }
+  | { end: true };

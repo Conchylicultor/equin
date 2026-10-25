@@ -2345,12 +2345,12 @@ never add one.
     - `serveCollectionOn`
     - `serveValueOn`
 - Cross-plugin:
-  - Imported by: 284 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 289 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×76
     - `conversations` ×50
-    - `debug` ×28
+    - `debug` ×31
     - `tasks` ×28
-    - `infra` ×17
+    - `infra` ×18
     - `active-data` ×12
     - `page` ×12
     - `primitives` ×10
@@ -2374,6 +2374,7 @@ never add one.
     - `fields/secret/config`
     - `reports`
     - `runs`
+    - `screenshot`
     - `shell/notifications`
     - `tag-tree/engine`
 - Exemptions:
@@ -2390,22 +2391,15 @@ never add one.
     - `build/build-profiling` (1 debt)
     - `build/serve-composition` (1 debt)
     - `debug/profiling/build` (1 debt)
-    - `debug/slow-ops/cluster` (1 debt)
-    - `debug/timeline` (1 debt)
-    - `debug/worktree-cleanup` (1 debt)
     - `framework/central-core` (0 debt)
     - `framework/resource-runtime` (0 debt)
     - `framework/server-core` (0 debt)
     - `infra/endpoints` (0 debt)
-    - `infra/events-test` (1 debt)
     - `infra/query-resource` (0 debt)
     - `network/live` (0 debt)
-    - `plugin-meta/plugin-health` (1 debt)
     - `primitives/data-view` (0 debt)
     - `primitives/live-state` (0 debt)
     - `primitives/optimistic-mutation` (0 debt)
-    - `screenshot` (1 debt)
-    - `ui/icons/sprites` (1 debt)
 - Machine:
   - Exports (values):
     - `serveCollection`

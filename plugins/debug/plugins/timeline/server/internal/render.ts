@@ -37,7 +37,6 @@ interface Buckets {
   events: TimelineEvent[]; // non-duress
   chunkErrors: { source: string; worktree: string; error: string }[];
   health: Map<string, TimelineHealthPoint[]>;
-  streamError: string | undefined;
 }
 
 function reduceFrames(frames: readonly TimelineFrame[]): Buckets {
@@ -47,7 +46,6 @@ function reduceFrames(frames: readonly TimelineFrame[]): Buckets {
     events: [],
     chunkErrors: [],
     health: new Map(),
-    streamError: undefined,
   };
   for (const f of frames) {
     if ("total" in f) {
@@ -60,8 +58,6 @@ function reduceFrames(frames: readonly TimelineFrame[]): Buckets {
       }
     } else if ("health" in f) {
       b.health.set(f.health.worktree, f.health.samples);
-    } else if ("error" in f) {
-      b.streamError = f.error;
     }
     // { end: true } carries no payload.
   }
@@ -223,11 +219,8 @@ function renderEvents(b: Buckets, opts: RenderOpts, lines: string[]): void {
 function renderChunkErrors(b: Buckets, lines: string[]): void {
   lines.push("");
   lines.push("CHUNK ERRORS (data missing here)");
-  if (b.streamError !== undefined) {
-    lines.push(`  ** WHOLE-STREAM FAILURE: ${b.streamError} **`);
-  }
   if (b.chunkErrors.length === 0) {
-    if (b.streamError === undefined) lines.push("  none");
+    lines.push("  none");
     return;
   }
   // Group per (worktree, error): openSession failing emits every source of a

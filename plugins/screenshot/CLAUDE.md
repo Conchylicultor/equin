@@ -4,20 +4,22 @@
 
 ## Plugin reference
 
-- Description: Capture the current page and edit it (crop, draw) in a new tab. Bottom prompt form launches a conversation with the edited screenshot attached. Stores in-flight screenshots (in memory) so a freshly opened tab can fetch them. Writing one to a file for an agent is the machine half's.
+- Description: Capture the current page and edit it (crop, draw) in a new tab. Bottom prompt form launches a conversation with the edited screenshot attached. Stores in-flight screenshots (in memory) so a freshly opened tab can read them. Writing one to a file for an agent is the machine half's.
 - Web:
   - Slots: `screenshotPane.Actions`
   - Slot contributors: `screenshotPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "screenshot"
     - `ActionBar.Item` → `ScreenshotButton`
-  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 32 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra/endpoints` ×3
+    - `primitives/live-state` ×3
     - `primitives/pane` ×3
     - `screenshot/draw-canvas` ×3
     - `primitives/css/ui-kit` ×2
     - `primitives/launch` ×2
     - `shell/notifications` ×2
+    - `network/live.useLive`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
     - `primitives/css/coords.Placed`
@@ -35,12 +37,13 @@
     - `captureApp`
     - `screenshotPane`
 - Server:
+  - Contributes: `resource.declare` "screenshot.image"
   - Uses:
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
-  - Routes:
-    - `POST /api/screenshots/:id`
-    - `GET /api/screenshots/:id`
+    - `network/live.serveValue`
+  - Resources: `screenshot.image` (invalidate, notified)
+  - Routes: `POST /api/screenshots/:id`
 - Machine:
   - Uses: `infra/endpoints.implementMachine`
   - Routes: `POST /api/screenshots/:id/file`
@@ -59,13 +62,11 @@
     - `ui/tokens/type-scale --font-size-3xs`
     - `ui/tokens/type-scale --line-height-3xs`
   - Imported by: `screenshot/draw-on-app`
-- Exemptions:
-  - Exempts itself from: `live/no-endpoint-read` — `web/components/screenshot-view.tsx` (debt)
 - Shared:
   - Exports (values):
     - `createScreenshot`
-    - `getScreenshot`
     - `saveScreenshotFile`
+    - `screenshotImage`
 - Sub-plugins:
   - **`draw-canvas`** — Reusable freehand draw canvas (color/width strokes). Used by the screenshot editor and draw-on-app.
   - **`draw-on-app`** — Toolbar button to draw freehand on the live app, capture as a screenshot with strokes baked in, and pre-attach to +improve.

@@ -1,5 +1,6 @@
 import { text } from "drizzle-orm/pg-core";
 import { defineTriggerEvent } from "@plugins/infra/plugins/events/server";
+import { PINGED_EVENT_NAME } from "../../shared/pinged";
 
 export interface PingedPayload {
   userId: string;
@@ -11,7 +12,7 @@ export interface PingedPayload {
 // self-contained. Identity-or-null match on payload.userId.
 export const { event: pinged, table: _pingedTriggers } =
   defineTriggerEvent<PingedPayload>({
-    name: "events_test.pinged",
+    name: PINGED_EVENT_NAME,
     filters: {
       userId: text("user_id"),
     },

@@ -1,1 +1,2 @@
-export { createScreenshot, getScreenshot, saveScreenshotFile } from "./endpoints";
+export { createScreenshot, saveScreenshotFile } from "./endpoints";
+export { screenshotImage } from "./image";

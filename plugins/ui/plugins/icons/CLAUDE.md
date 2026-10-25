@@ -117,11 +117,14 @@ destination.
   carries the default style's two sprites and the brands, with the
   `manifestHash`. The boot snapshot hydrates it, so the sheet is in the first
   commit.
-- **On demand**: a style some scope wants that is not resident is fetched from
-  `GET /api/icons/sprite/:hash/:key` (the typed `spriteEndpoint`) — immutable
-  for its URL; a hash that is not the server's current one is refused (409),
-  never answered with bytes the URL does not name. A failed fetch is
-  thrown into the host's error boundary.
+- **On demand**: a style some scope wants that is not resident is read as the
+  `icons.sprite` live value (`iconSprite`, params `{ hash, key }` — `hash` the
+  resident value's `manifestHash` — `load: "on-demand"`, external `immutable`:
+  content-addressed by the manifest). An unknown key is refused
+  (`unknown-key`), and so is a hash that is not the serving process's
+  (`stale-manifest`: the tab predates a restart that changed the manifest).
+  A refusal is thrown into the host's error boundary; a transient failure is
+  reported and leaves that key's icons on their fallback.
 
 ## Icon families
 
@@ -321,9 +324,9 @@ glyph a file gets and its colour; a direct `seti()` elsewhere is rare.
   the names some code writes (in practice, the file-type table).
 - **Never resident.** The `seti` sprite is not in `icons.sprites` (the boot
   snapshot). The first `<Icon icon={seti(…)}>` to mount calls `wantSprite("seti")`
-  (`web/internal/sprite-store.ts`); the sprite host fetches every wanted sprite
-  from `GET /api/icons/sprite/:hash/seti` (the same immutable, hash-checked
-  route as a non-default style). Until it lands a Seti icon is an empty box at
+  (`web/internal/sprite-store.ts`); the sprite host reads every wanted sprite
+  as `icons.sprite` `{ hash, key: "seti" }` (the same on-demand value as a
+  non-default style). Until it lands a Seti icon is an empty box at
   its final size. So a surface that never shows a file pays nothing.
 
 ## Runtime symbols (saved icons)
@@ -355,10 +358,11 @@ import { runtimeSymbol } from "@plugins/ui/plugins/icons/core";
   blocks, preprompt launch snapshots), config ones pass `tables: []` and `watch`
   (conversation-category, preprompts).
 - **On demand:** a name/style no chunk holds is a want; the sprites plugin's
-  loader batches every want of a frame into one
-  `GET /api/icons/symbols/:hash/:key?names=a,b` per style (sorted, so
-  content-addressed and immutable; unknown name 404, stale hash 409) and a
-  failed batch throws into its error boundary.
+  loader batches every want of a frame into one `icons.runtime-symbols` live
+  value tuple `{ hash, key, names }` per style (`names` sorted, at most 200, so
+  content-addressed and `immutable`; refused `unknown-key`, `stale-symbols`,
+  `invalid-names`, `unknown-name`), read with `useLive` until it lands; a
+  refused batch throws into its error boundary.
 - **Fallback:** while the wanted style's symbol loads `<Icon>` draws the default
   style's symbol for the same name, like a code icon — so a theme switch never
   blanks a saved icon. Only a name with no drawing in any style yet renders an
@@ -376,13 +380,11 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
   customizer's editing scope (undefined everywhere else), and any theme-engine
   import from here closes a cycle once the ui-kit draws `<Icon>`. Hence the
   leaf + publish/scope-context split above.
-- The sprite route and resident value live in the `sprites` sub-plugin, not in
+- The sprite values (resident and on-demand) live in the `sprites` sub-plugin, not in
   this plugin's `server/`, for the same reason: `core/` stays import-free so
   every runtime (and every `core/` file of every plugin) can name an icon.
 - The manifest is not in `core/` (see "The rules"), and the weight token is
   `iconStroke`, not `iconWeight` (a `-weight` var is a type metric).
-- On-demand sprites use the path `/:hash/:key`, not `?v=`, so the typed
-  endpoint (`spriteEndpoint`, a blob) carries the version as a param.
 - Lucide (plan `research/2026-10-06-apps-files-match-prototype.md` §1): the
   plan had `styleKeyOf` return `lucide` for a Lucide style. It still returns a
   Material `StyleKey` — the Material drawing a Lucide scope falls back to (and
@@ -422,7 +424,6 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `RuntimeSymbolEntry`
   - Exports (values):
     - `hasRuntimeSymbol`
-    - `hasSprite`
     - `Icon`
     - `iconFamilyGapReportSink`
     - `IconFamilyPreview`

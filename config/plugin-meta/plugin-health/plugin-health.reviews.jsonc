@@ -1,0 +1,14 @@
+// @hash 6ec84829688d
+{
+  "views": [
+    {
+      "id": "reviews",
+      "name": "Reviews",
+      // One row per axis, by axis (the collection's default order).
+      "view": { "type": "table" }
+    }
+  ],
+  "sortPresets": [],
+  "filterPresets": [],
+  "customColumns": []
+}

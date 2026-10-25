@@ -64,6 +64,7 @@ the durable emit that follows.
     - `RefHeadSchema`
 - Cross-plugin:
   - Imported by:
+    - `plugin-meta/plugin-health`
     - `release`
     - `review/plugin-changes`
     - `tasks/attempt-work`

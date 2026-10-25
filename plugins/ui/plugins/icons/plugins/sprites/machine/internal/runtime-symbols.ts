@@ -6,11 +6,25 @@ import { buildSymbol, wrapSprite } from "./build-sprite";
 import { PACKAGE, setIdentity, withSymbolSets } from "./symbol-sets";
 
 /**
- * What a runtime symbol's drawing is a function of — the two Material Symbols
- * sets — so a runtime-symbols URL carrying it can be cached forever.
+ * The build of a runtime symbol from the sets: the nearest-style fallback
+ * (`resolveSymbol`), `buildSymbol` and the `runtimeSymbolId` scheme. Bump it
+ * with any change to what those produce — it is folded into
+ * {@link symbolsHash}, as `ACTIVE_FORM_VERSION` / `LUCIDE_TUNING_VERSION` are
+ * into the sprites' manifest hash.
+ */
+export const RUNTIME_SYMBOL_BUILD_VERSION =
+  "1: nearest-style fallback, msr-<key>-<name>";
+
+/**
+ * What a runtime symbol's answer is a function of — the two Material Symbols
+ * sets, the saved-name list (which decides the `unknown-name` refusal) and the
+ * build ({@link RUNTIME_SYMBOL_BUILD_VERSION}) — so a runtime-symbols tuple
+ * carrying it is `immutable`.
  */
 export const symbolsHash: string = createHash("sha256")
   .update([PACKAGE.regular, PACKAGE.light].map(setIdentity).join("\n"))
+  .update(allSavedSymbolNames().join(" "))
+  .update(RUNTIME_SYMBOL_BUILD_VERSION)
   .digest("hex")
   .slice(0, 16);
 

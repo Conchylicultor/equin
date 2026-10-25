@@ -1,17 +1,8 @@
 import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
-import { ndjsonResponse } from "@plugins/infra/plugins/ndjson-stream/server";
 import { openShortLivedClient } from "@plugins/database/plugins/admin/server";
 import { listLiveForkDatabases } from "@plugins/debug/plugins/slow-ops/plugins/cluster/server";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
-import {
-  runInBackgroundLane,
-  runWithoutProfiling,
-} from "@plugins/infra/plugins/runtime-profiler/core";
-import {
-  TimelineQuerySchema,
-  HOST_LANE,
-  type TimelineFrame,
-} from "../../shared/frames";
+import { HOST_LANE, type TimelineFrame } from "../../shared/frames";
 import { DB_SOURCES } from "./sources/db-sources";
 import type { DbSourceCtx } from "./sources/context";
 import { loadBootEvents } from "./sources/boot";
@@ -25,49 +16,30 @@ import { listWorktreeLogDirs } from "./log-dirs";
 const FANOUT_CONCURRENCY = 6;
 
 // This view gets opened DURING incidents. A saturated fork must produce an
-// error chunk within seconds, not hang the stream — every fan-out session
+// error chunk within seconds, not hang the scan — every fan-out session
 // sets this before its first query.
 const STATEMENT_TIMEOUT_MS = 10_000;
 
 type Emit = (frame: TimelineFrame) => void;
 
-// Streamed as NDJSON for the same reason the cluster tab is: the fan-out
-// across ~16 fork DBs can take tens of seconds under load, so the client gets
-// a determinate `{ total }` up front, then per-(source, worktree) chunks as
-// they resolve. Whole producer runs under the background lane with profiling
-// suppressed — observability must never feed the profiler or ride the
-// interactive lane (anti-amplification discipline).
-export function handleTimeline(req: Request): Response {
-  const url = new URL(req.url);
-  const parsed = TimelineQuerySchema.safeParse(
-    Object.fromEntries(url.searchParams),
-  );
-  if (!parsed.success || parsed.data.fromMs >= parsed.data.toMs) {
-    return new Response(
-      "fromMs and toMs are required (wall-clock epoch ms, fromMs < toMs)",
-      {
-        status: 400,
-      },
-    );
-  }
-  const { fromMs, toMs } = parsed.data;
-  return ndjsonResponse((emit) =>
-    runInBackgroundLane(() =>
-      runWithoutProfiling(() => produceTimeline(emit, fromMs, toMs)),
-    ),
-  );
-}
-
-// Exported so the in-process get_timeline MCP tool can drive the SAME producer
-// with an array-push emit (see internal/collect.ts) — one source of truth for
-// the fan-out, whether the frames stream to the web tab or collect into a
-// rendered text report.
+// The fan-out across ~16 fork DBs can take tens of seconds under load, so it
+// emits a determinate `{ total }` up front, then one frame per (source,
+// worktree) cell as it resolves. Two consumers drive it with their own emit:
+// the web tab's live scan (scan-served.ts — folds the frames into the
+// `debug.timeline.scan` value and pushes it as they arrive) and the in-process
+// get_timeline MCP tool (collect.ts — collects them into a rendered text
+// report). Callers run it under the background lane with profiling suppressed
+// — observability must never feed the profiler or ride the interactive lane
+// (anti-amplification discipline).
 export async function produceTimeline(
   emit: Emit,
   fromMs: number,
   toMs: number,
 ): Promise<void> {
-  const dbNames = await listLiveForkDatabases(Date.now());
+  // Which forks count as live is judged at the window's end — the question's
+  // `at` for the web scan — so one question always reads one fork set, however
+  // often its scan restarts.
+  const dbNames = await listLiveForkDatabases(toMs);
   const logWorktrees = listWorktreeLogDirs();
   // Planned chunk count: every (DB × DB-source) cell, one boot chunk per
   // worktree log dir, plus the single host-global duress chunk. Health frames
@@ -119,7 +91,8 @@ export async function produceTimeline(
       emit({ health: { worktree: HOST_LANE, samples: hostSamples } });
   } finally {
     // Always drain the DB fan-out, even if a disk scan threw — otherwise its
-    // late chunks would race the closed stream as unhandled rejections.
+    // late chunks would land after the producer resolved (a completed scan /
+    // collected report) or reject unhandled.
     await dbWork;
   }
 

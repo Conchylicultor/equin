@@ -6,11 +6,9 @@ import {
 import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState, type ReactElement } from "react";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
-import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
-import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   getEndpointErrorMessage,
   useFetchEndpoint,
@@ -21,14 +19,27 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { readNdjson } from "@plugins/infra/plugins/ndjson-stream/web";
+import { useLive } from "@plugins/network/plugins/live/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import {
-  listWorktrees,
+  DataView,
+  defineDataView,
+  useLivePagedValuePaging,
+  type FieldDef,
+} from "@plugins/primitives/plugins/data-view/web";
+import { confirmDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/plugins/confirm/web";
+import { showToast } from "@plugins/shell/plugins/toast/web";
+import {
   bulkDeleteWorktrees,
   deleteWorktree,
-  WorktreeEntrySchema,
   type ReapStep,
-  type WorktreeEntry,
 } from "../../shared/endpoints";
+import {
+  worktreeScan,
+  type WorktreeEntry,
+  type WorktreeScanMeta,
+  type WorktreeScanQuery,
+} from "../../shared/scan";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
@@ -37,8 +48,28 @@ const folderDeleteIcon = symbol("folder-delete");
 const refreshIcon = symbol("refresh");
 const warningIcon = symbol("warning");
 
+const WORKTREES = defineDataView("debug.worktree-cleanup.worktrees");
+const NO_ROWS: readonly WorktreeEntry[] = [];
+
+/**
+ * A field shown but never sorted, filtered, grouped or searched by: the rows
+ * are key-range pages by `createdAt`, and the DataView would do any of those
+ * in memory over the loaded pages only — "Safe = true" would show the safe
+ * rows of the pages loaded while "Delete N safe" removes the whole scan's.
+ */
+const ONLY_SHOWN = {
+  sortable: false,
+  filterable: false,
+  groupable: false,
+} as const;
+
+// The reap's steps, then its outcome — and, apart from it, a failure to
+// re-read the row after it (the list then shows the row as it was).
 type DeleteEvent =
-  { step: ReapStep } | { ok: true } | { ok: false; error: string };
+  | { step: ReapStep }
+  | { refreshError: string }
+  | { ok: true }
+  | { ok: false; error: string };
 
 function relativeAge(iso: string): string {
   const ms = Date.now() - new Date(iso).getTime();
@@ -51,202 +82,211 @@ function relativeAge(iso: string): string {
   return `${Math.floor(days / 30)}mo`;
 }
 
+const STATUS_COLOR: Record<string, string> = {
+  done: "bg-success/10 text-success",
+  dropped: "bg-muted text-muted-foreground",
+  in_progress: "bg-info/10 text-info",
+  need_action: "bg-warning/10 text-warning",
+  attempted: "bg-muted text-muted-foreground",
+  // A worktree dir on disk with no attempt row behind it — nothing but the
+  // checkout itself is left to describe it.
+  orphan: "bg-warning/10 text-warning",
+};
+
 function StatusBadge({ status }: { status: string }) {
-  const color: Record<string, string> = {
-    done: "bg-success/10 text-success",
-    dropped: "bg-muted text-muted-foreground",
-    in_progress: "bg-info/10 text-info",
-    need_action: "bg-warning/10 text-warning",
-    attempted: "bg-muted text-muted-foreground",
-    // A worktree dir on disk with no attempt row behind it — nothing but the
-    // checkout itself is left to describe it.
-    orphan: "bg-warning/10 text-warning",
-  };
   return (
-    <Badge colorClass={color[status]} className="inline-block">
+    <Badge colorClass={STATUS_COLOR[status]} className="inline-block">
       {status}
     </Badge>
   );
 }
 
+/** What is left of a worktree on disk and in the cluster, in one word. */
+type Remains = "fully-clean" | "no-dir" | "clean" | "uncommitted";
+
+function remainsOf(entry: WorktreeEntry): Remains {
+  if (!entry.dirExists && !entry.dbExists) return "fully-clean";
+  if (!entry.dirExists) return "no-dir";
+  return entry.isDirty ? "uncommitted" : "clean";
+}
+
 function DirtyIndicator({ entry }: { entry: WorktreeEntry }) {
-  if (!entry.dirExists && !entry.dbExists) {
-    return (
-      <Text as="span" variant="caption" className="text-success">
-        fully clean
-      </Text>
-    );
+  switch (remainsOf(entry)) {
+    case "fully-clean":
+      return (
+        <Text as="span" variant="caption" className="text-success">
+          fully clean
+        </Text>
+      );
+    case "no-dir":
+      return (
+        <Text
+          as="span"
+          variant="caption"
+          className="text-muted-foreground italic"
+        >
+          no dir
+        </Text>
+      );
+    case "clean":
+      return (
+        <Text as="span" variant="caption" className="text-muted-foreground">
+          clean
+        </Text>
+      );
+    case "uncommitted":
+      return (
+        <Text as="div" variant="caption" className="text-warning">
+          <Stack direction="row" gap="xs" align="center">
+            <Icon icon={warningIcon} className="size-3.5" />
+            uncommitted
+          </Stack>
+        </Text>
+      );
   }
-  if (!entry.dirExists) {
-    return (
-      <Text
-        as="span"
-        variant="caption"
-        className="text-muted-foreground italic"
-      >
-        no dir
-      </Text>
-    );
-  }
-  if (!entry.isDirty) {
-    return (
-      <Text as="span" variant="caption" className="text-muted-foreground">
-        clean
-      </Text>
-    );
-  }
+}
+
+/** The scan's progress, or once it is complete what it found. */
+function ScanSummary({ meta }: { meta: WorktreeScanMeta }): ReactElement {
   return (
-    <Text as="div" variant="caption" className="text-warning">
-      <Stack direction="row" gap="xs" align="center">
-        <Icon icon={warningIcon} className="size-3.5" />
-        uncommitted
-      </Stack>
+    <Text
+      as="span"
+      variant="caption"
+      className="text-muted-foreground truncate"
+    >
+      {meta.complete
+        ? `${meta.scanned} worktree${meta.scanned !== 1 ? "s" : ""} · ${meta.safe} safe to delete`
+        : `Scanning… ${meta.scanned}${meta.planned === null ? "" : ` / ${meta.planned}`}`}
     </Text>
   );
 }
 
+/**
+ * Debug → Worktree Cleanup: every worktree this host knows, newest first, with
+ * its hygiene and a Delete per row. One scan per mount and per Refresh
+ * (`debug.worktree-cleanup.worktrees`, each a new question at the clock's
+ * now), filled in live as rows are built and paged by the rows on screen; a
+ * delete re-reads the rows it touched, so the list stays true after it.
+ */
 export function WorktreeCleanupPanel() {
-  const transport = useTransport();
   const fetchEndpoint = useFetchEndpoint();
-  const [entries, setEntries] = useState<WorktreeEntry[] | null>(null);
-  const [listError, setListError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [deletingSteps, setDeletingSteps] = useState<Map<string, ReapStep>>(
-    new Map(),
-  );
-  const [confirmDirtyId, setConfirmDirtyId] = useState<string | null>(null);
-  const [rowErrors, setRowErrors] = useState<Map<string, string>>(new Map());
+  // The instant the scan is asked for — a new one is a new scan.
+  const [at, setAt] = useState(() => Date.now());
   const [bulkResult, setBulkResult] = useState<string | null>(null);
-
-  const loadAbort = useRef<AbortController | null>(null);
-
-  const load = useCallback(async () => {
-    loadAbort.current?.abort();
-    const ctrl = new AbortController();
-    loadAbort.current = ctrl;
-
-    setLoading(true);
-    setListError(null);
-    setBulkResult(null);
-    setEntries([]);
-
-    const acc: WorktreeEntry[] = [];
-    let ended = false;
-    let sinceFlush = 0;
-    try {
-      for await (const frame of readNdjson(
-        transport,
-        listWorktrees.route,
-        interpolatePath(listWorktrees.path, {}),
-        { signal: ctrl.signal },
-      )) {
-        if ("error" in frame) throw new Error(String(frame.error));
-        if ("end" in frame) {
-          ended = true;
-          continue;
-        }
-        acc.push(WorktreeEntrySchema.parse((frame as { item: unknown }).item));
-        // Batch renders (~25 setEntries for 1257 rows) instead of one per row.
-        if (++sinceFlush >= 50) {
-          sinceFlush = 0;
-          setEntries([...acc]);
-        }
-      }
-      setEntries([...acc]);
-      // A dropped socket yields no terminal sentinel — fail loud rather than
-      // render a partial list as if it were complete.
-      if (!ended) throw new Error("worktree list stream truncated");
-    } catch (e) {
-      if (ctrl.signal.aborted) return; // superseded by a newer load / unmount
-      setListError(getEndpointErrorMessage(e));
-    } finally {
-      if (!ctrl.signal.aborted) setLoading(false);
-    }
-  }, [transport]);
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- async NDJSON stream load: load() flushes setEntries in mid-stream batches as worktree rows arrive and sets loading/listError around the fan-out, with an AbortController (loadAbort ref) guarding stale/unmount writes. useEndpoint/useResource can't consume a progressive NDJSON stream, so this can't be derived in render.
-    void load();
-  }, [load]);
-
-  // Abort any in-flight stream on unmount.
-  useEffect(() => () => loadAbort.current?.abort(), []);
-
-  const deleteOne = useCallback(
-    async (id: string) => {
-      setDeletingSteps((prev) => new Map(prev).set(id, "worktree"));
-      setRowErrors((prev) => {
-        const next = new Map(prev);
-        next.delete(id);
-        return next;
-      });
-      try {
-        for await (const frame of readNdjson(
-          transport,
-          deleteWorktree.route,
-          interpolatePath(deleteWorktree.path, { id }),
-          { method: "DELETE" },
-        )) {
-          const event = frame as DeleteEvent;
-          if ("step" in event) {
-            setDeletingSteps((prev) => new Map(prev).set(id, event.step));
-          } else if (!event.ok) {
-            setRowErrors((prev) => new Map(prev).set(id, event.error));
-          }
-        }
-      } catch (e) {
-        setRowErrors((prev) => new Map(prev).set(id, String(e)));
-      } finally {
-        setDeletingSteps((prev) => {
-          const next = new Map(prev);
-          next.delete(id);
-          return next;
-        });
-      }
-      await load();
-    },
-    [transport, load],
-  );
-
-  const deleteSafe = useCallback(async () => {
-    if (!entries) return;
-    const safeIds = entries.filter((e) => e.isSafe).map((e) => e.attemptId);
-    if (safeIds.length === 0) return;
-
-    setBulkResult(null);
-    setLoading(true);
-    try {
-      const { succeeded, failed } = await fetchEndpoint(
-        bulkDeleteWorktrees,
-        {},
-        { body: { ids: safeIds } },
-      );
-      setBulkResult(
-        failed.length === 0
-          ? `Deleted ${succeeded} worktree${succeeded !== 1 ? "s" : ""}`
-          : `Deleted ${succeeded}, ${failed.length} error${failed.length !== 1 ? "s" : ""}`,
-      );
-      if (failed.length > 0) {
-        setRowErrors(new Map(failed.map((f) => [f.id, f.error])));
-      }
-    } catch (e) {
-      setBulkResult(`Error: ${getEndpointErrorMessage(e)}`);
-    } finally {
-      setLoading(false);
-    }
-    await load();
-  }, [fetchEndpoint, entries, load]);
-
-  // Server streams rows in completion order; sort for display (was a server sort).
-  const sortedEntries = useMemo(
+  const query = useMemo((): WorktreeScanQuery => ({ at }), [at]);
+  const meta = useLive(worktreeScan.meta, query);
+  const { pages, paging } = useLivePagedValuePaging<
+    WorktreeEntry,
+    WorktreeScanMeta,
+    WorktreeScanQuery,
+    WorktreeScanQuery
+  >(worktreeScan, query);
+  const readiness = useMemo(
     () =>
-      entries
-        ? [...entries].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-        : null,
-    [entries],
+      pages.status === "ready"
+        ? { status: "ready" as const, data: pages.rows }
+        : pages,
+    [pages],
+  );
+  const rows = pages.status === "ready" ? pages.rows : NO_ROWS;
+
+  const fields = useMemo<FieldDef<WorktreeEntry>[]>(
+    () => [
+      {
+        id: "task",
+        label: "Task",
+        type: "text",
+        primary: true,
+        width: "minmax(0,1fr)",
+        ...ONLY_SHOWN,
+        value: (e) => e.taskTitle,
+        cell: (e) => (
+          <Stack gap="2xs">
+            <Text
+              as="span"
+              variant="caption"
+              className="truncate font-medium"
+              title={e.taskTitle}
+            >
+              {e.taskTitle}
+            </Text>
+            <Stack direction="row" gap="xs" align="center">
+              <StatusBadge status={e.taskStatus} />
+              <span className="text-3xs text-muted-foreground font-mono truncate">
+                {e.worktreePath.split("/").pop() ?? e.attemptId}
+              </span>
+            </Stack>
+          </Stack>
+        ),
+      },
+      {
+        id: "taskStatus",
+        label: "Status",
+        type: "enum",
+        visible: false,
+        ...ONLY_SHOWN,
+        value: (e) => e.taskStatus,
+        options: [...Object.keys(STATUS_COLOR), "unknown"].map((s) => ({
+          value: s,
+          label: s,
+        })),
+      },
+      {
+        id: "createdAt",
+        label: "Age",
+        type: "date",
+        width: "5rem",
+        ...ONLY_SHOWN,
+        value: (e) => new Date(e.createdAt),
+        cell: (e) => (
+          <Text
+            as="span"
+            variant="caption"
+            className="text-muted-foreground whitespace-nowrap"
+          >
+            {relativeAge(e.createdAt)}
+          </Text>
+        ),
+      },
+      {
+        id: "remains",
+        label: "Dirty?",
+        type: "enum",
+        width: "8rem",
+        ...ONLY_SHOWN,
+        value: remainsOf,
+        options: [
+          { value: "uncommitted", label: "uncommitted", variant: "warning" },
+          { value: "clean", label: "clean" },
+          { value: "no-dir", label: "no dir" },
+          { value: "fully-clean", label: "fully clean", variant: "success" },
+        ],
+        cell: (e) => <DirtyIndicator entry={e} />,
+      },
+      {
+        id: "isSafe",
+        label: "Safe",
+        type: "bool",
+        width: "4rem",
+        ...ONLY_SHOWN,
+        value: (e) => e.isSafe,
+      },
+      {
+        id: "delete",
+        label: "Delete",
+        header: false,
+        width: "10rem",
+        align: "end",
+        filterable: false,
+        sortable: false,
+        cell: (e) => <DeleteAction entry={e} />,
+      },
+    ],
+    [],
   );
 
-  const safeCount = entries?.filter((e) => e.isSafe).length ?? 0;
+  const safeCount =
+    meta.status === "ready" && meta.data.complete ? meta.data.safe : 0;
 
   return (
     <Stack gap="none" className="h-full">
@@ -271,23 +311,48 @@ export function WorktreeCleanupPanel() {
           >
             Worktree Cleanup
           </Text>
-          {entries && entries.length > 0 && (
-            <Text
-              as="span"
-              variant="caption"
-              className="text-muted-foreground truncate"
-            >
-              {entries.length} worktree{entries.length !== 1 ? "s" : ""} ·{" "}
-              {safeCount} safe to delete
+          {meta.status === "loading" && (
+            <Text as="span" variant="caption" className="text-muted-foreground">
+              Scanning…
             </Text>
+          )}
+          {meta.status === "ready" && <ScanSummary meta={meta.data} />}
+          {meta.status === "error" && (
+            <ResourceErrorInline
+              error={meta.error}
+              // A failed scan is held as failed: Retry asks a new question.
+              refetch={async () => {
+                setBulkResult(null);
+                setAt(Date.now());
+              }}
+              variant="inline"
+              subject="the worktree scan"
+            />
           )}
         </Stack>
         <Stack direction="row" gap="sm" align="center" className={rigidClass()}>
           <Button
             variant="destructive"
-            onClick={deleteSafe}
-            loading={loading || deletingSteps.size > 0}
             disabled={safeCount === 0}
+            onClick={async () => {
+              setBulkResult(null);
+              try {
+                const { succeeded, failed } = await fetchEndpoint(
+                  bulkDeleteWorktrees,
+                  {},
+                  { body: { at } },
+                );
+                setBulkResult(
+                  failed.length === 0
+                    ? `Deleted ${succeeded} worktree${succeeded !== 1 ? "s" : ""}`
+                    : `Deleted ${succeeded}, ${failed.length} error${failed.length !== 1 ? "s" : ""}: ${failed
+                        .map((f) => `${f.id}: ${f.error}`)
+                        .join("; ")}`,
+                );
+              } catch (e) {
+                setBulkResult(`Error: ${getEndpointErrorMessage(e)}`);
+              }
+            }}
           >
             {/* eslint-disable-next-line spacing/no-adhoc-spacing -- icon-to-label inset inside a Button; parent is a 3rd-party Button, no gap to own it */}
             <Icon icon={folderDeleteIcon} className="size-4 mr-1.5" />
@@ -297,8 +362,14 @@ export function WorktreeCleanupPanel() {
             icon={refreshIcon}
             label="Refresh"
             variant="outline"
-            onClick={() => load()}
-            loading={loading}
+            loading={
+              meta.status === "loading" ||
+              (meta.status === "ready" && !meta.data.complete)
+            }
+            onClick={() => {
+              setBulkResult(null);
+              setAt(Date.now());
+            }}
           />
         </Stack>
       </Stack>
@@ -327,48 +398,17 @@ export function WorktreeCleanupPanel() {
 
       {/* Content */}
       <Scroll axis="both" fill>
-        {listError ? (
-          <Placeholder tone="error">{listError}</Placeholder>
-        ) : loading && (!sortedEntries || sortedEntries.length === 0) ? (
-          <Loading />
-        ) : sortedEntries?.length === 0 ? (
-          <Placeholder>No worktrees found.</Placeholder>
-        ) : (
-          <table className="w-full text-body">
-            <thead>
-              <tr className="border-b text-caption text-muted-foreground">
-                <th className="text-left font-medium px-lg py-sm">Task</th>
-                <th className="text-left font-medium px-lg py-sm">Age</th>
-                <th className="text-left font-medium px-lg py-sm">Dirty?</th>
-                <th className="px-lg py-sm" />
-              </tr>
-            </thead>
-            <tbody>
-              {sortedEntries?.map((entry) => (
-                <EntryRow
-                  key={entry.attemptId}
-                  entry={entry}
-                  deletingStep={deletingSteps.get(entry.attemptId) ?? null}
-                  highlighted={entry.isSafe}
-                  error={rowErrors.get(entry.attemptId) ?? null}
-                  confirmOpen={confirmDirtyId === entry.attemptId}
-                  onDelete={() => {
-                    if (!entry.isSafe && entry.dirExists) {
-                      setConfirmDirtyId(entry.attemptId);
-                    } else {
-                      void deleteOne(entry.attemptId);
-                    }
-                  }}
-                  onConfirm={() => {
-                    setConfirmDirtyId(null);
-                    void deleteOne(entry.attemptId);
-                  }}
-                  onCancelConfirm={() => setConfirmDirtyId(null)}
-                />
-              ))}
-            </tbody>
-          </table>
-        )}
+        <DataView<WorktreeEntry>
+          rows={rows}
+          fields={fields}
+          rowKey={(e) => e.attemptId}
+          storageKey={WORKTREES}
+          views={["table", "list"]}
+          defaultView="table"
+          readiness={readiness}
+          paging={paging ?? undefined}
+          emptyState="No worktrees found."
+        />
       </Scroll>
     </Stack>
   );
@@ -386,134 +426,98 @@ const STEP_LABEL: Record<ReapStep, string> = {
   registry: "Deregistering…",
 };
 
-function EntryRow({
-  entry,
-  deletingStep,
-  highlighted,
-  error,
-  confirmOpen,
-  onDelete,
-  onConfirm,
-  onCancelConfirm,
-}: {
-  entry: WorktreeEntry;
-  deletingStep: ReapStep | null;
-  highlighted: boolean;
-  error: string | null;
-  confirmOpen: boolean;
-  onDelete: () => void;
-  onConfirm: () => void;
-  onCancelConfirm: () => void;
-}) {
+/**
+ * One row's Delete: streams the reap's steps into its label, and — for a
+ * worktree the reaper would not call safe — asks first. The row itself is
+ * re-read by the server once the reap ends, so the list never needs a reload.
+ */
+function DeleteAction({ entry }: { entry: WorktreeEntry }): ReactElement {
+  const transport = useTransport();
+  const [step, setStep] = useState<ReapStep | null>(null);
   const branchName = entry.worktreePath.split("/").pop() ?? entry.attemptId;
 
+  const reap = async (): Promise<void> => {
+    setStep("worktree");
+    try {
+      for await (const frame of readNdjson(
+        transport,
+        deleteWorktree.route,
+        interpolatePath(deleteWorktree.path, { id: entry.attemptId }),
+        { method: "DELETE" },
+      )) {
+        const event = frame as DeleteEvent;
+        if ("step" in event) setStep(event.step);
+        else if ("refreshError" in event)
+          showToast({
+            variant: "error",
+            title: `Could not re-read ${branchName} after the delete`,
+            description: event.refreshError,
+          });
+        else if (!event.ok)
+          showToast({
+            variant: "error",
+            title: `Could not delete ${branchName}`,
+            description: event.error,
+          });
+      }
+    } catch (e) {
+      showToast({
+        variant: "error",
+        title: `Could not delete ${branchName}`,
+        description: getEndpointErrorMessage(e),
+      });
+    } finally {
+      setStep(null);
+    }
+  };
+
+  if (!entry.dirExists && !entry.dbExists) {
+    return (
+      <ControlSizeProvider size="sm">
+        <Button variant="ghost" disabled className="opacity-40 cursor-default">
+          {/* eslint-disable-next-line spacing/no-adhoc-spacing -- icon-to-label inset inside a Button; parent is a 3rd-party Button, no gap to own it */}
+          <Icon icon={deleteIcon} className="size-3.5 mr-1" />
+          Drop DB
+        </Button>
+      </ControlSizeProvider>
+    );
+  }
   return (
-    <>
-      <tr
-        className={`border-b transition-colors ${highlighted ? "bg-destructive/10" : "hover:bg-muted/30"}`}
+    <ControlSizeProvider size="sm">
+      <Button
+        variant={entry.isSafe || !entry.dirExists ? "outline" : "ghost"}
+        disabled={step !== null}
+        onClick={() => {
+          if (!entry.isSafe && entry.dirExists) {
+            void confirmDialog({
+              title: "Delete anyway?",
+              description: entry.isDirty
+                ? "This worktree has uncommitted changes."
+                : "This worktree is not finished (open conversation, open task, or under 72 h old).",
+              confirmLabel: "Delete",
+              onConfirm: () => {
+                void reap();
+              },
+            });
+            return;
+          }
+          void reap();
+        }}
       >
-        <td className="px-lg py-sm max-w-[220px]">
-          <Stack gap="2xs">
-            <Text
-              as="span"
-              variant="caption"
-              className="truncate font-medium"
-              title={entry.taskTitle}
-            >
-              {entry.taskTitle}
-            </Text>
-            <Stack direction="row" gap="xs" align="center">
-              <StatusBadge status={entry.taskStatus} />
-              <span className="text-3xs text-muted-foreground font-mono truncate">
-                {branchName}
-              </span>
-            </Stack>
-          </Stack>
-        </td>
-        <td className="px-lg py-sm text-caption text-muted-foreground whitespace-nowrap">
-          {relativeAge(entry.createdAt)}
-        </td>
-        <td className="px-lg py-sm">
-          <DirtyIndicator entry={entry} />
-        </td>
-        <td className="px-lg py-sm text-right whitespace-nowrap">
-          <ControlSizeProvider size="sm">
-            {!entry.dirExists && !entry.dbExists ? (
-              <Button
-                variant="ghost"
-                disabled
-                className="opacity-40 cursor-default"
-              >
-                {/* eslint-disable-next-line spacing/no-adhoc-spacing -- icon-to-label inset inside a Button; parent is a 3rd-party Button, no gap to own it */}
-                <Icon icon={deleteIcon} className="size-3.5 mr-1" />
-                Drop DB
-              </Button>
-            ) : (
-              <Button
-                variant={entry.isSafe || !entry.dirExists ? "outline" : "ghost"}
-                onClick={onDelete}
-                disabled={deletingStep != null}
-              >
-                {deletingStep != null ? (
-                  <>
-                    {/* eslint-disable-next-line spacing/no-adhoc-spacing -- icon-to-label inset inside a Button; parent is a 3rd-party Button, no gap to own it */}
-                    <Spinner className="size-3.5 mr-1" />
-                    {STEP_LABEL[deletingStep]}
-                  </>
-                ) : (
-                  <>
-                    {/* eslint-disable-next-line spacing/no-adhoc-spacing -- icon-to-label inset inside a Button; parent is a 3rd-party Button, no gap to own it */}
-                    <Icon icon={deleteIcon} className="size-3.5 mr-1" />
-                    {entry.dirExists ? "Delete" : "Drop DB"}
-                  </>
-                )}
-              </Button>
-            )}
-          </ControlSizeProvider>
-        </td>
-      </tr>
-
-      {/* Inline confirmation for dirty worktrees */}
-      {confirmOpen && (
-        <tr className="border-b bg-warning/5">
-          <td colSpan={5} className="px-lg py-sm">
-            <Stack direction="row" gap="lg" align="center" justify="between">
-              <Text as="span" variant="caption" className="text-warning">
-                {entry.isDirty
-                  ? "This worktree has uncommitted changes."
-                  : "This worktree is not finished (open conversation, open task, or under 72 h old)."}{" "}
-                Delete anyway?
-              </Text>
-              <ControlSizeProvider size="sm">
-                <Stack
-                  direction="row"
-                  gap="sm"
-                  align="center"
-                  className={rigidClass()}
-                >
-                  <Button variant="outline" onClick={onCancelConfirm}>
-                    Cancel
-                  </Button>
-                  <Button variant="destructive" onClick={onConfirm}>
-                    Delete
-                  </Button>
-                </Stack>
-              </ControlSizeProvider>
-            </Stack>
-          </td>
-        </tr>
-      )}
-
-      {/* Per-row error */}
-      {error && (
-        <tr className="border-b">
-          <td colSpan={5} className="px-lg py-xs">
-            <Text as="span" variant="caption" className="text-destructive">
-              {error}
-            </Text>
-          </td>
-        </tr>
-      )}
-    </>
+        {step !== null ? (
+          <>
+            {/* eslint-disable-next-line spacing/no-adhoc-spacing -- icon-to-label inset inside a Button; parent is a 3rd-party Button, no gap to own it */}
+            <Spinner className="size-3.5 mr-1" />
+            {STEP_LABEL[step]}
+          </>
+        ) : (
+          <>
+            {/* eslint-disable-next-line spacing/no-adhoc-spacing -- icon-to-label inset inside a Button; parent is a 3rd-party Button, no gap to own it */}
+            <Icon icon={deleteIcon} className="size-3.5 mr-1" />
+            {entry.dirExists ? "Delete" : "Drop DB"}
+          </>
+        )}
+      </Button>
+    </ControlSizeProvider>
   );
 }

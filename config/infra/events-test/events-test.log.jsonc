@@ -1,0 +1,14 @@
+// @hash 6ec84829688d
+{
+  "views": [
+    {
+      "id": "log",
+      "name": "Job log",
+      // In the order the jobs fired: the source's own order, no sort.
+      "view": { "type": "table" }
+    }
+  ],
+  "sortPresets": [],
+  "filterPresets": [],
+  "customColumns": []
+}

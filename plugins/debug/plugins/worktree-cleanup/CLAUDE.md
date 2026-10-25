@@ -61,6 +61,37 @@ keeps its own timeout.
 
 The manual delete endpoints still run `reapAttempt` inside the request.
 
+## The panel reads one scan — `debug.worktree-cleanup.worktrees` (`shared/scan.ts`)
+
+A key-range-PAGED value over the question `{ at }` (the instant the panel
+asked: mount or Refresh, each a new question), newest first by `createdAt`:
+the list grows with every attempt ever made, so the DataView reads it by
+viewport (`useLivePagedValuePaging`) and only the pages on screen are live.
+Its meta sibling is the scan's progress and safe count
+(`{ planned, scanned, complete, safe }`).
+
+Served external `"notified"` (`server/internal/scan-served.ts`): the
+question's first subscriber starts ONE scan (`produceWorktreeEntries`,
+`server/internal/entries.ts` — every attempt, then every dir orphan on main),
+held in memory and pushed every 50 rows built and on completion, dropped at
+the last unsubscribe. Nothing else watches the disk, so after completion only
+deletes move it: `DELETE /:id` and `POST /bulk-delete` call
+`refreshScannedRows(ids)` once their reaps end, which rebuilds those rows in
+every held scan (one catalog query for all of them; an attempt's row survives
+as "fully clean", a reaped dir orphan's leaves) and pushes them; the hourly
+sweep, which reaps in its own child, calls `refreshSweptRows` from its
+`onEnded` in this backend — it finds the held rows whose dir or fork DB moved
+(`movedEntryIds`) and re-reads those. The completed scan's `scanned` is the
+rows it holds, so a removed row leaves the count too. The list's fields sort,
+filter, group and search by nothing — not even `createdAt`: the paged value
+serves one order (newest first), and the DataView would do any sort or filter
+over the loaded pages only. "Delete N safe" sends the scan's question,
+not ids: the server deletes the safe rows of the scan the panel holds
+(`safeIdsOf`, refused 409 while it is not held or not complete), so the panel
+never has to hold the whole list. The scan's safe set can be hours old, so each
+id is rebuilt (`rebuildEntries`) and judged again just before its reap; one no
+longer safe is returned failed (`no longer safe`), never reaped.
+
 ## The step vocabulary is shared
 
 `ReapStep` lives in `shared/endpoints.ts`, so the server's `onStep` and the
@@ -78,55 +109,74 @@ the panel until it is given something to say.
   - Contributes:
     - `Pane.Register` "worktree-cleanup"
     - `DebugApp.Sidebar` "Worktree Cleanup"
-  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/data-view` ×4
     - `primitives/css/ui-kit` ×3
     - `primitives/pane` ×3
     - `infra/endpoints` ×2
     - `apps/debug/shell.DebugApp`
     - `infra/ndjson-stream.readNdjson`
+    - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.fillClasses`
-    - `primitives/css/placeholder.Placeholder`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/spinner.Spinner`
     - `primitives/css/text.Text`
     - `primitives/icon-button.IconButton`
-    - `primitives/loading.Loading`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/networking.useTransport`
+    - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
+    - `shell/toast.showToast`
     - `ui/icons.Icon`
   - Exports (values): `worktreeCleanupPane`
 - Server:
-  - Contributes: `report-kind` "worktree-reap-failed"
-  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Contributes:
+    - `report-kind` "worktree-reap-failed"
+    - `resource.declare` "debug.worktree-cleanup.worktrees"
+    - `resource.declare` "debug.worktree-cleanup.worktrees:meta"
+  - Uses: 34 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra/worktree` ×10
     - `infra/worktree/reclaim` ×4
+    - `tasks/tasks-core` ×4
     - `database/admin` ×3
-    - `tasks/tasks-core` ×3
-    - `infra/endpoints` ×2
+    - `infra/endpoints` ×3
     - `infra/host/host-read-pool` ×2
     - `infra/paths` ×2
+    - `network/live` ×2
     - `infra/jobs/supervised-job.defineSupervisedJob`
     - `infra/ndjson-stream.ndjsonResponse`
     - `primitives/log-channels.defineLogSink`
     - `reports.ReportKind`
   - Register: `defineSupervisedJob('worktree-cleanup.reap-stale')`
+  - Resources:
+    - `debug.worktree-cleanup.worktrees` (keyed, window, notified)
+    - `debug.worktree-cleanup.worktrees:meta` (push, notified)
   - Routes:
-    - `GET /api/debug/worktrees`
     - `POST /api/debug/worktrees/bulk-delete`
     - `DELETE /api/debug/worktrees/:id`
 - Cross-plugin:
-  - Uses tokens: 22 vars — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ui/tokens/type-scale` ×10
-    - `ui/tokens/color-palette` ×6
-    - `ui/tokens/density` ×4
+  - Uses tokens:
+    - `ui/tokens/color-palette --info`
+    - `ui/tokens/color-palette --muted`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --success`
+    - `ui/tokens/color-palette --warning`
+    - `ui/tokens/density --space-lg`
+    - `ui/tokens/density --space-md`
+    - `ui/tokens/density --space-sm`
     - `ui/tokens/font-family --font-mono`
     - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-scale`
+    - `ui/tokens/type-scale --font-size-3xs`
+    - `ui/tokens/type-scale --font-weight-medium`
+    - `ui/tokens/type-scale --font-weight-semibold`
+    - `ui/tokens/type-scale --line-height-3xs`
 - Exemptions:
   - Exempts itself from:
+    - `no-db-backed-notify` — `server/internal/scan-served.ts` (sanctioned)
     - `endpoints:no-raw-json-handlers` — `server/internal/handle-delete.ts` (sanctioned)
-    - `live/no-endpoint-read` — `web/components/worktree-cleanup-panel.tsx` (debt)
     - `boundaries/no-platform-api` — `server/internal/dirs.ts`, `server/internal/reap-policy.ts`, `server/internal/reap.ts` (debt)
 - Shared:
   - Exports (types): `BulkDeleteWorktreesBody`
@@ -134,6 +184,5 @@ the panel until it is given something to say.
     - `bulkDeleteWorktrees`
     - `BulkDeleteWorktreesBodySchema`
     - `deleteWorktree`
-    - `listWorktrees`
 
 <!-- AUTOGENERATED:END -->

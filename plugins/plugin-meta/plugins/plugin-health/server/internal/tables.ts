@@ -27,7 +27,7 @@ const pluginHealthReviews = defineEntity(pluginHealthReviewsEntityRef, {
 export const _pluginHealthReviews = pluginHealthReviews.table;
 
 // Which tasks belong to a review. The `review_id` index serves the only read
-// keyed on a foreign column — `handleGetTasksForReview` (see ./routes.ts),
+// keyed on a foreign column — the `plugin-health.review-tasks` value (see ./review-tasks.ts),
 // `WHERE review_id = X` joined to `_tasks` on the `taskId` key (`parent_id`);
 // the pk's implicit btree covers the join side, not the filter. The row never
 // reaches the browser, so the shape is declared here rather than in `shared/`.

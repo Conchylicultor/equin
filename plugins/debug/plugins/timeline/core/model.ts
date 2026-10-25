@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { wholeRecord } from "@plugins/packages/plugins/list-bound/core";
 
 // ---------------------------------------------------------------------------
 // The closed, normalized wire model of the cross-worktree timeline.
@@ -47,6 +48,8 @@ export const TimelineEventSchema = z.object({
   // Deep-link to the trace detail pane when the source row carries one.
   traceId: z.string().optional(),
   // Source-specific extras for the detail strip. Opaque to the wire model.
-  detail: z.record(z.unknown()),
+  detail: wholeRecord(z.unknown(), {
+    reason: "one event's few source-specific fields, written by its extractor",
+  }),
 });
 export type TimelineEvent = z.infer<typeof TimelineEventSchema>;

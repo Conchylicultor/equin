@@ -1,107 +1,118 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   DrawCanvas,
   applyStrokes,
   type Stroke,
 } from "@plugins/screenshot/plugins/draw-canvas/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import {
-  EndpointError,
-  useFetchEndpoint,
-} from "@plugins/infra/plugins/endpoints/web";
+  foldResource,
+  mapResource,
+  ResourceErrorInline,
+} from "@plugins/primitives/plugins/live-state/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
-import { getScreenshot } from "../../shared/endpoints";
+import { screenshotImage } from "../../shared/image";
 import { ToolsPane, type Tool, type DrawSettings } from "./tools-pane";
 import { CropOverlay, type CropRect } from "./crop-overlay";
 import { PromptForm } from "./prompt-form";
 
+/**
+ * How long a `missing` screenshot reads as "still uploading" before the pane
+ * says it is not there. The capturing tab opens this one before its upload
+ * lands, so a short wait is normal; past this, the id names nothing (expired,
+ * or lost to a server restart). Only the copy changes: the read stays live, so
+ * a late upload still shows.
+ */
+const UPLOAD_GRACE_MS = 30_000;
+
 export function ScreenshotView({ id }: { id: string }) {
-  const fetchEndpoint = useFetchEndpoint();
-  const [imageBlob, setImageBlob] = useState<Blob | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  // The capture handed over by the capturing tab (BroadcastChannel), when it
+  // arrives before the server's copy.
+  const [broadcast, setBroadcast] = useState<Blob | null>(null);
+  // The image after a committed crop / applied drawing; null = the original.
+  const [edited, setEdited] = useState<Blob | null>(null);
+  const [uploadOverdue, setUploadOverdue] = useState(false);
   const [tool, setTool] = useState<Tool>("none");
   const [strokes, setStrokes] = useState<Stroke[]>([]);
   const [draw, setDraw] = useState<DrawSettings>({
     color: "#ef4444",
     width: 4,
   });
-  // Set to true once the blob is delivered (either via BroadcastChannel or
-  // server poll) so the other path knows to bail out.
-  const blobDelivered = useRef(false);
 
   function resetEdits() {
     setTool("none");
     setStrokes([]);
   }
 
-  // Primary delivery: BroadcastChannel receives the blob directly from the
-  // capturing tab the instant domToBlob finishes — no server roundtrip.
-  // Send a "ready" ping so the original tab replies even if it finished
-  // broadcasting before this tab's listener was set up.
+  // The server's copy, live: refused `missing` until the capturing tab's
+  // upload lands, which notifies this tuple. Not read once the broadcast
+  // delivered the same image.
+  const stored = useLive(screenshotImage, broadcast === null ? { id } : null);
+  const storedBlob = useMemo(
+    () =>
+      mapResource(stored, (bytes) => new Blob([bytes], { type: "image/png" })),
+    [stored],
+  );
+  const storedReady = stored.status === "ready";
+
+  // Fast path: the capturing tab broadcasts the blob the instant domToBlob
+  // finishes — no server round trip. The "ready" ping makes it re-send when it
+  // broadcast before this listener was up. Whichever copy lands first wins:
+  // the channel closes once the server's copy is here.
   useEffect(() => {
+    if (storedReady) return;
     const ch = new BroadcastChannel(`screenshot:${id}`);
     ch.onmessage = (e: MessageEvent) => {
       if (e.data instanceof Blob) {
-        blobDelivered.current = true;
-        setImageBlob(e.data);
-        resetEdits();
+        setBroadcast(e.data);
         ch.close();
       }
     };
     ch.postMessage("ready");
     return () => ch.close();
-  }, [id]);
-
-  // Fallback delivery: server poll handles page refreshes and cases where the
-  // BroadcastChannel message was missed (tab not yet listening when sent).
-  const reload = useCallback(async () => {
-    setError(null);
-    const deadline = Date.now() + 30_000;
-    while (true) {
-      if (blobDelivered.current) return;
-      try {
-        const blob = await fetchEndpoint(getScreenshot, { id });
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-        if (!blobDelivered.current) {
-          setImageBlob(blob);
-          resetEdits();
-        }
-        return;
-      } catch (err) {
-        // A 404 means the screenshot has not been uploaded yet — keep polling
-        // until the deadline. Any other error (or a 404 past the deadline) is
-        // terminal.
-        if (
-          err instanceof EndpointError &&
-          err.status === 404 &&
-          Date.now() <= deadline
-        ) {
-          await new Promise((r) => setTimeout(r, 150));
-          continue;
-        }
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-        if (!blobDelivered.current) {
-          setError(
-            err instanceof EndpointError && err.status === 404
-              ? "Screenshot not found"
-              : err instanceof EndpointError
-                ? `Failed (${err.status})`
-                : (err as Error).message,
-          );
-        }
-        return;
-      }
-    }
-  }, [fetchEndpoint, id]);
+  }, [id, storedReady]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- poll-on-mount: reload() is a self-contained 30s poll-with-retry (BroadcastChannel-raced, 404-backoff) that writes imageBlob/error; no data-fetching primitive (useEndpoint/useResource) covers this retry-loop pattern, and the fetch must be kicked off on mount/reload
-    void reload();
-  }, [reload]);
+    const timer = setTimeout(() => setUploadOverdue(true), UPLOAD_GRACE_MS);
+    return () => clearTimeout(timer);
+  }, [id]);
+
+  // The image the tools act on (copy, download, apply, the prompt's
+  // attachment): the edit, else whichever original copy is here. Absent while
+  // neither has arrived — every tool then does nothing.
+  // A failed re-read (the server lost the image to a restart) keeps the copy
+  // it last read: the read's `stale`, drawn and acted on as before.
+  const shown = edited ?? broadcast;
+  const imageBlob: Blob | null =
+    shown ??
+    foldResource(storedBlob, {
+      loading: () => null,
+      error: (_error, stale) => stale ?? null,
+      ready: (blob) => blob,
+    });
+
+  function stage(blob: Blob) {
+    return (
+      <ImageStage
+        blob={blob}
+        tool={tool}
+        onCropCommit={async (rect) => {
+          const base =
+            strokes.length > 0 ? await applyStrokes(blob, strokes) : blob;
+          setEdited(await applyCrop(base, rect));
+          resetEdits();
+        }}
+        strokes={strokes}
+        onStrokesChange={setStrokes}
+        drawSettings={draw}
+      />
+    );
+  }
 
   return (
     // eslint-disable-next-line layout/no-adhoc-layout -- full-surface split row that also clips (flex-row + overflow-hidden, no single primitive)
@@ -110,30 +121,31 @@ export function ScreenshotView({ id }: { id: string }) {
       <div className="flex min-h-0 flex-1 flex-col">
         <Clip fill>
           <Center className="relative h-full w-full bg-muted/40">
-            {error ? (
-              <Text as="div" variant="body" tone="muted">
-                {error}
-              </Text>
-            ) : !imageBlob ? (
-              <Loading />
-            ) : (
-              <ImageStage
-                blob={imageBlob}
-                tool={tool}
-                onCropCommit={async (rect) => {
-                  const base =
-                    strokes.length > 0
-                      ? await applyStrokes(imageBlob, strokes)
-                      : imageBlob;
-                  const next = await applyCrop(base, rect);
-                  setImageBlob(next);
-                  resetEdits();
-                }}
-                strokes={strokes}
-                onStrokesChange={setStrokes}
-                drawSettings={draw}
-              />
-            )}
+            {shown !== null
+              ? stage(shown)
+              : foldResource(storedBlob, {
+                  loading: () => <Loading />,
+                  error: (error, stale) =>
+                    stale !== undefined ? (
+                      stage(stale)
+                    ) : error.kind === "refused" && error.code === "missing" ? (
+                      uploadOverdue ? (
+                        <Text as="div" variant="body" tone="muted">
+                          Screenshot not found
+                        </Text>
+                      ) : (
+                        <Loading />
+                      )
+                    ) : (
+                      <ResourceErrorInline
+                        error={error}
+                        refetch={stored.refetch}
+                        variant="block"
+                        subject="the screenshot"
+                      />
+                    ),
+                  ready: stage,
+                })}
           </Center>
         </Clip>
         <PromptForm
@@ -156,8 +168,7 @@ export function ScreenshotView({ id }: { id: string }) {
           hasStrokes={strokes.length > 0}
           onApplyDraw={async () => {
             if (!imageBlob || strokes.length === 0) return;
-            const next = await applyStrokes(imageBlob, strokes);
-            setImageBlob(next);
+            setEdited(await applyStrokes(imageBlob, strokes));
             resetEdits();
           }}
           onClearStrokes={() => setStrokes([])}
@@ -186,8 +197,8 @@ export function ScreenshotView({ id }: { id: string }) {
             URL.revokeObjectURL(url);
           }}
           onReset={() => {
-            blobDelivered.current = false;
-            void reload();
+            setEdited(null);
+            resetEdits();
           }}
         />
       </div>

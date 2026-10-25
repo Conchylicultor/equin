@@ -1,61 +1,66 @@
 import type { StyleKey } from "@plugins/ui/plugins/icons/core";
 import type { RuntimeSymbolEntry } from "@plugins/ui/plugins/icons/web";
+import { MAX_RUNTIME_SYMBOLS_PER_READ } from "../../core";
 
-/** The route's cap, mirrored: a batch larger than this is split. */
-export const MAX_NAMES_PER_FETCH = 200;
+/** One read's worth of wants: `names` sorted and duplicate-free, in one style. */
+export interface RuntimeSymbolBatch {
+  /** The runtime-symbol chunk the batch lands as (unique per loader). */
+  readonly chunkId: string;
+  readonly styleKey: StyleKey;
+  readonly names: readonly string[];
+}
 
-export interface RuntimeSymbolLoaderDeps {
-  /** Fetch `names` (sorted, duplicate-free) in `styleKey`: the whole `<svg>`. */
-  fetchSymbols(styleKey: StyleKey, names: readonly string[]): Promise<string>;
-  /** Run `flush` once, later — on the next animation frame in the browser. */
-  schedule(flush: () => void): void;
-  /** A batch landed: hold it as runtime-symbol chunk `chunkId`. */
-  onLoaded(
-    chunkId: string,
-    markup: string,
-    entries: readonly RuntimeSymbolEntry[],
-  ): void;
-  onError(err: Error): void;
+export interface RuntimeSymbolLoader {
+  /** Want runtime symbol `name` in `styleKey` (a no-op once wanted). */
+  request(entry: RuntimeSymbolEntry): void;
+  /** The batches not yet landed, oldest first — a new array on every change. */
+  batches(): readonly RuntimeSymbolBatch[];
+  subscribe(listener: () => void): () => void;
+  /** Batch `chunkId` was provided to the sheet: stop reading it. */
+  landed(chunkId: string): void;
 }
 
 /**
- * Turns `<Icon>`'s one-at-a-time wants into few requests: every want made
- * before the scheduled flush is batched — one fetch per style key (split past
- * {@link MAX_NAMES_PER_FETCH}), names sorted so the URL is content-addressed —
- * and a name already requested (in flight or landed) is never requested again.
- * A failed batch releases its names (a later want retries) and is reported.
+ * Turns `<Icon>`'s one-at-a-time wants into few reads: every want made before
+ * the scheduled flush becomes one batch per style key (split past
+ * {@link MAX_RUNTIME_SYMBOLS_PER_READ}), names sorted so the batch is one
+ * content-addressed `icons.runtime-symbols` tuple; a name already wanted is
+ * never batched again. The host reads `batches()` with `useLive` — a batch,
+ * once made, never changes, so a later frame's wants open a new tuple and
+ * leave the earlier ones alone — and calls `landed` once a batch's symbols
+ * are in the sheet, so the tuples read at once are only the ones in flight.
  */
-export function createRuntimeSymbolLoader(deps: RuntimeSymbolLoaderDeps): {
-  request(entry: RuntimeSymbolEntry): void;
-} {
+export function createRuntimeSymbolLoader(
+  schedule: (flush: () => void) => void,
+): RuntimeSymbolLoader {
   const requested = new Set<string>();
   let queued = new Map<StyleKey, Set<string>>();
   let scheduled = false;
-  let batch = 0;
+  let next = 0;
+  let pending: readonly RuntimeSymbolBatch[] = [];
+  const listeners = new Set<() => void>();
+  const changed = () => {
+    for (const l of listeners) l();
+  };
 
   const flush = () => {
     scheduled = false;
     const work = queued;
     queued = new Map();
+    const made: RuntimeSymbolBatch[] = [];
     for (const [styleKey, set] of work) {
       const names = [...set].sort();
-      for (let i = 0; i < names.length; i += MAX_NAMES_PER_FETCH) {
-        const slice = names.slice(i, i + MAX_NAMES_PER_FETCH);
-        const chunkId = `runtime-${styleKey}-${batch++}`;
-        deps.fetchSymbols(styleKey, slice).then(
-          (markup) =>
-            deps.onLoaded(
-              chunkId,
-              markup,
-              slice.map((name) => ({ styleKey, name })),
-            ),
-          (err: unknown) => {
-            for (const name of slice) requested.delete(`${styleKey} ${name}`);
-            deps.onError(err instanceof Error ? err : new Error(String(err)));
-          },
-        );
+      for (let i = 0; i < names.length; i += MAX_RUNTIME_SYMBOLS_PER_READ) {
+        made.push({
+          chunkId: `runtime-${styleKey}-${next++}`,
+          styleKey,
+          names: names.slice(i, i + MAX_RUNTIME_SYMBOLS_PER_READ),
+        });
       }
     }
+    if (made.length === 0) return;
+    pending = [...pending, ...made];
+    changed();
   };
 
   return {
@@ -68,8 +73,18 @@ export function createRuntimeSymbolLoader(deps: RuntimeSymbolLoaderDeps): {
       set.add(name);
       if (!scheduled) {
         scheduled = true;
-        deps.schedule(flush);
+        schedule(flush);
       }
+    },
+    batches: () => pending,
+    subscribe(listener) {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+    landed(chunkId) {
+      if (!pending.some((b) => b.chunkId === chunkId)) return;
+      pending = pending.filter((b) => b.chunkId !== chunkId);
+      changed();
     },
   };
 }

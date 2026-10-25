@@ -4,7 +4,7 @@ import type { ContentionSnapshot } from "@plugins/infra/plugins/host/plugins/con
 import type {
   ClusterSlowOp as SlowOp,
   ClusterWorktree,
-} from "../../shared/endpoints";
+} from "../../shared/scan";
 import {
   buildClusterAggregate,
   buildContentionTimeline,
@@ -53,10 +53,32 @@ function op(over: Partial<SlowOp> = {}): SlowOp {
 }
 
 function worktree(name: string, ops: SlowOp[]): ClusterWorktree {
-  return { name, ok: true, ops };
+  return { name, ok: true, ops, opCount: ops.length };
 }
 
 describe("buildClusterAggregate", () => {
+  test("an op a truncated fork did not report may be under-counted there", () => {
+    const a = worktree("wt-a", [op({ worktree: "wt-a", operation: "x" })]);
+    const b = {
+      ...worktree("wt-b", [op({ worktree: "wt-b", operation: "y" })]),
+      opCount: 500,
+    };
+    const c = {
+      ...worktree("wt-c", [
+        op({ worktree: "wt-c", operation: "x" }),
+        op({ worktree: "wt-c", operation: "y" }),
+      ]),
+      opCount: 300,
+    };
+    const byOp = new Map(
+      buildClusterAggregate([a, b, c]).map((r) => [r.operation, r]),
+    );
+    // wt-b holds 500 rows but sent its heaviest only, and "x" was not among them.
+    expect(byOp.get("x")?.maybeUncountedIn).toEqual(["wt-b"]);
+    // Every truncated fork reported "y": its sums are exact.
+    expect(byOp.get("y")?.maybeUncountedIn).toEqual([]);
+  });
+
   test("groups same op across worktrees: sums count/totalMs, max maxMs, latest lastSeenAt", () => {
     const result = buildClusterAggregate([
       worktree("wt-a", [
@@ -107,7 +129,7 @@ describe("buildClusterAggregate", () => {
 
   test("ignores failed worktrees", () => {
     const result = buildClusterAggregate([
-      { name: "wt-broken", ok: false, error: "boom", ops: [] },
+      { name: "wt-broken", ok: false, error: "boom", ops: [], opCount: 0 },
       worktree("wt-a", [op()]),
     ]);
     expect(result).toHaveLength(1);
@@ -187,6 +209,7 @@ describe("failedWorktrees", () => {
         ok: false,
         error: "column recent_samples does not exist",
         ops: [],
+        opCount: 0,
       },
     ]);
     expect(result).toEqual([

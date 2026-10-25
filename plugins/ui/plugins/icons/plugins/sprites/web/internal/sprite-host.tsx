@@ -1,16 +1,18 @@
-import { useEffect, useLayoutEffect, useState } from "react";
-import { fetchEndpointOver } from "@plugins/infra/plugins/endpoints/web";
-import { pageTransport } from "@plugins/primitives/plugins/networking/plugins/page-transport/web";
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { useLive } from "@plugins/network/plugins/live/web";
 import {
   isSpriteKey,
   isStyleKey,
   type SpriteKey,
-  type StyleKey,
 } from "@plugins/ui/plugins/icons/core";
 import {
   IconSpriteSheet,
-  hasSprite,
   installRuntimeSymbolLoader,
   provideRuntimeSymbols,
   provideSprite,
@@ -18,38 +20,18 @@ import {
   useWantedStyleKeys,
 } from "@plugins/ui/plugins/icons/web";
 import {
+  iconSprite,
   residentSprites,
-  runtimeSymbolsEndpoint,
+  runtimeSymbolsValue,
   savedIconSprites,
-  spriteEndpoint,
   type IconSprites,
   type SavedIconSprites,
 } from "../../core";
 import { createRuntimeSymbolLoader } from "./runtime-symbol-loader";
 
-// The page's icon sprites: page chrome, always loaded from the page's own server.
-const fetchEndpoint = fetchEndpointOver(pageTransport);
-
 function spriteKey(key: string): SpriteKey {
   if (isSpriteKey(key)) return key;
   throw new Error(`[icons] the server sent an unknown sprite key "${key}"`);
-}
-
-// Sprites being fetched, page-wide: a re-render never starts a second request
-// for the same key.
-const inflight = new Set<SpriteKey>();
-
-async function fetchSprite(key: SpriteKey, hash: string): Promise<string> {
-  const answer = await fetchEndpoint(
-    spriteEndpoint,
-    { hash, key },
-    // Idempotent and content-addressed: a retry cannot land twice.
-    { retry: { retries: 3, backoffMs: 300 } },
-  );
-  // Only reached once the resident sprites loaded, which they only do with the
-  // computer behind the page — so this is a broken assumption, said.
-  if (answer.kind === "unavailable") throw new Error(answer.message);
-  return await answer.value.text();
 }
 
 /**
@@ -81,33 +63,16 @@ export function IconSpriteHost() {
   return <LoadedSprites resident={resident.data} saved={saved.data} />;
 }
 
-async function fetchRuntimeSymbols(
-  hash: string,
-  key: StyleKey,
-  names: readonly string[],
-): Promise<string> {
-  const answer = await fetchEndpoint(
-    runtimeSymbolsEndpoint,
-    { hash, key },
-    // Idempotent and content-addressed, like a sprite.
-    {
-      query: { names: names.join(",") },
-      retry: { retries: 3, backoffMs: 300 },
-    },
-  );
-  // Only reached once the saved sprites loaded (the computer is behind the
-  // page) — a broken assumption if not, said.
-  if (answer.kind === "unavailable") throw new Error(answer.message);
-  return await answer.value.text();
-}
-
 /**
  * Holds the resident saved-icon symbols and installs the runtime-symbol loader:
- * every name `<Icon>` wants in a style no chunk holds is batched (one fetch per
- * style key per frame) and appended to the sheet. A failed batch is thrown into
- * this contribution's error boundary, like a failed sprite.
+ * every name `<Icon>` wants in a style no chunk holds is batched (one batch per
+ * style key per frame), read as one `icons.runtime-symbols` tuple per batch
+ * while it is in flight, and appended to the sheet. A refused batch is thrown
+ * into this contribution's error boundary; any other failure is reported by
+ * live-state's resource-error sink and leaves that batch's icons on their
+ * fallback, like a failed sprite.
  */
-function useSavedSymbols(saved: SavedIconSprites, fail: (err: Error) => void) {
+function useSavedSymbols(saved: SavedIconSprites) {
   useLayoutEffect(() => {
     for (const [key, markup] of Object.entries(saved.sprites)) {
       const styleKey = spriteKey(key);
@@ -125,28 +90,54 @@ function useSavedSymbols(saved: SavedIconSprites, fail: (err: Error) => void) {
     }
   }, [saved]);
 
-  const { symbolsHash } = saved;
-  useEffect(() => {
-    const loader = createRuntimeSymbolLoader({
-      fetchSymbols: (key, names) =>
-        fetchRuntimeSymbols(symbolsHash, key, names),
-      schedule: (flush) => void requestAnimationFrame(flush),
-      onLoaded: provideRuntimeSymbols,
-      onError: fail,
-    });
-    return installRuntimeSymbolLoader(loader.request);
-  }, [symbolsHash, fail]);
+  const [loader] = useState(() =>
+    createRuntimeSymbolLoader((flush) => void requestAnimationFrame(flush)),
+  );
+  useEffect(() => installRuntimeSymbolLoader(loader.request), [loader]);
+
+  const batches = useSyncExternalStore(loader.subscribe, loader.batches);
+  const reads = useLive(
+    runtimeSymbolsValue,
+    batches.map((b) => ({
+      hash: saved.symbolsHash,
+      key: b.styleKey,
+      names: b.names.join(","),
+    })),
+  );
+  // Only reached once the saved sprites loaded (the computer is behind the
+  // page) — a broken assumption if not, said.
+  if ("status" in reads) throw new Error(reads.message);
+  // One result per batch, in order.
+  const landed = batches.map((batch, i) => ({ batch, read: reads[i] }));
+  for (const { read } of landed) {
+    // A refusal (an unknown style or name, unsorted names, a sets hash this
+    // server does not serve) is a contract fault no retry fixes.
+    if (read?.status === "error" && read.error.kind === "refused")
+      throw read.error;
+  }
+  useLayoutEffect(() => {
+    for (const { batch, read } of landed) {
+      if (read?.status !== "ready") continue;
+      provideRuntimeSymbols(
+        batch.chunkId,
+        read.data,
+        batch.names.map((name) => ({ styleKey: batch.styleKey, name })),
+      );
+      // The sheet keeps the chunk: the tuple need not stay read.
+      loader.landed(batch.chunkId);
+    }
+  });
 }
 
 /**
- * Provides the resident sprites and fetches, on demand, the sprite of every
+ * Provides the resident sprites and reads, on demand, the sprite of every
  * style some theme scope wants that is not resident — and every sprite some
  * mounted icon asked for (the Seti file-type glyphs and a Lucide scope's
- * glyphs, never resident).
+ * glyphs, never resident) — as one live read per key (`icons.sprite`).
  *
- * A failed fetch is thrown from render, into this contribution's error
- * boundary, rather than leaving that style's icons on the default glyphs with
- * no word said.
+ * A refused read is thrown from render, into this contribution's error
+ * boundary; a transient failure is reported and leaves that key unprovided
+ * (its icons draw their fallback), so a blip never takes the sheet down.
  */
 function LoadedSprites({
   resident,
@@ -157,9 +148,7 @@ function LoadedSprites({
 }) {
   const wantedStyles = useWantedStyleKeys();
   const wantedSprites = useWantedSprites();
-  const [failure, setFailure] = useState<Error | null>(null);
-  useSavedSymbols(saved, setFailure);
-  if (failure) throw failure;
+  useSavedSymbols(saved);
 
   // A layout effect: the store update re-renders the sheet (and every icon
   // waiting on a sprite) before the browser paints.
@@ -169,23 +158,38 @@ function LoadedSprites({
     }
   }, [resident]);
 
-  const { manifestHash } = resident;
-  useEffect(() => {
-    for (const key of [...wantedStyles, ...wantedSprites]) {
-      if (hasSprite(key) || inflight.has(key)) continue;
-      inflight.add(key);
-      void fetchSprite(key, manifestHash).then(
-        (markup) => {
-          inflight.delete(key);
-          provideSprite(key, markup);
-        },
-        (err: unknown) => {
-          inflight.delete(key);
-          setFailure(err instanceof Error ? err : new Error(String(err)));
-        },
-      );
+  // Every wanted key the resident value does not carry, once each. A key
+  // stays read while it is wanted; the sheet keeps a sprite once provided.
+  const onDemand = useMemo(
+    () =>
+      [...new Set([...wantedStyles, ...wantedSprites])].filter(
+        (key) => !Object.hasOwn(resident.sprites, key),
+      ),
+    [wantedStyles, wantedSprites, resident],
+  );
+  const reads = useLive(
+    iconSprite,
+    onDemand.map((key) => ({ hash: resident.manifestHash, key })),
+  );
+  // Only reached once the resident sprites loaded, which they only do with the
+  // computer behind the page — so this is a broken assumption, said.
+  if ("status" in reads) throw new Error(reads.message);
+  // One result per key, in order.
+  const sprites = onDemand.map((key, i) => ({ key, read: reads[i] }));
+  for (const { read } of sprites) {
+    // A refusal (an unknown key, a manifest this server does not serve) is a
+    // contract fault no retry fixes: thrown, into this contribution's error
+    // boundary. Any other failure leaves that key's icons on their fallback
+    // glyphs — as a failed resident read leaves the sheet empty — and is
+    // reported by live-state's resource-error sink; the sheet stays up.
+    if (read?.status === "error" && read.error.kind === "refused")
+      throw read.error;
+  }
+  useLayoutEffect(() => {
+    for (const { key, read } of sprites) {
+      if (read?.status === "ready") provideSprite(key, read.data);
     }
-  }, [wantedStyles, wantedSprites, manifestHash]);
+  });
 
   return <IconSpriteSheet />;
 }

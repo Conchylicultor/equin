@@ -799,7 +799,7 @@ Batch B7 covers themes, where a write has to show up in the list the same user i
 
 | Site | Value key | Source / changes | Endpoint | Debt entry |
 |---|---|---|---|---|
-| saved-themes `web/internal/use-saved-themes.ts` (the resident `ThemeSource`) | `saved-themes.list` (whole list, `unbounded` with a reason, `preload: "boot-and-keep"`) | `db`, routed on `saved_themes` (full map) | **`listSavedThemes` (`GET /api/saved-themes`) deleted** | removed |
+| saved-themes `web/internal/use-saved-themes.ts` (the resident `ThemeSource`) | `saved-themes.list` (whole list — since the list-bound change a `wholeList` with a reason, was `unbounded` — `preload: "boot-and-keep"`) | `db`, routed on `saved_themes` (full map) | **`listSavedThemes` (`GET /api/saved-themes`) deleted** | removed |
 | saved-themes `web/boot.ts` (the `Core.Boot` `hydrateEndpoint` task) | (same: boot snapshot via `preload`) | — | — | file deleted |
 | saved-themes `web/use-edit-theme.ts` (copy and patch, `invalidates:`) | waits on `saved-themes.list` through `awaitSavedThemesWrite` | — | writes answer `SavedThemeWrite` `{theme, watermark}` | removed |
 | saved-themes `web/remove-saved-theme.ts` / `refresh-saved-themes.ts` | `whenNoScopeSelects`, then `awaitSavedThemesWrite` | — | delete answers `{reassigned, watermark}` | `refresh-saved-themes.ts` deleted |
@@ -978,7 +978,7 @@ Batch B9 covers the interim Stats values: Cost (8 sites), Commits (4), Pushes (3
 | commits: `commits-category-charts` | `stats.commits.counts-by-category` (`+ categoryId`) | same, plus `reads: conversation_categories` (full) and a category-config watch | (same endpoints) | removed |
 | commits: `lines-charts` (4 charts) | `stats.commits.lines`, `stats.commits.lines-by-ext` | same, plus a commits-config watch (excluded paths); the manual `invalidateQueries` is gone | `/lines/cumulative`, `/lines/rate` deleted | removed |
 | pushes: `wait-time-chart`, `throughput-chart`, `step-breakdown-chart` | `stats.pushes.wait-time` / `.throughput` / `.step-breakdown` `{bucket}` (`needsMachine`, served from `machine/`) | `db`, routed `full` on `op_log_ops`, `throttleMs: 5000` | 3 GETs deleted | removed (manifest deleted) |
-| tasks: `tasks-cumulative-chart`, `tasks-velocity-chart` | `stats.tasks.history` (one row per UTC day, `unbounded` with a reason) | `db`, relation read `tasks_v` (bases: tasks, attempts, attempt_deliveries, conversations, pushes, task_dependencies), `throttleMs: 1000` | `/cumulative`, `/daily` deleted | removed (manifest deleted) |
+| tasks: `tasks-cumulative-chart`, `tasks-velocity-chart` | `stats.tasks.history` (one row per UTC day, a `wholeList` with a reason — was `unbounded` before the list-bound change) | `db`, relation read `tasks_v` (bases: tasks, attempts, attempt_deliveries, conversations, pushes, task_dependencies), `throttleMs: 1000` | `/cumulative`, `/daily` deleted | removed (manifest deleted) |
 
 ### Integration fixes
 
@@ -1083,3 +1083,250 @@ What changed, per finding:
 - **The new debt is tracked.** The `throttleMs` drain is task-1792636104-uyhq3k and the commits cold parse is task-1792636107-t4nqnp. Both are cited in Open.
 - **The keys and modules are consistent.** The keys are now `stats.pushes.*` and `stats.tasks.history`; the span labels follow. The value modules are `shared/values.ts` in all four sub-plugins (cost's `live.ts` and tasks' `history.ts` were renamed).
 - **The commits parse cache is bounded.** A read at a new HEAD drops every parse taken at another HEAD. At most 2 excluded-path combinations are kept (least recently read dropped first), plus the unfiltered parse.
+
+## Result (B10a)
+
+Batch B10a covers four hidden reads from P0.2 (plugin-health, events-test, screenshot, icon sprites) and the three NDJSON streams (debug timeline, the slow-ops cluster, worktree cleanup). All seven sites now read through `useLive` (the sprite site's runtime saved symbols last, as `icons.runtime-symbols` — see Review fixes). All seven `live/no-endpoint-read` debt entries are deleted, and so is plugin-health's emptied `exempt/` manifest. Verdicts:
+
+- **Check:** `regen-generated` and `format` changed nothing (0 files reformatted). `./equin check` then failed only `web-artifacts:map-in-sync`, because the dist was stale. The build fixed it. The `type-check` failures the hidden-reads implementer saw on the timeline and worktree-cleanup files were gone once the ndjson implementer finished.
+- **Test:** `./equin test` on slow-ops (with cluster), timeline, worktree-cleanup, events-test, plugin-health, screenshot, `ui/icons`, `network/live`, `infra/ndjson-stream` and `no-db-backed-notify` gave 945 bun:test passes and 2 fails, plus 123 vitest passes (11 files).
+  - Both failures are in `debug/slow-ops/server/internal/record-slow-op.test.ts` › "writeSlowOpRows (real DB)". The error is a `database.migration-source` host service with no provider in the combined bun process, followed by an `afterAll` crash that cascades from it. **B10a did not cause them.** The file is untouched since the merge-base, it is not on any B10a path, and it passes alone: `./equin test plugins/debug/plugins/slow-ops/server/internal/record-slow-op.test.ts` gives 11 passes and 0 fails. This is a test-isolation problem in the multi-plugin run.
+- **Build:** green with checks (build-1792678378-ujo51q).
+
+### Per site
+
+| Site | Value key | Source / freshness (`_debug`) | Endpoint | Debt |
+|---|---|---|---|---|
+| plugin-health `health-section.tsx` (staleness) | `plugin-health.staleness` `{pluginId, commitHash}`, on-demand; refusals `invalid-commit`, `unknown-commit` | external `notified`, `dependsOn: ["git-watcher.refHead"]` (mode `invalidate`) | `GET …/staleness` deleted, plus the dead `GET /api/plugin-health/reviews` | removed (manifest deleted) |
+| plugin-health (review tasks) | `plugin-health.review-tasks` `{reviewId}` → counts `{open, dropped, held}` | db, routed on `tasks_ext_health_review` + `tasks`, `throttleMs: 1000` | `GET …/tasks` deleted | (same) |
+| events-test `events-test-view.tsx` (triggers) | the existing `event-triggers` value (infra/events), filtered to `events_test.pinged` | db, routed per trigger table | `GET /api/events-test/triggers` **kept** (called over HTTP by `e2e/events-test-flow.ts`) | removed |
+| events-test (job log) | `events-test.log` → `{entries: newest 200, total}` | external `notified` (job append and `resetLog`) | `GET /api/events-test/log` **kept** (same e2e) | (same) |
+| screenshot `screenshot-view.tsx` | `screenshot.image` `{id}`, `bytes: true`; refusal `missing` | external `notified` (`put()`); expiry deliberately does not notify | `GET /api/screenshots/:id` deleted | removed |
+| icons/sprites `sprite-host.tsx` | `icons.sprite` `{hash, key}`, on-demand; refusals `unknown-key`, `stale-manifest` (superseded by Review fixes (B10a): content address restored) | external `immutable` (content-addressed by the manifest hash) | `GET /api/icons/sprite/:hash/:key` deleted | removed |
+| icons/sprites (runtime symbols) | `icons.runtime-symbols` `{hash, key, names}`, on-demand; refusals `unknown-key`, `stale-symbols`, `invalid-names`, `unknown-name` | external `immutable` (content-addressed by `symbolsHash` and the sorted names) | the runtime-symbols GET route deleted | removed |
+| debug/timeline `use-timeline-stream.ts` (deleted) | `debug.timeline.scan` `{lookbackMs, at}`, `patches: true`; refusal `invalid-window` | external `notified` (about 40 pushes per scan plus completion) | `GET /api/debug/timeline` deleted | removed |
+| slow-ops/cluster `use-cluster-stream.ts` (deleted) | `debug.slow-ops.cluster.scan` `{at}`, `patches: true`; the heaviest 100 rows per fork plus `opCount` | external `notified` | `GET /api/slow-ops/cluster` deleted | removed |
+| worktree-cleanup `worktree-cleanup-panel.tsx` | `debug.worktree-cleanup.worktrees` `{at}`, paged (limit 100, maxLimit 500), plus `…:meta` `{planned, scanned, complete, safe}`; the panel is now a DataView | external `notified` (a push every 50 rows plus completion; this panel's deletes re-read their rows) | `GET /api/debug/worktrees` deleted; bulk-delete body is now `{at}` | removed |
+
+`/api/resources/_debug` lists every new key with exactly the freshness in this table.
+
+### Live evidence
+
+Everything below ran on `http://att-1791598784-yegtlr.localhost:9000` through the `browser_*` session, plus one headless `screenshot.ts` run (`/tmp/live-migration-shots/B10a-timeline-{before,after}.png`). The tab's network log shows no request to `/api/{debug,slow-ops,screenshots,icons,plugin-health,events-test}` other than the slow-ops client POSTs.
+
+- **Timeline (verified, progressive).**
+  - The text was sampled every 150 ms after clicking the tab. It read "Scanning sources…", then "Scanning sources… 226 / 234" at 766 ms, then "1139 events · 229 cells merged · 5 failed · 28 older not shown" at 917 ms.
+  - Changing the lookback to 15m started a new question. It read "Scanning sources… 170 / 234", then "381 events · 229 cells merged · 5 failed", and the axis label became "TIMELINE 15m 0s".
+  - The 5 failed cells are old forks whose DB has no `traces` table. They show "error: relation "traces" does not exist", which is a data condition and not B10a.
+  - The Gantt draws incident bands, per-worktree lanes and health strips (`B10a-timeline-after.png`).
+- **Cluster (verified, progressive).** The header read "Scanning worktrees… 0 / 16", then "2 / 16" at 1.6 s, then "16 worktrees merged · heaviest 100 ops of 11 worktrees" at 2.3 s. The Cluster Aggregate table filled; its top row is `config-v2.values` across 2 worktrees.
+- **Worktree cleanup (list verified; action not driven).** The list read "Scanning… 4808 / 4844" at 0.2 s and "4844 worktrees · 0 safe to delete" at 9.2 s. The DataView shows Task, Age, Dirty and Safe columns, with All worktrees and Safe-to-delete views.
+  - The newest row is this worktree (12d old). This DB is a 12-day-old fork, so its `attempts` stop there, as with the old endpoint.
+  - **No cleanup was driven.** Every enabled action deletes another worktree or drops its DB fork, and nothing was safe to delete. So "a delete refreshes the list" is **not verified live**.
+- **Events test (verified fresh both ways).**
+  - Subscribing a one-shot trigger with label `b10a-check` showed "Active triggers (1)" without a reload.
+  - Emitting `pinged` for `u-b10a` then dropped it to "Active triggers (0)" (one-shot fired) and showed "Job log (1)": "b10a-check fired for userId=u-b10a msg="hello"", job 1959592, with no reload and no poll.
+  - Clear reset the log to "Job log (0)". `_debug` showed `events-test.log` with 2 hand notifies.
+- **Screenshot (verified fresh, including the refused-then-notified path).**
+  - `/agents/screenshot/b10a-fresh-0001` was opened before the id existed, and it showed "Loading…" (refusal `missing`).
+  - A PNG was then POSTed from outside the page with `curl -X POST /api/screenshots/b10a-fresh-0001`. Within 3 s the editor showed the image with no reload; `_debug` showed `screenshot.image` with 1 hand notify.
+  - This settles the implementer's open question: a refused tuple is re-read when its source notifies.
+  - The toolbar capture path (BroadcastChannel) was not driven. See Open about its URL.
+- **Icon sprites (verified).**
+  - In the Files app, `~/__A__/dev/singularity` draws its Seti file-type glyphs (lock, gear, Claude, ESLint, `$`, npm). Seti is never resident.
+  - `_debug` showed `icons.sprite` with 4 subscribed tuples: `rounded-filled-400`, `rounded-outline-400`, `lucide` and `seti`. These are the non-default styles and sprites some scope wanted, each read on demand.
+- **Plugin health (not verified live).** `plugin_health_reviews` is empty in both this worktree's DB and main's. `useHealthAvailable` therefore hides the section on every plugin; `/studio/p/screenshot` shows no Health section. Neither value could be driven against data.
+
+### Deviations (from the implementers, accepted)
+
+- **plugin-health:**
+  - Review tasks are counts, not rows.
+  - Staleness is one value per review row (`{commitsSince, apiChanged}`).
+  - A commit hash that is not hex is refused. The old endpoint passed it to git, which was an option-injection hole.
+- **events-test:**
+  - It reuses `event-triggers` rather than a new value.
+  - The log is bounded to the newest 200 entries.
+  - The Refresh button and the 1 s poll are gone.
+- **screenshot:**
+  - The BroadcastChannel fast path stays, because it is push.
+  - A `missing` refusal shows Loading for 30 s, then "Screenshot not found" (a one-shot timer that only changes the text).
+  - Expiry does not notify, so an open editor keeps its image.
+- ~~**icons.sprite:** the manifest hash is dropped (`fixed` per process, like `residentSprites`). A tab that outlives a restart with a different manifest no longer gets the 409 "reload the page" error.~~ Superseded by Review fixes (B10a): the content address is restored (`{hash, key}`, served `immutable`), and a stale hash is refused `stale-manifest`.
+- **NDJSON sites:**
+  - Each scan is held per question `at` in `whileSubscribed` and dropped at the last unsubscribe. A loader read with no subscription throws.
+  - Bulk delete takes `{at}` and answers 409 unless that scan is open and complete.
+  - Cluster and worktree scans now run unprofiled on the background lane.
+  - In the worktree panel, per-row errors are toasts, the unsafe-delete confirm is a `confirmDialog`, and the Delete button lives in a field cell, not `defineItemActions`.
+  - The MCP renderer's dead `{error}` frame path is removed.
+- **No `needsMachine` split** for any of the seven. They stay in `server/`, under the existing split debt task-1792338443-riwqev.
+- **Three new sanctioned `no-db-backed-notify` exemptions**, in the `scan-served.ts` of timeline, cluster and worktree-cleanup. **Accepted as genuinely sanctioned**, following the mail.search precedent:
+  - Each value's truth is other forks' DBs or the disk, which this backend's change feed cannot see.
+  - The only local Postgres read (`listAttempts` / `listTasks`) is inside the scan `whileSubscribed` starts, frozen at the question's `at` by design.
+  - Declaring `reads: attempts` would recompute every open scan on each attempts write, for nothing.
+- **Hand-rendered lists:** superseded by Review fixes (B10a) — the plugin-health table and the events-test trigger and log lists are now DataViews.
+
+### Open (B10a)
+
+- **The screenshot toolbar button opens a URL that does not exist** (predates B10a, and is the same on main). `screenshot-button.tsx` calls `window.open('/screenshot/<id>')`, but the pane lives in the agent-manager app at `/agents/screenshot/:id`. Both this build and `http://equin.localhost:9000/screenshot/<id>` render "This page doesn't exist". The BroadcastChannel hand-off therefore lands in a not-found tab.
+- **The held-scan registry** (about 40 lines) is repeated in timeline, cluster and worktree-cleanup: task-1792679797-o5b98w.
+- **`record-slow-op.test.ts` fails in a multi-plugin `./equin test` run** (no `database.migration-source` provider) but passes alone. This predates B10a.
+- **Not verified live:** plugin-health (no review rows anywhere), and a worktree-cleanup delete refreshing the list (destructive).
+- **State left behind:** the in-memory screenshot `b10a-fresh-0001`, which expires within an hour. The `b10a-check` trigger fired and is gone, and the events-test log was cleared.
+- `./equin exempt list --rule live/no-endpoint-read --debt`: **7** exemptions remain (14 before B10a), all debt, all in the `build/*` and `profiling/build` plugins.
+
+### Review fixes (B10a)
+
+Twenty-two review findings, each judged; all applied (two in the alternative form a finding offered).
+
+- **worktree-cleanup.**
+  - *Batched re-read.* `rebuildEntry(id)` became `rebuildEntries(ids)` (`entries.ts`): one `listDatabases()` for all ids, then attempt / task reads and row builds at the scan's bounded concurrency (50). A bulk delete of N rows is no longer ~3N serial round trips.
+  - *Count after a removed row.* The meta's `scanned` is the rows the scan holds once complete (`entries.size`), so a reaped dir orphan leaves the header's count.
+  - *Refresh failure is not the reap's outcome.* `handle-delete.ts` holds the reap's outcome, re-reads the row, then emits it. A refresh failure is its own `{ refreshError }` frame (toasted as "Could not re-read …"), never "Could not delete" and never in place of the reap's error.
+  - *Filters over a partial window.* Every field but `createdAt` (the paged key) is `sortable`/`filterable`/`groupable: false` (`ONLY_SHOWN`), and the committed `Safe to delete` view (an in-memory `isSafe` filter) is deleted from `config/debug/worktree-cleanup/debug.worktree-cleanup.worktrees.jsonc`. The header's "N safe to delete" is the whole-scan count.
+  - *The hourly sweep notifies.* It reaps in its supervised child, which cannot reach the panel's in-memory scans, so the job's `onEnded` (run in this backend) calls `refreshSweptRows()`: it finds the held rows whose dir or fork DB moved (`movedEntryIds` — one catalog query, one stat per row with something left) and re-reads them through `refreshScannedRows`. Every delete path now ends in one function.
+  - *Comments.* The three `handle-list` mentions now name `entries.ts`.
+- **slow-ops cluster: per-fork truncation is marked, not hidden.** Taken the finding's second form (the merge stays client-side and unit-tested): each aggregate row carries `maybeUncountedIn` — the truncated forks that did not report the op — and its Count and Total cells read `≥ N` (title lists those forks). The caption says "totals cover the heaviest 100 ops of 11 worktrees (≥ marks a sum that may miss one)". New test in `aggregate.test.ts`. Live, with 11 of 16 forks truncated, every row reads `≥`: that is the honest answer for this cluster.
+- **timeline.** `produceTimeline` judges fork liveness at `toMs` (the question's `at` for the web scan, the MCP tool's own `toMs`), so the sanctioned exemption's reason now matches the code. `collect.ts`'s comment names the live scan, not the deleted `handleTimeline`.
+- **icon sprites.**
+  - *Content address restored.* `icons.sprite` is `params: ["hash", "key"]`, `refusals: ["unknown-key", "stale-manifest"]`, served `immutable` ("content-addressed by the manifest hash"); the loader refuses a hash not this process's. The host reads `{ hash: resident.manifestHash, key }`. `manifestHash` is therefore live again; its doc comment and both CLAUDE.md files say what it is for (finding "manifestHash is dead" resolved by this, not by deleting it).
+  - *A blip no longer takes the sheet down.* Only a refusal is thrown into the error boundary; any other failure is reported by live-state's resource-error sink and leaves that key unprovided (its icons draw their fallback) — as the resident read already did.
+  - *`hasSprite`* is out of the icons web barrel (its only caller is internal).
+  - *Runtime symbols moved onto `icons.runtime-symbols`* (the hidden `fetchRuntimeSymbols` read, P0 open item 5). Params `["hash", "key", "names"]`: `hash` the resident `symbolsHash`, `key` a style key, `names` a comma-joined, sorted, duplicate-free list of at most `MAX_RUNTIME_SYMBOLS_PER_READ` = 200 saved names — one spelling per set, so the tuple is content-addressed; `load: "on-demand"`, served external `immutable` ("content-addressed by the symbol sets' hash and the sorted names"). Refusals `unknown-key`, `stale-symbols` (a hash not this process's), `invalid-names` (empty, unsorted, duplicated, over the cap), `unknown-name`. The loader keeps the batching and needs no imperative read: `createRuntimeSymbolLoader` is now a batch store — `<Icon>`'s wants (still installed through `installRuntimeSymbolLoader`) become one immutable batch per style key per frame, never re-batching a wanted name — and the host reads the batches with `useSyncExternalStore` + `useLive(runtimeSymbolsValue, batches.map(…))`, providing each landed chunk to the sheet and then dropping its batch (`landed`), so the tuples read at once are only the ones in flight (bounded by wants per frame / 200, never one per name nor one per name ever seen). A refusal throws into the host's error boundary; a transient failure is reported and leaves that batch on its fallback (the old loader threw every failure). `GET /api/icons/symbols/:hash/:key`, its handler and test are deleted (no other caller, incl. server/cli/e2e); the sprite `web/internal` debt entry is removed.
+- **plugin-health.**
+  - *Refusal only for a commit git does not hold.* `git rev-parse --verify --quiet <sha>^{commit}` runs first; exit 1 is the `unknown-commit` refusal, any other non-zero exit of the probe, `rev-list` or `diff` is a plain Error (loader-failed, reported, retryable).
+  - *The review table is a DataView* over `liveDataSource(pluginHealthReviews).scoped({ where: { pluginId } })`, with the axis as the collection's field and the health dot, Reviewed, Commits and Findings as `extraFields` whose cells each `useLive` their value. Not verified live: still no `plugin_health_reviews` rows anywhere.
+- **events-test.** The trigger and job-log lists are in-memory DataViews (`views={["table"]}`; the trigger's flash highlight moved onto its userId chip). Verified live: one subscribed trigger and one fired job rendered as rows, then were cleaned up (trigger deleted, log reset).
+- **screenshot.** The store keeps an image any tab is subscribed to (`whileSubscribed` adds the id to `held`; `gc` skips held ids), so a held tab's re-read is never refused. An image lost to a restart is covered in the view: the error arm draws `stale` when the read carries one, and `imageBlob` falls back to it, so copy, download and the prompt keep working. The store comment says exactly that.
+- **ndjson-stream.** Its CLAUDE.md (and server description) now says it streams a mutation's progress; a progressive read is a `notified` live value filled by `whileSubscribed` (`debug.timeline.scan`), never a GET NDJSON stream.
+- **Held-scan registry duplication:** filed as task-1792679797-o5b98w (sidequest), cited in Open.
+- **events-test GET endpoints kept — a decision.** `GET /api/events-test/log` and `/triggers` stay for `e2e/events-test-flow.ts`, which asserts on the whole log and clears the triggers over plain HTTP; moving it onto the resource HTTP read would make an e2e script decode the live-state envelope for a debug harness. The unbounded log read is test-only (the log is reset at the flow's start and holds a handful of entries); the pane reads the bounded live value.
+- **Verdicts:** `./equin check` — only generated / format drift (`format-clean`, `plugins-registry-in-sync`, `data-views-in-sync`, `web-artifacts:map-in-sync`, `plugins-doc-in-sync`), `type-check` green; the build regenerated them. First build failed `config:overrides-authored` on the three seeded DataView configs of the new views (`events-test.{log,triggers}`, `plugin-health.reviews`); each is now authored (one table view, source order). `./equin test` on worktree-cleanup, cluster, timeline, `ui/icons`, plugin-health, screenshot, events-test and ndjson-stream: 35 bun:test files and 1 vitest file (16 tests), all exit 0. Build green with checks (build-1792681443-za955h).
+- **Re-verified live** on that build: the cluster tab completes "16 worktrees merged · totals cover the heaviest 100 ops of 11 worktrees (≥ marks a sum that may miss one)" with `≥` on Count / Total (columns widened to fit); the worktree panel completes "4844 worktrees · 0 safe to delete" with only the All worktrees view; the events-test DataViews render a trigger row and a job-log row (`/tmp/b10a-fix/events-test2-before.png`). Not driven: a panel or sweep delete (destructive), the sprite `stale-manifest` refusal (needs a restart with a changed manifest), plugin-health (no rows).
+
+
+### Rebase onto main (B10a)
+
+B10a was rebased onto main after main's portable split, the `equin` rename and the list-bound change (0e3c207c6a).
+
+- **Icon sprites are desktop-only now.** Main moved the sprites' server half into `machine/` with `needsMachine: { feature: "Icon sprites" }` on every declaration. `icons.sprite` and `icons.runtime-symbols` follow: both carry `needsMachine`, and their served values (`sprite-value.ts`, `runtime-symbols-value.ts` and its test) are in `machine/internal/`, served through `live/machine`. The deleted handlers (`handle-sprite.ts`, `handle-runtime-symbols.ts` and its test) are gone from `machine/` as well.
+  - The host's list reads (`useLive(iconSprite, […])`, `useLive(runtimeSymbolsValue, […])`) can now answer `unavailable`. That is only reachable after the resident sprites loaded, which needs the computer, so the host throws it as a broken assumption, as main's fetch did.
+  - The `networking/no-page-transport` exemption on `sprite-host.tsx` is deleted, because no endpoint fetch is left. With the `live/no-endpoint-read` debt also gone, the sprites `exempt/` manifest is deleted.
+- **Screenshot server is `portable: true`** (main). Save-file moved to `machine/`. The server barrel keeps the `screenshot.image` contribution and only `createScreenshot`. Main's `no-platform-api` debt entry and B10a's `no-endpoint-read` entry were the manifest's only entries, so the `exempt/` manifest is deleted.
+- **Main's `useFetchEndpoint` / `useTransport` changes** were ported into the B10a code that survives: the worktree-cleanup panel's bulk delete and per-row NDJSON delete. The deleted stream hooks (`use-timeline-stream.ts`, `use-cluster-stream.ts`) took main's transport change with them.
+- **List bounds (0e3c207c6a).**
+  - `debug.timeline.scan`: a cell's `events` are `cappedList` at `TIMELINE_CELL_EVENT_CAP` (500, the scan's slice). `cells` and `health` are `wholeList`, with the live-fork bound as the reason. A health frame's `samples` are `wholeList`: at most 500 buckets plus the sleep-wake points kept beside them, so not a hard cap. `TimelineEvent.detail` is a `wholeRecord`: one event's few extractor fields.
+  - `debug.slow-ops.cluster.scan`: `ops` is `cappedList` at `CLUSTER_OPS_PER_WORKTREE` (100, the SQL `LIMIT`). `worktrees` is `wholeList`, one per live fork.
+  - `events-test.log`: `entries` is `cappedList` at `EVENTS_TEST_LOG_WINDOW` (200, the job's slice).
+  - The remaining values hold no list: `debug.worktree-cleanup.worktrees` is paged (limit 100, maxLimit 500) and its meta is scalar, `plugin-health.*` hold scalars or a collection, `screenshot.image` is bytes, and `icons.sprite` / `icons.runtime-symbols` are strings.
+- **The three `no-db-backed-notify` sanctioned exemptions stay** (timeline, cluster, worktree-cleanup `scan-served.ts`). The rule is still exemptable, and `no-db-backed-notify` passes.
+
+## Result (B10a-rebase)
+
+This is a regression pass over B10a after the rebase onto main (see *Rebase onto main (B10a)*). It used the build `build-1792934817-2v8d9d` on base `755b42af7f`, all on `http://att-1791598784-yegtlr.localhost:9000`.
+
+### Verdicts
+
+- **regen / format:** `regen-generated` changed nothing. `format` rewrote one file, `debug/timeline/shared/scan.ts`.
+- **Check:** 4 failures, all fixed with no new exemption.
+  - `web-artifacts:map-in-sync` and `generated-artifacts-normalized`: the dist and generated files were stale after the rebase. The build regenerated them.
+  - `namespace:legacy-host`: the plan doc's Open (B10a) spelled the main host with its legacy label; it now writes `equin.localhost`.
+  - `paths:no-undeclared-data-dirs`: `~/.singularity/state/prompt-submits` was orphaned. It is the turn-ledger prompt mailbox that main deleted with the tmux runtime (30c7830fd9), so no plugin declares it any more. It is machine state, not B10a. Following the check's hint, it was quarantined by hand to `~/.singularity/deprecated/state/prompt-submits`.
+- **Test:** `./equin test` ran on slow-ops (with cluster), timeline, worktree-cleanup, events-test, ndjson-stream, plugin-health, screenshot, `ui/icons`, `network/live`, `agent-manager/demo` and `data-view`.
+  - All B10a suites pass: the icons `runtime-symbols-value` and loader, cluster `aggregate`, timeline `render`, worktree-cleanup and events-test.
+  - Four failure groups remain. **None was caused by B10a:**
+    - `slow-ops/record-slow-op.test.ts` (2): there is no `database.migration-source` provider in the multi-plugin run. This is the same isolation problem recorded in Result (B10a), and it passes alone.
+    - `data-view/view-order/handle-set-row-order.test.ts` (1): the same missing `database.migration-source` provider. The file is not touched by B10a.
+    - `agent-manager/demo/bin/browser-host.test.ts` (2): the test expects the `config-v2.*` served keys, and main's new `config-v2.git-values` is not in its list. That is config_v2 code from main. B10a's only diff in that plugin is the generated `hostReads`/`hostEntries`: it adds `icons.sprite`, `icons.runtime-symbols` and `screenshot.image`, and screenshot now depends on `network/live`.
+    - `data-view/web/__tests__/live-source.test.tsx` (14 vitest): "slot contributions must be read within PluginProvider", raised from `useFieldPresentations` (`network/live`). Neither the file nor that path is touched by B10a, whose only data-view diff is three rows added to the generated `data-views.generated.ts`.
+- **Build:** green with checks (`build-1792934817-2v8d9d`).
+
+### Per site (after rebase)
+
+| Site | Value key | `_debug` freshness | `_debug` shape | Live |
+|---|---|---|---|---|
+| debug/timeline | `debug.timeline.scan` | `notified` | `cells` whole (reason), `cells[].events` max 500, `cells[].events[].detail` whole record, `health`, `health[].samples` whole (reasons) | verified |
+| slow-ops cluster | `debug.slow-ops.cluster.scan` | `notified` | `worktrees` whole, `worktrees[].ops` max 100, `recentSamples` and `pgTopDatabases` whole (reasons) | verified |
+| worktree cleanup | `debug.worktree-cleanup.worktrees` + `:meta` | `notified` / `notified` | `paged: true` / scalar | list verified; no delete driven |
+| events-test log | `events-test.log` | `notified` | `entries` max 200 | verified fresh |
+| events-test triggers | `event-triggers` (reused) | db | root and nested whole (reasons) | verified fresh |
+| screenshot | `screenshot.image` | `notified` | bytes | verified fresh |
+| icon sprites | `icons.sprite` | `immutable` ("content-addressed by the manifest hash") | string | verified |
+| icon runtime symbols | `icons.runtime-symbols` | `immutable` ("content-addressed by the symbol sets' hash and the sorted names") | string | verified (default and non-default style) |
+| plugin-health staleness | `plugin-health.staleness` | `notified`, `dependsOn: git-watcher.refHead` | scalar | not verified (0 `plugin_health_reviews` rows) |
+| plugin-health review tasks | `plugin-health.review-tasks` | db | scalar | not verified (same) |
+
+### Live evidence
+
+These were driven in the `browser_*` session. Text was sampled every 200–250 ms.
+
+- **Timeline.**
+  - 1h lookback: "Scanning sources…" at 256 ms, then "200 / 232" at 2.6 s, then "1069 events · 227 cells merged · 5 failed" at 2.8 s.
+  - Switching to 15m: "Scanning sources…", then "212 / 232" at 1.6 s, then "283 events · 227 cells merged · 5 failed" at 1.8 s.
+  - The screenshot shows the axis "TIMELINE 15m 0s" with duress bands, an incident band, and per-worktree lanes (singularity with 213 events, att-1791598784-yegtlr with 66 events) with trace, slow-op, report, build, boot and health rows.
+  - The headless harness shot (`/tmp/live-migration-shots/B10a-rebase-timeline-after.png`) was captured mid-scan and shows only "Scanning sources…" with an empty axis. It is **not** evidence of the filled state; the browser screenshot is.
+- **Cluster.** "Scanning worktrees… 0 / 16" at 0.2 s, "1 / 16" at 3.3 s, "5 / 16" at 6.1 s, then "16 worktrees merged · totals cover the heaviest 100 ops of 11 worktrees (≥ marks a sum that may miss one)" at 6.5 s. The aggregate table's Count and Total cells carry `≥`; the top row is `config-v2.values`, ≥ 393222 across 2 worktrees.
+- **Worktree cleanup.**
+  - The list went from "Scanning… 0" through "560 / 4844" … "4808 / 4844" in 2.4 s, then "4844 worktrees · 0 safe to delete".
+  - The DataView shows the Task, Age, Dirty? and Safe columns with only the All worktrees view. The first row is this worktree (15d, uncommitted).
+  - No delete was driven.
+- **Events test (fresh, no reload).**
+  - Subscribing a one-shot `b10ar-check` for `u-b10ar` showed "Active triggers (1)" within one sample.
+  - "Emit pinged" then showed "Active triggers (0) | Job log (1)" within 204 ms. The row reads b10ar-check · u-b10ar · "hello" · job 1959965.
+  - Clear brought it back to "Job log (0)" within 200 ms.
+  - `_debug`: `events-test.log` hand notifies 2, `event-triggers` feed notifies 2.
+  - Clean-up: the trigger was one-shot (fired and gone) and the log was cleared.
+- **Screenshot (fresh, refused then notified).**
+  - `/agents/screenshot/b10ar-fresh-0001` was opened first and showed "Loading…".
+  - A PNG was then POSTed with `curl -X POST /api/screenshots/b10ar-fresh-0001`. Without a reload or navigation, the editor showed the image (a Slow Events page capture) on the first check.
+  - `_debug` shows `screenshot.image` with 1 hand notify.
+- **Icon sprites.**
+  - The page fetched `icons.sprite` for `rounded-filled-400`, `rounded-outline-400`, `lucide` and `lucide-active` through `/api/resources/icons.sprite?hash=300413fe7dd7d406&key=…`, all 200.
+  - `_debug` lists 3 subscribed tuples at rest.
+  - The sheet holds 710 `ms-rounded-*` symbols. Pages' theme sets `iconShape: "rounded"`.
+- **Icon runtime symbols.**
+  - **Non-default style:** a callout on Pages → "APIs and endpoints" has the saved icon `warning`. It drew `#msr-rounded-outline-400-warning`, read through `GET /api/resources/icons.runtime-symbols?hash=1d27d5bca2dd2a53&key=rounded-outline-400&names=warning` (200). A second read was `…&names=star-rate`. The screenshot shows the ⚠ glyph leading the callout.
+  - **Default style:** the agent avatar picker (Agents → Perf → Pick agent avatar) read one batch of 150 sorted names at `key=default-outline-400`, and its grid draws them (`#msr-default-outline-400-account-circle` …).
+  - `_debug` lists `icons.runtime-symbols` as `immutable`. At rest it has 0 tuples, as designed: each landed batch is dropped.
+- **No deleted endpoint was called.** One page load covered Slow Events → Timeline → Cluster → Worktree Cleanup → Events Test. Its network log holds only `boot-snapshot`, `icons.sprite`, `auth-state`, and the `slow-ops/client`, `latency-ledger/client` and `logs/emit` POSTs. The callout page load also shows no `/api/icons/sprite|symbols`, `/api/screenshots/:id` GET, `/api/debug/*`, `/api/slow-ops/cluster` or `/api/plugin-health/*` request, and no failed request.
+- **Freshness sources in `_debug`:** `debug.timeline.scan` 173, `debug.slow-ops.cluster.scan` 54 and `debug.worktree-cleanup.worktrees` 195 hand notifies (the progressive fills).
+
+### Deviations (rebase integration)
+
+- A machine-state orphan, `state/prompt-submits`, was quarantined into `deprecated/` by hand to clear `paths:no-undeclared-data-dirs`. It has nothing to do with B10a.
+- No code fix was needed beyond formatting and the plan doc's host spelling.
+
+### Open (B10a-rebase)
+
+- **Not verified live:**
+  - plugin-health, because there are still 0 `plugin_health_reviews` rows;
+  - a worktree-cleanup delete refreshing the list, because it is destructive;
+  - the sprite `stale-manifest` and runtime `stale-symbols` refusals, which need a restart with a changed manifest.
+- **Pre-existing test failures, not B10a:**
+  - the missing `database.migration-source` provider in multi-plugin runs (record-slow-op, handle-set-row-order);
+  - the demo browser-host test not listing `config-v2.git-values`;
+  - the data-view `live-source.test.tsx` PluginProvider error.
+- **State left behind:** the in-memory screenshot `b10ar-fresh-0001`, which expires within the hour.
+- `./equin exempt list --rule live/no-endpoint-read --debt`: **7** remain, all debt, all in `build/*` and `debug/profiling/build` (task-1791560308-woqgfi).
+
+### Review fixes (B10a-rebase)
+
+Twelve review findings. Eleven fixed and one skipped. The fixes are verified by `./equin test` on timeline, cluster, worktree-cleanup, plugin-health and `ui/icons/sprites` (203 pass, 0 fail), and by build `build-1792937120-crzgnz`, green with checks.
+
+- **A failed scan's Retry did nothing (timeline, cluster, worktree cleanup): fixed.** A whole-scan failure is held on the scan, so `read.refetch` only re-read the same failure. Each error arm's `ResourceErrorInline` now retries with a new question: `refetch={async () => setAt(Date.now())}`. The worktree panel also clears `bulkResult`, as Refresh does. This matches "new instant = new scan". The timeline and cluster CLAUDE.md files say so.
+- **Worktree cleanup Age sorted and filtered over the loaded pages only: fixed.** `createdAt` now spreads `ONLY_SHOWN` too, so no field sorts, filters or groups. The paged value serves only one order, newest first. The CLAUDE.md sentence that exempted `createdAt` is corrected.
+- **Bulk delete trusted a scan that could be hours old: fixed.** `handle-bulk-delete.ts` now rebuilds every id from `safeIdsOf(at)` just before it reaps (`rebuildEntries`, the same path `refreshScannedRows` uses). It reaps only the ids whose rebuilt entry still has `isSafe === true`. The others come back as `{ ok: false, error: "no longer safe" }`. Every id in the scan's safe set is re-read into the held scan afterwards. Documented in the worktree-cleanup CLAUDE.md.
+- **plugin-health "ONE query" comment: fixed (comment).** The count and the availability gate share one subscription. The section's DataView reads its own window over the same scope, which is a second subscription. The comment now says this. It also notes that the default window's limit bounds nothing here, because a plugin has at most one review per axis. Deriving the title count from the DataView's window was not done: the count and the gate render outside the DataView (the card title and the host's `useAvailable`).
+- **`symbolsHash` did not cover the runtime symbol build: fixed.** It now folds in `RUNTIME_SYMBOL_BUILD_VERSION` (bump it with any change to the nearest-style fallback, `buildSymbol` or `runtimeSymbolId`) and the saved-name list (`allSavedSymbolNames()`, which decides `unknown-name`). This is the same pattern as `manifestHash`. The core docs and the served `immutable` reason now say so.
+  - Live: the hash moved from `1d27d5bca2dd2a53` to `4016d100ae665a21`. A read with the new hash returns 200. A read with the old hash is refused 422 `stale-symbols` ("…reload the page"). This also closes the Open item about verifying `stale-symbols` live.
+- **The plan's `icons.sprite` row and Deviation were stale: fixed.** The B10a per-site row now reads `{hash, key}`, refusals `unknown-key` / `stale-manifest`, external `immutable`, and an `icons.runtime-symbols` row was added. The Deviations bullet that said the manifest hash was dropped is struck through, with a note that Review fixes (B10a) superseded it.
+- **Stale wording about the NDJSON stream: fixed.** In `produce.ts`, "not hang the scan" replaces "not hang the stream", and the drain comment now says that late chunks would land after the producer resolved (a completed scan or a collected report) or reject unhandled. In `view-model.ts`, "rides the scan as health frames" and "Buckets the scan's cells" replace the stream wording. The timeline CLAUDE.md's duress paragraph now says "ride the scan as one host-lane cell".
+- **The timeline CLAUDE.md `invalid-window` description was incomplete: fixed.** It now reads "a non-positive lookback, or one reaching before the epoch", which matches `shared/scan.ts` and `windowOf`.
+- **The endpoints CLAUDE.md taught a deleted GET binary read: fixed.** The `blob()` response example is now `getAttachmentFile` (`GET /api/attachments/:id`), which still exists and stays an endpoint because the browser loads it as an asset URL. `createScreenshot` remains the `blob("image/png")` request-body example. A new bullet says that a binary READ shown in the UI is a `bytes: true` live value, and that `live/no-endpoint-read` bans the GET.
+- **On-demand sprites lost their HTTP `immutable` cache header: skipped.** The on-demand HTTP read is `cache-control: no-store` on purpose, and in three layers: `handleResourceHttp` pairs every ETag with `no-store`, the client fetches with `cache: "no-store"`, and server-core defaults a header-less API response to `no-store`. These layers are the documented class fix for the cross-boot HTTP cache poisoning (resource-runtime CLAUDE.md; `research/2026-07-15-global-live-state-http-cache-poisoning-class-fix.md`). Letting `immutable` values be cached long-term would be a transport-wide design change against that invariant, not a review fix for this batch. The cost is one sprite re-download per page load in a non-default-styled scope, served from localhost. Left as a follow-up: an `immutable`-only cache policy in the transport, if it shows up in the latency ledger.
+
+**Re-screenshots** (`./equin run …/screenshot.ts`, long `--wait`):
+
+- `/tmp/b10ar-review-wtc-before.png`: the worktree cleanup panel, mid-scan at 4808 / 4844. The Task / Age / Dirty? / Safe columns are unchanged.
+- `/tmp/b10ar-review-timeline-after.png`: the Timeline filled in. It shows "1225 events · 229 cells merged · 5 failed", duress and incident bands, and per-worktree lanes.
+
+No error arm was triggered live; that would need a fork-list failure.

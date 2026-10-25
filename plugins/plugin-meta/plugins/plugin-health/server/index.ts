@@ -1,16 +1,8 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { pluginHealthReviewsServed } from "./internal/resource";
 import { proposeTaskTool } from "./internal/mcp-tools";
-import {
-  handleGetReviews,
-  handleGetStaleness,
-  handleGetTasksForReview,
-} from "./internal/routes";
-import {
-  getPluginHealthReviews,
-  getPluginStaleness,
-  getPluginHealthTasks,
-} from "../core/endpoints";
+import { pluginStalenessServed } from "./internal/staleness";
+import { reviewTaskCountsServed } from "./internal/review-tasks";
 import { IdKinds } from "@plugins/ids/server";
 import { pluginReviewIdKind } from "../core";
 
@@ -21,11 +13,8 @@ export default {
   contributions: [
     IdKinds.Kind({ kind: pluginReviewIdKind }),
     ...pluginHealthReviewsServed.declare,
+    ...pluginStalenessServed.declare,
+    ...reviewTaskCountsServed.declare,
   ],
-  httpRoutes: {
-    [getPluginHealthReviews.route]: handleGetReviews,
-    [getPluginStaleness.route]: handleGetStaleness,
-    [getPluginHealthTasks.route]: handleGetTasksForReview,
-  },
   register: [proposeTaskTool],
 } satisfies ServerPluginDefinition;

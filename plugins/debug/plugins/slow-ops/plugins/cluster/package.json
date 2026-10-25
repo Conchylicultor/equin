@@ -1,6 +1,6 @@
 {
   "name": "@equin/plugin-debug-slow-ops-cluster",
-  "description": "Cross-worktree cluster view of slow ops: fans out across every worktree DB fork and merges them into one aggregate + a unified contention timeline.",
+  "description": "Cross-worktree cluster view of slow ops: fans out across every live worktree DB fork (its heaviest slow ops, as a live scan) and merges them into one aggregate + a unified contention timeline.",
   "private": true,
   "version": "0.0.1"
 }

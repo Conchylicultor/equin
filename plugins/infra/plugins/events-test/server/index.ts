@@ -21,7 +21,7 @@ import {
   handleWaitIdle,
 } from "./internal/handle";
 import { detachedSleep, handleDetachedSleep } from "./internal/detached-sleep";
-import { logPing } from "./internal/log-job";
+import { eventsTestLogServed, logPing } from "./internal/log-job";
 import { pinged } from "./internal/tables";
 import {
   subscribeEventsTest,
@@ -41,6 +41,7 @@ import {
 
 export default {
   description: "Dummy plugin exercising the events and jobs APIs end-to-end.",
+  contributions: [...eventsTestLogServed.declare],
   httpRoutes: {
     [subscribeEventsTest.route]: handleSubscribe,
     [emitEventsTest.route]: handleEmit,

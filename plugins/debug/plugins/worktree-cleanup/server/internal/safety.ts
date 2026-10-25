@@ -138,8 +138,9 @@ export interface SafetyInput {
 }
 
 // Single definition of "nothing to lose, safe to auto-reap". Used by both the
-// UI safe-to-delete badge (handle-list) and the scheduled reaper (reap-policy),
-// so the two can never drift again.
+// UI safe-to-delete badge (entries.ts, the debug.worktree-cleanup.worktrees
+// scan) and the scheduled reaper (reap-policy), so the two can never drift
+// again.
 //
 // Reapability is USER INTENT, never process liveness. Two independent proofs that
 // the user is finished are required, and they are checked before anything else:

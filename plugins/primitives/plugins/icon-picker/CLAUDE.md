@@ -20,7 +20,7 @@ button and the callout appearance panel compose it. Design:
 The picker ships no glyphs. The grid is windowed (`virtual-rows`) and every cell
 is `<Icon icon={runtimeSymbol(name)}/>`, so only the rows on screen ask
 `ui/icons` for their symbols — batched per frame into one immutable
-`GET /api/icons/symbols/:hash/:key?names=…` per style — in the style the picked
+`icons.runtime-symbols` live read (`{ hash, key, names }`) per style — in the style the picked
 icon will be drawn in.
 
 ## The data: vendored Google metadata

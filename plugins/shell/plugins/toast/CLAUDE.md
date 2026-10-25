@@ -31,17 +31,17 @@
     - `ui/tokens/color-palette --popover`
     - `ui/tokens/color-palette --popover-foreground`
     - `ui/tokens/shape --radius`
-  - Imported by: 30 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 31 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×10
     - `conversations` ×3
     - `primitives` ×3
     - `config_v2` ×2
+    - `debug` ×2
     - `hints` ×2
     - `page` ×2
     - `active-data/show-me`
     - `apps-core/app-embed`
     - `build/serve-composition`
-    - `debug/profiling/ops`
     - `infra/health`
     - `menu-bar`
     - `reports/optimistic-rejection`

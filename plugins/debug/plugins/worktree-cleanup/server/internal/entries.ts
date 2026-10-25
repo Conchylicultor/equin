@@ -1,15 +1,17 @@
 import {
+  getAttempt,
+  getTask,
   listAttempts,
   listTasks,
 } from "@plugins/tasks/plugins/tasks-core/server";
 import { listDatabases } from "@plugins/database/plugins/admin/server";
 import { ensureMainWorktreeRoot } from "@plugins/infra/plugins/worktree/server";
-import { ndjsonResponse } from "@plugins/infra/plugins/ndjson-stream/server";
-import { type WorktreeEntry } from "../../shared/endpoints";
+import type { WorktreeEntry } from "../../shared/scan";
 import { dirExists } from "./reap";
 import {
   canClassifyOrphans,
   dirAgeMs,
+  orphanDirPath,
   readWorktreeDirs,
   type WorktreeDir,
 } from "./dirs";
@@ -129,46 +131,93 @@ async function buildOrphanEntry(
   };
 }
 
-// Streamed NDJSON: each computed worktree row is emitted as it completes,
-// followed by a terminal `{ end: true }` sentinel. Streaming keeps the socket
-// alive past Bun's 10s idleTimeout (1257 worktrees × git status >> 10s) and lets
-// rows render progressively. Errors inside the producer are framed as `{ error }`
-// by ndjsonResponse, so no try/catch is needed here. No server-side sort — rows
-// stream in completion order and the client sorts.
-export function handleList(): Response {
-  return ndjsonResponse(async (emit) => {
-    const root = await ensureMainWorktreeRoot();
+/** What a scan of every worktree reports as it goes. */
+export interface EntrySink {
+  /** More rows are planned: the attempts once read, then the orphan dirs found. */
+  planned: (more: number) => void;
+  /** One row built, in completion order (no order: the reader sorts). */
+  entry: (entry: WorktreeEntry) => void;
+}
 
-    // One catalog query for all DB names instead of an N+1 `databaseExists`
-    // per attempt — with 2000+ attempts the per-row query was the dominant
-    // cost that pushed the request past Bun's 10s idleTimeout.
-    const [attempts, tasks, databases] = await Promise.all([
-      listAttempts(),
-      listTasks(),
-      listDatabases(),
-    ]);
-    const taskMap = new Map(tasks.map((t) => [t.id, t]));
-    const dbSet = new Set(databases);
+// Every worktree row: one per attempt, then one per canonical worktree dir no
+// attempt row names. Rows are reported as they complete — 1257 worktrees × a
+// git status each take far longer than a reader should wait for the first.
+export async function produceWorktreeEntries(sink: EntrySink): Promise<void> {
+  const root = await ensureMainWorktreeRoot();
 
-    await pMap(attempts, CONCURRENCY, async (attempt) => {
-      emit({ item: await buildEntry(attempt, taskMap, dbSet) });
-    });
+  // One catalog query for all DB names instead of an N+1 `databaseExists`
+  // per attempt — with 2000+ attempts the per-row query was the dominant
+  // cost.
+  const [attempts, tasks, databases] = await Promise.all([
+    listAttempts(),
+    listTasks(),
+    listDatabases(),
+  ]);
+  const taskMap = new Map(tasks.map((t) => [t.id, t]));
+  const dbSet = new Set(databases);
+  sink.planned(attempts.length);
 
-    // Dir orphans last: everything above is attempt-anchored, so a dir with no
-    // attempt row was invisible here (and to the reaper) until now. The attempt
-    // ids already emitted are what makes a dir an orphan, hence the second pass.
-    // Skipped entirely where the attempts table is a stale fork — see
-    // canClassifyOrphans; the pane then lists exactly what it always did.
-    if (canClassifyOrphans()) {
-      const seen = new Set(attempts.map((a) => a.id));
-      const orphanDirs = (await readWorktreeDirs(root)).filter(
-        (d) => !seen.has(d.name),
-      );
-      await pMap(orphanDirs, CONCURRENCY, async (dir) => {
-        emit({ item: await buildOrphanEntry(dir, dbSet) });
-      });
-    }
-
-    emit({ end: true });
+  await pMap(attempts, CONCURRENCY, async (attempt) => {
+    sink.entry(await buildEntry(attempt, taskMap, dbSet));
   });
+
+  // Dir orphans last: everything above is attempt-anchored, so a dir with no
+  // attempt row was invisible here (and to the reaper) until now. The attempt
+  // ids already reported are what makes a dir an orphan, hence the second
+  // pass. Skipped entirely where the attempts table is a stale fork — see
+  // canClassifyOrphans; the pane then lists exactly what it always did.
+  if (canClassifyOrphans()) {
+    const seen = new Set(attempts.map((a) => a.id));
+    const orphanDirs = (await readWorktreeDirs(root)).filter(
+      (d) => !seen.has(d.name),
+    );
+    sink.planned(orphanDirs.length);
+    await pMap(orphanDirs, CONCURRENCY, async (dir) => {
+      sink.entry(await buildOrphanEntry(dir, dbSet));
+    });
+  }
+}
+
+// The rows `ids` name as they stand now — after a delete touched them — each
+// `null` when nothing names it any more (a reaped dir orphan). An attempt row
+// survives its reap, so its row is rebuilt (dir and DB gone, "fully clean").
+// One catalog query for every id (as the scan does), then the rows built at
+// the scan's bounded concurrency.
+export async function rebuildEntries(
+  ids: readonly string[],
+): Promise<Map<string, WorktreeEntry | null>> {
+  const dbSet = new Set(await listDatabases());
+  const built = await pMap([...new Set(ids)], CONCURRENCY, async (id) => {
+    const attempt = await getAttempt(id);
+    if (attempt !== null) {
+      const task = await getTask(attempt.taskId);
+      const taskMap = new Map<string, Task>();
+      if (task !== null) taskMap.set(task.id, task);
+      return [id, await buildEntry(attempt, taskMap, dbSet)] as const;
+    }
+    const path = await orphanDirPath(id);
+    return [
+      id,
+      path === null ? null : await buildOrphanEntry({ name: id, path }, dbSet),
+    ] as const;
+  });
+  return new Map(built);
+}
+
+// Of `entries`, the ids whose dir or fork DB is not what the row says any more
+// — the rows something reaped behind the scan's back (the hourly sweep). Cheap:
+// one catalog query and one stat per row that still had something to reap.
+export async function movedEntryIds(
+  entries: readonly WorktreeEntry[],
+): Promise<string[]> {
+  const live = entries.filter((e) => e.dirExists || e.dbExists);
+  if (live.length === 0) return [];
+  const dbSet = new Set(await listDatabases());
+  const moved = await pMap(live, CONCURRENCY, async (e) =>
+    e.dbExists !== dbSet.has(e.attemptId) ||
+    e.dirExists !== (await dirExists(e.worktreePath))
+      ? e.attemptId
+      : null,
+  );
+  return moved.filter((id): id is string => id !== null);
 }

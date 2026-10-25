@@ -1,4 +1,4 @@
-import { useMemo, type ReactElement } from "react";
+import { useMemo, useState, type ReactElement, type ReactNode } from "react";
 import {
   DataView,
   defineDataView,
@@ -13,11 +13,16 @@ import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
-import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { loadSeverity } from "@plugins/debug/plugins/slow-ops/core";
-import { useClusterStream } from "../internal/use-cluster-stream";
+import { useLive } from "@plugins/network/plugins/live/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import {
+  CLUSTER_OPS_PER_WORKTREE,
+  clusterScan,
+  type ClusterScan,
+} from "../../shared/scan";
 import { ScanProgress } from "./scan-progress";
 import {
   buildClusterAggregate,
@@ -37,8 +42,114 @@ function uniqueSorted(values: string[]): { value: string; label: string }[] {
   return [...new Set(values)].sort().map((v) => ({ value: v, label: v }));
 }
 
+/**
+ * The Cluster tab: one scan of every live worktree DB fork per mount and per
+ * Refresh (`debug.slow-ops.cluster.scan`, each a new question at the clock's
+ * now), filled in live as each fork answers; a finished scan never moves.
+ */
 export function ClusterView(): ReactElement {
-  const { worktrees, total, status, error, reload } = useClusterStream();
+  // The instant the scan is asked for — a new one is a new scan.
+  const [at, setAt] = useState(() => Date.now());
+  const read = useLive(clusterScan, { at });
+  const refresh = (scanning: boolean): ReactNode => (
+    <Button
+      variant="outline"
+      loading={scanning}
+      onClick={() => setAt(Date.now())}
+    >
+      Refresh
+    </Button>
+  );
+  switch (read.status) {
+    case "loading":
+      return (
+        <ClusterFrame
+          status={<ScanProgress received={0} total={null} />}
+          refresh={refresh(true)}
+        />
+      );
+    case "error":
+      return (
+        <ClusterFrame
+          status={
+            <ResourceErrorInline
+              error={read.error}
+              // A failed scan is held as failed: Retry asks a new question.
+              refetch={async () => setAt(Date.now())}
+              variant="inline"
+              subject="the cluster"
+            />
+          }
+          refresh={refresh(false)}
+        />
+      );
+    case "ready":
+      return (
+        <ClusterScanView
+          scan={read.data}
+          refresh={refresh(!read.data.complete)}
+        />
+      );
+  }
+}
+
+/**
+ * A summed count or time: prefixed ≥ when a truncated fork did not report the
+ * op — it may sit below that fork's heaviest {@link CLUSTER_OPS_PER_WORKTREE},
+ * so the sum is a lower bound.
+ */
+function AtLeast({
+  row,
+  value,
+}: {
+  row: ClusterAggregate;
+  value: number;
+}): ReactElement {
+  if (row.maybeUncountedIn.length === 0) return <>{value}</>;
+  return (
+    <span
+      title={`Not among the heaviest ${CLUSTER_OPS_PER_WORKTREE} ops read from: ${row.maybeUncountedIn.join(", ")}`}
+    >
+      ≥ {value}
+    </span>
+  );
+}
+
+/** The tab's chrome — its label, the scan's state and Refresh — over `children`. */
+function ClusterFrame({
+  status,
+  refresh,
+  children,
+}: {
+  status: ReactNode;
+  refresh: ReactNode;
+  children?: ReactNode;
+}): ReactElement {
+  return (
+    <Scroll axis="both" className="h-full">
+      <Stack gap="xl" className="px-md py-md">
+        <Stack direction="row" align="center" gap="md">
+          <Stack as={Fill} gap="2xs">
+            <SectionLabel>Cross-worktree cluster</SectionLabel>
+            {status}
+          </Stack>
+          {refresh}
+        </Stack>
+        {children}
+      </Stack>
+    </Scroll>
+  );
+}
+
+/** One scan, as far as it got: the merged aggregate and contention timeline. */
+function ClusterScanView({
+  scan,
+  refresh,
+}: {
+  scan: ClusterScan;
+  refresh: ReactNode;
+}): ReactElement {
+  const { worktrees, total, complete } = scan;
 
   const aggregates = useMemo(
     () => buildClusterAggregate(worktrees),
@@ -103,17 +214,19 @@ export function ClusterView(): ReactElement {
         id: "count",
         label: "Count",
         type: "number",
-        width: "4rem",
+        width: "5.5rem",
         align: "end",
         value: (r) => r.count,
+        cell: (r) => <AtLeast row={r} value={r.count} />,
       },
       {
         id: "totalMs",
         label: "Total (ms)",
         type: "number",
-        width: "5.5rem",
+        width: "7.5rem",
         align: "end",
         value: (r) => Math.round(r.totalMs),
+        cell: (r) => <AtLeast row={r} value={Math.round(r.totalMs)} />,
       },
       {
         id: "maxMs",
@@ -235,48 +348,43 @@ export function ClusterView(): ReactElement {
     [timeline],
   );
 
-  return (
-    <Scroll axis="both" className="h-full">
-      <Stack gap="xl" className="px-md py-md">
-        <Stack direction="row" align="center" gap="md">
-          <Stack as={Fill} gap="2xs">
-            <SectionLabel>Cross-worktree cluster</SectionLabel>
-            {status === "streaming" && (
-              <ScanProgress received={worktrees.length} total={total} />
-            )}
-            {status === "done" && (
-              <Text
-                as="span"
-                variant="caption"
-                className="text-muted-foreground"
-              >
-                {okCount} worktree{okCount === 1 ? "" : "s"} merged
-                {failed.length > 0 && " "}
-                {failed.length > 0 && (
-                  <span
-                    className="text-warning"
-                    title={failed
-                      .map((f) => `${f.name}: ${f.error}`)
-                      .join("\n")}
-                  >
-                    · {failed.length} failed to load
-                  </span>
-                )}
-              </Text>
-            )}
-            {status === "error" && error && (
-              <Placeholder tone="error">{error}</Placeholder>
-            )}
-          </Stack>
-          <Button
-            variant="outline"
-            loading={status === "streaming"}
-            onClick={() => void reload()}
-          >
-            Refresh
-          </Button>
-        </Stack>
+  // Forks holding more rows than the scan reads (their heaviest only).
+  const truncated = worktrees.filter((w) => w.opCount > w.ops.length);
 
+  return (
+    <ClusterFrame
+      refresh={refresh}
+      status={
+        complete ? (
+          <Text as="span" variant="caption" className="text-muted-foreground">
+            {okCount} worktree{okCount === 1 ? "" : "s"} merged
+            {failed.length > 0 && " "}
+            {failed.length > 0 && (
+              <span
+                className="text-warning"
+                title={failed.map((f) => `${f.name}: ${f.error}`).join("\n")}
+              >
+                · {failed.length} failed to load
+              </span>
+            )}
+            {truncated.length > 0 && (
+              <span
+                title={truncated
+                  .map((w) => `${w.name}: ${w.opCount} ops`)
+                  .join("\n")}
+              >
+                {" "}
+                · totals cover the heaviest {CLUSTER_OPS_PER_WORKTREE} ops of{" "}
+                {truncated.length} worktree{truncated.length === 1 ? "" : "s"}{" "}
+                (≥ marks a sum that may miss one)
+              </span>
+            )}
+          </Text>
+        ) : (
+          <ScanProgress received={worktrees.length} total={total} />
+        )
+      }
+    >
         <DataView<ClusterAggregate>
           rows={aggregates}
           fields={aggFields}
@@ -298,7 +406,6 @@ export function ClusterView(): ReactElement {
           defaultView="table"
           emptyState="No contention samples captured yet"
         />
-      </Stack>
-    </Scroll>
+    </ClusterFrame>
   );
 }

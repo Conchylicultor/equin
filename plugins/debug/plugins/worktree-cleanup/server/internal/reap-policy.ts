@@ -287,7 +287,7 @@ async function pMap<T, R>(
 
 // Classifies every attempt/fork and returns the set safe to reap autonomously,
 // sharing the SAME `isSafeToReap` predicate as the UI safe-to-delete badge
-// (handle-list) so the scheduled reaper and the UI can never drift. The branch
+// (entries.ts) so the scheduled reaper and the UI can never drift. The branch
 // taxonomy lives on `classifyAttempt` above.
 //
 // COST SHAPE — this used to be O(attempts ever created), one `stat` per row,

@@ -1,6 +1,6 @@
 {
   "name": "@equin/plugin-debug-timeline",
-  "description": "Unified cross-worktree slow-event timeline: fans out over every worktree DB fork and disk log, normalizes traces / slow-ops / reports / builds / boots / health to one wall-clock wire model, streamed as NDJSON.",
+  "description": "Unified cross-worktree slow-event timeline: fans out over every worktree DB fork and disk log, normalizes traces / slow-ops / reports / builds / boots / health to one wall-clock wire model, served as a live value filled in as the fan-out resolves.",
   "private": true,
   "version": "0.0.1"
 }

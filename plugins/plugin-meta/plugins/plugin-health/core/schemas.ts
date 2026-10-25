@@ -33,17 +33,3 @@ export const PluginHealthReviewSchema = fieldsToZodObject(
   pluginHealthReviewFields,
 );
 export type PluginHealthReview = z.infer<typeof PluginHealthReviewSchema>;
-
-export const PluginStalenessSchema = z.object({
-  axis: z.string(),
-  commitsSince: z.number(),
-  apiChanged: z.boolean(),
-});
-export type PluginStaleness = z.infer<typeof PluginStalenessSchema>;
-
-export const ReviewTaskSummarySchema = z.object({
-  taskId: z.string(),
-  title: z.string(),
-  status: z.string(),
-});
-export type ReviewTaskSummary = z.infer<typeof ReviewTaskSummarySchema>;

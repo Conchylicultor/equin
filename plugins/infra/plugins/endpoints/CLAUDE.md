@@ -266,8 +266,8 @@ export const createScreenshot = defineEndpoint({
   response: z.object({ id: z.string() }),  // bare schema → JSON response
 });
 
-export const getScreenshot = defineEndpoint({
-  route: "GET /api/screenshot/:id",
+export const getAttachmentFile = defineEndpoint({
+  route: "GET /api/attachments/:id",
   response: blob(),                        // typed Blob response (client decodes via res.blob())
 });
 
@@ -279,6 +279,7 @@ export const uploadAttachment = defineEndpoint({
 ```
 
 - `blob(contentType?)` — raw binary on the request (`body:`) or response (`response:`) side. The client encodes/decodes via `Blob`. A server handler that needs custom response headers (e.g. `cache-control`, `content-disposition`) may stay a raw handler instead of using `implement()` — `blob()` carries only the body.
+- A binary READ the UI shows (a screenshot, a sprite) is not an endpoint: it is a `bytes: true` live value (`network/live`; `live/no-endpoint-read` bans the GET). `getAttachmentFile` stays an endpoint because the browser loads it as an asset URL (`assetPath`).
 - `multipart()` — **request-only** FormData. No `Content-Type` is set so the browser supplies the multipart boundary; using it in a `response:` slot throws.
 
 A `FetchEndpoint` call also accepts two transport opts for fire-and-forget beacons:
@@ -456,17 +457,17 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `unmatchedApiResponse`
     - `unsupportedEndpointResponse`
 - Cross-plugin:
-  - Imported by: 236 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 232 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×59
     - `conversations` ×32
     - `infra` ×20
     - `page` ×20
-    - `debug` ×19
     - `tasks` ×19
+    - `debug` ×17
     - `primitives` ×16
     - `build` ×8
-    - `ui` ×7
     - `reports` ×6
+    - `ui` ×6
     - `auth` ×5
     - `active-data` ×2
     - `apps-core` ×2
@@ -480,7 +481,6 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `backup`
     - `database/fork`
     - `hints`
-    - `plugin-meta/plugin-health`
     - `release`
     - `search/engine`
     - `shell/notifications`

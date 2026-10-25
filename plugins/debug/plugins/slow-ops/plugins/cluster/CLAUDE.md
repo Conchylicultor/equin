@@ -3,15 +3,31 @@
 The **Cluster** tab of the Slow Ops pane. Each worktree writes its `slow_ops`
 to its **own forked Postgres DB**, so a cluster-wide contention storm shows up
 as ~16 disconnected per-worktree rows. This sub-plugin fans out across every
-worktree DB (`listDatabases()` → `openShortLivedClient(name)` → raw
-`SELECT … FROM slow_ops`, bounded concurrency via the semaphore primitive) and
-merges them into one view.
+live worktree DB (`listLiveForkDatabases()` → `openShortLivedClient(name)` →
+raw `SELECT … FROM slow_ops`, bounded concurrency via the semaphore primitive)
+and merges them into one view.
 
-The fan-out is **pull / user-triggered** (a Refresh button), never live or
-polled — a 16-worktree query is too heavy and too rarely needed for a live
-resource. Per-DB failures (an old-schema fork missing `recent_samples`, a stale
-fork) are surfaced as an `ok: false` error row, not swallowed — one broken fork
-never blanks the whole view.
+## The scan value — `debug.slow-ops.cluster.scan` (`shared/scan.ts`)
+
+A typed-query value, `{ at }`: the instant the tab asked (mount or Refresh —
+each a new question). Served external `"notified"`
+(`server/internal/scan-served.ts`): the question's first subscriber starts ONE
+fan-out, and the answer `{ total, worktrees, complete }` is pushed — as
+patches, the worktree list append-only — once the fork list is read, as forks
+answer (about 40 pushes at most) and on completion; a complete scan never
+moves, nor is it polled (no change feed of this backend sees another fork's
+`slow_ops`). The last unsubscribe drops it. Per-DB failures (an old-schema fork
+missing `recent_samples`, a stale fork) are surfaced as an `ok: false` row, not
+swallowed — one broken fork never blanks the whole view; a whole-scan failure
+(the fork list unreadable) fails the read, held as failed — so the error's
+Retry asks a new question (a new `at`), as Refresh does.
+
+**Bound:** one entry per live fork (main + attempts active or under 24 h old),
+each holding its heaviest `CLUSTER_OPS_PER_WORKTREE` (100) rows by total time
+plus `opCount`, every row it holds — main alone holds thousands, each with a
+ten-sample contention ring. The tab says which forks were cut ("heaviest 100
+ops of N worktrees"), so the aggregate and the timeline are over the heaviest
+ops, not every op.
 
 The server returns the **raw per-worktree rows**; the web layer derives the two
 sections client-side (so the merge logic is pure and unit-tested in
@@ -32,17 +48,15 @@ so the pane never imports this component directly.
 
 ## Plugin reference
 
-- Description: Cross-worktree Cluster tab for the Slow Events pane: fans out across every worktree DB fork and merges them into one aggregate + a unified contention timeline. Cross-worktree fan-out endpoint: merges every worktree DB fork's slow_ops into one cluster response.
+- Description: Cross-worktree Cluster tab for the Slow Events pane: fans out across every worktree DB fork and merges them into one aggregate + a unified contention timeline. Cross-worktree cluster scan: every live worktree DB fork's heaviest slow_ops, served as the debug.slow-ops.cluster.scan live value — one scan per Refresh, pushed as each fork answers.
 - Web:
   - Contributes: `SlowEvents.View` "Cluster" → `ClusterView`
   - Uses:
     - `debug/trace/pane.SlowEvents`
-    - `infra/endpoints.getEndpointErrorMessage`
-    - `infra/ndjson-stream.readNdjson`
+    - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/clip.Clip`
     - `primitives/css/fill.Fill`
-    - `primitives/css/placeholder.Placeholder`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.SectionLabel`
@@ -52,16 +66,17 @@ so the pane never imports this component directly.
     - `primitives/data-view.DataView`
     - `primitives/data-view.defineDataView`
     - `primitives/data-view.FieldDef`
-    - `primitives/networking.useTransport`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/relative-time.RelativeTime`
 - Server:
+  - Contributes: `resource.declare` "debug.slow-ops.cluster.scan"
   - Uses:
     - `database/admin.listDatabases`
     - `database/admin.openShortLivedClient`
-    - `infra/ndjson-stream.ndjsonResponse`
+    - `network/live.serveValue`
     - `tasks/tasks-core.listAttempts`
   - Exports (values): `listLiveForkDatabases`
-  - Routes: `GET /api/slow-ops/cluster`
+  - Resources: `debug.slow-ops.cluster.scan` (push, notified, whole: one entry per live fork (main + attempts active or under 24 h old), not every database on the host, capped: CLUSTER_OPS_PER_WORKTREE)
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --muted`
@@ -76,6 +91,6 @@ so the pane never imports this component directly.
     - `ui/tokens/type-scale --line-height-3xs`
   - Imported by: `debug/timeline`
 - Exemptions:
-  - Exempts itself from: `live/no-endpoint-read` — `web/internal/use-cluster-stream.ts` (debt)
+  - Exempts itself from: `no-db-backed-notify` — `server/internal/scan-served.ts` (sanctioned)
 
 <!-- AUTOGENERATED:END -->

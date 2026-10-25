@@ -13,6 +13,7 @@ import {
   type ReapTarget,
 } from "./reap-policy";
 import { reapAttempt } from "./reap";
+import { refreshSweptRows } from "./scan-served";
 
 // The reaper's ops log, at `logs/worktree-cleanup.jsonl`. Its only WRITER is the
 // backend that supervises a sweep: it tails the child's transcript into this
@@ -68,6 +69,10 @@ export const worktreeReapJob = defineSupervisedJob({
   channel: reapLog,
   schedule: { cron: "0 * * * *" }, // hourly
   runAttempts: 1,
+  // The sweep reaps in its child, so the panel's held scans (this backend's
+  // memory) are told here, at its end: their rows the sweep moved re-read.
+  // Idempotent — it only looks at what is on disk and in the catalog now.
+  onEnded: () => refreshSweptRows(),
   async run(_input, { log }) {
     // Files of earlier removals whose own delete was killed or whose process
     // died. `removeWorktree` moves a checkout into the trash atomically, so

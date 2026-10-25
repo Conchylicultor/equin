@@ -1,0 +1,14 @@
+// @hash 6ec84829688d
+{
+  "views": [
+    {
+      "id": "triggers",
+      "name": "Triggers",
+      // The pinged event's bindings, oldest first: the source's own order.
+      "view": { "type": "table" }
+    }
+  ],
+  "sortPresets": [],
+  "filterPresets": [],
+  "customColumns": []
+}

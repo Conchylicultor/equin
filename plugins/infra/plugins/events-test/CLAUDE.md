@@ -36,27 +36,27 @@ curl -sX POST http://<ns>.localhost:9000/api/events-test/queue-saturate \
   - Contributes:
     - `Pane.Register` "events-test"
     - `DebugApp.Sidebar` "Events Test"
-  - Uses:
+  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/live-state` ×4
+    - `primitives/css/ui-kit` ×3
+    - `primitives/data-view` ×3
+    - `primitives/css/spacing` ×2
+    - `primitives/pane` ×2
+    - `shell/notifications` ×2
     - `apps/debug/shell.DebugApp`
     - `infra/endpoints.useFetchEndpoint`
+    - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.Fill`
     - `primitives/css/scroll.Scroll`
-    - `primitives/css/spacing.selfClass`
-    - `primitives/css/spacing.Stack`
     - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/css/ui-kit.Input`
     - `primitives/icon-button.IconButton`
-    - `primitives/pane.defineRoute`
-    - `primitives/pane.Pane`
-    - `shell/notifications.Toast`
-    - `shell/notifications.useToast`
+    - `primitives/loading.Loading`
     - `ui/icons.Icon`
   - Exports (values): `eventsTestPane`
 - Server:
+  - Contributes: `resource.declare` "events-test.log"
   - Uses:
     - `database.db`
     - `infra/endpoints.HttpError`
@@ -73,6 +73,7 @@ curl -sX POST http://<ns>.localhost:9000/api/events-test/queue-saturate \
     - `infra/jobs.reachableSlots`
     - `infra/jobs.singletonJobKey`
     - `infra/jobs/supervised-job.defineSupervisedJob`
+    - `network/live.serveValue`
     - `primitives/log-channels.defineLogSink`
   - DB schema: `plugins/infra/plugins/events-test/server/internal/tables.ts`
   - Register:
@@ -83,6 +84,7 @@ curl -sX POST http://<ns>.localhost:9000/api/events-test/queue-saturate \
     - `defineJob('events_test.dead-letter')`
     - `defineSupervisedJob('events-test.detached-sleep')`
     - `defineTriggerEvent('events_test.pinged')`
+  - Resources: `events-test.log` (push, notified, capped: EVENTS_TEST_LOG_WINDOW)
   - Routes:
     - `POST /api/events-test/subscribe`
     - `POST /api/events-test/emit`
@@ -115,26 +117,19 @@ curl -sX POST http://<ns>.localhost:9000/api/events-test/queue-saturate \
     - `ui/tokens/color-palette --info-foreground`
     - `ui/tokens/color-palette --input`
     - `ui/tokens/color-palette --muted`
-    - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/color-palette --success`
     - `ui/tokens/density --space-lg`
     - `ui/tokens/density --space-md`
-    - `ui/tokens/density --space-sm`
     - `ui/tokens/density --space-xl`
     - `ui/tokens/density --space-xs`
     - `ui/tokens/font-family --font-mono`
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`
-    - `ui/tokens/type-scale --font-scale`
-    - `ui/tokens/type-scale --font-size-body`
-    - `ui/tokens/type-scale --font-weight-normal`
-    - `ui/tokens/type-scale --line-height-body`
 - Exemptions:
   - Exempts itself from:
     - `jobs:no-raw-addjob` — `server/internal/cron-dedup.ts` (sanctioned)
     - `endpoints:no-raw-json-handlers` — `server/internal`, `machine/internal` (sanctioned)
     - `ids:pk-declared` — `server/internal/tables.ts` (debt)
-    - `live/no-endpoint-read` — `web/components/events-test-view.tsx` (debt)
     - `boundaries/no-platform-api` — `server/internal/serial-queue.ts` (debt)
 - Shared:
   - Exports (types):

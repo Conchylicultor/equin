@@ -1,31 +1,12 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 
-// Single source of truth for a worktree row — shared by the server handler
-// (return shape) and the web panel, which parses/validates each streamed NDJSON
-// row with this schema rather than blindly JSON-parsing whatever the gateway returns.
-export const WorktreeEntrySchema = z.object({
-  attemptId: z.string(),
-  taskId: z.string(),
-  taskTitle: z.string(),
-  taskStatus: z.string(),
-  attemptStatus: z.string(),
-  worktreePath: z.string(),
-  createdAt: z.string(),
-  dirExists: z.boolean(),
-  dbExists: z.boolean(),
-  isDirty: z.boolean(),
-  isSafe: z.boolean(),
-});
-export type WorktreeEntry = z.infer<typeof WorktreeEntrySchema>;
-
-// Streamed as NDJSON (no `response` schema) — see server/internal/handle-list.ts.
-export const listWorktrees = defineEndpoint({
-  route: "GET /api/debug/worktrees",
-});
-
+// "Delete N safe": every row of the scan `at` names that is safe to delete
+// (`isSafe`), read off the scan the panel holds — the safe set is the scan's,
+// so the server takes it from there rather than from a list the panel would
+// have to hold whole.
 export const BulkDeleteWorktreesBodySchema = z.object({
-  ids: z.array(z.string()),
+  at: z.number().int(),
 });
 export type BulkDeleteWorktreesBody = z.infer<
   typeof BulkDeleteWorktreesBodySchema

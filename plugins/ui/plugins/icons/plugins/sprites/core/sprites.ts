@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { blob, defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { liveValue } from "@plugins/network/plugins/live/core";
 import {
   wholeList,
@@ -15,8 +14,9 @@ const SPRITES = { feature: "Icon sprites" } as const;
 export const IconSpritesSchema = z.object({
   /**
    * What the sprites are a function of: the manifest's names and the installed
-   * Iconify sets. Every sprite URL carries it, which is what lets the route
-   * serve them as immutable.
+   * Iconify sets. Every on-demand {@link iconSprite} read carries it, which
+   * is what makes that read immutable: a tab whose resident sprites came from
+   * another process's manifest is refused, not sent a mismatched sprite.
    */
   manifestHash: z.string(),
   /** Sprite key → a whole `<svg>…</svg>` of `<symbol>`s. */
@@ -30,8 +30,8 @@ export type IconSprites = z.infer<typeof IconSpritesSchema>;
  * The RESIDENT sprites: the default style's two (at rest and active) plus the
  * brands. Preloaded, so the boot snapshot hydrates them before first paint and
  * no icon ever renders against a missing symbol in the default theme. A scope
- * themed to another style fetches that style's sprite from
- * {@link spriteEndpoint} on demand. External: the truth is the manifest compiled into this process
+ * themed to another style reads that style's sprite from {@link iconSprite} on
+ * demand. External: the truth is the manifest compiled into this process
  * and node_modules, neither of which changes while it runs.
  */
 export const residentSprites = liveValue("icons.sprites", {
@@ -41,20 +41,33 @@ export const residentSprites = liveValue("icons.sprites", {
 });
 
 /**
- * One sprite (`image/svg+xml`), content-addressed by the manifest hash in its
- * path, so it is served immutable. `key` is a style key, `brands` or `seti`
- * (the Seti file-type glyphs, never resident: fetched when the first one mounts).
+ * One sprite, by key: a whole `<svg>…</svg>` of `<symbol>`s. `key` is a style
+ * key, `brands`, `seti` or `lucide` — read on demand for a style no resident
+ * sprite covers (a scope themed to rounded, say) and for a sprite that is never
+ * resident (the Seti file-type glyphs, the Lucide glyphs: wanted the first
+ * time one mounts). Content-addressed by `hash`, the manifest hash the tab's
+ * resident sprites carry ({@link IconSprites.manifestHash}), so a tuple's
+ * answer never changes: `immutable`. Read over HTTP (on demand), as the
+ * endpoint it replaces was: a sprite is a whole style's symbols, asked for once
+ * per page, so it never rides the socket.
+ *
+ * Refused `unknown-key` — a key that names no sprite — and `stale-manifest` —
+ * `hash` is not the serving process's (the tab predates a restart that changed
+ * the manifest; reloading the page is the remedy).
  */
-export const spriteEndpoint = defineEndpoint({
-  route: "GET /api/icons/sprite/:hash/:key",
-  response: blob("image/svg+xml"),
+export const iconSprite = liveValue("icons.sprite", {
+  schema: z.string(),
+  params: ["hash", "key"],
+  load: "on-demand",
+  refusals: ["unknown-key", "stale-manifest"],
   needsMachine: SPRITES,
 });
 
 export const SavedIconSpritesSchema = z.object({
   /**
-   * What a runtime symbol's drawing is a function of: the installed Material
-   * Symbols sets. Every {@link runtimeSymbolsEndpoint} URL carries it.
+   * What a runtime symbol's answer is a function of: the installed Material
+   * Symbols sets, the saved-name list and the symbol build's version. Every
+   * {@link runtimeSymbolsValue} tuple carries it.
    */
   symbolsHash: z.string(),
   /** Every saved name some saved-icon source reports, sorted. */
@@ -97,15 +110,33 @@ export const savedIconsChanged = liveValue("icons.saved-icons-changed", {
 });
 
 /**
- * Runtime (saved) symbols in one style (`image/svg+xml`): `names` is a
- * comma-separated, sorted, duplicate-free list of saved symbol names, so the URL
- * is content-addressed with `hash` (the sets' {@link SavedIconSprites.symbolsHash})
- * and served immutable. `key` is a style key.
+ * At most this many names in one {@link runtimeSymbolsValue} tuple: the read
+ * travels as a URL (an on-demand value is fetched over HTTP), which stays
+ * well under any proxy's limit. The loader splits a larger batch.
  */
-export const runtimeSymbolsEndpoint = defineEndpoint({
-  route: "GET /api/icons/symbols/:hash/:key",
-  query: z.object({ names: z.string() }),
-  response: blob("image/svg+xml"),
+export const MAX_RUNTIME_SYMBOLS_PER_READ = 200;
+
+/**
+ * Runtime (saved) symbols in one style: a whole `<svg>` of
+ * `<symbol id="msr-<key>-<name>">`s. `names` is a comma-separated, sorted,
+ * duplicate-free list of at most {@link MAX_RUNTIME_SYMBOLS_PER_READ} saved
+ * symbol names — one spelling per set, so the tuple is content-addressed with
+ * `hash` ({@link SavedIconSprites.symbolsHash}) and its answer never
+ * changes: `immutable`. `key` is a style key. Read on demand (over HTTP), one
+ * tuple per style per frame of wants (the sprites plugin's runtime-symbol
+ * loader batches `<Icon>`'s wants).
+ *
+ * Refused `unknown-key` (no such style key), `stale-symbols` (`hash` is not
+ * the serving process's: the tab predates a restart that changed the sets,
+ * the name list or the symbol build —
+ * reloading is the remedy), `invalid-names` (empty, unsorted, duplicated or
+ * over the cap) and `unknown-name` (a name that is not a saved symbol name).
+ */
+export const runtimeSymbolsValue = liveValue("icons.runtime-symbols", {
+  schema: z.string(),
+  params: ["hash", "key", "names"],
+  load: "on-demand",
+  refusals: ["unknown-key", "stale-symbols", "invalid-names", "unknown-name"],
   needsMachine: SPRITES,
 });
 

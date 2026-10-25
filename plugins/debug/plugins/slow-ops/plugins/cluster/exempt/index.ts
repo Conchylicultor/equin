@@ -2,11 +2,10 @@ import type { Exemptions } from "@plugins/framework/plugins/tooling/plugins/exem
 
 export default [
   {
-    rule: "live/no-endpoint-read",
-    paths: ["web/internal/use-cluster-stream.ts"],
-    kind: "debt",
-    task: "task-1791560308-woqgfi",
+    rule: "no-db-backed-notify",
+    paths: ["server/internal/scan-served.ts"],
+    kind: "sanctioned",
     reason:
-      "A request/response server read (a GET fetchEndpoint or NDJSON stream an effect, a hook or a function they call runs) not yet moved onto a liveValue or liveCollection read with useLive.",
+      "debug.slow-ops.cluster.scan's truth is other fork DBs' slow_ops, which no change feed of this backend sees. Its loader reads only the in-memory scan; the one read of this backend's Postgres is `listAttempts` inside the scan its `whileSubscribed` starts, choosing which forks count as live AT the question's instant `at` — a snapshot frozen by design (Refresh is a new question), so no write to `attempts` may move a scan already asked. The lexical scan of the serveValue call reaches it through whileSubscribed.",
   },
 ] satisfies Exemptions;
