@@ -10,8 +10,12 @@ import type { TranscriptSnapshot } from "./watcher";
 // over real files. Bun scopes module mocks to the test file, so `parse-jsonl.test.ts`
 // still sees the genuine module.
 let chainPaths: string[] = [];
+let resolveCalls = 0;
 void mock.module("./resolve-chain", () => ({
-  resolveConversationTranscriptPaths: () => Promise.resolve(chainPaths),
+  resolveConversationTranscriptPaths: () => {
+    resolveCalls += 1;
+    return Promise.resolve(chainPaths);
+  },
 }));
 
 // Wrap the real chain reader with a hook that runs INSIDE the read. That is the only
@@ -79,6 +83,7 @@ describe("processRoom", () => {
     convId = `conv-${Math.random().toString(36).slice(2)}`;
     chainPaths = [transcript];
     duringRead = null;
+    resolveCalls = 0;
     seq = 0;
   });
 
@@ -185,6 +190,25 @@ describe("processRoom", () => {
     await refreshConversationChain(convId);
     expect(c.snapshots).toHaveLength(2);
     expect(c.snapshots[1]!.events).toHaveLength(2);
+  });
+
+  test("a room with nothing on disk yet stays pending until its chain is refreshed — no polling", async () => {
+    chainPaths = [];
+    const c = collector();
+    subscribe(c);
+    // Long enough for the old 1 s retry loop to have re-asked twice.
+    await new Promise((r) => setTimeout(r, 2_100));
+    expect(resolveCalls).toBe(1);
+    expect(c.snapshots).toHaveLength(0);
+
+    // The status reconciler records the session once its file exists, then refreshes.
+    await writeFile(transcript, line("first"));
+    chainPaths = [transcript];
+    const fanned = c.next();
+    await refreshConversationChain(convId);
+    await fanned;
+    expect(resolveCalls).toBe(2);
+    expect(c.snapshots[0]!.events).toHaveLength(1);
   });
 
   test("a late subscriber receives the events and their signature as one pair", async () => {

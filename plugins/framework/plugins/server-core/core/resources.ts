@@ -332,7 +332,8 @@ function errorReport(context: string, err: unknown): ServerErrorReport {
 // Push-outcome observer registry (the `onSlowSpan` shape): lets other plugins
 // subscribe to per-push outcomes (was the push a real content change, or a wasted
 // no-op?) WITHOUT server-core importing them. The runtime emits `onPush` once per
-// keyed push to >=1 subscriber; we fan it out to every registered observer. A
+// keyed or value recompute for >=1 subscriber (an equal value recompute, which
+// ships no frame, as a `changed: false` no-op); we fan it out to every registered observer. A
 // debug plugin registers at boot via `onResourcePush` from this barrel.
 export type ResourcePushObserver = (
   key: string,

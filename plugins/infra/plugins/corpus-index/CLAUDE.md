@@ -39,7 +39,13 @@ const index = defineCorpusIndex<MyPartial>({
   is load-bearing, not convenience: `ensureFresh` short-circuits on
   `!dirty && isMain()`, and `dirty` is otherwise only re-set by `startWatcher()`'s
   onChange. See the "own your own watcher" pattern below.
-- `startWatcher()` — main-only `@parcel/watcher` push freshness.
+- `startWatcher()` — main-only `@parcel/watcher` push freshness. A change batch
+  re-checks **only the paths it named** (`refreshCorpusPaths`: a gone path drops
+  its entries, a new directory is enumerated, a file goes through the
+  fingerprint gate); the full walk is the cold pass, `markDirty()`, and the 30 s
+  reconcile backstop. It used to re-walk the whole corpus on every batch — for
+  the transcript corpus ~1.2k dirs and ~4k stats every couple of seconds while
+  any agent wrote, 32k slow passes on main.
 - `warmup()` — convenience `defineWarmup` wrapping `startWatcher` + `ensureFresh`.
   Consumers with extra warm work (e.g. pricing) write their own `defineWarmup`
   that calls `ensureFresh`/`startWatcher` instead.

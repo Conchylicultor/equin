@@ -6,7 +6,6 @@ import {
 import { createKeyedCoalescer } from "@plugins/packages/plugins/coalesce/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { CLAUDE_PROJECTS_DIR } from "@plugins/infra/plugins/paths/server";
-import { retryUntil, fixed } from "@plugins/packages/plugins/retry/core";
 import { resolveConversationTranscriptPaths } from "./resolve-chain";
 import { readChain, type ChainRead } from "./parse-jsonl";
 import { transcriptChainSignature } from "./chain-signature";
@@ -89,7 +88,6 @@ interface Room {
   lastSignature: string;
   lastValue: unknown;
   subscribers: Set<Listener>;
-  abort: AbortController;
 }
 
 const rooms = new Map<string, Room>();
@@ -161,9 +159,6 @@ export async function startTranscriptWatcher(): Promise<void> {
 }
 
 export async function stopTranscriptWatcher(): Promise<void> {
-  for (const room of rooms.values()) {
-    room.abort.abort();
-  }
   rooms.clear();
   watchIndex.clear();
   if (watcher) {
@@ -219,19 +214,10 @@ export function watchPaths<T>(
       lastSignature: "",
       lastValue: undefined,
       subscribers: new Set(),
-      abort: new AbortController(),
     };
     rooms.set(spec.key, room);
     const created = room;
-    void runTracked("transcript-watcher:resolve", () =>
-      resolveRoom(created).catch((err) => {
-        if (err instanceof DOMException && err.name === "AbortError") return;
-        console.error(
-          `[transcript-watcher] resolveRoom failed for ${spec.key}`,
-          err,
-        );
-      }),
-    );
+    void runTracked("transcript-watcher:resolve", () => refreshRoom(created));
   } else if (room.lastSignature !== "") {
     // Late subscriber: deliver the current snapshot immediately. Both halves are
     // read here (and written in `processRoom`) together, so they can never be
@@ -262,29 +248,6 @@ export async function refreshWatchTag(tag: string): Promise<void> {
   }
 }
 
-async function resolveRoom(room: Room): Promise<void> {
-  const { signal } = room.abort;
-
-  // `retryUntil` retries while its callback resolves null/undefined and rethrows
-  // anything it throws. A room with NOTHING to watch — no files and no directory
-  // — is waiting on something that has not landed on disk yet (a transcript
-  // Claude has not written, a chain with no resolvable session), so map that onto
-  // null and keep waiting; a DB or glob failure still surfaces on the first
-  // attempt. A discovered room whose directories are known is NOT waiting: its
-  // empty file set is a legitimate value ("no sub-agents yet") and must be
-  // delivered, not withheld.
-  const targets = await retryUntil(
-    async () => {
-      const resolved = await room.spec.resolve();
-      return hasTargets(resolved) ? resolved : null;
-    },
-    { delay: fixed(1_000), signal },
-  );
-
-  registerTargets(room, targets);
-  await processRoom(room);
-}
-
 function hasTargets(targets: WatchTargets): boolean {
   return targets.paths.length > 0 || (targets.dirs?.length ?? 0) > 0;
 }
@@ -303,12 +266,33 @@ async function reconcileRoom(room: Room): Promise<void> {
   }
 }
 
+/**
+ * Resolve a room's targets and re-read it: the room's creation, a refresh of its
+ * tag, and the reconcile sweep all run this one step.
+ *
+ * A room with NOTHING to watch — no files and no directory — is waiting on
+ * something that has not landed on disk yet (a transcript Claude has not
+ * written, a chain with no resolvable session). It stays PENDING: registered
+ * nowhere, read never, until a push wakes it. No timer re-asks — every room
+ * that can resolve empty is derived from a conversation's session chain and
+ * carries its `refreshOn` tag, and the status reconciler fires that tag the
+ * moment it records a session id, which it only does once that session's file
+ * exists (its adoption gate). The 30s reconcile is the backstop for a missed
+ * notify. (This used to be a 1 s `retryUntil` loop: one chain lookup per second
+ * per pending room, for as long as Claude took to start — or for hours, for a
+ * conversation whose transcript never lands.)
+ *
+ * A pending refresh of a room that already has targets keeps them rather than
+ * tearing down a working subscription. A discovered room whose directories are
+ * known is NOT pending: its empty file set is a legitimate value ("no sub-agents
+ * yet") and is delivered. A DB or glob failure throws to the caller.
+ */
 async function refreshRoom(room: Room): Promise<void> {
-  if (!rooms.has(room.key)) return;
+  if (rooms.get(room.key) !== room) return;
   const targets = await room.spec.resolve();
-  // Nothing to watch means the files haven't landed yet (or a room whose initial
-  // `resolveRoom` is still retrying). Keep whatever the room already had rather
-  // than tearing down a working subscription.
+  // Closed (or replaced) while resolving: registering now would leak index
+  // entries for a room nobody can reach.
+  if (rooms.get(room.key) !== room) return;
   if (hasTargets(targets)) registerTargets(room, targets);
   await processRoom(room);
 }
@@ -386,7 +370,6 @@ function fanOut(room: Room, snapshot: PathsSnapshot<unknown>): void {
 }
 
 function closeRoom(room: Room): void {
-  room.abort.abort();
   for (const key of room.watchKeys) {
     const set = watchIndex.get(key);
     if (!set) continue;

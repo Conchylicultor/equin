@@ -75,18 +75,19 @@ describe("flushNotifies — level-parallel", () => {
   });
 
   test("a downstream frame is sent strictly after its upstream", async () => {
+    let n = 0; // a new value on every recompute (an equal one ships nothing)
     const h = createHarness();
     const upstreamR = h.runtime.defineExternalResource({
       key: "up",
       mode: "push",
       schema: z.number(),
-      loader: async () => 1,
+      loader: async () => ++n,
     });
     h.runtime.defineResource({
       key: "down",
       mode: "push",
       schema: z.number(),
-      loader: async () => 2,
+      loader: async () => ++n,
       dependsOn: [{ resource: upstreamR }], // identity cascade, depth(down) = 1
     });
 
@@ -108,6 +109,7 @@ describe("flushNotifies — level-parallel", () => {
   // ids, so it runs no edge query and opens no `cascade` origin — only a
   // routed entry's reverse resolve does (`runtime-table-routing.test.ts`).
   test("a cascade opens no `cascade` origin; the downstream reloads FULL under `push`", async () => {
+    let n = 0; // a new value on every recompute (an equal one ships nothing)
     const origins: Array<[string, string]> = [];
     const h = createHarness({
       wrapOrigin: (kind, key, fn) => {
@@ -119,7 +121,7 @@ describe("flushNotifies — level-parallel", () => {
       key: "up",
       mode: "push",
       schema: z.number(),
-      loader: async () => 1,
+      loader: async () => ++n,
     });
     const downCtx: unknown[] = [];
     h.runtime.defineResource({
@@ -128,7 +130,7 @@ describe("flushNotifies — level-parallel", () => {
       schema: z.number(),
       loader: async (_p, ctx) => {
         downCtx.push(ctx);
-        return 2;
+        return ++n;
       },
       dependsOn: [{ resource: up }],
     });
@@ -149,12 +151,13 @@ describe("flushNotifies — level-parallel", () => {
   });
 
   test("version advances monotonically per (key,pk), one per notify", async () => {
+    let n = 0; // a new value on every recompute (an equal one ships nothing)
     const h = createHarness();
     const r = h.runtime.defineExternalResource({
       key: "ver",
       mode: "push",
       schema: z.number(),
-      loader: async () => 1,
+      loader: async () => ++n,
     });
     await h.subscribe("ver");
     const base = h.frames.find((f) => f.kind === "sub-ack")!.version!;
@@ -169,6 +172,7 @@ describe("flushNotifies — level-parallel", () => {
   });
 
   test("a notify arriving mid-flush is re-drained, once, after the in-flight flush", async () => {
+    let n = 0; // a new value on every recompute (an equal one ships nothing)
     const h = createHarness();
     const slow = controllable(0);
     const slowR = h.runtime.defineExternalResource({
@@ -181,7 +185,7 @@ describe("flushNotifies — level-parallel", () => {
       key: "f",
       mode: "push",
       schema: z.number(),
-      loader: async () => 1,
+      loader: async () => ++n,
     });
 
     await h.subscribe("s");
@@ -1024,6 +1028,7 @@ describe("P8 23b — the deleted spellings are refused at registration", () => {
   // recompute. A25 (`scheduleNotify` refusing row ids for a non-membership
   // entry) has no public path left to reach it, so it is not exercised here.
   test("Resource.notify takes no row ids (type); an external notify recomputes FULL", async () => {
+    let n = 0; // a new value on every recompute (an equal one ships nothing)
     const h = createHarness();
     const ctxs: unknown[] = [];
     const r = h.runtime.defineExternalResource({
@@ -1032,7 +1037,7 @@ describe("P8 23b — the deleted spellings are refused at registration", () => {
       schema: z.number(),
       loader: (_p, ctx) => {
         ctxs.push(ctx);
-        return 1;
+        return ++n;
       },
     });
     await h.subscribe("ext");

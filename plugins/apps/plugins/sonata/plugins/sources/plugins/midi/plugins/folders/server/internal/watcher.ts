@@ -4,6 +4,7 @@ import {
   type FileWatcher,
 } from "@plugins/infra/plugins/file-watcher/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
+import { createCoalescer } from "@plugins/packages/plugins/coalesce/core";
 import { watchConfig } from "@plugins/config_v2/server";
 import type { Disposable } from "@plugins/config_v2/core";
 import {
@@ -28,8 +29,18 @@ export const midiFoldersWatcher = defineFileWatcher({
   description:
     "Watches your MIDI folders: imports a .mid file when it is added or edited and badges its song when the file is deleted.",
   extensions: [".mid", ".midi"],
-  // A backstop for a dropped fsevent: re-derives the whole folder set.
-  reconcileMs: 30_000,
+  // NO `reconcileMs`. A reconcile re-walks every watched folder recursively, and
+  // a watched folder may be a big tree (`~/Downloads`: 26k dirs for 31 MIDI
+  // files, 2.6 s of readdir per walk) — on a 30 s timer that was 2.6 s of I/O
+  // every 30 s in EVERY backend, to find nothing changed. A dropped fsevent is
+  // not silent: the native watch errors, and the engine reports it as `onLost`,
+  // which re-derives the folder set below (`lostReconciles`).
+});
+
+// A lost-events reconcile, coalesced: an error burst on several dirs costs at
+// most one running plus one pending walk.
+const lostReconciles = createCoalescer({
+  run: () => runTracked("midi-folders:reconcile", () => reconcile()),
 });
 
 // Mirrors infra/git/git-watcher's manager: module-level mutable watcher, `started`
@@ -90,8 +101,7 @@ async function reconfigure(opts: { reconcile: boolean }): Promise<void> {
         dirs,
         onChange: (events) =>
           runTracked("midi-folders:change", () => onChange(events)),
-        onReconcile: () =>
-          runTracked("midi-folders:reconcile", () => reconcile()),
+        onLost: () => lostReconciles.trigger(),
       });
     }
     if (opts.reconcile) await reconcile();

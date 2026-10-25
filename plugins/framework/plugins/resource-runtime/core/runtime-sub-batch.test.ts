@@ -117,6 +117,7 @@ describe("sub-batch — whole-set replay for one tab", () => {
   });
 
   test("two tabs on one socket are isolated: one tab's departure never releases the other's subs", async () => {
+    let n = 0; // a new value on every recompute (an equal one ships nothing)
     const first = mock((_p: unknown) => {});
     const last = mock((_p: unknown) => {});
     const h = createHarness();
@@ -124,7 +125,7 @@ describe("sub-batch — whole-set replay for one tab", () => {
       key: "k",
       mode: "push",
       schema: z.string(),
-      loader: async () => "v",
+      loader: async () => `v${++n}`,
       onFirstSubscribe: first,
       onLastUnsubscribe: last,
     });

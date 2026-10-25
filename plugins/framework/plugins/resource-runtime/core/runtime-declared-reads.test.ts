@@ -89,6 +89,7 @@ function reachedExternal(
 ) {
   const loads: ResourceParams[] = [];
   const reports: string[] = [];
+  let runs = 0;
   const h = createHarness({
     reportError: (ctx) => reports.push(ctx),
     ...runtime,
@@ -98,9 +99,10 @@ function reachedExternal(
     {
       mode: "push",
       reach: wholeReads(tables),
+      // A new value on every read (an unchanged recompute ships nothing).
       loader: (p) => {
         loads.push(p);
-        return loads.length;
+        return ++runs;
       },
     },
   );

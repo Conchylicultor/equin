@@ -45,13 +45,14 @@ function makeCapture(start = 100): {
 
 describe("watermark — full frames carry it", () => {
   test("sub-ack carries the flight watermark; a later update carries its own", async () => {
+    let n = 0; // a new value on every recompute (an equal one ships nothing)
     const cap = makeCapture();
     const h = createHarness({ captureWatermark: cap.fn });
     const r = h.runtime.defineExternalResource({
       key: "r",
       mode: "push",
       schema: z.string(),
-      loader: async () => "val",
+      loader: async () => `val${++n}`,
     });
 
     await h.subscribe("r");

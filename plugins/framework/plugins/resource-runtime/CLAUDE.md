@@ -47,9 +47,12 @@ at the same or earlier depth
 (`research/2026-06-19-global-parallel-flush-notifies.md`). `drainEntry` opens with
 a synchronous snapshot+clear of pending, and keeps its per-pk loop sequential so
 versions/snapshots stay monotonic. A `debounceMs` entry (a served value's
-`throttleMs`) drains only when its own window elapsed (`debounceDue`): a flush
-another entry triggers leaves its pending held, and a cascade into it arms its
-window — at most one drain per window, whatever else flushes (pinned by
+`throttleMs`) is a leading-edge throttle: a change with no drain of it in the
+last window drains at once, one inside the window waits for its remainder, and
+it drains only when released (`debounceDue`): a flush another entry triggers
+leaves its pending held, and a cascade into it is throttled like a notify — at
+most one drain per window, whatever else flushes, with no window of lag on an
+isolated change (pinned by
 `runtime-throttle.test.ts`; `research/2026-10-22-global-live-throttle-holds.md`). A `flushRunning`
 mutex + `flushAgain` rerun flag guarantee two flushes never overlap: a notify
 landing mid-flush sets `flushAgain` and is re-drained by the live flush. Pinned by
@@ -736,21 +739,43 @@ co-production doc exists to kill.) Etag-AFTER-value is safe here because the fra
 carries the value and self-heals via `flushAgain` — see the comment on `sendUpdate`
 and `research/2026-07-10-global-push-etag-rides-the-update-frame.md`.
 
-**D8 — a recompute that changed nothing sends nothing.** A non-keyed drain of
-a pushed, non-persisted entry that declares `revalidate` (`skipsUnchanged` —
-the memo-backed loaders, which hand back their cached object while the
-signature stands) loads BEFORE it mints. If the loader's RAW return (before
-the schema parse, which copies — `FlightValue.raw`) is the very object
-(`===`) every holder holds (`lastSent`), it sends no frame and mints no
-version; it only acks. Equal content in a new object is a change — nothing is
-hashed, so the rule needs no signature probe and cannot pin a stale value
-whatever order notifies arrive in: values are immutable, so the same object
-is the same content. `lastSent` is set by the update frame (synchronously
-with its subscriber set) and by the sub-ack that opened the span to its sole
-holder while no drain has minted since; any other read handing a holder
-another object (or an `up-to-date`, a 304, an error), a failed load, and N→0
-drop it. `invalidate` mode, keyed and persisted entries never skip; the
-cascade still runs on a skip. Pinned by `runtime-revalidate.test.ts` §D8.
+**D8 — a value recompute that changed nothing is not a change.** Every
+pushed, non-persisted non-keyed value (`holdsValue`, whatever its loader)
+keeps, per subscribed tuple, the value every holder holds (`held`: the value
+as served, after the schema parse — a copy, so a loader mutating its own
+return cannot move it — and its version). A drain with a held value and
+subscribers loads BEFORE it mints, and compares the load against it with
+`diffValue` (`compareHeld`) — the very walk a patched value's frame is built
+from, so a patched drain diffs once, and nothing is serialized or hashed to
+decide. `[]` ⇒ no version, no frame (no empty `patch`); only the ack it owes
+(`broadcastAckOnly`). The cascade still runs, as for any recompute: an
+unchanged value cannot move a downstream, but a downstream's recompute is its
+own decision (its own D8 — and a failed one retries on it). A
+`revalidate` entry (a signed memo) also keeps the loader's raw return: the
+very object again is unchanged without a walk.
+`held` is set by every frame to all the tuple's holders (`update` / `patch`,
+synchronously with the subscriber set it goes to) — only when that set is
+every current subscriber (a drain that minted before its load sends to the
+subscribers of that moment; a tab subscribing during the load is not among
+them and may hold an older read) and the tuple is still in the tracking span
+the drain started in (`entry.spans`, `snapshotOwner`'s rule: a drain
+outliving N→0 must not leave a value a later 0→1 — for a patched entry, a
+sub-ack answered from it with no load — would trust); otherwise the frame
+drops it. It is also set by the sub-ack that
+opened the span to its sole holder while no drain minted since; any other
+read (sub-ack, HTTP body) keeps it only when it handed equal content
+(`noteRead`), and drops it on anything else (other content, an
+`up-to-date`, a 304, an error). A failed load, a version minted with no frame
+to every holder, and N→0 drop it. `invalidate` mode (no
+value to compare — a drain loads none), keyed entries (they diff per row,
+`diffKeyed`) and persisted entries (boot-snapshot hydrates pages from the L2
+row, holders this runtime never saw) are outside the rule. The skip still
+reaches the churn monitor: the value drain fires `onPush` like the keyed
+paths — once per value-carrying recompute for ≥1 subscriber, `changed:
+false` for a skip, since the loader ran for nothing. Cost: one `diffValue`
+walk per drain of a held tuple (allocation-free when equal) and one retained
+value per subscribed tuple. Pinned by `runtime-unchanged-value.test.ts` and
+`runtime-revalidate.test.ts` §D8.
 
 `sendUpdate` sends the frame ITSELF rather than returning it, so the no-`revalidate`
 path (almost every resource) builds and broadcasts with **NO await before the
@@ -1071,19 +1096,21 @@ A contract may declare `patches: true` (a `liveValue`'s `patches`, threaded
 onto the entry like `bytes`): a pushed value whose changes ship as what
 changed. Design: `research/2026-10-21-global-live-value-patches.md`.
 
-- **One version, one value.** Per tuple, `patchBases` holds the value (as
+- **One version, one value.** Per tuple, D8's `held` is the value (as
   served, after the schema parse) every holder at its `version` holds. Every
   `update` / `patch` sets it; so does the sub-ack that opened the span, under
-  D8's sole-holder rule (`notePatchBase`) — two racing first reads leave none.
+  D8's sole-holder rule (`noteRead`) — two racing first reads leave none.
   While it stands, a sub-ack is answered FROM it (its value, its version, no
   load): a tab joining mid-stream holds what the others hold. A change since is
   a notify already pending, whose drain patches every holder forward.
-- **The drain** (`sendUpdate`): with a base, `diffValue(base, value)` →
-  `patch { base, version, ops }` (no etag; `watermark` / `ackTx` / `timing` as
-  an `update`); a root change (`null`), or no base, → `update`. Synchronous,
-  so H5a holds.
-- **Dropped** when a drain's load fails (its holders sit on an error) and at
-  N→0, so the next frame is a whole `update`.
+- **The drain** (`sendUpdate`): with a base, D8's own `diffValue(base,
+  value)` → `[]` is no change (nothing ships), other ops → `patch { base,
+  version, ops }` (no etag; `watermark` / `ackTx` / `timing` as an
+  `update`); a root change (`null`), or no base, → `update`. Synchronous, so
+  H5a holds.
+- **Dropped** when a drain's load fails (its holders sit on an error), when
+  an HTTP read hands a reader other content, and at N→0, so the next frame is
+  a whole `update`.
 - **Refused** at registration: a non-push mode, `revalidate` (an `up-to-date`
   answer would name a value the base does not), a preload (persisted, and read
   with nobody holding the base).
@@ -1227,13 +1254,13 @@ and those plugins' `CLAUDE.md`.
 ## Plugin reference
 
 - Core:
-  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `packages/resource-protocol` ×15
     - `packages/string-hash` ×2
+    - `packages/value-patch` ×2
     - `packages/canonical-params.canonicalParams`
     - `packages/inflight.createInflight`
     - `packages/semaphore.createSemaphore`
-    - `packages/value-patch.diffValue`
   - Exports (types):
     - `AliasMembership`
     - `ChangeSource`

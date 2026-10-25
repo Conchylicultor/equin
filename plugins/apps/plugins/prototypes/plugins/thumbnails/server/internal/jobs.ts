@@ -3,7 +3,7 @@ import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { readyNow } from "@plugins/infra/plugins/deps/deps";
 import { requestDep } from "@plugins/infra/plugins/deps/server";
 import { chromium } from "@plugins/infra/plugins/safe-fetch/plugins/browser-fetch/deps";
-import { listPrototypeMetas } from "@plugins/apps/plugins/prototypes/plugins/files/server";
+import { readPrototypeMeta } from "@plugins/apps/plugins/prototypes/plugins/files/server";
 import { hasThumbnail, sweepThumbnails, writeThumbnail } from "./cache";
 import { fingerprintPrototype } from "./fingerprint";
 import { ThumbnailRenderError } from "./errors";
@@ -65,9 +65,9 @@ export const renderThumbnailJob = defineJob({
   // slow op worth reporting.
   slowThresholdMs: 60_000,
   run: async ({ input }) => {
-    const meta = (await listPrototypeMetas()).find(
-      (m) => m.name === input.name,
-    );
+    // This one prototype's meta, not the whole tree's (which reads and
+    // parses every folder — seconds on a busy host — to keep one entry).
+    const meta = await readPrototypeMeta(input.name);
     // Deleted between enqueue and run — the work is moot, not failed.
     if (!meta) return;
 

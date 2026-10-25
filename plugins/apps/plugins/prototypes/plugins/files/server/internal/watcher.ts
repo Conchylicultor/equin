@@ -51,7 +51,7 @@ export const prototypesTreeWatcher = defineFileWatcher({
 let watcher: FileWatcher | null = null;
 let started = false;
 
-const listeners: (() => void)[] = [];
+const listeners: ((changed: readonly string[]) => void)[] = [];
 
 /** The tree as of the last time it was looked at — see {@link readPrototypesSignature}. */
 let lastSignature = new Map<string, string>();
@@ -65,10 +65,17 @@ let lastSignature = new Map<string, string>();
  * re-derived: a consumer that needs to react to an edit (the thumbnail
  * renderer) listens here instead of watching.
  *
+ * The listener is handed the prototypes that moved — added, removed or
+ * edited, by name (a removed one is no longer on disk) — the same diff that
+ * gates the re-broadcast, so a consumer redoes the work for those and leaves
+ * the rest of the tree alone.
+ *
  * Process-lifetime, like the watcher itself — there is no unsubscribe because
  * every listener is registered once, in a plugin's `onReady`.
  */
-export function onPrototypesChanged(listener: () => void): void {
+export function onPrototypesChanged(
+  listener: (changed: readonly string[]) => void,
+): void {
   listeners.push(listener);
 }
 
@@ -95,7 +102,7 @@ async function refreshOnce(): Promise<void> {
   // (its folder gone) would make the loader throw "no such prototype" for
   // a pane still open on it — which unmounts once the list above reaches it.
   for (const name of changed) if (signature.has(name)) notifyHistory(name);
-  for (const listener of listeners) listener();
+  for (const listener of listeners) listener(changed);
 
   // A folder that appeared without the mint (made by hand, restored from a
   // backup) gets its history here; a minted one already has it. Last, so a

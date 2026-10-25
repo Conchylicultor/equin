@@ -6178,8 +6178,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `checkpointPrototype`
               - `listPrototypeMetas`
+              - `listPrototypeNames`
               - `onPrototypesChanged`
               - `prototypeExists`
+              - `readPrototypeMeta`
               - `readPrototypeTitle`
             - Register: `defineFileWatcher('prototypes-files.tree')`
             - Resources:
@@ -6543,8 +6545,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Server:
             - Contributes: `resource.declare` "prototypes.thumbnails"
             - Uses:
-              - `apps/prototypes/files.listPrototypeMetas`
+              - `apps/prototypes/files.listPrototypeNames`
               - `apps/prototypes/files.onPrototypesChanged`
+              - `apps/prototypes/files.readPrototypeMeta`
               - `infra/deps.onDepInstallSettled`
               - `infra/deps.requestDep`
               - `infra/jobs.defineJob`
@@ -25428,13 +25431,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PRODUCT_NAME`
     - **`resource-runtime`**
       - Core:
-        - Uses: 21 symbols — full list in [`plugins/framework/plugins/resource-runtime/REFERENCE.md`](../plugins/framework/plugins/resource-runtime/REFERENCE.md)
+        - Uses: 22 symbols — full list in [`plugins/framework/plugins/resource-runtime/REFERENCE.md`](../plugins/framework/plugins/resource-runtime/REFERENCE.md)
           - `packages/resource-protocol` ×15
           - `packages/string-hash` ×2
+          - `packages/value-patch` ×2
           - `packages/canonical-params.canonicalParams`
           - `packages/inflight.createInflight`
           - `packages/semaphore.createSemaphore`
-          - `packages/value-patch.diffValue`
         - Exports (types):
           - `AliasMembership`
           - `ChangeSource`
@@ -50064,6 +50067,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `RECENT_GONE_LIMIT`
           - `recordScratchDelivery`
           - `removeTaskDependency`
+          - `runtimeOfConversationLookup`
           - `setConversationHibernated`
           - `taskAttachments`
           - `taskDependsOn`

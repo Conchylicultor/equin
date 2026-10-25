@@ -5,7 +5,7 @@ import { onDepInstallSettled } from "@plugins/infra/plugins/deps/server";
 import { chromium } from "@plugins/infra/plugins/safe-fetch/plugins/browser-fetch/deps";
 import { renderThumbnailJob, sweepThumbnailsJob } from "./internal/jobs";
 import { prototypeThumbnailsServed } from "./internal/state";
-import { syncThumbnails } from "./internal/sync";
+import { syncChangedThumbnails, syncThumbnails } from "./internal/sync";
 
 export default {
   description:
@@ -15,8 +15,11 @@ export default {
   onReady: () => {
     // `files` owns `prototypes/` and already watches it; subscribing to the
     // signal it computes is what keeps a second watcher off the same tree.
-    onPrototypesChanged(() => {
-      void runTracked("prototype-thumbnails:sync", () => syncThumbnails());
+    // It names the prototypes that moved, so an edit re-decides those alone.
+    onPrototypesChanged((changed) => {
+      void runTracked("prototype-thumbnails:sync-changed", () =>
+        syncChangedThumbnails(changed),
+      );
     });
 
     // A render that found no browser parked its card in `waiting-for-browser`

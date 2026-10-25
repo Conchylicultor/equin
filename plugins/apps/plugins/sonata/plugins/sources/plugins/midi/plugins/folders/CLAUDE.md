@@ -20,7 +20,13 @@ Two mechanisms keep the DB in sync with disk:
   `watchConfig`), so there is no polling.
 - **Drift reconcile** (`reconcile.ts`) — catches what the watcher cannot: files
   that changed while the backend was down, and pre-existing files in a
-  newly-added folder (the watcher emits no events for those).
+  newly-added folder (the watcher emits no events for those). It runs at boot
+  (the warm-up below), on a real config change, and when the watch reports
+  lost events (`onLost`: FSEvents / inotify dropped some) — **never on a
+  timer**. One reconcile is a recursive walk of every watched folder, and a
+  watched folder can be a big tree (`~/Downloads`: 26k dirs holding 31 MIDI
+  files, ~2.6 s of `readdir` per walk); the former 30 s `reconcileMs` backstop
+  re-walked it every 30 s in every backend to find nothing changed.
 
 ### An unreadable folder is a state, never a skip
 

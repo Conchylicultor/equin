@@ -125,6 +125,20 @@ export async function listPrototypeMetas(): Promise<PrototypeMeta[]> {
 }
 
 /**
+ * One prototype's `PrototypeMeta`, read from its own folder alone (the tree is
+ * only listed, for the sibling names its validation checks against) — for a
+ * caller that names one prototype and must not pay for reading every folder.
+ * `null` when no such prototype is on disk.
+ */
+export async function readPrototypeMeta(
+  name: string,
+): Promise<PrototypeMeta | null> {
+  const dirNames = await listPrototypeDirNames(prototypesDir.path);
+  if (!dirNames.includes(name)) return null;
+  return await readMeta(name, dirNames);
+}
+
+/**
  * One prototype's display title, read from its `index.html` alone — for a
  * caller that names a single prototype (an id in a task description) and must
  * not pay for validating the whole tree. `found: false` when no such folder or

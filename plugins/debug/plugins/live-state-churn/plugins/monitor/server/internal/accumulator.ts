@@ -1,6 +1,7 @@
 // Module-level, in-process accumulator of per-resource live-state push outcomes.
 // PURE MEMORY — no DB writes (like health-monitor's module-level counters). The
-// resource-runtime fires `recordPush` once per keyed push to >=1 subscriber; we
+// resource-runtime fires `recordPush` once per keyed or value recompute for >=1
+// subscriber (an unchanged value recompute — no frame — as a no-op); we
 // bucket those outcomes so the scheduled monitor can read a trailing-window rate
 // without touching the DB.
 //

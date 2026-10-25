@@ -3,7 +3,9 @@
 The *detect* half of live-state churn debugging.
 
 An in-process accumulator (`server/internal/accumulator.ts`) is fed by every keyed
-live-state push via `onResourcePush`. A per-worktree scheduled job
+or pushed-value live-state recompute for a subscriber via `onResourcePush`. A
+value recompute equal to what its holders hold ships no frame (resource-runtime's
+D8) but still counts here as a no-op: the loader ran for nothing. A per-worktree scheduled job
 (`debug.live-state-churn-monitor`) samples that accumulator and, when a resource
 sustains a high rate of no-op (empty-diff) pushes over the window, files a deduped
 `live-state-noop` report through the reports engine (one report per distinct

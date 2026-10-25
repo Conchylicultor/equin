@@ -167,9 +167,10 @@ describe("stale-flight refusal — the 2026-08-08 revert", () => {
     // after it cannot have missed the commit, so the drain joins it and the
     // loader runs once — the property `notBefore` exists to preserve, and the
     // reason the fix is a floor rather than "the push path never coalesces".
-    // Staged with a debounced entry: the notify arms a timer instead of the
-    // immediate microtask flush, which opens the window for a read flight to
-    // start between the notify and the drain.
+    // Staged with a throttled entry inside its window (a first notify drained
+    // and opened it): the notify arms a timer instead of the immediate
+    // microtask flush, which opens the gap for a read flight to start between
+    // the notify and the drain.
     const ctl = snapshotControllable<Rows>(PRE);
     const supersedes: string[] = [];
     const h = createHarness({
@@ -180,20 +181,22 @@ describe("stale-flight refusal — the 2026-08-08 revert", () => {
       key: "d",
       mode: "push",
       schema: rowsSchema,
-      debounceMs: 5,
+      debounceMs: 30,
       loader: ctl.loader,
     });
     await h.subscribe("d", {}, { socket: 0 });
+    r.notify(); // the leading edge: drains at once and opens the window
+    await tick();
     const before = ctl.invocations;
 
     ctl.setValue(POST);
-    r.notify(); // stamps lastNotifyAt; the flush is deferred by the debounce
+    r.notify(); // stamps lastNotifyAt; inside the window, the flush is deferred
     ctl.block();
     const parked = h.subscribe("d", {}, { socket: 1 }); // starts AFTER the notify
     await tick();
     expect(ctl.invocations).toBe(before + 1);
 
-    await new Promise((res) => setTimeout(res, 15)); // the debounce fires
+    await new Promise((res) => setTimeout(res, 50)); // the window's timer fires
     expect(supersedes).toEqual([]); // the flight is fresh enough — joined
     expect(ctl.invocations).toBe(before + 1); // exactly one loader run, shared
 

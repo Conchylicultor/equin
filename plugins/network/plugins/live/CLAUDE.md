@@ -1730,9 +1730,11 @@ useLive(folderListing, expanded.map((dir) => ({ dir })));  // MANY tuples → on
     collection's); a `"notified"` external value adds `notify`. `compileValue` is the same derivation
     without registering, and `core/internal/compile-value.ts`'s `registerValue`
     registers it on any runtime (tests use their own).
-  - **`throttleMs`** (db, and external `"notified"`): at most one flush per window — the first
-    change arms a trailing timer later changes do not re-arm (the runtime's
-    `debounceMs`, which was always a throttle). Only the window releases it:
+  - **`throttleMs`** (db, and external `"notified"`): at most one flush per window, leading
+    edge — a change with no flush in the last window flushes at once (an
+    isolated change is never held); one inside the window waits for its
+    remainder, on a timer later changes do not re-arm (the runtime's
+    `debounceMs`, which was always a throttle). Only the throttle releases it:
     a flush another value triggers inside it, or a `recomputeOn` cascade,
     leaves it held — so the bound holds on a busy server.
   - **`recomputeOn: [served, { value: served, params: (up) => P }]`** (db, and

@@ -156,6 +156,9 @@ describe("heartbeat — flushOpenMs", () => {
       clock.advance(1_000);
       expect(probe.beat().flushOpenMs).toBe(1_000);
 
+      // Pass 2 reads a value of its own (pass 1 resolved at release with 2 —
+      // an equal recompute would ship nothing).
+      slow.setValue(3);
       slow.release();
       await tick();
       expect(h.pushesFor("slow")).toHaveLength(2);

@@ -1,8 +1,5 @@
 import { serveValue } from "@plugins/network/plugins/live/machine";
-import {
-  _conversations,
-  getConversationRuntime,
-} from "@plugins/tasks/plugins/tasks-core/server";
+import { runtimeOfConversationLookup } from "@plugins/tasks/plugins/tasks-core/server";
 import { conversationPartialMessage, type PartialMessage } from "../../core";
 import { Runtime } from "../../server/internal/runtime";
 
@@ -15,21 +12,27 @@ const held = new Map<string, PartialMessage | null>();
  * first reader and stopped after the last). Throttled to one push per 50 ms:
  * the model writes faster than a reader reads. Declared `patches`, so each
  * push ships what was written since the last one, not the whole message.
+ * The runtime row is read once, by `whileSubscribed`, to pick the runtime to
+ * watch — through the compiled lookup of THAT conversation's row, so another
+ * conversation's write never reaches this tuple (declaring the whole
+ * `conversations` table re-ran every watched tuple on every write and shipped
+ * an empty patch).
  */
 export const partialMessageServed = serveValue(conversationPartialMessage, {
   source: "external",
   changes: "notified",
   throttleMs: 50,
   reads: {
-    tables: [_conversations],
+    tables: [],
+    lookups: [runtimeOfConversationLookup.read<{ id: string }>((p) => p.id)],
     reason:
       "the conversation's runtime row picks which runtime to watch; the text itself is in memory, pushed by that runtime",
   },
   loader: ({ id }) => held.get(id) ?? null,
   whileSubscribed: async ({ id }, notify) => {
-    const row = await getConversationRuntime(id);
-    if (!row) throw new Error(`Conversation ${id} not found`);
-    const stop = Runtime.get(row.runtime).watchPartial(id, (message) => {
+    const found = await runtimeOfConversationLookup.run(id);
+    if (!found.found) throw new Error(`Conversation ${id} not found`);
+    const stop = Runtime.get(found.row.runtime).watchPartial(id, (message) => {
       held.set(id, message);
       notify();
     });

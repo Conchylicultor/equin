@@ -3,7 +3,10 @@ import { hashHex } from "@plugins/packages/plugins/string-hash/core";
 import { createInflight } from "@plugins/packages/plugins/inflight/core";
 import { canonicalParams } from "@plugins/packages/plugins/canonical-params/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
-import { diffValue } from "@plugins/packages/plugins/value-patch/core";
+import {
+  diffValue,
+  type ValuePatchOp,
+} from "@plugins/packages/plugins/value-patch/core";
 import {
   BUILD_GRAPH_HEADER,
   DERIVE_MAX_ID,
@@ -412,20 +415,22 @@ export interface ResourceDefinition<
    */
   recomputeOn?: ReadonlyArray<RoutedRecomputeOn>;
   /**
-   * Fixed-window trailing debounce (ms) for this resource's flushes. When set
-   * (and > 0), a `notify()` (or cascaded `mergePending`) into this entry does
-   * NOT ride the immediate microtask flush; instead it arms a per-entry timer
-   * that triggers a flush after the window. The timer is NOT re-armed on
-   * subsequent notifies within the window (fixed window, starvation-free), so a
-   * continuously-ticking source still flushes at least every `debounceMs`. The
-   * merge into `pendingNotifies` is unchanged, so all coalescing keeps working —
-   * the debounce only delays *when* the accumulated pending map drains.
-   * The window is a real throttle: ONLY its own timer releases the entry's
-   * pending — a flush another resource triggers inside the window leaves it
-   * held (no piggyback; on a busy server one would drain it on every change),
-   * and a cascade into the entry arms its window like a notify does. So the
+   * Leading-edge throttle (ms) for this resource's flushes: drains are at
+   * least `debounceMs` apart. A `notify()` (or cascaded `mergePending`) into an
+   * entry that has not drained within the last window drains on the next flush
+   * (the leading edge — an isolated change is never held); one landing inside
+   * the window arms a per-entry timer for the window's REMAINDER (never re-armed
+   * by later notifies, starvation-free), so a continuously-ticking source still
+   * drains once per `debounceMs`. The merge into `pendingNotifies` is
+   * unchanged, so all coalescing keeps working — the throttle only decides
+   * *when* the accumulated pending map drains. Only the throttle releases the
+   * entry's pending — a flush another resource triggers inside the window
+   * leaves it held (no piggyback; on a busy server one would drain it on every
+   * change), and a cascade into the entry is throttled like a notify. So the
    * entry recomputes at most once per `debounceMs`, whatever else flushes.
-   * See research/2026-10-22-global-live-throttle-holds.md.
+   * See research/2026-10-22-global-live-throttle-holds.md (the leading edge
+   * came after: a trailing-only window held every isolated change a full window,
+   * e.g. `app-usage.summary` delivering each once-a-minute flush 2 s late).
    * Do NOT use on keyed resources driving optimistic-mutation delta-sync —
    * debounce the *source* instead. See
    * research/2026-06-15-global-live-state-cascade-contention.md.
@@ -542,7 +547,7 @@ export interface ResourceDefinition<
   /**
    * A PATCHED value, declared once on the shared client descriptor (a
    * `liveValue`'s `patches: true`): a drain that has the value every holder
-   * holds (`RegistryEntry.patchBases`) ships what changed as a `patch` frame
+   * holds (`RegistryEntry.held`) ships what changed as a `patch` frame
    * (`packages/value-patch`) instead of an `update`, and a sub-ack while that
    * base stands is answered FROM it — so one version names one value for
    * every holder, and every holder can apply the next patch. Mode `push`
@@ -1112,6 +1117,26 @@ interface PendingReverse {
 }
 
 /**
+ * D8 — the value every holder of a tuple holds (`RegistryEntry.held`).
+ * `raw` only on a `revalidate` entry: the loader's own return, compared by
+ * identity as a fast path (a signed memo hands its cached object back).
+ */
+interface HeldValue {
+  version: number;
+  value: unknown;
+  raw?: unknown;
+}
+
+/**
+ * A drain's D8 comparison against the held value at `base`: `diffValue`'s
+ * ops (`null` = the root itself changed), shipped by a patched entry.
+ */
+interface ValuePatch {
+  base: number;
+  ops: ValuePatchOp[] | null;
+}
+
+/**
  * What one read flight co-produces (see `getResourceValue`): the value, the
  * etag it was seeded with, its commit watermark, the ackTx it may stamp, and the
  * tuple's version when its read started.
@@ -1119,8 +1144,8 @@ interface PendingReverse {
 interface FlightValue {
   value: unknown;
   /**
-   * The loader's own return, before the schema parse (which copies): what D8
-   * compares by identity (`RegistryEntry.lastSent`). Never sent.
+   * The loader's own return, before the schema parse (which copies): what
+   * D8's memo fast path compares by identity (`HeldValue.raw`). Never sent.
    */
   raw: unknown;
   etag: string | undefined;
@@ -1246,7 +1271,11 @@ interface RegistryEntry {
   refusals?: readonly string[];
   /** A bytes value — see `ResourceDefinition.bytes`. */
   bytes?: true;
-  /** A patched value — see `ResourceDefinition.patches`. */
+  /**
+   * A patched value — see `ResourceDefinition.patches`: its drains ship
+   * the D8 comparison's ops against `held` as a `patch` frame, and while
+   * `held` stands a sub-ack is answered FROM it.
+   */
   patches?: true;
   /**
    * True when declared via `defineExternalResource` — the resource's truth lives
@@ -1318,20 +1347,26 @@ interface RegistryEntry {
   versions: Map<string, number>;
   /** Coalesced pending notifies per params-tuple. */
   pendingNotifies: Map<string, PendingNotify>;
-  /** Fixed-window trailing debounce (ms) for this entry's flushes. 0/undefined = immediate. */
+  /** Leading-edge throttle (ms) for this entry's flushes. 0/undefined = immediate. */
   debounceMs?: number;
   /**
-   * Armed debounce timer handle, or undefined when not armed. Set when the first
-   * notify in a window arrives; cleared on fire (which marks `debounceDue` and
-   * schedules a flush).
+   * Armed throttle timer handle, or undefined when not armed. Set when a notify
+   * lands inside the window opened by the last drain, for the window's
+   * remainder; cleared on fire (which marks `debounceDue` and schedules a flush).
    */
   debounceTimer?: ReturnType<typeof setTimeout>;
   /**
-   * The window elapsed and a flush is scheduled for it: the only state in which
-   * `drainEntry` drains a debounced entry. Cleared by that drain, so the next
-   * change opens a fresh window; a change landing while due rides the due drain.
+   * A drain is allowed and a flush is scheduled for it (the leading edge, or
+   * the timer fired): the only state in which `drainEntry` drains a throttled
+   * entry. Cleared by that drain; a change landing while due rides the due drain.
    */
   debounceDue?: boolean;
+  /**
+   * `performance.now()` of this throttled entry's last drain: it opens the
+   * window inside which a change waits for the remainder instead of draining.
+   * Undefined until the first drain (so the first change drains at once).
+   */
+  debounceDrainedAt?: number;
   /** Global subscriber refcount per params-tuple (across all sockets). */
   subCounts: Map<string, number>;
   /**
@@ -1362,29 +1397,22 @@ interface RegistryEntry {
    */
   draining: Set<string>;
   /**
-   * D8 — per tracked pk of an entry that skips unchanged recomputes
-   * (`skipsUnchanged`): the loader's RAW return (before the schema parse, which
-   * copies) that every holder of the tuple holds. Set by a non-keyed drain as
-   * it sends its `update` (synchronously with the subscriber set the frame goes
-   * to), and by the sub-ack that opened the tuple's span to its sole holder
-   * while no drain has minted since. Dropped whenever a read hands a holder
-   * anything else — another value, an `up-to-date`, an error — when a drain's
-   * load fails, and at N→0. A drain whose load returns this very object
-   * (`===`; values are immutable) changed nothing a holder lacks: no frame, no
-   * version, only the ack it owes.
+   * D8 — per tracked pk of a held-value entry (`holdsValue`: a pushed,
+   * non-persisted value): what every holder of the tuple holds at `version`
+   * — the value as served (after the schema parse, which copies, so a loader
+   * mutating its own return cannot move it), and, for a `revalidate` entry
+   * (a signed memo's), the loader's RAW return it came from. Set by every
+   * frame that goes to all the tuple's holders (`update`, `patch`,
+   * synchronously with the subscriber set it goes to), and by the sub-ack
+   * that opened the tuple's span to its sole holder while no drain minted
+   * since. Kept by any other read that hands a holder equal content; dropped
+   * when one hands it anything else (another value, an `up-to-date`, an
+   * error), when a drain's load fails, when a version is minted without a
+   * frame to every holder, and at N→0. A drain whose load equals it
+   * (`diffValue` → `[]`; or the very raw object, for a memo) changed
+   * nothing a holder lacks: no frame, no version, only the ack it owes.
    */
-  lastSent: Map<string, unknown>;
-  /**
-   * A patched entry's per-pk base (`ResourceDefinition.patches`): the value —
-   * as served, after the schema parse — that every holder at `version` holds.
-   * Set by every frame that goes to all the tuple's holders (`update`,
-   * `patch`), and by the sub-ack that opened the span to its sole holder while
-   * no drain minted since. While it stands, a sub-ack is answered from it, so
-   * no holder ever holds another value at its version. Dropped when a drain's
-   * load fails (its holders sit on an error) and at N→0. Undefined on every
-   * other entry.
-   */
-  patchBases?: Map<string, { version: number; value: unknown }>;
+  held: Map<string, HeldValue>;
   /** Present ⇒ a routed entry (see `ResourceDefinition.routes`). */
   routing?: RoutingRecord;
   /**
@@ -1709,8 +1737,10 @@ export interface ResourceRuntimeOptions {
   keySet?: () => "open" | "closed";
   /** Per-key owner metadata for the _debug endpoint. server: from Resource.Declare; central: omit. */
   debugOwners?: () => Array<{ key: string; pluginId?: string }>;
-  /** Fired once per push to >=1 subscriber, with whether the push carried a content change.
-   *  A `changed: false` push is a wasted no-op (empty keyed diff). */
+  /** Fired once per keyed or pushed-value recompute for >=1 subscriber, with whether it
+   *  carried a content change. A `changed: false` one is a wasted no-op: an empty keyed
+   *  diff, or a value recompute equal to what every holder holds (D8 — no frame went out,
+   *  but the loader ran for nothing). */
   onPush?(key: string, info: { subscribers: number; changed: boolean }): void;
   /**
    * Per-key automatic table read-set: the tables this resource's loader actually
@@ -3329,31 +3359,25 @@ export function createResourceRuntime(
     watermark?: string,
     ackTx?: readonly string[],
     pending?: PendingNotify,
+    patch?: ValuePatch,
   ): number | Promise<number> {
     // A patched entry ships what changed against the value every holder at
-    // the base's version holds; the first frame of a span, and a change of
-    // the root itself, ship the whole value. Either way the frame goes to every
-    // holder, so its value is the new base. Synchronous: no await before the
-    // wire (H5a) — a patched entry has no `revalidate`.
-    const bases = entry.patchBases;
-    if (bases !== undefined) {
-      const pk = paramsKey(params);
-      const base = bases.get(pk);
-      bases.set(pk, { version, value });
-      const ops = base === undefined ? null : diffValue(base.value, value);
-      if (base !== undefined && ops !== null) {
-        return broadcastJson(subs, {
-          kind: "patch" as const,
-          key: entry.key,
-          params,
-          base: base.version,
-          version,
-          ops,
-          ...(watermark !== undefined ? { watermark } : {}),
-          ...(ackTx !== undefined && ackTx.length > 0 ? { ackTx } : {}),
-          ...(pending !== undefined ? frameTiming(pending) : {}),
-        });
-      }
+    // the base's version holds (`patch`: the drain's own D8 diff — one walk
+    // decides both "changed?" and "what changed"); the first frame of a span,
+    // and a change of the root itself, ship the whole value. Synchronous: no
+    // await before the wire (H5a) — a patched entry has no `revalidate`.
+    if (entry.patches && patch !== undefined && patch.ops !== null) {
+      return broadcastJson(subs, {
+        kind: "patch" as const,
+        key: entry.key,
+        params,
+        base: patch.base,
+        version,
+        ops: patch.ops,
+        ...(watermark !== undefined ? { watermark } : {}),
+        ...(ackTx !== undefined && ackTx.length > 0 ? { ackTx } : {}),
+        ...(pending !== undefined ? frameTiming(pending) : {}),
+      });
     }
     const broadcast = (etag?: string): number => {
       const msg = {
@@ -3376,39 +3400,61 @@ export function createResourceRuntime(
     return pushEtag(entry, params).then(broadcast);
   }
 
-  // D8: whether a non-keyed drain of `entry` may send nothing when its load
-  // returns the very object every holder holds (`RegistryEntry.lastSent`).
-  // Only a pushed value (an `invalidate` carries no value to compare — a
-  // holder's refetch decides what it holds), never a persisted one (its value
-  // and floor are written on every recompute), and only one that declares a
-  // `revalidate` signature: those are the memo-backed loaders
-  // (`createSignedMemo`), which hand back their cached object while the
-  // signature stands. Skipping on identity relies on values being immutable:
-  // a loader that mutated a returned object in place and returned it again
-  // would be skipped — the `revalidate` gate keeps the rule to the loaders
-  // whose value is a memo's, not every pushed value's.
-  function skipsUnchanged(entry: RegistryEntry, persisted: boolean): boolean {
-    return (
-      entry.mode === "push" && entry.revalidate !== undefined && !persisted
-    );
+  // D8: whether `entry` keeps the value every holder of a tuple holds
+  // (`RegistryEntry.held`), so a non-keyed drain whose recompute equals it
+  // sends nothing. Every pushed value — whatever its loader — but a persisted
+  // one (read at boot from its L2 row and hydrated into pages through
+  // boot-snapshot, with no holder this runtime saw, so "what every holder
+  // holds" has no answer) and an `invalidate` one (its frame carries no
+  // value, and a drain does not load one to compare). A keyed entry diffs
+  // per row instead (`diffKeyed`).
+  function holdsValue(entry: RegistryEntry, persisted: boolean): boolean {
+    return entry.mode === "push" && !persisted;
   }
 
-  // D8: a read handed one holder of the tuple something — `served.raw`, the
-  // loader's raw return it was served from, or `undefined` for anything else
-  // (an `up-to-date`, a 304, an error). The held object survives only if the
-  // holder now holds that very object. `sole`: the read is the sub-ack of the
-  // subscription that opened the tuple's span (the global 0→1, which minted
-  // the `version` it reports — above any version a client holds, so its holder
-  // applies it). While that holder is still the tuple's only one and no drain
-  // minted since (`version` still current: no frame reached it after this
-  // read), every holder holds `served.raw`, and it becomes the held object.
+  // D8: whether the drain's recompute `value` (from `raw`) changed nothing a
+  // holder of the tuple lacks — and, when there is a held value to compare
+  // against, the comparison itself (`ops`), so a patched entry's frame reuses
+  // the one walk. A memo's own object again is unchanged without a walk
+  // (identity is content: a `revalidate` loader's values are a memo's,
+  // immutable). Otherwise `diffValue` compares as the JSON the frame would
+  // carry: `[]` is unchanged.
+  function compareHeld(
+    entry: RegistryEntry,
+    pk: string,
+    value: unknown,
+    raw: unknown,
+  ): { unchanged: boolean; patch?: ValuePatch } {
+    const held = entry.held.get(pk);
+    if (held === undefined) return { unchanged: false };
+    if (entry.revalidate !== undefined && held.raw === raw)
+      return { unchanged: true };
+    const ops = diffValue(held.value, value);
+    return {
+      unchanged: ops !== null && ops.length === 0,
+      patch: { base: held.version, ops },
+    };
+  }
+
+  // D8: a read handed one holder of the tuple something — `served`, the value
+  // (and the loader's raw return) it was served from, or `undefined` for
+  // anything else (an `up-to-date`, a 304, an error). The held value survives
+  // only if the holder now holds equal content (the very raw object for a
+  // memo, or `diffValue` → `[]` — the drain's own comparison). `sole`: the
+  // read is the sub-ack of the subscription that opened the tuple's span (the
+  // global 0→1, which minted the `version` it reports — above any version a
+  // client holds, so its holder applies it). While that holder is still the
+  // tuple's only one and no drain minted since (`version` still current: no
+  // frame reached it after this read), every holder holds `served`, and it
+  // becomes the held value — two first reads racing leave none (for a
+  // patched entry, a base two holders do not share would corrupt one).
   function noteRead(
     entry: RegistryEntry,
     pk: string,
-    served: { raw: unknown } | undefined,
+    served: { value: unknown; raw: unknown } | undefined,
     sole?: { state: SocketState; version: number },
   ): void {
-    if (!skipsUnchanged(entry, isPersisted(entry))) return;
+    if (!holdsValue(entry, isPersisted(entry))) return;
     if (
       served !== undefined &&
       sole !== undefined &&
@@ -3416,38 +3462,33 @@ export function createResourceRuntime(
       sole.state.subs.get(entry.key)?.get(pk)?.tabs.size === 1 &&
       (entry.versions.get(pk) ?? 0) === sole.version
     ) {
-      entry.lastSent.set(pk, served.raw);
+      entry.held.set(
+        pk,
+        heldValue(entry, sole.version, served.value, served.raw),
+      );
       return;
     }
+    const held = entry.held.get(pk);
+    if (held === undefined) return;
     if (
       served !== undefined &&
-      entry.lastSent.has(pk) &&
-      entry.lastSent.get(pk) === served.raw
+      ((entry.revalidate !== undefined && held.raw === served.raw) ||
+        diffValue(held.value, served.value)?.length === 0)
     ) {
       return;
     }
-    entry.lastSent.delete(pk);
+    entry.held.delete(pk);
   }
 
-  // A patched entry's first base: the value the sub-ack that opened the span
-  // hands its holder — kept only while that holder is still the tuple's only
-  // one and no drain minted since (D8's sole-holder rule, `noteRead`). Two
-  // first reads racing may hand two holders two values at one version; then
-  // there is no base, and the next drain ships the whole value.
-  function notePatchBase(
+  function heldValue(
     entry: RegistryEntry,
-    pk: string,
+    version: number,
     value: unknown,
-    sole: { state: SocketState; version: number },
-  ): void {
-    const bases = entry.patchBases;
-    if (bases === undefined || bases.has(pk)) return;
-    if (
-      entry.subCounts.get(pk) === 1 &&
-      sole.state.subs.get(entry.key)?.get(pk)?.tabs.size === 1 &&
-      (entry.versions.get(pk) ?? 0) === sole.version
-    )
-      bases.set(pk, { version: sole.version, value });
+    raw: unknown,
+  ): HeldValue {
+    return entry.revalidate !== undefined
+      ? { version, value, raw }
+      : { version, value };
   }
 
   // Coalesce an incoming notify into the pending map for one pk, applying the
@@ -4276,8 +4317,7 @@ export function createResourceRuntime(
       spans: new Map(),
       pendingAcks: new Map(),
       draining: new Set(),
-      lastSent: new Map(),
-      ...(def.patches === true ? { patchBases: new Map() } : {}),
+      held: new Map(),
       ...(routing ? { routing } : {}),
       upstreamKeys,
       downstream: [],
@@ -4835,24 +4875,33 @@ export function createResourceRuntime(
     }
     armFlush(entry);
   }
-
   // Get `entry`'s pending work drained: nothing inside a `withNotifyBatch` (its
   // exit schedules the flush), the entry's debounce window when it declares one,
   // the next microtask flush otherwise.
   function armFlush(entry: RegistryEntry): void {
     if (batchDepth > 0) return;
-    // Debounced entries do not ride the immediate flush: arm a per-entry
-    // fixed-window timer (only if not already armed — never re-armed within a
-    // window, so a continuously-ticking source still flushes every debounceMs —
-    // and not while due: the scheduled due drain takes this change too).
+    // Throttled entries drain at most once per window. Nothing to do while a
+    // drain is already due or a timer armed (that drain takes this change too —
+    // never re-armed, so a continuously-ticking source still drains every
+    // debounceMs). Otherwise: outside the window the last drain opened, drain
+    // now (the leading edge: an isolated change is never held); inside it, arm
+    // a timer for the window's remainder.
     if (entry.debounceMs) {
-      if (entry.debounceTimer === undefined && !entry.debounceDue) {
-        entry.debounceTimer = setTimeout(() => {
-          entry.debounceTimer = undefined;
-          entry.debounceDue = true;
-          scheduleFlush();
-        }, entry.debounceMs);
+      if (entry.debounceTimer !== undefined || entry.debounceDue) return;
+      const sinceDrain =
+        entry.debounceDrainedAt === undefined
+          ? Infinity
+          : performance.now() - entry.debounceDrainedAt;
+      if (sinceDrain >= entry.debounceMs) {
+        entry.debounceDue = true;
+        scheduleFlush();
+        return;
       }
+      entry.debounceTimer = setTimeout(() => {
+        entry.debounceTimer = undefined;
+        entry.debounceDue = true;
+        scheduleFlush();
+      }, entry.debounceMs - sinceDrain);
       return;
     }
     scheduleFlush();
@@ -5908,6 +5957,8 @@ export function createResourceRuntime(
     if (entry.pendingNotifies.size === 0 && entry.pendingAcks.size === 0) {
       return;
     }
+    // A throttled drain opens the window the next change waits out.
+    if (entry.debounceMs) entry.debounceDrainedAt = performance.now();
     const pending = Array.from(entry.pendingNotifies.values());
     entry.pendingNotifies.clear();
     const owedAcks = Array.from(entry.pendingAcks.values());
@@ -6172,17 +6223,22 @@ export function createResourceRuntime(
         );
         continue;
       }
-      // D8 — a recompute that changed nothing sends nothing. An entry that
-      // `skipsUnchanged`, with subscribers, loads BEFORE it mints: when the
-      // loader hands back the very object every holder holds
-      // (`lastSent`), no version, no frame — only the ack it owes. Otherwise
-      // it mints after the load, and the frame goes to the subscribers of that
+      // D8 — a recompute that changed nothing is not a change. A held-value
+      // entry (`holdsValue`: every pushed, non-persisted value) with a held
+      // value and subscribers loads BEFORE it mints: when the load equals
+      // what every holder holds (`compareHeld`), no version, no frame —
+      // only the ack it owes (the cascade still runs). Otherwise it
+      // mints after the load, and the frame goes to the subscribers of that
       // moment. (Minting later is safe: a read meanwhile reports the older
       // version, and the frame — to every subscriber registered by then —
       // supersedes it.)
+      const holds = holdsValue(entry, persisted);
+      // The tracking span this drain started in (`snapshotOwner`'s rule): a
+      // held value it records must be the span's own — one that ended while
+      // the load ran took its holders with it.
+      const span = entry.spans.get(pk);
       const deferMint =
-        skipsUnchanged(entry, persisted) &&
-        subscribersFor(entry.key, pk).length > 0;
+        holds && entry.held.has(pk) && subscribersFor(entry.key, pk).length > 0;
       let version = 0;
       let subs: SocketState[] = [];
       if (!deferMint) {
@@ -6253,9 +6309,8 @@ export function createResourceRuntime(
         } catch (err) {
           if (evictOnContractError(entry, params, err)) continue;
           reportLoaderError(`loader failed for ${entry.key}`, err);
-          // D8: a refused holder sits on an error, not on the held object.
-          entry.lastSent.delete(pk);
-          entry.patchBases?.delete(pk);
+          // D8: a refused holder sits on an error, not on the held value.
+          entry.held.delete(pk);
           broadcastRefusal(
             deferMint ? subscribersFor(entry.key, pk) : subs,
             entry,
@@ -6295,12 +6350,12 @@ export function createResourceRuntime(
         }
       }
 
-      // D8: the very object every holder holds — nothing to send. The
-      // cascade still runs below, as for any recompute: an unchanged value
-      // cannot move a downstream, but a downstream's recompute is its own
-      // decision (and its own D8), so this rule stays local to the entry.
-      const unchanged =
-        deferMint && entry.lastSent.has(pk) && entry.lastSent.get(pk) === raw;
+      // D8: what every holder holds — nothing to send, nothing to mint. One
+      // comparison (`compareHeld`), whose ops a patched entry's frame reuses.
+      const compared = deferMint
+        ? compareHeld(entry, pk, value, raw)
+        : { unchanged: false };
+      const unchanged = compared.unchanged;
       if (unchanged) {
         broadcastAckOnly(entry, pendingEntry);
       } else if (deferMint) {
@@ -6323,8 +6378,18 @@ export function createResourceRuntime(
           frameChars = broadcastJson(subs, msg);
         } else {
           // D8: recorded with the subscriber set the frame goes to, before
-          // any await — a read served from here on compares against it.
-          if (skipsUnchanged(entry, persisted)) entry.lastSent.set(pk, raw);
+          // any await — a read served from here on compares against it. Only
+          // when that set is every holder: a tab that subscribed while the
+          // load ran (a version minted before it) is not in `subs`, and may
+          // hold an older read; and only in the span the drain started in.
+          if (holds) {
+            if (
+              entry.spans.get(pk) === span &&
+              subscribersFor(entry.key, pk).every((s) => subs.includes(s))
+            )
+              entry.held.set(pk, heldValue(entry, version, value, raw));
+            else entry.held.delete(pk);
+          }
           frameChars = await sendUpdate(
             entry,
             params,
@@ -6334,8 +6399,13 @@ export function createResourceRuntime(
             flightWatermark,
             flightAckTx,
             pendingEntry,
+            compared.patch,
           );
         }
+      } else if (!unchanged) {
+        // D8: a version minted with no frame to every holder — nobody is
+        // known to hold anything at it.
+        entry.held.delete(pk);
       }
 
       // Delivery latency (enqueue → ws.send) charged to this resource under the
@@ -6347,7 +6417,24 @@ export function createResourceRuntime(
           delivery(pendingEntry, subs.length, frameChars),
         );
       }
+      // The churn monitor's hook, as the keyed paths fire it: once per
+      // value-carrying recompute for >=1 subscriber — a skipped one is a
+      // no-op push (`changed: false`): no frame went out, but the loader ran
+      // for nothing, which is the churn the monitor surfaces.
+      if (entry.mode === "push") {
+        const holders = unchanged
+          ? subscribersFor(entry.key, pk).length
+          : subs.length;
+        if (holders > 0)
+          opts.onPush?.(entry.key, {
+            subscribers: holders,
+            changed: !unchanged,
+          });
+      }
 
+      // The cascade runs on a skip too, as for any recompute: an unchanged
+      // value cannot move a downstream, but a downstream's recompute is its
+      // own decision (and its own D8) — a failed one retries on it.
       await cascadeDownstream(
         entry,
         params,
@@ -6925,7 +7012,7 @@ export function createResourceRuntime(
     // A PATCHED value with a base: the value every holder holds, at its
     // version — so this holder can apply the next patch like the others. A
     // change since is a notify already pending: its drain patches it forward.
-    const patchBase = entry.patchBases?.get(pk);
+    const patchBase = entry.patches ? entry.held.get(pk) : undefined;
     if (patchBase !== undefined) {
       sendJson(state.ws, {
         kind: "sub-ack",
@@ -7023,8 +7110,12 @@ export function createResourceRuntime(
     // etag, we stamp the FLIGHT's, never our own probe's — a joiner adopts the
     // starter's floor, so the watermark can never be newer than the value.
     // `up-to-date` frames deliberately carry none (they ship no value).
-    noteRead(entry, pk, { raw }, opensSpan ? { state, version } : undefined);
-    if (opensSpan) notePatchBase(entry, pk, value, { state, version });
+    noteRead(
+      entry,
+      pk,
+      { value, raw },
+      opensSpan ? { state, version } : undefined,
+    );
     sendJson(state.ws, {
       kind: "sub-ack",
       ...req,
@@ -7295,8 +7386,7 @@ export function createResourceRuntime(
       // The tuple leaves the router's targets, and its memoized read-set with it.
       entry.tracked.delete(pk);
       entry.spans.delete(pk);
-      entry.lastSent.delete(pk);
-      entry.patchBases?.delete(pk);
+      entry.held.delete(pk);
       entry.routing?.uses.delete(pk);
       // Bound keyed-snapshot memory to actively-observed pks. Re-subscribe
       // re-hydrates via a full sub-ack and rebuilds the snapshot.
@@ -7481,8 +7571,9 @@ export function createResourceRuntime(
     // flight) → OMIT the header; the client then sends no If-None-Match next time
     // and gets a full body.
     if (etag !== undefined) headers["ETag"] = etag;
-    // D8: an HTTP reader is no identified holder — it may only clear.
-    noteRead(entry, pk, { raw });
+    // D8: an HTTP reader is no identified holder — it may only keep (equal
+    // content) or clear.
+    noteRead(entry, pk, { value, raw });
     // A BYTES value's body IS the value (`application/octet-stream`); the rest of
     // the envelope below — version, epoch, watermark, which the client's guard
     // needs exactly as for a JSON body — rides response headers instead.

@@ -28,7 +28,12 @@ import {
 // declares its one data dir at its root (`@plugins/apps/plugins/prototypes/data-dirs`),
 // and a sibling imports `prototypesDir` from there — re-exporting it through
 // this barrel would be proxying another plugin's symbol.
-export { listPrototypeMetas, readPrototypeTitle } from "./internal/list";
+export {
+  listPrototypeMetas,
+  listPrototypeNames,
+  readPrototypeMeta,
+  readPrototypeTitle,
+} from "./internal/list";
 export { onPrototypesChanged } from "./internal/watcher";
 // The version store's one write a sibling needs: the `checkpoints` plugin
 // records a version at the end of every agent turn that touched a prototype.

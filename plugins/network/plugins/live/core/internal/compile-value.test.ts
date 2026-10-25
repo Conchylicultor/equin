@@ -104,7 +104,7 @@ function upstream(runtime: ReturnType<typeof createResourceRuntime>) {
 }
 
 describe("throttleMs", () => {
-  test("a burst of notifies coalesces into one recompute", async () => {
+  test("a burst of notifies coalesces into one recompute per window", async () => {
     const h = harness();
     const v = liveValue(key("throttle"), { schema: Count });
     let loads = 0;
@@ -117,14 +117,18 @@ describe("throttleMs", () => {
     await h.subscribe(v.key);
     const afterSub = loads;
     const notify = (resource as { notify(): void }).notify;
+    // The first burst lands outside any window: one recompute, at once.
+    for (let i = 0; i < 5; i++) notify();
+    await h.until(() => h.of("update", v.key).length > 0, "update");
+    expect(loads).toBe(afterSub + 1);
+    // A second burst inside the window that drain opened waits it out.
     for (let i = 0; i < 5; i++) notify();
     await sleep(10);
-    // Still inside the window: nothing flushed yet.
-    expect(loads).toBe(afterSub);
-    await h.until(() => h.of("update", v.key).length > 0, "update");
-    await sleep(60);
     expect(loads).toBe(afterSub + 1);
-    expect(h.of("update", v.key)).toHaveLength(1);
+    await h.until(() => h.of("update", v.key).length > 1, "update");
+    await sleep(60);
+    expect(loads).toBe(afterSub + 2);
+    expect(h.of("update", v.key)).toHaveLength(2);
   });
 });
 

@@ -59,6 +59,10 @@ export {
   workspaceOfAttemptLookup,
   workspaceOfConversationLookup,
 } from "./internal/workspace-lookups";
+// Which runtime hosts a conversation and where its turn stands, the same way:
+// a write reaches only the tuple asking about that conversation, and only
+// when it moved `runtime` or `status`.
+export { runtimeOfConversationLookup } from "./internal/runtime-lookups";
 // The derived `tasks_v` relation. A task's `status` is COMPUTED there and exists
 // as no column of `tasks`, so a consumer that needs the status of a SET of tasks
 // in one query has nowhere else to read it — and a `tasks_v` read costs the same

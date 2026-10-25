@@ -190,12 +190,13 @@ describe("over-replay idempotence — a seeded scopedMembership entry", () => {
 
 describe("recomputeResource", () => {
   test("routes one FULL feed notify to subscribers (exactly one push)", async () => {
+    let n = 0; // a new value on every recompute (an equal one ships nothing)
     const h = createHarness();
     h.runtime.defineResource({
       key: "k",
       mode: "push",
       schema: z.number(),
-      loader: async () => 1,
+      loader: async () => ++n,
     });
     await h.subscribe("k");
     const base = h.frames.find((f) => f.kind === "sub-ack")!.version!;

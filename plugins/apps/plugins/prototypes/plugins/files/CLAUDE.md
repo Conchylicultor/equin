@@ -523,8 +523,10 @@ for the `checkpoints` plugin's end-of-turn job.
   - Exports (values):
     - `checkpointPrototype`
     - `listPrototypeMetas`
+    - `listPrototypeNames`
     - `onPrototypesChanged`
     - `prototypeExists`
+    - `readPrototypeMeta`
     - `readPrototypeTitle`
   - Register: `defineFileWatcher('prototypes-files.tree')`
   - Resources:

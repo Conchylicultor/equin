@@ -6,21 +6,27 @@ Chromium is the renderer; this plugin owns the caching around it.
 
 ```
 edit under prototypes/
-  → files' watcher (the ONLY one over that tree) fires onPrototypesChanged
-  → syncThumbnails(): fingerprint every folder, decide, push state, enqueue
+  → files' watcher (the ONLY one over that tree) fires onPrototypesChanged(changed)
+  → syncChangedThumbnails(changed): fingerprint those folders, decide, push state, enqueue
   → prototypes.render-thumbnail: chromium → PNG → cache → notify
   → the card's <img> src changes; nothing polled
 ```
 
-`syncThumbnails` is the only thing that decides what needs rendering, and it
-decides from the fingerprint alone — so it is idempotent, and boot and a file
-change are the same call.
+`syncThumbnails` (boot, and a settled browser install: every folder) and
+`syncChangedThumbnails` (a tree change: only the prototypes it names) are the
+only things that decide what needs rendering, and both decide from the
+fingerprint alone — so they are idempotent. Every backend on the box runs them
+(the files watcher runs in each), so their cost is paid ×N per edit and per
+boot: they take the prototypes' **names** (`listPrototypeNames`, the folder
+listing), never `listPrototypeMetas` — which reads, validates and parses every
+folder, and was ~2–4 s of every sync before. The render job reads its one
+prototype with `readPrototypeMeta` for the same reason.
 
 ## Decisions that look wrong until you know why
 
 **The change signal is borrowed.** `files` owns the prototypes tree and already
 watches it; a second `@parcel/watcher` over the same tree doubles every event.
-So `files` exports `onPrototypesChanged` / `listPrototypeMetas` and this plugin
+So `files` exports `onPrototypesChanged` / `listPrototypeNames` / `readPrototypeMeta` and this plugin
 listens instead of watching. `prototypesDir` comes from the app root's
 `data-dirs/` (`@plugins/apps/plugins/prototypes/data-dirs`, the app's one
 `apps/prototypes` dir) — imported at its home, never through `files`' barrel,
@@ -153,8 +159,9 @@ Design: `research/2026-08-16-apps-prototype-gallery-thumbnails.md`.
 - Server:
   - Contributes: `resource.declare` "prototypes.thumbnails"
   - Uses:
-    - `apps/prototypes/files.listPrototypeMetas`
+    - `apps/prototypes/files.listPrototypeNames`
     - `apps/prototypes/files.onPrototypesChanged`
+    - `apps/prototypes/files.readPrototypeMeta`
     - `infra/deps.onDepInstallSettled`
     - `infra/deps.requestDep`
     - `infra/jobs.defineJob`

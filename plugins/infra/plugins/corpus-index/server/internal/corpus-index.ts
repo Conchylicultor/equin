@@ -102,8 +102,8 @@ export interface CorpusIndex<TPartial> {
   entries(): Map<string, TPartial>;
   /**
    * Force the next {@link ensureFresh} to re-walk even on main. LOAD-BEARING (not
-   * convenience): `ensureFresh` short-circuits on `!dirty && isMain()`, and
-   * `dirty` is otherwise only re-set by {@link startWatcher}'s onChange. A
+   * convenience): on main `ensureFresh` short-circuits while nothing is
+   * stale, and only {@link startWatcher}'s watch otherwise marks it stale. A
    * consumer that owns its OWN file watcher must NOT call `startWatcher()` (it
    * double-watches and is `isMain()`-gated), so `markDirty()` is its ONLY way to
    * invalidate the index — without it every refresh after the first would
@@ -111,8 +111,10 @@ export interface CorpusIndex<TPartial> {
    */
   markDirty(): void;
   /**
-   * Main-only push freshness via `@parcel/watcher`: a corpus change marks the
-   * index dirty and warms it in the background. No-op off main / if already started.
+   * Main-only push freshness via `@parcel/watcher`: a change batch marks the
+   * paths it named stale and re-checks THOSE in the background (never a full
+   * walk); the reconcile tick re-walks everything as the dropped-event
+   * backstop. No-op off main / if already started.
    * Requires {@link watcher} to be mounted in the calling plugin's `register`
    * (on main it throws otherwise).
    */
@@ -277,6 +279,11 @@ export interface RefreshDeps<TPartial> {
   yieldMacrotask: () => Promise<void>;
 }
 
+/** What one refresh pass did: {@link CorpusDelta} plus whether anything moved. */
+export interface RefreshResult extends CorpusDelta {
+  changed: boolean;
+}
+
 /**
  * Incremental refresh: enumerate the corpus, `stat` every file, re-parse only
  * those whose `(mtimeMs,size)` fingerprint changed (or are new), drop entries
@@ -286,26 +293,86 @@ export interface RefreshDeps<TPartial> {
 export async function refreshCorpus<TPartial>(
   index: CorpusFile<TPartial>,
   deps: RefreshDeps<TPartial>,
-): Promise<{
-  changed: boolean;
-  addedPaths: string[];
-  modifiedPaths: string[];
-  removedPaths: string[];
-}> {
+): Promise<RefreshResult> {
   const paths = await enumerate(deps.roots, deps.match);
   const live = new Set(paths);
-  const addedPaths: string[] = [];
-  const modifiedPaths: string[] = [];
-  const removedPaths: string[] = [];
+  const delta: CorpusDelta = {
+    addedPaths: [],
+    modifiedPaths: [],
+    removedPaths: [],
+  };
 
   // Drop entries for files that no longer exist.
   for (const path of Object.keys(index.files)) {
     if (!live.has(path)) {
       delete index.files[path];
-      removedPaths.push(path);
+      delta.removedPaths.push(path);
     }
   }
 
+  return await reindexFiles(index, paths, deps, delta);
+}
+
+/**
+ * Targeted refresh: re-check ONLY `changedPaths` — what a file watcher said
+ * moved — instead of walking the corpus. A path that is gone drops its entry
+ * (and, for a removed directory, every entry under it); a directory that
+ * appeared is enumerated (a folder moved in may surface as one event); a file
+ * goes through the same fingerprint gate as a full pass. Paths outside the
+ * roots, or not matching, are ignored. The full walk ({@link refreshCorpus})
+ * stays the cold pass and the reconcile backstop for a dropped event.
+ */
+export async function refreshCorpusPaths<TPartial>(
+  index: CorpusFile<TPartial>,
+  changedPaths: Iterable<string>,
+  deps: RefreshDeps<TPartial>,
+): Promise<RefreshResult> {
+  const delta: CorpusDelta = {
+    addedPaths: [],
+    modifiedPaths: [],
+    removedPaths: [],
+  };
+  const underRoot = (p: string): boolean =>
+    deps.roots.some((r) => p === r || p.startsWith(`${r}/`));
+  const files = new Set<string>();
+  for (const path of changedPaths) {
+    if (!underRoot(path)) continue;
+    let st;
+    try {
+      st = await stat(path);
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+      // Gone: the file itself, or a directory and everything under it.
+      const prefix = `${path}/`;
+      for (const known of Object.keys(index.files)) {
+        if (known === path || known.startsWith(prefix)) {
+          delete index.files[known];
+          delta.removedPaths.push(known);
+        }
+      }
+      continue;
+    }
+    if (st.isDirectory()) {
+      for (const p of await enumerate([path], deps.match)) files.add(p);
+    } else if (deps.match(path)) {
+      files.add(path);
+    }
+  }
+  return await reindexFiles(index, [...files], deps, delta);
+}
+
+/**
+ * The fingerprint gate both passes share: stat each path, re-parse the ones
+ * whose `(mtimeMs,size)` moved (or that are new), drop one that vanished since
+ * it was listed; then persist once if anything moved.
+ */
+async function reindexFiles<TPartial>(
+  index: CorpusFile<TPartial>,
+  paths: readonly string[],
+  deps: RefreshDeps<TPartial>,
+  delta: CorpusDelta,
+): Promise<RefreshResult> {
+  const { addedPaths, modifiedPaths, removedPaths } = delta;
   // Stat all files; collect the ones whose fingerprint changed (or are new).
   // `hadEntry` distinguishes the two, and the distinction is load-bearing for
   // consumers (see the CorpusDelta doc): a file with NO prior entry is only
@@ -328,6 +395,11 @@ export async function refreshCorpus<TPartial>(
           st = await stat(path);
         } catch (err) {
           if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+          // Vanished since it was listed (or named by the watcher).
+          if (index.files[path] !== undefined) {
+            delete index.files[path];
+            removedPaths.push(path);
+          }
           return;
         }
         const cached = index.files[path];
@@ -385,8 +457,10 @@ export interface CorpusIndexEnv {
   yieldMacrotask: () => Promise<void>;
   startFileWatcher: (opts: {
     dirs: string[];
-    /** A change or reconcile tick; its promise is coalesced by the watch. */
-    onChange: () => Promise<unknown>;
+    /** The paths a change batch named; its promise is coalesced by the watch. */
+    onChange: (paths: readonly string[]) => Promise<unknown>;
+    /** A reconcile tick (the dropped-event backstop); coalesced likewise. */
+    onReconcile: () => Promise<unknown>;
   }) => Promise<void>;
   /** The declaration `startFileWatcher` opens (surfaced as `CorpusIndex.watcher`). */
   watcherRegistration: Registration;
@@ -401,11 +475,14 @@ export function createCorpusIndex<TPartial>(
   env: CorpusIndexEnv,
 ): CorpusIndex<TPartial> {
   // The in-memory index, loaded from disk once per process then kept fresh by
-  // incremental refresh. A watcher marks it dirty on corpus changes (push-based,
+  // incremental refresh. A watcher marks the changed paths stale (push-based,
   // no TTL poll); every ensureFresh also does an on-demand stat-diff as the
   // correctness fallback.
   let index: CorpusFile<TPartial> | null = null;
-  let dirty = true;
+  // What the next refresh must look at: `"all"` ⇒ walk the whole corpus (cold,
+  // `markDirty`, a reconcile tick, off main); a set ⇒ only the paths a watcher
+  // batch named since the last pass (empty ⇒ nothing moved, on main).
+  let stale: "all" | Set<string> = "all";
   let refreshInflight: Promise<CorpusDelta> | null = null;
   let watcherStarted = false;
   let watchArmed = false;
@@ -434,24 +511,30 @@ export function createCorpusIndex<TPartial>(
 
   async function ensureFresh(): Promise<CorpusDelta> {
     index ??= await loadCorpusFile<TPartial>(spec.indexPath, spec.version);
-    // Main clears `dirty` after a refresh and relies on the watcher (or an
+    // Main clears `stale` after a refresh and relies on the watcher (or an
     // explicit markDirty) to set it again. Worktree backends have no watcher, so
-    // they always re-check. Nothing moved ⇒ an empty delta (a real empty success).
-    if (!dirty && env.isMain()) {
+    // they always re-walk. Nothing moved ⇒ an empty delta (a real empty success).
+    const main = env.isMain();
+    if (main && stale !== "all" && stale.size === 0) {
       return { addedPaths: [], modifiedPaths: [], removedPaths: [] };
     }
     // Single-flight: a concurrent second caller joins THIS promise and so
     // receives the same delta the refresh computed — never a silent empty one.
     refreshInflight ??= (async (): Promise<CorpusDelta> => {
-      // Cleared BEFORE the pass: a change landing mid-pass (which may already
-      // have scanned past its path) sets it again, so the next call re-checks
-      // rather than trusting this pass. A failed pass leaves the index stale.
-      dirty = false;
+      // Taken BEFORE the pass: a change landing mid-pass (which may already
+      // have scanned past its path) is recorded again, so the next call
+      // re-checks rather than trusting this pass. A failed pass re-walks all.
+      const work = main ? stale : "all";
+      stale = new Set();
       try {
-        const { addedPaths, modifiedPaths, removedPaths } = await refreshCorpus(
-          index!,
-          refreshDeps(),
-        );
+        // A watcher batch names what moved: re-check those paths alone. A
+        // full walk is O(corpus) — ~1.2k dirs and ~4k stats for the transcript
+        // corpus — and used to run on every batch, i.e. every couple of
+        // seconds while any agent was writing.
+        const { addedPaths, modifiedPaths, removedPaths } =
+          work === "all"
+            ? await refreshCorpus(index!, refreshDeps())
+            : await refreshCorpusPaths(index!, work, refreshDeps());
         if (
           addedPaths.length + modifiedPaths.length + removedPaths.length >
           0
@@ -460,7 +543,7 @@ export function createCorpusIndex<TPartial>(
         }
         return { addedPaths, modifiedPaths, removedPaths };
       } catch (err) {
-        dirty = true;
+        stale = "all";
         throw err;
       } finally {
         refreshInflight = null;
@@ -472,7 +555,13 @@ export function createCorpusIndex<TPartial>(
   // See the interface doc: the ONLY invalidation seam for a consumer that owns
   // its own watcher (and therefore must not call startWatcher()).
   function markDirty(): void {
-    dirty = true;
+    stale = "all";
+  }
+
+  /** A watcher batch: remember what it named, unless a full walk is due anyway. */
+  function markPathsStale(paths: readonly string[]): void {
+    if (stale === "all") return;
+    for (const p of paths) stale.add(p);
   }
 
   function entries(): Map<string, TPartial> {
@@ -490,11 +579,17 @@ export function createCorpusIndex<TPartial>(
     watcherStarted = true;
     await env.startFileWatcher({
       dirs: resolveRoots(),
-      onChange: () => {
-        // A corpus change: mark the index stale and warm it now, so the next
-        // request finds nothing (or little) to do. Returned to the watch, which
-        // folds the changes landing mid-pass into one trailing pass.
-        dirty = true;
+      onChange: (paths) => {
+        // A corpus change: mark the paths it named stale and warm them now, so
+        // the next request finds nothing (or little) to do. Returned to the
+        // watch, which folds the changes landing mid-pass into one trailing
+        // pass (its events merged).
+        markPathsStale(paths);
+        return runTracked("corpus-index:ensure-fresh", () => ensureFresh());
+      },
+      onReconcile: () => {
+        // The backstop for a dropped event: walk everything.
+        markDirty();
         return runTracked("corpus-index:ensure-fresh", () => ensureFresh());
       },
     });
@@ -578,13 +673,13 @@ export function defineCorpusIndex<TPartial>(
     withSlot: withHeavyReadSlot,
     yieldMacrotask,
     watcherRegistration: watcher,
-    startFileWatcher: async ({ dirs, onChange }) => {
+    startFileWatcher: async ({ dirs, onChange, onReconcile }) => {
       // Process-lifetime watcher — the handle is intentionally discarded (the
       // original stats/cost watcher was likewise fire-and-forget, main-only).
       await watcher.start({
         dirs,
-        onChange: () => onChange(),
-        onReconcile: () => onChange(),
+        onChange: (events) => onChange(events.map((e) => e.path)),
+        onReconcile: () => onReconcile(),
       });
     },
   });

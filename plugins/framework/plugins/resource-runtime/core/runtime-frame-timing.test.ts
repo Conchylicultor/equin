@@ -31,11 +31,13 @@ function pushedSince(h: { frames: RecordedFrame[] }, before: number) {
     .filter((f) => f.kind === "update" || f.kind === "delta");
 }
 
-// A push value reading table `t` whole (a reach plan), as a served db value is.
+// A push value reading table `t` whole (a reach plan), as a served db value is
+// — a new value on every read (a recompute that changed nothing ships nothing).
 function defineR(h: Harness): void {
+  let n = 0;
   h.runtime.defineResource(
     { key: "r", schema: z.number(), validateParams: () => {} },
-    { mode: "push", reach: wholeReach(["t"]), loader: async () => 1 },
+    { mode: "push", reach: wholeReach(["t"]), loader: async () => ++n },
   );
 }
 
@@ -89,11 +91,12 @@ describe("timing on pushed frames", () => {
 
   test("a hand notify() of an external resource stamps the time of the call", async () => {
     const h = createHarness();
+    let n = 0;
     const r = h.runtime.defineExternalResource({
       key: "ext",
       mode: "push",
       schema: z.number(),
-      loader: async () => 1,
+      loader: async () => ++n,
     });
     await h.subscribe("ext");
     const before = h.frames.length;

@@ -15,6 +15,7 @@ import {
   defineCorpusIndex,
   loadCorpusFile,
   refreshCorpus,
+  refreshCorpusPaths,
   type CorpusFile,
   type CorpusIndexEnv,
   type CorpusIndexSpec,
@@ -369,7 +370,8 @@ test("a cold index reports every file as added, never modified", async () => {
 });
 
 test("onChange fires after a refresh that moved a file, never on an empty one; watching() follows startWatcher", async () => {
-  let watcherOnChange: (() => Promise<unknown>) | undefined;
+  let watcherOnChange:
+    ((paths: readonly string[]) => Promise<unknown>) | undefined;
   const idx = createCorpusIndex(
     spec(),
     env({
@@ -392,8 +394,9 @@ test("onChange fires after a refresh that moved a file, never on an empty one; w
   await idx.ensureFresh(); // nothing moved
   expect(heard).toBe(1);
 
-  await writeFile(join(corpusRoot, "a", "five.txt"), "five");
-  await watcherOnChange!(); // the watcher's pass
+  const five = join(corpusRoot, "a", "five.txt");
+  await writeFile(five, "five");
+  await watcherOnChange!([five]); // the watcher's pass
   expect(heard).toBe(2);
 
   stop();
@@ -401,4 +404,79 @@ test("onChange fires after a refresh that moved a file, never on an empty one; w
   idx.markDirty();
   await idx.ensureFresh();
   expect(heard).toBe(2); // unsubscribed
+});
+
+test("refreshCorpusPaths re-checks only the named paths: edit, new file, removed file, removed dir, new dir", async () => {
+  const index = empty();
+  await refreshCorpus(index, deps());
+  parseCount.clear();
+
+  const one = join(corpusRoot, "a", "one.txt");
+  const two = join(corpusRoot, "a", "two.txt");
+  const three = join(corpusRoot, "b", "three.txt");
+  await appendFile(one, " more");
+  await appendFile(two, " unnamed"); // edited but NOT named ⇒ not re-checked
+  const r1 = await refreshCorpusPaths(index, [one], deps());
+  expect(r1.modifiedPaths).toEqual([one]);
+  expect([...parseCount.keys()]).toEqual([one]);
+  expect(index.files[one]!.partial).toBe("one more");
+  expect(index.files[two]!.partial).toBe("two"); // the reconcile's job
+
+  // A named non-matching path, and one outside the roots, are ignored.
+  const r2 = await refreshCorpusPaths(
+    index,
+    [join(corpusRoot, "b", "skip.md"), join(root, "index.json")],
+    deps(),
+  );
+  expect(r2.changed).toBe(false);
+
+  // A removed file, and a removed directory (every entry under it).
+  await rm(one);
+  await rm(join(corpusRoot, "b"), { recursive: true });
+  const r3 = await refreshCorpusPaths(
+    index,
+    [one, join(corpusRoot, "b")],
+    deps(),
+  );
+  expect(new Set(r3.removedPaths)).toEqual(new Set([one, three]));
+  expect(Object.keys(index.files)).toEqual([two]);
+
+  // A directory that appeared as one event is enumerated.
+  await mkdir(join(corpusRoot, "c"));
+  const four = join(corpusRoot, "c", "four.txt");
+  await writeFile(four, "four");
+  const r4 = await refreshCorpusPaths(index, [join(corpusRoot, "c")], deps());
+  expect(r4.addedPaths).toEqual([four]);
+});
+
+test("on main a watcher batch re-checks only what it named; the reconcile tick walks everything", async () => {
+  let onChange: ((paths: readonly string[]) => Promise<unknown>) | undefined;
+  let onReconcile: (() => Promise<unknown>) | undefined;
+  const idx = createCorpusIndex(
+    spec(),
+    env({
+      isMain: () => true,
+      startFileWatcher: async (opts) => {
+        onChange = opts.onChange;
+        onReconcile = opts.onReconcile;
+      },
+    }),
+  );
+  await idx.startWatcher();
+  await idx.ensureFresh(); // cold: a full walk
+  parseCount.clear();
+
+  const one = join(corpusRoot, "a", "one.txt");
+  const two = join(corpusRoot, "a", "two.txt");
+  await appendFile(one, "!");
+  await appendFile(two, "!");
+  await onChange!([one]);
+  expect([...parseCount.keys()]).toEqual([one]);
+  expect(idx.entries().get(two)).toBe("two"); // not named ⇒ not re-checked
+
+  // Nothing named since ⇒ the clean short-circuit.
+  expect((await idx.ensureFresh()).modifiedPaths).toEqual([]);
+
+  await onReconcile!(); // the dropped-event backstop catches `two`
+  expect(idx.entries().get(two)).toBe("two!");
 });

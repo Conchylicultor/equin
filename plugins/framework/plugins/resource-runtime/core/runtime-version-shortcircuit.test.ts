@@ -49,7 +49,7 @@ describe("version short-circuit — same-boot epoch + matching version", () => {
       schema: z.string(),
       loader: async () => {
         loads++;
-        return "val";
+        return `val${loads}`;
       },
     });
 

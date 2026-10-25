@@ -51,7 +51,9 @@ function setup(opts: ResourceRuntimeOptions = {}) {
     reportError: (context, err) => reported.push({ context, err }),
     ...opts,
   });
-  const loader = mock(async () => "v");
+  let n = 0;
+  // A new value on every read after the first (an equal recompute ships nothing).
+  const loader = mock(async () => (n++ === 0 ? "v" : `v${n}`));
   const r = h.runtime.defineExternalResource(limitContract("hist"), {
     mode: "push",
     loader,

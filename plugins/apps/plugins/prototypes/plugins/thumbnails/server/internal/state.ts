@@ -45,3 +45,17 @@ export function replaceThumbnailStates(
   for (const [name, state] of next) states.set(name, state);
   prototypeThumbnailsServed.notify();
 }
+
+/**
+ * Set some prototypes' states and drop others', and push ONCE — the
+ * incremental twin of {@link replaceThumbnailStates}, for a change that named
+ * the prototypes it moved.
+ */
+export function patchThumbnailStates(
+  set: Map<string, ThumbnailState>,
+  remove: readonly string[],
+): void {
+  for (const name of remove) states.delete(name);
+  for (const [name, state] of set) states.set(name, state);
+  prototypeThumbnailsServed.notify();
+}

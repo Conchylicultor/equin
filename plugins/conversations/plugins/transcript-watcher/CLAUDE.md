@@ -16,6 +16,8 @@ One `parcel.subscribe(CLAUDE_PROJECTS_DIR)` covers all active conversations. A p
 
 **Following a session switch.** A room resolved at subscribe time would stay pinned to the file it found. The poller calls `refreshConversationChain(conversationId)` the moment it records a new session id, which re-resolves the room and fans out; the 30s reconcile re-resolves too, as a backstop for a missed notify.
 
+**A room with nothing on disk yet is pending, not polled.** When `resolve` finds no files and no directory (Claude has not written the transcript, no session recorded), the room registers nowhere and waits for a push: its `refreshOn` tag (`refreshConversationChain`, fired by the status reconciler only once the session's file exists) or the 30s reconcile. Never re-add a timer loop here — the old 1 s `retryUntil` ran one chain lookup per second per pending room, for as long as Claude took to start, and for hours on a conversation whose transcript never lands. A room that can resolve empty must carry a `refreshOn` tag.
+
 **Restart recovery**: room creation triggers an immediate seed read, so any events that landed during server downtime are delivered to subscribers on reconnect. `turn-emitter`'s `hasPendingTrigger` logic hooks into this seed callback.
 
 ## One conversation, one projects directory

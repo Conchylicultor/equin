@@ -396,16 +396,24 @@ describe("serveCollectionOn — whileSubscribed and throttleMs", () => {
     });
     await h.subscribe(c.key, c.window.defaultParams);
     src.loads.length = 0;
-    for (let i = 0; i < 5; i++) {
-      src.rows.set("b", { id: "b", title: `B${i}`, rank: 2 });
-      served.notify();
-    }
-    await settle(h);
-    expect(src.loads).toEqual([]);
-    await new Promise((resolve) => setTimeout(resolve, 40));
+    const burst = (tag: string) => {
+      for (let i = 0; i < 5; i++) {
+        src.rows.set("b", { id: "b", title: `${tag}${i}`, rank: 2 });
+        served.notify();
+      }
+    };
+    // Outside any window: the burst re-reads once, at once (leading edge).
+    burst("A");
     await settle(h);
     expect(src.loads).toEqual(["window:10"]);
-    expect(h.pushesFor(c.key)).toHaveLength(1);
+    // Inside the window that re-read opened: held until it elapses.
+    burst("B");
+    await settle(h);
+    expect(src.loads).toEqual(["window:10"]);
+    await new Promise((resolve) => setTimeout(resolve, 40));
+    await settle(h);
+    expect(src.loads).toEqual(["window:10", "window:10"]);
+    expect(h.pushesFor(c.key)).toHaveLength(2);
   });
 
   test("a silent collection takes neither hook — in its type, and at runtime", () => {

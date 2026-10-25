@@ -633,8 +633,10 @@ describe("conditional revalidation — a push etag rides only the update frame",
  * D8 — a recompute that changed nothing sends nothing. A non-keyed drain of a
  * pushed `revalidate` resource with subscribers loads before it mints; when the
  * loader hands back the very object (`===`) every holder holds — a signed
- * memo's hit — it sends no frame, bumps no version, and only acks. Equal
- * content in a new object is a change (nothing is hashed). The held object is
+ * memo's hit — it sends no frame, bumps no version, and only acks, without
+ * comparing content. Equal content in a new object is no change either (the
+ * general rule, pinned for every pushed value by
+ * `runtime-unchanged-value.test.ts`). The held object is
  * set by the frame that carried it and by the sub-ack that opened the tuple's
  * span to its sole holder; a read handing anyone anything else, a failed load
  * and N→0 drop it.
@@ -780,15 +782,13 @@ describe("D8 — a recompute returning the object last sent sends nothing", () =
     ]);
   });
 
-  test("a new object with equal content is a change: the frame goes out", async () => {
+  test("a new object with equal content is no change either: nothing goes out", async () => {
     const t = memoized();
     await t.h.subscribe("r");
-    t.replace("s1");
+    t.replace("s1"); // the memo recomputed, to the same content
     t.r.notify();
     await tick();
-    expect(t.h.pushesFor("r").map((f) => [f.kind, f.value])).toEqual([
-      ["update", { s: "s1" }],
-    ]);
+    expect(t.h.pushesFor("r")).toEqual([]);
   });
 
   test("a changed value delivers, and is then the held object", async () => {
