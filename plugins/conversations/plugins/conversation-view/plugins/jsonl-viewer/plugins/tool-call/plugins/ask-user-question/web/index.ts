@@ -13,6 +13,13 @@ import { ANSWER_MARKER } from "../shared";
 export { AnswerForm } from "./components/answer-form";
 export { QuestionCard } from "./components/question-card";
 export { answerDraftScope } from "./components/answer-draft";
+export { SentAnswerCard } from "./components/sent-answer-card";
+export {
+  dropSentAnswer,
+  recordSentAnswer,
+  useSentAnswer,
+} from "./components/sent-answers";
+export type { SentAnswer } from "./components/sent-answers";
 export type {
   AnswerSelections,
   FormAnswer,

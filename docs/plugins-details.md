@@ -16406,7 +16406,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `JsonlRowActions.Item` "change-answers" → `ChangeAnswersAction`
                       - `JsonlViewer.EventFilter` "ask-user-question:suppress-answer-turn"
                       - `JsonlViewer.EventFilter` "ask-user-question:suppress-interrupt-turn"
-                    - Uses: 35 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/ask-user-question/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/ask-user-question/REFERENCE.md)
+                    - Uses: 36 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/ask-user-question/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/ask-user-question/REFERENCE.md)
                       - `primitives/css/ui-kit` ×9
                       - `primitives/persistent-draft` ×4
                       - `conversations/conversation-view/jsonl-viewer/tool-call` ×3
@@ -16424,6 +16424,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `primitives/css/rigid.rigidClass`
                       - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
+                      - `primitives/css/working-dots.WorkingText`
                       - `primitives/dom/web-storage.defineStore`
                       - `ui/icons.Icon`
                     - Exports (types):
@@ -16431,10 +16432,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `FormAnswer`
                       - `Question`
                       - `QuestionSelection`
+                      - `SentAnswer`
                     - Exports (values):
                       - `answerDraftScope`
                       - `AnswerForm`
+                      - `dropSentAnswer`
                       - `QuestionCard`
+                      - `recordSentAnswer`
+                      - `SentAnswerCard`
+                      - `useSentAnswer`
                   - Machine:
                     - Uses: `infra/endpoints.implementMachine`
                     - Routes: `POST /api/conversations/:id/answer-question`
@@ -18267,8 +18273,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
           - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question.answerDraftScope`
           - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question.AnswerForm`
+          - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question.dropSentAnswer`
           - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question.FormAnswer`
           - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question.QuestionCard`
+          - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question.recordSentAnswer`
+          - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question.SentAnswerCard`
+          - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question.useSentAnswer`
           - `infra/endpoints.useEndpointMutation`
           - `network/live.useLive`
           - `primitives/css/text.Text`
@@ -39255,6 +39265,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --primary-text`
             - Imported by:
               - `conversations/conversation-view/jsonl-viewer`
+              - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
               - `conversations/conversation-view/pending-turn`
         - **`yield`** — Yielding-cell layout primitive: yieldClass(axis) is the flex child that falls below its own content width (min-w-0) but never takes slack. The half of <Fill> that gives, without the half that grows.
           - Cross-plugin:

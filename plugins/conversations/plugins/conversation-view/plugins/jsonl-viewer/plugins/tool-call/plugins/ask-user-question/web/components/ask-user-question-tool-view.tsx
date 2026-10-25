@@ -3,6 +3,7 @@ import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/p
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { useEffect } from "react";
 import { useTranscriptEvents } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import {
   isInterruptContent,
@@ -10,13 +11,19 @@ import {
 } from "@plugins/conversations/plugins/transcript-source/core";
 import { useConversation } from "@plugins/conversations/web";
 import { MarkerAnswerForm } from "./marker-answer-form";
-import { OptionBody, OptionRow } from "./option-row";
+import {
+  AnsweredQuestions,
+  SendingStatus,
+  answeredSummary,
+  selectionsFromForm,
+  selectionsFromParsed,
+} from "./answered-view";
+import { dropSentAnswer, useSentAnswer } from "./sent-answers";
 import { summaryFor } from "./question-card";
 import { findAnswerTurn, questionState } from "./question-state";
 import {
   answersFromRecord,
   parseMarkerAnswer,
-  parseSelectedLabels,
   type AskUserQuestionInput,
   type ParsedAnswer,
 } from "./answer-model";
@@ -33,6 +40,13 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
   // transcript.
   const events = useTranscriptEvents();
   const conversation = useConversation(convId);
+  const sent = useSentAnswer(event.toolUseId);
+  // The transcript now holds this call's outcome: the answer this tab sent is
+  // no longer on its way.
+  const resolved = event.result != null && event.result.outcomeUnknown !== true;
+  useEffect(() => {
+    if (resolved && sent !== null) dropSentAnswer(event.toolUseId);
+  }, [resolved, sent, event.toolUseId]);
 
   if (conversation.status === "loading") return null;
 
@@ -93,139 +107,47 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
   // - otherwise (result null pre-flush, or interrupted-but-not-last historical
   //   question with no answer turn): empty map → question rendered read-only.
   const answerRecord = event.result?.questionAnswer;
-  const reply = answerRecord ? replyOf(answerRecord) : undefined;
+  let reply = answerRecord ? (replyOf(answerRecord) ?? null) : null;
   let answerMap: Record<string, ParsedAnswer> | null = null;
   if (answerTurn != null) {
     answerMap = parseMarkerAnswer(answerTurn.text, questions);
   } else if (answerRecord != null) {
     answerMap = answersFromRecord(answerRecord);
   }
-
-  const questionSelections = questions.map((q) => {
-    const parsed = answerMap?.[q.question];
-    const { selected, otherText } = parseSelectedLabels(
-      parsed?.answer ?? undefined,
-      q.options,
-    );
-    return { selected, otherText, notes: parsed?.notes ?? null };
-  });
-
-  const firstSel = questionSelections[0];
-  const firstAnswerParts = firstSel
-    ? [
-        ...firstSel.selected,
-        ...(firstSel.otherText ? [firstSel.otherText] : []),
-        // Fall back to the note when the user attached one without picking an option.
-        ...(firstSel.selected.size === 0 &&
-        !firstSel.otherText &&
-        firstSel.notes
-          ? [firstSel.notes]
-          : []),
-      ]
-    : [];
-
-  // A reply given in place of the answers stands in for them in the summary.
-  const summary = summaryFor(
-    questions,
-    firstAnswerParts.length === 0 && reply != null ? [reply] : firstAnswerParts,
-  );
+  let selections = selectionsFromParsed(questions, answerMap);
+  // Answered from this tab and still on its way (the hold let go, the result
+  // not written yet): draw the answer as sent, "Sending…" under it.
+  const inFlight = state.kind === "asking" && sent !== null;
+  if (inFlight) {
+    selections = selectionsFromForm(questions, sent.answer);
+    reply = sent.answer.response;
+  }
 
   return (
     <ToolCallCard
       event={event}
-      summary={summary}
+      summary={answeredSummary(questions, selections, reply)}
       defaultOpen
       isError={showAsError}
       outcomeUnknown={false}
     >
-      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mt offsets the answered view from the question card above (no named margin utility) */}
-      <Stack gap="md" className="mt-2">
-        {questions.map((q, qi) => {
-          const { selected, otherText, notes } = questionSelections[qi] ?? {
-            selected: new Set<string>(),
-            otherText: null,
-            notes: null,
-          };
-          const hasAnswer = selected.size > 0 || otherText != null;
-
-          return (
-            <div key={qi}>
-              {questions.length > 1 && (
-                <p
-                  // eslint-disable-next-line spacing/no-adhoc-spacing -- mb separates the per-question header from its question text (no named margin utility)
-                  className="mb-1 text-3xs font-medium tracking-wider text-muted-foreground"
-                >
-                  {q.header}
-                </p>
-              )}
-              {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mb separates the question text from its option list (no named margin utility) */}
-              <Text as="p" variant="caption" className="mb-1.5 text-foreground">
-                {q.question}
+      <AnsweredQuestions
+        questions={questions}
+        selections={selections}
+        reply={reply}
+        footer={
+          inFlight ? (
+            <SendingStatus />
+          ) : (
+            event.result?.isError &&
+            !resultIsInterrupt && (
+              <Text as="p" variant="caption" tone="destructive">
+                {event.result.content}
               </Text>
-              <Stack gap="xs">
-                {q.options.map((opt, oi) => (
-                  <OptionRow
-                    key={oi}
-                    selected={selected.has(opt.label)}
-                    multi={q.multiSelect}
-                    dimmed={hasAnswer}
-                  >
-                    <OptionBody
-                      label={opt.label}
-                      description={opt.description}
-                      preview={opt.preview}
-                    />
-                  </OptionRow>
-                ))}
-                {otherText != null && (
-                  <OptionRow selected multi={q.multiSelect}>
-                    <Text
-                      as="p"
-                      variant="caption"
-                      className="italic text-foreground"
-                    >
-                      {otherText}
-                    </Text>
-                  </OptionRow>
-                )}
-                {notes != null && (
-                  <div className="rounded-md border-l-2 border-muted-foreground/30 bg-muted/40 py-xs pl-sm">
-                    <p className="text-3xs font-medium tracking-wider text-muted-foreground">
-                      Note
-                    </p>
-                    <Text
-                      as="p"
-                      variant="caption"
-                      className="whitespace-pre-wrap break-words text-foreground"
-                    >
-                      {notes}
-                    </Text>
-                  </div>
-                )}
-              </Stack>
-            </div>
-          );
-        })}
-        {reply != null && (
-          <div className="rounded-md border-l-2 border-muted-foreground/30 bg-muted/40 py-xs pl-sm">
-            <p className="text-3xs font-medium tracking-wider text-muted-foreground">
-              Reply
-            </p>
-            <Text
-              as="p"
-              variant="caption"
-              className="whitespace-pre-wrap break-words text-foreground"
-            >
-              {reply}
-            </Text>
-          </div>
-        )}
-        {event.result?.isError && !resultIsInterrupt && (
-          <Text as="p" variant="caption" tone="destructive">
-            {event.result.content}
-          </Text>
-        )}
-      </Stack>
+            )
+          )
+        }
+      />
     </ToolCallCard>
   );
 }

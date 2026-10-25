@@ -21,8 +21,9 @@ re-asks a call already in its transcript.
   `Your questions have been answered: …` result, read back from the line's
   structured `toolUseResult` (`result.questionAnswer`, `answersFromRecord`) —
   never from the result's prose, whose wording the CLI changes across versions.
-- **asking** — the agent is mid-turn and the hold is not registered yet:
-  read-only.
+- **asking** — the agent is mid-turn and the hold is not registered yet (or
+  let go, the result not written yet): read-only — or, when this tab sent the
+  answer, that answer with "Sending…" under it (see below).
 - **orphaned** — unresolved (no result, the result the CLI fills in on resume
   after a restart killed the session mid-question — `outcomeUnknown` — or the
   tmux-era interrupt sentinel),
@@ -32,6 +33,21 @@ re-asks a call already in its transcript.
   `findAnswerTurn` and *Change answers* serve this path.
 - **settled** — answered, superseded, failed, or a conversation that can take
   no turn: read-only.
+
+## A sent answer shows at once — `sent-answers`
+
+Submitting a held question must not make it vanish: the relay row leaves its
+collection at once and the transcript card stays out while the call is held,
+so the question used to disappear until the CLI wrote the result. Whoever
+sends the answer calls `recordSentAnswer(toolUseId, { questions, answer })`
+(an in-memory per-tab store); both surfaces then draw it with the same
+`AnsweredQuestions` body the settled card uses, plus `SendingStatus` under it
+— the `"question"` pending prompt through `SentAnswerCard` while the call is
+held, then the transcript card in **asking** — so when the result lands only
+the "Sending…" line goes (the user-message echo contract,
+`conversation-view/pending-turn`). The transcript card drops the entry once
+the call has a result; a failed send drops it, bringing the form back with the
+draft.
 
 ## `OptionRow` owns the selected look — for both states of the card
 
@@ -92,7 +108,7 @@ ordinary `MarkerAnswerForm` renders with the old answer already in its draft.
     - `JsonlRowActions.Item` "change-answers" → `ChangeAnswersAction`
     - `JsonlViewer.EventFilter` "ask-user-question:suppress-answer-turn"
     - `JsonlViewer.EventFilter` "ask-user-question:suppress-interrupt-turn"
-  - Uses: 35 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 36 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×9
     - `primitives/persistent-draft` ×4
     - `conversations/conversation-view/jsonl-viewer/tool-call` ×3
@@ -110,6 +126,7 @@ ordinary `MarkerAnswerForm` renders with the old answer already in its draft.
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
+    - `primitives/css/working-dots.WorkingText`
     - `primitives/dom/web-storage.defineStore`
     - `ui/icons.Icon`
   - Exports (types):
@@ -117,10 +134,15 @@ ordinary `MarkerAnswerForm` renders with the old answer already in its draft.
     - `FormAnswer`
     - `Question`
     - `QuestionSelection`
+    - `SentAnswer`
   - Exports (values):
     - `answerDraftScope`
     - `AnswerForm`
+    - `dropSentAnswer`
     - `QuestionCard`
+    - `recordSentAnswer`
+    - `SentAnswerCard`
+    - `useSentAnswer`
 - Machine:
   - Uses: `infra/endpoints.implementMachine`
   - Routes: `POST /api/conversations/:id/answer-question`
