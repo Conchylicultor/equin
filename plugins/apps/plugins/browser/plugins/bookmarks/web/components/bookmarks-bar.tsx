@@ -87,7 +87,9 @@ export function BookmarksBar() {
               </ControlSizeProvider>
             }
           >
-            <Text variant="body">{hostOf(b.url)}</Text>
+            <Text variant="body" className="browser-bookmark-label">
+              {hostOf(b.url)}
+            </Text>
           </Row>
         ))}
         {more}

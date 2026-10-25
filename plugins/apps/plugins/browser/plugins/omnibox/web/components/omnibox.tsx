@@ -125,7 +125,7 @@ function OmniboxInput({
             above={
               parts ? (
                 <Center axis="vertical" className="h-full">
-                  <Text variant="body">
+                  <Text variant="body" className="browser-omnibox-address">
                     <span className="text-foreground">{parts.host}</span>
                     <span className="text-faint-foreground">{parts.rest}</span>
                   </Text>
@@ -153,7 +153,7 @@ function OmniboxInput({
               autoComplete="off"
               spellCheck={false}
               className={cn(
-                "browser-omnibox-input text-body w-full",
+                "browser-omnibox-input browser-omnibox-address text-body w-full",
                 parts && "is-masked",
               )}
             />

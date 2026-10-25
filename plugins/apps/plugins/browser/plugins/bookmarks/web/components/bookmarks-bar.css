@@ -13,6 +13,11 @@
      bar centres its row, so the margin moves the chip up into that place. */
   margin-bottom: 6px;
 }
+/* Optical centring on the favicon — the same 1px lift as the tab titles: the
+   system UI font's lowercase sits ~1.6px below its line box's centre. */
+.browser-bookmark-label {
+  translate: 0 -1px;
+}
 .browser-bookmark:hover {
   color: var(--foreground);
 }

@@ -15,13 +15,19 @@
 }
 /* The tabs themselves: content-sized up to the room there is, so they shrink
    together (each to its 44px floor) as more open, and the + follows the last
-   one. The left inset is room for the first tab's flare, which hangs outside
-   its box; the clip is the strip's edge. */
+   one. The list clips (that is what keeps a crowded strip inside its row), so
+   it carries a 12px inset on BOTH sides — the full width of the active tab's
+   flares, which hang outside its box — or the first and last tab lose their
+   curves. The negative margins give that inset back, so the tabs and the +
+   keep their places: the left one is held to 2px (the list then starts at the
+   launcher's edge rather than over it); the right one is all of it, so the +
+   sits 2px after the last tab with that tab's flare running under it. */
 .browser-tab-list {
   flex: 0 1 auto;
   min-width: 0;
   overflow: hidden;
-  padding-left: 10px;
+  padding: 0 12px;
+  margin: 0 -12px 0 -2px;
   align-items: flex-end;
 }
 
@@ -92,6 +98,13 @@
 .browser-tab.is-active + .browser-tab:not(.is-active)::before,
 .browser-tab:hover + .browser-tab:not(.is-active)::before {
   display: none;
+}
+
+/* Optical centring: the system UI font's lowercase sits ~1.6px below its line
+   box's centre (its capitals ~0.4px), so a label centred on its favicon reads
+   low; one pixel up centres both within half a pixel. */
+.browser-tab-label {
+  translate: 0 -1px;
 }
 
 .browser-tab-icon {

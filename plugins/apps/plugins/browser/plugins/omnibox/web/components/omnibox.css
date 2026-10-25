@@ -43,6 +43,14 @@
   color: transparent;
 }
 
+/* Optical centring on the site-info glyph — the same 1px lift as the tab
+   titles: the system UI font's lowercase sits ~1.6px below its line box's
+   centre. Both the formatted address and the input wear it, so they stay one
+   on the other. */
+.browser-omnibox-address {
+  translate: 0 -1px;
+}
+
 /* The start page's search glyph, where the site-info button sits on a page. */
 .browser-omnibox-glyph {
   width: 18px;

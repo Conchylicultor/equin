@@ -79,7 +79,9 @@ export function TabStrip() {
                   )}
                 </span>
                 <Fill>
-                  <Text variant="control">{label}</Text>
+                  <Text variant="control" className="browser-tab-label">
+                    {label}
+                  </Text>
                 </Fill>
                 <TabCloseButton
                   label={label}
