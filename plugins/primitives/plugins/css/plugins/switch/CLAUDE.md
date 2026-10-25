@@ -59,6 +59,7 @@ padding on the track that a flex direction could reinterpret.
     - `ui/tokens/shadow --shadow-sm`
     - `ui/tokens/shape --spacing`
   - Imported by:
+    - `apps/browser/proxy`
     - `apps/deploy/analytics/dashboard`
     - `apps/events/sources`
     - `apps/prototypes/canvas`

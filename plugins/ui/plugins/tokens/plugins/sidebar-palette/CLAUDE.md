@@ -30,6 +30,7 @@
     - `ui/tokens/shape --spacing`
   - Tokens used by:
     - `apps-core/app-launcher`
+    - `apps/browser/shell`
     - `apps/file-explorer/places`
     - `conversations/conversations-view/data-view`
     - `primitives/app-shell`

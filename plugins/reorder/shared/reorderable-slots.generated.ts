@@ -26,6 +26,8 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "apps.browser.shell.actions", pluginId: "apps.browser.shell", configName: "actions" },
   { slotId: "apps.browser.shell.nav-controls", pluginId: "apps.browser.shell", configName: "nav-controls" },
   { slotId: "apps.browser.shell.omnibox", pluginId: "apps.browser.shell", configName: "omnibox" },
+  { slotId: "apps.browser.shell.omnibox-action", pluginId: "apps.browser.shell", configName: "omnibox-action" },
+  { slotId: "apps.browser.shell.site-info", pluginId: "apps.browser.shell", configName: "site-info" },
   { slotId: "apps.browser.shell.start-page", pluginId: "apps.browser.shell", configName: "start-page" },
   { slotId: "apps.browser.shell.sub-bar", pluginId: "apps.browser.shell", configName: "sub-bar" },
   { slotId: "apps.browser.shell.tab-strip", pluginId: "apps.browser.shell", configName: "tab-strip" },

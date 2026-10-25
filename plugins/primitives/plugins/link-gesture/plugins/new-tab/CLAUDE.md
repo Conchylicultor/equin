@@ -53,7 +53,6 @@ the forms above — or, if the control does not open a browser tab, another glyp
     - `NewTabMenuItem`
 - Cross-plugin:
   - Imported by:
-    - `apps/browser/start-page`
     - `apps/browser/webview`
     - `apps/deploy/local-serve`
     - `apps/deploy/servers`

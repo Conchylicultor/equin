@@ -1,28 +1,33 @@
-import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Switch } from "@plugins/primitives/plugins/css/plugins/switch/web";
 import { useBrowserProxy } from "@plugins/apps/plugins/browser/plugins/shell/web";
-import { symbol } from "@plugins/ui/plugins/icons/core";
-
-const shieldIcon = symbol("shield");
 
 /**
- * Proxy-mode toggle for the chrome bar's trailing actions. When on, pages load
- * through the same-origin framing-stripping proxy so framing-blocked sites
- * render. Filled shield when on, outline when off.
+ * The proxy switch, as a row of the address pill's site-info popover. When on,
+ * pages load through the same-origin framing-stripping proxy so sites that
+ * refuse to be framed still render; the pill's leading glyph turns into a
+ * shield while it is on.
  */
 export function ProxyToggle() {
   const { enabled, toggle } = useBrowserProxy();
-  const label = enabled
-    ? "Proxy mode on — bypass embedding blocks"
-    : "Proxy mode off — bypass embedding blocks";
-
   return (
-    <IconButton
-      icon={shieldIcon}
-      active={enabled}
-      label={label}
-      tooltip={label}
-      aria-pressed={enabled}
-      onClick={toggle}
-    />
+    <Line className="gap-sm border-t pt-sm">
+      <Fill>
+        <Stack gap="none">
+          <Text variant="label">Load through proxy</Text>
+          <Text variant="caption" tone="muted">
+            For sites that refuse to be shown inside another app
+          </Text>
+        </Stack>
+      </Fill>
+      <Switch
+        checked={enabled}
+        onCheckedChange={() => toggle()}
+        aria-label="Load through proxy"
+      />
+    </Line>
   );
 }

@@ -1,0 +1,50 @@
+/*
+ * The address pill. Plugin-local CSS because the field is a bare `<input>`
+ * (whose formatted twin is layered over it) inside a pill whose fill and focus
+ * ring follow the focus state — a recipe no field primitive spells. Colours
+ * are theme tokens only.
+ *
+ * At rest the pill is a muted well; focused, it lifts to the content colour
+ * with a ring, like Chrome's.
+ */
+.browser-omnibox {
+  height: 34px;
+  padding: 0 4px;
+  border-radius: 9999px;
+  border: 1px solid transparent;
+  background: var(--muted);
+  transition: background-color 120ms, border-color 120ms, box-shadow 120ms;
+}
+.browser-omnibox:hover:not(.is-focused) {
+  background: color-mix(in oklab, var(--muted) 85%, var(--foreground));
+}
+.browser-omnibox.is-focused {
+  background: var(--background);
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 25%, transparent);
+}
+
+.browser-omnibox-input {
+  display: block;
+  height: 32px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--foreground);
+}
+.browser-omnibox-input::placeholder {
+  color: var(--muted-foreground);
+}
+/* The formatted address is drawn over the input; the input's own text hides
+   (the caret and selection come back the moment it takes focus). */
+.browser-omnibox-input.is-masked {
+  color: transparent;
+}
+
+/* The start page's search glyph: the same box as the site-info button, so the
+   address starts at the same x either way. */
+.browser-omnibox-glyph {
+  width: 24px;
+  height: 24px;
+  color: var(--muted-foreground);
+}

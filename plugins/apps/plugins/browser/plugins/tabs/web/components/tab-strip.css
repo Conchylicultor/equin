@@ -1,0 +1,97 @@
+/*
+ * Chrome-shaped browser tabs. Plugin-local CSS because the shape is
+ * pseudo-element geometry (the active tab's S-curve flares, the hairline
+ * separators) that no primitive or utility spells. Colours are tokens only:
+ * the strip is `--sidebar` (browser-layout.css), the active tab and its flares
+ * are `--background` (the toolbar's colour, so they read as one surface).
+ *
+ * Every tab is the SAME box — 34px with a transparent 3px/4px border — so
+ * hover never moves anything: an inactive tab's hover background is clipped to
+ * the padding box (a fully rounded 28px pill inside the box), while the active
+ * tab paints its whole box (rounded top, square bottom).
+ */
+.browser-tabs {
+  /* Room for the first tab's left flare, which hangs outside its box. */
+  padding-left: 10px;
+  align-items: flex-end;
+}
+
+.browser-tab {
+  position: relative;
+  flex: 0 1 220px;
+  min-width: 44px;
+  height: 34px;
+  padding: 0 4px 0 8px;
+  border: solid transparent;
+  border-width: 3px 4px;
+  border-radius: 12px;
+  background-clip: padding-box;
+  color: var(--muted-foreground);
+  cursor: default;
+  user-select: none;
+  transition: background-color 120ms, color 120ms;
+}
+.browser-tab:hover {
+  background-color: color-mix(in oklab, var(--foreground) 7%, transparent);
+  color: var(--foreground);
+}
+.browser-tab:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -3px;
+}
+.browser-tab.is-active {
+  z-index: 1;
+  border-radius: 12px 12px 0 0;
+  background-color: var(--background);
+  background-clip: border-box;
+  color: var(--foreground);
+}
+
+/* The S-curve: the active tab flares into the toolbar at both bottom corners.
+   The pseudo-elements are positioned against the padding box, so the border
+   (3px bottom, 4px sides) is added to their offsets. */
+.browser-tab.is-active::before,
+.browser-tab.is-active::after {
+  content: "";
+  position: absolute;
+  bottom: -3px;
+  width: 12px;
+  height: 12px;
+  pointer-events: none;
+}
+.browser-tab.is-active::before {
+  left: -16px;
+  background: radial-gradient(circle at 0 0, transparent 11.5px, var(--background) 12px);
+}
+.browser-tab.is-active::after {
+  right: -16px;
+  background: radial-gradient(circle at 100% 0, transparent 11.5px, var(--background) 12px);
+}
+
+/* Hairline separators between inactive tabs, hidden next to the active or
+   hovered one (scoped to inactive tabs so they never touch the active flare). */
+.browser-tab + .browser-tab:not(.is-active):not(:hover)::before {
+  content: "";
+  position: absolute;
+  left: -4.5px;
+  top: 5px;
+  bottom: 5px;
+  width: 1px;
+  background: var(--border);
+}
+.browser-tab.is-active + .browser-tab:not(.is-active)::before,
+.browser-tab:hover + .browser-tab:not(.is-active)::before {
+  display: none;
+}
+
+.browser-tab-icon {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+}
+
+/* The + sits centred on the tabs' line. */
+.browser-tab-new {
+  margin: 0 0 3px 2px;
+}

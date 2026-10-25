@@ -6,11 +6,13 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 const arrowBackIcon = symbol("arrow-back");
 const arrowForwardIcon = symbol("arrow-forward");
 const refreshIcon = symbol("refresh");
-const homeIcon = symbol("home");
 
-/** Back / forward / reload / home controls in the browser chrome bar. */
+/**
+ * Back / forward / reload in the browser chrome bar. There is no Home button:
+ * as in Chrome, a new tab is the start page.
+ */
 export function NavControls() {
-  const { canGoBack, canGoForward, back, forward, reload, goHome } =
+  const { current, canGoBack, canGoForward, back, forward, reload } =
     useBrowserNav();
   return (
     <Stack direction="row" gap="2xs" align="center">
@@ -33,12 +35,7 @@ export function NavControls() {
         label="Reload"
         tooltip="Reload"
         onClick={reload}
-      />
-      <IconButton
-        icon={homeIcon}
-        label="Home"
-        tooltip="Home"
-        onClick={goHome}
+        disabled={current === ""}
       />
     </Stack>
   );

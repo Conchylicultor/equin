@@ -1,0 +1,56 @@
+/*
+ * Start-page geometry: plugin-local CSS for the two pieces no primitive
+ * spells — the large pill search field (a bare `<input>` in a raised pill
+ * whose ring follows focus) and the pin tile. Colours are theme tokens only.
+ */
+.browser-start {
+  padding-top: clamp(32px, 9vh, 96px);
+  padding-bottom: 48px;
+}
+
+.browser-start-search {
+  height: 48px;
+  padding: 0 16px;
+  border-radius: 9999px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.06), 0 4px 16px rgb(0 0 0 / 0.06);
+  transition: border-color 120ms, box-shadow 120ms;
+}
+.browser-start-search:focus-within {
+  border-color: var(--ring);
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--ring) 25%, transparent),
+    0 4px 16px rgb(0 0 0 / 0.06);
+}
+.browser-start-search-input {
+  display: block;
+  height: 44px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--foreground);
+}
+.browser-start-search-input::placeholder {
+  color: var(--faint-foreground);
+}
+
+.browser-pin {
+  padding: 14px 6px 10px;
+  border-radius: 12px;
+  color: var(--muted-foreground);
+  transition: background-color 120ms, color 120ms;
+}
+.browser-pin:hover {
+  background: var(--hover-fill);
+  color: var(--foreground);
+}
+.browser-pin:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+.browser-pin-tile {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--muted);
+}

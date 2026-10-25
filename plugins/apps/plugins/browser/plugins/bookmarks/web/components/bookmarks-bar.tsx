@@ -23,7 +23,8 @@ const closeIcon = symbol("close");
  * bookmark in the collection's default window. Clicking a chip navigates; a
  * hover-revealed × removes it; a trailing "More" grows the window when it is
  * full. Renders nothing while loading or when there are no bookmarks (no empty
- * chrome row).
+ * chrome row). It sits in the browser's chrome block, which draws the one
+ * hairline under toolbar + bookmarks, so the bar drops its own.
  */
 export function BookmarksBar() {
   const { navigate } = useBrowserNav();
@@ -35,7 +36,7 @@ export function BookmarksBar() {
       // A failed read is said, in the bar's own row — never the silent
       // nothing a still-loading (or empty) list renders.
       return (
-        <Bar tier="pane">
+        <Bar tier="pane" className="border-b-0">
           <ResourceErrorInline
             variant="inline"
             subject="bookmarks"
@@ -63,7 +64,7 @@ export function BookmarksBar() {
     ) : null;
 
   return (
-    <Bar tier="pane">
+    <Bar tier="pane" className="border-b-0">
       <Stack direction="row" gap="2xs" align="center">
         {/* eslint-disable-next-line data-view/no-adhoc-row-list -- bookmarks bar chrome strip */}
         {bookmarks.map((b) => (

@@ -4,13 +4,17 @@
 
 ## Plugin reference
 
-- Description: Browser proxy-mode toggle: a shield button in the chrome actions that flips the framing-stripping proxy on/off for the surface. Framing-stripping browser proxy: fetches the target server-side (SSRF-guarded, anonymous), strips X-Frame-Options/CSP and credential headers, and rewrites HTML to inject a <base> + nav-interception script so framing-blocked sites render in the in-app browser.
+- Description: Browser proxy-mode toggle: a switch row in the address pill's site-info popover that flips the framing-stripping proxy on/off for the surface. Framing-stripping browser proxy: fetches the target server-side (SSRF-guarded, anonymous), strips X-Frame-Options/CSP and credential headers, and rewrites HTML to inject a <base> + nav-interception script so framing-blocked sites render in the in-app browser.
 - Web:
-  - Contributes: `Browser.Actions` "Chrome actions" → `ProxyToggle`
+  - Contributes: `Browser.SiteInfo` "Site info" → `ProxyToggle`
   - Uses:
     - `apps/browser/shell.Browser`
     - `apps/browser/shell.useBrowserProxy`
-    - `primitives/icon-button.IconButton`
+    - `primitives/css/fill.Fill`
+    - `primitives/css/line.Line`
+    - `primitives/css/spacing.Stack`
+    - `primitives/css/switch.Switch`
+    - `primitives/css/text.Text`
 - Server:
   - Uses:
     - `infra/endpoints.rawEndpointHandler`
@@ -19,6 +23,8 @@
   - Routes:
     - `GET /api/browser/proxy`
     - `POST /api/browser/proxy`
+- Cross-plugin:
+  - Uses tokens: `ui/tokens/density --space-sm`
 - Core:
   - Exports (types):
     - `BrowserProxyNavKind`

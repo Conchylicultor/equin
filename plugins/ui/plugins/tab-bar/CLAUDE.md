@@ -64,6 +64,7 @@ needing a DOM handle wraps `<Tab>` in its own element.
     - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps-core/tab-bar`
+    - `apps/browser/tabs`
     - `ui/tab-bar/chip`
     - `ui/tab-bar/connected`
     - `ui/tab-bar/customizer`

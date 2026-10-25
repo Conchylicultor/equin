@@ -1,0 +1,20 @@
+/*
+ * The loading bar's ease-out run to 80%: plugin-local CSS because it is a
+ * keyframed width, which no utility spells. It restarts on every mount — the
+ * webview mounts it when a load starts and drops it when the load finishes.
+ */
+.browser-loading-bar {
+  width: 80%;
+  border-radius: 0 2px 2px 0;
+  animation: browser-loading-run 2.4s cubic-bezier(0.1, 0.7, 0.3, 1) both;
+}
+@keyframes browser-loading-run {
+  from {
+    width: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .browser-loading-bar {
+    animation: none;
+  }
+}

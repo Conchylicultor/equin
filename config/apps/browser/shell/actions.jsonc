@@ -1,4 +1,4 @@
-// @hash 650297637295
+// @hash 4406ce175f22
 // @legend — how to write this file (rewritten by ./equin build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -11,8 +11,6 @@
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   "items": [
-    "apps.browser.proxy:proxy-toggle",
-    "apps.browser.bookmarks:bookmark-star",
     "apps.browser.webview:open-external"
   ]
 }

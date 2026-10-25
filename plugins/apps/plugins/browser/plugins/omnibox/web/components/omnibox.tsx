@@ -1,14 +1,32 @@
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { FormEvent } from "react";
-import { SearchInput } from "@plugins/primitives/plugins/search/web";
-import { useBrowserNav } from "@plugins/apps/plugins/browser/plugins/shell/web";
+import {
+  cn,
+  ControlSizeProvider,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { Overlay } from "@plugins/primitives/plugins/css/plugins/overlay/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+import {
+  Browser,
+  useBrowserNav,
+} from "@plugins/apps/plugins/browser/plugins/shell/web";
 import { normalizeInput } from "../normalize";
+import { SiteInfoButton } from "./site-info";
+import "./omnibox.css";
+
+const searchIcon = symbol("search");
 
 /**
- * The address bar. A controlled input seeded from the current URL; Enter
- * normalizes the input and navigates (or goes home on empty). Reuses the
- * SearchInput primitive for its leading search affordance + clear button.
+ * The address bar: Chrome's pill. A leading site-info button (the start page
+ * shows a search glyph instead), the address, and the contributed in-field
+ * actions (`Browser.OmniboxAction`, e.g. the bookmark star). Enter normalizes
+ * the input and navigates (or goes home on empty).
  *
  * The input's draft state is owned by a self-keyed inner component
  * ({@link OmniboxInput}) keyed on `current`: whenever the active URL changes
@@ -29,6 +47,18 @@ export function Omnibox() {
   );
 }
 
+/** Split a URL into what the pill shows strong (the host, sans `www.`) and faint (the rest). */
+function displayParts(url: string): { host: string; rest: string } | null {
+  try {
+    const u = new URL(url);
+    const rest = `${u.pathname === "/" ? "" : u.pathname}${u.search}${u.hash}`;
+    return { host: u.host.replace(/^www\./, ""), rest };
+  } catch (err) {
+    if (err instanceof TypeError) return null; // not a URL — show it raw
+    throw err;
+  }
+}
+
 function OmniboxInput({
   current,
   navigate,
@@ -39,9 +69,12 @@ function OmniboxInput({
   goHome: () => void;
 }) {
   const [value, setValue] = useState(current);
+  const [focused, setFocused] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
+    inputRef.current?.blur();
     const result = normalizeInput(value);
     if (result.kind === "home") {
       goHome();
@@ -50,20 +83,76 @@ function OmniboxInput({
     }
   };
 
+  // While unfocused and untouched, the pill shows the address formatted (host
+  // strong, path faint) over the input, whose own text is masked; focusing
+  // hands the plain, fully-selected text back for editing.
+  const parts =
+    !focused && value === current && current ? displayParts(current) : null;
+
   return (
-    // Rendered inside the chrome bar's flexible content cell, which already
-    // supplies the `min-w-0` truncation context — the form + input just fill
-    // that cell's width.
-    <form onSubmit={submit} className="w-full">
-      <SearchInput
-        wrapperClassName={cn("w-full")}
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        placeholder="Search or enter address"
-        aria-label="Address bar"
-        autoComplete="off"
-        spellCheck={false}
-      />
-    </form>
+    <ControlSizeProvider size="xs">
+      <Line
+        as="form"
+        onSubmit={submit}
+        className={cn(
+          "browser-omnibox w-full gap-2xs",
+          focused && "is-focused",
+        )}
+      >
+        <span className={rigidClass()}>
+          {current ? (
+            <SiteInfoButton url={current} />
+          ) : (
+            <Center className="browser-omnibox-glyph">
+              <Icon icon={searchIcon} className="size-4" aria-hidden />
+            </Center>
+          )}
+        </span>
+        <Fill>
+          <Overlay
+            above={
+              parts ? (
+                <Center axis="vertical" className="h-full">
+                  <Text variant="body">
+                    <span className="text-foreground">{parts.host}</span>
+                    <span className="text-faint-foreground">{parts.rest}</span>
+                  </Text>
+                </Center>
+              ) : undefined
+            }
+          >
+            <input
+              ref={inputRef}
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              onFocus={(e) => {
+                setFocused(true);
+                e.currentTarget.select();
+              }}
+              onBlur={() => {
+                setFocused(false);
+                setValue(current);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") e.currentTarget.blur();
+              }}
+              placeholder="Search or enter address"
+              aria-label="Address bar"
+              autoComplete="off"
+              spellCheck={false}
+              className={cn(
+                "browser-omnibox-input text-body w-full",
+                parts && "is-masked",
+              )}
+            />
+          </Overlay>
+        </Fill>
+        {current && (
+          <span className={rigidClass()}>
+            <Browser.OmniboxAction.Render />
+          </span>
+        )}
+      </Line>
+    </ControlSizeProvider>
   );
 }

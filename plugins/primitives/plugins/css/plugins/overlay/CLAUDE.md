@@ -82,6 +82,7 @@ header content inside is a `<Frame>`.
     - `OverlayInteractive`
 - Cross-plugin:
   - Imported by:
+    - `apps/browser/omnibox`
     - `apps/browser/webview`
     - `apps/chord/trainer`
     - `apps/prototypes/thumbnails`

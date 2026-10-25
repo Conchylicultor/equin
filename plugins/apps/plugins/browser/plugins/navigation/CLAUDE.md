@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Browser navigation controls: back / forward / reload / home buttons in the chrome bar.
+- Description: Browser navigation controls: back / forward / reload buttons in the chrome bar.
 - Web:
   - Contributes: `Browser.NavControls` "Navigation controls" → `NavControls`
   - Uses:

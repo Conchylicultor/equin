@@ -10,10 +10,10 @@ export { browserBookmarks, BookmarkRowSchema, type BookmarkRow } from "../core";
 
 export default {
   description:
-    "Browser bookmarks UI: a star toggle in the chrome actions and a bookmarks bar of clickable chips below the omnibox.",
+    "Browser bookmarks UI: a star toggle inside the address pill and a bookmarks bar of clickable chips below the omnibox.",
   contributions: [
     IdKinds.Kind({ kind: bookmarkIdKind }),
-    Browser.Actions({ id: "bookmark-star", component: BookmarkStar }),
+    Browser.OmniboxAction({ id: "bookmark-star", component: BookmarkStar }),
     Browser.SubBar({ id: "bookmarks-bar", component: BookmarksBar }),
   ],
 } satisfies PluginDefinition;

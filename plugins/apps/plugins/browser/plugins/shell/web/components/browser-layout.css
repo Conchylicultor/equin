@@ -1,0 +1,20 @@
+/*
+ * The browser's tab row: Chrome's recessed strip. It wears the chrome frame
+ * colour (`--sidebar`, the same role the app tab bar's `chrome` surface paints)
+ * so the active tab — the content colour — reads as raised out of it and fused
+ * with the toolbar below. The top inset is the strip's breathing room above the
+ * tabs; the tabs themselves sit on the strip's bottom edge. Plugin-local CSS
+ * because the tab geometry below it (tab-strip.css) is pseudo-element work no
+ * primitive spells.
+ */
+.browser-tab-row {
+  background: var(--sidebar);
+  color: var(--sidebar-foreground, var(--muted-foreground));
+  padding-top: 8px;
+  padding-left: 8px;
+  align-items: flex-end;
+}
+/* The launcher sits centred on the tabs' line, not on the strip's padding. */
+.browser-tab-row > :first-child {
+  margin-bottom: 2px;
+}

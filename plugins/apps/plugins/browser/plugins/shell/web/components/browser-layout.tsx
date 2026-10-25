@@ -11,17 +11,24 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Browser } from "../slots";
 import { BrowserTabsStore } from "../nav-store";
+import "./browser-layout.css";
 
 /**
  * Inner layout — sits INSIDE `<BrowserTabsStore.Provider>` so its children (the
  * tab strip, chrome bars, sub-bar, viewport, effects) can read the per-surface
  * tab store.
  *
- * The chrome bar is a single-line row: the app launcher (the shared app-shell
- * brand, at the same leading edge every app shows it), the nav controls, the flexible
- * omnibox in the truncating fill track, and the trailing actions cluster. The
- * outer shell is the full-surface column — a `Stack` that also clips, so it
- * takes `clipClasses()` rather than wrapping itself in a `<Clip>`.
+ * Chrome's arrangement, top to bottom:
+ *
+ * - the **tab row** — the app launcher (the shared app-shell brand, at the
+ *   leading edge every app shows it) then the contributed tab strip, on the
+ *   recessed chrome colour. It is the surface's top line, so it is the floating
+ *   action bar's band (`pr-floating-bar anchor-floating-bar-band`).
+ * - the **chrome block** — the toolbar (nav controls, the flexible omnibox in
+ *   the truncating fill track, the trailing actions) and the sub-bar (bookmarks),
+ *   on the content colour so the active tab flows into it, with ONE hairline
+ *   under the whole block rather than one per bar.
+ * - the viewport.
  */
 function BrowserInner() {
   return (
@@ -32,26 +39,37 @@ function BrowserInner() {
         clipClasses({ axis: "both", fill: false }),
       )}
     >
-      <Browser.TabStrip.Render />
-      <Bar tier="chrome">
-        <Line className="w-full gap-sm">
-          <AppShellBrand form="icon" />
-          <Browser.NavControls.Render />
-          <Fill>
-            <Browser.Omnibox.Render />
-          </Fill>
-          <Stack
-            direction="row"
-            gap="sm"
-            align="center"
-            justify="end"
-            className={rigidClass()}
-          >
-            <Browser.Actions.Render />
-          </Stack>
-        </Line>
-      </Bar>
-      <Browser.SubBar.Render />
+      <Line
+        className={cn(
+          "browser-tab-row pr-floating-bar anchor-floating-bar-band",
+          rigidClass(),
+        )}
+      >
+        <AppShellBrand form="icon" />
+        <Fill>
+          <Browser.TabStrip.Render />
+        </Fill>
+      </Line>
+      <Stack gap="none" className={cn("border-b", rigidClass())}>
+        <Bar tier="chrome" endSafeArea={false} className="border-b-0">
+          <Line className="w-full gap-2xs">
+            <Browser.NavControls.Render />
+            <Fill>
+              <Browser.Omnibox.Render />
+            </Fill>
+            <Stack
+              direction="row"
+              gap="2xs"
+              align="center"
+              justify="end"
+              className={rigidClass()}
+            >
+              <Browser.Actions.Render />
+            </Stack>
+          </Line>
+        </Bar>
+        <Browser.SubBar.Render />
+      </Stack>
       <Clip as="main" fill>
         <Browser.Viewport.Render />
       </Clip>

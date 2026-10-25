@@ -22,11 +22,11 @@ Bookmarks section reads the same collection).
 
 ## Plugin reference
 
-- Description: Browser bookmarks UI: a star toggle in the chrome actions and a bookmarks bar of clickable chips below the omnibox. Browser bookmarks: the browser_bookmarks table, the browser-bookmarks live collection, and add/delete endpoints backing the star toggle and bookmarks bar.
+- Description: Browser bookmarks UI: a star toggle inside the address pill and a bookmarks bar of clickable chips below the omnibox. Browser bookmarks: the browser_bookmarks table, the browser-bookmarks live collection, and add/delete endpoints backing the star toggle and bookmarks bar.
 - Web:
   - Contributes:
     - `IdKinds.Kind` "bkmk"
-    - `Browser.Actions` "Chrome actions" → `BookmarkStar`
+    - `Browser.OmniboxAction` "Omnibox action" → `BookmarkStar`
     - `Browser.SubBar` "Sub bar" → `BookmarksBar`
   - Uses:
     - `apps/browser/shell.Browser`

@@ -22,7 +22,15 @@ export const Browser = {
   Omnibox: defineRenderSlot<{ component: ComponentType }>({
     docLabel: () => "Omnibox",
   }),
-  /** Trailing chrome-bar actions (open-external, bookmark star). */
+  /** Trailing controls INSIDE the address pill (e.g. the bookmark star). */
+  OmniboxAction: defineRenderSlot<{ component: ComponentType }>({
+    docLabel: () => "Omnibox action",
+  }),
+  /** Rows of the site-info popover the address pill's leading button opens (e.g. the proxy switch). */
+  SiteInfo: defineRenderSlot<{ component: ComponentType }>({
+    docLabel: () => "Site info",
+  }),
+  /** Trailing chrome-bar actions (open-external). */
   Actions: defineRenderSlot<{ component: ComponentType }>({
     docLabel: () => "Chrome actions",
   }),

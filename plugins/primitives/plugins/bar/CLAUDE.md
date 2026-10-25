@@ -34,7 +34,6 @@ Tiers: `chrome` (the app toolbar, `h-chrome-bar`), `pane` (a pane header, `h-chr
   - Imported by:
     - `apps/browser/bookmarks`
     - `apps/browser/shell`
-    - `apps/browser/tabs`
     - `apps/demo/shell`
     - `apps/file-explorer/browser`
     - `conversations/conversation-view`

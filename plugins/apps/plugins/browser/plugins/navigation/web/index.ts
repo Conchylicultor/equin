@@ -4,7 +4,7 @@ import { NavControls } from "./components/nav-controls";
 
 export default {
   description:
-    "Browser navigation controls: back / forward / reload / home buttons in the chrome bar.",
+    "Browser navigation controls: back / forward / reload buttons in the chrome bar.",
   contributions: [
     Browser.NavControls({ id: "nav-controls", component: NavControls }),
   ],

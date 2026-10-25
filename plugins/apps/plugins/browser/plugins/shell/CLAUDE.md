@@ -10,6 +10,8 @@
     - `Browser.TabStrip`
     - `Browser.NavControls`
     - `Browser.Omnibox`
+    - `Browser.OmniboxAction`
+    - `Browser.SiteInfo`
     - `Browser.Actions`
     - `Browser.SubBar`
     - `Browser.Viewport`
@@ -19,8 +21,8 @@
     - `Browser.TabStrip` ← `apps.browser.tabs`
     - `Browser.NavControls` ← `apps.browser.navigation`
     - `Browser.Omnibox` ← `apps.browser.omnibox`
-    - `Browser.Actions` ← `apps.browser.bookmarks`
-    - `Browser.Actions` ← `apps.browser.proxy`
+    - `Browser.OmniboxAction` ← `apps.browser.bookmarks`
+    - `Browser.SiteInfo` ← `apps.browser.proxy`
     - `Browser.Actions` ← `apps.browser.webview`
     - `Browser.SubBar` ← `apps.browser.bookmarks`
     - `Browser.Viewport` ← `apps.browser.webview`
@@ -65,7 +67,11 @@
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --background`
-    - `ui/tokens/density --space-sm`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/density --chrome-pad-x`
+    - `ui/tokens/density --space-2xs`
+    - `ui/tokens/sidebar-palette --sidebar`
+    - `ui/tokens/sidebar-palette --sidebar-foreground`
   - Imported by:
     - `apps/browser/bookmarks`
     - `apps/browser/history`
