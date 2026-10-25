@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
+import { AUDIENCES } from "@plugins/audience/core";
 import { NotificationVariantSchema } from "./schema";
 import { notificationIdKind } from "../core";
 
@@ -14,6 +15,7 @@ export const createNotification = defineEndpoint({
     linkTo: z.string().nullable().optional(),
     metadata: z.record(z.unknown()).nullable().optional(),
     dedupeKey: z.string().nullable().optional(),
+    audience: z.enum(AUDIENCES).optional(),
   }),
   response: z.object({ id: z.string() }),
   // Persisting a browser toast is the desktop's bell (D4,

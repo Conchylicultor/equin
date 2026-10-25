@@ -11,7 +11,11 @@ export function ReconnectWatcher() {
       if (toastTimer) return;
       toastTimer = setTimeout(() => {
         toastTimer = null;
-        showToast({ description: "Reconnected to server", variant: "info" });
+        showToast({
+          description: "Reconnected to server",
+          variant: "info",
+          audience: "developer",
+        });
       }, 150);
     };
 

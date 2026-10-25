@@ -1,4 +1,5 @@
 import { useCallback } from "react";
+import type { Audience } from "@plugins/audience/core";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import {
   useFetchEndpoint,
@@ -18,6 +19,11 @@ export interface ToastArgs {
   linkTo?: string;
   metadata?: Record<string, unknown>;
   dedupeKey?: string;
+  /**
+   * Who it is for: a `developer` toast is shown, and kept in the bell, only in
+   * Developer mode. Default `user` — everyone.
+   */
+  audience?: Audience;
 }
 
 export const recentClientIds = new Set<string>();
@@ -46,6 +52,7 @@ export function useToast(): Toast {
         title: args.title,
         description: args.description,
         variant,
+        audience: args.audience,
       });
       if (!persist) return;
 
@@ -66,6 +73,7 @@ export function useToast(): Toast {
             linkTo: args.linkTo ?? null,
             metadata: args.metadata ?? null,
             dedupeKey: args.dedupeKey ?? null,
+            audience: args.audience,
           },
         },
       );

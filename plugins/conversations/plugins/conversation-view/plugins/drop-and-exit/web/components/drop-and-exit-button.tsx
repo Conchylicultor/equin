@@ -94,7 +94,15 @@ function DropAndExitEntry({
       const description = data.dropped
         ? "Task marked dropped and conversation closed"
         : "Conversation closed without changing task state";
-      toast({ type: "conversation", title, description, variant: "success" });
+      toast({
+        type: "conversation",
+        title,
+        description,
+        variant: "success",
+        // Dropping the task is news to everyone; a plain close only to a
+        // developer.
+        audience: data.dropped ? undefined : "developer",
+      });
     },
     onError: (err) =>
       toast({

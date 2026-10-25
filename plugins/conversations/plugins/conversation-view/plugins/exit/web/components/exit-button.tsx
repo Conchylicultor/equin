@@ -23,6 +23,7 @@ export function ExitItem({
         title: "Conversation closed",
         description: "Closed without changing task state",
         variant: "success",
+        audience: "developer",
       }),
     onError: (err) =>
       toast({

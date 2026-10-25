@@ -27,6 +27,7 @@ import {
   useFetchEndpoint,
 } from "@plugins/infra/plugins/endpoints/web";
 import type { MachineResult } from "@plugins/infra/plugins/endpoints/core";
+import type { Audience } from "@plugins/audience/core";
 import {
   conversationPromptDraft,
   useSendConversationTurn,
@@ -81,6 +82,8 @@ const stopIcon = symbol("stop");
 type ActionSpec = {
   verb: string;
   successToast?: string;
+  /** Who the success toast is for (default everyone). */
+  successAudience?: Audience;
   run: () => void | Promise<void>;
 };
 
@@ -363,6 +366,7 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
         return {
           verb: "Close",
           successToast: "Conversation closed",
+          successAudience: "developer",
           run: async () => {
             machineValue(await fetchEndpoint(exitConversation, { id: convId }));
           },
@@ -391,6 +395,7 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
           title: spec.verb,
           description: spec.successToast,
           variant: "success",
+          audience: spec.successAudience,
         });
       }
     } catch (err) {

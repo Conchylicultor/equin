@@ -11302,6 +11302,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `config_v2/git-defaults-preview`
       - `shell/global-action-bar`
       - `shell/notifications`
+      - `shell/toast`
   - Plugins:
     - **`developer-mark`** — The developer-only mark: DeveloperMark (the developer symbol in the primary tint, inline beside a title or opaque on a corner) and DeveloperCorner (the mark overhanging a tile's corner). Every surface showing something only a developer sees — a developer app's tile, a developer notification or toast — draws it, so one symbol means developer everywhere.
       - Web:
@@ -47421,12 +47422,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/color-palette --muted-foreground`
               - `ui/tokens/density --space-md`
-    - **`toast`** — Global toast notifications: a plain showToast() backed by sonner's global API, plus the Core.Root-mounted sonner Toaster host. Degrades to a silent no-op when no host is mounted. useSuppressToasts() lets a surface that is its whole document (the menu-bar panel) turn the host off while mounted.
+    - **`toast`** — Global toast notifications: a plain showToast() backed by sonner's global API, plus the Core.Root-mounted sonner Toaster host. Degrades to a silent no-op when no host is mounted. A toast declaring audience developer is shown only in Developer mode. useSuppressToasts() lets a surface that is its whole document (the menu-bar panel) turn the host off while mounted.
       - Web:
         - Contributes: `Core.Root` → `ToasterHost`
         - Uses:
           - `apps-core/chrome-theme.chromeTheme`
           - `apps-core/chrome-theme.chromeThemeScope`
+          - `audience.useAudience`
           - `audience/developer-mark.DeveloperMark`
           - `primitives/css/theme-boundary.Theme`
           - `primitives/css/ui-kit.Button`

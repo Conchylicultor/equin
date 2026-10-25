@@ -4,6 +4,7 @@ import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
 import { DeveloperMark } from "@plugins/audience/plugins/developer-mark/web";
 import type { ToastArgs } from "../../core";
 import { trackToast, untrackToast } from "./live-toasts";
+import { toastReachesReader } from "./reader-audience";
 
 /**
  * Page-unique toast ids we mint ourselves, rather than taking sonner's return
@@ -80,6 +81,8 @@ function ToastBody({ id, children }: { id: string; children: React.ReactNode }) 
  * Fire a global toast. Backed by sonner's global imperative API — callable from
  * anywhere; if no `<ToasterHost/>` is mounted the enqueue simply has no renderer
  * (a silent no-op, never a throw). Deprecates the former `shell.toast` command.
+ * A toast declaring `audience: "developer"` is dropped unless the reader is in
+ * Developer mode.
  */
 export function showToast({
   title,
@@ -88,6 +91,8 @@ export function showToast({
   audience,
   action,
 }: ToastArgs): void {
+  // A developer toast is shown only to a developer (Developer mode on).
+  if (!toastReachesReader(audience)) return;
   const id = `shell-toast-${SESSION}-${++seq}`;
   // `||`, not `??`: `title: ""` is a caller saying "no title", and `??` would
   // render an empty headline and drop the description entirely.

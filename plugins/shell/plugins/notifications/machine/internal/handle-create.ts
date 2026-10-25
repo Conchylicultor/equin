@@ -14,6 +14,7 @@ export const handleCreate = implementMachine(
       linkTo: body.linkTo ?? null,
       metadata: body.metadata ?? null,
       dedupeKey: body.dedupeKey ?? null,
+      audience: body.audience,
     });
     return { id };
   },
