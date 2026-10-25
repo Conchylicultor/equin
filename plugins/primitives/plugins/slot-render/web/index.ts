@@ -8,11 +8,13 @@ export {
   defineOrderedDispatchSlot,
   defineWrapperSlot,
   renderIsolated,
+  renderAsContribution,
   RenderSlotSubIdContext,
 } from "./internal/render-slot";
 export type {
   RenderSlot,
   RenderSlotConfig,
+  DerivedIdRenderSlot,
   MountSlot,
   MountComponent,
   MountSlotConfig,
@@ -26,6 +28,7 @@ export type {
   WrapContribution,
 } from "./internal/render-slot";
 export { RenderCoreRoot } from "./internal/root-render";
+export { useSlotOrder } from "./internal/slot-order";
 export { SlotItemLayout } from "./internal/item-layout";
 export type { SlotItemOrientation } from "./internal/item-layout";
 export { useDispatchOutcome } from "./internal/dispatch-outcome";
@@ -35,6 +38,7 @@ export type {
   SlotItemBox,
   SlotItemMiddleware,
   SlotListMiddleware,
+  SlotOrder,
 } from "./internal/types";
 export { SlotRender } from "./internal/slots";
 

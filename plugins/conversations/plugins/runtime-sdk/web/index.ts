@@ -13,9 +13,6 @@ export default {
       kind: "status",
       id: "claude-code",
       title: "Claude Code",
-      // Before Connection (10): "can this app run an agent at all" is the
-      // first thing a new user needs answered.
-      order: 5,
       useStatus: useClaudeCodeRowHealth,
       actions: ClaudeCodeActions,
       glance: ClaudeUsageGlance,

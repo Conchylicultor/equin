@@ -36,7 +36,6 @@ export default {
       kind: "status",
       id: "job-queue",
       title: "Job queue",
-      order: 20,
       useStatus: useQueueHealth,
       glance: QueueGlance,
       component: QueueDetail,

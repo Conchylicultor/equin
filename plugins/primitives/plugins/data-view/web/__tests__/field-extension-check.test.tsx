@@ -52,7 +52,7 @@ const boundaryPlugin = {
   description: "boundary",
   contributions: [
     SlotRender.ItemMiddleware({
-      priority: 100,
+      depth: 100,
       Component: ({ slotId, children }) => (
         <Boundary slotId={slotId}>{children}</Boundary>
       ),

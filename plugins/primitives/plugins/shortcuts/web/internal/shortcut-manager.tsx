@@ -30,7 +30,7 @@ export function ShortcutManager() {
         if (ids.length > 1) {
           console.warn(
             `[shortcuts] Key combo "${combo}" registered by: ${ids.join(", ")}. ` +
-              `Highest priority wins; use "when" guards or distinct priorities to resolve.`,
+              `Highest precedence wins; use "when" guards or distinct precedences to resolve.`,
           );
         }
       }
@@ -47,7 +47,7 @@ export function ShortcutManager() {
       const active = shortcutsRef.current;
       const editable = targetClaimsKey(e);
       let winner: (typeof active)[number] | null = null;
-      let winnerPriority = -Infinity;
+      let winnerPrecedence = -Infinity;
 
       for (const shortcut of active) {
         const parsed = getCachedCombo(shortcut.keys);
@@ -65,10 +65,10 @@ export function ShortcutManager() {
         )
           continue;
 
-        const priority = shortcut.priority ?? 0;
-        if (priority > winnerPriority) {
+        const precedence = shortcut.precedence ?? 0;
+        if (precedence > winnerPrecedence) {
           winner = shortcut;
-          winnerPriority = priority;
+          winnerPrecedence = precedence;
         }
       }
 

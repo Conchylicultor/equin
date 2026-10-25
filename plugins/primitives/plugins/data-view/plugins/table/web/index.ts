@@ -15,7 +15,6 @@ export default {
       companion: true,
       title: "Table",
       icon: symbol("table-rows"),
-      order: 1,
       loadingVariant: "rows",
       loadingCount: 6,
       component: TableView,

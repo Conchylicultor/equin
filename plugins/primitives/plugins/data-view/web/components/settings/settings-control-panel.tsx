@@ -1,7 +1,10 @@
 import { Fragment, type ReactNode } from "react";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { ControlPanel } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
-import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
+import {
+  renderIsolated,
+  useSlotOrder,
+} from "@plugins/primitives/plugins/slot-render/web";
 import { DataViewSlots } from "../../slots";
 import { useDataViewControls } from "../controls/controls-context";
 
@@ -15,7 +18,8 @@ import { useDataViewControls } from "../controls/controls-context";
  *    "Fields" UI is one such contribution (it imports the slot directly — the
  *    dependency is inverted, so the host names no individual setting).
  *
- * The body is a flat run of contributions, view scope first, each in `order`,
+ * The body is a flat run of contributions, view scope first, each in the slot's
+ * layout order,
  * rendered uniformly through `renderIsolated` (error-boundary-isolated). **Each
  * contribution renders its own `ControlPanel.Section`** — so the host wraps
  * nothing, adds no element between the panel and a section, and the hairline
@@ -35,21 +39,15 @@ import { useDataViewControls } from "../controls/controls-context";
 export function SettingsControlPanel(): ReactNode {
   const context = useDataViewControls();
 
-  const settings = DataViewSlots.Setting.useContributions();
-  const byOrder = (a: { order?: number }, b: { order?: number }) =>
-    (a.order ?? 0) - (b.order ?? 0);
+  const settings = useSlotOrder(DataViewSlots.Setting);
   // Each contribution declares its own applicability (`isApplicable`); the panel
   // stays generic — it never names group-by / properties. A setting filtered out
   // here is the one that would self-hide, so no section ever renders empty.
   const applicable = (s: (typeof settings)[number]) =>
     s.isApplicable?.(context) ?? true;
   const ordered = [
-    ...settings
-      .filter((s) => s.scope === "view" && applicable(s))
-      .sort(byOrder),
-    ...settings
-      .filter((s) => s.scope === "global" && applicable(s))
-      .sort(byOrder),
+    ...settings.filter((s) => s.scope === "view" && applicable(s)),
+    ...settings.filter((s) => s.scope === "global" && applicable(s)),
   ];
 
   if (ordered.length === 0) {

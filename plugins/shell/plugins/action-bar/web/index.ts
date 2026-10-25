@@ -2,7 +2,7 @@ import { ActionBar } from "./slots";
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
 export { ActionBar } from "./slots";
-export type { ActionBarContribution } from "./slots";
+export type { ActionBarContribution, ActionBarLeadProps } from "./slots";
 
 export default {
   description:

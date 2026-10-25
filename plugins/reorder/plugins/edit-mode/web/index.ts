@@ -31,9 +31,9 @@ export default {
       when: () => getEditMode(),
       // Esc leaves the innermost mode first. Fullscreen's own Esc
       // (`surface.exit-solo`) is live whenever edit mode is, and an equal
-      // priority went to whichever registered first — so Esc left fullscreen
+      // precedence went to whichever registered first — so Esc left fullscreen
       // and edit mode stayed on, with its switch in an unclickable gear.
-      priority: 10,
+      precedence: 10,
     }),
     // The switch and the editor ship together: the switch is the only thing
     // that turns edit mode on, and reorder throws if edit mode is on with no

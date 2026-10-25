@@ -40,7 +40,6 @@ export default {
       id: "gallery",
       title: "Prototypes",
       icon: symbol("grid-view"),
-      order: 10,
       views: ["gallery", "list"],
       component: GallerySource,
     }),
@@ -48,7 +47,6 @@ export default {
       id: "trash",
       title: "Trash",
       icon: symbol("delete"),
-      order: 20,
       views: ["gallery", "list"],
       component: TrashSource,
     }),
@@ -70,19 +68,16 @@ export default {
       id: "pin",
       component: PinCardAction,
       useActive: usePinnedActive,
-      order: 10,
     }),
     PrototypeCardActions({
       id: "done",
       component: DoneCardAction,
       useActive: useDoneActive,
-      order: 20,
     }),
     // Delete, last in the hover cluster (after present's Open in a new tab).
     PrototypeCardActions({
       id: "delete",
       component: DeleteCardAction,
-      order: 90,
     }),
     // A Trash card's one action: back into the gallery.
     PrototypeTrashActions({ id: "restore", component: RestoreCardAction }),

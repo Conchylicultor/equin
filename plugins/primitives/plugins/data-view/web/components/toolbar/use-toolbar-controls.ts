@@ -1,3 +1,4 @@
+import { useSlotOrder } from "@plugins/primitives/plugins/slot-render/web";
 import {
   DataViewSlots,
   type DataViewControlAction,
@@ -21,9 +22,10 @@ export type ToolbarControl =
  * surface's options trigger — so they cannot disagree about which controls
  * apply or what the badge says.
  *
- * Reads `DataViewSlots.Control`, drops the ones that do not apply to the active
- * view + schema (a panel control's `isApplicable`; an action control's
- * `action` answering `null`), and orders them. Both are pure and asked BEFORE
+ * Reads `DataViewSlots.Control` in its layout order (the slot's reorder
+ * config) and drops the ones that do not apply to the active view + schema (a
+ * panel control's `isApplicable`; an action control's `action` answering
+ * `null`). Both are pure and asked BEFORE
  * anything mounts — a control that does not apply costs nothing, not even a
  * mounted-then-null component.
  *
@@ -40,10 +42,7 @@ export function useToolbarControls(): {
   const ctx = useDataViewControls();
   const controls: ToolbarControl[] = [];
   let activeCount = 0;
-  const sorted = [...DataViewSlots.Control.useContributions()].sort(
-    (a, b) => (a.order ?? 0) - (b.order ?? 0),
-  );
-  for (const c of sorted) {
+  for (const c of useSlotOrder(DataViewSlots.Control)) {
     if (c.action) {
       const action = c.action(ctx);
       if (action) controls.push({ kind: "action", id: c.id, action });

@@ -5,7 +5,6 @@ import {
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import {
   type ControlSize,
-  ControlSizeProvider,
   cn,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
@@ -17,7 +16,6 @@ import { useDragGesture } from "@plugins/primitives/plugins/dom/plugins/movable/
 import { isChromelessDocument } from "@plugins/primitives/plugins/embed/web";
 import { chromeThemeScope } from "@plugins/apps-core/plugins/chrome-theme/web";
 import { ActionBar } from "@plugins/shell/plugins/action-bar/web";
-import { HealthReportButton } from "@plugins/shell/plugins/health-report/web";
 import { actionBarConfig } from "../../shared/config";
 import { useActionBarPinned } from "../internal/use-action-bar-pinned";
 import { useFloatingBarSafeArea } from "../internal/use-floating-bar-safe-area";
@@ -33,7 +31,7 @@ import { actionBarAnchor } from "../../core";
  * strip's, inside the 36px tab bar); the floating capsule picks `md` — 32px
  * controls in a 36px capsule (2px padding), so each hover circle keeps 8px
  * around its 16px icon. Every item of a host shares its one height: the host
- * passes it to each slot's `.Render` and to the health dot, never per item.
+ * passes it to each slot's `.Render` (the leading mark's too), never per item.
  */
 const FLOATING_SIZE: ControlSize = "md";
 const DOCKED_SIZE: ControlSize = "sm";
@@ -47,21 +45,25 @@ const DOCKED_SIZE: ControlSize = "sm";
  */
 const BAR_TONE = "text-muted-foreground";
 
+const NO_ACTIVITIES: readonly Activity[] = [];
+
 /**
- * The always-visible leading item: the health report's dot, at its host's
- * density (the one the host gives every other button in the bar).
+ * The always-visible leading item (`ActionBar.Lead` — the health report's dot),
+ * at its host's density (the one the host gives every other button in the bar).
+ * The bar names no contributor: whoever draws the mark gets the activities the
+ * collapsed bar folds onto it.
  */
-function HealthItem({
+function LeadItem({
   size,
-  activities,
+  activities = NO_ACTIVITIES,
 }: {
   size: ControlSize;
   activities?: readonly Activity[];
 }) {
   return (
-    <ControlSizeProvider size={size}>
-      <HealthReportButton activities={activities} />
-    </ControlSizeProvider>
+    <ActionBar.Lead.Render controlSize={size}>
+      {(item) => <item.component activities={activities} />}
+    </ActionBar.Lead.Render>
   );
 }
 
@@ -82,7 +84,7 @@ function FloatingTrigger({ open }: { open: boolean }) {
   return (
     <Stack direction="row" gap="2xs" align="center">
       {probes}
-      <HealthItem
+      <LeadItem
         size={FLOATING_SIZE}
         activities={open ? undefined : activities}
       />
@@ -421,7 +423,7 @@ export function DockedActionBarHost() {
       // eslint-disable-next-line layout/no-adhoc-layout -- rigid leaf of the tab bar's flex (must not compress as tabs scroll under it)
       className={`shrink-0 pl-sm ${BAR_TONE}`}
     >
-      <HealthItem size={DOCKED_SIZE} />
+      <LeadItem size={DOCKED_SIZE} />
       <ActionBar.Item.Render controlSize={DOCKED_SIZE}>
         {renderItemForAudience}
       </ActionBar.Item.Render>

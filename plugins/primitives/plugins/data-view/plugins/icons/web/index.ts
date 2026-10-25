@@ -12,7 +12,6 @@ export default {
       companion: true,
       title: "Icons",
       icon: symbol("apps"),
-      order: 5,
       loadingVariant: "cards",
       component: IconsView,
       // Opts into flat manual-order: a grid renders one linear rank, so a tile's

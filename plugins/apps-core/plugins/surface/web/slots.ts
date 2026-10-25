@@ -8,7 +8,7 @@ import {
   type PointerEvent,
   type ReactNode,
 } from "react";
-import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
+import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
 import type { ClassName } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 
 /**
@@ -82,9 +82,10 @@ export interface PlacementDef {
   label: string;
   /** Icon for the mode control. */
   icon: IconRef;
-  /** Control order + default resolution (lowest order acts as default fallback). */
-  order: number;
-  /** Exactly one mode should set this — the registry's default (boot) mode. */
+  /**
+   * Exactly one mode should set this — the registry's default (boot) mode.
+   * Without one, the first mode in the slot's layout order is the default.
+   */
   default?: boolean;
 
   /**
@@ -169,11 +170,14 @@ export interface PlacementDef {
  * The single placement registry. Each placement sub-plugin contributes one
  * {@link PlacementDef}; `SurfaceBody` dispatches every open tab through the
  * matching descriptor, and the placement control derives its options from the
- * sorted contributions. `apps` never names a specific placement — it reads the
+ * contributions in the slot's reorder layout order
+ * (`config/apps-core/surface/apps-core.surface.placement.jsonc`) — a render
+ * slot read with `useSlotOrder`, never `.Render`ed: the host draws the control
+ * and the tabs itself. `apps` never names a specific placement — it reads the
  * derived capabilities back through the apps-owned placement-capability registry.
  */
 export const Surface = {
-  Placement: defineSlot<PlacementDef>(),
+  Placement: defineRenderSlot<PlacementDef>({ docLabel: (p) => p.label }),
 };
 
 /**

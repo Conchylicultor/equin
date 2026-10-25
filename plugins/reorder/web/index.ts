@@ -15,6 +15,7 @@ export type {
 export { ReorderLayoutContext } from "./internal/reorder-layout";
 export type { ReorderLayout } from "./internal/reorder-layout";
 export { useReorderedEntries } from "./internal/use-reordered-entries";
+export { useLayoutOrder } from "./internal/use-layout-order";
 export { contributionLabel, entryKey, isNodeData } from "./internal/sorting";
 export type {
   ReorderNodeData,

@@ -3,6 +3,7 @@ import { SlotRender } from "@plugins/primitives/plugins/slot-render/web";
 import {
   ReorderItemMiddleware,
   ReorderListMiddleware,
+  useLayoutOrder,
 } from "@plugins/reorder/web";
 
 export default {
@@ -16,14 +17,17 @@ export default {
   // literal for the closure engine to read it. Importing reorder pulls it in.
   contributions: [
     SlotRender.ListMiddleware({
-      priority: 0,
+      depth: 0,
       Component: ReorderListMiddleware,
       companion: true,
     }),
     SlotRender.ItemMiddleware({
-      priority: 50,
+      depth: 50,
       Component: ReorderItemMiddleware,
       companion: true,
     }),
+    // The same layout, for a host that draws a slot's contributions itself
+    // (`useSlotOrder`).
+    SlotRender.Order({ useOrder: useLayoutOrder, companion: true }),
   ],
 } satisfies PluginDefinition;

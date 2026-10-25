@@ -11,10 +11,6 @@ export default {
       kind: "status",
       id: "agent-browser",
       title: "Agent browser",
-      // After the rows that say whether the app works at all (Claude Code 5,
-      // Connection 10, Database 20, Machine watcher 30): a tool agents use,
-      // not the app itself.
-      order: 40,
       useStatus: useAgentBrowserHealth,
       component: AgentBrowserDetail,
     }),

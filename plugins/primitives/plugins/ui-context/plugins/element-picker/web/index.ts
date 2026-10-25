@@ -41,7 +41,7 @@ export default {
     // the cost is paid only where something that can pick is in the composition.
     SlotRender.ItemAttrs({ attrs: markerAttrs }),
     SlotRender.ItemMiddleware({
-      priority: 50,
+      depth: 50,
       Component: PluginMarkerMiddleware,
     }),
   ],

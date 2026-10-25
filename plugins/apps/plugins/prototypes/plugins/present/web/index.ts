@@ -23,7 +23,6 @@ export default {
     PrototypeCardActions({
       id: "open-new-tab",
       component: OpenCardNewTabAction,
-      order: 30,
     }),
   ],
   slots: {

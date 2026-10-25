@@ -31,9 +31,6 @@ export default {
       kind: "status",
       id: "machine-watcher",
       title: "Machine watcher",
-      // After Connection (10) and the server's own Database / Job queue (20):
-      // this one is about the whole machine, not the server you are on.
-      order: 30,
       useStatus: useMachineWatcherHealth,
       // Both read the per-tick vitals, and both mount only while the report is
       // open (the detail only while the row is expanded) — the summary above

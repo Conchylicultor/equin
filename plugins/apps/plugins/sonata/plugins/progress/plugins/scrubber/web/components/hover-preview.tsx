@@ -1,3 +1,4 @@
+import { useSlotOrder } from "@plugins/primitives/plugins/slot-render/web";
 import { Fragment, useSyncExternalStore } from "react";
 import type { ReactNode, RefObject } from "react";
 import type {
@@ -80,11 +81,10 @@ export function HoverPreview({
   columnRef: RefObject<HTMLElement | null>;
 }) {
   const point = useSyncExternalStore(store.subscribe, store.get);
-  const describes = SonataProgress.Describe.useContributions();
+  const describes = useSlotOrder(SonataProgress.Describe);
   if (!point) return null;
 
-  const lines = [...describes]
-    .sort((a, b) => a.order - b.order)
+  const lines = describes
     .map((d) => ({
       id: d.id,
       line: d.line,

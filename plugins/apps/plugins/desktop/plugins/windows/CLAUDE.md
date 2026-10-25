@@ -122,7 +122,7 @@ new window of the focused window's app; F3 toggles the overview.
     - `Desktop.Overlay` ← `apps.desktop.shelf`
     - `Desktop.Overlay` ← `apps.desktop.switcher`
   - Contributes:
-    - `Surface.Placement`
+    - `Surface.Placement` "Desktop"
     - `Shortcuts.Shortcut` "desktop.overview (f3)"
     - `Shortcuts.Shortcut` "desktop.overview-exit (escape)"
     - `Shortcuts.Shortcut` "floating.close (mod+w)"

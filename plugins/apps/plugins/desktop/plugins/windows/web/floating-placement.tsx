@@ -53,7 +53,6 @@ export const floatingDef: PlacementDef = {
   id: DESKTOP_PLACEMENT_ID,
   label: "Desktop",
   icon: webAssetIcon,
-  order: 1,
   visibleWhenUnfocused: true,
   newTabFollows: true,
   // The desktop draws its own frame — its shelf replaces the tab bar and rail.

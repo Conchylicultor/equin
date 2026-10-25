@@ -1,6 +1,9 @@
 import { type ReactNode, useMemo } from "react";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
-import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
+import {
+  renderIsolated,
+  useSlotOrder,
+} from "@plugins/primitives/plugins/slot-render/web";
 import type { ViewSourceEntry } from "@plugins/primitives/plugins/data-view/plugins/view-core/core";
 import type { ResolvedViewInstance } from "@plugins/primitives/plugins/data-view/plugins/view-core/web";
 import type {
@@ -79,16 +82,10 @@ export function DataViewSwitcher<THostProps>(
     searchPlaceholder,
     aside,
   } = props;
-  const contributions = DataViewSlots.View.useContributions();
-  const rawSourceContribs = sources.useContributions();
-  // `useContributions` returns registration order; honor the contributions'
-  // declared `order` (the add menu's section order and entry precedence), the
-  // same explicit sort the tabbed-view host applied.
-  const sourceContribs = useMemo(
-    () =>
-      [...rawSourceContribs].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
-    [rawSourceContribs],
-  );
+  const contributions = useSlotOrder(DataViewSlots.View);
+  // The add menu's section order and entry precedence: the source slot's
+  // reorder layout (`config/<plugin>/<slotId>.jsonc`), never a number on a source.
+  const sourceContribs = useSlotOrder(sources);
 
   // One `ViewSourceEntry` per contributed source, from static metadata only —
   // no `viewOptions` (code-only options can't exist before the source mounts;

@@ -42,6 +42,40 @@ export interface CompanionFlag {
   companion?: true;
 }
 
+/**
+ * The keys a contribution would use to position itself among its siblings.
+ * Ordering is never a number on a slot contribution: a slot whose contributions
+ * paint UI is a `defineRenderSlot` (or `defineOrderedDispatchSlot` when its host
+ * draws its own rows) and its order is the slot's reorder config layout
+ * (`config/<plugin>/<slotId>.jsonc`, seeded by `./equin build`). A plain
+ * `defineSlot` is data read as data. A number that means something else is
+ * named for what it means.
+ */
+type OrderingKey = "order" | "priority" | "rank" | "weight";
+
+/** The ordering keys of `P` (of any union member) whose value may be a number. */
+type OrderingNumberKeys<P> = P extends unknown
+  ? {
+      [K in keyof P & OrderingKey]-?: [
+        Extract<NonNullable<P[K]>, number>,
+      ] extends [never]
+        ? never
+        : K;
+    }[keyof P & OrderingKey]
+  : never;
+
+/**
+ * `defineSlot`'s payload constraint: any `P` without a numeric ordering key.
+ * One that has one fails here, the error spelling the alternative.
+ */
+export type NoOrderingNumber<P> = [OrderingNumberKeys<P>] extends [never]
+  ? unknown
+  : {
+      [
+        K in OrderingNumberKeys<P>
+      ]: "Ordering is never a number on a slot contribution: use defineRenderSlot (or defineOrderedDispatchSlot) and order it in the slot's reorder config layout, config/<plugin>/<slotId>.jsonc — or rename a number that means something else after its meaning";
+    };
+
 export interface SlotOptions<P> {
   docLabel?: (props: P) => string | undefined;
   /**
@@ -63,10 +97,12 @@ export interface SlotOptions<P> {
  * ({@link CompanionFlag}): `true` ships every companion with the owner, a keyed
  * `{ key, space }` only the ones whose key the bundle uses (`SlotCompanions`).
  */
-export function defineSlot<P>(
+export function defineSlot<P extends NoOrderingNumber<P>>(
   opts: SlotOptions<P> & { companions: SlotCompanions },
 ): Slot<P & CompanionFlag>;
-export function defineSlot<P>(opts?: SlotOptions<P>): Slot<P>;
+export function defineSlot<P extends NoOrderingNumber<P>>(
+  opts?: SlotOptions<P>,
+): Slot<P>;
 export function defineSlot<P>(
   opts?: SlotOptions<P> & { companions?: SlotCompanions },
 ): Slot<P> {

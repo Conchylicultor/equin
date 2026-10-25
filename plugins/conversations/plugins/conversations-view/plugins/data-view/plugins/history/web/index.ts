@@ -15,7 +15,6 @@ export default {
       id: "history",
       title: "History",
       icon: symbol("history"),
-      order: 10,
       views: ["list"],
       component: HistorySource,
     }),

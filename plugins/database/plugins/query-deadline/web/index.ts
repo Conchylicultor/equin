@@ -22,9 +22,6 @@ export default {
       kind: "status",
       id: "database",
       title: "Database",
-      // Right after Connection (10): the two rows answer "can I reach the
-      // server" and then "is the server reaching its database".
-      order: 20,
       useStatus: useDatabaseHealth,
     }),
   ],

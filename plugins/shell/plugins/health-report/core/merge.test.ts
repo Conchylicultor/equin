@@ -139,53 +139,42 @@ describe("sortRows", () => {
   interface R {
     id: string;
     kind: "status" | "info";
-    order: number;
     status?: ReportedStatus;
   }
-  const row = (
-    id: string,
-    kind: R["kind"],
-    order: number,
-    status?: ReportedStatus,
-  ): R => ({ id, kind, order, status });
+  const row = (id: string, kind: R["kind"], status?: ReportedStatus): R => ({
+    id,
+    kind,
+    status,
+  });
   const ids = (rows: R[]) => sortRows(rows).map((r) => r.id);
 
-  it("puts info rows first, ordered by order", () => {
+  it("puts info rows first, each kind keeping the layout order it is given", () => {
     expect(
       ids([
-        row("s", "status", 0, ok()),
-        row("i2", "info", 5),
-        row("i1", "info", 1),
+        row("s", "status", ok()),
+        row("i1", "info"),
+        row("t", "status", ok()),
+        row("i2", "info"),
       ]),
-    ).toEqual(["i1", "i2", "s"]);
+    ).toEqual(["i1", "i2", "s", "t"]);
   });
 
   it("ignores status, so a row keeps its place when it turns red", () => {
     expect(
       ids([
-        row("ok", "status", 0, ok()),
-        row("unknown", "status", 1, undefined),
-        row("attention", "status", 2, attention()),
-        row("critical", "status", 3, critical()),
-        row("n/a", "status", -1, notApplicable()),
+        row("n/a", "status", notApplicable()),
+        row("ok", "status", ok()),
+        row("unknown", "status", undefined),
+        row("attention", "status", attention()),
+        row("critical", "status", critical()),
       ]),
     ).toEqual(["n/a", "ok", "unknown", "attention", "critical"]);
   });
 
-  it("orders by order, then keeps registration order", () => {
-    expect(
-      ids([
-        row("b", "status", 20, ok()),
-        row("a", "status", 10, ok()),
-        row("c", "status", 20, ok()),
-      ]),
-    ).toEqual(["a", "b", "c"]);
-  });
-
   it("does not mutate its input", () => {
-    const input = [row("b", "status", 2, ok()), row("a", "status", 1, ok())];
+    const input = [row("s", "status", ok()), row("i", "info")];
     sortRows(input);
-    expect(input.map((r) => r.id)).toEqual(["b", "a"]);
+    expect(input.map((r) => r.id)).toEqual(["s", "i"]);
   });
 });
 
@@ -193,7 +182,6 @@ describe("foldQuietRows", () => {
   type R = {
     id: string;
     kind: "status" | "info";
-    order: number;
     status?: ReportedStatus;
     plain: boolean;
   };
@@ -202,7 +190,7 @@ describe("foldQuietRows", () => {
     status: ReportedStatus,
     plain = true,
     kind: R["kind"] = "status",
-  ): R => ({ id, kind, order: 0, status, plain });
+  ): R => ({ id, kind, status, plain });
   const shape = (rows: R[]) =>
     foldQuietRows(
       rows,

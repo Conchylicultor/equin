@@ -13,9 +13,9 @@ import {
 } from "../index";
 
 // A fixture walker that wraps the running content in a marked <span>. Because
-// transforms compose via reduce([…], seed), a lower-order walker's transform
-// runs *first* (innermost) and higher-order walkers wrap its output — so the
-// DOM nests highest-order outermost. This pins ordering + that the seed is the
+// transforms compose via reduce([…], seed), a lower-stage walker's transform
+// runs *first* (innermost) and higher-stage walkers wrap its output — so the
+// DOM nests highest-stage outermost. This pins ordering + that the seed is the
 // raw string (the only thing `text` accepts — a component root is impossible).
 function makeWalker(testid: string) {
   return function Walker({ children }: { children: ReactNode }) {
@@ -39,15 +39,23 @@ const plugin = {
   id: "inline-text-ordering-test",
   description: "inline-text ordering fixture",
   contributions: [
-    InlineTextWalkerSlot({ id: "first", order: 0, Component: makeWalker("first") }),
-    InlineTextWalkerSlot({ id: "second", order: 10, Component: makeWalker("second") }),
+    InlineTextWalkerSlot({
+      id: "first",
+      stage: 0,
+      Component: makeWalker("first"),
+    }),
+    InlineTextWalkerSlot({
+      id: "second",
+      stage: 10,
+      Component: makeWalker("second"),
+    }),
   ],
 } as unknown as LoadedPlugin;
 
 afterEach(cleanup);
 
 describe("InlineText composes registered walkers in order", () => {
-  it("seeds with the raw string and applies walkers by ascending order", () => {
+  it("seeds with the raw string and applies walkers by ascending stage", () => {
     const { getByTestId } = render(
       <PluginProvider plugins={[plugin]}>
         <InlineText text="hello" />
@@ -55,7 +63,7 @@ describe("InlineText composes registered walkers in order", () => {
     );
     const first = getByTestId("first");
     const second = getByTestId("second");
-    // order:0 runs first → innermost; order:10 wraps its output → outermost.
+    // stage 0 runs first → innermost; stage 10 wraps its output → outermost.
     expect(second.contains(first)).toBe(true);
     expect(first.contains(second)).toBe(false);
     // The raw string seed reaches the innermost walker untouched.

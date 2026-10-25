@@ -24,7 +24,6 @@ export const soloDef: PlacementDef = {
   id: "solo",
   label: "Fullscreen (solo)",
   icon: fullscreenIcon,
-  order: 2,
   // The boot mode: a fresh session opens one app edge to edge. Esc (or the
   // mode control) leaves it for the previous mode, else the first other one.
   default: true,

@@ -3,6 +3,7 @@ import type {
   SlotItemAttrsFn,
   SlotItemMiddleware,
   SlotListMiddleware,
+  SlotOrder,
 } from "./types";
 
 /**
@@ -18,9 +19,9 @@ import type {
  * lineage marker) stays an opt-in option.
  */
 export const SlotRender = {
-  /** Wraps a render slot's whole contribution list (`.Render` only), lowest priority outermost. */
+  /** Wraps a render slot's whole contribution list (`.Render` only), lowest `depth` outermost. */
   ListMiddleware: defineSlot<SlotListMiddleware>({ companions: true }),
-  /** Wraps each contribution `.Render` / `.Mount` / `.Dispatch` / `renderIsolated` draws, lowest priority outermost. */
+  /** Wraps each contribution `.Render` / `.Mount` / `.Dispatch` / `renderIsolated` draws, lowest `depth` outermost. */
   ItemMiddleware: defineSlot<SlotItemMiddleware>({ companions: true }),
   /**
    * DOM attributes stamped onto EVERY contribution's own box — the one element
@@ -34,4 +35,11 @@ export const SlotRender = {
    * misplaced: there is exactly one box per contribution and the slot owns it.
    */
   ItemAttrs: defineSlot<{ attrs: SlotItemAttrsFn }>({ companions: true }),
+  /**
+   * The layout order `useSlotOrder` reads — the data-level twin of the
+   * `ListMiddleware` that orders `.Render`. At most one (reorder's): with
+   * none, a slot's contributions keep registration order, exactly as `.Render`
+   * does without a list middleware.
+   */
+  Order: defineSlot<SlotOrder>({ companions: true }),
 };

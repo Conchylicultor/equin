@@ -12,25 +12,25 @@ export default {
   contributions: [
     MarkdownEnhancerSlot({
       id: "file-links",
-      order: 10,
+      stage: 10,
       Component: FileLinksEnhancer,
     }),
     // Plain-text (non-markdown) counterpart of the file-links markdown
-    // enhancer, registered after active-data (order 10) so chips stay opaque
+    // enhancer, registered after active-data (stage 10) so chips stay opaque
     // and remaining file paths still linkify. Same useFileTarget resolution.
     InlineTextWalkerSlot({
       id: "file-links",
-      order: 10,
+      stage: 10,
       Component: FileLinksInlineWalker,
     }),
     MarkdownEnhancerSlot({
       id: "code-inline",
-      order: 20,
+      stage: 20,
       Component: CodeEnhancer,
     }),
     MarkdownEnhancerSlot({
       id: "img-proxy",
-      order: 30,
+      stage: 30,
       Component: ImgEnhancer,
     }),
   ],

@@ -1,3 +1,4 @@
+import { useSlotOrder } from "@plugins/primitives/plugins/slot-render/web";
 import { Fragment, useMemo } from "react";
 import type { ReactNode } from "react";
 import type { Score } from "@plugins/apps/plugins/sonata/plugins/score/core";
@@ -50,12 +51,12 @@ export function LabelLane({
   /** The hovered group's beat, or `null` when the pointer leaves it. */
   onHoverBeat: (beat: number | null) => void;
 }) {
-  const contributions = SonataProgress.Label.useContributions();
+  const contributions = useSlotOrder(SonataProgress.Label);
   const groups = useMemo(() => {
-    const entries: LaneEntry<LaneItem>[] = contributions.flatMap((c) =>
+    const entries: LaneEntry<LaneItem>[] = contributions.flatMap((c, index) =>
       c.labels(score).map((l) => ({
         beat: l.beat,
-        order: c.order,
+        contributorIndex: index,
         item: { key: `${c.id}:${l.key}`, node: l.node, align: l.align },
       })),
     );

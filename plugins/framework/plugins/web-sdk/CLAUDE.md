@@ -28,6 +28,19 @@ A slot lives in one runtime, so bridging its contributions to the other runtime 
 
 Slots are grouped in a namespace object per plugin (`export const MyPlugin = { Panel: … }`) — see the `defineRenderSlot` example below, which has the same shape.
 
+**Ordering is never a number on a slot contribution.** A plain `defineSlot` is
+for data read as data, never for anything drawn. Contributions that paint UI go
+through `defineRenderSlot` (or `defineOrderedDispatchSlot`), and their order is
+the slot's reorder config layout (`config/<plugin>/<slotId>.jsonc`, seeded by
+`./equin build`). A host that draws the rows itself — a menu, a report, a
+segmented control — reads that order with `useSlotOrder(slot)` and wraps each row it draws in
+`renderAsContribution` (both `slot-render/web`).
+"The host owns the order" is not an exemption: the config layout IS that
+ownership. `tsc` enforces it — `defineSlot<P>` rejects a payload with a numeric
+`order` / `priority` / `rank` / `weight` key (`NoOrderingNumber`). A number that
+means something other than a position is named for what it means: a pipeline
+`stage`, a shortcut's `precedence`, a middleware's wrapping `depth`.
+
 ### Declaring the slots you own
 
 A plugin declares the slots it owns in `slots`, the sibling of `contributions`.
@@ -91,7 +104,7 @@ export default {
 
 **Invariant:** `useContributions()` returns a sealed list — `component` is an opaque
 `SealedComponent` that **cannot be rendered directly** (`<c.component/>` is a compile
-error); every other field (`id`, `order`, `title`, `icon`, `match`, `.length`) is readable.
+error); every other field (`id`, `title`, `icon`, `match`, `.length`) is readable.
 Rendering goes through one of the primitives below, which apply the error-boundary /
 reorder middleware chain so one broken contribution never crashes the whole surface.
 

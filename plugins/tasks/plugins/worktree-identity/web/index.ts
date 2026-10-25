@@ -11,7 +11,6 @@ export default {
     HealthReport.Row({
       kind: "info",
       id: "worktree",
-      order: 0,
       icon: symbol("account-tree"),
       useInfo: useWorktreeIdentity,
       actions: WorktreeActions,

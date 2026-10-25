@@ -42,10 +42,11 @@ export interface HealthInfo {
 }
 
 interface RowCommon {
-  /** Stable id, unique across every row. Keys the report's per-row status. */
+  /**
+   * Stable id, unique across every row. Keys the report's per-row status, and
+   * names the row in the slot's reorder layout (its place in the report).
+   */
   id: string;
-  /** Tie-break among rows of equal severity (and the order of info rows). Lower first. */
-  order: number;
   /**
    * Trailing controls on the row (copy, "Open task", "Open queue"), always
    * visible. Rendered inside an error boundary, at the row's compact density.

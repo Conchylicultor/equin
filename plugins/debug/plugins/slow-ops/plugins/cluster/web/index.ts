@@ -11,7 +11,6 @@ export default {
       id: "cluster",
       title: "Cluster",
       icon: symbol("hub"),
-      order: 30,
       component: ClusterView,
     }),
   ],

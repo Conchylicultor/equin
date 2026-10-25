@@ -6,7 +6,7 @@ behaviors (active-data linkification, file-link detection, image proxying)
 auto-activate via `Markdown.Enhancer` slot contributions.
 
 The `<Markdown>` component reads all `Markdown.Enhancer` contributions,
-sorts by `order`, wraps `<MarkdownRenderer>` in each enhancer component
+sorts by `stage` (a processing position, not a visual one), wraps `<MarkdownRenderer>` in each enhancer component
 (outermost-first), then renders. Each enhancer stacks transforms and
 component overrides into `MarkdownEnhancementContext`; the renderer reads
 the accumulated context and merges it with the base component map.

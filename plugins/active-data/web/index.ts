@@ -40,16 +40,16 @@ export default {
   contributions: [
     MarkdownEnhancerSlot({
       id: "active-data",
-      order: 0,
+      stage: 0,
       Component: ActiveDataMarkdownEnhancer,
     }),
     // Plain-text (non-markdown) counterpart of the markdown enhancer: the same
     // inline-pattern walker, registered into the inline-text pipeline before
-    // file-links (order 0). Keeps user-text/task-description chips in sync with
+    // file-links (stage 0). Keeps user-text/task-description chips in sync with
     // the markdown surfaces from one registry.
     InlineTextWalkerSlot({
       id: "active-data",
-      order: 0,
+      stage: 0,
       Component: ActiveDataInlineWalker,
     }),
   ],

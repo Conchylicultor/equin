@@ -113,9 +113,15 @@ type HealthReportRow = StatusRow | InfoRow;
 export const HealthReport = { Row: defineSlot<HealthReportRow>() };
 ```
 
-- A **plain `defineSlot`**, not `defineRenderSlot`: the report owns the order
+- ~~A **plain `defineSlot`**, not `defineRenderSlot`: the report owns the order
   (info → severity → `order`), so reorder middleware would fight it, and a render
-  slot would owe a reorder config for nothing. Precedent: `Runs.Kind`.
+  slot would owe a reorder config for nothing. Precedent: `Runs.Kind`.~~
+  **Superseded (2026-10-25,
+  [`2026-10-25-global-no-ordering-numbers-on-slots.md`](./2026-10-25-global-no-ordering-numbers-on-slots.md)):**
+  the premise was wrong — "the report owns the order" is exactly what a reorder
+  config layout is. `HealthReport.Row` is a render slot the report reads with
+  `useSlotOrder` and draws itself; rows carry no `order`, and `defineSlot`
+  now rejects a numeric one.
 - Info rows are a type-level distinction: they cannot declare a state, so they
   structurally cannot move the dot (rung 2).
 - `component` is the sealed field → rendered via `renderIsolated` (error

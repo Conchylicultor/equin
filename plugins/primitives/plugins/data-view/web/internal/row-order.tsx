@@ -1,6 +1,9 @@
 import { useLayoutEffect, useMemo, type ReactNode } from "react";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
-import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
+import {
+  renderIsolated,
+  useSlotOrder,
+} from "@plugins/primitives/plugins/slot-render/web";
 import type {
   DataViewId,
   FieldDef,
@@ -108,7 +111,8 @@ type RowOrderContributions = ReturnType<
 
 /**
  * Derives the view's **ordered set** — filter-applied, search-EXCLUDED,
- * sort-suppressed — then reads `useContributions()` once and kicks off the fold.
+ * sort-suppressed — then reads the contributions once, in the slot's layout
+ * order (`useSlotOrder`), and kicks off the fold.
  *
  * Search only changes what is *rendered*, so excluding it keeps a drag under an
  * active search rebuilding the full order (no hidden row is dropped). Suppressing
@@ -148,7 +152,7 @@ function RowOrderFold(
     resolveOperatorSet,
     searchAccessor,
   );
-  const contributions = DataViewSlots.RowOrder.useContributions();
+  const contributions = useSlotOrder(DataViewSlots.RowOrder);
   return (
     <RowOrderStep
       {...ids}

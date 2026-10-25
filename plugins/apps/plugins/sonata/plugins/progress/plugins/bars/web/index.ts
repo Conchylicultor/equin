@@ -10,7 +10,6 @@ export default {
     SonataProgress.Marker({ id: "bars", component: BarTicks }),
     SonataProgress.Describe({
       id: "bars",
-      order: 0,
       line: "head",
       describe: describeBar,
     }),

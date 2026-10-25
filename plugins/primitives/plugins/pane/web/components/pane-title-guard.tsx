@@ -49,6 +49,6 @@ function PaneTitleSlotGuard({
 }
 
 export const paneTitleSlotGuard: SlotItemMiddleware = {
-  priority: 200,
+  depth: 200,
   Component: PaneTitleSlotGuard,
 };

@@ -86,7 +86,9 @@ export const companionManifest: Readonly<
   "primitives.slot-render.item-attrs": { always: [] },
   "primitives.slot-render.item-middleware": { always: ["primitives.error-boundary", "reorder.slot-middleware"] },
   "primitives.slot-render.list-middleware": { always: ["reorder.slot-middleware"] },
+  "primitives.slot-render.order": { always: ["reorder.slot-middleware"] },
   "reorder.node-types.node-type": { always: ["reorder.node-types.divider", "reorder.node-types.header", "reorder.node-types.overflow", "reorder.node-types.spacer"] },
+  "shell.action-bar.lead": { always: ["shell.health-report"] },
   "ui.icons.root": { always: ["ui.icons.sprites", "ui.tokens.icons"] },
   "ui.tokens.font-family.root": { always: ["ui.tokens.font-family.google-fonts"] },
 };

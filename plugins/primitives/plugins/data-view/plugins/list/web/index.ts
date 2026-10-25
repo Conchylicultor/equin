@@ -15,7 +15,6 @@ export default {
       companion: true,
       title: "List",
       icon: symbol("view-list"),
-      order: 3,
       loadingVariant: "rows",
       component: ListView,
       // Opts into flat manual-order (rank-based drag reorder); active only when

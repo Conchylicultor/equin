@@ -111,15 +111,18 @@ export function verdictOf(statuses: ReadonlyArray<ReportedStatus>): string {
   }
 }
 
-/** The fields `sortRows` orders by — a contribution or its sealed read. */
+/** The field `sortRows` arranges by — a contribution or its sealed read. */
 export interface SortableRow {
   kind: "status" | "info";
-  order: number;
 }
 
 /**
- * The report's row order: info rows first, then status rows, each by `order`,
- * then by registration order (the sort is stable). Returns a new array.
+ * The report's row order: info rows first, then status rows, each keeping the
+ * order it is given — the slot's reorder layout (the sort is stable). Returns a
+ * new array.
+ *
+ * Info-first is the report's own arrangement, not a layout choice: an info row
+ * says where you are, and reads as the report's heading whatever the layout.
  *
  * Deliberately blind to status: a row keeps its place whatever it reports, so
  * the report does not reshuffle the moment something turns red. The dot and
@@ -127,7 +130,7 @@ export interface SortableRow {
  */
 export function sortRows<R extends SortableRow>(rows: ReadonlyArray<R>): R[] {
   const rank = (row: R): number => (row.kind === "info" ? 0 : 1);
-  return [...rows].sort((a, b) => rank(a) - rank(b) || a.order - b.order);
+  return [...rows].sort((a, b) => rank(a) - rank(b));
 }
 
 /** One entry of the report: a row on its own, or several quiet rows folded into one card. */

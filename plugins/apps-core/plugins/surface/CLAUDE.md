@@ -29,6 +29,8 @@
     - `primitives/css/toggle-chip.SegmentedOption`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/viewport-overlay.useViewportEscape`
+    - `primitives/slot-render.defineRenderSlot`
+    - `primitives/slot-render.useSlotOrder`
     - `shell/action-bar.ActionBar`
     - `ui/icons.Icon`
   - Exports (types):

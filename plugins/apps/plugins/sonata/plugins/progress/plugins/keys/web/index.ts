@@ -12,10 +12,9 @@ export default {
     "Sonata progress keys: a thin key-coloured line on the progression rail at each key change, the key names in the label lane under it (starting key muted), and the hover preview's key line (key in force, or 'Key change → …' snapped onto a change). Keys come from the starting key + 'key' annotations.",
   contributions: [
     SonataProgress.Marker({ id: "keys", component: KeyFlags }),
-    SonataProgress.Label({ id: "keys", order: 1, labels: keyLabels }),
+    SonataProgress.Label({ id: "keys", labels: keyLabels }),
     SonataProgress.Describe({
       id: "keys",
-      order: 1,
       line: "body",
       describe: describeKey,
       snapBeats: keyChangeBeats,

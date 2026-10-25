@@ -2,9 +2,9 @@
 
 Renders the shared `ActionBar.Item` set as a single global bar in the tab bar
 (`Apps.TabBarActions`), so the main actions are available identically in every
-app. Its leading item, in both hosts, is the health report's dot
-(`HealthReportButton` from `shell/health-report`): collapsed, the bar is just that
-dot, which expands the bar on hover and opens the report on click. Whether the
+app. Its leading item, in both hosts, is the `ActionBar.Lead` slot — the health
+report's dot, which `shell/health-report` contributes (the bar names no
+contributor): collapsed, the bar is just that dot, which expands the bar on hover and opens the report on click. Whether the
 bar is pinned is not a preference — it follows the surface mode: desktop and
 tab modes dock it expanded in the tab bar; fullscreen (solo), which hides the
 tab bar and app rail, floats it over the app. Owns the `enabled` config.
@@ -12,7 +12,7 @@ tab bar and app rail, floats it over the app. Owns the `enabled` config.
 Collapsed, the floating bar hides every item — so it folds what they would say
 onto the dot (`FloatingTrigger`, which `FloatingAction` hands its open state). Each `ActionBar.Activity` contribution's hook
 (the build, …) is read by its own probe (`internal/use-bar-activities.tsx`) and
-passed to `HealthReportButton`, which rings the dot (`primitives/css/activity-ring`:
+passed to the `ActionBar.Lead` contribution (`activities`) — the health button, which rings the dot (`primitives/css/activity-ring`:
 any running spins it, else any failed breaks it) and adds the labels to its
 tooltip. `ActionBar.Glance` chips (Reload) sit after the dot. Expanded, the dot
 is the plain health button again — no ring, no activity labels, no glance chips
@@ -82,7 +82,7 @@ where it was put across apps, surface modes (solo, the desktop) and reloads.
 `ActionBar.Item` and `ActionBar.Glance` declare `controlSize: "sm"`, the slot
 default. Each host passes its own density to the slots' `.Render`
 (`controlSize`, which slot-render applies to the WHOLE slot, so every item
-still shares one height) and to the health dot (`HealthItem size`):
+still shares one height) — the leading mark's `ActionBar.Lead.Render` too:
 
 - **floating** — `md` (`FLOATING_SIZE`): 32px controls with 16px icons, in a
   36px capsule (2px padding);
@@ -101,7 +101,7 @@ orientation, so in this horizontal row it draws an upright hairline about
 0.56× the control height, with 6px either side.
 
 The two hosts are mutually exclusive (the surface mode), which is what keeps exactly one
-`HealthReportButton` — and so one set of health probes — mounted at a time.
+`ActionBar.Lead` mark — the health button, and so one set of health probes — mounted at a time.
 
 In an embedded document (`?embed=1`, see `primitives/embed`) neither host
 renders: the floating one checks the flag itself, the docked one lives in the
@@ -118,11 +118,11 @@ tab bar, which an embed does not paint.
     - `Apps.TabBarActions` "Tab bar actions" → `DockedActionBarHost`
     - `ActionBar.Item` → `ViewOptionsButton`
     - `ConfigV2.WebRegister` "config"
-  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps-core/tabs` ×3
-    - `primitives/css/ui-kit` ×3
     - `audience/developer-mark` ×2
     - `config_v2` ×2
+    - `primitives/css/ui-kit` ×2
     - `primitives/overlay/floating-action` ×2
     - `apps-core/chrome-theme.chromeThemeScope`
     - `apps-core.Apps`
@@ -138,7 +138,6 @@ tab bar, which an embed does not paint.
     - `primitives/icon-button.IconButton`
     - `primitives/slot-render.SlotItemLayout`
     - `shell/action-bar.ActionBar`
-    - `shell/health-report.HealthReportButton`
   - Exports (values): `useActionBarPinned`
 - Server:
   - Contributes: `ConfigV2.Register` "config"

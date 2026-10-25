@@ -9,7 +9,6 @@ export type CodeHandler = {
 
 export type MarkdownExtension = {
   id: string;
-  priority?: number;
   useComponents?: Hook<() => Partial<Components>>;
   useTransform?: Hook<() => ((children: ReactNode) => ReactNode) | null>;
   useCodeHandler?: Hook<() => CodeHandler | null>;

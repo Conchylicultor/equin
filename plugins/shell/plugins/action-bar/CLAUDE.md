@@ -20,6 +20,7 @@ inherit whichever the host chose, so every item in a host shares one height.
   - Slots:
     - `ActionBar.Item`
     - `ActionBar.ViewOption`
+    - `ActionBar.Lead`
     - `ActionBar.Activity`
     - `ActionBar.Glance`
   - Slot contributors:
@@ -37,10 +38,13 @@ inherit whichever the host chose, so every item in a host shares one height.
     - `ActionBar.ViewOption` ← `config_v2.git-defaults-preview`
     - `ActionBar.ViewOption` ← `fullscreen`
     - `ActionBar.ViewOption` ← `reorder.edit-mode`
+    - `ActionBar.Lead` ← `shell.health-report`
     - `ActionBar.Activity` ← `build`
     - `ActionBar.Glance` ← `build`
   - Uses: `primitives/slot-render.defineRenderSlot`
-  - Exports (types): `ActionBarContribution`
+  - Exports (types):
+    - `ActionBarContribution`
+    - `ActionBarLeadProps`
   - Exports (values): `ActionBar`
 - Cross-plugin:
   - Imported by:
@@ -55,6 +59,7 @@ inherit whichever the host chose, so every item in a host shares one height.
     - `screenshot`
     - `screenshot/draw-on-app`
     - `shell/global-action-bar`
+    - `shell/health-report`
     - `shell/notifications`
     - `ui/theme-engine/quick-theme`
 

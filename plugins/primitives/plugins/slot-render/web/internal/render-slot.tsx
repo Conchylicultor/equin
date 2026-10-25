@@ -16,9 +16,11 @@ import {
 } from "react";
 import {
   defineSlot,
+  defineSlotFacade,
   useRawContributions,
   UNSAFE_unsealSlotComponent,
   type Slot,
+  type SlotOptions,
   type SealedComponent,
 } from "@plugins/framework/plugins/web-sdk/core";
 import type {
@@ -41,6 +43,15 @@ import {
   flowAxis,
   layoutHost,
 } from "@plugins/primitives/plugins/dom/plugins/layout-host/web";
+
+/**
+ * `defineSlot` minus its payload check (`NoOrderingNumber`), for this file's
+ * four funnels only. Each builds its payload as `P & { … }` over a NAKED type
+ * parameter, which the check's conditional cannot resolve — it would reject
+ * every call. The check still guards every `defineSlot` written with a concrete
+ * payload, which is every slot a plugin declares directly.
+ */
+const defineSlotUnchecked = defineSlot as <Q>(opts?: SlotOptions<Q>) => Slot<Q>;
 
 /**
  * The ONE element a slot draws around each contribution — its box.
@@ -177,7 +188,7 @@ export interface RenderSlotConfig<P> {
 /**
  * The contributed item middlewares (`SlotRender.ItemMiddleware`: error-boundary
  * isolation, reorder item handle, …) folded around one contribution, lowest
- * priority outermost. A component rather than a loop in `applyItemMiddlewares`
+ * `depth` outermost. A component rather than a loop in `applyItemMiddlewares`
  * because the middlewares are slot contributions, read with a hook — and
  * `applyItemMiddlewares` / `renderIsolated` are plain functions their callers
  * use from anywhere in a render.
@@ -278,10 +289,40 @@ export const RenderSlotSubIdContext = createContext<string | undefined>(
   undefined,
 );
 
+/**
+ * A render slot whose contributions are identified by a field they already
+ * carry (`DataViewSlots.View`'s `type`): the slot derives each contribution's
+ * reorder `id` with `idOf`, so a contributor never restates the same value
+ * under a second name that could drift from the first.
+ */
+export type DerivedIdRenderSlot<P> = RenderSlot<P> &
+  ((props: P & CompanionFlag) => Contribution);
+
+/**
+ * `idOf` derives a contribution's `id` (see {@link DerivedIdRenderSlot});
+ * `companions` opts the slot into companion contributions exactly as on
+ * `defineSlot` — typically keyed, so a contribution serving one key ships only
+ * in bundles that use it.
+ */
+export function defineRenderSlot<P>(
+  config: RenderSlotConfig<P> & {
+    idOf: (props: P) => string;
+    companions?: SlotCompanions;
+  },
+): DerivedIdRenderSlot<P>;
+export function defineRenderSlot<P>(
+  config: RenderSlotConfig<P> & { companions: SlotCompanions },
+): RenderSlot<P & CompanionFlag>;
 export function defineRenderSlot<P>(
   config?: RenderSlotConfig<P>,
+): RenderSlot<P>;
+export function defineRenderSlot<P>(
+  config?: RenderSlotConfig<P> & {
+    idOf?: (props: P) => string;
+    companions?: SlotCompanions;
+  },
 ): RenderSlot<P> {
-  const slot = defineSlot<
+  const slot = defineSlotUnchecked<
     P & { id: string; excludeFromReorder?: boolean; fill?: boolean }
   >({ docLabel: config?.docLabel });
 
@@ -293,6 +334,7 @@ export function defineRenderSlot<P>(
     kind: "render",
     reorderable: true,
     partOfComponent: config?.partOfComponent === true,
+    ...(config?.companions ? { companions: config.companions } : {}),
   };
   const declaredControlSize = config?.controlSize;
 
@@ -418,7 +460,12 @@ export function defineRenderSlot<P>(
     return withDensity;
   };
 
-  return renderSlot;
+  const idOf = config?.idOf;
+  if (!idOf) return renderSlot;
+  return defineSlotFacade(
+    (props: P) => slot({ ...props, id: idOf(props) }),
+    renderSlot,
+  );
 }
 
 /**
@@ -454,7 +501,9 @@ export interface MountSlot<P> extends Slot<
 export function defineMountSlot<P = {}>(
   config?: MountSlotConfig<P>,
 ): MountSlot<P> {
-  const slot = defineSlot<{ id: string; component: MountComponent<P> } & P>({
+  const slot = defineSlotUnchecked<
+    { id: string; component: MountComponent<P> } & P
+  >({
     docLabel: config?.docLabel,
   });
 
@@ -533,13 +582,13 @@ export interface WrapperSlot<P extends object = {}> extends Slot<
  * This mirrors `Core.Root`'s direct unseal for the same structural reason.
  *
  * Fold direction: `reduceRight` makes `contributions[0]` the outermost wrapper —
- * matching `applyItemMiddlewares`, where the first (lowest-priority) middleware
+ * matching `applyItemMiddlewares`, where the first (lowest-depth) middleware
  * also ends up outermost.
  */
 export function defineWrapperSlot<P extends object = {}>(
   config?: WrapperSlotConfig<P>,
 ): WrapperSlot<P> {
-  const slot = defineSlot<WrapContribution & P>({
+  const slot = defineSlotUnchecked<WrapContribution & P>({
     docLabel: config?.docLabel ? (c) => config.docLabel!(c) : undefined,
   });
 
@@ -658,7 +707,7 @@ export function defineDispatchSlot<
     companions?: SlotCompanions;
   },
 ): DispatchSlot<Props, Key, Extra> {
-  const slot = defineSlot<DispatchContribution<Props, Key> & Extra>({
+  const slot = defineSlotUnchecked<DispatchContribution<Props, Key> & Extra>({
     docLabel: config.docLabel ? (c) => config.docLabel!(c) : undefined,
   });
 
@@ -787,6 +836,25 @@ export function defineOrderedDispatchSlot<
   ) as unknown as OrderedDispatchSlot<Props, Key, Extra>;
   slot.meta = { kind: "ordered-dispatch", reorderable: true };
   return slot;
+}
+
+/**
+ * Draw one contribution the HOST renders itself — from the contribution's data,
+ * not its `component` — inside the same item middlewares and box `.Render`
+ * gives it: error isolation, the element picker's lineage, every other
+ * describing stamp. For a host that reads a slot's contributions in layout
+ * order (`useSlotOrder`) and lays them out itself (a report folding some rows
+ * into one card): without this, its rows would be the host's own markup, and a
+ * pick or a crash on one would name the host instead of the contributor.
+ *
+ * `contribution` is the one read from the slot (sealed reads keep `_pluginId`).
+ */
+export function renderAsContribution(
+  slot: SlotHandle,
+  contribution: object,
+  node: ReactNode,
+): ReactNode {
+  return applyItemMiddlewares(node, slot.id, contribution as Contribution);
 }
 
 /**

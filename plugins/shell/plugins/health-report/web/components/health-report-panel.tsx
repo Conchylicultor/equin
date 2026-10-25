@@ -1,4 +1,7 @@
-import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
+import {
+  renderAsContribution,
+  useSlotOrder,
+} from "@plugins/primitives/plugins/slot-render/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -34,32 +37,34 @@ function isPlain(row: SealedRow): boolean {
   );
 }
 
-/** One row in its own boundary, so a crashing contributor leaves the rest readable. */
-function BoundaryRow({
+/**
+ * One row, drawn by the report but rendered AS its contribution: inside the
+ * slot's item middlewares and box (`renderAsContribution`) — so a crashing
+ * contributor leaves the rest readable, and an element pick on the row names
+ * the plugin that contributed it rather than the report.
+ */
+function ContributedRow({
   row,
   statuses,
 }: {
   row: SealedRow;
   statuses: Readonly<Record<string, ReportedStatus>>;
 }) {
-  return (
-    <PluginErrorBoundary
-      slot={HealthReport.Row.id}
-      label={row._pluginId ?? row.id}
-    >
-      {row.kind === "status" ? (
-        <StatusRowView row={row} status={statuses[row.id]} />
-      ) : (
-        <InfoRowView row={row} useInfo={row.useInfo} />
-      )}
-    </PluginErrorBoundary>
+  return renderAsContribution(
+    HealthReport.Row,
+    row,
+    row.kind === "status" ? (
+      <StatusRowView row={row} status={statuses[row.id]} />
+    ) : (
+      <InfoRowView row={row} useInfo={row.useInfo} />
+    ),
   );
 }
 
 /**
  * The report: a header with the merged dot and the verdict, then every row in
- * a fixed order — info rows first, then status rows, each by `order`, never by
- * status — with the plain rows that are fine folded into one expandable card
+ * a fixed order — info rows first, then status rows, each in the slot's layout
+ * order, never by status — with the plain rows that are fine folded into one expandable card
  * at the end (`foldQuietRows`). No footer:
  * a row that has a pane to point at does so through its own `actions`, so the
  * report never names a contributor.
@@ -68,7 +73,7 @@ function BoundaryRow({
  * `useInfo` from running while nobody is looking.
  */
 export function HealthReportPanel() {
-  const rows = HealthReport.Row.useContributions();
+  const rows = useSlotOrder(HealthReport.Row);
   const statuses = HealthStore.useStore();
   const statusList = rows.flatMap((row) =>
     row.kind === "status" ? [statuses[row.id]] : [],
@@ -96,12 +101,12 @@ export function HealthReportPanel() {
       </Line>
       {items.length > 0 ? (
         <Stack gap="2xs" className="p-xs">
-          {/* Not a DataView: these are the report's own rows — slot
-              contributions, a handful at most — in an order the report
-              decides, inside a transient popover. */}
+          {/* Not a DataView: these are slot contributions — a handful at
+              most — in the slot's layout order, arranged by the report (info
+              first, quiet rows folded), inside a transient popover. */}
           {items.map((item) =>
             item.kind === "row" ? (
-              <BoundaryRow
+              <ContributedRow
                 key={item.row.id}
                 row={item.row}
                 statuses={statuses}
@@ -115,7 +120,7 @@ export function HealthReportPanel() {
                 statuses={statuses}
               >
                 {item.rows.map((row) => (
-                  <BoundaryRow key={row.id} row={row} statuses={statuses} />
+                  <ContributedRow key={row.id} row={row} statuses={statuses} />
                 ))}
               </QuietRowsView>
             ),

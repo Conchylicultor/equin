@@ -65,16 +65,16 @@ export function segmentAt(segs: readonly BeatSpan[], beat: number): number {
   return -1;
 }
 
-/** One item fed to the label lane: its anchor, its contributor's `order`, and
- *  whatever the renderer needs (opaque here). */
-export type LaneEntry<T> = { beat: number; order: number; item: T };
+/** One item fed to the label lane: its anchor, its contributor's index in the
+ *  slot's layout order, and whatever the renderer needs (opaque here). */
+export type LaneEntry<T> = { beat: number; contributorIndex: number; item: T };
 
 /** A same-beat group of the label lane, laid out over `[beat, end)`. */
 export type LaneGroup<T> = { beat: number; end: number; items: T[] };
 
 /**
  * Fold label items into same-beat groups: sorted by beat, then contributor
- * `order`, then input order (stable) — so a section's name and a key that
+ * (layout) index, then input order (stable) — so a section's name and a key that
  * changes on its downbeat land in one group, name first. Each group spans up
  * to the next group's beat; the last runs to `endBeat`. Items outside
  * `[0, endBeat)` are dropped (they would have no room on the lane).
@@ -86,7 +86,10 @@ export function groupLabels<T>(
   const sorted = entries
     .map((e, i) => ({ ...e, i }))
     .filter((e) => e.beat >= 0 && e.beat < endBeat)
-    .sort((a, b) => a.beat - b.beat || a.order - b.order || a.i - b.i);
+    .sort(
+      (a, b) =>
+        a.beat - b.beat || a.contributorIndex - b.contributorIndex || a.i - b.i,
+    );
   const groups: LaneGroup<T>[] = [];
   for (const e of sorted) {
     const prev = groups.at(-1);

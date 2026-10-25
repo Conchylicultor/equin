@@ -19,7 +19,12 @@ export type ShortcutDescriptor = {
    * guards ignore it and read their own state.
    */
   when?: (event: KeyboardEvent) => boolean;
-  priority?: number;
+  /**
+   * Which handler wins when several eligible shortcuts match ONE keystroke
+   * (`Escape` while a tour, edit mode and solo are all live): the highest
+   * precedence fires, alone. Default 0. Not an order of anything drawn.
+   */
+  precedence?: number;
   /**
    * Fire even when an editable element (input/textarea/select/contenteditable)
    * is focused. Off by default: plain-key shortcuts yield to the text field so

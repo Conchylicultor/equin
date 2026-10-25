@@ -16,7 +16,7 @@ export const pickerPlugin = {
   contributions: [
     SlotRender.ItemAttrs({ attrs: markerAttrs }),
     SlotRender.ItemMiddleware({
-      priority: 50,
+      depth: 50,
       Component: PluginMarkerMiddleware,
     }),
   ],

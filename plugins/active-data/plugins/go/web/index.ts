@@ -18,10 +18,10 @@ export default {
       component: GoBlock,
       inline: GoInline,
     }),
-    // Before active-data's chip walker (order 0): it must see the raw string.
+    // Before active-data's chip walker (stage 0): it must see the raw string.
     InlineTextWalkerSlot({
       id: "go",
-      order: -1,
+      stage: -1,
       Component: GoInlineTextWalker,
     }),
     TextEditorSlots.Plugin({ id: "go-region", component: GoRegionPlugin }),

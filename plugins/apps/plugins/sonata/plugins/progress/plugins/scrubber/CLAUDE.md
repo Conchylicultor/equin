@@ -40,7 +40,9 @@
     - `primitives/css/ui-kit.cn`
     - `primitives/hover-reveal.hoverRevealGroup`
     - `primitives/overlay/floating-surface.FloatingSurface`
+    - `primitives/slot-render.defineRenderSlot`
     - `primitives/slot-render.renderIsolated`
+    - `primitives/slot-render.useSlotOrder`
   - Exports (types):
     - `BeatSpan`
     - `ProgressLabel`

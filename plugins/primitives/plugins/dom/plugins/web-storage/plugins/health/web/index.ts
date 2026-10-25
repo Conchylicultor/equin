@@ -14,7 +14,6 @@ export default {
       kind: "status",
       id: "browser-storage",
       title: "Browser storage",
-      order: 40,
       useStatus: useStorageHealth,
       component: StorageDetail,
     }),

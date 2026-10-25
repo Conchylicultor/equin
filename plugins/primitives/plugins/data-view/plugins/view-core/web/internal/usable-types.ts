@@ -3,7 +3,9 @@ import type { ViewSourceEntry, ViewTypeMeta } from "../../core";
 
 /**
  * The view-types one source entry can offer, in menu order: that entry's
- * registered contributions ∩ its `views` whitelist.
+ * registered contributions ∩ its `views` whitelist, in the order the entry
+ * lists its contributions — the view-type slot's reorder layout, read by the
+ * host (`useSlotOrder`), never a number on the type.
  *
  * **The ONE gate.** Both places that offer a type to the user read it — the `+`
  * add menu (`availableSources`) and the active view's settings popover
@@ -13,11 +15,7 @@ import type { ViewSourceEntry, ViewTypeMeta } from "../../core";
 export function usableTypes<T extends ViewTypeMeta>(
   entry: ViewSourceEntry<T>,
 ): SealContributions<T>[] {
-  return entry.contributions
-    .filter((c) => (entry.views ? entry.views.includes(c.type) : true))
-    .slice()
-    .sort(
-      (a, b) =>
-        (a.order ?? 0) - (b.order ?? 0) || a.title.localeCompare(b.title),
-    );
+  return entry.contributions.filter((c) =>
+    entry.views ? entry.views.includes(c.type) : true,
+  );
 }

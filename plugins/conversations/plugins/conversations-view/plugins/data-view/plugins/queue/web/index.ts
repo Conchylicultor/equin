@@ -20,7 +20,6 @@ export default {
       id: "queue",
       title: "Queue",
       icon: symbol("low-priority"),
-      order: 5,
       views: ["list"],
       component: QueueSource,
     }),

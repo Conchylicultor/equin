@@ -7,7 +7,7 @@
 - Description: Solo (fullscreen) surface mode — the default boot mode: only the focused tab, full-viewport (the tab bar and app rail hidden, the global action bar floating), with an Esc shortcut back to the previous mode.
 - Web:
   - Contributes:
-    - `Surface.Placement`
+    - `Surface.Placement` "Fullscreen (solo)"
     - `Shortcuts.Shortcut` "surface.exit-solo (Escape)"
   - Uses:
     - `apps-core/surface.Surface`

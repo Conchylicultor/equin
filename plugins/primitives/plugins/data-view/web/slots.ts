@@ -30,9 +30,10 @@ import { Grouping } from "./grouping-slot";
 import { ColumnConfig } from "./column-config-slot";
 
 /**
- * A registered view-*type*: the generic `ViewTypeMeta` (type/title/icon/order/
+ * A registered view-*type*: the generic `ViewTypeMeta` (type/title/icon/
  * configSchema — owned by view-core) plus data-view's own render
- * contract, the `component`.
+ * contract, the `component`. Menus list view types in the `View` slot's
+ * reorder layout order.
  */
 export interface DataViewContribution extends ViewTypeMeta {
   component: ComponentType<DataViewRenderProps<unknown>>;
@@ -79,9 +80,9 @@ export interface DataViewContribution extends ViewTypeMeta {
 }
 
 /**
- * A contribution to the DataView settings menu (the gear popover). A plain data
- * contribution (NOT a render slot — settings aren't force-reorderable), mirroring
- * the `View` slot's shape. `scope` places it in the "Current view" section
+ * A contribution to the DataView settings menu (the gear popover). A render
+ * slot the panel reads with `useSlotOrder` and draws itself (each section
+ * through `renderIsolated`), so its order is the slot's reorder layout. `scope` places it in the "Current view" section
  * (per-instance settings like group-by / properties) or the "DataView" section
  * (surface-wide settings like custom-columns). The `component` reads everything it
  * needs from `DataViewControlsContext` — no props are threaded.
@@ -94,10 +95,8 @@ export interface DataViewContribution extends ViewTypeMeta {
 export interface DataViewSettingContribution {
   /** Stable id (React key + reorder/doc identity). */
   id: string;
-  /** Which menu section this setting renders in. */
+  /** Which menu section this setting renders in (view scope first). */
   scope: "global" | "view";
-  /** Ordering within its scope's section (ascending; default 0). */
-  order?: number;
   /**
    * Whether this setting has anything to render for the current context — the
    * generic applicability signal the menu uses to decide gear/section visibility
@@ -143,8 +142,6 @@ export interface DataViewPanelControlContribution {
    *  label, and the back-header title of a panel pushed from it. */
   label: string;
   icon: IconRef;
-  /** Reading order in the toolbar (ascending; default 0). */
-  order?: number;
   /** Whether this control applies at all to the active view + schema. Absent =
    *  always applicable. Pure: it is asked before any panel mounts. */
   isApplicable?: (ctx: DataViewControlsContextValue) => boolean;
@@ -184,8 +181,6 @@ export interface DataViewControlAction {
 export interface DataViewActionControlContribution {
   /** Stable id (React key + doc identity), e.g. `data-view.expand-all`. */
   id: string;
-  /** Reading order in the toolbar (ascending; default 0). */
-  order?: number;
   action: (ctx: DataViewControlsContextValue) => DataViewControlAction | null;
   component?: never;
 }
@@ -198,15 +193,14 @@ export interface DataViewActionControlContribution {
  * `sortControl`, `filterControl`, `fieldsControl` — which is the collection-consumer
  * rule broken in the most literal way, and meant no plugin could ever add a fourth.
  *
- * It is a plain `defineSlot` + `renderIsolated` (the `View` / `Setting` precedent),
- * NOT a `defineRenderSlot`. A render slot would mount EVERY control's panel on
- * EVERY DataView on every page — each running `useFilterPresets`, the live
- * custom-values resource, and so on — just to draw a closed trigger. The host
- * instead reads the metadata (`label`, `icon`, `isApplicable`, `summary`), builds
- * each trigger itself, and mounts exactly the one panel that is open. A render
- * slot would also be unconditionally reorderable, owing an authored
- * `config/…/primitives.data-view.control.jsonc` with a build-blocking `// @review`
- * marker — for a fixed reading order that `order` already expresses.
+ * It is a render slot the toolbar never `.Render`s: `.Render` would mount EVERY
+ * control's panel on EVERY DataView on every page — each running
+ * `useFilterPresets`, the live custom-values resource, and so on — just to draw
+ * a closed trigger. The host instead reads the metadata (`label`, `icon`,
+ * `isApplicable`, `summary`, an action control's `action`) in the slot's layout
+ * order (`useSlotOrder`), builds each trigger itself, and mounts exactly the one
+ * panel that is open (`renderIsolated`). The reading order is the slot's reorder
+ * layout, `config/primitives/data-view/control.jsonc`.
  */
 export type DataViewControlContribution =
   DataViewPanelControlContribution | DataViewActionControlContribution;
@@ -254,7 +248,6 @@ export interface GlobalRowOrderContribution {
   /** Stable id (React key + reorder/doc identity). */
   id: string;
   component: ComponentType<GlobalRowOrderProps>;
-  order?: number;
 }
 
 /**
@@ -315,8 +308,13 @@ export function collectionItemActionKey(
 }
 
 export const DataViewSlots = {
-  View: defineSlot<DataViewContribution>({
+  /** View types, in the slot's reorder layout order — the add menu's and the
+   *  settings popover's. A view type is identified by its `type`, which the
+   *  slot reads as the contribution's reorder id (`idOf`). Never `.Render`ed:
+   *  the host mounts only the active view, through `renderIsolated`. */
+  View: defineRenderSlot<DataViewContribution>({
     docLabel: (p) => p.title,
+    idOf: (p) => p.type,
     // A renderer ships only in bundles that use its view type (see `KeySpace`):
     // the data-view primitive plus a DataView authoring or whitelisting it.
     companions: { key: "type", space: "view-type" },
@@ -346,14 +344,15 @@ export const DataViewSlots = {
     docLabel: (p) => p.id,
   }),
   /** Contributable DataView settings menu entries (group-by, future per-view /
-   *  surface-wide settings). Plain data slot, read by the host's settings menu. */
-  Setting: defineSlot<DataViewSettingContribution>({
+   *  surface-wide settings), in the slot's layout order. */
+  Setting: defineRenderSlot<DataViewSettingContribution>({
     docLabel: (p) => p.id,
   }),
   /** Contributable toolbar controls (filter, sort, settings, and anything a
-   *  plugin adds). Plain data slot: the toolbar reads each contribution's
-   *  metadata to build its trigger and mounts only the open panel. */
-  Control: defineSlot<DataViewControlContribution>({
+   *  plugin adds), in the slot's layout order: the toolbar reads each
+   *  contribution's metadata to build its trigger and mounts only the open
+   *  panel. */
+  Control: defineRenderSlot<DataViewControlContribution>({
     docLabel: (p) => ("label" in p ? p.label : p.id),
   }),
   /** Row actions a collection (or a union's arm) declares once, drawn by every

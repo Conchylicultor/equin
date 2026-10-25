@@ -15,7 +15,6 @@ export interface ViewTypeMeta {
   type: string;
   title: string;
   icon: IconRef;
-  order?: number;
   /** Per-instance `options` sub-form schema, type-dispatched by `type`. Drives
    *  the settings popover's options sub-form (via a web-side `variantField`). */
   configSchema?: FieldsRecord;

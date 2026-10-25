@@ -63,7 +63,6 @@ const status = (
   kind: "status",
   id,
   title: id,
-  order: 0,
   useStatus: () => value,
   ...extra,
 });
@@ -72,7 +71,6 @@ const info = (id: string, useInfo = () => ({ title: id, summary: "where" })) =>
   ({
     kind: "info",
     id,
-    order: 0,
     icon: accountTreeIcon,
     useInfo,
   }) satisfies HealthReportRow;

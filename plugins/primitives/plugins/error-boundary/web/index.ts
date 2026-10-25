@@ -42,7 +42,7 @@ export default {
     // A companion: wherever slots render, a crashing contribution must stay
     // contained to its own box rather than take the surface down with it.
     SlotRender.ItemMiddleware({
-      priority: 100,
+      depth: 100,
       Component: ErrorBoundaryMiddleware,
       companion: true,
     }),

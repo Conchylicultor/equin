@@ -1,8 +1,15 @@
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
+import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
+import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 import type { ComponentType, ReactNode } from "react";
 
+/**
+ * `depth` is the middleware's place in the wrapping chain, not a position among
+ * siblings: the lowest depth wraps outermost, every higher one nests inside it.
+ */
 export interface SlotItemMiddleware {
-  priority: number;
+  /** Wrapping depth: lower wraps outside higher (the error boundary is deepest). */
+  depth: number;
   Component: ComponentType<{
     slotId: string;
     contribution: Contribution;
@@ -11,13 +18,30 @@ export interface SlotItemMiddleware {
 }
 
 export interface SlotListMiddleware {
-  priority: number;
+  /** Wrapping depth around the whole list: lower wraps outside higher. */
+  depth: number;
   Component: ComponentType<{
     slotId: string;
     contributions: readonly Contribution[];
     renderItem: (contribution: Contribution) => ReactNode;
     children: ReactNode;
   }>;
+}
+
+/**
+ * How a reorderable slot's contributions are ordered for a host that draws
+ * them itself (`useSlotOrder`): the data-level twin of the list middleware —
+ * the same layout, no rendering. Contributed by the plugin that owns layouts
+ * (reorder's slot-middleware, a companion), so a host names no layout engine.
+ * The hook returns the contributions to draw, in order (hidden ones dropped).
+ */
+export interface SlotOrder {
+  useOrder: Hook<
+    (
+      slot: SlotHandle,
+      contributions: readonly Contribution[],
+    ) => readonly Contribution[]
+  >;
 }
 
 /** What the box being stamped is, for a {@link SlotItemAttrsFn}. */

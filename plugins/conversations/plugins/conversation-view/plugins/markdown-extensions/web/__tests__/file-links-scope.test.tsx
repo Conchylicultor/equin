@@ -35,22 +35,22 @@ function Plugins({ children }: { children: ReactNode }) {
       contributions: [
         MarkdownEnhancerSlot({
           id: "file-links",
-          order: 10,
+          stage: 10,
           Component: FileLinksEnhancer,
         }),
         MarkdownEnhancerSlot({
           id: "code-inline",
-          order: 20,
+          stage: 20,
           Component: CodeEnhancer,
         }),
         MarkdownEnhancerSlot({
           id: "img-proxy",
-          order: 30,
+          stage: 30,
           Component: ImgEnhancer,
         }),
         InlineTextWalkerSlot({
           id: "file-links",
-          order: 10,
+          stage: 10,
           Component: FileLinksInlineWalker,
         }),
       ],

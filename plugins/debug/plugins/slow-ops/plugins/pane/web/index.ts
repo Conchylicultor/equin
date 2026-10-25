@@ -19,7 +19,6 @@ export default {
       id: "aggregates",
       title: "Aggregates",
       icon: symbol("computer"),
-      order: 20,
       component: SlowOpsView,
     }),
     Pane.Register({ pane: slowOpDetailPane }),

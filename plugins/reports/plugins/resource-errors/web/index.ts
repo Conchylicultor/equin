@@ -22,9 +22,6 @@ export default {
       kind: "status",
       id: "live-reads",
       title: "Live reads",
-      // After Connection (10) and Database (20): the socket is up and the
-      // server reaches its database, and yet a read can still fail.
-      order: 30,
       useStatus: useResourceErrorsHealth,
     }),
   ],

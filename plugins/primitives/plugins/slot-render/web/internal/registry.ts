@@ -6,25 +6,25 @@ import { SlotRender } from "./slots";
 // render.
 const sortedByList = new WeakMap<readonly object[], readonly object[]>();
 
-function byPriority<T extends { priority: number }>(
+function byDepth<T extends { depth: number }>(
   list: readonly T[],
 ): readonly T[] {
   let out = sortedByList.get(list) as readonly T[] | undefined;
   if (!out) {
-    out = [...list].sort((a, b) => a.priority - b.priority);
+    out = [...list].sort((a, b) => a.depth - b.depth);
     sortedByList.set(list, out);
   }
   return out;
 }
 
-/** The contributed item middlewares, lowest priority first (= outermost). */
+/** The contributed item middlewares, lowest depth first (= outermost). */
 export function useSlotItemMiddlewares() {
-  return byPriority(SlotRender.ItemMiddleware.useContributions());
+  return byDepth(SlotRender.ItemMiddleware.useContributions());
 }
 
-/** The contributed list middlewares, lowest priority first (= outermost). */
+/** The contributed list middlewares, lowest depth first (= outermost). */
 export function useSlotListMiddlewares() {
-  return byPriority(SlotRender.ListMiddleware.useContributions());
+  return byDepth(SlotRender.ListMiddleware.useContributions());
 }
 
 /** The merged attributes for one contribution's box, or `null` when none. */

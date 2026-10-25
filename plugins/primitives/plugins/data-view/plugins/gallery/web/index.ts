@@ -15,7 +15,6 @@ export default {
       companion: true,
       title: "Gallery",
       icon: symbol("grid-view"),
-      order: 0,
       loadingVariant: "cards",
       loadingCount: 8,
       component: GalleryView,

@@ -55,13 +55,13 @@ describe("segmentFill / segmentAt", () => {
 });
 
 describe("groupLabels", () => {
-  test("same-beat items fold into one group, ordered by contributor order", () => {
+  test("same-beat items fold into one group, ordered by contributor index", () => {
     const groups = groupLabels(
       [
-        { beat: 32, order: 20, item: "G#m" },
-        { beat: 0, order: 20, item: "B" },
-        { beat: 32, order: 10, item: "Answer" },
-        { beat: 0, order: 10, item: "Theme" },
+        { beat: 32, contributorIndex: 20, item: "G#m" },
+        { beat: 0, contributorIndex: 20, item: "B" },
+        { beat: 32, contributorIndex: 10, item: "Answer" },
+        { beat: 0, contributorIndex: 10, item: "Theme" },
       ],
       64,
     );
@@ -71,12 +71,12 @@ describe("groupLabels", () => {
     ]);
   });
 
-  test("equal order keeps input order; a lone mid-section item gets its own group", () => {
+  test("equal contributor index keeps input order; a lone mid-section item gets its own group", () => {
     const groups = groupLabels(
       [
-        { beat: 0, order: 0, item: "a" },
-        { beat: 0, order: 0, item: "b" },
-        { beat: 20, order: 5, item: "D" },
+        { beat: 0, contributorIndex: 0, item: "a" },
+        { beat: 0, contributorIndex: 0, item: "b" },
+        { beat: 20, contributorIndex: 5, item: "D" },
       ],
       48,
     );
@@ -90,8 +90,8 @@ describe("groupLabels", () => {
     expect(
       groupLabels(
         [
-          { beat: -2, order: 0, item: "pre" },
-          { beat: 48, order: 0, item: "end" },
+          { beat: -2, contributorIndex: 0, item: "pre" },
+          { beat: 48, contributorIndex: 0, item: "end" },
         ],
         48,
       ),

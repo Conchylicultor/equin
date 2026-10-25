@@ -1,3 +1,4 @@
+import { useSlotOrder } from "@plugins/primitives/plugins/slot-render/web";
 import {
   useEffect,
   useMemo,
@@ -87,11 +88,8 @@ export function SurfaceBody() {
     titles,
   } = useTabs();
 
-  const defs = Surface.Placement.useContributions();
-  const sorted = useMemo(
-    () => [...defs].sort((a, b) => a.order - b.order),
-    [defs],
-  );
+  // The slot's layout order: the fallback default and "the first other mode".
+  const sorted = useSlotOrder(Surface.Placement);
   const byId = useMemo(() => {
     const m = new Map<string, PlacementDef>();
     for (const d of sorted) m.set(d.id, d);

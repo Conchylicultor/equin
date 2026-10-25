@@ -2,9 +2,17 @@ import { useMemo, type ComponentType, type ReactNode } from "react";
 import { defineSlot, type Slot } from "@plugins/framework/plugins/web-sdk/core";
 import { lazyComponent } from "@plugins/primitives/plugins/lazy-component/web";
 
+/**
+ * The markdown enhancer pipeline. `stage` is a processing position, not a place
+ * on screen: enhancers nest lowest stage outermost, so a lower stage's transform
+ * is stacked first and sees the text before a higher one claims it (active-data
+ * chips at 0 before file-links at 10). A pipeline, not painted rows — so it is
+ * not a reorder layout, which a user could rearrange into a broken render.
+ */
 export const MarkdownEnhancerSlot: Slot<{
   id: string;
-  order: number;
+  /** Processing stage: lower runs first (outermost), higher sees what it left. */
+  stage: number;
   Component: ComponentType<{ children: ReactNode }>;
 }> = defineSlot();
 
@@ -38,7 +46,7 @@ export function Markdown({
   const enhancers = MarkdownEnhancerSlot.useContributions();
 
   const sorted = useMemo(
-    () => [...enhancers].sort((a, b) => a.order - b.order),
+    () => [...enhancers].sort((a, b) => a.stage - b.stage),
     [enhancers],
   );
 

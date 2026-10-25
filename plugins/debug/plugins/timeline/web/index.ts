@@ -11,7 +11,6 @@ export default {
       id: "timeline",
       title: "Timeline",
       icon: symbol("timeline"),
-      order: 40,
       component: TimelineView,
     }),
   ],

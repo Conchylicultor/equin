@@ -1,3 +1,4 @@
+import { useSlotOrder } from "@plugins/primitives/plugins/slot-render/web";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import { useMemo } from "react";
 import {
@@ -19,18 +20,16 @@ import { Surface } from "../slots";
  * `TabsProvider` (the docked tab-bar strip's popover) and outside it (the
  * globally-mounted floating overlay's).
  *
- * The options are derived from the `Surface.Placement` registry (sorted by
- * `order`) — never a hardcoded list — so adding / removing a mode sub-plugin
+ * The options are derived from the `Surface.Placement` registry, in the slot's
+ * layout order (`useSlotOrder`) — never a hardcoded list — so adding / removing a mode sub-plugin
  * updates the control with zero edits here. With no modes contributed it renders
  * nothing.
  */
 export function ActionBarPlacementControl() {
-  const defs = Surface.Placement.useContributions();
+  const defs = useSlotOrder(Surface.Placement);
   const options = useMemo(
     () =>
-      [...defs]
-        .sort((a, b) => a.order - b.order)
-        .map((d): SegmentedOption<string> => ({
+      defs.map((d): SegmentedOption<string> => ({
           id: d.id,
           icon: <Icon icon={d.icon} />,
           // Icon-only: the mode's label is the radio's tooltip and name.

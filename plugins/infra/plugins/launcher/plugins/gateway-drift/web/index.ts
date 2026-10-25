@@ -11,10 +11,6 @@ export default {
       kind: "status",
       id: "gateway",
       title: "Gateway",
-      // After Connection (10), Database (20) and Live reads (30): the
-      // infrastructure the page runs on, ending with the front door's own
-      // currency.
-      order: 40,
       useStatus: useGatewayHealth,
       // Drawn only while out of date, so the row still folds while current.
       remedy: UpdateGatewayButton,

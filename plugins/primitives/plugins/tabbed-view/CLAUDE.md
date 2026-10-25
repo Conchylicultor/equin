@@ -29,7 +29,10 @@ Post-`unified-view-switcher` roles:
   - Uses:
     - `primitives/css/column.Column`
     - `primitives/css/spacing.Stack`
+    - `primitives/slot-render.defineRenderSlot`
     - `primitives/slot-render.renderIsolated`
+    - `primitives/slot-render.RenderSlot`
+    - `primitives/slot-render.useSlotOrder`
     - `primitives/view-switcher.useActiveViewId`
     - `primitives/view-switcher.ViewSwitcher`
   - Exports (types):

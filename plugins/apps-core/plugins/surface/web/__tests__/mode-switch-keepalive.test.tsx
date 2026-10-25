@@ -85,7 +85,6 @@ const containedDef: PlacementDef = {
   id: "docked-ish",
   label: "Contained",
   icon: testIcon,
-  order: 0,
   default: true,
   frame: "pane",
   themeScope: "app",
@@ -96,7 +95,6 @@ const viewportDef: PlacementDef = {
   id: "solo-ish",
   label: "Viewport",
   icon: testIcon,
-  order: 1,
   frame: "viewport",
   themeScope: "app",
 };
@@ -106,7 +104,6 @@ const windowDef: PlacementDef = {
   id: "window-ish",
   label: "Window",
   icon: testIcon,
-  order: 2,
   frame: "window",
   frameClassName: cn("rounded-lg border"),
   visibleWhenUnfocused: true,

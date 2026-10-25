@@ -18,7 +18,6 @@ export default {
       kind: "status",
       id: "connection",
       title: "Connection",
-      order: 10,
       useStatus: useConnectionHealth,
     }),
   ],

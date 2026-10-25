@@ -38,6 +38,22 @@ semantics you want:
   menus, ordered pickers) read that order through the reorder read hook — the
   slot itself renders pure dispatch.
 
+### A host that draws its own rows
+
+A render slot need not be `.Render`ed. A host that lays its contributions out
+itself (the health report folding quiet rows into one card, a toolbar building
+triggers from metadata, a segmented control) reads them in layout order with
+`useSlotOrder(slot)` and draws each one inside
+`renderAsContribution(slot, contribution, node)` — the same item middlewares and
+box `.Render` gives it, so isolation and element-picker lineage still reach the
+row. The order comes from the one `SlotRender.Order` contribution — reorder's
+(`reorder/slot-middleware`, a companion, beside its list middleware), the
+data-level twin of the middleware that orders `.Render`; without one,
+registration order, as `.Render` without its list middleware. That is the replacement for a numeric `order` on a plain `defineSlot`,
+which `defineSlot` rejects at compile time. `idOf` derives a contribution's id
+from a field it already carries (`DataViewSlots.View`'s `type`), and
+`companions` opens a render slot to companion contributions as on `defineSlot`.
+
 ## Density: declared by the slot, picked by the host
 
 `defineRenderSlot({ controlSize })` makes a slot size-owning: `.Render` wraps
@@ -142,7 +158,8 @@ What every slot renders through is three declared slots this plugin owns —
 `SlotRender.ListMiddleware` (wraps a render slot's whole list),
 `SlotRender.ItemMiddleware` (wraps each contribution, on every path) and
 `SlotRender.ItemAttrs` (stamps the box, below) — read with hooks at render
-time, lowest `priority` outermost. They replaced an imperative module registry
+time, lowest `depth` outermost (a wrapping depth, not a position — a number
+named for its meaning). They replaced an imperative module registry
 (`registerSlot*Middleware`), which no tool could see: `reorder` registered its
 layout middleware there, nothing imported it, and served compositions shipped
 without it — every slot in raw registration order.
@@ -270,6 +287,7 @@ the outcome too, with no separate code path.
     - `SlotRender.ListMiddleware`
     - `SlotRender.ItemMiddleware`
     - `SlotRender.ItemAttrs`
+    - `SlotRender.Order`
   - Slot contributors:
     - `SlotRender.ListMiddleware` ← `reorder.slot-middleware`
     - `SlotRender.ItemMiddleware` ← `primitives.error-boundary`
@@ -277,6 +295,7 @@ the outcome too, with no separate code path.
     - `SlotRender.ItemMiddleware` ← `primitives.ui-context.element-picker`
     - `SlotRender.ItemMiddleware` ← `reorder.slot-middleware`
     - `SlotRender.ItemAttrs` ← `primitives.ui-context.element-picker`
+    - `SlotRender.Order` ← `reorder.slot-middleware`
   - Uses:
     - `primitives/css/grow-relay.GrowRelay`
     - `primitives/css/ui-kit.ControlSize`
@@ -284,6 +303,7 @@ the outcome too, with no separate code path.
     - `primitives/dom/layout-host.flowAxis`
     - `primitives/dom/layout-host.layoutHost`
   - Exports (types):
+    - `DerivedIdRenderSlot`
     - `DispatchContribution`
     - `DispatchOutcome`
     - `DispatchSlot`
@@ -300,6 +320,7 @@ the outcome too, with no separate code path.
     - `SlotItemMiddleware`
     - `SlotItemOrientation`
     - `SlotListMiddleware`
+    - `SlotOrder`
     - `WrapContribution`
     - `WrapperSlot`
     - `WrapperSlotConfig`
@@ -309,21 +330,23 @@ the outcome too, with no separate code path.
     - `defineOrderedDispatchSlot`
     - `defineRenderSlot`
     - `defineWrapperSlot`
+    - `renderAsContribution`
     - `RenderCoreRoot`
     - `renderIsolated`
     - `RenderSlotSubIdContext`
     - `SlotItemLayout`
     - `SlotRender`
     - `useDispatchOutcome`
+    - `useSlotOrder`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/density --control-height-sm`
-  - Imported by: 87 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 88 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×28
     - `conversations` ×13
     - `primitives` ×13
     - `ui` ×5
+    - `apps-core` ×4
     - `shell` ×4
-    - `apps-core` ×3
     - `tasks` ×3
     - `config_v2` ×2
     - `debug` ×2

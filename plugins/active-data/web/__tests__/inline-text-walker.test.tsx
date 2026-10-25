@@ -21,7 +21,7 @@ import { ActiveDataInlineWalker } from "../internal/inline-walker";
 // End-to-end pin for the order-dependent footgun this primitive eliminates: a
 // raw string carrying BOTH an inline-chip pattern AND a file path must
 // render BOTH a chip and a file-link button. <InlineText> always seeds with the
-// string and runs active-data (order 0) before file-links (order 10) from the
+// string and runs active-data (stage 0) before file-links (stage 10) from the
 // registry — the composition the old hand-wiring silently got backwards.
 
 function Chip({ content }: { content: string }) {
@@ -63,12 +63,12 @@ const plugin = {
     ),
     InlineTextWalkerSlot({
       id: "active-data",
-      order: 0,
+      stage: 0,
       Component: ActiveDataInlineWalker,
     }),
     InlineTextWalkerSlot({
       id: "file-links",
-      order: 10,
+      stage: 10,
       Component: FileLinksTestWalker,
     }),
   ],

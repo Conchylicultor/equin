@@ -6,12 +6,13 @@ import { usableTypes } from "./usable-types";
 
 const Icon: ComponentType<{ className?: string }> = () => null;
 
-const table = { type: "table", title: "Table", icon: Icon, order: 1 };
-const gallery = { type: "gallery", title: "Gallery", icon: Icon, order: 0 };
-const board = { type: "board", title: "Board", icon: Icon, order: 2 };
+// In the order the host hands them — the view-type slot's layout order.
+const gallery = { type: "gallery", title: "Gallery", icon: Icon };
+const table = { type: "table", title: "Table", icon: Icon };
+const board = { type: "board", title: "Board", icon: Icon };
 const contributions = [
-  table,
   gallery,
+  table,
   board,
 ] as unknown as SealContributions<ViewTypeMeta>[];
 
@@ -32,11 +33,11 @@ describe("usableTypes", () => {
     ]);
   });
 
-  it("orders by `order`, then title", () => {
-    const unordered = [
+  it("keeps the order the host lists the contributions in (the slot layout)", () => {
+    const listed = [
       { type: "b", title: "B", icon: Icon },
       { type: "a", title: "A", icon: Icon },
     ] as unknown as SealContributions<ViewTypeMeta>[];
-    expect(typesOf({ contributions: unordered })).toEqual(["a", "b"]);
+    expect(typesOf({ contributions: listed })).toEqual(["b", "a"]);
   });
 });

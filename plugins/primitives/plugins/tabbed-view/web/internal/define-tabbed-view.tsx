@@ -1,10 +1,14 @@
 import type { IconRef } from "@plugins/ui/plugins/icons/core";
-import { type ComponentType, type ReactNode, useMemo } from "react";
-import { defineSlot, type Slot } from "@plugins/framework/plugins/web-sdk/core";
+import type { ComponentType, ReactNode } from "react";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
+import {
+  defineRenderSlot,
+  renderIsolated,
+  type RenderSlot,
+  useSlotOrder,
+} from "@plugins/primitives/plugins/slot-render/web";
 import {
   useActiveViewId,
   ViewSwitcher,
@@ -14,19 +18,19 @@ export interface TabContribution<ViewProps> {
   id: string;
   title: string;
   icon: IconRef;
-  order?: number;
   component: ComponentType<ViewProps>;
 }
 
 export interface TabbedView<ViewProps> {
-  View: Slot<TabContribution<ViewProps>>;
+  /** The tabs, in the slot's reorder layout order (`config/<plugin>/<slotId>.jsonc`). */
+  View: RenderSlot<TabContribution<ViewProps>>;
   Host: ComponentType<ViewProps & { header?: ReactNode; className?: string }>;
 }
 
 export function defineTabbedView<ViewProps extends object>(
   id: string,
 ): TabbedView<ViewProps> {
-  const View = defineSlot<TabContribution<ViewProps>>({
+  const View = defineRenderSlot<TabContribution<ViewProps>>({
     docLabel: (p) => p.title,
   });
 
@@ -34,12 +38,9 @@ export function defineTabbedView<ViewProps extends object>(
     props: ViewProps & { header?: ReactNode; className?: string },
   ): ReactNode {
     const { header, className, ...viewProps } = props;
-    const views = View.useContributions();
-
-    const ordered = useMemo(
-      () => [...views].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
-      [views],
-    );
+    // The host draws its own switcher and mounts only the active tab, so it
+    // reads the slot's layout order rather than `.Render`ing every tab.
+    const ordered = useSlotOrder(View);
 
     const { activeViewId, setActiveView } = useActiveViewId(id);
 

@@ -266,7 +266,6 @@ export default {
     DataViewSlots.Setting({
       id: "data-view.properties",
       scope: "view",
-      order: 0,
       isApplicable: (ctx) => ctx.fields.length > 1,
       component: PropertiesControl,
     }),
@@ -274,7 +273,6 @@ export default {
     DataViewSlots.Setting({
       id: "data-view.group-by",
       scope: "view",
-      order: 1,
       isApplicable: (ctx) =>
         ctx.activeSupportsGroupBy &&
         ctx.fields.some((f) => ctx.groupableField(f)),
@@ -286,7 +284,6 @@ export default {
     DataViewSlots.Setting({
       id: "data-view.fold",
       scope: "view",
-      order: 2,
       isApplicable: (ctx) =>
         ctx.activeSupportsFold && ctx.filter.filterableFields.length > 0,
       component: FoldControl,
@@ -323,7 +320,6 @@ export default {
       id: "data-view.filter",
       label: "Filter",
       icon: symbol("filter-list"),
-      order: 0,
       // A literal transcription of the host's old `hasFilters`.
       isApplicable: (ctx) => ctx.filter.filterableFields.length > 0,
       summary: (ctx) =>
@@ -338,7 +334,6 @@ export default {
       id: "data-view.sort",
       label: "Sort",
       icon: symbol("swap-vert"),
-      order: 1,
       // A literal transcription of the host's old `hasSort`.
       isApplicable: (ctx) =>
         ctx.activeSupportsSort && ctx.sort.sortableFields.length > 0,
@@ -353,7 +348,6 @@ export default {
       id: "data-view.settings",
       label: "View settings",
       icon: symbol("tune"),
-      order: 2,
       component: SettingsControlPanel,
     }),
   ],

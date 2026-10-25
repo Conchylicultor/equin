@@ -1,3 +1,4 @@
+import { useSlotOrder } from "@plugins/primitives/plugins/slot-render/web";
 import { type CSSProperties, type ReactNode, useMemo } from "react";
 import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import {
@@ -64,7 +65,7 @@ import { subItemsSettings } from "./sub-items-settings";
  * the sort/filter controllers, the toolbar, the view render).
  */
 export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
-  const contributions = DataViewSlots.View.useContributions();
+  const contributions = useSlotOrder(DataViewSlots.View);
   // The single-source path is ONE implicit source entry (`id`/`title`
   // undefined): every config row (all source-less) resolves through it, and the
   // add menu stays the flat single-group fast path.

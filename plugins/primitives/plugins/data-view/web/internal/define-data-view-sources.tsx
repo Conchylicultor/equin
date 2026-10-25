@@ -46,7 +46,6 @@ export interface DataViewSourceContribution<THostProps> {
   /** Add-menu group label. */
   title: string;
   icon: IconRef;
-  order?: number;
   /** STATIC view-type whitelist for this source's add-menu group. */
   views?: string[];
   component: ComponentType<DataViewSourceProps<THostProps>>;

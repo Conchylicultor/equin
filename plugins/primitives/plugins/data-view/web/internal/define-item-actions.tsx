@@ -16,7 +16,6 @@ import { itemActionPasses } from "./item-action-rest";
 export interface ItemActionContribution<TRow> {
   id: string;
   component: ComponentType<ItemActionProps<TRow>>;
-  order?: number;
   /**
    * Where this action belongs — see {@link ItemActionZone}. Default
    * `"revealed"` (the hover cluster). `"persistent"` rests where the view has an

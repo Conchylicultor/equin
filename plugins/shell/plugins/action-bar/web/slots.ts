@@ -17,6 +17,16 @@ export interface ActionBarContribution {
   audience?: Audience;
 }
 
+/** What the bar's leading mark is drawn with. */
+export interface ActionBarLeadProps {
+  /**
+   * Background work the COLLAPSED floating bar folds onto its mark
+   * (`ActionBar.Activity`, merged by the host) — empty while the bar is open
+   * and in the docked strip, whose items show that work themselves.
+   */
+  activities: readonly Activity[];
+}
+
 /**
  * The shared set of cross-app action buttons (Improve, Build, Screenshot, …),
  * plus the view options folded behind the bar's single gear button.
@@ -47,6 +57,20 @@ export const ActionBar = {
    * popover holds only the Developer mode switch, which order config keeps first.
    */
   ViewOption: defineRenderSlot<ActionBarContribution>(),
+  /**
+   * The bar's always-visible leading mark — the health report's dot. Both
+   * hosts draw it first, at their own density, outside the row the floating
+   * bar folds away: collapsed, the floating bar IS this mark (with the
+   * collapsed bar's `activities` folded onto it). A contribution is the
+   * thing a page mounts once per host, and the two hosts are mutually
+   * exclusive, so it is mounted exactly once per page.
+   *
+   * Opened to companions: the mark ships wherever the bar does, as it did when
+   * the bar imported it — without the bar naming who draws it.
+   */
+  Lead: defineRenderSlot<{ component: ComponentType<ActionBarLeadProps> }>({
+    companions: true,
+  }),
   /**
    * Background work the COLLAPSED bar should show while every item is hidden:
    * each contribution's hook answers what its work is doing right now (`null`

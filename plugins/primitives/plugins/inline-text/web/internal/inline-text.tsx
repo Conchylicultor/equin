@@ -12,7 +12,7 @@ function InlineTextSeed({ text }: { text: string }) {
 }
 
 // Renders a raw string with every registered inline-text walker (active-data
-// chips, file-links) applied in `order`. This is the ONLY sanctioned way to
+// chips, file-links) applied by `stage`. This is the ONLY sanctioned way to
 // compose the inline walkers on a non-markdown surface: consumers never name or
 // order a walker, and adding a new inline widget type flows here automatically.
 // Mirrors the <Markdown> enhancer pipeline, seeded with the string itself.
@@ -25,11 +25,11 @@ export function InlineText({
 }): ReactNode {
   const walkers = InlineTextWalkerSlot.useContributions();
   const sorted = useMemo(
-    () => [...walkers].sort((a, b) => a.order - b.order),
+    () => [...walkers].sort((a, b) => a.stage - b.stage),
     [walkers],
   );
 
-  // Nest the walker Components outermost-first (lowest order = outermost), so
+  // Nest the walker Components outermost-first (lowest stage = outermost), so
   // each contribution's hooks run once at a stable position (rules-of-hooks
   // safe) and its transform stacks before inner ones, exactly like <Markdown>.
   let content: ReactNode = <InlineTextSeed text={text} />;

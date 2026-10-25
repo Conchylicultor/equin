@@ -1,5 +1,6 @@
 import type { ComponentType, ReactNode } from "react";
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
+import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
 import type { Score } from "@plugins/apps/plugins/sonata/plugins/score/core";
 
 /** A beat range along the song, `[start, end)`. */
@@ -7,7 +8,8 @@ export type BeatSpan = { start: number; end: number };
 
 /**
  * One item of the label lane under the rail. Items sharing a `beat` (across
- * every contributor) render inline in one group, in contribution `order` — so
+ * every contributor) render inline in one group, in the slot's layout order
+ * (`config/…/apps.sonata.progress.scrubber.label.jsonc`) — so
  * a key that changes where a section starts reads inside that section's label
  * without either contributor knowing about the other.
  *
@@ -30,8 +32,10 @@ export type ProgressLabel = {
  * The open timeline axis of the Sonata progress bar. The scrubber owns the
  * generic surface (rail, label lane, hover preview) and never names a
  * contributor; adding/removing a marker, chapter, label or description plugin
- * is zero edits here. All are plain `defineSlot`s read with
- * `useContributions()` — NOT reorderable lists.
+ * is zero edits here. `Marker` and `Chapters` are plain `defineSlot`s read as
+ * data; `Label` and `Describe` decide what is drawn beside what, so they are
+ * render slots whose contributor order is their reorder layout — the scrubber
+ * reads it with `useSlotOrder` and draws the items itself.
  */
 export const SonataProgress = {
   /** Absolutely-positioned overlays over the rail zone (ticks, lines, loop). */
@@ -54,22 +58,17 @@ export const SonataProgress = {
   }>({ docLabel: (p) => p.id }),
 
   /** Items of the label lane under the rail, grouped by beat. */
-  Label: defineSlot<{
-    id: string;
-    /** Position within a same-beat group (lower first). */
-    order: number;
+  Label: defineRenderSlot<{
     labels: (score: Score) => readonly ProgressLabel[];
   }>({ docLabel: (p) => p.id }),
 
   /**
    * Lines of the hover preview. `head` items follow the time on the first
-   * line, `body` items form the second line, each in `order`. `snapBeats`
+   * line, `body` items form the second line, each in the slot's layout order. `snapBeats`
    * (optional) are beats the hover position snaps onto when the pointer is
    * within a few px — the preview only; a seek is never snapped.
    */
-  Describe: defineSlot<{
-    id: string;
-    order: number;
+  Describe: defineRenderSlot<{
     line: "head" | "body";
     describe: (score: Score, beat: number) => ReactNode;
     snapBeats?: (score: Score) => readonly number[];

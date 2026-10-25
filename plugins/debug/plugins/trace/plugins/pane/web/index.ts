@@ -27,7 +27,6 @@ export default {
       id: "events",
       title: "Events",
       icon: symbol("list"),
-      order: 10,
       component: EventsView,
     }),
     DebugApp.Sidebar({

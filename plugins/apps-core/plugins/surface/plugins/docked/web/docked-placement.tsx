@@ -18,7 +18,6 @@ export const dockedDef: PlacementDef = {
   id: "docked",
   label: "Dock in tab strip",
   icon: viewSidebarIcon,
-  order: 0,
   themeScope: "app",
   frame: "pane",
 };
