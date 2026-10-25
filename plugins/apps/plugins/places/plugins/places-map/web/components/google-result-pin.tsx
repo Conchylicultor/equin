@@ -18,6 +18,7 @@ import {
   type MapPinMarkFn,
   type MapPinProps,
 } from "@plugins/map/web";
+import { hoverRevealClass } from "@plugins/primitives/plugins/hover-reveal/web";
 import { hash53 } from "@plugins/packages/plugins/string-hash/core";
 import { readGoogleResultVisual } from "../internal/google-result";
 import { washInk } from "../internal/pin-paint";
@@ -81,12 +82,13 @@ export const googleResultMark: MapPinMarkFn = ({ pin }, env) =>
 /**
  * A Google result lifted into the DOM — which happens only while it is
  * hovered, on the map or through its card: the disc grows from its centre,
- * its ring turns solid and its name shows beside it.
+ * its ring turns solid and its name fades in beside it.
  */
-export function GoogleResultPin({ pin, tiles }: MapPinProps) {
+export function GoogleResultPin({ pin, active, hovered, tiles }: MapPinProps) {
   const env = useMapMarkEnv(tiles);
   if (env === null) return null;
-  const mark = ghostMark(pin, env, true);
+  const on = active || hovered;
+  const mark = ghostMark(pin, env, on);
   if (mark.kind === "pending") return null;
   const name = pin.label ?? "Google result";
   return (
@@ -98,13 +100,13 @@ export function GoogleResultPin({ pin, tiles }: MapPinProps) {
     >
       <MapMarkImage
         mark={mark}
-        className={cn("scale-[1.3] transition-transform")}
+        className={cn("transition-transform", on && "scale-[1.3]")}
         style={{ transformOrigin: `${mark.anchor.x}px ${mark.anchor.y}px` }}
       />
       <Placed
         x={{ start: mark.labelAt.x + 4 }}
         y={{ center: mark.labelAt.centerY }}
-        className="max-w-48 whitespace-nowrap"
+        className={cn("max-w-48 whitespace-nowrap", hoverRevealClass(on))}
       >
         <MapLabel tiles={tiles}>{name}</MapLabel>
       </Placed>

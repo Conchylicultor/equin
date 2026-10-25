@@ -19,6 +19,8 @@ import {
   type MapPinMarkFn,
   type MapPinProps,
 } from "@plugins/map/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { hoverRevealClass } from "@plugins/primitives/plugins/hover-reveal/web";
 import { readAskPickData } from "../internal/ask-pick";
 
 /** The disc's box, px — a ghost pin's, so a pick reads as the same kind of proposal. */
@@ -68,8 +70,9 @@ function pickMark(pin: MapPin, env: MapMarkEnv): MapMarkResult {
 /** `GeoMap.Pin`'s mark for a pick: the numbered accent disc. */
 export const askPickMark: MapPinMarkFn = ({ pin }, env) => pickMark(pin, env);
 
-/** A pick lifted into the DOM while hovered (its pin, or its card): grown, numbered, named. */
-export function AskPickPin({ pin, tiles }: MapPinProps) {
+/** A pick lifted into the DOM while hovered (its pin, or its card): grown, numbered, its name faded in. */
+export function AskPickPin({ pin, active, hovered, tiles }: MapPinProps) {
+  const on = active || hovered;
   const env = useMapMarkEnv(tiles);
   if (env === null) return null;
   const mark = pickMark(pin, env);
@@ -85,7 +88,7 @@ export function AskPickPin({ pin, tiles }: MapPinProps) {
       style={{ width: mark.width, height: mark.height }}
     >
       <span
-        className="block scale-[1.25] transition-transform"
+        className={cn("block transition-transform", on && "scale-[1.25]")}
         style={{ transformOrigin: `${mark.anchor.x}px ${mark.anchor.y}px` }}
       >
         <MapMarkImage mark={mark} />
@@ -98,7 +101,7 @@ export function AskPickPin({ pin, tiles }: MapPinProps) {
       <Placed
         x={{ start: mark.labelAt.x + 4 }}
         y={{ center: mark.labelAt.centerY }}
-        className="max-w-48 whitespace-nowrap"
+        className={cn("max-w-48 whitespace-nowrap", hoverRevealClass(on))}
       >
         <MapLabel tiles={tiles}>{name}</MapLabel>
       </Placed>
