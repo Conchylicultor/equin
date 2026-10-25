@@ -24,6 +24,7 @@ export default {
       id: CHORD_GRID_SOURCE_ID,
       label: "Chord Grid",
       icon: symbol("grid-view"),
+      tint: "--chord-2",
       LoaderComponent: ChordGridLoader,
       compile,
     }),

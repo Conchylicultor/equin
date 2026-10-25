@@ -1,4 +1,4 @@
-import { type ReactNode } from "react";
+import { type CSSProperties, type ReactNode } from "react";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import {
   StickyStack,
@@ -11,6 +11,7 @@ import {
 import {
   DATA_VIEW_HEADER_OFFSET_VAR,
   visibleSections,
+  dataPart,
   type DataViewGroupHeaders,
   type DataViewSection,
 } from "@plugins/primitives/plugins/data-view/core";
@@ -134,7 +135,7 @@ export function GroupedSections({
         keys={shown.map((section) => section.key!)}
         base={`var(${DATA_VIEW_HEADER_OFFSET_VAR}, 0px)`}
       >
-        {shown.map((section) => {
+        {shown.map((section, index) => {
           const key = section.key!;
           const depth = section.nesting?.depth ?? 0;
           const collapsed = collapsedSections?.has(key) ?? false;
@@ -174,6 +175,12 @@ export function GroupedSections({
                 // the indent (and its guides) sit outside the rail like the
                 // body's.
                 className={quiet && depth === 0 ? "rail-follow" : undefined}
+                // The room between two groups (`groupGap`, default 0) opens
+                // above every header but the first. A margin on the header,
+                // not a gap on the Stack: header and body are both its
+                // children, and a gap would also part each header from its
+                // own rows.
+                style={index === 0 ? undefined : GROUP_GAP_STYLE}
               >
                 <NestedSectionIndent depth={depth}>
                   {quiet && depth > 0 ? (
@@ -183,7 +190,7 @@ export function GroupedSections({
                   )}
                 </NestedSectionIndent>
               </StickyStackItem>
-              <CollapsibleContent>
+              <CollapsibleContent {...dataPart("dv.group")}>
                 {ownBody && (
                   <NestedSectionIndent depth={depth}>
                     {children(section)}
@@ -197,3 +204,6 @@ export function GroupedSections({
     </Stack>
   );
 }
+
+/** The `groupGap` token as the margin above a non-first group's header. */
+const GROUP_GAP_STYLE: CSSProperties = { marginTop: "var(--group-gap)" };

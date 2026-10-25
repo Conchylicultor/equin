@@ -100,7 +100,7 @@ its own open set, keyed by the header line); a host disclosure folds through
 Every line's outermost element carries `rowProps` — rows, full-span lines,
 group headers, footers — so the lines below a fold slide with it.
 
-## Presentation: grid or outline
+## Presentation: grid, outline or soft
 
 `presentation` (default `"grid"`) is how the table looks. `grid` is the header
 row, a hairline under every row (`border-b border-border/30`), a faint hover
@@ -109,8 +109,33 @@ below. `outline` is a sidebar's look: no header row (nor first-group labels;
 group headers pin at `stickyHeaderOffset`), no row rules, and each row is the
 tree row's rounded pill — `hover:bg-accent` on a row that is not selected, and
 the `--selected` tier on the selected one (`text-selected-foreground`,
-publishing `--scrim` and `--row-meta` like `Row` / `TreeRowChrome`). Both looks
+publishing `--scrim` and `--row-meta` like `Row` / `TreeRowChrome`). All looks
 live in one `ROW_LOOK` table in `data-table.tsx`.
+
+**`soft`** is borderless rows sized by the DataView token group
+(`ui/tokens/data-view`, every metric a token): each row `min-h-soft-row
+p-soft-row rounded-soft-row`, hovered to `--soft-row-hover-fill` (through
+`--dt-row-tint`, like grid), and a hairline BETWEEN rows — the row's
+`::before` on its top edge, drawn only under another soft row
+(`[data-soft-row]`), from `softRuleStart`, hidden on the hovered row and the
+row after it. One header row (`h-soft-header mb-soft-header`, no rule) whose
+labels take the `columnHeader` pick (`rolePickScope` on the row,
+`rolePickClass(fallback, false)` on each cell — the full rung, not the `xs`
+step), `columnHeaderCase`, `tracking-column-header`, `text-column-header-ink`
+(`-sorted-ink` on the sorted column); `sortIcon: sorted` hides the unsorted
+arrows (a style query). Cells take the `cell` pick the same way. The table's
+box is the optional frame (`rounded-soft-frame p-soft-frame shadow-soft-frame
+bg-soft-frame-fill border-soft-frame-border`, all none by default, an
+inline-size container) and sits ON the rail as a margin; the grid inside sets
+`--rail-owed-*: 0px`, so rows, group bands and footers pay no rail again. Its
+columns give way by `dropOrder` (`useColumnFit`'s `drop` mode) — it never
+scrolls sideways; a revealed cluster takes the trailing track as in grid. The
+windowed body's first estimate is 48px (`softRowH`'s default). The grid and
+outline looks are untouched by it.
+
+`parts?: DataTableParts` stamps caller-named `data-part`s on the box, the
+header row, each label, row and cell (data-view passes its part vocabulary,
+for the part-metrics diff).
 
 An outline row takes the tree row's geometry, so a nested outline table reads
 as a tree: `min-h-tree-row`, `py-xs`, `text-body`, and the pill sits ON
@@ -247,8 +272,9 @@ Verified in Chromium only (the e2e harness drives Chromium).
 
 - Description: Sortable/filterable flex-layout data table primitive.
 - Web:
-  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×4
+    - `primitives/css/text` ×3
     - `primitives/multi-select` ×3
     - `primitives/css/sticky/stack` ×2
     - `primitives/css/sticky` ×2
@@ -258,13 +284,13 @@ Verified in Chromium only (the e2e harness drives Chromium).
     - `primitives/css/center.Center`
     - `primitives/css/scroll.useScrollsSideways`
     - `primitives/css/spacing.Stack`
-    - `primitives/css/text.Text`
     - `primitives/link-gesture.activationProps`
     - `primitives/virtual-rows.useVirtualRows`
     - `ui/icons.Icon`
   - Exports (types):
     - `ColumnDef`
     - `DataTableGroup`
+    - `DataTableParts`
     - `DataTablePresentation`
     - `DataTableProps`
     - `DataTableRowDecoration`
@@ -275,7 +301,8 @@ Verified in Chromium only (the e2e harness drives Chromium).
     - `DATA_TABLE_VIRTUALIZE_THRESHOLD`
     - `DataTable`
 - Cross-plugin:
-  - Uses tokens: 27 vars — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses tokens: 50 vars — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui/tokens/data-view` ×23
     - `ui/tokens/type-scale` ×11
     - `ui/tokens/color-palette` ×8
     - `ui/tokens/density` ×6

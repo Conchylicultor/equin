@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-ui-tokens-data-view",
+  "private": true,
+  "version": "0.0.1",
+  "description": "DataView token group: per-part type picks, inks and metrics of the DataView toolbar, card, cover, group headers and soft table; every default is today's look."
+}

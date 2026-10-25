@@ -90,12 +90,42 @@
     /* Floating chrome's fill (material group, `bg-float-fill`) — the float
        surface role's background: the card, barely translucent by default. */
     --color-float-fill: var(--float-fill);
+    /* …and its edge (material group, `border-float-border`) — default the
+       popover's border, which the float surface always wore. */
+    --color-float-border: var(--float-border);
     /* The one-line tooltip's fill, ink and ring (overlay group) —
        `bg-tooltip`, `text-tooltip-foreground`, `ring-tooltip-border`. Defaults
        = the popover's fill and ink and the foreground at 10%. */
     --color-tooltip: var(--tooltip-fill);
     --color-tooltip-foreground: var(--tooltip-foreground);
     --color-tooltip-border: var(--tooltip-border);
+    /* The DataView token group's inks (`text-card-subtitle-ink`,
+       `bg-view-chip-active-fill`, `ring-cover-ring`, …) — each the token of
+       the same name, default today's colour (see tokens/data-view). */
+    --color-card-subtitle-ink: var(--card-subtitle-ink);
+    --color-card-token-ink: var(--card-token-ink);
+    --color-card-token-icon-ink: var(--card-token-icon-ink);
+    --color-group-count-ink: var(--group-count-ink);
+    --color-column-header-ink: var(--column-header-ink);
+    --color-column-header-sorted-ink: var(--column-header-sorted-ink);
+    --color-view-chip-active-fill: var(--view-chip-active-fill);
+    --color-view-chip-active-ink: var(--view-chip-active-ink);
+    --color-view-chip-active-ring: var(--view-chip-active-ring);
+    --color-cover-ring: var(--cover-ring);
+    --color-cover-ring-hover: var(--cover-ring-hover);
+    --color-cover-fill: var(--cover-fill);
+    --color-cover-primary-fill: var(--cover-primary-fill);
+    --color-cover-primary-ink: var(--cover-primary-ink);
+    --color-pill-divider-ink: var(--pill-divider-ink);
+    --color-group-label-ink: var(--group-label-ink);
+    --color-cell-ink: var(--cell-ink);
+    --color-search-fill: var(--search-fill);
+    --color-search-icon-ink: var(--search-icon-ink);
+    --color-group-chip-fill: var(--group-chip-fill);
+    --color-soft-row-hover-fill: var(--soft-row-hover-fill);
+    --color-soft-rule-ink: var(--soft-rule-ink);
+    --color-soft-frame-fill: var(--soft-frame-fill);
+    --color-soft-frame-border: var(--soft-frame-border);
     --color-card-foreground: var(--card-foreground);
     --color-card: var(--card);
     --color-foreground: var(--foreground);
@@ -124,6 +154,7 @@
        whose default is that same muted tier. */
     --color-row-meta: var(--row-meta, var(--muted-foreground));
     --color-group-foreground: var(--group-foreground);
+    --color-pane-title-foreground: var(--pane-title-foreground);
     --color-popover-border: var(--popover-border);
     /* A switch's off track and its knob off / on (color-palette group) —
        `bg-switch-track`, `bg-switch-knob`, `bg-switch-knob-on`. */
@@ -380,11 +411,112 @@
  * the same reasons. */
 @utility shadow-float { --tw-shadow: var(--shadow-float); box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow); } /* twmerge: extend shadow */
 @utility backdrop-float { -webkit-backdrop-filter: var(--float-backdrop); backdrop-filter: var(--float-backdrop); } /* twmerge: sg-backdrop */
+/* Floating chrome's sheen (material group `floatSheen`, default none): a
+ * background-image over `bg-float-fill` — a glass's faint top light. */
+@utility float-sheen { background-image: var(--float-sheen); } /* twmerge: standalone -- a token-driven background-image on the float surface; no bg-image class sits beside it. */
 /* A record's cover at rest and under the pointer (`--shadow-cover` /
  * `--shadow-cover-hover`, defaults the `sm` / `xl` tiers) — spelled like
  * `shadow-popover`, for the same tailwind-merge reason. */
 @utility shadow-cover { --tw-shadow: var(--shadow-cover); box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow); } /* twmerge: extend shadow */
 @utility shadow-cover-hover { --tw-shadow: var(--shadow-cover-hover); box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow); } /* twmerge: extend shadow */
+
+/* ── DataView token group (`tokens/data-view`) ─────────────────────────────
+ * One utility per metric a DataView part reads, each the token of the same
+ * name; every default is the look the part had before the group existed, so
+ * wearing one changes nothing until a theme sets the token. Inks are colour
+ * bridges in `@theme inline` above; type is picked (`<Text pick>`), never a
+ * utility here; enumerated policies (`viewChipLabel`, `sortIcon`, …) are read
+ * by style queries at their part.
+ * @twmerge group sg-dv-size excludes: size h w */
+/* The toolbar row's block padding and gap, a pill's padding and item gap, the
+ * divider before Create, the search lane (narrow: unset = today's `w-32`). */
+@utility py-toolbar { padding-block: var(--toolbar-pad-y); } /* twmerge: extend py */
+@utility gap-toolbar { gap: var(--toolbar-gap); } /* twmerge: extend gap */
+@utility p-pill { padding: var(--pill-pad-y) var(--pill-pad-x); } /* twmerge: extend p */
+@utility gap-pill { gap: var(--pill-gap); } /* twmerge: extend gap */
+@utility h-pill-divider { height: var(--pill-divider-h); } /* twmerge: extend h */
+@utility px-pill-divider { padding-inline: var(--pill-divider-pad-x); } /* twmerge: extend px */
+@utility w-search { width: var(--search-width); } /* twmerge: extend w */
+@utility w-search-narrow { width: var(--search-width-narrow, 8rem); } /* twmerge: extend w */
+/* The search well's corners, glyph size and where its text starts (the
+ * `filled` field's `rounded-lg`, `size-3.5` glyph and `pl-xl`), and a view
+ * chip's glyph and glyph↔name gap (`icon-auto`, `gap-control-sm`). */
+@utility rounded-search { border-radius: var(--search-radius); } /* twmerge: extend rounded */
+@utility size-search-icon { width: var(--search-icon-size); height: var(--search-icon-size); } /* twmerge: sg-dv-size */
+@utility pl-search-text { padding-left: var(--search-text-start); } /* twmerge: extend pl */
+@utility size-view-chip-icon { width: var(--view-chip-icon-size); height: var(--view-chip-icon-size); } /* twmerge: sg-dv-size */
+@utility gap-view-chip { gap: var(--view-chip-gap); } /* twmerge: extend gap */
+@utility rounded-view-chip { border-radius: var(--view-chip-radius); } /* twmerge: extend rounded */
+@utility rounded-view-add { border-radius: var(--view-add-radius); } /* twmerge: extend rounded */
+@utility rounded-create { border-radius: var(--create-radius); } /* twmerge: extend rounded */
+/* A labelled create button's inline padding: `createPadStart/End`, unset =
+ * the `sm` button's own `px-control-sm` sides; on a narrow band without its
+ * words, `createPadNarrow` both sides (unset = the start's). */
+@utility px-create { padding-inline: var(--create-pad-start, calc(var(--control-pad-sm) + var(--pill-extra-start))) var(--create-pad-end, calc(var(--control-pad-sm) + var(--pill-extra-end))); } /* twmerge: extend px */
+@utility px-create-narrow { padding-inline: var(--create-pad-narrow, var(--create-pad-start, calc(var(--control-pad-sm) + var(--pill-extra-start)))); } /* twmerge: extend px */
+/* The view switcher's gaps: between two chips, and between the chips, the
+ * add-view rule and the add-view button (both the `xs` step by default). */
+@utility gap-view-chips { gap: var(--view-chip-spacing); } /* twmerge: extend gap */
+@utility gap-view-switcher { gap: var(--view-switcher-gap); } /* twmerge: extend gap */
+/* The gallery card: the room between cover and text, each line's box, the
+ * gaps above the subtitle and tokens lines, between tokens, a token's icon, and
+ * the subtitle's clamp (`--card-subtitle-lines`, default 1). */
+/* A gallery section's grid band's block padding (`py-sm`). */
+@utility py-gallery-body { padding-block: var(--gallery-body-pad-y); } /* twmerge: extend py */
+@utility pt-card-meta { padding-top: var(--card-meta-pad-top); } /* twmerge: extend pt */
+@utility px-card-meta { padding-inline: var(--card-meta-pad-x); } /* twmerge: extend px */
+@utility h-card-title-line { height: var(--card-title-line); } /* twmerge: extend h */
+@utility h-card-subtitle-line { height: var(--card-subtitle-line); } /* twmerge: extend h */
+@utility h-card-tokens-line { height: var(--card-tokens-line); } /* twmerge: extend h */
+@utility pt-card-subtitle { padding-top: var(--card-subtitle-gap); } /* twmerge: extend pt */
+@utility pt-card-tokens { padding-top: var(--card-tokens-gap); } /* twmerge: extend pt */
+@utility gap-card-token { gap: var(--card-token-gap); } /* twmerge: extend gap */
+@utility gap-card-token-icon { gap: var(--card-token-icon-gap); } /* twmerge: extend gap */
+@utility size-card-token-icon { width: var(--card-token-icon-size); height: var(--card-token-icon-size); } /* twmerge: sg-dv-size */
+@utility line-clamp-card-subtitle { overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: var(--card-subtitle-lines); } /* twmerge: standalone -- a multi-line clamp read from a token; no built-in line-clamp class sits beside it on the subtitle. */
+/* The cover on its card's hover: lift, zoom and filter (spelled with the
+ * individual `translate` / `scale` / `filter` properties so they compose with
+ * nothing else the frame sets); the primary action's size (unset = its own). */
+@utility translate-cover-lift { translate: 0 calc(-1 * var(--cover-lift)); } /* twmerge: standalone -- the individual translate property; worn only under the cover's hover group, beside no other translate class. */
+@utility scale-cover-zoom { scale: var(--cover-zoom); } /* twmerge: standalone -- the individual scale property; worn only under the cover's hover group, beside no other scale class. */
+@utility filter-cover-hover { filter: var(--cover-hover-filter); } /* twmerge: standalone -- the whole filter from a token; worn only under the cover's hover group, beside no other filter class. */
+@utility size-cover-primary { width: var(--cover-primary-size); height: var(--cover-primary-size); } /* twmerge: sg-dv-size */
+/* The primary action's shadow, when a theme sets it (read under a style query). */
+@utility shadow-cover-primary { --tw-shadow: var(--cover-primary-shadow); box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow); } /* twmerge: extend shadow */
+/* Group headers: the row's gap and block padding, the room under the header,
+ * between groups, the chevron, and the identity chip (size, corners, glyph). */
+@utility gap-group-header { gap: var(--group-header-gap); } /* twmerge: extend gap */
+@utility py-group-header { padding-block: var(--group-header-pad-y); } /* twmerge: extend py */
+@utility mb-group-header { margin-bottom: var(--group-header-space-below); } /* twmerge: standalone -- the room under a group header; no margin class is ever set beside it. */
+@utility gap-group { gap: var(--group-gap); } /* twmerge: extend gap */
+@utility size-group-chevron { width: var(--group-chevron-size); height: var(--group-chevron-size); } /* twmerge: sg-dv-size */
+@utility mx-group-rule { margin-inline: var(--group-rule-start) var(--group-rule-end); } /* twmerge: standalone -- the group rule's own margins; no margin class sits beside it. */
+@utility size-group-chip { width: var(--group-chip-size); height: var(--group-chip-size); } /* twmerge: sg-dv-size */
+@utility rounded-group-chip { border-radius: var(--group-chip-radius); } /* twmerge: extend rounded */
+@utility size-group-chip-icon { width: var(--group-chip-icon-size); height: var(--group-chip-icon-size); } /* twmerge: sg-dv-size */
+/* The soft table: a row's minimum height, padding, corners and column gap,
+ * the rule's opacity, start and end, the header row's height and the room under it,
+ * the optional frame, the cover thumbnail, and the column labels' tracking. */
+@utility min-h-soft-row { min-height: var(--soft-row-h); } /* twmerge: extend min-h */
+@utility p-soft-row { padding: var(--soft-row-pad); padding-inline-end: var(--soft-row-pad-end); } /* twmerge: extend p */
+@utility rounded-soft-row { border-radius: var(--soft-row-radius); } /* twmerge: extend rounded */
+@utility gap-x-soft { column-gap: var(--soft-col-gap); } /* twmerge: extend gap-x */
+@utility opacity-soft-rule { opacity: var(--soft-rule-opacity); } /* twmerge: standalone -- the between-row hairline's own opacity; nothing else sets one on it. */
+@utility ms-soft-rule { margin-inline-start: var(--soft-rule-start); } /* twmerge: standalone -- where the between-row hairline starts; no margin class sits beside it. */
+@utility me-soft-rule { margin-inline-end: var(--soft-rule-end); } /* twmerge: standalone -- how far short of the row's end the hairline stops; no margin class sits beside it. */
+@utility h-soft-header { height: var(--soft-header-h); } /* twmerge: extend h */
+@utility mb-soft-header { margin-bottom: var(--soft-header-space-below); } /* twmerge: standalone -- the room under the soft header row; no margin class sits beside it. */
+@utility rounded-soft-frame { border-radius: var(--soft-frame-radius); } /* twmerge: extend rounded */
+@utility soft-frame-edge { border-width: var(--soft-frame-border-width); } /* twmerge: standalone -- the soft frame's border width from a token; no other border-width class sits on the frame. */
+@utility p-soft-frame { padding: var(--soft-frame-pad); } /* twmerge: extend p */
+@utility backdrop-soft-frame { -webkit-backdrop-filter: var(--soft-frame-backdrop); backdrop-filter: var(--soft-frame-backdrop); } /* twmerge: sg-backdrop */
+@utility pt-title-cell-subtitle { padding-top: var(--title-cell-line-gap); } /* twmerge: extend pt */
+@utility shadow-soft-frame { --tw-shadow: var(--soft-frame-shadow); box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow); } /* twmerge: extend shadow */
+@utility size-soft-thumb { width: var(--soft-thumb-w); height: var(--soft-thumb-h); } /* twmerge: sg-dv-size */
+@utility rounded-soft-thumb { border-radius: var(--soft-thumb-radius); } /* twmerge: extend rounded */
+/* A layer drawn over its frame's content (a cover's hairline ring) takes the frame's own corners, whatever radius the frame was given. */
+@utility rounded-inherit { border-radius: inherit; } /* twmerge: extend rounded */
+@utility tracking-column-header { letter-spacing: var(--column-header-tracking); } /* twmerge: standalone -- the column labels' tracking from a token; no tracking class sits beside it on the header. */
 
 /* How a floating panel ENTERS (`OverlayPanel` wears `data-open:overlay-enter`):
  * from transparent, offset by `--overlay-enter-translate` (a `translate` value)
@@ -878,6 +1010,9 @@
  * h-chrome-pane for pane headers; px-chrome is the shared left/right inset. */
 @utility h-chrome-bar { height: var(--chrome-bar-h); } /* twmerge: extend h */
 @utility h-chrome-pane { height: var(--chrome-pane-h); } /* twmerge: extend h */
+/* A floating-card pane header's row (`PaneChrome header="card"`) — density
+ * `chromePaneCardH`, default `--chrome-pane-h` (the bar's height). */
+@utility h-chrome-pane-card { height: var(--chrome-pane-card-h); } /* twmerge: extend h */
 @utility px-chrome { padding-left: var(--chrome-pad-x); padding-right: var(--chrome-pad-x); } /* twmerge: extend px */
 @utility pl-chrome { padding-left: var(--chrome-pad-x); } /* twmerge: extend pl */
 /* A pane header's own insets (`Bar tier="pane"`) — density `chromePanePadStart`
@@ -887,6 +1022,9 @@
  * the header's own end inset otherwise. A sub-pane strip (`tier="subpane"`,
  * the conversation toolbar) insets by `subpanePadX` (default the `sm` step). */
 @utility px-chrome-pane { padding-left: var(--chrome-pane-pad-start); padding-right: var(--chrome-pane-pad-end); } /* twmerge: extend px */
+/* A `header="card"` pane's row: its own insets (density `chromePaneCardPad*`,
+ * default the bar's), so a theme widening the bar's keeps its card rows. */
+@utility px-chrome-pane-card { padding-left: var(--chrome-pane-card-pad-start); padding-right: var(--chrome-pane-card-pad-end); } /* twmerge: extend px */
 @utility pr-floating-bar-pane { padding-right: var(--floating-bar-safe-area, var(--chrome-pane-pad-end)); transition: padding-right 280ms cubic-bezier(0.2, 0.8, 0.2, 1); } /* twmerge: extend pr */
 @utility px-subpane { padding-inline: var(--subpane-pad-x); } /* twmerge: extend px */
 /* A pane header's bottom rule width (`Bar tier="pane"`) — density
@@ -1139,16 +1277,25 @@
  *                          inset once, not twice.
  *   - only the rail set  ⇒ a hand-published region (a style object). Treat the
  *                          rail as owed — see `rail-owe-<step>`.
- *   - neither            ⇒ no region at all. Fall back to the pane header's own
- *                          inset (12/10/8 by density) so a band still lines up
- *                          with the header with nothing published anywhere,
- *                          which is what the gutter class this replaced did.
+ *   - neither            ⇒ no region at all. Fall back to the pane's shared
+ *                          content inset (`--pane-inset`, published only by a
+ *                          `PaneChrome inset="content"` pane whose theme sets
+ *                          the density group's `contentInset`), else to the
+ *                          pane header's own inset (12/10/8 by density) so a
+ *                          band still lines up with the header with nothing
+ *                          published anywhere, which is what the gutter class
+ *                          this replaced did. Unset, `--pane-inset` is invalid,
+ *                          so the floor changes nothing for any other pane.
  * It is in the `px` group, not a rail group: it consumes a rail, never owns one
  * — and note it deliberately does NOT clear the debt for its own descendants.
  * It cannot: reading `--rail-owed-start` while also declaring it on the same
  * element would resolve against its own declaration, not the region's. So two
  * NESTED followers each pay, exactly as two nested gutter classes did before. */
-@utility rail-follow { padding-inline: var(--rail-owed-start, var(--rail-start, var(--chrome-pad-x))) var(--rail-owed-end, var(--rail-end, var(--chrome-pad-x))); } /* twmerge: extend px */
+@utility rail-follow { padding-inline: var(--rail-owed-start, var(--rail-start, var(--pane-inset, var(--chrome-pad-x)))) var(--rail-owed-end, var(--rail-end, var(--pane-inset, var(--chrome-pad-x)))); } /* twmerge: extend px */
+
+/* The pane's shared content inset as padding — a `PaneChrome inset="content"`
+ * pane's header pads by it, so its title starts where the DataView toolbar and
+ * content (`rail-follow`, floored at the same var) do. Unset = the chrome pad. */
 
 /* The vertical half of `p-row`, for a row that takes its inline inset from the
  * rail but its block padding from the row density token. */

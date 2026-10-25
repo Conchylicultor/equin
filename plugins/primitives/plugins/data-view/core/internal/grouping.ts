@@ -1,4 +1,6 @@
 import type { FieldDef, FieldValue } from "./types";
+import type { IconRef } from "@plugins/ui/plugins/icons/core";
+import type { ColorTokenRef } from "@plugins/ui/plugins/tokens/plugins/color-ref/core";
 
 /**
  * One way to bucket a field's values — persisted by `id` in the view config.
@@ -95,8 +97,15 @@ export interface GroupBucket {
    * group-by over its roots — no live source groups by such a field today.
    */
   readonly ancestors?: readonly GroupBucketAncestor[];
-  /** A colour dot drawn before the section label — user data (a tag's
-   *  `#rrggbb`), painted through `style`. */
+  /** The bucket's identity glyph (an enum option's `icon`) — reaches its
+   *  section as `DataViewSection.identity`. */
+  readonly icon?: IconRef;
+  /** The bucket's colour (an enum option's `tint`), a declared colour token. */
+  readonly tint?: ColorTokenRef;
+  /** The bucket's colour as user data (a tag's `#rrggbb`), painted through
+   *  `style` — the same identity colour as `tint`, for a value whose colour
+   *  is the user's rather than a declared token. Reaches its section as
+   *  `DataViewSection.identity.swatch`. */
   readonly swatch?: string;
 }
 

@@ -14,12 +14,6 @@ import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { Layer } from "@plugins/primitives/plugins/css/plugins/layer/web";
-import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
-import {
-  RowActions,
-  rowActionsAnchor,
-} from "@plugins/primitives/plugins/row-actions/web";
 import { TreeRowChrome } from "@plugins/primitives/plugins/tree/web";
 import { FoldMotion } from "@plugins/primitives/plugins/collapsible/web";
 import {
@@ -29,8 +23,10 @@ import {
   DropInsertLine,
   FieldCell,
   GroupedSections,
+  PrimaryOverThumbnail,
   SectionBody,
-  isFieldValueEmpty,
+  SubtitleRun,
+  drawnSubtitleTerms,
   leadingSlot,
   resolveCover,
   pickLeadingField,
@@ -689,117 +685,6 @@ function resolveListLeading(
   };
 }
 
-/** Where a subtitle term sits in its row's run: after the previous drawn term
- *  (its index in `subtitleFields`), after the title on the same line, or first. */
-type TermPrev = number | "title" | null;
-
-/**
- * The separator drawn BEFORE a subtitle term.
- *
- * ` · ` is a punctuation mark between two pieces of text; it is not what
- * separates two chips, which already carry their own boundary. So the middot
- * is drawn only between two adjacent NON-chip terms, and a chip is separated
- * by spacing alone — otherwise a row of three enum fields renders
- * `name · [Web page] · [Daily] · [Failed]`, middots glued to pills.
- *
- * The run is inline content inside one truncating `<Text>` leaf (that is what
- * lets the subtitle ellipsize as a single leaf of the row's line), so the
- * spacing is a literal space in the flow, not a flex `gap` — a flex container
- * here would make each chip its own leaf and take the truncation with it.
- *
- * `prev` is the term DRAWN before it — an empty value is skipped, so its
- * neighbour is the previous non-empty term. `"title"` covers the one-line
- * seam: on one line the title is simply the run's first term. Stacked, the
- * title owns its own line and there is no seam.
- */
-function subtitleSeparator(
-  config: ListRowConfig,
-  fi: number,
-  prev: TermPrev,
-): ReactNode {
-  const { subtitleIsChip, titleIsChip } = config;
-  if (prev === null) return null; // nothing before it — no separator
-  const prevIsChip = prev === "title" ? titleIsChip : subtitleIsChip[prev]!;
-  return prevIsChip || subtitleIsChip[fi] ? " " : " · ";
-}
-
-/**
- * The subtitle terms this row draws, as indices into `subtitleFields`: every
- * field whose value is not empty. An empty value is left out of the run — never
- * drawn as the italic "Empty" (that placeholder is for a cell standing on its
- * own, not a term in a sentence) — and takes its separator with it.
- */
-function drawnSubtitleTerms(config: ListRowConfig, row: unknown): number[] {
-  const terms: number[] = [];
-  config.subtitleFields.forEach((field, fi) => {
-    if (!isFieldValueEmpty(field, row)) terms.push(fi);
-  });
-  return terms;
-}
-
-/** The run's terms, each with its separator. */
-function subtitleRun(
-  config: ListRowConfig,
-  row: unknown,
-  terms: readonly number[],
-  precededByTitle: boolean,
-): ReactNode {
-  return terms.map((fi, i) => (
-    <SubtitleTerm
-      key={config.subtitleFields[fi]!.id}
-      config={config}
-      row={row}
-      fi={fi}
-      prev={i > 0 ? terms[i - 1]! : precededByTitle ? "title" : null}
-    />
-  ));
-}
-
-/**
- * One term of the subtitle run: its separator, then its cell.
- *
- * The run is inline flow, but a cell is free to lay itself out as a block —
- * a chip group is typically a wrapping flex row (`Cluster`, a clipped `Stack`)
- * — and a block inside the run breaks the line: the row grows a line per such
- * term. A chip term is therefore drawn in an inline-flex box (`Inline`), where
- * whatever box the cell draws is a flex item on the run's line. A text term
- * stays bare inline content, so it still ellipsizes with the run.
- */
-function SubtitleTerm({
-  config,
-  row,
-  fi,
-  prev,
-}: {
-  config: ListRowConfig;
-  row: unknown;
-  fi: number;
-  prev: TermPrev;
-}): ReactNode {
-  const field = config.subtitleFields[fi]!;
-  const cell = (
-    <FieldCell
-      field={field}
-      row={row}
-      resolveCell={config.resolveCell}
-      resolveEditor={config.resolveEditor}
-      display="inline"
-    />
-  );
-  return (
-    <span>
-      {subtitleSeparator(config, fi, prev)}
-      {config.subtitleIsChip[fi] ? (
-        <Inline gap="none" className="max-w-full">
-          {cell}
-        </Inline>
-      ) : (
-        cell
-      )}
-    </span>
-  );
-}
-
 // The trailing cell — `align: "end"` fields plus the aggregate `×N` badge —
 // is identical in both row shapes, so it is written once. It is a rigid leaf:
 // it renders what it renders and never gives width back to the title. Only
@@ -925,65 +810,13 @@ function renderTreeChromeRow(
   );
 }
 
-/**
- * The row's primary action (zone `"primary"` — Sonata's Play), centred over its
- * thumbnail: revealed by the row's hover like the cluster, painted at rest
- * while the action is active.
- *
- * It cannot sit INSIDE the thumbnail: the thumbnail is in `Row`'s icon slot,
- * which on an activating row is inside the row's own `<button>`, and a button
- * may not nest one. So it is the row's SIBLING, drawn on a click-through ghost
- * of the row's line — a `Layer` over the row box with the row's own `p-row`
- * padding, holding one thumbnail-sized cell first — so the cell lands on the
- * thumbnail by construction (same padding, same first track, same centring),
- * never by measured offsets. The box both sit in is the `row-actions` hover
- * group, so the reveal answers the same hover as the row's cluster, and
- * `RowActions` keeps a press on the action from reaching the row (its click,
- * its drag).
- */
-function PrimaryOverThumbnail({
-  primary,
-  row,
-  hasChildren,
-  children,
-}: {
-  primary: ItemActionArms<unknown>;
-  row: unknown;
-  hasChildren: boolean;
-  children: ReactNode;
-}): ReactNode {
-  const target = { row, hasChildren };
-  return (
-    <div className={rowActionsAnchor}>
-      {children}
-      <Layer as={Line} decorative className="p-row">
-        <Center axis="both" className={cn("size-cover-thumb", rigidClass())}>
-          {primary.atRest ? (
-            // The ghost is click-through; an action painted at rest is live.
-            <RowActions
-              pin={null}
-              alwaysVisible
-              className="pointer-events-auto"
-            >
-              {primary.atRest(target)}
-            </RowActions>
-          ) : null}
-          {primary.revealed ? (
-            <RowActions pin={null}>{primary.revealed(target)}</RowActions>
-          ) : null}
-        </Center>
-      </Layer>
-    </div>
-  );
-}
-
 // Single source of row markup — shared verbatim by the plain and virtualized
 // branches so the two render identically.
 function listRowNode(props: ListEntryProps): ReactNode {
   const { config, row, rowKey: key, aggregateCount, open } = props;
   const { titleField, detail, thumbnail } = config;
   const trailing = hasTrailing(config, aggregateCount);
-  const terms = drawnSubtitleTerms(config, row);
+  const terms = drawnSubtitleTerms(config.subtitleFields, row);
   // Per-row emphasis: composed ON TOP of the title's own `text-foreground`, so
   // a switched-off / archived / finished row reads inactive. The subtitle and
   // the trailing cell are already muted, so the title is the whole difference.
@@ -1092,7 +925,15 @@ function listRowNode(props: ListEntryProps): ReactNode {
                 variant="caption"
                 className="truncate text-muted-foreground"
               >
-                {subtitleRun(config, row, terms, false)}
+                <SubtitleRun
+                  fields={config.subtitleFields}
+                  isChip={config.subtitleIsChip}
+                  terms={terms}
+                  seam={null}
+                  row={row}
+                  resolveCell={config.resolveCell}
+                  resolveEditor={config.resolveEditor}
+                />
               </Text>
             ) : null}
           </Stack>
@@ -1128,7 +969,22 @@ function listRowNode(props: ListEntryProps): ReactNode {
           ) : null}
           {terms.length > 0 ? (
             <Text variant="caption" className="text-muted-foreground">
-              {subtitleRun(config, row, terms, titleField != null)}
+              <SubtitleRun
+                fields={config.subtitleFields}
+                isChip={config.subtitleIsChip}
+                terms={terms}
+                // On one line the title is the run's first term.
+                seam={
+                  titleField == null
+                    ? null
+                    : config.titleIsChip
+                      ? "chip"
+                      : "text"
+                }
+                row={row}
+                resolveCell={config.resolveCell}
+                resolveEditor={config.resolveEditor}
+              />
             </Text>
           ) : null}
           {trailing ? (

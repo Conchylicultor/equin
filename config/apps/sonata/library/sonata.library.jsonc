@@ -5,7 +5,6 @@
       "id": "cards",
       "name": "Cards",
       "icon": "grid-view",
-      "icon": "grid-view",
       "view": {
         "type": "gallery",
         "groupBy": "source",
@@ -31,20 +30,29 @@
       "id": "all",
       "name": "All",
       "icon": "library-music",
-      "icon": "library-music",
-      "view": { "type": "list", "sort": { "fieldId": "title", "direction": "asc" } }
+      "view": {
+        "type": "table",
+        "presentation": "soft",
+        "cover": true,
+        "titleCell": "stacked",
+        "sort": { "fieldId": "title", "direction": "asc" }
+      }
     },
     {
       "id": "longest",
       "name": "Longest",
       "icon": "timer",
-      "icon": "timer",
-      "view": { "type": "list", "sort": { "fieldId": "duration", "direction": "desc" } }
+      "view": {
+        "type": "table",
+        "presentation": "soft",
+        "cover": true,
+        "titleCell": "stacked",
+        "sort": { "fieldId": "duration", "direction": "desc" }
+      }
     },
     {
       "id": "composed",
       "name": "Composed",
-      "icon": "music-note",
       "icon": "music-note",
       "view": {
         "type": "table",
@@ -70,7 +78,10 @@
       "name": "Recent",
       "icon": "history",
       "view": {
-        "type": "list",
+        "type": "table",
+        "presentation": "soft",
+        "cover": true,
+        "titleCell": "stacked",
         "sort": [{ "fieldId": "added", "direction": "desc" }]
       }
     }

@@ -226,8 +226,11 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
     - `collectFieldEagerBarrels`
     - `collectIconManifest`
     - `collectImportGraph`
+    - `collectTokenGroups`
     - `collectTokenGroupVars`
     - `collectWebSlotContributions`
+    - `COLOR_TOKEN_REF_GROUPS`
+    - `colorTokenRefPath`
     - `committedRegistryBundle`
     - `companionManifestPath`
     - `compositionFilteredRegistries`
@@ -252,6 +255,7 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
     - `generateBarrelStubs`
     - `generateBrowserHosts`
     - `generateClaudeSettings`
+    - `generateColorTokenRef`
     - `generateCompositionRegistry`
     - `generateConfigOrigins`
     - `generateCustomUtilities`
@@ -298,6 +302,7 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
     - `renderBrowserHostScope`
     - `renderClaudeSettings`
     - `renderCollectedDirRegistry`
+    - `renderColorTokenRef`
     - `renderCompactDoc`
     - `renderCompanionManifest`
     - `renderConfigOriginContent`

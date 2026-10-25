@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-ui-tokens-color-ref",
+  "private": true,
+  "version": "0.0.1",
+  "description": "ColorTokenRef: a typed reference to a declared palette colour token (its CSS var, drawn as var(<ref>)) — a GENERATED string-literal union of every var the palette token groups declare, in a zero-import leaf so data-view, network/live and apps can carry a tint without importing theme-engine."
+}

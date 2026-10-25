@@ -45,13 +45,26 @@ const MANIFEST_HEADER = [
   "// The `token-group-vars-in-sync` check fails on drift.",
 ].join("\n");
 
+/**
+ * One token group as the build reads it from its real descriptor: the CSS vars
+ * it declares, and its schema (each token's default and, for an enumerated
+ * token, its declared `values`).
+ */
+interface CollectedTokenGroup {
+  vars: string[];
+  schema: Record<string, { default?: unknown; values?: readonly string[] }>;
+}
+
 // Memoize per root: the descriptors are immutable for a process's lifetime, so
 // the (barrel-importing) collection runs at most once even though the codegen
-// step plus three checks (`token-group-vars-in-sync`, `css-vars-supplied`,
-// `css-vars-single-owner`) all consume it. Promise-valued so concurrent callers
-// share one in-flight pass; evicted on rejection so a transient failure doesn't
-// poison later retries.
-const collectCache = new Map<string, Promise<Record<string, string[]>>>();
+// step plus several checks (`token-group-vars-in-sync`, `css-vars-supplied`,
+// `css-vars-single-owner`, `type-scale:closed-role-ladder`) all consume it.
+// Promise-valued so concurrent callers share one in-flight pass; evicted on
+// rejection so a transient failure doesn't poison later retries.
+const collectCache = new Map<
+  string,
+  Promise<Record<string, CollectedTokenGroup>>
+>();
 
 /**
  * Walk the plugin tree, import each plugin's web barrel, and collect — per token
@@ -66,12 +79,26 @@ const collectCache = new Map<string, Promise<Record<string, string[]>>>();
  * any token-var rename/addition need two builds (the first failing on stale
  * data). The committed file remains only a reviewable, in-sync-guarded snapshot.
  */
-export function collectTokenGroupVars(
+export async function collectTokenGroupVars(
   root: string,
 ): Promise<Record<string, string[]>> {
+  const groups = await collectTokenGroups(root);
+  return Object.fromEntries(
+    Object.entries(groups).map(([id, g]) => [id, g.vars]),
+  );
+}
+
+/**
+ * Every token group's vars AND schema, from the same single pass as
+ * {@link collectTokenGroupVars} — for a check that reads what a token declares
+ * beyond its var (an enumerated token's `values`).
+ */
+export function collectTokenGroups(
+  root: string,
+): Promise<Record<string, CollectedTokenGroup>> {
   let cached = collectCache.get(root);
   if (!cached) {
-    cached = collectTokenGroupVarsUncached(root).catch((err) => {
+    cached = collectTokenGroupsUncached(root).catch((err) => {
       collectCache.delete(root);
       throw err;
     });
@@ -80,9 +107,9 @@ export function collectTokenGroupVars(
   return cached;
 }
 
-async function collectTokenGroupVarsUncached(
+async function collectTokenGroupsUncached(
   root: string,
-): Promise<Record<string, string[]>> {
+): Promise<Record<string, CollectedTokenGroup>> {
   const tree = await buildBarrelFreeTree(root);
   registerBarrelStubs(root);
   // Imports web barrels below, so it must also declare their slots: a
@@ -97,7 +124,7 @@ async function collectTokenGroupVarsUncached(
   // this is `slotNamed`, not the probe form a check owes.
   const tokenGroupSlot = naming.slotNamed(TOKEN_GROUP_SLOT_ID);
 
-  const byGroup: Record<string, string[]> = {};
+  const byGroup: Record<string, CollectedTokenGroup> = {};
   for (const node of tree.byDir.values()) {
     const webIndex = join(node.dir, "web", "index.ts");
     if (!existsSync(webIndex)) continue;
@@ -122,12 +149,19 @@ async function collectTokenGroupVarsUncached(
       if (c._slot !== tokenGroupSlot) continue;
       const id = c.id;
       const descriptor = c.descriptor as
-        { vars?: Record<string, string> } | undefined;
+        | {
+            vars?: Record<string, string>;
+            schema?: CollectedTokenGroup["schema"];
+          }
+        | undefined;
       if (typeof id !== "string" || !descriptor?.vars) continue;
       const vars = Object.values(descriptor.vars).filter(
         (v): v is string => typeof v === "string",
       );
-      byGroup[id] = [...new Set(vars)].sort((a, b) => a.localeCompare(b));
+      byGroup[id] = {
+        vars: [...new Set(vars)].sort((a, b) => a.localeCompare(b)),
+        schema: descriptor.schema ?? {},
+      };
     }
   }
 

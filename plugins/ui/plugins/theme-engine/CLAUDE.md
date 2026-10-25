@@ -220,8 +220,8 @@ exactly.
     - `ThemeEngine.SubTheme`
     - `ThemeEngine.FixedTheme`
     - `ThemeEngine.ThemeSource`
-  - Slot contributors: 46 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ThemeEngine.TokenGroup` ×18
+  - Slot contributors: 47 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ThemeEngine.TokenGroup` ×19
     - `ThemeEngine.Theme` ×12
     - `ThemeEngine.SubTheme` ×6
     - `ThemeEngine.VariantGroup` ×6
@@ -331,6 +331,7 @@ exactly.
     - `TokenGroupSchema`
     - `TokenGroupSpec`
     - `TokenValues`
+    - `TokenVarOf`
   - Exports (values):
     - `appColorModeConfig`
     - `assertUniqueFixedThemes`
@@ -365,14 +366,15 @@ exactly.
     - `tokenVarName`
     - `transformValues`
 - Cross-plugin:
-  - Uses tokens: 53 vars — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ui/tokens/color-palette` ×22
-    - `ui/tokens/density` ×19
+  - Uses tokens: 66 vars — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui/tokens/density` ×26
+    - `ui/tokens/color-palette` ×25
     - `ui/tokens/shadow` ×5
+    - `ui/tokens/shape` ×4
     - `ui/tokens/type-scale` ×4
-    - `ui/tokens/shape` ×3
-  - Imported by: 48 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ui` ×28
+    - `ui/tokens/data-view` ×2
+  - Imported by: 49 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui` ×29
     - `apps` ×15
     - `apps-core/chrome-theme`
     - `hints`

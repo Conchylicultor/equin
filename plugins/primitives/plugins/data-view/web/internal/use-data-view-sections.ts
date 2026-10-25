@@ -8,11 +8,13 @@ import {
   type DataViewRowEntry,
   type DataViewRowsComplete,
   type DataViewSection,
+  type DataViewSectionIdentity,
   type DataViewSectioning,
   type FieldDef,
   type FieldGrouping,
   type FieldValue,
   type FilterOperatorSet,
+  type GroupBucket,
   type GroupByRule,
   type SectionCount,
   sumSectionCounts,
@@ -63,6 +65,30 @@ export function isGroupableField<TRow>(
 ): boolean {
   if (!field.value) return false;
   return field.groupable ?? hasGrouping(field.type ?? "text");
+}
+
+/**
+ * A bucket's identity as its section carries it: the glyph and colour its
+ * grouping copied off the value (an enum option's `icon` / `tint`, a tag's
+ * `swatch`), or `undefined` when it declared none — so a section with no
+ * identity has no `identity` key at all, and its header draws no chip or dot.
+ * An ancestor (`GroupBucketAncestor`) carries only a `swatch`.
+ */
+export function bucketIdentity(
+  bucket: Pick<GroupBucket, "icon" | "tint" | "swatch">,
+): DataViewSectionIdentity | undefined {
+  if (
+    bucket.icon === undefined &&
+    bucket.tint === undefined &&
+    bucket.swatch === undefined
+  ) {
+    return undefined;
+  }
+  return {
+    ...(bucket.icon === undefined ? {} : { icon: bucket.icon }),
+    ...(bucket.tint === undefined ? {} : { tint: bucket.tint }),
+    ...(bucket.swatch === undefined ? {} : { swatch: bucket.swatch }),
+  };
 }
 
 /** What `partitionIntoSections` needs beyond the rows: the injected grouping
@@ -151,6 +177,9 @@ export function partitionIntoSections<TRow>(
     return opts.sectioning.sections.map((declared) => ({
       key: declared.key,
       label: declared.label,
+      ...(declared.identity === undefined
+        ? {}
+        : { identity: declared.identity }),
       count: exactCount(declared.count),
       entries: declared.rows.map((row) => ({
         row,
@@ -179,10 +208,10 @@ export function partitionIntoSections<TRow>(
   // sharing an ordinal in a stable order in BOTH reading directions.
   interface Bucket {
     label: string;
+    identity?: DataViewSectionIdentity;
     order: number;
     seq: number;
     rows: TRow[];
-    swatch?: string;
     /** Nested only: the parent bucket's key (`null` at a root), and the whole
      *  chain above it — what every later mention must agree with. */
     parentKey: string | null;
@@ -212,7 +241,10 @@ export function partitionIntoSections<TRow>(
   // bucket or as an ancestor of one), and every later mention must place it
   // under the same chain — two answers would be two trees.
   const node = (
-    entry: { key: string; label: string; order: number; swatch?: string },
+    entry: Pick<
+      GroupBucket,
+      "key" | "label" | "order" | "icon" | "tint" | "swatch"
+    >,
     above: readonly string[],
   ): Bucket => {
     const chain = above.join("\u0000");
@@ -228,12 +260,13 @@ export function partitionIntoSections<TRow>(
       return existing;
     }
     checkOrder(entry.key, entry.order);
+    const identity = bucketIdentity(entry);
     const bucket: Bucket = {
       label: entry.label,
+      ...(identity === undefined ? {} : { identity }),
       order: entry.order,
       seq: buckets.size,
       rows: [],
-      ...(entry.swatch === undefined ? {} : { swatch: entry.swatch }),
       parentKey: above.at(-1) ?? null,
       chain,
     };
@@ -289,8 +322,8 @@ export function partitionIntoSections<TRow>(
     bucket.rows.map((row) => ({ row, key: rowKey(row, globalIndex++) }));
   const ownCount = (bucket: Bucket) =>
     sectionCount(bucket.rows, rows, completeness, { fieldId: field.id });
-  const withSwatch = (bucket: Bucket) =>
-    bucket.swatch === undefined ? {} : { swatch: bucket.swatch };
+  const withIdentity = (bucket: Bucket) =>
+    bucket.identity === undefined ? {} : { identity: bucket.identity };
 
   const sections: DataViewSection<TRow>[] = [];
   if (nested) {
@@ -314,7 +347,7 @@ export function partitionIntoSections<TRow>(
           count: ownCount(bucket),
           entries: entriesOf(bucket),
           nesting: { depth, parentKey },
-          ...withSwatch(bucket),
+          ...withIdentity(bucket),
         });
         emit(key, depth + 1);
       }
@@ -334,7 +367,7 @@ export function partitionIntoSections<TRow>(
             ? exactCount(bucket.rows.length)
             : ownCount(bucket),
         entries: entriesOf(bucket),
-        ...withSwatch(bucket),
+        ...withIdentity(bucket),
       });
     });
   }

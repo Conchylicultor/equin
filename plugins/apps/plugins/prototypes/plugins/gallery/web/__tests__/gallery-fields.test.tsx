@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, render } from "@testing-library/react";
 import {
-  isFieldValueEmpty,
   partitionCardFields,
   type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
+import { isFieldValueEmpty } from "@plugins/primitives/plugins/data-view/web/testing";
 import type { PrototypeMeta } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import { galleryFields, joinGalleryRows } from "../internal/gallery-fields";
 import type { PrototypeGalleryRow } from "../slots";

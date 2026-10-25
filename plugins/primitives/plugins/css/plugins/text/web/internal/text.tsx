@@ -5,7 +5,8 @@ import {
   textStepFor,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 
-import type { TypeRole, TextTreatment } from "../../core";
+import type { TypeRole, TextTreatment, RolePart } from "../../core";
+import { rolePickClass, rolePickScope } from "./role-pick";
 
 /**
  * A `<Text>` variant: one of the closed typographic ROLES (`TYPE_ROLES` in this
@@ -139,13 +140,7 @@ function singleLineLeafClass(): string {
   return "block w-fit max-w-full min-w-0 truncate";
 }
 
-export interface TextProps extends React.HTMLAttributes<HTMLElement> {
-  /**
-   * Semantic typographic variant — the only way to set size/line-height/weight.
-   * Optional: omit to INHERIT the surrounding typography (the text leaf that sits
-   * in a row/header styled by its parent — the role `TruncatingText` used to fill).
-   */
-  variant?: TextVariant;
+interface TextBaseProps extends React.HTMLAttributes<HTMLElement> {
   /** Foreground tone layered on the variant. Defaults to `default` (inherit). */
   tone?: TextTone;
   /** Host element/component. Defaults to a `span`. */
@@ -158,6 +153,35 @@ export interface TextProps extends React.HTMLAttributes<HTMLElement> {
    */
   side?: TruncateSide;
 }
+
+/**
+ * Where the words' type comes from — exactly one of:
+ * - `variant`: a role (or treatment) the CALL SITE picks. Omit both to INHERIT
+ *   the surrounding typography (the text leaf that sits in a row/header styled
+ *   by its parent — the role `TruncatingText` used to fill).
+ * - `pick`: a role the THEME picks — the part's three tokens (rung, emphasis,
+ *   family; `RolePart`, text core), applied through the role-pick style
+ *   queries. A `display: contents` wrapper copies the tokens into the generic
+ *   vars; the text element carries the fallback rung (drawn while the role
+ *   token is unset) and the pick tables. Compacts at `xs` like `variant`.
+ */
+export type TextProps = TextBaseProps &
+  (
+    | { variant?: TextVariant; pick?: never; step?: never }
+    | {
+        pick: RolePart;
+        variant?: never;
+        /**
+         * Whether THIS SITE steps the pick down in a compact (`xs`) region:
+         * `ambient` (default, like `<Text variant>`), or `base` — the site
+         * never compacted (its words inherited a parent's non-compact rung
+         * before the pick existed), so the pick keeps the rung it names. A
+         * site that compacts still lets the part's own `step` token
+         * (`RolePart.step`) opt out.
+         */
+        step?: "ambient" | "base";
+      }
+  );
 
 /**
  * The semantic text leaf. `variant` picks a frozen typographic role (or inherits
@@ -175,6 +199,8 @@ export interface TextProps extends React.HTMLAttributes<HTMLElement> {
  */
 export function Text({
   variant,
+  pick,
+  step = "ambient",
   tone = "default",
   as: As = "span",
   side = "end",
@@ -187,7 +213,8 @@ export function Text({
   // Type size tracks the ambient control density via the single density→text
   // policy: at `xs` each variant swaps for its weight-preserving `-compact` rung.
   // An omitted variant inherits the surrounding typography — nothing to compact.
-  const compact = textStepFor(useControlSize()) === 1;
+  const regionCompact = textStepFor(useControlSize()) === 1;
+  const compact = pick !== undefined && step === "base" ? false : regionCompact;
   // Auto-derive the hover tooltip from string children when truncating, so the
   // clipped content stays discoverable (the role TruncatingText used to fill). An
   // explicit `title` always wins; outside a single-line context we add none (a
@@ -198,13 +225,15 @@ export function Text({
 
   // Composition order variant → tone → single-line leaf → caller className:
   // caller wins last so layout overrides (margins, width caps) compose on top.
-  const variantClass = variant
-    ? (compact ? COMPACT_VARIANT_CLASS : VARIANT_CLASS)[variant]
-    : undefined;
+  const variantClass = pick
+    ? rolePickClass(pick.fallback, compact)
+    : variant
+      ? (compact ? COMPACT_VARIANT_CLASS : VARIANT_CLASS)[variant]
+      : undefined;
   const typography = cn(variantClass, TONE_CLASS[tone]);
 
-  if (singleLine && side === "start") {
-    return (
+  const leaf =
+    singleLine && side === "start" ? (
       <As
         dir="rtl"
         title={resolvedTitle}
@@ -220,17 +249,27 @@ export function Text({
           {children}
         </span>
       </As>
+    ) : (
+      <As
+        title={resolvedTitle}
+        className={cn(
+          typography,
+          singleLine && singleLineLeafClass(),
+          className,
+        )}
+        {...rest}
+      >
+        {children}
+      </As>
     );
-  }
-
+  if (!pick) return leaf;
+  // The part's scope: a box-less wrapper whose computed vars the leaf's style
+  // queries read (a `display: contents` parent still answers them — checked in
+  // Chromium, and an unset token there does not inherit an outer pick).
   return (
-    <As
-      title={resolvedTitle}
-      className={cn(typography, singleLine && singleLineLeafClass(), className)}
-      {...rest}
-    >
-      {children}
-    </As>
+    <span className="contents" style={rolePickScope(pick)}>
+      {leaf}
+    </span>
   );
 }
 

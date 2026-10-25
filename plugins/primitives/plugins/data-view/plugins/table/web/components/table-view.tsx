@@ -4,6 +4,7 @@ import {
   DATA_TABLE_VIRTUALIZE_THRESHOLD,
   type ColumnDef,
   type DataTableGroup,
+  type DataTableParts,
   type DataTableRowDecoration,
 } from "@plugins/primitives/plugins/data-table/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
@@ -12,10 +13,13 @@ import {
   DataViewGroupHeader,
   FieldCell,
   NestedSectionIndent,
+  partitionCardFields,
   pickPrimaryField,
   resolveBodyFields,
+  resolveCover,
   SectionBody,
   useDataViewSections,
+  useIsChipField,
   useItemActionZones,
   useResolveCell,
   useResolveCellEditor,
@@ -24,6 +28,7 @@ import {
   type DataViewAggregateConfig,
   type DataViewRenderProps,
   type DataViewSection,
+  type FieldDef,
   type FieldValue,
   type ItemActionsDescriptor,
   type ManualOrderConfig,
@@ -35,6 +40,11 @@ import {
 import { visibleSections } from "@plugins/primitives/plugins/data-view/core";
 import type { TableViewOptions } from "../../core";
 import { mapPrimary } from "../internal/map-primary";
+import {
+  CoverCell,
+  StackedTitleCell,
+  type StackedTitle,
+} from "../internal/title-cell";
 import { NestedTableView } from "./nested-table-view";
 
 /** FieldValue → data-table's `string | number | undefined` comparable projection. */
@@ -44,6 +54,18 @@ function coerce(value: FieldValue): string | number | undefined {
   if (value === null) return undefined;
   return value;
 }
+
+/** The leading cover column's id: NUL-prefixed, never a field id. */
+const COVER_COLUMN_ID = "\u0000cover";
+
+/** The table's elements, named in data-view's part vocabulary. */
+const TABLE_PARTS: DataTableParts = {
+  table: "dv.table",
+  headerRow: "dv.column-header-row",
+  columnHeader: "dv.column-header",
+  row: "dv.row",
+  cell: "dv.cell",
+};
 
 /**
  * The table view. A hierarchical source nests its rows (`NestedTableView`, the
@@ -79,16 +101,28 @@ function FlatTableView(props: DataViewRenderProps<unknown>): ReactNode {
   // Documented cast boundary: itemActions arrives type-erased.
   const itemActions = props.itemActions as
     ItemActionsDescriptor<unknown> | undefined;
+  const isChipField = useIsChipField();
+  // Body columns follow the view's Properties (visible-fields) policy: which
+  // fields and in what order. `null` → identity (`props.fields`), so a view with
+  // no Properties configured renders every column unchanged. Sort/filter/search
+  // run over the FULL `props.fields`.
+  const vis = resolveBodyFields(props.fields, props.state.properties);
+  // `cover: true` — a leading thumbnail column, when the surface is covered
+  // (the cover field it is drawn from is then no column of its own).
+  const covers = options.cover === true ? resolveCover(vis, props.cover) : null;
+  const thumb = covers?.hasCovers ? covers : null;
   // A table row HAS a permanent per-row region — the reserved trailing track —
   // so persistent-zone actions stay painted at rest there, ahead of the
   // hover-revealed cluster. Resolved before the early empty-state return.
-  // No primary slot: a primary action rests in the trailing track like a
+  // A primary slot only over a thumbnail (the action sits on it, on hover);
+  // without one a primary action rests in the trailing track like a
   // persistent one.
   const {
     cluster: { atRest: persistent, revealed },
+    primary,
   } = useItemActionZones(itemActions, {
     hasPersistentSlot: true,
-    hasPrimarySlot: false,
+    hasPrimarySlot: thumb !== null,
   });
   const sections = useDataViewSections(
     props.rows,
@@ -153,11 +187,28 @@ function FlatTableView(props: DataViewRenderProps<unknown>): ReactNode {
     return <>{props.emptyState}</>;
   }
 
-  // Body columns follow the view's Properties (visible-fields) policy: which
-  // fields and in what order. `null` → identity (`props.fields`), so a view with
-  // no Properties configured renders every column unchanged. Sort/filter/search
-  // above still run over the FULL `props.fields`.
-  const vis = resolveBodyFields(props.fields, props.state.properties);
+  const bodyFields = thumb?.field ? vis.filter((f) => f !== thumb.field) : vis;
+  // `titleCell: "stacked"` — the card partition over the visible fields: the
+  // title column draws the title, its indicators and the subtitle run; the
+  // remaining token fields (and a leading field, an ordinary column flat) are
+  // the value columns.
+  const card =
+    options.titleCell === "stacked" ? partitionCardFields(bodyFields) : null;
+  const stacked: StackedTitle | null =
+    card?.title !== undefined
+      ? {
+          title: card.title,
+          indicators: card.indicators,
+          subtitle: card.subtitle,
+          subtitleIsChip: card.subtitle.map((f) => isChipField(f)),
+          resolveCell,
+          resolveEditor,
+        }
+      : null;
+  const columnFields: FieldDef<unknown>[] =
+    stacked && card
+      ? [stacked.title, ...(card.leading ? [card.leading] : []), ...card.tokens]
+      : bodyFields;
   // Aggregate representatives carry a `×N` badge in the primary cell. Key the
   // count by row OBJECT identity (the cell renderer gets the row, not its index),
   // which is stable since the representative row object flows through unchanged.
@@ -171,9 +222,11 @@ function FlatTableView(props: DataViewRenderProps<unknown>): ReactNode {
   }
   // Primary picked over the VISIBLE subset so the badge lands on a rendered
   // column (matches the list/gallery `pickPrimaryField(vis)` semantics).
-  const primaryFieldId = pickPrimaryField(vis)?.id ?? vis[0]?.id;
+  const primaryFieldId = stacked
+    ? stacked.title.id
+    : (pickPrimaryField(columnFields)?.id ?? columnFields[0]?.id);
 
-  const columns: ColumnDef<unknown>[] = vis.map((f) => ({
+  const fieldColumns: ColumnDef<unknown>[] = columnFields.map((f) => ({
     id: f.id,
     // `header: false` ⇒ an unlabelled column (empty header cell); the field
     // keeps its `label` everywhere a field is picked.
@@ -186,15 +239,20 @@ function FlatTableView(props: DataViewRenderProps<unknown>): ReactNode {
     // value its list cannot order by (a live source's derived or unsortable
     // column) offers no header sort.
     sortable: props.sortHeader.sortable.has(f.id),
+    // A number takes the numeric cell pick (soft), as a card's token does.
+    numeric: (row: unknown) => typeof f.value?.(row) === "number",
     cell: (row: unknown) => {
-      const cell = (
-        <FieldCell
-          field={f}
-          row={row}
-          resolveCell={resolveCell}
-          resolveEditor={resolveEditor}
-        />
-      );
+      const cell =
+        stacked && f === stacked.title ? (
+          <StackedTitleCell spec={stacked} row={row} />
+        ) : (
+          <FieldCell
+            field={f}
+            row={row}
+            resolveCell={resolveCell}
+            resolveEditor={resolveEditor}
+          />
+        );
       const count =
         f.id === primaryFieldId ? aggregateCountByRow.get(row) : undefined;
       if (!count) return cell;
@@ -205,7 +263,32 @@ function FlatTableView(props: DataViewRenderProps<unknown>): ReactNode {
         </Inline>
       );
     },
+    // The stacked title takes the slack unless its field sets a width.
+    ...(stacked && f === stacked.title
+      ? { width: f.width ?? "minmax(0,1fr)" }
+      : undefined),
   }));
+  const hasChildrenOf = (row: unknown): boolean =>
+    props.hasChildren?.(props.rowKey(row, 0)) ?? false;
+  const columns: ColumnDef<unknown>[] = thumb
+    ? [
+        {
+          id: COVER_COLUMN_ID,
+          header: "",
+          width: "auto",
+          sortable: false,
+          cell: (row: unknown) => (
+            <CoverCell
+              content={thumb.coverOf(row)}
+              primary={primary}
+              row={row}
+              hasChildren={hasChildrenOf(row)}
+            />
+          ),
+        },
+        ...fieldColumns,
+      ]
+    : fieldColumns;
 
   const actionProps = (row: unknown, i: number) => ({
     row,
@@ -246,6 +329,11 @@ function FlatTableView(props: DataViewRenderProps<unknown>): ReactNode {
     useRowDecoration: manualOrder ? useRowDecoration : undefined,
     columnHeader: options.columnHeader,
     density: props.density,
+    // A flat table draws `soft` when asked; `grid` / `outline` flat stay the
+    // grid it has always drawn (outline is the nested table's sidebar look).
+    presentation:
+      options.presentation === "soft" ? ("soft" as const) : undefined,
+    parts: TABLE_PARTS,
   };
 
   // Ungrouped renders as one flat body; grouped interleaves a header row per

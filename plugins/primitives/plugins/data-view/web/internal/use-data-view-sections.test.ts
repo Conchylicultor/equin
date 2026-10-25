@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
   formatSectionCount,
@@ -1180,8 +1181,8 @@ describe("partitionIntoSections — nested buckets", () => {
       // An unknown tag joins the null value in the ONE None, at the top level.
       [NULL_GROUP_KEY, null, null, ["p4", "p7"], "2"],
     ]);
-    expect(sections[0]!.swatch).toBe("#7c5cff");
-    expect(sections[1]!.swatch).toBeUndefined();
+    expect(sections[0]!.identity).toEqual({ swatch: "#7c5cff" });
+    expect(sections[1]!.identity).toBeUndefined();
   });
 
   test("desc reverses each sibling level, children still under their parent, None still last", () => {
@@ -1391,5 +1392,80 @@ describe("visibleSections", () => {
     expect(keys([])).toEqual(sections.map((s) => s.key));
     const flat = [{ key: "a" }, { key: "b" }];
     expect(visibleSections(flat, new Set(["a"]))).toEqual(flat);
+  });
+});
+
+describe("a section's identity (its value's glyph and colour)", () => {
+  const icon = symbol("list");
+  // A grouping that copies a bucket identity for "doing" only.
+  const identityGrouping: FieldGrouping = {
+    id: "value",
+    label: "Value",
+    plan: () => (value) => {
+      const key = String(value);
+      return key === "doing"
+        ? { key, label: "Doing", order: 0, icon, tint: "--categorical-3" }
+        : { key, label: key, order: 1 };
+    },
+  };
+  const tasks: Task[] = [
+    { id: "1", status: "doing" },
+    { id: "2", status: "todo" },
+    { id: "3", status: null },
+  ];
+
+  test("reaches the section from its bucket; absent when the bucket has none", () => {
+    const sections = partitionIntoSections(
+      tasks,
+      [statusField],
+      by("status"),
+      rowKey,
+      stubOpts<Task>({ enum: identityGrouping }),
+    );
+    expect(sections.map((s) => s.key)).toEqual([
+      "doing",
+      "todo",
+      NULL_GROUP_KEY,
+    ]);
+    expect(sections[0]!.identity).toEqual({ icon, tint: "--categorical-3" });
+    // No identity key at all — not an empty object a header could test.
+    expect("identity" in sections[1]!).toBe(false);
+    expect("identity" in sections[2]!).toBe(false);
+  });
+
+  test("a declared section carries the identity the server path gave it", () => {
+    const [section] = partitionIntoSections(
+      [],
+      [statusField],
+      by("status"),
+      rowKey,
+      {
+        ...stubOpts<Task>({ enum: identityGrouping }),
+        sectioning: {
+          kind: "declared",
+          sections: [
+            {
+              key: "doing",
+              label: "Doing",
+              identity: { icon },
+              count: 0,
+              rows: [],
+              paging: {
+                canGrow: false,
+                growing: false,
+                loadMore: () => {},
+                complete: true,
+                stalled: null,
+                truncated: false,
+                notices: [],
+                viewport: { report: () => {} },
+                placeholders: { before: [], after: [] },
+              },
+            },
+          ],
+        },
+      },
+    );
+    expect(section!.identity).toEqual({ icon });
   });
 });

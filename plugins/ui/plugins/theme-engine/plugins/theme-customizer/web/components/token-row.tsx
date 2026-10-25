@@ -6,6 +6,13 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 
 const undoIcon = symbol("undo");
 
@@ -13,6 +20,11 @@ export interface TokenRowProps {
   label: string;
   cssVar: string;
   value: string;
+  /**
+   * The token's closed value set (`TokenGroupField.values`): edited with a
+   * select over exactly these, never free text.
+   */
+  options?: readonly string[];
   isOverridden: boolean;
   isSplit?: boolean;
   onValueChange: (newValue: string) => void;
@@ -24,6 +36,7 @@ export function TokenRow({
   label,
   cssVar,
   value,
+  options,
   isOverridden,
   isSplit,
   onValueChange,
@@ -41,7 +54,7 @@ export function TokenRow({
     }
   }
 
-  const color = Color.fromCss(value);
+  const color = options === undefined ? Color.fromCss(value) : null;
   const isColor = color !== null;
 
   const handleColorChange = (newOklch: string) => {
@@ -61,7 +74,7 @@ export function TokenRow({
   };
 
   // Keep local text state in sync with external value changes
-  if (!isColor && textValue !== value) {
+  if (!isColor && options === undefined && textValue !== value) {
     setTextValue(value);
   }
 
@@ -89,6 +102,25 @@ export function TokenRow({
         >
           {value}
         </Text>
+      ) : options !== undefined ? (
+        <Select
+          items={options.map((o) => ({ value: o, label: o }))}
+          value={value}
+          onValueChange={(v: string | null) => {
+            if (v !== null && v !== value) onValueChange(v);
+          }}
+        >
+          <SelectTrigger aria-label={label}>
+            <SelectValue>{(v: string | null) => v ?? ""}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {options.map((o) => (
+              <SelectItem key={o} value={o}>
+                {o}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       ) : (
         <input
           ref={inputRef}

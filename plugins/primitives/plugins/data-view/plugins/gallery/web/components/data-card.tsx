@@ -1,4 +1,4 @@
-import { type ReactNode } from "react";
+import { type CSSProperties, type ReactNode } from "react";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   RowActions,
@@ -17,7 +17,40 @@ import {
   coverHoverGroup,
   coverHeldAttr,
 } from "@plugins/primitives/plugins/data-view/web";
-import type { CoverContent } from "@plugins/primitives/plugins/data-view/core";
+import {
+  dataPart,
+  type CoverContent,
+} from "@plugins/primitives/plugins/data-view/core";
+import { dataViewGroup } from "@plugins/ui/plugins/tokens/plugins/data-view/core";
+
+/** The cover tokens' lengths, as `Pin` insets (the `style` overriding its
+ *  anchor insets — `Pin offset` takes only ramp steps). */
+const CHIP_INSET = `var(${dataViewGroup.vars.coverChipInset})`;
+const PRIMARY_INSET_LEN = `var(${dataViewGroup.vars.coverPrimaryInset})`;
+const CHIP_TOP_LEFT: CSSProperties = { top: CHIP_INSET, left: CHIP_INSET };
+const CHIP_TOP_RIGHT: CSSProperties = { top: CHIP_INSET, right: CHIP_INSET };
+const PRIMARY_INSET: CSSProperties = {
+  bottom: PRIMARY_INSET_LEN,
+  right: PRIMARY_INSET_LEN,
+};
+
+/**
+ * The primary action's button takes the `coverPrimarySize` token — only when a
+ * theme sets it (a style query on the unset value), so by default the action
+ * keeps the size it draws itself at.
+ */
+const PRIMARY_SIZE =
+  "[@container_not_style(--cover-primary-size:initial)]:[&_button]:size-cover-primary";
+
+/**
+ * …and its fill, ink and shadow (`coverPrimaryFill` / `Ink` / `Shadow`), each
+ * only when a theme sets it — unset, the action's own paint stays.
+ */
+const PRIMARY_PAINT = [
+  "[@container_not_style(--cover-primary-fill:initial)]:[&_button]:bg-cover-primary-fill",
+  "[@container_not_style(--cover-primary-ink:initial)]:[&_button]:text-cover-primary-ink",
+  "[@container_not_style(--cover-primary-shadow:initial)]:[&_button]:shadow-cover-primary",
+].join(" ");
 
 /**
  * A card's item actions, already split by the zone rule (`useItemActionZones`
@@ -85,7 +118,9 @@ export interface DataCardProps {
  *
  * Hovering anywhere on the card lifts the cover (`coverHoverGroup`) and reveals
  * the hover arms (`rowActionsAnchor`); every reveal is `RowActions`', so the
- * card owns placement only.
+ * card owns placement only. Every distance is a `tokens/data-view` token: the
+ * room between cover and text (`cardMetaPadTop`), the chips' and the primary's
+ * insets (`coverChipInset` / `coverPrimaryInset`) and the primary's size.
  */
 export function DataCard({
   rowKey,
@@ -109,8 +144,9 @@ export function DataCard({
 
   return (
     <Stack
-      gap="sm"
+      gap="none"
       data-row-key={rowKey}
+      {...dataPart("dv.card")}
       role={activates ? "button" : undefined}
       tabIndex={activates ? 0 : undefined}
       {...activationProps(onActivate)}
@@ -152,12 +188,16 @@ export function DataCard({
           />
         ) : null}
         {badge ? (
-          <Pin to="top-left" offset="sm">
+          <Pin to="top-left" style={CHIP_TOP_LEFT}>
             {badge}
           </Pin>
         ) : null}
         {cluster ? (
-          <Pin to="top-right" offset="sm">
+          <Pin
+            to="top-right"
+            style={CHIP_TOP_RIGHT}
+            {...dataPart("dv.cover-actions")}
+          >
             <Stack direction="row" gap="2xs" align="center">
               {actions?.revealed != null ? (
                 <RowActions pin={null} chrome="float">
@@ -173,7 +213,12 @@ export function DataCard({
           </Pin>
         ) : null}
         {primary ? (
-          <Pin to="bottom-right" offset="sm">
+          <Pin
+            to="bottom-right"
+            style={PRIMARY_INSET}
+            className={cn(PRIMARY_SIZE, PRIMARY_PAINT)}
+            {...dataPart("dv.cover-primary")}
+          >
             {actions?.primaryAtRest != null ? (
               <RowActions pin={null} alwaysVisible>
                 {actions.primaryAtRest}
@@ -185,7 +230,7 @@ export function DataCard({
           </Pin>
         ) : null}
       </CoverFrame>
-      {children}
+      <div className="pt-card-meta px-card-meta">{children}</div>
     </Stack>
   );
 }

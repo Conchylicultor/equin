@@ -55,6 +55,7 @@ function renderToolbar(opts: {
   searchPlaceholder?: string;
   asideInset?: string;
   creators?: CreateOption[];
+  createLabel?: string;
 }) {
   lastParts = null;
   return render(
@@ -64,6 +65,7 @@ function renderToolbar(opts: {
           query=""
           onQueryChange={() => {}}
           creators={"creators" in opts ? opts.creators : CREATORS}
+          createLabel={opts.createLabel}
           switcher={{
             strip: <div data-testid="strip" />,
             chip: <div data-testid="chip" />,
@@ -89,7 +91,8 @@ describe("DataViewToolbar arrangements", () => {
     expect(screen.queryByTestId("chip")).toBeNull();
     // The search as a quiet well in its fixed lane, and a labelled creator.
     const input = screen.getByPlaceholderText("Search…");
-    expect(input.parentElement!.className).toContain("w-48");
+    // `w-search`: the data-view token group's `searchWidth` (12rem = w-48).
+    expect(input.parentElement!.className).toContain("w-search");
     const create = screen.getByRole("button", { name: "New thing" });
     expect(create.textContent).toBe("New thing");
     // Two floating pills: the views (the strip) and the tools (search, then a
@@ -126,7 +129,8 @@ describe("DataViewToolbar arrangements", () => {
     expect(tail.style.top).toBe("var(--dv-header-offset, 0px)");
     // …and the runway that keeps an unscrolled first row out of it.
     const runway = tail.nextElementSibling as HTMLElement;
-    expect(runway.style.height).toContain("--sticky-fade-tail");
+    // (`toolbarSpaceBelow`, whose default is the `--sticky-fade-tail` runway.)
+    expect(runway.style.height).toBe("var(--toolbar-space-below)");
   });
 
   it("hands an arrangement the parts, built in the forms it asked for", () => {
@@ -220,7 +224,11 @@ describe("DataViewToolbar arrangements", () => {
       asideInset: "240px",
     });
 
-    const band = screen.getByTestId("arrangement").parentElement!;
+    // The band (the `dv.toolbar` part) — the arrangement sits in a box-less
+    // wrapper publishing the narrow stage.
+    const band = screen
+      .getByTestId("arrangement")
+      .closest<HTMLElement>('[data-part~="dv.toolbar"]')!;
     expect(band.className).toContain("absolute");
     expect(band.className).toContain("pointer-events-none");
     expect(lastParts!.asideInset).toBe("240px");
@@ -232,7 +240,11 @@ describe("DataViewToolbar arrangements", () => {
     renderToolbar({ arrangement: recordingArrangement });
 
     expect(lastParts!.asideInset).toBe("0px");
-    const band = screen.getByTestId("arrangement").parentElement!;
+    // The band (the `dv.toolbar` part) — the arrangement sits in a box-less
+    // wrapper publishing the narrow stage.
+    const band = screen
+      .getByTestId("arrangement")
+      .closest<HTMLElement>('[data-part~="dv.toolbar"]')!;
     expect(band.className).not.toContain("pointer-events-none");
   });
 
@@ -247,5 +259,38 @@ describe("DataViewToolbar arrangements", () => {
     // The card opts back into pointer events over the click-through band.
     expect(strip.closest(".pointer-events-auto")).not.toBeNull();
     expect(strip.closest(".pointer-events-none")).not.toBeNull();
+  });
+
+  it("draws N creators as the + menu, or a labelled trigger given createLabel", () => {
+    const two: CreateOption[] = [
+      { id: "a", label: "Song", onSelect: () => {} },
+      { id: "b", label: "Folder", onSelect: () => {} },
+    ];
+    renderToolbar({ creators: two });
+    const plus = screen.getByRole("button", { name: "Create" });
+    expect(plus.getAttribute("data-part")).toBe("dv.create");
+    expect(plus.textContent).toBe("");
+    cleanup();
+
+    renderToolbar({ creators: two, createLabel: "Add" });
+    const add = screen.getByRole("button", { name: "Add" });
+    expect(add.getAttribute("data-part")).toBe("dv.create");
+    expect(add.textContent).toBe("Add");
+    expect(add.getAttribute("aria-haspopup")).toBe("menu");
+  });
+
+  it("stamps the toolbar's parts", () => {
+    const { container } = renderToolbar({});
+    expect(
+      (container.firstElementChild as HTMLElement).getAttribute("data-part"),
+    ).toBe("dv.toolbar");
+    for (const part of [
+      "dv.views-pill",
+      "dv.tools-pill",
+      "dv.search",
+      "dv.pill-divider",
+      "dv.create",
+    ])
+      expect(container.querySelector(`[data-part="${part}"]`)).not.toBeNull();
   });
 });

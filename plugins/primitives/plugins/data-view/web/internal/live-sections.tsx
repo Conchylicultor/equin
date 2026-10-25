@@ -18,6 +18,7 @@ import { useLive } from "@plugins/network/plugins/live/web";
 import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
 import type {
   DataViewPaging,
+  DataViewSectionIdentity,
   FieldDef,
   FieldGrouping,
   FieldValue,
@@ -27,7 +28,11 @@ import type { LiveGroupColumn } from "./live-fields";
 import { NO_VIEWPORT } from "./pages-viewport";
 import { NO_PLACEHOLDERS } from "./pages-paging";
 import { useLivePagesPaging } from "./use-live-pages-paging";
-import { NULL_GROUP_KEY, nullGroupLabel } from "./use-data-view-sections";
+import {
+  bucketIdentity,
+  NULL_GROUP_KEY,
+  nullGroupLabel,
+} from "./use-data-view-sections";
 
 // A live source grouped by a groupable column, server-sectioned
 // (research/2026-10-08-primitives-data-view-live-server-sections.md): ONE
@@ -40,6 +45,8 @@ import { NULL_GROUP_KEY, nullGroupLabel } from "./use-data-view-sections";
 export interface ServerSection {
   key: string;
   label: string;
+  /** The value's glyph and colour (`GroupBucket.icon` / `tint`), when declared. */
+  identity?: DataViewSectionIdentity;
   /** The ordinal the grouping gave it — the section order, read by `groupOrder`. */
   order: number;
   count: number;
@@ -114,9 +121,11 @@ export function serverSections(
       );
     }
     seen.add(bucket.key);
+    const identity = bucketIdentity(bucket);
     sections.push({
       key: bucket.key,
       label: bucket.label,
+      ...(identity === undefined ? {} : { identity }),
       order: bucket.order,
       count: group.count,
       value,

@@ -665,6 +665,7 @@ export const browserHost = {
     "ui.tokens.categorical",
     "ui.tokens.chart",
     "ui.tokens.color-palette",
+    "ui.tokens.data-view",
     "ui.tokens.density",
     "ui.tokens.file-type-palette",
     "ui.tokens.font-family",

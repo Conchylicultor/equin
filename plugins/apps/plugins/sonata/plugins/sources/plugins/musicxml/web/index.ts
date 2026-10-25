@@ -17,6 +17,7 @@ export default {
       id: MUSICXML_SOURCE_ID,
       label: "MusicXML",
       icon: symbol("music-note"),
+      tint: "--chord-4",
       LoaderComponent: MusicXmlLoader,
       compile: parseMusicXml,
     }),

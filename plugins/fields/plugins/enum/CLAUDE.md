@@ -25,15 +25,23 @@ token) matches descriptors built with the factory.
 
 ## The option contract
 
-`FieldDef.options` is `{ value, label, variant?, hint? }[]` (the shared
-`FieldOption`, `primitives/data-view/core`). **An option describes how it
+`FieldDef.options` is `{ value, label, variant?, hint?, icon?, tint? }[]` (the
+shared `FieldOption`, `primitives/data-view/core`). **An option describes how it
 presents** — the read chip takes its tint from `variant` (default `"muted"`) and
 its tooltip from `hint`, so a surface no longer keeps a value→label map beside a
 parallel value→variant map that every render site has to join by hand.
 
+An option's **identity** is `icon` (an `IconRef`) and `tint` (a declared colour
+token var, `ColorTokenRef`). The `value` grouping (`plugins/data-view-group`)
+copies both onto its bucket, so they reach `DataViewSection.identity` and the
+group header draws its chip (glyph on a tinted tile) before the label — only
+when there is an `icon`. In the read cell, a `tint` with no `variant` draws a
+7px dot in the tint beside the label instead of a chip; a `variant` keeps the
+chip.
+
 Deliberate no-ops, so nobody "finishes the job": the inline editor and the filter
 operand input draw `ToggleChip`s, whose vocabulary is not `BadgeVariant`, and
-stay untinted; group-by section labels and the control summaries are text-only;
+stay untinted; the control summaries are text-only;
 server-side filter SQL never reads `options` at all, so a tint never reaches the
 server.
 

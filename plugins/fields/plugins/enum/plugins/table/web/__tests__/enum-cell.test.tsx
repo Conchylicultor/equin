@@ -96,3 +96,39 @@ describe("a quiet option", () => {
     expect(container.textContent).toBe("");
   });
 });
+
+describe("EnumCell draws a tinted option without a variant as a dot", () => {
+  const tinted: FieldDef<unknown> = {
+    id: "source",
+    label: "Source",
+    type: "enum",
+    options: [
+      { value: "web", label: "Web", tint: "--categorical-3" },
+      {
+        value: "file",
+        label: "File",
+        tint: "--categorical-4",
+        variant: "success",
+      },
+    ],
+  };
+
+  it("a dot in the tint beside the label, no chip", () => {
+    const { container, getByText } = render(
+      <EnumCell field={tinted} value="web" raw={{}} />,
+    );
+    const dot = container.querySelector<HTMLElement>("[data-enum-dot]")!;
+    expect(dot.style.backgroundColor).toBe("var(--categorical-3)");
+    expect(dot.getAttribute("class")).toContain("size-[7px]");
+    expect(getByText("Web").closest("[data-tooltip]")).toBeNull();
+  });
+
+  it("a variant keeps the chip", () => {
+    const { container, getByText } = render(
+      <EnumCell field={tinted} value="file" raw={{}} />,
+    );
+    expect(container.querySelector("[data-enum-dot]")).toBeNull();
+    const chip = getByText("File").parentElement?.parentElement;
+    expect(chip?.className).toContain("text-success");
+  });
+});

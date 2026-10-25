@@ -1,0 +1,545 @@
+{
+  "proto": "proto-1792667078-9zh04x",
+  "appSetup": [
+    {
+      "when": {
+        "layout": "list"
+      },
+      "click": "[data-part~=\"dv.view-chip\"][aria-label=\"Recently edited\"]",
+      "note": "the mock's list layout is its Recently edited view; the app opens on its last active view (device-local)"
+    }
+  ],
+  "parts": [
+    {
+      "part": "pane.header",
+      "mock": ".phead",
+      "when": {
+        "header": "split"
+      },
+      "props": [
+        "box",
+        "padding"
+      ],
+      "note": "the mock spaces the title with its own margin (gap 4 + 4), the app with the bar's gap 8: title x compared below; the mock paints the ground behind its header, the app's is transparent over the same ground"
+    },
+    {
+      "part": "pane.title",
+      "mock": ".phead .crumb",
+      "when": {
+        "header": "split"
+      },
+      "props": [
+        "x",
+        "width",
+        "font-size",
+        "font-weight",
+        "font-family",
+        "color"
+      ]
+    },
+    {
+      "part": "dv.toolbar",
+      "mock": ".top",
+      "props": [
+        "box"
+      ],
+      "note": "the mock pads .top; the app pads the pill row inside the band"
+    },
+    {
+      "part": "dv.views-pill",
+      "mock": ".top .bar.left",
+      "props": [
+        "box",
+        "padding-left",
+        "padding-right",
+        "border",
+        "paint"
+      ],
+      "note": "the mock centres 30px items in a 42px pill (padding 0 5px); the app pads 5px all round \u2014 same geometry"
+    },
+    {
+      "part": "dv.view-chip",
+      "mock": ".view:not(.on):not(.add)",
+      "app": "[data-part~=\"dv.view-chip\"] .contents > span",
+      "label": "dv.view-chip (label)",
+      "props": [
+        "font-size",
+        "font-weight",
+        "font-family"
+      ],
+      "when": {
+        "layout": "gallery"
+      },
+      "note": "gallery only: the mock's list layout keeps Gallery active (drawn as a list), the app switches to Recently edited"
+    },
+    {
+      "part": "dv.view-chip",
+      "mock": ".view:not(.on):not(.add)",
+      "props": [
+        "box",
+        "padding-left",
+        "padding-right",
+        "border-radius",
+        "color",
+        "background-color"
+      ],
+      "when": {
+        "layout": "gallery"
+      },
+      "note": "gallery only: the mock's list layout keeps Gallery active (drawn as a list), the app switches to Recently edited"
+    },
+    {
+      "part": "dv.view-chip-active",
+      "mock": ".view.on",
+      "app": "[data-part~=\"dv.view-chip-active\"] .contents > span",
+      "label": "dv.view-chip-active (label)",
+      "props": [
+        "font-size",
+        "font-weight",
+        "font-family"
+      ],
+      "when": {
+        "layout": "gallery"
+      },
+      "note": "gallery only: the mock's list layout keeps Gallery active (drawn as a list), the app switches to Recently edited"
+    },
+    {
+      "part": "dv.view-chip-active",
+      "mock": ".view.on",
+      "props": [
+        "box",
+        "padding-left",
+        "padding-right",
+        "border-radius",
+        "color",
+        "background-color",
+        "box-shadow"
+      ],
+      "when": {
+        "layout": "gallery"
+      },
+      "note": "gallery only: the mock's list layout keeps Gallery active (drawn as a list), the app switches to Recently edited"
+    },
+    {
+      "part": "dv.view-add",
+      "mock": ".view.add",
+      "props": [
+        "box",
+        "border-radius",
+        "color"
+      ]
+    },
+    {
+      "part": "dv.tools-pill",
+      "mock": ".top .bar:not(.left)",
+      "props": [
+        "y",
+        "height",
+        "padding-left",
+        "padding-right",
+        "border",
+        "paint"
+      ],
+      "note": "the mock centres 30px items in a 42px pill (padding 0 5px); the app pads 5px all round \u2014 same geometry; x/width residual: the app's pill also holds Filter (a DataView control the mock omits) and Trash (added after the mock)"
+    },
+    {
+      "part": "dv.search",
+      "mock": ".search",
+      "props": [
+        "y",
+        "width",
+        "height",
+        "border-radius",
+        "background-color",
+        "font-size",
+        "font-weight",
+        "font-family"
+      ],
+      "note": "x residual (the tools pill holds Filter and Trash too); the mock pads its glyph in, the app pins it over the input's start padding"
+    },
+    {
+      "part": "dv.create",
+      "mock": ".new .lab",
+      "app": "[data-part~=\"dv.create\"] .contents > span",
+      "label": "dv.create (label)",
+      "props": [
+        "font-size",
+        "font-weight",
+        "font-family"
+      ]
+    },
+    {
+      "part": "dv.create",
+      "mock": ".new",
+      "props": [
+        "y",
+        "width",
+        "height",
+        "border-radius",
+        "color",
+        "background-color"
+      ]
+    },
+    {
+      "part": "dv.group-header",
+      "mock": ".shead",
+      "props": [
+        "y"
+      ],
+      "note": "the mock's .shead bleeds 4px left for its hover wash (margin-left -4, padding 4); the app's header pays the inset \u2014 visible pieces compared below; gallery only: the mock groups Recently edited, the user's saved view is ungrouped",
+      "when": {
+        "layout": "gallery"
+      }
+    },
+    {
+      "part": "dv.group-label",
+      "mock": ".shead h3",
+      "props": [
+        "x",
+        "y",
+        "font-size",
+        "font-weight",
+        "font-family",
+        "color"
+      ],
+      "note": "width is the group's own name (data); gallery only: the mock groups Recently edited, the user's saved view is ungrouped",
+      "when": {
+        "layout": "gallery"
+      }
+    },
+    {
+      "part": "dv.group-count",
+      "mock": ".shead .n",
+      "props": [
+        "y",
+        "font-size",
+        "font-weight",
+        "font-family",
+        "color"
+      ],
+      "when": {
+        "layout": "gallery"
+      },
+      "note": "gallery only: the mock groups Recently edited, the user's saved view is ungrouped"
+    },
+    {
+      "part": "dv.group-chevron",
+      "mock": ".shead .chev",
+      "props": [
+        "y",
+        "width",
+        "height",
+        "color"
+      ],
+      "note": "x: the mock's 4px left bleed is not mirrored right, so its chevron sits 4px in from the inset (mock quirk); gallery only: the mock groups Recently edited, the user's saved view is ungrouped",
+      "when": {
+        "layout": "gallery"
+      }
+    },
+    {
+      "part": "dv.card",
+      "mock": ".card",
+      "when": {
+        "layout": "gallery"
+      },
+      "props": [
+        "box"
+      ]
+    },
+    {
+      "part": "dv.cover",
+      "mock": ".card .shot",
+      "when": {
+        "layout": "gallery"
+      },
+      "props": [
+        "box",
+        "border",
+        "box-shadow",
+        "background-color"
+      ]
+    },
+    {
+      "part": "dv.cover",
+      "mock": ".card .shot",
+      "when": {
+        "layout": "gallery"
+      },
+      "hover": true,
+      "hoverTarget": ".card",
+      "appHoverTarget": "dv.card",
+      "props": [
+        "box",
+        "box-shadow"
+      ]
+    },
+    {
+      "part": "dv.card-meta",
+      "mock": ".card .info",
+      "when": {
+        "layout": "gallery"
+      },
+      "props": [
+        "box",
+        "padding",
+        "gap"
+      ],
+      "app": "[data-part~=\"dv.card\"] > :last-child"
+    },
+    {
+      "part": "dv.card-title",
+      "mock": ".card .info .t b",
+      "when": {
+        "layout": "gallery"
+      },
+      "props": [
+        "x",
+        "y",
+        "font-size",
+        "font-weight",
+        "font-family",
+        "color"
+      ],
+      "app": "[data-part~=\"dv.card-title\"] .contents > .truncate",
+      "note": "the words' run; width is the title (data)"
+    },
+    {
+      "part": "dv.card-subtitle",
+      "mock": ".card .info .d",
+      "app": "div:has(> span.contents > [data-part~=\"dv.card-subtitle\"])",
+      "when": {
+        "layout": "gallery"
+      },
+      "label": "dv.card-subtitle (box)",
+      "props": [
+        "box"
+      ]
+    },
+    {
+      "part": "dv.card-subtitle",
+      "mock": ".card .info .d",
+      "when": {
+        "layout": "gallery"
+      },
+      "props": [
+        "x",
+        "y",
+        "font-size",
+        "font-weight",
+        "font-family",
+        "color"
+      ]
+    },
+    {
+      "part": "dv.card-tokens",
+      "mock": ".card .toks",
+      "when": {
+        "layout": "gallery"
+      },
+      "props": [
+        "box",
+        "gap"
+      ]
+    },
+    {
+      "part": "dv.card-token",
+      "mock": ".card .tok",
+      "when": {
+        "layout": "gallery"
+      },
+      "props": [
+        "x"
+      ],
+      "note": "x only: the mock's .tok stretches to its 18px line, the app's token centres in it \u2014 the words line up"
+    },
+    {
+      "part": "dv.card-token",
+      "mock": ".card .tok",
+      "when": {
+        "layout": "gallery"
+      },
+      "props": [
+        "font-size",
+        "font-weight",
+        "font-family",
+        "color"
+      ],
+      "app": "[data-part~=\"dv.card-token\"] > .contents > span",
+      "label": "dv.card-token (words)"
+    },
+    {
+      "part": "dv.card-token-icon",
+      "mock": ".card .tok svg.i",
+      "when": {
+        "layout": "gallery"
+      },
+      "props": [
+        "box",
+        "color"
+      ]
+    },
+    {
+      "part": "dv.table-frame",
+      "mock": ".list",
+      "when": {
+        "layout": "list"
+      },
+      "props": [
+        "x",
+        "y",
+        "width",
+        "padding",
+        "border",
+        "paint"
+      ],
+      "app": "[data-part~=\"dv.table\"]",
+      "note": "the soft table's box is its frame; height is the row count (data)"
+    },
+    {
+      "part": "dv.column-header-row",
+      "mock": ".lhead",
+      "when": {
+        "layout": "list"
+      },
+      "props": [
+        "x",
+        "y",
+        "width",
+        "height"
+      ]
+    },
+    {
+      "part": "dv.column-header",
+      "mock": ".lhead > div",
+      "nth": 1,
+      "when": {
+        "layout": "list"
+      },
+      "label": "dv.column-header (name)",
+      "props": [
+        "y",
+        "font-size",
+        "font-weight",
+        "font-family",
+        "color",
+        "text-transform"
+      ],
+      "note": "x/width residual: Recently edited shows a different field set than the mock's Gallery-as-list"
+    },
+    {
+      "part": "dv.column-header",
+      "mock": ".lhead > div",
+      "nth": 2,
+      "when": {
+        "layout": "list"
+      },
+      "label": "dv.column-header (numeric)",
+      "props": [
+        "y",
+        "font-size",
+        "font-weight",
+        "font-family",
+        "color",
+        "text-transform"
+      ],
+      "note": "x/width residual: Recently edited shows a different field set than the mock's Gallery-as-list"
+    },
+    {
+      "part": "dv.row",
+      "mock": ".list .row:not(.lhead)",
+      "when": {
+        "layout": "list"
+      },
+      "props": [
+        "x",
+        "width",
+        "height",
+        "padding-left",
+        "padding-right",
+        "border-radius"
+      ],
+      "note": "same box (the mock pads 7/8, the app 7/8 inside a token minimum); y residual: the mock's list is its grouped Gallery view drawn as a list (status headers above the rows), the app's is the ungrouped Recently edited view"
+    },
+    {
+      "part": "dv.row",
+      "mock": ".list .row:not(.lhead)",
+      "when": {
+        "layout": "list"
+      },
+      "hover": true,
+      "props": [
+        "background-color"
+      ]
+    },
+    {
+      "part": "dv.thumb",
+      "mock": ".row .th",
+      "when": {
+        "layout": "list"
+      },
+      "props": [
+        "x",
+        "width",
+        "height",
+        "border-radius",
+        "background-color"
+      ],
+      "app": "[data-part~=\"dv.thumb\"] > *",
+      "note": "the frame inside the thumb cell; its hairline is a ring layer, not a shadow; y residual: the mock's list is its grouped Gallery view drawn as a list (status headers above the rows), the app's is the ungrouped Recently edited view"
+    },
+    {
+      "part": "dv.title-cell",
+      "mock": ".row .tx",
+      "when": {
+        "layout": "list"
+      },
+      "props": [
+        "x",
+        "height"
+      ]
+    },
+    {
+      "part": "dv.title-cell-title",
+      "mock": ".row .tx b",
+      "when": {
+        "layout": "list"
+      },
+      "props": [
+        "x",
+        "font-size",
+        "font-weight",
+        "font-family",
+        "color"
+      ]
+    },
+    {
+      "part": "dv.title-cell-subtitle",
+      "mock": ".row .tx p",
+      "when": {
+        "layout": "list"
+      },
+      "props": [
+        "x",
+        "font-size",
+        "font-weight",
+        "font-family",
+        "color"
+      ]
+    },
+    {
+      "part": "dv.cell",
+      "mock": ".list .row:not(.lhead) .c",
+      "when": {
+        "layout": "list"
+      },
+      "props": [
+        "font-size",
+        "font-weight",
+        "font-family",
+        "color"
+      ],
+      "appNth": 2,
+      "note": "appNth: the app's cover and title cells are dv.cell too; x residual (columns differ)"
+    }
+  ]
+}

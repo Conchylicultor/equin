@@ -587,9 +587,10 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `useSingleLine`
     - `WithTooltip`
 - Cross-plugin:
-  - Uses tokens: 264 vars — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ui/tokens/density` ×76
-    - `ui/tokens/color-palette` ×60
+  - Uses tokens: 363 vars — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui/tokens/data-view` ×93
+    - `ui/tokens/density` ×79
+    - `ui/tokens/color-palette` ×61
     - `ui/tokens/type-scale` ×42
     - `ui/tokens/shape` ×15
     - `ui/tokens/overlay` ×13
@@ -597,19 +598,19 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `ui/tokens/sidebar-metrics` ×12
     - `ui/tokens/categorical` ×11
     - `ui/tokens/sidebar-palette` ×9
+    - `ui/tokens/material` ×6
     - `ui/tokens/chart` ×5
     - `ui/tokens/font-family` ×4
-    - `ui/tokens/material` ×4
     - `ui/tokens/scrollbar --scrollbar-color`
-  - Imported by: 436 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 438 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives` ×109
-    - `apps` ×97
+    - `apps` ×98
     - `conversations` ×54
     - `page` ×25
     - `debug` ×24
     - `ui` ×21
     - `tasks` ×17
-    - `fields` ×11
+    - `fields` ×12
     - `plugin-meta` ×10
     - `apps-core` ×7
     - `reorder` ×6

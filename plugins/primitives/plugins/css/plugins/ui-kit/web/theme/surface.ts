@@ -79,5 +79,5 @@ export const SURFACE_LEVELS: Record<SurfaceLevel, string> = {
   // tone a menu row highlights with; the mask is the card, the opaque tone
   // its fill is mixed from.
   float:
-    "rounded-float border border-popover-border bg-float-fill backdrop-float text-popover-foreground shadow-float [--chrome-mask:var(--card)] [--hover-fill:var(--accent)] [--field-fill:var(--field)] [--field-outline:var(--input)]",
+    "rounded-float border border-float-border bg-float-fill float-sheen backdrop-float text-popover-foreground shadow-float [--chrome-mask:var(--card)] [--hover-fill:var(--accent)] [--field-fill:var(--field)] [--field-outline:var(--input)]",
 };

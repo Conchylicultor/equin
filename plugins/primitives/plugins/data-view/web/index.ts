@@ -78,7 +78,7 @@ export {
   useResolveColumnDerive,
 } from "./column-config-slot";
 export { useFieldIdentities } from "./internal/use-field-identities";
-export { EditableCell, isFieldValueEmpty } from "./components/editable-cell";
+export { EditableCell } from "./components/editable-cell";
 export {
   CoverFrame,
   coverHoverGroup,
@@ -87,11 +87,17 @@ export {
 } from "./components/cover-frame";
 export type { CoverFrameProps } from "./components/cover-frame";
 export { CardMeta } from "./components/card-meta";
+export { CreateButton } from "./components/creators-control";
 export type { CardMetaProps } from "./components/card-meta";
 export { resolveCover, pickCoverField } from "./internal/cover";
 export type { ResolvedCover } from "./internal/cover";
 export { partitionCardFields } from "./internal/card-fields";
 export type { CardFields } from "./internal/card-fields";
+export { SubtitleRun, drawnSubtitleTerms } from "./components/subtitle-run";
+export {
+  PrimaryActionSlot,
+  PrimaryOverThumbnail,
+} from "./components/primary-over-thumbnail";
 export { FieldCell } from "./components/field-cell";
 export { EditableTreeLabel } from "./components/editable-tree-label";
 export type { FieldCellProps } from "./components/field-cell";

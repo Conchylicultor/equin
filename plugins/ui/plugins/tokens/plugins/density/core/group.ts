@@ -1,3 +1,8 @@
+import {
+  PICK_EMPHASES,
+  PICK_FAMILIES,
+  PICK_RUNGS,
+} from "@plugins/primitives/plugins/css/plugins/text/core";
 import { defineTokenGroup } from "@plugins/ui/plugins/theme-engine/core";
 
 export const densityGroup = defineTokenGroup("density", {
@@ -76,10 +81,44 @@ export const densityGroup = defineTokenGroup("density", {
   },
   chromeBarH: { default: "3rem", label: "Chrome bar height" },
   chromePaneH: { default: "2.5rem", label: "Chrome pane header height" },
+  // The row height of a floating-card pane header (`PaneChrome header="card"`).
+  // Default = the bar's own `chromePaneH`, so untouched a card row and a bar
+  // row stay one height; a theme that grows the bar (a split header) keeps its
+  // card rows at their own height by setting this.
+  chromePaneCardH: {
+    default: "var(--chrome-pane-h)",
+    label: "Chrome pane card header height",
+  },
   chromePadX: { default: "0.75rem", label: "Chrome padding X" },
   // A pane header's bottom rule width (`Bar tier="pane"`). Default = the 1px
   // `border-b` every bar draws; `0` runs the header into its pane.
   chromePaneRule: { default: "1px", label: "Pane header rule" },
+  // The pane header title's type, picked (`<Text pick>`, the closed ladder's
+  // rung / weight / family — type-scale rule 6b): default the `label` role it
+  // always wore.
+  chromePaneTitleRole: {
+    default: "label",
+    label: "Pane title type role",
+    values: PICK_RUNGS,
+  },
+  chromePaneTitleEmphasis: {
+    default: "role",
+    label: "Pane title emphasis",
+    values: PICK_EMPHASES,
+  },
+  chromePaneTitleFamily: {
+    default: "role",
+    label: "Pane title family",
+    values: PICK_FAMILIES,
+  },
+  // The inline inset a `PaneChrome inset="content"` pane shares between a
+  // DataView's toolbar and its content (`--pane-inset`, read as
+  // `rail-follow`'s floor; the pane header keeps `chromePanePad*`). A length relative to the
+  // pane (`cqi`, the pane is its inline-size container), e.g.
+  // `max(clamp(16px, 3cqi, 40px), calc((100cqi - 1520px) / 2))` for an inset
+  // that also caps the content width. Default `initial` = UNSET: no pane
+  // publishes an inset and every rail falls back to today's chrome pad.
+  contentInset: { default: "initial", label: "Pane content inset" },
   // A tree row (`TreeRowChrome`): its minimum height and the indent per depth
   // level. Defaults = the old `min-h-7` and 16px step. The indent stays in px:
   // e2e reads it back as a number.
@@ -169,6 +208,17 @@ export const densityGroup = defineTokenGroup("density", {
   chromePanePadEnd: {
     default: "var(--chrome-pad-x)",
     label: "Pane header padding end",
+  },
+  // A `header="card"` pane row's insets — the bar's by default, so a theme
+  // widening the bar (a split header flush on the pane's left) keeps its card
+  // rows as they were.
+  chromePaneCardPadStart: {
+    default: "var(--chrome-pane-pad-start)",
+    label: "Pane header card padding start",
+  },
+  chromePaneCardPadEnd: {
+    default: "var(--chrome-pane-pad-end)",
+    label: "Pane header card padding end",
   },
   // The inline inset of a pane's secondary strip under its header
   // (`Bar tier="subpane"`, the conversation toolbar). Default = the `sm` step.

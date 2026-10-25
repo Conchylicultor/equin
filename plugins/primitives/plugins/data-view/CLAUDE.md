@@ -624,7 +624,10 @@ interface FieldGrouping {
 interface GroupingPlanContext { now: number; values: readonly FieldValue[]; field: FieldDef<unknown> }
 interface GroupBucket { key: string; label: string; order: number;
   ancestors?: GroupBucketAncestor[];   // root first — the buckets form a tree (below)
-  swatch?: string }                    // a colour dot before the label (user data)
+  icon?: IconRef;                      // the value's glyph — the header's identity chip
+  tint?: ColorTokenRef;                // its colour as a declared token (an enum option's)
+  swatch?: string }                    // its colour as user data (a tag's #rrggbb)
+// icon / tint / swatch reach the section as ONE `DataViewSection.identity`.
 interface GroupByRule { fieldId: string; groupingId: string }
 ```
 
@@ -840,9 +843,11 @@ rest, naming no type (`fields/tag`'s grouping is the one that does today —
   paging) as its header alone. The **table** applies `visibleSections` to its
   group rows and the indent (no guides) to its group header. Collapse state
   stays keyed by `section.key`, so each level folds independently.
-- **Header**: `DataViewGroupHeader` draws `section.swatch` (the bucket's,
-  from `FieldOption.swatch`) as a dot before the label, and a depth ≥ 1 header
-  in medium weight (a quiet root header is semibold).
+- **Header**: `DataViewGroupHeader` draws `section.identity` before the label —
+  the identity chip (glyph on a tile inked by the colour) when it has an
+  `icon`, else a colour dot when it has only a colour (`tint` token, else the
+  `swatch` hex from `FieldOption.swatch`) — and a depth ≥ 1 header's label in
+  medium weight (a quiet root header is semibold).
 - **Sticky**: nested headers stack like flat ones (one `StickyStack` over the
   visible sections), degrading to the swap hand-off past the stack cap.
 - **Body state**: the paging tail counts as hidden when its section — or any
@@ -1183,7 +1188,7 @@ Every DataView's toolbar, by default, is ONE row:
 it — `barArrangement` in flow, `floating-toolbar` over a canvas (`overlay`:
 each pill opts back into pointer events; the title rides the views pill).
 `PillsToolbarProps` = `ToolbarParts` + `{ overlay?, className?, style? }` (the
-row's inset; default `py-sm rail-follow`).
+row's inset; default `py-toolbar rail-follow`).
 
 - **Both pills are floating surfaces** (`Surface level="float"`:
   `bg-float-fill`, `backdrop-float`, `rounded-float`), under ONE
@@ -1196,7 +1201,35 @@ row's inset; default `py-sm rail-follow`).
 - **The search is a quiet well** (`forms.search: "filled"`, fixed `w-48`, `w-80`
   with suggestions) inside the tools pill, which already draws the edge.
 - **Create follows a divider** — drawn only when the surface declares
-  creators: `ToolbarParts.creators` is `null` when there are none.
+  creators: `ToolbarParts.creators` is `null` when there are none. One
+  creator is a labelled `Button`; N are a `+` menu — or, given
+  `DataViewProps.createLabel` (`"Add"`), a labelled `Button` (`+` + the label)
+  opening the same menu (the compact fold and the `round` form keep the `+`).
+- **Sizes are the theme's** (`ui/tokens/data-view`; every default is the
+  look above, so a theme that says nothing changes nothing): the row's
+  `py-toolbar` / `gap-toolbar`, a pill's `p-pill` / `gap-pill`, the divider's
+  `h-pill-divider` / `px-pill-divider`, the search lane `w-search`, the bar's
+  `spaceBelow` (`--toolbar-space-below`); the view chip's active
+  fill / ink / ring (`bg-view-chip-active-fill` …) and padding
+  (`viewChipActivePadStart/End`, unset = the chip's own), its icon / label
+  policy (`viewChipIcon` always|never, `viewChipLabel` always|active — style
+  queries on the chip), `viewAddSeparator` (a rule before the add-view `+`);
+  and the type of the view chip, search and create words, picked
+  (`DATA_VIEW_PICKS.viewChip` / `search` / `create` through
+  `rolePickScope` + `rolePickClass` — not `<Text pick>`, whose single-line
+  leaf would add a native `title` to a control's label).
+- **The narrow stage**: below `NARROW_BREAKPOINT` (760, measured beside
+  `COMPACT_BREAKPOINT` on the band) the theme may narrow the search
+  (`searchWidthNarrow`) and drop a labelled create button's words
+  (`narrowCreateLabel: hide`); both unset by default, so the stage is a
+  no-op. Measured, not a CSS `@container`: a size-contained band would lose
+  its intrinsic width in a shrink-to-fit host. (Below 720 the search already
+  narrows to `w-search-narrow`, 8rem unless the theme sets it.)
+- **Parts** (`dataPart`, core `DATA_VIEW_PARTS`): `dv.toolbar` (the band),
+  `dv.views-pill`, `dv.view-chip` / `dv.view-chip-active`, `dv.view-add`,
+  `dv.tools-pill`, `dv.search` (the input), `dv.control` (each control
+  trigger and the fold's), `dv.pill-divider`, `dv.create` — what a mock's
+  selectors map onto for the compare tool's metrics diff.
 
 ```ts
 interface ToolbarArrangement {
@@ -2036,6 +2069,10 @@ keeps its one shape.
   picker (sort, filter, group-by, Properties); it is still sortable from its
   empty header. Under `"first-group"`, "has a header" is what decides where the
   first group's label stops spanning.
+- **`presentation: "soft"`**, **`cover: true`**, **`titleCell: "stacked"`** —
+  the soft table: borderless token-sized rows, a cover-thumbnail column with
+  the primary action over it, a two-line title cell (title + indicators, then
+  the `SubtitleRun`). See the table child's CLAUDE.md.
 - The surface's `density` and `groupHeaders` (above) are honoured too.
 
 ### The fold rule
@@ -2198,7 +2235,7 @@ contribution can land in it.
 | View | `hasPersistentSlot` | `hasPrimarySlot` | At-rest placement |
 |---|---|---|---|
 | gallery | `true` | `true` (the round button at the cover's bottom-right) | the cover's top-right float chip: `DataCard.actions.atRest` → `<RowActions pin={null} alwaysVisible chrome="float">`, right of the revealed chip |
-| table | `true` | `false` | the reserved trailing `auto` track, before the revealed cluster |
+| table | `true` | `false` — `true` with `cover: true` on a covered surface (the action over the cover thumbnail, on hover) | the reserved trailing `auto` track, before the revealed cluster |
 | nested table | `true` (`false` for `outline`) | `false` | the row's trailing cell |
 | list | `false` | `true` while the row shows a cover thumbnail (the action sits over it, on hover) | — demoted to the hover cluster |
 | icons | `true` | `false` (the tile's click is its main verb) | the tile's top-right float chip, right of the revealed chip (the gallery's shape) |
@@ -2275,7 +2312,12 @@ declaration order:
 4. each presented by its owner's registration (`FieldPresentation.Register` —
    the entity, the exposure, the arm, or the collection itself for its listed
    fields (one property of a picked field set by both it and its entity
-   throws): `cell(value, row)`, `width`, `align`, `visible`, `groupable`, and
+   throws): `cell(value, row, context)`, `token` (minted into
+   `FieldDef.token`: `FieldCell context="token"` resolves `token → cell →
+   type cell`), `extent: true` (`FieldDef.extent`: the body computes the
+   field's `{ min, max }` once per view over its rows — `field-extents.ts`,
+   `FieldExtentsContext` — and `FieldCell` hands it as `context.extent`; no
+   cost for a field without it), `width`, `align`, `visible`, `groupable`, and
    `useOptions`, folded by `CollectFieldOptions` — a live READ makes the field
    `pending` (its `optionsResult` loading) until the options land, then they
    are its `options`; a failure with nothing held is its `readError`; a plain
@@ -2800,7 +2842,10 @@ so every card is the same height; an empty value (`isFieldValueEmpty`) is
 omitted, never drawn as "Empty". The cover comes from `resolveCover(fields,
 DataViewProps.cover)` — accessor → `FieldDef.cover` → first `media` field —
 drawn by `<CoverFrame size="card" | "thumb">` (a coverless row on a covered
-surface gets a blank tinted frame).
+surface gets a blank tinted frame). Every size, type pick and ink of the card text and the
+card cover is a `ui/tokens/data-view` token whose default is the look before
+the group existed (the gallery's CLAUDE.md lists them); token values draw in
+`FieldCell context="token"`.
 
 ## The rail (the inverted topology)
 
@@ -2949,13 +2994,14 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `DataViewSlots.Control` ×3
     - `DataViewSlots.Setting` ×3
     - `IdKinds.Kind` ×2
-  - Uses: 119 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 124 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live` ×18
-    - `primitives/css/ui-kit` ×15
+    - `primitives/css/ui-kit` ×17
     - `primitives/data-view/view-core` ×10
     - `primitives/live-state` ×6
     - `primitives/css/control-panel` ×4
     - `primitives/slot-render` ×4
+    - `primitives/css/text` ×3
     - `primitives/css/toggle-chip` ×3
     - `primitives/tree` ×3
     - `config_v2` ×2
@@ -2971,6 +3017,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `primitives/hover-reveal` ×2
     - `primitives/latest-ref` ×2
     - `primitives/loading` ×2
+    - `primitives/row-actions` ×2
     - `primitives/search` ×2
     - `primitives/shortcuts` ×2
     - `primitives/sortable-list` ×2
@@ -2988,14 +3035,12 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/surface.Surface`
-    - `primitives/css/text.Text`
     - `primitives/css/yield.yieldClass`
     - `primitives/dom/auto-scroll.KeepAnchorAcross`
     - `primitives/dom/in-view.createInViewWatcher`
     - `primitives/dom/web-storage.defineStore`
     - `primitives/icon-button.IconButton`
     - `primitives/overlay/popover.InlinePopover`
-    - `primitives/row-actions.RowActions`
     - `ui/icons.Icon`
   - Exports (types):
     - `CardFields`
@@ -3116,6 +3161,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `CoverFrame`
     - `coverHeldAttr`
     - `coverHoverGroup`
+    - `CreateButton`
     - `DATA_VIEW_HEADER_OFFSET_VAR`
     - `DataView`
     - `DataViewGroupHeader`
@@ -3126,6 +3172,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `defineDataView`
     - `defineDataViewSources`
     - `defineItemActions`
+    - `drawnSubtitleTerms`
     - `DROP_TARGET_RING`
     - `DROP_TARGET_WASH`
     - `DropBackground`
@@ -3140,7 +3187,6 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `IDENTITY_CODEC`
     - `IDENTITY_GROUPING`
     - `IDENTITY_GROUPING_SET`
-    - `isFieldValueEmpty`
     - `isFilterGroup`
     - `isGroupableField`
     - `leadingSlot`
@@ -3154,11 +3200,14 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `pickLeadingField`
     - `pickPrimaryField`
     - `PillsToolbar`
+    - `PrimaryActionSlot`
+    - `PrimaryOverThumbnail`
     - `readFallback`
     - `resolveBodyFields`
     - `resolveCover`
     - `rowToneClass`
     - `SectionBody`
+    - `SubtitleRun`
     - `UNGROUPED_FOLD_KEY`
     - `useDataViewControls`
     - `useDataViewSections`
@@ -3228,6 +3277,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `DataViewPagePlaceholders`
     - `DataViewPaging`
     - `DataViewPagingTotal`
+    - `DataViewPart`
     - `DataViewProps`
     - `DataViewRenderProps`
     - `DataViewReserve`
@@ -3237,6 +3287,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `DataViewSearch`
     - `DataViewSearchSuggestions`
     - `DataViewSection`
+    - `DataViewSectionIdentity`
     - `DataViewSectioning`
     - `DataViewSectionPaging`
     - `DataViewSurfaceChrome`
@@ -3317,6 +3368,8 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `atLeastCount`
     - `compareValues`
     - `DATA_VIEW_HEADER_OFFSET_VAR`
+    - `DATA_VIEW_PARTS`
+    - `dataPart`
     - `defineDataView`
     - `exactCount`
     - `fieldOverrides`
@@ -3339,10 +3392,11 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `UNGROUPED_FOLD_KEY`
     - `visibleSections`
 - Cross-plugin:
-  - Uses tokens: 45 vars — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ui/tokens/density` ×17
-    - `ui/tokens/color-palette` ×12
-    - `ui/tokens/type-scale` ×10
+  - Uses tokens: 86 vars — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui/tokens/data-view` ×44
+    - `ui/tokens/density` ×16
+    - `ui/tokens/color-palette` ×11
+    - `ui/tokens/type-scale` ×9
     - `ui/tokens/shadow` ×3
     - `ui/tokens/shape` ×3
   - Imported by: 107 plugins — full list in [REFERENCE.md](./REFERENCE.md)
@@ -3378,6 +3432,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `consumerPaging` — A consumer's paging (`DataViewProps.paging`): placeholders before and after the rows, every viewport report pushed to `reports`, nothing to grow.
     - `deriveFields` — {@link useDerivedFields}, pure.
     - `describePagedConformance` — The paged-view contract every DataView view honours, run against `view` mounted through the real body on a laid-out page (`mountPagedDataView`):
+    - `isFieldValueEmpty` — Whether `field` has nothing to show for `row` — THE empty test, shared by the table's edit affordance (an empty editable cell offers its pencil over an "Empty" placeholder) and the card / list meta (an empty field is simply omitted, never drawn as "Empty").
     - `lowerFilterGroup` — Lower a DataView `FilterGroup` into a filter-language `Filter`, each rule through its operator's `lower` with `ctx.column` = the field id.
     - `lowersToMatch` — Does a rule `op(operand)` keep a row whose field projects to `value`? — the in-memory evaluator's exact path for one rule: `op.lower` over a column of `domain` (an incomplete rule, `undefined`, keeps every row), the DataView domain adapter, then the filter language's `matchesFilter`.
     - `mountPagedDataView` — Mount ONE view of a paged DataView against a laid-out page — through the real seam (`DataViewShellFrame` around `DataViewBody`, the body every DataView renders), with a fake one-instance view model, inside a scroller whose `scrollTop` the test drives and an IntersectionObserver that answers from the layout, as a browser does.

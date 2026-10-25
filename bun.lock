@@ -3261,6 +3261,10 @@
       "name": "@singularity/plugin-framework-tooling-checks-class-token-walk-single-source",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/checks/plugins/color-token-ref-in-sync": {
+      "name": "@singularity/plugin-framework-tooling-checks-color-token-ref-in-sync",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/checks/plugins/composition-closure": {
       "name": "@singularity/plugin-framework-tooling-checks-composition-closure",
       "version": "0.0.1",
@@ -6413,6 +6417,14 @@
       "name": "@singularity/plugin-ui-tokens-color-palette",
       "version": "0.0.1",
     },
+    "plugins/ui/plugins/tokens/plugins/color-ref": {
+      "name": "@singularity/plugin-ui-tokens-color-ref",
+      "version": "0.0.1",
+    },
+    "plugins/ui/plugins/tokens/plugins/data-view": {
+      "name": "@singularity/plugin-ui-tokens-data-view",
+      "version": "0.0.1",
+    },
     "plugins/ui/plugins/tokens/plugins/density": {
       "name": "@singularity/plugin-ui-tokens-density",
       "version": "0.0.1",
@@ -8746,6 +8758,8 @@
 
     "@singularity/plugin-framework-tooling-checks-class-token-walk-single-source": ["@singularity/plugin-framework-tooling-checks-class-token-walk-single-source@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/class-token-walk-single-source"],
 
+    "@singularity/plugin-framework-tooling-checks-color-token-ref-in-sync": ["@singularity/plugin-framework-tooling-checks-color-token-ref-in-sync@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/color-token-ref-in-sync"],
+
     "@singularity/plugin-framework-tooling-checks-composition-closure": ["@singularity/plugin-framework-tooling-checks-composition-closure@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/composition-closure"],
 
     "@singularity/plugin-framework-tooling-checks-config-origins-in-sync": ["@singularity/plugin-framework-tooling-checks-config-origins-in-sync@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/config-origins-in-sync"],
@@ -10215,6 +10229,10 @@
     "@singularity/plugin-ui-tokens-color-adjust": ["@singularity/plugin-ui-tokens-color-adjust@workspace:plugins/ui/plugins/tokens/plugins/color-adjust"],
 
     "@singularity/plugin-ui-tokens-color-palette": ["@singularity/plugin-ui-tokens-color-palette@workspace:plugins/ui/plugins/tokens/plugins/color-palette"],
+
+    "@singularity/plugin-ui-tokens-color-ref": ["@singularity/plugin-ui-tokens-color-ref@workspace:plugins/ui/plugins/tokens/plugins/color-ref"],
+
+    "@singularity/plugin-ui-tokens-data-view": ["@singularity/plugin-ui-tokens-data-view@workspace:plugins/ui/plugins/tokens/plugins/data-view"],
 
     "@singularity/plugin-ui-tokens-density": ["@singularity/plugin-ui-tokens-density@workspace:plugins/ui/plugins/tokens/plugins/density"],
 

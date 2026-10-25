@@ -392,11 +392,14 @@ function useFoldMotion(open: boolean) {
 export interface CollapsibleChevronProps {
   open?: boolean;
   className?: string;
+  /** A part name for the chevron's svg (a DataView group header's `dv.group-chevron`). */
+  "data-part"?: string;
 }
 
 export function CollapsibleChevron({
   open: openProp,
   className,
+  "data-part": part,
 }: CollapsibleChevronProps) {
   const ctx = useContext(CollapsibleContext);
   const open = openProp ?? ctx?.open ?? false;
@@ -404,6 +407,7 @@ export function CollapsibleChevron({
   return (
     <Icon
       icon={chevronRightIcon}
+      data-part={part}
       // eslint-disable-next-line layout/no-adhoc-layout -- rigid chevron indicator placed in arbitrary trigger rows; must never shrink
       className={cn(
         "shrink-0 transition-transform duration-200",

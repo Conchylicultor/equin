@@ -257,7 +257,7 @@ to reconcile them; they never needed reconciling.
 
 ## Plugin reference
 
-- Description: Semantic typography primitive: <Text variant tone as> picks a frozen size/line-height/weight role from the typography token group (incl. the eyebrow/section-label role). The single sanctioned home for text hierarchy; raw text-size/leading-* is banned by no-adhoc-typography.
+- Description: Semantic typography primitive: <Text variant tone as> (or <Text pick> — a role the theme picks per part through three tokens, applied by CSS style queries) picks a frozen size/line-height/weight role from the typography token group (incl. the eyebrow/section-label role). The single sanctioned home for text hierarchy; raw text-size/leading-* is banned by no-adhoc-typography.
 - Web:
   - Uses:
     - `primitives/css/ui-kit.cn`
@@ -273,24 +273,26 @@ to reconcile them; they never needed reconciling.
     - `TextVariant`
     - `TruncateSide`
   - Exports (values):
+    - `rolePickClass`
+    - `rolePickScope`
     - `SectionLabel`
     - `Text`
     - `textVariantClass`
 - Cross-plugin:
-  - Uses tokens: 43 vars — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ui/tokens/type-scale` ×36
+  - Uses tokens: 45 vars — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui/tokens/type-scale` ×37
     - `ui/tokens/color-palette` ×6
-    - `ui/tokens/font-family --font-mono`
-  - Imported by: 392 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui/tokens/font-family` ×2
+  - Imported by: 396 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×107
     - `conversations` ×73
-    - `primitives` ×44
+    - `primitives` ×45
     - `debug` ×37
     - `page` ×23
-    - `ui` ×15
+    - `ui` ×17
     - `plugin-meta` ×14
     - `tasks` ×14
-    - `fields` ×9
+    - `fields` ×10
     - `stats` ×6
     - `build` ×5
     - `infra` ×5
@@ -315,11 +317,20 @@ to reconcile them; they never needed reconciling.
     - `tag-tree/picker`
 - Core:
   - Exports (types):
+    - `PickEmphasis`
+    - `PickFamily`
+    - `PickRung`
+    - `PickStep`
+    - `RolePart`
     - `TextTreatment`
     - `TypeRole`
     - `TypeSubscale`
     - `TypeVarName`
   - Exports (values):
+    - `PICK_EMPHASES`
+    - `PICK_FAMILIES`
+    - `PICK_RUNGS`
+    - `PICK_STEPS`
     - `roleTokenKeys`
     - `TEXT_TREATMENTS`
     - `TYPE_ROLES`

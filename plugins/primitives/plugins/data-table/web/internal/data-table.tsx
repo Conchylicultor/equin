@@ -24,7 +24,12 @@ import {
   StickyStackItem,
 } from "@plugins/primitives/plugins/css/plugins/sticky/plugins/stack/web";
 import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import {
+  rolePickClass,
+  rolePickScope,
+  Text,
+} from "@plugins/primitives/plugins/css/plugins/text/web";
+import { DATA_VIEW_PICKS } from "@plugins/ui/plugins/tokens/plugins/data-view/core";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import {
@@ -35,6 +40,7 @@ import {
 import type {
   ColumnDef,
   DataTableGroup,
+  DataTableParts,
   DataTablePresentation,
   DataTableProps,
   DataTableRowDecoration,
@@ -59,6 +65,36 @@ const HEADER_TEXT_CLASS =
  *  its rule under it. */
 const OUTLINE_HEADER_CLASS =
   "min-h-tree-row text-caption-compact font-medium text-faint-foreground";
+/**
+ * A soft header's label cell: the DataView `columnHeader` pick (its rung,
+ * emphasis and family — the header row carries the scope,
+ * `SOFT_HEADER_SCOPE`), cased (`columnHeaderCase`), tracked and inked by
+ * tokens. The full rung, never its compact step: the table's `xs` control
+ * size is about its controls, not this label.
+ */
+const SOFT_HEADER_CELL_CLASS = cn(
+  rolePickClass(DATA_VIEW_PICKS.columnHeader.fallback, false),
+  "[@container_style(--column-header-case:upper)]:uppercase tracking-column-header text-column-header-ink",
+);
+const SOFT_HEADER_SCOPE = rolePickScope(DATA_VIEW_PICKS.columnHeader);
+/** The sorted column's label ink. */
+const SOFT_HEADER_SORTED_CLASS = "text-column-header-sorted-ink";
+/** A soft row's cell: the DataView `cell` pick (scoped on the row), in the
+ *  `cellInk` (default the row's own). A cell whose value is a number
+ *  (`ColumnDef.numeric`) takes the `cellNumeric` pick, scoped on a box-less
+ *  wrapper of its own (a style query reads its parent's vars). */
+const SOFT_CELL_CLASS = cn(
+  rolePickClass(DATA_VIEW_PICKS.cell.fallback, false),
+  "text-cell-ink",
+);
+const SOFT_NUMERIC_CELL_CLASS = cn(
+  rolePickClass(DATA_VIEW_PICKS.cellNumeric.fallback, false),
+  "text-cell-ink",
+);
+const SOFT_ROW_SCOPE = rolePickScope(DATA_VIEW_PICKS.cell);
+const SOFT_NUMERIC_SCOPE = rolePickScope(DATA_VIEW_PICKS.cellNumeric);
+/** `sortIcon: sorted` — an unsorted column shows no arrow. */
+const SORT_ICON_SORTED_ONLY = "[@container_style(--sort-icon:sorted)]:hidden";
 
 const arrowDownwardIcon = symbol("arrow-downward");
 const arrowUpwardIcon = symbol("arrow-upward");
@@ -97,8 +133,23 @@ function composeRefs<E extends Element>(
 }
 
 /** The windowed body's first guess, px per row — replaced before paint by a
- *  probed real row, then by the first row measured (`useVirtualRows`). */
-const ROW_ESTIMATE = 36;
+ *  probed real row, then by the first row measured (`useVirtualRows`). A soft
+ *  row is taller: its `softRowH` default (3rem). */
+const ROW_ESTIMATE: Record<DataTablePresentation, number> = {
+  grid: 36,
+  outline: 36,
+  soft: 48,
+};
+
+/**
+ * The hairline BETWEEN soft rows: a row's `::before` along its top edge, drawn
+ * only when the line above it is a soft row too (never under the header or a
+ * group band), from `softRuleStart` to `softRuleEnd` short of the end, in `softRuleInk` at
+ * `softRuleOpacity` — and hidden on the hovered row and the row after it, so
+ * the hover fill reads as one rounded shape.
+ */
+const SOFT_RULE =
+  "before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-soft-rule-ink before:opacity-soft-rule before:ms-soft-rule before:me-soft-rule before:hidden [[data-soft-row]+&]:before:block [[data-soft-row]+&]:hover:before:hidden [[data-soft-row]:hover+&]:before:hidden";
 
 /**
  * A row's look per presentation. `grid` is the table's own (a hairline under
@@ -120,6 +171,13 @@ const ROW_LOOK: Record<
       "hover:[--dt-row-tint:color-mix(in_oklab,var(--accent)_30%,transparent)]",
     selected: "[--dt-row-tint:var(--accent)]",
   },
+  // Borderless, a minimum height, its own padding and corners, the hairline
+  // between rows; tinted through `--dt-row-tint` like the grid row.
+  soft: {
+    base: `col-span-full grid grid-cols-subgrid items-center min-h-soft-row p-soft-row rounded-soft-row [background-color:var(--dt-row-tint)] ${SOFT_RULE}`,
+    hover: "hover:[--dt-row-tint:var(--soft-row-hover-fill)]",
+    selected: "[--dt-row-tint:var(--accent)]",
+  },
   // The hover tint applies only to a row that is not selected, so a selected
   // row does not hover to a different tone.
   outline: {
@@ -132,13 +190,16 @@ const ROW_LOOK: Record<
 /** A decoration's `highlighted` row (a drop target): the accent tint. */
 const ROW_HIGHLIGHT: Record<DataTablePresentation, string> = {
   grid: "[--dt-row-tint:var(--accent)]",
+  soft: "[--dt-row-tint:var(--accent)]",
   outline: "bg-accent [--scrim:var(--accent)]",
 };
 
-/** The inline inset every subgrid row takes (`rail-follow`'s start side). */
+/** The inline inset every subgrid row takes (`rail-follow`'s, floor included:
+ *  a `PaneChrome inset="content"` pane's `--pane-inset`, else the chrome pad). */
 const RAIL_START =
-  "var(--rail-owed-start, var(--rail-start, var(--chrome-pad-x)))";
-const RAIL_END = "var(--rail-owed-end, var(--rail-end, var(--chrome-pad-x)))";
+  "var(--rail-owed-start, var(--rail-start, var(--pane-inset, var(--chrome-pad-x))))";
+const RAIL_END =
+  "var(--rail-owed-end, var(--rail-end, var(--pane-inset, var(--chrome-pad-x))))";
 /**
  * An outline row is the tree row's pill ON the rail: the rail is its margin
  * (the pill starts where a `rail-follow` band's content does), and the pill
@@ -176,6 +237,29 @@ const LEAD_CELL: CSSProperties = {
   backgroundImage:
     "linear-gradient(var(--dt-row-tint, transparent), var(--dt-row-tint, transparent))",
 };
+/**
+ * A soft table's box sits on the rail (a margin, like an outline pill) and is
+ * the rail's OWNER for everything inside it: the grid publishes nothing owed,
+ * so its rows, group bands and footers pay no rail again — the frame (its
+ * padding) and each row's own padding are the inset.
+ */
+const SOFT_BOX: CSSProperties = { marginInline: `${RAIL_START} ${RAIL_END}` };
+const SOFT_GRID_RAIL = {
+  "--rail-owed-start": "0px",
+  "--rail-owed-end": "0px",
+} as CSSProperties;
+/** The soft header's inline inset: its rows' own padding, so labels sit over
+ *  their cells. */
+const SOFT_HEADER_INSET: CSSProperties = {
+  paddingInlineStart: "var(--soft-row-pad)",
+  paddingInlineEnd: "var(--soft-row-pad-end)",
+};
+/** The optional frame around a soft table (every token's default draws none).
+ *  An inline-size container, so a cell can answer the table's own width (the
+ *  narrow cover thumb). */
+const SOFT_FRAME_CLASS =
+  "@container rounded-soft-frame p-soft-frame shadow-soft-frame backdrop-soft-frame bg-soft-frame-fill soft-frame-edge border-soft-frame-border";
+
 /** A wide table's header label: never wraps. */
 const NOWRAP: CSSProperties = { whiteSpace: "nowrap" };
 
@@ -232,6 +316,7 @@ export function DataTable<TRow>({
   header,
   tree,
   selection,
+  parts,
 }: DataTableProps<TRow>) {
   // A grid table in a region that may scroll it sideways (`wide`: a pane's
   // `Scroll`, no card / popover / clipping box in between — see
@@ -244,7 +329,8 @@ export function DataTable<TRow>({
   // row's), so it reserves no track: a sidebar's labels keep the width a hidden
   // cluster would take. A persistent cluster is painted at rest and needs room.
   const hasActionsTrack =
-    !!rowPersistentActions || (!!rowActions && presentation === "grid");
+    !!rowPersistentActions || (!!rowActions && presentation !== "outline");
+  const soft = presentation === "soft";
   // Destructured: render never reads a member off the hook output (the refs
   // rule flags member access on a value carrying refs).
   const {
@@ -254,14 +340,15 @@ export function DataTable<TRow>({
     containerRef: fitContainerRef,
     gridRef: fitGridRef,
   } = useColumnFit(columns, {
-    // A grid table in a sideways-scroll region goes wide; an outline with its
-    // labels drops columns in its box; anything else squeezes.
+    // A grid table in a sideways-scroll region goes wide; a soft table, or an
+    // outline with its labels, drops columns in its box; anything else
+    // squeezes.
     mode:
       presentation === "grid"
         ? sideways
           ? "wide"
           : "none"
-        : header
+        : soft || header
           ? "drop"
           : "none",
     nested: !!tree,
@@ -363,7 +450,7 @@ export function DataTable<TRow>({
   const leadSpan = firstLabelled === -1 ? shownColumns.length : firstLabelled;
   // An outline has no column labels at all — neither a header row nor labels
   // on the first group.
-  const showHeader = header ?? presentation === "grid";
+  const showHeader = header ?? presentation !== "outline";
   const outlineHeader = showHeader && presentation === "outline";
   const labelsOnFirstGroup =
     showHeader &&
@@ -388,6 +475,7 @@ export function DataTable<TRow>({
             <SortIcon
               active={active}
               direction={active ? sortState!.direction : null}
+              hideUnsorted={soft}
             />
           )}
         </span>
@@ -399,10 +487,12 @@ export function DataTable<TRow>({
       const cellProps = {
         className: cn(
           cellClassName,
+          soft && [SOFT_HEADER_CELL_CLASS, active && SOFT_HEADER_SORTED_CLASS],
           alignClass(col.align),
           sortable && "cursor-pointer select-none",
         ),
         onClick: sortable ? () => toggleSort(col.id) : undefined,
+        "data-part": parts?.columnHeader,
       };
       // The first column's label pins with the cells below it — the cell
       // itself, so it stays the click target that sorts. A plain span like
@@ -442,10 +532,12 @@ export function DataTable<TRow>({
         leadSpan,
         cells: (
           <>
-            {headerCells(HEADER_TEXT_CLASS).slice(leadSpan)}
+            {headerCells(soft ? undefined : HEADER_TEXT_CLASS).slice(leadSpan)}
             {hasActionsTrack && <span aria-hidden />}
           </>
         ),
+        // A soft label's pick reads its scope off the band it sits in.
+        style: soft ? SOFT_HEADER_SCOPE : undefined,
       }
     : undefined;
   const template = [
@@ -504,6 +596,7 @@ export function DataTable<TRow>({
         selectable={!!selection}
         pinLead={pinLead}
         metaColumns={outlineHeader}
+        parts={parts}
       />
     );
   };
@@ -548,15 +641,21 @@ export function DataTable<TRow>({
     <ControlSizeProvider size={controlSize}>
       {/* The table's box: what the fit measures the room in, and what it
           marks `data-scrolls-x` while the grid is wider (useColumnFit). */}
-      <div ref={fitContainerRef}>
+      <div
+        ref={fitContainerRef}
+        data-part={parts?.table}
+        className={soft ? SOFT_FRAME_CLASS : undefined}
+        style={soft ? SOFT_BOX : undefined}
+      >
         <div
           // eslint-disable-next-line layout/no-adhoc-layout -- subgrid table host: a dynamic gridTemplateColumns grid whose rows are full-span subgrids (no Frame/Grid equivalent)
-          className="grid gap-x-sm"
+          className={soft ? "grid gap-x-soft" : "grid gap-x-sm"}
           style={{
             gridTemplateColumns: template,
             // A grid table never squeezes a column below its track's minimum
             // (a content-sized one: its label); past that it overflows.
             minWidth: pinLead ? "min-content" : undefined,
+            ...(soft ? SOFT_GRID_RAIL : undefined),
           }}
           // Nesting rows make the grid a treegrid, and the grid the keyboard
           // host: a key on a focused row walks the painted lines.
@@ -579,9 +678,12 @@ export function DataTable<TRow>({
               mask
               layer="raised"
               data-slot="data-table-header"
+              data-part={parts?.headerRow}
               // eslint-disable-next-line layout/no-adhoc-layout -- sticky header is itself a full-span subgrid row inheriting the host's column tracks
               className={cn(
-                "col-span-full grid grid-cols-subgrid border-b",
+                "col-span-full grid grid-cols-subgrid",
+                // A soft header is borderless: a height and the room under it.
+                !soft && "border-b",
                 // Every subgrid row — this header, each data row, each group header —
                 // takes its inline padding from the ambient rail and its block padding
                 // from the row density token. Column alignment holds because they all
@@ -590,7 +692,9 @@ export function DataTable<TRow>({
                 // on the rail), so its labels sit over theirs.
                 outlineHeader
                   ? [OUTLINE_HEADER_CLASS, "items-center"]
-                  : [HEADER_TEXT_CLASS, rowPad, "rail-follow"],
+                  : soft
+                    ? "h-soft-header mb-soft-header items-center"
+                    : [HEADER_TEXT_CLASS, rowPad, "rail-follow"],
               )}
               style={{
                 top: stickyHeaderOffset,
@@ -600,6 +704,9 @@ export function DataTable<TRow>({
                       // A breath under the rule before the first row.
                       marginBottom: "var(--space-xs)",
                     }
+                  : undefined),
+                ...(soft
+                  ? { ...SOFT_HEADER_INSET, ...SOFT_HEADER_SCOPE }
                   : undefined),
               }}
             >
@@ -637,6 +744,7 @@ export function DataTable<TRow>({
                   <VirtualTableBody
                     key={segment.key}
                     lines={segment.lines}
+                    estimateSize={ROW_ESTIMATE[presentation]}
                     selectedRowId={selectedRowId}
                     renderLine={renderLine}
                     keepMounted={keepMountedRowKeys}
@@ -648,6 +756,7 @@ export function DataTable<TRow>({
           ) : rows.length > VIRTUALIZE_THRESHOLD ? (
             <VirtualTableBody
               lines={fold.items}
+              estimateSize={ROW_ESTIMATE[presentation]}
               selectedRowId={selectedRowId}
               renderLine={renderLine}
               keepMounted={keepMountedRowKeys}
@@ -723,6 +832,7 @@ function DataTableRow<TRow>({
   selectable,
   pinLead,
   metaColumns,
+  parts,
 }: {
   row: TRow;
   index: number;
@@ -749,6 +859,7 @@ function DataTableRow<TRow>({
   pinLead: boolean;
   /** Draw every column after the first as meta (a labelled outline). */
   metaColumns: boolean;
+  parts: DataTableParts | undefined;
 }): ReactNode {
   const decoration = useRowDecoration(row, index);
   // A row whose activation is a link reads the link gestures: ⌘/middle-click
@@ -773,6 +884,7 @@ function DataTableRow<TRow>({
       ? decoration.actions
       : rowActions?.(row, index);
   const outline = presentation === "outline";
+  const soft = presentation === "soft";
   // A decorated row in a windowed body is BOTH a drag source and a measurement
   // target, so the two refs compose (they were mutually exclusive back when
   // decoration disabled virtualization).
@@ -787,14 +899,18 @@ function DataTableRow<TRow>({
       // The row's identity on the DOM — the same marker the list and icons
       // views carry — so a test can address one row instead of walking text.
       data-row-key={key}
+      // A soft row's hairline shows only below another soft row.
+      data-soft-row={soft ? "" : undefined}
+      data-part={parts?.row}
       // eslint-disable-next-line layout/no-adhoc-layout -- CSS subgrid row inheriting the outer grid's column tracks (no Frame/Grid equivalent for subgrid)
       className={cn(
         look.base,
         !selected && look.hover,
         // Same rail as the column header and the group headers — see there.
         // An outline row is the tree row's pill instead: its block padding
-        // is the tree row's, its rail a margin (`OUTLINE_INSET`).
-        outline ? "py-xs" : [rowPad, "rail-follow"],
+        // is the tree row's, its rail a margin (`OUTLINE_INSET`). A soft row
+        // pads itself (`p-soft-row`, in its look); its box paid the rail.
+        outline ? "py-xs" : soft ? undefined : [rowPad, "rail-follow"],
         // Reveals the trailing RowActions cluster; its bundled `relative` also
         // hosts the decoration overlay (a positioned row with `z-index: auto`
         // lays out and stacks identically, so it is inert on plain rows).
@@ -815,7 +931,9 @@ function DataTableRow<TRow>({
                 : undefined),
               ...decorationStyle,
             }
-          : decorationStyle
+          : soft
+            ? { ...SOFT_ROW_SCOPE, ...decorationStyle }
+            : decorationStyle
       }
       onClick={
         gestures.onClick
@@ -874,6 +992,19 @@ function DataTableRow<TRow>({
                   align={col.align}
                   role={tree ? "gridcell" : undefined}
                   meta={metaColumns && c > 0}
+                  className={
+                    soft
+                      ? col.numeric?.(row) === true
+                        ? SOFT_NUMERIC_CELL_CLASS
+                        : SOFT_CELL_CLASS
+                      : undefined
+                  }
+                  scope={
+                    soft && col.numeric?.(row) === true
+                      ? SOFT_NUMERIC_SCOPE
+                      : undefined
+                  }
+                  part={parts?.cell}
                 >
                   {col.cell
                     ? col.cell(row)
@@ -1016,12 +1147,15 @@ function CompactActionsCell({
  */
 function VirtualTableBody<TRow>({
   lines,
+  estimateSize,
   selectedRowId,
   renderLine,
   keepMounted,
   drawPastEnd,
 }: {
   lines: readonly BodyLine<TRow>[];
+  /** The first guess, px per row (`ROW_ESTIMATE`, per presentation). */
+  estimateSize: number;
   selectedRowId: string | undefined;
   renderLine: (line: BodyLine<TRow>, measure: RowMeasure) => ReactNode;
   keepMounted: readonly string[] | undefined;
@@ -1042,7 +1176,7 @@ function VirtualTableBody<TRow>({
     probe,
   } = useVirtualRows<BodyLine<TRow>>({
     items: lines,
-    estimateSize: ROW_ESTIMATE,
+    estimateSize,
     getKey: lineKeyOf,
     scrollToIndex: selectedIndex >= 0 ? selectedIndex : null,
     keepMounted,
@@ -1135,6 +1269,8 @@ interface FirstGroupLabels {
   leadSpan: number;
   /** The label cells for the remaining tracks (actions track included). */
   cells: ReactNode;
+  /** The band's own style (a soft label's pick scope). */
+  style?: CSSProperties;
 }
 
 /**
@@ -1163,6 +1299,7 @@ function renderGroupHeader<TRow>(
       // the label cells below land in the body's own column tracks.
       // eslint-disable-next-line layout/no-adhoc-layout -- first group header is a full-span subgrid row inheriting the host's column tracks
       className="col-span-full grid grid-cols-subgrid items-center rail-follow"
+      style={labels.style}
     >
       <div
         // eslint-disable-next-line layout/no-adhoc-layout -- the group label's cell spans the unlabelled leading tracks of the subgrid
@@ -1348,6 +1485,9 @@ function AlignedCell({
   align,
   role,
   meta = false,
+  className,
+  scope,
+  part,
   children,
 }: {
   align: ColumnDef<unknown>["align"];
@@ -1357,31 +1497,55 @@ function AlignedCell({
    *  (muted, or the selected row's meta colour), as the tree's aligned
    *  columns wore. */
   meta?: boolean;
+  /** The presentation's cell type (a soft row's `cell` pick). */
+  className?: string;
+  /** A pick scope of the cell's own (a soft numeric cell's), on a box-less
+   *  wrapper — the grid item stays the cell. */
+  scope?: CSSProperties;
+  /** The cell's `data-part` (`DataTableParts.cell`). */
+  part?: string;
   children: ReactNode;
 }) {
   const cell = (
     <Text
       as="div"
       role={role}
-      className={cn(alignClass(align), meta && "text-caption text-row-meta")}
+      data-part={part}
+      className={cn(
+        className,
+        alignClass(align),
+        meta && "text-caption text-row-meta",
+      )}
     >
       {children}
     </Text>
   );
-  if (align !== "end" && align !== "center") return cell;
-  return (
-    <Stack direction="row" gap="none" align="center" justify={align}>
-      {cell}
-    </Stack>
+  const aligned =
+    align !== "end" && align !== "center" ? (
+      cell
+    ) : (
+      <Stack direction="row" gap="none" align="center" justify={align}>
+        {cell}
+      </Stack>
+    );
+  return scope === undefined ? (
+    aligned
+  ) : (
+    <div className="contents" style={scope}>
+      {aligned}
+    </div>
   );
 }
 
 function SortIcon({
   active,
   direction,
+  hideUnsorted = false,
 }: {
   active: boolean;
   direction: "asc" | "desc" | null;
+  /** Honour `sortIcon: sorted` (a soft header): no arrow while unsorted. */
+  hideUnsorted?: boolean;
 }) {
   const icon =
     direction === "asc"
@@ -1396,6 +1560,7 @@ function SortIcon({
       className={cn(
         "mb-px ml-0.5 inline-block size-3 align-middle",
         active ? "text-foreground" : "text-muted-foreground/40",
+        !active && hideUnsorted && SORT_ICON_SORTED_ONLY,
       )}
     />
   );

@@ -24,6 +24,7 @@ export default {
       id: MIDI_SOURCE_ID,
       label: "MIDI File",
       icon: symbol("music-note"),
+      tint: "--chord-5",
       LoaderComponent: MidiLoader,
       compile: parseMidi,
     }),

@@ -1,16 +1,28 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { type KeyboardEvent, type ReactNode, useCallback, useRef } from "react";
+import {
+  type CSSProperties,
+  type KeyboardEvent,
+  type ReactNode,
+  useCallback,
+  useRef,
+} from "react";
 import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { spaceLength } from "@plugins/primitives/plugins/css/plugins/space-ramp/core";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import {
+  rolePickClass,
+  rolePickScope,
+  Text,
+} from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import { hoverRevealGroup } from "@plugins/primitives/plugins/hover-reveal/web";
+import { DATA_VIEW_PICKS } from "@plugins/ui/plugins/tokens/plugins/data-view/core";
 import {
   DATA_VIEW_HEADER_OFFSET_VAR,
+  dataPart,
   type CreateOption,
   type DataViewDensity,
   type DataViewSearchSuggestions,
@@ -47,6 +59,42 @@ const COMPACT_BREAKPOINT = 360;
  */
 const NARROW_SEARCH_BREAKPOINT = 720;
 
+/**
+ * Below this container width the wide row is NARROW — the stage a theme can
+ * tune through the data-view token group: `searchWidthNarrow` (the search
+ * lane; unset = no change here, `w-search` above
+ * {@link NARROW_SEARCH_BREAKPOINT} and today's `w-32` below it) and
+ * `narrowCreateLabel` (`hide` drops a labelled create button's words; `show`
+ * by default). Both are no-ops for a theme that sets neither, so the stage
+ * changes nothing by default. Measured like {@link COMPACT_BREAKPOINT} (the
+ * band's own width) rather than a CSS container query: making the band a
+ * size container would zero its intrinsic width wherever a DataView sits in
+ * a shrink-to-fit box.
+ */
+const NARROW_BREAKPOINT = 760;
+
+/**
+ * The search lane on a narrow band above {@link NARROW_SEARCH_BREAKPOINT}:
+ * the theme's `searchWidthNarrow`, else the wide lane (`--search-width`) —
+ * so unset it is `w-search` exactly.
+ */
+const NARROW_SEARCH_WIDTH_CLASS =
+  "w-[var(--search-width-narrow,var(--search-width))]";
+
+/**
+ * The toolbar's search well (the `filled` field), from the data-view token
+ * group: its fill, corners and where its text starts (`searchFill`,
+ * `searchRadius`, `searchTextStart`), and its glyph's size and ink
+ * (`searchIconSize` / `searchIconInk`, on the field's leading pin — its first
+ * child). Every default is the `filled` field's own look.
+ */
+const BAND_NARROW = { "--dv-band-narrow": "yes" } as CSSProperties;
+
+const SEARCH_WELL_CLASS =
+  "rounded-search bg-search-fill dark:bg-search-fill pl-search-text";
+const SEARCH_GLYPH_CLASS =
+  "[&>:first-child]:text-search-icon-ink [&>:first-child_svg]:size-search-icon";
+
 export interface DataViewToolbarProps {
   /**
    * Attached to the sticky toolbar element so the host can measure its height and
@@ -65,6 +113,8 @@ export interface DataViewToolbarProps {
    * `compact` — a single creator folds to an icon `+` button when narrow.
    */
   creators?: CreateOption[];
+  /** `DataViewProps.createLabel`: N creators draw a labelled trigger. */
+  createLabel?: string | undefined;
   /** The view switcher, in both forms (strip / collapsed chip). */
   switcher: ToolbarParts["switcher"];
   /** Number of view instances — the switcher is hidden when compact unless >1. */
@@ -116,6 +166,7 @@ export function DataViewToolbar({
   onQueryChange,
   actions,
   creators,
+  createLabel,
   switcher,
   switcherCount,
   density,
@@ -141,6 +192,7 @@ export function DataViewToolbar({
   const focusSearch = useCallback(() => searchRef.current?.focus(), []);
   const compact =
     density === "compact" || (width > 0 && width < COMPACT_BREAKPOINT);
+  const narrow = width > 0 && width < NARROW_BREAKPOINT;
   // Applicability, ordering and the badge count, derived the one way the
   // hosted trigger derives them too. A non-empty query counts toward the
   // compact trigger's badge, since the fold hides the search field.
@@ -163,13 +215,29 @@ export function DataViewToolbar({
     creators === undefined || creators.length === 0 ? null : (
       <CreatorsControl
         creators={creators}
+        createLabel={createLabel}
         compact={compact}
         form={forms.creators}
       />
     );
-  const field = (
+  const appearance = compact ? "field" : forms.search;
+  // The field's text takes the type the theme picks (`DATA_VIEW_PICKS.search`,
+  // default the `sm` field's own caption). Not for `bare`, whose text is the
+  // body role a pill-filling field draws.
+  const pickSearch = appearance !== "bare";
+  const searchPick = DATA_VIEW_PICKS.search;
+  const searchField = (
     <SearchInput
       ref={searchRef}
+      {...dataPart("dv.search")}
+      {...(pickSearch
+        ? {
+            className: cn(
+              rolePickClass(searchPick.fallback),
+              appearance === "filled" && SEARCH_WELL_CLASS,
+            ),
+          }
+        : {})}
       value={query}
       onChange={(e) => onQueryChange(e.target.value)}
       {...(onSearchSubmit === undefined
@@ -182,7 +250,7 @@ export function DataViewToolbar({
             },
           })}
       placeholder={searchPlaceholder}
-      appearance={compact ? "field" : forms.search}
+      appearance={appearance}
       // Wide field: a fixed lane in the inline row — wider when it searches
       // beyond the rows (suggestions). Compact: full width of the options
       // popover (the wrapper's own block box) — hence no width class there.
@@ -190,15 +258,27 @@ export function DataViewToolbar({
       wrapperClassName={
         !compact && forms.search !== "bare"
           ? cn(
+              appearance === "filled" && SEARCH_GLYPH_CLASS,
               searchSuggestions !== undefined
                 ? "w-80"
                 : width > 0 && width < NARROW_SEARCH_BREAKPOINT
-                  ? "w-32"
-                  : "w-48",
+                  ? "w-search-narrow"
+                  : narrow
+                    ? NARROW_SEARCH_WIDTH_CLASS
+                    : "w-search",
             )
           : undefined
       }
     />
+  );
+  // The pick's scope: a box-less wrapper whose vars the input's style queries
+  // read (through the field's own wrapper, which inherits them).
+  const field = pickSearch ? (
+    <span className="contents" style={rolePickScope(searchPick)}>
+      {searchField}
+    </span>
+  ) : (
+    searchField
   );
   const fieldWithTrailing =
     searchTrailing === undefined ? (
@@ -276,6 +356,7 @@ export function DataViewToolbar({
               <ToolbarPill
                 overlay={floating}
                 label="Tools"
+                part="dv.tools-pill"
                 className={revealClass}
               >
                 {node}
@@ -287,7 +368,7 @@ export function DataViewToolbar({
     />
   );
 
-  const bandContent = !compact ? (
+  const bandBody = !compact ? (
     <Arrangement
       title={titleNode}
       switcher={switcher}
@@ -312,6 +393,14 @@ export function DataViewToolbar({
     />
   ) : (
     compactRow
+  );
+  // The narrow stage, published to the band's content as a var a style query
+  // reads (`--dv-band-narrow`): a create button anywhere in the band — the
+  // host's or a surface's own — follows the theme's `narrowCreateLabel`.
+  const bandContent = (
+    <div className="contents" style={narrow ? BAND_NARROW : undefined}>
+      {bandBody}
+    </div>
   );
 
   return (
@@ -342,6 +431,7 @@ export function DataViewToolbar({
           layer="nav"
           ref={bandRef}
           className={hoverRevealGroup}
+          {...dataPart("dv.toolbar")}
         >
           {bandContent}
         </Pin>
@@ -352,6 +442,7 @@ export function DataViewToolbar({
           layer="nav"
           ref={bandRef}
           className={hoverRevealGroup}
+          {...dataPart("dv.toolbar")}
         >
           {bandContent}
         </Sticky>

@@ -8,6 +8,7 @@ import { fontFamilyGroup } from "@plugins/ui/plugins/tokens/plugins/font-family/
 import { typeScaleGroup } from "@plugins/ui/plugins/tokens/plugins/type-scale/core";
 import { iconsGroup } from "@plugins/ui/plugins/tokens/plugins/icons/core";
 import { overlayGroup } from "@plugins/ui/plugins/tokens/plugins/overlay/core";
+import { dataViewGroup } from "@plugins/ui/plugins/tokens/plugins/data-view/core";
 
 /*
  * The Prototypes look: the canvas-viewer mockup (`proto-1792527153-l4fzh8`),
@@ -52,7 +53,8 @@ const colorPalette = colorPaletteGroup.fragment(
     popover: POP,
     popoverForeground: TEXT,
     primary: ACCENT,
-    primaryForeground: BG,
+    // The mock's ink on the apricot (`.new`, a checked box): a warm near-black.
+    primaryForeground: "#17120d",
     primaryText: ACCENT,
     secondary: SURFACE_2,
     secondaryForeground: TEXT,
@@ -68,6 +70,9 @@ const colorPalette = colorPaletteGroup.fragment(
     selected: RAISE_2,
     popoverHover: RAISE,
     groupForeground: MUTED,
+    // The gallery's split header title (`.phead .crumb`) reads in full ink
+    // over the header's muted controls.
+    paneTitleForeground: TEXT,
     toolbarForeground: MUTED,
     treeGuide: LINE,
     border: LINE_2,
@@ -162,12 +167,16 @@ const shape = shapeGroup.fragment(
  * which every Bar declares); a frame header's are 24px with 14px glyphs (the
  * `xs` rung); a chip's corners 6px. A pane header's inline insets are the
  * header card's 6px (`.top-l`'s `padding: 0 6px`) — its 40px row
- * (`chromePaneH`, the default) inside a 1px border is the card's 42px.
+ * (`chromePaneCardH`) inside a 1px border is the card's 42px.
  */
 const density = densityGroup.fragment(
   both({
-    chromePanePadStart: "0.375rem",
-    chromePanePadEnd: "0.375rem",
+    // The split header (`.phead`): flush on the pane's left, 16px in; the
+    // detail pane's header card keeps the card's 6px (`.top-l`).
+    chromePanePadStart: "1rem",
+    chromePanePadEnd: "1rem",
+    chromePaneCardPadStart: "0.375rem",
+    chromePaneCardPadEnd: "0.375rem",
     controlHeightSm: "1.875rem",
     controlIconSm: "0.9375rem",
     controlIconXs: "0.875rem",
@@ -187,6 +196,17 @@ const density = densityGroup.fragment(
     galleryCardMin: "15.625rem",
     galleryGapX: "1.625rem",
     galleryGapY: "1.875rem",
+    // The gallery mock's `--inset`: one pane-relative edge for the pane
+    // header, the toolbar and the content (PaneChrome `inset="content"`) —
+    // 4% of the pane between 16 and 56px, centring a 1560px column beyond.
+    contentInset: "max(clamp(16px, 4cqi, 56px), calc((100cqi - 1560px) / 2))",
+    // The mock's split header (`.phead`): a 48px row with no rule under it.
+    // Only the bar headers (the gallery, the Trash) have one; the detail
+    // pane's card header never did. The card row (`header="card"`, the canvas
+    // mock's 40px row in a 42px card) keeps its own height.
+    chromePaneH: "3rem",
+    chromePaneCardH: "2.5rem",
+    chromePaneRule: "0",
   }),
 );
 
@@ -241,6 +261,14 @@ const typeScale = typeScaleGroup.fragment(
     "line-height-2xs": "0.875rem",
     "font-size-3xs": "0.65625rem",
     "line-height-3xs": "0.875rem",
+    // The gallery mock's two sizes off the ladder: a card's title (13.5px on
+    // its 19px line, `heading` — unused elsewhere in the app) and a card's
+    // blurb / the search field (12.5px on a 1.45 line, `subheading` — only a
+    // dialog title reads it, and the app opens none).
+    fontSizeHeading: "0.84375rem",
+    lineHeightHeading: "1.1875rem",
+    fontSizeSubheading: "0.78125rem",
+    lineHeightSubheading: "1.1328125rem",
   }),
 );
 
@@ -273,6 +301,159 @@ const overlay = overlayGroup.fragment(
 );
 
 /**
+ * The gallery mock (`proto-1792667078-9zh04x`, `header: split`): its toolbar
+ * row (`.top`: 12px block padding and gap), its two 42px floating pills (5px
+ * inside a 1px border, 30px items 2px apart), label-only view chips (the
+ * active one the raise-2 wash in a `--line-2` ring), the 220px search
+ * (140px narrow) and its 18px divider; a card's lines (`.info`: 11px down,
+ * a 19px 13.5/500 title, a fixed two-line 12.5/1.45 blurb 3px under it, a
+ * 17px token line 7px under that — tokens 12px apart in 11px dim mono with
+ * 12px glyphs), the cover's 3px lift; group heads (`.shead`: 13/500, the count
+ * in 11.5 dim mono, 8px gap, 4px padding, 16px to the cards, 28px between
+ * groups, a 14px chevron); and the list (`.list`) as the soft table inside a
+ * float frame (r14, pad 4): rows padded 7 at r10, 16px column gap, the raise
+ * wash on hover, a `--line` rule from 108px, an 84×52.5 r7 thumbnail (72 on
+ * a narrow table), column labels in 11px dim, unsorted arrows hidden, cells
+ * in 11.5 dim mono.
+ */
+const dataView = dataViewGroup.fragment(
+  both({
+    // ── Type picks — measured off the mock, so literal: never stepped down in
+    // the gallery's compact cards.
+    pickStep: "base",
+    viewChipRole: "body",
+    viewChipEmphasis: "normal",
+    searchRole: "subheading",
+    searchEmphasis: "normal",
+    searchFamily: "sans",
+    createRole: "body",
+    createEmphasis: "medium",
+    cardTitleRole: "heading",
+    cardTitleEmphasis: "medium",
+    cardSubtitleRole: "subheading",
+    cardSubtitleEmphasis: "normal",
+    cardSubtitleFamily: "sans",
+    cardTokenRole: "2xs",
+    cardTokenEmphasis: "normal",
+    cardTokenFamily: "mono",
+    cardTokenNumericRole: "2xs",
+    cardTokenNumericEmphasis: "normal",
+    cardTokenNumericFamily: "mono",
+    groupLabelRole: "label",
+    groupCountRole: "code",
+    columnHeaderRole: "2xs",
+    columnHeaderEmphasis: "normal",
+    titleCellRole: "label",
+    titleCellFamily: "sans",
+    titleCellSubtitleFamily: "sans",
+    titleCellSubtitleRole: "caption",
+    cellRole: "code", // `.row .c`: 11.5px dim mono, numbers and words alike
+    cellNumericRole: "code",
+    cellInk: DIM,
+    // ── Inks
+    cardTokenInk: "var(--faint-foreground)",
+    cardTokenIconInk: "var(--faint-foreground)",
+    columnHeaderInk: "var(--faint-foreground)",
+    columnHeaderSortedInk: "var(--faint-foreground)",
+    viewChipActiveRing: LINE_2,
+    groupLabelInk: TEXT, // `.shead h3`
+    // ── Toolbar
+    toolbarPadY: "0.75rem",
+    toolbarGap: "0.75rem",
+    // The first section starts 14px under the row (128px less 48 + 66).
+    toolbarSpaceBelow: "0.875rem",
+    pillPadX: "0.3125rem",
+    pillPadY: "0.3125rem",
+    pillGap: "0.125rem",
+    pillDividerH: "1.125rem",
+    pillDividerPadX: "0.25rem",
+    searchWidth: "13.75rem",
+    searchWidthNarrow: "8.75rem",
+    // `.search.open`: the raise wash at 7px corners, a 15px muted glyph, the
+    // text after 8 + 15 + 7px.
+    searchFill: RAISE,
+    searchRadius: "0.4375rem",
+    searchIconSize: "0.9375rem",
+    searchIconInk: MUTED,
+    searchTextStart: "1.875rem",
+    // `.new { padding: 0 12px 0 9px }`, less the button's 1px border.
+    createPadStart: "0.5rem",
+    createPadEnd: "0.6875rem",
+    createPadNarrow: "0.4375rem", // narrow: `.new { padding: 0 8px }`
+    createRadius: "0.5rem", // `.new { border-radius: 8px }`
+    // ── View chips
+    viewChipIcon: "never",
+    // `.view`: 8px corners, 7px glyph gap; `.views { gap: 1px }` between
+    // chips, `.bar { gap: 2px }` around the add button (as the add's 8px).
+    viewChipRadius: "0.5rem",
+    viewChipGap: "0.4375rem",
+    viewChipSpacing: "0.0625rem",
+    viewSwitcherGap: "0.0625rem", // the add sits in `.views` too
+    viewAddRadius: "0.5rem",
+    viewChipLabel: "always",
+    viewAddSeparator: "hide",
+    narrowCreateLabel: "hide",
+    // ── Card
+    // The cards start right under their header (`.shead`'s 16px is the room).
+    galleryBodyPadY: "0px",
+    cardMetaPadTop: "0.6875rem",
+    cardMetaPadX: "0.125rem", // `.info { padding: 11px 2px 0 }`
+    cardTitleLine: "1.1875rem",
+    cardSubtitleLine: "1.1328125rem",
+    cardTokensLine: "1.0625rem",
+    cardSubtitleGap: "0.1875rem",
+    cardTokensGap: "0.4375rem",
+    cardSubtitleLines: "2",
+    cardTokenGap: "0.75rem",
+    cardTokenIconSize: "0.75rem",
+    cardTokenIconGap: "0.3125rem", // `.tok { gap: 5px }`
+    // ── Cover
+    coverLift: "0.1875rem",
+    coverFill: "#0e0e0e", // `.shot { background }`
+    coverChipInset: "0.5rem",
+    // ── Groups
+    groupHeaderGap: "0.5rem",
+    // `.shead { padding: 4px }` around a `normal` 17px line: 3.5px around the
+    // label role's 18px keeps the 25px row and the words where they were.
+    groupHeaderPadY: "0.21875rem",
+    groupHeaderSpaceBelow: "1rem",
+    groupGap: "1.75rem",
+    groupChevronSize: "0.875rem",
+    // `.shead .rule { margin: 0 4px 0 6px }`
+    groupRuleStart: "0.375rem",
+    groupRuleEnd: "0.25rem",
+    // ── Soft table
+    softRowH: "4.15625rem", // 52.5px thumb + 2 × 7px
+    softRowPad: "0.4375rem",
+    softRowPadEnd: "0.5rem", // `.row { padding: 7px 8px 7px 7px }`
+    softRowRadius: "0.625rem",
+    softColGap: "1rem",
+    softRowHoverFill: RAISE,
+    softRuleInk: LINE,
+    softRuleOpacity: "1",
+    softRuleStart: "6.75rem",
+    softRuleEnd: "0.625rem", // `.row + .row::before { right: 10px }`
+    softHeaderH: "1.2125rem", // 11px on the body's 1.4 line + 2 × 2px
+    softHeaderSpaceBelow: "0px",
+    softFrameFill: `color-mix(in oklab, ${SURFACE} 86%, transparent)`,
+    softFrameBorder: LINE_2,
+    softFrameShadow:
+      "0 12px 40px -12px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.05)",
+    softFrameRadius: "0.875rem",
+    softFramePad: "0.25rem",
+    softFrameBackdrop: "blur(20px) saturate(150%)", // `.list.float`
+    titleCellLineGap: "0.125rem", // `.row .tx p { margin: 2px 0 0 }`
+    softThumbW: "5.25rem",
+    softThumbH: "3.28125rem",
+    softThumbRadius: "0.4375rem",
+    softThumbNarrowW: "4.5rem",
+    columnHeaderCase: "none",
+    columnHeaderTracking: "-0.005em",
+    sortIcon: "sorted",
+  }),
+);
+
+/**
  * The mockup's own line glyphs (`prototypesIcons`, prototypes/icons), which
  * fall back to each symbol's Lucide counterpart for the names it does not
  * draw.
@@ -297,5 +478,6 @@ export const prototypesTheme = defineTheme({
     typeScale,
     icons,
     overlay,
+    dataView,
   ],
 });

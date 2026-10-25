@@ -49,7 +49,8 @@ term. The precedence is per surface, decided once (`resolveListLeading`):
 thumbnail, revealed by the row's hover and painted at rest while active
 (`primary.atRest` / `primary.revealed`). It cannot live inside the thumbnail:
 the icon slot is inside an activating row's own `<button>`. So
-`PrimaryOverThumbnail` draws it as the row's SIBLING, on a click-through ghost
+`PrimaryOverThumbnail` (data-view web, shared with the soft table's
+`PrimaryActionSlot`) draws it as the row's SIBLING, on a click-through ghost
 of the row's line (`Layer as={Line}` with the row's `p-row`, one
 `size-cover-thumb` cell first) — the cell lands on the thumbnail by
 construction, not by measured offsets. The wrapper is the `row-actions` hover
@@ -100,6 +101,10 @@ own boundary. So the run draws ` · ` **only between two adjacent non-chip
 terms**, and separates a chip from its neighbour by spacing alone. The title
 seam follows the same rule, since on one line the title is just the run's first
 term.
+
+The run is data-view's shared `SubtitleRun` (+ `drawnSubtitleTerms`), which
+the soft table's stacked title cell draws too; `subtitle-extraction.test.tsx`
+pins the list's markup against the pre-extraction code.
 
 Which terms are chips comes from `useIsChipField()` — the same Cell registry
 `resolveCell` consults, asked once per render (the schema is per-view, not
@@ -226,19 +231,16 @@ conditional hook.
 - Description: List view child for the data-view primitive: a compact single-row-per-item list (Row primitive) with field-driven label/subtitle/trailing, active-row highlight, and hover item actions.
 - Web:
   - Contributes: `DataViewSlots.View` "List" → `ListView`
-  - Uses: 61 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/data-view` ×37
+  - Uses: 59 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/data-view` ×39
     - `primitives/rank-reorder` ×3
     - `primitives/css/spacing` ×2
-    - `primitives/row-actions` ×2
     - `primitives/collapsible.FoldMotion`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
     - `primitives/css/clip.clipClasses`
     - `primitives/css/fill.Fill`
     - `primitives/css/inline.Inline`
-    - `primitives/css/layer.Layer`
-    - `primitives/css/line.Line`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/row.Row`
     - `primitives/css/text.Text`
@@ -253,10 +255,6 @@ conditional hook.
   - Uses tokens:
     - `ui/tokens/color-palette --foreground`
     - `ui/tokens/color-palette --muted-foreground`
-    - `ui/tokens/density --cover-thumb-h`
-    - `ui/tokens/density --cover-thumb-w`
-    - `ui/tokens/density --pad-row-x`
-    - `ui/tokens/density --pad-row-y`
     - `ui/tokens/density --section-body-pad-top`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/density --space-xl`

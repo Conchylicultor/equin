@@ -1,4 +1,5 @@
 import type { IconRef } from "@plugins/ui/plugins/icons/core";
+import type { ColorTokenRef } from "@plugins/ui/plugins/tokens/plugins/color-ref/core";
 import type { ComponentType } from "react";
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import { defineMountSlot } from "@plugins/primitives/plugins/slot-render/web";
@@ -23,6 +24,9 @@ export const SonataDocument = {
     id: string;
     label: string;
     icon?: IconRef;
+    // The source's colour, a declared colour token: the library's source
+    // chip / dot / group chip and the quiet cover's wash are drawn in it.
+    tint?: ColorTokenRef;
     LoaderComponent: ComponentType<{
       raw?: unknown;
       onRaw: (raw: unknown) => void;

@@ -24,6 +24,7 @@ export default {
       id: UG_SOURCE_ID,
       label: "Ultimate Guitar",
       icon: sonataIcons.icon("pick"),
+      tint: "--chord-3",
       LoaderComponent: UltimateGuitarLoader,
       compile,
     }),

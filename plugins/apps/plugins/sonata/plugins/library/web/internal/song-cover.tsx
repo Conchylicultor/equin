@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useState, type CSSProperties, type ReactNode } from "react";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import {
@@ -11,6 +11,7 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { SonataDocument } from "@plugins/apps/plugins/sonata/plugins/document/web";
 import { hash53 } from "@plugins/packages/plugins/string-hash/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
+import type { ColorTokenRef } from "@plugins/ui/plugins/tokens/plugins/color-ref/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import type { Song } from "../../core";
 import type { SongCoverAnswer } from "../slots";
@@ -35,10 +36,28 @@ const SOURCE_TINTS = [
   "bg-categorical-10/12 text-categorical-10",
 ] as const;
 
-/** A source's tint: a stable hash of its id, so a source keeps its colour
- *  across reloads, sessions and machines. */
-function sourceTint(sourceId: string): string {
+/** A source without a declared tint: a stable hash of its id, so it keeps
+ *  its colour across reloads, sessions and machines. */
+function hashedSourceTint(sourceId: string): string {
   return SOURCE_TINTS[hash53(sourceId) % SOURCE_TINTS.length]!;
+}
+
+/**
+ * The quiet base's wash and glyph colour: the source's declared tint (its
+ * `SonataDocument.Source.tint`, the colour its chip and group chip wear too)
+ * as a low wash under the glyph in it — else the hashed categorical slot.
+ */
+function quietTint(
+  sourceId: string,
+  tint: ColorTokenRef | undefined,
+): { className?: string; style?: CSSProperties } {
+  if (tint === undefined) return { className: hashedSourceTint(sourceId) };
+  return {
+    style: {
+      backgroundColor: `color-mix(in oklab, var(${tint}) 12%, transparent)`,
+      color: `var(${tint})`,
+    },
+  };
 }
 
 export interface SongCoverProps {
@@ -62,6 +81,7 @@ export interface SongCoverProps {
 export function SongCover({ song, answer }: SongCoverProps): ReactNode {
   const sources = SonataDocument.Source.useContributions();
   const source = sources.find((s) => s.id === song.source);
+  const tint = quietTint(song.source, source?.tint);
   // The image's own failure, keyed by its URL: a new URL tries again.
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
 
@@ -84,7 +104,7 @@ export function SongCover({ song, answer }: SongCoverProps): ReactNode {
 
   return (
     <Layer>
-      <Center className={cn("size-full", sourceTint(song.source))}>
+      <Center className={cn("size-full", tint.className)} style={tint.style}>
         <Icon
           icon={iconArt ?? source?.icon ?? musicNoteIcon}
           className="size-[30%] max-h-10 max-w-10 opacity-80"

@@ -12,7 +12,7 @@ import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
-import type { ToolbarParts } from "../../../core";
+import { dataPart, type DataViewPart, type ToolbarParts } from "../../../core";
 
 /** Where a pill row sits, and whether its band is click-through. */
 export interface PillsLayoutProps {
@@ -22,8 +22,9 @@ export interface PillsLayoutProps {
    * reachable. Default `false` (an in-flow band).
    */
   overlay?: boolean;
-  /** The row's own inset — the arrangement's. Default `"py-sm rail-follow"`
-   *  (the in-flow band: on the rail, a small gap above and below). */
+  /** The row's own inset — the arrangement's. Default `"py-toolbar
+   *  rail-follow"` (the in-flow band: on the rail, the data-view token
+   *  group's `toolbarPadY` above and below — `sm` by default). */
   className?: string;
   /** Inline style for the row (an inset computed from the aside's reach). */
   style?: CSSProperties;
@@ -34,33 +35,44 @@ export interface PillsLayoutProps {
  * click-through band when `overlay`. `give` makes it the cell that yields
  * (and scrolls its content sideways) when the row runs out of room; every
  * other pill is rigid. `className` lands on the pill's surface (a reveal
- * class, for a pill that is hidden at rest).
+ * class, for a pill that is hidden at rest). `part` stamps the surface's
+ * `data-part` (`dv.views-pill` / `dv.tools-pill`). Its padding and item gap
+ * are the data-view token group's `pillPadX/Y` / `pillGap` (`2xs` by default).
  */
 export function ToolbarPill(props: {
   overlay?: boolean;
   give?: boolean;
   label: string;
+  part: DataViewPart;
   className?: string;
   children: ReactNode;
 }): ReactNode {
-  const { overlay = false, give = false, label, className, children } = props;
+  const {
+    overlay = false,
+    give = false,
+    label,
+    part,
+    className,
+    children,
+  } = props;
   const sizing = give ? yieldClass("x") : rigidClass();
   const body = give ? (
     // Past its room the strip scrolls sideways inside the pill rather than
     // pushing the tools pill off the row. Scrollbar hidden — an overflow
     // escape hatch, not a permanent affordance.
     <Scroll axis="x" hideScrollbar>
-      <Line className="gap-2xs">{children}</Line>
+      <Line className="gap-pill">{children}</Line>
     </Scroll>
   ) : (
-    <Line className="gap-2xs">{children}</Line>
+    <Line className="gap-pill">{children}</Line>
   );
   const surface = (
     <Surface
       level="float"
       role="group"
       aria-label={label}
-      className={cn("p-2xs", !overlay && sizing, className)}
+      {...dataPart(part)}
+      className={cn("p-pill", !overlay && sizing, className)}
     >
       {body}
     </Surface>
@@ -93,7 +105,7 @@ export function PillsRow(
 ): ReactNode {
   const {
     overlay = false,
-    className = "py-sm rail-follow",
+    className = "py-toolbar rail-follow",
     style,
     lead,
     views,
@@ -102,13 +114,18 @@ export function PillsRow(
   } = props;
   return (
     <ControlSizeProvider size="sm">
-      <Line className={cn("gap-sm", className)} style={style}>
+      <Line className={cn("gap-toolbar", className)} style={style}>
         {/* Over a click-through band there is no band surface for a bare
             title to sit on (a map shows through), so it rides the views
             pill; in flow it reads on the band, before the pill. */}
         {overlay ? null : lead}
         {views == null && !(overlay && lead) ? null : (
-          <ToolbarPill overlay={overlay} give label="Views">
+          <ToolbarPill
+            overlay={overlay}
+            give
+            label="Views"
+            part="dv.views-pill"
+          >
             {overlay ? lead : null}
             {views}
           </ToolbarPill>
@@ -116,7 +133,7 @@ export function PillsRow(
         {/* The slack between the pills — click-through over an overlay band. */}
         <Fill />
         {tools == null ? null : (
-          <ToolbarPill overlay={overlay} label="Tools">
+          <ToolbarPill overlay={overlay} label="Tools" part="dv.tools-pill">
             {tools}
           </ToolbarPill>
         )}
@@ -128,14 +145,19 @@ export function PillsRow(
 
 /**
  * The thin rule between the tools pill's controls and its create
- * affordance: a 20px box the line centres, the rule stretching to fill it (a
+ * affordance: a box the line centres (`pillDividerH` × `pillDividerPadX`,
+ * 20px tall and `2xs` aside by default), the rule stretching to fill it (a
  * fixed-height rule would itself be the flex item, where the vertical
  * Separator's own `self-stretch` pins it to the top).
  */
 export function PillDivider(): ReactNode {
   return (
-    <Center axis="horizontal" className={cn("h-5 px-2xs", rigidClass())}>
-      <Separator orientation="vertical" />
+    <Center
+      axis="horizontal"
+      className={cn("h-pill-divider px-pill-divider", rigidClass())}
+      {...dataPart("dv.pill-divider")}
+    >
+      <Separator orientation="vertical" className="bg-pill-divider-ink" />
     </Center>
   );
 }

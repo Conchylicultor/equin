@@ -38,6 +38,12 @@ export interface ColumnDef<TRow> {
   sortable?: boolean;
   cell?: (row: TRow) => ReactNode;
   /**
+   * Whether this row's value is a number — a `soft` row's cell then takes the
+   * DataView `cellNumeric` pick instead of `cell` (mono figures, where a theme
+   * wants them). Ignored by the other presentations.
+   */
+  numeric?: (row: TRow) => boolean;
+  /**
    * When the table runs out of room, the order this column gives way in: lower
    * drops first, until the first column keeps its minimum. A column without one
    * never drops — whatever still does not fit scrolls sideways. The first column
@@ -107,8 +113,15 @@ export type DataTableDensity = "comfortable" | "compact";
  *   tier (its text `--selected-foreground`, its secondary cells
  *   `--selected-meta-foreground`) — the tree row's tokens, so a table drawn as
  *   an outline reads like the tree it replaces.
+ * - **`"soft"`** — borderless rows of a minimum height, a rounded hover fill,
+ *   a hairline BETWEEN rows (hidden around the hovered one), one header row
+ *   (its labels' type picked, cased and inked by tokens; unsorted arrows
+ *   optionally hidden), and an optional frame around the whole table — every
+ *   metric from the DataView token group's `soft*` / `columnHeader*` / `cell*`
+ *   tokens (`ui/tokens/data-view`). Its columns give way by `dropOrder` in a
+ *   narrow box; it never scrolls sideways.
  */
-export type DataTablePresentation = "grid" | "outline";
+export type DataTablePresentation = "grid" | "outline" | "soft";
 
 /**
  * Rows that nest. `DataTable` never builds a tree: the caller passes the
@@ -286,6 +299,30 @@ export interface DataTableProps<TRow> {
   tree?: DataTableTree<TRow>;
   /** Checkbox multi-select — see {@link DataTableSelection}. */
   selection?: DataTableSelection;
+  /**
+   * `data-part` names to stamp on the table's elements, so a caller with a
+   * part vocabulary (data-view's `DataViewPart`) can address them — the
+   * part-metrics diff measures them. Absent keys stamp nothing.
+   */
+  parts?: DataTableParts;
+}
+
+/**
+ * The table elements a caller may name with a `data-part` attribute
+ * ({@link DataTableProps.parts}). The table knows no vocabulary: each value is
+ * the caller's.
+ */
+export interface DataTableParts {
+  /** The table's box (the frame, in `soft`). */
+  table?: string;
+  /** The column-header row. */
+  headerRow?: string;
+  /** Each column label. */
+  columnHeader?: string;
+  /** Each body row. */
+  row?: string;
+  /** Each body cell. */
+  cell?: string;
 }
 
 /**

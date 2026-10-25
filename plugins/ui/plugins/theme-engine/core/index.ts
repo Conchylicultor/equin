@@ -12,6 +12,7 @@ export type {
   TokenGroupSpec,
   TokenGroupFragment,
   TokenValues,
+  TokenVarOf,
 } from "./define-token-group";
 export {
   appColorModeConfig,

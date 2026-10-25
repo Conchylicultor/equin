@@ -193,6 +193,12 @@ export const colorPaletteGroup = defineTokenGroup("color-palette", {
     default: "var(--muted-foreground)",
     label: "Group heading text",
   },
+  // A pane header's title (`PaneChrome`). Default = the header's own ink
+  // (`currentColor`: the toolbar foreground it always inherited).
+  paneTitleForeground: {
+    default: "currentColor",
+    label: "Pane title text",
+  },
   // A floating panel's outline (popover / dropdown / select content, drawn as
   // a 1px ring). Default = the 10% foreground ring it always drew.
   popoverBorder: {

@@ -8,6 +8,7 @@ import type {
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { EditableCell } from "./editable-cell";
+import { useFieldCellContext } from "../internal/field-extents";
 
 /**
  * Thrown by `FieldCell` when a field declares `data` but neither a `cell`
@@ -27,9 +28,12 @@ export class MissingDataCellError extends Error {
  * The single "render a field's value, editable when it declares `onEdit`"
  * component, used by every view. Read precedence is uniform: consumer
  * `field.cell` override → contributed `data-view.cell` slot (`resolveCell`) →
- * `String(value)`. When the field declares a write-back (`onEdit`/`onEditValues`)
- * the read is wrapped in `EditableCell` for click-to-edit; otherwise the read is
- * rendered bare.
+ * `String(value)`. In the `token` context (a card's token line) the field's
+ * own `token` renderer comes first: `field.token` → `field.cell` → the type's
+ * cell. Either renderer is handed the field's `extent` when it declares
+ * `extent: true` (`FieldExtentsContext`, provided by the body). When the
+ * field declares a write-back (`onEdit`/`onEditValues`) the read is wrapped
+ * in `EditableCell` for click-to-edit; otherwise the read is rendered bare.
  */
 export interface FieldCellProps {
   field: FieldDef<unknown>;
@@ -37,6 +41,12 @@ export interface FieldCellProps {
   resolveCell: ReturnType<typeof useResolveCell>;
   resolveEditor: ReturnType<typeof useResolveCellEditor>;
   display?: "block" | "inline";
+  /**
+   * Where the value is drawn: `"cell"` (default — a table cell, a list term)
+   * or `"token"` (a card's token line, a compact meta run), where the field's
+   * short form (`FieldDef.token`) wins over its cell.
+   */
+  context?: "cell" | "token";
 }
 
 export function FieldCell({
@@ -45,7 +55,10 @@ export function FieldCell({
   resolveCell,
   resolveEditor,
   display,
+  context = "cell",
 }: FieldCellProps): ReactNode {
+  // A field declaring `extent: true` is handed its extent over the view's rows.
+  const cellContext = useFieldCellContext(field);
   // A field whose values failed to load has no value to draw — say so, per
   // cell, rather than draw the decode of `undefined` (an unset-looking cell).
   if (field.readError) {
@@ -65,8 +78,9 @@ export function FieldCell({
   }
   const value = field.value?.(row);
   const values = field.values?.(row);
-  const read = field.cell
-    ? field.cell(row)
+  const own = context === "token" ? (field.token ?? field.cell) : field.cell;
+  const read = own
+    ? own(row, cellContext)
     : (resolveCell(field, value, row, values) ?? readFallback(field, value));
   if (field.onEdit != null || field.onEditValues != null) {
     return (

@@ -89,6 +89,11 @@ export function galleryFields(
         </Badge>
       ),
     },
+    // "3d ago" / "v12" read the same as a card token and as a table cell (the
+    // gallery mock's list draws its tokens' text in its columns), so neither
+    // field needs a separate `token`. As columns (the soft "Recently edited"
+    // table) both are narrow, end-aligned tracks — the mock's 72px / 64px —
+    // and give way when the title runs out of room, the version count first.
     {
       id: "modifiedAt",
       label: "Edited",
@@ -96,6 +101,9 @@ export function galleryFields(
       icon: scheduleIcon,
       value: (p) => new Date(p.modifiedAt),
       cell: (p) => <RelativeTime date={new Date(p.modifiedAt)} />,
+      width: "4.5rem",
+      align: "end",
+      dropOrder: 2,
     },
     // Absent when no count is known — the token is omitted, never "v0".
     {
@@ -105,6 +113,9 @@ export function galleryFields(
       icon: historyIcon,
       value: (p) => p.versions,
       cell: (p) => (p.versions === undefined ? null : `v${p.versions}`),
+      width: "4rem",
+      align: "end",
+      dropOrder: 1,
     },
     // Sort key: hidden on the card, offered in the sort and filter menus.
     {

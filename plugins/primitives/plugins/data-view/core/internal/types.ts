@@ -7,6 +7,7 @@ import type {
 } from "@plugins/network/plugins/live/plugins/filter/core";
 import type { BadgeVariant } from "@plugins/primitives/plugins/css/plugins/badge/core";
 import type {
+  FieldCellContext,
   LiveArms,
   LiveColumnRef,
   LiveRowsCollection,
@@ -33,6 +34,7 @@ import type {
 } from "./toolbar-arrangement";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 import type { IconRef } from "@plugins/ui/plugins/icons/core";
+import type { ColorTokenRef } from "@plugins/ui/plugins/tokens/plugins/color-ref/core";
 import type { Activation } from "@plugins/primitives/plugins/link-gesture/core";
 import type { LiveDataSource } from "./live-data-source";
 
@@ -530,6 +532,17 @@ export interface FieldOption {
    *  (`fields/core`'s `FieldOptionMeta.quiet`). */
   quiet?: true;
   /**
+   * The value's identity glyph — drawn by a group header (the section this
+   * option buckets into, `DataViewSection.identity`) before its label.
+   */
+  icon?: IconRef;
+  /**
+   * The value's colour, as a declared colour token (`ColorTokenRef`): tints
+   * the identity chip of its group header, and — without a `variant` — the
+   * read cell draws a dot in it before the label.
+   */
+  tint?: ColorTokenRef;
+  /**
    * The `value` of this option's parent option, making the set a forest
    * (e.g. a place category under its group). Absent → a root. Read by
    * {@link optionDescendants} (the "incl. nested" tags operators); a value that
@@ -623,8 +636,27 @@ interface FieldDefBase<TRow> {
    * it with `value` if the field must also be comparable.
    */
   data?: (row: TRow) => unknown;
-  /** Custom renderer; falls back to String(value ?? ""). */
-  cell?: (row: TRow) => ReactNode;
+  /**
+   * Custom renderer; falls back to String(value ?? ""). `context` carries the
+   * field's `extent` when it declares `extent: true` (`FieldCell` hands it);
+   * a site drawing the cell alone (a title, a cover) may omit it — no peers.
+   */
+  cell?: (row: TRow, context?: FieldCellContext) => ReactNode;
+  /**
+   * The renderer for the field drawn as a TOKEN — a gallery card's token line,
+   * a compact meta run (`FieldCell context="token"`) — where a short form reads
+   * better than the cell (`12×` beside a play-count bar). Resolution there:
+   * `token` → `cell` → the type's cell. The cell context ignores it.
+   */
+  token?: (row: TRow, context?: FieldCellContext) => ReactNode;
+  /**
+   * `true`: the field's cells are handed its EXTENT (`context.extent`) — the
+   * smallest and largest finite number `value` returns across the rows the
+   * view shows, computed once per view by the body (only for such fields; no
+   * cost for the rest) — so a cell can draw its value against its peers (a
+   * play count's bar). `null` when no row holds a number.
+   */
+  extent?: true;
   /**
    * The field's values FAILED to load and no earlier values are held — set by a
    * field whose values come from a read of its own (a field extension). Every
@@ -935,7 +967,26 @@ export interface DataViewSection<TRow> {
    * `visibleSections`.
    */
   nesting?: { depth: number; parentKey: string | null };
-  /** The bucket's `swatch` — the header draws it as a dot before the label. */
+  /**
+   * What the section's VALUE looks like — its bucket's `icon` / `tint` /
+   * `swatch` (an enum option's, a tag's colour). A group header draws the
+   * identity chip before its label when `icon` is present (inked by the
+   * colour), else a colour dot when it has only a colour. Absent for a value
+   * with no identity, the "None" section and the implicit section.
+   */
+  identity?: DataViewSectionIdentity;
+}
+
+/**
+ * A section's identity: its value's glyph and colour (see
+ * {@link DataViewSection.identity}). The colour is ONE concept with two
+ * spellings — `tint`, a declared colour token (design data: an option a
+ * plugin declares), or `swatch`, a `#rrggbb` (user data: a tag's colour).
+ * `tint` wins when both are present.
+ */
+export interface DataViewSectionIdentity {
+  icon?: IconRef;
+  tint?: ColorTokenRef;
   swatch?: string;
 }
 
@@ -956,6 +1007,8 @@ export interface DataViewDeclaredSection<TRow> {
   /** The bucket key (`GroupBucket.key`), or the partition's one "None" key. */
   key: string;
   label: string;
+  /** The value's glyph and colour — becomes `DataViewSection.identity`. */
+  identity?: DataViewSectionIdentity;
   /** Exact: the server counted it. */
   count: number;
   /** The rows of this section's own read loaded so far, in its order. */
@@ -1702,9 +1755,12 @@ export type FieldOverride<TRow> = Partial<
     | "section"
     | "icon"
     | "indicator"
+    | "extent"
   >
 > & {
-  cell?(row: TRow): ReactNode;
+  cell?(row: TRow, context?: FieldCellContext): ReactNode;
+  /** The field's token renderer (`FieldDefBase.token`) — a method, like `cell`. */
+  token?(row: TRow, context?: FieldCellContext): ReactNode;
   /**
    * The list's inline-edit write-back (`FieldDefBase.onEdit`): persistence is
    * the list's, never the declaration's — a method for the same reason as
@@ -2074,6 +2130,12 @@ export interface DataViewBaseProps<TRow> {
    * — a `CreateOption` carries only `id`/`label`/`icon`/`description`/`onSelect`.
    */
   creators?: CreateOption[];
+  /**
+   * The label of the create control when the surface declares several
+   * creators (`"Add"`): a labelled button opening the creators menu instead of
+   * the bare "+". Absent ⇒ the "+" as today. One creator keeps its own label.
+   */
+  createLabel?: string;
   /**
    * How much room this surface gives the view — see {@link DataViewDensity}.
    * A small popover or a dense side panel declares `"compact"` and gets the

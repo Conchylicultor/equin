@@ -1,4 +1,5 @@
 import {
+  CreateButton,
   DataViewSwitcher,
   defineDataView,
   type DataViewSourceProps,
@@ -13,7 +14,6 @@ import { useLive } from "@plugins/network/plugins/live/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useToast } from "@plugins/shell/plugins/notifications/web";
-import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
 import type { ThumbnailState } from "@plugins/apps/plugins/prototypes/plugins/thumbnails/core";
 import { PROTOTYPES_CATEGORY_ID } from "@plugins/apps/plugins/prototypes/core";
@@ -44,10 +44,6 @@ import {
   trashFields,
   type TagFieldTree,
 } from "../internal/gallery-fields";
-import { symbol } from "@plugins/ui/plugins/icons/core";
-import { Icon } from "@plugins/ui/plugins/icons/web";
-
-const addIcon = symbol("add");
 
 const PROTOTYPES_VIEW = defineDataView("prototypes.gallery");
 
@@ -99,10 +95,10 @@ export function PrototypeGallery() {
         <LaunchAgentPopover
           draftKey="new-prototype"
           trigger={
-            <Button variant="default">
-              <Icon icon={addIcon} />
-              New prototype
-            </Button>
+            // The DataView's own create button (its part, padding and picked
+            // words) as the launch popover's trigger: New prototype opens a
+            // panel rather than running a creator.
+            <CreateButton label="New prototype" />
           }
           title="New prototype"
           description="Launch an agent to scaffold a new throwaway UI prototype."

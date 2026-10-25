@@ -8,6 +8,7 @@ import { typeScaleGroup } from "@plugins/ui/plugins/tokens/plugins/type-scale/co
 import { densityGroup } from "@plugins/ui/plugins/tokens/plugins/density/core";
 import { iconsGroup } from "@plugins/ui/plugins/tokens/plugins/icons/core";
 import { materialGroup } from "@plugins/ui/plugins/tokens/plugins/material/core";
+import { dataViewGroup } from "@plugins/ui/plugins/tokens/plugins/data-view/core";
 
 // The immersive player's night (proto-1792113547-2qr6g7): a blue-black stage,
 // warm off-white text whose quieter tiers are the same ink at lower alpha, and
@@ -47,7 +48,8 @@ const colorPalette = colorPaletteGroup.fragment(
     popover: MENU,
     popoverForeground: TEXT,
     primary: ACCENT,
-    primaryForeground: ON_ACCENT,
+    // The mockups' `--on-accent` over sky (oklch 0.14 — near-black).
+    primaryForeground: "#090909",
     secondary: CHIP,
     secondaryForeground: TEXT,
     muted: CHIP,
@@ -111,10 +113,23 @@ const typeScale = typeScaleGroup.fragment(
   both({
     fontSizeSubheading: "0.9375rem",
     fontSizeBody: "0.8125rem",
+    // The mockups' 13px/1.35 body line (17.55px, on the 1px grid: 18).
+    lineHeightBody: "1.125rem",
     fontSizeLabel: "0.78125rem",
     fontSizeCaption: "0.71875rem",
     fontSizeControl: "0.75rem",
     fontWeightControl: "600",
+    // The library (proto-1792667077-4bakda): a group header's 15px bold
+    // label, a card title's 13.5px on an 18px line, the 12px mono cells and
+    // the card subtitle's 12px on a 17px line.
+    fontSizeGroup: "0.9375rem",
+    lineHeightGroup: "1.25rem",
+    fontWeightGroup: "700",
+    fontSizeHeading: "0.84375rem",
+    lineHeightHeading: "1.125rem",
+    fontSizeCode: "0.75rem",
+    fontSizeTag: "0.75rem",
+    lineHeightTag: "1.0625rem",
   }),
 );
 
@@ -161,7 +176,10 @@ const shadow = shadowGroup.fragment(
  */
 const material = materialGroup.fragment(
   both({
-    floatFill: "rgb(22 22 32 / 0.5)",
+    floatFill: "rgb(22 22 32 / 0.55)",
+    floatSheen:
+      "linear-gradient(180deg, rgb(255 255 255 / 0.075), rgb(255 255 255 / 0.02))",
+    floatBorder: HAIR,
     floatBackdrop: "blur(16px) saturate(1.9)",
   }),
 );
@@ -178,6 +196,168 @@ const density = densityGroup.fragment(
     galleryCardMin: "13.75rem",
     galleryGapX: "1.125rem",
     galleryGapY: "1.5rem",
+    // The library's split header: a 48px pane header with no rule, flush on
+    // the pane's left (`.phead`, 16px in); ONE inset shared by the toolbar and
+    // the content only — 3% of the pane (16–40px), widening to centre a
+    // 1520px column on a wide pane.
+    chromePaneH: "3rem",
+    chromePanePadStart: "1rem",
+    chromePanePadEnd: "1rem",
+    chromePaneRule: "0px",
+    // Its title: 15px bold (`.phead strong`).
+    chromePaneTitleRole: "subheading",
+    chromePaneTitleEmphasis: "bold",
+    contentInset: "max(clamp(16px, 3cqi, 40px), calc((100cqi - 1520px) / 2))",
+    // The toolbar's pill items (view chips, icon triggers, search, Add): 32px.
+    controlHeightSm: "2rem",
+  }),
+);
+
+/**
+ * The library's DataView (proto-1792667077-4bakda, `header: split`): the
+ * toolbar's two glass pills, view chips that name only the active view (a
+ * filled foreground chip), the gallery card's three fixed lines and its
+ * lifting, zooming cover, identity-chip group headers, and the soft table
+ * (borderless 56px rows, a 52×34 thumbnail, a hairline from the title on).
+ */
+const dataView = dataViewGroup.fragment(
+  both({
+    // ── Type picks ── (measured off the mock: literal, never stepped down in
+    // the gallery's compact cards)
+    pickStep: "base",
+    viewChipRole: "body",
+    viewChipEmphasis: "semibold",
+    searchRole: "label",
+    searchEmphasis: "normal",
+    createRole: "control",
+    createEmphasis: "bold",
+    cardTitleRole: "heading",
+    cardTitleEmphasis: "semibold",
+    cardSubtitleRole: "tag",
+    cardSubtitleEmphasis: "normal",
+    cardSubtitleFamily: "sans",
+    cardTokenRole: "caption",
+    cardTokenEmphasis: "semibold",
+    cardTokenFamily: "sans",
+    cardTokenNumericRole: "2xs",
+    cardTokenNumericEmphasis: "medium",
+    cardTokenNumericFamily: "mono",
+    groupLabelRole: "group",
+    groupLabelEmphasis: "bold",
+    groupCountRole: "caption",
+    groupCountEmphasis: "medium",
+    groupCountFamily: "mono",
+    columnHeaderRole: "3xs",
+    columnHeaderEmphasis: "bold",
+    titleCellRole: "body",
+    titleCellEmphasis: "semibold",
+    titleCellFamily: "sans",
+    titleCellSubtitleRole: "caption",
+    titleCellSubtitleEmphasis: "normal",
+    titleCellSubtitleFamily: "sans",
+    // `.cell.sans` (source, played, added) 12/500 sans; numbers `.cell`
+    // 12/500 mono.
+    cellRole: "code",
+    cellEmphasis: "medium",
+    cellFamily: "sans",
+    cellNumericRole: "code",
+    cellNumericEmphasis: "medium",
+    cellInk: MUTED,
+    // ── Inks ──
+    cardTokenIconInk: "var(--faint-foreground)",
+    columnHeaderInk: "var(--faint-foreground)",
+    columnHeaderSortedInk: "var(--foreground)",
+    viewChipActiveFill: "var(--foreground)",
+    viewChipActiveInk: ON_ACCENT,
+    pillDividerInk: HAIR_2,
+    // A group header's label (the library's "MIDI File") reads in full ink.
+    groupLabelInk: TEXT,
+    coverRing: "var(--border)",
+    // ── Toolbar ──
+    toolbarPadY: "0.75rem",
+    toolbarGap: "0.625rem",
+    toolbarSpaceBelow: "1rem",
+    pillPadX: "0.1875rem",
+    pillPadY: "0.1875rem",
+    pillGap: "0.125rem",
+    pillDividerH: "1.125rem",
+    pillDividerPadX: "0.1875rem",
+    searchWidth: "13.75rem",
+    searchWidthNarrow: "8.75rem",
+    // The search well: a black 30% pill, a 16px muted glyph, text 30px in.
+    searchFill: "rgb(0 0 0 / 0.3)",
+    searchRadius: "999px",
+    searchIconSize: "1rem",
+    searchIconInk: MUTED,
+    searchTextStart: "1.875rem",
+    // `.add-btn { padding: 0 14px 0 11px }`, less the button's 1px border.
+    createPadStart: "0.625rem",
+    createPadEnd: "0.8125rem",
+    createPadNarrow: "0.5rem", // narrow: `.add-btn { padding: 0 9px }`
+    // ── View chip policy ──
+    viewChipLabel: "active",
+    viewChipActivePadStart: "0.6875rem",
+    viewChipActivePadEnd: "0.8125rem",
+    viewChipIconSize: "1rem",
+    viewChipGap: "0.4375rem",
+    viewChipSpacing: "0.125rem", // `.views { gap: 2px }`
+    viewSwitcherGap: "0.125rem",
+    viewAddSeparator: "show",
+    narrowCreateLabel: "hide",
+    // ── Gallery card ──
+    // The grid starts right under its header (`.ghead`'s 14px is the room).
+    galleryBodyPadY: "0px",
+    cardMetaPadTop: "0.625rem",
+    cardMetaPadX: "0.125rem", // `.meta { padding: 10px 2px 0 }`
+    cardTitleLine: "1.125rem",
+    cardSubtitleLine: "1.0625rem",
+    cardTokensLine: "1.125rem",
+    cardSubtitleGap: "0.125rem",
+    cardTokensGap: "0.3125rem",
+    cardTokenGap: "0.75rem",
+    cardTokenIconSize: "0.75rem",
+    cardTokenIconGap: "0.3125rem", // `.tok { gap: 5px }`
+    // ── Cover ──
+    coverLift: "0.1875rem",
+    coverZoom: "1.035",
+    coverHoverFilter: "brightness(1.12) saturate(1.1)",
+    coverFill: PANEL,
+    coverRingHover: HAIR_2,
+    coverPrimaryFill: "var(--foreground)",
+    coverPrimaryInk: ON_ACCENT,
+    coverPrimaryShadow: "0 6px 18px rgb(0 0 0 / 0.5)",
+    coverPrimarySize: "2.375rem",
+    // `.play { right: 10px; bottom: 10px }` / `.more { top: 8px }`, inside the
+    // cover's 1px border — measured from the frame's edge, a pixel further.
+    coverPrimaryInset: "0.6875rem",
+    coverChipInset: "0.5625rem",
+    // ── Group headers ──
+    groupHeaderGap: "0.625rem",
+    groupHeaderPadY: "0.25rem",
+    groupHeaderSpaceBelow: "0.875rem",
+    groupGap: "1.625rem",
+    groupChevronSize: "1rem",
+    groupChipSize: "1.625rem",
+    groupChipRadius: "0.5rem",
+    groupChipFill: CHIP,
+    groupChipIconSize: "0.9375rem",
+    // ── Soft table ──
+    softFrameBorderWidth: "0px",
+    softRowH: "3.5rem",
+    softRowPad: "0.5rem",
+    softRowRadius: "0.875rem",
+    softColGap: "0.875rem",
+    softRowHoverFill: CHIP,
+    softRuleStart: "4.625rem",
+    softRuleEnd: "0.625rem", // `.lrow + .lrow::before { right: 10px }`
+    titleCellLineGap: "0.0625rem", // `.ltitle .s { margin-top: 1px }`
+    softHeaderH: "1.875rem",
+    softHeaderSpaceBelow: "0.25rem",
+    softThumbW: "3.25rem",
+    softThumbH: "2.125rem",
+    softThumbRadius: "0.5625rem",
+    columnHeaderTracking: "0.12em",
+    sortIcon: "sorted",
   }),
 );
 
@@ -205,6 +385,7 @@ export const sonataTheme = defineTheme({
     shadow,
     material,
     density,
+    dataView,
     icons,
   ],
 });

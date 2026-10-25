@@ -44,6 +44,8 @@ exactly this (`plugins/apps/plugins/website/plugins/shell/web/internal/theme.ts`
   - **`chord-palette`** — Chord colour token group: --chord-1…7 (one colour per Roman numeral's number, I … VII, ♭VII sharing VII's) and --chord-outside (a chord with no key), with their customizer section.
   - **`color-adjust`** — Customizer section for a theme's color adjustment — the hue / saturation / lightness shift applied to every color it paints — with "Fill from…" shortcuts.
   - **`color-palette`** — Color palette token group (surfaces, text, accents, status colors) with its customizer section.
+  - **`color-ref`** — ColorTokenRef: a typed reference to a declared palette colour token (its CSS var, drawn as var(<ref>)) — a GENERATED string-literal union of every var the palette token groups declare, in a…
+  - **`data-view`** — DataView token group (each part's type pick — rung, emphasis, family — plus the inks and metrics of the toolbar pills, view chips, gallery card and cover, group headers and the soft table; every…
   - **`density`** — Density token group (padding intents, control heights, the spacing ramp) with its customizer section and "Fill from…" shortcuts.
   - **`file-type-palette`** — File-type colour token group: the closed --file-<tone> tints file-type glyphs are drawn in (Seti's palette on dark, darkened on light) and the --folder tint, with their customizer section.
   - **`font-family`** — Font-family token group (sans/serif/mono families, letter-spacing) with its customizer section.

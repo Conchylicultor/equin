@@ -78,7 +78,43 @@ type HeaderPresentation =
       headerGlass?: never;
     };
 
+/**
+ * Which inline edge the pane's header and content share.
+ *
+ * - `"chrome"` (the default): today's pane. The header pads by its own tier
+ *   inset (density `chromePanePadStart` / `chromePanePadEnd`) and a DataView
+ *   band inside the body by `rail-follow`'s fallback, the chrome pad.
+ * - `"content"`: ONE pane-relative edge for a DataView's toolbar and its
+ *   content. The pane root becomes an inline-size container (so a `cqi`
+ *   length in the theme's inset is a fraction of the PANE, not the window)
+ *   and publishes `--pane-inset: var(--content-inset)` (density
+ *   `contentInset`), which every `rail-follow` band in the body floors at.
+ *   The header keeps its own tier inset (`chromePanePad*`): its title sits
+ *   flush at the pane's left, only the body takes the shared edge. While the theme leaves
+ *   `contentInset` unset (`initial`) the var is invalid and every reader falls
+ *   back to the chrome pad — the same edge as `"chrome"`.
+ *
+ * Opt-in per pane because a container changes more than the edge: it is the
+ * containing block for `position: fixed` descendants (portaled overlays escape
+ * it; an un-portaled `fixed` box does not) and the nearest container for any
+ * unnamed `@container` query / `cq*` length inside it that has no closer one.
+ */
+export type PaneInset = "chrome" | "content";
+
+/**
+ * The pane root's half of `inset="content"`: the inline-size container that
+ * makes `cqi` pane-relative, and the published shared inset. Literal classes
+ * (Tailwind only emits what its scanner sees).
+ */
+const CONTENT_INSET_ROOT =
+  "[container-type:inline-size] [--pane-inset:var(--content-inset)]";
+
 type PaneChromeProps = HeaderPresentation & {
+  /**
+   * Which edge the header and the content share — see {@link PaneInset}.
+   * Default `"chrome"` (unchanged).
+   */
+  inset?: PaneInset;
   /**
    * The pane this chrome is for. Its header title comes from HERE — the
    * pane's `Pane.define({ title })` — and nowhere else: `PaneChrome` accepts no
@@ -147,8 +183,10 @@ export function PaneChrome({
   floatingHeader = false,
   headerTheme,
   headerGlass = false,
+  inset = "chrome",
   children,
 }: PaneChromeProps) {
+  const contentInset = inset === "content";
   const chrome = pane._internal.chrome;
   const entry = usePaneEntry(pane._internal);
   const layoutCtx = useContext(PaneLayoutContext);
@@ -181,6 +219,7 @@ export function PaneChrome({
     <Bar
       tier="pane"
       endSafeArea={reserveEnd}
+      data-part="pane.header"
       // The header row is a hover-reveal anchor: a header item may wear
       // `hoverRevealTargetInAnchor` to show only while the row is hovered.
       className={cn(
@@ -243,7 +282,12 @@ export function PaneChrome({
   if (presentation === "card") {
     return (
       // positioning host for the card and the overlay: the scroll's PARENT, so neither scrolls away with the body
-      <div className="relative isolate h-full">
+      <div
+        className={cn(
+          "relative isolate h-full",
+          contentInset && CONTENT_INSET_ROOT,
+        )}
+      >
         {grounded(<PaneScroll>{content}</PaneScroll>)}
         {overlay}
         <Pin
@@ -252,12 +296,15 @@ export function PaneChrome({
           className="max-w-[calc(100%-2*var(--space-md))]"
         >
           <Surface level="float">
-            {/* The card's row: the bar's own height and insets (density
-                `chromePaneH`, `chromePanePad*`), the theme's toolbar ink, and
+            {/* The card's row: its own height (density `chromePaneCardH`,
+                default the bar's `chromePaneH`), its own insets
+                (`chromePaneCardPad*`, default the bar's), the theme's
+                toolbar ink, and
                 no rule — the card's edge is its border. */}
             <Line
+              data-part="pane.header"
               className={cn(
-                "h-chrome-pane gap-2xs px-chrome-pane text-toolbar-foreground",
+                "h-chrome-pane-card gap-2xs px-chrome-pane-card text-toolbar-foreground",
                 hoverRevealGroup,
               )}
               onDoubleClick={layoutCtx?.onDoubleClickHeader}
@@ -317,7 +364,7 @@ export function PaneChrome({
   );
   return (
     <Column
-      className="h-full"
+      className={cn("h-full", contentInset && CONTENT_INSET_ROOT)}
       header={floatingHeader ? undefined : header(false)}
       // The pane body owns exactly one scroll, expressed via the shared
       // `PaneScroll` scaffold (`<Scroll axis="y" fill h-full>`) instead of

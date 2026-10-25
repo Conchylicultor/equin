@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 import type {
   FieldDef,
   FieldValue,
@@ -164,5 +165,21 @@ describe("enumGroupings", () => {
     bucket("doing");
     // The label lookup reads the SAME array captured at plan time.
     expect(reads).toBe(before);
+  });
+});
+
+describe("enum grouping: the option's identity rides the bucket", () => {
+  test("copies the matched option's icon and tint; leaves them off otherwise", () => {
+    const icon = symbol("list");
+    const [doing, done, stale] = bucketAll(["doing", "done", "gone"], {
+      options: [
+        { value: "doing", label: "In progress", icon, tint: "--categorical-3" },
+        { value: "done", label: "Done" },
+      ],
+    });
+    expect(doing!.icon).toEqual(icon);
+    expect(doing!.tint).toBe("--categorical-3");
+    expect("icon" in done! || "tint" in done!).toBe(false);
+    expect("icon" in stale! || "tint" in stale!).toBe(false);
   });
 });

@@ -44,6 +44,7 @@ documented with the mockup variable it is.
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --border`
+    - `ui/tokens/color-palette --faint-foreground`
     - `ui/tokens/color-palette --popover`
     - `ui/tokens/color-palette --primary`
     - `ui/tokens/shadow --shadow`

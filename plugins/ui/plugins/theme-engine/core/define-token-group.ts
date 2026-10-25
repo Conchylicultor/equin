@@ -1,5 +1,14 @@
 export interface TokenGroupField {
-  /** The token's value when no theme says otherwise — in light mode, and in dark mode unless `darkDefault` is set. */
+  /**
+   * The token's value when no theme says otherwise — in light mode, and in dark
+   * mode unless `darkDefault` is set.
+   *
+   * `"initial"` means UNSET: the var is painted as the CSS-wide `initial`
+   * keyword, i.e. the guaranteed-invalid value, so every `var(--x, fallback)`
+   * reading it takes its fallback — the consumer's own default applies. Use it
+   * for an opt-in token whose absence must change nothing (a content inset a
+   * theme may set, a narrow-stage width), never as a stand-in value.
+   */
   default: string;
   /**
    * The token's dark-mode value when no theme says otherwise. Set it on every
@@ -9,13 +18,33 @@ export interface TokenGroupField {
    */
   darkDefault?: string;
   label?: string;
+  /**
+   * The closed set of values the token may take — an enumerated token (a role
+   * picker's rung, a show/hide policy). Declare it `as const` (or pass a
+   * `readonly` tuple constant): the group's `fragment` then types the token as
+   * that union, so a theme naming a value outside it is a tsc error, and the
+   * customizer edits it with a select. The `default` should be one of them
+   * (or `"initial"`).
+   */
+  values?: readonly string[];
 }
 
 export type TokenGroupSchema = Record<string, TokenGroupField>;
 
-/** Some of a group's tokens, each mapped to its CSS value. */
+/**
+ * The value type of one token: the declared `values` union for an enumerated
+ * token, any CSS string otherwise.
+ */
+export type TokenValueOf<F> = F extends { values: readonly (infer V)[] }
+  ? V
+  : string;
+
+/**
+ * Some of a group's tokens, each mapped to its CSS value — an enumerated
+ * token (`values`) to one of its declared values.
+ */
 export type TokenValues<T extends TokenGroupSchema = TokenGroupSchema> =
-  Partial<{ [K in keyof T]: string }>;
+  Partial<{ [K in keyof T]: TokenValueOf<T[K]> }>;
 
 /**
  * What one theme says about one token group: a sparse set of token values per
@@ -68,6 +97,26 @@ export interface TokenGroupDescriptor<
  */
 export type TokenGroupSpec<T extends TokenGroupSchema = TokenGroupSchema> =
   Pick<TokenGroupDescriptor<T>, "id" | "schema" | "vars">;
+
+// `S` in kebab case, as `tokenVarName` spells it: each capital → `-` + lower.
+type KebabCase<
+  S extends string,
+  Acc extends string = "",
+> = S extends `${infer H}${infer T}`
+  ? KebabCase<T, `${Acc}${H extends Lowercase<H> ? H : `-${Lowercase<H>}`}`>
+  : Acc;
+
+/** The CSS custom property a schema key paints, as a type (`tokenVarName`'s). */
+export type TokenVarName<K extends string> = `--${KebabCase<K>}`;
+
+/**
+ * The union of every CSS var a token group declares, derived from its schema
+ * keys — so a typed reference to "one of this group's tokens" (an option's
+ * colour) is a tsc error on a name the group does not declare.
+ */
+export type TokenVarOf<G extends { schema: TokenGroupSchema }> = TokenVarName<
+  keyof G["schema"] & string
+>;
 
 /** The CSS custom property a token-group schema key paints: `--` + its kebab case. */
 export function tokenVarName(key: string): string {

@@ -5,7 +5,9 @@
 // Usage:
 //   ./equin run plugins/apps/plugins/prototypes/plugins/compare/e2e/compare-diff.ts \
 //     --name <proto-id> [--width <px>] [--options <name>=<value>,…] [--out <prefix>] [--threshold 0.1] \
-//     [--delta-e 5] [--fail-above <pct>] [--wait <ms>] [--color-scheme dark|light] [--headed]
+//     [--delta-e 5] [--fail-above <pct>] [--wait <ms>] [--color-scheme dark|light] [--headed] \
+//     [--metrics <app>/e2e/<proto>.parts.json] [--metrics-tolerance px=0.5,de=3,weight=0,opacity=0.01] \
+//     [--metrics-only] [--fail-on-metrics]
 //
 // The prototype names its counterpart itself, in its own
 // `<meta name="mocks" content="<kind>:<ref>">` (`route:/agents`,
@@ -21,8 +23,9 @@
 //
 // Both frames always share one size (the canvas's), set to 100% through the
 // size & zoom chip so a pixel of the mock is a pixel of the app. --width picks
-// the canvas size preset of that width (the run refuses, listing the presets,
-// when no preset has it). Without it the canvas stays at the size the
+// the canvas size preset of that width when one has it; any other width (700)
+// is Responsive with the browser window sized until the frames come out that
+// wide, at the declared size's height. Without it the canvas stays at the size the
 // prototype declares (`<meta name="prototype-viewport">`: a preset, or
 // `window` — the default — photographed at Laptop, a headless run having no
 // viewer's window); a `responsive` prototype is photographed at Responsive with
@@ -54,8 +57,14 @@
 // the swatches, the two region mosaics and the profiles. `--delta-e` sets the
 // drift line (default 5; ~2 is just noticeable).
 //
+// --metrics <mapping> measures each mapped part in both documents (box,
+// padding, gaps, type, radius, border, colours, shadow, opacity) and prints
+// part · prop · mock · app · Δ · ok, writing `<out>-metrics.json` (see
+// ./part-metrics.ts). --metrics-only skips the pixel and colour diff.
+//
 // A transcript tool by default: pass --fail-above <pct> to make a
-// differing-pixel ratio above it a FAIL.
+// differing-pixel ratio above it a FAIL, and --fail-on-metrics to make any
+// metric outside --metrics-tolerance one.
 //
 // Example:
 //   ./equin run plugins/apps/plugins/prototypes/plugins/compare/e2e/compare-diff.ts \
@@ -66,6 +75,7 @@ import type { Frame, Locator, Page } from "playwright";
 import {
   agentFetch,
   arg,
+  flag,
   clearToasts,
   colorReport,
   colorReportText,
@@ -111,6 +121,15 @@ import {
   REAL_APP_LABEL,
   REAL_APP_SOURCE,
 } from "@plugins/apps/plugins/prototypes/plugins/compare/core";
+import {
+  compareMetrics,
+  loadMapping,
+  runAppSetup,
+  measureSide,
+  metricsTableText,
+  parseTolerance,
+  type MetricsScope,
+} from "./part-metrics";
 
 const USAGE =
   "--name <proto-id> is required — the prototype folder's minted id (`./equin prototype list` prints them)";
@@ -129,6 +148,13 @@ const deltaE = numArg("delta-e", 5);
 const waitMs = numArg("wait", 3000);
 const colorScheme = (arg("color-scheme") ??
   detectOsColorScheme()) as ColorScheme;
+const metricsPath = arg("metrics");
+const metricsTolerance = parseTolerance(arg("metrics-tolerance"));
+const metricsOnly = flag("metrics-only");
+const failOnMetrics = flag("fail-on-metrics");
+if (metricsPath === undefined && (metricsOnly || failOnMetrics)) {
+  usage("--metrics-only / --fail-on-metrics need --metrics <file.parts.json>");
+}
 
 /** Room around the two frames at a preset size: the app chrome and the board. */
 const CHROME = { width: 720, height: 360 };
@@ -194,6 +220,13 @@ function readPicks(): OptionPicks {
 }
 
 const picks = readPicks();
+// Validated before the browser launches: an unknown part, an undeclared `when`
+// option or a mapping for another prototype refuses the run outright.
+const mapping =
+  metricsPath === undefined
+    ? undefined
+    : loadMapping(metricsPath, name, meta.options, picks);
+const metricTargets = mapping?.targets;
 
 console.log(`prototype:    ${meta.title} (${name})`);
 console.log(`mocks:        ${decl.tag}:${decl.ref}`);
@@ -343,6 +376,125 @@ async function pickOptions(page: Page): Promise<void> {
   }
 }
 
+/** A frame screen's live iframe, as a Playwright Frame; null when it draws inline. */
+async function iframeIn(loc: Locator): Promise<Frame | null> {
+  const iframe = loc.locator("iframe:not([aria-hidden])");
+  const n = await iframe.count();
+  if (n === 0) return null;
+  if (n > 1) throw new Error(`${n} live iframes in one frame screen`);
+  const handle = await iframe.elementHandle();
+  const frame = handle ? await handle.contentFrame() : null;
+  if (!frame) throw new Error("the frame's iframe has no document");
+  return frame;
+}
+
+/** The counterpart's measuring scope: its iframe, or the frame screen for an inline exhibit. */
+async function appMetricsScope(page: Page): Promise<MetricsScope> {
+  const appFrame = await iframeIn(page.locator(appSelector("found")));
+  return appFrame
+    ? { frame: appFrame, root: null }
+    : { frame: page.mainFrame(), root: appSelector("found") };
+}
+
+/** The mapping's appSetup clicks for these picks, made in the app before measuring and capturing. */
+async function runSetup(
+  page: Page,
+  r: ReturnType<typeof report>,
+): Promise<void> {
+  if (!mapping || mapping.appSetup.length === 0) return;
+  const failures = await runAppSetup(
+    page,
+    await appMetricsScope(page),
+    mapping.appSetup,
+  );
+  if (failures.length > 0) {
+    r.fail(
+      "every app setup click matches exactly one element",
+      failures.join("; "),
+    );
+    await r.finish();
+  }
+}
+
+/**
+ * The part-metrics pass: both documents measured per mapping entry, the table
+ * printed, `<out>-metrics.json` written. A selector matching nothing on either
+ * side fails the run — a mapping row that measures nothing would pass forever.
+ */
+async function runMetrics(
+  page: Page,
+  r: ReturnType<typeof report>,
+  size: { w: number; h: number },
+): Promise<void> {
+  if (!metricTargets) return;
+  const mockFrame = await iframeIn(screen(page, "A"));
+  if (!mockFrame) throw new Error("frame A (the mock) has no live iframe");
+  const mockScope: MetricsScope = { frame: mockFrame, root: null };
+  const appScope = await appMetricsScope(page);
+
+  const mock = await measureSide(page, mockScope, "mock", metricTargets);
+  const app = await measureSide(page, appScope, "app", metricTargets);
+  const missing = [...mock.missing, ...app.missing];
+  if (missing.length > 0) {
+    r.fail(
+      "every mapped part matches an element on both sides",
+      missing
+        .map(
+          (m) =>
+            `${m.side} ${m.key}: ${m.selector}${m.nth ? ` (nth ${m.nth})` : ""} — ${m.reason}`,
+        )
+        .join("; "),
+    );
+    await r.finish();
+  }
+  const rows = compareMetrics(
+    metricTargets,
+    mock.values,
+    app.values,
+    metricsTolerance,
+  );
+  const off = rows.filter((row) => !row.ok);
+  const tol = Object.entries(metricsTolerance)
+    .map(([k, v]) => `${k}=${v}`)
+    .join(",");
+  console.log(
+    `part metrics (${metricTargets.length} parts, ${rows.length} values, tolerance ${tol}):`,
+  );
+  console.log(metricsTableText(rows));
+  console.log(`metrics:      ${off.length} of ${rows.length} values off`);
+  const path = `${out}-metrics.json`;
+  writeFileSync(
+    path,
+    JSON.stringify(
+      {
+        proto: name,
+        size,
+        picks,
+        tolerance: metricsTolerance,
+        off: off.length,
+        rows,
+      },
+      null,
+      2,
+    ) + "\n",
+  );
+  console.log(`wrote ${path}`);
+  if (failOnMetrics) {
+    r.ok(
+      "every part metric is within tolerance",
+      off.length === 0,
+      `${off.length} off: ${off
+        .slice(0, 12)
+        .map((row) => `${row.key} ${row.prop} ${row.mock}→${row.app}`)
+        .join("; ")}${off.length > 12 ? " …" : ""}`,
+    );
+  } else if (off.length > 0) {
+    r.note(
+      `${off.length} part metrics off — pass --fail-on-metrics to make it a verdict`,
+    );
+  }
+}
+
 async function capture(loc: Locator, suffix: string): Promise<Buffer> {
   const png = await loc.screenshot({ timeout: 15_000 });
   const path = `${out}-${suffix}.png`;
@@ -389,15 +541,12 @@ await withBrowser(async (h) => {
   // so the frames come out at the size a responsive page renders at.
   const declared = meta.viewport;
   let preset: (typeof SIZE_PRESETS)[number] | undefined;
+  // A width no preset has is Responsive, the window sized until the frames
+  // come out that wide (at the declared size's height).
+  let target = initial;
   if (width !== undefined) {
     preset = SIZE_PRESETS.find((p) => p.w === width);
-    if (!preset) {
-      r.fail(
-        `a canvas size preset is ${width}px wide`,
-        `the presets are ${SIZE_PRESETS.map((p) => `${p.name} ${p.w}×${p.h}`).join(", ")} — pass one of their widths as --width, or omit it for the size the prototype declares`,
-      );
-      return await r.finish();
-    }
+    if (!preset) target = { w: width, h: initial.h };
   } else if (declared.kind === "preset") {
     preset = SIZE_PRESETS.find((p) => p.name === declared.preset);
   } else if (declared.kind === "window") {
@@ -413,7 +562,7 @@ await withBrowser(async (h) => {
     });
   } else {
     await pickSizeAtActual(page, "Responsive");
-    await sizeWindowTo(page, initial);
+    await sizeWindowTo(page, target);
   }
 
   await page.locator(mockSelector("found")).waitFor({ timeout: 20_000 });
@@ -437,6 +586,21 @@ await withBrowser(async (h) => {
       );
       await r.finish();
     }
+  }
+
+  if (width !== undefined && size.w !== width) {
+    r.fail(
+      `the frames are ${width}px wide`,
+      `they settled at ${size.w}×${size.h} — the window could not be sized to it`,
+    );
+    await r.finish();
+  }
+
+  await runSetup(page, r);
+  await runMetrics(page, r, size);
+  if (metricsOnly) {
+    for (const err of captured.pageErrors) r.note(`page error: ${err}`);
+    return await r.finish();
   }
 
   const mockPng = await capture(mock, "mock");

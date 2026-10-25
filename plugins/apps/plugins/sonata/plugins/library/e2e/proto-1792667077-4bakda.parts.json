@@ -1,0 +1,569 @@
+{
+  "proto": "proto-1792667077-4bakda",
+  "appSetup": [
+    {
+      "when": {
+        "layout": "list"
+      },
+      "click": "[data-part~=\"dv.view-chip\"][aria-label=\"All\"]",
+      "note": "the mock's list layout is its All view; the app opens on its last active view (device-local), so pick All the way a user would"
+    }
+  ],
+  "parts": [
+    {
+      "part": "pane.header",
+      "mock": ".phead",
+      "when": {
+        "header": "split"
+      },
+      "props": [
+        "box",
+        "padding"
+      ],
+      "note": "the mock paints the stage behind its header; the app's header is transparent over the same stage"
+    },
+    {
+      "part": "pane.title",
+      "mock": ".phead strong",
+      "when": {
+        "header": "split"
+      },
+      "props": [
+        "x",
+        "width",
+        "font-size",
+        "font-weight",
+        "font-family",
+        "color"
+      ],
+      "note": "line box differs (mock line-height 1, app the rung's 20px) \u2014 both centred in the 48px header"
+    },
+    {
+      "part": "dv.toolbar",
+      "mock": ".top",
+      "props": [
+        "box"
+      ],
+      "note": "the mock pads .top; the app pads the pill row inside the band \u2014 compare the band's box, the pills' positions say the rest"
+    },
+    {
+      "part": "dv.views-pill",
+      "mock": ".views",
+      "props": [
+        "box",
+        "padding-left",
+        "padding-right",
+        "border",
+        "paint"
+      ],
+      "note": "the mock centres 32px items in a 40px pill (padding 0 3px); the app pads 3px all round \u2014 same geometry"
+    },
+    {
+      "part": "dv.view-chip",
+      "mock": ".view:not(.active):not(.add)",
+      "props": [
+        "box",
+        "padding-left",
+        "padding-right",
+        "border-radius",
+        "color",
+        "background-color"
+      ]
+    },
+    {
+      "part": "dv.view-chip-active",
+      "mock": ".view.active .lab",
+      "app": "[data-part~=\"dv.view-chip-active\"] .contents > span",
+      "label": "dv.view-chip-active (label)",
+      "props": [
+        "x",
+        "font-size",
+        "font-weight",
+        "font-family"
+      ]
+    },
+    {
+      "part": "dv.view-chip-active",
+      "mock": ".view.active",
+      "props": [
+        "box",
+        "padding-left",
+        "padding-right",
+        "column-gap",
+        "border-radius",
+        "color",
+        "background-color",
+        "box-shadow"
+      ]
+    },
+    {
+      "part": "dv.view-add",
+      "mock": ".view.add",
+      "props": [
+        "box",
+        "border-radius",
+        "color",
+        "background-color"
+      ]
+    },
+    {
+      "part": "dv.pill-divider",
+      "mock": ".views .vsep",
+      "label": "dv.pill-divider (views)",
+      "props": [
+        "box",
+        "background-color"
+      ],
+      "app": "[data-part~=\"dv.pill-divider\"] > *"
+    },
+    {
+      "part": "dv.tools-pill",
+      "mock": ".tools",
+      "props": [
+        "box",
+        "padding-left",
+        "padding-right",
+        "border",
+        "paint"
+      ],
+      "note": "the mock centres 32px items in a 40px pill (padding 0 3px); the app pads 3px all round \u2014 same geometry"
+    },
+    {
+      "part": "dv.search",
+      "mock": ".search",
+      "props": [
+        "box",
+        "border-radius",
+        "background-color",
+        "font-size",
+        "font-weight",
+        "font-family"
+      ],
+      "note": "the mock's label pads its glyph in; the app pins it over the input's start padding \u2014 the input box is the well"
+    },
+    {
+      "part": "dv.pill-divider",
+      "mock": ".tools .vsep",
+      "appNth": 1,
+      "label": "dv.pill-divider (tools)",
+      "props": [
+        "box",
+        "background-color"
+      ],
+      "app": "[data-part~=\"dv.pill-divider\"] > *"
+    },
+    {
+      "part": "dv.create",
+      "mock": ".add-btn .lab",
+      "app": "[data-part~=\"dv.create\"] .contents > span",
+      "label": "dv.create (label)",
+      "props": [
+        "x",
+        "font-size",
+        "font-weight",
+        "font-family"
+      ]
+    },
+    {
+      "part": "dv.create",
+      "mock": ".add-btn",
+      "props": [
+        "box",
+        "border-radius",
+        "color",
+        "background-color"
+      ]
+    },
+    {
+      "part": "dv.group-header",
+      "mock": ".ghead",
+      "props": [
+        "y",
+        "height"
+      ],
+      "note": "the app's header spans the band and pays the inset as padding; the mock's sits inside the inset \u2014 visible pieces compared below; gallery only: the mock groups its All list by source, the user's saved All view is ungrouped (a saved-view setting the pass leaves as the user has it)",
+      "when": {
+        "layout": "gallery"
+      }
+    },
+    {
+      "part": "dv.group-chip",
+      "mock": ".ghead .gi",
+      "props": [
+        "box",
+        "border-radius",
+        "background-color"
+      ],
+      "note": "ink is the first group's source tint (data: the mock's first group is MIDI, the user's library may start elsewhere); gallery only: the mock groups its All list by source, the user's saved All view is ungrouped (a saved-view setting the pass leaves as the user has it)",
+      "when": {
+        "layout": "gallery"
+      }
+    },
+    {
+      "part": "dv.group-label",
+      "mock": ".ghead h3",
+      "props": [
+        "x",
+        "y",
+        "font-size",
+        "font-weight",
+        "font-family",
+        "color"
+      ],
+      "when": {
+        "layout": "gallery"
+      },
+      "note": "gallery only: the mock groups its All list by source, the user's saved All view is ungrouped (a saved-view setting the pass leaves as the user has it)"
+    },
+    {
+      "part": "dv.group-count",
+      "mock": ".ghead .n",
+      "props": [
+        "y",
+        "font-size",
+        "font-weight",
+        "font-family",
+        "color"
+      ],
+      "note": "x follows the label's width (data: the group's own name); gallery only: the mock groups its All list by source, the user's saved All view is ungrouped (a saved-view setting the pass leaves as the user has it)",
+      "when": {
+        "layout": "gallery"
+      }
+    },
+    {
+      "part": "dv.group-chevron",
+      "mock": ".ghead .chev",
+      "props": [
+        "box",
+        "color"
+      ],
+      "when": {
+        "layout": "gallery"
+      },
+      "note": "gallery only: the mock groups its All list by source, the user's saved All view is ungrouped (a saved-view setting the pass leaves as the user has it)"
+    },
+    {
+      "part": "dv.card",
+      "mock": ".card",
+      "when": {
+        "layout": "gallery"
+      },
+      "props": [
+        "box"
+      ]
+    },
+    {
+      "part": "dv.cover",
+      "mock": ".card .cover",
+      "when": {
+        "layout": "gallery"
+      },
+      "props": [
+        "box",
+        "box-shadow",
+        "background-color"
+      ],
+      "note": "the app draws the hairline as a ring layer over the picture, not a border"
+    },
+    {
+      "part": "dv.cover",
+      "mock": ".card .cover",
+      "when": {
+        "layout": "gallery"
+      },
+      "hover": true,
+      "hoverTarget": ".card",
+      "appHoverTarget": "dv.card",
+      "props": [
+        "box",
+        "box-shadow"
+      ]
+    },
+    {
+      "part": "dv.cover-primary",
+      "mock": ".card .cover .play",
+      "when": {
+        "layout": "gallery"
+      },
+      "hover": true,
+      "hoverTarget": ".card",
+      "appHoverTarget": "dv.card",
+      "props": [
+        "box",
+        "border-radius",
+        "color",
+        "background-color",
+        "box-shadow",
+        "opacity"
+      ],
+      "app": "[data-part~=\"dv.cover-primary\"] button"
+    },
+    {
+      "part": "dv.card-meta",
+      "mock": ".card .meta",
+      "when": {
+        "layout": "gallery"
+      },
+      "props": [
+        "box",
+        "padding",
+        "gap"
+      ],
+      "app": "[data-part~=\"dv.card\"] > :last-child",
+      "note": "the mock's .meta box is the padded text box; the app's padded box is the card's text wrapper"
+    },
+    {
+      "part": "dv.card-title",
+      "mock": ".card .meta .t b",
+      "when": {
+        "layout": "gallery"
+      },
+      "props": [
+        "x",
+        "y",
+        "height",
+        "font-size",
+        "font-weight",
+        "font-family",
+        "color"
+      ],
+      "nth": 3,
+      "note": "nth 3: the mock's first three cards carry a 'fresh' dot before the title (no counterpart); width is the title's own (data); app side is the words' own run \u2014 the title's box also holds the hover pencil (inline-flex), taller than the line",
+      "app": "[data-part~=\"dv.card-title\"] .contents > .truncate"
+    },
+    {
+      "part": "dv.card-subtitle",
+      "mock": ".card .meta .sub",
+      "when": {
+        "layout": "gallery"
+      },
+      "props": [
+        "x",
+        "y",
+        "height",
+        "font-size",
+        "font-weight",
+        "font-family",
+        "color"
+      ],
+      "nth": 3
+    },
+    {
+      "part": "dv.card-tokens",
+      "mock": ".card .toks",
+      "when": {
+        "layout": "gallery"
+      },
+      "props": [
+        "box",
+        "gap"
+      ]
+    },
+    {
+      "part": "dv.card-token",
+      "mock": ".card .tok",
+      "when": {
+        "layout": "gallery"
+      },
+      "props": [
+        "x"
+      ],
+      "note": "x only: the mock's .tok stretches to its 18px line, the app's token centres in it \u2014 the words line up"
+    },
+    {
+      "part": "dv.card-token",
+      "mock": ".card .tok",
+      "when": {
+        "layout": "gallery"
+      },
+      "props": [
+        "font-size",
+        "font-weight",
+        "font-family",
+        "color"
+      ],
+      "app": "[data-part~=\"dv.card-token\"] > .contents > span",
+      "note": "the words' own box (the mock's .tok is the line's flex item)",
+      "label": "dv.card-token (words)"
+    },
+    {
+      "part": "dv.card-token-icon",
+      "mock": ".card .tok svg.i",
+      "when": {
+        "layout": "gallery"
+      },
+      "props": [
+        "box",
+        "color"
+      ]
+    },
+    {
+      "part": "dv.column-header-row",
+      "mock": ".lhead",
+      "when": {
+        "layout": "list"
+      },
+      "props": [
+        "x",
+        "y",
+        "width",
+        "height"
+      ]
+    },
+    {
+      "part": "dv.column-header",
+      "mock": ".lhead > div",
+      "nth": 1,
+      "when": {
+        "layout": "list"
+      },
+      "label": "dv.column-header (title, sorted)",
+      "props": [
+        "y",
+        "font-size",
+        "font-weight",
+        "font-family",
+        "color",
+        "text-transform",
+        "letter-spacing"
+      ],
+      "note": "x/width residual: the user's All view shows more columns (Added, Transcription) than the mock's"
+    },
+    {
+      "part": "dv.column-header",
+      "mock": ".lhead > div",
+      "nth": 3,
+      "when": {
+        "layout": "list"
+      },
+      "label": "dv.column-header (numeric)",
+      "props": [
+        "y",
+        "font-size",
+        "font-weight",
+        "font-family",
+        "color",
+        "text-transform",
+        "letter-spacing"
+      ],
+      "note": "x/width residual: the user's All view shows more columns (Added, Transcription) than the mock's"
+    },
+    {
+      "part": "dv.row",
+      "mock": ".lrow:not(.lhead)",
+      "when": {
+        "layout": "list"
+      },
+      "props": [
+        "x",
+        "width",
+        "height",
+        "padding-left",
+        "padding-right",
+        "border-radius"
+      ],
+      "note": "the mock centres in a fixed 56px row, the app pads 8px inside a 56px minimum \u2014 same box; y residual: the mock groups its All list (a MIDI files header above the rows), the user's All view is ungrouped"
+    },
+    {
+      "part": "dv.row",
+      "mock": ".lrow:not(.lhead)",
+      "when": {
+        "layout": "list"
+      },
+      "hover": true,
+      "props": [
+        "background-color"
+      ]
+    },
+    {
+      "part": "dv.thumb",
+      "mock": ".lthumb",
+      "when": {
+        "layout": "list"
+      },
+      "props": [
+        "x",
+        "width",
+        "height",
+        "border-radius",
+        "background-color"
+      ],
+      "app": "[data-part~=\"dv.thumb\"] > *",
+      "note": "the frame inside the thumb cell; its hairline is a ring layer; y residual: the mock groups its All list (a MIDI files header above the rows), the user's All view is ungrouped"
+    },
+    {
+      "part": "dv.title-cell",
+      "mock": ".ltitle",
+      "when": {
+        "layout": "list"
+      },
+      "props": [
+        "x"
+      ]
+    },
+    {
+      "part": "dv.title-cell-title",
+      "mock": ".ltitle b",
+      "when": {
+        "layout": "list"
+      },
+      "props": [
+        "x",
+        "font-size",
+        "font-weight",
+        "font-family",
+        "color"
+      ],
+      "note": "width/height: the app's title line is the column's block, the mock's b hugs its words; y residual: the mock groups its All list (a MIDI files header above the rows), the user's All view is ungrouped"
+    },
+    {
+      "part": "dv.title-cell-subtitle",
+      "mock": ".ltitle .s:not(:empty)",
+      "when": {
+        "layout": "list"
+      },
+      "props": [
+        "x",
+        "font-size",
+        "font-weight",
+        "font-family",
+        "color"
+      ],
+      "note": "the first row WITH a subtitle on each side (data)"
+    },
+    {
+      "part": "dv.cell",
+      "mock": ".lrow:not(.lhead) .cell",
+      "nth": 0,
+      "when": {
+        "layout": "list"
+      },
+      "label": "dv.cell (source)",
+      "props": [
+        "font-size",
+        "font-weight",
+        "font-family",
+        "color"
+      ],
+      "appNth": 2,
+      "note": "appNth: the app's cover and title cells are dv.cell too; x residual (more columns before); width: the mock's .cell is the grid track, the app's is the words' box inside it"
+    },
+    {
+      "part": "dv.cell",
+      "mock": ".lrow:not(.lhead) .cell",
+      "nth": 1,
+      "when": {
+        "layout": "list"
+      },
+      "label": "dv.cell (length)",
+      "props": [
+        "font-size",
+        "font-weight",
+        "font-family",
+        "color"
+      ],
+      "appNth": 3,
+      "note": "; width: the mock's .cell is the grid track, the app's is the words' box inside it"
+    }
+  ]
+}

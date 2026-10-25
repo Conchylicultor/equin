@@ -8,6 +8,7 @@ export type {
   ColumnDef,
   DataTableProps,
   DataTableGroup,
+  DataTableParts,
   DataTablePresentation,
   DataTableRowDecoration,
   DataTableSelection,

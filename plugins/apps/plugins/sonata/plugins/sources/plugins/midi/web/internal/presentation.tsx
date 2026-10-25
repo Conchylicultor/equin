@@ -20,6 +20,8 @@ export const midiPresentation = FieldPresentation.Register({
     trackCount: {
       icon: tracksIcon,
       cell: (n) => (n === null ? null : `${n} ${n === 1 ? "track" : "tracks"}`),
+      // The card token's compact form (`2 tr`).
+      token: (n) => (n === null ? null : `${n} tr`),
       width: "5rem",
       align: "end",
     },

@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import type { DataViewSection } from "../../core";
 import { GroupedSections } from "../internal/grouped-sections";
 import { SectionBody } from "../components/section-body";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 afterEach(cleanup);
 
@@ -151,7 +152,7 @@ describe("GroupedSections — nested sections", () => {
       count: exact(4),
       entries: [{ key: "p2", row: {} }],
       nesting: { depth: 0, parentKey: null },
-      swatch: "#7c5cff",
+      identity: { swatch: "#7c5cff" },
     },
     {
       key: "website",
@@ -235,5 +236,82 @@ describe("GroupedSections — nested sections", () => {
     expect(screen.getByText("rows of app")).toBeTruthy();
     expect(screen.queryByText("rows of homepage")).toBeNull();
     expect(screen.getByText("rows of chord")).toBeTruthy();
+  });
+});
+
+describe("GroupedSections — identity chip", () => {
+  const withIdentity = [
+    {
+      key: "doing",
+      label: "Doing",
+      identity: { icon: symbol("list"), tint: "--categorical-3" },
+      count: { kind: "exact", n: 2 },
+      entries: [],
+    },
+    {
+      key: "tinted",
+      label: "Tinted",
+      // A tint alone draws no chip (the chip is the glyph's) — its dot.
+      identity: { tint: "--categorical-4" },
+      count: { kind: "exact", n: 1 },
+      entries: [],
+    },
+  ] as unknown as DataViewSection<unknown>[];
+
+  function chips(headerStyle: "standard" | "quiet") {
+    render(
+      <GroupedSections sections={withIdentity} headerStyle={headerStyle}>
+        {(section) => <div>rows of {section.key}</div>}
+      </GroupedSections>,
+    );
+    return [...document.querySelectorAll('[data-part="dv.group-chip"]')];
+  }
+
+  it("standard and quiet: draws the chip before the label, tinted, only with an icon", () => {
+    for (const style of ["standard", "quiet"] as const) {
+      const found = chips(style);
+      expect(found).toHaveLength(1);
+      const chip = found[0] as HTMLElement;
+      expect(chip.style.color).toBe("var(--categorical-3)");
+      expect(chip.querySelector("svg")).not.toBeNull();
+      // Before the label, in the same run.
+      const label = chip.parentElement!.querySelector(
+        '[data-part="dv.group-label"]',
+      )!;
+      expect(label.textContent).toBe("Doing");
+      expect(
+        chip.compareDocumentPosition(label) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      cleanup();
+    }
+  });
+
+  it("a colour without a glyph draws the dot, the token's colour through its var", () => {
+    render(
+      <GroupedSections sections={withIdentity}>
+        {(section) => <div>rows of {section.key}</div>}
+      </GroupedSections>,
+    );
+    const dots = [...document.querySelectorAll("[data-section-swatch]")];
+    expect(dots).toHaveLength(1);
+    expect((dots[0] as HTMLElement).style.backgroundColor).toBe(
+      "var(--categorical-4)",
+    );
+  });
+
+  it("no chip for a section without identity (every existing surface)", () => {
+    renderSections("standard");
+    expect(document.querySelector('[data-part="dv.group-chip"]')).toBeNull();
+    // The parts are still stamped for the metrics diff.
+    for (const part of [
+      "dv.group-header",
+      "dv.group-label",
+      "dv.group-count",
+      "dv.group-rule",
+      "dv.group-chevron",
+      "dv.group",
+    ]) {
+      expect(document.querySelector(`[data-part="${part}"]`)).not.toBeNull();
+    }
   });
 });

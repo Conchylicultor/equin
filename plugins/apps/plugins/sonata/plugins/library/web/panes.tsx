@@ -74,7 +74,7 @@ export const sonataLibraryPane = Pane.define({
 
 function SonataLibraryBody(): ReactElement {
   return (
-    <PaneChrome pane={sonataLibraryPane}>
+    <PaneChrome pane={sonataLibraryPane} inset="content">
       <SonataLibrarySurface />
     </PaneChrome>
   );

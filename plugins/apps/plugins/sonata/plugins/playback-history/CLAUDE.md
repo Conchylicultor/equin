@@ -34,6 +34,10 @@ tuples that read the join.
     - `apps/sonata/shell.useSonataApp`
     - `infra/endpoints.useFetchEndpoint`
     - `network/live.FieldPresentation`
+    - `primitives/css/clip.Clip`
+    - `primitives/css/inline.Inline`
+    - `primitives/css/rigid.rigidClass`
+    - `primitives/css/ui-kit.cn`
     - `primitives/relative-time.formatRelativeTime`
 - Server:
   - Contributes: `live.columns.expose` "sonata_songs ← sonata_songs_ext_playback"
@@ -47,6 +51,11 @@ tuples that read the join.
   - Entity extension of: `apps/sonata/library` (table `sonata_songs_ext_playback`)
   - Exports (values): `songPlayback`
   - Routes: `POST /api/sonata/songs/:id/play`
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --primary`
+    - `ui/tokens/shape --spacing`
 - Exemptions:
   - Exempts itself from: `endpoints/no-void-fetch-endpoint` — `web/components/record-play-observer.tsx` (sanctioned)
 

@@ -35,13 +35,18 @@
     },
     {
       // The same prototypes as one list, the most recently edited first —
-      // "what was I working on", without the tag sections.
+      // "what was I working on", without the tag sections. Drawn as the
+      // soft table (the gallery mock's list): each row's picture, the title
+      // over the blurb, then when it was edited and its version count.
       "id": "recently-edited",
       "name": "Recently edited",
       "icon": "schedule",
       "source": "gallery",
       "view": {
-        "type": "list",
+        "type": "table",
+        "presentation": "soft",
+        "cover": true,
+        "titleCell": "stacked",
         "sort": [{ "fieldId": "modifiedAt", "direction": "desc" }]
       }
     },

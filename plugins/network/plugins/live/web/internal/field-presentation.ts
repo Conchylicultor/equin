@@ -6,6 +6,7 @@ import {
 } from "@plugins/framework/plugins/web-sdk/core";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 import type { IconRef } from "@plugins/ui/plugins/icons/core";
+import type { ColorTokenRef } from "@plugins/ui/plugins/tokens/plugins/color-ref/core";
 import type {
   FieldOptionMeta,
   FieldsRecord,
@@ -17,6 +18,7 @@ import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web"
 import type {
   ClientFields,
   ClientFieldValue,
+  FieldCellContext,
   LiveArm,
   LiveFieldIds,
   LiveFields,
@@ -65,13 +67,37 @@ export interface LiveFieldOption extends FieldOptionMeta {
    * place-tag tree): the nested tags operators (`has-nested`) reach an
    * option's descendants through it. Absent → a root.
    */
-  readonly parent?: string;
+  readonly parent?: string; /** The value's identity glyph — a group header draws it before the label. */
+  readonly icon?: IconRef;
+  /**
+   * The value's colour, a declared colour token: tints its group header's
+   * identity chip, and — without a `variant` — the read cell draws a dot in it.
+   */
+  readonly tint?: ColorTokenRef;
 }
 
 /** How one field presents in a list, beyond what its declaration says. */
 export interface FieldPresentationSpec<V, Row> {
-  /** The cell, from the field's value (and the row); absent ⇒ its type's default cell. */
-  cell?: (value: V, row: Row) => ReactNode;
+  /**
+   * The cell, from the field's value (and the row); absent ⇒ its type's
+   * default cell. `context.extent` is the field's extent over the view's rows
+   * when the spec declares `extent: true` — else always `null`.
+   */
+  cell?: (value: V, row: Row, context: FieldCellContext) => ReactNode;
+  /**
+   * The field drawn as a TOKEN — a card's token line, a compact meta run —
+   * where a short form reads better than the cell (`12×` beside a bar).
+   * Absent ⇒ the cell, then its type's.
+   */
+  token?: (value: V, row: Row, context: FieldCellContext) => ReactNode;
+  /**
+   * `true`: the renderers are handed the field's EXTENT (`context.extent`) —
+   * the smallest and largest number it holds across the rows the view shows,
+   * computed once per view and only for such a field — so a cell can draw
+   * its value against its peers (a play count's bar). `null` when no row of
+   * the view holds a number, or the cell is drawn outside a view.
+   */
+  extent?: true;
   width?: string;
   align?: "start" | "end" | "center";
   /** `false`: no header text in a table (a glyph column) — the label still names it everywhere else. */

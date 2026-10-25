@@ -89,8 +89,9 @@ the other:
 It opens the prototype's canvas on the deploy this checkout built, adds the
 Real app frame (Compare with Real app), waits for it to resolve, sets the canvas to 100% through the size & zoom chip
 (so a pixel of the mock is a pixel of the app), and photographs both frames at
-the one canvas size. `--width` must be a size preset's width (the run refuses
-and lists the presets otherwise); without it the canvas stays at the size the
+the one canvas size. `--width` takes any width: a size preset's width picks
+that preset, any other (700) is Responsive with the browser window sized
+until the frames come out that wide, at the declared size's height; without it the canvas stays at the size the
 prototype declares — `window` (the default) is photographed at Laptop, since
 a headless run has no viewer's window — or, for a `responsive` prototype,
 Responsive with the browser window sized until the frames come out at
@@ -122,6 +123,59 @@ frame A of kind `prototype` is the mock, the frame whose kind is
 frame has resolved (on `unresolved`, the frame's own text is printed as the
 reason). An `e2e` script may import a plugin's `core` and `e2e` barrels but
 never its `web`, which is why the source id lives in `core/`.
+
+### Part metrics: `--metrics <mapping>`
+
+The pixel and colour diff say where the frames differ; the part-metrics pass
+(`e2e/part-metrics.ts`) says by how much, per part and property:
+
+```bash
+./equin run plugins/apps/plugins/prototypes/plugins/compare/e2e/compare-diff.ts \
+  --name proto-1792667077-4bakda --options header=split,layout=list --width 700 \
+  --metrics plugins/apps/plugins/sonata/plugins/library/e2e/proto-1792667077-4bakda.parts.json \
+  [--metrics-tolerance px=0.5,de=3,weight=0,opacity=0.01] [--metrics-only] [--fail-on-metrics]
+```
+
+A **mapping file** kept with the app (`<app>/e2e/<proto>.parts.json`) maps
+mock CSS selectors onto parts — the mock stays unconstrained, the real
+component carries `data-part`. Each entry: `part` (the closed
+`DATA_VIEW_PARTS` from `data-view/core`, or the pane's `pane.header` /
+`pane.title` — anything else refuses the run), `mock` (selector), optional
+`app` (default `[data-part~="<part>"]`), `nth` / `appNth`, `when` (only
+measured under these mock picks — `{ "layout": "list" }`; names and values
+must be declared options), `hover` with `hoverTarget` / `appHoverTarget`
+(the closest ancestor to hover — a selector, or a part name on the app
+side), `props` (properties or the groups `box`, `padding`, `gap`, `type`,
+`border`, `paint`; default all), `label` (to tell two rows of one part apart)
+and `note`. The file is zod-validated before the browser launches.
+
+Measurement artefacts are normalised on both sides: `box-shadow` drops
+invisible layers (alpha 0 — Tailwind's `rgba(0,0,0,0) 0 0 0 0` ring
+placeholders) and reads `none` when none is left; `border-radius` is the
+effective one, clamped to min(width, height)/2, so any pill compares equal.
+
+An optional top-level `appSetup: [{ "when"?: {<option>: <value>}, "click":
+"<selector>", "note"?: string }]` (names and values must be declared options)
+runs the steps matching the effective picks IN THE APP document, in order,
+after the settle and the picks check and before the measurement and the pixel
+capture (also under `--metrics-only`), so both see the same state. Each
+`click` must match exactly one element or the run fails; the app settles after
+each (load, two frames, 500ms) and one line `app setup: click <selector>` is
+printed per step. Example: `"appSetup": [{ "when": { "layout": "list" },
+"click": "[data-part~=\"dv.view-chip\"][aria-label=\"All\"]" }]`.
+
+After the settle and the picks check, before the capture, each side is
+measured in its own document (the mock's iframe; the counterpart's iframe, or
+the frame screen for an inline exhibit): frame-relative box, padding, row /
+column gap, font size / weight / line height / first family / tracking /
+case, top-left radius, border width / colour, colour, background, shadow,
+opacity — resting entries in one evaluate, then each hover entry alone.
+Colours go through relative colour syntax to sRGB and compare as the
+harness's `deltaE`, the worse of the two composites over black and white (so
+alpha counts). It prints part · prop · mock · app · Δ · ok and writes
+`<out>-metrics.json`. A selector that matches nothing (or fewer than `nth`)
+on either side fails the run. `--metrics-only` skips the pixel and colour
+diff; `--fail-on-metrics` turns any value outside tolerance into a FAIL.
 
 Both captures come out of the same Chromium at the same size, which is what
 makes a pixel diff honest here — the pixel arithmetic itself is the harness's

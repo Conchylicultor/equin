@@ -86,6 +86,38 @@ const VARIANT_CLASS: Record<SectionHeaderVariant, string> = {
 export type SectionHeaderDisclosure = "lead" | "trailing" | "none" | "end";
 
 /**
+ * Which token family sizes the header.
+ *
+ * - **`row`** (default) — the row's own metrics: `p-row`, the row's `gap-sm`,
+ *   an `icon-auto` chevron.
+ * - **`group-header`** — a DataView group header's (`ui/tokens/data-view`):
+ *   the label run's gap (`gap-group-header`), its block padding
+ *   (`py-group-header`), the room below it (`mb-group-header`), the
+ *   chevron's size (`size-group-chevron`) and the rule's own margins
+ *   (`mx-group-rule`). Every default equals the row's own
+ *   metric, so a theme that sets none of them draws the `row` header exactly.
+ */
+export type SectionHeaderMetrics = "row" | "group-header";
+
+/**
+ * The group-header metrics as classes. The label run's gap is set twice: on
+ * the row (the single-element path, where the row IS the run) and on the
+ * row's control (`[data-focus-ring]`, the split path's run beside the actions).
+ */
+const GROUP_HEADER_METRICS =
+  "py-group-header mb-group-header gap-group-header [&>[data-focus-ring]]:gap-group-header";
+
+/**
+ * Part names stamped on the pieces the header draws itself, so a caller can
+ * name them without reaching into its DOM (a DataView's `dv.group-rule` /
+ * `dv.group-chevron`).
+ */
+export interface SectionHeaderParts {
+  rule?: string;
+  chevron?: string;
+}
+
+/**
  * The passthrough ({@link Passthrough}) is handed straight to `Row`, which
  * routes it by DESTINATION: the row box, except the control's own attributes.
  * The `aria-expanded` / `aria-controls` written below ride that same rule, which
@@ -125,6 +157,10 @@ export interface SectionHeaderRowProps extends Passthrough {
    * (out of the a11y tree); the row's click target is unchanged. Default off.
    */
   rule?: boolean;
+  /** Token family — see {@link SectionHeaderMetrics}. Default `"row"`. */
+  metrics?: SectionHeaderMetrics;
+  /** `data-part`s for the rule and the chevron — see {@link SectionHeaderParts}. */
+  parts?: SectionHeaderParts;
   className?: string;
   children: React.ReactNode;
 }
@@ -149,18 +185,35 @@ export function SectionHeaderRow({
   collapsible = true,
   disclosure = "lead",
   rule = false,
-  className,
+  metrics = "row",
+  parts,
+  className: callerClassName,
   children: label,
   ...rest
 }: SectionHeaderRowProps) {
+  // The metrics sit before the caller's classes, so a caller's own padding or
+  // gap still wins.
+  const className =
+    metrics === "group-header"
+      ? cn(GROUP_HEADER_METRICS, callerClassName)
+      : callerClassName;
+  const chevronSize = metrics === "group-header" ? "size-group-chevron" : "";
   // The rule is the last thing in the label run, so it takes exactly the
   // slack between the label and whatever trails it. `span`s: the run sits
   // inside the row's `<button>`, which admits phrasing content only.
   const children = rule ? (
     <>
       {label}
-      <Fill as="span" aria-hidden>
-        <Separator render={<span />} className="block" />
+      <Fill
+        as="span"
+        aria-hidden
+        className={metrics === "group-header" ? "mx-group-rule" : undefined}
+      >
+        <Separator
+          render={<span />}
+          className="block"
+          data-part={parts?.rule}
+        />
       </Fill>
     </>
   ) : (
@@ -266,7 +319,8 @@ export function SectionHeaderRow({
         {children}
         <CollapsibleChevron
           open={open}
-          className={hoverRevealClass(reveal.revealed)}
+          className={cn(hoverRevealClass(reveal.revealed), chevronSize)}
+          data-part={parts?.chevron}
         />
       </Row>
     );
@@ -298,7 +352,11 @@ export function SectionHeaderRow({
                 // Faint at rest, brightening while the header is pointed at
                 // or focused — a named group, so a hover elsewhere up the
                 // tree (an enclosing `group`) never lights it.
-                className="text-faint-foreground transition-colors group-hover/section-header:text-foreground group-focus-within/section-header:text-foreground"
+                className={cn(
+                  "text-faint-foreground transition-colors group-hover/section-header:text-foreground group-focus-within/section-header:text-foreground",
+                  chevronSize,
+                )}
+                data-part={parts?.chevron}
               />
             </>
           ) : actions === undefined ? undefined : open ? (
@@ -331,7 +389,13 @@ export function SectionHeaderRow({
       onClick={onClick}
       actionsAlwaysVisible
       actions={actions}
-      icon={<CollapsibleChevron open={open} />}
+      icon={
+        <CollapsibleChevron
+          open={open}
+          className={chevronSize}
+          data-part={parts?.chevron}
+        />
+      }
       className={cn(VARIANT_CLASS[variant], className)}
       {...rest}
       onPointerEnter={onWarmEnter}

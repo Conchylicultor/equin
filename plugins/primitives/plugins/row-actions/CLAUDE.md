@@ -190,7 +190,6 @@ construction; *visibility* rests on this signal, and only the runtime asserts it
     - `primitives/data-view`
     - `primitives/data-view/gallery`
     - `primitives/data-view/icons`
-    - `primitives/data-view/list`
     - `primitives/tree`
     - `shell/health-report`
 

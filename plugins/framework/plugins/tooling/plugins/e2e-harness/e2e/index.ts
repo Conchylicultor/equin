@@ -37,7 +37,7 @@ export { stallRoute } from "./stall";
 export type { StalledRoute, StallRouteOptions } from "./stall";
 export { snap, DEFAULT_SNAP_TIMEOUT_MS } from "./shots";
 export type { SnapResult } from "./shots";
-export { samplePixels, colorDistance } from "./pixels";
+export { samplePixels, colorDistance, deltaE } from "./pixels";
 export type { PixelGrid, Rgba, Rect } from "./pixels";
 export { diffImages, heatmapText } from "./image-diff";
 export type { ImageDiff, ImageDiffOptions, ImageSize } from "./image-diff";

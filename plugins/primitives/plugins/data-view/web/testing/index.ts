@@ -23,3 +23,6 @@ export { describePagedConformance } from "./paged-conformance";
 // The real field derivation (a collection's fields, presented by the given
 // registrations), so a host's test resolves the schema its list derives.
 export { deriveFields } from "../internal/derived-fields";
+// "Is this field's value empty?" — the rule a card / list line omits a term
+// by, for another plugin's test to check its fields against.
+export { isFieldValueEmpty } from "../components/editable-cell";

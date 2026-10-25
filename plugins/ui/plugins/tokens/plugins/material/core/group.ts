@@ -38,6 +38,14 @@ export const materialGroup = defineTokenGroup("material", {
     default: "blur(20px) saturate(1.5)",
     label: "Floating chrome backdrop filter",
   },
+  // Its edge (`border-float-border`, default the popover's border it always
+  // wore) and a sheen over the fill (`float-sheen`, a background-image —
+  // a glass's faint top light; default none).
+  floatBorder: {
+    default: "var(--popover-border)",
+    label: "Floating chrome border",
+  },
+  floatSheen: { default: "none", label: "Floating chrome sheen" },
 });
 
 export type MaterialTokenValues = {

@@ -174,3 +174,30 @@ export async function flatness(
 export function hexColor(c: Rgba): string {
   return `#${[c.r, c.g, c.b].map((v) => v.toString(16).padStart(2, "0")).join("")}`;
 }
+
+/**
+ * CIE76 ΔE between two sRGB colours (0–255 channels; alpha ignored — composite
+ * first if it matters): ~2 is just noticeable, 5 a visible drift. The same
+ * arithmetic `colorReport` runs inside the page, where it cannot import this
+ * (a `page.evaluate` body is serialized, so it carries its own copy).
+ */
+export function deltaE(a: Rgba, b: Rgba): number {
+  const lin = (c: number): number => {
+    const s = c / 255;
+    return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+  };
+  const f = (t: number): number =>
+    t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116;
+  const lab = (c: Rgba): [number, number, number] => {
+    const R = lin(c.r);
+    const G = lin(c.g);
+    const B = lin(c.b);
+    const x = (R * 0.4124 + G * 0.3576 + B * 0.1805) / 0.95047;
+    const y = R * 0.2126 + G * 0.7152 + B * 0.0722;
+    const z = (R * 0.0193 + G * 0.1192 + B * 0.9505) / 1.08883;
+    return [116 * f(y) - 16, 500 * (f(x) - f(y)), 200 * (f(y) - f(z))];
+  };
+  const p = lab(a);
+  const q = lab(b);
+  return Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]);
+}

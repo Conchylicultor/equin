@@ -6,7 +6,7 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { hoverRevealTarget } from "@plugins/primitives/plugins/hover-reveal/web";
-import type { ToolbarPartForms } from "../../../core";
+import { dataPart, type ToolbarPartForms } from "../../../core";
 import type { DataViewControl } from "../../slots";
 import { useDataViewControls } from "../controls/controls-context";
 import { DataViewControlPanel } from "./control-panel-host";
@@ -142,6 +142,7 @@ export function CompactControls({
             aria-label="View options"
             shape={shape}
             className={triggerReveal}
+            {...dataPart("dv.control")}
           >
             <Icon icon={tuneIcon} />
             <span className="tabular-nums">{activeCount}</span>
@@ -153,6 +154,7 @@ export function CompactControls({
             variant="ghost"
             shape={shape}
             className={cn(triggerReveal, form === "round" && ROUND_AT_REST)}
+            {...dataPart("dv.control")}
           />
         )
       }

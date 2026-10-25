@@ -51,6 +51,7 @@ buttons, `--chrome-mask`).
   - Uses tokens:
     - `ui/tokens/color-palette --card`
     - `ui/tokens/color-palette --popover`
+    - `ui/tokens/color-palette --popover-border`
     - `ui/tokens/shape --spacing`
   - Tokens used by:
     - `menu-bar`

@@ -1,4 +1,5 @@
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import type { RolePart } from "@plugins/primitives/plugins/css/plugins/text/core";
 import { createContext, useContext, type ReactNode } from "react";
 import { usePaneTitle, type MatchEntry, type PaneInternal } from "../pane";
 
@@ -18,6 +19,28 @@ export interface PaneTitleValue {
   /** `null` when the pane is not in the current match (no params to resolve from). */
   entry: MatchEntry | null;
 }
+
+/**
+ * The title's `data-part` (data-view's parts vocabulary spells it the same; the
+ * pane cannot import data-view, so the literal is stated here). On the title's
+ * own box — never on the yielding cell around it, whose emptiness the bar reads.
+ */
+const PANE_TITLE_PART = "pane.title";
+
+/**
+ * The title's type: the density group's `chromePaneTitle*` pick (default the
+ * `label` role it always wore), so a theme sets a pane title's rung, weight and
+ * family without a component-named size. The vars are spelled out rather than
+ * read off `densityGroup.vars`: the density group's core sits above this
+ * primitive (theme-engine → apps-core → pane), so importing it is a cycle —
+ * the same reason the pane reads its other density tokens through utilities.
+ */
+const PANE_TITLE_PICK: RolePart = {
+  role: "--chrome-pane-title-role",
+  emphasis: "--chrome-pane-title-emphasis",
+  family: "--chrome-pane-title-family",
+  fallback: "label",
+};
 
 export const PaneTitleContext = createContext<PaneTitleValue | null>(null);
 
@@ -76,7 +99,12 @@ function ResolvedTextTitle({
  */
 function TextTitle({ title }: { title: string }): ReactNode {
   return (
-    <Text as="span" variant="label" className="truncate">
+    <Text
+      as="span"
+      pick={PANE_TITLE_PICK}
+      className="truncate text-pane-title-foreground"
+      data-part={PANE_TITLE_PART}
+    >
       {title}
     </Text>
   );
@@ -97,9 +125,14 @@ function NodeTitle({ children }: { children: ReactNode }) {
     // the display class: `Text` passes its own single-line leaf recipe
     // (`inline-block …`) down as `className`, which `cn` then resolves as the
     // WINNER over `Line`'s `flex`, so the row silently stops being a row. Hence a
-    // raw class, kept on one prettier-stable line so the directive cannot drift.
-    // eslint-disable-next-line layout/no-adhoc-layout -- node title needs a flex row for breadcrumb-style multi-segment compositions; see above for why Line cannot supply it
-    <Text as="div" variant="label" className="flex min-w-0 items-center">
+    // raw class, its directive on the attribute line itself so it cannot drift.
+    <Text
+      as="div"
+      pick={PANE_TITLE_PICK}
+      data-part={PANE_TITLE_PART}
+      // eslint-disable-next-line layout/no-adhoc-layout -- node title needs a flex row for breadcrumb-style multi-segment compositions; see above for why Line cannot supply it
+      className="flex min-w-0 items-center text-pane-title-foreground"
+    >
       {children}
     </Text>
   );

@@ -82,7 +82,7 @@ is the model behind them.
 | --- | --- |
 | `rail-<step>` · `rail-x-` · `rail-y-` | open a region: publish **and** pay. `rail-x-none` is how *flush* is spelled — a region of width zero, which is a different state from no region at all |
 | `rail-owe-<step>` | open a region and hand the bill on: publish, pay nothing. The inverted topology; the app-shell sidebar is its live user |
-| `rail-follow` | pay what is owed, publish nothing. Falls back owed → rail → chrome pad |
+| `rail-follow` | pay what is owed, publish nothing. Falls back owed → rail → pane inset → chrome pad |
 | `rail-bleed` | the escape: cancel and re-apply, as one class |
 
 `core/` holds what CSS cannot: the var **spellings** (`RAIL_START_VAR`, …), for
@@ -97,6 +97,15 @@ fallback, and a `0px` default at the root would make all of those fallbacks dead
 code — `rail-follow` would resolve to zero everywhere and every pane would go
 flush. "Nobody opened a region here" must stay distinguishable from "someone
 opened one of width zero".
+
+**The pane-inset floor.** Between "no region" and the chrome pad sits
+`--pane-inset`, published only by a `PaneChrome inset="content"` pane (as
+`var(--content-inset)`, the density group's `contentInset`), so a follower band
+with nothing published above it lands on the pane's shared content edge (the
+pane header keeps its own inset). It is a floor, not a
+region: it says where a follower lands, never what has been applied, so a
+bleeder ignores it — and unset (`contentInset: initial`) it is invalid, falling
+through to the chrome pad exactly as before.
 
 ## Why a parallel ramp, and not publication folded into `p-*`
 

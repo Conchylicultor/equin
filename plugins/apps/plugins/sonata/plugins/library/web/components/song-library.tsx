@@ -121,9 +121,16 @@ export function SongLibrary() {
           },
         },
         // m:ss over the inherited number cell; the number range filter stays.
+        // The cell reads in the foreground ink (the length is the row's one
+        // value worth reading at a glance); the card token stays quiet.
         duration: {
           icon: durationIcon,
-          cell: (s) => formatDuration(s.duration),
+          cell: (s) => (
+            <span className="text-foreground">
+              {formatDuration(s.duration)}
+            </span>
+          ),
+          token: (s) => formatDuration(s.duration),
           width: "5rem",
           align: "end",
         },
@@ -168,6 +175,8 @@ export function SongLibrary() {
             // menu. The library stays source-agnostic — it threads an opaque
             // `createOption` and never names MIDI.
             creators={creators}
+            // N sources: a labelled "Add" button opening the creators menu.
+            createLabel="Add"
             rowActivation={songLink}
             emptyState={<>No songs match.</>}
           />

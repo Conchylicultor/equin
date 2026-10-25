@@ -1121,8 +1121,11 @@ conversationHistory.fields.status;   // { id, key, label, typeId, options, prima
   runs arms' rationale is in `runs` core) and `listed` (its descriptors, ids
   `<arm>.<field>`). See *Union collections*.
 - **Presentation — `FieldPresentation.Register({ owner, reads?, fields })`**
-  (web). What only the browser can say of a field — `cell(value, row)`,
-  `width`, `align`, `visible: false`, `groupable: true` (a text dimension
+  (web). What only the browser can say of a field — `cell(value, row,
+  context)`, `token(value, row, context)` (its short form on a card's token
+  line), `extent: true` (its renderers get `context.extent`, the `{ min, max }`
+  of its numbers over the view's rows — `FieldExtent` / `FieldCellContext`,
+  core — else `null`), `width`, `align`, `visible: false`, `groupable: true` (a text dimension
   grouped by), `useOptions` (a `Hook` returning a
   `ResourceResult` of options — a live catalog; the field is `pending` until
   it lands — or, for a set that is always known such as a contribution
@@ -2189,6 +2192,8 @@ never add one.
     - `ExternalSilentValue`
     - `ExternalSourceRow`
     - `ExternalWindowCollection`
+    - `FieldCellContext`
+    - `FieldExtent`
     - `FieldsFilterable`
     - `FieldsRow`
     - `LabelledKeys`
@@ -2313,6 +2318,7 @@ never add one.
   - Exports (values):
     - `clientFields`
     - `exposedColumns`
+    - `extentOf`
     - `isPointId`
     - `LIVE_COLUMNS_KEY`
     - `LIVE_QUERY_MAX_BYTES`

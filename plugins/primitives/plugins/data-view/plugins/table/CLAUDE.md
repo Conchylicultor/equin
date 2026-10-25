@@ -134,11 +134,38 @@ drag.
   Column labels over tree rows are an outline table with `header: true`
   (columns dropping by `dropOrder` — the file explorer).
 
-**`presentation: "grid" | "outline"`** is `DataTable.presentation`: `grid` is
+**`presentation: "grid" | "outline" | "soft"`** is `DataTable.presentation`: `grid` is
 the header row and ruled rows; `outline` (a sidebar's look) drops the header and
 the rules and draws each row as the tree row's pill (`bg-selected` /
 `--selected-foreground` / `--row-meta`), at the tree row's geometry (see
-`data-table`'s CLAUDE.md).
+`data-table`'s CLAUDE.md). The flat table forwards only `soft`
+(`grid` / `outline` on a flat source stay the grid it always drew); `soft` is
+borderless token-sized rows with a hairline between them (`data-table`'s
+CLAUDE.md, "Presentation").
+
+### Cover column, stacked title cell, primary (flat)
+
+- **`cover: true`** — a leading unlabelled column of each row's cover
+  (`resolveCover(visibleFields, props.cover)`, the cover field then no column)
+  as `CoverFrame size="thumb"` sized by `size-soft-thumb rounded-soft-thumb`
+  (narrower under a 640px table when the theme sets `softThumbNarrowW`) —
+  `web/internal/title-cell.tsx`'s `CoverCell`. A covered table HAS a primary
+  slot (`useItemActionZones(…, { hasPrimarySlot: true })`): the primary action
+  (Play) sits centred over the thumbnail inside the frame
+  (`PrimaryActionSlot`, data-view web), revealed by the row's hover, at rest
+  while active. Uncovered, it demotes into the trailing track as before.
+- **`titleCell: "stacked"`** — `partitionCardFields` over the visible fields:
+  the title column draws the title + its indicators on line 1 and the
+  subtitle run of text fields on line 2 (data-view's shared `SubtitleRun`, the
+  list's own run) — `StackedTitleCell`, each line a DataView pick
+  (`titleCell` / `titleCellSubtitle`) at the full rung, stamped
+  `dv.title-cell(-title|-subtitle)`. The remaining token fields (and a leading
+  field) are the value columns, each with its field's width / align /
+  `dropOrder`; the title takes the slack (`minmax(0,1fr)`) unless its field
+  sets a width.
+- Rows, cells, the header and its labels carry `data-part`s
+  (`dv.table`, `dv.column-header-row`, `dv.column-header`, `dv.row`, `dv.cell`,
+  `dv.thumb`).
 
 **The label** (the primary field) is the tree row's: data-view's
 `EditableTreeLabel` (select-then-edit, a created row opening straight into its
@@ -165,22 +192,30 @@ see `data-view/CLAUDE.md` ("The rail") and `data-table/CLAUDE.md`.
 - Description: Table view for data-view: maps the typed field schema to data-table columns with host-controlled sort, and nests its rows (a tree is a table with no columns) when the source has a hierarchy.
 - Web:
   - Contributes: `DataViewSlots.View` "Table" → `TableView`
-  - Uses: 67 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/data-view` ×34
+  - Uses: 81 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/data-view` ×43
     - `primitives/tree` ×18
-    - `primitives/data-table` ×6
+    - `primitives/data-table` ×7
+    - `primitives/css/text` ×3
     - `primitives/rank-reorder` ×3
     - `primitives/css/badge.Badge`
     - `primitives/css/clip.Clip`
     - `primitives/css/inline.Inline`
+    - `primitives/css/layer.Layer`
     - `primitives/css/spacing.Stack`
     - `primitives/css/ui-kit.cn`
     - `ui/icons.Icon`
   - Exports (types): `TableViewOptions`
 - Cross-plugin:
   - Uses tokens:
+    - `ui/tokens/color-palette --foreground`
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/color-palette --ring`
+    - `ui/tokens/data-view --soft-thumb-h`
+    - `ui/tokens/data-view --soft-thumb-narrow-w`
+    - `ui/tokens/data-view --soft-thumb-radius`
+    - `ui/tokens/data-view --soft-thumb-w`
+    - `ui/tokens/data-view --title-cell-line-gap`
     - `ui/tokens/density --chrome-pad-x`
     - `ui/tokens/density --tree-pill-indent`
     - `ui/tokens/density --tree-root-gap`

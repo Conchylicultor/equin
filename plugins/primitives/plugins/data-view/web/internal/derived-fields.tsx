@@ -3,6 +3,7 @@ import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 import type { FieldOptionMeta } from "@plugins/fields/core";
 import {
   exposedColumns,
+  type FieldCellContext,
   type LiveArm,
   type LiveField,
 } from "@plugins/network/plugins/live/core";
@@ -157,6 +158,41 @@ function presented(
   };
 }
 
+/** A cell drawn outside a view (a title, a cover) has no peers: no extent. */
+const NO_PEERS: FieldCellContext = { extent: null };
+
+/**
+ * The renderers a field takes from its spec — `cell` and `token`, each over
+ * the field's value read by `read` (a row holding none draws nothing) — and
+ * `extent: true` when the spec asks for the field's extent, which `FieldCell`
+ * then hands them.
+ */
+function renderers(
+  spec: FieldPresentationSpec<unknown, unknown> | undefined,
+  read: (row: unknown) => unknown,
+): Pick<FieldDef<unknown>, "cell" | "token" | "extent"> {
+  if (spec === undefined) return {};
+  const over =
+    (
+      render: (
+        value: unknown,
+        row: unknown,
+        context: FieldCellContext,
+      ) => ReactNode,
+    ) =>
+    (row: unknown, context?: FieldCellContext): ReactNode => {
+      const value = read(row);
+      return value === undefined
+        ? null
+        : render(value, row, context ?? NO_PEERS);
+    };
+  return {
+    ...(spec.cell !== undefined ? { cell: over(spec.cell) } : {}),
+    ...(spec.token !== undefined ? { token: over(spec.token) } : {}),
+    ...(spec.extent === true ? { extent: true as const } : {}),
+  };
+}
+
 /**
  * One derived field, read by `read` (a row → the value of its key, or
  * `undefined` for a row that holds none — another arm's): an enum when it
@@ -171,7 +207,6 @@ function derivedField(
   extra: Pick<FieldDef<unknown>, "column" | "section">,
 ): FieldDef<unknown> {
   const options = optionsOf(field.options);
-  const cell = spec?.cell;
   // An enum over booleans / numbers (options keyed by their spelling) filters
   // in its values' domain.
   const valueDomain =
@@ -189,14 +224,7 @@ function derivedField(
       ? { values: (row) => (read(row) as string[] | undefined) ?? [] }
       : { value: (row) => (read(row) ?? null) as FieldValue }),
     ...(field.primary ? { primary: true } : {}),
-    ...(cell !== undefined
-      ? {
-          cell: (row) => {
-            const value = read(row);
-            return value === undefined ? null : cell(value, row);
-          },
-        }
-      : {}),
+    ...renderers(spec, read),
     ...presented(spec),
     ...extra,
   };
@@ -556,6 +584,7 @@ function ClientValuesLevel(props: {
           ? { values: built.values }
           : {}),
         ...(f.cell === entry.placeholder.cell ? { cell: built.cell } : {}),
+        ...(f.token === entry.placeholder.token ? { token: built.token } : {}),
       } as FieldDef<unknown>;
       if (read !== undefined) return next;
       return values.status === "error"

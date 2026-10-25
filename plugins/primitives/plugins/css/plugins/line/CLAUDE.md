@@ -34,7 +34,7 @@ attribute type carries.
 - Cross-plugin:
   - Imported by: 119 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×33
-    - `primitives` ×19
+    - `primitives` ×18
     - `conversations` ×17
     - `debug` ×8
     - `page` ×6
@@ -49,6 +49,7 @@ attribute type carries.
     - `shell` ×2
     - `auth`
     - `code-explorer/commit-detail`
+    - `fields/enum/table`
     - `hints/ask`
     - `integrations/youtube`
     - `map`

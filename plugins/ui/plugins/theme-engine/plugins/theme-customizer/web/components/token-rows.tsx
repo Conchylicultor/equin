@@ -38,6 +38,7 @@ export function TokenRows({
           label={group.schema[key]?.label ?? key}
           cssVar={group.vars[key] ?? `--${key}`}
           value={shown[key] ?? ""}
+          options={group.schema[key]?.values}
           isOverridden={isOverridden(editor, key)}
           isSplit={isSplit(editor.own, key)}
           search={search}

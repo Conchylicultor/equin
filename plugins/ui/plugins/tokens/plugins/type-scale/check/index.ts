@@ -5,9 +5,16 @@ import type {
   Check,
   CheckResult,
 } from "@plugins/framework/plugins/tooling/core";
-import { collectTokenGroupVars } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import {
+  collectTokenGroups,
+  collectTokenGroupVars,
+} from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { grepCode } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import {
+  PICK_EMPHASES,
+  PICK_FAMILIES,
+  PICK_STEPS,
+  PICK_RUNGS,
   TEXT_TREATMENTS,
   TYPE_ROLES,
   TYPE_SUBSCALE,
@@ -41,11 +48,20 @@ import { typeScaleGroup } from "../core";
  *   5. no `.ts(x)` outside the text and type-scale plugins reads a raw
  *      `var(--font-size-*)` / `var(--line-height-*)` (it would skip the scale —
  *      `typeVar()` is the sanctioned spelling);
- *   6. the tooltip's role picker (a token whose VALUE names a role,
- *      `--tooltip-role`, applied by one style-query class per role in ui-kit's
- *      tooltip, which cannot import the ladder) covers exactly the ladder: each
- *      role's own `text-<role>`, and `font-<role>-strong` under
- *      `--tooltip-emphasis: strong` for exactly the roles with a strong step.
+ *   6. every ROLE PICKER (`ROLE_PICKERS` below — a token whose VALUE names a
+ *      rung, applied by one literal style-query class per rung, since a class
+ *      table Tailwind must see cannot be derived) covers exactly its rungs, each
+ *      with exactly the utilities the ladder gives it: the tooltip's
+ *      (`--tooltip-role`, ui-kit's tooltip: each role's `text-<role>`, and
+ *      `font-<role>-strong` under `--tooltip-emphasis: strong` for exactly the
+ *      roles with a strong step) and the generic part picker's (`--role-pick`,
+ *      the text plugin's role-pick tables behind `<Text pick>`: every rung of
+ *      `PICK_RUNGS`, base and compact);
+ *   6b. every token-group key ending `Role` / `Emphasis` / `Family` / `Step` — a part's
+ *      pick tokens — declares `values` equal to `PICK_RUNGS` / `PICK_EMPHASES`
+ *      / `PICK_FAMILIES` / `PICK_STEPS` (the overlay group's tooltip pair, which predates the
+ *      generic picker and has its own vocabulary, is the one listed
+ *      exception), so a theme cannot name a value no table applies.
  *
  * This check is the ONE authority for (1): the group carries no load-time
  * assertion of its own.
@@ -62,29 +78,114 @@ const THIS_CHECK =
 const TYPE_SCALE_GROUP_ID = "type-scale";
 const TOOLTIP =
   "plugins/primitives/plugins/css/plugins/ui-kit/web/components/ui/tooltip.tsx";
+const ROLE_PICK =
+  "plugins/primitives/plugins/css/plugins/text/web/internal/role-pick.ts";
 
 /**
- * The roles a role-picker source applies: `[@container_style(--<v>:<role>)]:text-<utility>`
- * pairs, and the `…_and_style(--<emphasis>:strong)]:font-<utility>-strong` ones.
+ * Every `[@container_style(--<roleVar>:<rung>)…]:<utility>` class in a picker
+ * source, as `<rung> → <utility>` (a compound `…_and_style(--x:y)` query is
+ * tagged `<rung>+<x>:<y> → <utility>`). Order-free and deduplicated.
  */
-export function rolePickerPairs(
-  src: string,
-  roleVar: string,
-  emphasisVar: string,
-): { roles: Array<[string, string]>; strong: Array<[string, string]> } {
-  const role = new RegExp(
-    String.raw`\[@container_style\(--${roleVar}:([a-z]+)\)\]:text-([a-z-]+)`,
+export function rolePickerPairs(src: string, roleVar: string): Set<string> {
+  const re = new RegExp(
+    String.raw`\[@container_style\(--${roleVar}:([a-z0-9]+)\)(?:_and_style\(--([a-z-]+):([a-z]+)\))?\]:([a-z0-9-]+)`,
     "g",
   );
-  const strong = new RegExp(
-    String.raw`\[@container_style\(--${roleVar}:([a-z]+)\)_and_style\(--${emphasisVar}:strong\)\]:font-([a-z]+)-strong`,
-    "g",
+  return new Set(
+    [...src.matchAll(re)].map((m) =>
+      m[2] === undefined
+        ? `${m[1]} → ${m[4]}`
+        : `${m[1]}+${m[2]}:${m[3]} → ${m[4]}`,
+    ),
   );
-  return {
-    roles: [...src.matchAll(role)].map((m) => [m[1]!, m[2]!]),
-    strong: [...src.matchAll(strong)].map((m) => [m[1]!, m[2]!]),
-  };
 }
+
+/** The roles with a strong step (`font-<role>-strong`). */
+function strongRoles(): string[] {
+  return Object.entries(TYPE_ROLES)
+    .filter(([, spec]) => "strong" in spec && spec.strong)
+    .map(([r]) => r);
+}
+
+/**
+ * The role pickers: each source, its rung var, and the exact
+ * `<rung> → <utility>` set the ladder implies for it. Adding a picker is one
+ * entry here (and its literal table) — rule 6 then holds it to the ladder.
+ */
+const ROLE_PICKERS: ReadonlyArray<{
+  id: string;
+  file: string;
+  roleVar: string;
+  expected: () => Set<string>;
+  hint: string;
+}> = [
+  {
+    id: "tooltip",
+    file: TOOLTIP,
+    roleVar: "tooltip-role",
+    expected: () =>
+      new Set([
+        ...Object.keys(TYPE_ROLES).map((r) => `${r} → text-${r}`),
+        ...strongRoles().map(
+          (r) => `${r}+tooltip-emphasis:strong → font-${r}-strong`,
+        ),
+      ]),
+    hint:
+      "Give every TYPE_ROLES role one `[@container_style(--tooltip-role:<role>)]:text-<role>` entry in TOOLTIP_ROLE_CLASS, and every role with a strong step a " +
+      "`[@container_style(--tooltip-role:<role>)_and_style(--tooltip-emphasis:strong)]:font-<role>-strong` one — written literally, so Tailwind sees it.",
+  },
+  {
+    id: "role-pick",
+    file: ROLE_PICK,
+    roleVar: "role-pick",
+    expected: () => {
+      const out = new Set<string>();
+      for (const rung of PICK_RUNGS) {
+        if ((TYPE_SUBSCALE as readonly string[]).includes(rung)) {
+          // The sub-scale is below role granularity: it does not compact.
+          out.add(`${rung} → text-${rung}`);
+          continue;
+        }
+        out.add(`${rung} → text-${rung}`);
+        // The compact table: the compact rung while the part's step is
+        // `ambient`, the rung itself under `base`.
+        out.add(`${rung}+role-step:ambient → text-${rung}-compact`);
+        out.add(`${rung}+role-step:base → text-${rung}`);
+        const spec = TYPE_ROLES[rung as keyof typeof TYPE_ROLES];
+        // A role whose own compact utility carries no weight
+        // (`tag`, like `<Text variant="tag">`) also needs its `font-<role>`.
+        if (spec.compact === "own") out.add(`${rung} → font-${rung}`);
+      }
+      return out;
+    },
+    hint:
+      "Give every PICK_RUNGS rung its `[@container_style(--role-pick:<rung>)]:text-<rung>` entry in RUNG_CLASS and its `…:text-<rung>-compact` one in " +
+      "RUNG_COMPACT_CLASS, under `_and_style(--role-step:ambient)`, beside `…_and_style(--role-step:base)]:text-<rung>` (the 2xs / 3xs sub-scale: plain `text-<rung>` in both) — written literally, so Tailwind sees it.",
+  },
+];
+
+/** Token keys that name a part's pick, by axis — and the vocabulary each must declare. */
+const PICK_AXES: ReadonlyArray<{ suffix: string; values: readonly string[] }> =
+  [
+    { suffix: "Role", values: PICK_RUNGS },
+    { suffix: "Emphasis", values: PICK_EMPHASES },
+    { suffix: "Family", values: PICK_FAMILIES },
+    { suffix: "Step", values: PICK_STEPS },
+  ];
+
+/**
+ * Keys ending in a pick suffix that are not a part's pick. Each is reviewed:
+ * - the overlay group's tooltip pair predates the generic picker and keeps its
+ *   own vocabulary (`regular | strong` emphasis), held by rule 6's tooltip
+ *   picker instead;
+ * - `icons.iconFamily` names an ICON set's family (Material Symbols style),
+ *   not a type family.
+ */
+const PICK_AXIS_EXCEPTIONS: readonly string[] = [
+  "overlay.tooltipRole",
+  "overlay.tooltipEmphasis",
+  "icons.iconFamily",
+];
 
 /**
  * Spelling a raw type var in TS is exempted for the ladder's two owners (the
@@ -189,7 +290,7 @@ export function advertisedVariants(ruleSrc: string): {
 const check: Check = {
   id: "type-scale:closed-role-ladder",
   description:
-    "the type-scale role ladder stays closed: type-scale keys = TYPE_ROLES-derived + non-role keys, no other token group declares type metrics, every ui-kit type @utility is a derived role utility scaled by --font-scale, the no-adhoc-typography message names every <Text> variant, and no TS outside text/type-scale reads a raw type var",
+    "the type-scale role ladder stays closed: type-scale keys = TYPE_ROLES-derived + non-role keys, no other token group declares type metrics, every ui-kit type @utility is a derived role utility scaled by --font-scale, the no-adhoc-typography message names every <Text> variant, every role picker (tooltip, role-pick) covers exactly the ladder, every …Role / …Emphasis / …Family token declares the PICK_* vocabulary, and no TS outside text/type-scale reads a raw type var",
   exemptable: {
     [RAW_VARS]:
       "reads a raw `var(--font-size-*)` / `var(--line-height-*)` in TS, which skips --font-scale (use typeVar())",
@@ -316,35 +417,59 @@ const check: Check = {
       );
     }
 
-    // (6) The tooltip's role picker covers exactly the ladder.
-    const picker = rolePickerPairs(
-      readFileSync(join(root, TOOLTIP), "utf8"),
-      "tooltip-role",
-      "tooltip-emphasis",
-    );
-    const ladder = Object.keys(TYPE_ROLES).sort();
-    const strongRoles = Object.entries(TYPE_ROLES)
-      .filter(([, spec]) => "strong" in spec && spec.strong)
-      .map(([r]) => r)
-      .sort();
-    const picked = picker.roles.map(([r]) => r).sort();
-    const pickedStrong = picker.strong.map(([r]) => r).sort();
-    const mismatched = [...picker.roles, ...picker.strong]
-      .filter(([r, u]) => r !== u)
-      .map(([r, u]) => `${r} → ${u}`);
-    if (
-      picked.join() !== ladder.join() ||
-      pickedStrong.join() !== strongRoles.join() ||
-      mismatched.length > 0
-    ) {
+    // (6) Every role picker covers exactly the ladder.
+    for (const picker of ROLE_PICKERS) {
+      const got = rolePickerPairs(
+        readFileSync(join(root, picker.file), "utf8"),
+        picker.roleVar,
+      );
+      const want = picker.expected();
+      const missingPairs = [...want].filter((p) => !got.has(p)).sort();
+      const extraPairs = [...got].filter((p) => !want.has(p)).sort();
+      if (missingPairs.length > 0 || extraPairs.length > 0) {
+        report(
+          `${picker.file}: the ${picker.id} role picker is out of step with the ladder — ` +
+            [
+              missingPairs.length > 0
+                ? `missing: ${missingPairs.join(", ")}`
+                : "",
+              extraPairs.length > 0
+                ? `not the ladder's: ${extraPairs.join(", ")}`
+                : "",
+            ]
+              .filter(Boolean)
+              .join("; "),
+          picker.hint,
+        );
+      }
+    }
+
+    // (6b) Every pick token declares exactly its axis's vocabulary.
+    const pickLeaks: string[] = [];
+    for (const [groupId, group] of Object.entries(
+      await collectTokenGroups(root),
+    )) {
+      for (const [key, field] of Object.entries(group.schema)) {
+        const axis = PICK_AXES.find((a) => key.endsWith(a.suffix));
+        if (!axis || PICK_AXIS_EXCEPTIONS.includes(`${groupId}.${key}`))
+          continue;
+        const declared = field.values;
+        if (
+          declared === undefined ||
+          declared.length !== axis.values.length ||
+          declared.some((v, i) => v !== axis.values[i])
+        ) {
+          pickLeaks.push(
+            `${groupId}.${key} (values: ${declared === undefined ? "none" : declared.join(" | ")})`,
+          );
+        }
+      }
+    }
+    if (pickLeaks.length > 0) {
       report(
-        `${TOOLTIP}: the tooltip's role picker (TOOLTIP_ROLE_CLASS) is out of step with the ladder — ` +
-          `picks [${picked.join(", ")}] (ladder: ${ladder.join(", ")}), strong [${pickedStrong.join(", ")}] (ladder: ${strongRoles.join(", ")})` +
-          (mismatched.length > 0
-            ? `, wrong utility: ${mismatched.join(", ")}`
-            : ""),
-        "Give every TYPE_ROLES role one `[@container_style(--tooltip-role:<role>)]:text-<role>` entry, and every role with a strong step a " +
-          "`[@container_style(--tooltip-role:<role>)_and_style(--tooltip-emphasis:strong)]:font-<role>-strong` one — written literally, so Tailwind sees it.",
+        `token keys ending Role / Emphasis / Family must declare values equal to PICK_RUNGS / PICK_EMPHASES / PICK_FAMILIES: ${pickLeaks.join(", ")}`,
+        "Declare `values: PICK_RUNGS` (or PICK_EMPHASES / PICK_FAMILIES, from @plugins/primitives/plugins/css/plugins/text/core) on the token, so a theme cannot name a value the role-pick tables do not apply. " +
+          `A key that is not a part's pick should not end in Role / Emphasis / Family; one with its own vocabulary and table goes in PICK_AXIS_EXCEPTIONS in ${THIS_CHECK} with its rule-6 picker.`,
       );
     }
 

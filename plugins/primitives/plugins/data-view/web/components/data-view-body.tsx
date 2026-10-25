@@ -107,6 +107,10 @@ import {
   type PagedReadLayout,
   usePlaceholderHeights,
 } from "../internal/placeholder-heights";
+import {
+  FieldExtentsContext,
+  useFieldExtents,
+} from "../internal/field-extents";
 import type {
   DataViewBodyProps,
   DistributiveOmit,
@@ -880,6 +884,12 @@ function DataViewBodyInner<TRow>(
   const effectiveRows: readonly unknown[] = origin
     ? origin.rows
     : ((rows ?? NO_ROWS) as readonly unknown[]);
+  // The extents of the `extent: true` fields, once per view over its rows
+  // (none asked: no row visited).
+  const fieldExtents = useFieldExtents(
+    effectiveRows,
+    fields as FieldDef<unknown>[],
+  );
   // Neutralize ONLY the server-owned dimensions (sort/filter/query already ran in
   // SQL). `properties` is display-only — it never touches the query — so the
   // `...activeState` spread deliberately PRESERVES it so the views still honor
@@ -1432,13 +1442,15 @@ function DataViewBodyInner<TRow>(
                         rows={effectiveRows}
                         rowKey={renderProps.rowKey}
                       >
-                        {(manualOrder) =>
-                          renderIsolated(
-                            DataViewSlots.View,
-                            activeInstance.viewType as unknown as Contribution,
-                            { ...renderProps, manualOrder },
-                          )
-                        }
+                        {(manualOrder) => (
+                          <FieldExtentsContext.Provider value={fieldExtents}>
+                            {renderIsolated(
+                              DataViewSlots.View,
+                              activeInstance.viewType as unknown as Contribution,
+                              { ...renderProps, manualOrder },
+                            )}
+                          </FieldExtentsContext.Provider>
+                        )}
                       </PendingMoveOverlay>
                       {flatPlaceholders ? (
                         <PagePlaceholders
@@ -1596,6 +1608,7 @@ function DataViewBodyInner<TRow>(
                 switcherCount={chrome.switcherCount}
                 actions={chrome.actions}
                 creators={creators}
+                createLabel={props.createLabel}
                 density={chrome.density}
                 arrangement={arrangement}
                 searchPlaceholder={chrome.searchPlaceholder}

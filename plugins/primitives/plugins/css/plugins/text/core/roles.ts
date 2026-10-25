@@ -102,3 +102,66 @@ export function roleTokenKeys(): string[] {
   }
   return keys;
 }
+
+/**
+ * A role PICKER's vocabulary — what a token whose VALUE names a type choice may
+ * say (the per-part `<part>Role` / `<part>Emphasis` / `<part>Family` tokens a
+ * component reads through `<Text pick>`). Still the closed ladder: a part picks
+ * a rung, a shared weight and a family, never a size; `--font-scale` scales it.
+ *
+ * - `PICK_RUNGS` — every role, plus the 2xs / 3xs sub-scale.
+ * - `PICK_EMPHASES` — `role` keeps the rung's own weight; `normal` … `bold` are
+ *   the four shared weight tokens; `parent` takes the weight of the element
+ *   the words sit in (a chip's `font-tag`, a header row's `font-medium`) — what
+ *   a part whose weight is its container's today picks to stay identical.
+ * - `PICK_FAMILIES` — `role` keeps the rung's own family (mono for `code`);
+ *   `sans` / `mono` force one.
+ *
+ * The type-scale check (rule 6b) holds every `…Role` / `…Emphasis` / `…Family`
+ * token's declared `values` equal to these lists, and the role-pick tables
+ * (text web) are `Record`s over them, so neither can drift.
+ */
+export const PICK_RUNGS = [
+  ...(Object.keys(TYPE_ROLES) as TypeRole[]),
+  ...TYPE_SUBSCALE,
+] as const satisfies readonly (TypeRole | TypeSubscale)[];
+export type PickRung = TypeRole | TypeSubscale;
+
+export const PICK_EMPHASES = [
+  "role",
+  "normal",
+  "medium",
+  "semibold",
+  "bold",
+  "parent",
+] as const;
+export type PickEmphasis = (typeof PICK_EMPHASES)[number];
+
+export const PICK_FAMILIES = ["role", "sans", "mono"] as const;
+export type PickFamily = (typeof PICK_FAMILIES)[number];
+
+/**
+ * Whether a pick steps down inside a compact (`xs`) region — the density→text
+ * policy `<Text variant>` follows (`textStepFor`). `ambient` (a pick behaves
+ * like the variant it replaced: its rung's `-compact` form in an `xs`
+ * region); `base` (the rung the token names, whatever the region — a theme
+ * whose picks are literal measurements). Read by a `…Step` token (type-scale
+ * rule 6b holds its `values` to this list).
+ */
+export const PICK_STEPS = ["ambient", "base"] as const;
+export type PickStep = (typeof PICK_STEPS)[number];
+
+/**
+ * One part's role pick, as the CSS custom properties its three tokens paint
+ * (`"--card-title-role"`, …) plus the rung drawn where the role token is unset
+ * (`initial`) or the browser lacks style queries. `<Text pick={part}>` reads it.
+ */
+export interface RolePart {
+  role: `--${string}`;
+  emphasis: `--${string}`;
+  family: `--${string}`;
+  /** The `…Step` token (`PICK_STEPS`); absent = `ambient` — a compact region
+   *  steps the pick down, as `<Text variant>` does. */
+  step?: `--${string}`;
+  fallback: PickRung;
+}

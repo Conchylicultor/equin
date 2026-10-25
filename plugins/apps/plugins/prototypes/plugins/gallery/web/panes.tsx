@@ -19,11 +19,17 @@ export const prototypesGalleryPane = Pane.define({
 /**
  * The gallery lies on the viewer's own ground (the canvas grid), so a card and
  * the frame it opens sit on the same surface. The ground stays put while the
- * cards scroll over it.
+ * cards scroll over it. The pane header's title, the DataView toolbar and the
+ * cards share one pane-relative edge (`inset="content"`, the theme's
+ * `contentInset` — the gallery mock's `--inset`).
  */
 function PrototypesGalleryBody() {
   return (
-    <PaneChrome pane={prototypesGalleryPane} ground={<CanvasGround />}>
+    <PaneChrome
+      pane={prototypesGalleryPane}
+      ground={<CanvasGround />}
+      inset="content"
+    >
       <PrototypeGallery />
     </PaneChrome>
   );

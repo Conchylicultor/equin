@@ -68,8 +68,8 @@ slots-as-props, which is what `<Frame>` did before it was deleted.
   - Uses tokens:
     - `ui/tokens/font-family --font-mono`
     - `ui/tokens/shape --spacing`
-  - Imported by: 129 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×29
+  - Imported by: 131 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×30
     - `conversations` ×23
     - `primitives` ×16
     - `debug` ×13
@@ -86,6 +86,7 @@ slots-as-props, which is what `<Frame>` did before it was deleted.
     - `active-data/show-me`
     - `auth`
     - `code-explorer/commit-detail`
+    - `fields/enum/table`
     - `hints/ask`
     - `menu-bar`
     - `reorder/node-types/header`

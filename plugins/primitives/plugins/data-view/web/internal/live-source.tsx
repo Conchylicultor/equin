@@ -679,6 +679,9 @@ function useSectionedReads<TRow>(args: {
       return {
         key: section.key,
         label: section.label,
+        ...(section.identity === undefined
+          ? {}
+          : { identity: section.identity }),
         count: section.count,
         rows: (report?.rows ?? NO_ROWS) as readonly TRow[],
         paging: (isActive

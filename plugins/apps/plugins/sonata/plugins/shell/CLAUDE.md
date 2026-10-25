@@ -92,6 +92,9 @@ persistence); an effect that must run wherever a song plays is a
   - Exports (values): `sonataApp`
 - Cross-plugin:
   - Uses tokens:
+    - `ui/tokens/color-palette --border`
+    - `ui/tokens/color-palette --faint-foreground`
+    - `ui/tokens/color-palette --foreground`
     - `ui/tokens/color-palette --popover`
     - `ui/tokens/shadow --shadow`
     - `ui/tokens/shadow --shadow-cover`

@@ -44,6 +44,8 @@ export type {
   RequireLabel,
 } from "./internal/live-fields";
 export type { DomainOfValue, FieldsFilterable } from "./internal/field-domain";
+export { extentOf } from "./internal/field-extent";
+export type { FieldCellContext, FieldExtent } from "./internal/field-extent";
 export type { LiveExposedColumns } from "./internal/exposed-columns";
 // A declaration's SHAPE (every list it holds, capped or whole — the
 // list-bound markers) is walked by `liveValue` / `liveCollection` and a bare

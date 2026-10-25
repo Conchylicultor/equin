@@ -1192,11 +1192,11 @@ keeps every row's identity rather than re-minting each moved row.
   - Uses tokens:
     - `ui/tokens/color-palette --destructive`
     - `ui/tokens/shadow --shadow`
-  - Imported by: 274 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 275 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×73
     - `conversations` ×49
     - `debug` ×25
-    - `ui` ×24
+    - `ui` ×25
     - `tasks` ×23
     - `page` ×14
     - `primitives` ×12

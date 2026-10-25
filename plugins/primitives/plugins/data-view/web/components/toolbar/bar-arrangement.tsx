@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { spaceLength } from "@plugins/primitives/plugins/css/plugins/space-ramp/core";
+import { dataViewGroup } from "@plugins/ui/plugins/tokens/plugins/data-view/core";
 import type { ToolbarArrangement, ToolbarParts } from "../../../core";
 import { PillsToolbar } from "./pills-toolbar";
 
@@ -23,6 +23,7 @@ export const barArrangement: ToolbarArrangement = {
   // the band; at rest the first row must start where it has faded out, or
   // the top of an unscrolled list reads washed out. It stops one `sm` short
   // of the tail: the tail's last stretch is near-transparent, and the pills
-  // already sit `py-sm` inside the band.
-  spaceBelow: `calc(var(--sticky-fade-tail) - ${spaceLength("sm")})`,
+  // already sit `py-sm` inside the band. The data-view token group's
+  // `toolbarSpaceBelow`, whose default is exactly that runway.
+  spaceBelow: `var(${dataViewGroup.vars.toolbarSpaceBelow})`,
 };

@@ -433,6 +433,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
   - **`barrel-stubs-in-sync`**
   - **`bun-runtime`** [exempt]
   - **`class-token-walk-single-source`**
+  - **`color-token-ref-in-sync`**
   - **`composition-closure`**
   - **`config-origins-in-sync`**
   - **`config-stable-list-ids`**

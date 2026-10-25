@@ -177,10 +177,18 @@ export {
 
 export {
   collectTokenGroupVars,
+  collectTokenGroups,
   generateTokenGroupVars,
   renderTokenGroupVarsManifest,
   tokenGroupVarsManifestPath,
 } from "./token-group-vars-gen";
+
+export {
+  COLOR_TOKEN_REF_GROUPS,
+  colorTokenRefPath,
+  generateColorTokenRef,
+  renderColorTokenRef,
+} from "./color-token-ref-gen";
 
 export {
   generateCustomUtilities,

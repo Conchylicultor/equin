@@ -11,6 +11,7 @@ import {
 } from "./plugin-registry-gen";
 import { generateEagerTier } from "./eager-tier-gen";
 import { generateTokenGroupVars } from "./token-group-vars-gen";
+import { generateColorTokenRef } from "./color-token-ref-gen";
 import {
   postWebManifests,
   preBarrelManifests,
@@ -233,6 +234,11 @@ export async function regenerateManifestCodegen({
     );
     await onStep("tokenGroupVars", "token-group vars manifest", () =>
       generateTokenGroupVars({ root }),
+    );
+    // Same descriptor pass (memoized). Only type-only imports reach the file,
+    // so no barrel freezes a stale copy at module-load.
+    await onStep("colorTokenRef", "ColorTokenRef union", () =>
+      generateColorTokenRef({ root }),
     );
     await onStep("configOrigins", "generate config origins", () =>
       generateConfigOrigins({ root }),

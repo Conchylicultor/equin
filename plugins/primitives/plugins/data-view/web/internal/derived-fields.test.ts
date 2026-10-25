@@ -447,6 +447,69 @@ describe("deriveFields — a collection's own presentation and non-string option
   });
 });
 
+describe("deriveFields — token and extent", () => {
+  const counted = liveCollection("test.derived-fields.counted", {
+    fields: {
+      name: textField({ label: "Name", primary: true }),
+      plays: intField({ label: "Plays" }),
+    },
+    carry: { fields: { id: textField() } },
+    id: "id",
+    all: { orderBy: [["name", "asc"]], unbounded: { reason: "a test" } },
+  });
+  const song = { id: "s", name: "Song", plays: 12 };
+
+  test("a spec's token is minted over the field's value, beside its cell", () => {
+    const plays = deriveFields(counted, false, [
+      registration({
+        owner: counted,
+        fields: {
+          plays: {
+            cell: (v: unknown) => `cell:${String(v)}`,
+            token: (v: unknown) => `${String(v)}×`,
+          },
+        },
+      }),
+    ]).fields.find((f) => f.id === "plays")!;
+    expect(plays.cell!(song)).toBe("cell:12");
+    expect(plays.token!(song)).toBe("12×");
+    expect(plays.extent).toBeUndefined();
+  });
+
+  test("`extent: true` marks the field and hands its renderers the context (none outside a view)", () => {
+    const plays = deriveFields(counted, false, [
+      registration({
+        owner: counted,
+        fields: {
+          plays: {
+            extent: true,
+            cell: (v, _row, { extent }) =>
+              extent === null
+                ? `alone:${String(v)}`
+                : `${String(v)}/${extent.min}-${extent.max}`,
+          },
+        },
+      }),
+    ]).fields.find((f) => f.id === "plays")!;
+    expect(plays.extent).toBe(true);
+    expect(plays.cell!(song, { extent: { min: 2, max: 40 } })).toBe("12/2-40");
+    expect(plays.cell!(song)).toBe("alone:12");
+  });
+
+  test("without `extent: true` the context holds no extent", () => {
+    const plays = deriveFields(counted, false, [
+      registration({
+        owner: counted,
+        fields: {
+          plays: { cell: (_v, _r, { extent }) => String(extent) },
+        },
+      }),
+    ]).fields.find((f) => f.id === "plays")!;
+    expect(plays.extent).toBeUndefined();
+    expect(plays.cell!(song)).toBe("null");
+  });
+});
+
 describe("listSchema", () => {
   const { fields: derived } = deriveFields(notesList, false, []);
 
@@ -467,6 +530,21 @@ describe("listSchema", () => {
       "section",
     ]);
     expect(schema.find((f) => f.id === "status")!.groupable).toBe(false);
+  });
+
+  test("an override's token and extent reach the field", () => {
+    const schema = listSchema({
+      collection: notesList,
+      derived,
+      fields: undefined,
+      overrides: fieldOverrides(notesList, {
+        status: { token: (r) => `t:${r.status}`, extent: true },
+      }),
+      extraFields: undefined,
+    });
+    const status = schema.find((f) => f.id === "status")!;
+    expect(status.token!(row)).toBe("t:done");
+    expect(status.extent).toBe(true);
   });
 
   test("refuses hand fields beside a collection declared by fields, and none without one", () => {

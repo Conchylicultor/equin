@@ -1,4 +1,4 @@
-// @hash 3ef0bddfadaa
+// @hash 9872c3776a30
 // @legend — how to write this file (rewritten by ./equin build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -24,6 +24,7 @@
     "ui.tokens.shadow:shadow",
     "ui.tokens.material:material",
     "ui.tokens.overlay:overlay",
+    "ui.tokens.data-view:data-view",
     "ui.tokens.chart:chart",
     "ui.tokens.categorical:categorical",
     "ui.tokens.file-type-palette:file-type-palette",

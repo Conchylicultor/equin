@@ -11,7 +11,8 @@ import {
  *
  * `field.options` is the ONE choice-list contract (a custom column's private
  * per-type config is projected onto it when the field is minted), so a section
- * header shows the option's **label** and never its stored value — an opaque
+ * header shows the option's **label** (and its `icon` / `tint`, the header's
+ * identity chip) and never its stored value — an opaque
  * minted option id, for a user-authored column.
  *
  * Section order is `options` order, with values that match no option placed
@@ -58,10 +59,17 @@ function planEnumBuckets(
 
   return (value) => {
     const key = String(value);
+    const option = options.find((o) => o.value === key);
     return {
       key,
-      label: options.find((o) => o.value === key)?.label ?? String(value),
+      label: option?.label ?? String(value),
       order: knownOrder.get(key) ?? unknownOrder.get(key) ?? lastOrder,
+      // The option's identity — its glyph and colour — rides the bucket to
+      // the section (`DataViewSection.identity`), where the group header draws
+      // its chip. Spread only when declared, so an option without one leaves
+      // the bucket exactly as it was.
+      ...(option?.icon === undefined ? {} : { icon: option.icon }),
+      ...(option?.tint === undefined ? {} : { tint: option.tint }),
     };
   };
 }

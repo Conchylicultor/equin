@@ -11,12 +11,21 @@ import { songsEntityRef } from "../../core";
  * carries each source's human label (the `Library.Source` registry is
  * id-only). Its ids match the opaque `source` stamped on each song, so the
  * library never hard-codes a source name. A contribution registry is read
- * synchronously, so the set is always known — the options themselves.
+ * synchronously, so the set is always known — the options themselves. Each
+ * option carries the source's declared icon and tint.
  */
 export function useSongSourceOptions(): LiveFieldOptionsRead {
   const sources = SonataDocument.Source.useContributions();
   return useMemo(
-    () => sources.map((s) => ({ value: s.id, label: s.label })),
+    () =>
+      sources.map((s) => ({
+        value: s.id,
+        label: s.label,
+        // The source's glyph and colour: the group header's identity chip,
+        // and the read cell's dot.
+        icon: s.icon,
+        tint: s.tint,
+      })),
     [sources],
   );
 }

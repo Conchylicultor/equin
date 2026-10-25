@@ -206,7 +206,8 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
     <SectionBody
       section={section}
       foldLines={props.foldLines}
-      className="py-sm"
+      // `galleryBodyPadY` (default the `sm` rhythm).
+      className="py-gallery-body"
     >
       {/* A section whose cards are all folded draws no grid — its header and
           fold line say everything. */}

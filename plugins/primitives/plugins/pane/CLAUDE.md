@@ -495,6 +495,45 @@ background, which the pane republishes as `--chrome-mask` on the bar.
 `headerGlass` frosts the mask (`<Sticky mask="glass">`: the background at 72%,
 what scrolls under it blurred) instead of painting it opaque.
 
+### `inset="content"` — one edge for the toolbar and the content
+
+`<PaneChrome inset="content">` (default `"chrome"`, unchanged) lines up a
+DataView's toolbar and its content on ONE pane-relative edge, while the header
+title stays flush at the pane's left on its own tier inset
+(`chromePanePadStart` / `End`):
+
+- the pane root becomes an inline-size container (`container-type:
+  inline-size`), so a `cqi` length in the inset is a fraction of the **pane**,
+  not the window;
+- it publishes `--pane-inset: var(--content-inset)` — the density group's
+  `contentInset` token, which a theme sets (e.g.
+  `max(clamp(16px, 3cqi, 40px), calc((100cqi - 1520px) / 2))`);
+- every `rail-follow` band in the body floors at that var
+  ([`rail`](../css/plugins/rail/CLAUDE.md)); the header `Bar` is untouched.
+
+While the theme leaves `contentInset` unset (`initial`) the var is invalid and
+every reader falls back to the chrome pad, so an opted-in pane looks like any
+other until its theme says otherwise. A `header="card"` row keeps its own inset
+(the card is a floating chip, not an edge); only its root becomes the container.
+
+Opt-in per pane, because a container is more than an edge: it is the
+containing block for `position: fixed` descendants (overlays portal out; an
+un-portaled `fixed` box is clipped to the pane, and `findViewportBlocker`
+names it) and the nearest size container for any unnamed `@container` query or
+`cq*` length inside it with no closer container. The pane root's inline size
+never derives from its content, so it must sit in a sized box (every layout
+renderer gives it one). Header height and rule stay the density group's
+`chromePaneH` / `chromePaneRule`, which are per theme scope — they reach every
+`PaneChrome` header of the app, not just opted-in ones. A `header="card"` row
+reads its own height and insets, `chromePaneCardH` / `chromePaneCardPadStart`
+/ `End` (`h-chrome-pane-card`, `px-chrome-pane-card`, default the bar's), so a
+theme growing or widening the bar for a split header keeps its card rows as
+they were.
+
+The header row is `data-part="pane.header"` and the title's box
+`data-part="pane.title"` (on every pane) — data-view's parts vocabulary,
+spelled literally here since the pane cannot import data-view.
+
 ### `header="card"` — the header as a floating card
 
 `<PaneChrome header="card">` draws the SAME header row — the leading control,
@@ -1138,10 +1177,14 @@ See "Open questions" in the design doc.
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --background`
+    - `ui/tokens/color-palette --pane-title-foreground`
     - `ui/tokens/color-palette --toolbar-foreground`
-    - `ui/tokens/density --chrome-pane-h`
+    - `ui/tokens/density --chrome-pad-x`
+    - `ui/tokens/density --chrome-pane-card-h`
+    - `ui/tokens/density --chrome-pane-card-pad-end`
+    - `ui/tokens/density --chrome-pane-card-pad-start`
     - `ui/tokens/density --chrome-pane-pad-end`
-    - `ui/tokens/density --chrome-pane-pad-start`
+    - `ui/tokens/density --content-inset`
     - `ui/tokens/density --space-2xs`
     - `ui/tokens/density --space-md`
     - `ui/tokens/shape --spacing`

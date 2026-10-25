@@ -124,4 +124,19 @@ describe("paintThemeStyles", () => {
       "--primary: oklch(0.5000 0.1000 110.00);",
     );
   });
+
+  it("paints an `initial` default as the CSS-wide keyword, leaving the var unset", () => {
+    const optIn = defineTokenGroup("opt-in", {
+      inset: { default: "initial" },
+    });
+    const styles = paintThemeStyles(
+      { ...sources, groups: [optIn] },
+      { rootThemeId: DEFAULT_THEME_ID, appThemes: [] },
+    );
+    // `--inset: initial` is the guaranteed-invalid value: every
+    // `var(--inset, fallback)` takes its fallback, i.e. the consumer's own.
+    expect(styles["theme-engine-opt-in"]).toBe(
+      ":root {\n  --inset: initial;\n}\n.dark {\n  --inset: initial;\n}",
+    );
+  });
 });

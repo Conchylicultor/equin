@@ -29,9 +29,28 @@ export interface TableViewOptions<TRow = unknown> {
    * How the table looks. `"grid"` (default) — the column-header row and a rule
    * under every row. `"outline"` — a sidebar's look: no header, no rules, rows
    * as rounded pills tinted on hover and selection (the tree row's tokens). See
-   * `data-table`'s `DataTablePresentation`.
+   * `data-table`'s `DataTablePresentation`. `"soft"` — borderless rows of a
+   * min height with a rounded hover fill and a between-row hairline, one
+   * header row, an optional frame; sized by the DataView token group's
+   * `soft*` tokens.
    */
-  presentation?: "grid" | "outline";
+  presentation?: "grid" | "outline" | "soft";
+  /**
+   * A leading cover column: each row's cover (`resolveCover` — the surface's
+   * `cover` accessor, a `FieldDef.cover` field, else the first `media` field)
+   * as a thumbnail (`CoverFrame size="thumb"`, the soft thumb tokens). The
+   * surface's primary item action then sits over the thumbnail on hover.
+   * Flat table only. Default `false`.
+   */
+  cover?: boolean;
+  /**
+   * The title column's shape. `"plain"` (default) — the primary field alone.
+   * `"stacked"` — two lines, as a card's text: the title and its indicators,
+   * then the subtitle run of text fields (`partitionCardFields` over the
+   * visible fields); the remaining token fields are the value columns. Flat
+   * table only.
+   */
+  titleCell?: "plain" | "stacked";
   /**
    * Draw the column-header row. Default: `grid` yes, `outline` no. An outline
    * that keeps its column labels over tree rows (a file listing's Name /

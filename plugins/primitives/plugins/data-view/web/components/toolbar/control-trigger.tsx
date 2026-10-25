@@ -2,7 +2,7 @@ import { useState, type ReactNode } from "react";
 import { ControlPanelPopover } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import type { ToolbarPartForms } from "../../../core";
+import { dataPart, type ToolbarPartForms } from "../../../core";
 import { ROUND_AT_REST } from "./round-form";
 import type { DataViewControl } from "../../slots";
 import { useDataViewControls } from "../controls/controls-context";
@@ -71,6 +71,7 @@ export function ControlTrigger({
           variant={summary ? "secondary" : "ghost"}
           shape={form === "round" ? "pill" : "default"}
           className={cn(form === "round" && !summary && ROUND_AT_REST)}
+          {...dataPart("dv.control")}
         />
       }
     >

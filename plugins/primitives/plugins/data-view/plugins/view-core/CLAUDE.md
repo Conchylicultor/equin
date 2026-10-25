@@ -229,21 +229,22 @@ contributions each surface passes in, and per-entry plugin id
 - Description: Type-agnostic named-view-instance engine: instance model + resolver, config-descriptor machinery, debounced write-back, and the editable view-switcher chrome. Type-agnostic named-view-instance engine (server): the per-id `views` config descriptor + a generic registration helper. Consumers register their own ids under their own plugin.
 - Web:
   - Contributes: `IdKinds.Kind` "view"
-  - Uses: 40 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/css/ui-kit` ×13
+  - Uses: 45 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×15
     - `config_v2` ×3
+    - `primitives/css/text` ×3
     - `primitives/css/control-panel` ×2
     - `primitives/hover-reveal` ×2
     - `primitives/live-state` ×2
     - `primitives/sortable-list` ×2
     - `config_v2/fields.FieldRenderer`
     - `ids.IdKinds`
+    - `primitives/css/center.Center`
     - `primitives/css/fill.Fill`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/row.Row`
     - `primitives/css/spacing.Stack`
     - `primitives/css/status-dot.StatusDot`
-    - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.ToggleChip`
     - `primitives/dom/web-storage.defineStore`
     - `primitives/icon-button.IconButton`
@@ -296,19 +297,13 @@ contributions each surface passes in, and per-entry plugin id
     - `ViewTypeMeta`
   - Exports (values): `viewIdKind`
 - Cross-plugin:
-  - Uses tokens:
-    - `ui/tokens/color-palette --faint-foreground`
-    - `ui/tokens/color-palette --foreground`
-    - `ui/tokens/color-palette --muted-foreground`
-    - `ui/tokens/color-palette --primary`
-    - `ui/tokens/density --space-xs`
+  - Uses tokens: 34 vars — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui/tokens/data-view` ×14
+    - `ui/tokens/type-scale` ×9
+    - `ui/tokens/color-palette` ×4
+    - `ui/tokens/density` ×4
+    - `ui/tokens/sidebar-metrics` ×2
     - `ui/tokens/shape --spacing`
-    - `ui/tokens/sidebar-metrics --sidebar-icon-gap`
-    - `ui/tokens/sidebar-metrics --sidebar-icon-size`
-    - `ui/tokens/type-scale --font-scale`
-    - `ui/tokens/type-scale --font-size-label`
-    - `ui/tokens/type-scale --font-weight-medium`
-    - `ui/tokens/type-scale --line-height-label`
   - Imported by:
     - `primitives/data-view`
     - `primitives/metrics`

@@ -99,6 +99,7 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
       title={props.title}
       actions={props.actions}
       creators={props.creators}
+      createLabel={props.createLabel}
       density={props.density}
       groupHeaders={props.groupHeaders}
       toolbar={props.toolbar}
@@ -172,6 +173,8 @@ export function DataViewShellFrame(props: {
   title?: ReactNode;
   actions?: ReactNode;
   creators?: CreateOption[];
+  /** `DataViewProps.createLabel` — the stand-in toolbar's create trigger. */
+  createLabel?: string | undefined;
   density?: DataViewDensity;
   groupHeaders?: DataViewGroupHeaders;
   toolbar?: DataViewToolbarSpec;
@@ -225,6 +228,7 @@ export function DataViewShellFrame(props: {
     title,
     actions,
     creators,
+    createLabel,
     density,
     groupHeaders,
     toolbar,
@@ -317,7 +321,12 @@ export function DataViewShellFrame(props: {
       </Stack>
     ) : (
       <Stack gap="none" ref={rootRef} className={rootClassName}>
-        <ShellToolbar title={title} actions={actions} creators={creators} />
+        <ShellToolbar
+          title={title}
+          actions={actions}
+          creators={creators}
+          createLabel={createLabel}
+        />
         <div className="rail-follow py-md">{content}</div>
       </Stack>
     );
@@ -506,8 +515,9 @@ function ShellToolbar(props: {
   title?: ReactNode;
   actions?: ReactNode;
   creators?: CreateOption[];
+  createLabel?: string | undefined;
 }): ReactNode {
-  const { title, actions, creators } = props;
+  const { title, actions, creators, createLabel } = props;
   return (
     <Sticky
       edge="top"
@@ -522,7 +532,7 @@ function ShellToolbar(props: {
       {/* eslint-disable-next-line row-actions/no-raw-actions-slot -- surface-level toolbar actions, one per DataView, not a per-row cluster */}
       {actions ? <div className="ml-auto">{actions}</div> : null}
       <div className={actions ? undefined : "ml-auto"}>
-        <CreatorsControl creators={creators} />
+        <CreatorsControl creators={creators} createLabel={createLabel} />
       </div>
     </Sticky>
   );

@@ -127,7 +127,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`tooling`** [exempt] — Umbrella for build-time tooling: boundary checker, lint rules, checks, guards, codegen
       - Plugins:
         - **`boundaries`** [exempt] — Boundary-rules checker: zone DSL, edge evaluator, and project boundary config
-        - **`checks`** [test helpers] [exempt] [55 sub-plugins] — Check runner and built-in checks for ./equin check
+        - **`checks`** [test helpers] [exempt] [56 sub-plugins] — Check runner and built-in checks for ./equin check
         - **`codegen`** [exempt] — Plugin doc generation and registry codegen
         - **`collected-dir`** — Generic loader for build-time collected-dir registries (loadCollectedDir).
         - **`e2e-harness`** [exempt] — Shared Playwright harness for the per-plugin e2e/ scripts: argv parsing, worktree-derived target URL, browser/session lifecycle, error capture, pass/fail reporting, screenshots, and Chromium on…
@@ -388,7 +388,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`theme-customizer`** — Extensible theme customization pane: per-app theme toggle, component variant pickers, search, and contributed sections, plus the token-group editor kit (useTokenGroupEditor, TokenRows, FillFromMenu)…
         - **`theme-gallery`** — The Theme DataView: every selectable theme plus every catalog's unsaved entries, with My themes / Community / Curated views. Picking one selects it for the current scope (saving a catalog entry…
     - **`theme-toggle`** — Light/dark controls: the Dark mode and Match system switches inside the quick-theme popover (editing the scheme of the focused app's scope, or the global setting when no app fills the surface), and…
-    - **`tokens`** [exempt] [20 sub-plugins] — Umbrella for CSS token group plugins: each declares its variables and schema defaults, and a customizer section that edits the scope's theme.
+    - **`tokens`** [exempt] [22 sub-plugins] — Umbrella for CSS token group plugins: each declares its variables and schema defaults, and a customizer section that edits the scope's theme.
     - **`tree-disclosure`** — Tree-row disclosure region (merged / dimmed-leaf / column). Contributes its variant-region host into Tree.Disclosure.
       - Plugins:
         - **`column`** — Column tree disclosure — a dedicated chevron column ahead of the icon, present only on rows with children (Finder / VS Code style).
