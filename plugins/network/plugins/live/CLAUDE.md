@@ -1923,8 +1923,9 @@ const r = useLive(checkoutStatus);   // ResourceResult<T> | { status: "unavailab
   undefined`); a paged value carries it as `LivePagedValue`'s own `NM` type
   argument (so a serve or read still infers `Item` / `Meta` from the
   declaration), and its meta sibling inherits it (`host-fs.list`). A reader
-  of a paged value that does not take `NM` (data-view's
-  `useLivePagedValuePaging`) accepts only a portable one (tsc).
+  of a paged value takes `NM` too and passes the `unavailable` arm on
+  (data-view's `useLivePagedValuePaging` — `build.run-logs`); a reader that
+  does not accepts only a portable one (tsc).
 - **Serve.** `live/server`'s `serveValue` / `serveCollection` take only a
   portable declaration; `live/machine`'s — the SAME overload set
   (`ServeValueOverloads<H>` / `ServeCollectionOverloads<H>`, `H` intersected
@@ -2108,12 +2109,14 @@ never add one.
     - `LivePagesResult`
     - `LiveRowResult`
     - `LiveSnapshotResult`
+    - `LiveUnavailable`
     - `LiveValuePagesOptions`
     - `PagesTruncation`
     - `PresentationOwner`
     - `StoredClientFieldsResolution`
     - `StoredFieldPresentation`
     - `VisibleRange`
+    - `WithMachine`
   - Exports (values):
     - `ClientFields`
     - `clientFieldsKey`
@@ -2345,16 +2348,16 @@ never add one.
     - `serveCollectionOn`
     - `serveValueOn`
 - Cross-plugin:
-  - Imported by: 293 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 298 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×79
     - `conversations` ×50
-    - `debug` ×31
+    - `debug` ×32
     - `tasks` ×28
     - `infra` ×18
     - `page` ×13
     - `active-data` ×12
+    - `build` ×10
     - `primitives` ×10
-    - `build` ×6
     - `stats` ×5
     - `code-explorer` ×4
     - `plugin-meta` ×4
@@ -2384,13 +2387,6 @@ never add one.
     - `no-db-backed-notify` — `server/internal/serve-off-feed.ts` (sanctioned)
     - `no-raw-websocket` — `e2e/narrowing.ts` (sanctioned)
   - Exempted by:
-    - `build/build-commits` (1 debt)
-    - `build/build-fix` (1 debt)
-    - `build/build-info` (1 debt)
-    - `build/build-logs` (1 debt)
-    - `build/build-profiling` (1 debt)
-    - `build/serve-composition` (1 debt)
-    - `debug/profiling/build` (1 debt)
     - `framework/central-core` (0 debt)
     - `framework/resource-runtime` (0 debt)
     - `framework/server-core` (0 debt)

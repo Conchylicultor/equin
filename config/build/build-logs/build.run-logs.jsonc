@@ -1,0 +1,24 @@
+// @hash 6ec84829688d
+// The run's log lines, newest first, a page at a time. No client sort: the
+// server pages them in that order, so a sort over the loaded window would
+// reorder only the lines paged in so far. One view per type the call site
+// whitelists: the table (line, step, text) and a plain list of the text.
+{
+  "views": [
+    {
+      "id": "lines",
+      "name": "Lines",
+      "icon": "table",
+      "view": { "type": "table" }
+    },
+    {
+      "id": "plain",
+      "name": "Plain",
+      "icon": "list",
+      "view": { "type": "list" }
+    }
+  ],
+  "sortPresets": [],
+  "filterPresets": [],
+  "customColumns": []
+}

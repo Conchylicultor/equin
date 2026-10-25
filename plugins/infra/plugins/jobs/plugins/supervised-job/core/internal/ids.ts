@@ -37,9 +37,18 @@ export function assertRunKindId(id: string): void {
   }
 }
 
+/**
+ * Whether `runId` can name a run: one non-empty filename segment of letters,
+ * digits, `.`, `_` and `-` — never `.` or `..`, which pass the character class
+ * but name a directory. The predicate a reader holding an id from outside (a
+ * URL, a ledger row of an older shape) checks before joining it into a path.
+ */
+export function isRunId(runId: string): boolean {
+  return RUN_ID.test(runId) && runId !== "." && runId !== "..";
+}
+
 export function assertRunId(kindId: string, runId: string): void {
-  // `.` and `..` pass the character class but name a directory, not a run.
-  if (!RUN_ID.test(runId) || runId === "." || runId === "..") {
+  if (!isRunId(runId)) {
     throw new Error(
       `[supervised-run] ${kindId}: invalid run id ${JSON.stringify(runId)} — ` +
         `a run id becomes a filename, so it must be non-empty and made of ` +

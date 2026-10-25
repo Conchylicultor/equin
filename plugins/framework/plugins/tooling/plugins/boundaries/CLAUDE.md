@@ -182,8 +182,6 @@ readings use it:
     - `backup/sources/transcripts` (1 debt)
     - `backup/targets/google-drive` (2 debt)
     - `backup/targets/local` (1 debt)
-    - `build/build-logs` (1 debt)
-    - `build/build-profiling` (1 debt)
     - `build/run-ledger` (1 debt)
     - `build/serve-composition` (1 debt)
     - `build/server-build-id` (2 debt)

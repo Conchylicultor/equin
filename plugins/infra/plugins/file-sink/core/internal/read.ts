@@ -1,4 +1,5 @@
 import { closeSync, fstatSync, openSync, readSync } from "node:fs";
+import { open } from "node:fs/promises";
 
 // The bounded READ counterpart of `append()`. Lifted from
 // log-channels/server/internal/persist.ts's `readTail` (a positioned
@@ -88,6 +89,40 @@ function readLastBytes(file: string, budget: number): FileChunk | null {
   }
 }
 
+/** {@link readLastBytes} without blocking the event loop. */
+async function readLastBytesAsync(
+  file: string,
+  budget: number,
+): Promise<FileChunk | null> {
+  let handle;
+  try {
+    handle = await open(file, "r");
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw err;
+  }
+  try {
+    const size = (await handle.stat()).size;
+    const start = Math.max(0, size - budget);
+    const length = size - start;
+    const buf = Buffer.allocUnsafe(length);
+    let offset = 0;
+    while (offset < length) {
+      const { bytesRead } = await handle.read(
+        buf,
+        offset,
+        length - offset,
+        start + offset,
+      );
+      if (bytesRead === 0) break;
+      offset += bytesRead;
+    }
+    return { text: buf.toString("utf8", 0, offset), clipped: start > 0 };
+  } finally {
+    await handle.close();
+  }
+}
+
 function splitLines(text: string): string[] {
   return text.split("\n").filter((l) => l !== "");
 }
@@ -141,6 +176,54 @@ export function readTail(path: string, opts: TailOptions = {}): TailResult {
     }
   }
 
+  return assembleTail(chunks, moreHistoryExists, opts);
+}
+
+/**
+ * {@link readTail} without blocking the event loop — the same walk, budget and
+ * stitching over `node:fs/promises`, for a reader inside a shared async cycle
+ * (a live-resource loader) where a synchronous read freezes everything else.
+ */
+export async function readTailAsync(
+  path: string,
+  opts: TailOptions = {},
+): Promise<TailResult> {
+  const budget = opts.maxBytes ?? DEFAULT_MAX_BYTES;
+  const includeRotated = opts.includeRotated ?? false;
+
+  const chunks: FileChunk[] = [];
+  let remaining = budget;
+
+  const live = await readLastBytesAsync(path, remaining);
+  if (live === null) return { kind: "missing" };
+  chunks.push(live);
+  remaining -= Buffer.byteLength(live.text, "utf8");
+
+  let moreHistoryExists = false;
+
+  if (includeRotated) {
+    for (let n = 1; ; n++) {
+      if (remaining <= 0) {
+        moreHistoryExists =
+          (await readLastBytesAsync(rotationPath(path, n), 1)) !== null;
+        break;
+      }
+      const chunk = await readLastBytesAsync(rotationPath(path, n), remaining);
+      if (chunk === null) break;
+      chunks.push(chunk);
+      remaining -= Buffer.byteLength(chunk.text, "utf8");
+    }
+  }
+
+  return assembleTail(chunks, moreHistoryExists, opts);
+}
+
+/** The newest-first chunks of a tail walk, stitched oldest-first into lines. */
+function assembleTail(
+  chunks: FileChunk[],
+  moreHistoryExists: boolean,
+  opts: TailOptions,
+): TailResult {
   chunks.reverse(); // oldest-first
   // Only the OLDEST opened file can have a partial leading line: every newer chunk
   // was read from offset 0 (the budget is spent walking backwards, so a chunk is
@@ -191,7 +274,18 @@ export function readTail(path: string, opts: TailOptions = {}): TailResult {
  * validates (e.g. `safeParse`) on top.
  */
 export function readJsonlTail<T>(path: string, opts: TailOptions = {}): JsonlTailResult<T> {
-  const result = readTail(path, opts);
+  return parseJsonlTail<T>(readTail(path, opts));
+}
+
+/** {@link readJsonlTail} without blocking the event loop (see {@link readTailAsync}). */
+export async function readJsonlTailAsync<T>(
+  path: string,
+  opts: TailOptions = {},
+): Promise<JsonlTailResult<T>> {
+  return parseJsonlTail<T>(await readTailAsync(path, opts));
+}
+
+function parseJsonlTail<T>(result: TailResult): JsonlTailResult<T> {
   if (result.kind === "missing") return { kind: "missing" };
 
   const records: T[] = [];

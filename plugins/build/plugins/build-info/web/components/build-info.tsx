@@ -1,13 +1,13 @@
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
-import { useLiveRow } from "@plugins/network/plugins/live/web";
+import { useLive, useLiveRow } from "@plugins/network/plugins/live/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
-import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { buildHistory, type BuildRun } from "@plugins/build/core";
 import { BuildStatusBadge } from "@plugins/build/plugins/build-status/web";
 import { buildStatusOf } from "@plugins/build/plugins/build-status/core";
 import {
+  buildRunTermination,
   describeTermination,
-  getBuildRunTermination,
+  type BuildTermination,
 } from "@plugins/build/plugins/build-termination/core";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
@@ -54,9 +54,10 @@ function Row({
  * whole story — `killed` (a catchable signal reached the build) and
  * `interrupted` (its owner was hard-killed).
  *
- * Its own component so the endpoint hook is not called from `BuildInfo`, which
- * returns early while the run loads. The fetch is gated on the status, so
- * the overwhelmingly common healthy run costs no request.
+ * Its own component so the live read is not called from `BuildInfo`, which
+ * returns early while the run loads. The read is gated on the status (a `null`
+ * tuple reads nothing), so the overwhelmingly common healthy run costs no
+ * subscription.
  *
  * It renders nothing only when there is genuinely nothing to say — for any
  * killed run it prints a line even when the sender is unknown, because silence
@@ -66,14 +67,33 @@ function Row({
 function TerminationDetail({ run }: { run: BuildRun }) {
   const status = buildStatusOf(run);
   const externallyEnded = status === "killed" || status === "interrupted";
-  const { data } = useEndpoint(
-    getBuildRunTermination,
-    { id: run.id },
-    { enabled: externallyEnded },
+  const result = useLive(
+    buildRunTermination,
+    externallyEnded ? { id: run.id } : null,
   );
-  // `undefined` is TanStack's "no data yet" — mapped to the `null` that means
-  // "not loaded", so an in-flight request never renders as "no record exists".
-  const described = describeTermination(status, run.exitCode, data ?? null);
+  if (result.status === "error") {
+    return (
+      <ResourceErrorInline
+        variant="inline"
+        subject="how this run ended"
+        error={result.error}
+        refetch={result.refetch}
+      />
+    );
+  }
+  // `null` is `describeTermination`'s "not loaded": while the record is in
+  // flight — or cannot be read on this host — it claims no sender either way.
+  let record: BuildTermination | null;
+  switch (result.status) {
+    case "ready":
+      record = result.data;
+      break;
+    case "loading":
+    case "unavailable":
+      record = null;
+      break;
+  }
+  const described = describeTermination(status, run.exitCode, record);
   if (!described) return null;
 
   return (
@@ -87,10 +107,16 @@ function TerminationDetail({ run }: { run: BuildRun }) {
       <Text as="p" variant="body">
         {described.headline}
       </Text>
-      {described.note !== null && (
+      {result.status === "unavailable" ? (
         <Text as="p" variant="caption" className="text-muted-foreground">
-          {described.note}
+          {result.message}
         </Text>
+      ) : (
+        described.note !== null && (
+          <Text as="p" variant="caption" className="text-muted-foreground">
+            {described.note}
+          </Text>
+        )
       )}
     </Stack>
   );

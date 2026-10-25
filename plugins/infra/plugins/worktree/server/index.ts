@@ -43,6 +43,8 @@ export {
   namespaceCollision,
   stampCompositionMarker,
   readCompositionMarker,
+  loadCompositionMarker,
+  isCompositionMarkerPath,
   hasCompositionMarker,
 } from "./internal/composition-namespace";
 

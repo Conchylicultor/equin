@@ -12569,56 +12569,49 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `buildConfig`
       - `isMainCompositionBuild`
   - Plugins:
-    - **`build-commits`** — Commits included since the previous build, shown in the build detail pane. Per-run commit list data endpoint.
+    - **`build-commits`** — Commits included since the previous build, shown in the build detail pane.
       - Web:
         - Contributes: `BuildDetailSlots.Section` "Commits" → `BuildCommitsSection`
         - Uses:
           - `build.BuildDetailSlots`
           - `conversations/commit-conversation.OpenCommitConversation`
-          - `infra/endpoints.useEndpoint`
+          - `network/live.useLive`
           - `primitives/commit-list.CommitRowItem`
           - `primitives/css/placeholder.Placeholder`
+          - `primitives/live-state.ResourceErrorInline`
           - `primitives/loading.Loading`
       - Server:
-        - Uses:
-          - `build/run-ledger._buildRuns`
-          - `database.db`
-          - `infra/endpoints.HttpError`
-          - `infra/endpoints.implement`
-          - `infra/paths.REPO_ROOT`
-          - `primitives/commit-list.LOG_FORMAT`
-          - `primitives/commit-list.parseGitLog`
-          - `primitives/commit-list.runGit`
-        - Routes: `GET /api/build/runs/:id/commits`
+        - Contributes: `resource.declare` "build.run-commits"
+        - Resources: `build.run-commits` (push, notified, capped: BUILD_COMMITS_MAX)
+      - Machine:
+        - Uses: `network/live.serveValue`
       - Core:
         - Uses:
-          - `infra/endpoints.defineEndpoint`
+          - `network/live.liveValue`
+          - `packages/list-bound.cappedList`
           - `primitives/commit-list.CommitRowSchema`
-        - Exports (values): `getBuildRunCommits`
+        - Exports (types): `BuildRunCommits`
+        - Exports (values): `buildRunCommits`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/color-palette --primary`
-      - Exemptions:
-        - Exempts itself from: `live/no-endpoint-read` — `web/components/build-commits-section.tsx` (debt)
-      - Shared:
-        - Exports (values): `getBuildRunCommits`
     - **`build-fix`** — Launch-agent button in the build detail pane for failed builds.
       - Web:
         - Contributes: `BuildDetailSlots.Section` "Fix"
         - Uses:
           - `build.BuildDetailSlots`
-          - `infra/endpoints.useEndpoint`
+          - `network/live.LiveListResult`
           - `network/live.LiveRowResult`
+          - `network/live.LiveUnavailable`
+          - `network/live.useLive`
           - `network/live.useLiveRow`
           - `primitives/launch/investigate.InvestigateAction`
-      - Exemptions:
-        - Exempts itself from: `live/no-endpoint-read` — `web/components/build-fix-section.tsx` (debt)
     - **`build-info`** — Status, trigger, commit hash, and timing section in the build detail pane.
       - Web:
         - Contributes: `BuildDetailSlots.Section` "Info" → `BuildInfo`
         - Uses:
           - `build.BuildDetailSlots`
           - `build/build-status.BuildStatusBadge`
-          - `infra/endpoints.useEndpoint`
+          - `network/live.useLive`
           - `network/live.useLiveRow`
           - `primitives/css/badge.Badge`
           - `primitives/css/inline.Inline`
@@ -12637,73 +12630,58 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-code`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-code`
-      - Exemptions:
-        - Exempts itself from: `live/no-endpoint-read` — `web/components/build-info.tsx` (debt)
-    - **`build-logs`** — Live log stream section in the build detail pane. Per-run build log data endpoint.
+    - **`build-logs`** — Logs section in the build detail pane: the run's persisted steps and lines (build.run-logs, newest first, paged by viewport), else the live log channel.
       - Web:
         - Contributes: `BuildDetailSlots.Section` "Logs" → `BuildLogSection`
         - Uses:
           - `build.BuildDetailSlots`
-          - `infra/endpoints.useEndpoint`
-          - `primitives/collapsible.Collapsible`
-          - `primitives/collapsible.CollapsibleChevron`
-          - `primitives/collapsible.CollapsibleContent`
-          - `primitives/collapsible.CollapsibleTrigger`
-          - `primitives/css/clip.Clip`
+          - `network/live.useLive`
+          - `primitives/copy-to-clipboard.CopyButton`
+          - `primitives/css/fill.Fill`
+          - `primitives/css/line.Line`
+          - `primitives/css/placeholder.Placeholder`
           - `primitives/css/rigid.rigidClass`
-          - `primitives/css/scroll.Scroll`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
-          - `primitives/css/text.textVariantClass`
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.ControlSizeProvider`
-          - `primitives/icon-button.IconButton`
+          - `primitives/data-view.DataView`
+          - `primitives/data-view.defineDataView`
+          - `primitives/data-view.FieldDef`
+          - `primitives/data-view.useLivePagedValuePaging`
+          - `primitives/live-state.ResourceErrorInline`
+          - `primitives/loading.Loading`
           - `primitives/log-channels.LiveLogChannel`
           - `shell/notifications.useToast`
           - `ui/icons.Icon`
       - Server:
-        - Uses:
-          - `infra/endpoints.HttpError`
-          - `infra/endpoints.implement`
-          - `infra/paths.worktreeArtifacts`
-        - Routes: `GET /api/build/runs/:id/logs`
+        - Contributes:
+          - `resource.declare` "build.run-logs"
+          - `resource.declare` "build.run-logs:meta"
+        - Resources:
+          - `build.run-logs` (keyed, window, notified, capped: BUILD_LOG_STEPS_MAX)
+          - `build.run-logs:meta` (push, notified, capped: BUILD_LOG_STEPS_MAX)
+      - Machine:
+        - Uses: `network/live.serveValue`
       - Core:
-        - Uses: `infra/endpoints.defineEndpoint`
+        - Uses:
+          - `network/live.liveValue`
+          - `packages/list-bound.cappedList`
         - Exports (types):
-          - `BuildLogsResponse`
-          - `BuildStepLog`
-        - Exports (values):
-          - `BuildLogsResponseSchema`
-          - `getBuildRunLogs`
+          - `BuildLogLine`
+          - `BuildLogStep`
+          - `BuildRunLogsMeta`
+          - `BuildRunLogsQuery`
+          - `BuildRunLogsRefusal`
+        - Exports (values): `buildRunLogs`
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/color-palette --destructive`
-          - `ui/tokens/color-palette --foreground`
-          - `ui/tokens/color-palette --muted`
           - `ui/tokens/color-palette --muted-foreground`
           - `ui/tokens/color-palette --success`
-          - `ui/tokens/density --space-md`
-          - `ui/tokens/density --space-sm`
           - `ui/tokens/density --space-xs`
-          - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
-          - `ui/tokens/type-scale --font-scale`
-          - `ui/tokens/type-scale --font-size-caption`
-          - `ui/tokens/type-scale --font-weight-medium`
-          - `ui/tokens/type-scale --font-weight-normal`
-          - `ui/tokens/type-scale --line-height-caption`
-      - Exemptions:
-        - Exempts itself from:
-          - `live/no-endpoint-read` — `web/components/build-log-section.tsx` (debt)
-          - `boundaries/no-platform-api` — `server/internal/handle-build-run-logs.ts` (debt)
-      - Shared:
-        - Exports (types):
-          - `BuildLogsResponse`
-          - `BuildStepLog`
-        - Exports (values):
-          - `BuildLogsResponseSchema`
-          - `getBuildRunLogs`
-    - **`build-profiling`** — Per-run build profiling Gantt section in the build detail pane. Per-run build profiling data endpoint.
+    - **`build-profiling`** — Per-run build profiling Gantt section in the build detail pane.
       - Web:
         - Contributes: `BuildDetailSlots.Section` "Profiling" → `BuildProfilingSection`
         - Uses:
@@ -12714,13 +12692,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug/profiling.ProfilingContext`
           - `debug/profiling.Span`
           - `debug/profiling.SpanDetail`
-          - `infra/endpoints.useEndpoint`
+          - `network/live.useLive`
+          - `primitives/css/placeholder.Placeholder`
+          - `primitives/live-state.foldResource`
+          - `primitives/live-state.ResourceErrorInline`
+          - `primitives/loading.Loading`
       - Server:
+        - Contributes: `resource.declare` "build.run-profile"
+        - Resources: `build.run-profile` (push, notified, capped: RUN_PROFILE_MAX_SPANS)
+      - Machine:
+        - Uses: `network/live.serveValue`
+      - Core:
         - Uses:
-          - `infra/endpoints.HttpError`
-          - `infra/endpoints.implement`
-          - `infra/paths.worktreeArtifacts`
-        - Routes: `GET /api/build/runs/:id/profile`
+          - `network/live.liveValue`
+          - `packages/list-bound.cappedList`
+        - Exports (values): `buildRunProfile`
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/categorical --categorical-1`
@@ -12731,12 +12717,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/categorical --categorical-6`
           - `ui/tokens/categorical --categorical-7`
           - `ui/tokens/categorical --categorical-8`
-      - Exemptions:
-        - Exempts itself from:
-          - `live/no-endpoint-read` — `web/components/build-profiling-section.tsx` (debt)
-          - `boundaries/no-platform-api` — `server/internal/handle-build-run-profiling.ts` (debt)
-      - Shared:
-        - Exports (values): `getBuildRunProfile`
     - **`build-status`** — Single source of truth for build-run status display metadata — label, badge variant, and dot color per BuildStatus.
       - Web:
         - Uses:
@@ -12771,25 +12751,26 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `BUILD_STATUS_OPTIONS_META`
           - `buildStatusOf`
           - `killedSignalName`
-    - **`build-termination`** — Per-run termination endpoint: what the host-global signal-origin sink recorded about the death of one build run (which signal, and who sent it).
+    - **`build-termination`** — Per-run termination record, desktop-only: the build.run-termination live value — what the host-global signal-origin sink recorded about the death of one build run (which signal, and who sent it), notified by a watch on the sink.
       - Server:
-        - Uses:
-          - `infra/endpoints.HttpError`
-          - `infra/endpoints.implement`
-        - Routes: `GET /api/build/runs/:id/termination`
+        - Contributes: `resource.declare` "build.run-termination"
+        - Resources: `build.run-termination` (push, notified, capped: SIGNAL_ORIGIN_ANCESTRY_MAX)
+      - Machine:
+        - Uses: `network/live.serveValue`
       - Core:
         - Uses:
           - `build/build-status.BuildStatus`
           - `build/build-status.killedSignalName`
-          - `infra/endpoints.defineEndpoint`
+          - `network/live.liveValue`
+          - `packages/list-bound.cappedList`
           - `packages/signal-origin.formatSignalOrigin`
         - Exports (types):
           - `BuildTermination`
           - `TerminationDescription`
         - Exports (values):
+          - `buildRunTermination`
           - `BuildTerminationSchema`
           - `describeTermination`
-          - `getBuildRunTermination`
     - **`deployment`** — The client half of the deployment description: `useDeployment()` composes THIS tab's own baked pin in beside the server's two deployable carriers, and `<DeploymentChain/>` renders the four arms — one commit row when converged, the chain with a carrier chip on each carrier's own commit when behind, and the raw pins plus the reason when there is no line to draw. Also eagerly registers the boot-critical build.deployment resource descriptor so boot-snapshot can hydrate it before first paint.
       - Server:
         - Contributes:
@@ -12902,7 +12883,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `active-data/build-run`
           - `build`
-          - `build/build-commits`
           - `build/runs-arm`
           - `framework/cli/build`
       - Exemptions:
@@ -12947,19 +12927,47 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `buildRunArm`
           - `BuildStatusSchema`
     - **`serve-composition`** — Serve capability for a composition: the live-serve toggle panel, the enable→build hook (a `build --composition <id>` of THIS checkout), the served-liveness read (the server-resolved namespace plus the composition.json marker, not the autoBuild intent), and the delete flow — which asks what the composition owns across every checkout, names it in a confirm dialog, and reclaims it before the manifest row goes. Consumed by Studio's Build & serve section and compositions list, and by the deploy pane's Test locally section. Serve-liveness read for a composition: WHERE this backend's checkout serves it (the server-resolved namespace + url) and whether anything is actually there (the composition.json marker), plus the reset-to-first-launch endpoint — wipes ONLY that namespace's DB + config back to what a serve build provisions on a fresh serve, then restarts its backend. Never touches the checkout's own app. Also answers what a composition owns across EVERY checkout that has served it (the marker scan behind the delete confirmation) and reclaims that whole set, per-namespace outcomes reported individually.
+      - Server:
+        - Contributes: `resource.declare` "build.serve-status"
+        - Uses:
+          - `database/admin.databaseExists`
+          - `database/admin.dropDatabase`
+          - `database/admin.ensureDatabase`
+          - `infra/endpoints.implement`
+          - `infra/paths.checkoutRef`
+          - `infra/paths.REPO_ROOT`
+          - `infra/worktree.ensureMainWorktreeRoot`
+          - `infra/worktree.hasCompositionMarker`
+          - `infra/worktree.loadCompositionMarker`
+          - `infra/worktree.namespaceCollision`
+          - `infra/worktree.probeNamespace`
+          - `infra/worktree/reclaim.NamespaceReclaimError`
+          - `infra/worktree/reclaim.namespacesOwnedByComposition`
+          - `infra/worktree/reclaim.OwnedNamespace`
+          - `infra/worktree/reclaim.reclaimNamespace`
+        - Resources: `build.serve-status` (push, notified)
+        - Routes:
+          - `POST /api/build/serve/reset`
+          - `GET /api/build/serve/status`
+          - `GET /api/build/serve/owned`
+          - `POST /api/build/serve/reclaim`
       - Web:
-        - Uses: 21 symbols — full list in [`plugins/build/plugins/serve-composition/REFERENCE.md`](../plugins/build/plugins/serve-composition/REFERENCE.md)
-          - `infra/endpoints` ×4
-          - `primitives/css/toggle-chip` ×3
-          - `network/live` ×2
-          - `plugin-meta/composition` ×2
+        - Uses:
+          - `infra/endpoints.getEndpointErrorMessage`
+          - `infra/endpoints.useEndpointMutation`
+          - `infra/endpoints.useFetchEndpoint`
+          - `network/live.useLive`
+          - `plugin-meta/composition.useManifestActions`
+          - `plugin-meta/composition.useManifestItems`
           - `primitives/css/badge.Badge`
           - `primitives/css/link-chip.LinkChip`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
+          - `primitives/css/toggle-chip.SegmentedControl`
+          - `primitives/css/toggle-chip.SegmentedOption`
+          - `primitives/css/toggle-chip.ToggleChip`
           - `primitives/css/ui-kit.Button`
           - `primitives/latest-ref.useLatestRef`
-          - `primitives/live-state.foldResource`
           - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
           - `primitives/relative-time.RelativeTime`
           - `shell/toast.showToast`
@@ -12971,28 +12979,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useDeleteComposition`
           - `useServeComposition`
           - `useServeStatus`
-      - Server:
-        - Uses:
-          - `database/admin.databaseExists`
-          - `database/admin.dropDatabase`
-          - `database/admin.ensureDatabase`
-          - `infra/endpoints.implement`
-          - `infra/paths.checkoutRef`
-          - `infra/paths.REPO_ROOT`
-          - `infra/worktree.ensureMainWorktreeRoot`
-          - `infra/worktree.hasCompositionMarker`
-          - `infra/worktree.namespaceCollision`
-          - `infra/worktree.probeNamespace`
-          - `infra/worktree.readCompositionMarker`
-          - `infra/worktree/reclaim.NamespaceReclaimError`
-          - `infra/worktree/reclaim.namespacesOwnedByComposition`
-          - `infra/worktree/reclaim.OwnedNamespace`
-          - `infra/worktree/reclaim.reclaimNamespace`
-        - Routes:
-          - `POST /api/build/serve/reset`
-          - `GET /api/build/serve/status`
-          - `GET /api/build/serve/owned`
-          - `POST /api/build/serve/reclaim`
+      - Machine:
+        - Uses: `network/live.serveValue`
       - Cross-plugin:
         - Imported by:
           - `apps/deploy/local-serve`
@@ -13000,9 +12988,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/studio/compositions/draft-actions`
           - `apps/studio/compositions/release`
       - Exemptions:
-        - Exempts itself from:
-          - `live/no-endpoint-read` — `web/internal/use-serve-status.ts` (debt)
-          - `boundaries/no-platform-api` — `server/internal/reset.ts` (debt)
+        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/reset.ts` (debt)
     - **`server-build-id`** — Served-bundle pin leaf: reads the .build-commit (the tree the bundle was built from) and .build-graph (content identity of the served web graph) trailers out of the served dist, fresh on every call; also registers the boot-memoized graph as the live-resource runtime's build identity (contract-mismatch verdicts). A leaf so the deployment description and stale-tab detection read them without importing the heavy build barrel (which pulls git-watcher/worktree).
       - Server:
         - Uses: `infra/paths.webDistDir`
@@ -19669,7 +19655,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `quotedRelationsIn`
       - `readTag`
   - Cross-plugin:
-    - Imported by: 125 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+    - Imported by: 124 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
       - `apps` ×35
       - `page` ×15
       - `infra` ×13
@@ -19683,7 +19669,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `stats` ×2
       - `apps-core/app-usage`
       - `backup`
-      - `build/build-commits`
       - `code-explorer`
       - `hints`
       - `history/engine`
@@ -21719,17 +21704,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug/profiling.ProfilingContext`
               - `debug/profiling.Span`
               - `debug/profiling.SpanDetail`
-              - `infra/endpoints.useEndpoint`
+              - `network/live.useLive`
               - `primitives/css/clip.Clip`
               - `primitives/css/placeholder.Placeholder`
               - `primitives/css/spacing.Inset`
+              - `primitives/live-state.foldResource`
+              - `primitives/live-state.ResourceErrorInline`
+              - `primitives/loading.Loading`
               - `primitives/pane.defineRoute`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
             - Exports (values): `buildProfileDetailPane`
-          - Machine:
-            - Uses: `infra/endpoints.implementMachine`
-            - Routes: `GET /api/debug/profiling/build/:worktree/:buildId`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/categorical --categorical-1`
@@ -21742,8 +21727,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/categorical --categorical-8`
               - `ui/tokens/shape --radius`
             - Imported by: `debug/profiling/ops`
-          - Exemptions:
-            - Exempts itself from: `live/no-endpoint-read` — `web/components/build-detail.tsx` (debt)
         - **`cold-start`** — Cold-start benchmark: stops the worktree's server, loads a page in a fresh browser and splits page request → first screen with data across the gateway, the server's boot phases and the browser's boot trace.
         - **`op-log`** — Unified op log: the one durable record for every host-contending op (build / push / check), its per-resource wait list, the writer, and the merged file reader. Its op-store child ingests it into the DB and owns the orphan reconciler.
           - Core:
@@ -26101,8 +26084,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `backup/sources/transcripts` (1 debt)
               - `backup/targets/google-drive` (2 debt)
               - `backup/targets/local` (1 debt)
-              - `build/build-logs` (1 debt)
-              - `build/build-profiling` (1 debt)
               - `build/run-ledger` (1 debt)
               - `build/serve-composition` (1 debt)
               - `build/server-build-id` (2 debt)
@@ -28931,20 +28912,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 235 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+        - Imported by: 228 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
           - `apps` ×61
           - `conversations` ×32
           - `page` ×21
           - `infra` ×20
           - `tasks` ×19
-          - `debug` ×17
+          - `debug` ×16
           - `primitives` ×16
-          - `build` ×8
           - `reports` ×6
           - `ui` ×6
           - `auth` ×5
           - `active-data` ×2
           - `apps-core` ×2
+          - `build` ×2
           - `code-explorer` ×2
           - `config_v2` ×2
           - `history` ×2
@@ -29378,7 +29359,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `openDynamicSink`
           - `readHistory`
           - `readJsonlTail`
+          - `readJsonlTailAsync`
           - `readTail`
+          - `readTailAsync`
           - `sanitizeChannel`
           - `statHistory`
     - **`file-watcher`** — defineFileWatcher: the one declared in-process file watcher — a named, described declaration (static policy: extensions, ignore, debounce, ceiling, writesWhileOpen, depth, reconcile, mainOnly) whose start({dirs, label, onChange, onReconcile}) opens instances over one @parcel/watcher engine (debounce + ceiling flush, reconcile timer, kqueue sizing). Records per declaration its open instances, last change batch and a ring of handler runs for the Background activity catalog (onWatcherActivity / listFileWatchers / fileWatcherRecentRuns). The cli barrel's watchForCommand is the same engine for a foreground command, with no registry. acquireDirWatch({dir, scope, onChange}) is the shared directory-watch hub: one native watch per folder tree, refcounted, a dir under a watched root riding its watch, with subtree or children (depth-1 listing) scope — a children request with no root above it opening only a single-directory watch (depth children, fs.watch), never a recursive one.
@@ -30347,6 +30330,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `cancelSupervisedJob`
               - `cancelSupervisedJobByLock`
               - `defineSupervisedJob`
+              - `onSupervisedRunChange`
               - `runEnded`
             - Register:
               - `defineTriggerEvent('supervisedRun.ended')`
@@ -30366,6 +30350,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `assertRunKindId`
               - `HARD_KILL_EXIT_CODE`
               - `isRunAlive`
+              - `isRunId`
               - `observeRun`
               - `readRunTerminal`
               - `RUN_TERMINAL_ENV`
@@ -30843,13 +30828,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreeDataDir`
           - `worktreesDir`
       - Cross-plugin:
-        - Imported by: 43 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+        - Imported by: 40 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
           - `debug` ×8
           - `infra` ×7
-          - `build` ×5
           - `backup` ×4
           - `framework` ×4
           - `release` ×3
+          - `build` ×2
           - `conversations` ×2
           - `plugin-meta` ×2
           - `primitives` ×2
@@ -31638,10 +31623,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `hasCompositionMarker`
           - `isCanonicalWorktreeName`
           - `isCanonicalWorktreePath`
+          - `isCompositionMarkerPath`
           - `isWorktreeOpActive`
           - `listActiveWorktreeOps`
           - `listWorktreeOps`
           - `listWorktreePaths`
+          - `loadCompositionMarker`
           - `markWorktreeOpStart`
           - `namespaceCollision`
           - `probeNamespace`
@@ -32767,12 +32754,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LivePagesResult`
           - `LiveRowResult`
           - `LiveSnapshotResult`
+          - `LiveUnavailable`
           - `LiveValuePagesOptions`
           - `PagesTruncation`
           - `PresentationOwner`
           - `StoredClientFieldsResolution`
           - `StoredFieldPresentation`
           - `VisibleRange`
+          - `WithMachine`
         - Exports (values):
           - `ClientFields`
           - `clientFieldsKey`
@@ -33004,16 +32993,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveCollectionOn`
           - `serveValueOn`
       - Cross-plugin:
-        - Imported by: 293 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 298 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×79
           - `conversations` ×50
-          - `debug` ×31
+          - `debug` ×32
           - `tasks` ×28
           - `infra` ×18
           - `page` ×13
           - `active-data` ×12
+          - `build` ×10
           - `primitives` ×10
-          - `build` ×6
           - `stats` ×5
           - `code-explorer` ×4
           - `plugin-meta` ×4
@@ -33043,13 +33032,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `no-db-backed-notify` — `server/internal/serve-off-feed.ts` (sanctioned)
           - `no-raw-websocket` — `e2e/narrowing.ts` (sanctioned)
         - Exempted by:
-          - `build/build-commits` (1 debt)
-          - `build/build-fix` (1 debt)
-          - `build/build-info` (1 debt)
-          - `build/build-logs` (1 debt)
-          - `build/build-profiling` (1 debt)
-          - `build/serve-composition` (1 debt)
-          - `debug/profiling/build` (1 debt)
           - `framework/central-core` (0 debt)
           - `framework/resource-runtime` (0 debt)
           - `framework/server-core` (0 debt)
@@ -33242,12 +33224,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `createKeyedMutex`
     - **`list-bound`** — A list's bound, declared in its zod schema: cappedList / cappedRecord (a checked max) and wholeList / wholeRecord (loaded whole, with a written reason), tagged in _def so the tag survives zod's clones; listShapeOf walks every array, record, map and set a schema reaches and reports each one's bound and the bare ones, listBoundsOf refuses a bare one.
       - Cross-plugin:
-        - Imported by: 87 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
+        - Imported by: 91 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
           - `apps` ×15
           - `conversations` ×13
           - `infra` ×13
           - `debug` ×12
           - `primitives` ×5
+          - `build` ×4
           - `tasks` ×4
           - `fields` ×3
           - `page` ×3
@@ -33411,7 +33394,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Plugins:
         - **`sink`**
           - Core:
-            - Uses: `infra/file-sink.readJsonlTail`
+            - Uses:
+              - `infra/file-sink.readJsonlTail`
+              - `infra/file-sink.readJsonlTailAsync`
             - Exports (types):
               - `ArmFailedLine`
               - `SignalOriginLine`
@@ -33419,6 +33404,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SignalRecordedLine`
             - Exports (values):
               - `readSignalOriginLines`
+              - `readSignalOriginLinesAsync`
               - `SIGNAL_ORIGIN_FILE`
     - **`single-flight`** — Cross-process single-flight: singleFlight(opts, lead) lets N processes asking for the same keyed work at once run it once — the first takes a kernel flock and leads, the rest wait on the lock push-based (waitForFlock) and adopt the verdict it publishes, re-leading only when no adoptable verdict from a run in flight since they arrived exists.
       - Core:
@@ -38212,7 +38198,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-caption`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-caption`
-        - Imported by: 59 plugins — full list in [`plugins/primitives/plugins/collapsible/REFERENCE.md`](../plugins/primitives/plugins/collapsible/REFERENCE.md)
+        - Imported by: 58 plugins — full list in [`plugins/primitives/plugins/collapsible/REFERENCE.md`](../plugins/primitives/plugins/collapsible/REFERENCE.md)
           - `conversations` ×14
           - `ui` ×12
           - `apps` ×11
@@ -38220,7 +38206,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-meta` ×4
           - `review` ×3
           - `auth`
-          - `build/build-logs`
           - `code-explorer/commit-detail`
           - `debug/read-set`
           - `layouts/miller`
@@ -38360,13 +38345,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CopyButton`
           - `useCopyToClipboard`
       - Cross-plugin:
-        - Imported by: 29 plugins — full list in [`plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md`](../plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md)
+        - Imported by: 30 plugins — full list in [`plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md`](../plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md)
           - `apps` ×9
           - `primitives` ×5
           - `page` ×4
           - `conversations` ×3
           - `debug` ×3
           - `review` ×2
+          - `build/build-logs`
           - `infra/claude-cli`
           - `plugin-meta/exhibits`
           - `tasks/worktree-identity`
@@ -38539,7 +38525,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `clipClasses`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --radius`
-            - Imported by: 69 plugins — full list in [`plugins/primitives/plugins/css/plugins/clip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/clip/REFERENCE.md)
+            - Imported by: 68 plugins — full list in [`plugins/primitives/plugins/css/plugins/clip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/clip/REFERENCE.md)
               - `apps` ×22
               - `primitives` ×10
               - `conversations` ×8
@@ -38550,7 +38536,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `review` ×2
               - `active-data/go`
               - `apps-core/surface`
-              - `build/build-logs`
               - `config_v2/settings`
               - `hints/ask`
               - `menu-bar`
@@ -38779,7 +38764,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Fill`
               - `fillClasses`
           - Cross-plugin:
-            - Imported by: 176 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
+            - Imported by: 177 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
               - `apps` ×53
               - `primitives` ×30
               - `conversations` ×24
@@ -38791,12 +38776,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta` ×3
               - `review` ×3
               - `shell` ×3
+              - `build` ×2
               - `config_v2` ×2
               - `hints` ×2
               - `active-data/go`
               - `apps-core/app-launcher`
               - `auth`
-              - `build/deployment`
               - `code-explorer/commit-detail`
               - `menu-bar`
               - `tag-tree/picker`
@@ -38952,7 +38937,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `LineProps`
             - Exports (values): `Line`
           - Cross-plugin:
-            - Imported by: 122 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
+            - Imported by: 123 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
               - `apps` ×37
               - `primitives` ×18
               - `conversations` ×17
@@ -38962,9 +38947,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks` ×5
               - `plugin-meta` ×4
               - `review` ×4
+              - `build` ×3
               - `infra` ×3
               - `apps-core` ×2
-              - `build` ×2
               - `reorder` ×2
               - `shell` ×2
               - `auth`
@@ -39078,14 +39063,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-size-body`
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-body`
-            - Imported by: 89 plugins — full list in [`plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md)
+            - Imported by: 91 plugins — full list in [`plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md)
               - `apps` ×30
               - `debug` ×18
               - `primitives` ×13
               - `page` ×7
               - `conversations` ×5
+              - `build` ×4
               - `auth` ×2
-              - `build` ×2
               - `config_v2` ×2
               - `plugin-meta` ×2
               - `code-explorer/commit-detail`
@@ -39236,13 +39221,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useScrollsSideways`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 96 plugins — full list in [`plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md)
+            - Imported by: 95 plugins — full list in [`plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md)
               - `conversations` ×26
               - `apps` ×21
               - `primitives` ×14
               - `debug` ×13
               - `page` ×5
-              - `build` ×3
+              - `build` ×2
               - `infra` ×2
               - `menu-bar` ×2
               - `plugin-meta` ×2
@@ -40115,13 +40100,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ← `primitives.data-view`
           - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
           - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
-        - Contributes: 94 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ConfigV2.WebRegister` ×84
+        - Contributes: 96 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ConfigV2.WebRegister` ×86
           - `DataViewSlots.Control` ×4
           - `DataViewSlots.Setting` ×4
           - `IdKinds.Kind` ×2
-        - Uses: 128 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `network/live` ×18
+        - Uses: 130 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `network/live` ×20
           - `primitives/css/ui-kit` ×17
           - `primitives/data-view/view-core` ×10
           - `primitives/live-state` ×6
@@ -40372,8 +40357,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useSortController`
           - `useViewRowCounts`
       - Server:
-        - Contributes: 86 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ConfigV2.Register` ×84
+        - Contributes: 88 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ConfigV2.Register` ×86
           - `ids.kind` ×2
         - Uses:
           - `config_v2.getConfig`
@@ -40533,7 +40518,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale` ×8
           - `ui/tokens/shadow` ×3
           - `ui/tokens/shape` ×3
-        - Imported by: 112 plugins — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Imported by: 113 plugins — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `fields` ×31
           - `apps` ×27
           - `debug` ×15
@@ -40544,6 +40529,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-meta` ×2
           - `apps-core/app-launcher`
           - `auth`
+          - `build/build-logs`
           - `config_v2/settings`
           - `history/dialog`
           - `integrations/google-maps/usage`
@@ -42026,7 +42012,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `IconButton`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 129 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
+        - Imported by: 128 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
           - `apps` ×43
           - `primitives` ×21
           - `conversations` ×20
@@ -42035,12 +42021,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug` ×5
           - `config_v2` ×4
           - `infra` ×3
-          - `build` ×2
           - `hints` ×2
           - `screenshot` ×2
           - `shell` ×2
           - `ui` ×2
           - `apps-core/tab-bar`
+          - `build`
           - `fields/enum/column-config`
           - `fullscreen`
           - `map/google`
@@ -42451,19 +42437,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/color-palette --destructive`
           - `ui/tokens/shadow --shadow`
-        - Imported by: 284 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
+        - Imported by: 287 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
           - `apps` ×76
           - `conversations` ×49
-          - `debug` ×28
+          - `debug` ×29
           - `ui` ×25
           - `tasks` ×23
           - `page` ×15
           - `primitives` ×12
           - `infra` ×8
           - `active-data` ×7
+          - `build` ×6
           - `plugin-meta` ×5
           - `auth` ×4
-          - `build` ×4
           - `integrations` ×3
           - `review` ×3
           - `apps-core` ×2
@@ -42548,16 +42534,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-body`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-body`
-        - Imported by: 213 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+        - Imported by: 216 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
           - `apps` ×68
           - `ui` ×22
           - `conversations` ×19
+          - `debug` ×19
           - `primitives` ×19
-          - `debug` ×18
           - `tasks` ×14
           - `page` ×11
+          - `build` ×6
           - `plugin-meta` ×5
-          - `build` ×4
           - `review` ×4
           - `auth` ×3
           - `active-data` ×2
@@ -52540,7 +52526,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 233 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
+            - Tokens used by: 232 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
               - `apps` ×62
               - `primitives` ×38
               - `conversations` ×36
@@ -52552,9 +52538,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fields` ×4
               - `review` ×4
               - `auth` ×3
-              - `build` ×3
               - `reorder` ×3
               - `stats` ×3
+              - `build` ×2
               - `code-explorer` ×2
               - `config_v2` ×2
               - `shell` ×2

@@ -1,0 +1,16 @@
+// @hash 6ec84829688d
+// The run's steps in the order they ran — the order the log is read in, so
+// no sort: a step's position is its id (the lines name their step by it).
+{
+  "views": [
+    {
+      "id": "steps",
+      "name": "Steps",
+      "icon": "table",
+      "view": { "type": "table" }
+    }
+  ],
+  "sortPresets": [],
+  "filterPresets": [],
+  "customColumns": []
+}

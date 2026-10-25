@@ -2,151 +2,286 @@ import {
   cn,
   ControlSizeProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { useCallback, type ReactElement } from "react";
+import { useMemo, type ReactElement } from "react";
 import { useToast } from "@plugins/shell/plugins/notifications/web";
 import { LiveLogChannel } from "@plugins/primitives/plugins/log-channels/web";
-import {
-  Collapsible,
-  CollapsibleTrigger,
-  CollapsibleContent,
-  CollapsibleChevron,
-} from "@plugins/primitives/plugins/collapsible/web";
-import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import { useLive } from "@plugins/network/plugins/live/web";
+import {
+  DataView,
+  defineDataView,
+  useLivePagedValuePaging,
+  type FieldDef,
+} from "@plugins/primitives/plugins/data-view/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { BUILD_LOG_CHANNEL } from "@plugins/build/core";
-import { getBuildRunLogs } from "../../shared/endpoints";
-import type { BuildStepLog } from "../../shared/endpoints";
-import { textVariantClass } from "@plugins/primitives/plugins/css/plugins/text/web";
+import {
+  buildRunLogs,
+  type BuildLogLine,
+  type BuildLogStep,
+  type BuildRunLogsMeta,
+  type BuildRunLogsQuery,
+  type BuildRunLogsRefusal,
+} from "../../core";
+import type { MachineFeature } from "@plugins/infra/plugins/endpoints/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
-const contentCopyIcon = symbol("content-copy");
 const checkIcon = symbol("check");
 const closeIcon = symbol("close");
 
-// Mono build-log body: intentional fixed code size + line-height (not on the typography scale).
-const monoLogClass = textVariantClass("code");
+// Markers scraped by codegen (data-views.generated.ts). Must live in web/**.
+const BUILD_RUN_LOG_STEPS = defineDataView("build.run-log-steps");
+const BUILD_RUN_LOG_LINES = defineDataView("build.run-logs");
 
-export function BuildLogSection({ runId }: { runId: string }): ReactElement {
-  const { data } = useEndpoint(getBuildRunLogs, { id: runId });
+const NO_LINES: BuildLogLine[] = [];
 
-  const hasPersistedLogs = data && data.steps.length > 0;
-
-  if (hasPersistedLogs) {
-    return <PersistedLogs steps={data.steps} />;
-  }
-
-  return <LiveLogs />;
+/** A step of the run's log, with its position — the id its lines name it by. */
+interface IndexedStep extends BuildLogStep {
+  index: number;
 }
 
-function PersistedLogs({ steps }: { steps: BuildStepLog[] }): ReactElement {
-  const toast = useToast();
-  const copyAll = useCallback(async () => {
-    const text = steps
-      .map((s) => {
-        const header = `── ${s.label} ${s.success ? "✓" : "✗"} (${(s.durationMs / 1000).toFixed(1)}s)`;
-        const body = s.lines.map((l) => `  ${l.text}`).join("\n");
-        return body ? `${header}\n${body}` : header;
-      })
-      .join("\n\n");
-    await navigator.clipboard.writeText(text);
-    toast({
-      type: "build",
-      title: "Logs copied",
-      description: "Build logs copied to clipboard",
-      variant: "info",
-    });
-  }, [steps, toast]);
+function durationText(step: BuildLogStep): string {
+  return `${(step.durationMs / 1000).toFixed(1)}s`;
+}
+
+/**
+ * One build run's log: its persisted steps and lines when the run has any on
+ * disk, else the live log channel — a run refused `missing` has not written a
+ * line yet (or never will here: a hand-run build's log lands at its end), which
+ * is what a still-running build wants.
+ */
+export function BuildLogSection({ runId }: { runId: string }): ReactElement {
+  const query = useMemo((): BuildRunLogsQuery => ({ id: runId }), [runId]);
+  const meta = useLive(buildRunLogs.meta, query);
+  switch (meta.status) {
+    case "loading":
+      return <Loading variant="rows" count={3} />;
+    case "error":
+      if (meta.error.kind === "refused" && meta.error.code === "missing") {
+        return <LiveLogs />;
+      }
+      return (
+        <ResourceErrorInline
+          variant="block"
+          subject="the build logs"
+          error={meta.error}
+          refetch={meta.refetch}
+        />
+      );
+    case "ready":
+      return <PersistedLogs query={query} meta={meta.data} />;
+    // A host without the computer (the demo): there are no run files to read.
+    case "unavailable":
+      return <Placeholder tone="muted">{meta.message}</Placeholder>;
+  }
+}
+
+/**
+ * A run's persisted log: its steps (verdict, line count, duration), then its
+ * lines newest first, a page at a time — the DataView pages them by viewport,
+ * so scrolling down reads back through the log without the whole of it ever
+ * being loaded.
+ */
+function PersistedLogs({
+  query,
+  meta,
+}: {
+  query: BuildRunLogsQuery;
+  meta: BuildRunLogsMeta;
+}): ReactElement {
+  const steps = useMemo(
+    (): IndexedStep[] => meta.steps.map((s, index) => ({ ...s, index })),
+    [meta.steps],
+  );
+  const { pages, paging } = useLivePagedValuePaging<
+    BuildLogLine,
+    BuildRunLogsMeta,
+    BuildRunLogsQuery,
+    BuildRunLogsQuery,
+    BuildRunLogsRefusal,
+    MachineFeature
+  >(buildRunLogs, query);
+  const readiness = useMemo(() => {
+    switch (pages.status) {
+      case "ready":
+        return { status: "ready" as const, data: pages.rows };
+      case "loading":
+      case "error":
+        return pages;
+      // Mounted only once the meta read is ready, which a host without the
+      // computer never is — the two reads share the declaration's latch.
+      case "unavailable":
+        throw new Error(
+          "build.run-logs: pages unavailable under a ready meta read",
+        );
+    }
+  }, [pages]);
+  const rows = pages.status === "ready" ? pages.rows : NO_LINES;
+
+  const stepFields = useMemo<FieldDef<IndexedStep>[]>(
+    () => [
+      {
+        id: "success",
+        label: "Passed",
+        type: "bool",
+        header: false,
+        width: "1.5rem",
+        value: (s) => s.success,
+        cell: (s) => (
+          <Icon
+            icon={s.success ? checkIcon : closeIcon}
+            className={cn(
+              "size-3.5",
+              s.success ? "text-success" : "text-destructive",
+              rigidClass(),
+            )}
+          />
+        ),
+      },
+      {
+        id: "label",
+        label: "Step",
+        type: "text",
+        primary: true,
+        width: "minmax(0,1fr)",
+        value: (s) => s.label,
+      },
+      {
+        id: "lines",
+        label: "Lines",
+        type: "number",
+        width: "5rem",
+        value: (s) => s.lines,
+      },
+      {
+        id: "duration",
+        label: "Duration",
+        type: "number",
+        width: "5rem",
+        value: (s) => s.durationMs,
+        cell: (s) => (
+          <Text variant="caption" tone="muted" className="tabular-nums">
+            {durationText(s)}
+          </Text>
+        ),
+      },
+    ],
+    [],
+  );
+
+  const lineFields = useMemo<FieldDef<BuildLogLine>[]>(
+    () => [
+      {
+        id: "n",
+        label: "Line",
+        type: "number",
+        value: (l) => Number(l.n),
+        cell: (l) => (
+          <Text variant="code" tone="faint" className="tabular-nums">
+            {Number(l.n)}
+          </Text>
+        ),
+        width: "4rem",
+      },
+      {
+        id: "step",
+        label: "Step",
+        type: "text",
+        value: (l) => steps[l.step]?.label ?? "",
+        cell: (l) => {
+          const step = steps[l.step];
+          return (
+            <Text
+              variant="caption"
+              tone={step?.success === false ? "destructive" : "muted"}
+              className="truncate"
+            >
+              {step?.label}
+            </Text>
+          );
+        },
+        width: "8rem",
+      },
+      {
+        id: "text",
+        label: "Text",
+        type: "text",
+        primary: true,
+        value: (l) => l.text,
+        cell: (l) => (
+          <Text
+            variant="code"
+            tone={l.stream === "stderr" ? "destructive" : "default"}
+            className="whitespace-pre-wrap break-all"
+          >
+            {l.text}
+          </Text>
+        ),
+        width: "minmax(0,1fr)",
+      },
+    ],
+    [steps],
+  );
 
   return (
     <Stack gap="xs">
-      <Stack
-        direction="row"
-        gap="sm"
-        align="center"
-        justify="between"
-        className="pb-xs"
-      >
-        <Text as="span" variant="label" className="text-muted-foreground">
-          Logs
-        </Text>
+      <Line className="pb-xs">
+        <Fill>
+          <Text as="span" variant="label" className="text-muted-foreground">
+            Logs
+          </Text>
+        </Fill>
         <ControlSizeProvider size="xs">
-          <IconButton
-            icon={contentCopyIcon}
-            label="Copy logs"
-            variant="ghost"
-            onClick={copyAll}
+          {/* The lines loaded so far, in run order — the reader pages the rest in. */}
+          <CopyButton
+            text={[...rows]
+              .reverse()
+              .map((l) => l.text)
+              .join("\n")}
+            tooltip="Copy the loaded lines"
           />
         </ControlSizeProvider>
-      </Stack>
-      {steps.map((step) => (
-        <StepSection key={step.id} step={step} />
-      ))}
+      </Line>
+      <DataView<IndexedStep>
+        rows={steps}
+        fields={stepFields}
+        rowKey={(s) => String(s.index)}
+        storageKey={BUILD_RUN_LOG_STEPS}
+        // Secondary lists inside one section of the run's pane: neither owns
+        // the pane's `;view` (two DataViews here cannot share it).
+        viewParam={false}
+        views={["table"]}
+        defaultView="table"
+        emptyState="No steps"
+      />
+      <DataView<BuildLogLine>
+        rows={rows}
+        fields={lineFields}
+        rowKey={(l) => l.n}
+        storageKey={BUILD_RUN_LOG_LINES}
+        viewParam={false}
+        views={["table", "list"]}
+        defaultView="table"
+        readiness={readiness}
+        paging={paging ?? undefined}
+        emptyState="No build logs"
+      />
     </Stack>
   );
 }
 
-function StepSection({ step }: { step: BuildStepLog }): ReactElement {
-  const duration = (step.durationMs / 1000).toFixed(1);
-
-  return (
-    <Collapsible defaultOpen={!step.success || step.lines.length <= 6}>
-      <Clip className="rounded-md border bg-muted/30">
-        {/* CollapsibleTrigger is already a line container (`flex w-full region-line`),
-            so this only adds the gap + chrome. */}
-        <CollapsibleTrigger className="gap-sm px-md py-xs text-caption hover:bg-muted/50 transition-colors">
-          <CollapsibleChevron className="size-3 text-muted-foreground" />
-          {step.success ? (
-            <Icon
-              icon={checkIcon}
-              className={cn("size-3.5 text-success", rigidClass())}
-            />
-          ) : (
-            <Icon
-              icon={closeIcon}
-              className={cn("size-3.5 text-destructive", rigidClass())}
-            />
-          )}
-          <span className="font-medium">{step.label}</span>
-          <span className="text-muted-foreground ml-auto">{duration}s</span>
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          {step.lines.length > 0 && (
-            <Scroll
-              axis="y"
-              className={`border-t px-md py-sm max-h-64 ${monoLogClass}`}
-            >
-              {step.lines.map((line, i) => (
-                <div
-                  key={i}
-                  className={cn(
-                    "whitespace-pre-wrap break-all",
-                    line.stream === "stderr"
-                      ? "text-destructive"
-                      : "text-foreground",
-                  )}
-                >
-                  {line.text}
-                </div>
-              ))}
-            </Scroll>
-          )}
-        </CollapsibleContent>
-      </Clip>
-    </Collapsible>
-  );
-}
-
 /**
- * The live tail, for a run whose per-step logs are not on disk yet (a build
- * still in flight, or one whose artifact never landed). Body, socket, de-dup and
- * copy button all belong to the shared `LiveLogChannel` primitive — this file
- * used to carry its own copy of them.
+ * The live tail, for a run with no log on disk yet (a build still in flight
+ * before its first line, or one whose artifacts never landed). Body, socket,
+ * de-dup and copy button all belong to the shared `LiveLogChannel` primitive.
  */
 function LiveLogs(): ReactElement {
   const toast = useToast();

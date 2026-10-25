@@ -3177,13 +3177,13 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `DataViewSlots.Control` ← `primitives.data-view`
     - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
     - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
-  - Contributes: 94 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ConfigV2.WebRegister` ×84
+  - Contributes: 96 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.WebRegister` ×86
     - `DataViewSlots.Control` ×4
     - `DataViewSlots.Setting` ×4
     - `IdKinds.Kind` ×2
-  - Uses: 128 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `network/live` ×18
+  - Uses: 130 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `network/live` ×20
     - `primitives/css/ui-kit` ×17
     - `primitives/data-view/view-core` ×10
     - `primitives/live-state` ×6
@@ -3434,8 +3434,8 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `useSortController`
     - `useViewRowCounts`
 - Server:
-  - Contributes: 86 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ConfigV2.Register` ×84
+  - Contributes: 88 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.Register` ×86
     - `ids.kind` ×2
   - Uses:
     - `config_v2.getConfig`
@@ -3595,7 +3595,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `ui/tokens/type-scale` ×8
     - `ui/tokens/shadow` ×3
     - `ui/tokens/shape` ×3
-  - Imported by: 112 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 113 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `fields` ×31
     - `apps` ×27
     - `debug` ×15
@@ -3606,6 +3606,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `plugin-meta` ×2
     - `apps-core/app-launcher`
     - `auth`
+    - `build/build-logs`
     - `config_v2/settings`
     - `history/dialog`
     - `integrations/google-maps/usage`

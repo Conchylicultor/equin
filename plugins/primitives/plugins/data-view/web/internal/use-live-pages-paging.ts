@@ -3,7 +3,10 @@ import {
   useLive,
   type LivePagesQuery,
   type LivePagesResult,
+  type LiveUnavailable,
+  type WithMachine,
 } from "@plugins/network/plugins/live/web";
+import type { MachineFeature } from "@plugins/infra/plugins/endpoints/core";
 import type {
   LiveCollection,
   LiveCountedCollection,
@@ -136,6 +139,10 @@ export function useLivePagesPaging<Row, F, S extends string>(
  * and the same `paging`, so a DataView shows an external source at any depth
  * exactly as it shows a collection's window. Search and filter run in memory
  * over the rows loaded (a value has no filterable seam).
+ *
+ * A value declared `needsMachine` reads as `useLive` reads it: `pages` gains
+ * the `unavailable` arm under a transport with no computer behind it (nothing
+ * read, no paging), so the reader renders that state rather than a spinner.
  */
 export function useLivePagedValuePaging<
   Item,
@@ -143,26 +150,34 @@ export function useLivePagedValuePaging<
   Q,
   QIn,
   C extends string = never,
+  NM extends MachineFeature | undefined = undefined,
 >(
-  value: LivePagedValue<Item, Meta, Q, QIn, LiveValueOrigin, C> | null,
+  value: LivePagedValue<Item, Meta, Q, QIn, LiveValueOrigin, C, NM> | null,
   query: NoInfer<QIn> | null,
   options?: { resetKey?: string },
-): { pages: LivePagesResult<Item, C>; paging: LivePagesPaging | null } {
+): {
+  pages: WithMachine<NM, LivePagesResult<Item, C>>;
+  paging: LivePagesPaging | null;
+} {
   const { viewport, sink } = usePagesViewport();
   const resetKey = options?.resetKey;
-  const pages = useLive(
+  const pages = useLive<Item, Meta, Q, QIn, C, NM>(
     value,
     query,
     resetKey === undefined ? { viewport } : { viewport, resetKey },
   );
+  // Either arm set, read as the widest: a portable value never takes the
+  // `unavailable` arm, a machine one may.
+  const read: LivePagesResult<Item, C> | LiveUnavailable = pages;
   const paging = useMemo((): LivePagesPaging | null => {
-    switch (pages.status) {
+    switch (read.status) {
       case "ready":
-        return pagesPaging<unknown>(pages, sink);
+        return pagesPaging<unknown>(read, sink);
       case "loading":
       case "error":
+      case "unavailable":
         return null;
     }
-  }, [pages, sink]);
+  }, [read, sink]);
   return useMemo(() => ({ pages, paging }), [pages, paging]);
 }

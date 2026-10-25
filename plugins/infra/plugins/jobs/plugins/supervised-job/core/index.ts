@@ -20,7 +20,7 @@ export {
 } from "./internal/terminal";
 export type { RunObservation, RunTerminal } from "./internal/terminal";
 export { supervisedArgv, RUN_TERMINAL_ENV } from "./internal/shim";
-export { assertRunKindId, assertRunId } from "./internal/ids";
+export { assertRunKindId, assertRunId, isRunId } from "./internal/ids";
 export { SUPERVISED_EXEC_COMMAND } from "./internal/exec-command";
 export type { ExecContext } from "./internal/exec-context";
 export type { SupervisedTaskInvocation } from "./internal/exec-command";

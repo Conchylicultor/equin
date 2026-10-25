@@ -11,7 +11,12 @@ export {
   openDynamicSink,
   sanitizeChannel,
 } from "./internal/file-sink";
-export { readTail, readJsonlTail } from "./internal/read";
+export {
+  readTail,
+  readTailAsync,
+  readJsonlTail,
+  readJsonlTailAsync,
+} from "./internal/read";
 export type { TailOptions, TailResult, JsonlTailResult } from "./internal/read";
 export {
   historyCutAt,

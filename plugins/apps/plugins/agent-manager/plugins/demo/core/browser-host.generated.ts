@@ -722,6 +722,7 @@ export const hostReads: readonly {
   { key: "build.chain-from", needsMachine: true },
   { key: "build.deployment", needsMachine: true },
   { key: "build.history", needsMachine: false },
+  { key: "build.run-profile", needsMachine: true },
   { key: "claude-accounts", needsMachine: true },
   { key: "claude-code-status", needsMachine: true },
   { key: "code.commit-files", needsMachine: true },

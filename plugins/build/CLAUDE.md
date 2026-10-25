@@ -216,10 +216,10 @@ wire.
   window is read as key-range pages, and a page that splits is read at twice
   its step), declared `preload: "boot"`: the Build button's label is
   first-paint chrome, so the boot snapshot hydrates the default window. All
-  four list readers take the default window, `useLive(buildHistory)`, and none
-  pages past it: the button, the popover and the build-activity hook read its
-  newest rows, and `serve-composition`'s freshness signature folds it for the
-  newest finished run naming its composition. A window is never
+  three list readers (the button, the popover and the build-activity hook)
+  take the default window, `useLive(buildHistory)`, read its newest rows and
+  never page past it. (`serve-composition`'s Serve panel no longer folds it:
+  its status is its own notified `build.serve-status` value.) A window is never
   L2-persisted, so a cold boot loads its 50 rows fresh.
 - **One run** — `build-info` and `build-fix` read
   `useLiveRow(buildHistory, runId)`, the `:rows` point read: a run older than
@@ -399,13 +399,13 @@ fills to navy and oxblood — see `apps-core/chrome-theme`.
     - `buildConfig`
     - `isMainCompositionBuild`
 - Sub-plugins:
-  - **`build-commits`** [exempt] — Commits included since the previous build, shown in the build detail pane. Per-run commit list data endpoint.
-  - **`build-fix`** [exempt] — Launch-agent button in the build detail pane for failed builds.
-  - **`build-info`** [exempt] — Status, trigger, commit hash, and timing section in the build detail pane.
-  - **`build-logs`** [exempt] — Live log stream section in the build detail pane. Per-run build log data endpoint.
-  - **`build-profiling`** [exempt] — Per-run build profiling Gantt section in the build detail pane. Per-run build profiling data endpoint.
+  - **`build-commits`** — Commits included since the previous build, shown in the build detail pane.
+  - **`build-fix`** — Launch-agent button in the build detail pane for failed builds.
+  - **`build-info`** — Status, trigger, commit hash, and timing section in the build detail pane.
+  - **`build-logs`** — Logs section in the build detail pane: the run's persisted steps and lines (build.run-logs, newest first, paged by viewport), else the live log channel.
+  - **`build-profiling`** — Per-run build profiling Gantt section in the build detail pane.
   - **`build-status`** — Single source of truth for build-run status display metadata — label, badge variant, and dot color per BuildStatus.
-  - **`build-termination`** — Per-run termination endpoint: what the host-global signal-origin sink recorded about the death of one build run (which signal, and who sent it).
+  - **`build-termination`** — Per-run termination record, desktop-only: the build.run-termination live value — what the host-global signal-origin sink recorded about the death of one build run (which signal, and who sent it)…
   - **`deployment`** — The client half of the deployment description: `useDeployment()` composes THIS tab's own baked pin in beside the server's two deployable carriers, and `<DeploymentChain/>` renders the four arms…
   - **`run-ledger`** [exempt] — Build-runs ledger leaf: the build_runs entity, and (cli/) the hand-SQL build-run recorder the `./equin build` CLI imports without the table or the heavy build barrel.
   - **`runs-arm`** — The build arm's presence on the merged run surface: its rows' link into the existing build run-detail pane, the six-way build status dot as the list row's leading indicator, and the status / targets…

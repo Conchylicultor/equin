@@ -26,6 +26,7 @@ import {
   type SupervisedRunKind,
 } from "./registry";
 import { createTranscriptTail, type TranscriptTail } from "./tail";
+import { announceRunChange } from "./observers";
 
 /**
  * How often the watcher re-derives every kind's unfinished set while any run is
@@ -155,6 +156,8 @@ function track(
       // order, which is the worse trade for a transcript people read top to
       // bottom.
       kind.spec.channel.publishAll(lines.map((line) => ({ line })));
+      // A reader of the run's files (its persisted log) hears the same pump.
+      announceRunChange(kind.id, runId);
     },
   });
   const run: LiveRun = { kind, runId, tail, pid };
@@ -213,6 +216,9 @@ async function settleRun(
   // Drain BEFORE the row closes: a UI that stops following a finished run must
   // not stop one pump short of the line that says why it failed.
   if (run !== undefined) untrack(run);
+  // The marker landed (or the run was written off): a reader of its files
+  // re-reads the verdict. Before `finish`, which may be slow or throw.
+  announceRunChange(kind.id, runId);
   await kind.spec.finish(runId, observation.terminal);
   return true;
 }

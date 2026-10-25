@@ -1,64 +1,12 @@
-import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
-import { REPO_ROOT, checkoutRef } from "@plugins/infra/plugins/paths/server";
-import { readCompositionMarker } from "@plugins/infra/plugins/worktree/server";
-import {
-  namespaceFor,
-  namespaceUrl,
-} from "@plugins/infra/plugins/namespace/core";
 import { serveStatusEndpoint } from "../../shared/endpoints";
+import { readServeStatus } from "./serve-status";
 
 /**
- * WHERE is this composition served from here, and is anything actually there?
- *
- * The namespace is resolved rather than received. `REPO_ROOT` is the checkout
- * this backend runs out of — main's for the main app, the building worktree's
- * for a composition served from one — so `namespaceFor(composition, checkoutRef)`
- * is the namespace a serve build started HERE would publish, and the one a
- * marker for it would live under. The browser cannot compose it: it knows the
- * namespace it is talking to, and a namespace does not decompose back into its
- * (composition, checkout) pair.
- *
- * The marker is the only honest answer to the second question: a serve build
- * writes `composition.json` into the namespace dir before it composes anything,
- * so its presence is what distinguishes a live URL from a config flag nothing
- * has acted on yet. `readCompositionMarker` reads the shared
- * `~/.singularity/worktrees/` tree, so a backend can answer for a namespace it
- * does not itself serve.
- *
- * The third answer is about this BACKEND rather than the composition:
- * `autoTriggersHere` says whether the automatic serve modes are acted on here at
- * all. They run on main only — the durable `git.refAdvanced` event is emitted
- * only from main, and a per-worktree schedule would have every live agent
- * worktree rebuilding the same compositions — so a worktree's panel would
- * otherwise offer "On every push" and silently never act on it.
- *
- * There is no `canServe` any more. It answered "is this backend main?", because
- * the serve stage ran inside main's build; a serve is now an ordinary build of
- * this checkout, startable anywhere. Whether a composition may be served AT ALL
- * (main's may not — its namespace is the checkout's own app) is
- * `isServableCompositionId`, a pure function of the id that every surface can
- * call directly.
+ * The serve status over HTTP — kept for the local-serve e2e script
+ * (`apps/deploy/local-serve/e2e/local-serve-verify.ts`), which asks it from
+ * outside the app. The app itself reads the `build.serve-status` live value.
  */
-export const handleServeStatus = implement(
-  serveStatusEndpoint,
-  async ({ query }) => {
-    const ns = namespaceFor(query.composition, await checkoutRef(REPO_ROOT));
-    const marker = readCompositionMarker(ns);
-    return {
-      namespace: ns,
-      url: namespaceUrl(ns),
-      liveness:
-        marker === null
-          ? ({ served: false } as const)
-          : ({
-              served: true,
-              // Markers written before the field carry no commit. Reported as
-              // unknown rather than back-filled from a guess.
-              commit: marker.commit ?? null,
-              builtAt: marker.builtAt,
-            } as const),
-      autoTriggersHere: isMain(),
-    };
-  },
+export const handleServeStatus = implement(serveStatusEndpoint, ({ query }) =>
+  readServeStatus(query.composition),
 );

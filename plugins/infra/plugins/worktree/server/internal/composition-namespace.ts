@@ -24,7 +24,8 @@ import {
   renameSync,
   writeFileSync,
 } from "node:fs";
-import { join } from "node:path";
+import { readFile } from "node:fs/promises";
+import { basename, join } from "node:path";
 import {
   isNamespaceHostAlias,
   NAMESPACE_HOST_ALIASES,
@@ -222,4 +223,33 @@ export function readCompositionMarker(ns: Namespace): CompositionMarker | null {
   const path = join(worktreesDir(), ns, COMPOSITION_MARKER_FILE);
   if (!existsSync(path)) return null;
   return JSON.parse(readFileSync(path, "utf8")) as CompositionMarker;
+}
+
+/**
+ * {@link readCompositionMarker} without blocking the event loop — for a reader
+ * that runs inside the live-resource flush cycle (a loader), where a
+ * synchronous read freezes every other loader and every socket send.
+ */
+export async function loadCompositionMarker(
+  ns: Namespace,
+): Promise<CompositionMarker | null> {
+  let text: string;
+  try {
+    text = await readFile(
+      join(worktreesDir(), ns, COMPOSITION_MARKER_FILE),
+      "utf8",
+    );
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw err;
+  }
+  return JSON.parse(text) as CompositionMarker;
+}
+
+/**
+ * Whether a path inside a namespace dir is its composition marker — so a
+ * watcher of that dir can hear the marker alone without restating its name.
+ */
+export function isCompositionMarkerPath(path: string): boolean {
+  return basename(path) === COMPOSITION_MARKER_FILE;
 }

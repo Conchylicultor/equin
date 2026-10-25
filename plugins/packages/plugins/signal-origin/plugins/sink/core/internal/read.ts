@@ -1,4 +1,7 @@
-import { readJsonlTail } from "@plugins/infra/plugins/file-sink/core";
+import {
+  readJsonlTail,
+  readJsonlTailAsync,
+} from "@plugins/infra/plugins/file-sink/core";
 import { SIGNAL_ORIGIN_FILE, type SignalOriginLine } from "./lines";
 
 /**
@@ -21,6 +24,22 @@ import { SIGNAL_ORIGIN_FILE, type SignalOriginLine } from "./lines";
  */
 export function readSignalOriginLines(): SignalOriginLine[] {
   return readSignalOriginLinesFrom(SIGNAL_ORIGIN_FILE);
+}
+
+/**
+ * {@link readSignalOriginLines} without blocking the event loop — for a reader
+ * inside the live-resource flush cycle (a loader), where a synchronous read
+ * freezes every other loader and every socket send.
+ */
+export async function readSignalOriginLinesAsync(): Promise<
+  SignalOriginLine[]
+> {
+  const result = await readJsonlTailAsync<SignalOriginLine>(
+    SIGNAL_ORIGIN_FILE,
+    { includeRotated: true },
+  );
+  if (result.kind === "missing") return [];
+  return result.records;
 }
 
 /**

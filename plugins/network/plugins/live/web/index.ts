@@ -48,6 +48,8 @@ export type {
   LiveListResult,
   LiveRowResult,
   LiveSnapshotResult,
+  LiveUnavailable,
+  WithMachine,
 } from "./internal/use-live";
 
 export default {

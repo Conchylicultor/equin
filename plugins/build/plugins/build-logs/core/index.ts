@@ -1,2 +1,8 @@
-export { getBuildRunLogs, BuildLogsResponseSchema } from "./endpoints";
-export type { BuildStepLog, BuildLogsResponse } from "./endpoints";
+export { buildRunLogs } from "./run-logs";
+export type {
+  BuildLogLine,
+  BuildLogStep,
+  BuildRunLogsMeta,
+  BuildRunLogsQuery,
+  BuildRunLogsRefusal,
+} from "./run-logs";

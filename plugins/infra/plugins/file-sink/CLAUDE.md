@@ -219,7 +219,9 @@ as the only escape. Being importable from every runtime *is* the feature.
     - `openDynamicSink`
     - `readHistory`
     - `readJsonlTail`
+    - `readJsonlTailAsync`
     - `readTail`
+    - `readTailAsync`
     - `sanitizeChannel`
     - `statHistory`
 

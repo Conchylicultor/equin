@@ -143,10 +143,12 @@ pid liveness.
     - `hasCompositionMarker`
     - `isCanonicalWorktreeName`
     - `isCanonicalWorktreePath`
+    - `isCompositionMarkerPath`
     - `isWorktreeOpActive`
     - `listActiveWorktreeOps`
     - `listWorktreeOps`
     - `listWorktreePaths`
+    - `loadCompositionMarker`
     - `markWorktreeOpStart`
     - `namespaceCollision`
     - `probeNamespace`

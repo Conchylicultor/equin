@@ -1,6 +1,6 @@
 import { killedSignalName, type BuildStatus } from "@plugins/build/plugins/build-status/core";
 import { formatSignalOrigin } from "@plugins/packages/plugins/signal-origin/core";
-import type { BuildTermination } from "./endpoints";
+import type { BuildTermination } from "./termination";
 
 /** What the detail pane prints under the status badge. */
 export interface TerminationDescription {

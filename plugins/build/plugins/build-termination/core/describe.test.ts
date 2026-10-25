@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { SignalOrigin } from "@plugins/packages/plugins/signal-origin/core";
 import { describeTermination } from "./describe";
-import type { BuildTermination } from "./endpoints";
+import type { BuildTermination } from "./termination";
 
 const origin: SignalOrigin = {
   signal: 15,

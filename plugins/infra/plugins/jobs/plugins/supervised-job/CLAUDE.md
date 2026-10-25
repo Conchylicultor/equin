@@ -694,6 +694,7 @@ construction, and the job and the body it spawns cannot drift apart.
     - `cancelSupervisedJob`
     - `cancelSupervisedJobByLock`
     - `defineSupervisedJob`
+    - `onSupervisedRunChange`
     - `runEnded`
   - Register:
     - `defineTriggerEvent('supervisedRun.ended')`
@@ -713,6 +714,7 @@ construction, and the job and the body it spawns cannot drift apart.
     - `assertRunKindId`
     - `HARD_KILL_EXIT_CODE`
     - `isRunAlive`
+    - `isRunId`
     - `observeRun`
     - `readRunTerminal`
     - `RUN_TERMINAL_ENV`

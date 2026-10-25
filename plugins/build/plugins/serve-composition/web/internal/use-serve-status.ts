@@ -1,16 +1,10 @@
-import { foldResource } from "@plugins/primitives/plugins/live-state/web";
-import { useEffect, useMemo, useRef } from "react";
-import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import {
-  useLive,
-  type LiveListResult,
-} from "@plugins/network/plugins/live/web";
-import { buildHistory, type BuildRun } from "@plugins/build/core";
+import { useMemo } from "react";
+import { useLive } from "@plugins/network/plugins/live/web";
 import {
   asNamespace,
   namespaceHost,
 } from "@plugins/infra/plugins/namespace/core";
-import { serveStatusEndpoint } from "../../shared/endpoints";
+import { serveStatus } from "../../shared/serve-status";
 
 /**
  * What a surface may claim about a composition's live serve. A discriminated
@@ -48,92 +42,28 @@ export type ServeStatus =
     };
 
 /**
- * A signature of the newest terminal build that could have changed this
- * composition's marker: any run whose targets include it.
- *
- * It used to additionally watch main's run, because a serve deactivated by the
- * compose-serve sweep wrote no child row of its own — watching only the child
- * would have missed the sweep. Both are gone: a serve is now its own build, so
- * the runs that touch this composition are exactly the ones that name it.
- *
- * Folded here over the whole default window — the same tuple the Build button
- * reads. `build.history` pushes only when a build starts or ends, so folding it
- * on every render is not a hot path.
- */
-function buildSignature(
-  result: LiveListResult<BuildRun>,
-  composition: string,
-): string | null {
-  // `null` is genuine absence the caller must handle, not an empty default: the
-  // effect below acts on a CHANGE of signature, so "no signature yet" can never
-  // be mistaken for "nothing has built". A failed history read is no signature
-  // either: it announces no build, so it must not nudge a refetch.
-  return foldResource(result, {
-    loading: () => null,
-    error: () => null,
-    ready: (runs) => {
-      let newestAt = -1;
-      let newestId = "";
-      for (const run of runs) {
-        if (!run.targets.includes(composition)) continue;
-        if (run.finishedAt === null) continue;
-        const at = run.finishedAt.getTime();
-        if (at > newestAt) {
-          newestAt = at;
-          newestId = run.id;
-        }
-      }
-      return `${newestAt}:${newestId}`;
-    },
-  });
-}
-
-/**
  * Where is `composition` served from this backend's checkout, and is anything
  * actually there right now?
  *
  * The truth is the `composition.json` marker on the shared filesystem, read
- * through `GET /api/build/serve/status`. Freshness is push-based, not polled:
- * the query refetches when a build that could have written that marker reaches
- * terminal, which is exactly what `build.history` announces.
+ * through the `build.serve-status` live value. Freshness is push-based, not
+ * polled: the backend watches the marker for as long as this is mounted, so a
+ * serve build landing it (or a reclaim removing the namespace) is pushed.
  *
- * `composition` is the manifest item's **id**, never its display name.
+ * `composition` is the manifest item's **id**, never its display name. A host
+ * without the computer behind it has no marker to read, and says so as an
+ * `error` — the surfaces render it as "could not read the serve state", never
+ * as "not served".
  */
 export function useServeStatus(composition: string): ServeStatus {
-  const query = useEndpoint(
-    serveStatusEndpoint,
-    {},
-    { query: { composition } },
-  );
-
-  const runsResult = useLive(buildHistory);
-  const signature = buildSignature(runsResult, composition);
-
-  // The first settled signature is RECORDED, not acted on: the query already
-  // fetched on mount, and refetching it there would double every mount for no
-  // new information.
-  const seen = useRef<string | null>(null);
-  const { refetch } = query;
-  useEffect(() => {
-    if (signature === null) return;
-    if (seen.current === null || seen.current === signature) {
-      seen.current = signature;
-      return;
-    }
-    seen.current = signature;
-    // Fire-and-forget by design: the query owns its own error state, and this is
-    // a freshness nudge, not a request anything awaits.
-    void refetch();
-  }, [signature, refetch]);
-
-  const { data, error } = query;
+  const result = useLive(serveStatus, { composition });
   return useMemo<ServeStatus>(() => {
-    if (data === undefined) {
-      return error
-        ? { kind: "error", message: error.message }
-        : { kind: "pending" };
-    }
-    const { namespace, url, liveness, autoTriggersHere } = data;
+    if (result.status === "loading") return { kind: "pending" };
+    if (result.status === "unavailable")
+      return { kind: "error", message: result.message };
+    if (result.status === "error")
+      return { kind: "error", message: result.error.message };
+    const { namespace, url, liveness, autoTriggersHere } = result.data;
     return {
       kind: "ready",
       namespace,
@@ -151,5 +81,5 @@ export function useServeStatus(composition: string): ServeStatus {
           }
         : { served: false },
     };
-  }, [data, error]);
+  }, [result]);
 }

@@ -74,8 +74,9 @@ namespace dir before it composes anything. The two disagree routinely — the
 enabling build has not run yet, or it failed — and a surface that reads the mode
 as liveness offers a link to a namespace that 502s.
 
-So `GET /api/build/serve/status?composition=<id>` answers three questions at
-once:
+So the `build.serve-status` live value (`{ composition: <id> }`, desktop-only —
+served from `machine/`; `GET /api/build/serve/status?composition=<id>` gives the
+same answer for the local-serve e2e script) answers three questions at once:
 
 - `namespace` + `url` — WHERE this composition is (or would be) served from the
   backend that answered: `namespaceFor(id, <that backend's checkout>)`. Server
@@ -97,9 +98,11 @@ surface, so no round-trip is needed to know whether a control can succeed.
 
 `useServeStatus` returns the read as a discriminated `ServeStatus`
 (`pending | error | ready`) — a failed read is a state a host renders, never an
-absence that reads as "not served". Freshness is push-based: it refetches when
-the newest terminal `build.history` run whose `targets` include this composition
-changes. Nothing polls.
+absence that reads as "not served" (a host without the computer behind it reads
+`error` too). Freshness is push-based: while a tuple is read the backend watches
+the worktrees home for the namespace dir and, while it exists, the namespace dir
+for the marker, so a serve build landing it or a reclaim removing it is pushed.
+A malformed id is refused `invalid-composition`. Nothing polls.
 
 `commit` comes from the marker, stamped with the commit the build took the lock
 at. Markers written before that field existed carry none and report `null` —
@@ -235,19 +238,47 @@ code, that is the bug this section exists to prevent.
 ## Plugin reference
 
 - Description: Serve capability for a composition: the live-serve toggle panel, the enable→build hook (a `build --composition <id>` of THIS checkout), the served-liveness read (the server-resolved namespace plus the composition.json marker, not the autoBuild intent), and the delete flow — which asks what the composition owns across every checkout, names it in a confirm dialog, and reclaims it before the manifest row goes. Consumed by Studio's Build & serve section and compositions list, and by the deploy pane's Test locally section. Serve-liveness read for a composition: WHERE this backend's checkout serves it (the server-resolved namespace + url) and whether anything is actually there (the composition.json marker), plus the reset-to-first-launch endpoint — wipes ONLY that namespace's DB + config back to what a serve build provisions on a fresh serve, then restarts its backend. Never touches the checkout's own app. Also answers what a composition owns across EVERY checkout that has served it (the marker scan behind the delete confirmation) and reclaims that whole set, per-namespace outcomes reported individually.
+- Server:
+  - Contributes: `resource.declare` "build.serve-status"
+  - Uses:
+    - `database/admin.databaseExists`
+    - `database/admin.dropDatabase`
+    - `database/admin.ensureDatabase`
+    - `infra/endpoints.implement`
+    - `infra/paths.checkoutRef`
+    - `infra/paths.REPO_ROOT`
+    - `infra/worktree.ensureMainWorktreeRoot`
+    - `infra/worktree.hasCompositionMarker`
+    - `infra/worktree.loadCompositionMarker`
+    - `infra/worktree.namespaceCollision`
+    - `infra/worktree.probeNamespace`
+    - `infra/worktree/reclaim.NamespaceReclaimError`
+    - `infra/worktree/reclaim.namespacesOwnedByComposition`
+    - `infra/worktree/reclaim.OwnedNamespace`
+    - `infra/worktree/reclaim.reclaimNamespace`
+  - Resources: `build.serve-status` (push, notified)
+  - Routes:
+    - `POST /api/build/serve/reset`
+    - `GET /api/build/serve/status`
+    - `GET /api/build/serve/owned`
+    - `POST /api/build/serve/reclaim`
 - Web:
-  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `infra/endpoints` ×4
-    - `primitives/css/toggle-chip` ×3
-    - `network/live` ×2
-    - `plugin-meta/composition` ×2
+  - Uses:
+    - `infra/endpoints.getEndpointErrorMessage`
+    - `infra/endpoints.useEndpointMutation`
+    - `infra/endpoints.useFetchEndpoint`
+    - `network/live.useLive`
+    - `plugin-meta/composition.useManifestActions`
+    - `plugin-meta/composition.useManifestItems`
     - `primitives/css/badge.Badge`
     - `primitives/css/link-chip.LinkChip`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
+    - `primitives/css/toggle-chip.SegmentedControl`
+    - `primitives/css/toggle-chip.SegmentedOption`
+    - `primitives/css/toggle-chip.ToggleChip`
     - `primitives/css/ui-kit.Button`
     - `primitives/latest-ref.useLatestRef`
-    - `primitives/live-state.foldResource`
     - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
     - `primitives/relative-time.RelativeTime`
     - `shell/toast.showToast`
@@ -259,28 +290,8 @@ code, that is the bug this section exists to prevent.
     - `useDeleteComposition`
     - `useServeComposition`
     - `useServeStatus`
-- Server:
-  - Uses:
-    - `database/admin.databaseExists`
-    - `database/admin.dropDatabase`
-    - `database/admin.ensureDatabase`
-    - `infra/endpoints.implement`
-    - `infra/paths.checkoutRef`
-    - `infra/paths.REPO_ROOT`
-    - `infra/worktree.ensureMainWorktreeRoot`
-    - `infra/worktree.hasCompositionMarker`
-    - `infra/worktree.namespaceCollision`
-    - `infra/worktree.probeNamespace`
-    - `infra/worktree.readCompositionMarker`
-    - `infra/worktree/reclaim.NamespaceReclaimError`
-    - `infra/worktree/reclaim.namespacesOwnedByComposition`
-    - `infra/worktree/reclaim.OwnedNamespace`
-    - `infra/worktree/reclaim.reclaimNamespace`
-  - Routes:
-    - `POST /api/build/serve/reset`
-    - `GET /api/build/serve/status`
-    - `GET /api/build/serve/owned`
-    - `POST /api/build/serve/reclaim`
+- Machine:
+  - Uses: `network/live.serveValue`
 - Cross-plugin:
   - Imported by:
     - `apps/deploy/local-serve`
@@ -288,8 +299,6 @@ code, that is the bug this section exists to prevent.
     - `apps/studio/compositions/draft-actions`
     - `apps/studio/compositions/release`
 - Exemptions:
-  - Exempts itself from:
-    - `live/no-endpoint-read` — `web/internal/use-serve-status.ts` (debt)
-    - `boundaries/no-platform-api` — `server/internal/reset.ts` (debt)
+  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/reset.ts` (debt)
 
 <!-- AUTOGENERATED:END -->

@@ -7,8 +7,14 @@ import {
   type Span,
   type PhaseConfig,
 } from "@plugins/debug/plugins/profiling/web";
-import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { getBuildRunProfile } from "../../shared/endpoints";
+import { useLive } from "@plugins/network/plugins/live/web";
+import {
+  foldResource,
+  ResourceErrorInline,
+} from "@plugins/primitives/plugins/live-state/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
+import { buildRunProfile } from "../../core";
 
 const PHASE_ORDER = [
   "build:preflight",
@@ -37,35 +43,63 @@ const PHASE_CONFIG: Record<string, PhaseConfig> = {
  * contribution's `useAvailable` rather than a `return null` in the body: the
  * host paints the card before it reaches the body, so a null there would leave
  * a "Profiling" bar that opens onto nothing.
+ *
+ * Absent while the profile is not known yet (the gate is a boolean: the card
+ * appears once it lands) and when the run has none (`missing`). A failed read
+ * and a host without the computer are shown — the body says which.
  */
 export function useHasBuildProfile({ runId }: { runId: string }): boolean {
-  const { data } = useEndpoint(getBuildRunProfile, { id: runId });
-  return data !== undefined && data.spans.length > 0;
+  const profile = useLive(buildRunProfile, { buildId: runId });
+  return foldResource(profile, {
+    loading: () => false,
+    error: (error) => !(error.kind === "refused" && error.code === "missing"),
+    unavailable: () => true,
+    ready: (data) => data.spans.length > 0,
+  });
 }
 
-export function BuildProfilingSection({ runId }: { runId: string }): ReactElement | null {
-  const { data } = useEndpoint(getBuildRunProfile, { id: runId });
+export function BuildProfilingSection({
+  runId,
+}: {
+  runId: string;
+}): ReactElement {
+  const profile = useLive(buildRunProfile, { buildId: runId });
   const [hovered, setHovered] = useState<Span | null>(null);
-  const ctxValue = useMemo(() => ({ hovered, setHovered, refreshKey: 0 }), [hovered, setHovered]);
-
-  // `useAvailable` already gated on a profile with spans; this only narrows.
-  if (!data || data.spans.length === 0) return null;
-
-  const grouped = groupByPhase(data.spans);
-
-  return (
-    // No frame and no title of our own: this section is hosted inside the build
-    // detail's `SectionCard` ("Profiling"), which already supplies both. The
-    // Gantt's own label column then carries just the run's total duration.
-    <ProfilingContext.Provider value={ctxValue}>
-      <GanttSection
-        totalMs={data.totalMs}
-        phaseOrder={PHASE_ORDER}
-        phaseConfig={PHASE_CONFIG}
-        allByPhase={grouped.all}
-        visibleByPhase={grouped.visible}
-      />
-      <SpanDetail span={hovered} />
-    </ProfilingContext.Provider>
+  const ctxValue = useMemo(
+    () => ({ hovered, setHovered, refreshKey: 0 }),
+    [hovered, setHovered],
   );
+  const refetch =
+    profile.status === "unavailable" ? undefined : profile.refetch;
+
+  return foldResource(profile, {
+    loading: () => <Loading />,
+    error: (error) => (
+      <ResourceErrorInline
+        error={error}
+        refetch={refetch}
+        variant="inline"
+        subject="the build profile"
+      />
+    ),
+    unavailable: (message) => <Placeholder tone="muted">{message}</Placeholder>,
+    ready: (data) => {
+      const grouped = groupByPhase(data.spans);
+      return (
+        // No frame and no title of our own: this section is hosted inside the build
+        // detail's `SectionCard` ("Profiling"), which already supplies both. The
+        // Gantt's own label column then carries just the run's total duration.
+        <ProfilingContext.Provider value={ctxValue}>
+          <GanttSection
+            totalMs={data.totalMs}
+            phaseOrder={PHASE_ORDER}
+            phaseConfig={PHASE_CONFIG}
+            allByPhase={grouped.all}
+            visibleByPhase={grouped.visible}
+          />
+          <SpanDetail span={hovered} />
+        </ProfilingContext.Provider>
+      );
+    },
+  });
 }

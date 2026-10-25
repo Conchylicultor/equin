@@ -346,9 +346,9 @@ function serveHost(it: CompositionManifestItem): string | null {
   // `<id>.<checkout>` — which only the SERVER can resolve (the browser knows the
   // namespace it is talking to, and that does not decompose back into a pair).
   // This column is a list-wide, intent-derived hint and cannot afford a
-  // per-row round-trip; the composition's own Serve panel asks
-  // `serveStatusEndpoint` and shows the resolved host, which is the surface to
-  // trust. Giving this column the true answer means a batched resolve — filed
+  // per-row read; the composition's own Serve panel reads the
+  // `build.serve-status` live value (`useServeStatus`) and shows the resolved
+  // host, which is the surface to trust. Giving this column the true answer means a batched resolve — filed
   // as its own change rather than faked here.
   if (it.id === MAIN_COMPOSITION_ID)
     return namespaceHost(asNamespace(MAIN_COMPOSITION_ID));

@@ -3,7 +3,8 @@ import { BuildDetailSlots } from "@plugins/build/web";
 import { BuildLogSection } from "./components/build-log-section";
 
 export default {
-  description: "Live log stream section in the build detail pane.",
+  description:
+    "Logs section in the build detail pane: the run's persisted steps and lines (build.run-logs, newest first, paged by viewport), else the live log channel.",
   contributions: [
     BuildDetailSlots.Section({ id: "logs", label: "Logs", component: BuildLogSection }),
   ],
