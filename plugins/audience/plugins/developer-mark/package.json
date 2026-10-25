@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-audience-developer-mark",
+  "description": "The one mark every surface draws on a developer-only thing (an app, a notification, a toast), so a developer learns one symbol.",
+  "private": true,
+  "version": "0.0.1"
+}

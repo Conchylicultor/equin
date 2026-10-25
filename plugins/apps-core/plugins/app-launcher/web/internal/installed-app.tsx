@@ -1,5 +1,11 @@
 import type { ActiveApp } from "@plugins/apps-core/web";
 import { AppIconAvatar } from "@plugins/apps-core/plugins/app-icon/web";
+import type { Audience } from "@plugins/audience/core";
+import {
+  DeveloperCorner,
+  DeveloperMark,
+} from "@plugins/audience/plugins/developer-mark/web";
+import { useAvatarPresentation } from "@plugins/primitives/plugins/avatar/web";
 import { fieldOverrides } from "@plugins/primitives/plugins/data-view/web";
 import { FieldPresentation } from "@plugins/network/plugins/live/web";
 import { installedApp } from "../../core";
@@ -13,16 +19,42 @@ export interface AppRow {
   id: string;
   name: string;
   icon: ActiveApp["icon"];
+  audience: Audience;
   entry: ActiveApp;
 }
 
 /** The row of one installed app. */
 export function appRow(entry: ActiveApp): AppRow {
-  return { id: entry.id, name: entry.app.name, icon: entry.icon, entry };
+  return {
+    id: entry.id,
+    name: entry.app.name,
+    icon: entry.icon,
+    audience: entry.app.audience ?? "user",
+    entry,
+  };
 }
 
 /**
- * The icon is the row's leading field: drawn through `AppIconAvatar` (the
+ * An app's icon cell: `AppIconAvatar` (a tile filling the box in a tile view,
+ * a badge in rows and table cells), and — on a tile — the developer mark on a
+ * developer app's corner. A badge-sized avatar has no room for it; its row
+ * carries the Audience field instead.
+ */
+export function AppIconCell({
+  row,
+}: {
+  row: Pick<AppRow, "id" | "icon" | "audience">;
+}) {
+  const tile = useAvatarPresentation() !== "badge";
+  return (
+    <DeveloperCorner developer={tile && row.audience === "developer"}>
+      <AppIconAvatar icon={row.icon} appId={row.id} />
+    </DeveloperCorner>
+  );
+}
+
+/**
+ * The icon is the row's leading field: drawn through `AppIconCell` (the
  * app's colour in `APP_TILE_PALETTE`; a tile filling the box in a tile view, a
  * badge in rows and table cells). Every list of apps passes these overrides, so
  * an app looks the same wherever it is launched from.
@@ -37,7 +69,11 @@ export const installedAppPresentation = FieldPresentation.Register({
     icon: {
       // A glyph column: obvious from its cells, so no header text in a table.
       header: false,
-      cell: (icon, row) => <AppIconAvatar icon={icon} appId={row.id} />,
+      cell: (_icon, row) => <AppIconCell row={row} />,
+    },
+    // The developer mark for a developer app; nothing for everyone's.
+    audience: {
+      cell: (audience) => (audience === "developer" ? <DeveloperMark /> : null),
     },
   },
 });

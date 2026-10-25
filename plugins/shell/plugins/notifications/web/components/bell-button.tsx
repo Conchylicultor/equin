@@ -43,6 +43,7 @@ export function BellButton() {
       title: n.title,
       description: n.description,
       variant: n.variant,
+      audience: n.audience,
     }),
   );
 

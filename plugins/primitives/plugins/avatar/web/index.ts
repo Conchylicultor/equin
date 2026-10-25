@@ -13,6 +13,7 @@ export {
 } from "./internal/colors";
 export {
   AvatarPresentationProvider,
+  useAvatarPresentation,
   type AvatarPresentation,
 } from "./internal/presentation";
 export { DEFAULT_AGENT_AVATAR } from "./internal/default-avatar";

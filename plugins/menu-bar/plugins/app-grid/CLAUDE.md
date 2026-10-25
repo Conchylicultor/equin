@@ -14,11 +14,10 @@
   - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×5
     - `apps-core` ×4
+    - `apps-core/app-launcher` ×3
     - `primitives/live-state` ×3
-    - `apps-core/app-launcher` ×2
     - `menu-bar` ×2
     - `primitives/css/ui-kit` ×2
-    - `apps-core/app-icon.AppIconAvatar`
     - `apps-core/tabs.useActivateApp`
     - `infra/endpoints.useFetchEndpoint`
     - `network/live.useLive`

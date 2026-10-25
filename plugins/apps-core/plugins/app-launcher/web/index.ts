@@ -5,7 +5,12 @@ import { AppBrand } from "./components/app-brand";
 import { FloatingAppLauncher } from "./components/floating-app-launcher";
 import { installedAppPresentation } from "./internal/installed-app";
 
-export { appRow, appRowOverrides, type AppRow } from "./internal/installed-app";
+export {
+  AppIconCell,
+  appRow,
+  appRowOverrides,
+  type AppRow,
+} from "./internal/installed-app";
 
 export default {
   description:

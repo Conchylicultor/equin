@@ -10,6 +10,7 @@
   - Uses:
     - `apps-core/chrome-theme.chromeTheme`
     - `apps-core/chrome-theme.chromeThemeScope`
+    - `audience/developer-mark.DeveloperMark`
     - `primitives/css/theme-boundary.Theme`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.ControlSizeProvider`

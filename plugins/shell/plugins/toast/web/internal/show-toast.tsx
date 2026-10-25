@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { toast as sonnerToast } from "sonner";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
+import { DeveloperMark } from "@plugins/audience/plugins/developer-mark/web";
 import type { ToastArgs } from "../../core";
 import { trackToast, untrackToast } from "./live-toasts";
 
@@ -80,7 +81,13 @@ function ToastBody({ id, children }: { id: string; children: React.ReactNode }) 
  * anywhere; if no `<ToasterHost/>` is mounted the enqueue simply has no renderer
  * (a silent no-op, never a throw). Deprecates the former `shell.toast` command.
  */
-export function showToast({ title, description, variant, action }: ToastArgs): void {
+export function showToast({
+  title,
+  description,
+  variant,
+  audience,
+  action,
+}: ToastArgs): void {
   const id = `shell-toast-${SESSION}-${++seq}`;
   // `||`, not `??`: `title: ""` is a caller saying "no title", and `??` would
   // render an empty headline and drop the description entirely.
@@ -98,7 +105,17 @@ export function showToast({ title, description, variant, action }: ToastArgs): v
   // first unmount would untrack a toast the other half still shows.
   const body = (
     <ToastBody id={id}>
-      <ContentScope fill={false}>{rawMessage}</ContentScope>
+      <ContentScope fill={false}>
+        {rawMessage}
+        {/* The developer mark after the headline, inline so a long headline
+            still wraps — the same mark the bell's row draws for it. */}
+        {audience === "developer" && (
+          <>
+            {" "}
+            <DeveloperMark />
+          </>
+        )}
+      </ContentScope>
     </ToastBody>
   );
 

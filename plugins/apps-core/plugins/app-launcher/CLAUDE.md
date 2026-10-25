@@ -55,12 +55,13 @@ never draw their own header (the shell places it; see
     - `AppShell.Brand` "Brand" → `AppBrand`
     - `Apps.Overlay` "Overlay" → `FloatingAppLauncher`
     - `FieldPresentation.Register` "collection:apps.installed-app"
-  - Uses: 38 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 41 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps-core/tabs` ×5
     - `apps-core` ×5
     - `primitives/data-view` ×3
     - `primitives/live-state` ×3
     - `apps-core/app-icon` ×2
+    - `audience/developer-mark` ×2
     - `primitives/app-shell` ×2
     - `primitives/css/fill` ×2
     - `primitives/css/theme-boundary` ×2
@@ -68,6 +69,7 @@ never draw their own header (the shell places it; see
     - `reorder` ×2
     - `apps-core/chrome-theme.chromeThemeScope`
     - `network/live.FieldPresentation`
+    - `primitives/avatar.useAvatarPresentation`
     - `primitives/css/line.Line`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
@@ -78,11 +80,14 @@ never draw their own header (the shell places it; see
     - `ui/icons.Icon`
   - Exports (types): `AppRow`
   - Exports (values):
+    - `AppIconCell`
     - `appRow`
     - `appRowOverrides`
 - Core:
   - Uses:
+    - `audience.AUDIENCES`
     - `fields/json/config.jsonField`
+    - `fields/text/config.enumTextField`
     - `fields/text/config.textField`
     - `network/live.rowKind`
     - `ui/icons.symbol`

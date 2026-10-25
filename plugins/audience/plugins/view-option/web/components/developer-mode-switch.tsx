@@ -1,10 +1,8 @@
 import { useAudience, useSetDeveloperMode } from "@plugins/audience/web";
 import { ControlPanel } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { symbol } from "@plugins/ui/plugins/icons/core";
+import { developerSymbol } from "@plugins/audience/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
-
-const developerIcon = symbol("code");
 
 /** The Developer mode switch, as a row of the view-options popover. */
 export function DeveloperModeSwitch() {
@@ -16,7 +14,7 @@ export function DeveloperModeSwitch() {
   const developer = audience.data === "developer";
   return (
     <ControlPanel.Row
-      icon={<Icon icon={developerIcon} />}
+      icon={<Icon icon={developerSymbol} />}
       select="switch"
       checked={developer}
       onSelect={() => setDeveloperMode(!developer)}

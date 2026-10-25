@@ -67,6 +67,7 @@ export const browserHost = {
     "apps.pages.welcome.quick-create",
     "apps.pages.welcome.recent-pages",
     "audience",
+    "audience.developer-mark",
     "build",
     "build.deployment",
     "code-explorer.commit-detail",

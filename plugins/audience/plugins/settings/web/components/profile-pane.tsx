@@ -6,6 +6,8 @@ import {
   ControlPanelPane,
 } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { developerSymbol } from "@plugins/audience/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
 
 /** Who the user is: the Developer mode switch, and what it changes. */
 export function ProfileSettings(): ReactElement {
@@ -34,12 +36,13 @@ export function ProfileSettings(): ReactElement {
         description="How you use equin. Features meant for people building equin itself stay out of the way unless you are a developer."
       >
         <ControlPanel.Row
+          icon={<Icon icon={developerSymbol} />}
           select="switch"
           checked={developer}
           onSelect={() => setDeveloperMode(!developer)}
           description={
             developer
-              ? "The developer apps (Studio, Debug, Deploy, …) appear in the app gallery and launchers."
+              ? "The developer apps (Studio, Debug, Deploy, …) appear in the app gallery and launchers, and developer notifications in the bell — each marked with this symbol."
               : "The developer apps stay out of the app gallery and launchers. They still open at their URL."
           }
         >

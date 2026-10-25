@@ -1,10 +1,14 @@
 import { z } from "zod";
 import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
-import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
+import {
+  enumTextField,
+  textField,
+} from "@plugins/fields/plugins/text/plugins/config/core";
 import { rowKind } from "@plugins/network/plugins/live/core";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import type { AppIcon } from "@plugins/apps-core/plugins/app-icon/core";
+import { AUDIENCES } from "@plugins/audience/core";
 
 const AppIconSchema: ZodParser<AppIcon> = z.custom<AppIcon>(
   (v) => typeof v === "object" && v !== null && "kind" in v,
@@ -25,6 +29,15 @@ export const installedApp = rowKind("apps.installed-app", {
       label: "Icon",
       schema: AppIconSchema,
       default: { kind: "symbol", symbol: symbol("apps") },
+    }),
+    // Who the app is for (`defineApp({ audience })`): a developer app is
+    // listed only in Developer mode, and wears the developer mark there.
+    audience: enumTextField(AUDIENCES, {
+      label: "Audience",
+      options: {
+        user: { label: "Everyone" },
+        developer: { label: "Developer" },
+      },
     }),
   },
   carry: { fields: { id: textField() } },

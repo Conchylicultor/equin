@@ -136,6 +136,7 @@ color palette.
     - `AvatarPresentationProvider`
     - `avatarSoftClass`
     - `DEFAULT_AGENT_AVATAR`
+    - `useAvatarPresentation`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/categorical --categorical-1`
@@ -160,6 +161,7 @@ color palette.
     - `ui/tokens/type-scale --font-weight-medium`
   - Imported by:
     - `apps-core/app-icon`
+    - `apps-core/app-launcher`
     - `apps/mail/reading-pane`
     - `apps/website/pages/apps`
     - `conversations/agents`

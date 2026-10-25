@@ -22,18 +22,22 @@
     - `config_v2.ConfigV2`
     - `config_v2.getConfig`
   - Exports (values): `getAudience`
-- Cross-plugin:
-  - Imported by:
-    - `apps-core`
-    - `audience/settings`
-    - `audience/view-option`
-    - `shell/notifications`
 - Core:
+  - Uses: `ui/icons.symbol`
   - Exports (types): `Audience`
   - Exports (values):
     - `AUDIENCES`
+    - `developerSymbol`
     - `reachesAudience`
+- Cross-plugin:
+  - Imported by:
+    - `apps-core`
+    - `apps-core/app-launcher`
+    - `audience/settings`
+    - `audience/view-option`
+    - `shell/notifications`
 - Sub-plugins:
+  - **`developer-mark`** — The developer-only mark: DeveloperMark (the developer symbol in the primary tint, inline beside a title or opaque on a corner) and DeveloperCorner (the mark overhanging a tile's corner). Every…
   - **`settings`** — The Developer mode switch in Settings: a Profile sidebar entry opening a pane that switches the user's audience (user | developer).
   - **`view-option`** — The Developer mode switch in the action bar's view-options popover — the same setting as Settings → Profile.
 

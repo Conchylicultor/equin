@@ -58,6 +58,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`audience`** — Who the user is (user | developer), read live as useAudience() from the Developer mode config; registers that config. Registers the Developer mode config and reads the user's audience on the server…
   - Plugins:
+    - **`developer-mark`** — The developer-only mark: DeveloperMark (the developer symbol in the primary tint, inline beside a title or opaque on a corner) and DeveloperCorner (the mark overhanging a tile's corner). Every…
     - **`settings`** — The Developer mode switch in Settings: a Profile sidebar entry opening a pane that switches the user's audience (user | developer).
     - **`view-option`** — The Developer mode switch in the action bar's view-options popover — the same setting as Settings → Profile.
 

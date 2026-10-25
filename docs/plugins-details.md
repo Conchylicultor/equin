@@ -10815,19 +10815,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps-core/app-rail`
           - `apps/desktop/shell`
           - `config_v2/settings`
-          - `menu-bar/app-grid`
     - **`app-launcher`** — The app brand every app shell draws (AppShell.Brand): the launcher — the current app's own mark — click for the composition's home app (the app gallery on main), hover or ArrowDown for a grid of every other installed app (switching exactly as the rail does) — plus, as the sidebar header, the current app's name linking to its own home. In solo (fullscreen) mode, a surface that draws no brand gets the launcher floating at the top-left, revealed as the pointer nears the corner.
       - Web:
         - Contributes:
           - `AppShell.Brand` "Brand" → `AppBrand`
           - `Apps.Overlay` "Overlay" → `FloatingAppLauncher`
           - `FieldPresentation.Register` "collection:apps.installed-app"
-        - Uses: 38 symbols — full list in [`plugins/apps-core/plugins/app-launcher/REFERENCE.md`](../plugins/apps-core/plugins/app-launcher/REFERENCE.md)
+        - Uses: 41 symbols — full list in [`plugins/apps-core/plugins/app-launcher/REFERENCE.md`](../plugins/apps-core/plugins/app-launcher/REFERENCE.md)
           - `apps-core/tabs` ×5
           - `apps-core` ×5
           - `primitives/data-view` ×3
           - `primitives/live-state` ×3
           - `apps-core/app-icon` ×2
+          - `audience/developer-mark` ×2
           - `primitives/app-shell` ×2
           - `primitives/css/fill` ×2
           - `primitives/css/theme-boundary` ×2
@@ -10835,6 +10835,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reorder` ×2
           - `apps-core/chrome-theme.chromeThemeScope`
           - `network/live.FieldPresentation`
+          - `primitives/avatar.useAvatarPresentation`
           - `primitives/css/line.Line`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
@@ -10845,11 +10846,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/icons.Icon`
         - Exports (types): `AppRow`
         - Exports (values):
+          - `AppIconCell`
           - `appRow`
           - `appRowOverrides`
       - Core:
         - Uses:
+          - `audience.AUDIENCES`
           - `fields/json/config.jsonField`
+          - `fields/text/config.enumTextField`
           - `fields/text/config.textField`
           - `network/live.rowKind`
           - `ui/icons.symbol`
@@ -11273,18 +11277,41 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `config_v2.ConfigV2`
       - `config_v2.getConfig`
     - Exports (values): `getAudience`
-  - Cross-plugin:
-    - Imported by:
-      - `apps-core`
-      - `audience/settings`
-      - `audience/view-option`
-      - `shell/notifications`
   - Core:
+    - Uses: `ui/icons.symbol`
     - Exports (types): `Audience`
     - Exports (values):
       - `AUDIENCES`
+      - `developerSymbol`
       - `reachesAudience`
+  - Cross-plugin:
+    - Imported by:
+      - `apps-core`
+      - `apps-core/app-launcher`
+      - `audience/settings`
+      - `audience/view-option`
+      - `shell/notifications`
   - Plugins:
+    - **`developer-mark`** — The developer-only mark: DeveloperMark (the developer symbol in the primary tint, inline beside a title or opaque on a corner) and DeveloperCorner (the mark overhanging a tile's corner). Every surface showing something only a developer sees — a developer app's tile, a developer notification or toast — draws it, so one symbol means developer everywhere.
+      - Web:
+        - Uses:
+          - `primitives/css/inline.Inline`
+          - `primitives/css/pin.Pin`
+          - `primitives/css/ui-kit.WithTooltip`
+          - `ui/icons.Icon`
+        - Exports (values):
+          - `DeveloperCorner`
+          - `DeveloperMark`
+      - Cross-plugin:
+        - Uses tokens:
+          - `ui/tokens/color-palette --background`
+          - `ui/tokens/color-palette --primary`
+          - `ui/tokens/color-palette --primary-text`
+          - `ui/tokens/shape --spacing`
+        - Imported by:
+          - `apps-core/app-launcher`
+          - `shell/notifications`
+          - `shell/toast`
     - **`settings`** — The Developer mode switch in Settings: a Profile sidebar entry opening a pane that switches the user's audience (user | developer).
       - Web:
         - Slots: `settings-profile.actions`
@@ -11303,6 +11330,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/pane.defineRoute`
           - `primitives/pane.Pane`
           - `primitives/pane.PaneChrome`
+          - `ui/icons.Icon`
     - **`view-option`** — The Developer mode switch in the action bar's view-options popover — the same setting as Settings → Profile.
       - Web:
         - Contributes: `ActionBar.ViewOption` → `DeveloperModeSwitch`
@@ -32178,11 +32206,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses: 28 symbols — full list in [`plugins/menu-bar/plugins/app-grid/REFERENCE.md`](../plugins/menu-bar/plugins/app-grid/REFERENCE.md)
           - `primitives/data-view` ×5
           - `apps-core` ×4
+          - `apps-core/app-launcher` ×3
           - `primitives/live-state` ×3
-          - `apps-core/app-launcher` ×2
           - `menu-bar` ×2
           - `primitives/css/ui-kit` ×2
-          - `apps-core/app-icon.AppIconAvatar`
           - `apps-core/tabs.useActivateApp`
           - `infra/endpoints.useFetchEndpoint`
           - `network/live.useLive`
@@ -37463,6 +37490,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `AvatarPresentationProvider`
           - `avatarSoftClass`
           - `DEFAULT_AGENT_AVATAR`
+          - `useAvatarPresentation`
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/categorical --categorical-1`
@@ -37487,6 +37515,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-weight-medium`
         - Imported by:
           - `apps-core/app-icon`
+          - `apps-core/app-launcher`
           - `apps/mail/reading-pane`
           - `apps/website/pages/apps`
           - `conversations/agents`
@@ -38291,7 +38320,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `InlineProps`
             - Exports (values): `Inline`
           - Cross-plugin:
-            - Imported by: 90 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
+            - Imported by: 91 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
               - `apps` ×17
               - `reports` ×15
               - `debug` ×14
@@ -38303,6 +38332,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta` ×3
               - `ui` ×2
               - `active-data/go`
+              - `audience/developer-mark`
               - `backup/runs-arm`
               - `config_v2/settings`
               - `database/query-deadline`
@@ -38479,13 +38509,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `pinClasses`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 57 plugins — full list in [`plugins/primitives/plugins/css/plugins/pin/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/pin/REFERENCE.md)
+            - Imported by: 58 plugins — full list in [`plugins/primitives/plugins/css/plugins/pin/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/pin/REFERENCE.md)
               - `primitives` ×18
               - `apps` ×17
               - `page` ×9
               - `conversations` ×4
               - `tasks` ×2
               - `apps-core/app-rail`
+              - `audience/developer-mark`
               - `map`
               - `menu-bar/app-grid`
               - `plugin-meta/exhibits`
@@ -39298,7 +39329,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 438 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 439 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×109
               - `apps` ×98
               - `conversations` ×54
@@ -39324,6 +39355,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `layouts` ×2
               - `menu-bar` ×2
               - `screenshot` ×2
+              - `audience/developer-mark`
               - `code-explorer/commit-detail`
               - `history/dialog`
               - `improve`
@@ -47171,7 +47203,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DebugApp.Sidebar` "Notifications"
           - `notification-actions` "open" → `OpenNotificationAction`
           - `notification-actions` "dismiss" → `DismissNotificationAction`
-        - Uses: 43 symbols — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
+        - Uses: 44 symbols — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
           - `primitives/data-view` ×5
           - `infra/endpoints` ×3
           - `primitives/css/coords` ×2
@@ -47181,6 +47213,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/pane` ×2
           - `apps-core/tabs.useAppLink`
           - `apps/debug/shell.DebugApp`
+          - `audience/developer-mark.DeveloperMark`
           - `audience.useAudience`
           - `ids.IdKinds`
           - `network/live.useLive`
@@ -47337,6 +47370,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `apps-core/chrome-theme.chromeTheme`
           - `apps-core/chrome-theme.chromeThemeScope`
+          - `audience/developer-mark.DeveloperMark`
           - `primitives/css/theme-boundary.Theme`
           - `primitives/css/ui-kit.Button`
           - `primitives/css/ui-kit.ControlSizeProvider`
@@ -50179,7 +50213,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/shadow --shadow`
           - `ui/tokens/shape --spacing`
-        - Imported by: 342 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 345 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×89
           - `conversations` ×58
           - `primitives` ×42
@@ -50189,6 +50223,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks` ×8
           - `ui` ×8
           - `active-data` ×5
+          - `audience` ×4
           - `plugin-meta` ×4
           - `reorder` ×4
           - `review` ×4
@@ -50200,7 +50235,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `config_v2` ×2
           - `infra` ×2
           - `reports` ×2
-          - `audience/view-option`
           - `auth`
           - `framework/tooling/codegen`
           - `fullscreen`
@@ -51315,7 +51349,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `colorPaletteGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Tokens used by: 520 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 521 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×116
               - `conversations` ×88
               - `primitives` ×77
@@ -51343,6 +51377,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `menu-bar` ×2
               - `runs` ×2
               - `screenshot` ×2
+              - `audience/developer-mark`
               - `config_v2/settings`
               - `database/query-deadline`
               - `framework/web-core`
@@ -51792,7 +51827,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `shapeGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --radius-chip-compact`
-            - Tokens used by: 432 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+            - Tokens used by: 433 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
               - `conversations` ×93
               - `apps` ×85
               - `primitives` ×70
@@ -51818,6 +51853,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `integrations` ×2
               - `menu-bar` ×2
               - `screenshot` ×2
+              - `audience/developer-mark`
               - `hints/ask`
               - `history/dialog`
               - `layouts/miller`

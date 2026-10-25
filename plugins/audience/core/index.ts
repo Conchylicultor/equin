@@ -1,1 +1,6 @@
-export { AUDIENCES, reachesAudience, type Audience } from "./audience";
+export {
+  AUDIENCES,
+  developerSymbol,
+  reachesAudience,
+  type Audience,
+} from "./audience";

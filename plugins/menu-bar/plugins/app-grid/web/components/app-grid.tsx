@@ -16,11 +16,11 @@ import type {
   HostedToolbarParts,
 } from "@plugins/primitives/plugins/data-view/core";
 import {
+  AppIconCell,
   appRow,
   type AppRow,
 } from "@plugins/apps-core/plugins/app-launcher/web";
 import { installedApp } from "@plugins/apps-core/plugins/app-launcher/core";
-import { AppIconAvatar } from "@plugins/apps-core/plugins/app-icon/web";
 import type { Activation } from "@plugins/primitives/plugins/link-gesture/core";
 import type { IconsViewOptions } from "@plugins/primitives/plugins/data-view/plugins/icons/core";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
@@ -40,8 +40,8 @@ import { AppGridActions } from "./pin-action";
 const MENU_BAR_APPS_VIEW = defineDataView("menu-bar.apps");
 
 /**
- * The app's tile — the icon Home and the launcher draw — with the app's own
- * badge (`Apps.App` `badge`: unread mail, a config conflict) on its corner.
+ * The app's tile — the icon Home and the launcher draw, developer mark included
+ * — with the app's own badge (`Apps.App` `badge`: unread mail, a config conflict) on its corner.
  */
 const appGridOverrides = fieldOverrides(installedApp, {
   icon: {
@@ -50,7 +50,7 @@ const appGridOverrides = fieldOverrides(installedApp, {
       const Badge = row.entry.badge;
       return (
         <span className="relative block size-full">
-          <AppIconAvatar icon={row.icon} appId={row.id} />
+          <AppIconCell row={row} />
           {Badge && (
             <Pin to="top-right" outset decorative>
               <Badge />

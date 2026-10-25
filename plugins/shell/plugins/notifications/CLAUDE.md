@@ -105,7 +105,7 @@ DataView (`web/components/notifications-view.tsx`):
     - `DebugApp.Sidebar` "Notifications"
     - `notification-actions` "open" → `OpenNotificationAction`
     - `notification-actions` "dismiss" → `DismissNotificationAction`
-  - Uses: 43 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 44 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×5
     - `infra/endpoints` ×3
     - `primitives/css/coords` ×2
@@ -115,6 +115,7 @@ DataView (`web/components/notifications-view.tsx`):
     - `primitives/pane` ×2
     - `apps-core/tabs.useAppLink`
     - `apps/debug/shell.DebugApp`
+    - `audience/developer-mark.DeveloperMark`
     - `audience.useAudience`
     - `ids.IdKinds`
     - `network/live.useLive`

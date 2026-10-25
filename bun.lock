@@ -1388,6 +1388,10 @@
       "name": "@singularity/plugin-audience",
       "version": "0.0.1",
     },
+    "plugins/audience/plugins/developer-mark": {
+      "name": "@singularity/plugin-audience-developer-mark",
+      "version": "0.0.1",
+    },
     "plugins/audience/plugins/settings": {
       "name": "@singularity/plugin-audience-settings",
       "version": "0.0.1",
@@ -7857,6 +7861,8 @@
     "@singularity/plugin-apps-website-shell": ["@singularity/plugin-apps-website-shell@workspace:plugins/apps/plugins/website/plugins/shell"],
 
     "@singularity/plugin-audience": ["@singularity/plugin-audience@workspace:plugins/audience"],
+
+    "@singularity/plugin-audience-developer-mark": ["@singularity/plugin-audience-developer-mark@workspace:plugins/audience/plugins/developer-mark"],
 
     "@singularity/plugin-audience-settings": ["@singularity/plugin-audience-settings@workspace:plugins/audience/plugins/settings"],
 

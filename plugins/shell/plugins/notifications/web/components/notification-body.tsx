@@ -7,6 +7,7 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { DeveloperMark } from "@plugins/audience/plugins/developer-mark/web";
 import type { Notification } from "../../shared/resources";
 
 const VARIANT_TEXT: Record<Notification["variant"], string> = {
@@ -40,7 +41,8 @@ export function notificationLink(n: Notification): string | undefined {
 }
 
 /**
- * One notification's body — title (variant-coloured, a `muted` badge), the
+ * One notification's body — title (variant-coloured, the developer mark on a
+ * developer notification, a `muted` badge), the
  * description when it says more than the title, and the metadata line (last
  * seen, recurrence count, type, which tab, "View →" for a linked row). Dimmed
  * while read or muted. Shared by the bell popover's row (which adds the accent
@@ -62,6 +64,7 @@ export function NotificationBody({ n }: { n: Notification }): ReactElement {
         >
           {n.title}
         </Text>
+        {n.audience === "developer" && <DeveloperMark />}
         {n.muted && (
           <Badge
             variant="muted"
