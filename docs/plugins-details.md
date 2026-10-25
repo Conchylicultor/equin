@@ -6845,9 +6845,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ThumbnailStateSchema`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shadow --shadow`
-            - Imported by:
-              - `apps/prototypes/gallery`
-              - `page/prototype`
+            - Imported by: `apps/prototypes/gallery`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/cache.ts`, `server/internal/hash-dir.ts`, `server/internal/render.ts` (debt)
     - **`settings`** — Settings app.
@@ -35869,13 +35867,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `createPromptBlockTask`
               - `promptBlockTasks`
               - `PromptTaskLinkSchema`
-    - **`prototype`** — Prototype block type: links a prototype (proto-…) into a page as its rendered preview, played live in place on click, its canvas opened beside the page. Inserted by /prototype (a picker over every prototype), or written by an agent as <prototype id="proto-…"/>. Prototype block type: registers its `data` schema (the prototype id) at the server write boundary, and supplies the prototype's `<title>` to the `<prototype>` tag an agent reads.
+    - **`prototype`** — Prototype block type: links a prototype (proto-…) into a page live and interactive in place, its actions (open beside, new tab) revealed on hover. Inserted by /prototype (a picker over every prototype), or written by an agent as <prototype id="proto-…"/>. Prototype block type: registers its `data` schema (the prototype id) at the server write boundary, and supplies the prototype's `<title>` to the `<prototype>` tag an agent reads.
       - Web:
         - Contributes: `Editor.Block` "prototype" → `PrototypeBlock`
-        - Uses: 34 symbols — full list in [`plugins/page/plugins/prototype/REFERENCE.md`](../plugins/page/plugins/prototype/REFERENCE.md)
+        - Uses: 31 symbols — full list in [`plugins/page/plugins/prototype/REFERENCE.md`](../plugins/page/plugins/prototype/REFERENCE.md)
           - `page/editor` ×3
-          - `apps/prototypes/thumbnails` ×2
           - `primitives/css/layer` ×2
+          - `primitives/css/ui-kit` ×2
           - `primitives/hover-reveal` ×2
           - `primitives/live-state` ×2
           - `apps/prototypes/canvas.prototypeDetailPane`
@@ -35883,15 +35881,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live.useLive`
           - `primitives/css/center.Center`
           - `primitives/css/clip.Clip`
-          - `primitives/css/overlay.Overlay`
           - `primitives/css/pin.Pin`
           - `primitives/css/placeholder.Placeholder`
-          - `primitives/css/rigid.rigidClass`
           - `primitives/css/row.Row`
           - `primitives/css/scroll.Scroll`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
-          - `primitives/css/ui-kit.cn`
           - `primitives/icon-button.IconButton`
           - `primitives/link-gesture/new-tab.NewTabButton`
           - `primitives/link-gesture.activationProps`
@@ -35920,21 +35915,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/color-palette --background`
           - `ui/tokens/color-palette --border`
-          - `ui/tokens/color-palette --card`
-          - `ui/tokens/color-palette --foreground`
-          - `ui/tokens/color-palette --muted`
           - `ui/tokens/color-palette --muted-foreground`
           - `ui/tokens/density --space-2xs`
           - `ui/tokens/density --space-md`
           - `ui/tokens/density --space-sm`
           - `ui/tokens/density --space-xs`
+          - `ui/tokens/shadow --shadow-sm`
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
-          - `ui/tokens/type-scale --font-scale`
-          - `ui/tokens/type-scale --font-size-caption`
-          - `ui/tokens/type-scale --font-weight-medium`
-          - `ui/tokens/type-scale --font-weight-normal`
-          - `ui/tokens/type-scale --line-height-caption`
     - **`quote`** — Quote block type: a void CONTAINER whose left bar spans blocks of any type nested inside it, so a quotation may be a passage — several paragraphs, a list, a heading — rather than one line. Quote block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
       - Web:
         - Contributes:
@@ -39042,7 +39030,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `music/chord-box`
               - `page/editor`
               - `page/embed`
-              - `page/prototype`
               - `page/read-only-view`
               - `primitives/data-view`
               - `primitives/pane`
@@ -39160,13 +39147,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --spacing`
-            - Imported by: 136 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
+            - Imported by: 135 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
               - `apps` ×34
               - `conversations` ×23
               - `primitives` ×17
               - `debug` ×13
-              - `page` ×8
               - `tasks` ×8
+              - `page` ×7
               - `ui` ×6
               - `plugin-meta` ×4
               - `review` ×4
@@ -52381,14 +52368,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-3xs`
               - `ui/tokens/type-scale --line-height-caption`
-            - Tokens used by: 74 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
+            - Tokens used by: 75 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
               - `apps` ×29
               - `primitives` ×18
               - `ui` ×6
               - `framework` ×5
+              - `page` ×3
               - `apps-core` ×2
               - `hints` ×2
-              - `page` ×2
               - `screenshot` ×2
               - `tasks` ×2
               - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
@@ -52553,13 +52540,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 234 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
+            - Tokens used by: 233 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
               - `apps` ×62
               - `primitives` ×38
               - `conversations` ×36
               - `debug` ×16
               - `plugin-meta` ×14
-              - `page` ×13
+              - `page` ×12
               - `ui` ×10
               - `tasks` ×9
               - `fields` ×4

@@ -2,9 +2,7 @@ import { useState } from "react";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
-import { Overlay } from "@plugins/primitives/plugins/css/plugins/overlay/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
-import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import {
   Layer,
@@ -13,7 +11,10 @@ import {
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  cn,
+  ControlSizeProvider,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   hoverRevealGroup,
   hoverRevealTarget,
@@ -46,15 +47,9 @@ import {
   prototypeDetailRoute,
   prototypesApp,
 } from "@plugins/apps/plugins/prototypes/plugins/shell/core";
-import {
-  PrototypeThumbnail,
-  usePrototypeThumbnails,
-} from "@plugins/apps/plugins/prototypes/plugins/thumbnails/web";
-import { navIcons, symbol } from "@plugins/ui/plugins/icons/core";
+import { navIcons } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import { prototypeBlock, PROTOTYPE_BLOCK_ICON } from "../../core";
-
-const playIcon = symbol("play-arrow");
 
 /** How many prototypes the picker lists at once — newest edit first. */
 const PICKER_LIMIT = 50;
@@ -62,16 +57,12 @@ const PICKER_LIMIT = 50;
 /**
  * A prototype block: the mock a page links to (`<prototype id="proto-…"/>`).
  *
- * At rest it is the prototype's rendered preview (the gallery's own cached
- * PNG — no live document per block, so a page full of mocks stays cheap) over
- * a footer row naming it. Clicking the preview plays the prototype LIVE in
- * place, in the same sandbox the canvas frames it in; Done goes back to the
- * picture. The footer opens the prototype's canvas beside the page (or, ⌘-
- * click / the arrow, in its own app in a new browser tab).
+ * The prototype itself, live and interactive in the page (see
+ * `PrototypeCard`), its actions revealed on hover.
  *
  * Resolution is free: `prototypesList` is the app-wide live list re-broadcast
- * on every file change, so the title, blurb and preview follow an agent's edit
- * live, and an id the list does not carry is a prototype that is not here.
+ * on every file change, so the document follows an agent's edit live, and an
+ * id the list does not carry is a prototype that is not here.
  */
 export function PrototypeBlock({ block, editor }: BlockRendererProps) {
   const { prototypeId } = prototypeBlock.parse(block.data);
@@ -149,9 +140,21 @@ export function PrototypeBlock({ block, editor }: BlockRendererProps) {
   });
 }
 
+/**
+ * The prototype itself, live and interactive, at the block's own width
+ * (prototypes are fluid). No chrome at rest: hovering the block reveals its
+ * actions in the top-right corner — Open beside, and a new browser tab in the
+ * Prototypes app.
+ *
+ * The url carries `meta.rev`, a hash of this prototype's files, so an agent's
+ * edit reloads it and nothing else does. Sandboxed exactly as the canvas frames
+ * it: `allow-same-origin` keeps a prototype fetching its own flat files
+ * working — they are first-party files from the user's own prototypes dir.
+ * `loading="lazy"`: a page holding many mocks only boots the ones scrolled to.
+ */
 function PrototypeCard({ meta }: { meta: PrototypeMeta }) {
-  const [live, setLive] = useState(false);
   const openPane = useOpenPane();
+  const url = useAssetUrl(prototypeDocument(meta.name, { v: meta.rev }));
   // `push`: the canvas opens as a column to the RIGHT of the page, so the
   // document that links the mock stays on screen beside it.
   const openBeside = openPane.to(
@@ -162,143 +165,56 @@ function PrototypeCard({ meta }: { meta: PrototypeMeta }) {
 
   return (
     <div className="px-md py-xs">
-      <Clip className="rounded-md border border-border bg-card transition-colors hover:border-foreground/20">
-        <Clip className="relative w-full aspect-video bg-muted">
-          {live ? (
-            <LivePrototype meta={meta} onDone={() => setLive(false)} />
-          ) : (
-            <PreviewButton meta={meta} onPlay={() => setLive(true)} />
-          )}
-        </Clip>
-        <div className="border-t border-border">
-          <Row
-            {...activationProps(openBeside)}
-            icon={
-              <Icon
-                icon={PROTOTYPE_BLOCK_ICON}
-                className="text-muted-foreground"
-              />
-            }
-            actionsAlwaysVisible
-            actions={
-              <>
-                <IconButton
-                  icon={navIcons.sidePane}
-                  label="Open beside"
-                  {...activationProps(openBeside)}
-                />
-                <NewTabButton
-                  href={prototypeDetailRoute.link(prototypesApp, {
-                    name: meta.name,
-                  })}
-                />
-              </>
-            }
-          >
-            {/* The title keeps its width; the blurb takes what is left. */}
-            <Text className={cn(rigidClass(), "font-medium")}>
-              {meta.title}
-            </Text>
-            {meta.blurb !== "" && (
+      <Clip
+        className={cn(
+          hoverRevealGroup,
+          "relative w-full aspect-video rounded-md border border-border bg-background",
+        )}
+      >
+        {url.kind === "ready" ? (
+          <iframe
+            title={meta.title}
+            src={url.url}
+            loading="lazy"
+            sandbox="allow-scripts allow-same-origin"
+            className={cn(layerClasses(), "h-full w-full border-0")}
+          />
+        ) : (
+          <Layer>
+            <Center className="h-full w-full p-md">
               <Text variant="caption" tone="muted">
-                {meta.blurb}
+                {url.message}
               </Text>
-            )}
-          </Row>
-        </div>
-      </Clip>
-    </div>
-  );
-}
-
-/** The rendered preview: one click plays the prototype in place. */
-function PreviewButton({
-  meta,
-  onPlay,
-}: {
-  meta: PrototypeMeta;
-  onPlay: () => void;
-}) {
-  const thumbnails = usePrototypeThumbnails();
-  return (
-    <button
-      type="button"
-      onClick={onPlay}
-      aria-label={`Interact with ${meta.title}`}
-      className={cn(layerClasses(), hoverRevealGroup)}
-    >
-      <Overlay fill className="h-full w-full">
-        {matchResource(thumbnails, {
-          loading: () => <Loading variant="block" className="h-full w-full" />,
-          ready: (states) => (
-            <PrototypeThumbnail
-              state={states[meta.name]}
-              fallback={<div className="h-full w-full bg-muted" />}
-            />
-          ),
-        })}
-        <Pin to="center">
+            </Center>
+          </Layer>
+        )}
+        <Pin to="top-right" offset="xs" layer="raised">
           <Stack
             direction="row"
-            gap="xs"
+            gap="2xs"
             align="center"
             className={cn(
               hoverRevealTarget,
-              "rounded-full bg-foreground/80 px-md py-xs text-caption font-medium text-background backdrop-blur-sm",
+              "rounded-md border border-border bg-background/80 p-2xs shadow-sm backdrop-blur",
             )}
           >
-            <Icon icon={playIcon} className="size-4" />
-            Interact
+            <ControlSizeProvider size="xs">
+              <IconButton
+                icon={navIcons.sidePane}
+                label={`Open ${meta.title} beside`}
+                {...activationProps(openBeside)}
+              />
+              <NewTabButton
+                variant="ghost"
+                href={prototypeDetailRoute.link(prototypesApp, {
+                  name: meta.name,
+                })}
+              />
+            </ControlSizeProvider>
           </Stack>
         </Pin>
-      </Overlay>
-    </button>
-  );
-}
-
-/**
- * The live document, at the block's own width (prototypes are fluid). The
- * url carries `meta.rev`, a hash of this prototype's files, so an agent's edit
- * reloads it and nothing else does. Sandboxed exactly as the canvas frames it:
- * `allow-same-origin` keeps a prototype fetching its own flat files working —
- * they are first-party files from the user's own prototypes dir.
- */
-function LivePrototype({
-  meta,
-  onDone,
-}: {
-  meta: PrototypeMeta;
-  onDone: () => void;
-}) {
-  const url = useAssetUrl(prototypeDocument(meta.name, { v: meta.rev }));
-  return (
-    <>
-      {url.kind === "ready" ? (
-        <iframe
-          title={meta.title}
-          src={url.url}
-          sandbox="allow-scripts allow-same-origin"
-          className={cn(layerClasses(), "h-full w-full border-0 bg-background")}
-        />
-      ) : (
-        <Layer>
-          <Center className="h-full w-full p-md">
-            <Text variant="caption" tone="muted">
-              {url.message}
-            </Text>
-          </Center>
-        </Layer>
-      )}
-      <Pin to="top-right" offset="xs">
-        <button
-          type="button"
-          onClick={onDone}
-          className="rounded-full bg-foreground/80 px-sm py-2xs text-caption font-medium text-background backdrop-blur-sm hover:bg-foreground"
-        >
-          Done
-        </button>
-      </Pin>
-    </>
+      </Clip>
+    </div>
   );
 }
 

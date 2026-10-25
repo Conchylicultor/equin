@@ -92,7 +92,6 @@ header content inside is a `<Frame>`.
     - `music/chord-box`
     - `page/editor`
     - `page/embed`
-    - `page/prototype`
     - `page/read-only-view`
     - `primitives/data-view`
     - `primitives/pane`

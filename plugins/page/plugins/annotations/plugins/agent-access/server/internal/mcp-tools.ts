@@ -455,7 +455,7 @@ To CREATE one, use \`edit_page\` on the page that should hold it: a tagless
 body becoming the new page's content. There is no separate append tool.
 
 To show a prototype you built (\`proto-…\`), write \`<prototype id="proto-…"/>\` on
-a line of its own: it renders as the mock's preview, playable in place.
+a line of its own: it renders as the mock itself, live and interactive in the page.
 \`read_page\` shows it back as \`<prototype id="…" title="…"/>\`, \`title\` read-only.
 
 \`content\` is the block's CONTENTS, not the block. Write ordinary markdown
