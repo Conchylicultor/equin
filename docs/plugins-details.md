@@ -704,6 +704,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `browserBookmarks`
               - `browserBookmarksEntityRef`
           - Cross-plugin:
+            - Uses tokens:
+              - `ui/tokens/color-palette --foreground`
+              - `ui/tokens/color-palette --muted-foreground`
+              - `ui/tokens/color-palette --primary-text`
             - Imported by: `apps/browser/start-page`
             - Endpoint callers: `history`
         - **`history`** — Browser history: a headless recorder that logs every navigation to the history store, plus the browserRecents live value (read with useLive). Browser history store (browser_history table), the distinct-by-url recents live value, and the POST /api/browser/history record endpoint.
@@ -772,20 +776,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/ui-kit.ControlSizeProvider`
               - `primitives/icon-button.IconButton`
               - `primitives/overlay/popover.InlinePopover`
+              - `primitives/shortcuts.useSurfaceShortcuts`
               - `ui/icons.Icon`
             - Exports (types): `NormalizedInput`
-            - Exports (values): `normalizeInput`
+            - Exports (values):
+              - `FOCUS_ADDRESS_KEYS`
+              - `normalizeInput`
           - Cross-plugin:
             - Uses tokens:
-              - `ui/tokens/color-palette --background`
+              - `ui/tokens/color-palette --card`
               - `ui/tokens/color-palette --faint-foreground`
               - `ui/tokens/color-palette --foreground`
               - `ui/tokens/color-palette --muted`
-              - `ui/tokens/color-palette --muted-foreground`
               - `ui/tokens/color-palette --ring`
-              - `ui/tokens/density --space-2xs`
               - `ui/tokens/density --space-sm`
-              - `ui/tokens/shape --spacing`
               - `ui/tokens/type-scale --font-scale`
               - `ui/tokens/type-scale --font-size-body`
               - `ui/tokens/type-scale --font-weight-normal`
@@ -824,7 +828,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `parseBrowserProxyNavMessage`
               - `parseMetaRefresh`
               - `proxyUrl`
-        - **`shell`** — App shell for the Browser app. Registers the /browser app entry, owns the per-surface tab store (each tab an independent nav stack), defines the Browser.* slots, and exports the <Favicon> component.
+        - **`shell`** — App shell for the Browser app. Registers the /browser app entry, owns the per-surface tab store (each tab an independent nav stack), defines the Browser.* slots, exports the <Favicon> component, and contributes the app's own theme (the mockup's palette in both modes, the system font at 13px, Lucide icons, its control geometry), which the browser app selects.
           - Web:
             - Slots:
               - `Browser.TabStrip`
@@ -848,7 +852,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Browser.Viewport` ← `apps.browser.webview`
               - `Browser.StartPage` ← `apps.browser.start-page`
               - `Browser.Effects` ← `apps.browser.history`
-            - Contributes: `Apps.App` "Browser" → `BrowserLayout`
+            - Contributes:
+              - `Apps.App` "Browser" → `BrowserLayout`
+              - `ThemeEngine.Theme` "Browser"
             - Uses:
               - `apps-core.Apps`
               - `primitives/app-shell.AppShellBrand`
@@ -860,10 +866,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/rigid.rigidClass`
               - `primitives/css/spacing.Stack`
               - `primitives/css/ui-kit.cn`
+              - `primitives/css/ui-kit.ControlSizeProvider`
               - `primitives/scope/scoped-store.defineScopedStore`
               - `primitives/slot-render.defineMountSlot`
               - `primitives/slot-render.defineRenderSlot`
               - `ui/icons.Icon`
+              - `ui/theme-engine.ThemeEngine`
             - Exports (types):
               - `BrowserNavApi`
               - `BrowserProxyApi`
@@ -889,7 +897,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --background`
               - `ui/tokens/color-palette --muted-foreground`
               - `ui/tokens/density --chrome-pad-x`
-              - `ui/tokens/density --space-2xs`
+              - `ui/tokens/density --space-xs`
               - `ui/tokens/sidebar-palette --sidebar`
               - `ui/tokens/sidebar-palette --sidebar-foreground`
             - Imported by:
@@ -906,14 +914,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`start-page`** — Browser start page: the empty-state landing shown in the viewport when no URL is loaded — a centered hero (time-of-day greeting + pill search), a grid of pins (curated quick links, then the live bookmarks), and the recently visited pages.
           - Web:
             - Contributes: `Browser.StartPage` "Start page" → `StartPage`
-            - Uses: 22 symbols — full list in [`plugins/apps/plugins/browser/plugins/start-page/REFERENCE.md`](../plugins/apps/plugins/browser/plugins/start-page/REFERENCE.md)
+            - Uses: 25 symbols — full list in [`plugins/apps/plugins/browser/plugins/start-page/REFERENCE.md`](../plugins/apps/plugins/browser/plugins/start-page/REFERENCE.md)
               - `apps/browser/shell` ×3
               - `apps/browser/bookmarks` ×2
+              - `apps/browser/omnibox` ×2
               - `primitives/css/spacing` ×2
               - `primitives/css/ui-kit` ×2
               - `primitives/live-state` ×2
               - `apps/browser/history.browserRecents`
-              - `apps/browser/omnibox.normalizeInput`
               - `network/live.useLive`
               - `primitives/css/center.Center`
               - `primitives/css/fill.Fill`
@@ -921,7 +929,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/line.Line`
               - `primitives/css/row.Row`
               - `primitives/css/text.Text`
+              - `primitives/overlay/tooltip.Kbd`
               - `primitives/relative-time.RelativeTime`
+              - `primitives/shortcuts.formatShortcutLabel`
               - `ui/icons.Icon`
           - Cross-plugin:
             - Uses tokens:
@@ -932,12 +942,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --muted`
               - `ui/tokens/color-palette --muted-foreground`
               - `ui/tokens/color-palette --ring`
-              - `ui/tokens/density --space-sm`
-              - `ui/tokens/shape --spacing`
               - `ui/tokens/type-scale --font-scale`
-              - `ui/tokens/type-scale --font-size-body`
+              - `ui/tokens/type-scale --font-size-2xs`
+              - `ui/tokens/type-scale --font-size-subheading`
               - `ui/tokens/type-scale --font-weight-normal`
-              - `ui/tokens/type-scale --line-height-body`
+              - `ui/tokens/type-scale --font-weight-semibold`
+              - `ui/tokens/type-scale --line-height-subheading`
         - **`tabs`** — Browser tab strip: an in-app row of tabs, each an independent navigation stack, with a new-tab button. Renders above the chrome bar.
           - Web:
             - Contributes: `Browser.TabStrip` "Tab strip" → `TabStrip`
@@ -962,7 +972,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --foreground`
               - `ui/tokens/color-palette --muted-foreground`
               - `ui/tokens/color-palette --ring`
-              - `ui/tokens/density --space-xs`
         - **`webview`** — Browser webview: the iframe viewport with a loading bar and start-page fallback, plus an open-in-new-tab chrome action.
           - Web:
             - Contributes:
@@ -43175,10 +43184,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-size-2xs`
               - `ui/tokens/type-scale --font-weight-medium`
               - `ui/tokens/type-scale --line-height-2xs`
-            - Imported by: 21 plugins — full list in [`plugins/primitives/plugins/overlay/plugins/tooltip/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/tooltip/REFERENCE.md)
+            - Imported by: 22 plugins — full list in [`plugins/primitives/plugins/overlay/plugins/tooltip/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/tooltip/REFERENCE.md)
               - `primitives` ×8
               - `page` ×6
-              - `apps` ×4
+              - `apps` ×5
               - `tasks` ×3
     - **`pane`** — Unified pane primitive: Pane.define and chrome components.
       - Web:
@@ -44116,8 +44125,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useFocusedSurfaceId`
           - `useSurfaceShortcuts`
       - Cross-plugin:
-        - Imported by: 31 plugins — full list in [`plugins/primitives/plugins/shortcuts/REFERENCE.md`](../plugins/primitives/plugins/shortcuts/REFERENCE.md)
-          - `apps` ×13
+        - Imported by: 33 plugins — full list in [`plugins/primitives/plugins/shortcuts/REFERENCE.md`](../plugins/primitives/plugins/shortcuts/REFERENCE.md)
+          - `apps` ×15
           - `primitives` ×13
           - `apps-core` ×2
           - `hints`
@@ -50834,9 +50843,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ThemeEngine.SubTheme`
           - `ThemeEngine.FixedTheme`
           - `ThemeEngine.ThemeSource`
-        - Slot contributors: 47 contributors — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
+        - Slot contributors: 48 contributors — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
           - `ThemeEngine.TokenGroup` ×19
-          - `ThemeEngine.Theme` ×12
+          - `ThemeEngine.Theme` ×13
           - `ThemeEngine.SubTheme` ×6
           - `ThemeEngine.VariantGroup` ×6
           - `ThemeEngine.FixedTheme` ×2
@@ -50987,9 +50996,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shape` ×4
           - `ui/tokens/type-scale` ×4
           - `ui/tokens/data-view` ×2
-        - Imported by: 49 plugins — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
+        - Imported by: 50 plugins — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
           - `ui` ×29
-          - `apps` ×15
+          - `apps` ×16
           - `apps-core/chrome-theme`
           - `hints`
           - `menu-bar`
@@ -51349,8 +51358,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `colorPaletteGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Tokens used by: 521 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
-              - `apps` ×116
+            - Tokens used by: 522 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+              - `apps` ×117
               - `conversations` ×88
               - `primitives` ×77
               - `debug` ×36
@@ -51467,9 +51476,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 337 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
-              - `apps` ×71
+            - Tokens used by: 335 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
               - `primitives` ×70
+              - `apps` ×69
               - `conversations` ×48
               - `debug` ×28
               - `page` ×20
@@ -51827,9 +51836,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `shapeGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --radius-chip-compact`
-            - Tokens used by: 433 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+            - Tokens used by: 431 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
               - `conversations` ×93
-              - `apps` ×85
+              - `apps` ×83
               - `primitives` ×70
               - `page` ×35
               - `ui` ×33

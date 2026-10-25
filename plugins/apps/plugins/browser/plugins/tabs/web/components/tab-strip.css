@@ -11,7 +11,16 @@
  * tab paints its whole box (rounded top, square bottom).
  */
 .browser-tabs {
-  /* Room for the first tab's left flare, which hangs outside its box. */
+  align-items: flex-end;
+}
+/* The tabs themselves: content-sized up to the room there is, so they shrink
+   together (each to its 44px floor) as more open, and the + follows the last
+   one. The left inset is room for the first tab's flare, which hangs outside
+   its box; the clip is the strip's edge. */
+.browser-tab-list {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
   padding-left: 10px;
   align-items: flex-end;
 }
@@ -21,6 +30,7 @@
   flex: 0 1 220px;
   min-width: 44px;
   height: 34px;
+  gap: 8px;
   padding: 0 4px 0 8px;
   border: solid transparent;
   border-width: 3px 4px;
@@ -32,7 +42,7 @@
   transition: background-color 120ms, color 120ms;
 }
 .browser-tab:hover {
-  background-color: color-mix(in oklab, var(--foreground) 7%, transparent);
+  background-color: color-mix(in srgb, var(--foreground) 6%, transparent);
   color: var(--foreground);
 }
 .browser-tab:focus-visible {
@@ -93,5 +103,5 @@
 
 /* The + sits centred on the tabs' line. */
 .browser-tab-new {
-  margin: 0 0 3px 2px;
+  margin: 0 0 2px 2px;
 }

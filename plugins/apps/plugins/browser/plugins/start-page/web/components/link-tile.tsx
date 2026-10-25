@@ -30,7 +30,7 @@ export function LinkTile({ url, label, onClick }: LinkTileProps) {
   return (
     <Stack
       as="button"
-      gap="xs"
+      gap="sm"
       align="center"
       onClick={onClick}
       title={text}

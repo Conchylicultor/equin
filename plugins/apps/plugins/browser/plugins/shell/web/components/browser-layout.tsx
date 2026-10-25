@@ -8,7 +8,10 @@ import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  cn,
+  ControlSizeProvider,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Browser } from "../slots";
 import { BrowserTabsStore } from "../nav-store";
 import "./browser-layout.css";
@@ -45,21 +48,29 @@ function BrowserInner() {
           rigidClass(),
         )}
       >
-        <AppShellBrand form="icon" />
+        <span className={cn("browser-tab-launcher", rigidClass())}>
+          <ControlSizeProvider size="sm">
+            <AppShellBrand form="icon" />
+          </ControlSizeProvider>
+        </span>
         <Fill>
           <Browser.TabStrip.Render />
         </Fill>
       </Line>
       <Stack gap="none" className={cn("border-b", rigidClass())}>
-        <Bar tier="chrome" endSafeArea={false} className="border-b-0">
-          <Line className="w-full gap-2xs">
+        <Bar
+          tier="chrome"
+          endSafeArea={false}
+          className="border-b-0 px-chrome text-muted-foreground"
+        >
+          <Line className="w-full gap-xs">
             <Browser.NavControls.Render />
             <Fill>
               <Browser.Omnibox.Render />
             </Fill>
             <Stack
               direction="row"
-              gap="2xs"
+              gap="xs"
               align="center"
               justify="end"
               className={rigidClass()}

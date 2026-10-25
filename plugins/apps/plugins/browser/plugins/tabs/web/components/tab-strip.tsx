@@ -44,50 +44,52 @@ export function TabStrip() {
   return (
     <ControlSizeProvider size="sm">
       <Line className="browser-tabs w-full">
-        {tabs.map((tab) => {
-          const label = tabLabel(tab.url);
-          return (
-            <Line
-              key={tab.id}
-              as="div"
-              role="button"
-              tabIndex={0}
-              aria-pressed={tab.active}
-              title={label}
-              className={cn(
-                "browser-tab gap-xs",
-                hoverRevealGroup,
-                tab.active && "is-active",
-              )}
-              onClick={() => select(tab.id)}
-              onAuxClick={(e) => {
-                if (e.button === 1) close(tab.id);
-              }}
-              onKeyDown={(e: KeyboardEvent) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  select(tab.id);
-                }
-              }}
-            >
-              <span className={cn("browser-tab-icon", rigidClass())}>
-                {tab.loading ? (
-                  <Spinner />
-                ) : (
-                  <Favicon url={tab.url} size={16} />
+        <Line className="browser-tab-list">
+          {tabs.map((tab) => {
+            const label = tabLabel(tab.url);
+            return (
+              <Line
+                key={tab.id}
+                as="div"
+                role="button"
+                tabIndex={0}
+                aria-pressed={tab.active}
+                title={label}
+                className={cn(
+                  "browser-tab",
+                  hoverRevealGroup,
+                  tab.active && "is-active",
                 )}
-              </span>
-              <Fill>
-                <Text variant="control">{label}</Text>
-              </Fill>
-              <TabCloseButton
-                label={label}
-                active={tab.active}
-                onClose={() => close(tab.id)}
-              />
-            </Line>
-          );
-        })}
+                onClick={() => select(tab.id)}
+                onAuxClick={(e) => {
+                  if (e.button === 1) close(tab.id);
+                }}
+                onKeyDown={(e: KeyboardEvent) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    select(tab.id);
+                  }
+                }}
+              >
+                <span className={cn("browser-tab-icon", rigidClass())}>
+                  {tab.loading ? (
+                    <Spinner />
+                  ) : (
+                    <Favicon url={tab.url} size={16} />
+                  )}
+                </span>
+                <Fill>
+                  <Text variant="control">{label}</Text>
+                </Fill>
+                <TabCloseButton
+                  label={label}
+                  active={tab.active}
+                  onClose={() => close(tab.id)}
+                />
+              </Line>
+            );
+          })}
+        </Line>
         <span className={cn("browser-tab-new", rigidClass())}>
           <IconButton
             icon={addIcon}

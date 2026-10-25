@@ -3,6 +3,7 @@ import { Browser } from "@plugins/apps/plugins/browser/plugins/shell/web";
 import { Omnibox } from "./components/omnibox";
 
 export { normalizeInput, type NormalizedInput } from "./normalize";
+export { FOCUS_ADDRESS_KEYS } from "./focus-keys";
 
 export default {
   description:

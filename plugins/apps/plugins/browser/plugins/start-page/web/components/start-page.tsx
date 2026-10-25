@@ -16,8 +16,8 @@ import "./start-page.css";
  */
 export function StartPage() {
   return (
-    <Inset x="xl" className="browser-start mx-auto w-full max-w-3xl">
-      <Stack gap="2xl">
+    <Inset x="xl" className="browser-start mx-auto w-full">
+      <Stack gap="2xl" className="browser-start-stack">
         <Hero />
         <Pins />
         <RecentsSection />

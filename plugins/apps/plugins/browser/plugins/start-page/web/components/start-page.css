@@ -54,3 +54,47 @@
   border-radius: 12px;
   background: var(--muted);
 }
+
+/* The mockup's rhythm (proto-1792901196-2xyrv7): a 760px column, 36px
+   between sections, 22px between the greeting and the search. */
+.browser-start {
+  max-width: 760px;
+}
+.browser-start-stack {
+  gap: 36px;
+}
+.browser-start-hero {
+  gap: 22px;
+}
+.browser-start-search {
+  max-width: 580px;
+  gap: 12px;
+}
+.browser-start-kbd {
+  height: auto;
+  margin-left: 0;
+  padding: 1px 5px;
+  border-radius: 5px;
+  border-color: var(--border);
+  background: transparent;
+  font-family: inherit;
+  font-size: var(--font-size-2xs);
+  line-height: 1.4;
+  color: var(--faint-foreground);
+}
+/* The recent rows bleed 10px past the column so their hover fill reads as a
+   row, with the text back on the column's edge. */
+.browser-recents {
+  margin: 0 -10px;
+}
+.browser-recent {
+  min-height: 34px;
+  padding-inline: 10px;
+}
+.browser-recents-label {
+  font-weight: 550;
+}
+.browser-recent-time {
+  width: 56px;
+  text-align: right;
+}

@@ -33,7 +33,7 @@ export function Pins() {
   const quickHosts = new Set(QUICK_LINKS.map((l) => hostOf(l.url)));
 
   const grid = (bookmarks: BookmarkRow[]) => (
-    <Grid minCellWidth="5.5rem" gap="xs">
+    <Grid minCellWidth="5.5rem" gap="sm">
       {QUICK_LINKS.map((link) => (
         <LinkTile
           key={link.url}

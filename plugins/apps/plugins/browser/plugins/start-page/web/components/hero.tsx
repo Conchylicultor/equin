@@ -5,7 +5,12 @@ import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { useBrowserNav } from "@plugins/apps/plugins/browser/plugins/shell/web";
-import { normalizeInput } from "@plugins/apps/plugins/browser/plugins/omnibox/web";
+import {
+  FOCUS_ADDRESS_KEYS,
+  normalizeInput,
+} from "@plugins/apps/plugins/browser/plugins/omnibox/web";
+import { Kbd } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
+import { formatShortcutLabel } from "@plugins/primitives/plugins/shortcuts/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
@@ -40,19 +45,15 @@ export function Hero() {
   };
 
   return (
-    <Stack gap="xl" align="center">
+    <Stack gap="xl" align="center" className="browser-start-hero">
       <Text as="h1" variant="title" className="tracking-tight">
         Good {part}
         <span className="text-muted-foreground">.</span>
       </Text>
-      <Line
-        as="form"
-        onSubmit={submit}
-        className="browser-start-search w-full max-w-xl gap-sm"
-      >
+      <Line as="form" onSubmit={submit} className="browser-start-search w-full">
         <Icon
           icon={searchIcon}
-          className="size-5 text-faint-foreground"
+          className="size-[18px] text-faint-foreground"
           aria-hidden
         />
         <Fill>
@@ -65,9 +66,12 @@ export function Hero() {
             spellCheck={false}
             // The start page IS the new-tab page: typing starts at once, as in every browser.
             autoFocus
-            className="browser-start-search-input text-body w-full"
+            className="browser-start-search-input text-subheading w-full font-normal"
           />
         </Fill>
+        <Kbd className="browser-start-kbd">
+          {formatShortcutLabel(FOCUS_ADDRESS_KEYS)}
+        </Kbd>
       </Line>
     </Stack>
   );

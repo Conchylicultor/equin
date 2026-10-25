@@ -97,6 +97,10 @@ Bookmarks section reads the same collection).
     - `browserBookmarks`
     - `browserBookmarksEntityRef`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --primary-text`
   - Imported by: `apps/browser/start-page`
   - Endpoint callers: `history`
 

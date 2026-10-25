@@ -3,8 +3,8 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useBrowserNav } from "@plugins/apps/plugins/browser/plugins/shell/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
-const arrowBackIcon = symbol("arrow-back");
-const arrowForwardIcon = symbol("arrow-forward");
+const backIcon = symbol("chevron-left");
+const forwardIcon = symbol("chevron-right");
 const refreshIcon = symbol("refresh");
 
 /**
@@ -15,16 +15,16 @@ export function NavControls() {
   const { current, canGoBack, canGoForward, back, forward, reload } =
     useBrowserNav();
   return (
-    <Stack direction="row" gap="2xs" align="center">
+    <Stack direction="row" gap="xs" align="center">
       <IconButton
-        icon={arrowBackIcon}
+        icon={backIcon}
         label="Back"
         tooltip="Back"
         onClick={back}
         disabled={!canGoBack}
       />
       <IconButton
-        icon={arrowForwardIcon}
+        icon={forwardIcon}
         label="Forward"
         tooltip="Forward"
         onClick={forward}

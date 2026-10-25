@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import {
   cn,
@@ -16,7 +16,9 @@ import {
   Browser,
   useBrowserNav,
 } from "@plugins/apps/plugins/browser/plugins/shell/web";
+import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
 import { normalizeInput } from "../normalize";
+import { FOCUS_ADDRESS_KEYS } from "../focus-keys";
 import { SiteInfoButton } from "./site-info";
 import "./omnibox.css";
 
@@ -72,6 +74,19 @@ function OmniboxInput({
   const [focused, setFocused] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const shortcuts = useMemo(
+    () => [
+      {
+        id: "browser.focus-address",
+        keys: FOCUS_ADDRESS_KEYS,
+        label: "Focus the address bar",
+        handler: () => inputRef.current?.focus(),
+      },
+    ],
+    [],
+  );
+  useSurfaceShortcuts(shortcuts);
+
   const submit = (e: FormEvent) => {
     e.preventDefault();
     inputRef.current?.blur();
@@ -94,17 +109,14 @@ function OmniboxInput({
       <Line
         as="form"
         onSubmit={submit}
-        className={cn(
-          "browser-omnibox w-full gap-2xs",
-          focused && "is-focused",
-        )}
+        className={cn("browser-omnibox w-full", focused && "is-focused")}
       >
         <span className={rigidClass()}>
           {current ? (
             <SiteInfoButton url={current} />
           ) : (
             <Center className="browser-omnibox-glyph">
-              <Icon icon={searchIcon} className="size-4" aria-hidden />
+              <Icon icon={searchIcon} className="size-[15px]" aria-hidden />
             </Center>
           )}
         </span>

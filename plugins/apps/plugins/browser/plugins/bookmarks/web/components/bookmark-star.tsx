@@ -48,6 +48,7 @@ function UrlBookmarkStar({ url }: { url: string }) {
       label={bookmarked ? "Remove bookmark" : "Add bookmark"}
       tooltip={bookmarked ? "Remove bookmark" : "Add bookmark"}
       aria-pressed={bookmarked}
+      className={bookmarked ? "text-primary-text" : undefined}
       onClick={() => toggle(hostOf(url))}
     />
   );

@@ -1,0 +1,14 @@
+// @hash 81ba03048557
+{
+  // The Browser paints its own designed theme, `browser` (the mockup's
+  // palette, system font, Lucide icons and control geometry —
+  // proto-1792901196-2xyrv7), contributed by the browser shell
+  // (`plugins/apps/plugins/browser/plugins/shell/web/internal/theme.ts`) —
+  // never the desktop's runtime choice. A group `browser` does not mention
+  // paints its schema defaults.
+  //
+  // `colorMode` is deliberately absent: light/dark is a single global setting
+  // today (`COLOR_MODE_SCOPE_ID` in `theme-engine/web/use-color-mode.ts`); the
+  // theme writes the mockup's light and dark values for the two modes.
+  "theme": "browser"
+}

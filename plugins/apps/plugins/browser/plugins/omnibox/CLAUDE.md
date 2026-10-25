@@ -23,20 +23,20 @@
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/icon-button.IconButton`
     - `primitives/overlay/popover.InlinePopover`
+    - `primitives/shortcuts.useSurfaceShortcuts`
     - `ui/icons.Icon`
   - Exports (types): `NormalizedInput`
-  - Exports (values): `normalizeInput`
+  - Exports (values):
+    - `FOCUS_ADDRESS_KEYS`
+    - `normalizeInput`
 - Cross-plugin:
   - Uses tokens:
-    - `ui/tokens/color-palette --background`
+    - `ui/tokens/color-palette --card`
     - `ui/tokens/color-palette --faint-foreground`
     - `ui/tokens/color-palette --foreground`
     - `ui/tokens/color-palette --muted`
-    - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/color-palette --ring`
-    - `ui/tokens/density --space-2xs`
     - `ui/tokens/density --space-sm`
-    - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-scale`
     - `ui/tokens/type-scale --font-size-body`
     - `ui/tokens/type-scale --font-weight-normal`

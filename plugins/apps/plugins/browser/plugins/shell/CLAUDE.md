@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: App shell for the Browser app. Registers the /browser app entry, owns the per-surface tab store (each tab an independent nav stack), defines the Browser.* slots, and exports the <Favicon> component.
+- Description: App shell for the Browser app. Registers the /browser app entry, owns the per-surface tab store (each tab an independent nav stack), defines the Browser.* slots, exports the <Favicon> component, and contributes the app's own theme (the mockup's palette in both modes, the system font at 13px, Lucide icons, its control geometry), which the browser app selects.
 - Web:
   - Slots:
     - `Browser.TabStrip`
@@ -28,7 +28,9 @@
     - `Browser.Viewport` ← `apps.browser.webview`
     - `Browser.StartPage` ← `apps.browser.start-page`
     - `Browser.Effects` ← `apps.browser.history`
-  - Contributes: `Apps.App` "Browser" → `BrowserLayout`
+  - Contributes:
+    - `Apps.App` "Browser" → `BrowserLayout`
+    - `ThemeEngine.Theme` "Browser"
   - Uses:
     - `apps-core.Apps`
     - `primitives/app-shell.AppShellBrand`
@@ -40,10 +42,12 @@
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/ui-kit.cn`
+    - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/scope/scoped-store.defineScopedStore`
     - `primitives/slot-render.defineMountSlot`
     - `primitives/slot-render.defineRenderSlot`
     - `ui/icons.Icon`
+    - `ui/theme-engine.ThemeEngine`
   - Exports (types):
     - `BrowserNavApi`
     - `BrowserProxyApi`
@@ -69,7 +73,7 @@
     - `ui/tokens/color-palette --background`
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/density --chrome-pad-x`
-    - `ui/tokens/density --space-2xs`
+    - `ui/tokens/density --space-xs`
     - `ui/tokens/sidebar-palette --sidebar`
     - `ui/tokens/sidebar-palette --sidebar-foreground`
   - Imported by:

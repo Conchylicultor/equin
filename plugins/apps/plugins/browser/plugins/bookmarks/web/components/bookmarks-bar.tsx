@@ -15,6 +15,7 @@ import {
 import { useBookmarks } from "../internal/use-bookmarks";
 import { hostOf } from "../internal/host-of";
 import { symbol } from "@plugins/ui/plugins/icons/core";
+import "./bookmarks-bar.css";
 
 const closeIcon = symbol("close");
 
@@ -71,7 +72,7 @@ export function BookmarksBar() {
           <Row
             key={b.id}
             size="sm"
-            className="w-auto"
+            className="browser-bookmark w-auto"
             title={b.title}
             icon={<Favicon url={b.url} size={14} />}
             onClick={() => navigate(b.url)}
@@ -86,7 +87,7 @@ export function BookmarksBar() {
               </ControlSizeProvider>
             }
           >
-            <Text>{hostOf(b.url)}</Text>
+            <Text variant="body">{hostOf(b.url)}</Text>
           </Row>
         ))}
         {more}

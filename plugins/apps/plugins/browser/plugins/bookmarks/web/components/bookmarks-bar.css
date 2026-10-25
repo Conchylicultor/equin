@@ -1,0 +1,18 @@
+/*
+ * The bookmarks bar's chips at the mockup's size (proto-1792901196-2xyrv7):
+ * 26px, the label muted until hovered. Plugin-local CSS because the chip is a
+ * `Row` whose height is its size's, and the bar wants a chip smaller than any
+ * row size.
+ */
+.browser-bookmark {
+  min-height: 26px;
+  height: 26px;
+  border-radius: 7px;
+  color: var(--muted-foreground);
+  /* The mockup's bar sits its chips flush at the top with 6px below them; the
+     bar centres its row, so the margin moves the chip up into that place. */
+  margin-bottom: 6px;
+}
+.browser-bookmark:hover {
+  color: var(--foreground);
+}

@@ -27,27 +27,28 @@ export function RecentsSection() {
     ready: (recents) => {
       if (recents.length === 0) return null;
       return (
-        <Stack gap="xs">
-          <Text variant="label" tone="muted">
+        <Stack gap="sm">
+          <Text variant="label" tone="muted" className="browser-recents-label">
             Recently visited
           </Text>
-          <Stack gap="none" className="rail-bleed">
+          <Stack gap="none" className="browser-recents">
             {/* eslint-disable-next-line data-view/no-adhoc-row-list -- start-page quick-access widget (bounded recent window) */}
             {recents.map((r) => (
               <Row
                 key={r.url}
                 title={r.url}
+                className="browser-recent"
                 icon={<Favicon url={r.url} size={16} />}
                 onClick={() => navigate(r.url)}
                 actions={
                   <Stack direction="row" gap="md" align="center">
-                    <Text variant="caption" tone="faint">
+                    <Text variant="body" tone="faint">
                       {hostOf(r.url)}
                     </Text>
                     <Text
-                      variant="caption"
+                      variant="body"
                       tone="faint"
-                      className="tabular-nums"
+                      className="browser-recent-time tabular-nums"
                     >
                       <RelativeTime date={r.visitedAt} format="short" />
                     </Text>
