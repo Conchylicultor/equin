@@ -30,6 +30,7 @@ export function IconCell({
   source,
   labelOf,
   size,
+  active,
 }: {
   icon: IconRef;
   family: IconFamilyId;
@@ -38,6 +39,8 @@ export function IconCell({
   /** A family id → its label. */
   labelOf: (id: IconFamilyId) => string;
   size: IconSize;
+  /** Draw it active: the family's active form. */
+  active: boolean;
 }): ReactElement {
   const badge = fallbackBadge(source, labelOf);
   const label = labelOf(family);
@@ -54,6 +57,7 @@ export function IconCell({
       <Stack direction="row" gap="2xs" align="center" justify="center">
         <Icon
           icon={icon}
+          active={active}
           title={title}
           className={cn(
             SIZE_CLASS[size],

@@ -50112,6 +50112,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SymbolName`
           - `SymbolRef`
         - Exports (values):
+          - `ACTIVE_FORM_VERSION`
+          - `ACTIVE_ID_TOKEN`
           - `ALL_STYLE_KEYS`
           - `brand`
           - `brandId`
@@ -50120,6 +50122,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DEFAULT_ICON_STYLE`
           - `DEFAULT_STYLE_KEYS`
           - `defineIconFamily`
+          - `deriveActiveForm`
           - `familyGapId`
           - `familyGlyphBody`
           - `familyGlyphId`
@@ -50135,14 +50138,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `isIconRefModule`
           - `isSpriteKey`
           - `isStyleKey`
+          - `LUCIDE_ACTIVE_SPRITE`
           - `LUCIDE_FAMILY`
           - `LUCIDE_MAP`
           - `LUCIDE_SPRITE`
+          - `lucideActiveId`
           - `lucideId`
           - `lucideNameOf`
           - `MATERIAL_FAMILY`
           - `navIcons`
+          - `paintedBox`
           - `parseStyleKey`
+          - `placeActiveIds`
           - `resolveSymbolStyle`
           - `runtimeSymbol`
           - `runtimeSymbolId`

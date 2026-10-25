@@ -35,6 +35,8 @@ export interface IconsHostProps {
   labelOf: (id: IconFamilyId) => string;
   resolve: ResolveSource;
   size: IconSize;
+  /** Draw every cell active — each family's active form, for reviewing them. */
+  active: boolean;
   fallbacksOnly: boolean;
   selected: string | undefined;
   onSelect: (key: string) => void;
@@ -72,6 +74,7 @@ export function MatrixSource({
     labelOf,
     resolve,
     size,
+    active,
     fallbacksOnly,
     selected,
     onSelect,
@@ -123,12 +126,13 @@ export function MatrixSource({
               source={source}
               labelOf={labelOf}
               size={size}
+              active={active}
             />
           );
         },
       })),
     ],
-    [columns, labelOf, size],
+    [columns, labelOf, size, active],
   );
   return (
     <>
@@ -158,6 +162,7 @@ export function BySetSource({
     labelOf,
     resolve,
     size,
+    active,
     fallbacksOnly,
     selected,
     onSelect,
@@ -181,6 +186,7 @@ export function BySetSource({
             }
             labelOf={labelOf}
             size={size}
+            active={active}
           />
         ),
       },
@@ -213,7 +219,7 @@ export function BySetSource({
         visible: false,
       },
     ],
-    [columns, labelOf, size],
+    [columns, labelOf, size, active],
   );
   return (
     <>

@@ -21,6 +21,7 @@ export { LUCIDE_FAMILY, LUCIDE_MAP, lucideNameOf } from "./lucide-map";
 export {
   ALL_STYLE_KEYS,
   BRANDS_SPRITE,
+  LUCIDE_ACTIVE_SPRITE,
   LUCIDE_SPRITE,
   SETI_SPRITE,
   DEFAULT_ICON_STYLE,
@@ -32,6 +33,7 @@ export {
   iconifyName,
   isSpriteKey,
   isStyleKey,
+  lucideActiveId,
   lucideId,
   parseStyleKey,
   runtimeSymbolId,
@@ -67,4 +69,11 @@ export type {
   InlineIconFamily,
 } from "./icon-family";
 export { ICON_MOTIONS, isIconMotion } from "./icon-motion";
+export { paintedBox } from "./glyph-geometry";
+export {
+  ACTIVE_FORM_VERSION,
+  ACTIVE_ID_TOKEN,
+  deriveActiveForm,
+  placeActiveIds,
+} from "./active-form";
 export type { IconMotion } from "./icon-motion";

@@ -146,11 +146,11 @@ hidden in the page as `<symbol id="fam-<family>-<glyph>">`.
   scope's Material style. A family not (yet) contributed ends the chain early —
   its plugin may load in a later tier, so its scopes draw Material meanwhile. A
   fallback loop throws.
-- **Active forms**: a family has no fill axis, so an inline glyph declares
-  what `<Icon active>` draws as its own `active` body (sheet id
-  `famact-<family>-<glyph>`, beside `fam-…`). A glyph without one draws the
-  same at rest and active — give one to every glyph a toggle shows. A sprite
-  family (Lucide) has none: its icons draw the same either way.
+- **Active forms**: a family has no fill axis, so `<Icon active>` in a scope
+  whose `iconActiveFill` is `filled` draws the glyph's ACTIVE FORM — see
+  "Active forms (line families)" below. An inline glyph's is in the sheet
+  as `famact-<family>-<glyph>`, beside `fam-…`; a sprite family's comes from
+  its `activeSprite` (`idOf(name, active)`).
 - **Coverage is required** (`IconFamilyCoverage`, a discriminated union, so tsc
   makes every family state it): `coverage: "fallback"` (with an optional
   `fallback` family — the chain above) or `coverage: "strict"` (no `fallback`
@@ -226,6 +226,41 @@ otherwise the part's own box centre).
   in a region, so the same glyphs stay still there. A `type` part is invisible
   at rest, in or out of a region.
 
+## Active forms (line families)
+
+Material's `active` is a fill axis (`iconActiveFill`); a line family has none,
+so its active drawing is DERIVED from the line drawing —
+`deriveActiveForm(body)` (`core/active-form.ts`, pure TS, every runtime):
+
+- every **outer closed shape** is filled (a circle, rect, polygon, ellipse, or
+  a path whose subpaths are closed — an open straight stroke beside them, like
+  a pin's needle, is allowed: filling it adds nothing);
+- what lies **inside** a filled shape — an open stroke (a check, text lines, a
+  clock's hands), a closed shape nested in it (an eye's pupil, a gear's hub),
+  a filled dot (a bot's eyes) — is **cut out** of the fill at its own stroke;
+  outside every fill it still draws as a line.
+
+Two `<mask>`s do the cut (SVG has no boolean geometry), so a form carries mask
+ids: written with `ACTIVE_ID_TOKEN` and placed (`placeActiveIds`) by whoever
+puts it in the page — the sheet under the symbol id, an inline (animated)
+`<Icon>` under its own `useId`, so no two copies share an id. A mask under
+`display: none` is not rendered: the sheets are **zero-size, never `hidden`**
+(`web/internal/sheet-style.ts`). Each part keeps its ancestors (`<g>` with a
+transform, a paint, a motion) copied around it, so a moving part's fill and
+its cut-out move together. A glyph with no outer closed shape (a chevron, a
+list) has no active form and draws the same; so does a `paint: "fill"` glyph.
+
+- **Inline families** derive it in `defineIconFamily`; a glyph's own `active`
+  body wins — write one only where the derivation misses (a shape left open).
+- **Lucide** derives it at sprite build into its own sprite, `lucide-active`
+  (`LUCIDE_ACTIVE_SPRITE`, `lucide-active-<material name>`; the drawing at
+  rest where nothing fills), fetched the first time an active Lucide icon
+  mounts — the rest drawing stands in until then.
+- `ACTIVE_FORM_VERSION` is folded into the sprite hash: bump it with any
+  change to the derivation's output.
+- A scope whose `iconActiveFill` is `outline` draws every family's active
+  icons as at rest, as it does Material's.
+
 ## Lucide family
 
 A theme scope whose `iconFamily` is `lucide` (`IconStyle.family`) draws every
@@ -241,7 +276,8 @@ the path bar, a search field) follows the scope it is drawn in.
   repo has no entry, so adding a symbol means deciding what it is in Lucide.
   `lucideNameOf(name)` is the one reader.
 - **The sprite** — one sprite key, `lucide` (`LUCIDE_SPRITE`; Lucide has no
-  shape, fill or weight, and `active` draws the same), holding
+  shape, fill or weight; its active drawings are the `lucide-active` sprite,
+  see "Active forms"), holding
   `<symbol id="lucide-<material name>">` for every mapped manifest symbol.
   Built from `@iconify-json/lucide` (embedded like the Material sets) and
   **tuned at build** (`plugins/sprites/machine/internal/lucide.ts`): the glyph is
@@ -269,7 +305,7 @@ glyph a file gets and its colour; a direct `seti()` elsewhere is rare.
   reduces every `icons/*.svg` to ONE colour (`normalizeSetiSvg`: every paint
   `currentColor`, gradients and `<style>` dropped, ids namespaced; an unknown
   element or attribute throws), **crops it to what it paints** — the smallest
-  square around the painted bounding box (`shared/seti-bbox.ts`: geometry
+  square around the painted bounding box (`core/glyph-geometry.ts`: geometry
   flattened through every transform, curves and arcs sampled, strokes grown by
   half their width, unpainted shapes ignored), centred, with a 1/12 margin a
   side (`SETI_CROP_MARGIN`, the 2-in-24 keyline Material and Lucide draw
@@ -482,6 +518,8 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `SymbolName`
     - `SymbolRef`
   - Exports (values):
+    - `ACTIVE_FORM_VERSION`
+    - `ACTIVE_ID_TOKEN`
     - `ALL_STYLE_KEYS`
     - `brand`
     - `brandId`
@@ -490,6 +528,7 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `DEFAULT_ICON_STYLE`
     - `DEFAULT_STYLE_KEYS`
     - `defineIconFamily`
+    - `deriveActiveForm`
     - `familyGapId`
     - `familyGlyphBody`
     - `familyGlyphId`
@@ -505,14 +544,18 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `isIconRefModule`
     - `isSpriteKey`
     - `isStyleKey`
+    - `LUCIDE_ACTIVE_SPRITE`
     - `LUCIDE_FAMILY`
     - `LUCIDE_MAP`
     - `LUCIDE_SPRITE`
+    - `lucideActiveId`
     - `lucideId`
     - `lucideNameOf`
     - `MATERIAL_FAMILY`
     - `navIcons`
+    - `paintedBox`
     - `parseStyleKey`
+    - `placeActiveIds`
     - `resolveSymbolStyle`
     - `runtimeSymbol`
     - `runtimeSymbolId`

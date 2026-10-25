@@ -1,6 +1,9 @@
 /**
- * The bounding box of what an SVG glyph actually paints, from its geometry —
- * so the vendored Seti glyphs can be cropped to it (`normalizeSetiSvg`).
+ * SVG glyph geometry, from the markup alone (no DOM, so every runtime can run
+ * it): the outlines a shape traces (`pathSubpaths`, `shapeRings`) — what a
+ * derived active form tests containment with (`active-form.ts`) — and the
+ * bounding box of what a glyph actually paints (`paintedBox`), so the vendored
+ * Seti glyphs can be cropped to it (`normalizeSetiSvg`).
  *
  * Every shape is flattened to points (curves and arcs sampled finely, which is
  * exact to well under a unit at Seti's 32-unit scale), each point taken through
@@ -24,11 +27,11 @@ export interface Box {
 }
 
 /** An affine transform `[a b c d e f]`: x' = a·x + c·y + e, y' = b·x + d·y + f. */
-type Matrix = readonly [number, number, number, number, number, number];
+export type Matrix = readonly [number, number, number, number, number, number];
 
-const IDENTITY: Matrix = [1, 0, 0, 1, 0, 0];
+export const IDENTITY: Matrix = [1, 0, 0, 1, 0, 0];
 
-function multiply(m: Matrix, n: Matrix): Matrix {
+export function multiply(m: Matrix, n: Matrix): Matrix {
   return [
     m[0] * n[0] + m[2] * n[1],
     m[1] * n[0] + m[3] * n[1],
@@ -39,7 +42,7 @@ function multiply(m: Matrix, n: Matrix): Matrix {
   ];
 }
 
-function apply(m: Matrix, x: number, y: number): [number, number] {
+export function apply(m: Matrix, x: number, y: number): [number, number] {
   return [m[0] * x + m[2] * y + m[4], m[1] * x + m[3] * y + m[5]];
 }
 
@@ -59,7 +62,7 @@ export function parseTransform(src: string): Matrix {
       let t: Matrix;
       switch (fn) {
         case "matrix":
-          if (n.length !== 6) throw new Error(`[seti] bad matrix(${args})`);
+          if (n.length !== 6) throw new Error(`[icons] bad matrix(${args})`);
           t = n as unknown as Matrix;
           break;
         case "translate":
@@ -100,7 +103,7 @@ export function parseTransform(src: string): Matrix {
     },
   );
   if (consumed.replace(/[\s,]/g, "") !== "") {
-    throw new Error(`[seti] unsupported transform "${src}"`);
+    throw new Error(`[icons] unsupported transform "${src}"`);
   }
   return out;
 }
@@ -141,7 +144,7 @@ class PathReader {
     const hit = STICKY_NUMBER_RE.exec(this.d);
     if (!hit)
       throw new Error(
-        `[seti] bad path data at "${this.d.slice(this.i, this.i + 12)}"`,
+        `[icons] bad path data at "${this.d.slice(this.i, this.i + 12)}"`,
       );
     this.i += hit[0].length;
     return Number(hit[0]);
@@ -151,7 +154,7 @@ class PathReader {
     this.skip();
     const c = this.d[this.i];
     if (c !== "0" && c !== "1")
-      throw new Error(`[seti] bad arc flag in path data`);
+      throw new Error(`[icons] bad arc flag in path data`);
     this.i++;
     return Number(c);
   }
@@ -215,8 +218,20 @@ function arcPoints(
 
 /** Every point a path's outline passes through (curves and arcs sampled). */
 export function pathPoints(d: string): [number, number][] {
+  return pathSubpaths(d).flatMap((sub) => sub.points);
+}
+
+/** One subpath of a path: the points it passes through, and whether a `Z` closed it. */
+export interface Subpath {
+  points: [number, number][];
+  closed: boolean;
+}
+
+/** A path's subpaths, in order (curves and arcs sampled), each from its moveto. */
+export function pathSubpaths(d: string): Subpath[] {
   const r = new PathReader(d);
-  const pts: [number, number][] = [];
+  const subs: Subpath[] = [];
+  let pts: [number, number][] = [];
   let [x, y] = [0, 0];
   let [sx, sy] = [0, 0];
   // The last control point, for S / T reflection.
@@ -227,7 +242,7 @@ export function pathPoints(d: string): [number, number][] {
     const next = r.command();
     if (next !== undefined) cmd = next;
     else if (cmd === undefined)
-      throw new Error("[seti] path data must start with a command");
+      throw new Error("[icons] path data must start with a command");
     else if (cmd === "M") cmd = "L";
     else if (cmd === "m") cmd = "l";
     const c = cmd!;
@@ -241,7 +256,8 @@ export function pathPoints(d: string): [number, number][] {
         x = r.number() + ox;
         y = r.number() + oy;
         [sx, sy] = [x, y];
-        pts.push([x, y]);
+        pts = [[x, y]];
+        subs.push({ points: pts, closed: false });
         break;
       case "L":
         x = r.number() + ox;
@@ -258,6 +274,10 @@ export function pathPoints(d: string): [number, number][] {
         break;
       case "Z":
         [x, y] = [sx, sy];
+        subs[subs.length - 1]!.closed = true;
+        // A drawing command after Z starts a new subpath at the same point.
+        pts = [[x, y]];
+        subs.push({ points: pts, closed: false });
         break;
       case "C":
       case "S": {
@@ -324,7 +344,10 @@ export function pathPoints(d: string): [number, number][] {
     ctrl = nextCtrl;
     prev = c;
   }
-  return pts;
+  // Drop the empty subpath a trailing Z (or a bare moveto) opened.
+  return subs.filter(
+    (sub, i) => sub.closed || sub.points.length > 1 || i === 0,
+  );
 }
 
 // ── Shapes ──────────────────────────────────────────────────────────────────
@@ -337,7 +360,7 @@ function num(
   const v = attrs.get(key);
   const n = v === undefined ? 0 : Number(v.replace(/px$/, ""));
   if (!Number.isFinite(n))
-    throw new Error(`[seti] <${el.tag}> has ${key}="${v}"`);
+    throw new Error(`[icons] <${el.tag}> has ${key}="${v}"`);
   return n;
 }
 
@@ -353,6 +376,47 @@ function ellipsePoints(
     out.push([cx + rx * Math.cos(t), cy + ry * Math.sin(t)]);
   }
   return out;
+}
+
+/**
+ * The outlines `el` traces, each as a ring of points, and whether it is closed:
+ * a circle, ellipse, rect or polygon is one closed ring; a path is one ring per
+ * subpath; a line or polyline is one open ring.
+ */
+export function shapeRings(
+  el: BBoxElement,
+  a: ReadonlyMap<string, string> = el.attrs,
+): Subpath[] {
+  switch (el.tag) {
+    case "path":
+      return pathSubpaths(a.get("d") ?? "");
+    case "rect": {
+      const [x, y, w, h] = [
+        num(el, a, "x"),
+        num(el, a, "y"),
+        num(el, a, "width"),
+        num(el, a, "height"),
+      ];
+      return [
+        {
+          points: [
+            [x, y],
+            [x + w, y],
+            [x + w, y + h],
+            [x, y + h],
+          ],
+          closed: true,
+        },
+      ];
+    }
+    case "polygon":
+      return [{ points: shapePoints(el, a), closed: true }];
+    case "line":
+    case "polyline":
+      return [{ points: shapePoints(el, a), closed: false }];
+    default:
+      return [{ points: shapePoints(el, a), closed: true }];
+  }
 }
 
 function shapePoints(
@@ -400,7 +464,7 @@ function shapePoints(
       return out;
     }
     default:
-      throw new Error(`[seti] cannot measure <${el.tag}>`);
+      throw new Error(`[icons] cannot measure <${el.tag}>`);
   }
 }
 
@@ -465,7 +529,7 @@ export function paintedBox(
   };
 
   const visit = (el: BBoxElement, m: Matrix, paint: Paint, depth: number) => {
-    if (depth > 32) throw new Error("[seti] <use> nesting too deep");
+    if (depth > 32) throw new Error("[icons] <use> nesting too deep");
     // Only what is rendered: a <defs> child is drawn through a <use>.
     if (NOT_RENDERED.has(el.tag)) return;
     const a = attrsOf(el);
@@ -481,7 +545,7 @@ export function paintedBox(
       const href = a.get("href") ?? a.get("xlink:href") ?? "";
       const target = byId.get(href.slice(1));
       if (!href.startsWith("#") || target === undefined) {
-        throw new Error(`[seti] <use> of unknown "${href}"`);
+        throw new Error(`[icons] <use> of unknown "${href}"`);
       }
       mm = multiply(mm, [1, 0, 0, 1, num(el, a, "x"), num(el, a, "y")]);
       visit(target, mm, p, depth + 1);

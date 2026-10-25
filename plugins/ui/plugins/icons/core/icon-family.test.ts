@@ -143,3 +143,29 @@ describe("defineIconFamily — active form", () => {
     expect(g.glyphs.x.animated).toBe(true);
   });
 });
+
+describe("defineIconFamily — derived active form", () => {
+  const f = defineIconFamily({
+    id: "derived-test",
+    label: "Derived test",
+    coverage: "fallback",
+    stroke: 1.6,
+    glyphs: {
+      ring: { body: '<circle cx="12" cy="12" r="8"/><path d="M9 12h6"/>' },
+      solid: { body: '<circle cx="12" cy="12" r="8"/>', paint: "fill" },
+    },
+    symbols: { info: "ring", circle: "solid" },
+  });
+
+  test("a closed outline gets a derived form, its masks placed under its sheet id", () => {
+    expect(f.glyphs.ring.active).toContain('fill="currentColor"');
+    const markup = familyGlyphMarkup(f);
+    const id = familyGlyphId("derived-test", "ring", true);
+    expect(markup).toContain(`<mask id="${id}-k"`);
+    expect(markup).not.toContain("%active-id%");
+  });
+
+  test("a fill glyph has none", () => {
+    expect(f.glyphs.solid.active).toBeUndefined();
+  });
+});

@@ -32,8 +32,9 @@ family draws it. Plan: `research/2026-10-23-global-agent-icon-family.md` §4.
 - **Body** — one `DataViewSwitcher` surface (`debug.icons`) with two contributed
   sources: Matrix (table, grouped by the worst cell, app-only glyphs last) and
   By set (icons view, grouped by family, each family's app-only glyphs in a
-  "<Family> · own glyphs" group right after it). Search, size (16/20/24/40) and Fallbacks only apply to
-  both. The page is an `IconMotionRegion`: hovering a row plays its animated
+  "<Family> · own glyphs" group right after it). Search, size (16/20/24/40), Active (every cell drawn
+  `active` — each family's active form, derived or its own) and Fallbacks
+  only apply to both. The page is an `IconMotionRegion`: hovering a row plays its animated
   glyphs.
 - The model (`web/internal/model.ts`) is pure, tested with fake families.
 

@@ -1,11 +1,14 @@
 import {
   useEffect,
+  useId,
   useMemo,
   useSyncExternalStore,
   type ComponentPropsWithRef,
 } from "react";
 import {
+  ACTIVE_ID_TOKEN,
   familyGlyphBody,
+  placeActiveIds,
   type IconRef,
   type IconStyle,
   type InlineIconFamily,
@@ -88,7 +91,9 @@ const inlineMarkup = new WeakMap<InlineIconFamily, Map<string, string>>();
  * animated family glyph (one with moving parts) must sit in the page's DOM for
  * the motion CSS to reach its parts — a `<use>` shadow tree is out of reach.
  * The same `familyGlyphBody` the sheet's `<symbol>` holds, so the two draw
- * alike.
+ * alike — an active form's mask ids left as `ACTIVE_ID_TOKEN`, for each icon
+ * to place under an id of its own (a copy under `display: none` holding the
+ * page's first mask of an id would blank every other).
  */
 function inlineGlyphMarkup(source: DrawingSource | undefined): string | null {
   if (source?.kind !== "family") return null;
@@ -104,7 +109,11 @@ function inlineGlyphMarkup(source: DrawingSource | undefined): string | null {
   const key = source.active ? `${source.glyph}:active` : source.glyph;
   let markup = byGlyph.get(key);
   if (markup === undefined) {
-    markup = familyGlyphBody(family, glyph, source.active);
+    markup = familyGlyphBody(
+      family,
+      glyph,
+      source.active ? { ids: ACTIVE_ID_TOKEN } : undefined,
+    );
     byGlyph.set(key, markup);
   }
   return markup;
@@ -160,6 +169,8 @@ export function Icon({ icon, active = false, title, ...rest }: IconProps) {
   const inline = useSyncExternalStore(subscribeIconStores, () =>
     inlineGlyphMarkup(resolveIconDrawing(icon, style, active).drawing?.source),
   );
+  // An id no other icon has, for an inline active form's masks.
+  const maskIds = `icon-${useId().replace(/[^\w-]/g, "")}`;
   const gapFamily = useSyncExternalStore(subscribeIconStores, () => {
     const source = resolveIconDrawing(icon, style, active).drawing?.source;
     return source?.kind === "gap" ? source.family : null;
@@ -193,7 +204,7 @@ export function Icon({ icon, active = false, title, ...rest }: IconProps) {
         <g
           // A family glyph body: source-code data, checked at definition to
           // hold shape elements and valid motion attributes only.
-          dangerouslySetInnerHTML={{ __html: inline }}
+          dangerouslySetInnerHTML={{ __html: placeActiveIds(inline, maskIds) }}
         />
       ) : id !== null ? (
         <use href={`#${id}`} />

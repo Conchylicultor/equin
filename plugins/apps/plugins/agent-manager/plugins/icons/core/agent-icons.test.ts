@@ -61,8 +61,13 @@ describe("agentIcons", () => {
   });
 
   test("the toggle glyphs draw a filled active form", () => {
+    // pin: its own (an open head); star: derived.
     expect(agentIcons.glyphs.pin.active).toContain('fill="currentColor"');
     expect(agentIcons.glyphs.star.active).toContain('fill="currentColor"');
+  });
+
+  test("a glyph of open strokes only has no active form", () => {
+    expect(agentIcons.glyphs["chevron-down"].active).toBeUndefined();
   });
 
   test("every glyph moves, and a draw part carries pathLength", () => {

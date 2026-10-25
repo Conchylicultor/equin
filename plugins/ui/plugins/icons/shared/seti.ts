@@ -1,5 +1,5 @@
 import type { IconifyJSON } from "@iconify/types";
-import { paintedBox } from "./seti-bbox";
+import { paintedBox } from "../core";
 
 /**
  * The Seti file-type glyphs, vendored as an Iconify set.

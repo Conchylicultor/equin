@@ -67,6 +67,7 @@ export function IconsPage(): ReactElement {
   const [hidden, setHidden] = useState<ReadonlySet<IconFamilyId>>(new Set());
   const [size, setSize] = useState<IconSize>("20");
   const [fallbacksOnly, setFallbacksOnly] = useState(false);
+  const [active, setActive] = useState(false);
   const [selected, setSelected] = useState<string>();
 
   const sets = useMemo(
@@ -91,6 +92,7 @@ export function IconsPage(): ReactElement {
     labelOf,
     resolve,
     size,
+    active,
     fallbacksOnly,
     selected,
     onSelect: setSelected,
@@ -127,6 +129,12 @@ export function IconsPage(): ReactElement {
                   onChange={setSize}
                   label="Icon size"
                 />
+                <ToggleChip
+                  active={active}
+                  onClick={() => setActive((on) => !on)}
+                >
+                  Active
+                </ToggleChip>
                 <ToggleChip
                   active={fallbacksOnly}
                   onClick={() => setFallbacksOnly((on) => !on)}

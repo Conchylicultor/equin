@@ -123,6 +123,15 @@ export function lucideId(name: string): string {
   return `lucide-${name}`;
 }
 
+/**
+ * The sprite `<symbol>` id of a symbol's ACTIVE Lucide drawing — the derived
+ * filled form (`deriveActiveForm`), or the drawing at rest when it has nothing
+ * to fill. In {@link LUCIDE_ACTIVE_SPRITE}.
+ */
+export function lucideActiveId(name: string): string {
+  return `lucide-active-${name}`;
+}
+
 /** The sprite `<symbol>` id of a brand mark. */
 export function brandId(name: string): string {
   return `si-${name}`;
@@ -144,20 +153,33 @@ export const SETI_SPRITE = "seti";
 
 /**
  * The sprite that holds the Lucide drawing of every manifest symbol that has
- * one (one style: Lucide has no shape, fill or weight, and `active` draws the
- * same). Never resident: fetched the first time an icon in a Lucide scope
- * mounts.
+ * one (one style: Lucide has no shape, fill or weight; its active drawings
+ * are {@link LUCIDE_ACTIVE_SPRITE}). Never resident: fetched the first time an
+ * icon in a Lucide scope mounts.
  */
 export const LUCIDE_SPRITE = "lucide";
 
+/**
+ * The sprite holding the ACTIVE drawing of every symbol the Lucide sprite
+ * holds (`lucide-active-<material name>`), built with it. Its own sprite, never
+ * resident: fetched the first time an active icon in a Lucide scope mounts, so
+ * a page drawing none pays nothing.
+ */
+export const LUCIDE_ACTIVE_SPRITE = "lucide-active";
+
 export type SpriteKey =
-  StyleKey | typeof BRANDS_SPRITE | typeof SETI_SPRITE | typeof LUCIDE_SPRITE;
+  | StyleKey
+  | typeof BRANDS_SPRITE
+  | typeof SETI_SPRITE
+  | typeof LUCIDE_SPRITE
+  | typeof LUCIDE_ACTIVE_SPRITE;
 
 export function isSpriteKey(key: string): key is SpriteKey {
   return (
     key === BRANDS_SPRITE ||
     key === SETI_SPRITE ||
     key === LUCIDE_SPRITE ||
+    key === LUCIDE_ACTIVE_SPRITE ||
     isStyleKey(key)
   );
 }

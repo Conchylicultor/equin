@@ -1,5 +1,6 @@
 import { useSprites } from "./sprite-store";
 import { useRuntimeSymbolChunks } from "./runtime-symbol-store";
+import { SHEET_STYLE } from "./sheet-style";
 
 /**
  * The page's sprites, inline: a hidden container holding one `<svg>` per
@@ -7,9 +8,9 @@ import { useRuntimeSymbolChunks } from "./runtime-symbol-store";
  * portals and Fullscreen API subtrees too, which an external `file.svg#id`
  * reference would not reach without a second fetch per document.
  *
- * `hidden` (display: none) is safe here: a `<use>` of a `<symbol>` under a
- * display-none ancestor still renders, and our symbols hold plain paths — no
- * gradient, mask or filter, the references that do break there.
+ * Zero-size, not `hidden`: a derived active form (the Lucide active sprite's)
+ * holds masks, and a mask under a `display: none` ancestor is not rendered —
+ * every `<use>` of it would draw nothing.
  *
  * Mounted once, by the sprite host.
  */
@@ -17,7 +18,7 @@ export function IconSpriteSheet() {
   const sprites = useSprites();
   const runtime = useRuntimeSymbolChunks();
   return (
-    <div hidden data-icon-sprites="">
+    <div aria-hidden style={SHEET_STYLE} data-icon-sprites="">
       {sprites.map(([key, markup]) => (
         <div
           key={key}

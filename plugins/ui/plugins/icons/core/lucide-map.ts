@@ -1,5 +1,10 @@
 import type { SpriteIconFamily } from "./icon-family";
-import { LUCIDE_SPRITE, lucideId } from "./style";
+import {
+  LUCIDE_ACTIVE_SPRITE,
+  LUCIDE_SPRITE,
+  lucideActiveId,
+  lucideId,
+} from "./style";
 import type { LucideName, SymbolName } from "./symbol-names.generated";
 
 /**
@@ -414,6 +419,11 @@ export const LUCIDE_FAMILY: SpriteIconFamily = {
   label: "Lucide",
   coverage: "fallback",
   sprite: LUCIDE_SPRITE,
-  idOf: (name) =>
-    lucideNameOf(name) === undefined ? undefined : lucideId(name),
+  activeSprite: LUCIDE_ACTIVE_SPRITE,
+  idOf: (name, active) =>
+    lucideNameOf(name) === undefined
+      ? undefined
+      : active
+        ? lucideActiveId(name)
+        : lucideId(name),
 };

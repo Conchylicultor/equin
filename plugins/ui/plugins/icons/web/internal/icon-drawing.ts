@@ -72,6 +72,10 @@ function familyChain(id: string): readonly IconFamily[] {
  * the sprites wanted on the way (a sprite family that maps the name but has
  * not loaded yet: the next family draws until it lands). `strictEnd` is the
  * chain's last family when it is strict: past it, nothing else may draw.
+ *
+ * `active` (the icon is active AND its scope fills active icons) draws the
+ * family's active form: an inline glyph's own, a sprite family's from its
+ * `activeSprite` — the drawing at rest standing in while that loads.
  */
 function familyDrawing(
   familyId: string,
@@ -93,6 +97,20 @@ function familyDrawing(
         wants,
         strictEnd: undefined,
       };
+    }
+    if (active && f.activeSprite !== undefined) {
+      const activeId = f.idOf(name, true);
+      if (activeId !== undefined && hasSprite(f.activeSprite)) {
+        return {
+          drawing: {
+            id: activeId,
+            source: { kind: "sprite", key: f.activeSprite },
+          },
+          wants,
+          strictEnd: undefined,
+        };
+      }
+      wants.push({ kind: "sprite", key: f.activeSprite });
     }
     if (hasSprite(f.sprite)) {
       return {
@@ -223,12 +241,20 @@ export function resolveIconDrawing(
         );
       }
       return {
-        drawing: inlineGlyphDrawing(f, icon.name, active),
+        drawing: inlineGlyphDrawing(
+          f,
+          icon.name,
+          active && style.activeFill === "filled",
+        ),
         wants: [],
       };
     }
     case "symbol": {
-      const family = familyDrawing(style.family, icon.name, active);
+      const family = familyDrawing(
+        style.family,
+        icon.name,
+        active && style.activeFill === "filled",
+      );
       if (family.drawing !== null) return family;
       if (family.strictEnd !== undefined) {
         // A strict family's scope never borrows another family's drawing: an

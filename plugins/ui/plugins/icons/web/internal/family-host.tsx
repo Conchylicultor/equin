@@ -2,13 +2,15 @@ import { useLayoutEffect } from "react";
 import { familyGlyphMarkup } from "../../core";
 import { Icons } from "../slots";
 import { provideIconFamilies, useIconFamilies } from "./family-store";
+import { SHEET_STYLE } from "./sheet-style";
 // The motion keyframes and region rules, shipped wherever icons are.
 import "./icon-motion.css";
 
 /**
  * Publishes every `Icons.Family` contribution to the family store and renders
- * the app-drawn families' glyphs into the page, hidden, so `<use href>`
- * resolves in-document (portals and Fullscreen subtrees included).
+ * the app-drawn families' glyphs into the page, zero-size (`SHEET_STYLE`), so
+ * `<use href>` resolves in-document (portals and Fullscreen subtrees
+ * included).
  *
  * A layout effect: icons that rendered before the families were held
  * re-render before the browser paints, so a family's scope never flashes its
@@ -21,7 +23,7 @@ export function IconFamilyHost() {
   }, [contributed]);
   const families = useIconFamilies();
   return (
-    <div hidden data-icon-families="">
+    <div aria-hidden style={SHEET_STYLE} data-icon-families="">
       {families.map((family) =>
         family.kind === "inline" ? (
           <div

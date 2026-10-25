@@ -1,5 +1,6 @@
 import type { CustomRef } from "./icon-ref";
 import { isIconMotion } from "./icon-motion";
+import { deriveActiveForm, placeActiveIds } from "./active-form";
 import type { SpriteKey } from "./style";
 import type { SymbolName } from "./symbol-names.generated";
 
@@ -32,9 +33,11 @@ export function isIconFamilyId(value: string): value is IconFamilyId {
  * `data-motion-delay="<ms>"` and `data-motion-origin="<x> <y>"` (grid units).
  *
  * `active` is the glyph's ACTIVE form — what `<Icon active>` draws (a pinned
- * pin, an on star): a family has no fill axis, so without one the active icon
- * looks exactly like the one at rest. Same paint and rules as `body`; a part
- * is filled by its own `fill="currentColor"`.
+ * pin, an on star) in a scope whose `iconActiveFill` is `filled`. Optional: by
+ * default it is DERIVED from `body` (`deriveActiveForm`: the outer closed
+ * shapes filled, what lies inside them cut out). Write one where the derived
+ * form misses the point — a shape left open, like a pin's head. Same paint and
+ * rules as `body`; a part is filled by its own `fill="currentColor"`.
  */
 export interface IconGlyphSource {
   readonly body: string;
@@ -43,10 +46,12 @@ export interface IconGlyphSource {
 }
 
 /**
- * A defined glyph: its source, with `body` (and `active`) the DRAWN body (each
- * moving part's delay and origin written as its inline style, `pathLength="1"`
- * on a `draw` part), and `animated` — derived, true when either form holds a
- * moving part. An
+ * A defined glyph: its source, with `body` the DRAWN body (each moving part's
+ * delay and origin written as its inline style, `pathLength="1"` on a `draw`
+ * part); `active` its drawn active form — the source's, else the derived one,
+ * its mask ids written with `ACTIVE_ID_TOKEN` (absent when there is nothing to
+ * fill: the glyph draws the same active); and `animated` — derived, true when
+ * either form holds a moving part. An
  * animated glyph is drawn inline by `<Icon>` (a `<use>` shadow tree is out of
  * the page CSS's reach), every other one through `<use>`.
  */
@@ -106,8 +111,17 @@ export interface SpriteIconFamily {
   readonly coverage: "fallback";
   readonly fallback?: IconFamilyId;
   readonly sprite: SpriteKey;
-  /** The sprite `<symbol>` id drawing `name`, or `undefined` when the family does not draw it. */
-  idOf(name: SymbolName): string | undefined;
+  /**
+   * The sprite holding the family's active drawings (fetched on first use, like
+   * `sprite`); without one, an active icon draws as at rest.
+   */
+  readonly activeSprite?: SpriteKey;
+  /**
+   * The sprite `<symbol>` id drawing `name` — its active drawing, in
+   * `activeSprite`, when `active` — or `undefined` when the family does not
+   * draw it.
+   */
+  idOf(name: SymbolName, active: boolean): string | undefined;
 }
 
 /** A contributed icon family (`Icons.Family`). */
@@ -123,7 +137,9 @@ export function familyGlyphOf(
   family: IconFamily,
   name: SymbolName,
 ): string | undefined {
-  return family.kind === "inline" ? family.symbols[name] : family.idOf(name);
+  return family.kind === "inline"
+    ? family.symbols[name]
+    : family.idOf(name, false);
 }
 
 /** The elements a glyph body may hold; anything else throws at definition. */
@@ -255,9 +271,16 @@ export function defineIconFamily<G extends string>(
     const source = def.glyphs[name];
     const rest = drawnBody(def.id, name, source.body);
     const active =
-      source.active === undefined
-        ? undefined
-        : drawnBody(def.id, `${name} (active)`, source.active);
+      source.active !== undefined
+        ? drawnBody(def.id, `${name} (active)`, source.active)
+        : source.paint === "fill"
+          ? undefined
+          : (() => {
+              const derived = deriveActiveForm(rest.body);
+              return derived === undefined
+                ? undefined
+                : { body: derived, animated: rest.animated };
+            })();
     glyphs[name] = {
       ...source,
       body: rest.body,
@@ -304,21 +327,28 @@ function strokePaint(family: InlineIconFamily): string {
 }
 
 /**
- * One glyph as drawn: its body (its active form's, when `active` and it has
- * one) inside the one `<g>` carrying the family's paint. The `<symbol>`
- * content of the sheet, and what `<Icon>` draws inline for an animated glyph —
- * one markup, so the two cannot differ.
+ * One glyph as drawn: its body inside the one `<g>` carrying the family's
+ * paint. The `<symbol>` content of the sheet, and what `<Icon>` draws inline
+ * for an animated glyph — one markup, so the two cannot differ.
+ *
+ * `active` draws its active form (when it has one), its mask ids under
+ * `activeIds` — unique in the document: the sheet's symbol id, an inline
+ * icon's own.
  */
 export function familyGlyphBody(
   family: InlineIconFamily,
   glyph: IconGlyph,
-  active = false,
+  active?: { ids: string },
 ): string {
   const paint =
     glyph.paint === "fill"
       ? 'fill="currentColor" stroke="none"'
       : strokePaint(family);
-  return `<g ${paint}>${active ? (glyph.active ?? glyph.body) : glyph.body}</g>`;
+  const body =
+    active !== undefined && glyph.active !== undefined
+      ? placeActiveIds(glyph.active, active.ids)
+      : glyph.body;
+  return `<g ${paint}>${body}</g>`;
 }
 
 /**
@@ -332,7 +362,7 @@ export function familyGlyphMarkup(family: InlineIconFamily): string {
       ...(glyph.active === undefined
         ? []
         : [
-            `<symbol id="${familyGlyphId(family.id, name, true)}" viewBox="0 0 24 24">${familyGlyphBody(family, glyph, true)}</symbol>`,
+            `<symbol id="${familyGlyphId(family.id, name, true)}" viewBox="0 0 24 24">${familyGlyphBody(family, glyph, { ids: familyGlyphId(family.id, name, true) })}</symbol>`,
           ]),
     ],
   );

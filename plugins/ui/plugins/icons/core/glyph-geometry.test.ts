@@ -4,7 +4,7 @@ import {
   parseTransform,
   pathPoints,
   type BBoxElement,
-} from "./seti-bbox";
+} from "./glyph-geometry";
 
 function extent(points: readonly [number, number][]) {
   const xs = points.map((p) => p[0]);
