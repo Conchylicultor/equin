@@ -1,4 +1,4 @@
-import type { KeyboardEvent } from "react";
+import { useState, type KeyboardEvent } from "react";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
@@ -20,15 +20,45 @@ import "./tab-strip.css";
 
 const addIcon = symbol("add");
 
-/** A readable label for a tab: the URL's host (sans `www.`), or "New tab" for the start page. */
-function tabLabel(url: string): string {
+const FAVICON_SIZE = 16;
+
+/**
+ * A readable label for a tab: the page's title, else the URL's host (sans
+ * `www.`), or "New tab" for the start page.
+ */
+function tabLabel(url: string, title: string): string {
   if (!url) return "New tab";
+  if (title) return title;
   try {
     return new URL(url).hostname.replace(/^www\./, "") || url;
   } catch (err) {
     if (err instanceof TypeError) return url; // invalid URL — show raw
     throw err;
   }
+}
+
+/** The page's own icon (reported by the engine), else the host's. */
+function TabFavicon({
+  url,
+  faviconUrl,
+}: {
+  url: string;
+  faviconUrl: string | null;
+}) {
+  const [failed, setFailed] = useState<string | null>(null);
+  if (!faviconUrl || failed === faviconUrl) {
+    return <Favicon url={url} size={FAVICON_SIZE} />;
+  }
+  return (
+    <img
+      src={faviconUrl}
+      alt=""
+      width={FAVICON_SIZE}
+      height={FAVICON_SIZE}
+      style={{ width: FAVICON_SIZE, height: FAVICON_SIZE }}
+      onError={() => setFailed(faviconUrl)}
+    />
+  );
 }
 
 /**
@@ -46,7 +76,7 @@ export function TabStrip() {
       <Line className="browser-tabs w-full">
         <Line className="browser-tab-list">
           {tabs.map((tab) => {
-            const label = tabLabel(tab.url);
+            const label = tabLabel(tab.url, tab.title);
             return (
               <Line
                 key={tab.id}
@@ -75,7 +105,7 @@ export function TabStrip() {
                   {tab.loading ? (
                     <Spinner />
                   ) : (
-                    <Favicon url={tab.url} size={16} />
+                    <TabFavicon url={tab.url} faviconUrl={tab.faviconUrl} />
                   )}
                 </span>
                 <Fill>

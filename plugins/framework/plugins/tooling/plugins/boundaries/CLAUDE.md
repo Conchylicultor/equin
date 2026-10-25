@@ -145,6 +145,7 @@ readings use it:
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `core/check.ts`, `core/resolve.ts` (debt)
   - Exempted by:
+    - `apps/browser/engine` (0 debt)
     - `apps/chord/song-index` (3 debt)
     - `apps/deploy/analytics/collect` (2 debt)
     - `apps/deploy/analytics/ip-country` (2 debt)

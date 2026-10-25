@@ -11,7 +11,7 @@ export { Browser } from "./slots";
 export {
   useBrowserNav,
   useBrowserTabs,
-  useBrowserProxy,
+  useBrowserRemote,
   BrowserTabsStore,
 } from "./nav-store";
 export type {
@@ -20,13 +20,16 @@ export type {
   BrowserTabsState,
   BrowserTabSummary,
   BrowserTabsApi,
-  BrowserProxyApi,
+  BrowserOpenOptions,
+  BrowserRemoteApi,
+  BrowserNavCommand,
+  BrowserNavRequest,
 } from "./nav-store";
 export { Favicon, type FaviconProps } from "./components/favicon";
 
 export default {
   description:
-    "App shell for the Browser app. Registers the /browser app entry, owns the per-surface tab store (each tab an independent nav stack), defines the Browser.* slots, exports the <Favicon> component, and contributes the app's own theme (the mockup's palette in both modes, the system font at 13px, Lucide icons, its control geometry), which the browser app selects.",
+    "App shell for the Browser app. Registers the /browser app entry, owns the per-surface tab store (each tab a page in the engine's Chromium, addressed by key: navigation requests out, host-reported page state in), defines the Browser.* slots, exports the <Favicon> component, and contributes the app's own theme (the mockup's palette in both modes, the system font at 13px, Lucide icons, its control geometry), which the browser app selects.",
   contributions: [
     Apps.App({
       app: browserApp,

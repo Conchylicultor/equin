@@ -4,6 +4,6 @@ import { TabStrip } from "./components/tab-strip";
 
 export default {
   description:
-    "Browser tab strip: an in-app row of tabs, each an independent navigation stack, with a new-tab button. Renders above the chrome bar.",
+    "Browser tab strip: an in-app row of tabs, each a page in the engine's Chromium showing its title and favicon, with a new-tab button. Renders above the chrome bar.",
   contributions: [Browser.TabStrip({ id: "tab-strip", component: TabStrip })],
 } satisfies PluginDefinition;

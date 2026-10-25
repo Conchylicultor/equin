@@ -7,7 +7,7 @@
 - Description: Container for the installed apps (agent-manager, pages, settings, …). The switcher infrastructure lives in apps-core.
 - Sub-plugins:
   - **`agent-manager`** — Agent manager app shell and layout.
-  - **`browser`** — Minimal iframe-based web browser app.
+  - **`browser`** — Web browser app: each tab is a page in a real Chromium on the machine (persistent profile, so logins stick), streamed to a canvas with input sent back.
   - **`chord`** — Chord — a chord ear trainer that plays loops of real songs whose chords you have turned on, asks you to name each chord, and keeps track of how well you know each one.
   - **`debug`** — Debug app.
   - **`demo`** — Demo — a temporary sandbox app hosting the in-app demo (the Agent Manager on made-up data) while it is prototyped, before it ships on the website.

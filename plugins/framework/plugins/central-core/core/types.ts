@@ -8,6 +8,8 @@ export interface WsHandler {
   open(ws: ServerWebSocket<WsData>): void;
   message(ws: ServerWebSocket<WsData>, msg: string | Buffer): void;
   close(ws: ServerWebSocket<WsData>, code: number, reason: string): void;
+  /** The socket's send queue drained after a `send` hit backpressure. */
+  drain?(ws: ServerWebSocket<WsData>): void;
 }
 
 export type HttpHandler = (

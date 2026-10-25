@@ -263,7 +263,6 @@ export const ICON_MANIFEST: {
     "playlist-play",
     "precision-manufacturing",
     "public",
-    "public-off",
     "publish",
     "push-pin",
     "queue-music",

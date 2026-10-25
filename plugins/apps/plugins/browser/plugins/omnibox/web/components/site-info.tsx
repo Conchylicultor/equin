@@ -8,11 +8,10 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 import {
   Browser,
   Favicon,
-  useBrowserProxy,
 } from "@plugins/apps/plugins/browser/plugins/shell/web";
 
 const lockIcon = symbol("lock");
-const shieldIcon = symbol("shield");
+const infoIcon = symbol("info");
 
 function hostOf(url: string): string {
   try {
@@ -24,18 +23,18 @@ function hostOf(url: string): string {
 }
 
 /**
- * The address pill's leading button: a lock, or a shield while pages load
- * through the framing-stripping proxy. It opens the site-info popover — the
- * host, then every contributed `Browser.SiteInfo` row (the proxy switch, …).
+ * The address pill's leading button: a lock on an https page, an info mark
+ * otherwise (as Chrome's). It opens the site-info popover — the host, whether
+ * the connection is secure, then every contributed `Browser.SiteInfo` row.
  */
 export function SiteInfoButton({ url }: { url: string }) {
-  const { enabled } = useBrowserProxy();
+  const secure = url.startsWith("https:");
   return (
     <InlinePopover
       width="menu"
       trigger={
         <IconButton
-          icon={enabled ? shieldIcon : lockIcon}
+          icon={secure ? lockIcon : infoIcon}
           label="Site information"
           tooltip="Site information"
         />
@@ -48,7 +47,7 @@ export function SiteInfoButton({ url }: { url: string }) {
             <Stack gap="none">
               <Text variant="label">{hostOf(url)}</Text>
               <Text variant="caption" tone="muted">
-                {enabled ? "Loaded through the proxy" : "Loaded directly"}
+                {secure ? "Connection is secure" : "Connection is not secure"}
               </Text>
             </Stack>
           </Fill>

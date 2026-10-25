@@ -30,8 +30,10 @@ the bulk work below default, and raise main's event-loop thread above it.
 - `withForegroundPriority(fn)` — that self-promotion, scoped: out of darwinbg
   for `fn`, restored after, each write verified by a read (`setpriority(…, 1)`
   returns 0 and changes nothing; only `PRIO_DARWIN_BG` = 0x1000 demotes). Like
-  `boostInteractiveQos`, the caller owns the contract: its one caller is
-  host-admission's interactive-lane `withHostGrant`. It lifts the WHOLE
+  `boostInteractiveQos`, the caller owns the contract: its callers are
+  host-admission's interactive-lane `withHostGrant` and the Browser app's
+  engine host (`apps/browser/engine`, for its whole life — the user watches
+  and types into its pages). It lifts the WHOLE
   process for the async body, so everything else the process runs meanwhile
   is lifted too.
 - `spawnInForeground(spawn)` — the same self-promotion around ONE

@@ -77,9 +77,11 @@ function setDarwinBg(lib: Lib, background: boolean): void {
  *
  * Who may call it is the caller's contract, exactly as for
  * `boostInteractiveQos`: lifting arbitrary agent work out of darwinbg defeats
- * the isolation this plugin exists for. Today its one caller is the
+ * the isolation this plugin exists for. Its callers: the
  * interactive lane of host-admission's `withHostGrant` — a human is blocked on
- * that holder, and the lane is bounded (one push at a time, the reserved floor).
+ * that holder, and the lane is bounded (one push at a time, the reserved floor)
+ * — and the Browser app's engine host, for its whole life (a human watches and
+ * types into its pages).
  *
  * It lifts the WHOLE process for as long as `fn` runs, so anything else this
  * process does meanwhile is lifted too. To start one child in the foreground

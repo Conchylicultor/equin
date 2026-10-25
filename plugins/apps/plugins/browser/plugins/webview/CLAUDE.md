@@ -4,29 +4,28 @@
 
 ## Plugin reference
 
-- Description: Browser webview: the iframe viewport with a loading bar and start-page fallback, plus an open-in-new-tab chrome action.
+- Description: Browser webview: the active tab's page streamed from the engine's Chromium — JPEG screencast frames drawn on a canvas, mouse / wheel / keyboard / IME / clipboard input sent back over the tab's engine socket, the page's dialogs, <select> menus, popups and downloads rendered with app primitives — with a loading bar, the start page for an empty tab, closed tabs' remote pages closed on the host, plus an open-in-system-browser chrome action.
 - Web:
   - Contributes:
     - `Browser.Viewport` "Viewport" → `Viewport`
     - `Browser.Actions` "Chrome actions" → `OpenExternal`
-  - Uses:
-    - `apps/browser/shell.Browser`
-    - `apps/browser/shell.useBrowserNav`
-    - `apps/browser/shell.useBrowserProxy`
-    - `apps/browser/shell.useBrowserTabs`
+  - Uses: 32 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×8
+    - `apps/browser/shell` ×6
+    - `primitives/css/overlay` ×2
+    - `primitives/css/spacing` ×2
+    - `primitives/networking` ×2
+    - `primitives/overlay/cursor-menu` ×2
     - `primitives/css/center.Center`
-    - `primitives/css/overlay.Overlay`
-    - `primitives/css/pin.Pin`
+    - `primitives/css/fill.Fill`
     - `primitives/css/placeholder.Placeholder`
-    - `primitives/css/spacing.Inset`
-    - `primitives/css/spacing.Stack`
     - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/icon-button.IconButton`
+    - `primitives/dom/element-size.useResizeObserver`
+    - `primitives/latest-ref.useLatestRef`
     - `primitives/link-gesture/new-tab.NewTabButton`
-    - `ui/icons.Icon`
+    - `primitives/log-channels.clientLog`
+    - `shell/toast.showToast`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --background`

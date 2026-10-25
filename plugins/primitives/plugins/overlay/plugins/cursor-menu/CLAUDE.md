@@ -28,6 +28,7 @@ intact, and `DropdownMenuContent` already self-portals + theme-forwards.
   - Exports (values): `CursorAnchoredMenu`
 - Cross-plugin:
   - Imported by:
+    - `apps/browser/webview`
     - `apps/desktop/launcher`
     - `apps/desktop/shelf`
     - `apps/desktop/wallpaper`

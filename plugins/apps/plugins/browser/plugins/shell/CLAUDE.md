@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: App shell for the Browser app. Registers the /browser app entry, owns the per-surface tab store (each tab an independent nav stack), defines the Browser.* slots, exports the <Favicon> component, and contributes the app's own theme (the mockup's palette in both modes, the system font at 13px, Lucide icons, its control geometry), which the browser app selects.
+- Description: App shell for the Browser app. Registers the /browser app entry, owns the per-surface tab store (each tab a page in the engine's Chromium, addressed by key: navigation requests out, host-reported page state in), defines the Browser.* slots, exports the <Favicon> component, and contributes the app's own theme (the mockup's palette in both modes, the system font at 13px, Lucide icons, its control geometry), which the browser app selects.
 - Web:
   - Slots:
     - `Browser.TabStrip`
@@ -22,7 +22,6 @@
     - `Browser.NavControls` ← `apps.browser.navigation`
     - `Browser.Omnibox` ← `apps.browser.omnibox`
     - `Browser.OmniboxAction` ← `apps.browser.bookmarks`
-    - `Browser.SiteInfo` ← `apps.browser.proxy`
     - `Browser.Actions` ← `apps.browser.webview`
     - `Browser.SubBar` ← `apps.browser.bookmarks`
     - `Browser.Viewport` ← `apps.browser.webview`
@@ -50,7 +49,10 @@
     - `ui/theme-engine.ThemeEngine`
   - Exports (types):
     - `BrowserNavApi`
-    - `BrowserProxyApi`
+    - `BrowserNavCommand`
+    - `BrowserNavRequest`
+    - `BrowserOpenOptions`
+    - `BrowserRemoteApi`
     - `BrowserTab`
     - `BrowserTabsApi`
     - `BrowserTabsState`
@@ -61,7 +63,7 @@
     - `BrowserTabsStore`
     - `Favicon`
     - `useBrowserNav`
-    - `useBrowserProxy`
+    - `useBrowserRemote`
     - `useBrowserTabs`
 - Core:
   - Uses:
@@ -81,7 +83,6 @@
     - `apps/browser/history`
     - `apps/browser/navigation`
     - `apps/browser/omnibox`
-    - `apps/browser/proxy`
     - `apps/browser/start-page`
     - `apps/browser/tabs`
     - `apps/browser/webview`

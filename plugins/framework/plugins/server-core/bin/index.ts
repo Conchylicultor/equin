@@ -166,6 +166,9 @@ function bindSocket(ordered: LoadedServerPlugin[]): void {
       close(ws, code, reason) {
         wsRoutes[ws.data.path]?.close(ws, code, reason);
       },
+      drain(ws) {
+        wsRoutes[ws.data.path]?.drain?.(ws);
+      },
     },
   });
 

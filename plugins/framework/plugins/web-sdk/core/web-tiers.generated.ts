@@ -50,7 +50,6 @@ export const DEFERRED_PLUGIN_PATHS: ReadonlySet<string> = new Set([
   "apps/plugins/browser/plugins/history",
   "apps/plugins/browser/plugins/navigation",
   "apps/plugins/browser/plugins/omnibox",
-  "apps/plugins/browser/plugins/proxy",
   "apps/plugins/browser/plugins/start-page",
   "apps/plugins/browser/plugins/tabs",
   "apps/plugins/browser/plugins/webview",

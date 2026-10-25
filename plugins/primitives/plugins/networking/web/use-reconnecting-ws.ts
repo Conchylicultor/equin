@@ -20,10 +20,20 @@ export interface ReconnectingWsOptions {
   onMessage?: (ev: MessageEvent) => void;
   onStatusChange?: (status: WsStatus) => void;
   enabled?: boolean;
+  /**
+   * How binary messages arrive in `onMessage` (`ev.data`). Default: the
+   * browser's (`"blob"`); `"arraybuffer"` for a consumer that reads binary
+   * frames synchronously (a streamed video/screencast).
+   */
+  binaryType?: BinaryType;
 }
 
+/** What `send` accepts: a text frame or a binary one. */
+export type ReconnectingWsData =
+  string | ArrayBuffer | ArrayBufferView<ArrayBuffer>;
+
 export interface ReconnectingWsHandle {
-  send: (data: string) => void;
+  send: (data: ReconnectingWsData) => void;
   close: () => void;
 }
 
@@ -44,7 +54,7 @@ export function useReconnectingWebSocket(opts: ReconnectingWsOptions): {
     let ws: WebSocket | null = null;
     const reconnect = new ReconnectSchedule();
     let disposed = false;
-    const queue: string[] = [];
+    const queue: ReconnectingWsData[] = [];
 
     const setStatus = (status: WsStatus) => {
       publishWsStatus({ url, status });
@@ -55,6 +65,8 @@ export function useReconnectingWebSocket(opts: ReconnectingWsOptions): {
       if (disposed) return;
       setStatus(reconnect.isFirstAttempt ? "connecting" : "reconnecting");
       ws = new WebSocket(url);
+      const { binaryType } = optsRef.current;
+      if (binaryType !== undefined) ws.binaryType = binaryType;
 
       ws.addEventListener("open", () => {
         if (disposed || !ws) return;

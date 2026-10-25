@@ -4,6 +4,7 @@ export { useReconnectingWebSocket } from "./use-reconnecting-ws";
 export type {
   ReconnectingWsOptions,
   ReconnectingWsHandle,
+  ReconnectingWsData,
 } from "./use-reconnecting-ws";
 export { ReconnectingEventSource } from "./reconnecting-event-source";
 export type { ReconnectingEventSourceOptions } from "./reconnecting-event-source";

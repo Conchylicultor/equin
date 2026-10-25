@@ -1,6 +1,11 @@
 import { mkdirSync, readFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
-import type { Browser, LaunchOptions } from "playwright";
+import type {
+  Browser,
+  BrowserContext,
+  BrowserType,
+  LaunchOptions,
+} from "playwright";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/core";
 import { spawnExpectOk } from "@plugins/infra/plugins/spawn/core";
 import type {
@@ -235,6 +240,52 @@ export async function launchChromium(
     executablePath: headless
       ? read.executables.headlessShell
       : read.executables.headed,
+  });
+}
+
+/** `chromium.launchPersistentContext` options, minus the two that pick the binary. */
+export type PersistentChromiumLaunchOptions = Omit<
+  NonNullable<Parameters<BrowserType["launchPersistentContext"]>[1]>,
+  "executablePath" | "channel"
+> & {
+  /**
+   * Launch a binary DERIVED from the installed one rather than the installed
+   * one itself — e.g. a copy of the headed app bundle re-flagged for the OS.
+   * Takes the installed executable's path (the one `headless` picks) and
+   * returns the path to launch; the install stays the only source.
+   */
+  derive?: (executable: string) => Promise<string>;
+};
+
+/**
+ * Launch the installed Chromium on a persistent profile (`userDataDir`):
+ * cookies, logins and storage survive the process. The same binary choice as
+ * {@link launchChromium} (headless shell by default, the headed binary with
+ * `headless: false`). The browser is the returned context's — closing the
+ * context closes it and flushes the profile.
+ */
+export async function launchPersistentChromium(
+  ready: Ready<PlaywrightBrowserSource>,
+  userDataDir: string,
+  opts: PersistentChromiumLaunchOptions = {},
+): Promise<BrowserContext> {
+  const read = readBrowserExecutables(ready.dir);
+  if (!read.ok) {
+    throw new Error(
+      `${ready.dep.id} is no longer intact (${read.reason}) — reinstall it: ./equin deps install ${ready.dep.id}`,
+    );
+  }
+  const { derive, ...launchOpts } = opts;
+  const headless = launchOpts.headless ?? true;
+  const installed = headless
+    ? read.executables.headlessShell
+    : read.executables.headed;
+  const executablePath = derive ? await derive(installed) : installed;
+  const { chromium } = await import("playwright");
+  return chromium.launchPersistentContext(userDataDir, {
+    ...launchOpts,
+    headless,
+    executablePath,
   });
 }
 

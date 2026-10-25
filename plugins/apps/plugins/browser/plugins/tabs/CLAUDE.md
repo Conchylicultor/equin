@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Browser tab strip: an in-app row of tabs, each an independent navigation stack, with a new-tab button. Renders above the chrome bar.
+- Description: Browser tab strip: an in-app row of tabs, each a page in the engine's Chromium showing its title and favicon, with a new-tab button. Renders above the chrome bar.
 - Web:
   - Contributes: `Browser.TabStrip` "Tab strip" → `TabStrip`
   - Uses:

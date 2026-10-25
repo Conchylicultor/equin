@@ -11,7 +11,6 @@
     - `apps/browser/shell.Browser`
     - `apps/browser/shell.Favicon`
     - `apps/browser/shell.useBrowserNav`
-    - `apps/browser/shell.useBrowserProxy`
     - `primitives/css/center.Center`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`

@@ -226,8 +226,8 @@ count accumulates across drops.
     - `ui/tokens/density --space-xs`
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`
-  - Imported by: 54 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×11
+  - Imported by: 55 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×12
     - `debug` ×9
     - `database` ×7
     - `infra` ×7

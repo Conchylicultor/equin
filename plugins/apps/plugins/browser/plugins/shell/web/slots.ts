@@ -26,7 +26,7 @@ export const Browser = {
   OmniboxAction: defineRenderSlot<{ component: ComponentType }>({
     docLabel: () => "Omnibox action",
   }),
-  /** Rows of the site-info popover the address pill's leading button opens (e.g. the proxy switch). */
+  /** Rows of the site-info popover the address pill's leading button opens (site permissions, cookies, …). */
   SiteInfo: defineRenderSlot<{ component: ComponentType }>({
     docLabel: () => "Site info",
   }),

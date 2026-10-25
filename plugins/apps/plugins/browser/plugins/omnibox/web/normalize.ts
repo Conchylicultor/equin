@@ -6,10 +6,12 @@
  *
  * Rules (in order):
  *  - trim; empty → home.
- *  - already `^https?://` → as-is.
+ *  - already `^https?://`, or a `data:` / `about:` / `view-source:` URL → as-is
+ *    (pages open in a real Chromium, which loads them).
  *  - host is `localhost` / `127.*` / `*.localhost` → prefix `http://`.
  *  - looks like a domain (has `.`, no whitespace) → prefix `https://`.
- *  - else → DuckDuckGo search.
+ *  - else → Google search (DuckDuckGo answers the engine's headless Chromium
+ *    with an error page).
  */
 export type NormalizedInput =
   | { kind: "home" }
@@ -19,7 +21,9 @@ export function normalizeInput(raw: string): NormalizedInput {
   const trimmed = raw.trim();
   if (trimmed === "") return { kind: "home" };
 
-  if (/^https?:\/\//i.test(trimmed)) return { kind: "url", url: trimmed };
+  if (/^(https?:\/\/|data:|about:|view-source:)/i.test(trimmed)) {
+    return { kind: "url", url: trimmed };
+  }
 
   const hasWhitespace = /\s/.test(trimmed);
   const firstSegment = trimmed.split("/")[0] ?? "";
@@ -38,6 +42,6 @@ export function normalizeInput(raw: string): NormalizedInput {
 
   return {
     kind: "url",
-    url: `https://duckduckgo.com/?q=${encodeURIComponent(trimmed)}`,
+    url: `https://www.google.com/search?q=${encodeURIComponent(trimmed)}`,
   };
 }

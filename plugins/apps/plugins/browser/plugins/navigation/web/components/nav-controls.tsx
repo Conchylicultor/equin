@@ -6,13 +6,14 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 const backIcon = symbol("chevron-left");
 const forwardIcon = symbol("chevron-right");
 const refreshIcon = symbol("refresh");
+const stopIcon = symbol("close");
 
 /**
- * Back / forward / reload in the browser chrome bar. There is no Home button:
- * as in Chrome, a new tab is the start page.
+ * Back / forward / reload (stop while the page loads) in the browser chrome
+ * bar. There is no Home button: as in Chrome, a new tab is the start page.
  */
 export function NavControls() {
-  const { current, canGoBack, canGoForward, back, forward, reload } =
+  const { current, canGoBack, canGoForward, loading, back, forward, reload, stop } =
     useBrowserNav();
   return (
     <Stack direction="row" gap="xs" align="center">
@@ -30,13 +31,22 @@ export function NavControls() {
         onClick={forward}
         disabled={!canGoForward}
       />
-      <IconButton
-        icon={refreshIcon}
-        label="Reload"
-        tooltip="Reload"
-        onClick={reload}
-        disabled={current === ""}
-      />
+      {loading ? (
+        <IconButton
+          icon={stopIcon}
+          label="Stop"
+          tooltip="Stop loading"
+          onClick={stop}
+        />
+      ) : (
+        <IconButton
+          icon={refreshIcon}
+          label="Reload"
+          tooltip="Reload"
+          onClick={reload}
+          disabled={current === ""}
+        />
+      )}
     </Stack>
   );
 }

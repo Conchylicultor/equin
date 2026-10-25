@@ -245,6 +245,13 @@
       "name": "@equin/plugin-apps-browser-bookmarks",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/browser/plugins/engine": {
+      "name": "@equin/plugin-apps-browser-engine",
+      "version": "0.0.1",
+      "dependencies": {
+        "playwright": "^1.62.1",
+      },
+    },
     "plugins/apps/plugins/browser/plugins/history": {
       "name": "@equin/plugin-apps-browser-history",
       "version": "0.0.1",
@@ -255,10 +262,6 @@
     },
     "plugins/apps/plugins/browser/plugins/omnibox": {
       "name": "@equin/plugin-apps-browser-omnibox",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/browser/plugins/proxy": {
-      "name": "@equin/plugin-apps-browser-proxy",
       "version": "0.0.1",
     },
     "plugins/apps/plugins/browser/plugins/shell": {
@@ -6754,13 +6757,13 @@
 
     "@equin/plugin-apps-browser-bookmarks": ["@equin/plugin-apps-browser-bookmarks@workspace:plugins/apps/plugins/browser/plugins/bookmarks"],
 
+    "@equin/plugin-apps-browser-engine": ["@equin/plugin-apps-browser-engine@workspace:plugins/apps/plugins/browser/plugins/engine"],
+
     "@equin/plugin-apps-browser-history": ["@equin/plugin-apps-browser-history@workspace:plugins/apps/plugins/browser/plugins/history"],
 
     "@equin/plugin-apps-browser-navigation": ["@equin/plugin-apps-browser-navigation@workspace:plugins/apps/plugins/browser/plugins/navigation"],
 
     "@equin/plugin-apps-browser-omnibox": ["@equin/plugin-apps-browser-omnibox@workspace:plugins/apps/plugins/browser/plugins/omnibox"],
-
-    "@equin/plugin-apps-browser-proxy": ["@equin/plugin-apps-browser-proxy@workspace:plugins/apps/plugins/browser/plugins/proxy"],
 
     "@equin/plugin-apps-browser-shell": ["@equin/plugin-apps-browser-shell@workspace:plugins/apps/plugins/browser/plugins/shell"],
 
@@ -7338,6 +7341,8 @@
 
     "@equin/plugin-audience": ["@equin/plugin-audience@workspace:plugins/audience"],
 
+    "@equin/plugin-audience-developer-mark": ["@equin/plugin-audience-developer-mark@workspace:plugins/audience/plugins/developer-mark"],
+
     "@equin/plugin-audience-settings": ["@equin/plugin-audience-settings@workspace:plugins/audience/plugins/settings"],
 
     "@equin/plugin-audience-view-option": ["@equin/plugin-audience-view-option@workspace:plugins/audience/plugins/view-option"],
@@ -7435,6 +7440,8 @@
     "@equin/plugin-config_v2-config-link": ["@equin/plugin-config_v2-config-link@workspace:plugins/config_v2/plugins/config-link"],
 
     "@equin/plugin-config_v2-fields": ["@equin/plugin-config_v2-fields@workspace:plugins/config_v2/plugins/fields"],
+
+    "@equin/plugin-config_v2-git-defaults-preview": ["@equin/plugin-config_v2-git-defaults-preview@workspace:plugins/config_v2/plugins/git-defaults-preview"],
 
     "@equin/plugin-config_v2-ledger": ["@equin/plugin-config_v2-ledger@workspace:plugins/config_v2/plugins/ledger"],
 
@@ -10307,10 +10314,6 @@
     "@shikijs/vscode-textmate": ["@shikijs/vscode-textmate@10.0.2", "", {}, "sha512-83yeghZ2xxin3Nj8z1NMd/NCuca+gsYXswywDy5bHvwlWL8tpTQmzGeUuHd9FC3E/SBEMvzJRwWEOz5gGes9Qg=="],
 
     "@sindresorhus/merge-streams": ["@sindresorhus/merge-streams@4.0.0", "", {}, "sha512-tlqY9xq5ukxTUZBmoOp+m61cqwQD5pHJtFY3Mn8CA8ps6yghLH/Hw8UPdqg4OLmFW3IFlcXnQNmo/dh8HzXYIQ=="],
-
-    "@equin/plugin-audience-developer-mark": ["@equin/plugin-audience-developer-mark@workspace:plugins/audience/plugins/developer-mark"],
-
-    "@equin/plugin-config_v2-git-defaults-preview": ["@equin/plugin-config_v2-git-defaults-preview@workspace:plugins/config_v2/plugins/git-defaults-preview"],
 
     "@stablelib/base64": ["@stablelib/base64@1.0.1", "", {}, "sha512-1bnPQqSxSuc3Ii6MhBysoWCg58j97aUjuCSZrGSmDxNqtytIi0k8utUenAwTZN4V5mXXYGsVUI9zeBqy+jBOSQ=="],
 

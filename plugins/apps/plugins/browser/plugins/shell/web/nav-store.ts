@@ -1,277 +1,228 @@
 import { useMemo } from "react";
+import type { PageState } from "@plugins/apps/plugins/browser/plugins/engine/core";
 import { defineScopedStore } from "@plugins/primitives/plugins/scope/plugins/scoped-store/web";
 
 /**
- * Per-surface browser tab state. Each tab is an independent navigation stack;
- * exactly one is active. The `""` sentinel in `history` means the start page.
- * The store is dumb — no IO, no URL normalization. Callers pass fully-formed
- * URLs (the omnibox owns normalization).
+ * A navigation command the app asks of a tab's remote page. Recorded by the
+ * chrome (omnibox, nav controls, start page …) and delivered over the tab's
+ * engine socket by the viewport.
+ */
+export type BrowserNavCommand =
+  | { kind: "navigate"; url: string }
+  | { kind: "back" }
+  | { kind: "forward" }
+  | { kind: "reload" }
+  | { kind: "stop" };
+
+/** The latest undelivered-or-delivered command of a tab; `seq` orders them. */
+export interface BrowserNavRequest {
+  seq: number;
+  cmd: BrowserNavCommand;
+}
+
+/**
+ * Per-surface browser tab state. Each tab is a page in the engine's Chromium,
+ * addressed by `key`; the page's navigation history lives there, and the host
+ * reports its state back (`report`). The store is dumb — no IO, no URL
+ * normalization. Callers pass fully-formed URLs (the omnibox owns
+ * normalization).
  */
 export interface BrowserTab {
   /** Stable per-surface id (`tab-<seq>`). */
   id: string;
-  /** Visited (request) URLs; `""` sentinel = start page. Drives the iframe src. */
-  history: string[];
-  /** Pointer into `history` (current = history[index]). */
-  index: number;
-  /** Bump to force this tab's iframe to remount (reload). */
-  loadKey: number;
-  /** True between navigate/reload and the iframe `onLoad`. */
+  /** The remote page's key on the engine host (a UUID; a popup's is the host's). */
+  key: string;
+  /** What the tab shows: the page's URL, or `""` for the start page. */
+  url: string;
+  /**
+   * The remote page's URL — kept while the start page is shown over it
+   * (`goHome`), so `back` returns to the page. `""` while no remote page exists.
+   */
+  pageUrl: string;
+  /** Whether the host has a page for `key` (an `attach` was sent, or adopted popup). */
+  remote: boolean;
+  title: string;
+  faviconUrl: string | null;
   loading: boolean;
-  /**
-   * User-facing URL override for the omnibox/history/bookmarks, distinct from
-   * the request URL (`history[index]`) that drives the iframe src. Set by a
-   * `commit` (redirect reflection) or `sync` (SPA URL change). `null` => fall
-   * back to `history[index]`. Keeping it separate keeps the iframe src stable so
-   * a redirect/SPA URL change never reloads the frame.
-   */
-  displayUrl: string | null;
-  /**
-   * True when the next document `commit` is the result of a parent-initiated
-   * load (navigate/back/forward/reload). It reconciles into `displayUrl` rather
-   * than pushing a new history entry. Cleared once consumed.
-   */
-  expectCommit: boolean;
-  /**
-   * True when the iframe self-navigated out of the proxy and landed on an
-   * un-proxied document. Caused by escapes the in-page shim can't intercept — a
-   * JS `location` assignment (`location.href = …` / `.assign` / `.replace`, all
-   * `[LegacyUnforgeable]`) or a scripted `form.submit()` (fires no submit event).
-   * Detected as an iframe-initiated load that produced no `commit` (the real
-   * origin re-blocks framing → blank frame). Surfaces the escape overlay so the
-   * user can continue in their system browser. Cleared by any parent-initiated
-   * navigation or a fresh commit.
-   */
-  escaped: boolean;
+  /** The remote page's own history, as last reported by the host. */
+  canGoBack: boolean;
+  canGoForward: boolean;
+  /** The latest navigation command; delivered once `seq > sentSeq`. */
+  request: BrowserNavRequest | null;
+  /** The `seq` of the last request delivered to the host (or superseded by `attach`). */
+  sentSeq: number;
 }
 
 /** The per-surface collection of tabs with one active. */
 export type BrowserTabsState = {
   tabs: BrowserTab[];
   activeId: string;
-  /** Monotonic id counter — deterministic per surface (no Date.now/random). */
+  /** Monotonic id / request counter — deterministic per surface. */
   seq: number;
   /**
-   * Whether the framing-stripping proxy is on for this surface. When on, the
-   * webview loads each tab through the same-origin proxy so framing-blocked
-   * sites render. Top-level surface state (not per-tab); default on.
+   * Keys of closed tabs whose remote page still has to be told to close
+   * (delivered by the viewport, then dropped with `closeDelivered`).
    */
-  proxyEnabled: boolean;
+  pendingCloses: string[];
 };
 
+interface FreshTabOptions {
+  url?: string;
+  /** Adopt an existing host page (a popup the page opened). */
+  key?: string;
+}
+
 /** A fresh tab pointed at `url` (default: the start page). */
-function freshTab(seq: number, url = ""): BrowserTab {
+function freshTab(seq: number, opts: FreshTabOptions = {}): BrowserTab {
+  const url = opts.url ?? "";
   return {
     id: `tab-${seq}`,
-    history: [url],
-    index: 0,
-    loadKey: 0,
+    key: opts.key ?? crypto.randomUUID(),
+    url,
+    pageUrl: url,
+    remote: opts.key !== undefined,
+    title: "",
+    faviconUrl: null,
     loading: url !== "",
-    displayUrl: null,
-    expectCommit: url !== "",
-    escaped: false,
+    canGoBack: false,
+    canGoForward: false,
+    request: null,
+    sentSeq: 0,
   };
 }
 
-const FIRST = freshTab(0);
-const INITIAL: BrowserTabsState = {
-  tabs: [FIRST],
-  activeId: FIRST.id,
-  seq: 1,
-  proxyEnabled: true,
-};
+function initialState(): BrowserTabsState {
+  const first = freshTab(0);
+  return { tabs: [first], activeId: first.id, seq: 1, pendingCloses: [] };
+}
 
-/** Per-surface store (each surface tab gets its own isolated instance). */
-export const BrowserTabsStore = defineScopedStore<BrowserTabsState>(INITIAL);
+/**
+ * Per-surface store (each surface tab gets its own isolated instance). A
+ * factory, so every surface's first tab gets its own remote-page key.
+ */
+export const BrowserTabsStore =
+  defineScopedStore<BrowserTabsState>(initialState);
+
+type SetState = (fn: (s: BrowserTabsState) => BrowserTabsState) => void;
+
+/** Patch one tab by id. */
+function patchTab(
+  setState: SetState,
+  id: string | ((s: BrowserTabsState) => string),
+  fn: (t: BrowserTab, s: BrowserTabsState) => BrowserTab,
+): void {
+  setState((s) => {
+    const target = typeof id === "function" ? id(s) : id;
+    return {
+      ...s,
+      tabs: s.tabs.map((t) => (t.id === target ? fn(t, s) : t)),
+    };
+  });
+}
+
+/** Record `cmd` as the active tab's latest request (bumping the surface seq). */
+function request(
+  setState: SetState,
+  fn: (
+    t: BrowserTab,
+  ) => { cmd: BrowserNavCommand; patch?: Partial<BrowserTab> } | null,
+): void {
+  setState((s) => {
+    let bumped = false;
+    const tabs = s.tabs.map((t) => {
+      if (t.id !== s.activeId) return t;
+      const r = fn(t);
+      if (!r) return t;
+      bumped = true;
+      return { ...t, ...r.patch, request: { seq: s.seq, cmd: r.cmd } };
+    });
+    return bumped ? { ...s, tabs, seq: s.seq + 1 } : s;
+  });
+}
 
 /** The derived navigation API consumed by the chrome bars and webview. */
 export interface BrowserNavApi {
-  /**
-   * Active tab's user-facing URL: `displayUrl ?? history[index] ?? ""`. Drives
-   * the omnibox, history recorder, and bookmarks. `""` => start page.
-   */
+  /** Active tab's URL; `""` => start page. Drives the omnibox, history recorder, bookmarks. */
   current: string;
+  /** The page can go back — or the start page is shown over a page `back` returns to. */
   canGoBack: boolean;
   canGoForward: boolean;
   loading: boolean;
-  loadKey: number;
-  /** Active tab escaped the proxy (un-proxied self-navigation); drives the escape overlay. */
-  escaped: boolean;
   /**
-   * Truncate forward entries, push `url`, point at the end, mark loading. If
-   * `url === current`, reloads instead. Operates on the active tab. Clears
-   * `displayUrl` and arms `expectCommit`.
+   * Navigate the active tab's page to `url`; `""` = `goHome`. From the start
+   * page, the tab's existing remote page navigates (it stays in its history).
    */
   navigate(url: string): void;
   back(): void;
   forward(): void;
-  /** Force the active tab's iframe to remount (`loadKey++`) and mark loading. */
   reload(): void;
-  /** `navigate("")` — back to the start page. */
+  stop(): void;
+  /**
+   * Show the start page. The remote page is KEPT (not closed): `back` returns
+   * to it, and the start page needs no remote page of its own.
+   */
   goHome(): void;
-  /** Mark the active tab's load done (called by the webview `onLoad`). */
-  finishLoad(): void;
-  /**
-   * The iframe committed a full document at `url` (post-redirect / POST landing).
-   * If `expectCommit` (a parent-initiated load): reconcile into `displayUrl`
-   * (redirect reflection) — no history mutation, no reload. Otherwise (an
-   * iframe-driven load, e.g. a PRG POST landing): push a new history entry so
-   * back/forward + reload behave correctly.
-   */
-  commit(url: string): void;
-  /** SPA in-page URL change — update the omnibox display only, nothing else. */
-  syncDisplay(url: string): void;
-  /**
-   * Mark the active tab as escaped (an un-proxied self-navigation the shim
-   * couldn't intercept). Called by the webview when an iframe-initiated load
-   * completes without a `commit`. Also clears `loading` (the frame "loaded").
-   */
-  markEscaped(): void;
-  /** Dismiss the escape overlay on the active tab (escaped → false). */
-  clearEscaped(): void;
 }
 
 /**
- * Reads the active tab and returns the imperative navigation API. Unchanged
- * surface vs. the original single-stack store — every existing consumer keeps
- * working. Must be called inside `<BrowserTabsStore.Provider>`.
+ * Reads the active tab and returns the imperative navigation API. Must be
+ * called inside `<BrowserTabsStore.Provider>`.
  */
 export function useBrowserNav(): BrowserNavApi {
   const state = BrowserTabsStore.useStore();
   const store = BrowserTabsStore.useStoreApi();
-  // By invariant the store always holds ≥1 tab; the `freshTab` fallback only
-  // satisfies the type system and is never reached in practice.
+  // By invariant the store always holds ≥1 tab.
   const active =
-    state.tabs.find((t) => t.id === state.activeId) ??
-    state.tabs[0] ??
-    freshTab(0);
+    state.tabs.find((t) => t.id === state.activeId) ?? state.tabs[0];
+  if (!active) throw new Error("BrowserTabsStore holds no tab");
 
   const actions = useMemo(() => {
-    const patchActive = (fn: (t: BrowserTab) => BrowserTab) =>
-      store.setState((s) => ({
-        ...s,
-        tabs: s.tabs.map((t) => (t.id === s.activeId ? fn(t) : t)),
-      }));
-
-    const reload = () =>
-      patchActive((t) => ({
-        ...t,
-        loadKey: t.loadKey + 1,
-        loading: true,
-        displayUrl: null,
-        expectCommit: true,
-        escaped: false,
-      }));
-
-    const navigate = (url: string) =>
-      patchActive((t) => {
-        const cur = t.history[t.index] ?? "";
-        if (url === cur) {
-          // Same URL: reload (the start page has no iframe, so never "loading").
-          return {
-            ...t,
-            loadKey: t.loadKey + 1,
-            loading: url !== "",
-            displayUrl: null,
-            expectCommit: url !== "",
-            escaped: false,
-          };
-        }
-        const history = [...t.history.slice(0, t.index + 1), url];
-        return {
-          ...t,
-          history,
-          index: history.length - 1,
-          loading: url !== "",
-          displayUrl: null,
-          expectCommit: url !== "",
-          escaped: false,
-        };
-      });
-
-    const commit = (url: string) =>
-      patchActive((t) => {
-        if (t.expectCommit) {
-          // Parent-initiated load completed: reflect a redirect via displayUrl
-          // (no history mutation, no reload). Clear the expectation.
-          const requestUrl = t.history[t.index] ?? "";
-          return {
-            ...t,
-            displayUrl: url !== requestUrl ? url : null,
-            expectCommit: false,
-            escaped: false,
-          };
-        }
-        // Iframe-driven landing (e.g. a PRG POST): push a real history entry so
-        // back/forward + reload re-GET it. The iframe already shows it; its src
-        // updates to proxyUrl(url) on its own (accepted PRG re-GET).
-        const history = [...t.history.slice(0, t.index + 1), url];
-        return {
-          ...t,
-          history,
-          index: history.length - 1,
-          displayUrl: null,
-          escaped: false,
-        };
-      });
-
-    const syncDisplay = (url: string) =>
-      patchActive((t) => ({ ...t, displayUrl: url }));
-
-    const markEscaped = () =>
-      patchActive((t) =>
-        t.escaped ? t : { ...t, escaped: true, loading: false },
+    const setState: SetState = (fn) => store.setState(fn);
+    const goHome = () =>
+      patchTab(
+        setState,
+        (s) => s.activeId,
+        (t) => (t.url === "" ? t : { ...t, url: "", loading: false }),
       );
-
-    const clearEscaped = () =>
-      patchActive((t) => (t.escaped ? { ...t, escaped: false } : t));
-
+    // Commands for the page itself; meaningless while the start page shows.
+    const pageCmd = (cmd: BrowserNavCommand) =>
+      request(setState, (t) => (t.url === "" ? null : { cmd }));
     return {
-      navigate,
-      reload,
-      commit,
-      syncDisplay,
-      markEscaped,
-      clearEscaped,
-      back: () =>
-        patchActive((t) =>
-          t.index > 0
-            ? {
-                ...t,
-                index: t.index - 1,
-                loading: (t.history[t.index - 1] ?? "") !== "",
-                displayUrl: null,
-                expectCommit: (t.history[t.index - 1] ?? "") !== "",
-                escaped: false,
-              }
-            : t,
-        ),
-      forward: () =>
-        patchActive((t) =>
-          t.index < t.history.length - 1
-            ? {
-                ...t,
-                index: t.index + 1,
-                loading: (t.history[t.index + 1] ?? "") !== "",
-                displayUrl: null,
-                expectCommit: (t.history[t.index + 1] ?? "") !== "",
-                escaped: false,
-              }
-            : t,
-        ),
-      goHome: () => navigate(""),
-      finishLoad: () =>
-        patchActive((t) => (t.loading ? { ...t, loading: false } : t)),
+      goHome,
+      navigate: (url: string) => {
+        if (url === "") {
+          goHome();
+          return;
+        }
+        request(setState, () => ({
+          cmd: { kind: "navigate", url },
+          patch: { url, pageUrl: url, loading: true },
+        }));
+      },
+      back: () => {
+        const s = store.getState();
+        const t = s.tabs.find((x) => x.id === s.activeId);
+        // The start page over a kept page: back reveals the page.
+        if (t && t.url === "") {
+          if (t.pageUrl !== "") {
+            patchTab(setState, t.id, (x) => ({ ...x, url: x.pageUrl }));
+          }
+          return;
+        }
+        pageCmd({ kind: "back" });
+      },
+      forward: () => pageCmd({ kind: "forward" }),
+      reload: () => pageCmd({ kind: "reload" }),
+      stop: () => pageCmd({ kind: "stop" }),
     };
   }, [store]);
 
+  const onStartPage = active.url === "";
   return {
-    current: active.displayUrl ?? active.history[active.index] ?? "",
-    canGoBack: active.index > 0,
-    canGoForward: active.index < active.history.length - 1,
+    current: active.url,
+    canGoBack: onStartPage ? active.pageUrl !== "" : active.canGoBack,
+    canGoForward: onStartPage ? false : active.canGoForward,
     loading: active.loading,
-    loadKey: active.loadKey,
-    escaped: active.escaped,
     ...actions,
   };
 }
@@ -279,13 +230,20 @@ export function useBrowserNav(): BrowserNavApi {
 /** A flattened view of one tab for the strip and the viewport. */
 export interface BrowserTabSummary {
   id: string;
-  /** `history[index]`; `""` => start page. */
+  /** `""` => start page. */
   url: string;
-  loadKey: number;
+  /** The page's title as the host reports it (`""` until known). */
+  title: string;
+  faviconUrl: string | null;
   loading: boolean;
   active: boolean;
-  /** True when this tab escaped the proxy (drives the escape overlay). */
-  escaped: boolean;
+}
+
+export interface BrowserOpenOptions {
+  /** Open without selecting it. */
+  background?: boolean;
+  /** Adopt the host page with this key (a popup the page opened). */
+  key?: string;
 }
 
 /** The tab-collection API consumed by the tab strip and the webview. */
@@ -295,11 +253,13 @@ export interface BrowserTabsApi {
   /** Make `id` the active tab (no-op if already active). */
   select(id: string): void;
   /** Open a new tab (start page if no `url`). Becomes active unless `background`. */
-  open(url?: string, opts?: { background?: boolean }): void;
-  /** Close `id`; selects a neighbor if it was active. Closing the last tab resets to one fresh start-page tab. */
+  open(url?: string, opts?: BrowserOpenOptions): void;
+  /**
+   * Close `id`; selects a neighbor if it was active. Closing the last tab
+   * resets to one fresh start-page tab. A tab with a remote page queues its key
+   * on `pendingCloses`, which the viewport delivers to the host.
+   */
   close(id: string): void;
-  /** Mark a specific tab's load complete (the webview `onLoad`). */
-  finishLoad(id: string): void;
 }
 
 /**
@@ -314,9 +274,9 @@ export function useBrowserTabs(): BrowserTabsApi {
     () => ({
       select: (id: string) =>
         store.setState((s) => (s.activeId === id ? s : { ...s, activeId: id })),
-      open: (url = "", opts?: { background?: boolean }) =>
+      open: (url = "", opts?: BrowserOpenOptions) =>
         store.setState((s) => {
-          const tab = freshTab(s.seq, url);
+          const tab = freshTab(s.seq, { url, key: opts?.key });
           return {
             ...s,
             tabs: [...s.tabs, tab],
@@ -327,11 +287,21 @@ export function useBrowserTabs(): BrowserTabsApi {
       close: (id: string) =>
         store.setState((s) => {
           const idx = s.tabs.findIndex((t) => t.id === id);
-          if (idx === -1) return s;
+          const closed = s.tabs[idx];
+          if (!closed) return s;
+          const pendingCloses = closed.remote
+            ? [...s.pendingCloses, closed.key]
+            : s.pendingCloses;
           const remaining = s.tabs.filter((t) => t.id !== id);
           if (remaining.length === 0) {
             const tab = freshTab(s.seq);
-            return { ...s, tabs: [tab], activeId: tab.id, seq: s.seq + 1 };
+            return {
+              ...s,
+              tabs: [tab],
+              activeId: tab.id,
+              seq: s.seq + 1,
+              pendingCloses,
+            };
           }
           let { activeId } = s;
           if (activeId === id) {
@@ -339,15 +309,8 @@ export function useBrowserTabs(): BrowserTabsApi {
             const neighbor = remaining[Math.min(idx, remaining.length - 1)];
             if (neighbor) activeId = neighbor.id;
           }
-          return { ...s, tabs: remaining, activeId };
+          return { ...s, tabs: remaining, activeId, pendingCloses };
         }),
-      finishLoad: (id: string) =>
-        store.setState((s) => ({
-          ...s,
-          tabs: s.tabs.map((t) =>
-            t.id === id && t.loading ? { ...t, loading: false } : t,
-          ),
-        })),
     }),
     [store],
   );
@@ -355,38 +318,90 @@ export function useBrowserTabs(): BrowserTabsApi {
   return {
     tabs: state.tabs.map((t) => ({
       id: t.id,
-      url: t.history[t.index] ?? "",
-      loadKey: t.loadKey,
+      url: t.url,
+      title: t.title,
+      faviconUrl: t.faviconUrl,
       loading: t.loading,
       active: t.id === state.activeId,
-      escaped: t.escaped,
     })),
     activeId: state.activeId,
     ...actions,
   };
 }
 
-/** The per-surface proxy-mode API consumed by the proxy toggle + webview. */
-export interface BrowserProxyApi {
-  /** Whether the framing-stripping proxy is on for this surface. */
-  enabled: boolean;
-  /** Flip the proxy on/off for this surface. */
-  toggle(): void;
+/**
+ * The engine-facing half of the store, for the viewport that owns the tabs'
+ * sockets: every tab whole (key, pending request), the closes to deliver, and
+ * the write-backs.
+ */
+export interface BrowserRemoteApi {
+  tabs: BrowserTab[];
+  activeId: string;
+  /** Keys of closed tabs' remote pages still to close on the host. */
+  pendingCloses: string[];
+  /**
+   * The tab's socket sent `attach` carrying `url`. A tab without a remote page
+   * gets one at that URL, so a pending `navigate` to that same URL is
+   * superseded (marked sent); any other pending request stays to be sent.
+   */
+  markAttached(tabId: string, url: string): void;
+  /** The request `seq` was delivered over the tab's socket. */
+  markSent(tabId: string, seq: number): void;
+  /** The host reported the tab's page state. */
+  report(tabId: string, state: PageState): void;
+  /** The host was told to close the page `key`. */
+  closeDelivered(key: string): void;
 }
 
-/**
- * Reads the surface's proxy-mode flag and returns its toggle. Must be called
- * inside `<BrowserTabsStore.Provider>`.
- */
-export function useBrowserProxy(): BrowserProxyApi {
+/** Reads the whole tab state for the viewport. Must be called inside `<BrowserTabsStore.Provider>`. */
+export function useBrowserRemote(): BrowserRemoteApi {
   const state = BrowserTabsStore.useStore();
   const store = BrowserTabsStore.useStoreApi();
 
-  const toggle = useMemo(
-    () => () =>
-      store.setState((s) => ({ ...s, proxyEnabled: !s.proxyEnabled })),
-    [store],
-  );
+  const actions = useMemo(() => {
+    const setState: SetState = (fn) => store.setState(fn);
+    return {
+      markAttached: (tabId: string, url: string) =>
+        patchTab(setState, tabId, (t) => {
+          if (t.remote) return t;
+          const r = t.request;
+          const superseded =
+            r !== null && r.cmd.kind === "navigate" && r.cmd.url === url;
+          return {
+            ...t,
+            remote: true,
+            sentSeq: superseded ? r.seq : t.sentSeq,
+          };
+        }),
+      markSent: (tabId: string, seq: number) =>
+        patchTab(setState, tabId, (t) =>
+          t.sentSeq >= seq ? t : { ...t, sentSeq: seq },
+        ),
+      report: (tabId: string, page: PageState) =>
+        patchTab(setState, tabId, (t) => ({
+          ...t,
+          // The start page shown over the page keeps showing; the page's URL
+          // is still tracked for `back`.
+          url: t.url === "" ? "" : page.url,
+          pageUrl: page.url,
+          title: page.title,
+          faviconUrl: page.faviconUrl,
+          loading: t.url === "" ? false : page.loading,
+          canGoBack: page.canGoBack,
+          canGoForward: page.canGoForward,
+        })),
+      closeDelivered: (key: string) =>
+        setState((s) => ({
+          ...s,
+          pendingCloses: s.pendingCloses.filter((k) => k !== key),
+        })),
+    };
+  }, [store]);
 
-  return { enabled: state.proxyEnabled, toggle };
+  return {
+    tabs: state.tabs,
+    activeId: state.activeId,
+    pendingCloses: state.pendingCloses,
+    ...actions,
+  };
 }
