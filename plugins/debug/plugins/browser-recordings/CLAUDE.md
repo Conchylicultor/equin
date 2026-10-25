@@ -49,11 +49,13 @@ no DOM snapshots: nobody opens them.
 ## The view
 
 `isRecordedToolCall(name, input)` (core) is the one classification. The
-tool-call renderer hosts `JsonlViewerTool.Footer` under every card; this
+tool-call renderer hosts `JsonlViewerTool.Footer` inside every card (always
+shown under its header, so the screenshot reads as part of the call); this
 plugin's footer reads the `browser-recordings.runs` live value for a recorded
 call and draws one filmstrip per run (consecutive steps on the same frame fold
-into one thumbnail, a failing step is ringed, each run its own image gallery so
-the viewer's slideshow plays it). The same strips are gathered as the
+into one thumbnail, a failing step is ringed). A strip opens no gallery of its own: its frames
+join the transcript's, so the viewer's ← / → walk from one call's screenshot to
+the next (the artifact section is one gallery too). The same strips are gathered as the
 conversation's Browser recordings artifact. Pushed: the server watches the
 recordings root once (`acquireDirWatch`) and notifies the call whose manifest
 landed. Frames are served by host-fs raw.
@@ -120,8 +122,6 @@ inside one `browser_batch` (one frame per call).
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --destructive`
-    - `ui/tokens/density --space-2xs`
-    - `ui/tokens/density --space-md`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/shape --radius`
   - Imported by: `debug/browser-recordings/writer`

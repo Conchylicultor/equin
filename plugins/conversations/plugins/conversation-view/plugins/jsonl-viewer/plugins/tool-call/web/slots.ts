@@ -28,10 +28,11 @@ export interface ToolFooterProps {
 }
 
 /**
- * Rendered under ANY tool call's card, whichever renderer drew it, for what
- * the call left behind beyond its result (e.g. the recording of the browser it
- * drove). A contribution decides for itself whether a call is one of its own
- * and renders nothing otherwise.
+ * Rendered inside ANY tool call's card, under its header and always shown
+ * (whichever renderer drew it, through `ToolCallCard`), for what the call left
+ * behind beyond its result (e.g. the recording of the browser it drove). A
+ * contribution decides for itself whether a call is one of its own and renders
+ * nothing otherwise; it owns its top spacing, so nothing adds no gap.
  */
 export interface ToolFooterContribution {
   id: string;

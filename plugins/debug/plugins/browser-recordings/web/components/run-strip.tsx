@@ -1,8 +1,5 @@
 import { hostFileUrl } from "@plugins/infra/plugins/host-fs/core";
-import {
-  AssetThumbnail,
-  ImageGallery,
-} from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
+import { AssetThumbnail } from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -10,8 +7,9 @@ import type { BrowserRecordingRun, RecordingStep } from "../../core";
 
 /**
  * One run's filmstrip: a frame per step (the page as the step ended), the
- * failing step ringed. Each run is its own gallery, so the full-window viewer
- * steps — or slideshows — through that run's frames only. An e2e run is
+ * failing step ringed. The strip opens no gallery of its own: its frames join
+ * the enclosing one (the transcript's, the artifacts popover's), so ← / → in
+ * the viewer walk on to the next call's screenshots. An e2e run is
  * captioned with its script; a browser_* call's frame is the call's own
  * picture, its card already says what it did.
  */
@@ -31,32 +29,30 @@ export function RunStrip({ run }: { run: BrowserRecordingRun }) {
           {failed > 0 ? ` · ${failed} failed` : ""}
         </Text>
       ) : null}
-      <ImageGallery>
-        <Scroll axis="x">
-          <Stack direction="row" gap="xs">
-            {frames.map(({ frame, step, index }) => (
-              <span
-                key={frame}
-                title={`${index + 1}. ${step.title}${step.error ? `\n${step.error}` : ""}`}
-                className={
-                  step.error !== undefined
-                    ? "rounded-md ring-2 ring-destructive"
-                    : undefined
-                }
-              >
-                <AssetThumbnail
-                  size="chip"
-                  asset={hostFileUrl(frame)}
-                  image={{
-                    name: `${index + 1}/${steps.length} · ${step.title}`,
-                    sourceLabel: source,
-                  }}
-                />
-              </span>
-            ))}
-          </Stack>
-        </Scroll>
-      </ImageGallery>
+      <Scroll axis="x">
+        <Stack direction="row" gap="xs">
+          {frames.map(({ frame, step, index }) => (
+            <span
+              key={frame}
+              title={`${index + 1}. ${step.title}${step.error ? `\n${step.error}` : ""}`}
+              className={
+                step.error !== undefined
+                  ? "rounded-md ring-2 ring-destructive"
+                  : undefined
+              }
+            >
+              <AssetThumbnail
+                size="chip"
+                asset={hostFileUrl(frame)}
+                image={{
+                  name: `${index + 1}/${steps.length} · ${step.title}`,
+                  sourceLabel: source,
+                }}
+              />
+            </span>
+          ))}
+        </Stack>
+      </Scroll>
     </Stack>
   );
 }

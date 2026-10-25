@@ -20366,8 +20366,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/color-palette --destructive`
-          - `ui/tokens/density --space-2xs`
-          - `ui/tokens/density --space-md`
           - `ui/tokens/density --space-sm`
           - `ui/tokens/shape --radius`
         - Imported by: `debug/browser-recordings/writer`

@@ -1,6 +1,7 @@
 import type { ArtifactItem } from "@plugins/conversations/plugins/conversation-view/plugins/artifacts/core";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { ImageGallery } from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -16,7 +17,8 @@ export const BROWSER_RECORDING_ICON = symbol("movie");
  * (`useLive` over every call's tuple at once); a call that recorded nothing
  * (killed before its teardown) adds no strip.
  *
- * Like the screenshots section, the popover stays open under the viewer a
+ * Like the screenshots section, the whole section is ONE gallery (← / → walk
+ * every run's frames), and the popover stays open under the viewer a
  * thumbnail opens — the viewer renders inside this section's tree.
  */
 export function RecordingsSection({ items }: { items: ArtifactItem[] }) {
@@ -25,25 +27,27 @@ export function RecordingsSection({ items }: { items: ArtifactItem[] }) {
     items.map((item) => ({ toolUseId: item.key })),
   );
   return (
-    <Stack gap="sm" className="px-sm">
-      {results.map((result, i) => {
-        const key = items[i]?.key ?? String(i);
-        if (result.status === "loading")
-          return <Loading key={key} variant="block" />;
-        if (result.status === "error")
-          return (
-            <ResourceErrorInline
-              key={key}
-              variant="inline"
-              subject="a browser recording"
-              error={result.error}
-              refetch={result.refetch}
-            />
-          );
-        return result.data.runs.map((run) => (
-          <RunStrip key={run.dir} run={run} />
-        ));
-      })}
-    </Stack>
+    <ImageGallery>
+      <Stack gap="sm" className="px-sm">
+        {results.map((result, i) => {
+          const key = items[i]?.key ?? String(i);
+          if (result.status === "loading")
+            return <Loading key={key} variant="block" />;
+          if (result.status === "error")
+            return (
+              <ResourceErrorInline
+                key={key}
+                variant="inline"
+                subject="a browser recording"
+                error={result.error}
+                refetch={result.refetch}
+              />
+            );
+          return result.data.runs.map((run) => (
+            <RunStrip key={run.dir} run={run} />
+          ));
+        })}
+      </Stack>
+    </ImageGallery>
   );
 }

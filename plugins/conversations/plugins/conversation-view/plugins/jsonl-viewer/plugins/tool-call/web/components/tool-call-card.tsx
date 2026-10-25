@@ -1,4 +1,5 @@
-import { type ReactNode } from "react";
+import { type ReactNode, use } from "react";
+import { ToolFooterContext } from "../internal/footer-context";
 import {
   blockingHook,
   isLoudHook,
@@ -59,6 +60,9 @@ interface ToolCallFrameProps {
    *  by the worst outcome) on the closed card, and what the loud ones said (a
    *  block, a failure, added context) at the top of the opened body. */
   hooks?: readonly HookRecord[];
+  /** Always-shown content inside the card under its header (the card's
+   *  `footer`). `ToolCallCard` passes the call's `JsonlViewerTool.Footer`. */
+  footer?: ReactNode;
 }
 
 /**
@@ -77,6 +81,7 @@ export function ToolCallFrame({
   isError,
   running,
   hooks,
+  footer,
 }: ToolCallFrameProps) {
   const tool = toolName(name);
   return (
@@ -87,6 +92,7 @@ export function ToolCallFrame({
       note={note}
       aside={aside}
       trailing={running ? <BouncingDots /> : undefined}
+      footer={footer}
       label={
         // Rigid identity only: the tool-name badge + an optional leading chip.
         // The flexible `summary` rides the card's own flexible cell (passed as a
@@ -163,6 +169,7 @@ export function ToolCallCard({
   ...frame
 }: ToolCallCardProps) {
   const unknown = outcomeUnknown ?? event.result?.outcomeUnknown === true;
+  const footer = use(ToolFooterContext);
   const blocked = blockingHook(event) !== undefined;
   return (
     <ToolCallFrame
@@ -179,6 +186,7 @@ export function ToolCallCard({
       }
       running={running ?? !event.result}
       hooks={event.hooks}
+      footer={footer?.toolUseId === event.toolUseId ? footer.footer : undefined}
     />
   );
 }

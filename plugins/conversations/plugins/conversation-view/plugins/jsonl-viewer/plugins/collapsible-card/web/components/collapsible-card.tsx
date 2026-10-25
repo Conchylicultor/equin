@@ -83,6 +83,11 @@ export interface CollapsibleCardProps {
   className?: string;
   /** Collapsible body. */
   children?: ReactNode;
+  /** Always-shown content under the header (and under the body when open),
+   *  inside the card's chrome — what belongs to the card but is not folded
+   *  away, e.g. the screenshot a browser call left. It owns its own top
+   *  spacing, so a footer that renders nothing adds no gap. */
+  footer?: ReactNode;
 }
 
 // One canonical chrome for every transcript card. Semantic accents live in the
@@ -118,6 +123,7 @@ export function CollapsibleCard({
   onOpenChange,
   className,
   children,
+  footer,
 }: CollapsibleCardProps) {
   const { open, triggerProps, contentProps } = useCollapsible({
     defaultOpen,
@@ -228,6 +234,7 @@ export function CollapsibleCard({
         {/* eslint-disable-next-line spacing/no-adhoc-spacing -- top offset separating the collapsible body from the header inside the non-flex Card; lifting into Card padding would also pad the always-present header */}
         <div className="pt-2">{children}</div>
       </FoldMotion>
+      {footer}
     </Card>
   );
 }

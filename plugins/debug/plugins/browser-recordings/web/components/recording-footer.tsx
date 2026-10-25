@@ -11,8 +11,10 @@ import {
 import { RunStrip } from "./run-strip";
 
 /**
- * The recording of the browser a tool call drove, under its card: one
+ * The recording of the browser a tool call drove, as its card's footer: one
  * filmstrip per run — an e2e script's steps, or a browser_* call's frame.
+ * Its frames join the transcript's gallery, so the viewer steps from one
+ * call's screenshot to the next.
  */
 export function RecordingFooter({ event }: ToolFooterProps) {
   if (!isRecordedToolCall(event.name, event.input)) return null;
@@ -43,7 +45,7 @@ function Recordings({ toolUseId }: { toolUseId: string }) {
   // transcript opening on it does not grow under the reader.
   if (result.status === "loading")
     return (
-      <Stack gap="xs" className="px-md pt-2xs" aria-busy>
+      <Stack gap="xs" className="pt-sm" aria-busy>
         <ThumbnailPlaceholder size="chip" />
       </Stack>
     );
@@ -60,7 +62,7 @@ function Recordings({ toolUseId }: { toolUseId: string }) {
   // before it wrote one) is nothing to show.
   if (result.data.runs.length === 0) return null;
   return (
-    <Stack gap="xs" className="px-md pt-2xs">
+    <Stack gap="xs" className="pt-sm">
       {result.data.runs.map((run) => (
         <RunStrip key={run.dir} run={run} />
       ))}
