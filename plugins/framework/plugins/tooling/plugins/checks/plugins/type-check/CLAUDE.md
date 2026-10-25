@@ -364,6 +364,11 @@ is checked against or keyed on. Before this, a cold run was one program over
   so it counts as an import of each: what it imports shares its component, as
   in one program. The repo sources a repo `.d.ts` root imports are in every
   program, so they go first.
+- **An import is followed through files outside the set.** An outside file
+  is served its stored `.d.ts`, which imports what the file imports, so a
+  batch loading it loads those too: the plan's edge from an importer is to
+  every file of the set reached through outside files only (a file importing
+  an unchanged barrel over a changed file waits for that file).
 - **A type is spelled by the file that declares it** in the canonical
   `.d.ts` (`canonicalDeclarations`' `declaringOf`, from the checker): emit
   names a type through whichever module path its program resolved it by — a

@@ -146,3 +146,25 @@ test("a batch grows along what waits on it, up to k", () => {
   });
   expect(batches).toEqual([["a", "b", "c"], ["d"]]);
 });
+
+test("an import of a file outside the set is followed through it, cycles and the environment included", () => {
+  // `a` imports `z`, outside, a barrel over `y`; `z` and `w` (outside) import
+  // each other; `env` (outside, the environment) imports `e`.
+  const deps = {
+    a: ["z"],
+    y: [],
+    z: ["w"],
+    w: ["z", "y"],
+    env: ["e"],
+    e: [],
+  };
+  const batches = drain({
+    files: ["a", "y", "e"],
+    deps: graph(deps),
+    environment: ["env"],
+    globals: [],
+    k: 1,
+    width: 1,
+  });
+  expect(batches).toEqual([["e"], ["y"], ["a"]]);
+});

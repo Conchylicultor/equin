@@ -173,7 +173,10 @@ export interface CheckSetInput {
   hashOf(path: string): string | undefined;
   /** `.d.ts` texts this run produced that the store does not hold yet, by hash. */
   fresh: ReadonlyMap<string, string>;
-  /** The repo targets of a file's imports (the batch order's edges). */
+  /**
+   * The repo targets of a file's imports (the batch order's edges) — asked of
+   * files outside the set too: the plan follows an import through them.
+   */
   importsOf(path: string): Iterable<string>;
   /** What to lint of a file in a batch, if anything. */
   lintSpec?(path: string): BatchLintSpec | undefined;
@@ -239,6 +242,8 @@ export function declImports(
     );
     for (const [spec, mode] of fileImports(sf, options)) {
       const t = resolver.target(d, spec, mode);
+      // A `declare module "x"` name resolves nowhere ("-"): not an import.
+      if (t === "-" || t === "<dep>") continue;
       if (isRepoPath(t) && needsContract(t)) out.add(t);
     }
   }

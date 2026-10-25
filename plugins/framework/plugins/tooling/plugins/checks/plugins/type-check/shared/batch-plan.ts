@@ -9,6 +9,12 @@
 // import cycle (a strongly connected component) is never split, so a batch
 // holds at most max(K, the largest cycle) files.
 //
+// A file OUTSIDE the set is served its stored `.d.ts`, and a `.d.ts` imports
+// what its file imports: a batch loading it loads those too. So an import of
+// an outside file is followed through it, to the files of the set it reaches
+// through outside files only (an import the plan did not see otherwise: a
+// file importing an unchanged barrel over a changed file).
+//
 // The ENVIRONMENT goes first: the repo sources a repo `.d.ts` root imports are
 // in every program, so they (and what they import) are done before any other
 // batch is dispatched. A GLOBAL source file is seen by every file without an
@@ -28,7 +34,10 @@ import { forEachComponent } from "./keys";
 export interface BatchPlanInput {
   /** The files to check. */
   files: readonly string[];
-  /** The files `p` imports (anything outside `files` is ignored: it is served). */
+  /**
+   * The files `p` imports — of `files`, or outside them (served, and followed
+   * through to what they import). Asked of outside files too.
+   */
   deps(p: string): Iterable<string>;
   /** Files every program holds: done, with what they import, before the rest. */
   environment: Iterable<string>;
@@ -64,16 +73,11 @@ export function planBatches(input: BatchPlanInput): BatchPlan {
   }
   const files = [...input.files].sort();
   const index = new Map(files.map((p, i) => [p, i]));
-  const globals = [...input.globals].flatMap((g) => {
-    const j = index.get(g);
-    return j === undefined ? [] : [j];
-  });
+  const reach = throughServed(index, input.deps);
+  const globals = [...new Set([...input.globals].flatMap(reach))];
   const out: number[][] = files.map((p, i) => {
     const seen = new Set<number>(globals);
-    for (const d of input.deps(p)) {
-      const j = index.get(d);
-      if (j !== undefined) seen.add(j);
-    }
+    for (const d of input.deps(p)) for (const j of reach(d)) seen.add(j);
     seen.delete(i);
     return [...seen].sort((a, b) => a - b);
   });
@@ -101,8 +105,7 @@ export function planBatches(input: BatchPlanInput): BatchPlan {
   const envClosure = new Set<number>();
   const envStack: number[] = [];
   for (const p of input.environment) {
-    const j = index.get(p);
-    if (j !== undefined) envStack.push(comp[j]!);
+    for (const j of reach(p)) envStack.push(comp[j]!);
   }
   while (envStack.length > 0) {
     const c = envStack.pop()!;
@@ -225,5 +228,76 @@ export function planBatches(input: BatchPlanInput): BatchPlan {
       }
     },
     finished: () => completed === n && taken.size === n,
+  };
+}
+
+/**
+ * The files of the set a file stands for as an import: itself, when in the
+ * set; else (served) every file of the set its imports reach through outside
+ * files only. Memoized per strongly-connected component of the outside files
+ * (an outside import cycle is followed once).
+ */
+function throughServed(
+  index: ReadonlyMap<string, number>,
+  deps: (p: string) => Iterable<string>,
+): (p: string) => readonly number[] {
+  const outsideId = new Map<string, number>();
+  const outsidePath: string[] = [];
+  const outsideDeps: string[][] = [];
+  const idOf = (p: string): number => {
+    let id = outsideId.get(p);
+    if (id === undefined) {
+      id = outsidePath.length;
+      outsideId.set(p, id);
+      outsidePath.push(p);
+      outsideDeps.push([...deps(p)]);
+    }
+    return id;
+  };
+  /** Each outside file's frontier in the set, once its component is visited. */
+  const frontier: (readonly number[] | undefined)[] = [];
+  return (p) => {
+    const j = index.get(p);
+    if (j !== undefined) return [j];
+    const start = idOf(p);
+    const known = frontier[start];
+    if (known !== undefined) return known;
+    // The outside files `p` reaches, not yet resolved, found before Tarjan
+    // runs over them (it needs its node set up front).
+    const nodes: number[] = [];
+    const queued = new Set<number>([start]);
+    for (const stack = [start]; stack.length > 0;) {
+      const v = stack.pop()!;
+      nodes.push(v);
+      for (const d of outsideDeps[v]!) {
+        if (index.has(d)) continue;
+        const w = idOf(d);
+        if (frontier[w] !== undefined || queued.has(w)) continue;
+        queued.add(w);
+        stack.push(w);
+      }
+    }
+    const edges = (v: number): number[] =>
+      outsideDeps[v]!.filter((d) => !index.has(d)).map((d) =>
+        outsideId.get(d)!,
+      );
+    forEachComponent(nodes, edges, (members) => {
+      // Visited after every component it reaches: theirs are resolved.
+      const inSet = new Set<number>();
+      const own = new Set(members);
+      for (const v of members) {
+        for (const d of outsideDeps[v]!) {
+          const k = index.get(d);
+          if (k !== undefined) inSet.add(k);
+          else {
+            const w = outsideId.get(d)!;
+            if (!own.has(w)) for (const x of frontier[w]!) inSet.add(x);
+          }
+        }
+      }
+      const f = [...inSet].sort((a, b) => a - b);
+      for (const v of members) frontier[v] = f;
+    });
+    return frontier[start]!;
   };
 }

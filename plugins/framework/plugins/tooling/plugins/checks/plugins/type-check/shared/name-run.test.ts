@@ -1009,3 +1009,28 @@ test("a type reached through a barrel is spelled by its declaring file, whicheve
   const out = await run(root, files, memoryNameStore());
   expect(out.results.get("use/job.ts")!.diagnostics).toEqual([]);
 });
+
+test("a batch importing a file outside the set waits for what that file's .d.ts imports from the set", async () => {
+  // `a` and `y` change, `z` (a barrel over `y`) does not: the set is {a, y},
+  // `z` is served its stored .d.ts — which imports `y`. So `a` needs `y`'s
+  // .d.ts, through `z`, though neither imports the other.
+  const files = {
+    "y.ts": "export const y = (): number => 1;\n",
+    "z.ts": 'export { y } from "./y";\n',
+    "a.ts": 'import { y } from "./z";\nexport const a = (): number => y();\n',
+  };
+  const root = freshRoot();
+  writeTree(root, files);
+  const store = memoryNameStore();
+  await run(root, files, store);
+  const edited = {
+    ...files,
+    "y.ts": "export const y = (): number => 2;\n",
+    "a.ts":
+      'import { y } from "./z";\nexport const a = (): number => y() + 1;\n',
+  };
+  writeTree(root, edited, files);
+  const out = await run(root, edited, store, { batchK: 1 });
+  expect(out.checked).toEqual(["a.ts", "y.ts"]);
+  expect(out.report.p1Batches!.batches).toBe(2);
+});
