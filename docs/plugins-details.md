@@ -28354,8 +28354,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Core:
         - Uses:
           - `framework/product-name.PRODUCT_NAME`
-          - `infra/request-origin.AGENT_WRITE_HEADER`
           - `infra/request-origin.originOf`
+          - `infra/request-origin.UNREVERTED_WRITE_HEADER`
           - `infra/runtime-identity.isMain`
           - `infra/runtime-profiler.chargeWait`
           - `infra/runtime-profiler.recordEntrySpan`
@@ -30539,12 +30539,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types): `WriteOrigin`
         - Exports (values):
           - `AGENT_ORIGIN`
-          - `AGENT_WRITE_HEADER`
           - `agentOriginHeaders`
           - `ORIGIN_HEADER`
           - `ORIGIN_SOURCE_HEADER`
           - `originOf`
           - `systemOrigin`
+          - `UNREVERTED_WRITE_HEADER`
       - Plugins:
         - **`agent-write-ledger`** — Shared agent-write ledger: defineAgentWriteLedger lets a domain snapshot the files an agent-origin request is about to overwrite (first write wins) and put them back on revert, skipping anything a person edited since; GET /api/agent-writes and POST /api/agent-writes/revert aggregate every registered ledger for the e2e harness.
           - Server:

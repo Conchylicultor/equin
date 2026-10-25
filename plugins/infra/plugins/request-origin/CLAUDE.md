@@ -38,11 +38,15 @@ endpoint-built handlers on a write route, so no raw handler can skip it.
 Worktree deploys are unchanged. Design:
 [`research/2026-10-22-global-main-read-only-for-agent-sessions.md`](../../../../research/2026-10-22-global-main-read-only-for-agent-sessions.md).
 
-`AGENT_WRITE_HEADER` (`x-singularity-agent-write`) is the third header, and
-**advisory only**: `fetchEndpoint` stamps it (value = the declaration) on a
-request to an endpoint declaring `agentWrite`, and its one reader is the agent
-browser's write drain, which skips such requests. The server gate reads the
-endpoint definition, never this header.
+`UNREVERTED_WRITE_HEADER` (`x-singularity-unreverted-write`) is the third
+header: `fetchEndpoint` stamps it on every write to an endpoint that does not
+declare `agentReverted` — "this request records nothing an agent-write revert
+undoes". The agent browser's write drain does not wait for such a request
+before reverting. `originOf` carries it as the agent arm's `claimsUnreverted`,
+and the agent-write ledger refuses (throws) to record a write that made the
+claim, so a missing `agentReverted` is a loud failure, never a write the revert
+silently missed. Main's write gate reads the endpoint definition, never a
+header.
 
 ## Consumers
 
@@ -92,12 +96,12 @@ own server half.)
   - Exports (types): `WriteOrigin`
   - Exports (values):
     - `AGENT_ORIGIN`
-    - `AGENT_WRITE_HEADER`
     - `agentOriginHeaders`
     - `ORIGIN_HEADER`
     - `ORIGIN_SOURCE_HEADER`
     - `originOf`
     - `systemOrigin`
+    - `UNREVERTED_WRITE_HEADER`
 - Sub-plugins:
   - **`agent-write-ledger`** — Shared agent-write ledger: defineAgentWriteLedger lets a domain snapshot the files an agent-origin request is about to overwrite (first write wins) and put them back on revert, skipping anything a…
 

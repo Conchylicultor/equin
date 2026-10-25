@@ -58,7 +58,11 @@ Files: `services/agent-browser/` (`data-dirs`) — `host.sock`, `host.pid`,
   build, main, another worktree) and on nothing else (a CDN, a public website).
   The session records each deploy it reached (`origins` in the status), and
   closing reverts THAT source's writes on each (`shared/revert.ts`) — never
-  another conversation's or an e2e run's.
+  another conversation's or an e2e run's. **What is reverted is narrow**: only
+  the files a domain records in an agent-write ledger
+  ([`agent-write-ledger`](../../../request-origin/plugins/agent-write-ledger/CLAUDE.md)
+  — config documents, prototype picks). Every other write the session makes
+  (DB rows: tasks, app usage, …) stays on that deploy.
 - **Main is read-only for a session.** Main's backend refuses its writes with a
   `403` ("main is read-only for agent sessions — reproduce on your own build")
   before they run, except endpoints declaring `agentWrite` (telemetry, the
@@ -69,12 +73,15 @@ Files: `services/agent-browser/` (`data-dirs`) — `host.sock`, `host.pid`,
   requests client-side only: a write already sent still lands, and if it lands
   after the revert it sticks. So the session tracks its non-GET requests to the
   deploys from the moment it opens — except those stamped
-  `x-singularity-agent-write` (`fetchEndpoint` stamps a request to an endpoint
-  declaring `agentWrite`: telemetry writes nothing the revert undoes, and
-  waiting on it was the `drain-writes` false alarm); closing routes every new request to an
+  `x-singularity-unreverted-write` (`fetchEndpoint` stamps every write to an
+  endpoint not declaring `agentReverted`: it records nothing the revert undoes,
+  and waiting on such writes — an app-usage flush, telemetry — was the
+  `drain-writes` false alarm; a ledger refuses a stamped agent write, so the
+  stamp cannot hide a revertible one). Closing routes every new request to an
   abort (a debounced write-back firing mid-close included), waits for the
   tracked ones to get their response (≤ 10 s; past that a `drain-writes` host
-  error names them and the revert runs anyway), then closes and reverts.
+  error names them and the revert runs anyway — a real race on a revertible
+  write), then closes and reverts.
 - **A host that dies** (SIGKILL, OOM) leaves `status.json` saying `ready` for a
   dead pid (`died`). Its sessions' writes are still in each target's ledger:
   the next `ensureHost` reverts every listed session before relaunching, and a

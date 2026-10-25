@@ -72,6 +72,7 @@ export const renameSavedTheme = defineEndpoint({
  */
 export const deleteSavedTheme = defineEndpoint({
   route: "DELETE /api/saved-themes/:id",
+  agentReverted: true,
   query: z.object({
     reassign: z
       .enum(["true", "false"])

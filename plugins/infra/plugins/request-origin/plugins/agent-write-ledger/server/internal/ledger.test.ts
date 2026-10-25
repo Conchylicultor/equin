@@ -38,7 +38,11 @@ afterAll(() => {
   rmSync(files, { recursive: true, force: true });
 });
 
-const agent: WriteOrigin = { kind: "agent", source: "e2e:ledger-test" };
+const agent: WriteOrigin = {
+  kind: "agent",
+  source: "e2e:ledger-test",
+  claimsUnreverted: false,
+};
 const E2E = { scope: "prefix", prefix: "e2e:" } as const;
 
 type Role = "main" | "side";
@@ -291,8 +295,16 @@ test("a revert restores only the sessions it names", async () => {
     label: "Scoped",
     restore: async (entry) => putBack(entry),
   });
-  const a: WriteOrigin = { kind: "agent", source: "mcp-browser:conv-a" };
-  const b: WriteOrigin = { kind: "agent", source: "mcp-browser:conv-ab" };
+  const a: WriteOrigin = {
+    kind: "agent",
+    source: "mcp-browser:conv-a",
+    claimsUnreverted: false,
+  };
+  const b: WriteOrigin = {
+    kind: "agent",
+    source: "mcp-browser:conv-ab",
+    claimsUnreverted: false,
+  };
   const pathsA = pathsFor("scoped-a");
   const pathsB = pathsFor("scoped-b");
 
@@ -340,4 +352,21 @@ test("a ledger id is unique and names a file", () => {
       restore: async () => {},
     }),
   ).toThrow(/ledger id must match/);
+});
+
+test("an agent write claiming to be unreverted is refused before it is recorded", () => {
+  const ledger = defineAgentWriteLedger<Role>({
+    id: "test-claims-unreverted",
+    label: "Claims unreverted",
+    restore: async (entry) => putBack(entry),
+  });
+  const claimed: WriteOrigin = {
+    kind: "agent",
+    source: "mcp-browser:conv-claim",
+    claimsUnreverted: true,
+  };
+  expect(() =>
+    ledger.record(claimed, "k", pathsFor("claims-unreverted"), "op"),
+  ).toThrow(/agentReverted/);
+  expect(entriesOf("test-claims-unreverted")).toEqual([]);
 });

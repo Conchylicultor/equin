@@ -112,7 +112,10 @@ export interface AgentWriteLedger<K extends string> {
    * resolved.
    *
    * A no-op for anything but an agent write, so every call site pays one
-   * discriminant check and nothing else.
+   * discriminant check and nothing else. THROWS for an agent write whose
+   * request claimed to be unreverted (`claimsUnreverted` — its endpoint does
+   * not declare `agentReverted`), before the write: the agent browser did not
+   * wait for that request before reverting.
    *
    * **The FIRST write is the one captured.** The ledger answers "what did this
    * look like before the agent touched it at all". On a second write the
@@ -299,6 +302,16 @@ export function defineAgentWriteLedger<K extends string>(
   const handle: AgentWriteLedger<K> = {
     record(writer, key, paths, operation) {
       if (writer.kind !== "agent") return;
+      if (writer.claimsUnreverted) {
+        // The agent browser's write drain skipped this request on that claim,
+        // so a revert could run before it lands and miss it. Refuse the write
+        // rather than record one the revert may silently fail to undo.
+        throw new Error(
+          `[agent-write-ledger] "${id}": ${writer.source}'s write to "${key}" (${operation}) ` +
+            `came in a request stamped as never reverted (x-singularity-unreverted-write). ` +
+            `Declare \`agentReverted: true\` on the endpoint that reaches this write.`,
+        );
+      }
 
       const ledger = load();
       const now = new Date().toISOString();

@@ -7,6 +7,7 @@ import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 // could not be parsed — the UI then offers manual entry.
 export const setAppleCertificateEndpoint = defineEndpoint({
   route: "POST /api/apple-signing/certificate",
+  agentReverted: true,
   body: z.object({
     p12Base64: z.string(),
     password: z.string(),

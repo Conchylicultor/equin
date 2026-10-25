@@ -91,5 +91,6 @@ export const prototypePicks = liveValue("prototypes.picks", {
  */
 export const setPrototypePicks = defineEndpoint({
   route: "PUT /api/prototypes/:name/picks",
+  agentReverted: true,
   body: PicksChangeSchema,
 });

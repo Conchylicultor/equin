@@ -45,11 +45,21 @@ interface EndpointContract<
    * Why an agent session may send this WRITE to main (see {@link AgentWrite}).
    * Absent = a normal write: main's backend refuses it with a 403 when the
    * request carries the agent-origin headers. Write endpoints only — `implement`
-   * throws for a GET. `fetchEndpoint` stamps it on the request
-   * (`AGENT_WRITE_HEADER`, advisory) so the agent browser's write drain does not
-   * wait for it; the server reads only this field.
+   * throws for a GET. The server reads only this field.
    */
   readonly agentWrite?: AgentWrite;
+  /**
+   * An agent session's write here may be recorded in an agent-write ledger
+   * (`request-origin/agent-write-ledger`) and undone when the session closes —
+   * so the agent browser's write drain must wait for it before reverting.
+   *
+   * Absent on a write = it records nothing a revert undoes: `fetchEndpoint`
+   * stamps `UNREVERTED_WRITE_HEADER` on the request and the drain does not wait
+   * for it. Getting this wrong is loud, never silent: a ledger refuses (throws)
+   * to record an agent write whose request carried that stamp. Write endpoints
+   * only — `implement` throws for a GET.
+   */
+  readonly agentReverted?: true;
   /** Phantom field to carry the params type. Never set at runtime. */
   readonly __params?: TParams;
 }
@@ -111,6 +121,10 @@ interface EndpointOptions<Route extends string, B, R, TQuery> {
   agentWrite?: Route extends `${"GET" | "HEAD" | "OPTIONS"} ${string}`
     ? never
     : AgentWrite;
+  /** A read cannot write, so a GET declaring it is a tsc error. */
+  agentReverted?: Route extends `${"GET" | "HEAD" | "OPTIONS"} ${string}`
+    ? never
+    : true;
 }
 
 /**
@@ -179,6 +193,7 @@ export function defineEndpoint<
     dedupe: opts.dedupe,
     slowThresholdMs: opts.slowThresholdMs,
     agentWrite: opts.agentWrite,
+    agentReverted: opts.agentReverted,
     ...(opts.needsMachine !== undefined
       ? { needsMachine: opts.needsMachine }
       : {}),

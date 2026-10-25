@@ -227,9 +227,7 @@ export const emitLogs = defineEndpoint({
   here. A raw write handler (a stream, a binary body, custom headers) goes
   through `rawEndpointHandler(endpoint, handler)` (or `machineHandler(endpoint,
   handler)`), which runs the same gate and nothing else.
-- **The client.** `fetchEndpoint` stamps `AGENT_WRITE_HEADER` on a request to a
-  declaring endpoint (advisory — read only by the agent browser's write drain;
-  the server reads the declaration) and turns the refusal into
+- **The client.** `fetchEndpoint` turns the refusal into
   `EndpointAgentWriteRefusedError`, which files nothing: not to
   `endpointErrorSink`, not as an unhandled rejection (the crash collector skips
   it), not as an optimistic-rejection report (toasted only). The toast / error
@@ -237,6 +235,23 @@ export const emitLogs = defineEndpoint({
 - **Not covered:** `central/` routes (one process for every worktree, never
   main's), and clients that do not send the agent headers (raw `curl`, page JS
   overriding them) — the gate prevents accidents, it is not a security boundary.
+
+## Writes an agent session's close undoes — `agentReverted`
+
+```typescript
+export const setConfigField = defineEndpoint({
+  route: "POST /api/config-v2/set-field", body: …,
+  agentReverted: true,   // its handler records into an agent-write ledger
+});
+```
+
+Declare it on a write whose handler passes `originOf(req)` into a store that
+records into an agent-write ledger (`request-origin/agent-write-ledger`: config
+files, prototype picks). Every other write gets `UNREVERTED_WRITE_HEADER`
+stamped by `fetchEndpoint`, and the agent browser's write drain does not wait
+for it before reverting — nothing it wrote is reverted, so landing late changes
+nothing. A missing declaration is loud: the ledger throws on an agent write that
+came stamped. A GET declaring it is a tsc error.
 
 ## Non-JSON payloads (codecs)
 
@@ -393,8 +408,8 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
 - Core:
   - Uses:
     - `framework/product-name.PRODUCT_NAME`
-    - `infra/request-origin.AGENT_WRITE_HEADER`
     - `infra/request-origin.originOf`
+    - `infra/request-origin.UNREVERTED_WRITE_HEADER`
     - `infra/runtime-identity.isMain`
     - `infra/runtime-profiler.chargeWait`
     - `infra/runtime-profiler.recordEntrySpan`

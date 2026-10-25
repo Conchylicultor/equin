@@ -3,6 +3,7 @@ import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 
 export const setConfigField = defineEndpoint({
   route: "POST /api/config-v2/set-field",
+  agentReverted: true,
   body: z.object({
     storePath: z.string(),
     key: z.string(),
@@ -13,11 +14,13 @@ export const setConfigField = defineEndpoint({
 
 export const forkScope = defineEndpoint({
   route: "POST /api/config-v2/fork-scope",
+  agentReverted: true,
   body: z.object({ scopeId: z.string() }),
 });
 
 export const deleteScope = defineEndpoint({
   route: "POST /api/config-v2/delete-scope",
+  agentReverted: true,
   body: z.object({ scopeId: z.string() }),
 });
 
@@ -27,10 +30,12 @@ export const deleteScope = defineEndpoint({
 // descriptor.
 export const forkDescriptorScope = defineEndpoint({
   route: "POST /api/config-v2/fork-descriptor-scope",
+  agentReverted: true,
   body: z.object({ storePath: z.string(), scopeId: z.string() }),
 });
 
 export const removeDescriptorScope = defineEndpoint({
   route: "POST /api/config-v2/remove-descriptor-scope",
+  agentReverted: true,
   body: z.object({ storePath: z.string(), scopeId: z.string() }),
 });

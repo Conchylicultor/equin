@@ -9,6 +9,7 @@ import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
  */
 export const resetConfigField = defineEndpoint({
   route: "POST /api/config-v2/reset-field",
+  agentReverted: true,
   body: z.object({
     storePath: z.string(),
     key: z.string(),
@@ -18,11 +19,13 @@ export const resetConfigField = defineEndpoint({
 
 export const acknowledgeConflict = defineEndpoint({
   route: "POST /api/config-v2/acknowledge-conflict",
+  agentReverted: true,
   body: z.object({ storePath: z.string(), scopeId: z.string().optional() }),
 });
 
 export const deleteOverride = defineEndpoint({
   route: "POST /api/config-v2/delete-override",
+  agentReverted: true,
   body: z.object({ storePath: z.string(), scopeId: z.string().optional() }),
 });
 
@@ -32,6 +35,7 @@ export const deleteOverride = defineEndpoint({
 // and the conflict is fully cleared.
 export const mergeConflict = defineEndpoint({
   route: "POST /api/config-v2/merge-conflict",
+  agentReverted: true,
   body: z.object({ storePath: z.string(), scopeId: z.string().optional() }),
   response: z.object({
     resolved: z.boolean(),

@@ -27,14 +27,19 @@ export const ORIGIN_SOURCE_HEADER = "x-singularity-origin-source";
 export const AGENT_ORIGIN = "agent";
 
 /**
- * Advisory, stamped by `fetchEndpoint` on a request to an endpoint declaring
- * `agentWrite` (its value is the declaration, e.g. `telemetry`): this write is
- * one an agent session may send to main. Its only reader is the agent
- * browser's write drain, which need not wait for such a request before
- * reverting. NEVER an authority: main's write gate reads the endpoint
- * definition, never this header — a page can set any header it likes.
+ * Stamped by `fetchEndpoint` on every WRITE to an endpoint that does not
+ * declare `agentReverted`: this request records nothing an agent-write revert
+ * undoes. Its reader is the agent browser's write drain, which need not wait
+ * for such a request before reverting (an unstamped write — a raw `fetch`, a
+ * declaring endpoint — is waited for).
+ *
+ * A claim, never an authority for anything else — a page can set any header it
+ * likes. It is checked where it matters: {@link originOf} carries it as
+ * `claimsUnreverted`, and the agent-write ledger refuses (throws) to record a
+ * write whose request made the claim, so a mis-declared endpoint fails loudly
+ * instead of leaving a write the revert silently missed.
  */
-export const AGENT_WRITE_HEADER = "x-singularity-agent-write";
+export const UNREVERTED_WRITE_HEADER = "x-singularity-unreverted-write";
 
 /**
  * Who caused a durable write.
@@ -47,7 +52,16 @@ export const AGENT_WRITE_HEADER = "x-singularity-agent-write";
  */
 export type WriteOrigin =
   | { readonly kind: "user" }
-  | { readonly kind: "agent"; readonly source: string }
+  | {
+      readonly kind: "agent";
+      readonly source: string;
+      /**
+       * The request carried {@link UNREVERTED_WRITE_HEADER}: the agent
+       * browser's write drain did not wait for it, so a ledger must not
+       * record it (the revert could run before it lands).
+       */
+      readonly claimsUnreverted: boolean;
+    }
   | { readonly kind: "system"; readonly reason: string };
 
 /**
@@ -64,6 +78,7 @@ export function originOf(req: Request): WriteOrigin {
   return {
     kind: "agent",
     source: req.headers.get(ORIGIN_SOURCE_HEADER) ?? AGENT_ORIGIN,
+    claimsUnreverted: req.headers.has(UNREVERTED_WRITE_HEADER),
   };
 }
 

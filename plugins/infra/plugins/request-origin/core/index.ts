@@ -5,7 +5,7 @@ export {
   ORIGIN_HEADER,
   ORIGIN_SOURCE_HEADER,
   AGENT_ORIGIN,
-  AGENT_WRITE_HEADER,
+  UNREVERTED_WRITE_HEADER,
   originOf,
   systemOrigin,
   agentOriginHeaders,

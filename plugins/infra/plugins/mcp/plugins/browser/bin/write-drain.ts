@@ -1,5 +1,5 @@
 import type { BrowserContext, Request } from "playwright";
-import { AGENT_WRITE_HEADER } from "@plugins/infra/plugins/request-origin/core";
+import { UNREVERTED_WRITE_HEADER } from "@plugins/infra/plugins/request-origin/core";
 
 /**
  * The writes a session still has on the wire, so closing it reverts only once
@@ -17,12 +17,14 @@ import { AGENT_WRITE_HEADER } from "@plugins/infra/plugins/request-origin/core";
  * sent before anyone asked to close. Context-level events also cover pages an
  * attached script opened through `bind()`.
  *
- * A request stamped `AGENT_WRITE_HEADER` is not waited for: `fetchEndpoint`
- * stamps it from the endpoint's own `agentWrite` declaration (telemetry — log
- * lines, latency samples, reports — or the revert itself), which writes nothing
- * the revert undoes. Waiting on those is what raised the `drain-writes … still
- * unanswered` false alarm. Advisory by design: a page that forged it only
- * shortens the wait, and main refuses an agent's real writes regardless.
+ * A request stamped `UNREVERTED_WRITE_HEADER` is not waited for:
+ * `fetchEndpoint` stamps every write to an endpoint that does not declare
+ * `agentReverted` — app-usage flushes, task edits, telemetry, the revert itself
+ * — which records nothing the revert undoes, so its landing late changes
+ * nothing. Waiting on those is what raised the `drain-writes … still
+ * unanswered` false alarm. The claim cannot hide a revertible write: a ledger
+ * refuses (throws) to record an agent write whose request carried the stamp.
+ * An unstamped write (a raw `fetch`, a declaring endpoint) is waited for.
  */
 
 /** Methods that cannot write. Everything else may. */
@@ -30,7 +32,8 @@ const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
 /**
  * Whether a request may write something the session's revert must wait for:
- * any non-safe method, unless its endpoint declared `agentWrite`.
+ * any non-safe method, unless it is stamped as recording nothing a revert
+ * undoes.
  * `headers` as Playwright gives them (lower-cased names).
  */
 export function isDrainedWrite(
@@ -38,7 +41,7 @@ export function isDrainedWrite(
   headers: Record<string, string>,
 ): boolean {
   if (SAFE_METHODS.has(method)) return false;
-  return headers[AGENT_WRITE_HEADER] === undefined;
+  return headers[UNREVERTED_WRITE_HEADER] === undefined;
 }
 
 export type DrainOutcome =

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { AGENT_WRITE_HEADER } from "@plugins/infra/plugins/request-origin/core";
+import { UNREVERTED_WRITE_HEADER } from "@plugins/infra/plugins/request-origin/core";
 import { createInFlight, isDrainedWrite } from "./write-drain";
 
 describe("isDrainedWrite", () => {
@@ -14,13 +14,10 @@ describe("isDrainedWrite", () => {
     expect(isDrainedWrite("OPTIONS", {})).toBe(false);
   });
 
-  test("a write stamped agentWrite (telemetry, the revert) is not tracked", () => {
-    expect(isDrainedWrite("POST", { [AGENT_WRITE_HEADER]: "telemetry" })).toBe(
+  test("a write stamped as unreverted is not tracked", () => {
+    expect(isDrainedWrite("POST", { [UNREVERTED_WRITE_HEADER]: "1" })).toBe(
       false,
     );
-    expect(
-      isDrainedWrite("POST", { [AGENT_WRITE_HEADER]: "agent-control" }),
-    ).toBe(false);
   });
 });
 

@@ -72,16 +72,20 @@ export function isAgentWriteRefusal(status: number, body: unknown): boolean {
  * not main's — so a worktree pays nothing per request), else the per-request
  * test answering the refusal for an agent-origin request.
  *
- * The server reads the declaration, never the advisory
- * `AGENT_WRITE_HEADER` a client stamps — that header only tells the agent
- * browser's write drain which requests it need not wait for.
+ * The server reads the declaration, never a header a client stamps.
  */
 export function agentWriteGate(endpoint: {
   route: string;
   method: string;
   agentWrite?: AgentWrite;
+  agentReverted?: true;
 }): ((req: Request) => Response | null) | null {
   if (SAFE_METHODS.has(endpoint.method)) {
+    if (endpoint.agentReverted !== undefined) {
+      throw new Error(
+        `implement(${endpoint.route}): agentReverted is only meaningful on a write (non-GET) endpoint`,
+      );
+    }
     if (endpoint.agentWrite !== undefined) {
       // Fail loudly at boot: a read cannot write, so the declaration is a
       // misunderstanding the reader of the contract would be misled by.

@@ -1,10 +1,10 @@
-import { AGENT_WRITE_HEADER } from "@plugins/infra/plugins/request-origin/core";
+import { UNREVERTED_WRITE_HEADER } from "@plugins/infra/plugins/request-origin/core";
 import type { EndpointDef, MachineEndpointDef } from "./define-endpoint";
 import {
   EndpointAgentWriteRefusedError,
   EndpointError,
 } from "./endpoint-error";
-import { isAgentWriteRefusal } from "./agent-write";
+import { isAgentWriteRefusal, SAFE_METHODS } from "./agent-write";
 import { interpolatePath } from "./route-params";
 
 /** Either kind of endpoint — a request is built and read the same way. */
@@ -75,7 +75,8 @@ export function endpointPath<
  * One request to an endpoint, built from its contract: the path with params
  * interpolated and the query appended, and the init — the route's method, the
  * body through its codec (content type from the codec only, so multipart stays
- * header-less), the advisory `AGENT_WRITE_HEADER` for a declaring endpoint.
+ * header-less), `UNREVERTED_WRITE_HEADER` on a write whose endpoint does not
+ * declare `agentReverted`.
  */
 export function endpointRequest<
   Route extends string,
@@ -95,10 +96,10 @@ export function endpointRequest<
   );
 
   const headers: Record<string, string> = { ...opts?.headers };
-  // Advisory only (the server reads the endpoint's declaration): tells the
-  // agent browser's write drain this write need not be waited for.
-  if (endpoint.agentWrite !== undefined) {
-    headers[AGENT_WRITE_HEADER] = endpoint.agentWrite;
+  // Tells the agent browser's write drain this write need not be waited for:
+  // nothing it records is reverted. A ledger refuses a write so stamped.
+  if (!SAFE_METHODS.has(endpoint.method) && endpoint.agentReverted !== true) {
+    headers[UNREVERTED_WRITE_HEADER] = "1";
   }
   let body: BodyInit | undefined;
   if (endpoint.bodyCodec && opts && "body" in opts && opts.body !== undefined) {
