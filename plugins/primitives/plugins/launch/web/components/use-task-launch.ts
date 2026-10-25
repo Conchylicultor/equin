@@ -25,6 +25,13 @@ export type TaskLaunchTarget =
 export interface UseTaskLaunchOptions {
   /** Whether a launch that started also OPENS its conversation. Default `false`. */
   openAfterLaunch?: boolean;
+  /**
+   * Whether the HOST shows the started conversation itself (an embedded thread)
+   * without opening it. Like `openAfterLaunch`, it makes the launch's
+   * "Conversation started" notification quiet (bell only, no toast): the user is
+   * already looking at the conversation. Default `false`.
+   */
+  hostShowsConversation?: boolean;
   /** Where that conversation opens, when it does. Default `"push"`. */
   openMode?: PaneOpenMode;
   /**
@@ -52,6 +59,7 @@ export interface UseTaskLaunchOptions {
  */
 export function useTaskLaunch({
   openAfterLaunch = false,
+  hostShowsConversation = false,
   openMode = "push",
   ownedOptions = [],
 }: UseTaskLaunchOptions = {}) {
@@ -82,6 +90,7 @@ export function useTaskLaunch({
           prompt,
           options: pickKnownOptions(resolveOptions(picked), registered),
           task,
+          shownByLauncher: openAfterLaunch || hostShowsConversation,
         },
       },
     );

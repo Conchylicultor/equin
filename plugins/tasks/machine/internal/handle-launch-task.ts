@@ -79,19 +79,21 @@ export const handleLaunchTask = implementMachine(
     await entry.apply({ taskId, cause: "user-launch", start: "now" }, value);
   }
 
-  // `prepareConversation` reads the preprompt and thinking mode off the rows
-  // the applies just wrote, so they need no threading here. `user-launch` is
-  // also what lets `conversations.notify-created` announce the launch.
-  // `launch`: the user is asking for a run, even of a task that already has
-  // one — a second "Fix this crash" reuses the report's live task, and must
-  // start a fresh attempt under it rather than being refused as "already
-  // started".
-  const result = await launchTaskNow(taskId, {
-    prompt: body.prompt,
-    cause: "user-launch",
-    ifAlreadyStarted: "launch",
-  });
-  return result.started
-    ? { started: true as const, conversation: result.conversation }
-    : { started: false as const, taskId };
-});
+    // `prepareConversation` reads the preprompt and thinking mode off the rows
+    // the applies just wrote, so they need no threading here. `user-launch` is
+    // also what lets `conversations.notify-created` announce the launch.
+    // `launch`: the user is asking for a run, even of a task that already has
+    // one — a second "Fix this crash" reuses the report's live task, and must
+    // start a fresh attempt under it rather than being refused as "already
+    // started".
+    const result = await launchTaskNow(taskId, {
+      prompt: body.prompt,
+      cause: "user-launch",
+      ifAlreadyStarted: "launch",
+      shownByLauncher: body.shownByLauncher,
+    });
+    return result.started
+      ? { started: true as const, conversation: result.conversation }
+      : { started: false as const, taskId };
+  },
+);

@@ -29,7 +29,8 @@ export type StartThreadResult = MachineResult<{ conversationId: string }>;
  * Starts a run: files a task under the host's category and launches it now
  * under the host's scratch profile and model — the user's other launch
  * defaults (preprompt, effort) apply as for any launch. Nothing opens: the
- * host shows the run in its own `<AgentThread>`.
+ * host shows the run in its own `<AgentThread>` — so its "Conversation
+ * started" notification is recorded without a toast.
  *
  * `availability` is `useTaskLaunch`'s (launching needs the computer), for the
  * host to disable its control before a click.
@@ -39,7 +40,10 @@ export function useStartThread({
   categoryId,
   model,
 }: StartThreadOptions) {
-  const { launch, availability } = useTaskLaunch({ openAfterLaunch: false });
+  const { launch, availability } = useTaskLaunch({
+    openAfterLaunch: false,
+    hostShowsConversation: true,
+  });
 
   const start = async ({
     title,

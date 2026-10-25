@@ -34,6 +34,7 @@ export const notifyConversationCreatedJob = defineJob({
       taskId: z.string(),
       model: z.string(),
       spawnedBy: z.string(),
+      shownByLauncher: z.boolean().optional(),
     })
     .passthrough(),
   run: async ({ event }) => {
@@ -54,6 +55,9 @@ export const notifyConversationCreatedJob = defineJob({
       title,
       description,
       variant: "info",
+      // The launcher already shows it (an opened pane, an embedded thread): a
+      // toast would only cover what the user is looking at. Still in the bell.
+      muted: event.shownByLauncher === true,
       linkTo: conversationRoute.link(agentManagerApp, {
         convId: event.conversationId,
       }),

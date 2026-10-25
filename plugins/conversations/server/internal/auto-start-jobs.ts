@@ -117,7 +117,13 @@ export type LaunchTaskNowResult =
 // required, because the queue and a user launch mean opposite things by it.
 export async function launchTaskNow(
   taskId: string,
-  opts: { prompt?: string; cause: string; ifAlreadyStarted: IfAlreadyStarted },
+  opts: {
+    prompt?: string;
+    cause: string;
+    ifAlreadyStarted: IfAlreadyStarted;
+    /** The launcher shows the conversation itself (see `CreateConversationOpts`). */
+    shownByLauncher?: boolean;
+  },
 ): Promise<LaunchTaskNowResult> {
   const ext = await getTaskAutoStart(taskId);
   if (!ext) return { started: false, reason: "not-armed" };
@@ -140,6 +146,7 @@ export async function launchTaskNow(
     model: ext.autoStartModel,
     prompt,
     spawnedBy: opts.cause,
+    shownByLauncher: opts.shownByLauncher,
   });
 
   // The marker and the launch commit together (see `launchArmedTask`). A

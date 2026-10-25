@@ -102,6 +102,11 @@ export const LaunchTaskBodySchema = z.object({
       subject: TaskSubjectSchema.optional(),
     }),
   ]),
+  // Whether the launcher itself shows the conversation it starts (opens its
+  // pane, or embeds it as a thread). The user is then already looking at it, so
+  // the "Conversation started" notification is recorded quietly — in the bell,
+  // no toast. A launch into the background announces itself.
+  shownByLauncher: z.boolean(),
 });
 export type LaunchTaskBody = z.infer<typeof LaunchTaskBodySchema>;
 

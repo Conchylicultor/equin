@@ -109,6 +109,8 @@ export interface ConversationCreatedPayload {
   taskId: string;
   model: ConversationModel;
   spawnedBy: string;
+  // The launcher shows the conversation itself — the user is looking at it.
+  shownByLauncher?: boolean;
   createdAt: string;
   prompt?: string;
   kind?: string;

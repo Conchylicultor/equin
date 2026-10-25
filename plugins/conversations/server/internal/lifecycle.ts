@@ -117,6 +117,12 @@ export interface CreateConversationOpts {
   /** A family ("opus") or a pinned version; resolved to what runs here, once. */
   model?: ModelChoice;
   spawnedBy?: string;
+  /**
+   * The launcher shows this conversation itself (opened its pane, or embeds it
+   * as a thread), so the user is already looking at it: carried on
+   * `conversationCreated` for the launch notification to stay quiet (no toast).
+   */
+  shownByLauncher?: boolean;
   kind?: ConversationKind;
   forkFromConversationId?: string;
   /**
@@ -177,6 +183,7 @@ export interface PreparedConversation {
   conversationId: string;
   model: ConversationModel;
   spawnedBy: string;
+  shownByLauncher: boolean;
   kind: ConversationKind;
   // The caller's raw prompt, for the `conversationCreated` payload.
   rawPrompt: string | undefined;
@@ -393,6 +400,7 @@ export async function prepareConversation(
     conversationId: conversationIdKind.mint(),
     model,
     spawnedBy,
+    shownByLauncher: opts.shownByLauncher ?? false,
     kind: opts.kind ?? "user",
     rawPrompt: opts.prompt,
     launchTurn,
@@ -500,6 +508,7 @@ export async function commitConversation(
       taskId: conv.taskId,
       model: conv.model,
       spawnedBy: conv.spawnedBy!,
+      shownByLauncher: p.shownByLauncher,
       createdAt: conv.createdAt.toISOString(),
       prompt: p.rawPrompt?.trim() || undefined,
       kind: conv.kind,

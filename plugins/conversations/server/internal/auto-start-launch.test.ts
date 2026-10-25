@@ -121,6 +121,7 @@ function prepared(taskId: string): PreparedConversation {
     conversationId: nextId("conv"),
     model: MODEL,
     spawnedBy: "test",
+    shownByLauncher: false,
     kind: "user",
     rawPrompt: "do the thing",
     launchTurn: { text: "do the thing", typedText: "do the thing" },
