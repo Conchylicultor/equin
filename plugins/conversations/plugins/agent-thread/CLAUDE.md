@@ -81,10 +81,18 @@ newest turn's finished steps, its running step, its accepted results, and
   working (its rewound text goes back to the draft). A pending question mounts
   the `JsonlViewer.PendingPrompt` dispatch; sent turns show as
   `PendingTurnCard`s.
-- **An answer renders like the transcript's assistant text**:
-  `ActiveDataMarkdown` (active-data/web — the one rendering the transcript row
-  uses too), so active-data blocks and inline tags draw in the thread, each
-  block bound to its identity by the answer's `messageId` (`turn.answer`).
+- **An answer renders like the transcript's assistant text**: `AgentProse`
+  (assistant-text/web — the one body the transcript row uses too), so
+  active-data blocks and inline tags draw in the thread, each block bound to
+  its identity by the answer's `messageId` (`turn.answer`) — and **it streams
+  the same way**: `AgentThread` reads the message the agent is writing
+  through jsonl-viewer's `useStreamingStandIns` (the read the transcript's
+  `StreamingMessage` makes) and hands it to `groupThread` as `writing`, so the
+  running turn's answer is the text as far as it is written
+  (`answer.streaming`), revealed steadily with the same fading edge until the
+  transcript holds it. The bouncing dots show only while the agent is between
+  tools and not writing. Hosts reading `useThread*` (a pill) see finished
+  answers only.
   `AgentThreadView` mounts a `PromptComposerProvider` over answers and
   composer, and `ThreadComposer` registers as its prompt
   (`useRegisterPromptComposer`): a `<go>`'s ▶ sends the choice down the
@@ -156,11 +164,11 @@ waking a hibernated agent with nothing new to show. A refused resume is a toast.
     - `AgentThreadSlots.StepLabel` "TodoWrite" → `TodoWriteStepLabel`
     - `AgentThreadSlots.StepLabel` "AskUserQuestion" → `AskUserQuestionStepLabel`
     - `AgentThreadSlots.StepLabel` "^(Agent|Task)$" → `AgentStepLabel`
-  - Uses: 63 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 64 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations/conversation-view/pending-turn` ×9
     - `primitives/live-state` ×7
+    - `conversations/conversation-view/jsonl-viewer` ×4
     - `conversations/conversation-view` ×4
-    - `conversations/conversation-view/jsonl-viewer` ×3
     - `conversations/conversation-view/user-message` ×2
     - `infra/endpoints` ×2
     - `primitives/css/status-dot` ×2
@@ -168,7 +176,7 @@ waking a hibernated agent with nothing new to show. A refused resume is a toast.
     - `primitives/dom/auto-scroll` ×2
     - `primitives/latest-ref` ×2
     - `primitives/slot-render` ×2
-    - `active-data.ActiveDataMarkdown`
+    - `conversations/conversation-view/jsonl-viewer/assistant-text.AgentProse`
     - `conversations/conversation-view/jsonl-viewer/tool-call.ToolNameLabel`
     - `conversations/hibernation.useMarkConversationViewed`
     - `conversations.useConversation`

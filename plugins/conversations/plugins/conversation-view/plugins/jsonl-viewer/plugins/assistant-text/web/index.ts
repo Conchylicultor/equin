@@ -5,9 +5,12 @@ import { AssistantTextRow } from "./components/assistant-text-row";
 import { CopyAssistantTextAction } from "./components/copy-text-action";
 import { MarkdownToggleAction } from "./components/markdown-toggle-action";
 
+export { AgentProse } from "./components/agent-prose";
+export type { AgentProseProps } from "./components/agent-prose";
+
 export default {
   description:
-    "Renders assistant text events in the JSONL viewer, with optional markdown rendering; a text block the agent is still writing (a jsonl-viewer streaming stand-in) is revealed at a steady pace with a soft fading edge rather than in the bursts it arrives in.",
+    "Renders assistant text events in the JSONL viewer, with optional markdown rendering; a text block the agent is still writing (a jsonl-viewer streaming stand-in) is revealed at a steady pace with a soft fading edge rather than in the bursts it arrives in. Exports AgentProse — the agent's words (markdown with active-data, steadily revealed while still written) as every surface shows them: the transcript row and an agent thread's answer.",
   contributions: [
     JsonlViewer.EventRenderer({
       match: "assistant-text",

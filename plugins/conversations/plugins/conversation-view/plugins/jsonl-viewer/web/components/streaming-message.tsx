@@ -1,14 +1,9 @@
-import { useMemo, useRef, useState, type ReactNode } from "react";
-import {
-  conversationPartialMessage,
-  type PartialMessage,
-} from "@plugins/conversations/core";
-import { useLive } from "@plugins/network/plugins/live/web";
+import { useRef, type ReactNode } from "react";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { FOLLOW_MOTION_ATTR } from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
 import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { standInsOf } from "../streaming-blocks";
+import { useStreamingStandIns } from "../use-streaming-stand-ins";
 import { EventRow } from "./event-row";
 import { StreamingRowProvider } from "./streaming-row-context";
 import { useTranscriptEvents } from "./transcript-events-context";
@@ -18,15 +13,16 @@ import "./streaming-message.css";
  * The message the agent is writing — its thinking, text and tool calls — drawn
  * at the end of the transcript as the model streams it: each block a stand-in
  * through the renderer its row will use, in block order, until the transcript
- * holds that block (`standInsOf`).
+ * holds that block (`useStreamingStandIns`).
  */
 export function StreamingMessage({
   conversationId,
 }: {
   conversationId: string;
 }) {
-  const partial = useLive(conversationPartialMessage, { id: conversationId });
-  switch (partial.status) {
+  const events = useTranscriptEvents();
+  const streaming = useStreamingStandIns(conversationId, events);
+  switch (streaming.status) {
     case "unavailable":
       // No computer behind this page (the demo): no agent is writing.
       return null;
@@ -39,32 +35,22 @@ export function StreamingMessage({
         <ResourceErrorInline
           variant="inline"
           subject="the message being written"
-          error={partial.error}
-          refetch={partial.refetch}
+          error={streaming.error}
+          refetch={streaming.refetch}
         />
       );
     case "ready":
-      return partial.data ? (
-        // Per message: a new message's stand-ins start from nothing.
-        <StreamingBlocks key={partial.data.messageId} message={partial.data} />
-      ) : null;
+      break;
   }
-}
-
-function StreamingBlocks({ message }: { message: PartialMessage }) {
-  const events = useTranscriptEvents();
-  // When the page first saw the message: the stand-ins' timestamp.
-  const [at] = useState(() => new Date().toISOString());
-  const standIns = useMemo(
-    () => standInsOf(message, events, at),
-    [message, events, at],
-  );
-  if (standIns.length === 0) return null;
+  if (streaming.data === null || streaming.data.standIns.length === 0)
+    return null;
+  const { messageId, standIns } = streaming.data;
   return (
-    <EasedHeight>
+    // Per message: a new message's frame eases from nothing.
+    <EasedHeight key={messageId}>
       {/* The attributes mark the message and each stand-in for the e2e
           scripts (assistant-text/e2e/first-token.ts, e2e/stream-order.ts). */}
-      <Stack gap="sm" data-streaming-message={message.messageId}>
+      <Stack gap="sm" data-streaming-message={messageId}>
         {standIns.map((s) => (
           <div key={s.key} data-stand-in={s.event.kind}>
             <StreamingRowProvider writing={s.writing}>

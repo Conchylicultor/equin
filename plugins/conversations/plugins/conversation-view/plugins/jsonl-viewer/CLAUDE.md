@@ -170,8 +170,8 @@ back.
   - Contributes:
     - `JsonlRowActions.Item` "timestamp" → `TimestampAction`
     - `JsonlRowActions.Item` "raw-json" → `RawJsonAction`
-  - Uses: 53 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/live-state` ×7
+  - Uses: 55 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/live-state` ×9
     - `primitives/dom/auto-scroll` ×5
     - `conversations/conversation-view/pending-turn` ×4
     - `primitives/collapsible` ×4
@@ -210,6 +210,8 @@ back.
     - `EventRendererMeta`
     - `OverlayContribution`
     - `SectionExpand`
+    - `StandIn`
+    - `StreamingStandIns`
     - `TranscriptEvents`
     - `TranscriptOlder`
     - `TranscriptSubject`
@@ -232,6 +234,7 @@ back.
     - `useRowMarkdown`
     - `useSectionExpand`
     - `useStreamingRow`
+    - `useStreamingStandIns`
     - `useTranscriptDrawn`
     - `useTranscriptEvents`
     - `useTranscriptSubject`

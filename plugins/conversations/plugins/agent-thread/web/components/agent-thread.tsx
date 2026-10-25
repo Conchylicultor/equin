@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
+  foldResource,
   ResourceErrorInline,
   ResourceView,
   useCombinedResources,
@@ -10,7 +11,10 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
-import { JsonlViewer } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
+import {
+  JsonlViewer,
+  useStreamingStandIns,
+} from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import {
   PendingTurnCard,
   useOptimisticConversationStatus,
@@ -115,6 +119,7 @@ function useMarkViewedWhileVisible(
 function LiveThread<D extends ThreadResultDef>({
   conversation,
   events,
+  raw,
   pending,
   results,
   renderResult,
@@ -125,7 +130,10 @@ function LiveThread<D extends ThreadResultDef>({
   prepareTurn,
 }: {
   conversation: ConversationEntry;
+  /** The transcript as drawn (`useVisibleTranscript`). */
   events: readonly JsonlEvent[];
+  /** The transcript whole — what the streaming message's blocks land in. */
+  raw: readonly JsonlEvent[];
   /** The turn ledger's cards — answered (ready, or failed). */
   pending: AnsweredPending;
   results: readonly D[];
@@ -139,11 +147,26 @@ function LiveThread<D extends ThreadResultDef>({
   const status = useOptimisticConversationStatus(conversation);
   const turnRunning = useTurnRunning(conversation);
   const waitingFor = conversation.waitingFor;
+  // The message the agent is writing, as the transcript reveals it: its text
+  // is the running turn's answer, as far as it is written.
+  const streaming = useStreamingStandIns(conversation.id, raw);
+  // Not known yet, failed (shown below) or no computer: nothing is being
+  // written as far as the thread can tell — what it shows without a stream.
+  const standIns = foldResource(streaming, {
+    loading: () => null,
+    error: () => null,
+    ready: (data) => data?.standIns ?? null,
+    unavailable: () => null,
+  });
+  const writing = useMemo(
+    () => (standIns ?? []).map((s) => s.event),
+    [standIns],
+  );
   const key = results.map((d) => d.tool).join("\n");
   const turns = useMemo(
-    () => groupThread(events, results, { status, waitingFor }),
+    () => groupThread(events, results, { status, waitingFor }, writing),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed by the kinds' tools: an inline `results={[…]}` is the same list every render
-    [events, key, status, waitingFor],
+    [events, key, status, waitingFor, writing],
   );
   const state = threadStateOf(turns, { status, waitingFor });
   // A ledger read that failed shows its error where the cards go, over the
@@ -201,9 +224,17 @@ function LiveThread<D extends ThreadResultDef>({
                 renderEcho={renderEcho}
             />
             ))}
-            {pending.status === "error" && (
+            {streaming.status === "error" && (
             <ResourceErrorInline
               variant="inline"
+                subject="the message being written"
+                error={streaming.error}
+                refetch={streaming.refetch}
+              />
+            )}
+            {pending.status === "error" && (
+              <ResourceErrorInline
+                variant="inline"
               subject="the sent messages"
               error={pending.error}
               refetch={pending.refetch}
@@ -271,7 +302,7 @@ export function AgentThread<D extends ThreadResultDef>(
   const row = useConversation(conversationId);
   // The echoes stand until the transcript holds their turn.
   const pending = usePendingTurns(conversationId, raw);
-  const both = useCombinedResources({ events, row });
+  const both = useCombinedResources({ events, raw, row });
 
   const loading = (
     <Fallback>
@@ -295,13 +326,14 @@ export function AgentThread<D extends ThreadResultDef>(
         </Fallback>
       )}
     >
-      {({ events: visible, row: conversation }) =>
+      {({ events: visible, raw: whole, row: conversation }) =>
         conversation === null ? (
           <Missing />
         ) : (
           <LiveThread
             conversation={conversation}
             events={visible}
+            raw={whole}
             pending={pending}
             results={results}
             renderResult={renderResult}

@@ -28,6 +28,9 @@ export {
 export { useWholeTranscript } from "./use-whole-transcript";
 export type { TranscriptWindow } from "./use-transcript-window";
 export { useVisibleEvents } from "./use-visible-events";
+export { useStreamingStandIns } from "./use-streaming-stand-ins";
+export type { StreamingStandIns } from "./use-streaming-stand-ins";
+export type { StandIn } from "./streaming-blocks";
 export { EventLine } from "./components/event-line";
 export { useRowMarkdown } from "./components/row-markdown-context";
 export {

@@ -58,12 +58,15 @@ export function threadStateOf(
   }
 }
 
-/** When the thread last said something: its newest answer or result. */
+/**
+ * When the thread last said something: its newest answer or result — an
+ * answer still being written counts once the transcript holds it.
+ */
 export function latestOutputAt(turns: readonly ThreadTurn[]): number | null {
   let latest: number | null = null;
   for (const turn of turns) {
     const stamps = [
-      ...(turn.answer ? [turn.answer.at] : []),
+      ...(turn.answer && !turn.answer.streaming ? [turn.answer.at] : []),
       ...turn.results.map((r) => r.at),
     ];
     for (const at of stamps) {

@@ -16,7 +16,7 @@ import {
   StatusDot,
   type StatusDotPaint,
 } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
-import { ActiveDataMarkdown } from "@plugins/active-data/web";
+import { AgentProse } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/assistant-text/web";
 import {
   UserMessageCard,
   UserMessageText,
@@ -156,22 +156,24 @@ function TurnView<D extends ThreadResultDef>({
   renderResult: RenderThreadResult<D>;
   resultWords: ResultWords;
 }) {
-  // The agent is between tools (thinking, writing): say it is still on it.
+  // The agent is between tools, thinking: say it is still on it. Words it is
+  // writing say so themselves.
   const thinking =
-    turn.state === "running" && !turn.steps.some((s) => s.state === "running");
+    turn.state === "running" &&
+    !turn.steps.some((s) => s.state === "running") &&
+    !turn.answer?.streaming;
   return (
     <Stack gap="sm">
       <UserBubble text={turn.user.text} />
       <StepList turn={turn} resultWords={resultWords} />
       {thinking && <BouncingDots />}
       {turn.answer && (
-        <Text as="div" variant="body">
-          <ActiveDataMarkdown
-            text={turn.answer.text}
-            conversationId={conversationId}
-            messageId={turn.answer.messageId}
-          />
-        </Text>
+        <AgentProse
+          text={turn.answer.text}
+          conversationId={conversationId}
+          messageId={turn.answer.messageId}
+          streaming={turn.answer.streaming}
+        />
       )}
       {turn.results.map((result) => (
         <Fragment key={result.toolUseId}>

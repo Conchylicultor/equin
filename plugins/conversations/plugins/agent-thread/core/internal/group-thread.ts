@@ -71,6 +71,11 @@ export interface ThreadAnswer {
   text: string;
   at: string;
   messageId: string | null;
+  /**
+   * The agent is still writing it: a block of the message being streamed,
+   * not in the transcript yet — `text` is what has been written so far.
+   */
+  streaming: boolean;
 }
 
 /** One exchange: what the user said, and everything the agent did about it. */
@@ -199,11 +204,19 @@ function closeTurn<D extends ThreadResultDef>(
  *
  * `events` is the transcript as rendered (`useVisibleEvents`), so an event a
  * filter hides (a question's raw answer turn) never opens a turn.
+ *
+ * `writing` is the message the agent is streaming, as stand-ins for the events
+ * it will become (jsonl-viewer's `useStreamingStandIns`): while the newest turn
+ * runs, its text is the turn's answer as far as it is written (`streaming`),
+ * until the transcript holds it — the same words the transcript reveals. Its
+ * tool calls join as steps once the transcript holds them (a streaming call's
+ * input is still incomplete).
  */
 export function groupThread<D extends ThreadResultDef>(
   events: readonly JsonlEvent[],
   results: readonly D[],
   conversation: ThreadConversation,
+  writing: readonly JsonlEvent[] = [],
 ): ThreadTurn<D>[] {
   const defs = new Map<string, D>();
   for (const def of results) {
@@ -213,8 +226,12 @@ export function groupThread<D extends ThreadResultDef>(
     defs.set(def.tool, def);
   }
 
+  const runs = lastTurnRuns(conversation);
+  const streamed = new Set<JsonlEvent>(
+    runs ? writing.filter((e) => e.kind === "assistant-text") : [],
+  );
   const drafts: TurnDraft[] = [];
-  for (const event of events) {
+  for (const event of [...events, ...streamed]) {
     if (event.kind === "user-text") {
       drafts.push({
         user: { text: event.text, at: event.at },
@@ -231,10 +248,10 @@ export function groupThread<D extends ThreadResultDef>(
         text: event.text,
         at: event.at,
         messageId: event.messageId ?? null,
+        streaming: streamed.has(event),
       };
   }
 
-  const runs = lastTurnRuns(conversation);
   return drafts.map((draft, i) =>
     closeTurn(draft, defs, runs && i === drafts.length - 1),
   );

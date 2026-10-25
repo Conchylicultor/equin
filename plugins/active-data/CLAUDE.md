@@ -214,7 +214,6 @@ Behavior:
     - `active-data/plugin-link`
     - `active-data/show-me`
     - `active-data/task`
-    - `conversations/agent-thread`
     - `conversations/conversation-view/jsonl-viewer/assistant-text`
 - Test helpers:
   - Web: `@plugins/active-data/web/testing`

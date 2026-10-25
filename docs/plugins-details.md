@@ -88,7 +88,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `active-data/plugin-link`
       - `active-data/show-me`
       - `active-data/task`
-      - `conversations/agent-thread`
       - `conversations/conversation-view/jsonl-viewer/assistant-text`
   - Test helpers:
     - Web: `@plugins/active-data/web/testing`
@@ -13581,11 +13580,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `AgentThreadSlots.StepLabel` "TodoWrite" → `TodoWriteStepLabel`
           - `AgentThreadSlots.StepLabel` "AskUserQuestion" → `AskUserQuestionStepLabel`
           - `AgentThreadSlots.StepLabel` "^(Agent|Task)$" → `AgentStepLabel`
-        - Uses: 63 symbols — full list in [`plugins/conversations/plugins/agent-thread/REFERENCE.md`](../plugins/conversations/plugins/agent-thread/REFERENCE.md)
+        - Uses: 64 symbols — full list in [`plugins/conversations/plugins/agent-thread/REFERENCE.md`](../plugins/conversations/plugins/agent-thread/REFERENCE.md)
           - `conversations/conversation-view/pending-turn` ×9
           - `primitives/live-state` ×7
+          - `conversations/conversation-view/jsonl-viewer` ×4
           - `conversations/conversation-view` ×4
-          - `conversations/conversation-view/jsonl-viewer` ×3
           - `conversations/conversation-view/user-message` ×2
           - `infra/endpoints` ×2
           - `primitives/css/status-dot` ×2
@@ -13593,7 +13592,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/dom/auto-scroll` ×2
           - `primitives/latest-ref` ×2
           - `primitives/slot-render` ×2
-          - `active-data.ActiveDataMarkdown`
+          - `conversations/conversation-view/jsonl-viewer/assistant-text.AgentProse`
           - `conversations/conversation-view/jsonl-viewer/tool-call.ToolNameLabel`
           - `conversations/hibernation.useMarkConversationViewed`
           - `conversations.useConversation`
@@ -15062,8 +15061,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `JsonlRowActions.Item` "timestamp" → `TimestampAction`
               - `JsonlRowActions.Item` "raw-json" → `RawJsonAction`
-            - Uses: 53 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
-              - `primitives/live-state` ×7
+            - Uses: 55 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
+              - `primitives/live-state` ×9
               - `primitives/dom/auto-scroll` ×5
               - `conversations/conversation-view/pending-turn` ×4
               - `primitives/collapsible` ×4
@@ -15102,6 +15101,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `EventRendererMeta`
               - `OverlayContribution`
               - `SectionExpand`
+              - `StandIn`
+              - `StreamingStandIns`
               - `TranscriptEvents`
               - `TranscriptOlder`
               - `TranscriptSubject`
@@ -15124,6 +15125,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useRowMarkdown`
               - `useSectionExpand`
               - `useStreamingRow`
+              - `useStreamingStandIns`
               - `useTranscriptDrawn`
               - `useTranscriptEvents`
               - `useTranscriptSubject`
@@ -15224,7 +15226,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/icons.Icon`
               - Cross-plugin:
                 - Uses tokens: `ui/tokens/shape --spacing`
-            - **`assistant-text`** — Renders assistant text events in the JSONL viewer, with optional markdown rendering; a text block the agent is still writing (a jsonl-viewer streaming stand-in) is revealed at a steady pace with a soft fading edge rather than in the bursts it arrives in.
+            - **`assistant-text`** — Renders assistant text events in the JSONL viewer, with optional markdown rendering; a text block the agent is still writing (a jsonl-viewer streaming stand-in) is revealed at a steady pace with a soft fading edge rather than in the bursts it arrives in. Exports AgentProse — the agent's words (markdown with active-data, steadily revealed while still written) as every surface shows them: the transcript row and an agent thread's answer.
               - Web:
                 - Contributes:
                   - `JsonlViewer.EventRenderer` "assistant-text" → `AssistantTextRow`
@@ -15243,10 +15245,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/text.Text`
                   - `primitives/icon-button.IconButton`
                   - `primitives/select-scope.ContentScope`
+                - Exports (types): `AgentProseProps`
+                - Exports (values): `AgentProse`
               - Cross-plugin:
                 - Uses tokens:
                   - `ui/tokens/density --space-md`
                   - `ui/tokens/density --space-sm`
+                - Imported by: `conversations/agent-thread`
             - **`assistant-thinking`** — Renders assistant thinking blocks in the JSONL viewer as collapsible sections.
               - Web:
                 - Contributes: `JsonlViewer.EventRenderer` "assistant-thinking" → `AssistantThinkingRow`

@@ -295,7 +295,31 @@ describe("groupThread", () => {
       text: "Last.",
       at: expect.any(String),
       messageId: "msg_b",
+      streaming: false,
     });
+  });
+
+  test("while the turn runs, the text being written is its streaming answer", () => {
+    const events = [user("q"), say("Looking.", "msg_a")];
+    const writing = [
+      say("Here is wh", "msg_b"),
+      call("Read", { file_path: "/x" }),
+    ];
+    const [turn] = groupThread(events, [], WORKING, writing);
+    expect(turn!.answer).toMatchObject({
+      text: "Here is wh",
+      messageId: "msg_b",
+      streaming: true,
+    });
+    // A streaming tool call is not a step until the transcript holds it.
+    expect(turn!.steps).toEqual([]);
+  });
+
+  test("text being written is ignored once the conversation is idle", () => {
+    const [turn] = groupThread([user("q"), say("Done.", "msg_a")], [], IDLE, [
+      say("stale", "msg_b"),
+    ]);
+    expect(turn!.answer).toMatchObject({ text: "Done.", streaming: false });
   });
 
   test("an answer from a line that names no message has a null message id", () => {
