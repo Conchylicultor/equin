@@ -218,7 +218,15 @@ export function base64ImageSize(base64: string): Partial<ImageSize> {
 }
 
 export function base64Bytes(base64: string): Uint8Array<ArrayBuffer> {
-  return Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+  // Native decode: ~35× faster than `atob` plus a callback per byte, which was
+  // a seventh of a cold transcript parse. Every runtime this runs on has it;
+  // the repo's TS lib (ES2023) does not yet declare it.
+  return (Uint8Array as unknown as Base64Decoder).fromBase64(base64);
+}
+
+/** `Uint8Array.fromBase64` (ES2026), typed here until the TS lib carries it. */
+interface Base64Decoder {
+  fromBase64(base64: string): Uint8Array<ArrayBuffer>;
 }
 
 const IMAGE_MIME: Record<string, string> = {

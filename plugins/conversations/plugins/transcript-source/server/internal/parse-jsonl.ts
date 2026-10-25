@@ -28,6 +28,7 @@ import type {
 } from "../../core";
 import { requestConfigOf, requestShapeOf } from "./api-request";
 import { base64ImageSize, imageMimeOf } from "./image-key";
+import { transcriptSlicer } from "./slicing";
 
 type ToolCallEvent = Extract<JsonlEvent, { kind: "tool-call" }>;
 type ApiRequestEvent = Extract<JsonlEvent, { kind: "api-request" }>;
@@ -468,7 +469,11 @@ export async function buildJsonlEvents(
     }
   };
 
+  // A long chain's build would hold the thread for seconds (task-notification
+  // XML, text processing): yield between lines, on the transcript turn queue.
+  const slice = transcriptSlicer();
   for (const obj of parsed) {
+    await slice();
     // Skip lines on an abandoned rewind branch — they are not part of the
     // live conversation. Lines without a uuid (metadata markers) are not in
     // the tree and always pass through.

@@ -110,4 +110,14 @@ describe("createTimeSlicer", () => {
     await slice();
     expect(ran).toBe(true);
   });
+
+  test("concurrent slicers sharing a turn queue each resume on their own turn", async () => {
+    const turns = createTurnQueue();
+    const slicers = [0, 1, 2].map(() => createTimeSlicer(0, turns));
+    blockThread(2);
+    let i = 0;
+    for (const gap of betweenStarts(await race(() => slicers[i++]!()))) {
+      expect(gap).toContain("tick");
+    }
+  });
 });

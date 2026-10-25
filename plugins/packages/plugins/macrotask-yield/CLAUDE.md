@@ -29,6 +29,10 @@ turn has arrived, so a full loop turn (timers, I/O) separates consecutive
 callers. The check runner starts every check through one: ~100 checks'
 synchronous start-ups used to run as one block before any timer fired.
 
+`createTimeSlicer(budgetMs, yieldTurn)` takes the queue as its yield: tasks of
+one kind slicing at once (the transcripts a server boot opens) share one
+`createTurnQueue()`, so each slice gets a turn of its own.
+
 The browser-only `yieldToMain` (`primitives/perfs/plugins/scheduler/web`) is a
 separate helper with a `postTask` tier for the deferred plugin boot; this one is
 runtime-neutral `core`.

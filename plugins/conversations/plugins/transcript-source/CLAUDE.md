@@ -13,6 +13,13 @@ A conversation's transcript, independent of the host that stores it.
   the **`TranscriptSource`** host service: `{ signature(id), events(id),
   watch(id, onChange) }`. `jsonl-viewer`'s `jsonl-events` value reads it, so
   the transcript view runs on any host.
+- **Never one block on the thread.** `TranscriptLines.catchUp(file, size,
+  read)` and `events()` run one at a time under the lines' own lock (the lines
+  track what they consumed, so racing reads of one file cannot decode it
+  twice), and both the line decode and `buildJsonlEvents` yield about every
+  10 ms on one turn queue shared by every transcript parse (`slicing.ts`) — so
+  a cold read of a huge chain, or of every chain a server boot opens, never
+  stalls the event loop (it once held it 10.5 s).
 - **Providers.** The desktop: `transcript-watcher#machine` (the session files on
   disk, signed by mtime + size, watched by the one transcript watcher). A host
   without the files: `plugins/memory` (JSONL text written to it —
@@ -31,6 +38,7 @@ Design: `research/2026-10-19-global-demo-story-from-browser-worker.md` §3.
     - `conversations/session-chain._conversationSessions`
     - `tasks/tasks-core._conversations`
   - Exports (types):
+    - `TranscriptByteRead`
     - `TranscriptImageIo`
     - `TranscriptImageRead`
     - `TranscriptImageReader`
@@ -44,6 +52,7 @@ Design: `research/2026-10-19-global-demo-story-from-browser-worker.md` §3.
     - `TranscriptImageKeyError`
     - `TranscriptLines`
     - `TranscriptSource`
+    - `wholeBytes`
 - Core:
   - Uses:
     - `packages/list-bound.wholeList`

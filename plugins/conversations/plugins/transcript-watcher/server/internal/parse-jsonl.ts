@@ -94,10 +94,9 @@ export async function readChain(
       ? previous
       : { lines: new TranscriptLines(keyPromptImage), files: [] };
   for (const file of now) {
-    const consumed = read.lines.consumed(file.path);
-    if (file.size <= consumed) continue;
-    const bytes = await Bun.file(file.path).slice(consumed, file.size).bytes();
-    read.lines.append(file.path, consumed, bytes);
+    await read.lines.catchUp(file.path, file.size, (from, to) =>
+      Bun.file(file.path).slice(from, to).bytes(),
+    );
   }
   read.files = now;
   return read;

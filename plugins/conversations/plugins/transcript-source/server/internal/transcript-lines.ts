@@ -1,3 +1,4 @@
+import { createKeyedMutex } from "@plugins/packages/plugins/keyed-mutex/core";
 import type { JsonlEvent } from "../../core";
 import { slimApiRequestLine } from "./api-request";
 import {
@@ -6,22 +7,42 @@ import {
   visitInlineImages,
 } from "./image-key";
 import { buildJsonlEvents, type TranscriptImageReader } from "./parse-jsonl";
+import { transcriptSlicer } from "./slicing";
 
 const NEWLINE = 0x0a;
+
+/** The whole chain: every catch-up and event build takes this one lock. */
+const CHAIN = "chain";
+
+/**
+ * Bytes `[from, to)` of a chain file, from the host's storage — what
+ * `TranscriptLines.catchUp` reads a file's unconsumed tail through.
+ */
+export type TranscriptByteRead = (
+  from: number,
+  to: number,
+) => Promise<Uint8Array>;
 
 /**
  * A session chain's lines, read a file at a time and a chunk at a time: what a
  * host keeps between two reads of a transcript, so a change costs the bytes it
  * appended rather than the whole chain.
  *
- * - **Append-only, in chain order.** `append(file, offset, bytes)` decodes the
- *   complete lines of `bytes` — the file's bytes from `offset`, which must be
- *   exactly what was consumed of it so far — and leaves an incomplete last line
- *   for the next call (the CLI terminates every line). A file appended to for
- *   the first time goes after every line already held, so only the chain's LAST
- *   file may grow, or a new file follow it. Anything else (a file that shrank or
- *   was replaced, an earlier file that grew) is a new `TranscriptLines`: the
- *   host's call, since only it sees the files.
+ * - **Append-only, in chain order.** `catchUp(file, size, read)` reads the
+ *   bytes of `file` it has not consumed yet, up to `size`, decodes their
+ *   complete lines and leaves an incomplete last line for the next call (the
+ *   CLI terminates every line). The lines track what they consumed, so a host
+ *   only says how big the file is now — two reads racing over one file cannot
+ *   decode the same bytes twice. A file caught up for the first time goes after
+ *   every line already held, so only the chain's LAST file may grow, or a new
+ *   file follow it. Anything else (a file that shrank or was replaced, an
+ *   earlier file that grew) is a new `TranscriptLines`: the host's call, since
+ *   only it sees the files.
+ * - **One at a time, never in one block.** Catch-ups and event builds run in
+ *   call order under one lock, so `events()` sees every catch-up asked for
+ *   before it and never a half-decoded chunk; and each yields the thread about
+ *   every 10 ms (`transcriptSlicer`), so a cold read of a 50 MB chain — or of
+ *   every chain a server boot opens — never holds the event loop.
  * - **Merged as a chain.** A uuid already held is skipped — a forked session
  *   copies its ancestor's lines verbatim (`mergeChainLines`' rule).
  * - **Held slim.** A line is held without what no event reads: its inline
@@ -42,6 +63,7 @@ export class TranscriptLines {
   private built: { version: number; events: Promise<JsonlEvent[]> } | null =
     null;
   private version = 0;
+  private readonly lock = createKeyedMutex();
 
   constructor(private readonly readImage: TranscriptImageReader) {}
 
@@ -55,23 +77,49 @@ export class TranscriptLines {
     return this.consumedByFile.get(file) ?? 0;
   }
 
-  /** The held lines, in chain order. */
+  /** The held lines, in chain order — as of the catch-ups that have settled. */
   lines(): readonly Record<string, unknown>[] {
     return this.held;
   }
 
   /**
-   * Decode the complete lines of `bytes` — `file`'s bytes from `offset`.
-   * Returns how many lines it added (a line already held, or one no event
-   * reads, adds none).
+   * Catch `file` up to `size` bytes: read what was not consumed of it yet
+   * through `read` and decode its complete lines. Returns how many lines it
+   * added (a line already held, or one no event reads, adds none; a file
+   * already consumed to `size` reads nothing).
    */
-  append(file: string, offset: number, bytes: Uint8Array): number {
-    const consumed = this.consumed(file);
-    if (offset !== consumed) {
-      throw new Error(
-        `TranscriptLines.append: ${file} read from byte ${offset}, but ${consumed} were consumed`,
-      );
-    }
+  catchUp(
+    file: string,
+    size: number,
+    read: TranscriptByteRead,
+  ): Promise<number> {
+    return this.lock.run(CHAIN, async () => {
+      const from = this.consumed(file);
+      if (size <= from) return 0;
+      return this.decode(file, from, await read(from, size));
+    });
+  }
+
+  /** The transcript's events, built from the held lines (once per change). */
+  events(): Promise<JsonlEvent[]> {
+    return this.lock.run(CHAIN, () => {
+      if (this.built?.version !== this.version) {
+        this.built = {
+          version: this.version,
+          events: buildJsonlEvents(this.held, this.readImage),
+        };
+      }
+      return this.built.events;
+    });
+  }
+
+  /** Decode the complete lines of `bytes` — `file`'s bytes from `offset`. Runs under the lock. */
+  private async decode(
+    file: string,
+    offset: number,
+    bytes: Uint8Array,
+  ): Promise<number> {
+    const slice = transcriptSlicer();
     const decoder = new TextDecoder();
     let added = 0;
     let start = 0;
@@ -85,21 +133,11 @@ export class TranscriptLines {
         }
       }
       start = end + 1;
+      await slice();
     }
     this.consumedByFile.set(file, offset + start);
     if (added > 0) this.version += 1;
     return added;
-  }
-
-  /** The transcript's events, built from the held lines (once per change). */
-  events(): Promise<JsonlEvent[]> {
-    if (this.built?.version !== this.version) {
-      this.built = {
-        version: this.version,
-        events: buildJsonlEvents(this.held, this.readImage),
-      };
-    }
-    return this.built.events;
   }
 
   private keep(
@@ -221,19 +259,21 @@ const noImages: TranscriptImageReader = () => Promise.resolve(null);
  * correct (it was abandoned), but it is a loss the per-file parse would not have
  * had. Pinned by a test in `parse-jsonl.test.ts`.
  */
-export function mergeChainLines(
+export async function mergeChainLines(
   files: readonly { path: string; raw: string }[],
-): readonly Record<string, unknown>[] {
+): Promise<readonly Record<string, unknown>[]> {
   const lines = new TranscriptLines(noImages);
   const encoder = new TextEncoder();
   for (const { path, raw } of files) {
     // A whole file read as text: its last line is complete even when the text
     // does not end in a newline (a test's literal).
-    lines.append(
-      path,
-      0,
-      encoder.encode(raw.endsWith("\n") ? raw : `${raw}\n`),
-    );
+    const bytes = encoder.encode(raw.endsWith("\n") ? raw : `${raw}\n`);
+    await lines.catchUp(path, bytes.length, wholeBytes(bytes));
   }
   return lines.lines();
+}
+
+/** A `TranscriptByteRead` over bytes already in memory. */
+export function wholeBytes(bytes: Uint8Array): TranscriptByteRead {
+  return (from, to) => Promise.resolve(bytes.subarray(from, to));
 }

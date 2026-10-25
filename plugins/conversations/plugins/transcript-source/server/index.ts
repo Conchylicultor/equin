@@ -6,11 +6,12 @@ export type {
   TranscriptSnapshot,
 } from "./internal/service";
 // The Claude Code JSONL parser: a provider holds a chain's lines
-// (`TranscriptLines`, appended a chunk at a time) and builds the events from
-// them.
+// (`TranscriptLines`, caught up a chunk at a time from the host's bytes) and
+// builds the events from them.
 export { buildJsonlEvents } from "./internal/parse-jsonl";
 export type { TranscriptImageReader } from "./internal/parse-jsonl";
-export { TranscriptLines } from "./internal/transcript-lines";
+export { TranscriptLines, wholeBytes } from "./internal/transcript-lines";
+export type { TranscriptByteRead } from "./internal/transcript-lines";
 // Images by reference: the key a host mints for a prompt's image file, and the
 // read every host answers `TranscriptSource.image` with over its own storage.
 export {

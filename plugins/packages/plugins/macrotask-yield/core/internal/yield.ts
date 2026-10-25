@@ -78,12 +78,20 @@ export function createTurnQueue(): () => Promise<void> {
  *
  * One slicer per loop (or per task): the budget is the caller's own run time
  * since ITS last yield.
+ *
+ * `yieldTurn` is how it yields. When many tasks of one kind slice at once (every
+ * transcript a server boot opens), pass them one shared `createTurnQueue()`: each
+ * task's next slice then waits for a turn of its own, instead of all of them
+ * resuming back to back in one turn — N × the budget with no timer in between.
  */
-export function createTimeSlicer(budgetMs = 10): () => Promise<void> {
+export function createTimeSlicer(
+  budgetMs = 10,
+  yieldTurn: () => Promise<void> = yieldMacrotask,
+): () => Promise<void> {
   let lastYield = performance.now();
   return async () => {
     if (performance.now() - lastYield <= budgetMs) return;
-    await yieldMacrotask();
+    await yieldTurn();
     lastYield = performance.now();
   };
 }

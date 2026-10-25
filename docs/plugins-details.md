@@ -19213,6 +19213,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/session-chain._conversationSessions`
           - `tasks/tasks-core._conversations`
         - Exports (types):
+          - `TranscriptByteRead`
           - `TranscriptImageIo`
           - `TranscriptImageRead`
           - `TranscriptImageReader`
@@ -19226,6 +19227,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TranscriptImageKeyError`
           - `TranscriptLines`
           - `TranscriptSource`
+          - `wholeBytes`
       - Core:
         - Uses:
           - `packages/list-bound.wholeList`
@@ -19293,6 +19295,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/transcript-source.TranscriptSnapshot`
               - `conversations/transcript-source.TranscriptSource`
               - `conversations/transcript-source.TranscriptSourceImpl`
+              - `conversations/transcript-source.wholeBytes`
             - Exports (values): `writeTranscript`
     - **`transcript-watcher`** — Foreign-session report renderer: a one-line Debug, Reports summary for the conversation-foreign-session kind — which conversation holds a session id that belongs to another, and how it was seen. Single @parcel/watcher-based JSONL transcript watcher. Replaces two independent 500ms pollers with one fan-out subscription.
       - Web:

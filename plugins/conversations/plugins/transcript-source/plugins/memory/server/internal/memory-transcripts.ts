@@ -2,6 +2,7 @@ import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-sourc
 import {
   readImageKey,
   TranscriptLines,
+  wholeBytes,
   type TranscriptImageIo,
   type TranscriptSnapshot,
   type TranscriptSourceImpl,
@@ -19,10 +20,10 @@ const noImages = async (): Promise<null> => null;
 /** The transcript "file" an image key names: the conversation's stored JSONL. */
 const fileOf = (id: string): string => `memory:${id}`;
 
-function parse(id: string): Promise<JsonlEvent[]> {
+async function parse(id: string): Promise<JsonlEvent[]> {
   const lines = new TranscriptLines(noImages);
   const jsonl = transcripts.get(id)?.jsonl;
-  if (jsonl) lines.append(fileOf(id), 0, jsonl);
+  if (jsonl) await lines.catchUp(fileOf(id), jsonl.length, wholeBytes(jsonl));
   return lines.events();
 }
 

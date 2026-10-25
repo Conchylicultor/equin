@@ -4,12 +4,15 @@
 //
 // Replays the transcript the way the watcher reads it: the file minus its last
 // `appends` lines read whole, then each remaining line appended and read
-// incrementally (`TranscriptLines.append`). Per append it reports the server
+// incrementally (`TranscriptLines.catchUp`). Per append it reports the server
 // time (append + event build) and the bytes of the rows the change touched —
 // what the paged `jsonl-events` value ships as a keyed delta. Rows are keyed as
 // `jsonl-viewer`'s `transcriptRows` keys them (a tool call by its tool-use id,
 // anything else by its position).
-import { TranscriptLines } from "@plugins/conversations/plugins/transcript-source/server";
+import {
+  TranscriptLines,
+  wholeBytes,
+} from "@plugins/conversations/plugins/transcript-source/server";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 
 const path = process.argv[2];
@@ -50,11 +53,34 @@ for (let i = bytes.indexOf(10); i !== -1; i = bytes.indexOf(10, i + 1))
   ends.push(i + 1);
 const split = ends[Math.max(0, ends.length - appends - 1)]!;
 
+/**
+ * The longest the event loop went without running a timer while `work` ran —
+ * what every other request on the server waited at worst.
+ */
+async function maxLoopStall<T>(work: () => Promise<T>): Promise<[T, number]> {
+  let worst = 0;
+  let last = performance.now();
+  let running = true;
+  const tick = () => {
+    const now = performance.now();
+    worst = Math.max(worst, now - last);
+    last = now;
+    if (running) setTimeout(tick, 0);
+  };
+  setTimeout(tick, 0);
+  const value = await work();
+  running = false;
+  worst = Math.max(worst, performance.now() - last);
+  return [value, worst];
+}
+
 // Initial read: what opening a cold conversation costs the server.
 let t0 = performance.now();
 const whole = new TranscriptLines(noImages);
-whole.append(path, 0, bytes);
-const allEvents = await whole.events();
+const [allEvents, coldStallMs] = await maxLoopStall(async () => {
+  await whole.catchUp(path, bytes.length, wholeBytes(bytes));
+  return whole.events();
+});
 const fullReadMs = performance.now() - t0;
 const heldBytes = JSON.stringify(whole.lines()).length;
 
@@ -66,17 +92,16 @@ const wholeValueBytes = JSON.stringify(allEvents).length;
 
 // Replay: read up to `split`, then append line by line.
 const lines = new TranscriptLines(noImages);
-lines.append(path, 0, bytes.subarray(0, split));
+const read = wholeBytes(bytes);
+await lines.catchUp(path, split, read);
 let previous = rowsById(await lines.events());
 const changeMs: number[] = [];
 const changeBytes: number[] = [];
-let offset = split;
 for (const end of ends.filter((e) => e > split)) {
   t0 = performance.now();
-  lines.append(path, offset, bytes.subarray(offset, end));
+  await lines.catchUp(path, end, read);
   const events = await lines.events();
   changeMs.push(performance.now() - t0);
-  offset = end;
   const next = rowsById(events);
   let delta = 0;
   for (const [id, json] of next)
@@ -90,6 +115,7 @@ console.log(`file: ${path} (${mb(bytes.length)}, ${ends.length} lines)`);
 console.log(`events: ${allEvents.length}`);
 console.log(`lines held in memory (slim): ${mb(heldBytes)}`);
 console.log(`cold read + parse (open, server): ${fullReadMs.toFixed(0)} ms`);
+console.log(`longest event-loop stall during it: ${coldStallMs.toFixed(0)} ms`);
 console.log(
   `whole event array (what each change used to push): ${mb(wholeValueBytes)}`,
 );
