@@ -114,13 +114,16 @@ the binary that runs and the sweep keeps off it. The health report's Gateway row
 plist (or the detached spawn) names that path and it
 `holdDep`s the install as `machine-gateway`, so the daily deps sweep never
 deletes the binary launchd will relaunch, however long main has moved on; the
-next `start` moves the hold to the new build. On macOS it then runs
-`signGateway` (`infra/codesign`): a no-op when the binary is already signed as
-`dev.singularity.gateway` by this machine's identity, a re-sign when the
-identity changed (`ensureDep` skips a ready install, so the build's own signing
-step does not run again). A configured identity that does not resolve fails
-`start`. A release never builds: its
-launcher reads the gateway sealed into the bundle.
+next `start` moves the hold to the new build. On macOS the plist does not
+name the cache path: `start` installs the build into the equin app bundle
+(`installServiceExecutable`, `infra/launcher/login-services`) and the plist runs
+`~/.singularity/state/macos-app/equin.app/Contents/MacOS/gateway`, its build
+named in the job's `EQUIN_APP_COMPONENT` — so macOS asks for, grants and resets
+the gateway's permissions as one app, "equin" (`dev.equin`). The install is a
+no-op when the bundle already holds that build signed by this machine's
+identity, a re-sign when the identity changed. A configured identity that does
+not resolve fails `start`. A release never builds: its launcher reads the
+gateway sealed into the bundle and runs it where it is.
 
 It waits for the gateway to actually answer before printing success, because a
 gateway exits when a managed service fails to start and an unconditional

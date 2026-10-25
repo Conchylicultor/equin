@@ -9,8 +9,9 @@ import {
 import { ensureDep, holdDep } from "@plugins/infra/plugins/deps/deps";
 import { cliExecContext } from "@plugins/infra/plugins/jobs/plugins/supervised-job/cli";
 import {
+  GATEWAY_APP_COMPONENT,
   gatewayBinary,
-  signGateway,
+  gatewayBuild,
 } from "@plugins/infra/plugins/launcher/deps";
 import { gatewayLogs } from "@plugins/infra/plugins/launcher/data-dirs";
 import {
@@ -36,15 +37,21 @@ import {
 import {
   awaitProcessGone,
   declaredLoginServices,
+  installServiceExecutable,
   loginServiceId,
   loginServiceManager,
+  machineMacosAppHost,
+  plannedServiceExecutable,
   reconcileLoginService,
   terminateProcess,
   type LoginService,
   type LoginServiceDeclaration,
   type LoginServiceManager,
+  type MacosAppHost,
   type ReconcileOutcome,
 } from "@plugins/infra/plugins/launcher/plugins/login-services/machine";
+import type { Ready } from "@plugins/infra/plugins/deps/deps";
+import type { BuildSource } from "@plugins/infra/plugins/deps/plugins/build/deps";
 
 type Opts = { force?: boolean; logLevel: string; only?: string };
 
@@ -66,16 +73,19 @@ const run: CliAction<[], Opts> = async (opts) => {
   assertSupportedHost();
 
   const manager = loginServiceManager();
+  // The equin app bundle every service runs from on macOS (a no-op elsewhere).
+  const app = machineMacosAppHost({ exec: cliExecContext() }, console.log);
   if (selected(GATEWAY_SERVICE.label)) {
     if (manager)
-      await startAsLoginService(manager.service(GATEWAY_SERVICE), opts);
-    else await startDetached(opts);
+      await startAsLoginService(manager.service(GATEWAY_SERVICE), opts, app);
+    else await startDetached(opts, app);
   }
   // Then every login service a plugin declares — none named here.
   await startDeclaredLoginServices(
     manager,
     declared.filter((d) => selected(d.id)),
     opts,
+    app,
   );
 };
 
@@ -115,6 +125,7 @@ function selectServices(
 async function startAsLoginService(
   loginService: LoginService,
   opts: Opts,
+  app: MacosAppHost,
 ): Promise<void> {
   const manager = loginService.manager;
   const service = await loginService.state();
@@ -131,7 +142,7 @@ async function startAsLoginService(
     printRunning(
       `Gateway is already running under ${manager} (PID ${managedPid})`,
     );
-    await reportStaleGateway(loginService, opts);
+    await reportStaleGateway(loginService, opts, app);
     return;
   }
   if (
@@ -145,8 +156,8 @@ async function startAsLoginService(
     return;
   }
 
-  const launch = await prepareGateway(opts);
-  await adoptGatewayLaunch(launch);
+  const prepared = await prepareGateway(opts, app);
+  const launch = await adoptGatewayLaunch(prepared, app);
   const spec = gatewayLaunchSpec(launch);
   const written = loginService.write(gatewayServiceJob(spec));
   console.log(
@@ -196,12 +207,13 @@ async function startAsLoginService(
 async function reportStaleGateway(
   loginService: LoginService,
   opts: Opts,
+  app: MacosAppHost,
 ): Promise<void> {
-  const launch = await prepareGateway(opts);
+  const { gateway, launch } = await prepareGateway(opts, app);
   if (loginService.isCurrent(gatewayServiceJob(gatewayLaunchSpec(launch))))
     return;
   console.log(
-    `  Stale:   the gateway's job changed since the running gateway started (main's gateway binary is now ${launch.gateway.dir}, identity ${launch.gateway.identity}). It keeps running the old one; \`./equin start --only ${GATEWAY_SERVICE.label} --force\` swaps it (restarts every backend).`,
+    `  Stale:   the gateway's job changed since the running gateway started (main's gateway binary is now ${gateway.dir}, identity ${gateway.identity}). It keeps running the old one; \`./equin start --only ${GATEWAY_SERVICE.label} --force\` swaps it (restarts every backend).`,
   );
 }
 
@@ -217,6 +229,7 @@ async function startDeclaredLoginServices(
   manager: LoginServiceManager | null,
   declared: readonly LoginServiceDeclaration[],
   opts: Opts,
+  app: MacosAppHost,
 ): Promise<void> {
   if (declared.length === 0) return;
   if (manager === null) {
@@ -237,6 +250,7 @@ async function startDeclaredLoginServices(
       decl,
       ready,
       opts.force ? "force" : "start",
+      { host: app, log: console.log },
     );
     console.log(
       `${decl.id} (${decl.owner}) ${describeStart(outcome, service)}`,
@@ -266,7 +280,7 @@ function describeStart(
  * Hosts without a service manager: the detached spawn. It does not survive a reboot —
  * run `./equin start` again after one.
  */
-async function startDetached(opts: Opts): Promise<void> {
+async function startDetached(opts: Opts, app: MacosAppHost): Promise<void> {
   const existingPid = readPid();
   const pidAlive = existingPid !== null && isRunning(existingPid);
 
@@ -286,8 +300,7 @@ async function startDetached(opts: Opts): Promise<void> {
     await terminateProcess(existingPid!);
   }
 
-  const launch = await prepareGateway(opts);
-  await adoptGatewayLaunch(launch);
+  const launch = await adoptGatewayLaunch(await prepareGateway(opts, app), app);
   // `.pid` only, and no `.ref()`: the gateway deliberately outlives `start`.
   const { pid } = spawnGatewayDaemon(launch);
 
@@ -301,16 +314,26 @@ async function startDetached(opts: Opts): Promise<void> {
   );
 }
 
+/** Main's gateway build, and the launch that would run it — nothing applied yet. */
+interface PreparedGateway {
+  gateway: Ready<BuildSource>;
+  launch: GatewayLaunchOptions;
+}
+
 /**
  * Ensure main's gateway binary and derive the launch options — every input to
- * a launch, nothing applied yet. Built only when main's gateway source (or Go)
- * changed since the last build (the identity is the source hash), so an
- * unchanged one costs a hash. It does not reach a RUNNING gateway: `start`
- * without `--force` leaves that one on its binary and only reports it stale
- * (`reportStaleGateway`); a launch applies the options first
- * (`adoptGatewayLaunch`).
+ * a launch, nothing applied yet: the executable is where the build WOULD run
+ * (inside the equin app bundle on macOS), not installed there. Built only when
+ * main's gateway source (or Go) changed since the last build (the identity is
+ * the source hash), so an unchanged one costs a hash. It does not reach a
+ * RUNNING gateway: `start` without `--force` leaves that one on its binary and
+ * only reports it stale (`reportStaleGateway`); a launch applies the options
+ * first (`adoptGatewayLaunch`).
  */
-async function prepareGateway(opts: Opts): Promise<GatewayLaunchOptions> {
+async function prepareGateway(
+  opts: Opts,
+  app: MacosAppHost,
+): Promise<PreparedGateway> {
   // The machine's gateway is MAIN's: built from the main checkout's Go source
   // whichever checkout runs `start`.
   const repoRoot = await getMainRepoRoot();
@@ -321,24 +344,39 @@ async function prepareGateway(opts: Opts): Promise<GatewayLaunchOptions> {
   console.log(`Gateway binary: ${gateway.dir} (${gateway.identity})`);
   return {
     gateway,
-    ...devGatewayLaunchOptions({ repoRoot, logLevel: opts.logLevel }),
+    launch: {
+      executable: plannedServiceExecutable(
+        app,
+        GATEWAY_APP_COMPONENT,
+        gatewayBuild(gateway),
+      ),
+      ...devGatewayLaunchOptions({ repoRoot, logLevel: opts.logLevel }),
+    },
   };
 }
 
 /**
- * Apply `launch` before it runs: its binary signed and held, `database.json`
- * written. Only on the paths that launch — holding a build the running gateway
- * does not run would move the sweep's hold off the live binary, and the
- * running gateway's config is not this command's to change under it.
+ * Apply a prepared launch before it runs: the binary installed into the equin
+ * app bundle (macOS; re-signed there when this machine's identity changed),
+ * the build held, `database.json` written. Only on the paths that launch —
+ * swapping the bundle's gateway or moving the hold off the build the running
+ * gateway runs is not a staleness report's to do, and the running gateway's
+ * config is not this command's to change under it.
  */
-async function adoptGatewayLaunch(launch: GatewayLaunchOptions): Promise<void> {
-  const { gateway } = launch;
-  // A ready install skips the build's signing step, so a changed identity
-  // (configured, or a reset local one) is applied here; a no-op otherwise.
-  await signGateway(gateway, cliExecContext(), console.log);
-  // The service job (and a detached gateway) names this binary by path long
-  // after main's source moves on: keep the deps sweep off it until the next
-  // `start` moves the hold to a newer build.
+async function adoptGatewayLaunch(
+  { gateway, launch }: PreparedGateway,
+  app: MacosAppHost,
+): Promise<GatewayLaunchOptions> {
+  const executable = await installServiceExecutable(
+    app,
+    GATEWAY_APP_COMPONENT,
+    gatewayBuild(gateway),
+    console.log,
+  );
+  // Off macOS the service job (and a detached gateway) names this binary by
+  // path long after main's source moves on: keep the deps sweep off it until
+  // the next `start` moves the hold to a newer build. (On macOS the bundle is
+  // a copy; the hold only keeps the build it was made from.)
   holdDep(gateway, "machine-gateway");
   ensureDatabaseConfig(launch.cwd, console.log);
   console.log(
@@ -346,6 +384,7 @@ async function adoptGatewayLaunch(launch: GatewayLaunchOptions): Promise<void> {
       ? `Binding the gateway to every interface (${LISTEN_ENV}=:${DEV_GATEWAY_PORT})`
       : `Binding the gateway to ${launch.bindHost}:${DEV_GATEWAY_PORT}`,
   );
+  return { ...launch, executable };
 }
 
 function printRunning(headline: string): void {

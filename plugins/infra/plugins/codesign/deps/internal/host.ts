@@ -1,11 +1,27 @@
 import { tmpdir } from "node:os";
-import { downloadedFile } from "@plugins/infra/plugins/deps/plugins/download/deps";
-import { ensureDep } from "@plugins/infra/plugins/deps/deps";
+import {
+  downloadedFile,
+  type DownloadSource,
+} from "@plugins/infra/plugins/deps/plugins/download/deps";
+import { ensureDep, type Ready } from "@plugins/infra/plugins/deps/deps";
 import type { ExecContext } from "@plugins/infra/plugins/jobs/plugins/supervised-job/core";
 import { waitForFlock } from "@plugins/packages/plugins/flock/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { codesignDir } from "../../data-dirs";
 import { rcodesign } from "./rcodesign";
+
+/**
+ * Where `rcodesign` (the local identity's signer) comes from:
+ *
+ * - `exec` — installed on demand. Only an out-of-process context holds an
+ *   `ExecContext` (a CLI command, a supervised job, a build's `then`).
+ * - `installed` — already installed: a serving backend, which may not install
+ *   anything on its event loop, waits for the dependency through `deps`
+ *   (`requestDep` + `readyNow`) and hands over the `Ready`.
+ */
+export type RcodesignTool =
+  | { readonly exec: ExecContext }
+  | { readonly installed: Ready<DownloadSource> };
 
 export interface CommandResult {
   readonly exitCode: number;
@@ -28,8 +44,8 @@ export interface CodesignHost {
   run(argv: readonly string[]): Promise<CommandResult>;
   /** Run `fn` holding the machine-wide lock on `path`. */
   withLock<T>(path: string, fn: () => Promise<T>): Promise<T>;
-  /** The `rcodesign` executable, installed on demand. */
-  rcodesignPath(exec: ExecContext): Promise<string>;
+  /** The `rcodesign` executable, from `tool`. */
+  rcodesignPath(tool: RcodesignTool): Promise<string>;
 }
 
 /** No signing tool call takes longer than this (a cold `security` can be slow). */
@@ -66,8 +82,12 @@ export function machineHost(): CodesignHost {
         await held.release();
       }
     },
-    async rcodesignPath(exec) {
-      return downloadedFile(await ensureDep(rcodesign, exec), "rcodesign");
+    async rcodesignPath(tool) {
+      const ready =
+        "installed" in tool
+          ? tool.installed
+          : await ensureDep(rcodesign, tool.exec);
+      return downloadedFile(ready, "rcodesign");
     },
   };
 }

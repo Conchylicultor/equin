@@ -57,12 +57,14 @@ import { listenFlag } from "./listen";
 // Own-plugin, so relative — the `@plugins/infra/plugins/launcher/core` alias
 // would name this plugin from inside itself.
 import { pickRuntimeEnv, runtimeEnvNames } from "../../core";
-import { gatewayBinary } from "../../deps";
+import { gatewayBinary, gatewayBuild } from "../../deps";
 import { readyNow, type Ready } from "@plugins/infra/plugins/deps/deps";
+import type { BuildSource } from "@plugins/infra/plugins/deps/plugins/build/deps";
 import {
-  builtFile,
-  type BuildSource,
-} from "@plugins/infra/plugins/deps/plugins/build/deps";
+  executableEnv,
+  unbundledExecutable,
+  type ServiceExecutable,
+} from "@plugins/infra/plugins/launcher/plugins/login-services/core";
 
 // Progress sink. The launcher runs in a CLI process whose human-facing output
 // belongs on the terminal, but this plugin must not assume stdout (a packaged
@@ -404,11 +406,14 @@ export async function bundledGateway(
 /** What a gateway launch needs, whoever performs it (see {@link gatewayLaunchSpec}). */
 export interface GatewayLaunchOptions {
   /**
-   * The installed gateway binary (`gateway-binary`): ensured from the checkout
-   * by `./equin start` / `serve-app`, read from the bundle by a release.
-   * A `Ready`, so a launch that never ensured one does not compile.
+   * The gateway executable the launch runs, made from an installed
+   * `gateway-binary` build (a `Ready`: ensured from the checkout by
+   * `./equin start` / `serve-app`, read from the bundle by a release).
+   * `./equin start` on macOS runs it from the equin app bundle
+   * (login-services' `installServiceExecutable`), every other launch where it
+   * was built (`unbundledExecutable(gatewayBuild(ready))`).
    */
-  gateway: Ready<BuildSource>;
+  executable: ServiceExecutable;
   /**
    * The gateway's working directory, which its supervised children inherit: the
    * checkout whose scripts `database.json` runs. Those start as `bun run <script>`,
@@ -471,14 +476,17 @@ export function gatewayLaunchSpec(opts: GatewayLaunchOptions): {
   logsDir: string;
 } {
   return {
-    argv: [builtFile(opts.gateway), ...gatewayLaunchFlags(opts)],
+    argv: [opts.executable.path, ...gatewayLaunchFlags(opts)],
     // Nothing the gateway reads is relative (every path is a flag), but
     // its children resolve their toolchain from it — see `cwd` above.
     cwd: opts.cwd,
     // The declared subset of the LIVE `process.env` — never an implicit
     // inherit (which would miss the release launcher's mutations) and never
-    // the whole thing (which hands the starter's shell to every backend).
-    env: pickRuntimeEnv(process.env),
+    // the whole thing (which hands the starter's shell to every backend) —
+    // plus, for a bundled executable, the build it runs (its path is stable,
+    // so this is what makes a rebuilt gateway a changed job). Not forwarded
+    // to the children: `-child-env` does not list it.
+    env: { ...pickRuntimeEnv(process.env), ...executableEnv(opts.executable) },
     stdioLog: GATEWAY_STDIO_LOG,
     logsDir: gatewayLogs.path,
   };
@@ -491,7 +499,7 @@ export function gatewayLaunchSpec(opts: GatewayLaunchOptions): {
  * before main's new binary is even built.
  */
 export function gatewayLaunchFlags(
-  opts: Omit<GatewayLaunchOptions, "gateway">,
+  opts: Omit<GatewayLaunchOptions, "executable">,
 ): string[] {
   const logsDir = gatewayLogs.ensure();
   gatewayState.ensure();
@@ -823,7 +831,8 @@ export async function bootSelfContainedApp(opts: {
   // A self-contained app is single-namespace: route subdomain-less requests
   // (the desktop webview, single-origin web) to it via the gateway default.
   const gateway = spawnGatewayDaemon({
-    gateway: opts.gateway,
+    // Where it was built: a self-contained app is not the machine's app bundle.
+    executable: unbundledExecutable(gatewayBuild(opts.gateway)),
     cwd: repoRoot,
     port,
     bindHost,

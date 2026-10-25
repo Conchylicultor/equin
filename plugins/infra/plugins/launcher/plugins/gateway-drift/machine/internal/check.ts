@@ -1,13 +1,15 @@
 import { existsSync, readFileSync } from "node:fs";
+import { codeSignature } from "@plugins/infra/plugins/codesign/deps";
 import { readyNow } from "@plugins/infra/plugins/deps/deps";
-import { builtFile } from "@plugins/infra/plugins/deps/plugins/build/deps";
 import { isRelease } from "@plugins/infra/plugins/paths/core";
 import {
   getMainRepoRoot,
   spawnCaptured,
 } from "@plugins/infra/plugins/spawn/core";
 import {
+  GATEWAY_APP_COMPONENT,
   gatewayBinary,
+  gatewayBuild,
   gatewaySignature,
 } from "@plugins/infra/plugins/launcher/deps";
 import {
@@ -18,7 +20,16 @@ import {
   isRunning,
   readPid,
 } from "@plugins/infra/plugins/launcher/server";
-import { loginService } from "@plugins/infra/plugins/launcher/plugins/login-services/machine";
+import { componentIdentity } from "@plugins/infra/plugins/launcher/plugins/login-services/core";
+import {
+  APP_BUNDLE_ID,
+  bundleOfExecutable,
+  installedAppComponents,
+  loginService,
+  machineMacosAppHost,
+  plannedServiceExecutable,
+  type MacosAppHost,
+} from "@plugins/infra/plugins/launcher/plugins/login-services/machine";
 import type { GatewayDrift } from "../../core";
 import { binaryIdentity, diffGatewayFlags, flagValue } from "./diff";
 
@@ -76,16 +87,27 @@ export async function checkGatewayDrift(): Promise<GatewayDrift> {
     );
   }
 
+  // Read only (where the bundle is, what it holds): nothing is installed or
+  // signed here, so the host is given no signing tool.
+  const app = machineMacosAppHost(null, () => {});
+  const bundle = bundleOfExecutable(app.bundle, installedBinary);
   const differences: string[] = [];
-  const binary = await describeBinary(installedBinary, repoRoot);
+  const binary = await describeBinary(installedBinary, repoRoot, app);
   if (binary !== null) differences.push(binary);
   differences.push(...diffGatewayFlags(installedFlags, expectedFlags));
   if (installed.cwd !== repoRoot) {
     differences.push(`working directory ${installed.cwd} → ${repoRoot}`);
   }
-  const signature = await gatewaySignature(installedBinary);
+  const signature =
+    bundle === null
+      ? await gatewaySignature(installedBinary)
+      : await codeSignature(bundle, APP_BUNDLE_ID);
   if (signature === "unsigned") {
-    differences.push("binary not signed by this machine's identity");
+    differences.push(
+      bundle === null
+        ? "binary not signed by this machine's identity"
+        : "equin app not signed by this machine's identity",
+    );
   } else if (signature === "no-identity") {
     differences.push("no stable signing identity on this machine yet");
   }
@@ -102,20 +124,32 @@ export async function checkGatewayDrift(): Promise<GatewayDrift> {
 
 /**
  * How the installed binary differs from main's `gateway-binary` build, or null
- * when it is that build. Main's build may not exist yet (its source moved and
- * nothing built it): the installed one is then older by definition — `start
- * --force` builds it.
+ * when it is that build, where `start` would run it (inside the equin app on
+ * macOS). Main's build may not exist yet (its source moved and nothing built
+ * it): the installed one is then older by definition — `start --force` builds
+ * it.
  */
 async function describeBinary(
   installedBinary: string,
   repoRoot: string,
+  app: MacosAppHost,
 ): Promise<string | null> {
   const now = await readyNow(gatewayBinary, { root: repoRoot });
-  const was = binaryIdentity(installedBinary) ?? installedBinary;
+  const was = installedIdentity(installedBinary, app) ?? installedBinary;
   switch (now.kind) {
     case "ready": {
-      if (builtFile(now.ready) === installedBinary) return null;
-      return `binary built from older gateway source (${short(was)} → ${short(now.ready.identity)})`;
+      const expected = plannedServiceExecutable(
+        app,
+        GATEWAY_APP_COMPONENT,
+        gatewayBuild(now.ready),
+      );
+      if (installedBinary !== expected.path) {
+        return expected.bundled
+          ? "runs outside the equin app (its permissions are a bare binary's)"
+          : `binary at ${installedBinary}, not ${expected.path}`;
+      }
+      if (was === expected.identity) return null;
+      return `binary built from older gateway source (${short(was)} → ${short(expected.identity)})`;
     }
     case "failed":
       return `main's gateway does not build (${now.message})`;
@@ -125,8 +159,30 @@ async function describeBinary(
   }
 }
 
+/**
+ * Which gateway build the installed job runs: the build the equin app records
+ * for its `gateway` component, or the one a deps-cache path names; null when
+ * neither says.
+ */
+function installedIdentity(path: string, app: MacosAppHost): string | null {
+  const bundle = bundleOfExecutable(app.bundle, path);
+  if (bundle !== null) {
+    return (
+      installedAppComponents(bundle)?.find(
+        (c) => c.name === GATEWAY_APP_COMPONENT.name,
+      )?.identity ?? null
+    );
+  }
+  const identity = binaryIdentity(path);
+  return identity === null
+    ? null
+    : componentIdentity(gatewayBinary.id, identity);
+}
+
+/** A build identity, shortened for the summary (without its `<dep>@` prefix). */
 function short(identity: string): string {
-  return identity.length > 12 ? identity.slice(0, 8) : identity;
+  const bare = identity.slice(identity.indexOf("@") + 1);
+  return bare.length > 12 ? bare.slice(0, 8) : bare;
 }
 
 /**

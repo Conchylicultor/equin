@@ -74,7 +74,13 @@ ok, so the row still folds into the quiet card while current.
   - Resources: `gateway-drift` (push, notified, whole: one phrase per kind of difference (binary, each changed flag, cwd, signature, running vs installed) — a fixed handful)
 - Machine:
   - Uses:
+    - `infra/launcher/login-services.APP_BUNDLE_ID`
+    - `infra/launcher/login-services.bundleOfExecutable`
+    - `infra/launcher/login-services.installedAppComponents`
     - `infra/launcher/login-services.loginService`
+    - `infra/launcher/login-services.machineMacosAppHost`
+    - `infra/launcher/login-services.MacosAppHost`
+    - `infra/launcher/login-services.plannedServiceExecutable`
     - `network/live.serveValue`
   - Register: `defineRefReaction('launcher.gateway-drift (refs/heads/main)')`
 - Core:

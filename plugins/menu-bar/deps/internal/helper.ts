@@ -4,61 +4,23 @@ import {
   mkdirSync,
   mkdtempSync,
   rmSync,
-  writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { defineDep } from "@plugins/infra/plugins/deps/deps";
+import { defineDep, type Ready } from "@plugins/infra/plugins/deps/deps";
 import type { BuildContext } from "@plugins/infra/plugins/deps/plugins/build/deps";
-import { cargoBuild } from "@plugins/infra/plugins/deps/plugins/rust/deps";
+import {
+  cargoBuild,
+  type CargoSource,
+} from "@plugins/infra/plugins/deps/plugins/rust/deps";
 
 const CRATE = "plugins/menu-bar/rust";
 const BIN = "equin-desktop";
-const APP = "equin.app";
-/** The bundle identity macOS files the helper's notifications under (= tauri.conf.json's identifier). */
-const BUNDLE_ID = "dev.equin.menu-bar";
+/** macOS: the binary and the app icon, side by side — what the equin app bundle installs. */
+const MACOS = "macos";
+/** The app icon, built from the crate's spiral (`.icns`, for the equin app bundle). */
+const ICON = "equin.icns";
 const MINUTE = 60_000;
-
-/**
- * `Info.plist` of the helper's bundle: `LSUIElement` keeps it out of the Dock
- * and the app switcher (the status item is its only presence). The ATS
- * exception lets its webview load `http://<ns>.localhost:9000` — inside a
- * bundle, App Transport Security otherwise blocks plain-http loads (the
- * navigation starts and never commits); `NSAllowsLocalNetworking` does not
- * cover `*.localhost`.
- */
-function infoPlist(): string {
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-  <key>CFBundleIdentifier</key><string>${BUNDLE_ID}</string>
-  <key>CFBundleName</key><string>equin</string>
-  <key>CFBundleDisplayName</key><string>equin</string>
-  <key>CFBundleExecutable</key><string>${BIN}</string>
-  <key>CFBundleIconFile</key><string>equin</string>
-  <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleShortVersionString</key><string>0.1.0</string>
-  <key>CFBundleVersion</key><string>1</string>
-  <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
-  <key>LSMinimumSystemVersion</key><string>11.0</string>
-  <key>LSUIElement</key><true/>
-  <key>NSHighResolutionCapable</key><true/>
-  <key>NSAppTransportSecurity</key>
-  <dict>
-    <key>NSExceptionDomains</key>
-    <dict>
-      <key>localhost</key>
-      <dict>
-        <key>NSIncludesSubdomains</key><true/>
-        <key>NSExceptionAllowsInsecureHTTPLoads</key><true/>
-      </dict>
-    </dict>
-  </dict>
-</dict>
-</plist>
-`;
-}
 
 /** The `.iconset` sizes `iconutil` reads, from the 512 px icon build.rs renders. */
 const ICONSET: ReadonlyArray<readonly [name: string, px: number]> = [
@@ -74,22 +36,17 @@ const ICONSET: ReadonlyArray<readonly [name: string, px: number]> = [
 ];
 
 /**
- * Assemble `equin.app` around the built binary: the binary (copied — `built`
- * is the shared target dir's), `Info.plist`, the spiral as `equin.icns`
- * (`sips` + `iconutil` over the crate's build-rendered `icons/icon.png`), then
- * an ad-hoc signature (`codesign -s -`) so the bundle has a stable identity.
+ * macOS: the binary (copied — `built` is the shared target dir's) and the
+ * spiral as `equin.icns` (`sips` + `iconutil` over the crate's build-rendered
+ * `icons/icon.png`). No bundle: the helper runs from the ONE equin app bundle
+ * every login service shares (login-services' `macos-app`), which installs
+ * both and signs the whole with the machine's identity.
  */
-async function assembleApp(ctx: BuildContext, built: string): Promise<void> {
+async function assembleMacos(ctx: BuildContext, built: string): Promise<void> {
   const env = { ...process.env };
-  const contents = join(ctx.output, "Contents");
-  const macos = join(contents, "MacOS");
-  const resources = join(contents, "Resources");
-  mkdirSync(macos, { recursive: true });
-  mkdirSync(resources, { recursive: true });
-
-  copyFileSync(built, join(macos, BIN));
-  chmodSync(join(macos, BIN), 0o755);
-  writeFileSync(join(contents, "Info.plist"), infoPlist());
+  mkdirSync(ctx.output, { recursive: true });
+  copyFileSync(built, join(ctx.output, BIN));
+  chmodSync(join(ctx.output, BIN), 0o755);
 
   // The iconset is scratch, outside env/.
   const scratch = mkdtempSync(join(tmpdir(), "equin-iconset-"));
@@ -111,23 +68,23 @@ async function assembleApp(ctx: BuildContext, built: string): Promise<void> {
     );
   }
   await ctx.run(
-    ["iconutil", "-c", "icns", iconset, "-o", join(resources, "equin.icns")],
+    ["iconutil", "-c", "icns", iconset, "-o", join(ctx.output, ICON)],
     { cwd: ctx.dir, env, timeoutMs: MINUTE },
   );
   rmSync(scratch, { recursive: true });
+}
 
-  await ctx.run(["codesign", "--force", "--sign", "-", ctx.output], {
-    cwd: ctx.dir,
-    env,
-    timeoutMs: MINUTE,
-  });
+/** The app icon of an installed macOS build (see {@link assembleMacos}); null on Linux. */
+export function menuBarHelperIcon(ready: Ready<CargoSource>): string | null {
+  return process.platform === "darwin" ? join(ready.dir, MACOS, ICON) : null;
 }
 
 /**
  * The native helper — `equin-desktop` (rust/): the menu-bar / top-bar icon and
  * its panel (`tray`), and an installed app's window (`window`). Built from this
- * checkout's crate by the rust kind. macOS: `equin.app` (a bundle identity for
- * notifications, no Dock icon); Linux: the bare binary.
+ * checkout's crate by the rust kind. macOS: the binary beside the app icon,
+ * which the equin app bundle installs (its notifications are the app's);
+ * Linux: the bare binary.
  */
 export const menuBarHelper = defineDep({
   id: "menu-bar-helper",
@@ -140,9 +97,9 @@ export const menuBarHelper = defineDep({
       ? cargoBuild({
           crate: CRATE,
           bin: BIN,
-          output: APP,
-          binary: `${APP}/Contents/MacOS/${BIN}`,
-          then: assembleApp,
+          output: MACOS,
+          binary: `${MACOS}/${BIN}`,
+          then: assembleMacos,
         })
       : cargoBuild({ crate: CRATE, bin: BIN }),
   updates: { none: "built from this checkout's own source" },

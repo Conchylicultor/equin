@@ -1,8 +1,12 @@
 import type { Dep, DepSource, Ready } from "@plugins/infra/plugins/deps/deps";
-import type {
-  LoginServiceId,
-  LoginServiceJob,
-  LoginServiceSession,
+import {
+  executableEnv,
+  type AppComponent,
+  type ComponentBuild,
+  type LoginServiceId,
+  type LoginServiceJob,
+  type LoginServiceSession,
+  type ServiceExecutable,
 } from "../../core";
 
 /** What a declaration's `spec` computes from its installed dependency. */
@@ -25,8 +29,22 @@ export interface DefineLoginServiceSpec<S extends DepSource> {
    * and holds it, so the deps sweep never deletes the binary the job names.
    */
   dep: Dep<S>;
-  /** How to run it, from the installed dependency — a `Ready`, so a job that never ensured its binary does not compile. */
-  spec(ready: Ready<S>): LoginServiceRun;
+  /**
+   * The program it runs, as a component of the equin app: on macOS an
+   * executable inside `equin.app`, so its permissions are the app's
+   * (`macos-app.ts`). `build` says which file of the installed dependency that
+   * is (and the app icon, when this component brings it).
+   */
+  executable: AppComponent & {
+    build(ready: Ready<S>): ComponentBuild;
+  };
+  /**
+   * How to run it, from the installed dependency — a `Ready`, so a job that
+   * never ensured its binary does not compile — and `executable`, the path the
+   * program runs from (inside the app bundle on macOS): the only spelling of
+   * argv[0], so a job cannot run the build from the deps cache by mistake.
+   */
+  spec(ready: Ready<S>, executable: string): LoginServiceRun;
 }
 
 /**
@@ -38,7 +56,7 @@ export interface LoginServiceDeclaration<
   S extends DepSource = DepSource,
 > extends Readonly<Omit<DefineLoginServiceSpec<S>, "spec">> {
   readonly _brand: "LoginServiceDeclaration";
-  spec(ready: Ready<S>): LoginServiceRun;
+  spec(ready: Ready<S>, executable: string): LoginServiceRun;
 }
 
 const LABEL = /^[a-z][a-z0-9-]*(\.[a-z0-9-]+)+$/;
@@ -64,12 +82,23 @@ export function loginServiceId(decl: LoginServiceDeclaration): LoginServiceId {
   return { label: decl.id, session: decl.session };
 }
 
-/** The job to write, from the declaration's installed dependency. */
+/**
+ * The job to write, from the declaration's installed dependency and where its
+ * executable runs from. A bundled executable's build is named in the job's
+ * environment ({@link executableEnv}): its path is stable, so that is what
+ * makes a rebuilt component a changed job.
+ */
 export function loginServiceJob<S extends DepSource>(
   decl: LoginServiceDeclaration<S>,
   ready: Ready<S>,
+  executable: ServiceExecutable,
 ): LoginServiceJob {
-  return { description: decl.description, ...decl.spec(ready) };
+  const run = decl.spec(ready, executable.path);
+  return {
+    description: decl.description,
+    ...run,
+    env: { ...run.env, ...executableEnv(executable) },
+  };
 }
 
 /**

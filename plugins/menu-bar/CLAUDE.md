@@ -3,9 +3,12 @@
 ## Native helper
 
 `rust/` is the Tauri 2 crate `equin-desktop`, built by `deps/` (`menu-bar-helper`,
-the rust deps kind: `./equin deps install menu-bar-helper`; macOS gets an
-`equin.app` around it — `dev.equin.menu-bar`, `LSUIElement`, ad-hoc signed — so
-notifications have a bundle identity; Linux the bare binary). Generic: it knows
+the rust deps kind: `./equin deps install menu-bar-helper`; macOS gets the
+binary beside the app icon, `macos/{equin-desktop,equin.icns}`, which the login
+service installs into the ONE equin app bundle — `equin.app`, `dev.equin`
+(also the crate's Tauri `identifier`, which its notifications use),
+`LSUIElement`, signed with the machine's identity — so notifications and every
+other permission are the app's; Linux the bare binary). Generic: it knows
 namespaces and URLs, never an app.
 
 - `equin-desktop tray [--namespace <ns>]` (default `singularity`, the main
@@ -45,7 +48,7 @@ namespaces and URLs, never an app.
   handed off and stepped back from (an iframe may load any origin, so only the
   main-frame page-load event can tell). macOS bundles need an ATS exception for
   `localhost` + subdomains (`NSExceptionAllowsInsecureHTTPLoads`), else
-  WKWebView never loads `http://*.localhost` — `equin.app` and every shim carry it.
+  WKWebView never loads `http://*.localhost` — the equin app bundle and every shim carry it.
 - **Bridge** (`rust/src/bridge.js`, the contract `core/` mirrors): an
   initialization script on the panel's main frame defines `window.equinNative`
   only on `http://<ns>.localhost:9000` — `hostInfo()` (`{ version: 1, platform,
@@ -132,8 +135,11 @@ window) whenever it has a shim — every app, once main's first sync ran — and
 draws the **Keep in Dock** pin as a hover item action on each tile (data-view's
 icons view corner), hidden once pinned or where `capabilities.pin` is false.
 
-`login-services/` declares `dev.equin.menu-bar` (`graphical`): the helper
-binary inside `equin.app` (`cargoBinary(ready)`) run as `tray`, its stdio in
+`login-services/` declares `dev.equin.menu-bar` (`graphical`): the helper run
+as `tray` — on macOS from the equin app bundle, as its main executable
+(`executable: { name: "equin-desktop", main: true }`; the bundle is the one
+every login service runs from, `infra/launcher/login-services`), on Linux the
+bare build — its stdio in
 `logs/menu-bar/helper-stdio.log`. Once a `./equin start` has registered it, the
 tray follows main by itself: main's boot (after a push changing `rust/`)
 requests the helper build and reloads the tray onto it
@@ -241,8 +247,12 @@ requests the helper build and reloads the tray onto it
 - Deps:
   - Uses:
     - `infra/deps.defineDep`
+    - `infra/deps.Ready`
     - `infra/deps/rust.cargoBuild`
-  - Exports (values): `menuBarHelper`
+    - `infra/deps/rust.CargoSource`
+  - Exports (values):
+    - `menuBarHelper`
+    - `menuBarHelperIcon`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --background`

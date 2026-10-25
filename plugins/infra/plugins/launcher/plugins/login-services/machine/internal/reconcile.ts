@@ -11,6 +11,7 @@ import {
   type LoginServiceDeclaration,
 } from "./define";
 import type { LoginService } from "./login-service";
+import { installServiceExecutable, type MacosAppHost } from "./macos-app";
 import { awaitProcessGone } from "./process";
 
 /**
@@ -39,10 +40,11 @@ export type ReconcileOutcome =
 
 /**
  * Bring one declared login service to `ready`'s job under `policy`: hold the
- * dependency (the job names its binary by path long after main moves on),
- * write the job, and (re)load it when the policy says so. The one per-service
- * body shared by `./equin start` and main's boot (`follow-main.ts`), so the
- * two cannot disagree on what "changed" means or on the unload → gone → load
+ * dependency (off macOS the job names its binary by path long after main
+ * moves on), install its executable into the equin app (macOS), write the
+ * job, and (re)load it when the policy says so. The one per-service body
+ * shared by `./equin start` and main's boot (`follow-main.ts`), so the two
+ * cannot disagree on what "changed" means or on the unload → gone → load
  * order.
  */
 export async function reconcileLoginService<S extends DepSource>(
@@ -50,6 +52,7 @@ export async function reconcileLoginService<S extends DepSource>(
   decl: LoginServiceDeclaration<S>,
   ready: Ready<S>,
   policy: ReconcilePolicy,
+  app: { host: MacosAppHost; log: (line: string) => void },
 ): Promise<ReconcileOutcome> {
   // Decided before holding or writing anything: following main must never
   // register a service the user did not `start`.
@@ -58,7 +61,15 @@ export async function reconcileLoginService<S extends DepSource>(
 
   holdDep(ready, loginServiceHolder(decl));
   const before = await service.state();
-  const job = loginServiceJob(decl, ready);
+  // Swapped in under a running generation, which keeps its own executable
+  // until the reload below (measured: its grants hold meanwhile).
+  const executable = await installServiceExecutable(
+    app.host,
+    decl.executable,
+    decl.executable.build(ready),
+    app.log,
+  );
+  const job = loginServiceJob(decl, ready, executable);
   const written = service.write(job);
   const runningPid = before.kind === "loaded" ? before.pid : null;
 

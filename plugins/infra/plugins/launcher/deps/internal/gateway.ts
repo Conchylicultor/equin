@@ -1,10 +1,7 @@
 import { join } from "node:path";
 import {
-  isSignedBy,
+  codeSignature,
   machineHost,
-  readConfiguredValue,
-  readLocalIdentity,
-  resolveConfigured,
   signBinary,
   type CodesignHost,
 } from "@plugins/infra/plugins/codesign/deps";
@@ -18,14 +15,36 @@ import {
   builtFile,
   type BuildSource,
 } from "@plugins/infra/plugins/deps/plugins/build/deps";
-import type { ExecContext } from "@plugins/infra/plugins/jobs/plugins/supervised-job/core";
+import {
+  componentIdentity,
+  type AppComponent,
+  type ComponentBuild,
+} from "@plugins/infra/plugins/launcher/plugins/login-services/core";
 
 /**
- * The gateway's code-signing identifier: with the signing certificate, what
- * macOS keys the gateway's permission grants to (Downloads for the File
- * Explorer, …). The same as the launchd label, so the two read as one app.
+ * The bare gateway binary's code-signing identifier: with the signing
+ * certificate, what macOS keys its permission grants to when it runs where it
+ * was built (`serve-app`, a release built on a Mac). The machine's own gateway
+ * runs from the equin app bundle instead (`GATEWAY_APP_COMPONENT`), whose
+ * grants are the app's.
  */
 const GATEWAY_CODESIGN_IDENTIFIER = "dev.singularity.gateway";
+
+/**
+ * The gateway as a program of the equin app: `equin.app/Contents/MacOS/gateway`
+ * on macOS (login-services' `macos-app`), so the backends' file access — which
+ * macOS charges to the gateway that started them — asks, and is granted, as
+ * "equin". Named `gateway` there too, so its process name is unchanged.
+ */
+export const GATEWAY_APP_COMPONENT: AppComponent = { name: "gateway" };
+
+/** An installed gateway build, as the component the app bundle installs. */
+export function gatewayBuild(gateway: Ready<BuildSource>): ComponentBuild {
+  return {
+    file: builtFile(gateway),
+    identity: componentIdentity(gatewayBinary.id, gateway.identity),
+  };
+}
 
 /** Go's spelling of a target (GOOS / GOARCH). */
 function goTarget(target: DepTarget): { GOOS: string; GOARCH: string } {
@@ -67,7 +86,9 @@ function goTarget(target: DepTarget): { GOOS: string; GOARCH: string } {
  * this machine's identity (`infra/codesign`), so macOS keeps its permission
  * grants across rebuilds — an ad-hoc binary is keyed by its hash, and every
  * rebuild was a new app to it. The identity is not part of the build's
- * identity; `signGateway` re-signs an installed binary when it changes.
+ * identity. That signature serves a gateway run where it was built
+ * (`serve-app`, a release); the machine's own gateway runs from the equin app
+ * bundle, which `./equin start` installs it into and signs as a whole.
  */
 export const gatewayBinary = defineDep({
   id: "gateway-binary",
@@ -107,37 +128,12 @@ export const gatewayBinary = defineDep({
 });
 
 /**
- * Make sure an installed gateway is signed by this machine's CURRENT identity —
- * what `./equin start` runs after `ensureDep`, which skips a ready install and
- * so never re-runs the build's signing step. A no-op when it already is (or off
- * macOS); otherwise re-signs in place, which is safe under a running gateway
- * (the signed copy is renamed over the file). Throws when a configured identity
- * cannot be resolved.
- */
-export async function signGateway(
-  gateway: Ready<BuildSource>,
-  exec: ExecContext,
-  log: (line: string) => void,
-): Promise<void> {
-  const outcome = await signBinary(builtFile(gateway), {
-    identifier: GATEWAY_CODESIGN_IDENTIFIER,
-    exec,
-    log,
-  });
-  if (outcome.kind === "already-signed") {
-    log(
-      `Gateway signed by the ${outcome.identity.kind} identity "${outcome.identity.label}" (${outcome.identity.sha1})`,
-    );
-  }
-}
-
-/**
- * Whether the gateway binary at `path` carries the signature `signGateway`
- * would give it now — asked WITHOUT side effects (the local identity is read,
+ * Whether the BARE gateway binary at `path` carries the signature its build
+ * gives it (`then`, as `dev.singularity.gateway`) — asked WITHOUT side effects (the local identity is read,
  * never minted; nothing is re-signed), for a reader that only reports.
  *
  * - `unsupported` — not macOS: nothing is signed there;
- * - `no-identity` — this machine has no local identity yet (the next `start`
+ * - `no-identity` — this machine has no local identity yet (the next build
  *   creates one and signs);
  * - `signed` / `unsigned` — by that identity, as `dev.singularity.gateway`.
  */
@@ -145,17 +141,5 @@ export async function gatewaySignature(
   path: string,
   host: CodesignHost = machineHost(),
 ): Promise<"unsupported" | "no-identity" | "signed" | "unsigned"> {
-  if (host.platform !== "darwin") return "unsupported";
-  const configured = readConfiguredValue(host);
-  let sha1: string;
-  if (configured !== null) {
-    sha1 = (await resolveConfigured(configured, host)).sha1;
-  } else {
-    const local = readLocalIdentity(host);
-    if (local.kind !== "present") return "no-identity";
-    sha1 = local.identity.sha1;
-  }
-  return (await isSignedBy(path, GATEWAY_CODESIGN_IDENTIFIER, sha1, host))
-    ? "signed"
-    : "unsigned";
+  return codeSignature(path, GATEWAY_CODESIGN_IDENTIFIER, host);
 }

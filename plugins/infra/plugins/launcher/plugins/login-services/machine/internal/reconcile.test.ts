@@ -1,12 +1,24 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { defineDep } from "@plugins/infra/plugins/deps/deps";
 import { readyForTests } from "@plugins/infra/plugins/deps/deps/testing";
-import type { LoginServiceJob } from "../../core";
-import { defineLoginService, loginServiceId } from "./define";
+import {
+  componentIdentity,
+  unbundledExecutable,
+  type LoginServiceJob,
+} from "../../core";
+import { APP_COMPONENT_ENV } from "../../core/internal/app-component";
+import { defineLoginService, loginServiceId, loginServiceJob } from "./define";
 import type { LoginService, LoginServiceState } from "./login-service";
+import type { MacosAppHost } from "./macos-app";
 import { reconcileLoginService, type ReconcilePolicy } from "./reconcile";
 
 const dir = mkdtempSync(join(tmpdir(), "login-service-reconcile-"));
@@ -32,8 +44,15 @@ const decl = defineLoginService({
   description: "An example tray helper",
   session: "graphical",
   dep: helper,
-  spec: (ready) => ({
-    argv: [`${ready.dir}/bin`, "tray"],
+  executable: {
+    name: "example",
+    build: (ready) => ({
+      file: `${ready.dir}/bin`,
+      identity: componentIdentity(helper.id, ready.identity),
+    }),
+  },
+  spec: (ready, executable) => ({
+    argv: [executable, "tray"],
     cwd: ready.dir,
     env: {},
     // A folder that does not exist yet: the reconcile creates it.
@@ -60,7 +79,13 @@ function fakeService(registration: Registration, writtenFrom: typeof oldBuild) {
   let definition: string | null =
     registration === "unregistered"
       ? null
-      : render({ description: decl.description, ...decl.spec(writtenFrom) });
+      : render(
+          loginServiceJob(
+            decl,
+            writtenFrom,
+            unbundledExecutable(decl.executable.build(writtenFrom)),
+          ),
+        );
   let state: LoginServiceState =
     registration === "loaded"
       ? { kind: "loaded", pid: DEAD_PID, lastExit: null }
@@ -102,6 +127,24 @@ function fakeService(registration: Registration, writtenFrom: typeof oldBuild) {
   return { service, calls, definition: () => definition };
 }
 
+/** A host with no app bundle (Linux): the service runs its build where it is. */
+const unbundled: MacosAppHost = {
+  platform: "linux",
+  bundle: "/nowhere/equin.app",
+  withLock: () => {
+    throw new Error("nothing is installed off macOS");
+  },
+  sign: () => {
+    throw new Error("nothing is signed off macOS");
+  },
+  isSigned: () => {
+    throw new Error("nothing is signed off macOS");
+  },
+  register: () => {
+    throw new Error("nothing is registered off macOS");
+  },
+};
+
 const run = (
   registration: Registration,
   job: "same" | "changed",
@@ -111,7 +154,10 @@ const run = (
   const ready = job === "same" ? oldBuild : newBuild;
   return {
     fake,
-    outcome: reconcileLoginService(fake.service, decl, ready, policy),
+    outcome: reconcileLoginService(fake.service, decl, ready, policy, {
+      host: unbundled,
+      log: () => {},
+    }),
   };
 };
 
@@ -211,4 +257,55 @@ test("a (re)load truncates the stdio log, creating its folder", async () => {
   const { outcome } = run("unregistered", "changed", "start");
   await outcome;
   expect(readFileSync(join(dir, "logs", "example.log"), "utf-8")).toBe("");
+});
+
+describe("reconcileLoginService — macOS (the equin app bundle)", () => {
+  // Real build files, so the install copies something; signing is faked.
+  const builds = join(dir, "builds");
+  const build = (identity: string) => {
+    const env = join(builds, identity);
+    mkdirSync(env, { recursive: true });
+    writeFileSync(join(env, "bin"), `binary ${identity}`);
+    return readyForTests(helper, env, identity);
+  };
+  const bundle = join(dir, "app", "equin.app");
+  const host: MacosAppHost = {
+    platform: "darwin",
+    bundle,
+    withLock: (fn) => fn(),
+    sign: async () => {},
+    isSigned: async () => true,
+    register: async () => {},
+  };
+  const reconcile = (service: LoginService, ready: ReturnType<typeof build>) =>
+    reconcileLoginService(service, decl, ready, "follow", {
+      host,
+      log: () => {},
+    });
+
+  test("the job runs the executable from the bundle and names its build in the environment", async () => {
+    const one = build("one");
+    const fake = fakeService("loaded", one);
+    await reconcile(fake.service, one);
+    const job = JSON.parse(fake.definition()!) as LoginServiceJob;
+    expect(job.argv[0]).toBe(join(bundle, "Contents", "MacOS", "example"));
+    expect(job.env[APP_COMPONENT_ENV]).toBe("example-helper@one");
+    expect(
+      readFileSync(join(bundle, "Contents", "MacOS", "example"), "utf8"),
+    ).toBe("binary one");
+  });
+
+  test("a rebuilt component is a changed job at the same path, and reloads", async () => {
+    const one = build("one");
+    const two = build("two");
+    const fake = fakeService("loaded", one);
+    await reconcile(fake.service, one);
+    fake.calls.length = 0;
+    const outcome = await reconcile(fake.service, two);
+    expect(outcome).toMatchObject({ kind: "started", reloaded: true });
+    expect(fake.calls).toEqual(["write", "unload", "load"]);
+    const job = JSON.parse(fake.definition()!) as LoginServiceJob;
+    expect(job.argv[0]).toBe(join(bundle, "Contents", "MacOS", "example"));
+    expect(job.env[APP_COMPONENT_ENV]).toBe("example-helper@two");
+  });
 });

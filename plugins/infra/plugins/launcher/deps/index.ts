@@ -6,9 +6,10 @@
 import { gatewayBinary } from "./internal/gateway";
 
 export {
+  GATEWAY_APP_COMPONENT,
   gatewayBinary,
+  gatewayBuild,
   gatewaySignature,
-  signGateway,
 } from "./internal/gateway";
 
 export default [gatewayBinary];

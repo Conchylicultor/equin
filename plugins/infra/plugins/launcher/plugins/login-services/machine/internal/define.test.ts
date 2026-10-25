@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { defineDep } from "@plugins/infra/plugins/deps/deps";
 import { readyForTests } from "@plugins/infra/plugins/deps/deps/testing";
+import { componentIdentity, unbundledExecutable } from "../../core";
+import { APP_COMPONENT_ENV } from "../../core/internal/app-component";
 import {
   defineLoginService,
   isLoginServiceDeclaration,
@@ -29,8 +31,15 @@ const decl = defineLoginService({
   description: "An example tray helper",
   session: "graphical",
   dep: helper,
-  spec: (ready) => ({
-    argv: [`${ready.dir}/bin`, "tray"],
+  executable: {
+    name: "example",
+    build: (ready) => ({
+      file: `${ready.dir}/bin`,
+      identity: componentIdentity(helper.id, ready.identity),
+    }),
+  },
+  spec: (ready, executable) => ({
+    argv: [executable, "tray"],
     cwd: ready.dir,
     env: { HOME: "/h/me" },
     stdioLog: "/h/me/logs/example.log",
@@ -48,12 +57,32 @@ describe("defineLoginService", () => {
 
   test("the job is the declaration's description plus what spec computes from the install", () => {
     const ready = readyForTests(helper, "/cache/x/env", "x");
-    expect(loginServiceJob(decl, ready)).toEqual({
+    expect(
+      loginServiceJob(
+        decl,
+        ready,
+        unbundledExecutable(decl.executable.build(ready)),
+      ),
+    ).toEqual({
       description: "An example tray helper",
       argv: ["/cache/x/env/bin", "tray"],
       cwd: "/cache/x/env",
       env: { HOME: "/h/me" },
       stdioLog: "/h/me/logs/example.log",
+    });
+  });
+
+  test("a bundled executable runs from its path, its build named in the environment", () => {
+    const ready = readyForTests(helper, "/cache/x/env", "x");
+    const job = loginServiceJob(decl, ready, {
+      path: "/app/equin.app/Contents/MacOS/example",
+      identity: "example-helper@x",
+      bundled: true,
+    });
+    expect(job.argv).toEqual(["/app/equin.app/Contents/MacOS/example", "tray"]);
+    expect(job.env).toEqual({
+      HOME: "/h/me",
+      [APP_COMPONENT_ENV]: "example-helper@x",
     });
   });
 

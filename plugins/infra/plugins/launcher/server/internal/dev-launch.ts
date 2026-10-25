@@ -22,7 +22,7 @@ export const DEV_GATEWAY_LOG_LEVEL = "info";
 export function devGatewayLaunchOptions(opts: {
   repoRoot: string;
   logLevel: string;
-}): Omit<GatewayLaunchOptions, "gateway"> {
+}): Omit<GatewayLaunchOptions, "executable"> {
   return {
     cwd: opts.repoRoot,
     port: DEV_GATEWAY_PORT,

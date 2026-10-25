@@ -1,7 +1,8 @@
 # codesign
 
-Stable code signing for the binaries this machine builds — today the Go
-gateway. macOS keys permission grants (Files & Folders, …) to a binary's
+Stable code signing for the code this machine builds — the Go gateway, and the
+equin app bundle every login service runs from on macOS (`signBundle`,
+`registerApp`; see `infra/launcher/login-services`). macOS keys permission grants (Files & Folders, …) to a binary's
 **designated requirement**. An ad-hoc, linker-signed binary (`Identifier=a.out`)
 is keyed by its hash, so every gateway rebuild used to drop its grants and leave
 one more stale "gateway" row in System Settings. Signing with a stable identity
@@ -15,7 +16,20 @@ import { signBinary } from "@plugins/infra/plugins/codesign/deps";
 // in a build's `then` (infra/deps/build) or a CLI command — needs an ExecContext
 const outcome = await signBinary(path, { identifier: "dev.singularity.gateway", exec, log });
 // → unsupported (not macOS) | already-signed (no-op) | signed
+
+// an app bundle, IN PLACE: the caller signs a staged copy and swaps it in
+await signBundle(staging, { identifier: "dev.equin", tool: { exec } /* or { installed: rcodesignReady } */ });
+await registerApp(bundle); // lsregister -f: tccutil and System Settings resolve its bundle id
 ```
+
+`signBundle` signs every executable in `Contents/MacOS` (rcodesign does the
+nested ones itself; with a configured identity each is `codesign`ed first, under
+its own name) and verifies the bundle against the requirement; its identifier
+must be the bundle's `CFBundleIdentifier`. `rcodesign` comes from an
+`RcodesignTool`: `{ exec }` installs it on demand, `{ installed }` is a `Ready`
+a serving backend waited for through `deps` (it may not install on its event
+loop). `codeSignature(path, identifier)` asks whether a binary or bundle is
+signed by this machine's identity, without side effects (the drift row).
 
 ## Which identity
 
@@ -60,9 +74,6 @@ rebuilds and re-signs.
 
 - It is idempotent. It first checks `codesign -v -R='identifier "<id>" and
   certificate leaf = H"<sha1>"'`. If that passes, the file is left untouched.
-  This is what `./equin start` relies on: `ensureDep` skips a ready install, so
-  `start` calls `signGateway` (launcher/deps) after it. That re-signs only when
-  the identity changed (it was configured, or reset).
 - It signs a **copy** beside the file and renames the copy over it. `rcodesign`
   rewrites a file in place (same inode), which a running process should never
   see. After the rename, the running gateway keeps its old pages. The spike
@@ -75,17 +86,24 @@ rebuilds and re-signs.
 `infra/launcher`'s `gateway-binary` passes `then: signBinary(built,
 { identifier: "dev.singularity.gateway" })` to `build()` for darwin targets
 built on a Mac. The signing identity is **not** part of the dependency's
-identity: it finishes a build, it does not change what was built.
+identity: it finishes a build, it does not change what was built. That
+signature serves a gateway run where it was built (`serve-app`, a release). The
+machine's own gateway (`./equin start`) runs from the equin app bundle
+(`dev.equin`), signed as a whole by `signBundle`, and re-signed by `start` when
+the identity changed.
 
 ## Resetting
 
 `./equin codesign status` prints the identity in use, and creates nothing.
 `./equin codesign reset` deletes `local/`. The next `./equin start` creates a
-new certificate and re-signs the gateway. macOS then treats the gateway as a
-new app: grants are lost once, and the old rows can only be removed by hand in
-System Settings → Privacy & Security. Switching to signed builds for the first
-time costs the same one-time loss. `tccutil reset SystemPolicyDownloadsFolder`
-clears one service for every app. Never run it automatically.
+new certificate and re-signs the equin app. macOS then treats it as a new app:
+grants are lost once. One app's decision is reset on its own by bundle id,
+`tccutil reset SystemPolicyDownloadsFolder dev.equin` (`All` for every service);
+that needs a bundle LaunchServices knows (`registerApp`). A bare executable
+(the gateway before it ran from the bundle) has no bundle id: its rows can only
+be removed by hand in System Settings → Privacy & Security, and
+`tccutil reset <Service>` alone resets every app. Never run either
+automatically.
 
 ## Check
 
@@ -114,17 +132,21 @@ certificate expires within 30 days.
   - Uses:
     - `infra/deps.defineDep`
     - `infra/deps.ensureDep`
+    - `infra/deps.Ready`
     - `infra/deps/download.download`
     - `infra/deps/download.downloadedFile`
+    - `infra/deps/download.DownloadSource`
   - Exports (types):
     - `CodesignHost`
     - `CommandResult`
     - `ConfiguredValue`
     - `LocalIdentityState`
+    - `RcodesignTool`
     - `SigningIdentity`
     - `SignOutcome`
   - Exports (values):
     - `CODESIGN_IDENTITY_ENV`
+    - `codeSignature`
     - `configuredIdentityFile`
     - `configuredValidTo`
     - `isSignedBy`
@@ -134,10 +156,12 @@ certificate expires within 30 days.
     - `rcodesign`
     - `readConfiguredValue`
     - `readLocalIdentity`
+    - `registerApp`
     - `RESET_HINT`
     - `resolveConfigured`
     - `resolveSigningIdentity`
     - `signBinary`
+    - `signBundle`
     - `signedByRequirement`
 - Cross-plugin:
   - Imported by: `infra/launcher`

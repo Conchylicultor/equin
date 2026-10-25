@@ -6,7 +6,8 @@ import { userInfo } from "node:os";
 import { HOME_DIR } from "@plugins/infra/plugins/paths/core";
 import { defineLoginService } from "@plugins/infra/plugins/launcher/plugins/login-services/machine";
 import { cargoBinary } from "@plugins/infra/plugins/deps/plugins/rust/deps";
-import { menuBarHelper } from "../deps";
+import { componentIdentity } from "@plugins/infra/plugins/launcher/plugins/login-services/core";
+import { menuBarHelper, menuBarHelperIcon } from "../deps";
 import { menuBarLogs } from "../data-dirs";
 
 /** The environment the tray runs with — the whole of it (nothing is inherited). */
@@ -38,10 +39,24 @@ export const menuBarService = defineLoginService({
     "equin menu-bar helper (the equin icon in the menu bar / top bar)",
   session: "graphical",
   dep: menuBarHelper,
-  spec: (ready) => ({
-    // The binary inside equin.app on macOS (so notifications carry the
-    // bundle's identity), the bare binary on Linux.
-    argv: [cargoBinary(ready), "tray"],
+  // The equin app's main executable on macOS: what notifications (and
+  // `Bundle.main`) see, and what opening equin.app runs.
+  executable: {
+    name: "equin-desktop",
+    main: true,
+    build: (ready) => {
+      const icon = menuBarHelperIcon(ready);
+      return {
+        file: cargoBinary(ready),
+        ...(icon === null ? {} : { icon }),
+        identity: componentIdentity(menuBarHelper.id, ready.identity),
+      };
+    },
+  },
+  spec: (ready, executable) => ({
+    // Inside equin.app on macOS (so notifications carry the app's identity),
+    // the bare binary on Linux.
+    argv: [executable, "tray"],
     cwd: ready.dir,
     env: trayEnv(),
     stdioLog: menuBarLogs.file("helper-stdio.log"),

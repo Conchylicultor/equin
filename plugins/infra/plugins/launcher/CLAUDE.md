@@ -59,14 +59,22 @@ asks for `./equin start --force`. Both derive "main's launch" from the same
 `gateway-binary` (`deps/index.ts`) is an `infra/deps` `build` dependency: `go
 build` of `gateway/` (every `.go` file + `go.mod` / `go.sum`, `go version`, the
 target), cached at `~/.singularity/cache/deps/gateway-binary/<identity>/env/gateway`.
-There is no `<repo>/gateway/gateway` any more. `GatewayLaunchOptions.gateway`
-and `bootSelfContainedApp({ gateway })` take its `Ready`, so a launch that never
-ensured the binary does not compile; argv[0] is `builtFile(ready)` and the cwd
-is the install dir (every path the gateway reads is a flag).
+There is no `<repo>/gateway/gateway` any more. `bootSelfContainedApp({ gateway })`
+takes its `Ready`, so a launch that never ensured the binary does not compile;
+`GatewayLaunchOptions.executable` is the executable made from one: where the
+build sits (`unbundledExecutable(gatewayBuild(ready))` — a release, `serve-app`,
+Linux), or, for `./equin start` on macOS, inside the equin app bundle
+(`GATEWAY_APP_COMPONENT`, installed by login-services' `installServiceExecutable`)
+so macOS charges the backends' file access to one app, "equin" (`dev.equin`), whose
+permissions can be reset on their own (`tccutil reset <Service> dev.equin`).
+argv[0] is its path; a bundled one's build travels in the job's
+`EQUIN_APP_COMPONENT` (its path is stable). The cwd is the checkout (every path
+the gateway reads is a flag).
 
 - `./equin start` ensures it from the MAIN checkout and holds it
   (`holdDep(…, "machine-gateway")`) so the deps sweep never deletes the binary
-  the launchd plist names; `serve-app` ensures it from its `--repo-root`.
+  a systemd unit names (on macOS the plist names the app bundle's copy);
+  `serve-app` ensures it from its `--repo-root`.
 - A release seals it (`bundle: "required"`, `targets: "any"` — cgo on for a
   darwin target, off for linux) into `<bundle>/deps/gateway-binary/` with
   `deps.sealed.json`; `bin/launch.ts` reads it through
@@ -316,12 +324,9 @@ Design: [`research/2026-09-15-global-declared-runtime-environment.md`](../../../
   - Register: `defineDaemon('launcher.gateway')`
 - Deps:
   - Uses:
+    - `infra/codesign.codeSignature`
     - `infra/codesign.CodesignHost`
-    - `infra/codesign.isSignedBy`
     - `infra/codesign.machineHost`
-    - `infra/codesign.readConfiguredValue`
-    - `infra/codesign.readLocalIdentity`
-    - `infra/codesign.resolveConfigured`
     - `infra/codesign.signBinary`
     - `infra/deps.defineDep`
     - `infra/deps.DepTarget`
@@ -330,9 +335,10 @@ Design: [`research/2026-09-15-global-declared-runtime-environment.md`](../../../
     - `infra/deps/build.BuildSource`
     - `infra/deps/build.builtFile`
   - Exports (values):
+    - `GATEWAY_APP_COMPONENT`
     - `gatewayBinary`
+    - `gatewayBuild`
     - `gatewaySignature`
-    - `signGateway`
 - Cross-plugin:
   - Imported by: `release`
 - Exemptions:

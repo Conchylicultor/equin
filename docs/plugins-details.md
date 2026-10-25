@@ -27902,17 +27902,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `infra/deps.defineDep`
           - `infra/deps.ensureDep`
+          - `infra/deps.Ready`
           - `infra/deps/download.download`
           - `infra/deps/download.downloadedFile`
+          - `infra/deps/download.DownloadSource`
         - Exports (types):
           - `CodesignHost`
           - `CommandResult`
           - `ConfiguredValue`
           - `LocalIdentityState`
+          - `RcodesignTool`
           - `SigningIdentity`
           - `SignOutcome`
         - Exports (values):
           - `CODESIGN_IDENTITY_ENV`
+          - `codeSignature`
           - `configuredIdentityFile`
           - `configuredValidTo`
           - `isSignedBy`
@@ -27922,10 +27926,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `rcodesign`
           - `readConfiguredValue`
           - `readLocalIdentity`
+          - `registerApp`
           - `RESET_HINT`
           - `resolveConfigured`
           - `resolveSigningIdentity`
           - `signBinary`
+          - `signBundle`
           - `signedByRequirement`
       - Cross-plugin:
         - Imported by: `infra/launcher`
@@ -29917,12 +29923,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Register: `defineDaemon('launcher.gateway')`
       - Deps:
         - Uses:
+          - `infra/codesign.codeSignature`
           - `infra/codesign.CodesignHost`
-          - `infra/codesign.isSignedBy`
           - `infra/codesign.machineHost`
-          - `infra/codesign.readConfiguredValue`
-          - `infra/codesign.readLocalIdentity`
-          - `infra/codesign.resolveConfigured`
           - `infra/codesign.signBinary`
           - `infra/deps.defineDep`
           - `infra/deps.DepTarget`
@@ -29931,9 +29934,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/deps/build.BuildSource`
           - `infra/deps/build.builtFile`
         - Exports (values):
+          - `GATEWAY_APP_COMPONENT`
           - `gatewayBinary`
+          - `gatewayBuild`
           - `gatewaySignature`
-          - `signGateway`
       - Cross-plugin:
         - Imported by: `release`
       - Exemptions:
@@ -29972,7 +29976,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Resources: `gateway-drift` (push, notified, whole: one phrase per kind of difference (binary, each changed flag, cwd, signature, running vs installed) — a fixed handful)
           - Machine:
             - Uses:
+              - `infra/launcher/login-services.APP_BUNDLE_ID`
+              - `infra/launcher/login-services.bundleOfExecutable`
+              - `infra/launcher/login-services.installedAppComponents`
               - `infra/launcher/login-services.loginService`
+              - `infra/launcher/login-services.machineMacosAppHost`
+              - `infra/launcher/login-services.MacosAppHost`
+              - `infra/launcher/login-services.plannedServiceExecutable`
               - `network/live.serveValue`
             - Register: `defineRefReaction('launcher.gateway-drift (refs/heads/main)')`
           - Core:
@@ -29986,36 +29996,52 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `GatewayDriftSchema`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-        - **`login-services`** — Per-user login services, generalized from the gateway's: a LoginService over a LoginServiceSpec (label, argv, cwd, env, stdio log, session background | graphical), rendered as a launchd LaunchAgent on macOS (graphical → LimitLoadToSessionType=Aqua) or a systemd user unit on Linux (graphical → graphical-session.target, no lingering); defineLoginService and the collected login-services/ registry, so ./equin start / stop bring every declared service up and down without naming one. On main's boot, every declared service a start registered follows main: reloaded when main's build of its dependency changed its job (rewritten only, when stopped), the dependency requested through deps first when it is not built yet.
+        - **`login-services`** — Per-user login services, generalized from the gateway's: a LoginService over a LoginServiceSpec (label, argv, cwd, env, stdio log, session background | graphical), rendered as a launchd LaunchAgent on macOS (graphical → LimitLoadToSessionType=Aqua) or a systemd user unit on Linux (graphical → graphical-session.target, no lingering); defineLoginService and the collected login-services/ registry, so ./equin start / stop bring every declared service up and down without naming one. On main's boot, every declared service a start registered follows main: reloaded when main's build of its dependency changed its job (rewritten only, when stopped), the dependency requested through deps first when it is not built yet. On macOS every service (the gateway too) runs from ONE app bundle, equin.app (bundle id dev.equin, signed with the machine's identity, at a stable path under state/macos-app): installServiceExecutable copies a component's build in and swaps the re-signed bundle in whole, so every permission prompt, System Settings row and tccutil reset names one app, equin.
           - Core:
             - Uses: `framework/tooling/collected-dir.defineCollectedDir`
             - Exports (types):
+              - `AppComponent`
+              - `ComponentBuild`
               - `LoginServiceId`
               - `LoginServiceJob`
               - `LoginServiceSession`
               - `LoginServiceSpec`
+              - `ServiceExecutable`
+            - Exports (values):
+              - `componentIdentity`
+              - `executableEnv`
+              - `unbundledExecutable`
           - Cross-plugin:
             - Imported by: `infra/launcher/gateway-drift`
           - Machine:
             - Exports (types):
               - `DefineLoginServiceSpec`
+              - `InstalledComponent`
               - `InstalledJob`
               - `LoginService`
               - `LoginServiceDeclaration`
               - `LoginServiceManager`
               - `LoginServiceRun`
               - `LoginServiceState`
+              - `MacosAppHost`
               - `ReconcileOutcome`
               - `ReconcilePolicy`
             - Exports (values):
+              - `APP_BUNDLE_ID`
+              - `appExecutablePath`
               - `awaitProcessGone`
+              - `bundleOfExecutable`
               - `declaredLoginServices`
               - `defineLoginService`
+              - `installedAppComponents`
+              - `installServiceExecutable`
               - `loginService`
               - `loginServiceHolder`
               - `loginServiceId`
               - `loginServiceJob`
               - `loginServiceManager`
+              - `machineMacosAppHost`
+              - `plannedServiceExecutable`
               - `reconcileLoginService`
               - `terminateProcess`
     - **`mcp`** — HTTP MCP server endpoint. Hosts tools contributed by other plugins via Mcp.tool, and serves the mcp.catalog live value: every tool, instructions section and the scope resolver with the plugin that declared each, each tool's input schema as tools/list sends it.
@@ -32037,8 +32063,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
   - Deps:
     - Uses:
       - `infra/deps.defineDep`
+      - `infra/deps.Ready`
       - `infra/deps/rust.cargoBuild`
-    - Exports (values): `menuBarHelper`
+      - `infra/deps/rust.CargoSource`
+    - Exports (values):
+      - `menuBarHelper`
+      - `menuBarHelperIcon`
   - Cross-plugin:
     - Uses tokens:
       - `ui/tokens/color-palette --background`
