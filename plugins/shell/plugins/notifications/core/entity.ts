@@ -10,6 +10,7 @@ import {
   textField,
 } from "@plugins/fields/plugins/text/plugins/config/core";
 import { idKindField } from "@plugins/ids/core";
+import { AUDIENCES } from "@plugins/audience/core";
 import { entityRef } from "@plugins/infra/plugins/entities/core";
 import { notificationIdKind } from "./id-kind";
 
@@ -39,6 +40,12 @@ export const notificationFields = {
     optionMeta: { false: { label: "Unread" }, true: { label: "Read" } },
   }),
   muted: boolField({ label: "Muted" }),
+  /**
+   * Who the notification is for, declared by its producer (the reports engine
+   * writes `developer`; everything else is for everyone). The bell shows a
+   * user only what reaches them (`shared/audience-scope.ts`).
+   */
+  audience: enumTextField(AUDIENCES, { label: "Audience" }),
   linkTo: nullable(textField({ label: "Link" })),
   /**
    * A free-form bag every producer stamps its own keys into (the reports

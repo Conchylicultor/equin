@@ -1,7 +1,13 @@
 import { and, eq, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { db } from "@plugins/database/server";
-import { executeOne } from "@plugins/database/plugins/sql-rows/core";
+import { executeRows } from "@plugins/database/plugins/sql-rows/core";
+import { z } from "zod";
+import {
+  AUDIENCES,
+  reachesAudience,
+  type Audience,
+} from "@plugins/audience/core";
 import {
   serveCollection,
   serveValue,
@@ -10,7 +16,7 @@ import { filterSql } from "@plugins/network/plugins/live/plugins/filter/server";
 import { _notifications } from "./tables";
 import { notifications, notificationsUnread } from "../../shared/resources";
 import {
-  NotificationsUnreadSchema,
+  NotificationVariantSchema,
   type NotificationsUnread,
 } from "../../shared/schema";
 import { countedUnread, countedUnreadFilterable } from "../../shared/unread";
@@ -40,10 +46,18 @@ const countedUnreadSql = filterSql(
   countedUnreadFilterable,
 );
 
+// One row per (declared audience, variant) the unread rows hold.
+const UnreadGroupSchema = z.object({
+  audience: z.enum(AUDIENCES),
+  variant: NotificationVariantSchema,
+  n: z.number().int().nonnegative(),
+});
+
 /**
- * The badge's counts over the WHOLE collection (not the loaded window). One
- * aggregate row always comes back; `executeOne` throws if it does not, so a
- * missing row can never read as "no unread". The partial index
+ * The badge's counts over the WHOLE collection (not the loaded window), per
+ * audience: the unread rows grouped by their declared audience, then folded
+ * into each reader audience through `reachesAudience` — the same rule the
+ * bell's `audienceScope` filters its reads by. The partial index
  * `notifications_unread_badge_idx` covers exactly this predicate.
  *
  * db-parametrized so the DB-backed suite drives it against a throwaway
@@ -52,15 +66,26 @@ const countedUnreadSql = filterSql(
 export async function countUnreadNotifications(
   conn: NodePgDatabase = db,
 ): Promise<NotificationsUnread> {
-  return executeOne(conn, {
-    query: sql`SELECT
-        count(*) FILTER (WHERE ${_notifications.variant} = 'error')::int AS errors,
-        count(*) FILTER (WHERE ${_notifications.variant} = 'warning')::int AS warnings
+  const groups = await executeRows(conn, {
+    query: sql`SELECT ${_notifications.audience} AS audience,
+        ${_notifications.variant} AS variant, count(*)::int AS n
       FROM ${_notifications}
-      WHERE ${and(undismissed, countedUnreadSql)}`,
-    row: NotificationsUnreadSchema,
+      WHERE ${and(undismissed, countedUnreadSql)}
+      GROUP BY 1, 2`,
+    row: UnreadGroupSchema,
     label: "notifications.unread",
   });
+  const counts = (reader: Audience) => {
+    const reaching = groups.filter((g) => reachesAudience(g.audience, reader));
+    const sum = (variant: string) =>
+      reaching
+        .filter((g) => g.variant === variant)
+        .reduce((total, g) => total + g.n, 0);
+    return { errors: sum("error"), warnings: sum("warning") };
+  };
+  return Object.fromEntries(
+    AUDIENCES.map((reader) => [reader, counts(reader)]),
+  ) as NotificationsUnread;
 }
 
 // A whole-table value: recomputed (and pushed whole) on every write to

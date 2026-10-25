@@ -19,6 +19,7 @@ const notificationsEntity = defineEntity(
       dismissed: { default: false },
       read: { default: false },
       muted: { default: false },
+      audience: { default: "user" },
       count: { default: 1 },
       lastSeenAt: { default: defaultNow() },
       createdAt: { default: defaultNow() },
@@ -32,7 +33,7 @@ const notificationsEntity = defineEntity(
       // this table; this partial index holds exactly the rows it counts
       // (`countedUnread` minus its variant test, plus the base membership).
       index("notifications_unread_badge_idx")
-        .on(t.variant)
+        .on(t.variant, t.audience)
         .where(
           sql`${t.dismissed} = false AND ${t.read} = false AND ${t.muted} = false`,
         ),

@@ -6,6 +6,15 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+// A developer's panel: its reads are the unscoped tuples seeded below.
+vi.mock("@plugins/audience/web", () => ({
+  useAudience: () => ({
+    status: "ready",
+    data: "developer",
+    refetch: () => Promise.resolve(),
+  }),
+}));
+
 vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({
   clientLog: () => {},
 }));

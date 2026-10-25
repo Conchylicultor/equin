@@ -2,7 +2,9 @@
  * The bell's badge reads the `notifications.unread` VALUE (a whole-table
  * count), not the loaded window: pending paints a neutral bell, settled paints
  * the count (label exact, badge capped at "9+") in red only while an error is
- * among them. Data is driven with `client.setQueryData` on the exact tuples.
+ * among them — the counts of the reader's audience (a user's leaves out what
+ * is declared for developers). Data is driven with `client.setQueryData` on
+ * the exact tuples.
  *
  * Closing the popover after it opened with unread items marks all read — but
  * leaving through the panel's "View all" (to Debug → Notifications) does not:
@@ -18,6 +20,16 @@ vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({
 const spy = vi.hoisted(() => ({
   /** Every app link opened. */
   opened: [] as string[],
+  /** The reader's audience. A developer's bell reads the default window. */
+  audience: "developer" as "user" | "developer",
+}));
+
+vi.mock("@plugins/audience/web", () => ({
+  useAudience: () => ({
+    status: "ready",
+    data: spy.audience,
+    refetch: () => Promise.resolve(),
+  }),
 }));
 
 vi.mock("@plugins/apps-core/plugins/tabs/web", async (importOriginal) => ({
@@ -47,11 +59,13 @@ import {
   type FakeFetchEndpoint,
 } from "@plugins/infra/plugins/endpoints/web/testing";
 import { notifications, notificationsUnread } from "../../shared/resources";
+import { audienceScope } from "../../shared/audience-scope";
 import { BellButton } from "../components/bell-button";
 
 afterEach(() => {
   cleanup();
   spy.opened = [];
+  spy.audience = "developer";
 });
 
 /** The fetcher every harness's transport hands the bell (its mark-all-read). */
@@ -82,13 +96,15 @@ const windowKey = () => {
 };
 const unreadKey = () => queryKeyFor(notificationsUnread.key, {});
 
-function settled(unread: {
-  errors: number;
-  warnings: number;
-}): LiveStateHarness {
+type Counts = { errors: number; warnings: number };
+
+function settled(
+  developer: Counts,
+  user: Counts = developer,
+): LiveStateHarness {
   const live = harness();
   live.queryClient.setQueryData(windowKey(), []);
-  live.queryClient.setQueryData(unreadKey(), unread);
+  live.queryClient.setQueryData(unreadKey(), { user, developer });
   return live;
 }
 
@@ -116,6 +132,28 @@ describe("BellButton — unread badge", () => {
 
   it("is amber (the solid warning fill) when only warnings are unread", () => {
     mount(settled({ errors: 0, warnings: 2 }));
+    expect(
+      screen.getByRole("button", { name: "Notifications, 2 unread" }),
+    ).toBeTruthy();
+    expect(screen.getByText("2").className).toContain("bg-warning-solid");
+  });
+
+  it("counts only what reaches a user outside Developer mode", () => {
+    spy.audience = "user";
+    const live = harness();
+    // A user's bell reads its audience-scoped window, not the default one.
+    live.queryClient.setQueryData(
+      queryKeyFor(
+        notifications.key,
+        notifications.window.window.encode({ where: audienceScope("user") }),
+      ),
+      [],
+    );
+    live.queryClient.setQueryData(unreadKey(), {
+      user: { errors: 0, warnings: 2 },
+      developer: { errors: 40, warnings: 700 },
+    });
+    mount(live);
     expect(
       screen.getByRole("button", { name: "Notifications, 2 unread" }),
     ).toBeTruthy();

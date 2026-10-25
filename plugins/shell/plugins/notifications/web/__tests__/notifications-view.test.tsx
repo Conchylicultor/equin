@@ -91,6 +91,7 @@ const note = (over: Partial<Notification> = {}): Notification => ({
   dismissed: false,
   read: false,
   muted: false,
+  audience: "user",
   linkTo: null,
   metadata: null,
   count: 1,
@@ -124,11 +125,19 @@ describe("the field schema over the notifications source", () => {
   it("binds every field to its column; createdAt is the one sort", () => {
     const p = plan();
     expect([...p.columnOf.keys()].sort()).toEqual(
-      ["createdAt", "muted", "read", "title", "type", "variant"].sort(),
+      [
+        "audience",
+        "createdAt",
+        "muted",
+        "read",
+        "title",
+        "type",
+        "variant",
+      ].sort(),
     );
     expect(p.sortFields.map((f) => f.id)).toEqual(["createdAt"]);
     expect(p.filterFields.map((f) => f.id).sort()).toEqual(
-      ["muted", "read", "title", "type", "variant"].sort(),
+      ["audience", "muted", "read", "title", "type", "variant"].sort(),
     );
   });
 

@@ -1,6 +1,6 @@
 {
-  "id": "de4900c5-46ab-4a25-9228-bd763dfdb474",
-  "prevId": "2cb28db2-5a12-4481-8a5e-031257c7d1d5",
+  "id": "50b13286-8c74-4cf7-be6d-b5d4e2f31062",
+  "prevId": "de4900c5-46ab-4a25-9228-bd763dfdb474",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -11343,6 +11343,13 @@
           "notNull": true,
           "default": false
         },
+        "audience": {
+          "name": "audience",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'user'"
+        },
         "link_to": {
           "name": "link_to",
           "type": "text",
@@ -11449,6 +11456,12 @@
           "columns": [
             {
               "expression": "variant",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "audience",
               "isExpression": false,
               "asc": true,
               "nulls": "last"

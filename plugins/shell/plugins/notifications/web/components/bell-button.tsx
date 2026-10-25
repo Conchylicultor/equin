@@ -13,8 +13,10 @@ import {
   pct,
 } from "@plugins/primitives/plugins/css/plugins/coords/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { useAudience } from "@plugins/audience/web";
 import { useNotificationArrivals } from "../internal/use-notification-arrivals";
-import { notifications, notificationsUnread } from "../../shared/resources";
+import { useReachingNotifications } from "../internal/use-reaching-notifications";
+import { notificationsUnread } from "../../shared/resources";
 import { markAllNotificationsRead } from "../../shared/endpoints";
 import { NotificationsPanel } from "./notifications-panel";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -24,13 +26,16 @@ const notificationsIcon = symbol("notifications");
 export function BellButton() {
   const fetchEndpoint = useFetchEndpoint();
   const [open, setOpen] = useState(false);
-  // The default window (newest 200 undismissed) — boot-preloaded, so the bell
-  // paints settled. It drives the toasts and the panel's `empty`; the popover
-  // body reads its own queries and mounts only while open.
-  const notificationsResult = useLive(notifications);
+  // The newest 200 undismissed notifications that reach the user's audience
+  // (a developer's is the boot-preloaded default window). It drives the toasts
+  // and the panel's `empty`; the popover body reads its own queries and mounts
+  // only while open.
+  const notificationsResult = useReachingNotifications();
   // The badge counts the WHOLE collection (a server-side count), not the loaded
-  // window — an unread error older than the newest 200 still turns it red.
+  // window — an unread error older than the newest 200 still turns it red. One
+  // count per audience: the bell reads its user's.
   const unreadResult = useLive(notificationsUnread);
+  const audience = useAudience();
 
   // A toast for each notification that arrives while the bell is mounted.
   useNotificationArrivals((n) =>
@@ -51,6 +56,7 @@ export function BellButton() {
   const both = useCombinedResources({
     list: notificationsResult,
     unread: unreadResult,
+    audience,
   });
   if (both.status === "loading") {
     return (
@@ -78,7 +84,7 @@ export function BellButton() {
   }
 
   const { list } = both.data;
-  const { errors, warnings } = both.data.unread;
+  const { errors, warnings } = both.data.unread[both.data.audience];
   const unreadCount = errors + warnings;
   // Match the badge color to the most severe unread item: red only when a crash
   // (error) is present, otherwise amber for warning-only noise (e.g. slow ops).

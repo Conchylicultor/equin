@@ -1,7 +1,6 @@
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { useState } from "react";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
-import { useLive } from "@plugins/network/plugins/live/web";
 import { matchesFilter } from "@plugins/network/plugins/live/plugins/filter/core";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { useAppLink } from "@plugins/apps-core/plugins/tabs/web";
@@ -18,7 +17,11 @@ import {
   InfiniteScrollFooter,
   useInfiniteScroll,
 } from "@plugins/primitives/plugins/cursor-pagination/web";
-import { notifications, type Notification } from "../../shared/resources";
+import type { Notification } from "../../shared/resources";
+import {
+  useReachingNotificationGroups,
+  useReachingNotifications,
+} from "../internal/use-reaching-notifications";
 import { countedUnread, countedUnreadFilterable } from "../../shared/unread";
 import {
   dismissNotification,
@@ -107,8 +110,8 @@ function FilterChips({
   filter: Filter;
   onPick: (next: Filter) => void;
 }) {
-  const types = useLive(notifications, { groupBy: "type" });
-  const variants = useLive(notifications, { groupBy: "variant" });
+  const types = useReachingNotificationGroups("type");
+  const variants = useReachingNotificationGroups("variant");
 
   // Precedence error > loading: one failed read fails the row, even while
   // the other still loads.
@@ -220,13 +223,12 @@ function NotificationList({
   filter: Filter;
   onClose: () => void;
 }) {
-  const result = useLive(
-    notifications,
+  const result = useReachingNotifications(
     filter.kind === "all"
       ? undefined
       : filter.kind === "errors"
-        ? { where: { variant: "error" } }
-        : { where: { type: filter.type } },
+        ? { variant: "error" }
+        : { type: filter.type },
   );
   // Only a ready window has paging handles; the arms below render the rest.
   const settled =

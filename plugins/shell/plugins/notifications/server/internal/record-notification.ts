@@ -3,6 +3,7 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { db } from "@plugins/database/server";
 import { _notifications } from "./tables";
 import type { NotificationVariant } from "../../shared/schema";
+import type { Audience } from "@plugins/audience/core";
 import { notificationIdKind, type NotificationId } from "../../core";
 
 // Every column a notification write can set, with no rule tying `variant` to
@@ -21,6 +22,12 @@ export interface NotificationWrite {
    * excluded from the unread badge, and never pops a toast. Defaults to false.
    */
   muted?: boolean;
+  /**
+   * Who the notification is for: `developer` keeps it out of the bell of a user
+   * not in Developer mode (equin's own telemetry — reports, crashes). Defaults
+   * to `user` — for everyone, as a feature that declares no audience is.
+   */
+  audience?: Audience;
   /**
    * Deterministic key that collapses duplicate writes to a single row via a
    * UNIQUE index: a second write with the same key updates the existing row's
@@ -121,6 +128,7 @@ export async function writeNotification(
       linkTo: input.linkTo ?? null,
       metadata: input.metadata ?? null,
       muted: input.muted ?? false,
+      audience: input.audience ?? "user",
       dedupKey,
     })
     // null never conflicts, so a plain insert happens when no dedupeKey is set;
@@ -139,6 +147,7 @@ export async function writeNotification(
         linkTo: input.linkTo ?? null,
         metadata: input.metadata ?? null,
         muted: input.muted ?? false,
+        audience: input.audience ?? "user",
         count: sql`${_notifications.count} + 1`,
         lastSeenAt: now,
         read: sql`CASE WHEN ${resurfaced} THEN false ELSE ${_notifications.read} END`,

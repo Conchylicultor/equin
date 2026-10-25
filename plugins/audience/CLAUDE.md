@@ -26,6 +26,7 @@
   - Imported by:
     - `apps-core`
     - `audience/settings`
+    - `shell/notifications`
 - Core:
   - Exports (types): `Audience`
   - Exports (values):

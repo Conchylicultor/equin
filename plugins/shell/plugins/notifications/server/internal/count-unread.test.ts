@@ -2,8 +2,9 @@
  * The bell badge's loader against a throwaway Postgres seeded with the REAL
  * migration chain: it counts `countedUnread` over the WHOLE undismissed
  * collection — including unread errors and warnings older than the newest 200
- * rows the default window loads — and agrees row for row with the panel's
- * in-memory `matchesFilter` over the same predicate.
+ * rows the default window loads — per reader audience (a user's count leaves
+ * out what is declared for developers), and agrees row for row with the
+ * panel's in-memory `matchesFilter` over the same predicate.
  *
  * Run: `./equin test plugins/shell/plugins/notifications`
  */
@@ -23,6 +24,7 @@ import {
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
 import { runMigrations } from "@plugins/database/plugins/migrations/server/testing";
 import { matchesFilter } from "@plugins/network/plugins/live/plugins/filter/core";
+import { reachesAudience, type Audience } from "@plugins/audience/core";
 import { countUnreadNotifications } from "./resources";
 import { _notifications } from "./tables";
 import type { NotificationVariant } from "../../shared/schema";
@@ -34,6 +36,7 @@ type Seed = {
   read?: boolean;
   muted?: boolean;
   dismissed?: boolean;
+  audience?: Audience;
   ageMs: number;
 };
 
@@ -64,6 +67,7 @@ describe("countUnreadNotifications (real DB)", () => {
         read: row.read ?? false,
         muted: row.muted ?? false,
         dismissed: row.dismissed ?? false,
+        audience: row.audience ?? "user",
         // Spread within the bucket so the order is total.
         createdAt: new Date(now - row.ageMs - i * 1000),
       })),
@@ -72,7 +76,7 @@ describe("countUnreadNotifications (real DB)", () => {
 
   beforeEach(async () => {
     await t.db.execute(sql`DELETE FROM notifications`);
-    // 260 undismissed rows. The counted ones (3 unread errors, 5 unread
+    // 266 undismissed rows. The counted ones (3 unread errors, 5 unread
     // warnings) are a day old — behind 200 fresh info rows, so none of them is
     // in the default window the bell used to count.
     await seed(3, { variant: "error", ageMs: 24 * HOUR });
@@ -81,6 +85,9 @@ describe("countUnreadNotifications (real DB)", () => {
     await seed(20, { variant: "error", muted: true, ageMs: 2 * HOUR });
     await seed(20, { variant: "warning", read: true, ageMs: 2 * HOUR });
     await seed(12, { variant: "success", ageMs: 2 * HOUR });
+    // Declared for developers: counted on a developer's badge only.
+    await seed(4, { variant: "error", audience: "developer", ageMs: HOUR });
+    await seed(2, { variant: "warning", audience: "developer", ageMs: HOUR });
     // Dismissed rows are outside the collection, unread or not.
     await seed(10, { variant: "error", dismissed: true, ageMs: HOUR });
   });
@@ -95,8 +102,8 @@ describe("countUnreadNotifications (real DB)", () => {
     expect(window.every((r) => r.variant === "info")).toBe(true);
 
     expect(await countUnreadNotifications(t.db)).toEqual({
-      errors: 3,
-      warnings: 5,
+      user: { errors: 3, warnings: 5 },
+      developer: { errors: 7, warnings: 7 },
     });
   });
 
@@ -105,13 +112,21 @@ describe("countUnreadNotifications (real DB)", () => {
       .select()
       .from(_notifications)
       .where(eq(_notifications.dismissed, false));
-    expect(rows).toHaveLength(260);
-    const counted = rows.filter((r) =>
-      matchesFilter(r, countedUnread, countedUnreadFilterable),
-    );
+    expect(rows).toHaveLength(266);
+    const countFor = (reader: Audience) => {
+      const counted = rows.filter(
+        (r) =>
+          reachesAudience(r.audience, reader) &&
+          matchesFilter(r, countedUnread, countedUnreadFilterable),
+      );
+      return {
+        errors: counted.filter((r) => r.variant === "error").length,
+        warnings: counted.filter((r) => r.variant === "warning").length,
+      };
+    };
     expect({
-      errors: counted.filter((r) => r.variant === "error").length,
-      warnings: counted.filter((r) => r.variant === "warning").length,
+      user: countFor("user"),
+      developer: countFor("developer"),
     }).toEqual(await countUnreadNotifications(t.db));
   });
 
@@ -124,6 +139,7 @@ describe("countUnreadNotifications (real DB)", () => {
           eq(_notifications.variant, "error"),
           eq(_notifications.muted, false),
           eq(_notifications.dismissed, false),
+          eq(_notifications.audience, "user"),
         ),
       )
       .limit(1);
@@ -133,8 +149,8 @@ describe("countUnreadNotifications (real DB)", () => {
       .set({ dismissed: true })
       .where(eq(_notifications.id, first.id));
     expect(await countUnreadNotifications(t.db)).toEqual({
-      errors: 2,
-      warnings: 5,
+      user: { errors: 2, warnings: 5 },
+      developer: { errors: 6, warnings: 7 },
     });
   });
 
@@ -150,8 +166,8 @@ describe("countUnreadNotifications (real DB)", () => {
         ),
       );
     expect(await countUnreadNotifications(t.db)).toEqual({
-      errors: 0,
-      warnings: 0,
+      user: { errors: 0, warnings: 0 },
+      developer: { errors: 0, warnings: 0 },
     });
   });
 });

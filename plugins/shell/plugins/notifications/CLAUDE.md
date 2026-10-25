@@ -10,7 +10,8 @@
   splits off the next key-range page, never reloads), and stops at 400 — the
   last step that fits under `maxLimit` 500; "View all" is the way past it.
 - **The unread badge** reads the `notifications.unread` VALUE (`liveValue`,
-  `preload: "boot"`): `{ errors, warnings }` counted over the WHOLE undismissed
+  `preload: "boot"`): `{ errors, warnings }` per audience (see *Audience*),
+  counted over the WHOLE undismissed
   table, not over the loaded window — so an unread error older than the newest
   200 still turns the badge red. One `count(*) FILTER (…)` query
   (`countUnreadNotifications` in `server/internal/resources.ts`), recomputed and
@@ -26,6 +27,27 @@
   (`matchesFilter`), the badge's loader compiles it to SQL (`filterSql`); both
   go through the one op table the filter plugin's parity suite pins.
 - `e2e/bell-filter.ts` drives all of it on a deployed build, "View all" included.
+
+## Audience: what a user outside Developer mode sees
+
+Every notification carries an `audience` (`audience/core`'s `user | developer`),
+declared by its producer: `recordNotification({ audience })` / the default
+`user` (for everyone). The reports engine stamps `developer` on every report
+and crash — equin's own telemetry.
+
+- **The bell reads only what reaches the reader** — the list, the chips, the
+  filtered windows and the arrivals (toasts, native notifications) all go
+  through `useReachingNotifications` / `useReachingNotificationGroups`
+  (`web/internal/use-reaching-notifications.ts`), which AND in
+  `audienceScope(audience)` (`shared/audience-scope.ts`): declared for an
+  audience that `reachesAudience` the reader, and not muted unless the reader
+  is a developer. A developer's scope is empty, so their bell reads the
+  boot-preloaded default window; a user's is its own tuple.
+- **The badge counts per audience**: `notifications.unread` is `{ user,
+  developer }`, each `{ errors, warnings }` — one grouped count folded through
+  the same `reachesAudience` — and the bell picks its reader's.
+- **Debug → Notifications is unscoped**: Debug is a developer app, and its pane
+  is the whole record.
 
 ## Toasts persist only where there is a bell (`useToast`)
 
@@ -83,7 +105,7 @@ DataView (`web/components/notifications-view.tsx`):
     - `DebugApp.Sidebar` "Notifications"
     - `notification-actions` "open" → `OpenNotificationAction`
     - `notification-actions` "dismiss" → `DismissNotificationAction`
-  - Uses: 42 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 43 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×5
     - `infra/endpoints` ×3
     - `primitives/css/coords` ×2
@@ -93,6 +115,7 @@ DataView (`web/components/notifications-view.tsx`):
     - `primitives/pane` ×2
     - `apps-core/tabs.useAppLink`
     - `apps/debug/shell.DebugApp`
+    - `audience.useAudience`
     - `ids.IdKinds`
     - `network/live.useLive`
     - `primitives/css/badge.Badge`
@@ -162,6 +185,7 @@ DataView (`web/components/notifications-view.tsx`):
   - Routes: `POST /api/notifications`
 - Core:
   - Uses:
+    - `audience.AUDIENCES`
     - `fields.FieldsRecord`
     - `fields.nullable`
     - `fields/bool/config.boolField`

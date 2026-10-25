@@ -403,6 +403,8 @@ export async function recordReport(
         description: desc.length > 140 ? `${desc.slice(0, 137)}...` : desc,
         variant: spec.meta.variant,
         muted: row.noise,
+        // equin's own telemetry: a user not in Developer mode never sees it.
+        audience: "developer",
         dedupeKey: row.id,
         resurfaceAfterMs,
         // Deep-link to the report's detail sidepane in Debug → Reports, never a task.

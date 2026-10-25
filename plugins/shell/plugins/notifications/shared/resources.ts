@@ -27,10 +27,11 @@ import { NotificationsUnreadSchema } from "./schema";
 // `read` / `muted` / `variant` columns are the three `countedUnreadFilterable`
 // names (the ONE declaration the badge's predicate is written over), so the pane groups on
 // `read` as server sections and filters on `muted`; `title` is its search box;
-// `type` / `variant` are its facets.
+// `type` / `variant` are its facets. `audience` is filterable so the bell can
+// read only what reaches the user (`audience-scope.ts`).
 export const notifications = liveCollection("notifications", {
   from: notificationsEntityRef,
-  pick: ["type", "title", "variant", "read", "muted", "createdAt"],
+  pick: ["type", "title", "variant", "read", "muted", "audience", "createdAt"],
   carry: {
     pick: [
       "id",
@@ -53,7 +54,7 @@ export const notifications = liveCollection("notifications", {
 export type Notification =
   typeof notifications extends LiveRowsCollection<infer R> ? R : never;
 
-// The bell's unread badge, counted over the WHOLE collection — not over the
+// The bell's unread badge, per audience, counted over the WHOLE collection — not over the
 // loaded window, which holds only the newest 200 rows, so unread errors older
 // than those would otherwise never reach the badge. One small object (counted
 // by `countedUnread`, split by variant), pushed whole on every change to the

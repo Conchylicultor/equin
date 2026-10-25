@@ -11217,6 +11217,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Imported by:
       - `apps-core`
       - `audience/settings`
+      - `shell/notifications`
   - Core:
     - Exports (types): `Audience`
     - Exports (values):
@@ -47031,7 +47032,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DebugApp.Sidebar` "Notifications"
           - `notification-actions` "open" → `OpenNotificationAction`
           - `notification-actions` "dismiss" → `DismissNotificationAction`
-        - Uses: 42 symbols — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
+        - Uses: 43 symbols — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
           - `primitives/data-view` ×5
           - `infra/endpoints` ×3
           - `primitives/css/coords` ×2
@@ -47041,6 +47042,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/pane` ×2
           - `apps-core/tabs.useAppLink`
           - `apps/debug/shell.DebugApp`
+          - `audience.useAudience`
           - `ids.IdKinds`
           - `network/live.useLive`
           - `primitives/css/badge.Badge`
@@ -47110,6 +47112,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Routes: `POST /api/notifications`
       - Core:
         - Uses:
+          - `audience.AUDIENCES`
           - `fields.FieldsRecord`
           - `fields.nullable`
           - `fields/bool/config.boolField`
