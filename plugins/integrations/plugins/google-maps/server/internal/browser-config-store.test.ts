@@ -1,3 +1,8 @@
+import {
+  readEnv,
+  setEnv,
+  unsetEnv,
+} from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { afterAll, beforeEach, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -13,13 +18,13 @@ import {
 
 // Hermetic: the data root (read per call) points at a throwaway dir, so the
 // host's real browser-config.json is never touched.
-const ORIGINAL_DATA_ROOT = process.env.SINGULARITY_DIR;
+const ORIGINAL_DATA_ROOT = readEnv("DIR");
 const dataRoot = mkdtempSync(join(tmpdir(), "google-maps-browser-config-"));
-process.env.SINGULARITY_DIR = dataRoot;
+setEnv("DIR", dataRoot);
 
 afterAll(() => {
-  if (ORIGINAL_DATA_ROOT === undefined) delete process.env.SINGULARITY_DIR;
-  else process.env.SINGULARITY_DIR = ORIGINAL_DATA_ROOT;
+  if (ORIGINAL_DATA_ROOT === undefined) unsetEnv("DIR");
+  else setEnv("DIR", ORIGINAL_DATA_ROOT);
   rmSync(dataRoot, { recursive: true, force: true });
 });
 

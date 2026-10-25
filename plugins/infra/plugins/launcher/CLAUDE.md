@@ -162,23 +162,52 @@ The runtime tree is the gateway and everything it starts: every backend (main,
 central, each worktree) and Postgres / PgBouncer. It
 starts from a **declared** environment, never from whoever started it. (It used
 to inherit: `./equin start` from an agent shell put that shell's
-`SINGULARITY_CONVERSATION_ID` and `CLAUDE_*` into every backend on the
+`EQUIN_CONVERSATION_ID` and `CLAUDE_*` into every backend on the
 host, so their builds' op-log records and commits named one agent's
 conversation.)
 
-The declaration is `core/internal/runtime-env.ts`, a leaf with no imports:
-host facts (`RUNTIME_HOST_ENV`), the `SINGULARITY_*` installation settings every
-backend must see (`RUNTIME_FORWARDED_ENV`, each with a reason naming its
-reader), forwarded name prefixes (`SINGULARITY_AUTH_`), third-party tool
-locations (`RUNTIME_FORWARDED_TOOL_ENV`), and the `SINGULARITY_*` names that
-must **never** be inherited, each with who delivers it instead
-(`RUNTIME_WITHHELD_ENV`). An allowlist on purpose: what a starting shell may
-carry is an open set, so a list of bad names only catches the last leak found.
+The declaration is the `env-names` sub-plugin's `core/internal/env-keys.ts` (a
+leaf importing only `framework/product-name`, so the lowest-level packages can
+import it without a cycle through this plugin), by KEY — `DIR`, `CONVERSATION_ID`, never a full
+name: the `EQUIN_*` installation settings every backend must see
+(`RUNTIME_FORWARDED_ENV`, each with a reason naming its reader), forwarded key
+prefixes (`AUTH_`), and the names that must **never** be inherited, each with
+who delivers it instead (`RUNTIME_WITHHELD_ENV`). Host facts
+(`RUNTIME_HOST_ENV`) and third-party tool locations
+(`RUNTIME_FORWARDED_TOOL_ENV`) live in `core/internal/runtime-env.ts`. An
+allowlist on purpose: what a starting shell may carry is an open set, so a list
+of bad names only catches the last leak found.
+
+### Two names per variable, while the rename settles
+
+Each key has two names: `EQUIN_<key>` and the legacy one
+(`LEGACY_IDS.envPrefix` + key). An installed plist written by an older
+`start`, a gateway built from an older main, a backend on a checkout not yet
+rebased and an operator's dotfiles all still speak the legacy name, so
+(`env-names` `core/internal/env.ts`):
+
+- **every read tries both** — `readEnv(key, env?)`, current name first;
+- **every write sets both** — `envEntries({ KEY: v })` for a child's env,
+  `setEnv` / `setEnvDefault` (the `??=` form) / `unsetEnv` in-process;
+- **both set to different values throws** (`EnvNameConflictError`): current
+  code always writes both, so a mismatch is an older writer overriding one name
+  under a newer ancestor, or an operator exporting both — not knowable here.
+
+`envName(key)` spells the current name for a message; `envNames(key)` lists
+both, for an allowlist. Keys born after the rename (`APP_COMPONENT`,
+`RELEASE_DIR`) have only the current name. Mirrors that cannot import the keys
+read both too: `gateway/env.go` `readEnv` (same rule), the git hooks and
+`doctor.sh` with `${EQUIN_<key>:-$<legacy name>}`, the generated hook commands
+(`guards/agent-policy`). `.mcp.json` alone still reads only the legacy names
+(Claude Code's `${VAR:-default}` is not documented to nest); every launcher
+sets both, so it resolves. Dropping the legacy names is a later step, once
+every install has restarted on this code (`./equin start --force`).
+Design: [`research/2026-10-25-global-equin-env-vars.md`](../../../../research/2026-10-25-global-equin-env-vars.md).
 
 Two boundaries, one declaration:
 
 1. **Starter → gateway.** `gatewayLaunchSpec` sets
-   `pickRuntimeEnv(process.env)` — for the detached spawn, and baked into the
+   `pickRuntimeEnv(process.env)` (each forwarded variable under both its names, whichever one the starter set) — for the detached spawn, and baked into the
    launchd plist on macOS dev hosts (so a change reaches that gateway on the
    next `start --force`). It filters the **live** `process.env`, so the
    release launcher's mutations (`launch.ts`'s relocation variables, the release
@@ -187,7 +216,8 @@ Two boundaries, one declaration:
    and through it the desktop app, the preview manager, systemd) goes through
    this one function.
 2. **Gateway → every child.** It also passes the required
-   `-child-env <runtimeEnvNames().join(",")>` (prefixes spelled `NAME_*`). The
+   `-child-env <runtimeEnvNames().join(",")>` (both names of every forwarded
+   key; prefixes spelled `NAME_*`). The
    gateway holds no list of its own; it forwards only those names, plus its
    per-child additions. A backend's socket path is
    not one of them: it travels on argv (`--socket`). See `gateway/CLAUDE.md`.
@@ -234,17 +264,17 @@ starter's own `MISE_*` never travels. A release has no checkout and pins nothing
 (it spawns no mise tool). `toolchain:resolved` re-measures the pin from a temp
 dir on every build, since it rests on mise's semantics rather than ours.
 
-**Adding a variable:** write the reader, then run `./equin check`.
-`launcher:runtime-env-declared` fails on any `SINGULARITY_*` name that code
-reads or sets (TypeScript under `plugins/`, gateway Go, git hooks, desktop
-Rust — comments and lint rules are not scanned, since they read nothing) that
-is not forwarded, withheld or under a forwarded prefix, and asks: *should a
-backend inherit this from whoever starts the gateway?* Yes →
-`RUNTIME_FORWARDED_ENV`; no → `RUNTIME_WITHHELD_ENV`. The yes case is the one
-that bites: a relocation variable set in `launch.ts` but not forwarded silently
-never reaches the backend, which reads its dev default in a release only. It
-also fails on a listed name no code uses any more — delete that entry. A
-non-`SINGULARITY_*` variable goes in `RUNTIME_FORWARDED_TOOL_ENV`; nothing
+**Adding a variable:** add its key to `plugins/env-names/core/internal/env-keys.ts`, answering
+*should a backend inherit this from whoever starts the gateway?* Yes →
+`RUNTIME_FORWARDED_ENV`; no → `RUNTIME_WITHHELD_ENV`, with the one-line reason.
+The yes case is the one that bites: a relocation variable set in `launch.ts` but
+not forwarded silently never reaches the backend, which reads its dev default in
+a release only. Then read it with `readEnv("KEY")`: an undeclared key is a type
+error. `launcher:env-names` holds what a type cannot see — no full
+`EQUIN_*` / legacy name spelled in TypeScript code (comments may name one),
+every full name a mirror (Go, shell, Rust, JSON), a comment or a doc spells is a
+declared key (tests excepted), and every declared key is still used (a dead one
+is deleted). A third-party variable goes in `RUNTIME_FORWARDED_TOOL_ENV`; nothing
 checks for those.
 
 `launcher:gateway-env-explicit` keeps the second boundary shut: outside
@@ -311,7 +341,6 @@ Design: [`research/2026-09-15-global-declared-runtime-environment.md`](../../../
     - `hasPgBouncerPackage`
     - `isGatewayListening`
     - `isRunning`
-    - `LISTEN_ENV`
     - `listenFlag`
     - `LOOPBACK_BIND`
     - `pgbouncerConnection`
@@ -324,6 +353,23 @@ Design: [`research/2026-09-15-global-declared-runtime-environment.md`](../../../
     - `teardownSelfContainedApp`
     - `writeReleaseDatabaseConfig`
   - Register: `defineDaemon('launcher.gateway')`
+- Core:
+  - Uses:
+    - `infra/launcher/env-names.EnvKey`
+    - `infra/launcher/env-names.envKeyOf`
+    - `infra/launcher/env-names.envNames`
+    - `infra/launcher/env-names.readEnv`
+    - `infra/launcher/env-names.RUNTIME_FORWARDED_ENV`
+    - `infra/launcher/env-names.RUNTIME_FORWARDED_PREFIXES`
+  - Exports (values):
+    - `isRuntimeEnvName`
+    - `pickHostEnv`
+    - `pickRuntimeEnv`
+    - `RUNTIME_FORWARDED_TOOL_ENV`
+    - `RUNTIME_HOST_ENV`
+    - `runtimeEnvNames`
+    - `runtimePath`
+    - `runtimeShimsDir`
 - Deps:
   - Uses:
     - `infra/codesign.codeSignature`
@@ -349,20 +395,8 @@ Design: [`research/2026-09-15-global-declared-runtime-environment.md`](../../../
     - `marker-scan-safety/no-adhoc-marker-scan` — `check/internal/strip-comments.ts` (sanctioned)
     - `spawn-safety/no-raw-bun-spawn` — `server/internal/boot.ts` (sanctioned)
     - `boundaries/no-platform-api` — `server/internal/boot.ts`, `server/internal/config-propagate.ts` (debt)
-- Core:
-  - Exports (values):
-    - `isRuntimeEnvName`
-    - `pickHostEnv`
-    - `pickRuntimeEnv`
-    - `RUNTIME_FORWARDED_ENV`
-    - `RUNTIME_FORWARDED_PREFIXES`
-    - `RUNTIME_FORWARDED_TOOL_ENV`
-    - `RUNTIME_HOST_ENV`
-    - `RUNTIME_WITHHELD_ENV`
-    - `runtimeEnvNames`
-    - `runtimePath`
-    - `runtimeShimsDir`
 - Sub-plugins:
+  - **`env-names`** — The app's own environment variables, declared by key (forwarded to the runtime tree or withheld from it, with why), and the one way to read and write them: readEnv / envEntries / setEnv /…
   - **`gateway-drift`** — Gateway drift, shown: the health report's Gateway row — attention while the machine's login-service gateway (installed or running) differs from what ./equin start --force would install now from…
   - **`login-services`** — Per-user login services, generalized from the gateway's: a LoginService over a LoginServiceSpec (label, argv, cwd, env, stdio log, session background | graphical), rendered as a launchd LaunchAgent…
 

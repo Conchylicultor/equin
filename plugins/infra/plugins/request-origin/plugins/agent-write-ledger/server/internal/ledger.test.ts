@@ -1,3 +1,8 @@
+import {
+  readEnv,
+  setEnv,
+  unsetEnv,
+} from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { afterAll, expect, test } from "bun:test";
 import {
   existsSync,
@@ -26,14 +31,14 @@ import {
 // duplicate id throws — that is the point), so every test uses ids of its own,
 // and every revert assertion filters to them: `revertAgentWritesIn` walks every
 // ledger this process ever defined.
-const ORIGINAL_DATA_ROOT = process.env.SINGULARITY_DIR;
+const ORIGINAL_DATA_ROOT = readEnv("DIR");
 const dataRoot = mkdtempSync(join(tmpdir(), "agent-write-ledger-root-"));
-process.env.SINGULARITY_DIR = dataRoot;
+setEnv("DIR", dataRoot);
 const files = mkdtempSync(join(tmpdir(), "agent-write-ledger-files-"));
 
 afterAll(() => {
-  if (ORIGINAL_DATA_ROOT === undefined) delete process.env.SINGULARITY_DIR;
-  else process.env.SINGULARITY_DIR = ORIGINAL_DATA_ROOT;
+  if (ORIGINAL_DATA_ROOT === undefined) unsetEnv("DIR");
+  else setEnv("DIR", ORIGINAL_DATA_ROOT);
   rmSync(dataRoot, { recursive: true, force: true });
   rmSync(files, { recursive: true, force: true });
 });

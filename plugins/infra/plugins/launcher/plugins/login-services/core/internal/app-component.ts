@@ -1,3 +1,4 @@
+import { envEntries } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 /**
  * One program of the equin app — on macOS an executable inside the ONE
  * `equin.app` bundle every login service runs from (`machine/internal/macos-app.ts`),
@@ -38,9 +39,6 @@ export interface ServiceExecutable {
   readonly bundled: boolean;
 }
 
-/** The variable a bundled service's job names its component build in. */
-export const APP_COMPONENT_ENV = "EQUIN_APP_COMPONENT";
-
 /** A component build's identity: the dependency and its build identity. */
 export function componentIdentity(depId: string, identity: string): string {
   return `${depId}@${identity}`;
@@ -59,5 +57,8 @@ export function unbundledExecutable(build: ComponentBuild): ServiceExecutable {
 export function executableEnv(
   executable: ServiceExecutable,
 ): Record<string, string> {
-  return executable.bundled ? { [APP_COMPONENT_ENV]: executable.identity } : {};
+  // A bundled service's job names its component build in APP_COMPONENT.
+  return executable.bundled
+    ? envEntries({ APP_COMPONENT: executable.identity })
+    : {};
 }

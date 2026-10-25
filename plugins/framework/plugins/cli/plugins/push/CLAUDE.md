@@ -113,7 +113,6 @@ queues behind the mutex it was holding.
   - Uses:
     - `framework/cli/bootstrap.ensureDeps`
     - `framework/cli/git-artifacts.normalizeGeneratedArtifacts`
-    - `framework/cli/git-artifacts.SKIP_POST_REWRITE_ENV`
     - `framework/cli/op-runtime.checkBroadcasts`
     - `framework/cli/op-runtime.installFatalSignalExit`
     - `framework/cli/op-runtime.opPriority`

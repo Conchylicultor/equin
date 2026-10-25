@@ -1,3 +1,4 @@
+import { envEntries } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -21,7 +22,7 @@ function preToolUseCommand(): string {
 function runHook(cwd: string, guardsRoot: string) {
   const result = Bun.spawnSync(["/bin/sh", "-c", preToolUseCommand()], {
     cwd,
-    env: { ...process.env, SINGULARITY_GUARDS_ROOT: guardsRoot },
+    env: { ...process.env, ...envEntries({ GUARDS_ROOT: guardsRoot }) },
     stdin: new TextEncoder().encode(
       JSON.stringify({ tool_name: "Read", tool_input: {} }),
     ),

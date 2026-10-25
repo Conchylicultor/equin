@@ -1,4 +1,5 @@
-import { TOOL_USE_ID_ENV, TOOL_USE_ID_RE } from "../tool-use-id";
+import { envNames } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
+import { TOOL_USE_ID_RE } from "../tool-use-id";
 import { defineGuard } from "../define-guard";
 import { parseShell } from "../parse-shell";
 import type { BashInput } from "../types";
@@ -12,7 +13,8 @@ import { CLI_NAME } from "@plugins/framework/plugins/cli/plugins/cli-name/core";
  * the only key both sides hold, and only this hook sees it: Claude Code hands
  * no per-call identity to the command itself. So the command gets an `export`
  * in front — `export`, not a `VAR=… cmd` prefix, so it reaches every command of
- * a chain (`./equin build && ./equin run …/e2e/x.ts`).
+ * a chain (`./equin build && ./equin run …/e2e/x.ts`). Under every name of the
+ * TOOL_USE_ID variable, since the script may be on an older checkout.
  *
  * A rewrite, never a denial, and it changes nothing the command does: the
  * variable files the recording, it never chooses the deploy.
@@ -33,7 +35,9 @@ export const e2eToolUseIdGuard = defineGuard<BashInput>({
     if (!runsE2e) return null;
     return {
       rewrite: {
-        command: `export ${TOOL_USE_ID_ENV}=${ctx.toolUseId}; ${cmd}`,
+        command: `export ${envNames("TOOL_USE_ID")
+          .map((name) => `${name}=${ctx.toolUseId}`)
+          .join(" ")}; ${cmd}`,
       },
     };
   },

@@ -5,7 +5,7 @@
 isolated data root, and stay up serving it.
 
 This is a **release** entry point, not a development one. It refuses to run
-without `SINGULARITY_DIR` set in its environment, because that variable re-roots
+without `EQUIN_DIR` set in its environment, because that variable re-roots
 the entire install: unset, `dataRoot()` answers with the developer's
 `~/.singularity` and the command would quietly pour a release cluster, spec and
 registry into it. `--web` is required for the same reason — every derivable dist
@@ -39,7 +39,7 @@ barrel (`cli:command-declarations-light`). The default therefore lives in
 
 ## Plugin reference
 
-- Description: `./equin serve-app` — boot a packaged app's full runtime (gateway + embedded Postgres + app DB) under an isolated SINGULARITY_DIR. The one detachable command: it is meant to outlive the shell that launched it.
+- Description: `./equin serve-app` — boot a packaged app's full runtime (gateway + embedded Postgres + app DB) under an isolated EQUIN_DIR. The one detachable command: it is meant to outlive the shell that launched it.
 - Cli:
   - Uses: `infra/jobs/supervised-job.cliExecContext`
 - Exemptions:

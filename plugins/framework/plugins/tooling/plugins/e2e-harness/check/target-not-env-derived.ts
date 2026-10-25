@@ -8,7 +8,7 @@ import type {
 /**
  * An e2e script never learns which deploy it drives from the environment.
  *
- * The defect this closes was `$SINGULARITY_WORKTREE`, which answered a question
+ * The defect this closes was the retired worktree variable, which answered a question
  * about a different process: the gateway set it on every backend it spawned, so
  * it meant "which namespace is this BACKEND the server for". An agent's pane was
  * spawned by main's backend and inherited the variable through the tmux server's
@@ -26,8 +26,8 @@ import type {
  * config file at the namespace it computed. Resolved to main, both of those
  * land on the user's live documents.
  *
- * The pattern is the PREFIX, deliberately, not the one variable name.
- * `SINGULARITY_E2E_BASE` had the same shape — an inherited channel that
+ * The pattern is the helper family, deliberately, not one variable name.
+ * The retired e2e-base variable had the same shape — an inherited channel that
  * silently outranks the derivation — and was deleted for the same reason, so a
  * SECOND env-shaped target must be unspellable rather than merely absent today.
  * A rule keyed on one variable name would watch the one spelling we already know
@@ -42,12 +42,16 @@ import type {
  * one is caught like any other.
  */
 
-/** A read of any `SINGULARITY_*` var — the prefix, not one variable. */
-const OFFENDING = /\bprocess\s*\.\s*env\s*\.\s*SINGULARITY_/;
+/**
+ * Any READ of the app's own environment variables (`readEnv`, the one reader;
+ * a hand-spelled `process.env.EQUIN_…` fails `launcher:env-names`) — the
+ * family, not one variable. Setting one for a child the script spawns
+ * (`envEntries`) chooses nothing about this run's target, so it is allowed.
+ */
+const OFFENDING = /\breadEnv\s*\(/;
 
 /** Same shape in POSIX ERE, for the `git grep -l` candidate pre-filter. */
-const GREP_ARG =
-  "process[[:space:]]*\\.[[:space:]]*env[[:space:]]*\\.[[:space:]]*SINGULARITY_";
+const GREP_ARG = "readEnv[[:space:]]*\\(";
 
 /**
  * Only `e2e/` files, and never the harness's own target resolver.
@@ -65,7 +69,7 @@ const PATHSPECS = [
 const check: Check = {
   id: "e2e-harness:target-not-env-derived",
   description:
-    "e2e scripts derive their target from the deploy this checkout published, never from a `SINGULARITY_*` environment variable — one inherited from main's backend names main from every worktree",
+    "e2e scripts derive their target from the deploy this checkout published, never from one of the app's own environment variables (`readEnv`) — one inherited from main's backend names main from every worktree",
   async run(): Promise<CheckResult> {
     const root = await getWorktreeRoot();
     // Comments are masked unconditionally, so a docblock naming the variable —

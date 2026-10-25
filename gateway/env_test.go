@@ -20,11 +20,11 @@ func testChildEnv(t *testing.T) ChildEnv {
 }
 
 func TestParseChildEnvFlag(t *testing.T) {
-	got, err := parseChildEnvFlag(" HOME, PATH ,SINGULARITY_AUTH_*")
+	got, err := parseChildEnvFlag(" HOME, PATH ,EQUIN_AUTH_*")
 	if err != nil {
 		t.Fatalf("parseChildEnvFlag: %v", err)
 	}
-	if want := []string{"HOME", "PATH", "SINGULARITY_AUTH_*"}; !reflect.DeepEqual(got, want) {
+	if want := []string{"HOME", "PATH", "EQUIN_AUTH_*"}; !reflect.DeepEqual(got, want) {
 		t.Fatalf("declared = %q, want %q", got, want)
 	}
 
@@ -49,30 +49,30 @@ func TestParseChildEnvFlag(t *testing.T) {
 }
 
 // TestNewChildEnvKeepsOnlyDeclared is the incident regression: an agent
-// shell's identity and terminal state (SINGULARITY_CONVERSATION_ID,
+// shell's identity and terminal state (EQUIN_CONVERSATION_ID,
 // CLAUDE_*) must not survive into the base, and must be reported as dropped.
 func TestNewChildEnvKeepsOnlyDeclared(t *testing.T) {
 	environ := []string{
 		"HOME=/home/me",
-		"SINGULARITY_CONVERSATION_ID=conv-1",
+		"EQUIN_CONVERSATION_ID=conv-1",
 		"PATH=/usr/bin:/bin",
 		"TERM_SESSION_ID=w0t0p0",
 		"HOMEBREW_PREFIX=/opt/homebrew", // shares a prefix with HOME, but HOME is exact
-		"SINGULARITY_AUTH_GOOGLE_CLIENT_ID=abc",
-		"SINGULARITY_AUTHX=nope", // the prefix is SINGULARITY_AUTH_, underscore included
+		"EQUIN_AUTH_GOOGLE_CLIENT_ID=abc",
+		"EQUIN_AUTHX=nope", // the prefix is EQUIN_AUTH_, underscore included
 		"CLAUDE_CODE_SESSION_ID=s-1",
 	}
-	env, dropped := NewChildEnv([]string{"HOME", "PATH", "SINGULARITY_AUTH_*"}, environ)
+	env, dropped := NewChildEnv([]string{"HOME", "PATH", "EQUIN_AUTH_*"}, environ)
 
-	wantBase := []string{"HOME=/home/me", "PATH=/usr/bin:/bin", "SINGULARITY_AUTH_GOOGLE_CLIENT_ID=abc"}
+	wantBase := []string{"HOME=/home/me", "PATH=/usr/bin:/bin", "EQUIN_AUTH_GOOGLE_CLIENT_ID=abc"}
 	if got := env.With(); !reflect.DeepEqual(got, wantBase) {
 		t.Fatalf("base = %q, want %q", got, wantBase)
 	}
-	wantDropped := []string{"SINGULARITY_CONVERSATION_ID", "TERM_SESSION_ID", "HOMEBREW_PREFIX", "SINGULARITY_AUTHX", "CLAUDE_CODE_SESSION_ID"}
+	wantDropped := []string{"EQUIN_CONVERSATION_ID", "TERM_SESSION_ID", "HOMEBREW_PREFIX", "EQUIN_AUTHX", "CLAUDE_CODE_SESSION_ID"}
 	if !reflect.DeepEqual(dropped, wantDropped) {
 		t.Fatalf("dropped = %q, want %q", dropped, wantDropped)
 	}
-	if got, want := env.Names(), []string{"HOME", "PATH", "SINGULARITY_AUTH_GOOGLE_CLIENT_ID"}; !reflect.DeepEqual(got, want) {
+	if got, want := env.Names(), []string{"HOME", "PATH", "EQUIN_AUTH_GOOGLE_CLIENT_ID"}; !reflect.DeepEqual(got, want) {
 		t.Fatalf("Names() = %q, want %q", got, want)
 	}
 }
@@ -130,5 +130,36 @@ func TestCommandSetsEnv(t *testing.T) {
 	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
 	if want := []string{"GATEWAY_ENV_TEST_KEPT=1", "SOCKET_PATH=/s.sock"}; !reflect.DeepEqual(lines, want) {
 		t.Fatalf("child env = %q, want %q", lines, want)
+	}
+}
+
+// TestReadEnvBothNames: the current name wins, the legacy one is the fallback
+// (an installed plist from an older `./equin start` sets only it), and the two
+// set to different values is an error, never a guess.
+func TestReadEnvBothNames(t *testing.T) {
+	const key = "TEST_READ_ENV"
+	current, legacy := envPrefix+key, legacyEnvPrefix+key
+	cases := []struct {
+		name, current, legacy, want string
+		wantErr                     bool
+	}{
+		{"neither", "", "", "", false},
+		{"current only", "a", "", "a", false},
+		{"legacy only", "", "b", "b", false},
+		{"both equal", "a", "a", "a", false},
+		{"both differ", "a", "b", "", true},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			t.Setenv(current, c.current)
+			t.Setenv(legacy, c.legacy)
+			got, err := readEnv(key)
+			if (err != nil) != c.wantErr {
+				t.Fatalf("readEnv err = %v, wantErr %v", err, c.wantErr)
+			}
+			if got != c.want {
+				t.Fatalf("readEnv = %q, want %q", got, c.want)
+			}
+		})
 	}
 }

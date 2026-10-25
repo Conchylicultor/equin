@@ -15,7 +15,7 @@ import {
   unbundledExecutable,
   type LoginServiceJob,
 } from "../../core";
-import { APP_COMPONENT_ENV } from "../../core/internal/app-component";
+import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { defineLoginService, loginServiceId, loginServiceJob } from "./define";
 import type { LoginService, LoginServiceState } from "./login-service";
 import type { MacosAppHost } from "./macos-app";
@@ -289,7 +289,7 @@ describe("reconcileLoginService — macOS (the equin app bundle)", () => {
     await reconcile(fake.service, one);
     const job = JSON.parse(fake.definition()!) as LoginServiceJob;
     expect(job.argv[0]).toBe(join(bundle, "Contents", "MacOS", "example"));
-    expect(job.env[APP_COMPONENT_ENV]).toBe("example-helper@one");
+    expect(readEnv("APP_COMPONENT", job.env)).toBe("example-helper@one");
     expect(
       readFileSync(join(bundle, "Contents", "MacOS", "example"), "utf8"),
     ).toBe("binary one");
@@ -306,6 +306,6 @@ describe("reconcileLoginService — macOS (the equin app bundle)", () => {
     expect(fake.calls).toEqual(["write", "unload", "load"]);
     const job = JSON.parse(fake.definition()!) as LoginServiceJob;
     expect(job.argv[0]).toBe(join(bundle, "Contents", "MacOS", "example"));
-    expect(job.env[APP_COMPONENT_ENV]).toBe("example-helper@two");
+    expect(readEnv("APP_COMPONENT", job.env)).toBe("example-helper@two");
   });
 });

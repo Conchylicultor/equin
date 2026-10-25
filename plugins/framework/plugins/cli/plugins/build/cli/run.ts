@@ -1,3 +1,7 @@
+import {
+  readEnv,
+  setEnv,
+} from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import { existsSync } from "fs";
 import { retryUntil, fixed } from "@plugins/packages/plugins/retry/core";
@@ -595,7 +599,7 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
   // ONE progress run per PROCESS, keyed on the checkout's namespace: the
   // module holds a single `current`, so a second `openBuildProgress` would
   // be a silent no-op rather than a second log.
-  openBuildProgress(name, process.env.SINGULARITY_BUILD_ID ?? null);
+  openBuildProgress(name, readEnv("BUILD_ID") ?? null);
 
   // Report a predecessor that never completed, BEFORE this build overwrites
   // its receipt. Self-healing on purpose: the previous build was SIGKILLed, so
@@ -608,23 +612,22 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
   // Every build needs ONE stable id, shared by its build-log record, its
   // build-profile-<id>.json, its build-logs, and the bundle's .build-id —
   // so the profiling Gantt can open ANY build's detail by id, not just
-  // UI-triggered ones. UI builds already set SINGULARITY_BUILD_ID
+  // UI-triggered ones. UI builds already set EQUIN_BUILD_ID
   // (run-build.ts); manual CLI builds (`./equin build`) get a
   // generated one here. Write it back into the env so the profiler and
   // build-logs writers (which read the env var at write time) agree by
   // construction instead of falling back to id-less default filenames and
   // a null build-log buildId (which left manual builds un-clickable).
   // A UI/auto build's backend minted the build_runs row before spawning this
-  // CLI (SINGULARITY_BUILD_ID is that row's id); a manual `./equin
+  // CLI (EQUIN_BUILD_ID is that row's id); a manual `./equin
   // build` has no such id yet. Captured BEFORE the env is overwritten below,
   // so the CLI knows whether it must mint main's row itself (decision 3).
-  const uiTriggered = process.env.SINGULARITY_BUILD_ID != null;
+  const uiTriggered = readEnv("BUILD_ID") != null;
   // Minted through the run ledger's id kind, like the backend's claim: one
   // shape (`build-<s>-<6>`) whoever started the build, so a manual build's id
   // is recognised (chips, the run pane) exactly like a UI build's.
-  const buildId: string =
-    process.env.SINGULARITY_BUILD_ID ?? buildRunIdKind.mint();
-  process.env.SINGULARITY_BUILD_ID = buildId;
+  const buildId: string = readEnv("BUILD_ID") ?? buildRunIdKind.mint();
+  setEnv("BUILD_ID", buildId);
 
   // A main build is human-blocking (interactive lane); an agent build is
   // background. Derived ONCE, here, because two consumers need the same
@@ -640,7 +643,7 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
   // recorded as their own segments instead.
   //
   // `opId` is `buildId`: unique and non-null on every path (a UI build gets
-  // SINGULARITY_BUILD_ID from run-build.ts, a manual CLI build the minted
+  // EQUIN_BUILD_ID from run-build.ts, a manual CLI build the minted
   // `build-<s>-<6>` above). `buildId` is passed AGAIN, separately, because
   // it means something else there — the join key to build-profile-<id>.json,
   // which is what makes a bar's span breakdown openable.

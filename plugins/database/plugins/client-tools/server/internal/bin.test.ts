@@ -1,3 +1,4 @@
+import { envEntries } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { describe, expect, it } from "bun:test";
 import {
   PgClientToolMissingError,
@@ -42,7 +43,7 @@ describe("resolvePgClientBin", () => {
       resolvePgClientBin(
         "pg_restore",
         ctx(
-          { env: { SINGULARITY_PG_CLIENT_BIN_DIR: "/bundle/pg-client/bin" } },
+          { env: envEntries({ PG_CLIENT_BIN_DIR: "/bundle/pg-client/bin" }) },
           ["/bundle/pg-client/bin/pg_restore", `${PKG_BIN}/pg_restore`],
         ),
       ),
@@ -54,7 +55,7 @@ describe("resolvePgClientBin", () => {
       resolvePgClientBin(
         "pg_dump",
         ctx(
-          { env: { SINGULARITY_PG_CLIENT_BIN_DIR: "/bundle/pg-client/bin" } },
+          { env: envEntries({ PG_CLIENT_BIN_DIR: "/bundle/pg-client/bin" }) },
           [`${PKG_BIN}/pg_dump`],
         ),
       ),

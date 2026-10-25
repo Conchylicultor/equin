@@ -1,3 +1,7 @@
+import {
+  envName,
+  readEnv,
+} from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { dlopen, ptr } from "bun:ffi";
 import type { Ready } from "@plugins/infra/plugins/deps/deps";
 import {
@@ -40,11 +44,11 @@ let armResult: SignalOriginArmResult | null = null;
 
 /**
  * Whether the escape hatch turns the whole mechanism off host-wide
- * (`SINGULARITY_NO_SIGNAL_ORIGIN=1`, mirroring SINGULARITY_NO_SPAWN_PRIORITY):
+ * (`EQUIN_NO_SIGNAL_ORIGIN=1`, mirroring EQUIN_NO_SPAWN_PRIORITY):
  * no arm, and a caller ensuring the shim should not build it either.
  */
 export function signalOriginDisabled(): boolean {
-  return process.env.SINGULARITY_NO_SIGNAL_ORIGIN === "1";
+  return readEnv("NO_SIGNAL_ORIGIN") === "1";
 }
 
 /**
@@ -107,7 +111,7 @@ export function armSignalOrigin(
   if (signalOriginDisabled()) {
     armResult = {
       armed: false,
-      reason: "disabled by SINGULARITY_NO_SIGNAL_ORIGIN=1",
+      reason: `disabled by ${envName("NO_SIGNAL_ORIGIN")}=1`,
     };
     return armResult;
   }

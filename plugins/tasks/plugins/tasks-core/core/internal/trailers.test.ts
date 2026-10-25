@@ -77,7 +77,7 @@ test("multiple values of one trailer key shift the fields — a known quirk", ()
   // both values into the conversation field's slot, pushing every later field
   // right. The parse then reads the second conversation id as the push id. This is
   // the ported behaviour, kept deliberately: the writer half stamps exactly one of
-  // each (the shell hook from SINGULARITY_CONVERSATION_ID, the push CLI per
+  // each (the shell hook from EQUIN_CONVERSATION_ID, the push CLI per
   // invocation), so no commit `./equin push` produces can reach it. Pinned
   // here so a future fix is a deliberate change with a failing test, not a
   // surprise.

@@ -1,9 +1,11 @@
+import {
+  envEntries,
+  readEnv,
+} from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import {
   cpuBudget,
   HOST_POOLS,
-  HOST_GRANT_ENV,
-  HOST_LANE_ENV,
   type Grant,
   type GrantHooks,
   type Lane,
@@ -44,7 +46,7 @@ function grantOfUnits(units: number, lane: Lane): Grant {
     units,
     lane,
     run: (fn, opts) => sem.run(fn, { weight: spendOf(opts?.units, units) }),
-    env: () => ({ [HOST_GRANT_ENV]: String(units), [HOST_LANE_ENV]: lane }),
+    env: () => envEntries({ HOST_GRANT: String(units), LANE: lane }),
   };
 }
 
@@ -136,7 +138,7 @@ export const e2ePool = defineHostPool({
  * `fn`, release. Same signature, so a direct op picks the pool without
  * changing shape. The grant it hands `fn` carries one unit for the holder's own
  * fan-out but **no env**: it holds no `cpu` units, so a child must not inherit
- * a `SINGULARITY_HOST_GRANT` claiming some — a `./equin check` an e2e
+ * a `EQUIN_HOST_GRANT` claiming some — a `./equin check` an e2e
  * script spawns acquires its own `cpu` grant like any top-level op.
  */
 export async function withE2eGrant<T>(
@@ -165,17 +167,17 @@ export async function withE2eGrant<T>(
 /**
  * The grant this process inherited from its parent via the environment, or
  * `undefined` if there is none (a fresh top-level invocation). Reads
- * `SINGULARITY_HOST_GRANT` (a positive int) and rebuilds an in-process semaphore
+ * `EQUIN_HOST_GRANT` (a positive int) and rebuilds an in-process semaphore
  * of that many units — it acquires NOTHING host-wide, because the parent already
  * holds the slots and this child is their only spender. An absent or invalid
  * value returns `undefined` so the caller falls back to `withHostGrant`.
  */
 export function inheritedGrant(): Grant | undefined {
-  const raw = process.env[HOST_GRANT_ENV];
+  const raw = readEnv("HOST_GRANT");
   if (raw === undefined) return undefined;
   const units = Number(raw);
   if (!Number.isInteger(units) || units < 1) return undefined;
   const lane: Lane =
-    process.env[HOST_LANE_ENV] === "interactive" ? "interactive" : "background";
+    readEnv("LANE") === "interactive" ? "interactive" : "background";
   return grantOfUnits(units, lane);
 }

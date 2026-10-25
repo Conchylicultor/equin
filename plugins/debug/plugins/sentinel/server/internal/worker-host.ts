@@ -1,4 +1,5 @@
 import { namespaceArgv } from "@plugins/infra/plugins/runtime-identity/core";
+import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { pathToFileURL } from "node:url";
 import {
   DEFAULT_BACKOFF,
@@ -152,11 +153,11 @@ function toStatus(t: DaemonTransition): SentinelStatus {
  * Compiled release: `bun build --compile` does NOT trace/embed a
  * `new Worker(new URL(...))` entry (verified Bun 1.3.13), so release.ts vendors
  * the worker as a standalone bundled `.js` on disk and launch.ts points
- * `SINGULARITY_SENTINEL_WORKER_JS` at it — the same vendored-asset pattern as
- * `SINGULARITY_PARCEL_WATCHER_NODE`. When set, spawn from that file.
+ * `EQUIN_SENTINEL_WORKER_JS` at it — the same vendored-asset pattern as
+ * `EQUIN_PARCEL_WATCHER_NODE`. When set, spawn from that file.
  */
 function resolveWorkerUrl(): URL {
-  const vendored = process.env.SINGULARITY_SENTINEL_WORKER_JS;
+  const vendored = readEnv("SENTINEL_WORKER_JS");
   return vendored
     ? pathToFileURL(vendored)
     : new URL("./worker/entry.ts", import.meta.url);

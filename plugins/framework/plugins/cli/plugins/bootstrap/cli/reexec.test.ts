@@ -3,7 +3,12 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import { dirname, join } from "node:path";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
-import { REEXEC_ENV, reexecAfterInstall, takeReexecBudget } from "./reexec";
+import {
+  envEntries,
+  envNames,
+  readEnv,
+} from "@plugins/infra/plugins/launcher/plugins/env-names/core";
+import { reexecAfterInstall, takeReexecBudget } from "./reexec";
 
 const fixtures: string[] = [];
 afterEach(() => {
@@ -53,7 +58,7 @@ test("re-execs the same entry and args, and marks the child as generation 1", as
   // The child must still see the invoking environment — the push flow hands its
   // host CPU grant down through env, and `build` reads its detached marker.
   expect(calls[0]!.env.PATH).toBe("/usr/bin");
-  expect(calls[0]!.env[REEXEC_ENV]).toBe("1");
+  expect(readEnv("DEPS_REEXEC", calls[0]!.env)).toBe("1");
 });
 
 test("propagates the child's exit code so the wrapper's status is the command's", async () => {
@@ -74,18 +79,18 @@ test("a second install in a re-exec'd process re-execs once more", async () => {
   const { calls, spawn } = recordingSpawn();
   const outcome = await reexecAfterInstall(
     "/repo/bin/index.ts",
-    takeReexecBudget({ [REEXEC_ENV]: "1" }),
+    takeReexecBudget(envEntries({ DEPS_REEXEC: "1" })),
     { args: ["build"], env: {}, spawn },
   );
   expect(outcome.reexeced).toBe(true);
-  expect(calls[0]!.env[REEXEC_ENV]).toBe("2");
+  expect(readEnv("DEPS_REEXEC", calls[0]!.env)).toBe("2");
 });
 
 test("the budget is bounded — a checkout whose inputs keep churning cannot fork-bomb", async () => {
   const { calls, spawn } = recordingSpawn();
   const outcome = await reexecAfterInstall(
     "/repo/bin/index.ts",
-    takeReexecBudget({ [REEXEC_ENV]: "2" }),
+    takeReexecBudget(envEntries({ DEPS_REEXEC: "2" })),
     { args: ["build"], env: {}, spawn },
   );
   expect(calls).toHaveLength(0);
@@ -99,7 +104,7 @@ test("a garbled counter spends the budget rather than granting an unbounded one"
   for (const raw of ["nonsense", "-1", ""]) {
     const outcome = await reexecAfterInstall(
       "/repo/bin/index.ts",
-      takeReexecBudget({ [REEXEC_ENV]: raw }),
+      takeReexecBudget(envEntries({ DEPS_REEXEC: raw })),
       { args: ["build"], env: {}, spawn },
     );
     expect(outcome.reexeced).toBe(false);
@@ -110,10 +115,10 @@ test("a garbled counter spends the budget rather than granting an unbounded one"
 test("taking the budget removes it from the environment descendants inherit", () => {
   const env: Record<string, string | undefined> = {
     PATH: "/usr/bin",
-    [REEXEC_ENV]: "1",
+    ...envEntries({ DEPS_REEXEC: "1" }),
   };
   expect(takeReexecBudget(env).prior).toBe(1);
-  expect(REEXEC_ENV in env).toBe(false);
+  expect(envNames("DEPS_REEXEC").some((name) => name in env)).toBe(false);
   expect(env.PATH).toBe("/usr/bin");
   // A second read — what a nested `./equin` would see — starts fresh.
   expect(takeReexecBudget(env).prior).toBe(0);
@@ -121,15 +126,17 @@ test("taking the budget removes it from the environment descendants inherit", ()
 
 test("a re-exec carries the counter only to its own child", async () => {
   const { calls, spawn } = recordingSpawn();
-  const env: Record<string, string | undefined> = { [REEXEC_ENV]: "1" };
+  const env: Record<string, string | undefined> = envEntries({
+    DEPS_REEXEC: "1",
+  });
   const budget = takeReexecBudget(env);
   await reexecAfterInstall("/repo/bin/index.ts", budget, {
     args: ["build"],
     env,
     spawn,
   });
-  expect(calls[0]!.env[REEXEC_ENV]).toBe("2");
-  expect(env[REEXEC_ENV]).toBeUndefined();
+  expect(readEnv("DEPS_REEXEC", calls[0]!.env)).toBe("2");
+  expect(readEnv("DEPS_REEXEC", env)).toBeUndefined();
 });
 
 /**
@@ -200,21 +207,20 @@ test.each(["installed", "installed-by-other"] as const)(
       `import { ensureDeps } from "./install";
      const root = import.meta.dir + "/..";
      const deps = await ensureDeps(root);
-     if (deps.kind !== "fresh" && process.env.${REEXEC_ENV} === undefined) {
+     if (deps.kind !== "fresh" && process.env.FIXTURE_REEXEC === undefined) {
        const child = Bun.spawn([process.execPath, import.meta.path, ...process.argv.slice(2)], {
          stdio: ["inherit", "inherit", "inherit"],
-         env: { ...process.env, ${REEXEC_ENV}: "1" },
+         env: { ...process.env, FIXTURE_REEXEC: "1" },
        });
        process.exit(await child.exited);
      }
      await import("./cli");\n`,
     );
 
-    // Cleared for a runner that is not the CLI (the bootstrap already takes the
-    // counter out of `./equin test`'s own environment): an inherited
-    // marker would make the fixture skip the very step under test.
+    // The fixture's own re-exec marker, cleared in case a runner exported it:
+    // an inherited marker would make the fixture skip the very step under test.
     const env = { ...process.env };
-    delete env[REEXEC_ENV];
+    delete env.FIXTURE_REEXEC;
     const result = await spawnCaptured(
       [process.execPath, join(bin, "index.ts"), "some-command"],
       {

@@ -10,7 +10,7 @@ import type { CommittedFiles, ConfigGitLayerImpl } from "../../core";
 import { repoConfigDir } from "@plugins/infra/plugins/paths/server";
 import { acquireDirWatch } from "@plugins/infra/plugins/file-watcher/server";
 
-/** The checkout's `config/` (or a release's, `SINGULARITY_REPO_CONFIG_DIR`) as raw files. */
+/** The checkout's `config/` (or a release's, `EQUIN_REPO_CONFIG_DIR`) as raw files. */
 function fsCommittedFiles(dir: string): CommittedFiles {
   return {
     read(ref) {

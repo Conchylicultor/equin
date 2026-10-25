@@ -62,20 +62,12 @@
  * path (one extra process start, against a ~7.5 s fresh-worktree install); the
  * common fresh-stamp case never reaches this module.
  */
+import {
+  envEntries,
+  readEnv,
+  unsetEnv,
+} from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { spawnPassthrough } from "@plugins/infra/plugins/spawn/core";
-
-/**
- * Re-exec budget carried across process generations. Present ⇒ this process IS
- * a re-exec, and its value is how many happened before it.
- *
- * It belongs to ONE user invocation's chain of re-execs, so it is carried only
- * from a process to the re-exec of itself. The bootstrap TAKES it
- * ({@link takeReexecBudget}) — reads it and removes it from `process.env` —
- * before it spawns anything, so no descendant (`run` → an e2e script → a nested
- * `./equin …`, `build` → its `check` subprocess) inherits a spent or
- * partly spent budget for what is really a new invocation.
- */
-export const REEXEC_ENV = "SINGULARITY_DEPS_REEXEC";
 
 /**
  * This invocation's re-exec budget: how many re-execs led to this process.
@@ -87,6 +79,15 @@ export interface ReexecBudget {
   readonly __brand: "ReexecBudget";
 }
 
+// The re-exec budget (the DEPS_REEXEC variable) is carried across process
+// generations: present ⇒ this process IS a re-exec, and its value is how many
+// happened before it. It belongs to ONE user invocation's chain of re-execs, so
+// it is carried only from a process to the re-exec of itself. The bootstrap
+// TAKES it (below) — reads it and removes it from `process.env` — before it
+// spawns anything, so no descendant (`run` → an e2e script → a nested
+// `./equin …`, `build` → its `check` subprocess) inherits a spent or partly
+// spent budget for what is really a new invocation.
+
 /**
  * Read this process's re-exec budget and remove it from `env` (default
  * `process.env`). Call once, first thing in the bootstrap, before any spawn.
@@ -95,7 +96,7 @@ export function takeReexecBudget(
   env: Record<string, string | undefined> = process.env,
 ): ReexecBudget {
   const prior = priorReexecs(env);
-  delete env[REEXEC_ENV];
+  unsetEnv("DEPS_REEXEC", env);
   return { prior, __brand: "ReexecBudget" } as ReexecBudget;
 }
 
@@ -136,7 +137,7 @@ export interface ReexecOptions {
 
 /** How many re-execs already happened, from the inherited env. */
 function priorReexecs(env: Record<string, string | undefined>): number {
-  const raw = env[REEXEC_ENV];
+  const raw = readEnv("DEPS_REEXEC", env);
   if (raw === undefined) return 0;
   const n = Number.parseInt(raw, 10);
   // A garbled value is treated as "budget spent", never as 0: the loop bound is
@@ -196,7 +197,7 @@ export async function reexecAfterInstall(
 
   const { exitCode } = await spawn([entry, ...args], {
     ...env,
-    [REEXEC_ENV]: String(prior + 1),
+    ...envEntries({ DEPS_REEXEC: String(prior + 1) }),
   });
   return { reexeced: true, exitCode };
 }

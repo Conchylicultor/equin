@@ -116,7 +116,7 @@ from a `git merge-base` read the recording view cannot observe, and
 `runChecks()` gates its per-check fan-out with a `createSemaphore` (the repo's
 canonical in-process bound). **The default width is unbounded** — one slot per
 selected check, i.e. the behaviour that predates the gate — and `--jobs <n>` /
-`SINGULARITY_CHECK_JOBS` narrow it. The env var is the one `build` and `push`
+`EQUIN_CHECK_JOBS` narrow it. The env var is the one `build` and `push`
 reach: neither calls `runChecks` in-process, they spawn the `check` command, and
 the child inherits `...process.env`.
 
@@ -355,11 +355,12 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
 
 - Description: Check runner and built-in checks for ./equin check
 - Core:
-  - Uses: 46 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 49 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `framework/tooling/exempt` ×7
     - `framework/tooling` ×7
     - `reports/check-thread-stall` ×7
     - `infra/stack-sampler` ×5
+    - `infra/launcher/env-names` ×3
     - `infra/paths` ×3
     - `infra/spawn` ×3
     - `plugin-meta/parse-utils` ×3

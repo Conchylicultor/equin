@@ -1,3 +1,8 @@
+import {
+  readEnv,
+  setEnv,
+  unsetEnv,
+} from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { afterAll, describe, expect, test } from "bun:test";
 import {
   mkdirSync,
@@ -16,18 +21,18 @@ import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
 // Each case owns a data root and real git repos: `checkoutRef` asks git which
 // checkout is main, and the spec's checkout is matched by its real path.
 
-const ORIGINAL_ROOT = process.env.SINGULARITY_DIR;
+const ORIGINAL_ROOT = readEnv("DIR");
 const dirs: string[] = [];
 afterAll(() => {
-  if (ORIGINAL_ROOT === undefined) delete process.env.SINGULARITY_DIR;
-  else process.env.SINGULARITY_DIR = ORIGINAL_ROOT;
+  if (ORIGINAL_ROOT === undefined) unsetEnv("DIR");
+  else setEnv("DIR", ORIGINAL_ROOT);
   for (const d of dirs) rmSync(d, { recursive: true, force: true });
 });
 
 function sandbox(): { dir: string; claimMain: (checkout: string) => void } {
   const dir = realpathSync(mkdtempSync(join(tmpdir(), "checkout-ref-")));
   dirs.push(dir);
-  process.env.SINGULARITY_DIR = join(dir, "data");
+  setEnv("DIR", join(dir, "data"));
   return {
     dir,
     claimMain: (checkout) => {

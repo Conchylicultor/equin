@@ -60,7 +60,7 @@ sees a delivery.
 - **Fails open and PRINTS NOTHING.** A banner on every build in a
   toolchain-less environment would be noise in exactly the transcript this
   feature exists to keep clean. The caller records the `reason`. Escape hatch
-  `SINGULARITY_NO_SIGNAL_ORIGIN=1` (`signalOriginDisabled()`: no arm, and the
+  `EQUIN_NO_SIGNAL_ORIGIN=1` (`signalOriginDisabled()`: no arm, and the
   tap does not ensure the shim either).
 - **The shim is a dependency, not a compile inside the arm.** `op-runtime`'s
   `signalOriginTap` awaits `ensureDep(signalOriginShim, cliExecContext())`

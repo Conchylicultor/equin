@@ -53,19 +53,19 @@ preloaded, so neither needs eager registration.)
   restart-durability — ownership is *more* stable than build's.
 - **Versioned out-dir.** `releaseOutDir` (in `plugins/bundles/server`, which is
   DB-free so the CLI shares it) roots
-  each release at `<SINGULARITY_DIR>/releases/<worktree>/<comp>-<target>/<run-id>/`
+  each release at `<EQUIN_DIR>/releases/<worktree>/<comp>-<target>/<run-id>/`
   — versioned per run, not overwrite-in-place, so builds are kept and a
   `latest-<platform>` symlink (written by the CLI once a run is PACKED) points at
   the current `<run-id>`. The 104-byte
   Unix-socket cap no longer constrains this path: `launcher/bin/launch.ts` reroots
   the embedded-PG, PgBouncer, and gateway per-worktree backend sockets onto short
   `/tmp` dirs — the PG/PgBouncer sockets to a `/tmp/sgs-XXXXXX` dir via
-  `SINGULARITY_PG_SOCKET_DIR`, the backend worktree sockets to a `/tmp/sgw-XXXXXX`
-  dir via `SINGULARITY_SOCKETS_DIR` — so a long `<run-id>` is safe even for a
+  `EQUIN_PG_SOCKET_DIR`, the backend worktree sockets to a `/tmp/sgw-XXXXXX`
+  dir via `EQUIN_SOCKETS_DIR` — so a long `<run-id>` is safe even for a
   direct `<out>/launch`. For **preview**, the data root is a `/tmp/sgp-XXXXXX`
   mkdtemp — short by construction.
 - **Preview** (`server/internal/preview-manager.ts`) spawns the staged `launch`
-  binary with `SINGULARITY_DIR=<tmp>` + `SINGULARITY_LISTEN=loopback:<free>`, tracked in an in-memory
+  binary with `EQUIN_DIR=<tmp>` + `EQUIN_LISTEN=loopback:<free>`, tracked in an in-memory
   Map projected into the `release.previews` value
   (`server/internal/preview-state-resource.ts`: `serveValue(releasePreviews, {
   source: "external" })`, pushed by `releasePreviewsServed.notify()` on every
@@ -395,7 +395,7 @@ release and confirming the Cards/All/Longest/Composed tabs + toolbar render:
 
 1. **config_v2 defaults are vendored + reachable.** `release.ts` step 3.6 ships
    the git-layer `config/` tree and a `propagateConfigToUser`-resolved
-   `config-seed/`; `launch.ts` points `SINGULARITY_REPO_CONFIG_DIR` at the former
+   `config-seed/`; `launch.ts` points `EQUIN_REPO_CONFIG_DIR` at the former
    and seeds the latter into `<data>/config/<worktree>` (copy-if-absent) on first
    boot. So `config-v2.values` resolves the real defaults at runtime (verified: the
    full value, e.g. the 4 Library views, reaches the browser over the WS sub-ack).

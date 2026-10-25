@@ -2,5 +2,5 @@
   "name": "@equin/plugin-framework-tooling-lint-namespace-identity",
   "version": "0.0.1",
   "private": true,
-  "description": "Two lint rules over one mistake — answering 'which namespace?' with something that is not one: no-laundered-checkout-namespace bans casting a checkout directory name to a Namespace, and no-ambient-worktree-env bans the retired SINGULARITY_WORKTREE environment variable a runtime now receives as --namespace."
+  "description": "One lint rule against answering 'which namespace?' with something that is not one: no-laundered-checkout-namespace bans casting a checkout directory name to a Namespace."
 }

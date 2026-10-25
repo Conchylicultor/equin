@@ -1,3 +1,4 @@
+import { envEntries } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { afterAll, describe, expect, test } from "bun:test";
 import {
   existsSync,
@@ -39,7 +40,7 @@ import type { MainToWorkerFrame, WorkerToMainFrame } from "./protocol";
 // only the worker thread could have renewed it.
 //
 // Isolation: the worker thread evaluates its module graph fresh, and Bun's
-// Worker `env` option overrides its environment — so SINGULARITY_DIR points
+// Worker `env` option overrides its environment — so EQUIN_DIR points
 // the worker's latch AND its duress-episodes channel at a throwaway temp dir
 // (the parent's own import-frozen paths are irrelevant — it asserts via raw
 // fs on the temp paths). Runtime process.env mutations do NOT propagate to
@@ -104,8 +105,16 @@ const rigs: WorkerRig[] = [];
 function spawnRig(dir: string): WorkerRig {
   const frames: WorkerToMainFrame[] = [];
   const waiters: (() => void)[] = [];
+  // A Worker takes only set values; the data root under both its names.
+  const env: Record<string, string> = {};
+  for (const [name, value] of Object.entries({
+    ...process.env,
+    ...envEntries({ DIR: dir }),
+  })) {
+    if (value !== undefined) env[name] = value;
+  }
   const worker = new Worker(new URL("./entry.ts", import.meta.url), {
-    env: { ...process.env, SINGULARITY_DIR: dir },
+    env,
     // Spawned exactly as worker-host spawns it: the namespace rides argv.
     argv: namespaceArgv(),
   });
@@ -145,12 +154,12 @@ function spawnRig(dir: string): WorkerRig {
 }
 
 // The latch's declared data dir (`locks/duress`) under the worker's
-// SINGULARITY_DIR — the path the worker's `duressLatchDir` resolves to.
+// EQUIN_DIR — the path the worker's `duressLatchDir` resolves to.
 function latchPathIn(dir: string): string {
   return join(dir, "locks", "duress", LATCH_FILENAME);
 }
 
-// The vitals file under the worker's SINGULARITY_DIR — the status-file leaf's
+// The vitals file under the worker's EQUIN_DIR — the status-file leaf's
 // declared data dir (`locks/sentinel`).
 function readVitalsIn(dir: string): SentinelVitalsRecord {
   return SentinelVitalsRecordSchema.parse(

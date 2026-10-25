@@ -51,8 +51,8 @@ export const googleDescriptor: AuthProviderDescriptor = defineAuthProvider({
     }),
     fetchIdentity: fetchGoogleIdentity,
     resolveCredentials: async (env) => {
-      const idFromEnv = env.get("SINGULARITY_AUTH_GOOGLE_CLIENT_ID");
-      const secretFromEnv = env.get("SINGULARITY_AUTH_GOOGLE_CLIENT_SECRET");
+      const idFromEnv = env.get("AUTH_GOOGLE_CLIENT_ID");
+      const secretFromEnv = env.get("AUTH_GOOGLE_CLIENT_SECRET");
       if (idFromEnv) {
         return { clientId: idFromEnv, clientSecret: secretFromEnv };
       }

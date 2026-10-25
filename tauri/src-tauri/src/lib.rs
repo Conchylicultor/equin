@@ -42,7 +42,7 @@ struct StackCtx {
 /// release it). The embedded Postgres binds no TCP listener, but its port still
 /// names its Unix socket file (`.s.PGSQL.<port>`) and defaults to 5433, the dev
 /// cluster's, so each desktop instance still gets its own. This mirrors how the web
-/// preview path hands each instance its own `SINGULARITY_PG_PORT`.
+/// preview path hands each instance its own `EQUIN_PG_PORT`.
 fn pick_free_port() -> Option<u16> {
     std::net::TcpListener::bind("127.0.0.1:0")
         .ok()
@@ -119,12 +119,12 @@ pub fn run() {
             std::thread::spawn(move || {
                 if !gateway_up(port) {
                     let status = Command::new(bundle_dir.join("launch"))
-                        .env("SINGULARITY_DIR", &data_dir)
-                        .env("SINGULARITY_PG_SOCKET_DIR", &socket_dir)
+                        .env("EQUIN_DIR", &data_dir)
+                        .env("EQUIN_PG_SOCKET_DIR", &socket_dir)
                         // `host:port`; `loopback` binds 127.0.0.1 and [::1]
                         // only — the webview is the one client, on this machine.
-                        .env("SINGULARITY_LISTEN", format!("loopback:{port}"))
-                        .env("SINGULARITY_PG_PORT", pg_port.to_string())
+                        .env("EQUIN_LISTEN", format!("loopback:{port}"))
+                        .env("EQUIN_PG_PORT", pg_port.to_string())
                         .status();
                     if !matches!(status, Ok(s) if s.success()) {
                         eprintln!("equin: launch failed ({status:?}); app will not load");
@@ -148,12 +148,12 @@ pub fn run() {
                     // Synchronous: hold process exit until the daemons are signalled,
                     // else they outlive the app window.
                     let _ = Command::new(ctx.bundle_dir.join("teardown"))
-                        .env("SINGULARITY_DIR", &ctx.data_dir)
-                        .env("SINGULARITY_PG_SOCKET_DIR", &ctx.socket_dir)
+                        .env("EQUIN_DIR", &ctx.data_dir)
+                        .env("EQUIN_PG_SOCKET_DIR", &ctx.socket_dir)
                         // Same address launch was given, so teardown resolves the
                         // same gateway.
-                        .env("SINGULARITY_LISTEN", format!("loopback:{}", ctx.port))
-                        .env("SINGULARITY_PG_PORT", ctx.pg_port.to_string())
+                        .env("EQUIN_LISTEN", format!("loopback:{}", ctx.port))
+                        .env("EQUIN_PG_PORT", ctx.pg_port.to_string())
                         .status();
                 }
             }

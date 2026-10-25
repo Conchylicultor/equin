@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 /**
  * One-time backfill: insert push records for commits that have a push
- * trailer but are missing the conversation trailer (SINGULARITY_CONVERSATION_ID was
+ * trailer but are missing the conversation trailer (EQUIN_CONVERSATION_ID was
  * unset at commit time, so the hook never wrote the trailer).
  *
  * Strategy: the local worktree directory is named after the conversation ID, and

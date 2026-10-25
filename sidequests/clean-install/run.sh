@@ -100,12 +100,12 @@ case "$VM_NAME" in
     ;;
 esac
 
-SINGULARITY_DIR_RESOLVED="$(cd "$HOME" && printf '%s/.singularity/' "$PWD")"
+DATA_ROOT_RESOLVED="$(cd "$HOME" && printf '%s/.singularity/' "$PWD")"
 OUT_DIR_PARENT="$(dirname "$OUT_DIR")"
 mkdir -p "$OUT_DIR_PARENT"
 OUT_DIR_RESOLVED="$(cd "$OUT_DIR_PARENT" && printf '%s/%s/' "$PWD" "$(basename "$OUT_DIR")")"
 case "$OUT_DIR_RESOLVED" in
-  "$SINGULARITY_DIR_RESOLVED"*)
+  "$DATA_ROOT_RESOLVED"*)
     echo "Refusing: --out '$OUT_DIR' resolves inside ~/.singularity. This harness must never write there — pick a different --out." >&2
     exit 1
     ;;

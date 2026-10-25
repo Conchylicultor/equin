@@ -1,3 +1,7 @@
+import {
+  envName,
+  readEnv,
+} from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { resolve } from "path";
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import {
@@ -31,18 +35,18 @@ const run: CliAction<
     logLevel: string;
   }
 > = async (opts) => {
-  // The launcher is a release entry point: SINGULARITY_DIR must already
+  // The launcher is a release entry point: EQUIN_DIR must already
   // be set in the environment, because it re-roots the whole install. The
   // check is on the ENV rather than on `dataRoot()` precisely because
   // `dataRoot()` cannot express "explicitly set" — unset, it answers with
   // the dev ~/.singularity, and silently defaulting to that would pollute
   // the developer's data root with a release cluster, spec, and registry.
-  if (!process.env.SINGULARITY_DIR) {
+  if (!readEnv("DIR")) {
     console.error(
-      "serve-app requires SINGULARITY_DIR to be set in its environment.\n" +
+      `serve-app requires ${envName("DIR")} to be set in its environment.\n` +
         "Invoke the launcher with an isolated root, e.g.:\n" +
         "\n" +
-        "  SINGULARITY_DIR=$(mktemp -d /tmp/sonata-release.XXXX) \\\n" +
+        `  ${envName("DIR")}=$(mktemp -d /tmp/sonata-release.XXXX) \\\n` +
         "    bun plugins/framework/plugins/cli/bin/index.ts serve-app \\\n" +
         "      --name sonata --port 9100 --web <bundle>/web\n",
     );

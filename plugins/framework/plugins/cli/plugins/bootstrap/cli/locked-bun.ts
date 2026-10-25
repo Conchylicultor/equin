@@ -43,15 +43,13 @@ import {
   runtimePath,
   runtimeShimsDir,
 } from "@plugins/infra/plugins/launcher/core";
+import {
+  envEntries,
+  readEnv,
+  unsetEnv,
+} from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { spawnPassthrough } from "@plugins/infra/plugins/spawn/core";
 import { PRODUCT_NAME } from "@plugins/framework/plugins/product-name/core";
-
-/**
- * Present ⇒ this process IS the locked-Bun re-exec of its parent. Taken (read
- * and removed) before anything spawns, like the deps re-exec budget, so a
- * descendant `./equin` is judged on its own.
- */
-export const LOCKED_BUN_REEXEC_ENV = "SINGULARITY_LOCKED_BUN_REEXEC";
 
 /** The one exact bun release `mise.lock` records, or null when it does not. */
 export function lockedBunVersion(lockText: string): string | null {
@@ -98,6 +96,10 @@ export interface LockedBunOptions {
    * or null when there is no mise to install with.
    */
   install?: (version: string, root: string) => Promise<number | null>;
+  // The LOCKED_BUN_REEXEC variable, present ⇒ this process IS the locked-Bun
+  // re-exec of its parent. Taken (read and removed) before anything spawns, like
+  // the deps re-exec budget, so a descendant `./equin` is judged on its own.
+
   /** @internal TEST SEAM, mirrors `reexecAfterInstall`'s. */
   spawn?: (
     argv: string[],
@@ -110,8 +112,8 @@ export async function reexecUnderLockedBun(
   opts: LockedBunOptions = {},
 ): Promise<LockedBunOutcome> {
   const env = opts.env ?? process.env;
-  const alreadyReexeced = env[LOCKED_BUN_REEXEC_ENV] !== undefined;
-  delete env[LOCKED_BUN_REEXEC_ENV];
+  const alreadyReexeced = readEnv("LOCKED_BUN_REEXEC", env) !== undefined;
+  unsetEnv("LOCKED_BUN_REEXEC", env);
 
   const root = opts.root ?? process.cwd();
   const lockPath = join(root, "mise.lock");
@@ -173,7 +175,7 @@ export async function reexecUnderLockedBun(
       // The shims first, so the re-exec'd command's own `bun` children resolve
       // the lock too rather than the caller's pinned install dir.
       PATH: runtimePath(env),
-      [LOCKED_BUN_REEXEC_ENV]: "1",
+      ...envEntries({ LOCKED_BUN_REEXEC: "1" }),
     },
   );
   return { kind: "reexeced", exitCode };

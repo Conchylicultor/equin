@@ -61,7 +61,7 @@ export function openPrepareThread(): PrepareThread {
   // The environment AS IT IS NOW, explicitly: a Bun Worker otherwise sees only
   // the environment the process STARTED with, never a later `process.env`
   // edit. The thread is this run's own code moved off the runner's thread, so
-  // it must resolve every data dir (`SINGULARITY_DIR`) exactly as the runner
+  // it must resolve every data dir (`EQUIN_DIR`) exactly as the runner
   // would — measured: without this, a test's redirect never reached the
   // thread, which read and copied from the host's real warm-base pool.
   const env: Record<string, string> = {};

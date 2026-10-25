@@ -16,6 +16,11 @@
  * the protocol says. A real git fixture, because the tree is read from git.
  */
 
+import {
+  readEnv,
+  setEnv,
+  unsetEnv,
+} from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
@@ -39,7 +44,7 @@ const TIMEOUT_MS = 60_000;
 
 let root = "";
 let dataRoot = "";
-const priorDataRoot = process.env.SINGULARITY_DIR;
+const priorDataRoot = readEnv("DIR");
 
 function write(rel: string, content: string): void {
   const abs = join(root, rel);
@@ -68,9 +73,9 @@ const RESULT_KEYS: Record<string, string> = {
 };
 
 beforeAll(async () => {
-  // The stores are host-global; `SINGULARITY_DIR` points them at a temp root.
+  // The stores are host-global; `EQUIN_DIR` points them at a temp root.
   dataRoot = mkdtempSync(join(tmpdir(), "type-check-records-data-"));
-  process.env.SINGULARITY_DIR = dataRoot;
+  setEnv("DIR", dataRoot);
   root = mkdtempSync(join(tmpdir(), "type-check-records-"));
   write(".gitignore", ".cache/\n");
   write(
@@ -86,8 +91,8 @@ beforeAll(async () => {
 });
 
 afterAll(() => {
-  if (priorDataRoot === undefined) delete process.env.SINGULARITY_DIR;
-  else process.env.SINGULARITY_DIR = priorDataRoot;
+  if (priorDataRoot === undefined) unsetEnv("DIR");
+  else setEnv("DIR", priorDataRoot);
   if (root) rmSync(root, { recursive: true, force: true });
   if (dataRoot) rmSync(dataRoot, { recursive: true, force: true });
 });

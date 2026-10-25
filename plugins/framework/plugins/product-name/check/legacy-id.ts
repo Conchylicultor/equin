@@ -22,8 +22,6 @@ const OLD_NAME = /singularity/i;
  * something outside the repo's control.
  */
 const ALLOWED: ReadonlyArray<{ pattern: RegExp; why: string }> = [
-  // Step 6 moves the env vars to EQUIN_* with a dual-read window.
-  { pattern: /SINGULARITY_\w*/g, why: "an env var (step 6)" },
   // Step 7 moves the data dir to ~/.equin with a user-run migration.
   {
     pattern: /\.singularity(?=$|[/"'`\s,;:)\]}>*]|\.(?:\s|$))/g,

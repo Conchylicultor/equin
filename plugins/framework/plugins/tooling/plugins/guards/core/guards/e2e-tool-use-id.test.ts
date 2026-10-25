@@ -1,9 +1,13 @@
 import { describe, expect, test } from "bun:test";
+import { envNames } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { createContext } from "../context";
 import type { BashInput, Verdict } from "../types";
 import { e2eToolUseIdGuard } from "./e2e-tool-use-id";
 
 const ID = "toolu_01ABCdef";
+const EXPORT = `export ${envNames("TOOL_USE_ID")
+  .map((name) => `${name}=${ID}`)
+  .join(" ")};`;
 
 function rewritten(input: BashInput, toolUseId: string | null = ID) {
   const v = e2eToolUseIdGuard.check(
@@ -19,9 +23,7 @@ describe("e2e-tool-use-id guard", () => {
       rewritten({
         command: "./equin run plugins/x/e2e/flow.ts --url http://a",
       }),
-    ).toBe(
-      `export SINGULARITY_TOOL_USE_ID=${ID}; ./equin run plugins/x/e2e/flow.ts --url http://a`,
-    );
+    ).toBe(`${EXPORT} ./equin run plugins/x/e2e/flow.ts --url http://a`);
   });
 
   test("a chain reaches the run", () => {
@@ -30,9 +32,7 @@ describe("e2e-tool-use-id guard", () => {
         command: "./equin build && ./equin run plugins/x/e2e/f.ts",
         run_in_background: true,
       }),
-    ).toMatch(
-      /^export SINGULARITY_TOOL_USE_ID=toolu_01ABCdef; \.\/equin build/,
-    );
+    ).toStartWith(`${EXPORT} ./equin build`);
   });
 
   test("other commands, non-e2e runs and a payload without an id are untouched", () => {

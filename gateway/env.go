@@ -14,7 +14,7 @@ import (
 // (`append(os.Environ(), "SOCKET_PATH=…")`), and the exec sites that set no Env
 // at all got the same thing implicitly: a nil Cmd.Env in Go means "inherit
 // everything". The gateway's own environment is whatever its starter carried.
-// Started from an agent shell, that was the shell's SINGULARITY_CONVERSATION_ID
+// Started from an agent shell, that was the shell's EQUIN_CONVERSATION_ID
 // and CLAUDE_* — so every backend on the host (main, central, each
 // worktree) ran as that one conversation, and so did everything they spawned:
 // op-log records and commit trailers named it.
@@ -49,7 +49,7 @@ var errChildEnvRequired = errors.New("-child-env is required — start the gatew
 
 // parseChildEnvFlag splits the -child-env flag into its declared entries.
 // Each entry is a variable name, or a name prefix ending in `*`
-// (`SINGULARITY_AUTH_*`).
+// (`EQUIN_AUTH_*`).
 //
 // Every malformed entry is an error rather than skipped: the flag is generated
 // by the launcher, so a bad entry means the declaration and this parser
@@ -125,7 +125,7 @@ func captureChildEnv(declared []string) (ChildEnv, []string) {
 }
 
 // Names returns the names in the base environment, for logging. Names only:
-// values can be credentials (SINGULARITY_AUTH_*), and the log is not a secret
+// values can be credentials (EQUIN_AUTH_*), and the log is not a secret
 // store.
 func (c ChildEnv) Names() []string {
 	names := make([]string, 0, len(c.base))
@@ -170,4 +170,45 @@ func (c ChildEnv) Command(name string, args ...string) *exec.Cmd {
 	cmd := exec.Command(name, args...)
 	cmd.Env = c.With()
 	return cmd
+}
+
+// ─── the app's own variables, by key ─────────────────────────
+//
+// The Go twin of readEnv in plugins/infra/plugins/launcher/core (env.ts): each
+// of the app's variables has two names while the product's rename settles,
+// EQUIN_<key> and the legacy one, because an installed plist written by an
+// older `./equin start` still sets only the legacy name. Both are read, the
+// current one first; both set to different values is an error rather than a
+// guess. An empty value counts as unset, as os.Getenv always did here.
+// The prefixes must match envName / LEGACY_IDS.envPrefix (the product-name
+// legacy-ids-in-sync check holds this file to the legacy one).
+const (
+	envPrefix       = "EQUIN_"
+	legacyEnvPrefix = "SINGULARITY_"
+)
+
+// readEnv returns the value of the app variable `key` under either name, or ""
+// when neither is set.
+func readEnv(key string) (string, error) {
+	current, legacy := os.Getenv(envPrefix+key), os.Getenv(legacyEnvPrefix+key)
+	switch {
+	case current == "":
+		return legacy, nil
+	case legacy != "" && legacy != current:
+		return "", fmt.Errorf("%s%s=%q and %s%s=%q disagree: both names of one variable are set to different values — unset one (%s%s is the current name)",
+			envPrefix, key, current, legacyEnvPrefix, key, legacy, envPrefix, key)
+	default:
+		return current, nil
+	}
+}
+
+// mustReadEnv is readEnv for flag defaults, read before logging exists: a
+// conflict is printed and exits, like a bad flag.
+func mustReadEnv(key string) string {
+	v, err := readEnv(key)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(2)
+	}
+	return v
 }

@@ -109,7 +109,7 @@ export interface InstallLayout {
   readonly currentLink: string;
   /** `EQUIN_RELEASE_DIR` — the self-extractor's cache. */
   readonly runtimeDir: string;
-  /** `SINGULARITY_DIR` — postgres cluster, config, logs. The isolation boundary. */
+  /** `EQUIN_DIR` — postgres cluster, config, logs. The isolation boundary. */
   readonly dataDir: string;
   /** `EnvironmentFile` (0600, `root:svc-<c>`) carrying the per-install values. */
   readonly envFile: string;
@@ -202,7 +202,7 @@ export function loopbackOnlySentence(loopbackPort: number): string {
 }
 
 /**
- * The `SINGULARITY_LISTEN` value for a deployment — the single runtime override
+ * The `EQUIN_LISTEN` value for a deployment — the single runtime override
  * of the gateway's bind address, rendered into the `env` file by converge. The
  * loopback host is baked in here rather than passed, so a converge run cannot
  * emit a wildcard bind by omission.

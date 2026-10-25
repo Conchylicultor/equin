@@ -25,6 +25,11 @@
  * file's own version, plus the API line of what it imports.
  */
 
+import {
+  readEnv,
+  setEnv,
+  unsetEnv,
+} from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import {
   mkdirSync,
@@ -71,7 +76,7 @@ const TIMEOUT_MS = 180_000;
 let root = "";
 let dataRoot = "";
 const scratch: string[] = [];
-const priorDataRoot = process.env.SINGULARITY_DIR;
+const priorDataRoot = readEnv("DIR");
 
 function write(rel: string, content: string): void {
   const abs = join(root, rel);
@@ -106,7 +111,7 @@ const MANIFEST = "plugins/search/exempt/index.ts";
 
 beforeAll(async () => {
   dataRoot = mkdtempSync(join(tmpdir(), "type-check-run-base-data-"));
-  process.env.SINGULARITY_DIR = dataRoot;
+  setEnv("DIR", dataRoot);
   root = mkdtempSync(join(tmpdir(), "type-check-run-base-"));
   write(".gitignore", ".cache/\n");
   write(
@@ -125,8 +130,8 @@ beforeAll(async () => {
 });
 
 afterAll(() => {
-  if (priorDataRoot === undefined) delete process.env.SINGULARITY_DIR;
-  else process.env.SINGULARITY_DIR = priorDataRoot;
+  if (priorDataRoot === undefined) unsetEnv("DIR");
+  else setEnv("DIR", priorDataRoot);
   if (root) rmSync(root, { recursive: true, force: true });
   if (dataRoot) rmSync(dataRoot, { recursive: true, force: true });
   for (const d of scratch) rmSync(d, { recursive: true, force: true });
@@ -288,16 +293,17 @@ async function fullPath(): Promise<{
   done: Finalized;
   state: Map<string, FileBase>;
 }> {
-  const saved = process.env.SINGULARITY_DIR;
+  const saved = readEnv("DIR");
   const dir = mkdtempSync(join(tmpdir(), "type-check-run-base-full-"));
   scratch.push(dir);
-  process.env.SINGULARITY_DIR = dir;
+  setEnv("DIR", dir);
   try {
     const { plan, done } = await run();
     expect(plan.lintBase).toBeNull();
     return { done, state: await recordedState() };
   } finally {
-    process.env.SINGULARITY_DIR = saved;
+    if (saved === undefined) unsetEnv("DIR");
+    else setEnv("DIR", saved);
   }
 }
 

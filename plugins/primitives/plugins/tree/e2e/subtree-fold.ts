@@ -31,7 +31,7 @@
  *     --url http://<worktree>.localhost:9000 [--headed]
  *
  * Pass `--url` explicitly: the harness derives its default from
- * `$SINGULARITY_WORKTREE`, which in an agent shell read the main namespace,
+ * `$WORKTREE`, which in an agent shell read the main namespace,
  * not the worktree this script is checked out in.
  */
 import type { Locator, Page } from "playwright";

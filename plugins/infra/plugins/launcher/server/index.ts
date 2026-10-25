@@ -31,7 +31,6 @@ export {
 } from "./internal/dev-launch";
 export { GATEWAY_SERVICE, gatewayServiceJob } from "./internal/gateway-service";
 export {
-  LISTEN_ENV,
   LOOPBACK_BIND,
   resolveListenAddress,
   listenFlag,

@@ -1,3 +1,7 @@
+import {
+  envName,
+  readEnv,
+} from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { join } from "node:path";
 import { pgClusterDir } from "../../data-dirs";
 import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
@@ -9,11 +13,11 @@ import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 // Frozen at import time, like every path constant; the launcher/start scripts set
 // it in the process env before this module is first imported.
 function resolvePgPort(): number {
-  const raw = process.env.SINGULARITY_PG_PORT;
+  const raw = readEnv("PG_PORT");
   if (raw === undefined) return 5433;
   const n = Number(raw);
   if (!Number.isInteger(n) || n <= 0) {
-    throw new Error(`Invalid SINGULARITY_PG_PORT: ${raw}`);
+    throw new Error(`Invalid ${envName("PG_PORT")}: ${raw}`);
   }
   return n;
 }
@@ -46,8 +50,7 @@ export const PG_DATA_DIR = join(PG_DIR, `data-pg${PG_MAJOR}`);
 // `/tmp`-rooted dir is safe. Default unchanged ⇒ dev byte-identical. The pgbouncer
 // plugin reads the SAME env var so both agree on the socket dir. Frozen at import
 // time, like every path constant; the launcher sets it before this module loads.
-export const PG_SOCKET_DIR =
-  process.env.SINGULARITY_PG_SOCKET_DIR ?? join(PG_DIR, "socket");
+export const PG_SOCKET_DIR = readEnv("PG_SOCKET_DIR") ?? join(PG_DIR, "socket");
 export const PG_LOG_FILE = join(PG_DIR, "postgres.log");
 
 /**

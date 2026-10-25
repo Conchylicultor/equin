@@ -2,13 +2,14 @@ import type { Check } from "@plugins/framework/plugins/tooling/core";
 import { listCandidateSources } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { createTimeSlicer } from "@plugins/packages/plugins/macrotask-yield/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
-// Own-plugin, so relative — the `@plugins/infra/plugins/launcher/core` alias
-// would name this plugin from inside itself.
 import {
-  RUNTIME_FORWARDED_ENV,
-  RUNTIME_FORWARDED_PREFIXES,
-  RUNTIME_WITHHELD_ENV,
-} from "../core";
+  DECLARED_ENV_KEYS,
+  DECLARED_ENV_PREFIXES,
+  ENV_PREFIX,
+  envKeyOf,
+  isDeclaredEnvName,
+} from "@plugins/infra/plugins/launcher/plugins/env-names/core";
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import { stripComments } from "./internal/strip-comments";
 
 const DECLARATION = "plugins/infra/plugins/launcher/core";
@@ -22,10 +23,10 @@ function isTestFile(path: string): boolean {
   );
 }
 
-// ── launcher:runtime-env-declared ──────────────────────────────────────────
+// ── launcher:env-names ─────────────────────────────────────────────────────
 //
-// Every SINGULARITY_* variable is one of two kinds, and the difference decides
-// whether a backend may carry it:
+// Every variable the app reads or sets is one of two kinds, and the difference
+// decides whether a backend may carry it:
 //
 //  - an installation setting (the data root, a release's vendored-file
 //    locations, an operator knob), which must reach every backend; or
@@ -33,127 +34,170 @@ function isTestFile(path: string): boolean {
 //    host grant), which must never reach one — a backend that inherited it
 //    would act as whichever process happened to start the gateway.
 //
-// The launcher's declaration lists both kinds, and the gateway spawn forwards
-// only the first. So a name that is on neither list fails in one of two quiet
-// ways: an installation setting that silently never arrives (a release reads
-// its dev default instead of the vendored file), or — had the lists been a
-// denylist — a session value that silently leaks. This check makes adding the
-// name the moment that question gets answered.
+// The declaration (`core/internal/env-keys.ts`) lists both kinds BY KEY, and
+// the gateway spawn forwards only the first. TypeScript reaches a variable only
+// through the key-typed helpers (`readEnv`, `envEntries`, …), so an undeclared
+// key is a type error. What a type cannot see, this check holds:
 //
-// The question only means something for code that reads or sets a variable,
-// so that is all this scans. Comments are dropped first (a comment describing
-// a retired variable reads nothing, and in TypeScript neither does a regex
-// literal), and so are lint rules (a rule that names
-// a variable to ban it neither reads nor sets it). What is left: TypeScript
-// under plugins/, the gateway's Go, the git hooks, and the desktop shell's
-// Rust (it sets variables for the release launcher it starts).
+//  1. No TypeScript CODE spells a full name (`EQUIN_<key>`, or the legacy
+//     spelling). A full name written by hand bypasses the declaration, and a
+//     read of it misses the other name of the same variable. Comments may name
+//     one; strings, identifiers and template text may not.
+//  2. Every full name ANY tracked file spells — a mirror that cannot import the
+//     keys (the gateway's Go, the git hooks, the desktop shell's Rust, a shell
+//     script, a JSON config), a comment, a doc — is a declared key, so a mirror
+//     cannot read a variable nobody sets and a doc cannot keep a dead name.
+//     Tests are left out of this one: a test of the filter spells a name
+//     nobody declared on purpose.
+//  3. Every declared key is still used: named as a key in TypeScript code
+//     outside the declaration, or as a full name in a mirror (docs do not
+//     count). A dead entry is deleted, not left to look load-bearing.
 //
-// The reverse holds too: a declared name that no scanned code reads or sets any
-// more is reported as stale, so the lists cannot fill up with names nothing
-// uses.
-const NAME_PATHSPECS = [
-  ":(glob)plugins/**/*.ts",
-  ":(glob)plugins/**/*.tsx",
-  ":(glob)gateway/*.go",
-  ":(glob).githooks/*",
-  ":(glob)tauri/**/*.rs",
-];
+// Research notes are history and out of scope, like generated files.
+const ENV_NAMES_RULE = "launcher:env-names";
 
-// The declaration itself spells every declared name; scanning it would make
-// every entry look used.
-const DECLARATION_FILE = `${DECLARATION}/internal/runtime-env.ts`;
+// The env-name registry (the `env-names` sub-plugin). Its declaration names
+// keys, never full names, but it is the one file whose key spellings are
+// definitions rather than uses.
+const ENV_NAMES_CORE = `${DECLARATION.replace(/\/core$/, "")}/plugins/env-names/core`;
+const DECLARATION_FILE = `${ENV_NAMES_CORE}/internal/env-keys.ts`;
 
-function isScanned(path: string): boolean {
-  return (
-    !isTestFile(path) && !path.includes("/lint/") && path !== DECLARATION_FILE
-  );
+// A full variable name, not the tail of a longer identifier: the lookbehind is
+// what leaves out globals like `__EQUIN_SCOPE__` (a menu-bar script
+// placeholder) and the web-artifact globals, which no environment holds.
+const FULL_NAME_RE = new RegExp(
+  `(?<![A-Za-z0-9_])(?:${ENV_PREFIX}|${LEGACY_IDS.envPrefix})[A-Z0-9_]+`,
+  "g",
+);
+
+function isTypeScript(path: string): boolean {
+  return /\.tsx?$/.test(path);
 }
 
-// A variable name, and not the tail of a longer identifier: the lookbehind is
-// what leaves out the vite build-time defines `__SINGULARITY_GRAPH__` /
-// `__SINGULARITY_COMMIT__`, which are substituted into the bundle at build time
-// and never read from any environment.
-const NAME_RE = /(?<![A-Za-z0-9_])SINGULARITY_[A-Z0-9_]+/g;
-
-const DECLARED_NAMES: readonly string[] = [
-  ...Object.keys(RUNTIME_FORWARDED_ENV),
-  ...Object.keys(RUNTIME_WITHHELD_ENV),
-];
-const PREFIXES: readonly string[] = Object.keys(RUNTIME_FORWARDED_PREFIXES);
-
-/** The declared entry that covers `name`: itself, or the prefix it starts with. */
-function declaredEntryFor(name: string): string | undefined {
-  if (DECLARED_NAMES.includes(name)) return name;
-  // A template that builds the name (`SINGULARITY_AUTH_${provider}_…`) scans
-  // as the bare prefix, which the prefix covers too.
-  return PREFIXES.find((p) => name.startsWith(p));
+function isProse(path: string): boolean {
+  return /\.(?:md|mdx|txt)$/.test(path) || path.endsWith("package.json");
 }
 
-const runtimeEnvDeclaredCheck: Check = {
-  id: "launcher:runtime-env-declared",
+/** Whether `code` (comments already blanked) names `key` as a key: a quoted string or an object key. */
+function namesKey(code: string, key: string): boolean {
+  const k = key.replace(/[^A-Z0-9_]/g, "");
+  if (DECLARED_ENV_PREFIXES.includes(key)) {
+    return new RegExp(`["'\`]${k}`).test(code);
+  }
+  return new RegExp(`["'\`]${k}["'\`]|(?<![A-Za-z0-9_$.])${k}\\s*:`).test(code);
+}
+
+const envNamesCheck: Check = {
+  id: ENV_NAMES_RULE,
   description:
-    "Every SINGULARITY_* variable the code reads or sets must be declared as forwarded to the runtime tree or withheld from it, in plugins/infra/plugins/launcher/core — and every declared name must still be used",
-  async run() {
+    "The app's environment variables are spelled by key: no full EQUIN_* / legacy name in TypeScript code, every full name a mirror or doc spells is declared in launcher/core, and every declared key is still used",
+  exemptable: {
+    [ENV_NAMES_RULE]:
+      "spells a full variable name on purpose (a fixture of the rule itself)",
+  },
+  outOfScope: ["research", "generated"],
+  async run(ctx) {
     const root = await getWorktreeRoot();
-    const sources = await listCandidateSources({
-      root,
-      grepArg: "SINGULARITY_",
-      fixed: true,
-      pathspecs: NAME_PATHSPECS,
-    });
+    const exempt = await ctx.exempt(ENV_NAMES_RULE);
+    const byPath = new Map<string, string>();
+    for (const grepArg of [ENV_PREFIX, LEGACY_IDS.envPrefix]) {
+      for (const { rel, src } of await listCandidateSources({
+        root,
+        grepArg,
+        fixed: true,
+        pathspecs: ["."],
+      })) {
+        byPath.set(rel, src);
+      }
+    }
 
-    // name → every place it is spelled, so one undeclared name is one entry.
+    const handSpelled: string[] = [];
     const undeclared = new Map<string, string[]>();
-    const used = new Set<string>();
-    // The check runner's thread is shared by every check in the pass: pause
-    // every ~10 ms of scanning rather than holding it for the whole file set.
+    const usedByMirror = new Set<string>();
     const slice = createTimeSlicer();
-    for (const { rel, src } of sources) {
-      if (!isScanned(rel)) continue;
+    for (const [rel, src] of byPath) {
+      if (rel === DECLARATION_FILE || exempt.skips(rel)) continue;
       await slice();
-      const lines = stripComments(rel, src).split("\n");
+      const ts = isTypeScript(rel);
+      const code = ts ? stripComments(rel, src).split("\n") : [];
+      const lines = src.split("\n");
       for (let i = 0; i < lines.length; i++) {
-        for (const match of lines[i]!.matchAll(NAME_RE)) {
+        for (const match of lines[i]!.matchAll(FULL_NAME_RE)) {
           const name = match[0];
-          const entry = declaredEntryFor(name);
-          if (entry !== undefined) {
-            used.add(entry);
-            continue;
+          if (!isDeclaredEnvName(name)) {
+            if (isTestFile(rel)) continue;
+            const sites = undeclared.get(name) ?? [];
+            sites.push(`${rel}:${i + 1}`);
+            undeclared.set(name, sites);
+          } else if (!ts && !isProse(rel)) {
+            usedByMirror.add(name);
           }
-          const sites = undeclared.get(name) ?? [];
-          sites.push(`${rel}:${i + 1}`);
-          undeclared.set(name, sites);
+        }
+        if (ts) {
+          for (const match of code[i]!.matchAll(FULL_NAME_RE)) {
+            handSpelled.push(`${rel}:${i + 1}  ${match[0]}`);
+          }
         }
       }
     }
-    const stale = [...DECLARED_NAMES, ...PREFIXES]
-      .filter((entry) => !used.has(entry))
-      .sort();
 
-    if (undeclared.size === 0 && stale.length === 0) return { ok: true };
+    // Rule 3 reads TypeScript code that names keys, which need not spell a
+    // full name at all — a second, narrower pass over the importers.
+    const keyUsers = await listCandidateSources({
+      root,
+      grepArg: `@${ENV_NAMES_CORE}`,
+      fixed: true,
+      pathspecs: [":(glob)plugins/**/*.ts", ":(glob)plugins/**/*.tsx"],
+    });
+    const code = keyUsers
+      .filter(({ rel }) => rel !== DECLARATION_FILE)
+      .map(({ rel, src }) => stripComments(rel, src))
+      .join("\n");
+    const stale: string[] = [];
+    for (const key of [...DECLARED_ENV_KEYS, ...DECLARED_ENV_PREFIXES]) {
+      await slice();
+      const mirrored = [...usedByMirror].some(
+        (name) =>
+          envKeyOf(name) === key ||
+          (key.endsWith("_") && envKeyOf(name)?.startsWith(key)),
+      );
+      if (!mirrored && !namesKey(code, key)) stale.push(key);
+    }
 
+    if (
+      handSpelled.length === 0 &&
+      undeclared.size === 0 &&
+      stale.length === 0
+    ) {
+      return { ok: true };
+    }
     const problems: string[] = [];
+    if (handSpelled.length > 0) {
+      problems.push(
+        `${handSpelled.length} full variable name(s) spelled in TypeScript code:\n    ${handSpelled.join("\n    ")}`,
+      );
+    }
     if (undeclared.size > 0) {
       const entries = [...undeclared.entries()]
         .sort(([a], [b]) => a.localeCompare(b))
         .map(([name, sites]) => `${name}\n        ${sites.join("\n        ")}`);
       problems.push(
-        `${undeclared.size} SINGULARITY_* variable(s) not declared for the runtime tree:\n    ${entries.join("\n    ")}`,
+        `${undeclared.size} variable name(s) that are not declared keys:\n    ${entries.join("\n    ")}`,
       );
     }
     if (stale.length > 0) {
       problems.push(
-        `${stale.length} declared name(s) that no code reads or sets any more:\n    ${stale.join("\n    ")}`,
+        `${stale.length} declared key(s) that no code reads or sets any more:\n    ${stale.sort().join("\n    ")}`,
       );
     }
     return {
       ok: false,
       message: problems.join("\n"),
       hint:
-        "For each undeclared name, answer one question: should a backend inherit this from whoever starts the gateway? " +
-        `Add it to RUNTIME_FORWARDED_ENV (yes — an installation setting every backend must see) or RUNTIME_WITHHELD_ENV (no — somebody's own state, delivered some other way) in ${DECLARATION}, with the one-line reason. ` +
-        "Forwarded is what makes a variable the release launcher sets actually reach the backend; withheld is what keeps an agent shell's variables out of every backend on the host. " +
-        "A stale name was declared for code that is gone: delete its entry.",
+        `In TypeScript, name the KEY through @${ENV_NAMES_CORE}: \`readEnv("LANE")\`, \`{ ...process.env, ...envEntries({ LANE: x }) }\`, \`setEnv\` / \`setEnvDefault\` / \`unsetEnv\`, \`envName("LANE")\` in a message — they read and write both names of the variable while the rename settles. ` +
+        `A new variable is a new key in ${DECLARATION_FILE}, answering one question: should a backend inherit this from whoever starts the gateway? Yes → RUNTIME_FORWARDED_ENV (an installation setting every backend must see); no → RUNTIME_WITHHELD_ENV (somebody's own state, delivered some other way), with the one-line reason. ` +
+        "A mirror (Go, shell, Rust, JSON) spells declared names only, and reads both (gateway/env.go readEnv; in shell, the current name defaulting to the legacy one). " +
+        "A stale key was declared for code that is gone: delete its entry.",
     };
   },
 };
@@ -289,6 +333,16 @@ const PER_PROCESS_ENV: Record<
   },
 };
 
+// Where a per-process variable could be read or set: TypeScript under
+// plugins/, the gateway's Go, the git hooks and the desktop shell's Rust.
+const NAME_PATHSPECS = [
+  ":(glob)plugins/**/*.ts",
+  ":(glob)plugins/**/*.tsx",
+  ":(glob)gateway/*.go",
+  ":(glob).githooks/*",
+  ":(glob)tauri/**/*.rs",
+];
+
 // This file spells every name it bans, in the table above.
 const THIS_FILE = "plugins/infra/plugins/launcher/check/index.ts";
 
@@ -356,7 +410,7 @@ const perProcessEnvOnArgvCheck: Check = {
 };
 
 export default [
-  runtimeEnvDeclaredCheck,
+  envNamesCheck,
   gatewayEnvExplicitCheck,
   gatewayPureGoCheck,
   perProcessEnvOnArgvCheck,

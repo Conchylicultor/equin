@@ -40,7 +40,7 @@ export const SCHEMA_GLOBS = [
  * That is why this is one constant rather than a literal per call site.
  *
  * This is the repo-relative DEV-TREE source location. It is NOT the runtime
- * migrations dir: the runner reads `SINGULARITY_MIGRATIONS_DIR ?? <its own
+ * migrations dir: the runner reads `EQUIN_MIGRATIONS_DIR ?? <its own
  * dir>/../../data` (`server/internal/runner.ts`), which a released bundle points
  * at `<bundle>/migrations/data`. No runtime path reads this constant.
  */

@@ -16,7 +16,7 @@ import type { Carrier } from "../../core";
  * minting builds for ever.
  *
  * Both pins come from globals the build bakes into `index.html`
- * (`compose.ts` → `__SINGULARITY_GRAPH__` / `__SINGULARITY_COMMIT__`, which
+ * (`compose.ts` → the graph and commit globals, which
  * `import.meta.env.VITE_BUILD_GRAPH` / `VITE_BUILD_COMMIT` compile to). Neither
  * is baked into a hashed artifact: either would churn every artifact hash on
  * every build.

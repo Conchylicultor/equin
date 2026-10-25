@@ -1,3 +1,4 @@
+import { envName } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { defineCliCommand } from "@plugins/framework/plugins/cli/core";
 import { CHECK_SCOPES } from "@plugins/framework/plugins/tooling/core";
 
@@ -86,7 +87,8 @@ export default defineCliCommand<
         "recorded duration is mostly the wave's own length (the suite costs 601s serially " +
         "and reports 13817s unbounded), and even a merely narrower run reorders the table. " +
         "Also settable as " +
-        "SINGULARITY_CHECK_JOBS, which is what reaches the check pass `build` and `push` " +
+        `${envName("CHECK_JOBS")}, which is what ` +
+        "reaches the check pass `build` and `push` " +
         "spawn (they inherit the environment; nothing threads a flag through). The flag " +
         "wins over the env var; a value that is not a positive integer fails loudly rather " +
         "than falling back to the default.",

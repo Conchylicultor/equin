@@ -87,8 +87,8 @@ Loopback only by default: the gateway's `-listen loopback:9000` binds
 `127.0.0.1:9000` and `[::1]:9000` (a host without IPv6 gets the first alone, with
 a warning; `[::1]` held by someone else is fatal). So the agent manager is
 unreachable off-box, and macOS never asks to "accept incoming network
-connections", unless someone asked for it: `SINGULARITY_LISTEN=:9000 ./equin start`
-binds every interface, and `SINGULARITY_LISTEN=<host>:9000` one address. Only the
+connections", unless someone asked for it: `EQUIN_LISTEN=:9000 ./equin start`
+binds every interface, and `EQUIN_LISTEN=<host>:9000` one address. Only the
 host may change; the port stays 9000. The bind is baked into the plist, so a
 change reaches the running gateway on `./equin start --force`.
 

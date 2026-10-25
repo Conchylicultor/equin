@@ -9,6 +9,10 @@
  * Exits 0 on success (PG is running), non-zero on failure.
  */
 import {
+  envName,
+  readEnv,
+} from "@plugins/infra/plugins/launcher/plugins/env-names/core";
+import {
   existsSync,
   lstatSync,
   mkdirSync,
@@ -81,11 +85,11 @@ function platformPackage(): string {
 
 function resolveBinDir(): string {
   // A packaged release points at vendored native binaries via env override.
-  const override = process.env.SINGULARITY_PG_BIN_DIR;
+  const override = readEnv("PG_BIN_DIR");
   if (override) {
     if (!existsSync(override)) {
       throw new Error(
-        `pg: SINGULARITY_PG_BIN_DIR set to ${override} but that directory does not exist`,
+        `pg: ${envName("PG_BIN_DIR")} set to ${override} but that directory does not exist`,
       );
     }
     return override;

@@ -619,7 +619,7 @@ which app it is. That namespace resolves both the per-worktree database and,
 through that namespace's `spec.json`, the composition registry: same app, same DB
 as the parent, because the parent SAID so.
 
-It used to be inherited instead, through a `SINGULARITY_WORKTREE` environment
+It used to be inherited instead, through a `WORKTREE` environment
 variable, and that is exactly the failure this replaced: an environment variable
 reaches every descendant forever, so a value nobody chose became every agent
 session's identity

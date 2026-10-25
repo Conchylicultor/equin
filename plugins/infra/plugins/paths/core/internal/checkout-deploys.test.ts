@@ -1,3 +1,8 @@
+import {
+  readEnv,
+  setEnv,
+  unsetEnv,
+} from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { afterAll, afterEach, describe, expect, test } from "bun:test";
 import {
   mkdirSync,
@@ -20,7 +25,7 @@ import { SERVER_CORE_RELATIVE } from "./paths";
 // `realpathSync`, so a fixture whose directories do not exist would be testing a
 // different comparison than the one that runs.
 
-const ORIGINAL_ROOT = process.env.SINGULARITY_DIR;
+const ORIGINAL_ROOT = readEnv("DIR");
 const fixtures: string[] = [];
 
 function fixture(): {
@@ -43,7 +48,7 @@ function fixture(): {
 } {
   const dir = mkdtempSync(join(tmpdir(), "checkout-deploys-"));
   fixtures.push(dir);
-  process.env.SINGULARITY_DIR = join(dir, "data");
+  setEnv("DIR", join(dir, "data"));
   // The registry layout is spelled here rather than taken from
   // `worktreeArtifacts.spec`, which takes a `Namespace` — and one case below
   // registers a directory whose name is deliberately not one.
@@ -90,8 +95,8 @@ function capturingWarnings<T>(fn: () => T): { result: T; warnings: string[] } {
 }
 
 afterEach(() => {
-  if (ORIGINAL_ROOT === undefined) delete process.env.SINGULARITY_DIR;
-  else process.env.SINGULARITY_DIR = ORIGINAL_ROOT;
+  if (ORIGINAL_ROOT === undefined) unsetEnv("DIR");
+  else setEnv("DIR", ORIGINAL_ROOT);
 });
 
 afterAll(() => {

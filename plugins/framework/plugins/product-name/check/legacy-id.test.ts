@@ -18,10 +18,15 @@ describe("offendingLine", () => {
     expect(offendingLine(`// the ${OLD} data root`, [])).toBe(true);
   });
 
-  test("leaves the env vars, the data dir and repo URLs to their own steps", () => {
-    expect(offendingLine(`process.env.${OLD.toUpperCase()}_DIR`, [])).toBe(
-      false,
-    );
+  test("an env var's old name is flagged, except in a mirror that spells the prefix", () => {
+    const name = `${OLD.toUpperCase()}_DIR`;
+    expect(offendingLine(`process.env.${name}`, [])).toBe(true);
+    expect(
+      offendingLine(`\${NEW_DIR:-$${name}}`, [`${OLD.toUpperCase()}_`]),
+    ).toBe(false);
+  });
+
+  test("leaves the data dir and repo URLs to their own steps", () => {
     expect(offendingLine(`~/.${OLD}/worktrees/x`, [])).toBe(false);
     expect(offendingLine(`"$HOME/.${OLD}"`, [])).toBe(false);
     expect(offendingLine(`https://github.com/Owner/${OLD}/pull/1`, [])).toBe(

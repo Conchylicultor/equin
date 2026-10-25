@@ -41,9 +41,9 @@ step_01_baseline_TAG="from-docs"
 
 step_02_one_command() {
   if [[ -n "${CLEAN_INSTALL_SH:-}" ]]; then
-    printf "cat > /tmp/install.sh <<'SINGULARITY_INSTALL_SH'\n"
+    printf "cat > /tmp/install.sh <<'INSTALL_SH_EOF'\n"
     cat "$CLEAN_INSTALL_SH"
-    printf "SINGULARITY_INSTALL_SH\n"
+    printf "INSTALL_SH_EOF\n"
     printf "cat /tmp/install.sh | bash -s -- %s\n" "${CLEAN_INSTALL_ARGS:-}"
   else
     printf 'curl -fsSL %s | bash -s -- %s\n' "$INSTALL_URL" "${CLEAN_INSTALL_ARGS:-}"

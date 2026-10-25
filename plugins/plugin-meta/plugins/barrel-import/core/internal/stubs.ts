@@ -176,7 +176,7 @@ export function registerBarrelStubs(_repoRoot: string): void {
       // registerBarrelStubs). Stubbing it is what created the export-list drift bug.
 
       // @plugins/database/server is intentionally left unstubbed too: its barrel
-      // is import-safe (lazy pool, no SINGULARITY_WORKTREE read at eval — see
+      // is import-safe (lazy pool, no WORKTREE read at eval — see
       // plugins/database/CLAUDE.md § Import-safety), so the real module loads.
       // A hand-written export list here drifted the moment the barrel grew an
       // export another barrel reads at eval (withQueryDeadline broke docgen).

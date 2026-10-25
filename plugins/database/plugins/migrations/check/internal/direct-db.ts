@@ -1,6 +1,6 @@
 import { Pool } from "pg";
 // Connect via the database CORE barrel, not admin/server: the admin pool module
-// throws at import time if SINGULARITY_WORKTREE is unset, which is the norm in a
+// throws at import time if the retired worktree variable is unset, which is the norm in a
 // tooling/check subprocess. The core barrel exposes exactly the config→connstring
 // helpers for non-backend consumers and is import-safe by design.
 import {

@@ -1,3 +1,4 @@
+import { envEntries } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import {
   spawnCaptured,
   spawnPassthrough,
@@ -16,15 +17,6 @@ import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 // to leave them open: nothing else would ever break such a wedge (the
 // fleet-level op-wedge watchdog was retired 2026-07-28).
 const GIT_TIMEOUT_MS = 60_000;
-
-/**
- * Env flag that suppresses the `.githooks/post-rewrite` hook for a child git
- * process. Set by the two callers that own the normalize themselves:
- *   - `push`, around its own rebase — it installs the rebased lockfile BEFORE
- *     normalizing, an ordering the hook cannot know about;
- *   - this module's own amend, which would otherwise re-enter the hook.
- */
-export const SKIP_POST_REWRITE_ENV = "SINGULARITY_SKIP_POST_REWRITE";
 
 async function exec(
   cmd: string[],
@@ -160,7 +152,12 @@ export async function normalizeGeneratedArtifacts(
   // The hook re-enters here via `git commit --amend`; the env flag closes that
   // loop. (The markers are already cleared above, so the guard is belt-and-
   // braces — but it makes the no-recursion property local to this call.)
-  const env = { ...process.env, [SKIP_POST_REWRITE_ENV]: "1" };
+  // SKIP_POST_REWRITE suppresses the `.githooks/post-rewrite` hook for a child
+  // git process. Set by the two callers that own the normalize themselves:
+  // `push`, around its own rebase (it installs the rebased lockfile BEFORE
+  // normalizing, an ordering the hook cannot know about), and this amend, which
+  // would otherwise re-enter the hook.
+  const env = { ...process.env, ...envEntries({ SKIP_POST_REWRITE: "1" }) };
   await exec(["git", "add", "-A"], root, env);
   await exec(
     [

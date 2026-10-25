@@ -6,7 +6,7 @@ import { sanitizeChannel } from "@plugins/infra/plugins/file-sink/core";
 import { worktreesDir } from "@plugins/infra/plugins/paths/server";
 import { logsDirFor, readChannelJson } from "./persist";
 
-// Hermetic: a throwaway worktree name under the real SINGULARITY_DIR (mirrors
+// Hermetic: a throwaway worktree name under the real EQUIN_DIR (mirrors
 // host-semaphore's test precedent), removed in afterEach. The WRITE/rotation
 // path moved to file-sink, so we seed real log-channel envelope lines directly
 // on disk (the `{t,stream,line}` JSONL shape) at the same path readChannelJson

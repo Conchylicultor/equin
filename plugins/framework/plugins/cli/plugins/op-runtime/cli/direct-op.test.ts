@@ -1,3 +1,4 @@
+import { envEntries } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { describe, expect, test } from "bun:test";
 import type {
   Grant,
@@ -25,8 +26,7 @@ function fakeGrant(units: number, lane: Lane): Grant {
     lane,
     run: (fn) => fn(),
     env: () => ({
-      SINGULARITY_HOST_GRANT: String(units),
-      SINGULARITY_HOST_LANE: lane,
+      ...envEntries({ HOST_GRANT: String(units) }),
     }),
   };
 }

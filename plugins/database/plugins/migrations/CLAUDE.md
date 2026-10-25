@@ -495,7 +495,7 @@ copy of the literal — a copy that drifted would fail exactly this way.
 
 The constant is the repo-relative **dev-tree source location**. It is deliberately NOT
 the runtime migrations dir: the runner reads
-`SINGULARITY_MIGRATIONS_DIR ?? <runner dir>/../../data` (`server/internal/runner.ts`),
+`EQUIN_MIGRATIONS_DIR ?? <runner dir>/../../data` (`server/internal/runner.ts`),
 and a released bundle points that env var at `<bundle>/migrations/data`. No runtime
 path reads `MIGRATIONS_PLUGIN_DIR`.
 

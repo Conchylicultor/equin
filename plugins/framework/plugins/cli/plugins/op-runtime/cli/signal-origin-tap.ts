@@ -1,3 +1,4 @@
+import { envName } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { ensureDep, type Ready } from "@plugins/infra/plugins/deps/deps";
 import type { BuildSource } from "@plugins/infra/plugins/deps/plugins/build/deps";
 import { cliExecContext } from "@plugins/infra/plugins/jobs/plugins/supervised-job/cli";
@@ -55,7 +56,7 @@ async function ensureShim(): Promise<Shim> {
   if (signalOriginDisabled()) {
     return {
       kind: "unavailable",
-      reason: "disabled by SINGULARITY_NO_SIGNAL_ORIGIN=1",
+      reason: `disabled by ${envName("NO_SIGNAL_ORIGIN")}=1`,
     };
   }
   try {

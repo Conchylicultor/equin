@@ -17,7 +17,7 @@ import {
 //   `@plugins/infra/plugins/paths/core`). A CLI process has no runtime
 //   namespace at all and must never ask for one.
 //
-// The value used to ride in `SINGULARITY_WORKTREE`, and an environment variable
+// The value used to ride in `WORKTREE`, and an environment variable
 // reaches every descendant forever. Main's backend was the first process to talk
 // to the tmux server after a restart, so the tmux server kept main's
 // environment, and from then on every agent session — and every `build`,

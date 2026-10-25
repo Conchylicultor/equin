@@ -200,7 +200,7 @@ its disable does not cover. Parameters and imports have no in-file value.
   - **`import-scan-safety`** — import-scan-safety lint rule: no-adhoc-import-scan
   - **`intersection-observer-safety`** — intersection-observer-safety lint rule: no-raw-intersection-observer
   - **`marker-scan-safety`** — marker-scan-safety lint rule: no-adhoc-marker-scan
-  - **`namespace-identity`** [exempt] — Two lint rules over one mistake — answering 'which namespace?' with something that is not one: no-laundered-checkout-namespace bans casting a checkout directory name to a Namespace, and…
+  - **`namespace-identity`** — One lint rule against answering 'which namespace?' with something that is not one: no-laundered-checkout-namespace bans casting a checkout directory name to a Namespace.
   - **`polling-safety`** — polling-safety lint rule: no-refetch-interval
   - **`promise-safety`** — promise-safety lint rules: no-floating-promises, no-bare-catch
   - **`reactive-server-io`** — reactive-server-io lint rule: no-reactive-server-io

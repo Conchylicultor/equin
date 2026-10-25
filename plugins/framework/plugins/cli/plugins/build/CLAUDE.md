@@ -55,7 +55,7 @@ files included. Left dirty, main's checkout made every push's `git merge
 `build` is deliberately **not** `detachable`: the orphan guard exiting it when
 its invoking shell dies is what stops an abandoned build from sitting on the
 build lock and a host grant. The detached self-restart build exempts itself
-through `SINGULARITY_BUILD_DETACHED` instead.
+through `EQUIN_BUILD_DETACHED` instead.
 
 `pg` is a dependency of this plugin rather than of the CLI host, because
 `cli/run.ts` is its only importer here (`databaseReady` and `waitForPg` both

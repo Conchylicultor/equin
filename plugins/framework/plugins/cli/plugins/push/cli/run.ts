@@ -1,3 +1,4 @@
+import { envEntries } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { realpathSync } from "node:fs";
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import {
@@ -9,10 +10,7 @@ import {
   signalOriginTap,
 } from "@plugins/framework/plugins/cli/plugins/op-runtime/cli";
 import { ensureDeps } from "@plugins/framework/plugins/cli/plugins/bootstrap/cli";
-import {
-  SKIP_POST_REWRITE_ENV,
-  normalizeGeneratedArtifacts,
-} from "@plugins/framework/plugins/cli/plugins/git-artifacts/cli";
+import { normalizeGeneratedArtifacts } from "@plugins/framework/plugins/cli/plugins/git-artifacts/cli";
 import {
   createOpProfiler,
   type OpProfiler,
@@ -187,7 +185,7 @@ async function readLandingShape(): Promise<LandingShape> {
 // the regen runs against node_modules that match the tree it is regenerating.
 const rebaseEnv = (): Record<string, string | undefined> => ({
   ...process.env,
-  [SKIP_POST_REWRITE_ENV]: "1",
+  ...envEntries({ SKIP_POST_REWRITE: "1" }),
 });
 
 // Install the lockfile the rebase just brought in — main may have added

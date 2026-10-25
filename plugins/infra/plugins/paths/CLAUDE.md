@@ -77,14 +77,14 @@ a reviewed edit to `DATA_DIR_KINDS`, and that friction is the point.
 ### The root itself is unjoinable
 
 `dataRoot()` returns the root, and its **only** legitimate use is handing that
-root to a child process as its `SINGULARITY_DIR` (the gateway spawn, a release
+root to a child process as its `EQUIN_DIR` (the gateway spawn, a release
 launch, a remote deploy's env line) — or reporting it to a human.
 `join(dataRoot(), …)` is exactly what `defineDataDir` exists to replace: a
 joined root is an undeclared directory, which is the failure mode the registry
 is here to make impossible.
 
 `paths:data-root-not-joined` enforces it: no `join`/`resolve`/`` `${…}/` `` of
-`dataRoot()`, and no **read** of `process.env.SINGULARITY_DIR` outside a
+`dataRoot()`, and no **read** of `process.env.EQUIN_DIR` outside a
 four-entry allowlist (a raw env read is a second derivation of the root).
 **Writing** that var — `=`, `??=`, an `env: {…}` key — is the handoff to a child
 and is never flagged; `*.test.ts` is exempt, since a test owning its own root is
@@ -95,7 +95,7 @@ preview's `/tmp` data dir, a fresh install's), use `relativeToDataRoot(dir, …)
 It takes a `DataDir`, so the answer comes from the declaration.
 
 `dataRoot()` is a **function**, and `DataDir.path` is a **getter** — never a
-value frozen at module eval. `SINGULARITY_DIR` is env-overridable and the release
+value frozen at module eval. `EQUIN_DIR` is env-overridable and the release
 launcher sets it *before* importing anything path-dependent, while
 `defineDataDir` runs at consumer module eval, which is earlier still. This is the
 same reasoning that made `webDistDir()` a function; the frozen-const form there
@@ -166,7 +166,7 @@ through the move first, so nothing reads the new spot before the bytes are there
 **Only the host singleton running merged code moves**: the main backend from
 the main checkout, or a release's backend on its own root. Not
 `isHostSingleton()` alone — every process an agent pane spawns inherits
-`SINGULARITY_WORKTREE` set to the main namespace, so a worktree's CLI, tests and hooks read as
+`WORKTREE` set to the main namespace, so a worktree's CLI, tests and hooks read as
 the singleton, and an unmerged branch must never mutate the shared root. The
 **symlink** keeps older checkouts on the same bytes instead of a fresh empty dir.
 Not a `LEGACY_LAYOUT` row: that table is top-level, self-liquidating, and its
@@ -246,6 +246,9 @@ run everywhere.
   - Uses:
     - `framework/product-name.LEGACY_IDS`
     - `framework/tooling/collected-dir.defineCollectedDir`
+    - `infra/launcher/env-names.readEnv`
+    - `infra/launcher/env-names.setEnv`
+    - `infra/launcher/env-names.unsetEnv`
     - `infra/namespace.asNamespace`
     - `infra/namespace.CheckoutRef`
     - `infra/namespace.isNamespace`

@@ -33,7 +33,7 @@ create_new() {
   fi
 
   $TMUX -u new-session -d -s "$name" -c "$wt_path" \
-    "zsh -l -c 'export SINGULARITY_CONVERSATION_ID=$name; export SINGULARITY_PARENT_HOST=singularity; $CLAUDE'"
+    "zsh -l -c 'export EQUIN_CONVERSATION_ID=$name SINGULARITY_CONVERSATION_ID=$name; export EQUIN_PARENT_HOST=singularity SINGULARITY_PARENT_HOST=singularity; $CLAUDE'"
   exec $TMUX -u attach -t "$name"
 }
 

@@ -27,7 +27,7 @@ published** — `resolveCheckoutDeploy(REPO_ROOT)` reads every
 name, and no environment variable has any spelling in this runtime.
 
 That is not fastidiousness. The default used to be
-`$SINGULARITY_WORKTREE ?? basename(REPO_ROOT)`, and that variable answered a
+the retired worktree variable `?? basename(REPO_ROOT)`, and that variable answered a
 question about a different process: the gateway set it on the backends it
 spawned, an agent pane inherited it through the tmux server, so from inside any
 worktree it said the main namespace. (The variable itself is gone now — see
@@ -72,9 +72,9 @@ IDENTITY, not a way back to an origin: rebuilding a URL from it with
 `namespaceUrl` would ignore `--url` and point the script at the gateway
 instead. Use `pathUrl` for anything the app answers.
 
-`e2e-harness:target-not-env-derived` keeps the class out — any
-`process.env.SINGULARITY_*` under `*/e2e/*.ts` fails the check. The prefix, not
-the one variable: `$SINGULARITY_E2E_BASE` had the same shape (an inherited
+`e2e-harness:target-not-env-derived` keeps the class out — any `readEnv` call
+under `*/e2e/*.ts` fails the check (setting a variable for a child the script
+spawns, `envEntries`, is fine). Every variable, not one: the retired e2e-base variable had the same shape (an inherited
 channel that silently outranks the derivation, which nothing in the repo ever
 set) and was deleted with it, so a second env-shaped target has to be
 unspellable rather than merely absent today.

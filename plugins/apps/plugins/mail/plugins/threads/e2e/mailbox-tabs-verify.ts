@@ -76,9 +76,9 @@ const BOOT_TIMEOUT_MS = 120_000;
  * produced the URL this script drives — so the file the two `rmSync` calls below
  * delete belongs to the deploy under test, by construction.
  *
- * It used to read `process.env.SINGULARITY_WORKTREE ?? basename(REPO_ROOT)`,
+ * It used to read the retired worktree environment variable `?? basename(REPO_ROOT)`,
  * with the correct rule stated in the prose immediately above the code that
- * broke it. An agent pane inherited `SINGULARITY_WORKTREE` from the backend that
+ * broke it. An agent pane inherited that variable from the backend that
  * spawned it, so from inside any worktree it answers the main namespace: this script
  * deleted the user's live Mail config on MAIN, every run, while asserting
  * against a worktree deploy. Nothing about the file made that visible, which is

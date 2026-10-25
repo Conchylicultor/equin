@@ -1,3 +1,4 @@
+import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 export const ORPHAN_EXIT_CODE = 140; // 128 + 12
 
 // The poll installed by `installOrphanGuard`, held at module scope so
@@ -37,7 +38,7 @@ export function installOrphanGuard(onOrphan: () => void): void {
   // to outlive the backend it restarts — it must never self-terminate on reparent.
   // Env rather than a declaration because it is set by the SPAWNER, before this
   // process exists, and so is knowable here in the pre-install phase.
-  if (process.env.SINGULARITY_BUILD_DETACHED) return;
+  if (readEnv("BUILD_DETACHED")) return;
   if (process.ppid === 1) {
     onOrphan();
     return;

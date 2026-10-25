@@ -1,3 +1,4 @@
+import { envEntries } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { afterAll, afterEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -196,7 +197,7 @@ describe("sentinel worker host", () => {
               (e): e is [string, string] => e[1] !== undefined,
             ),
           ),
-          SINGULARITY_DIR: newTmpDir("sentinel-root-"),
+          ...envEntries({ DIR: newTmpDir("sentinel-root-") }),
         },
       },
       daemon: testDaemon,

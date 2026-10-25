@@ -15,7 +15,7 @@ import { defineCliCommand } from "@plugins/framework/plugins/cli/core";
  * Not `detachable`: build is an op command, and the orphan guard exiting it
  * when its invoking shell dies is what stops an abandoned build from sitting on
  * the build lock and a host grant. The detached self-restart build exempts
- * itself through `SINGULARITY_BUILD_DETACHED` instead.
+ * itself through `EQUIN_BUILD_DETACHED` instead.
  */
 export default defineCliCommand({
   name: "build",

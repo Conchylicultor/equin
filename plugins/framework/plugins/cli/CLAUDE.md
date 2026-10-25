@@ -74,7 +74,7 @@ bootstrap runs before the install that would let it load the declarations.
 
 The opt-out is declared, not inferred: a command meant to outlive its shell sets
 `detachable: true` and the mapper disarms the guard as it starts. The spawner-set
-`SINGULARITY_BUILD_DETACHED` escape still covers the detached self-restart build,
+`EQUIN_BUILD_DETACHED` escape still covers the detached self-restart build,
 which is knowable pre-install because it is env.
 
 A **hermetic** build (`build --hermetic`) is therefore guarded like everything
@@ -102,7 +102,7 @@ is the other half: re-derive from the merged tree, amend, consume the marker.
 
 It is deliberately NOT push-owned. `.githooks/post-rewrite` runs it after any
 rebase (so a manual `git rebase origin/main` self-heals), `push` runs it around
-its own rebase with the hook suppressed (`SINGULARITY_SKIP_POST_REWRITE`, because
+its own rebase with the hook suppressed (`EQUIN_SKIP_POST_REWRITE`, because
 push installs the rebased lockfile first), and `build` reaches the same state by
 regenerating everything and clearing the markers itself. `core/` holds the marker
 names + conflict scan so the `generated-artifacts-normalized` check reads the
@@ -468,7 +468,7 @@ ui-kit's `theme/app.css` (JS-sets / CSS-styles split, as with `.dark`).
   - **`regen-migrations`** — `./equin regen-migrations` — discard branch-local migrations and re-generate them against the rebased schema, for the post-rebase normalize step in `push`; aborts on hand-edited SQL.
   - **`release`** [exempt] — `./equin release` — stage a composition into a portable, self-contained artifact (compiled binaries + vendored native PG/PgBouncer/gateway/parcel-watcher) and pack it as a single-file web binary or…
   - **`run`** — `./equin run <script.ts> [args…]` — run a repo script against THIS worktree's own dependencies; the correct spelling of `bun <file>`, which silently resolves another checkout's installed tree.
-  - **`serve-app`** [exempt] — `./equin serve-app` — boot a packaged app's full runtime (gateway + embedded Postgres + app DB) under an isolated SINGULARITY_DIR. The one detachable command: it is meant to outlive the shell that…
+  - **`serve-app`** [exempt] — `./equin serve-app` — boot a packaged app's full runtime (gateway + embedded Postgres + app DB) under an isolated EQUIN_DIR. The one detachable command: it is meant to outlive the shell that…
   - **`start`** — `./equin start` — build the gateway and register it as a per-user OS service (launchd on macOS, a systemd user unit on Linux) so it comes back after a reboot, then wait for it to actually serve…
   - **`stop`** — `./equin stop` — stop the gateway daemon (and with it every backend); `--disable` also stops it starting at login.
   - **`test`** [exempt] — `./equin test` — the ONLY way to run tests: both runners (bun:test for co-located logic suites, vitest for jsdom suites), with a summary naming both buckets so a green-but-partial result is…

@@ -25353,10 +25353,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `disarmOrphanGuard`
               - `ensureDeps`
               - `installOrphanGuard`
-              - `LOCKED_BUN_REEXEC_ENV`
               - `lockedBunVersion`
               - `ORPHAN_EXIT_CODE`
-              - `REEXEC_ENV`
               - `reexecAfterInstall`
               - `reexecUnderLockedBun`
               - `takeReexecBudget`
@@ -25409,7 +25407,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `normalizeGeneratedArtifacts`
               - `registerMergeDrivers`
-              - `SKIP_POST_REWRITE_ENV`
         - **`migrations`** — Drizzle migration generation for the CLI: the generate/rename/journal pipeline and the interactive drizzle-kit prompt driver.
           - Cross-plugin:
             - Imported by:
@@ -25500,7 +25497,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `finishBuildProgress`
               - `installFatalSignalExit`
               - `installVerdictGuard`
-              - `LANE_ENV`
               - `laneFor`
               - `mustRequeue`
               - `openBuildProgress`
@@ -25541,7 +25537,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `framework/cli/bootstrap.ensureDeps`
               - `framework/cli/git-artifacts.normalizeGeneratedArtifacts`
-              - `framework/cli/git-artifacts.SKIP_POST_REWRITE_ENV`
               - `framework/cli/op-runtime.checkBroadcasts`
               - `framework/cli/op-runtime.installFatalSignalExit`
               - `framework/cli/op-runtime.opPriority`
@@ -25562,7 +25557,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`run`** — `./equin run <script.ts> [args…]` — run a repo script against THIS worktree's own dependencies; the correct spelling of `bun <file>`, which silently resolves another checkout's installed tree.
           - Cli:
             - Uses: `framework/cli/op-runtime.withDirectOp`
-        - **`serve-app`** — `./equin serve-app` — boot a packaged app's full runtime (gateway + embedded Postgres + app DB) under an isolated SINGULARITY_DIR. The one detachable command: it is meant to outlive the shell that launched it.
+        - **`serve-app`** — `./equin serve-app` — boot a packaged app's full runtime (gateway + embedded Postgres + app DB) under an isolated EQUIN_DIR. The one detachable command: it is meant to outlive the shell that launched it.
           - Cli:
             - Uses: `infra/jobs/supervised-job.cliExecContext`
           - Exemptions:
@@ -25673,9 +25668,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/cli`
           - `framework/cli/cli-name`
           - `framework/plugin-id`
+          - `framework/tooling/web-artifacts`
           - `infra/endpoints`
           - `infra/git/remotes`
           - `infra/host-fs`
+          - `infra/launcher/env-names`
           - `infra/namespace`
           - `infra/paths`
           - `infra/request-origin`
@@ -26194,11 +26191,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/icons` (1 debt)
         - **`checks`** — Check runner and built-in checks for ./equin check
           - Core:
-            - Uses: 46 symbols — full list in [`plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md)
+            - Uses: 49 symbols — full list in [`plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md)
               - `framework/tooling/exempt` ×7
               - `framework/tooling` ×7
               - `reports/check-thread-stall` ×7
               - `infra/stack-sampler` ×5
+              - `infra/launcher/env-names` ×3
               - `infra/paths` ×3
               - `infra/spawn` ×3
               - `plugin-meta/parse-utils` ×3
@@ -26745,6 +26743,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/collected-dir.loadCollectedDir`
               - `framework/tooling/guards/refusal-format.joinRefusal`
               - `framework/tooling/guards/refusal-format.REFUSAL_HEADER`
+              - `infra/launcher/env-names.envNames`
+              - `infra/launcher/env-names.readEnv`
               - `infra/namespace.asNamespace`
               - `infra/namespace.isNamespace`
               - `infra/paths.HOME_DIR`
@@ -26786,7 +26786,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `readTaskReport`
               - `redirectionTargets`
               - `THRESHOLD`
-              - `TOOL_USE_ID_ENV`
               - `TOOL_USE_ID_RE`
               - `toolUseIdFrom`
               - `watchSubjects`
@@ -26803,9 +26802,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `boundaries/no-platform-api` — `core/agent-ops.ts`, `core/argv.ts`, `core/context.ts`, `core/git-target.ts`, `core/informed-once.ts`, `core/guards/git-diff-main.ts`, `core/guards/main-edits.ts`, `core/guards/poll-loop.ts`, `core/parse-shell.ts`, `core/stop-guard.ts` (debt)
           - Plugins:
             - **`agent-policy`** — The protections every agent runs with — the guard and stop-guard hooks and the deny rules — declared once as data: `.claude/settings.json`'s protection keys are generated from it (guards:claude-settings-in-sync) and every app launch carries it, whatever its workspace, so an agent outside the repo (a scratch workspace) is guarded too.
-              - Cross-plugin:
-                - Imported by: `framework/tooling/codegen`
               - Core:
+                - Uses: `infra/launcher/env-names.envNames`
                 - Exports (types):
                   - `AgentPolicySettings`
                   - `PolicyHookCommand`
@@ -26814,8 +26812,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values):
                   - `agentPolicySettings`
                   - `GUARD_SCRIPTS`
-                  - `GUARDS_ROOT_ENV`
-                  - `WORKSPACE_ROOT_ENV`
+              - Cross-plugin:
+                - Imported by: `framework/tooling/codegen`
             - **`refusal-format`** — The text format of a guard's denial — the did-not-run banner, then 'Why it was blocked:' and the guard's own reason — written (joinRefusal) and read back (refusalReason) in one place, so a transcript viewer can show the reason without the banner.
               - Cross-plugin:
                 - Imported by:
@@ -26945,10 +26943,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `framework/tooling/test-layout` (0 debt)
                   - `infra/launcher` (0 debt)
                   - `plugin-meta/facets/routes` (0 debt)
-            - **`namespace-identity`** — Two lint rules over one mistake — answering 'which namespace?' with something that is not one: no-laundered-checkout-namespace bans casting a checkout directory name to a Namespace, and no-ambient-worktree-env bans the retired SINGULARITY_WORKTREE environment variable a runtime now receives as --namespace.
-              - Exemptions:
-                - Exempts itself from: `namespace-identity/no-ambient-worktree-env` — `lint/no-ambient-worktree-env.ts` (sanctioned)
-                - Exempted by: `framework/tooling/lint/namespace-identity` (0 debt)
+            - **`namespace-identity`** — One lint rule against answering 'which namespace?' with something that is not one: no-laundered-checkout-namespace bans casting a checkout directory name to a Namespace.
             - **`polling-safety`** — polling-safety lint rule: no-refetch-interval
             - **`promise-safety`** — promise-safety lint rules: no-floating-promises, no-bare-catch
             - **`reactive-server-io`** — reactive-server-io lint rule: no-reactive-server-io
@@ -27070,6 +27065,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/plugin-id.isTestCodePath`
               - `framework/plugin-id.TESTING_FOLDER`
               - `framework/plugin-id.TESTS_DIR`
+              - `framework/product-name.LEGACY_IDS`
               - `framework/web-core.findViteContributions`
               - `framework/web-core.loadBabelContributions`
               - `infra/namespace.MAIN_COMPOSITION_ID`
@@ -28421,7 +28417,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SigningIdentity`
           - `SignOutcome`
         - Exports (values):
-          - `CODESIGN_IDENTITY_ENV`
           - `codeSignature`
           - `configuredIdentityFile`
           - `configuredValidTo`
@@ -29713,8 +29708,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Priority`
             - Exports (values):
               - `cpuBudget`
-              - `HOST_GRANT_ENV`
-              - `HOST_LANE_ENV`
               - `HOST_POOLS`
               - `hostCpuCeiling`
               - `hostPoolsFor`
@@ -30422,7 +30415,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `hasPgBouncerPackage`
           - `isGatewayListening`
           - `isRunning`
-          - `LISTEN_ENV`
           - `listenFlag`
           - `LOOPBACK_BIND`
           - `pgbouncerConnection`
@@ -30435,6 +30427,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `teardownSelfContainedApp`
           - `writeReleaseDatabaseConfig`
         - Register: `defineDaemon('launcher.gateway')`
+      - Core:
+        - Uses:
+          - `infra/launcher/env-names.EnvKey`
+          - `infra/launcher/env-names.envKeyOf`
+          - `infra/launcher/env-names.envNames`
+          - `infra/launcher/env-names.readEnv`
+          - `infra/launcher/env-names.RUNTIME_FORWARDED_ENV`
+          - `infra/launcher/env-names.RUNTIME_FORWARDED_PREFIXES`
+        - Exports (values):
+          - `isRuntimeEnvName`
+          - `pickHostEnv`
+          - `pickRuntimeEnv`
+          - `RUNTIME_FORWARDED_TOOL_ENV`
+          - `RUNTIME_HOST_ENV`
+          - `runtimeEnvNames`
+          - `runtimePath`
+          - `runtimeShimsDir`
       - Deps:
         - Uses:
           - `infra/codesign.codeSignature`
@@ -30460,20 +30469,44 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `marker-scan-safety/no-adhoc-marker-scan` — `check/internal/strip-comments.ts` (sanctioned)
           - `spawn-safety/no-raw-bun-spawn` — `server/internal/boot.ts` (sanctioned)
           - `boundaries/no-platform-api` — `server/internal/boot.ts`, `server/internal/config-propagate.ts` (debt)
-      - Core:
-        - Exports (values):
-          - `isRuntimeEnvName`
-          - `pickHostEnv`
-          - `pickRuntimeEnv`
-          - `RUNTIME_FORWARDED_ENV`
-          - `RUNTIME_FORWARDED_PREFIXES`
-          - `RUNTIME_FORWARDED_TOOL_ENV`
-          - `RUNTIME_HOST_ENV`
-          - `RUNTIME_WITHHELD_ENV`
-          - `runtimeEnvNames`
-          - `runtimePath`
-          - `runtimeShimsDir`
       - Plugins:
+        - **`env-names`** — The app's own environment variables, declared by key (forwarded to the runtime tree or withheld from it, with why), and the one way to read and write them: readEnv / envEntries / setEnv / setEnvDefault / unsetEnv, which use both names of each key (EQUIN_<key> and the legacy one) during the rename window, a disagreement between the two throwing. A leaf importing only framework/product-name, so every runtime and the lowest-level packages can import it.
+          - Core:
+            - Uses:
+              - `framework/product-name.LEGACY_IDS`
+              - `framework/product-name.PRODUCT_NAME`
+            - Exports (types): `EnvKey`
+            - Exports (values):
+              - `DECLARED_ENV_KEYS`
+              - `DECLARED_ENV_PREFIXES`
+              - `ENV_PREFIX`
+              - `envEntries`
+              - `envKeyOf`
+              - `envName`
+              - `EnvNameConflictError`
+              - `envNames`
+              - `isDeclaredEnvName`
+              - `readEnv`
+              - `RUNTIME_FORWARDED_ENV`
+              - `RUNTIME_FORWARDED_PREFIXES`
+              - `setEnv`
+              - `setEnvDefault`
+              - `unsetEnv`
+          - Cross-plugin:
+            - Imported by:
+              - `framework/tooling/checks`
+              - `framework/tooling/guards`
+              - `framework/tooling/guards/agent-policy`
+              - `infra/launcher`
+              - `infra/launcher/login-services`
+              - `infra/paths`
+              - `infra/runtime-profiler`
+              - `packages/flock`
+              - `packages/spawn-disclaim`
+              - `packages/spawn-priority`
+          - Test helpers:
+            - Core: `@plugins/infra/plugins/launcher/plugins/env-names/core/testing`
+              - `withEnv` — Runs `fn` with `values` set in `process.env` under every name of each key (undefined = unset under every name), then puts back exactly what was there before — the save / set / restore a test of an env reader needs.
         - **`gateway-drift`** — Gateway drift, shown: the health report's Gateway row — attention while the machine's login-service gateway (installed or running) differs from what ./equin start --force would install now from main, in one line, with an Update remedy launching an agent briefed with each difference (binary, -listen and the other flags, cwd, signature) to run it; folded with Connection, Database and Live reads while current.
           - Web:
             - Contributes: `HealthReport.Row` "Gateway"
@@ -30512,7 +30545,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens: `ui/tokens/shape --spacing`
         - **`login-services`** — Per-user login services, generalized from the gateway's: a LoginService over a LoginServiceSpec (label, argv, cwd, env, stdio log, session background | graphical), rendered as a launchd LaunchAgent on macOS (graphical → LimitLoadToSessionType=Aqua) or a systemd user unit on Linux (graphical → graphical-session.target, no lingering); defineLoginService and the collected login-services/ registry, so ./equin start / stop bring every declared service up and down without naming one. On main's boot, every declared service a start registered follows main: reloaded when main's build of its dependency changed its job (rewritten only, when stopped), the dependency requested through deps first when it is not built yet. On macOS every service (the gateway too) runs from ONE app bundle, equin.app (bundle id dev.equin, signed with the machine's identity, at a stable path under state/macos-app): installServiceExecutable copies a component's build in and swaps the re-signed bundle in whole, so every permission prompt, System Settings row and tccutil reset names one app, equin.
           - Core:
-            - Uses: `framework/tooling/collected-dir.defineCollectedDir`
+            - Uses:
+              - `framework/tooling/collected-dir.defineCollectedDir`
+              - `infra/launcher/env-names.envEntries`
             - Exports (types):
               - `AppComponent`
               - `ComponentBuild`
@@ -30758,6 +30793,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `framework/product-name.LEGACY_IDS`
           - `framework/tooling/collected-dir.defineCollectedDir`
+          - `infra/launcher/env-names.readEnv`
+          - `infra/launcher/env-names.setEnv`
+          - `infra/launcher/env-names.unsetEnv`
           - `infra/namespace.asNamespace`
           - `infra/namespace.CheckoutRef`
           - `infra/namespace.isNamespace`
@@ -31152,15 +31190,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Core: `@plugins/infra/plugins/runtime-identity/core/testing`
           - `resetRuntimeNamespaceForTest` — Drop the declaration.
     - **`runtime-profiler`**
-      - Cross-plugin:
-        - Imported by:
-          - `debug/profiling/runtime`
-          - `debug/slow-ops`
-          - `infra/endpoints`
-          - `packages/watched-memo`
-      - Exemptions:
-        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/install.ts` (debt)
       - Core:
+        - Uses: `infra/launcher/env-names.readEnv`
         - Exports (types):
           - `Aggregate`
           - `EntryContext`
@@ -31211,6 +31242,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SPAN_KINDS`
           - `SPAN_MEASURES`
           - `waitSplit`
+      - Cross-plugin:
+        - Imported by:
+          - `debug/profiling/runtime`
+          - `debug/slow-ops`
+          - `infra/endpoints`
+          - `packages/watched-memo`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/install.ts` (debt)
     - **`safe-fetch`** — SSRF-guarded fetch primitive: parsePublicUrl + DNS-resolution checks (isPrivateIp/assertResolvesPublic) and safeFetch, which dials the validated IP directly (closing the DNS-rebinding TOCTOU) while preserving Host/SNI/cert via Bun fetch tls.serverName, following redirects with per-hop revalidation so a target can never reach loopback/private/link-local/metadata addresses.
       - Cross-plugin:
         - Imported by:
@@ -33146,6 +33185,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `createCoalescer`
           - `createKeyedCoalescer`
     - **`flock`** — Kernel advisory file locking: flockTry/flockRelease over libc flock(2), and waitForFlock — a push-based blocking acquire run in a child so the event loop never freezes. The one lock ownership the kernel releases on process death (SIGKILL included) and that consults no pid.
+      - Core:
+        - Uses:
+          - `infra/launcher/env-names.envEntries`
+          - `infra/launcher/env-names.readEnv`
+          - `infra/launcher/env-names.unsetEnv`
+        - Exports (types):
+          - `HeldFlock`
+          - `ParentLifeline`
+          - `WaitForFlockOptions`
+        - Exports (values):
+          - `exitWithParent`
+          - `flockRelease`
+          - `flockTry`
+          - `flockTryShared`
+          - `holdParentLifeline`
+          - `waitForFlock`
       - Cross-plugin:
         - Imported by:
           - `framework/tooling/checks`
@@ -33166,19 +33221,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `flockRelease`
           - `flockTry`
           - `flockTryShared`
-          - `waitForFlock`
-      - Core:
-        - Exports (types):
-          - `HeldFlock`
-          - `ParentLifeline`
-          - `WaitForFlockOptions`
-        - Exports (values):
-          - `exitWithParent`
-          - `flockRelease`
-          - `flockTry`
-          - `flockTryShared`
-          - `holdParentLifeline`
-          - `PARENT_LIFELINE_ENV`
           - `waitForFlock`
     - **`host-semaphore`** — Cross-process concurrency primitive: createHostSemaphore bounds work across processes via flock slot files (the host-wide twin of packages/semaphore).
       - Server:
@@ -33440,19 +33482,31 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SMOOTH_CLOCK_MAX_SLEW`
           - `SMOOTH_CLOCK_SNAP_SEC`
     - **`spawn-disclaim`**
+      - Core:
+        - Uses: `infra/launcher/env-names.readEnv`
+        - Exports (values):
+          - `disclaimArgv`
+          - `spawnDisclaimWanted`
       - Deps:
         - Uses:
           - `infra/deps.defineDep`
           - `infra/deps/build.build`
         - Exports (values): `disclaimExec`
-      - Core:
-        - Exports (values):
-          - `disclaimArgv`
-          - `NO_SPAWN_DISCLAIM_ENV`
-          - `spawnDisclaimWanted`
       - Structure:
         - Non-standard folders: `native/`
     - **`spawn-priority`** — OS scheduling-priority isolation: backgroundArgv/backgroundPrefix wrap heavy background work (DB forks, agent sessions, builds, worktree checkouts) in darwinbg (taskpolicy -b) so it yields host CPU/IO to the interactive backends; spawnInForeground starts a scarce slot holder's child out of darwinbg; boostInteractiveQos raises the calling thread to user-interactive QoS (main backend's event loop only).
+      - Core:
+        - Uses: `infra/launcher/env-names.readEnv`
+        - Exports (types):
+          - `DarwinBackground`
+          - `SpawnTier`
+        - Exports (values):
+          - `backgroundArgv`
+          - `backgroundPrefix`
+          - `readDarwinBackground`
+          - `spawnAtTier`
+          - `spawnInForeground`
+          - `withForegroundPriority`
       - Cross-plugin:
         - Imported by:
           - `infra/host/host-admission`
@@ -33466,17 +33520,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `backgroundPrefix`
           - `boostInteractiveQos`
           - `readDarwinBackground`
-          - `withForegroundPriority`
-      - Core:
-        - Exports (types):
-          - `DarwinBackground`
-          - `SpawnTier`
-        - Exports (values):
-          - `backgroundArgv`
-          - `backgroundPrefix`
-          - `readDarwinBackground`
-          - `spawnAtTier`
-          - `spawnInForeground`
           - `withForegroundPriority`
     - **`string-hash`** — Portable string hashes in plain JS (no node:crypto, no Bun.hash), so every host — the Bun server, central and a browser page — computes the same value: hash53 (cyrb53, a 53-bit number, optionally seeded), hashHex (two seeded cyrb53s, ~106 bits as hex), hash64 (a 64-bit bigint) and sha256Hex (a synchronous SHA-256, identical to node:crypto's hex digest).
       - Cross-plugin:

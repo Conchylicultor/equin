@@ -1,3 +1,4 @@
+import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { mkdirSync, renameSync, writeFileSync } from "node:fs";
 import {
   worktreeDataDir,
@@ -194,7 +195,7 @@ export function writeBuildLogs(
 ): string {
   return defaultCollector.writeLogs(
     name,
-    process.env.SINGULARITY_BUILD_ID,
+    readEnv("BUILD_ID"),
     exitCode,
     trailer,
   );

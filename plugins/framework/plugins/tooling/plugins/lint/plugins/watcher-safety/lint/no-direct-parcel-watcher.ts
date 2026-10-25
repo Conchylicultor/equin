@@ -19,7 +19,7 @@ export default createRule({
         "the watcher with `defineFileWatcher` from " +
         "`@plugins/infra/plugins/file-watcher/server` (or `watchForCommand` " +
         "from its `cli` barrel in a foreground command), so the release's " +
-        "vendored native addon (SINGULARITY_PARCEL_WATCHER_NODE) is honored " +
+        "vendored native addon override is honored " +
         "and the watcher is listed in Background activity. Type-only imports " +
         "are allowed.",
     },

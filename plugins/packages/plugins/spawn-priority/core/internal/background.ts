@@ -1,3 +1,4 @@
+import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { existsSync } from "node:fs";
 
 const TASKPOLICY = "/usr/sbin/taskpolicy";
@@ -20,7 +21,7 @@ const DEMOTE_FLAGS = ["-b"];
 
 function prefixTokens(): string[] {
   // Escape hatch + A/B verification harness: disable all demotion host-wide.
-  if (process.env.SINGULARITY_NO_SPAWN_PRIORITY === "1") return [];
+  if (readEnv("NO_SPAWN_PRIORITY") === "1") return [];
   if (process.platform === "darwin" && existsSync(TASKPOLICY)) {
     return [TASKPOLICY, ...DEMOTE_FLAGS, "--"];
   }

@@ -7,7 +7,7 @@ content-addressed vite lib-mode artifact under `~/.singularity/cache/web-artifac
 the compose step assembles `dist/` (inline import map + entry + preloads +
 links into the store). This is the ONLY frontend build — the monolithic vite
 build it replaced is gone (`web-core/vite.config.ts`, `--monolith`,
-`SINGULARITY_WEB_MONOLITH`), so every dist producer runs this pipeline:
+its environment switch), so every dist producer runs this pipeline:
 `./equin build` (once per target namespace) and `./equin build
 --hermetic --composition <name…>` (the release path). Design/history:
 `research/2026-07-15-global-per-plugin-web-artifacts.md`,
@@ -144,14 +144,14 @@ Key invariants:
   inlined an unhashed `shared/` (`…/mirror`) the same way.
   (`research/2026-08-17-global-artifact-address-covers-content.md`)
 - **A dist names itself by its content, not by its run.** Compose injects two
-  globals into `index.html` — `__SINGULARITY_GRAPH__` (`computeGraphHash`: a pure
+  globals into `index.html` — `the graph global (GRAPH_GLOBAL)` (`computeGraphHash`: a pure
   function of the import map, entry, global CSS and preload closure, every one of
-  them already content-addressed) and `__SINGULARITY_COMMIT__` (the tree the
+  them already content-addressed) and the commit global (the tree the
   caller sampled BEFORE it read a source file). The graph hash is what the
   caller writes to `.build-graph` and what a tab compares itself against, so two
   builds of an unchanged tree don't ask every open tab to reload. The run id
   (`buildId`) stays out of the bundle: it changes on every build by construction,
-  which is exactly what made the old `__SINGULARITY_BUILD_ID__` nonce useless as
+  which is exactly what made the old `build-id` nonce useless as
   an identity — and it also gave every compose-serve composition the SAME pin
   despite each composing a different closure.
 - **Every served file is compressed once, when it is published.** All three
@@ -212,6 +212,7 @@ Key invariants:
     - `framework/plugin-id.isTestCodePath`
     - `framework/plugin-id.TESTING_FOLDER`
     - `framework/plugin-id.TESTS_DIR`
+    - `framework/product-name.LEGACY_IDS`
     - `framework/web-core.findViteContributions`
     - `framework/web-core.loadBabelContributions`
     - `infra/namespace.MAIN_COMPOSITION_ID`

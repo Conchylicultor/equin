@@ -7,7 +7,6 @@ import { rcodesign } from "./internal/rcodesign";
 
 export { rcodesign } from "./internal/rcodesign";
 export {
-  CODESIGN_IDENTITY_ENV,
   configuredIdentityFile,
   configuredValidTo,
   LOCAL_IDENTITY_NAME,

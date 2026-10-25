@@ -26,7 +26,7 @@ export async function requestDisclaimHelper(): Promise<void> {
 
 /**
  * The helper's path for this agent start, or null when the disclaim is not
- * wanted here (not macOS, or `SINGULARITY_NO_SPAWN_DISCLAIM=1`) or the helper
+ * wanted here (not macOS, or `EQUIN_NO_SPAWN_DISCLAIM=1`) or the helper
  * is not installed within a short wait — reported, and the agent launches
  * without it (its prompts then name the gateway).
  */

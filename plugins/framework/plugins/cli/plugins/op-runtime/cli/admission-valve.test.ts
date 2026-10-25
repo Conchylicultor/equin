@@ -1,3 +1,4 @@
+import { envEntries } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { afterEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -143,7 +144,7 @@ describe("valveGates", () => {
   });
 
   test("the detached main auto-build is not gated (v1 adopted decision)", () => {
-    expect(valveGates("background", { SINGULARITY_BUILD_DETACHED: "1" })).toBe(
+    expect(valveGates("background", envEntries({ BUILD_DETACHED: "1" }))).toBe(
       false,
     );
   });

@@ -1,6 +1,10 @@
 import { loadCollectedDir } from "@plugins/framework/plugins/tooling/plugins/collected-dir/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import { worktreeArtifacts } from "@plugins/infra/plugins/paths/core";
+import {
+  envName,
+  readEnv,
+} from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import type {
   Check,
   CheckContext,
@@ -221,7 +225,7 @@ export interface RunChecksOptions {
  * The requested fan-out width, or null for "the runner decides". Resolved from
  * the option first and the environment second.
  *
- * The env read lives HERE, beside `SINGULARITY_CHECK_NO_CACHE` and for the same
+ * The env read lives HERE, beside `EQUIN_CHECK_NO_CACHE` and for the same
  * structural reason: `build` and `push` do not call `runChecks` in-process, they
  * spawn the `check` command, and `runCheckSubprocess` hands the child
  * `...process.env` (op-runtime/cli/check-subprocess.ts). So an env knob reaches
@@ -230,7 +234,7 @@ export interface RunChecksOptions {
  * that stays true for any future caller.
  *
  * A malformed value THROWS rather than falling back to the default: a typo'd
- * `--jobs` or a stale `SINGULARITY_CHECK_JOBS=auto` in a shell profile would
+ * `--jobs` or a stale `EQUIN_CHECK_JOBS=auto` in a shell profile would
  * otherwise silently run at a width nobody asked for, and the whole point of the
  * knob is that the width is known.
  *
@@ -242,12 +246,15 @@ export interface RunChecksOptions {
  * one about the same number.
  */
 export function requestedJobs(jobs: number | undefined): number | null {
-  const fromEnv = process.env.SINGULARITY_CHECK_JOBS;
+  const fromEnv = readEnv("CHECK_JOBS");
   const source =
     jobs !== undefined
       ? { value: jobs, from: "jobs option / --jobs" }
       : fromEnv !== undefined && fromEnv !== ""
-        ? { value: Number(fromEnv), from: `SINGULARITY_CHECK_JOBS=${fromEnv}` }
+        ? {
+            value: Number(fromEnv),
+            from: `${envName("CHECK_JOBS")}=${fromEnv}`,
+          }
         : null;
   if (source === null) return null;
   if (!Number.isInteger(source.value) || source.value < 1) {
@@ -434,8 +441,7 @@ export async function runChecks(
     return false;
   }
 
-  const noCache =
-    options?.noCache || process.env.SINGULARITY_CHECK_NO_CACHE === "1";
+  const noCache = options?.noCache || readEnv("CHECK_NO_CACHE") === "1";
   // Root is only needed when caching (tree hash + snapshot); skipping it in
   // no-cache mode preserves today's behaviour of not touching git at all.
   // Each of the four is wrapped in its own progress phase. They all spawn git
@@ -534,7 +540,7 @@ export async function runChecks(
   // reason) is visible before a check is trusted. Never changes the verdict or
   // the default output. Off unless asked for — the input-keyed path itself is
   // live on every run, so this is the one part that is genuinely opt-in.
-  const shadow = process.env.SINGULARITY_CHECK_SHADOW === "1";
+  const shadow = readEnv("CHECK_SHADOW") === "1";
 
   // One check, start to settle. Extracted from the `Promise.all` callback ONLY
   // so the progress log can wrap it in a try/finally — a `finally` cannot see a

@@ -169,7 +169,7 @@ export async function runHermeticBuild(opts: {
   // served from a non-main checkout, which is exactly what the brand catches.
   const namespace = await checkoutNamespace(root);
 
-  // A release is NOT a build run, so `SINGULARITY_BUILD_ID` is deliberately
+  // A release is NOT a build run, so `EQUIN_BUILD_ID` is deliberately
   // neither read nor written here: reading it would make a release adopt the
   // id of whatever build spawned it (and, through the profiler/log writers,
   // append to that build's artifacts); writing it would leak this id into

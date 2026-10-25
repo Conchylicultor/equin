@@ -22,7 +22,7 @@ import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
  * than a convention.
  */
 
-/** Written by `.githooks/prepare-commit-msg` from `SINGULARITY_CONVERSATION_ID`. */
+/** Written by `.githooks/prepare-commit-msg` from `EQUIN_CONVERSATION_ID`. */
 export const CONVERSATION_TRAILER_KEY = LEGACY_IDS.conversationTrailer;
 /** Stamped per `./equin push` invocation by the rebase `--exec`. */
 export const PUSH_TRAILER_KEY = LEGACY_IDS.pushTrailer;

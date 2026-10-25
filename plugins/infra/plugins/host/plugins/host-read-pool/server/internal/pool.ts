@@ -1,3 +1,4 @@
+import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { defineHostPool } from "@plugins/infra/plugins/host/plugins/host-admission/server";
 import { HOST_POOLS } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
@@ -24,7 +25,7 @@ const { size: heavyReadSize } = HOST_POOLS["heavy-read"];
 // vs.) the host size. Env-overridable for tuning.
 function localSize(): number {
   const host = heavyReadSize;
-  const env = process.env.SINGULARITY_HEAVY_READ_LOCAL_CONCURRENCY;
+  const env = readEnv("HEAVY_READ_LOCAL_CONCURRENCY");
   let local = Math.max(1, Math.ceil(host / 2));
   if (env) {
     const n = parseInt(env, 10);

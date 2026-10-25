@@ -217,7 +217,7 @@ describe("main-writes guard", () => {
   });
 });
 
-// An app-launched agent names its workspace (SINGULARITY_WORKSPACE_ROOT); in a
+// An app-launched agent names its workspace (EQUIN_WORKSPACE_ROOT); in a
 // scratch workspace — outside every checkout — the protected tree is the main
 // checkout of the code the guards run from.
 describe("main-writes guard in a launch-named workspace", () => {

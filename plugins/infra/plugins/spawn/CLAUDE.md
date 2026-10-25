@@ -53,7 +53,7 @@ both automatic for every `spawnCaptured` / `spawnPassthrough` call:
   itself an op CLI runs its own exit hooks, and its own reaper, in turn.
 - **Child side: the lifeline** (`holdParentLifeline` / `exitWithParent`,
   `packages/flock`). Each spawn holds an exclusive flock on `lifeline` in its
-  private tmpdir and hands the path down as `SINGULARITY_PARENT_LIFELINE`. The
+  private tmpdir and hands the path down as `EQUIN_PARENT_LIFELINE`. The
   kernel drops that lock when the parent dies, SIGKILL and OOM included, so a
   child that called `exitWithParent()` dies at that moment even while its main
   thread is busy. Opt-in, because only a child we wrote can call it. Today the

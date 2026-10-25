@@ -3,6 +3,10 @@
  * every case here drives `signal-origin.fixture.ts` as a real child and reads
  * back what it recorded. See that file for the on-disk protocol.
  */
+import {
+  envEntries,
+  envName,
+} from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { afterEach, beforeAll, describe, expect, test } from "bun:test";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -224,11 +228,13 @@ describe("armSignalOrigin / readSignalOrigin", () => {
     expect(existsSync(join(dir, "events"))).toBe(false);
   }, 60_000);
 
-  test("SINGULARITY_NO_SIGNAL_ORIGIN=1 fails open with a reason", async () => {
+  test("the no-signal-origin switch fails open with a reason", async () => {
     const dir = scratch();
-    const proc = spawnFixture("arm-only", dir, {
-      SINGULARITY_NO_SIGNAL_ORIGIN: "1",
-    });
+    const proc = spawnFixture(
+      "arm-only",
+      dir,
+      envEntries({ NO_SIGNAL_ORIGIN: "1" }),
+    );
     await awaitExit(proc);
 
     const arm = readJson<SignalOriginArmResult>(dir, "arm.json");
@@ -236,7 +242,7 @@ describe("armSignalOrigin / readSignalOrigin", () => {
     // The reason is the product, not a nicety: the caller records it so that
     // "no attribution" is itself on the record.
     expect(arm.armed === false && arm.reason).toContain(
-      "SINGULARITY_NO_SIGNAL_ORIGIN",
+      envName("NO_SIGNAL_ORIGIN"),
     );
     expect(proc.exitCode).toBe(0);
   }, 60_000);

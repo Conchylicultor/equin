@@ -21,7 +21,7 @@ export { fileHint } from "./file-hint";
 export type { FileHintSpec } from "./file-hint";
 export { MODULE_EXTENSION } from "./module-extension";
 export { parseShell } from "./parse-shell";
-export { TOOL_USE_ID_ENV, TOOL_USE_ID_RE, toolUseIdFrom } from "./tool-use-id";
+export { TOOL_USE_ID_RE, toolUseIdFrom } from "./tool-use-id";
 export { parseArgv, redirectionTargets } from "./argv";
 export type { ParsedArgv, FileOperand, KnownCommand } from "./argv";
 export { createContext } from "./context";

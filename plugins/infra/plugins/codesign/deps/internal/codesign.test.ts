@@ -1,3 +1,4 @@
+import { envEntries } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
@@ -15,7 +16,6 @@ import { join } from "node:path";
 import { execContextForTests } from "@plugins/infra/plugins/jobs/plugins/supervised-job/core/testing";
 import type { CodesignHost, CommandResult } from "./host";
 import {
-  CODESIGN_IDENTITY_ENV,
   configuredValidTo,
   ensureLocalIdentity,
   parseFindIdentity,
@@ -164,9 +164,9 @@ describe("resolveSigningIdentity", () => {
 
   test("configured by exact name or by SHA-1 (any case), env over file", async () => {
     const byName = fakeHost({
-      env: {
-        [CODESIGN_IDENTITY_ENV]: "Developer ID Application: Jane (TEAM1)",
-      },
+      env: envEntries({
+        CODESIGN_IDENTITY: "Developer ID Application: Jane (TEAM1)",
+      }),
     });
     expect(await resolveSigningIdentity(byName)).toEqual({
       kind: "configured",
@@ -179,25 +179,31 @@ describe("resolveSigningIdentity", () => {
     writeFileSync(join(host.dir, "identity"), `${DEV_ID_2.toLowerCase()}\n`);
     expect((await resolveSigningIdentity(host))?.sha1).toBe(DEV_ID_2);
 
-    const envWins = fakeHost({ env: { [CODESIGN_IDENTITY_ENV]: DEV_ID } });
+    const envWins = fakeHost({
+      env: envEntries({ CODESIGN_IDENTITY: DEV_ID }),
+    });
     writeFileSync(join(envWins.dir, "identity"), DEV_ID_2);
     expect((await resolveSigningIdentity(envWins))?.sha1).toBe(DEV_ID);
   });
 
   test("a configured identity that is missing, invalid or ambiguous throws — never falls back", async () => {
-    const missing = fakeHost({ env: { [CODESIGN_IDENTITY_ENV]: "Nobody" } });
+    const missing = fakeHost({
+      env: envEntries({ CODESIGN_IDENTITY: "Nobody" }),
+    });
     expect(
       (await rejection(resolveSigningIdentity(missing))).message,
     ).toContain("not in your keychains");
 
-    const expired = fakeHost({ env: { [CODESIGN_IDENTITY_ENV]: "Old Cert" } });
+    const expired = fakeHost({
+      env: envEntries({ CODESIGN_IDENTITY: "Old Cert" }),
+    });
     expect(
       (await rejection(resolveSigningIdentity(expired))).message,
     ).toContain("CSSMERR_TP_CERT_EXPIRED");
 
     // Two distinct identities with one name.
     const ambiguous = fakeHost({
-      env: { [CODESIGN_IDENTITY_ENV]: "Dup" },
+      env: envEntries({ CODESIGN_IDENTITY: "Dup" }),
       run: async () => ({
         exitCode: 0,
         stdout: `  1) ${DEV_ID} "Dup"\n  2) ${DEV_ID_2} "Dup"\n`,
@@ -270,7 +276,7 @@ describe("signBinary", () => {
   });
 
   test("configured: /usr/bin/codesign, verified, mode kept; a second call is a no-op", async () => {
-    const host = fakeHost({ env: { [CODESIGN_IDENTITY_ENV]: DEV_ID } });
+    const host = fakeHost({ env: envEntries({ CODESIGN_IDENTITY: DEV_ID }) });
     const bin = join(base, "gateway");
     writeFileSync(bin, "binary", { mode: 0o755 });
     const outcome = await signBinary(bin, {
@@ -319,7 +325,9 @@ describe("signBinary", () => {
     expect(rc[rc.indexOf("--timestamp-url") + 1]).toBe("none");
 
     // Configuring an identity later: the next call re-signs with it.
-    const configured = fakeHost({ env: { [CODESIGN_IDENTITY_ENV]: DEV_ID } });
+    const configured = fakeHost({
+      env: envEntries({ CODESIGN_IDENTITY: DEV_ID }),
+    });
     expect(
       (
         await signBinary(bin, {
@@ -335,7 +343,7 @@ describe("signBinary", () => {
   });
 
   test("a signature that does not verify throws and leaves the original file", async () => {
-    const host = fakeHost({ env: { [CODESIGN_IDENTITY_ENV]: DEV_ID } });
+    const host = fakeHost({ env: envEntries({ CODESIGN_IDENTITY: DEV_ID }) });
     const real = host.run.bind(host);
     const lying: CodesignHost = {
       ...host,
@@ -361,7 +369,7 @@ describe("signBinary", () => {
   });
 
   test("a failing codesign throws; an unknown codesign -v exit throws", async () => {
-    const host = fakeHost({ env: { [CODESIGN_IDENTITY_ENV]: DEV_ID } });
+    const host = fakeHost({ env: envEntries({ CODESIGN_IDENTITY: DEV_ID }) });
     const real = host.run.bind(host);
     const failing: CodesignHost = {
       ...host,

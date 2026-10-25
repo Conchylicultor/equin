@@ -13,7 +13,7 @@ import {
 //
 // The value arrives on ARGV, from the one process that knows it: the gateway
 // spawns `… bin/index.ts --namespace <ns>` (`gateway/worktree.go`). It used to
-// arrive as `SINGULARITY_WORKTREE` in the environment, and an environment
+// arrive as the retired worktree variable in the environment, and an environment
 // variable reaches every descendant forever — which is how agent shells, and
 // every `build` / `check` / `test` they ran, came to believe they were main.
 //

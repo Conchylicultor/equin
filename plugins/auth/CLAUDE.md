@@ -84,8 +84,8 @@ The provider's `central/internal/register.ts` runs at module init and calls `reg
 OAuth client credentials (`clientId`, `clientSecret`) are user-supplied in the provider's Accounts pane (its setup writes the config fields; Settings → Config shows them too). Both use `secretField()` from config_v2, which stores values in the central secrets store under `{ namespace: "config-fields", key: "auth-<provider>.<field>" }`. Provider descriptors read them via `readSecretConfig()` from `@plugins/fields/plugins/secret/plugins/config/central`.
 
 Env-var overrides for developers:
-- `SINGULARITY_AUTH_<PROVIDER>_CLIENT_ID`
-- `SINGULARITY_AUTH_<PROVIDER>_CLIENT_SECRET` (where applicable)
+- `EQUIN_AUTH_<PROVIDER>_CLIENT_ID`
+- `EQUIN_AUTH_<PROVIDER>_CLIENT_SECRET` (where applicable)
 
 Google uses Desktop-app + PKCE, but the token endpoint **still requires** `client_secret` (Google's implementation of RFC 8252 §8.6). Notion uses web-integration and also requires both. Shipping our own verified Google credentials is deferred — see [research/2026-04-24-global-auth-plugin.md](../../research/2026-04-24-global-auth-plugin.md) §I.
 

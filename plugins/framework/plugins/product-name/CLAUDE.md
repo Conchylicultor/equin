@@ -27,9 +27,10 @@ plist) is listed in its id's `mirrors`.
 - `product-name:legacy-id` fails on the old name, in any case, in any tracked
   file outside this plugin — except a mirror's line holding its value, committed
   migrations (`database/migrations` exempts them as history), `research/` and
-  generated files. Two spellings stay allowed until their step of the rename
-  lands: `SINGULARITY_*` env vars (step 6) and the `~/.singularity` data dir
-  (step 7). Repository URLs are allowed too, because the repo keeps its name.
+  generated files. One spelling stays allowed until its step of the rename
+  lands: the `~/.singularity` data dir (step 7). The old env-var prefix is
+  `envPrefix`, spelled by the env-name registry (`infra/launcher/env-names`) and its
+  mirrors only. Repository URLs are allowed too, because the repo keeps its name.
 - `product-name:legacy-ids-in-sync` fails when a mirror stops spelling its value.
 
 Decision: `research/2026-10-25-global-equin-internal-identifiers.md`.
@@ -50,9 +51,11 @@ A leaf with no imports, so a browser bundle, a server or a script can import it.
     - `framework/cli`
     - `framework/cli/cli-name`
     - `framework/plugin-id`
+    - `framework/tooling/web-artifacts`
     - `infra/endpoints`
     - `infra/git/remotes`
     - `infra/host-fs`
+    - `infra/launcher/env-names`
     - `infra/namespace`
     - `infra/paths`
     - `infra/request-origin`

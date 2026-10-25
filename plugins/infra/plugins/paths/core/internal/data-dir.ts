@@ -19,8 +19,8 @@ import {
 // The declared-directory registry for `~/.singularity/`.
 //
 // The root used to be a shared mutable namespace with no owner and no reader:
-// `SINGULARITY_DIR` was a plain string and ~37 call sites across ~30 plugins
-// wrote `join(SINGULARITY_DIR, "<whatever>")`. Nothing ever read the directory
+// `EQUIN_DIR` was a plain string and ~37 call sites across ~30 plugins
+// wrote `join(EQUIN_DIR, "<whatever>")`. Nothing ever read the directory
 // as a whole, so nine orphaned entries (~1 GB) accumulated with zero references
 // left in the repo, ten `<name>-slots` dirs were minted by ONE primitive, and
 // ~7 GB of pure cache sat indistinguishable from the only copy of a secret.
@@ -110,7 +110,7 @@ export interface DataDirSpec {
    *
    * `path` is **relative to the data root**, never absolute. Two reasons, both
    * load-bearing: an absolute literal would be frozen at module eval and so
-   * would not follow `SINGULARITY_DIR` (see {@link dataRoot}), and it would
+   * would not follow `EQUIN_DIR` (see {@link dataRoot}), and it would
    * have to spell out the home directory, which `paths:no-hardcoded-paths`
    * bans outright.
    */
@@ -251,13 +251,13 @@ const APP_DIR_RECLAIM_REASON =
  * The data root ITSELF.
  *
  * Its ONE legitimate use is handing the root to a child process as its
- * `SINGULARITY_DIR` (the gateway spawn, a release launch, a remote deploy's
+ * `EQUIN_DIR` (the gateway spawn, a release launch, a remote deploy's
  * env line). `join(dataRoot(), …)` is exactly what `defineDataDir` exists to
  * replace — a joined root is an undeclared directory, which is the failure mode
  * this whole registry is here to make impossible.
  *
  * A FUNCTION, not a const, and its result must not be cached by a caller:
- * `SINGULARITY_DIR` is env-overridable and the release launcher sets it before
+ * `EQUIN_DIR` is env-overridable and the release launcher sets it before
  * importing anything path-dependent, so a value frozen at module eval captures
  * whatever the environment said when that module was FIRST imported. This is
  * the same reasoning that made `webDistDir()` a function — see its docblock in
@@ -415,7 +415,7 @@ type MoveState = "settled" | "pending" | "conflict";
 
 /**
  * Moves already known settled, keyed by the ABSOLUTE `from` — which carries
- * the data root in it, so a process that repoints `SINGULARITY_DIR` (tests, the
+ * the data root in it, so a process that repoints `EQUIN_DIR` (tests, the
  * release launcher) re-inspects on the new root instead of trusting the old
  * one's answer.
  *

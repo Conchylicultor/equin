@@ -16,7 +16,10 @@
 // keep happening. A standalone check and a push-spawned one inherit no build's
 // environment, so both verify the deployed dist for real.
 
-const BUILD_IN_PROGRESS_ENV = "SINGULARITY_BUILD_IN_PROGRESS";
+import {
+  readEnv,
+  setEnv,
+} from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 
 /**
  * Called once at the start of the `build` command's action.
@@ -28,7 +31,7 @@ const BUILD_IN_PROGRESS_ENV = "SINGULARITY_BUILD_IN_PROGRESS";
  * rather than one question that cannot express the other.
  */
 export function markBuildInProgress(): void {
-  process.env[BUILD_IN_PROGRESS_ENV] = String(process.pid);
+  setEnv("BUILD_IN_PROGRESS", String(process.pid));
 }
 
 /**
@@ -39,10 +42,10 @@ export function markBuildInProgress(): void {
  * to skip them.
  */
 export function isBuildInProgress(): boolean {
-  return (process.env[BUILD_IN_PROGRESS_ENV] ?? "") !== "";
+  return (readEnv("BUILD_IN_PROGRESS") ?? "") !== "";
 }
 
 /** True only in the build process ITSELF — never in the check pass it spawns. */
 export function isBuildProcess(): boolean {
-  return process.env[BUILD_IN_PROGRESS_ENV] === String(process.pid);
+  return readEnv("BUILD_IN_PROGRESS") === String(process.pid);
 }

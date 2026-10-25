@@ -39,6 +39,7 @@
  * the database consequence of a renamed migration (the runner re-applies DDL
  * keyed by the new sha8) is mechanical and covered by the runner's own tests.
  */
+import { envEntries } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { CLI_NAME } from "@plugins/framework/plugins/cli/plugins/cli-name/core";
 import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import {
@@ -103,7 +104,7 @@ interface Ctx {
  * fixture's):
  *
  * - a commit identity;
- * - `SINGULARITY_CONVERSATION_ID`: the session that authors the clone's work.
+ * - `EQUIN_CONVERSATION_ID`: the session that authors the clone's work.
  *   The repo's `prepare-commit-msg` hook (core.hooksPath, set as the `setup`
  *   task sets it — see `configureCheckout`) stamps it on every commit, and
  *   push's `conversation-trailer` check requires it;
@@ -551,7 +552,7 @@ export async function runMigrationJourney(
     GIT_AUTHOR_EMAIL: "t@t.t",
     GIT_COMMITTER_NAME: "t",
     GIT_COMMITTER_EMAIL: "t@t.t",
-    SINGULARITY_CONVERSATION_ID: `conv-e2e-cj-${id}`,
+    ...envEntries({ CONVERSATION_ID: `conv-e2e-cj-${id}` }),
     MISE_TRUSTED_CONFIG_PATHS: realpathSync(opts.tmp),
   };
   const { check } = ctx;

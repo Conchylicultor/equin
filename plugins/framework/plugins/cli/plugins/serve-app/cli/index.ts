@@ -5,7 +5,7 @@ const DEFAULT_PORT = 9100;
 /**
  * The launcher a packaged app ships with: one process that brings up a gateway,
  * an embedded Postgres and the app's own backend under an isolated
- * `SINGULARITY_DIR`, then stays up serving.
+ * `EQUIN_DIR`, then stays up serving.
  *
  * DETACHABLE, AND THE ONLY COMMAND THAT IS. `bin/index.ts` arms the orphan
  * guard for every invocation — a CLI process dies with the shell that started
@@ -72,7 +72,7 @@ export default defineCliCommand<
         "Composition whose filtered server registry the backend boots (default: --name)",
     },
     // REQUIRED, with no default. `serve-app` boots under an isolated
-    // SINGULARITY_DIR (see the action), and every derivable dist path
+    // EQUIN_DIR (see the action), and every derivable dist path
     // (`worktreeArtifacts.webDist(...)`) resolves inside THAT root — which holds
     // no dist, because nothing ever built into it. A checkout-relative default
     // is equally wrong: no checkout carries a dist any more. There is no correct

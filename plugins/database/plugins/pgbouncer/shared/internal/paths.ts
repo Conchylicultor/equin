@@ -1,3 +1,4 @@
+import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { join } from "node:path";
 import { pgClusterDir } from "@plugins/database/plugins/embedded/data-dirs";
 
@@ -15,7 +16,7 @@ export const PGBOUNCER_PORT = 6432;
 // install keep the Unix socket on a short path (under the 104-byte limit) while
 // its data root is a long OS app-data path. Default unchanged ⇒ dev byte-identical.
 export const PGBOUNCER_SOCKET_DIR =
-  process.env.SINGULARITY_PG_SOCKET_DIR ?? join(PG_DIR, "socket");
+  readEnv("PG_SOCKET_DIR") ?? join(PG_DIR, "socket");
 
 export const PGBOUNCER_CONFIG_FILE = join(PG_DIR, "pgbouncer.ini");
 export const PGBOUNCER_USERLIST_FILE = join(PG_DIR, "userlist.txt");

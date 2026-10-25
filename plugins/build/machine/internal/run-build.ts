@@ -1,5 +1,6 @@
 import { CLI_NAME } from "@plugins/framework/plugins/cli/plugins/cli-name/core";
 import { z } from "zod";
+import { envEntries } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/server";
 import { defineSupervisedJob } from "@plugins/infra/plugins/jobs/plugins/supervised-job/server";
 import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
@@ -142,13 +143,12 @@ export const buildJob = defineSupervisedJob({
       // installation settings), plus these two. That environment is a closed
       // list, so spreading it hands the build no stray session state.
       //
-      // SINGULARITY_BUILD_DETACHED is load-bearing: the CLI's orphan guard
+      // EQUIN_BUILD_DETACHED is load-bearing: the CLI's orphan guard
       // exits a command whose invoking shell dies, and a supervised build is
       // MEANT to outlive the backend it restarts. (It is also what keeps the
       // build out of the admission valve's background lane.)
       envOverrides: {
-        SINGULARITY_BUILD_ID: runId,
-        SINGULARITY_BUILD_DETACHED: "1",
+        ...envEntries({ BUILD_ID: runId, BUILD_DETACHED: "1" }),
       },
     };
   },

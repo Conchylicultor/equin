@@ -12,8 +12,8 @@
 // what the not-clobber below exists for.
 //
 // The `Lane` a build/check passes to `withHostGrant` IS this fact. `publishLane`
-// additionally mirrors it into `SINGULARITY_LANE` so a subprocess that does not
-// inherit a full grant (`SINGULARITY_HOST_GRANT`) still classifies correctly;
+// additionally mirrors it into `EQUIN_LANE` so a subprocess that does not
+// inherit a full grant (`EQUIN_HOST_GRANT`) still classifies correctly;
 // `inheritedGrant()` reads the same var to reconstruct the inherited lane.
 //
 // Keyed on whether this is the human-blocking (interactive) origin, NOT on the
@@ -22,10 +22,11 @@
 // the two spellings can never drift on the lane decision. See
 // research/2026-07-10-global-host-admission-unified-budget.md.
 
+import {
+  readEnv,
+  setEnv,
+} from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import type { Lane } from "@plugins/infra/plugins/host/plugins/host-admission/core";
-
-/** Env signal naming the lane the current process's checks run in. */
-export const LANE_ENV = "SINGULARITY_LANE";
 
 /** The human-blocking (interactive) origin ⇒ interactive lane; else background. */
 export function laneFor(isInteractiveOrigin: boolean): Lane {
@@ -47,6 +48,6 @@ export function laneFor(isInteractiveOrigin: boolean): Lane {
  * what the not-clobber already guarantees.
  */
 export function publishLane(isInteractiveOrigin: boolean): void {
-  if (process.env[LANE_ENV]) return; // an ancestor already decided the lane
-  process.env[LANE_ENV] = laneFor(isInteractiveOrigin);
+  if (readEnv("LANE")) return; // an ancestor already decided the lane
+  setEnv("LANE", laneFor(isInteractiveOrigin));
 }

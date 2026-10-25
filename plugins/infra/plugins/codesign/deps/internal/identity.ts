@@ -9,10 +9,12 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
+import {
+  envName,
+  readEnv,
+} from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { machineHost, runOk, type CodesignHost } from "./host";
 
-/** The environment variable naming a configured identity (wins over the file). */
-export const CODESIGN_IDENTITY_ENV = "SINGULARITY_CODESIGN_IDENTITY";
 /** The common name of the local certificate this plugin creates. */
 export const LOCAL_IDENTITY_NAME = "equin Local Code Signing";
 /** 20 years: the local certificate should outlive the machine. */
@@ -24,7 +26,7 @@ const LOCAL_CERT_DAYS = 7300;
  * rebuilds.
  *
  * - `configured`: a VALID identity in the user's keychains, named by
- *   `SINGULARITY_CODESIGN_IDENTITY` or the `identity` file — an Apple
+ *   `EQUIN_CODESIGN_IDENTITY` or the `identity` file — an Apple
  *   "Developer ID Application" / "Apple Development" identity. Signed with
  *   `/usr/bin/codesign`.
  * - `local`: the machine's own self-signed certificate under
@@ -78,9 +80,9 @@ export function configuredIdentityFile(host: CodesignHost): string {
 export function readConfiguredValue(
   host: CodesignHost,
 ): ConfiguredValue | null {
-  const fromEnv = host.env[CODESIGN_IDENTITY_ENV]?.trim();
+  const fromEnv = readEnv("CODESIGN_IDENTITY", host.env)?.trim();
   if (fromEnv !== undefined && fromEnv !== "") {
-    return { value: fromEnv, from: CODESIGN_IDENTITY_ENV };
+    return { value: fromEnv, from: envName("CODESIGN_IDENTITY") };
   }
   const file = configuredIdentityFile(host);
   if (!existsSync(file)) return null;

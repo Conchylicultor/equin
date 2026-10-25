@@ -74,6 +74,8 @@ export const LEGACY_IDS = {
   defaultCheckoutDir: "singularity",
   /** The backups dir under the home dir (`~/.backups/<dir>`). */
   backupsDirName: "singularity",
+  /** What the app's environment variables were named with (`<p>DIR`, …), read beside `EQUIN_*` during the rename window. */
+  envPrefix: "SINGULARITY_",
   /** The GitHub repository. */
   githubRepo: "Conchylicultor/singularity",
 } as const;
@@ -203,6 +205,18 @@ export const LEGACY_ID_NOTES: Readonly<Record<LegacyIdKey, LegacyIdNote>> = {
   },
   backupsDirName: {
     kept: "existing local backups; moves with the data dir (step 7)",
+  },
+  envPrefix: {
+    kept: "installed plists, older gateways and backends, agent hooks and operators' dotfiles still set or read the old names; both are read and written until a later step drops them (research/2026-10-25-global-equin-env-vars.md)",
+    mirrors: [
+      "gateway/env.go",
+      ".claude/settings.json",
+      ".githooks/prepare-commit-msg",
+      ".githooks/post-rewrite",
+      ".mcp.json",
+      "plugins/framework/plugins/cli/plugins/doctor/doctor.sh",
+      "sidequests/claude-web/session-picker.sh",
+    ],
   },
   githubRepo: { kept: "the repository keeps its name (user decision)" },
 };

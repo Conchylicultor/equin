@@ -58,7 +58,7 @@ the congestion it measures saturates).
 **Compiled releases** (verified on Bun 1.3.13): `bun build --compile` does NOT
 trace/embed `new Worker(new URL(...))`, so the worker is **vendored** instead —
 `release.ts` bundles `worker/entry.ts` to a standalone `<out>/sentinel/worker.js`
-(its lean closure inlines), `launch.ts` points `SINGULARITY_SENTINEL_WORKER_JS`
+(its lean closure inlines), `launch.ts` points `EQUIN_SENTINEL_WORKER_JS`
 at it, and `worker-host.ts` spawns from that path when the env is set (else the
 dev source URL). This mirrors the vendored parcel-watcher native addon. The
 start-gate also admits releases: a release's single backend runs under the

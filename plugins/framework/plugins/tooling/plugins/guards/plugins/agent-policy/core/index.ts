@@ -1,9 +1,4 @@
-export {
-  agentPolicySettings,
-  GUARD_SCRIPTS,
-  GUARDS_ROOT_ENV,
-  WORKSPACE_ROOT_ENV,
-} from "./agent-policy";
+export { agentPolicySettings, GUARD_SCRIPTS } from "./agent-policy";
 export type {
   AgentPolicySettings,
   PolicyHookCommand,

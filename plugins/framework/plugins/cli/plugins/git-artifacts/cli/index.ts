@@ -14,9 +14,6 @@
  * facts, and a check may not import a `cli/` barrel.
  */
 
-export {
-  SKIP_POST_REWRITE_ENV,
-  normalizeGeneratedArtifacts,
-} from "./normalize-generated";
+export { normalizeGeneratedArtifacts } from "./normalize-generated";
 
 export { registerMergeDrivers } from "./register-merge-drivers";

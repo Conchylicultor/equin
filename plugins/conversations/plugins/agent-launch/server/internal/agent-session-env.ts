@@ -1,8 +1,8 @@
-import {
-  GUARDS_ROOT_ENV,
-  WORKSPACE_ROOT_ENV,
-} from "@plugins/framework/plugins/tooling/plugins/guards/plugins/agent-policy/core";
 import { runtimeShimsDir } from "@plugins/infra/plugins/launcher/core";
+import {
+  envEntries,
+  envNames,
+} from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 
 // What environment does an agent's shell start from? Every app-launched agent
@@ -28,43 +28,40 @@ import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 
 /**
  * The variables the launch delivers, valued by
- * {@link agentSessionEnv} — whose return type is keyed by this list, so a name
- * here without a value (or the reverse) is a type error, and the allowlist
- * below spreads it, so a delivered name is never dropped by `env -i`.
+ * {@link agentSessionEnv} — which sets each under every name of its key, and
+ * the allowlist below spreads this list, so a delivered name is never dropped
+ * by `env -i`.
  *
- * - `SINGULARITY_CONVERSATION_ID` — the conversation id the
+ * - `EQUIN_CONVERSATION_ID` — the conversation id the
  *   prepare-commit-msg hook stamps trailers from (and every hook command names
  *   its conversation by).
- * - `SINGULARITY_PARENT_HOST` — the host the agent's `.mcp.json` dials back to.
+ * - `EQUIN_PARENT_HOST` — the host the agent's `.mcp.json` dials back to.
  * - `CLAUDE_CODE_DISABLE_AGENT_VIEW` — pins the Claude session to this agent
  *   process, so it can never migrate into Claude Code's background daemon and
  *   inherit whichever process first spawned that daemon (the Sep 9 misattributed
  *   push).
- * - `SINGULARITY_GUARDS_ROOT` — the checkout whose guard scripts the launch's
+ * - `EQUIN_GUARDS_ROOT` — the checkout whose guard scripts the launch's
  *   policy hooks run (guards/agent-policy): the workspace's own for a worktree,
  *   the launching backend's for scratch.
- * - `SINGULARITY_WORKSPACE_ROOT` — the workspace the agent runs in, the
+ * - `EQUIN_WORKSPACE_ROOT` — the workspace the agent runs in, the
  *   boundary the write guards allow (any workspace kind, so a scratch dir is
  *   bounded too).
  */
-export const AGENT_SESSION_DELIVERED_ENV = [
-  "SINGULARITY_CONVERSATION_ID",
-  "SINGULARITY_PARENT_HOST",
+export const AGENT_SESSION_DELIVERED_ENV: readonly string[] = [
+  ...envNames("CONVERSATION_ID"),
+  ...envNames("PARENT_HOST"),
   "CLAUDE_CODE_DISABLE_AGENT_VIEW",
-  GUARDS_ROOT_ENV,
-  WORKSPACE_ROOT_ENV,
-] as const;
+  ...envNames("GUARDS_ROOT"),
+  ...envNames("WORKSPACE_ROOT"),
+];
 
-/** The values one agent session is launched with. */
-export type AgentSessionEnv = Record<
-  (typeof AGENT_SESSION_DELIVERED_ENV)[number],
-  string
->;
+/** The values one agent session is launched with, by full variable name. */
+export type AgentSessionEnv = Record<string, string>;
 
 /**
  * The `-e` values for `conversationId`'s session.
  *
- * SINGULARITY_PARENT_HOST must be a host the gateway actually routes, so it is
+ * EQUIN_PARENT_HOST must be a host the gateway actually routes, so it is
  * this backend's own declared runtime namespace rather than a caller-supplied
  * label; `runtimeNamespace()` throws when the process never declared one.
  *
@@ -82,15 +79,17 @@ export function agentSessionEnv(
   roots: { workspaceRoot: string; guardsRoot: string },
 ): AgentSessionEnv {
   return {
-    SINGULARITY_CONVERSATION_ID: conversationId,
-    SINGULARITY_PARENT_HOST: runtimeNamespace(),
+    ...envEntries({
+      CONVERSATION_ID: conversationId,
+      PARENT_HOST: runtimeNamespace(),
+      GUARDS_ROOT: roots.guardsRoot,
+      WORKSPACE_ROOT: roots.workspaceRoot,
+    }),
     CLAUDE_CODE_DISABLE_AGENT_VIEW: "1",
-    [GUARDS_ROOT_ENV]: roots.guardsRoot,
-    [WORKSPACE_ROOT_ENV]: roots.workspaceRoot,
   };
 }
 
-export const AGENT_SESSION_ENV_ALLOWLIST = [
+export const AGENT_SESSION_ENV_ALLOWLIST: readonly string[] = [
   // Identity. Under `env -i` zsh reconstructs HOME from the passwd entry but
   // reads LOGNAME from getlogin(), which on this host answers the console
   // owner rather than the running uid — so all three are passed explicitly.
@@ -107,7 +106,7 @@ export const AGENT_SESSION_ENV_ALLOWLIST = [
   "LC_CTYPE",
   // What the launch delivers with `-e` (`agentSessionEnv`).
   ...AGENT_SESSION_DELIVERED_ENV,
-] as const;
+];
 
 // The system directories every PATH starts from, so early profile lines that
 // shell out (path_helper itself lives in /usr/libexec but is invoked as a plain

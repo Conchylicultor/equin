@@ -1,3 +1,7 @@
+import {
+  envName,
+  readEnv,
+} from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import {
   withDirectOp,
@@ -251,7 +255,7 @@ const run: CliAction<
   if (opts.runId !== undefined && !nested) {
     console.error(
       "--run-id is only valid for a nested check (one that inherited a parent op's " +
-        "host grant via SINGULARITY_HOST_GRANT). A top-level check mints its own id, " +
+        `host grant via ${envName("HOST_GRANT")}). A top-level check mints its own id, ` +
         "which also names its op-log row and its kill line — adopting a parent's would " +
         "collide with the parent's own records. Drop the flag.",
     );
@@ -277,7 +281,7 @@ const run: CliAction<
   // CPU slot (minutes, under load) just to be told it was a typo. But `--list`
   // and `--status` acquire no grant and run no check, and `--status` is the tool
   // you reach for from a second shell WHILE a run is wedged. A stale
-  // `SINGULARITY_CHECK_JOBS=auto` in a shell profile must not be what stops you
+  // `EQUIN_CHECK_JOBS=auto` in a shell profile must not be what stops you
   // reading the progress log during an incident.
   //
   // Deliberately the runner's own `requestedJobs`, not a second check that
@@ -290,10 +294,9 @@ const run: CliAction<
   // CPU work, and the run-level single-flight below is keyed on it — a
   // duplicate must find the in-flight run without first queueing for a host
   // slot. Handed to `runChecks` so the cache is keyed on the same reading.
-  // `--no-cache` / SINGULARITY_CHECK_NO_CACHE mean "really run": no hash, no
+  // `--no-cache` / EQUIN_CHECK_NO_CACHE mean "really run": no hash, no
   // flight — exactly what the runner does with them.
-  const noCache =
-    opts.cache === false || process.env.SINGULARITY_CHECK_NO_CACHE === "1";
+  const noCache = opts.cache === false || readEnv("CHECK_NO_CACHE") === "1";
   const treeHash = noCache
     ? undefined
     : { value: await computeTreeHash(await getWorktreeRoot()) };
@@ -360,7 +363,7 @@ const run: CliAction<
         // Commander hands every `<n>` option through as a string, so the
         // conversion happens here and the VALIDATION does not: `runChecks`
         // rejects anything that is not a positive integer, with one message
-        // covering both this flag and SINGULARITY_CHECK_JOBS (which it reads
+        // covering both this flag and EQUIN_CHECK_JOBS (which it reads
         // itself — that is the knob `build` and `push` reach, since they spawn
         // this command and inherit the environment). Splitting the check across
         // both sites would be two rules that could disagree about the same

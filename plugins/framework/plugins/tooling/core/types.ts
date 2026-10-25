@@ -40,7 +40,7 @@ export interface CheckContext {
   log?: (line: string, stream: "stdout" | "stderr") => void;
   /**
    * False when the run was asked to bypass caches (`--no-cache` /
-   * `SINGULARITY_CHECK_NO_CACHE=1`).
+   * `EQUIN_CHECK_NO_CACHE=1`).
    *
    * The runner honours it for its own result cache, but a check with caches of
    * its OWN has to be told — otherwise `--no-cache` stops meaning "actually do

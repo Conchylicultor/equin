@@ -1,5 +1,9 @@
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
+import {
+  envName,
+  readEnv,
+} from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 
 const TRAILER = LEGACY_IDS.conversationTrailer;
 
@@ -68,20 +72,19 @@ async function hasStrayBodyTrailer(sha: string): Promise<boolean> {
 
 const check: Check = {
   id: "conversation-trailer",
-  description: `SINGULARITY_CONVERSATION_ID is set and every commit ahead of every known main (local, and each <remote>/main) carries the ${TRAILER} trailer`,
-  // Not a pure function of the working tree: reads SINGULARITY_CONVERSATION_ID
+  description: `${envName("CONVERSATION_ID")} is set and every commit ahead of every known main (local, and each <remote>/main) carries the ${TRAILER} trailer`,
+  // Not a pure function of the working tree: reads EQUIN_CONVERSATION_ID
   // env and the trailers of this branch's own commits. Never cache.
   cacheSignature: () => null,
   async run() {
     const branch = await currentBranch();
     if (branch === "main") return { ok: true };
 
-    const envId = process.env.SINGULARITY_CONVERSATION_ID;
+    const envId = readEnv("CONVERSATION_ID");
     if (!envId) {
       return {
         ok: false,
-        message:
-          "SINGULARITY_CONVERSATION_ID is not set in this shell. The `./equin push` amend would strip attribution, orphaning the push from its task.",
+        message: `${envName("CONVERSATION_ID")} is not set in this shell. The \`./equin push\` amend would strip attribution, orphaning the push from its task.`,
         hint: STOP_MESSAGE,
       };
     }
@@ -131,7 +134,7 @@ const check: Check = {
         .join("\n");
       return {
         ok: false,
-        message: `${mismatched.length} commit(s) carry a ${TRAILER} trailer that does not match this pane (SINGULARITY_CONVERSATION_ID=${envId}):\n${list}`,
+        message: `${mismatched.length} commit(s) carry a ${TRAILER} trailer that does not match this pane (${envName("CONVERSATION_ID")}=${envId}):\n${list}`,
         hint:
           "If the commit was created by another conversation sharing this worktree, " +
           "you can safely uncommit (git reset HEAD~1) while keeping the changes, " +

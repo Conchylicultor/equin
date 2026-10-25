@@ -11,6 +11,10 @@
 //   - a refused request, or the backend unreachable for 40 s → stderr, exit 1
 //     (a non-blocking hook error the CLI shows; the session goes on without).
 import {
+  envName,
+  readEnv,
+} from "@plugins/infra/plugins/launcher/plugins/env-names/core";
+import {
   backendBaseUrl,
   fetchCompactionContext,
   hookOutput,
@@ -21,11 +25,11 @@ function fail(message: string): never {
   process.exit(1);
 }
 
-const conversationId = process.env.SINGULARITY_CONVERSATION_ID;
-const parentHost = process.env.SINGULARITY_PARENT_HOST;
+const conversationId = readEnv("CONVERSATION_ID");
+const parentHost = readEnv("PARENT_HOST");
 if (!conversationId || !parentHost) {
   fail(
-    "SINGULARITY_CONVERSATION_ID / SINGULARITY_PARENT_HOST are not set — not an app-launched agent",
+    `${envName("CONVERSATION_ID")} / ${envName("PARENT_HOST")} are not set — not an app-launched agent`,
   );
 }
 

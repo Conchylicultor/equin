@@ -43,9 +43,9 @@
  * checker.
  *
  * The first fix replaced the literal with a *derivation* — the checkout's
- * directory name, preferring `$SINGULARITY_WORKTREE` — and that failed the same
+ * directory name, preferring the retired worktree variable — and that failed the same
  * way, one level up. A name is a guess about what somebody else registered:
- * `SINGULARITY_WORKTREE` answered "which namespace is this BACKEND the server
+ * the retired worktree variable answered "which namespace is this BACKEND the server
  * for" (the gateway set it on the backends it spawned), an agent pane inherited
  * it through the tmux server, and so from inside any worktree it said
  * the main namespace. Runs drove MAIN's app and printed ALL CHECKS PASSED — worse,
@@ -63,7 +63,7 @@
  * ones a basename could not name even in principle.
  *
  * No environment variable has any spelling in this runtime — not
- * `SINGULARITY_WORKTREE`, and not the `$SINGULARITY_E2E_BASE` that used to
+ * the retired worktree variable, and not the the retired e2e-base variable that used to
  * outrank the derivation here (nothing in the repo ever set it, and an
  * inherited channel that silently wins is the shape of the bug above). There is
  * nothing left to prefer or contradict; `--url` covers every operator case and

@@ -13,7 +13,7 @@ Once, in `plugins/agent-policy` (hooks + deny rules). `.claude/settings.json`'s
 it — so a scratch-workspace agent, whose cwd loads no project settings, is
 guarded too. Never add a hook to `.claude/settings.json` by hand
 (`guards:claude-settings-in-sync`). An app launch also names the workspace root
-(`SINGULARITY_WORKSPACE_ROOT` → `ctx.workRoot` / `ctx.protectedRoot`): the
+(`EQUIN_WORKSPACE_ROOT` → `ctx.workRoot` / `ctx.protectedRoot`): the
 write guards' boundary, for any workspace kind.
 
 ## The stop guard, and why a subagent needs one
@@ -155,6 +155,8 @@ can blind or deafen all of them at once.
     - `framework/tooling/collected-dir.loadCollectedDir`
     - `framework/tooling/guards/refusal-format.joinRefusal`
     - `framework/tooling/guards/refusal-format.REFUSAL_HEADER`
+    - `infra/launcher/env-names.envNames`
+    - `infra/launcher/env-names.readEnv`
     - `infra/namespace.asNamespace`
     - `infra/namespace.isNamespace`
     - `infra/paths.HOME_DIR`
@@ -196,7 +198,6 @@ can blind or deafen all of them at once.
     - `readTaskReport`
     - `redirectionTargets`
     - `THRESHOLD`
-    - `TOOL_USE_ID_ENV`
     - `TOOL_USE_ID_RE`
     - `toolUseIdFrom`
     - `watchSubjects`

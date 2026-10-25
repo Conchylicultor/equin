@@ -15,4 +15,3 @@ export {
   cpuBudget,
 } from "./internal/budget";
 export type { Grant, GrantHooks } from "./internal/grant";
-export { HOST_GRANT_ENV, HOST_LANE_ENV } from "./internal/grant";

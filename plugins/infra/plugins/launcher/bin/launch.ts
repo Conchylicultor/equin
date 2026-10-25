@@ -18,11 +18,15 @@
  * `DataDir.path` is a getter, so nothing there captures an env read. What still
  * freezes is the embedded-PG family — `PG_PORT`, `PG_SOCKET_DIR` and the paths
  * derived from them (`database/embedded/shared/internal/paths.ts`) are
- * module-level consts over `SINGULARITY_PG_PORT` / `SINGULARITY_PG_SOCKET_DIR`.
+ * module-level consts over `EQUIN_PG_PORT` / `EQUIN_PG_SOCKET_DIR`.
  * One frozen constant anywhere in the closure is enough to make the ordering
  * load-bearing, so keep the dynamic import until that family is lazy too.
  */
 import { dirname, join } from "node:path";
+import {
+  readEnv,
+  setEnvDefault,
+} from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { existsSync, mkdtempSync, readFileSync } from "node:fs";
 // Zero-import and path-independent, so the ordering constraint above does not
 // apply to it — nothing here freezes a path constant.
@@ -37,7 +41,7 @@ const bundleRoot = dirname(process.execPath);
 
 // Every variable set below reaches the gateway, and through it the backend and
 // the supervised start binaries, only because it is a FORWARDED name in the
-// declared runtime environment (`RUNTIME_FORWARDED_ENV` in launcher/core). The
+// declared runtime environment (`RUNTIME_FORWARDED_ENV` in launcher/env-names). The
 // gateway spawn drops every other name. A new relocation variable therefore
 // goes on that list too; the `launcher:runtime-env-declared` check makes you
 // decide.
@@ -45,79 +49,67 @@ const bundleRoot = dirname(process.execPath);
 // registry, the pid file) so a release never touches the dev `~/.singularity`.
 // `??=` lets an operator override the data root (e.g. point at a persistent
 // volume) without editing the binary.
-process.env.SINGULARITY_DIR ??= join(bundleRoot, "data");
+setEnvDefault("DIR", join(bundleRoot, "data"));
 // Mark this as a compiled release so host-singleton work that keys on the dev
 // "main" worktree (the cluster sentinel + duress latch) also runs on a
 // release's single backend, whose runtime namespace is the composition name
 // (so isMain() is false). Travels launch → gateway → backend because it is a
 // forwarded name in the declared runtime environment (launcher/core). Read via
 // isRelease() in infra/paths.
-process.env.SINGULARITY_RELEASE ??= "1";
+setEnvDefault("RELEASE", "1");
 // Point the compiled pg-start / pgbouncer-start at the vendored native trees.
 // Both are forwarded names, so the gateway receives them and passes them to the
 // supervised start binaries.
-process.env.SINGULARITY_PG_BIN_DIR ??= join(bundleRoot, "pg", "native", "bin");
-process.env.SINGULARITY_PGBOUNCER_BIN ??= join(
-  bundleRoot,
-  "pgbouncer",
-  "native",
-  "bin",
-  "pgbouncer",
+setEnvDefault("PG_BIN_DIR", join(bundleRoot, "pg", "native", "bin"));
+setEnvDefault(
+  "PGBOUNCER_BIN",
+  join(bundleRoot, "pgbouncer", "native", "bin", "pgbouncer"),
 );
 // The backend spawns pg_dump / pg_restore for DB forks and backups; a compiled
 // backend's `import.meta.dir` is its virtual FS, so point it at the vendored
 // tools. A forwarded name, so the gateway hands it to the spawned backend.
-process.env.SINGULARITY_PG_CLIENT_BIN_DIR ??= join(
-  bundleRoot,
-  "pg-client",
-  "bin",
-);
+setEnvDefault("PG_CLIENT_BIN_DIR", join(bundleRoot, "pg-client", "bin"));
 // The migration runner reads its `.sql` files from disk; `import.meta.dir`
 // resolves into the compiled binary's virtual FS, so point it at the vendored
 // `migrations/data` tree. A forwarded name, so the gateway receives it and
 // hands it to the spawned backend, which is the process that actually runs
 // migrations.
-process.env.SINGULARITY_MIGRATIONS_DIR ??= join(
-  bundleRoot,
-  "migrations",
-  "data",
-);
+setEnvDefault("MIGRATIONS_DIR", join(bundleRoot, "migrations", "data"));
 // @parcel/watcher's native .node can't be embedded by `bun --compile`; point the
 // file-watcher loader at the vendored addon. A forwarded name, so the gateway
 // hands it to the spawned backend, which is the process that starts watchers.
-process.env.SINGULARITY_PARCEL_WATCHER_NODE ??= join(
-  bundleRoot,
-  "parcel-watcher",
-  "watcher.node",
+setEnvDefault(
+  "PARCEL_WATCHER_NODE",
+  join(bundleRoot, "parcel-watcher", "watcher.node"),
 );
 // The cluster sentinel's Bun Worker entry can't be embedded by `bun --compile`
 // (the `new Worker(new URL(...))` module is not traced), so release.ts vendors
 // it as a standalone bundled .js; point worker-host.ts at it. A forwarded
 // name, so the gateway hands it to the spawned backend, which spawns the worker.
-process.env.SINGULARITY_SENTINEL_WORKER_JS ??= join(
-  bundleRoot,
-  "sentinel",
-  "worker.js",
-);
+setEnvDefault("SENTINEL_WORKER_JS", join(bundleRoot, "sentinel", "worker.js"));
 // The raw git-layer config tree is read by the config-v2.raw-file loader
 // (Settings "View raw") and gitBacksScope (per-app un-fork). REPO_ROOT resolves
 // into the compiled binary's virtual FS, so point these at the vendored tree.
-process.env.SINGULARITY_REPO_CONFIG_DIR ??= join(bundleRoot, "config");
+setEnvDefault("REPO_CONFIG_DIR", join(bundleRoot, "config"));
 // The served frontend. In dev this derives from the namespace
 // (`~/.singularity/worktrees/<name>/web`); a release ships one bundle whose web
 // tree is vendored at `<bundleRoot>/web` (already carrying `.build-graph` /
 // `.build-commit` / `.build-id`, copied by release.ts), so point the backend's
 // readers — the stale-tab graph pin, the build-commit base, the producing run —
 // at it. Travels launch → gateway → backend, like every var above.
-process.env.SINGULARITY_WEB_DIST ??= join(bundleRoot, "web");
+setEnvDefault("WEB_DIST", join(bundleRoot, "web"));
 // Reroot the embedded-PG / PgBouncer sockets AND the gateway's per-worktree
 // backend sockets onto short `/tmp` paths (each reads a single env override).
 // The data root above may be a long versioned `<out>/data`
 // (`releases/<wt>/<comp>-<target>/<run-id>/data`), which would blow the 104-byte
 // AF_UNIX socket-path cap; the socket dirs are decoupled so length never
 // constrains where a release is staged.
-process.env.SINGULARITY_PG_SOCKET_DIR ??= mkdtempSync(join("/tmp", "sgs-"));
-process.env.SINGULARITY_SOCKETS_DIR ??= mkdtempSync(join("/tmp", "sgw-"));
+if (readEnv("PG_SOCKET_DIR") === undefined) {
+  setEnvDefault("PG_SOCKET_DIR", mkdtempSync(join("/tmp", "sgs-")));
+}
+if (readEnv("SOCKETS_DIR") === undefined) {
+  setEnvDefault("SOCKETS_DIR", mkdtempSync(join("/tmp", "sgw-")));
+}
 
 interface ReleaseManifest {
   composition: string;
@@ -167,7 +159,7 @@ async function main(): Promise<void> {
   // subdomain, a spec dir and a database name.
   const name = asNamespace(manifest.composition);
 
-  // Where to listen: `SINGULARITY_LISTEN=host:port` if set, else the port baked
+  // Where to listen: `EQUIN_LISTEN=host:port` if set, else the port baked
   // into RELEASE.json on loopback (127.0.0.1 and [::1]); `:port` is the explicit
   // wildcard opt-in. That env var is the ONE runtime
   // authority — it replaced the older `PORT` override rather than joining it,
@@ -197,7 +189,7 @@ async function main(): Promise<void> {
   // delegates the copy mechanics + dirname to asset-mirror.
   seedReleaseAssetMirror({
     bundleRoot,
-    dataDir: process.env.SINGULARITY_DIR!,
+    dataDir: readEnv("DIR")!,
     log: console.log,
   });
 
@@ -206,11 +198,11 @@ async function main(): Promise<void> {
   // serve the FIRST bundle's config forever. Only the build-owned origin layer
   // is written; the user's own `.jsonc` overrides are left alone. worktreeName
   // = composition = the backend's runtime namespace, so this lands exactly where
-  // config-dir.ts reads (SINGULARITY_DIR/config/<worktree>). Runs before the
+  // config-dir.ts reads (EQUIN_DIR/config/<worktree>). Runs before the
   // gateway spawns the backend, so CONFIG_DIR is current on first read.
   propagateReleaseConfig({
     bundleRoot,
-    dataDir: process.env.SINGULARITY_DIR!,
+    dataDir: readEnv("DIR")!,
     worktreeName: name,
     log: console.log,
   });
@@ -243,7 +235,7 @@ async function main(): Promise<void> {
   console.log("");
   console.log(`App "${name}" is serving.`);
   console.log(`  URL:  ${namespaceUrl(name, "", port)}`);
-  console.log(`  Root: ${process.env.SINGULARITY_DIR}`);
+  console.log(`  Root: ${readEnv("DIR")}`);
 
   // ── Stay in the foreground. ────────────────────────────────────────────────
   //
@@ -262,7 +254,7 @@ async function main(): Promise<void> {
   // gateway dies, which is the event that means the app is gone.
   gateway.ref();
 
-  const root = process.env.SINGULARITY_DIR!;
+  const root = readEnv("DIR")!;
   let stopping = false;
   async function stop(reason: string, code: number): Promise<void> {
     if (stopping) return; // A second SIGTERM must not race the first teardown.

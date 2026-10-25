@@ -6,8 +6,8 @@
  * It only signals pidfiles — it does NOT delete the data dir — so a packaged
  * install's songs/DB persist across app restarts.
  *
- * Invoked by the desktop (Tauri) shell on app exit with the SAME `SINGULARITY_DIR`
- * / `SINGULARITY_LISTEN` env the launcher saw, so it tears down exactly the stack
+ * Invoked by the desktop (Tauri) shell on app exit with the SAME `EQUIN_DIR`
+ * / `EQUIN_LISTEN` env the launcher saw, so it tears down exactly the stack
  * `launch` brought up. The gateway / Postgres are detached daemons (not the shell's
  * children), so pidfile-based teardown is the authoritative stop.
  *
@@ -15,6 +15,10 @@
  * anything path-dependent, then `await import(...)` so the constants freeze under
  * the release root.
  */
+import {
+  readEnv,
+  setEnvDefault,
+} from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { dirname, join } from "node:path";
 import { existsSync, readFileSync } from "node:fs";
 
@@ -24,7 +28,7 @@ const bundleRoot = dirname(process.execPath);
 
 // Re-root under the bundle, matching launch.ts. `??=` lets the desktop shell (or
 // an operator) point at the actual install root via inherited env.
-const dataRoot = (process.env.SINGULARITY_DIR ??= join(bundleRoot, "data"));
+const dataRoot = setEnvDefault("DIR", join(bundleRoot, "data"));
 
 interface ReleaseManifest {
   composition: string;
@@ -56,16 +60,16 @@ async function main(): Promise<void> {
   );
 
   // The HTTP listen port, resolved by the SAME function launch.ts uses (one
-  // authority: SINGULARITY_LISTEN, else the baked manifest value) — so teardown
+  // authority: EQUIN_LISTEN, else the baked manifest value) — so teardown
   // cannot target a different gateway than the one launch brought up.
   const { port: httpPort } = resolveListenAddress(manifest.port);
 
   // PG is killed via its postmaster pidfile under `root` — the authoritative
   // stop. The pgPort arg is only a loopback-TCP backstop, relevant when the
   // cluster runs on a non-default port; a desktop install uses the default, so we
-  // pass it through only when SINGULARITY_PG_PORT is explicitly set. (Reading the
+  // pass it through only when EQUIN_PG_PORT is explicitly set. (Reading the
   // env here avoids a cross-plugin import of the embedded PG_PORT constant.)
-  const pgPortRaw = process.env.SINGULARITY_PG_PORT;
+  const pgPortRaw = readEnv("PG_PORT");
   const pgPort = pgPortRaw ? Number(pgPortRaw) : undefined;
 
   await teardownSelfContainedApp(

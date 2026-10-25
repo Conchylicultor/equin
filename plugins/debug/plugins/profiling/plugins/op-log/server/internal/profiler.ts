@@ -1,3 +1,4 @@
+import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import type {
   GrantHooks,
   Lane,
@@ -153,7 +154,7 @@ export function createOpProfiler<K extends OpKind>(
   kind: K,
   opts: OpProfilerOptions,
 ): OpProfiler<K> {
-  const conversationId = process.env.SINGULARITY_CONVERSATION_ID ?? null;
+  const conversationId = readEnv("CONVERSATION_ID") ?? null;
   const sink = opts.sink ?? ((event: OpEvent) => appendOpLog(event));
   const readSleep = opts.readSleep ?? readSleepClock;
 

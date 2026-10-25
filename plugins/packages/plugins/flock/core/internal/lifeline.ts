@@ -1,19 +1,21 @@
 import { closeSync, openSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { Worker } from "node:worker_threads";
+import {
+  envEntries,
+  readEnv,
+  unsetEnv,
+} from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { flockTry } from "./flock";
 
-/**
- * The environment variable a parent hands its child the lifeline path in. The
- * one name both halves read — `holdParentLifeline` (the spawner) writes it,
- * `exitWithParent` (the child) reads it.
- */
-export const PARENT_LIFELINE_ENV = "SINGULARITY_PARENT_LIFELINE";
+// The PARENT_LIFELINE variable is what a parent hands its child the lifeline
+// path in: `holdParentLifeline` (the spawner) writes it, `exitWithParent` (the
+// child) reads it.
 
 /** A lifeline the parent holds for one child. */
 export interface ParentLifeline {
   /** Merge into the child's environment. */
-  env: { [PARENT_LIFELINE_ENV]: string };
+  env: Record<string, string>;
   /** Drop the lock. Call once the child has exited. */
   release(): void;
 }
@@ -36,7 +38,7 @@ export function holdParentLifeline(dir: string): ParentLifeline {
     throw new Error(`holdParentLifeline: could not lock fresh file ${path}`);
   }
   return {
-    env: { [PARENT_LIFELINE_ENV]: path },
+    env: envEntries({ PARENT_LIFELINE: path }),
     release: () => closeSync(fd),
   };
 }
@@ -56,11 +58,11 @@ export function holdParentLifeline(dir: string): ParentLifeline {
  * with an explicit `process.exit()` rather than by draining the event loop.
  */
 export function exitWithParent(): void {
-  const file = process.env[PARENT_LIFELINE_ENV];
+  const file = readEnv("PARENT_LIFELINE");
   if (!file) return;
   // A grandchild must not inherit OUR parent's lifeline: it is guarded by its
   // own spawn's lifeline, or by nothing.
-  delete process.env[PARENT_LIFELINE_ENV];
+  unsetEnv("PARENT_LIFELINE");
   const worker = new Worker(
     join(import.meta.dir, "../../scripts/lifeline-block.ts"),
     { workerData: { file } },

@@ -12,6 +12,11 @@
  * The fixture is a real git repository, because the tree is read out of git.
  */
 
+import {
+  readEnv,
+  setEnv,
+  unsetEnv,
+} from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { test, expect, beforeAll, afterAll } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
@@ -59,7 +64,7 @@ const PROGRAM = "repo";
 let dataRoot = "";
 /** A real directory that is NOT a git checkout — the failing-root case below. */
 let notARepo = "";
-const priorDataRoot = process.env.SINGULARITY_DIR;
+const priorDataRoot = readEnv("DIR");
 
 beforeAll(async () => {
   // The program name is a fixed literal now (`repo`), not a per-suite one, so
@@ -67,11 +72,11 @@ beforeAll(async () => {
   // lint result store — are the
   // REAL ones unless pointed
   // elsewhere. Left alone, the suite would score (and copy) every pooled
-  // multi-GB base of every checkout on this machine. `SINGULARITY_DIR` is the
+  // multi-GB base of every checkout on this machine. `EQUIN_DIR` is the
   // sanctioned redirect (every DataDir read resolves it per call), and it is
   // set before any worker is spawned so the thread inherits it too.
   dataRoot = mkdtempSync(join(tmpdir(), "type-check-prepare-thread-data-"));
-  process.env.SINGULARITY_DIR = dataRoot;
+  setEnv("DIR", dataRoot);
   notARepo = mkdtempSync(join(tmpdir(), "type-check-prepare-thread-norepo-"));
 
   root = mkdtempSync(join(tmpdir(), "type-check-prepare-thread-"));
@@ -91,8 +96,8 @@ beforeAll(async () => {
 });
 
 afterAll(() => {
-  if (priorDataRoot === undefined) delete process.env.SINGULARITY_DIR;
-  else process.env.SINGULARITY_DIR = priorDataRoot;
+  if (priorDataRoot === undefined) unsetEnv("DIR");
+  else setEnv("DIR", priorDataRoot);
   if (root) rmSync(root, { recursive: true, force: true });
   if (dataRoot) rmSync(dataRoot, { recursive: true, force: true });
   if (notARepo) rmSync(notARepo, { recursive: true, force: true });

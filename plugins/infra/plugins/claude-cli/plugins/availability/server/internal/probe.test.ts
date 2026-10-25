@@ -2,10 +2,15 @@ import { afterAll, afterEach, describe, expect, test } from "bun:test";
 import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import {
+  readEnv,
+  setEnv,
+  unsetEnv,
+} from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { probeClaudeCode } from "./probe";
 
 const dir = mkdtempSync(join(tmpdir(), "sg-claude-probe-"));
-const saved = process.env.SINGULARITY_CLAUDE_BIN;
+const saved = readEnv("CLAUDE_BIN");
 
 /** A fake `claude` answering `--version` and `auth status --json`. */
 function stub(
@@ -30,15 +35,18 @@ function stub(
 }
 
 afterEach(() => {
-  if (saved === undefined) delete process.env.SINGULARITY_CLAUDE_BIN;
-  else process.env.SINGULARITY_CLAUDE_BIN = saved;
+  if (saved === undefined) unsetEnv("CLAUDE_BIN");
+  else setEnv("CLAUDE_BIN", saved);
 });
 afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
 describe("probeClaudeCode", () => {
   test("signed in → ready, with version and account", async () => {
-    process.env.SINGULARITY_CLAUDE_BIN = stub(
-      '{"loggedIn": true, "authMethod": "claude.ai", "email": "a@b.c", "orgId": "x"}',
+    setEnv(
+      "CLAUDE_BIN",
+      stub(
+        '{"loggedIn": true, "authMethod": "claude.ai", "email": "a@b.c", "orgId": "x"}',
+      ),
     );
     expect(await probeClaudeCode()).toEqual({
       kind: "ready",
@@ -49,9 +57,7 @@ describe("probeClaudeCode", () => {
   });
 
   test("signed out → signed-out, whatever the exit code", async () => {
-    process.env.SINGULARITY_CLAUDE_BIN = stub('{"loggedIn": false}', {
-      authExit: 1,
-    });
+    setEnv("CLAUDE_BIN", stub('{"loggedIn": false}', { authExit: 1 }));
     expect(await probeClaudeCode()).toEqual({
       kind: "signed-out",
       version: "2.1.282",
@@ -60,7 +66,7 @@ describe("probeClaudeCode", () => {
 
   test("no executable → missing, naming where it looked", async () => {
     const nowhere = join(dir, "not-there");
-    process.env.SINGULARITY_CLAUDE_BIN = nowhere;
+    setEnv("CLAUDE_BIN", nowhere);
     expect(await probeClaudeCode()).toEqual({
       kind: "missing",
       searched: [nowhere],
@@ -68,16 +74,14 @@ describe("probeClaudeCode", () => {
   });
 
   test("output that is not its JSON → unreadable, never a verdict", async () => {
-    process.env.SINGULARITY_CLAUDE_BIN = stub("Error: something broke", {
-      authExit: 1,
-    });
+    setEnv("CLAUDE_BIN", stub("Error: something broke", { authExit: 1 }));
     const s = await probeClaudeCode();
     expect(s.kind).toBe("unreadable");
     if (s.kind === "unreadable") expect(s.error).toContain("something broke");
   });
 
   test("JSON of the wrong shape → unreadable", async () => {
-    process.env.SINGULARITY_CLAUDE_BIN = stub('{"loggedIn": "yes"}');
+    setEnv("CLAUDE_BIN", stub('{"loggedIn": "yes"}'));
     expect((await probeClaudeCode()).kind).toBe("unreadable");
   });
 });

@@ -52,7 +52,7 @@ the one spelling of the `--namespace` flag and its "given with no value" error.
 
 ## Why not an environment variable
 
-It was one — `SINGULARITY_WORKTREE` — and an env var reaches every descendant
+It was one — `WORKTREE` — and an env var reaches every descendant
 forever. Main's backend was the first process to talk to the tmux server after a
 restart, so the tmux server kept main's environment, and from then on every agent
 session started life believing it was main. Every `./equin build`, `check`
@@ -60,9 +60,9 @@ and `test` those sessions ran inherited it and filed its records under
 the main namespace. Nothing chose that value.
 
 Module state cannot be inherited, which is the whole point of putting the answer
-here. `namespace-identity/no-ambient-worktree-env` (rung 3) keeps the variable
-from coming back: the name may not appear in code anywhere but the rule's own
-source and test.
+here. The variable cannot come back (rung 2): the app's variables are declared
+by key in `infra/launcher/env-names`, which has no worktree key, so `readEnv` cannot
+name it, and `launcher:env-names` rejects a full variable name written in code.
 
 Design:
 [`research/2026-09-15-global-retire-ambient-worktree-env-runtime-identity.md`](../../../../research/2026-09-15-global-retire-ambient-worktree-env-runtime-identity.md).

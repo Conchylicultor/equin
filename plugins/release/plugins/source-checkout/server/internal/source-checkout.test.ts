@@ -1,3 +1,8 @@
+import {
+  readEnv,
+  setEnv,
+  unsetEnv,
+} from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import {
   closeSync,
@@ -28,9 +33,9 @@ import {
 // scratch namespace dir or host-pool slot file lands under the real
 // `~/.singularity`. The root is read at call time, so setting it here — before
 // any test body runs — is enough.
-const ORIGINAL_DATA_ROOT = process.env.SINGULARITY_DIR;
+const ORIGINAL_DATA_ROOT = readEnv("DIR");
 const dataRoot = mkdtempSync(join(tmpdir(), "release-source-checkout-root-"));
-process.env.SINGULARITY_DIR = dataRoot;
+setEnv("DIR", dataRoot);
 const repo = mkdtempSync(join(tmpdir(), "release-source-checkout-repo-"));
 
 /** The rejection message of `promise`; fails the test when it resolves. */
@@ -78,8 +83,8 @@ beforeAll(async () => {
 });
 
 afterAll(() => {
-  if (ORIGINAL_DATA_ROOT === undefined) delete process.env.SINGULARITY_DIR;
-  else process.env.SINGULARITY_DIR = ORIGINAL_DATA_ROOT;
+  if (ORIGINAL_DATA_ROOT === undefined) unsetEnv("DIR");
+  else setEnv("DIR", ORIGINAL_DATA_ROOT);
   rmSync(dataRoot, { recursive: true, force: true });
   rmSync(repo, { recursive: true, force: true });
 });

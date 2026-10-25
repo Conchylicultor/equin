@@ -122,8 +122,8 @@ What each arm of `machine/internal/run-build.ts` owns, and why the split is wher
   here, which is the last moment this plugin owns before the child exists.
 - **`argv`** — `--allow-main` before `--composition` (commander's variadic is
   greedy up to the next flag), plus the two env overrides that are ADDED to the
-  backend's own environment: `SINGULARITY_BUILD_ID`, and
-  `SINGULARITY_BUILD_DETACHED`, which is what stops the CLI's orphan guard from
+  backend's own environment: `EQUIN_BUILD_ID`, and
+  `EQUIN_BUILD_DETACHED`, which is what stops the CLI's orphan guard from
   killing a build whose invoking backend it is about to restart.
 - **`closeRow`** — the bare `WHERE finished_at IS NULL` stamp of `finished_at` +
   `exit_code`, and NOTHING else. It runs in the supervised-run reconciler of

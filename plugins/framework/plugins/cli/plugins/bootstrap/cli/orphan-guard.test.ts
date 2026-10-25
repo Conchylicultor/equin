@@ -1,3 +1,4 @@
+import { withEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core/testing";
 import { afterEach, expect, test } from "bun:test";
 import {
   disarmOrphanGuard,
@@ -38,10 +39,8 @@ test("arming installs a poll that disarm removes", () => {
   expect(() => disarmOrphanGuard()).not.toThrow();
 });
 
-test("SINGULARITY_BUILD_DETACHED skips arming entirely", () => {
-  const previous = process.env.SINGULARITY_BUILD_DETACHED;
-  process.env.SINGULARITY_BUILD_DETACHED = "1";
-  try {
+test("BUILD_DETACHED skips arming entirely", async () => {
+  await withEnv({ BUILD_DETACHED: "1" }, () => {
     let fired = false;
     installOrphanGuard(() => {
       fired = true;
@@ -49,10 +48,7 @@ test("SINGULARITY_BUILD_DETACHED skips arming entirely", () => {
     expect(fired).toBe(false);
     // Nothing was installed, so disarm has nothing to cancel and must not throw.
     expect(() => disarmOrphanGuard()).not.toThrow();
-  } finally {
-    if (previous === undefined) delete process.env.SINGULARITY_BUILD_DETACHED;
-    else process.env.SINGULARITY_BUILD_DETACHED = previous;
-  }
+  });
 });
 
 test("ORPHAN_EXIT_CODE is the documented 128 + 12", () => {

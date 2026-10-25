@@ -58,8 +58,8 @@ export const notionDescriptor: AuthProviderDescriptor = defineAuthProvider({
     }),
     fetchIdentity: fetchNotionIdentity,
     resolveCredentials: async (env) => {
-      const idFromEnv = env.get("SINGULARITY_AUTH_NOTION_CLIENT_ID");
-      const secretFromEnv = env.get("SINGULARITY_AUTH_NOTION_CLIENT_SECRET");
+      const idFromEnv = env.get("AUTH_NOTION_CLIENT_ID");
+      const secretFromEnv = env.get("AUTH_NOTION_CLIENT_SECRET");
       if (idFromEnv && secretFromEnv) {
         return { clientId: idFromEnv, clientSecret: secretFromEnv };
       }

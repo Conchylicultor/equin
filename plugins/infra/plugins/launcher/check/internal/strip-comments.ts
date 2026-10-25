@@ -5,7 +5,7 @@ import { maskSource } from "@plugins/plugin-meta/plugins/parse-utils/core";
 // does not. The result has the SAME length and the same newlines as the input,
 // so a line number found in it is the line number in the original file.
 //
-// Four syntaxes, chosen by path, because `launcher:runtime-env-declared` scans
+// Four syntaxes, chosen by path, because the launcher checks scan
 // TypeScript, the gateway's Go, the desktop shell's Rust and the git hooks.
 // Go and Rust look alike but are read separately: each knows only its own
 // literals (Go's backtick strings, Rust's raw strings and nesting comments), so
@@ -24,7 +24,7 @@ function blank(out: string[], start: number, end: number): void {
  * reading is what every text scan in the repo already relies on.
  *
  * A regex literal therefore counts as not-code, like a comment: a pattern that
- * spells a variable name (a check banning `process.env.SINGULARITY_DIR`) neither
+ * spells a variable name (a check banning `process.env.EQUIN_DIR`) neither
  * reads nor sets it — the same reason lint rules are not scanned.
  *
  * This used to parse each file into a TypeScript syntax tree and visit every

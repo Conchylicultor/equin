@@ -58,7 +58,7 @@ its appearance is the step that turns `not-packed` into shippable.
 ## The `latest-<platform>` pointer
 
 A composition's run dirs sit under
-`<SINGULARITY_DIR>/releases/<namespace>/<comp>-<target>/<run-id>/`, beside one
+`<EQUIN_DIR>/releases/<namespace>/<comp>-<target>/<run-id>/`, beside one
 symlink **per platform**: `latest-linux-x64`, `latest-darwin-arm64`, …
 
 Two properties are structural, not conventional:

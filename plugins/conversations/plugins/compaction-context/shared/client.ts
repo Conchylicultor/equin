@@ -16,7 +16,7 @@ export function compactionContextPath(conversationId: string): string {
 
 /**
  * Where the hook reaches its backend: the namespace the agent's .mcp.json dials
- * too (`SINGULARITY_PARENT_HOST`). Throws on a value that is not one.
+ * too (`EQUIN_PARENT_HOST`). Throws on a value that is not one.
  */
 export function backendBaseUrl(parentHost: string): string {
   return namespaceUrl(asNamespace(parentHost));

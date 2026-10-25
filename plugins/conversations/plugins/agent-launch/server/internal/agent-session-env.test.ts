@@ -1,4 +1,9 @@
 import { describe, expect, test } from "bun:test";
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
+import {
+  envEntries,
+  envNames,
+} from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import {
   AGENT_SESSION_DELIVERED_ENV,
@@ -13,7 +18,7 @@ import {
 // The namespace variable a backend's environment used to leak into agents. Spelled
 // from its parts so the identifier itself stays out of the tree: the rule that
 // bans it does not need an exception for the test that proves it is gone.
-const LEAKED_NAMESPACE_VAR = ["SINGULARITY_", "WORKTREE"].join("");
+const LEAKED_NAMESPACE_VAR = `${LEGACY_IDS.envPrefix}${["WORK", "TREE"].join("")}`;
 
 // Every `NAME=` word the wrapper hands to `env -i`, in order.
 function assignedNames(wrapper: string): string[] {
@@ -56,12 +61,14 @@ describe("the agent-session wrapper", () => {
 });
 
 describe("agentSessionLaunch", () => {
-  const ENV = {
-    SINGULARITY_CONVERSATION_ID: "conv-test",
-    SINGULARITY_PARENT_HOST: "att-test-w6l1",
+  const ENV: Record<string, string> = {
+    ...envEntries({
+      CONVERSATION_ID: "conv-test",
+      PARENT_HOST: "att-test-w6l1",
+      GUARDS_ROOT: "/fixture/repo",
+      WORKSPACE_ROOT: "/fixture/workspaces/att-test-w6l1",
+    }),
     CLAUDE_CODE_DISABLE_AGENT_VIEW: "1",
-    SINGULARITY_GUARDS_ROOT: "/fixture/repo",
-    SINGULARITY_WORKSPACE_ROOT: "/fixture/workspaces/att-test-w6l1",
   };
   const launch = agentSessionLaunch({
     env: ENV,
@@ -150,8 +157,10 @@ async function runWrapper(
     TERM: "dumb",
     LANG: "C.UTF-8",
     // What the runtime delivers.
-    SINGULARITY_CONVERSATION_ID: "conv-test",
-    SINGULARITY_PARENT_HOST: "att-test-w6l1",
+    ...envEntries({
+      CONVERSATION_ID: "conv-test",
+      PARENT_HOST: "att-test-w6l1",
+    }),
     CLAUDE_CODE_DISABLE_AGENT_VIEW: "1",
     // What a backend's ambient environment carries.
     [LEAKED_NAMESPACE_VAR]: "fixture-namespace",
@@ -198,8 +207,12 @@ describe.each(LOGIN_SHELLS)("the wrapper, executed under %s", (loginShell) => {
     expect(res.stdout).toContain(`PROMPT<${prompt}>`);
 
     // The agent keeps what it was given...
-    expect(res.stdout).toContain("SINGULARITY_CONVERSATION_ID=conv-test");
-    expect(res.stdout).toContain("SINGULARITY_PARENT_HOST=att-test-w6l1");
+    for (const name of envNames("CONVERSATION_ID")) {
+      expect(res.stdout).toContain(`${name}=conv-test`);
+    }
+    for (const name of envNames("PARENT_HOST")) {
+      expect(res.stdout).toContain(`${name}=att-test-w6l1`);
+    }
     // ...including the toolchain on PATH, whatever the login profile does...
     expect(res.stdout).toMatch(/^PATH=.*\/fixture\/shims/m);
     // ...and nothing it was not.

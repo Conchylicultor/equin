@@ -1,12 +1,17 @@
+import {
+  envName,
+  readEnv,
+} from "@plugins/infra/plugins/launcher/plugins/env-names/core";
+
 /**
  * The listen address of a launched app, and its ONE runtime authority.
  *
  * A released bundle's listen address can be expressed in exactly two places:
  * `RELEASE.json`'s `port` (the build's default, which is what makes a bundle
- * runnable by double-click with no environment at all) and `SINGULARITY_LISTEN`
+ * runnable by double-click with no environment at all) and `EQUIN_LISTEN`
  * (the runtime override). Nothing else.
  *
- * `SINGULARITY_LISTEN` replaced the older `PORT` override rather than joining
+ * `EQUIN_LISTEN` replaced the older `PORT` override rather than joining
  * it. `PORT` was a strictly weaker form of the same knob — no bind host — and
  * the bind host is the whole point: a deployment sits behind Caddy on loopback,
  * and "the gateway is not reachable off-box" must be a property of how it was
@@ -20,8 +25,7 @@
  * connections" prompt) unless someone asked for it.
  */
 
-/** The single runtime listen override, `host:port`. */
-export const LISTEN_ENV = "SINGULARITY_LISTEN";
+// The LISTEN variable is the single runtime listen override, `host:port`.
 
 /**
  * The bind host keyword for "loopback only, both families": the gateway's
@@ -42,7 +46,7 @@ export interface ListenAddress {
 }
 
 /**
- * Resolve where to listen: `SINGULARITY_LISTEN` if set, else `manifestPort` on
+ * Resolve where to listen: `EQUIN_LISTEN` if set, else `manifestPort` on
  * loopback ({@link LOOPBACK_BIND}). An explicit `:<port>` is the wildcard opt-in.
  *
  * A malformed override throws rather than falling back to the manifest — a
@@ -50,7 +54,7 @@ export interface ListenAddress {
  * knob exists to prevent, so it must never be absorbable.
  */
 export function resolveListenAddress(manifestPort: number): ListenAddress {
-  const raw = process.env[LISTEN_ENV];
+  const raw = readEnv("LISTEN");
   if (raw === undefined || raw.trim() === "") {
     return {
       host: LOOPBACK_BIND,
@@ -65,13 +69,16 @@ export function resolveListenAddress(manifestPort: number): ListenAddress {
   const split = value.lastIndexOf(":");
   if (split < 0) {
     throw new Error(
-      `${LISTEN_ENV}="${value}" is not a host:port address. Use "${LOOPBACK_BIND}:9100" (or leave it unset) to listen on loopback only, "127.0.0.1:9100" for one address, or ":9100" to listen on all interfaces.`,
+      `${envName("LISTEN")}="${value}" is not a host:port address. Use "${LOOPBACK_BIND}:9100" (or leave it unset) to listen on loopback only, "127.0.0.1:9100" for one address, or ":9100" to listen on all interfaces.`,
     );
   }
   const host = value.slice(0, split);
   return {
     host: host === "" ? null : host,
-    port: assertPort(Number(value.slice(split + 1)), `${LISTEN_ENV}="${value}"`),
+    port: assertPort(
+      Number(value.slice(split + 1)),
+      `${envName("LISTEN")}="${value}"`,
+    ),
   };
 }
 

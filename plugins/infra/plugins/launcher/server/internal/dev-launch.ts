@@ -1,5 +1,6 @@
 import type { GatewayLaunchOptions } from "./boot";
-import { LISTEN_ENV, resolveListenAddress } from "./listen";
+import { envName } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
+import { resolveListenAddress } from "./listen";
 
 /**
  * The port the machine's dev gateway always listens on: every backend reaches
@@ -33,19 +34,19 @@ export function devGatewayLaunchOptions(opts: {
 
 /**
  * Where the dev gateway binds: loopback by default (127.0.0.1 and [::1]), or the
- * host `SINGULARITY_LISTEN` names — the one listen override a release honours
- * too. Every interface is the explicit opt-in `SINGULARITY_LISTEN=:9000`, so the
+ * host `EQUIN_LISTEN` names — the one listen override a release honours
+ * too. Every interface is the explicit opt-in `EQUIN_LISTEN=:9000`, so the
  * agent manager is off-box only when someone asked for it. Only the HOST may
  * change: every backend reaches central at `localhost:9000`.
  *
- * `SINGULARITY_LISTEN` is a forwarded runtime name, so a backend reads the value
+ * `EQUIN_LISTEN` is a forwarded runtime name, so a backend reads the value
  * the gateway's starter had.
  */
 function devBindHost(): string | null {
   const addr = resolveListenAddress(DEV_GATEWAY_PORT);
   if (addr.port !== DEV_GATEWAY_PORT) {
     throw new Error(
-      `${LISTEN_ENV} names port ${addr.port}, but the dev gateway must listen on ${DEV_GATEWAY_PORT} (backends reach central at localhost:${DEV_GATEWAY_PORT}). Set only the host, e.g. ${LISTEN_ENV}=127.0.0.1:${DEV_GATEWAY_PORT}.`,
+      `${envName("LISTEN")} names port ${addr.port}, but the dev gateway must listen on ${DEV_GATEWAY_PORT} (backends reach central at localhost:${DEV_GATEWAY_PORT}). Set only the host, e.g. ${envName("LISTEN")}=127.0.0.1:${DEV_GATEWAY_PORT}.`,
     );
   }
   return addr.host;

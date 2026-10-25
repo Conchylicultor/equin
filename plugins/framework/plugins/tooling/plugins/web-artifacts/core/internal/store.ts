@@ -20,7 +20,7 @@ import { precompressDir } from "./precompress";
 
 // Read off the declaration in this plugin's `data-dirs/index.ts` rather than
 // joining the data root by hand. These stay module-level consts, exactly as
-// they were when they read a frozen `SINGULARITY_DIR`: three sibling modules
+// they were when they read a frozen `EQUIN_DIR`: three sibling modules
 // (`check/index.ts`, `vendors.ts`, `global-css.ts`) already join them into
 // their own module-level consts, so the whole family freezes at first import
 // either way. They become functions when the store actually moves off its

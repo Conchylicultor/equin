@@ -39,8 +39,8 @@ let cached: DatabaseConfig | null = null;
 /**
  * THE reader for `~/.singularity/state/db-config/database.json`. Memoized for
  * the process lifetime; `CONFIG_PATH` is resolved at module load from the
- * `state/db-config` declaration (and so from `SINGULARITY_DIR`), so a process
- * that wants a different location must set `SINGULARITY_DIR` in its own
+ * `state/db-config` declaration (and so from `EQUIN_DIR`), so a process
+ * that wants a different location must set `EQUIN_DIR` in its own
  * environment before this module is first imported (see the co-located
  * `config.test.ts`, which spawns a child for exactly that reason).
  *

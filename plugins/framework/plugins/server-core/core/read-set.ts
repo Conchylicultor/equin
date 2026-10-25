@@ -4,7 +4,7 @@
 // the runtime's drift guard (A8 / D5) and the persisted `tables_read`, and the
 // union is shown by `_debug`. It lives here,
 // beside the runtime it feeds, and not in the profiler, so the profiler's
-// switches (`SINGULARITY_PROFILING=0`, a Debug → Profiling reset) never blind
+// switches (`EQUIN_PROFILING=0`, a Debug → Profiling reset) never blind
 // the drift guard. The capture itself still rides
 // the profiler's ambient loader entry — the same context the DB gate reads —
 // but its flush lands here, whatever the profiler records: runtime-profiler's

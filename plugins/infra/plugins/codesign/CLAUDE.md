@@ -35,7 +35,7 @@ signed by this machine's identity, without side effects (the drift row).
 
 `resolveSigningIdentity()` gives `null` off macOS, otherwise one of two:
 
-1. **Configured**: `SINGULARITY_CODESIGN_IDENTITY`, or else the file
+1. **Configured**: `EQUIN_CODESIGN_IDENTITY`, or else the file
    `~/.singularity/state/codesign/identity`. It holds a certificate SHA-1 or
    the exact name of a **valid** keychain identity, e.g. your
    "Developer ID Application: …" or "Apple Development: …". It is resolved
@@ -145,7 +145,6 @@ certificate expires within 30 days.
     - `SigningIdentity`
     - `SignOutcome`
   - Exports (values):
-    - `CODESIGN_IDENTITY_ENV`
     - `codeSignature`
     - `configuredIdentityFile`
     - `configuredValidTo`

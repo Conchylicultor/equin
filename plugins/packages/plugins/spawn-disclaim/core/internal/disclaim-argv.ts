@@ -1,16 +1,16 @@
-/** The operator escape hatch: `1` turns the disclaim off everywhere. */
-export const NO_SPAWN_DISCLAIM_ENV = "SINGULARITY_NO_SPAWN_DISCLAIM";
+import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 
 /**
  * Whether a spawn from THIS process should be disclaimed: on macOS, unless
- * `SINGULARITY_NO_SPAWN_DISCLAIM=1`. The caller that resolves the helper asks
+ * `EQUIN_NO_SPAWN_DISCLAIM=1` (the operator escape hatch: `1` turns the
+ * disclaim off everywhere). The caller that resolves the helper asks
  * this first, so a disabled or non-macOS host never builds or waits for it.
  */
 export function spawnDisclaimWanted(
   env: Readonly<Record<string, string | undefined>> = process.env,
   platform: NodeJS.Platform = process.platform,
 ): boolean {
-  return platform === "darwin" && env[NO_SPAWN_DISCLAIM_ENV] !== "1";
+  return platform === "darwin" && readEnv("NO_SPAWN_DISCLAIM", env) !== "1";
 }
 
 /**

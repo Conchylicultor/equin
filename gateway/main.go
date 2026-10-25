@@ -56,7 +56,7 @@ type Config struct {
 // and the root never has to be re-derived anywhere else in the process — which
 // is what let two independently-drifting copies of this fallback exist before.
 func dataRoot() string {
-	if dir := os.Getenv("SINGULARITY_DIR"); dir != "" {
+	if dir := mustReadEnv("DIR"); dir != "" {
 		return dir
 	}
 	home, _ := os.UserHomeDir()
@@ -91,11 +91,11 @@ func parseFlags() (Config, string) {
 	flag.StringVar(&cfg.LogDir, "log-dir", defaultLogDir, "directory for the gateway and per-worktree log files")
 	defaultRegistry := filepath.Join(dataDir, "worktrees")
 	flag.StringVar(&cfg.RegistryDir, "registry-dir", defaultRegistry, "directory of worktree JSON files")
-	defaultSockets := os.Getenv("SINGULARITY_SOCKETS_DIR")
+	defaultSockets := mustReadEnv("SOCKETS_DIR")
 	if defaultSockets == "" {
 		defaultSockets = filepath.Join(dataDir, "sockets")
 	}
-	flag.StringVar(&cfg.SocketsDir, "sockets-dir", defaultSockets, "directory for per-worktree Unix sockets (env: SINGULARITY_SOCKETS_DIR; short /tmp dir for deep release roots)")
+	flag.StringVar(&cfg.SocketsDir, "sockets-dir", defaultSockets, "directory for per-worktree Unix sockets (env: EQUIN_SOCKETS_DIR; short /tmp dir for deep release roots)")
 	defaultCentralRoutes := filepath.Join(dataDir, "state", "gateway", "central-routes.json")
 	flag.StringVar(&cfg.CentralRoutesFile, "central-routes-file", defaultCentralRoutes, "path to the central routing manifest")
 	defaultDbConfig := filepath.Join(dataDir, "state", "db-config", "database.json")

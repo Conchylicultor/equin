@@ -23,6 +23,7 @@ import {
 } from "node:path";
 import type { Plugin as VitePlugin } from "vite";
 import { init as esLexerInit, parse as esLexerParse } from "es-module-lexer";
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import type { BabelPluginItem } from "@plugins/framework/plugins/web-core/core";
 import { COMPOSITION_REGISTRY_SPECIFIER } from "../composition-modules";
 import { WORKER_ASSETS_DIR } from "../constants";
@@ -119,8 +120,8 @@ export function assertCoEntriesOffHostPath(opts: {
 // composed module graph), not the id of the run that produced it: two builds of
 // an unchanged tree compose the same graph, so a tab holding it is not stale.
 // The commit is the tree the graph was built from.
-export const GRAPH_GLOBAL = "__SINGULARITY_GRAPH__";
-export const COMMIT_GLOBAL = "__SINGULARITY_COMMIT__";
+export const GRAPH_GLOBAL = `${LEGACY_IDS.artifactGlobalPrefix}GRAPH__`;
+export const COMMIT_GLOBAL = `${LEGACY_IDS.artifactGlobalPrefix}COMMIT__`;
 
 const ARTIFACT_DEFINE: Record<string, string> = {
   "import.meta.env.DEV": "false",

@@ -12,6 +12,7 @@
  *   must notice — while its main thread is stuck in synchronous work, which is
  *   the type-check worker's shape.
  */
+import { envNames } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { afterEach, expect, test } from "bun:test";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -155,7 +156,7 @@ test("a lifeline child that finishes on its own exits normally", async () => {
 test("exitWithParent is a no-op without a lifeline (run standalone)", async () => {
   const script = `
     import { exitWithParent } from ${JSON.stringify(LIFELINE_MODULE)};
-    delete process.env.SINGULARITY_PARENT_LIFELINE;
+    for (const name of ${JSON.stringify(envNames("PARENT_LIFELINE"))}) delete process.env[name];
     exitWithParent();
     await Bun.sleep(300);
     process.stdout.write("still here");

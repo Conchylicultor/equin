@@ -5,7 +5,7 @@ import { HOST_POOLS } from "@plugins/infra/plugins/host/plugins/host-admission/c
 // the primitive that uses them.
 //
 // This is the fix for the single worst offender in the old data root:
-// `createHostSemaphore` used to do ``join(SINGULARITY_DIR, `${name}-slots`)``
+// `createHostSemaphore` used to do ``join(EQUIN_DIR, `${name}-slots`)``
 // itself, so ONE primitive silently minted a top-level directory per pool — ten
 // on disk, of which only seven had a live `defineHostPool`. Nothing could see
 // that, because the paths existed only as a template literal inside a function.

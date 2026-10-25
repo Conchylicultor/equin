@@ -41,7 +41,7 @@ unsaturated — by editing the constant, in one place.
 **Two-tier gate (per-worktree fairness).** In front of the host-wide flock gate
 sits a small **in-process per-worktree `createSemaphore`** (size
 `max(1, ceil(host/2))`, env-overridable via
-`SINGULARITY_HEAVY_READ_LOCAL_CONCURRENCY`, clamped to `1 ≤ local ≤ host`). It
+`EQUIN_HEAVY_READ_LOCAL_CONCURRENCY`, clamped to `1 ≤ local ≤ host`). It
 wraps *outside* the host gate, so each backend can only ever present a bounded
 slice of work to the shared flock queue — under a cross-worktree storm (a `main`
 advance fanning `commits-graph` out to ~16 backends) no single worktree can

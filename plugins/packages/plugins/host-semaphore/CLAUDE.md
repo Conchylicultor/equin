@@ -24,7 +24,7 @@ primitive).
 `slots` is a **declared** `DataDir` (`@plugins/infra/plugins/paths`), supplied by
 the caller. This primitive derives no path of its own — and that is a deliberate
 correction, not a style choice. It used to do
-``join(SINGULARITY_DIR, `${name}-slots`)`` itself, which meant one primitive
+``join(EQUIN_DIR, `${name}-slots`)`` itself, which meant one primitive
 silently minted a top-level directory in `~/.singularity/` per pool: ten existed on
 disk, only seven had a live `defineHostPool`, and nothing in the repo could
 enumerate any of them because the paths existed only as a template literal inside a

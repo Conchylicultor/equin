@@ -55,7 +55,7 @@ started on the tree the joiner saw) — and `withDirectOp` wraps the grant step 
 - **A nested op leads but never waits** (`tryLead`). A top-level leader can be
   queued for a host grant whose units the nested op's parent holds; joining it
   would deadlock. Busy → the nested op runs unshared.
-- `--no-cache` / `SINGULARITY_CHECK_NO_CACHE=1` and a fail-open (null) tree
+- `--no-cache` / `EQUIN_CHECK_NO_CACHE=1` and a fail-open (null) tree
   hash mean no flight. `e2e` is not opted in (live browser, arbitrary args).
 
 `build` and `push` are **not** direct ops (build lock + duress gate + host grant;
@@ -215,7 +215,6 @@ the shared Playwright harness.
     - `finishBuildProgress`
     - `installFatalSignalExit`
     - `installVerdictGuard`
-    - `LANE_ENV`
     - `laneFor`
     - `mustRequeue`
     - `openBuildProgress`

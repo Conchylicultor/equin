@@ -3,10 +3,8 @@ import {
   withHostGrant,
   inheritedGrant,
 } from "@plugins/infra/plugins/host/plugins/host-admission/server";
-import {
-  HOST_GRANT_ENV,
-  HOST_LANE_ENV,
-} from "@plugins/infra/plugins/host/plugins/host-admission/core";
+import { envEntries } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
+import { withEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core/testing";
 
 // `withHostGrant` touches the real host `cpu` pool (flock slot files), so keep
 // its footprint minimal — request a single slot on the background lane. Its only
@@ -25,12 +23,8 @@ test("withHostGrant grants at least one unit and runs fn", async () => {
   expect(result).toBe(42);
 });
 
-test("inheritedGrant reads SINGULARITY_HOST_GRANT and bounds grant.run to units", async () => {
-  const prevGrant = process.env[HOST_GRANT_ENV];
-  const prevLane = process.env[HOST_LANE_ENV];
-  process.env[HOST_GRANT_ENV] = "3";
-  process.env[HOST_LANE_ENV] = "interactive";
-  try {
+test("inheritedGrant reads the HOST_GRANT key and bounds grant.run to units", async () => {
+  await withEnv({ HOST_GRANT: "3", LANE: "interactive" }, async () => {
     const g = inheritedGrant();
     expect(g).toBeDefined();
     expect(g!.units).toBe(3);
@@ -38,10 +32,9 @@ test("inheritedGrant reads SINGULARITY_HOST_GRANT and bounds grant.run to units"
     // decisions (its type-check worker's slot and priority) off the grant.
     expect(g!.lane).toBe("interactive");
     // The env it hands a child round-trips the very values it was built from.
-    expect(g!.env()).toEqual({
-      [HOST_GRANT_ENV]: "3",
-      [HOST_LANE_ENV]: "interactive",
-    });
+    expect(g!.env()).toEqual(
+      envEntries({ HOST_GRANT: "3", LANE: "interactive" }),
+    );
 
     // 9 tasks through a 3-unit grant: concurrency must never exceed 3.
     let active = 0;
@@ -58,12 +51,7 @@ test("inheritedGrant reads SINGULARITY_HOST_GRANT and bounds grant.run to units"
     );
     expect(peak).toBeLessThanOrEqual(3);
     expect(peak).toBeGreaterThan(0);
-  } finally {
-    if (prevGrant === undefined) delete process.env[HOST_GRANT_ENV];
-    else process.env[HOST_GRANT_ENV] = prevGrant;
-    if (prevLane === undefined) delete process.env[HOST_LANE_ENV];
-    else process.env[HOST_LANE_ENV] = prevLane;
-  }
+  });
 });
 
 // A grant built from an env count, with the env restored afterwards. Pure
@@ -74,16 +62,11 @@ async function withInheritedUnits(
     grant: NonNullable<ReturnType<typeof inheritedGrant>>,
   ) => Promise<void>,
 ): Promise<void> {
-  const prevGrant = process.env[HOST_GRANT_ENV];
-  process.env[HOST_GRANT_ENV] = String(units);
-  try {
+  await withEnv({ HOST_GRANT: String(units) }, async () => {
     const grant = inheritedGrant();
     expect(grant).toBeDefined();
     await body(grant!);
-  } finally {
-    if (prevGrant === undefined) delete process.env[HOST_GRANT_ENV];
-    else process.env[HOST_GRANT_ENV] = prevGrant;
-  }
+  });
 }
 
 test("a 1-unit grant runs a 2-unit request rather than waiting forever", async () => {
@@ -145,37 +128,23 @@ test("grant.run rejects a nonsense unit count", async () => {
   });
 });
 
-test("inheritedGrant defaults the lane to background when SINGULARITY_LANE is unset", () => {
-  const prevGrant = process.env[HOST_GRANT_ENV];
-  const prevLane = process.env[HOST_LANE_ENV];
-  process.env[HOST_GRANT_ENV] = "2";
-  delete process.env[HOST_LANE_ENV];
-  try {
+test("inheritedGrant defaults the lane to background when the LANE key is unset", async () => {
+  await withEnv({ HOST_GRANT: "2", LANE: undefined }, () => {
     const g = inheritedGrant();
     expect(g?.lane).toBe("background");
-    expect(g?.env()).toEqual({
-      [HOST_GRANT_ENV]: "2",
-      [HOST_LANE_ENV]: "background",
-    });
-  } finally {
-    if (prevGrant === undefined) delete process.env[HOST_GRANT_ENV];
-    else process.env[HOST_GRANT_ENV] = prevGrant;
-    if (prevLane === undefined) delete process.env[HOST_LANE_ENV];
-    else process.env[HOST_LANE_ENV] = prevLane;
-  }
+    expect(g?.env()).toEqual(
+      envEntries({ HOST_GRANT: "2", LANE: "background" }),
+    );
+  });
 });
 
-test("inheritedGrant returns undefined for absent or invalid SINGULARITY_HOST_GRANT", () => {
-  const prevGrant = process.env[HOST_GRANT_ENV];
-  try {
-    delete process.env[HOST_GRANT_ENV];
+test("inheritedGrant returns undefined for absent or invalid HOST_GRANT", async () => {
+  await withEnv({ HOST_GRANT: undefined }, () => {
     expect(inheritedGrant()).toBeUndefined();
-    for (const bad of ["0", "-1", "abc", "", "1.5", " "]) {
-      process.env[HOST_GRANT_ENV] = bad;
+  });
+  for (const bad of ["0", "-1", "abc", "", "1.5", " "]) {
+    await withEnv({ HOST_GRANT: bad }, () => {
       expect(inheritedGrant()).toBeUndefined();
-    }
-  } finally {
-    if (prevGrant === undefined) delete process.env[HOST_GRANT_ENV];
-    else process.env[HOST_GRANT_ENV] = prevGrant;
+    });
   }
 });

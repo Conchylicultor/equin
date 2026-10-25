@@ -6,14 +6,14 @@ export default [
     paths: ["bin/launch.ts"],
     kind: "sanctioned",
     reason:
-      "The release launcher and its teardown twin SET the root (`??=`) and read back what they just wrote, before anything path-dependent is imported: the processes that decide what the root IS.",
+      "The release launcher and its teardown twin SET the root (`setEnvDefault`) and read back what they just wrote, before anything path-dependent is imported: the processes that decide what the root IS.",
   },
   {
     rule: "marker-scan-safety/no-adhoc-marker-scan",
     paths: ["check/internal/strip-comments.ts"],
     kind: "sanctioned",
     reason:
-      "Token-in-string: the launcher checks look for SINGULARITY_* variable names, which code spells inside strings (an `env` object key, a `process.env[…]` subscript) with no enclosing marker call — a full mask would erase the names. It only needs comments (and regex literals) blanked.",
+      "Token-in-string: the launcher checks look for the app's environment variable names, which code spells inside strings (an `env` object key, a key literal handed to `readEnv`) with no enclosing marker call — a full mask would erase the names. It only needs comments (and regex literals) blanked.",
   },
   {
     rule: "spawn-safety/no-raw-bun-spawn",

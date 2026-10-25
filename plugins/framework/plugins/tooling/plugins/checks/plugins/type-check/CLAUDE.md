@@ -614,7 +614,7 @@ are compared by canonical text, since tsc prints union members in
 type-creation order — which follows what its program loaded first — so the
 same declarations emit in two orders); `dual` adds the full
 check. `scripts/walk-replay.ts` replays main commits as two chains (incremental
-/ full walk, each its own `SINGULARITY_DIR`) and compares the walk bases, the
+/ full walk, each its own `EQUIN_DIR`) and compares the walk bases, the
 tsc and the lint verdicts. Carried shards older than `TOUCH_AFTER_DAYS` are
 touched with their files' entries, contracts and prediction data, which no
 fixed file reads.
@@ -665,7 +665,7 @@ and its stores are declared retired (`type-check-programs`,
 `type-check-type-fps`, `type-check-file-results`; the manifest under
 `.cache/type-check/` is no longer written).
 
-`--no-cache` (and `SINGULARITY_CHECK_NO_CACHE=1`) still disarms the OUTER
+`--no-cache` (and `EQUIN_CHECK_NO_CACHE=1`) still disarms the OUTER
 cache (the runner's read-set replay); the per-file stores are content-addressed
 facts and are used either way. To force a full re-check, run
 `scripts/dual-check.ts`.

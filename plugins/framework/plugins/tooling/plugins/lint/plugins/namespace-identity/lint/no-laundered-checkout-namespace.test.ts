@@ -72,7 +72,7 @@ ruleTester.run(
       // e2e-harness/e2e/target.ts — the defect itself. The laundering sits on
       // the right of a `??`, which is why the rule steps through fallbacks.
       {
-        code: `const name = asNamespace(process.env.SINGULARITY_WORKTREE ?? checkoutWorktreeName(REPO_ROOT));`,
+        code: `const name = asNamespace(process.env.WORKTREE ?? checkoutWorktreeName(REPO_ROOT));`,
         errors: [{ messageId: "launderedCheckoutName" }],
       },
       // The same value with the helper's name filed off.

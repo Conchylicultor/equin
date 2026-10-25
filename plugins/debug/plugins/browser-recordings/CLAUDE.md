@@ -40,7 +40,7 @@ no DOM snapshots: nobody opens them.
 
 - Bash: the PreToolUse payload carries `tool_use_id`; the guards plugin's
   `e2e-tool-use-id` guard rewrites an e2e command to
-  `export SINGULARITY_TOOL_USE_ID=<id>; <command>` (`TOOL_USE_ID_ENV`, guards
+  `export EQUIN_TOOL_USE_ID=<id>; <command>` (`TOOL_USE_ID_ENV`, guards
   core). A run with no id (a human at a terminal) goes under `manual/`.
 - MCP: Claude Code sends the id in the `tools/call` request's `_meta`
   (`claudecode/toolUseId`); `infra/mcp` hands it to every handler as

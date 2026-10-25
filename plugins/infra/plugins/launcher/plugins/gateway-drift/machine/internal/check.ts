@@ -77,7 +77,7 @@ export async function checkGatewayDrift(): Promise<GatewayDrift> {
     }),
   );
   // A definition naming another data root's pidfile is not the gateway this
-  // backend runs behind (a preview under its own SINGULARITY_DIR).
+  // backend runs behind (a preview under its own EQUIN_DIR).
   if (
     flagValue(installedFlags, "-pid-file") !==
     flagValue(expectedFlags, "-pid-file")

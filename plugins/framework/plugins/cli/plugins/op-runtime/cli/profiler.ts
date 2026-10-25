@@ -1,3 +1,4 @@
+import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { mkdirSync, renameSync, writeFileSync } from "node:fs";
 import {
   worktreeDataDir,
@@ -49,7 +50,7 @@ interface SpanCollector {
    * Writes `build-profile-<buildId>.json` under worktree `name`, accepting the
    * id-less (`undefined`) case so the module-default collector can still produce
    * the unsuffixed `build-profile.json` for a manual CLI build with no
-   * SINGULARITY_BUILD_ID.
+   * EQUIN_BUILD_ID.
    */
   writeProfile(name: Namespace, buildId: string | undefined): void;
 }
@@ -140,5 +141,5 @@ export function pushBuildSpan(
 }
 
 export function writeBuildProfile(name: Namespace): void {
-  defaultCollector.writeProfile(name, process.env.SINGULARITY_BUILD_ID);
+  defaultCollector.writeProfile(name, readEnv("BUILD_ID"));
 }

@@ -1,3 +1,4 @@
+import { envName } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import {
   cpSync,
@@ -95,14 +96,14 @@ import {
 //     pgbouncer/native/bin/pgbouncer  vendored PgBouncer native binary
 //     pg-client/bin/{pg_dump,pg_restore}  vendored Postgres client tools
 //     parcel-watcher/watcher.node   vendored @parcel/watcher native addon
-//     config/                      raw git-layer config tree (SINGULARITY_REPO_CONFIG_DIR)
+//     config/                      raw git-layer config tree (EQUIN_REPO_CONFIG_DIR)
 //     config-seed/config/<comp>/   resolved config defaults, seeded into <data>/config on first run
 //     web/                         filtered Vite dist (served statically)
 //     RELEASE.json                 { composition, target, platform, builtAt, port, runId, commitSha, commitDirty }
 //     dist/<comp>-<target>-<platform>   web target: self-extracting binary (the shippable)
 //     bundle/<Name>.app, <Name>.dmg     tauri target: desktop bundle (the shippable)
 //
-// `launch` self-roots SINGULARITY_DIR under <out>/data and points the start
+// `launch` self-roots EQUIN_DIR under <out>/data and points the start
 // binaries at the vendored natives via env, so the bundle is fully isolated. A
 // sibling `<comp>-<target>/latest-<platform>` symlink points at the current
 // PACKED <run-id> — see @plugins/release/plugins/bundles for why it is claimed
@@ -114,7 +115,7 @@ import {
 // The cluster sentinel runs its sampler + duress-latch lifecycle on a Bun
 // Worker. `bun --compile` does not trace/embed a `new Worker(new URL(...))`
 // entry, so we bundle it separately to a standalone `.js` and vendor it on
-// disk; launch.ts points SINGULARITY_SENTINEL_WORKER_JS at it and worker-host.ts
+// disk; launch.ts points EQUIN_SENTINEL_WORKER_JS at it and worker-host.ts
 // spawns from there (mirrors the vendored parcel-watcher native addon).
 const SENTINEL_WORKER_ENTRY =
   "plugins/debug/plugins/sentinel/server/internal/worker/entry.ts";
@@ -396,7 +397,7 @@ async function compile(opts: {
  * constants, the pure detector/gatherers, and `pg`) inlines into one file that
  * the release's compiled backend spawns as a `Worker`. `bun --compile` cannot
  * embed a `new Worker(new URL(...))` entry, so the worker is vendored on disk
- * instead — launch.ts points `SINGULARITY_SENTINEL_WORKER_JS` at this file.
+ * instead — launch.ts points `EQUIN_SENTINEL_WORKER_JS` at this file.
  */
 async function bundleSentinelWorker(opts: {
   root: string;
@@ -1217,7 +1218,7 @@ const runRelease: CliAction<[], ReleaseOptions> = async (opts) => {
   );
 
   // Postgres client tools: the backend spawns them for DB forks and backups
-  // (SINGULARITY_PG_CLIENT_BIN_DIR, set by launch.ts).
+  // (EQUIN_PG_CLIENT_BIN_DIR, set by launch.ts).
   console.log("  • pg client tools (pg_dump, pg_restore)");
   mkdirSync(join(out, "pg-client", "bin"), { recursive: true });
   const pgClientBinDir = pgClientNativeBinDir(root, platform, natives);
@@ -1226,7 +1227,7 @@ const runRelease: CliAction<[], ReleaseOptions> = async (opts) => {
   }
 
   // @parcel/watcher native addon: bun --compile can't embed .node addons, so the
-  // file-watcher loader dlopens this vendored copy at runtime (SINGULARITY_PARCEL_WATCHER_NODE).
+  // file-watcher loader dlopens this vendored copy at runtime (EQUIN_PARCEL_WATCHER_NODE).
   console.log("  • parcel-watcher native addon");
   mkdirSync(join(out, "parcel-watcher"), { recursive: true });
   cpSync(
@@ -1236,7 +1237,7 @@ const runRelease: CliAction<[], ReleaseOptions> = async (opts) => {
 
   // Sentinel worker: `bun --compile` can't embed the `new Worker(new
   // URL(...))` entry, so bundle it to a standalone .js the backend spawns
-  // via SINGULARITY_SENTINEL_WORKER_JS (set by launch.ts).
+  // via EQUIN_SENTINEL_WORKER_JS (set by launch.ts).
   console.log("  • sentinel worker bundle");
   await bundleSentinelWorker({
     root,
@@ -1245,7 +1246,7 @@ const runRelease: CliAction<[], ReleaseOptions> = async (opts) => {
 
   // Migration SQL files: the runner reads them from disk at boot (they are
   // not bundled into the compiled backend). Vendor the data/ tree's `.sql`
-  // files; launch.ts points SINGULARITY_MIGRATIONS_DIR at it. `meta/` (the
+  // files; launch.ts points EQUIN_MIGRATIONS_DIR at it. `meta/` (the
   // journal, snapshots, answers) is generator input the runner never reads.
   console.log("  • migration data");
   const migrationsSrc = join(root, "plugins/database/plugins/migrations/data");
@@ -1345,7 +1346,7 @@ const runRelease: CliAction<[], ReleaseOptions> = async (opts) => {
   if (opts.dev) {
     console.log("\n[done] Staged release (--dev):");
     console.log(`  ${out}`);
-    console.log("\nRun it (self-roots SINGULARITY_DIR under <out>/data):");
+    console.log(`\nRun it (self-roots ${envName("DIR")} under <out>/data):`);
     console.log(`  ${join(out, "launch")}`);
     console.log(
       `\nThen: ${namespaceUrl(asNamespace(opts.composition), "", port)}`,
@@ -1719,7 +1720,7 @@ const HASH = ${JSON.stringify(hash)};
 // Deliberately home-directory-agnostic — the launcher self-roots its DATA under
 // the extracted dir regardless, so the self-extractor needs no user-home lookup.
 const baseCache =
-  process.env.EQUIN_RELEASE_DIR ??
+  process.env.${envName("RELEASE_DIR")} ??
   process.env.XDG_CACHE_HOME ??
   tmpdir();
 const extractDir = join(baseCache, "equin-release", ${JSON.stringify(

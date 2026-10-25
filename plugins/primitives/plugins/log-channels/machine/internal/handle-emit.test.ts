@@ -26,7 +26,7 @@ import { getChannelIds } from "../../server/internal/registry";
 import { handleEmit } from "../../server/internal/handle-emit";
 
 // Hermetic in the two ways that matter: a throwaway worktree name under the real
-// SINGULARITY_DIR (the precedent read-channel-json.test.ts sets), removed at the
+// EQUIN_DIR (the precedent read-channel-json.test.ts sets), removed at the
 // end; and the duress latch pointed at a temp dir of its own, so the test can
 // never read — or write — the host's real latch.
 

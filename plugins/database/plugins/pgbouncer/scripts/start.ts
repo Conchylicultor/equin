@@ -1,4 +1,8 @@
 #!/usr/bin/env bun
+import {
+  envName,
+  readEnv,
+} from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { existsSync, writeFileSync, rmSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -14,11 +18,9 @@ import {
 
 // Duplicated from embedded/shared — standalone scripts can't use @plugins
 // aliases, and shared/ is plugin-private so cross-plugin imports are forbidden.
-// The upstream port must honor SINGULARITY_PG_PORT so a preview's PgBouncer dials
+// The upstream port must honor EQUIN_PG_PORT so a preview's PgBouncer dials
 // the same per-instance port its embedded PG bound (see embedded/shared paths.ts).
-const PG_PORT = process.env.SINGULARITY_PG_PORT
-  ? Number(process.env.SINGULARITY_PG_PORT)
-  : 5433;
+const PG_PORT = readEnv("PG_PORT") ? Number(readEnv("PG_PORT")) : 5433;
 const PG_USER = "singularity";
 const PG_SOCKET_DIR = PGBOUNCER_SOCKET_DIR; // same dir
 
@@ -47,11 +49,11 @@ function platformPackage(): string {
 
 function resolveBinary(): string {
   // A packaged release points at the vendored native binary via env override.
-  const override = process.env.SINGULARITY_PGBOUNCER_BIN;
+  const override = readEnv("PGBOUNCER_BIN");
   if (override) {
     if (!existsSync(override)) {
       throw new Error(
-        `pgbouncer: SINGULARITY_PGBOUNCER_BIN set to ${override} but that file does not exist`,
+        `pgbouncer: ${envName("PGBOUNCER_BIN")} set to ${override} but that file does not exist`,
       );
     }
     return override;

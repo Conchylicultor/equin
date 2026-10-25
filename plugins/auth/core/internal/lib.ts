@@ -1,3 +1,4 @@
+import type { EnvKey } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 /**
  * How a provider's credential is obtained. The closed list both runtimes read:
  * the descriptor type, the state resource's wire schema, and every `switch` on
@@ -13,8 +14,9 @@ export interface AuthIdentity {
   avatarUrl?: string;
 }
 
+/** Reads one of the app's environment variables by key, under both its names. */
 export interface AuthEnvAccessor {
-  get(key: string): string | undefined;
+  get(key: EnvKey): string | undefined;
 }
 
 export interface ResolvedCredentials {

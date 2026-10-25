@@ -31,7 +31,7 @@ which agent asks, and each conversation's grants are its own.
   `cc -arch`), `admission: { none }` (one tiny compile), `bundle: { optional }`.
 - `disclaimArgv(helper | null, argv)` / `spawnDisclaimWanted()` (`core/`,
   import-free) — `[helper, …argv]` on macOS, `argv` unchanged with no helper,
-  off macOS, or under `SINGULARITY_NO_SPAWN_DISCLAIM=1`.
+  off macOS, or under `EQUIN_NO_SPAWN_DISCLAIM=1`.
 
 Which process is responsible and how much CPU it gets are separate settings,
 so this is a sibling of `spawn-priority`, not a `spawnAtTier` tier.
@@ -55,7 +55,7 @@ for app-level grants), and non-interactive `claude -p` probes are not wrapped.
   process's children report it as their responsible process; a plain one's
   report an ancestor. A macOS
   that drops them makes every agent start fail with the stderr line above —
-  set `SINGULARITY_NO_SPAWN_DISCLAIM=1` to launch without while it is fixed.
+  set `EQUIN_NO_SPAWN_DISCLAIM=1` to launch without while it is fixed.
 - **The escape hatch is read by the backend, not the agent.** The agent's
   environment is an allowlist (`agent-launch`), so the variable never reaches
   it; the backend resolves `disclaimExec` to null instead. It reaches the
@@ -74,16 +74,16 @@ for app-level grants), and non-interactive `claude -p` probes are not wrapped.
 
 ## Plugin reference
 
+- Core:
+  - Uses: `infra/launcher/env-names.readEnv`
+  - Exports (values):
+    - `disclaimArgv`
+    - `spawnDisclaimWanted`
 - Deps:
   - Uses:
     - `infra/deps.defineDep`
     - `infra/deps/build.build`
   - Exports (values): `disclaimExec`
-- Core:
-  - Exports (values):
-    - `disclaimArgv`
-    - `NO_SPAWN_DISCLAIM_ENV`
-    - `spawnDisclaimWanted`
 - Structure:
   - Non-standard folders: `native/`
 

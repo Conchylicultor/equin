@@ -5,12 +5,12 @@
  *
  * FLAGGED — `join(dataRoot(), …)`, `resolve(dataRoot(), …)`, the
  * `${dataRoot()}/…` concatenation that is the same join spelled differently, and
- * every READ of `process.env.SINGULARITY_DIR`.
+ * every READ of the env var by key (`readEnv("DIR")`).
  *
  * NOT FLAGGED — naming the root on its own (`const r = dataRoot()`, which is
  * how a child process is handed one), `relative(dataRoot(), …)` (the
  * `relativeToDataRoot` helper's own body), and every WRITE of the env var:
- * `??=`, `=`, and a `SINGULARITY_DIR:` key inside an `env: {…}` object. Those
+ * `setEnvDefault`, `setEnv`, and an `envEntries({ DIR })` spread. Those
  * writes ARE the sanctioned handoff — a check that flagged them would be telling
  * the launcher not to launch.
  *
@@ -44,15 +44,15 @@ const PATTERNS: { pattern: RegExp; grepArg: string }[] = [
   },
   { pattern: /\$\{\s*dataRoot\s*\(\s*\)\s*\}[/\\]/, grepArg: "dataRoot" },
   {
-    pattern: /process\.env\.SINGULARITY_DIR(?![ \t]*(?:\?\?)?=[^=])/,
-    grepArg: "SINGULARITY_DIR",
+    pattern: /\breadEnv\s*\(\s*["']DIR["']/,
+    grepArg: "readEnv",
   },
 ];
 
 // Split tokens: assembled into the (contiguous) fixture lines written to the
 // temp repo, never spelled contiguously here.
 const DR = "dataRoot" + "()";
-const ENV = "process.env." + "SINGULARITY_" + "DIR";
+const ENV = "readEnv(" + '"' + "DIR" + '")';
 const BT = "`"; // a literal backtick, kept out of nested-template soup
 
 // ── FLAGGED ────────────────────────────────────────────────────────────────
@@ -70,9 +70,9 @@ const N1 = "const r = " + DR + ";";
 // The relativeToDataRoot body: `relative` is neither join nor resolve.
 const N2 = "const rel = relative(" + DR + ", dir.path);";
 // Writes: the handoff to a child process, in all three spellings.
-const N3 = ENV + ' ??= join(bundleRoot, "data");';
-const N4 = ENV + " = dir;";
-const N5 = "const env = { SINGULARITY_" + 'DIR: dataDir, PORT: "1" };';
+const N3 = 'setEnvDefault("DIR", join(bundleRoot, "data"));';
+const N4 = 'setEnv("DIR", dir);';
+const N5 = 'const env = { ...envEntries({ DIR: dataDir }), PORT: "1" };';
 
 const FLAGGED = [L1, L2, L3, L4, L5];
 const PASSING = [N1, N2, N3, N4, N5];

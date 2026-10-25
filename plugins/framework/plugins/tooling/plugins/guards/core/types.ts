@@ -91,7 +91,7 @@ export interface GuardContext {
    * silently wrong the next time the data root moves (it already has once, in
    * the `apps/` layout migration). Passing the RESOLVED paths in means the
    * guard compares against wherever the declaration says the directory is
-   * today, including under a `SINGULARITY_DIR` override.
+   * today, including under a `EQUIN_DIR` override.
    */
   writableDataDirs: readonly string[];
   /**

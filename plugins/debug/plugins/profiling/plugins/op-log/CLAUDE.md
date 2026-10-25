@@ -131,7 +131,7 @@ is true for the process that wrote the line. The op-store reconciler reads the
 slug's markers for liveness, and the profiling reader groups a Gantt row on it.
 
 The record used to carry a second field, `worktree`, read from the
-`SINGULARITY_WORKTREE` environment variable — and the reader preferred it. An
+retired worktree environment variable — and the reader preferred it. An
 environment variable reaches every descendant forever: once the tmux server
 inherited main's copy, every agent's build, check and test filed itself under
 `main`, and each conversation's own Op profiling pane went empty. Two

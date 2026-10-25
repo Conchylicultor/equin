@@ -19,7 +19,7 @@ here, a change is a `tsc` error at the other end.
 It is a **sub-plugin** rather than part of `signal-origin/core` because that
 barrel is the FFI-free *and web-safe* half (`build-info` imports
 `formatSignalOrigin` from it), while this one reaches `node:path` /
-`SINGULARITY_DIR`. Same split as `infra/file-sink/core`.
+`EQUIN_DIR`. Same split as `infra/file-sink/core`.
 
 ## Reading
 

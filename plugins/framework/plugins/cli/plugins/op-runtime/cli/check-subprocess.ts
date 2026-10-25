@@ -47,7 +47,7 @@
 // Nobody asserts `host` from an op. Its subject is the machine, shared with
 // every checkout on the box; its home is a standalone `./equin check`.
 //
-// **`SINGULARITY_BUILD_IN_PROGRESS` must pass through untouched.** That marker
+// **`EQUIN_BUILD_IN_PROGRESS` must pass through untouched.** That marker
 // is how a dist-comparing check (`web-artifacts:map-in-sync`) learns to skip a
 // dist the build is about to replace; the child is the process actually running
 // those checks, so it is the one that has to see it.

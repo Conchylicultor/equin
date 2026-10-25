@@ -1,3 +1,7 @@
+import {
+  envName,
+  readEnv,
+} from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 
@@ -6,9 +10,6 @@ import { join } from "node:path";
  * vendored has no spelling, so it cannot quietly fall through to the PATH.
  */
 export type PgClientTool = "pg_dump" | "pg_restore";
-
-/** Set by the release launcher to the bundle's vendored `pg-client/bin`. */
-const BIN_DIR_ENV = "SINGULARITY_PG_CLIENT_BIN_DIR";
 
 const PLATFORMS: Record<string, Record<string, string>> = {
   darwin: { arm64: "darwin-arm64", x64: "darwin-x64" },
@@ -47,14 +48,15 @@ export function resolvePgClientBin(
   tool: PgClientTool,
   ctx: ResolveContext,
 ): string {
-  const override = ctx.env[BIN_DIR_ENV];
+  // Set by the release launcher to the bundle's vendored `pg-client/bin`.
+  const override = readEnv("PG_CLIENT_BIN_DIR", ctx.env);
   if (override) {
     const bin = join(override, tool);
     if (!ctx.exists(bin)) {
       throw new PgClientToolMissingError(
         tool,
         bin,
-        `${BIN_DIR_ENV} points at ${override}, which the release bundle should have vendored it into`,
+        `${envName("PG_CLIENT_BIN_DIR")} points at ${override}, which the release bundle should have vendored it into`,
       );
     }
     return bin;

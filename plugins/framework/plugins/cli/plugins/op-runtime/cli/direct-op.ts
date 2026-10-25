@@ -354,7 +354,7 @@ export async function withDirectOp<K extends OpKind>(
 
   // A direct op on the main worktree is human-blocking (interactive), any other
   // is background. `publishLane` not-clobbers: a parent op's `grant.env()`
-  // always sets SINGULARITY_LANE, so a nested op reads the parent's
+  // always sets EQUIN_LANE, so a nested op reads the parent's
   // classification here rather than reclassifying off its own branch — that
   // is how a push-nested check keeps `interactive` even on an agent branch.
   // Left UNCONDITIONAL; a `!nested` gate would be a second rule saying the

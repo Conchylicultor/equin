@@ -35,7 +35,7 @@ export function compositionReleaseDir(
 /**
  * The `--out` directory passed to `./equin release`. VERSIONED per run-id
  * (NOT overwrite-in-place): each release lands at its own
- * `<SINGULARITY_DIR>/releases/<worktree>/<comp>-<target>/<run-id>/` dir, so
+ * `<EQUIN_DIR>/releases/<worktree>/<comp>-<target>/<run-id>/` dir, so
  * builds are kept and a `latest-<platform>` symlink (written by the CLI, only
  * once a run is PACKED) points at the current one. The `<run-id>`
  * (`release-<ms>-<rand>`) gives chronology plus a stable dir key shared with the
@@ -51,8 +51,8 @@ export function compositionReleaseDir(
  * The 104-byte Unix-socket length cap no longer constrains this path: the
  * launcher (`launcher/bin/launch.ts`) reroots the embedded-PG, PgBouncer, and
  * gateway per-worktree backend sockets onto short `/tmp` dirs — the PG/PgBouncer
- * sockets via `SINGULARITY_PG_SOCKET_DIR`, the backend worktree sockets via
- * `SINGULARITY_SOCKETS_DIR` — so a long versioned `<run-id>` segment is safe even
+ * sockets via `EQUIN_PG_SOCKET_DIR`, the backend worktree sockets via
+ * `EQUIN_SOCKETS_DIR` — so a long versioned `<run-id>` segment is safe even
  * for a direct `<out>/launch`.
  */
 export function releaseOutDir(

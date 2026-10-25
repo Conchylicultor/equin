@@ -6,7 +6,7 @@ export { listMigrationFiles, MIGRATIONS_DIR } from "./internal/list-files";
 
 export default {
   description:
-    "The desktop's migration source: the committed data/*.sql read off disk (or a release's vendored copy, SINGULARITY_MIGRATIONS_DIR).",
+    "The desktop's migration source: the committed data/*.sql read off disk (or a release's vendored copy, its migrations-dir override).",
   contributions: [
     MigrationSource.provide({ list: () => listMigrationFiles(MIGRATIONS_DIR) }),
   ],

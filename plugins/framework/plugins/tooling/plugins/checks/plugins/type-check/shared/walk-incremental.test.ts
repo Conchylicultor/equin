@@ -18,6 +18,11 @@
  * directory, and a run that throws writing no base.
  */
 
+import {
+  readEnv,
+  setEnv,
+  unsetEnv,
+} from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { afterAll, beforeAll, expect, setDefaultTimeout, test } from "bun:test";
 import {
   mkdirSync,
@@ -53,15 +58,15 @@ import {
 setDefaultTimeout(120_000);
 
 const dirs: string[] = [];
-const priorDataRoot = process.env.SINGULARITY_DIR;
+const priorDataRoot = readEnv("DIR");
 beforeAll(() => {
   const d = mkdtempSync(join(tmpdir(), "walk-incremental-data-"));
   dirs.push(d);
-  process.env.SINGULARITY_DIR = d;
+  setEnv("DIR", d);
 });
 afterAll(() => {
-  if (priorDataRoot === undefined) delete process.env.SINGULARITY_DIR;
-  else process.env.SINGULARITY_DIR = priorDataRoot;
+  if (priorDataRoot === undefined) unsetEnv("DIR");
+  else setEnv("DIR", priorDataRoot);
   for (const d of dirs) rmSync(d, { recursive: true, force: true });
 });
 

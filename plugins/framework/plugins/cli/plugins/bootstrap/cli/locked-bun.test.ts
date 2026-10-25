@@ -3,10 +3,10 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import { join } from "node:path";
 import {
-  LOCKED_BUN_REEXEC_ENV,
-  lockedBunVersion,
-  reexecUnderLockedBun,
-} from "./locked-bun";
+  envEntries,
+  readEnv,
+} from "@plugins/infra/plugins/launcher/plugins/env-names/core";
+import { lockedBunVersion, reexecUnderLockedBun } from "./locked-bun";
 
 const fixtures: string[] = [];
 afterEach(() => {
@@ -99,7 +99,7 @@ test("re-execs under the locked install with a shims-first PATH and the marker",
     "--allow-main",
   ]);
   expect(calls[0]!.env.PATH).toBe(`${home}/.local/share/mise/shims:/usr/bin`);
-  expect(calls[0]!.env[LOCKED_BUN_REEXEC_ENV]).toBe("1");
+  expect(readEnv("LOCKED_BUN_REEXEC", calls[0]!.env)).toBe("1");
 });
 
 test("installs a missing locked release, then re-execs under it", async () => {
@@ -148,7 +148,7 @@ test("never re-execs twice, and takes the marker out of the environment", async 
   const { calls, spawn } = recordingSpawn();
   const env: Record<string, string | undefined> = {
     HOME: home,
-    [LOCKED_BUN_REEXEC_ENV]: "1",
+    ...envEntries({ LOCKED_BUN_REEXEC: "1" }),
   };
   const outcome = await reexecUnderLockedBun("/e.ts", {
     root,
@@ -158,7 +158,7 @@ test("never re-execs twice, and takes the marker out of the environment", async 
   });
   expect(outcome.kind).toBe("mismatch");
   expect(calls).toHaveLength(0);
-  expect(env[LOCKED_BUN_REEXEC_ENV]).toBeUndefined();
+  expect(readEnv("LOCKED_BUN_REEXEC", env)).toBeUndefined();
 });
 
 test("does nothing outside a checkout with a lock", async () => {

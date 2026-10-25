@@ -1,3 +1,4 @@
+import { envName } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { writeFileSync } from "node:fs";
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import { assertPrerequisites } from "@plugins/framework/plugins/cli/plugins/doctor/cli";
@@ -27,7 +28,6 @@ import {
   spawnGatewayDaemon,
   gatewayLaunchSpec,
   awaitGatewayReady,
-  LISTEN_ENV,
   DEV_GATEWAY_PORT,
   devGatewayLaunchOptions,
   GATEWAY_SERVICE,
@@ -381,7 +381,7 @@ async function adoptGatewayLaunch(
   ensureDatabaseConfig(launch.cwd, console.log);
   console.log(
     launch.bindHost === null
-      ? `Binding the gateway to every interface (${LISTEN_ENV}=:${DEV_GATEWAY_PORT})`
+      ? `Binding the gateway to every interface (${envName("LISTEN")}=:${DEV_GATEWAY_PORT})`
       : `Binding the gateway to ${launch.bindHost}:${DEV_GATEWAY_PORT}`,
   );
   return { ...launch, executable };

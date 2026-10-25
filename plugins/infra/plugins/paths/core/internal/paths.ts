@@ -1,4 +1,9 @@
 import { homedir } from "node:os";
+import {
+  readEnv,
+  setEnv,
+  unsetEnv,
+} from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { basename, join, resolve } from "node:path";
 import {
   asNamespace,
@@ -30,7 +35,7 @@ export const PLUGINS_DIR = join(REPO_ROOT, "plugins");
  * `@app/<id>` scopes). Read directly at runtime by config_v2's raw-diff panel and
  * per-app un-fork check. In a release `REPO_ROOT` resolves into the compiled
  * binary's virtual FS (un-shipped, unreachable), so `launch.ts` points this at the
- * vendored tree via `SINGULARITY_REPO_CONFIG_DIR`; in dev it falls back to the repo.
+ * vendored tree via `EQUIN_REPO_CONFIG_DIR`; in dev it falls back to the repo.
  *
  * A FUNCTION for the same reason as {@link resolveDataRoot} and
  * {@link worktreesDir}: `launch.ts` sets its env var, and a const would capture
@@ -40,7 +45,7 @@ export const PLUGINS_DIR = join(REPO_ROOT, "plugins");
  * path-dependent" ordering discipline.
  */
 export function repoConfigDir(): string {
-  return process.env.SINGULARITY_REPO_CONFIG_DIR ?? join(REPO_ROOT, "config");
+  return readEnv("REPO_CONFIG_DIR") ?? join(REPO_ROOT, "config");
 }
 
 // The web-core plugin dir, relative to a checkout root. Used for the
@@ -64,7 +69,7 @@ export const SERVER_CORE_RELATIVE = "plugins/framework/plugins/server-core";
 
 /**
  * True when this backend is running inside a compiled release artifact (the
- * `launch` binary sets `SINGULARITY_RELEASE=1` before bringing up the app; it
+ * `launch` binary sets `EQUIN_RELEASE=1` before bringing up the app; it
  * travels launch → gateway → backend as a forwarded name of the declared runtime
  * environment, `launcher/core`). A release runs exactly ONE backend
  * per host, so this is the release-side twin of `isMain()` for host-singleton
@@ -73,7 +78,7 @@ export const SERVER_CORE_RELATIVE = "plugins/framework/plugins/server-core";
  * single backend IS the host singleton.
  */
 export function isRelease(): boolean {
-  return process.env.SINGULARITY_RELEASE === "1";
+  return readEnv("RELEASE") === "1";
 }
 
 /**
@@ -101,14 +106,12 @@ export interface ReleaseIdentity {
 
 // Where the identity rides: the same launch → gateway → backend env chain
 // `isRelease()` uses. Both names are forwarded names of the declared runtime
-// environment (`RUNTIME_FORWARDED_ENV` in `launcher/core`): the launcher spawns
+// environment (`RUNTIME_FORWARDED_ENV` in `launcher/env-names`): the launcher spawns
 // the gateway with that subset of its live `process.env`, and the gateway hands
 // the same subset to the backend — so a name missing from that list would
 // silently never arrive. Private to this module on purpose —
 // `setReleaseIdentity` / `releaseIdentity` are the only surface, so the names
 // exist once and no consumer can spell one of them wrong.
-const RUN_ID_ENV = "SINGULARITY_RELEASE_RUN_ID";
-const COMPOSITION_ENV = "SINGULARITY_RELEASE_COMPOSITION";
 
 /**
  * Read which build is serving. This is a *propagation* of `RELEASE.json`, not a
@@ -119,8 +122,8 @@ const COMPOSITION_ENV = "SINGULARITY_RELEASE_COMPOSITION";
  */
 export function releaseIdentity(): ReleaseIdentity {
   return {
-    runId: process.env[RUN_ID_ENV] ?? null,
-    composition: process.env[COMPOSITION_ENV] ?? null,
+    runId: readEnv("RELEASE_RUN_ID") ?? null,
+    composition: readEnv("RELEASE_COMPOSITION") ?? null,
   };
 }
 
@@ -132,13 +135,13 @@ export function releaseIdentity(): ReleaseIdentity {
  */
 export function setReleaseIdentity(identity: ReleaseIdentity): void {
   for (const [key, value] of [
-    [RUN_ID_ENV, identity.runId],
-    [COMPOSITION_ENV, identity.composition],
+    ["RELEASE_RUN_ID", identity.runId],
+    ["RELEASE_COMPOSITION", identity.composition],
   ] as const) {
     // A null field deletes rather than writes "null" / "": an absent var is how
     // "not a release" is spelled, and a stale inherited value must not survive.
-    if (value === null) delete process.env[key];
-    else process.env[key] = value;
+    if (value === null) unsetEnv(key);
+    else setEnv(key, value);
   }
 }
 
@@ -199,25 +202,25 @@ export const HOME_DIR = resolve(homedir());
 /**
  * The data root, derived AT CALL TIME.
  *
- * THE single derivation of the root, and the ONLY read of `SINGULARITY_DIR` in
+ * THE single derivation of the root, and the ONLY read of `EQUIN_DIR` in
  * this plugin. Not exported from the barrel on purpose: `dataRoot()`
  * (`./data-dir.ts`) is its public spelling, so a consumer that wants the root
  * gets the lazy function, and a consumer that wants a directory under it gets a
  * `DataDir`.
  *
- * There is deliberately no eager `SINGULARITY_DIR` const beside this any more.
+ * There is deliberately no eager `EQUIN_DIR` const beside this any more.
  * A frozen snapshot of the root was both the second spelling that let the
- * registry be bypassed by hand (`join(SINGULARITY_DIR, "whatever")` minted an
+ * registry be bypassed by hand (`join(EQUIN_DIR, "whatever")` minted an
  * undeclared top-level entry that nothing failed on) and a value captured at
  * whatever the environment said when this module was FIRST imported — while the
- * release launcher sets `SINGULARITY_DIR` before importing anything
+ * release launcher sets `EQUIN_DIR` before importing anything
  * path-dependent. `paths:data-root-not-joined` now fails on either way back.
  *
  * A function for that second reason, the same one that makes `webDistDir()` a
  * function and `DataDir.path` a getter. See `webDistDir`'s docblock below.
  */
 export function resolveDataRoot(): string {
-  return process.env.SINGULARITY_DIR ?? join(HOME_DIR, ".singularity");
+  return readEnv("DIR") ?? join(HOME_DIR, ".singularity");
 }
 
 // OUTSIDE the data root on purpose (`~/.backups/…`), which is why it
@@ -232,7 +235,7 @@ export const BACKUPS_DIR = join(
 // Everything else under the data root is a DECLARATION, not a constant here.
 // This module used to carry a second spelling of nine of those directories
 // (`SECRETS_DIR`, `ATTACHMENTS_DIR`, `PROTOTYPES_DIR`, …) as plain
-// `join(SINGULARITY_DIR, …)` consts. Two spellings of one directory is how the
+// `join(EQUIN_DIR, …)` consts. Two spellings of one directory is how the
 // registry gets quietly bypassed: the declaration moves and the const does not,
 // so half the code writes to the new home and half goes on writing to the old
 // one, with nothing to fail. Reach a directory through its owner's
@@ -252,7 +255,7 @@ export const BACKUPS_DIR = join(
  *
  * A FUNCTION, not a const, for the reason in {@link resolveDataRoot} — a const
  * would freeze the root at whatever the environment said when this module was
- * first imported, which is precisely the bug the eager `SINGULARITY_DIR` used
+ * first imported, which is precisely the bug the eager `EQUIN_DIR` used
  * to carry.
  */
 export function worktreesDir(): string {
@@ -558,7 +561,7 @@ export const worktreeArtifacts = {
  * A FUNCTION, not a const, for two independent reasons — do not re-freeze it at
  * module eval:
  *
- * - `SINGULARITY_WEB_DIST` is set by the release launcher (`launch.ts`) before
+ * - `EQUIN_WEB_DIST` is set by the release launcher (`launch.ts`) before
  *   it imports anything path-dependent, but a const here would still capture
  *   whatever the env said when *this* module was first imported. In a release
  *   the alternative — deriving from `REPO_ROOT` — resolves into the compiled
@@ -585,10 +588,7 @@ export const worktreeArtifacts = {
  * composition instead.
  */
 export function webDistDir(): string {
-  return (
-    process.env.SINGULARITY_WEB_DIST ??
-    worktreeArtifacts.webDist(runtimeNamespace())
-  );
+  return readEnv("WEB_DIST") ?? worktreeArtifacts.webDist(runtimeNamespace());
 }
 
 export const CLAUDE_DIR = join(HOME_DIR, ".claude");

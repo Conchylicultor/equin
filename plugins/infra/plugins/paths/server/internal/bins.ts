@@ -1,3 +1,4 @@
+import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 
@@ -24,7 +25,7 @@ export type ClaudeBinLookup =
   { kind: "found"; path: string } | { kind: "missing"; searched: string[] };
 
 /**
- * Find the Claude Code executable NOW: `$SINGULARITY_CLAUDE_BIN`, else PATH,
+ * Find the Claude Code executable NOW: `$EQUIN_CLAUDE_BIN`, else PATH,
  * else {@link CLAUDE_CANDIDATES}.
  *
  * A function, not a constant, and a result, not a string, on purpose. The
@@ -40,7 +41,7 @@ export type ClaudeBinLookup =
  * their choice is broken.
  */
 export function resolveClaudeBin(): ClaudeBinLookup {
-  const override = process.env.SINGULARITY_CLAUDE_BIN;
+  const override = readEnv("CLAUDE_BIN");
   if (override) {
     return existsSync(override)
       ? { kind: "found", path: override }

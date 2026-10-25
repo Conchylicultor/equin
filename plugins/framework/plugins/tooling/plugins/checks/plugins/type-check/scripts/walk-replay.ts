@@ -7,7 +7,7 @@
 // SCRATCH checkout (a `git clone --shared` outside the repo, its
 // `node_modules` installed — re-installed here when the lockfile moves) as
 // two independent CHAINS of the type-check worker, each under its own
-// `SINGULARITY_DIR` (`<dir>/inc`, `<dir>/full`):
+// `EQUIN_DIR` (`<dir>/inc`, `<dir>/full`):
 //
 //   inc  — the walk starts from the chain's last walk base
 //          (`../shared/walk-base.ts`, `walkBase: hint`);
@@ -33,6 +33,7 @@
 // import — and every lint decision is a function of the result keys compared
 // here.
 
+import { setEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { cpSync, mkdirSync, rmSync, writeFileSync } from "fs";
 import os from "os";
 import { join, resolve } from "path";
@@ -98,7 +99,7 @@ mkdirSync(chainDir.inc, { recursive: true });
 
 /** Point every store at `dir`: the data root is the process's. */
 function setDataDir(dir: string): void {
-  process.env.SINGULARITY_DIR = dir;
+  setEnv("DIR", dir);
 }
 
 interface ChainStep {

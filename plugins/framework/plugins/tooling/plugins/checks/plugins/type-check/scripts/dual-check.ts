@@ -21,7 +21,7 @@
 // The correctness gate for any change to the type check, and how it was
 // validated before it decided verdicts: run it on a tree, apply a commit, run
 // it again — the second run is the incremental one under test.
-// Point `SINGULARITY_DIR` at a scratch directory to keep the store isolated
+// Point `EQUIN_DIR` at a scratch directory to keep the store isolated
 // from the fleet's.
 //
 // Manual and expensive: two program builds and a full check (minutes, ~15 GB).

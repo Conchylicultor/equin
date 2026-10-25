@@ -8,23 +8,22 @@
 //     `agentLaunchPolicy`), so an agent whose cwd is outside the repo — a
 //     scratch workspace — is guarded too.
 //
-// Each command is ONE string, spelled the same in both places:
-// `${SINGULARITY_GUARDS_ROOT:-$CLAUDE_PROJECT_DIR}/…`. A human session has no
-// SINGULARITY_GUARDS_ROOT, so its guards come from the project; an app launch
-// sets it to the checkout its workspace runs the guards of (a worktree: its
-// own, so an agent can edit and test them; scratch: the launching backend's).
-// In a worktree both copies are loaded, and Claude Code runs identical hook
-// commands once (measured 2026-10-24: identical strings ran once, differing
-// ones twice) — keep them byte-identical.
+// Each command is ONE string, spelled the same in both places, rooted at the
+// GUARDS_ROOT variable or else `$CLAUDE_PROJECT_DIR`. A human session has no
+// GUARDS_ROOT, so its guards come from the project; an app launch sets it to
+// the checkout its workspace runs the guards of (a worktree: its own, so an
+// agent can edit and test them; scratch: the launching backend's). The shell
+// reads both of its names (EQUIN_GUARDS_ROOT, then the legacy one), since a
+// launching backend may be older than this checkout (`envNames`,
+// infra/launcher). In a worktree both copies are loaded, and Claude Code runs
+// identical hook commands once (measured 2026-10-24: identical strings ran
+// once, differing ones twice) — keep them byte-identical.
+//
+// The workspace an app-launched agent runs in (the WORKSPACE_ROOT variable) is
+// the boundary `main-edits` / `main-writes` allow writes under; absent in a
+// human session.
 
-/** The checkout whose guard scripts an app-launched agent's hooks run. */
-export const GUARDS_ROOT_ENV = "SINGULARITY_GUARDS_ROOT";
-
-/**
- * The root of the workspace an app-launched agent runs in — the boundary
- * `main-edits` / `main-writes` allow writes under. Absent in a human session.
- */
-export const WORKSPACE_ROOT_ENV = "SINGULARITY_WORKSPACE_ROOT";
+import { envNames } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 
 /** The guard entry points, relative to a checkout root. */
 export const GUARD_SCRIPTS = {
@@ -50,7 +49,11 @@ export interface AgentPolicySettings {
   permissions: { deny: string[] };
 }
 
-const ROOT = `\${${GUARDS_ROOT_ENV}:-$CLAUDE_PROJECT_DIR}`;
+/** `${A:-${B:-$CLAUDE_PROJECT_DIR}}` over every name of GUARDS_ROOT, current first. */
+const ROOT = envNames("GUARDS_ROOT").reduceRight(
+  (fallback, name) => `\${${name}:-${fallback}}`,
+  "$CLAUDE_PROJECT_DIR",
+);
 
 function script(rel: string): string {
   return `"${ROOT}/${rel}"`;

@@ -1,3 +1,4 @@
+import { envEntries } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { connect } from "node:net";
@@ -69,8 +70,8 @@ async function pickFreePort(from: number): Promise<number> {
 
 /**
  * Start a local preview of a finished release artifact. Spawns the staged
- * `launch` binary, which self-roots SINGULARITY_DIR under the data dir we hand it
- * and binds its embedded PG to the free `SINGULARITY_PG_PORT` we pick — so the
+ * `launch` binary, which self-roots EQUIN_DIR under the data dir we hand it
+ * and binds its embedded PG to the free `EQUIN_PG_PORT` we pick — so the
  * whole stack runs isolated alongside the dev environment. The data root MUST be
  * short because the embedded PG/gateway open Unix sockets under it (104-byte path
  * limit) — `/tmp/sgp-XXXXXX` is short by construction, the canonical mitigation.
@@ -106,12 +107,11 @@ export async function startPreview(runId: string): Promise<void> {
     argv: [join(run.artifactPath, "launch")],
     env: {
       ...process.env,
-      SINGULARITY_DIR: dataRoot,
+      ...envEntries({ DIR: dataRoot }),
       // Loopback only (127.0.0.1 and [::1]), on the preview's own port. A
       // preview must pin its port: falling through to `manifest.port` would
       // bind every concurrent preview to the same one.
-      SINGULARITY_LISTEN: `loopback:${port}`,
-      SINGULARITY_PG_PORT: String(pgPort),
+      ...envEntries({ LISTEN: `loopback:${port}`, PG_PORT: String(pgPort) }),
     },
     pidFile: gatewayPidFile(dataRoot),
     onOutputLine: (line, stream) => {

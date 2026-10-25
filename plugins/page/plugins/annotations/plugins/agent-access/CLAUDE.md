@@ -29,7 +29,7 @@ the two sections below reverse what they reverse. Design:
 ## The database is the SHARED one, and that is the point
 
 These tools touch `db` directly, and the MCP server runs in the instance that
-**launched** the conversation (`.mcp.json` dials `SINGULARITY_PARENT_HOST`) —
+**launched** the conversation (`.mcp.json` dials `EQUIN_PARENT_HOST`) —
 normally main. So a page write lands in main's store, never the agent's fork.
 
 Intended: pages are **prod documents an agent edits collaboratively with the

@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { defineDep } from "@plugins/infra/plugins/deps/deps";
 import { readyForTests } from "@plugins/infra/plugins/deps/deps/testing";
 import { componentIdentity, unbundledExecutable } from "../../core";
-import { APP_COMPONENT_ENV } from "../../core/internal/app-component";
+import { envEntries } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import {
   defineLoginService,
   isLoginServiceDeclaration,
@@ -82,7 +82,7 @@ describe("defineLoginService", () => {
     expect(job.argv).toEqual(["/app/equin.app/Contents/MacOS/example", "tray"]);
     expect(job.env).toEqual({
       HOME: "/h/me",
-      [APP_COMPONENT_ENV]: "example-helper@x",
+      ...envEntries({ APP_COMPONENT: "example-helper@x" }),
     });
   });
 

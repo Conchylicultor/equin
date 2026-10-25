@@ -212,11 +212,11 @@ the returned `slots` in an in-process `createSemaphore(slots)`
 - `grant.lane` — the lane it was admitted in. Children read lane-shaped
   decisions off it (the type-check worker's slot window), never off the
   branch.
-- `grant.env()` — `{ SINGULARITY_HOST_GRANT, SINGULARITY_LANE }`, inherited by a
+- `grant.env()` — `{ EQUIN_HOST_GRANT, EQUIN_LANE }`, inherited by a
   subprocess child so its `inheritedGrant()` rebuilds the SAME budget and spends
   those units — acquiring NOTHING host-wide, because the parent holds the slots
   and the child is their only spender. This is what deletes the old
-  `SINGULARITY_HOST_SLOT_HELD` / `kind: "exempt"` double-acquire dodge.
+  the host-slot-held marker / `kind: "exempt"` double-acquire dodge.
 
 ### An interactive grant runs its holder in the foreground
 
@@ -336,8 +336,6 @@ See `research/2026-07-10-global-host-admission-unified-budget.md`.
     - `Priority`
   - Exports (values):
     - `cpuBudget`
-    - `HOST_GRANT_ENV`
-    - `HOST_LANE_ENV`
     - `HOST_POOLS`
     - `hostCpuCeiling`
     - `hostPoolsFor`

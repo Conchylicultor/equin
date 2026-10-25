@@ -1,3 +1,9 @@
+import {
+  readEnv,
+  setEnv,
+  unsetEnv,
+  type EnvKey,
+} from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { afterAll, afterEach, expect, test } from "bun:test";
 import {
   existsSync,
@@ -32,17 +38,19 @@ import {
 // Every variable a test below rewrites, plus the process's declared runtime
 // namespace. The move tests impersonate a process that may or may not move
 // shared data, and that is decided by the declared namespace and
-// `SINGULARITY_RELEASE`. The `bun test` preload declared this process's
+// `EQUIN_RELEASE`. The `bun test` preload declared this process's
 // namespace as the checkout it runs from, so each test puts that exact
 // declaration back rather than merely dropping it.
-const ENV_KEYS = ["SINGULARITY_DIR", "SINGULARITY_RELEASE"] as const;
-const ORIGINAL_ENV = new Map(ENV_KEYS.map((k) => [k, process.env[k]]));
+const ENV_KEYS: readonly EnvKey[] = ["DIR", "RELEASE"];
+const ORIGINAL_ENV = new Map<EnvKey, string | undefined>(
+  ENV_KEYS.map((k) => [k, readEnv(k)] as const),
+);
 const ORIGINAL_NAMESPACE = runtimeNamespace();
 
 function restoreEnv(): void {
   for (const [key, value] of ORIGINAL_ENV) {
-    if (value === undefined) delete process.env[key];
-    else process.env[key] = value;
+    if (value === undefined) unsetEnv(key);
+    else setEnv(key, value);
   }
   resetRuntimeNamespaceForTest();
   declareRuntimeNamespace(ORIGINAL_NAMESPACE);
@@ -85,13 +93,13 @@ test("an invalid name throws", () => {
   }
 });
 
-test("path resolves lazily against the CURRENT SINGULARITY_DIR, not the one at declaration", () => {
-  process.env.SINGULARITY_DIR = "/tmp/root-a";
+test("path resolves lazily against the CURRENT data-root variable, not the one at declaration", () => {
+  setEnv("DIR", "/tmp/root-a");
   const dir = defineDataDir(spec("lazy-fixture"));
   expect(dir.path).toBe(join("/tmp/root-a", "cache", "lazy-fixture"));
 
   // The launcher's move: the root changes AFTER the declaration ran.
-  process.env.SINGULARITY_DIR = "/tmp/root-b";
+  setEnv("DIR", "/tmp/root-b");
   expect(dir.path).toBe(join("/tmp/root-b", "cache", "lazy-fixture"));
   expect(dir.file("sub", "f.json")).toBe(
     join("/tmp/root-b", "cache", "lazy-fixture", "sub", "f.json"),
@@ -100,7 +108,7 @@ test("path resolves lazily against the CURRENT SINGULARITY_DIR, not the one at d
 });
 
 test("legacyLocation resolves relative to the root, outside its kind", () => {
-  process.env.SINGULARITY_DIR = "/tmp/root-c";
+  setEnv("DIR", "/tmp/root-c");
   const dir = defineDataDir({
     ...spec("legacy-fixture"),
     kind: "services",
@@ -111,7 +119,7 @@ test("legacyLocation resolves relative to the root, outside its kind", () => {
   });
   expect(dir.path).toBe(join("/tmp/root-c", "postgres"));
   // Still lazy — the override is a relative segment, never a frozen absolute.
-  process.env.SINGULARITY_DIR = "/tmp/root-d";
+  setEnv("DIR", "/tmp/root-d");
   expect(dir.path).toBe(join("/tmp/root-d", "postgres"));
 });
 
@@ -125,7 +133,7 @@ test("getDataDirs returns a copy, keyed by kind/name", () => {
 
 test("ensure() creates the directory and returns it", () => {
   const root = mkdtempSync(join(tmpdir(), "data-dir-ensure-"));
-  process.env.SINGULARITY_DIR = root;
+  setEnv("DIR", root);
   const dir = defineDataDir(spec("ensure-fixture"));
   expect(dir.ensure()).toBe(join(root, "cache", "ensure-fixture"));
   // Idempotent: a second call on an existing directory is a no-op, not a throw.
@@ -141,7 +149,7 @@ test("ensure() throws when the target exists and is NOT a directory", () => {
   const root = mkdtempSync(join(tmpdir(), "data-dir-notdir-"));
   mkdirSync(join(root, "logs"), { recursive: true });
   writeFileSync(join(root, "some.latch"), "held");
-  process.env.SINGULARITY_DIR = root;
+  setEnv("DIR", root);
 
   const dir = defineDataDir({
     ...spec("notdir-fixture"),
@@ -168,7 +176,7 @@ const appOpts = (owner: string) => ({
 });
 
 test("defineAppDataDir derives the name from the app id, under apps/, never reclaimable", () => {
-  process.env.SINGULARITY_DIR = "/tmp/root-app";
+  setEnv("DIR", "/tmp/root-app");
   // Shaped like an `AppRef` — the parameter is structural, so a real app's ref
   // passes as-is without this plugin depending on the pane primitive.
   const app = { id: "fixture-app-derive", name: "Fixture", basePath: "/x" };
@@ -224,7 +232,7 @@ test("defineDataDir refuses the apps kind — a type error, and a throw for a ca
 
 test("subdir() names an area inside the dir: path, file() and ensure()", () => {
   const root = mkdtempSync(join(tmpdir(), "data-dir-subdir-"));
-  process.env.SINGULARITY_DIR = root;
+  setEnv("DIR", root);
   const dir = defineAppDataDir(
     { id: "fixture-subdir-app" },
     appOpts("apps/fixture-subdir-app"),
@@ -247,7 +255,7 @@ test("subdir() rejects anything but one lowercase segment", () => {
 
 test("an area's ensure() shares the not-a-directory guard", () => {
   const root = mkdtempSync(join(tmpdir(), "data-dir-area-notdir-"));
-  process.env.SINGULARITY_DIR = root;
+  setEnv("DIR", root);
   const dir = defineDataDir(spec("area-notdir"));
   mkdirSync(dir.path, { recursive: true });
   writeFileSync(dir.file("blob"), "a file, not an area");
@@ -259,7 +267,7 @@ test("an area's ensure() shares the not-a-directory guard", () => {
 /** A process that may NOT move shared data: no runtime namespace, not a release. */
 function asOrdinaryProcess(): void {
   resetRuntimeNamespaceForTest();
-  delete process.env.SINGULARITY_RELEASE;
+  unsetEnv("RELEASE");
 }
 
 /**
@@ -268,12 +276,12 @@ function asOrdinaryProcess(): void {
  * cannot be — that arm is covered by the `mayMoveSharedData` truth table below.
  */
 function asMover(): void {
-  process.env.SINGULARITY_RELEASE = "1";
+  setEnv("RELEASE", "1");
 }
 
 function freshRoot(label: string): string {
   const root = mkdtempSync(join(tmpdir(), `data-dir-move-${label}-`));
-  process.env.SINGULARITY_DIR = root;
+  setEnv("DIR", root);
   return root;
 }
 

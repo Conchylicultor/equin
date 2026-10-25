@@ -6,7 +6,7 @@ import {
 // Everything the gateway daemon owns under the data root. Four directories, and
 // each one is handed to the Go process as an explicit flag (`-log-dir`,
 // `-central-routes-file`, `-sockets-dir`) rather than left to a Go-side default
-// derived from the inherited `SINGULARITY_DIR` — a second, silently-drifting
+// derived from the inherited `EQUIN_DIR` — a second, silently-drifting
 // derivation of the same layout is exactly what this registry exists to end.
 // The pid file too (`-pid-file`): the gateway writes its own pid, since under
 // launchd no launcher sees the spawn.
@@ -104,7 +104,7 @@ export const GATEWAY_PID_FILENAME = "gateway.pid";
  *
  * For the one caller that must name this file under a root that is NOT this
  * process's own: teardown finds a release preview's gateway under its
- * `/tmp/sgp-XXXXXX` data dir, not under `SINGULARITY_DIR`. It cannot use
+ * `/tmp/sgp-XXXXXX` data dir, not under `EQUIN_DIR`. It cannot use
  * `gatewayLocks.file(...)`, but it also must not spell the location a second
  * time — a hand-written copy would go on naming the old spot after the layout
  * migration moved the real one, leaving every preview's gateway un-killable.

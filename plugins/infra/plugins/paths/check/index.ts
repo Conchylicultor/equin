@@ -881,13 +881,13 @@ const noUndeclaredDataDirsCheck: Check = {
 //      that is unavoidable, since a child process has to be handed one — so the
 //      constraint cannot live in the type. `join(dataRoot(), "whatever")` is
 //      precisely what `defineDataDir` exists to replace.
-//   2. **Re-reading `SINGULARITY_DIR` from the environment.** A second
+//   2. **Re-reading `EQUIN_DIR` from the environment.** A second
 //      derivation of the root, in a plugin that owns none of it. This is the
-//      form the deleted `SINGULARITY_DIR` const would come back as: not an
-//      import (that is now a tsc error), but four characters of `process.env`.
+//      form the deleted `EQUIN_DIR` const would come back as: not an
+//      import (that is now a tsc error), but one `readEnv("DIR")` call.
 //
-// A WRITE to the env var is untouched — `??=`, `=`, and a `SINGULARITY_DIR:`
-// key inside an `env: {…}` object are how a root is handed to a child, which is
+// A WRITE to the env var is untouched — `setEnv`, `setEnvDefault` and an
+// `envEntries({ DIR })` spread are how a root is handed to a child, which is
 // the sanctioned direction. Only reads are policed, which is why the pattern
 // carries a negative lookahead for an assignment rather than matching the name.
 //
@@ -905,19 +905,19 @@ const DATA_ROOT_PATTERNS: { pattern: RegExp; grepArg: string }[] = [
     pattern: /\$\{\s*dataRoot\s*\(\s*\)\s*\}[/\\]/,
     grepArg: "dataRoot",
   },
-  // A READ of the env var. The lookahead lets an assignment through: `??=` and
-  // `=` are writes, while `==` / `===` / `!==` are comparisons, i.e. reads.
+  // A READ of the env var, by key: `readEnv("DIR", …)`. Writes go through
+  // `setEnv` / `setEnvDefault` / `envEntries`, which this does not match.
   //
   // The inter-token whitespace lives INSIDE the lookahead deliberately. Written
-  // as `…SINGULARITY_DIR\s*(?!…)` it matches every write instead: `\s*` is free
+  // as `…EQUIN_DIR\s*(?!…)` it matches every write instead: `\s*` is free
   // to give back the space it consumed, so the lookahead re-runs hard against
   // the name and sees " ??=" rather than "??=", finds no assignment, and the
   // negative succeeds. Both writes in the co-located test failed exactly that
   // way. `[ \t]` rather than `\s` because an assignment operator is always on
   // its target's line, and `\s` would let the scan run into the next one.
   {
-    pattern: /process\.env\.SINGULARITY_DIR(?![ \t]*(?:\?\?)?=[^=])/,
-    grepArg: "SINGULARITY_DIR",
+    pattern: /\breadEnv\s*\(\s*["']DIR["']/,
+    grepArg: "readEnv",
   },
 ];
 
@@ -927,16 +927,16 @@ const DATA_ROOT_PATTERNS: { pattern: RegExp; grepArg: string }[] = [
  * by name: a test that points the root at a temp dir is being hermetic — the
  * correct thing for a test to do, and the alternative (running against the
  * developer's real `~/.singularity`) is the actual bug. Files that legitimately
- * read `SINGULARITY_DIR` declare it in their own plugin's manifest; entries
+ * read `EQUIN_DIR` declare it in their own plugin's manifest; entries
  * LEAVE it the moment their read does (a stale one fails this check).
  */
 const dataRootNotJoinedCheck: Check = {
   id: "paths:data-root-not-joined",
   description:
-    "The data root has one door: `dataRoot()` names it and nothing joins it. No `join(dataRoot(), …)`, and no re-reading SINGULARITY_DIR from the environment — a directory under the root is declared with defineDataDir.",
+    "The data root has one door: `dataRoot()` names it and nothing joins it. No `join(dataRoot(), …)`, and no re-reading the DIR env var from the environment — a directory under the root is declared with defineDataDir.",
   exemptable: {
     "paths:data-root-not-joined":
-      "joins the data root by hand or re-reads SINGULARITY_DIR from the environment instead of declaring a data dir",
+      "joins the data root by hand or re-reads the DIR env var from the environment instead of declaring a data dir",
   },
   outOfScope: ["research", "test"],
   async run(ctx) {
@@ -983,8 +983,8 @@ const dataRootNotJoinedCheck: Check = {
         "`dataRoot()` names the ROOT ITSELF and its only use is handing that root to a child " +
         "process (or reporting it); to express a declared location under a root that is not this " +
         "process's own, use `relativeToDataRoot(dir, …)` rather than re-deriving the layout. " +
-        "Reading `process.env.SINGULARITY_DIR` is a second derivation of the root — WRITING it " +
-        "(`=`, `??=`, or an `env: {…}` key) is the sanctioned handoff and is not flagged.",
+        'Reading `readEnv("DIR")` is a second derivation of the root — WRITING it ' +
+        "(`setEnv`, `setEnvDefault`, or an `envEntries({ DIR })` spread) is the sanctioned handoff and is not flagged.",
     };
   },
 };

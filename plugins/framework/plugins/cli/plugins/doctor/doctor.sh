@@ -147,7 +147,7 @@ fi
 # are the one thing that needs it — the app says so where they are launched.
 # The same lookup order as resolveClaudeBin() in plugins/infra/plugins/paths/server/internal/bins.ts
 # (doctor.test.ts keeps the candidate paths in step).
-claude_bin="${SINGULARITY_CLAUDE_BIN:-$(command -v claude 2>/dev/null)}"
+claude_bin="${EQUIN_CLAUDE_BIN:-${SINGULARITY_CLAUDE_BIN:-$(command -v claude 2>/dev/null)}}"
 if [ -z "$claude_bin" ]; then
   for candidate in "$HOME/.local/bin/claude" "/opt/homebrew/bin/claude" "/usr/local/bin/claude"; do
     if [ -x "$candidate" ]; then claude_bin="$candidate"; break; fi

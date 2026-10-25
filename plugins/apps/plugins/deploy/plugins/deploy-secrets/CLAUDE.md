@@ -76,7 +76,7 @@ and on the box: `readDeploySecret(RESEND_API_KEY)` → `{ kind: "set", value } |
 3. **The box script** (`converge-script.ts`, `SECRET_ENV_SH`): the script is generated
    from KEYS only; the values arrive on the SSH session's **stdin** (never argv, never
    the uploaded file), are checked to be exactly the expected keys, and are written into
-   the 0600 `root:svc-<c>` env file beside `SINGULARITY_LISTEN`. Every line it prints
+   the 0600 `root:svc-<c>` env file beside `EQUIN_LISTEN`. Every line it prints
    names keys, never values. systemd re-reads `EnvironmentFile` on the restart the env
    change triggers.
 

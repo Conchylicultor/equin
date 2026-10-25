@@ -2,5 +2,5 @@
   "name": "@equin/plugin-framework-cli-serve-app",
   "private": true,
   "version": "0.0.1",
-  "description": "`./equin serve-app` — boot a packaged app's full runtime (gateway + embedded Postgres + app DB) under an isolated SINGULARITY_DIR. The one detachable command: it is meant to outlive the shell that launched it."
+  "description": "`./equin serve-app` — boot a packaged app's full runtime (gateway + embedded Postgres + app DB) under an isolated EQUIN_DIR. The one detachable command: it is meant to outlive the shell that launched it."
 }

@@ -1,10 +1,8 @@
-import noAmbientWorktreeEnv from "./no-ambient-worktree-env";
 import noLaunderedCheckoutNamespace from "./no-laundered-checkout-namespace";
 
 export default {
   name: "namespace-identity",
   rules: {
-    "no-ambient-worktree-env": noAmbientWorktreeEnv,
     "no-laundered-checkout-namespace": noLaunderedCheckoutNamespace,
   },
   /**
@@ -30,12 +28,5 @@ export default {
    * the rule off in. A rule that is off in the file its own bug lived in is not
    * enforcing anything.
    */
-  enforceEverywhere: [
-    "no-laundered-checkout-namespace",
-    // Same two conditions, for the same reasons. A test or e2e file that set the
-    // retired variable would be re-creating the ambient identity this rule
-    // exists to delete — and setting it in a test process is precisely how a
-    // spawned child came to inherit a worktree name nobody chose.
-    "no-ambient-worktree-env",
-  ],
+  enforceEverywhere: ["no-laundered-checkout-namespace"],
 };

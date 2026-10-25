@@ -150,7 +150,9 @@ folder needs only its boundary row, not a barrel's doc and shipping policy.
 
 - Description: Per-user login services, generalized from the gateway's: a LoginService over a LoginServiceSpec (label, argv, cwd, env, stdio log, session background | graphical), rendered as a launchd LaunchAgent on macOS (graphical → LimitLoadToSessionType=Aqua) or a systemd user unit on Linux (graphical → graphical-session.target, no lingering); defineLoginService and the collected login-services/ registry, so ./equin start / stop bring every declared service up and down without naming one. On main's boot, every declared service a start registered follows main: reloaded when main's build of its dependency changed its job (rewritten only, when stopped), the dependency requested through deps first when it is not built yet. On macOS every service (the gateway too) runs from ONE app bundle, equin.app (bundle id dev.equin, signed with the machine's identity, at a stable path under state/macos-app): installServiceExecutable copies a component's build in and swaps the re-signed bundle in whole, so every permission prompt, System Settings row and tccutil reset names one app, equin.
 - Core:
-  - Uses: `framework/tooling/collected-dir.defineCollectedDir`
+  - Uses:
+    - `framework/tooling/collected-dir.defineCollectedDir`
+    - `infra/launcher/env-names.envEntries`
   - Exports (types):
     - `AppComponent`
     - `ComponentBuild`

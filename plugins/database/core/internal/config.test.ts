@@ -2,6 +2,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { envEntries } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { HOME_DIR } from "@plugins/infra/plugins/paths/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 
@@ -18,7 +19,7 @@ import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
  * fallback would then never be exercised. (The capture is this module's own:
  * `paths` itself resolves the root lazily on every call.)
  *
- * So the probe runs in a CHILD process with `SINGULARITY_DIR` pointed at an empty
+ * So the probe runs in a CHILD process with `EQUIN_DIR` pointed at an empty
  * temp dir — the same technique the plan's bare-host simulation uses. The probe
  * script is written INSIDE the repo tree so Bun resolves the `@plugins/*` alias
  * from the repo tsconfig exactly as it does for the module under test.
@@ -73,14 +74,14 @@ async function probe(env: Record<string, string>): Promise<Probe> {
 }
 
 // A deliberately minimal, PG*-free base environment: PATH so Bun can exec, and
-// the empty SINGULARITY_DIR. Anything the dev's shell exports (PGHOST, a real
-// SINGULARITY_DIR, USER) must NOT leak in, or the assertions below stop meaning
+// the empty EQUIN_DIR. Anything the dev's shell exports (PGHOST, a real
+// EQUIN_DIR, USER) must NOT leak in, or the assertions below stop meaning
 // what they say.
 const baseEnv = {
   PATH: process.env.PATH ?? "",
   // Bun wants a home for its own caches; HOME_DIR is the sanctioned source.
   HOME: HOME_DIR,
-  SINGULARITY_DIR: emptyDataDir,
+  ...envEntries({ DIR: emptyDataDir }),
 };
 
 describe("readDatabaseConfig / libpqEnv with no database.json", () => {
@@ -145,7 +146,10 @@ describe("readDatabaseConfig with a real database.json", () => {
           ],
         }),
       );
-      const { config, env } = await probe({ ...baseEnv, SINGULARITY_DIR: dir });
+      const { config, env } = await probe({
+        ...baseEnv,
+        ...envEntries({ DIR: dir }),
+      });
       expect(config.connection).toEqual({
         host: "/var/run/pg",
         port: 5433,
@@ -169,7 +173,7 @@ describe("readDatabaseConfig with a real database.json", () => {
       const { config } = await probe({
         ...baseEnv,
         USER: "probe-user",
-        SINGULARITY_DIR: dir,
+        ...envEntries({ DIR: dir }),
       });
       expect(config.connection).toEqual({
         host: "localhost",

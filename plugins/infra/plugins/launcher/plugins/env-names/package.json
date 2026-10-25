@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-infra-launcher-env-names",
+  "private": true,
+  "version": "0.0.1",
+  "description": "The app's own environment variables, declared by key (forwarded to the runtime tree or withheld from it, with why), and the one way to read and write them: readEnv / envEntries / setEnv / setEnvDefault / unsetEnv, which use both names of each key (EQUIN_<key> and the legacy one) during the rename window, a disagreement between the two throwing. A leaf importing only framework/product-name, so every runtime and the lowest-level packages can import it."
+}

@@ -21,7 +21,8 @@ cat >/dev/null
 
 # Set by `push` around its own rebase (it installs the rebased lockfile before
 # normalizing) and by normalize's own amend. Both own the repair themselves.
-[ -n "$SINGULARITY_SKIP_POST_REWRITE" ] && exit 0
+# Either name of the SKIP_POST_REWRITE variable (the setter may be older).
+[ -n "${EQUIN_SKIP_POST_REWRITE:-$SINGULARITY_SKIP_POST_REWRITE}" ] && exit 0
 
 GITDIR=$(git rev-parse --git-dir) || exit 0
 ROOT=$(git rev-parse --show-toplevel) || exit 0
@@ -45,4 +46,4 @@ unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_OBJECT_DIRECTORY
 
 cd "$ROOT" || exit 0
 echo "post-rewrite: generated artifacts were auto-resolved — normalizing..."
-SINGULARITY_SKIP_POST_REWRITE=1 ./equin normalize-generated
+EQUIN_SKIP_POST_REWRITE=1 SINGULARITY_SKIP_POST_REWRITE=1 ./equin normalize-generated

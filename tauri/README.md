@@ -96,6 +96,6 @@ session, which a headless/automation shell lacks.
 - **Embedded PG port is picked per launch.** The embedded Postgres binds no TCP
   listener, but its port still names its Unix socket file and would default to
   5433, the dev cluster's. The shell picks a free port at setup and passes it as
-  `SINGULARITY_PG_PORT` to both `launch` and `teardown` (mirroring the web
+  `EQUIN_PG_PORT` to both `launch` and `teardown` (mirroring the web
   preview path, `plugins/release/server/internal/preview-manager.ts`), so the
   desktop app coexists with a running dev cluster and other instances.

@@ -5,7 +5,7 @@ The Postgres client tools the app spawns — `pg_dump` and `pg_restore` — buil
 This plugin ships:
 
 - The `@equin/pg-client-<platform>` packages as optionalDependencies in `package.json`, so `bun install` lands the binaries at `node_modules/@equin/pg-client-<platform>/native/bin/`.
-- `pgClientBin(tool)` (server barrel) — the absolute path of a vendored tool. A release bundle points it at its own copy with `SINGULARITY_PG_CLIENT_BIN_DIR` (set by the launcher). A missing binary throws `PgClientToolMissingError`. There is no PATH fallback.
+- `pgClientBin(tool)` (server barrel) — the absolute path of a vendored tool. A release bundle points it at its own copy with `EQUIN_PG_CLIENT_BIN_DIR` (set by the launcher). A missing binary throws `PgClientToolMissingError`. There is no PATH fallback.
 
 ## Why vendored, and why never the PATH
 

@@ -1,10 +1,14 @@
 import { describe, expect, test } from "bun:test";
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import {
-  RUNTIME_FORWARDED_ENV,
-  RUNTIME_FORWARDED_PREFIXES,
+  ENV_PREFIX,
+  envEntries,
+  envName,
+  envNames,
+} from "@plugins/infra/plugins/launcher/plugins/env-names/core";
+import {
   RUNTIME_FORWARDED_TOOL_ENV,
   RUNTIME_HOST_ENV,
-  RUNTIME_WITHHELD_ENV,
   miseShimsDir,
   pickHostEnv,
   pickRuntimeEnv,
@@ -13,35 +17,56 @@ import {
   runtimeShimsDir,
 } from "./runtime-env";
 
-const forwarded = Object.keys(RUNTIME_FORWARDED_ENV);
-const withheld = Object.keys(RUNTIME_WITHHELD_ENV);
-const prefixes = Object.keys(RUNTIME_FORWARDED_PREFIXES);
+const legacy = (key: string) => `${LEGACY_IDS.envPrefix}${key}`;
 
 describe("pickRuntimeEnv", () => {
   test("keeps host, forwarded and prefix-matched names", () => {
     const picked = pickRuntimeEnv({
       HOME: "home-value",
       PATH: "/usr/bin",
-      SINGULARITY_DIR: "/data",
-      SINGULARITY_RELEASE_RUN_ID: "run-1",
-      SINGULARITY_AUTH_GOOGLE_CLIENT_ID: "id",
+      ...envEntries({
+        DIR: "/data",
+        RELEASE_RUN_ID: "run-1",
+        AUTH_GOOGLE_CLIENT_ID: "id",
+      }),
     });
     expect(picked).toEqual({
       HOME: "home-value",
       PATH: "home-value/.local/share/mise/shims:/usr/bin",
-      SINGULARITY_DIR: "/data",
-      SINGULARITY_RELEASE_RUN_ID: "run-1",
-      SINGULARITY_AUTH_GOOGLE_CLIENT_ID: "id",
+      ...envEntries({
+        DIR: "/data",
+        RELEASE_RUN_ID: "run-1",
+        AUTH_GOOGLE_CLIENT_ID: "id",
+      }),
     });
+  });
+
+  test("a variable set under ONE of its names travels under both", () => {
+    // An operator's dotfiles may still export the legacy name; a newer one the
+    // current name. Either way the runtime tree sees both.
+    expect(pickRuntimeEnv({ [legacy("DIR")]: "/old" })).toEqual(
+      envEntries({ DIR: "/old" }),
+    );
+    expect(
+      pickRuntimeEnv({ [envName("AUTH_GOOGLE_CLIENT_ID")]: "id" }),
+    ).toEqual(envEntries({ AUTH_GOOGLE_CLIENT_ID: "id" }));
+  });
+
+  test("both names set to different values refuses to guess", () => {
+    expect(() =>
+      pickRuntimeEnv({ [envName("DIR")]: "/new", [legacy("DIR")]: "/old" }),
+    ).toThrow(/disagree/);
   });
 
   test("drops withheld names — the leak this exists to stop", () => {
     const picked = pickRuntimeEnv({
       HOME: "home-value",
-      SINGULARITY_CONVERSATION_ID: "conv-1",
-      SINGULARITY_PARENT_HOST: "http://equin.localhost:9000",
-      SINGULARITY_BUILD_ID: "build-1",
-      SINGULARITY_HOST_GRANT: "4",
+      ...envEntries({
+        CONVERSATION_ID: "conv-1",
+        PARENT_HOST: "http://equin.localhost:9000",
+        BUILD_ID: "build-1",
+        HOST_GRANT: "4",
+      }),
     });
     expect(picked).toEqual({ HOME: "home-value" });
   });
@@ -54,17 +79,18 @@ describe("pickRuntimeEnv", () => {
       WARP_IS_LOCAL_SHELL_SESSION: "1",
       SOCKET_PATH: "/sock",
       PGHOST: "elsewhere",
-      SINGULARITY_SOMETHING_NEW: "x",
+      [`${ENV_PREFIX}SOMETHING_NEW`]: "x",
+      [legacy("SOMETHING_NEW")]: "x",
       // A prefix match is a prefix of the NAME, not a substring of it.
-      MY_SINGULARITY_AUTH_X: "y",
+      [`MY_${envName("AUTH_X")}`]: "y",
     });
     expect(picked).toEqual({});
   });
 
   test("skips names whose value is undefined", () => {
-    expect(pickRuntimeEnv({ HOME: undefined, SINGULARITY_DIR: "/d" })).toEqual({
-      SINGULARITY_DIR: "/d",
-    });
+    expect(
+      pickRuntimeEnv({ HOME: undefined, ...envEntries({ DIR: "/d" }) }),
+    ).toEqual(envEntries({ DIR: "/d" }));
   });
 });
 
@@ -75,13 +101,15 @@ describe("pickHostEnv", () => {
       PATH: "/usr/bin",
       LANG: "en_US.UTF-8",
       LC_ALL: undefined,
-      SINGULARITY_DIR: "/data",
-      SINGULARITY_AUTH_GOOGLE_CLIENT_SECRET: "secret",
+      ...envEntries({
+        DIR: "/data",
+        AUTH_GOOGLE_CLIENT_SECRET: "secret",
+        CONVERSATION_ID: "conv-1",
+      }),
       PLAYWRIGHT_BROWSERS_PATH: "/pw",
       CLAUDECODE: "1",
       CLAUDE_CODE_EXTRA_BODY: "{}",
       SOCKET_PATH: "/sock",
-      SINGULARITY_CONVERSATION_ID: "conv-1",
     });
     expect(picked).toEqual({
       HOME: "home-value",
@@ -91,29 +119,14 @@ describe("pickHostEnv", () => {
   });
 });
 
-describe("the declaration", () => {
-  test("forwarded and withheld are disjoint", () => {
-    expect(forwarded.filter((name) => withheld.includes(name))).toEqual([]);
-  });
-
-  test("no withheld name is forwarded by a prefix", () => {
-    expect(
-      withheld.filter((name) => prefixes.some((p) => name.startsWith(p))),
-    ).toEqual([]);
-  });
-
-  test("every forwarded, withheld and prefix key is a SINGULARITY_ name", () => {
-    for (const name of [...forwarded, ...withheld, ...prefixes]) {
-      expect(name).toStartWith("SINGULARITY_");
-    }
-  });
-
-  test("host and tool names are not SINGULARITY_ names", () => {
+describe("host names", () => {
+  test("host and tool names are not app names", () => {
     for (const name of [
       ...RUNTIME_HOST_ENV,
       ...Object.keys(RUNTIME_FORWARDED_TOOL_ENV),
     ]) {
-      expect(name).not.toStartWith("SINGULARITY_");
+      expect(name).not.toStartWith(ENV_PREFIX);
+      expect(name).not.toStartWith(LEGACY_IDS.envPrefix);
     }
   });
 });
@@ -122,9 +135,11 @@ describe("runtimeEnvNames", () => {
   test("lists every declared name, and each prefix as <prefix>*", () => {
     const names = runtimeEnvNames();
     expect(names).toContain("HOME");
-    expect(names).toContain("SINGULARITY_DIR");
-    expect(names).toContain("SINGULARITY_AUTH_*");
-    expect(names).not.toContain("SINGULARITY_CONVERSATION_ID");
+    for (const name of envNames("DIR")) expect(names).toContain(name);
+    for (const name of envNames("AUTH_")) expect(names).toContain(`${name}*`);
+    for (const name of envNames("CONVERSATION_ID")) {
+      expect(names).not.toContain(name);
+    }
     expect(new Set(names).size).toBe(names.length);
   });
 

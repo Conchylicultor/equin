@@ -7,7 +7,10 @@
 # (e.g. describing a `---` markdown shortcut) makes interpret-trailers stamp the
 # trailer mid-body, above the `---`, where %(trailers) can't see it — the
 # conversation-trailer check then reports it missing even though it is present.
-[ -n "$SINGULARITY_CONVERSATION_ID" ] || exit 0
+# The id travels under both names of the CONVERSATION_ID variable (the current
+# EQUIN_ one first) while the launching backend may be older than this checkout.
+CONVERSATION_ID="${EQUIN_CONVERSATION_ID:-$SINGULARITY_CONVERSATION_ID}"
+[ -n "$CONVERSATION_ID" ] || exit 0
 
 # "Already stamped" means: in the trailer block (the message's last paragraph),
 # which is the only place %(trailers) reads. A line anywhere else — e.g. an old
@@ -22,4 +25,4 @@ if grep -q "^Singularity-Conversation:" "$1" 2>/dev/null; then
   grep -v "^Singularity-Conversation:" "$1" >"$1.tmp" && mv "$1.tmp" "$1"
 fi
 git interpret-trailers --in-place --no-divider \
-  --trailer "Singularity-Conversation=$SINGULARITY_CONVERSATION_ID" "$1"
+  --trailer "Singularity-Conversation=$CONVERSATION_ID" "$1"

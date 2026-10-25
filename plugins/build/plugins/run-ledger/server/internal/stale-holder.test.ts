@@ -12,6 +12,11 @@
  */
 
 import {
+  readEnv,
+  setEnv,
+  unsetEnv,
+} from "@plugins/infra/plugins/launcher/plugins/env-names/core";
+import {
   afterAll,
   afterEach,
   beforeAll,
@@ -57,7 +62,7 @@ const NS = asNamespace("ledger-settle-test");
 
 let t: TestDb;
 let dataRoot: string;
-const priorDataRoot = process.env.SINGULARITY_DIR;
+const priorDataRoot = readEnv("DIR");
 
 beforeAll(async () => {
   // DB first: the admin connection config is resolved (and cached) before the
@@ -67,12 +72,12 @@ beforeAll(async () => {
   dataRoot = mkdtempSync(join(tmpdir(), "sg-ledger-settle-"));
   // `worktreesDir()` reads this on every call, so the build-logs paths resolve
   // under the temp root for the rest of the suite.
-  process.env.SINGULARITY_DIR = dataRoot;
+  setEnv("DIR", dataRoot);
 });
 
 afterAll(async () => {
-  if (priorDataRoot === undefined) delete process.env.SINGULARITY_DIR;
-  else process.env.SINGULARITY_DIR = priorDataRoot;
+  if (priorDataRoot === undefined) unsetEnv("DIR");
+  else setEnv("DIR", priorDataRoot);
   rmSync(dataRoot, { recursive: true, force: true });
   await t.drop();
 });

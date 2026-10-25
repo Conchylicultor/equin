@@ -72,7 +72,7 @@ starting at login. On Linux it is a systemd user unit
 (`~/.config/systemd/user/<gateway-label>.service`) that starts at boot,
 nobody logged in — it needs lingering (`sudo loginctl enable-linger $USER`,
 which `install.sh` enables). The gateway listens on loopback only
-(`127.0.0.1` and `::1`); `SINGULARITY_LISTEN=:9000 ./equin start` opens it on
+(`127.0.0.1` and `::1`); `EQUIN_LISTEN=:9000 ./equin start` opens it on
 every interface. Elsewhere (no launchd, no systemd)
 the gateway does not survive a reboot: run `./equin start` again after one.
 

@@ -1,9 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import {
-  NO_SPAWN_DISCLAIM_ENV,
-  disclaimArgv,
-  spawnDisclaimWanted,
-} from "./disclaim-argv";
+import { envEntries } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
+import { disclaimArgv, spawnDisclaimWanted } from "./disclaim-argv";
 
 describe("spawnDisclaimWanted", () => {
   test("on macOS by default", () => {
@@ -14,12 +11,12 @@ describe("spawnDisclaimWanted", () => {
   });
   test("off with the escape hatch", () => {
     expect(
-      spawnDisclaimWanted({ [NO_SPAWN_DISCLAIM_ENV]: "1" }, "darwin"),
+      spawnDisclaimWanted(envEntries({ NO_SPAWN_DISCLAIM: "1" }), "darwin"),
     ).toBe(false);
   });
   test("only `1` turns it off", () => {
     expect(
-      spawnDisclaimWanted({ [NO_SPAWN_DISCLAIM_ENV]: "0" }, "darwin"),
+      spawnDisclaimWanted(envEntries({ NO_SPAWN_DISCLAIM: "0" }), "darwin"),
     ).toBe(true);
   });
 });

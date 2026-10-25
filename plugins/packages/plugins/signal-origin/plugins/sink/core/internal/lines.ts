@@ -31,7 +31,7 @@ interface SignalOriginLineBase {
 
 /**
  * A signal actually arrived. `origin` is null when the tap was not armed (no C
- * toolchain, or `SINGULARITY_NO_SIGNAL_ORIGIN=1`) — kept as an explicit field
+ * toolchain, or `EQUIN_NO_SIGNAL_ORIGIN=1`) — kept as an explicit field
  * rather than an omitted one so a reader can tell "we looked and could not see"
  * from "we never looked".
  */

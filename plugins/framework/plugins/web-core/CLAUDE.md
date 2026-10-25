@@ -47,8 +47,8 @@ Always go through `./equin build` from the repo root.
 
 `./equin build` composes the frontend as **per-plugin web artifacts**, and
 that is now the only mode — the monolithic Vite build (and with it
-`vite.config.ts`, `--monolith`, `--artifacts`, `SINGULARITY_WEB_MONOLITH`,
-`SINGULARITY_WEB_ARTIFACTS`) was removed once release builds moved onto the same
+`vite.config.ts`, `--monolith`, `--artifacts` and their two environment
+switches) was removed once release builds moved onto the same
 pipeline. This plugin therefore carries no build config of its own; it is the
 source root (`web/index.html`, `web/main.tsx`, `web/public/`) the pipeline
 composes from.

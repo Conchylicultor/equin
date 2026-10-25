@@ -29,7 +29,7 @@ export type { ReleaseIdentity } from "../core/internal/paths";
 // plugins are the bulk of the writers under the root, and a server file that
 // had to reach into `…/paths/core` for `defineDataDir` while taking every other
 // path from `…/paths/server` is the friction that keeps people joining the root
-// by hand. There is no `SINGULARITY_DIR` above any more: `dataRoot()` is the
+// by hand. There is no `EQUIN_DIR` above any more: `dataRoot()` is the
 // only spelling of the root, and `paths:data-root-not-joined` fails on joining
 // it or on re-reading its environment variable.
 export {

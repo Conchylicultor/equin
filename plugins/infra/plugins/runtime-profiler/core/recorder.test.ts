@@ -1,6 +1,11 @@
 // bun:test suite for the recorder's wait-propagation decomposition. The core
 // stays pure — the AsyncLocalStorage runtime and the deterministic clock are
 // injected HERE, exactly the way server/internal/install.ts does at boot.
+import {
+  readEnv,
+  setEnv,
+  unsetEnv,
+} from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { beforeEach, describe, expect, test } from "bun:test";
 import { AsyncLocalStorage } from "node:async_hooks";
 import {
@@ -865,14 +870,14 @@ describe("loader read-set capture — handed to the installed sink", () => {
 
   // The read-set is runtime state, not profile data: a kill-switched profiler
   // records no span, yet the route drift guard still needs every loader's tables.
-  test("captures under the SINGULARITY_PROFILING=0 kill-switch, which drops the span itself", async () => {
-    const prior = process.env.SINGULARITY_PROFILING;
-    process.env.SINGULARITY_PROFILING = "0";
+  test("captures under the profiling kill-switch set to 0, which drops the span itself", async () => {
+    const prior = readEnv("PROFILING");
+    setEnv("PROFILING", "0");
     try {
       await runLoader("killed", ["tasks"]);
     } finally {
-      if (prior === undefined) delete process.env.SINGULARITY_PROFILING;
-      else process.env.SINGULARITY_PROFILING = prior;
+      if (prior === undefined) unsetEnv("PROFILING");
+      else setEnv("PROFILING", prior);
     }
     expect(readSetFlushes).toEqual([{ label: "killed", tables: ["tasks"] }]);
     expect(

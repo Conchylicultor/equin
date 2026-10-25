@@ -50,7 +50,7 @@ export type {
 
 // The declared-directory registry for the data root. `dataRoot()` is the ONLY
 // way to name the root and `defineDataDir` the only way to name anything under
-// it — the plain `SINGULARITY_DIR` string that used to sit above is gone, and
+// it — the plain `EQUIN_DIR` string that used to sit above is gone, and
 // `paths:data-root-not-joined` fails on both ways back to it (joining the root,
 // or re-reading its environment variable).
 //

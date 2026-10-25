@@ -6,7 +6,7 @@
 // spawned the gateway with `{ ...process.env }`, and the gateway handed every
 // child its own `os.Environ()` plus a few additions. So `./equin start`
 // run from an agent shell gave every backend on the host that shell's
-// SINGULARITY_CONVERSATION_ID and its CLAUDE_* session
+// conversation id and its CLAUDE_* session
 // variables (observed 2026-09-15). Every op-log record and every commit a
 // backend's build made was then stamped with one agent's conversation.
 //
@@ -35,8 +35,6 @@
 // - PG*: the database location is declared in `database.json`. libpq lets the
 //   environment win over that file, so a stray PGHOST in the starting shell
 //   would silently point a toolbar build's readiness probes at another server.
-// - EQUIN_RELEASE_DIR: set by the systemd unit, but read only by the release
-//   self-extractor, before the launcher runs. No runtime reads it.
 // - Toolchain variables (GOROOT, CARGO_HOME, RUSTUP_*, HOMEBREW_*, __MISE_SHIM):
 //   PATH is forwarded, and each tool either defaults these or recomputes them
 //   from its own install location.
@@ -51,15 +49,23 @@
 // tools through the shims and obeys the committed `mise.toml` rather than a
 // version frozen into (or missing from) the starter's shell. See `runtimePath`.
 //
-// Every SINGULARITY_* name the code reads or sets must appear in
-// RUNTIME_FORWARDED_ENV or RUNTIME_WITHHELD_ENV (or match a forwarded prefix),
-// and every name listed here must still be read or set somewhere. The
-// `launcher:runtime-env-declared` check enforces both, so a new variable cannot
-// be added without deciding whether it travels, and a dead one cannot linger.
-// (The retired SINGULARITY_WORKTREE is not listed: the namespace-identity lint
-// rule bans that name outright.)
+// The app's own variables are declared by KEY in the `env-names` sub-plugin (forwarded,
+// withheld, forwarded prefixes); each key has two names while the product's
+// rename settles, and its `readEnv` / `envEntries` read and write both. `launcher:env-names`
+// keeps the declaration closed: no full name spelled in TypeScript code, no
+// undeclared name in a mirror (Go, shell, JSON) or a doc, no key nothing uses.
 //
-// Design: research/2026-09-15-global-declared-runtime-environment.md
+// Design: research/2026-09-15-global-declared-runtime-environment.md,
+// research/2026-10-25-global-equin-env-vars.md (the two names)
+
+import {
+  RUNTIME_FORWARDED_ENV,
+  RUNTIME_FORWARDED_PREFIXES,
+  envKeyOf,
+  envNames,
+  readEnv,
+  type EnvKey,
+} from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 
 /**
  * Facts about the host and the user, passed through from the starter when set
@@ -79,68 +85,6 @@ export const RUNTIME_HOST_ENV = [
 ] as const;
 
 /**
- * Installation settings that must reach the runtime, each with the reason it
- * travels and who reads it there. Most are set by the release launcher
- * (`launcher/bin/launch.ts`) to point the runtime at the bundle's vendored
- * files; the rest are operator knobs an installation may set once.
- */
-export const RUNTIME_FORWARDED_ENV = {
-  SINGULARITY_DIR:
-    "the data root every path derives from; a release and a preview re-root their whole install with it (paths/core dataRoot(), gateway/main.go flag defaults)",
-  SINGULARITY_SOCKETS_DIR:
-    "short /tmp dir for backend sockets when the data root is too deep for the AF_UNIX cap; the launcher passes it as -sockets-dir and gateway/main.go reads it as that flag's default",
-  SINGULARITY_RELEASE:
-    "marks a compiled release, so its single backend takes the host-singleton work (paths/core isRelease())",
-  SINGULARITY_RELEASE_RUN_ID:
-    "which release run is serving, stamped by the launcher from RELEASE.json for /api/health (paths/core releaseIdentity())",
-  SINGULARITY_RELEASE_COMPOSITION:
-    "which composition is serving, stamped by the launcher from RELEASE.json for /api/health (paths/core releaseIdentity())",
-  SINGULARITY_PG_BIN_DIR:
-    "vendored Postgres binaries for the supervised start script (database/embedded/scripts/start.ts)",
-  SINGULARITY_PGBOUNCER_BIN:
-    "vendored PgBouncer binary for the supervised start script (database/pgbouncer/scripts/start.ts)",
-  SINGULARITY_PG_CLIENT_BIN_DIR:
-    "vendored pg_dump / pg_restore the backend spawns for DB forks and backups (database/client-tools server/internal/bin.ts)",
-  SINGULARITY_PG_PORT:
-    "the embedded cluster's port, which a preview moves off the default (database/embedded/shared/internal/paths.ts, database/pgbouncer/scripts/start.ts)",
-  SINGULARITY_PG_SOCKET_DIR:
-    "short /tmp dir for the Postgres / PgBouncer sockets under a deep release root (database/embedded/shared/internal/paths.ts, database/pgbouncer/shared/internal/paths.ts)",
-  SINGULARITY_MIGRATIONS_DIR:
-    "the vendored .sql tree, since a compiled backend cannot read its own (database/migrations/server/internal/runner.ts)",
-  SINGULARITY_PARCEL_WATCHER_NODE:
-    "the vendored @parcel/watcher addon, which `bun --compile` cannot embed (infra/file-watcher shared/engine.ts)",
-  SINGULARITY_SENTINEL_WORKER_JS:
-    "the vendored cluster-sentinel worker, which `bun --compile` does not trace (debug/sentinel worker-host.ts)",
-  SINGULARITY_REPO_CONFIG_DIR:
-    "the vendored git-layer config tree for a compiled backend (paths/core repoConfigDir())",
-  SINGULARITY_WEB_DIST:
-    "the release's vendored web bundle, which the backend reads its build pins from (paths/core webDistDir())",
-  SINGULARITY_CLAUDE_BIN:
-    "where the backend finds the claude CLI (infra/paths/server bins.ts)",
-  SINGULARITY_PROFILING:
-    "operator kill-switch for the runtime profiler (infra/runtime-profiler/core recorder.ts)",
-  SINGULARITY_NO_SPAWN_PRIORITY:
-    "operator escape hatch that turns off darwinbg demotion of background work (packages/spawn-priority background.ts)",
-  SINGULARITY_NO_SIGNAL_ORIGIN:
-    "operator escape hatch that turns off the native signal-origin tap (packages/signal-origin signal-origin.ts)",
-  SINGULARITY_NO_SPAWN_DISCLAIM:
-    "operator escape hatch that runs agents' claude without the disclaim-exec helper; read by the backend that resolves it (packages/spawn-disclaim disclaim-argv.ts)",
-  SINGULARITY_HEAVY_READ_LOCAL_CONCURRENCY:
-    "operator tuning for the per-backend heavy-read gate (infra/host/host-read-pool pool.ts)",
-  SINGULARITY_CODESIGN_IDENTITY:
-    "operator-set keychain identity the gateway is code-signed with; a backend's deps.install job can build (and so sign) the gateway too, and must use the same signer as `./equin start` (infra/codesign identity.ts)",
-} as const satisfies Record<`SINGULARITY_${string}`, string>;
-
-/**
- * Name PREFIXES that travel: every variable starting with one is forwarded.
- * Passed to the gateway as `<prefix>*`.
- */
-export const RUNTIME_FORWARDED_PREFIXES = {
-  SINGULARITY_AUTH_:
-    "operator-set OAuth client credentials, SINGULARITY_AUTH_<PROVIDER>_CLIENT_ID / _CLIENT_SECRET, read by central (auth/google, auth/notion central descriptor.ts)",
-} as const satisfies Record<`SINGULARITY_${string}`, string>;
-
-/**
  * Third-party tool locations an operator may set, where the install-time
  * reader and the run-time reader must agree. None today:
  * `PLAYWRIGHT_BROWSERS_PATH` left when Chromium became an `infra/deps`
@@ -149,66 +93,33 @@ export const RUNTIME_FORWARDED_PREFIXES = {
  */
 export const RUNTIME_FORWARDED_TOOL_ENV: Readonly<Record<string, string>> = {};
 
-/**
- * Names that exist in the code but must NEVER be inherited by the runtime tree,
- * each with who delivers it instead. A backend that inherited one of these
- * would act as whichever process happened to start the gateway.
- */
-export const RUNTIME_WITHHELD_ENV = {
-  SINGULARITY_CONVERSATION_ID:
-    "agent-session identity; the agent launcher delivers it into that agent's own process environment, where the commit hook and op-log read it",
-  SINGULARITY_TOOL_USE_ID:
-    "the Bash tool call an e2e script was launched by; a PreToolUse guard exports it into that one command, never a backend's",
-  SINGULARITY_PARENT_HOST:
-    "the host an agent's MCP client dials back to; delivered into that agent's own process environment by the agent launcher",
-  SINGULARITY_GUARDS_ROOT:
-    "the checkout one agent's policy hooks run their guards from (guards/agent-policy); delivered into that agent's own process environment by the agent launcher",
-  SINGULARITY_WORKSPACE_ROOT:
-    "the workspace one agent runs in, its write guards' boundary (guards/agent-policy); delivered into that agent's own process environment by the agent launcher",
-  SINGULARITY_PARENT_LIFELINE:
-    "the lock file one spawn holds for the child it starts, set by infra/spawn for that child only (packages/flock lifeline.ts)",
-  SINGULARITY_HOST_GRANT:
-    "a host CPU admission grant, set by a grant holder for the subprocess it spawns (infra/host/host-admission grant.ts)",
-  SINGULARITY_LANE:
-    "the admission lane of a CLI op, set by the op for the subprocesses it spawns (cli/op-runtime lane.ts)",
-  SINGULARITY_BUILD_ID:
-    "the build_runs row a UI-triggered build writes to, set by the backend for the build it spawns (build/server run-build.ts)",
-  SINGULARITY_BUILD_DETACHED:
-    "marks a supervised build that must outlive its backend, set by the backend for the build it spawns (build/server run-build.ts)",
-  SINGULARITY_BUILD_IN_PROGRESS:
-    "marks the check pass a build spawns, set by that build (tooling/checks/core run-context.ts)",
-  SINGULARITY_CHECK_JOBS:
-    "check fan-out width for one check run, typed by whoever runs it; reaches that run's subprocesses, never a backend",
-  SINGULARITY_CHECK_NO_CACHE:
-    "cache bypass for one check run, typed by whoever runs it; reaches that run's subprocesses, never a backend",
-  SINGULARITY_CHECK_SHADOW:
-    "shadow-mode switch for one check run, typed by whoever runs it; reaches that run's subprocesses, never a backend",
-  SINGULARITY_DEPS_REEXEC:
-    "re-exec budget the CLI carries across its own dependency-install re-exec; taken out of the env by the bootstrap, so it never reaches a descendant (cli/bootstrap reexec.ts)",
-  SINGULARITY_LOCKED_BUN_REEXEC:
-    "marks the CLI's own re-exec under the mise.lock Bun so it never re-execs twice; taken out of the env by the bootstrap, so it never reaches a descendant (cli/bootstrap locked-bun.ts)",
-  SINGULARITY_SKIP_POST_REWRITE:
-    "recursion guard the post-rewrite git hook sets for the command it runs (.githooks/post-rewrite)",
-  SINGULARITY_LISTEN:
-    "a launcher input; the launcher reads it and passes the gateway -listen",
-} as const satisfies Record<`SINGULARITY_${string}`, string>;
-
-const HOST_NAMES: ReadonlySet<string> = new Set(RUNTIME_HOST_ENV);
-const FORWARDED_NAMES: ReadonlySet<string> = new Set([
-  ...Object.keys(RUNTIME_FORWARDED_ENV),
+const HOST_NAMES: ReadonlySet<string> = new Set([
+  ...RUNTIME_HOST_ENV,
   ...Object.keys(RUNTIME_FORWARDED_TOOL_ENV),
 ]);
+const FORWARDED_KEYS: ReadonlySet<string> = new Set(
+  Object.keys(RUNTIME_FORWARDED_ENV),
+);
 const FORWARDED_PREFIXES: readonly string[] = Object.keys(
   RUNTIME_FORWARDED_PREFIXES,
 );
 
+/** The forwarded key `name` spells (under either prefix), or undefined. */
+function forwardedKeyOf(name: string): EnvKey | undefined {
+  const key = envKeyOf(name);
+  if (key === undefined) return undefined;
+  if (
+    FORWARDED_KEYS.has(key) ||
+    FORWARDED_PREFIXES.some((p) => key.startsWith(p))
+  ) {
+    return key as EnvKey;
+  }
+  return undefined;
+}
+
 /** True when `name` is part of the declared runtime environment. */
 export function isRuntimeEnvName(name: string): boolean {
-  return (
-    HOST_NAMES.has(name) ||
-    FORWARDED_NAMES.has(name) ||
-    FORWARDED_PREFIXES.some((prefix) => name.startsWith(prefix))
-  );
+  return HOST_NAMES.has(name) || forwardedKeyOf(name) !== undefined;
 }
 
 /**
@@ -343,8 +254,18 @@ export function pickRuntimeEnv(
   const picked: Record<string, string> = {};
   for (const [name, value] of Object.entries(source)) {
     if (value === undefined) continue;
-    if (!isRuntimeEnvName(name)) continue;
-    picked[name] = name === "PATH" ? runtimePath(source) : value;
+    if (HOST_NAMES.has(name)) {
+      picked[name] = name === "PATH" ? runtimePath(source) : value;
+      continue;
+    }
+    // An app variable travels under BOTH its names, whichever one the starter
+    // set: an operator's dotfiles may still export the legacy name, and the
+    // runtime tree may still hold readers of either.
+    const key = forwardedKeyOf(name);
+    if (key === undefined) continue;
+    const resolved = readEnv(key, source);
+    if (resolved === undefined) continue;
+    for (const n of envNames(key)) picked[n] = resolved;
   }
   return picked;
 }
@@ -353,7 +274,7 @@ export function pickRuntimeEnv(
  * Only the host facts of `source` (RUNTIME_HOST_ENV) whose value is set: the
  * environment for a third-party tool the runtime runs, which needs to know who
  * and where the user is and nothing about this installation. Narrower than
- * `pickRuntimeEnv` on purpose — that one also carries the SINGULARITY_*
+ * `pickRuntimeEnv` on purpose — that one also carries the app's own
  * installation settings and OAuth client credentials, which a tool like the
  * claude CLI has no business seeing.
  */
@@ -380,8 +301,14 @@ export function pickHostEnv(
 export function runtimeEnvNames(): string[] {
   return [
     ...RUNTIME_HOST_ENV,
-    ...Object.keys(RUNTIME_FORWARDED_ENV),
+    ...(
+      Object.keys(
+        RUNTIME_FORWARDED_ENV,
+      ) as (keyof typeof RUNTIME_FORWARDED_ENV)[]
+    ).flatMap(envNames),
     ...Object.keys(RUNTIME_FORWARDED_TOOL_ENV),
-    ...FORWARDED_PREFIXES.map((prefix) => `${prefix}*`),
+    ...(
+      FORWARDED_PREFIXES as (keyof typeof RUNTIME_FORWARDED_PREFIXES)[]
+    ).flatMap((prefix) => envNames(prefix).map((name) => `${name}*`)),
   ];
 }

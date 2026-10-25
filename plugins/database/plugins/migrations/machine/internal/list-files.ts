@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import {
   isMigrationFileName,
   migrationsFrom,
@@ -12,8 +13,7 @@ import {
 // `.sql` files. The release vendors `data/` and points here. When unset (dev),
 // resolve relative to this module as before.
 export const MIGRATIONS_DIR =
-  process.env.SINGULARITY_MIGRATIONS_DIR ??
-  join(import.meta.dir, "..", "..", "data");
+  readEnv("MIGRATIONS_DIR") ?? join(import.meta.dir, "..", "..", "data");
 
 /** Every migration file in `dir`, in timestamp order (`migrationsFrom`). */
 export function listMigrationFiles(dir: string): Migration[] {

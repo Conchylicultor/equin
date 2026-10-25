@@ -2,6 +2,7 @@ import type * as parcel from "@parcel/watcher";
 import { type FSWatcher, readdirSync, watch as fsWatch } from "node:fs";
 import { stat } from "node:fs/promises";
 import { basename, dirname, extname, join } from "node:path";
+import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import {
   createCoalescer,
   createKeyedCoalescer,
@@ -25,7 +26,7 @@ import { createWrapper } from "@parcel/watcher/wrapper";
 // does fails loudly at the call site (not during an unrelated barrel's init).
 //
 // In a self-contained release `bun --compile` cannot embed the native addon, so
-// the launcher vendors it on disk and points `SINGULARITY_PARCEL_WATCHER_NODE`
+// the launcher vendors it on disk and points `EQUIN_PARCEL_WATCHER_NODE`
 // at the absolute path of the `watcher.node` binding. When that env var is set,
 // `getParcelWatcher()` dlopens the vendored binding directly and wraps it with
 // parcel's own `createWrapper`, yielding the identical public API. This single
@@ -54,7 +55,7 @@ export type ParcelWatcherApi = Omit<typeof parcel, "subscribe"> & {
 let parcelWatcherPromise: Promise<ParcelWatcherApi> | null = null;
 export function getParcelWatcher(): Promise<ParcelWatcherApi> {
   parcelWatcherPromise ??= (async () => {
-    const nodePath = process.env.SINGULARITY_PARCEL_WATCHER_NODE;
+    const nodePath = readEnv("PARCEL_WATCHER_NODE");
     if (nodePath) {
       // Release: the native addon isn't bundled into the compiled binary.
       // dlopen the vendored binding from disk and wrap it with parcel's own
