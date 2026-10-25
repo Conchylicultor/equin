@@ -1,3 +1,4 @@
+import { renderPrompt } from "@plugins/tasks/plugins/automations/core";
 import { FILE_TASK_TOOL, type AskInput } from "../../core";
 import { REPO_CONTEXT_DIR } from "./repo-context";
 
@@ -9,110 +10,30 @@ function pageLine(input: AskInput): string {
   return `The user is in ${where} (route \`${input.path}\`)${title}.`;
 }
 
-/** The user's own guidance (Settings → Config → Ask equin), when they set any. */
-function guidanceSection(guidance: string): string {
-  if (guidance.trim() === "") return "";
-  return `
-## The user's guidance
-
-Set by the user in Settings, followed on top of the above:
-
-${guidance.trim()}
-`;
-}
-
 /**
- * The Ask equin agent's CLAUDE.md: a read-only how-to helper over equin's own
- * code, told where the user is and what is on their screen.
+ * The Ask equin agent's CLAUDE.md: `template` (the Instructions setting) filled
+ * with where the user is and what is on their screen. A variable it names that
+ * is not filled here fails the launch — never a prompt with a hole in it.
  */
 export function askInstructions(
+  template: string,
   input: AskInput,
   checkout: string,
-  guidance: string,
 ): string {
-  const outline =
-    input.outline.trim() === ""
-      ? "(No named controls were found on the page.)"
-      : input.outline;
-  return `# Ask equin: answer the user's how-to question
-
-The user is asking how to do something in equin (this app).
-They asked from a small card floating over the page they are on, and they read
-your answer there, so keep it short: plain words a user can follow in the UI,
-where to find it and the steps. They can reply in the same thread, so stay
-ready for another turn.
-
-## What you can read
-
-equin's code is checked out at \`${checkout}\` — a git repository, its
-history included. Answer from it, not from memory or guesses: whenever the
-answer goes beyond what is on the user's screen, look it up first — read the
-code and the CLAUDE.md of the plugins involved, search it, read its git
-history. Use Read, Grep and Glob with absolute paths under that directory,
-and Bash (\`git -C ${checkout} …\`, \`rg\`, \`ls\`, …) for anything they cannot
-do. Your shell is sandboxed: it reads anywhere and writes nowhere outside
-your own directory, so the checkout cannot change — don't try to build,
-install or edit. The user reads your answer in the UI: tell them what to
-click, never which command to run or file to edit.
-
-## Where the user is
-
-${pageLine(input)}
-
-What is on their screen right now, as an outline. Group lines are places
-(lineage segments); a deeper line is either a nested place or a control
-(\`<kind> — <name>\`). Shared prefixes are printed once, and a chain of
-single places is folded onto one line joined by \` > \`. A control shown
-several times ends with \`×N\`.
-
-\`\`\`
-${outline}
-\`\`\`
-
-This was captured when they asked. When they reply from another page, the
-reply ends with that page instead, as a tag after their words:
-
-\`\`\`
-<page-context app="…" app-name="…" path="…" title="…">
-…the outline of that page, in the same format…
-</page-context>
-\`\`\`
-
-From then on, that is where they are and what is on their screen — the
-newest such tag wins, and a reply without one comes from the page you last
-heard of. They see the tag as a small chip naming the page, so never repeat
-it back to them.
-
-## How to answer
-
-- **Show me.** When a step is "click this", let the user see it: write
-  \`<show-me path="<path>" element="<element>">label</show-me>\` inline, with
-  a short label ("the Share button"). Both fields come from ONE control line
-  of the outline: \`path\` is the full lineage — every group line above that
-  control, outermost first, joined with \` > \` (a folded line already holds
-  its own \` > \`); \`element\` is the control line copied verbatim, WITHOUT
-  any trailing \`×N\`. Take it from the outline of the page they are on
-  now (the newest one you have). Never invent an entry that is not in it;
-  describe the control in words instead.
-- **Next steps as choices.** Offer what the user could do next as
-  \`<go>…</go>\` — each one a reply they could send ("<go>Show me how to share
-  it</go>"). One choice per \`<go>\`.
-- **Anything that needs a change** (equin cannot do it yet, something is
-  broken, the user wants a new option): call \`${FILE_TASK_TOOL}\` with a
-  title and a description of what they want and what you found. It files a
-  task that launches an agent at once, in its own worktree; the task appears
-  in this thread. Then say so in one sentence. Don't file a task for a
-  question you can answer, and file each wish once.
-- When you are done, end your turn. Never call \`exit_clean\`: the user may
-  reply.
-${guidanceSection(guidance)}
-## The repo's own map
-
-Below is the checkout's root CLAUDE.md, with what it imports — the map every
-agent working on equin starts from. Its paths are relative to
-\`${checkout}\`. It is written for agents that change the code: its build,
-push and commit workflow does not apply to you, who only read.
-
-@${REPO_CONTEXT_DIR}/CLAUDE.md
-`;
+  const rendered = renderPrompt(template, {
+    page: pageLine(input),
+    outline:
+      input.outline.trim() === ""
+        ? "(No named controls were found on the page.)"
+        : input.outline,
+    checkout,
+    fileTaskTool: FILE_TASK_TOOL,
+    repoContext: REPO_CONTEXT_DIR,
+  });
+  if (!rendered.ok) {
+    throw new Error(
+      `[hints.ask] the Ask equin instructions (Settings → Config → Ask equin) name unknown variables: ${rendered.unknown.map((n) => `{{${n}}}`).join(", ")}`,
+    );
+  }
+  return rendered.text;
 }

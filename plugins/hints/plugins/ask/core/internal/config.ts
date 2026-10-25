@@ -2,18 +2,17 @@ import { defineConfig } from "@plugins/config_v2/core";
 import { multilineTextField } from "@plugins/fields/plugins/multiline-text/plugins/config/core";
 import { dynamicEnumField } from "@plugins/fields/plugins/dynamic-enum/plugins/config/core";
 import { DEFAULT_MODEL_CHOICE } from "@plugins/conversations/plugins/model-provider/core";
-
-/**
- * The default guidance the help agent follows on top of its built-in prompt:
- * every agent launch starts from the global action bar's Improve button.
- */
-const DEFAULT_ASK_GUIDANCE = `- The global action bar (top right, on every app) is where the user starts anything an agent should do: changing a prototype, creating an app, fixing or improving what they see. When they want something done, point them to its **Improve** button (with \`<show-me>\` when it is on their screen) — it files a task from the page they are on and an agent picks it up — rather than to an app's own buttons.`;
+import {
+  ASK_INSTRUCTIONS_TEMPLATE,
+  ASK_INSTRUCTIONS_VARIABLES,
+} from "./instructions";
 
 /**
  * Ask equin's settings (Settings → Config). The two models are picked from the
  * live model catalog (the web barrel contributes their options); a stored
- * value is read through `normalizeModelChoice`. `guidance` is added to the
- * help agent's CLAUDE.md at each launch.
+ * value is read through `normalizeModelChoice`. `instructions` is the help
+ * agent's whole CLAUDE.md, filled at each launch — edit it here, then port the
+ * edit back to {@link ASK_INSTRUCTIONS_TEMPLATE} to make it the default.
  */
 export const askConfig = defineConfig({
   fields: {
@@ -29,12 +28,11 @@ export const askConfig = defineConfig({
         "The model a task Ask equin files for you launches with (in its own worktree, at once).",
       default: DEFAULT_MODEL_CHOICE,
     }),
-    guidance: multilineTextField({
-      label: "Guidance",
-      description:
-        "Extra instructions the help agent follows when answering, added to its prompt at each new question (markdown). Empty for none.",
-      default: DEFAULT_ASK_GUIDANCE,
-      rows: 8,
+    instructions: multilineTextField({
+      label: "Instructions",
+      description: `The help agent's whole prompt (its CLAUDE.md), read at each new question. Filled per question: ${ASK_INSTRUCTIONS_VARIABLES.map((v) => `{{${v.name}}} (${v.description})`).join(", ")}.`,
+      default: ASK_INSTRUCTIONS_TEMPLATE,
+      rows: 24,
     }),
   },
 });

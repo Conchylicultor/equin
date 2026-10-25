@@ -28,6 +28,7 @@ import {
 } from "../internal/use-ask";
 import { useRunQuestion } from "../internal/use-question";
 import { FiledTaskCard } from "./filed-task-card";
+import { AgentInstructionsRow } from "./instructions-row";
 
 const askIcon = symbol("forum");
 const minimizeIcon = symbol("remove");
@@ -156,7 +157,8 @@ export function AskThreadCard({
 }
 
 /**
- * The empty card: a few suggested questions and the first-question box.
+ * The empty card: a few suggested questions (and, for a developer, the way to
+ * the agent's instructions) and the first-question box.
  * Asking starts the run (with where the user is) and the card shows it.
  * `card` is the card's own element, left out of the page outline.
  */
@@ -213,6 +215,7 @@ export function AskEmptyCard({
                 </Fill>
               </Line>
             ))}
+            <AgentInstructionsRow />
           </Stack>
         }
         footer={

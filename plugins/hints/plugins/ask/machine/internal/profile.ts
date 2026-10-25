@@ -30,7 +30,11 @@ export const helpAskProfile = defineScratchProfile({
     "Ask equin: a read-only how-to helper answering from equin's own code and history, with the page the user asked from.",
   inputSchema: AskInputSchema,
   instructions: (input) =>
-    askInstructions(input, checkoutRootPath(), getConfig(askConfig).guidance),
+    askInstructions(
+      getConfig(askConfig).instructions,
+      input,
+      checkoutRootPath(),
+    ),
   mcpTools: [FILE_TASK_TOOL, "flag_raise"],
   permissions: {
     allow: ["Read", "Grep", "Glob", "Bash"],

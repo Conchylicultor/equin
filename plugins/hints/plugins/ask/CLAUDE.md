@@ -13,17 +13,22 @@ on the computer. The reserved `ask_file_task` tool and the config stay in the
 portable `server/` half.
 
 - **Profile `help.ask`** (`ScratchProfile.define`): an empty scratch dir whose
-  CLAUDE.md is `askInstructions(input, checkout, guidance)` — the user's page (app, route,
+  CLAUDE.md is `askInstructions(template, input, checkout)` — the user's page (app, route,
   focused tab title), the page outline (`ui-context`'s `formatOutline`), the
   main checkout's path to read (`getMainRepoRoot()`, resolved once in
   `onReadyBlocking` because `instructions` is synchronous), and how to answer:
   `<show-me path element>` copied from an outline entry, next steps as
   `<go>`, anything needing a change filed with `ask_file_task`, end the turn,
   never `exit_clean`.
-- **The user's guidance**: `askConfig.guidance` (Settings → Config → Ask
-  equin, a multiline field; default: send every agent launch through the
-  global action bar's Improve button) is appended as a "The user's guidance"
-  section, read at each launch, so an edit applies to the next question.
+- **The prompt is config, not code**: `askConfig.instructions` (Settings →
+  Config → Ask equin → Instructions, a multiline field) is the whole CLAUDE.md
+  as a template, its default `ASK_INSTRUCTIONS_TEMPLATE`
+  (`core/internal/instructions.ts`). Each launch fills `{{page}}`,
+  `{{outline}}`, `{{checkout}}`, `{{fileTaskTool}}`, `{{repoContext}}`
+  (`ASK_INSTRUCTIONS_VARIABLES`) with the automations' `renderPrompt`; a
+  variable it does not know fails the launch loudly. Tune it in Settings, then
+  port the edit back to the template to make it the default. The default
+  tells the agent that agent work starts from the action bar's Improve button.
 - **The repo's map**: `prepare` copies the checkout's root `CLAUDE.md` and
   every file it imports (its `@path` lines — today `docs/plugins-compact.md`)
   into `<dir>/repo-context/` (`copyRepoContext`, at every launch), and the
@@ -78,7 +83,9 @@ portable `server/` half.
   top-right corner sits below the action bar.
 - **Empty state**: `pickSuggestions(Math.random)` (two fixed newcomer
   questions + one rotating) and a first-question `TextEditor` (draft in
-  `askQuestionDraft`). The first send captures the context — `useActiveApp`,
+  `askQuestionDraft`). For a developer (`useAudience`), an **Agent
+  instructions** row under the suggestions (`DeveloperMark`) opens the Ask
+  equin config (`useConfigLink(askConfig)`). The first send captures the context — `useActiveApp`,
   `usePathname`, `useFocusedTabTitle`, and
   `collectOutline(document.body, { exclude: [card] })` — and starts the run
   with `useStartThread` (Help category, `askConfig.model`). Sends wait while
@@ -127,7 +134,7 @@ portable `server/` half.
 
 ## Plugin reference
 
-- Description: Ask equin, web half: the ? menu's entry (Ask equin how to… / Back to your question), and the AskHost at Core.Root — a draggable card in the chrome's theme holding one threaded conversation with the help agent (AgentThread; a filed task shows as its live status and title, opening in the Agent Manager), above every tab so it follows the user across apps: suggested questions and a first-question box when empty (the first send attaches the focused app, route, tab title and the page outline), minimized to a pill with the step it is on and an unseen dot, its position kept edge-anchored and snapped only near a corner, and the newest unseen or working run taken back as the pill once per load. A reply sent from another page carries that page (a <page-context> token after the words, drawn as a chip naming the page). Registers the Ask equin config with both model pickers. Ask equin, server half: the help agent's reserved ask_file_task tool (a task with no folder or dependency edges, in the default worktree workspace, filed under Improvements and armed with the configured model so it launches at once), and the Ask equin config (the answering model, the filed tasks' model, the guidance added to the help agent's prompt).
+- Description: Ask equin, web half: the ? menu's entry (Ask equin how to… / Back to your question), and the AskHost at Core.Root — a draggable card in the chrome's theme holding one threaded conversation with the help agent (AgentThread; a filed task shows as its live status and title, opening in the Agent Manager), above every tab so it follows the user across apps: suggested questions (plus, for a developer, an Agent instructions row opening the Ask equin config) and a first-question box when empty (the first send attaches the focused app, route, tab title and the page outline), minimized to a pill with the step it is on and an unseen dot, its position kept edge-anchored and snapped only near a corner, and the newest unseen or working run taken back as the pill once per load. A reply sent from another page carries that page (a <page-context> token after the words, drawn as a chip naming the page). Registers the Ask equin config with both model pickers. Ask equin, server half: the help agent's reserved ask_file_task tool (a task with no folder or dependency edges, in the default worktree workspace, filed under Improvements and armed with the configured model so it launches at once), and the Ask equin config (the answering model, the filed tasks' model, the help agent's whole prompt as an editable template).
 - Web:
   - Contributes:
     - `Core.Root` → `AskHost`
@@ -136,13 +143,14 @@ portable `server/` half.
     - `ConfigV2.WebRegister` "config"
     - `DynamicEnum.Options` "Model for filed tasks"
     - `DynamicEnum.Options` "Model"
-  - Uses: 60 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 66 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations/agent-thread` ×7
     - `apps-core` ×2
     - `config_v2` ×2
     - `hints/help-menu` ×2
     - `primitives/css/coords` ×2
     - `primitives/css/ui-kit` ×2
+    - `primitives/hover-reveal` ×2
     - `primitives/live-state` ×2
     - `primitives/persistent-draft` ×2
     - `primitives/text-editor/inline-chip` ×2
@@ -150,6 +158,9 @@ portable `server/` half.
     - `tasks/task-status` ×2
     - `apps-core/chrome-theme.chromeThemeScope`
     - `apps-core/tabs.useFocusedTabTitle`
+    - `audience/developer-mark.DeveloperMark`
+    - `audience.useAudience`
+    - `config_v2/config-link.useConfigLink`
     - `conversations/conversation-view.conversationPane`
     - `conversations/model-provider.useModelChoiceOptions`
     - `conversations.useConversation`
@@ -173,6 +184,7 @@ portable `server/` half.
     - `primitives/dom/web-storage.defineStore`
     - `primitives/file-links.FileLinksWorkspaceProvider`
     - `primitives/icon-button.IconButton`
+    - `primitives/link-gesture.activationProps`
     - `primitives/loading.Loading`
     - `primitives/pane.useOpenPane`
     - `primitives/text-editor.TextEditor`

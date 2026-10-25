@@ -24,6 +24,7 @@
   - Imported by:
     - `apps-core/app-launcher`
     - `config_v2/git-defaults-preview`
+    - `hints/ask`
     - `shell/global-action-bar`
     - `shell/notifications`
     - `shell/toast`

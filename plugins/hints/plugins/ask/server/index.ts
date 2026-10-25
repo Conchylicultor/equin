@@ -5,7 +5,7 @@ import { fileTaskTool } from "./internal/tools";
 
 export default {
   description:
-    "Ask equin, server half: the help agent's reserved ask_file_task tool (a task with no folder or dependency edges, in the default worktree workspace, filed under Improvements and armed with the configured model so it launches at once), and the Ask equin config (the answering model, the filed tasks' model, the guidance added to the help agent's prompt).",
+    "Ask equin, server half: the help agent's reserved ask_file_task tool (a task with no folder or dependency edges, in the default worktree workspace, filed under Improvements and armed with the configured model so it launches at once), and the Ask equin config (the answering model, the filed tasks' model, the help agent's whole prompt as an editable template).",
   contributions: [ConfigV2.Register({ descriptor: askConfig })],
   register: [fileTaskTool],
 } satisfies ServerPluginDefinition;

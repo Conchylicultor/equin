@@ -11300,6 +11300,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `audience/settings`
       - `audience/view-option`
       - `config_v2/git-defaults-preview`
+      - `hints/ask`
       - `shell/global-action-bar`
       - `shell/notifications`
       - `shell/toast`
@@ -11324,6 +11325,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps-core/app-launcher`
           - `config_v2/git-defaults-preview`
+          - `hints/ask`
           - `shell/global-action-bar`
           - `shell/notifications`
           - `shell/toast`
@@ -13148,6 +13150,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/conversation-view/launch-prompts`
           - `conversations/conversation-view/prompt-templates`
           - `conversations/preprompts`
+          - `hints/ask`
           - `integrations/google-maps/usage`
           - `stats/commits`
           - `tasks/launch-options`
@@ -27064,7 +27067,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `shell/global-action-bar`
       - `tasks/task-draft-form`
   - Plugins:
-    - **`ask`** — Ask equin, web half: the ? menu's entry (Ask equin how to… / Back to your question), and the AskHost at Core.Root — a draggable card in the chrome's theme holding one threaded conversation with the help agent (AgentThread; a filed task shows as its live status and title, opening in the Agent Manager), above every tab so it follows the user across apps: suggested questions and a first-question box when empty (the first send attaches the focused app, route, tab title and the page outline), minimized to a pill with the step it is on and an unseen dot, its position kept edge-anchored and snapped only near a corner, and the newest unseen or working run taken back as the pill once per load. A reply sent from another page carries that page (a <page-context> token after the words, drawn as a chip naming the page). Registers the Ask equin config with both model pickers. Ask equin, server half: the help agent's reserved ask_file_task tool (a task with no folder or dependency edges, in the default worktree workspace, filed under Improvements and armed with the configured model so it launches at once), and the Ask equin config (the answering model, the filed tasks' model, the guidance added to the help agent's prompt).
+    - **`ask`** — Ask equin, web half: the ? menu's entry (Ask equin how to… / Back to your question), and the AskHost at Core.Root — a draggable card in the chrome's theme holding one threaded conversation with the help agent (AgentThread; a filed task shows as its live status and title, opening in the Agent Manager), above every tab so it follows the user across apps: suggested questions (plus, for a developer, an Agent instructions row opening the Ask equin config) and a first-question box when empty (the first send attaches the focused app, route, tab title and the page outline), minimized to a pill with the step it is on and an unseen dot, its position kept edge-anchored and snapped only near a corner, and the newest unseen or working run taken back as the pill once per load. A reply sent from another page carries that page (a <page-context> token after the words, drawn as a chip naming the page). Registers the Ask equin config with both model pickers. Ask equin, server half: the help agent's reserved ask_file_task tool (a task with no folder or dependency edges, in the default worktree workspace, filed under Improvements and armed with the configured model so it launches at once), and the Ask equin config (the answering model, the filed tasks' model, the help agent's whole prompt as an editable template).
       - Web:
         - Contributes:
           - `Core.Root` → `AskHost`
@@ -27073,13 +27076,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ConfigV2.WebRegister` "config"
           - `DynamicEnum.Options` "Model for filed tasks"
           - `DynamicEnum.Options` "Model"
-        - Uses: 60 symbols — full list in [`plugins/hints/plugins/ask/REFERENCE.md`](../plugins/hints/plugins/ask/REFERENCE.md)
+        - Uses: 66 symbols — full list in [`plugins/hints/plugins/ask/REFERENCE.md`](../plugins/hints/plugins/ask/REFERENCE.md)
           - `conversations/agent-thread` ×7
           - `apps-core` ×2
           - `config_v2` ×2
           - `hints/help-menu` ×2
           - `primitives/css/coords` ×2
           - `primitives/css/ui-kit` ×2
+          - `primitives/hover-reveal` ×2
           - `primitives/live-state` ×2
           - `primitives/persistent-draft` ×2
           - `primitives/text-editor/inline-chip` ×2
@@ -27087,6 +27091,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/task-status` ×2
           - `apps-core/chrome-theme.chromeThemeScope`
           - `apps-core/tabs.useFocusedTabTitle`
+          - `audience/developer-mark.DeveloperMark`
+          - `audience.useAudience`
+          - `config_v2/config-link.useConfigLink`
           - `conversations/conversation-view.conversationPane`
           - `conversations/model-provider.useModelChoiceOptions`
           - `conversations.useConversation`
@@ -27110,6 +27117,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/dom/web-storage.defineStore`
           - `primitives/file-links.FileLinksWorkspaceProvider`
           - `primitives/icon-button.IconButton`
+          - `primitives/link-gesture.activationProps`
           - `primitives/loading.Loading`
           - `primitives/pane.useOpenPane`
           - `primitives/text-editor.TextEditor`
@@ -41509,12 +41517,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `hoverRevealTargetWithGroupFocus`
           - `useHoverReveal`
       - Cross-plugin:
-        - Imported by: 36 plugins — full list in [`plugins/primitives/plugins/hover-reveal/REFERENCE.md`](../plugins/primitives/plugins/hover-reveal/REFERENCE.md)
+        - Imported by: 37 plugins — full list in [`plugins/primitives/plugins/hover-reveal/REFERENCE.md`](../plugins/primitives/plugins/hover-reveal/REFERENCE.md)
           - `apps` ×11
           - `page` ×8
           - `primitives` ×7
           - `ui` ×4
           - `conversations` ×2
+          - `hints/ask`
           - `integrations/youtube`
           - `layouts/miller`
           - `plugin-meta/exhibits`
@@ -41794,7 +41803,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `linkProps`
           - `openInBrowserTab`
       - Cross-plugin:
-        - Imported by: 46 plugins — full list in [`plugins/primitives/plugins/link-gesture/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/REFERENCE.md)
+        - Imported by: 47 plugins — full list in [`plugins/primitives/plugins/link-gesture/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/REFERENCE.md)
           - `primitives` ×13
           - `conversations` ×11
           - `apps` ×4
@@ -41802,10 +41811,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page` ×3
           - `tasks` ×3
           - `debug` ×2
+          - `hints` ×2
           - `build`
           - `code-explorer/file-resolve`
           - `config_v2/config-link`
-          - `hints/help-menu`
           - `integrations/google-maps/usage`
           - `plugin-meta/plugin-view`
           - `shell/notifications`
