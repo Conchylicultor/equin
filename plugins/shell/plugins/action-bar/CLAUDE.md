@@ -32,6 +32,7 @@ inherit whichever the host chose, so every item in a host shares one height.
     - `ActionBar.Item` ← `shell.notifications`
     - `ActionBar.Item` ← `ui.theme-engine.quick-theme`
     - `ActionBar.ViewOption` ← `apps-core.surface`
+    - `ActionBar.ViewOption` ← `audience.view-option`
     - `ActionBar.ViewOption` ← `fullscreen`
     - `ActionBar.ViewOption` ← `reorder.edit-mode`
     - `ActionBar.Activity` ← `build`
@@ -41,6 +42,7 @@ inherit whichever the host chose, so every item in a host shares one height.
 - Cross-plugin:
   - Imported by:
     - `apps-core/surface`
+    - `audience/view-option`
     - `build`
     - `fullscreen`
     - `hints/help-menu`

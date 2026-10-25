@@ -1,4 +1,4 @@
-// @hash 9d611b0001bf
+// @hash 551d9532f8c3
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -8,6 +8,7 @@
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
     "apps-core.surface:placement-control",
+    "audience.view-option:developer-mode",
     "fullscreen:fullscreen-toggle",
     "reorder.edit-mode:reorder-pen"
   ]

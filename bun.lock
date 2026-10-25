@@ -1392,6 +1392,10 @@
       "name": "@singularity/plugin-audience-settings",
       "version": "0.0.1",
     },
+    "plugins/audience/plugins/view-option": {
+      "name": "@singularity/plugin-audience-view-option",
+      "version": "0.0.1",
+    },
     "plugins/auth": {
       "name": "@singularity/plugin-auth",
       "version": "0.0.1",
@@ -7855,6 +7859,8 @@
     "@singularity/plugin-audience": ["@singularity/plugin-audience@workspace:plugins/audience"],
 
     "@singularity/plugin-audience-settings": ["@singularity/plugin-audience-settings@workspace:plugins/audience/plugins/settings"],
+
+    "@singularity/plugin-audience-view-option": ["@singularity/plugin-audience-view-option@workspace:plugins/audience/plugins/view-option"],
 
     "@singularity/plugin-auth": ["@singularity/plugin-auth@workspace:plugins/auth"],
 

@@ -11217,6 +11217,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Imported by:
       - `apps-core`
       - `audience/settings`
+      - `audience/view-option`
       - `shell/notifications`
   - Core:
     - Exports (types): `Audience`
@@ -11242,6 +11243,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/pane.defineRoute`
           - `primitives/pane.Pane`
           - `primitives/pane.PaneChrome`
+    - **`view-option`** — The Developer mode switch in the action bar's view-options popover — the same setting as Settings → Profile.
+      - Web:
+        - Contributes: `ActionBar.ViewOption` → `DeveloperModeSwitch`
+        - Uses:
+          - `audience.useAudience`
+          - `audience.useSetDeveloperMode`
+          - `primitives/css/control-panel.ControlPanel`
+          - `primitives/loading.Loading`
+          - `shell/action-bar.ActionBar`
+          - `ui/icons.Icon`
 
 - **`auth`** — Shared authentication infrastructure (OAuth 2.0, API keys, password sign-in). Exposes the Accounts pane — a DataView of every provider (Auth.Provider) and non-provider setup surface (Auth.Integration), grouped by service, each row opening one account pane to the right (header, account, and the row's setup inline — a provider's setup wizard, OAuth client steps or sign-in form; an integration's own setup) — and the Settings app surfaces the Account entry. Worktree-side auth helpers. Provides getTokenFromCentral() for worktree plugins that need OAuth tokens. Centralized OAuth/API-key/password-sign-in infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
   - Web:
@@ -38079,17 +38090,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×7
               - `ui/tokens/shape` ×2
               - `ui/tokens/shadow --shadow`
-            - Imported by: 42 plugins — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
+            - Imported by: 43 plugins — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
               - `apps` ×15
               - `page` ×5
               - `primitives` ×4
               - `tasks` ×3
+              - `audience` ×2
               - `config_v2` ×2
               - `fields` ×2
               - `hints` ×2
               - `ui` ×2
               - `apps-core/surface`
-              - `audience/settings`
               - `conversations/conversation-view/dependencies`
               - `fullscreen`
               - `reorder/edit-mode`
@@ -41896,7 +41907,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-body`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-body`
-        - Imported by: 208 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+        - Imported by: 209 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
           - `apps` ×66
           - `ui` ×22
           - `conversations` ×19
@@ -41910,10 +41921,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `auth` ×3
           - `active-data` ×2
           - `apps-core` ×2
+          - `audience` ×2
           - `integrations` ×2
           - `map` ×2
           - `menu-bar` ×2
-          - `audience/settings`
           - `backup`
           - `code-explorer/commit-detail`
           - `config_v2/settings`
@@ -46909,6 +46920,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ActionBar.Item` ← `shell.notifications`
           - `ActionBar.Item` ← `ui.theme-engine.quick-theme`
           - `ActionBar.ViewOption` ← `apps-core.surface`
+          - `ActionBar.ViewOption` ← `audience.view-option`
           - `ActionBar.ViewOption` ← `fullscreen`
           - `ActionBar.ViewOption` ← `reorder.edit-mode`
           - `ActionBar.Activity` ← `build`
@@ -46918,6 +46930,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by:
           - `apps-core/surface`
+          - `audience/view-option`
           - `build`
           - `fullscreen`
           - `hints/help-menu`
@@ -50106,7 +50119,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/shadow --shadow`
           - `ui/tokens/shape --spacing`
-        - Imported by: 340 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 341 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×88
           - `conversations` ×58
           - `primitives` ×42
@@ -50127,6 +50140,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `config_v2` ×2
           - `infra` ×2
           - `reports` ×2
+          - `audience/view-option`
           - `auth`
           - `framework/tooling/codegen`
           - `fullscreen`

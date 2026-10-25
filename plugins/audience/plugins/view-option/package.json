@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-audience-view-option",
+  "description": "The Developer mode switch in the action bar's view-options popover.",
+  "private": true,
+  "version": "0.0.1"
+}
