@@ -1,6 +1,6 @@
 # Internal "singularity" identifiers: which ones move, and how
 
-Track: *Rename Singularity to Equin* (wiki `block-dc049371-1f5f-413d-af7b-6e12b531d579`), step 5 — the decision.
+Track: the rename-to-equin track (wiki `block-dc049371-1f5f-413d-af7b-6e12b531d579`), step 5 — the decision.
 
 ## Context
 
