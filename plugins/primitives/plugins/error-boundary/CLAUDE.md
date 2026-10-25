@@ -80,7 +80,6 @@ barrel.
   - Imported by:
     - `apps-core/app-embed`
     - `apps/prototypes/canvas`
-    - `framework/web-core`
     - `layouts/full-pane`
     - `layouts/miller`
     - `plugin-meta/exhibits`

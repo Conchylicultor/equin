@@ -181,9 +181,8 @@ if (match) return renderIsolated(FilePane.Renderer.id, match, { file });
 #### `UNSAFE_unsealSlotComponent()` — framework exemptions only
 
 Returns a raw, **non-isolated** `ComponentType`. Reserved for the few sites that
-structurally cannot route through the middleware chain: `Core.Root` in `web-core/web/App.tsx`
-(web-sdk cannot import slot-render; already hand-wrapped in `<PluginErrorBoundary>`),
-`ErrorBoundary.Action` (renders inside the boundary's own fallback), and `active-data`'s tag
+structurally cannot route through the middleware chain: `ErrorBoundary.Action` (renders
+inside the boundary's own fallback), and `active-data`'s tag
 components (spliced into a foreign ReactNode tree, not a flat slot list). Every call must
 carry a `// UNSAFE: <reason>` comment. Import from `@plugins/framework/plugins/web-sdk/core`.
 
@@ -198,7 +197,11 @@ collected folder (`server`, `central`, `check`, `lint`, `facet`, …), each mark
 ## Bootstrap Flow
 
 `main.tsx` renders `App` → `<PluginProvider plugins={plugins}>` collects every plugin's
-contributions into React context → `<RootRenderer>` renders all `Core.Root` contributions.
+contributions into React context → slot-render's `<RenderCoreRoot>` renders all `Core.Root`
+contributions (and each `Core.Root({ slot })`'s mounts) through the same item middlewares as
+every other slot — isolation, lineage stamping — with no layout cell and no reorder. web-sdk
+cannot import slot-render, so `Core.Root` has no `.Render` of its own; the page root
+(`web-core/web/App.tsx`, a composition root) mounts `RenderCoreRoot` instead.
 Those layouts in turn call `.useContributions()` on the slots they define.
 
 ### Scoping a subtree to a composition: `<PluginScope>`

@@ -4,7 +4,25 @@ import type {
   SlotHandle,
   SlotNamingEntry,
 } from "@plugins/framework/plugins/slot-declaration/core";
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import type { Contribution, LoadedPlugin } from "./types";
+// A module cycle (slots → context → registry → slots), benign only because
+// `slots` is read lazily — inside a registry pass, long after every module has
+// evaluated. Never hoist the read to module scope: entered through the barrel,
+// this module evaluates BEFORE slots.ts, and the binding would be empty.
+import { slots as webSdkSlots } from "./slots";
+
+/**
+ * web-sdk's own declaration — `Core.Root` / `Core.Boot` — seeded into every
+ * registry pass, the runtime twin of the build-time guard's seed
+ * (`codegen/core/slot-declaration-guard.ts`). web-sdk has no `web/index.ts`,
+ * so it is never a loaded plugin; without the seed its slots would have no id
+ * in the browser, and a render path that names its slot (slot-render's
+ * `RenderCoreRoot`, stamping the lineage of every root mount) could not.
+ * The id is web-sdk's own plugin id, the one the build-time seed derives from
+ * this plugin's directory (pinned by registry.test.ts).
+ */
+const WEB_SDK_ID = asPluginId("framework.web-sdk");
 
 /**
  * The loaded plugin set, as ONE object for the lifetime of the page (or of a
@@ -134,7 +152,10 @@ export function createPluginRegistry(): PluginRegistry {
     // `"registry"`: `ordered` IS the registry — the plugin set this browser
     // loaded — so a slot this pass does not name is one no loaded plugin
     // declares, not one some disabled plugin owns off-screen.
-    declared = declarePluginSlots(ordered, "registry").declarations();
+    declared = declarePluginSlots(
+      [{ id: WEB_SDK_ID, slots: webSdkSlots }, ...ordered],
+      "registry",
+    ).declarations();
 
     // Every slot is re-derived, not only the batch's: a plugin's contributions
     // array may be rewritten by the declaration pass above (reorder's per-slot

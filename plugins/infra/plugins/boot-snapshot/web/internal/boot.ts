@@ -106,7 +106,7 @@ export async function runBootSnapshot(): Promise<void> {
   }
   if (missing.length) {
     // The crash collector's window error listener is NOT mounted yet during the boot
-    // window (RootRenderer mounts after the boot tasks settle), so a queueMicrotask
+    // window (RenderCoreRoot mounts after the boot tasks settle), so a queueMicrotask
     // throw would only reach the console. report() is a direct keepalive POST that
     // files a deduped crash task regardless of mount state.
     const summary = `boot-snapshot: unresolved descriptor key(s): ${missing.join(", ")}`;

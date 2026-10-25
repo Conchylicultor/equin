@@ -26826,7 +26826,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit`
           - `primitives/css/ui-kit.Button`
-          - `primitives/error-boundary.PluginErrorBoundary`
           - `primitives/live-state.ensureNotificationsClient`
           - `primitives/live-state.NotificationsProvider`
           - `primitives/networking.TransportProvider`
@@ -26837,6 +26836,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/perfs/boot-trace.traceBootPluginLoad`
           - `primitives/perfs/scheduler.yieldToMain`
           - `primitives/relative-time.ElapsedTime`
+          - `primitives/slot-render.RenderCoreRoot`
           - `reports.report`
       - Cross-plugin:
         - Uses tokens:
@@ -41137,7 +41137,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps-core/app-embed`
           - `apps/prototypes/canvas`
-          - `framework/web-core`
           - `layouts/full-pane`
           - `layouts/miller`
           - `plugin-meta/exhibits`
@@ -44291,6 +44290,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineOrderedDispatchSlot`
           - `defineRenderSlot`
           - `defineWrapperSlot`
+          - `RenderCoreRoot`
           - `renderIsolated`
           - `RenderSlotSubIdContext`
           - `SlotItemLayout`
@@ -44298,7 +44298,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useDispatchOutcome`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/density --control-height-sm`
-        - Imported by: 86 plugins — full list in [`plugins/primitives/plugins/slot-render/REFERENCE.md`](../plugins/primitives/plugins/slot-render/REFERENCE.md)
+        - Imported by: 87 plugins — full list in [`plugins/primitives/plugins/slot-render/REFERENCE.md`](../plugins/primitives/plugins/slot-render/REFERENCE.md)
           - `apps` ×27
           - `conversations` ×13
           - `primitives` ×13
@@ -44309,6 +44309,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `config_v2` ×2
           - `debug` ×2
           - `page` ×2
+          - `framework/web-core`
           - `hints/help-menu`
           - `improve`
           - `integrations/google-maps`

@@ -186,6 +186,19 @@ cell's layout role. `applyItemMiddlewares` mints the box itself (it has to be
 outermost), so `renderItem` returns a Fragment carrying the React key, which
 every caller mapping it over a list relies on.
 
+## `Core.Root` renders here too: `<RenderCoreRoot/>`
+
+`Core.Root` is declared by web-sdk, below this plugin, so it cannot carry a
+`.Render`. Its render path lives here instead — `RenderCoreRoot`, which the page
+root (`web-core`'s `App.tsx`) mounts — and it is `renderIsolated` per
+contribution: the item middlewares (error boundary, the element picker's
+portal-lineage forwarding) and the stamped box, as `display: contents`, drawn
+only when something is stamped. No list middleware, so root mounts are never
+reorderable. A `Core.Root({ slot })` entry's mounts are attributed to that root
+slot. There is no bypass left: a pick inside the Ask card, the floating action
+bar, a toast or a dialog — and every popover opened from them — carries its
+lineage like any other contribution.
+
 ## Reading a dispatch's match: `useMatch()`
 
 `slot.useMatch()` returns `(props) => Extra | undefined`: the `Extra` fields
@@ -296,6 +309,7 @@ the outcome too, with no separate code path.
     - `defineOrderedDispatchSlot`
     - `defineRenderSlot`
     - `defineWrapperSlot`
+    - `RenderCoreRoot`
     - `renderIsolated`
     - `RenderSlotSubIdContext`
     - `SlotItemLayout`
@@ -303,7 +317,7 @@ the outcome too, with no separate code path.
     - `useDispatchOutcome`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/density --control-height-sm`
-  - Imported by: 86 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 87 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×27
     - `conversations` ×13
     - `primitives` ×13
@@ -314,6 +328,7 @@ the outcome too, with no separate code path.
     - `config_v2` ×2
     - `debug` ×2
     - `page` ×2
+    - `framework/web-core`
     - `hints/help-menu`
     - `improve`
     - `integrations/google-maps`

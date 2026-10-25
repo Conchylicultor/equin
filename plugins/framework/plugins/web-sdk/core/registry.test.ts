@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { createPluginRegistry, readerOf, scopedReader } from "./registry";
-import { defineSlot } from "./slots";
+import { Core, defineSlot } from "./slots";
 import type { Contribution, LoadedPlugin } from "./types";
 
 const A = defineSlot<{ id: string }>();
@@ -166,5 +166,29 @@ describe("scopedReader — a registry view narrowed to a plugin set", () => {
   it("replace throws: the plugin set belongs to the enclosing provider", () => {
     const { reader } = scoped(["in"]);
     expect(() => reader.replace([])).toThrow(/read-only/);
+  });
+});
+
+describe("plugin registry — web-sdk's own slots", () => {
+  it("names Core.Root / Core.Boot in the browser, as the build does", () => {
+    const registry = createPluginRegistry();
+    registry.append([]);
+    // web-sdk's plugin id derived from THIS file's directory, the way the
+    // build-time seed derives it — so relocating web-sdk without updating the
+    // registry's seed fails here rather than mislabelling every root mount.
+    const dir = import.meta.dir;
+    const webSdkId = dir
+      .slice(dir.indexOf("/plugins/") + "/plugins/".length)
+      .replace(/\/core$/, "")
+      .split("/plugins/")
+      .join(".");
+    expect(webSdkId).toBe("framework.web-sdk");
+    expect(Core.Root.id).toBe(`${webSdkId}.root`);
+    expect(Core.Boot.id).toBe(`${webSdkId}.boot`);
+    expect(
+      readerOf(registry)
+        .declared()
+        .map((d) => d.id),
+    ).toContain(`${webSdkId}.root`);
   });
 });

@@ -10,14 +10,12 @@ import {
   markDeferredPluginsFailed,
   missingCompanions,
   pluginLoadReportSink,
-  UNSAFE_unsealSlotComponent,
 } from "@plugins/framework/plugins/web-sdk/core";
 import type {
   LoadedPlugin,
   PluginLoadError,
-  RootSlot,
 } from "@plugins/framework/plugins/web-sdk/core";
-import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
+import { RenderCoreRoot } from "@plugins/primitives/plugins/slot-render/web";
 import { normalizeRoutePath } from "@plugins/primitives/plugins/pane/core";
 import {
   NotificationsProvider,
@@ -191,47 +189,6 @@ function recordErrors(errors: PluginLoadError[]): void {
       e.error instanceof Error ? e.error.message : String(e.error);
     pluginLoadReportSink.emit({ pluginPath: e.pluginPath, message });
   }
-}
-
-function RootRenderer() {
-  const roots = Core.Root.useContributions();
-  return (
-    <>
-      {roots.map((r, i) => {
-        if (r.slot) return <RootSlotRenderer key={i} slot={r.slot} />;
-        // UNSAFE: Core.Root is framework bootstrap; web-sdk/core can't import
-        // slot-render; isolation is the manual PluginErrorBoundary here.
-        const RootComponent = UNSAFE_unsealSlotComponent(r.component);
-        return (
-          <PluginErrorBoundary key={i} slot="core.root">
-            <RootComponent />
-          </PluginErrorBoundary>
-        );
-      })}
-    </>
-  );
-}
-
-/**
- * A capability's own root slot (`Core.Root({ slot })`): each of its
- * contributions — the capability's companions — mounted at the root exactly
- * like a `Core.Root` component, isolated one by one.
- */
-function RootSlotRenderer({ slot }: { slot: RootSlot }) {
-  const mounts = slot.useContributions();
-  return (
-    <>
-      {mounts.map((m, i) => {
-        // UNSAFE: same as RootRenderer — framework bootstrap, manual isolation.
-        const MountComponent = UNSAFE_unsealSlotComponent(m.component);
-        return (
-          <PluginErrorBoundary key={i} slot="core.root">
-            <MountComponent />
-          </PluginErrorBoundary>
-        );
-      })}
-    </>
-  );
 }
 
 // Where boot is. There is no "nothing to show" state: until `ready`, App
@@ -455,7 +412,7 @@ function PageApp() {
       )}
       <NotificationsProvider>
         <PluginProvider registry={registry} composition={composition}>
-          <RootRenderer />
+          <RenderCoreRoot />
         </PluginProvider>
       </NotificationsProvider>
     </>
