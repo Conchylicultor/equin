@@ -1,12 +1,10 @@
-import { existsSync, mkdirSync } from "node:fs";
-import { basename, join } from "node:path";
+import { mkdirSync } from "node:fs";
+import { join } from "node:path";
 import { NAMESPACE_LABEL_RE } from "@plugins/infra/plugins/namespace/core";
 import { worktreesDir } from "@plugins/infra/plugins/paths/server";
 import { isCompositionMarkerPath } from "@plugins/infra/plugins/worktree/server";
-import {
-  acquireDirWatch,
-  type DirWatchRelease,
-} from "@plugins/infra/plugins/file-watcher/server";
+import type { DirWatchRelease } from "@plugins/infra/plugins/file-watcher/server";
+import { acquireEventualDirWatch } from "@plugins/infra/plugins/file-watcher/machine";
 import { serveValue } from "@plugins/network/plugins/live/machine";
 import { serveStatus } from "../../shared/serve-status";
 import {
@@ -38,58 +36,18 @@ async function watchServeMarker(
   mkdirSync(home, { recursive: true });
   const ns = await serveNamespaceOf(composition);
   const nsDir = join(home, ns);
-  let inner: DirWatchRelease | null = null;
-  let stopped = false;
-
-  const dropInner = () => {
-    inner?.();
-    inner = null;
-  };
-  // Re-reads nothing itself: the initial arm precedes the tuple's first load,
-  // and the home watch re-reads after arming (below), which closes the gap
-  // for a marker that landed before a later-appearing dir's watch opened.
-  const armInner = async () => {
-    if (inner !== null || !existsSync(nsDir)) return;
-    let release: DirWatchRelease;
-    try {
-      release = await acquireDirWatch({
-        dir: nsDir,
-        scope: "children",
-        onChange: (events) => {
-          if (events.some((e) => isCompositionMarkerPath(e.path))) notify();
-        },
-      });
-    } catch (err) {
-      // Removed between the check and the open (a reclaim): the home watch
-      // hears it come back. Any other failure is real.
-      if (!existsSync(nsDir)) return;
-      throw err;
-    }
-    if (stopped || inner !== null) {
-      release();
-      return;
-    }
-    inner = release;
-  };
-
-  const outer = await acquireDirWatch({
-    dir: home,
+  // No trailing re-read: the runtime awaits this start before the tuple's
+  // first load, so that load already runs with the watch open.
+  return acquireEventualDirWatch({
+    dir: nsDir,
     scope: "children",
-    onChange: async (events) => {
-      if (!events.some((e) => basename(e.path) === ns)) return;
-      if (existsSync(nsDir)) await armInner();
-      else dropInner();
-      notify();
+    onChange: (events) => {
+      if (
+        events.some((e) => e.path === nsDir || isCompositionMarkerPath(e.path))
+      )
+        notify();
     },
   });
-  // No trailing re-read: the runtime awaits this start before the tuple's
-  // first load, so that load already runs with both watches open.
-  await armInner();
-  return () => {
-    stopped = true;
-    outer();
-    dropInner();
-  };
 }
 
 /**

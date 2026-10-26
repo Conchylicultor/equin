@@ -1,4 +1,3 @@
-import { existsSync } from "node:fs";
 import { mkdir, readFile } from "node:fs/promises";
 import { basename, dirname } from "node:path";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
@@ -8,10 +7,8 @@ import {
   type Namespace,
 } from "@plugins/infra/plugins/namespace/core";
 import { worktreeArtifacts } from "@plugins/infra/plugins/paths/server";
-import {
-  acquireDirWatch,
-  type DirWatchRelease,
-} from "@plugins/infra/plugins/file-watcher/server";
+import type { DirWatchRelease } from "@plugins/infra/plugins/file-watcher/server";
+import { acquireEventualDirWatch } from "@plugins/infra/plugins/file-watcher/machine";
 import { serveValue } from "@plugins/network/plugins/live/machine";
 import { buildRunProfile } from "../../core";
 
@@ -65,57 +62,16 @@ async function watchProfile(
   notify: () => void,
 ): Promise<DirWatchRelease> {
   const dir = dirname(path);
-  const parent = dirname(dir);
-  const dirName = basename(dir);
   const file = basename(path);
-  let inner: DirWatchRelease | null = null;
-  let stopped = false;
-
-  const dropInner = () => {
-    inner?.();
-    inner = null;
-  };
-  const armInner = async () => {
-    if (inner !== null || !existsSync(dir)) return;
-    let release: DirWatchRelease;
-    try {
-      release = await acquireDirWatch({
-        dir,
-        scope: "children",
-        onChange: (events) => {
-          if (events.some((e) => basename(e.path) === file)) notify();
-        },
-      });
-    } catch (err) {
-      // Removed between the check and the open: the parent watch hears it
-      // come back. Any other failure is real.
-      if (!existsSync(dir)) return;
-      throw err;
-    }
-    if (stopped || inner !== null) {
-      release();
-      return;
-    }
-    inner = release;
-  };
-
-  await mkdir(parent, { recursive: true });
-  const outer = await acquireDirWatch({
-    dir: parent,
+  await mkdir(dirname(dir), { recursive: true });
+  return acquireEventualDirWatch({
+    dir,
     scope: "children",
-    onChange: async (events) => {
-      if (!events.some((e) => basename(e.path) === dirName)) return;
-      if (existsSync(dir)) await armInner();
-      else dropInner();
-      notify();
+    onChange: (events) => {
+      if (events.some((e) => e.path === dir || basename(e.path) === file))
+        notify();
     },
   });
-  await armInner();
-  return () => {
-    stopped = true;
-    outer();
-    dropInner();
-  };
 }
 
 /**

@@ -24,7 +24,9 @@
   - Contributes: `resource.declare` "build.run-profile"
   - Resources: `build.run-profile` (push, notified, capped: RUN_PROFILE_MAX_SPANS)
 - Machine:
-  - Uses: `network/live.serveValue`
+  - Uses:
+    - `infra/file-watcher.acquireEventualDirWatch`
+    - `network/live.serveValue`
 - Core:
   - Uses:
     - `network/live.liveValue`

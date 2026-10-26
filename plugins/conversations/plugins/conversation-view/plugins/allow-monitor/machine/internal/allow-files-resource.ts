@@ -2,7 +2,7 @@ import { basename, join } from "path";
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import { serveValue } from "@plugins/network/plugins/live/machine";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
-import { acquireDirWatch } from "@plugins/infra/plugins/file-watcher/server";
+import { acquireEventualDirWatch } from "@plugins/infra/plugins/file-watcher/machine";
 import { createParkedWatches } from "@plugins/packages/plugins/parked-watch/core";
 import { BYPASS_TOKENS } from "@plugins/framework/plugins/tooling/plugins/guards/core";
 import { workspaceOfConversationLookup } from "@plugins/tasks/plugins/tasks-core/server";
@@ -20,17 +20,20 @@ async function resolveWorktreePath(
   return found.row.path;
 }
 
+function reportWatchOpenError(conversationId: string, err: unknown): void {
+  reportServerError({
+    message: `[allow-files] the bypass-file watch of conversation ${conversationId} failed to open — its BYPASS chip hears no change until a load retries it: ${err instanceof Error ? err.message : String(err)}`,
+    stack: err instanceof Error ? (err.stack ?? null) : null,
+    errorType: "AllowFilesWatchOpenError",
+  });
+}
+
 // The watches of a conversation subscribed before its row (or its path) was
 // written, parked until a load resolves its directory (`watchAllowFiles`). A
 // parked watch that fails to open is reported and parked again: the next load
 // that resolves the directory retries it.
 const parked = createParkedWatches<string>({
-  onOpenError: (conversationId, err) =>
-    reportServerError({
-      message: `[allow-files] the bypass-file watch of conversation ${conversationId} failed to open — its BYPASS chip hears no change until a load retries it: ${err instanceof Error ? err.message : String(err)}`,
-      stack: err instanceof Error ? (err.stack ?? null) : null,
-      errorType: "AllowFilesWatchOpenError",
-    }),
+  onOpenError: reportWatchOpenError,
 });
 
 // The loader's resolve: a directory found opens the watches parked on the
@@ -58,7 +61,10 @@ async function loadAllowFiles(conversationId: string): Promise<AllowFiles> {
 // checkout watch edited-files / git-status already hold on the same worktree
 // rather than opening a second native watch over it. A conversation whose
 // directory is not written yet parks the watch: the load the row's insert
-// re-runs (the lookup's route) opens it.
+// re-runs (the lookup's route) opens it. The path is written before the
+// directory exists (the checkout is the spawn job's), and a reaped worktree's
+// is gone while its conversation can still be open — so the watch is an
+// eventual one: it hears the directory appear or go, and either re-reads.
 function watchAllowFiles(
   conversationId: string,
   notify: () => void,
@@ -67,11 +73,17 @@ function watchAllowFiles(
     conversationId,
     () => resolveWorktreePath(conversationId),
     async (worktreePath) => {
-      const release = await acquireDirWatch({
+      const release = await acquireEventualDirWatch({
         dir: worktreePath,
         scope: "children",
         onChange: (events) => {
-          if (events.some((e) => BYPASS_TOKENS.includes(basename(e.path))))
+          if (
+            events.some(
+              (e) =>
+                e.path === worktreePath ||
+                BYPASS_TOKENS.includes(basename(e.path)),
+            )
+          )
             notify();
         },
       });
@@ -102,12 +114,22 @@ export const allowFilesServed = serveValue(allowFiles, {
   // subscribe path, so it would hold the sub-ack behind the watch opening on
   // the worktree root. The watch is instead held as a promise, and the release
   // chains on it — the last subscriber can leave before it resolves.
+  //
+  // A watch that fails to open holds nothing: it is reported as it fails —
+  // never left an unobserved rejection until the release — and its release
+  // has nothing to give back.
   whileSubscribed: ({ id }, notify) => {
-    const watch = watchAllowFiles(id, notify);
+    const watch = watchAllowFiles(id, notify).then(
+      (release) => ({ opened: true as const, release }),
+      (err: unknown) => {
+        reportWatchOpenError(id, err);
+        return { opened: false as const };
+      },
+    );
     return () => {
       void runTracked("allow-files:unwatch", async () => {
-        const release = await watch;
-        release();
+        const held = await watch;
+        if (held.opened) held.release();
       });
     };
   },

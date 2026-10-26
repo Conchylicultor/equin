@@ -12708,7 +12708,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes: `resource.declare` "build.run-profile"
         - Resources: `build.run-profile` (push, notified, capped: RUN_PROFILE_MAX_SPANS)
       - Machine:
-        - Uses: `network/live.serveValue`
+        - Uses:
+          - `infra/file-watcher.acquireEventualDirWatch`
+          - `network/live.serveValue`
       - Core:
         - Uses:
           - `network/live.liveValue`
@@ -12987,7 +12989,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useServeComposition`
           - `useServeStatus`
       - Machine:
-        - Uses: `network/live.serveValue`
+        - Uses:
+          - `infra/file-watcher.acquireEventualDirWatch`
+          - `network/live.serveValue`
       - Cross-plugin:
         - Imported by:
           - `apps/deploy/local-serve`
@@ -14836,7 +14840,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes: `resource.declare` "allow-files"
             - Resources: `allow-files` (push, notified, whole: the guard-bypass files present at one worktree root — at most one per bypass token, a handful)
           - Machine:
-            - Uses: `network/live.serveValue`
+            - Uses:
+              - `infra/file-watcher.acquireEventualDirWatch`
+              - `network/live.serveValue`
           - Core:
             - Uses:
               - `network/live.liveValue`
@@ -29369,11 +29375,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `statHistory`
     - **`file-watcher`** — defineFileWatcher: the one declared in-process file watcher — a named, described declaration (static policy: extensions, ignore, debounce, ceiling, writesWhileOpen, depth, mainOnly) whose start({dirs, label, onChange, onLost}) opens instances over one @parcel/watcher engine (debounce + ceiling flush, kqueue sizing; no timer — a dropped event is reported to onLost, the one backstop). Records per declaration its open instances, last change batch and a ring of handler runs for the Background activity catalog (onWatcherActivity / listFileWatchers / fileWatcherRecentRuns). The cli barrel's watchForCommand is the same engine for a foreground command, with no registry. acquireDirWatch({dir, scope, onChange}) is the shared directory-watch hub: one native watch per folder tree, refcounted, a dir under a watched root riding its watch, with subtree or children (depth-1 listing) scope — a children request with no root above it opening only a single-directory watch (depth children, fs.watch), never a recursive one.
       - Cross-plugin:
-        - Imported by: 23 plugins — full list in [`plugins/infra/plugins/file-watcher/REFERENCE.md`](../plugins/infra/plugins/file-watcher/REFERENCE.md)
+        - Imported by: 26 plugins — full list in [`plugins/infra/plugins/file-watcher/REFERENCE.md`](../plugins/infra/plugins/file-watcher/REFERENCE.md)
           - `debug` ×7
           - `infra` ×7
           - `apps` ×2
-          - `conversations/transcript-watcher`
+          - `build` ×2
+          - `conversations` ×2
           - `framework/cli/await`
           - `integrations/google-maps`
           - `plugin-meta/plugin-tree`
@@ -29413,6 +29420,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Register:
           - `defineFileWatcher('file-watcher.dirs')`
           - `defineFileWatcher('file-watcher.dir-entries')`
+      - Machine:
+        - Exports (values): `acquireEventualDirWatch`
       - Cli:
         - Exports (types):
           - `FileWatcher`

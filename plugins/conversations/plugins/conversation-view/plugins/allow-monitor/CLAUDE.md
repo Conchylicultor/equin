@@ -24,7 +24,9 @@ The value is the `allowFiles` live value (`allow-files`, params `{ id }` — the
   - Contributes: `resource.declare` "allow-files"
   - Resources: `allow-files` (push, notified, whole: the guard-bypass files present at one worktree root — at most one per bypass token, a handful)
 - Machine:
-  - Uses: `network/live.serveValue`
+  - Uses:
+    - `infra/file-watcher.acquireEventualDirWatch`
+    - `network/live.serveValue`
 - Core:
   - Uses:
     - `network/live.liveValue`

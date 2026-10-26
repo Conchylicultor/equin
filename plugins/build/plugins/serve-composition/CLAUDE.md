@@ -291,7 +291,9 @@ code, that is the bug this section exists to prevent.
     - `useServeComposition`
     - `useServeStatus`
 - Machine:
-  - Uses: `network/live.serveValue`
+  - Uses:
+    - `infra/file-watcher.acquireEventualDirWatch`
+    - `network/live.serveValue`
 - Cross-plugin:
   - Imported by:
     - `apps/deploy/local-serve`
