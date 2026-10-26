@@ -2,6 +2,8 @@ import { describe, expect, test } from "bun:test";
 import type { Hold } from "@plugins/infra/plugins/deps/plugins/updates/core";
 import {
   cargoCutoff,
+  cargoRowFates,
+  type CargoProbe,
   compareCrateVersions,
   moveCrate,
   parseCargoLock,
@@ -107,5 +109,102 @@ describe("cargo updater choice", () => {
   test("versions order by their numbers", () => {
     expect(compareCrateVersions("0.10.0", "0.9.9")).toBeGreaterThan(0);
     expect(compareCrateVersions("1.0.0", "1.0.0")).toBe(0);
+  });
+});
+
+describe("cargo updater units", () => {
+  const row = (pkg: string, from: string, to: string) => ({
+    name: `menu-bar:${pkg}`,
+    pkg,
+    from,
+    to,
+  });
+
+  test("moves a probe drags along form one unit; a lone move has none", () => {
+    const rows = [
+      row("futures-util", "0.3.32", "0.3.34"),
+      row("futures-core", "0.3.32", "0.3.34"),
+      row("serde", "1.0.1", "1.0.2"),
+    ];
+    const fates = cargoRowFates(
+      rows,
+      new Map([
+        [
+          "menu-bar:futures-util",
+          {
+            ok: true,
+            touched: [
+              { pkg: "futures-core", from: "0.3.32", to: "0.3.34" },
+              { pkg: "futures-util", from: "0.3.32", to: "0.3.34" },
+            ],
+          },
+        ],
+        [
+          "menu-bar:futures-core",
+          {
+            ok: true,
+            touched: [{ pkg: "futures-core", from: "0.3.32", to: "0.3.34" }],
+          },
+        ],
+        [
+          "menu-bar:serde",
+          {
+            ok: true,
+            touched: [{ pkg: "serde", from: "1.0.1", to: "1.0.2" }],
+          },
+        ],
+      ]),
+    );
+    expect(fates.get("menu-bar:futures-util")).toEqual({
+      kind: "moves",
+      unit: "menu-bar:futures-core",
+    });
+    expect(fates.get("menu-bar:futures-core")).toEqual({
+      kind: "moves",
+      unit: "menu-bar:futures-core",
+    });
+    expect(fates.get("menu-bar:serde")).toEqual({
+      kind: "moves",
+      unit: undefined,
+    });
+  });
+
+  test("an unreachable move, an unplanned drag and their unit are blocked", () => {
+    const rows = [
+      row("brotli-decompressor", "6.0.1", "6.1.1"),
+      row("cc", "1.2.65", "1.9.0"),
+      row("find-msvc-tools", "0.1.9", "0.1.15"),
+    ];
+    const fates = cargoRowFates(
+      rows,
+      new Map<string, CargoProbe>([
+        [
+          "menu-bar:brotli-decompressor",
+          { ok: false, error: "failed to select a version" },
+        ],
+        [
+          "menu-bar:cc",
+          {
+            ok: true,
+            touched: [
+              { pkg: "cc", from: "1.2.65", to: "1.9.0" },
+              { pkg: "find-msvc-tools", from: "0.1.9", to: "0.1.15" },
+              { pkg: "shlex", from: "1.3.0", to: "1.4.0" },
+            ],
+          },
+        ],
+        [
+          "menu-bar:find-msvc-tools",
+          {
+            ok: true,
+            touched: [{ pkg: "find-msvc-tools", from: "0.1.9", to: "0.1.15" }],
+          },
+        ],
+      ]),
+    );
+    expect(fates.get("menu-bar:brotli-decompressor")?.kind).toBe("blocked");
+    expect(fates.get("menu-bar:cc")?.kind).toBe("blocked");
+    // Its own move is fine, but its unit (with cc) cannot land.
+    expect(fates.get("menu-bar:find-msvc-tools")?.kind).toBe("blocked");
   });
 });

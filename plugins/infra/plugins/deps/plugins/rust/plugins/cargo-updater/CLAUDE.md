@@ -14,8 +14,19 @@ broken — the shared bounded `Hold` of `infra/deps/updates` (held by
   HELD row. Only crates.io packages move; a git or path dependency is pinned
   by hand. Requirements (`Cargo.toml`) are never moved — a new semver major is
   a code change.
-- **Apply**: `cargo update -p <crate>@<from> --precise <to>` per move, then the
-  lock is read back to prove it.
+- **Units**: each candidate is probed on its own (`cargo update -p
+  <crate>@<from> --precise <to> --dry-run --offline`). The rows a probe drags
+  along (futures-util pins its futures-* siblings exactly) are one lockstep
+  `Move.unit`, so a narrowed batch never splits them. A row cargo cannot reach
+  from the lock alone (a dependent's requirement excludes it until that
+  dependent's own new release clears the cooldown), or that drags an entry to
+  a release no row plans, is a `blocked` row — listed, not moved — as is the
+  rest of its unit.
+- **Apply**: `cargo update -p <crate>@<from> --precise <to>` per move (skipped
+  when an earlier move of its unit already dragged it there), each read back
+  from the lock; then every entry the lock lost must be a planned move's
+  `from` — any other entry moved fails the apply (an entry added beside the
+  old ones, a new dependency of a moved release, is not a move).
 - **Smoke**: `cargo check --locked` of each touched crate, in its dir of the
   shared target cache.
 - Every cargo command is spelled through the rust kind's `cargoCommand`
