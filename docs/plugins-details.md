@@ -25717,6 +25717,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `KeyedMembershipInput`
           - `KeyedResourceContract`
           - `KeyedServerResourceOptions`
+          - `NotifiedRead`
           - `NotifyCounts`
           - `PersistedBase`
           - `PersistedValueCheck`

@@ -97,23 +97,32 @@ async function loadCatalog(): Promise<AutomationEntry[]> {
  * installed schedule and the concurrency move when an automation's config
  * changes — every such change in `server/` raises `catalogChanged`, which the
  * subscription here turns into a recompute. The DB-derived fields (`openTaskId`,
- * `runningTaskIds`, `launchedInBatch`, `approvedCount`) are declared `reads`,
- * so the change feed recomputes the catalog on any write to them — `tasks_v`
- * as a view (the loader filters on its derived `status`), reached through its
- * base tables. Bounded by the declared set.
+ * `runningTaskIds`, `launchedInBatch`, `approvedCount`) read the origin,
+ * launch-decision and launch-batch tables, declared `reads`, so the change feed
+ * recomputes the catalog on any write to them. They also read each task's
+ * derived `status` from `tasks_v`, declared `notified`: through the feed, that
+ * view would recompute the catalog on every write to the tasks tree (any
+ * conversation's turn), and the catalog reads only three readings of a status
+ * (`catalogStatusMoved`). The status-change job (`automations.task-status`)
+ * raises `catalogChanged` for exactly the transitions that move one of them.
+ * Bounded by the declared set.
  */
 export const automationsCatalogServed = serveValue(automationsCatalog, {
   source: "external",
   changes: "notified",
   reads: {
     tables: [
-      tasksView,
       tasksOrigin.table,
       tasksLaunchDecision.table,
       _automationLaunchBatches,
     ],
     reason:
-      "The catalog is one singleton listing every automation: its open task, occupied slots, launches in the open batch and approved count join the origin, launch-decision and launch-batch tables over each task's derived status, so a write to any row of them may change any entry.",
+      "The catalog is one singleton listing every automation: its open task, occupied slots, launches in the open batch and approved count join the origin, launch-decision and launch-batch tables, so a write to any row of them may change any entry.",
+    notified: {
+      relations: [tasksView],
+      reason:
+        "Only each task's derived status, which tasks.statusChanged announces: the automations.task-status job raises catalogChanged() for a transition that moves a catalog reading (catalogStatusMoved) of a task an automation filed or launched, or a person approved.",
+    },
   },
   loader: loadCatalog,
   whileSubscribed: (_params, notify) => onCatalogChanged(notify),

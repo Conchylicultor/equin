@@ -315,6 +315,17 @@ export interface ValueReads<P extends ResourceParams = ResourceParams> {
    * refuses at boot one it does cover.
    */
   outsideFeed?: { tables: readonly RoutedSource[]; reason: string };
+  /**
+   * Relations (views or tables) the loader reads whose changes reach the value
+   * through its OWN notify — a domain event that owns them, wired to the
+   * value's `notify` — not through the change feed (resource-runtime's
+   * `NotifiedRead`). Never routed, never indexed under a view's bases, so a
+   * write to them recomputes nothing by itself; the drift guard accepts them.
+   * Only an external `"notified"` value may declare them (network/live types
+   * it; the runtime throws on a DB-backed entry). A relation is in `tables`,
+   * a lookup or here, never two of them.
+   */
+  notified?: { relations: readonly (RoutedSource | PgView)[]; reason: string };
 }
 
 /**
@@ -398,6 +409,17 @@ export function compiledValueReach<P extends ResourceParams>(
     table: routedBase(source, label).name,
     reason: outside!.reason,
   }));
+  const announced = reads.notified;
+  if (announced !== undefined && announced.relations.length === 0) {
+    throw new Error(`${where}.notified.relations is empty — omit it.`);
+  }
+  // A relation also routed or read whole is refused by `mintReachPlan`.
+  const notified = (announced?.relations ?? []).map((source) => ({
+    relation: is(source, PgView)
+      ? getViewConfig(source).name
+      : routedBase(source, label).name,
+    reason: announced!.reason,
+  }));
   const wholeUses: ReadonlyMap<string, TupleUse> = new Map(
     routes.slice(0, whole).map((r) => [r.id, { role: "membership" as const }]),
   );
@@ -416,6 +438,7 @@ export function compiledValueReach<P extends ResourceParams>(
     usesOf,
     unfed,
     relations,
+    ...(notified.length > 0 ? { notified } : {}),
     ...(taggedReads.length > 0 ? { taggedReads } : {}),
   });
 }

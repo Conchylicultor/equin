@@ -2,6 +2,7 @@ import { and, count, eq, inArray, isNull } from "drizzle-orm";
 import { db, type DbExecutor } from "@plugins/database/server";
 import { tasksView } from "@plugins/tasks/plugins/tasks-core/server";
 import type { LaunchDecision } from "../../core";
+import { AWAITING_LAUNCH_STATUS } from "./catalog-status";
 import { tasksLaunchDecision, tasksOrigin } from "./tables";
 
 const d = tasksLaunchDecision.table;
@@ -23,6 +24,18 @@ export async function approvedTaskIds(
   return new Set(rows.map((r) => r.taskId));
 }
 
+/** Whether a person approved `taskId` for launch. */
+export async function isTaskApproved(
+  taskId: string,
+  exec: DbExecutor = db,
+): Promise<boolean> {
+  const rows = await exec
+    .select({ taskId: d.taskId })
+    .from(d)
+    .where(and(eq(d.taskId, taskId), eq(d.decision, "approved")));
+  return rows.length > 0;
+}
+
 /**
  * How many approved tasks still wait for a launch: approved, no automation
  * launched or filed them yet (no origin row), and still `new` — a done,
@@ -41,7 +54,7 @@ export async function pendingApprovalCount(
       and(
         eq(d.decision, "approved"),
         isNull(o.taskId),
-        eq(tasksView.status, "new"),
+        eq(tasksView.status, AWAITING_LAUNCH_STATUS),
       ),
     );
   if (row === undefined) throw new Error("count() returned no row");

@@ -545,6 +545,13 @@ the deletion of the old read-set router:
   reads that the feed skips by declaration — never routed, accepted by the
   drift guard, listed by `unfedResourceTables()` (change-feed's boot check
   refuses one the feed covers) and in `_debug` as `unfedReads`.
+  **`notified`** (`NotifiedRead`): relations an EXTERNAL entry's loader
+  reads whose changes reach it through its own `notify` (a domain event the
+  owner wires to it) — never routed, never indexed under a view's bases,
+  accepted by the drift guard (`readCovered`), listed in `_debug` as
+  `notifiedReads`; `routingRecordFor` throws on a DB-backed entry declaring
+  one (it has no notify), and `mintReachPlan` on one that is also a route,
+  unfed table or relation read.
 - **Every `serveCollection` resource is routed** (window, `:rows` and `:groups`,
   compiled by `infra/query-resource`), so none of them depends on the loader
   read-set to be reached.
@@ -1280,6 +1287,7 @@ and those plugins' `CLAUDE.md`.
     - `KeyedMembershipInput`
     - `KeyedResourceContract`
     - `KeyedServerResourceOptions`
+    - `NotifiedRead`
     - `NotifyCounts`
     - `PersistedBase`
     - `PersistedValueCheck`

@@ -10,6 +10,8 @@ import {
   type OriginRole,
 } from "../../core";
 import { catalogChanged } from "./catalog-changed";
+import { catalogStatusMoved } from "./catalog-status";
+import { isTaskApproved } from "./decisions";
 import { originOfTask } from "./origin";
 import { registeredAutomation } from "./registry";
 
@@ -49,10 +51,17 @@ function rings(
 /**
  * The bell is where an automated task asks for its person: nobody watches the
  * task list for tasks they did not file. One row per task (`dedupeKey`),
- * re-surfaced on every transition that rings (`rings`). Every status change of
- * an automated task also re-pushes the catalog, whose `openTaskId` /
- * `runningTaskIds` follow it, and a launched task settling wakes the
- * automation that launched it, so the next task takes its slot.
+ * re-surfaced on every transition that rings (`rings`). A launched task
+ * settling wakes the automation that launched it, so the next task takes its
+ * slot.
+ *
+ * It is also how a status change reaches the catalog: `automations.catalog`
+ * declares its `tasks_v` read `notified` (never routed through the change
+ * feed, whose every write to the tree would recompute it), so this job
+ * re-pushes it — only for a transition that moves what it shows
+ * (`catalogStatusMoved`: `openTaskId`, `runningTaskIds`, `approvedCount`), of
+ * a task it shows: one an automation filed or launched, or one a person
+ * approved for launch.
  */
 export const automationTaskStatusJob = defineJob({
   name: "automations.task-status",
@@ -62,14 +71,24 @@ export const automationTaskStatusJob = defineJob({
   input: z.object({}),
   dedup: "none",
   event: z
-    .object({ taskId: z.string(), status: TaskStatusSchema })
+    .object({
+      taskId: z.string(),
+      status: TaskStatusSchema,
+      previousStatus: TaskStatusSchema,
+    })
     .passthrough(),
   run: async ({ event }) => {
     if (!event) return;
+    const moved = catalogStatusMoved(event.previousStatus, event.status);
     const origin = await originOfTask(event.taskId);
-    if (origin === null) return;
+    if (origin === null) {
+      // No automation's task — but an approved one waits for a launch, and
+      // `approvedCount` counts it only while it is `new`.
+      if (moved && (await isTaskApproved(event.taskId))) catalogChanged();
+      return;
+    }
     const { automationId } = origin;
-    catalogChanged();
+    if (moved) catalogChanged();
     const automation = registeredAutomation(automationId);
     if (origin.role === "launched" && SETTLES_SLOT.has(event.status)) {
       automation?.wake();

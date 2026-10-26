@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, isNull, notInArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, notInArray } from "drizzle-orm";
 import { db, type DbExecutor } from "@plugins/database/server";
 import {
   _tasks,
@@ -7,6 +7,7 @@ import {
 } from "@plugins/tasks/plugins/tasks-core/server";
 import { setTaskCategory } from "@plugins/tasks/plugins/task-category/server";
 import { SLOT_SETTLED_STATUSES, type AutomationTaskRow } from "../../core";
+import { FILED_CLOSED_STATUSES } from "./catalog-status";
 import { tasksOrigin } from "./tables";
 
 const t = tasksOrigin.table;
@@ -17,7 +18,7 @@ const t = tasksOrigin.table;
 // task a launch-kind automation started is not a filing to dedupe against.
 const isOpen = and(
   eq(t.role, "filed"),
-  sql`${tasksView.status} NOT IN ('done', 'dropped')`,
+  notInArray(tasksView.status, [...FILED_CLOSED_STATUSES]),
 );
 
 // A task a launch-kind automation started HOLDS one of its slots until it is

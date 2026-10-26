@@ -479,6 +479,135 @@ describe("D2 — relation reads", () => {
   });
 });
 
+describe("notified reads — a relation an external's own notify covers", () => {
+  const bases = (relation: string): readonly string[] =>
+    relation === "tasks_v" ? ["tasks", "attempts"] : [relation];
+  const notified = [
+    { relation: "tasks_v", reason: "status, announced by tasks.statusChanged" },
+  ];
+  const plan = () =>
+    mintReachPlan({
+      routes: [
+        {
+          id: "origins",
+          table: "origins",
+          map: { kind: "full" as const, reason: "reads origins whole" },
+          columns: ["id"],
+        },
+      ],
+      usesOf: () => new Map([["origins", { role: "membership" as const }]]),
+      notified,
+    });
+
+  function notifiedExternal(runtime: ResourceRuntimeOptions = {}) {
+    const loads: ResourceParams[] = [];
+    const h = createHarness({ relationBases: bases, ...runtime });
+    const ext = h.runtime.defineExternalResource(
+      { key: "catalog", schema: z.number(), validateParams: () => {} },
+      {
+        mode: "push",
+        reach: plan(),
+        loader: (p) => {
+          loads.push(p);
+          return loads.length;
+        },
+      },
+    );
+    return { h, ext, loads };
+  }
+
+  test("a write to the relation's bases reaches nothing; its notify and a routed table do", async () => {
+    const v = notifiedExternal();
+    v.h.runtime.indexRelationReads();
+    await v.h.subscribe("catalog", {});
+    v.loads.length = 0;
+    change(v.h, "attempts");
+    change(v.h, "tasks");
+    await settle();
+    expect(v.loads).toEqual([]);
+    v.ext.notify();
+    await settle();
+    expect(v.loads).toEqual([{}]);
+    v.loads.length = 0;
+    change(v.h, "origins");
+    await settle();
+    expect(v.loads).toEqual([{}]);
+  });
+
+  test("the drift guard accepts it in a capture, under strictRoutes", async () => {
+    const v = notifiedExternal({
+      lastReadSet: () => ["origins", "tasks_v"],
+      strictRoutes: true,
+    });
+    await v.h.subscribe("catalog", {});
+    expect(v.h.frames.map((f) => f.kind)).toEqual(["sub-ack"]);
+  });
+
+  test("_debug lists it with its reason", async () => {
+    const v = notifiedExternal();
+    expect(
+      (
+        (await debugOf(v.h, "catalog")) as DebugEntry & {
+          notifiedReads: unknown;
+        }
+      ).notifiedReads,
+    ).toEqual(notified);
+  });
+
+  test("a DB-backed entry may not declare one — it has no notify", () => {
+    const h = createHarness({ relationBases: bases });
+    expect(() =>
+      h.runtime.defineResource(
+        { key: "db", schema: z.number(), validateParams: () => {} },
+        { mode: "push", reach: plan(), loader: () => 1 },
+      ),
+    ).toThrow(/declares notified reads .* but is not external/);
+  });
+
+  test("minting refuses one that is also a route, unfed table or relation read, one listed twice, or one with no reason", () => {
+    const route = {
+      id: "t",
+      table: "t",
+      map: { kind: "full" as const, reason: "x" },
+      columns: [],
+    };
+    const mint = (
+      reads: { relation: string; reason: string }[],
+      extra: {
+        unfed?: { table: string; reason: string }[];
+        relations?: RelationRead[];
+      } = {},
+    ) =>
+      mintReachPlan({
+        routes: [route],
+        usesOf: () => new Map(),
+        notified: reads,
+        ...extra,
+      });
+    expect(() => mint([{ relation: "t", reason: "x" }])).toThrow(
+      /both a notified read and a route table/,
+    );
+    expect(() =>
+      mint([{ relation: "c", reason: "x" }], {
+        unfed: [{ table: "c", reason: "y" }],
+      }),
+    ).toThrow(/both a notified read and read outside the feed/);
+    expect(() =>
+      mint([{ relation: "v", reason: "x" }], {
+        relations: [{ relation: "v", reason: "y" }],
+      }),
+    ).toThrow(/both a notified read and a relation read/);
+    expect(() =>
+      mint([
+        { relation: "v", reason: "x" },
+        { relation: "v", reason: "y" },
+      ]),
+    ).toThrow(/listed twice/);
+    expect(() => mint([{ relation: "v", reason: " " }])).toThrow(/no reason/);
+    expect("notified" in mint([])).toBe(false);
+  });
+});
+
 describe("D4 — a deferred external value", () => {
   function deferredExternal() {
     const loads: ResourceParams[] = [];

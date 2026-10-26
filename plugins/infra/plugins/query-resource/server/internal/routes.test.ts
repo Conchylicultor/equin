@@ -312,6 +312,64 @@ describe("compiledValueReach — a served value's declared whole-table reads", (
     ).toBeUndefined();
   });
 
+  test("notified relations ride the plan as notified reads — no route, no relation read", () => {
+    const plan = compiledValueReach(
+      {
+        tables: [tags],
+        reason: "r",
+        notified: {
+          relations: [view, notes],
+          reason: "an event announces every change the value reads",
+        },
+      },
+      "v",
+    );
+    expect(plan.routes.map((r) => r.table)).toEqual(["vr_tags"]);
+    expect(plan.relations).toBeUndefined();
+    expect(plan.notified).toEqual([
+      {
+        relation: "vr_notes_v",
+        reason: "an event announces every change the value reads",
+      },
+      {
+        relation: "vr_notes",
+        reason: "an event announces every change the value reads",
+      },
+    ]);
+    expect(
+      compiledValueReach({ tables: [notes], reason: "r" }, "v").notified,
+    ).toBeUndefined();
+  });
+
+  test("refuses an empty notified list, and a relation both read through the feed and notified", () => {
+    expect(() =>
+      compiledValueReach(
+        { tables: [], reason: "r", notified: { relations: [], reason: "e" } },
+        "v",
+      ),
+    ).toThrow(/notified.relations is empty/);
+    expect(() =>
+      compiledValueReach(
+        {
+          tables: [view],
+          reason: "r",
+          notified: { relations: [view], reason: "e" },
+        },
+        "v",
+      ),
+    ).toThrow(/both a notified read and a relation read/);
+    expect(() =>
+      compiledValueReach(
+        {
+          tables: [notes],
+          reason: "r",
+          notified: { relations: [notes], reason: "e" },
+        },
+        "v",
+      ),
+    ).toThrow(/both a notified read and a route table/);
+  });
+
   test("zero routes with only outsideFeed reads — a feed-excluded cache", () => {
     const plan = compiledValueReach(
       {

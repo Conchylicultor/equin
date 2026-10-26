@@ -1204,6 +1204,12 @@ interface RoutingRecord {
    */
   relations: ReadonlyMap<string, string>;
   /**
+   * The relations an external entry's own notify covers
+   * (`ReachPlan.notified`), relation → reason: never routed, never indexed
+   * under their bases — the drift guard accepts them in a capture.
+   */
+  notified: ReadonlyMap<string, string>;
+  /**
    * The route tables a capture covers only through tagged reads
    * (`ReachPlan.taggedReads`), table → the tags that cover it: a read of one
    * carrying no tag, or another, is drift (`readCovered`).
@@ -2881,7 +2887,8 @@ export function createResourceRuntime(
       routing.byTable.has(relation) ||
       routing.derived.has(relation) ||
       routing.unfed.has(relation) ||
-      routing.relations.has(relation)
+      routing.relations.has(relation) ||
+      routing.notified.has(relation)
     );
   }
 
@@ -2989,6 +2996,7 @@ export function createResourceRuntime(
       derived: new Set(),
       unfed,
       relations: new Map(),
+      notified: new Map(),
       tagged: new Map(),
       drifted: new Set(),
       relationBases: new Set(),
@@ -3735,6 +3743,12 @@ export function createResourceRuntime(
           `defineResource: "reach" is the non-keyed arm, but key "${key}" is keyed — a keyed entry routes through "routes" and a membership; only an external window or point set (no route reaches it) declares its Postgres reads as a "reach" plan`,
         );
       }
+      const notified = (plan as ReachPlan<ResourceParams>).notified ?? [];
+      if (!externalSource && notified.length > 0) {
+        throw new Error(
+          `defineResource: key "${key}" declares notified reads (${notified.map((n) => `"${n.relation}"`).join(", ")}) but is not external — a notified read reaches the entry only through its own notify, which a DB-backed entry does not have; read it through the feed (a route or a relation read)`,
+        );
+      }
       const mapped = plan.routes.find((r) => r.map.kind !== "full");
       if (mapped) {
         throw new Error(
@@ -3774,6 +3788,13 @@ export function createResourceRuntime(
         field === "reach"
           ? ((plan as ReachPlan<ResourceParams>).relations ?? []).map(
               (r) => [r.relation, r.reason] as const,
+            )
+          : [],
+      ),
+      notified: new Map(
+        field === "reach"
+          ? ((plan as ReachPlan<ResourceParams>).notified ?? []).map(
+              (n) => [n.relation, n.reason] as const,
             )
           : [],
       ),
@@ -7654,6 +7675,7 @@ export function createResourceRuntime(
         reason: string;
         bases: string[];
       }>;
+      notifiedReads: Array<{ relation: string; reason: string }>;
       routeDrifted: string[];
       routeDriftSeeded: string[];
       tuples: number;
@@ -7749,6 +7771,13 @@ export function createResourceRuntime(
                 reason,
                 bases: [...relationBasesOf(relation)].sort(),
               }))
+          : [],
+        // A reach plan's notified reads (`ReachPlan.notified`): relations an
+        // external entry's own notify covers, never routed. `[]` otherwise.
+        notifiedReads: entry.routing
+          ? [...entry.routing.notified]
+              .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+              .map(([relation, reason]) => ({ relation, reason }))
           : [],
         routeDrifted: entry.routing ? [...entry.routing.drifted].sort() : [],
         // D7: persisted reads seeded as drift at boot that no load has

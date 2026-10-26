@@ -234,10 +234,18 @@ offered only to them). Read two ways from the one table:
   variables, and by kind: `categoryId` + `openTaskId` (file), `concurrency` +
   `runningTaskIds` + `maxLaunches` + `launchedInBatch` + `approvedCount`
   (launch; the list shows "N running"). Re-pushed when an
-  automation's config changes, it files, launches or releases a task, or one of
-  its tasks changes status — every such change in `server/` raises
-  `catalogChanged()` (`server/internal/catalog-changed.ts`), which the serve
-  turns into a recompute while subscribed. Declared `needsMachine`
+  automation's config changes, it files, launches or releases a task, or a
+  status transition moves one of the catalog's three readings of a status
+  (filing closed, slot settled, awaiting launch — `catalogStatusMoved`,
+  `server/internal/catalog-status.ts`, the same constants the queries filter
+  on) for a task an automation filed or launched, or a person approved —
+  every such change in `server/` raises `catalogChanged()`
+  (`server/internal/catalog-changed.ts`), which the serve turns into a
+  recompute while subscribed. Its own tables (origin, launch decision, launch
+  batch) are routed `reads`; `tasks_v` is a `notified` read
+  (`network/live`), never routed: through the feed that view would recompute
+  the catalog on every write to the tasks tree (every agent turn). The
+  status reaches it only through `automations.task-status`. Declared `needsMachine`
   ("Automations") and served by the machine half
   (`machine/internal/catalog.ts`), since the automations it lists are
   config-bound until the config split; under an in-browser server the list,

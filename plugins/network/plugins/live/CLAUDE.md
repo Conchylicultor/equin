@@ -1663,6 +1663,18 @@ useLive(folderListing, expanded.map((dir) => ({ dir })));  // MANY tuples → on
       change feed skips by declaration (`ExcludeFromChangeFeed`; a bulk cache
       read through a memo keyed on a routed table). Never routed; the drift
       guard accepts them; change-feed refuses at boot one it does cover.
+    - `notified: { relations, reason }` — external `"notified"` arm only
+      (`notified?: never` on the db arm, and the runtime throws on a
+      DB-backed entry): relations (a view or a table) the loader reads whose
+      changes reach the value through its OWN notify, wired to a domain event
+      that owns them — never through the feed (resource-runtime's
+      `NotifiedRead`). For a hot relation read for a narrow fact the domain
+      announces: `automations.catalog` reads only `tasks_v`'s derived
+      `status`, which `tasks.statusChanged` announces, and notifies only on
+      the transitions that move it — through the feed, every agent turn
+      recomputed it. Never routed and never indexed under a view's bases; the
+      drift guard accepts them; `_debug` lists them as `notifiedReads`. The
+      `reason` names the signal; the wiring is the owner's (test it).
     - **A thunk** — `reads: () => ({ tables, reason })` — when the tables come
       from a registry complete only once contributions are collected (one
       table per trigger event, per link owner, per saved-icon source): the

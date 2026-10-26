@@ -45,6 +45,7 @@ export type {
   DerivedRead,
   FullRoute,
   HostMap,
+  NotifiedRead,
   ReachPlan,
   RelationRead,
   Route,

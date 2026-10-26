@@ -313,6 +313,25 @@ export interface UnfedRead {
 }
 
 /**
+ * A relation (a view, or a table) an EXTERNAL entry's loader reads whose
+ * changes reach it through its OWN `notify`, not through the change feed: a
+ * domain event owns that relation's changes and the value's notify is wired to
+ * it (a served value's `reads.notified` — `automations.catalog` reads only the
+ * derived `status` of `tasks_v`, which `tasks.statusChanged` announces, and
+ * recomputes on the transitions that move it). No route names it and nothing
+ * indexes it under its bases, so a write to them reaches the entry only through
+ * that notify; the drift guard (A8 / D5) accepts it in a capture. Only an
+ * external entry may declare one (`routingRecordFor` throws otherwise): a DB
+ * value has no notify, so nothing could tell it of the change.
+ */
+export interface NotifiedRead {
+  /** The relation's name, as a captured read-set records it. */
+  relation: string;
+  /** Which signal carries its changes to the entry's notify, and why that is all of them. */
+  reason: string;
+}
+
+/**
  * A route table a loader may read ONLY through queries carrying `tag` — a
  * compiled lookup's own SQL (query-resource's `compileLookup`), whose route
  * `columns` gate on exactly what that SQL reads. Any other read of the table
@@ -352,6 +371,8 @@ export interface ReachPlanInput<
   unfed?: readonly UnfedRead[];
   /** Views / rollups read whole, reached through their bases — see `RelationRead`. */
   relations?: readonly RelationRead[];
+  /** Relations whose changes reach an external entry through its own notify — see `NotifiedRead`. */
+  notified?: readonly NotifiedRead[];
   /** Route tables covered only by tagged reads — see `TaggedRead`. */
   taggedReads?: readonly TaggedRead[];
 }
@@ -372,6 +393,7 @@ export interface ReachPlan<
   derivedReads?: never;
   unfed?: readonly UnfedRead[];
   relations?: readonly RelationRead[];
+  notified?: readonly NotifiedRead[];
   taggedReads?: readonly TaggedRead[];
 }
 
@@ -447,7 +469,8 @@ export function mintRoutePlan<P extends Record<string, string>>(
  * external keyed window's / point set's. Throws on an `unfed` table a route
  * names (it is either routed or read outside the feed), listed twice, or with
  * no reason; on a relation read that is also a route or unfed table, listed
- * twice, or with no reason; and on a tagged read of no route table, with an
+ * twice, or with no reason; on a notified read that is also a route, unfed
+ * table or relation read, listed twice, or with no reason; and on a tagged read of no route table, with an
  * empty tag, or listed twice.
  */
 export function mintReachPlan<P extends Record<string, string>>(
@@ -489,6 +512,30 @@ export function mintReachPlan<P extends Record<string, string>>(
     }
     relationSeen.add(r.relation);
   }
+  const notified = plan.notified ?? [];
+  const notifiedSeen = new Set<string>();
+  for (const n of notified) {
+    if (
+      routed.has(n.relation) ||
+      seen.has(n.relation) ||
+      relationSeen.has(n.relation)
+    ) {
+      throw new Error(
+        `mintReachPlan: "${n.relation}" is both a notified read and ${routed.has(n.relation) ? "a route table" : seen.has(n.relation) ? "read outside the feed" : "a relation read"} — a relation reaches the entry through its notify or through the feed, never both.`,
+      );
+    }
+    if (notifiedSeen.has(n.relation)) {
+      throw new Error(
+        `mintReachPlan: notified read "${n.relation}" is listed twice — one entry per relation.`,
+      );
+    }
+    if (n.reason.trim() === "") {
+      throw new Error(
+        `mintReachPlan: notified read "${n.relation}" has no reason — name the signal that carries its changes to the notify.`,
+      );
+    }
+    notifiedSeen.add(n.relation);
+  }
   const taggedReads = plan.taggedReads ?? [];
   const taggedSeen = new Set<string>();
   for (const t of taggedReads) {
@@ -517,6 +564,7 @@ export function mintReachPlan<P extends Record<string, string>>(
     // Only when non-empty, like `unfed`: a plan reading no relation is the
     // shape it always was.
     ...(relations.length > 0 ? { relations } : {}),
+    ...(notified.length > 0 ? { notified } : {}),
     ...(taggedReads.length > 0 ? { taggedReads } : {}),
     [MINTED]: true,
   };

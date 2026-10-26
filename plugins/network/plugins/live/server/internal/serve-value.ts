@@ -141,10 +141,18 @@ export type ServedValueReads<P extends ResourceParams = ResourceParams> =
  */
 type AnyServedValueReads = ServedValueReads<never>;
 
+/**
+ * A db value's reads: no `notified` relations — a db value has no notify, so
+ * nothing could carry their changes (the runtime refuses one too).
+ */
+type DbValueReads<P extends ResourceParams> = ValueReads<P> & {
+  notified?: never;
+};
+
 /** The db arm's declaration of what its loader reads. Required. */
 interface DbReadsOption<P extends ResourceParams> {
   /** Every table the loader reads, and why a write to any row may change any tuple. */
-  reads: ServedValueReads<P>;
+  reads: DbValueReads<P> | (() => DbValueReads<P>);
 }
 
 /**
