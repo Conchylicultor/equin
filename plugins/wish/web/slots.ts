@@ -16,6 +16,8 @@ export interface WishSegmentContribution {
 export interface WishHeaderActionProps {
   /** Close the Wish popover (its draft is kept). */
   close: () => void;
+  /** The words drafted in the popover so far ("" when none) — to carry over. */
+  draft: string;
 }
 
 export interface WishHeaderActionContribution {

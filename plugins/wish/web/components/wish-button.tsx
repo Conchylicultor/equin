@@ -71,15 +71,17 @@ export function WishButton() {
         target={{ kind: "category", categoryId: WISHES_CATEGORY_ID }}
         insert={insert}
         heading="Make a wish"
-        headerActions={headerActions.map((action) => (
-          <Fragment key={action.id}>
-            {renderIsolated(
-              WishSlots.HeaderAction,
-              action as unknown as Contribution,
-              { close: closeWish },
-            )}
-          </Fragment>
-        ))}
+        headerActions={({ text }) =>
+          headerActions.map((action) => (
+            <Fragment key={action.id}>
+              {renderIsolated(
+                WishSlots.HeaderAction,
+                action as unknown as Contribution,
+                { close: closeWish, draft: text },
+              )}
+            </Fragment>
+          ))
+        }
         placeholder="Fix, change or build anything…"
         hintAnchors={HINT_ANCHORS}
         onSuccess={(taskIds) => emitHintSignal(wishSent, { taskIds })}

@@ -92,7 +92,12 @@ portable `server/` half.
   top-right corner sits below the action bar.
 - **Empty state**: `pickSuggestions(Math.random)` (two fixed newcomer
   questions + one rotating) and a first-question `TextEditor` (draft in
-  `askQuestionDraft`). The first send captures the context — `useActiveApp`,
+  `askQuestionDraft`). The suggestions show only while that box is empty.
+- **From Wish** (`AskFromWish`, a `WishSlots.HeaderAction`): the action is
+  handed the words drafted in Wish and calls `askAbout(draft)` — with none,
+  it just opens the card; with some, they become `askQuestionDraft` and the
+  card opens empty on them (a run in hand is let go, as by New question), so
+  the question is ready to send and no suggestions show. The first send captures the context — `useActiveApp`,
   `usePathname`, `useFocusedTabTitle`, and
   `collectOutline(document.body, { exclude: [card] })` — and starts the run
   with `useStartThread` (Help category, `askConfig.model`). Sends wait while
@@ -155,15 +160,15 @@ portable `server/` half.
     - `ConfigV2.WebRegister` "config"
     - `DynamicEnum.Options` "Model for filed tasks"
     - `DynamicEnum.Options` "Model"
-  - Uses: 65 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 66 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations/agent-thread` ×7
+    - `primitives/persistent-draft` ×3
     - `apps-core` ×2
     - `config_v2` ×2
     - `hints/help-menu` ×2
     - `primitives/css/coords` ×2
     - `primitives/css/ui-kit` ×2
     - `primitives/live-state` ×2
-    - `primitives/persistent-draft` ×2
     - `primitives/text-editor/inline-chip` ×2
     - `primitives/ui-context` ×2
     - `tasks/task-status` ×2

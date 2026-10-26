@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
-import { askCardStore, type AskCardSnapshot } from "./stores";
+import { writeDraft } from "@plugins/primitives/plugins/persistent-draft/web";
+import { askCardStore, askQuestionDraft, type AskCardSnapshot } from "./stores";
 
 /**
  * Where the card is: `closed` (nothing on screen), `open` (the card), `min`
@@ -85,6 +86,21 @@ export function useAskState(): AskState {
 /** Open the card — on the run in hand, or empty. */
 export function openAsk(): void {
   set({ mode: "open" });
+}
+
+/**
+ * Open the card to ask `question` — words drafted elsewhere (the Wish
+ * popover). With none, just `openAsk`. With some, they become the empty
+ * card's question draft, ready to send or edit: any run in hand is let go
+ * (it stays in the Agent Manager) and the empty card remounts on them.
+ */
+export function askAbout(question: string): void {
+  if (question.trim() === "") {
+    openAsk();
+    return;
+  }
+  writeDraft(askQuestionDraft, question);
+  releaseRun({ close: false });
 }
 
 /** Show run `conversationId` in the open card (a question just started). */

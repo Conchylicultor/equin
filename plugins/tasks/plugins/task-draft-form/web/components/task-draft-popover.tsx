@@ -28,6 +28,7 @@ import {
   TaskDraftForm,
   makeCard,
   type CardDraft,
+  type TaskDraftHeaderDraft,
   type TaskDraftHintAnchors,
 } from "./task-draft-form";
 import { describeOutcome, submitChain } from "../internal/submit";
@@ -146,9 +147,10 @@ export interface TaskDraftPopoverProps {
   heading?: string;
   /**
    * Actions drawn in the form's header, before its × — another way to handle
-   * what the user came for (Wish's Ask equin).
+   * what the user came for (Wish's Ask equin), handed the words drafted so far
+   * so they can carry them over.
    */
-  headerActions?: ReactNode;
+  headerActions?: (draft: TaskDraftHeaderDraft) => ReactNode;
   /** The head card's placeholder — what this surface asks the user for. */
   placeholder?: string;
   onSuccess?: (taskIds: string[]) => void;
@@ -203,7 +205,7 @@ function TaskDraftFormContent({
   activeRelate: { taskId: string } | null;
   target: TaskChainTarget;
   heading: string | undefined;
-  headerActions: ReactNode;
+  headerActions: TaskDraftPopoverProps["headerActions"];
   placeholder: string | undefined;
   onSuccess: ((taskIds: string[]) => void) | undefined;
   headInsertRef: React.MutableRefObject<((snippet: string) => void) | null>;

@@ -72,7 +72,7 @@ export interface TaskDraftFormProps {
   showStandalone?: boolean;
   heading?: string;
   /** See `TaskDraftPopoverProps.headerActions`. */
-  headerActions?: React.ReactNode;
+  headerActions?: (draft: TaskDraftHeaderDraft) => React.ReactNode;
   /** The head card's placeholder; defaults to "Describe the task…". */
   placeholder?: string;
   /**
@@ -113,6 +113,19 @@ export function makeCard(
     includeUrl,
     linkedToPrev: true,
   };
+}
+
+/** What a header action is handed of the draft (`TaskDraftPopoverProps.headerActions`). */
+export interface TaskDraftHeaderDraft {
+  /** The words drafted so far: every non-empty card, in chain order, a blank line apart. */
+  text: string;
+}
+
+function draftText(cards: readonly CardDraft[]): string {
+  return cards
+    .map((c) => c.text.trim())
+    .filter((t) => t !== "")
+    .join("\n\n");
 }
 
 export function TaskDraftForm({
@@ -251,7 +264,7 @@ export function TaskDraftForm({
             {heading ?? "Draft tasks"}
           </Text>
         </Fill>
-        {headerActions}
+        {headerActions?.({ text: draftText(cards) })}
         {/* The first card has no connector to carry its ×, so the header's
             stands in: with a chain it drops task 1 (task 2 becomes the head);
             with one task left there is nothing to drop, so it closes. */}
@@ -329,12 +342,12 @@ export function TaskDraftForm({
             </TooltipDoc>
           }
           variant="ghost"
-            onClick={appendChainCard}
-            loading={submitting}
-            className="text-muted-foreground"
-          >
-            <Icon icon={addIcon} className="size-3.5" />
-            Follow-up task
+          onClick={appendChainCard}
+          loading={submitting}
+          className="text-muted-foreground"
+        >
+          <Icon icon={addIcon} className="size-3.5" />
+          Follow-up task
         </Button>
         {/* Empty grow cell: it absorbs the slack so Cancel/Create sit flush-right. */}
         <Fill />

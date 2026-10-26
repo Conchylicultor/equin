@@ -210,23 +210,27 @@ export function AskEmptyCard({
         </CardHeader>
       }
       body={
-        <Stack gap="2xs" className="p-sm">
-          {suggestions.map((q) => (
-            <Line
-              key={q}
-              as="button"
-              type="button"
-              disabled={pending || blocked !== null}
-              onClick={() => void send(q, false)}
-              className="w-full gap-xs rounded-md px-sm py-xs text-left text-muted-foreground hover:bg-hover-fill hover:text-foreground disabled:opacity-50"
-            >
-              <Icon icon={suggestionIcon} className="size-4" />
-              <Fill>
-                <Text variant="body">{q}</Text>
-              </Fill>
-            </Line>
-          ))}
-        </Stack>
+        // Suggestions are for an empty box: once there is a question (typed,
+        // or carried over from Wish) they would only compete with it.
+        draft.trim() === "" ? (
+          <Stack gap="2xs" className="p-sm">
+            {suggestions.map((q) => (
+              <Line
+                key={q}
+                as="button"
+                type="button"
+                disabled={pending || blocked !== null}
+                onClick={() => void send(q, false)}
+                className="w-full gap-xs rounded-md px-sm py-xs text-left text-muted-foreground hover:bg-hover-fill hover:text-foreground disabled:opacity-50"
+              >
+                <Icon icon={suggestionIcon} className="size-4" />
+                <Fill>
+                  <Text variant="body">{q}</Text>
+                </Fill>
+              </Line>
+            ))}
+          </Stack>
+        ) : undefined
       }
       footer={
         <Stack
