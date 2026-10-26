@@ -1,7 +1,7 @@
 import { Avatar } from "@plugins/primitives/plugins/avatar/web";
 import type { ConversationItemConv } from "./conversation-item";
 import { statusDotPaintClass } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
-import { CONV_STATUS_DOT } from "./conv-status-dot";
+import { convStatusDot } from "./conv-status-dot";
 
 // Placeholder rendered by Item.Avatar when no contribution's predicate matches.
 // Keeps all rows aligned along their title column. Shows the title's first
@@ -9,7 +9,7 @@ import { CONV_STATUS_DOT } from "./conv-status-dot";
 export function AvatarFallback({ conv }: { conv: ConversationItemConv }) {
   return (
     <Avatar
-      statusDot={statusDotPaintClass(CONV_STATUS_DOT[conv.status])}
+      statusDot={statusDotPaintClass(convStatusDot(conv))}
       fallbackGlyph={conv.title?.trim()[0] ?? "?"}
       fallbackKey={conv.id}
     />

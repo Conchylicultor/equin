@@ -16,8 +16,8 @@ import { TurnKindSchema, TurnStateSchema } from "./schemas";
 
 /**
  * A ledger row's fields, in column order — the `conversation_turns` table is
- * built from them (`server/internal/tables.ts`), plus `typedText` and
- * `submittedText`, its server fields (never on the wire). `conversationId` is
+ * built from them (`server/internal/tables.ts`), plus `typedText`, its server
+ * field (never on the wire). `conversationId` is
  * the one a reader filters on; the rest is carried.
  */
 export const ledgerTurnFields = {
@@ -27,22 +27,20 @@ export const ledgerTurnFields = {
   /** What the user wrote, raw — for the draft and the echo. */
   text: textField(),
   state: parsedTextField(TurnStateSchema, { default: "held" }),
-  /** `merged` only: the text the CLI submitted around this turn's. */
-  extraText: nullable(textField()),
-  /** `failed` / `unverified` (and kept by `withdrawn`): why. */
+  /** `failed` (and kept by `withdrawn`): why. */
   error: nullable(textField()),
   /**
-   * `accepted` / `merged`: when the agent took it — its `turn_started` event's
+   * `accepted`: when the agent took it — its `turn_started` event's
    * own time, so a late replay still records the agent's moment. The status
-   * reconciler weighs it against the agent's own idle/busy write; the web
-   * retires the turn's echo once the transcript reaches it.
+   * reconciler weighs it against the agent's own idle/busy write.
    */
   submittedAt: nullable(dateField()),
   /**
-   * `accepted` / `merged`: the uuid the agent gave the message it took — the
-   * transcript entry's (a user line's `uuid`, a prompt folded into a running
-   * turn's `source_uuid`), so the web finds the message that replaced the echo.
-   * Null for a turn confirmed before it was recorded.
+   * Set with `submittedAt`: the uuid of the SDK user message the agent sent
+   * this turn as, which its CLI started — the transcript entry's (a user
+   * line's `uuid`, a prompt folded into a running turn's `source_uuid`): the
+   * turn's identity in the transcript, which Stop / rewind and the web's echo
+   * key on. Null for a turn confirmed before it was recorded.
    */
   promptUuid: nullable(textField()),
   createdAt: dateField(),

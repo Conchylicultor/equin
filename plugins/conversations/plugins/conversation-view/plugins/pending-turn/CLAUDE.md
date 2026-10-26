@@ -2,8 +2,8 @@
 
 The **single entry point** for sending a turn from the browser, and the view of
 the server's turn ledger. Where a turn stands is the server's business — its
-`conversation_turns` row, moved by the CLI's own submit hook, Stop and the
-runtime's submit check: see [`turn-ledger/CLAUDE.md`](../../../turn-ledger/CLAUDE.md)
+`conversation_turns` row, moved by the send, the agent's own confirmation and
+Stop: see [`turn-ledger/CLAUDE.md`](../../../turn-ledger/CLAUDE.md)
 and `research/2026-10-15-conversations-turn-ledger.md`. This plugin only
 sends, echoes and draws.
 
@@ -60,11 +60,9 @@ ledger window and tab sends, filtered to the echo states).
 
 | State | Card |
 |---|---|
-| `sending` (tab only) / `held` / `typing` / `typed` / `accepted` | echo, **until the agent confirmed it and the transcript shows it** (holds the message under the uuid it was confirmed as, or reaches the confirmation's moment) — "Sending…" under it, "Waiting for the agent to start…" when held, and **Queued · Send now** when typed while a turn runs: the agent's CLI holds it until the next tool boundary or the turn's end. Mounted after the transcript, the echo stays last while the agent's steps land above it; Send now interrupts the running turn (`POST /api/conversations/:id/interrupt`), and the CLI starts the queued message next |
-| `accepted` slash command | nothing: the CLI ran it, no prompt row will come |
+| `sending` (tab only) / `held` / `typing` / `typed` / `accepted` | echo, **until the agent confirmed it and the transcript holds its line** (a user message under the uuid it was confirmed as, or a window beginning after its confirmation) — "Sending…" under it, "Waiting for the agent to start…" when held, and **Queued · Send now** when typed while a turn runs: the agent's CLI holds it until the next tool boundary or the turn's end. Mounted after the transcript, the echo stays last while the agent's steps land above it; Send now interrupts the running turn (`POST /api/conversations/:id/interrupt`), and the CLI starts the queued message next |
 | `returned` / `withdrawn` | nothing: the draft has it |
-| `merged` | warning naming the other text (`extraText`) — only while it is the newest turn |
-| `failed` / `unverified` / `unsent` (tab only) | Retry + Copy to draft, with the error |
+| `failed` / `unsent` (tab only) | Retry + Copy to draft, with the error |
 
 **An echo is the host's own user row, not a look-alike.** `PendingTurnCard`
 takes a required `renderEcho(turn, status)`: the host draws the turn with the
@@ -75,21 +73,29 @@ the caption, a highlight sweeping across it — under it. So when the transcript
 takes over, the message does not move, re-wrap or change colour; only the
 status line goes. Never dim or restyle the echo itself.
 
-**An echo retires on the agent's confirmation AND the transcript, never on a
-guess.** The echo stands in for the message, and the two reach the tab on
-different channels (the ledger's change feed, the transcript watcher).
-`transcriptShows` (`internal/landed.ts`): the row is `accepted` / `merged` —
-the agent itself named this exact turn as taken, at `submittedAt` — and the
-transcript's newest event is at or after `submittedAt`, so the prompt the agent
-wrote when it took it is on screen. Retiring on the confirmation alone left the
-turn on screen nowhere while the transcript lagged; matching transcript prompts
-to rows by order (the former `landedTurnIds`) retired an unconfirmed turn's
-echo whenever any other prompt landed after it — and, once the transcript
-became a paged tail, left confirmed turns echoing forever. A turn nothing
-confirmed keeps its echo until its row moves (confirmed, failed, returned);
-the error left is a turn shown twice for a moment, never one shown nowhere.
-Only the newest event is read, so how much of the past the tail holds does not
-matter.
+**An echo retires on its own transcript line, never on a guess.** The echo
+stands in for the message, and the two reach the tab on different channels
+(the ledger's change feed, the transcript watcher). `transcriptShows`
+(`internal/landed.ts`): the row is `accepted` — the agent confirmed taking this
+turn, as transcript line `promptUuid` — **and** either the loaded transcript
+holds that line, or the window begins after the row's `submittedAt` (the line
+is above what is loaded, so the echo is not on screen in its place either).
+The line is a `user-text` event with `uuid === promptUuid` — a slash command's
+too (`/compact` writes `<command-name>/compact…` under the turn's uuid), and a
+prompt a busy agent folded into its running turn (the CLI writes a
+`queued_command` attachment, which the transcript parser makes the user's
+message under its `source_uuid`; see turn-ledger's "The transcript line a turn
+becomes"). No "newest event is later" guess: a reply or another turn landing
+after the confirmation says nothing about this line. And since the agent
+confirms a turn when its CLI **starts** it, not when it queues it, a queued
+turn stays an echo (Queued) until its line is due. A turn nothing confirmed
+keeps its echo until its row moves (confirmed, failed, returned) — never one
+shown nowhere.
+
+**Temporary:** a row accepted before `prompt_uuid` existed has none; it keeps
+the old rule (the window's newest event at or after `submittedAt`). Every
+confirmation since stamps the uuid and retention sweeps settled rows after 7
+days, so this goes a week after the column reached main.
 
 An `answer` draws no in-flight echo (its question card is its in-flight state)
 but its failure card like any other. A ledger row's Retry is
@@ -109,11 +115,11 @@ idle, so the user edits the prompt and sends it again.
 ## `useOptimisticConversationStatus`
 
 `working` only while the server cannot know about a turn yet: this tab's
-request is open (or done, its row not here yet), or a hooked row is `typing` /
-`typed` awaiting the CLI's hook — sent since the server's status last moved
-(`updatedAt`). From the hook on (`accepted` / `merged`) the server's status is
-the one answer: the status reconciler itself reads the confirmed submit
-(`submitted_at`) against the CLI's own idle/busy write, so every surface — the
+request is open (or done, its row not here yet), or a row is `typing` /
+`typed` awaiting the agent's confirmation — sent since the server's status
+last moved (`updatedAt`). From the confirmation on (`accepted`) the server's
+status is the one answer: the status reconciler itself reads the confirmed
+submit (`submitted_at`) against the agent's own idle/busy write, so every surface — the
 header chip, the sidebar dot — shows the same status. It reads the tab's sends
 and the ledger's newest rows across all conversations (the default window — one
 shared subscription for every row of a list); a failure retracts it.

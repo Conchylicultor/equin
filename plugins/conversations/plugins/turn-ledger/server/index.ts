@@ -7,6 +7,7 @@ import { userTurnSent } from "./internal/tables-user-turn-sent-event";
 export {
   acceptTurn,
   applyTurnEvent,
+  confirmTurn,
   dropTypedTurns,
   getTurn,
   hasHeldTurns,
@@ -16,7 +17,7 @@ export {
   resolvePromptSubmit,
   returnHeldTurns,
   hasTurnInFlight,
-  returnTurnByText,
+  returnTurnByPromptUuid,
   returnTurnsSince,
 } from "./internal/store";
 export { onTurnSubmitted } from "./internal/submit-signal";
@@ -32,7 +33,7 @@ export type { UserTurnSentPayload } from "./internal/tables-user-turn-sent-event
 
 export default {
   description:
-    "The turn ledger's backend: the conversation_turns table (one row per turn sent to an agent, its state moved only by applyTurnEvent's pure transition), the accept that holds a turn while its conversation starts, resolvePromptSubmit (the agent's confirmation that it took a turn, matched to the oldest unconfirmed one), the turn-ledger.turns live collection, the conversation.userTurnSent event (emitted once the agent confirmed a user's turn) and turnVerdictSink (a merged or unverified turn, filed as a report by machine/).",
+    "The turn ledger's backend: the conversation_turns table (one row per turn sent to an agent, its state moved only by applyTurnEvent's pure transition), the accept that holds a turn while its conversation starts, confirmTurn (the agent's confirmation that it took a turn, applied to that row by the turn id it echoed, with the transcript line's uuid; resolvePromptSubmit is its temporary equality-matched fallback for an agent started before turn ids), Stop's and rewind's returnTurnByPromptUuid (the turn taken back, by its transcript line), the turn-ledger.turns live collection and the conversation.userTurnSent event (emitted once the agent confirmed a user's turn).",
   portable: true,
   register: [userTurnSent],
   contributions: [

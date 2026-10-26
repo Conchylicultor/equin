@@ -15,7 +15,7 @@ describe("sdkLaunchOptions", () => {
     const o = sdkLaunchOptions({
       ...base,
       launch: { guardsRoot: "/w", settings: {} },
-      prompt: "hi",
+      prompt: { turnId: "turn-1", text: "hi" },
     });
     expect(o).toMatchObject({
       cwd: "/w",
@@ -25,7 +25,7 @@ describe("sdkLaunchOptions", () => {
       strictMcpConfig: false,
       resume: null,
       fork: false,
-      prompt: "hi",
+      prompt: { turnId: "turn-1", text: "hi" },
       model: null,
       effort: null,
     });
@@ -67,10 +67,13 @@ describe("sdkLaunchOptions", () => {
     const o = sdkLaunchOptions({
       ...base,
       launch: { guardsRoot: "/w", settings: {} },
-      prompt: "hi",
+      prompt: { turnId: "turn-1", text: "hi" },
       appendSystemPrompt: "be terse",
     });
-    expect(o).toMatchObject({ prompt: "hi", appendSystemPrompt: "be terse" });
+    expect(o).toMatchObject({
+      prompt: { turnId: "turn-1", text: "hi" },
+      appendSystemPrompt: "be terse",
+    });
     expect(
       sdkLaunchOptions({ ...base, launch: { guardsRoot: "/w", settings: {} } })
         .appendSystemPrompt,
@@ -117,7 +120,7 @@ describe("rewindRelaunchOptions", () => {
   const prev = sdkLaunchOptions({
     ...base,
     launch: { guardsRoot: "/w", settings: {} },
-    prompt: "first",
+    prompt: { turnId: "turn-0", text: "first" },
     appendSystemPrompt: "be terse",
     forkSession: true,
     resumeSessionId: "src",

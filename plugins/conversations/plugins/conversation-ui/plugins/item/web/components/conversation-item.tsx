@@ -24,7 +24,7 @@ import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import type { RelativeTimeFormat } from "@plugins/primitives/plugins/relative-time/web";
 import type { Ref } from "react";
 import { Item } from "../slots";
-import { CONV_STATUS_DOT } from "./conv-status-dot";
+import { convStatusDot } from "./conv-status-dot";
 
 function ChipsSlot({ conv }: { conv: ConversationItemConv }) {
   const items = Item.Chips.useContributions();
@@ -58,6 +58,8 @@ export type ConversationItemConv = {
   id: string;
   title: string | null;
   status: ConversationStatus;
+  /** Set while `status` is only the last known one (see {@link convStatusDot}). */
+  statusUnverifiedSince: Date | null;
   kind: ConversationKind;
   createdAt: Date;
   spawnedBy?: string | null;
@@ -93,9 +95,7 @@ export type ConversationItemProps = {
 export type ConvTitleOverride = { label: string; full: string };
 
 export function ConvStatusDot({ conv }: { conv: ConversationItemConv }) {
-  return (
-    <StatusDot {...CONV_STATUS_DOT[conv.status]} className="inline-block" />
-  );
+  return <StatusDot {...convStatusDot(conv)} className="inline-block" />;
 }
 
 export function ConvSysBadge({ conv }: { conv: ConversationItemConv }) {

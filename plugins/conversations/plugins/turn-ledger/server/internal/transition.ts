@@ -7,13 +7,14 @@ import type { TurnState } from "../../core/schemas";
 //
 // The rules that make it safe to apply events in whatever order they arrive:
 //
-//   - A confirmation always wins. The agent saying "I submitted this" (its
-//     `turn_started` event) is the one ground truth, so it resolves `typing`,
-//     `typed`, `unverified` and `failed` alike — it can land before the send
+//   - A confirmation always wins. The agent saying "I took turn <id>" (its
+//     `turn_started` event, echoing the id the backend sent the turn with) is
+//     the one ground truth, so it resolves that row out of `held`, `typing`,
+//     `typed`, `failed` and `withdrawn` alike — it can land before the send
 //     path has even recorded `typed`.
-//   - Never revert. Once accepted or merged, the send path's own verdicts
-//     (`typed`, `unverified`, `failed`) change nothing; only Stop's `returned`
-//     moves a settled row, because the CLI really did hand the text back.
+//   - Never revert. Once accepted, the send path's own verdicts (`typed`,
+//     `failed`) change nothing; only `returned` moves a settled row, because
+//     the agent really did hand the turn back.
 //   - An event that does not apply returns null: no write, so applying the
 //     same event twice is a no-op (the fixed point the tests pin).
 
@@ -25,26 +26,37 @@ import type { TurnState } from "../../core/schemas";
  * - `deliver` — a held or retried row starts being typed, as `typedText`.
  * - `release` — the launch that was to carry a held row threw before the
  *   agent existed: it is held again, as `typedText`.
- * - `typed` / `unverified` — the runtime's submit check.
- * - `failed` — the text never reached the box.
- * - `confirmed` — the agent reported taking `prompt` (its `turn_started` event:
- *   its CLI started it), `at` the moment it did, as the message `promptUuid`.
+ * - `typed` — the agent's socket queued it.
+ * - `failed` — it never reached the agent.
+ * - `confirmed` — the agent's CLI started THIS turn (its `turn_started`
+ *   event carried the row's id), as the transcript line `promptUuid`, `at` the
+ *   moment it did.
+ * - `confirmed-by-text` — TEMPORARY: the agent reported taking `prompt`
+ *   without an id — an agent started before turn ids, whose launch prompt
+ *   carries none. Resolves a row whose typed text IS the prompt
+ *   (`promptIs`). Deleted, with `resolvePromptSubmit`, once no agent started
+ *   before turn ids runs (the sdk projection's `turn_ids` false on no live row).
  * - `dropped` — the agent went away while the turn waited in its CLI's
  *   queue: it never ran. Fails it (Retry); a late confirmation still wins.
- * - `returned` — the text came back to the user: the CLI gave it back (Stop,
- *   or found in the box), or Stop took a `held` turn back before the agent it
- *   was waiting for was up.
- * - `withdraw` — the user took a `failed` / `unverified` turn back into the
- *   draft instead of retrying it: the draft is now its only copy.
+ * - `returned` — the turn came back to the user: Stop took it back out of the
+ *   session, a rewind cut it, or Stop took a `held` turn back before the agent
+ *   it was waiting for was up.
+ * - `withdraw` — the user took a `failed` turn back into the draft instead of
+ *   retrying it: the draft is now its only copy.
  */
 export type TurnEvent =
   | { kind: "hold" }
   | { kind: "deliver"; typedText: string }
   | { kind: "release"; typedText: string }
   | { kind: "typed" }
-  | { kind: "unverified"; reason: string }
   | { kind: "failed"; error: string }
-  | { kind: "confirmed"; prompt: string; promptUuid: string; at: Date }
+  | { kind: "confirmed"; promptUuid: string; at: Date }
+  | {
+      kind: "confirmed-by-text";
+      prompt: string;
+      promptUuid: string;
+      at: Date;
+    }
   | { kind: "dropped" }
   | { kind: "returned" }
   | { kind: "withdraw" };
@@ -58,10 +70,8 @@ export interface TurnFacts {
 /** The row fields a transition may write, beside `state`. */
 export interface TurnPatch {
   typedText?: string;
-  submittedText?: string;
   submittedAt?: Date;
   promptUuid?: string;
-  extraText?: string | null;
   error?: string | null;
 }
 
@@ -70,101 +80,49 @@ export interface TurnTransition {
   patch: TurnPatch;
 }
 
-/** How the CLI's submitted prompt relates to a row's typed text. */
-export type PromptMatch =
-  | { kind: "equal" }
-  | { kind: "contains"; extraText: string }
-  | { kind: "none" };
-
 /**
- * Compare the confirmed `prompt` with what was typed. Byte-exact (Step 1, E1:
- * the confirmed prompt is the sent text verbatim — multi-line, a leading `>`, `@`
- * tokens), save for whitespace at the two ends: the launch message reaches the
- * CLI with a leading space before a `/` (a retired runtime's
- * launch message did that), and nothing else about a turn depends on edge whitespace.
+ * Whether the prompt an id-less confirmation names is `typedText` — byte-exact
+ * save for whitespace at the two ends.
  *
- * `contains` is the incident's shape: a stale draft the box still held, with
- * the turn typed after it, submitted as ONE prompt.
+ * Temporary, like `confirmed-by-text`: the launch prompt of an agent started
+ * before turn ids is the one confirmation that carries no id, and it is one
+ * whole turn (a turn is its own SDK user message — nothing merges two).
  */
-export function matchPrompt(prompt: string, typedText: string): PromptMatch {
-  const submitted = prompt.trim();
+export function promptIs(prompt: string, typedText: string): boolean {
   const typed = typedText.trim();
-  if (typed.length === 0) return { kind: "none" };
-  if (submitted === typed) return { kind: "equal" };
-  const at = submitted.indexOf(typed);
-  if (at === -1) return { kind: "none" };
-  const extraText = [
-    submitted.slice(0, at).trim(),
-    submitted.slice(at + typed.length).trim(),
-  ]
-    .filter((part) => part.length > 0)
-    .join("\n");
-  return { kind: "contains", extraText };
+  return typed.length > 0 && prompt.trim() === typed;
 }
 
 /**
- * Which rows a submitted `prompt` may resolve, in the order to try them (rows
- * given oldest first). Sends are serialized per conversation, so the
- * unconfirmed rows are few and in order:
- *
- *   1. every EQUAL match, oldest first;
- *   2. then every row the prompt CONTAINS (a merge) — but never a `failed`
- *      one: a turn that never reached the box cannot have been merged into
- *      somebody else's prompt.
- *
- * `prompt_id` is no turn id (a busy agent's queued turn carries the running
- * turn's), so text is the key.
+ * Which rows a confirmation resolves (see "a confirmation always wins"):
+ * every row not settled. `held` too — a launch that threw after its agent had
+ * taken the prompt puts the row back to `held`; the agent's word is the truth,
+ * and accepting it keeps the flush from sending it a second time. Settled rows
+ * (`accepted`, `returned`) stay: replaying the line is a no-op, and Stop's
+ * `returned` is the agent handing the turn back after taking it.
+ * A Record, so a new state cannot be left out.
  */
-export function promptCandidates<T extends TurnFacts>(
-  prompt: string,
-  oldestFirst: readonly T[],
-): T[] {
-  const open = oldestFirst.filter((row) => CONFIRM_ROLE[row.state] === "open");
-  const withdrawn = oldestFirst.filter(
-    (row) => CONFIRM_ROLE[row.state] === "exact",
-  );
-  return [
-    ...open.filter(
-      (row) => matchPrompt(prompt, row.typedText).kind === "equal",
-    ),
-    ...open.filter(
-      (row) =>
-        row.state !== "failed" &&
-        matchPrompt(prompt, row.typedText).kind === "contains",
-    ),
-    // Last, and only exactly: a turn the user already took back loses to any
-    // turn still on its way.
-    ...withdrawn.filter(
-      (row) => matchPrompt(prompt, row.typedText).kind === "equal",
-    ),
-  ];
-}
-
-/**
- * What a confirmation may still do to a row in each state (see "a confirmation always
- * wins"): `open` — resolve it, equal or merged; `exact` — resolve it only on an
- * exact match, after every open row (`withdrawn`: the user took it back, but
- * it may have landed after all — the truth wins); `null` — nothing (settled,
- * or not typed yet). A Record, so a new state cannot be left out.
- */
-const CONFIRM_ROLE: Record<TurnState, "open" | "exact" | null> = {
-  held: null,
-  typing: "open",
-  typed: "open",
-  accepted: null,
-  merged: null,
-  // Stop's / the box's: the CLI handed the text back; a confirmation of that text
-  // belongs to whatever turn carries it next.
-  returned: null,
-  failed: "open",
-  unverified: "open",
-  withdrawn: "exact",
+const CONFIRMABLE: Record<TurnState, boolean> = {
+  held: true,
+  typing: true,
+  typed: true,
+  accepted: false,
+  returned: false,
+  failed: true,
+  withdrawn: true,
 };
 
 /** The states a confirmation may still resolve — `resolvePromptSubmit`'s candidate query. */
 export const CONFIRMABLE_STATES = (
-  Object.keys(CONFIRM_ROLE) as TurnState[]
-).filter((state) => CONFIRM_ROLE[state] !== null);
+  Object.keys(CONFIRMABLE) as TurnState[]
+).filter((state) => CONFIRMABLE[state]);
+
+function accept(event: { promptUuid: string; at: Date }): TurnTransition {
+  return {
+    state: "accepted",
+    patch: { submittedAt: event.at, promptUuid: event.promptUuid, error: null },
+  };
+}
 
 /** The next state for `event`, or null when the event changes nothing. */
 export function transitionTurn(
@@ -176,7 +134,7 @@ export function transitionTurn(
     case "hold":
       return state === "typing" ? { state: "held", patch: {} } : null;
     case "deliver":
-      return state === "held" || state === "failed" || state === "unverified"
+      return state === "held" || state === "failed"
         ? {
             state: "typing",
             patch: { typedText: event.typedText, error: null },
@@ -188,44 +146,16 @@ export function transitionTurn(
         : null;
     case "typed":
       return state === "typing" ? { state: "typed", patch: {} } : null;
-    case "unverified":
-      return state === "typing"
-        ? {
-            state: "unverified",
-            patch: { error: event.reason },
-          }
-        : null;
     case "failed":
       return state === "typing" || state === "held"
         ? { state: "failed", patch: { error: event.error } }
         : null;
-    case "confirmed": {
-      const role = CONFIRM_ROLE[state];
-      if (role === null) return null;
-      const match = matchPrompt(event.prompt, row.typedText);
-      if (match.kind === "none") return null;
-      if (role === "exact" && match.kind !== "equal") return null;
-      if (match.kind === "equal") {
-        return {
-          state: "accepted",
-          patch: {
-            submittedAt: event.at,
-            promptUuid: event.promptUuid,
-            error: null,
-          },
-        };
-      }
-      return {
-        state: "merged",
-        patch: {
-          submittedText: event.prompt,
-          submittedAt: event.at,
-          promptUuid: event.promptUuid,
-          extraText: match.extraText,
-          error: null,
-        },
-      };
-    }
+    case "confirmed":
+      return CONFIRMABLE[state] ? accept(event) : null;
+    case "confirmed-by-text":
+      return CONFIRMABLE[state] && promptIs(event.prompt, row.typedText)
+        ? accept(event)
+        : null;
     case "dropped":
       return state === "typed"
         ? {
@@ -236,16 +166,11 @@ export function transitionTurn(
           }
         : null;
     case "returned":
-      return state === "held" ||
-        state === "typed" ||
-        state === "accepted" ||
-        state === "merged"
+      return state === "held" || state === "typed" || state === "accepted"
         ? { state: "returned", patch: {} }
         : null;
     case "withdraw":
       // The error stays, for the history of why it was taken back.
-      return state === "failed" || state === "unverified"
-        ? { state: "withdrawn", patch: {} }
-        : null;
+      return state === "failed" ? { state: "withdrawn", patch: {} } : null;
   }
 }

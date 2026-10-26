@@ -1,79 +1,83 @@
 import { describe, expect, test } from "bun:test";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import type { TurnState } from "@plugins/conversations/plugins/turn-ledger/core";
-import { transcriptReachedAt, transcriptShows } from "./landed";
+import { transcriptShows } from "./landed";
 
 const T0 = Date.parse("2026-10-18T15:53:08Z");
 const at = (ms: number) => new Date(T0 + ms).toISOString();
 
-const typed = (text: string, ms: number): JsonlEvent => ({
+const line = (uuid: string, ms: number): JsonlEvent => ({
   kind: "user-text",
   at: at(ms),
-  text,
-  uuid: `u-${text}-${ms}`,
+  text: `text ${uuid}`,
+  uuid,
 });
 
 const turn = (
   state: TurnState,
   submittedMs: number | null,
-  promptUuid: string | null = null,
+  promptUuid: string | null = "mine",
 ) => ({
   state,
   submittedAt: submittedMs === null ? null : new Date(T0 + submittedMs),
   promptUuid,
 });
 
-/** A transcript whose newest event was written `ms` after T0. */
-const upTo = (ms: number) => [typed("x", ms)];
-
-describe("transcriptReachedAt", () => {
-  test("is the newest event's time, or null for an empty transcript", () => {
-    expect(transcriptReachedAt([])).toBeNull();
-    expect(transcriptReachedAt([typed("a", 100), typed("b", 900)])).toBe(
-      T0 + 900,
-    );
-  });
-});
-
 describe("transcriptShows", () => {
-  test("a confirmed turn, once the transcript reaches its confirmation", () => {
-    for (const state of ["accepted", "merged"] as const) {
-      expect(transcriptShows(turn(state, 500), upTo(499))).toBe(false);
-      expect(transcriptShows(turn(state, 500), upTo(500))).toBe(true);
-      expect(transcriptShows(turn(state, 500), [])).toBe(false);
-    }
+  test("a confirmed turn, once the window holds its own line", () => {
+    const window = [line("before", 100), line("other", 900)];
+    // Newer events are no sign of it: only its uuid is.
+    expect(transcriptShows(turn("accepted", 500), window)).toBe(false);
+    expect(
+      transcriptShows(turn("accepted", 500), [...window, line("mine", 950)]),
+    ).toBe(true);
   });
 
-  test("a confirmed turn whose message the transcript holds, whatever its time", () => {
-    // A prompt folded into a running turn is written with its enqueue time,
-    // before the confirmation.
-    const folded: JsonlEvent = {
-      kind: "user-text",
-      at: at(100),
-      text: "also this",
-      uuid: "cmd-1",
-    };
-    expect(transcriptShows(turn("accepted", 500, "cmd-1"), [folded])).toBe(
+  test("a prompt folded into a running turn, by the message the parser makes of it", () => {
+    // The CLI writes a folded prompt as a queued_command attachment; the
+    // parser makes it the user's message under its source_uuid, at its
+    // enqueue time — earlier than the confirmation.
+    expect(
+      transcriptShows(turn("accepted", 500), [line("before", 100), line("mine", 300)]),
+    ).toBe(true);
+  });
+
+  test("a confirmed turn whose line is above the window", () => {
+    expect(transcriptShows(turn("accepted", 500), [line("later", 501)])).toBe(
       true,
     );
-    expect(transcriptShows(turn("accepted", 500, "cmd-2"), [folded])).toBe(
+    expect(transcriptShows(turn("accepted", 500), [line("same", 500)])).toBe(
       false,
     );
-    expect(transcriptShows(turn("typed", null, "cmd-1"), [folded])).toBe(false);
   });
 
-  test("never a turn the agent has not confirmed, however far the transcript goes", () => {
+  test("never with no transcript loaded", () => {
+    expect(transcriptShows(turn("accepted", 500), [])).toBe(false);
+  });
+
+  test("a row confirmed before uuids were recorded: the newest event at or after it (temporary)", () => {
+    const legacy = turn("accepted", 500, null);
+    expect(transcriptShows(legacy, [line("a", 100), line("b", 499)])).toBe(
+      false,
+    );
+    expect(transcriptShows(legacy, [line("a", 100), line("b", 500)])).toBe(
+      true,
+    );
+  });
+
+  test("never a turn the agent has not confirmed, whatever the transcript holds", () => {
     const unconfirmed: TurnState[] = [
       "held",
       "typing",
       "typed",
       "failed",
-      "unverified",
       "returned",
       "withdrawn",
     ];
     for (const state of unconfirmed) {
-      expect(transcriptShows(turn(state, null), upTo(1e9))).toBe(false);
+      expect(
+        transcriptShows(turn(state, null), [line("mine", 1e9), line("x", 2e9)]),
+      ).toBe(false);
     }
   });
 });

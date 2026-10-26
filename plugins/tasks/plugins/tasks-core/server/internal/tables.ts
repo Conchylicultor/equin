@@ -180,6 +180,7 @@ const conversationsEntity = defineEntity(conversationsEntityRef, {
       claudeSessionId: false,
       waitingFor: false,
       workingOn: { into: ["turn"], outOf: ["turn"] },
+      statusUnverifiedSince: false,
       spawnedBy: false,
       createdAt: false,
       endedAt: false,

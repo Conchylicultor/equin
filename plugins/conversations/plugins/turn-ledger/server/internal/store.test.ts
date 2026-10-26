@@ -7,9 +7,8 @@
  * seeded with the REAL migration chain.
  *
  * Only side-effect-free transitions are driven: `answer` rows (which emit no
- * `userTurnSent`) and no merge or unverified verdicts (which file reports into
- * the worktree's own database). The rules behind those are pure and pinned in
- * transition.test.ts.
+ * `userTurnSent` into the worktree's own database). The rules behind the
+ * transitions are pure and pinned in transition.test.ts.
  *
  * Requires the running embedded cluster — `./equin build` first.
  */
@@ -35,14 +34,17 @@ import { turnIdKind } from "../../core/id-kind";
 import {
   acceptTurn,
   applyTurnEvent,
+  confirmTurn,
+  dropTypedTurns,
   getTurn,
   hasHeldTurns,
   holdIfStarting,
   latestSubmitAt,
   listHeldTurns,
   resolvePromptSubmit,
-  returnTurnByText,
+  returnTurnByPromptUuid,
   returnTurnsSince,
+  type AcceptOutcome,
   type NewTurn,
 } from "./store";
 
@@ -97,6 +99,20 @@ const turn = (text: string): NewTurn => ({
   text,
   typedText: text,
 });
+
+/** The id of a turn the accept recorded for sending. */
+function sentId(outcome: AcceptOutcome): string {
+  if (outcome.kind !== "send") throw new Error(`not sent: ${outcome.kind}`);
+  return outcome.turn.id;
+}
+
+let uuidSeq = 0;
+const nextPromptUuid = () =>
+  `00000000-0000-4000-8000-${String(++uuidSeq).padStart(12, "0")}`;
+
+/** The agent's confirmation of the turn the accept recorded, by its id. */
+const confirm = (conversationId: string, outcome: AcceptOutcome, at = AT) =>
+  confirmTurn(conversationId, sentId(outcome), nextPromptUuid(), at, conn);
 
 const heldTexts = async (conversationId: string): Promise<string[]> =>
   (await listHeldTurns(conversationId, conn)).map((h) => h.typedText);
@@ -165,12 +181,8 @@ describe("acceptTurn", () => {
     const accepted = await acceptTurn(id, turn("/compact"), conn);
     if (accepted.kind !== "send") throw new Error(accepted.kind);
     await applyTurnEvent(accepted.turn.id, { kind: "typed" }, conn);
-    const resolved = await resolvePromptSubmit(
-      id,
-      { prompt: "/compact", promptUuid: crypto.randomUUID(), at: new Date() },
-      conn,
-    );
-    expect(resolved?.state).toBe("accepted");
+    const resolved = await confirm(id, accepted, new Date());
+    expect(resolved.kind).toBe("confirmed");
   });
 
   test("a flip in progress makes the accept wait, then record it for sending", async () => {
@@ -285,6 +297,95 @@ describe("delivery claims", () => {
   });
 });
 
+describe("confirmTurn", () => {
+  test("confirms THAT row by id, before `typed`, with the transcript line's uuid", async () => {
+    const id = await seedConversation("waiting");
+    const first = await acceptTurn(id, turn("same"), conn);
+    const second = await acceptTurn(id, turn("same"), conn);
+    const outcome = await confirmTurn(id, sentId(second), "uuid-2", AT, conn);
+    expect(outcome.kind).toBe("confirmed");
+    const confirmed = await getTurn(sentId(second), conn);
+    expect(confirmed).toMatchObject({
+      state: "accepted",
+      promptUuid: "uuid-2",
+      submittedAt: AT,
+    });
+    // The older row with the same text is not touched: the id names the row.
+    expect((await getTurn(sentId(first), conn))?.state).toBe("typing");
+  });
+
+  test("the submit check landing after the confirmation changes nothing", async () => {
+    const id = await seedConversation("waiting");
+    const accepted = await acceptTurn(id, turn("hi"), conn);
+    await confirm(id, accepted);
+    const after = await applyTurnEvent(
+      sentId(accepted),
+      { kind: "typed" },
+      conn,
+    );
+    expect(after.state).toBe("accepted");
+  });
+
+  test("a confirmation after `typed` lands too", async () => {
+    const id = await seedConversation("waiting");
+    const accepted = await acceptTurn(id, turn("hi"), conn);
+    await applyTurnEvent(sentId(accepted), { kind: "typed" }, conn);
+    expect((await confirm(id, accepted)).kind).toBe("confirmed");
+    expect((await getTurn(sentId(accepted), conn))?.state).toBe("accepted");
+  });
+
+  test("a withdrawn turn the agent did take becomes accepted", async () => {
+    const id = await seedConversation("waiting");
+    const accepted = await acceptTurn(id, turn("hi"), conn);
+    await applyTurnEvent(
+      sentId(accepted),
+      { kind: "failed", error: "no reply" },
+      conn,
+    );
+    await applyTurnEvent(sentId(accepted), { kind: "withdraw" }, conn);
+    expect((await confirm(id, accepted)).kind).toBe("confirmed");
+    expect((await getTurn(sentId(accepted), conn))?.state).toBe("accepted");
+  });
+
+  test("a settled row is a fixed point: a replayed line changes nothing", async () => {
+    const id = await seedConversation("waiting");
+    const accepted = await acceptTurn(id, turn("hi"), conn);
+    await confirmTurn(id, sentId(accepted), "uuid-first", AT, conn);
+    const later = new Date(AT.getTime() + 1_000);
+    const again = await confirmTurn(
+      id,
+      sentId(accepted),
+      "uuid-other",
+      later,
+      conn,
+    );
+    expect(again.kind).toBe("settled");
+    expect(await getTurn(sentId(accepted), conn)).toMatchObject({
+      state: "accepted",
+      promptUuid: "uuid-first",
+      submittedAt: AT,
+    });
+    // Stop's `returned` is settled too.
+    await applyTurnEvent(sentId(accepted), { kind: "returned" }, conn);
+    expect((await confirm(id, accepted)).kind).toBe("settled");
+  });
+
+  test("an id no row has, or another conversation's, confirms nothing", async () => {
+    const id = await seedConversation("waiting");
+    const other = await seedConversation("waiting");
+    expect(
+      (await confirmTurn(id, turnIdKind.mint(), "uuid-x", AT, conn)).kind,
+    ).toBe("unknown-turn");
+    const theirs = await acceptTurn(other, turn("theirs"), conn);
+    expect(await confirmTurn(id, sentId(theirs), "uuid-y", AT, conn)).toEqual({
+      kind: "other-conversation",
+      owner: other,
+    });
+    expect((await getTurn(sentId(theirs), conn))?.state).toBe("typing");
+  });
+});
+
+// The temporary text fallback, for an agent started before turn ids.
 describe("resolvePromptSubmit", () => {
   test("the confirmation accepts the oldest row with exactly its text, even before `typed`", async () => {
     const id = await seedConversation("waiting");
@@ -292,7 +393,9 @@ describe("resolvePromptSubmit", () => {
     const second = await acceptTurn(id, turn("same"), conn);
     const resolved = await resolvePromptSubmit(
       id,
-      { prompt: "same", promptUuid: crypto.randomUUID(), at: AT },
+      "same",
+      nextPromptUuid(),
+      AT,
       conn,
     );
     expect<string | undefined>(resolved?.id).toBe(
@@ -306,66 +409,65 @@ describe("resolvePromptSubmit", () => {
     expect(later?.state).toBe("typing");
   });
 
-  test("a prompt matching no row is not ours", async () => {
+  test("a prompt merely containing a row's text resolves nothing", async () => {
     const id = await seedConversation("waiting");
-    await acceptTurn(id, turn("mine"), conn);
-    expect(null);
+    const accepted = await acceptTurn(id, turn("mine"), conn);
+    expect(
+      await resolvePromptSubmit(
+        id,
+        "old draft\nmine",
+        nextPromptUuid(),
+        AT,
+        conn,
+      ),
+    ).toBe(null);
+    expect((await getTurn(sentId(accepted), conn))?.state).toBe("typing");
   });
 
   test("the submit check landing after the confirmation changes nothing", async () => {
     const id = await seedConversation("waiting");
     const accepted = await acceptTurn(id, turn("hi"), conn);
     const turnId = accepted.kind === "send" ? accepted.turn.id : "";
-    await resolvePromptSubmit(
-      id,
-      { prompt: "hi", promptUuid: crypto.randomUUID(), at: AT },
-      conn,
-    );
+    await resolvePromptSubmit(id, "hi", nextPromptUuid(), AT, conn);
     const after = await applyTurnEvent(turnId, { kind: "typed" }, conn);
     expect(after.state).toBe("accepted");
   });
 });
 
-describe("returnTurnByText", () => {
-  test("Stop's rewound text returns the newest delivered row carrying it", async () => {
+describe("returnTurnByPromptUuid", () => {
+  test("Stop's turn is the row the agent confirmed as that transcript line", async () => {
     const id = await seedConversation("waiting");
-    const accepted = await acceptTurn(id, turn("stop me"), conn);
-    const turnId = accepted.kind === "send" ? accepted.turn.id : "";
-    await resolvePromptSubmit(
-      id,
-      { prompt: "stop me", promptUuid: crypto.randomUUID(), at: AT },
-      conn,
-    );
+    const first = await acceptTurn(id, turn("same"), conn);
+    const second = await acceptTurn(id, turn("same"), conn);
+    await confirmTurn(id, sentId(first), "uuid-first", AT, conn);
+    await confirmTurn(id, sentId(second), "uuid-second", AT, conn);
     expect<string | undefined>(
-      (await returnTurnByText(id, "stop me\n", conn))?.id,
-    ).toBe(turnId);
-    expect((await getTurn(turnId, conn))?.state).toBe("returned");
+      (await returnTurnByPromptUuid(id, "uuid-first", conn))?.id,
+    ).toBe(sentId(first));
+    expect((await getTurn(sentId(first), conn))?.state).toBe("returned");
+    expect((await getTurn(sentId(second), conn))?.state).toBe("accepted");
   });
 
-  test("text no recent row carries returns nothing", async () => {
+  test("a uuid no row of this conversation carries returns nothing", async () => {
     const id = await seedConversation("waiting");
-    await acceptTurn(id, turn("kept"), conn);
-    expect(await returnTurnByText(id, "something else", conn)).toBe(null);
+    const other = await seedConversation("waiting");
+    const theirs = await acceptTurn(other, turn("theirs"), conn);
+    await confirmTurn(other, sentId(theirs), "uuid-theirs", AT, conn);
+    expect(await returnTurnByPromptUuid(id, "uuid-theirs", conn)).toBe(null);
+    expect(await returnTurnByPromptUuid(id, "uuid-none", conn)).toBe(null);
+    expect((await getTurn(sentId(theirs), conn))?.state).toBe("accepted");
   });
 });
 
 describe("latestSubmitAt", () => {
   test("is when the CLI last confirmed a turn, absent before any", async () => {
     const id = await seedConversation("waiting");
-    await acceptTurn(id, turn("first"), conn);
+    const first = await acceptTurn(id, turn("first"), conn);
     expect((await latestSubmitAt([id], conn)).has(id)).toBe(false);
-    await resolvePromptSubmit(
-      id,
-      { prompt: "first", promptUuid: crypto.randomUUID(), at: AT },
-      conn,
-    );
+    await confirm(id, first);
     const later = new Date(AT.getTime() + 5_000);
-    await acceptTurn(id, turn("second"), conn);
-    await resolvePromptSubmit(
-      id,
-      { prompt: "second", promptUuid: crypto.randomUUID(), at: later },
-      conn,
-    );
+    const second = await acceptTurn(id, turn("second"), conn);
+    await confirm(id, second, later);
     expect((await latestSubmitAt([id], conn)).get(id)).toEqual(later);
   });
 });
@@ -374,20 +476,15 @@ describe("returnTurnsSince", () => {
   test("returns the delivered turns sent at or after the cut, not before", async () => {
     const id = await seedConversation("waiting");
     const before = await acceptTurn(id, turn("kept"), conn);
-    await resolvePromptSubmit(
-      id,
-      { prompt: "kept", promptUuid: crypto.randomUUID(), at: AT },
-      conn,
-    );
+    await confirm(id, before);
+    // The cut is read in ms, the rows' times in µs: keep the kept turn out of
+    // the cut's millisecond.
+    await Bun.sleep(2);
     const [{ now }] = (
       await t.db.execute<{ now: Date }>(sql`SELECT clock_timestamp() AS now`)
     ).rows as [{ now: Date }];
     const after = await acceptTurn(id, turn("cut"), conn);
-    await resolvePromptSubmit(
-      id,
-      { prompt: "cut", promptUuid: crypto.randomUUID(), at: AT },
-      conn,
-    );
+    await confirm(id, after);
     const returned = await returnTurnsSince(id, new Date(now), conn);
     expect<string[]>(returned.map((row) => row.id)).toEqual([
       after.kind === "send" ? after.turn.id : "",
@@ -396,5 +493,29 @@ describe("returnTurnsSince", () => {
       (await getTurn(before.kind === "send" ? before.turn.id : "", conn))
         ?.state,
     ).toBe("accepted");
+  });
+});
+
+describe("dropTypedTurns", () => {
+  test("fails the turns still queued in the agent that went away, and only those", async () => {
+    const id = await seedConversation("waiting");
+    const queued = await acceptTurn(id, turn("queued"), conn);
+    await applyTurnEvent(sentId(queued), { kind: "typed" }, conn);
+    const taken = await acceptTurn(id, turn("taken"), conn);
+    await applyTurnEvent(sentId(taken), { kind: "typed" }, conn);
+    await confirm(id, taken);
+    // The cut is read in ms, the rows' times in µs.
+    await Bun.sleep(2);
+    const [{ now }] = (
+      await t.db.execute<{ now: Date }>(sql`SELECT clock_timestamp() AS now`)
+    ).rows as [{ now: Date }];
+    const later = await acceptTurn(id, turn("to the next agent"), conn);
+    await applyTurnEvent(sentId(later), { kind: "typed" }, conn);
+    const dropped = await dropTypedTurns(id, new Date(now), conn);
+    expect<string[]>(dropped.map((row) => row.id)).toEqual([sentId(queued)]);
+    expect((await getTurn(sentId(taken), conn))?.state).toBe("accepted");
+    expect((await getTurn(sentId(later), conn))?.state).toBe("typed");
+    // A late confirmation still wins.
+    expect((await confirm(id, queued)).kind).toBe("confirmed");
   });
 });

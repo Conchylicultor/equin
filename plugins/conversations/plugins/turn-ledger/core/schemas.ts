@@ -31,32 +31,27 @@ export type TurnKind = z.infer<typeof TurnKindSchema>;
  * - `typed` — the agent's socket took it; waiting on its CLI to start it. A
  *   busy agent's CLI holds it in its command queue until the next tool
  *   boundary or the turn's end: the web shows it as Queued.
- * - `accepted` — the agent confirmed exactly this text (also for a busy agent:
- *   it confirms when the CLI starts it).
- * - `merged` — the agent confirmed this text PLUS other text; `extraText` is
- *   the rest.
+ * - `accepted` — the agent confirmed taking THIS turn: its `turn_started`
+ *   echoed the row's id when its CLI started it (for a busy agent: at the
+ *   next tool boundary or the turn's end).
  * - `returned` — Stop rewound it: the agent gave it back and the web draft is
  *   now its only copy.
  * - `failed` — it never reached the agent (a resume that was refused, a socket
  *   error), or the agent went away before its CLI started it. Retry.
- * - `unverified` — sent, but the runtime cannot tell whether it went in.
- *   Retry; a late confirmation still resolves it.
- * - `withdrawn` — a `failed` / `unverified` turn the user took back into the
- *   draft instead of retrying (the card's Copy to draft); its error stays for
- *   history. A late confirmation matching it EXACTLY still makes it `accepted`
- *   (an unverified turn may have landed after all), unlike Stop's `returned`.
+ * - `withdrawn` — a `failed` turn the user took back into the draft instead
+ *   of retrying (the card's Copy to draft); its error stays for history. A
+ *   late confirmation of it still makes it `accepted` (the agent's word is the
+ *   truth), unlike Stop's `returned`.
  *
- * A confirmation always wins, over `failed` and `unverified` too.
+ * A confirmation always wins, over `failed` too.
  */
 export const TurnStateSchema = z.enum([
   "held",
   "typing",
   "typed",
   "accepted",
-  "merged",
   "returned",
   "failed",
-  "unverified",
   "withdrawn",
 ]);
 export type TurnState = z.infer<typeof TurnStateSchema>;
@@ -64,17 +59,15 @@ export type TurnState = z.infer<typeof TurnStateSchema>;
 /** The states a user may Retry from. */
 export const RETRYABLE_TURN_STATES = [
   "failed",
-  "unverified",
 ] as const satisfies readonly TurnState[];
 
 /**
  * The states whose outcome is decided — swept by retention a week later. Only
- * two late facts still move one: Stop's `returned` (out of accepted / merged)
- * and an exact confirmation (out of `withdrawn`), neither of which reopens it.
+ * two late facts still move one: Stop's `returned` (out of `accepted`) and a
+ * confirmation (out of `withdrawn`), neither of which reopens it.
  */
 export const SETTLED_TURN_STATES = [
   "accepted",
-  "merged",
   "returned",
   "withdrawn",
 ] as const satisfies readonly TurnState[];

@@ -7,6 +7,7 @@ import {
   type Liveness,
   type PlanContext,
   type PlanRow,
+  type UpdatePlan,
 } from "./plan-update";
 import type { RuntimeInfo } from "./runtime";
 
@@ -23,6 +24,7 @@ function row(overrides: Partial<PlanRow> = {}): PlanRow {
     workingOn: null,
     createdAt: new Date(NOW - 60 * 60_000),
     hibernatedAt: null,
+    statusUnverifiedSince: null,
     ...overrides,
   };
 }
@@ -41,7 +43,7 @@ function live(overrides: Partial<RuntimeInfo> = {}): Liveness {
 }
 
 const ABSENT: Liveness = { kind: "absent" };
-const UNKNOWN: Liveness = { kind: "unknown" };
+const UNKNOWN: Liveness = { kind: "unknown", reason: "behind" };
 
 function ctx(overrides: Partial<PlanContext> = {}): PlanContext {
   return {
@@ -258,20 +260,97 @@ describe("planConversationUpdate — dead agent", () => {
   });
 });
 
-describe("planConversationUpdate — no live session", () => {
-  test("failed runtime (unknown) → untouched, whatever the row", () => {
-    expect(planConversationUpdate(row(), UNKNOWN, ctx())).toEqual({
-      kind: "noop",
-    });
+describe("planConversationUpdate — unknown state (unverified)", () => {
+  const MARKED = new Date(NOW - 30_000);
+  const MARK: UpdatePlan = {
+    kind: "patch",
+    patch: { statusUnverifiedSince: new Date(NOW) },
+    adoptedSessionId: null,
+  };
+  const CLEAR: UpdatePlan = {
+    kind: "patch",
+    patch: { statusUnverifiedSince: null },
+    adoptedSessionId: null,
+  };
+
+  test("unknown marks the row unverified — status untouched, whatever it is", () => {
+    for (const r of [
+      row(),
+      row({ status: "working", workingOn: "turn" }),
+      row({ status: "starting", createdAt: new Date(0) }),
+    ]) {
+      expect(planConversationUpdate(r, UNKNOWN, ctx())).toEqual(MARK);
+    }
+  });
+
+  test("unknown keeps the first mark's time", () => {
     expect(
       planConversationUpdate(
-        row({ status: "starting", createdAt: new Date(0) }),
+        row({ statusUnverifiedSince: MARKED }),
         UNKNOWN,
         ctx(),
       ),
     ).toEqual({ kind: "noop" });
   });
 
+  test("live clears the mark, alone or with the status change", () => {
+    expect(
+      planConversationUpdate(
+        row({ statusUnverifiedSince: MARKED }),
+        live(),
+        ctx(),
+      ),
+    ).toEqual(CLEAR);
+    expect(
+      planConversationUpdate(
+        row({ statusUnverifiedSince: MARKED }),
+        live({ workingOn: "turn" }),
+        ctx(),
+      ),
+    ).toEqual({
+      kind: "patch",
+      patch: {
+        status: "working",
+        workingOn: "turn",
+        statusUnverifiedSince: null,
+      },
+      adoptedSessionId: null,
+    });
+  });
+
+  test("absent clears the mark on every plan that keeps the row", () => {
+    expect(
+      planConversationUpdate(
+        row({ status: "gone", statusUnverifiedSince: MARKED }),
+        ABSENT,
+        ctx(),
+      ),
+    ).toEqual(CLEAR);
+    expect(
+      planConversationUpdate(
+        row({ statusUnverifiedSince: MARKED }),
+        ABSENT,
+        ctx(),
+      ),
+    ).toEqual({ kind: "hibernate", endTurn: false, clearUnverified: true });
+    // gone / closed clear it in their own write.
+    expect(
+      planConversationUpdate(
+        row({ closeRequested: true, statusUnverifiedSince: MARKED }),
+        ABSENT,
+        ctx(),
+      ),
+    ).toEqual({ kind: "closed" });
+  });
+
+  test("a checked row is never patched for the mark", () => {
+    expect(planConversationUpdate(row(), live(), ctx())).toEqual({
+      kind: "noop",
+    });
+  });
+});
+
+describe("planConversationUpdate — no live session", () => {
   test("already gone → noop", () => {
     expect(
       planConversationUpdate(row({ status: "gone" }), ABSENT, ctx()),

@@ -1,6 +1,6 @@
 /**
- * `PendingTurnCard` by state: the echo while held or being typed, the merged
- * warning naming the other text, and Retry / Copy to draft on a failure — a
+ * `PendingTurnCard` by state: the echo while held or being typed, and Retry /
+ * Copy to draft on a failure — a
  * ledger row's through the server's retry / withdraw endpoints, a request that
  * never reached the server through the tab's own store.
  */
@@ -72,7 +72,6 @@ function turn(state: PendingTurnState, over: Partial<PendingTurn> = {}) {
     text: "fix the build",
     sentAt: new Date("2026-10-21T10:00:00Z"),
     state,
-    extraText: null,
     error: null,
     ...over,
   } satisfies PendingTurn;
@@ -145,21 +144,6 @@ describe("PendingTurnCard", () => {
     }
   });
 
-  it("names the text a merged turn was submitted with", () => {
-    render(
-      <PendingTurnCard
-        renderEcho={renderEcho}
-        conversationId={CONV}
-        turn={turn("merged", { extraText: "an old draft" })}
-        agentStarting={false}
-        turnRunning={false}
-      />,
-    );
-    expect(screen.getByText("an old draft")).toBeTruthy();
-    expect(screen.getByText(/together with other text/)).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
-  });
-
   it("offers Retry on a failed row, through the server's retry", async () => {
     render(
       <PendingTurnCard
@@ -181,17 +165,17 @@ describe("PendingTurnCard", () => {
     );
   });
 
-  it("Copy to draft withdraws an unverified row and fills the draft", async () => {
+  it("Copy to draft withdraws a failed row and fills the draft", async () => {
     render(
       <PendingTurnCard
         renderEcho={renderEcho}
         conversationId={CONV}
-        turn={turn("unverified")}
+        turn={turn("failed")}
         agentStarting={false}
         turnRunning={false}
       />,
     );
-    expect(screen.getByText(/Not confirmed/)).toBeTruthy();
+    expect(screen.getByText(/Failed to send/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Copy to draft" }));
     await waitFor(() =>
       expect(routes()).toEqual([

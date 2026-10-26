@@ -8,7 +8,7 @@ import {
 } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import {
-  CONV_STATUS_DOT,
+  convStatusDot,
   conversationTitle,
 } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
@@ -113,7 +113,7 @@ function AttemptSection({
                     "gap-sm px-sm py-xs text-left text-body",
                   )}
                 >
-                  <StatusDot {...CONV_STATUS_DOT[c.status]} />
+                  <StatusDot {...convStatusDot(c)} />
                   <Fill as="span" className="truncate">
                     {conversationTitle(c)}
                   </Fill>

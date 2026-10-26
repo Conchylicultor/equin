@@ -37,6 +37,8 @@ export type UpdateConversationPatch = ConversationStatusPatch & {
   title?: string | null;
   claudeSessionId?: string | null;
   waitingFor?: string | null;
+  /** See the field: set while the reconciler cannot check `status`. */
+  statusUnverifiedSince?: Date | null;
   endedAt?: Date | null;
   closeRequested?: boolean;
 };
@@ -189,6 +191,8 @@ export async function updateConversation(
   if (patch.claudeSessionId !== undefined)
     dbPatch.claudeSessionId = patch.claudeSessionId;
   if (patch.waitingFor !== undefined) dbPatch.waitingFor = patch.waitingFor;
+  if (patch.statusUnverifiedSince !== undefined)
+    dbPatch.statusUnverifiedSince = patch.statusUnverifiedSince;
   if (patch.endedAt !== undefined) dbPatch.endedAt = patch.endedAt;
   if (patch.closeRequested !== undefined)
     dbPatch.closeRequested = patch.closeRequested;
@@ -267,6 +271,7 @@ export async function markConversationGone(id: string): Promise<boolean> {
         endedAt: now,
         waitingFor: null,
         workingOn: null,
+        statusUnverifiedSince: null,
       })
       .where(
         and(
@@ -316,7 +321,12 @@ export async function markConversationClosed(
   await withTaskStatusChange(taskId ?? [], db, async () => {
     await db
       .update(_conversations)
-      .set({ status: "done", endedAt, workingOn: null })
+      .set({
+        status: "done",
+        endedAt,
+        workingOn: null,
+        statusUnverifiedSince: null,
+      })
       .where(eq(_conversations.id, id));
   });
   await emitConversationStatusChange(id, taskId, prevStatus, "done");

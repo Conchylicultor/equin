@@ -128,6 +128,9 @@ describe("conversation lists — routes", () => {
         "runtime",
         "spawned_by",
         "status",
+        // The status-unverified mark: the status cell reads it. Written only
+        // when a reconcile cannot check the row, and when it next can.
+        "status_unverified_since",
         "title",
         "updated_at",
       ].sort(),

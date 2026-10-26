@@ -9,7 +9,7 @@ import {
   DEFAULT_AGENT_AVATAR,
 } from "@plugins/primitives/plugins/avatar/web";
 import {
-  CONV_STATUS_DOT,
+  convStatusDot,
   type ConversationItemConv,
 } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { agentLaunchRows, agentRows } from "../../core";
@@ -38,7 +38,7 @@ export function AgentAvatarRow({ conv }: { conv: ConversationItemConv }) {
   return (
     <Avatar
       icon={agent?.icon ?? DEFAULT_AGENT_AVATAR.icon}
-      statusDot={statusDotPaintClass(CONV_STATUS_DOT[conv.status])}
+      statusDot={statusDotPaintClass(convStatusDot(conv))}
       title={agent?.name}
       colorless
     />

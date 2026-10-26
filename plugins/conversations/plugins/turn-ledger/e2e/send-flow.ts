@@ -1,21 +1,22 @@
 /**
- * The turn ledger against a real Claude session: every turn the app types gets
- * a `conversation_turns` row whose verdict comes from the CLI's own
- * UserPromptSubmit hook — never from matching transcript text.
+ * The turn ledger against a real Claude session: every turn the app sends gets
+ * a `conversation_turns` row confirmed by the agent's own `turn_started`, which
+ * echoes the row's id and names the transcript line it became (`prompt_uuid`)
+ * — never by matching transcript text.
  *
  *   1. Send → the row reaches `accepted`, and the pane shows no card for it.
- *   2. Send while the agent is busy → `accepted` at Enter (the hook fires on
- *      enqueue), while the conversation is still `working`.
- *   3. The incident replay (research/2026-10-15-conversations-turn-ledger.md):
- *      a turn P, Stop (the CLI puts P back in its input box; Stop's rewind
- *      hands it to the draft), then a different turn B. P's row is `returned`
- *      and B's is `accepted` with exactly B — the box was emptied before B was
- *      typed, so the CLI never submitted `P+B`. P is a harmless counting turn,
- *      not Push & Close: a wrap-up prompt the Stop came too late for would
- *      push the throwaway attempt.
- *
- * Not covered here: a server killed mid-send, whose mailbox file confirms the
- * row on the next boot — `server/internal/mailbox.test.ts` pins the boot drain.
+ *   2. Send while the agent is busy → `accepted` when the agent queues it,
+ *      while the conversation is still `working`.
+ *   3. Stop, then a different turn: Stop returns exactly the stopped turn's
+ *      row (found by its transcript uuid) and hands back that row's own text;
+ *      the next turn is accepted alone. P is a harmless counting turn, not
+ *      Push & Close: a wrap-up prompt the Stop came too late for would push
+ *      the throwaway attempt.
+ *   4. Identity: the launch turn and every accepted turn carry their own
+ *      `prompt_uuid`, and the transcript holds a line under each — a user
+ *      line, or the `queued_command` attachment of a turn the busy agent
+ *      absorbed (`source_uuid`) — which is what retires each echo; the pane
+ *      shows no card for any of them.
  *
  * It creates its own throwaway conversation (Haiku) and acts only on that one:
  * agent processes and transcripts live in `~/.claude`, so driving a
@@ -53,10 +54,10 @@ const attemptId = requireArg(
 interface LedgerRow extends Record<string, unknown> {
   id: string;
   state: TurnState;
+  text: string;
   typed_text: string;
-  submitted_text: string | null;
-  extra_text: string | null;
   error: string | null;
+  prompt_uuid: string | null;
 }
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
@@ -89,7 +90,7 @@ const db = openDeployDb();
 
 async function ledgerRow(turnId: string): Promise<LedgerRow | null> {
   const [row] = await db.query<LedgerRow>(
-    `SELECT id, state, typed_text, submitted_text, extra_text, error
+    `SELECT id, state, text, typed_text, error, prompt_uuid
        FROM conversation_turns WHERE id = $1`,
     [turnId],
   );
@@ -100,11 +101,12 @@ async function ledgerRow(turnId: string): Promise<LedgerRow | null> {
 async function awaitTurn(
   turnId: string,
   states: readonly TurnState[],
+  intervalMs = 250,
 ): Promise<LedgerRow | null> {
   const settled = await waitFor(
     () => ledgerRow(turnId),
     (row) => row !== null && states.includes(row.state),
-    { timeoutMs: TURN_BUDGET_MS, intervalMs: 250 },
+    { timeoutMs: TURN_BUDGET_MS, intervalMs },
   );
   return settled.value;
 }
@@ -134,16 +136,12 @@ try {
   r.note(`throwaway conversation ${conv.id}`);
   await awaitStatus(conv.id, "waiting");
 
-  // 1. An idle agent: the hook confirms the exact text.
+  // 1. An idle agent: it confirms the turn by its id.
   const first = await send(conv.id, "Reply with only the word ALPHA.");
-  const firstRow = await awaitTurn(first, ["accepted", "merged", "failed"]);
+  const firstRow = await awaitTurn(first, ["accepted", "failed"]);
   r.ok(
     `an idle send is accepted (got ${firstRow?.state ?? "no row"})`,
     firstRow?.state === "accepted",
-  );
-  r.ok(
-    "an accepted turn carries no submitted text of its own",
-    firstRow?.submitted_text === null,
   );
   await awaitStatus(conv.id, "waiting");
 
@@ -153,21 +151,23 @@ try {
       marker: "[data-event-index]",
       settleMs: 2500,
     });
-    const cards = page.getByText(/Sending…|Not confirmed|Failed to send/);
+    const cards = page.getByText(
+      /Sending…|Waiting for the agent|Failed to send/,
+    );
     r.ok(
       `no pending card once the turn is accepted (found ${await cards.count()})`,
       (await cards.count()) === 0,
     );
   });
 
-  // 2. A busy agent: the hook fires at Enter, carrying the running prompt's id.
+  // 2. A busy agent: it confirms the turn when it queues it.
   await send(
     conv.id,
     "Count from 1 to 300, one number per line, and nothing else.",
   );
   await awaitStatus(conv.id, "working");
   const queued = await send(conv.id, "Then reply with only the word BETA.");
-  const queuedRow = await awaitTurn(queued, ["accepted", "merged", "failed"]);
+  const queuedRow = await awaitTurn(queued, ["accepted", "failed"]);
   const stillWorking = await api<{ status: string }>(
     `/api/conversations/${conv.id}`,
   );
@@ -178,33 +178,114 @@ try {
   r.note(`status when the queued turn was accepted: ${stillWorking.status}`);
   await awaitStatus(conv.id, "waiting");
 
-  // 3. Stop, then a different turn: never `P+B`.
-  const stopped = await send(
-    conv.id,
-    "Count from 1 to 500, one number per line, and nothing else.",
-  );
-  await awaitStatus(conv.id, "working");
-  const stop = await post<{ ok: boolean; rewindText: string | null }>(
-    `/api/conversations/${conv.id}/stop`,
-    {},
+  // 3. Stop takes back exactly the stopped turn, then a different turn goes alone.
+  //    Stop takes a turn back only while it has no reply yet, and Haiku starts
+  //    answering about a second after it takes the turn: Stop as soon as the
+  //    row is accepted (the agent took it), and try again when the reply won
+  //    the race (Stop then rightly keeps the turn).
+  const STOP_TRIES = 3;
+  let stopped: string | null = null;
+  let stop: { ok: boolean; rewindText: string | null } = {
+    ok: false,
+    rewindText: null,
+  };
+  for (let attempt = 1; attempt <= STOP_TRIES; attempt++) {
+    stopped = await send(
+      conv.id,
+      "Count from 1 to 500, one number per line, and nothing else.",
+    );
+    await awaitTurn(stopped, ["accepted", "failed"], 25);
+    stop = await post<{ ok: boolean; rewindText: string | null }>(
+      `/api/conversations/${conv.id}/stop`,
+      {},
+    );
+    if (stop.rewindText !== null) break;
+    r.note(
+      `stop try ${attempt}: the turn already had a reply, so Stop kept it`,
+    );
+    await awaitStatus(conv.id, "waiting");
+  }
+  const stoppedRow = stopped === null ? null : await ledgerRow(stopped);
+  r.ok(
+    `the stopped turn's own row is returned (got ${stoppedRow?.state ?? "no row"}, prompt_uuid ${stoppedRow?.prompt_uuid ?? "none"})`,
+    stoppedRow?.state === "returned" && stoppedRow.prompt_uuid !== null,
   );
   r.ok(
-    "Stop hands the stopped turn back as the draft",
-    stop.rewindText?.includes("1 to 500") ?? false,
-  );
-  const stoppedRow = await awaitTurn(stopped, ["returned"]);
-  r.ok(
-    `the stopped turn is returned (got ${stoppedRow?.state ?? "no row"})`,
-    stoppedRow?.state === "returned",
+    `Stop hands back that row's text as the draft (got ${JSON.stringify(stop.rewindText)})`,
+    stoppedRow !== null && stop.rewindText === stoppedRow.text,
   );
   await awaitStatus(conv.id, "waiting");
   const B = "Reply with only the word GAMMA.";
   const after = await send(conv.id, B);
-  const afterRow = await awaitTurn(after, ["accepted", "merged", "failed"]);
+  const afterRow = await awaitTurn(after, ["accepted", "failed"]);
   r.ok(
-    `the turn after Stop is accepted alone (got ${afterRow?.state ?? "no row"}${afterRow?.extra_text ? `, merged with ${JSON.stringify(afterRow.extra_text)}` : ""})`,
+    `the turn after Stop is accepted (got ${afterRow?.state ?? "no row"})`,
     afterRow?.state === "accepted" && afterRow.typed_text === B,
   );
+
+  // 4. Identity: every confirmed turn — the launch prompt included — is
+  //    confirmed by its own id and names its own transcript line.
+  const launchRows = await db.query<LedgerRow>(
+    `SELECT id, state, text, typed_text, error, prompt_uuid
+       FROM conversation_turns WHERE conversation_id = $1 AND kind = 'launch'`,
+    [conv.id],
+  );
+  const confirmed = [launchRows[0] ?? null, firstRow, queuedRow, afterRow];
+  const uuids = confirmed.map((row) => row?.prompt_uuid ?? null);
+  r.ok(
+    `the launch turn and each accepted turn carry a transcript uuid (got ${JSON.stringify(uuids)})`,
+    confirmed.every((row) => row?.state === "accepted") &&
+      uuids.every((uuid) => uuid !== null),
+  );
+  r.ok(
+    "each turn's transcript uuid is its own",
+    new Set(uuids).size === uuids.length,
+  );
+
+  // The line each echo retires on: a user line under the uuid, or a busy
+  // agent's `queued_command` attachment naming it.
+  // The agent confirms a turn as it hands it to Claude Code, which writes the
+  // line a moment later: wait for it (bounded) rather than read once.
+  const missingLines = async (): Promise<(string | null)[]> => {
+    const { paths } = await api<{ paths: string[] }>(
+      `/api/conversations/${conv.id}/transcript`,
+    );
+    const lines = (
+      await Promise.all(paths.map((path) => Bun.file(path).text()))
+    ).join("\n");
+    return uuids.filter(
+      (uuid) =>
+        uuid === null ||
+        !(
+          lines.includes(`"uuid":"${uuid}"`) ||
+          lines.includes(`"source_uuid":"${uuid}"`)
+        ),
+    );
+  };
+  const missing = (
+    await waitFor(missingLines, (left) => left.length === 0, {
+      timeoutMs: 30_000,
+      intervalMs: 250,
+    })
+  ).value;
+  r.ok(
+    `the transcript holds a line under each turn's uuid (missing ${JSON.stringify(missing)})`,
+    missing.length === 0,
+  );
+  await withBrowser(async (h) => {
+    const { page } = await h.session();
+    await boot(page, pathUrl(`/agents/c/${conv.id}`), {
+      marker: "[data-event-index]",
+      settleMs: 2500,
+    });
+    const cards = page.getByText(
+      /Sending…|Waiting for the agent|Failed to send/,
+    );
+    r.ok(
+      `every echo retired on its line (pending cards: ${await cards.count()})`,
+      (await cards.count()) === 0,
+    );
+  });
 } finally {
   // Close first (so the status reconciler files it as done, not as hibernated
   // work to come back to), then kill the pane.

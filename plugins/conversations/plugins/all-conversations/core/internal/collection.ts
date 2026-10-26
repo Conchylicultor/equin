@@ -22,6 +22,9 @@ import { CONVERSATION_SORTABLE } from "./fields";
 // `waitingFor`, `lastViewedAt`, `claudeSessionId`, `closeRequested`,
 // `hibernatedAt`, `attemptId` — so the status reconciler's `waitingFor` /
 // `lastViewedAt` writes fall outside every list's route gate and load nothing.
+// It does carry `statusUnverifiedSince`: the status cell renders Unknown while
+// it is set, and the reconciler writes it only on entering and leaving an
+// unverified stretch.
 
 /** The conversation fields a list shows, in list order. */
 const CONVERSATION_LIST_PICK = [
@@ -48,7 +51,7 @@ const CONVERSATION_LIST_OWN_FIELDS = {
 
 /** What a row carries that no list shows. */
 const CONVERSATION_LIST_CARRY = {
-  pick: ["id", "spawnedBy"],
+  pick: ["id", "spawnedBy", "statusUnverifiedSince"],
   fields: { taskId: textField() },
 } as const;
 

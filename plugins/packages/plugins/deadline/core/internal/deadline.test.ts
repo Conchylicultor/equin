@@ -1,12 +1,17 @@
 import { describe, expect, test } from "bun:test";
 import { withDeadline } from "./deadline";
-import { BrowserFetchError } from "./errors";
 
-// The regression these pin: `await import("playwright")` used to be awaited with
-// no deadline, so a module load that never settled parked a caller forever —
-// observed in a live backend as a refresh job open for hours with no error, no
-// log line and no failed run. Every step of a render is now bounded; this is the
-// one whose bound had to be built by hand, so it is the one worth testing.
+// The regression these pin: browser-fetch's `await import("playwright")` used to
+// be awaited with no deadline, so a module load that never settled parked a
+// caller forever — observed in a live backend as a refresh job open for hours
+// with no error, no log line and no failed run.
+
+class SlowError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "SlowError";
+  }
+}
 
 describe("withDeadline", () => {
   test("passes a value through when the work wins the race", async () => {
@@ -24,15 +29,9 @@ describe("withDeadline", () => {
     const caught = await withDeadline(
       never,
       10,
-      () =>
-        new BrowserFetchError(
-          "browser-unavailable",
-          "https://example.com/",
-          "took too long",
-        ),
+      () => new SlowError("took too long"),
     ).catch((err: unknown) => err);
-    expect(caught).toBeInstanceOf(BrowserFetchError);
-    expect((caught as BrowserFetchError).kind).toBe("browser-unavailable");
+    expect(caught).toBeInstanceOf(SlowError);
     expect((caught as Error).message).toBe("took too long");
   });
 

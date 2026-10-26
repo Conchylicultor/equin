@@ -85,7 +85,7 @@ export const postTurnDelivery: TurnDelivery = {
   },
 };
 
-/** Type a `failed` / `unverified` ledger row again (the server's Retry). */
+/** Type a `failed` ledger row again (the server's Retry). */
 export async function retryLedgerTurn(
   fetchEndpoint: FetchEndpoint,
   conversationId: string,
@@ -96,7 +96,7 @@ export async function retryLedgerTurn(
   );
 }
 
-/** Take a `failed` / `unverified` ledger row back: it becomes `returned`. */
+/** Take a `failed` ledger row back: it becomes `returned`. */
 export async function withdrawLedgerTurn(
   fetchEndpoint: FetchEndpoint,
   conversationId: string,

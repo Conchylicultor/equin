@@ -20,6 +20,13 @@ import { z } from "zod";
 // running agent would then refuse every command): an agent advertises them in
 // `hello` (`stream`, `contextUsage`), and a backend uses them only when
 // advertised.
+//
+// Turn ids (`turnIds`) are such an addition: every agent has always echoed a
+// `turn` command's `turnId` in its `turn_started`, so a backend sending its
+// ledger id breaks no running agent. What an agent started before it cannot do
+// is put the id on its LAUNCH prompt (read from the options file, where it
+// was a bare string) — its `started` line lacks `turnIds`, and the backend
+// confirms that one turn by text (turn-ledger's temporary legacy path).
 export const PROTOCOL_VERSION = 2;
 
 /**
@@ -35,7 +42,11 @@ export type AgentAnswer = z.infer<typeof AgentAnswerSchema>;
 
 export const AgentCommandSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("hello"), version: z.number().int() }),
-  /** A user turn. `turnId` is the backend's, echoed in the `turn_started` event. */
+  /**
+   * A user turn. `turnId` is the backend's ledger id, echoed in the
+   * `turn_started` event — the key the ledger confirms the turn by. The backend
+   * always sends one; null is left on the wire for a backend from before.
+   */
   z.object({
     type: z.literal("turn"),
     turnId: z.string().nullable(),
@@ -105,6 +116,11 @@ export const HelloReplySchema = z.object({
   stream: z.literal(true).optional(),
   /** The agent takes `contextUsage`. Absent from an agent started before it existed. */
   contextUsage: z.literal(true).optional(),
+  /**
+   * Every turn the agent takes carries the backend's turn id, its launch
+   * prompt included (`AgentLaunchPrompt`). Absent from an agent started before.
+   */
+  turnIds: z.literal(true).optional(),
 });
 export type HelloReply = z.infer<typeof HelloReplySchema>;
 
@@ -136,10 +152,18 @@ export const AgentLifecycleSchema = z.discriminatedUnion("event", [
     resumeAt: z.string().nullable(),
     fork: z.boolean(),
     account: z.string().optional(),
+    /**
+     * As `hello.turnIds`: this process puts the backend's turn id on every
+     * turn it takes, so a `turn_started` without one is not the backend's.
+     * On the line, not only in `hello`, so a replay of the file knows which
+     * process wrote each `turn_started` after it.
+     */
+    turnIds: z.literal(true).optional(),
   }),
   z.object({ event: z.literal("ready"), cliVersion: z.string().nullable() }),
   z.object({
     event: z.literal("turn_started"),
+    /** The `turn` command's (or the launch prompt's) `turnId`, echoed. */
     turnId: z.string().nullable(),
     promptUuid: z.string(),
     text: z.string(),
@@ -215,6 +239,16 @@ export const AGENT_EVENTS_FILE = "events.jsonl";
 /** The launch options file inside an agent's directory (`AgentLaunchOptions`). */
 export const AGENT_OPTIONS_FILE = "launch.json";
 
+/**
+ * The launch's first turn: the ledger row it is (`turnId`, echoed in its
+ * `turn_started` like a `turn` command's) and its text.
+ */
+export const AgentLaunchPromptSchema = z.object({
+  turnId: z.string(),
+  text: z.string(),
+});
+export type AgentLaunchPrompt = z.infer<typeof AgentLaunchPromptSchema>;
+
 /** One MCP server the launch adds (the workspace's `LaunchMcpServer`). */
 const McpServerSchema = z.object({ type: z.literal("http"), url: z.string() });
 
@@ -228,7 +262,7 @@ const McpServerSchema = z.object({ type: z.literal("http"), url: z.string() });
  * field existed is defaulted in this one place, never per reader.
  */
 export const AgentLaunchOptionsSchema = z.preprocess(
-  defaultLegacyGuardsRoot,
+  defaultLegacyFields,
   z.object({
   cwd: z.string(),
   /**
@@ -286,7 +320,7 @@ export const AgentLaunchOptionsSchema = z.preprocess(
    * socket so a launch retried after a crash never loses it: a running agent
    * already took it, a new one takes it from here.
    */
-  prompt: z.string().nullable(),
+    prompt: AgentLaunchPromptSchema.nullable(),
   /**
    * Added after Claude Code's own system prompt (`systemPrompt.append` on the
    * `claude_code` preset), never in its place: the launch's instructions (a
@@ -299,8 +333,20 @@ export const AgentLaunchOptionsSchema = z.preprocess(
 );
 export type AgentLaunchOptions = z.infer<typeof AgentLaunchOptionsSchema>;
 
-function defaultLegacyGuardsRoot(raw: unknown): unknown {
-  if (typeof raw !== "object" || raw === null || "guardsRoot" in raw)
-    return raw;
-  return { ...raw, guardsRoot: (raw as { cwd?: unknown }).cwd };
+function defaultLegacyFields(raw: unknown): unknown {
+  if (typeof raw !== "object" || raw === null) return raw;
+  const legacy = raw as {
+    cwd?: unknown;
+    guardsRoot?: unknown;
+    prompt?: unknown;
+  };
+  return {
+    ...raw,
+    ...("guardsRoot" in raw ? {} : { guardsRoot: legacy.cwd }),
+    // A bare-string prompt is a file written before launch prompts carried
+    // their turn id (Oct 2026). Its agent read it at its start, and every
+    // later reader of the file relaunches without a prompt (rewind, account
+    // switch), so the text is read as none rather than re-sent untracked.
+    ...(typeof legacy.prompt === "string" ? { prompt: null } : {}),
+  };
 }

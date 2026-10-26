@@ -5,6 +5,7 @@ const conv = {
   id: "c1",
   title: "Pane title from Claude Code",
   status: "working" as const,
+  statusUnverifiedSince: null,
   kind: "user" as const,
   createdAt: new Date(),
   taskTitle: "Add a conversation list title setting",

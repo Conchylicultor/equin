@@ -16,6 +16,7 @@
     - `primitives/css/badge.formatStatusLabel`
     - `primitives/css/ui-kit.WithTooltip`
     - `primitives/live-state.ResourceErrorInline`
+    - `primitives/relative-time.formatRelativeTime`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --border`

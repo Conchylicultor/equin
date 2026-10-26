@@ -37,6 +37,7 @@ export type PlanRow = Pick<
   | "workingOn"
   | "createdAt"
   | "hibernatedAt"
+  | "statusUnverifiedSince"
 >;
 
 /** What the runtime says about one conversation. */
@@ -45,8 +46,11 @@ export type Liveness =
   | { kind: "live"; info: RuntimeInfo }
   /** The runtime answered and has no session for it. */
   | { kind: "absent" }
-  /** The runtime failed to answer — its state is unknown. */
-  | { kind: "unknown" };
+  /**
+   * Its state is unknown: the runtime failed to answer as a whole, or it
+   * answered but could not vouch for this conversation (`unverified`).
+   */
+  | { kind: "unknown"; reason: string };
 
 export interface PlanContext {
   onMain: boolean;
@@ -89,7 +93,12 @@ export type UpdatePlan =
    * with no process, nothing is computing, so the row is settled to `waiting`
    * in the same reconcile (see `planAbsent`).
    */
-  | { kind: "hibernate"; endTurn: boolean }
+  | {
+      kind: "hibernate";
+      endTurn: boolean;
+      /** Clear `statusUnverifiedSince` in the same reconcile. */
+      clearUnverified?: true;
+    }
   | {
       kind: "patch";
       patch: UpdateConversationPatch;
@@ -148,15 +157,59 @@ export function planConversationUpdate(
 
   switch (live.kind) {
     case "live":
-      return planLive(row, live.info, ctx);
+      return verified(row, planLive(row, live.info, ctx));
     case "unknown":
-      // Runtime failed to answer (e.g. a socket error under FD pressure). We
-      // can't tell whether the session is alive, so leave status alone and wait
-      // for a reconcile where the runtime answers — better than declaring every
-      // working/waiting conversation gone on a transient hiccup.
-      return { kind: "noop" };
+      return planUnknown(row, ctx);
     case "absent":
-      return planAbsent(row, ctx);
+      return verified(row, planAbsent(row, ctx));
+  }
+}
+
+/**
+ * Unknown — the runtime failed to answer (a socket error under FD pressure),
+ * or the agent answers but this backend has not applied its latest events: we
+ * can't tell what the agent is doing. `status` stays the last KNOWN one —
+ * never declare every working/waiting conversation gone on a hiccup, and
+ * never plan from a stale projection — and the row is marked unverified, so
+ * readers show "Unknown" instead of claiming it. The mark keeps its first
+ * time (the row says since when), and the next reconcile that can check
+ * clears it ({@link verified}).
+ *
+ * A whole-runtime failure marks too: the status really is unverified then.
+ * It cannot flap faster than reconciles run — the next one that answers (a
+ * push signal, or the minute sweep) clears it — and the failure itself is
+ * reported by the shell.
+ */
+function planUnknown(row: PlanRow, ctx: PlanContext): UpdatePlan {
+  if (row.statusUnverifiedSince !== null) return { kind: "noop" };
+  return {
+    kind: "patch",
+    patch: { statusUnverifiedSince: new Date(ctx.now) },
+    adoptedSessionId: null,
+  };
+}
+
+/**
+ * A decision made from a checked state ends any unverified stretch: `plan`
+ * plus clearing `statusUnverifiedSince` when it is set. `gone` and `closed`
+ * clear it in their own write.
+ */
+function verified(row: PlanRow, plan: UpdatePlan): UpdatePlan {
+  if (row.statusUnverifiedSince === null) return plan;
+  switch (plan.kind) {
+    case "noop":
+      return {
+        kind: "patch",
+        patch: { statusUnverifiedSince: null },
+        adoptedSessionId: null,
+      };
+    case "patch":
+      return { ...plan, patch: { ...plan.patch, statusUnverifiedSince: null } };
+    case "hibernate":
+      return { ...plan, clearUnverified: true };
+    case "gone":
+    case "closed":
+      return plan;
   }
 }
 

@@ -60,7 +60,14 @@ export function useConversationModelOptions(): LiveFieldOptionsRead {
  */
 export const conversationPresentation = FieldPresentation.Register({
   owner: conversationsEntityRef,
-  reads: ["id", "title", "kind", "createdAt", "updatedAt"],
+  reads: [
+    "id",
+    "title",
+    "kind",
+    "createdAt",
+    "updatedAt",
+    "statusUnverifiedSince",
+  ],
   fields: {
     status: { cell: (_status, conv) => <StatusCell conv={conv} /> },
     model: { useOptions: useConversationModelOptions },

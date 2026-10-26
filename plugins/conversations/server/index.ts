@@ -67,10 +67,10 @@ export {
 } from "./internal/runtime";
 export type {
   RuntimeInfo,
+  RuntimeInspection,
   RuntimeSignal,
   ConversationRuntime,
-  SubmitVerdict,
-  TypedTurn,
+  OutgoingTurn,
 } from "./internal/runtime";
 export { submitTurn } from "./internal/turns";
 export type { SubmitOutcome, TurnSubmission } from "./internal/turns";

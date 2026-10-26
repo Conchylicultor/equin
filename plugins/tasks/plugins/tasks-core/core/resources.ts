@@ -287,6 +287,7 @@ const CONVERSATION_QUEUE_CARRY = {
     "claudeSessionId",
     "waitingFor",
     "workingOn",
+    "statusUnverifiedSince",
     "spawnedBy",
     "closeRequested",
     "hibernatedAt",

@@ -32,6 +32,18 @@ export interface RuntimeInfo {
 }
 
 /**
+ * What a runtime can say about one conversation it hosts a live session for:
+ * - `live` — its state, checked against the agent's own head;
+ * - `unverified` — the agent is up, but this backend cannot vouch for its
+ *   state: what it knows lags what the agent reports (the sdk runtime's
+ *   consumer has not applied the agent's latest events, even after a bounded
+ *   catch-up). The reconciler keeps the row's last known status and marks it
+ *   unverified (`statusUnverifiedSince`), never plans from the stale state.
+ */
+export type RuntimeInspection =
+  { kind: "live"; info: RuntimeInfo } | { kind: "unverified"; reason: string };
+
+/**
  * A runtime's push signal: "the live state of these conversations may have
  * moved". Only a wake-up — the reconciler re-reads the truth through
  * {@link ConversationRuntime.inspect} and the DB, so a duplicate, late or
@@ -44,16 +56,13 @@ export interface RuntimeInfo {
 export type RuntimeSignal = { conversationIds: string[] } | { all: true };
 
 /**
- * The runtime's verdict on a sent turn: `submitted` — the agent took it;
- * `unverified` — the runtime cannot tell, so only the agent's own report
- * (the turn ledger's confirmation) can say whether the turn went in.
+ * One user turn as a runtime sends it: the turn ledger's row id, which the
+ * agent echoes when it takes the turn (the ledger confirms THAT row by it),
+ * and the text the agent gets.
  */
-export type SubmitVerdict =
-  { kind: "submitted" } | { kind: "unverified"; reason: string };
-
-/** What sending one turn did. */
-export interface TypedTurn {
-  verdict: SubmitVerdict;
+export interface OutgoingTurn {
+  turnId: string;
+  text: string;
 }
 
 export interface ConversationRuntime {
@@ -72,7 +81,7 @@ export interface ConversationRuntime {
     launch: LaunchFragment,
     opts?: {
       /** The first user turn. */
-      prompt?: string;
+      prompt?: OutgoingTurn;
       /**
        * Added after Claude Code's own system prompt, never in its place. Not
        * kept in the transcript, so every spawn of a session passes it again.
@@ -92,14 +101,18 @@ export interface ConversationRuntime {
    * the duplicate session — `create` probes this first and no-ops when true.
    */
   isRunning(conversationId: string): Promise<boolean>;
-  /** Every live session this runtime hosts. Throws when the state is unknown. */
-  list(): Promise<Map<string, RuntimeInfo>>;
+  /**
+   * Every live session this runtime hosts. Throws when the state is unknown
+   * as a whole; one conversation it cannot vouch for is `unverified`.
+   */
+  list(): Promise<Map<string, RuntimeInspection>>;
   /**
    * The batched form of {@link list} for a known set: the live state of each of
    * `ids`. A missing id means no live session; a throw means the state is
-   * unknown (the same contract as `list()` failing) — never an empty map.
+   * unknown (the same contract as `list()` failing) — never an empty map;
+   * an `unverified` entry means that one conversation's state is.
    */
-  inspect(ids: readonly string[]): Promise<Map<string, RuntimeInfo>>;
+  inspect(ids: readonly string[]): Promise<Map<string, RuntimeInspection>>;
   /**
    * Start delivering push signals (see {@link RuntimeSignal}). Resolves once the
    * runtime's signal sources are open — a source that cannot open rejects, so a
@@ -108,26 +121,30 @@ export interface ConversationRuntime {
    */
   subscribe(onSignal: (signal: RuntimeSignal) => void): Promise<() => void>;
   /**
-   * Send `text` to the session as one user turn. Resolves with the runtime's
-   * verdict; throws only when the text provably never reached the agent.
+   * Send `turn` to the session as one user turn. Resolves once the agent
+   * queued it — whether it took it is the agent's own `turn_started`, which
+   * the turn ledger confirms the row by; throws when it did not reach the
+   * agent.
    */
-  send(conversationId: string, text: string): Promise<TypedTurn>;
+  send(conversationId: string, turn: OutgoingTurn): Promise<void>;
   interrupt(conversationId: string): Promise<void>;
   /**
    * Stop the running turn: interrupt it and, when it got no reply, take it back
    * out of the session — the transcript no longer holds it and nothing of it is
-   * left for the next turn to ride on. Resolves with the text taken back, which
-   * the web hands back to the composer, or null when the turn stays (it had a
-   * reply, or there was none). Runs as the conversation's terminal writer.
+   * left for the next turn to ride on. Resolves with the transcript line uuid
+   * of the turn taken back (the turn ledger returns the row confirmed as it,
+   * whose text the web hands back to the composer), or null when the turn
+   * stays (it had a reply, or there was none). Runs as the conversation's
+   * terminal writer.
    */
-  stop(conversationId: string): Promise<{ returnedText: string | null }>;
+  stop(conversationId: string): Promise<{ returnedPromptUuid: string | null }>;
   /**
-   * Reply to an open question (AskUserQuestion) with `text` instead of an
-   * answer, as ONE operation: dismiss the question, then send `text` as a
+   * Reply to an open question (AskUserQuestion) with `turn` instead of an
+   * answer, as ONE operation: dismiss the question, then send `turn` as a
    * normal turn — exactly as {@link send}. Implementers MUST NOT send while the
    * question is still open: the agent would read the text as its answer.
    */
-  answerPrompt(conversationId: string, text: string): Promise<TypedTurn>;
+  answerPrompt(conversationId: string, turn: OutgoingTurn): Promise<void>;
   /**
    * Wait, bounded, until the session can take a turn — for a session that was
    * just started, until the agent answers. Resolves

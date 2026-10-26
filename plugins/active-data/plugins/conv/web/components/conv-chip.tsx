@@ -2,7 +2,7 @@ import { useConversationOpener } from "@plugins/conversations/plugins/conversati
 import { useConversationById } from "@plugins/conversations/web";
 import {
   ConversationItem,
-  CONV_STATUS_DOT,
+  convStatusDot,
 } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
@@ -22,7 +22,13 @@ export function ConvChip({
     <LinkChip
       activation={opener.toggle(sideConvId)}
       tooltip={title ? `${title} · ${sideConvId}` : sideConvId}
-      leading={conv ? undefined : <StatusDot {...CONV_STATUS_DOT.gone} />}
+      leading={
+        conv ? undefined : (
+          <StatusDot
+            {...convStatusDot({ status: "gone", statusUnverifiedSince: null })}
+          />
+        )
+      }
       mono={!conv}
     >
       {conv ? <ConversationItem conv={conv} layout="inline" /> : sideConvId}

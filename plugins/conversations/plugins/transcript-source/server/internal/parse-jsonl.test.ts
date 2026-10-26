@@ -79,6 +79,61 @@ describe("buildJsonlEvents — a call the session ended on", () => {
   });
 });
 
+// The line each sdk turn becomes carries the turn's uuid (the SDK user
+// message's), which the web's echo retires on — a slash command too, and a turn
+// a busy agent absorbed mid-turn as a `queued_command` attachment's
+// `source_uuid`. Shapes read from real transcripts (2026-10-25).
+describe("buildJsonlEvents — a turn's line carries its uuid", () => {
+  test("a slash command's line is a user row with the turn's uuid", async () => {
+    const events = await buildJsonlEvents(
+      [
+        {
+          type: "user",
+          uuid: "turn-uuid",
+          parentUuid: null,
+          timestamp: AT,
+          message: {
+            role: "user",
+            content:
+              "<command-name>/compact</command-name>\n            <command-message>compact</command-message>\n            <command-args></command-args>",
+          },
+        },
+      ],
+      noImages,
+    );
+    expect(events).toEqual([
+      expect.objectContaining({ kind: "user-text", uuid: "turn-uuid" }),
+    ]);
+  });
+
+  test("an absorbed turn's attachment keeps its source_uuid", async () => {
+    const events = await buildJsonlEvents(
+      [
+        {
+          type: "attachment",
+          uuid: "att-line",
+          parentUuid: null,
+          timestamp: AT,
+          attachment: {
+            type: "queued_command",
+            prompt: "i.e. do not file the task",
+            source_uuid: "turn-uuid",
+            commandMode: "prompt",
+          },
+        },
+      ],
+      noImages,
+    );
+    expect(events).toEqual([
+      expect.objectContaining({
+        kind: "attachment",
+        subtype: "queued_command",
+        attachment: expect.objectContaining({ source_uuid: "turn-uuid" }),
+      }),
+    ]);
+  });
+});
+
 // The launch preprompt is appended to the system prompt; the CLI records the
 // system prompt in a `prompt_snapshot` attachment written after the first turn.
 describe("buildJsonlEvents — the launch preprompt", () => {

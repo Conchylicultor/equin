@@ -35,7 +35,6 @@ export interface AgentProjection {
   openToolUseId: string | null;
   /** The latest turn the agent took, and whether the agent has answered it yet. */
   lastPromptUuid: string | null;
-  lastPromptText: string | null;
   turnReplied: boolean;
   /** The last top-level assistant message. */
   lastAssistantUuid: string | null;
@@ -46,6 +45,13 @@ export interface AgentProjection {
   rewindAnchorUuid: string | null;
   /** The Claude account the agent process runs on (`started`); null before one says. */
   account: string | null;
+  /**
+   * The running process puts the backend's turn id on every turn it takes
+   * (`started.turnIds`). False for an agent started before turn ids: its
+   * launch prompt's `turn_started` carries none, and is confirmed by text.
+   * Temporary — goes with that legacy path once no such agent runs.
+   */
+  turnIds: boolean;
   /**
    * When a failed model request last stopped the agent's turn — the CLI's
    * synthetic assistant message with an `error`, written once its retries
@@ -68,11 +74,11 @@ export const EMPTY_PROJECTION: AgentProjection = {
   openRequestId: null,
   openToolUseId: null,
   lastPromptUuid: null,
-  lastPromptText: null,
   turnReplied: false,
   lastAssistantUuid: null,
   rewindAnchorUuid: null,
   account: null,
+  turnIds: false,
   stoppedAt: null,
   stopError: null,
 };
@@ -87,8 +93,27 @@ export type AgentEffect =
       toolUseId: string;
       outcome: "dismissed" | "aborted";
     }
-  /** The CLI started a turn: the turn ledger confirms it. */
-  | { kind: "prompt-submitted"; text: string; promptUuid: string; at: Date }
+  /**
+   * The CLI started the turn `turnId` (the ledger's row), as the transcript
+   * line `promptUuid`: the turn ledger confirms that row.
+   */
+  | { kind: "prompt-submitted"; turnId: string; promptUuid: string; at: Date }
+  /**
+   * The CLI started a turn with no id, from an agent started before turn ids
+   * (its launch prompt): the ledger resolves the row whose typed text IS it.
+   * TEMPORARY — deleted with that fallback once no such agent runs.
+   */
+  | {
+      kind: "prompt-submitted-by-text";
+      text: string;
+      promptUuid: string;
+      at: Date;
+    }
+  /**
+   * The CLI started a turn with no id from an agent that puts one on every turn
+   * the backend sends: not the backend's turn. Reported, never matched.
+   */
+  | { kind: "turn-without-id"; seq: number; promptUuid: string; text: string }
   /**
    * The agent went away: a turn handed to it and not started by then was in
    * its CLI's queue, which died with it — the turn ledger fails it.
@@ -201,6 +226,7 @@ export function reduceEvents(
             s.openRequestId = null;
             s.openToolUseId = null;
             s.account = p.account ?? null;
+            s.turnIds = p.turnIds === true;
             s.stoppedAt = null;
             s.stopError = null;
             break;
@@ -212,16 +238,31 @@ export function reduceEvents(
             s.statusAt = at;
             s.rewindAnchorUuid = s.lastAssistantUuid;
             s.lastPromptUuid = p.promptUuid;
-            s.lastPromptText = p.text;
             s.turnReplied = false;
             s.stoppedAt = null;
             s.stopError = null;
-            effects.push({
-              kind: "prompt-submitted",
-              text: p.text,
-              promptUuid: p.promptUuid,
-              at,
-            });
+            if (p.turnId !== null) {
+              effects.push({
+                kind: "prompt-submitted",
+                turnId: p.turnId,
+                promptUuid: p.promptUuid,
+                at,
+              });
+            } else if (!s.turnIds) {
+              effects.push({
+                kind: "prompt-submitted-by-text",
+                text: p.text,
+                promptUuid: p.promptUuid,
+                at,
+              });
+            } else {
+              effects.push({
+                kind: "turn-without-id",
+                seq: e.seq,
+                promptUuid: p.promptUuid,
+                text: p.text,
+              });
+            }
             break;
           case "exited":
             effects.push({ kind: "turns-dropped", at });

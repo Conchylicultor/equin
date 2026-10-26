@@ -8,6 +8,7 @@ import type { ConversationEntry } from "@plugins/conversations/core";
 import { useLiveRow } from "@plugins/network/plugins/live/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { WithTooltip } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { formatRelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import {
   describeSpawnFailure,
   FAILED_TO_START_LABEL,
@@ -25,6 +26,8 @@ const STATUS_CLASSES: Record<ConversationStatus, string> = {
 };
 
 const FAILED_CLASS = "bg-destructive/15 text-destructive border-destructive/30";
+const UNKNOWN_CLASS =
+  "bg-muted text-muted-foreground border-dashed border-border";
 
 // Semantic overrides where the display word differs from the status key
 // (not just casing). Everything else is sentence-cased via formatStatusLabel.
@@ -46,11 +49,38 @@ export function StatusBadge() {
 // Split out so the optimistic-status hook runs only once the row is known.
 function StatusChip({ conversation }: { conversation: ConversationEntry }) {
   const status = useOptimisticConversationStatus(conversation);
+  // The reconciler could not check the row against the agent: its status is
+  // only the last known one, so the chip claims none. `done` is final.
+  if (conversation.statusUnverifiedSince !== null && status !== "done")
+    return (
+      <UnknownChip
+        since={conversation.statusUnverifiedSince}
+        lastKnown={status}
+      />
+    );
   if (status === "gone") return <GoneChip conversationId={conversation.id} />;
   return (
     <HeaderChip colorClass={STATUS_CLASSES[status]}>
       {prettify(status)}
     </HeaderChip>
+  );
+}
+
+function UnknownChip({
+  since,
+  lastKnown,
+}: {
+  since: Date;
+  lastKnown: ConversationStatus;
+}) {
+  return (
+    <WithTooltip
+      content={`Status unverified since ${formatRelativeTime(since)} — this backend could not check it against the agent (it has not caught up with the agent's events, or the agent runtime did not answer). Last known: ${prettify(lastKnown)}.`}
+    >
+      <span>
+        <HeaderChip colorClass={UNKNOWN_CLASS}>Unknown</HeaderChip>
+      </span>
+    </WithTooltip>
   );
 }
 

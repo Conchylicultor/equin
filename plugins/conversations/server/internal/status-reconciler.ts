@@ -16,7 +16,7 @@ import { isTransientDbError } from "@plugins/database/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
-import { Runtime, type RuntimeInfo, type RuntimeSignal } from "./runtime";
+import { Runtime, type RuntimeInspection, type RuntimeSignal } from "./runtime";
 import { deliverHeldTurnsJob } from "./deliver-held-turns-job";
 import { spawnConversationJob } from "./spawn-job";
 import {
@@ -63,9 +63,7 @@ import {
 // always the freshest read.
 const reconcileGate = createSemaphore(1);
 
-interface LiveEntry extends RuntimeInfo {
-  runtime: string;
-}
+type LiveEntry = RuntimeInspection & { runtime: string };
 
 interface LiveSnapshot {
   next: Map<string, LiveEntry>;
@@ -91,7 +89,7 @@ async function collectLive(
   const merged = new Map<string, LiveEntry>();
   const failedRuntimes = new Set<string>();
   for (const runtime of Runtime.all()) {
-    let entries: Map<string, RuntimeInfo>;
+    let entries: Map<string, RuntimeInspection>;
     try {
       entries = ids ? await runtime.inspect(ids) : await runtime.list();
     } catch (err) {
@@ -203,10 +201,20 @@ function awaitingAny(sessionIds: ReadonlySet<string>): string[] {
 }
 
 function livenessOf(row: Conversation, live: LiveSnapshot): Liveness {
-  const info = live.next.get(row.id);
-  if (info) return { kind: "live", info };
+  const entry = live.next.get(row.id);
+  if (entry) {
+    switch (entry.kind) {
+      case "live":
+        return { kind: "live", info: entry.info };
+      case "unverified":
+        return { kind: "unknown", reason: entry.reason };
+    }
+  }
   return live.failedRuntimes.has(row.runtime)
-    ? { kind: "unknown" }
+    ? {
+        kind: "unknown",
+        reason: `the "${row.runtime}" runtime did not answer`,
+      }
     : { kind: "absent" };
 }
 
@@ -250,8 +258,13 @@ async function apply(row: Conversation, plan: UpdatePlan): Promise<void> {
       return;
     case "hibernate":
       await setConversationHibernated(id, new Date());
-      if (plan.endTurn) {
-        await updateConversation(id, { status: "waiting", waitingFor: null });
+      if (plan.endTurn || plan.clearUnverified) {
+        await updateConversation(id, {
+          ...(plan.endTurn
+            ? { status: "waiting" as const, waitingFor: null }
+            : {}),
+          ...(plan.clearUnverified ? { statusUnverifiedSince: null } : {}),
+        });
       }
       return;
     case "gone":

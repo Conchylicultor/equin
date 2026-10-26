@@ -112,8 +112,8 @@ on a host without the computer gets the unavailable arm instead of a 404.
   - Uses:
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`
-    - `conversations/conversation-ui/item.CONV_STATUS_DOT`
     - `conversations/conversation-ui/item.ConversationItemConv`
+    - `conversations/conversation-ui/item.convStatusDot`
     - `conversations/conversation-ui/item.Item`
     - `fields/dynamic-enum/config.DynamicEnum`
     - `network/live.useLive`

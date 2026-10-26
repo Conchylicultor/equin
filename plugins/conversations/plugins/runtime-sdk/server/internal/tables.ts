@@ -28,11 +28,11 @@ const sdkAgentShape = defineExtensionShape({
     openRequestId: nullable(textField()),
     openToolUseId: nullable(textField()),
     lastPromptUuid: nullable(textField()),
-    lastPromptText: nullable(textField()),
     turnReplied: boolField(),
     lastAssistantUuid: nullable(textField()),
     rewindAnchorUuid: nullable(textField()),
     account: nullable(textField()),
+    turnIds: boolField(),
     stoppedAt: nullable(dateField()),
     stopError: nullable(textField()),
   },
@@ -42,8 +42,9 @@ export const sdkAgents = defineExtension(
   _conversations,
   "sdk_agent",
   sdkAgentShape,
-  // Rows written before the column existed hold no background task.
-  { columns: { backgroundTasks: { default: 0 } } },
+  // Rows written before the column existed hold no background task, and an
+  // agent started before turn ids.
+  { columns: { backgroundTasks: { default: 0 }, turnIds: { default: false } } },
 );
 // Re-export the underlying pgTable so drizzle-kit's schema glob picks it up.
 export const _sdkAgentsTable = sdkAgents.table;

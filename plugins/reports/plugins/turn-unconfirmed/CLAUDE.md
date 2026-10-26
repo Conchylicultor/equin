@@ -2,9 +2,8 @@
 
 > **Retired.** Nothing files this kind any more: the browser's pending-turn
 > store that guessed delivery from the transcript is gone, replaced by the
-> server-side turn ledger (`conversations/turn-ledger`), which files
-> `turn-merged`, `turn-unverified` and `turn-input-not-empty` where each fact is
-> learned. The kind stays registered so existing rows still validate, render and
+> server-side turn ledger (`conversations/turn-ledger`), which the agent
+> confirms each turn into by the turn's id. The kind stays registered so existing rows still validate, render and
 > can be investigated — an investigated report keeps its row past the 7-day
 > sweep. Delete this plugin once no such row is left. The rest of this page
 > describes how it worked.
@@ -46,7 +45,7 @@ bell would re-alert every 10 minutes for one known problem.
 
 ## Plugin reference
 
-- Description: Retired turn-unconfirmed report kind's Debug → Reports summary view, kept so existing rows still render: the one-line preview + elapsed + conversation id for a sent turn the browser's old pending-turn store never found in the transcript. Nothing files it any more — the turn ledger's server-side kinds replace it. Retired turn-unconfirmed report kind, kept registered so existing rows still validate, render and can be investigated (an investigated report is never swept): a sent turn the browser's old pending-turn store never found in the transcript within 90 s. Nothing files it any more — the turn ledger's turn-merged / turn-unverified / turn-input-not-empty kinds (conversations/turn-ledger) replace it. Fingerprints by conversation id; re-arms every 6h.
+- Description: Retired turn-unconfirmed report kind's Debug → Reports summary view, kept so existing rows still render: the one-line preview + elapsed + conversation id for a sent turn the browser's old pending-turn store never found in the transcript. Nothing files it any more — the turn ledger's server-side kinds replace it. Retired turn-unconfirmed report kind, kept registered so existing rows still validate, render and can be investigated (an investigated report is never swept): a sent turn the browser's old pending-turn store never found in the transcript within 90 s. Nothing files it any more — the turn ledger (conversations/turn-ledger) replaced it, and confirms each turn by its id. Fingerprints by conversation id; re-arms every 6h.
 - Web:
   - Contributes: `Reports.KindView` → `TurnUnconfirmedKindView`
   - Uses:

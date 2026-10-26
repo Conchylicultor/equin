@@ -5,7 +5,6 @@ import { WorkingText } from "@plugins/primitives/plugins/css/plugins/working-dot
 import { UserMessageText } from "@plugins/conversations/plugins/conversation-view/plugins/user-message/web";
 import {
   Button,
-  cn,
   ControlSizeProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -173,9 +172,7 @@ export type RenderEcho = (turn: PendingTurn, status: ReactNode) => ReactNode;
  *   under it — Queued · Send now while it waits for a running turn — until
  *   the transcript shows the turn. Mounted after the transcript, it stays
  *   last as the agent's steps land above it;
- * - `merged` — the CLI submitted this turn together with other text (a draft
- *   its input box still held): a warning naming that text;
- * - `failed` / `unverified` / `unsent` — Retry + Copy to draft, with why.
+ * - `failed` / `unsent` — Retry + Copy to draft, with why.
  *
  * The card is the message only: what the agent is doing (starting, working)
  * is the host's one activity line at the foot of the transcript.
@@ -218,41 +215,12 @@ export function PendingTurnCard({
     );
   }
 
-  if (card === "merged") {
-    return (
-      <div className="rounded-md border border-warning/40 bg-warning/5 px-md py-sm">
-        <Stack gap="xs">
-          <Text as="div" variant="caption" className="text-warning">
-            The agent received this message together with other text that was
-            still in its input box:
-          </Text>
-          <UserMessageText text={turn.extraText ?? ""} />
-        </Stack>
-      </div>
-    );
-  }
-
-  const destructive = turn.state !== "unverified";
-  const caption =
-    turn.state === "unverified"
-      ? `Not confirmed — the agent may not have received this message${turn.error ? ` (${turn.error})` : ""}. Check the terminal.`
-      : `Failed to send${turn.error ? ` — ${turn.error}` : ""}`;
+  const caption = `Failed to send${turn.error ? ` — ${turn.error}` : ""}`;
   return (
-    <div
-      className={cn(
-        "rounded-md border px-md py-sm",
-        destructive
-          ? "border-destructive/40 bg-destructive/5"
-          : "border-warning/40 bg-warning/5",
-      )}
-    >
+    <div className="rounded-md border border-destructive/40 bg-destructive/5 px-md py-sm">
       <Stack gap="xs">
         <UserMessageText text={turn.text} />
-        <Text
-          as="div"
-          variant="caption"
-          className={destructive ? "text-destructive" : "text-warning"}
-        >
+        <Text as="div" variant="caption" className="text-destructive">
           {caption}
         </Text>
         <Stack direction="row" gap="sm">

@@ -3,8 +3,11 @@ import { relative, sep } from "node:path";
 import type { RuntimeSignal } from "@plugins/conversations/server";
 import { defineFileWatcher } from "@plugins/infra/plugins/file-watcher/server";
 import { createKeyedCoalescer } from "@plugins/packages/plugins/coalesce/core";
+import { withDeadline } from "@plugins/packages/plugins/deadline/core";
+import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { recordReport } from "@plugins/reports/plugins/engine/server";
 import {
+  confirmTurn,
   dropTypedTurns,
   resolvePromptSubmit,
 } from "@plugins/conversations/plugins/turn-ledger/server";
@@ -35,7 +38,7 @@ import {
 import { readAgentEvents, type ReadPosition } from "./event-reader";
 import { runningAgentIds } from "./agent-processes";
 import { agentReady } from "./partial-stream";
-import { agentEventsPath, ownAgentsRoot } from "./paths";
+import { agentEventsExist, agentEventsPath, ownAgentsRoot } from "./paths";
 import {
   AgentNotRunningError,
   commandAgent,
@@ -69,8 +72,13 @@ export const sdkEventsWatcher = defineFileWatcher({
 /** Where each agent's file was last read up to (lost on restart: the cursor replays). */
 const positions = new Map<string, ReadPosition | null>();
 
-/** Conversation ids seen on disk, by whether they are this DB's sdk rows. */
-const ours = new Map<string, boolean>();
+/**
+ * Conversation ids known to be this DB's sdk rows. Only a yes is kept: a cached
+ * no would skip that conversation's events forever, silently — the same shape
+ * as the 2026-10-25 stall — and asking again is one indexed lookup per watched
+ * batch.
+ */
+const ours = new Set<string>();
 
 type Waiter = {
   until: (s: AgentProjection) => boolean;
@@ -82,15 +90,13 @@ let signal: ((s: RuntimeSignal) => void) | null = null;
 
 /** Mark `id` as this DB's sdk conversation (its `create` just ran here). */
 export function adoptAgent(id: string): void {
-  ours.set(id, true);
+  ours.add(id);
 }
 
 async function isOurs(id: string): Promise<boolean> {
-  const known = ours.get(id);
-  if (known !== undefined) return known;
+  if (ours.has(id)) return true;
   const mine = await isSdkConversation(id);
-  // Another backend's agent stays "not ours" until this backend creates it.
-  ours.set(id, mine);
+  if (mine) ours.add(id);
   return mine;
 }
 
@@ -102,16 +108,25 @@ export class ProjectionTimeoutError extends Error {
   }
 }
 
+/** {@link waitForProjection}'s caller stopped waiting (its signal aborted). */
+export class ProjectionWaitAbortedError extends Error {
+  constructor(id: string, what: string) {
+    super(`SDK agent ${id}: stopped waiting for ${what}`);
+    this.name = "ProjectionWaitAbortedError";
+  }
+}
+
 /**
  * Wait until the conversation's applied projection satisfies `until` — checked
  * against the stored row first, then after every catch-up. Resolves the
- * projection; rejects after `timeoutMs`.
+ * projection; rejects after `timeoutMs`, or once `signal` aborts.
  */
 export async function waitForProjection(
   id: string,
   until: (s: AgentProjection) => boolean,
   timeoutMs: number,
   what: string,
+  signal?: AbortSignal,
 ): Promise<AgentProjection> {
   let resolve!: (s: AgentProjection) => void;
   let reject!: (e: Error) => void;
@@ -127,6 +142,9 @@ export async function waitForProjection(
     () => reject(new ProjectionTimeoutError(id, what, timeoutMs)),
     timeoutMs,
   );
+  const onAbort = () => reject(new ProjectionWaitAbortedError(id, what));
+  if (signal?.aborted) onAbort();
+  signal?.addEventListener("abort", onAbort);
   try {
     // Registered before the read, so a catch-up landing in between wakes it.
     const current = await readAgentRow(id);
@@ -136,20 +154,84 @@ export async function waitForProjection(
     return await done;
   } finally {
     clearTimeout(timer);
+    signal?.removeEventListener("abort", onAbort);
     set.delete(waiter);
     if (set.size === 0) waiters.delete(id);
   }
 }
 
 const catchUps = createKeyedCoalescer<string>({
-  run: (id) => catchUp(id),
+  run: (id) => watchedCatchUp(id),
 });
 
+// A catch-up reads a row, runs a few idempotent effects and writes the row:
+// milliseconds, a few seconds on a loaded host. Far past that, it is parked on
+// something that will not settle — and since catch-ups run one at a time per
+// conversation, every later event of that conversation waits behind it.
+const CATCH_UP_DEADLINE_MS = 30_000;
+
+/** Where a catch-up run is: set before each of its awaits, named by the overdue report. */
+type CatchUpProgress = { stage: string };
+
+class CatchUpOverdueError extends Error {
+  constructor(id: string) {
+    super(`SDK agent ${id}: catch-up overdue`);
+    this.name = "CatchUpOverdueError";
+  }
+}
+
+/**
+ * One catch-up run, watched: past {@link CATCH_UP_DEADLINE_MS} it files an
+ * `sdk-catch-up-overdue` report naming the step it is parked in (once per run)
+ * and keeps waiting. Nothing cancels it — an effect cannot be aborted halfway,
+ * and the coalescer's slot must stay held until the run really settles. On
+ * 2026-10-25 a run that never settled stalled one conversation's events for a
+ * backend's whole lifetime, with nothing filed.
+ */
+async function watchedCatchUp(id: string): Promise<void> {
+  const progress: CatchUpProgress = { stage: "start" };
+  const startedAt = Date.now();
+  const work = runTracked("runtime-sdk:catch-up", () => catchUp(id, progress));
+  try {
+    await withDeadline(
+      work,
+      CATCH_UP_DEADLINE_MS,
+      () => new CatchUpOverdueError(id),
+    );
+  } catch (err) {
+    if (!(err instanceof CatchUpOverdueError)) throw err;
+    await recordReport({
+      kind: "sdk-catch-up-overdue",
+      source: "server-caught",
+      message: `SDK agent ${id}: a catch-up of its events has been running for ${String(Math.round((Date.now() - startedAt) / 1000))} s, parked at "${progress.stage}"; the conversation's later events wait behind it`,
+      data: {
+        conversationId: id,
+        stage: progress.stage,
+        elapsedMs: Date.now() - startedAt,
+      },
+    });
+    await work;
+  }
+}
+
 /** Apply every line of `id`'s events file past its cursor. */
-async function catchUp(id: string): Promise<void> {
+async function catchUp(id: string, progress: CatchUpProgress): Promise<void> {
+  progress.stage = "read-row";
   const row = await readAgentRow(id);
-  // No row: `create` has not prepared one yet (it does before the agent starts).
-  if (!row) return;
+  if (!row) {
+    // No row and no events: `create` has not prepared the row yet (it does
+    // before the agent starts). Events with no row are an agent this backend
+    // cannot apply — say so, rather than skip them forever.
+    if (!agentEventsExist(id)) return;
+    progress.stage = "report";
+    await recordReport({
+      kind: "crash",
+      source: "server-caught",
+      message: `SDK agent ${id}: its events file ${agentEventsPath(id)} exists but the conversation has no conversations_ext_sdk_agent row, so its events are not applied`,
+      data: { errorType: "SdkEventsWithoutRow", label: "runtime-sdk.events" },
+    });
+    return;
+  }
   const path = agentEventsPath(id);
   const read = readAgentEvents(path, positions.get(id) ?? null);
   const { worktreePath: _path, ...projection } = row;
@@ -157,6 +239,7 @@ async function catchUp(id: string): Promise<void> {
     projection,
     read.events,
   );
+  progress.stage = "report";
   for (const gap of gaps) {
     await recordReport({
       kind: "crash",
@@ -197,8 +280,13 @@ async function catchUp(id: string): Promise<void> {
   // Side effects first, then the cursor: a crash in between replays the lines,
   // and every effect is idempotent (a prompt resolves once, a question
   // registration is an upsert).
-  for (const effect of effects) await runEffect(id, effect);
+  for (const effect of effects) {
+    progress.stage = `effect:${effect.kind}`;
+    await runEffect(id, effect);
+  }
+  progress.stage = "write-projection";
   if (state.cursorSeq !== row.cursorSeq) await writeProjection(id, state);
+  progress.stage = "signal";
   positions.set(id, read.position);
   if (read.events.length === 0) return;
   // A (re)started agent takes `subscribe` now: a watched partial reconnects.
@@ -216,11 +304,49 @@ const QuestionInputSchema = z.object({ questions: z.unknown() });
 
 async function runEffect(id: string, effect: AgentEffect): Promise<void> {
   switch (effect.kind) {
-    case "prompt-submitted":
-      await resolvePromptSubmit(id, {
-        prompt: effect.text,
-        promptUuid: effect.promptUuid,
-        at: effect.at,
+    case "prompt-submitted": {
+      const outcome = await confirmTurn(
+        id,
+        effect.turnId,
+        effect.promptUuid,
+        effect.at,
+      );
+      if (
+        outcome.kind === "unknown-turn" ||
+        outcome.kind === "other-conversation"
+      ) {
+        const owner =
+          outcome.kind === "other-conversation" ? outcome.owner : null;
+        await recordReport({
+          kind: "turn-unknown-id",
+          source: "server-caught",
+          message: `SDK agent ${id}: it took turn ${effect.turnId}, which ${owner === null ? "no ledger row has" : `is conversation ${owner}'s`}, so no turn was confirmed`,
+          data: {
+            conversationId: id,
+            turnId: effect.turnId,
+            promptUuid: effect.promptUuid,
+            owner,
+          },
+        });
+      }
+      return;
+    }
+    case "prompt-submitted-by-text":
+      // TEMPORARY: an agent started before turn ids (its launch prompt),
+      // matched by equal text. Deleted once no such agent runs.
+      await resolvePromptSubmit(id, effect.text, effect.promptUuid, effect.at);
+      return;
+    case "turn-without-id":
+      await recordReport({
+        kind: "turn-without-id",
+        source: "server-caught",
+        message: `SDK agent ${id}: it took a turn with no turn id (event ${String(effect.seq)}), though it puts one on every turn it is sent; no turn was confirmed`,
+        data: {
+          conversationId: id,
+          seq: effect.seq,
+          promptUuid: effect.promptUuid,
+          text: effect.text,
+        },
       });
       return;
     case "turns-dropped":
@@ -322,6 +448,10 @@ export async function startConsumer(
         const id = agentOfPath(root, e.path);
         if (id) ids.add(id);
       }
+      // Heard before (and whatever) the catch-up does: a launch probing for a
+      // stalled consumer must hear the agent write even when catch-up is wedged.
+      for (const id of ids)
+        for (const hear of appendListeners.get(id) ?? []) hear();
       for (const id of ids) if (await isOurs(id)) catchUps.trigger(id);
     },
   });
@@ -334,7 +464,7 @@ export async function startConsumer(
     ...(await runningAgentIds()),
   ]);
   for (const id of atBoot) {
-    ours.set(id, true);
+    ours.add(id);
     await catchUps.run(id);
     await resyncOpenRequests(id);
   }
@@ -362,6 +492,56 @@ async function resyncOpenRequests(id: string): Promise<void> {
 /** Apply what is on disk now, and wait for it (the runtime's own reads). */
 export function catchUpNow(id: string): Promise<void> {
   return catchUps.run(id);
+}
+
+class CatchUpBudgetError extends Error {
+  constructor(id: string) {
+    super(`SDK agent ${id}: catch-up did not settle within its budget`);
+    this.name = "CatchUpBudgetError";
+  }
+}
+
+/**
+ * {@link catchUpNow}, bounded: `overdue` when it has not settled within
+ * `budgetMs` — this backend is not applying the agent's events (a run parked
+ * behind a wedged one), and nothing read from the row since is current. The
+ * run is not cancelled; it keeps going (and the overdue watchdog reports it).
+ */
+export async function catchUpWithin(
+  id: string,
+  budgetMs: number,
+): Promise<"applied" | "overdue"> {
+  try {
+    await withDeadline(
+      catchUpNow(id),
+      budgetMs,
+      () => new CatchUpBudgetError(id),
+    );
+    return "applied";
+  } catch (err) {
+    if (err instanceof CatchUpBudgetError) return "overdue";
+    throw err;
+  }
+}
+
+const appendListeners = new Map<string, Set<() => void>>();
+
+/**
+ * Hear every append to `id`'s events file, straight from the watch —
+ * independent of catch-up, so a caller can tell "the agent writes" from "this
+ * backend applies it". Returns the unsubscribe.
+ */
+export function onEventsAppended(id: string, hear: () => void): () => void {
+  let set = appendListeners.get(id);
+  if (!set) {
+    set = new Set();
+    appendListeners.set(id, set);
+  }
+  set.add(hear);
+  return () => {
+    set.delete(hear);
+    if (set.size === 0) appendListeners.delete(id);
+  };
 }
 
 /** The agent starts its event file over: read it from the start next time. */

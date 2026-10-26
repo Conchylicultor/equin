@@ -1,10 +1,10 @@
-import { existsSync } from "node:fs";
 import { z } from "zod";
 import type {
   ConversationRuntime,
+  OutgoingTurn,
   RuntimeInfo,
+  RuntimeInspection,
   RuntimeSignal,
-  TypedTurn,
 } from "@plugins/conversations/server";
 import { ContextUsageSchema } from "@plugins/conversations/core";
 import type { LaunchFragment } from "@plugins/conversations/plugins/workspace/server";
@@ -14,7 +14,9 @@ import { agentLaunchPolicy } from "@plugins/conversations/plugins/agent-launch/s
 import { requireClaudeBin } from "@plugins/infra/plugins/claude-cli/plugins/availability/server";
 import { recordReport } from "@plugins/reports/plugins/engine/server";
 import {
+  type AgentLaunchOptions,
   DismissReplySchema,
+  type HelloReply,
   TurnReplySchema,
   USAGE_LIMIT_ERROR,
 } from "../../core";
@@ -33,12 +35,15 @@ import { runningAgentIds } from "./agent-processes";
 import {
   adoptAgent,
   catchUpNow,
+  catchUpWithin,
   forgetPosition,
+  onEventsAppended,
   ProjectionTimeoutError,
+  ProjectionWaitAbortedError,
   startConsumer,
   waitForProjection,
 } from "./consumer";
-import { agentEventsPath } from "./paths";
+import { agentEventsExist } from "./paths";
 import {
   attachRunningAgents,
   awaitAgentExit,
@@ -47,7 +52,6 @@ import {
   nextLaunchAccount,
   readAgentOptions,
   startAgentProcess,
-  type StartedAgent,
 } from "./agent-process";
 import { recountAgentProcesses } from "./agent-processes";
 import {
@@ -57,6 +61,7 @@ import {
   helloAgent,
 } from "./socket-client";
 import { watchPartialMessage } from "./partial-stream";
+import { startOutcome, type StartOutcome } from "./start-outcome";
 
 // The sdk runtime: one Agent SDK process per conversation (bin/agent.ts),
 // started detached (agent-process.ts), so it outlives a backend restart.
@@ -74,24 +79,29 @@ const INTERRUPT_SETTLE_MS = 30_000;
 // so a kill here means even that did not run.
 const EXIT_TIMEOUT_MS = 15_000;
 
+// How long an inspect lets a projection behind the agent's head catch up
+// before calling that conversation's state unverified.
+const INSPECT_CATCH_UP_MS = 5_000;
+// How long a launch lets a catch-up the agent's first appends woke settle
+// before calling the consumer stalled — instead of sitting out
+// READY_TIMEOUT_MS beside an agent that is up.
+const LAUNCH_CATCH_UP_MS = 10_000;
+
 const UnknownReplySchema = z.unknown();
 
-/** Whether the agent answers on its socket. Any other failure throws (state unknown). */
-async function answersHello(id: string): Promise<boolean> {
+/** The agent's `hello`, or `not-running`. Any other failure throws (state unknown). */
+async function helloOf(id: string): Promise<HelloReply | "not-running"> {
   try {
-    await helloAgent(id);
-    return true;
+    return await helloAgent(id);
   } catch (err) {
-    if (err instanceof AgentNotRunningError) return false;
+    if (err instanceof AgentNotRunningError) return "not-running";
     throw err;
   }
 }
 
-function eventsExist(id: string): boolean {
-  const path = agentEventsPath(id);
-  return [path, `${path}.1`, `${path}.2`, `${path}.3`].some((p) =>
-    existsSync(p),
-  );
+/** Whether the agent answers on its socket. Any other failure throws (state unknown). */
+async function answersHello(id: string): Promise<boolean> {
+  return (await helloOf(id)) !== "not-running";
 }
 
 /**
@@ -139,59 +149,184 @@ async function reportKill(
   });
 }
 
-/** The live state of each of `ids` that is this DB's sdk conversation. */
-async function inspectAgents(
-  ids: readonly string[],
-): Promise<Map<string, RuntimeInfo>> {
-  const out = new Map<string, RuntimeInfo>();
-  const mine = await runningAgentIds(ids);
-  if (mine.length === 0) return out;
-  const [rows, alive] = await Promise.all([
-    readAgentRows(mine),
-    Promise.all(mine.map(answersHello)),
-  ]);
-  mine.forEach((id, i) => {
-    const row = rows.get(id);
-    if (!alive[i] || !row) return;
-    out.set(id, {
-      workingOn: row.working
-        ? "turn"
-        : row.backgroundTasks > 0
-          ? "background"
-          : null,
-      dead: false,
-      claudeSessionId: row.sessionId,
-      statusWrittenAt: row.statusAt,
-    });
-  });
-  return out;
+type AgentRow = NonNullable<Awaited<ReturnType<typeof readAgentRow>>>;
+
+function infoOf(row: AgentRow): RuntimeInfo {
+  return {
+    workingOn: row.working
+      ? "turn"
+      : row.backgroundTasks > 0
+        ? "background"
+        : null,
+    dead: false,
+    claudeSessionId: row.sessionId,
+    statusWrittenAt: row.statusAt,
+  };
 }
 
 /**
- * Wait until the agent answers on its socket. Each new event line (the
- * process's `started`) is the push to look again.
+ * The live state of each of `ids` that is this DB's sdk conversation — read
+ * at the agent's own head, or not at all. The projection is checked against
+ * the seq the agent answers `hello` with; one behind it gets a bounded
+ * catch-up, and one still behind after it is `unverified`: this backend is
+ * not applying the agent's events (2026-10-25: a stalled consumer showed
+ * `waiting` beside an agent running a build), so its row says nothing current.
  */
-async function waitForHello(
+async function inspectAgents(
+  ids: readonly string[],
+): Promise<Map<string, RuntimeInspection>> {
+  const out = new Map<string, RuntimeInspection>();
+  const mine = await runningAgentIds(ids);
+  if (mine.length === 0) return out;
+  // Hello first, the rows after: a row read before the agent answered could
+  // lag it by the lines written in between, and look behind when it is not.
+  const hellos = await Promise.all(
+    mine.map(async (id) => ({ id, hello: await helloOf(id) })),
+  );
+  const rows = await readAgentRows(mine);
+  const inspected = await Promise.all(
+    hellos.map(async ({ id, hello }) => ({
+      id,
+      inspection: await inspectAgent(id, rows.get(id), hello),
+    })),
+  );
+  for (const { id, inspection } of inspected) {
+    if (inspection) out.set(id, inspection);
+  }
+  return out;
+}
+
+async function inspectAgent(
+  id: string,
+  row: AgentRow | undefined,
+  hello: HelloReply | "not-running",
+): Promise<RuntimeInspection | null> {
+  if (hello === "not-running" || !row) return null;
+  if (row.cursorSeq >= hello.seq) return { kind: "live", info: infoOf(row) };
+  const behind = (cursorSeq: number): RuntimeInspection => ({
+    kind: "unverified",
+    reason: `the agent is at event ${String(hello.seq)}, but this backend has applied only up to ${String(cursorSeq)}`,
+  });
+  if ((await catchUpWithin(id, INSPECT_CATCH_UP_MS)) === "overdue")
+    return behind(row.cursorSeq);
+  const caughtUp = await readAgentRow(id);
+  if (!caughtUp) return null;
+  return caughtUp.cursorSeq >= hello.seq
+    ? { kind: "live", info: infoOf(caughtUp) }
+    : behind(caughtUp.cursorSeq);
+}
+
+/**
+ * Wait for the consumer to apply the agent's `started` line — the push that
+ * the agent is up — then ask it `hello` once. `launchedAt` is when this launch
+ * began: a projection still showing a predecessor's pid (its `exited` line not
+ * applied yet) is not this start. Null when no launch is in hand (the readiness
+ * waiters): any started agent counts.
+ *
+ * Every outcome is decided by one `hello` at the end, never by the projection
+ * alone: on 2026-10-25 a stalled consumer never applied `started`, and the old
+ * wait — which asked `hello` again only when the projection moved — sat out
+ * its whole bound beside an agent that had answered all along. And the wait
+ * itself ends early when catch-up is wedged: each append the watch hears gets
+ * a bounded catch-up ({@link LAUNCH_CATCH_UP_MS}); one that does not settle
+ * ends the wait, and the `hello` names the consumer behind.
+ */
+async function waitForStart(
+  id: string,
+  signal: AbortSignal,
+  launchedAt: Date | null,
+): Promise<StartOutcome> {
+  // The probe: every append the agent makes (heard straight from the watch)
+  // gets a bounded catch-up. One that does not settle means this backend is
+  // not applying the agent's events — the wait stops there, in seconds, rather
+  // than sitting out READY_TIMEOUT_MS. A push per append, never a poll.
+  const wait = new AbortController();
+  const callOff = () => wait.abort();
+  if (signal.aborted) wait.abort();
+  signal.addEventListener("abort", callOff);
+  let stalled = false;
+  let probeError: Error | null = null;
+  let probing = false;
+  const stopProbing = onEventsAppended(id, () => {
+    if (probing) return;
+    probing = true;
+    void catchUpWithin(id, LAUNCH_CATCH_UP_MS).then(
+      (r) => {
+        probing = false;
+        if (r === "overdue") {
+          stalled = true;
+          wait.abort();
+        }
+      },
+      (err: unknown) => {
+        probeError = err instanceof Error ? err : new Error(String(err));
+        wait.abort();
+      },
+    );
+  });
+  let applied: boolean;
+  try {
+    await waitForProjection(
+      id,
+      (s) =>
+        s.agentPid !== null &&
+        (launchedAt === null ||
+          (s.statusAt !== null && s.statusAt >= launchedAt)),
+      READY_TIMEOUT_MS,
+      "the agent's start",
+      wait.signal,
+    );
+    applied = true;
+  } catch (err) {
+    if (!(err instanceof ProjectionWaitAbortedError)) {
+      if (!(err instanceof ProjectionTimeoutError)) throw err;
+      applied = false;
+    } else if (probeError !== null) {
+      throw probeError;
+    } else if (stalled) {
+      applied = false;
+    } else {
+      return { kind: "slow" };
+    }
+  } finally {
+    stopProbing();
+    signal.removeEventListener("abort", callOff);
+  }
+  let agentSeq: number | null;
+  try {
+    agentSeq = (await helloAgent(id)).seq;
+  } catch (err) {
+    if (!(err instanceof AgentNotRunningError)) throw err;
+    agentSeq = null;
+  }
+  const cursorSeq = (await readAgentRow(id))?.cursorSeq ?? 0;
+  const outcome = startOutcome({ applied, agentSeq, cursorSeq });
+  if (outcome.kind === "consumer-behind") {
+    await recordReport({
+      kind: "sdk-consumer-stalled",
+      source: "server-caught",
+      message: `SDK agent ${id}: it answers at seq ${String(outcome.agentSeq)}, but its row has applied only up to seq ${String(outcome.cursorSeq)} — this backend is not applying its events`,
+      data: {
+        conversationId: id,
+        cursorSeq: outcome.cursorSeq,
+        agentSeq: outcome.agentSeq,
+      },
+    });
+  }
+  return outcome;
+}
+
+/**
+ * Ready = the agent's socket answers: it queues turns from then on, so nothing
+ * waits on the CLI's initialize. A consumer behind the agent is reported (by
+ * {@link waitForStart}) and still ready — the agent takes the turn.
+ */
+async function waitUntilReady(
   id: string,
   signal: AbortSignal,
 ): Promise<"ready" | "timeout"> {
-  const deadline = Date.now() + READY_TIMEOUT_MS;
-  while (!signal.aborted && Date.now() < deadline) {
-    const seen = (await readAgentRow(id))?.cursorSeq ?? 0;
-    if (await answersHello(id)) return "ready";
-    try {
-      await waitForProjection(
-        id,
-        (s) => s.cursorSeq > seen,
-        Math.max(1, deadline - Date.now()),
-        "the agent's start",
-      );
-    } catch (err) {
-      if (err instanceof ProjectionTimeoutError) return "timeout";
-      throw err;
-    }
-  }
-  return "timeout";
+  const outcome = await waitForStart(id, signal, null);
+  return outcome.kind === "slow" ? "timeout" : "ready";
 }
 
 /** The agent process exited before it answered on its socket. */
@@ -223,15 +358,23 @@ function lastErrorLine(output: string): string {
 }
 
 /**
- * Hold the launch until the agent answers, so an agent that dies on start
- * fails it with its own output, rather than leaving the row `starting` for the
- * status sweep to call stuck. A slow start is not a failure: one still coming
- * up at the deadline is left to the readiness waiters, as before.
+ * Start the agent and hold the launch until it is up, so an agent that dies on
+ * start fails it with its own output, rather than leaving the row `starting`
+ * for the status sweep to call stuck. A slow start is not a failure: one still
+ * coming up at the deadline is left to the readiness waiters, as before. Nor is
+ * a consumer behind the agent (reported by {@link waitForStart}): the agent is
+ * up and took the launch prompt, and failing the launch would hand the turn
+ * back to be sent a second time.
  */
-async function awaitStart(id: string, started: StartedAgent): Promise<void> {
+async function launchAgent(
+  id: string,
+  options: AgentLaunchOptions,
+): Promise<void> {
+  const launchedAt = new Date();
+  const started = await startAgentProcess(id, options);
   const stopWaiting = new AbortController();
   const outcome = await Promise.race([
-    waitForHello(id, stopWaiting.signal).then((r) => ({ kind: r })),
+    waitForStart(id, stopWaiting.signal, launchedAt),
     started.exited.then((reason) => ({ kind: "exited" as const, reason })),
   ]);
   stopWaiting.abort();
@@ -259,14 +402,17 @@ async function moveOffSpentAccount(id: string): Promise<void> {
   const relaunch = continueRelaunchOptions(readAgentOptions(id), row.sessionId);
   await stopAgent(id);
   await recordLaunchSession(id, relaunch.sessionId);
-  await awaitStart(id, await startAgentProcess(id, relaunch));
+  await launchAgent(id, relaunch);
 }
 
-async function sendTurn(id: string, text: string): Promise<TypedTurn> {
+async function sendTurn(id: string, turn: OutgoingTurn): Promise<void> {
   await moveOffSpentAccount(id);
-  await commandAgent(id, { type: "turn", turnId: null, text }, TurnReplySchema);
+  await commandAgent(
+    id,
+    { type: "turn", turnId: turn.turnId, text: turn.text },
+    TurnReplySchema,
+  );
   // The agent queued it; the ledger confirms it on the `turn_started` event.
-  return { verdict: { kind: "submitted" } };
 }
 
 export const sdkRuntime: ConversationRuntime = {
@@ -297,7 +443,7 @@ export const sdkRuntime: ConversationRuntime = {
     cwd: string,
     launch: LaunchFragment,
     opts?: {
-      prompt?: string;
+      prompt?: OutgoingTurn;
       appendSystemPrompt?: string;
       model?: ConversationModel;
       effort?: EffortLevel;
@@ -322,11 +468,11 @@ export const sdkRuntime: ConversationRuntime = {
       prompt: opts?.prompt,
       appendSystemPrompt: opts?.appendSystemPrompt,
     });
-    const fresh = !eventsExist(id);
+    const fresh = !agentEventsExist(id);
     await prepareAgentRow(id, cwd, !fresh, options.sessionId);
     if (fresh) forgetPosition(id);
     adoptAgent(id);
-    await awaitStart(id, await startAgentProcess(id, options));
+    await launchAgent(id, options);
   },
 
   async delete(id: string) {
@@ -342,7 +488,7 @@ export const sdkRuntime: ConversationRuntime = {
   async stop(id: string) {
     await catchUpNow(id);
     const before = await readAgentRow(id);
-    if (!before?.working) return { returnedText: null };
+    if (!before?.working) return { returnedPromptUuid: null };
     const interruptedAt = before.cursorSeq;
     await commandAgent(id, { type: "interrupt" }, UnknownReplySchema);
     const settled = await waitForProjection(
@@ -353,7 +499,7 @@ export const sdkRuntime: ConversationRuntime = {
     );
     // A turn the agent has begun answering (an assistant message or a tool result) stays.
     if (settled.turnReplied || !settled.lastPromptUuid) {
-      return { returnedText: null };
+      return { returnedPromptUuid: null };
     }
     if (!settled.sessionId) {
       throw new Error(
@@ -367,17 +513,13 @@ export const sdkRuntime: ConversationRuntime = {
     });
     await stopAgent(id);
     await recordLaunchSession(id, relaunch.sessionId);
-    await startAgentProcess(id, relaunch);
-    await waitForProjection(
-      id,
-      (s) => s.agentPid !== null,
-      READY_TIMEOUT_MS,
-      "restart after the rewind",
-    );
-    return { returnedText: settled.lastPromptText };
+    // The same launch wait as every start: a projection still showing the
+    // predecessor's pid (its `exited` line not applied yet) is not this start.
+    await launchAgent(id, relaunch);
+    return { returnedPromptUuid: settled.lastPromptUuid };
   },
 
-  async answerPrompt(id: string, text: string) {
+  async answerPrompt(id: string, turn: OutgoingTurn) {
     // Withdraw every question the agent holds (denied, the turn interrupted),
     // then the text goes as a normal turn.
     const hello = await helloAgent(id);
@@ -388,12 +530,10 @@ export const sdkRuntime: ConversationRuntime = {
         DismissReplySchema,
       );
     }
-    return sendTurn(id, text);
+    await sendTurn(id, turn);
   },
 
-  // Ready = the agent's socket answers: it queues turns from then on, so
-  // nothing waits on the CLI's initialize.
-  waitUntilReady: waitForHello,
+  waitUntilReady,
 
   watchPartial: watchPartialMessage,
 

@@ -1,6 +1,5 @@
 import { sql } from "drizzle-orm";
 import { index } from "drizzle-orm/pg-core";
-import { nullable } from "@plugins/fields/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import {
   defineEntity,
@@ -18,7 +17,7 @@ import { ledgerTurnsEntityRef } from "../../core/entity";
 // a returned turn goes back to, and what `conversation.userTurnSent` carries.
 // `typed_text` is exactly what reached the CLI: attachment refs resolved to
 // `@<disk-path>`, or the whole launch prompt for a held turn that rode the
-// launch. The confirmed prompt is compared with it.
+// launch.
 //
 // `created_at` is `clock_timestamp()`, not `now()`: a held turn is inserted
 // after the conversation row lock, so the wall clock at insert follows the lock
@@ -28,9 +27,6 @@ export const conversationTurnsEntity = defineEntity(
   ledgerTurnsEntityRef,
   {
     typedText: textField(),
-    // `merged` only: the confirmed whole prompt, and the part of it that was
-    // not this turn (`extraText`).
-    submittedText: nullable(textField()),
   },
   {
     primaryKey: "id",
@@ -43,7 +39,7 @@ export const conversationTurnsEntity = defineEntity(
     },
     indexes: (t) => [
       // Every read is "this conversation's turns, by age": the web's window,
-      // the held flush, the confirmation's candidates.
+      // the held flush, Stop and rewind.
       index("conversation_turns_conversation_idx").on(
         t.conversationId,
         t.createdAt,
@@ -55,10 +51,8 @@ export const conversationTurnsEntity = defineEntity(
       touchedBy: {
         typedText: true,
         state: true,
-        submittedText: true,
         submittedAt: true,
         promptUuid: true,
-        extraText: true,
         error: true,
         id: false,
         conversationId: false,

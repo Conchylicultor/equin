@@ -7,8 +7,8 @@ itself. Design and the CLI experiments behind it:
 It replaces a browser-side guess — "did the CLI accept these exact bytes?",
 answered by matching transcript text, only while one view was mounted, against
 a 90 s deadline — with facts: the runtime's verdict on the send, the agent's
-own confirmation (the sdk runtime's `turn_started` event, which carries the
-exact prompt it took), and Stop. Under the retired tmux runtime that
+own confirmation (the sdk runtime's `turn_started` event, which echoes the
+turn's ledger id and names the transcript line it became), and Stop. Under the retired tmux runtime that
 confirmation was the CLI's `UserPromptSubmit` hook; the ledger's `confirmed`
 event is its successor.
 
@@ -19,12 +19,11 @@ event is its successor.
 | `id` | `turn-<uuid>` (`turnIdKind`), minted by the client so a repeated POST finds the row the first one wrote; the server mints one when a sender has none |
 | `kind` | `turn` (a user message), `answer` (an AskUserQuestion answer), `push-and-exit`, `launch` (the prompt the conversation was launched with) |
 | `text` | what the user wrote, raw — the draft a returned turn goes back to; what `userTurnSent` carries |
-| `typed_text` | exactly what reached the CLI: attachment refs resolved, or the whole launch prompt for a held turn that rode the launch. The confirmed prompt is compared with this |
+| `typed_text` | exactly what reached the agent: attachment refs resolved, or the whole launch prompt for a held turn that rode the launch |
 | `state` | below |
-| `submitted_text`, `extra_text` | `merged` only: the confirmed whole prompt, and the part that was not this turn |
-| `submitted_at` | `accepted` / `merged`: when the agent took it — the event's own time, so a late replay still records the agent's moment |
-| `prompt_uuid` | `accepted` / `merged`: the uuid of the message the agent took — the transcript entry's (a user line's `uuid`, a folded-in prompt's `source_uuid`), so the web retires the echo on the message itself |
-| `error` | `failed` / `unverified`: why |
+| `submitted_at` | `accepted`: when the agent took it — the event's own time, so a late replay still records the agent's moment |
+| `prompt_uuid` | set with `submitted_at`: the uuid of the transcript line the turn became (the SDK user message the agent queued it as) — the turn's identity in the transcript: Stop and rewind return the row by it, and the web's echo retires on it |
+| `error` | `failed` (kept by `withdrawn`): why |
 
 ## States — one pure function
 
@@ -35,32 +34,36 @@ full state × event matrix out, plus the fixed point (an event applied twice
 changes nothing) and order independence (the confirmation before or after `typed`).
 
 ```
-held ─▶ typing ─▶ typed ─▶ accepted     confirmed prompt == typed text
-  ▲       │         ├────▶ merged       confirmed prompt contains it plus other text
-  └─hold──┤         └────▶ returned     Stop rewound it
-          ├─▶ failed       never reached the agent — Retry
-typed ─dropped─▶ failed    the agent went away with it still in its CLI's queue
-          └─▶ unverified   the runtime cannot tell whether it went in — Retry
-failed / unverified ─withdraw─▶ withdrawn ─exact confirmation─▶ accepted
+held ─▶ typing ─▶ typed ─▶ accepted ─▶ returned   the agent confirmed THIS row (by id);
+  ▲       │         │                              Stop / a rewind took it back
+  └─hold──┤         └────▶ returned               a rewind cut it before its confirmation
+          └─▶ failed       never reached the agent — Retry
+typed ─dropped─▶ failed    the agent went away with it still in its CLI's queue — Retry
+failed ─withdraw─▶ withdrawn ─confirmation─▶ accepted
 held ─Stop while starting─▶ returned
 ```
 
+There is no `merged` (a turn is its own SDK user message, so nothing can
+submit two as one) and no `unverified` (a verdict only the retired tmux
+runtime's input-box check produced). The data migration
+`retire_text_matched_turns` moved old rows to `accepted` / `failed`.
+
 - **A confirmation always wins** — over `typing` (it can land inside the
-  runtime's own send), `typed`, `unverified`, `failed` and (exactly) a
-  `withdrawn` turn.
-- **Never revert.** Once accepted or merged, the send path's own verdicts change
-  nothing; only `returned` moves a settled row (the CLI really gave it back).
-- **No timer anywhere.** A `typed` row waits for its confirmation. Every turn
-  gets one — a slash command or a `!` line included: the agent confirms
-  whatever it takes off its input queue.
-- `withdraw` (failed / unverified → `withdrawn`): the card's Copy to draft —
-  the user takes the text back instead of retrying; the error stays, for
-  history. Without it a failed row would hold its card until it left the
-  window. A late confirmation matching it EXACTLY still makes it `accepted`
-  (an unverified turn may have landed after all — the truth wins), tried after
-  every turn still on its way. Stop's `returned` ignores confirmations: one of
-  that text belongs to whatever turn carries it next. `CONFIRM_ROLE` (a Record
-  over every state) says what a confirmation may do in each.
+  runtime's own send), `typed`, `failed`, `withdrawn` and `held` (a launch
+  that threw after its agent took the prompt put it back; accepting it keeps
+  the flush from sending it twice). A settled row (`accepted`, `returned`) is
+  a fixed point: a replayed line changes nothing. `CONFIRMABLE` (a Record
+  over every state) says which.
+- **Never revert.** Once accepted, the send path's own verdicts change nothing;
+  only `returned` moves a settled row (the agent really gave it back).
+- **No timer anywhere.** A `typed` row waits for its confirmation, or for its
+  agent's exit (`dropped`). Every turn gets one — a slash command or a `!`
+  line included: the agent confirms whatever its CLI starts.
+- `withdraw` (failed → `withdrawn`): the card's Copy to draft — the user takes
+  the text back instead of retrying; the error stays, for history. Without it
+  a failed row would hold its card until it left the window. A late
+  confirmation of it still makes it `accepted` (the truth wins). Stop's
+  `returned` ignores confirmations: the agent handed that turn back.
 - `returned` from `held`: Stop while the conversation is `starting`
   (`returnHeldTurns`, conversations `stopTurn`) takes every held turn back into
   the draft at once — none reached the agent. Conditional on `held` like the
@@ -70,33 +73,70 @@ held ─Stop while starting─▶ returned
   `starting` again; the turn waits for its input box like any held turn.
   `release` (typing → held): the launch that was to carry it threw.
 
-## Matching the confirmation
+## Matching the confirmation: by identity
 
-`resolvePromptSubmit(conversationId, prompt)` takes the rows a confirmation may still
-resolve, oldest first, and tries `promptCandidates`: every **equal** match
-first, then every row the prompt **contains** — never a `failed` one, which
-never reached the box to be merged. Equality is byte-exact save for edge
-whitespace (the launch message reaches the CLI with a space before a leading
-`/`). `prompt_id` is no turn id: a busy agent's queued turn carries the running
-turn's. Sends are serialized per conversation, so the candidates are few and in
-order. A prompt matching nothing — typed in the terminal — is not ours and is
-dropped.
+Every turn is sent with its row's id (`ConversationRuntime.send(id, { turnId,
+text })`, the launch prompt in the agent's options file likewise), and the agent
+echoes it in the `turn_started` it writes when the SDK takes the turn off its
+input queue, with the transcript line's uuid (`promptUuid`).
+`confirmTurn(conversationId, turnId, promptUuid, at)` applies the `confirmed`
+event to THAT row — no text is compared, so two turns with the same text, a
+slash command, a `!` line are all just rows. It returns what it found:
+`confirmed`, `settled` (unchanged), `unknown-turn` or `other-conversation` —
+the last two the consumer files as a `turn-unknown-id` report; the ledger
+never guesses which row was meant.
+
+**Temporary legacy fallback — delete once no agent started before turn ids
+runs** (no live `conversations_ext_sdk_agent` row with `turn_ids` false; step A3
+of [`research/2026-10-25-conversations-turn-identity-and-fresh-projection.md`](../../../../research/2026-10-25-conversations-turn-identity-and-fresh-projection.md)).
+An agent started before turn ids put none on its launch prompt (its options
+file held a bare string). Its `turn_started` with `turnId: null` goes to
+`resolvePromptSubmit(conversationId, prompt, promptUuid, at)` (the
+`confirmed-by-text` event): the oldest unsettled row whose typed text IS the
+prompt (`promptIs` — equality, edge whitespace aside; nothing is matched by
+containment). The fallback is gated on the agent, not guessed: the sdk
+projection's `turnIds` is set by each process's `started` line, so an id-less
+turn from an agent that does put ids on its turns is a `turn-without-id`
+report, never a text match.
 
 ## Where the confirmation comes from
 
-The sdk runtime's event consumer calls `resolvePromptSubmit(conversationId,
-{ prompt, promptUuid, at })` for each `turn_started` its agent writes —
-replayed from its event cursor after a backend restart, so a confirmation is
-never lost while the backend is down.
+The sdk runtime's event consumer calls `confirmTurn` for each `turn_started`
+its agent writes — replayed from its event cursor after a backend restart, so
+a confirmation is never lost while the backend is down.
 
 `turn_started` is the CLI **starting** the turn, not the turn being handed to
 it: a busy CLI parks a message in its command queue and starts it at the next
 tool boundary (folded into the running turn) or the turn's end. The agent
-follows that queue through the CLI's `command_lifecycle` messages
-(`runtime-sdk/bin/agent.ts`), so `typed` is exactly "queued in the agent" —
-the web's Queued echo. When the agent exits, every `typed` row sent before the
-exit is `dropped` (→ `failed`, Retry): its CLI's queue died with it. Findings:
+follows that queue through the CLI's `command_lifecycle` messages, keyed by the
+SDK user message's uuid (`runtime-sdk/bin/agent.ts`), and only then writes
+`turn_started` carrying the row's id and that uuid — so `typed` is exactly
+"queued in the agent" (the web's Queued echo), and one identity runs from the
+ledger row through the agent's message to the transcript line (`prompt_uuid`).
+A CLI reporting no lifecycle confirms at hand-off. When the agent exits, every
+`typed` row sent before the exit is `dropped` (→ `failed`, Retry): its CLI's
+queue died with it. Findings:
 [`research/2026-10-25-conversations-queued-message-state.md`](../../../../research/2026-10-25-conversations-queued-message-state.md).
+
+## The transcript line a turn becomes
+
+`prompt_uuid` is the uuid the agent gave the SDK user message; what Claude
+Code writes under it (measured over 1,141 sdk turns, 2026-10-25):
+
+- a user line with `uuid` = `prompt_uuid` — a slash command included:
+  `/compact` writes `<command-name>/compact</command-name>…` under it, then its
+  `<local-command-stdout>` line. No `!` turn occurs in the sample (bash mode
+  is the interactive REPL's; the agent sends a `!` line as an ordinary SDK user
+  message) — unobserved; one that wrote no line would keep its echo (visible,
+  never hidden) until the window moved past it;
+- for a turn sent while the agent was busy and **folded into the running
+  turn** at a tool boundary (`queue-operation remove` — 39 of 1,141), no user
+  line at all: a `queued_command` attachment whose `source_uuid` is
+  `prompt_uuid`. The transcript parser (`transcript-source`) turns it into the
+  user's own message under that uuid.
+
+So "the transcript shows this turn" is one uuid lookup over the parsed user
+messages — the web's echo retirement (`pending-turn`'s `transcriptShows`).
 
 ## Who writes rows
 
@@ -123,34 +163,44 @@ resolved confirmation signals `onTurnSubmitted`, which the reconciler subscribes
 to, so the status follows the confirmation's arrival. The browser's optimistic status stops at
 `accepted` — the server is the one writer of `working` from there.
 
-## Rewind
+## Stop and rewind: the turn taken back, by its transcript line
 
-A rewind cuts turns out of the transcript; `returnTurnsSince(conversationId,
-cutMessageAt)` plus `returnTurnByText` for the cut message itself make them
-`returned` (conversations `rewindConversationAt`). Without it a cut turn stayed
-`accepted` — the agent's newest turn, as far as the ledger knew.
+- **Stop** (conversations `stopTurn`): `ConversationRuntime.stop` answers the
+  transcript uuid of the turn it took back out of the session (the sdk
+  runtime's `lastPromptUuid`), or null when the turn stays (it had a reply).
+  `returnTurnByPromptUuid` makes THAT row `returned`, and the draft gets the
+  row's own `text` — never text read back from the agent. A uuid no row was
+  confirmed as is a ledger hole and throws.
+- **Rewind** (conversations `rewindConversationAt`): `returnTurnsSince(
+  conversationId, cutMessageAt)` returns every turn sent from the cut on, and
+  `returnTurnByPromptUuid` the cut message itself, by the cut line's uuid (its
+  row predates its own line, so the time cut alone misses it). A cut at an
+  AskUserQuestion answer names a tool result, which no row is. Without it a cut
+  turn stayed `accepted` — the agent's newest turn, as far as the ledger knew.
 
 ## Events and reports
 
 - `conversation.userTurnSent` (owned here, read by task-title) is emitted when a
-  `turn` row is accepted or merged — the moment the agent got it.
-- `turn-merged` (with the extra text) and `turn-unverified` are filed where the
-  fact is learned: the merge by the confirmation, the unverified verdict by the
-  transition write. They replace the browser's `turn-unconfirmed`. The store
-  announces both on `turnVerdictSink` (`server/internal/verdict-sink.ts`), and
-  `machine/` maps it to `recordReport`: the reports engine is not portable, and
-  the server half runs on every host (it is `portable: true`, so the demo's
-  browser worker serves `turn-ledger.turns` over PGlite).
+  `turn` row is accepted — the moment the agent got it.
+- `turn-without-id` / `turn-unknown-id` (runtime-sdk's machine half, which
+  learns them): a confirmation that names no row of this conversation.
+- `turn-unverified` is **retired** (`machine/internal/report-kinds.ts`):
+  nothing files it, it stays registered while old rows remain. The server half
+  is `portable: true` (the demo's browser worker serves `turn-ledger.turns`
+  over PGlite), so it files no report itself.
 
 ## Reading it from the web
 
 `conversationTurns` (`turn-ledger.turns`, core): a window collection filterable
-by `conversationId`, newest first (default 20, max 100). Retry is
+by `conversationId`, newest first (default 20, max 100), carrying
+`promptUuid`. Retry is
 `retryConversationTurn` (`POST /api/conversations/:id/turns/:turnId/retry`, in
-conversations core) for `failed` / `unverified` rows, and Copy to draft is
+conversations core) for `failed` rows, and Copy to draft is
 `withdrawConversationTurn` (`…/withdraw`, → `withdrawn`). The browser's half — the send, the
-echo and the cards — is `conversation-view/pending-turn`. A 7-day retention sweep
-(`machine/`, desktop only) removes settled rows (accepted, merged, returned,
+echo and the cards — is `conversation-view/pending-turn`; its echo retires on
+the transcript line named by `promptUuid` (see its CLAUDE.md for which line a
+slash command and a turn absorbed by a busy agent become). A 7-day retention
+sweep (`machine/`, desktop only) removes settled rows (accepted, returned,
 withdrawn).
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./equin build` -->

@@ -52,15 +52,25 @@ const renderEcho: RenderEcho = (turn, status) => (
 /**
  * The transcript's one activity line, at its foot under the queued messages:
  * the agent is starting, or working on a turn, with how long it has been at
- * it. A message on its way says so itself, under its echo.
+ * it — or, while the row's status is unverified, that what it is doing is not
+ * known (never the quiet foot of an idle agent). A message on its way says so
+ * itself, under its echo.
  */
 function TranscriptActivity({
   phase,
   startAt,
 }: {
-  phase: "starting" | "working";
+  phase: "starting" | "working" | "unknown";
   startAt: number | null;
 }) {
+  if (phase === "unknown")
+    return (
+      <Line className="px-md py-xs">
+        <Text as="span" variant="caption" className="text-muted-foreground">
+          Status unknown — this backend has not caught up with the agent
+        </Text>
+      </Line>
+    );
   return (
     // px-md: the same inset as the transcript's text rows, so the dots start
     // on the column the agent's words and the tool cards' contents start on.
@@ -181,11 +191,15 @@ function JsonlPaneInner({
   const agentStarting = conversation.status === "starting";
   // The foot's activity line (see TranscriptActivity): the agent's phase. A
   // message still on its way to an idle agent says so under its own echo.
-  const activity: "starting" | "working" | null = agentStarting
-    ? "starting"
-    : isWorking
-      ? "working"
-      : null;
+  // An unverified status claims no phase, and no idle either.
+  const activity: "starting" | "working" | "unknown" | null =
+    conversation.statusUnverifiedSince !== null && !isGone
+      ? "unknown"
+      : agentStarting
+        ? "starting"
+        : isWorking
+          ? "working"
+          : null;
 
   // Working with nothing written yet: the pane's empty state shows it.
   const isStarting =

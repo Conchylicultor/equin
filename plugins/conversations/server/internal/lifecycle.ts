@@ -58,7 +58,7 @@ import {
 } from "@plugins/conversations/plugins/workspace/server";
 import {
   acceptTurn,
-  returnTurnByText,
+  returnTurnByPromptUuid,
   returnTurnsSince,
 } from "@plugins/conversations/plugins/turn-ledger/server";
 import { turnIdKind } from "@plugins/conversations/plugins/turn-ledger/core";
@@ -844,15 +844,18 @@ export async function previewRewind(
  * longer in the transcript, so its row is `returned` — otherwise it would
  * still claim to be the agent's latest turn (an echo with nothing to retire it,
  * a submit the status reconciler weighs). Later turns first, by send time; then
- * the cut message itself by its text, which its row carries (the row predates
- * its own transcript line, so the time cut alone misses it).
+ * the cut message itself, by its transcript line's uuid — the row the agent
+ * confirmed as that line (the row predates its own line, so the time cut alone
+ * misses it). A cut at an AskUserQuestion answer names a tool result, which no
+ * turn row is.
  */
 async function returnCutTurns(
   conversationId: string,
-  cut: { messageText: string; messageAt: Date | null },
+  cut: { messageAt: Date | null },
+  cutUuid: string,
 ): Promise<void> {
   if (cut.messageAt) await returnTurnsSince(conversationId, cut.messageAt);
-  await returnTurnByText(conversationId, cut.messageText);
+  await returnTurnByPromptUuid(conversationId, cutUuid);
 }
 
 /**
@@ -894,7 +897,7 @@ export async function rewindConversationAt(
 
   await rename(located.path, backupPath);
   await Bun.write(located.path, serializeTranscript(located.cut.keptLines));
-  await returnCutTurns(id, located.cut);
+  await returnCutTurns(id, located.cut, userMessageUuid);
 
   // Kills the pane — a running turn and any background work with it — and
   // resumes the same session id on the shortened file.

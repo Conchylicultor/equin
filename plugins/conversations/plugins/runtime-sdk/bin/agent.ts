@@ -501,6 +501,7 @@ async function run(cmd: AgentCommand): Promise<unknown> {
         openRequests: [...openRequests.values()],
         stream: true,
         contextUsage: true,
+        turnIds: true,
       };
       return reply;
     }
@@ -584,6 +585,12 @@ function serve(conn: Socket): void {
 
 rmSync(socketPath, { force: true });
 const server = createServer(serve).listen(socketPath);
+// `started` is written once the socket answers: the backend reads that line as
+// "the agent is up" and asks it `hello` straight after. A failed listen is an
+// `error` event with no listener — a crash, loud.
+const listening = new Promise<void>((resolve) => {
+  server.once("listening", () => resolve());
+});
 
 // ── exit ──────────────────────────────────────────────────────────────────
 // The pid file says "this process is alive" to every backend, so it goes
@@ -692,6 +699,7 @@ function hardExit(
   throw new Error("SIGKILL did not end the agent process");
 }
 
+await listening;
 emit({
   kind: "agent",
   payload: {
@@ -701,6 +709,7 @@ emit({
     resumeAt: options.resumeAt,
     fork: options.fork,
     account: args.account,
+    turnIds: true,
   },
 });
 // The pid file is what says "running" to every backend counting agents; a
@@ -708,7 +717,8 @@ emit({
 mkdirSync(dirname(pidPath), { recursive: true });
 writeFileSync(pidPath, `${process.pid}\n`);
 log(`● agent ${process.pid} · ${dir}`);
-if (options.prompt !== null) pushInput(options.prompt, null);
+if (options.prompt !== null)
+  pushInput(options.prompt.text, options.prompt.turnId);
 
 for await (const msg of session) {
   // Nothing is numbered after `exited`.

@@ -12,7 +12,7 @@ import {
   holdIfStarting,
   listHeldTurns,
   returnHeldTurns,
-  returnTurnByText,
+  returnTurnByPromptUuid,
   type TurnRow,
 } from "@plugins/conversations/plugins/turn-ledger/server";
 import { QUESTION_WAITING_FOR } from "../../core/turn-gate";
@@ -21,7 +21,7 @@ import {
   conversationRuntime,
   getConversationRow,
   withTerminal,
-  type TypedTurn,
+  type OutgoingTurn,
 } from "./runtime";
 
 // Every turn the app sends to an agent goes through here, and every one gets
@@ -97,9 +97,8 @@ export type RetryOutcome =
   | { kind: "retried"; turn: TurnRow };
 
 /**
- * Deliver a `failed` or `unverified` turn again, as it was typed. Manual only:
- * an unverified turn may have landed after all, so re-sending is the user's
- * call. Throws when the delivery fails again (the row is `failed`).
+ * Deliver a `failed` turn again, as it was typed. Manual only: re-sending is
+ * the user's call. Throws when the delivery fails again (the row is `failed`).
  */
 export async function retryTurn(
   conversationId: string,
@@ -127,10 +126,9 @@ export type WithdrawOutcome =
   | { kind: "withdrawn" | "not-withdrawable"; turn: TurnRow };
 
 /**
- * The user took a `failed` / `unverified` turn back into the draft instead of
- * retrying it (the card's Copy to draft): the row becomes `withdrawn`, the
- * draft its only copy. Touches no terminal — an unverified turn's text may
- * still sit in the CLI's box, which the next send's empty-box guard clears.
+ * The user took a `failed` turn back into the draft instead of retrying it
+ * (the card's Copy to draft): the row becomes `withdrawn`, the draft its only
+ * copy. Touches no agent.
  */
 export async function withdrawTurn(
   conversationId: string,
@@ -181,7 +179,7 @@ export async function deliverHeldTurns(conversationId: string): Promise<void> {
  */
 export async function launchWithHeldTurn(
   conversationId: string,
-  launch: (prompt: string | undefined) => Promise<void>,
+  launch: (prompt: OutgoingTurn | undefined) => Promise<void>,
 ): Promise<void> {
   await withTerminal(conversationId, async () => {
     const [first] = await listHeldTurns(conversationId);
@@ -198,7 +196,7 @@ export async function launchWithHeldTurn(
       return;
     }
     try {
-      await launch(first.typedText);
+      await launch({ turnId: claimed.id, text: claimed.typedText });
     } catch (err) {
       await applyTurnEvent(first.id, {
         kind: "release",
@@ -214,7 +212,8 @@ export async function launchWithHeldTurn(
  * Stop: the runtime interrupts the turn and, when it got no reply, takes it
  * back out of the session (`ConversationRuntime.stop`). The web's draft
  * becomes the turn's only copy, and its ledger row is `returned`. Returns the
- * text taken back.
+ * text taken back — the row's own text, the row named by the transcript line
+ * the runtime took back.
  *
  * While the conversation is starting there is no turn running yet, only turns
  * waiting for the agent (`held` — the launch prompt, and whatever was sent
@@ -234,11 +233,21 @@ export async function stopTurn(conversationId: string): Promise<string | null> {
     ? null
     : await withTerminal(conversationId, async () => {
         const { runtime } = await conversationRuntime(conversationId);
-        const { returnedText } = await runtime.stop(conversationId);
-        if (returnedText !== null) {
-          await returnTurnByText(conversationId, returnedText);
+        const { returnedPromptUuid } = await runtime.stop(conversationId);
+        if (returnedPromptUuid === null) return null;
+        const returned = await returnTurnByPromptUuid(
+          conversationId,
+          returnedPromptUuid,
+        );
+        // Every turn an agent takes is a ledger row confirmed with its line's
+        // uuid: one without a row is a ledger hole, and its text is gone from
+        // the session — say so rather than hand back nothing.
+        if (!returned) {
+          throw new Error(
+            `Stop took turn ${returnedPromptUuid} out of conversation ${conversationId}, but no ledger turn was confirmed as it`,
+          );
         }
-        return returnedText;
+        return returned.text;
       });
   // Oldest first: the running turn was sent before any turn held behind it.
   const texts = [stopped, ...takenBack.map((turn) => turn.text)].filter(
@@ -252,7 +261,7 @@ function messageOf(err: unknown): string {
 }
 
 /**
- * Type one `typing` row into its agent and record the verdict. The caller is
+ * Send one `typing` row to its agent and record that it is `typed`. The caller is
  * the conversation's terminal writer.
  *
  * A hibernated conversation is resumed first, which puts it back in
@@ -262,7 +271,6 @@ function messageOf(err: unknown): string {
  */
 async function deliverLocked(turn: TurnRow): Promise<TurnRow> {
   const conversationId = turn.conversationId;
-  let typed: TypedTurn;
   try {
     const resumed = await ensureResumed(conversationId);
     if (resumed.kind === "blocked") {
@@ -271,17 +279,12 @@ async function deliverLocked(turn: TurnRow): Promise<TurnRow> {
     if (await holdIfStarting(turn.id)) {
       return (await getTurn(turn.id)) ?? turn;
     }
-    typed = await typeInto(turn);
+    await typeInto(turn);
   } catch (err) {
     await applyTurnEvent(turn.id, { kind: "failed", error: messageOf(err) });
     throw err;
   }
-  return applyTurnEvent(
-    turn.id,
-    typed.verdict.kind === "submitted"
-      ? { kind: "typed" }
-      : { kind: "unverified", reason: typed.verdict.reason },
-  );
+  return applyTurnEvent(turn.id, { kind: "typed" });
 }
 
 /**
@@ -290,10 +293,11 @@ async function deliverLocked(turn: TurnRow): Promise<TurnRow> {
  * chose to say something else, and the agent would otherwise read it as the
  * answer.
  */
-async function typeInto(turn: TurnRow): Promise<TypedTurn> {
+async function typeInto(turn: TurnRow): Promise<void> {
   const id = turn.conversationId;
   const { waitingFor, runtime } = await conversationRuntime(id);
+  const outgoing: OutgoingTurn = { turnId: turn.id, text: turn.typedText };
   if (turn.kind === "answer" || waitingFor === QUESTION_WAITING_FOR)
-    return runtime.answerPrompt(id, turn.typedText);
-  return runtime.send(id, turn.typedText);
+    return runtime.answerPrompt(id, outgoing);
+  return runtime.send(id, outgoing);
 }

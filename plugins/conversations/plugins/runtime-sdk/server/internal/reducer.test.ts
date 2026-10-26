@@ -9,17 +9,32 @@ const started = (seq: number, pid = 42): AgentEvent => ({
   seq,
   t: at(),
   kind: "agent",
+  payload: {
+    event: "started",
+    pid,
+    resume: null,
+    resumeAt: null,
+    fork: false,
+    turnIds: true,
+  },
+});
+/** A `started` from an agent started before turn ids (no `turnIds`). */
+const startedLegacy = (seq: number, pid = 41): AgentEvent => ({
+  seq,
+  t: at(),
+  kind: "agent",
   payload: { event: "started", pid, resume: null, resumeAt: null, fork: false },
 });
 const turnStarted = (
   seq: number,
   text: string,
   promptUuid: string,
+  turnId: string | null = `turn-${promptUuid}`,
 ): AgentEvent => ({
   seq,
   t: at(),
   kind: "agent",
-  payload: { event: "turn_started", turnId: null, promptUuid, text },
+  payload: { event: "turn_started", turnId, promptUuid, text },
 });
 const sdk = (seq: number, payload: unknown): AgentEvent => ({
   seq,
@@ -113,7 +128,6 @@ describe("reduceEvents", () => {
       working: true,
       agentPid: 42,
       lastPromptUuid: "p-b",
-      lastPromptText: "remember BANANA",
       turnReplied: false,
       lastAssistantUuid: "a-1",
       rewindAnchorUuid: "a-1",
@@ -151,8 +165,8 @@ describe("reduceEvents", () => {
     expect(second.effects).toEqual([
       {
         kind: "prompt-submitted",
-        text: "remember BANANA",
-        promptUuid: expect.any(String),
+        turnId: "turn-p-b",
+        promptUuid: "p-b",
         at: expect.any(Date),
       },
     ]);
@@ -160,6 +174,50 @@ describe("reduceEvents", () => {
     const third = reduceEvents(second.state, stream);
     expect(third.state).toEqual(second.state);
     expect(third.effects).toEqual([]);
+  });
+
+  test("a turn the agent took carries its ledger id and transcript uuid", () => {
+    const { effects } = reduceEvents(EMPTY_PROJECTION, stream.slice(0, 2));
+    expect(effects).toEqual([
+      {
+        kind: "prompt-submitted",
+        turnId: "turn-p-a",
+        promptUuid: "p-a",
+        at: new Date(stream[1]!.t),
+      },
+    ]);
+  });
+
+  test("an agent started before turn ids: its id-less launch turn is matched by text", () => {
+    const { state, effects } = reduceEvents(EMPTY_PROJECTION, [
+      startedLegacy(1),
+      turnStarted(2, "launch prompt", "p-l", null),
+      // A turn the new backend sent it: the old agent echoes the id.
+      turnStarted(3, "follow-up", "p-f", "turn-f"),
+    ]);
+    expect(state.turnIds).toBe(false);
+    expect(effects.map((e) => e.kind)).toEqual([
+      "prompt-submitted-by-text",
+      "prompt-submitted",
+    ]);
+  });
+
+  test("an id-less turn from an agent that puts ids on every turn is reported, not matched", () => {
+    const { state, effects } = reduceEvents(EMPTY_PROJECTION, [
+      startedLegacy(1),
+      // Relaunched under the new protocol: the new process's `started` says so.
+      started(2),
+      turnStarted(3, "where from?", "p-x", null),
+    ]);
+    expect(state.turnIds).toBe(true);
+    expect(effects).toEqual([
+      {
+        kind: "turn-without-id",
+        seq: 3,
+        promptUuid: "p-x",
+        text: "where from?",
+      },
+    ]);
   });
 
   test("a seq jump past the cursor is reported as a gap, then applied", () => {

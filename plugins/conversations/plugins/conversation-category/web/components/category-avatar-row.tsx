@@ -3,7 +3,7 @@ import { useMemo } from "react";
 import { statusDotPaintClass } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { Avatar } from "@plugins/primitives/plugins/avatar/web";
 import {
-  CONV_STATUS_DOT,
+  convStatusDot,
   type ConversationItemConv,
 } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import {
@@ -31,10 +31,7 @@ export function CategoryAvatarRow({ conv }: { conv: ConversationItemConv }) {
   // the neutral disc, which would read as "still loading" forever.
   if (avatarCategoryId && rows.status === "loading") {
     return (
-      <Avatar
-        statusDot={statusDotPaintClass(CONV_STATUS_DOT[conv.status])}
-        colorless
-      />
+      <Avatar statusDot={statusDotPaintClass(convStatusDot(conv))} colorless />
     );
   }
   if (avatarCategoryId && rows.status === "error") {
@@ -58,7 +55,7 @@ export function CategoryAvatarRow({ conv }: { conv: ConversationItemConv }) {
   return (
     <Avatar
       icon={avatar?.icon ?? null}
-      statusDot={statusDotPaintClass(CONV_STATUS_DOT[conv.status])}
+      statusDot={statusDotPaintClass(convStatusDot(conv))}
       colorless={hasIcon}
       fallbackGlyph={hasIcon ? undefined : (conv.title?.trim()[0] ?? "?")}
       fallbackKey={hasIcon ? undefined : conv.id}

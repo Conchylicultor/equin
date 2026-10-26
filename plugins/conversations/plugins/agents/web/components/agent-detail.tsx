@@ -25,7 +25,7 @@ import {
   AvatarPicker,
   DEFAULT_AGENT_AVATAR,
 } from "@plugins/primitives/plugins/avatar/web";
-import { CONV_STATUS_DOT } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
+import { convStatusOnlyDot } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import {
   useFetchEndpoint,
   useMachineAvailability,
@@ -175,7 +175,7 @@ function AgentDetailInner({
                 color={agent.iconColor ?? DEFAULT_AGENT_AVATAR.color}
                 statusDot={
                   latestStatus
-                    ? statusDotPaintClass(CONV_STATUS_DOT[latestStatus])
+                    ? statusDotPaintClass(convStatusOnlyDot(latestStatus))
                     : null
                 }
                 fallbackKey={agent.id}

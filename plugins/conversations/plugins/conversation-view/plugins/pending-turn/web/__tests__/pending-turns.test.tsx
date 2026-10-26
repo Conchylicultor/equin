@@ -90,20 +90,18 @@ function row(
   state: TurnState,
   over: Partial<LedgerTurn> = {},
 ): LedgerTurn {
+  const text = over.text ?? `text of ${id}`;
   return {
     id: id as TurnId,
     conversationId,
     kind: "turn" as TurnKind,
-    text: `text of ${id}`,
+    text,
     state,
-    extraText: null,
     error: null,
-    // The agent's confirmation, a confirmed turn's only.
-    submittedAt:
-      state === "accepted" || state === "merged"
-        ? new Date(Date.now() - 60_000)
-        : null,
-    promptUuid: null,
+    // The agent's confirmation, a confirmed turn's only: when, and as which
+    // transcript line (`prompt(text)`'s uuid).
+    promptUuid: state === "accepted" ? `uuid-${text}` : null,
+    submittedAt: state === "accepted" ? new Date(Date.now() - 60_000) : null,
     createdAt: new Date(Date.now() - 60_000),
     updatedAt: new Date(Date.now() - 60_000),
     ...over,
@@ -164,10 +162,8 @@ describe("pendingTurnsOf — which ledger states draw a card", () => {
     // Echoes until the transcript shows the turn (none here).
     typed: true,
     accepted: true,
-    merged: true,
     returned: false,
     failed: true,
-    unverified: true,
     // Taken back into the draft by the user.
     withdrawn: false,
   };
@@ -185,16 +181,6 @@ describe("pendingTurnsOf — which ledger states draw a card", () => {
       NO_EVENTS,
     );
     expect(cards.map((c) => c.card)).toEqual(["echo", "failure"]);
-  });
-
-  it("shows a merged warning only while its turn is the newest", () => {
-    const merged = row("c", "old", "merged", { extraText: "stale draft" });
-    expect(pendingTurnsOf([merged], [], NO_EVENTS)[0]?.extraText).toBe(
-      "stale draft",
-    );
-    const newer = row("c", "new", "accepted");
-    const both = [prompt("a", new Date()), prompt("b", new Date())];
-    expect(pendingTurnsOf([newer, merged], [], both)).toEqual([]);
   });
 
   it("draws no in-flight echo for an answer, but its failure card", () => {
@@ -232,7 +218,7 @@ describe("pendingTurnsOf — which ledger states draw a card", () => {
     expect(cards.map((c) => c.id)).toEqual(["first", "second"]);
   });
 
-  it("an echo stands until the transcript shows the turn — whatever the ledger says", () => {
+  it("an echo stands until the transcript holds its own line — whatever else lands after", () => {
     const sentAt = new Date(Date.now() - 1_000);
     const accepted = row("c", "t1", "accepted", {
       createdAt: sentAt,
@@ -241,13 +227,49 @@ describe("pendingTurnsOf — which ledger states draw a card", () => {
     expect(pendingTurnsOf([accepted], [], NO_EVENTS)).toEqual([
       expect.objectContaining({ id: "t1", state: "accepted" }),
     ]);
-    // The transcript lags the confirmation: still the echo.
-    const lagging = [prompt("older", new Date(sentAt.getTime() - 5_000))];
-    expect(pendingTurnsOf([accepted], [], lagging)).toEqual([
+    // The window starts before the confirmation, and newer events (another
+    // turn's line) are no sign of this one: still the echo.
+    const before = new Date(sentAt.getTime() - 5_000);
+    const others = [
+      prompt("older", before),
+      prompt("another turn", new Date()),
+    ];
+    expect(pendingTurnsOf([accepted], [], others)).toEqual([
       expect.objectContaining({ id: "t1", state: "accepted" }),
     ]);
-    const landed = [prompt("text of t1", new Date())];
+    const landed = [...others, prompt("text of t1", new Date())];
     expect(pendingTurnsOf([accepted], [], landed)).toEqual([]);
+  });
+
+  it("a turn the busy agent absorbed retires on its queued_command attachment", () => {
+    const sentAt = new Date(Date.now() - 1_000);
+    const accepted = row("c", "t1", "accepted", { submittedAt: sentAt });
+    const absorbed: JsonlEvent = {
+      kind: "attachment",
+      at: new Date().toISOString(),
+      subtype: "queued_command",
+      attachment: {
+        type: "queued_command",
+        prompt: "text of t1",
+        source_uuid: "uuid-text of t1",
+      },
+    };
+    const older = prompt("older", new Date(sentAt.getTime() - 5_000));
+    expect(pendingTurnsOf([accepted], [], [older])).toHaveLength(1);
+    expect(pendingTurnsOf([accepted], [], [older, absorbed])).toEqual([]);
+  });
+
+  it("a row accepted before uuids were recorded keeps the old rule (temporary)", () => {
+    const sentAt = new Date(Date.now() - 1_000);
+    const legacy = row("c", "t1", "accepted", {
+      submittedAt: sentAt,
+      promptUuid: null,
+    });
+    const lagging = [prompt("older", new Date(sentAt.getTime() - 5_000))];
+    expect(pendingTurnsOf([legacy], [], lagging)).toHaveLength(1);
+    expect(
+      pendingTurnsOf([legacy], [], [...lagging, prompt("x", new Date())]),
+    ).toEqual([]);
   });
 
   it("an unconfirmed turn echoes however much the transcript moves on", () => {
@@ -261,9 +283,9 @@ describe("pendingTurnsOf — which ledger states draw a card", () => {
     }
   });
 
-  it("a long ledger over a transcript tail: every confirmed turn the tail reaches retires", () => {
-    // The window holds only the newest events (none of the older turns'
-    // prompts), yet each confirmed turn is shown — the tail reaches past it.
+  it("a long ledger over a transcript tail: lines in the tail, and turns above it, retire", () => {
+    // The window holds only the newest events: t3's and t4's lines. t1 and t2
+    // were taken before the window begins, so their lines are above it.
     const at = (ago: number) => new Date(Date.now() - ago);
     const confirmed = (id: string, ago: number) =>
       row("c", id, "accepted", { createdAt: at(ago), submittedAt: at(ago) });
@@ -280,13 +302,26 @@ describe("pendingTurnsOf — which ledger states draw a card", () => {
     expect(pendingTurnsOf(ledger, [], tail)).toEqual([]);
   });
 
-  it("a slash command echoes until the agent takes it, then draws nothing", () => {
+  it("a slash command retires on its own line, like any turn", () => {
     const sent = row("c", "t1", "typed", { text: "/compact" });
     expect(pendingTurnsOf([sent], [], NO_EVENTS)).toEqual([
       expect.objectContaining({ id: "t1", state: "typed" }),
     ]);
-    const taken = row("c", "t1", "accepted", { text: "/compact" });
-    expect(pendingTurnsOf([taken], [], NO_EVENTS)).toEqual([]);
+    const sentAt = new Date(Date.now() - 1_000);
+    const taken = row("c", "t1", "accepted", {
+      text: "/compact",
+      submittedAt: sentAt,
+    });
+    const older = prompt("older", new Date(sentAt.getTime() - 5_000));
+    expect(pendingTurnsOf([taken], [], [older])).toHaveLength(1);
+    // `/compact` writes `<command-name>/compact…` under the turn's uuid.
+    const line: JsonlEvent = {
+      kind: "user-text",
+      at: new Date().toISOString(),
+      text: "<command-name>/compact</command-name>",
+      uuid: "uuid-/compact",
+    };
+    expect(pendingTurnsOf([taken], [], [older, line])).toEqual([]);
   });
 });
 
@@ -334,18 +369,25 @@ describe("send → optimistic echo → live row", () => {
     await settle();
     expect(result.current.inFlight).toBe(false);
 
-    // The hook confirmed it, but the transcript has not shown it yet: the echo
+    // The agent confirmed it, but the transcript has not shown it yet: the echo
     // stays — the message is not on screen.
     const sentAt = new Date(Date.now() - 1_000);
-    ready([row(conv, turnId, "accepted", { createdAt: sentAt })]);
+    events = [prompt("earlier", new Date(sentAt.getTime() - 5_000))];
+    ready([
+      row(conv, turnId, "accepted", {
+        text: "fix the build",
+        createdAt: sentAt,
+        submittedAt: sentAt,
+      }),
+    ]);
     rerender();
     const confirmed = result.current.pending;
     expect(confirmed.status === "ready" && confirmed.data).toEqual([
       expect.objectContaining({ id: turnId, state: "accepted" }),
     ]);
 
-    // The transcript shows it: no card is left.
-    events = [prompt("fix the build", new Date())];
+    // The transcript shows its line: no card is left.
+    events = [...events, prompt("fix the build", new Date())];
     rerender();
     const done = result.current.pending;
     expect(done.status === "ready" && done.data).toEqual([]);

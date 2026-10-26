@@ -27,6 +27,41 @@ agents without tmux, per-namespace paths, the Claude Code health row:
   started in its own build while testing, which nothing else reaps once that
   backend stops (`stopCheckoutAgents`, the one cross-namespace command: by pid,
   never by socket).
+- **A stalled consumer is loud, never silent** (incident 2026-10-25: main's
+  consumer applied nothing of one conversation for the backend's lifetime, no
+  report — [`research/2026-10-25-conversations-turn-identity-and-fresh-projection.md`](../../../../research/2026-10-25-conversations-turn-identity-and-fresh-projection.md)).
+  - Launch (`launchAgent` / `waitForStart` in `sdk-runtime.ts`): waits for the
+    consumer to apply this launch's `started` line (the projection's
+    `agentPid`, with `statusAt` past the launch, so a predecessor's unapplied
+    pid does not count), bounded at 60 s, then asks `hello` once. Outcomes:
+    `ready`; `slow` (no answer yet — not a failure, left to the readiness
+    waiters); `consumer-behind` (it answers at a seq past the row's cursor —
+    reported as `sdk-consumer-stalled`, NOT thrown: the agent took the launch
+    prompt, and a failed launch would release the turn to be sent twice); a
+    process exit still throws `AgentStartError`. `waitUntilReady` is the same
+    wait with no launch in hand, and Stop's rewind relaunch goes through
+    `launchAgent` too (it used to wait on `agentPid` alone, which the
+    predecessor's unapplied pid satisfied). The agent writes `started` only
+    once its socket listens, so the `hello` after it answers.
+  - A wedged consumer ends the launch wait in seconds, not 60 s: the events
+    watch notifies `onEventsAppended(id)` listeners before (and whatever)
+    catch-up does; the wait gives each append a bounded catch-up
+    (`catchUpWithin`, 10 s), and one that does not settle stops the wait —
+    the `hello` then names `consumer-behind`. Push-only: no timer runs unless
+    the agent writes.
+  - Inspect (`inspectAgents`, every reconcile and the minute sweep): `hello`
+    first, the rows after; a row whose `cursorSeq` is behind `hello.seq`
+    gets `catchUpWithin(id, 5 s)` and a re-read, and one still behind is
+    `{ kind: "unverified" }` — the reconciler then marks the conversation
+    `statusUnverifiedSince` instead of planning from the stale projection.
+  - Catch-up (`consumer.ts`): each run is `runTracked("runtime-sdk:catch-up")`
+    and watched by a one-shot deadline (`packages/deadline`, 30 s); past it,
+    one `sdk-catch-up-overdue` report per run names the step it is parked in
+    (`read-row`, `report`, `effect:<kind>`, `write-projection`, `signal`). No
+    cancellation — the run keeps the coalescer slot until it settles. An events
+    file with no row is reported (`SdkEventsWithoutRow`); only "no row, no
+    file" (create has not prepared it) is silent. `isOurs` caches only a yes:
+    a cached no would skip a conversation forever.
 - **Every agent path is under the launching backend's namespace**
   (`machine/internal/paths.ts`, which reads `runtimeNamespace()` itself): a
   worktree's DB is a fork of main's, and with paths keyed by conversation id
@@ -58,6 +93,34 @@ agents without tmux, per-namespace paths, the Claude Code health row:
   (`SdkAgentDuplicate`) is reported too. Why:
   [`research/2026-10-21-conversations-sdk-agent-exit-guarantee.md`](../../../../research/2026-10-21-conversations-sdk-agent-exit-guarantee.md).
 - `core/protocol.ts` — the wire: commands, replies, event lines, `PROTOCOL_VERSION`.
+  An addition an older peer can ignore does not bump the version (an agent
+  refuses a `hello` of any other version, so a bump would cut the backend off
+  from every running agent); the agent advertises it in `hello` instead.
+- **Turn identity.** Every turn carries its turn-ledger row id: `sendTurn`
+  sends `{ type: "turn", turnId, text }` and a launch writes `prompt:
+  { turnId, text }` into launch.json; the agent echoes the id in the
+  `turn_started` it writes when the SDK dequeues the turn, beside the user
+  message's uuid (`promptUuid`, the transcript line's uuid). The reducer turns
+  it into a `prompt-submitted { turnId, promptUuid, at }` effect and the
+  consumer calls turn-ledger's `confirmTurn` — no text matching; an id the
+  ledger does not hold for this conversation is a `turn-unknown-id` report.
+  Relaunches (Stop's rewind, an account switch) write `prompt: null`, so a
+  confirmed launch prompt is never queued twice. **Temporary**: an agent
+  started before turn ids (`hello.turnIds` / `started.turnIds` absent, the
+  projection's `turnIds` false) put no id on its launch prompt; its id-less
+  `turn_started` is confirmed by EQUAL text (`prompt-submitted-by-text` →
+  `resolvePromptSubmit`, the oldest unsettled row whose typed text is the
+  prompt). An id-less turn from an agent with `turnIds` is a
+  `turn-without-id` report. The fallback, the `turnIds` column and
+  launch.json's bare-string `prompt` reading go once no such agent runs (no
+  live row with `turn_ids` false) — the last step of
+  [`research/2026-10-25-conversations-turn-identity-and-fresh-projection.md`](../../../../research/2026-10-25-conversations-turn-identity-and-fresh-projection.md).
+- **Stop answers a uuid, not text.** `stop` interrupts the running turn and,
+  when it got no reply, relaunches on the session rewound to before it
+  (`rewindRelaunchOptions`), answering `{ returnedPromptUuid }` — the
+  projection's `lastPromptUuid`, the transcript line of the turn taken back.
+  The conversations server returns the ledger row confirmed as that line and
+  hands back the row's own text; the agent's prompt text is never read back.
 - `core/partial.ts` — token streaming: the agent folds the SDK's
   `stream_event`s (`includePartialMessages`) into frames — never written to
   `events.jsonl` — and streams them on `subscribe` connections; the backend
@@ -164,6 +227,10 @@ Gotchas the spike hit:
     - `resource.declare` "runtime-sdk.error-stopped:groups"
     - `resource.declare` "runtime-sdk.error-stopped:rows"
     - `trigger` "runtime-sdk.attempt-ended"
+    - `report-kind` "sdk-catch-up-overdue"
+    - `report-kind` "sdk-consumer-stalled"
+    - `report-kind` "turn-unknown-id"
+    - `report-kind` "turn-without-id"
   - Uses:
     - `conversations/agent-launch.LAUNCH_CLI_SETTINGS`
     - `conversations/agent-launch.mergeLaunchSettings`
@@ -215,6 +282,7 @@ Gotchas the spike hit:
     - `AgentCommand`
     - `AgentEvent`
     - `AgentLaunchOptions`
+    - `AgentLaunchPrompt`
     - `AgentLifecycle`
     - `AgentProcesses`
     - `ClaudeUsage`

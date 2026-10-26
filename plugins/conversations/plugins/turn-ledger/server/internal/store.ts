@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, inArray, lte, max } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, lte, max } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { db } from "@plugins/database/server";
 import {
@@ -11,11 +11,10 @@ import { _conversationTurns } from "./tables";
 import { userTurnSent } from "./tables-user-turn-sent-event";
 import {
   CONFIRMABLE_STATES,
-  promptCandidates,
+  promptIs,
   transitionTurn,
   type TurnEvent,
 } from "./transition";
-import { turnVerdictSink } from "./verdict-sink";
 import { notifyTurnSubmitted } from "./submit-signal";
 
 /** One ledger row, as the server holds it. */
@@ -161,38 +160,19 @@ async function applyInTx(
 }
 
 /**
- * Whether this change is the moment the agent got a user's message, the fact
- * `conversation.userTurnSent` announces: the agent confirmed it (accepted or
- * merged).
+ * What a change means beyond the row: `conversation.userTurnSent` when it is
+ * the moment the agent got a user's message — it confirmed a `turn` row.
  */
-function deliveredNow({ row }: Applied): boolean {
-  return (
-    row.kind === "turn" && (row.state === "accepted" || row.state === "merged")
-  );
-}
-
-/** What a change means beyond the row: the event, and its report. */
 async function afterChange(applied: Applied): Promise<void> {
   if (!applied.changed) return;
   const { row } = applied;
-  if (deliveredNow(applied)) {
-    const conversation = await getConversation(row.conversationId);
-    if (conversation) {
-      await userTurnSent.emit({
-        conversationId: row.conversationId,
-        taskId: conversation.taskId,
-        text: row.text,
-      });
-    }
-  }
-  if (row.state === "merged" || row.state === "unverified") {
-    turnVerdictSink.emit({
-      verdict: row.state,
-      id: row.id,
+  if (row.kind !== "turn" || row.state !== "accepted") return;
+  const conversation = await getConversation(row.conversationId);
+  if (conversation) {
+    await userTurnSent.emit({
       conversationId: row.conversationId,
-      typedText: row.typedText,
-      extraText: row.extraText,
-      error: row.error,
+      taskId: conversation.taskId,
+      text: row.text,
     });
   }
 }
@@ -200,8 +180,8 @@ async function afterChange(applied: Applied): Promise<void> {
 /**
  * Apply `event` to the turn — the ONLY way a ledger state changes. Locks the
  * row, asks {@link transitionTurn}, writes its answer, then announces it
- * (`userTurnSent`, the merged / unverified reports). Returns the row as it now
- * stands; an event that does not apply leaves it untouched.
+ * (`userTurnSent`). Returns the row as it now stands; an event that does not
+ * apply leaves it untouched.
  */
 export async function applyTurnEvent(
   turnId: string,
@@ -247,23 +227,83 @@ export async function hasHeldTurns(
   return row !== undefined;
 }
 
-/** What the agent reported taking: the prompt, as message `promptUuid`, `at`. */
-export interface PromptConfirmation {
-  prompt: string;
-  promptUuid: string;
-  at: Date;
+/** What the agent's confirmation of one turn found. */
+export type ConfirmOutcome =
+  /** The row is `accepted` now. */
+  | { kind: "confirmed"; turn: TurnRow }
+  /** The row was settled already (a replayed line, or Stop got there first): unchanged. */
+  | { kind: "settled"; turn: TurnRow }
+  /** No row has the id. */
+  | { kind: "unknown-turn" }
+  /** The row is another conversation's. Unchanged. */
+  | { kind: "other-conversation"; owner: string };
+
+/**
+ * The agent took turn `turnId` (its `turn_started` echoed the id the turn was
+ * sent with), as the transcript line `promptUuid`, at `at`: THAT row becomes
+ * `accepted` — the `confirmed` event, whatever the row's state short of
+ * settled. A row already settled is left as it is, so replaying the line
+ * changes nothing. A confirmed row signals `onTurnSubmitted` and announces
+ * `userTurnSent`.
+ *
+ * An id no row has, or another conversation's, is a fact the caller reports:
+ * the ledger does not guess which row it meant.
+ */
+export async function confirmTurn(
+  conversationId: string,
+  turnId: string,
+  promptUuid: string,
+  at: Date,
+  conn: NodePgDatabase = db,
+): Promise<ConfirmOutcome> {
+  const found = await conn.transaction(
+    async (
+      tx,
+    ): Promise<
+      | Extract<ConfirmOutcome, { kind: "unknown-turn" | "other-conversation" }>
+      | { kind: "applied"; applied: Applied }
+    > => {
+      const [owner] = await tx
+        .select({ conversationId: _conversationTurns.conversationId })
+        .from(_conversationTurns)
+        .where(eq(_conversationTurns.id, turnIdKind.key(turnId)))
+        .for("update");
+      if (!owner) return { kind: "unknown-turn" };
+      if (owner.conversationId !== conversationId) {
+        return { kind: "other-conversation", owner: owner.conversationId };
+      }
+      const applied = await applyInTx(tx, turnId, {
+        kind: "confirmed",
+        promptUuid,
+        at,
+      });
+      return { kind: "applied", applied };
+    },
+  );
+  if (found.kind !== "applied") return found;
+  const { applied } = found;
+  await afterChange(applied);
+  if (!applied.changed) return { kind: "settled", turn: applied.row };
+  notifyTurnSubmitted(conversationId);
+  return { kind: "confirmed", turn: applied.row };
 }
 
 /**
- * Resolve the turn the CLI just reported starting: the first of
- * {@link promptCandidates} the confirmation still applies to. A prompt matching
- * nothing — typed in the terminal — is not ours.
- * Returns the resolved row, or null. A resolved row signals
- * `onTurnSubmitted`.
+ * TEMPORARY. Resolve the turn the agent reported taking at `at` WITHOUT an id
+ * — an agent started before turn ids, whose launch prompt carries none: the
+ * oldest unsettled row whose typed text IS the prompt (`promptIs`, equality
+ * only). A prompt matching no row is not resolved. Returns the resolved row,
+ * or null. A resolved row signals `onTurnSubmitted`.
+ *
+ * Deleted, with `confirmed-by-text`, once no agent started before turn ids
+ * runs — no live `conversations_ext_sdk_agent` row with `turn_ids` false
+ * ({@link confirmTurn} is the path).
  */
 export async function resolvePromptSubmit(
   conversationId: string,
-  { prompt, promptUuid, at }: PromptConfirmation,
+  prompt: string,
+  promptUuid: string,
+  at: Date,
   conn: NodePgDatabase = db,
 ): Promise<TurnRow | null> {
   const oldestFirst = await conn
@@ -276,10 +316,12 @@ export async function resolvePromptSubmit(
       ),
     )
     .orderBy(asc(_conversationTurns.createdAt), asc(_conversationTurns.id));
-  for (const candidate of promptCandidates(prompt, oldestFirst)) {
+  for (const candidate of oldestFirst.filter((row) =>
+    promptIs(prompt, row.typedText),
+  )) {
     const applied = await conn.transaction((tx) =>
       applyInTx(tx, candidate.id, {
-        kind: "confirmed",
+        kind: "confirmed-by-text",
         prompt,
         promptUuid,
         at,
@@ -332,7 +374,7 @@ export async function returnTurnsSince(
     .where(
       and(
         eq(_conversationTurns.conversationId, conversationId),
-        inArray(_conversationTurns.state, ["typed", "accepted", "merged"]),
+        inArray(_conversationTurns.state, ["typed", "accepted"]),
         gte(_conversationTurns.createdAt, since),
       ),
     )
@@ -416,32 +458,25 @@ export async function hasTurnInFlight(
 }
 
 /**
- * Mark `returned` the newest delivered turn whose text the CLI handed back —
- * the text Stop rewound, or a draft found in the input box before typing. The
- * text compared is what the CLI submitted (a merged row's whole prompt).
- * Returns the row, or null when no recent turn carries that text.
+ * Mark `returned` the turn the agent took as transcript line `promptUuid` —
+ * the turn Stop took back out of the session, or the message a rewind cut at.
+ * Returns the row, or null when this conversation has no turn with that uuid
+ * (a turn confirmed before the ledger recorded uuids).
  */
-export async function returnTurnByText(
+export async function returnTurnByPromptUuid(
   conversationId: string,
-  text: string,
+  promptUuid: string,
   conn: NodePgDatabase = db,
 ): Promise<TurnRow | null> {
-  const wanted = text.trim();
-  if (wanted.length === 0) return null;
-  const recent = await conn
-    .select()
+  const [match] = await conn
+    .select({ id: _conversationTurns.id })
     .from(_conversationTurns)
     .where(
       and(
         eq(_conversationTurns.conversationId, conversationId),
-        inArray(_conversationTurns.state, ["typed", "accepted", "merged"]),
+        eq(_conversationTurns.promptUuid, promptUuid),
       ),
-    )
-    .orderBy(desc(_conversationTurns.createdAt), desc(_conversationTurns.id))
-    .limit(10);
-  const match = recent.find(
-    (row) => (row.submittedText ?? row.typedText).trim() === wanted,
-  );
+    );
   if (!match) return null;
   return applyTurnEvent(match.id, { kind: "returned" }, conn);
 }

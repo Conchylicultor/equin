@@ -12,7 +12,7 @@ export {
   type ConversationItemProps,
   type ConvTitleOverride,
 } from "./components/conversation-item";
-export { CONV_STATUS_DOT } from "./components/conv-status-dot";
+export { convStatusDot, convStatusOnlyDot } from "./components/conv-status-dot";
 export { Item } from "./slots";
 
 export default {

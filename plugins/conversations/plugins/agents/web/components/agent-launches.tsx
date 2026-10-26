@@ -3,7 +3,7 @@ import { useLive } from "@plugins/network/plugins/live/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
-import { CONV_STATUS_DOT } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
+import { convStatusOnlyDot } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import {
   DataView,
@@ -128,7 +128,7 @@ export function AgentLaunches({ agentId }: { agentId: string }) {
             leading: (l: AgentLaunchWithStatus) => (
               <StatusDot
                 {...(l.latestConversation
-                  ? CONV_STATUS_DOT[l.latestConversation.status]
+                  ? convStatusOnlyDot(l.latestConversation.status)
                   : { colorClass: "bg-muted-foreground/40" })}
               />
             ),

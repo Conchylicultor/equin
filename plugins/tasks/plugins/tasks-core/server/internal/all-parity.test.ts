@@ -277,6 +277,7 @@ async function checkAttempts(): Promise<number> {
         kind: _conversations.kind,
         createdAt: _conversations.createdAt,
         spawnedBy: _conversations.spawnedBy,
+        statusUnverifiedSince: _conversations.statusUnverifiedSince,
       })
       .from(_conversations);
     const listOf = (attemptId: string) =>
@@ -294,6 +295,7 @@ async function checkAttempts(): Promise<number> {
           kind: c.kind,
           createdAt: c.createdAt.toISOString(),
           spawnedBy: c.spawnedBy,
+          statusUnverifiedSince: c.statusUnverifiedSince?.toISOString() ?? null,
         }));
     for (const row of full) {
       expect({ id: row.id, list: row.conversations }).toEqual({

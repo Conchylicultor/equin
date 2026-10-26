@@ -156,7 +156,7 @@ Playwright import at all, so a consumer that only wants `detectBotMitigation`
 pays nothing.
 
 That import is the one step with no `timeout` option of its own, so it is bounded
-by hand through `withDeadline` (`deadline.ts`) against the same whole-op clock as
+by hand through `withDeadline` (`packages/deadline`) against the same whole-op clock as
 every other step — **every** `await` on this path must answer within the budget,
 or the budget is a fiction. A deadline-expired import keeps its memo (it is still
 in flight; a second concurrent import would orphan the first); only a *rejected*

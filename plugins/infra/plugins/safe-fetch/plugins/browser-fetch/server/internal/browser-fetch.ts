@@ -26,7 +26,7 @@ import {
   type PlaywrightBrowserSource,
 } from "@plugins/infra/plugins/deps/plugins/playwright-browser/deps";
 import { chromium as chromiumDep } from "../../deps";
-import { withDeadline } from "./deadline";
+import { withDeadline } from "@plugins/packages/plugins/deadline/core";
 import {
   BrowserFetchError,
   BrowserUnavailableError,

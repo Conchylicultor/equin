@@ -160,6 +160,12 @@ export const conversationFields = {
   claudeSessionId: nullable(textField()),
   waitingFor: nullable(textField()),
   workingOn: nullable(enumTextField(ConversationWorkingOnSchema.options)),
+  // Set by the status reconciler while it cannot check `status` against the
+  // agent's own head (the backend has not applied the agent's latest events,
+  // or the runtime did not answer): `status` is then the last KNOWN one, and
+  // readers render "Unknown" instead of claiming it. Cleared on the next
+  // reconcile that could check.
+  statusUnverifiedSince: nullable(dateField()),
   spawnedBy: nullable(textField()),
   createdAt: dateField({ label: "Created" }),
   // Last activity. Sortable in the lists: it is DERIVED (a DB trigger) and

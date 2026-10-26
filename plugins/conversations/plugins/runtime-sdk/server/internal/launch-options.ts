@@ -16,7 +16,7 @@ import {
   resolveEffortSettings,
   type EffortLevel,
 } from "@plugins/conversations/plugins/effort-provider/core";
-import type { AgentLaunchOptions } from "../../core";
+import type { AgentLaunchOptions, AgentLaunchPrompt } from "../../core";
 
 /** The CLI's own default when a workspace names no sources: all of them. */
 const DEFAULT_SETTING_SOURCES = ["user", "project", "local"] as const;
@@ -31,7 +31,8 @@ export interface SdkLaunchInput {
   effort?: EffortLevel;
   resumeSessionId?: string;
   forkSession?: boolean;
-  prompt?: string;
+  /** The first turn: its ledger id and text. */
+  prompt?: AgentLaunchPrompt;
   appendSystemPrompt?: string;
 }
 
@@ -73,7 +74,7 @@ export function sdkLaunchOptions(input: SdkLaunchInput): AgentLaunchOptions {
     resumeDropsTurn: null,
     fork: input.forkSession ?? false,
     sessionId: launchSessionId(input.resumeSessionId, input.forkSession),
-    prompt: input.prompt && input.prompt.length > 0 ? input.prompt : null,
+    prompt: input.prompt && input.prompt.text.length > 0 ? input.prompt : null,
     appendSystemPrompt: input.appendSystemPrompt || null,
   };
 }

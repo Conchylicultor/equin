@@ -1,41 +1,36 @@
 import { describe, expect, test } from "bun:test";
 import { TurnStateSchema, type TurnState } from "../../core/schemas";
 import {
-  matchPrompt,
-  promptCandidates,
+  promptIs,
   transitionTurn,
   type TurnEvent,
   type TurnFacts,
+  type TurnTransition,
 } from "./transition";
 
 const STATES = TurnStateSchema.options;
 const TYPED = "fix the build";
 const AT = new Date("2026-10-18T15:53:10Z");
-const UUID = "5b9d0c3e-0000-4000-8000-000000000001";
+const PROMPT_UUID = "5b1f6a1e-0000-4000-8000-000000000001";
 
 const EVENTS = {
   hold: { kind: "hold" },
   deliver: { kind: "deliver", typedText: TYPED },
   release: { kind: "release", typedText: TYPED },
   typed: { kind: "typed" },
-  unverified: { kind: "unverified", reason: "box kept text" },
   failed: { kind: "failed", error: "agent exploded" },
+  confirmed: { kind: "confirmed", promptUuid: PROMPT_UUID, at: AT },
+  // The temporary id-less path: a pre-turn-id agent's launch prompt.
   "confirmed-equal": {
-    kind: "confirmed",
+    kind: "confirmed-by-text",
     prompt: TYPED,
-    promptUuid: UUID,
-    at: AT,
-  },
-  "confirmed-merged": {
-    kind: "confirmed",
-    prompt: `stale draft\n${TYPED}`,
-    promptUuid: UUID,
+    promptUuid: PROMPT_UUID,
     at: AT,
   },
   "confirmed-other": {
-    kind: "confirmed",
-    prompt: "something the user typed",
-    promptUuid: UUID,
+    kind: "confirmed-by-text",
+    prompt: `stale draft\n${TYPED}`,
+    promptUuid: PROMPT_UUID,
     at: AT,
   },
   dropped: { kind: "dropped" },
@@ -45,136 +40,62 @@ const EVENTS = {
 
 type EventName = keyof typeof EVENTS;
 
+const NOTHING: Record<EventName, null> = {
+  hold: null,
+  deliver: null,
+  release: null,
+  typed: null,
+  failed: null,
+  confirmed: null,
+  "confirmed-equal": null,
+  "confirmed-other": null,
+  dropped: null,
+  returned: null,
+  withdraw: null,
+};
+
 // The whole machine, written out: for every state, where each event takes it
 // (null = no change). A new state or event that is not added here fails the
 // coverage test below, so the table cannot silently fall behind the code.
 const MATRIX: Record<TurnState, Record<EventName, TurnState | null>> = {
   held: {
-    hold: null,
+    ...NOTHING,
     deliver: "typing",
-    release: null,
-    typed: null,
-    unverified: null,
     failed: "failed",
-    "confirmed-equal": null,
-    "confirmed-merged": null,
-    "confirmed-other": null,
-    dropped: null,
+    confirmed: "accepted",
+    "confirmed-equal": "accepted",
     returned: "returned",
-    withdraw: null,
   },
   typing: {
+    ...NOTHING,
     hold: "held",
-    deliver: null,
     release: "held",
     typed: "typed",
-    unverified: "unverified",
     failed: "failed",
+    confirmed: "accepted",
     "confirmed-equal": "accepted",
-    "confirmed-merged": "merged",
-    "confirmed-other": null,
-    dropped: null,
-    returned: null,
-    withdraw: null,
   },
   typed: {
-    hold: null,
-    deliver: null,
-    release: null,
-    typed: null,
-    unverified: null,
-    failed: null,
+    ...NOTHING,
+    confirmed: "accepted",
     "confirmed-equal": "accepted",
-    "confirmed-merged": "merged",
-    "confirmed-other": null,
     dropped: "failed",
     returned: "returned",
-    withdraw: null,
   },
-  accepted: {
-    hold: null,
-    deliver: null,
-    release: null,
-    typed: null,
-    unverified: null,
-    failed: null,
-    "confirmed-equal": null,
-    "confirmed-merged": null,
-    "confirmed-other": null,
-    dropped: null,
-    returned: "returned",
-    withdraw: null,
-  },
-  merged: {
-    hold: null,
-    deliver: null,
-    release: null,
-    typed: null,
-    unverified: null,
-    failed: null,
-    "confirmed-equal": null,
-    "confirmed-merged": null,
-    "confirmed-other": null,
-    dropped: null,
-    returned: "returned",
-    withdraw: null,
-  },
-  returned: {
-    hold: null,
-    deliver: null,
-    release: null,
-    typed: null,
-    unverified: null,
-    failed: null,
-    "confirmed-equal": null,
-    "confirmed-merged": null,
-    "confirmed-other": null,
-    dropped: null,
-    returned: null,
-    withdraw: null,
-  },
+  accepted: { ...NOTHING, returned: "returned" },
+  returned: NOTHING,
   failed: {
-    hold: null,
+    ...NOTHING,
     deliver: "typing",
-    release: null,
-    typed: null,
-    unverified: null,
-    failed: null,
+    confirmed: "accepted",
     "confirmed-equal": "accepted",
-    "confirmed-merged": "merged",
-    "confirmed-other": null,
-    dropped: null,
-    returned: null,
     withdraw: "withdrawn",
   },
-  unverified: {
-    hold: null,
-    deliver: "typing",
-    release: null,
-    typed: null,
-    unverified: null,
-    failed: null,
-    "confirmed-equal": "accepted",
-    "confirmed-merged": "merged",
-    "confirmed-other": null,
-    dropped: null,
-    returned: null,
-    withdraw: "withdrawn",
-  },
+  // The truth wins: the agent took it after all.
   withdrawn: {
-    hold: null,
-    deliver: null,
-    release: null,
-    typed: null,
-    unverified: null,
-    failed: null,
-    // The truth wins, but only exactly.
+    ...NOTHING,
+    confirmed: "accepted",
     "confirmed-equal": "accepted",
-    "confirmed-merged": null,
-    "confirmed-other": null,
-    dropped: null,
-    returned: null,
-    withdraw: null,
   },
 };
 
@@ -218,45 +139,55 @@ describe("transitionTurn", () => {
   });
 
   test("the confirmation and the submit check converge in either order", () => {
-    const confirmedFirst = transitionTurn(
-      row("typing"),
-      EVENTS["confirmed-equal"],
-    )!;
+    const confirmedFirst = transitionTurn(row("typing"), EVENTS.confirmed)!;
     expect(transitionTurn(row(confirmedFirst.state), EVENTS.typed)).toBeNull();
-    expect(
-      transitionTurn(row(confirmedFirst.state), EVENTS.unverified),
-    ).toBeNull();
+    expect(transitionTurn(row(confirmedFirst.state), EVENTS.failed)).toBeNull();
     const typedFirst = transitionTurn(row("typing"), EVENTS.typed)!;
+    expect(transitionTurn(row(typedFirst.state), EVENTS.confirmed)?.state).toBe(
+      confirmedFirst.state,
+    );
+  });
+
+  test("a confirmation by id records when, and as which transcript line, whatever the text", () => {
+    const expected: TurnTransition = {
+      state: "accepted",
+      patch: { submittedAt: AT, promptUuid: PROMPT_UUID, error: null },
+    };
+    expect(transitionTurn(row("typed"), EVENTS.confirmed)).toEqual(expected);
+    // The text plays no part: the id names the row.
     expect(
-      transitionTurn(row(typedFirst.state), EVENTS["confirmed-equal"])?.state,
-    ).toBe(confirmedFirst.state);
+      transitionTurn({ state: "typed", typedText: "" }, EVENTS.confirmed),
+    ).toEqual(expected);
+  });
+
+  test("a confirmation by id takes a withdrawn or a held turn: the agent has it", () => {
+    expect(transitionTurn(row("withdrawn"), EVENTS.confirmed)?.state).toBe(
+      "accepted",
+    );
+    expect(transitionTurn(row("held"), EVENTS.confirmed)?.state).toBe(
+      "accepted",
+    );
+  });
+
+  test("a confirmation by id leaves a settled turn as it is", () => {
+    for (const state of ["accepted", "returned"] as const) {
+      expect(transitionTurn(row(state), EVENTS.confirmed)).toBeNull();
+    }
   });
 
   test("withdrawing keeps the error, for history", () => {
-    expect(transitionTurn(row("unverified"), EVENTS.withdraw)).toEqual({
+    expect(transitionTurn(row("failed"), EVENTS.withdraw)).toEqual({
       state: "withdrawn",
       patch: {},
     });
   });
 
-  test("a merge records the other text the CLI submitted", () => {
-    expect(
-      transitionTurn(row("typed"), EVENTS["confirmed-merged"])?.patch,
-    ).toEqual({
-      submittedText: `stale draft\n${TYPED}`,
-      submittedAt: AT,
-      promptUuid: UUID,
-      extraText: "stale draft",
-      error: null,
-    });
-  });
-
-  test("an accept records when the CLI submitted it", () => {
+  test("an id-less confirmation of the same text records when the agent took it", () => {
     expect(
       transitionTurn(row("typed"), EVENTS["confirmed-equal"])?.patch,
     ).toEqual({
       submittedAt: AT,
-      promptUuid: UUID,
+      promptUuid: PROMPT_UUID,
       error: null,
     });
   });
@@ -271,88 +202,22 @@ describe("transitionTurn", () => {
   });
 });
 
-describe("matchPrompt", () => {
+describe("promptIs (temporary: a pre-turn-id agent's launch prompt)", () => {
   test("equal, byte for byte", () => {
-    expect(
-      matchPrompt(
-        "line one\n> quoted\n@/a/b.png",
-        "line one\n> quoted\n@/a/b.png",
-      ),
-    ).toEqual({
-      kind: "equal",
-    });
+    const text = "line one\n> quoted\n@/a/b.png";
+    expect(promptIs(text, text)).toBe(true);
   });
 
-  test("edge whitespace is not a difference (the launch message's escape)", () => {
-    expect(matchPrompt(" /todo blocks", "/todo blocks")).toEqual({
-      kind: "equal",
-    });
+  test("edge whitespace is not a difference", () => {
+    expect(promptIs(" /todo blocks", "/todo blocks")).toBe(true);
   });
 
-  test("contains: the extra text around the turn", () => {
-    expect(matchPrompt("old draft new turn", "new turn")).toEqual({
-      kind: "contains",
-      extraText: "old draft",
-    });
-    expect(matchPrompt("before\nnew turn\nafter", "new turn")).toEqual({
-      kind: "contains",
-      extraText: "before\nafter",
-    });
+  test("a prompt that merely contains the turn is not it", () => {
+    expect(promptIs("old draft new turn", "new turn")).toBe(false);
   });
 
-  test("none: unrelated text, or nothing typed", () => {
-    expect(matchPrompt("hello", "goodbye")).toEqual({ kind: "none" });
-    expect(matchPrompt("hello", "  ")).toEqual({ kind: "none" });
-  });
-});
-
-describe("promptCandidates", () => {
-  const at = (id: string, state: TurnState, typedText: string) => ({
-    id,
-    state,
-    typedText,
-  });
-
-  test("a withdrawn turn is tried last, and only for an exact match", () => {
-    const rows = [
-      at("withdrawn", "withdrawn", "fix"),
-      at("cli-returned", "returned", "fix"),
-      at("fresh", "typed", "fix"),
-    ];
-    expect(promptCandidates("fix", rows).map((r) => r.id)).toEqual([
-      "fresh",
-      "withdrawn",
-    ]);
-    expect(promptCandidates("please fix", rows).map((r) => r.id)).toEqual([
-      "fresh",
-    ]);
-  });
-
-  test("equal matches come before merges, each oldest first", () => {
-    const rows = [
-      at("old-merge", "typed", "fix"),
-      at("equal", "typed", "please fix it"),
-      at("new-merge", "unverified", "please"),
-    ];
-    expect(promptCandidates("please fix it", rows).map((r) => r.id)).toEqual([
-      "equal",
-      "old-merge",
-      "new-merge",
-    ]);
-  });
-
-  test("a failed row matches only exactly: it never reached the box to be merged", () => {
-    const rows = [at("failed", "failed", "fix")];
-    expect(promptCandidates("please fix it", rows)).toEqual([]);
-    expect(promptCandidates("fix", rows).map((r) => r.id)).toEqual(["failed"]);
-  });
-
-  test("settled and held rows are never candidates", () => {
-    const rows = [
-      at("accepted", "accepted", "fix"),
-      at("returned", "returned", "fix"),
-      at("held", "held", "fix"),
-    ];
-    expect(promptCandidates("fix", rows)).toEqual([]);
+  test("unrelated text, or nothing typed, is not it", () => {
+    expect(promptIs("hello", "goodbye")).toBe(false);
+    expect(promptIs("  ", "  ")).toBe(false);
   });
 });

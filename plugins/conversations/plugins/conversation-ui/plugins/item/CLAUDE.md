@@ -23,13 +23,19 @@ before hand-rolling a seventh clickable pill.
   density, the title the full `label` role (the nav labels' size and
   weight), the time faint.
 
-`CONV_STATUS_DOT` is a `Record<ConversationStatus, StatusDotPaint>`: `working`
-filled green, `waiting` filled amber, and hollow rings for `starting` (muted),
-`gone` (amber) and `done` (faint). Spread it onto `<StatusDot>`; an avatar's
-presence overlay reads it through `statusDotPaintClass`.
+`convStatusDot(conv)` paints a conversation's dot from its row (`status` and
+`statusUnverifiedSince`): `working` filled green, `waiting` filled amber, and
+hollow rings for `starting` (muted), `gone` (amber) and `done` (faint); while
+the status reconciler could not check the row (`statusUnverifiedSince` set,
+any status but `done`) a filled muted dot — Unknown, never the colour that
+would claim the last known status. It takes the row, not the status, so no
+surface can paint an unverified status as fact; `convStatusOnlyDot(status)` is
+only for a row that carries no mark (the agents' launch rollup). Spread it onto
+`<StatusDot>`; an avatar's presence overlay reads it through
+`statusDotPaintClass`.
 
 The atoms (`ConvStatusDot`, `ConvSysBadge`, `ConvTitle`, `ConvRelativeTime` — which
-takes `format="ago" | "short"`) plus the `CONV_STATUS_DOT` constant are exported alongside so surfaces with
+takes `format="ago" | "short"`) plus `convStatusDot` are exported alongside so surfaces with
 bespoke layouts can compose directly. (For relative-time formatting, import
 `formatRelativeTime` from `@plugins/primitives/plugins/relative-time/web`
 directly — it is no longer re-exported here.)
@@ -75,11 +81,12 @@ directly — it is no longer re-exported here.)
     - `ConversationItemProps`
     - `ConvTitleOverride`
   - Exports (values):
-    - `CONV_STATUS_DOT`
     - `ConversationItem`
     - `conversationTitle`
     - `ConvRelativeTime`
+    - `convStatusDot`
     - `ConvStatusDot`
+    - `convStatusOnlyDot`
     - `ConvSysBadge`
     - `ConvTitle`
     - `Item`

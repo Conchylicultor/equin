@@ -6,58 +6,59 @@ import type { LedgerTurn } from "@plugins/conversations/plugins/turn-ledger/core
 // reach the tab on two channels (the ledger's change feed, the transcript
 // watcher), so neither alone retires it:
 //
-//   - the LEDGER says which turn: only the agent's own confirmation
-//     (`accepted` / `merged`, stamped `submittedAt`) names this exact turn as
-//     taken. A turn still `typing` / `typed` / `held` is not known to be
-//     anywhere but the echo — nothing guesses it landed;
-//   - the TRANSCRIPT says when it is on screen: the agent writes the prompt
-//     when it takes it, so once the transcript holds an event at or after
-//     `submittedAt` it holds the prompt too. Retiring on the confirmation
-//     alone left the turn on screen nowhere for as long as the transcript
-//     lagged.
+//   - the LEDGER says which line: the agent's confirmation (`accepted`)
+//     records the uuid of the transcript line the turn became
+//     (`promptUuid`). A turn still `typing` / `typed` / `held` is not known to
+//     be anywhere but the echo — nothing guesses it landed;
+//   - the TRANSCRIPT says when that line is on screen: the tab's window holds
+//     an event carrying the uuid, or the window begins after the agent took
+//     the turn, so its line is above what is loaded.
 //
-// Only the newest event is read: the tab's transcript is a tail window
-// (closed under "after"), so the answer does not depend on how much of the
-// past is loaded. The error this can make is a turn shown twice for a moment
-// (the prompt is written but nothing after it yet) — never a turn shown
-// nowhere. The message itself, found by the uuid the agent confirmed it
-// under, settles it at once: a prompt folded into a running turn is written
-// with the time it was queued, before the confirmation's.
+// The line an agent writes for a turn (measured over 1,141 sdk turns,
+// 2026-10-25): a user line with the turn's uuid — a slash command too
+// (`/compact` writes `<command-name>/compact…` under it); or, for a turn sent
+// while the agent was busy and folded into the running turn at a tool
+// boundary, a `queued_command` attachment whose `source_uuid` is the turn's
+// uuid, which the transcript parser turns into the user's own message under
+// that uuid. Either way: a `user-text` event carrying `promptUuid`.
+//
+// The agent confirms a turn when its CLI STARTS it (not when it is queued),
+// so `submittedAt` is never earlier than the turn's place in the transcript:
+// a window beginning after it has the line above it.
 
 /**
- * Whether a turn is a slash command: the CLI runs it rather than writing it as
- * a prompt, so the transcript holds no prompt row for it — the agent's
- * confirmation (`accepted`) is the last word on it.
- */
-export function isSlashCommand(row: Pick<LedgerTurn, "text">): boolean {
-  return row.text.trimStart().startsWith("/");
-}
-
-/** When the newest event of `events` (oldest first) was written, epoch ms. */
-export function transcriptReachedAt(
-  events: readonly JsonlEvent[],
-): number | null {
-  const newest = events.at(-1);
-  return newest ? Date.parse(newest.at) : null;
-}
-
-/**
- * Whether the transcript `events` (oldest first) shows `row`: the agent
- * confirmed taking it, and the transcript holds the message it confirmed (by
- * its uuid) or reaches the moment it did.
+ * Whether `events` (the loaded transcript window, oldest first) shows `row`:
+ * the agent confirmed it, and its line is in the window — or above it, the
+ * window beginning after the agent took it.
  */
 export function transcriptShows(
   row: Pick<LedgerTurn, "state" | "submittedAt" | "promptUuid">,
   events: readonly JsonlEvent[],
 ): boolean {
-  if (row.state !== "accepted" && row.state !== "merged") return false;
-  if (
-    row.promptUuid !== null &&
-    events.some((e) => e.kind === "user-text" && e.uuid === row.promptUuid)
-  ) {
-    return true;
-  }
-  const reachedAt = transcriptReachedAt(events);
-  if (row.submittedAt === null || reachedAt === null) return false;
-  return reachedAt >= row.submittedAt.getTime();
+  if (row.state !== "accepted" || row.submittedAt === null) return false;
+  const oldest = events[0];
+  if (oldest === undefined) return false;
+  const { promptUuid } = row;
+  if (promptUuid === null)
+    return legacyTranscriptShows(row.submittedAt, events);
+  if (Date.parse(oldest.at) > row.submittedAt.getTime()) return true;
+  return events.some(
+    (event) => event.kind === "user-text" && event.uuid === promptUuid,
+  );
+}
+
+/**
+ * TEMPORARY — a row accepted before the ledger recorded `promptUuid`: the old
+ * guess, the transcript's newest event at or after the confirmation. Such rows
+ * are settled, and retention sweeps settled rows a week after their last
+ * change, so none is left — and this can go — 7 days after the `prompt_uuid`
+ * column reached main (every confirmation since stamps it, the temporary
+ * id-less one included).
+ */
+function legacyTranscriptShows(
+  submittedAt: Date,
+  events: readonly JsonlEvent[],
+): boolean {
+  const newest = events.at(-1);
+  return newest !== undefined && Date.parse(newest.at) >= submittedAt.getTime();
 }

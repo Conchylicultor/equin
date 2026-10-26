@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { socketsDir } from "@plugins/infra/plugins/launcher/data-dirs";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
@@ -36,6 +37,14 @@ export function agentDir(conversationId: string): string {
 
 export function agentEventsPath(conversationId: string): string {
   return join(agentDir(conversationId), AGENT_EVENTS_FILE);
+}
+
+/** Whether any generation of the agent's events file (rotated ones included) is on disk. */
+export function agentEventsExist(conversationId: string): boolean {
+  const path = agentEventsPath(conversationId);
+  return [path, `${path}.1`, `${path}.2`, `${path}.3`].some((p) =>
+    existsSync(p),
+  );
 }
 
 export function agentOptionsPath(conversationId: string): string {

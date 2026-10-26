@@ -18,7 +18,7 @@ import type {
   ConversationWorkingOn,
 } from "@plugins/tasks/plugins/tasks-core/core";
 import { isTurnRunning } from "@plugins/conversations/core";
-import { isSlashCommand, transcriptShows } from "./landed";
+import { transcriptShows } from "./landed";
 import { useSentTurns, useSettleSentTurns, type SentTurn } from "./send";
 
 /**
@@ -39,23 +39,20 @@ export interface PendingTurn {
   state: PendingTurnState;
   /** The card it draws — `CARD_OF[state]`, never null for a turn listed. */
   card: PendingCard;
-  /** `merged` only: the text the CLI submitted around this turn's. */
-  extraText: string | null;
-  /** `failed` / `unverified` / `unsent`: why. */
+  /** `failed` / `unsent`: why. */
   error: string | null;
 }
 
 /** The card a turn draws, by kind of card. */
-export type PendingCard = "echo" | "merged" | "failure";
+export type PendingCard = "echo" | "failure";
 
 /**
  * The card each state draws — a Record, so a new state cannot be left out:
  * - `sending` (tab only) / `held` / `typing` / `typed` / `accepted` — the
- *   echo, until the agent confirmed the turn AND the transcript reached that
- *   moment (`transcriptShows`): the echo stands in for the message, so it
- *   retires only once the message is on screen — never on a guess;
- * - `merged` — the warning naming the other text (see `pendingTurnsOf`);
- * - `failed` / `unverified` / `unsent` (tab only) — Retry and Copy to draft.
+ *   echo, until the agent confirmed the turn AND the transcript holds its line
+ *   (`transcriptShows`): the echo stands in for the message, so it retires
+ *   only once the message is on screen — never on a guess;
+ * - `failed` / `unsent` (tab only) — Retry and Copy to draft.
  *
  * `returned` and `withdrawn` draw nothing: the draft holds them.
  */
@@ -65,10 +62,8 @@ export const CARD_OF: Record<PendingTurnState, PendingCard | null> = {
   typing: "echo",
   typed: "echo",
   accepted: "echo",
-  merged: "merged",
   returned: null,
   failed: "failure",
-  unverified: "failure",
   withdrawn: null,
   unsent: "failure",
 };
@@ -82,27 +77,10 @@ function draws(turn: { kind: TurnKind; state: PendingTurnState }): boolean {
 }
 
 /**
- * Whether a ledger row's echo has nothing left to stand in for: the transcript
- * `events` show it, or — a slash command, which lands as no
- * prompt row — the agent confirmed taking it, which is all anything will ever
- * say about it.
- */
-function echoRetired(row: LedgerTurn, events: readonly JsonlEvent[]): boolean {
-  if (CARD_OF[row.state] !== "echo") return false;
-  return (
-    transcriptShows(row, events) ||
-    (isSlashCommand(row) && row.state === "accepted")
-  );
-}
-
-/**
  * The cards a conversation's transcript ends with, oldest first: its ledger
  * rows (`newestFirst`, as the live window reads them) that still say
  * something, then this tab's sent turns no row stands for yet. `events` is the
- * transcript the pane renders: an echo shows until it holds the turn.
- *
- * A `merged` warning shows only while its turn is the newest: it explains the
- * reply the agent is giving now, and the next turn makes it history.
+ * transcript the pane renders: an echo shows until it holds the turn's line.
  */
 export function pendingTurnsOf(
   newestFirst: readonly LedgerTurn[],
@@ -111,17 +89,10 @@ export function pendingTurnsOf(
 ): PendingTurn[] {
   const ledgerIds = new Set(newestFirst.map((row) => row.id));
   const unseen = sent.filter((turn) => !ledgerIds.has(turn.id));
-  const newestId = unseen.length ? null : (newestFirst[0]?.id ?? null);
   const fromLedger: PendingTurn[] = newestFirst
     .flatMap((row) => {
       const card = CARD_OF[row.state];
-      if (
-        card === null ||
-        echoRetired(row, events) ||
-        (row.state === "merged" && row.id !== newestId)
-      ) {
-        return [];
-      }
+      if (card === null || transcriptShows(row, events)) return [];
       return [
         {
           id: row.id,
@@ -130,7 +101,6 @@ export function pendingTurnsOf(
           sentAt: row.createdAt,
           state: row.state,
           card,
-          extraText: row.extraText,
           error: row.error,
         },
       ];
@@ -143,7 +113,6 @@ export function pendingTurnsOf(
     sentAt: turn.createdAt,
     state: turn.status.kind === "unsent" ? "unsent" : "sending",
     card: turn.status.kind === "unsent" ? "failure" : "echo",
-    extraText: null,
     error: turn.status.kind === "unsent" ? turn.status.error : null,
   }));
   return [...fromLedger, ...fromTab].filter(draws);
@@ -254,10 +223,10 @@ export function useTurnsInFlight(
 
 /**
  * The states in which the server cannot know yet that a turn is running: being
- * typed, or typed with the CLI's hook still to come. From the hook on, the
- * server's own status is the authority — the status reconciler weighs the
- * CLI's confirmed submit (`turn-ledger` `submitted_at`) against the CLI's
- * idle/busy write. `held` is not (the conversation is starting, and its own
+ * sent, or queued with the agent's confirmation still to come. From the
+ * confirmation on, the server's own status is the authority — the status
+ * reconciler weighs the confirmed submit (`turn-ledger` `submitted_at`)
+ * against the agent's idle/busy write. `held` is not (the conversation is starting, and its own
  * status says so), nor are the failures or a turn given back.
  */
 const BEFORE_THE_SERVER_KNOWS: Record<TurnState, boolean> = {
@@ -265,10 +234,8 @@ const BEFORE_THE_SERVER_KNOWS: Record<TurnState, boolean> = {
   typing: true,
   typed: true,
   accepted: false,
-  merged: false,
   returned: false,
   failed: false,
-  unverified: false,
   withdrawn: false,
 };
 
@@ -369,10 +336,8 @@ const AWAITS_START: Record<TurnState, boolean> = {
   typing: true,
   typed: true,
   accepted: false,
-  merged: false,
   returned: false,
   failed: false,
-  unverified: false,
   withdrawn: false,
 };
 

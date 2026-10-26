@@ -28,7 +28,7 @@ import { _attempts, _conversations } from "./tables";
 // `jsonAgg` of the attempt's non-system conversations. A conversation write
 // reaches its attempt through the children route (gated on what the list
 // reads: `attempt_id`, `id`, `kind`, `title`, `status`, `created_at`,
-// `spawned_by`) and the conversation rollup's source route (`status`,
+// `spawned_by`, `status_unverified_since`) and the conversation rollup's source route (`status`,
 // `ended_at`); a push through the push rollup's (`created_at`). Neither
 // `waiting_for`, `last_viewed_at` nor `updated_at` is read, so a poller
 // write reaches nothing — the gate the old hand-rolled cascade signature
@@ -65,6 +65,7 @@ const convs = childrenJoin({
         kind: c.convs.kind,
         createdAt: c.convs.createdAt,
         spawnedBy: c.convs.spawnedBy,
+        statusUnverifiedSince: c.convs.statusUnverifiedSince,
       },
       { orderBy: [[c.convs.createdAt, "asc"]] },
     ),

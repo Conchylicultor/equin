@@ -21,7 +21,7 @@ The paint is a discriminated union, so a dot is exactly one of:
   (`border-warning`).
 
 A status vocabulary maps to `Record<Status, StatusDotPaint>` and spreads onto
-the dot (`<StatusDot {...CONV_STATUS_DOT[status]} />`). A surface that draws its
+the dot (`<StatusDot {...convStatusDot(conv)} />`). A surface that draws its
 own dot element (an avatar's presence overlay takes a class string) reads the
 same paint through `statusDotPaintClass(paint)`.
 

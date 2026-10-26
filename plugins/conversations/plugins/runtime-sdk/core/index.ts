@@ -18,6 +18,7 @@ export type {
   AgentCommand,
   AgentEvent,
   AgentLaunchOptions,
+  AgentLaunchPrompt,
   AgentLifecycle,
   CommandReply,
   HelloReply,

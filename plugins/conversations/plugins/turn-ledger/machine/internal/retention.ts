@@ -5,7 +5,7 @@ import { _conversationTurns } from "../../server/internal/tables";
 
 // A turn is worth keeping while it is still on its way, plus a week to debug
 // how it ended. Only rows nothing will move again are swept: a held, typing,
-// typed, failed or unverified row stays until it settles or its conversation
+// typed or failed row stays until it settles or its conversation
 // is deleted (the FK cascade). Per worktree: the table lives in each fork.
 export const conversationTurnsRetention = defineRetention({
   table: _conversationTurns,
