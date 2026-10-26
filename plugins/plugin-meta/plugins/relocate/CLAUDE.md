@@ -71,6 +71,10 @@ namespace has not applied (recorded in its `.plugin-moves-applied.json`):
   re-rooted, found by the same `scanReorderItemRefs` the git-layer rewrite uses;
 - every rewritten default gets its new `// @hash`, and each override anchored to
   the old hash is re-stamped, so overrides stay in force instead of going stale.
+  A rewritten origin that is the checkout's git-layer document but for order (a
+  renamed key re-sorts in the regenerated catalog) takes that document's hash —
+  the one propagation stamps next — so the re-stamped override survives
+  propagation instead of turning into a conflict.
 
 The marker, the fresh-namespace rule and the hash re-stamping are the shared
 config ledger's (`config_v2/plugins/ledger`), which config migrations
@@ -91,6 +95,14 @@ moving anything.
 - Core:
   - Uses:
     - `config_v2.APP_SCOPE_DIR`
+    - `config_v2.committedDocument`
+    - `config_v2.CommittedFiles`
+    - `config_v2.computeHash`
+    - `config_v2.configFileRelPath`
+    - `config_v2.JsonValue`
+    - `config_v2.parseConfigFileRelPath`
+    - `config_v2.scopeAppId`
+    - `config_v2.storePathParts`
     - `config_v2/ledger.configTextHash`
     - `config_v2/ledger.parseConfigText`
     - `config_v2/ledger.rewriteConfigFiles`

@@ -69,6 +69,7 @@ export { CONFIG_HASH_RE, parseConfigFile } from "./internal/config-file";
 export { createMemoryConfigStore } from "./internal/memory-store";
 export {
   configFileRelPath,
+  parseConfigFileRelPath,
   scopeSegment,
   storePathParts,
 } from "./internal/store";

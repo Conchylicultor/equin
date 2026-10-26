@@ -103,6 +103,49 @@ describe("applyPluginMoves", () => {
     expect(override.hash).toBe(newOrigin.hash);
   });
 
+  test("a rewritten origin takes the hash of the git-layer document it matches but for order", () => {
+    ledger([MOVE]);
+    const origin = { items: ["a.b:one", "m:two"] };
+    const originHash = computeHash(origin);
+    put("shell/sidebar.origin.jsonc", origin, originHash);
+    put("shell/sidebar.jsonc", { items: ["m:two", "a.b:one"] }, originHash);
+    // The checkout's regenerated origin: the renamed key re-sorts.
+    const upstream = { items: ["m:two", "x.b:one"] };
+    const repoOrigin = join(root, "config/shell/sidebar.origin.jsonc");
+    mkdirSync(dirname(repoOrigin), { recursive: true });
+    writeFileSync(
+      repoOrigin,
+      `// @hash ${computeHash(upstream)}\n${JSON.stringify(upstream)}\n`,
+    );
+
+    applyPluginMoves({ root, userConfigDir: ns });
+
+    // Propagation stamps computeHash(upstream): the override is already there.
+    expect(get("shell/sidebar.origin.jsonc").hash).toBe(computeHash(upstream));
+    expect(get("shell/sidebar.jsonc").hash).toBe(computeHash(upstream));
+  });
+
+  test("a rewritten origin that differs from the git layer keeps its own hash", () => {
+    ledger([MOVE]);
+    const origin = { items: ["a.b:one", "m:two"] };
+    const originHash = computeHash(origin);
+    put("shell/sidebar.origin.jsonc", origin, originHash);
+    put("shell/sidebar.jsonc", { items: ["m:two", "a.b:one"] }, originHash);
+    const upstream = { items: ["m:two", "new:three", "x.b:one"] };
+    const repoOrigin = join(root, "config/shell/sidebar.origin.jsonc");
+    mkdirSync(dirname(repoOrigin), { recursive: true });
+    writeFileSync(
+      repoOrigin,
+      `// @hash ${computeHash(upstream)}\n${JSON.stringify(upstream)}\n`,
+    );
+
+    applyPluginMoves({ root, userConfigDir: ns });
+
+    const rewritten = get("shell/sidebar.origin.jsonc");
+    expect(rewritten.hash).toBe(computeHash(rewritten.content));
+    expect(get("shell/sidebar.jsonc").hash).toBe(rewritten.hash);
+  });
+
   test("a stale override stays anchored to its (rewritten) ancestor", () => {
     ledger([MOVE]);
     const base = { items: ["a.b:one"] };

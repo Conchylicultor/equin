@@ -18,6 +18,11 @@
 //      its hash, which would mark the override stale and let the default win —
 //      the very loss this prevents. So every rewritten origin/ancestor yields an
 //      old → new hash pair, and each override's header is re-stamped through it.
+//      A rewritten ORIGIN is stamped with the hash of the document propagation
+//      is about to write there (the checkout's git layer) when the two are the
+//      same document but for order — a renamed key re-sorts in a regenerated
+//      catalog, and the text's own hash would then disagree with propagation's
+//      and turn the re-stamped override into a conflict anyway.
 //
 // Each applied entry is recorded in the namespace's marker file, so an entry is
 // replayed once — even if a later plugin reuses the old id. A namespace whose
@@ -30,10 +35,22 @@ import {
   existsSync,
   mkdirSync,
   readdirSync,
+  readFileSync,
   renameSync,
   rmdirSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
+import {
+  APP_SCOPE_DIR,
+  committedDocument,
+  computeHash,
+  configFileRelPath,
+  parseConfigFileRelPath,
+  scopeAppId,
+  storePathParts,
+  type CommittedFiles,
+  type JsonValue,
+} from "@plugins/config_v2/core";
 import { asPath } from "@plugins/framework/plugins/plugin-id/core";
 import { scanReorderItemRefs } from "@plugins/plugin-meta/plugins/plugin-refs/core";
 import {
@@ -47,6 +64,7 @@ import {
   readPluginMoves,
   type PluginMove,
 } from "./ledger";
+import { sameDocumentModuloOrder } from "./same-document";
 
 /** Per-namespace record of the ledger entries already applied. Not `.jsonc`,
  *  so neither the config registry nor the orphan audit ever reads it. */
@@ -109,6 +127,53 @@ export function rewriteKeys(
   return out;
 }
 
+/** The checkout's `config/` as the committed layer propagation reads. */
+function repoCommittedFiles(configDir: string): CommittedFiles {
+  return {
+    read(ref) {
+      const file = join(configDir, configFileRelPath(ref));
+      return existsSync(file) ? readFileSync(file, "utf8") : null;
+    },
+    appIds(storePath) {
+      const appDir = join(
+        configDir,
+        storePathParts(storePath).hier,
+        APP_SCOPE_DIR,
+      );
+      if (!existsSync(appDir)) return [];
+      return readdirSync(appDir, { withFileTypes: true })
+        .filter((e) => e.isDirectory())
+        .map((e) => e.name)
+        .sort();
+    },
+  };
+}
+
+/**
+ * The hash a re-rooted user snapshot is stamped with: for an origin that is the
+ * git-layer document propagation writes next but for order, that document's
+ * hash (what propagation will stamp); otherwise its own content's.
+ */
+function upstreamAwareHash(
+  files: CommittedFiles,
+): (rel: string, content: JsonValue) => string {
+  return (rel, content) => {
+    const ref = parseConfigFileRelPath(rel);
+    if (ref.file !== "origin") return computeHash(content);
+    const doc = committedDocument(ref.storePath, files);
+    const appId = scopeAppId(ref.scopeId);
+    const upstream =
+      doc === undefined
+        ? undefined
+        : appId === undefined
+          ? doc.base
+          : doc.scopes[appId];
+    return upstream !== undefined && sameDocumentModuloOrder(content, upstream)
+      ? computeHash(upstream)
+      : computeHash(content);
+  };
+}
+
 /**
  * Apply every ledger entry of the checkout at `root` that the namespace config
  * dir `userConfigDir` has not applied yet, in ledger order. Throws (failing the
@@ -120,6 +185,7 @@ export function applyPluginMoves(opts: {
   userConfigDir: string;
 }): AppliedMove[] {
   const { root, userConfigDir } = opts;
+  const committed = repoCommittedFiles(join(root, "config"));
   return runConfigLedger({
     userConfigDir,
     markerFile: APPLIED_MOVES_FILE,
@@ -133,6 +199,7 @@ export function applyPluginMoves(opts: {
         );
         const rewritten = rewriteConfigFiles(dir, {
           rewrite: (f, text) => rewriteKeys(f, text, move),
+          snapshotHash: upstreamAwareHash(committed),
         });
         return { move, moved, kept, rewritten };
       },

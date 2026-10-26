@@ -577,6 +577,7 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `orphanReportSchema`
     - `orphanRiskClassSchema`
     - `parseConfigFile`
+    - `parseConfigFileRelPath`
     - `propagate`
     - `propagateGitLayerDocument`
     - `readonlyProxy`

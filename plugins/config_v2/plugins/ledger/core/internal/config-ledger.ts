@@ -137,9 +137,18 @@ export function rewriteConfigFiles(
   opts: {
     select?: (rel: string) => boolean;
     rewrite: (rel: string, text: string) => string;
+    /** The hash a rewritten snapshot is stamped with (default: its content's
+     *  own). A ledger that knows the document the next propagation writes
+     *  there can answer with that document's hash when the two are the same
+     *  document — so the override re-stamped to it stays in sync through
+     *  propagation instead of reading as a conflict. */
+    snapshotHash?: (rel: string, content: JsonValue) => string;
   },
 ): string[] {
   const select = opts.select ?? (() => true);
+  const snapshotHash =
+    opts.snapshotHash ??
+    ((_rel: string, content: JsonValue) => computeHash(content));
   const files = walkConfigFiles(dir).filter(
     (f) => f.endsWith(".jsonc") && select(f),
   );
@@ -154,7 +163,7 @@ export function rewriteConfigFiles(
     const header = configTextHash(out);
     if (isSnapshot(f)) {
       if (out !== text && header !== undefined) {
-        const hash = computeHash(parseConfigText(f, out));
+        const hash = snapshotHash(f, parseConfigText(f, out));
         rehash.set(header, hash);
         out = withConfigTextHash(out, hash);
       }
