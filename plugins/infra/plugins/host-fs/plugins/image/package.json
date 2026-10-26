@@ -4,6 +4,6 @@
   "private": true,
   "version": "0.0.1",
   "dependencies": {
-    "sharp": "^0.34.4"
+    "sharp": "^0.35.5"
   }
 }

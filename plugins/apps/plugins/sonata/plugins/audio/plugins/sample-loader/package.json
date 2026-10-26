@@ -4,6 +4,6 @@
   "private": true,
   "version": "0.0.1",
   "dependencies": {
-    "smplr": "^0.26.0"
+    "smplr": "^1.1.0"
   }
 }
