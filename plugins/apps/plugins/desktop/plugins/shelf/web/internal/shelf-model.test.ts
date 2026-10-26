@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import {
   entryClick,
+  pinnedAfterMove,
   shelfEntries,
   windowClick,
   type ShelfWindow,
@@ -122,5 +123,49 @@ describe("entryClick", () => {
       windowId: "b",
     });
     expect(entryClick(windows, "c")).toEqual({ kind: "focus", windowId: "a" });
+  });
+});
+
+describe("pinnedAfterMove", () => {
+  // Pinned: mail, pages, and a "gone" app no longer installed; running: music, home.
+  const pinned = ["mail", "gone", "pages"];
+  const entries = shelfEntries(
+    pinned,
+    [win("w1", "music"), win("w2", "home")],
+    installed,
+  );
+
+  it("reorders the pinned apps", () => {
+    expect(pinnedAfterMove(pinned, entries, "pages", "mail")).toEqual([
+      "pages",
+      "mail",
+      "gone",
+    ]);
+  });
+
+  it("pins a running app dropped among the pinned ones, where it lands", () => {
+    expect(pinnedAfterMove(pinned, entries, "home", "pages")).toEqual([
+      "mail",
+      "home",
+      "pages",
+      "gone",
+    ]);
+  });
+
+  it("pins a running app dropped among the running ones, after the pinned", () => {
+    expect(pinnedAfterMove(pinned, entries, "home", "music")).toEqual([
+      "mail",
+      "pages",
+      "home",
+      "gone",
+    ]);
+  });
+
+  it("keeps a pinned app dropped among the running ones pinned, last", () => {
+    expect(pinnedAfterMove(pinned, entries, "mail", "home")).toEqual([
+      "pages",
+      "mail",
+      "gone",
+    ]);
   });
 });

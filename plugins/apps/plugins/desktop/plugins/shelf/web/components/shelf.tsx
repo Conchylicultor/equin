@@ -9,6 +9,10 @@ import type { CursorAnchor } from "@plugins/primitives/plugins/overlay/plugins/c
 import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { FloatingSurface } from "@plugins/primitives/plugins/overlay/plugins/floating-surface/web";
+import {
+  SortableItem,
+  SortableList,
+} from "@plugins/primitives/plugins/sortable-list/web";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { toggleLauncher } from "@plugins/apps/plugins/desktop/plugins/launcher/web";
@@ -119,6 +123,13 @@ export function Shelf({ tabIds }: { tabIds: string[] }) {
     [latestTabs],
   );
 
+  // ── Drag ──
+  // An entry dragged to a new place reorders the pinned apps. The release that
+  // ends a drag lands on the entry's button and would click it; the flag eats
+  // that click, and the next press clears it should the release land elsewhere.
+  const [dragging, setDragging] = useState(false);
+  const dragEnded = useRef(false);
+
   // ── Peek ──
   const [peek, setPeek] = useState<Peek | null>(null);
   const [menu, setMenu] = useState<Menu | null>(null);
@@ -137,7 +148,7 @@ export function Shelf({ tabIds }: { tabIds: string[] }) {
   };
   const showPeek = (next: Peek) => {
     cancelHide();
-    if (menu || overview) return;
+    if (menu || overview || dragging) return;
     if (peek && hoverKey(peek) === hoverKey(next)) return;
     setPeekedWindow(null);
     setPeek(next);
@@ -181,6 +192,10 @@ export function Shelf({ tabIds }: { tabIds: string[] }) {
   const windowsOf = (entry: ShelfAppEntry): FloatingWindow[] =>
     entry.windows.flatMap((w) => model.windows.get(w.id) ?? []);
   const onEntryClick = (entry: ShelfAppEntry, e: MouseEvent) => {
+    if (dragEnded.current) {
+      dragEnded.current = false;
+      return;
+    }
     hidePeek(false);
     if (e.shiftKey || e.altKey) return actions.openWindow(entry.appId);
     const action = entryClick(entry.windows, model.focusedWindowId);
@@ -251,47 +266,73 @@ export function Shelf({ tabIds }: { tabIds: string[] }) {
             // eslint-disable-next-line layout/no-adhoc-layout -- the mockup's `.sh-apps` row; it yields so a crowded dock clips instead of overflowing the desktop
             className="flex min-w-0 items-center gap-xs"
             onPointerLeave={() => hidePeek(true)}
+            onPointerDownCapture={() => {
+              dragEnded.current = false;
+            }}
           >
-            {model.entries.map((entry, i) => (
-              <Fragment key={entry.appId}>
-                {i > 0 && model.entries[i - 1]!.section !== entry.section && (
-                  <Separator />
-                )}
-                <ShelfEntryButton
-                  entry={entry}
-                  active={entry.windows.some(
-                    (w) => w.id === model.focusedWindowId,
+            <SortableList
+              items={model.entries.map((e) => e.appId)}
+              orientation="horizontal"
+              onMove={(activeId, overId) =>
+                actions.moveEntry(model.entries, activeId, overId)
+              }
+              onActiveChange={(id) => {
+                setDragging(id !== null);
+                if (id !== null) hidePeek(false);
+                else dragEnded.current = true;
+              }}
+            >
+              {model.entries.map((entry, i) => (
+                <Fragment key={entry.appId}>
+                  {i > 0 && model.entries[i - 1]!.section !== entry.section && (
+                    <Separator />
                   )}
-                  ref={(el) => {
-                    if (el) entryEls.current.set(entry.appId, el);
-                    else entryEls.current.delete(entry.appId);
-                  }}
-                  onClick={(e) => onEntryClick(entry, e)}
-                  onAuxClick={(e) => {
-                    if (e.button !== 1) return;
-                    e.preventDefault();
-                    hidePeek(false);
-                    actions.openWindow(entry.appId);
-                  }}
-                  onContextMenu={(e) => {
-                    e.preventDefault();
-                    hidePeek(false);
-                    setMenu({
-                      kind: "app",
-                      appId: entry.appId,
-                      anchor: menuAnchorAbove(e.currentTarget),
-                    });
-                  }}
-                  onPointerOver={(e) =>
-                    showPeek({
-                      kind: "app",
-                      appId: entry.appId,
-                      anchor: e.currentTarget,
-                    })
-                  }
-                />
-              </Fragment>
-            ))}
+                  <SortableItem
+                    id={entry.appId}
+                    // The dragged tile draws over its neighbours as it passes them.
+                    className={(st) =>
+                      cn(rigidClass(), st.isDragging && "relative z-raised")
+                    }
+                  >
+                    {() => (
+                      <ShelfEntryButton
+                        entry={entry}
+                        active={entry.windows.some(
+                          (w) => w.id === model.focusedWindowId,
+                        )}
+                        ref={(el) => {
+                          if (el) entryEls.current.set(entry.appId, el);
+                          else entryEls.current.delete(entry.appId);
+                        }}
+                        onClick={(e) => onEntryClick(entry, e)}
+                        onAuxClick={(e) => {
+                          if (e.button !== 1) return;
+                          e.preventDefault();
+                          hidePeek(false);
+                          actions.openWindow(entry.appId);
+                        }}
+                        onContextMenu={(e) => {
+                          e.preventDefault();
+                          hidePeek(false);
+                          setMenu({
+                            kind: "app",
+                            appId: entry.appId,
+                            anchor: menuAnchorAbove(e.currentTarget),
+                          });
+                        }}
+                        onPointerOver={(e) =>
+                          showPeek({
+                            kind: "app",
+                            appId: entry.appId,
+                            anchor: e.currentTarget,
+                          })
+                        }
+                      />
+                    )}
+                  </SortableItem>
+                </Fragment>
+              ))}
+            </SortableList>
           </div>
           <Separator />
           {/* eslint-disable-next-line layout/no-adhoc-layout, spacing/no-adhoc-spacing -- the mockup's `.sh-tray` row (gap 6px, off the ramp) */}
