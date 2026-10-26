@@ -1,4 +1,4 @@
-import { insertIntoImproveDraft } from "@plugins/improve/web";
+import { insertIntoWishDraft } from "@plugins/wish/web";
 import { serializeUiContext } from "@plugins/primitives/plugins/ui-context/core";
 import { PickerButton } from "@plugins/primitives/plugins/ui-context/plugins/element-picker/web";
 
@@ -16,9 +16,7 @@ export function ElementPickerButton() {
   return (
     <PickerButton
       variant="ghost"
-      onPick={(meta) =>
-        insertIntoImproveDraft(serializeUiContext(meta, "picked"))
-      }
+      onPick={(meta) => insertIntoWishDraft(serializeUiContext(meta, "picked"))}
     />
   );
 }

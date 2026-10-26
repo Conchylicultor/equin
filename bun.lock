@@ -3759,14 +3759,6 @@
       "name": "@equin/plugin-ids",
       "version": "0.0.1",
     },
-    "plugins/improve": {
-      "name": "@equin/plugin-improve",
-      "version": "0.0.1",
-    },
-    "plugins/improve/plugins/element-picker": {
-      "name": "@equin/plugin-improve-element-picker",
-      "version": "0.0.1",
-    },
     "plugins/infra": {
       "name": "@equin/plugin-infra",
       "version": "0.0.1",
@@ -6593,6 +6585,14 @@
       "name": "@equin/plugin-upstream",
       "version": "0.0.1",
     },
+    "plugins/wish": {
+      "name": "@equin/plugin-wish",
+      "version": "0.0.1",
+    },
+    "plugins/wish/plugins/element-picker": {
+      "name": "@equin/plugin-wish-element-picker",
+      "version": "0.0.1",
+    },
   },
   "patchedDependencies": {
     "eslint-plugin-react-hooks@7.1.1": "patches/eslint-plugin-react-hooks@7.1.1.patch",
@@ -8538,10 +8538,6 @@
 
     "@equin/plugin-ids": ["@equin/plugin-ids@workspace:plugins/ids"],
 
-    "@equin/plugin-improve": ["@equin/plugin-improve@workspace:plugins/improve"],
-
-    "@equin/plugin-improve-element-picker": ["@equin/plugin-improve-element-picker@workspace:plugins/improve/plugins/element-picker"],
-
     "@equin/plugin-infra": ["@equin/plugin-infra@workspace:plugins/infra"],
 
     "@equin/plugin-infra-asset-mirror": ["@equin/plugin-infra-asset-mirror@workspace:plugins/infra/plugins/asset-mirror"],
@@ -9863,6 +9859,10 @@
     "@equin/plugin-ui-variant-region": ["@equin/plugin-ui-variant-region@workspace:plugins/ui/plugins/variant-region"],
 
     "@equin/plugin-upstream": ["@equin/plugin-upstream@workspace:plugins/upstream"],
+
+    "@equin/plugin-wish": ["@equin/plugin-wish@workspace:plugins/wish"],
+
+    "@equin/plugin-wish-element-picker": ["@equin/plugin-wish-element-picker@workspace:plugins/wish/plugins/element-picker"],
 
     "@equin/web": ["@equin/web@workspace:plugins/framework/plugins/web-core"],
 

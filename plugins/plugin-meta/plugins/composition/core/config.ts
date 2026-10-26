@@ -556,7 +556,7 @@ export const compositionsConfig = defineConfig({
         // ── Packs: reusable contributor sets apps opt into via `extends` ────────
         {
           ...pack("self-improvement", [
-            "improve.element-picker",
+            "wish.element-picker",
             "review",
             "reports.crash",
             "reports.launch-fix",

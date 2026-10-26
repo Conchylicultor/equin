@@ -21,14 +21,18 @@ import { isCandidatePath, strayPgTableCalls } from "./index";
 // (which validates every `plugins/...` string literal repo-wide) stays happy —
 // the predicate itself only cares about path structure + the supplied globFiles.
 // A glob-matched schema file (would be in globFiles) is NOT a candidate.
-const globFiles = new Set(["plugins/improve/server/internal/tables.ts"]);
+const globFiles = new Set(["plugins/wish/server/internal/tables.ts"]);
 
 test("a glob-matched tables.ts path is excluded (not a candidate)", () => {
-  expect(isCandidatePath("plugins/improve/server/internal/tables.ts", globFiles)).toBe(false);
+  expect(
+    isCandidatePath("plugins/wish/server/internal/tables.ts", globFiles),
+  ).toBe(false);
 });
 
 test("a non-glob server file is an in-scope candidate", () => {
-  expect(isCandidatePath("plugins/improve/server/internal/helpers.ts", globFiles)).toBe(true);
+  expect(
+    isCandidatePath("plugins/wish/server/internal/helpers.ts", globFiles),
+  ).toBe(true);
 });
 
 test("a factory-body server file is a candidate (excluded later by FACTORY_DEFINITION_FILES, not the predicate)", () => {
@@ -40,15 +44,21 @@ test("a factory-body server file is a candidate (excluded later by FACTORY_DEFIN
 });
 
 test("a .test.ts server file is out of scope", () => {
-  expect(isCandidatePath("plugins/improve/server/internal/helpers.test.ts", globFiles)).toBe(false);
+  expect(
+    isCandidatePath("plugins/wish/server/internal/helpers.test.ts", globFiles),
+  ).toBe(false);
 });
 
 test("a __tests__ server file is out of scope", () => {
-  expect(isCandidatePath("plugins/improve/server/__tests__/helpers.ts", globFiles)).toBe(false);
+  expect(
+    isCandidatePath("plugins/wish/server/__tests__/helpers.ts", globFiles),
+  ).toBe(false);
 });
 
 test("a non-server file is out of scope", () => {
-  expect(isCandidatePath("plugins/improve/web/internal/tables.ts", globFiles)).toBe(false);
+  expect(
+    isCandidatePath("plugins/wish/web/internal/tables.ts", globFiles),
+  ).toBe(false);
 });
 
 // --- imperative-table read-handle exemption ---

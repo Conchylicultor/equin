@@ -306,7 +306,7 @@ if (pin.categoryTask !== undefined) {
   );
 }
 const otherCategory =
-  category.category === "improvements" ? "conversations" : "improvements";
+  category.category === "wishes" ? "conversations" : "wishes";
 
 const fixture: Fixture = {
   attempt: attempt.id,
@@ -605,7 +605,7 @@ async function writeThrowaway(i: number): Promise<void> {
     [task, attempt.task_id],
   );
   await q(
-    `INSERT INTO tasks_ext_category (parent_id, category) VALUES ($1, 'improvements')`,
+    `INSERT INTO tasks_ext_category (parent_id, category) VALUES ($1, 'wishes')`,
     [task],
   );
 }

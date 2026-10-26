@@ -1,7 +1,7 @@
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
 import { useDispatchOutcome } from "@plugins/primitives/plugins/slot-render/web";
-import { IMPROVEMENTS_CATEGORY_ID } from "@plugins/improve/core";
+import { WISHES_CATEGORY_ID } from "@plugins/wish/core";
 import { useJsonlConversationId } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { rowActionClass } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -71,7 +71,7 @@ export function InvestigateEventAction({ event }: { event: JsonlEvent }) {
           "```",
           ...(body ? ["", "## What the user asked for", "", body] : []),
         ].join("\n");
-        return { prompt, categoryId: IMPROVEMENTS_CATEGORY_ID };
+        return { prompt, categoryId: WISHES_CATEGORY_ID };
       }}
     />
   );

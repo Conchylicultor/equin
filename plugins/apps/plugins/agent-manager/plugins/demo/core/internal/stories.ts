@@ -1,6 +1,6 @@
 import { BUILD_CATEGORY_ID } from "@plugins/build/core";
 import { CONVERSATIONS_CATEGORY_ID } from "@plugins/conversations/core";
-import { IMPROVEMENTS_CATEGORY_ID } from "@plugins/improve/core";
+import { WISHES_CATEGORY_ID } from "@plugins/wish/core";
 import { PAGES_CATEGORY_ID } from "@plugins/page/plugins/prompt/plugins/link/core";
 import { ConversationModelSchema } from "@plugins/conversations/plugins/model-provider/core";
 import {
@@ -113,7 +113,7 @@ export const STORIES: readonly Story[] = [
     key: "csv-export",
     shortTitle: "CSV export",
     phase: "implementation",
-    category: IMPROVEMENTS_CATEGORY_ID,
+    category: WISHES_CATEGORY_ID,
     task: "Export a notebook as CSV",
     title: "Add CSV export to the notebook menu",
     status: "working",
@@ -164,7 +164,7 @@ export const STORIES: readonly Story[] = [
     key: "search-speed",
     shortTitle: "Faster search",
     phase: "pushed",
-    category: IMPROVEMENTS_CATEGORY_ID,
+    category: WISHES_CATEGORY_ID,
     task: "Search takes 2 s on large notebooks",
     title: "Index note titles for search",
     status: "done",

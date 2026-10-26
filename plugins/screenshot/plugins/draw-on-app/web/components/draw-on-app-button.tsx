@@ -6,7 +6,7 @@ import { useToast } from "@plugins/shell/plugins/notifications/web";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { uploadAttachment } from "@plugins/infra/plugins/attachments/web";
 import { attachmentMarkdown } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/web";
-import { insertIntoImproveDraft } from "@plugins/improve/web";
+import { insertIntoWishDraft } from "@plugins/wish/web";
 import type { Stroke } from "@plugins/screenshot/plugins/draw-canvas/web";
 import { LiveDrawOverlay } from "./live-draw-overlay";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -63,7 +63,7 @@ export function DrawOnAppButton() {
         "image/png",
       );
       teardown();
-      insertIntoImproveDraft(attachmentMarkdown(uploaded.id, "drawing.png"));
+      insertIntoWishDraft(attachmentMarkdown(uploaded.id, "drawing.png"));
     } catch (err) {
       toast({
         type: "screenshot",

@@ -82,10 +82,10 @@ never name it. Rendered by `<DemoScope scenario><AppEmbed app route/></DemoScope
     - `conversations/agents.agentIdKind`
     - `conversations/agents.agentLaunchIdKind`
     - `conversations/model-provider.ConversationModelSchema`
-    - `improve.IMPROVEMENTS_CATEGORY_ID`
     - `page/editor.blockIdKind`
     - `page/inline-page-link.pageLinkToken`
     - `page/prompt/link.PAGES_CATEGORY_ID`
+    - `wish.WISHES_CATEGORY_ID`
   - Exports (types):
     - `DemoAgent`
     - `DemoContentBlock`

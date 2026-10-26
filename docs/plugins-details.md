@@ -527,10 +527,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/agents.agentIdKind`
               - `conversations/agents.agentLaunchIdKind`
               - `conversations/model-provider.ConversationModelSchema`
-              - `improve.IMPROVEMENTS_CATEGORY_ID`
               - `page/editor.blockIdKind`
               - `page/inline-page-link.pageLinkToken`
               - `page/prompt/link.PAGES_CATEGORY_ID`
+              - `wish.WISHES_CATEGORY_ID`
             - Exports (types):
               - `DemoAgent`
               - `DemoContentBlock`
@@ -4558,10 +4558,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `hints.Hints`
               - `hints.setTourData`
               - `hints.useTourRun`
-              - `improve.openImprove`
               - `primitives/pane.openPane`
               - `shell/global-action-bar.useActionBarPinned`
               - `ui/icons.Icon`
+              - `wish.openWish`
         - **`usage-fields`** — Declares per-app usage stats as client fields of the installed-app row kind: opens and active time over 7 days and all time, and when the app was last opened — sortable, filterable fields shown as columns of the Home grid's table view.
           - Web:
             - Contributes:
@@ -18367,7 +18367,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `ConversationGroupId`
             - Exports (values): `conversationGroupIdKind`
           - Cross-plugin:
-            - Imported by: `improve`
+            - Imported by: `wish`
         - **`queue`** — Queue classification + reorder logic (classifyQueue / applyReorder) consumed by the DataView Queue tab. Ranks seeded once on creation (newest first); a user-set pin lifts a waiting task group into its own top section. Stable-rank global queue. Ranks seeded once on creation (newest first). A user-set pin lifts a conversation's task group into its own section at the top.
           - Server:
             - Contributes:
@@ -19673,7 +19673,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `code-explorer`
       - `hints`
       - `history/engine`
-      - `improve`
       - `integrations/google-maps/usage`
       - `plugin-meta/plugin-health`
       - `release`
@@ -19681,6 +19680,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `shell/notifications`
       - `tag-tree/engine`
       - `ui/theme-engine/saved-themes`
+      - `wish`
   - Exemptions:
     - Exempts itself from: `boundaries/no-platform-api` — `core/internal/config.ts` (debt)
   - Core:
@@ -26634,13 +26634,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/lint`
               - `framework/tooling/provision`
               - `framework/web-sdk`
-              - `improve/element-picker`
               - `infra/asset-mirror`
               - `infra/deps`
               - `infra/launcher/login-services`
               - `infra/paths`
               - `plugin-meta/exhibits`
               - `plugin-meta/facets`
+              - `wish/element-picker`
           - Core:
             - Exports (types):
               - `CollectedDirDef`
@@ -26674,13 +26674,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `reports` ×2
               - `build`
               - `database/admin`
-              - `improve/element-picker`
               - `map/google`
               - `menu-bar`
               - `network/live`
               - `plugin-meta/exhibits`
               - `release`
               - `runs`
+              - `wish/element-picker`
           - Exemptions:
             - Exempts itself from: `agent-origin-safety/no-unmarked-app-fetch` — `e2e/app-fetch.ts`, `e2e/deploy-identity.ts` (sanctioned)
         - **`exempt`** — Inverted exemptions: a plugin declares, in its own exempt/index.ts, which of its files may violate which lint rule or check — with a reason, and a task when it is debt. The manifest types, the generated rule-id union, the file-category vocabulary rule owners scope by, and the one loader + hit-recording matcher the ESLint config, the type-check worker and the check runner all read.
@@ -27416,16 +27416,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `conversations/conversation-view/push-and-exit`
       - `conversations/conversations-view/data-view`
       - `hints/help-menu`
-      - `improve`
       - `shell/global-action-bar`
       - `tasks/task-draft-form`
+      - `wish`
   - Plugins:
-    - **`ask`** — Ask equin, web half: the ? menu's entry (Ask equin how to… / Back to your question) and the same entry as an icon in the Wish popover's header, and the AskHost at Core.Root — a draggable card in the chrome's theme (a developer-only Agent instructions header action opening the Ask equin config) holding one threaded conversation with the help agent (AgentThread; a filed task shows as its live status and title, opening in the Agent Manager), above every tab so it follows the user across apps: suggested questions and a first-question box when empty (the first send attaches the focused app, route, tab title and the page outline), minimized to a pill with the step it is on and an unseen dot, its position kept edge-anchored and snapped only near a corner, and the newest unseen or working run taken back as the pill once per load. A reply sent from another page carries that page (a <page-context> token after the words, drawn as a chip naming the page). Registers the Ask equin config with both model pickers. Ask equin, server half: the help agent's reserved ask_file_task tool (a task with no folder or dependency edges, in the default worktree workspace, filed under Improvements and armed with the configured model so it launches at once), and the Ask equin config (the answering model, the filed tasks' model, the help agent's whole prompt as an editable template).
+    - **`ask`** — Ask equin, web half: the ? menu's entry (Ask equin how to… / Back to your question) and the same entry as an icon in the Wish popover's header, and the AskHost at Core.Root — a draggable card in the chrome's theme (a developer-only Agent instructions header action opening the Ask equin config) holding one threaded conversation with the help agent (AgentThread; a filed task shows as its live status and title, opening in the Agent Manager), above every tab so it follows the user across apps: suggested questions and a first-question box when empty (the first send attaches the focused app, route, tab title and the page outline), minimized to a pill with the step it is on and an unseen dot, its position kept edge-anchored and snapped only near a corner, and the newest unseen or working run taken back as the pill once per load. A reply sent from another page carries that page (a <page-context> token after the words, drawn as a chip naming the page). Registers the Ask equin config with both model pickers. Ask equin, server half: the help agent's reserved ask_file_task tool (a task with no folder or dependency edges, in the default worktree workspace, filed under Wishes and armed with the configured model so it launches at once), and the Ask equin config (the answering model, the filed tasks' model, the help agent's whole prompt as an editable template).
       - Web:
         - Contributes:
           - `Core.Root` → `AskHost`
           - `HelpMenu.Entry` "Ask equin how to…" → `AskEquinEntry`
-          - `ImproveSlots.HeaderAction` "ask" → `AskFromWish`
+          - `WishSlots.HeaderAction` "ask" → `AskFromWish`
           - `InlineChip.Tag` "ask-page-context" → `PageContextChip`
           - `ConfigV2.WebRegister` "config"
           - `DynamicEnum.Options` "Model for filed tasks"
@@ -27450,7 +27450,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/model-provider.useModelChoiceOptions`
           - `conversations.useConversation`
           - `fields/dynamic-enum/config.DynamicEnum`
-          - `improve.ImproveSlots`
           - `network/live.useLiveRow`
           - `primitives/css/badge.Badge`
           - `primitives/css/clip.clipClasses`
@@ -27480,6 +27479,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/task-detail.taskDetailPane`
           - `tasks/tasks-core.useTaskConversations`
           - `ui/icons.Icon`
+          - `wish.WishSlots`
       - Server:
         - Contributes: `ConfigV2.Register` "config"
         - Uses:
@@ -27747,86 +27747,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `reports`
       - `shell/notifications`
       - `tag-tree/engine`
-
-- **`improve`** — The Wish toolbar button: the entry point for anything the user wants done — a fix, a change, a new app. Files a task under "Improvements" with the current URL. Companion actions join it as segments of one split pill via ImproveSlots.Segment; ImproveSlots.HeaderAction adds actions to its popover header (Ask equin). Task category of the Wish toolbar button. Files tasks stamped "Improvements" via the shared task-draft-form primitive.
-  - Web:
-    - Slots:
-      - `ImproveSlots.Segment`
-      - `ImproveSlots.HeaderAction`
-    - Slot contributors:
-      - `ImproveSlots.Segment` ← `improve.element-picker`
-      - `ImproveSlots.HeaderAction` ← `hints.ask`
-    - Contributes: `ActionBar.Item` → `ImproveButton`
-    - Uses:
-      - `hints.emitHintSignal`
-      - `hints.useHintAnchor`
-      - `primitives/css/ui-kit.Button`
-      - `primitives/css/ui-kit.ButtonGroup`
-      - `primitives/slot-render.renderIsolated`
-      - `shell/action-bar.ActionBar`
-      - `tasks/task-draft-form.draftInsert`
-      - `tasks/task-draft-form.draftSeed`
-      - `tasks/task-draft-form.TaskDraftInsert`
-      - `tasks/task-draft-form.TaskDraftPopover`
-      - `ui/icons.Icon`
-    - Exports (types):
-      - `ImproveHeaderActionContribution`
-      - `ImproveHeaderActionProps`
-      - `ImproveSegmentContribution`
-    - Exports (values):
-      - `ImproveSlots`
-      - `insertIntoImproveDraft`
-      - `openImprove`
-  - Server:
-    - Contributes:
-      - `trigger` "improve.apply-group"
-      - `taskCategory` "improvements"
-    - Uses:
-      - `conversations/conversations-view/grouped.addMemberToGroup`
-      - `database.db`
-      - `infra/events.Trigger`
-      - `infra/jobs.defineJob`
-      - `tasks/task-category.TaskCategory`
-      - `tasks/tasks-core.conversationCreated`
-    - DB schema: `plugins/improve/server/internal/tables.ts`
-    - Exports (values): `_improvePendingGroups`
-    - Register: `defineJob('improve.apply-group')`
-  - Core:
-    - Uses:
-      - `hints.defineHintAnchor`
-      - `hints.defineHintSignal`
-    - Exports (values):
-      - `improveButtonAnchor`
-      - `IMPROVEMENTS_CATEGORY_ID`
-      - `improvePanelAnchor`
-      - `improveSendAnchor`
-      - `improveSent`
-  - Cross-plugin:
-    - Uses tokens:
-      - `ui/tokens/color-palette --foreground`
-      - `ui/tokens/color-palette --muted-foreground`
-    - Imported by:
-      - `apps/agent-manager/demo`
-      - `apps/home/tour`
-      - `hints/ask`
-      - `improve/element-picker`
-      - `screenshot/draw-on-app`
-  - Plugins:
-    - **`element-picker`** — The element picker wired into equin's Improve flow: a 'Pick UI element' segment of the Improve pill that opens the Improve popover with the picked element as a <ui-context/> chip, and an 'Attach UI element' button in the task-draft form. The picker, its overlay and the chip are primitives/ui-context/element-picker.
-      - Web:
-        - Contributes:
-          - `ImproveSlots.Segment` "element-picker" → `ElementPickerButton`
-          - `TaskDraftFormSlots.Action` → `TaskDraftPickerButton`
-        - Uses:
-          - `improve.ImproveSlots`
-          - `improve.insertIntoImproveDraft`
-          - `primitives/ui-context/element-picker.PickerButton`
-          - `tasks/task-draft-form.TaskDraftFormSlots`
-      - Core:
-        - Uses: `framework/tooling/collected-dir.defineCollectedDir`
-        - Exports (values): `viteCollectedDir`
-      - Cross-plugin:
-        - Uses tokens: `ui/tokens/color-palette --foreground`
 
 - **`infra`** — Umbrella for cross-cutting server-side primitives used by feature plugins: jobs, events, secrets, mcp, attachments.
   - Plugins:
@@ -29202,7 +29122,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations` ×4
           - `infra` ×4
           - `page` ×4
-          - `improve`
+          - `wish`
       - Exemptions:
         - Exempts itself from:
           - `ids:pk-declared` — `server/internal/tables.ts` (debt)
@@ -30194,11 +30114,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks` ×4
           - `database` ×3
           - `page` ×3
-          - `improve`
           - `integrations/youtube/audio-fetch`
           - `shell/notifications`
           - `stats/cost`
           - `upstream`
+          - `wish`
       - Exemptions:
         - Exempts itself from:
           - `timer/no-unlisted-timer` — `machine/internal/stuck-lock-sweeper.ts` (sanctioned)
@@ -39977,12 +39897,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `audience/developer-mark`
               - `code-explorer/commit-detail`
               - `history/dialog`
-              - `improve`
               - `map`
               - `music/chord-box`
               - `search/quick-find`
               - `stats/commits`
               - `tag-tree/picker`
+              - `wish`
           - Exemptions:
             - Exempts itself from:
               - `surface/no-adhoc-surface` — `web/components/ui` (sanctioned)
@@ -44839,7 +44759,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page` ×2
           - `framework/web-core`
           - `hints/help-menu`
-          - `improve`
           - `integrations/google-maps`
           - `map`
           - `menu-bar`
@@ -44849,6 +44768,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `review/plugin-changes`
           - `runs`
           - `stats`
+          - `wish`
     - **`sortable-list`** — Generic sortable list primitive with smooth displacement animations. Wraps @dnd-kit/sortable into SortableList + SortableItem components, plus DeferredSortableList / DeferredSortableHost for a list draggable only in a mode (no drag machinery mounted while disabled, items never remounted by the toggle; its items are deferred-item's DeferredSortableItem, which imports no dnd-kit).
       - Web:
         - Uses:
@@ -45724,7 +45644,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `apps/website/improve`
               - `hints/ask`
-              - `improve/element-picker`
+              - `wish/element-picker`
     - **`undo-redo`** — Surface-scoped client-side undo/redo command-history stack: a UndoRedoProvider per surface tab holding past/future stacks of {undo,redo} thunks, with time-windowed coalescing, a max-depth cap, a re-entrancy guard so replayed patches aren't re-recorded, mount-scoped entries (useScopedUndoRedo drops its entries when its mount unmounts), a pending-flush seam (usePendingFlush / registerPendingFlush: a producer holding a not-yet-recorded entry seals it at the start of every undo/redo turn, outside the replay guard, so it is the entry popped), serialized turns (an undo/redo during an in-flight thunk queues FIFO behind it instead of running under the guard), and an optional useUndoRedoShortcuts (mod+z / mod+shift+z / mod+y) convenience binding.
       - Web:
         - Uses:
@@ -47524,7 +47444,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Web:
         - Contributes: `ActionBar.Item` → `DrawOnAppButton`
         - Uses:
-          - `improve.insertIntoImproveDraft`
           - `infra/attachments.uploadAttachment`
           - `infra/endpoints.useFetchEndpoint`
           - `primitives/css/pin.Pin`
@@ -47540,6 +47459,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `screenshot/draw-canvas.Stroke`
           - `shell/action-bar.ActionBar`
           - `shell/notifications.useToast`
+          - `wish.insertIntoWishDraft`
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/color-palette --background`
@@ -47664,12 +47584,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ActionBar.Item` ← `build`
           - `ActionBar.Item` ← `config_v2.git-defaults-preview`
           - `ActionBar.Item` ← `hints.help-menu`
-          - `ActionBar.Item` ← `improve`
           - `ActionBar.Item` ← `screenshot`
           - `ActionBar.Item` ← `screenshot.draw-on-app`
           - `ActionBar.Item` ← `shell.global-action-bar`
           - `ActionBar.Item` ← `shell.notifications`
           - `ActionBar.Item` ← `ui.theme-engine.quick-theme`
+          - `ActionBar.Item` ← `wish`
           - `ActionBar.ViewOption` ← `apps-core.surface`
           - `ActionBar.ViewOption` ← `audience.view-option`
           - `ActionBar.ViewOption` ← `config_v2.git-defaults-preview`
@@ -47691,7 +47611,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `config_v2/git-defaults-preview`
           - `fullscreen`
           - `hints/help-menu`
-          - `improve`
           - `reorder/edit-mode`
           - `screenshot`
           - `screenshot/draw-on-app`
@@ -47699,6 +47618,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `shell/health-report`
           - `shell/notifications`
           - `ui/theme-engine/quick-theme`
+          - `wish`
     - **`document-head`** — What the SPA shell's <head> must carry before the first frame, per app path: the DocumentHead.Fragment contribution a server plugin renders its head HTML through (the theme's CSS), and the merge of every source into one fragment per path.
       - Cross-plugin:
         - Imported by:
@@ -49491,11 +49411,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `build`
           - `config_v2/settings`
           - `debug/background/investigate`
-          - `improve`
           - `infra/deps/updates`
           - `release`
           - `toolchain`
           - `upstream`
+          - `wish`
       - Core:
         - Exports (types): `TaskCategoryDef`
         - Exports (values): `TaskCategoryDefSchema`
@@ -49656,7 +49576,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`task-draft-form`** — Reusable popover + chain form for drafting one or more tasks. Powers the Wish toolbar button and the conversation new-child-task button.
       - Web:
         - Slots: `TaskDraftFormSlots.Action`
-        - Slot contributors: `TaskDraftFormSlots.Action` ← `improve.element-picker`
+        - Slot contributors: `TaskDraftFormSlots.Action` ← `wish.element-picker`
         - Contributes: `ConfigV2.WebRegister` "config"
         - Uses: 44 symbols — full list in [`plugins/tasks/plugins/task-draft-form/REFERENCE.md`](../plugins/tasks/plugins/task-draft-form/REFERENCE.md)
           - `tasks/launch-options` ×5
@@ -49724,10 +49644,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `conversations/conversation-view`
           - `conversations/conversation-view/new-child-task`
-          - `improve`
-          - `improve/element-picker`
           - `tasks/menu-bar-task`
           - `tasks/task-dependencies`
+          - `wish`
+          - `wish/element-picker`
       - Core:
         - Exports (values): `TASK_DRAFT_FORM_WIDTH`
     - **`task-effort`** — Per-task thinking-mode (effort) picker, contributed as a launch option of both the task detail's Prompt card and the task-draft popover; the selection is applied to Claude Code on launch. Owns the tasks_ext_effort side-table: the per-task thinking mode (effort level), applied to Claude Code at launch via --effort / --settings ultracode.
@@ -50675,8 +50595,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `code-explorer`
           - `database/query`
           - `hints/ask`
-          - `improve`
           - `plugin-meta/plugin-health`
+          - `wish`
         - Extended by:
           - `conversations/conversation-view/notes` (table `conversations_ext_notes`)
           - `apps/places/ask` (table `conversations_ext_places_ask`)
@@ -50904,12 +50824,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `auth`
           - `framework/tooling/codegen`
           - `fullscreen`
-          - `improve`
           - `layouts/miller`
           - `map`
           - `menu-bar`
           - `screenshot`
           - `tag-tree/picker`
+          - `wish`
       - Exemptions:
         - Exempts itself from:
           - `icons/reserved-nav-icon` — `core/nav-icons.ts` (sanctioned)
@@ -52030,10 +51950,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `integrations` ×3
               - `backup` ×2
               - `code-explorer` ×2
-              - `improve` ×2
               - `menu-bar` ×2
               - `runs` ×2
               - `screenshot` ×2
+              - `wish` ×2
               - `audience/developer-mark`
               - `config_v2/settings`
               - `database/query-deadline`
@@ -52884,5 +52804,85 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `fetchUpstreamStatus`
       - `UPSTREAM_BRANCH`
       - `UPSTREAM_SUBJECT_LIMIT`
+
+- **`wish`** — The Wish toolbar button: the entry point for anything the user wants done — a fix, a change, a new app. Files a task under "Wishes" with the current URL. Companion actions join it as segments of one split pill via WishSlots.Segment; WishSlots.HeaderAction adds actions to its popover header (Ask equin). Task category of the Wish toolbar button. Files tasks stamped "Wishes" via the shared task-draft-form primitive.
+  - Web:
+    - Slots:
+      - `WishSlots.Segment`
+      - `WishSlots.HeaderAction`
+    - Slot contributors:
+      - `WishSlots.Segment` ← `wish.element-picker`
+      - `WishSlots.HeaderAction` ← `hints.ask`
+    - Contributes: `ActionBar.Item` → `WishButton`
+    - Uses:
+      - `hints.emitHintSignal`
+      - `hints.useHintAnchor`
+      - `primitives/css/ui-kit.Button`
+      - `primitives/css/ui-kit.ButtonGroup`
+      - `primitives/slot-render.renderIsolated`
+      - `shell/action-bar.ActionBar`
+      - `tasks/task-draft-form.draftInsert`
+      - `tasks/task-draft-form.draftSeed`
+      - `tasks/task-draft-form.TaskDraftInsert`
+      - `tasks/task-draft-form.TaskDraftPopover`
+      - `ui/icons.Icon`
+    - Exports (types):
+      - `WishHeaderActionContribution`
+      - `WishHeaderActionProps`
+      - `WishSegmentContribution`
+    - Exports (values):
+      - `insertIntoWishDraft`
+      - `openWish`
+      - `WishSlots`
+  - Server:
+    - Contributes:
+      - `trigger` "improve.apply-group"
+      - `taskCategory` "wishes"
+    - Uses:
+      - `conversations/conversations-view/grouped.addMemberToGroup`
+      - `database.db`
+      - `infra/events.Trigger`
+      - `infra/jobs.defineJob`
+      - `tasks/task-category.TaskCategory`
+      - `tasks/tasks-core.conversationCreated`
+    - DB schema: `plugins/wish/server/internal/tables.ts`
+    - Exports (values): `_improvePendingGroups`
+    - Register: `defineJob('improve.apply-group')`
+  - Core:
+    - Uses:
+      - `hints.defineHintAnchor`
+      - `hints.defineHintSignal`
+    - Exports (values):
+      - `wishButtonAnchor`
+      - `WISHES_CATEGORY_ID`
+      - `wishPanelAnchor`
+      - `wishSendAnchor`
+      - `wishSent`
+  - Cross-plugin:
+    - Uses tokens:
+      - `ui/tokens/color-palette --foreground`
+      - `ui/tokens/color-palette --muted-foreground`
+    - Imported by:
+      - `apps/agent-manager/demo`
+      - `apps/home/tour`
+      - `hints/ask`
+      - `screenshot/draw-on-app`
+      - `wish/element-picker`
+  - Plugins:
+    - **`element-picker`** — The element picker wired into equin's Improve flow: a 'Pick UI element' segment of the Improve pill that opens the Improve popover with the picked element as a <ui-context/> chip, and an 'Attach UI element' button in the task-draft form. The picker, its overlay and the chip are primitives/ui-context/element-picker.
+      - Web:
+        - Contributes:
+          - `WishSlots.Segment` "element-picker" → `ElementPickerButton`
+          - `TaskDraftFormSlots.Action` → `TaskDraftPickerButton`
+        - Uses:
+          - `primitives/ui-context/element-picker.PickerButton`
+          - `tasks/task-draft-form.TaskDraftFormSlots`
+          - `wish.insertIntoWishDraft`
+          - `wish.WishSlots`
+      - Core:
+        - Uses: `framework/tooling/collected-dir.defineCollectedDir`
+        - Exports (values): `viteCollectedDir`
+      - Cross-plugin:
+        - Uses tokens: `ui/tokens/color-palette --foreground`
 
 <!-- AUTOGENERATED:END -->

@@ -7,19 +7,19 @@ import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import { Fragment, useSyncExternalStore } from "react";
 import { TaskDraftPopover } from "@plugins/tasks/plugins/task-draft-form/web";
 import {
-  getImproveOpenState,
-  setImproveOpen,
-  subscribeImproveOpen,
+  getWishOpenState,
+  setWishOpen,
+  subscribeWishOpen,
 } from "../internal/open-store";
 import {
-  IMPROVEMENTS_CATEGORY_ID,
-  improveButtonAnchor,
-  improvePanelAnchor,
-  improveSendAnchor,
-  improveSent,
+  WISHES_CATEGORY_ID,
+  wishButtonAnchor,
+  wishPanelAnchor,
+  wishSendAnchor,
+  wishSent,
 } from "../../core";
 import { emitHintSignal, useHintAnchor } from "@plugins/hints/web";
-import { ImproveSlots } from "../slots";
+import { WishSlots } from "../slots";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
@@ -30,13 +30,13 @@ import { Icon } from "@plugins/ui/plugins/icons/web";
 const sparkIcon = symbol("flare");
 
 /** What the onboarding tour points at inside the open popover. */
-const HINT_ANCHORS = { panel: improvePanelAnchor, send: improveSendAnchor };
+const HINT_ANCHORS = { panel: wishPanelAnchor, send: wishSendAnchor };
 
-const closeWish = () => setImproveOpen(false);
+const closeWish = () => setWishOpen(false);
 
 /**
  * The Wish pill: the Wish button (opening the draft popover) joined with
- * every contributed `ImproveSlots.Segment` — companion actions that feed the
+ * every contributed `WishSlots.Segment` — companion actions that feed the
  * same draft, such as picking a UI element — as one split capsule. Every
  * segment is a ghost: a quiet bar button, no fill and no outline, so the pill
  * reads as one labelled action rather than a framed box inside the bar's own
@@ -44,20 +44,20 @@ const closeWish = () => setImproveOpen(false);
  * and the companions) keep the bar's quieter tone, like its other icons, and
  * brighten on hover.
  */
-export function ImproveButton() {
+export function WishButton() {
   const { open, insert } = useSyncExternalStore(
-    subscribeImproveOpen,
-    getImproveOpenState,
+    subscribeWishOpen,
+    getWishOpenState,
   );
-  const segments = ImproveSlots.Segment.useContributions();
-  const headerActions = ImproveSlots.HeaderAction.useContributions();
-  const anchorRef = useHintAnchor(improveButtonAnchor);
+  const segments = WishSlots.Segment.useContributions();
+  const headerActions = WishSlots.HeaderAction.useContributions();
+  const anchorRef = useHintAnchor(wishButtonAnchor);
 
   return (
     <ButtonGroup shape="pill">
       <TaskDraftPopover
         open={open}
-        onOpenChange={setImproveOpen}
+        onOpenChange={setWishOpen}
         trigger={
           <Button ref={anchorRef} variant="ghost" className="text-foreground">
             <Icon
@@ -68,13 +68,13 @@ export function ImproveButton() {
           </Button>
         }
         tooltip="Wish"
-        target={{ kind: "category", categoryId: IMPROVEMENTS_CATEGORY_ID }}
+        target={{ kind: "category", categoryId: WISHES_CATEGORY_ID }}
         insert={insert}
         heading="Make a wish"
         headerActions={headerActions.map((action) => (
           <Fragment key={action.id}>
             {renderIsolated(
-              ImproveSlots.HeaderAction,
+              WishSlots.HeaderAction,
               action as unknown as Contribution,
               { close: closeWish },
             )}
@@ -82,12 +82,12 @@ export function ImproveButton() {
         ))}
         placeholder="Fix, change or build anything…"
         hintAnchors={HINT_ANCHORS}
-        onSuccess={(taskIds) => emitHintSignal(improveSent, { taskIds })}
+        onSuccess={(taskIds) => emitHintSignal(wishSent, { taskIds })}
       />
       {segments.map((segment) => (
         <Fragment key={segment.id}>
           {renderIsolated(
-            ImproveSlots.Segment,
+            WishSlots.Segment,
             segment as unknown as Contribution,
             {},
           )}

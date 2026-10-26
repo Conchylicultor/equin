@@ -1,4 +1,4 @@
-// @hash 627cad693162
+// @hash 750e9dffc9a5
 {
   "manifests": [
     {
@@ -555,7 +555,7 @@
       "category": "pack",
       "entryPoints": [],
       "selectedContributors": [
-        "improve.element-picker",
+        "wish.element-picker",
         "review",
         "reports.crash",
         "reports.launch-fix",

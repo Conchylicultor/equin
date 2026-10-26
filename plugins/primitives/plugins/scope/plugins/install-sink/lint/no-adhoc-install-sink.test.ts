@@ -92,15 +92,15 @@ ruleTester.run(
         code: `
         let state = { open: false };
         const listeners = new Set();
-        export function setImproveOpen(open) {
+        export function setWishOpen(open) {
           state = { open };
           for (const l of listeners) l();
         }
-        export function subscribeImproveOpen(listener) {
+        export function subscribeWishOpen(listener) {
           listeners.add(listener);
           return () => { listeners.delete(listener); };
         }
-        export function getImproveOpenState() { return state; }
+        export function getWishOpenState() { return state; }
       `,
       },
       // The listener collection alone, typed on the `new Set<…>()` call.

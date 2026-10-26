@@ -109,7 +109,7 @@ re-apply one already taken. Cards are `useDraft`-persisted, so a replacing seed 
 silently destroy work in progress — hence a request type rather than an `initialText`.
 
 `draftSeed(text)` is the other request kind: a suggested first request (Improve's
-`openImprove({ seed })`, used by the onboarding tour). It fills the head card only
+`openWish({ seed })`, used by the onboarding tour). It fills the head card only
 when every card is empty, and is dropped otherwise — never mixed into a draft.
 
 `hintAnchors?: { panel?, send? }` lets a host name hint anchors for the form
@@ -123,7 +123,7 @@ it is handed and knows no tour.
 - Description: Reusable popover + chain form for drafting one or more tasks. Powers the Wish toolbar button and the conversation new-child-task button.
 - Web:
   - Slots: `TaskDraftFormSlots.Action`
-  - Slot contributors: `TaskDraftFormSlots.Action` ← `improve.element-picker`
+  - Slot contributors: `TaskDraftFormSlots.Action` ← `wish.element-picker`
   - Contributes: `ConfigV2.WebRegister` "config"
   - Uses: 44 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `tasks/launch-options` ×5
@@ -191,10 +191,10 @@ it is handed and knows no tour.
   - Imported by:
     - `conversations/conversation-view`
     - `conversations/conversation-view/new-child-task`
-    - `improve`
-    - `improve/element-picker`
     - `tasks/menu-bar-task`
     - `tasks/task-dependencies`
+    - `wish`
+    - `wish/element-picker`
 - Core:
   - Exports (values): `TASK_DRAFT_FORM_WIDTH`
 

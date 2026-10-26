@@ -6,7 +6,7 @@ const listeners = new Set<SignalListener>();
 
 /**
  * Tells the hints engine an app event happened — e.g. Improve's send emitting
- * `improveSent` with the filed task ids. A running tour step whose `advanceOn`
+ * `wishSent` with the filed task ids. A running tour step whose `advanceOn`
  * is this signal moves on; nothing listens otherwise, so emitting is free.
  */
 export function emitHintSignal<T>(

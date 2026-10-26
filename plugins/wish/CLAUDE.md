@@ -4,15 +4,15 @@
 
 ## Plugin reference
 
-- Description: The Wish toolbar button: the entry point for anything the user wants done — a fix, a change, a new app. Files a task under "Improvements" with the current URL. Companion actions join it as segments of one split pill via ImproveSlots.Segment; ImproveSlots.HeaderAction adds actions to its popover header (Ask equin). Task category of the Wish toolbar button. Files tasks stamped "Improvements" via the shared task-draft-form primitive.
+- Description: The Wish toolbar button: the entry point for anything the user wants done — a fix, a change, a new app. Files a task under "Wishes" with the current URL. Companion actions join it as segments of one split pill via WishSlots.Segment; WishSlots.HeaderAction adds actions to its popover header (Ask equin). Task category of the Wish toolbar button. Files tasks stamped "Wishes" via the shared task-draft-form primitive.
 - Web:
   - Slots:
-    - `ImproveSlots.Segment`
-    - `ImproveSlots.HeaderAction`
+    - `WishSlots.Segment`
+    - `WishSlots.HeaderAction`
   - Slot contributors:
-    - `ImproveSlots.Segment` ← `improve.element-picker`
-    - `ImproveSlots.HeaderAction` ← `hints.ask`
-  - Contributes: `ActionBar.Item` → `ImproveButton`
+    - `WishSlots.Segment` ← `wish.element-picker`
+    - `WishSlots.HeaderAction` ← `hints.ask`
+  - Contributes: `ActionBar.Item` → `WishButton`
   - Uses:
     - `hints.emitHintSignal`
     - `hints.useHintAnchor`
@@ -26,17 +26,17 @@
     - `tasks/task-draft-form.TaskDraftPopover`
     - `ui/icons.Icon`
   - Exports (types):
-    - `ImproveHeaderActionContribution`
-    - `ImproveHeaderActionProps`
-    - `ImproveSegmentContribution`
+    - `WishHeaderActionContribution`
+    - `WishHeaderActionProps`
+    - `WishSegmentContribution`
   - Exports (values):
-    - `ImproveSlots`
-    - `insertIntoImproveDraft`
-    - `openImprove`
+    - `insertIntoWishDraft`
+    - `openWish`
+    - `WishSlots`
 - Server:
   - Contributes:
     - `trigger` "improve.apply-group"
-    - `taskCategory` "improvements"
+    - `taskCategory` "wishes"
   - Uses:
     - `conversations/conversations-view/grouped.addMemberToGroup`
     - `database.db`
@@ -44,7 +44,7 @@
     - `infra/jobs.defineJob`
     - `tasks/task-category.TaskCategory`
     - `tasks/tasks-core.conversationCreated`
-  - DB schema: `plugins/improve/server/internal/tables.ts`
+  - DB schema: `plugins/wish/server/internal/tables.ts`
   - Exports (values): `_improvePendingGroups`
   - Register: `defineJob('improve.apply-group')`
 - Core:
@@ -52,11 +52,11 @@
     - `hints.defineHintAnchor`
     - `hints.defineHintSignal`
   - Exports (values):
-    - `improveButtonAnchor`
-    - `IMPROVEMENTS_CATEGORY_ID`
-    - `improvePanelAnchor`
-    - `improveSendAnchor`
-    - `improveSent`
+    - `wishButtonAnchor`
+    - `WISHES_CATEGORY_ID`
+    - `wishPanelAnchor`
+    - `wishSendAnchor`
+    - `wishSent`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --foreground`
@@ -65,8 +65,8 @@
     - `apps/agent-manager/demo`
     - `apps/home/tour`
     - `hints/ask`
-    - `improve/element-picker`
     - `screenshot/draw-on-app`
+    - `wish/element-picker`
 - Sub-plugins:
   - **`element-picker`** — The element picker wired into equin's Improve flow: a 'Pick UI element' segment of the Improve pill that opens the Improve popover with the picked element as a <ui-context/> chip, and an 'Attach UI…
 

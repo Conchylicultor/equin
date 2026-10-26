@@ -1,6 +1,6 @@
 # draw-on-app
 
-Toolbar button (`MdGesture`) that mounts a fullscreen draw overlay on the live app. The user draws with the standard `DrawCanvas` primitive; on Done, the page (with strokes baked into the in-DOM canvas) is captured via `modern-screenshot`'s `domToBlob`, uploaded as an attachment, and handed off to the `+improve` popover via `insertIntoImproveDraft`. The attachment markdown is *inserted into* the head card (never replacing a draft in progress) so the image appears inline in the Lexical editor (same path as paste-images).
+Toolbar button (`MdGesture`) that mounts a fullscreen draw overlay on the live app. The user draws with the standard `DrawCanvas` primitive; on Done, the page (with strokes baked into the in-DOM canvas) is captured via `modern-screenshot`'s `domToBlob`, uploaded as an attachment, and handed off to the `+improve` popover via `insertIntoWishDraft`. The attachment markdown is *inserted into* the head card (never replacing a draft in progress) so the image appears inline in the Lexical editor (same path as paste-images).
 
 The floating tools chrome (color swatches, width slider, Undo/Clear, Cancel/Done) carries `data-draw-chrome="true"` and is hidden + filtered out before capture so it doesn't appear in the screenshot.
 
@@ -12,7 +12,6 @@ The floating tools chrome (color swatches, width slider, Undo/Clear, Cancel/Done
 - Web:
   - Contributes: `ActionBar.Item` → `DrawOnAppButton`
   - Uses:
-    - `improve.insertIntoImproveDraft`
     - `infra/attachments.uploadAttachment`
     - `infra/endpoints.useFetchEndpoint`
     - `primitives/css/pin.Pin`
@@ -28,6 +27,7 @@ The floating tools chrome (color swatches, width slider, Undo/Clear, Cancel/Done
     - `screenshot/draw-canvas.Stroke`
     - `shell/action-bar.ActionBar`
     - `shell/notifications.useToast`
+    - `wish.insertIntoWishDraft`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --background`

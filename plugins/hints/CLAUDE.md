@@ -19,8 +19,8 @@ the collection.
 | Tour | `defineTour({ id, app, primary?, autoStart?, intro?, initialData, steps })` | `Hints.Tour({ tour })` + `startTour(id)` |
 | Seen state | `hintsSeen` (live collection), `markHintSeenEndpoint`, `resetHintsEndpoint` | `useHintSeen()`, `useResetHints()`, `useHintCatalog()` |
 
-- **Anchors live in the owner's `core/`** (`improve/core` exports
-  `improveButtonAnchor`), so another plugin's tour names them without a deep
+- **Anchors live in the owner's `core/`** (`wish/core` exports
+  `wishButtonAnchor`), so another plugin's tour names them without a deep
   import. `hintsHelpAnchor` (this plugin) is the `?` help button's.
 - **Copy is `ReactNode`** (`HintContent`), and a tour's copy and labels may be
   functions of the tour's data. `core/` only names React's *types*; the web
@@ -69,8 +69,8 @@ While the seen state is pending nothing shows (no flash on reload).
 ## A tour
 
 ```tsx
-// improve/core
-export const improveSent = defineHintSignal<{ taskIds: string[] }>("improve.sent");
+// wish/core
+export const wishSent = defineHintSignal<{ taskIds: string[] }>("wish.sent");
 
 // home/tour/core
 export const homeTour = defineTour<{ taskId?: string }>({
@@ -84,12 +84,12 @@ export const homeTour = defineTour<{ taskId?: string }>({
     { id: "apps", anchor: homeGalleryAnchor, title: "Your apps", body: "…" },
     { id: "bar", anchor: actionBarAnchor, title: "The toolbar", body: "Hover it to unfold",
       advanceOn: "anchor-hover" },
-    { id: "improve", anchor: improveButtonAnchor, title: "Improve anything", body: "…",
-      next: { label: "Try it", run: (ctl) => { openImprove({ seed: FIRST_PROMPT }); ctl.go("ask"); } },
+    { id: "improve", anchor: wishButtonAnchor, title: "Improve anything", body: "…",
+      next: { label: "Try it", run: (ctl) => { openWish({ seed: FIRST_PROMPT }); ctl.go("ask"); } },
       alt: { label: "Skip", to: "agents" } },
-    { id: "ask", anchor: improvePanelAnchor, cue: improveSendAnchor, title: "Send it", body: "…",
+    { id: "ask", anchor: wishPanelAnchor, cue: wishSendAnchor, title: "Send it", body: "…",
       next: "none", onAnchorLost: "improve",
-      advanceOn: onSignal(improveSent, { update: (d, p) => ({ ...d, taskId: p.taskIds[0] }) }) },
+      advanceOn: onSignal(wishSent, { update: (d, p) => ({ ...d, taskId: p.taskIds[0] }) }) },
     { id: "agents", anchor: appTileAnchor.at("agent-manager"),
       title: (d) => (d.taskId ? "Your agent is on it" : "Agent work comes back here"), body: "…",
       next: { label: "Open Agent Manager", run: (ctl) => { ctl.navigate("/agents"); ctl.next(); } } },
@@ -127,7 +127,7 @@ contributions: [Hints.Tour({ tour: homeTour, companion: true })]
   The click is heard on the document **after** the anchor's own handlers
   (a `click`, so keyboard activation counts), so the run builds on what the
   anchor did instead of racing it: Improve's step declares `"anchor-click"`
-  and its "Try it" run (`openImprove({ seed })`, `ctl.go("ask")`) seeds the
+  and its "Try it" run (`openWish({ seed })`, `ctl.go("ask")`) seeds the
   popover the click just opened. A run whose action IS the anchor's own
   (the handoff opening the row the user clicked) skips it on `via: "anchor"`.
   The decision is the pure `primaryMove(run, press)` in `tour-machine.ts`.
@@ -435,9 +435,9 @@ Exhibits: `hints/card`, `hints/caption`, `hints/spotlight`, `hints/welcome`.
     - `conversations/conversation-view/push-and-exit`
     - `conversations/conversations-view/data-view`
     - `hints/help-menu`
-    - `improve`
     - `shell/global-action-bar`
     - `tasks/task-draft-form`
+    - `wish`
 - Sub-plugins:
   - **`ask`** — Ask equin, web half: the ? menu's entry (Ask equin how to… / Back to your question) and the same entry as an icon in the Wish popover's header, and the AskHost at Core.Root — a draggable card in the…
   - **`help-menu`** — The ? "Getting started" menu on the global action bar — the hints engine's help anchor, ringed while a tour end pulses it — rendering the open HelpMenu.Entry slot: Replay the tour (the primary…

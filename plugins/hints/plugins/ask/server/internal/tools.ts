@@ -9,7 +9,7 @@ import { createTask } from "@plugins/tasks/plugins/tasks-core/server";
 import { threadResultReply } from "@plugins/conversations/plugins/agent-thread/core";
 import { setTaskCategory } from "@plugins/tasks/plugins/task-category/server";
 import { armTaskAutoStart } from "@plugins/tasks/server";
-import { IMPROVEMENTS_CATEGORY_ID } from "@plugins/improve/core";
+import { WISHES_CATEGORY_ID } from "@plugins/wish/core";
 import {
   AskFiledTaskSchema,
   FILE_TASK_TOOL,
@@ -50,7 +50,7 @@ export const fileTaskTool = Mcp.tool({
       description,
       author: conversationId,
     });
-    await setTaskCategory(task.id, IMPROVEMENTS_CATEGORY_ID);
+    await setTaskCategory(task.id, WISHES_CATEGORY_ID);
     await armTaskAutoStart({ taskId: task.id, model, cause: "help-ask" });
     return threadResultReply(askFiledTask, { taskId: task.id });
   },

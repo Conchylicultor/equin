@@ -6,12 +6,12 @@ import {
 } from "@plugins/apps/plugins/home/plugins/app-cards/core";
 import { actionBarAnchor } from "@plugins/shell/plugins/global-action-bar/core";
 import {
-  improveButtonAnchor,
-  improvePanelAnchor,
-  improveSendAnchor,
-  improveSent,
-} from "@plugins/improve/core";
-import { openImprove } from "@plugins/improve/web";
+  wishButtonAnchor,
+  wishPanelAnchor,
+  wishSendAnchor,
+  wishSent,
+} from "@plugins/wish/core";
+import { openWish } from "@plugins/wish/web";
 import { conversationRowAnchor } from "@plugins/conversations/plugins/conversations-view/plugins/data-view/core";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { openPane } from "@plugins/primitives/plugins/pane/web";
@@ -97,8 +97,8 @@ export const homeTour = defineTour<HomeTourData>({
       advanceOn: (d) => (d.barFloating ? "anchor-hover" : null),
     },
     {
-      id: "improve",
-      anchor: improveButtonAnchor,
+      id: "wish",
+      anchor: wishButtonAnchor,
       title: "Wish for anything you see",
       body: (
         <>
@@ -113,7 +113,7 @@ export const homeTour = defineTour<HomeTourData>({
       next: {
         label: "Try it",
         run: (ctl) => {
-          openImprove({ seed: FIRST_PROMPT });
+          openWish({ seed: FIRST_PROMPT });
           ctl.go("ask");
         },
       },
@@ -124,14 +124,14 @@ export const homeTour = defineTour<HomeTourData>({
       // Improve is open: the card stays beside it, Send ringed. Sending moves
       // on; closing it unsent goes back a step.
       id: "ask",
-      anchor: improvePanelAnchor,
-      cue: improveSendAnchor,
+      anchor: wishPanelAnchor,
+      cue: wishSendAnchor,
       title: "See what an agent can do",
       body: "Here's a first request — a real change to this screen, built while you carry on. Send it as is, or make it yours.",
       next: "none",
       alt: { label: "Skip", to: "agents" },
-      onAnchorLost: "improve",
-      advanceOn: onSignal(improveSent, {
+      onAnchorLost: "wish",
+      advanceOn: onSignal(wishSent, {
         update: (d: HomeTourData, p: { taskIds: string[] }) => ({
           ...d,
           taskId: p.taskIds[0] ?? null,
@@ -148,7 +148,7 @@ export const homeTour = defineTour<HomeTourData>({
         d.taskId
           ? "It works in the background — usually a few minutes, so there's no need to wait. Its conversation lives in the Agent Manager."
           : "Agents work in the background, 10 minutes to an hour. Their conversations live in the Agent Manager.",
-      back: "improve",
+      back: "wish",
       next: {
         label: "Open Agent Manager",
         run: (ctl) => {

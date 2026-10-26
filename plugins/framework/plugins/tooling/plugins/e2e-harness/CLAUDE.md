@@ -360,13 +360,13 @@ own `requestfailed` listener calls it too. Diagnosis:
     - `reports` ×2
     - `build`
     - `database/admin`
-    - `improve/element-picker`
     - `map/google`
     - `menu-bar`
     - `network/live`
     - `plugin-meta/exhibits`
     - `release`
     - `runs`
+    - `wish/element-picker`
 - Exemptions:
   - Exempts itself from: `agent-origin-safety/no-unmarked-app-fetch` — `e2e/app-fetch.ts`, `e2e/deploy-identity.ts` (sanctioned)
 

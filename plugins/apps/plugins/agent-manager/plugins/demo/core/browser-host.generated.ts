@@ -317,8 +317,6 @@ export const browserHost = {
     "history.dialog",
     "history.engine",
     "ids",
-    "improve",
-    "improve.element-picker",
     "infra.attachments",
     "infra.background.catalog",
     "infra.claude-cli.availability",
@@ -687,6 +685,8 @@ export const browserHost = {
     "ui.tree-disclosure.merged",
     "ui.tweakcn.community-browser",
     "ui.variant-region",
+    "wish",
+    "wish.element-picker",
   ],
   start: () => import("@browser-host/apps/plugins/agent-manager/plugins/demo"),
 } satisfies DemoHost;

@@ -6,7 +6,7 @@ import { ConfigV2 } from "@plugins/config_v2/web";
 import { DynamicEnum } from "@plugins/fields/plugins/dynamic-enum/plugins/config/web";
 import { useModelChoiceOptions } from "@plugins/conversations/plugins/model-provider/web";
 import { HelpMenu } from "@plugins/hints/plugins/help-menu/web";
-import { ImproveSlots } from "@plugins/improve/web";
+import { WishSlots } from "@plugins/wish/web";
 // Side-effect import, and the composition edge: the element picker's barrel
 // stamps every slot contribution with its lineage, which is what the page
 // outline a question carries is made of. Wherever this card is, those markers
@@ -32,7 +32,7 @@ export default {
       label: "Ask equin how to…",
       component: AskEquinEntry,
     }),
-    ImproveSlots.HeaderAction({ id: "ask", component: AskFromWish }),
+    WishSlots.HeaderAction({ id: "ask", component: AskFromWish }),
     // The page a reply was sent from, in the user's bubble (and the Agent
     // Manager's transcript): transcript only — it is addressed to the agent.
     InlineChip.Tag(

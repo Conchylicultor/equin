@@ -319,7 +319,6 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./equin build`. The bui
     - `code-explorer`
     - `hints`
     - `history/engine`
-    - `improve`
     - `integrations/google-maps/usage`
     - `plugin-meta/plugin-health`
     - `release`
@@ -327,6 +326,7 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./equin build`. The bui
     - `shell/notifications`
     - `tag-tree/engine`
     - `ui/theme-engine/saved-themes`
+    - `wish`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `core/internal/config.ts` (debt)
 - Core:

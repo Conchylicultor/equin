@@ -108,7 +108,6 @@ export const hostEntries: ServerRegistryEntry[] = [
   { pluginPath: "hints", id: "hints", loader: () => import("@plugins/hints/server"), dependsOn: ["database","infra/plugins/endpoints","infra/plugins/entities","network/plugins/live"] },
   { pluginPath: "history/plugins/engine", id: "history.engine", loader: () => import("@plugins/history/plugins/engine/server"), dependsOn: ["database","ids","infra/plugins/endpoints","infra/plugins/entities","network/plugins/live"] },
   { pluginPath: "ids", id: "ids", loader: () => import("@plugins/ids/server"), dependsOn: ["database/plugins/sql-column"] },
-  { pluginPath: "improve", id: "improve", loader: () => import("@plugins/improve/server"), dependsOn: ["conversations/plugins/conversations-view/plugins/grouped","database","infra/plugins/events","infra/plugins/jobs","tasks/plugins/task-category","tasks/plugins/tasks-core"] },
   { pluginPath: "infra/plugins/attachments", id: "infra.attachments", loader: () => import("@plugins/infra/plugins/attachments/server"), dependsOn: ["database","infra/plugins/endpoints","infra/plugins/jobs","network/plugins/live","primitives/plugins/log-channels"] },
   { pluginPath: "infra/plugins/attachments/plugins/memory-blobs", id: "infra.attachments.memory-blobs", loader: () => import("@plugins/infra/plugins/attachments/plugins/memory-blobs/server"), dependsOn: ["infra/plugins/attachments"] },
   { pluginPath: "infra/plugins/background/plugins/catalog", id: "infra.background.catalog", loader: () => import("@plugins/infra/plugins/background/plugins/catalog/server"), dependsOn: ["infra/plugins/endpoints","infra/plugins/query-resource","network/plugins/live"] },
@@ -211,6 +210,7 @@ export const hostEntries: ServerRegistryEntry[] = [
   { pluginPath: "ui/plugins/tweakcn", id: "ui.tweakcn", loader: () => import("@plugins/ui/plugins/tweakcn/server"), dependsOn: ["infra/plugins/endpoints","ui/plugins/theme-engine/plugins/saved-themes"] },
   { pluginPath: "ui/plugins/tweakcn/plugins/community-browser", id: "ui.tweakcn.community-browser", loader: () => import("@plugins/ui/plugins/tweakcn/plugins/community-browser/server"), dependsOn: ["infra/plugins/endpoints","network/plugins/live","ui/plugins/theme-engine/plugins/saved-themes","ui/plugins/tweakcn"] },
   { pluginPath: "ui/plugins/variant-region", id: "ui.variant-region", loader: () => import("@plugins/ui/plugins/variant-region/server"), dependsOn: ["config_v2"] },
+  { pluginPath: "wish", id: "wish", loader: () => import("@plugins/wish/server"), dependsOn: ["conversations/plugins/conversations-view/plugins/grouped","database","infra/plugins/events","infra/plugins/jobs","tasks/plugins/task-category","tasks/plugins/tasks-core"] },
 ];
 
 /** Host service id → the plugin providing it in this graph. */

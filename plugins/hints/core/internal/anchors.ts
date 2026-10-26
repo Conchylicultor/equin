@@ -5,7 +5,7 @@
  *
  * Two shapes:
  *
- * - a **plain** anchor (`defineHintAnchor("improve.button")`) is one element,
+ * - a **plain** anchor (`defineHintAnchor("wish.button")`) is one element,
  *   and is itself a {@link HintTarget};
  * - a **parameterized** anchor (`defineHintAnchor("conversations.row", (id:
  *   string) => id)`) is a family of elements, one per parameter; `anchor.at(p)`

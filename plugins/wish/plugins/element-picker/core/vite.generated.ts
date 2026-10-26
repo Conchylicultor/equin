@@ -14,7 +14,7 @@ export interface CollectedEntry {
 
 export const viteEntries: CollectedEntry[] = [
   { pluginPath: "framework/plugins/tooling/plugins/react-compiler", id: "framework.tooling.react-compiler", loader: () => import("@plugins/framework/plugins/tooling/plugins/react-compiler/vite"), dependsOn: [] },
-  { pluginPath: "improve/plugins/element-picker", id: "improve.element-picker", loader: () => import("@plugins/improve/plugins/element-picker/vite"), dependsOn: [] },
+  { pluginPath: "wish/plugins/element-picker", id: "wish.element-picker", loader: () => import("@plugins/wish/plugins/element-picker/vite"), dependsOn: [] },
 ];
 
 export interface CompositionIdentity {

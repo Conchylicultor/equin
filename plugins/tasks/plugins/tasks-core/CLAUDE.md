@@ -547,8 +547,8 @@ serves them.
     - `code-explorer`
     - `database/query`
     - `hints/ask`
-    - `improve`
     - `plugin-meta/plugin-health`
+    - `wish`
   - Extended by:
     - `conversations/conversation-view/notes` (table `conversations_ext_notes`)
     - `apps/places/ask` (table `conversations_ext_places_ask`)

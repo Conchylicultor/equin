@@ -176,7 +176,7 @@ insert and the ring's inline prune reach it through the change feed. The
     - `conversations` ×4
     - `infra` ×4
     - `page` ×4
-    - `improve`
+    - `wish`
 - Exemptions:
   - Exempts itself from:
     - `ids:pk-declared` — `server/internal/tables.ts` (debt)

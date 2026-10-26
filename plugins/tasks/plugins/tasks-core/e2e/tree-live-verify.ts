@@ -171,7 +171,7 @@ async function categoriesPhase(
   const KEY = "task-categories";
   let at = frames.length;
   await db.query(
-    "INSERT INTO tasks_ext_category (parent_id, category) VALUES ($1, 'improvements')",
+    "INSERT INTO tasks_ext_category (parent_id, category) VALUES ($1, 'wishes')",
     [taskId],
   );
   const set = await waitFor(
@@ -181,7 +181,7 @@ async function categoriesPhase(
   );
   r.eq("a category set arrives as an upsert of the task's row", set.value, {
     taskId,
-    category: "improvements",
+    category: "wishes",
   });
   await snap(page, OUT, "18-category-set");
 

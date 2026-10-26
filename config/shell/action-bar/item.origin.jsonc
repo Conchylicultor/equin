@@ -1,4 +1,4 @@
-// @hash 9d86882e37de
+// @hash e17c2f2d490a
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -10,11 +10,11 @@
     "build:build",
     "config_v2.git-defaults-preview:git-defaults-preview",
     "hints.help-menu:help",
-    "improve:improve",
     "screenshot:screenshot",
     "screenshot.draw-on-app:draw-on-app",
     "shell.global-action-bar:view-options",
     "shell.notifications:notifications",
-    "ui.theme-engine.quick-theme:quick-theme"
+    "ui.theme-engine.quick-theme:quick-theme",
+    "wish:improve"
   ]
 }

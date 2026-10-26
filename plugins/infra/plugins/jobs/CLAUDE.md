@@ -753,11 +753,11 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `tasks` ×4
     - `database` ×3
     - `page` ×3
-    - `improve`
     - `integrations/youtube/audio-fetch`
     - `shell/notifications`
     - `stats/cost`
     - `upstream`
+    - `wish`
 - Exemptions:
   - Exempts itself from:
     - `timer/no-unlisted-timer` — `machine/internal/stuck-lock-sweeper.ts` (sanctioned)

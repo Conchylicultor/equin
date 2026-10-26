@@ -162,28 +162,28 @@ async function resetSeen(page: Page): Promise<void> {
  * Cancel — returns to improve with its card showing, the bar held open when
  * it floats; "Try it" reaches ask every time.
  */
-async function improveRoundTrips(
+async function wishRoundTrips(
   page: Page,
   mode: string,
   floating: boolean,
 ): Promise<void> {
-  const improveCard = page.getByText("Wish for anything you see", {
+  const wishCard = page.getByText("Wish for anything you see", {
     exact: true,
   });
   const askCard = page.getByText("See what an agent can do", { exact: true });
-  const improveButton = page.getByRole("button", {
+  const wishButton = page.getByRole("button", {
     name: "Wish",
     exact: true,
   });
   const draft = page.getByText(
     "Make my home screen's background follow the time of day",
   );
-  const backOnImprove = async (how: string) => {
-    await visible(`${mode}: ${how} → back on improve`, improveCard);
+  const backOnWish = async (how: string) => {
+    await visible(`${mode}: ${how} → back on improve`, wishCard);
     if (floating) {
       // The step holds the bar open over its Improve button.
       await page.mouse.move(700, 850);
-      const openBar = page.locator("[data-open]", { has: improveButton });
+      const openBar = page.locator("[data-open]", { has: wishButton });
       r.ok(
         `${mode}: ${how} → bar held open on improve`,
         await openBar
@@ -200,28 +200,28 @@ async function improveRoundTrips(
   };
 
   // The real button: the same as "Try it".
-  await improveButton.first().click();
+  await wishButton.first().click();
   await visible(`${mode}: real Improve click → ask`, askCard);
   await visible(`${mode}: real Improve click seeds the first request`, draft);
   await snap(page, out, `${mode}-ask-by-hand`);
 
   // A click elsewhere closes it unsent.
   await page.mouse.click(200, 820);
-  await backOnImprove("click outside");
+  await backOnWish("click outside");
   await snap(page, out, `${mode}-improve-after-outside`);
 
   // Esc closes the popover — and does not end the tour.
-  await improveButton.first().click();
+  await wishButton.first().click();
   await visible(`${mode}: Improve again → ask`, askCard);
   await page.keyboard.press("Escape");
-  await backOnImprove("Esc");
+  await backOnWish("Esc");
 
   // "Try it", every time; Cancel back.
   for (let i = 1; i <= 3; i++) {
     await page.getByRole("button", { name: "Try it", exact: true }).click();
     await visible(`${mode}: Try it → ask (${i})`, askCard);
     await page.getByRole("button", { name: "Cancel", exact: true }).click();
-    await backOnImprove(`Cancel (${i})`);
+    await backOnWish(`Cancel (${i})`);
   }
 }
 
@@ -269,7 +269,7 @@ const passed = await withBrowser(async (h) => {
     !(await visible("docked: improve step", card("Wish for anything you see")))
   )
     return false;
-  await improveRoundTrips(page, "docked", false);
+  await wishRoundTrips(page, "docked", false);
   await page.keyboard.press("Escape");
   await visible(
     "docked: Esc on improve ends the tour",
@@ -309,7 +309,7 @@ const passed = await withBrowser(async (h) => {
   await page.waitForTimeout(800);
   await visible("bar stays unfolded on the improve step", button("Wish"));
   await snap(page, out, "4-improve");
-  await improveRoundTrips(page, "solo", true);
+  await wishRoundTrips(page, "solo", true);
 
   const startedAt = new Date();
   await button("Try it").click();

@@ -4,9 +4,9 @@ The element picker wired into equin's Improve flow — two buttons, both
 `PickerButton` from `primitives/ui-context/element-picker`:
 
 - **Improve pill** (`MdAdsClick`, "Pick UI element") — the second segment of the
-  action bar's `[✦ Improve | ⌖]` split pill (`ImproveSlots.Segment`): pick an
+  action bar's `[✦ Wish | ⌖]` split pill (`WishSlots.Segment`): pick an
   element, then insert its `<ui-context …>…</ui-context>` tag into the Improve
-  draft via `insertIntoImproveDraft`, opening the popover if it is closed.
+  draft via `insertIntoWishDraft`, opening the popover if it is closed.
 - **Task-draft form** ("Attach UI element") — inject the tag at the head card's
   caret, so several picks in a row land as several chips.
 
@@ -43,13 +43,13 @@ gets `source`/`owner` from it).
 - Description: The element picker wired into equin's Improve flow: a 'Pick UI element' segment of the Improve pill that opens the Improve popover with the picked element as a <ui-context/> chip, and an 'Attach UI element' button in the task-draft form. The picker, its overlay and the chip are primitives/ui-context/element-picker.
 - Web:
   - Contributes:
-    - `ImproveSlots.Segment` "element-picker" → `ElementPickerButton`
+    - `WishSlots.Segment` "element-picker" → `ElementPickerButton`
     - `TaskDraftFormSlots.Action` → `TaskDraftPickerButton`
   - Uses:
-    - `improve.ImproveSlots`
-    - `improve.insertIntoImproveDraft`
     - `primitives/ui-context/element-picker.PickerButton`
     - `tasks/task-draft-form.TaskDraftFormSlots`
+    - `wish.insertIntoWishDraft`
+    - `wish.WishSlots`
 - Core:
   - Uses: `framework/tooling/collected-dir.defineCollectedDir`
   - Exports (values): `viteCollectedDir`

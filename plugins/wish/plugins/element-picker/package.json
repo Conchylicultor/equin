@@ -1,5 +1,5 @@
 {
-  "name": "@equin/plugin-improve-element-picker",
+  "name": "@equin/plugin-wish-element-picker",
   "private": true,
   "version": "0.0.1",
   "description": "Chrome-inspector-style 'pick a UI element' toolbar button that captures element metadata into the Improve prompt."

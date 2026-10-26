@@ -632,12 +632,12 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `audience/developer-mark`
     - `code-explorer/commit-detail`
     - `history/dialog`
-    - `improve`
     - `map`
     - `music/chord-box`
     - `search/quick-find`
     - `stats/commits`
     - `tag-tree/picker`
+    - `wish`
 - Exemptions:
   - Exempts itself from:
     - `surface/no-adhoc-surface` — `web/components/ui` (sanctioned)

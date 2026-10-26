@@ -118,11 +118,11 @@ Consumers read only the generic aggregate:
     - `build`
     - `config_v2/settings`
     - `debug/background/investigate`
-    - `improve`
     - `infra/deps/updates`
     - `release`
     - `toolchain`
     - `upstream`
+    - `wish`
 - Core:
   - Exports (types): `TaskCategoryDef`
   - Exports (values): `TaskCategoryDefSchema`

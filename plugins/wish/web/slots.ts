@@ -1,7 +1,7 @@
 import type { ComponentType } from "react";
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 
-export interface ImproveSegmentContribution {
+export interface WishSegmentContribution {
   id: string;
   /**
    * One trailing segment of the Wish pill — a companion action that feeds
@@ -13,19 +13,19 @@ export interface ImproveSegmentContribution {
   component: ComponentType;
 }
 
-export interface ImproveHeaderActionProps {
+export interface WishHeaderActionProps {
   /** Close the Wish popover (its draft is kept). */
   close: () => void;
 }
 
-export interface ImproveHeaderActionContribution {
+export interface WishHeaderActionContribution {
   id: string;
   /**
    * An action in the Wish popover's header, before its × — another entry point
    * for what the user came for (Ask equin, for a question rather than a task).
    * Renders one `IconButton`.
    */
-  component: ComponentType<ImproveHeaderActionProps>;
+  component: ComponentType<WishHeaderActionProps>;
 }
 
 /**
@@ -34,11 +34,11 @@ export interface ImproveHeaderActionContribution {
  * per contribution — NOT a render slot, whose row cells would wrap each
  * segment in an element and break the group's direct-child seams.
  */
-export const ImproveSlots = {
-  Segment: defineSlot<ImproveSegmentContribution>({
+export const WishSlots = {
+  Segment: defineSlot<WishSegmentContribution>({
     docLabel: (p) => p.id,
   }),
-  HeaderAction: defineSlot<ImproveHeaderActionContribution>({
+  HeaderAction: defineSlot<WishHeaderActionContribution>({
     docLabel: (p) => p.id,
   }),
 };

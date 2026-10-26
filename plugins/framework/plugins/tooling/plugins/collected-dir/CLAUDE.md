@@ -61,13 +61,13 @@ relative specifier inside this leaf would resolve against the wrong module.
     - `framework/tooling/lint`
     - `framework/tooling/provision`
     - `framework/web-sdk`
-    - `improve/element-picker`
     - `infra/asset-mirror`
     - `infra/deps`
     - `infra/launcher/login-services`
     - `infra/paths`
     - `plugin-meta/exhibits`
     - `plugin-meta/facets`
+    - `wish/element-picker`
 - Core:
   - Exports (types):
     - `CollectedDirDef`

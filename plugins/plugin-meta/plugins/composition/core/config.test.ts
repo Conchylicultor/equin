@@ -24,7 +24,7 @@ const seeds = compositionsConfig.defaults
 const registry = seeds.map(manifestItemToManifest);
 
 const SELF_IMPROVEMENT = [
-  "improve.element-picker",
+  "wish.element-picker",
   "review",
   "reports.crash",
   "reports.launch-fix",

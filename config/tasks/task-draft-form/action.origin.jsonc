@@ -1,4 +1,4 @@
-// @hash b81dc95a7259
+// @hash 76c8e872faf5
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -7,6 +7,6 @@
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
-    "improve.element-picker:element-picker"
+    "wish.element-picker:element-picker"
   ]
 }

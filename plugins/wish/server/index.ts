@@ -2,7 +2,7 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 import { Trigger } from "@plugins/infra/plugins/events/server";
 import { TaskCategory } from "@plugins/tasks/plugins/task-category/server";
 import { conversationCreated } from "@plugins/tasks/plugins/tasks-core/server";
-import { IMPROVEMENTS_CATEGORY_ID } from "../core/task-category";
+import { WISHES_CATEGORY_ID } from "../core/task-category";
 import { applyGroupJob } from "./internal/apply-group-job";
 
 export { _improvePendingGroups } from "./internal/tables";
@@ -10,7 +10,7 @@ export { _improvePendingGroups } from "./internal/tables";
 export default {
   portable: true,
   description:
-    'Task category of the Wish toolbar button. Files tasks stamped "Improvements" via the shared task-draft-form primitive.',
+    'Task category of the Wish toolbar button. Files tasks stamped "Wishes" via the shared task-draft-form primitive.',
   register: [applyGroupJob],
   contributions: [
     Trigger({
@@ -20,8 +20,8 @@ export default {
       oneShot: false,
     }),
     TaskCategory({
-      id: IMPROVEMENTS_CATEGORY_ID,
-      label: "Improvements",
+      id: WISHES_CATEGORY_ID,
+      label: "Wishes",
       order: 3,
     }),
   ],

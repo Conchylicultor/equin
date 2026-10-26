@@ -50,10 +50,10 @@
     - `integrations` ×3
     - `backup` ×2
     - `code-explorer` ×2
-    - `improve` ×2
     - `menu-bar` ×2
     - `runs` ×2
     - `screenshot` ×2
+    - `wish` ×2
     - `audience/developer-mark`
     - `config_v2/settings`
     - `database/query-deadline`
