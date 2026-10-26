@@ -4,11 +4,7 @@ import {
 } from "@plugins/infra/plugins/runtime-identity/core";
 import { join } from "node:path";
 import { readFileSync, statSync, writeFileSync } from "node:fs";
-import {
-  monitorEventLoopDelay,
-  PerformanceObserver,
-  type IntervalHistogram,
-} from "node:perf_hooks";
+import { monitorEventLoopDelay, PerformanceObserver } from "node:perf_hooks";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import { procMemory } from "@plugins/framework/plugins/server-core/core";
 import { heavyReadQueueDepth } from "@plugins/infra/plugins/host/plugins/host-read-pool/server";
@@ -72,7 +68,8 @@ export function onHealthSample(cb: HealthSampleObserver): () => void {
   return () => sampleObservers.delete(cb);
 }
 
-let histogram: IntervalHistogram | null = null;
+// Named by what returns it: @types/node renamed the type (IntervalHistogram → ELDHistogram).
+let histogram: ReturnType<typeof monitorEventLoopDelay> | null = null;
 // Profiler-invisible: the tick drains the JSC stall profiler and reads the
 // profiler's own self-meter, so spanning it would re-feed what it measures.
 export const processSamplerTimer = defineTimer({

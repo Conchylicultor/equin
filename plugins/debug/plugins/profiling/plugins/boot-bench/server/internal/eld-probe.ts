@@ -1,4 +1,4 @@
-import { monitorEventLoopDelay, type IntervalHistogram } from "node:perf_hooks";
+import { monitorEventLoopDelay } from "node:perf_hooks";
 
 // A dedicated, on-demand event-loop-delay probe for the boot benchmark window.
 // A second native histogram alongside health-monitor's continuous sampler is
@@ -9,7 +9,8 @@ import { monitorEventLoopDelay, type IntervalHistogram } from "node:perf_hooks";
 //
 // Lazily created + enabled on first reset so the native sampler only runs while a
 // benchmark is in flight. Durations are nanoseconds → divide by 1e6 for ms.
-let histogram: IntervalHistogram | null = null;
+// Named by what returns it: @types/node renamed the type (IntervalHistogram → ELDHistogram).
+let histogram: ReturnType<typeof monitorEventLoopDelay> | null = null;
 
 export function resetEldProbe(): void {
   if (!histogram) {

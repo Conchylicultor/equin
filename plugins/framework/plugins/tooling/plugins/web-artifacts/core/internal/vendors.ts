@@ -24,7 +24,7 @@ import {
 } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { init as cjsInit, parse as cjsParse } from "cjs-module-lexer";
-import { init as esInit, parse as esParse } from "es-module-lexer";
+import { init as esInit, parse as esParse } from "es-module-lexer/minimal";
 import * as esbuild from "esbuild";
 import { sha256Hex } from "../hash";
 import { publishDir, WEB_ARTIFACTS_DIR } from "./store";
@@ -236,7 +236,7 @@ async function esmHasDefaultExport(
   file: string,
   reads: ReadSet,
 ): Promise<boolean> {
-  await esInit;
+  await esInit();
   const source = readFileSync(file, "utf8");
   reads.record(file);
   const [, exports] = esParse(source, file);
@@ -270,7 +270,7 @@ async function resolveVendors(
 ): Promise<{ resolved: ResolvedVendor[]; stats: VendorResolveStats }> {
   const startedMs = Date.now();
   await cjsInit();
-  await esInit;
+  await esInit();
 
   // Before anything else, cache included: this is a build-invariant violation,
   // not a resolution outcome, so it must fire whatever the cache says.
@@ -536,7 +536,7 @@ export async function ensureVendorSet(opts: {
   }
 
   // Per-file static imports (for the modulepreload closure). Relative to set dir.
-  await esInit;
+  await esInit();
   const imports: Record<string, string[]> = {};
   for (const dirent of readdirSync(tmpDir, {
     recursive: true,

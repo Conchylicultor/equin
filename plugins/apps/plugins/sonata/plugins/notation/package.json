@@ -3,6 +3,6 @@
   "private": true,
   "version": "0.0.1",
   "dependencies": {
-    "vexflow": "^4.2.2"
+    "vexflow": "^5.0.0"
   }
 }

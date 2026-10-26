@@ -22,7 +22,10 @@ import {
   sep,
 } from "node:path";
 import type { Plugin as VitePlugin } from "vite";
-import { init as esLexerInit, parse as esLexerParse } from "es-module-lexer";
+import {
+  init as esLexerInit,
+  parse as esLexerParse,
+} from "es-module-lexer/minimal";
 import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import type { BabelPluginItem } from "@plugins/framework/plugins/web-core/core";
 import { COMPOSITION_REGISTRY_SPECIFIER } from "../composition-modules";
@@ -322,7 +325,7 @@ export async function assertWorkersSelfContained(opts: {
 }): Promise<string[]> {
   const dir = join(opts.outDir, WORKER_ASSETS_DIR);
   if (!existsSync(dir)) return [];
-  await esLexerInit;
+  await esLexerInit();
   const workers: string[] = [];
   for (const name of readdirSync(dir).sort()) {
     if (!name.endsWith(".js")) continue;
@@ -354,7 +357,7 @@ export async function parseEmittedImports(outDir: string): Promise<{
   staticImportsByFile: Record<string, string[]>;
   dynamicImports: string[];
 }> {
-  await esLexerInit;
+  await esLexerInit();
   const staticImportsByFile: Record<string, string[]> = {};
   const dynamicImports = new Set<string>();
   for (const name of readdirSync(outDir).sort()) {

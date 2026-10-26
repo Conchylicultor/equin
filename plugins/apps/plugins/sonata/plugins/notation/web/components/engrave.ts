@@ -292,8 +292,8 @@ function buildTuplets(
     while (j < tickables.length && tickables[j]!.tuplet?.id === tup.id) j++;
     tuplets.push(
       new Tuplet(notes.slice(i, j), {
-        num_notes: tup.num,
-        notes_occupied: tup.inSpace,
+        numNotes: tup.num,
+        notesOccupied: tup.inSpace,
         bracketed: true,
         ratioed: false,
       }),
@@ -334,8 +334,8 @@ function buildVoice(
 ): BuiltVoice {
   const notes = ev.tickables.map((t) => makeNote(t, clef, ev.stem));
   const voice = new Voice({
-    num_beats: measure.timeSig.numerator,
-    beat_value: measure.timeSig.denominator,
+    numBeats: measure.timeSig.numerator,
+    beatValue: measure.timeSig.denominator,
   }).setMode(Voice.Mode.SOFT);
   voice.addTickables(notes);
   Accidental.applyAccidentals([voice], measure.keyName);
@@ -636,7 +636,7 @@ export function drawSystem(
         const dir = stemOf(bv.eng.stem);
         const beams = Beam.generateBeams(
           bv.notes,
-          dir !== undefined ? { stem_direction: dir } : undefined,
+          dir !== undefined ? { stemDirection: dir } : undefined,
         );
         bv.voice.draw(ctx, st);
         beams.forEach((beam) => beam.setContext(ctx).draw());
@@ -676,7 +676,7 @@ export function drawSystem(
   for (const vk of sys.tieIn) {
     const seq = seqs.get(vk);
     if (seq?.length) {
-      new StaveTie({ first_note: null, last_note: seq[0]!.n })
+      new StaveTie({ firstNote: null, lastNote: seq[0]!.n })
         .setContext(ctx)
         .draw();
     }
@@ -684,7 +684,7 @@ export function drawSystem(
   for (const vk of sys.tieOut) {
     const seq = seqs.get(vk);
     if (seq?.length) {
-      new StaveTie({ first_note: seq.at(-1)!.n, last_note: null })
+      new StaveTie({ firstNote: seq.at(-1)!.n, lastNote: null })
         .setContext(ctx)
         .draw();
     }
@@ -778,7 +778,7 @@ function drawTies(
     if (!seq[i]!.t.tieToNext || seq[i]!.t.isRest || seq[i + 1]!.t.isRest) {
       continue;
     }
-    new StaveTie({ first_note: seq[i]!.n, last_note: seq[i + 1]!.n })
+    new StaveTie({ firstNote: seq[i]!.n, lastNote: seq[i + 1]!.n })
       .setContext(ctx)
       .draw();
   }

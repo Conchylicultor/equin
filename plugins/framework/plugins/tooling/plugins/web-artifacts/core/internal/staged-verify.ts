@@ -18,7 +18,10 @@
 
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
-import { init as esLexerInit, parse as esLexerParse } from "es-module-lexer";
+import {
+  init as esLexerInit,
+  parse as esLexerParse,
+} from "es-module-lexer/minimal";
 import { isBrowserUnreachableDynamic } from "../constants";
 import { type ImportClause, parseImportClause } from "./import-clause";
 
@@ -82,7 +85,7 @@ export async function scanStagedModules(opts: {
   /** The composed map's `imports` record (specifier → URL). */
   imports: Record<string, string>;
 }): Promise<StagedScanResult> {
-  await esLexerInit;
+  await esLexerInit();
   const failures: StagedModuleIssue[] = [];
   const warnings: StagedModuleIssue[] = [];
   const linkFailures: StagedLinkFailure[] = [];
