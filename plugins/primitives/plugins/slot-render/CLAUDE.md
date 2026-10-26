@@ -311,6 +311,7 @@ the outcome too, with no separate code path.
     - `MountComponent`
     - `MountSlot`
     - `MountSlotConfig`
+    - `OrderedContribution`
     - `OrderedDispatchContribution`
     - `OrderedDispatchSlot`
     - `RenderSlot`
@@ -328,6 +329,7 @@ the outcome too, with no separate code path.
     - `defineDispatchSlot`
     - `defineMountSlot`
     - `defineOrderedDispatchSlot`
+    - `defineOrderedSlot`
     - `defineRenderSlot`
     - `defineWrapperSlot`
     - `renderAsContribution`
@@ -340,10 +342,10 @@ the outcome too, with no separate code path.
     - `useSlotOrder`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/density --control-height-sm`
-  - Imported by: 88 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 89 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×28
+    - `primitives` ×14
     - `conversations` ×13
-    - `primitives` ×13
     - `ui` ×5
     - `apps-core` ×4
     - `shell` ×4

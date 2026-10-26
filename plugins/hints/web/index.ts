@@ -5,6 +5,7 @@ import {
 import { defineShortcut } from "@plugins/primitives/plugins/shortcuts/web";
 import { ThemeEngine } from "@plugins/ui/plugins/theme-engine/web";
 import { HintHost } from "./components/hint-host";
+import { HintsLayer } from "./internal/layer";
 import { hintsTheme } from "./internal/hints-theme";
 import {
   dispatchTour,
@@ -39,6 +40,7 @@ export default {
   slots: Hints,
   contributions: [
     Core.Root({ component: HintHost }),
+    HintsLayer.contribution,
     ThemeEngine.FixedTheme(hintsTheme),
     defineShortcut({
       id: "hints.tour-end",

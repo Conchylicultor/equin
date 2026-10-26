@@ -5,6 +5,7 @@ import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
 import { foldResource } from "@plugins/primitives/plugins/live-state/web";
 import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
 import { ViewportOverlay } from "@plugins/primitives/plugins/css/plugins/viewport-overlay/web";
+import { HintsLayer } from "../internal/layer";
 import { revealElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 import {
   hintsHelpAnchor,
@@ -234,7 +235,7 @@ export function HintHost() {
   };
   return (
     <Theme name={hintsThemeScope} surface="none" className="contents">
-      <ViewportOverlay layer="guide" className="pointer-events-none">
+      <ViewportOverlay layer={HintsLayer} className="pointer-events-none">
         <HintStage scene={scene} />
       </ViewportOverlay>
     </Theme>

@@ -29,12 +29,20 @@ const PortalContainerContext =
  * Nested hosts: a popup uses its NEAREST host. A popup opened from inside a
  * hosted popup lands in the same host (the context crosses portals).
  */
-export function PortalHost({ children }: { children: ReactNode }): ReactNode {
+export function PortalHost({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  /** Classes for the host element — e.g. `pointer-events-auto` when the region
+   *  is `pointer-events-none`, so the popups drawn into it stay clickable. */
+  className?: string;
+}): ReactNode {
   const ref = useRef<HTMLDivElement>(null);
   return (
     <PortalContainerContext.Provider value={ref}>
       {children}
-      <div ref={ref} data-portal-host="" />
+      <div ref={ref} data-portal-host="" className={className} />
     </PortalContainerContext.Provider>
   );
 }

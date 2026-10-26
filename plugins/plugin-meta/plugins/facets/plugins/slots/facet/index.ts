@@ -41,8 +41,9 @@ function parseSlotCalls(
     | "defineRenderSlot"
     | "defineMountSlot"
     | "defineWrapperSlot"
-    | "defineOrderedDispatchSlot",
-  kind: "render" | "mount" | "wrap" | "ordered-dispatch",
+    | "defineOrderedDispatchSlot"
+    | "defineOrderedSlot",
+  kind: "render" | "mount" | "wrap" | "ordered-dispatch" | "ordered",
   pluginId: string,
 ): SlotDef[] {
   const out: SlotDef[] = [];
@@ -81,6 +82,7 @@ const COMPANION_SLOT_BUILDERS = [
   "defineSlot",
   "defineDispatchSlot",
   "defineOrderedDispatchSlot",
+  "defineOrderedSlot",
   "defineRenderSlot",
   "defineMountSlot",
   "defineWrapperSlot",
@@ -93,6 +95,7 @@ const BUILDER_KIND: Record<
   defineSlot: "slot",
   defineDispatchSlot: "dispatch",
   defineOrderedDispatchSlot: "ordered-dispatch",
+  defineOrderedSlot: "ordered",
   defineRenderSlot: "render",
   defineMountSlot: "mount",
   defineWrapperSlot: "wrap",
@@ -305,6 +308,8 @@ function parseSlotsFromSource(dir: string, pluginId: string): SlotDef[] {
         "ordered-dispatch",
         pluginId,
       ),
+      // Same reason: an ordered (data) slot is usually a standalone `const`.
+      ...parseSlotCalls(masked, "defineOrderedSlot", "ordered", pluginId),
       ...parseDefineGroup(
         original,
         "defineSlot",

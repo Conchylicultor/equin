@@ -5,9 +5,11 @@ import {
 } from "@plugins/apps-core/plugins/chrome-theme/web";
 import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
+import { useZStackIndex } from "@plugins/primitives/plugins/css/plugins/z-layers/plugins/stack/web";
 import { DismissAllButton } from "./dismiss-all-button";
 import { useToastsSuppressed } from "../internal/suppress-toasts";
 import { usePublishReaderAudience } from "../internal/reader-audience";
+import { ToastLayer } from "../internal/layer";
 
 /**
  * Sonner's own `VIEWPORT_OFFSET` default, restated here because the stack-action
@@ -27,6 +29,9 @@ export function ToasterHost() {
 }
 
 function Toasts() {
+  // The stack and its dismiss-all strip share ONE layer, so no other surface
+  // on the stack (the Ask card) can land between them.
+  const zIndex = useZStackIndex(ToastLayer);
   const [actionsRef, { height: actionsHeight }] =
     useElementSize<HTMLDivElement>();
 
@@ -59,10 +64,8 @@ function Toasts() {
         style={
           {
             // Sonner's own stylesheet pins the list at z-index 999999999, off
-            // the ladder; the inline style wins. The stack and its dismiss-all
-            // strip share ONE layer, so a floating card (the Ask card, at
-            // z-popover) can never land between them.
-            zIndex: "var(--z-toast)",
+            // the ladder; the inline style wins.
+            zIndex,
             "--normal-bg": "var(--popover)",
             "--normal-text": "var(--popover-foreground)",
             "--normal-border": "var(--border)",
@@ -73,8 +76,8 @@ function Toasts() {
       <div
         ref={actionsRef}
         // eslint-disable-next-line layout/no-adhoc-layout -- viewport-corner fixed strip, anchored to the same inset as sonner's own fixed toast list
-        className="pointer-events-none fixed z-toast"
-        style={{ right: VIEWPORT_OFFSET, bottom: VIEWPORT_OFFSET }}
+        className="pointer-events-none fixed"
+        style={{ right: VIEWPORT_OFFSET, bottom: VIEWPORT_OFFSET, zIndex }}
       >
         <DismissAllButton />
       </div>

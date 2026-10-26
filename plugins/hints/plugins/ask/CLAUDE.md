@@ -156,13 +156,14 @@ portable `server/` half.
 - Web:
   - Contributes:
     - `Core.Root` → `AskHost`
+    - `ZStack.Layer` "The floating Ask equin card"
     - `HelpMenu.Entry` "Ask equin how to…" → `AskEquinEntry`
     - `WishSlots.HeaderAction` "ask" → `AskFromWish`
     - `InlineChip.Tag` "ask-page-context" → `PageContextChip`
     - `ConfigV2.WebRegister` "config"
     - `DynamicEnum.Options` "Model for filed tasks"
     - `DynamicEnum.Options` "Model"
-  - Uses: 67 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 68 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations/agent-thread` ×7
     - `primitives/persistent-draft` ×3
     - `apps-core` ×2
@@ -198,6 +199,7 @@ portable `server/` half.
     - `primitives/css/text.Text`
     - `primitives/css/theme-boundary.Theme`
     - `primitives/css/viewport-overlay.ViewportOverlay`
+    - `primitives/css/z-layers/stack.defineZLayer`
     - `primitives/dom/movable.useDragGesture`
     - `primitives/dom/web-storage.defineStore`
     - `primitives/file-links.FileLinksWorkspaceProvider`

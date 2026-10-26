@@ -240,6 +240,7 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "plugin-meta.exhibits.exhibits.actions", pluginId: "plugin-meta.exhibits", configName: "exhibits.actions" },
   { slotId: "plugin-meta.plugin-view.plugin-view.actions", pluginId: "plugin-meta.plugin-view", configName: "plugin-view.actions" },
   { slotId: "plugin-meta.plugin-view.section", pluginId: "plugin-meta.plugin-view", configName: "section" },
+  { slotId: "primitives.css.z-layers.stack.layer", pluginId: "primitives.css.z-layers.stack", configName: "layer" },
   { slotId: "primitives.data-view.control", pluginId: "primitives.data-view", configName: "control" },
   { slotId: "primitives.data-view.field-extension", pluginId: "primitives.data-view", configName: "field-extension" },
   { slotId: "primitives.data-view.row-order", pluginId: "primitives.data-view", configName: "row-order" },

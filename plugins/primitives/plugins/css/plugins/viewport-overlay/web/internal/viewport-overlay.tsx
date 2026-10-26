@@ -1,4 +1,4 @@
-import { useCallback, useRef, type ReactNode } from "react";
+import { useCallback, useRef, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import {
   cn,
@@ -9,6 +9,11 @@ import {
   type PortaledLayer,
   zLayerClass,
 } from "@plugins/primitives/plugins/css/plugins/z-layers/web";
+import {
+  useZStackIndex,
+  type ZStackLayer,
+} from "@plugins/primitives/plugins/css/plugins/z-layers/plugins/stack/web";
+import { PortalHost } from "@plugins/primitives/plugins/overlay/plugins/portal-host/web";
 import { useViewportEscape } from "./use-viewport-escape";
 
 // The viewport-fill recipe lives in a module const (not an inline className
@@ -22,12 +27,22 @@ const OVERLAY_ROOT = "fixed inset-0";
  * included. The `fixed inset-0` + z-layer + `data-theme-scope` are owned by the
  * primitive and cannot be overridden away.
  */
-export interface ViewportOverlayProps extends Passthrough<HTMLDivElement> {
-  /** Stacking layer. Defaults to "popover" (the documented portaled-layer). */
-  layer?: PortaledLayer;
+/** Everything but the layer — what the overlay root itself takes. */
+interface OverlayBodyProps extends Passthrough<HTMLDivElement> {
   /** Extra classes for the overlay root (background, flex layout, etc.). */
   className?: string;
+  /** Inline style for the overlay root; a stack layer's z-index wins over it. */
+  style?: CSSProperties;
   children: ReactNode;
+}
+
+export interface ViewportOverlayProps extends OverlayBodyProps {
+  /**
+   * Stacking layer. Defaults to "popover" (the documented portaled-layer). An
+   * app-wide surface that must paint above the popovers passes its own declared
+   * stack layer (`ZStack.Layer`, z-layers/stack) — never a generic one.
+   */
+  layer?: PortaledLayer | ZStackLayer;
 }
 
 /**
@@ -59,11 +74,49 @@ export interface ViewportOverlayProps extends Passthrough<HTMLDivElement> {
  */
 export function ViewportOverlay({
   layer = "popover",
+  ...props
+}: ViewportOverlayProps) {
+  return typeof layer === "string" ? (
+    <OverlayRoot layerClass={zLayerClass(layer)} name={layer} {...props} />
+  ) : (
+    <StackOverlay layer={layer} {...props} />
+  );
+}
+
+/**
+ * A stack layer: its z-index comes from the committed stack order, and its
+ * children draw their own popups — a popup portaled to `<body>` sits on the
+ * popover layer, BELOW this overlay, so a tooltip inside it would be hidden.
+ * The host element is `pointer-events-auto` so popups stay clickable under a
+ * `pointer-events-none` overlay root.
+ */
+function StackOverlay({
+  layer,
+  children,
+  ...props
+}: OverlayBodyProps & { layer: ZStackLayer }) {
+  const zIndex = useZStackIndex(layer);
+  return (
+    <OverlayRoot name={layer.id} zIndex={zIndex} {...props}>
+      <PortalHost className="pointer-events-auto">{children}</PortalHost>
+    </OverlayRoot>
+  );
+}
+
+function OverlayRoot({
+  layerClass,
+  zIndex,
+  name,
   className,
   children,
   ref,
+  style,
   ...rest
-}: ViewportOverlayProps) {
+}: OverlayBodyProps & {
+  layerClass?: string;
+  zIndex?: number;
+  name: string;
+}) {
   const forwarded = usePortalForwardedAttrs();
   // The audit below needs a real ref OBJECT to read after commit, and the caller
   // needs the same node — so the two compose onto one callback rather than one
@@ -94,7 +147,7 @@ export function ViewportOverlay({
   useViewportEscape(rootRef, {
     enabled: !!import.meta.env.DEV,
     from: "parent",
-    subject: `a <ViewportOverlay layer="${layer}">`,
+    subject: `a <ViewportOverlay layer="${name}">`,
     remedy:
       "Remove the property from <body> / <html>, or scope it to a subtree that does not contain the portal root.",
   });
@@ -103,7 +156,8 @@ export function ViewportOverlay({
     <div
       {...forwarded}
       // eslint-disable-next-line viewport-overlay/no-adhoc-viewport-overlay -- OVERLAY_ROOT is THE viewport-fill recipe this rule redirects everyone else to; the primitive owns it
-      className={cn(OVERLAY_ROOT, zLayerClass(layer), className)}
+      className={cn(OVERLAY_ROOT, layerClass, className)}
+      style={zIndex === undefined ? style : { ...style, zIndex }}
       {...rest}
       // After the passthrough, like the class recipe above it — but the caller's
       // `ref` is not lost to that, it is COMPOSED into `setRoot`. The primitive's

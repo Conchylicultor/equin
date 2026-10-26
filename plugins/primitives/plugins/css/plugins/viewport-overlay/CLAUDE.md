@@ -28,7 +28,11 @@ transformed ancestor, so the overlay fills the actual viewport every time.
 </ViewportOverlay>
 ```
 
-- **`layer`** — `"popover"` (default, z-50) | `"draw"` (z-60) | `"max"` (z-9999).
+- **`layer`** — `"popover"` (default, z-50) | `"max"` (z-9999) | a declared
+  stack layer (`ZStack.Layer`, [`z-layers/stack`](../z-layers/plugins/stack/CLAUDE.md))
+  for an app-wide surface above the popovers: its z-index comes from the
+  committed stack order, and its children are wrapped in `PortalHost` so popups
+  opened inside it draw above it, not on the popover layer beneath.
   Picks the named z-utility; never write a raw z-index.
 - **`className`** — extra classes for the overlay root (background, flex layout,
   pointer-events, …). The `fixed inset-0` + z-layer are baked in.
@@ -158,6 +162,9 @@ looks equivalent and silently discards the caller's.
     - `primitives/css/ui-kit.usePortalForwardedAttrs`
     - `primitives/css/z-layers.PortaledLayer`
     - `primitives/css/z-layers.zLayerClass`
+    - `primitives/css/z-layers/stack.useZStackIndex`
+    - `primitives/css/z-layers/stack.ZStackLayer`
+    - `primitives/overlay/portal-host.PortalHost`
   - Exports (types):
     - `ViewportBlocker`
     - `ViewportBlockerReason`

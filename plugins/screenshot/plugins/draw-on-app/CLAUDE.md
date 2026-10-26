@@ -10,7 +10,9 @@ The floating tools chrome (color swatches, width slider, Undo/Clear, Cancel/Done
 
 - Description: Toolbar button to draw freehand on the live app, capture as a screenshot with strokes baked in, and pre-attach to +improve.
 - Web:
-  - Contributes: `ActionBar.Item` → `DrawOnAppButton`
+  - Contributes:
+    - `ActionBar.Item` → `DrawOnAppButton`
+    - `ZStack.Layer` "The draw-on-app full-screen capture overlay"
   - Uses:
     - `infra/attachments.uploadAttachment`
     - `infra/endpoints.useFetchEndpoint`
@@ -20,6 +22,7 @@ The floating tools chrome (color swatches, width slider, Undo/Clear, Cancel/Done
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/viewport-overlay.ViewportOverlay`
+    - `primitives/css/z-layers/stack.defineZLayer`
     - `primitives/icon-button.IconButton`
     - `primitives/text-editor/paste-images.attachmentMarkdown`
     - `screenshot.captureApp`

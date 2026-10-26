@@ -6,7 +6,9 @@
 
 - Description: Global toast notifications: a plain showToast() backed by sonner's global API, plus the Core.Root-mounted sonner Toaster host. Degrades to a silent no-op when no host is mounted. A toast declaring audience developer is shown only in Developer mode. useSuppressToasts() lets a surface that is its whole document (the menu-bar panel) turn the host off while mounted.
 - Web:
-  - Contributes: `Core.Root` → `ToasterHost`
+  - Contributes:
+    - `Core.Root` → `ToasterHost`
+    - `ZStack.Layer` "Toasts and their Dismiss all strip"
   - Uses:
     - `apps-core/chrome-theme.chromeTheme`
     - `apps-core/chrome-theme.chromeThemeScope`
@@ -15,6 +17,8 @@
     - `primitives/css/theme-boundary.Theme`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.ControlSizeProvider`
+    - `primitives/css/z-layers/stack.defineZLayer`
+    - `primitives/css/z-layers/stack.useZStackIndex`
     - `primitives/dom/element-size.useElementSize`
     - `primitives/select-scope.ContentScope`
     - `ui/icons.Icon`

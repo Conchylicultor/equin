@@ -15,9 +15,6 @@ const Z_LAYER_CLASS = {
   float: "z-float",
   overlay: "z-overlay",
   popover: "z-popover",
-  guide: "z-guide",
-  draw: "z-draw",
-  toast: "z-toast",
   max: "z-max",
 } as const;
 
@@ -28,9 +25,11 @@ export type ZLayer = keyof typeof Z_LAYER_CLASS;
  *  in-pane floats, full-pane overlays. Out-stacked by every portaled layer. */
 export type InTreeLayer = "base" | "raised" | "nav" | "float" | "overlay";
 
-/** Portaled top layers (50–9999): elements portaled to <body> that must
- *  out-stack all in-tree chrome — modals/lightboxes, draw overlay, banners. */
-export type PortaledLayer = "popover" | "guide" | "draw" | "toast" | "max";
+/** Generic portaled layers: `popover` (50) for every popup / lightbox,
+ *  `max` (9999) for critical banners. An app-wide surface that must paint
+ *  above the popovers declares its OWN layer on the stack instead
+ *  (`z-layers/stack`: `ZStack.Layer`), ordered between these two. */
+export type PortaledLayer = "popover" | "max";
 
 // Compile-time guard: the two tiers must EXACTLY partition the ladder, so a new
 // layer added to Z_LAYER_CLASS can't silently belong to neither tier.

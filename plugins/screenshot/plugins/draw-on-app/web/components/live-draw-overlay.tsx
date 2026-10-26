@@ -10,6 +10,7 @@ import { ViewportOverlay } from "@plugins/primitives/plugins/css/plugins/viewpor
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
+import { DrawLayer } from "../internal/layer";
 
 const closeIcon = symbol("close");
 const undoIcon = symbol("undo");
@@ -66,7 +67,7 @@ export function LiveDrawOverlay({
   const natural = { w: viewport.w, h: viewport.h };
 
   return (
-    <ViewportOverlay layer="draw">
+    <ViewportOverlay layer={DrawLayer}>
       <DrawCanvas
         displayed={displayed}
         natural={natural}

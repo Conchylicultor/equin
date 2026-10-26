@@ -20,10 +20,17 @@ import type { SlotCompanions } from "./companion-keys";
  * so every consumer reads one field instead of re-deriving the answer.
  */
 export interface SlotMeta {
-  kind: "slot" | "render" | "mount" | "wrap" | "dispatch" | "ordered-dispatch";
+  kind:
+    | "slot"
+    | "render"
+    | "mount"
+    | "wrap"
+    | "dispatch"
+    | "ordered-dispatch"
+    | "ordered";
   /**
    * Whether this slot's contributions are user-orderable (and therefore owe a
-   * reorder config directive). True for render and ordered-dispatch slots.
+   * reorder config directive). True for render, ordered-dispatch and ordered (data) slots.
    */
   reorderable: boolean;
   /**

@@ -47,6 +47,7 @@ precedent as `popup-open` and `overlay-boundary`.
     - `apps/prototypes/canvas`
     - `apps/prototypes/present`
     - `primitives/css/ui-kit`
+    - `primitives/css/viewport-overlay`
 - Web:
   - Exports (values):
     - `PortalHost`

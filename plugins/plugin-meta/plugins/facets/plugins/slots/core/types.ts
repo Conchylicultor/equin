@@ -9,12 +9,20 @@ export interface SlotDef {
    * Which slot factory defined this slot — `SlotMeta.kind`, read off the slot
    * object itself when barrels are imported. `"render"` for `defineRenderSlot`,
    * `"mount"` for `defineMountSlot`, `"dispatch"` for `defineDispatchSlot`,
-   * `"ordered-dispatch"` for `defineOrderedDispatchSlot`, `"wrap"` for
+   * `"ordered-dispatch"` for `defineOrderedDispatchSlot`, `"ordered"` for
+   * `defineOrderedSlot`, `"wrap"` for
    * `defineWrapperSlot`, `"slot"` for `defineSlot`. In the barrel-free
    * (`skipBarrelImport`) mode it is inferred from the constructor's name in
    * source text, which cannot see `"ordered-dispatch"`.
    */
-  kind?: "render" | "mount" | "dispatch" | "ordered-dispatch" | "wrap" | "slot";
+  kind?:
+    | "render"
+    | "mount"
+    | "dispatch"
+    | "ordered-dispatch"
+    | "ordered"
+    | "wrap"
+    | "slot";
   /**
    * The slot accepts companion contributions (`SlotMeta.companions`): `true`,
    * or keyed `{ key, space }` — required only when used. Read off the slot

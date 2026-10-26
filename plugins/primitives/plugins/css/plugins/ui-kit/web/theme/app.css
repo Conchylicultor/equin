@@ -37,9 +37,9 @@
     --z-float:   30;   /* in-pane floating widgets: selection bar, message TOC   */
     --z-overlay: 40;   /* full-pane bespoke overlays                             */
     --z-popover: 50;   /* portaled floating layers: floating-action, lightboxes  */
-    --z-guide:   55;   /* onboarding tour / tips, above the popovers they point into */
-    --z-draw:    60;   /* draw-on-app full-screen capture overlay                */
-    --z-toast:   70;   /* toast stack + its dismiss-all strip: above every floating card */
+    /* 51…: the top-layer stack — app-wide surfaces (hints, Ask, draw, toasts)
+       declared by their own plugins, ordered by one committed layout
+       (z-layers/stack); never a var here. */
     --z-max:     9999; /* critical banners / dev frame                          */
 }
 
@@ -2320,9 +2320,6 @@
 @utility z-float   { z-index: var(--z-float); }   /* twmerge: extend z */
 @utility z-overlay { z-index: var(--z-overlay); } /* twmerge: extend z */
 @utility z-popover { z-index: var(--z-popover); } /* twmerge: extend z */
-@utility z-guide   { z-index: var(--z-guide); }   /* twmerge: extend z */
-@utility z-draw    { z-index: var(--z-draw); }    /* twmerge: extend z */
-@utility z-toast   { z-index: var(--z-toast); }   /* twmerge: extend z */
 @utility z-max     { z-index: var(--z-max); }     /* twmerge: extend z */
 
 @layer base {

@@ -27277,12 +27277,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Hints.Tour` ← `apps.home.tour`
     - Contributes:
       - `Core.Root` → `HintHost`
+      - `ZStack.Layer` "Hint tips, tour steps and show-me pointers"
       - `ThemeEngine.FixedTheme` "Onboarding hints"
       - `Shortcuts.Shortcut` "hints.pointer-end (Escape)"
       - `Shortcuts.Shortcut` "hints.tour-back (ArrowLeft)"
       - `Shortcuts.Shortcut` "hints.tour-end (Escape)"
       - `Shortcuts.Shortcut` "hints.tour-next (ArrowRight)"
-    - Uses: 24 symbols — full list in [`plugins/hints/REFERENCE.md`](../plugins/hints/REFERENCE.md)
+    - Uses: 25 symbols — full list in [`plugins/hints/REFERENCE.md`](../plugins/hints/REFERENCE.md)
       - `primitives/live-state` ×3
       - `apps-core/tabs` ×2
       - `primitives/css/ui-kit` ×2
@@ -27295,6 +27296,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `primitives/css/text.Text`
       - `primitives/css/theme-boundary.Theme`
       - `primitives/css/viewport-overlay.ViewportOverlay`
+      - `primitives/css/z-layers/stack.defineZLayer`
       - `primitives/dom/element-size.useResizeObserver`
       - `primitives/dom/scroll-reveal.revealElement`
       - `primitives/latest-ref.useEventCallback`
@@ -27426,13 +27428,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Web:
         - Contributes:
           - `Core.Root` → `AskHost`
+          - `ZStack.Layer` "The floating Ask equin card"
           - `HelpMenu.Entry` "Ask equin how to…" → `AskEquinEntry`
           - `WishSlots.HeaderAction` "ask" → `AskFromWish`
           - `InlineChip.Tag` "ask-page-context" → `PageContextChip`
           - `ConfigV2.WebRegister` "config"
           - `DynamicEnum.Options` "Model for filed tasks"
           - `DynamicEnum.Options` "Model"
-        - Uses: 67 symbols — full list in [`plugins/hints/plugins/ask/REFERENCE.md`](../plugins/hints/plugins/ask/REFERENCE.md)
+        - Uses: 68 symbols — full list in [`plugins/hints/plugins/ask/REFERENCE.md`](../plugins/hints/plugins/ask/REFERENCE.md)
           - `conversations/agent-thread` ×7
           - `primitives/persistent-draft` ×3
           - `apps-core` ×2
@@ -27468,6 +27471,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/text.Text`
           - `primitives/css/theme-boundary.Theme`
           - `primitives/css/viewport-overlay.ViewportOverlay`
+          - `primitives/css/z-layers/stack.defineZLayer`
           - `primitives/dom/movable.useDragGesture`
           - `primitives/dom/web-storage.defineStore`
           - `primitives/file-links.FileLinksWorkspaceProvider`
@@ -39927,6 +39931,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/ui-kit.usePortalForwardedAttrs`
               - `primitives/css/z-layers.PortaledLayer`
               - `primitives/css/z-layers.zLayerClass`
+              - `primitives/css/z-layers/stack.useZStackIndex`
+              - `primitives/css/z-layers/stack.ZStackLayer`
+              - `primitives/overlay/portal-host.PortalHost`
             - Exports (types):
               - `ViewportBlocker`
               - `ViewportBlockerReason`
@@ -40010,6 +40017,32 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PortaledLayer`
               - `ZLayer`
             - Exports (values): `zLayerClass`
+          - Plugins:
+            - **`stack`** — The top-layer stack: app-wide surfaces declare their own z-layer (ZStack.Layer) in their own plugin, ordered by one committed reorder layout; useZStackIndex reads a layer's z-index.
+              - Web:
+                - Slots: `ZStack.Layer`
+                - Slot contributors:
+                  - `ZStack.Layer` ← `hints`
+                  - `ZStack.Layer` ← `hints.ask`
+                  - `ZStack.Layer` ← `screenshot.draw-on-app`
+                  - `ZStack.Layer` ← `shell.toast`
+                - Uses:
+                  - `primitives/slot-render.defineOrderedSlot`
+                  - `primitives/slot-render.useSlotOrder`
+                - Exports (types):
+                  - `ZStackLayer`
+                  - `ZStackLayerDef`
+                - Exports (values):
+                  - `defineZLayer`
+                  - `useZStackIndex`
+                  - `ZStack`
+              - Cross-plugin:
+                - Imported by:
+                  - `hints`
+                  - `hints/ask`
+                  - `primitives/css/viewport-overlay`
+                  - `screenshot/draw-on-app`
+                  - `shell/toast`
     - **`cursor-pagination`** — Cursor-pagination primitive: the error-gated useInfiniteScroll observer + InfiniteScrollFooter (load-more spinner / Retry / sentinel), and the ScrollSentinel component. The pages themselves come from a paged live read (useLive(...).loadMore).
       - Web:
         - Uses:
@@ -43687,6 +43720,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/prototypes/canvas`
               - `apps/prototypes/present`
               - `primitives/css/ui-kit`
+              - `primitives/css/viewport-overlay`
           - Web:
             - Exports (values):
               - `PortalHost`
@@ -44727,6 +44761,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `MountComponent`
           - `MountSlot`
           - `MountSlotConfig`
+          - `OrderedContribution`
           - `OrderedDispatchContribution`
           - `OrderedDispatchSlot`
           - `RenderSlot`
@@ -44744,6 +44779,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineDispatchSlot`
           - `defineMountSlot`
           - `defineOrderedDispatchSlot`
+          - `defineOrderedSlot`
           - `defineRenderSlot`
           - `defineWrapperSlot`
           - `renderAsContribution`
@@ -44756,10 +44792,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useSlotOrder`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/density --control-height-sm`
-        - Imported by: 88 plugins — full list in [`plugins/primitives/plugins/slot-render/REFERENCE.md`](../plugins/primitives/plugins/slot-render/REFERENCE.md)
+        - Imported by: 89 plugins — full list in [`plugins/primitives/plugins/slot-render/REFERENCE.md`](../plugins/primitives/plugins/slot-render/REFERENCE.md)
           - `apps` ×28
+          - `primitives` ×14
           - `conversations` ×13
-          - `primitives` ×13
           - `ui` ×5
           - `apps-core` ×4
           - `shell` ×4
@@ -46058,8 +46094,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
   - Web:
     - Slots: `ReorderSlots.AreaEditor`
     - Slot contributors: `ReorderSlots.AreaEditor` ← `reorder.edit-mode`
-    - Contributes: 261 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×261
+    - Contributes: 262 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×262
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfig`
@@ -46095,8 +46131,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `useLayoutOrder`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 260 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×260
+    - Contributes: 261 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×261
     - Uses: `config_v2.ConfigV2`
     - Exports (values): `reorderDirectiveDescriptor`
   - Cross-plugin:
@@ -47453,7 +47489,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `screenshot/draw-on-app`
     - **`draw-on-app`** — Toolbar button to draw freehand on the live app, capture as a screenshot with strokes baked in, and pre-attach to +improve.
       - Web:
-        - Contributes: `ActionBar.Item` → `DrawOnAppButton`
+        - Contributes:
+          - `ActionBar.Item` → `DrawOnAppButton`
+          - `ZStack.Layer` "The draw-on-app full-screen capture overlay"
         - Uses:
           - `infra/attachments.uploadAttachment`
           - `infra/endpoints.useFetchEndpoint`
@@ -47463,6 +47501,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/ui-kit.Button`
           - `primitives/css/ui-kit.cn`
           - `primitives/css/viewport-overlay.ViewportOverlay`
+          - `primitives/css/z-layers/stack.defineZLayer`
           - `primitives/icon-button.IconButton`
           - `primitives/text-editor/paste-images.attachmentMarkdown`
           - `screenshot.captureApp`
@@ -47962,7 +48001,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --space-md`
     - **`toast`** — Global toast notifications: a plain showToast() backed by sonner's global API, plus the Core.Root-mounted sonner Toaster host. Degrades to a silent no-op when no host is mounted. A toast declaring audience developer is shown only in Developer mode. useSuppressToasts() lets a surface that is its whole document (the menu-bar panel) turn the host off while mounted.
       - Web:
-        - Contributes: `Core.Root` → `ToasterHost`
+        - Contributes:
+          - `Core.Root` → `ToasterHost`
+          - `ZStack.Layer` "Toasts and their Dismiss all strip"
         - Uses:
           - `apps-core/chrome-theme.chromeTheme`
           - `apps-core/chrome-theme.chromeThemeScope`
@@ -47971,6 +48012,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/theme-boundary.Theme`
           - `primitives/css/ui-kit.Button`
           - `primitives/css/ui-kit.ControlSizeProvider`
+          - `primitives/css/z-layers/stack.defineZLayer`
+          - `primitives/css/z-layers/stack.useZStackIndex`
           - `primitives/dom/element-size.useElementSize`
           - `primitives/select-scope.ContentScope`
           - `ui/icons.Icon`

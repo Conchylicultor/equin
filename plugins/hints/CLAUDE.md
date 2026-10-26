@@ -294,12 +294,13 @@ Exhibits: `hints/card`, `hints/caption`, `hints/spotlight`, `hints/welcome`.
     - `Hints.Tour` ← `apps.home.tour`
   - Contributes:
     - `Core.Root` → `HintHost`
+    - `ZStack.Layer` "Hint tips, tour steps and show-me pointers"
     - `ThemeEngine.FixedTheme` "Onboarding hints"
     - `Shortcuts.Shortcut` "hints.pointer-end (Escape)"
     - `Shortcuts.Shortcut` "hints.tour-back (ArrowLeft)"
     - `Shortcuts.Shortcut` "hints.tour-end (Escape)"
     - `Shortcuts.Shortcut` "hints.tour-next (ArrowRight)"
-  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/live-state` ×3
     - `apps-core/tabs` ×2
     - `primitives/css/ui-kit` ×2
@@ -312,6 +313,7 @@ Exhibits: `hints/card`, `hints/caption`, `hints/spotlight`, `hints/welcome`.
     - `primitives/css/text.Text`
     - `primitives/css/theme-boundary.Theme`
     - `primitives/css/viewport-overlay.ViewportOverlay`
+    - `primitives/css/z-layers/stack.defineZLayer`
     - `primitives/dom/element-size.useResizeObserver`
     - `primitives/dom/scroll-reveal.revealElement`
     - `primitives/latest-ref.useEventCallback`

@@ -82,8 +82,11 @@ function isExcluded(c: Contribution): boolean {
  *    `ReorderNodeData`.
  *
  * After the walk, any live visible-non-excluded contribution NOT named in the
- * tree is appended in natural runtime order (fail-loud — never silently
- * dropped). `excludeFromReorder` items stay pinned last, never hidden.
+ * tree is appended in natural runtime order — a silent runtime safety net (no
+ * error, no log) so nothing disappears during a stale window. The forcing step
+ * is at build time: the new contribution shifts the origin `@hash`, so the
+ * committed layout is marked for review and `push` fails until it is placed.
+ * `excludeFromReorder` items stay pinned last, never hidden.
  */
 export function applyTree(
   contributions: readonly Contribution[],

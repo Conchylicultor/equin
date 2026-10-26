@@ -19,6 +19,7 @@ import { askPositionStore } from "../internal/stores";
 import { useRestoreNewestRun } from "../internal/use-ask";
 import { AskEmptyCard, AskThreadCard, CardFrame } from "./ask-card";
 import { AskPill } from "./ask-pill";
+import { AskLayer } from "../internal/layer";
 
 /**
  * At most this much of the card may leave the viewport when the window
@@ -103,7 +104,7 @@ export function AskHost() {
   };
   const pill = mode === "min" && conversationId !== null;
   return (
-    <ViewportOverlay layer="popover" className="pointer-events-none">
+    <ViewportOverlay layer={AskLayer} className="pointer-events-none">
       <Theme name={chromeThemeScope} surface="none">
         {/* Closing fades the card out (Presence); minimizing and restoring
             morph the one frame between card and pill. */}

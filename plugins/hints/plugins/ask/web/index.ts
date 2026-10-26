@@ -20,6 +20,7 @@ import { PAGE_CONTEXT_RE, askConfig } from "../core";
 import { AskEquinEntry } from "./components/ask-entry";
 import { AskFromWish } from "./components/ask-from-wish";
 import { AskHost } from "./components/ask-host";
+import { AskLayer } from "./internal/layer";
 import { PageContextChip } from "./components/page-context-chip";
 
 export default {
@@ -27,6 +28,7 @@ export default {
     "Ask equin, web half: the ? menu's entry (Ask equin how to… / Back to your question) and the same entry as an icon in the Wish popover's header, and the AskHost at Core.Root — a draggable card in the chrome's theme (a developer-only Agent instructions header action opening the Ask equin config) holding one threaded conversation with the help agent (AgentThread; a filed task shows as its live status and title, opening in the Agent Manager), above every tab so it follows the user across apps: suggested questions and a first-question box when empty (the first send attaches the focused app, route, tab title and the page outline), minimized to a pill with the step it is on and an unseen dot, its position kept edge-anchored and snapped only near a corner, and the newest unseen or working run taken back as the pill once per load. A reply sent from another page carries that page (a <page-context> token after the words, drawn as a chip naming the page). Registers the Ask equin config with both model pickers.",
   contributions: [
     Core.Root({ component: AskHost }),
+    AskLayer.contribution,
     HelpMenu.Entry({
       id: "ask",
       label: "Ask equin how to…",

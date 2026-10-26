@@ -31,7 +31,7 @@ The data-level counterpart to `<Slot.Render>` for consumers that draw their **ow
 
 `useLayoutOrder` is its flat form for the common case — the slot's contributions in layout order, hidden ones and layout nodes dropped, a header's members in its place — contributed by `reorder/slot-middleware` as `SlotRender.Order`, which slot-render's `useSlotOrder(slot)` reads, so a host names slot-render, never reorder. **This replaces per-contribution priority numbers**: a host that draws its own rows orders them by this, never by an `order` field (`defineSlot` rejects a numeric one).
 
-`id` is the **stable identifier** for a contribution in a slot. The layout tree references contributions by `entryKey` — `pluginId:id` (computed by `entryKey()`), which prevents collisions when different plugins contribute the same `id` to the same slot. Never rename `id` — renaming orphans the entry in any saved layout (an orphaned name in the tree is skipped on read and the live contribution falls back to natural-order append, so nothing disappears, but the customization is lost).
+`id` is the **stable identifier** for a contribution in a slot. The layout tree references contributions by `entryKey` — `pluginId:id` (computed by `entryKey()`), which prevents collisions when different plugins contribute the same `id` to the same slot. Never rename `id` — renaming orphans the entry in any saved layout (an orphaned name in the tree is skipped on read and the live contribution falls back to natural-order append, so nothing disappears). The rename also shifts the origin `@hash`, so a committed layout is caught — marked for review on build, push blocked until the item is placed again (see *Staleness / reconciliation*); only a user-layer layout loses its customization silently.
 
 ## Rules for plugins using reorder
 
@@ -89,7 +89,7 @@ type ReorderNode =
 - Every **extension** node is `{ type, … }` — dispatched to the **node-type registry** (`@plugins/reorder/plugins/node-types`). The core format knows only the structural `type`/`id`/`items`; `label`/`collapsed`/etc. are each node type's own payload (validated by its `schema`). Built-ins: `{ type: "spacer", id }` (a blank draggable gap) and `{ type: "header", label?, collapsed?, items: [...] }` (a labeled, collapsible **container**). Containers are **one level — no nesting**.
 - An **unknown** `type` (or invalid payload) is skipped at render (fail-soft).
 
-The tree is **applied over the live catalog** at render (`applyTree()` in `web/internal/sorting.ts`) via `normalizeNode`: named items emit in tree order, hidden items route to the hidden bucket, container members resolve and are **consumed** (so they don't re-emit at top level), unknown names are skipped, and **any live, visible contribution not named in the tree is appended in natural order** (fail-loud — a contribution is never silently dropped). `excludeFromReorder` items stay pinned last. Both consumers (this middleware and the config-pane field renderer) pre-render each node via `useReorderNodeTypes()` and hand the editor opaque `node` content.
+The tree is **applied over the live catalog** at render (`applyTree()` in `web/internal/sorting.ts`) via `normalizeNode`: named items emit in tree order, hidden items route to the hidden bucket, container members resolve and are **consumed** (so they don't re-emit at top level), unknown names are skipped, and **any live, visible contribution not named in the tree is appended in natural order** — a silent runtime safety net (no error, no log), so a contribution never disappears. It is not what forces placement: that is the build/push step in *Staleness / reconciliation* (a new contribution shifts the origin `@hash` → the committed layout is marked for review and push fails until the item is placed). `excludeFromReorder` items stay pinned last. Both consumers (this middleware and the config-pane field renderer) pre-render each node via `useReorderNodeTypes()` and hand the editor opaque `node` content.
 
 ### Materialized origin (not a sparse patch)
 
@@ -129,7 +129,7 @@ Because the origin default is the materialized catalog, adding/removing a contri
 
 - **Code ↔ git override** (`config/<plugin>/<slot>.jsonc`): a committed override whose `@hash` no longer matches the regenerated origin **hard-fails `config-origins-in-sync`**, which runs on `push` → push is blocked until an agent reconciles (edit the committed file to place the new item explicitly — the regenerated origin shows the full current list — and re-stamp the hash). This is the agent-facing forcing function.
 - **User override ↔ git** (`~/.singularity/state/config/<wt>/.../<slot>.jsonc`): on hash conflict, `effective()` reverts to the origin (natural order) at runtime; the user sees the conflict in the config settings UI and fixes it manually. No `effective()` bypass.
-- During the stale window, `applyTree` still appends any unmentioned live contribution (fail-loud) so nothing disappears.
+- During the stale window, `applyTree` still appends any unmentioned live contribution (a silent safety net, not a signal) so nothing disappears.
 
 ### Caveats
 
@@ -162,8 +162,8 @@ Edit mode inflates every item with chrome (ring, ×-badge, empty-item placeholde
 - Web:
   - Slots: `ReorderSlots.AreaEditor`
   - Slot contributors: `ReorderSlots.AreaEditor` ← `reorder.edit-mode`
-  - Contributes: 261 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ConfigV2.WebRegister` ×261
+  - Contributes: 262 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.WebRegister` ×262
   - Uses:
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`
@@ -199,8 +199,8 @@ Edit mode inflates every item with chrome (ring, ×-badge, empty-item placeholde
     - `useLayoutOrder`
     - `useReorderedEntries`
 - Server:
-  - Contributes: 260 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ConfigV2.Register` ×260
+  - Contributes: 261 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.Register` ×261
   - Uses: `config_v2.ConfigV2`
   - Exports (values): `reorderDirectiveDescriptor`
 - Cross-plugin:

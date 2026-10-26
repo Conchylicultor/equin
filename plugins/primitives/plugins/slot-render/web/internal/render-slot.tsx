@@ -839,6 +839,33 @@ export function defineOrderedDispatchSlot<
 }
 
 /**
+ * A contribution to an ordered slot: plain data with a structurally required
+ * `id` (the reorder entryKey is `pluginId:id`).
+ */
+export interface OrderedContribution {
+  id: string;
+}
+
+/**
+ * Ordered DATA slot: a plain `defineSlot` whose contributions are data — no
+ * `component`, nothing rendered — but carry an `id`, so the slot is
+ * `reorderable` and its order is the slot's reorder config layout, exactly like
+ * a render slot's. Read the contributions in that order with `useSlotOrder`.
+ *
+ * For an open set a host consumes as an ORDERED LIST of values (stacking
+ * layers, …): every contributor declares its entry in its own plugin, the
+ * order lives in one committed file, and a new contribution cannot land
+ * unplaced (it shifts the layout's origin hash → review marker → push fails).
+ */
+export function defineOrderedSlot<P extends OrderedContribution>(
+  opts?: SlotOptions<P>,
+): Slot<P> {
+  const slot = defineSlotUnchecked<P>(opts);
+  slot.meta = { ...slot.meta, kind: "ordered", reorderable: true };
+  return slot;
+}
+
+/**
  * Draw one contribution the HOST renders itself — from the contribution's data,
  * not its `component` — inside the same item middlewares and box `.Render`
  * gives it: error isolation, the element picker's lineage, every other

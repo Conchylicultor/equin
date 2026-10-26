@@ -440,6 +440,7 @@ export const browserHost = {
     "primitives.css.working-dots",
     "primitives.css.yield",
     "primitives.css.z-layers",
+    "primitives.css.z-layers.stack",
     "primitives.cursor-pagination",
     "primitives.data-table",
     "primitives.data-view",
