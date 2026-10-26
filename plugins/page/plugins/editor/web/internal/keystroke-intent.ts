@@ -99,6 +99,15 @@ export type KeyIntent =
    */
   | { type: "unwrap"; blockId: string }
   /**
+   * Backspace on an EMPTY line that has no line break above it to delete (the
+   * line above is a sub-page row, a divider, an image, or another page's last
+   * line): remove the empty line itself, promoting its children into its slot
+   * (the reducer's `unwrap` on the caret's own block), and step the caret left
+   * onto whatever precedes it. Without this rung the line could not be removed
+   * by keyboard at all — Backspace only ever moved the caret off it.
+   */
+  | { type: "removeLine" }
+  /**
    * Cross an inline-mark boundary's VIRTUAL DELIMITER: set the caret's pending
    * marks to `marks` and move its depth to `escaped`. The linear offset does not
    * change — the delimiter is an invisible position, not a character — so the
@@ -745,6 +754,11 @@ export function resolveKeystroke(
       // outdent below merge would silently REMOVE the only way such a block can
       // escape its nesting — e.g. the line below a divider inside a container.
       if (isIndented(ctx, node)) return { type: "outdent" };
+      // An EMPTY line with a line above it that cannot take a merge: the empty
+      // line itself is the nearest thing to delete. Its children (if any) take
+      // its slot, so nothing but the blank line goes. Only with a visible line
+      // above — the first line of the page (or of a zoom) keeps stepping out.
+      if (caret.length === 0 && prev) return { type: "removeLine" };
       // No same-page line to merge into: the first top-level block, or a page
       // boundary directly above. Backspace here means exactly what ArrowLeft
       // means — step backwards out to whatever caret surface precedes (the page

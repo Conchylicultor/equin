@@ -1370,6 +1370,23 @@ describe("multi-page union boundaries", () => {
     ).toEqual({ type: "nav", dir: "left" });
   });
 
+  test("Backspace on an EMPTY line below a COLLAPSED sub-page → removeLine (the blank line is what goes)", () => {
+    const nodes = union({ expanded: false }).map((n) =>
+      n.id === "D" ? { ...n, data: { text: [] } } : n,
+    );
+    // Its children are promoted by the `unwrap` the executor dispatches; the
+    // resolver only needs to see that nothing above can take a merge.
+    nodes.push(mk("E", "D", rankChild, { text: "ee" }));
+    expect(
+      resolveKeystroke(
+        "Backspace",
+        NO_SHIFT,
+        caret({ atStart: true, atEnd: true, length: 0 }),
+        { nodes, ...TYPE_FACTS, blockId: "D" },
+      ),
+    ).toEqual({ type: "removeLine" });
+  });
+
   test("Backspace at the FIRST child of an expanded sub-page → nav left (its prev visible line is the shell)", () => {
     expect(
       resolveKeystroke("Backspace", NO_SHIFT, caret({ atStart: true }), {
@@ -1490,6 +1507,28 @@ describe("void lines (acceptsText)", () => {
         blockId: "V1",
       }),
     ).toEqual({ type: "mergeNext" });
+  });
+
+  test("Backspace on an EMPTY line below a divider → removeLine", () => {
+    expect(
+      resolveKeystroke(
+        "Backspace",
+        NO_SHIFT,
+        caret({ atStart: true, atEnd: true, length: 0 }),
+        { nodes: withVoid("divider"), ...TYPE_FACTS, blockId: "B" },
+      ),
+    ).toEqual({ type: "removeLine" });
+  });
+
+  test("Backspace on an EMPTY first top-level line → nav left (no line above to remove it toward)", () => {
+    expect(
+      resolveKeystroke(
+        "Backspace",
+        NO_SHIFT,
+        caret({ atStart: true, atEnd: true, length: 0 }),
+        ctx("A"),
+      ),
+    ).toEqual({ type: "nav", dir: "left" });
   });
 
   test("Backspace at the start of the line BELOW a divider → nav left (nothing to merge into)", () => {

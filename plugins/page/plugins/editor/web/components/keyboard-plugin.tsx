@@ -148,6 +148,14 @@ export function KeyboardPlugin({
           event.preventDefault();
           unwrapRef.current(intent.blockId);
           return true;
+        case "removeLine":
+          // Land the caret on the line above FIRST (this block's editor is
+          // about to unmount), then dissolve this block: `unwrap` deletes it
+          // and promotes its children into its slot.
+          event.preventDefault();
+          api.navigate("left", caret);
+          unwrapRef.current(blockIdRef.current);
+          return true;
         case "expand":
           // Also the CONTAINER, for the same reason — but `setExpanded` is a
           // per-block API, so address it by minting one for that id. The caret

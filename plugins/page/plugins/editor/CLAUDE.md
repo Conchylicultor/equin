@@ -1457,7 +1457,9 @@ deletion and to escaping structure:
 
 > **Backspace** deletes the nearest visible thing to the LEFT of the caret:
 > marker glyph (convertTo) → **excess** indentation (outdent) → line break
-> (merge) → any remaining indentation (outdent) → boundary (nav-left).
+> (merge) → any remaining indentation (outdent) → an EMPTY line itself, when
+> a line above exists but cannot take a merge (removeLine: `unwrap` the caret's
+> block, children promoted, caret stepped left) → boundary (nav-left).
 >
 > **Delete** deletes the nearest visible thing to the RIGHT of the caret:
 > the line break below (merge the next visible line up) → boundary (nav-right).

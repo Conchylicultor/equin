@@ -116,7 +116,7 @@ const OP_LABELS: Record<BlockOp["kind"], string> = {
   merge: "Merge blocks",
   indent: "Indent blocks",
   outdent: "Outdent blocks",
-  unwrap: "Remove container",
+  unwrap: "Remove block",
   move: "Move block",
   bulkMove: "Move blocks",
   paste: "Paste blocks",
