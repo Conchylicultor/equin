@@ -219,6 +219,9 @@ function MessageList({ page }: { page: SiteMessagesPage }): ReactNode {
         views={["list", "table"]}
         defaultView="list"
         storageKey={MESSAGES_VIEW}
+        // A section of the deployment pane, beside other sections' DataViews:
+        // one pane URL key cannot hold them all, so the view stays device-local.
+        viewParam={false}
         selectedRowId={openId ?? undefined}
         onRowActivate={(m) => setOpenId((id) => (id === m.id ? null : m.id))}
         searchAccessor={(m) => `${m.replyTo} ${m.message}`}
