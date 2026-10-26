@@ -245,7 +245,12 @@ token's own two fields — no hand-written anchor labels anywhere.
   Compared in canonical spellings (parsed and re-formatted). The path may be
   **partial**: when no element's lineage is exactly the path, one whose
   lineage holds its segments in order matches (an agent often copies only
-  the outline line it read the control under); `""` stays exact. Scoped, so a
+  the outline line it read the control under); `""` stays exact. Nodes
+  compare by `lineageNodeIdentity` (core): a region's label ("column 2 of
+  2") is position, not identity, and changes as columns open and close.
+  `gone` carries `near` — the same descriptor elsewhere on the page (path,
+  shown) and the shown controls under the path's innermost node — so a
+  caller can log why nothing matched. Scoped, so a
   click resolves fast: candidates are the descriptor's tag / role / type
   under the markers of the path's innermost node plus every portaled lineage
   host; only those are described and walked.
@@ -273,6 +278,7 @@ marker is *additive* alongside it; nothing here reads or writes it.
     - `CollectOutlineOptions`
     - `ContributionNodeAttrs`
     - `RegionNodeAttrs`
+    - `UiContextNear`
     - `UiContextRef`
     - `UiContextResolution`
     - `UiOutline`
@@ -323,6 +329,7 @@ marker is *additive* alongside it; nothing here reads or writes it.
     - `formatElementDescriptor`
     - `formatLineageNode`
     - `formatLineagePath`
+    - `lineageNodeIdentity`
     - `parseElementDescriptor`
     - `parseLineageNode`
     - `parseLineagePath`

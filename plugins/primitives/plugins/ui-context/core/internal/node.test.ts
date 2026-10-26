@@ -2,6 +2,7 @@ import { describe, it, expect } from "bun:test";
 import {
   formatLineageNode,
   formatLineagePath,
+  lineageNodeIdentity,
   parseLineageNode,
   parseLineagePath,
   type LineageNode,
@@ -51,5 +52,25 @@ describe("lineage path parse ⇄ format", () => {
 
   it("ignores empty segments", () => {
     expect(parseLineagePath("")).toEqual([]);
+  });
+});
+
+describe("lineageNodeIdentity", () => {
+  it("drops a region's label and keeps everything else", () => {
+    const at = (label?: string) =>
+      lineageNodeIdentity(
+        parseLineageNode(`pages/page#pane:page${label ? `[${label}]` : ""}`),
+      );
+    expect(at("column 2 of 2")).toBe("pages/page#pane:page");
+    expect(at("column 2 of 3")).toBe(at("column 2 of 2"));
+    expect(at()).toBe(at("column 1 of 1"));
+    expect(
+      lineageNodeIdentity(parseLineageNode("pages/page#pane:other")),
+    ).not.toBe(at());
+  });
+
+  it("is the formatted node for a contribution", () => {
+    const n = parseLineageNode("pages/share@PaneToolbar.Item");
+    expect(lineageNodeIdentity(n)).toBe(formatLineageNode(n));
   });
 });

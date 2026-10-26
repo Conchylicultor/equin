@@ -6,6 +6,7 @@ export type {
 export {
   formatLineageNode,
   formatLineagePath,
+  lineageNodeIdentity,
   parseLineageNode,
   parseLineagePath,
 } from "./internal/node";

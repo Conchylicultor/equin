@@ -415,7 +415,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reports.getReportTitle`
       - Core:
         - Exports (values): `REPORT_CHIP_SURFACES`
-    - **`show-me`** — Renders <show-me path="…" element="…">label</show-me> in an agent's reply — an element of the live page named by its ui-context lineage path and element descriptor (an outline entry) — as a target chip: a click resolves it on the page now (resolveUiContext) and highlights it — a pulsing ring (the label as caption only when the element shows no text of its own), non-modal, gone after a few seconds or at the next click (hints pointAt); when nothing on the page matches, the chip says "Not on this page" (a toast, then its own look) and nothing is highlighted. One step at a time.
+    - **`show-me`** — Renders <show-me path="…" element="…">label</show-me> in an agent's reply — an element of the live page named by its ui-context lineage path and element descriptor (an outline entry) — as a target chip: a click resolves it on the page now (resolveUiContext) and highlights it — a pulsing ring (the label as caption only when the element shows no text of its own), non-modal, gone after a few seconds or at the next click (hints pointAt); when nothing on the page matches, the chip says "Not on this page" (a toast, then its own look) and nothing is highlighted, the miss logged with what the page held instead (browser log channel show-me). One step at a time.
       - Web:
         - Contributes: `ActiveData.Tag` "show-me" → `ShowMeBlock`
         - Uses:
@@ -424,6 +424,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/link-chip.LinkChip`
           - `primitives/css/rigid.rigidClass`
           - `primitives/css/ui-kit.cn`
+          - `primitives/log-channels.clientLog`
           - `primitives/ui-context.resolveUiContext`
           - `shell/toast.showToast`
           - `ui/icons.Icon`
@@ -42651,7 +42652,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
-        - Imported by: 55 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
+        - Imported by: 56 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
           - `apps` ×12
           - `debug` ×9
           - `database` ×7
@@ -42662,6 +42663,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives` ×2
           - `reports` ×2
           - `tasks` ×2
+          - `active-data/show-me`
           - `backup`
           - `integrations/youtube/audio-fetch`
           - `menu-bar`
@@ -45538,6 +45540,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CollectOutlineOptions`
           - `ContributionNodeAttrs`
           - `RegionNodeAttrs`
+          - `UiContextNear`
           - `UiContextRef`
           - `UiContextResolution`
           - `UiOutline`
@@ -45588,6 +45591,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `formatElementDescriptor`
           - `formatLineageNode`
           - `formatLineagePath`
+          - `lineageNodeIdentity`
           - `parseElementDescriptor`
           - `parseLineageNode`
           - `parseLineagePath`

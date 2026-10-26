@@ -18,7 +18,11 @@ descriptor (`button — Share`, without a `×N`). No hand-written anchor labels.
   seconds or at the user's next click, which goes through to the page.
   `gone` → a "Not on this page" toast, and the chip then wears the
   `location-disabled` icon and says so in its tooltip; a later click looks
-  again. A tag with no `element` draws a disabled-looking chip whose click
+  again. Every miss is logged to the browser channel `show-me`
+  (`~/.singularity/worktrees/<wt>/logs/show-me.jsonl`): the path and element
+  asked for, the URL, and `resolveUiContext`'s `near` — the same element
+  elsewhere (its path, shown or not) and the controls shown where the path
+  points. Read it before trying to reproduce a "Not on this page". A tag with no `element` draws a disabled-looking chip whose click
   throws. `pointAt` throws while a tour runs — left loud.
 - **One step.** Next through the message's other show-me tags is not offered:
   an inline renderer is handed its tag only, not the message around it.
@@ -30,7 +34,7 @@ descriptor (`button — Share`, without a `×N`). No hand-written anchor labels.
 
 ## Plugin reference
 
-- Description: Renders <show-me path="…" element="…">label</show-me> in an agent's reply — an element of the live page named by its ui-context lineage path and element descriptor (an outline entry) — as a target chip: a click resolves it on the page now (resolveUiContext) and highlights it — a pulsing ring (the label as caption only when the element shows no text of its own), non-modal, gone after a few seconds or at the next click (hints pointAt); when nothing on the page matches, the chip says "Not on this page" (a toast, then its own look) and nothing is highlighted. One step at a time.
+- Description: Renders <show-me path="…" element="…">label</show-me> in an agent's reply — an element of the live page named by its ui-context lineage path and element descriptor (an outline entry) — as a target chip: a click resolves it on the page now (resolveUiContext) and highlights it — a pulsing ring (the label as caption only when the element shows no text of its own), non-modal, gone after a few seconds or at the next click (hints pointAt); when nothing on the page matches, the chip says "Not on this page" (a toast, then its own look) and nothing is highlighted, the miss logged with what the page held instead (browser log channel show-me). One step at a time.
 - Web:
   - Contributes: `ActiveData.Tag` "show-me" → `ShowMeBlock`
   - Uses:
@@ -39,6 +43,7 @@ descriptor (`button — Share`, without a `×N`). No hand-written anchor labels.
     - `primitives/css/link-chip.LinkChip`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/ui-kit.cn`
+    - `primitives/log-channels.clientLog`
     - `primitives/ui-context.resolveUiContext`
     - `shell/toast.showToast`
     - `ui/icons.Icon`

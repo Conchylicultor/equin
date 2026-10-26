@@ -55,6 +55,19 @@ export function formatLineageNode(n: LineageNode): string {
   return `${n.pluginId ?? ""}#${n.regionKind}:${n.id}${label}`;
 }
 
+/**
+ * What makes two nodes the same node: the formatted node without a region's
+ * `label`. The label is the producer's prose about where the region sits
+ * among its siblings ("column 2 of 2"), which changes as siblings come and go
+ * while the region stays the one it was — so a reader matching a written path
+ * against the page compares identities, never the labels.
+ */
+export function lineageNodeIdentity(n: LineageNode): string {
+  return formatLineageNode(
+    n.kind === "region" ? { ...n, label: undefined } : n,
+  );
+}
+
 /** The separator between nodes — written by the formatter, read by the parser,
  *  spelled once so the two cannot drift. */
 const PATH_SEP = " > ";

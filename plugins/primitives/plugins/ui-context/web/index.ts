@@ -26,7 +26,11 @@ export {
   DEFAULT_OUTLINE_LIMIT,
   formatOutline,
 } from "./internal/outline";
-export type { UiContextRef, UiContextResolution } from "./internal/resolve";
+export type {
+  UiContextNear,
+  UiContextRef,
+  UiContextResolution,
+} from "./internal/resolve";
 export { resolveUiContext } from "./internal/resolve";
 export {
   isBoxlessMarker,

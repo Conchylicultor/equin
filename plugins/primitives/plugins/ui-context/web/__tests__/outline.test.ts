@@ -148,7 +148,30 @@ describe("resolveUiContext", () => {
         path: "pages/share@PaneToolbar.Item > apps.pages.shell@apps.app",
         element: "button — Share",
       }),
-    ).toEqual({ kind: "gone" });
+    ).toMatchObject({ kind: "gone" });
+  });
+
+  it("matches a pane whatever its column label says now", () => {
+    mount();
+    const share = document.querySelector('[aria-label="Share"]');
+    // Written while the pane was column 2 of 2; another column has since
+    // opened or closed. The label is position, not identity.
+    for (const path of [
+      "apps.pages.shell@apps.app > pages/page#pane:page[column 2 of 3] > pages/share@PaneToolbar.Item",
+      "pages/page#pane:page[column 2 of 2]",
+      "pages/page#pane:page",
+    ])
+      expect(resolveUiContext({ path, element: "button — Share" })).toEqual({
+        kind: "found",
+        el: share,
+      });
+    // A different pane id is a different pane.
+    expect(
+      resolveUiContext({
+        path: "pages/page#pane:other[column 1 of 1]",
+        element: "button — Share",
+      }).kind,
+    ).toBe("gone");
   });
 
   it("prefers an exact path over a partial reading of it", () => {
@@ -184,7 +207,48 @@ describe("resolveUiContext", () => {
       { path: "", element: "button — Share" },
       { path: PANE_PATH, element: "Share" },
     ])
-      expect(resolveUiContext(ref)).toEqual({ kind: "gone" });
+      expect(resolveUiContext(ref)).toMatchObject({ kind: "gone" });
+  });
+
+  it("says what the page holds instead when gone", () => {
+    mount();
+    expect(
+      resolveUiContext({ path: PANE_PATH, element: "button — Aria hidden" }),
+    ).toEqual({
+      kind: "gone",
+      near: {
+        notADescriptor: false,
+        // There, but withdrawn.
+        sameElement: [{ path: PANE_PATH, shown: false }],
+        // What is shown where the path points (a renamed control shows here).
+        underPath: [
+          "button — Share",
+          "button — Open",
+          "div[role=tab] — Details",
+          "a — Read more",
+          "button",
+          "button — Mine",
+        ],
+      },
+    });
+    // Elsewhere on the page: the same control, under another path.
+    expect(
+      resolveUiContext({
+        path: "pages/other#pane:x",
+        element: "button — Share",
+      }),
+    ).toMatchObject({
+      kind: "gone",
+      near: {
+        sameElement: [
+          { path: `${PANE_PATH} > pages/share@PaneToolbar.Item`, shown: true },
+        ],
+      },
+    });
+    expect(resolveUiContext({ path: PANE_PATH, element: "Share" })).toEqual({
+      kind: "gone",
+      near: { notADescriptor: true, sameElement: [], underPath: [] },
+    });
   });
 
   it("compares canonical spellings", () => {

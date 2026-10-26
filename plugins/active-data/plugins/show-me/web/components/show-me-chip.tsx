@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { pointAt } from "@plugins/hints/web";
+import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
@@ -13,6 +14,11 @@ const goneIcon = symbol("location-disabled");
 
 const NOT_HERE = "Not on this page";
 
+/** Every miss, with what the page held instead (`resolveUiContext`'s `near`):
+ *  the browser log channel `show-me` (`logs/show-me.jsonl`), so a "Not on this
+ *  page" can be explained afterwards instead of reproduced. */
+const LOG_CHANNEL = "show-me";
+
 /**
  * The chip a `<show-me path element>label</show-me>` draws: the label behind
  * a target. A click finds the element NOW (`resolveUiContext` — the page may
@@ -20,7 +26,8 @@ const NOT_HERE = "Not on this page";
  * (`pointAt`: a ring — plus the label as caption on an element without text of
  * its own — that never blocks the page). When nothing on the page matches, the
  * chip says so — in a toast and, from then on, its own look and tooltip — and
- * nothing is highlighted. A tag without `element` cannot name anything: it draws
+ * nothing is highlighted, and the miss is logged with what the page held
+ * instead. A tag without `element` cannot name anything: it draws
  * as such rather than as a chip that does nothing.
  *
  * One step: Next is not offered (stepping through a message's other show-me
@@ -56,6 +63,14 @@ function ShowMeChip({
   const show = () => {
     const found = resolveUiContext({ path: attrs.path ?? "", element });
     if (found.kind === "gone") {
+      clientLog(
+        LOG_CHANNEL,
+        JSON.stringify({
+          miss: { path: attrs.path ?? "", element },
+          url: window.location.href,
+          near: found.near,
+        }),
+      );
       setGone(true);
       showToast({ title: NOT_HERE, description: label, variant: "info" });
       return;
