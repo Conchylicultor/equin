@@ -16,6 +16,29 @@ guarded too. Never add a hook to `.claude/settings.json` by hand
 (`EQUIN_WORKSPACE_ROOT` → `ctx.workRoot` / `ctx.protectedRoot`): the
 write guards' boundary, for any workspace kind.
 
+## The guard survives a broken checkout
+
+A worktree runs its OWN guards (so an agent can edit and test them), and the
+guard proper loads ~100 of the checkout's modules — the built-in guards, the
+contributed `guard/` folders, and what they import (`prototypes/data-dirs` →
+the app's `shell/core` → `pane/core`, …). One half-done edit anywhere in that
+closure (a re-export of a name just removed) used to crash the hook, and a
+crashed hook refuses every call — including the edit that would fix it.
+
+So `bin/guard.ts` is a **bootstrap** that imports nothing from the repo
+(`bin/bootstrap.ts`, `node:` builtins only — `guards:bootstrap-builtins-only`
+measures its static closure). It loads the guard proper (`bin/hook.ts`) with a
+dynamic `import()`; if that or the run throws, it runs **main's**
+`bin/guard.ts` as a subprocess on the same payload (the hook protocol is the
+contract between the two checkouts, so versions may differ) and adds a notice
+naming the error to the verdict — a denial's reason or the call's additional
+context — on every call until it loads again. It never fails open: in main
+itself, or when main's guard fails too, the hook exits non-zero and the hook
+command blocks. A mistake in the bootstrap files themselves still locks the
+checkout out — keep them tiny.
+
+Plan: `research/2026-10-26-framework-guard-survives-broken-worktree.md`.
+
 ## The stop guard, and why a subagent needs one
 
 A subagent's background-task completion notification is filed under the PARENT

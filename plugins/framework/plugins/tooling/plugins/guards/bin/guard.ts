@@ -1,43 +1,23 @@
 #!/usr/bin/env bun
-import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
-import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
-import { runHook } from "../core/runner";
-
-/**
- * The directories outside the checkout an agent may write into, read from their
- * owners' declarations at hook time.
- *
- * `bin/` is where this can happen at all: a `data-dirs` module is importable
- * from `server`/`shared`/`bin`, never from `core/`, so the guards themselves
- * cannot name a data dir (see `GuardContext.writableDataDirs`). Reading
- * `.path` here — a getter, resolved per read — is what keeps the guard aligned
- * with the declaration when the directory moves.
- *
- * Prototypes qualify precisely because they are NOT in git: `prototypes/CLAUDE.md`
- * tells every agent to write its mock into this tree, and the declaration's
- * `reclaim: never` says the folder on disk is the only copy of that work.
- */
-const writableDataDirs = [prototypesDir.path];
+// The PreToolUse hook's entry point: a bootstrap that imports nothing from the
+// repo, then loads the guard proper (`./hook`) dynamically — so a checkout
+// whose code is mid-edit (a re-export of a removed name anywhere in the guard's
+// import closure) gets main's guards with a notice instead of a hook that
+// refuses every call, including the edit that would fix it.
+// See "The guard survives a broken checkout" in ../CLAUDE.md.
+import { mainCheckoutFallback, runGuardWithFallback } from "./bootstrap";
 
 const chunks: Buffer[] = [];
 for await (const chunk of process.stdin) chunks.push(chunk as Buffer);
 const raw = Buffer.concat(chunks).toString("utf8");
 
-let input: unknown = {};
-if (raw.trim()) {
-  try {
-    input = JSON.parse(raw);
-  } catch (err) {
-    if (!(err instanceof SyntaxError)) throw err;
-    // malformed input — allow (don't block tool use on parse failure)
-    process.exit(0);
-  }
-}
-
-// Set by an app launch for every workspace kind; absent in a human session.
-const workspaceRoot = readEnv("WORKSPACE_ROOT") || null;
-
-await runHook(input as Parameters<typeof runHook>[0], {
-  writableDataDirs,
-  workspaceRoot,
+const result = await runGuardWithFallback({
+  live: async () => (await import("./hook")).guardHook(raw),
+  fallback: () => mainCheckoutFallback(import.meta.path, raw),
 });
+if (result.ok) {
+  process.stdout.write(result.stdout);
+} else {
+  process.stderr.write(`${result.stderr}\n`);
+  process.exitCode = 1;
+}

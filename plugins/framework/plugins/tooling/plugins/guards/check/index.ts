@@ -7,6 +7,8 @@ import {
   CLAUDE_SETTINGS_REL_PATH,
   renderClaudeSettings,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import { importClosure } from "@plugins/framework/plugins/tooling/plugins/import-closure/core";
+import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import { loadGuards } from "../core/load-guards";
 import {
   agentPolicySettings,
@@ -86,4 +88,43 @@ const claudeSettingsInSync: Check = {
   },
 };
 
-export default [matcherCoversGuards, claudeSettingsInSync];
+const GUARDS_BIN = "plugins/framework/plugins/tooling/plugins/guards/bin";
+
+/**
+ * The PreToolUse entry point is a bootstrap that must run whatever state the
+ * checkout's code is in: it loads the guard proper with a dynamic `import()`
+ * and falls back to main's guard when that throws. A static import of any repo
+ * module from the bootstrap puts that module in front of the fallback — one
+ * half-done edit there and every tool call is refused again, the edit that
+ * would fix it included. So its static closure is exactly its own two files.
+ */
+const bootstrapStandsAlone: Check = {
+  id: "guards:bootstrap-builtins-only",
+  description:
+    "the PreToolUse bootstrap (guards/bin/guard.ts) statically loads no repo module but bin/bootstrap.ts — the guard proper is a dynamic import it can fall back from",
+  async run() {
+    const entry = `${GUARDS_BIN}/guard.ts`;
+    const allowed = new Set([entry, `${GUARDS_BIN}/bootstrap.ts`]);
+    const closure = await importClosure(await getWorktreeRoot(), entry, {
+      dynamicImports: "cut",
+    });
+    const extra = [...closure.modules].filter((m) => !allowed.has(m));
+    const external = [...closure.external.keys()];
+    if (extra.length === 0 && external.length === 0) return { ok: true };
+    const lines = [
+      ...extra.map((m) => closure.importChain(m).join(" → ")),
+      ...external.map((spec) => `npm: ${spec}`),
+    ];
+    return {
+      ok: false,
+      message: `the PreToolUse bootstrap statically loads modules a mid-edit checkout can break, so a broken one refuses every tool call:\n    ${lines.join("\n    ")}`,
+      hint: 'Import only node: builtins in guards/bin/guard.ts and bin/bootstrap.ts; reach repo code through guard.ts\'s dynamic import("./hook").',
+    };
+  },
+};
+
+export default [
+  matcherCoversGuards,
+  claudeSettingsInSync,
+  bootstrapStandsAlone,
+];

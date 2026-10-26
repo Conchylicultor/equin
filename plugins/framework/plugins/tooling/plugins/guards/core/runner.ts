@@ -62,12 +62,19 @@ export interface HookOptions {
   workspaceRoot: string | null;
 }
 
+/**
+ * What the hook prints on stdout — Claude Code's PreToolUse output object —
+ * or `null` to let the call through silently. Returned, not written, so the
+ * entry point owns stdout (`bin/guard.ts` adds its fallback notice to it).
+ */
+export type HookOutput = Record<string, unknown>;
+
 export async function runHook(
   input: HookInput,
   options: HookOptions,
-): Promise<void> {
+): Promise<HookOutput | null> {
   const tool = input.tool_name;
-  if (!tool) return;
+  if (!tool) return null;
   const cwd = input.cwd || process.cwd();
   const ctx = createContext(
     cwd,
@@ -112,23 +119,22 @@ export async function runHook(
       // Every denial leads with what did NOT happen — added here, at the one
       // exit every guard's refusal passes through, so no guard can forget it.
       const reason = withRefusalBanner(tool, current, verdict.reason);
-      process.stdout.write(
-        JSON.stringify({
-          ...(verdict.fatal ? { continue: false, stopReason: reason } : {}),
-          hookSpecificOutput: {
-            hookEventName: "PreToolUse",
-            permissionDecision: "deny",
-            permissionDecisionReason: reason,
-          },
-        }),
-      );
-      return;
+      return {
+        ...(verdict.fatal ? { continue: false, stopReason: reason } : {}),
+        hookSpecificOutput: {
+          hookEventName: "PreToolUse",
+          permissionDecision: "deny",
+          permissionDecisionReason: reason,
+        },
+      };
     }
   }
 
+  // Recorded only when the call goes through: a denial above returns without telling the
+  // agent anything, so a `once` inform must still be pending for its retry.
+  recordInformed(ctx.sessionId, agent, informedOnce);
   if (informs.length > 0 || rewritten) {
-    process.stdout.write(
-      JSON.stringify({
+    return {
         hookSpecificOutput: {
           hookEventName: "PreToolUse",
           // Without a `permissionDecision`, Claude Code applies `updatedInput`
@@ -139,10 +145,7 @@ export async function runHook(
             ? { additionalContext: informs.join("\n\n") }
             : {}),
         },
-      }),
-    );
+    };
   }
-  // Recorded only once written: a denial above returns without telling the
-  // agent anything, so a `once` inform must still be pending for its retry.
-  recordInformed(ctx.sessionId, agent, informedOnce);
+  return null;
 }
