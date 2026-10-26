@@ -1,4 +1,4 @@
-import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
 import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
@@ -7,9 +7,11 @@ import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/we
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import {
+  EndThreadButton,
   StepLabel,
   useThreadProgress,
 } from "@plugins/conversations/plugins/agent-thread/web";
+import { releaseRun } from "../internal/ask-store";
 import { ASK_RESULTS } from "../internal/use-ask";
 import { useRunQuestion } from "../internal/use-question";
 import type { DragHandle } from "./ask-card";
@@ -22,7 +24,8 @@ const askIcon = symbol("forum");
  * once it answered, the question — with a dot until you have looked. A click
  * opens the card again where it was; a press that travels drags it, like the
  * card's header (`useDragGesture` keeps the plain press a click). The label
- * takes the frame's fixed width and ellipsizes its tail.
+ * takes the pill's width beside the × and ellipsizes its tail. The × ends
+ * the conversation and closes it, as the card's own × does.
  */
 export function AskPill({
   conversationId,
@@ -38,16 +41,17 @@ export function AskPill({
   const p = progress.status === "ready" ? progress.data : null;
   const working = p === null || p.state === "working";
   return (
-    <Button
-      variant="ghost"
-      shape="pill"
-      className="w-full cursor-grab touch-none"
-      onClick={onOpen}
-      onPointerDown={drag}
-      aria-label="Show Ask equin"
-    >
-      {working ? <Spinner /> : <Icon icon={askIcon} className="size-4" />}
-      <Line as="span" className={fillClasses("x")}>
+    <Line className="w-full pr-2xs">
+      <Button
+        variant="ghost"
+        shape="pill"
+        className={cn(fillClasses("x"), "cursor-grab touch-none")}
+        onClick={onOpen}
+        onPointerDown={drag}
+        aria-label="Show Ask equin"
+      >
+        {working ? <Spinner /> : <Icon icon={askIcon} className="size-4" />}
+        <Line as="span" className={fillClasses("x")}>
         <Text variant="caption">
           {p === null ? (
             "Ask equin"
@@ -65,8 +69,14 @@ export function AskPill({
             (question ?? "Ask equin")
           )}
         </Text>
-      </Line>
-      {p !== null && p.unseen ? <StatusDot colorClass="bg-primary" /> : null}
-    </Button>
+        </Line>
+        {p !== null && p.unseen ? <StatusDot colorClass="bg-primary" /> : null}
+      </Button>
+      <EndThreadButton
+        conversationId={conversationId}
+        display="icon"
+        onEnded={() => releaseRun({ close: true })}
+      />
+    </Line>
   );
 }

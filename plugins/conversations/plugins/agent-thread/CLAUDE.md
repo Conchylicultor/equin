@@ -101,12 +101,15 @@ newest turn's finished steps, its running step, its accepted results, and
   (`useRegisterPromptComposer`): a `<go>`'s ▶ sends the choice down the
   composer's own send path (resume-then-send for an ended conversation), its
   text inserts at the editor's caret, and `canSend` is the composer's own gate.
-- `<EndThreadButton conversationId onEnded? />` — **Done**, the UI's
+- `<EndThreadButton conversationId onEnded? display? />` — **Done**, the UI's
   `exit_clean`: a ghost button (tooltip "Close the conversation and drop its
   task") that calls the conversation view's `dropAndExit` (drop-and-exit core —
   drops the task unless work landed, which a scratch run never has, then closes
   the conversation), then `onEnded`. Renders nothing until the row is in and
-  once it is `done` / `gone`. A failure is a toast. The host places it (the
+  once it is `done` / `gone`. `display="icon"` is a × ("Close") instead, the
+  host's one way to put the thread away: pending until the row is in, always
+  shown, and once the conversation ended a click only calls `onEnded`
+  (Ask equin's card and pill). A failure is a toast. The host places it (the
   thread's `headerAction`, typically) and clears its own selection in
   `onEnded`.
 - `AgentThreadView` — the same look over given turns, every live part handed

@@ -151,6 +151,7 @@ export function AskThreadCard({
               />
               <EndThreadButton
                 conversationId={conversationId}
+                display="icon"
                 onEnded={() => releaseRun({ close: true })}
               />
             </CardHeader>
