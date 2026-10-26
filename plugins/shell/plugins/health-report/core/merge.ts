@@ -138,29 +138,33 @@ export type ReportItem<R> =
   { kind: "row"; row: R } | { kind: "quiet"; rows: R[] };
 
 /**
- * Fold the quiet rows into ONE card, placed after every other row.
+ * Fold the quiet rows into ONE card, and keep every row that could be in it
+ * beside it, after every other row.
  *
  * A row is quiet when it is a status row with nothing to show beyond its
  * summary (`isPlain`: no glance, no detail, no actions) and it is `ok`: a line
  * that only says "fine". Several of them stacked are noise, so they collapse
  * into one card that lists them when expanded. The moment one is not `ok` it
- * leaves the card and sorts on its own, so a problem is never hidden behind a
- * chevron. The card sits last so a row leaving or rejoining it never moves
- * the rows around it. Fewer than two quiet rows fold nothing — a card of one
- * is a row.
+ * leaves the card so a problem is never hidden behind a chevron — but it stays
+ * next to it, just above, among the other plain rows: where the user saw it
+ * while it was fine. Plain rows (in or out of the card) sit after every other
+ * row, so a row leaving or rejoining the card never moves the rows around it.
+ * Fewer than two quiet rows fold nothing — a card of one is a row.
  */
 export function foldQuietRows<R extends SortableRow>(
   sorted: ReadonlyArray<R>,
   statusOf: (row: R) => ReportedStatus,
   isPlain: (row: R) => boolean,
 ): ReportItem<R>[] {
+  const plain = (row: R): boolean => row.kind === "status" && isPlain(row);
   const isQuiet = (row: R): boolean =>
-    row.kind === "status" && isPlain(row) && levelOf(statusOf(row)) === "ok";
-  const quiet = sorted.filter(isQuiet);
-  if (quiet.length < 2) return sorted.map((row) => ({ kind: "row", row }));
-  const items: ReportItem<R>[] = sorted
-    .filter((row) => !isQuiet(row))
-    .map((row) => ({ kind: "row", row }));
+    plain(row) && levelOf(statusOf(row)) === "ok";
+  const asRow = (row: R): ReportItem<R> => ({ kind: "row", row });
+  const items = sorted.filter((row) => !plain(row)).map(asRow);
+  const plainRows = sorted.filter(plain);
+  const quiet = plainRows.filter(isQuiet);
+  if (quiet.length < 2) return [...items, ...plainRows.map(asRow)];
+  items.push(...plainRows.filter((row) => !isQuiet(row)).map(asRow));
   items.push({ kind: "quiet", rows: quiet });
   return items;
 }

@@ -87,8 +87,9 @@ status row with nothing beyond its summary (no `glance`, `component` or
 `actions`; a `remedy` is not drawn while `ok`, so it does not count) that is
 `ok` only says "fine", so two or more of them collapse into one card — their titles, "All normal" — that lists each when expanded. A row
 leaves the card the moment it is not `ok`, so a problem is never behind a
-chevron. The card sits after every other row, so a row leaving or rejoining it
-never shifts the rest. The rule reads only the row's shape and state, never its
+chevron — but it stays beside it (just above), where it sat while fine: every
+plain row, folded or not, sits after every other row, so a row leaving or
+rejoining the card never shifts the rest. The rule reads only the row's shape and state, never its
 id.
 
 Row order: the slot's reorder layout

@@ -64,8 +64,9 @@ function ContributedRow({
 /**
  * The report: a header with the merged dot and the verdict, then every row in
  * a fixed order — info rows first, then status rows, each in the slot's layout
- * order, never by status — with the plain rows that are fine folded into one expandable card
- * at the end (`foldQuietRows`). No footer:
+ * order, never by status — with the plain rows at the end, those that are fine
+ * folded into one expandable card and the rest just above it (`foldQuietRows`).
+ * No footer:
  * a row that has a pane to point at does so through its own `actions`, so the
  * report never names a contributor.
  *

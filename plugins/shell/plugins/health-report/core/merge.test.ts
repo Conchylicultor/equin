@@ -204,30 +204,31 @@ describe("foldQuietRows", () => {
     expect(
       shape([
         row("info", undefined, true, "info"),
-        row("bad", critical()),
+        row("bad", critical(), false),
         row("conn", ok()),
         row("queue", ok(), false),
         row("db", ok()),
-        row("n/a", notApplicable()),
+        row("n/a", notApplicable(), false),
       ]),
     ).toEqual(["info", "bad", "queue", "n/a", ["conn", "db"]]);
   });
 
-  it("leaves a plain row that is not ok on its own", () => {
+  it("puts a plain row that is not ok on its own, just above the card", () => {
     expect(
       shape([
         row("db", attention()),
+        row("queue", ok(), false),
         row("conn", ok()),
         row("reads", ok()),
         row("late", undefined),
+        row("machine", critical(), false),
       ]),
-    ).toEqual(["db", "late", ["conn", "reads"]]);
+    ).toEqual(["queue", "machine", "db", "late", ["conn", "reads"]]);
   });
 
-  it("folds nothing when fewer than two rows are quiet", () => {
-    expect(shape([row("db", attention()), row("conn", ok())])).toEqual([
-      "db",
-      "conn",
-    ]);
+  it("folds nothing when fewer than two rows are quiet, plain rows still last", () => {
+    expect(
+      shape([row("db", attention()), row("queue", ok(), false), row("conn", ok())]),
+    ).toEqual(["queue", "db", "conn"]);
   });
 });
