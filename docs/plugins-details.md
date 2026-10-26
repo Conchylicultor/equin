@@ -7106,6 +7106,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/scope/surface-id.useSurfaceTabId`
               - `primitives/shortcuts.getFocusedSurfaceId`
               - `primitives/shortcuts.targetClaimsKey`
+              - `primitives/shortcuts.usePlayPauseShortcut`
               - `primitives/shortcuts.useSurfaceShortcuts`
         - **`covers`** — Serves Sonata song covers: a content-addressed SVG cache (rendered on request, deduped while in flight), immutable while the URL's version is current.
           - Core:
@@ -41862,7 +41863,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/file-viewer.FileViewer`
               - `primitives/file-viewer.NoPreview`
               - `primitives/file-viewer.UnloadedFile`
-              - `primitives/shortcuts.useSurfaceShortcuts`
+              - `primitives/shortcuts.usePlayPauseShortcut`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/density --space-lg`
@@ -44682,6 +44683,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `subscribeFocusedSurface`
           - `targetClaimsKey`
           - `useFocusedSurfaceId`
+          - `usePlayPauseShortcut`
           - `useSurfaceShortcuts`
       - Cross-plugin:
         - Imported by: 31 plugins — full list in [`plugins/primitives/plugins/shortcuts/REFERENCE.md`](../plugins/primitives/plugins/shortcuts/REFERENCE.md)

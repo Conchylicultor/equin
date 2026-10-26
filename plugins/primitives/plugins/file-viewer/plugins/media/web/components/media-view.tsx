@@ -13,25 +13,13 @@ import {
 } from "@plugins/primitives/plugins/file-viewer/web";
 import { useAssetSrc } from "@plugins/infra/plugins/endpoints/web";
 import { FileTypeIcon } from "@plugins/primitives/plugins/file-type/web";
-import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
+import { usePlayPauseShortcut } from "@plugins/primitives/plugins/shortcuts/web";
 import type { MediaKind } from "../internal/supports";
-
-/**
- * Whether Space landing on `target` already means something there: the media
- * element's own controls toggle playback themselves (a second toggle would
- * undo it), and a focused button is activated by Space.
- */
-function spaceClaimedBy(target: EventTarget | null): boolean {
-  return (
-    target instanceof Element &&
-    target.closest("video, audio, button, [role=button], a[href]") !== null
-  );
-}
 
 /**
  * The browser's native player with its controls, playing as soon as it opens
  * (a browser that refuses unprompted playback leaves it paused). Space plays /
- * pauses from anywhere on the surface. The host raw route answers byte
+ * pauses from anywhere on the surface (`usePlayPauseShortcut`). The host raw route answers byte
  * ranges, so seeking streams instead of downloading the whole file. A file the
  * browser cannot decode (unsupported codec, unreadable) shows the "No preview"
  * body, with Open with default app.
@@ -53,23 +41,17 @@ function LoadedMediaView({
   // Keyed by address so a failure on one file never sticks to the next.
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
 
-  const shortcuts = useMemo(
-    () => [
-      {
-        id: "file-viewer.media.play-pause",
-        keys: "space",
-        label: "Play / pause",
-        when: (e: KeyboardEvent) => media !== null && !spaceClaimedBy(e.target),
-        handler: () => {
-          if (media === null) return;
-          if (media.paused) void media.play();
-          else media.pause();
-        },
-      },
-    ],
+  const toggle = useMemo(
+    () =>
+      media === null
+        ? null
+        : () => {
+            if (media.paused) void media.play();
+            else media.pause();
+          },
     [media],
   );
-  useSurfaceShortcuts(shortcuts);
+  usePlayPauseShortcut(toggle);
 
   if (failedSrc === src) return <NoPreview file={file} />;
   const common = {

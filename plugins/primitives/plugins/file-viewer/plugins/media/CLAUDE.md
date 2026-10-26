@@ -19,7 +19,7 @@
     - `primitives/file-viewer.FileViewer`
     - `primitives/file-viewer.NoPreview`
     - `primitives/file-viewer.UnloadedFile`
-    - `primitives/shortcuts.useSurfaceShortcuts`
+    - `primitives/shortcuts.usePlayPauseShortcut`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/density --space-lg`
