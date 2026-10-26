@@ -9,9 +9,18 @@ export type {
   RelativeRef,
   RelativeRefSyntax,
 } from "./types";
-export { BOUNDARY_CONFIG, COMPOSITIONS_MANIFEST, findPluginRefs } from "./find";
+export {
+  BOUNDARY_CONFIG,
+  COMPOSITIONS_MANIFEST,
+  COMPOSITIONS_SOURCE,
+  findPluginRefs,
+} from "./find";
 export type { FindPluginRefsOptions } from "./find";
-export { scanAsPluginIdRefs, scanRuntimeExceptionRefs } from "./ts-refs";
+export {
+  scanAsPluginIdRefs,
+  scanCompositionSourceRefs,
+  scanRuntimeExceptionRefs,
+} from "./ts-refs";
 export {
   scanCompositionManifestRefs,
   scanReorderItemRefs,

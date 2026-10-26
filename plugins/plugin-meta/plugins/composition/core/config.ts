@@ -59,36 +59,38 @@ import { SERVE_MODE_OPTIONS } from "./serve-mode";
  * the place and map page blocks and the data view's map (Google Maps, auth, the
  * map primitive).
  */
-const AGENT_MANAGER_ENTRY_POINTS = [
-  "apps.agent-manager.**",
-  "conversations.**",
-  "tasks.**",
-  "fields.**",
-  "active-data.**",
-  "!active-data.song.**",
-  "!active-data.event-source.**",
-  "!active-data.prototype.**",
-  "page.**",
-  "!page.place.**",
-  "!page.map.**",
-  "ui.tokens.rich-text-palette",
-  "code-explorer.**",
-  "primitives.file-viewer.**",
-  "primitives.prompt-editor.**",
-  "primitives.syntax-highlight.**",
-  "primitives.data-view.**",
-  "!primitives.data-view.map.**",
-  "reorder.**",
-  "apps-core.**",
-  "shell.**",
-  "fullscreen.**",
-  "ui.breadcrumb-separator.**",
-  "ui.segmented-progress-bar.**",
-  "ui.sidebar-framing.**",
-  "ui.tab-bar.**",
-  "ui.tree-disclosure.**",
-  "ui.tweakcn.**",
-];
+const AGENT_MANAGER = {
+  entryPoints: [
+    "apps.agent-manager.**",
+    "conversations.**",
+    "tasks.**",
+    "fields.**",
+    "active-data.**",
+    "!active-data.song.**",
+    "!active-data.event-source.**",
+    "!active-data.prototype.**",
+    "page.**",
+    "!page.place.**",
+    "!page.map.**",
+    "ui.tokens.rich-text-palette",
+    "code-explorer.**",
+    "primitives.file-viewer.**",
+    "primitives.prompt-editor.**",
+    "primitives.syntax-highlight.**",
+    "primitives.data-view.**",
+    "!primitives.data-view.map.**",
+    "reorder.**",
+    "apps-core.**",
+    "shell.**",
+    "fullscreen.**",
+    "ui.breadcrumb-separator.**",
+    "ui.segmented-progress-bar.**",
+    "ui.sidebar-framing.**",
+    "ui.tab-bar.**",
+    "ui.tree-disclosure.**",
+    "ui.tweakcn.**",
+  ],
+};
 
 export const compositionsConfig = defineConfig({
   name: "compositions",
@@ -267,13 +269,13 @@ export const compositionsConfig = defineConfig({
         // Full = lean + the self-improvement PACK (first-class `extends`, replacing
         // the formerly-inlined ids). full \ lean is still exactly the pack's set —
         // now sourced through the reference rather than duplicated here.
-        // Both rows share AGENT_MANAGER_ENTRY_POINTS (above), so the two profiles
+        // Both rows share AGENT_MANAGER.entryPoints (above), so the two profiles
         // differ ONLY by the pack.
         {
           id: "agent-manager",
           name: "agent-manager",
           category: "profile",
-          entryPoints: [...AGENT_MANAGER_ENTRY_POINTS],
+          entryPoints: [...AGENT_MANAGER.entryPoints],
           selectedContributors: ["ui.theme-toggle"],
           extends: ["self-improvement", "served-baseline"],
           excludes: [] as string[],
@@ -284,7 +286,7 @@ export const compositionsConfig = defineConfig({
           id: "agent-manager-lean",
           name: "agent-manager-lean",
           category: "profile",
-          entryPoints: [...AGENT_MANAGER_ENTRY_POINTS],
+          entryPoints: [...AGENT_MANAGER.entryPoints],
           selectedContributors: ["ui.theme-toggle"],
           extends: ["served-baseline"],
           excludes: [] as string[],
@@ -364,10 +366,10 @@ export const compositionsConfig = defineConfig({
         },
 
         // ── Apps: lean baseline (entry only) for every other top-level app ──────
-        app("home", "apps.home"),
-        app("pages", "apps.pages"),
-        app("settings", "apps.settings"),
-        app("studio", "apps.studio"),
+        app("home", { entryPoints: ["apps.home.**"] }),
+        app("pages", { entryPoints: ["apps.pages.**"] }),
+        app("settings", { entryPoints: ["apps.settings.**"] }),
+        app("studio", { entryPoints: ["apps.studio.**"] }),
         // The linchpin edge is now CUT: infra.health no longer hard-imports
         // reports (its wedge watchdog emits onto a neutral report-sink that
         // reports.crash registers into), so served-baseline no longer drags
@@ -384,17 +386,17 @@ export const compositionsConfig = defineConfig({
         // agent-runtime bundle in. Likewise transcription launches an agent
         // (a scratch-workspace conversation), which a standalone Sonata has no
         // runtime for.
-        {
-          ...app("sonata", "apps.sonata", [], ["agent-runtime", "auth"]),
+        app("sonata", {
           entryPoints: [
             "apps.sonata.**",
             "!apps.sonata.sources.midi.file-preview.**",
             "!apps.sonata.transcription.**",
           ],
-        },
-        app("debug", "apps.debug"),
-        app("deploy", "apps.deploy"),
-        app("file-explorer", "apps.file-explorer"),
+          excludes: ["agent-runtime", "auth"],
+        }),
+        app("debug", { entryPoints: ["apps.debug.**"] }),
+        app("deploy", { entryPoints: ["apps.deploy.**"] }),
+        app("file-explorer", { entryPoints: ["apps.file-explorer.**"] }),
 
         // The public equin site: the whole `apps.website` subtree
         // (`"apps.website.**"` seeds the `apps.website` node + its ENTIRE
@@ -424,24 +426,24 @@ export const compositionsConfig = defineConfig({
         // containment always carries the shared baseline (`apps-core.layout`,
         // `infra.health`, `shell.toast`, the token groups) that every app extends.
         // `excludes` names infra bundles — that is the whole vocabulary.
-        app("website", "apps.website", [], ["agent-runtime", "auth"]),
+        app("website", {
+          entryPoints: ["apps.website.**"],
+          excludes: ["agent-runtime", "auth"],
+        }),
 
         // ── Subsystems: infra closures as building blocks / inspection lenses ───
-        subsystem("data", ["database"]),
-        subsystem("jobs-events", [
-          "infra.jobs",
-          "infra.events",
-          "infra.secrets",
-        ]),
-        subsystem("live-state", [
-          "primitives.live-state",
-          "primitives.networking",
-        ]),
-        subsystem("auth", ["auth"]),
-        subsystem("search", ["search.engine"]),
-        subsystem("history", ["history.engine"]),
-        subsystem("conversations", ["conversations"]),
-        subsystem("tasks-domain", ["tasks"]),
+        subsystem("data", { entryPoints: ["database.**"] }),
+        subsystem("jobs-events", {
+          entryPoints: ["infra.jobs.**", "infra.events.**", "infra.secrets.**"],
+        }),
+        subsystem("live-state", {
+          entryPoints: ["primitives.live-state.**", "primitives.networking.**"],
+        }),
+        subsystem("auth", { entryPoints: ["auth.**"] }),
+        subsystem("search", { entryPoints: ["search.engine.**"] }),
+        subsystem("history", { entryPoints: ["history.engine.**"] }),
+        subsystem("conversations", { entryPoints: ["conversations.**"] }),
+        subsystem("tasks-domain", { entryPoints: ["tasks.**"] }),
         // The agent-runtime infra closure: what a self-contained app must NOT
         // bundle. Reuses the conversations/tasks-domain subsystems via `extends`
         // and adds the deep taproots (worktree / git-watcher / claude-cli) plus
@@ -466,10 +468,10 @@ export const compositionsConfig = defineConfig({
           serve: "off",
           home: "",
         },
-        subsystem("page-editor", ["page"]),
-        subsystem("fields", ["fields"]),
-        subsystem("design-system", ["primitives.css"]),
-        subsystem("mcp", ["infra.mcp"]),
+        subsystem("page-editor", { entryPoints: ["page.**"] }),
+        subsystem("fields", { entryPoints: ["fields.**"] }),
+        subsystem("design-system", { entryPoints: ["primitives.css.**"] }),
+        subsystem("mcp", { entryPoints: ["infra.mcp.**"] }),
         // The reusable baseline EVERY gateway-served app composition `extends`:
         // what BEING SERVED needs, and nothing a capability needs. Each entry is
         // a dead end nothing hard-imports, mounted from Core.Root:
@@ -503,12 +505,14 @@ export const compositionsConfig = defineConfig({
         //
         // Entry points (not contributors) so they're forced into the hard closure
         // unconditionally; the theme-customizer UI stays opt-in/soft.
-        subsystem("served-baseline", [
-          "apps-core.layout",
-          "infra.health",
-          "ui.theme-engine",
-          "primitives.dom.overscroll-hint",
-        ]),
+        subsystem("served-baseline", {
+          entryPoints: [
+            "apps-core.layout.**",
+            "infra.health.**",
+            "ui.theme-engine.**",
+            "primitives.dom.overscroll-hint.**",
+          ],
+        }),
 
         // ── Opt-in root mounts ───────────────────────────────────────────────────
         // A plugin mounted from `Core.Root` that nothing imports cannot be a
@@ -522,53 +526,63 @@ export const compositionsConfig = defineConfig({
         // calls, …) and files a report. Reports feed the self-improvement loop,
         // so they ship with it — the pack below extends this row — and an app
         // released without self-improvement ships none of them.
-        subsystem("reporters", [
-          "reports.adaptive-bar",
-          "reports.caret-flight",
-          "reports.collab-hydration",
-          "reports.endpoint-errors",
-          "reports.icon-family-gap",
-          "reports.live-state-stale-drop",
-          "reports.main-thread-stall",
-          "reports.mutation-errors",
-          "reports.optimistic-divergence",
-          "reports.optimistic-rejection",
-          "reports.page-undo-conflict",
-          "reports.panel-overflow",
-          "reports.plugin-load-errors",
-          "reports.render-loop",
-          "reports.resource-errors",
-          "reports.theme-resolution",
-          "reports.viewport-escape",
-        ]),
+        subsystem("reporters", {
+          entryPoints: [
+            "reports.adaptive-bar.**",
+            "reports.caret-flight.**",
+            "reports.collab-hydration.**",
+            "reports.endpoint-errors.**",
+            "reports.icon-family-gap.**",
+            "reports.live-state-stale-drop.**",
+            "reports.main-thread-stall.**",
+            "reports.mutation-errors.**",
+            "reports.optimistic-divergence.**",
+            "reports.optimistic-rejection.**",
+            "reports.page-undo-conflict.**",
+            "reports.panel-overflow.**",
+            "reports.plugin-load-errors.**",
+            "reports.render-loop.**",
+            "reports.resource-errors.**",
+            "reports.theme-resolution.**",
+            "reports.viewport-escape.**",
+          ],
+        }),
         // Debug instrumentation mounted at the root: the render profiler, the
         // latency ledger and the synthetic live-state emitter. Main only today.
-        subsystem("diagnostics", [
-          "debug.latency-ledger",
-          "debug.live-state-churn.emit",
-          "debug.render-profiler",
-        ]),
+        subsystem("diagnostics", {
+          entryPoints: [
+            "debug.latency-ledger.**",
+            "debug.live-state-churn.emit.**",
+            "debug.render-profiler.**",
+          ],
+        }),
         // Opt-in root features no released app selects yet: the Cmd+K palette,
         // and the hints host (onboarding tips and tours) until the plugins that
         // declare hints reach it by import.
-        subsystem("root-features", ["primitives.command-palette", "hints"]),
+        subsystem("root-features", {
+          entryPoints: ["primitives.command-palette.**", "hints.**"],
+        }),
 
         // ── Packs: reusable contributor sets apps opt into via `extends` ────────
         {
-          ...pack("self-improvement", [
-            "wish.element-picker",
-            "review",
-            "reports.crash",
-            "reports.launch-fix",
-            "screenshot.draw-on-app",
-          ]),
+          ...pack("self-improvement", {
+            selectedContributors: [
+              "wish.element-picker",
+              "review",
+              "reports.crash",
+              "reports.launch-fix",
+              "screenshot.draw-on-app",
+            ],
+          }),
           extends: ["reporters"],
         },
-        pack("theming", [
-          "ui.theme-toggle",
-          "ui.tweakcn",
-          "ui.tweakcn.community-browser",
-        ]),
+        pack("theming", {
+          selectedContributors: [
+            "ui.theme-toggle",
+            "ui.tweakcn",
+            "ui.tweakcn.community-browser",
+          ],
+        }),
         // The app-surface CHROME, opt-in and extended by nothing: the tab strip,
         // the app rail (its default `rail` variant), the multi-placement
         // surface (docked / floating / solo) and the global action bar.
@@ -576,22 +590,30 @@ export const compositionsConfig = defineConfig({
         // served-baseline) renders a chrome-less surface — tabs + tab-surface
         // substrate only — so a composition ships the tab bar / rail / placements
         // only by `extends`-ing this pack (or selecting individual contributors).
-        pack("app-chrome", [
-          "apps-core.tab-bar",
-          "apps-core.app-rail-framing",
-          "apps-core.app-rail-framing.rail",
-          "apps-core.surface",
-          "apps-core.surface.docked",
-          "apps.desktop",
-          "apps-core.surface.solo",
-          // The floating action bar (Improve, theme, view options). Opt-in: an
-          // app is releasable without it, and then shows no action strip.
-          "shell.global-action-bar",
-        ]),
+        pack("app-chrome", {
+          selectedContributors: [
+            "apps-core.tab-bar",
+            "apps-core.app-rail-framing",
+            "apps-core.app-rail-framing.rail",
+            "apps-core.surface",
+            "apps-core.surface.docked",
+            "apps.desktop",
+            "apps-core.surface.solo",
+            // The floating action bar (Improve, theme, view options). Opt-in: an
+            // app is releasable without it, and then shows no action strip.
+            "shell.global-action-bar",
+          ],
+        }),
       ],
     }),
   },
 });
+
+// Every plugin id below is written inside an `entryPoints:` /
+// `selectedContributors:` array literal — the one spelling the plugin-refs
+// locator reads in this file, so `./equin plugin move` rewrites it. An id passed
+// any other way (a bare helper argument, a const array) is invisible to it, and
+// `plugin-refs:compositions-source-covers-origin` fails.
 
 /**
  * A lean app baseline: entry = the app shell umbrella, nothing soft opted in.
@@ -601,18 +623,20 @@ export const compositionsConfig = defineConfig({
  */
 function app(
   name: string,
-  entry: string,
-  extraExtends: string[] = [],
-  excludes: string[] = [],
+  opts: {
+    entryPoints: string[];
+    extraExtends?: string[];
+    excludes?: string[];
+  },
 ) {
   return {
     id: name,
     name,
     category: "app" as const,
-    entryPoints: [entry + ".**"],
+    entryPoints: opts.entryPoints,
     selectedContributors: [] as string[],
-    extends: ["served-baseline", ...extraExtends],
-    excludes,
+    extends: ["served-baseline", ...(opts.extraExtends ?? [])],
+    excludes: opts.excludes ?? [],
     serve: "off",
     // An app row's name IS its `defineApp` id — the app it ships is its home.
     home: name,
@@ -620,12 +644,12 @@ function app(
 }
 
 /** A subsystem closure: one or more infra umbrellas/plugins as entry points. */
-function subsystem(name: string, entries: string[]) {
+function subsystem(name: string, opts: { entryPoints: string[] }) {
   return {
     id: name,
     name,
     category: "subsystem" as const,
-    entryPoints: entries.map((e) => e + ".**"),
+    entryPoints: opts.entryPoints,
     selectedContributors: [] as string[],
     extends: [] as string[],
     excludes: [] as string[],
@@ -635,13 +659,13 @@ function subsystem(name: string, entries: string[]) {
 }
 
 /** A pack: an entry-less contributor SET other compositions reference via `extends`. */
-function pack(name: string, contributors: string[]) {
+function pack(name: string, opts: { selectedContributors: string[] }) {
   return {
     id: name,
     name,
     category: "pack" as const,
     entryPoints: [] as string[],
-    selectedContributors: contributors,
+    selectedContributors: opts.selectedContributors,
     extends: [] as string[],
     excludes: [] as string[],
     serve: "off",

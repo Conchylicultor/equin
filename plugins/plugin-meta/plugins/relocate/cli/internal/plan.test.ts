@@ -162,6 +162,17 @@ describe("dot refs", () => {
     );
     expect(p.counts.get("dot:reorder-items")).toBe(2);
   });
+
+  test("config origins are derived: the override is rewritten, its origin is not", () => {
+    const text = `{ "items": ["a.b:x"] }`;
+    const p = plan(move("a.b", "d"), {
+      "config/shell/reorder.jsonc": text,
+      "config/shell/reorder.origin.jsonc": text,
+    });
+    expect(p.rewrites.map((r) => r.file)).toEqual([
+      "config/shell/reorder.jsonc",
+    ]);
+  });
 });
 
 describe("relative refs", () => {

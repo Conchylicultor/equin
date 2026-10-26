@@ -12,6 +12,7 @@ import {
 import { scanCssRefs, scanMarkdownRefs } from "./relative-refs";
 import {
   scanAsPluginIdRefs,
+  scanCompositionSourceRefs,
   scanPathRefs,
   scanRuntimeExceptionRefs,
 } from "./ts-refs";
@@ -19,6 +20,11 @@ import type { PluginRef, PluginRefKind } from "./types";
 
 /** The compositions manifest: its config lives under the owning plugin's slash path. */
 export const COMPOSITIONS_MANIFEST = `config/${asPath(asPluginId("plugin-meta.composition"))}/compositions.origin.jsonc`;
+
+/** The compositions manifest's SOURCE: the `defineConfig` seeds its origin is
+ *  generated from. A move rewrites the ids here — the origin follows on build. */
+export const COMPOSITIONS_SOURCE =
+  "plugins/plugin-meta/plugins/composition/core/config.ts";
 
 /** The boundary config whose `runtimeExceptions` name plugins. */
 export const BOUNDARY_CONFIG =
@@ -46,7 +52,8 @@ async function readOrThrow(repo: RepoFiles, path: string): Promise<string> {
  *  - `path` — `plugins/…` path literals and `@plugins/…` specifiers in every
  *    `.ts`/`.tsx` file (test code included — a test that names a plugin by
  *    path names it; `*.generated.ts` excluded — a build rewrites those);
- *  - `dot` — ids read structurally: the compositions manifest, reorder override
+ *  - `dot` — ids read structurally: the compositions manifest (and its
+ *    `defineConfig` source), reorder override
  *    `items` keys under `config/`, `asPluginId("…")` in non-test code, and the
  *    boundary config's `runtimeExceptions`;
  *  - `relative` — relative targets in every `*.md` and `@source`/`@import` in
@@ -79,6 +86,9 @@ export async function findPluginRefs(
       if (kinds.has("dot") && path === BOUNDARY_CONFIG) {
         scanners.push((t) => scanRuntimeExceptionRefs(path, t));
       }
+      if (kinds.has("dot") && path === COMPOSITIONS_SOURCE) {
+        scanners.push((t) => scanCompositionSourceRefs(path, t));
+      }
     } else if (
       kinds.has("dot") &&
       path.startsWith("config/") &&
@@ -96,8 +106,12 @@ export async function findPluginRefs(
     if (scanners.length > 0) jobs.push({ path, scanners });
   }
   if (kinds.has("dot")) {
-    // Both are fixed inputs: a missing one is a moved file, not "no refs".
-    for (const required of [COMPOSITIONS_MANIFEST, BOUNDARY_CONFIG]) {
+    // Fixed inputs: a missing one is a moved file, not "no refs".
+    for (const required of [
+      COMPOSITIONS_MANIFEST,
+      COMPOSITIONS_SOURCE,
+      BOUNDARY_CONFIG,
+    ]) {
       if (!repo.has(required)) {
         throw new Error(`plugin-refs: ${required} is missing — was it moved?`);
       }

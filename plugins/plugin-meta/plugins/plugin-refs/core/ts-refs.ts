@@ -3,6 +3,7 @@ import {
   PLUGIN_FOLDERS,
 } from "@plugins/framework/plugins/plugin-id/core";
 import { parseRuntimeException } from "@plugins/framework/plugins/tooling/plugins/boundaries/core";
+import { parseEntryPattern } from "@plugins/plugin-meta/plugins/closure/core";
 import {
   findImports,
   markerCallSpans,
@@ -191,6 +192,52 @@ export function scanRuntimeExceptionRefs(file: string, src: string): DotRef[] {
         line: lineOf(start),
         value: id,
         id: asPluginId(id),
+      });
+    }
+  }
+  return out;
+}
+
+/** The manifest fields whose array elements are entry patterns naming plugins. */
+const MANIFEST_FIELD_RE = /\b(?:entryPoints|selectedContributors)\s*:\s*\[/g;
+
+/**
+ * Every plugin id in the compositions manifest's SOURCE (the `defineConfig`
+ * seeds its `.origin.jsonc` is generated from): each string literal in the
+ * array literal of an `entryPoints:` / `selectedContributors:` property, read
+ * through the closure engine's `parseEntryPattern`. The range spans the base id,
+ * so `!` and `.**` survive a rewrite; the root pattern `**` names no plugin.
+ *
+ * An id written anywhere else in that file (a helper argument, a const array)
+ * is invisible here — the `plugin-refs:compositions-source-covers-origin` check
+ * fails on it, since the generated origin still names it.
+ */
+export function scanCompositionSourceRefs(file: string, src: string): DotRef[] {
+  const masked = maskSource(src);
+  const lineOf = lineIndex(src);
+  const out: DotRef[] = [];
+  for (const m of masked.matchAll(MANIFEST_FIELD_RE)) {
+    const open = m.index + m[0].length - 1;
+    const close = matchBracket(masked, open, "[", "]");
+    if (close < 0) {
+      throw new Error(
+        `plugin-refs: ${file}:${lineOf(open)}: unbalanced manifest array`,
+      );
+    }
+    for (const lit of literalsIn(src, masked, open + 1, close)) {
+      const parsed = parseEntryPattern(lit.value);
+      if (parsed.kind === "root") continue;
+      const start = lit.start + (parsed.negate ? 1 : 0);
+      const range = { start, end: start + parsed.base.length };
+      assertRange(file, src, range, parsed.base);
+      out.push({
+        kind: "dot",
+        site: "composition-source",
+        file,
+        range,
+        line: lineOf(start),
+        value: parsed.base,
+        id: parsed.base,
       });
     }
   }

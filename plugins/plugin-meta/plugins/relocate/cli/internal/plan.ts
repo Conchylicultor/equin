@@ -135,9 +135,20 @@ export function editKind(ref: PluginRef): EditKind {
   }
 }
 
-/** Files a move never edits by hand: a build rewrites them (codegen, lockfile). */
+/**
+ * Files a move never edits by hand: a build rewrites them from their source —
+ * codegen, the lockfile, and config snapshots (an `.origin.jsonc` is generated
+ * from its `defineConfig` defaults or the slot catalog, so the build needs the
+ * PRE-move origin on disk to tell a pure move from a real default change; see
+ * `restampMovedOverrides`).
+ */
 function isDerivedFile(file: string): boolean {
-  return file.endsWith(".generated.ts") || file === "bun.lock";
+  return (
+    file.endsWith(".generated.ts") ||
+    file === "bun.lock" ||
+    file.endsWith(".origin.jsonc") ||
+    file.endsWith(".ancestor.jsonc")
+  );
 }
 
 /**

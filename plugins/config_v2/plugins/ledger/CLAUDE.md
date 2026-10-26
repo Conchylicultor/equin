@@ -23,6 +23,7 @@
     - `rewriteConfigFiles`
     - `runConfigLedger`
     - `walkConfigFiles`
+    - `withConfigTextHash`
 - Cross-plugin:
   - Imported by:
     - `framework/tooling/codegen`

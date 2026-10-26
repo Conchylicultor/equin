@@ -282,7 +282,7 @@ readings use it:
     - `plugin-meta/parse-utils` (1 debt)
     - `plugin-meta/plugin-refs` (1 debt)
     - `plugin-meta/plugin-tree` (3 debt)
-    - `plugin-meta/relocate` (2 debt)
+    - `plugin-meta/relocate` (3 debt)
     - `plugin-meta/token-usage` (1 debt)
     - `primitives/commit-list` (1 debt)
     - `primitives/css/layout-harness` (2 debt)

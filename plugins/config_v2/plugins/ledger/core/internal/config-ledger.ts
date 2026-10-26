@@ -117,7 +117,8 @@ export function configTextHash(text: string): string | undefined {
   return CONFIG_HASH_RE.exec(text)?.[1];
 }
 
-function setHash(text: string, hash: string): string {
+/** `text` with its first-line `// @hash` header replaced by `hash`. */
+export function withConfigTextHash(text: string, hash: string): string {
   return text.replace(CONFIG_HASH_RE, `// @hash ${hash}\n`);
 }
 
@@ -155,10 +156,10 @@ export function rewriteConfigFiles(
       if (out !== text && header !== undefined) {
         const hash = computeHash(parseConfigText(f, out));
         rehash.set(header, hash);
-        out = setHash(out, hash);
+        out = withConfigTextHash(out, hash);
       }
     } else if (header !== undefined && rehash.has(header)) {
-      out = setHash(out, rehash.get(header)!);
+      out = withConfigTextHash(out, rehash.get(header)!);
     }
     if (out !== text) next.set(f, out);
   }

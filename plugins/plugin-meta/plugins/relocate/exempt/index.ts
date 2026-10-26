@@ -10,7 +10,11 @@ export default [
   },
   {
     rule: "boundaries/no-platform-api",
-    paths: ["core/internal/apply-moves.ts", "core/internal/ledger.ts"],
+    paths: [
+      "core/internal/apply-moves.ts",
+      "core/internal/ledger.ts",
+      "core/internal/restamp-moved.ts",
+    ],
     kind: "debt",
     task: "task-1792338443-riwqev",
     reason: "not yet split into server/ + machine/",

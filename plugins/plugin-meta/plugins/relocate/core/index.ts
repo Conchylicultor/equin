@@ -12,3 +12,7 @@ export {
   namespacesHolding,
 } from "./internal/apply-moves";
 export type { AppliedMove } from "./internal/apply-moves";
+export {
+  restampMovedOverrides,
+  snapshotConfigOrigins,
+} from "./internal/restamp-moved";

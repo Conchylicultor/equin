@@ -7,7 +7,12 @@ import {
   scanCompositionManifestRefs,
   scanReorderItemRefs,
 } from "./config-refs";
-import { BOUNDARY_CONFIG, COMPOSITIONS_MANIFEST, findPluginRefs } from "./find";
+import {
+  BOUNDARY_CONFIG,
+  COMPOSITIONS_MANIFEST,
+  COMPOSITIONS_SOURCE,
+  findPluginRefs,
+} from "./find";
 import { maskMarkdown, scanCssRefs, scanMarkdownRefs } from "./relative-refs";
 import {
   pluginDirOfPath,
@@ -16,6 +21,7 @@ import {
 } from "./resolve";
 import {
   scanAsPluginIdRefs,
+  scanCompositionSourceRefs,
   scanPathRefs,
   scanRuntimeExceptionRefs,
 } from "./ts-refs";
@@ -97,6 +103,30 @@ describe("dot refs", () => {
     expect(() => scanRuntimeExceptionRefs(BOUNDARY_CONFIG, src)).toThrow(
       /is not "plugin\./,
     );
+  });
+
+  test("compositions source: entryPoints / selectedContributors array literals only", () => {
+    const src = [
+      `const SHARED = { entryPoints: ["apps.x.**", "!apps.x.y.**"] };`,
+      `const rows = [`,
+      `  { id: "all", entryPoints: ["**"], selectedContributors: [] as string[] },`,
+      `  { ...SHARED, selectedContributors: ["ui.toggle" /* "not.a.ref" */], extends: ["pack"] },`,
+      `  pack("p", { selectedContributors: [\n    "wish.element-picker",\n    'review',\n  ] }),`,
+      `];`,
+      `const label = "apps.not-a-ref";`,
+    ].join("\n");
+    const refs = scanCompositionSourceRefs(COMPOSITIONS_SOURCE, src);
+    expect(refs.map((r) => String(r.id))).toEqual([
+      "apps.x",
+      "apps.x.y",
+      "ui.toggle",
+      "wish.element-picker",
+      "review",
+    ]);
+    expect(new Set(refs.map((r) => r.site))).toEqual(
+      new Set(["composition-source"]),
+    );
+    expectRanges(src, refs);
   });
 
   test("compositions manifest: entryPoints + selectedContributors, not extends/excludes", () => {
@@ -252,6 +282,7 @@ describe("findPluginRefs over a fixture repo", () => {
 
   const files: Record<string, string> = {
     [COMPOSITIONS_MANIFEST]: `{ "manifests": [{ "entryPoints": ["apps.home.**"], "selectedContributors": [] }] }`,
+    [COMPOSITIONS_SOURCE]: `pack("p", { selectedContributors: ["apps.home"] });`,
     [BOUNDARY_CONFIG]: `export default { runtimeExceptions: ["plugin.a.core -> plugin.a.data-dirs"] };`,
     "config/shell/reorder.origin.jsonc": `{ "items": ["tasks.task-list:new"] }`,
     "plugins/tasks/core/x.ts": `import { y } from "@plugins/b/core";\nconst id = asPluginId("a.b");`,
@@ -275,6 +306,7 @@ describe("findPluginRefs over a fixture repo", () => {
       "config/shell/reorder.origin.jsonc dot tasks.task-list",
       "plugins/framework/plugins/tooling/plugins/boundaries/core/boundary-config.ts dot a",
       "plugins/framework/plugins/tooling/plugins/boundaries/core/boundary-config.ts dot a",
+      "plugins/plugin-meta/plugins/composition/core/config.ts dot apps.home",
       "plugins/tasks/CLAUDE.md relative ../../research/r.md",
       "plugins/tasks/core/x.test.ts path plugins/c",
       "plugins/tasks/core/x.ts path plugins/b",

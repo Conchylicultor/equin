@@ -19,7 +19,7 @@ private scan in a check.
 | kind | what | where it is found |
 | --- | --- | --- |
 | `path` | `plugins/a/plugins/b` | a string literal that is wholly a `plugins/…` path; a `@plugins/…` module specifier (static / dynamic `import()` / `mock(…)`) — in every `.ts`/`.tsx` except `*.generated.ts` |
-| `dot` | `a.b` | compositions manifest `entryPoints` / `selectedContributors` (via `parseEntryPattern`); reorder `items` keys in `config/**.jsonc`; `asPluginId("…")` in non-test code; boundary-config `runtimeExceptions` (via `parseRuntimeException`) |
+| `dot` | `a.b` | compositions manifest `entryPoints` / `selectedContributors` (via `parseEntryPattern`), in the generated origin and in its `defineConfig` source (`composition/core/config.ts`: the array literal of an `entryPoints:` / `selectedContributors:` property — `plugin-refs:compositions-source-covers-origin` fails on an id spelled any other way); reorder `items` keys in `config/**.jsonc`; `asPluginId("…")` in non-test code; boundary-config `runtimeExceptions` (via `parseRuntimeException`) |
 | `relative` | `../x/CLAUDE.md` | markdown `[x](rel)`, `[x]: rel`, `<img src>` / `<a href>` in every `*.md`; CSS `@source` / `@import` |
 
 - **Dot ids are read structurally, never by free-text regex.** A top-level id
@@ -90,6 +90,7 @@ links **into** research from anywhere else are.
   - Exports (values):
     - `BOUNDARY_CONFIG`
     - `COMPOSITIONS_MANIFEST`
+    - `COMPOSITIONS_SOURCE`
     - `findPluginRefs`
     - `isWithinDir`
     - `maskMarkdown`
@@ -101,6 +102,7 @@ links **into** research from anywhere else are.
     - `resolveRelativeRef`
     - `scanAsPluginIdRefs`
     - `scanCompositionManifestRefs`
+    - `scanCompositionSourceRefs`
     - `scanReorderItemRefs`
     - `scanRuntimeExceptionRefs`
 - Cross-plugin:

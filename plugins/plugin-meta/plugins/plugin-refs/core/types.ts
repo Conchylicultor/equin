@@ -48,6 +48,9 @@ export interface PathRef extends RefBase {
  * regex, since a top-level id like `search` has no dot to recognise it by.
  *  - `composition-manifest` — an `entryPoints` / `selectedContributors` entry of
  *    the compositions manifest (range: the id, without `!` / `.**`).
+ *  - `composition-source` — the same entries in the manifest's SOURCE, the
+ *    `defineConfig` seeds the origin is generated from (an `entryPoints:` /
+ *    `selectedContributors:` property's array literal).
  *  - `reorder-items` — the `<pluginId>` half of a reorder override's
  *    `"<pluginId>:<id>"` `items` entry, in any tracked `config/**.jsonc`.
  *  - `as-plugin-id` — the string argument of `asPluginId("…")` in non-test code.
@@ -56,6 +59,7 @@ export interface PathRef extends RefBase {
  */
 export type DotRefSite =
   | "composition-manifest"
+  | "composition-source"
   | "reorder-items"
   | "as-plugin-id"
   | "runtime-exception";

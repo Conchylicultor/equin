@@ -4,6 +4,7 @@ export {
   rewriteConfigFiles,
   runConfigLedger,
   walkConfigFiles,
+  withConfigTextHash,
 } from "./internal/config-ledger";
 export type { ConfigLedgerEntry } from "./internal/config-ledger";
 export {

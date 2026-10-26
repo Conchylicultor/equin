@@ -26,6 +26,10 @@ import {
 import { carryForwardServedEntries } from "@plugins/framework/plugins/tooling/plugins/web-artifacts/cli";
 import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import {
+  restampMovedOverrides,
+  snapshotConfigOrigins,
+} from "@plugins/plugin-meta/plugins/relocate/core";
+import {
   flattenManifest,
   resolveComposition,
 } from "@plugins/plugin-meta/plugins/closure/core";
@@ -558,7 +562,18 @@ export async function generateAppSources(opts: {
   // live in the pipeline module as the authoritative record. Per-step
   // profiler spans are threaded through `onStep`.
   hooks.log("Generating plugins doc...");
+  // The origins as committed, before codegen regenerates them: the base a
+  // plugin move's re-stamp compares the regenerated ones against (4b'').
+  const priorOrigins = snapshotConfigOrigins(join(root, "config"));
   await regenerateManifestCodegen({ root, onStep: codegenStep });
+
+  // 4b''. A plugin move re-roots reorder keys in committed overrides, but the
+  // regenerated origins' hashes are only known now. Re-stamp each override
+  // whose origin changed by nothing but a recorded move, so neither the
+  // re-mark below nor `config-origins-in-sync` reads a pure rename as stale.
+  for (const rel of restampMovedOverrides({ root, prior: priorOrigins })) {
+    hooks.log(`[config-v2] re-stamped config/${rel} (plugin move)`);
+  }
 
   // 4b'. Seed / re-mark the MANDATORY config overrides (descriptors that set
   // `requiresAuthoredOverride`). Runs after the origin pass above (it reads

@@ -93,7 +93,11 @@ function moveTree(
 }
 
 /** `text` with every reorder key naming the moved subtree re-rooted. */
-function rewriteKeys(file: string, text: string, move: PluginMove): string {
+export function rewriteKeys(
+  file: string,
+  text: string,
+  move: PluginMove,
+): string {
   const edits = scanReorderItemRefs(file, text)
     .map((ref) => ({ ref, to: movedPluginId(ref.id, move.from, move.to) }))
     .filter((e) => e.to !== null)

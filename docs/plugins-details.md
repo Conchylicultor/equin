@@ -13391,7 +13391,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `validationIssues`
       - `withOverrideLegend`
   - Cross-plugin:
-    - Imported by: 121 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+    - Imported by: 122 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
       - `apps` ×34
       - `backup` ×13
       - `conversations` ×13
@@ -13403,6 +13403,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `primitives` ×3
       - `infra` ×2
       - `integrations` ×2
+      - `plugin-meta` ×2
       - `reports` ×2
       - `shell` ×2
       - `stats` ×2
@@ -13411,7 +13412,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `framework/tooling/codegen`
       - `hints/ask`
       - `map/google`
-      - `plugin-meta/composition`
       - `reorder`
       - `review/code-review`
   - Test helpers:
@@ -13557,6 +13557,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `rewriteConfigFiles`
           - `runConfigLedger`
           - `walkConfigFiles`
+          - `withConfigTextHash`
       - Cross-plugin:
         - Imported by:
           - `framework/tooling/codegen`
@@ -26189,7 +26190,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta/parse-utils` (1 debt)
               - `plugin-meta/plugin-refs` (1 debt)
               - `plugin-meta/plugin-tree` (3 debt)
-              - `plugin-meta/relocate` (2 debt)
+              - `plugin-meta/relocate` (3 debt)
               - `plugin-meta/token-usage` (1 debt)
               - `primitives/commit-list` (1 debt)
               - `primitives/css/layout-harness` (2 debt)
@@ -37432,6 +37433,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `BOUNDARY_CONFIG`
           - `COMPOSITIONS_MANIFEST`
+          - `COMPOSITIONS_SOURCE`
           - `findPluginRefs`
           - `isWithinDir`
           - `maskMarkdown`
@@ -37443,6 +37445,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `resolveRelativeRef`
           - `scanAsPluginIdRefs`
           - `scanCompositionManifestRefs`
+          - `scanCompositionSourceRefs`
           - `scanReorderItemRefs`
           - `scanRuntimeExceptionRefs`
       - Cross-plugin:
@@ -37722,9 +37725,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`relocate`** — `./equin plugin move <from> <to>` — relocate or rename a plugin (and every descendant) in one step: git mv the folder and its config dir, then rewrite every reference the plugin-refs locator finds (path literals, @plugins specifiers, dot ids, relative links) by exact range. Records each move in a committed ledger that every build replays onto its namespace's saved user config (folder moved, reorder keys re-rooted, hash chain kept).
       - Core:
         - Uses:
+          - `config_v2.APP_SCOPE_DIR`
+          - `config_v2/ledger.configTextHash`
+          - `config_v2/ledger.parseConfigText`
           - `config_v2/ledger.rewriteConfigFiles`
           - `config_v2/ledger.runConfigLedger`
           - `config_v2/ledger.walkConfigFiles`
+          - `config_v2/ledger.withConfigTextHash`
           - `framework/plugin-id.asPath`
           - `framework/plugin-id.asPluginId`
           - `framework/plugin-id.PluginId`
@@ -37741,10 +37748,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PLUGIN_MOVES_FILE`
           - `pluginMoveKey`
           - `readPluginMoves`
+          - `restampMovedOverrides`
+          - `snapshotConfigOrigins`
       - Exemptions:
         - Exempts itself from:
           - `product-name:legacy-id` — `core/plugin-moves.json` (sanctioned)
-          - `boundaries/no-platform-api` — `core/internal/apply-moves.ts`, `core/internal/ledger.ts` (debt)
+          - `boundaries/no-platform-api` — `core/internal/apply-moves.ts`, `core/internal/ledger.ts`, `core/internal/restamp-moved.ts` (debt)
     - **`token-usage`** — Which theme tokens a plugin's source uses, and which plugin owns each one: the static defineTokenGroup reader (owner + CSS vars) and the token-usage scanner (literal var(--x) plus Tailwind classes resolved by Tailwind's own design system over app.css). Feeds the cross-refs facet's tokenUses, which the closure engine turns into hard edges.
       - Core:
         - Uses:
