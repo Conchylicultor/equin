@@ -37,7 +37,7 @@ const newIcon = symbol("edit-square");
 const sendIcon = symbol("arrow-upward");
 const suggestionIcon = symbol("arrow-forward");
 
-type DragHandle = (e: PointerEvent<HTMLElement>) => void;
+export type DragHandle = (e: PointerEvent<HTMLElement>) => void;
 
 /**
  * The card's frame, the one surface every state of Ask equin is drawn in:
@@ -63,7 +63,7 @@ export function CardFrame({
       {...(pill ? {} : { role: "dialog", "aria-label": "Ask equin" })}
       className={cn(
         pill
-          ? "max-w-80 rounded-full"
+          ? "w-64 max-w-[calc(100vw-1.5rem)] rounded-full"
           : "w-[24rem] max-w-[calc(100vw-1.5rem)] max-h-[min(37.5rem,calc(100vh-6rem))]",
         clipClasses({ axis: "both", fill: false }),
       )}

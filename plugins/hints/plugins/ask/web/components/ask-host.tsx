@@ -121,6 +121,7 @@ export function AskHost() {
                   <AskPill
                     conversationId={conversationId}
                     onOpen={restoreCard}
+                    drag={drag}
                   />
                 ) : conversationId !== null ? (
                   <AskThreadCard
