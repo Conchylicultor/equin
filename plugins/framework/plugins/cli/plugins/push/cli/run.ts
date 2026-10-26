@@ -119,6 +119,10 @@ async function execPublish(
 ): Promise<void> {
   const { exitCode } = await spawnPassthrough(cmd, { cwd });
   if (exitCode === 0) return;
+  await explainPushRejection(root);
+}
+
+async function explainPushRejection(root: string): Promise<never> {
   console.error("");
   console.error(
     "The remote rejected that push — asking it whether this checkout may publish at all...",
@@ -138,6 +142,63 @@ async function execPublish(
     );
   }
   process.exit(1);
+}
+
+// Publishes `branch` as the remote's main, BEFORE local main moves.
+//
+// The push mutex serializes the pushes on this machine, not every writer of
+// the remote: a commit made on GitHub's web editor (or from another clone) can
+// land on the remote main between this push's fetch and its final write. When
+// local main was fast-forwarded first and the remote write then refused, local
+// main was left holding a commit the remote never got — diverged from it, so
+// every worktree branched from it inherited the commit as its own and the next
+// push failed at its `--ff-only` pull. Writing the remote first makes the
+// remote's own non-fast-forward refusal the atomic gate: lose the race and
+// local main is untouched, so a re-run fetches the new commit and rebases
+// onto it like any other.
+async function publishMain(
+  remote: string,
+  branch: string,
+  root: string,
+): Promise<void> {
+  const { exitCode } = await spawnPassthrough([
+    "git",
+    "push",
+    remote,
+    `${branch}:refs/heads/main`,
+  ]);
+  if (exitCode === 0) return;
+
+  // A refusal is either the race above or a question of access. Fetch and
+  // ask which: a remote main that is no longer below the branch moved.
+  await exec(["git", "fetch", remote, "main"]);
+  const cmd = [
+    "git",
+    "merge-base",
+    "--is-ancestor",
+    `${remote}/main`,
+    branch,
+  ];
+  const ancestry = await spawnCaptured(cmd, { timeoutMs: GIT_TIMEOUT_MS });
+  if (ancestry.exitCode === 1) {
+    console.error(
+      [
+        ``,
+        `${remote}/main moved while this push ran — someone else landed a commit on it.`,
+        `Local main was NOT touched, and nothing of this push reached ${remote}/main.`,
+        `Re-run ./equin push: it fetches the new commit and rebases onto it.`,
+      ].join("\n"),
+    );
+    process.exit(1);
+  }
+  if (ancestry.exitCode !== 0) {
+    console.error(
+      `Command failed (exit ${ancestry.exitCode}): ${cmd.join(" ")}`,
+    );
+    if (ancestry.stderr.trim()) console.error(ancestry.stderr.trim());
+    process.exit(1);
+  }
+  await explainPushRejection(root);
 }
 
 // The three facts that decide HOW this branch is made to land on main.
@@ -994,23 +1055,23 @@ const pushAction: CliAction<
           profiler.stepEnd("push-branch");
         }
 
-        // 6. Fast-forward merge into main (guaranteed to succeed — we hold the
-        //    lock, so no other push can have advanced main since our rebase).
+        // 6. Publish the branch as the remote's main — BEFORE local main
+        //    moves (publishMain says why). Skipped in local mode, where
+        //    local main is the trunk and step 7 is the whole landing.
+        if (publish.kind === "publish") {
+          profiler.stepStart("push-main");
+          console.log("Pushing main...");
+          await publishMain(publish.remote, branch, root);
+          profiler.stepEnd("push-main");
+        }
+
+        // 7. Fast-forward local main (guaranteed to succeed — we hold the
+        //    lock, so no other push can have advanced it since our rebase).
+        //    The last step: main's own auto-build takes it from there.
         profiler.stepStart("ff-merge");
         console.log(`Merging ${branch} into main...`);
         await exec(["git", "merge", "--ff-only", branch], mainWorktree);
         profiler.stepEnd("ff-merge");
-
-        // 7. Push main. The last step and the only one with nothing after it,
-        //    so in local mode the push simply ends at 6 — main has advanced,
-        //    and main's own auto-build takes it from there exactly as it does
-        //    for a publisher.
-        if (publish.kind === "publish") {
-          profiler.stepStart("push-main");
-          console.log("Pushing main...");
-          await execPublish(["git", "push"], mainWorktree, root);
-          profiler.stepEnd("push-main");
-        }
       },
       onLockRequested,
       onLockAcquired,

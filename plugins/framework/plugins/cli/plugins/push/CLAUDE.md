@@ -73,7 +73,15 @@ mutex the order is load-bearing:
 4. `ensureDeps({ frozenLockfile: true })` — install what the rebase brought in
 5. `normalizeGeneratedArtifacts(…, { force: true })` — re-derive and amend
 6. `check --scope tree` in a subprocess, handed the section's grant (below)
-7. push the branch (publish mode only), ff `main`, push `main` (publish mode only)
+7. push the branch, then push it as the remote's `main` (both publish mode
+   only), then ff local `main` — **remote first**. The mutex serializes this
+   machine's pushes, not every writer of the remote (a GitHub web edit, another
+   clone). With local `main` advanced first, a remote that moved in between
+   refused the push and left local `main` holding a commit the remote never got:
+   diverged, inherited by every new worktree, and the next push failed at its
+   `--ff-only` pull. Now the remote's non-fast-forward refusal is the atomic
+   gate; `publishMain` tells that race (local `main` untouched, re-run) from an
+   access refusal (re-probe, as above).
 
 **Steps 3–7 run under ONE interactive CPU grant**, taken by `withPushLock` as
 the first thing inside the mutex and passed to its body (and from there to the
