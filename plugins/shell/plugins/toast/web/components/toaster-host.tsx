@@ -58,6 +58,11 @@ function Toasts() {
         mobileOffset={{ bottom: VIEWPORT_OFFSET + reserved }}
         style={
           {
+            // Sonner's own stylesheet pins the list at z-index 999999999, off
+            // the ladder; the inline style wins. The stack and its dismiss-all
+            // strip share ONE layer, so a floating card (the Ask card, at
+            // z-popover) can never land between them.
+            zIndex: "var(--z-toast)",
             "--normal-bg": "var(--popover)",
             "--normal-text": "var(--popover-foreground)",
             "--normal-border": "var(--border)",
@@ -68,7 +73,7 @@ function Toasts() {
       <div
         ref={actionsRef}
         // eslint-disable-next-line layout/no-adhoc-layout -- viewport-corner fixed strip, anchored to the same inset as sonner's own fixed toast list
-        className="pointer-events-none fixed z-popover"
+        className="pointer-events-none fixed z-toast"
         style={{ right: VIEWPORT_OFFSET, bottom: VIEWPORT_OFFSET }}
       >
         <DismissAllButton />

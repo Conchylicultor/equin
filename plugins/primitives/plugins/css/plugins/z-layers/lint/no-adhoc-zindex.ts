@@ -11,7 +11,7 @@ const createRule = ESLintUtils.RuleCreator(
  * Stacking order must come from ONE ordered, named ladder: the semantic
  * `--z-*` scale defined in `plugins/primitives/plugins/css/plugins/ui-kit/web/theme/app.css`
  * and exposed as the `z-base / z-raised / z-nav / z-float / z-overlay / z-popover
- * / z-draw / z-max` `@utility` classes. A raw `z-<n>` / `z-[…]` value is opaque
+ * / z-guide / z-draw / z-toast / z-max` `@utility` classes. A raw `z-<n>` / `z-[…]` value is opaque
  * intent — it can't say *which* layer it means — and scattering raw numbers
  * across call sites is how stacking bugs (a floating panel painting under a
  * sibling) creep back in.
@@ -41,12 +41,12 @@ export default function buildRule({
       type: "problem",
       docs: {
         description:
-          "Disallow raw z-index utilities (z-0…z-50, z-[…]). Stacking order must come from the semantic z-layer scale (z-raised, z-nav, z-float, z-overlay, z-popover, z-guide, z-draw, z-max).",
+          "Disallow raw z-index utilities (z-0…z-50, z-[…]). Stacking order must come from the semantic z-layer scale (z-raised, z-nav, z-float, z-overlay, z-popover, z-guide, z-draw, z-toast, z-max).",
       },
       schema: [],
       messages: {
         adhocZindex:
-          "Use a semantic z-layer utility (z-raised, z-nav, z-float, z-overlay, z-popover, z-guide, z-draw, z-max) from the z-layers scale instead of a raw z-index. See plugins/primitives/plugins/css/plugins/ui-kit/web/theme/app.css.",
+          "Use a semantic z-layer utility (z-raised, z-nav, z-float, z-overlay, z-popover, z-guide, z-draw, z-toast, z-max) from the z-layers scale instead of a raw z-index. See plugins/primitives/plugins/css/plugins/ui-kit/web/theme/app.css.",
       },
     },
     defaultOptions: [],

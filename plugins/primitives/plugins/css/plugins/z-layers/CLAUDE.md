@@ -6,7 +6,7 @@ plus the lint rule that keeps it the single source of truth.
 ## The scale
 
 z-index is **structural**, not runtime-themeable, so the layers live in the
-static `@theme { }` block as `--z-{base,raised,nav,float,overlay,popover,draw,max}`
+static `@theme { }` block as `--z-{base,raised,nav,float,overlay,popover,guide,draw,toast,max}`
 vars, exposed as the matching `z-*` `@utility` classes (both defined in
 `plugins/primitives/plugins/css/plugins/ui-kit/web/theme/app.css`).
 
@@ -20,6 +20,7 @@ vars, exposed as the matching `z-*` `@utility` classes (both defined in
 | `z-popover`  | 50    | portaled floating layers: floating-action, lightboxes  |
 | `z-guide`    | 55    | onboarding tour / tips: above the popovers they point into |
 | `z-draw`     | 60    | draw-on-app full-screen capture overlay                |
+| `z-toast`    | 70    | toast stack + its dismiss-all strip: above every floating card |
 | `z-max`      | 9999  | critical banners / dev frame                           |
 
 z-index only orders siblings *within one stacking context*, so the durable fix
