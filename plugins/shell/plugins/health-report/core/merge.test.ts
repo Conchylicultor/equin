@@ -228,7 +228,11 @@ describe("foldQuietRows", () => {
 
   it("folds nothing when fewer than two rows are quiet, plain rows still last", () => {
     expect(
-      shape([row("db", attention()), row("queue", ok(), false), row("conn", ok())]),
+      shape([
+        row("db", attention()),
+        row("queue", ok(), false),
+        row("conn", ok()),
+      ]),
     ).toEqual(["queue", "db", "conn"]);
   });
 });
