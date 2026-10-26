@@ -509,6 +509,11 @@ export function mountIcebergScene({
     screenKey = key;
     relayout();
   };
+  // pieces rendered open (everything below the apps) carry their drawing from the start
+  pieces()
+    .filter((el) => el.classList.contains("open"))
+    .forEach((el) => runtime.open(el));
+  syncExpander();
   let disposed = false;
   void document.fonts.ready.then(() => {
     if (!disposed) relayout();

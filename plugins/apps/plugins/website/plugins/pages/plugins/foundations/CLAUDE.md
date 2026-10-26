@@ -9,7 +9,9 @@ Re-check the picks (the prototype's options pill) before porting a change.
 
 - Every piece is a pill that opens **in place** into a card; 35 of them carry a
   live drawing (`web/internal/cards/`). The piece under the cursor holds still
-  while its neighbours and the berg glide to where they land (FLIP).
+  while its neighbours and the berg glide to where they land (FLIP). The apps
+  (sea level) start as pills — the sky is sized for them — and every piece
+  below the waterline starts open, its drawing mounted on boot.
 - A depth gauge (lines of code passed below the surface), a Components /
   Harness filter under the title, and Expand all (the pill, or `E`).
 - Harness pieces are plain chips like the rest, told apart by the wrench in

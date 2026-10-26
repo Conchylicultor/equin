@@ -29,7 +29,9 @@ import "./iceberg.css";
  * The foundations page: what equin brings on top of Claude, as an iceberg —
  * ten layers from the apps at sea level down to the loop that built everything
  * above it. Every piece is a pill that opens in place into a card; most cards
- * carry a live drawing of what the piece does.
+ * carry a live drawing of what the piece does. The apps at sea level start as
+ * pills (the sky is sized for them); every piece below the waterline starts
+ * open, so the page reads as the full reference.
  *
  * React renders the scene's markup once and never re-renders it: the scene
  * (`internal/iceberg/scene.ts`) and the card runtime (`internal/kit`) own the
@@ -154,7 +156,13 @@ const IcebergMarkup = memo(function IcebergMarkup({
             </div>
             <div className="iceberg-pieces">
               {L.pieces.map((p) => (
-                <Piece key={p.name} piece={p} layer={i} layerName={L.name} />
+                <Piece
+                  key={p.name}
+                  piece={p}
+                  layer={i}
+                  layerName={L.name}
+                  open={i !== 0}
+                />
               ))}
             </div>
           </section>
@@ -194,10 +202,13 @@ function Piece({
   piece,
   layer,
   layerName,
+  open,
 }: {
   piece: IcebergPiece;
   layer: number;
   layerName: string;
+  /** Whether the piece starts as a card; the scene mounts the drawings of the ones that do. */
+  open: boolean;
 }) {
   const style = {
     "--i": layer,
@@ -207,12 +218,12 @@ function Piece({
   return (
     <button
       type="button"
-      className={`iceberg-item${piece.card ? " has-viz" : ""}`}
+      className={`iceberg-item${piece.card ? " has-viz" : ""}${open ? " open" : ""}`}
       data-w={piece.weight}
       data-kind={piece.kind}
       data-name={piece.name}
       data-layer={layerName}
-      aria-expanded="false"
+      aria-expanded={open}
       style={style}
     >
       <span className="iceberg-name">

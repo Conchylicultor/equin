@@ -9,8 +9,10 @@
 //   - a Harness piece carries its teal wrench, and is otherwise a plain chip;
 //   - the header stays pinned: frosted in dark ink over the sky, frosted in
 //     light ink over the water, and a gauge jump lands the layer just below it;
-//   - a piece opens in place into its card (the drawing mounted), its top edge
-//     held still, and folds back (the drawing gone);
+//   - the apps start as pills and every piece below them starts open (every
+//     drawing mounted);
+//   - a piece folds back into its pill (the drawing gone), and opens in place
+//     into its card again (the drawing mounted), its top edge held still;
 //   - the Components / Harness key dims the other half;
 //   - `E` opens every piece (every drawing mounted) and closes them all again;
 //   - each card is photographed open, one file per card, for a side-by-side
@@ -39,9 +41,10 @@ const width = numArg("width", 1280);
 const height = numArg("height", 900);
 const colorScheme = arg("color-scheme", "dark") === "light" ? "light" : "dark";
 
-/** Pieces and drawings on the page (data.ts / cards/index.ts). */
-const PIECES = 60;
-const CARDS = 32;
+/** Pieces and drawings on the page (data.ts / cards/index.ts); the apps (no drawing) start closed. */
+const PIECES = 63;
+const CARDS = 35;
+const APPS = 7;
 
 interface SceneState {
   open: number;
@@ -120,6 +123,11 @@ await withBrowser(async (h) => {
 
   // --- the first screen is all sky --------------------------------------------
   const top = await sceneState(page);
+  r.ok(
+    `the ${APPS} apps start closed, every other piece open with its drawing`,
+    top.open === PIECES - APPS && top.mounted === CARDS,
+    JSON.stringify(top),
+  );
   r.ok(
     "the waterline lands at the bottom of the first screen",
     Math.abs(top.waterTop - top.screen) <= 2,
@@ -204,18 +212,30 @@ await withBrowser(async (h) => {
   await snap(page, out, "header-deep");
   await scrollPane(page, "top");
 
-  // --- a piece opens in place, and folds back -----------------------------------
+  // --- a piece folds back, and opens in place ------------------------------------
   const target = piece(page, "Windowed loading");
   await target.scrollIntoViewIfNeeded();
+  await target.click({ position: { x: 12, y: 8 } });
+  const closed = await waitFor(
+    () => sceneState(page),
+    (s) => s.open === PIECES - APPS - 1 && s.mounted === CARDS - 1,
+    { timeoutMs: 3000, intervalMs: 100 },
+  );
+  r.ok(
+    "clicking an open piece folds it and unmounts its drawing",
+    closed.ok,
+    JSON.stringify(closed.value),
+  );
+  await page.waitForTimeout(600);
   const before = (await target.boundingBox())?.y ?? 0;
   await target.click({ position: { x: 12, y: 8 } });
   const opened = await waitFor(
     () => sceneState(page),
-    (s) => s.open === 1 && s.mounted === 1,
+    (s) => s.open === PIECES - APPS && s.mounted === CARDS,
     { timeoutMs: 3000, intervalMs: 100 },
   );
   r.ok(
-    "clicking a piece opens it and mounts its drawing",
+    "clicking it again opens it and mounts its drawing",
     opened.ok,
     JSON.stringify(opened.value),
   );
@@ -227,17 +247,6 @@ await withBrowser(async (h) => {
   );
   await page.waitForTimeout(600);
   await snap(page, out, "one-open");
-  await target.click({ position: { x: 12, y: 8 } });
-  const closed = await waitFor(
-    () => sceneState(page),
-    (s) => s.open === 0 && s.mounted === 0,
-    { timeoutMs: 3000, intervalMs: 100 },
-  );
-  r.ok(
-    "clicking it again folds it and unmounts the drawing",
-    closed.ok,
-    JSON.stringify(closed.value),
-  );
 
   // --- the Components / Harness key -------------------------------------------
   await scrollPane(page, "top");
