@@ -19,6 +19,8 @@ export default {
       // The case masking exists for, as the comment above says. `markdownSpan`
       // is a separate field from `pattern` because most tokens do NOT need it.
       markdownSpan: "protect",
+      // A backticked token documents its syntax.
+      agentCodeSpan: "verbatim",
       node: inlineMathNode,
     }),
   ],

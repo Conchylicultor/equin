@@ -19,11 +19,15 @@ import {
   writeResolvedPageTags,
 } from "@plugins/page/plugins/tags/server";
 import { TAG_COLORS } from "@plugins/page/plugins/tags/core";
-import { renamePage } from "@plugins/page/plugins/editor/server";
+import {
+  agentCodeSpanTokens,
+  renamePage,
+} from "@plugins/page/plugins/editor/server";
 import {
   blockAuthorOf,
   dropBlankLinesBesideTags,
   pageBlockHandle,
+  unwrapAgentCodeSpans,
   type MarkdownContext,
 } from "@plugins/page/plugins/editor/core";
 import { recordAgentNotesAuthor } from "@plugins/page/plugins/annotations/plugins/agent-notes/plugins/authorship/server";
@@ -485,6 +489,9 @@ is the only way to be sure you are echoing what is actually there. The same goes
 for \`<page id="…"/>\` and \`<agent-page id="…"/>\` pointers inside an agent page:
 a sub-page is never deleted by leaving it out, but hand the pointers back anyway.
 
+An id you write (\`task-…\`, \`att-…\`, \`conv-…\`) becomes its chip, in
+backticks or not; read_page then shows it bare.
+
 Always \`read_page\` the block first (\`read_page\` with its id returns exactly
 this document) and edit THAT text: a document written from memory loses every
 block the projection encoded and re-mints the blocks it fails to reproduce
@@ -529,10 +536,15 @@ can open the run that produced it. Returns what the write actually did
     // being walked a second time here.
     let authored: string[] = [];
     // A blank line the agent put beside a tag is spacing, not an empty
-    // paragraph (see `dropBlankLinesBesideTags`).
-    const spaced = dropBlankLinesBesideTags(
+    // paragraph (see `dropBlankLinesBesideTags`). A backticked id the write
+    // introduces lands as the id's chip; one already in the card stays as it
+    // is, so a `<human>` card echoed back keeps its bytes (see
+    // `unwrapAgentCodeSpans`).
+    const spaced = agentWrittenText(
       content,
-      serverMarkdownContext().handles,
+      content.includes("`")
+        ? await readBlockAsMarkdown(blockId, { redact: redactHumanAudience })
+        : "",
     );
     const report = await applyMarkdownToBlock(blockId, spaced, {
       // The SAME filter the read used, which is what makes the apply a diff
@@ -738,6 +750,9 @@ Contract, matching the \`Edit\` file tool:
 - It must be UNIQUE unless \`replace_all\` is true; a non-unique match is an
   error naming how many were found. Include surrounding lines to disambiguate.
 - \`old_string\` and \`new_string\` must differ.
+- An id you write (\`task-…\`, \`att-…\`, \`conv-…\`) becomes its chip, in
+  backticks or not; read_page then shows it bare. A backticked id carried over
+  unchanged from \`old_string\` stays as it was.
 - Indentation may be off by a uniform amount. A read scoped to a block holds
   what is nested under it, starting at depth zero, so a line copied from a
   whole-page read carries leading spaces that read has not. With no exact match, \`old_string\` is tried
@@ -823,7 +838,9 @@ the author's even when it sits in yours.`,
     // A blank line the agent put beside a tag — `</human>\n\n<agent-inline>` —
     // is spacing, not an empty paragraph minted in the page's prose. Only
     // `new_string` is the agent's own text: a spacer already on the page stays a
-    // spacer when a card lands beside it (see `dropBlankLinesBesideTags`).
+    // spacer when a card lands beside it (see `dropBlankLinesBesideTags`). The
+    // same holds for a backticked id: one new_string introduces lands as the
+    // chip, one carried over from old_string stays code.
     //
     // A `<page-meta>` header leading old_string is dropped before matching (and
     // one leading new_string with it): the header is read-only and differs per
@@ -855,9 +872,9 @@ the author's even when it sits in yours.`,
       findEdits(
         markdown,
         withHeader ? oldString : withoutPageMeta(oldString),
-        dropBlankLinesBesideTags(
+        agentWrittenText(
           withHeader ? newString : withoutPageMeta(newString),
-          serverMarkdownContext().handles,
+          oldString,
         ),
       );
     let found = tryFind(ownHeader);
@@ -1120,3 +1137,19 @@ export const pageInstructionsSection = Mcp.instructions({
     return section;
   },
 });
+
+/**
+ * Text an agent WROTE, read the way it means it, before it is spliced and
+ * parsed: a blank line beside a tag is spacing (`dropBlankLinesBesideTags`),
+ * and a backticked bare id is the id's chip (`unwrapAgentCodeSpans`) — unless
+ * the same span is already in `replaced`, the text this write replaces.
+ */
+function agentWrittenText(text: string, replaced: string): string {
+  const { handles } = serverMarkdownContext();
+  return unwrapAgentCodeSpans(
+    dropBlankLinesBesideTags(text, handles),
+    handles,
+    agentCodeSpanTokens(),
+    replaced,
+  );
+}

@@ -19,6 +19,7 @@ import { idChipPattern, idReferentTag, type IdChipSurface } from "../../core";
  *   block's doc can then hold the chip node, and the server must be able to
  *   read it back. Markdown-TRANSPARENT: a bare id has no character the inline
  *   markdown scan could misread, so masking it would only cost its marks.
+ *   And `agentCodeSpan: "token"`: an agent's `` `task-…` `` lands as the chip.
  *
  * `referentTag` names the tag a model reads the resolved id as. It defaults to
  * the kind's label (`idReferentTag`); a family whose long-standing tag differs
@@ -49,6 +50,9 @@ export function idChipServer(spec: {
       Editor.InlineToken({
         pattern,
         markdownSpan: "transparent",
+        // An agent backticking an id named the thing: the id has no other
+        // spelling, so in its page write the span is the chip.
+        agentCodeSpan: "token",
         node: inlineChipNode,
       }),
     );

@@ -360,6 +360,34 @@ export function matchInlineFormat(
 export type MarkdownSpan = "protect" | "transparent";
 
 /**
+ * What an inline code span holding EXACTLY one of a token family's tokens
+ * means in text an AGENT writes to a page — an `edit_page` `new_string`, a
+ * `write_agent_note` body.
+ *
+ * Agents style every identifier as inline code (`` `task-1791474346624-bc04eo` ``),
+ * out of the same habit that has them write `` `foo.ts` ``. For a bare id that
+ * is not a statement that the id is verbatim text: the agent named a task, and
+ * the reader wants its chip — what the same id becomes when a person pastes it,
+ * and what an agent's backticked id already renders as in a transcript (the
+ * markdown enhancer chips inline code). So a family states, once, which reading
+ * its token takes in an agent's page write:
+ *
+ *  - `"token"` — the backticks go and the token lands as itself (the chip).
+ *    Right for a bare id, whose only spelling is the id.
+ *  - `"verbatim"` — the span stays code. Right for a token with a SYNTAX
+ *    (`[[page:…]]`, `\(latex\)`): an agent backticking one is documenting
+ *    that syntax.
+ *
+ * About agent text only, and only text the write INTRODUCES (see
+ * `unwrapAgentCodeSpans`): a person who backticks an id in the page editor
+ * keeps their code span ({@link MarkdownSpan}'s and `token-scan`'s `code`
+ * rule) — there it is a deliberate act, here a habit. Required, never
+ * defaulted: the two kinds of family want opposite answers, and only the
+ * family that owns the bytes knows which it is.
+ */
+export type AgentCodeSpan = "token" | "verbatim";
+
+/**
  * Stand-in character for a protected span's bytes while scanning. NUL cannot
  * appear in a delimiter tag, a link, or a tag name, so every `startsWith` test
  * fails inside a masked region BY CONSTRUCTION rather than by a range check

@@ -5,7 +5,7 @@ import {
   type InlineTokenExtension,
   type InlineTokenNodeRef,
 } from "@plugins/primitives/plugins/text-editor/plugins/token-extension/core";
-import type { BlockHandle, MarkdownSpan } from "../../core";
+import type { AgentCodeSpan, BlockHandle, MarkdownSpan } from "../../core";
 
 // Server-reachable `type → handle` registry. `Editor.Block` is a WEB-only dispatch
 // slot, so nothing on the server could resolve a block type's `data` schema; each
@@ -59,6 +59,12 @@ export const Editor = {
   InlineToken: defineServerContribution<{
     pattern: RegExp;
     markdownSpan: MarkdownSpan;
+    /**
+     * What `` `<token>` `` means in text an agent writes to a page — the
+     * token itself (a bare id) or code (a token with a syntax). A third
+     * question, again separate from both above: see {@link AgentCodeSpan}.
+     */
+    agentCodeSpan: AgentCodeSpan;
     node?: InlineTokenNodeRef;
   }>("page.inline-token", {
     docLabel: (t) => t.pattern.source,
@@ -140,6 +146,18 @@ export function resolveBlockHandle(
 export function blockTextProtectedSpans(): RegExp[] {
   return Editor.InlineToken.getContributions()
     .filter((t) => t.markdownSpan === "protect")
+    .map((t) => t.pattern);
+}
+
+/**
+ * The patterns of the families whose backticked token, in text an agent
+ * writes, is the token itself (`agentCodeSpan: "token"` — the bare ids), for
+ * `unwrapAgentCodeSpans`. Read at call time, for
+ * {@link blockTextProtectedSpans}' reason.
+ */
+export function agentCodeSpanTokens(): RegExp[] {
+  return Editor.InlineToken.getContributions()
+    .filter((t) => t.agentCodeSpan === "token")
     .map((t) => t.pattern);
 }
 

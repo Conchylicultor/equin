@@ -22,6 +22,7 @@ import {
   type MarkdownContext,
   type MarkdownNode,
   dropBlankLinesBesideTags,
+  unwrapAgentCodeSpans,
 } from "./markdown";
 import { loadBlockHandles } from "./testing";
 
@@ -2003,6 +2004,39 @@ describe("empty paragraphs", () => {
 
   test("a name that is not a registered tag is not a tag line", () => {
     expect(spaced("a\n\n<not-a-block>")).toBe("a\n\n<not-a-block>");
+  });
+
+  // -------------------------------------------------------------------------
+  // A backticked bare id an AGENT writes is the id, so it lands as its chip
+  // -------------------------------------------------------------------------
+
+  // A stand-in for a family declaring `agentCodeSpan: "token"` — the real ones
+  // are id kinds this core cannot import.
+  const ID = /(?<![\w/-])task-\d+-[a-z0-9]+(?![\w/-])/g;
+  const unwrapped = (md: string, replaced = ""): string =>
+    unwrapAgentCodeSpans(md, handles, [ID], replaced);
+
+  test("a code span holding exactly one id loses its backticks", () => {
+    expect(
+      unwrapped("filed as `task-1791474346624-bc04eo`, then `task-1-ab`."),
+    ).toBe("filed as task-1791474346624-bc04eo, then task-1-ab.");
+  });
+
+  test("a span holding more than the id, or no id, stays code", () => {
+    const md =
+      "`task-1-ab done` and `foo.ts` and ``task-1-ab`` and \\`task-1-ab`";
+    expect(unwrapped(md)).toBe(md);
+  });
+
+  test("a span already in the replaced text is carried over as written", () => {
+    expect(unwrapped("- `task-1-ab` and `task-2-cd`", "- `task-1-ab`")).toBe(
+      "- `task-1-ab` and task-2-cd",
+    );
+  });
+
+  test("a fence body is verbatim", () => {
+    const fence = "```\n`task-1-ab`\n```";
+    expect(unwrapped(fence)).toBe(fence);
   });
 
   test("the PARSER still reads a blank line beside a tag as an empty paragraph", () => {

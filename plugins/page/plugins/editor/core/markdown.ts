@@ -2324,31 +2324,16 @@ export function dropBlankLinesBesideTags(
   handles: BlockHandle<unknown>[],
 ): string {
   const names = new Set(tagParsersOf(handles).keys());
-  const fences = claimersOf(handles).fences.map((f) => f.fence);
   const lines = text.split("\n");
+  const fenced = fenceLines(lines, handles);
   // "tag" | "blank" | "other", per line; a fence's lines are all "other".
-  const kinds: ("tag" | "blank" | "other")[] = [];
-  let fenceClose: string | null = null;
-  for (const line of lines) {
+  const kinds = lines.map((line, i): "tag" | "blank" | "other" => {
     const content = line.trim();
-    if (fenceClose !== null) {
-      kinds.push("other");
-      if (content.startsWith(fenceClose)) fenceClose = null;
-      continue;
-    }
-    if (content === "") {
-      kinds.push("blank");
-      continue;
-    }
-    const fence = fences.find((f) => content.startsWith(f.open));
-    if (fence) {
-      fenceClose = fence.close;
-      kinds.push("other");
-      continue;
-    }
+    if (fenced[i]) return "other";
+    if (content === "") return "blank";
     const name = /^<\/?([A-Za-z][\w-]*)/.exec(content)?.[1];
-    kinds.push(name !== undefined && names.has(name) ? "tag" : "other");
-  }
+    return name !== undefined && names.has(name) ? "tag" : "other";
+  });
   const nearest = (from: number, step: 1 | -1): string | undefined => {
     let i = from;
     while (kinds[i] === "blank") i += step;
@@ -2359,6 +2344,70 @@ export function dropBlankLinesBesideTags(
       (_, i) =>
         kinds[i] !== "blank" ||
         (nearest(i, -1) !== "tag" && nearest(i, 1) !== "tag"),
+    )
+    .join("\n");
+}
+
+/**
+ * Which lines of `lines` belong to a fenced block (its open and close lines
+ * included) — verbatim bytes the inline syntax never reaches.
+ */
+function fenceLines(
+  lines: readonly string[],
+  handles: BlockHandle<unknown>[],
+): boolean[] {
+  const fences = claimersOf(handles).fences.map((f) => f.fence);
+  let fenceClose: string | null = null;
+  return lines.map((line) => {
+    const content = line.trim();
+    if (fenceClose !== null) {
+      if (content.startsWith(fenceClose)) fenceClose = null;
+      return true;
+    }
+    const fence = fences.find((f) => content.startsWith(f.open));
+    if (fence) fenceClose = fence.close;
+    return fence !== undefined;
+  });
+}
+
+/** One single-backtick inline code span: `` `x` ``, never inside ``` `` ``` runs or after `\`. */
+const CODE_SPAN_RE = /(?<![`\\])`([^`\n]+)`(?!`)/g;
+
+/**
+ * Drop the backticks around an inline code span holding exactly ONE token of
+ * a family that declared `agentCodeSpan: "token"` (a bare id), in text an agent
+ * WROTE — before it is spliced and parsed. `` `task-…` `` then lands as the
+ * task's chip, as the same id pasted by a person does, instead of a code-marked
+ * run that never chips (see `AgentCodeSpan`, `./inline-markdown.ts`).
+ *
+ * Only spans the write INTRODUCES: a span also present in `replaced` — the text
+ * this write replaces (`edit_page`'s `old_string`, the card's current contents
+ * for `write_agent_note`) — is left as written, so an edit that carries a
+ * person's backticked id along unchanged does not rewrite it (which would be a
+ * write to their prose, and refused). Fence bodies are left verbatim, and so is
+ * a span holding anything besides the token.
+ */
+export function unwrapAgentCodeSpans(
+  text: string,
+  handles: BlockHandle<unknown>[],
+  tokens: readonly RegExp[],
+  replaced: string,
+): string {
+  if (tokens.length === 0 || !text.includes("`")) return text;
+  const whole = tokens.map(
+    (t) => new RegExp(`^(?:${t.source})$`, t.flags.replace("g", "")),
+  );
+  const lines = text.split("\n");
+  const fenced = fenceLines(lines, handles);
+  return lines
+    .map((line, i) =>
+      fenced[i]
+        ? line
+        : line.replace(CODE_SPAN_RE, (span, content: string) =>
+            whole.some((re) => re.test(content)) && !replaced.includes(span)
+              ? content
+              : span,
+          ),
     )
     .join("\n");
 }

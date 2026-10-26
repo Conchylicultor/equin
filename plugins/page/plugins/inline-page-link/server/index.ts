@@ -28,6 +28,8 @@ export default {
       // markdown link — so it genuinely needs masking. `markdownSpan` is a
       // separate field from `pattern` because most tokens do NOT.
       markdownSpan: "protect",
+      // A backticked token documents its syntax.
+      agentCodeSpan: "verbatim",
       node: pageLinkInlineNode,
     }),
     // What the token names, read on the server: the linked page's title. Text a

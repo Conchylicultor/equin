@@ -109,6 +109,7 @@ export type {
 } from "./internal/page-content";
 export {
   Editor,
+  agentCodeSpanTokens,
   blockTextProtectedSpans,
   blockTextServerExtensions,
   blockTextServerNodes,

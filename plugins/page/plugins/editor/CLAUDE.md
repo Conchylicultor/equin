@@ -4659,6 +4659,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `StoredBlock`
   - Exports (values):
     - `_blocks`
+    - `agentCodeSpanTokens`
     - `applyPageBlockPatch`
     - `BlockLifecycle`
     - `blocksChanged`
@@ -4719,6 +4720,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `primitives/text-editor/token-extension/node.defineInlineTokenNode`
     - `ui/icons/emoji.EmojiSchema`
   - Exports (types):
+    - `AgentCodeSpan`
     - `Block`
     - `BlockAudience`
     - `BlockAuthor`
@@ -4887,6 +4889,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `toNodes`
     - `turnIntoPage`
     - `TurnIntoPageBodySchema`
+    - `unwrapAgentCodeSpans`
     - `updateBlock`
     - `UpdateBlockBodySchema`
     - `visibleChildrenOf`

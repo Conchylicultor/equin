@@ -69,6 +69,7 @@ function installChipOnly(): void {
         Editor.InlineToken({
           pattern: CHIP_PATTERN,
           markdownSpan: "protect",
+          agentCodeSpan: "verbatim",
           node: chipNode,
         }),
       ],

@@ -77,7 +77,7 @@ const check: Check = {
  * failure surfaces later and somewhere else, as an agent's `edit_page` /
  * `write_agent_note` throwing on a block that looks fine in the browser.
  *
- * The server half is ~8 lines (`Editor.InlineToken({ pattern, markdownSpan, node })`) and
+ * The server half is ~8 lines (`Editor.InlineToken({ pattern, markdownSpan, agentCodeSpan, node })`) and
  * nothing in the type system asks for it, because the two halves are two
  * plugins' two barrels. So it is asked for here instead — at check time, on the
  * build that ships the chip, rather than at an agent's first edit.
@@ -278,7 +278,7 @@ const documentChipHasServerToken: Check = {
         '  import { Editor } from "@plugins/page/plugins/editor/server";\n' +
         '  import { inlineChipNode } from "@plugins/primitives/plugins/text-editor/plugins/inline-chip/core";\n' +
         '  import { <PATTERN> } from "../core";\n' +
-        '  export default { description: "…", contributions: [Editor.InlineToken({ pattern: <PATTERN>, markdownSpan: "transparent", node: inlineChipNode })] } satisfies ServerPluginDefinition;\n' +
+        '  export default { description: "…", contributions: [Editor.InlineToken({ pattern: <PATTERN>, markdownSpan: "transparent", agentCodeSpan: "token", node: inlineChipNode })] } satisfies ServerPluginDefinition;\n' +
         '`markdownSpan: "transparent"` is right for every bare-id chip: the pattern says WHERE the ' +
         "token is, it does NOT ask for the bytes to be masked from the marks-aware inline markdown " +
         "scan — and a bare id must not be, since a masked span becomes its own UNMARKED run and an " +

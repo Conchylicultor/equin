@@ -33,6 +33,8 @@ export default {
       // `markdownSpan` is a separate field from `pattern` because most tokens
       // do NOT.
       markdownSpan: "protect",
+      // A backticked token documents its syntax.
+      agentCodeSpan: "verbatim",
       node: dateMentionNode,
     }),
   ],

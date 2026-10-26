@@ -128,6 +128,7 @@ export {
   serializeInlineMarkdown,
 } from "./inline-markdown";
 export type {
+  AgentCodeSpan,
   InlineSyntax,
   InlineFormatMatch,
   InlineFormatContext,
@@ -191,6 +192,7 @@ export {
   parseMarkdownToForest,
   defaultTextHandle,
   dropBlankLinesBesideTags,
+  unwrapAgentCodeSpans,
   formatTagLine,
   parseTagLine,
   markdownLineClaim,
