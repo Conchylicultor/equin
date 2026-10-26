@@ -47,7 +47,7 @@ export type KeyedSnapshot = ReadonlyMap<string, SnapEntry>;
  *   recompute — the delivery-path GC sawtooth) to ~16 B/row. The trade,
  *   explicit: a 64-bit collision makes a genuinely-changed row read as
  *   unchanged — a missed update no self-heal path catches (the diff sees no
- *   change, so no frame and no flushAgain). Birthday-bounded: for a pk with
+ *   change, so no frame and no rerun pass). Birthday-bounded: for a pk with
  *   n rows the probability of ANY collision is ~n²/2⁶⁵ (n=10⁵ ⇒ ~3·10⁻¹⁰);
  *   the Bun hosts' length fold additionally kills every different-length
  *   collision.

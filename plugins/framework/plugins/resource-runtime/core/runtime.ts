@@ -2432,11 +2432,27 @@ export function createResourceRuntime(
   // barriers between levels to preserve cascade-into-downstream ordering.
   let topoLevels: RegistryEntry[][] = [];
   const sockets = new Map<RuntimeSocket, SocketState>();
-  let flushScheduled = false;
-  // Single-active-flush mutex. `flushRunning` ⇒ a flush is mid-await; a new
-  // flush sets `flushAgain` instead of overlapping, and the live flush re-drains.
-  let flushRunning = false;
-  let flushAgain = false;
+  // The flush scheduler, as ONE state whose every transition is synchronous:
+  //   idle    — nothing pending a flush;
+  //   queued  — a `flushNotifies` microtask is pending;
+  //   running — a flush loop is mid-pass;
+  //   rerun   — mid-pass, and a notify asked for another pass.
+  // So `queued` always has a microtask behind it and `running` / `rerun` a live
+  // loop that reads the state again — there is no value meaning "a flush was
+  // asked for and nobody will run it". The three booleans this replaced had one
+  // (2026-10-26, main pushed nothing for 7 min): the loop checked its rerun flag
+  // a few microtask hops before the mutex was released (the async flush wrapper
+  // unwinding), and a notify landing in that gap left `flushScheduled` true with
+  // no flush coming — every later notify returned at `scheduleFlush`'s first line.
+  // research/2026-10-26-framework-live-push-wedge-stranded-flush.md
+  type FlushState = "idle" | "queued" | "running" | "rerun";
+  let flushState: FlushState = "idle";
+  // The state as it is NOW. A pass awaits, and a notify meanwhile moves the state
+  // (`running` → `rerun`); read through this after an await, since tsc keeps the
+  // narrowing from the last assignment across it.
+  function currentFlushState(): FlushState {
+    return flushState;
+  }
   // `performance.now()` when the live flush last made progress — stamped when it
   // takes the mutex and re-stamped at the start of every re-drain pass; `null`
   // while no flush runs. A flush whose loader never settles (a DB query whose
@@ -2452,7 +2468,8 @@ export function createResourceRuntime(
   // waits: inside a flush pass that does not settle (the pass's age), or queued
   // with no flush ever starting to take it (its pending's `enqueuedAt`) — an
   // open `withNotifyBatch` that never settles holds every entry's flush, so no
-  // pass opens at all (2026-10-26: 7 min of no pushes behind a 0 flush age).
+  // pass opens at all; so did a stranded scheduler request before `flushState`
+  // (2026-10-26: 7 min of no pushes behind a 0 flush age).
   // A debounced entry's held pending is owed for at most its window, far below
   // any stall threshold. O(entries + pendings), once per heartbeat.
   function pushStallMs(): number {
@@ -3358,7 +3375,7 @@ export function createResourceRuntime(
   // Unlike the read path (handleSub / handleResourceHttp), the etag-AFTER-value
   // order is SAFE here and deliberately not reordered: this frame CARRIES the
   // value, and any change landing between the value read and this etag read fires
-  // its own notify → flushAgain → another drainEntry that ships a fresh value +
+  // its own notify → a rerun pass → another drainEntry that ships a fresh value +
   // etag, so a momentarily skewed frame is always superseded (self-healing). The
   // read path has no such self-heal and must keep its etag-BEFORE-value ordering.
   // `watermark` is the flight-co-produced commit watermark for THIS value (Rule
@@ -4777,10 +4794,12 @@ export function createResourceRuntime(
   }
 
   // Schedule a single global microtask flush, guarded so concurrent callers
-  // coalesce onto one flush. The immediate (non-debounced) path.
+  // coalesce onto one flush. The immediate (non-debounced) path. A notify landing
+  // mid-flush asks the live loop for another pass instead (see `flushState`).
   function scheduleFlush(): void {
-    if (flushScheduled) return;
-    flushScheduled = true;
+    if (flushState === "running") flushState = "rerun";
+    if (flushState !== "idle") return;
+    flushState = "queued";
     queueMicrotask(() => {
       void flushNotifies();
     });
@@ -5346,47 +5365,56 @@ export function createResourceRuntime(
     return diff;
   }
 
+  // The flush loop, entered only from the `queued` microtask: never two at once.
+  // Re-drains while mid-pass notifies ask for another pass (`rerun`). The check
+  // that ends the loop and the release to `idle` run in ONE synchronous segment
+  // after the pass's wrapper has fully settled, so no notify can land between
+  // them (see `flushState`).
   async function flushNotifies(): Promise<void> {
-    // Single-active-flush mutex: never overlap two flushes. A notify that lands
-    // while a flush is mid-await sets `flushAgain`; the live flush re-drains so
-    // mid-flush arrivals are never stranded.
-    if (flushRunning) {
-      flushAgain = true;
-      return;
+    if (flushState !== "queued") {
+      throw new Error(
+        `[resources] flushNotifies entered in state ${flushState} — only the queued microtask runs a flush`,
+      );
     }
-    flushRunning = true;
-    // Stamped with the mutex (not inside the wrapper) so the heartbeat's
-    // `pushStallMs` covers the whole hold, wrapper included.
-    flushPassStartedAt = performance.now();
+    flushState = "running";
     try {
-      // Run the whole drain inside the injected flush wrapper (server:
-      // recordEntrySpan("flush", ...)) so each cycle is one `flush` entry and the
-      // per-resource `push` loads it triggers nest under it (byParent =
-      // head-of-line blocking attribution). Identity passthrough on central.
-      if (opts.wrapFlush) await opts.wrapFlush(runFlushCycle);
-      else await runFlushCycle();
+      for (;;) {
+        // A fresh pass is progress: the previous one settled (see `pushStallMs`).
+        flushPassStartedAt = performance.now();
+        // Each pass runs inside the injected flush wrapper (server:
+        // recordEntrySpan("flush", ...)) so each pass is one `flush` entry and the
+        // per-resource `push` loads it triggers nest under it (byParent =
+        // head-of-line blocking attribution). Identity passthrough on central.
+        if (opts.wrapFlush) await opts.wrapFlush(runFlushPass);
+        else await runFlushPass();
+        if (currentFlushState() === "rerun") {
+          flushState = "running";
+          continue;
+        }
+        flushState = "idle";
+        return;
+      }
+    } catch (err) {
+      // A failed pass must not swallow the pass a notify asked for meanwhile:
+      // re-queue it before reporting, so the scheduler is never left wedged.
+      const rerun = currentFlushState() === "rerun";
+      flushState = "idle";
+      if (rerun) scheduleFlush();
+      reportLoaderError("flush pass failed", err);
     } finally {
-      flushRunning = false;
       flushPassStartedAt = null;
     }
   }
 
-  // One flush cycle: re-drains while mid-flush notifies set `flushAgain`. Each
-  // depth level runs concurrently; a barrier between levels so every cascade
-  // merged into a (strictly-deeper) downstream settles before that downstream
-  // level drains. A slow loader can no longer head-of-line-block an unrelated
-  // entry at the same or an earlier depth.
-  async function runFlushCycle(): Promise<void> {
-    do {
-      // A fresh pass is progress: the previous one settled (see `pushStallMs`).
-      flushPassStartedAt = performance.now();
-      flushAgain = false;
-      flushScheduled = false;
-      rebuildDag();
-      for (const level of topoLevels) {
-        await Promise.all(level.map(drainEntry));
-      }
-    } while (flushAgain);
+  // One flush pass. Each depth level runs concurrently; a barrier between levels
+  // so every cascade merged into a (strictly-deeper) downstream settles before
+  // that downstream level drains. A slow loader can no longer head-of-line-block
+  // an unrelated entry at the same or an earlier depth.
+  async function runFlushPass(): Promise<void> {
+    rebuildDag();
+    for (const level of topoLevels) {
+      await Promise.all(level.map(drainEntry));
+    }
   }
 
   // Cascade this entry's change into its downstream edges — always FULL: only

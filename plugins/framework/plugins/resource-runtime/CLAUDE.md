@@ -53,10 +53,17 @@ it drains only when released (`debounceDue`): a flush another entry triggers
 leaves its pending held, and a cascade into it is throttled like a notify — at
 most one drain per window, whatever else flushes, with no window of lag on an
 isolated change (pinned by
-`runtime-throttle.test.ts`; `research/2026-10-22-global-live-throttle-holds.md`). A `flushRunning`
-mutex + `flushAgain` rerun flag guarantee two flushes never overlap: a notify
-landing mid-flush sets `flushAgain` and is re-drained by the live flush. Pinned by
-`runtime.test.ts` §"flushNotifies — level-parallel".
+`runtime-throttle.test.ts`; `research/2026-10-22-global-live-throttle-holds.md`). The scheduler
+is ONE state (`flushState`: `idle` | `queued` | `running` | `rerun`) whose every
+transition is synchronous, so two flushes never overlap and a request is never
+stranded: a notify landing mid-flush moves `running` → `rerun` and the live loop
+runs another pass. The loop's last check and its release to `idle` share one
+synchronous segment after the pass's wrapper settled — the booleans this replaced
+checked the rerun flag a few microtask hops before releasing the mutex, and a
+notify in that gap left every later push un-flushed until restart (2026-10-26,
+`research/2026-10-26-framework-live-push-wedge-stranded-flush.md`). A failed pass
+re-queues a requested rerun before it is reported. Pinned by `runtime.test.ts`
+§"flushNotifies — level-parallel" and `runtime-flush-state.test.ts`.
 
 **The heartbeat ping carries `pushStallMs`** — how long the oldest change the
 runtime owes its sockets has gone undelivered, 0 when nothing is owed: the older
@@ -65,9 +72,10 @@ It is the one frame that still reaches the tab while pushes are stuck, and the
 health report's Connection row flags ≥ 30 s. Both ways a change can wait count:
 a flush pass whose loader never settles holds the mutex (2026-09-11: 25 min,
 green health dot — `research/2026-09-11-global-live-updates-frozen-by-stray-fd-close.md`),
-and a `withNotifyBatch` whose function never settles keeps `batchDepth` above 0,
-so `armFlush` never schedules a flush at all and the pass age stays 0
-(2026-10-26: 7 min, green health dot). The pass stamp is **re-taken at the
+and a change queued with no flush ever starting to take it — a `withNotifyBatch`
+whose function never settles keeps `batchDepth` above 0 so `armFlush` never
+schedules one, and a stranded scheduler request did the same until `flushState`
+made it unrepresentable (2026-10-26: 7 min, green health dot, pass age 0). The pass stamp is **re-taken at the
 start of each re-drain pass**, not once per mutex hold: a steady notify stream
 holds the mutex across many short delivering passes, which is not a stall.
 Pinned by `runtime-heartbeat.test.ts`.
@@ -748,7 +756,7 @@ carries only a diff, so both *structurally cannot* obtain one — there is no ot
 call site. (An etag-stamped `invalidate` would hand the client a signature newer
 than the value it still holds: the permanent stale pin the `2026-07-09`
 co-production doc exists to kill.) Etag-AFTER-value is safe here because the frame
-carries the value and self-heals via `flushAgain` — see the comment on `sendUpdate`
+carries the value and self-heals via the flush's rerun pass — see the comment on `sendUpdate`
 and `research/2026-07-10-global-push-etag-rides-the-update-frame.md`.
 
 **D8 — a value recompute that changed nothing is not a change.** Every

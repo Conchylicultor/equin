@@ -195,11 +195,11 @@ describe("flushNotifies — level-parallel", () => {
     slow.block();
     slow.setValue(1);
     slowR.notify();
-    await tick(); // flush is now mid-await on `s`, flushRunning = true
+    await tick(); // flush is now mid-await on `s` (flushState running)
 
     // This notify lands during the in-flight flush.
     fastR.notify();
-    await tick(); // the guard records flushAgain; it does NOT start a second flush
+    await tick(); // the guard records a rerun; it does NOT start a second flush
 
     // `f` is held back until the in-flight flush finishes (no overlap).
     expect(h.pushesFor("f")).toHaveLength(0);
