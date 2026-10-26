@@ -32,9 +32,13 @@ async function cli(root: string, args: string[]): Promise<number> {
 }
 
 /**
- * Every check, uncached. `--no-cache` because a recorded PASS is keyed on the
- * tree, not on the toolchain that produced it — reusing one would let the
- * candidate inherit the baseline's verdicts.
+ * Every tree-scoped check, uncached. `--no-cache` because a recorded PASS is
+ * keyed on the tree, not on the toolchain that produced it — reusing one would
+ * let the candidate inherit the baseline's verdicts. `--scope tree`, the pass
+ * `./equin push` runs: a deploy-scoped check judges the deployed dist, which a
+ * candidate never rebuilds, so it fails on every move that changes what the
+ * dist composes (web-artifacts:map-in-sync on a mise move) whatever the
+ * release; the `./equin build` after a landing runs those.
  *
  * The verdicts are read back from the durable check-progress log (the one
  * machine-readable per-check record), picking the run this invocation started.
@@ -45,7 +49,13 @@ export async function runChecks(
   ids: readonly string[] = [],
 ): Promise<GateResult> {
   const startedAt = new Date().toISOString();
-  const exitCode = await cli(root, ["check", "--no-cache", ...ids]);
+  const exitCode = await cli(root, [
+    "check",
+    "--no-cache",
+    "--scope",
+    "tree",
+    ...ids,
+  ]);
   const run = readCheckProgress().find(
     (r) => r.worktree === slug && r.startedAt >= startedAt && r.done !== null,
   );
