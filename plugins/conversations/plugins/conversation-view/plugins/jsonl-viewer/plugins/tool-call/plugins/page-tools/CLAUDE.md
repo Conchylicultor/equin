@@ -10,7 +10,9 @@
     - `apps/pages/page-tree.pageDetailPane`
     - `network/live.LiveRowResult`
     - `network/live.useLiveRow`
+    - `page/editor.PageIcon`
     - `primitives/css/badge.Badge`
+    - `primitives/css/center.Center`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/link-chip.LinkChip`
     - `primitives/css/scroll.Scroll`
@@ -18,7 +20,6 @@
     - `primitives/css/text.Text`
     - `primitives/pane.useOpenPane`
     - `primitives/syntax-highlight.HighlightedCode`
-    - `ui/icons.Icon`
   - Exports (values):
     - `PageMarkdown`
     - `PageRefChip`
@@ -28,6 +29,7 @@
   - Uses tokens:
     - `ui/tokens/color-palette --destructive`
     - `ui/tokens/shape --radius`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `conversations/conversation-view/artifacts/page`
     - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/edit-page`

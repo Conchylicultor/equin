@@ -11,10 +11,8 @@ import {
   type PageRow,
 } from "@plugins/page/plugins/editor/core";
 import { pageDetailPane } from "@plugins/apps/plugins/pages/plugins/page-tree/web";
-import { symbol } from "@plugins/ui/plugins/icons/core";
-import { Icon } from "@plugins/ui/plugins/icons/web";
-
-const descriptionIcon = symbol("description");
+import { PageIcon } from "@plugins/page/plugins/editor/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 
 /** `block-7f1a2d3d-a3cd-…` → `7f1a2d3d…` — enough to recognize, short enough to sit in a header. */
 function shortenBlockId(id: string): string {
@@ -85,10 +83,15 @@ export function PageRefChip({
   const page = seenPage(byPage) ?? seenPage(byBlock);
   if (!page) return <BlockIdBadge id={id} />;
 
-  const title = pageData(page).title || "Untitled";
+  const { title: rawTitle, icon } = pageData(page);
+  const title = rawTitle || "Untitled";
   return (
     <LinkChip
-      leading={<Icon icon={descriptionIcon} />}
+      leading={
+        <Center as="span" className="size-3.5">
+          <PageIcon icon={icon} className="size-3.5" />
+        </Center>
+      }
       tooltip={title}
       activation={openPane.to(
         pageDetailPane,

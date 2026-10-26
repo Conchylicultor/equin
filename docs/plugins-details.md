@@ -16992,7 +16992,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `apps/pages/page-tree.pageDetailPane`
                       - `network/live.LiveRowResult`
                       - `network/live.useLiveRow`
+                      - `page/editor.PageIcon`
                       - `primitives/css/badge.Badge`
+                      - `primitives/css/center.Center`
                       - `primitives/css/cluster.Cluster`
                       - `primitives/css/link-chip.LinkChip`
                       - `primitives/css/scroll.Scroll`
@@ -17000,7 +17002,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `primitives/css/text.Text`
                       - `primitives/pane.useOpenPane`
                       - `primitives/syntax-highlight.HighlightedCode`
-                      - `ui/icons.Icon`
                     - Exports (values):
                       - `PageMarkdown`
                       - `PageRefChip`
@@ -17010,6 +17011,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Uses tokens:
                       - `ui/tokens/color-palette --destructive`
                       - `ui/tokens/shape --radius`
+                      - `ui/tokens/shape --spacing`
                     - Imported by:
                       - `conversations/conversation-view/artifacts/page`
                       - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/edit-page`
@@ -34826,12 +34828,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shape` ×2
           - `ui/tokens/font-family --font-mono`
           - `ui/tokens/shadow --shadow`
-        - Imported by: 79 plugins — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
+        - Imported by: 80 plugins — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
           - `page` ×59
           - `apps` ×9
           - `reports` ×4
           - `active-data` ×3
           - `primitives` ×2
+          - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
           - `debug/slow-ops`
           - `reorder/node-types`
         - Extended by:
@@ -38544,11 +38547,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CenterProps`
             - Exports (values): `Center`
           - Cross-plugin:
-            - Imported by: 126 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
+            - Imported by: 127 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
               - `apps` ×40
               - `primitives` ×26
               - `page` ×18
-              - `conversations` ×7
+              - `conversations` ×8
               - `debug` ×6
               - `ui` ×5
               - `apps-core` ×3
@@ -50864,9 +50867,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/shadow --shadow`
           - `ui/tokens/shape --spacing`
-        - Imported by: 346 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 345 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×89
-          - `conversations` ×57
+          - `conversations` ×56
           - `primitives` ×42
           - `page` ×41
           - `fields` ×35
