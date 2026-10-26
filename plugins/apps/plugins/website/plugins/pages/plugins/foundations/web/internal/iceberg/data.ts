@@ -107,7 +107,7 @@ export const LAYERS: readonly IcebergLayer[] = [
       {
         name: "Cross-app integration",
         weight: 3,
-        desc: "Apps use each other directly: a page can show a live task, and a conversation opens the prototype it mentions.",
+        desc: "Every app can be integrated with the others, so features from one app can be used in the others.",
         card: "crossapp",
         kind: "component",
       },
@@ -120,7 +120,7 @@ export const LAYERS: readonly IcebergLayer[] = [
       {
         name: "Mac & Linux integration",
         weight: 2,
-        desc: "Every app can be installed as an app of its own, with its own window and its own icon in the Dock. An equin icon in the menu bar opens a panel from wherever you are to file a task or open any app, and notifications show as system notifications.",
+        desc: "Every app can be installed as its own app, with its own window and Dock icon.",
         card: "tray",
         kind: "component",
       },

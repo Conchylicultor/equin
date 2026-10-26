@@ -1,0 +1,105 @@
+[data-card="crossapp"] .xa-stage { display: block; position: relative; height: 186px; }
+[data-card="crossapp"] .xa-win { position: absolute; inset: 0; display: flex; flex-direction: column; }
+[data-card="crossapp"] .xa-bar { display: flex; align-items: center; gap: 5px; flex: none; padding: 0 9px; line-height: 21px; font-weight: var(--k-wb);
+  border-bottom: 1px solid color-mix(in srgb, var(--k-ink) 14%, transparent); }
+[data-card="crossapp"] .xa-body { flex: 1; min-height: 0; overflow: hidden; padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; }
+[data-card="crossapp"] .k-bar { flex: none; }
+/* the space the view takes: closed while the host is alone (a), opening in b (the host's content moves aside) */
+[data-card="crossapp"] .xa-hole { display: grid; grid-template-rows: 0fr; flex: none; transition: grid-template-rows .55s var(--k-ease); }
+[data-card="crossapp"] .xa-hole-in { display: flex; flex-direction: column; min-height: 0; overflow: hidden; margin: -10px -10px 0; padding: 10px 10px 0; }
+[data-card="crossapp"] [data-s="1"] .xa-hole, [data-card="crossapp"] [data-s="3"] .xa-hole, [data-card="crossapp"] [data-s="5"] .xa-hole, [data-card="crossapp"] [data-s="7"] .xa-hole { grid-template-rows: 1fr; }
+/* the embedded view: accent outline, the companion's name tagged on its top edge; it pops in once its space is open */
+[data-card="crossapp"] .xa-emb { box-sizing: border-box; position: relative; display: flex; flex-direction: column; gap: 6px; flex: none; margin-top: 6px; padding: 10px 8px 7px;
+  border-radius: var(--k-r); border: 1.5px solid var(--k-accent); background: color-mix(in srgb, var(--k-accent) 4%, var(--k-soft));
+  box-shadow: 0 3px 10px color-mix(in srgb, var(--k-accent) 16%, transparent);
+  opacity: 0; transform: translateY(8px) scale(.94); transition: opacity .2s, transform .2s; }
+[data-card="crossapp"] [data-s="1"] .xa-emb, [data-card="crossapp"] [data-s="3"] .xa-emb, [data-card="crossapp"] [data-s="5"] .xa-emb, [data-card="crossapp"] [data-s="7"] .xa-emb { opacity: 1; transform: none; transition: opacity .35s .4s, transform .5s .4s var(--k-ease); }
+[data-card="crossapp"] .xa-tag { position: absolute; top: -8px; left: 7px; display: inline-flex; align-items: center; gap: 3px; padding: 0 6px 0 4px; line-height: 14px;
+  border-radius: var(--k-pill); background: var(--k-accent); color: var(--k-soft); font-size: var(--k-fs-sm); font-weight: var(--k-wb); }
+/* step a's action: the thing that calls for the other app arrives just after the host shows */
+[data-card="crossapp"] .xa-act { animation: xa-pop .35s .35s var(--k-ease) backwards; }
+@keyframes xa-pop { from { opacity: 0; transform: translateY(5px) scale(.96); } }
+/* scene 0 · conversation */
+[data-card="crossapp"] .xa-th { display: flex; flex-direction: column; gap: 5px; }
+[data-card="crossapp"] .xa-me, [data-card="crossapp"] .xa-ag { display: block; padding: 3px 8px; border-radius: var(--k-r-lg); font-size: var(--k-fs-sm); max-width: 80%; }
+[data-card="crossapp"] .xa-me { align-self: flex-end; border-bottom-right-radius: 3px; background: color-mix(in srgb, var(--k-accent) 16%, var(--k-soft)); }
+[data-card="crossapp"] .xa-ag { align-self: flex-start; border-bottom-left-radius: 3px; border: 1px solid color-mix(in srgb, var(--k-ink) 18%, transparent); }
+[data-card="crossapp"] .xa-th .xa-emb { margin-top: 4px; width: 78%; }
+[data-card="crossapp"] .xa-set { display: flex; flex-direction: column; gap: 6px; }
+[data-card="crossapp"] .xa-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+[data-card="crossapp"] .xa-sw { position: relative; flex: none; width: 20px; height: 11px; border-radius: 6px; background: color-mix(in srgb, var(--k-ink) 25%, transparent); }
+[data-card="crossapp"] .xa-sw::after { content: ""; position: absolute; top: 1.5px; left: 1.5px; width: 8px; height: 8px; border-radius: 50%; background: var(--k-soft); }
+[data-card="crossapp"] .xa-sw-a { animation: xa-sw-bg 2.6s infinite; } [data-card="crossapp"] .xa-sw-a::after { animation: xa-sw-k 2.6s infinite; }
+[data-card="crossapp"] .xa-sw-b { background: var(--k-accent); } [data-card="crossapp"] .xa-sw-b::after { left: 10.5px; }
+@keyframes xa-sw-bg { 0%, 40% { background: color-mix(in srgb, var(--k-ink) 25%, transparent); } 50%, 90% { background: var(--k-accent); } }
+@keyframes xa-sw-k { 0%, 40% { left: 1.5px; } 50%, 90% { left: 10.5px; } }
+[data-card="crossapp"] .xa-seg { display: inline-flex; padding: 1px; gap: 1px; border-radius: 6px; border: 1px solid color-mix(in srgb, var(--k-ink) 22%, transparent); font-size: 8.5px; font-weight: var(--k-wb); }
+[data-card="crossapp"] .xa-seg > span { padding: 0 5px; line-height: 11px; border-radius: 5px; }
+[data-card="crossapp"] .xa-sg-a { animation: xa-seg 2.6s 1.3s infinite; } [data-card="crossapp"] .xa-sg-b { animation: xa-seg 2.6s infinite; }
+@keyframes xa-seg { 0%, 40% { background: var(--k-accent); color: var(--k-soft); } 50%, 90% { background: transparent; color: var(--k-ink); } }
+/* scene 1 · a page */
+[data-card="crossapp"] .xa-doc { display: flex; flex-direction: column; gap: 6px; }
+[data-card="crossapp"] .xa-h { font-weight: 700; font-size: var(--k-fs-lg); }
+[data-card="crossapp"] .xa-doc .xa-emb { margin: 4px 0 0; }
+[data-card="crossapp"] .xa-line { display: block; }
+[data-card="crossapp"] .xa-mention { display: inline-flex; align-items: center; gap: 2px; padding: 0 4px 0 3px; border-radius: 4px; font-weight: var(--k-wb);
+  color: var(--k-accent); background: color-mix(in srgb, var(--k-accent) 12%, transparent); }
+[data-card="crossapp"] .xa-map { position: relative; display: block; height: 54px; border-radius: 4px; overflow: hidden; background: color-mix(in srgb, var(--k-ink) 5%, var(--k-soft)); }
+[data-card="crossapp"] .xa-map > svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+[data-card="crossapp"] .xa-road { fill: none; stroke: color-mix(in srgb, var(--k-ink) 16%, transparent); stroke-width: 3; }
+[data-card="crossapp"] .xa-water { fill: color-mix(in srgb, var(--k-accent) 16%, transparent); }
+[data-card="crossapp"] .xa-pin { position: absolute; left: 58%; top: 9px; color: var(--k-accent); opacity: 0; transform: translateY(-14px); transition: opacity .2s, transform .2s; }
+[data-card="crossapp"] .k-root .xa-pin svg.k-hic { width: 18px; height: 18px; fill: var(--k-soft); stroke-width: 1.6; }
+[data-card="crossapp"] .xa-pin::after { content: ""; position: absolute; left: 50%; bottom: -2px; width: 8px; height: 3px; margin-left: -4px; border-radius: 50%;
+  background: color-mix(in srgb, var(--k-accent) 40%, transparent); }
+[data-card="crossapp"] [data-s="1"] .xa-pin, [data-card="crossapp"] [data-s="3"] .xa-pin, [data-card="crossapp"] [data-s="5"] .xa-pin, [data-card="crossapp"] [data-s="7"] .xa-pin { opacity: 1; transform: none; transition: opacity .2s .85s, transform .45s .85s cubic-bezier(.3, 1.6, .5, 1); }
+[data-card="crossapp"] .xa-place { display: flex; flex-direction: column; line-height: 1.25; font-size: var(--k-fs-sm); }
+[data-card="crossapp"] .xa-place > span { color: var(--k-mute); font-size: 8.5px; }
+[data-card="crossapp"] .xa-task { display: flex; align-items: center; gap: 5px; font-weight: var(--k-wb); }
+[data-card="crossapp"] .xa-task > .k-hic { color: var(--k-accent); }
+[data-card="crossapp"] .xa-tt { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+[data-card="crossapp"] .xa-st { display: inline-flex; align-items: center; gap: 3px; padding: 0 6px 0 4px; border-radius: 7px; line-height: 14px; font-size: 8.5px;
+  color: var(--k-accent); background: color-mix(in srgb, var(--k-accent) 14%, transparent); }
+[data-card="crossapp"] .xa-spin { width: 6px; height: 6px; border-radius: 50%; border: 1.3px solid currentColor; border-right-color: transparent; animation: xa-rot .9s linear infinite; }
+@keyframes xa-rot { to { transform: rotate(360deg); } }
+[data-card="crossapp"] .xa-prog { display: block; height: 3px; border-radius: 2px; background: color-mix(in srgb, var(--k-ink) 14%, transparent); overflow: hidden; }
+[data-card="crossapp"] .xa-prog > span { display: block; height: 100%; width: 35%; border-radius: 2px; background: var(--k-accent); animation: xa-fill 5.8s ease-out forwards; }
+@keyframes xa-fill { from { width: 10%; } to { width: 62%; } }
+[data-card="crossapp"] .xa-pl { display: flex; align-items: center; gap: 7px; }
+[data-card="crossapp"] .xa-pb { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 18px; height: 18px; border-radius: 50%; background: var(--k-accent); color: var(--k-soft); }
+[data-card="crossapp"] .xa-pb .k-hic { fill: currentColor; }
+[data-card="crossapp"] .xa-song { display: flex; flex-direction: column; line-height: 1.2; font-size: var(--k-fs-sm); }
+[data-card="crossapp"] .xa-song > span { color: var(--k-mute); font-size: 8.5px; }
+/* scene 2 · Files */
+[data-card="crossapp"] .xa-fx { position: relative; display: flex; gap: 8px; height: 100%; }
+/* the pointer clicking the file, and the row it selects */
+[data-card="crossapp"] .xa-cur { position: absolute; left: 70px; top: 26px; width: 13px; height: 13px; z-index: 2;
+  animation: xa-cur .6s .25s var(--k-ease) backwards, xa-click .16s .85s; }
+[data-card="crossapp"] .xa-cur svg { width: 100%; height: 100%; fill: var(--k-soft); stroke: var(--k-ink); stroke-width: 1; stroke-linejoin: round; }
+@keyframes xa-cur { from { transform: translate(110px, 90px); opacity: 0; } 30% { opacity: 1; } }
+@keyframes xa-click { 50% { transform: scale(.8); } }
+[data-card="crossapp"] .xa-fsel { animation: xa-sel .15s .9s backwards; }
+@keyframes xa-sel { from { background: transparent; color: var(--k-ink); font-weight: 400; } }
+[data-card="crossapp"] .xa-ls { display: flex; flex-direction: column; gap: 1px; width: 98px; flex: none; }
+[data-card="crossapp"] .xa-f { display: flex; align-items: center; gap: 4px; padding: 0 5px; line-height: 19px; border-radius: var(--k-r-sm); font-size: var(--k-fs-sm); white-space: nowrap; overflow: hidden; }
+[data-card="crossapp"] .xa-fsel { background: color-mix(in srgb, var(--k-accent) 14%, transparent); color: var(--k-accent); font-weight: var(--k-wb); }
+[data-card="crossapp"] .xa-fx .xa-hole { flex: 1; min-width: 0; align-self: flex-start; }
+[data-card="crossapp"] .xa-fx .xa-emb { margin-top: 8px; }
+[data-card="crossapp"] .xa-roll { position: relative; height: 48px; border-radius: 3px; overflow: hidden;
+  background: repeating-linear-gradient(to bottom, transparent 0 8px, color-mix(in srgb, var(--k-ink) 9%, transparent) 8px 9px); }
+[data-card="crossapp"] .xa-n { position: absolute; height: 6px; border-radius: 2px; background: color-mix(in srgb, var(--k-accent) 70%, var(--k-soft)); }
+[data-card="crossapp"] .xa-head { position: absolute; top: 0; bottom: 0; width: 1.5px; background: var(--k-accent); animation: xa-head 4s linear infinite; }
+@keyframes xa-head { from { left: 0; } to { left: 100%; } }
+[data-card="crossapp"] .xa-pl-sm .xa-pb { width: 15px; height: 15px; }
+/* scene 3 · Deploy */
+[data-card="crossapp"] .xa-runs { display: flex; flex-direction: column; gap: 4px; }
+[data-card="crossapp"] .xa-run { display: flex; align-items: center; gap: 5px; padding: 0 2px; line-height: 20px; font-weight: var(--k-wb); }
+[data-card="crossapp"] .xa-run .xa-when { margin-left: auto; font-weight: 400; color: var(--k-mute); font-size: var(--k-fs-sm); }
+[data-card="crossapp"] .xa-bad > .k-hic { color: var(--k-accent); }
+[data-card="crossapp"] .xa-runs .xa-emb { margin: 6px 0 4px 14px; }
+/* the pager: one pill per scene, host and companion icons */
+[data-card="crossapp"] .xa-pg { display: flex; justify-content: center; gap: 3px; margin-top: 8px; }
+[data-card="crossapp"] .xa-dot { display: inline-flex; align-items: center; gap: 2px; padding: 0 4px; line-height: 16px; border-radius: var(--k-pill); cursor: pointer;
+  border: 1px solid color-mix(in srgb, var(--k-ink) 22%, transparent); transition: background var(--k-fast), color var(--k-fast), border-color var(--k-fast); }
+[data-card="crossapp"] .xa-dot:hover:not(.k-sel) { border-color: var(--k-accent); }
+[data-card="crossapp"] .xa-dot.k-sel { background: var(--k-accent); border-color: var(--k-accent); color: var(--k-soft); }
