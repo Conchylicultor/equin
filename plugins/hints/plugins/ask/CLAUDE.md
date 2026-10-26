@@ -112,8 +112,7 @@ portable `server/` half.
   action still clicks: `useDragGesture` drags from a control only past its
   threshold): the mark and the question, then Open in Agent Manager
   (`OpenConversationButton display="icon"`), New question (lets go of the run;
-  it stays in the Agent Manager), Agent instructions, Minimize and Close (×, `EndThreadButton
-  display="icon"`: ends the conversation if it is still open — dropping its
+  it stays in the Agent Manager), Agent instructions, Minimize and Close (×, `EndThreadButton`: ends the conversation if it is still open — dropping its
   task — then lets go of the run and closes the card; always there, so an
   ended thread still closes). No
   status in it — the steps show live in the body, the pill when minimized.
@@ -131,7 +130,7 @@ portable `server/` half.
   corner and the suggestions, a free drag, the corner snap, the card still
   open where it was left after a reload, Close.
 - **Pill**: `useThreadProgress` — the step it is on while working, the question
-  once answered, a dot while unseen; a × beside it is the card's own Close (`EndThreadButton display="icon"`).
+  once answered, a dot while unseen; a × beside it is the card's own Close (`EndThreadButton`).
 - The web barrel side-effect-imports the element picker's barrel so its
   contribution lineage markers (what the outline is made of) are in every
   composition that has the card.

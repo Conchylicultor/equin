@@ -325,9 +325,9 @@ starts a background run (`useStartThread`, the `places.ask` profile — see
 
 - **The thread is a docked side card**, not part of the search panel:
   `AskThreadCard`, full height on the right under the toolbar
-  (`ASK_THREAD_WIDTH` 380px), an `<AgentThread>` with Done
-  (`EndThreadButton`: closes the conversation and drops its task — the card
-  goes, the run stays in the history) and Hide in its header. The bar's
+  (`ASK_THREAD_WIDTH` 380px), an `<AgentThread>` with Hide and Close
+  (×, `EndThreadButton`: closes the conversation and drops its task — the card
+  goes, the run stays in the history) in its header. The bar's
   `AskPill` stays while a run is in hand (`useAsk`'s `conversationId`) and
   toggles the card (`shown`; filled while shown, its unseen dot only while
   hidden). Typing in the bar only searches — the card is untouched.

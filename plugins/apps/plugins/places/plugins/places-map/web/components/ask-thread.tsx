@@ -61,16 +61,16 @@ export interface AskThreadCardProps {
   onToggleExpanded: (toolUseId: string) => void;
   /** Collapse the card to its pill; the run goes on. */
   onHide: () => void;
-  /** The run was ended (Done). */
+  /** The run was ended (Close). */
   onEnded: () => void;
 }
 
 /**
  * Ask Sonnet's run, docked on the right of the map as a full-height card: the
  * conversation as a thread (your question, Sonnet's steps, its answer), a
- * reply box to refine, and in the header Done (closes the conversation and
- * drops its task — it stays in the history, and can be reopened and replied
- * to) and Hide (back to the pill). The CURRENT result — the newest picks,
+ * reply box to refine, and in the header Hide (back to the pill) and Close
+ * (× — closes the conversation and drops its task; it stays in the history,
+ * and can be reopened and replied to). The CURRENT result — the newest picks,
  * whichever turn gave them — shows as cards (photo, rank, why, about,
  * sources, Save; a click opens the pick's detail card); each earlier one is a
  * one-line summary that unfolds to its cards, and its pins join the map's
@@ -106,11 +106,11 @@ export function AskThreadCard(props: AskThreadCardProps) {
         resultWords={(n) => `${n} pick${n === 1 ? "" : "s"}`}
         headerAction={
           <>
+            <IconButton icon={hideIcon} label="Hide" onClick={onHide} />
             <EndThreadButton
               conversationId={conversationId}
               onEnded={onEnded}
             />
-            <IconButton icon={hideIcon} label="Hide" onClick={onHide} />
           </>
         }
         placeholder="Reply to Sonnet — e.g. cheaper, open late"

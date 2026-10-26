@@ -74,7 +74,6 @@ export function AskPill({
       </Button>
       <EndThreadButton
         conversationId={conversationId}
-        display="icon"
         onEnded={() => releaseRun({ close: true })}
       />
     </Line>

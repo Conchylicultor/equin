@@ -35,7 +35,7 @@ export interface AskState {
   toggle: () => void;
   /** Hide the card; the run stays in hand (its pill) and goes on. */
   hide: () => void;
-  /** The run was ended (Done): no card, no pill — it stays in the history. */
+  /** The run was ended (Close): no card, no pill — it stays in the history. */
   release: () => void;
 }
 
