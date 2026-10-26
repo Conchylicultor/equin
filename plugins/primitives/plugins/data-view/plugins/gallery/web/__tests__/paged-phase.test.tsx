@@ -140,11 +140,14 @@ beforeEach(() => {
       return { top: 0, bottom: h, height: h, width: 800 } as DOMRect;
     },
   );
-  vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockImplementation(
-    function (this: HTMLElement) {
+  // Both box reads: virtual-core sizes the scroller by its client box.
+  for (const dim of ["offsetHeight", "clientHeight"] as const) {
+    vi.spyOn(HTMLElement.prototype, dim, "get").mockImplementation(function (
+      this: HTMLElement,
+    ) {
       return heightOf(this);
-    },
-  );
+    });
+  }
   vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockReturnValue(800);
 });
 

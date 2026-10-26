@@ -108,8 +108,13 @@ afterEach(() => {
   // toast body's effect cleanup), so the next test starts from an empty count
   // without the module needing a `clear` — which is precisely what this design
   // deleted. Sonner's own `ToastState.toasts` history does persist across tests,
-  // so anything asserting on it takes a baseline rather than an absolute.
+  // so anything asserting on it takes a baseline rather than an absolute — and
+  // since sonner 2.0.8 a `<Toaster/>` replays every still-ACTIVE toast when it
+  // subscribes, so each test dismisses what it fired or the next test's toaster
+  // mounts them. After `cleanup`: with no toaster subscribed, a dismiss-all
+  // only marks them dismissed, and renders nothing outside `act`.
   cleanup();
+  sonnerToast.dismiss();
   vi.useRealTimers();
 });
 

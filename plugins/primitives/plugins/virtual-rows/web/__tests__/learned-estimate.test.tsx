@@ -46,8 +46,9 @@ afterEach(() => {
 
 describe("useVirtualRows — the estimate is learned", () => {
   it("rows never measured are estimated at the first measured row's size, not the guess", () => {
-    // The scroller shows 300 px; a row is 31 px (the virtualizer reads both
-    // through `offsetHeight`).
+    // The scroller shows 300 px; a row is 31 px. Stubbed through both box
+    // reads: virtual-core sizes the scroller by its client box (3.19.7+) and
+    // a row by its rect or offset box.
     const heightOf = (el: Element) =>
       el.hasAttribute("data-row")
         ? 31
@@ -65,7 +66,13 @@ describe("useVirtualRows — the estimate is learned", () => {
         return heightOf(this);
       },
     );
+    vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockImplementation(
+      function (this: HTMLElement) {
+        return heightOf(this);
+      },
+    );
     vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockReturnValue(100);
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(100);
     const items = Array.from({ length: 100 }, (_, i) => `r${i}`);
     const view = render(<List items={items} />);
     // Grow the list: the rows appended are estimated at the learned 31 px.
