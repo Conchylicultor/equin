@@ -4,10 +4,14 @@
 
 ## Plugin reference
 
-- Description: Toolbar button for app-improvement feedback. Files a task under "Improvements" with the current URL. Companion actions join it as segments of one split pill via ImproveSlots.Segment. Toolbar button and category for app-improvement feedback. Files tasks stamped "Improvements" via the shared task-draft-form primitive.
+- Description: The Wish toolbar button: the entry point for anything the user wants done — a fix, a change, a new app. Files a task under "Improvements" with the current URL. Companion actions join it as segments of one split pill via ImproveSlots.Segment; ImproveSlots.HeaderAction adds actions to its popover header (Ask equin). Task category of the Wish toolbar button. Files tasks stamped "Improvements" via the shared task-draft-form primitive.
 - Web:
-  - Slots: `ImproveSlots.Segment`
-  - Slot contributors: `ImproveSlots.Segment` ← `improve.element-picker`
+  - Slots:
+    - `ImproveSlots.Segment`
+    - `ImproveSlots.HeaderAction`
+  - Slot contributors:
+    - `ImproveSlots.Segment` ← `improve.element-picker`
+    - `ImproveSlots.HeaderAction` ← `hints.ask`
   - Contributes: `ActionBar.Item` → `ImproveButton`
   - Uses:
     - `hints.emitHintSignal`
@@ -21,7 +25,10 @@
     - `tasks/task-draft-form.TaskDraftInsert`
     - `tasks/task-draft-form.TaskDraftPopover`
     - `ui/icons.Icon`
-  - Exports (types): `ImproveSegmentContribution`
+  - Exports (types):
+    - `ImproveHeaderActionContribution`
+    - `ImproveHeaderActionProps`
+    - `ImproveSegmentContribution`
   - Exports (values):
     - `ImproveSlots`
     - `insertIntoImproveDraft`
@@ -57,6 +64,7 @@
   - Imported by:
     - `apps/agent-manager/demo`
     - `apps/home/tour`
+    - `hints/ask`
     - `improve/element-picker`
     - `screenshot/draw-on-app`
 - Sub-plugins:

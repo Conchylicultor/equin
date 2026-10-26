@@ -1,7 +1,7 @@
 # task-draft-form
 
 Reusable popover + chain form for drafting one or more tasks. Drives both the
-toolbar Improve button (`plugins/improve`) and the conversation `+` button
+toolbar Wish button (`plugins/improve`, formerly Improve) and the conversation `+` button
 (`plugins/conversations/.../new-child-task`).
 
 The form is a chain of cards: index 0 is the head, each later card is blocked
@@ -120,7 +120,7 @@ it is handed and knows no tour.
 
 ## Plugin reference
 
-- Description: Reusable popover + chain form for drafting one or more tasks. Powers the Improve toolbar button and the conversation new-child-task button.
+- Description: Reusable popover + chain form for drafting one or more tasks. Powers the Wish toolbar button and the conversation new-child-task button.
 - Web:
   - Slots: `TaskDraftFormSlots.Action`
   - Slot contributors: `TaskDraftFormSlots.Action` ← `improve.element-picker`

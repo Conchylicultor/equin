@@ -25,20 +25,22 @@ import { Icon } from "@plugins/ui/plugins/icons/web";
 
 // The single four-point spark — `flare`, whose Lucide counterpart is
 // `sparkle` — rather than `auto-awesome` (the cluster of three, Lucide
-// `sparkles`), the app's canonical "agent" glyph: Improve is the bar's one
+// `sparkles`), the app's canonical "agent" glyph: Wish is the bar's one
 // labelled action, and the lone spark reads as it at the bar's size.
 const sparkIcon = symbol("flare");
 
 /** What the onboarding tour points at inside the open popover. */
 const HINT_ANCHORS = { panel: improvePanelAnchor, send: improveSendAnchor };
 
+const closeWish = () => setImproveOpen(false);
+
 /**
- * The Improve pill: the Improve button (opening the draft popover) joined with
+ * The Wish pill: the Wish button (opening the draft popover) joined with
  * every contributed `ImproveSlots.Segment` — companion actions that feed the
  * same draft, such as picking a UI element — as one split capsule. Every
  * segment is a ghost: a quiet bar button, no fill and no outline, so the pill
  * reads as one labelled action rather than a framed box inside the bar's own
- * capsule. Only the Improve label is in the text colour; the icons (its sparkle
+ * capsule. Only the Wish label is in the text colour; the icons (its sparkle
  * and the companions) keep the bar's quieter tone, like its other icons, and
  * brighten on hover.
  */
@@ -48,6 +50,7 @@ export function ImproveButton() {
     getImproveOpenState,
   );
   const segments = ImproveSlots.Segment.useContributions();
+  const headerActions = ImproveSlots.HeaderAction.useContributions();
   const anchorRef = useHintAnchor(improveButtonAnchor);
 
   return (
@@ -61,14 +64,23 @@ export function ImproveButton() {
               icon={sparkIcon}
               className="text-muted-foreground transition-colors group-hover/button:text-foreground group-aria-expanded/button:text-foreground"
             />
-            Improve
+            Wish
           </Button>
         }
-        tooltip="Improve"
+        tooltip="Wish"
         target={{ kind: "category", categoryId: IMPROVEMENTS_CATEGORY_ID }}
         insert={insert}
-        heading="Improve this app"
-        placeholder="What should be better here?"
+        heading="Make a wish"
+        headerActions={headerActions.map((action) => (
+          <Fragment key={action.id}>
+            {renderIsolated(
+              ImproveSlots.HeaderAction,
+              action as unknown as Contribution,
+              { close: closeWish },
+            )}
+          </Fragment>
+        ))}
+        placeholder="Fix, change or build anything…"
         hintAnchors={HINT_ANCHORS}
         onSuccess={(taskIds) => emitHintSignal(improveSent, { taskIds })}
       />

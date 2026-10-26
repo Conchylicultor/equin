@@ -99,10 +99,10 @@ export const homeTour = defineTour<HomeTourData>({
     {
       id: "improve",
       anchor: improveButtonAnchor,
-      title: "Improve anything you see",
+      title: "Wish for anything you see",
       body: (
         <>
-          Spot a bug, a rough edge, an idea? Click <b>Improve</b> and say it —{" "}
+          Spot a bug, a rough edge, an idea? Click <b>Wish</b> and say it —{" "}
           <Icon icon={pickIcon} /> points at the exact element. An agent works
           on it in the background while you carry on.
         </>

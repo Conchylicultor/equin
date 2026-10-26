@@ -10,7 +10,7 @@ export { _improvePendingGroups } from "./internal/tables";
 export default {
   portable: true,
   description:
-    'Toolbar button and category for app-improvement feedback. Files tasks stamped "Improvements" via the shared task-draft-form primitive.',
+    'Task category of the Wish toolbar button. Files tasks stamped "Improvements" via the shared task-draft-form primitive.',
   register: [applyGroupJob],
   contributions: [
     Trigger({

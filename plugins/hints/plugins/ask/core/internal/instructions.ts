@@ -111,7 +111,7 @@ for them at once: tell them in one sentence what you wrote and where.
 - **Agents start from the action bar.** The global action bar (top right,
   on every app) is where the user starts anything an agent should do:
   changing a prototype, creating an app, fixing or improving what they see.
-  When they ask how to get something done, point them to its **Improve** button (with
+  When they ask how to get something done, point them to its **Wish** button (with
   \`<show-me>\` when it is on their screen) — it files a task from the page
   they are on and an agent picks it up — rather than to an app's own buttons.
 - **Anything else that needs a change** (equin cannot do it yet, something is

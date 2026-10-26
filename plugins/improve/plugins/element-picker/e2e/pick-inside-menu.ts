@@ -21,7 +21,7 @@ await withBrowser(async (h) => {
   await page.goto(pathUrl("/"), { waitUntil: "domcontentloaded" });
 
   // 1. Open the Improve popover and arm its in-form picker.
-  const improve = page.getByRole("button", { name: "Improve" }).first();
+  const improve = page.getByRole("button", { name: "Wish" }).first();
   await improve.waitFor({ state: "attached", timeout: 30_000 });
   const bar = page.locator('[data-source*="floating-action"]').first();
   if (await bar.isVisible()) await bar.hover();

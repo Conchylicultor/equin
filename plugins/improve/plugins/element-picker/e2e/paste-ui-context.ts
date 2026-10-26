@@ -37,11 +37,11 @@ await withBrowser(async (h) => {
     if (await bar.isVisible()) await bar.hover();
   };
   await page
-    .getByRole("button", { name: "Improve" })
+    .getByRole("button", { name: "Wish" })
     .first()
     .waitFor({ state: "attached", timeout: 30_000 });
   await revealBar();
-  const improve = page.getByRole("button", { name: "Improve" }).first();
+  const improve = page.getByRole("button", { name: "Wish" }).first();
   await improve.waitFor({ state: "visible", timeout: 10_000 });
   await improve.click();
   const editor = page.locator('[contenteditable="true"]').first();

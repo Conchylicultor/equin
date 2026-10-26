@@ -29,8 +29,8 @@ export default function SpotlightExhibit() {
           placement: "bottom",
           content: (
             <HintCard
-              title="Improve anything you see"
-              body="Spot a bug, a rough edge, an idea? Click Improve and say it. An agent works on it in the background while you carry on."
+              title="Wish for anything you see"
+              body="Spot a bug, a rough edge, an idea? Click Wish and say it. An agent works on it in the background while you carry on."
               steps={{ count: 6, index: 2 }}
               onClose={noop}
               alt={{ label: "Skip", onClick: noop }}

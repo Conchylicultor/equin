@@ -71,6 +71,8 @@ export interface TaskDraftFormProps {
   onStandaloneChange?: (next: boolean) => void;
   showStandalone?: boolean;
   heading?: string;
+  /** See `TaskDraftPopoverProps.headerActions`. */
+  headerActions?: React.ReactNode;
   /** The head card's placeholder; defaults to "Describe the task…". */
   placeholder?: string;
   /**
@@ -131,6 +133,7 @@ export function TaskDraftForm({
   onStandaloneChange,
   showStandalone,
   heading,
+  headerActions,
   placeholder,
   headInsertRef,
   hintAnchors,
@@ -248,6 +251,7 @@ export function TaskDraftForm({
             {heading ?? "Draft tasks"}
           </Text>
         </Fill>
+        {headerActions}
         {/* The first card has no connector to carry its ×, so the header's
             stands in: with a chain it drops task 1 (task 2 becomes the head);
             with one task left there is nothing to drop, so it closes. */}

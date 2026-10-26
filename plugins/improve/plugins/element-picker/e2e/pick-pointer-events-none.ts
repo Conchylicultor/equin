@@ -30,7 +30,7 @@ await withBrowser(async (h) => {
     if (await bar.isVisible()) await bar.hover();
   };
   await page
-    .getByRole("button", { name: "Improve" })
+    .getByRole("button", { name: "Wish" })
     .first()
     .waitFor({ state: "attached", timeout: 30_000 });
   await revealBar();

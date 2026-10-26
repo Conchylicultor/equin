@@ -35,7 +35,7 @@ export default function FormExhibit() {
       relateMode={relateMode}
       onRelateModeChange={setRelateMode}
       showIndependentRelate
-      heading="Improve this app"
+      heading="Make a wish"
     />
   );
 }

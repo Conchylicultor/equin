@@ -167,12 +167,12 @@ async function improveRoundTrips(
   mode: string,
   floating: boolean,
 ): Promise<void> {
-  const improveCard = page.getByText("Improve anything you see", {
+  const improveCard = page.getByText("Wish for anything you see", {
     exact: true,
   });
   const askCard = page.getByText("See what an agent can do", { exact: true });
   const improveButton = page.getByRole("button", {
-    name: "Improve",
+    name: "Wish",
     exact: true,
   });
   const draft = page.getByText(
@@ -266,7 +266,7 @@ const passed = await withBrowser(async (h) => {
   await visible("docked: bar step", card("Your way to talk to equin"));
   await button("Next").click();
   if (
-    !(await visible("docked: improve step", card("Improve anything you see")))
+    !(await visible("docked: improve step", card("Wish for anything you see")))
   )
     return false;
   await improveRoundTrips(page, "docked", false);
@@ -302,12 +302,12 @@ const passed = await withBrowser(async (h) => {
   await hoverActionBar(page);
   await visible(
     "improve step (hover advanced)",
-    card("Improve anything you see"),
+    card("Wish for anything you see"),
   );
   // The step holds the bar unfolded with the pointer gone.
   await page.mouse.move(700, 850);
   await page.waitForTimeout(800);
-  await visible("bar stays unfolded on the improve step", button("Improve"));
+  await visible("bar stays unfolded on the improve step", button("Wish"));
   await snap(page, out, "4-improve");
   await improveRoundTrips(page, "solo", true);
 

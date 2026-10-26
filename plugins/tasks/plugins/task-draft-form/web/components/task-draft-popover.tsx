@@ -144,6 +144,11 @@ export interface TaskDraftPopoverProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   heading?: string;
+  /**
+   * Actions drawn in the form's header, before its × — another way to handle
+   * what the user came for (Wish's Ask equin).
+   */
+  headerActions?: ReactNode;
   /** The head card's placeholder — what this surface asks the user for. */
   placeholder?: string;
   onSuccess?: (taskIds: string[]) => void;
@@ -175,6 +180,7 @@ function TaskDraftFormContent({
   activeRelate,
   target,
   heading,
+  headerActions,
   placeholder,
   onSuccess,
   headInsertRef,
@@ -197,6 +203,7 @@ function TaskDraftFormContent({
   activeRelate: { taskId: string } | null;
   target: TaskChainTarget;
   heading: string | undefined;
+  headerActions: ReactNode;
   placeholder: string | undefined;
   onSuccess: ((taskIds: string[]) => void) | undefined;
   headInsertRef: React.MutableRefObject<((snippet: string) => void) | null>;
@@ -343,6 +350,7 @@ function TaskDraftFormContent({
       onStandaloneChange={(v) => patchDraft({ standalone: v })}
       showStandalone={relateTaskHasDeps}
       heading={heading}
+      headerActions={headerActions}
       placeholder={placeholder}
       headInsertRef={headInsertRef}
       hintAnchors={hintAnchors}
@@ -359,6 +367,7 @@ export function TaskDraftPopover({
   open: controlledOpen,
   onOpenChange,
   heading,
+  headerActions,
   placeholder,
   onSuccess,
   hintAnchors,
@@ -520,6 +529,7 @@ export function TaskDraftPopover({
             activeRelate={activeRelate}
             target={target}
             heading={heading}
+            headerActions={headerActions}
             placeholder={placeholder}
             onSuccess={onSuccess}
             headInsertRef={headInsertRef}
