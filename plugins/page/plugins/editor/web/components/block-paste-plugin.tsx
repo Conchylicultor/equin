@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { COMMAND_PRIORITY_NORMAL, PASTE_COMMAND } from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { clipboardEventOf } from "@plugins/primitives/plugins/text-editor/plugins/clipboard-event/core";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { plainOf } from "../../core";
 import type { BlockTextPluginProps } from "../internal/block-text-extensions";
@@ -22,10 +23,12 @@ export function BlockPastePlugin({ block, editor }: BlockTextPluginProps) {
   const fetchEndpoint = useFetchEndpoint();
   const docs = useBlockDocs();
   useEffect(() => {
-    return lexical.registerCommand<ClipboardEvent>(
+    return lexical.registerCommand(
       PASTE_COMMAND,
       (event) => {
-        const picked = resolvePastedBlock(event.clipboardData);
+        const picked = resolvePastedBlock(
+          clipboardEventOf(event)?.clipboardData ?? null,
+        );
         if (!picked) return false; // not a pasted file → let url-paste / default run
         event.preventDefault();
         const { file, handler } = picked;

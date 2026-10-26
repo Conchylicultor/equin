@@ -215,10 +215,10 @@ export function LinkHoverPlugin({ block }: BlockTextPluginProps) {
   // focus is in the form, which handles its own Esc.
   useEffect(() => {
     if (activeKey === null) return;
-    return lexical.registerCommand<KeyboardEvent | null>(
+    return lexical.registerCommand(
       KEY_ESCAPE_COMMAND,
       (event) => {
-        event?.preventDefault();
+        event.preventDefault();
         close();
         return true;
       },

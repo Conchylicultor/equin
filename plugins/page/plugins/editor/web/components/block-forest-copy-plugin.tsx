@@ -7,6 +7,7 @@ import {
   CUT_COMMAND,
 } from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { clipboardEventOf } from "@plugins/primitives/plugins/text-editor/plugins/clipboard-event/core";
 import { selectionIsCollapsed } from "@plugins/primitives/plugins/dom/plugins/dom-selection/web";
 import { useBlockEditor } from "../block-editor-context";
 import { Editor } from "../slots";
@@ -70,7 +71,7 @@ export function BlockForestCopyPlugin({ block, editor }: BlockTextPluginProps) {
      * failed to reach the clipboard must not destroy the block.
      */
     const writeBlock = (
-      event: ClipboardEvent,
+      event: ClipboardEvent | KeyboardEvent | null,
       gesture: "copy" | "cut",
     ): boolean => {
       const selection = $getSelection();
@@ -84,24 +85,25 @@ export function BlockForestCopyPlugin({ block, editor }: BlockTextPluginProps) {
       if (!$isRangeSelection(selection) || !selection.isCollapsed())
         return false;
       if (!selectionIsCollapsed()) return false;
-      const clipboardData = event.clipboardData;
-      if (clipboardData === null) return false;
+      const clipboardEvent = clipboardEventOf(event);
+      const clipboardData = clipboardEvent?.clipboardData ?? null;
+      if (clipboardEvent === null || clipboardData === null) return false;
       const forest = serializeForest(rowsRef.current, [block.id]);
       // The row is gone from under the caret (a concurrent delete): decline
       // rather than write an empty clipboard over what the user had.
       if (forest.length === 0) return false;
       writeForestToClipboard(clipboardData, forest, handles, gesture, "blocks");
-      event.preventDefault();
+      clipboardEvent.preventDefault();
       return true;
     };
 
     const unregister = [
-      lexical.registerCommand<ClipboardEvent>(
+      lexical.registerCommand(
         COPY_COMMAND,
         (event) => writeBlock(event, "copy"),
         COMMAND_PRIORITY_NORMAL,
       ),
-      lexical.registerCommand<ClipboardEvent>(
+      lexical.registerCommand(
         CUT_COMMAND,
         (event) => {
           if (!writeBlock(event, "cut")) return false;

@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from "react";
 import { COMMAND_PRIORITY_NORMAL, PASTE_COMMAND } from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { clipboardEventOf } from "@plugins/primitives/plugins/text-editor/plugins/clipboard-event/core";
 import {
   parseMarkdownToForest,
   type ForestGranularity,
@@ -64,10 +65,10 @@ export function BlockForestPastePlugin({ block }: BlockTextPluginProps) {
   );
 
   useEffect(() => {
-    return lexical.registerCommand<ClipboardEvent>(
+    return lexical.registerCommand(
       PASTE_COMMAND,
       (event) => {
-        const clipboard = event.clipboardData;
+        const clipboard = clipboardEventOf(event)?.clipboardData ?? null;
         if (!clipboard) return false;
         const decision = decideTransfer({
           isFile: resolvePastedBlock(clipboard) !== null,

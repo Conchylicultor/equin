@@ -1,6 +1,12 @@
 import { useEffect } from "react";
-import { COMMAND_PRIORITY_NORMAL, DROP_COMMAND, PASTE_COMMAND } from "lexical";
+import {
+  COMMAND_PRIORITY_NORMAL,
+  DROP_COMMAND,
+  PASTE_COMMAND,
+  type PasteCommandType,
+} from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { clipboardEventOf } from "@plugins/primitives/plugins/text-editor/plugins/clipboard-event/core";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { attachFiles, filesOf } from "./attach-files";
 
@@ -17,9 +23,11 @@ export function ImageUploadPlugin({
   const fetchEndpoint = useFetchEndpoint();
 
   useEffect(() => {
-    const handle = (event: ClipboardEvent | DragEvent) => {
+    const handle = (event: PasteCommandType | DragEvent) => {
       const isDrop = event instanceof DragEvent;
-      const data = isDrop ? event.dataTransfer : event.clipboardData;
+      const data = isDrop
+        ? event.dataTransfer
+        : (clipboardEventOf(event)?.clipboardData ?? null);
       if (!data) return false;
       const files = filesOf(data, isDrop ? "drop" : "paste");
       if (files.length === 0) return false;
@@ -33,7 +41,7 @@ export function ImageUploadPlugin({
       return true;
     };
 
-    const unregisterPaste = editor.registerCommand<ClipboardEvent>(
+    const unregisterPaste = editor.registerCommand(
       PASTE_COMMAND,
       handle,
       COMMAND_PRIORITY_NORMAL,

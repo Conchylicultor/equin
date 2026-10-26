@@ -45181,6 +45181,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page/inline-page-link`
               - `page/math/inline`
               - `page/url-paste`
+        - **`clipboard-event`** — clipboardEventOf: the ClipboardEvent a Lexical PASTE / COPY / CUT command carries, or null — their payloads are unions (an InputEvent paste, a keyboard-dispatched copy) and only a ClipboardEvent holds clipboardData. A leaf, so every editor plugin can read a clipboard command the same way, the text-editor tree included.
+          - Core:
+            - Exports (values): `clipboardEventOf`
         - **`composer`** — Composer field: a TextEditor whose control bar lives INSIDE its own border, via the editor's bottomSlot. One box, one focus ring, one density.
           - Web:
             - Uses:

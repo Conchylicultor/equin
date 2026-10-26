@@ -41,7 +41,7 @@
     "@types/bun": "^1.4.4",
     "@types/dagre": "^0.7.52",
     "@types/diff": "^8.0.0",
-    "@types/node": "^25.5.2",
+    "@types/node": "^26.6.5",
     "@types/pg": "^8.23.1",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
@@ -64,6 +64,19 @@
   "dependencyPolicy": {
     "ownScopes": ["@equin"],
     "groups": [
+      {
+        "id": "lexical",
+        "members": [
+          "lexical",
+          "@lexical/html",
+          "@lexical/link",
+          "@lexical/react",
+          "@lexical/selection",
+          "@lexical/yjs"
+        ],
+        "agree": "version",
+        "reason": "one copy of lexical: every @lexical/* package pins lexical to its own exact version, so a member moved alone resolves a second lexical whose LexicalEditor / LexicalCommand types do not assign to ours (2026-10-26: each of 0.52.0 alone failed type-check)"
+      },
       {
         "id": "typescript-eslint",
         "members": [

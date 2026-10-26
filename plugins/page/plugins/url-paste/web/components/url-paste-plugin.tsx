@@ -14,6 +14,7 @@ import {
 } from "lexical";
 import { $createLinkNode, $isLinkNode } from "@lexical/link";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { clipboardEventOf } from "@plugins/primitives/plugins/text-editor/plugins/clipboard-event/core";
 
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import {
@@ -269,10 +270,12 @@ export function UrlPastePlugin({ block, editor }: BlockTextPluginProps) {
       bareUrl(data ? readTransferText(data).trim() : "");
 
     const unregister = [
-      lexical.registerCommand<ClipboardEvent>(
+      lexical.registerCommand(
         PASTE_COMMAND,
         (event) => {
-          const url = transferUrl(event.clipboardData);
+          const url = transferUrl(
+            clipboardEventOf(event)?.clipboardData ?? null,
+          );
           if (url === null) return false;
           const sel = $getSelection();
           // A selected range is `LinkPlugin`'s: it wraps the range in the URL.

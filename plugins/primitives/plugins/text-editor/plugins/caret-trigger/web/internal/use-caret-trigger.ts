@@ -264,21 +264,21 @@ export function useCaretMenu(
     // applied is undone. Invisible for `/` (its caret already sits at the line
     // end, where Down has nowhere to go); fatal for url-paste, whose caret sits
     // just past a link and slides into it.
-    const unDown = lexicalEditor.registerCommand<KeyboardEvent | null>(
+    const unDown = lexicalEditor.registerCommand(
       KEY_ARROW_DOWN_COMMAND,
       (event) => {
         if (!interactiveRef.current) return false;
-        event?.preventDefault();
+        event.preventDefault();
         move(1);
         return true;
       },
       COMMAND_PRIORITY_CRITICAL,
     );
-    const unUp = lexicalEditor.registerCommand<KeyboardEvent | null>(
+    const unUp = lexicalEditor.registerCommand(
       KEY_ARROW_UP_COMMAND,
       (event) => {
         if (!interactiveRef.current) return false;
-        event?.preventDefault();
+        event.preventDefault();
         move(-1);
         return true;
       },

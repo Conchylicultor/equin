@@ -7,6 +7,7 @@ import {
   PASTE_COMMAND,
 } from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { clipboardEventOf } from "@plugins/primitives/plugins/text-editor/plugins/clipboard-event/core";
 import { blockIdKind } from "@plugins/page/plugins/editor/core";
 import {
   readTransferText,
@@ -71,10 +72,10 @@ export function BlockIdPastePlugin({ block, editor }: BlockTextPluginProps) {
 
   useEffect(
     () =>
-      lexical.registerCommand<ClipboardEvent>(
+      lexical.registerCommand(
         PASTE_COMMAND,
         (event) => {
-          const data = event.clipboardData;
+          const data = clipboardEventOf(event)?.clipboardData ?? null;
           const text = data ? readTransferText(data).trim() : "";
           if (!blockIdKind.is(text)) return false;
           const sel = $getSelection();

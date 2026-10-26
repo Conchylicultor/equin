@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { COMMAND_PRIORITY_LOW, PASTE_COMMAND } from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { clipboardEventOf } from "@plugins/primitives/plugins/text-editor/plugins/clipboard-event/core";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import {
   hasToken,
@@ -53,10 +54,10 @@ export function TokenPastePlugin({
   const extensionsRef = useLatestRef(extensions);
 
   useEffect(() => {
-    return editor.registerCommand<ClipboardEvent>(
+    return editor.registerCommand(
       PASTE_COMMAND,
       (event) => {
-        const data = event.clipboardData;
+        const data = clipboardEventOf(event)?.clipboardData ?? null;
         if (!data) return false;
         if (Array.from(data.types).includes(LEXICAL_MIME)) return false;
         const text = data.getData("text/plain");

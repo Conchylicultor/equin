@@ -90,7 +90,10 @@ const REPLAY_COMMANDS = {
   ArrowDown: KEY_ARROW_DOWN_COMMAND,
   ArrowLeft: KEY_ARROW_LEFT_COMMAND,
   ArrowRight: KEY_ARROW_RIGHT_COMMAND,
-} satisfies Record<KeystrokeKey, LexicalCommand<KeyboardEvent | null>>;
+} satisfies Record<
+  KeystrokeKey,
+  LexicalCommand<KeyboardEvent> | LexicalCommand<KeyboardEvent | null>
+>;
 
 /**
  * Apply input the caret authority buffered while this editor was still mounting.
