@@ -21,7 +21,7 @@ import type { ResourceResult } from "./use-resource";
  * after a first-load failure, and its `isPending` / `isError` booleans let a
  * surface read `data ?? []` without asking which state it is in — the
  * pending-as-empty collapse. This turns it into the three arms every read
- * has, through the same mapping `useEndpointResource` uses:
+ * has, through the same mapping a live read's `useResource` uses:
  *
  * - `error` whenever the last fetch failed — the value it held before as
  *   `stale`, if any (a failed refetch keeps React Query's data);

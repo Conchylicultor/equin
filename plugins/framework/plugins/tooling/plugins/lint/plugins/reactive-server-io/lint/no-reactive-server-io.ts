@@ -6,7 +6,7 @@ import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
  * Tripwire for a specific class of bug: a client `useEffect` / `useLayoutEffect`
  * that performs server I/O (toast/fetch/endpoint/query mutations) while reacting
  * to SHARED SERVER STATE. Live-state pushes (useLive / useLiveRow / useResource /
- * subscribeWsStatus / useEndpoint resources) fan out to EVERY open browser tab,
+ * subscribeWsStatus resources) fan out to EVERY open browser tab,
  * so an effect that reacts to such a value and calls a write/IO fires N times —
  * once per tab — duplicating the I/O.
  *
@@ -25,7 +25,7 @@ import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
  *       the effect's dependency array (or, if there is no dep array, the callback
  *       body) references at least one binding whose initializer is — directly or
  *       transitively through other local bindings — a call to a "shared-state hook":
- *       useLive | useLiveRow | useResource | subscribeWsStatus | useEndpoint |
+ *       useLive | useLiveRow | useResource | subscribeWsStatus |
  *       any use*Resource(s) hook.
  */
 
@@ -54,7 +54,6 @@ const SHARED_STATE_HOOK_NAMES = new Set([
   "useLiveRow",
   "useResource",
   "subscribeWsStatus",
-  "useEndpoint",
 ]);
 
 /**

@@ -3,8 +3,8 @@ import type { ResourceResult } from "./use-resource";
 
 /**
  * THE mapping from a TanStack query's (data, error) to a `ResourceResult` —
- * shared by `useResource`, `useQueryResource` and
- * `useEndpointResource`. Pure; memoize at the call site.
+ * shared by `useResource` (a live read's cache entry) and `useQueryResource`
+ * (a local async load). Pure; memoize at the call site.
  *
  * - `error` whenever the last fetch failed — the value it held before as
  *   `stale`, if any;

@@ -1,8 +1,4 @@
-import {
-  useMutation,
-  useQueryClient,
-  type UseMutationResult,
-} from "@tanstack/react-query";
+import { useMutation, type UseMutationResult } from "@tanstack/react-query";
 import { useTransport } from "@plugins/primitives/plugins/networking/web";
 import type {
   EndpointDef,
@@ -27,11 +23,6 @@ type MutationVariables<TParams, TBody> =
       : { params: TParams; body: TBody };
 
 type MutationOptions<TResponse> = {
-  // invalidation targets are heterogeneous
-  invalidates?: (
-    | EndpointDef<any, any, any, any, any>
-    | MachineEndpointDef<any, any, any, any, any>
-  )[];
   onSuccess?: (data: TResponse extends void ? void : TResponse) => void;
   onError?: (err: EndpointError) => void;
   // Explicit override for the global toast. Defaults to true when onError is provided.
@@ -57,7 +48,8 @@ export type MachineEndpointMutation<TParams, TBody, TResponse> =
 /**
  * TanStack Query useMutation wrapper for POST/PATCH/DELETE endpoints.
  *
- * On success, invalidates queries matching the listed endpoints' query key prefixes.
+ * It refreshes no read: every server read is live (`network/live`), pushed
+ * when the write lands, so there is nothing to invalidate by hand.
  * On error, the global auto-toast fires unless onError is provided or meta.suppressError is set.
  *
  * A desktop-only endpoint (`needsMachine`) answers a {@link MachineEndpointMutation}.
@@ -96,7 +88,6 @@ export function useEndpointMutation<
 ):
   | EndpointMutation<TParams, TBody, TResponse>
   | MachineEndpointMutation<TParams, TBody, TResponse> {
-  const queryClient = useQueryClient();
   const transport = useTransport();
   const fetchEndpoint = useFetchEndpoint();
   const suppressError =
@@ -131,16 +122,7 @@ export function useEndpointMutation<
       if (result.kind === "unavailable") throw new Error(result.message);
       return result.value;
     },
-    onSuccess: (data) => {
-      if (opts?.invalidates) {
-        for (const dep of opts.invalidates) {
-          void queryClient.invalidateQueries({
-            queryKey: ["endpoint", dep.route],
-          });
-        }
-      }
-      opts?.onSuccess?.(data);
-    },
+    onSuccess: opts?.onSuccess,
     onError: opts?.onError,
   });
   if (endpoint.needsMachine === undefined) return mutation;

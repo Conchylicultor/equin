@@ -17,12 +17,15 @@ const createRule = ESLintUtils.RuleCreator<LintRuleDocs>(
  *
  * A server read in the browser is a live resource: a `liveValue` (by `params`,
  * by a typed `query`, or key-range-`paged`) or a `liveCollection`, read with
- * `useLive`. The request/response path beside it — `useEndpoint`,
- * `useEndpointResource`, a TanStack `useQuery` family hook, a `queryFn` that
- * calls `fetchEndpoint`, or a GET `fetchEndpoint` / NDJSON stream an effect
- * runs — is a second read path with no push, so its value goes stale or gets
- * polled (research/2026-10-09-global-live-structured-paged-values.md,
- * research/2026-10-11-global-endpoint-reads-onto-live.md P0.2).
+ * `useLive`. The request/response path beside it — a TanStack `useQuery`
+ * family hook, a `queryFn` that calls `fetchEndpoint`, or a GET
+ * `fetchEndpoint` / NDJSON stream an effect runs — is a second read path with
+ * no push, so its value goes stale or gets polled
+ * (research/2026-10-09-global-live-structured-paged-values.md,
+ * research/2026-10-11-global-endpoint-reads-onto-live.md P0.2). The endpoint
+ * read hooks it was written against (`useEndpoint`, `useEndpointResource`,
+ * `endpointQueryKey`, `useEndpointMutation`'s `invalidates:`) are deleted
+ * (B10b), so what is left to ban is the substrate they were built on.
  *
  * Flags, in files under a `web/` folder:
  * - every import of a read hook from the barrel that exports it — a named
@@ -35,11 +38,7 @@ const createRule = ESLintUtils.RuleCreator<LintRuleDocs>(
  *   `fetchEndpoint` parameter; `endpoints/fetch-endpoint-binding-name` keeps
  *   every binding so named) lexically inside a `queryFn` property's value;
  * - a `fetchEndpoint(def, …)` of a GET endpoint, or a `readNdjson(transport, route, …)`
- *   over a GET route, that runs as a READ (see "Read context" below);
- * - `invalidateQueries` / `refetchQueries` whose argument names an endpoint
- *   read's query key — `endpointQueryKey(...)`, or the raw
- *   `["endpoint", …]` key it spells — directly or through a `const`. Refreshing
- *   an endpoint read by hand is what a pushed read makes unnecessary.
+ *   over a GET route, that runs as a READ (see "Read context" below).
  *
  * ## GET-ness
  *
@@ -77,18 +76,15 @@ const createRule = ESLintUtils.RuleCreator<LintRuleDocs>(
  *
  * An imperative `fetchEndpoint` — a mutation, an event handler — is not a
  * read and is not flagged. Test code is out of scope (a contributed rule's
- * default). The substrate that defines or wraps these hooks is exempt through
- * sanctioned entries in its plugins' `exempt/index.ts`; the remaining sites
- * are debt entries in theirs.
+ * default). The ban is flat: the only exemptions are the two sanctioned
+ * substrate entries (`network/live` and `primitives/live-state`, whose `web/`
+ * implements every live read over TanStack queries) — never a debt entry.
  */
 
-const ENDPOINTS_WEB = "@plugins/infra/plugins/endpoints/web";
 const NDJSON_WEB = "@plugins/infra/plugins/ndjson-stream/web";
 
 /** Each barrel → the read hooks it exports. */
 const READ_HOOKS: Readonly<Record<string, readonly string[]>> = {
-  [ENDPOINTS_WEB]: ["useEndpoint"],
-  "@plugins/primitives/plugins/live-state/web": ["useEndpointResource"],
   "@tanstack/react-query": [
     "useQuery",
     "useInfiniteQuery",
@@ -101,7 +97,6 @@ const READ_HOOKS: Readonly<Record<string, readonly string[]>> = {
 
 const FETCH_ENDPOINT = "fetchEndpoint";
 const READ_NDJSON = "readNdjson";
-const ENDPOINT_QUERY_KEY = "endpointQueryKey";
 
 /**
  * Each barrel → the plain functions the rule follows calls of. The endpoint
@@ -109,15 +104,8 @@ const ENDPOINT_QUERY_KEY = "endpointQueryKey";
  * transport and recognised by its binding name (`boundFunction`).
  */
 const TRACKED_FUNCTIONS: Readonly<Record<string, readonly string[]>> = {
-  [ENDPOINTS_WEB]: [ENDPOINT_QUERY_KEY],
   [NDJSON_WEB]: [READ_NDJSON],
 };
-
-/** The QueryClient methods that refresh a query by key. */
-const REFRESH_METHODS = new Set(["invalidateQueries", "refetchQueries"]);
-
-/** The raw first element of every endpoint read's query key. */
-const ENDPOINT_KEY_HEAD = "endpoint";
 
 /** Hooks whose first-argument callback runs after commit. */
 const EFFECT_HOOKS = new Set([
@@ -211,10 +199,6 @@ function calleeName(callee: TSESTree.Node): string | null {
   if (callee.type === "Identifier") return callee.name;
   if (callee.type === "MemberExpression") return memberName(callee);
   return null;
-}
-
-function isNode(value: unknown): value is TSESTree.Node {
-  return typeof value === "object" && value !== null && "type" in value;
 }
 
 type FunctionNode =
@@ -325,12 +309,6 @@ export default createRule({
         "@plugins/network/plugins/live — see " +
         "plugins/network/plugins/live/CLAUDE.md. A GET an event handler " +
         "(`on*`) or a `mutationFn` runs is not flagged.",
-      refreshEndpointKey:
-        "`{{name}}` over an endpoint read's query key refreshes a " +
-        "request/response read by hand. A live read is pushed when its " +
-        "source changes: declare it as a `liveValue` / `liveCollection` read " +
-        "with `useLive` (plugins/network/plugins/live/CLAUDE.md), and drop the " +
-        "manual refresh.",
     },
   },
   defaultOptions: [],
@@ -626,47 +604,6 @@ export default createRule({
       );
     };
 
-    // ── Endpoint query keys ─────────────────────────────────────────────
-
-    /** Whether an expression is (or a `const` holds) an endpoint query key. */
-    const isEndpointKey = (node: TSESTree.Node, depth = 0): boolean => {
-      if (depth > 4) return false;
-      if (node.type === "CallExpression")
-        return calledFunction(node.callee) === ENDPOINT_QUERY_KEY;
-      if (node.type === "ArrayExpression") {
-        const head = node.elements[0];
-        return head?.type === "Literal" && head.value === ENDPOINT_KEY_HEAD;
-      }
-      if (node.type === "Identifier") {
-        const def = definitionOf(node);
-        return (
-          def?.node.type === "VariableDeclarator" &&
-          def.node.id.type === "Identifier" &&
-          def.node.init !== null &&
-          isEndpointKey(def.node.init, depth + 1)
-        );
-      }
-      return false;
-    };
-
-    /**
-     * Whether any expression inside `node` is an endpoint query key — not
-     * looking into nested functions, whose bodies are not the argument.
-     */
-    const containsEndpointKey = (node: TSESTree.Node): boolean => {
-      if (isEndpointKey(node)) return true;
-      for (const key of context.sourceCode.visitorKeys[node.type] ?? []) {
-        const value: unknown = (node as unknown as Record<string, unknown>)[
-          key
-        ];
-        for (const child of Array.isArray(value) ? value : [value]) {
-          if (!isNode(child) || isFunction(child)) continue;
-          if (containsEndpointKey(child)) return true;
-        }
-      }
-      return false;
-    };
-
     return {
       Program(node) {
         // The endpoint client is recognised by its binding name wherever it
@@ -769,20 +706,7 @@ export default createRule({
               messageId: "effectFetch",
               data: { name: READ_NDJSON },
             });
-          return;
         }
-        if (
-          node.callee.type === "MemberExpression" &&
-          !node.callee.computed &&
-          node.callee.property.type === "Identifier" &&
-          REFRESH_METHODS.has(node.callee.property.name) &&
-          node.arguments.some(containsEndpointKey)
-        )
-          context.report({
-            node,
-            messageId: "refreshEndpointKey",
-            data: { name: node.callee.property.name },
-          });
       },
     };
   },

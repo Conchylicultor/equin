@@ -76,8 +76,8 @@ an out-of-date tab), `loading` renders `loadingState` (the view's skeleton), and
 only `ready` reaches the view, so `emptyState` can only mean "ready, and zero
 rows". There is no boolean `loading` prop: a boolean cannot say a read failed,
 so a failure would render as a skeleton forever (or, set false, as empty).
-Without `readiness` the rows are taken as ready (a static list). An endpoint read
-becomes a result through `useEndpointResource`.
+Without `readiness` the rows are taken as ready (a static list). Every server
+read is already a result (`useLive`); there is no endpoint read to adapt.
 
 A needsMachine read's `unavailable` arm is taken too: the shell renders its
 `message` in place of every instance (title/actions kept, no view controls), so

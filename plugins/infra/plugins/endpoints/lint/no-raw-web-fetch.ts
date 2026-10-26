@@ -4,8 +4,9 @@ import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
  * no-raw-web-fetch
  *
  * Web code must talk to the server through the typed-endpoint client
- * (`fetchEndpoint` / `useEndpoint` / `useEndpointMutation` from
- * `@plugins/infra/plugins/endpoints/web`), never a raw `fetch(...)` or a
+ * (`fetchEndpoint` / `useEndpointMutation` from
+ * `@plugins/infra/plugins/endpoints/web`) for a write, or a live read
+ * (`useLive`, `network/live`) for a read — never a raw `fetch(...)` or a
  * `fetchWithRetry(...)` wrapper. A raw web fetch evades the typed contract (no
  * shared route string, no request/response validation, no error reporting).
  *
@@ -51,15 +52,16 @@ export default createRule({
     docs: {
       description:
         "Disallow raw fetch()/fetchWithRetry() in web code — use " +
-        "fetchEndpoint/useEndpoint from the endpoints primitive instead.",
+        "fetchEndpoint from the endpoints primitive (a write) or useLive (a read) instead.",
     },
     schema: [],
     messages: {
       noRawWebFetch:
-        "Raw {{name}}() in web code bypasses the typed-endpoint contract. Use " +
-        "fetchEndpoint / useEndpoint / useEndpointMutation from " +
-        "@plugins/infra/plugins/endpoints/web instead. See the endpoints " +
-        "plugin CLAUDE.md.",
+        "Raw {{name}}() in web code bypasses the typed-endpoint contract. For " +
+        "a write use fetchEndpoint / useEndpointMutation from " +
+        "@plugins/infra/plugins/endpoints/web; for a read declare a liveValue " +
+        "/ liveCollection and read it with useLive (network/live). See the " +
+        "endpoints plugin CLAUDE.md.",
     },
   },
   defaultOptions: [],

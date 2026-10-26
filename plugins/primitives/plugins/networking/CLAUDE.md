@@ -65,7 +65,7 @@ servesUrls, machine, telemetry }`. **There is no default transport**:
 `research/2026-10-22-global-demo-scope-sealed.md`). Every client resolves its
 transport through `useTransport()` (or is handed one): live-state's
 `NotificationsProvider` (one pipeline per transport), endpoints'
-`useFetchEndpoint` / `useEndpoint` / `useEndpointMutation`, and the assets
+`useFetchEndpoint` / `useEndpointMutation`, and the assets
 elements load (`useAssetSrc(assetPath)`, `infra/endpoints`). `socketUrl` doubles as the socket's identity on
 the page-global ws-status bus, so two transports must never map one path to
 the same URL. `fetchWithRetry` takes the transport's `fetch` as an option.

@@ -6,7 +6,6 @@
 
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
-import { EndpointError } from "@plugins/infra/plugins/endpoints/web";
 import { ResourceError } from "../core";
 import { toResourceError } from "./resource-error";
 import {
@@ -85,18 +84,6 @@ describe("toResourceError", () => {
     expect(kindOf(new ResourceHttpError("k", 403, "unauthorized"))).toBe(
       "loader-failed",
     );
-  });
-
-  test("an endpoint's HTTP answer: 404 is not-found, anything else loader-failed, with the server's message", () => {
-    const missing = toResourceError(new EndpointError(404, "No such metric"));
-    expect(missing.kind).toBe("not-found");
-    expect(missing.message).toBe("No such metric");
-    const failed = toResourceError(
-      new EndpointError(500, { message: "query exploded" }),
-    );
-    expect(failed.kind).toBe("loader-failed");
-    expect(failed.message).toBe("query exploded");
-    expect(kindOf(new EndpointError(400, null))).toBe("loader-failed");
   });
 
   test("a client-side schema rejection is client-outdated", () => {

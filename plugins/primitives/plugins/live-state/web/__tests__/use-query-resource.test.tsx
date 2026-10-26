@@ -3,8 +3,8 @@
  * `ResourceResult`, against a real `QueryClient`:
  *
  *   - loading until the value lands, then ready;
- *   - a failure is the error arm, classified (endpoint 404 → not-found, other
- *     status → loader-failed, no answer → transport, schema → client-outdated);
+ *   - a failure is the error arm, classified (a thrown error → loader-failed,
+ *     no answer → transport, schema → client-outdated);
  *   - a failed refetch keeps the last value as `stale`; a refetch heals it.
  */
 
@@ -13,7 +13,6 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { z } from "zod";
-import { EndpointError } from "@plugins/infra/plugins/endpoints/web";
 import {
   ResourceError,
   useQueryResource,
@@ -54,12 +53,7 @@ describe("useQueryResource", () => {
   });
 
   it.each([
-    ["an endpoint 404", () => new EndpointError(404, "gone"), "not-found"],
-    [
-      "another endpoint status",
-      () => new EndpointError(500, "boom"),
-      "loader-failed",
-    ],
+    ["a thrown error", () => new Error("boom"), "loader-failed"],
     ["no answer", () => new TypeError("Failed to fetch"), "transport"],
     [
       "a schema rejection",
@@ -91,8 +85,7 @@ describe("useQueryResource", () => {
           queryKey: ["flaky"],
           queryFn: () => {
             call += 1;
-            if (call === 2)
-              return Promise.reject(new EndpointError(503, "busy"));
+            if (call === 2) return Promise.reject(new Error("busy"));
             return Promise.resolve(call);
           },
         }),

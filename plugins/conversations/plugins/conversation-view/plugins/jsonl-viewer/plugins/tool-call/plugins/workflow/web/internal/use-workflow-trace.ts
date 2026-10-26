@@ -26,7 +26,7 @@ export function useWorkflowTrace(script: string, args: unknown): TraceState {
   const [settled, setSettled] = useState<SettledTrace | null>(null);
 
   useEffect(() => {
-    /* eslint-disable react-hooks/set-state-in-effect -- async trace-execution of the workflow script (a local async computation, not a network endpoint, so useResource/useEndpoint don't apply); the cancelled guard prevents stale setState and no cleaner primitive owns this. */
+    /* eslint-disable react-hooks/set-state-in-effect -- async trace-execution of the workflow script (a local async computation, not a server read, so a live read (useLive) does not apply); the cancelled guard prevents stale setState and no cleaner primitive owns this. */
     if (!script) return;
     let cancelled = false;
     setSettled(null);

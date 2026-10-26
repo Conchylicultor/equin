@@ -2,7 +2,7 @@ import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { HoldClassSchema } from "@plugins/infra/plugins/jobs/core";
 
-// A response schema is required for useEndpoint/fetchEndpoint (and the MCP tool)
+// A response schema is required for fetchEndpoint / callEndpoint (and the MCP tool)
 // to return parsed data. These three item schemas mirror the jobs plugin's
 // introspection return shapes (BacklogJobStat / RunningJobStat / DeadJobStat) —
 // the server ignores the schema, so it is client- and MCP-safe.

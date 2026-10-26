@@ -513,7 +513,8 @@ function baseRuleEntries(
     // warn→error on 2026-06-24 once its burndown hit zero: anti-patterns
     // were refactored (props-to-state → key= remount, default-selection /
     // derived state → derive in render), fetch/subscription effects migrated
-    // to useEndpoint / useSyncExternalStore or the shared useHighlightedHtml
+    // to the endpoint read hook of the time (since replaced by live reads,
+    // `useLive`) / useSyncExternalStore or the shared useHighlightedHtml
     // primitive, and the genuinely-stateful remainder (animation/temporal
     // machines, NDJSON streams, optimistic-cleanup, primitive internals)
     // carries an inline `react-hooks/set-state-in-effect` disable. See

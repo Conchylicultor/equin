@@ -888,8 +888,8 @@ destructive default button modes). Three lint rules keep it out:
 - `live-state/no-handrolled-result` — outside live-state and `network/live`, no
   hand-written `status: "loading" | "error"` result arm or result union: derive
   with `mapResource` / `combineResources` so the typed error, `stale` and
-  `refetch` survive; a TanStack query becomes a result through
-  `useEndpointResource` / `useQueryResource` (below). Its message lists
+  `refetch` survive; a local TanStack query (a code-split module load) becomes
+  a result through `useQueryResource` (below). Its message lists
   every sanctioned constructor from ONE table, `lint/result-constructors.ts`
   (`{ name, from, use }`), which also derives the owning plugins; a new clean
   form is one row there, and `result-constructors.test.ts` fails if a row names
@@ -942,21 +942,22 @@ when the read failed.
 **A TanStack query is read through an adapter, never returned raw.** A read
 of the SERVER is live — a `liveValue` (`params`, a typed `query`, or
 key-range-`paged`) or a `liveCollection`, read with `useLive` (`network/live`),
-so it refreshes itself; the `live/no-endpoint-read` lint ratchets the
-remaining request/response reads. What is left renders through the result
-vocabulary too:
+so it refreshes itself; there is no request/response read (`useEndpoint` and
+`useEndpointResource` are deleted, and `live/no-endpoint-read` is a flat ban
+outside the substrate). What is left — a local async load — renders through
+the result vocabulary too:
 
 ```ts
-useEndpointResource(someGetEndpoint, params); // a GET endpoint (legacy — being migrated)
 useQueryResource({ queryKey, queryFn: () => import("./x") });  // a LOCAL async load, never a server read
 ```
 
-Both — and `useResource` itself — map (data, error) through one
+It — and `useResource` itself — map (data, error) through one
 `queryResult` (`web/query-result.ts`; `useResource` passes its own "a value
 landed" flag, because a selector may answer `undefined` for a landed value): `error` whenever the last
 fetch failed (the previous value as `stale`), `loading` while nothing landed,
-`ready` otherwise; the failure goes through `toResourceError` (an
-`EndpointError` 404 → `not-found`, other status → `loader-failed`). `enabled`
+`ready` otherwise; the failure goes through `toResourceError` (a resource
+read's HTTP 404 → `not-found`, other status → `loader-failed`, any other
+thrown error → `loader-failed`). `enabled`
 is not an option — a disabled query is `loading` forever. There is no form
 keyed by another read's value (a revision tick, the hand-made freshness
 `network/live` replaced), and no paged form: a paged server read is a
@@ -1094,9 +1095,8 @@ keeps every row's identity rather than re-minting each moved row.
 - Description: Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's tab-shared /ws/notifications channel. useQueryResource reads a local async load (not a server read — those are live) as a ResourceResult.
 - Load-bearing: yes
 - Web:
-  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/networking` ×10
-    - `infra/endpoints` ×3
     - `primitives/css/spacing` ×2
     - `primitives/css/ui-kit` ×2
     - `primitives/css/center.Center`
@@ -1176,7 +1176,6 @@ keeps every row's identity rather than re-minting each moved row.
     - `subscribePendingMounts`
     - `unansweredSubReportSink`
     - `useCombinedResources`
-    - `useEndpointResource`
     - `useFailingResources`
     - `useLiveRegistries`
     - `useLiveSocketKindOf`
@@ -1192,8 +1191,8 @@ keeps every row's identity rather than re-minting each moved row.
   - Uses tokens:
     - `ui/tokens/color-palette --destructive`
     - `ui/tokens/shadow --shadow`
-  - Imported by: 287 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×76
+  - Imported by: 288 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×77
     - `conversations` ×49
     - `debug` ×29
     - `ui` ×25

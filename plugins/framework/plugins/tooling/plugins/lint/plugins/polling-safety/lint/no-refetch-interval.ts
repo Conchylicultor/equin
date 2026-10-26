@@ -4,7 +4,7 @@ const createRule = ESLintUtils.RuleCreator(
   (name) => `https://github.com/anthropics/singularity/lint/${name}`,
 );
 
-// A `refetchInterval` option (react-query, and `useEndpoint`, which spreads its
+// A `refetchInterval` option (react-query's, or any wrapper forwarding its
 // options into `useQuery`) re-asks the server on a timer whether anything
 // changed. App data that changes has a change signal — a DB write, a file
 // watcher, a git ref — and belongs in a live resource (a `liveValue` or a

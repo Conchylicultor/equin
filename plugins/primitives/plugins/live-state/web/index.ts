@@ -15,7 +15,6 @@ export {
   useLiveRegistries,
   useLiveSocketKindOf,
 } from "./use-resource";
-export { useEndpointResource } from "./use-endpoint-resource";
 export { useQueryResource } from "./use-query-resource";
 export type {
   QueryResourceOptions,

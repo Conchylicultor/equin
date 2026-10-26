@@ -287,7 +287,9 @@ This is the single most important coding principle:
   must state `unbounded: { reason }` (tsc). Read both with `useLive` / `useLiveRow`. The old
   spellings that still exist (`defineResource`, `useResource`, …) remain only as the
   substrate the unified API compiles to; the
-  `live/no-legacy-resource-spelling` lint rejects them elsewhere — never copy one as precedent. A
+  `live/no-legacy-resource-spelling` lint rejects them elsewhere — never copy one as precedent.
+  There is no request/response read: endpoints are for writes, and `live/no-endpoint-read` bans
+  TanStack `useQuery` and a GET `fetchEndpoint` a render or effect runs, with no debt entry. A
   new way to read server data is an option `useLive` reads, never a new hook (its Design rule). See
   `plugins/network/plugins/live/CLAUDE.md`.
 - **Ordering is never a number on a slot contribution.** What is drawn is a `defineRenderSlot` (or `defineOrderedDispatchSlot`) ordered by its reorder config layout — a host drawing its own rows reads it with `useSlotOrder` — and `defineSlot<P>` rejects a numeric `order`/`priority`/`rank`/`weight` at compile time; a number with another meaning is named for it. See `plugins/framework/plugins/web-sdk/CLAUDE.md`.

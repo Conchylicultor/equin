@@ -1,6 +1,6 @@
 /**
  * Tests for the `no-endpoint-read` lint rule. The rule module alone flags
- * every web file; the substrate and burndown exemptions are `exempt/index.ts`
+ * every web file; the (sanctioned-only) substrate exemptions are `exempt/index.ts`
  * manifests, checked by `exempt:manifests-valid` and the unused-exemption
  * report.
  *
@@ -61,7 +61,6 @@ declare const queryClient: {
 
 const ENDPOINTS_WEB = "@plugins/infra/plugins/endpoints/web";
 const NDJSON_WEB = "@plugins/infra/plugins/ndjson-stream/web";
-const LIVE_STATE_WEB = "@plugins/primitives/plugins/live-state/web";
 const REACT_QUERY = "@tanstack/react-query";
 
 const web = (code: string) => ({ filename: WEB, code: PRELUDE + code });
@@ -70,10 +69,6 @@ const hook = (name: string) => ({ messageId: "readHook", data: { name } });
 const queryFnFetch = { messageId: "queryFnFetch" };
 const effectFetch = (name = "fetchEndpoint") => ({
   messageId: "effectFetch",
-  data: { name },
-});
-const refresh = (name = "invalidateQueries") => ({
-  messageId: "refreshEndpointKey",
   data: { name },
 });
 
@@ -282,13 +277,11 @@ ruleTester.run(
           return null;
         }
       `),
-      // A refresh of a key that is not an endpoint read's.
+      // A QueryClient refresh is not a read: with the endpoint read hooks
+      // deleted (B10b) there is no request/response query to refresh.
       web(`
-        import { endpointQueryKey } from "${ENDPOINTS_WEB}";
         void queryClient.invalidateQueries({ queryKey: ["tasks"] });
-        void queryClient.refetchQueries({ queryKey: ["other", read.route] });
-        const helper = () => endpointQueryKey(read, {}, undefined);
-        void queryClient.invalidateQueries({ predicate: () => helper() !== null });
+        void queryClient.refetchQueries({ queryKey: ["endpoint", read.route] });
       `),
     ],
     invalid: [
@@ -325,17 +318,6 @@ ruleTester.run(
       },
       {
         filename: WEB,
-        code: PRELUDE + `import { useEndpoint } from "${ENDPOINTS_WEB}";`,
-        errors: [hook("useEndpoint")],
-      },
-      {
-        filename: WEB,
-        code:
-          PRELUDE + `import { useEndpointResource } from "${LIVE_STATE_WEB}";`,
-        errors: [hook("useEndpointResource")],
-      },
-      {
-        filename: WEB,
         code:
           PRELUDE +
           `import { useQuery, useInfiniteQuery, useSuspenseQuery, useQueries } from "${REACT_QUERY}";`,
@@ -355,8 +337,8 @@ ruleTester.run(
       // Re-exported.
       {
         filename: WEB,
-        code: PRELUDE + `export { useEndpoint } from "${ENDPOINTS_WEB}";`,
-        errors: [hook("useEndpoint")],
+        code: PRELUDE + `export { useQuery } from "${REACT_QUERY}";`,
+        errors: [hook("useQuery")],
       },
       // A namespace import, by member (dot and string).
       {
@@ -376,11 +358,11 @@ ruleTester.run(
         code:
           PRELUDE +
           `
-          import * as endpoints from "${ENDPOINTS_WEB}";
-          const { useEndpoint } = endpoints;
+          import * as rq from "${REACT_QUERY}";
+          const { useSuspenseQuery } = rq;
           const { useQuery: q } = await import("${REACT_QUERY}");
         `,
-        errors: [hook("useEndpoint"), hook("useQuery")],
+        errors: [hook("useSuspenseQuery"), hook("useQuery")],
       },
       // A bound awaited dynamic import, read by member.
       {
@@ -388,10 +370,10 @@ ruleTester.run(
         code:
           PRELUDE +
           `
-          const ls = await import("${LIVE_STATE_WEB}");
-          ls.useEndpointResource(e);
+          const rq = await import("${REACT_QUERY}");
+          rq.useQueries({});
         `,
-        errors: [hook("useEndpointResource")],
+        errors: [hook("useQueries")],
       },
       // fetchEndpoint inside a queryFn — arrow, function, method, nested.
       {
@@ -478,18 +460,6 @@ ruleTester.run(
           }
         `),
         errors: [effectFetch("readNdjson")],
-      },
-      // A manual refresh of an endpoint read's key: by endpointQueryKey, the
-      // raw ["endpoint", ...] spelling, or a const holding one.
-      {
-        ...web(`
-          import { endpointQueryKey } from "${ENDPOINTS_WEB}";
-          void queryClient.invalidateQueries({ queryKey: endpointQueryKey(read, {}, undefined) });
-          void queryClient.refetchQueries({ queryKey: ["endpoint", read.route] });
-          const key = endpointQueryKey(readOther, {}, undefined);
-          void queryClient.invalidateQueries({ queryKey: key });
-        `),
-        errors: [refresh(), refresh("refetchQueries"), refresh()],
       },
     ],
   },

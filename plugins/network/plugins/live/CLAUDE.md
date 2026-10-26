@@ -1989,12 +1989,16 @@ debt entry remains. **Never add an entry for new code** — declare it with
 imports an old spelling is reported `(unused-exemption)` by the type-check
 worker (`framework/tooling/exempt`), so a stale one cannot linger.
 
-**Request/response reads — lint `live/no-endpoint-read`.** In `web/` code
-(tests out of scope) it flags `useEndpoint`, `useEndpointResource`, TanStack's
+**Request/response reads — lint `live/no-endpoint-read`.** There is no
+request/response read of the server in the browser: `useEndpoint`,
+live-state's `useEndpointResource`, the exported `endpointQueryKey` and
+`useEndpointMutation`'s `invalidates:` are deleted (B10b of
+research/2026-10-11-global-endpoint-reads-onto-live.md). In `web/` code
+(tests out of scope) the rule flags what is left to spell one: TanStack's
 `useQuery` / `useInfiniteQuery` / `useSuspenseQuery` (and their
 `Suspense*` / `useQueries` siblings) — resolved like the rule above — a
-`fetchEndpoint(...)` call inside a `queryFn` property, and three hidden reads
-(research/2026-10-11-global-endpoint-reads-onto-live.md P0.2):
+`fetchEndpoint(...)` call inside a `queryFn` property, and the hidden read
+(P0.2 of the plan):
 
 - a `fetchEndpoint` of a **GET** endpoint, or a `readNdjson` stream over a GET
   route, that runs as a read — in render, in a hook body, in
@@ -2005,18 +2009,23 @@ worker (`framework/tooling/exempt`), so a stale one cannot linger.
   `mutationFn` or an event-registrar callback is an action and is not flagged;
   a function that escapes the file (stored in an object, passed as a non-`on*`
   prop, returned, exported) is unflagged — a one-file lint cannot see where it
-  runs;
-- `invalidateQueries` / `refetchQueries` over an endpoint read's query key
-  (`endpointQueryKey(...)` or the raw `["endpoint", …]` spelling).
+  runs.
 
-A server read is a `liveValue` (`params`, a typed `query`, or `paged`) or a
-`liveCollection`, read with `useLive`; an imperative `fetchEndpoint` (a
-mutation, a handler) is a write and is not flagged. Sanctioned: the substrate
-that defines or wraps these hooks (`infra/endpoints`, `primitives/live-state`,
-`network/live`). Every other current site is a file-level `debt` entry
-(task-1791560308-woqgfi) in its plugin's `exempt/index.ts`
-(`./equin exempt list --rule live/no-endpoint-read --debt`): migrate,
-never add one.
+A server read is a `liveValue` (`params`, a typed `query`, `paged`, or
+`bytes`) or a `liveCollection`, read with `useLive`; an imperative
+`fetchEndpoint` (a mutation, a handler) is a write and is not flagged. Its
+blind spot: a non-GET `fetchEndpoint` an effect runs is not flagged either —
+effects run genuine writes too (record a play, flush logs), and the method is
+the only discriminator the rule has — so a POST whose answer an effect stores
+is a read the lint misses; declare it live all the same. The ban has no
+debt: its only exemptions are the two sanctioned substrate entries —
+`network/live`'s and `primitives/live-state`'s `web/`, where every live read
+is implemented over TanStack queries (and live-state's `useQueryResource`, a
+local async load) — and its debt burndown is at zero
+(`./equin exempt list --rule live/no-endpoint-read`). **Never add an entry,
+debt or sanctioned**: declare the read live. (The exempt framework cannot
+forbid only the debt kind for one rule — `closed` refuses every exemption,
+which the substrate needs — so "no debt" is held by review, not a check.)
 
 ## Internals
 
@@ -2402,7 +2411,6 @@ never add one.
     - `framework/central-core` (0 debt)
     - `framework/resource-runtime` (0 debt)
     - `framework/server-core` (0 debt)
-    - `infra/endpoints` (0 debt)
     - `infra/query-resource` (0 debt)
     - `network/live` (0 debt)
     - `primitives/data-view` (0 debt)

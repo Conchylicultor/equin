@@ -15,7 +15,7 @@ import {
 
 // Mirrors the recorder's getRuntimeProfile() return shape
 // (@plugins/infra/plugins/runtime-profiler/core). A response schema is required
-// for useEndpoint/fetchEndpoint to actually return parsed data on the client —
+// for fetchEndpoint / callEndpoint to actually return parsed data on the caller —
 // the server ignores it, so it is client-safe.
 // Derived from the runtime-profiler's single SPAN_KINDS source, so a new kind can
 // never silently drift out of the response schema (a hand-mirrored enum passed

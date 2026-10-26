@@ -77,8 +77,7 @@ page pipeline's client accessors) is PAGE-BOUND (sanctioned by
 `networking/no-page-transport`, which has no inline opt-out): its endpoints
 and raw `/api` URLs are the page's, its live reads are still the scope's
 (`useLive` goes through the context transport), and it may hold no scope
-fetcher (`useFetchEndpoint`, a `FetchEndpoint`, `useEndpoint`,
-`useEndpointMutation`) — a module is the page's or the scope's, never both.
+fetcher (`useFetchEndpoint`, a `FetchEndpoint`, `useEndpointMutation`) — a module is the page's or the scope's, never both.
 
 - **Live reads** — a declaration it imports (the resource vocabulary's
   `buildDescriptorIndex`, which also reads `needsMachine` and

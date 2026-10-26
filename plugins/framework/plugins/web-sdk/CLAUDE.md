@@ -283,7 +283,7 @@ contributions: [Pane.Register({ pane: terminalPane })]
 
 Raw `new EventSource(...)` is forbidden (`./equin check no-raw-event-source`) — use `ReconnectingEventSource` when consuming the gateway's external log SSE endpoint.
 
-For typed HTTP fetching, use the endpoints primitive (`@plugins/infra/plugins/endpoints/web`): `useEndpoint` (TanStack Query GET), `useEndpointMutation` (POST/PATCH/DELETE with auto-invalidation), or `fetchEndpoint` (imperative). Endpoint contracts are declared once in `core/endpoints.ts` with `defineEndpoint`; the server implements them with `implement()` from `@plugins/infra/plugins/endpoints/server`. See [`plugins/infra/plugins/endpoints/CLAUDE.md`](../../../infra/plugins/endpoints/CLAUDE.md).
+Server READS are live resources — a `liveValue` / `liveCollection` read with `useLive` (`plugins/network/plugins/live/CLAUDE.md`); there is no request/response read hook. For WRITES, use the endpoints primitive (`@plugins/infra/plugins/endpoints/web`): `useEndpointMutation` (POST/PATCH/DELETE — a live read is pushed when the write lands, so nothing is invalidated by hand) or `fetchEndpoint` (imperative, from `useFetchEndpoint()`). Endpoint contracts are declared once in `core/endpoints.ts` with `defineEndpoint`; the server implements them with `implement()` from `@plugins/infra/plugins/endpoints/server`. See [`plugins/infra/plugins/endpoints/CLAUDE.md`](../../../infra/plugins/endpoints/CLAUDE.md).
 
 ## File Structure
 

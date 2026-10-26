@@ -7,7 +7,7 @@ type Check = { id: string; description: string; run(): Promise<CheckResult> };
 const check: Check = {
   id: "endpoints:typed-web-fetches",
   description:
-    'Web code must use fetchEndpoint/useEndpoint instead of raw fetch("/api/...")',
+    'Web code must use fetchEndpoint (writes) or a live read (useLive) instead of raw fetch("/api/...")',
   async run() {
     const root = await getWorktreeRoot();
 
@@ -40,7 +40,7 @@ const check: Check = {
     return {
       ok: false,
       message: `${offenders.length} file(s) with raw fetch("/api/...") calls:\n    ${offenders.join("\n    ")}`,
-      hint: 'Use fetchEndpoint() / useEndpoint() / useEndpointMutation() from @plugins/infra/plugins/endpoints/web instead of raw fetch("/api/..."). See the endpoints plugin CLAUDE.md for the pattern.',
+      hint: 'A write: use fetchEndpoint() / useEndpointMutation() from @plugins/infra/plugins/endpoints/web instead of raw fetch("/api/..."). A read: declare a liveValue / liveCollection and read it with useLive (plugins/network/plugins/live/CLAUDE.md). See the endpoints plugin CLAUDE.md for the pattern.',
     };
   },
 };

@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { UgTabSchema } from "@plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/tab/core";
-import { UgSearchResultSchema } from "../core";
 
 /**
  * Fetch the raw Ultimate Guitar tab for a pasted UG tab URL. The handler
@@ -13,19 +12,6 @@ export const fetchUgTab = defineEndpoint({
   route: "POST /api/sonata/sources/ultimate-guitar/fetch",
   body: z.object({ url: z.string() }),
   response: UgTabSchema,
-});
-
-/**
- * Search the Ultimate Guitar catalog by free text. The handler hits UG's
- * private mobile-API search route with the same signed headers as `fetchUgTab`
- * and returns the slim candidate list. NO type filtering server-side (the
- * client filters on the returned `type` string); failures map to loud HTTP
- * statuses, never a silent empty list.
- */
-export const searchUgTabs = defineEndpoint({
-  route: "POST /api/sonata/sources/ultimate-guitar/search",
-  body: z.object({ query: z.string() }),
-  response: z.object({ results: z.array(UgSearchResultSchema) }),
 });
 
 /**

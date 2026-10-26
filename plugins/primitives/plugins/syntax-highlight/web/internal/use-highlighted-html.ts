@@ -95,7 +95,7 @@ export function useHighlightedHtml(
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    /* eslint-disable react-hooks/set-state-in-effect -- async-fetch-after-await: shiki getHighlighter() is async with no sync path; the cancel guard drops stale results so setHtml/setError can never write after unmount or an input change. The synchronous null-reset and cache-hit branches share this effect for coherence (same key deps) and are correct as effects — there is no project data-fetching primitive (useResource/useEndpoint) for a pure client-side compute that never hits the network. */
+    /* eslint-disable react-hooks/set-state-in-effect -- async-fetch-after-await: shiki getHighlighter() is async with no sync path; the cancel guard drops stale results so setHtml/setError can never write after unmount or an input change. The synchronous null-reset and cache-hit branches share this effect for coherence (same key deps) and are correct as effects — a live read (useLive) is for server data, not a pure client-side compute that never hits the network. */
     if (!lang || !code) {
       setHtml(null);
       setError(null);

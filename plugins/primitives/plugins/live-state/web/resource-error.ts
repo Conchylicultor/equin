@@ -1,8 +1,4 @@
 import { ZodError } from "zod";
-import {
-  EndpointError,
-  getEndpointErrorMessage,
-} from "@plugins/infra/plugins/endpoints/web";
 import { ResourceError, type ResourceErrorKind } from "../core";
 import {
   ResourceHttpError,
@@ -83,13 +79,6 @@ function kindOf(raw: unknown): {
     }
     if (raw.status === 404) return { kind: "not-found", message: raw.message };
     return { kind: "loader-failed", message: raw.message };
-  }
-  // A typed endpoint read (`useEndpointResource`) that got an HTTP answer:
-  // the server's own message.
-  if (raw instanceof EndpointError) {
-    const message = getEndpointErrorMessage(raw);
-    if (raw.status === 404) return { kind: "not-found", message };
-    return { kind: "loader-failed", message };
   }
   // A value this bundle's schema rejects: the server's shape moved under an
   // open tab (or a real schema bug — the cause says which). Reload is the fix.

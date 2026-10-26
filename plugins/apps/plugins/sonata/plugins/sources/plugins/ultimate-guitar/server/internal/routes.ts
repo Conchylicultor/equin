@@ -8,12 +8,11 @@ import { UgFetchError } from "../../core";
 import { UG_SOURCE_ID } from "@plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/tab/core";
 import {
   fetchUgTab,
-  searchUgTabs,
   createUltimateGuitarSong,
   getSongUltimateGuitar,
   updateUltimateGuitarSong,
 } from "../../shared/endpoints";
-import { fetchUgTabContent, searchUgTabContent } from "./ug-client";
+import { fetchUgTabContent } from "./ug-client";
 import { songUltimateGuitar } from "./tables";
 import { ugTabSaved } from "./tables-tab-saved";
 
@@ -43,22 +42,6 @@ function statusForKind(kind: UgFetchError["kind"]): number {
 export const handleFetchUgTab = implement(fetchUgTab, async ({ body }) => {
   try {
     return await fetchUgTabContent(body.url);
-  } catch (err) {
-    if (err instanceof UgFetchError) {
-      throw new HttpError(statusForKind(err.kind), err.message);
-    }
-    throw err;
-  }
-});
-
-/**
- * Search the UG catalog by free text. Maps classified `UgFetchError`s to HTTP
- * statuses; rethrows anything unexpected so it crashes loudly. Never silently
- * returns an empty list on upstream failure.
- */
-export const handleSearchUgTabs = implement(searchUgTabs, async ({ body }) => {
-  try {
-    return { results: await searchUgTabContent(body.query) };
   } catch (err) {
     if (err instanceof UgFetchError) {
       throw new HttpError(statusForKind(err.kind), err.message);

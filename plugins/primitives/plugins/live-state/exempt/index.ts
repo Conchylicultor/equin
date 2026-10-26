@@ -6,7 +6,7 @@ export default [
     paths: ["web/use-resource.ts"],
     kind: "sanctioned",
     reason:
-      "Special transport that implement()/fetchEndpoint can't express. Do NOT migrate these. The live-state primitive's own resource GET — this IS the primitive that useEndpoint resources are built on; it cannot depend on itself.",
+      "Special transport that implement()/fetchEndpoint can't express. Do NOT migrate these. The live-state primitive's own resource GET (`/api/resources/:key`, untyped per resource) — the substrate every live read compiles to; it cannot depend on the typed-endpoint client.",
   },
   {
     rule: "endpoints/no-raw-web-fetch",
@@ -27,6 +27,6 @@ export default [
     paths: ["web"],
     kind: "sanctioned",
     reason:
-      "The substrate: the live-state client's own HTTP read (useResource's fallback / on-demand fetch over TanStack queries) that every live read compiles to, and the useEndpointResource / useQueryResource adapters it defines.",
+      "The substrate: the live-state client's own HTTP read (useResource's fallback / on-demand fetch over TanStack queries) that every live read compiles to, and useQueryResource, the local-async-load adapter (a code-split module, never a server read).",
   },
 ] satisfies Exemptions;

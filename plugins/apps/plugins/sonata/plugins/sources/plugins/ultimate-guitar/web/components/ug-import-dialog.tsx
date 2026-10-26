@@ -18,6 +18,12 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { revealElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useLive } from "@plugins/network/plugins/live/web";
+import {
+  foldResource,
+  mapResource,
+  ResourceErrorInline,
+} from "@plugins/primitives/plugins/live-state/web";
 import {
   beatToSeconds,
   scoreEndBeat,
@@ -25,11 +31,8 @@ import {
 import { openSongImperative } from "@plugins/apps/plugins/sonata/plugins/library/web";
 import { compile } from "../compile";
 import { extractUgTabId, UgFetchError, type UgSearchResult } from "../../core";
-import {
-  fetchUgTab,
-  createUltimateGuitarSong,
-  searchUgTabs,
-} from "../../shared/endpoints";
+import { fetchUgTab, createUltimateGuitarSong } from "../../shared/endpoints";
+import { ugSearch } from "../../shared/resources";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
@@ -64,6 +67,9 @@ function looksLikeUgUrl(query: string): boolean {
 
 type TypeFilter = "chords" | "all";
 
+/** No rows to move through (the list is not drawn). */
+const NO_ROWS: readonly UgSearchResult[] = [];
+
 const TYPE_OPTIONS = [
   { id: "chords" as const, label: "Chords" },
   { id: "all" as const, label: "All types" },
@@ -77,9 +83,10 @@ const TYPE_OPTIONS = [
  * imports directly (a pasted tab URL):
  * - URL mode (`looksLikeUgUrl`) → no results list, a single "Import this tab"
  *   button funnelling through `importByUrl`.
- * - Search mode → debounced `searchUgTabs` (AbortController-guarded so a stale
- *   request never clobbers a newer one), a client-side type filter (Chords vs
- *   all), and a results list whose rows import on click.
+ * - Search mode → the debounced query read as the live `ugSearch` value (one
+ *   tuple per settled query, so a slow earlier answer can never stand in for a
+ *   newer question), a client-side type filter (Chords vs all), and a results
+ *   list whose rows import on click.
  *
  * Both paths funnel through `importByUrl`, which is **fetch-first**: fetch the
  * raw `UgTab` → `compile()` it client-side (so the same recognise-gate + timing
@@ -88,19 +95,16 @@ const TYPE_OPTIONS = [
  * cancel (or a fetch failure) never leaves a half-formed "Untitled" orphan in
  * the library — the song row is written exactly once, after the round-trip.
  *
- * Loud-failure posture: any fetch/compile/search error is surfaced in a
+ * Loud-failure posture: any fetch/compile error is surfaced in a
  * `role="alert"` red line, never swallowed and never rethrown out of a handler
- * (which would crash the dialog mid-import).
+ * (which would crash the dialog mid-import); a failed search is the read's
+ * error arm (`ResourceErrorInline`, with Retry).
  */
 export function UgImportDialog({ onClose }: { onClose: () => void }) {
   const fetchEndpoint = useFetchEndpoint();
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("chords");
   const [error, setError] = useState<string | null>(null);
-
-  // Search state.
-  const [results, setResults] = useState<UgSearchResult[]>([]);
-  const [searching, setSearching] = useState(false);
 
   // Per-row import progress: the tabId currently being imported (disables the
   // whole list while the fetch→compile→create round-trip runs).
@@ -116,56 +120,44 @@ export function UgImportDialog({ onClose }: { onClose: () => void }) {
   // Debounce only the search text — URL mode imports on an explicit click.
   const debouncedQuery = useDebouncedValue(isSearch ? trimmed : "", 150);
 
-  // Fire the search whenever the debounced query changes, aborting the prior
-  // request so a slow earlier response can never overwrite a newer one.
-  useEffect(() => {
-    /* eslint-disable react-hooks/set-state-in-effect -- async-fetch with cancel guard: debounced UG catalog search hits a POST endpoint (useEndpoint is GET-only, so it cannot express this); the synchronous setState calls are pre-fetch loading-state resets and an AbortController drops stale responses */
-    if (debouncedQuery.length === 0) {
-      setResults([]);
-      setSearching(false);
-      return;
-    }
-    const controller = new AbortController();
-    setSearching(true);
-    setError(null);
-    fetchEndpoint(
-      searchUgTabs,
-      {},
-      { body: { query: debouncedQuery }, signal: controller.signal },
-    )
-      .then((res) => {
-        setResults(res.results);
-        setActiveIdx(0);
-        setSearching(false);
-      })
-      .catch((err) => {
-        if (controller.signal.aborted) return;
-        setResults([]);
-        setSearching(false);
-        setError(err instanceof Error ? err.message : String(err));
-      });
-    return () => controller.abort();
-    /* eslint-enable react-hooks/set-state-in-effect */
-  }, [debouncedQuery, fetchEndpoint]);
+  // Nothing is read until there is a question: one tuple per settled query.
+  const search = useLive(
+    ugSearch,
+    debouncedQuery.length === 0 ? null : { q: debouncedQuery },
+  );
 
   // Client-side type filter: "Chords" keeps anything whose UG type contains
   // "Chords" (covers both "Chords" and "Ukulele Chords" — the two that compile
-  // to a songsheet); "All types" passes everything through.
+  // to a songsheet); "All types" passes everything through. Derived over the
+  // read, so loading and a failure stay states the list renders.
   const filtered = useMemo(
     () =>
-      typeFilter === "all"
-        ? results
-        : results.filter((r) => r.type.includes("Chords")),
-    [results, typeFilter],
+      mapResource(search, (results): readonly UgSearchResult[] =>
+        typeFilter === "all"
+          ? results
+          : results.filter((r) => r.type.includes("Chords")),
+      ),
+    [search, typeFilter],
   );
+  // The rows the arrow keys and Enter move through: only the drawn list's. A
+  // list not drawn yet (loading) or replaced by its error has none to move to.
+  const navigableRows = foldResource(filtered, {
+    loading: () => NO_ROWS,
+    error: () => NO_ROWS,
+    ready: (rows) => rows,
+  });
+  // The highlighted row, read against the list it indexes: during the debounce
+  // the previous question's (longer) list is still drawn and the arrow keys
+  // move through it, so a stored index can outrun the next, shorter list.
+  const currentIdx = Math.min(activeIdx, Math.max(navigableRows.length - 1, 0));
 
   // The active row resets to the top wherever the visible list actually changes
-  // — when fresh search results arrive (in the fetch .then above) and when the
-  // type filter toggles (in its onChange below) — so no setState-in-effect is
-  // needed to mirror `filtered`.
+  // — when a new question is asked (the search input's onChange below) and when
+  // the type filter toggles (its onChange) — so no setState-in-effect is needed
+  // to mirror `filtered`.
   useEffect(() => {
     revealElement(activeRef.current, { block: "nearest" });
-  }, [activeIdx]);
+  }, [currentIdx]);
 
   // `Button` auto-pends on a promise-returning onClick (spinner + double-click
   // guard); the result rows drive their own `importingId` spinner instead.
@@ -224,20 +216,30 @@ export function UgImportDialog({ onClose }: { onClose: () => void }) {
         void importByUrl(trimmed);
         return;
       }
-      if (!isSearch || filtered.length === 0) return;
+      if (!isSearch || navigableRows.length === 0) return;
       if (e.key === "ArrowDown") {
         e.preventDefault();
-        setActiveIdx((i) => (i + 1) % filtered.length);
+        setActiveIdx((currentIdx + 1) % navigableRows.length);
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
-        setActiveIdx((i) => (i - 1 + filtered.length) % filtered.length);
+        setActiveIdx(
+          (currentIdx - 1 + navigableRows.length) % navigableRows.length,
+        );
       } else if (e.key === "Enter") {
         e.preventDefault();
-        const chosen = filtered[activeIdx];
+        const chosen = navigableRows[currentIdx];
         if (chosen) void importResult(chosen);
       }
     },
-    [isUrl, isSearch, filtered, activeIdx, importByUrl, importResult, trimmed],
+    [
+      isUrl,
+      isSearch,
+      navigableRows,
+      currentIdx,
+      importByUrl,
+      importResult,
+      trimmed,
+    ],
   );
 
   const listDisabled = importingId !== null;
@@ -255,7 +257,13 @@ export function UgImportDialog({ onClose }: { onClose: () => void }) {
       <SearchInput
         autoFocus
         value={query}
-        onChange={(e) => setQuery(e.target.value)}
+        onChange={(e) => {
+          // A new question: back to the top row, and a failed import's
+          // message no longer belongs to what is on screen.
+          setQuery(e.target.value);
+          setActiveIdx(0);
+          setError(null);
+        }}
         onKeyDown={handleSearchKeyDown}
         placeholder="Search songs or paste a tab URL…"
         spellCheck={false}
@@ -288,20 +296,30 @@ export function UgImportDialog({ onClose }: { onClose: () => void }) {
         </Stack>
       ) : isSearch ? (
         <ScrollArea className="max-h-80">
-          {searching && filtered.length === 0 ? (
+          {debouncedQuery.length === 0 ? (
             <Loading variant="rows" />
-          ) : filtered.length === 0 ? (
+          ) : filtered.status === "error" ? (
+            // A refusal shows the server's message (no Retry: the answer
+            // stands); a UG failure offers Retry.
+            <ResourceErrorInline
+              error={filtered.error}
+              refetch={filtered.refetch}
+              variant="block"
+            />
+          ) : filtered.status === "loading" ? (
+            <Loading variant="rows" />
+          ) : filtered.data.length === 0 ? (
             <Placeholder>No results.</Placeholder>
           ) : (
             <Stack gap="2xs">
               {/* eslint-disable-next-line data-view/no-adhoc-row-list -- import search-result picker (dialog chrome) */}
-              {filtered.map((result, idx) => {
+              {filtered.data.map((result, idx) => {
                 const importing = importingId === result.tabId;
                 return (
                   <Row
                     key={result.tabId}
-                    ref={idx === activeIdx ? activeRef : undefined}
-                    selected={idx === activeIdx}
+                    ref={idx === currentIdx ? activeRef : undefined}
+                    selected={idx === currentIdx}
                     disabled={listDisabled}
                     icon={
                       importing ? (

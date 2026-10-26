@@ -33,11 +33,6 @@ export const RESULT_CONSTRUCTORS: readonly ResultConstructor[] = [
     use: "read a legacy resource descriptor (tree / revision-tick / config resources)",
   },
   {
-    name: "useEndpointResource",
-    from: "@plugins/primitives/plugins/live-state/web",
-    use: "read a GET endpoint",
-  },
-  {
     name: "useQueryResource",
     from: "@plugins/primitives/plugins/live-state/web",
     use: "wrap a local async load (a code-split module — never a server read) — never return the raw UseQueryResult",

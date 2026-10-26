@@ -39,15 +39,16 @@ Wire into `httpRoutes` via the computed key: `{ [getAgent.route]: handleGet }`.
 **3. Consume** — web components:
 
 ```typescript
-import { useEndpoint, useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
+import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 
-// GET — wraps useQuery; params type-checked against route template
-const { data } = useEndpoint(getAgent, { id });
-
-// PATCH — wraps useMutation; invalidates listed queries on success
-const { mutateAsync } = useEndpointMutation(updateAgent, { invalidates: [getAgent] });
-await mutateAsync({ id }, { body: { name: "new" } });
+// PATCH — wraps useMutation; params / body type-checked against the contract
+const { mutateAsync } = useEndpointMutation(updateAgent);
+await mutateAsync({ params: { id }, body: { name: "new" } });
 ```
+
+There is no read hook and no `invalidates:` option: a surface's read of server
+data is a live resource (`useLive`, below), pushed when the write lands, so a
+mutation never refreshes a read by hand.
 
 Imperative calls go through a `FetchEndpoint` — the client bound to ONE transport (there is no transportless fetcher). Non-2xx responses throw `EndpointError(status, body)`.
 
@@ -80,8 +81,8 @@ const fetchEndpoint = fetchEndpointOver(pageTransport);
 - **Tests** (`web/testing`): `fakeFetchEndpoint(answer?, { machine?, transport? })`
   records each call (`calls[].route / params / body`) and answers it;
   `fake.fetchEndpoint` is passed to a helper, `withTransport(fake)` is a
-  `render` / `renderHook` wrapper under which `useFetchEndpoint`,
-  `useEndpoint` and `useEndpointMutation` all answer from the fake. Never
+  `render` / `renderHook` wrapper under which `useFetchEndpoint` and
+  `useEndpointMutation` both answer from the fake. Never
   `vi.mock` the endpoints barrel to stub a call.
 
 **Off the page — `callEndpoint`** (`endpoints/server`). Server, machine and CLI code calling one of our endpoints (central's secrets from a backend, a backend from the CLI or an MCP tool) uses `useFetchEndpoint`'s twin over the global `fetch` and an absolute origin (server-side only — a page reaches a server through its subtree's transport):
@@ -97,14 +98,7 @@ const s = await callEndpoint(queueHealthSummaryEndpoint, {}, { origin: namespace
 
 Params, body, query and the decoded answer come from the contract, so a contract change is a tsc error at the caller (the bug class: `secretsSet` went 204 while its caller still parsed `{ ok: true }`). No answer → fetch's `TypeError`; a non-2xx → `EndpointError` whose message names the request and the reply. Retry / offline policy is the caller's, over those two. Both clients share one fetch-free request core in `core/request.ts` (`endpointRequest` / `readEndpointResponse`), which a module that cannot import `server/` (a `shared/` helper run by a host process) composes around its own sanctioned `fetch`. A hand-written `/api/…` path or a `fetch` to an endpoint's `.path` off the page is the `endpoints/no-raw-endpoint-call` lint; a genuine exception (a hook process that must not load zod) is an inline disable with the reason. A URL handed to someone else rather than fetched (an agent's MCP URL) is built with `endpointPath(endpoint, params)`. A reply read across code generations (any worktree's backend, through the gateway) is not an exception: its contract defaults every field added since (`.default(…)`), so an older backend's reply parses — `profiling/runtime`'s schemas are the example.
 
-**Endpoints are for writes, and for reads sanctioned to stay request/response.** A server read a surface renders is a live resource — a `liveValue` (`params`, a typed `query`, or cursor-`paged`) or a `liveCollection`, read with `useLive` (`plugins/network/plugins/live/CLAUDE.md`). The `live/no-endpoint-read` lint flags, in `web/` code, `useEndpoint`, `useEndpointResource`, TanStack's `useQuery` family, `fetchEndpoint` inside a `queryFn`, a GET `fetchEndpoint` / `readNdjson` that render, a hook or an effect runs, and `invalidateQueries` / `refetchQueries` over an endpoint read's key; imperative `fetchEndpoint` (a mutation, a handler) is untouched. The read hooks below remain for the existing sites — the rule's debt burndown (`./equin exempt list --rule live/no-endpoint-read --debt`) — never for new code.
-
-**A read that a surface renders is a `ResourceResult`, not React Query's own result** (whose `isPending` / `isError` let a surface read `data ?? []` without asking which state it is in). From `@plugins/primitives/plugins/live-state/web` (live-state sits downstream of endpoints, so the adapters live there):
-
-- a GET — `useEndpointResource(endpoint, params, opts)` instead of `useEndpoint`;
-- a structured question (once a POST body) is a typed-query `liveValue` (`{ query }`), and a paged read a collection's window or a key-range-paged one (`{ query, paged }`; a source with only forward cursors is one bounded value or a Postgres mirror — `network/live`, *Paged reads*) — never a TanStack query over `fetchEndpoint`. The revision-keyed and infinite query adapters are deleted; `useQueryResource` remains only for local async loads (a code-split module), never a server read.
-
-An `EndpointError` maps to `not-found` on a 404 and `loader-failed` otherwise, with the server's message; a `fetch` that got no answer to `transport`; a response the schema rejects to `client-outdated`.
+**Endpoints are for writes.** A server read a surface renders is a live resource — a `liveValue` (`params`, a typed `query`, `paged` by key ranges, or `bytes`) or a `liveCollection`, read with `useLive` (`plugins/network/plugins/live/CLAUDE.md`) as a `ResourceResult` (loading / error / ready), never React Query's own result. There is no request/response read hook: `useEndpoint`, live-state's `useEndpointResource`, `hydrateEndpoint`, `useCursorPagination`, `useEndpointMutation`'s `invalidates:` and the exported `endpointQueryKey` are deleted (`research/2026-10-11-global-endpoint-reads-onto-live.md`). The `live/no-endpoint-read` lint bans, in `web/` code, TanStack's `useQuery` family, `fetchEndpoint` inside a `queryFn`, and a GET `fetchEndpoint` / `readNdjson` that render, a hook or an effect runs — sanctioned only inside `network/live` and `primitives/live-state`, and never a debt entry. Imperative `fetchEndpoint` (a mutation, a handler) is untouched. It does **not** see a non-GET (POST) `fetchEndpoint` whose answer an effect reads: an effect also runs genuine writes (record a play, flush logs), so the method cannot tell the two apart; such a read is still wrong — declare it live. A structured question (once a POST body) is a typed-query `liveValue` (`{ query }`), a type-ahead search over a third party a param'd or typed-query value served `fixed` (`wallpaper.search`, `sonata.ultimate-guitar.search`); `useQueryResource` (live-state) remains only for local async loads (a code-split module), never a server read.
 
 Data the **first render** needs (no loading flash) is not an endpoint read: declare it a `liveValue` with `preload: "boot"` / `"boot-and-keep"` (`network/live`), which the boot snapshot hydrates.
 
@@ -136,7 +130,7 @@ const m = useEndpointMutation(launchTask);                  // { kind: "unavaila
   1. A handler that spawns cannot live in `server/` (the `boundaries/no-platform-api` lint).
   2. `implement` takes only a portable `EndpointDef` (whose `needsMachine` is `undefined`); `implementMachine` — exported only from the `machine` barrel — only a `MachineEndpointDef`, and brands its handler `MachineHttpHandler`.
   3. A `machine/` barrel's `httpRoutes` (`MachinePluginDefinition`) take only `MachineHttpHandler`s, and a `server/` barrel's (`ServerPluginDefinition`) refuse them — so a portable endpoint is never served by machine code alone (a silent 404 on every other host), and a machine one never by `server/`.
-  4. Every client call site handles the unavailable arm: `fetchEndpoint` answers `MachineResult<T>` (`{ kind: "ok"; value } | { kind: "unavailable"; message }`), `useEndpoint` reads one, and `useEndpointMutation` is unavailable at the HOOK level, so `mutate` is unreachable without narrowing. Portable endpoints are unchanged.
+  4. Every client call site handles the unavailable arm: `fetchEndpoint` answers `MachineResult<T>` (`{ kind: "ok"; value } | { kind: "unavailable"; message }`), and `useEndpointMutation` is unavailable at the HOOK level, so `mutate` is unreachable without narrowing. Portable endpoints are unchanged.
 - **Decided by the transport.** `Transport.machine` (`primitives/networking`) is required: `pageTransport` is `true`, `browserServerTransport` `false`. A subtree's transport is fixed, so the arm is stable across renders. Under `machine: false` nothing is sent.
 - **One sentence** — `unavailableMessage(feature)` (core): "Launching an agent isn't available in this version of the app — it needs equin running on your computer."
 - **`useMachineAvailability(declaration)`** takes any `{ needsMachine }` declaration — an endpoint or a live read (`network/live`) — for a control that renders disabled with the message (Welcome's send button, the launch form).
@@ -321,11 +315,11 @@ The `meta.suppressError` flag is also available on raw `useMutation` calls for n
 
 ## `useEndpointMutation` vs `void fetchEndpoint()`
 
-**Default: `useEndpointMutation` for all user-triggered mutations.** It gives you loading state, cache invalidation, and global error surfacing for free.
+**Default: `useEndpointMutation` for all user-triggered mutations.** It gives you loading state and global error surfacing for free.
 
 **`void fetchEndpoint()` only for genuine fire-and-forget** — background side-effects where two conditions hold simultaneously:
 1. A failure is silent and self-correcting (the user can recover without knowing it happened).
-2. State refreshes via another channel — a live-state WS push or the next user interaction — so no manual `invalidates` is needed.
+2. State refreshes via another channel — a live-state WS push or the next user interaction — so nothing refreshes a read by hand.
 
 Canonical examples: DnD rank writes (drag again to fix), notification dismissal (reappears on next load).
 
@@ -349,7 +343,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
 
 ## Enforced invariants
 
-- **Web code must use `fetchEndpoint`/`useEndpoint`.** Raw `fetch(...)` /
+- **Web code must use `fetchEndpoint` (a write) or `useLive` (a read).** Raw `fetch(...)` /
   `fetchWithRetry(...)` / `sendBeacon(...)` / `new XMLHttpRequest()` from any
   module a page can load (`web/`, and the `core/` / `shared/` helpers web
   imports) is forbidden — enforced by the `no-raw-web-fetch` lint rule and the
@@ -376,7 +370,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
 
 ## Plugin reference
 
-- Description: Typed endpoint contract primitive. useFetchEndpoint (a FetchEndpoint bound to the subtree's transport; fetchEndpointOver(t) for sanctioned page-level code), useEndpoint, and useEndpointMutation consume endpoint definitions on the client; useAssetSrc turns an AssetPath (a GET endpoint's asset) into what an element loads over the subtree's transport (the path, a blob URL, or unavailable); useAssetUrl / assetUrlOver hand a sink that loads by URL on its own (a library's fetch, an HTML string, an iframe) an AssetPath's or AssetBase's URL, or unavailable. Typed endpoint contract primitive. defineEndpoint declares the contract; implement() creates the server handler; callEndpoint() calls one from off the page (a backend, the CLI) through its contract; useFetchEndpoint/useEndpoint consume on the client.
+- Description: Typed endpoint contract primitive. useFetchEndpoint (a FetchEndpoint bound to the subtree's transport; fetchEndpointOver(t) for sanctioned page-level code) and useEndpointMutation consume endpoint definitions on the client — writes, and requests that are not reads a surface renders (every server read is a live resource, read with useLive); useAssetSrc turns an AssetPath (a GET endpoint's asset) into what an element loads over the subtree's transport (the path, a blob URL, or unavailable); useAssetUrl / assetUrlOver hand a sink that loads by URL on its own (a library's fetch, an HTML string, an iframe) an AssetPath's or AssetBase's URL, or unavailable. Typed endpoint contract primitive. defineEndpoint declares the contract; implement() creates the server handler; callEndpoint() calls one from off the page (a backend, the CLI) through its contract; useFetchEndpoint / useEndpointMutation consume it on the client.
 - Load-bearing: yes
 - Web:
   - Uses:
@@ -396,13 +390,11 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `EndpointAgentWriteRefusedError`
     - `EndpointError`
     - `endpointErrorSink`
-    - `endpointQueryKey`
     - `fetchEndpointOver`
     - `getEndpointErrorMessage`
     - `useAssetSrc`
     - `useAssetSrcs`
     - `useAssetUrl`
-    - `useEndpoint`
     - `useEndpointMutation`
     - `useFetchEndpoint`
     - `useMachineAvailability`
@@ -457,14 +449,14 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `unmatchedApiResponse`
     - `unsupportedEndpointResponse`
 - Cross-plugin:
-  - Imported by: 228 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 227 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×61
     - `conversations` ×32
     - `page` ×21
     - `infra` ×20
     - `tasks` ×19
     - `debug` ×16
-    - `primitives` ×16
+    - `primitives` ×15
     - `reports` ×6
     - `ui` ×6
     - `auth` ×5
@@ -485,9 +477,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `search/engine`
     - `shell/notifications`
 - Exemptions:
-  - Exempts itself from:
-    - `endpoints/no-raw-web-fetch` — `web` (sanctioned)
-    - `live/no-endpoint-read` — `web` (sanctioned)
+  - Exempts itself from: `endpoints/no-raw-web-fetch` — `web` (sanctioned)
   - Exempted by:
     - `apps/pages/page-tree` (0 debt)
     - `apps/sonata/playback-history` (0 debt)

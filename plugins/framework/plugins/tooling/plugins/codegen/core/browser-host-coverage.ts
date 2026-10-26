@@ -38,7 +38,7 @@
 // are not the scope's. Everything else in it still is — a live read always
 // goes through the context transport, the scope's inside one — and it may not
 // hold a scope fetcher too (`useFetchEndpoint`, a `FetchEndpoint` parameter,
-// `useEndpoint`, `useEndpointMutation`): a module is the page's or the scope's,
+// `useEndpointMutation`): a module is the page's or the scope's,
 // never both, or a scope call hidden in it would escape the endpoint arm.
 
 import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
@@ -225,7 +225,7 @@ const PAGE_BOUND_IMPORTS: ReadonlySet<string> = new Set([
 
 /** A scope fetcher (the subtree's transport) named in a module. */
 const SCOPE_FETCHER_RE =
-  /\b(?:useFetchEndpoint|FetchEndpoint|useEndpoint|useEndpointMutation)\b/;
+  /\b(?:useFetchEndpoint|FetchEndpoint|useEndpointMutation)\b/;
 
 const DECL_RE =
   /^(?:export\s+)?(?:declare\s+)?(?:async\s+)?(?:const|let|var|function\*?|class|enum)\s+([A-Za-z_$][\w$]*)/gm;

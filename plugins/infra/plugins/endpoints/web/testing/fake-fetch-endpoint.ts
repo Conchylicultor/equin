@@ -41,7 +41,7 @@ export interface FakeFetchEndpoint {
   calls: FetchEndpointCall[];
   /**
    * A transport whose clients get THIS fetcher (`useFetchEndpoint`,
-   * `useEndpoint`, `useEndpointMutation`, `fetchEndpointOver`) — mount it with
+   * `useEndpointMutation`, `fetchEndpointOver`) — mount it with
    * `withTransport(fake)`. Otherwise page-shaped (`testTransport`).
    */
   transport: Transport;
