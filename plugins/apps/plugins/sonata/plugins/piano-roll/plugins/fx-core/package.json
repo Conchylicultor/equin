@@ -4,6 +4,6 @@
   "private": true,
   "version": "0.0.1",
   "dependencies": {
-    "pixi.js": "^8.19.0"
+    "pixi.js": "^8.22.0"
   }
 }

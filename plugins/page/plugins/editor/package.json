@@ -9,7 +9,7 @@
     "@lexical/link": "^0.44.0",
     "@lexical/selection": "^0.44.0",
     "@lexical/yjs": "^0.44.0",
-    "yjs": "^13.6.20",
+    "yjs": "^13.6.33",
     "y-protocols": "^1.0.6"
   }
 }

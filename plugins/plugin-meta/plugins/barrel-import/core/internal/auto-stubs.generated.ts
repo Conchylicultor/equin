@@ -142,11 +142,18 @@ export function registerAutoStubs(build: BuildModule): void {
 
   build.module("react-resizable-panels", () => ({
     exports: {
+      Cell: noop,
+      Grid: noop,
+      Gridline: noop,
       Group: noop,
       Panel: noop,
       Separator: noop,
+      SeparatorOverlay: noop,
       isCoarsePointer: noop,
+      useDefaultGridLayout: noop,
       useDefaultLayout: noop,
+      useGridCallbackRef: noop,
+      useGridRef: noop,
       useGroupCallbackRef: noop,
       useGroupRef: noop,
       usePanelCallbackRef: noop,

@@ -5,7 +5,7 @@
   "description": "Domain-agnostic headless bridge between a Lexical editor state and the Y.Doc representation @lexical/yjs binds to (yDocFromLexical / readYDoc / yDocContent). A leaf so content-model owners (e.g. the page editor's runs↔XmlText seam) compose it without this primitive knowing any content model.",
   "dependencies": {
     "lexical": "^0.44.0",
-    "yjs": "^13.6.20",
+    "yjs": "^13.6.33",
     "@lexical/yjs": "^0.44.0"
   },
   "devDependencies": {

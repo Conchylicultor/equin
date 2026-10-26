@@ -4,6 +4,6 @@
   "private": true,
   "version": "0.0.1",
   "dependencies": {
-    "yjs": "^13.6.20"
+    "yjs": "^13.6.33"
   }
 }
