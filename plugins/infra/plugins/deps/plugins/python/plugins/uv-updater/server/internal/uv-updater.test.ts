@@ -6,6 +6,7 @@ import {
   parseCpythonDownloads,
   parseLockUpdates,
   parseUvLockVersions,
+  projectHolds,
   uvCutoff,
 } from "./uv-updater";
 
@@ -131,5 +132,25 @@ describe("uv updater interpreter", () => {
     expect(isNewerRelease("3.14.7", "3.12")).toBe(true);
     expect(isNewerRelease("3.12.14", "3.12")).toBe(true);
     expect(isNewerRelease("3.14.7", "3.14.7")).toBe(false);
+  });
+});
+
+describe("uv updater holds per project", () => {
+  const hold = (names: string[]): Hold => ({
+    names,
+    below: "3.15.0",
+    reason: "r",
+    reviewBy: "2026-11-15",
+  });
+
+  test("a bare name holds in every project, a project-scoped one only there", () => {
+    const holds = [hold(["audio-analysis:cpython"]), hold(["numpy"])];
+    expect(projectHolds(holds, "audio-analysis").map((h) => h.names)).toEqual([
+      ["cpython"],
+      ["numpy"],
+    ]);
+    expect(projectHolds(holds, "youtube").map((h) => h.names)).toEqual([
+      ["numpy"],
+    ]);
   });
 });

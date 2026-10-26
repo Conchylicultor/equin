@@ -263,6 +263,25 @@ const moveName = (project: UvProject, pkg: string): string =>
   `${project.label}:${pkg}`;
 
 /**
+ * The holds that apply in one project, by bare name: a hold name without a
+ * project (`cpython`, `numpy`) applies in every project, `<project>:<name>`
+ * (`audio-analysis:cpython`) only in that one — a release one project's
+ * dependencies cannot take yet need not hold back the others.
+ */
+export function projectHolds(holds: readonly Hold[], label: string): Hold[] {
+  return holds
+    .map((h) => ({
+      ...h,
+      names: h.names.flatMap((n) => {
+        const at = n.indexOf(":");
+        if (at === -1) return [n];
+        return n.slice(0, at) === label ? [n.slice(at + 1)] : [];
+      }),
+    }))
+    .filter((h) => h.names.length > 0);
+}
+
+/**
  * Every `python/` project's `uv.lock` and `.python-version`, under one
  * {@link UV_COOLDOWN_DAYS}-day release cooldown.
  *
@@ -290,10 +309,11 @@ export const uvUpdater: Updater = {
     const cutoff = uvCutoff(now);
     const today = utcDay(now);
     const downloads = await cpythonDownloads(root);
-    const cpython = newestCpython(downloads, cutoff, UV_HOLDS);
     const newest = newestCpython(downloads, cutoff, []);
     const out: Outdated[] = [];
     for (const project of await uvProjects(root)) {
+      const holds = projectHolds(UV_HOLDS, project.label);
+      const cpython = newestCpython(downloads, cutoff, holds);
       const pinned = readFileSync(
         pythonVersionFile(root, project),
         "utf8",
@@ -306,7 +326,7 @@ export const uvUpdater: Updater = {
         });
       } else if (newest !== null && isNewerRelease(newest, pinned)) {
         // Nothing to move to but a held release: listed, so a hold is never silent.
-        const hold = heldBy(UV_HOLDS, CPYTHON, newest, compareReleases)!;
+        const hold = heldBy(holds, CPYTHON, newest, compareReleases)!;
         out.push({
           name: moveName(project, CPYTHON),
           current: pinned,
@@ -322,7 +342,7 @@ export const uvUpdater: Updater = {
       ]);
       for (const u of parseLockUpdates(output)) {
         if (!isNewerRelease(u.to, u.from)) continue;
-        const hold = heldBy(UV_HOLDS, u.pkg, u.to, compareReleases);
+        const hold = heldBy(holds, u.pkg, u.to, compareReleases);
         out.push({
           name: moveName(project, u.pkg),
           current: u.from,
