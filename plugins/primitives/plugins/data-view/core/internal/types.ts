@@ -2017,18 +2017,6 @@ export interface DataViewBaseProps<TRow> {
    * says so instead of quietly falling back to whatever tab was last used.
    */
   pinnedView?: string;
-  /**
-   * Which key of the enclosing pane's URL holds the active view. Absent: the
-   * reserved `;view` every pane carries (`/sonata;view=all`), so a surface is
-   * addressable with nothing to wire (see "Addressable views" in the
-   * data-view CLAUDE.md). A string: a keyed param the pane's segment DECLARES
-   * — for a second DataView in one pane, since one key cannot hold two
-   * surfaces' views (a second claimant of `;view` throws). `false`: keep the
-   * selection device-local only (a secondary list whose view is not part of
-   * the page's address). A pinned host never binds (passing a name beside
-   * `pinnedView` throws); outside a pane there is no URL to bind.
-   */
-  viewParam?: string | false;
   storageKey: DataViewId;
   /**
    * Per-row emphasis — see {@link RowTone}. A data accessor closed over row

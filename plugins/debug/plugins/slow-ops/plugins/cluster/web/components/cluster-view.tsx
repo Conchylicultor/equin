@@ -395,10 +395,8 @@ function ClusterScanView({
           emptyState="No slow operations recorded across the cluster"
         />
 
-        <DataView<TimelineEntry>
-          // Device-local view: the aggregate list above owns the pane's ;view.
-          viewParam={false}
-          rows={timeline}
+      <DataView<TimelineEntry>
+        rows={timeline}
           fields={timelineFields}
           rowKey={(r) => r.key}
           storageKey={CLUSTER_TIMELINE}

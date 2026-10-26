@@ -255,9 +255,6 @@ function PersistedLogs({
         fields={stepFields}
         rowKey={(s) => String(s.index)}
         storageKey={BUILD_RUN_LOG_STEPS}
-        // Secondary lists inside one section of the run's pane: neither owns
-        // the pane's `;view` (two DataViews here cannot share it).
-        viewParam={false}
         views={["table"]}
         defaultView="table"
         emptyState="No steps"
@@ -267,7 +264,6 @@ function PersistedLogs({
         fields={lineFields}
         rowKey={(l) => l.n}
         storageKey={BUILD_RUN_LOG_LINES}
-        viewParam={false}
         views={["table", "list"]}
         defaultView="table"
         readiness={readiness}

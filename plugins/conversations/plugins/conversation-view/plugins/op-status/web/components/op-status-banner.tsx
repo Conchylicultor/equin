@@ -522,8 +522,6 @@ export function OpStatusBanner({
     <Text as="div" variant="caption">
       <BannerChromeContext.Provider value={chrome}>
         <DataView<QueueTableRow>
-          // Device-local view: a band above the prompt, not part of the conversation's address.
-          viewParam={false}
           rows={rows}
           collection={opQueueRow}
           overrides={queueOverrides}

@@ -229,7 +229,7 @@ contributions each surface passes in, and per-entry plugin id
 - Description: Type-agnostic named-view-instance engine: instance model + resolver, config-descriptor machinery, debounced write-back, and the editable view-switcher chrome. Type-agnostic named-view-instance engine (server): the per-id `views` config descriptor + a generic registration helper. Consumers register their own ids under their own plugin.
 - Web:
   - Contributes: `IdKinds.Kind` "view"
-  - Uses: 46 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 45 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×15
     - `config_v2` ×3
     - `primitives/css/text` ×3
@@ -237,7 +237,6 @@ contributions each surface passes in, and per-entry plugin id
     - `primitives/hover-reveal` ×2
     - `primitives/live-state` ×2
     - `primitives/sortable-list` ×2
-    - `primitives/view-switcher` ×2
     - `config_v2/fields.FieldRenderer`
     - `ids.IdKinds`
     - `primitives/css/center.Center`
@@ -252,6 +251,7 @@ contributions each surface passes in, and per-entry plugin id
     - `primitives/latest-ref.useLatestRef`
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/overlay/popup-open.PopupOpenScope`
+    - `primitives/view-switcher.useActiveViewId`
     - `ui/icons.Icon`
   - Exports (types):
     - `AssertStableGetters`

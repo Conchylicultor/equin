@@ -106,8 +106,6 @@ export function SetsList({
   );
   return (
     <DataView<SetRow>
-      // Device-local view: the icons switcher beside it owns the pane's ;view.
-      viewParam={false}
       rows={rows}
       fields={fields}
       rowKey={(r) => r.key}

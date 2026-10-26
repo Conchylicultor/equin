@@ -92,10 +92,10 @@ Rules:
   belongs to a pane that has not loaded yet reads as the optional value. Change
   it from inside the pane with `pane.useSetParams()` (below), not a `swap`.
 - A **keyed** param `;name` — after the positional parts, any number of them:
-  `song/:songId/:bar?;view;zoom` — is the unbounded form of the same idea, for
+  `song/:songId/:bar?;lens;zoom` — is the unbounded form of the same idea, for
   when a pane has more than one view of its entity, or one beside an optional
   `:param?`. Each is an optional key, written as a matrix parameter on the
-  pane's LAST URL part (`/song/abc/12;view=notation`), in declaration order,
+  pane's LAST URL part (`/song/abc/12;lens=notation`), in declaration order,
   only when supplied. Matrix rather than `?query`: in a multi-pane URL each part
   belongs to one pane, so the key is scoped to the pane declaring it (a query
   string is one bag every column would compete for), and it stays in the
@@ -104,38 +104,45 @@ Rules:
   a pane declaring no keyed params reads a raw `;` as text, as it always did.
   Keyed params do not change a segment's collision shape and do not count
   toward "paramful" (`useResolve`): they view an entity, never address one.
-- **`;view` is reserved — every pane carries it without declaring it**
-  (`RESERVED_VIEW_PARAM`, core): which view of the pane's content is on screen,
-  bound by whatever surface shows one of several views (a DataView's active view
-  instance — see below). `/tasks;view=open`, `/song/a;lens=n;view=all` (after
-  the declared keys). `defineRoute` throws on a declared `;view` or a `:view`,
-  so the name means one thing in every URL. A pane that declares no keyed
-  params strips only an exact trailing `;view=…`; any other raw `;` stays text.
-  It is NOT one of the pane's typed params: `useParams()`, `useResolve`,
-  `MatchEntry.params` / `fullParams` never carry it (the entry's `view` does),
-  an open never supplies it (re-opening the pane already there keeps it —
-  `sameAddress`), `RouteDef.path` never writes it, and `useSetParams` preserves
-  it. Only `fillSegment(…, { ownSlot: true })` writes it, on the slot's own part.
-- **An app's landing pane carries it on the base path: `/sonata;view=all`.** The
+- **Surface view keys — `;view.<surface>` — every pane carries them without
+  declaring them** (`surfaceViewKey(surface)`, core; surface grammar
+  `[A-Za-z0-9._-]+`): which view of ONE surface of the pane's content is on
+  screen, bound by whatever surface shows one of several views (a DataView's
+  active view instance, keyed by its id — see below).
+  `/tasks;view.tasks-list=open`, `/song/a;lens=n;view.song.notes=all`. The key
+  derives from the surface's own id, so any number of surfaces in one pane bind
+  side by side and a plugin contributing one section of a pane it does not own
+  declares nothing. Written after the declared keys, sorted — one spelling.
+  The `view.` prefix keeps the family disjoint from declared keys
+  (identifiers, no `.`); `defineRoute` throws on a declared `;view` or a
+  `:view`. A pane that declares no keyed params strips only a trailing run of
+  `;view.<surface>=…` pairs (and a retired bare `;view=…`, then dropped — an
+  old link still routes); any other raw `;` stays text. They are NOT the
+  pane's typed params: `useParams()`, `useResolve`, `MatchEntry.params` /
+  `fullParams` never carry them (the entry's `views`, by surface, does), an
+  open never supplies them (re-opening the pane already there keeps them —
+  `sameAddress`), `RouteDef.path` never writes them, and `useSetParams`
+  preserves them. Only `fillSegment(…, { ownSlot: true })` writes them, on the
+  slot's own part.
+- **An app's landing pane carries them on the base path:
+  `/sonata;view.sonata.library=all`.** The
   index pane is not a slot (an empty route shows it), so its keyed params live
   BESIDE the route in the store (`getIndexParams()`): parsed off a leading `;…`
   part (`parseUrl` → `index`), saved in `history.state` as `index`, restored on
   back/forward, carried by `navigate()` / boot, and dropped by any navigation
   that does not pass them on (`setRoute(route, replace, index)`). `stripBasePath`
   and the app matchers accept `<base>;…`. A non-index pane with no URL part of
-  its own cannot carry `;view`.
+  its own cannot carry surface view keys.
 
 ### `usePaneViewParam` — the view on screen, in the URL
 
-`usePaneViewParam(claimant, name = "view")` reads the enclosing pane instance
-(the index pane included) and returns `{ value, set }`, or `null` outside a pane
-or where no address can hold it. `set` writes in place and **replaces** the
-history entry (`store.setKeyedParam`): a view switch is not a navigation Back
-steps through. `name` may instead be a keyed param the pane DECLARES (it throws
-otherwise); `null` binds nothing. One key holds one surface's view: a second,
-different `claimant` of the same name in the same instance throws — give it a
-declared name of its own. DataView binds it automatically (data-view CLAUDE.md,
-"Addressable views").
+`usePaneViewParam(surface)` reads the enclosing pane instance's
+`;view.<surface>` (the index pane included) and returns `{ value, set }`, or
+`null` outside a pane or where no address can hold it. `set` writes in place
+and **replaces** the history entry (`store.setKeyedParam`): a view switch is not
+a navigation Back steps through; `set(undefined)` removes the key. Nothing is
+claimed: each surface has its own key. DataView binds it automatically
+(data-view CLAUDE.md, "Addressable views").
 - `useResolve` is required exactly when the route's own segment has a `:param`, and
   forbidden when it does not — a paramful pane must be able to say "no such
   entity". Opt out with `useResolve: false`. The key is `use`-named because its
@@ -1269,16 +1276,19 @@ See "Open questions" in the design doc.
     - `indexKeyedSuffix`
     - `MissingRouteParamError`
     - `normalizeRoutePath`
+    - `onlySurfaceViews`
     - `parseSegmentParts`
     - `readIndexKeyedParams`
     - `readKeyedParams`
-    - `RESERVED_VIEW_PARAM`
     - `segmentKeyedParamNames`
     - `segmentMatchPatterns`
     - `segmentParamNames`
     - `segmentRequiredParamNames`
-    - `slotKeyedParamNames`
     - `splitKeyedPart`
+    - `splitSurfaceViewPart`
+    - `surfaceViewKey`
+    - `surfaceViewsOf`
+    - `withoutSurfaceViews`
 - Test helpers:
   - Web: `@plugins/primitives/plugins/pane/web/testing`
     - `createTestSurfaceStore` — A surface store, bound as the live store so the imperative free functions and the module-level history listener agree with it.

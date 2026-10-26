@@ -214,8 +214,6 @@ function VersionHistoryBody({
       timeline={
         <RestoreVersionContext.Provider value={onRestore}>
           <DataView<VersionRow>
-            // Device-local view: a dialog over the pane, not part of its address.
-            viewParam={false}
             storageKey={VERSIONS_VIEW}
             source={source}
             overrides={overrides}

@@ -17,10 +17,7 @@ import {
 import { useViewsConfig, type ViewsConfigHandle } from "./use-views-config";
 import { cleanView, type DraftMap, sameView, withDraft } from "./draft-values";
 import { readDrafts, subscribeDrafts, writeDrafts } from "./view-drafts";
-import {
-  useActiveViewId,
-  type ActiveViewUrl,
-} from "@plugins/primitives/plugins/view-switcher/web";
+import { useActiveViewId } from "@plugins/primitives/plugins/view-switcher/web";
 import { resolveActiveId } from "./resolve-active-id";
 import { usableTypes } from "./usable-types";
 import {
@@ -157,11 +154,38 @@ export interface ViewModelOptions {
    */
   canonical?: (view: VariantValue) => unknown;
   /**
-   * Where the URL holds the active view (a pane's `;view`), when it does: a
-   * URL-named view outranks the device-local selection, and selecting writes
-   * both. `null`/absent keeps the selection device-local only.
+   * Where the URL holds the active view (a pane's surface view key), when it
+   * does: a URL-named view outranks the device-local selection, and the URL is
+   * DERIVED from the active view — see {@link activeViewUrlValue}.
+   * `null`/absent keeps the selection device-local only.
    */
   activeViewUrl?: ActiveViewUrl | null;
+}
+
+/**
+ * Where the URL holds the active view: the read and write of one address key
+ * (a pane's `;view.<surface>`, see `usePaneViewParam`). Structural, so this
+ * engine names no router.
+ */
+export interface ActiveViewUrl {
+  /** The id the address names, `undefined` when it names none. */
+  value: string | undefined;
+  /** Write the id into the address, or remove it with `undefined` (in place —
+   *  no history entry). */
+  set: (viewId: string | undefined) => void;
+}
+
+/**
+ * THE rule for what the URL holds while `activeId` is on screen: nothing on
+ * the surface's static default (`staticDefault` — its authored `defaultView`,
+ * else its first view), so a list on its default adds nothing to the address;
+ * the active id otherwise, so the address always reproduces the screen.
+ */
+export function activeViewUrlValue(
+  activeId: string,
+  staticDefault: string,
+): string | undefined {
+  return activeId === staticDefault ? undefined : activeId;
 }
 
 const NO_DRAFTS: DraftMap = Object.freeze({});
@@ -193,7 +217,10 @@ export function useViewModel<T extends ViewTypeMeta>(
   // derived straight from each entry's contributions — that is "what view-types
   // exist per source", not "default instances".
   const cfg = useViewsConfig(storageKey, descriptorMap, entries);
-  const active = useActiveViewId(storageKey, opts?.activeViewUrl);
+  const active = useActiveViewId(storageKey);
+  const url = opts?.activeViewUrl ?? null;
+  const urlViewId = url?.value;
+  const setUrl = url?.set;
 
   // The surface's working copies — the tab's shared map (every mount of this
   // surface reads the same one), or none without drafts.
@@ -291,21 +318,49 @@ export function useViewModel<T extends ViewTypeMeta>(
   );
 
   const activeId = resolveActiveId(instances, {
-    fromUrl: active.urlViewId,
+    fromUrl: urlViewId,
     persisted: active.activeViewId,
     defaultView,
     pinned: pinnedView,
+  });
+  // What the surface shows with nothing picked anywhere — the URL omits it.
+  const staticDefault = resolveActiveId(instances, {
+    fromUrl: undefined,
+    persisted: null,
+    defaultView,
+    pinned: undefined,
   });
 
   // A view the URL opened becomes this device's selection too: should the
   // address later stop naming it (a link opened beside it), the surface keeps
   // showing it rather than jumping back to the previous device-local pick.
-  const { urlViewId, activeViewId: persistedId, setActiveView: adopt } = active;
+  const { activeViewId: persistedId, setActiveView: persist } = active;
   useEffect(() => {
     if (activeId !== "" && activeId === urlViewId && persistedId !== activeId) {
-      adopt(activeId);
+      persist(activeId);
     }
-  }, [activeId, urlViewId, persistedId, adopt]);
+  }, [activeId, urlViewId, persistedId, persist]);
+
+  // The URL is derived from the active view: once the instances are known,
+  // whatever is on screen is what the address says (`activeViewUrlValue`). So
+  // a view restored from this device is stamped in, a stale or unknown id is
+  // rewritten to the view actually shown, and the default leaves no key.
+  useEffect(() => {
+    if (setUrl === undefined || activeId === "") return;
+    const desired = activeViewUrlValue(activeId, staticDefault);
+    if (urlViewId !== desired) setUrl(desired);
+  }, [setUrl, activeId, staticDefault, urlViewId]);
+
+  // Selecting a view writes the device's store and — by the same rule — the
+  // URL, in one batch. The URL outranks the store, so a pick that left it
+  // naming the previous view would resolve straight back to it.
+  const setActiveView = useCallback(
+    (id: string) => {
+      persist(id);
+      setUrl?.(activeViewUrlValue(id, staticDefault));
+    },
+    [persist, setUrl, staticDefault],
+  );
 
   // Capability-gated add menu, grouped per source entry: each group is that
   // entry's registered contributions ∩ `views` whitelist (if present). The `views` whitelist gates ADDABILITY only — authored
@@ -354,7 +409,6 @@ export function useViewModel<T extends ViewTypeMeta>(
   // surface that creates a view (the strip's `+`, the chip's "Add view", the
   // settings popover's Duplicate) lands on it, rather than each caller having
   // to remember to select the id it gets back.
-  const { setActiveView } = active;
   const actions = useMemo<ViewActionsCore>(
     () => ({
       availableSources,
@@ -449,7 +503,7 @@ export function useViewModel<T extends ViewTypeMeta>(
       failure: cfg.failure,
       instances,
       activeId,
-      setActiveView: active.setActiveView,
+      setActiveView,
       viewFor,
       savedViewFor,
       dirtyFor,
@@ -463,7 +517,7 @@ export function useViewModel<T extends ViewTypeMeta>(
       cfg.failure,
       instances,
       activeId,
-      active.setActiveView,
+      setActiveView,
       viewFor,
       savedViewFor,
       dirtyFor,

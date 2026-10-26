@@ -252,7 +252,7 @@ const SetupStepSchema = z.union([
       when: SetupWhen,
       /**
        * An in-app path the framed app is moved to, its query kept
-       * (`/sonata;view=all` — a DataView's view is part of its pane's URL, so
+       * (`/sonata;view.sonata.library=all` — a DataView's view is part of its pane's URL, so
        * a view is reached by address, never by clicking its chip).
        */
       goto: z.string().startsWith("/"),

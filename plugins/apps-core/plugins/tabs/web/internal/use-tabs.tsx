@@ -282,7 +282,7 @@ interface BootState {
  */
 type ActivateTarget =
   // `index`: the landing pane's keyed params a link carried on the base path
-  // (`/sonata;view=all`) — see the pane store's `getIndexParams`.
+  // (`/sonata;view.sonata.library=all`) — see the pane store's `getIndexParams`.
   | { kind: "route"; route: PaneSlot[]; index?: Record<string, string> }
   | { kind: "pending"; rawPath: string };
 

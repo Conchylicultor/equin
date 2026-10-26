@@ -133,7 +133,7 @@ export function serializePaneState(
   store: Pick<PaneStore, "getRouteState" | "getIndexParams">,
 ): PaneHistoryState {
   // Takes the STORE, not its route: a resolved entry also carries the app's
-  // landing-pane params (`index` — its `;view`, which live beside the route),
+  // landing-pane params (`index` — its surface view keys, which live beside the route),
   // and a caller handed only the route could not write them.
   const state = store.getRouteState();
   if (state.kind === "unresolved") return { pending: state.rawPath };

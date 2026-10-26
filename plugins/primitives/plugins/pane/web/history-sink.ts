@@ -40,7 +40,7 @@ export type SerializedSlot = {
  * rest, so the two runtimes never need to agree on the composite shape.
  */
 export type PaneHistoryState =
-  // `index`: the app's landing pane's keyed params (its `;view`), which live
+  // `index`: the app's landing pane's keyed params (its surface view keys), which live
   // beside the route — see `PaneStore.getIndexParams`.
   | { route: SerializedSlot[]; index?: Record<string, string> }
   | { pending: string };

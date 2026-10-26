@@ -163,16 +163,16 @@ one of:
 - `{ "when"?, "goto": "<in-app path>", "note"? }` — moves the framed app to
   that path, its query (the embed flag) kept, and waits for it to load and go
   network-idle. **How to reach a view**: a DataView's active view is part of
-  its pane's URL (`;view=<id>`, data-view's "Addressable views"), so
-  `"goto": "/sonata;view=all"` opens the All table whatever this device picked
-  last. A framed counterpart only — an inline exhibit has no URL.
+  its pane's URL under the DataView's own id (`;view.<dataViewId>=<viewId>`,
+  data-view's "Addressable views"), so `"goto": "/sonata;view.sonata.library=all"`
+  opens the All table whatever this device picked last. A framed counterpart only — an inline exhibit has no URL.
 - `{ "when"?, "click": "<selector>", "note"? }` — clicks in the app document;
   the selector must match exactly one element or the run fails.
 
 The app settles after each (load, two frames, 500ms) and one line
 `app setup: goto <path>` / `app setup: click <selector>` is printed per step.
 Example: `"appSetup": [{ "when": { "layout": "list" }, "goto":
-"/sonata;view=all" }]`.
+"/sonata;view.sonata.library=all" }]`.
 
 After the settle and the picks check, before the capture, each side is
 measured in its own document (the mock's iframe; the counterpart's iframe, or

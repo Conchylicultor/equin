@@ -217,8 +217,6 @@ export function LaunchListSection(): ReactElement {
         />
       ) : null}
       <DataView<LaunchListRow>
-        // Device-local view: a section of the automation's detail, beside its run history, which owns the pane's ;view.
-        viewParam={false}
         rows={rows}
         collection={launchListRowKind}
         overrides={LAUNCH_LIST_OVERRIDES}

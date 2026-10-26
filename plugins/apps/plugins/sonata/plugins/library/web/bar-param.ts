@@ -1,5 +1,5 @@
 /**
- * The `;bar` param of the player route (`/sonata/song/:songId;bar;view`): the
+ * The `;bar` param of the player route (`/sonata/song/:songId;bar;lens`): the
  * musical bar the song opens at (see `barStartBeat` in score/core for the
  * numbering — a pickup is bar 0, the first full bar is bar 1).
  *

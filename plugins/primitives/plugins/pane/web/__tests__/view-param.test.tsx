@@ -24,12 +24,14 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 
 // THE VIEW ON SCREEN HAS AN ADDRESS, WITH NOTHING TO DECLARE.
 //
-// Every pane carries the reserved `;view` (`RESERVED_VIEW_PARAM`): a surface
-// showing one of several views binds it through `usePaneViewParam`, so its
-// view is part of the pane's URL. An app's landing pane — no slot, no URL part
-// of its own — carries it on the base path (`/lib;view=all`). This suite pins
-// the parse, the build, the in-place REPLACE write, the landing pane, and the
-// one-claimant rule.
+// Every pane carries surface view keys (`;view.<surface>`, `surfaceViewKey`):
+// a surface showing one of several views binds its own key through
+// `usePaneViewParam(surface)`, so its view is part of the pane's URL and any
+// number of surfaces in one pane bind side by side. An app's landing pane — no
+// slot, no URL part of its own — carries them on the base path
+// (`/lib;view.lib=all`). This suite pins the parse, the build (declared keys
+// first, surface keys sorted), the in-place REPLACE write and its removal, the
+// landing pane, and `useSetParams` keeping them.
 
 const rootApp = defineApp({
   id: "view-param-root",
@@ -65,7 +67,7 @@ const libIndexPane = Pane.define({
 const plugins = [
   {
     id: "view-param-test-plugin",
-    description: "reserved ;view fixture",
+    description: "surface view keys fixture",
     contributions: [
       Pane.Register({ pane: listPane }),
       Pane.Register({ pane: songPane }),
@@ -107,36 +109,54 @@ function parsed(path: string) {
   return { slots: r.slots.map((s) => [s.paneId, s.params]), index: r.index };
 }
 
-describe("parsing the reserved `;view`", () => {
-  it("reads it off a pane that declares no keyed params", () => {
-    expect(parsed("/vp-list;view=open")).toEqual({
-      slots: [["vp-list", { view: "open" }]],
+describe("parsing surface view keys", () => {
+  it("reads them off a pane that declares no keyed params", () => {
+    expect(parsed("/vp-list;view.b=x;view.a=open")).toEqual({
+      slots: [["vp-list", { "view.a": "open", "view.b": "x" }]],
       index: {},
     });
   });
 
-  it("reads it beside a pane's declared keyed params", () => {
-    expect(parsed("/vp-song/a;lens=n;view=all")).toEqual({
-      slots: [["vp-song", { id: "a", lens: "n", view: "all" }]],
+  it("reads them beside a pane's declared keyed params", () => {
+    expect(parsed("/vp-song/a;lens=n;view.song.notes=all")).toEqual({
+      slots: [["vp-song", { id: "a", lens: "n", "view.song.notes": "all" }]],
       index: {},
     });
+  });
+
+  it("drops the retired bare `;view=` (an old link still routes)", () => {
+    expect(parsed("/vp-list;view=open")).toEqual({
+      slots: [["vp-list", {}]],
+      index: {},
+    });
+    expect(parsed("/vp-song/a;view=open")).toEqual({
+      slots: [["vp-song", { id: "a" }]],
+      index: {},
+    });
+  });
+
+  it("keeps any other raw `;` as text on a pane declaring no keyed params", () => {
+    expect(parsed("/vp-list;junk=1")).toBe("unresolved");
   });
 
   it("reads a leading `;…` part as the landing pane's params", () => {
-    expect(parsed("/;view=all")).toEqual({ slots: [], index: { view: "all" } });
-    expect(stripBasePath("/lib;view=all", "/lib")).toBe("/;view=all");
+    expect(parsed("/;view.lib=all")).toEqual({
+      slots: [],
+      index: { "view.lib": "all" },
+    });
+    expect(stripBasePath("/lib;view.lib=all", "/lib")).toBe("/;view.lib=all");
   });
 });
 
-/** Binds the enclosing instance's `;view` and hands it to the test. */
+/** Binds the enclosing instance's view of `surface` and hands it to the test. */
 function Bind({
-  claimant = "surface",
+  surface = "surface",
   onBind,
 }: {
-  claimant?: string;
+  surface?: string;
   onBind: (p: PaneViewParam | null) => void;
 }) {
-  onBind(usePaneViewParam(claimant));
+  onBind(usePaneViewParam(surface));
   return null;
 }
 
@@ -153,7 +173,7 @@ function InFirstInstance({ children }: { children: ReactNode }) {
 }
 
 describe("usePaneViewParam", () => {
-  it("writes the slot's `;view` in place, replacing the history entry", () => {
+  it("writes the surface's key in place, replacing the history entry", () => {
     store.restoreRoute([{ paneId: "vp-list", params: {} }]);
     const before = store.getRoute()[0]!;
     let bound: PaneViewParam | null = null;
@@ -170,19 +190,48 @@ describe("usePaneViewParam", () => {
 
     act(() => bound!.set("open"));
 
-    expect(window.location.pathname).toBe("/vp-list;view=open");
+    expect(window.location.pathname).toBe("/vp-list;view.surface=open");
     expect(window.history.length).toBe(historyLength);
     const after = store.getRoute()[0]!;
     expect(after.instanceId).toBe(before.instanceId);
     const entry = store.resolveRoute(store.getRoute())!.panes[0]!;
     expect(entry.params).toEqual({});
-    expect(entry.view).toBe("open");
+    expect(entry.views).toEqual({ surface: "open" });
     expect(bound!.value).toBe("open");
+
+    act(() => bound!.set(undefined));
+
+    expect(window.location.pathname).toBe("/vp-list");
+    expect(window.history.length).toBe(historyLength);
+    expect(bound!.value).toBeUndefined();
+  });
+
+  it("binds two surfaces of one pane side by side, keys sorted after declared ones", () => {
+    store.restoreRoute([{ paneId: "vp-song", params: { id: "a", lens: "n" } }]);
+    let first: PaneViewParam | null = null;
+    let second: PaneViewParam | null = null;
+    render(
+      <TestSurface store={store} plugins={plugins} basePath="">
+        <InFirstInstance>
+          <Bind surface="zeta.list" onBind={(p) => (first = p)} />
+          <Bind surface="alpha" onBind={(p) => (second = p)} />
+        </InFirstInstance>
+      </TestSurface>,
+    );
+
+    act(() => first!.set("x"));
+    act(() => second!.set("y"));
+
+    expect(window.location.pathname).toBe(
+      "/vp-song/a;lens=n;view.alpha=y;view.zeta.list=x",
+    );
+    expect(first!.value).toBe("x");
+    expect(second!.value).toBe("y");
   });
 
   it("is kept by the pane's own useSetParams", () => {
     store.restoreRoute([
-      { paneId: "vp-song", params: { id: "a", view: "all" } },
+      { paneId: "vp-song", params: { id: "a", "view.notes": "all" } },
     ]);
     let setParams: ((p: { id: string; lens?: string }) => void) | null = null;
     function SetLens() {
@@ -200,7 +249,7 @@ describe("usePaneViewParam", () => {
     expect(store.getRoute()[0]!.params).toEqual({
       id: "a",
       lens: "n",
-      view: "all",
+      "view.notes": "all",
     });
   });
 
@@ -210,7 +259,7 @@ describe("usePaneViewParam", () => {
     render(
       <TestSurface store={store} plugins={plugins} basePath="/lib">
         <InFirstInstance>
-          <Bind onBind={(p) => (bound = p)} />
+          <Bind surface="lib" onBind={(p) => (bound = p)} />
         </InFirstInstance>
       </TestSurface>,
     );
@@ -218,24 +267,15 @@ describe("usePaneViewParam", () => {
 
     act(() => bound!.set("all"));
 
-    expect(window.location.pathname).toBe("/lib;view=all");
+    expect(window.location.pathname).toBe("/lib;view.lib=all");
     expect(store.getRoute()).toEqual([]);
-    expect(store.getIndexParams()).toEqual({ view: "all" });
+    expect(store.getIndexParams()).toEqual({ "view.lib": "all" });
     expect(bound!.value).toBe("all");
-  });
 
-  it("refuses a second surface claiming the same key", () => {
-    store.restoreRoute([{ paneId: "vp-list", params: {} }]);
-    expect(() =>
-      render(
-        <TestSurface store={store} plugins={plugins} basePath="">
-          <InFirstInstance>
-            <Bind claimant="first" onBind={() => {}} />
-            <Bind claimant="second" onBind={() => {}} />
-          </InFirstInstance>
-        </TestSurface>,
-      ),
-    ).toThrow(/already bound to "first"/);
+    act(() => bound!.set(undefined));
+
+    expect(window.location.pathname).toBe("/lib");
+    expect(store.getIndexParams()).toEqual({});
   });
 
   it("binds nothing outside a pane", () => {

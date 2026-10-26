@@ -186,9 +186,6 @@ export function DeployHistorySection({
   return (
     <DataView<DeployRunRecord>
       storageKey={DEPLOY_HISTORY_VIEW}
-      // A section of the deployment pane, beside other sections' DataViews:
-      // one pane URL key cannot hold them all, so the view stays device-local.
-      viewParam={false}
       overrides={overrides}
       extraFields={extraFields}
       views={["list", "table"]}

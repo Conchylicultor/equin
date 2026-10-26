@@ -27,7 +27,7 @@ type ExtractParams<Path extends string> =
     ? PartParams<Seg> & ExtractParams<Rest>
     : PartParams<Path>;
 
-// Keyed params — the `;name` suffix of a segment (`song/:songId;view`). Every
+// Keyed params — the `;name` suffix of a segment (`song/:songId;lens`). Every
 // one is optional: a keyed param is a VIEW of the entity, absent by default.
 type KeyedParams<Names extends string> =
   Names extends `${infer N};${infer Rest}`
@@ -212,7 +212,7 @@ export function parseSegmentParts(segment: string): SegmentPart[] {
 // most ONE optional view of its entity that way. A keyed param is the
 // unbounded form: named in the URL, so any number of them are unambiguous, in
 // any combination. Each is written as a matrix parameter on the pane's LAST URL
-// part — `/song/abc/12;view=notation` — so it is scoped to the pane that
+// part — `/song/abc/12;lens=notation` — so it is scoped to the pane that
 // declares it: in a Miller URL holding several panes each part belongs to one
 // pane, where a `?query` would be one bag every pane competes for. And it stays
 // in the pathname, the one thing every routing consumer (tabs, history,
@@ -249,11 +249,14 @@ export function splitKeyedPart(part: string): {
 }
 
 /**
- * Read a part's keyed suffix (`view=notation;zoom=2`) against the names a
- * segment declares. A name the segment does not declare is dropped, as is a
- * pair with no `=`: the address bar is untrusted input, and an unknown view
- * key — a stale bookmark, a removed option — must not make the URL unroutable.
- * The pane falls back to its default view, exactly as for an absent key.
+ * Read a part's keyed suffix (`lens=notation;view.sonata.library=all`) against
+ * the names a segment declares. Surface view keys (`view.<surface>`, see
+ * {@link isSurfaceViewKey}) are kept whatever the segment declares — every pane
+ * carries them. Any other name the segment does not declare is dropped, as is a
+ * pair with no `=`: the address bar is untrusted input, and an unknown key — a
+ * stale bookmark, a removed option, the retired bare `;view=` — must not make
+ * the URL unroutable. The pane falls back to its default, exactly as for an
+ * absent key.
  */
 export function readKeyedParams(
   keyed: string,
@@ -264,7 +267,7 @@ export function readKeyedParams(
     const eq = pair.indexOf("=");
     if (eq < 0) continue;
     const name = decodeURIComponent(pair.slice(0, eq));
-    if (!names.includes(name)) continue;
+    if (!names.includes(name) && !isSurfaceViewKey(name)) continue;
     params[name] = decodeURIComponent(pair.slice(eq + 1));
   }
   return params;
@@ -273,24 +276,114 @@ export function readKeyedParams(
 const KEYED_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
 // ---------------------------------------------------------------------------
-// The reserved `;view` — the keyed param EVERY pane carries without declaring
-// it: which view of the pane's content is on screen (a DataView's active view
-// instance, bound automatically by `usePaneViewParam`). Reserved rather than
-// opt-in so a surface is addressable by default — a pane nobody remembered to
-// wire up would silently not be. No route may declare `view` itself (a keyed
+// Surface view keys — `;view.<surface>=<view>`: the keyed params EVERY pane
+// carries without declaring them, one per surface in the pane that shows one
+// of several views (a DataView's active view instance, bound automatically by
+// `usePaneViewParam(surface)`). The key is derived from the surface's own id,
+// so two surfaces in one pane can never collide on it, and a plugin
+// contributing one section of a pane it does not own needs to declare nothing.
+//
+// The `view.` prefix makes the family disjoint from declared keyed params
+// (identifiers — no `.`), and no route may declare `view` itself (a keyed
 // `;view` or a positional `:view` — `assertKeyedParams` throws), so the name
 // means one thing in every URL.
 //
-// It is never part of a pane's TYPED params (`useParams`, `useResolve`,
-// `openPane`): it views whatever the pane addresses, and only the binding
-// writes it.
+// They are never part of a pane's TYPED params (`useParams`, `useResolve`,
+// `openPane`): they view whatever the pane addresses, and only the binding
+// writes them. Written after the declared keyed params, sorted — one spelling.
 // ---------------------------------------------------------------------------
 
-export const RESERVED_VIEW_PARAM = "view";
+/** The prefix of every surface view key. */
+export const SURFACE_VIEW_PREFIX = "view.";
 
-/** The keyed names a pane's OWN URL part carries: its declared ones, then `view`. */
-export function slotKeyedParamNames(segment: string): string[] {
-  return [...segmentKeyedParamNames(segment), RESERVED_VIEW_PARAM];
+const SURFACE_NAME = /^[A-Za-z0-9._-]+$/;
+
+/** The URL key holding `surface`'s view: `view.<surface>`. Throws on a malformed surface. */
+export function surfaceViewKey(surface: string): string {
+  if (!SURFACE_NAME.test(surface)) {
+    throw new Error(
+      `surfaceViewKey("${surface}"): a surface id is [A-Za-z0-9._-]+, so its key ` +
+        `needs no escaping in the URL.`,
+    );
+  }
+  return SURFACE_VIEW_PREFIX + surface;
+}
+
+/** Is `name` a surface view key (`view.<surface>`)? */
+export function isSurfaceViewKey(name: string): boolean {
+  return (
+    name.startsWith(SURFACE_VIEW_PREFIX) &&
+    SURFACE_NAME.test(name.slice(SURFACE_VIEW_PREFIX.length))
+  );
+}
+
+// A trailing run of `;view.<surface>=<value>` pairs — and the retired bare
+// `;view=<value>`, so an old link still routes (its key is then dropped by
+// `readKeyedParams`). Values are `encodeURIComponent`ed, so never hold a `;`.
+const SURFACE_VIEW_SUFFIX =
+  /^(.+?);((?:view(?:\.[A-Za-z0-9._-]+)?=[^;]*)(?:;view(?:\.[A-Za-z0-9._-]+)?=[^;]*)*)$/;
+
+/**
+ * {@link splitKeyedPart} for a segment declaring NO keyed params: it still
+ * carries surface view keys, but reads any other raw `;` as text, as it always
+ * did — only a trailing run of `;view.<surface>=…` pairs is the suffix there,
+ * so a hand-typed `;` in a path keeps matching.
+ */
+export function splitSurfaceViewPart(part: string): {
+  base: string;
+  keyed: string | null;
+} {
+  const m = SURFACE_VIEW_SUFFIX.exec(part);
+  return m ? { base: m[1]!, keyed: m[2]! } : { base: part, keyed: null };
+}
+
+/** The surface view keys `params` holds, sorted. */
+function surfaceViewKeysOf(params: Record<string, string>): string[] {
+  return Object.keys(params).filter(isSurfaceViewKey).sort();
+}
+
+/**
+ * `params`' surface views, keyed by SURFACE (`{ "sonata.library": "all" }`) —
+ * the same object shape whatever order the URL wrote them in.
+ */
+export function surfaceViewsOf(
+  params: Record<string, string>,
+): Record<string, string> {
+  const views: Record<string, string> = {};
+  for (const key of surfaceViewKeysOf(params)) {
+    views[key.slice(SURFACE_VIEW_PREFIX.length)] = params[key]!;
+  }
+  return views;
+}
+
+/** `params` without its surface view keys (the same object when it has none). */
+export function withoutSurfaceViews(
+  params: Record<string, string>,
+): Record<string, string> {
+  if (!Object.keys(params).some(isSurfaceViewKey)) return params;
+  return Object.fromEntries(
+    Object.entries(params).filter(([name]) => !isSurfaceViewKey(name)),
+  );
+}
+
+/** `params`' surface view keys alone (`{}` when it has none). */
+export function onlySurfaceViews(
+  params: Record<string, string>,
+): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(params).filter(([name]) => isSurfaceViewKey(name)),
+  );
+}
+
+/**
+ * The keyed names a pane's OWN URL part carries for `params`: its declared
+ * ones, then the surface view keys `params` holds, sorted.
+ */
+export function slotKeyedParamNames(
+  segment: string,
+  params: Record<string, string>,
+): string[] {
+  return [...segmentKeyedParamNames(segment), ...surfaceViewKeysOf(params)];
 }
 
 /** `name=value` pairs for the supplied `names`, in order, encoded. */
@@ -308,20 +401,23 @@ function keyedPairs(
 
 /**
  * The keyed suffix an app's LANDING (index) pane writes on the app's base path
- * — `;view=all` in `/sonata;view=all` — or `""` when it carries none. An index
- * pane has no URL part of its own (it is what the bare root shows), so its
- * keyed params ride the base path; it declares none, so only the reserved
- * `view` is ever written there.
+ * — `;view.sonata.library=all` in `/sonata;view.sonata.library=all` — or `""`
+ * when it carries none. An index pane has no URL part of its own (it is what
+ * the bare root shows), so its keyed params ride the base path; it declares
+ * none, so only surface view keys are ever written there.
  */
 export function indexKeyedSuffix(params: Record<string, string>): string {
-  const pairs = keyedPairs([RESERVED_VIEW_PARAM], params);
+  const pairs = keyedPairs(surfaceViewKeysOf(params), params);
   return pairs.length > 0 ? ";" + pairs.join(";") : "";
 }
 
 /** Read {@link indexKeyedSuffix}'s text back (without its leading `;`). */
 export function readIndexKeyedParams(keyed: string): Record<string, string> {
-  return readKeyedParams(keyed, [RESERVED_VIEW_PARAM]);
+  return readKeyedParams(keyed, []);
 }
+
+/** The name the surface view family is spelled under — no route may declare it. */
+const RESERVED_VIEW_NAME = "view";
 
 /**
  * Throws on a malformed keyed suffix: a name that is not an identifier, one
@@ -330,10 +426,10 @@ export function readIndexKeyedParams(keyed: string): Record<string, string> {
  */
 function assertKeyedParams(id: string, segment: string): void {
   for (const part of parseSegmentParts(segment)) {
-    if (part.kind !== "static" && part.name === RESERVED_VIEW_PARAM) {
+    if (part.kind !== "static" && part.name === RESERVED_VIEW_NAME) {
       throw new Error(
         `Route "${id}": param ":${part.name}" in segment "${segment}" is reserved — every pane ` +
-          `already carries ";${RESERVED_VIEW_PARAM}" (see RESERVED_VIEW_PARAM). Rename it.`,
+          `already carries ";${SURFACE_VIEW_PREFIX}<surface>" keys (see surfaceViewKey). Rename it.`,
       );
     }
   }
@@ -357,11 +453,11 @@ function assertKeyedParams(id: string, segment: string): void {
         `Route "${id}": keyed param ";${name}" in segment "${segment}" is not an identifier.`,
       );
     }
-    if (name === RESERVED_VIEW_PARAM) {
+    if (name === RESERVED_VIEW_NAME) {
       throw new Error(
         `Route "${id}": keyed param ";${name}" in segment "${segment}" is reserved — every ` +
-          `pane already carries it (the view on screen, see RESERVED_VIEW_PARAM). Name yours ` +
-          `after what it views instead.`,
+          `pane already carries ";${SURFACE_VIEW_PREFIX}<surface>" keys (the views on screen, ` +
+          `see surfaceViewKey). Name yours after what it views instead.`,
       );
     }
     if (seen.has(name) || positional.has(name)) {
@@ -413,10 +509,10 @@ export class MissingRouteParamError extends Error {
 }
 
 /**
- * `segment`'s URL parts for `params`. `ownSlot` also writes the reserved
- * `;view` — only a slot's own segment carries it, never an ancestor's
+ * `segment`'s URL parts for `params`. `ownSlot` also writes the surface view
+ * keys — only a slot's own segment carries them, never an ancestor's
  * (`RouteDef.path` fills every segment of the chain from ONE flat param set,
- * which would otherwise stamp the same view on each of them).
+ * which would otherwise stamp the same views on each of them).
  */
 export function fillSegment(
   segment: string,
@@ -444,11 +540,11 @@ export function fillSegment(
   }
   // Keyed params ride the last part written (`assertKeyedParams` guarantees the
   // segment has one for its declared names), in declaration order so a route
-  // has ONE spelling — the reserved `view` last. A segment with no part of its
-  // own cannot carry the reserved one, so it is dropped there.
+  // has ONE spelling — the surface view keys last, sorted. A segment with no
+  // part of its own cannot carry them, so they are dropped there.
   const keyed = keyedPairs(
     opts?.ownSlot === true
-      ? slotKeyedParamNames(segment)
+      ? slotKeyedParamNames(segment, params)
       : segmentKeyedParamNames(segment),
     params,
   );

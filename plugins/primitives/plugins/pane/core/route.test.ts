@@ -7,8 +7,14 @@ import {
   fillSegment,
   indexKeyedSuffix,
   readIndexKeyedParams,
+  isSurfaceViewKey,
+  onlySurfaceViews,
   readKeyedParams,
   slotKeyedParamNames,
+  splitSurfaceViewPart,
+  surfaceViewKey,
+  surfaceViewsOf,
+  withoutSurfaceViews,
   segmentMatchPatterns,
   splitKeyedPart,
 } from "./route";
@@ -233,8 +239,8 @@ describe("keyed params (`;name`)", () => {
   });
 });
 
-describe("the reserved `;view`", () => {
-  test("no route may declare it, keyed or positional", () => {
+describe("surface view keys", () => {
+  test("no route may declare `view`, keyed or positional", () => {
     expect(() =>
       defineRoute({ id: "rv-keyed", segment: "t/:id;view" }),
     ).toThrow(/reserved/);
@@ -243,46 +249,95 @@ describe("the reserved `;view`", () => {
     );
   });
 
-  test("is written on a slot's own segment only, after its declared keys", () => {
+  test("are the `view.<surface>` family, nothing else", () => {
+    expect(surfaceViewKey("deploy.deployment.history")).toBe(
+      "view.deploy.deployment.history",
+    );
+    expect(() => surfaceViewKey("a:b")).toThrow(/\[A-Za-z0-9._-\]\+/);
+    expect(isSurfaceViewKey("view.tasks-list")).toBe(true);
+    expect(isSurfaceViewKey("view")).toBe(false);
+    expect(isSurfaceViewKey("view.")).toBe(false);
+    expect(isSurfaceViewKey("lens")).toBe(false);
+  });
+
+  test("are written on a slot's own segment only, after its declared keys, sorted", () => {
     expect(
       fillSegment(
         "song/:id;lens",
-        { id: "a", lens: "n", view: "all" },
-        {
-          ownSlot: true,
-        },
+        { id: "a", lens: "n", "view.z": "1", "view.a": "all" },
+        { ownSlot: true },
       ),
-    ).toEqual(["song", "a;lens=n;view=all"]);
-    expect(fillSegment("tasks", { view: "open" }, { ownSlot: true })).toEqual([
-      "tasks;view=open",
+    ).toEqual(["song", "a;lens=n;view.a=all;view.z=1"]);
+    expect(
+      fillSegment("tasks", { "view.tasks-list": "open" }, { ownSlot: true }),
+    ).toEqual(["tasks;view.tasks-list=open"]);
+    // An ancestor's segment, filled from the chained set, never carries them.
+    expect(fillSegment("tasks", { "view.tasks-list": "open" })).toEqual([
+      "tasks",
     ]);
-    // An ancestor's segment, filled from the chained set, never carries it.
-    expect(fillSegment("tasks", { view: "open" })).toEqual(["tasks"]);
     // A segment with no part of its own cannot.
-    expect(fillSegment("", { view: "open" }, { ownSlot: true })).toEqual([]);
-    expect(slotKeyedParamNames("song/:id;lens")).toEqual(["lens", "view"]);
+    expect(
+      fillSegment("", { "view.tasks-list": "open" }, { ownSlot: true }),
+    ).toEqual([]);
+    expect(
+      slotKeyedParamNames("song/:id;lens", { "view.b": "1", "view.a": "2" }),
+    ).toEqual(["lens", "view.a", "view.b"]);
   });
 
-  test("RouteDef.path never writes it", () => {
+  test("are read whatever the segment declares; other undeclared names drop", () => {
+    expect(
+      readKeyedParams("lens=n;view.a=1;view=old;junk=2", ["lens"]),
+    ).toEqual({ lens: "n", "view.a": "1" });
+  });
+
+  test("split off a part only as a trailing run, on a pane declaring none", () => {
+    expect(splitSurfaceViewPart("tasks;view.a=1;view.b=2")).toEqual({
+      base: "tasks",
+      keyed: "view.a=1;view.b=2",
+    });
+    expect(splitSurfaceViewPart("tasks;view=old")).toEqual({
+      base: "tasks",
+      keyed: "view=old",
+    });
+    expect(splitSurfaceViewPart("a;b;view.x=1")).toEqual({
+      base: "a;b",
+      keyed: "view.x=1",
+    });
+    expect(splitSurfaceViewPart("a;junk=1")).toEqual({
+      base: "a;junk=1",
+      keyed: null,
+    });
+  });
+
+  test("project out of, and apart from, a slot's params", () => {
+    const params = { id: "1", "view.b": "x", "view.a": "y" };
+    expect(withoutSurfaceViews(params)).toEqual({ id: "1" });
+    expect(onlySurfaceViews(params)).toEqual({ "view.b": "x", "view.a": "y" });
+    expect(surfaceViewsOf(params)).toEqual({ a: "y", b: "x" });
+    const plain = { id: "1" };
+    expect(withoutSurfaceViews(plain)).toBe(plain);
+  });
+
+  test("RouteDef.path never writes them", () => {
     const tasks = defineRoute({ id: "rv-tasks", segment: "tasks" });
     const task = defineRoute({
       id: "rv-task",
       segment: "t/:id",
       parent: tasks,
     });
-    expect(task.path({ id: "1", view: "x" } as { id: string })).toBe(
+    expect(task.path({ id: "1", "view.x": "x" } as { id: string })).toBe(
       "/tasks/t/1",
     );
   });
 
   test("an index pane's suffix round-trips", () => {
     expect(indexKeyedSuffix({})).toBe("");
-    expect(indexKeyedSuffix({ view: "recently edited" })).toBe(
-      ";view=recently%20edited",
-    );
-    expect(readIndexKeyedParams("view=recently%20edited;junk=1")).toEqual({
-      view: "recently edited",
-    });
+    expect(
+      indexKeyedSuffix({ "view.lib": "recently edited", "view.a": "x" }),
+    ).toBe(";view.a=x;view.lib=recently%20edited");
+    expect(
+      readIndexKeyedParams("view.lib=recently%20edited;view=old;junk=1"),
+    ).toEqual({ "view.lib": "recently edited" });
   });
 });
 

@@ -328,19 +328,13 @@ export function useDataViewModel(
   defaultView: string | undefined,
   pinnedView?: string,
   edits?: ViewEditsOptions,
-  viewParam?: string | false,
 ): ViewModel {
-  // The active view lives in the enclosing pane's URL (its reserved `;view`,
-  // or the keyed param `viewParam` names), unless the host is pinned or opts
-  // out — `null` binds nothing.
-  const pinnedWithParam =
-    pinnedView !== undefined && typeof viewParam === "string";
-  const activeViewUrl = usePaneViewParam(
-    storageKey,
-    pinnedView !== undefined || viewParam === false
-      ? null
-      : (viewParam ?? undefined),
-  );
+  // The active view lives in the enclosing pane's URL, under this surface's
+  // own key (`;view.<storageKey>`) — so any number of DataViews in one pane
+  // bind side by side. A pinned host shows one named instance and is not part
+  // of the surface's selection, so it binds nothing.
+  const paneViewParam = usePaneViewParam(storageKey);
+  const activeViewUrl = pinnedView === undefined ? paneViewParam : null;
   const core = useViewModel<DataViewContribution>(
     storageKey,
     dataViewDescriptors,
@@ -353,13 +347,6 @@ export function useDataViewModel(
       activeViewUrl,
     },
   );
-  if (pinnedWithParam) {
-    throw new Error(
-      `DataView "${storageKey}": viewParam "${viewParam}" beside pinnedView "${pinnedView}" — ` +
-        `a pinned host shows one named instance and is not part of the surface's selection, ` +
-        `so it has no view to put in the URL. Drop one of them.`,
-    );
-  }
   const homeViewId = edits?.home ?? null;
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const ephemeral = useViewEphemeral(storageKey);

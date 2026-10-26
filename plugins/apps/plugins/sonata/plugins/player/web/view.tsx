@@ -112,7 +112,7 @@ function resolveDisplayId(
 
 /**
  * Binds the player's display pick to a host-owned value — the song pane's
- * `;view` URL param — for everything rendered inside it (the pane's header
+ * `;lens` URL param — for everything rendered inside it (the pane's header
  * picker and its body's display), so the lens survives a reload, a bookmark or
  * a shared link.
  *

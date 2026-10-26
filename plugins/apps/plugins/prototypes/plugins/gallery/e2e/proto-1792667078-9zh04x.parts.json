@@ -5,14 +5,14 @@
       "when": {
         "layout": "gallery"
       },
-      "goto": "/prototypes;view=gallery",
+      "goto": "/prototypes;view.prototypes.gallery=gallery",
       "note": "the mock's gallery layout is the Gallery view, opened by address so the device's last pick cannot decide"
     },
     {
       "when": {
         "layout": "list"
       },
-      "goto": "/prototypes;view=recently-edited",
+      "goto": "/prototypes;view.prototypes.gallery=recently-edited",
       "note": "the mock's list layout is its Recently edited view, opened by address"
     }
   ],

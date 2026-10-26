@@ -174,7 +174,7 @@ Storage for non-config state):
 | State | Lives in |
 |---|---|
 | Instance def `{ id, name, view:{ type, sort?, filter?, …opts } }` (array-ordered) | `viewsDescriptor` config row (user-global layer) |
-| Active instance id | the enclosing pane's URL `;view` (see "Addressable views"), and localStorage `${storageKey}:active-view` (per device — what a bare URL opens) |
+| Active instance id | the enclosing pane's URL `;view.<storageKey>` (see "Addressable views"), and localStorage `${storageKey}:active-view` (per device — what a bare URL opens) |
 | Tree expand map, collapsed group sections, collapsed view section (`collapsed`, sections chrome) | localStorage `${storageKey}:view-state` (per device) |
 | Search query | **sessionStorage** `${storageKey}:view-query` (per browser tab) |
 | Unsaved edits of a drafted view (`viewEdits`) | **sessionStorage** owner `data-view.view-drafts`, keyed by `storageKey` (per browser tab) — view-core's drafts |
@@ -238,28 +238,32 @@ by an authoring mistake, never by a click.
 
 ## Addressable views: the active view is in the URL
 
-A DataView inside a pane puts its active view in that pane's URL — the reserved
-`;view` every pane carries (pane CLAUDE.md): `/sonata;view=all` opens the Sonata
-library on its All table, `/agents/tasks;view=open` the tasks list on Open. No
-consumer wires anything: `useDataViewModel` binds it through the pane's
-`usePaneViewParam` and hands it to view-core as `activeViewUrl`.
+A DataView inside a pane puts its active view in that pane's URL, under a key
+derived from its own id — `;view.<storageKey>`, a surface view key every pane
+carries (pane CLAUDE.md): `/sonata;view.sonata.library=all` opens the Sonata
+library on its All table, `/agents/tasks;view.tasks-list=open` the tasks list on
+Open. No consumer wires anything: `useDataViewModel` binds it through the
+pane's `usePaneViewParam(storageKey)` and hands it to view-core as
+`activeViewUrl`. Any number of DataViews in one pane bind side by side — the
+deployment pane's History, Secrets and Messages each have their own key.
 
 - **Which view shows**: pinned → the URL's (if authored) → this device's last
   pick → `defaultView` → the first (`resolveActiveId`). A stale or unknown id
   falls through, never to an empty surface.
-- **Selecting writes both**: the URL in place (replace — no history entry per
-  switch) and the device-local store, so a bare URL opens the last view picked
-  here. A view the URL opened is adopted locally too, so the screen does not
-  jump when the address later stops naming it.
-- **One key, one surface.** Two DataViews in one pane cannot both own `;view`
-  (the second throws). Give the second `viewParam="<name>"` — a keyed param its
-  pane's segment declares (`segment: "jobs;history"`) — or `viewParam={false}`
-  to keep it device-local (a secondary list).
-- **Not bound**: a `pinnedView` host (a name beside it throws), a DataView
+- **The URL is derived from the active view** (view-core's `useViewModel`,
+  `activeViewUrlValue`): nothing while the surface shows its static default
+  (`defaultView`, else its first view), the active id otherwise — so a list on
+  its default adds nothing, a view restored from this device is stamped in, a
+  switch back to the default removes the key, and a stale or unknown id is
+  rewritten to the view actually shown. Every write replaces (no history entry
+  per switch). Selecting also writes the device-local store, so a bare URL
+  opens the last view picked here; a view the URL opened is adopted locally
+  too, so the screen does not jump when the address later stops naming it.
+- **Not bound**: a `pinnedView` host, a DataView
   outside every pane (menu bar, popovers, sidebars, dialogs), and one in a pane
   with no URL part of its own that is not its app's landing pane.
 - **Tooling**: e2e and the compare tool reach a view by path —
-  `--path "/sonata;view=all"` — instead of clicking its chip.
+  `--path "/sonata;view.sonata.library=all"` — instead of clicking its chip.
 
 ## Meta-DataView: one list over sources of different entities
 

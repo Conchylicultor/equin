@@ -88,7 +88,6 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
             ? { home: props.viewEdits.home }
             : {}),
         },
-    props.viewParam,
   );
   return (
     <DataViewShellFrame

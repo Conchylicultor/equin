@@ -5,14 +5,14 @@
       "when": {
         "layout": "gallery"
       },
-      "goto": "/sonata;view=cards",
+      "goto": "/sonata;view.sonata.library=cards",
       "note": "the mock's gallery layout is the Cards view, opened by address so the device's last pick cannot decide"
     },
     {
       "when": {
         "layout": "list"
       },
-      "goto": "/sonata;view=all",
+      "goto": "/sonata;view.sonata.library=all",
       "note": "the mock's list layout is its All view, opened by address"
     }
   ],

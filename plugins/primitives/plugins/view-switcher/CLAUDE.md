@@ -6,11 +6,11 @@ The shared **view-switching primitive**. It offers two things:
   chrome mapping `{ id, title, icon }` options to a single-select switcher. It
   stays **pure-presentational**: selection state is owned and passed by the
   caller (`activeId` + `onSelect`).
-- The opt-in **`useActiveViewId(storageKey, url?)` hook** — device-local active-id
+- The opt-in **`useActiveViewId(storageKey)` hook** — device-local active-id
   persistence, reading/writing `${storageKey}:active-view` in localStorage
-  (DOMException-guarded), and, given `url` (`ActiveViewUrl` — a structural
-  `{ value, set }`, e.g. a pane's `;view`), the address's own id: returns
-  `{ activeViewId, urlViewId, setActiveView }`, selecting writes both. This is the
+  (DOMException-guarded): returns `{ activeViewId, setActiveView }`. It knows no
+  URL: where an address also names the view (a pane's `;view.<surface>`),
+  view-core's `useViewModel` derives the URL from the active view. This is the
   *single canonical* active-id helper: both `tabbed-view` (bespoke hosts) and
   `data-view`'s `view-core` (named-instance engine) consume it from here, so the
   selection-persistence logic exists in exactly one place. The component does not
@@ -28,7 +28,6 @@ The shared **view-switching primitive**. It offers two things:
     - `ui/icons.Icon`
   - Exports (types):
     - `ActiveViewState`
-    - `ActiveViewUrl`
     - `ViewSwitcherOption`
     - `ViewSwitcherProps`
   - Exports (values):

@@ -479,8 +479,6 @@ export function RunningAgentsBand({
   return (
     <BandChromeContext.Provider value={chrome}>
       <DataView<RunningAgentRow>
-        // Device-local view: a band above the prompt, not part of the conversation's address.
-        viewParam={false}
         rows={rows}
         fields={FIELDS}
         rowKey={(row) => row.key}

@@ -43,9 +43,6 @@ interface DataViewSwitcherBaseProps<THostProps> {
   /** The host surface's own props, threaded verbatim to every source. */
   hostProps: THostProps;
   defaultView?: string;
-  /** Which key of the enclosing pane's URL holds the active view —
-   *  `DataViewProps.viewParam`. */
-  viewParam?: string | false;
   /** The surface's density, forwarded to the shell exactly like `title` /
    *  `actions`. It is a property of the surface, so it applies whichever source
    *  the active view-instance binds to. */
@@ -76,7 +73,6 @@ export function DataViewSwitcher<THostProps>(
     title,
     actions,
     defaultView,
-    viewParam,
     density,
     toolbar,
     searchPlaceholder,
@@ -104,14 +100,7 @@ export function DataViewSwitcher<THostProps>(
     [sourceContribs, contributions, onOrphanType],
   );
 
-  const viewModel = useDataViewModel(
-    storageKey,
-    entries,
-    defaultView,
-    undefined,
-    undefined,
-    viewParam,
-  );
+  const viewModel = useDataViewModel(storageKey, entries, defaultView);
 
   return (
     <DataViewShellFrame
