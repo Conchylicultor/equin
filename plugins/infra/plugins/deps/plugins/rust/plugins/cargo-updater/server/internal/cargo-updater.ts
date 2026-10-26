@@ -574,7 +574,6 @@ export const cargoUpdater: Updater = {
       const mine = moves.filter((m) => m.name.startsWith(`${crate.label}:`));
       if (mine.length === 0) continue;
       const lockPath = join(root, crate.dir, "Cargo.lock");
-      const before = parseCargoLock(readFileSync(lockPath, "utf8"));
       for (const m of mine) {
         if (m.from === null) {
           throw new Error(`cargo move ${m.name} has no current release`);
@@ -589,7 +588,7 @@ export const cargoUpdater: Updater = {
           continue;
         }
         log(`  cargo update ${crate.dir} ${pkg} ${m.from} → ${m.to}`);
-        await cargo(
+        const output = await cargo(
           root,
           [
             "update",
@@ -602,34 +601,30 @@ export const cargoUpdater: Updater = {
           ],
           10 * MINUTE,
         );
+        // Every entry cargo moved is a planned move: one it dragged to a
+        // release no move names would land unreviewed. Entries it adds (a new
+        // dependency, a second semver major) or drops (an orphaned one) are
+        // graph changes, not moves.
+        const unplanned = parseCargoUpdates(output).filter(
+          (u) =>
+            !mine.some(
+              (o) =>
+                moveCrate(o.name) === u.pkg &&
+                o.from === u.from &&
+                o.to === u.to,
+            ),
+        );
+        if (unplanned.length > 0) {
+          throw new Error(
+            `moving ${pkg} to ${m.to} also moved ${unplanned.map((u) => `${u.pkg} ${u.from} → ${u.to}`).join(", ")} in ${crate.dir}/Cargo.lock, which no planned move names.`,
+          );
+        }
         const locked = parseCargoLock(readFileSync(lockPath, "utf8"));
         if (!locked.some((p) => p.name === pkg && p.version === m.to)) {
           throw new Error(
             `\`cargo update --precise\` did not record ${pkg} ${m.to} in ${crate.dir}/Cargo.lock.`,
           );
         }
-      }
-      // Every entry the lock lost is a planned move's `from`: an entry cargo
-      // dragged off its release without a move naming it would land
-      // unreviewed. An entry ADDED beside the old ones (a new dependency of a
-      // moved release, or a second semver major of one) is not a move.
-      const after = new Set(
-        parseCargoLock(readFileSync(lockPath, "utf8")).map(
-          (p) => `${p.name}@${p.version}`,
-        ),
-      );
-      const unplanned = before.filter(
-        (p) =>
-          p.source === CRATES_IO_SOURCE &&
-          !after.has(`${p.name}@${p.version}`) &&
-          !mine.some(
-            (m) => moveCrate(m.name) === p.name && m.from === p.version,
-          ),
-      );
-      if (unplanned.length > 0) {
-        throw new Error(
-          `the moves also moved ${unplanned.map((p) => `${p.name} ${p.version}`).join(", ")} in ${crate.dir}/Cargo.lock, which no planned move names.`,
-        );
       }
     }
   },

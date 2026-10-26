@@ -24,9 +24,9 @@ broken — the shared bounded `Hold` of `infra/deps/updates` (held by
   rest of its unit.
 - **Apply**: `cargo update -p <crate>@<from> --precise <to>` per move (skipped
   when an earlier move of its unit already dragged it there), each read back
-  from the lock; then every entry the lock lost must be a planned move's
-  `from` — any other entry moved fails the apply (an entry added beside the
-  old ones, a new dependency of a moved release, is not a move).
+  from the lock; every `Updating` line cargo prints must be a planned move —
+  any other entry moved fails the apply (entries it adds or drops are graph
+  changes, not moves).
 - **Smoke**: `cargo check --locked` of each touched crate, in its dir of the
   shared target cache.
 - Every cargo command is spelled through the rust kind's `cargoCommand`
