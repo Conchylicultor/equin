@@ -22495,6 +22495,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug/sentinel/status-file.SentinelDownStatusSchema`
           - `debug/sentinel/status-file.SentinelVitalsRecordSchema`
           - `debug/sentinel/status-file.SentinelWatchSchema`
+          - `debug/sentinel/status-file.SIGNAL_KEYS`
+          - `debug/sentinel/status-file.SignalKeySchema`
           - `fields/bool/config.boolField`
           - `fields/float/config.floatField`
           - `fields/int/config.intField`
@@ -47786,6 +47788,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/icons.Icon`
         - Exports (types):
           - `HealthInfo`
+          - `HealthMark`
           - `HealthReportRow`
           - `HealthState`
           - `HealthStatus`
@@ -47820,9 +47823,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/worktree-identity`
       - Core:
         - Exports (types):
+          - `DotMerge`
           - `GlanceProps`
           - `HealthInfo`
           - `HealthLevel`
+          - `HealthMark`
           - `HealthMerge`
           - `HealthReportRow`
           - `HealthState`
@@ -47839,6 +47844,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `isPulsing`
           - `isTransitioning`
           - `levelOf`
+          - `mergeDot`
           - `mergeHealth`
           - `sortRows`
           - `verdictOf`

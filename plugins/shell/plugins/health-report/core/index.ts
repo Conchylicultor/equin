@@ -1,7 +1,9 @@
 export type {
+  DotMerge,
   GlanceProps,
   HealthInfo,
   HealthLevel,
+  HealthMark,
   HealthMerge,
   HealthReportRow,
   HealthState,
@@ -16,6 +18,7 @@ export {
   isPulsing,
   isTransitioning,
   levelOf,
+  mergeDot,
   mergeHealth,
   sortRows,
   verdictOf,

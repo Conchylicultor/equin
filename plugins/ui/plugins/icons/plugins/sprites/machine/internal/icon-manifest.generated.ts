@@ -302,6 +302,7 @@ export const ICON_MANIFEST: {
     "speed",
     "splitscreen",
     "splitscreen-left",
+    "stacks",
     "star",
     "sticky-note-2",
     "stop",

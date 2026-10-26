@@ -168,6 +168,7 @@ probes, is mounted per page.
     - `ui/icons.Icon`
   - Exports (types):
     - `HealthInfo`
+    - `HealthMark`
     - `HealthReportRow`
     - `HealthState`
     - `HealthStatus`
@@ -202,9 +203,11 @@ probes, is mounted per page.
     - `tasks/worktree-identity`
 - Core:
   - Exports (types):
+    - `DotMerge`
     - `GlanceProps`
     - `HealthInfo`
     - `HealthLevel`
+    - `HealthMark`
     - `HealthMerge`
     - `HealthReportRow`
     - `HealthState`
@@ -221,6 +224,7 @@ probes, is mounted per page.
     - `isPulsing`
     - `isTransitioning`
     - `levelOf`
+    - `mergeDot`
     - `mergeHealth`
     - `sortRows`
     - `verdictOf`

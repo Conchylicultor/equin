@@ -5,6 +5,8 @@ import {
   SentinelDownStatusSchema,
   SentinelVitalsRecordSchema,
   SentinelWatchSchema,
+  SIGNAL_KEYS,
+  SignalKeySchema,
 } from "@plugins/debug/plugins/sentinel/plugins/status-file/core";
 
 // The machine watcher's (sentinel worker's) supervision status — what main's
@@ -30,8 +32,19 @@ export const SENTINEL_DOWN_KIND = "sentinel-down";
  */
 export const SentinelStatusValueSchema = z.object({
   watch: SentinelWatchSchema,
-  /** The duress latch while its lease is fresh; `null` when the machine is not under duress. */
-  duress: z.object({ since: z.number() }).nullable(),
+  /**
+   * The duress latch while its lease is fresh; `null` when the machine is not
+   * under duress. `elevated` is what holds it there now — the signals over
+   * their limit in the running watcher's latest reading (empty while it waits
+   * out its calm dwell, or without a current reading). Re-pushed only when
+   * that set changes, so the row knows CPU from memory without the 5 s vitals.
+   */
+  duress: z
+    .object({
+      since: z.number(),
+      elevated: z.array(SignalKeySchema).max(SIGNAL_KEYS.length),
+    })
+    .nullable(),
   /**
    * The disk verdict from the running watcher's latest reading; `null` when
    * there is no current reading of the disk. Rides this value (re-pushed only

@@ -1,4 +1,11 @@
-import type { HealthLevel, HealthMerge, HealthStatus, RowLevel } from "./types";
+import type {
+  DotMerge,
+  HealthLevel,
+  HealthMark,
+  HealthMerge,
+  HealthStatus,
+  RowLevel,
+} from "./types";
 
 /**
  * Severity rank, worst first. `unknown` outranks `ok` so the merged dot can
@@ -58,11 +65,35 @@ export function isPulsing(status: ReportedStatus): boolean {
 export function mergeHealth(
   statuses: ReadonlyArray<ReportedStatus>,
 ): HealthMerge {
+  const { state, count, transitioning, pending } = fold(statuses, false);
+  return { state, count, transitioning, pending };
+}
+
+/**
+ * What the action bar's dot shows: `mergeHealth`, except that an ambient
+ * attention row (`HealthStatus.ambient`) folds as `ok` — it neither colours
+ * the dot nor counts — and contributes its marks instead. The report's own
+ * header keeps `mergeHealth`: inside the report the condition is shown as it is.
+ */
+export function mergeDot(statuses: ReadonlyArray<ReportedStatus>): DotMerge {
+  return fold(statuses, true);
+}
+
+function fold(
+  statuses: ReadonlyArray<ReportedStatus>,
+  quietAmbient: boolean,
+): DotMerge {
   let state: HealthLevel = "ok";
   let count = 0;
   let transitioning = false;
   let pending = false;
+  const marks: HealthMark[] = [];
   for (const status of statuses) {
+    const ambient = status?.state === "attention" ? status.ambient : undefined;
+    if (quietAmbient && ambient !== undefined) {
+      marks.push(...ambient);
+      continue;
+    }
     const level = levelOf(status);
     if (level === "not-applicable") continue;
     if (RANK[level] < RANK[state]) state = level;
@@ -70,7 +101,7 @@ export function mergeHealth(
     if (isPending(status)) pending = true;
     if (isTransitioning(status)) transitioning = true;
   }
-  return { state, count, transitioning, pending };
+  return { state, count, transitioning, pending, marks };
 }
 
 /**

@@ -1,6 +1,13 @@
 import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
-import type { HealthStatus } from "@plugins/shell/plugins/health-report/web";
-import type { DiskAlarm } from "@plugins/debug/plugins/sentinel/plugins/status-file/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import type {
+  HealthMark,
+  HealthStatus,
+} from "@plugins/shell/plugins/health-report/web";
+import type {
+  DiskAlarm,
+  SignalKey,
+} from "@plugins/debug/plugins/sentinel/plugins/status-file/core";
 import type { SentinelStatusValue } from "../../core";
 
 /** What a dead or missing watcher costs, said once so every critical row agrees. */
@@ -39,6 +46,45 @@ const DISK_STATUS: Record<DiskAlarm, HealthStatus | null> = {
   full: { state: "critical", summary: "The disk is almost full" },
 };
 
+/**
+ * The machine resource each duress signal measures, and the mark the dot shows
+ * while it holds builds back. `null`: not the machine's own CPU or memory (the
+ * database, a slow worktree) — duress from one of those still colours the dot.
+ */
+const SIGNAL_MARK: Record<SignalKey, HealthMark | null> = {
+  loadRatio: {
+    id: "cpu",
+    icon: symbol("speed"),
+    label: "Builds held back: the CPU is busy",
+  },
+  decompressionsPerSec: {
+    id: "memory",
+    icon: symbol("stacks"),
+    label: "Builds held back: memory is tight",
+  },
+  locksWaiting: null,
+  blkReadDeltaMs: null,
+  slowBackends: null,
+};
+
+/**
+ * The dot's marks for a duress held by `elevated`, or `null` when some signal
+ * is not the machine's CPU or memory. Duress from CPU or memory is routine —
+ * the watcher is already holding builds back — so it marks the dot rather
+ * than colouring it. Empty while it waits out its calm dwell.
+ */
+export function duressMarks(
+  elevated: readonly SignalKey[],
+): HealthMark[] | null {
+  const marks: HealthMark[] = [];
+  for (const key of elevated) {
+    const mark = SIGNAL_MARK[key];
+    if (mark === null) return null;
+    if (!marks.some((m) => m.id === mark.id)) marks.push(mark);
+  }
+  return marks.sort((a, b) => a.id.localeCompare(b.id));
+}
+
 export function clockTime(at: number): string {
   return new Date(at).toLocaleTimeString([], {
     hour: "2-digit",
@@ -57,7 +103,8 @@ export function clockTime(at: number): string {
  *   pulsing; `running` → `ok`, or steady `attention` while the duress latch is
  *   up. Red means the watcher is broken and needs you; duress is the machine
  *   under load with the watcher already handling it (builds held back), so it
- *   asks for a look, not an intervention.
+ *   asks for a look, not an intervention. Duress held by CPU or memory alone is
+ *   ambient: the dot stays green with a CPU / memory mark (`duressMarks`).
  * - while running, the disk verdict: `critical` when it is (nearly) full or
  *   will be within the hour — that needs you, and outranks duress —, else
  *   `attention` when it is low or filling fast (after duress).
@@ -107,10 +154,13 @@ export function machineWatcherVerdict(
       const diskStatus = disk === null ? null : DISK_STATUS[disk];
       if (diskStatus?.state === "critical") return diskStatus;
       if (duress !== null) {
-        return {
-          state: "attention",
-          summary: `Under duress since ${clockTime(duress.since)} · builds held back`,
-        };
+        const summary = `Under duress since ${clockTime(duress.since)} · builds held back`;
+        // A low or filling disk on top keeps the dot coloured: it would
+        // otherwise hide behind a mark that only says the machine is busy.
+        const marks = diskStatus ? null : duressMarks(duress.elevated);
+        return marks === null
+          ? { state: "attention", summary }
+          : { state: "attention", summary, ambient: marks };
       }
       if (diskStatus) return diskStatus;
       return {

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "bun:test";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 import {
   foldQuietRows,
+  mergeDot,
   mergeHealth,
   sortRows,
   verdictOf,
@@ -21,6 +23,38 @@ const critical = (summary = "broken"): HealthStatus => ({
 const notApplicable = (summary = "Not here."): HealthStatus => ({
   state: "not-applicable",
   summary,
+});
+
+describe("mergeDot", () => {
+  const mark = (id: string) => ({
+    id,
+    icon: symbol("speed"),
+    label: id,
+  });
+  const busy = (...ids: string[]): HealthStatus => ({
+    state: "attention",
+    summary: "busy",
+    ambient: ids.map(mark),
+  });
+
+  it("folds an ambient row as ok and carries its marks", () => {
+    const dot = mergeDot([ok(), busy("cpu", "memory")]);
+    expect(dot.state).toBe("ok");
+    expect(dot.count).toBe(0);
+    expect(dot.marks.map((m) => m.id)).toEqual(["cpu", "memory"]);
+  });
+
+  it("still colours the dot for every other row", () => {
+    const dot = mergeDot([busy("cpu"), attention()]);
+    expect(dot.state).toBe("attention");
+    expect(dot.count).toBe(1);
+    expect(dot.marks.map((m) => m.id)).toEqual(["cpu"]);
+  });
+
+  it("leaves the report's own merge counting the ambient row", () => {
+    expect(mergeHealth([ok(), busy("cpu")]).state).toBe("attention");
+    expect(verdictOf([ok(), busy("cpu")])).toBe("busy");
+  });
 });
 
 describe("mergeHealth", () => {

@@ -8,10 +8,11 @@ import {
   type Activity,
   type ActivityState,
 } from "@plugins/primitives/plugins/css/plugins/activity-ring/web";
+import { Icon } from "@plugins/ui/plugins/icons/web";
 import {
-  mergeHealth,
+  mergeDot,
   verdictOf,
-  type HealthMerge,
+  type DotMerge,
   type ReportedStatus,
 } from "../../core";
 import { HealthReport } from "../slots";
@@ -21,7 +22,7 @@ import { HealthDot } from "./health-dot";
 import { HealthReportPanel } from "./health-report-panel";
 import { StatusProbes } from "./status-probes";
 
-interface DotView extends HealthMerge {
+interface DotView extends DotMerge {
   verdict: string;
 }
 
@@ -31,7 +32,8 @@ function sameView(a: DotView, b: DotView): boolean {
     a.count === b.count &&
     a.transitioning === b.transitioning &&
     a.pending === b.pending &&
-    a.verdict === b.verdict
+    a.verdict === b.verdict &&
+    JSON.stringify(a.marks) === JSON.stringify(b.marks)
   );
 }
 
@@ -59,7 +61,7 @@ function HealthReportTrigger({
   const view = HealthStore.useSelector(
     (state): DotView => {
       const statuses: ReportedStatus[] = ids.map((id) => state[id]);
-      return { ...mergeHealth(statuses), verdict: verdictOf(statuses) };
+      return { ...mergeDot(statuses), verdict: verdictOf(statuses) };
     },
     [idsKey],
     sameView,
@@ -72,6 +74,7 @@ function HealthReportTrigger({
       ? BUTTON_TINT_CLASS[view.state]
       : undefined;
   const needsLook = tint !== undefined;
+  const marked = view.marks.length > 0;
   // The activity labels ride along in the tooltip / accessible name: the ring
   // alone says "something is running", the words say what.
   const label = [view.verdict, ...activities.map((a) => a.label)].join(" · ");
@@ -86,7 +89,7 @@ function HealthReportTrigger({
         <Button
           variant="ghost"
           shape="pill"
-          aspect={needsLook ? "text" : "icon"}
+          aspect={needsLook || marked ? "text" : "icon"}
           aria-label={label}
           data-health={view.state}
           className={tint}
@@ -100,6 +103,14 @@ function HealthReportTrigger({
               />
             </ActivityRing>
           </ControlSizeProvider>
+          {view.marks.map((mark) => (
+            <Icon
+              key={mark.id}
+              icon={mark.icon}
+              title={mark.label}
+              className="size-4 text-muted-foreground"
+            />
+          ))}
           {needsLook ? (
             <span className="font-semibold tabular-nums">{view.count}</span>
           ) : null}
@@ -115,6 +126,8 @@ function HealthReportTrigger({
  * The health report's button: one dot merging every `HealthReport.Row`.
  *
  * - all ok → a green dot, nothing else;
+ * - an ambient condition (the machine busy) → the dot keeps its colour, with
+ *   the condition's small icons beside it (`mergeDot`);
  * - some rows need a look → an amber / red dot plus how many, in tinted figures;
  * - not known yet → a grey dot, pulsing, until every row has reported;
  * - the dot also pulses while a row is transitioning (reconnecting).

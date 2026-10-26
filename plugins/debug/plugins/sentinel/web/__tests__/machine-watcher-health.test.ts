@@ -8,6 +8,7 @@ import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web"
 import type {
   SentinelStatus,
   SentinelWatch,
+  SignalKey,
 } from "@plugins/debug/plugins/sentinel/plugins/status-file/core";
 import type { SentinelStatusValue } from "../../core";
 import { machineWatcherVerdict } from "../internal/machine-watcher-health";
@@ -68,13 +69,40 @@ describe("Machine watcher health row", () => {
   it("asks for attention while running under duress, saying since when", () => {
     const since = new Date(2026, 8, 17, 18, 2).getTime();
     const verdict = machineWatcherVerdict(
-      recorded({ state: "running", since: since - 60_000 }, true, { since }),
+      recorded({ state: "running", since: since - 60_000 }, true, {
+        since,
+        elevated: ["locksWaiting"],
+      }),
     );
     expect(verdict.state).toBe("attention");
+    expect("ambient" in verdict).toBe(false);
     expect("transitioning" in verdict && verdict.transitioning).toBeFalsy();
     expect("summary" in verdict && verdict.summary).toMatch(
       /^Under duress since .*02.* · builds held back$/,
     );
+  });
+
+  it("marks the dot instead of colouring it while CPU or memory holds the duress", () => {
+    const running = { state: "running", since: Date.now() } as const;
+    const marksOf = (elevated: SignalKey[]) => {
+      const verdict = machineWatcherVerdict(
+        recorded(running, true, { since: Date.now(), elevated }),
+      );
+      expect(verdict.state).toBe("attention");
+      return verdict.state === "attention"
+        ? verdict.ambient?.map((m) => m.id)
+        : undefined;
+    };
+    expect(marksOf(["loadRatio"])).toEqual(["cpu"]);
+    expect(marksOf(["decompressionsPerSec"])).toEqual(["memory"]);
+    expect(marksOf(["decompressionsPerSec", "loadRatio"])).toEqual([
+      "cpu",
+      "memory",
+    ]);
+    // Waiting out its calm dwell: still ambient, nothing to mark.
+    expect(marksOf([])).toEqual([]);
+    // Anything beyond the machine's CPU or memory still colours the dot.
+    expect(marksOf(["loadRatio", "slowBackends"])).toBeUndefined();
   });
 
   it("asks for attention while the disk is low or filling fast, after duress", () => {
@@ -89,9 +117,16 @@ describe("Machine watcher health row", () => {
       machineWatcherVerdict(recorded(running, true, null, "filling")).state,
     ).toBe("attention");
     const both = machineWatcherVerdict(
-      recorded(running, true, { since: Date.now() }, "filling"),
+      recorded(
+        running,
+        true,
+        { since: Date.now(), elevated: ["loadRatio"] },
+        "filling",
+      ),
     );
     expect("summary" in both && both.summary).toMatch(/^Under duress/);
+    // The disk keeps the dot coloured: no ambient marks to hide it behind.
+    expect("ambient" in both).toBe(false);
     expect(
       machineWatcherVerdict(recorded(running, true, null, null)).state,
     ).toBe("ok");
@@ -101,7 +136,12 @@ describe("Machine watcher health row", () => {
     const running = { state: "running", since: Date.now() } as const;
     expect(
       machineWatcherVerdict(
-        recorded(running, true, { since: Date.now() }, "full-soon"),
+        recorded(
+          running,
+          true,
+          { since: Date.now(), elevated: ["loadRatio"] },
+          "full-soon",
+        ),
       ),
     ).toEqual({
       state: "critical",
@@ -116,6 +156,7 @@ describe("Machine watcher health row", () => {
     const verdict = machineWatcherVerdict(
       recorded({ state: "stopped", since: Date.now() }, true, {
         since: Date.now(),
+        elevated: ["loadRatio"],
       }),
     );
     expect(verdict.state).toBe("attention");

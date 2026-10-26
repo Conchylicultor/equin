@@ -6,6 +6,7 @@ import { HealthReportButton } from "./components/health-report-button";
 export { HealthReport } from "./slots";
 export type {
   HealthInfo,
+  HealthMark,
   HealthReportRow,
   HealthState,
   HealthStatus,

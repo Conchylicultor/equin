@@ -14,11 +14,18 @@ export type HealthStatuses = Readonly<Record<string, HealthStatus>>;
  */
 export const HealthStore = defineScopedStore<HealthStatuses>(() => ({}));
 
+/** The marks an ambient status carries, as one comparable key ("" for none). */
+function marksKey(status: HealthStatus): string {
+  if (status.state !== "attention" || status.ambient === undefined) return "";
+  return JSON.stringify(status.ambient);
+}
+
 function sameStatus(a: HealthStatus, b: HealthStatus): boolean {
   return (
     a.state === b.state &&
     a.summary === b.summary &&
-    isTransitioning(a) === isTransitioning(b)
+    isTransitioning(a) === isTransitioning(b) &&
+    marksKey(a) === marksKey(b)
   );
 }
 

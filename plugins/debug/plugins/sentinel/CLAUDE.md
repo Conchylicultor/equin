@@ -372,6 +372,8 @@ pane's `GenericEventLane` fallback; a dedicated `Trace.Lane`
     - `debug/sentinel/status-file.SentinelDownStatusSchema`
     - `debug/sentinel/status-file.SentinelVitalsRecordSchema`
     - `debug/sentinel/status-file.SentinelWatchSchema`
+    - `debug/sentinel/status-file.SIGNAL_KEYS`
+    - `debug/sentinel/status-file.SignalKeySchema`
     - `fields/bool/config.boolField`
     - `fields/float/config.floatField`
     - `fields/int/config.intField`

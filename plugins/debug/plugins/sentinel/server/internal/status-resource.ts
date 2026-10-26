@@ -18,6 +18,7 @@ import {
 import {
   diskAlarmOf,
   type DiskAlarm,
+  type SignalKey,
 } from "@plugins/debug/plugins/sentinel/plugins/status-file/core";
 import {
   readSentinelVitals,
@@ -39,11 +40,32 @@ import {
 
 export function readStatusValue(): SentinelStatusValue {
   const latch = readFreshDuress();
+  const vitals = readVitalsValue();
   return {
     watch: readSentinelWatch(sentinelStatusDir.path),
-    duress: latch === null ? null : { since: latch.setAt },
-    disk: diskAlarmFrom(readVitalsValue()),
+    duress:
+      latch === null
+        ? null
+        : { since: latch.setAt, elevated: elevatedFrom(vitals) },
+    disk: diskAlarmFrom(vitals),
   };
+}
+
+/** The signals over their limit in a reading, when it is the running watcher's. */
+export function elevatedFrom(vitals: SentinelVitals): SignalKey[] {
+  if (vitals.kind !== "recorded" || !vitals.current) return [];
+  return [...vitals.vitals.elevated];
+}
+
+/**
+ * What the status carries from the per-tick vitals, as one comparable key: a
+ * vitals write re-pushes the status only when this moves.
+ */
+function vitalsFactsKey(vitals: SentinelVitals): string {
+  return JSON.stringify([
+    diskAlarmFrom(vitals),
+    [...elevatedFrom(vitals)].sort(),
+  ]);
 }
 
 /** The disk verdict of a reading, when it is the running watcher's and has one. */
@@ -118,11 +140,12 @@ export const sentinelStatusWatcher = defineFileWatcher({
 let watcher: FileWatcher | null = null;
 
 /**
- * The disk verdict last pushed with the status. A vitals write (every tick)
- * re-pushes the status only when it moves the verdict, so tabs hear about a
- * filling disk without a 5 s stream of identical statuses.
+ * The vitals facts (disk verdict, elevated signals) last pushed with the
+ * status. A vitals write (every tick) re-pushes the status only when it moves
+ * them, so tabs hear about a filling disk or a new duress cause without a 5 s
+ * stream of identical statuses.
  */
-let lastDiskAlarm: DiskAlarm | null | undefined;
+let lastVitalsFacts: string | undefined;
 
 export async function startStatusWatcher(): Promise<void> {
   if (watcher) return;
@@ -140,9 +163,9 @@ export async function startStatusWatcher(): Promise<void> {
         vitals ||= hit.vitals;
       }
       if (status || vitals) {
-        const disk = diskAlarmFrom(readVitalsValue());
-        status ||= disk !== lastDiskAlarm;
-        lastDiskAlarm = disk;
+        const facts = vitalsFactsKey(readVitalsValue());
+        status ||= facts !== lastVitalsFacts;
+        lastVitalsFacts = facts;
       }
       if (status) sentinelStatusServed.notify();
       if (vitals) sentinelVitalsServed.notify();

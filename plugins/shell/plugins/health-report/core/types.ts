@@ -27,7 +27,29 @@ export type HealthState = "ok" | "attention" | "critical";
 export type HealthStatus =
   | { state: "unknown"; summary?: string }
   | { state: "not-applicable"; summary: string }
-  | { state: HealthState; summary: string; transitioning?: boolean };
+  | { state: "ok" | "critical"; summary: string; transitioning?: boolean }
+  | {
+      state: "attention";
+      summary: string;
+      transitioning?: boolean;
+      /**
+       * Ambient attention: a condition worth seeing in the report but too
+       * routine to colour the dot (the machine busy, with the watcher already
+       * handling it). The row draws `attention` as usual; the dot treats it as
+       * `ok` and shows these marks beside it instead (`mergeDot`). An empty
+       * list keeps the dot green and unmarked.
+       */
+      ambient?: readonly HealthMark[];
+    };
+
+/** A small icon the dot shows for an ambient condition (`HealthStatus.ambient`). */
+export interface HealthMark {
+  /** Stable within its row: keys the mark. */
+  id: string;
+  icon: IconRef;
+  /** What it says, as the icon's accessible name and tooltip. */
+  label: string;
+}
 
 /** The merged verdict: the worst known state, or `unknown` when a row cannot vouch for itself. */
 export type HealthLevel = HealthState | "unknown";
@@ -124,4 +146,10 @@ export interface HealthMerge {
   transitioning: boolean;
   /** Some row is not known yet (unreported, or `unknown` without a summary). */
   pending: boolean;
+}
+
+/** What the dot shows: the merge with ambient rows folded as `ok`, and their marks. */
+export interface DotMerge extends HealthMerge {
+  /** Every ambient row's marks, in row order. */
+  marks: HealthMark[];
 }

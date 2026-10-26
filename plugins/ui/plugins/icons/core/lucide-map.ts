@@ -331,6 +331,7 @@ export const LUCIDE_MAP = {
   star: "star",
   "splitscreen-left": "panel-left",
   "sticky-note-2": "sticky-note",
+  stacks: "layers",
   stop: "square",
   "stop-circle": "circle-stop",
   storage: "database",
