@@ -2439,18 +2439,31 @@ export function createResourceRuntime(
   let flushAgain = false;
   // `performance.now()` when the live flush last made progress — stamped when it
   // takes the mutex and re-stamped at the start of every re-drain pass; `null`
-  // while no flush runs. The heartbeat reports its age as `flushOpenMs`. A flush
-  // whose loader never settles (a DB query whose socket was closed underneath
-  // it) holds the mutex forever, queueing every later push behind it while pings
-  // keep flowing — so the ping is the one frame that can tell the tab pushes are
-  // stuck. Per PASS, not per mutex hold: a steady notify stream keeps one hold
-  // alive across many short, delivering passes, and that is not a stall.
+  // while no flush runs. A flush whose loader never settles (a DB query whose
+  // socket was closed underneath it) holds the mutex forever, queueing every
+  // later push behind it while pings keep flowing. Per PASS, not per mutex hold:
+  // a steady notify stream keeps one hold alive across many short, delivering
+  // passes, and that is not a stall.
   // research/2026-09-11-global-live-updates-frozen-by-stray-fd-close.md
   let flushPassStartedAt: number | null = null;
-  function flushOpenMs(): number {
-    return flushPassStartedAt === null
-      ? 0
-      : Math.round(performance.now() - flushPassStartedAt);
+  // How long the oldest change this runtime owes its sockets has gone
+  // undelivered (0 when nothing is owed) — the heartbeat's `pushStallMs`, the one
+  // frame that still reaches the tab while pushes are stuck. Two ways a change
+  // waits: inside a flush pass that does not settle (the pass's age), or queued
+  // with no flush ever starting to take it (its pending's `enqueuedAt`) — an
+  // open `withNotifyBatch` that never settles holds every entry's flush, so no
+  // pass opens at all (2026-10-26: 7 min of no pushes behind a 0 flush age).
+  // A debounced entry's held pending is owed for at most its window, far below
+  // any stall threshold. O(entries + pendings), once per heartbeat.
+  function pushStallMs(): number {
+    const now = performance.now();
+    let oldest = flushPassStartedAt ?? now;
+    for (const entry of registry.values()) {
+      for (const pending of entry.pendingNotifies.values()) {
+        if (pending.enqueuedAt < oldest) oldest = pending.enqueuedAt;
+      }
+    }
+    return Math.round(now - oldest);
   }
   let batchDepth = 0;
   const heartbeats = new Map<RuntimeSocket, ReturnType<typeof setInterval>>();
@@ -5343,7 +5356,7 @@ export function createResourceRuntime(
     }
     flushRunning = true;
     // Stamped with the mutex (not inside the wrapper) so the heartbeat's
-    // `flushOpenMs` covers the whole hold, wrapper included.
+    // `pushStallMs` covers the whole hold, wrapper included.
     flushPassStartedAt = performance.now();
     try {
       // Run the whole drain inside the injected flush wrapper (server:
@@ -5365,7 +5378,7 @@ export function createResourceRuntime(
   // entry at the same or an earlier depth.
   async function runFlushCycle(): Promise<void> {
     do {
-      // A fresh pass is progress: the previous one settled (see `flushOpenMs`).
+      // A fresh pass is progress: the previous one settled (see `pushStallMs`).
       flushPassStartedAt = performance.now();
       flushAgain = false;
       flushScheduled = false;
@@ -6472,11 +6485,11 @@ export function createResourceRuntime(
   const notificationsWsHandler: WsHandler = {
     open(ws) {
       sockets.set(ws, { ws, subs: new Map() });
-      // `flushOpenMs`: how long the running flush pass has been open (0 when
-      // idle) — see `flushPassStartedAt`. Additive on the wire: an older client
-      // ignores it, and the client reads a ping without it as 0.
+      // `pushStallMs`: how long the oldest owed change has gone undelivered (0
+      // when nothing is owed) — see `pushStallMs()`. The client reads a ping
+      // without it as 0.
       const timer = setInterval(
-        () => sendJson(ws, { kind: "ping", flushOpenMs: flushOpenMs() }),
+        () => sendJson(ws, { kind: "ping", pushStallMs: pushStallMs() }),
         HEARTBEAT_MS,
       );
       heartbeats.set(ws, timer);

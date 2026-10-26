@@ -1,18 +1,18 @@
 import { describe, expect, test } from "bun:test";
 import type { ChannelStatuses } from "@plugins/primitives/plugins/live-state/web";
 import type { WsStatus } from "@plugins/primitives/plugins/networking/web";
-import { connectionHealth, FLUSH_STALL_MS } from "./connection-health";
+import { connectionHealth, PUSH_STALL_MS } from "./connection-health";
 
 /** Both sockets' states, with each server's latest reported flush age (ms). */
 function sockets(
   worktree: WsStatus,
   central: WsStatus,
-  flushOpenMs: Partial<ChannelStatuses["serverFlushOpenMs"]> = {},
+  pushStallMs: Partial<ChannelStatuses["serverPushStallMs"]> = {},
 ): ChannelStatuses {
   return {
     worktree,
     central,
-    serverFlushOpenMs: { worktree: 0, central: 0, ...flushOpenMs },
+    serverPushStallMs: { worktree: 0, central: 0, ...pushStallMs },
   };
 }
 
@@ -85,7 +85,7 @@ describe("connectionHealth — live updates stuck behind a server flush", () => 
         "Connected, but live updates have been stuck for 3 min — changes are saved but won't appear until the server restarts",
     });
     expect(
-      connectionHealth(sockets("open", "open", { worktree: FLUSH_STALL_MS })),
+      connectionHealth(sockets("open", "open", { worktree: PUSH_STALL_MS })),
     ).toEqual({
       state: "critical",
       summary:
@@ -115,12 +115,12 @@ describe("connectionHealth — live updates stuck behind a server flush", () => 
   test("below 30 s nothing changes", () => {
     expect(
       connectionHealth(
-        sockets("open", "open", { worktree: FLUSH_STALL_MS - 1, central: 5 }),
+        sockets("open", "open", { worktree: PUSH_STALL_MS - 1, central: 5 }),
       ),
     ).toEqual({ state: "ok", summary: "Server and central connected" });
     expect(
       connectionHealth(
-        sockets("open", "reconnecting", { worktree: FLUSH_STALL_MS - 1 }),
+        sockets("open", "reconnecting", { worktree: PUSH_STALL_MS - 1 }),
       ),
     ).toEqual({
       state: "attention",

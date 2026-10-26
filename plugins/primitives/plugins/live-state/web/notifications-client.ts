@@ -225,14 +225,15 @@ export type ChannelStatuses = {
   worktree: WsStatus;
   central: WsStatus;
   /**
-   * Per channel: how long the server's running live-state flush pass had been
-   * open at its latest heartbeat ping (0 when idle, and 0 until the first ping
-   * of the current connection). A flush that never settles freezes every push
-   * behind it while the socket stays open and quiet, so this is the only sign
-   * of it the tab gets — the health report's Connection row reads it.
+   * Per channel: how long the oldest change the server owes had gone
+   * undelivered at its latest heartbeat ping (0 when nothing is owed, and 0
+   * until the first ping of the current connection). A server whose pushes
+   * stopped — a flush that never settles, or no flush ever starting — leaves
+   * the socket open and quiet, so this is the only sign of it the tab gets;
+   * the health report's Connection row reads it.
    * research/2026-09-11-global-live-updates-frozen-by-stray-fd-close.md
    */
-  serverFlushOpenMs: Record<LiveStateSocketKind, number>;
+  serverPushStallMs: Record<LiveStateSocketKind, number>;
 };
 
 /** Live-state pipeline socket kind, as classified from a ws-status-bus url. */
@@ -592,10 +593,10 @@ export class NotificationsClient {
    */
   private applySeq = 0;
   private channelStatuses = new Map<string, WsStatus>();
-  /** Latest heartbeat `flushOpenMs` per channel — see `ChannelStatuses`. Reset
+  /** Latest heartbeat `pushStallMs` per channel — see `ChannelStatuses`. Reset
    *  to 0 whenever the channel's socket status changes, so a stall reported by
    *  a server that has since restarted never outlives its connection. */
-  private serverFlushOpenMs: Record<SocketKind, number> = {
+  private serverPushStallMs: Record<SocketKind, number> = {
     worktree: 0,
     central: 0,
   };
@@ -740,7 +741,7 @@ export class NotificationsClient {
       const kind = this.socketKindOf(url);
       if (kind === null) return;
       if (this.channelStatuses.get(url) !== status)
-        this.serverFlushOpenMs[kind] = 0;
+        this.serverPushStallMs[kind] = 0;
       this.channelStatuses.set(url, status);
       // Stamp the first instant THIS channel reached "open" (per-origin cold-
       // start latch; see `firstReadyByKind`). Written once per kind, never
@@ -853,25 +854,25 @@ export class NotificationsClient {
         this.channelStatuses.get(this.socketUrls.worktree) ?? "connecting",
       central:
         this.channelStatuses.get(this.socketUrls.central) ?? "connecting",
-      serverFlushOpenMs: { ...this.serverFlushOpenMs },
+      serverPushStallMs: { ...this.serverPushStallMs },
     };
   }
 
   /**
-   * Record a heartbeat's `flushOpenMs` for `kind`. Notifies channel-status
+   * Record a heartbeat's `pushStallMs` for `kind`. Notifies channel-status
    * listeners only when the value moved, so an idle server's pings (0 → 0)
    * re-render nothing. Every tab records it: the shared socket broadcasts every
    * frame, pings included, to all tabs.
    */
-  private noteServerFlushOpenMs(kind: SocketKind, raw: unknown): void {
+  private noteServerPushStallMs(kind: SocketKind, raw: unknown): void {
     const ms = raw ?? 0;
     if (typeof ms !== "number" || !Number.isFinite(ms) || ms < 0) {
       throw new Error(
-        `[notifications] ping carried a malformed flushOpenMs: ${JSON.stringify(raw)}`,
+        `[notifications] ping carried a malformed pushStallMs: ${JSON.stringify(raw)}`,
       );
     }
-    if (this.serverFlushOpenMs[kind] === ms) return;
-    this.serverFlushOpenMs[kind] = ms;
+    if (this.serverPushStallMs[kind] === ms) return;
+    this.serverPushStallMs[kind] = ms;
     const channels = this.getChannelStatuses();
     for (const fn of this.channelStatusListeners) fn(channels);
     this.emitDebug();
@@ -2158,11 +2159,12 @@ export class NotificationsClient {
   ): void {
     if (msg.kind === "ping") {
       // Server keepalive: never answered (per-tab duplicate `pong`s would be N×
-      // writes through the shared socket for nothing). It does carry the server's
-      // flush age, which the health report reads as "live updates stuck".
-      this.noteServerFlushOpenMs(
+      // writes through the shared socket for nothing). It does carry how long
+      // the server's oldest owed change has waited, which the health report
+      // reads as "live updates stuck".
+      this.noteServerPushStallMs(
         channel === this.channels.central ? "central" : "worktree",
-        msg.flushOpenMs,
+        msg.pushStallMs,
       );
       return;
     }

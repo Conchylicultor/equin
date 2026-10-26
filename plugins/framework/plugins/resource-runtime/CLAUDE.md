@@ -58,14 +58,19 @@ mutex + `flushAgain` rerun flag guarantee two flushes never overlap: a notify
 landing mid-flush sets `flushAgain` and is re-drained by the live flush. Pinned by
 `runtime.test.ts` §"flushNotifies — level-parallel".
 
-**The heartbeat ping carries `flushOpenMs`** — the running flush pass's age, 0
-when idle. One never-settling loader freezes every push behind the mutex while
-pings keep flowing (2026-09-11: 25 min, green health dot —
-`research/2026-09-11-global-live-updates-frozen-by-stray-fd-close.md`), so the
-ping reports it and the health report's Connection row flags ≥ 30 s. The stamp
-is **re-taken at the start of each re-drain pass**, not once per mutex hold: a
-steady notify stream holds the mutex across many short delivering passes, which
-is not a stall. Pinned by `runtime-heartbeat.test.ts`.
+**The heartbeat ping carries `pushStallMs`** — how long the oldest change the
+runtime owes its sockets has gone undelivered, 0 when nothing is owed: the older
+of the running flush pass's start and the oldest queued pending's `enqueuedAt`.
+It is the one frame that still reaches the tab while pushes are stuck, and the
+health report's Connection row flags ≥ 30 s. Both ways a change can wait count:
+a flush pass whose loader never settles holds the mutex (2026-09-11: 25 min,
+green health dot — `research/2026-09-11-global-live-updates-frozen-by-stray-fd-close.md`),
+and a `withNotifyBatch` whose function never settles keeps `batchDepth` above 0,
+so `armFlush` never schedules a flush at all and the pass age stays 0
+(2026-10-26: 7 min, green health dot). The pass stamp is **re-taken at the
+start of each re-drain pass**, not once per mutex hold: a steady notify stream
+holds the mutex across many short delivering passes, which is not a stall.
+Pinned by `runtime-heartbeat.test.ts`.
 
 **A resource loader must never do synchronous IO** (convention — nothing enforces
 it). Loaders run inside this shared flush cycle, so a synchronous syscall

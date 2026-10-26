@@ -205,8 +205,8 @@ const c = <const K extends string, const F extends WireFields>(
  *   stands behind (catch-up replay, a forced resubscribe's answer, …).
  */
 const SERVER_FRAMES = {
-  /** Keepalive, carrying how long the server's running flush has been open (0 idle). */
-  ping: s("ping", { flushOpenMs: w.number }),
+  /** Keepalive, carrying how long the oldest change the server owes has gone undelivered (0 when none). */
+  ping: s("ping", { pushStallMs: w.number }),
   "sub-error": s("sub-error", {
     id: w.optional(w.number),
     tabId: w.optional(w.string),

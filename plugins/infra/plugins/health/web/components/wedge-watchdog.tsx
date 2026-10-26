@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import {
   subscribeNetDiag,
   subscribeWsStatus,
@@ -8,9 +8,12 @@ import {
   getNotificationsClient,
   liveStateSocketKind,
   unansweredSubReportSink,
+  useNotificationsChannelStatuses,
+  type LiveStateSocketKind,
 } from "@plugins/primitives/plugins/live-state/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import { getHealth } from "../internal/client";
+import { PUSH_STALL_MS } from "../internal/connection-health";
 import { wedgeReportSink } from "../internal/wedge-report-sink";
 
 // How long a socket may stay non-open before we declare the live-state pipeline
@@ -33,7 +36,8 @@ type WedgeKind =
   | "missed-updates"
   | "connect-stalled"
   | "port-evicted"
-  | "unanswered-sub";
+  | "unanswered-sub"
+  | "push-stall";
 
 // A net-diag event's url is the absolute socket url the worker dialed; the
 // live-state classifier keys on the path.
@@ -61,7 +65,7 @@ function wedge(
   kind: WedgeKind,
   discriminator: string,
   detail: string,
-  opts: { benign?: boolean } = {},
+  opts: { benign?: boolean; description?: string } = {},
 ): void {
   const now = Date.now();
   const prev = lastWedgeAt.get(discriminator);
@@ -71,7 +75,8 @@ function wedge(
   if (!opts.benign) {
     showToast({
       title: "Live updates stalled",
-      description: "Reconnecting… refresh if data looks stale",
+      description:
+        opts.description ?? "Reconnecting… refresh if data looks stale",
       variant: "warning",
     });
   }
@@ -94,6 +99,35 @@ function wedge(
  * fully event/transition-driven with single armed timeouts — no polling.
  */
 export function WedgeWatchdog() {
+  // --- Signal 5: a server whose pushes stopped on an open socket ---
+  // The heartbeat's `pushStallMs` — the age of the oldest change the server
+  // owes — is the only frame that still arrives, so the tab is the one place
+  // that can report it. The same threshold turns the Connection row critical.
+  // One report per channel per episode: an episode ends when the stall drops
+  // back under the threshold (delivered, or the socket changed status).
+  const statuses = useNotificationsChannelStatuses();
+  const stalled = useRef(new Set<LiveStateSocketKind>());
+  useEffect(() => {
+    for (const kind of ["worktree", "central"] as const) {
+      const ms = statuses.serverPushStallMs[kind];
+      if (statuses[kind] !== "open" || ms < PUSH_STALL_MS) {
+        stalled.current.delete(kind);
+        continue;
+      }
+      if (stalled.current.has(kind)) continue;
+      stalled.current.add(kind);
+      wedge(
+        "push-stall",
+        `push-stall:${kind}`,
+        `the ${kind} server's oldest change has gone undelivered for ${Math.round(ms / 1000)}s on an open socket`,
+        {
+          description:
+            "Changes are saved but won't appear until the server restarts",
+        },
+      );
+    }
+  }, [statuses]);
+
   useEffect(() => {
     // --- Signal 1: socket-down wedge ---
     // One armed timeout per url. Armed on reconnecting/closed, cleared on open.

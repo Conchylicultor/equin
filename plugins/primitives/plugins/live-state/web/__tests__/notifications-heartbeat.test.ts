@@ -1,14 +1,14 @@
 /**
- * NotificationsClient — the server heartbeat's `flushOpenMs`. The server's ping
- * reports how long its running live-state flush pass has been open; a flush that
- * never settles freezes every push while the socket stays open and quiet, so the
- * ping is the only sign of it the tab gets. The client keeps the latest value
- * per channel in `ChannelStatuses.serverFlushOpenMs`, which the health report's
+ * NotificationsClient — the server heartbeat's `pushStallMs`. The server's ping
+ * reports how long the oldest change it owes has gone undelivered; a server whose
+ * pushes stopped leaves the socket open and quiet, so the ping is the only sign
+ * of it the tab gets. The client keeps the latest value
+ * per channel in `ChannelStatuses.serverPushStallMs`, which the health report's
  * Connection row reads. See
  * `research/2026-09-11-global-live-updates-frozen-by-stray-fd-close.md`.
  *
  * Pins:
- *   - a ping's `flushOpenMs` lands in the channel status and notifies listeners;
+ *   - a ping's `pushStallMs` lands in the channel status and notifies listeners;
  *   - a ping without it (a server that predates the field) reads as 0;
  *   - an unchanged value (an idle server's 0 → 0) notifies nobody;
  *   - every tab on the shared socket records it (the worker fans out every frame);
@@ -39,7 +39,7 @@ const flush = async (): Promise<void> => {
   await vi.advanceTimersByTimeAsync(0);
 };
 
-describe("NotificationsClient — heartbeat flushOpenMs", () => {
+describe("NotificationsClient — heartbeat pushStallMs", () => {
   const clients: NotificationsClient[] = [];
 
   async function setup(): Promise<{
@@ -73,40 +73,40 @@ describe("NotificationsClient — heartbeat flushOpenMs", () => {
 
   test("starts at 0 on both channels", async () => {
     const { client } = await setup();
-    expect(client.getChannelStatuses().serverFlushOpenMs).toEqual({
+    expect(client.getChannelStatuses().serverPushStallMs).toEqual({
       worktree: 0,
       central: 0,
     });
   });
 
-  test("a ping's flushOpenMs lands in the channel status and notifies listeners", async () => {
+  test("a ping's pushStallMs lands in the channel status and notifies listeners", async () => {
     const { client, socket } = await setup();
     const seen: ChannelStatuses[] = [];
     client.subscribeChannelStatuses((s) => seen.push(s));
     seen.length = 0; // drop the synchronous initial call
 
-    socket.serverSend({ kind: "ping", flushOpenMs: 45_000 });
+    socket.serverSend({ kind: "ping", pushStallMs: 45_000 });
     await flush();
-    expect(client.getChannelStatuses().serverFlushOpenMs.worktree).toBe(45_000);
+    expect(client.getChannelStatuses().serverPushStallMs.worktree).toBe(45_000);
     expect(client.getChannelStatuses().worktree).toBe("open");
     expect(seen).toHaveLength(1);
-    expect(seen[0]!.serverFlushOpenMs).toEqual({
+    expect(seen[0]!.serverPushStallMs).toEqual({
       worktree: 45_000,
       central: 0,
     });
 
-    socket.serverSend({ kind: "ping", flushOpenMs: 65_000 });
+    socket.serverSend({ kind: "ping", pushStallMs: 65_000 });
     await flush();
-    expect(seen.at(-1)!.serverFlushOpenMs.worktree).toBe(65_000);
+    expect(seen.at(-1)!.serverPushStallMs.worktree).toBe(65_000);
   });
 
-  test("a ping without flushOpenMs (an older server) reads as 0", async () => {
+  test("a ping without pushStallMs (an older server) reads as 0", async () => {
     const { client, socket } = await setup();
-    socket.serverSend({ kind: "ping", flushOpenMs: 45_000 });
+    socket.serverSend({ kind: "ping", pushStallMs: 45_000 });
     await flush();
     socket.serverSend({ kind: "ping" });
     await flush();
-    expect(client.getChannelStatuses().serverFlushOpenMs.worktree).toBe(0);
+    expect(client.getChannelStatuses().serverPushStallMs.worktree).toBe(0);
   });
 
   test("an unchanged value notifies nobody", async () => {
@@ -114,7 +114,7 @@ describe("NotificationsClient — heartbeat flushOpenMs", () => {
     const listener = vi.fn();
     client.subscribeChannelStatuses(listener);
     listener.mockClear();
-    socket.serverSend({ kind: "ping", flushOpenMs: 0 });
+    socket.serverSend({ kind: "ping", pushStallMs: 0 });
     await flush();
     socket.serverSend({ kind: "ping" });
     await flush();
@@ -140,22 +140,22 @@ describe("NotificationsClient — heartbeat flushOpenMs", () => {
     await flush(); // B attached to the same worker socket
     expect(second.debugSnapshot().transport.worktree.attachedTabs).toBe(2);
 
-    socket.serverSend({ kind: "ping", flushOpenMs: 90_000 });
+    socket.serverSend({ kind: "ping", pushStallMs: 90_000 });
     await flush(); // the worker's fan-out reaches both tabs
-    expect(first.getChannelStatuses().serverFlushOpenMs.worktree).toBe(90_000);
-    expect(second.getChannelStatuses().serverFlushOpenMs.worktree).toBe(90_000);
+    expect(first.getChannelStatuses().serverPushStallMs.worktree).toBe(90_000);
+    expect(second.getChannelStatuses().serverPushStallMs.worktree).toBe(90_000);
   });
 
   test("a socket drop clears it", async () => {
     const { client, socket } = await setup();
-    socket.serverSend({ kind: "ping", flushOpenMs: 120_000 });
+    socket.serverSend({ kind: "ping", pushStallMs: 120_000 });
     await flush();
-    expect(client.getChannelStatuses().serverFlushOpenMs.worktree).toBe(
+    expect(client.getChannelStatuses().serverPushStallMs.worktree).toBe(
       120_000,
     );
     socket.serverClose();
     await flush();
     expect(client.getChannelStatuses().worktree).not.toBe("open");
-    expect(client.getChannelStatuses().serverFlushOpenMs.worktree).toBe(0);
+    expect(client.getChannelStatuses().serverPushStallMs.worktree).toBe(0);
   });
 });

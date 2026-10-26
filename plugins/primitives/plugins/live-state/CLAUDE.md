@@ -396,10 +396,11 @@ force a resub (its own ack is already in flight, and congestion is what triggers
 this path). Adopting a version you cannot back silently drops your own
 value-carrying `sub-ack` as stale.
 
-**Pings carry the server's flush age.** A ping's `flushOpenMs` (missing ⇒ 0)
-lands per channel in `ChannelStatuses.serverFlushOpenMs` — the only sign a tab
-gets of a server flush stuck while the socket stays open (read by the health
-report's Connection row). It resets to 0 on any socket status change, so a dead
+**Pings carry the server's push stall.** A ping's `pushStallMs` (missing ⇒ 0) —
+how long the oldest change the server owes has gone undelivered — lands per
+channel in `ChannelStatuses.serverPushStallMs`: the only sign a tab gets of a
+server whose pushes stopped while the socket stays open (read by the health
+report's Connection row and the wedge watchdog). It resets to 0 on any socket status change, so a dead
 server's stall never outlives its connection; listeners fire only when it moves.
 Pinned by `notifications-heartbeat.test.ts`.
 

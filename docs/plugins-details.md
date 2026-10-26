@@ -29492,6 +29492,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/endpoints.fetchEndpointOver`
           - `primitives/live-state.getNotificationsClient`
           - `primitives/live-state.liveStateSocketKind`
+          - `primitives/live-state.LiveStateSocketKind`
           - `primitives/live-state.unansweredSubReportSink`
           - `primitives/live-state.useNotificationsChannelStatuses`
           - `primitives/networking.NetDiagEvent`

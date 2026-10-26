@@ -8,11 +8,12 @@ const CHANNELS = [
 ] as const;
 
 /**
- * How long a server's live-state flush may stay open before the row calls
- * live updates stuck. A healthy flush settles in milliseconds; the heartbeat
- * that reports the age arrives every 20 s, so a stall shows within ~50 s.
+ * How long a server's oldest owed change may go undelivered before the row
+ * calls live updates stuck. A healthy push lands in milliseconds (a throttled
+ * value waits at most its window); the heartbeat that reports the age arrives
+ * every 20 s, so a stall shows within ~50 s.
  */
-export const FLUSH_STALL_MS = 30_000;
+export const PUSH_STALL_MS = 30_000;
 
 function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
@@ -38,9 +39,10 @@ function formatStall(ms: number): string {
  * The connection row's health, from the two notification sockets' states.
  *
  * - any closed → critical, naming which ("Server disconnected").
- * - any open socket whose server reports a live-state flush open for
- *   `FLUSH_STALL_MS` or more → critical: the socket looks fine, but no change
- *   will reach the screen until that server restarts (the 2026-09-11 incident).
+ * - any open socket whose server reports a change undelivered for
+ *   `PUSH_STALL_MS` or more → critical: the socket looks fine, but no change
+ *   will reach the screen until that server restarts (the 2026-09-11 and
+ *   2026-10-26 incidents).
  * - otherwise any still (re)connecting → attention, `transitioning` so the dot
  *   pulses while the socket is on its way back.
  * - both open and flowing → ok.
@@ -60,11 +62,11 @@ export function connectionHealth(statuses: ChannelStatuses): HealthStatus {
   const stuck = CHANNELS.filter(
     (c) =>
       statuses[c.key] === "open" &&
-      statuses.serverFlushOpenMs[c.key] >= FLUSH_STALL_MS,
+      statuses.serverPushStallMs[c.key] >= PUSH_STALL_MS,
   );
   if (stuck.length > 0) {
     const longest = Math.max(
-      ...stuck.map((c) => statuses.serverFlushOpenMs[c.key]),
+      ...stuck.map((c) => statuses.serverPushStallMs[c.key]),
     );
     const who = joinNames(stuck.map((c) => c.subject));
     const restarts = stuck.length > 1 ? "restart" : "restarts";
