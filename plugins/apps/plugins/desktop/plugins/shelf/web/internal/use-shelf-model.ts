@@ -13,6 +13,7 @@ import {
 } from "@plugins/apps/plugins/desktop/plugins/windows/web";
 import { shelfConfig } from "@plugins/apps/plugins/desktop/plugins/shell/core";
 import {
+  pinnedAfterMove,
   shelfEntries,
   type ShelfEntry,
   type ShelfWindow,
@@ -117,6 +118,12 @@ export interface ShelfActions {
   closeWindow: (windowId: WindowId) => void;
   /** Keep an app in the dock, or remove it. */
   togglePinned: (appId: string) => void;
+  /** Drop entry `activeId` where `overId` is: reorders the pinned apps (pinning a dragged running one). */
+  moveEntry: (
+    entries: readonly ShelfEntry[],
+    activeId: string,
+    overId: string,
+  ) => void;
 }
 
 export function useShelfActions(): ShelfActions {
@@ -150,6 +157,12 @@ export function useShelfActions(): ShelfActions {
         pinnedApps.includes(appId)
           ? pinnedApps.filter((id) => id !== appId)
           : [...pinnedApps, appId],
+      );
+    },
+    moveEntry: (entries, activeId, overId) => {
+      setConfig(
+        "pinnedApps",
+        pinnedAfterMove(pinnedApps, entries, activeId, overId),
       );
     },
   };

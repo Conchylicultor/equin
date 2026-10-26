@@ -3007,13 +3007,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`shelf`** — The desktop's bottom shelf: a centred dock with the launcher button, the pinned apps and the running ones (grouped per app, with window pips, hover thumbnails and a right-click app menu), and the tray — the pager's mini-desktops with their desktop previews, the overview button and the clock. Reserves the desktop's bottom work area and is where windows minimise to.
           - Web:
             - Contributes: `Desktop.Overlay` "Desktop overlay" → `Shelf`
-            - Uses: 52 symbols — full list in [`plugins/apps/plugins/desktop/plugins/shelf/REFERENCE.md`](../plugins/apps/plugins/desktop/plugins/shelf/REFERENCE.md)
+            - Uses: 54 symbols — full list in [`plugins/apps/plugins/desktop/plugins/shelf/REFERENCE.md`](../plugins/apps/plugins/desktop/plugins/shelf/REFERENCE.md)
               - `apps/desktop/windows` ×25
               - `primitives/css/ui-kit` ×4
               - `apps-core` ×3
               - `config_v2` ×2
               - `primitives/hover-reveal` ×2
               - `primitives/overlay/cursor-menu` ×2
+              - `primitives/sortable-list` ×2
               - `apps-core/tabs.useTabs`
               - `apps/desktop/launcher.toggleLauncher`
               - `apps/desktop/shell.DesktopAppTile`
@@ -44859,6 +44860,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by:
           - `apps-core/tab-bar`
+          - `apps/desktop/shelf`
           - `apps/sonata/rich/rhythm-controls`
           - `config_v2/fields`
           - `fields/list/config`

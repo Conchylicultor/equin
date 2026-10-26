@@ -25,6 +25,13 @@ desktop's own theme (`app:desktop`).
   or minimised when it is already in front. With several, the first click brings
   the front-most forward and later clicks cycle. Shift-, Alt- and middle-click
   open a new window.
+- **Dragging an entry reorders the dock** (`SortableList`, whole-tile drag past
+  the 4px activation distance, so a click still clicks). The drop writes
+  `pinnedApps` through `pinnedAfterMove`: the entries in their new order, keeping
+  the pinned ones and the dragged one. A dragged running app is kept in the dock
+  wherever it lands (macOS's gesture), so a drop always persists and never
+  leaves a reorder the config cannot express. The release's click is swallowed,
+  and the peek stays shut while a drag is on.
 - **The shelf tells the windows where it is**, through two windows-plugin
   channels, so the windows plugin never names the shelf:
   `setWorkAreaReserve(dock height + 16)` keeps maximised and snapped windows off
@@ -53,13 +60,14 @@ desktop's own theme (`app:desktop`).
 - Description: The desktop's bottom shelf: a centred dock with the launcher button, the pinned apps and the running ones (grouped per app, with window pips, hover thumbnails and a right-click app menu), and the tray — the pager's mini-desktops with their desktop previews, the overview button and the clock. Reserves the desktop's bottom work area and is where windows minimise to.
 - Web:
   - Contributes: `Desktop.Overlay` "Desktop overlay" → `Shelf`
-  - Uses: 52 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 54 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/desktop/windows` ×25
     - `primitives/css/ui-kit` ×4
     - `apps-core` ×3
     - `config_v2` ×2
     - `primitives/hover-reveal` ×2
     - `primitives/overlay/cursor-menu` ×2
+    - `primitives/sortable-list` ×2
     - `apps-core/tabs.useTabs`
     - `apps/desktop/launcher.toggleLauncher`
     - `apps/desktop/shell.DesktopAppTile`

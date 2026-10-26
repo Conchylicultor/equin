@@ -111,3 +111,27 @@ function frontMost(windows: readonly ShelfWindow[]): ShelfWindow {
   const byZ = [...windows].sort((a, b) => b.z - a.z);
   return byZ.find((w) => !w.minimized) ?? byZ[0]!;
 }
+
+/**
+ * The pinned apps after dragging entry `activeId` onto entry `overId`: the
+ * entries in their new order, keeping the pinned ones and the dragged one — a
+ * dragged entry is kept in the dock wherever it is dropped, as on macOS, so
+ * dragging a running app is how it gets pinned. Pinned ids the shelf does not
+ * show (apps no longer installed) keep their place at the end.
+ */
+export function pinnedAfterMove(
+  pinned: readonly string[],
+  entries: readonly ShelfEntry[],
+  activeId: string,
+  overId: string,
+): string[] {
+  const order = entries.map((e) => e.appId);
+  const from = order.indexOf(activeId);
+  const to = order.indexOf(overId);
+  if (from < 0 || to < 0) return [...pinned];
+  order.splice(to, 0, ...order.splice(from, 1));
+  const pinnedSet = new Set(pinned);
+  const kept = order.filter((id) => id === activeId || pinnedSet.has(id));
+  const shown = new Set(order);
+  return [...kept, ...pinned.filter((id) => !shown.has(id))];
+}
