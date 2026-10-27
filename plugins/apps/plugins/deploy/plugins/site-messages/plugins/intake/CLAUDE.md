@@ -8,7 +8,7 @@ knows nothing about SSH or the deploy UI.
 **A site takes messages by importing the `web` barrel** (`useSendSiteMessage()`),
 never only `core`: a composition's closure follows same-runtime imports, so a
 site importing just the endpoint contract would ship the form without this
-server half (endpoint, table, notify job). Verified with `resolveComposition`
+server half (endpoint, table, notify and confirm jobs). Verified with `resolveComposition`
 for `website`.
 
 ## The endpoint — `POST /api/site-messages`
@@ -29,7 +29,7 @@ for `website`.
    so a burst cannot race past it. Over → `rate-limited`, nothing stored.
 2. **Spam** (`classify.ts`): honeypot filled, `elapsedMs < 3000`, or
    `isBotUserAgent` → stored `verdict: spam` with its `spam_reason`,
-   `notify_state: skipped`, and still answered `sent`, so a bot learns nothing.
+   `notify_state` / `confirm_state: skipped`, and still answered `sent`, so a bot learns nothing.
 3. **Retention** (`retention.ts`): spam is swept after 30 days
    (`defineRetention`, `perWorktree: true` — a deployed release is never main).
    Accepted messages are kept.
@@ -56,6 +56,23 @@ is exact), `hold: "seconds"` (a 15 s timeout on the Resend call), 5 attempts.
 - A failed send records `notify_error` and throws so the job retries; the last
   attempt records `failed` first.
 
+## The confirmation — `site-messages.confirm`
+
+The visitor's copy, so they know the message arrived (`confirm.ts`). Its own
+job, enqueued with the notification in the same transaction — a retry of one
+email never resends the other — and its own columns (`confirm_state`,
+`confirm_error`, `confirmed_at`; the same states as `notify_state`, rows from
+before confirmations read `skipped`). Same job shape and the same
+`sendOrRecord` send/retry path as the notification.
+
+- From `equin <noreply@equin.ai>` to the visitor, reply-to `CONTACT_EMAIL`,
+  subject "We received your message", plain text: that it arrived, the message
+  quoted, the page and the time.
+- **Caps** — the form takes any address, so the confirmation must not become a
+  way to mail strangers: at most 30 confirmations in any 24 h, and at most 3 to
+  one address (case-insensitive) in any 24 h. Past either → `throttled`, never
+  sent later. Spam is never confirmed.
+
 ## The host-only list — `GET /api/host-only/site-messages`
 
 `hostOnly()`, `?verdict=&limit=` (default 100, max 200), newest first,
@@ -68,7 +85,8 @@ the path the inbox curls.
 - `server/internal/classify.test.ts`, `rate-limit.test.ts` — pure rules.
 - `server/internal/site-messages.db.test.ts` — real Postgres: intake (stored,
   spam, rate limit, list), notify (not-configured, sent, retry then failed, the
-  cap and the held count), the spam sweep.
+  cap and the held count), confirm (sent, not-configured, retry then failed,
+  the per-address cap), the spam sweep.
 
 Run with `./equin test plugins/apps/plugins/deploy/plugins/site-messages`.
 
@@ -76,7 +94,7 @@ Run with `./equin test plugins/apps/plugins/deploy/plugins/site-messages`.
 
 ## Plugin reference
 
-- Description: useSendSiteMessage() — the contact form's send (sent or rate-limited); a site takes messages by importing this barrel, which pulls the intake's server half into its composition. Registers the site-message id kind (smsg) with the web id registry — the server barrel registers the same kind. Owns site_messages: the public POST /api/site-messages endpoint (body capped at 8 KB; honeypot, a send under three seconds or a bot user agent stored as spam and still answered sent; 3 per 10 minutes and 10 per day per salted IP hash, the IP never stored), the site-messages.notify job emailing each accepted message through Resend from the approved RESEND_API_KEY deploy secret (not-configured without one, at most 30 emails a day, the rest held and counted in the next), the 30-day spam sweep, and the host-only list the deploy app reads over SSH.
+- Description: useSendSiteMessage() — the contact form's send (sent or rate-limited); a site takes messages by importing this barrel, which pulls the intake's server half into its composition. Registers the site-message id kind (smsg) with the web id registry — the server barrel registers the same kind. Owns site_messages: the public POST /api/site-messages endpoint (body capped at 8 KB; honeypot, a send under three seconds or a bot user agent stored as spam and still answered sent; 3 per 10 minutes and 10 per day per salted IP hash, the IP never stored), the site-messages.notify job emailing each accepted message through Resend from the approved RESEND_API_KEY deploy secret (not-configured without one, at most 30 emails a day, the rest held and counted in the next), the site-messages.confirm job emailing the visitor a copy so they know it arrived (at most 30 a day and 3 a day per address), the 30-day spam sweep, and the host-only list the deploy app reads over SSH.
 - Web:
   - Contributes: `IdKinds.Kind` "smsg"
   - Uses:
@@ -106,6 +124,7 @@ Run with `./equin test plugins/apps/plugins/deploy/plugins/site-messages`.
   - DB schema: `plugins/apps/plugins/deploy/plugins/site-messages/plugins/intake/server/internal/tables.ts`
   - Register:
     - `defineJob('site-messages.notify')`
+    - `defineJob('site-messages.confirm')`
     - `defineJob('retention.site_messages')`
   - Routes:
     - `POST /api/site-messages`

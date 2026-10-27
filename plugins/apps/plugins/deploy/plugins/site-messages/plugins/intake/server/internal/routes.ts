@@ -12,7 +12,7 @@ import {
 } from "../../core";
 import { recordSiteMessage } from "./intake";
 import { listSiteMessages } from "./list";
-import { siteMessagesNotifyJob } from "./notify-job";
+import { siteMessagesConfirmJob, siteMessagesNotifyJob } from "./notify-job";
 
 export const handleSendSiteMessage = capBodySize(
   MAX_SITE_MESSAGE_BODY_BYTES,
@@ -25,7 +25,10 @@ export const handleSendSiteMessage = capBodySize(
         userAgent: req.headers.get("user-agent") ?? "",
         now: new Date(),
       },
-      (messageId, tx) => siteMessagesNotifyJob.enqueue({ messageId }, { tx }),
+      async (messageId, tx) => {
+        await siteMessagesNotifyJob.enqueue({ messageId }, { tx });
+        await siteMessagesConfirmJob.enqueue({ messageId }, { tx });
+      },
     ),
   ),
 );

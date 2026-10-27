@@ -37,11 +37,21 @@ export const siteMessages = pgTable(
     /** The provider's (or the network's) last error; null once sent. */
     notifyError: text("notify_error"),
     notifiedAt: timestamp("notified_at", { withTimezone: true }),
+    // The confirmation email: a copy of the message, sent to the visitor so
+    // they know it arrived. The same states as the notification; rows from
+    // before confirmations existed read `skipped`.
+    confirmState: parsedText("confirm_state", NotifyStateSchema)
+      .notNull()
+      .default("skipped"),
+    /** The provider's (or the network's) last error; null once sent. */
+    confirmError: text("confirm_error"),
+    confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
   },
   (t) => [
     index("site_messages_ip_hash_created_at_idx").on(t.ipHash, t.createdAt),
     index("site_messages_created_at_idx").on(t.createdAt),
     index("site_messages_notify_state_idx").on(t.notifyState, t.notifiedAt),
+    index("site_messages_confirm_state_idx").on(t.confirmState, t.confirmedAt),
   ],
 );
 

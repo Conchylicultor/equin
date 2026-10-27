@@ -282,7 +282,7 @@ function SentNote({
           Message sent
         </Text>
         <Text as="p" variant="body" tone="muted">
-          Thanks — we'll reply to {replyTo}.
+          Thanks — a copy is on its way to {replyTo}, and we'll reply there.
         </Text>
         <Button
           type="button"

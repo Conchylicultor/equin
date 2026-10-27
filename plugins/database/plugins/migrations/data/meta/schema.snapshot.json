@@ -1,6 +1,6 @@
 {
-  "id": "1f1284dd-9acd-4904-8306-9321d36136bb",
-  "prevId": "48c31ec0-ed1a-4324-8e0f-7e161a4191e4",
+  "id": "d3669c1b-4e81-4fe9-9422-951f400977e8",
+  "prevId": "1f1284dd-9acd-4904-8306-9321d36136bb",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -2216,6 +2216,25 @@
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
+        },
+        "confirm_state": {
+          "name": "confirm_state",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'skipped'"
+        },
+        "confirm_error": {
+          "name": "confirm_error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "confirmed_at": {
+          "name": "confirmed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -2266,6 +2285,27 @@
             },
             {
               "expression": "notified_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "site_messages_confirm_state_idx": {
+          "name": "site_messages_confirm_state_idx",
+          "columns": [
+            {
+              "expression": "confirm_state",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "confirmed_at",
               "isExpression": false,
               "asc": true,
               "nulls": "last"

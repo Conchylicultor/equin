@@ -28,6 +28,11 @@ import {
   siteMessageIdKind,
   type SiteMessageId,
 } from "../../core";
+import {
+  CONFIRM_PER_ADDRESS_CAP,
+  confirmSiteMessage,
+  type ConfirmDeps,
+} from "./confirm";
 import { recordSiteMessage, type IntakeContext } from "./intake";
 import { listSiteMessages } from "./list";
 import { DAILY_EMAIL_CAP, notifySiteMessage, type NotifyDeps } from "./notify";
@@ -107,6 +112,7 @@ describe("intake", () => {
       verdict: "accepted",
       spamReason: null,
       notifyState: "pending",
+      confirmState: "pending",
     });
     expect(row!.ipHash).toMatch(/^[0-9a-f]{64}$/);
     expect(row!.ipHash).not.toContain("203.0.113.7");
@@ -122,11 +128,16 @@ describe("intake", () => {
       kind: "sent",
     });
     expect(
-      (await rows()).map((r) => [r.verdict, r.spamReason, r.notifyState]),
+      (await rows()).map((r) => [
+        r.verdict,
+        r.spamReason,
+        r.notifyState,
+        r.confirmState,
+      ]),
     ).toEqual([
-      ["spam", "honeypot", "skipped"],
-      ["spam", "too-fast", "skipped"],
-      ["spam", "bot-user-agent", "skipped"],
+      ["spam", "honeypot", "skipped", "skipped"],
+      ["spam", "too-fast", "skipped", "skipped"],
+      ["spam", "bot-user-agent", "skipped", "skipped"],
     ]);
     expect(enqueued).toEqual([]);
   });
@@ -282,6 +293,109 @@ describe("notify", () => {
     expect(later.sent[0]!.text).toContain(
       "1 more message was held by the daily email cap",
     );
+  });
+});
+
+describe("confirm", () => {
+  function deps(over: Partial<ConfirmDeps> = {}): ConfirmDeps & {
+    sent: ResendEmail[];
+  } {
+    const sent: ResendEmail[] = [];
+    return {
+      apiKey: { kind: "set", value: "re_test" },
+      contact: "hello@equin.ai",
+      send: async (_key, email): Promise<ResendSendResult> => {
+        sent.push(email);
+        return { ok: true, id: `email-${sent.length}` };
+      },
+      attempt: 1,
+      maxAttempts: 5,
+      now: NOW,
+      sent,
+      ...over,
+    };
+  }
+
+  async function accepted(
+    over: Record<string, unknown> = {},
+  ): Promise<SiteMessageId> {
+    await send(over, { ip: `192.0.2.${enqueued.length + 100}` });
+    return enqueued.at(-1)!;
+  }
+
+  async function row(id: SiteMessageId) {
+    const [r] = await t.db
+      .select()
+      .from(siteMessages)
+      .where(eq(siteMessages.id, id));
+    return r!;
+  }
+
+  test("emails the visitor a copy, reply-to the site, independently of the notification", async () => {
+    const id = await accepted({ message: "Line one\nLine two" });
+    const d = deps();
+    expect(await confirmSiteMessage(t.db, id, d)).toEqual({
+      kind: "sent",
+      providerId: "email-1",
+    });
+    expect(d.sent[0]).toMatchObject({
+      from: "equin <noreply@equin.ai>",
+      to: "visitor@example.com",
+      replyTo: "hello@equin.ai",
+      subject: "We received your message",
+    });
+    expect(d.sent[0]!.text).toContain("> Line one\n> Line two");
+    expect(await row(id)).toMatchObject({
+      confirmState: "sent",
+      confirmError: null,
+      // The notification is its own job: untouched.
+      notifyState: "pending",
+    });
+    expect(await confirmSiteMessage(t.db, id, d)).toEqual({
+      kind: "nothing-to-do",
+    });
+  });
+
+  test("without a key, the confirmation is not-configured and nothing throws", async () => {
+    const id = await accepted();
+    const d = deps({ apiKey: { kind: "unset" } });
+    expect(await confirmSiteMessage(t.db, id, d)).toEqual({
+      kind: "not-configured",
+    });
+    expect(d.sent).toEqual([]);
+    expect((await row(id)).confirmState).toBe("not-configured");
+  });
+
+  test("a refused send records the error and throws; the last attempt records failed", async () => {
+    const id = await accepted();
+    const refusing = deps({
+      send: async () => ({ ok: false, status: 422, error: "bad address" }),
+    });
+    expect(
+      String(await rejection(confirmSiteMessage(t.db, id, refusing))),
+    ).toMatch(/bad address/);
+    expect(await row(id)).toMatchObject({
+      confirmState: "pending",
+      confirmError: "Resend answered 422: bad address",
+    });
+    await rejection(confirmSiteMessage(t.db, id, { ...refusing, attempt: 5 }));
+    expect((await row(id)).confirmState).toBe("failed");
+  });
+
+  test("one address gets at most the per-address cap a day, whatever its case", async () => {
+    const d = deps();
+    for (let i = 0; i < CONFIRM_PER_ADDRESS_CAP; i++) {
+      const id = await accepted();
+      expect((await confirmSiteMessage(t.db, id, d)).kind).toBe("sent");
+    }
+    const over = await accepted({ replyTo: "Visitor@Example.com" });
+    expect(await confirmSiteMessage(t.db, over, d)).toEqual({
+      kind: "throttled",
+    });
+    expect((await row(over)).confirmState).toBe("throttled");
+    // Another address is not affected.
+    const other = await accepted({ replyTo: "someone@example.com" });
+    expect((await confirmSiteMessage(t.db, other, d)).kind).toBe("sent");
   });
 });
 

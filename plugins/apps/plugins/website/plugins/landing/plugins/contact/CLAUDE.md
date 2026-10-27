@@ -27,15 +27,16 @@ Prototype `proto-1788797350-gqju`, variant `contact: expand`.
   (`tabIndex=-1`, `autocomplete=off`, `aria-hidden`) and `elapsedMs` since the
   form (or "Send another") opened. Nothing else is decided client-side.
 - **States**: Send auto-pends (`Button`); `sent` folds the form into "Message
-  sent — Thanks, we'll reply to <email>" with "Send another"; `rate-limited`
+  sent — Thanks, a copy is on its way to <email>, and we'll reply there" (the
+  intake's confirmation email) with "Send another"; `rate-limited`
   and a failed request are said inline under the fields, the typed text kept.
   A message is never lost silently.
 
 The backend is `apps/deploy/site-messages/intake`, reached through its `web`
 barrel's `useSendSiteMessage()` — importing the web barrel is what puts the
 intake's server half (endpoint, table, notify job) in the website's
-composition. The site's own server stores the message and emails it on through
-Resend — see its CLAUDE.md.
+composition. The site's own server stores the message, emails it on through
+Resend, and emails the visitor a copy — see its CLAUDE.md.
 
 ## The second card
 

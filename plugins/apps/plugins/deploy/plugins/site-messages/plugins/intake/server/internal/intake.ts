@@ -19,11 +19,12 @@ export interface IntakeContext {
 }
 
 /**
- * How an accepted message's notification is queued — in the SAME transaction
- * as its row, so a message is never stored without its job nor a job enqueued
- * for a row that rolled back. The route passes the notify job; a test its own.
+ * How an accepted message's emails are queued — the notification to the site
+ * and the confirmation to the visitor — in the SAME transaction as its row, so
+ * a message is never stored without its jobs nor a job enqueued for a row that
+ * rolled back. The route passes the notify and confirm jobs; a test its own.
  */
-export type EnqueueNotify = (
+export type EnqueueEmails = (
   messageId: SiteMessageId,
   tx: SiteMessagesTx,
 ) => Promise<unknown>;
@@ -34,13 +35,13 @@ export type EnqueueNotify = (
  * Under the visitor's advisory lock (so a burst cannot race past the limit):
  * over the rate limit → `rate-limited`, nothing stored. Otherwise the message
  * is stored whatever it is — spam with its reason, never emailed; accepted
- * with its notification queued. Spam is answered `sent` like the rest.
+ * with its notification and its confirmation queued. Spam is answered `sent` like the rest.
  */
 export async function recordSiteMessage(
   dbx: SiteMessagesDb,
   body: SiteMessageBody,
   ctx: IntakeContext,
-  enqueueNotify: EnqueueNotify,
+  enqueueEmails: EnqueueEmails,
 ): Promise<SiteMessageResponse> {
   const hash = await ipHash(dbx, ctx.ip);
   return dbx.transaction(async (tx) => {
@@ -84,8 +85,9 @@ export async function recordSiteMessage(
       verdict: verdict.verdict,
       spamReason: verdict.verdict === "spam" ? verdict.reason : null,
       notifyState: verdict.verdict === "spam" ? "skipped" : "pending",
+      confirmState: verdict.verdict === "spam" ? "skipped" : "pending",
     });
-    if (verdict.verdict === "accepted") await enqueueNotify(id, tx);
+    if (verdict.verdict === "accepted") await enqueueEmails(id, tx);
     return { kind: "sent" };
   });
 }

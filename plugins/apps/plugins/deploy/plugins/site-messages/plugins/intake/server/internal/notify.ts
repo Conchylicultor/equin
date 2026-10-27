@@ -23,11 +23,10 @@ export type NotifyOutcome =
   /** The row is gone (swept, or never committed) or already settled. */
   | { kind: "nothing-to-do" };
 
-export interface NotifyDeps {
+/** What one email job needs to send: the key, the client, its attempt budget. */
+export interface SendDeps {
   /** The approved Resend key, as the box sees it. */
   apiKey: DeploySecretValue;
-  /** Where the email goes: the site's own published address. */
-  to: string;
   send: (apiKey: string, email: ResendEmail) => Promise<ResendSendResult>;
   /** 1-based, and the job's budget: the last attempt records `failed`. */
   attempt: number;
@@ -35,9 +34,43 @@ export interface NotifyDeps {
   now: Date;
 }
 
+export interface NotifyDeps extends SendDeps {
+  /** Where the email goes: the site's own published address. */
+  to: string;
+}
+
 /** Thrown for a failed send, so the job retries (and, finally, dead-letters). */
 export class NotifySendError extends Error {
   override name = "NotifySendError";
+}
+
+/**
+ * Send one email with an approved key. A failure — Resend refusing it, or no
+ * answer at all — is recorded through `recordError` (with `final` on the
+ * job's last attempt, so the row can say `failed`) and THROWN, so the job
+ * retries. Answers the provider's id.
+ */
+export async function sendOrRecord(
+  apiKey: string,
+  email: ResendEmail,
+  deps: SendDeps,
+  recordError: (error: string, final: boolean) => Promise<unknown>,
+): Promise<string> {
+  const final = deps.attempt >= deps.maxAttempts;
+  let result: ResendSendResult;
+  try {
+    result = await deps.send(apiKey, email);
+  } catch (err) {
+    // No answer at all (network, timeout): the same retry path as a refusal.
+    await recordError(err instanceof Error ? err.message : String(err), final);
+    throw err;
+  }
+  if (!result.ok) {
+    const error = `Resend answered ${result.status}: ${result.error}`;
+    await recordError(error, final);
+    throw new NotifySendError(error);
+  }
+  return result.id;
 }
 
 /**
@@ -154,31 +187,20 @@ export async function notifySiteMessage(
   }
 
   const held = await heldSinceLastEmail(dbx);
-  const email = notificationEmail(row, held, deps.to);
-  const final = deps.attempt >= deps.maxAttempts;
-  let result: ResendSendResult;
-  try {
-    result = await deps.send(deps.apiKey.value, email);
-  } catch (err) {
-    // No answer at all (network, timeout): the same retry path as a refusal.
-    await settle({
-      notifyError: err instanceof Error ? err.message : String(err),
-      ...(final ? { notifyState: "failed" as const } : {}),
-    });
-    throw err;
-  }
-  if (!result.ok) {
-    const error = `Resend answered ${result.status}: ${result.error}`;
-    await settle({
-      notifyError: error,
-      ...(final ? { notifyState: "failed" as const } : {}),
-    });
-    throw new NotifySendError(error);
-  }
+  const providerId = await sendOrRecord(
+    deps.apiKey.value,
+    notificationEmail(row, held, deps.to),
+    deps,
+    (error, final) =>
+      settle({
+        notifyError: error,
+        ...(final ? { notifyState: "failed" as const } : {}),
+      }),
+  );
   await settle({
     notifyState: "sent",
     notifyError: null,
     notifiedAt: deps.now,
   });
-  return { kind: "sent", providerId: result.id, held };
+  return { kind: "sent", providerId, held };
 }
