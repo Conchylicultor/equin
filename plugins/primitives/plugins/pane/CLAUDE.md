@@ -971,9 +971,9 @@ See "Open questions" in the design doc.
 - Load-bearing: yes
 - Web:
   - Slots: `Pane.Register`
-  - Slot contributors: 92 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `Pane.Register` ×92
-  - Contributes: 119 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slot contributors: 93 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Pane.Register` ×93
+  - Contributes: 121 contributions — full list in [REFERENCE.md](./REFERENCE.md)
     - `SlotRender.ListMiddleware`
     - `WebsiteHeader` "title" → `PaneTitleItem`
     - `accountPane.Actions` "title" → `PaneTitleItem`
@@ -1030,6 +1030,8 @@ See "Open questions" in the design doc.
     - `exhibits.actions` "title" → `PaneTitleItem`
     - `explorerPane.Actions` "title" → `PaneTitleItem`
     - `filePeekPane.Actions` "title" → `PaneTitleItem`
+    - `files-data-at.actions` "title" → `PaneTitleItem`
+    - `files-data.actions` "title" → `PaneTitleItem`
     - `filesAtPane.Actions` "title" → `PaneTitleItem`
     - `filesHomePane.Actions` "title" → `PaneTitleItem`
     - `graphCanvasPane.Actions` "title" → `PaneTitleItem`
@@ -1228,8 +1230,8 @@ See "Open questions" in the design doc.
     - `ui/tokens/density --space-2xs`
     - `ui/tokens/density --space-md`
     - `ui/tokens/shape --spacing`
-  - Imported by: 185 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×67
+  - Imported by: 186 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×68
     - `conversations` ×30
     - `debug` ×27
     - `active-data` ×10

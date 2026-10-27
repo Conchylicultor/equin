@@ -128,7 +128,11 @@ describe("openPicksStore", () => {
         return mount.remove(path, opts);
       },
     };
-    const agent: WriteOrigin = { kind: "agent", source: "e2e" };
+    const agent: WriteOrigin = {
+      kind: "agent",
+      source: "e2e",
+      claimsUnreverted: false,
+    };
     const s = openPicksStore(recording);
     const pick = { kind: "set", option: "palette", value: "azure" } as const;
     await s.write(ID, pick, agent);

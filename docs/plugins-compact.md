@@ -18,7 +18,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`deploy`** [test helpers] [exempt] [23 sub-plugins] — The Deploy task category: the category tasks filed from the Deploy app, such as a failed deploy's investigation, are grouped under.
     - **`desktop`** [exempt] [10 sub-plugins] — Desktop — the floating-window desktop mode as an app: windows over a wallpaper, one bottom shelf (launcher, pinned apps, running windows, tray), virtual desktops, overview and a window switcher.
     - **`events`** [exempt] [22 sub-plugins] — Events — track events from pluggable sources in one database.
-    - **`file-explorer`** [exempt] [5 sub-plugins] — File explorer app.
+    - **`file-explorer`** [exempt] [6 sub-plugins] — File explorer app.
     - **`home`** [5 sub-plugins] — Home — app launcher and entry point. The Apps task category: the category tasks filed from the Home app's cards, such as building a new app, are grouped under.
     - **`keyboard-party`** — Keyboard Party — a keyboard toy for a small child: every key answers with its own animation and sound.
       - Plugins:
@@ -27,7 +27,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`mail`** [exempt] [12 sub-plugins] — Mail — a Gmail-class client.
     - **`pages`** [exempt] [16 sub-plugins] — Notion-like pages app.
     - **`places`** [exempt] [7 sub-plugins] — Places — the places you want to go and have been, on a map: saved Google places organised by one nested tag tree, coloured by their tags.
-    - **`prototypes`** [exempt] [14 sub-plugins] — The Prototypes task category: the category tasks filed from the Prototypes gallery, such as creating or improving a prototype, are grouped under.
+    - **`prototypes`** [test helpers] [16 sub-plugins] — The Prototypes task category: the category tasks filed from the Prototypes gallery, such as creating or improving a prototype, are grouped under. Declares the app's data dir as the prototypesFiles…
     - **`settings`** [4 sub-plugins] — Settings app.
     - **`sonata`** [test helpers] [exempt] [81 sub-plugins] — Sonata — extensible piano and music app.
     - **`studio`** [exempt] [27 sub-plugins] — Plugin inspection and visualization; home for the plugin graph and contribution tables.
@@ -164,7 +164,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`ids`** — The id-kind registry, web half: IdKinds.Kind registers a declared kind and IdKinds.Presenter how its ids render and open (icon, useReferent, useTarget); useIdKinds() / useIdPresenters() read them at…
 
-- **`infra`** [test helpers] [exempt] [89 sub-plugins] — Umbrella for cross-cutting server-side primitives used by feature plugins: jobs, events, secrets, mcp, attachments.
+- **`infra`** [test helpers] [exempt] [91 sub-plugins] — Umbrella for cross-cutting server-side primitives used by feature plugins: jobs, events, secrets, mcp, attachments.
 
 - **`integrations`** — Umbrella for third-party service integrations that consume an auth connection (Gmail, …).
   - Plugins:

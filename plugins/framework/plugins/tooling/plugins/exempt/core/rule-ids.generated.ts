@@ -29,6 +29,7 @@ export type ExemptableRuleId =
   | "control-panel/no-adhoc-panel-body"
   | "control-panel/no-row-in-panel"
   | "daemon/no-raw-worker"
+  | "data-files/no-direct-store"
   | "data-view/no-adhoc-row-list"
   | "database/no-pool-await-in-transaction"
   | "db-client-tools/no-path-pg-client"

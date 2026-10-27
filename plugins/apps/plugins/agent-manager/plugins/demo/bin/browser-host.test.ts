@@ -62,6 +62,7 @@ import {
   committedFilesFromMap,
   configConflict,
   configConflictLocations,
+  configGitValues,
   configModifiedCounts,
   configRawFile,
   configScopes,
@@ -524,6 +525,7 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
         configConflict,
         configTiers,
         configConflictLocations,
+        configGitValues,
         configModifiedCounts,
       ]
         .map((d) => d.key)

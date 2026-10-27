@@ -50,7 +50,7 @@ describe("frameUrlOver", () => {
     expect(frameUrlOver(scoped, assetBase(getMirrored, { id: "m" }))).toEqual({
       kind: "unavailable",
       message:
-        "The mirror isn't available in this version of the app — it needs Singularity running on your computer.",
+        "The mirror isn't available in this version of the app — it needs equin running on your computer.",
     });
   });
 

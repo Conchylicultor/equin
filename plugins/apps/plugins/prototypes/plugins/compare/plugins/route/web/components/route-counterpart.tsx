@@ -1,5 +1,6 @@
 import type { ReactElement } from "react";
 import { useDeferredLoadComplete } from "@plugins/framework/plugins/web-sdk/core";
+import { PRODUCT_NAME } from "@plugins/framework/plugins/product-name/core";
 import { Apps, resolveAppForPath } from "@plugins/apps-core/web";
 import { parseUrl } from "@plugins/primitives/plugins/pane/web";
 import {
@@ -70,8 +71,7 @@ function resolve(
     return {
       status: "unresolved",
       title: "The real app frame needs the app served by URL.",
-      detail:
-        "It loads the running app at its own address, and this version of the app runs in the browser with no address of its own. Open the prototype in Singularity on your computer to compare it with the real screen.",
+      detail: `It loads the running app at its own address, and this version of the app runs in the browser with no address of its own. Open the prototype in ${PRODUCT_NAME} on your computer to compare it with the real screen.`,
     };
   }
 
