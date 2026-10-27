@@ -20,7 +20,7 @@ export type ServeOwned = z.infer<typeof ServeOwnedSchema>;
  * the one namespace this checkout serves — and that difference is the whole
  * reason this is a separate value rather than a field of `build.serve-status`.)
  *
- * All the data lives in the shared `~/.singularity/` tree, so one backend can
+ * All the data lives in the shared `~/.equin/` tree, so one backend can
  * answer for — and reclaim — namespaces composed by other checkouts.
  *
  * Read by the delete action with `useLiveReader` at the click: a snapshot,

@@ -19,7 +19,7 @@ descriptor (`button — Share`, without a `×N`). No hand-written anchor labels.
   `gone` → a "Not on this page" toast, and the chip then wears the
   `location-disabled` icon and says so in its tooltip; a later click looks
   again. Every miss is logged to the browser channel `show-me`
-  (`~/.singularity/worktrees/<wt>/logs/show-me.jsonl`): the path and element
+  (`~/.equin/worktrees/<wt>/logs/show-me.jsonl`): the path and element
   asked for, the URL, and `resolveUiContext`'s `near` — the same element
   elsewhere (its path, shown or not) and the controls shown where the path
   points. Read it before trying to reproduce a "Not on this page". A tag with no `element` draws a disabled-looking chip whose click
