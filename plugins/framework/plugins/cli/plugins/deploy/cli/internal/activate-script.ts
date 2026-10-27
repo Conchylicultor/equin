@@ -13,6 +13,7 @@ import {
   releaseDir,
   type InstallLayout,
 } from "@plugins/apps/plugins/deploy/plugins/deployments/core";
+import { deploySecretsVisibilityEndpoint } from "@plugins/apps/plugins/deploy/plugins/deploy-secrets/core";
 import { sq } from "./converge-script";
 import { READY_ATTEMPTS, READY_INTERVAL_SEC } from "./target";
 
@@ -61,6 +62,8 @@ CACHE=${sq(`${install.runtimeDir}/equin-release`)}
 STALE=${sq(`${install.runtimeDir}/.stale-`)}$$
 READY_URL=${sq(`${base}/api/health/ready`)}
 HEALTH_URL=${sq(`${base}/api/health`)}
+SECRETS_URL=${sq(`${base}${deploySecretsVisibilityEndpoint.path}`)}
+CRED_DIR=${sq(install.credentialsDir)}
 RUN_ID=${sq(runId)}
 
 if [ ! -s "$RELEASE_DIR/$BINARY" ]; then
@@ -142,10 +145,11 @@ echo "[+] current -> $RELEASE_DIR (was: \${PREV:-<none>})"
 
 systemctl restart "$UNIT"
 
-# ── The health gate. Three outcomes, deliberately distinguished:
+# ── The health gate. Four outcomes, deliberately distinguished:
 #     ok=1  ready AND serving the runId we shipped   → success
 #     ok=0  never became ready within the window     → "not up"
 #     ok=2  ready, but /api/health names another build → the flip did not take
+#     ok=3  serving, but a deploy secret is unreadable  → see below
 ok=0
 body=""
 for _ in $(seq 1 ${READY_ATTEMPTS}); do
@@ -160,14 +164,45 @@ if [ "$ok" -eq 1 ]; then
   printf '%s' "$body" | grep -Eq '"runId"[[:space:]]*:[[:space:]]*"'"$RUN_ID"'"' || ok=2
 fi
 
+# ok=3  serving, but cannot read a deploy secret converge installed. A secret
+#       is approved, encrypted and loaded by systemd, yet only the app reading
+#       it proves it arrived — the runtime tree between them (launcher →
+#       gateway → backend) has dropped one silently before. Asked of the
+#       running app over the host-only route, through the SAME read its
+#       consumers use; the answer names keys, never values.
+unreadable=""
+secrets=""
+if [ "$ok" -eq 1 ] && [ -d "$CRED_DIR" ]; then
+  if [ ! -x "$CRED_DIR" ]; then
+    echo "gate: cannot list $CRED_DIR (ship must run as root)" >&2
+    exit 1
+  fi
+  keys=""
+  for _f in "$CRED_DIR"/*.cred; do
+    [ -e "$_f" ] || continue
+    _k="$(basename "$_f" .cred)"
+    keys="\${keys:+$keys,}$_k"
+  done
+  if [ -n "$keys" ]; then
+    secrets="$(curl -fsS -m 5 "$SECRETS_URL?keys=$keys" 2>&1 || true)"
+    for _k in \${keys//,/ }; do
+      printf '%s' "$secrets" | grep -Eq '"'"$_k"'"[[:space:]]*:[[:space:]]*"set"' || unreadable="$unreadable $_k"
+    done
+    if [ -n "$unreadable" ]; then ok=3; else echo "[ok] the app reads its deploy secrets: $keys"; fi
+  fi
+fi
+
 if [ "$ok" -ne 1 ]; then
   if [ "$ok" -eq 0 ]; then
     echo "gate: $UNIT never became ready at $READY_URL within ${
       READY_ATTEMPTS * READY_INTERVAL_SEC
     }s" >&2
-  else
+  elif [ "$ok" -eq 2 ]; then
     echo "gate: ready, but /api/health does not report the shipped runId $RUN_ID:" >&2
     printf '%s\\n' "$body" >&2
+  else
+    echo "gate: serving, but the app cannot read deploy secret(s):$unreadable — they are approved and installed in $CRED_DIR, yet do not reach the backend. The app answered:" >&2
+    printf '%s\\n' "$secrets" >&2
   fi
   # The trap does the revert and prints the journal — one recovery path for
   # every failure mode, not one per branch that remembered.

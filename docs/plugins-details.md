@@ -1922,7 +1922,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/website/pages/download`
                   - `apps/website/pages/foundations`
                   - `apps/website/shell`
-                - Endpoint callers: `host-only`
+                - Endpoint callers:
+                  - `deploy-secrets`
+                  - `host-only`
               - Exemptions:
                 - Exempts itself from:
                   - `ids:pk-declared` — `server/internal/tables.ts` (debt)
@@ -2002,6 +2004,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Cross-plugin:
                 - Imported by:
                   - `apps/deploy/analytics/collect`
+                  - `apps/deploy/deploy-secrets`
                   - `apps/deploy/site-messages/intake`
               - Server:
                 - Exports (values):
@@ -2085,17 +2088,32 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Uses:
                   - `apps/deploy/deploy-history.DeployRunItemActions`
                   - `primitives/launch/investigate.InvestigateAction`
-        - **`deploy-secrets`** — readDeploySecret(decl) reads an approved deploy secret from the box's environment, as a set/unset state.
-          - Cross-plugin:
-            - Imported by: `apps/deploy/site-messages/intake`
+        - **`deploy-secrets`** — readDeploySecret(decl) reads an approved deploy secret on the box, as a set/unset state, through the DeploySecretSource host service (the machine half reads the credential systemd decrypted into the service's credentials directory). The host-only GET /api/host-only/deploy-secrets answers set/unset per named key (never a value) — what ship's health gate asks of the running app.
           - Server:
-            - Exports (types): `DeploySecretValue`
-            - Exports (values): `readDeploySecret`
+            - Contributes: `host-service:deploy-secrets.source` "deploy-secrets.source"
+            - Uses:
+              - `apps/deploy/analytics/host-only.hostOnly`
+              - `infra/endpoints.implement`
+            - Exports (types):
+              - `DeploySecretSourceImpl`
+              - `DeploySecretValue`
+            - Exports (values):
+              - `DeploySecretSource`
+              - `readDeploySecret`
+            - Routes: `GET /api/host-only/deploy-secrets`
           - Core:
+            - Uses:
+              - `infra/endpoints.defineEndpoint`
+              - `packages/list-bound.cappedRecord`
             - Exports (types): `DeploySecret`
             - Exports (values):
               - `defineDeploySecret`
               - `DEPLOY_SECRET_KEY_PATTERN`
+              - `deploySecretsVisibilityEndpoint`
+              - `DeploySecretVisibilitySchema`
+              - `MAX_VISIBILITY_KEYS`
+          - Cross-plugin:
+            - Imported by: `apps/deploy/site-messages/intake`
           - Plugins:
             - **`approvals`** — Secrets section of a deployment's page: every deploy secret its composition's closure declares as a DataView (key, requesting plugin, description, status approved / new / value changed / missing value) with per-row Set value (a password dialog) and Approve (no approve-all). Shown only when the composition needs a secret, and open by default while one waits on the user. Deploy-secret approvals on the local machine: values in the secrets store (namespace deploy-secrets), per-deployment grants of a value's HMAC fingerprint (deploy_secret_grants), the deploy gate that ends a run needs-approval while any secret its composition's closure declares is missing, new or changed, the deploy-secrets.status live value behind the Secrets section, and the browser-refusing endpoint converge reads the approved env from.
               - Web:
@@ -28855,8 +28873,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 227 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
-          - `apps` ×61
+        - Imported by: 228 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+          - `apps` ×62
           - `conversations` ×32
           - `page` ×21
           - `infra` ×20
@@ -33217,8 +33235,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `createKeyedMutex`
     - **`list-bound`** — A list's bound, declared in its zod schema: cappedList / cappedRecord (a checked max) and wholeList / wholeRecord (loaded whole, with a written reason), tagged in _def so the tag survives zod's clones; listShapeOf walks every array, record, map and set a schema reaches and reports each one's bound and the bare ones, listBoundsOf refuses a bare one.
       - Cross-plugin:
-        - Imported by: 91 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
-          - `apps` ×15
+        - Imported by: 92 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
+          - `apps` ×16
           - `conversations` ×13
           - `infra` ×13
           - `debug` ×12

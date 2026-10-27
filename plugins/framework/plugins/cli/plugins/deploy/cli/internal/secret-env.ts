@@ -49,7 +49,7 @@ export function secretEnvStdin(entries: readonly SecretEntry[]): string {
       }
       if (!DEPLOY_SECRET_VALUE_PATTERN.test(value)) {
         throw new Error(
-          `the value of deploy secret ${key} has characters an env file cannot hold verbatim.`,
+          `the value of deploy secret ${key} has characters converge's stdin lines cannot carry verbatim.`,
         );
       }
       return `${key}=${value}\n`;

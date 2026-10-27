@@ -113,6 +113,17 @@ export interface InstallLayout {
   readonly dataDir: string;
   /** `EnvironmentFile` (0600, `root:svc-<c>`) carrying the per-install values. */
   readonly envFile: string;
+  /**
+   * The approved deploy secrets, one `systemd-creds`-encrypted `<KEY>.cred`
+   * file each (0700 `root`). Only systemd reads them: it decrypts each into the
+   * service's own credentials directory when the unit starts.
+   */
+  readonly credentialsDir: string;
+  /**
+   * The instance drop-in naming each credential (`LoadCredentialEncrypted=`).
+   * Per instance, because the unit template is shared by every composition.
+   */
+  readonly credentialsDropIn: string;
   /** This composition's Caddy site block. */
   readonly caddySitePath: string;
 }
@@ -120,16 +131,19 @@ export interface InstallLayout {
 /** Derive one composition's whole host layout from its name. */
 export function deriveInstall(compositionId: string): InstallLayout {
   const installDir = `${INSTALL_ROOT}/${compositionId}`;
+  const unit = `equin@${compositionId}.service`;
   return Object.freeze({
     compositionId,
     runUser: `svc-${compositionId}`,
-    unit: `equin@${compositionId}.service`,
+    unit,
     installDir,
     releasesDir: `${installDir}/releases`,
     currentLink: `${installDir}/current`,
     runtimeDir: `${installDir}/runtime`,
     dataDir: `${installDir}/data`,
     envFile: `${installDir}/env`,
+    credentialsDir: `${installDir}/credentials`,
+    credentialsDropIn: `/etc/systemd/system/${unit}.d/deploy-secrets.conf`,
     caddySitePath: `${CADDY_SITES_DIR}/${compositionId}.caddy`,
   });
 }

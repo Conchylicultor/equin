@@ -251,7 +251,9 @@ The dashboard's Events panel expands an event into these rows.
     - `apps/website/pages/download`
     - `apps/website/pages/foundations`
     - `apps/website/shell`
-  - Endpoint callers: `host-only`
+  - Endpoint callers:
+    - `deploy-secrets`
+    - `host-only`
 - Exemptions:
   - Exempts itself from:
     - `ids:pk-declared` — `server/internal/tables.ts` (debt)

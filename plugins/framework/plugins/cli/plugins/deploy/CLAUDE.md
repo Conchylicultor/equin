@@ -33,8 +33,11 @@ by eye if both are in one place.
 the deployment's approved env (refusing, before any host mutation, while a secret is
 missing, new or changed — `apps/deploy/deploy-secrets`), generates the script from the
 KEYS alone, and hands the `KEY=value` lines to `runScript`'s `stdin`; the script reads
-them first thing (`SECRET_ENV_SH`) into the 0600 env file. No value is in argv, the
-uploaded script or the transcript.
+them first thing (`SECRET_ENV_SH`) and encrypts each into a systemd credential
+(`SECRET_CREDENTIALS_SH`) — never into the env file. No value is in argv, the
+uploaded script or the transcript. Ship's health gate then asks the running app
+whether it can read every installed credential, and fails the ship if not
+(`apps/deploy/deploy-secrets` CLAUDE.md, *On the box*).
 
 Both generated scripts send their progress to **stderr** (`exec 1>&2`): a FAILED
 `sshRun` returns stderr only, and the failing run is the one whose log matters.

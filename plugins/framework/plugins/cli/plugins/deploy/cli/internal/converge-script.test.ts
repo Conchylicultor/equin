@@ -28,6 +28,7 @@ import { HOST_ONLY_PREFIX } from "@plugins/apps/plugins/deploy/plugins/analytics
 import {
   PUT_HELPER_SH,
   RESTART_GATE_SH,
+  SECRET_CREDENTIALS_SH,
   caddySite,
   convergeScript,
 } from "./converge-script";
@@ -111,9 +112,160 @@ describe("convergeScript (idempotence contract)", () => {
       "$SITE",
       "$CADDYFILE",
       "$UNIT_PATH",
+      "$DROPIN",
     ]) {
       expect(text).toContain(`if put "${target}"`);
     }
+  });
+
+  test("no secret is written into the env file", () => {
+    const envBlock = /\(\n {2}umask 077[\s\S]*?"\$ENV_FILE\.new"\n\)/.exec(
+      script(["equin.ai"]),
+    );
+    expect(envBlock).not.toBeNull();
+    expect(envBlock?.[0]).not.toContain("SECRET");
+  });
+});
+
+/**
+ * The credentials step, run for real against a stub `systemd-creds` (its
+ * "ciphertext" is the name, the value and a nonce — randomized like the real
+ * one, so equality can only come from decrypting) and a stub `systemctl`. What
+ * is under test is the decision: what is (re)encrypted, kept, removed, which
+ * drop-in lands, when systemd is reloaded — and that no value is ever an argv.
+ */
+describe("the deploy-secret credentials", () => {
+  let caseIndex = 0;
+
+  function sandbox() {
+    const dir = join(tmp, `creds-${caseIndex++}`);
+    const bin = join(dir, "bin");
+    mkdirSync(bin, { recursive: true });
+    writeFileSync(
+      join(bin, "systemd-creds"),
+      `#!/bin/bash
+printf '%s\\n' "$*" >> ${JSON.stringify(join(dir, "argv.log"))}
+verb=$1; name=\${2#--name=}
+if [ "$verb" = encrypt ]; then
+  name=\${3#--name=}; out=$5
+  printf 'ENC:%s:%s:%s' "$name" "$(cat)" "$RANDOM$RANDOM" > "$out"
+elif [ "$verb" = decrypt ]; then
+  IFS=: read -r tag n v _ < "$3" || true
+  [ "$tag" = ENC ] && [ "$n" = "$name" ] || exit 1
+  printf '%s' "$v"
+fi
+`,
+      { mode: 0o755 },
+    );
+    writeFileSync(
+      join(bin, "systemctl"),
+      `#!/bin/bash
+printf '%s\\n' "$*" >> ${JSON.stringify(join(dir, "systemctl.log"))}
+`,
+      { mode: 0o755 },
+    );
+    return dir;
+  }
+
+  async function converge(dir: string, lines: Record<string, string>) {
+    const keys = Object.keys(lines).join(" ");
+    const envLines = Object.entries(lines)
+      .map(([k, v]) => `${k}=${v}`)
+      .join("\n");
+    const result = await bash(
+      `set -euo pipefail
+export PATH=${JSON.stringify(join(dir, "bin"))}:$PATH
+SECRET_KEYS=${JSON.stringify(keys)}
+SECRET_ENV_LINES=${JSON.stringify(envLines)}
+CRED_DIR=${JSON.stringify(join(dir, "credentials"))}
+DROPIN_DIR=${JSON.stringify(join(dir, "unit.d"))}
+DROPIN="$DROPIN_DIR/deploy-secrets.conf"
+${PUT_HELPER_SH}
+${SECRET_CREDENTIALS_SH}`,
+      { cwd: dir },
+    );
+    const read = (name: string) =>
+      existsSync(join(dir, name)) ? readFileSync(join(dir, name), "utf8") : "";
+    return {
+      ...result,
+      argv: read("argv.log"),
+      reloads: read("systemctl.log").split("\n").filter(Boolean).length,
+      dropIn: read("unit.d/deploy-secrets.conf"),
+    };
+  }
+
+  test("a fresh host gets one encrypted credential per key and its drop-in", async () => {
+    const dir = sandbox();
+    const r = await converge(dir, { RESEND_API_KEY: "re_secret_1" });
+    expect(r.stderr).toBe("");
+    expect(r.code).toBe(0);
+    expect(
+      readFileSync(join(dir, "credentials/RESEND_API_KEY.cred"), "utf8"),
+    ).toStartWith("ENC:RESEND_API_KEY:re_secret_1:");
+    expect(statSync(join(dir, "credentials")).mode & 0o777).toBe(0o700);
+    expect(r.dropIn).toContain(
+      `LoadCredentialEncrypted=RESEND_API_KEY:${join(dir, "credentials")}/RESEND_API_KEY.cred`,
+    );
+    expect(r.reloads).toBe(1);
+  });
+
+  test("the value is never an argv — only the key is", async () => {
+    const dir = sandbox();
+    const r = await converge(dir, { RESEND_API_KEY: "re_secret_1" });
+    expect(r.argv).toContain("--name=RESEND_API_KEY");
+    expect(r.argv).not.toContain("re_secret_1");
+  });
+
+  test("an unchanged value is kept byte for byte, with no reload", async () => {
+    const dir = sandbox();
+    await converge(dir, { RESEND_API_KEY: "re_secret_1" });
+    const cred = join(dir, "credentials/RESEND_API_KEY.cred");
+    const before = readFileSync(cred, "utf8");
+    const r = await converge(dir, { RESEND_API_KEY: "re_secret_1" });
+    expect(r.stdout + r.stderr).toContain("[=] credential RESEND_API_KEY");
+    expect(readFileSync(cred, "utf8")).toBe(before);
+    expect(r.reloads).toBe(1); // still only the first run's
+  });
+
+  test("a rotated value is re-encrypted", async () => {
+    const dir = sandbox();
+    await converge(dir, { RESEND_API_KEY: "re_secret_1" });
+    const r = await converge(dir, { RESEND_API_KEY: "re_secret_2" });
+    expect(r.stdout + r.stderr).toContain(
+      "[~] encrypted credential RESEND_API_KEY",
+    );
+    expect(
+      readFileSync(join(dir, "credentials/RESEND_API_KEY.cred"), "utf8"),
+    ).toStartWith("ENC:RESEND_API_KEY:re_secret_2:");
+  });
+
+  test("a key no longer required is removed with its drop-in", async () => {
+    const dir = sandbox();
+    await converge(dir, { RESEND_API_KEY: "re_secret_1" });
+    const r = await converge(dir, {});
+    expect(r.code).toBe(0);
+    expect(existsSync(join(dir, "credentials/RESEND_API_KEY.cred"))).toBe(
+      false,
+    );
+    expect(existsSync(join(dir, "unit.d/deploy-secrets.conf"))).toBe(false);
+    expect(r.reloads).toBe(2);
+  });
+
+  test("no secrets and no systemd-creds: nothing to do, nothing required", async () => {
+    const dir = sandbox();
+    rmSync(join(dir, "bin/systemd-creds"));
+    const r = await converge(dir, {});
+    expect(r.code).toBe(0);
+    expect(r.reloads).toBe(0);
+  });
+
+  test("a secret but no systemd-creds fails before writing anything", async () => {
+    const dir = sandbox();
+    rmSync(join(dir, "bin/systemd-creds"));
+    const r = await converge(dir, { RESEND_API_KEY: "re_secret_1" });
+    expect(r.code).not.toBe(0);
+    expect(r.stderr).toContain("systemd-creds is missing");
+    expect(existsSync(join(dir, "credentials"))).toBe(false);
   });
 });
 
@@ -135,6 +287,8 @@ describe("the restart gate", () => {
     mono?: string;
     envMtime: number;
     unitMtime: number;
+    /** The credentials dir's mtime; omitted = no credentials on this host. */
+    credMtime?: number;
   }): Promise<{ restarted: boolean; log: string }> {
     const dir = join(tmp, `gate-${caseIndex++}`);
     const bin = join(dir, "bin");
@@ -144,6 +298,7 @@ describe("the restart gate", () => {
       `cpu 1 2 3\nbtime ${BTIME}\nprocesses 9\n`,
     );
 
+    if (opts.credMtime !== undefined) mkdirSync(join(dir, "credentials"));
     const restartMarker = join(dir, "restarted");
     writeFileSync(
       join(bin, "systemctl"),
@@ -164,6 +319,7 @@ exit 0
 case "\${3}" in
   *env) echo ${opts.envMtime} ;;
   *unit) echo ${opts.unitMtime} ;;
+  *credentials) echo ${opts.credMtime ?? 0} ;;
   *) echo 0 ;;
 esac
 `,
@@ -176,6 +332,8 @@ export PATH=${JSON.stringify(bin)}:$PATH
 export PROC_STAT=${JSON.stringify(join(dir, "proc-stat"))}
 ENV_FILE=${JSON.stringify(join(dir, "env"))}
 UNIT_PATH=${JSON.stringify(join(dir, "unit"))}
+CRED_DIR=${JSON.stringify(join(dir, "credentials"))}
+DROPIN_DIR=${JSON.stringify(join(dir, "unit.d"))}
 UNIT=equin@website.service
 ${RESTART_GATE_SH}`,
       { cwd: dir },
@@ -210,6 +368,24 @@ ${RESTART_GATE_SH}`,
   test("a newer unit template restarts too — daemon-reload alone would not", async () => {
     const r = await gate({ envMtime: BTIME + 50, unitMtime: BTIME + 100 });
     expect(r.restarted).toBe(true);
+  });
+
+  test("a credential added, rotated or removed restarts — the dir's mtime moves", async () => {
+    const r = await gate({
+      envMtime: BTIME + 50,
+      unitMtime: BTIME + 50,
+      credMtime: BTIME + 100,
+    });
+    expect(r.restarted).toBe(true);
+  });
+
+  test("an older credentials dir alone does not restart", async () => {
+    const r = await gate({
+      envMtime: BTIME + 50,
+      unitMtime: BTIME + 50,
+      credMtime: BTIME + 40,
+    });
+    expect(r.restarted).toBe(false);
   });
 
   test("same second as the restart counts as current, not as drift", async () => {

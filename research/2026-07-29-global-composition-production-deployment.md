@@ -516,6 +516,17 @@ explicit model rather than "from the secrets store":
   0600 `root:svc-<c>` env file beside `SINGULARITY_LISTEN`; a key no longer required is
   simply not written, so removing a secret needs no approval. The box reads it with
   `readDeploySecret`, which answers `set` / `unset`.
+  *(Amended 2026-10-26: secrets are no longer env-file lines.)* The env-file delivery
+  never reached the app: the runtime tree starts every process from a DECLARED
+  environment (launcher → gateway → backend), so `RESEND_API_KEY` was dropped between
+  systemd and the backend, the contact form recorded "not configured", and nothing
+  failed. Each approved secret is now an encrypted systemd credential
+  (`systemd-creds encrypt --with-key=host`, loaded with `LoadCredentialEncrypted=` from
+  an instance drop-in), read by the backend from `$CREDENTIALS_DIRECTORY` — a file
+  nothing inherits, rather than a variable every child process does. Ship's health gate
+  asks the running app whether it can read each installed credential and fails the ship
+  if not. The env file keeps only the derived, non-secret values. Details:
+  `plugins/apps/plugins/deploy/plugins/deploy-secrets/CLAUDE.md`, *On the box*.
 - **The secrets STORE stays off the box, and that is enforced.** `infra/secrets` is
   hosted on the *central* runtime, which a released bundle has none of, so converge still
   **refuses a composition whose closure includes `infra/secrets`**: the local approval

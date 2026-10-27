@@ -1,6 +1,7 @@
 /**
- * Env-var spelling of a deploy secret's key: what the box's EnvironmentFile
- * holds it under, so it must be a valid shell variable name.
+ * A deploy secret's key: the name of its credential on the box (the
+ * `<KEY>.cred` file, the systemd credential id), spelled like an env-var name
+ * so it is safe as a file name, a unit-file word and a URL query value as is.
  */
 export const DEPLOY_SECRET_KEY_PATTERN = /^[A-Z][A-Z0-9_]*$/;
 
@@ -11,7 +12,7 @@ export const DEPLOY_SECRET_KEY_PATTERN = /^[A-Z][A-Z0-9_]*$/;
  */
 export interface DeploySecret {
   readonly kind: "deploy-secret";
-  /** The env var it is delivered as on the box (`RESEND_API_KEY`). */
+  /** The credential it is delivered as on the box (`RESEND_API_KEY`). */
   readonly key: string;
   /** What it is for, in one sentence — shown on the approval card. */
   readonly description: string;

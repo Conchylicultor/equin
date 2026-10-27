@@ -45,6 +45,7 @@ plugin ships on the box, and SSH must not.
 - Cross-plugin:
   - Imported by:
     - `apps/deploy/analytics/collect`
+    - `apps/deploy/deploy-secrets`
     - `apps/deploy/site-messages/intake`
 - Server:
   - Exports (values):

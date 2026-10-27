@@ -27,6 +27,7 @@
  * Design: `research/2026-07-31-deploy-converge-idempotence.md`, amending D3 of
  * `research/2026-07-29-global-composition-production-deployment.md`.
  */
+import { dirname } from "node:path";
 import {
   CADDY_SITES_DIR,
   INSTALL_ROOT,
@@ -103,14 +104,24 @@ put() {
  * would never fix it. Ship restarts the unit itself, so the process is newer
  * than both files and a converge after a ship correctly does nothing.
  *
- * Reads `$ENV_FILE`, `$UNIT_PATH` and `$UNIT`. Exported as its own constant so
- * `converge-script.test.ts` can run the exact text that ships against stubbed
- * `systemctl` / `stat` / `/proc/stat` and assert the whole decision table.
+ * Reads `$ENV_FILE`, `$UNIT_PATH` and `$UNIT`, plus — when set and present —
+ * `$CRED_DIR` and `$DROPIN_DIR`: the deploy secrets' credential files and their
+ * drop-in. Those two are DIRECTORIES on purpose: a dir's mtime moves whenever an
+ * entry is added, replaced (`mv`) or removed, so a credential rotated, added or
+ * dropped is "configuration newer than the process" with no file to stat.
+ * Exported as its own constant so `converge-script.test.ts` can run the exact
+ * text that ships against stubbed `systemctl` / `stat` / `/proc/stat` and
+ * assert the whole decision table.
  */
 export const RESTART_GATE_SH = `newest_config=0
 for f in "$ENV_FILE" "$UNIT_PATH"; do
   # Written as an \`if\` rather than \`[ … ] && x=$m\`, whose non-zero status on
   # the false branch would trip \`set -e\`.
+  m="$(stat -c %Y "$f")"
+  if [ "$m" -gt "$newest_config" ]; then newest_config="$m"; fi
+done
+for f in "\${CRED_DIR:-}" "\${DROPIN_DIR:-}"; do
+  if [ -z "$f" ] || [ ! -e "$f" ]; then continue; fi
   m="$(stat -c %Y "$f")"
   if [ "$m" -gt "$newest_config" ]; then newest_config="$m"; fi
 done
@@ -142,7 +153,7 @@ else
 fi`;
 
 /**
- * The deploy secrets' half of the env file, read from the script's **stdin**.
+ * The approved deploy secrets, read from the script's **stdin**.
  *
  * Converge is handed the approved `KEY=value` lines over the SSH session's
  * stdin (`runScript`'s `stdin`), never in argv and never in the uploaded
@@ -150,7 +161,7 @@ fi`;
  * transcript. `render_secret_env` reads those lines, checks that the keys are
  * EXACTLY `$SECRET_KEYS` (the ones the script was generated for — not
  * secret, so they ride in the script), each once, and prints them back for
- * the env file. Every diagnostic it writes names the key alone.
+ * {@link SECRET_CREDENTIALS_SH}. Every diagnostic it writes names the key alone.
  *
  * It runs once, at the top of the script and before anything else can read
  * stdin (`apt-get` would), captured into `SECRET_ENV_LINES`; a refusal
@@ -187,6 +198,99 @@ export const SECRET_ENV_SH = `render_secret_env() {
     esac
   done
 }`;
+
+/**
+ * The deploy secrets as encrypted systemd credentials — never environment
+ * variables. An env var is inherited by every process the app starts, readable
+ * in `/proc/<pid>/environ` and printed by any environment dump; it also has to
+ * survive the runtime tree's declared-environment filters (launcher → gateway →
+ * backend), which is exactly where `RESEND_API_KEY` was silently dropped.
+ *
+ * Each approved secret becomes `$CRED_DIR/<KEY>.cred`, encrypted by
+ * `systemd-creds` with the host key (`/var/lib/systemd/credential.secret`,
+ * root-only) and bound to its name, so a file renamed to another key fails to
+ * decrypt. The instance drop-in `$DROPIN` names each one in a
+ * `LoadCredentialEncrypted=` line: on every start systemd decrypts them into the
+ * service's private, in-memory credentials directory (`$CREDENTIALS_DIRECTORY`,
+ * readable only by the run user, gone when the service stops), and the backend
+ * opens `<dir>/<KEY>` (`readDeploySecret`). Host key, not TPM: a Hetzner VM has
+ * none, and a TPM-bound credential stops decrypting after a firmware change —
+ * a site that will not start.
+ *
+ * Idempotence differs from {@link PUT_HELPER_SH} for one reason: encryption is
+ * randomized, so the same value never produces the same bytes. An existing
+ * credential is therefore DECRYPTED and compared with the approved value, and
+ * left untouched (mtime and all, so the restart gate stays quiet) when equal.
+ * The value moves only through builtins (`printf`, `[`), a pipe and a command
+ * substitution — never an argv, never a temp file.
+ *
+ * Reads `$SECRET_KEYS`, `$SECRET_ENV_LINES`, `$CRED_DIR`, `$DROPIN`,
+ * `$DROPIN_DIR` and `put`; `$SYSTEMD_CREDS` overrides the binary in a test.
+ * Exported as its own constant so the test runs the exact text that ships.
+ */
+export const SECRET_CREDENTIALS_SH = `creds="\${SYSTEMD_CREDS:-systemd-creds}"
+# The value of key $1 out of $SECRET_ENV_LINES, by parameter expansion alone.
+secret_value() {
+  _rest="$SECRET_ENV_LINES"
+  while [ -n "$_rest" ]; do
+    _line="\${_rest%%$'\\n'*}"
+    if [ "$_line" = "$_rest" ]; then _rest=""; else _rest="\${_rest#*$'\\n'}"; fi
+    case "$_line" in "$1="*) printf '%s' "\${_line#*=}"; return 0 ;; esac
+  done
+  echo "converge: secret $1 is missing from the delivered lines" >&2
+  return 1
+}
+if [ -n "$SECRET_KEYS" ]; then
+  if ! command -v "$creds" >/dev/null 2>&1; then
+    echo "converge: $creds is missing — deploy secrets are delivered as encrypted systemd credentials (systemd 250+)" >&2
+    exit 1
+  fi
+  install -d -m 700 "$CRED_DIR"
+  for _k in $SECRET_KEYS; do
+    _v="$(secret_value "$_k")"
+    _f="$CRED_DIR/$_k.cred"
+    if [ -f "$_f" ] && [ "$("$creds" decrypt --name="$_k" "$_f" - 2>/dev/null || true)" = "$_v" ]; then
+      echo "[=] credential $_k"
+    else
+      ( umask 077; printf '%s' "$_v" | "$creds" encrypt --with-key=host --name="$_k" - "$_f.new" )
+      chmod 600 "$_f.new"
+      # Not \`put\`: encryption is randomized, so equality was decided above.
+      mv -f "$_f.new" "$_f"
+      echo "[~] encrypted credential $_k"
+    fi
+  done
+fi
+# A credential no longer required is removed — never left to be loaded.
+if [ -d "$CRED_DIR" ]; then
+  for _f in "$CRED_DIR"/*.cred; do
+    [ -e "$_f" ] || continue
+    _k="$(basename "$_f" .cred)"
+    case " $SECRET_KEYS " in
+      *" $_k "*) ;;
+      *) rm -f "$_f"; echo "[-] removed credential $_k (no longer required)" ;;
+    esac
+  done
+fi
+# The drop-in naming them. Its dir is kept even when empty: the restart gate
+# reads that dir's mtime, which a removed drop-in must still move.
+install -d -m 755 "$DROPIN_DIR"
+if [ -n "$SECRET_KEYS" ]; then
+  {
+    echo "# GENERATED by \\\`./equin deploy converge\\\` — do not edit."
+    echo "[Service]"
+    for _k in $SECRET_KEYS; do echo "LoadCredentialEncrypted=$_k:$CRED_DIR/$_k.cred"; done
+  } > "$DROPIN.new"
+  if put "$DROPIN" 644 -; then
+    systemctl daemon-reload
+    echo "[~] wrote $DROPIN (daemon-reload)"
+  else
+    echo "[=] $DROPIN"
+  fi
+elif [ -e "$DROPIN" ]; then
+  rm -f "$DROPIN"
+  systemctl daemon-reload
+  echo "[-] removed $DROPIN (no deploy secrets)"
+fi`;
 
 /**
  * The systemd unit — ONE template file for every composition, so nothing
@@ -269,7 +373,7 @@ export function convergeScript(opts: {
   sshPort: number;
   sshUser: string;
   /**
-   * The deploy secrets this deployment's env file must hold — KEYS only. The
+   * The deploy secrets this deployment's credentials must hold — KEYS only. The
    * values never pass through here: they arrive on the script's stdin
    * (`SECRET_ENV_SH`), so the generated script cannot contain one.
    */
@@ -277,8 +381,6 @@ export function convergeScript(opts: {
 }): string {
   const { install, hostnames, loopbackPort, sshPort, sshUser, secretKeys } =
     opts;
-  const secretsNote =
-    secretKeys.length > 0 ? `; secrets: ${secretKeys.join(" ")}` : "";
   const caddyfile = "/etc/caddy/Caddyfile";
   const keyring = "/usr/share/keyrings/caddy-stable-archive-keyring.gpg";
   const sourceList = "/etc/apt/sources.list.d/caddy-stable.list";
@@ -315,6 +417,9 @@ RELEASES_DIR=${sq(install.releasesDir)}
 RUNTIME_DIR=${sq(install.runtimeDir)}
 DATA_DIR=${sq(install.dataDir)}
 ENV_FILE=${sq(install.envFile)}
+CRED_DIR=${sq(install.credentialsDir)}
+DROPIN=${sq(install.credentialsDropIn)}
+DROPIN_DIR=${sq(dirname(install.credentialsDropIn))}
 UNIT_PATH=${sq(UNIT_TEMPLATE_PATH)}
 CADDYFILE=${sq(caddyfile)}
 CADDY_SITES=${sq(CADDY_SITES_DIR)}
@@ -372,10 +477,8 @@ else
 fi
 
 # ── 4. The EnvironmentFile: the per-DEPLOYMENT values the shared unit template
-#       cannot hold — the listen address, plus the deploy secrets this
-#       deployment's closure declares and the user APPROVED for it (read from
-#       stdin above; a secret no longer required is simply not written, so it
-#       is dropped). See the plan, §What goes in \`env\`.
+#       cannot hold — today the listen address. NEVER a secret: those are
+#       credentials (step 4b). See the plan, §What goes in \`env\`.
 #       0600 root:$RUN_USER is safe because systemd (pid 1, root) reads
 #       EnvironmentFile BEFORE dropping to User=, so the service never needs
 #       read access itself. The umask is scoped to a SUBSHELL so the staged file
@@ -388,14 +491,19 @@ fi
 ${envNames("LISTEN")
   .map((n) => `    echo "${n}=${listenAddress(loopbackPort)}"`)
   .join("\n")}
-    if [ -n "$SECRET_ENV_LINES" ]; then printf '%s\\n' "$SECRET_ENV_LINES"; fi
   } > "$ENV_FILE.new"
 )
 if put "$ENV_FILE" 600 "root:$RUN_USER"; then
-  echo "[~] wrote $ENV_FILE (${envName("LISTEN")}=${listenAddress(loopbackPort)}${secretsNote})"
+  echo "[~] wrote $ENV_FILE (${envName("LISTEN")}=${listenAddress(loopbackPort)})"
 else
-  echo "[=] $ENV_FILE (${envName("LISTEN")}=${listenAddress(loopbackPort)}${secretsNote})"
+  echo "[=] $ENV_FILE (${envName("LISTEN")}=${listenAddress(loopbackPort)})"
 fi
+
+# ── 4b. The deploy secrets this deployment's closure declares and the user
+#       APPROVED for it (read from stdin above), as encrypted systemd
+#       credentials (${secretKeys.length > 0 ? secretKeys.join(" ") : "none"}). A secret
+#       no longer required is removed. See \`SECRET_CREDENTIALS_SH\`.
+${SECRET_CREDENTIALS_SH}
 
 # ── 5. Caddy terminates TLS in front; the gateway stays plain HTTP on
 #       loopback. The site file is only written when this deployment declares a

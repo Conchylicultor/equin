@@ -55,12 +55,12 @@ export const DeploySecretRowSchema = z.object({
 export type DeploySecretRow = z.infer<typeof DeploySecretRowSchema>;
 
 /**
- * What a deploy secret's value may be. It is written into a systemd
- * `EnvironmentFile` as `KEY=value`, and that format has quoting and escape
- * rules of its own — so rather than escape, the value is restricted to
- * printable ASCII with no whitespace, quotes, backslash or `$`, which every
- * API key in practice is. A value outside it is refused when it is entered,
- * not discovered on the box.
+ * What a deploy secret's value may be. It travels to the box as one
+ * `KEY=value` line on converge's stdin and is handled there by shell builtins
+ * on its way into `systemd-creds encrypt` — so rather than escape, the value is
+ * restricted to printable ASCII with no whitespace, quotes, backslash or `$`,
+ * which every API key in practice is. A value outside it is refused when it is
+ * entered, not discovered on the box.
  */
 export const DEPLOY_SECRET_VALUE_PATTERN =
   /^[\x21\x23\x25-\x26\x28-\x5b\x5d-\x7e]+$/;

@@ -71,6 +71,12 @@ import {
  * Facts about the host and the user, passed through from the starter when set
  * and never invented. Under systemd, HOME / USER / LOGNAME / SHELL come from
  * the unit's `User=`.
+ *
+ * `CREDENTIALS_DIRECTORY` is systemd's too: where it decrypted the unit's
+ * `LoadCredentialEncrypted=` credentials (a deployed box's deploy secrets,
+ * read by `apps/deploy/deploy-secrets`' `readDeploySecret`). A path, never a
+ * value — the secrets stay files the backend opens on purpose, so no child
+ * process inherits one. Unset everywhere but a deployed box.
  */
 export const RUNTIME_HOST_ENV = [
   "HOME",
@@ -82,6 +88,7 @@ export const RUNTIME_HOST_ENV = [
   "LANG",
   "LC_ALL",
   "LC_CTYPE",
+  "CREDENTIALS_DIRECTORY",
 ] as const;
 
 /**

@@ -228,7 +228,8 @@ honour both:
 - **Every generated file lands through `put`**, which replaces the target only
   when the bytes differ — so an unchanged file keeps its mtime, and `[=]` is a
   comparison rather than a string the step assumed.
-- **The restart is gated on the running process predating `env` / the unit**, not
+- **The restart is gated on the running process predating `env` / the unit / the
+  deploy-secret credentials (their dirs' mtimes)**, not
   on what this run did. That also repairs an install whose last converge wrote a
   new `env` and died before restarting — which a "did I just change it" flag
   never would.
