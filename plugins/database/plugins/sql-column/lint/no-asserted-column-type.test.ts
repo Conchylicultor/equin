@@ -183,7 +183,8 @@ ruleTester.run(
 );
 
 test("every declared message is reached by an invalid case", () => {
-  // `errors` is `number | (string | TestCaseError)[]` — RuleTester also accepts
+  // `errors` is `number | (string | RegExp | TestCaseError)[]` (a RegExp entry
+  // since eslint 10, matching the message text) — RuleTester also accepts
   // a bare COUNT, which asserts how many reports fired and not which. Such a
   // case contributes nothing here, deliberately: rewriting the only case for a
   // message into a count would leave that message unreached, and this test is
@@ -193,7 +194,10 @@ test("every declared message is reached by an invalid case", () => {
       const errors = typeof c === "string" ? [] : c.errors;
       if (!Array.isArray(errors)) return [];
       return errors.flatMap((e) =>
-        typeof e === "object" && e !== null && typeof e.messageId === "string"
+        typeof e === "object" &&
+        e !== null &&
+        !(e instanceof RegExp) &&
+        typeof e.messageId === "string"
           ? [e.messageId]
           : [],
       );
