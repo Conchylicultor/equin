@@ -13,6 +13,7 @@
         "@iconify-json/material-symbols-light": "^1.2.97",
         "@iconify-json/simple-icons": "^1.2.100",
         "@iconify/types": "^2.0.0",
+        "@noble/hashes": "^2.4.0",
         "@parcel/watcher": "^2.6.0",
         "@tanstack/react-query": "^5.104.5",
         "@xyflow/react": "^12.12.0",
@@ -4370,9 +4371,6 @@
     "plugins/packages/plugins/string-hash": {
       "name": "@equin/plugin-packages-string-hash",
       "version": "0.0.1",
-      "dependencies": {
-        "@noble/hashes": "^2.4.0",
-      },
     },
     "plugins/packages/plugins/ticket-line": {
       "name": "@equin/plugin-packages-ticket-line",

@@ -37,6 +37,13 @@ itself, or when main's guard fails too, the hook exits non-zero and the hook
 command blocks. A mistake in the bootstrap files themselves still locks the
 checkout out — keep them tiny.
 
+A fresh worktree runs its guard before anything installs its `node_modules`,
+so the guard's npm imports resolve by walking up into main's root
+`node_modules` — which holds only the ROOT `package.json`'s dependencies. A
+plugin-local dependency anywhere in the guard's closure (contributed `guard/`
+folders included) sends every fresh worktree to main's guard;
+`guards:closure-root-deps-only` keeps the closure to root-declared packages.
+
 Plan: `research/2026-10-26-framework-guard-survives-broken-worktree.md`.
 
 ## The stop guard, and why a subagent needs one

@@ -123,8 +123,69 @@ const bootstrapStandsAlone: Check = {
   },
 };
 
+/** `@scope/name/sub/path` → `@scope/name`; `name/sub` → `name`. */
+function packageName(spec: string): string {
+  const parts = spec.split("/");
+  return spec.startsWith("@") ? parts.slice(0, 2).join("/") : parts[0]!;
+}
+
+/**
+ * A worktree runs its OWN guard proper from the moment it is created — before
+ * anything installs its `node_modules`. Its npm imports then resolve by walking
+ * up from the checkout into main's (worktrees live under main's
+ * `.claude/worktrees/`), and only the ROOT package.json's dependencies sit in
+ * main's root `node_modules`: a plugin's own `package.json` dependency is
+ * installed under that plugin's folder, which the walk never visits. So one
+ * plugin-local package anywhere in the guard's closure (string-hash's
+ * `@noble/hashes`, reached through a contributed guard) fails the load in
+ * every fresh worktree, and main's guard judges every call until it builds.
+ *
+ * Measured from `bin/hook.ts` with literal dynamic edges followed, so the
+ * contributed `guard/` folders (`guard.generated.ts`'s loaders) are in.
+ */
+const closureRootDepsOnly: Check = {
+  id: "guards:closure-root-deps-only",
+  description:
+    "every npm package the guard proper (guards/bin/hook.ts + contributed guard/ folders) loads is a root package.json dependency, so an uninstalled worktree resolves it from main's root node_modules",
+  async run(ctx: CheckContext): Promise<CheckResult> {
+    const repo = await ctx.repo();
+    const rootPkg = await repo.read("package.json");
+    if (rootPkg === null) throw new Error("the repo has no root package.json");
+    const pkg = JSON.parse(rootPkg) as {
+      dependencies?: Record<string, string>;
+      devDependencies?: Record<string, string>;
+    };
+    const declared = new Set([
+      ...Object.keys(pkg.dependencies ?? {}),
+      ...Object.keys(pkg.devDependencies ?? {}),
+    ]);
+    const closure = await importClosure(repo.root, `${GUARDS_BIN}/hook.ts`, {
+      dynamicImports: "follow-except-command-runs",
+    });
+    const missing = new Map<string, string>();
+    for (const [spec, importers] of closure.external) {
+      if (spec.startsWith("node:") || spec === "bun" || spec.startsWith("bun:"))
+        continue;
+      const name = packageName(spec);
+      if (!declared.has(name) && !missing.has(name))
+        missing.set(name, importers[0]!);
+    }
+    if (missing.size === 0) return { ok: true };
+    const lines = [...missing].map(
+      ([name, importer]) =>
+        `${name}: ${closure.importChain(importer).join(" → ")}`,
+    );
+    return {
+      ok: false,
+      message: `the guard proper loads npm packages the root package.json does not declare, so an uninstalled worktree cannot resolve them and falls back to main's guard:\n    ${lines.join("\n    ")}`,
+      hint: "Declare the package in the root package.json (and drop it from the plugin's own), or keep it out of the guard's import closure.",
+    };
+  },
+};
+
 export default [
   matcherCoversGuards,
   claudeSettingsInSync,
   bootstrapStandsAlone,
+  closureRootDepsOnly,
 ];
