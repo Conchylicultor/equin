@@ -4,5 +4,16 @@
   "version": "0.0.1",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.1"
+  },
+  "dependencyPolicy": {
+    "holds": [
+      {
+        "names": ["@modelcontextprotocol/sdk"],
+        "version": "1.32.2",
+        "reason": "With 1.32.2 installed, type-check fails at server/internal/handle-mcp.ts mountTool's server.registerTool call (TS2589: type instantiation is excessively deep). Checked 2026-10-27: the gated upgrade's probes isolate it to this release, yet registerTool's declaration is unchanged from 1.32.1 (only shared/transport.d.ts differs), so the likely cause is resolution, not the API — its zod range is ^3.25 || ^4.0 and a fresh resolution may give it its own zod 4 beside our held zod 3 (unconfirmed). Retry the next release; if it repeats, settle it with the zod 4 migration (task-1793079250-84skjw).",
+        "issue": "https://github.com/modelcontextprotocol/typescript-sdk/releases",
+        "reviewBy": "2027-01-25"
+      }
+    ]
   }
 }
