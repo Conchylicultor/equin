@@ -28503,6 +28503,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ClaudeAccounts`
             - Exports (values):
               - `addClaudeAccount`
+              - `CLAUDE_TOKEN_ENV`
               - `claudeAccountIds`
               - `claudeAccounts`
               - `ClaudeAccountSchema`

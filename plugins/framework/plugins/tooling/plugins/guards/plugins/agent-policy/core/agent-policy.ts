@@ -87,7 +87,7 @@ export function agentPolicySettings(): AgentPolicySettings {
       PreToolUse: [
         {
           matcher:
-            "Bash|Write|Edit|Read|NotebookEdit|Agent|mcp__claude-in-chrome__.*",
+            "Bash|Write|Edit|Read|NotebookEdit|Agent|ToolSearch|mcp__claude-in-chrome__.*",
           hooks: [{ type: "command", command: PRE_TOOL_USE }],
         },
       ],

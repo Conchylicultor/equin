@@ -2,6 +2,7 @@ export {
   addClaudeAccount,
   claudeAccountIds,
   claudeAccounts,
+  CLAUDE_TOKEN_ENV,
   ClaudeAccountSchema,
   ClaudeAccountsSchema,
   ClaudeTokenSchema,

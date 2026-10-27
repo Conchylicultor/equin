@@ -39,6 +39,7 @@ import { basename, dirname, join } from "node:path";
 import { parseArgs } from "node:util";
 import { ZodError, z } from "zod";
 import { claudeAccountToken } from "@plugins/infra/plugins/claude-cli/plugins/accounts/server";
+import { CLAUDE_TOKEN_ENV } from "@plugins/infra/plugins/claude-cli/plugins/accounts/core";
 import { disclaimArgv } from "@plugins/packages/plugins/spawn-disclaim/core";
 import {
   AGENT_EVENTS_FILE,
@@ -93,18 +94,6 @@ const options = AgentLaunchOptionsSchema.parse(
 // environment. Only Claude Code's own process gets it (`env` below); the
 // system account (null) is Claude Code's own login.
 const oauthToken = await claudeAccountToken(args.account);
-
-// A token account's token (`claude setup-token`) can call the model but
-// carries no claude.ai sign-in, so Claude Code leaves out what needs one —
-// Claude-in-Chrome and the claude.ai connectors — even with `--chrome`, and
-// says nothing. Missing tools are nothing an agent can call and get an error
-// from, so it is told at session start why they are absent and who can fix it.
-const TOKEN_ACCOUNT_NOTE =
-  "This session runs on a Claude token account, not the computer's own Claude Code login. Claude-in-Chrome (mcp__claude-in-chrome__*) and the claude.ai connectors are therefore unavailable in this session, whatever the Chrome extension's state — reconnecting or relaunching the extension does not help. When a task needs the user's own Chrome, say so plainly: the user switches new agents to the system account (the Claude account picker in the health report's Claude Code row), then starts a new conversation (or restarts this one).";
-const appendSystemPrompt =
-  [options.appendSystemPrompt, oauthToken ? TOKEN_ACCOUNT_NOTE : null]
-    .filter((s): s is string => !!s)
-    .join("\n\n") || null;
 
 // ── events.jsonl ──────────────────────────────────────────────────────────
 // Resumes numbering from the file (or, right after a rotation, its newest
@@ -404,12 +393,13 @@ const session = query({
     cwd: options.cwd,
     // Exactly the CLI's harness: its system prompt and the launch's settings
     // sources (CLAUDE.md, hooks, guards, MCP servers). The launch's own
-    // instructions (a preprompt) and the token-account note are appended to
-    // the preset, never replace it.
+    // instructions (a preprompt) are appended to the preset, never replace it.
     systemPrompt: {
       type: "preset",
       preset: "claude_code",
-      ...(appendSystemPrompt ? { append: appendSystemPrompt } : {}),
+      ...(options.appendSystemPrompt
+        ? { append: options.appendSystemPrompt }
+        : {}),
     },
     settingSources: options.settingSources,
     settings: options.settings,
@@ -452,7 +442,7 @@ const session = query({
       ? { sessionId: options.sessionId }
       : {}),
     ...(oauthToken
-      ? { env: { ...process.env, CLAUDE_CODE_OAUTH_TOKEN: oauthToken } }
+      ? { env: { ...process.env, [CLAUDE_TOKEN_ENV]: oauthToken } }
       : {}),
     // Same argv, cwd, env and abort signal the SDK would spawn with — run
     // through `disclaim-exec` when the backend resolved it, which execs the

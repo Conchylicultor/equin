@@ -36,6 +36,7 @@ const NOT_DONE: Record<
     `The file was NOT read: ${stringField(input, "file_path") ?? "(no path)"}. You have not seen its contents.`,
   Agent: () =>
     "No agent was launched. Nothing it would have done has happened.",
+  ToolSearch: () => "No tools were loaded.",
 };
 
 function stringField(

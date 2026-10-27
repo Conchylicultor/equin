@@ -14,5 +14,6 @@ export interface CollectedEntry {
 
 export const guardEntries: CollectedEntry[] = [
   { pluginPath: "apps/plugins/prototypes", id: "apps.prototypes", loader: () => import("@plugins/apps/plugins/prototypes/guard"), dependsOn: [] },
+  { pluginPath: "infra/plugins/claude-cli/plugins/accounts", id: "infra.claude-cli.accounts", loader: () => import("@plugins/infra/plugins/claude-cli/plugins/accounts/guard"), dependsOn: [] },
   { pluginPath: "infra/plugins/mcp/plugins/browser", id: "infra.mcp.browser", loader: () => import("@plugins/infra/plugins/mcp/plugins/browser/guard"), dependsOn: [] },
 ];

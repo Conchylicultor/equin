@@ -12,6 +12,12 @@ import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 /** The account the computer's Claude Code is signed into. */
 export const SYSTEM_ACCOUNT_ID = "system";
 
+/**
+ * The environment variable a token account's token reaches Claude Code in. Its
+ * presence is how a session knows it runs on a token account.
+ */
+export const CLAUDE_TOKEN_ENV = "CLAUDE_CODE_OAUTH_TOKEN";
+
 export const ClaudeAccountSchema = z.object({
   id: z.string().min(1),
   /** The user's name for it: "Work", "Personal". */
