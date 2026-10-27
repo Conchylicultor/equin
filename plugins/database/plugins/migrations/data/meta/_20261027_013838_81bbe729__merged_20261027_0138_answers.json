@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "answers": [
+    {
+      "key": "column:conversations_ext_sdk_agent.turn_ids",
+      "entityType": "column",
+      "entityName": "turn_ids",
+      "action": "create"
+    }
+  ]
+}

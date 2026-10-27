@@ -241,22 +241,15 @@ describe("pendingTurnsOf — which ledger states draw a card", () => {
     expect(pendingTurnsOf([accepted], [], landed)).toEqual([]);
   });
 
-  it("a turn the busy agent absorbed retires on its queued_command attachment", () => {
+  it("a turn folded into a running turn retires on its message, written before the confirmation", () => {
     const sentAt = new Date(Date.now() - 1_000);
     const accepted = row("c", "t1", "accepted", { submittedAt: sentAt });
-    const absorbed: JsonlEvent = {
-      kind: "attachment",
-      at: new Date().toISOString(),
-      subtype: "queued_command",
-      attachment: {
-        type: "queued_command",
-        prompt: "text of t1",
-        source_uuid: "uuid-text of t1",
-      },
-    };
+    // The parser makes the CLI's queued_command attachment the user's message
+    // under its source_uuid, at the time it was queued.
+    const folded = prompt("text of t1", new Date(sentAt.getTime() - 2_000));
     const older = prompt("older", new Date(sentAt.getTime() - 5_000));
     expect(pendingTurnsOf([accepted], [], [older])).toHaveLength(1);
-    expect(pendingTurnsOf([accepted], [], [older, absorbed])).toEqual([]);
+    expect(pendingTurnsOf([accepted], [], [older, folded])).toEqual([]);
   });
 
   it("a row accepted before uuids were recorded keeps the old rule (temporary)", () => {

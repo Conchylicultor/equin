@@ -1,6 +1,6 @@
 {
-  "id": "48c31ec0-ed1a-4324-8e0f-7e161a4191e4",
-  "prevId": "5219360d-92c5-495c-bcd1-027ba083997d",
+  "id": "1f1284dd-9acd-4904-8306-9321d36136bb",
+  "prevId": "48c31ec0-ed1a-4324-8e0f-7e161a4191e4",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -6843,12 +6843,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "last_prompt_text": {
-          "name": "last_prompt_text",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "turn_replied": {
           "name": "turn_replied",
           "type": "boolean",
@@ -6872,6 +6866,13 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
+        },
+        "turn_ids": {
+          "name": "turn_ids",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
         },
         "stopped_at": {
           "name": "stopped_at",
@@ -7213,12 +7214,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "extra_text": {
-          "name": "extra_text",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "error": {
           "name": "error",
           "type": "text",
@@ -7256,12 +7251,6 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
-        },
-        "submitted_text": {
-          "name": "submitted_text",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
         }
       },
       "indexes": {
@@ -8722,38 +8711,6 @@
           "with": {}
         }
       },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.improve_pending_groups": {
-      "name": "improve_pending_groups",
-      "schema": "",
-      "columns": {
-        "task_id": {
-          "name": "task_id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "group_id": {
-          "name": "group_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
@@ -12953,6 +12910,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "status_unverified_since": {
+          "name": "status_unverified_since",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
         "spawned_by": {
           "name": "spawned_by",
           "type": "text",
@@ -13530,6 +13493,38 @@
           "with": {}
         }
       },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.improve_pending_groups": {
+      "name": "improve_pending_groups",
+      "schema": "",
+      "columns": {
+        "task_id": {
+          "name": "task_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "group_id": {
+          "name": "group_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},

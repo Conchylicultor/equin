@@ -38,7 +38,10 @@ describe("transcriptShows", () => {
     // parser makes it the user's message under its source_uuid, at its
     // enqueue time — earlier than the confirmation.
     expect(
-      transcriptShows(turn("accepted", 500), [line("before", 100), line("mine", 300)]),
+      transcriptShows(turn("accepted", 500), [
+        line("before", 100),
+        line("mine", 300),
+      ]),
     ).toBe(true);
   });
 

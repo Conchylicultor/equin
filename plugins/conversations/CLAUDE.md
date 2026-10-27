@@ -75,15 +75,15 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
     - `ConversationTurnCompletedPayload`
     - `IfAlreadyStarted`
     - `LaunchTaskNowResult`
+    - `OutgoingTurn`
     - `QuestionHold`
     - `QuestionHoldSource`
     - `RuntimeInfo`
+    - `RuntimeInspection`
     - `RuntimeSignal`
     - `SubmitOutcome`
-    - `SubmitVerdict`
     - `Turn`
     - `TurnSubmission`
-    - `TypedTurn`
   - Exports (values):
     - `afterTurn`
     - `conversationTurnCompleted`

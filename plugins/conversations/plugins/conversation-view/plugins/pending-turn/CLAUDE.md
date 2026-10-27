@@ -137,13 +137,13 @@ render (`reports/turn-unconfirmed`).
 
 ## Plugin reference
 
-- Description: The single entry point for sending a turn from the browser (useSendConversationTurn, bound to the subtree's transport: mints the turn's ledger id, shows its echo at once, then runs its delivery), and the view of the server's turn ledger (conversations/turn-ledger): usePendingTurns merges a conversation's live ledger rows with this tab's sends whose row has not arrived, PendingTurnCard renders each by state (echo while held or being typed, a warning when the CLI merged it with leftover text, Retry + Copy to draft when it failed), and useOptimisticConversationStatus reads a conversation as working from the instant a turn is sent. Every surface (prompt input, template chips, Send/Queue/Go, Push & Close, AskUserQuestion answers) sends through it and differs only in its delivery. Contributes the turn-send-safety lint rule.
+- Description: The single entry point for sending a turn from the browser (useSendConversationTurn, bound to the subtree's transport: mints the turn's ledger id, shows its echo at once, then runs its delivery), and the view of the server's turn ledger (conversations/turn-ledger): usePendingTurns merges a conversation's live ledger rows with this tab's sends whose row has not arrived, PendingTurnCard renders each by state (echo while held or being typed until the transcript holds its line, Retry + Copy to draft when it failed), and useOptimisticConversationStatus reads a conversation as working from the instant a turn is sent. Every surface (prompt input, template chips, Send/Queue/Go, Push & Close, AskUserQuestion answers) sends through it and differs only in its delivery. Contributes the turn-send-safety lint rule.
 - Web:
-  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra/endpoints` ×5
     - `primitives/live-state` ×4
-    - `primitives/css/ui-kit` ×3
     - `primitives/persistent-draft` ×3
+    - `primitives/css/ui-kit` ×2
     - `primitives/networking` ×2
     - `conversations/conversation-view/user-message.UserMessageText`
     - `network/live.useLive`
@@ -176,7 +176,6 @@ render (`reports/turn-unconfirmed`).
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --destructive`
-    - `ui/tokens/color-palette --warning`
     - `ui/tokens/density --space-md`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/shape --radius`

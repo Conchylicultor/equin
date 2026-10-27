@@ -176,8 +176,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `active-data/id-chip.idChip`
           - `conversations.useConversationById`
-          - `conversations/conversation-ui/item.CONV_STATUS_DOT`
           - `conversations/conversation-ui/item.ConversationItem`
+          - `conversations/conversation-ui/item.convStatusDot`
           - `conversations/conversation-view.useConversationOpener`
           - `network/live.useLiveRow`
           - `primitives/css/link-chip.LinkChip`
@@ -13807,15 +13807,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ConversationTurnCompletedPayload`
       - `IfAlreadyStarted`
       - `LaunchTaskNowResult`
+      - `OutgoingTurn`
       - `QuestionHold`
       - `QuestionHoldSource`
       - `RuntimeInfo`
+      - `RuntimeInspection`
       - `RuntimeSignal`
       - `SubmitOutcome`
-      - `SubmitVerdict`
       - `Turn`
       - `TurnSubmission`
-      - `TypedTurn`
     - Exports (values):
       - `afterTurn`
       - `conversationTurnCompleted`
@@ -14177,13 +14177,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Item.Avatar` → `AgentAvatarRow`
           - `conversationPane.Actions` "agent-avatar" → `AgentAvatarTitlePrefix`
           - `Agents.AgentActions` "delete" → `DeleteAgentAction`
-        - Uses: 61 symbols — full list in [`plugins/conversations/plugins/agents/REFERENCE.md`](../plugins/conversations/plugins/agents/REFERENCE.md)
+        - Uses: 62 symbols — full list in [`plugins/conversations/plugins/agents/REFERENCE.md`](../plugins/conversations/plugins/agents/REFERENCE.md)
           - `primitives/pane` ×8
           - `primitives/data-view` ×5
+          - `conversations/conversation-ui/item` ×4
           - `primitives/avatar` ×4
           - `primitives/collapsible` ×4
           - `primitives/live-state` ×4
-          - `conversations/conversation-ui/item` ×3
           - `infra/endpoints` ×3
           - `network/live` ×3
           - `primitives/css/ui-kit` ×3
@@ -14485,8 +14485,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `config_v2.ConfigV2`
           - `config_v2.useConfig`
-          - `conversations/conversation-ui/item.CONV_STATUS_DOT`
           - `conversations/conversation-ui/item.ConversationItemConv`
+          - `conversations/conversation-ui/item.convStatusDot`
           - `conversations/conversation-ui/item.Item`
           - `fields/dynamic-enum/config.DynamicEnum`
           - `network/live.useLive`
@@ -14731,11 +14731,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ConversationItemProps`
               - `ConvTitleOverride`
             - Exports (values):
-              - `CONV_STATUS_DOT`
               - `ConversationItem`
               - `conversationTitle`
               - `ConvRelativeTime`
+              - `convStatusDot`
               - `ConvStatusDot`
+              - `convStatusOnlyDot`
               - `ConvSysBadge`
               - `ConvTitle`
               - `Item`
@@ -17814,13 +17815,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `openAppAnchor`
               - `tryItHint`
-        - **`pending-turn`** — The single entry point for sending a turn from the browser (useSendConversationTurn, bound to the subtree's transport: mints the turn's ledger id, shows its echo at once, then runs its delivery), and the view of the server's turn ledger (conversations/turn-ledger): usePendingTurns merges a conversation's live ledger rows with this tab's sends whose row has not arrived, PendingTurnCard renders each by state (echo while held or being typed, a warning when the CLI merged it with leftover text, Retry + Copy to draft when it failed), and useOptimisticConversationStatus reads a conversation as working from the instant a turn is sent. Every surface (prompt input, template chips, Send/Queue/Go, Push & Close, AskUserQuestion answers) sends through it and differs only in its delivery. Contributes the turn-send-safety lint rule.
+        - **`pending-turn`** — The single entry point for sending a turn from the browser (useSendConversationTurn, bound to the subtree's transport: mints the turn's ledger id, shows its echo at once, then runs its delivery), and the view of the server's turn ledger (conversations/turn-ledger): usePendingTurns merges a conversation's live ledger rows with this tab's sends whose row has not arrived, PendingTurnCard renders each by state (echo while held or being typed until the transcript holds its line, Retry + Copy to draft when it failed), and useOptimisticConversationStatus reads a conversation as working from the instant a turn is sent. Every surface (prompt input, template chips, Send/Queue/Go, Push & Close, AskUserQuestion answers) sends through it and differs only in its delivery. Contributes the turn-send-safety lint rule.
           - Web:
-            - Uses: 26 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/pending-turn/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/pending-turn/REFERENCE.md)
+            - Uses: 25 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/pending-turn/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/pending-turn/REFERENCE.md)
               - `infra/endpoints` ×5
               - `primitives/live-state` ×4
-              - `primitives/css/ui-kit` ×3
               - `primitives/persistent-draft` ×3
+              - `primitives/css/ui-kit` ×2
               - `primitives/networking` ×2
               - `conversations/conversation-view/user-message.UserMessageText`
               - `network/live.useLive`
@@ -17853,7 +17854,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --destructive`
-              - `ui/tokens/color-palette --warning`
               - `ui/tokens/density --space-md`
               - `ui/tokens/density --space-sm`
               - `ui/tokens/shape --radius`
@@ -18193,6 +18193,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/badge.formatStatusLabel`
               - `primitives/css/ui-kit.WithTooltip`
               - `primitives/live-state.ResourceErrorInline`
+              - `primitives/relative-time.formatRelativeTime`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --border`
@@ -18982,6 +18983,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `resource.declare` "runtime-sdk.error-stopped:groups"
           - `resource.declare` "runtime-sdk.error-stopped:rows"
           - `trigger` "runtime-sdk.attempt-ended"
+          - `report-kind` "sdk-catch-up-overdue"
+          - `report-kind` "sdk-consumer-stalled"
+          - `report-kind` "turn-unknown-id"
+          - `report-kind` "turn-without-id"
         - Uses:
           - `conversations/agent-launch.LAUNCH_CLI_SETTINGS`
           - `conversations/agent-launch.mergeLaunchSettings`
@@ -19033,6 +19038,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `AgentCommand`
           - `AgentEvent`
           - `AgentLaunchOptions`
+          - `AgentLaunchPrompt`
           - `AgentLifecycle`
           - `AgentProcesses`
           - `ClaudeUsage`
@@ -19439,7 +19445,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/transcript-retention`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `server/internal/anchor.ts`, `server/internal/chain-signature.ts`, `server/internal/session-writes.ts`, `server/internal/watcher.ts` (debt)
-    - **`turn-ledger`** — Registers the turn id kind (turn) with the web id registry — the server barrel registers the same kind. The turn ledger's backend: the conversation_turns table (one row per turn sent to an agent, its state moved only by applyTurnEvent's pure transition), the accept that holds a turn while its conversation starts, resolvePromptSubmit (the agent's confirmation that it took a turn, matched to the oldest unconfirmed one), the turn-ledger.turns live collection, the conversation.userTurnSent event (emitted once the agent confirmed a user's turn) and turnVerdictSink (a merged or unverified turn, filed as a report by machine/).
+    - **`turn-ledger`** — Registers the turn id kind (turn) with the web id registry — the server barrel registers the same kind. The turn ledger's backend: the conversation_turns table (one row per turn sent to an agent, its state moved only by applyTurnEvent's pure transition), the accept that holds a turn while its conversation starts, confirmTurn (the agent's confirmation that it took a turn, applied to that row by the turn id it echoed, with the transcript line's uuid; resolvePromptSubmit is its temporary equality-matched fallback for an agent started before turn ids), Stop's and rewind's returnTurnByPromptUuid (the turn taken back, by its transcript line), the turn-ledger.turns live collection and the conversation.userTurnSent event (emitted once the agent confirmed a user's turn).
       - Web:
         - Contributes: `IdKinds.Kind` "turn"
         - Uses: `ids.IdKinds`
@@ -19449,7 +19455,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `resource.declare` "turn-ledger.turns"
           - `resource.declare` "turn-ledger.turns:groups"
           - `resource.declare` "turn-ledger.turns:rows"
-          - `report-kind` "turn-merged"
           - `report-kind` "turn-unverified"
         - Uses:
           - `database.db`
@@ -19466,13 +19471,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types):
           - `AcceptOutcome`
           - `NewTurn`
-          - `PromptConfirmation`
           - `TurnEvent`
           - `TurnRow`
           - `UserTurnSentPayload`
         - Exports (values):
           - `acceptTurn`
           - `applyTurnEvent`
+          - `confirmTurn`
           - `dropTypedTurns`
           - `getTurn`
           - `hasHeldTurns`
@@ -19483,7 +19488,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `onTurnSubmitted`
           - `resolvePromptSubmit`
           - `returnHeldTurns`
-          - `returnTurnByText`
+          - `returnTurnByPromptUuid`
           - `returnTurnsSince`
           - `userTurnSent`
         - Register: `defineTriggerEvent('conversation.userTurnSent')`
@@ -33269,6 +33274,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `createCoalescer`
           - `createKeyedCoalescer`
+    - **`deadline`** — Bound an await: withDeadline(work, budgetMs, onTimeout) races a promise against a one-shot timer, rejecting with the caller's own error on expiry (the work's own rejection wins when it comes first) and always clearing the timer. It never cancels the work — the caller keeps its handle and decides what a still-running promise means.
+      - Core:
+        - Exports (values): `withDeadline`
     - **`flock`** — Kernel advisory file locking: flockTry/flockRelease over libc flock(2), and waitForFlock — a push-based blocking acquire run in a child so the event loop never freezes. The one lock ownership the kernel releases on process death (SIGKILL included) and that consults no pid.
       - Core:
         - Uses:
@@ -44532,10 +44540,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `sortable-list/no-raw-dnd-kit` — `web` (sanctioned)
     - **`relative-time`** — Formats a Date as a human-readable relative string (just now, Nm ago, Nh ago, Nd ago — or the short now / Nm / Nh / Nd), and a running duration as a clock (m:ss). Exposes formatRelativeTime(), <RelativeTime date={…} />, formatElapsed(), useNow() and <ElapsedTime since={…} />.
       - Cross-plugin:
-        - Imported by: 66 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
+        - Imported by: 67 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
           - `apps` ×24
           - `debug` ×13
-          - `conversations` ×8
+          - `conversations` ×9
           - `tasks` ×5
           - `infra` ×4
           - `build` ×3
@@ -47091,7 +47099,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `themeResolutionFingerprint`
           - `ThemeResolutionPayloadSchema`
-    - **`turn-unconfirmed`** — Retired turn-unconfirmed report kind's Debug → Reports summary view, kept so existing rows still render: the one-line preview + elapsed + conversation id for a sent turn the browser's old pending-turn store never found in the transcript. Nothing files it any more — the turn ledger's server-side kinds replace it. Retired turn-unconfirmed report kind, kept registered so existing rows still validate, render and can be investigated (an investigated report is never swept): a sent turn the browser's old pending-turn store never found in the transcript within 90 s. Nothing files it any more — the turn ledger's turn-merged / turn-unverified / turn-input-not-empty kinds (conversations/turn-ledger) replace it. Fingerprints by conversation id; re-arms every 6h.
+    - **`turn-unconfirmed`** — Retired turn-unconfirmed report kind's Debug → Reports summary view, kept so existing rows still render: the one-line preview + elapsed + conversation id for a sent turn the browser's old pending-turn store never found in the transcript. Nothing files it any more — the turn ledger's server-side kinds replace it. Retired turn-unconfirmed report kind, kept registered so existing rows still validate, render and can be investigated (an investigated report is never swept): a sent turn the browser's old pending-turn store never found in the transcript within 90 s. Nothing files it any more — the turn ledger (conversations/turn-ledger) replaced it, and confirms each turn by its id. Fingerprints by conversation id; re-arms every 6h.
       - Web:
         - Contributes: `Reports.KindView` → `TurnUnconfirmedKindView`
         - Uses:

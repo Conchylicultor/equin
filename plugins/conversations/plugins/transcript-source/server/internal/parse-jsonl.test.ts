@@ -106,7 +106,7 @@ describe("buildJsonlEvents — a turn's line carries its uuid", () => {
     ]);
   });
 
-  test("an absorbed turn's attachment keeps its source_uuid", async () => {
+  test("a turn folded into a running turn is the user's message under its source_uuid", async () => {
     const events = await buildJsonlEvents(
       [
         {
@@ -126,9 +126,9 @@ describe("buildJsonlEvents — a turn's line carries its uuid", () => {
     );
     expect(events).toEqual([
       expect.objectContaining({
-        kind: "attachment",
-        subtype: "queued_command",
-        attachment: expect.objectContaining({ source_uuid: "turn-uuid" }),
+        kind: "user-text",
+        text: "i.e. do not file the task",
+        uuid: "turn-uuid",
       }),
     ]);
   });

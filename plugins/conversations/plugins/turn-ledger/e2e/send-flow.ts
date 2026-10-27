@@ -5,8 +5,9 @@
  * — never by matching transcript text.
  *
  *   1. Send → the row reaches `accepted`, and the pane shows no card for it.
- *   2. Send while the agent is busy → `accepted` when the agent queues it,
- *      while the conversation is still `working`.
+ *   2. Send while the agent is busy → `typed` (Queued) while its CLI holds
+ *      it, `accepted` once the CLI starts it (here: the counting turn's end,
+ *      which has no tool boundary to fold it in at).
  *   3. Stop, then a different turn: Stop returns exactly the stopped turn's
  *      row (found by its transcript uuid) and hands back that row's own text;
  *      the next turn is accepted alone. P is a harmless counting turn, not
@@ -160,7 +161,7 @@ try {
     );
   });
 
-  // 2. A busy agent: it confirms the turn when it queues it.
+  // 2. A busy agent: it confirms the turn when its CLI starts it.
   await send(
     conv.id,
     "Count from 1 to 300, one number per line, and nothing else.",
@@ -244,8 +245,8 @@ try {
 
   // The line each echo retires on: a user line under the uuid, or a busy
   // agent's `queued_command` attachment naming it.
-  // The agent confirms a turn as it hands it to Claude Code, which writes the
-  // line a moment later: wait for it (bounded) rather than read once.
+  // The agent confirms a turn as Claude Code starts it, which writes the line
+  // a moment later: wait for it (bounded) rather than read once.
   const missingLines = async (): Promise<(string | null)[]> => {
     const { paths } = await api<{ paths: string[] }>(
       `/api/conversations/${conv.id}/transcript`,

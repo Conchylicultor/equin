@@ -77,8 +77,8 @@ runtime's input-box check produced). The data migration
 
 Every turn is sent with its row's id (`ConversationRuntime.send(id, { turnId,
 text })`, the launch prompt in the agent's options file likewise), and the agent
-echoes it in the `turn_started` it writes when the SDK takes the turn off its
-input queue, with the transcript line's uuid (`promptUuid`).
+echoes it in the `turn_started` it writes when its CLI starts the turn (see
+below), with the transcript line's uuid (`promptUuid`).
 `confirmTurn(conversationId, turnId, promptUuid, at)` applies the `confirmed`
 event to THAT row — no text is compared, so two turns with the same text, a
 slash command, a `!` line are all just rows. It returns what it found:
@@ -207,7 +207,7 @@ withdrawn).
 
 ## Plugin reference
 
-- Description: Registers the turn id kind (turn) with the web id registry — the server barrel registers the same kind. The turn ledger's backend: the conversation_turns table (one row per turn sent to an agent, its state moved only by applyTurnEvent's pure transition), the accept that holds a turn while its conversation starts, resolvePromptSubmit (the agent's confirmation that it took a turn, matched to the oldest unconfirmed one), the turn-ledger.turns live collection, the conversation.userTurnSent event (emitted once the agent confirmed a user's turn) and turnVerdictSink (a merged or unverified turn, filed as a report by machine/).
+- Description: Registers the turn id kind (turn) with the web id registry — the server barrel registers the same kind. The turn ledger's backend: the conversation_turns table (one row per turn sent to an agent, its state moved only by applyTurnEvent's pure transition), the accept that holds a turn while its conversation starts, confirmTurn (the agent's confirmation that it took a turn, applied to that row by the turn id it echoed, with the transcript line's uuid; resolvePromptSubmit is its temporary equality-matched fallback for an agent started before turn ids), Stop's and rewind's returnTurnByPromptUuid (the turn taken back, by its transcript line), the turn-ledger.turns live collection and the conversation.userTurnSent event (emitted once the agent confirmed a user's turn).
 - Web:
   - Contributes: `IdKinds.Kind` "turn"
   - Uses: `ids.IdKinds`
@@ -217,7 +217,6 @@ withdrawn).
     - `resource.declare` "turn-ledger.turns"
     - `resource.declare` "turn-ledger.turns:groups"
     - `resource.declare` "turn-ledger.turns:rows"
-    - `report-kind` "turn-merged"
     - `report-kind` "turn-unverified"
   - Uses:
     - `database.db`
@@ -234,13 +233,13 @@ withdrawn).
   - Exports (types):
     - `AcceptOutcome`
     - `NewTurn`
-    - `PromptConfirmation`
     - `TurnEvent`
     - `TurnRow`
     - `UserTurnSentPayload`
   - Exports (values):
     - `acceptTurn`
     - `applyTurnEvent`
+    - `confirmTurn`
     - `dropTypedTurns`
     - `getTurn`
     - `hasHeldTurns`
@@ -251,7 +250,7 @@ withdrawn).
     - `onTurnSubmitted`
     - `resolvePromptSubmit`
     - `returnHeldTurns`
-    - `returnTurnByText`
+    - `returnTurnByPromptUuid`
     - `returnTurnsSince`
     - `userTurnSent`
   - Register: `defineTriggerEvent('conversation.userTurnSent')`
