@@ -72,9 +72,11 @@ type GateStaleOf<R> = R extends { status: "error"; stale?: infer D }
  * `combineResources`' result: the same three states as a `ResourceResult`,
  * precedence error > unavailable > loading > ready — one failed input fails the
  * whole combine (a surface never renders from a half-loaded snapshot, and never
- * spins on a read that will not load). No `stale`: a partial snapshot is not a
- * value. The `unavailable` arm is there exactly when some input carries it: one
- * input that will never arrive makes the whole snapshot unavailable.
+ * spins on a read that will not load). The error arm's `stale` is the
+ * last-known snapshot — present only when EVERY input has a value (ready, or
+ * failed with its own `stale`): a partial snapshot is not a value. The
+ * `unavailable` arm is there exactly when some input carries it: one input that
+ * will never arrive makes the whole snapshot unavailable.
  */
 export type CombinedResources<T extends Record<string, GateInput>> =
   | (HasUnavailable<T[keyof T]> extends true
@@ -91,13 +93,19 @@ export type CombinedResources<T extends Record<string, GateInput>> =
   | {
       status: "error";
       error: ResourceError;
+      stale?: CombinedData<T>;
       refetch: () => Promise<void>;
     }
   | {
       status: "ready";
-      data: { [K in keyof T]: GateDataOf<T[K]> };
+      data: CombinedData<T>;
       refetch: () => Promise<void>;
     };
+
+/** The ready value of a combine: each input's data under its key. */
+type CombinedData<T extends Record<string, GateInput>> = {
+  [K in keyof T]: GateDataOf<T[K]>;
+};
 
 /** The status of any gateable result. */
 export function statusOf(r: GateInput): GateStatus {
@@ -130,7 +138,8 @@ function refetchOf(r: GateInput): (() => Promise<void>) | undefined {
  * `error` (with the first failed input's error), even while others still load;
  * otherwise one unavailable input makes it `unavailable` (with the first such
  * input's message) — it will never be ready, so it is not loading either. The
- * combine's `refetch` refetches every input that can.
+ * combine's `refetch` refetches every input that can. A failed combine carries
+ * `stale` — every input's ready or stale value — when each input has one.
  *
  * Pure function — for a render-stable identity inside a component, use
  * `useCombinedResources`.
@@ -142,8 +151,18 @@ export function combineResources<T extends Record<string, GateInput>>(
   let unavailable: string | null = null;
   let loading = false;
   const refetches: (() => Promise<void>)[] = [];
-  for (const r of Object.values(inputs)) {
+  // Each input's last-known value; null once one input has none.
+  let known: [string, unknown][] | null = [];
+  for (const [key, r] of Object.entries(inputs)) {
     const status = statusOf(r);
+    const value =
+      status === "ready"
+        ? (r as unknown as { data: unknown }).data
+        : status === "error"
+          ? (r as { stale?: unknown }).stale
+          : undefined;
+    if (value === undefined) known = null;
+    else known?.push([key, value]);
     if (status === "error" && error === null) error = errorOf(r);
     if (status === "unavailable" && unavailable === null) {
       unavailable = (r as ResourceUnavailable).message;
@@ -153,7 +172,16 @@ export function combineResources<T extends Record<string, GateInput>>(
     if (refetch !== undefined) refetches.push(refetch);
   }
   const refetch = () => Promise.all(refetches.map((f) => f())).then(() => {});
-  if (error !== null) return { status: "error", error, refetch };
+  if (error !== null) {
+    return known === null
+      ? { status: "error", error, refetch }
+      : {
+          status: "error",
+          error,
+          stale: Object.fromEntries(known) as CombinedData<T>,
+          refetch,
+        };
+  }
   if (unavailable !== null) {
     // The arm is in the result type exactly when an input can carry it, and
     // only such an input reaches here.
@@ -169,21 +197,54 @@ export function combineResources<T extends Record<string, GateInput>>(
       k,
       (r as unknown as { data: unknown }).data,
     ]),
-  ) as { [K in keyof T]: GateDataOf<T[K]> };
+  ) as CombinedData<T>;
   return { status: "ready", data, refetch };
 }
 
 /**
- * `combineResources` with a render-stable identity: recomputes only when one
- * of the input results changes (useResource memoizes its result, so this is
- * safe to use as a useMemo/useEffect dependency).
- *
- * The set of keys must be static for a given call site (rules-of-hooks).
+ * A trie of combines over input-result identities: one level per input, in key
+ * order, each held weakly by its input (a dropped result frees its branch);
+ * the leaf keys the combine by its key names.
+ */
+type CombineNode = {
+  next: WeakMap<GateInput, CombineNode>;
+  combined: Map<string, unknown>;
+};
+const combineRoot: CombineNode = { next: new WeakMap(), combined: new Map() };
+
+/** `combineResources`, answered from the trie when these inputs were combined. */
+function combineResourcesShared<T extends Record<string, GateInput>>(
+  inputs: T,
+): CombinedResources<T> {
+  let node = combineRoot;
+  for (const r of Object.values(inputs)) {
+    let child = node.next.get(r);
+    if (child === undefined) {
+      child = { next: new WeakMap(), combined: new Map() };
+      node.next.set(r, child);
+    }
+    node = child;
+  }
+  const keys = Object.keys(inputs).join("\0");
+  const hit = node.combined.get(keys) as CombinedResources<T> | undefined;
+  if (hit !== undefined) return hit;
+  const combined = combineResources(inputs);
+  node.combined.set(keys, combined);
+  return combined;
+}
+
+/**
+ * `combineResources` with a render-stable identity: the same input results
+ * (by identity, under the same keys) answer the same combined object, so it is
+ * safe as a useMemo/useEffect dependency (useResource / useLive memoize their
+ * results). Keyed on the input VALUES, not on the `inputs` object — a fresh
+ * `{ a, b }` literal each render still hits — so it holds whether or not the
+ * calling component is compiled.
  */
 export function useCombinedResources<T extends Record<string, GateInput>>(
   inputs: T,
 ): CombinedResources<T> {
-  return combineResources(inputs);
+  return combineResourcesShared(inputs);
 }
 
 /**

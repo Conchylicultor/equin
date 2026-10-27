@@ -99,6 +99,21 @@ describe("combineResources", () => {
     expect(r.error.cause).toBe(plain);
   });
 
+  test("a failed combine carries the whole last-known snapshot as stale", () => {
+    const r = combineResources({ a: failed(boom, [1]), b: ready("x") });
+    if (r.status !== "error") throw new Error("unreachable");
+    expect(r.stale).toEqual({ a: [1], b: "x" });
+  });
+
+  test("no stale when some input has no value — a partial snapshot is not a value", () => {
+    const noValue = combineResources({ a: failed(boom), b: ready("x") });
+    if (noValue.status !== "error") throw new Error("unreachable");
+    expect("stale" in noValue).toBe(false);
+    const stillLoading = combineResources({ a: failed(boom, 1), b: loading() });
+    if (stillLoading.status !== "error") throw new Error("unreachable");
+    expect("stale" in stillLoading).toBe(false);
+  });
+
   test("refetch refetches every input that can", async () => {
     let calls = 0;
     const counting = (): ResourceResult<number> => ({
