@@ -216,6 +216,7 @@ Independent projects that live in `sidequests/`, not directly related to equin. 
 - Most features need a design phase first: use the project `plan` SKILL (it puts the plan doc in the right place). Do NOT use `EnterPlanMode`.
 - New features are plugins in `plugins/` — see [`plugins/framework/plugins/web-sdk/CLAUDE.md`](plugins/framework/plugins/web-sdk/CLAUDE.md).
 - Read the matching SKILL first: `create-app` (new top-level app), `debug` (before debugging — logs, profiling, crashes, DB, queues), `theme` (tokens, tweakcn, per-app config, typography/radius/z-index), `css` (layout mental model — containers share space, leaves truncate — and the layout-primitive index).
+- **When the user asks for a new app, always start with a new prototype** (see [`prototypes/CLAUDE.md`](prototypes/CLAUDE.md)) — implement the app only once the prototype is reviewed.
 - Before writing or editing a prototype, or implementing one in the app (the default is pixel-perfect), read [`prototypes/CLAUDE.md`](prototypes/CLAUDE.md). Prototypes live outside the repo in `~/.equin/apps/prototypes/<name>/`, shared by every worktree and live at `http://equin.localhost:9000` with no build or commit. Design from the blank `_template/`. Do not open other prototypes for inspiration.
 - Always edit files in your worktree, not the main branch.
 - **No unbounded `find`** — it has crashed macOS (65k DIR FDs via the bfs shim). Use `rg --files -g '<glob>'` or `fd '<regex>'`; `find` only with `-maxdepth` / `-prune`.
