@@ -3,28 +3,23 @@
  *
  *   crumbs ──start──▶ editing ──commit ok / cancel──▶ crumbs
  *                       │ ▲
- *                       └─┘ input · suggestions · move · complete · validating · invalid
+ *                       └─┘ input · move · complete · validating · invalid
  *
- * Suggestions are keyed by the text they were asked for (`forText`), so a slow
- * answer to an earlier keystroke can never overwrite the list for the text now
- * in the field.
+ * The suggestions are not state: they are the source's live read of the text
+ * now in the field (`PathBarSource.useComplete`), passed into the transitions
+ * that need them — so an answer to an earlier keystroke has nowhere to land.
  */
+import type { Suggestions } from "./types";
 
 /** How many suggestions the popover lists. */
 export const MAX_SUGGESTIONS = 8;
-
-export type Suggestions =
-  | { kind: "pending" }
-  | { kind: "ready"; items: readonly string[] }
-  | { kind: "failed"; message: string };
 
 export type PathBarState =
   | { mode: "crumbs" }
   | {
       mode: "editing";
       text: string;
-      suggestions: Suggestions;
-      /** Index into the ready items, or -1 for none (Enter commits the text). */
+      /** Index into the shown items, or -1 for none (Enter commits the text). */
       highlighted: number;
       /** A commit is being validated: the field is read-only meanwhile. */
       validating: boolean;
@@ -35,9 +30,8 @@ export type PathBarState =
 export type PathBarAction =
   | { type: "start"; text: string }
   | { type: "input"; text: string }
-  | { type: "suggestions"; forText: string; result: Suggestions }
-  | { type: "move"; delta: 1 | -1 }
-  | { type: "complete"; separator: string }
+  | { type: "move"; delta: 1 | -1; items: readonly string[] }
+  | { type: "complete"; separator: string; items: readonly string[] }
   | { type: "validating" }
   | { type: "invalid"; reason: string }
   | { type: "cancel" };
@@ -58,7 +52,6 @@ export function pathBarReducer(
     return {
       mode: "editing",
       text: action.text,
-      suggestions: { kind: "pending" },
       highlighted: -1,
       validating: false,
       invalid: null,
@@ -70,33 +63,20 @@ export function pathBarReducer(
       return {
         ...state,
         text: action.text,
-        suggestions: { kind: "pending" },
         highlighted: -1,
         invalid: null,
       };
-    case "suggestions": {
-      if (action.forText !== state.text) return state;
-      const result =
-        action.result.kind === "ready"
-          ? {
-              kind: "ready" as const,
-              items: action.result.items.slice(0, MAX_SUGGESTIONS),
-            }
-          : action.result;
-      return { ...state, suggestions: result, highlighted: -1 };
-    }
     case "move": {
-      const items = readyItems(state);
-      if (items.length === 0) return state;
-      const n = items.length;
-      const from =
-        state.highlighted < 0 ? (action.delta > 0 ? -1 : 0) : state.highlighted;
+      const n = action.items.length;
+      if (n === 0) return state;
+      const at = highlightedIn(state, action.items);
+      const from = at < 0 ? (action.delta > 0 ? -1 : 0) : at;
       return { ...state, highlighted: (from + action.delta + n) % n };
     }
     case "complete": {
-      const items = readyItems(state);
+      const { items } = action;
       if (items.length === 0) return state;
-      const pick = items[Math.max(0, state.highlighted)]!;
+      const pick = items[Math.max(0, highlightedIn(state, items))]!;
       return pathBarReducer(state, {
         type: "input",
         text: editText(pick, action.separator),
@@ -115,11 +95,24 @@ export function pathBarReducer(
   }
 }
 
-/** The suggestions the list shows right now (none while pending or failed). */
-export function readyItems(state: PathBarState): readonly string[] {
-  return state.mode === "editing" && state.suggestions.kind === "ready"
-    ? state.suggestions.items
+/** The suggestions the list shows: the first {@link MAX_SUGGESTIONS} of a
+ *  ready answer, none while pending or failed. */
+export function shownItems(suggestions: Suggestions): readonly string[] {
+  return suggestions.kind === "ready"
+    ? suggestions.items.slice(0, MAX_SUGGESTIONS)
     : [];
+}
+
+/**
+ * The highlighted index into `items`, or -1 — a highlight past the end (the
+ * list shrank under it: a folder went while it was shown) highlights nothing.
+ */
+export function highlightedIn(
+  state: PathBarState,
+  items: readonly string[],
+): number {
+  if (state.mode !== "editing") return -1;
+  return state.highlighted < items.length ? state.highlighted : -1;
 }
 
 /**
@@ -127,13 +120,14 @@ export function readyItems(state: PathBarState): readonly string[] {
  * trailing separator dropped (`/Users/me/` names `/Users/me`), except for the
  * root itself.
  */
-export function commitTarget(state: PathBarState, separator: string): string {
+export function commitTarget(
+  state: PathBarState,
+  items: readonly string[],
+  separator: string,
+): string {
   if (state.mode !== "editing") return "";
-  const items = readyItems(state);
-  const raw =
-    state.highlighted >= 0 && state.highlighted < items.length
-      ? items[state.highlighted]!
-      : state.text.trim();
+  const at = highlightedIn(state, items);
+  const raw = at >= 0 ? items[at]! : state.text.trim();
   return raw.length > separator.length && raw.endsWith(separator)
     ? raw.slice(0, -separator.length)
     : raw;

@@ -15,4 +15,11 @@ export default [
     reason:
       "Page-level watchdog (Core.Root): probes the page pipeline's own live-state client for missed updates (getNotificationsClient) and the page's server health.",
   },
+  {
+    rule: "endpoints/no-raw-web-fetch",
+    paths: ["web/internal/client.ts"],
+    kind: "sanctioned",
+    reason:
+      "The health probe must answer while the live socket is wedged (the wedge watchdog asks it), so it cannot be a live read. It is the page transport's raw fetch kept on the contract (endpointRequest + readEndpointResponse decode getHealth's own codec).",
+  },
 ] satisfies Exemptions;

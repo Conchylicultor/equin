@@ -35,6 +35,7 @@
 //   ./equin run plugins/page/plugins/url-paste/e2e/url-paste-link-verify.ts [--url <deploy>] [--headed]
 import type { Locator, Page } from "playwright";
 import {
+  pageFetch,
   arg,
   boot,
   pathUrl,
@@ -152,11 +153,9 @@ async function commitRow(page: Page, label: string): Promise<boolean> {
 }
 
 async function fetchRows(page: Page, pageId: string): Promise<Row[]> {
-  return page.evaluate(async (id: string) => {
-    const res = await fetch(`/api/pages/${id}/blocks`);
-    if (!res.ok) throw new Error(`GET blocks failed: ${res.status}`);
-    return (await res.json()) as Row[];
-  }, pageId);
+  const res = await pageFetch(page, `/api/pages/${pageId}/blocks`);
+  if (!res.ok) throw new Error(`GET blocks failed: ${res.status}`);
+  return (await res.json()) as Row[];
 }
 
 await withBrowser(async (h) => {
@@ -174,45 +173,47 @@ await withBrowser(async (h) => {
     timeoutMs: 90_000,
   });
 
-  const created = await page.evaluate(
-    async ({ title, count }: { title: string; count: number }) => {
-      const create = async (body: unknown): Promise<string> => {
-        const res = await fetch("/api/blocks", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify(body),
-        });
-        if (!res.ok)
-          throw new Error(`create failed: ${res.status} ${await res.text()}`);
-        return ((await res.json()) as { id: string }).id;
-      };
-      // A page block's data is `{ title, icon }` — NOT `{ text }`. A malformed
-      // page row blanks the entire Pages app, sidebar included.
-      const pageId = await create({
-        parentId: null,
-        type: "page",
-        data: { title, icon: null },
+  const created = await (async ({
+    title,
+    count,
+  }: {
+    title: string;
+    count: number;
+  }) => {
+    const create = async (body: unknown): Promise<string> => {
+      const res = await pageFetch(page, "/api/blocks", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
       });
-      // One empty text block per case, so no case inherits another's state.
-      // Deleting the page cascades them away.
-      const blockIds: string[] = [];
-      for (let i = 0; i < count; i++)
-        blockIds.push(
-          await create({ parentId: pageId, type: "text", data: { text: [] } }),
-        );
-      return { pageId, blockIds };
-    },
-    { title: SCRATCH_TITLE, count: CASES.length },
-  );
+      if (!res.ok)
+        throw new Error(`create failed: ${res.status} ${await res.text()}`);
+      return ((await res.json()) as { id: string }).id;
+    };
+    // A page block's data is `{ title, icon }` — NOT `{ text }`. A malformed
+    // page row blanks the entire Pages app, sidebar included.
+    const pageId = await create({
+      parentId: null,
+      type: "page",
+      data: { title, icon: null },
+    });
+    // One empty text block per case, so no case inherits another's state.
+    // Deleting the page cascades them away.
+    const blockIds: string[] = [];
+    for (let i = 0; i < count; i++)
+      blockIds.push(
+        await create({ parentId: pageId, type: "text", data: { text: [] } }),
+      );
+    return { pageId, blockIds };
+  })({ title: SCRATCH_TITLE, count: CASES.length });
   const { pageId } = created;
   const blockOf = (c: Case): string => created.blockIds[CASES.indexOf(c)]!;
   console.log(`scratch page: ${pageId}`);
 
   async function destroyScratchPage(): Promise<void> {
-    const status = await page.evaluate(async (id: string): Promise<number> => {
-      const res = await fetch(`/api/blocks/${id}`, { method: "DELETE" });
-      return res.status;
-    }, pageId);
+    const { status } = await pageFetch(page, `/api/blocks/${pageId}`, {
+      method: "DELETE",
+    });
     console.log(`\nscratch page deleted (HTTP ${status})`);
   }
 

@@ -20,6 +20,7 @@
 //
 // Exits non-zero on the first failed assertion, after dumping a screenshot.
 import {
+  pageFetch,
   arg,
   boot,
   pathUrl,
@@ -67,46 +68,50 @@ await withBrowser(async (h) => {
     timeoutMs: 90_000,
   });
 
-  const pageId = await page.evaluate(
-    async ({ title, url, text }): Promise<string> => {
-      const create = async (body: unknown): Promise<string> => {
-        const res = await fetch("/api/blocks", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify(body),
-        });
-        if (!res.ok)
-          throw new Error(`create failed: ${res.status} ${await res.text()}`);
-        return ((await res.json()) as { id: string }).id;
-      };
-      // A page block's data is `{ title, icon }` — NOT `{ text }`. A malformed
-      // page row blanks the entire Pages app, sidebar included.
-      const id = await create({
-        parentId: null,
-        type: "page",
-        data: { title, icon: null },
+  const pageId = await (async ({
+    title,
+    url,
+    text,
+  }: {
+    title: string;
+    url: string;
+    text: string;
+  }): Promise<string> => {
+    const create = async (body: unknown): Promise<string> => {
+      const res = await pageFetch(page, "/api/blocks", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
       });
-      // One text block holding a link mid-sentence, seeded as rich-text runs
-      // (`TextRun.link`) so no toolbar gesture is needed to make it. Deleting
-      // the page cascades it away.
-      await create({
-        parentId: id,
-        type: "text",
-        data: {
-          text: [{ text: "see " }, { text, link: url }, { text: " here" }],
-        },
-      });
-      return id;
-    },
-    { title: SCRATCH_TITLE, url: URL_BEFORE, text: TEXT_BEFORE },
-  );
+      if (!res.ok)
+        throw new Error(`create failed: ${res.status} ${await res.text()}`);
+      return ((await res.json()) as { id: string }).id;
+    };
+    // A page block's data is `{ title, icon }` — NOT `{ text }`. A malformed
+    // page row blanks the entire Pages app, sidebar included.
+    const id = await create({
+      parentId: null,
+      type: "page",
+      data: { title, icon: null },
+    });
+    // One text block holding a link mid-sentence, seeded as rich-text runs
+    // (`TextRun.link`) so no toolbar gesture is needed to make it. Deleting
+    // the page cascades it away.
+    await create({
+      parentId: id,
+      type: "text",
+      data: {
+        text: [{ text: "see " }, { text, link: url }, { text: " here" }],
+      },
+    });
+    return id;
+  })({ title: SCRATCH_TITLE, url: URL_BEFORE, text: TEXT_BEFORE });
   console.log(`scratch page: ${pageId}`);
 
   async function destroyScratchPage(): Promise<void> {
-    const status = await page.evaluate(async (id: string): Promise<number> => {
-      const res = await fetch(`/api/blocks/${id}`, { method: "DELETE" });
-      return res.status;
-    }, pageId);
+    const { status } = await pageFetch(page, `/api/blocks/${pageId}`, {
+      method: "DELETE",
+    });
     console.log(`\nscratch page deleted (HTTP ${status})`);
   }
 

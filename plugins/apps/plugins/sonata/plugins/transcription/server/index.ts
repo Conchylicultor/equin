@@ -4,13 +4,8 @@ import { Trigger } from "@plugins/infra/plugins/events/server";
 import { conversationStatusChanged } from "@plugins/tasks/plugins/tasks-core/server";
 import { TaskCategory } from "@plugins/tasks/plugins/task-category/server";
 import { ScratchProfile } from "@plugins/conversations/plugins/workspace/server";
+import { retryTranscription, prepareTranscription } from "../shared/endpoints";
 import {
-  getSongTranscription,
-  retryTranscription,
-  prepareTranscription,
-} from "../shared/endpoints";
-import {
-  handleGetSongTranscription,
   handleRetryTranscription,
   handlePrepareTranscription,
 } from "./internal/routes";
@@ -26,7 +21,6 @@ export default {
   httpRoutes: {
     [prepareTranscription.route]: handlePrepareTranscription,
     [retryTranscription.route]: handleRetryTranscription,
-    [getSongTranscription.route]: handleGetSongTranscription,
   },
   contributions: [
     LiveColumns.Expose(songTranscription),

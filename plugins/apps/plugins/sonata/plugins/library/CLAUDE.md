@@ -25,6 +25,36 @@ them without a `shell → library` import that would cycle with the existing
   reopened from the now-playing bar) is NOT reloaded: a reload would rebuild
   its timeline and the session's content reset would stop and rewind it.
 
+### Hydration (`Library.Source.useHydration`, `SongHydrator`)
+
+Each source reads its part of a song LIVE through its own hook,
+`useHydration(songId) → ResourceResult<SourceHydration>` (`raw` / `absent` /
+`pending`): a lookup-only collection by `songId` over its side-table
+(`sonata.midi`, `sonata.musicxml`, `sonata.ultimate-guitar.songs` plus
+`sonata-ug-alignment`), the song's own library row for what its extension
+already exposes (chord-grid's text, transcription's status), and an
+attachment's bytes through `attachments.bytes` (a `bytes: true` value,
+immutable by id). Not known yet and a failed read stay states — never a
+stand-in `absent`.
+
+`SongHydrator` (`song-hydrator.tsx`) renders one nested element per
+contribution — a contributed set cannot be looped over with hooks — each
+calling its source's hook and handing the accumulated answers on; the
+innermost renders its `children(hydration)` with every answer folded
+(`combineHydrations`: loading until every source answered, error if one
+failed). Two hosts:
+
+- **The player pane** mounts it (inside `SongLoader`) only while the song is
+  not the loaded one and the deferred tier settled; it loads once every source
+  answered, renders a pending source's Body meanwhile (a transcription), and
+  unmounts once loaded — so a live source change never resets a playing song.
+- **Background play** (`useSonataPlayback`): `togglePlaySong` asks the
+  surface's `BackgroundPlayProvider` (a `Sonata.Provider` around the whole
+  surface), which holds the one `pendingPlay` and hydrates it, then loads and
+  plays — or opens the pane when a source is pending or a read failed. The
+  row only asks, so a play in flight survives the row unmounting (a virtual
+  window scroll, a view or filter switch).
+
 ### The immersive player (`ImmersivePlayer`, `panes.tsx`)
 
 The design is proto-1792113547-2qr6g7 (`toolbar: corner`, `bar: v1`). The
@@ -73,12 +103,12 @@ Each input source contributes its "add a song" affordance as a plain-data
 to the onboarding cards. The library stays source-agnostic: it threads an
 opaque `s.createOption` and never names MIDI.
 
-**The `SourceContext`.** A source's `hydrate(songId, ctx)` and
-`createOption.onSelect(ctx)` run outside React, so they cannot call
-`useFetchEndpoint()`; the library passes `ctx.fetchEndpoint` — the fetcher
-bound to the transport the library renders under — so a source's reads and
-writes stay on that transport (a demo scope's, else the page's) instead of
-reaching for one itself.
+**The `SourceContext`.** A source's `createOption.onSelect(ctx)` runs outside
+React, so it cannot call `useFetchEndpoint()`; the library passes
+`ctx.fetchEndpoint` — the fetcher bound to the transport the library renders
+under — so a source's writes stay on that transport (a demo scope's, else the
+page's) instead of reaching for one itself. Writes only: a read is live
+(`useHydration`).
 
 Because a `createOption.onSelect` is plain data (no component, no hooks), the
 open-after-create step can't use the `useSongLink` hook. Sources call
@@ -252,18 +282,20 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `IdKinds.Kind` "song|seed"
     - `FieldPresentation.Register` "entity:sonata_songs"
     - `Sonata.Home` "library" → `SongLibrary`
+    - `Sonata.Provider` → `BackgroundPlayProvider`
     - `sonataPlayerPane.Actions` "display-picker" → `DisplayPicker`
     - `sonataPlayerPane.Actions` "fullscreen" → `FullscreenButton`
     - `Library.SongActions` "play" → `PlaySongAction`
     - `Library.SongActions` "delete" → `DeleteSongAction`
     - `Pane.Register` "sonata-library"
     - `Pane.Register` "sonata-player"
-  - Uses: 89 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 93 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×13
     - `primitives/data-view` ×7
     - `apps/sonata/shell` ×6
     - `network/live` ×6
     - `primitives/css/ui-kit` ×6
+    - `primitives/live-state` ×6
     - `apps/sonata/player` ×5
     - `apps/sonata/document` ×4
     - `primitives/persistent-draft` ×3
@@ -272,7 +304,6 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `primitives/css/layer` ×2
     - `primitives/css/spacing` ×2
     - `primitives/latest-ref` ×2
-    - `primitives/live-state` ×2
     - `apps/sonata/primitives/glass.Glass`
     - `apps/sonata/session.useSession`
     - `fullscreen.FullscreenButton`

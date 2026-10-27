@@ -88,6 +88,7 @@
 //
 // Usage: bun plugins/page/plugins/annotations/plugins/human-notes/e2e/human-notes-container-verify.ts [--url <deploy>] [--out /tmp/human-notes]
 import {
+  pageFetch,
   arg,
   report,
   snap,
@@ -386,12 +387,9 @@ interface StoredRow {
  * landed in the container's slot rather than merely rendering at that indent.
  */
 async function storedRows(page: Page, pageId: string): Promise<StoredRow[]> {
-  return page.evaluate(async (id: string) => {
-    const res = await fetch(`/api/pages/${id}/blocks`);
-    if (!res.ok)
-      throw new Error(`GET blocks ${res.status}: ${await res.text()}`);
-    return (await res.json()) as StoredRow[];
-  }, pageId);
+  const res = await pageFetch(page, `/api/pages/${pageId}/blocks`);
+  if (!res.ok) throw new Error(`GET blocks ${res.status}: ${await res.text()}`);
+  return (await res.json()) as StoredRow[];
 }
 
 /** Put the caret at the end of a block's text by clicking past its last glyph. */
@@ -465,29 +463,20 @@ async function probePost(
   pageId: string,
   data: unknown,
 ): Promise<PostProbe> {
-  return page.evaluate(
-    async ({ parent, payload }) => {
-      const res = await fetch("/api/blocks", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          parentId: parent,
-          type: "context",
-          data: payload,
-        }),
-      });
-      return { status: res.status, body: await res.text() };
-    },
-    { parent: pageId, payload: data },
-  );
+  const res = await pageFetch(page, "/api/blocks", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ parentId: pageId, type: "context", data }),
+  });
+  return { status: res.status, body: await res.text() };
 }
 
 /** Hard-delete one block subtree. Throws loudly — a failed cleanup is a fixture lie. */
 async function deleteBlock(page: Page, blockId: string): Promise<void> {
-  const res = await page.evaluate(async (id: string) => {
-    const response = await fetch(`/api/blocks/${id}`, { method: "DELETE" });
-    return { status: response.status, body: await response.text() };
-  }, blockId);
+  const response = await pageFetch(page, `/api/blocks/${blockId}`, {
+    method: "DELETE",
+  });
+  const res = { status: response.status, body: await response.text() };
   if (res.status < 200 || res.status >= 300) {
     throw new Error(`DELETE /api/blocks/${blockId} ${res.status}: ${res.body}`);
   }
@@ -503,24 +492,21 @@ async function deleteBlock(page: Page, blockId: string): Promise<void> {
  * did — is itself the regression this file exists to catch.
  */
 async function seedCards(page: Page, pageId: string): Promise<SeedIds> {
-  return page.evaluate(
-    async ({ pageId: parent }) => {
-      const post = async (body: unknown): Promise<{ id: string }> => {
-        const res = await fetch("/api/blocks", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify(body),
-        });
-        if (!res.ok)
-          throw new Error(
-            `POST /api/blocks ${res.status}: ${await res.text()}`,
-          );
-        return (await res.json()) as { id: string };
-      };
-      const humanCard = (parentId: string) =>
-        post({ parentId, type: "context", data: {} });
-      const text = (parentId: string, type: string, body: string) =>
-        post({ parentId, type, data: { text: [{ text: body }] } });
+  const parent = pageId;
+  const post = async (body: unknown): Promise<{ id: string }> => {
+    const res = await pageFetch(page, "/api/blocks", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok)
+      throw new Error(`POST /api/blocks ${res.status}: ${await res.text()}`);
+    return (await res.json()) as { id: string };
+  };
+  const humanCard = (parentId: string) =>
+    post({ parentId, type: "context", data: {} });
+  const text = (parentId: string, type: string, body: string) =>
+    post({ parentId, type, data: { text: [{ text: body }] } });
 
       const card = await humanCard(parent);
       const cardHead = await text(card.id, "heading-1", "Repo conventions");
@@ -582,10 +568,7 @@ async function seedCards(page: Page, pageId: string): Promise<SeedIds> {
         nestedChild: nestedChild.id,
         calloutTail: calloutTail.id,
         end: end.id,
-      };
-    },
-    { pageId },
-  );
+  };
 }
 
 await withBrowser(async (h) => {

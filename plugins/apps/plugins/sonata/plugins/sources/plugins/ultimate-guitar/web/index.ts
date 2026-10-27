@@ -8,7 +8,7 @@ import { Library } from "@plugins/apps/plugins/sonata/plugins/library/web";
 import { compile } from "./compile";
 import { UltimateGuitarLoader } from "./loader";
 import { UG_SOURCE_ID } from "@plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/tab/core";
-import { hydrate } from "./hydrate";
+import { useHydration } from "./hydrate";
 import { ugKeyPresentation } from "./internal/presentation";
 import { ugCover } from "./components/ug-cover";
 import { ultimateGuitarCreateOption } from "./components/ug-create-option";
@@ -30,7 +30,7 @@ export default {
     }),
     Library.Source({
       sourceId: UG_SOURCE_ID,
-      hydrate,
+      useHydration,
       createOption: ultimateGuitarCreateOption,
     }),
     Sonata.Section({

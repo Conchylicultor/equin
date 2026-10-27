@@ -1,7 +1,8 @@
 import { liveCollection } from "@plugins/network/plugins/live/core";
-import { ugAlignmentShape } from "../core";
+import { ugAlignmentShape } from "./row";
 
-// The alignment row of ONE song, read by its `songId`. The side-table holds 0 or
+// The alignment row of ONE song, read by its `songId` — in core, because the
+// UG source's hydration reads it too (a child's `shared/` is private). The side-table holds 0 or
 // 1 row per song — its primary key IS the song — so it is a lookup-only
 // collection: nothing lists every song's alignment, so it mints
 // `sonata-ug-alignment:rows` alone. A reader takes its row with

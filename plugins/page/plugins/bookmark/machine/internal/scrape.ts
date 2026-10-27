@@ -17,8 +17,8 @@ const USER_AGENT = `Mozilla/5.0 (compatible; ${PRODUCT_NAME}-bot/1.0; +link-prev
 
 /**
  * The page answered with a non-2xx status: a determinate answer about that
- * url, which each reader maps to its own wire form (the link-meta endpoint's
- * 502, the link-preview value's `unreachable` refusal).
+ * url, which the link-meta and link-preview values both answer as their
+ * `unreachable` refusal.
  */
 export class PageFetchError extends Error {
   constructor(readonly status: number) {

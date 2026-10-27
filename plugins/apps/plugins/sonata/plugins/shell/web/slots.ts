@@ -3,6 +3,7 @@ import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import {
   defineMountSlot,
   defineRenderSlot,
+  defineWrapperSlot,
 } from "@plugins/primitives/plugins/slot-render/web";
 import {
   defineDetailSections,
@@ -86,6 +87,7 @@ export const useSonataSectionOpen = sonataSections.useSectionOpen;
  *  - Hud / ViewOption      — screen-anchored chips over a display, and the per-lens prefs they surface.
  *  - Home                  — the app landing surface (the song library).
  *  - Effect                — headless app-scoped effects.
+ *  - Provider              — app-scoped context wrappers around the whole surface.
  *  - Section               — the player's free-floating panels (current-chord readout, …).
  *
  * The layers below the app own their own axes: the song document its inputs
@@ -161,6 +163,16 @@ export const Sonata = {
   // effect that must run wherever a song plays (audio) is a
   // `SonataSession.Effect` instead, and one that runs wherever a player is
   // shown (Space / ←→) is a `SonataPlayer.Effect`.
+  // PROVIDER — app-scoped React context wrappers folded around the whole Sonata
+  // surface (inside the player scope, so a wrapper may `useSession()` /
+  // `useLoadDocument()`): state an app-level verb owns for the surface's
+  // lifetime, shared by consumers in different panes and slot branches — the
+  // library's background play, asked by a row's Play and finished by its
+  // provider whatever happens to the row. Contributions nest outside-in in
+  // contribution order; the slot paints nothing itself. Per-session wrappers
+  // (wherever a song plays) are `SonataSession.Provider`.
+  Provider: defineWrapperSlot(),
+
   Effect: defineMountSlot({
     docLabel: (p) => p.id,
   }),

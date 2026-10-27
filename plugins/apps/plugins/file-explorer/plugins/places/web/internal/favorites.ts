@@ -2,9 +2,7 @@ import { displayPath } from "@plugins/infra/plugins/host-account/core";
 import { useCallback } from "react";
 import { useConfigResult, useSetConfig } from "@plugins/config_v2/web";
 import { foldResource } from "@plugins/primitives/plugins/live-state/web";
-import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { hostFsStat } from "@plugins/infra/plugins/host-fs/core";
-import { showToast } from "@plugins/shell/plugins/toast/web";
+import type { DraggedHostPath } from "@plugins/infra/plugins/host-fs/core";
 import { useHomeDir } from "@plugins/apps/plugins/file-explorer/plugins/browser/web";
 import {
   baseName,
@@ -92,15 +90,14 @@ export function useFavorites(): {
   /** Pin at the end; a pin already there stays where it is. */
   pin: (pins: readonly Pin[]) => void;
   unpin: (path: string) => void;
-  /** The pins for host paths (absolute, from a drop): each looked up for
-   *  its kind; the ones that are gone or unreadable are left out, and a
-   *  toast says which. */
-  lookUp: (paths: readonly string[]) => Promise<Pin[]>;
+  /** The pins for dropped host paths (absolute, each with the kind the
+   *  surface it was dragged from listed — so pinning reads nothing): a
+   *  folder pins as one, anything else as a file. */
+  pinsOf: (entries: readonly DraggedHostPath[]) => Pin[];
 } {
   const config = useConfigResult(placesConfig);
   const setConfig = useSetConfig(placesConfig);
   const home = useHomeDir();
-  const fetchEndpoint = useFetchEndpoint();
   // A write needs the list as it is: none while it is not known, or unreadable.
   const current = foldResource(config, {
     loading: () => null,
@@ -141,48 +138,18 @@ export function useFavorites(): {
     [known, setConfig],
   );
 
-  const lookUp = useCallback(
-    async (paths: readonly string[]) => {
+  const pinsOf = useCallback(
+    (entries: readonly DraggedHostPath[]): Pin[] => {
       if (homeDir === null) {
         throw new Error("file-explorer places: home directory not known yet");
       }
-      const looked = await Promise.all(
-        paths.map(async (path) => {
-          const answer = await fetchEndpoint(
-            hostFsStat,
-            {},
-            { query: { path } },
-          );
-          // Pinning reads the host's disk: with no computer behind the app
-          // there is nothing to pin, which says so rather than skipping.
-          if (answer.kind === "unavailable") throw new Error(answer.message);
-          return { path, stat: answer.value };
-        }),
-      );
-      const pins: Pin[] = [];
-      const missing: string[] = [];
-      for (const { path, stat } of looked) {
-        if (stat.kind !== "ok") {
-          missing.push(
-            `“${baseName(path)}” ${stat.kind === "missing" ? "no longer exists" : "cannot be read"}`,
-          );
-          continue;
-        }
-        pins.push({
-          path: displayPath(stat.path, homeDir),
-          kind: stat.entry.kind === "dir" ? "dir" : "file",
-        });
-      }
-      if (missing.length > 0) {
-        showToast({
-          variant: "error",
-          description: `Not added to Favorites: ${missing.join("; ")}`,
-        });
-      }
-      return pins;
+      return entries.map((e) => ({
+        path: displayPath(e.path, homeDir),
+        kind: e.kind === "dir" ? "dir" : "file",
+      }));
     },
-    [homeDir, fetchEndpoint],
+    [homeDir],
   );
 
-  return { pin, unpin, lookUp };
+  return { pin, unpin, pinsOf };
 }

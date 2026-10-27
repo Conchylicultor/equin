@@ -1,15 +1,5 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
-import { UgAlignmentRowSchema } from "./row";
-
-/**
- * One song's alignment row, or `null` when it has never had a video. Read by
- * the UG source's `hydrate`, so an aligned song opens aligned.
- */
-export const getUgAlignment = defineEndpoint({
-  route: "GET /api/sonata/songs/:id/ultimate-guitar/alignment",
-  response: UgAlignmentRowSchema.nullable(),
-});
 
 /**
  * Set the song's recording from a pasted YouTube link (or a bare id) and start

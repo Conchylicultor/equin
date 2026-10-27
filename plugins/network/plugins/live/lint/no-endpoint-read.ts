@@ -5,7 +5,6 @@ import {
   type TSESLint,
   type TSESTree,
 } from "@typescript-eslint/utils";
-import type { Type as TsType, TypeChecker } from "typescript";
 import type { LintRuleDocs } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 
 const createRule = ESLintUtils.RuleCreator<LintRuleDocs>(
@@ -16,39 +15,49 @@ const createRule = ESLintUtils.RuleCreator<LintRuleDocs>(
  * no-endpoint-read
  *
  * A server read in the browser is a live resource: a `liveValue` (by `params`,
- * by a typed `query`, or key-range-`paged`) or a `liveCollection`, read with
- * `useLive`. The request/response path beside it — a TanStack `useQuery`
- * family hook, a `queryFn` that calls `fetchEndpoint`, or a GET
- * `fetchEndpoint` / NDJSON stream an effect runs — is a second read path with
- * no push, so its value goes stale or gets polled
- * (research/2026-10-09-global-live-structured-paged-values.md,
- * research/2026-10-11-global-endpoint-reads-onto-live.md P0.2). The endpoint
- * read hooks it was written against (`useEndpoint`, `useEndpointResource`,
- * `endpointQueryKey`, `useEndpointMutation`'s `invalidates:`) are deleted
- * (B10b), so what is left to ban is the substrate they were built on.
+ * by a typed `query`, key-range-`paged`, or `bytes`) or a `liveCollection`,
+ * read with `useLive` — or, for a question an event asks and its own `await`
+ * consumes, with `useLiveReader`. Endpoints are for writes
+ * (research/2026-10-26-global-browser-reads-only-through-live.md).
  *
- * Flags, in files under a `web/` folder:
- * - every import of a read hook from the barrel that exports it — a named
- *   import (aliases included), an `export { … } from` re-export — and every
- *   read of one off that barrel's module object (a namespace import or an
- *   awaited dynamic import, by member or by destructuring), resolved as
- *   `no-legacy-resource-spelling` does;
- * - a `fetchEndpoint(...)` call (the transport-bound client, recognised by the
- *   name of its binding — `const fetchEndpoint = useFetchEndpoint()`, a
- *   `fetchEndpoint` parameter; `endpoints/fetch-endpoint-binding-name` keeps
- *   every binding so named) lexically inside a `queryFn` property's value;
- * - a `fetchEndpoint(def, …)` of a GET endpoint, or a `readNdjson(transport, route, …)`
- *   over a GET route, that runs as a READ (see "Read context" below).
+ * What tsc already holds is not repeated here: a GET def handed to
+ * `fetchEndpoint` / `useEndpointMutation` / `readNdjson` does not compile
+ * (endpoints' derived `read` marker, `& WriteEndpoint`), so this rule no
+ * longer reads a route's method. It flags, in files under a `web/` folder:
  *
- * ## GET-ness
+ * - **The TanStack read hooks** — every import of `useQuery` and its family
+ *   from `@tanstack/react-query` (a named import, aliases included, an
+ *   `export { … } from` re-export) and every read of one off the barrel's
+ *   module object (a namespace import or an awaited dynamic import, by member
+ *   or by destructuring), resolved as `no-legacy-resource-spelling` does;
+ *   and a `fetchEndpoint(...)` lexically inside a `queryFn` property's value.
+ * - **A write's answer used as a read** — a `fetchEndpoint(...)` (the
+ *   transport-bound client, recognised by its binding name:
+ *   `endpoints/fetch-endpoint-binding-name` keeps every binding so named) or
+ *   a `mutateAsync(...)` (a mutation's, by member, or a local bound from it —
+ *   destructured under any alias, or assigned from the member) of
+ *   ANY method that runs in READ CONTEXT (below) and whose ANSWER IS USED. A
+ *   write an effect fires and forgets — `void fetchEndpoint(save, …)`, an
+ *   awaited statement, a `.then(() => …)` that ignores the answer — passes:
+ *   effects run genuine writes (record a play, flush logs). What does not is
+ *   a POST whose answer render, a hook or an effect consumes: that is a read
+ *   wearing a write's method (chord's old `findLoops`).
+ * - **A `LiveReader` call in read context** — the function `useLiveReader()`
+ *   returns (recognised by its type, `LiveReader`) is for an event's own
+ *   `await`; in render, a hook body or an effect the read is `useLive`.
  *
- * Decided by the type checker, not by name: the `route` of an `EndpointDef` is
- * its literal route type (`"GET /api/…"`, the `Route` parameter
- * `defineEndpoint` infers), and `readNdjson`'s second argument (after the transport) is the
- * `.route` of one. A route whose type is not a string literal (a generic
- * wrapper's `EndpointDef<Route, …>`, a widened `string`) cannot be told apart
- * from a GET, so it counts as one: the rule fails toward flagging, and the
- * site is either sanctioned substrate or debt.
+ * ## Answer used
+ *
+ * Followed outwards from the call: discarded by an expression statement,
+ * `void`, a non-last sequence operand, or a `.then(cb)` whose callback takes
+ * no parameter. Passed through by `await`, a type assertion, `?.`, a
+ * conditional's branch, a logical's right side, `.catch` / `.finally`,
+ * `Promise.all` / `allSettled` / `race` / `any`, and a function returning it —
+ * whose answer is then followed at its call sites in the file (an IIFE, a
+ * `.then` / `.map` callback, a named function or callback hook); a function
+ * an effect hook runs, or one only an unknown callee runs, discards it.
+ * Anything else (a binding, an argument, a condition, a property read) uses
+ * it.
  *
  * ## Read context
  *
@@ -57,8 +66,8 @@ const createRule = ESLintUtils.RuleCreator<LintRuleDocs>(
  * `Promise.all`, an IIFE, `setTimeout` — are transparent):
  * - an `on*` prop / property value (a JSX handler, `onSuccess`), a
  *   `mutationFn`, or a callback handed to an event registrar
- *   (`addEventListener`, `subscribe`, `register…`, `on`) is an ACTION — not
- *   flagged, even when an effect does the registering;
+ *   (`addEventListener`, `subscribe…`, `register…`, `on`) is an ACTION — not
+ *   flagged, even when an effect or module load does the registering;
  * - the callback of `useEffect` / `useLayoutEffect` / `useInsertionEffect`,
  *   or of `useMemo` / `useState` (it runs during render), is a READ;
  * - a function named like a hook (`use…`) or a component (`Capitalised`) is a
@@ -70,22 +79,29 @@ const createRule = ESLintUtils.RuleCreator<LintRuleDocs>(
  *   ACTION if used only as one;
  * - a function that escapes the file's view — stored in an object or a class,
  *   passed as a non-`on*` prop, returned, exported, handed to another hook —
- *   is unflagged: the rule sees one file, so a GET wrapper another file's
- *   effect calls is that file's blind spot;
+ *   is unflagged: the rule sees one file, so a wrapper another file's effect
+ *   calls is that file's blind spot;
  * - module top level (no enclosing function) is a READ: it runs on import.
  *
- * An imperative `fetchEndpoint` — a mutation, an event handler — is not a
- * read and is not flagged. Test code is out of scope (a contributed rule's
- * default). The ban is flat: the only exemptions are the two sanctioned
- * substrate entries (`network/live` and `primitives/live-state`, whose `web/`
- * implements every live read over TanStack queries) — never a debt entry.
+ * ## Residual — held by review
+ *
+ * A POST read issued from an EVENT HANDLER is not flagged: nothing static
+ * tells "click → POST read → show" from "click → POST write → show its
+ * result". The honest spelling is as short as the lie — `useLiveReader` over
+ * a `liveValue` — and the `ReadMarker` sentence a GET write fails with points
+ * at it.
+ *
+ * Test code is out of scope (a contributed rule's default). The rule is
+ * `noDebt`: its only exemptions are the two sanctioned substrate entries
+ * (`network/live` and `primitives/live-state`, whose `web/` implements every
+ * live read over TanStack queries) — never a debt entry.
  */
 
-const NDJSON_WEB = "@plugins/infra/plugins/ndjson-stream/web";
+const REACT_QUERY = "@tanstack/react-query";
 
 /** Each barrel → the read hooks it exports. */
 const READ_HOOKS: Readonly<Record<string, readonly string[]>> = {
-  "@tanstack/react-query": [
+  [REACT_QUERY]: [
     "useQuery",
     "useInfiniteQuery",
     "useSuspenseQuery",
@@ -95,17 +111,12 @@ const READ_HOOKS: Readonly<Record<string, readonly string[]>> = {
   ],
 };
 
+/** The transport-bound endpoint client's binding name. */
 const FETCH_ENDPOINT = "fetchEndpoint";
-const READ_NDJSON = "readNdjson";
-
-/**
- * Each barrel → the plain functions the rule follows calls of. The endpoint
- * client is not one: no barrel exports a fetcher, it is a value bound per
- * transport and recognised by its binding name (`boundFunction`).
- */
-const TRACKED_FUNCTIONS: Readonly<Record<string, readonly string[]>> = {
-  [NDJSON_WEB]: [READ_NDJSON],
-};
+/** A mutation's promise-returning trigger, whose answer is the write's response. */
+const MUTATE_ASYNC = "mutateAsync";
+/** The type of the function `useLiveReader()` returns. */
+const LIVE_READER = "LiveReader";
 
 /** Hooks whose first-argument callback runs after commit. */
 const EFFECT_HOOKS = new Set([
@@ -117,10 +128,11 @@ const EFFECT_HOOKS = new Set([
 const RENDER_HOOKS = new Set(["useMemo", "useState"]);
 /**
  * A call that registers its callback for an event — the callback runs on the
- * event, like a handler, even when the registering is done by an effect.
+ * event, like a handler, even when the registering is done by an effect (or
+ * by module load: `subscribeWsStatus((ev) => …)` at top level).
  */
 const EVENT_REGISTRAR =
-  /^(addEventListener|addListener|on|once|subscribe|listen|register[A-Z]\w*)$/;
+  /^(addEventListener|addListener|on|once|subscribe|subscribe[A-Z]\w*|listen|register[A-Z]\w*)$/;
 /** A prop / property naming a handler. */
 const HANDLER_NAME = /^on[A-Z]/;
 /** An assigned event-handler property: DOM's `onclick` / `onmessage`, or `onChange`. */
@@ -129,6 +141,10 @@ const EVENT_PROPERTY = /^on[a-zA-Z]/;
 const MUTATION_KEYS = new Set(["mutationFn"]);
 const HOOK_NAME = /^use[A-Z0-9]/;
 const COMPONENT_NAME = /^[A-Z]/;
+/** Promise combinators: their answer holds each element's answer. */
+const PROMISE_COMBINATORS = new Set(["all", "allSettled", "race", "any"]);
+/** Array methods whose result holds each callback's return. */
+const MAPPING_METHODS = new Set(["map", "flatMap"]);
 
 /** Whether the file sits under a `web/` folder (the browser runtime). */
 function isWebFile(filename: string): boolean {
@@ -139,15 +155,9 @@ function isReadHook(source: string, name: string): boolean {
   return READ_HOOKS[source]?.includes(name) ?? false;
 }
 
-function isTrackedFunction(source: string, name: string): boolean {
-  return TRACKED_FUNCTIONS[source]?.includes(name) ?? false;
-}
-
 /** Whether `source` is a barrel whose module object the rule follows. */
 function isWatchedBarrel(source: string): boolean {
-  return (
-    READ_HOOKS[source] !== undefined || TRACKED_FUNCTIONS[source] !== undefined
-  );
+  return READ_HOOKS[source] !== undefined;
 }
 
 function propertyName(node: TSESTree.Node): string | null {
@@ -248,32 +258,38 @@ function firstArgumentOf(
   return name !== null && hooks.has(name);
 }
 
+/** `X.<method>(…)` — the call whose callee is `member`, when `method` names it. */
+function methodCall(
+  member: TSESTree.MemberExpression,
+): { method: string; call: TSESTree.CallExpression } | null {
+  const call = member.parent;
+  const method = memberName(member);
+  if (
+    method === null ||
+    call.type !== "CallExpression" ||
+    call.callee !== member
+  )
+    return null;
+  return { method, call };
+}
+
+/** Whether `node` is `Promise.<combinator>`. */
+function isPromiseCombinator(node: TSESTree.Node): boolean {
+  if (node.type !== "MemberExpression") return false;
+  const name = memberName(node);
+  return (
+    node.object.type === "Identifier" &&
+    node.object.name === "Promise" &&
+    name !== null &&
+    PROMISE_COMBINATORS.has(name)
+  );
+}
+
 /**
  * How code runs: as a `read` (render, an effect, module load), as an `action`
  * (a handler, a mutation), or `unknown` (it only escapes the file's view).
  */
 type Run = "read" | "action" | "unknown";
-
-/**
- * The literal routes a route type spells, or null when any part of it is not
- * a string literal (a type parameter is read through its constraint).
- */
-function literalRoutes(checker: TypeChecker, type: TsType): string[] | null {
-  const constrained = checker.getBaseConstraintOfType(type) ?? type;
-  const parts = constrained.isUnion() ? constrained.types : [constrained];
-  const routes: string[] = [];
-  for (const part of parts) {
-    if (!part.isStringLiteral()) return null;
-    routes.push(part.value);
-  }
-  return routes;
-}
-
-/** Whether a route type may be a GET — true when it is not a known literal. */
-function mayBeGet(checker: TypeChecker, type: TsType): boolean {
-  const routes = literalRoutes(checker, type);
-  return routes === null || routes.some((r) => r.split(" ", 1)[0] === "GET");
-}
 
 export default createRule({
   name: "no-endpoint-read",
@@ -281,34 +297,39 @@ export default createRule({
     type: "problem",
     docs: {
       description:
-        "Disallow request/response server reads in the browser — declare a liveValue (params / query / paged) or a liveCollection and read it with useLive.",
+        "Disallow request/response server reads in the browser — declare a liveValue or a liveCollection and read it with useLive (useLiveReader in an event handler).",
       requiresTypeChecking: true,
     },
     schema: [],
     messages: {
       readHook:
         "`{{name}}` reads the server over request/response, with no push. " +
-        "Declare the read as a `liveValue` (`params`, a typed `query`, or " +
-        "key-range-`paged`) or a `liveCollection`, and read it with `useLive` " +
-        "from @plugins/network/plugins/live — see " +
-        "plugins/network/plugins/live/CLAUDE.md. Endpoints stay for writes " +
-        "(fetchEndpoint in a mutation or a handler).",
+        "Declare the read as a `liveValue` (`params`, a typed `query`, " +
+        "key-range-`paged`, or `bytes`) or a `liveCollection`, and read it " +
+        "with `useLive` from @plugins/network/plugins/live — see " +
+        "plugins/network/plugins/live/CLAUDE.md. Endpoints stay for writes.",
       queryFnFetch:
         "`fetchEndpoint` inside a `queryFn` is a request/response server read, " +
-        "with no push. Declare the read as a `liveValue` (`params`, a typed " +
-        "`query`, or key-range-`paged`) or a `liveCollection`, and read it with " +
-        "`useLive` from @plugins/network/plugins/live — see " +
-        "plugins/network/plugins/live/CLAUDE.md. Endpoints stay for writes " +
-        "(fetchEndpoint in a mutation or a handler).",
-      effectFetch:
-        "`{{name}}` of a GET endpoint here runs as a read (render, an effect, " +
-        "a hook, or a function they call) — a request/response server read " +
-        "with no push, so it goes stale or gets polled. Declare it as a " +
-        "`liveValue` (`params`, a typed `query`, or cursor-`paged`) or a " +
+        "with no push. Declare the read as a `liveValue` or a " +
         "`liveCollection`, and read it with `useLive` from " +
         "@plugins/network/plugins/live — see " +
-        "plugins/network/plugins/live/CLAUDE.md. A GET an event handler " +
-        "(`on*`) or a `mutationFn` runs is not flagged.",
+        "plugins/network/plugins/live/CLAUDE.md. Endpoints stay for writes.",
+      answerRead:
+        "`{{name}}`'s answer is used where it runs as a read (render, a hook " +
+        "body, an effect, module load, or a function they call) — a " +
+        "request/response read wearing a write's method, with no push. " +
+        "Declare the question as a `liveValue` (a typed `query` for a " +
+        "structured one) and read it with `useLive` from " +
+        "@plugins/network/plugins/live — see " +
+        "plugins/network/plugins/live/CLAUDE.md. A genuine write an effect " +
+        "fires is `void`-ed: what it changes reaches the page through the " +
+        "live value it writes.",
+      readerInRead:
+        "A `LiveReader` call here runs as a read (render, a hook body, an " +
+        "effect, module load, or a function they call). `useLiveReader` is " +
+        "for a question an event handler asks and its own `await` consumes; " +
+        "where the answer is rendered, read it with `useLive` — see " +
+        "plugins/network/plugins/live/CLAUDE.md, *Event reads*.",
     },
   },
   defaultOptions: [],
@@ -324,8 +345,6 @@ export default createRule({
      * pre-filter, so scope is resolved only for a read off one of them.
      */
     const moduleLocals = new Set<string>();
-    /** The local names that MAY be a tracked function (imported or destructured). */
-    const functionLocals = new Set<string>();
 
     /** Type information, built on the first call that needs it. */
     let services: ParserServicesWithTypeInformation | undefined;
@@ -358,67 +377,81 @@ export default createRule({
         ? boundBarrel(node)
         : awaitedImportBarrel(node);
 
-    /** The tracked function `local` is bound to, or null. */
-    const boundFunction = (local: TSESTree.Identifier): string | null => {
-      if (!functionLocals.has(local.name)) return null;
+    /**
+     * Whether a local named `name` is a value binding — a `const`, a
+     * parameter, a destructured key — rather than an import, a function or a
+     * class declared under that name.
+     */
+    const isValueBinding = (local: TSESTree.Identifier): boolean => {
       const def = definitionOf(local);
-      if (def === undefined) return null;
-      const node: TSESTree.Node = def.node;
-      // The transport-bound endpoint client is a VALUE — `const fetchEndpoint
-      // = useFetchEndpoint()`, a `fetchEndpoint: FetchEndpoint` parameter, a
-      // destructured `{ fetchEndpoint }` — and every binding of it carries
-      // that name (`endpoints/fetch-endpoint-binding-name`), so any local
-      // binding of the name is the client.
-      if (
-        local.name === FETCH_ENDPOINT &&
-        node.type !== "ImportSpecifier" &&
+      if (def === undefined) return false;
+      return (
+        def.node.type !== "ImportSpecifier" &&
         def.type !== "FunctionName" &&
         def.type !== "ClassName"
-      )
-        return FETCH_ENDPOINT;
-      if (node.type === "ImportSpecifier") {
-        if (node.parent.type !== "ImportDeclaration") return null;
-        const imported = propertyName(node.imported);
-        return imported !== null &&
-          isTrackedFunction(node.parent.source.value, imported)
-          ? imported
-          : null;
-      }
-      // `const { fetchEndpoint: f } = m` — the destructured module object.
+      );
+    };
+
+    /**
+     * Whether a local is bound FROM a mutation's `mutateAsync`, whatever its
+     * name: a renamed destructure (`const { mutateAsync: find } = m`, a
+     * parameter's `{ mutateAsync: find }`) or a member read
+     * (`const run = m.mutateAsync`). Unlike `fetchEndpoint`, nothing pins a
+     * `mutateAsync` binding to its name, so the rule follows where it came from.
+     */
+    const boundFromMutateAsync = (local: TSESTree.Identifier): boolean => {
+      const def = definitionOf(local);
+      if (def === undefined) return false;
+      const parent = def.name.parent;
       if (
+        parent?.type === "Property" &&
+        parent.value === def.name &&
+        parent.parent.type === "ObjectPattern" &&
+        !parent.computed &&
+        propertyName(parent.key) === MUTATE_ASYNC
+      )
+        return true;
+      const node: TSESTree.Node = def.node;
+      return (
         node.type === "VariableDeclarator" &&
-        node.init !== null &&
-        node.id.type === "ObjectPattern"
-      ) {
-        const source = moduleBarrel(node.init);
-        if (source === null) return null;
-        for (const prop of node.id.properties) {
-          if (
-            prop.type === "Property" &&
-            prop.value.type === "Identifier" &&
-            prop.value.name === local.name
-          ) {
-            const key =
-              prop.computed && prop.key.type !== "Literal"
-                ? null
-                : propertyName(prop.key);
-            return key !== null && isTrackedFunction(source, key) ? key : null;
-          }
-        }
+        node.id === def.name &&
+        node.init?.type === "MemberExpression" &&
+        memberName(node.init) === MUTATE_ASYNC
+      );
+    };
+
+    /**
+     * The write client a callee names — `fetchEndpoint` (by binding name: a
+     * `const fetchEndpoint = useFetchEndpoint()`, a parameter, a destructured
+     * key) or `mutateAsync` (a mutation's member, a destructured local under
+     * its own name or an alias, or a local assigned from the member) — or
+     * null.
+     */
+    const writeClient = (callee: TSESTree.Node): string | null => {
+      if (callee.type === "Identifier") {
+        if (callee.name === FETCH_ENDPOINT || callee.name === MUTATE_ASYNC)
+          return isValueBinding(callee) ? callee.name : null;
+        return boundFromMutateAsync(callee) ? MUTATE_ASYNC : null;
       }
+      if (callee.type === "MemberExpression")
+        return memberName(callee) === MUTATE_ASYNC ? MUTATE_ASYNC : null;
       return null;
     };
 
-    /** The tracked function a callee names, or null. */
-    const calledFunction = (callee: TSESTree.Node): string | null => {
-      if (callee.type === "Identifier") return boundFunction(callee);
-      if (callee.type !== "MemberExpression") return null;
-      const member = memberName(callee);
-      if (member === null) return null;
-      const source = moduleBarrel(callee.object);
-      return source !== null && isTrackedFunction(source, member)
-        ? member
-        : null;
+    /** Whether a callee's value is a `LiveReader` (by its type). */
+    const isLiveReader = (callee: TSESTree.Node): boolean => {
+      if (callee.type !== "Identifier" && callee.type !== "MemberExpression")
+        return false;
+      // An import, a declared function or class, or a global is never a
+      // reader (one comes only from `useLiveReader()`'s answer): skip the type
+      // checker for them.
+      if (callee.type === "Identifier" && !isValueBinding(callee)) return false;
+      const { program, esTreeNodeToTSNodeMap } = typeServices();
+      const type = program
+        .getTypeChecker()
+        .getTypeAtLocation(esTreeNodeToTSNodeMap.get(callee));
+      const symbol = type.aliasSymbol ?? type.getSymbol();
+      return symbol?.getName() === LIVE_READER;
     };
 
     // ── Read context ────────────────────────────────────────────────────
@@ -435,6 +468,35 @@ export default createRule({
         if (run !== null) return run;
       }
       return "read";
+    };
+
+    /** The binding a function is held by — `function f`, `const f = …`, `const f = useX(…)`. */
+    const holderOf = (
+      fn: FunctionNode,
+    ): { declaration: TSESTree.Node; name: string } | null => {
+      const parent = fn.parent;
+      if (
+        parent.type === "VariableDeclarator" &&
+        parent.init === fn &&
+        parent.id.type === "Identifier"
+      )
+        return { declaration: parent, name: parent.id.name };
+      if (fn.type === "FunctionDeclaration" && fn.id !== null)
+        return { declaration: fn, name: fn.id.name };
+      if (
+        parent.type === "CallExpression" &&
+        parent.callee !== fn &&
+        HOOK_NAME.test(calleeName(parent.callee) ?? "")
+      ) {
+        const holder = parent.parent;
+        if (
+          holder.type === "VariableDeclarator" &&
+          holder.init === parent &&
+          holder.id.type === "Identifier"
+        )
+          return { declaration: holder, name: holder.id.name };
+      }
+      return null;
     };
 
     /** How a function's body runs, or null when it says nothing (transparent). */
@@ -456,12 +518,10 @@ export default createRule({
         if (HOOK_NAME.test(callee)) {
           // A callback hook (`useCallback`, `useEventCallback`, …): the
           // callback runs wherever the hook's result is used.
-          const holder = parent.parent;
-          return holder.type === "VariableDeclarator" &&
-            holder.init === parent &&
-            holder.id.type === "Identifier"
-            ? runOfUses(holder, holder.id.name, seen)
-            : "unknown";
+          const holder = holderOf(fn);
+          return holder === null
+            ? "unknown"
+            : runOfUses(holder.declaration, holder.name, seen);
         }
         return null;
       }
@@ -502,15 +562,19 @@ export default createRule({
       return declaration === null ? null : runOfUses(declaration, name, seen);
     };
 
+    /** The variable a declaration declares under `name`. */
+    const declaredVariable = (declaration: TSESTree.Node, name: string) =>
+      context.sourceCode
+        .getDeclaredVariables(declaration)
+        .find((v) => v.name === name);
+
     /** How a named function runs, from every use of its binding in the file. */
     const runOfUses = (
       declaration: TSESTree.Node,
       name: string,
       seen: Set<unknown>,
     ): Run => {
-      const variable = context.sourceCode
-        .getDeclaredVariables(declaration)
-        .find((v) => v.name === name);
+      const variable = declaredVariable(declaration, name);
       if (variable === undefined || seen.has(variable)) return "unknown";
       seen.add(variable);
       let run: Run = "unknown";
@@ -575,56 +639,122 @@ export default createRule({
       return null;
     };
 
-    // ── GET-ness ────────────────────────────────────────────────────────
+    // ── Answer used ─────────────────────────────────────────────────────
 
-    /** Whether a `fetchEndpoint(def, …)` call's endpoint may be a GET. */
-    const fetchMayBeGet = (call: TSESTree.CallExpression): boolean => {
-      const def = call.arguments[0];
-      if (def === undefined || def.type === "SpreadElement") return true;
-      const { program, esTreeNodeToTSNodeMap } = typeServices();
-      const checker = program.getTypeChecker();
-      const tsNode = esTreeNodeToTSNodeMap.get(def);
-      const route = checker.getTypeAtLocation(tsNode).getProperty("route");
-      if (route === undefined) return true;
-      return mayBeGet(
-        checker,
-        checker.getTypeOfSymbolAtLocation(route, tsNode),
-      );
+    /**
+     * Whether the value `expr` evaluates to — a write's answer, or a promise
+     * of it — is used (see the rule doc). `seen` breaks recursion through
+     * mutually-returning named functions.
+     */
+    const answerUsed = (expr: TSESTree.Node, seen: Set<unknown>): boolean => {
+      const parent = expr.parent;
+      if (parent === undefined) return true;
+      // An if-chain rather than a `switch`: `parent` is the whole
+      // `TSESTree.Node` union, and `switch-exhaustiveness-check` wants every
+      // member listed (a `default` does not satisfy it).
+      if (parent.type === "ExpressionStatement") return false;
+      if (parent.type === "UnaryExpression") return parent.operator !== "void";
+      if (
+        parent.type === "AwaitExpression" ||
+        parent.type === "ChainExpression" ||
+        parent.type === "TSAsExpression" ||
+        parent.type === "TSNonNullExpression" ||
+        parent.type === "TSSatisfiesExpression" ||
+        parent.type === "TSTypeAssertion"
+      )
+        return answerUsed(parent, seen);
+      if (parent.type === "SequenceExpression")
+        return parent.expressions.at(-1) === expr
+          ? answerUsed(parent, seen)
+          : false;
+      if (parent.type === "ConditionalExpression")
+        return parent.test === expr || answerUsed(parent, seen);
+      if (parent.type === "LogicalExpression")
+        return parent.left === expr || answerUsed(parent, seen);
+      if (parent.type === "MemberExpression") {
+        if (parent.object !== expr) return true;
+        const chained = methodCall(parent);
+        if (chained === null) return true;
+        if (chained.method === "catch" || chained.method === "finally")
+          return answerUsed(chained.call, seen);
+        if (chained.method !== "then") return true;
+        const onFulfilled = chained.call.arguments[0];
+        if (onFulfilled === undefined) return answerUsed(chained.call, seen);
+        // `.then(() => …)` ignores the answer: its result is the callback's.
+        return !isFunction(onFulfilled) || onFulfilled.params.length > 0;
+      }
+      if (parent.type === "CallExpression")
+        // `Promise.all(items.map(…))`: the combinator's value holds it.
+        return parent.arguments[0] === expr &&
+          isPromiseCombinator(parent.callee)
+          ? answerUsed(parent, seen)
+          : true;
+      if (parent.type === "ArrayExpression") {
+        const call = parent.parent;
+        return call.type === "CallExpression" &&
+          call.arguments[0] === parent &&
+          isPromiseCombinator(call.callee)
+          ? answerUsed(call, seen)
+          : true;
+      }
+      if (parent.type === "ReturnStatement") {
+        for (let cur: TSESTree.Node = parent; ; cur = cur.parent) {
+          if (cur.type === "Program") return true;
+          if (isFunction(cur)) return returnUsed(cur, seen);
+        }
+      }
+      if (parent.type === "ArrowFunctionExpression")
+        return parent.body === expr ? returnUsed(parent, seen) : true;
+      return true;
     };
 
-    /** Whether a `readNdjson(transport, route, …)` call's route may be a GET. */
-    const streamMayBeGet = (call: TSESTree.CallExpression): boolean => {
-      const route = call.arguments[1];
-      if (route === undefined || route.type === "SpreadElement") return true;
-      const { program, esTreeNodeToTSNodeMap } = typeServices();
-      const checker = program.getTypeChecker();
-      return mayBeGet(
-        checker,
-        checker.getTypeAtLocation(esTreeNodeToTSNodeMap.get(route)),
-      );
+    /** Whether what a function returns is used, at the places it is called. */
+    const returnUsed = (fn: FunctionNode, seen: Set<unknown>): boolean => {
+      const parent = fn.parent;
+      if (parent.type === "CallExpression") {
+        // An IIFE: its call is the value.
+        if (parent.callee === fn) return answerUsed(parent, seen);
+        if (firstArgumentOf(fn, RENDER_HOOKS)) return true;
+        const callee = parent.callee;
+        if (callee.type === "MemberExpression") {
+          const method = memberName(callee);
+          // `.then(() => write())` / `.map((x) => write(x))`: the outer
+          // call's value holds this one's.
+          if (
+            method !== null &&
+            (method === "then" ||
+              method === "catch" ||
+              method === "finally" ||
+              MAPPING_METHODS.has(method))
+          )
+            return answerUsed(parent, seen);
+        }
+      }
+      const holder = holderOf(fn);
+      if (holder === null) return false;
+      const variable = declaredVariable(holder.declaration, holder.name);
+      if (variable === undefined || seen.has(variable)) return false;
+      seen.add(variable);
+      // Judged where this file calls it — the same uses that made it a read.
+      return variable.references.some((ref) => {
+        const id = ref.identifier;
+        return (
+          id.parent.type === "CallExpression" &&
+          id.parent.callee === id &&
+          answerUsed(id.parent, seen)
+        );
+      });
     };
 
     return {
       Program(node) {
-        // The endpoint client is recognised by its binding name wherever it
-        // is bound (see `boundFunction`).
-        functionLocals.add(FETCH_ENDPOINT);
-        // Imports are always top-level, so every namespace / tracked-function
-        // local is known before any read of it is visited.
+        // Imports are always top-level, so every namespace local is known
+        // before any read of it is visited.
         for (const stmt of node.body) {
           if (stmt.type !== "ImportDeclaration") continue;
-          for (const spec of stmt.specifiers) {
+          for (const spec of stmt.specifiers)
             if (spec.type === "ImportNamespaceSpecifier")
               moduleLocals.add(spec.local.name);
-            else if (spec.type === "ImportSpecifier") {
-              const imported = propertyName(spec.imported);
-              if (
-                imported !== null &&
-                isTrackedFunction(stmt.source.value, imported)
-              )
-                functionLocals.add(spec.local.name);
-            }
-          }
         }
       },
 
@@ -668,13 +798,7 @@ export default createRule({
             prop.computed && prop.key.type !== "Literal"
               ? null
               : propertyName(prop.key);
-          if (key === null) continue;
-          if (isReadHook(source, key)) reportHook(prop, key);
-          else if (
-            isTrackedFunction(source, key) &&
-            prop.value.type === "Identifier"
-          )
-            functionLocals.add(prop.value.name);
+          if (key !== null && isReadHook(source, key)) reportHook(prop, key);
         }
       },
 
@@ -687,26 +811,26 @@ export default createRule({
       },
 
       CallExpression(node) {
-        const fn = calledFunction(node.callee);
-        if (fn === FETCH_ENDPOINT) {
-          if (insideQueryFn(node))
+        const client = writeClient(node.callee);
+        if (client !== null) {
+          if (client === FETCH_ENDPOINT && insideQueryFn(node)) {
             context.report({ node, messageId: "queryFnFetch" });
-          else if (runOf(node, new Set()) === "read" && fetchMayBeGet(node))
+            return;
+          }
+          if (runOf(node, new Set()) === "read" && answerUsed(node, new Set()))
             context.report({
               node,
-              messageId: "effectFetch",
-              data: { name: FETCH_ENDPOINT },
+              messageId: "answerRead",
+              data: { name: client },
             });
           return;
         }
-        if (fn === READ_NDJSON) {
-          if (runOf(node, new Set()) === "read" && streamMayBeGet(node))
-            context.report({
-              node,
-              messageId: "effectFetch",
-              data: { name: READ_NDJSON },
-            });
-        }
+        // Read context first (an AST walk), so the type checker is asked
+        // only about a call that would be flagged — never gated on the
+        // file's text: a reader reaches a file through a hook's return, a
+        // destructure or a context value without its type ever being named.
+        if (runOf(node, new Set()) === "read" && isLiveReader(node.callee))
+          context.report({ node, messageId: "readerInRead" });
       },
     };
   },

@@ -14,7 +14,7 @@ export {
   getMirroredFile,
   getMirroredNestedFile,
 } from "./endpoints";
-export { assetMirrorUrl } from "./url";
+export { ASSET_MIRROR_PREFIX, assetMirrorUrl } from "./url";
 export { assetMirrorPrewarmCollectedDir } from "./collected-dir";
 export { defineAssetMirrorPrewarm } from "./prewarm";
 export type { AssetMirrorPrewarm } from "./prewarm";

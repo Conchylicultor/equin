@@ -16,18 +16,21 @@ import { Sonata } from "../slots";
  * effects and the per-song setting observers), so each Sonata surface (desktop
  * window / keep-alive tab) gets its own isolated playback state, and a song
  * played from the library keeps playing whichever pane is active. Inside it,
- * the app-only effects (`Sonata.Effect`: shortcuts, play history, source
- * persistence).
+ * the app-only providers (`Sonata.Provider`: the library's background play)
+ * around everything, and the app-only effects (`Sonata.Effect`: shortcuts,
+ * play history, source persistence).
  */
 export function SonataLayout() {
   return (
     <SonataPlayerScope>
-      <div className="h-full min-h-0">
-        <AppShellLayout>
-          <FullPane />
-        </AppShellLayout>
-        <Sonata.Effect.Mount />
-      </div>
+      <Sonata.Provider.Wrap>
+        <div className="h-full min-h-0">
+          <AppShellLayout>
+            <FullPane />
+          </AppShellLayout>
+          <Sonata.Effect.Mount />
+        </div>
+      </Sonata.Provider.Wrap>
     </SonataPlayerScope>
   );
 }

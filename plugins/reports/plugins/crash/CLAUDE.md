@@ -30,6 +30,8 @@ Add a case there before changing any of this.
     - `infra/endpoints.EndpointAgentWriteRefusedError`
     - `infra/health.wedgeReportSink`
     - `primitives/error-boundary.boundaryReportSink`
+    - `primitives/networking/request-guard.RawApiRequestError`
+    - `primitives/networking/request-guard.requestGuardReportSink`
     - `reports.report`
     - `reports.Reports`
 - Server:

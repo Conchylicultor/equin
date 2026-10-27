@@ -35,9 +35,9 @@ export type {
   UgAlignmentRow,
   VideoPick,
 } from "./internal/row";
+export { ugAlignmentRows } from "./internal/resources";
 export {
   cancelUgAlignment,
-  getUgAlignment,
   realignUg,
   refuseUgAlignmentVideo,
   resolveUgAlignment,

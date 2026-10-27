@@ -11,6 +11,7 @@ import { IdKinds } from "@plugins/ids/web";
 import { songIdKind } from "../core";
 import { sonataLibraryPane, sonataPlayerPane } from "./panes";
 import { songPresentation } from "./internal/presentation";
+import { BackgroundPlayProvider } from "./use-playback";
 
 export { Library } from "./slots";
 export type {
@@ -36,6 +37,12 @@ export default {
     // How the songs entity's fields present in the library list.
     songPresentation,
     Sonata.Home({ id: "library", component: SongLibrary }),
+    // The surface's background play: a row's Play asks it, and it hydrates,
+    // loads and plays the song for the surface's lifetime — not the row's.
+    Sonata.Provider({
+      id: "background-play",
+      component: BackgroundPlayProvider,
+    }),
     // The player's toolbar pill. Back and the song title are NOT here: they
     // are the header band's own identity (`PlayerHeader`), left of the pill.
     sonataPlayerPane.Actions({

@@ -1,7 +1,5 @@
-import { songIdKind } from "@plugins/apps/plugins/sonata/plugins/library/core";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
-import { createMidiSong, getSongMidi } from "../../shared/endpoints";
-import { songMidi } from "./tables";
+import { createMidiSong } from "../../shared/endpoints";
 import { createMidiSongFromAttachment } from "./import";
 
 /**
@@ -27,10 +25,3 @@ export const handleCreateMidiSong = implement(
     return { id, title: body.title };
   },
 );
-
-/** Fetch one song's MIDI data (attachment + track count), or null. */
-export const handleGetSongMidi = implement(getSongMidi, async ({ params }) => {
-  const row = await songMidi.get(songIdKind.key(params.id));
-  if (!row) return null;
-  return { attachmentId: row.attachmentId, trackCount: row.trackCount };
-});

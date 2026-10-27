@@ -4,7 +4,7 @@ import { Library } from "@plugins/apps/plugins/sonata/plugins/library/web";
 import { MidiLoader } from "./loader";
 import { parseMidi } from "../shared/parse";
 import { MIDI_SOURCE_ID } from "./constants";
-import { hydrate } from "./hydrate";
+import { useHydration } from "./hydrate";
 import { midiCreateOption } from "./components/midi-create-option";
 import { midiPresentation } from "./internal/presentation";
 import { midiCover } from "./internal/cover";
@@ -30,7 +30,7 @@ export default {
     }),
     Library.Source({
       sourceId: MIDI_SOURCE_ID,
-      hydrate,
+      useHydration,
       createOption: midiCreateOption,
     }),
     Library.Cover({ id: MIDI_SOURCE_ID, cover: midiCover }),

@@ -7,7 +7,6 @@ import {
 import { CHORD_GRID_SOURCE_ID } from "../../shared/constants";
 import {
   createChordGridSong,
-  getSongChordGrid,
   updateChordGridSong,
 } from "../../shared/endpoints";
 import { songChordGrid } from "./tables";
@@ -30,18 +29,6 @@ export const handleCreateChordGridSong = implement(
       chordText: body.chordText,
     });
     return { id, title: body.title };
-  },
-);
-
-/** Fetch one song's chord-grid data, or null. */
-export const handleGetSongChordGrid = implement(
-  getSongChordGrid,
-  async ({ params }) => {
-    const row = await songChordGrid.get(songIdKind.key(params.id));
-    if (!row) return null;
-    return {
-      chordText: row.chordText,
-    };
   },
 );
 

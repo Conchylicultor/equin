@@ -4,8 +4,8 @@
  * manifests, checked by `exempt:manifests-valid` and the unused-exemption
  * report.
  *
- * Type-aware: whether a `fetchEndpoint` / `readNdjson` is a GET is read off
- * the endpoint's literal `route` type, so every case is type-checked. The
+ * Type-aware: a `LiveReader` is recognised by its type's name, so every case
+ * is type-checked. The
  * harness is the one `primitives/passthrough`'s
  * `no-unanchored-passthrough.test.ts` explains: each case is linted as a path
  * that does not exist on disk (`web/case.tsx` beside this file — under a
@@ -14,7 +14,8 @@
  * barrel does not resolve there, so a case binds `fetchEndpoint` itself (a
  * `declare const`, a `useFetchEndpoint()` result, a parameter) — the rule
  * recognises the client by its binding NAME, not its type — while
- * {@link PRELUDE} declares endpoint definitions with literal routes.
+ * {@link PRELUDE} declares endpoint definitions (their method no longer
+ * matters: tsc refuses a GET write) and {@link READER} a `LiveReader`.
  */
 
 import { setDefaultTimeout } from "bun:test";
@@ -60,17 +61,24 @@ declare const queryClient: {
 `;
 
 const ENDPOINTS_WEB = "@plugins/infra/plugins/endpoints/web";
-const NDJSON_WEB = "@plugins/infra/plugins/ndjson-stream/web";
 const REACT_QUERY = "@tanstack/react-query";
 
 const web = (code: string) => ({ filename: WEB, code: PRELUDE + code });
 
 const hook = (name: string) => ({ messageId: "readHook", data: { name } });
 const queryFnFetch = { messageId: "queryFnFetch" };
-const effectFetch = (name = "fetchEndpoint") => ({
-  messageId: "effectFetch",
+const answerRead = (name = "fetchEndpoint") => ({
+  messageId: "answerRead",
   data: { name },
 });
+const readerInRead = { messageId: "readerInRead" };
+
+/** A `LiveReader` and a value it reads — the rule knows the reader by its type's name. */
+const READER = `
+interface LiveReader { (v: unknown, p?: unknown): Promise<{ status: "ready"; data: unknown }> }
+declare function useLiveReader(): LiveReader;
+declare const stat: { key: "host-fs.stat" };
+`;
 
 const ruleTester = new RuleTester({
   languageOptions: {
@@ -186,95 +194,99 @@ ruleTester.run(
           type R = ReturnType<typeof rq.useQuery>;
         `,
       },
-      // ── GET fetchEndpoint / readNdjson by where it runs ──
-      // A write in an effect is not a read.
+      // ── A write's answer, by where it runs and whether it is used ──
+      // A write an effect fires and forgets: void-ed, an awaited statement,
+      // a `.then` that ignores the answer, a `.catch` chain left floating
+      // under `void`, a Promise.all of writes awaited as a statement.
       web(`
         declare const fetchEndpoint: FetchEndpoint;
+        declare const mutation: { mutateAsync(v: unknown): Promise<unknown> };
+        declare function setDone(v: boolean): void;
         function Panel() {
-          useEffect(() => { void fetchEndpoint(save, {}); }, []);
+          useEffect(() => {
+            void fetchEndpoint(save, {});
+            void (async () => {
+              await fetchEndpoint(save, {});
+              await Promise.all([fetchEndpoint(ack, {}), mutation.mutateAsync({})]);
+              await fetchEndpoint(save, {}).then(() => setDone(true));
+            })();
+            void fetchEndpoint(remove, {}).catch((e) => { throw e; });
+            void mutation.mutateAsync({});
+          }, []);
           return null;
         }
       `),
-      // A GET in a JSX handler, a mutationFn, or an onSuccess.
+      // A helper whose answer every caller drops; a mapped batch void-ed.
       web(`
         declare const fetchEndpoint: FetchEndpoint;
+        declare const items: string[];
+        async function flush() { return fetchEndpoint(save, {}); }
+        function Panel() {
+          const record = useCallback(async () => fetchEndpoint(ack, {}), []);
+          useEffect(() => {
+            void flush();
+            void record();
+            void Promise.all(items.map((i) => fetchEndpoint(save, { body: i })));
+          }, [record]);
+          return null;
+        }
+      `),
+      // An answer used in a JSX handler, a mutationFn, an onSuccess, a
+      // callback hook bound to a handler, an event registrar's callback.
+      web(`
+        declare const fetchEndpoint: FetchEndpoint;
+        declare function show(v: unknown): void;
         import { useMutation } from "${REACT_QUERY}";
         function Panel() {
-          useMutation({ mutationFn: () => fetchEndpoint(read, {}) });
-          useMutation({ mutationFn: save, onSuccess: () => fetchEndpoint(read, {}) });
-          return <button onClick={() => void fetchEndpoint(read, {})} />;
-        }
-      `),
-      // A named function used only as a handler — even through useCallback,
-      // a callback hook, and a deps array.
-      web(`
-        declare const fetchEndpoint: FetchEndpoint;
-        async function download() { return fetchEndpoint(read, {}); }
-        function Panel() {
-          const load = useCallback(async () => fetchEndpoint(read, {}), []);
-          const copy = useEventCallback(async () => fetchEndpoint(readOther, {}));
-          useEffect(() => {}, [load, copy]);
-          return <b onClick={load} onDoubleClick={() => void copy()} onAuxClick={download} />;
-        }
-      `),
-      // A callback an effect registers for an event runs on the event.
-      web(`
-        declare const fetchEndpoint: FetchEndpoint;
-        function Panel() {
+          useMutation({ mutationFn: () => fetchEndpoint(save, {}) });
+          useMutation({ mutationFn: save, onSuccess: async () => show(await fetchEndpoint(ack, {})) });
+          const load = useCallback(async () => show(await fetchEndpoint(save, {})), []);
           useEffect(() => {
-            const onKey = () => void fetchEndpoint(read, {});
-            window.addEventListener("keydown", () => void fetchEndpoint(read, {}));
-            window.addEventListener("keyup", onKey);
+            window.addEventListener("keydown", async () => show(await fetchEndpoint(save, {})));
           }, []);
-          return null;
+          return <button onClick={async () => show(await fetchEndpoint(save, {}))} onAuxClick={load} />;
         }
       `),
-      // A function stored in an object, passed as a non-on* prop, or
-      // returned escapes the file's view.
+      // A write whose answer its own flush reads, reached from a status
+      // subscription registered at module load (log-channels' clientLog).
       web(`
         declare const fetchEndpoint: FetchEndpoint;
-        export const api = { status: () => fetchEndpoint(read, {}) };
-        function useThing() {
-          const refetch = useCallback(() => fetchEndpoint(read, {}), []);
-          return { refetch, more: () => fetchEndpoint(readOther, {}) };
+        declare function subscribeWsStatus(cb: (ev: { status: string }) => void): void;
+        async function drain() {
+          const result = await fetchEndpoint(save, {});
+          return result;
         }
-        function Panel() {
-          return <Child action={() => fetchEndpoint(read, {})} />;
-        }
+        async function flush() { if ((await drain()) === null) return; }
+        subscribeWsStatus((ev) => { if (ev.status === "open") void flush(); });
       `),
-      // A function returned from a hook (an arrow's concise body or a
-      // `return`), an `on*` handler property assigned in an effect, and the
-      // latest-ref `ref.current = fn` all escape — named or anonymous alike.
+      // A function stored in an object, passed as a non-on* prop, returned
+      // from a hook, or assigned to a ref escapes the file's view.
       web(`
         declare const fetchEndpoint: FetchEndpoint;
-        declare const es: { onmessage: unknown };
         declare const handlerRef: { current: unknown };
-        function useOpenFile() {
-          return async () => fetchEndpoint(read, {});
-        }
-        const useOpener = () => () => fetchEndpoint(read, {});
-        function useNamedOpener() {
-          const open = async () => fetchEndpoint(readOther, {});
-          return open;
+        export const api = { status: async () => (await fetchEndpoint(save, {})) };
+        function useThing() {
+          const download = useCallback(async () => (await fetchEndpoint(save, {})), []);
+          return { download, more: () => fetchEndpoint(ack, {}) };
         }
         function Panel() {
-          useEffect(() => {
-            es.onmessage = () => void fetchEndpoint(read, {});
-            const onMsg = () => void fetchEndpoint(readOther, {});
-            es.onmessage = onMsg;
-          }, []);
-          handlerRef.current = () => fetchEndpoint(read, {});
-          return null;
+          handlerRef.current = async () => (await fetchEndpoint(save, {}));
+          return <Child action={() => fetchEndpoint(save, {})} />;
         }
       `),
-      // A stream over a non-GET route is a write.
+      // A local `fetchEndpoint` FUNCTION is not the client.
       web(`
-        import { readNdjson } from "${NDJSON_WEB}";
+        async function fetchEndpoint(..._a: unknown[]) { return 1; }
+        function Panel() { const n = useMemo(() => fetchEndpoint(save), []); return n; }
+      `),
+      // A LiveReader in an event handler, and one a callback hook holds for one.
+      web(`
+        ${READER}
+        declare function show(v: unknown): void;
         function Panel() {
-          useEffect(() => {
-            void (async () => { for await (const f of readNdjson(transport, remove.route, "/x")) void f; })();
-          }, []);
-          return null;
+          const read = useLiveReader();
+          const check = useCallback(async () => show(await read(stat, { path: "/" })), [read]);
+          return <button onClick={async () => show(await read(stat, { path: "/" }))} onAuxClick={check} />;
         }
       `),
       // A QueryClient refresh is not a read: with the endpoint read hooks
@@ -310,11 +322,11 @@ ruleTester.run(
           import { useFetchEndpoint } from "${ENDPOINTS_WEB}";
           function Panel() {
             const fetchEndpoint = useFetchEndpoint();
-            useEffect(() => { void fetchEndpoint(read, {}); }, []);
+            useEffect(() => { void fetchEndpoint(save, {}).then((r) => r); }, []);
             return null;
           }
         `),
-        errors: [effectFetch()],
+        errors: [answerRead()],
       },
       {
         filename: WEB,
@@ -391,75 +403,136 @@ ruleTester.run(
         `,
         errors: [queryFnFetch, queryFnFetch, queryFnFetch],
       },
-      // ── GET fetchEndpoint / readNdjson by where it runs ──
-      // An effect, a layout effect (through a then-chain and an IIFE),
-      // useMemo, a hook body, a component body, and module top level.
+      // ── A write's answer used where it runs as a read ──
+      // Any method: an effect (bound, through a then-callback, an IIFE, a
+      // Promise.all), a layout effect, useMemo, a hook body, a component
+      // body, and module top level.
       {
         ...web(`
           declare const fetchEndpoint: FetchEndpoint;
-          void fetchEndpoint(read, {});
-          function useThing() { void fetchEndpoint(read, {}); }
+          declare function setLoops(v: unknown): void;
+          const boot = fetchEndpoint(read, {});
+          function useThing() { return useState(fetchEndpoint(save, {})); }
           function Panel() {
-            useEffect(() => { void fetchEndpoint(read, {}); }, []);
-            useLayoutEffect(() => {
-              void (async () => { await fetchEndpoint(read, {}).then(() => fetchEndpoint(readOther, {})); })();
+            useEffect(() => {
+              void (async () => {
+                const loops = await fetchEndpoint(save, {});
+                setLoops(loops);
+                const [a] = await Promise.all([fetchEndpoint(ack, {})]);
+                setLoops(a);
+              })();
+              void fetchEndpoint(remove, {}).then(setLoops);
+              void fetchEndpoint(remove, {}).then((r) => setLoops(r));
             }, []);
-            useMemo(() => fetchEndpoint(read, {}), []);
-            void fetchEndpoint(read, {});
+            useLayoutEffect(() => { if (fetchEndpoint(save, {})) setLoops(1); }, []);
+            useMemo(() => fetchEndpoint(save, {}), []);
+            const p = fetchEndpoint(save, {});
+            return p;
+          }
+        `),
+        errors: [
+          answerRead(),
+          answerRead(),
+          answerRead(),
+          answerRead(),
+          answerRead(),
+          answerRead(),
+          answerRead(),
+          answerRead(),
+          answerRead(),
+        ],
+      },
+      // mutateAsync, by member and destructured; a helper an effect calls
+      // whose answer the effect keeps; a callback hook an effect runs.
+      {
+        ...web(`
+          declare const fetchEndpoint: FetchEndpoint;
+          declare function setLoops(v: unknown): void;
+          declare function useEndpointMutation(def: unknown): { mutateAsync(v: unknown): Promise<unknown> };
+          async function find() { return await fetchEndpoint(save, {}); }
+          function Panel() {
+            const m = useEndpointMutation(save);
+            const { mutateAsync } = useEndpointMutation(ack);
+            const refresh = useCallback(async () => fetchEndpoint(ack, {}), []);
+            useEffect(() => {
+              void (async () => {
+                setLoops(await m.mutateAsync({}));
+                setLoops(await mutateAsync({}));
+                setLoops(await find());
+                setLoops(await refresh());
+              })();
+            }, [m, mutateAsync, refresh]);
             return null;
           }
         `),
         errors: [
-          effectFetch(),
-          effectFetch(),
-          effectFetch(),
-          effectFetch(),
-          effectFetch(),
-          effectFetch(),
-          effectFetch(),
+          answerRead(),
+          answerRead(),
+          answerRead("mutateAsync"),
+          answerRead("mutateAsync"),
         ],
       },
-      // A named function an effect calls — a module helper, an inner
-      // function, a useCallback refresh also bound to a handler.
+      // mutateAsync under an alias: a renamed destructure, a renamed
+      // parameter destructure, a local assigned from the member.
       {
         ...web(`
-          declare const fetchEndpoint: FetchEndpoint;
-          async function loadOne() { return (await fetchEndpoint(read, {})); }
-          function Panel() {
-            const refresh = useCallback(async () => { await fetchEndpoint(readOther, {}); }, []);
-            useEffect(() => {
-              async function run() { await fetchEndpoint(read, {}); }
-              void run();
-              void loadOne();
-              void refresh();
-            }, [refresh]);
-            return <button onClick={refresh} />;
+          declare function setPool(v: unknown): void;
+          declare function useEndpointMutation(def: unknown): { mutateAsync(v: unknown): Promise<unknown> };
+          function useFind({ mutateAsync: ask }: { mutateAsync(v: unknown): Promise<unknown> }) {
+            useEffect(() => { void ask({}).then(setPool); }, [ask]);
           }
-        `),
-        errors: [effectFetch(), effectFetch(), effectFetch()],
-      },
-      // A route whose type is not a literal may be a GET.
-      {
-        ...web(`
-          declare const fetchEndpoint: FetchEndpoint;
           function Panel() {
-            useEffect(() => { void fetchEndpoint(loose, {}); }, []);
+            const { mutateAsync: findLoops } = useEndpointMutation(save);
+            const m = useEndpointMutation(ack);
+            const run = m.mutateAsync;
+            useEffect(() => {
+              void findLoops({}).then(setPool);
+              void run({}).then((x) => setPool(x));
+            }, [findLoops, run]);
             return null;
           }
         `),
-        errors: [effectFetch()],
+        errors: [
+          answerRead("mutateAsync"),
+          answerRead("mutateAsync"),
+          answerRead("mutateAsync"),
+        ],
       },
-      // An NDJSON stream over a GET route, run by an effect.
+      // A LiveReader reaching a component through a hook's return and a
+      // destructure — recognised by its (inferred) type, not by a name
+      // written where it is called.
       {
         ...web(`
-          import { readNdjson as stream } from "${NDJSON_WEB}";
-          function useFeed() {
-            useEffect(() => {
-              void (async () => { for await (const f of stream(transport, read.route, "/api/read")) void f; })();
-            }, []);
+          ${READER}
+          function useExplorerIo() { return { read: useLiveReader() }; }
+          declare function setStat(v: unknown): void;
+          function Panel() {
+            const { read } = useExplorerIo();
+            useEffect(() => { void read(stat, { path: "/" }).then(setStat); }, [read]);
+            return null;
           }
         `),
-        errors: [effectFetch("readNdjson")],
+        errors: [readerInRead],
+      },
+      // A LiveReader in an effect, a component body, a hook body, a
+      // useCallback an effect runs.
+      {
+        ...web(`
+          ${READER}
+          declare function show(v: unknown): void;
+          function useStat(read: LiveReader) { void read(stat, { path: "/" }); }
+          function Panel() {
+            const read = useLiveReader();
+            const check = useCallback(async () => show(await read(stat, { path: "/" })), [read]);
+            useEffect(() => {
+              void read(stat, { path: "/" }).then(show);
+              void check();
+            }, [read, check]);
+            void read(stat, { path: "/" });
+            return null;
+          }
+        `),
+        errors: [readerInRead, readerInRead, readerInRead, readerInRead],
       },
     ],
   },

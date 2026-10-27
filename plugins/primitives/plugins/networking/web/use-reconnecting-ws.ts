@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
+import { nativeWebSocket } from "@plugins/primitives/plugins/networking/plugins/request-guard/web";
 import { publishWsStatus, type WsStatus } from "./ws-status-bus";
 import { ReconnectSchedule } from "./reconnect-backoff";
 import { useTransport } from "./transport";
@@ -64,7 +65,8 @@ export function useReconnectingWebSocket(opts: ReconnectingWsOptions): {
     const connect = () => {
       if (disposed) return;
       setStatus(reconnect.isFirstAttempt ? "connecting" : "reconnecting");
-      ws = new WebSocket(url);
+      // Past the page request guard: this socket IS a sanctioned channel.
+      ws = nativeWebSocket(url);
       const { binaryType } = optsRef.current;
       if (binaryType !== undefined) ws.binaryType = binaryType;
 

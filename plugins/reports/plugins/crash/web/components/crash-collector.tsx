@@ -3,15 +3,24 @@ import { boundaryReportSink } from "@plugins/primitives/plugins/error-boundary/w
 import { wedgeReportSink } from "@plugins/infra/plugins/health/web";
 import { report } from "@plugins/reports/web";
 import { EndpointAgentWriteRefusedError } from "@plugins/infra/plugins/endpoints/web";
+import {
+  RawApiRequestError,
+  requestGuardReportSink,
+} from "@plugins/primitives/plugins/networking/plugins/request-guard/web";
 
 // A Core.Root side-effect component (the old reports ReportCollector, now owned
 // by the crash kind). It owns the three browser crash signals — window errors,
 // unhandled rejections, and React error-boundary catches — and funnels all of
 // them into the generic report() entry point with kind "crash", wrapping the
-// crash-specific fields into the `data` payload. Renders nothing.
+// crash-specific fields into the `data` payload — and files the page request
+// guard's refusals (its own sink). Renders nothing.
 export function CrashCollector() {
   useEffect(() => {
     const onError = (e: ErrorEvent) => {
+      // A request-guard refusal is filed once, through its own sink (below,
+      // which also holds the ones raised before this mounted); the guard's
+      // `reportError` echo of it is not a second crash.
+      if (e.error instanceof RawApiRequestError) return;
       const err = e.error instanceof Error ? e.error : null;
       void report({
         kind: "crash",
@@ -29,6 +38,8 @@ export function CrashCollector() {
       // notification the "Request failed" toast posts, a rank write) must not
       // file one report per click.
       if (e.reason instanceof EndpointAgentWriteRefusedError) return;
+      // Filed through the request guard's sink already (see onError).
+      if (e.reason instanceof RawApiRequestError) return;
       const err = e.reason instanceof Error ? e.reason : null;
       void report({
         kind: "crash",
@@ -86,11 +97,26 @@ export function CrashCollector() {
       });
     });
 
+    // The page request guard refused a raw request to the app's server. Its
+    // sink holds every refusal raised before this effect ran (the guard is
+    // installed before anything else evaluates), and replays them here.
+    requestGuardReportSink.register((err) => {
+      void report({
+        kind: "crash",
+        source: "browser-error",
+        message: err.message,
+        url: window.location.href,
+        userAgent: navigator.userAgent,
+        data: { errorType: err.name, stack: err.stack ?? null },
+      });
+    });
+
     return () => {
       window.removeEventListener("error", onError);
       window.removeEventListener("unhandledrejection", onRejection);
       boundaryReportSink.register(null);
       wedgeReportSink.register(null);
+      requestGuardReportSink.register(null);
     };
   }, []);
 

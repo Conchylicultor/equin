@@ -50,6 +50,22 @@ There is no read hook and no `invalidates:` option: a surface's read of server
 data is a live resource (`useLive`, below), pushed when the write lands, so a
 mutation never refreshes a read by hand.
 
+**The browser's clients send writes only.** `defineEndpoint` derives a `read`
+marker from the route — `undefined` for a literal `POST` / `PUT` / `PATCH` /
+`DELETE`, the `ReadMarker` sentence otherwise (a GET, HEAD, OPTIONS, a GET|POST
+union, a wide `string` route: an allow-list, so it fails closed). It is never
+declared. `FetchEndpoint` (both overloads), `useEndpointMutation` and
+`readNdjson` (`infra/ndjson-stream`) take `… & WriteEndpoint`, so a GET def is a
+tsc error (tsc reports the intersection reduced to `never` because property
+`read` conflicts — hover the def's `read` for the sentence), and `fetchEndpoint`
+throws `` `${route}: ${read}` `` if a cast gets one through (the
+`fakeFetchEndpoint` fake too). A read is a live value read with `useLive` —
+`useLiveReader` when an event handler asks and awaits the answer
+(`network/live`). A generic wrapper over the fetcher constrains its def with
+`& WriteEndpoint` too. GET contracts stay for everyone else: `callEndpoint`
+(CLI, servers, MCP), `implement`, `assetPath` / `useAssetSrc` / `useAssetUrl`,
+`endpointRequest` and e2e scripts ignore the marker.
+
 Imperative calls go through a `FetchEndpoint` — the client bound to ONE transport (there is no transportless fetcher). Non-2xx responses throw `EndpointError(status, body)`.
 
 ## The fetcher is bound to a transport
@@ -98,7 +114,7 @@ const s = await callEndpoint(queueHealthSummaryEndpoint, {}, { origin: namespace
 
 Params, body, query and the decoded answer come from the contract, so a contract change is a tsc error at the caller (the bug class: `secretsSet` went 204 while its caller still parsed `{ ok: true }`). No answer → fetch's `TypeError`; a non-2xx → `EndpointError` whose message names the request and the reply. Retry / offline policy is the caller's, over those two. Both clients share one fetch-free request core in `core/request.ts` (`endpointRequest` / `readEndpointResponse`), which a module that cannot import `server/` (a `shared/` helper run by a host process) composes around its own sanctioned `fetch`. A hand-written `/api/…` path or a `fetch` to an endpoint's `.path` off the page is the `endpoints/no-raw-endpoint-call` lint; a genuine exception (a hook process that must not load zod) is an inline disable with the reason. A URL handed to someone else rather than fetched (an agent's MCP URL) is built with `endpointPath(endpoint, params)`. A reply read across code generations (any worktree's backend, through the gateway) is not an exception: its contract defaults every field added since (`.default(…)`), so an older backend's reply parses — `profiling/runtime`'s schemas are the example.
 
-**Endpoints are for writes.** A server read a surface renders is a live resource — a `liveValue` (`params`, a typed `query`, `paged` by key ranges, or `bytes`) or a `liveCollection`, read with `useLive` (`plugins/network/plugins/live/CLAUDE.md`) as a `ResourceResult` (loading / error / ready), never React Query's own result. There is no request/response read hook: `useEndpoint`, live-state's `useEndpointResource`, `hydrateEndpoint`, `useCursorPagination`, `useEndpointMutation`'s `invalidates:` and the exported `endpointQueryKey` are deleted (`research/2026-10-11-global-endpoint-reads-onto-live.md`). The `live/no-endpoint-read` lint bans, in `web/` code, TanStack's `useQuery` family, `fetchEndpoint` inside a `queryFn`, and a GET `fetchEndpoint` / `readNdjson` that render, a hook or an effect runs — sanctioned only inside `network/live` and `primitives/live-state`, and never a debt entry. Imperative `fetchEndpoint` (a mutation, a handler) is untouched. It does **not** see a non-GET (POST) `fetchEndpoint` whose answer an effect reads: an effect also runs genuine writes (record a play, flush logs), so the method cannot tell the two apart; such a read is still wrong — declare it live. A structured question (once a POST body) is a typed-query `liveValue` (`{ query }`), a type-ahead search over a third party a param'd or typed-query value served `fixed` (`wallpaper.search`, `sonata.ultimate-guitar.search`); `useQueryResource` (live-state) remains only for local async loads (a code-split module), never a server read.
+**Endpoints are for writes.** A server read a surface renders is a live resource — a `liveValue` (`params`, a typed `query`, `paged` by key ranges, or `bytes`) or a `liveCollection`, read with `useLive` (`plugins/network/plugins/live/CLAUDE.md`) as a `ResourceResult` (loading / error / ready), never React Query's own result. There is no request/response read hook: `useEndpoint`, live-state's `useEndpointResource`, `hydrateEndpoint`, `useCursorPagination`, `useEndpointMutation`'s `invalidates:` and the exported `endpointQueryKey` are deleted (`research/2026-10-11-global-endpoint-reads-onto-live.md`). A GET `fetchEndpoint` / `useEndpointMutation` / `readNdjson` does not compile anywhere in the browser (the `read` marker, above): a read is `useLive`, or `useLiveReader` in an event handler. The `live/no-endpoint-read` lint bans, in `web/` code, TanStack's `useQuery` family, `fetchEndpoint` inside a `queryFn`, a `fetchEndpoint` / `mutateAsync` of any method whose answer is used where it runs as a read (render, a hook body, an effect, module load), and a `LiveReader` call there — sanctioned only inside `network/live` and `primitives/live-state`, and never a debt entry. A write an effect fires and forgets (`void`-ed) passes. Its residual, held by review: a POST read issued from an event handler (nothing static tells it from a write showing its result) — declare it live and read it with `useLiveReader`. A structured question (once a POST body) is a typed-query `liveValue` (`{ query }`), a type-ahead search over a third party a param'd or typed-query value served `fixed` (`wallpaper.search`, `sonata.ultimate-guitar.search`); `useQueryResource` (live-state) remains only for local async loads (a code-split module), never a server read.
 
 Data the **first render** needs (no loading flash) is not an endpoint read: declare it a `liveValue` with `preload: "boot"` / `"boot-and-keep"` (`network/live`), which the boot snapshot hydrates.
 
@@ -343,12 +359,14 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
 
 ## Enforced invariants
 
-- **Web code must use `fetchEndpoint` (a write) or `useLive` (a read).** Raw `fetch(...)` /
+- **Web code must use `fetchEndpoint` (a write) or `useLive` / `useLiveReader` (a read).** Raw `fetch(...)` /
   `fetchWithRetry(...)` / `sendBeacon(...)` / `new XMLHttpRequest()` from any
   module a page can load (`web/`, and the `core/` / `shared/` helpers web
-  imports) is forbidden — enforced by the `no-raw-web-fetch` lint rule and the
-  `endpoints:typed-web-fetches` check. A module that runs outside any page (an
-  agent's hook script) is exempted in its own manifest.
+  imports) is forbidden — enforced by the `no-raw-web-fetch` lint rule. A module
+  that runs outside any page (an agent's hook script) is exempted in its own
+  manifest, and only as `sanctioned`: the rule is `noDebt`, so a debt entry is
+  refused (tsc and `exempt:manifests-valid`) — a raw fetch is fixed, never
+  tracked.
 - **Off the page, endpoints are called with `callEndpoint`.** A hand-written
   `/api/…` path or a `fetch` built from an endpoint's `.path` in server /
   central / machine / cli / shared / core code is forbidden — enforced by the
@@ -370,7 +388,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
 
 ## Plugin reference
 
-- Description: Typed endpoint contract primitive. useFetchEndpoint (a FetchEndpoint bound to the subtree's transport; fetchEndpointOver(t) for sanctioned page-level code) and useEndpointMutation consume endpoint definitions on the client — writes, and requests that are not reads a surface renders (every server read is a live resource, read with useLive); useAssetSrc turns an AssetPath (a GET endpoint's asset) into what an element loads over the subtree's transport (the path, a blob URL, or unavailable); useAssetUrl / assetUrlOver hand a sink that loads by URL on its own (a library's fetch, an HTML string, an iframe) an AssetPath's or AssetBase's URL, or unavailable. Typed endpoint contract primitive. defineEndpoint declares the contract; implement() creates the server handler; callEndpoint() calls one from off the page (a backend, the CLI) through its contract; useFetchEndpoint / useEndpointMutation consume it on the client.
+- Description: Typed endpoint contract primitive. useFetchEndpoint (a FetchEndpoint bound to the subtree's transport; fetchEndpointOver(t) for sanctioned page-level code) and useEndpointMutation send writes only — a GET def is a tsc error (the derived read marker; & WriteEndpoint) and throws if cast through (every server read is a live resource, read with useLive, or useLiveReader in an event handler); useAssetSrc turns an AssetPath (a GET endpoint's asset) into what an element loads over the subtree's transport (the path, a blob URL, or unavailable); useAssetUrl / assetUrlOver hand a sink that loads by URL on its own (a library's fetch, an HTML string, an iframe) an AssetPath's or AssetBase's URL, or unavailable. Typed endpoint contract primitive. defineEndpoint declares the contract; implement() creates the server handler; callEndpoint() calls one from off the page (a backend, the CLI) through its contract; useFetchEndpoint / useEndpointMutation consume it on the client.
 - Load-bearing: yes
 - Web:
   - Uses:
@@ -380,6 +398,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `primitives/networking.transportScoped`
     - `primitives/networking.useTransport`
     - `primitives/networking.useTransportScoped`
+    - `primitives/networking/request-guard.allowAssetRoute`
   - Exports (types):
     - `AssetSrc`
     - `AssetUrl`
@@ -422,6 +441,9 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `MachineFeature`
     - `MachineResult`
     - `MachineUnavailable`
+    - `ReadMarker`
+    - `ReadOf`
+    - `WriteEndpoint`
   - Exports (values):
     - `agentWriteRefusedMessage`
     - `ASSET_PATH`
@@ -450,10 +472,10 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `unsupportedEndpointResponse`
 - Cross-plugin:
   - Imported by: 228 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×62
+    - `apps` ×63
     - `conversations` ×32
-    - `page` ×21
     - `infra` ×20
+    - `page` ×20
     - `tasks` ×19
     - `debug` ×16
     - `primitives` ×15
@@ -477,7 +499,9 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `search/engine`
     - `shell/notifications`
 - Exemptions:
-  - Exempts itself from: `endpoints/no-raw-web-fetch` — `web` (sanctioned)
+  - Exempts itself from:
+    - `endpoints/no-raw-web-fetch` — `web` (sanctioned)
+    - `networking/no-request-guard-capability` — `web/internal/asset-url.ts`, `web/internal/asset-src.ts` (sanctioned)
   - Exempted by:
     - `apps/pages/page-tree` (0 debt)
     - `apps/sonata/playback-history` (0 debt)
@@ -485,12 +509,13 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `apps/sonata/rich/swing` (0 debt)
     - `apps/sonata/transpose` (0 debt)
     - `conversations/compaction-context` (0 debt)
+    - `infra/boot-snapshot` (0 debt)
     - `infra/endpoints` (0 debt)
+    - `infra/health` (0 debt)
     - `infra/mcp/browser` (0 debt)
     - `infra/ndjson-stream` (0 debt)
     - `primitives/live-state` (0 debt)
     - `primitives/networking` (0 debt)
-    - `primitives/networking/page-transport` (0 debt)
     - `shell/notifications` (0 debt)
     - `tasks/task-graph` (0 debt)
 - Server:

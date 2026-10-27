@@ -27,7 +27,6 @@ import type ReactHooksPlugin from "eslint-plugin-react-hooks";
 import type { Program } from "typescript";
 import { loadRepoFiles } from "@plugins/framework/plugins/tooling/core";
 import {
-  FILE_CATEGORIES,
   NON_APP_FILE_CATEGORIES,
   categoryGlobs,
   isLintRuleId,
@@ -40,6 +39,7 @@ import { lintEntries } from "./lint.generated";
 import { LINT_SCOPE_EXCLUDE_GLOBS } from "./lint-scope-exceptions";
 import { createLintToolkit, type LintToolkit } from "./class-token-walk";
 import { readDeclaredUtilities } from "./declared-utilities";
+import { scopeDeclarationError } from "./scope-declaration";
 
 // Loaded lazily: importing anything from this module's barrel
 // (`lint/core/index.ts`) — even a leaf helper like `isLintScopeExcluded` —
@@ -148,6 +148,14 @@ export interface LintContribution {
    * first).
    */
   closed?: string[];
+  /**
+   * Rule ids that admit SANCTIONED exemptions only: an `exempt/index.ts`
+   * `kind: "debt"` entry naming one is refused (the id is absent from
+   * `DebtableRuleId`, so tsc refuses it first). For a rule whose substrate
+   * needs a sanctioned home but whose every other violation must be fixed, not
+   * tracked. Exclusive with `closed`, which already refuses both kinds.
+   */
+  noDebt?: string[];
 }
 
 /**
@@ -176,6 +184,7 @@ export interface LoadedLintContribution {
   enforceEverywhere: string[];
   outOfScope: Record<string, readonly FileCategory[]>;
   closed: string[];
+  noDebt: string[];
 }
 
 /**
@@ -211,8 +220,6 @@ export async function loadLintContributions(
   const results = await Promise.allSettled(lintEntries.map((e) => e.loader()));
   const contributions: LoadedLintContribution[] = [];
   const failures: string[] = [];
-  const isCategory = (c: unknown): c is FileCategory =>
-    (FILE_CATEGORIES as readonly unknown[]).includes(c);
   for (let i = 0; i < results.length; i++) {
     const r = results[i]!;
     const e = lintEntries[i]!;
@@ -245,30 +252,10 @@ export async function loadLintContributions(
       continue;
     }
     const rules = { ...def.rules, ...built.rules };
-    // A typo'd rule id in enforceEverywhere / outOfScope / closed would
-    // silently change nothing — exactly the failure each exists to prevent.
     const outOfScope = def.outOfScope ?? {};
-    const named: (readonly [key: string, id: string])[] = [
-      ...(def.enforceEverywhere ?? []).map(
-        (id) => ["enforceEverywhere", id] as const,
-      ),
-      ...Object.keys(outOfScope).map((id) => ["outOfScope", id] as const),
-      ...(def.closed ?? []).map((id) => ["closed", id] as const),
-    ];
-    const unknown = named.filter(([, id]) => !(id in rules));
-    if (unknown.length > 0) {
-      failures.push(
-        `${e.pluginPath}/lint — names rule(s) this plugin does not define: ${unknown.map(([k, id]) => `${k} "${id}"`).join(", ")}`,
-      );
-      continue;
-    }
-    const badCategories = Object.entries(outOfScope).flatMap(([id, cats]) =>
-      cats.filter((c) => !isCategory(c)).map((c) => `${id}: "${String(c)}"`),
-    );
-    if (badCategories.length > 0) {
-      failures.push(
-        `${e.pluginPath}/lint — outOfScope names unknown file categories (${badCategories.join(", ")}); known: ${FILE_CATEGORIES.join(", ")}`,
-      );
+    const scopeError = scopeDeclarationError(def, rules);
+    if (scopeError !== null) {
+      failures.push(`${e.pluginPath}/lint — ${scopeError}`);
       continue;
     }
     contributions.push({
@@ -278,6 +265,7 @@ export async function loadLintContributions(
       enforceEverywhere: def.enforceEverywhere ?? [],
       outOfScope,
       closed: def.closed ?? [],
+      noDebt: def.noDebt ?? [],
     });
   }
   if (failures.length > 0) {
@@ -289,27 +277,32 @@ export async function loadLintContributions(
 }
 
 /**
- * The live lint rule ids (`<ns>/<rule>`) and the closed subset — what an
- * exemption naming a lint rule is validated against.
+ * The live lint rule ids (`<ns>/<rule>`), the closed subset and the noDebt
+ * (sanctioned-only) subset — what an exemption naming a lint rule is
+ * validated against.
  */
 export function lintRuleIds(contributions: readonly LoadedLintContribution[]): {
   known: Set<string>;
   closed: Set<string>;
+  noDebt: Set<string>;
 } {
   const known = new Set<string>();
   const closed = new Set<string>();
+  const noDebt = new Set<string>();
   for (const c of contributions) {
     for (const id of Object.keys(c.rules)) known.add(`${c.name}/${id}`);
     for (const id of c.closed) closed.add(`${c.name}/${id}`);
+    for (const id of c.noDebt) noDebt.add(`${c.name}/${id}`);
   }
-  return { known, closed };
+  return { known, closed, noDebt };
 }
 
 /**
  * The exemptions that name a lint rule, validated against the live rule set.
  * Throws on an unknown or closed id: in "config-off" mode it would otherwise
  * switch off a rule that does not exist, and in "report" mode suppress nothing
- * with no way to tell.
+ * with no way to tell. Throws too on a debt entry for a noDebt rule, so the IDE
+ * config and the type-check worker refuse it as loudly as the check does.
  */
 export function lintExemptions(
   exemptions: readonly ResolvedExemption[],

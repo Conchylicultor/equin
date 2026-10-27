@@ -90,13 +90,18 @@ export function isLintRuleId(rule: string): boolean {
 
 /**
  * The problems with exemptions' rule ids against a live rule set: an id no
- * live rule declares, or one whose owner declared it `closed`. One function,
- * so the lint config build, the check runner and `exempt:manifests-valid`
- * cannot disagree about what a bad id is.
+ * live rule declares, one whose owner declared it `closed`, or a `debt` entry
+ * for one whose owner declared it `noDebt` (sanctioned-only). One function, so
+ * the lint config build, the check runner and `exempt:manifests-valid` cannot
+ * disagree about what a bad id is.
  */
 export function ruleIdProblems(
   exemptions: readonly ResolvedExemption[],
-  live: { known: ReadonlySet<string>; closed: ReadonlySet<string> },
+  live: {
+    known: ReadonlySet<string>;
+    closed: ReadonlySet<string>;
+    noDebt: ReadonlySet<string>;
+  },
 ): string[] {
   const problems: string[] = [];
   for (const e of exemptions) {
@@ -107,6 +112,10 @@ export function ruleIdProblems(
     } else if (!live.known.has(e.rule)) {
       problems.push(
         `${e.manifest} exempts "${e.path}" from ${e.rule}, which no lint rule or check declares exemptable`,
+      );
+    } else if (e.kind === "debt" && live.noDebt.has(e.rule)) {
+      problems.push(
+        `${e.manifest} exempts "${e.path}" from ${e.rule} as debt, but its owner declares it sanctioned-only (noDebt) — fix the violation, or, if this is a permanent home of the idiom, declare it kind: "sanctioned" with its reason`,
       );
     }
   }

@@ -2,6 +2,13 @@ import type { Exemptions } from "@plugins/framework/plugins/tooling/plugins/exem
 
 export default [
   {
+    rule: "no-db-backed-notify",
+    paths: ["server/internal/bytes.ts"],
+    kind: "sanctioned",
+    reason:
+      "attachments.bytes is `immutable` by id: an upload always mints a new attachment row and the bytes under an id are never rewritten, so the one Postgres read (the row's blob key, by id) can never change an answer. A deletion is not healed while subscribed, which is the immutable arm's stated contract.",
+  },
+  {
     rule: "paths:no-hardcoded-paths",
     paths: ["server/index.ts"],
     kind: "sanctioned",

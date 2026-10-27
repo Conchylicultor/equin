@@ -5,6 +5,51 @@ import { extractMethod, extractPath } from "./route-params";
 import type { MachineFeature } from "./needs-machine";
 import type { AgentWrite } from "./agent-write";
 
+/** The methods a browser may send through `fetchEndpoint` / `useEndpointMutation`. */
+type WriteMethod = "POST" | "PUT" | "PATCH" | "DELETE";
+const WRITE_METHODS: ReadonlySet<string> = new Set<WriteMethod>([
+  "POST",
+  "PUT",
+  "PATCH",
+  "DELETE",
+]);
+
+/**
+ * Why a read endpoint is refused by the browser's write clients — the sentence
+ * tsc prints when a GET def is passed to one, and the error a cast past tsc
+ * throws at runtime.
+ */
+const READ_MARKER =
+  "GET is a read: declare it live (liveValue / liveCollection) and read it with useLive (useLiveReader in an event handler); fetchEndpoint / useEndpointMutation send writes only" as const;
+export type ReadMarker = typeof READ_MARKER;
+
+/**
+ * The `read` marker a route derives: `undefined` for a literal write route,
+ * {@link ReadMarker} otherwise. An allow-list, so it fails closed: a GET (or
+ * HEAD / OPTIONS), a GET|POST union, and a wide `string` route are all reads to
+ * the write clients. A wide route keeps `undefined` in its type so every
+ * literal def stays assignable to `EndpointDef<string, …>` (`implement`,
+ * `callEndpoint`, registries) — yet is still not a {@link WriteEndpoint}.
+ */
+export type ReadOf<Route extends string> = string extends Route
+  ? ReadMarker | undefined
+  : [Route] extends [`${WriteMethod} ${string}`]
+    ? undefined
+    : ReadMarker;
+
+/**
+ * What the browser's write clients (`fetchEndpoint`, `useEndpointMutation`,
+ * `readNdjson`) take beside the def: a contract whose route is a write. A GET
+ * def fails it with the {@link ReadMarker} sentence; a generic wrapper keeps
+ * compiling by constraining its def with `& WriteEndpoint` too.
+ */
+export type WriteEndpoint = { readonly read: undefined };
+
+/** The `read` marker of a route, at runtime (what `defineEndpoint` stamps). */
+function readMarkerOf(route: string): ReadMarker | undefined {
+  return WRITE_METHODS.has(extractMethod(route)) ? undefined : READ_MARKER;
+}
+
 /** What every endpoint contract carries, portable or desktop-only. */
 interface EndpointContract<
   Route extends string,
@@ -16,6 +61,14 @@ interface EndpointContract<
   readonly route: Route;
   readonly method: string;
   readonly path: string;
+  /**
+   * Derived from the route, never declared: `undefined` on a write, the
+   * {@link ReadMarker} sentence on a read. The browser's write clients take
+   * only `& WriteEndpoint` (tsc), and `fetchEndpoint` throws the sentence when
+   * a cast gets a read past tsc. Every other client (`callEndpoint`, `assetPath`,
+   * `implement`, e2e) ignores it.
+   */
+  readonly read: ReadOf<Route>;
   readonly bodyCodec?: Codec<TBody>;
   readonly responseCodec?: Codec<TResponse>;
   readonly querySchema?: ZodParser<TQuery>;
@@ -186,6 +239,7 @@ export function defineEndpoint<
     route: opts.route,
     method: extractMethod(opts.route),
     path: extractPath(opts.route),
+    read: readMarkerOf(opts.route) as ReadOf<Route>,
     bodyCodec: bodyCodec as Codec<SpecType<B>> | undefined,
     responseCodec: responseCodec as Codec<SpecType<R>> | undefined,
     querySchema: opts.query,

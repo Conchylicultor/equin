@@ -1,6 +1,5 @@
 import { grepCode } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
-import typedWebFetches from "./typed-web-fetches";
 import noRawJsonHandlers from "./no-raw-json-handlers";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
@@ -43,4 +42,4 @@ const typedHandlers: Check = {
   },
 };
 
-export default [typedHandlers, typedWebFetches, noRawJsonHandlers];
+export default [typedHandlers, noRawJsonHandlers];

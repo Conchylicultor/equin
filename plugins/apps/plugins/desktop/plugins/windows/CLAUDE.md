@@ -137,7 +137,7 @@ new window of the focused window's app; F3 toggles the overview.
     - `Shortcuts.Shortcut` "floating.toggle-pin (ctrl+alt+p)"
     - `Shortcuts.Shortcut` "floating.window-to-next-desktop (ctrl+alt+shift+pagedown)"
     - `Shortcuts.Shortcut` "floating.window-to-prev-desktop (ctrl+alt+shift+pageup)"
-  - Uses: 43 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 44 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×8
     - `apps-core/surface` ×4
     - `apps/desktop/shell` ×4
@@ -149,6 +149,7 @@ new window of the focused window's app; F3 toggles the overview.
     - `apps-core/tabs.useTabs`
     - `apps-core.Apps`
     - `config_v2.useConfig`
+    - `infra/endpoints.useAssetSrc`
     - `primitives/app-shell.useSidebarDrawnOn`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`

@@ -36,7 +36,7 @@ import {
   chordOverlapsWindow,
   expandChord,
   type ChordToken,
-  type FindLoopsBody,
+  type FindLoops,
   type LoopCandidate,
   type LoopExtras,
   type LoopShapeId,
@@ -122,7 +122,7 @@ export function unlockedWindowsWhere(args: {
  * kept out of this one because it needs the sections and the video status
  * joined: this one stands on the windows table alone.
  */
-export function findLoopsWhere(body: FindLoopsBody): SQL {
+export function findLoopsWhere(body: FindLoops): SQL {
   const conditions: SQL[] = [
     unlockedWindowsWhere({
       shape: body.shape,
@@ -209,7 +209,7 @@ export function chordsInWindow(
  * front of a read that has to answer in tens of milliseconds.
  */
 export async function findLoopWindows(
-  body: FindLoopsBody,
+  body: FindLoops,
 ): Promise<LoopCandidate[]> {
   const rows = await db
     // Named columns, not the two whole rows: a section also carries `keys`,

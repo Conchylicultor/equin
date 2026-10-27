@@ -1,5 +1,8 @@
 import { serveValue } from "@plugins/network/plugins/live/machine";
-import { SsrfError } from "@plugins/infra/plugins/safe-fetch/server";
+import {
+  SsrfError,
+  isUnreachableError,
+} from "@plugins/infra/plugins/safe-fetch/server";
 import { linkPreview } from "../../core";
 import { PageFetchError, scrapeLinkPreview } from "./scrape";
 
@@ -23,8 +26,12 @@ export const linkPreviewServed = serveValue(linkPreview, {
     } catch (err) {
       if (err instanceof SsrfError)
         throw linkPreview.refuse("blocked", err.message);
-      if (err instanceof PageFetchError) {
-        throw linkPreview.refuse("unreachable", err.message);
+      // A dead or slow link (see link-meta-served.ts) is an answer, not a defect.
+      if (err instanceof PageFetchError || isUnreachableError(err)) {
+        throw linkPreview.refuse(
+          "unreachable",
+          err instanceof Error ? err.message : String(err),
+        );
       }
       throw err;
     }

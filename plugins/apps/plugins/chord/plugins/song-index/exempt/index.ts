@@ -2,6 +2,13 @@ import type { Exemptions } from "@plugins/framework/plugins/tooling/plugins/exem
 
 export default [
   {
+    rule: "no-db-backed-notify",
+    paths: ["server/internal/loops-resource.ts"],
+    kind: "sanctioned",
+    reason:
+      "chord.loops answers one random sample of loop windows per question, and every question carries its refill's own `round` nonce: an answer is frozen by design (`fixed` — the trainer's next refill, or its retry after `not-ready`, asks a new round), so no write to the index may move a sample already asked. Its loader reads the bulk-loaded index tables and the index status, and fills the idempotent oEmbed video-status cache.",
+  },
+  {
     rule: "ids:pk-declared",
     paths: ["server/internal/tables.ts"],
     kind: "debt",

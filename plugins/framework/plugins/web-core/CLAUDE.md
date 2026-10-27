@@ -134,6 +134,8 @@ bun run test:dom plugins/framework/plugins/web-core/web/__tests__/plugin-render.
     - `primitives/live-state.NotificationsProvider`
     - `primitives/networking.TransportProvider`
     - `primitives/networking/page-transport.pageTransport`
+    - `primitives/networking/request-guard.allowAssetRoute`
+    - `primitives/networking/request-guard.installRequestGuard`
     - `primitives/perfs/boot-trace.markBootInstant`
     - `primitives/perfs/boot-trace.markBootInstantAtNextCommit`
     - `primitives/perfs/boot-trace.startBootSpan`
@@ -157,6 +159,7 @@ bun run test:dom plugins/framework/plugins/web-core/web/__tests__/plugin-render.
     - `plugin-boundaries` — `web/__tests__/plugin-render.test.tsx` (sanctioned)
     - `boundaries/no-platform-api` — `core/vite-contributions.ts` (debt)
     - `networking/no-page-transport` — `web/App.tsx` (sanctioned)
+    - `networking/no-request-guard-capability` — `web/install-request-guard.ts` (sanctioned)
 - Core:
   - Exports (types):
     - `BabelPluginItem`

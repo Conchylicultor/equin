@@ -1,8 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import {
   SsrfError,
+  TooManyRedirectsError,
   buildPinnedDial,
   isPrivateIp,
+  isUnreachableError,
   parsePublicUrl,
 } from "./ssrf";
 
@@ -140,5 +142,35 @@ describe("buildPinnedDial", () => {
       "2606:4700::1",
     );
     expect(dial.serverName).toBe("2606:4700::1");
+  });
+});
+
+describe("isUnreachableError", () => {
+  const withCode = (E: new (m: string) => Error, code: string) =>
+    Object.assign(new E(code), { code });
+
+  test("a failed dial or lookup is unreachable", () => {
+    // Bun's fetch: a TypeError carrying the socket's code.
+    expect(isUnreachableError(withCode(TypeError, "ECONNREFUSED"))).toBe(true);
+    expect(isUnreachableError(withCode(TypeError, "ENOTFOUND"))).toBe(true);
+    // node:dns's lookup.
+    expect(isUnreachableError(withCode(Error, "ENOTFOUND"))).toBe(true);
+  });
+
+  test("a timeout, an abort and too many redirects are unreachable", () => {
+    expect(
+      isUnreachableError(new DOMException("timed out", "TimeoutError")),
+    ).toBe(true);
+    expect(isUnreachableError(new DOMException("aborted", "AbortError"))).toBe(
+      true,
+    );
+    expect(isUnreachableError(new TooManyRedirectsError(8))).toBe(true);
+  });
+
+  test("a programming error or a blocked target is not", () => {
+    expect(isUnreachableError(new TypeError("x is undefined"))).toBe(false);
+    expect(isUnreachableError(new SsrfError("blocked"))).toBe(false);
+    expect(isUnreachableError(withCode(Error, "EACCES"))).toBe(false);
+    expect(isUnreachableError("ENOTFOUND")).toBe(false);
   });
 });

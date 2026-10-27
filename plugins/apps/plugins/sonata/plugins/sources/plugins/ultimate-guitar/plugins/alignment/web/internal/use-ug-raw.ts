@@ -10,7 +10,7 @@ import {
   type UgAlignmentRow,
   type UgSourceRaw,
 } from "../../core";
-import { ugAlignmentRows } from "../../shared/resources";
+import { ugAlignmentRows } from "../../core";
 
 /**
  * The open song's UG raw, parsed (`undefined` for a song with no UG source),

@@ -32,10 +32,8 @@ import {
   type LoopExtras,
   type TokenSetCount,
 } from "../../core";
-import {
-  FindLoopsBodySchema,
-  NextChordsBodySchema,
-} from "../../core/endpoints";
+import { NextChordsBodySchema } from "../../core/endpoints";
+import { FindLoopsSchema } from "../../core/resources";
 import { SkipSummarySchema } from "../../core/skip-tally";
 import {
   findLoopsWhere,
@@ -150,7 +148,7 @@ async function findSectionIds(
   practised: ChordToken[],
   extras: LoopExtras = 0,
 ) {
-  const body = FindLoopsBodySchema.parse({
+  const body = FindLoopsSchema.parse({
     playable,
     practised,
     extras,

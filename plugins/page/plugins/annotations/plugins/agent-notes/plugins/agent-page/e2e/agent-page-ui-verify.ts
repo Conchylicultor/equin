@@ -19,6 +19,7 @@
 //          --conversation <conv-id> [--out /tmp/agent-page-ui]
 import type { Locator, Page } from "playwright";
 import {
+  pageFetch,
   agentFetch,
   arg,
   report,
@@ -80,26 +81,21 @@ async function callTool(name: string, args: unknown): Promise<string> {
   return text;
 }
 
-/** One same-origin JSON request from inside the page (its cookies, its origin). */
+/** One same-origin JSON request through the page's browser context (its cookies, its origin). */
 async function api(
   page: Page,
   method: string,
   url: string,
   body: unknown,
 ): Promise<unknown> {
-  return page.evaluate(
-    async ({ m, u, b }) => {
-      const res = await fetch(u, {
-        method: m,
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(b),
-      });
-      if (!res.ok)
-        throw new Error(`${m} ${u} ${res.status}: ${await res.text()}`);
-      return res.json() as unknown;
-    },
-    { m: method, u: url, b: body },
-  );
+  const res = await pageFetch(page, url, {
+    method,
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok)
+    throw new Error(`${method} ${url} ${res.status}: ${await res.text()}`);
+  return (await res.json()) as unknown;
 }
 
 /** The editor row for a block id. */

@@ -14,9 +14,14 @@ and a committed typed path runs it with `runActivation`.
 
 `PathBarSource` is everything the bar knows about a path space:
 `segments(path)` (the crumbs, root first, each with the `path` it navigates
-to), `complete(prefix)` (containers completing the typed text, as full paths
-without a trailing separator) and `validate(path)` (`dir` / `file` / `invalid`
-with a reason), plus an optional `separator` (default `/`). The bar imports no
+to), `useComplete(prefix | null)` (a `Hook` value — `framework/hook-value` —
+reading the containers completing the typed text, as full paths without a
+trailing separator: `Suggestions` = `pending` · `ready {items}` · `failed
+{message}`; `null` while the crumbs show, so nothing is read) and
+`validate(path)` (`dir` / `file` / `invalid` with a reason — one answer to the
+commit, awaited), plus an optional `separator` (default `/`). A source backed
+by server data reads completions with `useLive` and validates with
+`useLiveReader` (the file explorer's `hostPathSource`). The bar imports no
 filesystem — a git-ref tree or a page hierarchy is a second source, not a
 second bar.
 
@@ -28,9 +33,11 @@ second bar.
   so it fires only on the focused surface; `shortcut={false}` opts a second bar
   on one surface out.
 - **The field** is the ui-kit `Input`, mono, pre-filled with the path plus one
-  separator and fully selected. Completions are asked for on every change and
-  keyed by the text they were asked for, so a slow answer to an old keystroke is
-  dropped (no cancellation needed). The list is a combobox in a focus-less
+  separator and fully selected. The completions are not state: the bar renders
+  `source.useComplete(text)` for the text in the field, so an answer to an old
+  keystroke has nowhere to land (no cancellation, no keying), and a live
+  source's list follows the disk while it is open (a highlight past a list that
+  shrank highlights nothing). The list is a combobox in a focus-less
   `FloatingSurface` anchored to the field: at most 8 entries, the typed stem
   bold; ↑ / ↓ move, Tab completes the highlighted (or first) entry plus a
   separator, Enter commits the highlighted entry or the typed text (a trailing
@@ -38,8 +45,9 @@ second bar.
   commits on mouse-down with `preventDefault`, so the field never blurs first.
 - **Invalid is a state, not a revert**: a commit that resolves `invalid` keeps
   the field open, `aria-invalid`, with the source's reason under it, until the
-  text changes. A `complete` / `validate` that REJECTS is shown the same way
-  (the message in the panel) rather than swallowed.
+  text changes. A `validate` that REJECTS is shown the same way, and a
+  `failed` completion read shows its message in the panel — neither is
+  swallowed.
 - A validation that settles after the user left the field (Esc, blur) is
   ignored — an edit session counter, bumped on every start and end.
 
@@ -64,7 +72,7 @@ primitive when a second consumer appears.
 
 ## Plugin reference
 
-- Description: Dolphin-style editable path bar: a breadcrumb (primitives/breadcrumb) that flips to a mono text field on a press of its empty space, the pencil or ⌘L, with a folder-completion combobox (↑/↓, Tab completes, Enter commits, Esc/blur revert, an invalid path stays in the field marked bad). Generic over a PathBarSource (segments / complete / validate), so it imports no filesystem.
+- Description: Dolphin-style editable path bar: a breadcrumb (primitives/breadcrumb) that flips to a mono text field on a press of its empty space, the pencil or ⌘L, with a folder-completion combobox (↑/↓, Tab completes, Enter commits, Esc/blur revert, an invalid path stays in the field marked bad). Generic over a PathBarSource (segments / useComplete — a hook reading the typed text's completions live — / validate), so it imports no filesystem.
 - Web:
   - Uses:
     - `primitives/breadcrumb.Breadcrumb`
@@ -88,6 +96,7 @@ primitive when a second consumer appears.
     - `PathResolution`
     - `PathSegment`
     - `PathTarget`
+    - `Suggestions`
   - Exports (values): `PathBar`
 - Cross-plugin:
   - Uses tokens:

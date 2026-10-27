@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import type { MailAttachment } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
 import { mailAttachmentUrl } from "@plugins/apps/plugins/mail/plugins/attachments/core";
 import { useMailAttachment } from "@plugins/apps/plugins/mail/plugins/attachments/web";
@@ -8,45 +8,58 @@ function bareCid(cid: string): string {
   return cid.replace(/^<|>$/g, "").trim();
 }
 
-/**
- * A `resolveCid` callback for `<MailHtml>`: maps an inline image's `cid:` to a
- * same-origin attachment URL. `<MailHtml>` calls this synchronously while walking
- * the sanitized DOM and re-renders whenever the returned value changes, so this
- * returns the URL when known and `undefined` otherwise — kicking off the lazy
- * download in the background and flipping to the URL (via state) once resolved.
- *
- * - A stored inline attachment resolves instantly (no round-trip).
- * - An un-downloaded one returns `undefined`, triggers `download(...)`, and
- *   updates state on completion so `<MailHtml>` re-renders with the real src.
- * - An unknown cid (no matching attachment) returns `undefined` permanently, so
- *   `<MailHtml>` drops the broken image.
- */
-export function useResolveCid(
-  attachments: MailAttachment[],
-): (cid: string) => string | undefined {
-  const { download } = useMailAttachment();
-  const [resolved, setResolved] = useState<Record<string, string>>({});
-
-  return useCallback(
-    (cid: string): string | undefined => {
-      const target = bareCid(cid);
-      const att = attachments.find(
-        (a) => a.contentId != null && bareCid(a.contentId) === target,
-      );
-      if (!att) return undefined;
-
-      if (att.storedAttachmentId) return mailAttachmentUrl(att.storedAttachmentId);
-      if (resolved[att.id]) return resolved[att.id];
-
-      // Kick off the lazy download; the .then runs on a later microtask, so no
-      // setState happens during the caller's render. A rejection surfaces loudly.
-      void download(att.id).then((url) => {
-        setResolved((prev) =>
-          prev[att.id] === url ? prev : { ...prev, [att.id]: url },
-        );
-      });
-      return undefined;
-    },
-    [attachments, resolved, download],
+function findByCid(
+  attachments: readonly MailAttachment[],
+  cid: string,
+): MailAttachment | undefined {
+  const target = bareCid(cid);
+  return attachments.find(
+    (a) => a.contentId != null && bareCid(a.contentId) === target,
   );
+}
+
+export interface CidImages {
+  /**
+   * `<MailHtml resolveCid>`: a pure read of the live mail row — the stored
+   * attachment's same-origin URL, or `undefined` while its bytes are not
+   * stored (or no attachment carries the cid, and `<MailHtml>` drops the image).
+   */
+  resolveCid: (cid: string) => string | undefined;
+  /**
+   * `<MailHtml onUnresolvedCids>`: for every cid image still waiting on an
+   * attachment the mailbox has, fire the materialise write. The write stamps
+   * the row's `storedAttachmentId`; the `mail.message-body` value carries the
+   * stamped row back, `resolveCid` changes, and the image fills in.
+   */
+  onUnresolvedCids: (cids: readonly string[]) => void;
+}
+
+/**
+ * Inline `cid:` images for `<MailHtml>`, read from the message's live
+ * attachment rows. The URL is never held here: it is derived from the row's
+ * `storedAttachmentId`, so the only thing this hook does on its own is ask the
+ * server to store bytes it does not have yet (a write whose answer is unused).
+ */
+export function useResolveCid(attachments: MailAttachment[]): CidImages {
+  const { materialise } = useMailAttachment();
+
+  const resolveCid = useCallback(
+    (cid: string): string | undefined => {
+      const stored = findByCid(attachments, cid)?.storedAttachmentId;
+      return stored ? mailAttachmentUrl(stored) : undefined;
+    },
+    [attachments],
+  );
+
+  const onUnresolvedCids = useCallback(
+    (cids: readonly string[]): void => {
+      for (const cid of cids) {
+        const att = findByCid(attachments, cid);
+        if (att && !att.storedAttachmentId) materialise(att.id);
+      }
+    },
+    [attachments, materialise],
+  );
+
+  return { resolveCid, onUnresolvedCids };
 }

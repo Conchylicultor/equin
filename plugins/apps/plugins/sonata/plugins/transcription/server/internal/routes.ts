@@ -11,7 +11,6 @@ import { assertClaudeCodeReady } from "@plugins/infra/plugins/claude-cli/plugins
 import { extractAttachmentIds } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/core";
 import { setTaskWorkspace } from "@plugins/conversations/plugins/workspace/plugins/launch-option/server";
 import {
-  getSongTranscription,
   prepareTranscription,
   retryTranscription,
 } from "../../shared/endpoints";
@@ -99,14 +98,5 @@ export const handleRetryTranscription = implement(
       source,
     );
     return { conversationId };
-  },
-);
-
-export const handleGetSongTranscription = implement(
-  getSongTranscription,
-  async ({ params }) => {
-    const row = await songTranscription.get(songIdKind.key(params.id));
-    if (!row) return null;
-    return { status: row.status, error: row.error };
   },
 );

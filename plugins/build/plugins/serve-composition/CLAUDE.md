@@ -157,7 +157,7 @@ throws `CompositionResetError` (nothing touched) if any fails:
   carry no per-composition dimension, and are not part of this reset. Documented,
   not worked around.
 
-All four endpoint contracts live in `shared/endpoints.ts` (imported by both this
+All three endpoint contracts live in `shared/endpoints.ts` (imported by both this
 plugin's own web and server); the tolerant gateway restart (404 = not running,
 gateway-down = fine) mirrors the CLI's, minus its `closeAdminPool()`.
 
@@ -173,10 +173,12 @@ surface is keyed off the row that just vanished.
 delete buttons call it (the list row's and the draft editor's), so they cannot
 drift:
 
-1. `GET /api/build/serve/owned?composition=<id>` — what does it own? The button
-   pends while this is in flight; until the server answers we do not know whether
-   the delete is free or destroys a live database, and "owns nothing" is not a
-   thing to render before we know.
+1. `build.serve-owned {composition}` (a `load: "snapshot"`, `needsMachine`
+   live value served by `machine/`, read with `useLiveReader` at the click) —
+   what does it own? The button pends while the read is in flight; until the
+   server answers we do not know whether the delete is free or destroys a live
+   database, and "owns nothing" is not a thing to render before we know. A
+   snapshot is measured on every ask, so the dialog names what is there now.
 2. If it owns nothing — no serve build ever ran — the row is removed with no
    dialog. There would be nothing to warn about, and a scary prompt over an empty
    list teaches people to click through the one that matters.
@@ -237,9 +239,11 @@ code, that is the bug this section exists to prevent.
 
 ## Plugin reference
 
-- Description: Serve capability for a composition: the live-serve toggle panel, the enable→build hook (a `build --composition <id>` of THIS checkout), the served-liveness read (the server-resolved namespace plus the composition.json marker, not the autoBuild intent), and the delete flow — which asks what the composition owns across every checkout, names it in a confirm dialog, and reclaims it before the manifest row goes. Consumed by Studio's Build & serve section and compositions list, and by the deploy pane's Test locally section. Serve-liveness read for a composition: WHERE this backend's checkout serves it (the server-resolved namespace + url) and whether anything is actually there (the composition.json marker), plus the reset-to-first-launch endpoint — wipes ONLY that namespace's DB + config back to what a serve build provisions on a fresh serve, then restarts its backend. Never touches the checkout's own app. Also answers what a composition owns across EVERY checkout that has served it (the marker scan behind the delete confirmation) and reclaims that whole set, per-namespace outcomes reported individually.
+- Description: Serve capability for a composition: the live-serve toggle panel, the enable→build hook (a `build --composition <id>` of THIS checkout), the served-liveness read (the server-resolved namespace plus the composition.json marker, not the autoBuild intent), and the delete flow — which asks what the composition owns across every checkout, names it in a confirm dialog, and reclaims it before the manifest row goes. Consumed by Studio's Build & serve section and compositions list, and by the deploy pane's Test locally section. Serve-liveness read for a composition: WHERE this backend's checkout serves it (the server-resolved namespace + url) and whether anything is actually there (the composition.json marker), plus the reset-to-first-launch endpoint — wipes ONLY that namespace's DB + config back to what a serve build provisions on a fresh serve, then restarts its backend. Never touches the checkout's own app. Also reclaims everything a composition owns across EVERY checkout that has served it (the set the machine half's build.serve-owned value names), per-namespace outcomes reported individually.
 - Server:
-  - Contributes: `resource.declare` "build.serve-status"
+  - Contributes:
+    - `resource.declare` "build.serve-owned"
+    - `resource.declare` "build.serve-status"
   - Uses:
     - `database/admin.databaseExists`
     - `database/admin.dropDatabase`
@@ -256,18 +260,18 @@ code, that is the bug this section exists to prevent.
     - `infra/worktree/reclaim.namespacesOwnedByComposition`
     - `infra/worktree/reclaim.OwnedNamespace`
     - `infra/worktree/reclaim.reclaimNamespace`
-  - Resources: `build.serve-status` (push, notified)
+  - Resources:
+    - `build.serve-owned` (invalidate, snapshot, whole: one per checkout that has served this composition — the delete confirmation names every one it will erase)
+    - `build.serve-status` (push, notified)
   - Routes:
     - `POST /api/build/serve/reset`
     - `GET /api/build/serve/status`
-    - `GET /api/build/serve/owned`
     - `POST /api/build/serve/reclaim`
 - Web:
   - Uses:
-    - `infra/endpoints.getEndpointErrorMessage`
     - `infra/endpoints.useEndpointMutation`
-    - `infra/endpoints.useFetchEndpoint`
     - `network/live.useLive`
+    - `network/live.useLiveReader`
     - `plugin-meta/composition.useManifestActions`
     - `plugin-meta/composition.useManifestItems`
     - `primitives/css/badge.Badge`
@@ -279,6 +283,7 @@ code, that is the bug this section exists to prevent.
     - `primitives/css/toggle-chip.ToggleChip`
     - `primitives/css/ui-kit.Button`
     - `primitives/latest-ref.useLatestRef`
+    - `primitives/live-state.ResourceError`
     - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
     - `primitives/relative-time.RelativeTime`
     - `shell/toast.showToast`

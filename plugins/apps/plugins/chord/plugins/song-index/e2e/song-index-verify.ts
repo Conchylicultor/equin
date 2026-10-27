@@ -25,9 +25,9 @@ import {
   windowsInModes,
 } from "@plugins/apps/plugins/chord/plugins/song-index/core";
 import {
-  FindResponseSchema,
   NextResponseSchema,
   ensureReady,
+  findLoops,
   major,
   minor,
   postJson,
@@ -46,14 +46,12 @@ await ensureReady(r, timeoutMs);
 
 // ── 2. find {I, IV, V}, IV practised ─────────────────────────────────────────
 
-const found = FindResponseSchema.parse(
-  await postJson("/api/chord/loops/find", {
+const found = await findLoops({
     playable: [I, IV, V],
     practised: [IV],
     extras: 0,
     limit: 50,
-  }),
-);
+});
 if (found.kind !== "ready") {
   r.fail("find answers ready once the status is ready", JSON.stringify(found));
 } else {
@@ -148,14 +146,12 @@ for (const extras of [0, 1, 2, "any"] as const) {
     const playable = [...POOL].sort(() => Math.random() - 0.5).slice(0, size);
     const practised = playable.slice(0, 1 + Math.floor(size / 2));
     const t0 = performance.now();
-    const res = FindResponseSchema.parse(
-      await postJson("/api/chord/loops/find", {
+    const res = await findLoops({
         playable,
         practised,
         extras,
         limit: 20,
-      }),
-    );
+    });
     timings.push(performance.now() - t0);
     if (res.kind !== "ready") {
       r.fail("find stays ready during the timing run", JSON.stringify(res));

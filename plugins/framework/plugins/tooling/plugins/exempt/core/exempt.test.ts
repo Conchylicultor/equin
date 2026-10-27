@@ -193,10 +193,27 @@ describe("ruleIdProblems", () => {
     const problems = ruleIdProblems(entries, {
       known: new Set(["x/open", "x/shut"]),
       closed: new Set(["x/shut"]),
+      noDebt: new Set(),
     });
     expect(problems).toHaveLength(2);
     expect(problems[0]).toContain("closed");
     expect(problems[1]).toContain("x/typo");
+  });
+
+  it("refuses a debt entry for a noDebt rule, and only a debt entry", () => {
+    const entries = resolveManifest(P, [
+      { rule: "x/strict", paths: ["a"], kind: "sanctioned", reason: "r" },
+      { rule: "x/strict", paths: ["b"], kind: "debt", task: "t", reason: "r" },
+      { rule: "x/open", paths: ["c"], kind: "debt", task: "t", reason: "r" },
+    ]);
+    const problems = ruleIdProblems(entries, {
+      known: new Set(["x/open", "x/strict"]),
+      closed: new Set(),
+      noDebt: new Set(["x/strict"]),
+    });
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toContain('"b"');
+    expect(problems[0]).toContain("sanctioned-only");
   });
 });
 

@@ -4,6 +4,7 @@ import {
   useTransport,
   type Transport,
 } from "@plugins/primitives/plugins/networking/web";
+import { allowAssetRoute } from "@plugins/primitives/plugins/networking/plugins/request-guard/web";
 import type { AssetPath, MachineFeature } from "../../core";
 // `ASSET_PATH`: this module is the one reader of an AssetPath's path.
 import { ASSET_PATH, unavailableMessage } from "../../core";
@@ -145,7 +146,13 @@ function staticSrc(
   if (needsMachine !== null && !transport.machine) {
     return { kind: "unavailable", message: unavailableMessage(needsMachine) };
   }
-  return transport.servesUrls ? { kind: "ready", src: path } : null;
+  if (!transport.servesUrls) return null;
+  // The element loads the path itself — and so may anything that re-fetches
+  // the page's images by URL from the page realm (a screenshot inlining every
+  // <img>): register its route with the page request guard as an asset, as
+  // `assetUrlOver` does for a sink that loads by URL on its own.
+  allowAssetRoute(path);
+  return { kind: "ready", src: path };
 }
 
 /**

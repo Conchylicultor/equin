@@ -53,7 +53,13 @@ export type {
   SectionKind,
   TrackStanding,
 } from "./catalog";
-export { chordCatalog, chordCurriculum } from "./resource";
+export {
+  CurriculumLoopsQuerySchema,
+  chordCatalog,
+  chordCurriculum,
+  chordCurriculumLoops,
+} from "./resource";
+export type { CurriculumLoopsQueryInput } from "./resource";
 export {
   MAX_CHORD_CHANGES,
   setBlanksEndpoint,

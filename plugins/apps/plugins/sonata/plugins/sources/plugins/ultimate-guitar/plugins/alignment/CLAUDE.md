@@ -132,8 +132,9 @@ reason: it names the alignment record.
      indices is what `fitsSheet` catches instead. The row's `status` plays no part either, so a re-align that
      is queued, running or failed leaves the last alignment of this video and
      sheet playing, and setting a new video drops the old one's at once.
-   - UG `hydrate` fetches the tab and the alignment row (`getUgAlignment`)
-     together and applies that rule, so an aligned song opens aligned.
+   - UG's `useHydration` reads the tab and the alignment row live
+     (`ugAlignmentRows`) together and applies that rule, so an aligned song
+     opens aligned.
    - The `ug-alignment-sync` `Sonata.Effect` (`web/components/alignment-sync.tsx`)
      follows the live row and writes the same rule's result into the raw,
      compared by value, so playback resets at most once per finished job (and
@@ -190,7 +191,7 @@ failed | not-embeddable, score }[]`) and `record | null` (jsonb decoded by
 `AlignmentRecordSchema`). `status` and `phase` are text columns decoded by
 zod, so a new value takes no migration (keep the old ones parseable). It is
 served as the lookup-only
-live collection `sonata-ug-alignment` (`shared/resources.ts`), read with
+live collection `sonata-ug-alignment` (`core/internal/resources.ts`), read with
 `useLiveRow(ugAlignmentRows, songId)`.
 
 The job's transcript goes to the `sonata-ug-alignment` log channel.
@@ -216,7 +217,7 @@ The job's transcript goes to the `sonata-ug-alignment` log channel.
 
 ## Plugin reference
 
-- Description: UG sheet alignment in the player: a 'Recording' editor section showing the song's YouTube video (the recording plugin's RecordingVideo viewport with its volume, and its on/off RecordingSwitch in the header; the video itself is declared by a headless effect to the session's recording player, so it keeps playing — synced to the transport when the song plays on its alignment, a weak match included, else on its own — while the section is collapsed), an alignment status box (icon, status line, one control — Cancel, Re-align, Retry, Try another or Find a video — and while working a three-stage bar: find a video, analyse the audio, align the sheet), the video's line (title, match chip, channel, Replace) and an inline picker (a YouTube link, the candidate videos with thumbnail and outcome — click one to switch — and Search again); a headless report of a video the player refuses (SonataRecording.Refused → video-refused), and a headless effect writing the applied alignment record into the Ultimate Guitar raw so the Score plays on the recording's beats. In the library: the Video field's presentation (hidden by default). UG sheet alignment server: owns the sonata_songs_ext_ug_alignment side-table (video, who picked it, the resolver's candidates, status, record) served as a lookup-only live collection and its video id exposed to every list of songs (LiveColumns.Expose), the sonata.ug-alignment.align supervised job (choose a video with findSongVideos and walk the best candidates when none was set; beat features → alignChords → record, its live phase written on the row; a user's Cancel stops it as cancelled), the set-video / find-a-video / video-refused / re-align (also resuming a cancelled or failed walk) / cancel / get endpoints, and a trigger that starts choosing a video for a new UG song and re-aligns one whose sheet changes.
+- Description: UG sheet alignment in the player: a 'Recording' editor section showing the song's YouTube video (the recording plugin's RecordingVideo viewport with its volume, and its on/off RecordingSwitch in the header; the video itself is declared by a headless effect to the session's recording player, so it keeps playing — synced to the transport when the song plays on its alignment, a weak match included, else on its own — while the section is collapsed), an alignment status box (icon, status line, one control — Cancel, Re-align, Retry, Try another or Find a video — and while working a three-stage bar: find a video, analyse the audio, align the sheet), the video's line (title, match chip, channel, Replace) and an inline picker (a YouTube link, the candidate videos with thumbnail and outcome — click one to switch — and Search again); a headless report of a video the player refuses (SonataRecording.Refused → video-refused), and a headless effect writing the applied alignment record into the Ultimate Guitar raw so the Score plays on the recording's beats. In the library: the Video field's presentation (hidden by default). UG sheet alignment server: owns the sonata_songs_ext_ug_alignment side-table (video, who picked it, the resolver's candidates, status, record) served as a lookup-only live collection and its video id exposed to every list of songs (LiveColumns.Expose), the sonata.ug-alignment.align supervised job (choose a video with findSongVideos and walk the best candidates when none was set; beat features → alignChords → record, its live phase written on the row; a user's Cancel stops it as cancelled), the set-video / find-a-video / video-refused / re-align (also resuming a cancelled or failed walk) / cancel endpoints, and a trigger that starts choosing a video for a new UG song and re-aligns one whose sheet changes.
 - Web:
   - Contributes:
     - `Sonata.Section` "Recording" → `RecordingSection`
@@ -276,33 +277,23 @@ The job's transcript goes to the `sonata-ug-alignment` log channel.
     - `defineJob('sonata.ug-alignment.on-tab-saved')`
   - Resources: `sonata-ug-alignment:rows` (keyed, point)
   - Routes:
-    - `GET /api/sonata/songs/:id/ultimate-guitar/alignment`
     - `PUT /api/sonata/songs/:id/ultimate-guitar/alignment/video`
     - `POST /api/sonata/songs/:id/ultimate-guitar/alignment/realign`
     - `POST /api/sonata/songs/:id/ultimate-guitar/alignment/resolve`
     - `POST /api/sonata/songs/:id/ultimate-guitar/alignment/video-refused`
     - `POST /api/sonata/songs/:id/ultimate-guitar/alignment/cancel`
 - Core:
-  - Uses:
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps/sonata/sources/ultimate-guitar/tab` ×6
+    - `apps/sonata/theory` ×5
+    - `fields/text/config` ×2
     - `apps/sonata/library.songsEntityRef`
-    - `apps/sonata/sources/ultimate-guitar/tab.InferredSection`
-    - `apps/sonata/sources/ultimate-guitar/tab.inferSections`
-    - `apps/sonata/sources/ultimate-guitar/tab.ParsedLine`
-    - `apps/sonata/sources/ultimate-guitar/tab.ParsedTab`
-    - `apps/sonata/sources/ultimate-guitar/tab.parseUgContent`
-    - `apps/sonata/sources/ultimate-guitar/tab.UgTabSchema`
-    - `apps/sonata/theory.parseChordSymbol`
-    - `apps/sonata/theory.parseKeySignature`
-    - `apps/sonata/theory.qualityToIntervals`
-    - `apps/sonata/theory.transposeKey`
-    - `apps/sonata/theory.transposeScore`
-    - `fields.nullable`
     - `fields/bool/config.boolField`
     - `fields/json/config.jsonField`
-    - `fields/text/config.parsedTextField`
-    - `fields/text/config.textField`
+    - `fields.nullable`
     - `infra/endpoints.defineEndpoint`
     - `infra/entity-extensions.defineExtensionShape`
+    - `network/live.liveCollection`
     - `packages/list-bound.wholeList`
   - Exports (types):
     - `AlignmentCandidate`
@@ -324,13 +315,13 @@ The job's transcript goes to the `sonata-ug-alignment` log channel.
     - `appliedAlignment`
     - `cancelUgAlignment`
     - `fitsSheet`
-    - `getUgAlignment`
     - `MAX_TRIES_PER_RUN`
     - `realignUg`
     - `refuseUgAlignmentVideo`
     - `resolveUgAlignment`
     - `setUgAlignmentVideo`
     - `sheetHash`
+    - `ugAlignmentRows`
     - `UgAlignmentRowSchema`
     - `ugAlignmentShape`
     - `UgSourceRawSchema`

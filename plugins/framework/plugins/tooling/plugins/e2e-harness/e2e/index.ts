@@ -19,6 +19,8 @@ export { arg, numArg, flag, requireArg, usage } from "./args";
 // entirely — use `pathUrl` for anything the app answers.
 export { pathUrl, pageUrl, requirePage, targetNamespace } from "./target";
 export { agentFetch } from "./app-fetch";
+export { pageFetch } from "./page-fetch";
+export type { PageFetchInit } from "./page-fetch";
 export { openDeployDb } from "./deploy-db";
 export type { DeployDb } from "./deploy-db";
 export { withBrowser, boot, DEFAULT_VIEWPORT } from "./browser";

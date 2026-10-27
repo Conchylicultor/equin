@@ -8,7 +8,7 @@ import { Library } from "@plugins/apps/plugins/sonata/plugins/library/web";
 import { compile } from "./compile";
 import { ChordGridLoader } from "./loader";
 import { CHORD_GRID_SOURCE_ID } from "./constants";
-import { hydrate } from "./hydrate";
+import { useHydration } from "./hydrate";
 import { chordGridCreateOption } from "./components/chord-grid-create-option";
 import { ChordGridEditorSection } from "./components/chord-grid-editor-section";
 import { ChordGridPersistObserver } from "./components/chord-grid-persist-observer";
@@ -30,7 +30,7 @@ export default {
     }),
     Library.Source({
       sourceId: CHORD_GRID_SOURCE_ID,
-      hydrate,
+      useHydration,
       createOption: chordGridCreateOption,
     }),
     Sonata.Section({

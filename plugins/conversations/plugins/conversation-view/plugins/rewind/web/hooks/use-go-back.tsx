@@ -8,8 +8,10 @@ import {
   useFetchEndpoint,
   useMachineAvailability,
 } from "@plugins/infra/plugins/endpoints/web";
+import { useLiveReader } from "@plugins/network/plugins/live/web";
+import { ResourceError } from "@plugins/primitives/plugins/live-state/web";
 import { useToast, type Toast } from "@plugins/shell/plugins/notifications/web";
-import { previewRewindEndpoint, rewindConversationEndpoint } from "../../core";
+import { rewindConversationEndpoint, rewindPreview } from "../../core";
 import { LossList } from "../components/loss-list";
 import { describeLosses, type RewindMode } from "../internal/describe-losses";
 
@@ -45,7 +47,8 @@ export function useGoBackToMessage({
 } {
   const conversation = useConversationById(convId);
   const fetchEndpoint = useFetchEndpoint();
-  const machine = useMachineAvailability(previewRewindEndpoint);
+  const read = useLiveReader();
+  const machine = useMachineAvailability(rewindPreview);
   const toast = useToast();
   const [busy, setBusy] = useState(false);
   // The text to hand the FORK: known once the preview answers, used once the
@@ -82,15 +85,11 @@ export function useGoBackToMessage({
 
     setBusy(true);
     try {
-      const previewed = await fetchEndpoint(
-        previewRewindEndpoint,
-        { id: convId },
-        { body: { uuid } },
-      );
-      if (previewed.kind === "unavailable")
+      const previewed = await read(rewindPreview, { id: convId, uuid });
+      // A message that cannot be gone back to, or no computer to read it on.
+      if (previewed.status === "refused" || previewed.status === "unavailable")
         return refused(toast, previewed.message);
-      const preview = previewed.value;
-      if (!preview.ok) return refused(toast, preview.message);
+      const preview = previewed.data;
       if (mode === "rewind" && !preview.inPlace) {
         return refused(
           toast,
@@ -112,7 +111,14 @@ export function useGoBackToMessage({
         onConfirm: act,
       });
     } catch (err) {
-      refused(toast, getEndpointErrorMessage(err));
+      // The preview read's failure (already reported by the reader) or the
+      // rewind's / fork's own.
+      refused(
+        toast,
+        err instanceof ResourceError
+          ? err.message
+          : getEndpointErrorMessage(err),
+      );
     } finally {
       setBusy(false);
     }

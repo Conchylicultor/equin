@@ -18,6 +18,7 @@
 //
 // Usage: ./equin run plugins/page/plugins/container/e2e/container-enter-verify.ts [--out /tmp/container-enter]
 import {
+  pageFetch,
   arg,
   report,
   snap,
@@ -38,12 +39,9 @@ interface Row {
 }
 
 async function rows(page: Page, pageId: string): Promise<Row[]> {
-  return page.evaluate(async (id: string) => {
-    const res = await fetch(`/api/pages/${id}/blocks`);
-    if (!res.ok)
-      throw new Error(`GET blocks ${res.status}: ${await res.text()}`);
-    return (await res.json()) as Row[];
-  }, pageId);
+  const res = await pageFetch(page, `/api/pages/${pageId}/blocks`);
+  if (!res.ok) throw new Error(`GET blocks ${res.status}: ${await res.text()}`);
+  return (await res.json()) as Row[];
 }
 
 /** `parentId`'s children in rank order, each as its type + text. */
@@ -74,32 +72,29 @@ await withBrowser(async (h) => {
   const { page } = await h.session({ label: "A" });
   const { pageId } = await openBlankPage(page, { settleMs: 3000 });
 
-  const seeded = await page.evaluate(
-    async ({ pageId }) => {
-      const post = async (body: unknown) => {
-        const res = await fetch("/api/blocks", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify(body),
-        });
-        if (!res.ok)
-          throw new Error(
-            `POST /api/blocks ${res.status}: ${await res.text()}`,
-          );
-        return ((await res.json()) as { id: string }).id;
-      };
-      const callout = () =>
-        post({
-          parentId: pageId,
-          type: "callout",
-          data: { icon: null, color: "info" },
-        });
-      const line = (parentId: string, type: string, body: string) =>
-        post({
-          parentId,
-          type,
-          data: { text: body ? [{ text: body }] : [] },
-        });
+  const seeded = await (async () => {
+    const post = async (body: unknown) => {
+      const res = await pageFetch(page, "/api/blocks", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok)
+        throw new Error(`POST /api/blocks ${res.status}: ${await res.text()}`);
+      return ((await res.json()) as { id: string }).id;
+    };
+    const callout = () =>
+      post({
+        parentId: pageId,
+        type: "callout",
+        data: { icon: null, color: "info" },
+      });
+    const line = (parentId: string, type: string, body: string) =>
+      post({
+        parentId,
+        type,
+        data: { text: body ? [{ text: body }] : [] },
+      });
 
       const c1 = await callout();
       await line(c1, "text", "aaa");
@@ -117,9 +112,7 @@ await withBrowser(async (h) => {
       const c3Only = await line(c3, "text", "aaa");
       await line(pageId, "text", "the end");
       return { c1, c1Empty, c2, c2Empty, c3, c3Only };
-    },
-    { pageId },
-  );
+  })();
 
   await page.reload({ waitUntil: "domcontentloaded" });
   await page

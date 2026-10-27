@@ -123,6 +123,7 @@ without booting the server.
     - `AssetMirrorPrewarm`
     - `CollectedEntry`
   - Exports (values):
+    - `ASSET_MIRROR_PREFIX`
     - `assetMirrorBase`
     - `assetMirrorPrewarmCollectedDir`
     - `assetMirrorUrl`

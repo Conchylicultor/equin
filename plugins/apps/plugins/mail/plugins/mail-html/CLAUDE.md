@@ -11,6 +11,7 @@ four-stage pipeline before injecting it, and each stage exists for a reason.
   showRemoteImages={userOptedIn}
   onRemoteImagesDetected={(present) => setHasRemote(present)}
   resolveCid={(cid) => inlineAttachmentUrl(cid)}  // undefined = not yet hydrated
+  onUnresolvedCids={(cids) => fetchMissing(cids)}  // after render, from an effect
 />
 ```
 
@@ -26,7 +27,10 @@ four-stage pipeline before injecting it, and each stage exists for a reason.
 2. **Image gate.** For every `<img>` and inline `style` `url(http…)`:
    - `cid:` → `resolveCid(bareContentId)`; sets the src if the inline attachment
      is available, else leaves a `data-cid` placeholder (the body re-processes
-     when `resolveCid` changes, so it fills in as attachments hydrate).
+     when `resolveCid` changes, so it fills in as attachments hydrate). The
+     placeholder cids come back as `unresolvedCids`, and `onUnresolvedCids`
+     reports them after render, so the owner fetches what the body waits on from
+     an effect — `resolveCid` itself stays a pure lookup, run inside a memo.
    - remote `http(s)` → **only** rewritten to the same-origin, SSRF-guarded proxy
      (`remote-images`, its URL from `assetUrlOver` over the subtree's
      transport) **when `showRemoteImages` is true** and the proxy is available

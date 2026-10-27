@@ -14,7 +14,7 @@ import { songsEntityRef } from "@plugins/apps/plugins/sonata/plugins/library/cor
  * field: the card / table cell (the first chords, `web/internal/presentation`)
  * and the chord-grid cover (`web/components/chord-grid-cover`) both read it off
  * the row. No default, so a song with no grid (no extension row) reads null.
- * The editor still loads the grid through `getSongChordGrid`.
+ * The player's hydration reads it off the song's row too (`web/hydrate.ts`).
  */
 export const songChordGridShape = defineExtensionShape({
   key: "songId",

@@ -45,6 +45,7 @@
 //
 // Usage: bun plugins/page/plugins/callout/e2e/callout-container-verify.ts [--url <deploy>] [--out /tmp/callout]
 import {
+  pageFetch,
   arg,
   report,
   snap,
@@ -356,28 +357,25 @@ await withBrowser(async (h) => {
   // write boundary's strict parse rejects a stray one (400). A seed that still
   // posted `{text, icon, …}` — as this script's predecessor did — is itself the
   // regression.
-  const seeded = await page.evaluate(
-    async ({ pageId }) => {
-      const post = async (body: unknown) => {
-        const res = await fetch("/api/blocks", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify(body),
-        });
-        if (!res.ok)
-          throw new Error(
-            `POST /api/blocks ${res.status}: ${await res.text()}`,
-          );
-        return (await res.json()) as { id: string };
-      };
-      const callout = (color: string) =>
-        post({
-          parentId: pageId,
-          type: "callout",
-          data: { icon: null, color },
-        });
-      const text = (parentId: string, type: string, body: string) =>
-        post({ parentId, type, data: { text: [{ text: body }] } });
+  const seeded = await (async () => {
+    const post = async (body: unknown) => {
+      const res = await pageFetch(page, "/api/blocks", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok)
+        throw new Error(`POST /api/blocks ${res.status}: ${await res.text()}`);
+      return (await res.json()) as { id: string };
+    };
+    const callout = (color: string) =>
+      post({
+        parentId: pageId,
+        type: "callout",
+        data: { icon: null, color },
+      });
+    const text = (parentId: string, type: string, body: string) =>
+      post({ parentId, type, data: { text: [{ text: body }] } });
 
       const c1 = await callout("info");
       const c1First = await text(c1.id, "text", "parent line");
@@ -407,9 +405,7 @@ await withBrowser(async (h) => {
         c4Only: c4Only.id,
         end: end.id,
       };
-    },
-    { pageId },
-  );
+  })();
   console.log("seeded:", JSON.stringify(seeded));
 
   await page.reload({ waitUntil: "domcontentloaded" });

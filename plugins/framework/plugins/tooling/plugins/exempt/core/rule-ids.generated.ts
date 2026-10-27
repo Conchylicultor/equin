@@ -3,7 +3,9 @@
 //
 // Every rule id an `exempt/index.ts` may name: each contributed lint rule
 // (`<ns>/<rule>`) not declared `closed`, and each id a check declares
-// `exemptable`. The `exempt:rule-ids-in-sync` check fails on drift.
+// `exemptable`. A `kind: "debt"` entry may name only a `DebtableRuleId`:
+// those minus the lint rules declared `noDebt` (sanctioned-only).
+// The `exempt:rule-ids-in-sync` check fails on drift.
 
 export type ExemptableRuleId = 
   | "agent-origin-safety/no-unmarked-app-fetch"
@@ -90,6 +92,7 @@ export type ExemptableRuleId =
   | "namespace:legacy-host"
   | "namespace:no-hand-built-url"
   | "networking/no-page-transport"
+  | "networking/no-request-guard-capability"
   | "no-db-backed-notify"
   | "no-raw-event-source"
   | "no-raw-sse"
@@ -165,3 +168,13 @@ export type ExemptableRuleId =
   | "web-storage/no-raw-web-storage"
   | "z-layers/no-adhoc-zindex"
   | "zod-parser/no-narrow-zodtype";
+
+/** Declared `noDebt` by their owner: a sanctioned exemption only. */
+export type SanctionedOnlyRuleId = 
+  | "endpoints/no-raw-web-fetch"
+  | "live/no-endpoint-read"
+  | "networking/no-page-transport"
+  | "networking/no-request-guard-capability";
+
+/** What a `kind: "debt"` exemption may name. */
+export type DebtableRuleId = Exclude<ExemptableRuleId, SanctionedOnlyRuleId>;

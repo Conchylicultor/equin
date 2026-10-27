@@ -10,9 +10,13 @@ it creates is never swept, a config document it writes is not in the revert
 ledger and stays changed in the user's config. The script still goes green.
 
 **Absolute vs relative is the discriminator, not style.** `` fetch(`${base}/api/…`) ``
-runs in Node and is the hole; `fetch("/api/…")` inside `page.evaluate` runs in
-the browser and is already marked — flagging it would be wrong, and there is no
-`agentFetch` in the page to migrate it to.
+runs in Node and is the hole (`unmarked` → `agentFetch`). `fetch("/api/…")`
+(or `/ws`, `/gateway`) can only run in the page, inside `page.evaluate` — it is
+marked, but the page request guard (`primitives/networking/plugins/request-guard`)
+refuses it at run time, since page code reaches the app only through its
+transport (`inPage` → `pageFetch(page, path, init?)`, e2e-harness: the call made
+AS THE PAGE over Playwright's `page.request`, with the context's cookies and
+agent-origin headers).
 
 `enforceEverywhere` (contributed rules are off in `e2e/` by default) on the same
 grounds as `route-teardown-safety`: it catches a bug with a silent failure mode,

@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Library } from "@plugins/apps/plugins/sonata/plugins/library/web";
-import { hydrate } from "./hydrate";
+import { useHydration } from "./hydrate";
 import { transcribeCreateOption } from "./components/transcribe-create-option";
 import { transcriptionPresentation } from "./internal/presentation";
 import { transcriptionCover } from "./internal/cover";
@@ -17,7 +17,7 @@ export default {
   contributions: [
     Library.Source({
       sourceId: "transcription",
-      hydrate,
+      useHydration,
       createOption: transcribeCreateOption,
     }),
     Library.Cover({ id: "transcription", cover: transcriptionCover }),

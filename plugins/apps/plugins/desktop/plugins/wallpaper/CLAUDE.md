@@ -128,7 +128,6 @@ entry carries the move — `server/internal/store.ts` spells neither path.
     - `apps/desktop/wallpaper/openverse`
     - `apps/desktop/wallpaper/upload`
     - `apps/desktop/windows`
-  - Endpoint callers: `windows`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/handle-image.ts`, `server/internal/store.ts` (debt)
 - Sub-plugins:

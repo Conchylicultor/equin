@@ -1,5 +1,6 @@
 // The song index's HTTP steps, shared by the scripts in this folder: open the
-// index and wait for it, and the response schemas of the two loop reads.
+// index and wait for it, the loop find (its live value read over HTTP), and the
+// response schema of next-chords.
 //
 // The status is read by polling its resource over HTTP (`waitFor`): these
 // scripts have no browser session to subscribe with, and the harness offers no
@@ -12,10 +13,12 @@ import {
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import {
   IndexStatusSchema,
-  LoopCandidateSchema,
   NextChordCountSchema,
+  chordLoops,
   chordTokenFromParts,
+  type ChordLoopsAnswer,
   type ChordToken,
+  type FindLoopsInput,
   type IndexStatus,
 } from "@plugins/apps/plugins/chord/plugins/song-index/core";
 import { z } from "zod";
@@ -47,13 +50,27 @@ export async function readStatus(): Promise<IndexStatus> {
   return IndexStatusSchema.parse(value);
 }
 
-export const FindResponseSchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("not-ready"), status: IndexStatusSchema }),
-  z.object({
-    kind: z.literal("ready"),
-    candidates: z.array(LoopCandidateSchema),
-  }),
-]);
+/**
+ * One loop find, read off the `chord.loops` live value over plain HTTP (no
+ * browser session to subscribe with). Each call is a new round — a fresh
+ * nonce, so a new tuple and a new random sample, as the trainer's refills are.
+ * A refusal (`invalid-query`, HTTP 422) or any other failure throws.
+ */
+export async function findLoops(
+  find: FindLoopsInput,
+): Promise<ChordLoopsAnswer> {
+  const { q } = chordLoops.query.encode({
+    ...find,
+    round: crypto.randomUUID(),
+  });
+  const path = `/api/resources/${encodeURIComponent(chordLoops.key)}?${new URLSearchParams({ q }).toString()}`;
+  const res = await agentFetch(path);
+  if (!res.ok)
+    throw new Error(`GET ${path} → HTTP ${res.status}: ${await res.text()}`);
+  const { value } = z.object({ value: z.unknown() }).parse(await res.json());
+  return chordLoops.schema.parse(value);
+}
+
 export const NextResponseSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("not-ready"), status: IndexStatusSchema }),
   z.object({

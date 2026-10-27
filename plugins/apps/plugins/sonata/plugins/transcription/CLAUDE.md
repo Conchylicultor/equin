@@ -45,10 +45,10 @@ Sonata transcription (design: `research/2026-10-13-global-agent-workspaces-and-s
    and the default model). `url` / `files` inputs are the earlier dialog's rows, still decoded and
    retried.
 
-Every status write stamps the song row (`updateSongMeta`), which is what re-hydrates an open player.
+Every status write stamps the song row (`updateSongMeta`); the player's hydration reads the status live off that row, so an open player loads the score the moment it is ready.
 The extension EXPOSES the run state (`status`, `conversationId`, `error`) on the songs entity
 (`shared/shape.ts`, served by `LiveColumns.Expose`), so every list of songs carries it: the card badge
-(the status options, `web/internal/presentation.tsx`) and the player's pending body (`Library.Source` `hydrate` →
+(the status options, `web/internal/presentation.tsx`) and the player's pending body (`Library.Source` `useHydration` →
 `pending` with `TranscriptionBody`, which reads the song row live) — the thread, or the error and Retry.
 
 The task derives `done` from the delivery fact alone: tasks-core completes a delivered attempt as
@@ -92,6 +92,7 @@ Manual check: `scripts/smoke.sh` (needs the dep installed).
     - `conversations/agent-thread.AgentThread`
     - `infra/endpoints.useFetchEndpoint`
     - `network/live.FieldPresentation`
+    - `network/live.mapRow`
     - `network/live.useLiveRow`
     - `primitives/css/inline.Inline`
     - `primitives/css/line.Line`
@@ -136,7 +137,6 @@ Manual check: `scripts/smoke.sh` (needs the dep installed).
   - Routes:
     - `POST /api/sonata/transcription/prepare`
     - `POST /api/sonata/songs/:id/transcription/retry`
-    - `GET /api/sonata/songs/:id/transcription`
 - Core:
   - Uses: `conversations/agent-thread.defineThreadResult`
   - Exports (types):

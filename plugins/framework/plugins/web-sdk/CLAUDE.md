@@ -278,10 +278,10 @@ contributions: [Pane.Register({ pane: terminalPane })]
 
 - `<PluginErrorBoundary>`, `ErrorBoundary.Action`, `boundaryReportSink` → `@plugins/primitives/plugins/error-boundary/web`
 - `liveValue` / `liveCollection` (declare, `core/`), `serveValue` / `serveCollection` (serve), `useLive` / `useLiveRow` (read) → `@plugins/network/plugins/live/{core,server,web}`; the transport under them (`NotificationsProvider`, the leader-elected `NotificationsClient`) → `@plugins/primitives/plugins/live-state/web`
-- `useReconnectingWebSocket`, `ReconnectingEventSource`, `SharedWebSocket`, `fetchWithRetry`, `subscribeWsStatus` → `@plugins/primitives/plugins/networking/web`
+- `useReconnectingWebSocket`, `SharedWebSocket`, `fetchWithRetry`, `subscribeWsStatus` → `@plugins/primitives/plugins/networking/web`
 - `useEditableField` → `@plugins/primitives/plugins/editable-field/web`
 
-Raw `new EventSource(...)` is forbidden (`./equin check no-raw-event-source`) — use `ReconnectingEventSource` when consuming the gateway's external log SSE endpoint.
+Raw `new EventSource(...)` is forbidden (`./equin check no-raw-event-source`) — stream server data through a live value (`useLive`). Any raw same-origin `/api` · `/ws` · `/gateway` request from page code (fetch, XHR, sendBeacon, EventSource, WebSocket) is also refused at runtime by the page request guard (`primitives/networking/plugins/request-guard`).
 
 Server READS are live resources — a `liveValue` / `liveCollection` read with `useLive` (`plugins/network/plugins/live/CLAUDE.md`); there is no request/response read hook. For WRITES, use the endpoints primitive (`@plugins/infra/plugins/endpoints/web`): `useEndpointMutation` (POST/PATCH/DELETE — a live read is pushed when the write lands, so nothing is invalidated by hand) or `fetchEndpoint` (imperative, from `useFetchEndpoint()`). Endpoint contracts are declared once in `core/endpoints.ts` with `defineEndpoint`; the server implements them with `implement()` from `@plugins/infra/plugins/endpoints/server`. See [`plugins/infra/plugins/endpoints/CLAUDE.md`](../../../infra/plugins/endpoints/CLAUDE.md).
 

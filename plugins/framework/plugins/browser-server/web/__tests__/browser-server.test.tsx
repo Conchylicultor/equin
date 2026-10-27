@@ -94,10 +94,6 @@ const echo = defineEndpoint({
 });
 // Declared, never implemented here.
 const notHere = defineEndpoint({ route: "POST /api/x" });
-const centralRead = defineEndpoint({
-  route: "GET /api/central-resources/:key",
-  response: z.unknown(),
-});
 
 /** The `EndpointError` a request rejected with. */
 async function endpointError(p: Promise<unknown>): Promise<EndpointError> {
@@ -397,10 +393,9 @@ describe("browser server ⇄ the real live-state client", () => {
       method: "POST",
       path: "/api/x",
     });
-    // A central read is not hosted here: unmatched too.
-    const central = await endpointError(
-      fetchEndpoint(centralRead, { key: "auth.state" }, opts),
-    );
+    // A central read is not hosted here: unmatched too. (A read, so asked
+    // raw — `fetchEndpoint` sends writes only.)
+    const central = await transport.fetch("/api/central-resources/auth.state");
     expect(central.status).toBe(409);
     const page = await transport.fetch("/some/page");
     expect(page.status).toBe(404);

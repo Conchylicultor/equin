@@ -1,8 +1,11 @@
 import { useConfig } from "@plugins/config_v2/web";
 import {
   wallpaperConfig,
+  wallpaperImage,
   GRADIENT_WALLPAPER_ID,
 } from "@plugins/apps/plugins/desktop/plugins/wallpaper/core";
+import { assetPath } from "@plugins/infra/plugins/endpoints/core";
+import { useAssetSrc } from "@plugins/infra/plugins/endpoints/web";
 import { builtinWallpaperUrl } from "@plugins/apps/plugins/desktop/plugins/wallpaper/web";
 import { useOverviewActive } from "../internal/overview";
 import { layerClasses } from "@plugins/primitives/plugins/css/plugins/layer/web";
@@ -36,28 +39,67 @@ export function DesktopWallpaper() {
     if (state.kind === "builtin" && state.id === GRADIENT_WALLPAPER_ID) {
       return <DefaultGradientBackdrop className={treatment} />;
     }
-    const src =
-      state.kind === "image"
-        ? `/api/wallpaper/image?v=${state.version}`
-        : builtinWallpaperUrl(state.id);
+    if (state.kind === "image") {
+      return (
+        <UploadedWallpaper version={state.version} className={treatment} />
+      );
+    }
+    const src = builtinWallpaperUrl(state.id);
     if (!src) throw new Error(`Unknown built-in wallpaper "${state.id}"`);
-    return (
-      <img
-        aria-hidden
-        src={src}
-        alt=""
-        // The <img> IS the backdrop layer, so it takes the class rather than a
-        // wrapping <Layer>; `size-full object-cover` crops it to the desktop.
-        className={cn(
-          layerClasses({ decorative: true }),
-          "size-full object-cover",
-          treatment,
-        )}
-      />
-    );
+    return <WallpaperImage src={src} className={treatment} />;
   }
 
   return <DefaultGradientBackdrop className={treatment} />;
+}
+
+/**
+ * The uploaded wallpaper, loaded as an asset of its GET endpoint (cache-busted
+ * by `version`) — never a hand-built `/api` string, so it resolves over the
+ * subtree's transport and its route is one the page request guard lets a
+ * by-URL re-fetch (a screenshot inlining the page's images) load.
+ */
+function UploadedWallpaper({
+  version,
+  className,
+}: {
+  version: number;
+  className: string;
+}) {
+  const src = useAssetSrc(
+    assetPath(wallpaperImage, {}, { v: String(version) }),
+  );
+  // Loading (an in-browser server fetching the bytes): no backdrop yet, rather
+  // than the gradient standing in for a picture that is on its way.
+  if (src.kind === "loading") return null;
+  // A decorative layer with no message to show: as a failed <img> would, it
+  // falls back to the theme gradient.
+  if (src.kind !== "ready") {
+    return <DefaultGradientBackdrop className={className} />;
+  }
+  return <WallpaperImage src={src.src} className={className} />;
+}
+
+function WallpaperImage({
+  src,
+  className,
+}: {
+  src: string;
+  className: string;
+}) {
+  return (
+    <img
+      aria-hidden
+      src={src}
+      alt=""
+      // The <img> IS the backdrop layer, so it takes the class rather than a
+      // wrapping <Layer>; `size-full object-cover` crops it to the desktop.
+      className={cn(
+        layerClasses({ decorative: true }),
+        "size-full object-cover",
+        className,
+      )}
+    />
+  );
 }
 
 /**

@@ -43,7 +43,7 @@ function RenderedBody({
 }) {
   const [showRemoteImages, setShowRemoteImages] = useState(false);
   const [remoteDetected, setRemoteDetected] = useState(false);
-  const resolveCid = useResolveCid(attachments);
+  const { resolveCid, onUnresolvedCids } = useResolveCid(attachments);
 
   // Non-inline attachments get chips below the body; inline ones are the cid:
   // images resolved into the HTML.
@@ -65,6 +65,7 @@ function RenderedBody({
           showRemoteImages={showRemoteImages}
           onRemoteImagesDetected={setRemoteDetected}
           resolveCid={resolveCid}
+          onUnresolvedCids={onUnresolvedCids}
         />
       ) : text ? (
         <Text

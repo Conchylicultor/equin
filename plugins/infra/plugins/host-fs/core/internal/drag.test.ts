@@ -22,12 +22,13 @@ function transfer(data: Record<string, string> = {}) {
 describe("host paths drag payload", () => {
   test("round-trips through a DataTransfer", () => {
     const dt = transfer();
-    writeHostPaths(dt, ["/a/b.txt", "/a/c"]);
+    const entries = [
+      { path: "/a/b.txt", kind: "file" as const },
+      { path: "/a/c", kind: "dir" as const },
+    ];
+    writeHostPaths(dt, entries);
     expect(hasHostPaths(dt.types)).toBe(true);
-    expect(readHostPaths(dt)).toEqual({
-      kind: "paths",
-      paths: ["/a/b.txt", "/a/c"],
-    });
+    expect(readHostPaths(dt)).toEqual({ kind: "paths", entries });
   });
 
   test("a drag without the type is absent", () => {
@@ -41,7 +42,13 @@ describe("host paths drag payload", () => {
       kind: "malformed",
     });
     expect(
-      readHostPaths(transfer({ [HOST_PATHS_MIME]: '{"paths":[]}' })),
+      readHostPaths(transfer({ [HOST_PATHS_MIME]: '{"entries":[]}' })),
+    ).toMatchObject({ kind: "malformed" });
+    // An entry with no kind: every writer says what it drags.
+    expect(
+      readHostPaths(
+        transfer({ [HOST_PATHS_MIME]: '{"entries":[{"path":"/a"}]}' }),
+      ),
     ).toMatchObject({ kind: "malformed" });
   });
 

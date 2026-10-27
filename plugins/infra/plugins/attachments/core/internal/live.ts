@@ -25,3 +25,18 @@ export const attachmentFile = liveValue("attachments.file", {
   params: ["id"],
   refusals: ["missing"],
 });
+
+/**
+ * One attachment's bytes, by id — for a reader that decodes the file itself
+ * (a song's MIDI or MusicXML document). A `bytes` value: read over HTTP as
+ * `application/octet-stream`. Immutable: an attachment's bytes never change
+ * (an upload mints a new id), so nothing re-reads a tuple once answered.
+ *
+ * Refused `missing` when there is no such attachment, or its bytes are gone
+ * from the host's blob store.
+ */
+export const attachmentBytes = liveValue("attachments.bytes", {
+  bytes: true,
+  params: ["id"],
+  refusals: ["missing"],
+});

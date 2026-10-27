@@ -4,7 +4,6 @@ import { youtubeVideoId } from "@plugins/integrations/plugins/youtube/core";
 import { songUltimateGuitar } from "@plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/server";
 import {
   cancelUgAlignment,
-  getUgAlignment,
   realignUg,
   refuseUgAlignmentVideo,
   resolveUgAlignment,
@@ -21,27 +20,6 @@ async function requireUgSong(songId: string): Promise<void> {
     throw new HttpError(404, `Song ${songId} has no Ultimate Guitar tab.`);
   }
 }
-
-/** The song's alignment row (wire columns), or null when it never had a video. */
-export const handleGetUgAlignment = implement(
-  getUgAlignment,
-  async ({ params }) => {
-    const row = await songUgAlignment.get(params.id);
-    if (row === undefined) return null;
-    return {
-      songId: row.songId,
-      videoId: row.videoId,
-      status: row.status,
-      phase: row.phase,
-      error: row.error,
-      errorPermanent: row.errorPermanent,
-      pick: row.pick,
-      candidates: row.candidates,
-      record: row.record,
-      updatedAt: row.updatedAt,
-    };
-  },
-);
 
 /**
  * Set the recording from a pasted link (or a candidate's id) and queue an

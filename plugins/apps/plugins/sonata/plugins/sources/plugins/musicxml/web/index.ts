@@ -4,7 +4,7 @@ import { Library } from "@plugins/apps/plugins/sonata/plugins/library/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { parseMusicXml } from "../shared/parse";
 import { MUSICXML_SOURCE_ID } from "./constants";
-import { hydrate } from "./hydrate";
+import { useHydration } from "./hydrate";
 import { MusicXmlLoader } from "./loader";
 import { musicXmlCreateOption } from "./components/musicxml-create-option";
 import { musicXmlCover } from "./internal/cover";
@@ -23,7 +23,7 @@ export default {
     }),
     Library.Source({
       sourceId: MUSICXML_SOURCE_ID,
-      hydrate,
+      useHydration,
       createOption: musicXmlCreateOption,
     }),
     Library.Cover({ id: MUSICXML_SOURCE_ID, cover: musicXmlCover }),

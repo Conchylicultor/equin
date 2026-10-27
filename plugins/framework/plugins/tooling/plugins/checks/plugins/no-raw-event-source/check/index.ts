@@ -7,10 +7,10 @@ const check: Check = {
   // INPUT-KEYED (Stage 1). Pure `grepCode` — see no-raw-websocket for rationale.
   inputKeyed: true,
   description:
-    "SSE streams must go through the shared ReconnectingEventSource primitive (not raw `new EventSource`)",
+    "No raw `new EventSource` — server data streams to the page through live values (useLive), not an SSE connection of its own",
   exemptable: {
     "no-raw-event-source":
-      "constructs a raw `new EventSource(` — only the networking primitive that every client shares may",
+      "constructs a raw `new EventSource(` — a stream the app does not read through live",
   },
   outOfScope: ["research"],
   async run(ctx) {
@@ -33,7 +33,7 @@ const check: Check = {
     return {
       ok: false,
       message: `raw \`new EventSource(\` found in ${offenders.length} place(s):\n    ${offenders.join("\n    ")}`,
-      hint: "Use `new ReconnectingEventSource(...)` from `@plugins/primitives/plugins/networking/web` instead. It handles reconnection and inter-tab sharing (leader election) so opening many tabs doesn't saturate the server. A file that genuinely must construct one declares it in its own plugin's `exempt/index.ts` (rule `no-raw-event-source`).",
+      hint: "Declare the stream as a live value (`network/live`) and read it with `useLive`: one tab-shared socket carries every subscription, with reconnection built in. A same-origin `/api` EventSource is also refused at runtime by the page request guard (`primitives/networking/plugins/request-guard`). A file that genuinely must construct one (a third-party stream) declares it in its own plugin's `exempt/index.ts` (rule `no-raw-event-source`).",
     };
   },
 };

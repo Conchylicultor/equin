@@ -49,10 +49,7 @@ export type {
 export { ResourceErrorInline } from "./components/resource-error-inline";
 export type { ResourceErrorInlineProps } from "./components/resource-error-inline";
 export { resourceErrorReportSink } from "./resource-error-reporter";
-export type {
-  ResourceErrorInfo,
-  FailingResource,
-} from "./resource-error-reporter";
+export type { FailingResource } from "./resource-error-reporter";
 export { matchResource, ResourceView } from "./components/resource-view";
 export type {
   MatchResourceHandlers,

@@ -100,6 +100,28 @@ async function userRows(id: string): Promise<UserTextEvent[]> {
   return turns.map((t) => t.event).filter((e) => e.kind === "user-text");
 }
 
+// The rewind preview, read as the live value the action reads
+// (`conversations.rewind-preview`, a snapshot): its value, or its refusal code.
+type Preview =
+  | { ok: true; inPlace: boolean; messageText: string }
+  | { ok: false; code: string };
+async function previewOf(id: string, uuid: string): Promise<Preview> {
+  const path = `/api/resources/conversations.rewind-preview?${new URLSearchParams({ id, uuid })}`;
+  const res = await agentFetch(path);
+  if (res.status === 422) {
+    const body = (await res.json()) as { reason: string; code?: string };
+    if (body.reason !== "refused" || body.code === undefined)
+      throw new Error(`GET ${path} → 422 ${JSON.stringify(body)}`);
+    return { ok: false, code: body.code };
+  }
+  if (!res.ok)
+    throw new Error(`GET ${path} → ${res.status} ${await res.text()}`);
+  const { value } = (await res.json()) as {
+    value: { inPlace: boolean; messageText: string };
+  };
+  return { ok: true, ...value };
+}
+
 const REWIND = "Rewind to here";
 const RECALL =
   "List every word I asked you to remember so far. Reply with the words only.";
@@ -131,25 +153,16 @@ try {
   ).claudeSessionId;
 
   // The first message: nothing would be left to resume.
-  const first = await post<{ ok: boolean; reason?: string }>(
-    `/api/conversations/${conv.id}/rewind/preview`,
-    { uuid: apple.uuid },
-  );
+  const first = await previewOf(conv.id, apple.uuid);
   r.ok(
     "going back to the first message is refused",
-    !first.ok && first.reason === "nothing-before",
+    !first.ok && first.code === "nothing-before",
   );
 
-  const preview = await post<{
-    ok: boolean;
-    inPlace?: boolean;
-    messageText?: string;
-  }>(`/api/conversations/${conv.id}/rewind/preview`, { uuid: banana.uuid });
+  const preview = await previewOf(conv.id, banana.uuid);
   r.ok(
     "preview of the second message",
-    preview.ok &&
-      preview.inPlace === true &&
-      !!preview.messageText?.includes("BANANA"),
+    preview.ok && preview.inPlace && preview.messageText.includes("BANANA"),
   );
 
   // Fork from the second message: the original must not change.

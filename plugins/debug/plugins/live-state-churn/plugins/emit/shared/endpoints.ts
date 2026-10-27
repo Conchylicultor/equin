@@ -22,12 +22,3 @@ export const stopEmit = defineEndpoint({
   route: "POST /api/debug/live-state-emit/stop",
   response: EmitStatusSchema,
 });
-
-// The status as one request/response read, for the window-level imperative
-// API's `status()` (the headless e2e driver's handle). The pane reads the live
-// `live-state-emit.status` value instead (shared/resources.ts).
-export const getEmitStatus = defineEndpoint({
-  route: "GET /api/debug/live-state-emit/status",
-  response: EmitStatusSchema,
-  dedupe: true,
-});

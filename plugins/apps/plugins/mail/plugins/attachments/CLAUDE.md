@@ -6,7 +6,7 @@ The sync engine stores attachment **metadata** at hydration time
 (`filename` / `mimeType` / `sizeBytes` / `gmailAttachmentId` on `mail_attachments`)
 but never fetches the bytes — `stored_attachment_id` stays null. This plugin is
 the "fetch the bytes when the user actually wants them" half: a chip click or an
-inline `cid:` image resolution triggers one download, which is cached forever.
+inline `cid:` image waiting on its bytes triggers one download, which is cached forever.
 
 ## Server — `POST /api/mail/attachment`
 
@@ -31,7 +31,10 @@ propagates loudly; there is no silent fallback.
   **module-level** promise cache dedupes every download of a row across cards,
   re-mounts, and repeated `cid:` resolutions (the id is immutable, so caching the
   resolved URL forever is correct). A failed download is evicted so a later call
-  retries.
+  retries. `materialise(attachmentRowId)` is the same write fired and
+  forgotten (answer unused): for a reader that shows the bytes through the live
+  mail row (inline `cid:` images), which carries the stamped
+  `storedAttachmentId` back.
 - `<AttachmentChip attachment={…} />` — a pill chip (MIME icon + filename + human
   size). Click downloads on demand (spinner while in flight) and opens the URL in
   a new tab. A already-stored attachment resolves with no round-trip.
@@ -46,7 +49,7 @@ Consumes only barrel APIs: `mail-core` (`_mailAttachments`, `requireGmailToken`)
 
 ## Plugin reference
 
-- Description: Reading-pane attachment UI: the useMailAttachment() lazy-download hook (deduped, cached) and the AttachmentChip component (filename + size + MIME icon; downloads on click and opens in a new tab). Lazy Gmail attachment blob download: fetches an attachment's bytes on demand (reading-pane chip click or inline cid: image), caches them via infra/attachments, stamps mail_attachments.stored_attachment_id, and serves the same-origin URL.
+- Description: Reading-pane attachment UI: the useMailAttachment() lazy-download hook (download → URL for a click, materialise → fire-and-forget for a reader of the live row; deduped, cached) and the AttachmentChip component (filename + size + MIME icon; downloads on click and opens in a new tab). Lazy Gmail attachment blob download: fetches an attachment's bytes on demand (reading-pane chip click or inline cid: image), caches them via infra/attachments, stamps mail_attachments.stored_attachment_id, and serves the same-origin URL.
 - Web:
   - Uses:
     - `infra/endpoints.useFetchEndpoint`

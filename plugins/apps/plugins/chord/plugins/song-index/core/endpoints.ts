@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import {
   HookpadModeSchema,
   TheorytabSectionIdSchema,
@@ -16,8 +17,9 @@ import { ChordTokenSchema, type ChordToken } from "./token";
 
 // ── The index's HTTP surface ─────────────────────────────────────────────────
 //
-// Both reads answer `not-ready` (with the status) until the index is loaded —
-// never an empty list, which would read as "no song fits".
+// Both counts answer `not-ready` (with the status) until the index is loaded —
+// never an empty list, which would read as "no song fits". The loop find is a
+// live value (`chordLoops`, `./resources.ts`); its candidate shape is here.
 
 /**
  * Open the index: record that this instance uses the app, and start a load
@@ -29,8 +31,11 @@ export const ensureChordIndexEndpoint = defineEndpoint({
   response: IndexStatusSchema,
 });
 
-const ChordFeatureSchema = z.enum(CHORD_FEATURES);
-const LoopShapeIdSchema = z.enum(LOOP_SHAPE_IDS);
+export const ChordFeatureSchema = z.enum(CHORD_FEATURES);
+/** A window's token and feature lists: a few of each, from a few bars. */
+const WINDOW_LIST_REASON =
+  "one loop window's distinct chords or spelling features";
+export const LoopShapeIdSchema = z.enum(LOOP_SHAPE_IDS);
 
 /** A loop window as the trainer ranks and plays it. Beats are Hookpad's, 1-based. */
 export const LoopWindowFieldsSchema = z.object({
@@ -42,8 +47,8 @@ export const LoopWindowFieldsSchema = z.object({
   beatUnit: z.number(),
   keyTonic: z.string(),
   keyMode: HookpadModeSchema,
-  chordTokens: z.array(ChordTokenSchema),
-  features: z.array(ChordFeatureSchema),
+  chordTokens: wholeList(ChordTokenSchema, { reason: WINDOW_LIST_REASON }),
+  features: wholeList(ChordFeatureSchema, { reason: WINDOW_LIST_REASON }),
   chordCount: z.number().int(),
   changeCount: z.number().int(),
   hasRest: z.boolean(),
@@ -70,17 +75,16 @@ export const LoopCandidateSchema = z.object({
   alignment: AlignmentSchema,
   window: LoopWindowFieldsSchema,
   /** The section's chords overlapping the window (one ringing in from before counts), in beat order. */
-  chords: z.array(TokenizedChordSchema),
+  chords: wholeList(TokenizedChordSchema, {
+    reason: "the chords of one loop window: a few bars' worth",
+  }),
 });
 export type LoopCandidate = z.infer<typeof LoopCandidateSchema>;
 
-const NotReadySchema = z.object({
+export const NotReadySchema = z.object({
   kind: z.literal("not-ready"),
   status: IndexStatusSchema,
 });
-
-/** Most candidates one find returns. The trainer asks for a small batch, often. */
-export const FIND_LOOPS_MAX_LIMIT = 50;
 
 /**
  * How many chords outside the playable set a loop may hold: `0` (every chord
@@ -95,58 +99,6 @@ export const LoopExtrasSchema = z.union([
   z.literal("any"),
 ]);
 export type LoopExtras = z.infer<typeof LoopExtrasSchema>;
-
-export const FindLoopsBodySchema = z
-  .object({
-    /** The chords a loop may hold: practised and heard. */
-    playable: z.array(ChordTokenSchema).min(1),
-    /** The practised chords: every returned window holds at least one. Each must be playable. */
-    practised: z.array(ChordTokenSchema).min(1),
-    /** How many chords outside `playable` a window may hold besides. */
-    extras: LoopExtrasSchema,
-    /** Keep only windows holding this chord. Must be practised. */
-    focus: ChordTokenSchema.optional(),
-    shape: LoopShapeIdSchema.default(DEFAULT_LOOP_SHAPE),
-    /** Keep windows whose spelling has every one of these features. */
-    requireFeatures: z.array(ChordFeatureSchema).min(1).optional(),
-    /** Drop windows whose spelling has any of these features. */
-    forbidFeatures: z.array(ChordFeatureSchema).min(1).optional(),
-    /** Sections to leave out (recently played). */
-    excludeSectionIds: z.array(TheorytabSectionIdSchema).min(1).optional(),
-    limit: z.number().int().min(1).max(FIND_LOOPS_MAX_LIMIT),
-  })
-  .refine(
-    (body) => body.practised.every((token) => body.playable.includes(token)),
-    {
-      message:
-        "every practised chord must be playable: a practised chord is one a loop may hold",
-      path: ["practised"],
-    },
-  )
-  .refine(
-    (body) => body.focus === undefined || body.practised.includes(body.focus),
-    {
-      message: "focus must be one of the practised chords",
-      path: ["focus"],
-    },
-  );
-export type FindLoopsBody = z.infer<typeof FindLoopsBodySchema>;
-
-/**
- * Random loop windows holding at least one practised chord, whose other chords
- * are playable — up to `extras` of them may be outside the playable set.
- */
-export const findLoopsEndpoint = defineEndpoint({
-  route: "POST /api/chord/loops/find",
-  body: FindLoopsBodySchema,
-  response: z.discriminatedUnion("kind", [
-    NotReadySchema,
-    z.object({
-      kind: z.literal("ready"),
-      candidates: z.array(LoopCandidateSchema),
-    }),
-  ]),
-});
 
 export const NEXT_CHORDS_MAX_LIMIT = 200;
 

@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
-import { TRANSCRIPTION_STATUSES } from "../core";
 
 /**
  * Prepare a transcription from the launch form's text: creates the song
@@ -24,18 +23,4 @@ export const prepareTranscription = defineEndpoint({
 export const retryTranscription = defineEndpoint({
   route: "POST /api/sonata/songs/:id/transcription/retry",
   response: z.object({ conversationId: z.string() }),
-});
-
-/**
- * One song's transcription state, or `null` for a song nobody transcribed —
- * the source's `hydrate`, a one-shot read outside React.
- */
-export const getSongTranscription = defineEndpoint({
-  route: "GET /api/sonata/songs/:id/transcription",
-  response: z
-    .object({
-      status: z.enum(TRANSCRIPTION_STATUSES),
-      error: z.string().nullable(),
-    })
-    .nullable(),
 });

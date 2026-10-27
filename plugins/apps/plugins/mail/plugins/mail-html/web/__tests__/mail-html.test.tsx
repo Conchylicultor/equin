@@ -164,6 +164,21 @@ describe("MailHtml cid resolution", () => {
     expect(img.getAttribute("src")).toBeNull();
     expect(img.getAttribute("data-cid")).toBe("logo@x");
   });
+
+  it("reports the cids it had no URL for, each once, after render", () => {
+    const reports: (readonly string[])[] = [];
+    render(
+      <MailHtml
+        html={`<img src="cid:a@x"><img src="cid:b@x"><img src="cid:a@x">`}
+        showRemoteImages={false}
+        resolveCid={(cid) => (cid === "b@x" ? "/api/attachments/b" : undefined)}
+        onUnresolvedCids={(cids) => {
+          reports.push(cids);
+        }}
+      />,
+    );
+    expect(reports).toEqual([["a@x"]]);
+  });
 });
 
 describe("MailHtml quoted-history collapse", () => {

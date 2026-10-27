@@ -19,9 +19,12 @@ const hydrated: { key: string; params: unknown; value: unknown }[] = [];
 const reports: { message: string }[] = [];
 let snapshot: unknown;
 
-vi.mock("@plugins/infra/plugins/endpoints/web", () => ({
-  fetchEndpointOver: () => async () => snapshot,
-}));
+vi.mock(
+  "@plugins/primitives/plugins/networking/plugins/page-transport/web",
+  () => ({
+    pageTransport: { fetch: async () => Response.json(snapshot) },
+  }),
+);
 vi.mock("@plugins/primitives/plugins/perfs/plugins/boot-trace/web", () => ({
   recordBootSpan: () => {},
   markBootInstantAtNextCommit: () => {},

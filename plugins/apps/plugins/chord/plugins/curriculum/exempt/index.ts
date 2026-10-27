@@ -2,6 +2,13 @@ import type { Exemptions } from "@plugins/framework/plugins/tooling/plugins/exem
 
 export default [
   {
+    rule: "no-db-backed-notify",
+    paths: ["server/internal/loops-resource.ts"],
+    kind: "sanctioned",
+    reason:
+      "chord.curriculum.loops answers one random sample of loop windows per question, and every question carries its refill's own `round` nonce: an answer is frozen by design (`fixed`), so no write may move a sample already asked. Its loader reads the stored selection once per question (a selection change moves the trainer's palette, which drops the pool drawn for the old one) and the song index through song-index's answerLoopFind.",
+  },
+  {
     rule: "ids:pk-declared",
     paths: ["server/internal/tables.ts"],
     kind: "debt",

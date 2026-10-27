@@ -35,7 +35,6 @@
   - Routes:
     - `POST /api/debug/live-state-emit/start`
     - `POST /api/debug/live-state-emit/stop`
-    - `GET /api/debug/live-state-emit/status`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --muted-foreground`

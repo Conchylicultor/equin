@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 
 // ── Chord ids and progressions ───────────────────────────────────────────────
 
@@ -73,6 +74,10 @@ export const TheorytabSectionIdSchema = z
     "A TheoryTab section id is letters, digits, '_' and '-'",
   );
 
+// A chord's own lists are loaded whole wherever a live value carries a chord.
+const CHORD_PART_REASON =
+  "one chord's spelling: a handful of intervals or tones";
+
 export const HookpadChordSchema = z.object({
   /** Scale degree of the root, 1–7 relative to the current key (0 on a rest). */
   root: z.number(),
@@ -86,13 +91,13 @@ export const HookpadChordSchema = z.object({
   /** 0 = not an applied chord; otherwise the function it borrows toward (5 = a V/x, 7 = a vii°/x, …). */
   applied: z.number(),
   /** Added intervals, e.g. [9], [6, 9]. */
-  adds: z.array(z.number()),
+  adds: wholeList(z.number(), { reason: CHORD_PART_REASON }),
   /** Omitted chord tones, e.g. [3], [5]. */
-  omits: z.array(z.number()),
+  omits: wholeList(z.number(), { reason: CHORD_PART_REASON }),
   /** Altered tones, e.g. ["#5"], ["b9"]. */
-  alterations: z.array(z.string()),
+  alterations: wholeList(z.string(), { reason: CHORD_PART_REASON }),
   /** Suspensions, e.g. [4], [2]. */
-  suspensions: z.array(z.number()),
+  suspensions: wholeList(z.number(), { reason: CHORD_PART_REASON }),
   /**
    * Modal borrowing. `""` or `null` = not borrowed; a mode name ("minor",
    * "mixolydian", "dorian", … — a `HookpadMode`); or a custom scale as semitone
@@ -101,7 +106,14 @@ export const HookpadChordSchema = z.object({
    * must not make its whole section unreadable — `hookpadChordSound` reports it
    * as unreadable instead.
    */
-  borrowed: z.union([z.string(), z.array(z.number())]).nullable(),
+  borrowed: z
+    .union([
+      z.string(),
+      wholeList(z.number(), {
+        reason: "a custom scale: at most twelve semitone offsets",
+      }),
+    ])
+    .nullable(),
   /** A rest: silence in the harmony track for `duration` beats. */
   isRest: z.boolean(),
   /**

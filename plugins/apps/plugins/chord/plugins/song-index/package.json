@@ -1,6 +1,6 @@
 {
   "name": "@equin/plugin-apps-chord-song-index",
-  "description": "The Chord app's song index: TheoryTab sections read into sound tokens (root above the tonic, stacked intervals, inversion), spelling features, and 4-bar loop windows, loaded on first use from a compact snapshot of Sheet Sage's Hooktheory dump. Endpoints to open the index and find loops that fit an unlocked chord set, a live load status, and the snapshot's backup source.",
+  "description": "The Chord app's song index: TheoryTab sections read into sound tokens (root above the tonic, stacked intervals, inversion), spelling features, and 4-bar loop windows, loaded on first use from a compact snapshot of Sheet Sage's Hooktheory dump. An endpoint to open the index, a live loop find (chord.loops) over an unlocked chord set, loop counts, a live load status, and the snapshot's backup source.",
   "private": true,
   "version": "0.0.1",
   "dependencies": {

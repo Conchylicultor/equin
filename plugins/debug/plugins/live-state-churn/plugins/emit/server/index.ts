@@ -1,10 +1,9 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { handleStart } from "./internal/handle-start";
 import { handleStop } from "./internal/handle-stop";
-import { handleStatus } from "./internal/handle-status";
 import { stopEmitting } from "./internal/emitter";
 import { emitStatusServed } from "./internal/status-value";
-import { startEmit, stopEmit, getEmitStatus } from "../shared/endpoints";
+import { startEmit, stopEmit } from "../shared/endpoints";
 
 export default {
   description:
@@ -12,7 +11,6 @@ export default {
   httpRoutes: {
     [startEmit.route]: handleStart,
     [stopEmit.route]: handleStop,
-    [getEmitStatus.route]: handleStatus,
   },
   contributions: [...emitStatusServed.declare],
   onShutdown: () => {

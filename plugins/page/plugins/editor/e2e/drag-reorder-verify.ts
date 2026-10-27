@@ -32,6 +32,7 @@
 //
 // Usage: bun plugins/page/plugins/editor/e2e/drag-reorder-verify.ts [--url <deploy>] [--headed]
 import {
+  pageFetch,
   report,
   stallRoute,
   withBrowser,
@@ -59,34 +60,33 @@ await withBrowser(async (h) => {
   const blockTexts = (): Promise<string[]> => readBlockTexts(page);
 
   /** The page's rows as the SERVER holds them, in document (rank) order. */
-  const serverTexts = (pageId: string): Promise<string[]> =>
-    page.evaluate(async (id) => {
-      const res = await fetch(`/api/pages/${id}/blocks`, {
-        headers: { accept: "application/json" },
-      });
-      if (!res.ok) throw new Error(`GET blocks -> ${res.status}`);
-      const rows = (await res.json()) as {
-        rank: string;
-        data: { text?: unknown };
-      }[];
-      const plain = (text: unknown): string => {
-        if (typeof text === "string") return text.trim();
-        if (Array.isArray(text)) {
-          return text
-            .map((run) =>
-              typeof run === "object" && run !== null
-                ? String((run as { text?: unknown }).text ?? "")
-                : "",
-            )
-            .join("")
-            .trim();
-        }
-        return "";
-      };
-      return [...rows]
-        .sort((x, y) => (String(x.rank) < String(y.rank) ? -1 : 1))
-        .map((b) => plain(b.data.text));
-    }, pageId);
+  const serverTexts = async (id: string): Promise<string[]> => {
+    const res = await pageFetch(page, `/api/pages/${id}/blocks`, {
+      headers: { accept: "application/json" },
+    });
+    if (!res.ok) throw new Error(`GET blocks -> ${res.status}`);
+    const rows = (await res.json()) as {
+      rank: string;
+      data: { text?: unknown };
+    }[];
+    const plain = (text: unknown): string => {
+      if (typeof text === "string") return text.trim();
+      if (Array.isArray(text)) {
+        return text
+          .map((run) =>
+            typeof run === "object" && run !== null
+              ? String((run as { text?: unknown }).text ?? "")
+              : "",
+          )
+          .join("")
+          .trim();
+      }
+      return "";
+    };
+    return [...rows]
+      .sort((x, y) => (String(x.rank) < String(y.rank) ? -1 : 1))
+      .map((b) => plain(b.data.text));
+  };
 
   /**
    * Drag the row at `from` onto the row at `to`, dropping in its lower half so

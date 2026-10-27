@@ -108,6 +108,7 @@
 // Usage: bun plugins/page/plugins/annotations/plugins/agent-access/e2e/agent-access-verify.ts [--url <deploy>] [--out <path>]
 import type { Page } from "playwright";
 import {
+  pageFetch,
   agentFetch,
   arg,
   report,
@@ -388,24 +389,38 @@ function snapshotDiff(before: Snapshot, after: Snapshot): string[] {
   return lines;
 }
 
+/**
+ * One JSON request through the page's browser context (its session, its
+ * provenance); throws on a non-2xx, naming the call.
+ */
+async function sendJson(
+  page: Page,
+  method: string,
+  url: string,
+  body: unknown,
+): Promise<Response> {
+  const res = await pageFetch(page, url, {
+    method,
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok)
+    throw new Error(`${method} ${url} ${res.status}: ${await res.text()}`);
+  return res;
+}
+
+const post = async (page: Page, url: string, body: unknown) =>
+  (await (await sendJson(page, "POST", url, body)).json()) as { id: string };
+
 /** Set the page's own title, so the `# Title` banner is not an empty line. */
 async function setPageTitle(
   page: Page,
   pageId: string,
   title: string,
 ): Promise<void> {
-  await page.evaluate(
-    async ({ id, value }) => {
-      const res = await fetch(`/api/blocks/${id}`, {
-        method: "PATCH",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ data: { title: value, icon: null } }),
-      });
-      if (!res.ok)
-        throw new Error(`PATCH /api/blocks ${res.status}: ${await res.text()}`);
-    },
-    { id: pageId, value: title },
-  );
+  await sendJson(page, "PATCH", `/api/blocks/${pageId}`, {
+    data: { title, icon: null },
+  });
 }
 
 /** Seed a `/private` card holding one line, through the write boundary. */
@@ -414,34 +429,17 @@ async function seedPrivateCard(
   pageId: string,
   secret: string,
 ): Promise<{ card: string; child: string }> {
-  return page.evaluate(
-    async ({ parent, line }) => {
-      const post = async (body: unknown): Promise<{ id: string }> => {
-        const res = await fetch("/api/blocks", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify(body),
-        });
-        if (!res.ok)
-          throw new Error(
-            `POST /api/blocks ${res.status}: ${await res.text()}`,
-          );
-        return (await res.json()) as { id: string };
-      };
-      const card = await post({
-        parentId: parent,
-        type: "private-note",
-        data: {},
-      });
-      const child = await post({
-        parentId: card.id,
-        type: "text",
-        data: { text: [{ text: line }] },
-      });
-      return { card: card.id, child: child.id };
-    },
-    { parent: pageId, line: secret },
-  );
+  const card = await post(page, "/api/blocks", {
+    parentId: pageId,
+    type: "private-note",
+    data: {},
+  });
+  const child = await post(page, "/api/blocks", {
+    parentId: card.id,
+    type: "text",
+    data: { text: [{ text: secret }] },
+  });
+  return { card: card.id, child: child.id };
 }
 
 /**
@@ -456,30 +454,17 @@ async function seedHumanCard(
   parentId: string,
   line: string,
 ): Promise<{ card: string; child: string }> {
-  return page.evaluate(
-    async ({ parent, type, text }) => {
-      const post = async (body: unknown): Promise<{ id: string }> => {
-        const res = await fetch("/api/blocks", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify(body),
-        });
-        if (!res.ok)
-          throw new Error(
-            `POST /api/blocks ${res.status}: ${await res.text()}`,
-          );
-        return (await res.json()) as { id: string };
-      };
-      const card = await post({ parentId: parent, type, data: {} });
-      const child = await post({
-        parentId: card.id,
-        type: "text",
-        data: { text: [{ text }] },
-      });
-      return { card: card.id, child: child.id };
-    },
-    { parent: parentId, type: HUMAN_TYPE, text: line },
-  );
+  const card = await post(page, "/api/blocks", {
+    parentId,
+    type: HUMAN_TYPE,
+    data: {},
+  });
+  const child = await post(page, "/api/blocks", {
+    parentId: card.id,
+    type: "text",
+    data: { text: [{ text: line }] },
+  });
+  return { card: card.id, child: child.id };
 }
 
 /** The conversations recorded as authors of one agent-authored block (card or page). */
@@ -507,82 +492,63 @@ async function seedSubPage(
   title: string,
   author?: "agent",
 ): Promise<string> {
-  return page.evaluate(
-    async ({ parent, name, who }) => {
-      const call = async (
-        url: string,
-        body: unknown,
-      ): Promise<{ id: string }> => {
-        const res = await fetch(url, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify(body),
-        });
-        if (!res.ok)
-          throw new Error(`POST ${url} ${res.status}: ${await res.text()}`);
-        return (await res.json()) as { id: string };
-      };
-      const line = await call("/api/blocks", {
-        parentId: parent,
-        type: "text",
-        data: { text: [] },
-      });
-      await call(`/api/blocks/${line.id}/turn-into-page`, {
-        title: name,
-        seedChild: { type: "text", data: { text: [] } },
-        ...(who === undefined ? {} : { kind: { kind: "agent-page" } }),
-      });
-      return line.id;
-    },
-    { parent: parentId, name: title, who: author },
-  );
+  const line = await post(page, "/api/blocks", {
+    parentId,
+    type: "text",
+    data: { text: [] },
+  });
+  await post(page, `/api/blocks/${line.id}/turn-into-page`, {
+    title,
+    seedChild: { type: "text", data: { text: [] } },
+    ...(author === undefined ? {} : { kind: { kind: "agent-page" } }),
+  });
+  return line.id;
 }
 
-/** `PATCH /api/blocks/:id` from the browser; the HTTP status it answered. */
+/** `PATCH /api/blocks/:id` through the page's context; the HTTP status it answered. */
 async function patchBlockStatus(
   page: Page,
   blockId: string,
   body: unknown,
 ): Promise<number> {
-  return page.evaluate(
-    async ({ id, payload }) =>
-      (
-        await fetch(`/api/blocks/${id}`, {
-          method: "PATCH",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify(payload),
-        })
-      ).status,
-    { id: blockId, payload: body },
-  );
+  const res = await pageFetch(page, `/api/blocks/${blockId}`, {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return res.status;
+}
+
+/** `POST /api/blocks/:id/page-kind` through the page's context; the HTTP status. */
+async function postPageKind(
+  page: Page,
+  pageId: string,
+  kind: unknown,
+): Promise<number> {
+  const res = await pageFetch(page, `/api/blocks/${pageId}/page-kind`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ kind }),
+  });
+  return res.status;
 }
 
 /**
- * `POST /api/blocks/:id/page-kind` from the browser — the page header's
- * agent-page toggle, and the one way a page's author changes after it is born.
- * The HTTP status it answered.
+ * `POST /api/blocks/:id/page-kind` — the page header's agent-page toggle, and
+ * the one way a page's author changes after it is born. The HTTP status it
+ * answered.
  *
- * Through the browser for the same reason as the seeds above: no agent tool
- * exposes this operation, so only the human flips a page.
+ * Through the browser's session for the same reason as the seeds above: no
+ * agent tool exposes this operation, so only the human flips a page.
  */
 async function setPageAuthorStatus(
   page: Page,
   pageId: string,
   author: "agent" | "human",
 ): Promise<number> {
-  return page.evaluate(
-    async ({ id, who }) =>
-      (
-        await fetch(`/api/blocks/${id}/page-kind`, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            kind: { kind: who === "agent" ? "agent-page" : "page" },
-          }),
-        })
-      ).status,
-    { id: pageId, who: author },
-  );
+  return postPageKind(page, pageId, {
+    kind: author === "agent" ? "agent-page" : "page",
+  });
 }
 
 /**
@@ -593,19 +559,7 @@ async function makeInstructionsPage(
   page: Page,
   pageId: string,
 ): Promise<number> {
-  return page.evaluate(
-    async (id) =>
-      (
-        await fetch(`/api/blocks/${id}/page-kind`, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            kind: { kind: "instructions", global: false },
-          }),
-        })
-      ).status,
-    pageId,
-  );
+  return postPageKind(page, pageId, { kind: "instructions", global: false });
 }
 
 /** Add one text line at the end of a page (or block), through the write boundary. */
@@ -614,22 +568,11 @@ async function appendLine(
   parentId: string,
   line: string,
 ): Promise<void> {
-  await page.evaluate(
-    async ({ parent, text }) => {
-      const res = await fetch("/api/blocks", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          parentId: parent,
-          type: "text",
-          data: { text: [{ text }] },
-        }),
-      });
-      if (!res.ok)
-        throw new Error(`POST /api/blocks ${res.status}: ${await res.text()}`);
-    },
-    { parent: parentId, text: line },
-  );
+  await sendJson(page, "POST", "/api/blocks", {
+    parentId,
+    type: "text",
+    data: { text: [{ text: line }] },
+  });
 }
 
 /** The `instructions` string of an MCP `initialize` result for one conversation. */

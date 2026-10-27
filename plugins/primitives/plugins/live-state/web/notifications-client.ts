@@ -20,6 +20,7 @@ import { getTabId } from "@plugins/primitives/plugins/scope/plugins/tab-id/web";
 import type { ResourceDescriptor, ResourceOrigin } from "../core";
 import { mergeKeyedDelta } from "./keyed-delta-merge";
 import { applyValuePatch } from "@plugins/packages/plugins/value-patch/core";
+import { createInflight } from "@plugins/packages/plugins/inflight/core";
 import { rootWatermarks, type WatermarkRegistry } from "./watermark-registry";
 import { rootTxAcks, type TxAckRegistry } from "./tx-ack-registry";
 import { httpStaleDropReportSink } from "./stale-drop-reporter";
@@ -72,6 +73,15 @@ export type ResourceRead<T> = Pick<
   ResourceDescriptor<T>,
   "schema" | "refusals" | "bytes" | "patches"
 >;
+
+/**
+ * `NotificationsClient.readOnce`'s answer: the value, or a refusal whose code
+ * the read declares — the server's answer "this cannot be answered as asked".
+ * A failure is never an answer: it is thrown.
+ */
+export type ReadOnceAnswer<T> =
+  | { status: "ready"; data: T }
+  | { status: "refused"; code: string; message: string };
 
 /**
  * The build graph this tab's bundle was built from — sent on every `sub` /
@@ -586,6 +596,12 @@ export class NotificationsClient {
    * never-applied run is the wedge signature the reports consumer thresholds on.
    */
   private staleDropCounts = new Map<string, number>();
+  /**
+   * `readOnce`'s HTTP reads in flight, one per tuple: concurrent asks of the
+   * same tuple share one request and its answer (a concurrency deduplicator,
+   * never a cache — the next ask after it settles reads again).
+   */
+  private readFlights = createInflight();
   /**
    * The client-wide apply sequence: bumped on every value written to a sub's
    * cache (`markApplied`), so each sub's `appliedSeq` orders its value against
@@ -1537,17 +1553,9 @@ export class NotificationsClient {
     const channel = this.channels[socketKindFor(origin)];
     const entry = channel?.subs.get(`${key}\0${paramsKey(params)}`);
     const serverEpoch = channel?.serverEpoch;
-    const qs = new URLSearchParams(params).toString();
-    const base =
-      origin === "central" ? "/api/central-resources" : "/api/resources";
-    const url = `${base}/${encodeURIComponent(key)}${qs ? `?${qs}` : ""}`;
+    const url = resourceUrl(key, params, origin);
     const etag = this.etagFor(key, params, origin);
-    // `cache: "no-store"` on BOTH fetches: the browser HTTP cache must never
-    // store or transparently 304-revalidate a resource body — a restart-stable
-    // ETag would otherwise let it replay an old-boot `{value, version}`.
-    // Every read names this tab's build, so a contract mismatch is judged
-    // skew (reload) or a real bug on the server (the `sub` frame's twin).
-    const build = { [BUILD_GRAPH_HEADER]: clientBuild() };
+    const build = buildHeader();
     let res = await this.fetchImpl(
       url,
       etag !== undefined
@@ -1569,60 +1577,8 @@ export class NotificationsClient {
       // needless 304 never leaves the cache empty/stale, then take the write path.
       res = await this.fetchImpl(url, { cache: "no-store", headers: build });
     }
-    if (!res.ok) {
-      // A failed read carries a typed JSON body (reason + verdict). Read it so
-      // the error names WHY — and so a contract refusal reaches the Reload
-      // advice even when no WS sub-error did (the socket was down).
-      const errBody = parseResourceHttpErrorBody(await readJsonBody(res));
-      // A refusal must carry a code this read declares. The server only sends
-      // codes ITS declaration lists (the runtime turns any other into a
-      // failure), so a code this tab's does not list means the two bundles
-      // declare the resource differently: a contract mismatch, the tab out of
-      // date — never a refusal the surface would branch on with no type for.
-      if (
-        errBody?.reason === "refused" &&
-        (errBody.code === undefined ||
-          !(read.refusals ?? []).includes(errBody.code))
-      ) {
-        noteContractRefusal(key, "contract-mismatch", "skew");
-        throw new ResourceHttpError(
-          key,
-          res.status,
-          "contract-mismatch",
-          "skew",
-          `refused with ${errBody.code === undefined ? "no code" : `code "${errBody.code}"`}, ` +
-            `which this tab's declaration does not list ` +
-            `(${JSON.stringify(read.refusals ?? [])}): ${errBody.detail ?? ""}`,
-        );
-      }
-      noteContractRefusal(key, errBody?.reason, errBody?.verdict);
-      throw new ResourceHttpError(
-        key,
-        res.status,
-        errBody?.reason,
-        errBody?.verdict,
-        errBody?.detail,
-        errBody?.code,
-      );
-    }
-    // A bytes read's body IS the value; its envelope rides the headers
-    // (`parseResourceBytesHeaders` throws on a response that is not one).
-    const body: {
-      value: unknown;
-      version: number;
-      epoch?: string;
-      watermark?: string;
-    } = read.bytes
-      ? {
-          ...parseResourceBytesHeaders(key, res.headers),
-          value: await res.arrayBuffer(),
-        }
-      : ((await res.json()) as {
-          value: unknown;
-          version: number;
-          epoch?: string;
-          watermark?: string;
-        });
+    if (!res.ok) await throwReadFailure(key, res, read);
+    const body = await readEnvelope(key, res, read);
     this.noteHttpEtag(key, params, origin, res.headers.get("ETag"));
 
     // Epoch-aware version guard (see doc comment). Compute the adopt/drop decision
@@ -1706,6 +1662,149 @@ export class NotificationsClient {
       `http key=${key} params=${paramsKey(params)} version=${body.version} source=${source}`,
     );
     return parsed;
+  }
+
+  /**
+   * ONE answer to (key, params), for a question an event asks and its own
+   * `await` consumes (`network/live`'s `useLiveReader`) — never a
+   * subscription. `params` is the canonical tuple (the caller canonicalizes,
+   * as every read does), so the tuple is exactly the one a `useLive` of the
+   * same declaration subscribes.
+   *
+   * - **Observed and pushed-current** — this client holds a sub for the tuple
+   *   on an open socket, a server-vouched value landed under the current
+   *   subscription (the sub was answered since its last (re)subscribe — a
+   *   value cached across a reconnect or a keep-alive teardown does not
+   *   count) and nothing marked it stale (no error, not invalidated): that
+   *   value, with no request. It is
+   *   as fresh as what a `useLive` of it shows, because it is pushed.
+   * - **Otherwise one HTTP read**, concurrent asks of one tuple sharing it
+   *   (`packages/inflight`). An observed tuple's goes through
+   *   `fetchOverHttp` — version-guarded, written to the cache its readers
+   *   share. An unobserved one is NEVER written to the cache: nothing would
+   *   keep it current, so a later mount must not settle on it.
+   * - **`measure`** (a `load: "snapshot"` value): always the HTTP read — a
+   *   measurement is taken when asked.
+   *
+   * A declared refusal is an answer (`refused`); a refusal with a code the
+   * read does not declare is a contract mismatch (`throwReadFailure`). Any
+   * other failure — network, HTTP, a schema rejection, a lost version race —
+   * is thrown as its typed `ResourceError` (`toResourceError`) and reported
+   * ONCE per flight to `resourceErrorReportSink` (under this client's
+   * telemetry), however many callers joined it.
+   */
+  async readOnce<T>(
+    key: string,
+    params: ResourceParams,
+    origin: ResourceOrigin | undefined,
+    read: ResourceRead<T>,
+    measure: boolean,
+  ): Promise<ReadOnceAnswer<T>> {
+    const kind = socketKindFor(origin);
+    const pk = paramsKey(params);
+    if (!measure && this.holdsCurrentValue(kind, key, params)) {
+      trace(`read-once key=${key} params=${pk} source=observed`);
+      return {
+        status: "ready",
+        data: this.queryClient.getQueryData(queryKeyFor(key, params)) as T,
+      };
+    }
+    return this.readFlights.run(`${kind}\0${key}\0${pk}`, () =>
+      this.readOnceOverHttp(key, params, origin, read),
+    );
+  }
+
+  /**
+   * Does this client hold a pushed-current value for the tuple — a sub on an
+   * open socket, answered since its last (re)subscribe (a value applied under
+   * the CURRENT subscription, not one cached from before it), no error, not
+   * invalidated (an on-demand tuple between its `invalidate` frame and the
+   * refetch)?
+   */
+  private holdsCurrentValue(
+    kind: SocketKind,
+    key: string,
+    params: ResourceParams,
+  ): boolean {
+    const sub = this.channels[kind]?.subs.get(`${key}\0${paramsKey(params)}`);
+    // A sub at version -1 was just (re)subscribed — a fresh observe, a replay
+    // after a reconnect, a forced resub — and has not been answered yet: the
+    // cached value predates this subscription (kept across the drop, or by the
+    // query's gcTime after a keep-alive teardown), so nothing vouches for it.
+    if (sub === undefined || sub.version < 0) return false;
+    if (this.channelStatuses.get(this.socketUrls[kind]) !== "open")
+      return false;
+    const state = this.queryClient.getQueryState(queryKeyFor(key, params));
+    return (
+      state !== undefined &&
+      state.dataUpdatedAt !== 0 &&
+      state.error === null &&
+      !state.isInvalidated
+    );
+  }
+
+  /** `readOnce`'s HTTP read — one flight per tuple (see `readOnce`). */
+  private async readOnceOverHttp<T>(
+    key: string,
+    params: ResourceParams,
+    origin: ResourceOrigin | undefined,
+    read: ResourceRead<T>,
+  ): Promise<ReadOnceAnswer<T>> {
+    const pk = paramsKey(params);
+    const observed =
+      this.channels[socketKindFor(origin)]?.subs.get(`${key}\0${pk}`) !==
+      undefined;
+    try {
+      // An observed tuple's read is its HTTP fallback read: the same guarded
+      // write every reader of it shares.
+      const data = observed
+        ? await this.fetchOverHttp(key, params, origin, read, "fallback")
+        : await this.fetchUnobserved(key, params, origin, read);
+      trace(
+        `read-once key=${key} params=${pk} source=${observed ? "http-observed" : "http"}`,
+      );
+      return { status: "ready", data };
+    } catch (err) {
+      // `throwReadFailure` leaves a code on a refusal only when the read
+      // declares it.
+      if (
+        err instanceof ResourceHttpError &&
+        err.reason === "refused" &&
+        err.code !== undefined
+      ) {
+        return {
+          status: "refused",
+          code: err.code,
+          message: err.detail ?? err.message,
+        };
+      }
+      const error = toResourceError(err);
+      trace(
+        `read-once error key=${key} params=${pk} kind=${error.kind} error=${error.message}`,
+      );
+      if (this.telemetry) resourceErrorReportSink.emit({ key, params, error });
+      throw error;
+    }
+  }
+
+  /**
+   * One HTTP read of an unobserved tuple: decoded and parsed exactly as
+   * `fetchOverHttp` decodes and parses, but written nowhere — no cache entry,
+   * no watermark, no etag. There is no sub to guard a version against.
+   */
+  private async fetchUnobserved<T>(
+    key: string,
+    params: ResourceParams,
+    origin: ResourceOrigin | undefined,
+    read: ResourceRead<T>,
+  ): Promise<T> {
+    const res = await this.fetchImpl(resourceUrl(key, params, origin), {
+      cache: "no-store",
+      headers: buildHeader(),
+    });
+    if (!res.ok) await throwReadFailure(key, res, read);
+    const body = await readEnvelope(key, res, read);
+    return read.schema.parse(body.value);
   }
 
   /** Bump the consecutive-drop counter for (key, params) and emit the running
@@ -2735,4 +2834,99 @@ async function readJsonBody(res: Response): Promise<unknown> {
     if (err instanceof SyntaxError) return undefined;
     throw err;
   }
+}
+
+/** A resource's HTTP read URL: `/api/(central-)resources/:key?<params>`. */
+function resourceUrl(
+  key: string,
+  params: ResourceParams,
+  origin: ResourceOrigin | undefined,
+): string {
+  const qs = new URLSearchParams(params).toString();
+  const base =
+    origin === "central" ? "/api/central-resources" : "/api/resources";
+  return `${base}/${encodeURIComponent(key)}${qs ? `?${qs}` : ""}`;
+}
+
+/**
+ * The header every HTTP read names this tab's build with, so a contract
+ * mismatch is judged skew (reload) or a real bug on the server (the `sub`
+ * frame's twin). Every read is also `cache: "no-store"`: the browser HTTP
+ * cache must never store or transparently 304-revalidate a resource body — a
+ * restart-stable ETag would otherwise let it replay an old-boot
+ * `{value, version}`.
+ */
+function buildHeader(): Record<string, string> {
+  return { [BUILD_GRAPH_HEADER]: clientBuild() };
+}
+
+/**
+ * Throw the typed failure a non-2xx resource read is: a `ResourceHttpError`
+ * carrying the server's reason / verdict / detail / code — the one decoding
+ * every HTTP read shares (`fetchOverHttp`, `readOnce`), so a contract refusal
+ * reaches the Reload advice even when no WS sub-error did (the socket was
+ * down).
+ */
+async function throwReadFailure(
+  key: string,
+  res: Response,
+  read: ResourceRead<unknown>,
+): Promise<never> {
+  const errBody = parseResourceHttpErrorBody(await readJsonBody(res));
+  // A refusal must carry a code this read declares. The server only sends
+  // codes ITS declaration lists (the runtime turns any other into a failure),
+  // so a code this tab's does not list means the two bundles declare the
+  // resource differently: a contract mismatch, the tab out of date — never a
+  // refusal the surface would branch on with no type for.
+  if (
+    errBody?.reason === "refused" &&
+    (errBody.code === undefined ||
+      !(read.refusals ?? []).includes(errBody.code))
+  ) {
+    noteContractRefusal(key, "contract-mismatch", "skew");
+    throw new ResourceHttpError(
+      key,
+      res.status,
+      "contract-mismatch",
+      "skew",
+      `refused with ${errBody.code === undefined ? "no code" : `code "${errBody.code}"`}, ` +
+        `which this tab's declaration does not list ` +
+        `(${JSON.stringify(read.refusals ?? [])}): ${errBody.detail ?? ""}`,
+    );
+  }
+  noteContractRefusal(key, errBody?.reason, errBody?.verdict);
+  throw new ResourceHttpError(
+    key,
+    res.status,
+    errBody?.reason,
+    errBody?.verdict,
+    errBody?.detail,
+    errBody?.code,
+  );
+}
+
+/** A 2xx resource read's envelope: its value (unparsed) and version stamps. */
+interface ReadEnvelope {
+  value: unknown;
+  version: number;
+  epoch?: string;
+  watermark?: string;
+}
+
+/**
+ * A 2xx resource read's envelope. A bytes read's body IS the value, its
+ * envelope riding the headers (`parseResourceBytesHeaders` throws on a
+ * response that is not one); every other read's body is the JSON envelope.
+ */
+async function readEnvelope(
+  key: string,
+  res: Response,
+  read: ResourceRead<unknown>,
+): Promise<ReadEnvelope> {
+  return read.bytes
+    ? {
+        ...parseResourceBytesHeaders(key, res.headers),
+        value: await res.arrayBuffer(),
+      }
+    : ((await res.json()) as ReadEnvelope);
 }

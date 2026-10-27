@@ -59,18 +59,38 @@ const RENDER_TIMEOUT_MS = 90_000;
 const r = report(`sonata recording sync — ${songId}`);
 
 // ── The Score the player compiles: alignedScore over the stored record ───────
-async function getJson(path: string): Promise<unknown> {
+/**
+ * One song's row of a lookup-only live collection, over its HTTP point read
+ * (`GET /api/resources/<key>:rows?ids=<songId>` → `{ value: row[] }`), or
+ * null when the song has none — the reads the player's hydration makes with
+ * `useLiveRow` (UG's `sonata.ultimate-guitar.songs`, the alignment's
+ * `sonata-ug-alignment`).
+ */
+async function songRow(key: string): Promise<Record<string, unknown> | null> {
+  const path = `/api/resources/${encodeURIComponent(`${key}:rows`)}?${new URLSearchParams({ ids: songId })}`;
   const res = await agentFetch(path);
   if (!res.ok) throw new Error(`${path} → ${res.status} ${await res.text()}`);
-  return res.json();
+  const { value } = (await res.json()) as { value: Record<string, unknown>[] };
+  return value.find((row) => row.songId === songId) ?? null;
 }
-const tab = UgTabSchema.nullable().parse(
-  await getJson(`/api/sonata/songs/${songId}/ultimate-guitar`),
-);
-if (tab === null) throw new Error(`song ${songId} has no UG tab`);
-const row = (await getJson(
-  `/api/sonata/songs/${songId}/ultimate-guitar/alignment`,
-)) as { videoId: string | null; record: unknown } | null;
+const ugRow = await songRow("sonata.ultimate-guitar.songs");
+if (ugRow === null) throw new Error(`song ${songId} has no UG tab`);
+// The persisted tab is the row's fields (as the UG source's hydration builds it).
+const tab = UgTabSchema.parse({
+  tabId: ugRow.tabId,
+  songName: ugRow.songName,
+  artistName: ugRow.artistName,
+  type: ugRow.type,
+  key: ugRow.key,
+  capo: ugRow.capo,
+  tuning: ugRow.tuning,
+  content: ugRow.content,
+  urlWeb: ugRow.urlWeb,
+});
+const row = (await songRow("sonata-ug-alignment")) as {
+  videoId: string | null;
+  record: unknown;
+} | null;
 if (row?.record == null || row.videoId == null)
   throw new Error(`song ${songId} has no alignment record`);
 const record = AlignmentRecordSchema.parse(row.record);

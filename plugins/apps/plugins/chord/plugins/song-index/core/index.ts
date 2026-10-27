@@ -89,24 +89,39 @@ export {
   IndexPhaseSchema,
   IndexStatusSchema,
 } from "./index-status";
-export { chordIndexStatus } from "./resources";
+export {
+  FIND_LOOPS_MAX_EXCLUDED,
+  FIND_LOOPS_MAX_LIMIT,
+  FIND_LOOPS_ROUND_MAX,
+  ChordLoopsAnswerSchema,
+  FindLoopsQuerySchema,
+  FindLoopsSchema,
+  LoopFindOptionsSchema,
+  checkFindLoops,
+  chordIndexStatus,
+  chordLoops,
+} from "./resources";
+export type {
+  ChordLoopsAnswer,
+  FindLoops,
+  FindLoopsInput,
+  FindLoopsQuery,
+  FindLoopsQueryInput,
+  LoopFindOptions,
+} from "./resources";
 export type { IndexLoadPhase, IndexPhase, IndexStatus } from "./index-status";
 export {
   CountLoopsInSetBodySchema,
-  FIND_LOOPS_MAX_LIMIT,
   LOOP_EXTRAS,
-  LoopCandidateSchema,
   LoopExtrasSchema,
   LoopWindowFieldsSchema,
   NEXT_CHORDS_MAX_LIMIT,
   countLoopsInSetEndpoint,
   ensureChordIndexEndpoint,
-  findLoopsEndpoint,
   nextChordsEndpoint,
 } from "./endpoints";
 export type {
   CountLoopsInSetBody,
-  FindLoopsBody,
   LoopCandidate,
   LoopExtras,
   NextChordsBody,

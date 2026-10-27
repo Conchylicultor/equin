@@ -21,6 +21,7 @@
 //
 // Usage: bun plugins/page/plugins/editor/e2e/structural-write-order-verify.ts [--url <deploy>]
 import {
+  pageFetch,
   report,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
@@ -43,13 +44,12 @@ await withBrowser(async (h) => {
   const { page } = await h.session();
 
   /**
-   * The page's rows as the SERVER holds them. Fetched from the page's own
-   * context so it rides the app's session, and deliberately not through any
+   * The page's rows as the SERVER holds them. Fetched through the page's own
+   * browser context so it rides the app's session, and deliberately not through any
    * client cache — this is the whole point of the script.
    */
-  const authoritativeRows = (pageId: string): Promise<Row[]> =>
-    page.evaluate(async (id) => {
-      const res = await fetch(`/api/pages/${id}/blocks`, {
+  const authoritativeRows = async (id: string): Promise<Row[]> => {
+    const res = await pageFetch(page, `/api/pages/${id}/blocks`, {
         headers: { accept: "application/json" },
       });
       if (!res.ok) throw new Error(`GET blocks -> ${res.status}`);
@@ -63,7 +63,7 @@ await withBrowser(async (h) => {
         type: b.type,
         rank: String(b.rank),
       }));
-    }, pageId);
+  };
 
   const { pageId } = await openBlankPage(page, { settleMs: 3000 });
 

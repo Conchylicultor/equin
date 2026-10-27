@@ -42,7 +42,6 @@ export interface EmitStartOptions {
 export interface LiveStateEmitGlobal {
   start: (opts: EmitStartOptions) => Promise<EmitStatus>;
   stop: () => Promise<EmitStatus>;
-  status: () => Promise<EmitStatus>;
 }
 
 /** The window the emit API lives on. */

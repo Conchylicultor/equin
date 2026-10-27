@@ -1,4 +1,4 @@
-import { type ReactElement, useEffect, useRef, useState } from "react";
+import { type ReactElement, type ReactNode, useEffect, useRef } from "react";
 import {
   Pane,
   PaneChrome,
@@ -10,7 +10,12 @@ import {
   type ResolveResult,
 } from "@plugins/primitives/plugins/pane/web";
 import { mapRow, useLiveRow } from "@plugins/network/plugins/live/web";
-import { foldResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  foldResource,
+  matchResource,
+  ResourceErrorInline,
+  type ResourceResult,
+} from "@plugins/primitives/plugins/live-state/web";
 import {
   useLibrarySong,
   useLoadDocument,
@@ -20,7 +25,6 @@ import { useSession } from "@plugins/apps/plugins/sonata/plugins/session/web";
 import { barStartBeat } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { useDeferredLoadComplete } from "@plugins/framework/plugins/web-sdk/core";
-import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   PlayerDisplay,
   PlayerDisplayBinding,
@@ -37,8 +41,8 @@ import {
   Stack,
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { sonataPlayerRoute, songIdKind, songLibrary } from "../core";
-import { Library } from "./slots";
-import { hydrateSources, type PendingSource } from "./hydrate-sources";
+import type { SongHydration } from "./hydrate-sources";
+import { SongHydrator } from "./song-hydrator";
 import { SonataLibrarySurface } from "./components/library-surface";
 import { SongTitle } from "./components/song-title-field";
 import { SectionDock } from "./components/section-pane";
@@ -84,7 +88,7 @@ function SonataLibraryBody(): ReactElement {
  * The player pane at `/sonata/song/:songId;bar;lens` — a real URL that survives
  * reload and back/forward. Both keyed params are views of the song, absent by
  * default: `;bar=12` opens it with the playhead parked at that bar (see
- * {@link useSonataPlayerResolve}; build such a link with
+ * {@link SonataPlayerSurface}; build such a link with
  * {@link sonataSongLink}), and `;lens=notation` is the display lens on screen,
  * absent for the default lens — bound to the player by
  * {@link SonataPlayerSurface}. Named rather than positional, so neither can be
@@ -93,8 +97,8 @@ function SonataLibraryBody(): ReactElement {
  * optimistic `title` rides in `hint` purely as a DISPLAY value for `title.text`
  * (the browser-tab / tab-strip label before the song's live row settles) —
  * it is NOT a data source: the header title and every consumer read the
- * canonical row from `songLibrary`. `useResolve` hydrates every source for the song on
- * direct navigation / reload (see {@link useSonataPlayerResolve}).
+ * canonical row from `songLibrary`. The surface hydrates every source for the song,
+ * on direct navigation / reload too (see {@link SongLoader}).
  */
 export const sonataPlayerPane = Pane.define({
   route: sonataPlayerRoute,
@@ -153,7 +157,7 @@ function useSongTitle(
 
 /**
  * Resolve hook: gate the pane on the song's row existing. Hydration itself runs
- * in the surface ({@link useSongHydration}), which can render what it finds.
+ * in the surface ({@link SongLoader}), which can render what it finds.
  */
 function useSonataPlayerResolve({
   songId: songIdParam,
@@ -167,144 +171,38 @@ function useSonataPlayerResolve({
 }
 
 /**
- * Hydrate every registered source's raw for `songId`. Lifted out of `useSongLink` so hydration also runs
- * on direct navigation / reload (a deep-linked `/sonata/song/<id>`), not only on a
- * library click. Source-agnostic: a source with no data for the song returns
- * `undefined` and is skipped.
- *
- * Also places the playhead at the URL's `;bar`: with the load (a seek-on-load
- * intent the session's content reset honours), or — when only the bar changed
- * on the song already loaded — by a direct seek. A malformed bar value is no
- * bar ({@link parseBarParam}); a bar past the song's end clamps to its last bar.
+ * Where the playhead was last placed for a song shown in this pane: by the
+ * load intent armed with a load ({@link SongLoader}), or by a direct seek
+ * ({@link useBarSeek}). Lets the bar seek tell a bar CHANGE on the loaded song
+ * (seek now) from the bar a load already honours.
  */
-type SongHydrationState =
-  | { kind: "loading" }
-  | { kind: "pending"; sources: readonly PendingSource[] }
-  | { kind: "ready" };
+type PlacedForRef = { current: string | null };
 
-function useSongHydration({
-  songId: songIdParam,
-  bar: barParam,
-}: {
-  songId: string;
-  bar?: string;
-}): SongHydrationState {
-  // The URL's id as stored: `key` upgrades an old bare-uuid link
-  // (`/sonata/song/<uuid>`, from before the `song-` rewrite) so it resolves.
-  const songId = songIdKind.key(songIdParam);
-  const song = useLiveRow(songLibrary, songId);
-  const sources = Library.Source.useContributions();
-  const fetchEndpoint = useFetchEndpoint();
-  // The sources are an open contributed set, and most of them load in the
-  // deferred tier: hydrating before that tier settles reads an incomplete set,
-  // and the loaded song then never re-hydrates (the effect below keeps a song
-  // that is already loaded). So a deep link waits for the tier, as any reader
-  // of a contributed set does.
-  const deferredComplete = useDeferredLoadComplete();
-  const loadDocument = useLoadDocument();
-  const { requestSeekOnLoad, seekTo, score } = useSession();
+/**
+ * A bar change on the song already loaded here (`;bar=3` → `;bar=9` in place)
+ * reloads nothing, so no content reset runs to honour a load intent: seek
+ * directly. The bar a load armed is already placed (see {@link PlacedForRef}),
+ * so this never fights the reset; a URL that drops its bar leaves the playhead
+ * where it is. A song opened while already loaded (playing in the background
+ * from the library, or reopened from the now-playing bar) seeks to the URL's
+ * bar, if it names one.
+ */
+function useBarSeek(
+  songId: string,
+  bar: number | undefined,
+  hydrated: boolean,
+  placedForRef: PlacedForRef,
+): void {
+  const { seekTo, score } = useSession();
   const { content } = useSongDocument();
-  const loadedSong = useLibrarySong();
-  const loadedSongRef = useLatestRef(loadedSong);
-  // The sources still preparing a song, as the last hydration found them.
-  const [pendingSources, setPendingSources] = useState<{
-    songId: string;
-    sources: readonly PendingSource[];
-  } | null>(null);
-  // Re-hydration is driven by the song's row: every source write goes through
-  // `updateSongMeta`, which stamps `sourcesChangedAt`, so a pending source that
-  // finishes changes the row and this effect runs again. Not known until the
-  // row has settled.
-  const sourcesVersion =
-    song.status === "ready" && song.found
-      ? song.row.sourcesChangedAt.getTime()
-      : undefined;
-  const bar = parseBarParam(barParam);
-  const barRef = useLatestRef(bar);
-  // The (song, bar) the playhead was last placed for — by the load intent armed
-  // with a load, or by a direct seek. Lets the bar effect below tell a bar
-  // CHANGE on the loaded song (seek now) from the bar a load already honours.
-  const placedForRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    // The song is already loaded — playing in the background from the library,
-    // or reopened from the now-playing bar: show it as it is. Reloading would
-    // re-hydrate its sources into a new timeline, and the session's content
-    // reset would stop it and rewind to the lead-in. Its document is current
-    // (source edits write into it), and the bar effect below honours a URL bar.
-    const loaded = loadedSongRef.current;
-    if (loaded.kind === "library" && loaded.songId === songId) {
-      placedForRef.current = placementKey(songId, undefined);
-      return;
-    }
-    if (!deferredComplete || sourcesVersion === undefined) return;
-    let cancelled = false;
-    void (async () => {
-      const { rawMap, pending } = await hydrateSources(sources, songId, {
-        fetchEndpoint,
-      });
-      if (cancelled) return;
-      // A source has content for this song that is not ready: keep it for the
-      // surface to render and load NOTHING — never a score composed without it.
-      if (pending.length > 0) {
-        setPendingSources({ songId, sources: pending });
-        return;
-      }
-      setPendingSources(null);
-      // Open at the URL's bar: armed in the same turn as the load, so the
-      // session's content reset — which parks the playhead at the timeline
-      // origin otherwise — parks it at the bar instead. The bar's beat is read
-      // off the NEW score (its meter map), which only the reset has.
-      const target = barRef.current;
-      if (target !== undefined) {
-        requestSeekOnLoad((loaded) => barStartBeat(loaded, target));
-      }
-      placedForRef.current = placementKey(songId, target);
-      // The song id travels WITH its content: loading it hands the song's
-      // settings over in the same write (see `useLoadDocument`).
-      loadDocument({ kind: "library", songId }, rawMap);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    songId,
-    sources,
-    fetchEndpoint,
-    deferredComplete,
-    loadDocument,
-    requestSeekOnLoad,
-    barRef,
-    loadedSongRef,
-    sourcesVersion,
-  ]);
-
-  // Hydrated exactly when the loaded document is this song: after the load
-  // above, or at once for a song already loaded. Another song still loaded
-  // while this one hydrates is not this song's content.
-  const hydrated =
-    loadedSong.kind === "library" && loadedSong.songId === songId;
   const ready = hydrated && content.kind === "ready";
-
-  // A bar change on the song already loaded here (`;bar=3` → `;bar=9`
-  // in place) reloads nothing, so no content reset runs to honour a load
-  // intent: seek directly. The bar a load armed is already placed (see
-  // `placedForRef`), so this never fights the reset; a URL that drops its bar
-  // leaves the playhead where it is.
   useEffect(() => {
     if (!ready) return;
     const key = placementKey(songId, bar);
     if (placedForRef.current === key) return;
     placedForRef.current = key;
     if (bar !== undefined) seekTo(barStartBeat(score, bar));
-  }, [ready, songId, bar, score, seekTo]);
-  // Not known yet until the hydration above has completed: a loading song is
-  // never shown as empty.
-  if (hydrated) return { kind: "ready" };
-  if (pendingSources?.songId === songId) {
-    return { kind: "pending", sources: pendingSources.sources };
-  }
-  return { kind: "loading" };
+  }, [ready, songId, bar, score, seekTo, placedForRef]);
 }
 
 /** Identifies where the playhead was placed for: a song, at a bar or its start. */
@@ -313,36 +211,146 @@ function placementKey(songId: string, bar: number | undefined): string {
 }
 
 /**
- * The player surface: the song's hydration states, then — once the song is
- * loaded — the immersive player ({@link ImmersivePlayer}) bound to the URL's
- * display lens. The toolbar's controls (the display switcher, the speed wheel,
- * metronome, transpose, volume, the spread wheel, full screen) are
- * contributions to `sonataPlayerPane.Actions` — where each lands in the pill
- * is the slot's reorder config.
+ * Loads a song once every source answered ({@link SongHydrator}), and shows
+ * what stands before that: loading, a failed read, or — a source has content
+ * for the song that is not ready yet (a transcription still running) — that
+ * source's Body, loading NOTHING: never a score composed without it. Mounted
+ * only while the song is not the loaded one, so a live source change on a
+ * song already loaded (playing) never reloads it: reloading would re-hydrate
+ * its sources into a new timeline, and the session's content reset would stop
+ * it and rewind to the lead-in. Its document is current (source edits write
+ * into it).
+ *
+ * Opens at the URL's bar: armed in the same turn as the load, so the
+ * session's content reset — which parks the playhead at the timeline origin
+ * otherwise — parks it at the bar instead. The bar's beat is read off the NEW
+ * score (its meter map), which only the reset has.
+ */
+function SongLoader({
+  songId,
+  bar,
+  hydration,
+  placedForRef,
+}: {
+  songId: string;
+  bar: number | undefined;
+  hydration: ResourceResult<SongHydration>;
+  placedForRef: PlacedForRef;
+}): ReactNode {
+  const loadDocument = useLoadDocument();
+  const { requestSeekOnLoad } = useSession();
+  const barRef = useLatestRef(bar);
+  // One load per mount: the loader unmounts once the document is this song,
+  // and a re-render before that (the seek intent's own state) must not load
+  // it a second time.
+  const loadedRef = useRef(false);
+  const ready = foldResource(hydration, {
+    loading: () => null,
+    error: () => null,
+    ready: (h) =>
+      h.kind === "hydrated" && h.pending.length === 0 ? h.rawMap : null,
+  });
+  useEffect(() => {
+    if (ready === null || loadedRef.current) return;
+    loadedRef.current = true;
+    const target = barRef.current;
+    if (target !== undefined) {
+      requestSeekOnLoad((loaded) => barStartBeat(loaded, target));
+    }
+    placedForRef.current = placementKey(songId, target);
+    // The song id travels WITH its content: loading it hands the song's
+    // settings over in the same write (see `useLoadDocument`).
+    loadDocument({ kind: "library", songId }, ready);
+  }, [ready, songId, loadDocument, requestSeekOnLoad, barRef, placedForRef]);
+
+  return matchResource(hydration, {
+    loading: () => <Loading />,
+    error: (error) => (
+      <PaneChrome pane={sonataPlayerPane}>
+        <Inset pad="lg">
+          <ResourceErrorInline
+            error={error}
+            refetch={hydration.refetch}
+            variant="block"
+          />
+        </Inset>
+      </PaneChrome>
+    ),
+    ready: (h) =>
+      // Loading into the player (the pane swaps to it once the document is
+      // this song's), or waiting for the song's own source's content.
+      h.kind === "awaiting-owner" || h.pending.length === 0 ? (
+        <Loading />
+      ) : (
+        // A source is still preparing this song: show its Body in place of
+        // the player, so an unfinished song is never mistaken for an empty
+        // score. The song loads once the source is ready (its read changes).
+        <PaneChrome pane={sonataPlayerPane}>
+          <Inset pad="lg">
+            <Stack direction="col" gap="lg">
+              {h.pending.map(({ sourceId, label, Body }) => (
+                <Stack key={sourceId} direction="col" gap="sm">
+                  <Text variant="label" tone="muted">
+                    {label}
+                  </Text>
+                  <Body songId={songId} />
+                </Stack>
+              ))}
+            </Stack>
+          </Inset>
+        </PaneChrome>
+      ),
+  });
+}
+
+/**
+ * The player surface: until the song is the loaded one, its hydration
+ * ({@link SongLoader}); once it is, the immersive player ({@link
+ * ImmersivePlayer}) bound to the URL's display lens. The toolbar's controls
+ * (the display switcher, the speed wheel, metronome, transpose, volume, the
+ * spread wheel, full screen) are contributions to `sonataPlayerPane.Actions`
+ * — where each lands in the pill is the slot's reorder config.
+ *
+ * Also places the playhead at the URL's `;bar`: with the load, or — when only
+ * the bar changed on the song already loaded — by a direct seek. A malformed
+ * bar value is no bar ({@link parseBarParam}); a bar past the song's end
+ * clamps to its last bar.
  */
 function SonataPlayerSurface(): ReactElement {
   const params = sonataPlayerPane.useParams();
   const setParams = sonataPlayerPane.useSetParams();
-  const hydration = useSongHydration(params);
-  if (hydration.kind === "loading") return <Loading />;
-  if (hydration.kind === "pending") {
-    // A source is still preparing this song: show its Body in place of the
-    // player, so an unfinished song is never mistaken for an empty score.
+  // The URL's id as stored: `key` upgrades an old bare-uuid link
+  // (`/sonata/song/<uuid>`, from before the `song-` rewrite) so it resolves.
+  const songId = songIdKind.key(params.songId);
+  const bar = parseBarParam(params.bar);
+  const loadedSong = useLibrarySong();
+  // Hydrated exactly when the loaded document is this song: after its load,
+  // or at once for a song already loaded. Another song still loaded while
+  // this one hydrates is not this song's content.
+  const hydrated =
+    loadedSong.kind === "library" && loadedSong.songId === songId;
+  // The sources are an open contributed set, and most of them load in the
+  // deferred tier: hydrating before that tier settles reads an incomplete
+  // set, and the loaded song then never re-hydrates (a loaded song is kept).
+  // So a deep link waits for the tier, as any reader of a contributed set
+  // does.
+  const deferredComplete = useDeferredLoadComplete();
+  const placedForRef = useRef<string | null>(null);
+  useBarSeek(songId, bar, hydrated, placedForRef);
+
+  if (!hydrated) {
+    if (!deferredComplete) return <Loading />;
     return (
-      <PaneChrome pane={sonataPlayerPane}>
-        <Inset pad="lg">
-          <Stack direction="col" gap="lg">
-            {hydration.sources.map(({ sourceId, label, Body }) => (
-              <Stack key={sourceId} direction="col" gap="sm">
-                <Text variant="label" tone="muted">
-                  {label}
-                </Text>
-                <Body songId={songIdKind.key(params.songId)} />
-              </Stack>
-            ))}
-          </Stack>
-        </Inset>
-      </PaneChrome>
+      <SongHydrator songId={songId}>
+        {(hydration) => (
+          <SongLoader
+            songId={songId}
+            bar={bar}
+            hydration={hydration}
+            placedForRef={placedForRef}
+          />
+        )}
+      </SongHydrator>
     );
   }
   return (
@@ -354,7 +362,7 @@ function SonataPlayerSurface(): ReactElement {
       displayId={params.lens ?? null}
       onDisplayChange={(lens) =>
         setParams({
-          songId: songIdKind.key(params.songId),
+          songId,
           ...(params.bar !== undefined && { bar: params.bar }),
           ...(lens !== null && { lens }),
         })

@@ -39,6 +39,7 @@
 //
 // Usage: bun plugins/page/plugins/annotations/e2e/annotations-verify.ts [--url <deploy>] [--out /tmp/annotations]
 import {
+  pageFetch,
   arg,
   report,
   snap,
@@ -278,12 +279,9 @@ interface StoredRow {
 
 /** The persisted forest — rects prove what is painted, only this proves structure. */
 async function storedRows(page: Page, pageId: string): Promise<StoredRow[]> {
-  return page.evaluate(async (id: string) => {
-    const res = await fetch(`/api/pages/${id}/blocks`);
-    if (!res.ok)
-      throw new Error(`GET blocks ${res.status}: ${await res.text()}`);
-    return (await res.json()) as StoredRow[];
-  }, pageId);
+  const res = await pageFetch(page, `/api/pages/${pageId}/blocks`);
+  if (!res.ok) throw new Error(`GET blocks ${res.status}: ${await res.text()}`);
+  return (await res.json()) as StoredRow[];
 }
 
 /** The write boundary's verdict on one `POST /api/blocks` body, verbatim. */
@@ -293,28 +291,19 @@ async function probePost(
   type: string,
   data: unknown,
 ): Promise<{ status: number; body: string }> {
-  return page.evaluate(
-    async ({ parent, blockType, payload }) => {
-      const res = await fetch("/api/blocks", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          parentId: parent,
-          type: blockType,
-          data: payload,
-        }),
-      });
-      return { status: res.status, body: await res.text() };
-    },
-    { parent: pageId, blockType: type, payload: data },
-  );
+  const res = await pageFetch(page, "/api/blocks", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ parentId: pageId, type, data }),
+  });
+  return { status: res.status, body: await res.text() };
 }
 
 async function deleteBlock(page: Page, blockId: string): Promise<void> {
-  const res = await page.evaluate(async (id: string) => {
-    const response = await fetch(`/api/blocks/${id}`, { method: "DELETE" });
-    return { status: response.status, body: await response.text() };
-  }, blockId);
+  const response = await pageFetch(page, `/api/blocks/${blockId}`, {
+    method: "DELETE",
+  });
+  const res = { status: response.status, body: await response.text() };
   if (res.status < 200 || res.status >= 300) {
     throw new Error(`DELETE /api/blocks/${blockId} ${res.status}: ${res.body}`);
   }
@@ -342,22 +331,20 @@ async function seed(
   pageId: string,
   members: [type: string, child: string][],
 ): Promise<Seeded> {
-  return page.evaluate(
-    async ({ parent, types }) => {
-      const post = async (body: unknown): Promise<{ id: string }> => {
-        const res = await fetch("/api/blocks", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify(body),
-        });
-        if (!res.ok)
-          throw new Error(
-            `POST /api/blocks ${res.status}: ${await res.text()}`,
-          );
-        return (await res.json()) as { id: string };
-      };
-      const text = (parentId: string, type: string, body: string) =>
-        post({ parentId, type, data: { text: [{ text: body }] } });
+  const parent = pageId;
+  const types = members;
+  const post = async (body: unknown): Promise<{ id: string }> => {
+    const res = await pageFetch(page, "/api/blocks", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok)
+      throw new Error(`POST /api/blocks ${res.status}: ${await res.text()}`);
+    return (await res.json()) as { id: string };
+  };
+  const text = (parentId: string, type: string, body: string) =>
+    post({ parentId, type, data: { text: [{ text: body }] } });
 
       const cards: Record<
         string,
@@ -378,10 +365,7 @@ async function seed(
         };
       }
       const typing = await text(parent, "text", "");
-      return { cards, typing: typing.id };
-    },
-    { parent: pageId, types: members },
-  );
+  return { cards, typing: typing.id };
 }
 
 await withBrowser(async (h) => {

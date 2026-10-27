@@ -2,10 +2,10 @@ import type { Exemptions } from "@plugins/framework/plugins/tooling/plugins/exem
 
 export default [
   {
-    rule: "endpoints/no-raw-web-fetch",
+    rule: "networking/no-request-guard-capability",
     paths: ["web/page-transport.ts"],
     kind: "sanctioned",
     reason:
-      "The page's transport IS the low-level fetch every endpoint request of the page goes through; the rest of the app reaches it only via the transport.",
+      "The page's transport IS the low-level fetch every request of the page's own traffic goes through, so it holds the request guard's nativeFetch; the rest of the app reaches the server only via the transport.",
   },
 ] satisfies Exemptions;

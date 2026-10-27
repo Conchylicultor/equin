@@ -1,20 +1,17 @@
 import { useCallback } from "react";
 import { useManifestActions } from "@plugins/plugin-meta/plugins/composition/web";
-import {
-  getEndpointErrorMessage,
-  useFetchEndpoint,
-  useEndpointMutation,
-} from "@plugins/infra/plugins/endpoints/web";
+import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
+import { useLiveReader } from "@plugins/network/plugins/live/web";
+import { ResourceError } from "@plugins/primitives/plugins/live-state/web";
 import { confirmDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/plugins/confirm/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import { OwnedNamespacesList } from "../components/owned-namespaces-list";
 import {
-  ownedNamespacesEndpoint,
   reclaimCompositionNamespaces,
-  type OwnedNamespaceInfo,
   type ReclaimOutcome,
 } from "../../shared/endpoints";
+import { serveOwned } from "../../shared/serve-owned";
 
 export interface DeleteCompositionRequest {
   /** The manifest item's **id** — what the marker records, never the display name. */
@@ -45,9 +42,13 @@ export interface DeleteCompositionRequest {
  * are editing an array; the concept lives here instead, and both Studio delete
  * buttons call this, so they cannot drift.
  *
- * The returned function **never rejects**: `Button` auto-pends off a returned
- * thenable but attaches only `.finally()`, so a rejection would escape as an
- * unhandled rejection. It awaits only the inventory read (so the button pends
+ * The inventory is `build.serve-owned`, read with `useLiveReader` at the click:
+ * a snapshot, measured when asked, so the dialog names what is there now.
+ *
+ * The returned function rejects only on a bug (anything the reader throws that
+ * is not its `ResourceError`): `Button` auto-pends off a returned thenable but
+ * attaches only `.finally()`, so a rejection escapes as an unhandled rejection —
+ * every expected failure is a toast instead. It awaits only the inventory read (so the button pends
  * while we find out what is at stake, rather than rendering "owns nothing"
  * before we know) and then hands off to the dialog, which owns its own lifetime,
  * its own error display and its own retry.
@@ -55,7 +56,7 @@ export interface DeleteCompositionRequest {
 export function useDeleteComposition(): {
   deleteComposition: (req: DeleteCompositionRequest) => Promise<void>;
 } {
-  const fetchEndpoint = useFetchEndpoint();
+  const read = useLiveReader();
   const { remove } = useManifestActions();
   // The dialog shows the failure inline and re-enables its confirm button, so it
   // IS the error surface; a global toast on top of it would say the same thing
@@ -76,27 +77,31 @@ export function useDeleteComposition(): {
       name,
       onDeleted,
     }: DeleteCompositionRequest): Promise<void> => {
-      let owned: OwnedNamespaceInfo[];
-      try {
-        const res = await fetchEndpoint(
-          ownedNamespacesEndpoint,
-          {},
-          { query: { composition: id } },
-        );
-        owned = res.namespaces;
-      } catch (err) {
-        // Stop, loudly, and change nothing. Deleting the row without knowing
-        // what it owns is the exact bug this hook exists to prevent, so a failed
-        // read is a refusal to delete, not a reason to fall back to the old
-        // one-line behaviour. `fetchEndpoint` has already filed the failure
-        // through the endpoint error sink; this is the part the person sees.
+      // Stop, loudly, and change nothing on any answer but the inventory.
+      // Deleting the row without knowing what it owns is the exact bug this
+      // hook exists to prevent, so a failed read is a refusal to delete, not a
+      // reason to fall back to the old one-line behaviour.
+      const refuse = (why: string) =>
         showToast({
           title: `Did not delete “${name}”`,
-          description: `Could not check what it is serving: ${getEndpointErrorMessage(err)}`,
+          description: `Could not check what it is serving: ${why}`,
           variant: "error",
         });
+      let answer;
+      try {
+        answer = await read(serveOwned, { composition: id });
+      } catch (err) {
+        // The reader has already filed the failure through the live read error
+        // sink; this is the part the person sees.
+        if (!(err instanceof ResourceError)) throw err;
+        refuse(err.message);
         return;
       }
+      if (answer.status === "unavailable") {
+        refuse(answer.message);
+        return;
+      }
+      const owned = answer.data.namespaces;
 
       // Nothing was ever built from this composition, so there is nothing to
       // warn about and nothing to reclaim — deleting the row destroys only the
@@ -148,7 +153,7 @@ export function useDeleteComposition(): {
         },
       });
     },
-    [fetchEndpoint, latest],
+    [read, latest],
   );
 
   return { deleteComposition };

@@ -13,6 +13,7 @@
 
 import type { Page } from "playwright";
 import {
+  pageFetch,
   arg,
   report,
   snap,
@@ -39,15 +40,13 @@ async function readStoredPicks(
   page: Page,
   name: string,
 ): Promise<Record<string, string>> {
-  return page.evaluate(async (n: string) => {
-    const res = await fetch(
-      `/api/resources/prototypes.picks?${new URLSearchParams({ name: n }).toString()}`,
-      { cache: "no-store" },
-    );
-    if (!res.ok) throw new Error(`prototypes.picks read: HTTP ${res.status}`);
-    const body = (await res.json()) as { value: Record<string, string> };
-    return body.value;
-  }, name);
+  const res = await pageFetch(
+    page,
+    `/api/resources/prototypes.picks?${new URLSearchParams({ name: name }).toString()}`,
+  );
+  if (!res.ok) throw new Error(`prototypes.picks read: HTTP ${res.status}`);
+  const body = (await res.json()) as { value: Record<string, string> };
+  return body.value;
 }
 
 const out = arg("out", "/tmp/canvas-picks-persist");

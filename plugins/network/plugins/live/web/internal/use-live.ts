@@ -92,7 +92,7 @@ export type LiveSnapshotResult<T, C extends string = string> = ResourceResult<
  * carries one (`error.code`), typed by the declaration. `never` for a value
  * that declares none — it is never refused.
  */
-interface RefusalsDecl<C extends string> {
+export interface RefusalsDecl<C extends string> {
   refusals?: readonly C[];
 }
 
@@ -114,7 +114,7 @@ export type LiveUnavailable = ResourceUnavailable;
  * it: `MachineFeature` for a declaration that needs the computer, `undefined`
  * (or nothing to infer from — the default) for a portable one.
  */
-interface MachineDecl<M> {
+export interface MachineDecl<M> {
   needsMachine?: M;
 }
 

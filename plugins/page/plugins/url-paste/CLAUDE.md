@@ -32,15 +32,14 @@ link the user edited while the title was loading keeps their edit.
 - Description: Paste a URL into any text block (or drop one into an empty block) and it becomes a link at once, with a menu beside it: keep it as a link, mention it (the page's title becomes the link text), or — when the link is all the block holds — turn the block into a bookmark or embed.
 - Web:
   - Uses:
-    - `infra/endpoints.EndpointError`
-    - `infra/endpoints.getEndpointErrorMessage`
-    - `infra/endpoints.useFetchEndpoint`
+    - `network/live.useLiveReader`
     - `page/editor.BlockTextPluginProps`
     - `page/editor.readTransferText`
     - `page/editor.registerBlockTextExtension`
     - `page/editor.useBlockEditor`
     - `primitives/css/row.Row`
     - `primitives/latest-ref.useEventCallback`
+    - `primitives/live-state.ResourceError`
     - `primitives/text-editor/caret-trigger.CaretTriggerMenu`
     - `primitives/text-editor/caret-trigger.useCaretMenu`
     - `primitives/text-editor/caret-trigger.useForcedCaretQuery`

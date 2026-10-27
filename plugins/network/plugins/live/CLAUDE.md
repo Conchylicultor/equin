@@ -11,6 +11,15 @@ the filter language: `research/2026-09-25-global-unified-filter-language.md`).
 - A new way to read server data is an **option on `liveValue` /
   `liveCollection` that `useLive` reads** (overloaded by the descriptor's
   type) — never a new hook or a new read function.
+- **One read function sits beside it: `useLiveReader`** — for a question an
+  event asks and its own `await` consumes (validate then act, read then
+  confirm then destroy). It reads the same declarations with the same tuple,
+  refusals, machine arm and transport, adds no declaration surface, and is
+  banned wherever `useLive` fits (a render, a hook body, an effect). Reason,
+  recorded in `research/2026-10-26-global-browser-reads-only-through-live.md`
+  §2: `useLive` cannot express an answer bound to the event that asked for it
+  without rebuilding that `await` as pending state plus an effect that acts
+  once the answer lands.
 - A new hook needs a recorded reason in the research doc that introduced it
   ("`useLive` cannot express X because …").
 - Existing exceptions: `useLiveRow` is pending unification into `useLive`
@@ -1961,6 +1970,34 @@ const r = useLive(checkoutStatus);   // ResourceResult<T> | { status: "unavailab
   page's server; the types) and `machine/internal/serve.test.ts` (each
   barrel refuses the other's declaration; a machine value serves).
 
+## Event reads — `useLiveReader`
+
+```ts
+const read = useLiveReader();                       // web: the subtree's pipeline + transport
+onClick={async () => {
+  const a = await read(hostFsPathStat, { path });   // or read(v) / read(queryValue, query)
+  if (a.status === "refused") return showError(a.message);  // a.code typed by `refusals`
+  if (a.status === "unavailable") return;           // only on a `needsMachine` declaration
+  act(a.data);
+}}
+```
+
+- `LiveAnswer<T, C, NM>`: `ready` | `refused` (only when the value declares
+  refusals) | `unavailable` (only with `needsMachine`, under a transport
+  without the computer — no request). A failure REJECTS with its
+  `ResourceError` (network, `loader-failed`, `contract-mismatch` — an
+  undeclared refusal code included), reported once to
+  `resourceErrorReportSink`.
+- One tuple, `useLive`'s (`canonicalParams` / the query codec). A paged value,
+  a collection, `null` or a list of tuples is a tsc error (and throws).
+- No options. An observed tuple (a mounted `useLive` of it, value applied, its
+  socket open, not invalidated) answers its pushed value with no request;
+  otherwise ONE HTTP read (concurrent asks deduped, `packages/inflight`) that
+  is never written to the cache for an unobserved tuple. A `load: "snapshot"`
+  value is always read. Built on live-state's `NotificationsClient.readOnce`,
+  which shares `fetchOverHttp`'s request, refusal decoding and parse.
+- Pinned by `web/__tests__/use-live-reader.test.tsx` (behaviour and types).
+
 ## Old spellings — lint `no-legacy-resource-spelling`
 
 Contributed by `lint/` (repo-wide), beside `live/no-sentinel-param` (a `""`
@@ -1993,39 +2030,48 @@ worker (`framework/tooling/exempt`), so a stale one cannot linger.
 request/response read of the server in the browser: `useEndpoint`,
 live-state's `useEndpointResource`, the exported `endpointQueryKey` and
 `useEndpointMutation`'s `invalidates:` are deleted (B10b of
-research/2026-10-11-global-endpoint-reads-onto-live.md). In `web/` code
-(tests out of scope) the rule flags what is left to spell one: TanStack's
-`useQuery` / `useInfiniteQuery` / `useSuspenseQuery` (and their
-`Suspense*` / `useQueries` siblings) — resolved like the rule above — a
-`fetchEndpoint(...)` call inside a `queryFn` property, and the hidden read
-(P0.2 of the plan):
+research/2026-10-11-global-endpoint-reads-onto-live.md), and a GET handed to
+`fetchEndpoint` / `useEndpointMutation` / `readNdjson` does not compile
+(endpoints' derived `read` marker — §1 of
+research/2026-10-26-global-browser-reads-only-through-live.md), so the rule
+no longer reads a route's method. In `web/` code (tests out of scope) it flags:
 
-- a `fetchEndpoint` of a **GET** endpoint, or a `readNdjson` stream over a GET
-  route, that runs as a read — in render, in a hook body, in
-  `useEffect` / `useLayoutEffect` / `useMemo`, or in a named function one of
-  those calls (a `useCallback` refresh an effect runs, a module helper). GET-ness
-  is the endpoint's literal `route` type, read by the type checker; a route type
-  that is not a literal counts as a GET. A call in an `on*` handler, a
-  `mutationFn` or an event-registrar callback is an action and is not flagged;
-  a function that escapes the file (stored in an object, passed as a non-`on*`
-  prop, returned, exported) is unflagged — a one-file lint cannot see where it
-  runs.
+- **TanStack's read hooks** — `useQuery` / `useInfiniteQuery` /
+  `useSuspenseQuery` (and their `Suspense*` / `useQueries` siblings), resolved
+  like the rule above — and a `fetchEndpoint(...)` call inside a `queryFn`
+  property.
+- **A write's answer used as a read** — a `fetchEndpoint(...)` (by its
+  binding name) or a `mutateAsync(...)` of ANY method that runs in read
+  context — render, a hook body, `useEffect` / `useLayoutEffect` / `useMemo`,
+  module top level, or a named function one of those calls — and whose answer
+  is USED. A write an effect fires and forgets (`void`-ed, an awaited
+  statement, a `.then(() => …)` ignoring the answer, a helper whose callers
+  drop it) passes: effects run genuine writes (record a play, flush logs).
+- **A `LiveReader` call in read context** — `useLiveReader()`'s function (by
+  its type) in render, a hook body or an effect: there the read is `useLive`.
 
-A server read is a `liveValue` (`params`, a typed `query`, `paged`, or
-`bytes`) or a `liveCollection`, read with `useLive`; an imperative
-`fetchEndpoint` (a mutation, a handler) is a write and is not flagged. Its
-blind spot: a non-GET `fetchEndpoint` an effect runs is not flagged either —
-effects run genuine writes too (record a play, flush logs), and the method is
-the only discriminator the rule has — so a POST whose answer an effect stores
-is a read the lint misses; declare it live all the same. The ban has no
-debt: its only exemptions are the two sanctioned substrate entries —
-`network/live`'s and `primitives/live-state`'s `web/`, where every live read
-is implemented over TanStack queries (and live-state's `useQueryResource`, a
-local async load) — and its debt burndown is at zero
+Read context: a call in an `on*` handler, a `mutationFn` or an
+event-registrar callback (`addEventListener`, `subscribe…`, `register…`) is
+an action; a function that escapes the file (stored in an object, passed as a
+non-`on*` prop, returned, exported) is unflagged — a one-file lint cannot see
+where it runs. The rule's header (`lint/no-endpoint-read.ts`) states both
+walks exactly.
+
+**Residual, held by review:** a POST read issued from an EVENT HANDLER.
+Nothing static tells "click → POST read → show" from "click → POST write →
+show its result". Declare it live all the same and read it with
+`useLiveReader` — as short as the lie, and the `ReadMarker` sentence a GET
+write fails with points at it.
+
+The ban has no debt: its only exemptions are the two sanctioned substrate
+entries — `network/live`'s and `primitives/live-state`'s `web/`, where every
+live read is implemented over TanStack queries (and live-state's
+`useQueryResource`, a local async load) — and its debt burndown is at zero
 (`./equin exempt list --rule live/no-endpoint-read`). **Never add an entry,
-debt or sanctioned**: declare the read live. (The exempt framework cannot
-forbid only the debt kind for one rule — `closed` refuses every exemption,
-which the substrate needs — so "no debt" is held by review, not a check.)
+debt or sanctioned**: declare the read live. The rule is `noDebt` in this
+plugin's `lint/index.ts`: a debt entry is a tsc error (`DebtableRuleId`) and is
+refused by `exempt:manifests-valid` — `closed` would refuse the substrate's
+sanctioned entries too.
 
 ## Internals
 
@@ -2090,7 +2136,7 @@ which the substrate needs — so "no debt" is held by review, not a check.)
 
 ## Plugin reference
 
-- Description: Unified live-resource API, read half: useLive (a collection's window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, grown by its limit, a collection declared `all` whole — every row in its declared order, or a select-scoped slice of it — or an explicit id set), useLiveRow (one row: loading, failed, found, or determinately absent), with mapRow reducing a row read to a ResourceResult of what the row means; useLive also reads a typed-query liveValue (its question encoded to one canonical tuple); every collection's window — and a key-range-paged liveValue — is read as key-range pages — bounded windows tiling the order by server-minted row-key cuts, split when full and merged when small — given a measured viewport (useLive(c, q, { viewport })) with no depth limit, the pages near it live and the rest held stale up to a per-reader budget, past which they are height-keeping placeholders drawn before and after the rows, and without one every page live, capped at maxLimit rows; FieldPresentation.Register presents an owner's fields — an entity's own, an extension's exposed ones, a union arm's, a collection's own — with their cells, widths and live options in every list that reaches the owner, read by useFieldPresentations. Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven — or from an external source with notify(); the serve call decides only the freshness, never the shape: every list's bound is the liveValue's own (its schema's list-bound markers), so a serve call takes no `unbounded`; pushed by default, or refetched over HTTP when the liveValue declares `load: "on-demand"`; a typed-query value's hooks and notify take the decoded question, and a key-range-paged one — external only — is loaded one key range at a time, each answer checked against its range and minted its `$key`, notify(q) reaching every subscribed page and the per-question meta sibling, and sliceRange answers a range for a list held in memory) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value — only `:rows` for a lookup-only collection, and the whole ordered set (`key`, a routed scopedMembership alias compiled by compileAllCollection) + `:rows` for one declared `all` — encoding a column type's declared wire form in JS per row; a collection reaching an entity compiles at boot, folding every LiveColumns.Expose contribution of an extension exposing fields of it — and a `columnScope` collection every LiveColumns.Scoped set — into its rows' `$columns`; routed through the change feed, or — with `changes` — the same compiled SQL served off it, for a table its owner opted out) — or, `source: "external"`, from a source outside Postgres that answers window / rows / groups / count / all by hand (core's serveCollectionOn: every answer checked against the row schema, every window row's `$key` minted, notify() re-reading the subscribed tuples); every filter compiles through the filter language's filterSql. Unified live-resource API, central half: serveValue for a liveValue declared `origin: "central"` — the external arm only (central has no change feed), registered through the central plugin's `resources: [served]`; its options compile through the same code as the worktree serveValue.
+- Description: Unified live-resource API, read half: useLive (a collection's window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, grown by its limit, a collection declared `all` whole — every row in its declared order, or a select-scoped slice of it — or an explicit id set), useLiveRow (one row: loading, failed, found, or determinately absent), useLiveReader (the one read function beside useLive: one answer to one tuple of a liveValue, for a question an event asks and its own await consumes — its pushed value when observed, else one deduped HTTP read never written to the cache; refused / unavailable typed by the declaration), with mapRow reducing a row read to a ResourceResult of what the row means; useLive also reads a typed-query liveValue (its question encoded to one canonical tuple); every collection's window — and a key-range-paged liveValue — is read as key-range pages — bounded windows tiling the order by server-minted row-key cuts, split when full and merged when small — given a measured viewport (useLive(c, q, { viewport })) with no depth limit, the pages near it live and the rest held stale up to a per-reader budget, past which they are height-keeping placeholders drawn before and after the rows, and without one every page live, capped at maxLimit rows; FieldPresentation.Register presents an owner's fields — an entity's own, an extension's exposed ones, a union arm's, a collection's own — with their cells, widths and live options in every list that reaches the owner, read by useFieldPresentations. Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven — or from an external source with notify(); the serve call decides only the freshness, never the shape: every list's bound is the liveValue's own (its schema's list-bound markers), so a serve call takes no `unbounded`; pushed by default, or refetched over HTTP when the liveValue declares `load: "on-demand"`; a typed-query value's hooks and notify take the decoded question, and a key-range-paged one — external only — is loaded one key range at a time, each answer checked against its range and minted its `$key`, notify(q) reaching every subscribed page and the per-question meta sibling, and sliceRange answers a range for a list held in memory) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value — only `:rows` for a lookup-only collection, and the whole ordered set (`key`, a routed scopedMembership alias compiled by compileAllCollection) + `:rows` for one declared `all` — encoding a column type's declared wire form in JS per row; a collection reaching an entity compiles at boot, folding every LiveColumns.Expose contribution of an extension exposing fields of it — and a `columnScope` collection every LiveColumns.Scoped set — into its rows' `$columns`; routed through the change feed, or — with `changes` — the same compiled SQL served off it, for a table its owner opted out) — or, `source: "external"`, from a source outside Postgres that answers window / rows / groups / count / all by hand (core's serveCollectionOn: every answer checked against the row schema, every window row's `$key` minted, notify() re-reading the subscribed tuples); every filter compiles through the filter language's filterSql. Unified live-resource API, central half: serveValue for a liveValue declared `origin: "central"` — the external arm only (central has no change feed), registered through the central plugin's `resources: [served]`; its options compile through the same code as the worktree serveValue.
 - Web:
   - Slots:
     - `FieldPresentation.Register`
@@ -2106,6 +2152,7 @@ which the substrate needs — so "no debt" is held by review, not a check.)
     - `primitives/live-state.ResourceResult`
     - `primitives/live-state.ResourceTupleResult`
     - `primitives/live-state.ResourceUnavailable`
+    - `primitives/live-state.useNotificationsClient`
     - `primitives/live-state.useResource`
     - `primitives/live-state.useResources`
     - `primitives/log-channels.clientLog`
@@ -2120,6 +2167,7 @@ which the substrate needs — so "no debt" is held by review, not a check.)
     - `FieldPresentationSpec`
     - `FieldsCollection`
     - `LiveAllSelect`
+    - `LiveAnswer`
     - `LiveFieldOption`
     - `LiveFieldOptionsRead`
     - `LiveIdsQuery`
@@ -2128,6 +2176,7 @@ which the substrate needs — so "no debt" is held by review, not a check.)
     - `LivePagePlaceholder`
     - `LivePagesQuery`
     - `LivePagesResult`
+    - `LiveReader`
     - `LiveRowResult`
     - `LiveSnapshotResult`
     - `LiveUnavailable`
@@ -2150,6 +2199,7 @@ which the substrate needs — so "no debt" is held by review, not a check.)
     - `useClientFieldsResolvers`
     - `useFieldPresentations`
     - `useLive`
+    - `useLiveReader`
     - `useLiveRow`
 - Server:
   - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
@@ -2369,13 +2419,13 @@ which the substrate needs — so "no debt" is held by review, not a check.)
     - `serveCollectionOn`
     - `serveValueOn`
 - Cross-plugin:
-  - Imported by: 298 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×79
-    - `conversations` ×50
+  - Imported by: 301 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×80
+    - `conversations` ×51
     - `debug` ×32
     - `tasks` ×28
     - `infra` ×18
-    - `page` ×13
+    - `page` ×14
     - `active-data` ×12
     - `build` ×10
     - `primitives` ×10

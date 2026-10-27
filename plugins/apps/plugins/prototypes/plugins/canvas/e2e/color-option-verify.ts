@@ -21,6 +21,7 @@ import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Locator, Page } from "playwright";
 import {
+  pageFetch,
   agentFetch,
   arg,
   flag,
@@ -130,15 +131,13 @@ async function frameASrcs(page: Page): Promise<string[]> {
 
 /** The shared picks record as the server reads it now. */
 async function readStoredPicks(page: Page): Promise<Record<string, string>> {
-  return page.evaluate(async (n: string) => {
-    const res = await fetch(
-      `/api/resources/prototypes.picks?${new URLSearchParams({ name: n }).toString()}`,
-      { cache: "no-store" },
-    );
-    if (!res.ok) throw new Error(`prototypes.picks read: HTTP ${res.status}`);
-    const body = (await res.json()) as { value: Record<string, string> };
-    return body.value;
-  }, meta.name);
+  const res = await pageFetch(
+    page,
+    `/api/resources/prototypes.picks?${new URLSearchParams({ name: meta.name }).toString()}`,
+  );
+  if (!res.ok) throw new Error(`prototypes.picks read: HTTP ${res.status}`);
+  const body = (await res.json()) as { value: Record<string, string> };
+  return body.value;
 }
 
 /** Every PUT of this prototype's picks the page has sent. */

@@ -6,8 +6,6 @@ export type {
   ReconnectingWsHandle,
   ReconnectingWsData,
 } from "./use-reconnecting-ws";
-export { ReconnectingEventSource } from "./reconnecting-event-source";
-export type { ReconnectingEventSourceOptions } from "./reconnecting-event-source";
 export { SharedWebSocket } from "./shared-websocket";
 export type {
   SharedWebSocketHooks,
@@ -34,7 +32,7 @@ export type { NetDiagEvent } from "./net-diag-bus";
 
 export default {
   description:
-    "WebSocket / EventSource / fetch primitives with reconnection, status-bus, and retry. Used by live-state internally and by terminal/logs/health/stats directly.",
+    "WebSocket / fetch primitives with reconnection, status-bus, and retry. Used by live-state internally and by terminal/logs/health/stats directly.",
   loadBearing: true,
   contributions: [],
 } satisfies PluginDefinition;

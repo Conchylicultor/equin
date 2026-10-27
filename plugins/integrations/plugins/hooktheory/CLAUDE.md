@@ -175,6 +175,7 @@ nothing calls it in a loop yet.
   - Uses:
     - `infra/endpoints.defineEndpoint`
     - `integrations/youtube.youtubeVideoId`
+    - `packages/list-bound.wholeList`
   - Exports (types):
     - `HookpadChord`
     - `HookpadChordInput`

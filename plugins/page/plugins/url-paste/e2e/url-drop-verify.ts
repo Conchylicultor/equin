@@ -40,6 +40,7 @@
 //   ./equin run plugins/page/plugins/url-paste/e2e/url-drop-verify.ts [--url <deploy>] [--headed]
 import type { Page } from "playwright";
 import {
+  pageFetch,
   arg,
   report,
   snap,
@@ -126,10 +127,9 @@ await withBrowser(async (h) => {
   const doc = await openBlankPage(page, { settleMs: 3000 });
 
   async function destroyScratchPage(): Promise<void> {
-    const status = await page.evaluate(async (id: string): Promise<number> => {
-      const res = await fetch(`/api/blocks/${id}`, { method: "DELETE" });
-      return res.status;
-    }, doc.pageId);
+    const { status } = await pageFetch(page, `/api/blocks/${doc.pageId}`, {
+      method: "DELETE",
+    });
     console.log(`\nscratch page deleted (HTTP ${status})`);
   }
 

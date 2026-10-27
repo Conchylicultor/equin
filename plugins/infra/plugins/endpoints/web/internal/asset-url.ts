@@ -2,6 +2,7 @@ import {
   useTransport,
   type Transport,
 } from "@plugins/primitives/plugins/networking/web";
+import { allowAssetRoute } from "@plugins/primitives/plugins/networking/plugins/request-guard/web";
 import type { AssetBase, AssetPath } from "../../core";
 // `ASSET_PATH`: with asset-src.ts, this module is the one reader of an asset's path.
 import { ASSET_PATH, unavailableMessage } from "../../core";
@@ -27,6 +28,10 @@ export type AssetUrl =
  * on a transport no URL reaches THROWS: that sink would silently load from the
  * page's server — load such an asset through `useAssetSrc`, or declare the
  * route `needsMachine`.
+ *
+ * A ready URL's route is registered with the page request guard
+ * (`allowAssetRoute`): the sink's own GET / HEAD of it is an asset load, not a
+ * raw read of the app's API.
  */
 export function assetUrlOver(
   transport: Transport,
@@ -43,7 +48,9 @@ export function assetUrlOver(
       `assetUrlOver("${asset[ASSET_PATH]}"): this transport serves no URL (an in-browser server), so a sink loading by URL would reach the page's own server instead — load it through useAssetSrc, or declare its route needsMachine`,
     );
   }
-  return { kind: "ready", url: asset[ASSET_PATH] };
+  const url = asset[ASSET_PATH];
+  allowAssetRoute(url);
+  return { kind: "ready", url };
 }
 
 /** {@link assetUrlOver} over the subtree's transport. */

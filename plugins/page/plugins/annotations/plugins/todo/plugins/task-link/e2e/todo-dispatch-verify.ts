@@ -38,6 +38,7 @@
 //
 // Usage: bun plugins/page/plugins/annotations/plugins/todo/plugins/task-link/e2e/todo-dispatch-verify.ts [--url <deploy>] [--out /tmp/todo-dispatch]
 import {
+  pageFetch,
   arg,
   report,
   snap,
@@ -79,12 +80,9 @@ interface DispatchResult {
 
 /** The page's live rows, straight off the same endpoint the editor reads. */
 async function storedRows(page: Page, pageId: string): Promise<StoredRow[]> {
-  return page.evaluate(async (id: string) => {
-    const res = await fetch(`/api/pages/${id}/blocks`);
-    if (!res.ok)
-      throw new Error(`GET blocks ${res.status}: ${await res.text()}`);
-    return (await res.json()) as StoredRow[];
-  }, pageId);
+  const res = await pageFetch(page, `/api/pages/${pageId}/blocks`);
+  if (!res.ok) throw new Error(`GET blocks ${res.status}: ${await res.text()}`);
+  return (await res.json()) as StoredRow[];
 }
 
 /**
@@ -150,19 +148,14 @@ async function dispatch(
   blockId: string,
   context: string,
 ): Promise<DispatchResult> {
-  return page.evaluate(
-    async ({ id, ctx }) => {
-      const res = await fetch(`/api/todo-blocks/${id}/task`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ context: ctx || undefined }),
-      });
-      const text = await res.text();
-      if (!res.ok) return { status: res.status, body: text };
-      return { status: res.status, ...(JSON.parse(text) as object) };
-    },
-    { id: blockId, ctx: context },
-  );
+  const res = await pageFetch(page, `/api/todo-blocks/${blockId}/task`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ context: context || undefined }),
+  });
+  const text = await res.text();
+  if (!res.ok) return { status: res.status, body: text };
+  return { status: res.status, ...(JSON.parse(text) as object) };
 }
 
 await withBrowser(async (h) => {
@@ -319,15 +312,13 @@ await withBrowser(async (h) => {
   // name — the tint is a token, and what is under test is that the frame
   // re-rendered at all.
   const beforeDrop = await cardTint(page);
-  await page.evaluate(async (taskId: string) => {
-    const res = await fetch(`/api/tasks/${taskId}`, {
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ drop: true }),
-    });
-    if (!res.ok)
-      throw new Error(`PATCH task ${res.status}: ${await res.text()}`);
-  }, first.taskId!);
+  const dropRes = await pageFetch(page, `/api/tasks/${first.taskId!}`, {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ drop: true }),
+  });
+  if (!dropRes.ok)
+    throw new Error(`PATCH task ${dropRes.status}: ${await dropRes.text()}`);
   // POLLED, not slept on. The repaint arrives with the `tasks` push, which is
   // sub-second in the ordinary case — but a fixed wait turns "usually fast
   // enough" into a test that fails on the run where a burst of writes queued

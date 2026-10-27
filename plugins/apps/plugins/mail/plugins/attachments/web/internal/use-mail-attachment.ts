@@ -22,6 +22,14 @@ export interface UseMailAttachment {
    * failure clears the cache entry so a later call can retry.
    */
   download: (attachmentRowId: string) => Promise<string>;
+  /**
+   * Fire-and-forget: ask the server to store the attachment's bytes, for a
+   * reader that shows them through the live mail row — the write stamps the
+   * row's `storedAttachmentId`, and the row's live value carries it back. The
+   * answer is not read. Shares `download`'s per-row dedupe; a failure surfaces
+   * as an unhandled rejection (reported), and a later call retries.
+   */
+  materialise: (attachmentRowId: string) => void;
 }
 
 export function useMailAttachment(): UseMailAttachment {
@@ -52,5 +60,12 @@ export function useMailAttachment(): UseMailAttachment {
     [fetchEndpoint, transport],
   );
 
-  return { download };
+  const materialise = useCallback(
+    (attachmentRowId: string): void => {
+      void download(attachmentRowId);
+    },
+    [download],
+  );
+
+  return { download, materialise };
 }

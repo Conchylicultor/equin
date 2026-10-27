@@ -10,6 +10,7 @@ import {
   handleSetExtras,
 } from "./internal/handlers";
 import { chordCatalogServed, chordCurriculumServed } from "./internal/resource";
+import { chordCurriculumLoopsServed } from "./internal/loops-resource";
 
 // For a server plugin in the same backend: whether the catalog lists a chord,
 // which decides whether the Rare joker answers it (progress judges a round's
@@ -20,7 +21,7 @@ export type { ListedChordsState } from "./internal/catalog";
 
 export default {
   description:
-    "The Chord trainer's curriculum, server side: the chord_curriculum row (each chord practised, heard or off; how much of a loop is blank; how many other chords a loop may hold), the live chord.curriculum resource and its three writes — chords, blanks, extras —, and the live chord.catalog: every chord of the song index in tracks and sections, built once per loaded index.",
+    "The Chord trainer's curriculum, server side: the chord_curriculum row (each chord practised, heard or off; how much of a loop is blank; how many other chords a loop may hold), the live chord.curriculum resource and its three writes — chords, blanks, extras —, the live chord.catalog: every chord of the song index in tracks and sections, built once per loaded index, and the live chord.curriculum.loops: the trainer's loop find over the stored selection.",
   httpRoutes: {
     [setChordsEndpoint.route]: handleSetChords,
     [setBlanksEndpoint.route]: handleSetBlanks,
@@ -33,5 +34,6 @@ export default {
     // is what pushes `chord.curriculum`. No growth bound: it is one row.
     ...chordCurriculumServed.declare,
     ...chordCatalogServed.declare,
+    ...chordCurriculumLoopsServed.declare,
   ],
 } satisfies ServerPluginDefinition;

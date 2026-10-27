@@ -1,5 +1,7 @@
 import type { ComponentType } from "react";
 import type { FetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import type { Hook } from "@plugins/framework/plugins/hook-value/core";
+import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
 import {
@@ -14,16 +16,19 @@ import type { Song } from "../core";
  *
  *  - `Source` — the source registry. Each input source (MIDI, chord-grid, …)
  *    contributes how it persists/hydrates a song, so the library stays fully
- *    source-agnostic (the collection–consumer separation). `hydrate(songId, ctx)`
- *    returns that source's client raw for the song (or `undefined` if it has
- *    none); `useSongLink` collects every source's raw and loads them in one shot.
+ *    source-agnostic (the collection–consumer separation). `useHydration(songId)`
+ *    reads that source's client raw for the song live (absent, raw or pending —
+ *    {@link SourceHydration} — as a `ResourceResult`, so not-known-yet and a
+ *    failed read stay states); `SongHydrator` renders one hook per
+ *    contribution and folds them, so a song opens once every source answered.
  *    The optional `createOption` is a data-view {@link CreateOption} whose
- *    `onSelect` takes the same {@link SourceContext} — an "add a song of this
+ *    `onSelect` takes the {@link SourceContext} — an "add a song of this
  *    source" affordance the library binds and maps into the gallery's
  *    `creators` (a toolbar "+" menu, since there are N sources). Its `onSelect`
  *    runs fully imperatively (no React hooks): create the song, then
- *    `openSongImperative`. Both run outside React, so the library hands them
- *    the fetcher bound to the surface's transport (`ctx.fetchEndpoint`).
+ *    `openSongImperative`. It runs outside React, so the library hands it the
+ *    fetcher bound to the surface's transport (`ctx.fetchEndpoint`) — for its
+ *    writes; a read is live, never fetched.
  *    Adding a new source = a new contribution here, with zero library or
  *    core-schema changes.
  *  - `Cover` — each source's answer to "what is this song's cover?"
@@ -59,9 +64,10 @@ export type SourceHydration =
     };
 
 /**
- * What the library hands a source's imperative hooks (`hydrate`,
- * `createOption.onSelect`): the fetcher bound to the transport of the surface
- * the library renders in, so a source never reaches past it.
+ * What the library hands a source's imperative `createOption.onSelect`: the
+ * fetcher bound to the transport of the surface the library renders in, so a
+ * source never reaches past it. For writes only — `fetchEndpoint` refuses a
+ * read (a GET) at compile time; reads are live (`useHydration`).
  */
 export interface SourceContext {
   fetchEndpoint: FetchEndpoint;
@@ -94,8 +100,12 @@ export const Library = {
   Source: defineSlot<{
     /** Stable id of the source (matches its `SonataDocument.Source` id / `rawById` key). */
     sourceId: string;
-    /** This source's client raw for `songId`, absent, or pending (see {@link SourceHydration}). */
-    hydrate: (songId: string, ctx: SourceContext) => Promise<SourceHydration>;
+    /**
+     * This source's client raw for `songId`, absent, or pending (see
+     * {@link SourceHydration}), read live: `loading` until every read it makes
+     * answered, `error` when one failed — never a stand-in `absent`.
+     */
+    useHydration: Hook<(songId: string) => ResourceResult<SourceHydration>>;
     /**
      * Optional create affordance for this source, mapped by the library into the
      * data-view `creators` (toolbar "+" menu). Plain data — `onSelect` runs

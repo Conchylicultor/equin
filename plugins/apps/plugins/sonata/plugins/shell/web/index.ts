@@ -23,7 +23,7 @@ export {
 
 export default {
   description:
-    "App shell for Sonata. Registers the /sonata app entry (SonataLayout: one SonataPlayerScope around the pane router), derives the app's song — the one loaded in the player (useSonataApp) — and defines the app-level Sonata.{Overlay,TransportOverlay,TransportEdge,PitchAxis,Home,Effect,Hud,ViewOption,Section} slots, and the app's own dark-only theme (the immersive player's blue-black night, sky accent, the chord colours, Manrope), which the sonata app selects.",
+    "App shell for Sonata. Registers the /sonata app entry (SonataLayout: one SonataPlayerScope around the pane router), derives the app's song — the one loaded in the player (useSonataApp) — and defines the app-level Sonata.{Overlay,TransportOverlay,TransportEdge,PitchAxis,Home,Provider,Effect,Hud,ViewOption,Section} slots, and the app's own dark-only theme (the immersive player's blue-black night, sky accent, the chord colours, Manrope), which the sonata app selects.",
   contributions: [
     Apps.App({
       app: sonataApp,

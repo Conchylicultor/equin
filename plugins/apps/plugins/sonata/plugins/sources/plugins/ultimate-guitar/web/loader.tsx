@@ -27,7 +27,7 @@ import {
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { growClass } from "@plugins/primitives/plugins/css/plugins/grow/web";
 import { SourceLine } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/source-line/web";
-import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useLiveReader } from "@plugins/network/plugins/live/web";
 import {
   parseUgTab,
   UgParseError,
@@ -37,7 +37,7 @@ import {
   UgSourceRawSchema,
   type UgSourceRaw,
 } from "@plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/alignment/core";
-import { fetchUgTab } from "../shared/endpoints";
+import { ugTab } from "../shared/resources";
 import { collectUnrecognisedChords } from "./compile";
 
 interface Props {
@@ -54,7 +54,7 @@ function asUgTab(raw: unknown): UgTab | null {
 }
 
 export function UltimateGuitarLoader({ raw, onRaw }: Props) {
-  const fetchEndpoint = useFetchEndpoint();
+  const readLive = useLiveReader();
   const loaded = asUgTab(raw);
   // The URL box is local working state; pre-fill it with the loaded tab's URL so
   // editing/reloading is easy. The fetched `UgTab` is the persisted `raw`.
@@ -95,12 +95,13 @@ export function UltimateGuitarLoader({ raw, onRaw }: Props) {
     setLoading(true);
     setError(null);
     try {
-      const tab = await fetchEndpoint(
-        fetchUgTab,
-        {},
-        { body: { url: trimmed } },
-      );
-      onRaw({ tab, alignment: null } satisfies UgSourceRaw);
+      const answer = await readLive(ugTab, { url: trimmed });
+      // A bad URL or a missing tab is the answer, shown as the alert line.
+      if (answer.status === "refused") {
+        setError(answer.message);
+        return;
+      }
+      onRaw({ tab: answer.data, alignment: null } satisfies UgSourceRaw);
       setReplacing(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));

@@ -2,6 +2,8 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 
 export {
   SsrfError,
+  TooManyRedirectsError,
+  isUnreachableError,
   parsePublicUrl,
   assertResolvesPublic,
   buildPinnedDial,

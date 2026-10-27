@@ -18,7 +18,7 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { revealElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { useLive } from "@plugins/network/plugins/live/web";
+import { useLive, useLiveReader } from "@plugins/network/plugins/live/web";
 import {
   foldResource,
   mapResource,
@@ -31,8 +31,8 @@ import {
 import { openSongImperative } from "@plugins/apps/plugins/sonata/plugins/library/web";
 import { compile } from "../compile";
 import { extractUgTabId, UgFetchError, type UgSearchResult } from "../../core";
-import { fetchUgTab, createUltimateGuitarSong } from "../../shared/endpoints";
-import { ugSearch } from "../../shared/resources";
+import { createUltimateGuitarSong } from "../../shared/endpoints";
+import { ugSearch, ugTab } from "../../shared/resources";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
@@ -88,8 +88,9 @@ const TYPE_OPTIONS = [
  *   newer question), a client-side type filter (Chords vs all), and a results
  *   list whose rows import on click.
  *
- * Both paths funnel through `importByUrl`, which is **fetch-first**: fetch the
- * raw `UgTab` → `compile()` it client-side (so the same recognise-gate + timing
+ * Both paths funnel through `importByUrl`, which is **fetch-first**: read the
+ * raw `UgTab` (the live `ugTab` value, read once with `useLiveReader`) →
+ * `compile()` it client-side (so the same recognise-gate + timing
  * synthesis the player uses decides the metrics) → derive `durationSec`/`endBeat`
  * → create the song. Only then do we open it. Fetching before creating means a
  * cancel (or a fetch failure) never leaves a half-formed "Untitled" orphan in
@@ -102,6 +103,7 @@ const TYPE_OPTIONS = [
  */
 export function UgImportDialog({ onClose }: { onClose: () => void }) {
   const fetchEndpoint = useFetchEndpoint();
+  const readLive = useLiveReader();
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("chords");
   const [error, setError] = useState<string | null>(null);
@@ -167,11 +169,13 @@ export function UgImportDialog({ onClose }: { onClose: () => void }) {
       if (target.length === 0) return;
       setError(null);
       try {
-        const tab = await fetchEndpoint(
-          fetchUgTab,
-          {},
-          { body: { url: target } },
-        );
+        const answer = await readLive(ugTab, { url: target });
+        // A bad URL or a missing tab is the answer, shown as the alert line.
+        if (answer.status === "refused") {
+          setError(answer.message);
+          return;
+        }
+        const tab = answer.data;
         const score = compile({ tab, alignment: null });
         const endBeat = scoreEndBeat(score);
         const song = await fetchEndpoint(
@@ -191,7 +195,7 @@ export function UgImportDialog({ onClose }: { onClose: () => void }) {
         setError(err instanceof Error ? err.message : String(err));
       }
     },
-    [onClose, fetchEndpoint],
+    [onClose, fetchEndpoint, readLive],
   );
 
   const importResult = useCallback(

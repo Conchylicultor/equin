@@ -221,7 +221,7 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
     - `collectedDirNamedCompositionRegistryPath`
     - `collectedDirRegistryPath`
     - `collectEntriesWithDeps`
-    - `collectExemptableRuleIds`
+    - `collectExemptRuleIds`
     - `collectFieldEagerBarrels`
     - `collectIconManifest`
     - `collectImportGraph`

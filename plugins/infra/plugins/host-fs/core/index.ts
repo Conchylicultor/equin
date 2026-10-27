@@ -4,12 +4,10 @@ export {
   HOST_FS_PEEK_MAX_NAMES,
   HOST_FS_TEXT_MAX_BYTES,
   hostFileUrl,
-  hostFsComplete,
   hostFsExtract,
   hostFsMove,
   hostFsOpen,
   hostFsRaw,
-  hostFsStat,
   isBrowsable,
 } from "./internal/endpoints";
 export type {
@@ -35,7 +33,7 @@ export {
   readHostPaths,
   writeHostPaths,
 } from "./internal/drag";
-export type { ReadHostPathsResult } from "./internal/drag";
+export type { DraggedHostPath, ReadHostPathsResult } from "./internal/drag";
 export {
   FileVersionSchema,
   hostFsVersion,
@@ -46,11 +44,13 @@ export { HOST_FS_MACHINE } from "./internal/machine-feature";
 export {
   HostFsListingQuerySchema,
   hostFsArchiveReasonMessage,
+  hostFsCompletions,
   hostFsDirPeek,
   hostFsFileText,
   hostFsListing,
   hostFsPathStat,
   hostFsVolumeInfo,
+  type HostFsCompletions,
   type HostFsDirPeek,
   type HostFsFileText,
   type HostFsListingMeta,

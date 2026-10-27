@@ -6,9 +6,11 @@ import { writeGenerated } from "./write-generated";
 /**
  * Generates `ExemptableRuleId` — the union an `exempt/index.ts` types its
  * `rule` with, so a misspelled or closed rule id is a tsc error in the
- * manifest itself.
+ * manifest itself — and `DebtableRuleId`, the subset a `kind: "debt"` entry
+ * may name (every exemptable id but the ones declared `noDebt`), so a debt
+ * entry for a sanctioned-only rule is a tsc error too.
  *
- * The set is read off the LIVE contributions, never a list: every contributed
+ * The sets are read off the LIVE contributions, never a list: every contributed
  * lint rule (`<ns>/<rule>`) its barrel does not declare `closed`, plus every id
  * a check declares `exemptable`. Adding a rule or an exemptable id is the only
  * edit; the `exempt:rule-ids-in-sync` check fails on drift.
@@ -23,7 +25,9 @@ const HEADER = [
   "//",
   "// Every rule id an `exempt/index.ts` may name: each contributed lint rule",
   "// (`<ns>/<rule>`) not declared `closed`, and each id a check declares",
-  "// `exemptable`. The `exempt:rule-ids-in-sync` check fails on drift.",
+  '// `exemptable`. A `kind: "debt"` entry may name only a `DebtableRuleId`:',
+  "// those minus the lint rules declared `noDebt` (sanctioned-only).",
+  "// The `exempt:rule-ids-in-sync` check fails on drift.",
 ].join("\n");
 
 // The check fleet is loaded through a COMPUTED specifier. `listAllChecks`
@@ -35,35 +39,59 @@ const HEADER = [
 // this step runs: the last step of the manifest pipeline, after every write.
 const CHECKS_CORE = "@plugins/framework/plugins/tooling/plugins/checks/core";
 
-/** The exemptable ids, sorted: open lint rules plus declared check ids. */
-export async function collectExemptableRuleIds(
+/** The rule-id sets the generated unions are rendered from, each sorted. */
+interface ExemptRuleIdSets {
+  /** Open lint rules plus declared check ids: `ExemptableRuleId`. */
+  exemptable: string[];
+  /** The lint rules declared `noDebt`: excluded from `DebtableRuleId`. */
+  sanctionedOnly: string[];
+}
+
+/** The exemptable ids and their sanctioned-only subset, read off the live rules. */
+export async function collectExemptRuleIds(
   root: string,
-): Promise<string[]> {
+): Promise<ExemptRuleIdSets> {
   const { listAllChecks } = (await import(CHECKS_CORE)) as typeof ChecksCore;
   const [contributions, checks] = await Promise.all([
     loadLintContributions(root),
     listAllChecks(),
   ]);
-  const ids = new Set<string>();
+  const exemptable = new Set<string>();
+  const sanctionedOnly = new Set<string>();
   for (const c of contributions) {
+    // `loadLintContributions` refuses a rule both closed and noDebt, so every
+    // noDebt rule is exemptable.
     const closed = new Set(c.closed);
     for (const rule of Object.keys(c.rules)) {
-      if (!closed.has(rule)) ids.add(`${c.name}/${rule}`);
+      if (!closed.has(rule)) exemptable.add(`${c.name}/${rule}`);
     }
+    for (const rule of c.noDebt) sanctionedOnly.add(`${c.name}/${rule}`);
   }
   for (const check of checks) {
-    for (const id of Object.keys(check.exemptable ?? {})) ids.add(id);
+    for (const id of Object.keys(check.exemptable ?? {})) exemptable.add(id);
   }
-  return [...ids].sort();
+  return {
+    exemptable: [...exemptable].sort(),
+    sanctionedOnly: [...sanctionedOnly].sort(),
+  };
+}
+
+function renderUnion(ids: readonly string[]): string {
+  return ids.length === 0
+    ? "never"
+    : `\n${ids.map((id) => `  | ${JSON.stringify(id)}`).join("\n")}`;
 }
 
 export async function renderExemptRuleIds(root: string): Promise<string> {
-  const ids = await collectExemptableRuleIds(root);
-  const union =
-    ids.length === 0
-      ? "never"
-      : `\n${ids.map((id) => `  | ${JSON.stringify(id)}`).join("\n")}`;
-  return `${HEADER}\n\nexport type ExemptableRuleId = ${union};\n`;
+  const { exemptable, sanctionedOnly } = await collectExemptRuleIds(root);
+  return [
+    `${HEADER}\n`,
+    `export type ExemptableRuleId = ${renderUnion(exemptable)};\n`,
+    "/** Declared `noDebt` by their owner: a sanctioned exemption only. */",
+    `export type SanctionedOnlyRuleId = ${renderUnion(sanctionedOnly)};\n`,
+    '/** What a `kind: "debt"` exemption may name. */',
+    "export type DebtableRuleId = Exclude<ExemptableRuleId, SanctionedOnlyRuleId>;\n",
+  ].join("\n");
 }
 
 export function exemptRuleIdsPath(root: string): string {

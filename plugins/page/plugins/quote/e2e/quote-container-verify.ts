@@ -35,6 +35,7 @@
 //
 // Usage: bun plugins/page/plugins/quote/e2e/quote-container-verify.ts [--url <deploy>] [--out /tmp/quote]
 import {
+  pageFetch,
   arg,
   report,
   snap,
@@ -203,12 +204,9 @@ interface StoredRow {
  * same quote rather than merely rendering at that indent.
  */
 async function storedRows(page: Page, pageId: string): Promise<StoredRow[]> {
-  return page.evaluate(async (id: string) => {
-    const res = await fetch(`/api/pages/${id}/blocks`);
-    if (!res.ok)
-      throw new Error(`GET blocks ${res.status}: ${await res.text()}`);
-    return (await res.json()) as StoredRow[];
-  }, pageId);
+  const res = await pageFetch(page, `/api/pages/${pageId}/blocks`);
+  if (!res.ok) throw new Error(`GET blocks ${res.status}: ${await res.text()}`);
+  return (await res.json()) as StoredRow[];
 }
 
 /**
@@ -221,21 +219,12 @@ async function postBlock(
   pageId: string,
   data: unknown,
 ): Promise<{ status: number; body: string }> {
-  return page.evaluate(
-    async ({ parent, payload }: { parent: string; payload: unknown }) => {
-      const res = await fetch("/api/blocks", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          parentId: parent,
-          type: "quote",
-          data: payload,
-        }),
-      });
-      return { status: res.status, body: (await res.text()).slice(0, 400) };
-    },
-    { parent: pageId, payload: data },
-  );
+  const res = await pageFetch(page, "/api/blocks", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ parentId: pageId, type: "quote", data }),
+  });
+  return { status: res.status, body: (await res.text()).slice(0, 400) };
 }
 
 /** Commit a slash-menu conversion from the end of a block's text. */

@@ -10,6 +10,11 @@ export interface ProcessedEmail {
   quotedHtml: string | null;
   /** True if the source referenced at least one remote (http) image. */
   hadRemoteImage: boolean;
+  /**
+   * The bare Content-IDs of the `cid:` images `resolveCid` had no URL for, in
+   * document order, each once — what the body is still waiting on.
+   */
+  unresolvedCids: string[];
 }
 
 export interface ProcessOptions {
@@ -80,6 +85,7 @@ export function processEmailHtml(
   }
 
   let hadRemoteImage = false;
+  const unresolvedCids = new Set<string>();
 
   // Images: resolve cid: parts, block data:/remote unless opted in.
   for (const img of Array.from(root.querySelectorAll("img"))) {
@@ -95,6 +101,7 @@ export function processEmailHtml(
         // The component re-runs when resolveCid changes, filling it in later.
         img.removeAttribute("src");
         img.setAttribute("data-cid", cid);
+        unresolvedCids.add(cid);
       }
       continue;
     }
@@ -134,7 +141,12 @@ export function processEmailHtml(
   }
 
   const { mainHtml, quotedHtml } = splitQuoted(root);
-  return { mainHtml, quotedHtml, hadRemoteImage };
+  return {
+    mainHtml,
+    quotedHtml,
+    hadRemoteImage,
+    unresolvedCids: [...unresolvedCids],
+  };
 }
 
 /**

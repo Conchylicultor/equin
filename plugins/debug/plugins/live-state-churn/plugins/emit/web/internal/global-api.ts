@@ -5,7 +5,7 @@ import {
 } from "@plugins/infra/plugins/endpoints/web";
 import { LIVE_STATE_EMIT_GLOBAL } from "../../core";
 import type { LiveStateEmitWindow } from "../../core";
-import { startEmit, stopEmit, getEmitStatus } from "../../shared/endpoints";
+import { startEmit, stopEmit } from "../../shared/endpoints";
 
 let installed = false;
 
@@ -20,7 +20,6 @@ export function installGlobalApi(fetchEndpoint: FetchEndpoint): void {
     start: ({ key, rate, durationMs }) =>
       fetchEndpoint(startEmit, {}, { body: { key, rate, durationMs } }),
     stop: () => fetchEndpoint(stopEmit, {}),
-    status: () => fetchEndpoint(getEmitStatus, {}),
   };
 }
 

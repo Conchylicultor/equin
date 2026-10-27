@@ -19,15 +19,6 @@ export const createMusicXmlSong = defineEndpoint({
 });
 
 /**
- * One song's MusicXML attachment, or `null` if the song carries none. Used by
- * the source's `hydrate` to resolve the document to fetch.
- */
-export const getSongMusicXml = defineEndpoint({
-  route: "GET /api/sonata/songs/:id/musicxml",
-  response: z.object({ attachmentId: z.string() }).nullable(),
-});
-
-/**
  * One song's cover: a schematic grand staff of its opening bars, drawn on the
  * server from the song's own MusicXML (`covers` renders and caches it). Raw —
  * it answers SVG bytes. The last segment is `<version>.svg`, the version the

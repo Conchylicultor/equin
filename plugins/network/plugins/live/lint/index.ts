@@ -14,4 +14,5 @@ export default {
     "no-sentinel-param": noSentinelParam,
     "visible-range-minter": visibleRangeMinter,
   },
+  noDebt: ["no-endpoint-read"],
 } satisfies LintContribution;

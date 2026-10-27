@@ -18,6 +18,7 @@ import type {
   PathBarSource,
   PathResolution,
   PathTarget,
+  Suggestions,
 } from "../internal/types";
 
 /**
@@ -43,11 +44,38 @@ const DIRS = [
 ];
 const FILES = ["/vol/me/notes.md"];
 
+/** The completions of `prefix` among {@link DIRS}; `/locked…` cannot be read. */
+function completionsOf(prefix: string | null): Suggestions {
+  if (prefix === null) return { kind: "pending" };
+  if (prefix.startsWith("/locked")) {
+    return { kind: "failed", message: "Permission denied: /locked" };
+  }
+  const cut = prefix.lastIndexOf("/");
+  const parent = prefix.slice(0, cut) || "";
+  const stem = prefix.slice(cut + 1).toLowerCase();
+  return {
+    kind: "ready",
+    items: DIRS.filter((d) => {
+      const c = d.lastIndexOf("/");
+      return (
+        d.slice(0, c) === parent &&
+        d
+          .slice(c + 1)
+          .toLowerCase()
+          .startsWith(stem)
+      );
+    }),
+  };
+}
+
 function fakeSource(): PathBarSource & {
-  complete: ReturnType<typeof vi.fn>;
+  /** Every prefix the bar's render read completions for (`null`: none). */
+  asked: ReturnType<typeof vi.fn>;
   validate: ReturnType<typeof vi.fn>;
 } {
+  const asked = vi.fn();
   return {
+    asked,
     segments: (path) => {
       const parts = path.split("/").filter(Boolean);
       return [
@@ -58,21 +86,10 @@ function fakeSource(): PathBarSource & {
         }),
       ];
     },
-    complete: vi.fn(async (prefix: string) => {
-      const cut = prefix.lastIndexOf("/");
-      const parent = prefix.slice(0, cut) || "";
-      const stem = prefix.slice(cut + 1).toLowerCase();
-      return DIRS.filter((d) => {
-        const c = d.lastIndexOf("/");
-        return (
-          d.slice(0, c) === parent &&
-          d
-            .slice(c + 1)
-            .toLowerCase()
-            .startsWith(stem)
-        );
-      });
-    }),
+    useComplete: (prefix) => {
+      asked(prefix);
+      return completionsOf(prefix);
+    },
     validate: vi.fn(async (path: string): Promise<PathResolution> => {
       if (DIRS.includes(path)) return { kind: "dir", path };
       if (FILES.includes(path)) return { kind: "file", path };
@@ -139,7 +156,7 @@ describe("PathBar", () => {
     expect(document.activeElement).toBe(input);
     expect(input.selectionStart).toBe(0);
     expect(input.selectionEnd).toBe("/vol/me/".length);
-    expect(source.complete).toHaveBeenCalledWith("/vol/me/");
+    expect(source.asked).toHaveBeenLastCalledWith("/vol/me/");
   });
 
   it("forwards the trail's type role and leaf weight to the crumbs", () => {
@@ -183,7 +200,23 @@ describe("PathBar", () => {
     expect(field().getAttribute("aria-activedescendant")).toBe(options[1]!.id);
     fireEvent.keyDown(field(), { key: "Tab" });
     expect(field().value).toBe("/vol/me/Downloads/");
-    expect(source.complete).toHaveBeenLastCalledWith("/vol/me/Downloads/");
+    expect(source.asked).toHaveBeenLastCalledWith("/vol/me/Downloads/");
+  });
+
+  it("reads nothing while the crumbs show", () => {
+    const { source } = setup();
+    expect(source.asked).toHaveBeenCalled();
+    expect(source.asked.mock.calls.every(([p]) => p === null)).toBe(true);
+  });
+
+  it("a completion read that failed is shown, not an empty list", async () => {
+    const { field, startEditing } = setup();
+    await startEditing();
+    fireEvent.change(field(), { target: { value: "/locked/" } });
+    expect(
+      await screen.findByText("No suggestions: Permission denied: /locked"),
+    ).toBeTruthy();
+    expect(screen.queryAllByRole("option")).toEqual([]);
   });
 
   it("Tab with nothing highlighted takes the first", async () => {

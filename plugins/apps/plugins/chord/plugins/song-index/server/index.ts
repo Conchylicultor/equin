@@ -10,7 +10,6 @@ import { SongVideos } from "@plugins/integrations/plugins/youtube/plugins/song-v
 import {
   countLoopsInSetEndpoint,
   ensureChordIndexEndpoint,
-  findLoopsEndpoint,
   nextChordsEndpoint,
 } from "../core";
 import { songIndexConfig } from "../shared/config";
@@ -19,11 +18,11 @@ import { ensureIndexAtBoot } from "./internal/ensure";
 import {
   handleCountLoopsInSet,
   handleEnsureIndex,
-  handleFindLoops,
   handleNextChords,
 } from "./internal/handlers";
 import { songIndexLoadJob } from "./internal/load-job";
 import { hooktheorySongVideos } from "./internal/song-videos-source";
+import { chordLoopsServed } from "./internal/loops-resource";
 import { chordIndexStatusServed } from "./internal/status-resource";
 import {
   _chordIndexState,
@@ -42,6 +41,10 @@ export {
   countTokenSets,
 } from "./internal/find";
 export { loadIndexStatus, loadReadyIndexIdentity } from "./internal/state";
+// One loop find's answer (`not-ready`, or the random windows), for a server
+// plugin serving its own loop value over chord sets it holds — the curriculum's
+// `chord.curriculum.loops`, over the learner's stored selection.
+export { answerLoopFind } from "./internal/loops-resource";
 // The tables those reads touch, for a reader's declared `reads`.
 export {
   _chordIndexRequest,
@@ -51,10 +54,9 @@ export {
 
 export default {
   description:
-    "The chord app's song index: the Sheet Sage download and snapshot build, the supervised load job, the ensure endpoint, the live load status, the loop queries, the snapshot's backup source, and the `hooktheory` song-video source (the videos transcribers synced a song to, by slug).",
+    "The chord app's song index: the Sheet Sage download and snapshot build, the supervised load job, the ensure endpoint, the live load status, the live loop find (chord.loops), the loop counts, the snapshot's backup source, and the `hooktheory` song-video source (the videos transcribers synced a song to, by slug).",
   httpRoutes: {
     [ensureChordIndexEndpoint.route]: handleEnsureIndex,
-    [findLoopsEndpoint.route]: handleFindLoops,
     [nextChordsEndpoint.route]: handleNextChords,
     [countLoopsInSetEndpoint.route]: handleCountLoopsInSet,
   },
@@ -62,6 +64,7 @@ export default {
   contributions: [
     ConfigV2.Register({ descriptor: songIndexConfig }),
     ...chordIndexStatusServed.declare,
+    ...chordLoopsServed.declare,
     // "Which videos are this song?" for anyone who asks (Sonata's UG
     // alignment): the videos TheoryTab transcribers synced it to.
     SongVideos.Source(hooktheorySongVideos),
@@ -111,12 +114,12 @@ export default {
     ExcludeFromChangeFeed({
       table: _chordSections,
       reason:
-        "Bulk-loaded song index cache; no live-state resource reads it (the loop queries are plain endpoints).",
+        "Bulk-loaded song index cache; the one live value reading it (chord.loops) is fixed per tuple — a random sample nothing pushes a change to.",
     }),
     ExcludeFromChangeFeed({
       table: _chordLoopWindows,
       reason:
-        "Bulk-loaded song index cache; live values read it only through a memo keyed on the index identity, whose state row announces a load (the loop queries are plain endpoints).",
+        "Bulk-loaded song index cache; live values read it only through a memo keyed on the index identity, whose state row announces a load (chord.loops is fixed per tuple; the counts are plain endpoints).",
     }),
   ],
   // Only where the app was opened (the request row exists), and only when the

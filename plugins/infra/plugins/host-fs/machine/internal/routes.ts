@@ -3,34 +3,18 @@ import {
   implementMachine,
   machineHandler,
 } from "@plugins/infra/plugins/endpoints/machine";
-import {
-  hostFsComplete,
-  hostFsExtract,
-  hostFsMove,
-  hostFsOpen,
-  hostFsRaw,
-  hostFsStat,
-} from "../../core";
-import { completeHostDir, splitPrefix } from "../../server/internal/complete";
+import { hostFsExtract, hostFsMove, hostFsOpen, hostFsRaw } from "../../core";
 import { extractHostArchive } from "../../server/internal/extract";
 import { moveHostPaths } from "../../server/internal/move";
 import { isAppOrigin, openHostPath } from "../../server/internal/open";
 import { resolveHostPath } from "../../server/internal/path";
 import { handleRaw as rawBytes } from "../../server/internal/raw";
-import { statHostOrArchivePath } from "../../server/internal/stat";
 
 // host-fs's routes: every one reads or changes the host filesystem, so each
 // endpoint is declared `needsMachine` and served here — a host without the
 // computer (the in-browser demo) answers it unavailable without a request.
-
-export const handleStat = implementMachine(hostFsStat, ({ query }) =>
-  statHostOrArchivePath(resolveHostPath(query.path)),
-);
-
-export const handleComplete = implementMachine(hostFsComplete, ({ query }) => {
-  const { dir, fragment } = splitPrefix(query.prefix);
-  return completeHostDir(dir, fragment);
-});
+// The reads a surface makes (stat, complete, …) are live values (`./reads.ts`,
+// `./complete.ts`); `raw` stays a route because a byte URL is an asset.
 
 /** The bytes: a raw handler (its own status and headers — 200 / 206 / 416). */
 export const handleRaw = machineHandler(hostFsRaw, rawBytes);

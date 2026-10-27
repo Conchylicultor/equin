@@ -6,8 +6,9 @@
 //
 // <features.json>: a cached BeatFeatures file
 //   (~/.singularity/cache/beat-features/v<N>/<settingsKey>/<videoId>.json).
-// <ug-tab.json>: a UgTab, e.g. the body `POST /api/sonata/sources/ultimate-guitar/fetch`
-//   returns. Each file is recognised by its shape, in any order.
+// <ug-tab.json>: a UgTab, e.g. the `value` the live read
+//   `GET /api/resources/sonata.ultimate-guitar.tab?url=<tab url>` answers.
+//   Each file is recognised by its shape, in any order.
 //
 // One features file and one tab: prints the transposition, the score and what
 // it is made of (the sheet-constrained, free and all-filler log-scores per beat,
@@ -22,7 +23,7 @@
 // between right and wrong pairs, and what the resolver's accept rule picks from
 // each song's candidates (in the order the resolver ranked them). Tabs are read
 // from the `ug-calibration` cache dir; --fetch fills the missing ones through
-// that deploy's UG fetch endpoint. Features are read from the beat-features
+// that deploy's live UG tab read (`sonata.ultimate-guitar.tab`). Features are read from the beat-features
 // cache (final0 / fast chroma); a recording with none is listed and skipped.
 //
 // Results: research/2026-10-01-apps-sonata-ug-alignment-aligner.md (B) and
@@ -209,19 +210,17 @@ async function loadTab(url: string, fetchFrom: string | null): Promise<UgTab> {
     throw new Error(
       `Tab ${id} is not cached in ${dir}: pass --fetch http://<namespace>.localhost:9000 to fetch it.`,
     );
+  // The live value's HTTP read: the body is `{ value, version, epoch }`; a
+  // refused URL (not a tab, no such tab) answers 422 with its reason.
   const res = await fetch(
-    `${fetchFrom}/api/sonata/sources/ultimate-guitar/fetch`,
-    {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ url }),
-    },
+    `${fetchFrom}/api/resources/sonata.ultimate-guitar.tab?${new URLSearchParams({ url })}`,
   );
   if (!res.ok)
     throw new Error(
       `Fetching tab ${id}: HTTP ${res.status} ${await res.text()}`,
     );
-  const tab = UgTabSchema.parse(await res.json());
+  const body = (await res.json()) as { value: unknown };
+  const tab = UgTabSchema.parse(body.value);
   mkdirSync(dir, { recursive: true });
   writeFileSync(path, JSON.stringify(tab));
   return tab;

@@ -1,7 +1,13 @@
 export { defineEndpoint } from "./define-endpoint";
 export { ASSET_PATH, assetBase, assetPath } from "./asset-path";
 export type { AssetBase, AssetPath } from "./asset-path";
-export type { EndpointDef, MachineEndpointDef } from "./define-endpoint";
+export type {
+  EndpointDef,
+  MachineEndpointDef,
+  ReadMarker,
+  ReadOf,
+  WriteEndpoint,
+} from "./define-endpoint";
 export { unavailableMessage } from "./needs-machine";
 export type {
   MachineAvailability,

@@ -29,6 +29,7 @@ import {
   hostFsPathStatServed,
   hostFsVolumeInfoServed,
 } from "./reads";
+import { completions } from "./complete";
 import { watchHostPathOver } from "./version";
 import { watchHostDirOver, type AcquireDirWatch } from "./watch-dir";
 
@@ -136,6 +137,22 @@ describe("host-fs.peek / stat / text / volume", () => {
     expect(
       await refusalCode(hostFsFileTextServed.load({ path: join(root, "sub") })),
     ).toBe("not-a-file");
+  });
+
+  test("complete lists matching folders, and refuses what names no folder", async () => {
+    const all = await completions(`${root}/`);
+    expect(all).toEqual({
+      dir: root,
+      matches: [{ name: "sub", path: join(root, "sub") }],
+      truncated: false,
+    });
+    expect((await completions(`${root}/S`)).matches.map((m) => m.name)).toEqual(
+      ["sub"],
+    );
+    expect(await refusalCode(completions(`${root}/nope/`))).toBe("missing");
+    expect(await refusalCode(completions(`${root}/b.txt/`))).toBe("not-a-dir");
+    expect(await refusalCode(completions("relative"))).toBe("invalid-path");
+    expect(await refusalCode(completions(""))).toBe("invalid-path");
   });
 
   test("volume measures the volume, and refuses a missing path", async () => {

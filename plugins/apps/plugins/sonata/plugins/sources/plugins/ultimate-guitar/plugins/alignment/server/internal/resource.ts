@@ -1,5 +1,5 @@
 import { serveCollection } from "@plugins/network/plugins/live/server";
-import { ugAlignmentRows } from "../../shared/resources";
+import { ugAlignmentRows } from "../../core";
 import { songUgAlignment } from "./tables";
 
 // Server half of the per-song alignment read: the lookup-only collection served

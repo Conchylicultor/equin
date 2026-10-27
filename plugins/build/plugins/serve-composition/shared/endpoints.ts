@@ -131,31 +131,6 @@ export const OwnedNamespaceSchema = z.object({
 export type OwnedNamespaceInfo = z.infer<typeof OwnedNamespaceSchema>;
 
 /**
- * What does this composition own? A marker scan over EVERY namespace on the
- * host, deliberately not scoped to the answering backend's checkout: a
- * composition served from main and from three worktrees occupies four
- * namespaces, four databases and four config dirs, and deleting its manifest row
- * strands all four. (`resetCompositionData` is the opposite — it acts on the one
- * namespace this checkout serves — and that difference is the whole reason this
- * is a separate endpoint rather than a flag on the status read.)
- *
- * All the data lives in the shared `~/.singularity/` tree, so one backend can
- * answer for — and reclaim — namespaces composed by other checkouts.
- */
-export const ownedNamespacesEndpoint = defineEndpoint({
-  route: "GET /api/build/serve/owned",
-  query: z.object({
-    composition: z
-      .string()
-      .refine((v) => NAMESPACE_LABEL_RE.test(v), "not a valid composition id"),
-  }),
-  response: z.object({ namespaces: z.array(OwnedNamespaceSchema) }),
-  // A readdir plus one marker read and one `pg_database` lookup per namespace;
-  // collapsing a burst (two Studio surfaces asking about the same row) is free.
-  dedupe: true,
-});
-
-/**
  * What happened to ONE namespace in a reclaim — a discriminated outcome, never a
  * tally. A count of successes cannot say WHICH namespace still holds a database,
  * and "3 of 4" read as success is exactly how a stranded namespace becomes

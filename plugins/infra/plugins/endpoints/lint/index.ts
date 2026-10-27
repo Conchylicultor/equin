@@ -12,4 +12,5 @@ export default {
     "no-raw-web-fetch": noRawWebFetch,
     "no-void-fetch-endpoint": noVoidFetchEndpoint,
   },
+  noDebt: ["no-raw-web-fetch"],
 } satisfies LintContribution;

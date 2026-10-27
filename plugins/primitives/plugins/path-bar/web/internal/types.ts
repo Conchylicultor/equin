@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 
 /** One crumb of a path: what it says, and the path it stands for. */
 export interface PathSegment {
@@ -15,6 +16,17 @@ export type PathResolution =
   /** Not a place this source can go; `reason` is shown under the field. */
   | { kind: "invalid"; path: string; reason?: string };
 
+/**
+ * The completions of the text in the field, as the source's read of them
+ * stands now: not known yet, the list, or why there is none. `ready` with no
+ * items is an answer (nothing completes the text); a read that failed is
+ * `failed`, shown in the panel — never an empty list standing in.
+ */
+export type Suggestions =
+  | { kind: "pending" }
+  | { kind: "ready"; items: readonly string[] }
+  | { kind: "failed"; message: string };
+
 /** Where the path bar navigates to — a resolved `dir` or `file`, never `invalid`. */
 export type PathTarget = Extract<PathResolution, { kind: "dir" | "file" }>;
 
@@ -27,11 +39,14 @@ export interface PathBarSource {
   /** The crumbs of `path`, root first; the last is the current place. */
   segments: (path: string) => PathSegment[];
   /**
-   * Containers completing `prefix` — the text typed so far, up to and past its
-   * last separator — as full paths WITHOUT a trailing separator. The bar shows
-   * the first few and appends the separator itself when one is completed.
+   * A hook reading the containers completing `prefix` — the text typed so
+   * far, up to and past its last separator — as full paths WITHOUT a trailing
+   * separator; `null` while the bar is not editing (nothing is read). A live
+   * read: the bar renders whatever it answers now, so an answer to an older
+   * keystroke cannot land on newer text. The bar shows the first few and
+   * appends the separator itself when one is completed.
    */
-  complete: (prefix: string) => Promise<readonly string[]>;
+  useComplete: Hook<(prefix: string | null) => Suggestions>;
   /** Resolve a typed path before navigating to it. */
   validate: (path: string) => Promise<PathResolution>;
   /** The path separator. Default `"/"`. */

@@ -182,19 +182,16 @@ export const HostFsStatResultSchema = z.discriminatedUnion("kind", [
   Denied,
   UnreadableArchive,
 ]);
+/**
+ * One host path described — the machine half's own answer, which the
+ * `host-fs.stat` live value (`hostFsPathStat`) serves with its failures as
+ * refusals.
+ */
 export type HostFsStatResult = z.infer<typeof HostFsStatResultSchema>;
-
-/** Describe one host path (e.g. path-bar validation: a file → open its parent). */
-export const hostFsStat = defineEndpoint({
-  route: "GET /api/host-fs/stat",
-  query: z.object({ path: z.string() }),
-  response: HostFsStatResultSchema,
-  needsMachine: HOST_FS_MACHINE,
-});
 
 // ── complete ─────────────────────────────────────────────────────────────────
 
-/** How many completions one request returns at most (`truncated` says if there were more). */
+/** How many completions one answer holds at most (`truncated` says if there were more). */
 export const HOST_FS_COMPLETE_LIMIT = 50;
 
 export const HostFsCompleteResultSchema = z.discriminatedUnion("kind", [
@@ -209,21 +206,12 @@ export const HostFsCompleteResultSchema = z.discriminatedUnion("kind", [
   Denied,
   NotADir,
 ]);
-export type HostFsCompleteResult = z.infer<typeof HostFsCompleteResultSchema>;
-
 /**
- * Folder-only completions of a typed path: the directories (symlinks to
- * directories included) in `dirname(prefix)` whose name starts with
- * `basename(prefix)`, case-insensitively. A prefix ending in `/` completes
- * every child of that directory. Dotfolders are offered only once the typed
- * fragment starts with `.`. Expands `~`.
+ * A typed path's folder completions — the machine half's own answer, which the
+ * `host-fs.complete` live value (`hostFsCompletions`) serves with its failures
+ * as refusals.
  */
-export const hostFsComplete = defineEndpoint({
-  route: "GET /api/host-fs/complete",
-  query: z.object({ prefix: z.string() }),
-  response: HostFsCompleteResultSchema,
-  needsMachine: HOST_FS_MACHINE,
-});
+export type HostFsCompleteResult = z.infer<typeof HostFsCompleteResultSchema>;
 
 // ── text ─────────────────────────────────────────────────────────────────────
 

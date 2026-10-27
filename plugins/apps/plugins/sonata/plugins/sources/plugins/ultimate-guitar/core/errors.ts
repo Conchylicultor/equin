@@ -1,7 +1,7 @@
 /**
  * Failure taxonomy for the Ultimate Guitar fetch layer. Each `kind` is a
- * distinct, actionable breakage — the route layer maps these to HTTP statuses,
- * and the loud ones (signature rotation, shape change) are worth surfacing as
+ * distinct, actionable breakage — the `ugTab` live value refuses the two about
+ * the URL (`invalid-url`, `not-found`) and fails on the rest; the loud ones (signature rotation, shape change) are worth surfacing as
  * crash-worthy server-side failures rather than silently degrading.
  */
 export type UgFetchErrorKind =

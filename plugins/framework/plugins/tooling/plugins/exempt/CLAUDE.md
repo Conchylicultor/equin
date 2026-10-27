@@ -36,7 +36,9 @@ export default [
   or `"."` for the whole plugin. No globs, no `..`, nothing absolute, canonical
   spelling only: a plugin can only exempt its own files.
 - `kind: "sanctioned"` — a permanent, legitimate use. `kind: "debt"` — a
-  violation tracked for removal; it names its `task`.
+  violation tracked for removal; it names its `task`. A debt entry's `rule` is
+  typed `DebtableRuleId` (the same generated file): every exemptable id but the
+  ones declared `noDebt`.
 
 The folder is a leaf (`LEAF_FOLDERS`, row `exempt: ["core"]`). There is **no
 generated registry of manifests**: `loadExemptions(files)` finds every
@@ -55,8 +57,12 @@ exempted on must be the set it scans, or a violation in an excluded plugin
 
 - **Lint barrels** (`satisfies LintContribution`, from `lint/core`):
   `outOfScope: { "<rule>": FileCategory[] }` for whole categories the rule does
-  not apply to, and `closed: ["<rule>"]` for a rule that admits no exemption
-  (absent from `ExemptableRuleId`, and refused by `exempt:manifests-valid`).
+  not apply to, `closed: ["<rule>"]` for a rule that admits no exemption
+  (absent from `ExemptableRuleId`, and refused by `exempt:manifests-valid`),
+  and `noDebt: ["<rule>"]` for a rule that admits sanctioned exemptions only —
+  its substrate needs a home, but any other violation is fixed, never tracked
+  (absent from `DebtableRuleId`, and a debt entry refused by
+  `exempt:manifests-valid` and the lint config build). A rule is never both.
   Contributed rules are already out of scope in `test` and `e2e` unless listed
   in `enforceEverywhere`.
 - **Checks** (`Check` from `tooling/core`): `exemptable: { "<id>": "<what
@@ -94,8 +100,8 @@ One loader (`loadExemptions`), three consumers:
   fails the check for every exemption of its ids that matched nothing.
 
 Checks: `exempt:manifests-valid` (stale path, invalid manifest — escaping path,
-missing reason/task —, duplicate, unknown or closed rule) and
-`exempt:rule-ids-in-sync` (the generated union).
+missing reason/task —, duplicate, unknown or closed rule, debt on a `noDebt`
+rule) and `exempt:rule-ids-in-sync` (the generated unions).
 
 ## Finding exemptions
 

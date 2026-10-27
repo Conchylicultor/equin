@@ -989,15 +989,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shape --spacing`
     - **`chord`** — Chord — a chord ear trainer that plays loops of real songs whose chords you have turned on, asks you to name each chord, and keeps track of how well you know each one.
       - Plugins:
-        - **`curriculum`** — The curriculum's browser half: useCurriculum (the live chord.curriculum selection — each chord practised, heard or off, the blanks, how many other chords a loop may hold), useCatalog (the live chord.catalog), useCurriculumWrites (chords, blanks, extras; refusals as toasts), and <ChordsSection> — the trainer side panel's collapsible Chords section: Clear / Undo clear, the Blanks and Other-chords-per-loop pills, and every chord of the song index in tracks and sections, each chip cycling off → hear → practise, one chip per section's rare chords, and a footer giving the exact numbers of the chip under the pointer. The Chord trainer's curriculum, server side: the chord_curriculum row (each chord practised, heard or off; how much of a loop is blank; how many other chords a loop may hold), the live chord.curriculum resource and its three writes — chords, blanks, extras —, and the live chord.catalog: every chord of the song index in tracks and sections, built once per loaded index.
+        - **`curriculum`** — The curriculum's browser half: useCurriculum (the live chord.curriculum selection — each chord practised, heard or off, the blanks, how many other chords a loop may hold), useCatalog (the live chord.catalog), useCurriculumWrites (chords, blanks, extras; refusals as toasts), and <ChordsSection> — the trainer side panel's collapsible Chords section: Clear / Undo clear, the Blanks and Other-chords-per-loop pills, and every chord of the song index in tracks and sections, each chip cycling off → hear → practise, one chip per section's rare chords, and a footer giving the exact numbers of the chip under the pointer. The Chord trainer's curriculum, server side: the chord_curriculum row (each chord practised, heard or off; how much of a loop is blank; how many other chords a loop may hold), the live chord.curriculum resource and its three writes — chords, blanks, extras —, the live chord.catalog: every chord of the song index in tracks and sections, built once per loaded index, and the live chord.curriculum.loops: the trainer's loop find over the stored selection.
           - Server:
             - Contributes:
               - `resource.declare` "chord.catalog"
               - `resource.declare` "chord.curriculum"
+              - `resource.declare` "chord.curriculum.loops"
             - Uses:
               - `apps/chord/song-index._chordIndexRequest`
               - `apps/chord/song-index._chordIndexState`
               - `apps/chord/song-index._chordLoopWindows`
+              - `apps/chord/song-index.answerLoopFind`
               - `apps/chord/song-index.countTokenSets`
               - `apps/chord/song-index.loadReadyIndexIdentity`
               - `database.db`
@@ -1014,6 +1016,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Resources:
               - `chord.catalog` (push, whole: one loaded song index's catalog, read entire — its distinct chords (1,808 on the full index), built once per index, whole: a subset of Hookpad's key modes — seven at most)
               - `chord.curriculum` (push, whole: the chords the learner turned on — a subset of the catalog's chords)
+              - `chord.curriculum.loops` (invalidate, fixed)
             - Routes:
               - `POST /api/chord/curriculum/chords`
               - `POST /api/chord/curriculum/blanks`
@@ -1054,11 +1057,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useCurriculumWrites`
           - Core:
             - Uses:
+              - `apps/chord/song-index.ChordLoopsAnswerSchema`
               - `apps/chord/song-index.ChordToken`
               - `apps/chord/song-index.chordTokenFromParts`
               - `apps/chord/song-index.ChordTokenSchema`
+              - `apps/chord/song-index.FIND_LOOPS_ROUND_MAX`
               - `apps/chord/song-index.LoopExtras`
               - `apps/chord/song-index.LoopExtrasSchema`
+              - `apps/chord/song-index.LoopFindOptionsSchema`
               - `apps/chord/song-index.parseChordToken`
               - `apps/chord/song-index.repeatPeriod`
               - `apps/chord/song-index.TokenSetCount`
@@ -1082,6 +1088,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ChordChange`
               - `ChordPlace`
               - `ChordState`
+              - `CurriculumLoopsQueryInput`
               - `RareGroup`
               - `RecordedBlanks`
               - `SectionKind`
@@ -1105,9 +1112,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `chordCatalog`
               - `ChordChangeSchema`
               - `chordCurriculum`
+              - `chordCurriculumLoops`
               - `chordPlaces`
               - `chordState`
               - `ChordStateSchema`
+              - `CurriculumLoopsQuerySchema`
               - `firstSelection`
               - `groupState`
               - `isListed`
@@ -1152,7 +1161,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/chord/progress`
               - `apps/chord/trainer`
           - Exemptions:
-            - Exempts itself from: `ids:pk-declared` — `server/internal/tables.ts` (debt)
+            - Exempts itself from:
+              - `no-db-backed-notify` — `server/internal/loops-resource.ts` (sanctioned)
+              - `ids:pk-declared` — `server/internal/tables.ts` (debt)
         - **`piano`** — The Chord app's piano: usePiano (one AudioContext and one voice set per screen, striking a chord or a single note on Sonata's default instrument), <PianoCard> — the four-octave keyboard drawing the chord on show, its doubled bass greyed beside it, playable key by key — and the sound mix: the song and the piano as two channels, each on or off at its own level (useSoundMix, <SoundChannelControl channel/>), the piano following the song's playhead when on. The Chord app's piano, server side: registers the chord-sound config (the song and the piano, each on or off at its own level) so the learner's mix persists and shows in Settings.
           - Web:
             - Contributes: `ConfigV2.WebRegister` "config"
@@ -1283,7 +1294,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `chordApp`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/font-family --font-serif`
-        - **`song-index`** — The song index's web half: the settings registration for its load scope, and SongIndexGate — opens the index on mount and shows the load's progress (or its failure, with Retry) until the index is ready, then its children. The chord app's song index: the Sheet Sage download and snapshot build, the supervised load job, the ensure endpoint, the live load status, the loop queries, the snapshot's backup source, and the `hooktheory` song-video source (the videos transcribers synced a song to, by slug).
+        - **`song-index`** — The song index's web half: the settings registration for its load scope, and SongIndexGate — opens the index on mount and shows the load's progress (or its failure, with Retry) until the index is ready, then its children. The chord app's song index: the Sheet Sage download and snapshot build, the supervised load job, the ensure endpoint, the live load status, the live loop find (chord.loops), the loop counts, the snapshot's backup source, and the `hooktheory` song-video source (the videos transcribers synced a song to, by slug).
           - Web:
             - Contributes: `ConfigV2.WebRegister` "config"
             - Uses:
@@ -1303,6 +1314,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `ConfigV2.Register` "config"
               - `resource.declare` "chord.index-status"
+              - `resource.declare` "chord.loops"
               - `song-videos.source` "hooktheory"
               - `backup.source` "Chord song index snapshot"
               - `fork-data-exclusion` "chord_index_state"
@@ -1336,16 +1348,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `_chordIndexRequest`
               - `_chordIndexState`
               - `_chordLoopWindows`
+              - `answerLoopFind`
               - `countLoopsByNextChord`
               - `countLoopsInSet`
               - `countTokenSets`
               - `loadIndexStatus`
               - `loadReadyIndexIdentity`
             - Register: `defineSupervisedJob('chord.song-index.load')`
-            - Resources: `chord.index-status` (push)
+            - Resources:
+              - `chord.index-status` (push)
+              - `chord.loops` (invalidate, fixed, capped: FIND_LOOPS_MAX_LIMIT, whole: the chords of one loop window: a few bars' worth, whole: one section's beat grid: a point per beat of the section, whole: one loop window's distinct chords or spelling features)
             - Routes:
               - `POST /api/chord/index/ensure`
-              - `POST /api/chord/loops/find`
               - `POST /api/chord/loops/next-chords`
               - `POST /api/chord/loops/count-in-set`
           - Core:
@@ -1366,15 +1380,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `integrations/hooktheory.hookpadTonicPc`
               - `integrations/hooktheory.TheorytabSectionIdSchema`
               - `network/live.liveValue`
+              - `packages/list-bound.cappedList`
+              - `packages/list-bound.wholeList`
             - Exports (types):
               - `BeatTimesAlignment`
               - `ChordFeature`
+              - `ChordLoopsAnswer`
               - `ChordToken`
               - `ChordTokenParts`
               - `CountLoopsInSetBody`
               - `DerivedSection`
               - `DeriveSectionInput`
-              - `FindLoopsBody`
+              - `FindLoops`
+              - `FindLoopsInput`
+              - `FindLoopsQuery`
+              - `FindLoopsQueryInput`
               - `IndexedChord`
               - `IndexLoadPhase`
               - `IndexPhase`
@@ -1384,6 +1404,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `LoopCandidate`
               - `LoopChord`
               - `LoopExtras`
+              - `LoopFindOptions`
               - `LoopSectionInput`
               - `LoopShape`
               - `LoopShapeId`
@@ -1411,9 +1432,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `beatTimesAlignment`
               - `beatToSeconds`
               - `bestModeWindows`
+              - `checkFindLoops`
               - `CHORD_FEATURES`
               - `chordFeatures`
               - `chordIndexStatus`
+              - `chordLoops`
+              - `ChordLoopsAnswerSchema`
               - `chordOverlapsWindow`
               - `chordToken`
               - `chordTokenFromParts`
@@ -1425,8 +1449,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `deriveSection`
               - `ensureChordIndexEndpoint`
               - `expandChord`
+              - `FIND_LOOPS_MAX_EXCLUDED`
               - `FIND_LOOPS_MAX_LIMIT`
-              - `findLoopsEndpoint`
+              - `FIND_LOOPS_ROUND_MAX`
+              - `FindLoopsQuerySchema`
+              - `FindLoopsSchema`
               - `fnv1a32`
               - `INDEX_DERIVATION_VERSION`
               - `INDEX_LOAD_PHASES`
@@ -1440,8 +1467,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `LOOP_EXTRAS`
               - `LOOP_SHAPE_IDS`
               - `LOOP_SHAPES`
-              - `LoopCandidateSchema`
               - `LoopExtrasSchema`
+              - `LoopFindOptionsSchema`
               - `LoopWindowFieldsSchema`
               - `NEXT_CHORDS_MAX_LIMIT`
               - `NextChordCountSchema`
@@ -1488,14 +1515,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/chord/vocabulary`
           - Exemptions:
             - Exempts itself from:
+              - `no-db-backed-notify` — `server/internal/loops-resource.ts` (sanctioned)
               - `ids:pk-declared` — `server/internal/tables.ts` (debt)
               - `boundaries/no-platform-api` — `server/internal/backup-source.ts`, `server/internal/load-job.ts`, `server/internal/snapshot.ts` (debt)
+          - Test helpers:
+            - Core: `@plugins/apps/plugins/chord/plugins/song-index/core/testing`
+              - `LoopCandidateSchema`
         - **`trainer`** — The Chord trainer screen, the app's index pane (/chord): a real song's loop in an embedded YouTube player, an answer strip with one box per chord on the beat grid, one button per practised chord (keys 1–7), the check with its score, replays of the song over a box and of chords on Sonata's piano, the saved round, the player's playback reports, and the progress panel (today, all time, your chords).
           - Web:
             - Slots: `chord-trainer.actions`
             - Slot contributors: `chord-trainer.actions` ← `primitives.pane`
             - Contributes: `Pane.Register` "chord-trainer"
-            - Uses: 53 symbols — full list in [`plugins/apps/plugins/chord/plugins/trainer/REFERENCE.md`](../plugins/apps/plugins/chord/plugins/trainer/REFERENCE.md)
+            - Uses: 52 symbols — full list in [`plugins/apps/plugins/chord/plugins/trainer/REFERENCE.md`](../plugins/apps/plugins/chord/plugins/trainer/REFERENCE.md)
               - `integrations/youtube` ×5
               - `apps/chord/curriculum` ×4
               - `apps/chord/piano` ×4
@@ -1503,12 +1534,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/coords` ×3
               - `primitives/pane` ×3
               - `apps/chord/vocabulary` ×2
-              - `infra/endpoints` ×2
               - `music/chord-box` ×2
               - `primitives/css/spacing` ×2
               - `primitives/css/ui-kit` ×2
               - `primitives/latest-ref` ×2
               - `apps/chord/song-index.SongIndexGate`
+              - `infra/endpoints.useEndpointMutation`
               - `network/live.useLive`
               - `primitives/css/card.Card`
               - `primitives/css/center.Center`
@@ -3241,7 +3272,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/desktop/wallpaper/openverse`
               - `apps/desktop/wallpaper/upload`
               - `apps/desktop/windows`
-            - Endpoint callers: `windows`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/handle-image.ts`, `server/internal/store.ts` (debt)
           - Plugins:
@@ -3317,7 +3347,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Shortcuts.Shortcut` "floating.toggle-pin (ctrl+alt+p)"
               - `Shortcuts.Shortcut` "floating.window-to-next-desktop (ctrl+alt+shift+pagedown)"
               - `Shortcuts.Shortcut` "floating.window-to-prev-desktop (ctrl+alt+shift+pageup)"
-            - Uses: 43 symbols — full list in [`plugins/apps/plugins/desktop/plugins/windows/REFERENCE.md`](../plugins/apps/plugins/desktop/plugins/windows/REFERENCE.md)
+            - Uses: 44 symbols — full list in [`plugins/apps/plugins/desktop/plugins/windows/REFERENCE.md`](../plugins/apps/plugins/desktop/plugins/windows/REFERENCE.md)
               - `primitives/css/ui-kit` ×8
               - `apps-core/surface` ×4
               - `apps/desktop/shell` ×4
@@ -3329,6 +3359,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps-core/tabs.useTabs`
               - `apps-core.Apps`
               - `config_v2.useConfig`
+              - `infra/endpoints.useAssetSrc`
               - `primitives/app-shell.useSidebarDrawnOn`
               - `primitives/css/center.Center`
               - `primitives/css/clip.Clip`
@@ -4192,14 +4223,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `FieldPresentation.Register` "collection:file-explorer.entry"
               - `FileBrowserSlots.RowActions` "extract" → `ExtractAction`
               - `FileBrowserSlots.RowActions` "copy-path" → `CopyPathAction`
-            - Uses: 62 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md)
+            - Uses: 63 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md)
               - `primitives/data-view` ×9
               - `primitives/css/ui-kit` ×8
               - `primitives/file-viewer` ×5
+              - `network/live` ×4
               - `primitives/pane` ×4
-              - `infra/endpoints` ×3
               - `primitives/live-state` ×3
-              - `network/live` ×2
+              - `infra/endpoints` ×2
               - `primitives/path-bar` ×2
               - `primitives/persistent-draft` ×2
               - `primitives/bar.Bar`
@@ -4361,13 +4392,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ConfigV2.WebRegister` "config"
               - `row-actions` "remove-favorite" → `RemoveFavoriteAction`
               - `FileBrowserSlots.RowActions` "add-to-favorites" → `AddToFavoritesAction`
-            - Uses: 29 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/places/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/places/REFERENCE.md)
+            - Uses: 27 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/places/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/places/REFERENCE.md)
               - `primitives/data-view` ×6
               - `apps/file-explorer/browser` ×4
               - `apps/file-explorer/shell` ×3
               - `config_v2` ×3
-              - `infra/endpoints` ×2
               - `primitives/css/ui-kit` ×2
+              - `infra/endpoints.EndpointError`
               - `network/live.useLive`
               - `primitives/css/clip.Clip`
               - `primitives/css/scroll.Scroll`
@@ -4375,7 +4406,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/text.Text`
               - `primitives/icon-button.IconButton`
               - `primitives/live-state.foldResource`
-              - `shell/toast.showToast`
               - `ui/icons.Icon`
           - Server:
             - Contributes:
@@ -4653,7 +4683,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `keyboardPartyApp`
     - **`mail`** — Mail — a Gmail-class client.
       - Plugins:
-        - **`attachments`** — Reading-pane attachment UI: the useMailAttachment() lazy-download hook (deduped, cached) and the AttachmentChip component (filename + size + MIME icon; downloads on click and opens in a new tab). Lazy Gmail attachment blob download: fetches an attachment's bytes on demand (reading-pane chip click or inline cid: image), caches them via infra/attachments, stamps mail_attachments.stored_attachment_id, and serves the same-origin URL.
+        - **`attachments`** — Reading-pane attachment UI: the useMailAttachment() lazy-download hook (download → URL for a click, materialise → fire-and-forget for a reader of the live row; deduped, cached) and the AttachmentChip component (filename + size + MIME icon; downloads on click and opens in a new tab). Lazy Gmail attachment blob download: fetches an attachment's bytes on demand (reading-pane chip click or inline cid: image), caches them via infra/attachments, stamps mail_attachments.stored_attachment_id, and serves the same-origin URL.
           - Web:
             - Uses:
               - `infra/endpoints.useFetchEndpoint`
@@ -7232,18 +7262,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `IdKinds.Kind` "song|seed"
               - `FieldPresentation.Register` "entity:sonata_songs"
               - `Sonata.Home` "library" → `SongLibrary`
+              - `Sonata.Provider` → `BackgroundPlayProvider`
               - `sonataPlayerPane.Actions` "display-picker" → `DisplayPicker`
               - `sonataPlayerPane.Actions` "fullscreen" → `FullscreenButton`
               - `Library.SongActions` "play" → `PlaySongAction`
               - `Library.SongActions` "delete" → `DeleteSongAction`
               - `Pane.Register` "sonata-library"
               - `Pane.Register` "sonata-player"
-            - Uses: 89 symbols — full list in [`plugins/apps/plugins/sonata/plugins/library/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/library/REFERENCE.md)
+            - Uses: 93 symbols — full list in [`plugins/apps/plugins/sonata/plugins/library/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/library/REFERENCE.md)
               - `primitives/pane` ×13
               - `primitives/data-view` ×7
               - `apps/sonata/shell` ×6
               - `network/live` ×6
               - `primitives/css/ui-kit` ×6
+              - `primitives/live-state` ×6
               - `apps/sonata/player` ×5
               - `apps/sonata/document` ×4
               - `primitives/persistent-draft` ×3
@@ -7252,7 +7284,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/layer` ×2
               - `primitives/css/spacing` ×2
               - `primitives/latest-ref` ×2
-              - `primitives/live-state` ×2
               - `apps/sonata/primitives/glass.Glass`
               - `apps/sonata/session.useSession`
               - `fullscreen.FullscreenButton`
@@ -8831,7 +8862,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by: 32 plugins — full list in [`plugins/apps/plugins/sonata/plugins/session/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/session/REFERENCE.md)
               - `apps` ×32
-        - **`shell`** — App shell for Sonata. Registers the /sonata app entry (SonataLayout: one SonataPlayerScope around the pane router), derives the app's song — the one loaded in the player (useSonataApp) — and defines the app-level Sonata.{Overlay,TransportOverlay,TransportEdge,PitchAxis,Home,Effect,Hud,ViewOption,Section} slots, and the app's own dark-only theme (the immersive player's blue-black night, sky accent, the chord colours, Manrope), which the sonata app selects.
+        - **`shell`** — App shell for Sonata. Registers the /sonata app entry (SonataLayout: one SonataPlayerScope around the pane router), derives the app's song — the one loaded in the player (useSonataApp) — and defines the app-level Sonata.{Overlay,TransportOverlay,TransportEdge,PitchAxis,Home,Provider,Effect,Hud,ViewOption,Section} slots, and the app's own dark-only theme (the immersive player's blue-black night, sky accent, the chord colours, Manrope), which the sonata app selects.
           - Web:
             - Slots:
               - `Sonata.Overlay`
@@ -8839,12 +8870,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Sonata.TransportEdge`
               - `Sonata.PitchAxis`
               - `Sonata.Home`
+              - `Sonata.Provider`
               - `Sonata.Effect`
               - `Sonata.Hud`
               - `Sonata.ViewOption`
               - `Sonata.ViewSection`
               - `Sonata.Section`
-            - Slot contributors: 38 contributors — full list in [`plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md)
+            - Slot contributors: 39 contributors — full list in [`plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md)
               - `Sonata.Section` ×12
               - `Sonata.ViewOption` ×8
               - `Sonata.Effect` ×6
@@ -8853,6 +8885,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Sonata.Home` ← `apps.sonata.library`
               - `Sonata.Overlay` ← `apps.sonata.rich.chord-overlay`
               - `Sonata.PitchAxis` ← `apps.sonata.piano-keyboard`
+              - `Sonata.Provider` ← `apps.sonata.library`
               - `Sonata.TransportEdge` ← `apps.sonata.progress.loop`
               - `Sonata.ViewSection` ← `apps.sonata.piano-roll`
             - Contributes:
@@ -8869,6 +8902,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/detail-sections.DetailSection`
               - `primitives/slot-render.defineMountSlot`
               - `primitives/slot-render.defineRenderSlot`
+              - `primitives/slot-render.defineWrapperSlot`
               - `ui/theme-engine.ThemeEngine`
             - Exports (types):
               - `LaneInsets`
@@ -8940,8 +8974,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `Sonata.Effect` "chord-grid-persist" → `ChordGridPersistObserver`
                   - `FieldPresentation.Register` "exposure:sonata_songs_ext_chord_grid"
                   - `Library.Cover` "chord-grid"
-                - Uses: 25 symbols — full list in [`plugins/apps/plugins/sonata/plugins/sources/plugins/chord-grid/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/sources/plugins/chord-grid/REFERENCE.md)
+                - Uses: 27 symbols — full list in [`plugins/apps/plugins/sonata/plugins/sources/plugins/chord-grid/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/sources/plugins/chord-grid/REFERENCE.md)
                   - `apps/sonata/library` ×3
+                  - `network/live` ×3
                   - `primitives/persistent-draft` ×3
                   - `apps/sonata/document` ×2
                   - `apps/sonata/shell` ×2
@@ -8949,7 +8984,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/collapsible` ×2
                   - `primitives/css/ui-kit` ×2
                   - `infra/endpoints.useEndpointMutation`
-                  - `network/live.FieldPresentation`
                   - `primitives/css/badge.Badge`
                   - `primitives/css/cluster.Cluster`
                   - `primitives/css/fill.Fill`
@@ -8971,7 +9005,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values): `songChordGrid`
                 - Routes:
                   - `POST /api/sonata/songs/chord-grid`
-                  - `GET /api/sonata/songs/:id/chord-grid`
                   - `PUT /api/sonata/songs/:id/chord-grid`
               - Core:
                 - Uses:
@@ -8998,7 +9031,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/type-scale --font-size-caption`
                   - `ui/tokens/type-scale --font-weight-normal`
                   - `ui/tokens/type-scale --line-height-caption`
-            - **`midi`** — MIDI file input source for Sonata. Dropzone accepts .mid/.midi files; compile() parses them into a Score via @tonejs/midi. Persists per-song MIDI (attachment + track count) and contributes the library Import affordance, hydration, the song's falling-notes cover, and the cell of the Tracks field its extension exposes on every list of songs. Owns the sonata_songs_ext_midi side-table: per-song MIDI attachment + track count. Creates MIDI-backed songs, exposes its track count and file-missing flag to every list of songs (LiveColumns.Expose), serves each song's falling-notes cover (GET …/midi/cover/<version>.svg, drawn by covers), and seeds the bundled public-domain MIDI starters at boot.
+            - **`midi`** — MIDI file input source for Sonata. Dropzone accepts .mid/.midi files; compile() parses them into a Score via @tonejs/midi. Persists per-song MIDI (attachment + track count) and contributes the library Import affordance, hydration, the song's falling-notes cover, and the cell of the Tracks field its extension exposes on every list of songs. Owns the sonata_songs_ext_midi side-table: per-song MIDI attachment + track count. Creates MIDI-backed songs, serves each song's MIDI row as the lookup-only live collection sonata.midi (what the player hydrates the song from), exposes its track count and file-missing flag to every list of songs (LiveColumns.Expose), serves each song's falling-notes cover (GET …/midi/cover/<version>.svg, drawn by covers), and seeds the bundled public-domain MIDI starters at boot.
               - Web:
                 - Contributes:
                   - `SonataDocument.Source` "MIDI File"
@@ -9012,11 +9045,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/sonata/library.SourceCreateOption`
                   - `infra/attachments.uploadAttachment`
                   - `network/live.FieldPresentation`
+                  - `network/live.mapRow`
+                  - `network/live.useLive`
+                  - `network/live.useLiveRow`
                   - `primitives/css/line.Line`
                   - `primitives/css/rigid.rigidClass`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
                   - `primitives/css/ui-kit.cn`
+                  - `primitives/live-state.combineResources`
+                  - `primitives/live-state.foldResource`
+                  - `primitives/live-state.mapResource`
+                  - `primitives/live-state.ResourceResult`
                   - `ui/icons.Icon`
                 - Exports (types):
                   - `ImportedMidiSong`
@@ -9026,7 +9066,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `importMidiBytes`
                   - `MIDI_SOURCE_ID`
               - Server:
-                - Contributes: `live.columns.expose` "sonata_songs ← sonata_songs_ext_midi"
+                - Contributes:
+                  - `live.columns.expose` "sonata_songs ← sonata_songs_ext_midi"
+                  - `resource.declare` "sonata.midi:rows"
                 - Uses:
                   - `apps/sonata/covers.serveScoreCover`
                   - `apps/sonata/library._songs`
@@ -9041,6 +9083,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `infra/endpoints.rawEndpointHandler`
                   - `infra/entity-extensions.defineExtension`
                   - `network/live.LiveColumns`
+                  - `network/live.serveCollection`
                 - DB schema: `plugins/apps/plugins/sonata/plugins/sources/plugins/midi/server/internal/tables.ts`
                 - Entity extension of: `apps/sonata/library` (table `sonata_songs_ext_midi`)
                 - Exports (types): `ImportMidiSongInput`
@@ -9050,9 +9093,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `listFolderImportedSongs`
                   - `setSourceMissing`
                   - `songMidi`
+                - Resources: `sonata.midi:rows` (keyed, point)
                 - Routes:
                   - `POST /api/sonata/songs/midi`
-                  - `GET /api/sonata/songs/:id/midi`
                   - `GET /api/sonata/songs/:id/midi/cover/:file`
               - Core:
                 - Uses:
@@ -9199,7 +9242,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `ui/tokens/type-scale --line-height-caption`
                   - Exemptions:
                     - Exempts itself from: `boundaries/no-platform-api` — `server/internal/import-job.ts`, `server/internal/reconcile.ts`, `server/internal/folder-status.ts` (debt)
-            - **`musicxml`** — MusicXML file input source for Sonata: compile() parses a score-partwise document into a Score (parts and staves as tracks, ties merged, repeats unrolled, chord symbols, tempo, swing). Persists per-song MusicXML as an attachment and contributes the library Import affordance, hydration and the song's staff cover. Owns the sonata_songs_ext_musicxml side-table: per-song MusicXML attachment + content hash. Creates MusicXML-backed songs from an uploaded document (content-hash dedup) and fills an existing MusicXML song with a document (importMusicXmlForSong, for the transcription flow). Serves each song's staff cover (GET …/musicxml/cover/<version>.svg, drawn by covers).
+            - **`musicxml`** — MusicXML file input source for Sonata: compile() parses a score-partwise document into a Score (parts and staves as tracks, ties merged, repeats unrolled, chord symbols, tempo, swing). Persists per-song MusicXML as an attachment and contributes the library Import affordance, hydration and the song's staff cover. Owns the sonata_songs_ext_musicxml side-table: per-song MusicXML attachment + content hash. Creates MusicXML-backed songs from an uploaded document (content-hash dedup), serves each song's row as the lookup-only live collection sonata.musicxml (what the player hydrates the song from) and fills an existing MusicXML song with a document (importMusicXmlForSong, for the transcription flow). Serves each song's staff cover (GET …/musicxml/cover/<version>.svg, drawn by covers).
               - Web:
                 - Contributes:
                   - `SonataDocument.Source` "MusicXML"
@@ -9211,11 +9254,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/sonata/library.openSongImperative`
                   - `apps/sonata/library.SourceCreateOption`
                   - `infra/attachments.uploadAttachment`
+                  - `network/live.mapRow`
+                  - `network/live.useLive`
+                  - `network/live.useLiveRow`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
                   - `primitives/css/ui-kit.Button`
+                  - `primitives/live-state.combineResources`
+                  - `primitives/live-state.foldResource`
+                  - `primitives/live-state.mapResource`
+                  - `primitives/live-state.ResourceResult`
                   - `ui/icons.Icon`
               - Server:
+                - Contributes: `resource.declare` "sonata.musicxml:rows"
                 - Uses:
                   - `apps/sonata/covers.serveScoreCover`
                   - `apps/sonata/library._songs`
@@ -9229,6 +9280,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `infra/endpoints.implement`
                   - `infra/endpoints.rawEndpointHandler`
                   - `infra/entity-extensions.defineExtension`
+                  - `network/live.serveCollection`
                 - DB schema: `plugins/apps/plugins/sonata/plugins/sources/plugins/musicxml/server/internal/tables.ts`
                 - Entity extension of: `apps/sonata/library` (table `sonata_songs_ext_musicxml`)
                 - Exports (types): `ImportMusicXmlForSongInput`
@@ -9236,9 +9288,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `importMusicXmlForSong`
                   - `MUSICXML_SOURCE_ID`
                   - `MusicXmlParseError`
+                - Resources: `sonata.musicxml:rows` (keyed, point)
                 - Routes:
                   - `POST /api/sonata/songs/musicxml`
-                  - `GET /api/sonata/songs/:id/musicxml`
                   - `GET /api/sonata/songs/:id/musicxml/cover/:file`
               - Cross-plugin:
                 - Uses tokens:
@@ -9248,7 +9300,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Imported by: `apps/sonata/transcription`
               - Exemptions:
                 - Exempts itself from: `boundaries/no-platform-api` — `server/internal/import.ts` (debt)
-            - **`ultimate-guitar`** — Player-side Ultimate Guitar source for Sonata: paste a UG tab URL, fetch its raw tab, and compile() the chord/lyric markup into a playable Score (lyric-proportional, bar-quantized timing synthesis → chord annotations, sections, lyrics, synthesized 4/4 tempo). Chord notes are generated by the shell's reactive re-voicing step from the chord annotations. Persists the loaded tab to a per-song side-table, hydrates it on open, and contributes the library 'Import from Ultimate Guitar' URL-paste affordance plus an in-player editor section, and presents the tab's Key field (exposed on every list of songs). Ultimate Guitar source server: fetches raw tabs from UG's private mobile API (fails loudly), serves its catalog search as the live sonata.ultimate-guitar.search value, and owns the sonata_songs_ext_ultimate_guitar side-table — creating UG-backed songs from a fetched tab and persisting edits (syncing the parent song's title/duration), exposing the tab's key to every list of songs (LiveColumns.Expose), announcing sonata.ug.tabSaved when a song's sheet content changes.
+            - **`ultimate-guitar`** — Player-side Ultimate Guitar source for Sonata: paste a UG tab URL, fetch its raw tab, and compile() the chord/lyric markup into a playable Score (lyric-proportional, bar-quantized timing synthesis → chord annotations, sections, lyrics, synthesized 4/4 tempo). Chord notes are generated by the shell's reactive re-voicing step from the chord annotations. Persists the loaded tab to a per-song side-table, hydrates it on open, and contributes the library 'Import from Ultimate Guitar' URL-paste affordance plus an in-player editor section, and presents the tab's Key field (exposed on every list of songs). Ultimate Guitar source server: serves a tab URL's raw tab from UG's private mobile API as the live sonata.ultimate-guitar.tab value (a bad URL or a missing tab refused, any other breakage loud) and its catalog search as sonata.ultimate-guitar.search, and owns the sonata_songs_ext_ultimate_guitar side-table — serving each song's row as the lookup-only live collection sonata.ultimate-guitar.songs (what the player hydrates from), creating UG-backed songs from a fetched tab and persisting edits (syncing the parent song's title/duration), exposing the tab's key to every list of songs (LiveColumns.Expose), announcing sonata.ug.tabSaved when a song's sheet content changes.
               - Web:
                 - Contributes:
                   - `SonataDocument.Source` "Ultimate Guitar"
@@ -9257,14 +9309,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `Sonata.Effect` "ultimate-guitar-persist" → `UltimateGuitarPersistObserver`
                   - `FieldPresentation.Register` "exposure:sonata_songs_ext_ultimate_guitar"
                   - `Library.Cover` "ultimate-guitar"
-                - Uses: 41 symbols — full list in [`plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/REFERENCE.md)
+                - Uses: 46 symbols — full list in [`plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/REFERENCE.md)
                   - `primitives/css/ui-kit` ×6
-                  - `primitives/live-state` ×3
+                  - `network/live` ×5
+                  - `primitives/live-state` ×5
                   - `apps/sonata/document` ×2
                   - `apps/sonata/library` ×2
                   - `apps/sonata/shell` ×2
                   - `infra/endpoints` ×2
-                  - `network/live` ×2
                   - `primitives/css/layer` ×2
                   - `apps/sonata/primitives/source-line.SourceLine`
                   - `primitives/css/badge.Badge`
@@ -9290,17 +9342,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Contributes:
                   - `live.columns.expose` "sonata_songs ← sonata_songs_ext_ultimate_guitar"
                   - `resource.declare` "sonata.ultimate-guitar.search"
+                  - `resource.declare` "sonata.ultimate-guitar.songs:rows"
+                  - `resource.declare` "sonata.ultimate-guitar.tab"
                 - Uses:
                   - `apps/sonata/library._songs`
                   - `apps/sonata/library.createSongRow`
                   - `apps/sonata/library.updateSongMeta`
-                  - `infra/endpoints.HttpError`
                   - `infra/endpoints.implement`
                   - `infra/entity-extensions.defineExtension`
                   - `infra/events.defineTriggerEvent`
                   - `infra/safe-fetch.safeFetch`
                   - `infra/safe-fetch.SsrfError`
                   - `network/live.LiveColumns`
+                  - `network/live.serveCollection`
                   - `network/live.serveValue`
                 - DB schema:
                   - `plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/server/internal/tables-tab-saved.ts`
@@ -9312,11 +9366,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `songUltimateGuitar`
                   - `ugTabSaved`
                 - Register: `defineTriggerEvent('sonata.ug.tabSaved')`
-                - Resources: `sonata.ultimate-guitar.search` (invalidate, fixed, capped: UG_SEARCH_MAX_RESULTS)
+                - Resources:
+                  - `sonata.ultimate-guitar.search` (invalidate, fixed, capped: UG_SEARCH_MAX_RESULTS)
+                  - `sonata.ultimate-guitar.songs:rows` (keyed, point)
+                  - `sonata.ultimate-guitar.tab` (invalidate, fixed)
                 - Routes:
-                  - `POST /api/sonata/sources/ultimate-guitar/fetch`
                   - `POST /api/sonata/songs/ultimate-guitar`
-                  - `GET /api/sonata/songs/:id/ultimate-guitar`
                   - `PUT /api/sonata/songs/:id/ultimate-guitar`
               - Core:
                 - Uses:
@@ -9345,7 +9400,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ids:pk-declared` — `server/internal/tables-tab-saved.ts` (debt)
                   - `boundaries/no-platform-api` — `server/internal/ug-client.ts` (debt)
               - Plugins:
-                - **`alignment`** — UG sheet alignment in the player: a 'Recording' editor section showing the song's YouTube video (the recording plugin's RecordingVideo viewport with its volume, and its on/off RecordingSwitch in the header; the video itself is declared by a headless effect to the session's recording player, so it keeps playing — synced to the transport when the song plays on its alignment, a weak match included, else on its own — while the section is collapsed), an alignment status box (icon, status line, one control — Cancel, Re-align, Retry, Try another or Find a video — and while working a three-stage bar: find a video, analyse the audio, align the sheet), the video's line (title, match chip, channel, Replace) and an inline picker (a YouTube link, the candidate videos with thumbnail and outcome — click one to switch — and Search again); a headless report of a video the player refuses (SonataRecording.Refused → video-refused), and a headless effect writing the applied alignment record into the Ultimate Guitar raw so the Score plays on the recording's beats. In the library: the Video field's presentation (hidden by default). UG sheet alignment server: owns the sonata_songs_ext_ug_alignment side-table (video, who picked it, the resolver's candidates, status, record) served as a lookup-only live collection and its video id exposed to every list of songs (LiveColumns.Expose), the sonata.ug-alignment.align supervised job (choose a video with findSongVideos and walk the best candidates when none was set; beat features → alignChords → record, its live phase written on the row; a user's Cancel stops it as cancelled), the set-video / find-a-video / video-refused / re-align (also resuming a cancelled or failed walk) / cancel / get endpoints, and a trigger that starts choosing a video for a new UG song and re-aligns one whose sheet changes.
+                - **`alignment`** — UG sheet alignment in the player: a 'Recording' editor section showing the song's YouTube video (the recording plugin's RecordingVideo viewport with its volume, and its on/off RecordingSwitch in the header; the video itself is declared by a headless effect to the session's recording player, so it keeps playing — synced to the transport when the song plays on its alignment, a weak match included, else on its own — while the section is collapsed), an alignment status box (icon, status line, one control — Cancel, Re-align, Retry, Try another or Find a video — and while working a three-stage bar: find a video, analyse the audio, align the sheet), the video's line (title, match chip, channel, Replace) and an inline picker (a YouTube link, the candidate videos with thumbnail and outcome — click one to switch — and Search again); a headless report of a video the player refuses (SonataRecording.Refused → video-refused), and a headless effect writing the applied alignment record into the Ultimate Guitar raw so the Score plays on the recording's beats. In the library: the Video field's presentation (hidden by default). UG sheet alignment server: owns the sonata_songs_ext_ug_alignment side-table (video, who picked it, the resolver's candidates, status, record) served as a lookup-only live collection and its video id exposed to every list of songs (LiveColumns.Expose), the sonata.ug-alignment.align supervised job (choose a video with findSongVideos and walk the best candidates when none was set; beat features → alignChords → record, its live phase written on the row; a user's Cancel stops it as cancelled), the set-video / find-a-video / video-refused / re-align (also resuming a cancelled or failed walk) / cancel endpoints, and a trigger that starts choosing a video for a new UG song and re-aligns one whose sheet changes.
                   - Web:
                     - Contributes:
                       - `Sonata.Section` "Recording" → `RecordingSection`
@@ -9405,33 +9460,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `defineJob('sonata.ug-alignment.on-tab-saved')`
                     - Resources: `sonata-ug-alignment:rows` (keyed, point)
                     - Routes:
-                      - `GET /api/sonata/songs/:id/ultimate-guitar/alignment`
                       - `PUT /api/sonata/songs/:id/ultimate-guitar/alignment/video`
                       - `POST /api/sonata/songs/:id/ultimate-guitar/alignment/realign`
                       - `POST /api/sonata/songs/:id/ultimate-guitar/alignment/resolve`
                       - `POST /api/sonata/songs/:id/ultimate-guitar/alignment/video-refused`
                       - `POST /api/sonata/songs/:id/ultimate-guitar/alignment/cancel`
                   - Core:
-                    - Uses:
+                    - Uses: 21 symbols — full list in [`plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/alignment/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/alignment/REFERENCE.md)
+                      - `apps/sonata/sources/ultimate-guitar/tab` ×6
+                      - `apps/sonata/theory` ×5
+                      - `fields/text/config` ×2
                       - `apps/sonata/library.songsEntityRef`
-                      - `apps/sonata/sources/ultimate-guitar/tab.InferredSection`
-                      - `apps/sonata/sources/ultimate-guitar/tab.inferSections`
-                      - `apps/sonata/sources/ultimate-guitar/tab.ParsedLine`
-                      - `apps/sonata/sources/ultimate-guitar/tab.ParsedTab`
-                      - `apps/sonata/sources/ultimate-guitar/tab.parseUgContent`
-                      - `apps/sonata/sources/ultimate-guitar/tab.UgTabSchema`
-                      - `apps/sonata/theory.parseChordSymbol`
-                      - `apps/sonata/theory.parseKeySignature`
-                      - `apps/sonata/theory.qualityToIntervals`
-                      - `apps/sonata/theory.transposeKey`
-                      - `apps/sonata/theory.transposeScore`
-                      - `fields.nullable`
                       - `fields/bool/config.boolField`
                       - `fields/json/config.jsonField`
-                      - `fields/text/config.parsedTextField`
-                      - `fields/text/config.textField`
+                      - `fields.nullable`
                       - `infra/endpoints.defineEndpoint`
                       - `infra/entity-extensions.defineExtensionShape`
+                      - `network/live.liveCollection`
                       - `packages/list-bound.wholeList`
                     - Exports (types):
                       - `AlignmentCandidate`
@@ -9453,13 +9498,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `appliedAlignment`
                       - `cancelUgAlignment`
                       - `fitsSheet`
-                      - `getUgAlignment`
                       - `MAX_TRIES_PER_RUN`
                       - `realignUg`
                       - `refuseUgAlignmentVideo`
                       - `resolveUgAlignment`
                       - `setUgAlignmentVideo`
                       - `sheetHash`
+                      - `ugAlignmentRows`
                       - `UgAlignmentRowSchema`
                       - `ugAlignmentShape`
                       - `UgSourceRawSchema`
@@ -9670,6 +9715,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/agent-thread.AgentThread`
               - `infra/endpoints.useFetchEndpoint`
               - `network/live.FieldPresentation`
+              - `network/live.mapRow`
               - `network/live.useLiveRow`
               - `primitives/css/inline.Inline`
               - `primitives/css/line.Line`
@@ -9714,7 +9760,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Routes:
               - `POST /api/sonata/transcription/prepare`
               - `POST /api/sonata/songs/:id/transcription/retry`
-              - `GET /api/sonata/songs/:id/transcription`
           - Core:
             - Uses: `conversations/agent-thread.defineThreadResult`
             - Exports (types):
@@ -12956,9 +13001,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `buildRunArm`
           - `BuildStatusSchema`
-    - **`serve-composition`** — Serve capability for a composition: the live-serve toggle panel, the enable→build hook (a `build --composition <id>` of THIS checkout), the served-liveness read (the server-resolved namespace plus the composition.json marker, not the autoBuild intent), and the delete flow — which asks what the composition owns across every checkout, names it in a confirm dialog, and reclaims it before the manifest row goes. Consumed by Studio's Build & serve section and compositions list, and by the deploy pane's Test locally section. Serve-liveness read for a composition: WHERE this backend's checkout serves it (the server-resolved namespace + url) and whether anything is actually there (the composition.json marker), plus the reset-to-first-launch endpoint — wipes ONLY that namespace's DB + config back to what a serve build provisions on a fresh serve, then restarts its backend. Never touches the checkout's own app. Also answers what a composition owns across EVERY checkout that has served it (the marker scan behind the delete confirmation) and reclaims that whole set, per-namespace outcomes reported individually.
+    - **`serve-composition`** — Serve capability for a composition: the live-serve toggle panel, the enable→build hook (a `build --composition <id>` of THIS checkout), the served-liveness read (the server-resolved namespace plus the composition.json marker, not the autoBuild intent), and the delete flow — which asks what the composition owns across every checkout, names it in a confirm dialog, and reclaims it before the manifest row goes. Consumed by Studio's Build & serve section and compositions list, and by the deploy pane's Test locally section. Serve-liveness read for a composition: WHERE this backend's checkout serves it (the server-resolved namespace + url) and whether anything is actually there (the composition.json marker), plus the reset-to-first-launch endpoint — wipes ONLY that namespace's DB + config back to what a serve build provisions on a fresh serve, then restarts its backend. Never touches the checkout's own app. Also reclaims everything a composition owns across EVERY checkout that has served it (the set the machine half's build.serve-owned value names), per-namespace outcomes reported individually.
       - Server:
-        - Contributes: `resource.declare` "build.serve-status"
+        - Contributes:
+          - `resource.declare` "build.serve-owned"
+          - `resource.declare` "build.serve-status"
         - Uses:
           - `database/admin.databaseExists`
           - `database/admin.dropDatabase`
@@ -12975,18 +13022,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/worktree/reclaim.namespacesOwnedByComposition`
           - `infra/worktree/reclaim.OwnedNamespace`
           - `infra/worktree/reclaim.reclaimNamespace`
-        - Resources: `build.serve-status` (push, notified)
+        - Resources:
+          - `build.serve-owned` (invalidate, snapshot, whole: one per checkout that has served this composition — the delete confirmation names every one it will erase)
+          - `build.serve-status` (push, notified)
         - Routes:
           - `POST /api/build/serve/reset`
           - `GET /api/build/serve/status`
-          - `GET /api/build/serve/owned`
           - `POST /api/build/serve/reclaim`
       - Web:
         - Uses:
-          - `infra/endpoints.getEndpointErrorMessage`
           - `infra/endpoints.useEndpointMutation`
-          - `infra/endpoints.useFetchEndpoint`
           - `network/live.useLive`
+          - `network/live.useLiveReader`
           - `plugin-meta/composition.useManifestActions`
           - `plugin-meta/composition.useManifestItems`
           - `primitives/css/badge.Badge`
@@ -12998,6 +13045,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/toggle-chip.ToggleChip`
           - `primitives/css/ui-kit.Button`
           - `primitives/latest-ref.useLatestRef`
+          - `primitives/live-state.ResourceError`
           - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
           - `primitives/relative-time.RelativeTime`
           - `shell/toast.showToast`
@@ -18012,28 +18060,37 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/endpoints.getEndpointErrorMessage`
               - `infra/endpoints.useFetchEndpoint`
               - `infra/endpoints.useMachineAvailability`
+              - `network/live.useLiveReader`
               - `primitives/css/spacing.Stack`
               - `primitives/icon-button.IconButton`
               - `primitives/launch.useLaunchConversation`
+              - `primitives/live-state.ResourceError`
               - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
               - `shell/notifications.Toast`
               - `shell/notifications.useToast`
             - Exports (types): `RewindMode`
             - Exports (values): `useGoBackToMessage`
+          - Server:
+            - Contributes: `resource.declare` "conversations.rewind-preview"
+            - Resources: `conversations.rewind-preview` (invalidate, snapshot)
           - Machine:
-            - Uses: `infra/endpoints.implementMachine`
+            - Uses:
+              - `infra/endpoints.implementMachine`
+              - `network/live.serveValue`
             - Register: `defineJob('conversations.rewind-backup-sweep')`
-            - Routes:
-              - `POST /api/conversations/:id/rewind/preview`
-              - `POST /api/conversations/:id/rewind`
+            - Routes: `POST /api/conversations/:id/rewind`
           - Core:
             - Uses:
               - `conversations.RewindOutcomeSchema`
               - `conversations.RewindPreviewSchema`
+              - `conversations.RewindRefusalSchema`
               - `infra/endpoints.defineEndpoint`
+              - `network/live.liveValue`
+            - Exports (types): `RewindCutPreview`
             - Exports (values):
-              - `previewRewindEndpoint`
               - `rewindConversationEndpoint`
+              - `RewindCutPreviewSchema`
+              - `rewindPreview`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --muted-foreground`
@@ -18042,6 +18099,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-body`
             - Imported by: `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
+          - Exemptions:
+            - Exempts itself from: `no-db-backed-notify` — `machine/internal/rewind-preview-served.ts` (sanctioned)
         - **`running-agents`** — The sub-agents working for this conversation, in a card above the prompt box: a summary line (how many are working, how long the longest has been going) that folds the list, and one row per agent — what it was asked to do, what it is, what it last did and how many tokens it has produced. A finished agent lingers a few seconds showing 'done m:ss'; the card is not there at all when nothing is running. The transcript's stats strip carries an agents reading (how many agents, and the output tokens the conversation and they produced in all) that toggles the card to list every agent, finished or not
           - Web:
             - Contributes:
@@ -21252,7 +21311,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Routes:
               - `POST /api/debug/live-state-emit/start`
               - `POST /api/debug/live-state-emit/stop`
-              - `GET /api/debug/live-state-emit/status`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --muted-foreground`
@@ -26336,15 +26394,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - **`no-db-backed-notify`**
               - Exemptions:
                 - Exempted by:
+                  - `apps/chord/curriculum` (0 debt)
+                  - `apps/chord/song-index` (0 debt)
                   - `apps/mail/sync` (0 debt)
                   - `apps/studio/contributions/tables/columns` (0 debt)
                   - `apps/studio/contributions/tables/foreign-keys` (0 debt)
                   - `apps/studio/contributions/tables/indexes` (0 debt)
                   - `apps/studio/contributions/tables/row-count` (0 debt)
                   - `apps/studio/contributions/tables/sample-rows` (0 debt)
+                  - `conversations/conversation-view/rewind` (0 debt)
                   - `debug/slow-ops/cluster` (0 debt)
                   - `debug/timeline` (0 debt)
                   - `debug/worktree-cleanup` (0 debt)
+                  - `infra/attachments` (0 debt)
                   - `network/live` (0 debt)
             - **`no-disabled-flag`**
             - **`no-gitlinks`**
@@ -26354,7 +26416,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - **`no-plugin-workspace-deps`**
             - **`no-raw-event-source`**
               - Exemptions:
-                - Exempted by: `primitives/networking` (0 debt)
+                - Exempted by: `primitives/networking/request-guard` (0 debt)
             - **`no-raw-sse`**
               - Exemptions:
                 - Exempts itself from: `no-raw-sse` — `check/index.ts` (sanctioned)
@@ -26367,6 +26429,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `conversations/conversation-view/jsonl-viewer` (0 debt)
                   - `network/live` (0 debt)
                   - `primitives/networking` (0 debt)
+                  - `primitives/networking/request-guard` (0 debt)
             - **`no-reexport-default`**
             - **`no-relative-server-imports`**
             - **`no-use-resource-cast`**
@@ -26514,7 +26577,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `collectedDirNamedCompositionRegistryPath`
               - `collectedDirRegistryPath`
               - `collectEntriesWithDeps`
-              - `collectExemptableRuleIds`
+              - `collectExemptRuleIds`
               - `collectFieldEagerBarrels`
               - `collectIconManifest`
               - `collectImportGraph`
@@ -27169,6 +27232,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/live-state.NotificationsProvider`
           - `primitives/networking.TransportProvider`
           - `primitives/networking/page-transport.pageTransport`
+          - `primitives/networking/request-guard.allowAssetRoute`
+          - `primitives/networking/request-guard.installRequestGuard`
           - `primitives/perfs/boot-trace.markBootInstant`
           - `primitives/perfs/boot-trace.markBootInstantAtNextCommit`
           - `primitives/perfs/boot-trace.startBootSpan`
@@ -27192,6 +27257,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-boundaries` — `web/__tests__/plugin-render.test.tsx` (sanctioned)
           - `boundaries/no-platform-api` — `core/vite-contributions.ts` (debt)
           - `networking/no-page-transport` — `web/App.tsx` (sanctioned)
+          - `networking/no-request-guard-capability` — `web/install-request-guard.ts` (sanctioned)
       - Core:
         - Exports (types):
           - `BabelPluginItem`
@@ -27797,6 +27863,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `AssetMirrorPrewarm`
           - `CollectedEntry`
         - Exports (values):
+          - `ASSET_MIRROR_PREFIX`
           - `assetMirrorBase`
           - `assetMirrorPrewarmCollectedDir`
           - `assetMirrorUrl`
@@ -27822,6 +27889,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Server:
         - Contributes:
           - `resource.declare` "attachments.by-owner"
+          - `resource.declare` "attachments.bytes"
           - `resource.declare` "attachments.file"
           - `host-service:attachments.blobs` "attachments.blobs"
         - Uses:
@@ -27848,6 +27916,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Register: `defineJob('attachments.orphan-sweep')`
         - Resources:
           - `attachments.by-owner` (push, whole: one owner's attachments — the files a person attached to one task or block, a handful, never a growing log)
+          - `attachments.bytes` (invalidate, immutable)
           - `attachments.file` (push)
         - Routes:
           - `POST /api/attachments`
@@ -27865,6 +27934,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Attachment`
           - `AttachmentFile`
         - Exports (values):
+          - `attachmentBytes`
           - `attachmentFile`
           - `AttachmentFileSchema`
           - `attachmentsByOwner`
@@ -27893,6 +27963,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/tasks-core`
       - Exemptions:
         - Exempts itself from:
+          - `no-db-backed-notify` — `server/internal/bytes.ts` (sanctioned)
           - `paths:no-hardcoded-paths` — `server/index.ts` (sanctioned)
           - `ids:pk-declared` — `server/internal/tables.ts` (debt)
       - Web:
@@ -28111,7 +28182,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Web:
         - Contributes: `Core.Boot`
         - Uses:
-          - `infra/endpoints.fetchEndpointOver`
           - `primitives/live-state.hydrateResource`
           - `primitives/live-state.resourceDescriptorByKey`
           - `primitives/networking/page-transport.pageTransport`
@@ -28138,7 +28208,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `read-set`
           - `runtime`
       - Exemptions:
-        - Exempts itself from: `networking/no-page-transport` — `web/internal/boot.ts` (sanctioned)
+        - Exempts itself from:
+          - `networking/no-page-transport` — `web/internal/boot.ts` (sanctioned)
+          - `endpoints/no-raw-web-fetch` — `web/internal/boot.ts` (sanctioned)
     - **`claude-cli`** — Consumer half of the claude-cli call log: useClaudeCliCalls({correlationId, occurredAt}) answers 'which model calls produced this record?' as a calls / none / not-retained result, <ClaudeCliCallDetail> is the one rendering of a recorded call (header, meta grid, context with id chips, output or error, prompt, system — each copyable), and formatCallDuration is how a call's duration reads. One-shot Claude CLI helper (`claude --print`) for short, latency-tolerant generations, and runClaudeReadOnly — a print that may only Read / Grep / Glob one directory and answers with a zod-schema'd structured value. Reuses the user's local Claude CLI auth — no API key plumbing.
       - Server:
         - Contributes:
@@ -28795,7 +28867,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `utcDay`
           - Cli:
             - Exports (values): `upgradeThisWorktree`
-    - **`endpoints`** — Typed endpoint contract primitive. useFetchEndpoint (a FetchEndpoint bound to the subtree's transport; fetchEndpointOver(t) for sanctioned page-level code) and useEndpointMutation consume endpoint definitions on the client — writes, and requests that are not reads a surface renders (every server read is a live resource, read with useLive); useAssetSrc turns an AssetPath (a GET endpoint's asset) into what an element loads over the subtree's transport (the path, a blob URL, or unavailable); useAssetUrl / assetUrlOver hand a sink that loads by URL on its own (a library's fetch, an HTML string, an iframe) an AssetPath's or AssetBase's URL, or unavailable. Typed endpoint contract primitive. defineEndpoint declares the contract; implement() creates the server handler; callEndpoint() calls one from off the page (a backend, the CLI) through its contract; useFetchEndpoint / useEndpointMutation consume it on the client.
+    - **`endpoints`** — Typed endpoint contract primitive. useFetchEndpoint (a FetchEndpoint bound to the subtree's transport; fetchEndpointOver(t) for sanctioned page-level code) and useEndpointMutation send writes only — a GET def is a tsc error (the derived read marker; & WriteEndpoint) and throws if cast through (every server read is a live resource, read with useLive, or useLiveReader in an event handler); useAssetSrc turns an AssetPath (a GET endpoint's asset) into what an element loads over the subtree's transport (the path, a blob URL, or unavailable); useAssetUrl / assetUrlOver hand a sink that loads by URL on its own (a library's fetch, an HTML string, an iframe) an AssetPath's or AssetBase's URL, or unavailable. Typed endpoint contract primitive. defineEndpoint declares the contract; implement() creates the server handler; callEndpoint() calls one from off the page (a backend, the CLI) through its contract; useFetchEndpoint / useEndpointMutation consume it on the client.
       - Web:
         - Uses:
           - `primitives/networking.fetchWithRetry`
@@ -28804,6 +28876,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/networking.transportScoped`
           - `primitives/networking.useTransport`
           - `primitives/networking.useTransportScoped`
+          - `primitives/networking/request-guard.allowAssetRoute`
         - Exports (types):
           - `AssetSrc`
           - `AssetUrl`
@@ -28846,6 +28919,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `MachineFeature`
           - `MachineResult`
           - `MachineUnavailable`
+          - `ReadMarker`
+          - `ReadOf`
+          - `WriteEndpoint`
         - Exports (values):
           - `agentWriteRefusedMessage`
           - `ASSET_PATH`
@@ -28874,10 +28950,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unsupportedEndpointResponse`
       - Cross-plugin:
         - Imported by: 228 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
-          - `apps` ×62
+          - `apps` ×63
           - `conversations` ×32
-          - `page` ×21
           - `infra` ×20
+          - `page` ×20
           - `tasks` ×19
           - `debug` ×16
           - `primitives` ×15
@@ -28901,7 +28977,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `search/engine`
           - `shell/notifications`
       - Exemptions:
-        - Exempts itself from: `endpoints/no-raw-web-fetch` — `web` (sanctioned)
+        - Exempts itself from:
+          - `endpoints/no-raw-web-fetch` — `web` (sanctioned)
+          - `networking/no-request-guard-capability` — `web/internal/asset-url.ts`, `web/internal/asset-src.ts` (sanctioned)
         - Exempted by:
           - `apps/pages/page-tree` (0 debt)
           - `apps/sonata/playback-history` (0 debt)
@@ -28909,12 +28987,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/sonata/rich/swing` (0 debt)
           - `apps/sonata/transpose` (0 debt)
           - `conversations/compaction-context` (0 debt)
+          - `infra/boot-snapshot` (0 debt)
           - `infra/endpoints` (0 debt)
+          - `infra/health` (0 debt)
           - `infra/mcp/browser` (0 debt)
           - `infra/ndjson-stream` (0 debt)
           - `primitives/live-state` (0 debt)
           - `primitives/networking` (0 debt)
-          - `primitives/networking/page-transport` (0 debt)
           - `shell/notifications` (0 debt)
           - `tasks/task-graph` (0 debt)
       - Server:
@@ -29511,7 +29590,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Core.Root` → `WedgeWatchdog`
           - `HealthReport.Row` "Connection"
         - Uses:
-          - `infra/endpoints.fetchEndpointOver`
           - `primitives/live-state.getNotificationsClient`
           - `primitives/live-state.liveStateSocketKind`
           - `primitives/live-state.LiveStateSocketKind`
@@ -29545,6 +29623,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from:
           - `networking/no-page-transport` — `web/internal/client.ts` (sanctioned)
           - `networking/no-page-transport` — `web/components/wedge-watchdog.tsx` (sanctioned)
+          - `endpoints/no-raw-web-fetch` — `web/internal/client.ts` (sanctioned)
     - **`host`** — How much of the shared host machine may I take right now, and is the box still healthy? — the host-wide admission pools (host-admission), the heavy git/filesystem read budget declared through them (host-read-pool), the box's load snapshot (contention), and the 'the box is in trouble' latch plus the shed engine that rides it (duress).
       - Plugins:
         - **`contention`** — Cached, cluster-wide system-contention snapshot (OS load average + Postgres backend counts) stamped onto slow ops.
@@ -29777,9 +29856,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Server:
             - Contributes: `host-service:host-account.source` "host-account.source"
             - Uses: `infra/host-account.HostAccountSource`
-    - **`host-fs`** — The host-filesystem readers other plugins build on: resolveHostPath, openHostFile (a disk file or an archive member), serveHostPath (the one byte server), readHostPathText / decodeTextBytes (the size + binary gate) and the archive-format registry (defineArchiveFormat). Its routes — stat / complete / raw reads of any path the user account can read, POST open / extract / move — are the machine half's, each needsMachine.
+    - **`host-fs`** — The host-filesystem readers other plugins build on: resolveHostPath, openHostFile (a disk file or an archive member), serveHostPath (the one byte server), readHostPathText / decodeTextBytes (the size + binary gate) and the archive-format registry (defineArchiveFormat). Its live reads (list, peek, stat, complete, text, volume, version) and routes — raw bytes of any path the user account can read, POST open / extract / move — are the machine half's, each needsMachine.
       - Server:
         - Contributes:
+          - `resource.declare` "host-fs.complete"
           - `resource.declare` "host-fs.list"
           - `resource.declare` "host-fs.list:meta"
           - `resource.declare` "host-fs.peek"
@@ -29807,6 +29887,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `resolveHostPath`
           - `serveHostPath`
         - Resources:
+          - `host-fs.complete` (push, notified, capped: HOST_FS_COMPLETE_LIMIT)
           - `host-fs.list` (keyed, window, notified)
           - `host-fs.list:meta` (push, notified)
           - `host-fs.peek` (push, notified)
@@ -29829,8 +29910,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `watchHostDir`
           - `watchHostPath`
         - Routes:
-          - `GET /api/host-fs/stat`
-          - `GET /api/host-fs/complete`
           - `GET /api/host-fs/raw`
           - `POST /api/host-fs/open`
           - `POST /api/host-fs/extract`
@@ -29843,10 +29922,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/endpoints.blob`
           - `infra/endpoints.defineEndpoint`
           - `network/live.liveValue`
+          - `packages/list-bound.cappedList`
         - Exports (types):
+          - `DraggedHostPath`
           - `FileVersion`
           - `HostFsArchiveReason`
           - `HostFsCompleteResult`
+          - `HostFsCompletions`
           - `HostFsDirPeek`
           - `HostFsEntry`
           - `HostFsEntryKind`
@@ -29878,7 +29960,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HOST_PATHS_MIME`
           - `hostFileUrl`
           - `hostFsArchiveReasonMessage`
-          - `hostFsComplete`
+          - `hostFsCompletions`
           - `hostFsDirPeek`
           - `hostFsExtract`
           - `hostFsFileText`
@@ -29888,7 +29970,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `hostFsOpen`
           - `hostFsPathStat`
           - `hostFsRaw`
-          - `hostFsStat`
           - `hostFsVersion`
           - `hostFsVolumeInfo`
           - `isBrowsable`
@@ -30749,7 +30830,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `namespace:no-hand-built-url` — `core/namespace.ts`, `check/index.ts` (sanctioned)
           - `namespace:legacy-host` — `core/namespace.test.ts` (sanctioned)
           - `product-name:legacy-id` — `core/namespace.test.ts` (sanctioned)
-    - **`ndjson-stream`** — Client NDJSON stream reader: an async generator yielding one parsed JSON frame per line from a streamed endpoint over the caller's transport (readNdjson(transport, route, url, init)), guarding res.ok and reporting via EndpointError. NDJSON (application/x-ndjson) streaming Response builder: wrap a frame-emitting producer into a chunked stream that survives Bun's idle timeout, for a mutation whose steps the caller shows as they run (a progressive read is a notified live value instead).
+    - **`ndjson-stream`** — Client NDJSON stream reader: an async generator yielding one parsed JSON frame per line from a streamed endpoint over the caller's transport (readNdjson(transport, endpoint, params, opts) — a write endpoint's contract builds the request; a GET def is a tsc error), guarding res.ok and reporting via EndpointError. NDJSON (application/x-ndjson) streaming Response builder: wrap a frame-emitting producer into a chunked stream that survives Bun's idle timeout, for a mutation whose steps the caller shows as they run (a progressive read is a notified live value instead).
       - Web:
         - Uses:
           - `infra/endpoints.EndpointError`
@@ -31247,9 +31328,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `assertResolvesPublic`
           - `buildPinnedDial`
           - `isPrivateIp`
+          - `isUnreachableError`
           - `parsePublicUrl`
           - `safeFetch`
           - `SsrfError`
+          - `TooManyRedirectsError`
       - Plugins:
         - **`browser-fetch`** — Browser-backed page read for URLs a plain HTTP client cannot read: launch-per-call headless Chromium pinned to one validated IP via --host-resolver-rules (MAP <host> <ip>,MAP * ~NOTFOUND), every intercepted request re-guarded with parsePublicUrl, cross-origin subresources proxied through safeFetch, bounded by a size-2 host pool. Throws on timeout rather than returning a partially-rendered page.
           - Server:
@@ -32018,6 +32101,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `infra/endpoints.defineEndpoint`
           - `integrations/youtube.youtubeVideoId`
+          - `packages/list-bound.wholeList`
         - Exports (types):
           - `HookpadChord`
           - `HookpadChordInput`
@@ -32723,7 +32807,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`network`** — Umbrella for how data moves between the server and the browser: the live-resource API (declare a collection, query it, serve it) and, later, the live-state primitives it is built on.
   - Plugins:
-    - **`live`** — Unified live-resource API, read half: useLive (a collection's window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, grown by its limit, a collection declared `all` whole — every row in its declared order, or a select-scoped slice of it — or an explicit id set), useLiveRow (one row: loading, failed, found, or determinately absent), with mapRow reducing a row read to a ResourceResult of what the row means; useLive also reads a typed-query liveValue (its question encoded to one canonical tuple); every collection's window — and a key-range-paged liveValue — is read as key-range pages — bounded windows tiling the order by server-minted row-key cuts, split when full and merged when small — given a measured viewport (useLive(c, q, { viewport })) with no depth limit, the pages near it live and the rest held stale up to a per-reader budget, past which they are height-keeping placeholders drawn before and after the rows, and without one every page live, capped at maxLimit rows; FieldPresentation.Register presents an owner's fields — an entity's own, an extension's exposed ones, a union arm's, a collection's own — with their cells, widths and live options in every list that reaches the owner, read by useFieldPresentations. Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven — or from an external source with notify(); the serve call decides only the freshness, never the shape: every list's bound is the liveValue's own (its schema's list-bound markers), so a serve call takes no `unbounded`; pushed by default, or refetched over HTTP when the liveValue declares `load: "on-demand"`; a typed-query value's hooks and notify take the decoded question, and a key-range-paged one — external only — is loaded one key range at a time, each answer checked against its range and minted its `$key`, notify(q) reaching every subscribed page and the per-question meta sibling, and sliceRange answers a range for a list held in memory) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value — only `:rows` for a lookup-only collection, and the whole ordered set (`key`, a routed scopedMembership alias compiled by compileAllCollection) + `:rows` for one declared `all` — encoding a column type's declared wire form in JS per row; a collection reaching an entity compiles at boot, folding every LiveColumns.Expose contribution of an extension exposing fields of it — and a `columnScope` collection every LiveColumns.Scoped set — into its rows' `$columns`; routed through the change feed, or — with `changes` — the same compiled SQL served off it, for a table its owner opted out) — or, `source: "external"`, from a source outside Postgres that answers window / rows / groups / count / all by hand (core's serveCollectionOn: every answer checked against the row schema, every window row's `$key` minted, notify() re-reading the subscribed tuples); every filter compiles through the filter language's filterSql. Unified live-resource API, central half: serveValue for a liveValue declared `origin: "central"` — the external arm only (central has no change feed), registered through the central plugin's `resources: [served]`; its options compile through the same code as the worktree serveValue.
+    - **`live`** — Unified live-resource API, read half: useLive (a collection's window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, grown by its limit, a collection declared `all` whole — every row in its declared order, or a select-scoped slice of it — or an explicit id set), useLiveRow (one row: loading, failed, found, or determinately absent), useLiveReader (the one read function beside useLive: one answer to one tuple of a liveValue, for a question an event asks and its own await consumes — its pushed value when observed, else one deduped HTTP read never written to the cache; refused / unavailable typed by the declaration), with mapRow reducing a row read to a ResourceResult of what the row means; useLive also reads a typed-query liveValue (its question encoded to one canonical tuple); every collection's window — and a key-range-paged liveValue — is read as key-range pages — bounded windows tiling the order by server-minted row-key cuts, split when full and merged when small — given a measured viewport (useLive(c, q, { viewport })) with no depth limit, the pages near it live and the rest held stale up to a per-reader budget, past which they are height-keeping placeholders drawn before and after the rows, and without one every page live, capped at maxLimit rows; FieldPresentation.Register presents an owner's fields — an entity's own, an extension's exposed ones, a union arm's, a collection's own — with their cells, widths and live options in every list that reaches the owner, read by useFieldPresentations. Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven — or from an external source with notify(); the serve call decides only the freshness, never the shape: every list's bound is the liveValue's own (its schema's list-bound markers), so a serve call takes no `unbounded`; pushed by default, or refetched over HTTP when the liveValue declares `load: "on-demand"`; a typed-query value's hooks and notify take the decoded question, and a key-range-paged one — external only — is loaded one key range at a time, each answer checked against its range and minted its `$key`, notify(q) reaching every subscribed page and the per-question meta sibling, and sliceRange answers a range for a list held in memory) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value — only `:rows` for a lookup-only collection, and the whole ordered set (`key`, a routed scopedMembership alias compiled by compileAllCollection) + `:rows` for one declared `all` — encoding a column type's declared wire form in JS per row; a collection reaching an entity compiles at boot, folding every LiveColumns.Expose contribution of an extension exposing fields of it — and a `columnScope` collection every LiveColumns.Scoped set — into its rows' `$columns`; routed through the change feed, or — with `changes` — the same compiled SQL served off it, for a table its owner opted out) — or, `source: "external"`, from a source outside Postgres that answers window / rows / groups / count / all by hand (core's serveCollectionOn: every answer checked against the row schema, every window row's `$key` minted, notify() re-reading the subscribed tuples); every filter compiles through the filter language's filterSql. Unified live-resource API, central half: serveValue for a liveValue declared `origin: "central"` — the external arm only (central has no change feed), registered through the central plugin's `resources: [served]`; its options compile through the same code as the worktree serveValue.
       - Web:
         - Slots:
           - `FieldPresentation.Register`
@@ -32739,6 +32823,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/live-state.ResourceResult`
           - `primitives/live-state.ResourceTupleResult`
           - `primitives/live-state.ResourceUnavailable`
+          - `primitives/live-state.useNotificationsClient`
           - `primitives/live-state.useResource`
           - `primitives/live-state.useResources`
           - `primitives/log-channels.clientLog`
@@ -32753,6 +32838,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `FieldPresentationSpec`
           - `FieldsCollection`
           - `LiveAllSelect`
+          - `LiveAnswer`
           - `LiveFieldOption`
           - `LiveFieldOptionsRead`
           - `LiveIdsQuery`
@@ -32761,6 +32847,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LivePagePlaceholder`
           - `LivePagesQuery`
           - `LivePagesResult`
+          - `LiveReader`
           - `LiveRowResult`
           - `LiveSnapshotResult`
           - `LiveUnavailable`
@@ -32783,6 +32870,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useClientFieldsResolvers`
           - `useFieldPresentations`
           - `useLive`
+          - `useLiveReader`
           - `useLiveRow`
       - Server:
         - Uses: 33 symbols — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
@@ -33002,13 +33090,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveCollectionOn`
           - `serveValueOn`
       - Cross-plugin:
-        - Imported by: 298 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
-          - `apps` ×79
-          - `conversations` ×50
+        - Imported by: 301 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+          - `apps` ×80
+          - `conversations` ×51
           - `debug` ×32
           - `tasks` ×28
           - `infra` ×18
-          - `page` ×13
+          - `page` ×14
           - `active-data` ×12
           - `build` ×10
           - `primitives` ×10
@@ -33235,17 +33323,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `createKeyedMutex`
     - **`list-bound`** — A list's bound, declared in its zod schema: cappedList / cappedRecord (a checked max) and wholeList / wholeRecord (loaded whole, with a written reason), tagged in _def so the tag survives zod's clones; listShapeOf walks every array, record, map and set a schema reaches and reports each one's bound and the bare ones, listBoundsOf refuses a bare one.
       - Cross-plugin:
-        - Imported by: 92 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
-          - `apps` ×16
+        - Imported by: 95 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
+          - `apps` ×17
+          - `infra` ×14
           - `conversations` ×13
-          - `infra` ×13
           - `debug` ×12
           - `primitives` ×5
           - `build` ×4
           - `tasks` ×4
           - `fields` ×3
+          - `integrations` ×3
           - `page` ×3
-          - `integrations` ×2
           - `plugin-meta` ×2
           - `ui` ×2
           - `active-data`
@@ -34053,7 +34141,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps/pages/history`
           - `page/markdown-apply`
-    - **`bookmark`** — Bookmark block type: a link pasted into an empty block can become one (via the pasted-link menu), scraping OG metadata server-side to render a rich preview card (title, description, site, favicon, og:image cached same-origin). Registers the bookmark block's `data` schema at the server write boundary. Its link scraping (the bookmark.link-preview value, /api/link-meta) is the machine half's.
+    - **`bookmark`** — Bookmark block type: a link pasted into an empty block can become one (via the pasted-link menu), scraping OG metadata server-side to render a rich preview card (title, description, site, favicon, og:image cached same-origin). Registers the bookmark block's `data` schema at the server write boundary. Its link scraping (the bookmark.link-preview and bookmark.link-meta values) is the machine half's.
       - Web:
         - Contributes: `Editor.Block` "bookmark" → `BookmarkBlock`
         - Uses: 25 symbols — full list in [`plugins/page/plugins/bookmark/REFERENCE.md`](../plugins/page/plugins/bookmark/REFERENCE.md)
@@ -34082,17 +34170,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Server:
         - Contributes:
           - `page.block-data` "bookmark"
+          - `resource.declare` "bookmark.link-meta"
           - `resource.declare` "bookmark.link-preview"
         - Uses: `page/editor.Editor`
-        - Resources: `bookmark.link-preview` (invalidate, fixed)
+        - Resources:
+          - `bookmark.link-meta` (invalidate, fixed)
+          - `bookmark.link-preview` (invalidate, fixed)
       - Machine:
-        - Uses:
-          - `infra/endpoints.implementMachine`
-          - `network/live.serveValue`
-        - Routes: `GET /api/link-meta`
+        - Uses: `network/live.serveValue`
       - Core:
         - Uses:
-          - `infra/endpoints.defineEndpoint`
           - `network/live.liveValue`
           - `page/editor.defineBlock`
           - `ui/icons.symbol`
@@ -34102,7 +34189,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `BOOKMARK_TYPE`
           - `bookmarkBlock`
-          - `linkMetaEndpoint`
+          - `linkMeta`
           - `LinkMetaSchema`
           - `linkPreview`
           - `LinkPreviewSchema`
@@ -36291,15 +36378,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`url-paste`** — Paste a URL into any text block (or drop one into an empty block) and it becomes a link at once, with a menu beside it: keep it as a link, mention it (the page's title becomes the link text), or — when the link is all the block holds — turn the block into a bookmark or embed.
       - Web:
         - Uses:
-          - `infra/endpoints.EndpointError`
-          - `infra/endpoints.getEndpointErrorMessage`
-          - `infra/endpoints.useFetchEndpoint`
+          - `network/live.useLiveReader`
           - `page/editor.BlockTextPluginProps`
           - `page/editor.readTransferText`
           - `page/editor.registerBlockTextExtension`
           - `page/editor.useBlockEditor`
           - `primitives/css/row.Row`
           - `primitives/latest-ref.useEventCallback`
+          - `primitives/live-state.ResourceError`
           - `primitives/text-editor/caret-trigger.CaretTriggerMenu`
           - `primitives/text-editor/caret-trigger.useCaretMenu`
           - `primitives/text-editor/caret-trigger.useForcedCaretQuery`
@@ -42471,7 +42557,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ResourceContractMismatch`
           - `ResourceDerivation`
           - `ResourceDescriptor`
-          - `ResourceErrorInfo`
           - `ResourceErrorInlineProps`
           - `ResourceErrorKind`
           - `ResourceKey`
@@ -42530,17 +42615,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/color-palette --destructive`
           - `ui/tokens/shadow --shadow`
-        - Imported by: 288 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
-          - `apps` ×77
-          - `conversations` ×49
+        - Imported by: 293 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
+          - `apps` ×79
+          - `conversations` ×50
           - `debug` ×29
           - `ui` ×25
           - `tasks` ×23
-          - `page` ×15
+          - `page` ×16
           - `primitives` ×12
           - `infra` ×8
           - `active-data` ×7
-          - `build` ×6
+          - `build` ×7
           - `plugin-meta` ×5
           - `auth` ×4
           - `integrations` ×3
@@ -42600,7 +42685,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `noteResourceWatermark` — Adopt a frame's commit watermark for (key, params), monotonically: an equal or older watermark than the stored one is a no-op (compared causally via `compareTxWatermark`, never as strings).
           - `NotificationsClient`
           - `resetResourceContractMismatches` — Forget every mismatch — tests only (via `web/testing`).
-          - Types: `LiveStateHarness`, `LiveStateHarnessOptions`
+          - Types: `LiveStateHarness`, `LiveStateHarnessOptions`, `ResourceErrorInfo`
     - **`loading`** — Single entry point for the loading state: text / spinner / skeleton-rows / skeleton-cards / shimmer-block variants composing Placeholder and Spinner, with a built-in CSS delay-before-show (~120ms) so fast loads never flash.
       - Web:
         - Uses:
@@ -43182,9 +43267,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/agents`
           - `page/editor`
           - `primitives/data-table`
-    - **`networking`** — WebSocket / EventSource / fetch primitives with reconnection, status-bus, and retry. Used by live-state internally and by terminal/logs/health/stats directly.
+    - **`networking`** — WebSocket / fetch primitives with reconnection, status-bus, and retry. Used by live-state internally and by terminal/logs/health/stats directly.
       - Web:
-        - Uses: `primitives/latest-ref.useLatestRef`
+        - Uses:
+          - `primitives/latest-ref.useLatestRef`
+          - `primitives/networking/request-guard.nativeWebSocket`
         - Exports (types):
           - `FetchWithRetryOptions`
           - `LockManagerLike`
@@ -43192,7 +43279,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `MessagePortLike`
           - `NetDiagEvent`
           - `PageLifecycleLike`
-          - `ReconnectingEventSourceOptions`
           - `ReconnectingWsData`
           - `ReconnectingWsHandle`
           - `ReconnectingWsOptions`
@@ -43210,7 +43296,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `probeUrlStatus`
           - `publishNetDiag`
           - `publishWsStatus`
-          - `ReconnectingEventSource`
           - `SharedWebSocket`
           - `subscribeNetDiag`
           - `subscribeWsStatus`
@@ -43233,9 +43318,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/tasks-core`
       - Exemptions:
         - Exempts itself from:
-          - `no-raw-websocket` — `web/shared-ws.worker.ts`, `web/use-reconnecting-ws.ts` (sanctioned)
-          - `no-raw-event-source` — `.` (sanctioned)
+          - `no-raw-websocket` — `web/shared-ws.worker.ts` (sanctioned)
           - `endpoints/no-raw-web-fetch` — `web` (sanctioned)
+          - `networking/no-request-guard-capability` — `web/use-reconnecting-ws.ts` (sanctioned)
         - Exempted by:
           - `apps-core/app-usage` (0 debt)
           - `apps/deploy/analytics/collect` (0 debt)
@@ -43243,8 +43328,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug/slow-ops` (0 debt)
           - `framework/web-core` (0 debt)
           - `infra/boot-snapshot` (0 debt)
+          - `infra/endpoints` (0 debt)
           - `infra/health` (0 debt)
           - `primitives/log-channels` (0 debt)
+          - `primitives/networking` (0 debt)
+          - `primitives/networking/page-transport` (0 debt)
           - `reports` (0 debt)
       - Core:
         - Exports (types):
@@ -43268,11 +43356,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `transportWrapper` — A `wrapper` (`render` / `renderHook`) mounting `transport` above the tree.
           - Types: `FakeWsServerOptions`, `RenderWithTransportOptions`, `TabHandle`, `TransportHub`
       - Plugins:
-        - **`page-transport`** — pageTransport: the page's own server as a Transport (same-origin SharedWebSocket, the global fetch, plain asset paths, machine, its telemetry reported). The app root mounts it; every other importer is a sanctioned exemption of networking/no-page-transport (page-wide telemetry, boot).
+        - **`page-transport`** — pageTransport: the page's own server as a Transport (same-origin SharedWebSocket, the native fetch past the page request guard, plain asset paths, machine, its telemetry reported). The app root mounts it; every other importer is a sanctioned exemption of networking/no-page-transport (page-wide telemetry, boot).
           - Web:
             - Uses:
               - `primitives/networking.SharedWebSocket`
               - `primitives/networking.Transport`
+              - `primitives/networking/request-guard.nativeFetch`
             - Exports (values): `pageTransport`
           - Cross-plugin:
             - Imported by:
@@ -43286,7 +43375,28 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/log-channels`
               - `reports`
           - Exemptions:
-            - Exempts itself from: `endpoints/no-raw-web-fetch` — `web/page-transport.ts` (sanctioned)
+            - Exempts itself from: `networking/no-request-guard-capability` — `web/page-transport.ts` (sanctioned)
+        - **`request-guard`** — The page request guard: installRequestGuard (once, first thing in the app entry) refuses every same-origin /api, /ws and /gateway request page code issues by a raw channel — fetch, XMLHttpRequest, sendBeacon, EventSource, WebSocket — with a RawApiRequestError (fetch rejects, the rest throw), each also logged and filed through requestGuardReportSink (held until the crash collector registers). The app's own channels hold a capability instead: nativeFetch (the page transport) and nativeWebSocket (the per-tab socket), falling back to the globals at call time when no guard is installed; GET / HEAD of the asset routes allowAssetRoute registers pass. Importing the capability is bounded by networking/no-request-guard-capability.
+          - Cross-plugin:
+            - Imported by:
+              - `framework/web-core`
+              - `infra/endpoints`
+              - `primitives/networking`
+              - `primitives/networking/page-transport`
+              - `reports/crash`
+          - Exemptions:
+            - Exempts itself from:
+              - `no-raw-event-source` — `web/__tests__/request-guard.test.ts` (sanctioned)
+              - `no-raw-websocket` — `web/__tests__/request-guard.test.ts` (sanctioned)
+          - Web:
+            - Exports (types): `GuardedChannel`
+            - Exports (values):
+              - `allowAssetRoute`
+              - `installRequestGuard`
+              - `nativeFetch`
+              - `nativeWebSocket`
+              - `RawApiRequestError`
+              - `requestGuardReportSink`
     - **`optimistic-mutation`** — Optimistic-mutation primitive over live-state: useOptimisticResource replays pending ops on server truth (overlay/replay) under the never-revert policy — causal (ack-watermark) and content-based confirmation, denial only under causal proof, keep-rendered transient failures with reconnect auto-retry, and permanent (4xx) rejections dropped and reported.
       - Web:
         - Uses:
@@ -43518,8 +43628,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `createHoverIntent`
         - **`image-viewer`** — One full-screen image viewer for every image in the app: ViewerThumbnail (the capped inline thumbnail that always shows the whole image, with a tiny-icon shape and a size badge; a given width / height reserves its box before it loads, and a chip is one fixed height) and useImageViewerTrigger (for callers that keep their own <img>) open it; ThumbnailPlaceholder holds a thumbnail's box while its source is not known yet; an image that does not load shows MissingImage (its name, and whether the file is gone or only unreadable, with Retry) and leaves the gallery — useImageLoad gives a caller with its own <img> the same load state, and useImageProbe answers it off-DOM for a caller that must know before it renders; ImageGallery makes every thumbnail inside one ← / → set in page order and renders the viewer inside its own React tree; ImageViewer is the controlled viewer itself — fit, click-to-close, wheel/pinch zoom, drag pan, minimap, copy/download/open, a docked thumbnail strip, a grid of every image with a tile-size slider, a control-less full-screen slideshow, keyboard-isolated. A ViewerThumbnail outside any gallery is its own gallery of one; useImageViewerTrigger requires one.
           - Web:
-            - Uses: 50 symbols — full list in [`plugins/primitives/plugins/overlay/plugins/image-viewer/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/image-viewer/REFERENCE.md)
+            - Uses: 52 symbols — full list in [`plugins/primitives/plugins/overlay/plugins/image-viewer/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/image-viewer/REFERENCE.md)
               - `primitives/css/ui-kit` ×6
+              - `primitives/networking` ×3
               - `primitives/persistent-draft` ×3
               - `infra/endpoints` ×2
               - `primitives/css/clip` ×2
@@ -43550,7 +43661,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/latest-ref.useEventCallback`
               - `primitives/link-gesture/new-tab.NewTabButton`
               - `primitives/loading.Loading`
-              - `primitives/networking.probeUrlStatus`
               - `primitives/overlay/tooltip.Kbd`
               - `primitives/scope/scoped-store.defineScopedStore`
               - `primitives/shortcuts.formatShortcutLabel`
@@ -44163,7 +44273,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Core:
         - Exports (types): `Passthrough`
         - Exports (values): `splitPassthrough`
-    - **`path-bar`** — Dolphin-style editable path bar: a breadcrumb (primitives/breadcrumb) that flips to a mono text field on a press of its empty space, the pencil or ⌘L, with a folder-completion combobox (↑/↓, Tab completes, Enter commits, Esc/blur revert, an invalid path stays in the field marked bad). Generic over a PathBarSource (segments / complete / validate), so it imports no filesystem.
+    - **`path-bar`** — Dolphin-style editable path bar: a breadcrumb (primitives/breadcrumb) that flips to a mono text field on a press of its empty space, the pencil or ⌘L, with a folder-completion combobox (↑/↓, Tab completes, Enter commits, Esc/blur revert, an invalid path stays in the field marked bad). Generic over a PathBarSource (segments / useComplete — a hook reading the typed text's completions live — / validate), so it imports no filesystem.
       - Web:
         - Uses:
           - `primitives/breadcrumb.Breadcrumb`
@@ -44187,6 +44297,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PathResolution`
           - `PathSegment`
           - `PathTarget`
+          - `Suggestions`
         - Exports (values): `PathBar`
       - Cross-plugin:
         - Uses tokens:
@@ -46639,6 +46750,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/endpoints.EndpointAgentWriteRefusedError`
           - `infra/health.wedgeReportSink`
           - `primitives/error-boundary.boundaryReportSink`
+          - `primitives/networking/request-guard.RawApiRequestError`
+          - `primitives/networking/request-guard.requestGuardReportSink`
           - `reports.report`
           - `reports.Reports`
       - Server:
@@ -48078,8 +48191,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --popover`
           - `ui/tokens/color-palette --popover-foreground`
           - `ui/tokens/shape --radius`
-        - Imported by: 32 plugins — full list in [`plugins/shell/plugins/toast/REFERENCE.md`](../plugins/shell/plugins/toast/REFERENCE.md)
-          - `apps` ×11
+        - Imported by: 31 plugins — full list in [`plugins/shell/plugins/toast/REFERENCE.md`](../plugins/shell/plugins/toast/REFERENCE.md)
+          - `apps` ×10
           - `conversations` ×3
           - `primitives` ×3
           - `config_v2` ×2

@@ -6,6 +6,7 @@ import { handleDelete } from "./internal/handle-delete";
 import { handleHold } from "./internal/handle-hold";
 import { attachmentsByOwnerServed } from "./internal/by-owner";
 import { attachmentFileServed } from "./internal/file";
+import { attachmentBytesServed } from "./internal/bytes";
 import { orphanSweepJob } from "./internal/orphan-sweep";
 import { AttachmentBlobs } from "./internal/blobs";
 import {
@@ -34,6 +35,7 @@ export default {
   contributions: [
     ...attachmentsByOwnerServed.declare,
     ...attachmentFileServed.declare,
+    ...attachmentBytesServed.declare,
   ],
   httpRoutes: {
     [uploadAttachment.route]: rawEndpointHandler(

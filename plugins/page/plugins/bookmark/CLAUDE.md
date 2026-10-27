@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Bookmark block type: a link pasted into an empty block can become one (via the pasted-link menu), scraping OG metadata server-side to render a rich preview card (title, description, site, favicon, og:image cached same-origin). Registers the bookmark block's `data` schema at the server write boundary. Its link scraping (the bookmark.link-preview value, /api/link-meta) is the machine half's.
+- Description: Bookmark block type: a link pasted into an empty block can become one (via the pasted-link menu), scraping OG metadata server-side to render a rich preview card (title, description, site, favicon, og:image cached same-origin). Registers the bookmark block's `data` schema at the server write boundary. Its link scraping (the bookmark.link-preview and bookmark.link-meta values) is the machine half's.
 - Web:
   - Contributes: `Editor.Block` "bookmark" → `BookmarkBlock`
   - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
@@ -33,17 +33,16 @@
 - Server:
   - Contributes:
     - `page.block-data` "bookmark"
+    - `resource.declare` "bookmark.link-meta"
     - `resource.declare` "bookmark.link-preview"
   - Uses: `page/editor.Editor`
-  - Resources: `bookmark.link-preview` (invalidate, fixed)
+  - Resources:
+    - `bookmark.link-meta` (invalidate, fixed)
+    - `bookmark.link-preview` (invalidate, fixed)
 - Machine:
-  - Uses:
-    - `infra/endpoints.implementMachine`
-    - `network/live.serveValue`
-  - Routes: `GET /api/link-meta`
+  - Uses: `network/live.serveValue`
 - Core:
   - Uses:
-    - `infra/endpoints.defineEndpoint`
     - `network/live.liveValue`
     - `page/editor.defineBlock`
     - `ui/icons.symbol`
@@ -53,7 +52,7 @@
   - Exports (values):
     - `BOOKMARK_TYPE`
     - `bookmarkBlock`
-    - `linkMetaEndpoint`
+    - `linkMeta`
     - `LinkMetaSchema`
     - `linkPreview`
     - `LinkPreviewSchema`

@@ -11,11 +11,21 @@ import { ConversationRuntimeIdSchema } from "@plugins/conversations/plugins/runt
 
 // --- Body schemas ---
 
+/**
+ * The task's own text as a launch's first message: `{ from: "task" }` asks the
+ * server to build it (`buildTaskPrompt`: title + description) when the request
+ * arrives — after the caller's last save committed — so a browser launch never
+ * reads the task first to send its text back.
+ */
+const TaskPromptSchema = z.object({ from: z.literal("task") }).strict();
+
 export const CreateConversationBodySchema = z
   .object({
     taskId: z.string().optional(),
     attemptId: z.string().optional(),
-    prompt: z.string().optional(),
+    // The first message: text the caller wrote, or the launching task's own
+    // (`TaskPromptSchema`, with `taskId`). Omitted: the agent starts idle.
+    prompt: z.union([z.string(), TaskPromptSchema]).optional(),
     // Omitted: the fork source's, else the default (runtime-catalog).
     runtime: ConversationRuntimeIdSchema.optional(),
     // Strict enum — an unknown/typo model id is rejected loudly at the endpoint
@@ -34,6 +44,10 @@ export const CreateConversationBodySchema = z
   .refine((b) => !b.forkAtMessageUuid || !!b.forkFromConversationId, {
     message: "forkAtMessageUuid requires forkFromConversationId",
     path: ["forkAtMessageUuid"],
+  })
+  .refine((b) => typeof b.prompt !== "object" || b.taskId !== undefined, {
+    message: 'prompt { from: "task" } requires taskId',
+    path: ["prompt"],
   });
 export type CreateConversationBody = z.infer<
   typeof CreateConversationBodySchema

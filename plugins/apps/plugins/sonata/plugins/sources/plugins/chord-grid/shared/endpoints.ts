@@ -26,19 +26,6 @@ export const createChordGridSong = defineEndpoint({
 });
 
 /**
- * Fetch one song's chord-grid data (or `null` if the song carries none). Used by
- * the source's `hydrate` to repopulate the editor + recompile the score on open.
- */
-export const getSongChordGrid = defineEndpoint({
-  route: "GET /api/sonata/songs/:id/chord-grid",
-  response: z
-    .object({
-      chordText: z.string(),
-    })
-    .nullable(),
-});
-
-/**
  * Persist an edit to a chord-grid song: the grid text (→ extension row) plus its
  * `compile()`-**derived** metrics `durationSec`/`endBeat` (→ parent song row via
  * `updateSongMeta`), since `compile()` runs client-side. It carries **no**

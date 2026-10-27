@@ -5,6 +5,7 @@ import type {
   MachineEndpointDef,
   MachineResult,
   MachineUnavailable,
+  WriteEndpoint,
 } from "../../core";
 import { unavailableMessage } from "../../core";
 import { EndpointError } from "../../core";
@@ -46,7 +47,9 @@ export type MachineEndpointMutation<TParams, TBody, TResponse> =
   | ({ kind: "available" } & EndpointMutation<TParams, TBody, TResponse>);
 
 /**
- * TanStack Query useMutation wrapper for POST/PATCH/DELETE endpoints.
+ * TanStack Query useMutation wrapper for POST/PUT/PATCH/DELETE endpoints —
+ * writes only (`& WriteEndpoint`): a GET def is a tsc error carrying the
+ * `ReadMarker` sentence (a read is a live value, read with `useLive`).
  *
  * It refreshes no read: every server read is live (`network/live`), pushed
  * when the write lands, so there is nothing to invalidate by hand.
@@ -61,7 +64,8 @@ export function useEndpointMutation<
   TResponse,
   TQuery,
 >(
-  endpoint: MachineEndpointDef<Route, TParams, TBody, TResponse, TQuery>,
+  endpoint: MachineEndpointDef<Route, TParams, TBody, TResponse, TQuery> &
+    WriteEndpoint,
   opts?: MutationOptions<TResponse>,
 ): MachineEndpointMutation<TParams, TBody, TResponse>;
 export function useEndpointMutation<
@@ -71,7 +75,8 @@ export function useEndpointMutation<
   TResponse,
   TQuery,
 >(
-  endpoint: EndpointDef<Route, TParams, TBody, TResponse, TQuery>,
+  endpoint: EndpointDef<Route, TParams, TBody, TResponse, TQuery> &
+    WriteEndpoint,
   opts?: MutationOptions<TResponse>,
 ): EndpointMutation<TParams, TBody, TResponse>;
 export function useEndpointMutation<
@@ -81,9 +86,11 @@ export function useEndpointMutation<
   TResponse,
   TQuery,
 >(
-  endpoint:
+  endpoint: (
     | EndpointDef<Route, TParams, TBody, TResponse, TQuery>
-    | MachineEndpointDef<Route, TParams, TBody, TResponse, TQuery>,
+    | MachineEndpointDef<Route, TParams, TBody, TResponse, TQuery>
+  ) &
+    WriteEndpoint,
   opts?: MutationOptions<TResponse>,
 ):
   | EndpointMutation<TParams, TBody, TResponse>

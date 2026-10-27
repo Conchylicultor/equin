@@ -129,8 +129,9 @@ directives establish); the selected voicing strategy from the shared
     - `Sonata.Effect` "chord-grid-persist" → `ChordGridPersistObserver`
     - `FieldPresentation.Register` "exposure:sonata_songs_ext_chord_grid"
     - `Library.Cover` "chord-grid"
-  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/sonata/library` ×3
+    - `network/live` ×3
     - `primitives/persistent-draft` ×3
     - `apps/sonata/document` ×2
     - `apps/sonata/shell` ×2
@@ -138,7 +139,6 @@ directives establish); the selected voicing strategy from the shared
     - `primitives/collapsible` ×2
     - `primitives/css/ui-kit` ×2
     - `infra/endpoints.useEndpointMutation`
-    - `network/live.FieldPresentation`
     - `primitives/css/badge.Badge`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/fill.Fill`
@@ -160,7 +160,6 @@ directives establish); the selected voicing strategy from the shared
   - Exports (values): `songChordGrid`
   - Routes:
     - `POST /api/sonata/songs/chord-grid`
-    - `GET /api/sonata/songs/:id/chord-grid`
     - `PUT /api/sonata/songs/:id/chord-grid`
 - Core:
   - Uses:

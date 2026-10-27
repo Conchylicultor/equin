@@ -1,7 +1,6 @@
-import type { FetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
-  hostFsComplete,
-  hostFsStat,
+  hostFsCompletions,
+  hostFsPathStat,
   isBrowsable,
 } from "@plugins/infra/plugins/host-fs/core";
 import {
@@ -10,11 +9,12 @@ import {
   displayPath,
   hostHome,
 } from "@plugins/infra/plugins/host-account/core";
-import { useLive } from "@plugins/network/plugins/live/web";
+import { useLive, type LiveReader } from "@plugins/network/plugins/live/web";
 import type { ResourceError } from "@plugins/primitives/plugins/live-state/web";
 import type {
   PathBarSource,
   PathResolution,
+  Suggestions,
 } from "@plugins/primitives/plugins/path-bar/web";
 import { baseName, isWithin, pathChain } from "../../core";
 
@@ -57,16 +57,18 @@ export function crumbLabel(path: string, rootName: string | undefined): string {
 
 /**
  * The host filesystem as a path-bar source: crumbs from the path itself,
- * folder completions from host-fs `complete`, and validation from `stat` (a
- * file resolves to itself, so the explorer opens its folder and previews it).
- * Paths come back in display form (`~/…` under home).
+ * folder completions read live from `host-fs.complete` (`useLive`, one tuple
+ * per text typed, pushed while the folder searched changes), and validation
+ * one `host-fs.stat` answer to the commit (`read`, the subtree's
+ * `useLiveReader()` — a file resolves to itself, so the explorer opens its
+ * folder and previews it). Paths come back in display form (`~/…` under home).
  *
  * With a `root` (an embedded browser), the bar never leads above it: the
  * crumbs start at the root, completions outside it are dropped, and a typed
  * path outside it is invalid.
  */
 export function hostPathSource(
-  fetchEndpoint: FetchEndpoint,
+  read: LiveReader,
   home: string,
   rootName: string | undefined,
   root?: string,
@@ -83,39 +85,48 @@ export function hostPathSource(
           label: crumbLabel(p, rootName),
           path: p,
         })),
-    complete: async (prefix) => {
-      const answer = await fetchEndpoint(
-        hostFsComplete,
-        {},
-        { query: { prefix } },
+    useComplete: (prefix): Suggestions => {
+      const answer = useLive(
+        hostFsCompletions,
+        prefix === null ? null : { prefix },
       );
-      // No computer behind the app: nothing can be listed, which is a
-      // failure of the completion, not an empty answer.
-      if (answer.kind === "unavailable") throw new Error(answer.message);
-      const result = answer.value;
-      switch (result.kind) {
-        case "ok":
-          return result.matches
-            .filter((m) => inRoot(m.path))
-            .map((m) => displayPath(m.path, home));
-        // Typed into a folder that is not there (or into a file): no folder
-        // completes it, which is the answer, not a failure.
-        case "missing":
-        case "not-a-dir":
-          return [];
-        case "denied":
-          throw new Error(`Permission denied: ${result.path}`);
+      switch (answer.status) {
+        case "loading":
+          return { kind: "pending" };
+        // No computer behind the app: nothing can be listed, which is a
+        // failure of the completion, not an empty answer.
+        case "unavailable":
+          return { kind: "failed", message: answer.message };
+        case "ready":
+          return {
+            kind: "ready",
+            items: answer.data.matches
+              .filter((m) => inRoot(m.path))
+              .map((m) => displayPath(m.path, home)),
+          };
+        case "error":
+          // Typed into a folder that is not there (or into a file): no folder
+          // completes it, which is the answer, not a failure. Anything else —
+          // a spelling no folder has, a denied folder, a read that failed —
+          // is shown as why there are none.
+          if (
+            answer.error.kind === "refused" &&
+            (answer.error.code === "missing" ||
+              answer.error.code === "not-a-dir")
+          ) {
+            return { kind: "ready", items: [] };
+          }
+          return { kind: "failed", message: answer.error.message };
       }
     },
     validate: async (path): Promise<PathResolution> => {
-      const answer = await fetchEndpoint(hostFsStat, {}, { query: { path } });
-      if (answer.kind === "unavailable") {
-        return { kind: "invalid", path, reason: answer.message };
-      }
-      const result = answer.value;
-      switch (result.kind) {
-        case "ok":
-          if (!inRoot(result.path)) {
+      const answer = await read(hostFsPathStat, { path });
+      switch (answer.status) {
+        case "unavailable":
+          return { kind: "invalid", path, reason: answer.message };
+        case "ready": {
+          const stat = answer.data;
+          if (!inRoot(stat.path)) {
             return {
               kind: "invalid",
               path,
@@ -123,19 +134,26 @@ export function hostPathSource(
             };
           }
           return {
-            kind: isBrowsable(result.entry) ? "dir" : "file",
-            path: displayPath(result.path, home),
+            kind: isBrowsable(stat.entry) ? "dir" : "file",
+            path: displayPath(stat.path, home),
           };
-        case "missing":
-          return { kind: "invalid", path, reason: "No such file or folder" };
-        case "denied":
-          return { kind: "invalid", path, reason: "Permission denied" };
-        case "unreadable-archive":
-          return {
-            kind: "invalid",
-            path,
-            reason: `Unreadable archive (${result.reason})`,
-          };
+        }
+        case "refused":
+          switch (answer.code) {
+            case "missing":
+              return {
+                kind: "invalid",
+                path,
+                reason: "No such file or folder",
+              };
+            case "denied":
+              return { kind: "invalid", path, reason: "Permission denied" };
+            // Not a path at all, or an archive that cannot be read: the
+            // refusal's message says which.
+            case "invalid-path":
+            case "unreadable-archive":
+              return { kind: "invalid", path, reason: answer.message };
+          }
       }
     },
   };

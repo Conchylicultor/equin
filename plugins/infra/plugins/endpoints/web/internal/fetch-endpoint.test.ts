@@ -196,6 +196,37 @@ describe("fetchEndpoint needsMachine", () => {
   });
 });
 
+describe("fetchEndpoint of a read", () => {
+  const health = defineEndpoint({
+    route: "GET /api/health",
+    response: z.object({ ok: z.boolean() }),
+  });
+
+  test("a GET def a cast got past tsc throws the ReadMarker, without a request", async () => {
+    const fn = stubFetch([ok()]);
+    const err = await rejection(
+      fetchEndpoint(health as unknown as typeof ping, {}, { body: { n: 1 } }),
+    );
+    expect(err).toBeInstanceOf(Error);
+    expect((err as Error).message).toBe(`GET /api/health: ${health.read}`);
+    expect((err as Error).message).toContain("useLive");
+    expect(fn).toHaveBeenCalledTimes(0);
+  });
+
+  test("defineEndpoint derives the marker from the route's method", () => {
+    expect(ping.read).toBeUndefined();
+    expect(health.read).toContain("GET is a read");
+    for (const method of ["PUT", "PATCH", "DELETE"]) {
+      expect(
+        defineEndpoint({ route: `${method} /api/x` }).read,
+      ).toBeUndefined();
+    }
+    for (const method of ["HEAD", "OPTIONS"]) {
+      expect(defineEndpoint({ route: `${method} /api/x` }).read).toBeDefined();
+    }
+  });
+});
+
 describe("fetchEndpointOver", () => {
   test("is one fetcher per transport", () => {
     expect(fetchEndpointOver(page)).toBe(fetchEndpoint);

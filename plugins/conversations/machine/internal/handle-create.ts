@@ -1,7 +1,12 @@
 import { recordReport } from "@plugins/reports/plugins/engine/server";
 import { HttpError } from "@plugins/infra/plugins/endpoints/core";
 import { implementMachine } from "@plugins/infra/plugins/endpoints/machine";
-import { createConversation as createConversationEndpoint } from "../../core/endpoints";
+import {
+  createConversation as createConversationEndpoint,
+  type CreateConversationBody,
+} from "../../core/endpoints";
+import { getTask } from "@plugins/tasks/plugins/tasks-core/server";
+import { buildTaskPrompt } from "@plugins/tasks/plugins/tasks-core/core";
 import { ClaudeCodeUnavailableError } from "@plugins/infra/plugins/claude-cli/plugins/availability/server";
 import {
   ModelUnavailableError,
@@ -13,6 +18,22 @@ import {
   TranscriptCutError,
 } from "../../server/internal/lifecycle";
 
+// The launch's first message as text. `{ from: "task" }` is the launching
+// task's own (title + description), read HERE — after the caller's last save
+// committed — so a launch carries what the user just typed without the browser
+// reading the task first. A task that does not exist is the caller's mistake.
+async function launchPrompt(
+  body: CreateConversationBody,
+): Promise<string | undefined> {
+  if (typeof body.prompt !== "object") return body.prompt;
+  // The body schema refuses `{ from: "task" }` without a taskId.
+  if (body.taskId === undefined)
+    throw new HttpError(400, 'prompt { from: "task" } requires taskId');
+  const task = await getTask(body.taskId);
+  if (!task) throw new HttpError(404, `Task ${body.taskId} not found`);
+  return buildTaskPrompt(task);
+}
+
 export const handleCreate = implementMachine(
   createConversationEndpoint,
   async ({ body }) => {
@@ -22,12 +43,13 @@ export const handleCreate = implementMachine(
     // what can run, before anything is written.
     if (body.model !== undefined)
       assertChoiceLaunchable(body.model, getModelCatalog());
+    const prompt = await launchPrompt(body);
     let session;
     try {
       session = await createConversation({
         taskId: body.taskId,
         attemptId: body.attemptId,
-        prompt: body.prompt,
+        prompt,
         runtimeId: body.runtime,
         model: body.model,
         forkFromConversationId: body.forkFromConversationId,

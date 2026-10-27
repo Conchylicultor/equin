@@ -49,6 +49,7 @@
 //
 // Usage: bun plugins/page/plugins/container/e2e/container-collapse-verify.ts [--url <deploy>] [--out /tmp/collapse]
 import {
+  pageFetch,
   arg,
   report,
   snap,
@@ -259,41 +260,36 @@ await withBrowser(async (h) => {
   // A callout with THREE children: enough that folding hides something, and the
   // first child gets a subtree of its own so the "whose chevron is it" rule is
   // actually exercised rather than trivially satisfied.
-  const seeded = await page.evaluate(
-    async ({ pageId }: { pageId: string }) => {
-      const post = async (body: unknown) => {
-        const res = await fetch("/api/blocks", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify(body),
-        });
-        if (!res.ok)
-          throw new Error(
-            `POST /api/blocks ${res.status}: ${await res.text()}`,
-          );
-        return (await res.json()) as { id: string };
-      };
-      const box = await post({
-        parentId: pageId,
-        type: "callout",
-        data: { icon: null, color: "info" },
+  const seeded = await (async () => {
+    const post = async (body: unknown) => {
+      const res = await pageFetch(page, "/api/blocks", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
       });
-      const text = (parentId: string, body: string) =>
-        post({ parentId, type: "text", data: { text: [{ text: body }] } });
-      const first = await text(box.id, "first line");
-      const second = await text(box.id, "second line");
-      const third = await text(box.id, "third line");
-      const after = await text(pageId, "after the box");
-      return {
-        box: box.id,
-        first: first.id,
-        second: second.id,
-        third: third.id,
-        after: after.id,
-      };
-    },
-    { pageId },
-  );
+      if (!res.ok)
+        throw new Error(`POST /api/blocks ${res.status}: ${await res.text()}`);
+      return (await res.json()) as { id: string };
+    };
+    const box = await post({
+      parentId: pageId,
+      type: "callout",
+      data: { icon: null, color: "info" },
+    });
+    const text = (parentId: string, body: string) =>
+      post({ parentId, type: "text", data: { text: [{ text: body }] } });
+    const first = await text(box.id, "first line");
+    const second = await text(box.id, "second line");
+    const third = await text(box.id, "third line");
+    const after = await text(pageId, "after the box");
+    return {
+      box: box.id,
+      first: first.id,
+      second: second.id,
+      third: third.id,
+      after: after.id,
+    };
+  })();
   console.log("seeded:", JSON.stringify(seeded));
 
   await page.reload({ waitUntil: "domcontentloaded" });

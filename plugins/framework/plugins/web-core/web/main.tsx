@@ -1,3 +1,6 @@
+// FIRST: the page request guard must be in place before any other module
+// evaluates (see install-request-guard.ts).
+import "./install-request-guard";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/app.css";

@@ -13,7 +13,6 @@ import {
   type ReactNode,
 } from "react";
 import { Bar } from "@plugins/primitives/plugins/bar/web";
-import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
@@ -60,7 +59,7 @@ import {
   readHostPaths,
   type HostFsEntry,
 } from "@plugins/infra/plugins/host-fs/core";
-import { useLive } from "@plugins/network/plugins/live/web";
+import { useLive, useLiveReader } from "@plugins/network/plugins/live/web";
 import type { RowSelectionState } from "@plugins/primitives/plugins/tree/core";
 import { DROP_TARGET_RING } from "@plugins/primitives/plugins/data-view/web";
 import {
@@ -319,10 +318,10 @@ function Listing({
       rootName = undefined;
       break;
   }
-  const fetchEndpoint = useFetchEndpoint();
+  const liveReader = useLiveReader();
   const source = useMemo(
-    () => hostPathSource(fetchEndpoint, home, rootName, root),
-    [fetchEndpoint, home, rootName, root],
+    () => hostPathSource(liveReader, home, rootName, root),
+    [liveReader, home, rootName, root],
   );
   const { listings, request, setOpen, readers } = useListings(dir);
   const moveInto = useMoveInto();
@@ -441,7 +440,10 @@ function Listing({
         `file-explorer: malformed host-paths drop: ${read.error}`,
       );
     }
-    void moveInto(read.paths, absolutePath(target, home)).then((moved) => {
+    void moveInto(
+      read.entries.map((e) => e.path),
+      absolutePath(target, home),
+    ).then((moved) => {
       if (moved.length === 0) return;
       const gone = new Set(moved.map((p) => displayPath(p, home)));
       setSelection((s) => ({

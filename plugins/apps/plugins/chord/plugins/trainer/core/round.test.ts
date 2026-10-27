@@ -1,8 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import {
-  LoopCandidateSchema,
-  type LoopCandidate,
-} from "@plugins/apps/plugins/chord/plugins/song-index/core";
+import type { LoopCandidate } from "@plugins/apps/plugins/chord/plugins/song-index/core";
+import { LoopCandidateSchema } from "@plugins/apps/plugins/chord/plugins/song-index/core/testing";
 import { dealLoop } from "./deal";
 import { gridBoxes, roundFromCandidate, type Round } from "./round";
 

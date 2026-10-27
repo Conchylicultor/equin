@@ -2,9 +2,14 @@
 
 Ultimate Guitar (UG) input source for Sonata. The source pipeline so far:
 
-- **Task 1 — fetch.** A server endpoint takes a pasted UG tab URL, resolves it
-  to a numeric tab id, and fetches the raw tab JSON from UG's private **mobile
-  API**. `content` is returned verbatim.
+- **Task 1 — fetch.** The live value `ugTab` (`sonata.ultimate-guitar.tab`,
+  `shared/resources.ts`, params `{ url }`, on-demand, served `fixed` in
+  `server/internal/tab-served.ts`) takes a pasted UG tab URL, resolves it to a
+  numeric tab id, and fetches the raw tab JSON from UG's private **mobile
+  API**. `content` is returned verbatim. A bad URL or a missing tab is a
+  declared refusal (`invalid-url` / `not-found`); every other breakage is a
+  loud read failure. The import dialog and the loader read it once per click
+  with `useLiveReader`.
 - **Task 2 — parse.** A pure `plugins/tab/core/parse.ts` turns that verbatim `content`
   markup into a structured song model (ordered sections → lines, each carrying
   its chords as `symbol` + `charOffset` over the lyric).
@@ -34,19 +39,20 @@ Ultimate Guitar (UG) input source for Sonata. The source pipeline so far:
   - **Endpoints** (`shared/endpoints.ts`, handlers in `server/internal/routes.ts`):
     `POST /api/sonata/songs/ultimate-guitar` (create — writes the generic song
     row via `createSongRow`, title ← `songName` / composer ← `artistName`, then
-    the extension row), `GET /api/sonata/songs/:id/ultimate-guitar` (fetch the
-    persisted `UgTab` or `null`), `PUT /api/sonata/songs/:id/ultimate-guitar`
+    the extension row), `PUT /api/sonata/songs/:id/ultimate-guitar`
     (persist a full snapshot — upsert the extension row + `updateSongMeta`).
-  - **Hydration.** `web/hydrate.ts` fetches the persisted `UgTab` and its
-    alignment row together and hands `{ tab, alignment }` to the library's
+    A song's row is read live: the lookup-only collection
+    `sonata.ultimate-guitar.songs` (`songUgRows`, `shared/resources.ts`).
+  - **Hydration.** `web/hydrate.ts` (`useHydration`) reads the persisted
+    `UgTab` and its alignment row live, together, and hands `{ tab, alignment }` to the library's
     generic `useLoadDocument` load (keyed `"ultimate-guitar"`); `undefined` for a song with
     no UG tab, so the editor section stays hidden for it.
   - **Create affordance.** `web/index.ts` contributes `Library.Source`
-    (`sourceId` + `hydrate` + `createOption`). The create option opens the
+    (`sourceId` + `useHydration` + `createOption`). The create option opens the
     **"Import from Ultimate Guitar"** URL-paste dialog
     (`web/components/ug-import-dialog.tsx`) via the imperative-dialog primitive.
     The flow is **fetch-first**: fetch the tab → `compile()` → create → open, so
-    a cancel (or a fetch failure) never leaves a half-formed "Untitled" orphan in
+    a cancel (or a refused / failed read) never leaves a half-formed "Untitled" orphan in
     the library. The in-player editor section debounce-persists edits; when a
     different tab is loaded its `PUT` writes `title: songName`, and the toolbar
     title updates live off the library's `songs` value (no in-memory sync —
@@ -74,7 +80,7 @@ Ultimate Guitar (UG) input source for Sonata. The source pipeline so far:
 - **Alignment (UG alignment task B).** The raw is
   `UgSourceRaw = { tab: UgTab; alignment: AlignmentRecord | null }`
   (`UgSourceRawSchema`, declared in the `alignment` child's core because it
-  names the record). `hydrate` loads the tab and the alignment row together
+  names the record). `useHydration` reads the tab and the alignment row together
   and puts in the record `appliedAlignment` picks. `compile()` applies
   `alignment` through `alignedScore` only when
   `fitsSheet(alignment, tab.content)` (current aligner, same sheet — a weak
@@ -165,18 +171,18 @@ the scheme, that is the single place to update.
 
 ## Failure-mode table
 
-| Upstream | UG meaning | `UgFetchError.kind` | HTTP |
+| Upstream | UG meaning | `UgFetchError.kind` | `ugTab` read |
 | --- | --- | --- | --- |
-| (bad URL) | not a UG tab URL / no id | `invalid-url` | 400 |
-| 404 | tab id not found | `not-found` | 404 |
-| 400 | "Missing required api parameter" — headers/params changed | `bad-request` | 502 |
-| 498 | "Token expired/invalid" — **signing scheme rotated** (canary) | `signature-rejected` | 502 |
-| other non-2xx | unexpected upstream status | `upstream` | 502 |
-| non-JSON / shape mismatch | mobile-API response shape changed | `malformed-response` | 502 |
-| SSRF / DNS / timeout | transport failure | `network` | 502 |
+| (bad URL) | not a UG tab URL / no id | `invalid-url` | refused `invalid-url` |
+| 404 | tab id not found | `not-found` | refused `not-found` |
+| 400 | "Missing required api parameter" — headers/params changed | `bad-request` | failure |
+| 498 | "Token expired/invalid" — **signing scheme rotated** (canary) | `signature-rejected` | failure |
+| other non-2xx | unexpected upstream status | `upstream` | failure |
+| non-JSON / shape mismatch | mobile-API response shape changed | `malformed-response` | failure |
+| SSRF / DNS / timeout | transport failure | `network` | failure |
 
-The 502 cases are deliberately loud server-side breakages — the kind worth
-surfacing as crash tasks, not just toasts.
+The failures are deliberately loud server-side breakages (a loader failure,
+reported) — the kind worth surfacing as crash tasks, not just toasts.
 
 ## Layout
 
@@ -185,14 +191,16 @@ surfacing as crash tasks, not just toasts.
   `UgSearchResult`/`UgSearchResultSchema` (the slim search-result row).
   Co-located `tab-url.test.ts` (bun:test, no network). The tab model
   (`UG_SOURCE_ID`, `UgTab`, the parser) is `plugins/tab/core`.
-- `shared/endpoints.ts` — the `fetchUgTab` and song create / get / update
-  endpoint contracts; `shared/resources.ts` — the `ugSearch` live value.
+- `shared/endpoints.ts` — the song create / update endpoint contracts;
+  `shared/resources.ts` — the `ugTab` and `ugSearch` live values and the
+  `songUgRows` lookup-only collection.
 - `server/internal/ug-client.ts` — the signing + `safeFetch` + loud-failure
   client. Shared `signedUgGet` (auth + transport) and `throwForUgStatus` (status
   taxonomy) back both `fetchUgTabContent` and `searchUgTabContent`.
-- `server/internal/routes.ts` — `implement()` handlers (fetch, create, get,
-  update); map `UgFetchError.kind` → `HttpError`.
-  `server/internal/search-served.ts` serves `ugSearch`.
+- `server/internal/routes.ts` — `implement()` handlers (create, update).
+  `server/internal/tab-served.ts` serves `ugTab` (a URL's `UgFetchError` kinds
+  `invalid-url` / `not-found` as refusals), `server/internal/search-served.ts`
+  serves `ugSearch`, `server/internal/song-rows-served.ts` serves `songUgRows`.
 - `web/compile.ts` — `compile(raw)` (the aligned Score when the raw's
   alignment applies, else the synthesized one) + the pure `synthesizeScore(parsed)`,
   `collectUnrecognisedChords(parsed)` (the deduped set of chord symbols
@@ -223,7 +231,7 @@ surfacing as crash tasks, not just toasts.
   open). Rendered through the imperative-dialog primitive.
 - `web/components/ug-create-option.tsx` — `ultimateGuitarCreateOption`: the
   `Library.Source` create affordance opening the import dialog.
-- `web/hydrate.ts` — `hydrate(songId, { fetchEndpoint })`: fetches the persisted `UgTab` and its
+- `web/hydrate.ts` — `useHydration(songId)`: reads the persisted `UgTab` and its
   alignment row, and returns the `{ tab, alignment }` raw (the record
   `appliedAlignment` picks, else `null`).
 - `server/internal/tables.ts` — the `sonata_songs_ext_ultimate_guitar`
@@ -232,13 +240,13 @@ surfacing as crash tasks, not just toasts.
   event (`ugTabSaved`), emitted by the create / update routes when the sheet
   `content` changes.
 - `web/index.ts` — the player-side barrel: `SonataDocument.Source`, `Library.Source`
-  (hydrate + create), and the editor `Sonata.Section`.
+  (useHydration + create), and the editor `Sonata.Section`.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./equin build` -->
 
 ## Plugin reference
 
-- Description: Player-side Ultimate Guitar source for Sonata: paste a UG tab URL, fetch its raw tab, and compile() the chord/lyric markup into a playable Score (lyric-proportional, bar-quantized timing synthesis → chord annotations, sections, lyrics, synthesized 4/4 tempo). Chord notes are generated by the shell's reactive re-voicing step from the chord annotations. Persists the loaded tab to a per-song side-table, hydrates it on open, and contributes the library 'Import from Ultimate Guitar' URL-paste affordance plus an in-player editor section, and presents the tab's Key field (exposed on every list of songs). Ultimate Guitar source server: fetches raw tabs from UG's private mobile API (fails loudly), serves its catalog search as the live sonata.ultimate-guitar.search value, and owns the sonata_songs_ext_ultimate_guitar side-table — creating UG-backed songs from a fetched tab and persisting edits (syncing the parent song's title/duration), exposing the tab's key to every list of songs (LiveColumns.Expose), announcing sonata.ug.tabSaved when a song's sheet content changes.
+- Description: Player-side Ultimate Guitar source for Sonata: paste a UG tab URL, fetch its raw tab, and compile() the chord/lyric markup into a playable Score (lyric-proportional, bar-quantized timing synthesis → chord annotations, sections, lyrics, synthesized 4/4 tempo). Chord notes are generated by the shell's reactive re-voicing step from the chord annotations. Persists the loaded tab to a per-song side-table, hydrates it on open, and contributes the library 'Import from Ultimate Guitar' URL-paste affordance plus an in-player editor section, and presents the tab's Key field (exposed on every list of songs). Ultimate Guitar source server: serves a tab URL's raw tab from UG's private mobile API as the live sonata.ultimate-guitar.tab value (a bad URL or a missing tab refused, any other breakage loud) and its catalog search as sonata.ultimate-guitar.search, and owns the sonata_songs_ext_ultimate_guitar side-table — serving each song's row as the lookup-only live collection sonata.ultimate-guitar.songs (what the player hydrates from), creating UG-backed songs from a fetched tab and persisting edits (syncing the parent song's title/duration), exposing the tab's key to every list of songs (LiveColumns.Expose), announcing sonata.ug.tabSaved when a song's sheet content changes.
 - Web:
   - Contributes:
     - `SonataDocument.Source` "Ultimate Guitar"
@@ -247,14 +255,14 @@ surfacing as crash tasks, not just toasts.
     - `Sonata.Effect` "ultimate-guitar-persist" → `UltimateGuitarPersistObserver`
     - `FieldPresentation.Register` "exposure:sonata_songs_ext_ultimate_guitar"
     - `Library.Cover` "ultimate-guitar"
-  - Uses: 41 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 46 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×6
-    - `primitives/live-state` ×3
+    - `network/live` ×5
+    - `primitives/live-state` ×5
     - `apps/sonata/document` ×2
     - `apps/sonata/library` ×2
     - `apps/sonata/shell` ×2
     - `infra/endpoints` ×2
-    - `network/live` ×2
     - `primitives/css/layer` ×2
     - `apps/sonata/primitives/source-line.SourceLine`
     - `primitives/css/badge.Badge`
@@ -280,17 +288,19 @@ surfacing as crash tasks, not just toasts.
   - Contributes:
     - `live.columns.expose` "sonata_songs ← sonata_songs_ext_ultimate_guitar"
     - `resource.declare` "sonata.ultimate-guitar.search"
+    - `resource.declare` "sonata.ultimate-guitar.songs:rows"
+    - `resource.declare` "sonata.ultimate-guitar.tab"
   - Uses:
     - `apps/sonata/library._songs`
     - `apps/sonata/library.createSongRow`
     - `apps/sonata/library.updateSongMeta`
-    - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `infra/entity-extensions.defineExtension`
     - `infra/events.defineTriggerEvent`
     - `infra/safe-fetch.safeFetch`
     - `infra/safe-fetch.SsrfError`
     - `network/live.LiveColumns`
+    - `network/live.serveCollection`
     - `network/live.serveValue`
   - DB schema:
     - `plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/server/internal/tables-tab-saved.ts`
@@ -302,11 +312,12 @@ surfacing as crash tasks, not just toasts.
     - `songUltimateGuitar`
     - `ugTabSaved`
   - Register: `defineTriggerEvent('sonata.ug.tabSaved')`
-  - Resources: `sonata.ultimate-guitar.search` (invalidate, fixed, capped: UG_SEARCH_MAX_RESULTS)
+  - Resources:
+    - `sonata.ultimate-guitar.search` (invalidate, fixed, capped: UG_SEARCH_MAX_RESULTS)
+    - `sonata.ultimate-guitar.songs:rows` (keyed, point)
+    - `sonata.ultimate-guitar.tab` (invalidate, fixed)
   - Routes:
-    - `POST /api/sonata/sources/ultimate-guitar/fetch`
     - `POST /api/sonata/songs/ultimate-guitar`
-    - `GET /api/sonata/songs/:id/ultimate-guitar`
     - `PUT /api/sonata/songs/:id/ultimate-guitar`
 - Core:
   - Uses:

@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
+import { cappedList } from "@plugins/packages/plugins/list-bound/core";
 import {
+  HOST_FS_COMPLETE_LIMIT,
   HOST_FS_PEEK_MAX_NAMES,
   HostFsEntrySchema,
   HostFsWithinSchema,
@@ -171,6 +173,39 @@ export const hostFsPathStat = liveValue("host-fs.stat", {
   schema: HostFsPathStatSchema,
   params: ["path"],
   refusals: ["invalid-path", "missing", "denied", "unreadable-archive"],
+  needsMachine: MACHINE,
+});
+
+// ── complete ─────────────────────────────────────────────────────────────────
+
+export const HostFsCompletionsSchema = z.object({
+  /** The folder whose children were matched (`dirname` of the prefix), absolute. */
+  dir: z.string(),
+  /** The matching folders, in natural name order (`localeCompare`, numeric). */
+  matches: cappedList(z.object({ name: z.string(), path: z.string() }), {
+    max: HOST_FS_COMPLETE_LIMIT,
+  }),
+  /** More folders matched than {@link HOST_FS_COMPLETE_LIMIT}. */
+  truncated: z.boolean(),
+});
+export type HostFsCompletions = z.infer<typeof HostFsCompletionsSchema>;
+
+/**
+ * Folder-only completions of a typed path (`complete`): the folders (symlinks
+ * to folders included) in `dirname(prefix)` whose name starts with
+ * `basename(prefix)`, case-insensitively. A prefix ending in `/` completes
+ * every child of that folder; dotfolders are offered only once the typed
+ * fragment starts with `.`; `~` expands. Stays on disk (never inside an
+ * archive). Read as the user types — `useLive(hostFsCompletions, { prefix })`,
+ * one tuple per text — and pushed while read from a children-scope watch of
+ * the folder searched. Refused: `invalid-path` (empty, relative or NUL),
+ * `missing` (the folder is not there), `denied`, `not-a-dir` (typed into a
+ * file).
+ */
+export const hostFsCompletions = liveValue("host-fs.complete", {
+  schema: HostFsCompletionsSchema,
+  params: ["prefix"],
+  refusals: ["invalid-path", "missing", "denied", "not-a-dir"],
   needsMachine: MACHINE,
 });
 

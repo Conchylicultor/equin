@@ -422,15 +422,18 @@ export function FileTree({
     [listings, request, setOpen],
   );
 
-  // Rows drag as host paths (the selection when the grabbed row is in it), so
-  // any surface taking `HOST_PATHS_MIME` — a folder row here, the Favorites
-  // sidebar — can take them.
+  // Rows drag as host paths with their kinds (the selection when the grabbed
+  // row is in it), so any surface taking `HOST_PATHS_MIME` — a folder row
+  // here, the Favorites sidebar — can take them without reading the disk.
   const rowDrag = useMemo<RowDragConfig<EntryRow>>(
     () => ({
       write: (dragged, dt) => {
-        const paths = dragged.map((r) => absolutePath(r.path, home));
-        writeHostPaths(dt, paths);
-        onDragPaths(paths);
+        const entries = dragged.map((r) => ({
+          path: absolutePath(r.path, home),
+          kind: r.kind,
+        }));
+        writeHostPaths(dt, entries);
+        onDragPaths(entries.map((e) => e.path));
       },
     }),
     [home, onDragPaths],

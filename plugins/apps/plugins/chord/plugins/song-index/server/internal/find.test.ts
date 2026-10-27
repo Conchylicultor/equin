@@ -1,10 +1,9 @@
 import { describe, expect, it } from "bun:test";
 import { PgDialect } from "drizzle-orm/pg-core";
 import { chordTokenFromParts, compactChord, deriveSection } from "../../core";
-import {
-  FindLoopsBodySchema,
-  NextChordsBodySchema,
-} from "../../core/endpoints";
+import { NextChordsBodySchema } from "../../core/endpoints";
+import { FindLoopsSchema, checkFindLoops } from "../../core/resources";
+import { ResourceRefusal } from "@plugins/packages/plugins/resource-protocol/core";
 import { chord, section, windowsOf } from "../../core/test-sections";
 import {
   chordsInWindow,
@@ -21,7 +20,7 @@ const V = "7:4-3/0";
 
 describe("findLoopsWhere", () => {
   it("leads with the practised overlap and binds the playable set as one array", () => {
-    const body = FindLoopsBodySchema.parse({
+    const body = FindLoopsSchema.parse({
       playable: [I, IV, V],
       practised: [IV],
       extras: 0,
@@ -37,7 +36,7 @@ describe("findLoopsWhere", () => {
   });
 
   it("a focus adds the windows-holding-it test", () => {
-    const body = FindLoopsBodySchema.parse({
+    const body = FindLoopsSchema.parse({
       playable: [I, IV, V],
       practised: [I, IV],
       extras: 0,
@@ -52,7 +51,7 @@ describe("findLoopsWhere", () => {
 
   it("extras 1 and 2 count the chords outside the playable set instead of <@", () => {
     for (const extras of [1, 2] as const) {
-      const body = FindLoopsBodySchema.parse({
+      const body = FindLoopsSchema.parse({
         playable: [I, IV],
         practised: [I],
         extras,
@@ -68,7 +67,7 @@ describe("findLoopsWhere", () => {
   });
 
   it("extras any drops the containment test altogether", () => {
-    const body = FindLoopsBodySchema.parse({
+    const body = FindLoopsSchema.parse({
       playable: [I, IV],
       practised: [I],
       extras: "any",
@@ -81,7 +80,7 @@ describe("findLoopsWhere", () => {
   });
 
   it("adds the optional filters only when given", () => {
-    const body = FindLoopsBodySchema.parse({
+    const body = FindLoopsSchema.parse({
       playable: [I, IV],
       practised: [I],
       extras: 0,
@@ -103,23 +102,43 @@ describe("findLoopsWhere", () => {
   });
 
   it("refuses a practised chord that is not playable, and a focus not practised", () => {
-    const notPlayable = FindLoopsBodySchema.safeParse({
+    const refusal = (input: unknown) => {
+      try {
+        checkFindLoops(FindLoopsSchema.parse(input));
+      } catch (err) {
+        if (err instanceof ResourceRefusal) return err;
+        throw err;
+      }
+      throw new Error("checkFindLoops accepted the find");
+    };
+    const notPlayable = refusal({
       playable: [I, V],
       practised: [IV],
       extras: 0,
       limit: 10,
     });
-    expect(notPlayable.success).toBe(false);
-    expect(notPlayable.error?.issues[0]?.path).toEqual(["practised"]);
-    const badFocus = FindLoopsBodySchema.safeParse({
+    expect(notPlayable.code).toBe("invalid-query");
+    expect(notPlayable.message).toContain("practised");
+    const badFocus = refusal({
       playable: [I, V],
       practised: [I],
       extras: 0,
       focus: V,
       limit: 10,
     });
-    expect(badFocus.success).toBe(false);
-    expect(badFocus.error?.issues[0]?.path).toEqual(["focus"]);
+    expect(badFocus.code).toBe("invalid-query");
+    expect(badFocus.message).toContain("focus");
+    expect(() =>
+      checkFindLoops(
+        FindLoopsSchema.parse({
+          playable: [I, V],
+          practised: [I],
+          extras: 0,
+          focus: I,
+          limit: 10,
+        }),
+      ),
+    ).not.toThrow();
   });
 });
 
@@ -135,7 +154,7 @@ describe("playableVideoWhere", () => {
   it("is not part of the windows-only WHERE", () => {
     // `findLoopsWhere` stands on the windows table alone, like the counts,
     // which deliberately ignore the videos.
-    const body = FindLoopsBodySchema.parse({
+    const body = FindLoopsSchema.parse({
       playable: [I, IV],
       practised: [I],
       extras: 0,

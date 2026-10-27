@@ -14,7 +14,6 @@ import {
   useFetchEndpoint,
 } from "@plugins/infra/plugins/endpoints/web";
 import { useTransport } from "@plugins/primitives/plugins/networking/web";
-import { interpolatePath } from "@plugins/infra/plugins/endpoints/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -439,12 +438,9 @@ function DeleteAction({ entry }: { entry: WorktreeEntry }): ReactElement {
   const reap = async (): Promise<void> => {
     setStep("worktree");
     try {
-      for await (const frame of readNdjson(
-        transport,
-        deleteWorktree.route,
-        interpolatePath(deleteWorktree.path, { id: entry.attemptId }),
-        { method: "DELETE" },
-      )) {
+      for await (const frame of readNdjson(transport, deleteWorktree, {
+        id: entry.attemptId,
+      })) {
         const event = frame as DeleteEvent;
         if ("step" in event) setStep(event.step);
         else if ("refreshError" in event)

@@ -19,6 +19,7 @@
 
 import {
   boot,
+  pageFetch,
   pathUrl,
   report,
   snap,
@@ -191,14 +192,12 @@ await withBrowser(async (h) => {
   await assertCountIsTheStack("after a drained burst, with one toast up");
 
   // Clean up exactly what we created — by id, never the bulk endpoint.
-  await page.evaluate(async (ids) => {
-    for (const id of ids) {
-      const res = await fetch(`/api/notifications/${id}/dismiss`, {
-        method: "POST",
-      });
-      if (!res.ok) throw new Error(`dismiss ${id} failed: ${res.status}`);
-    }
-  }, seededIds);
+  for (const id of seededIds) {
+    const res = await pageFetch(page, `/api/notifications/${id}/dismiss`, {
+      method: "POST",
+    });
+    if (!res.ok) throw new Error(`dismiss ${id} failed: ${res.status}`);
+  }
 
   r.ok(
     "no page errors",
@@ -329,30 +328,25 @@ await withBrowser(async (h) => {
       title: `Seeded toast ${offset + i + 1}`,
     }));
     seededIds.push(...batch.map((entry) => entry.id));
-    await page.evaluate(
-      async ({ batch: entries, tight }) => {
-        const post = async (entry: {
-          id: string;
-          title: string;
-        }): Promise<void> => {
-          const res = await fetch("/api/notifications", {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({
-              id: entry.id,
-              type: "e2e",
-              title: entry.title,
-              description: "Fired by the dismiss-all e2e script.",
-              variant: "info",
-            }),
-          });
-          if (!res.ok) throw new Error(`seed failed: ${res.status}`);
-        };
-        if (tight) await Promise.all(entries.map(post));
-        else for (const entry of entries) await post(entry);
-      },
-      { batch, tight: opts.tight === true },
-    );
+    const post = async (entry: {
+      id: string;
+      title: string;
+    }): Promise<void> => {
+      const res = await pageFetch(page, "/api/notifications", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          id: entry.id,
+          type: "e2e",
+          title: entry.title,
+          description: "Fired by the dismiss-all e2e script.",
+          variant: "info",
+        }),
+      });
+      if (!res.ok) throw new Error(`seed failed: ${res.status}`);
+    };
+    if (opts.tight === true) await Promise.all(batch.map(post));
+    else for (const entry of batch) await post(entry);
     return batch.map((entry) => entry.title);
   }
 });

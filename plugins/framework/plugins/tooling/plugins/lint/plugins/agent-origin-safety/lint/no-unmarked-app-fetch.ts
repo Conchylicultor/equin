@@ -11,11 +11,12 @@ const createRule = ESLintUtils.RuleCreator(
  * The distinction that matters is absolute vs relative, and it is not a
  * stylistic one — it is exactly the line between marked and unmarked:
  *
- *   `fetch("/api/pages/…")`        inside `page.evaluate` — runs IN THE BROWSER,
- *                                  so the context's agent-origin headers already
- *                                  apply. Nothing to fix; flagging it would be
- *                                  wrong, and there is no `agentFetch` in the
- *                                  page to migrate it to.
+ *   `fetch("/api/pages/…")`        inside `page.evaluate` — runs IN THE BROWSER.
+ *                                  Marked (the context's headers apply), but the
+ *                                  page request guard refuses it: page code
+ *                                  reaches the app only through its transport.
+ *                                  Flagged separately (`inPage`): call the API
+ *                                  as the page with `pageFetch`.
  *   `fetch(`${base}/api/…`)`       runs in Node. Unmarked. This is the hole.
  *   `fetch(pathUrl("/api/…"))`     runs in Node. Unmarked. Same hole.
  *
@@ -27,6 +28,25 @@ const createRule = ESLintUtils.RuleCreator(
  * e2e script is legitimate and carries no provenance question. Only the app
  * under test does, and `/api/` (or `pathUrl`) is what names it.
  */
+/** A relative app path — `fetch` of it can only run in the page. */
+const IN_PAGE_APP_PATH = /^\/(?:api|ws|gateway)(?:[/?]|$)/;
+
+/**
+ * Is this an IN-PAGE fetch to the app under test (a relative `/api` | `/ws` |
+ * `/gateway` path, which only the browser can resolve)? The page request
+ * guard refuses it at run time; this says so at lint time.
+ */
+function isInPageAppFetch(
+  arg: TSESTree.CallExpressionArgument | undefined,
+): boolean {
+  if (!arg) return false;
+  if (arg.type === "Literal" && typeof arg.value === "string")
+    return IN_PAGE_APP_PATH.test(arg.value);
+  if (arg.type === "TemplateLiteral")
+    return IN_PAGE_APP_PATH.test(arg.quasis[0]?.value.cooked ?? "");
+  return false;
+}
+
 function isUnmarkedNodeAppFetch(
   arg: TSESTree.CallExpressionArgument | undefined,
 ): boolean {
@@ -61,7 +81,7 @@ export default createRule({
     type: "problem",
     docs: {
       description:
-        "In e2e scripts, call the app under test through `agentFetch` rather than a bare `fetch`, so the request carries agent-origin provenance.",
+        "In e2e scripts, call the app under test through `agentFetch` (as the script) or `pageFetch` (as the page) rather than a bare `fetch`: a Node-side one carries no agent-origin provenance, and an in-page one is refused by the page request guard.",
     },
     schema: [],
     messages: {
@@ -75,6 +95,14 @@ export default createRule({
         "Node — that is this gap. Use `agentFetch(path, init?)` from " +
         "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e, which applies " +
         "the headers and resolves `path` against the same `--url` target.",
+      inPage:
+        "An in-page `fetch` of the app's own API is refused at run time by the " +
+        "page request guard (primitives/networking/plugins/request-guard): page " +
+        "code reaches the server only through its transport. Call the API AS THE " +
+        "PAGE from the script's side instead — `pageFetch(page, path, init?)` " +
+        "from @plugins/framework/plugins/tooling/plugins/e2e-harness/e2e, over " +
+        "Playwright's `page.request` (the context's cookies and agent-origin " +
+        "headers), answering a standard `Response`.",
     },
   },
   defaultOptions: [],
@@ -83,13 +111,17 @@ export default createRule({
     // `enforceEverywhere` (contributed rules are otherwise off in e2e files) and
     // the claim is specific to e2e: a `fetch` to `/api/` from server code is an
     // ordinary internal call with no provenance question, and web code is
-    // already covered by `endpoints:typed-web-fetches`.
+    // already covered by `endpoints/no-raw-web-fetch`.
     if (!context.filename.includes("/e2e/")) return {};
 
     return {
       CallExpression(node) {
         if (node.callee.type !== "Identifier") return;
         if (node.callee.name !== "fetch") return;
+        if (isInPageAppFetch(node.arguments[0])) {
+          context.report({ node, messageId: "inPage" });
+          return;
+        }
         if (!isUnmarkedNodeAppFetch(node.arguments[0])) return;
         context.report({ node, messageId: "unmarked" });
       },

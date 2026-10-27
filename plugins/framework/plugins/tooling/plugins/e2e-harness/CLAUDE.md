@@ -131,6 +131,28 @@ writes an `ok` receipt with a new dist and leaves the previous backend running,
 so a run can still be green against a new frontend talking to old server code.
 Nothing here can see that — the receipt records one build id for both halves.
 
+## Calling the app's API: `pageFetch` (as the page) or `agentFetch` (as the script)
+
+The page itself may not: the page request guard
+(`primitives/networking/plugins/request-guard`, installed first by the app's
+entry) refuses every raw same-origin `/api` · `/ws` · `/gateway` request page
+code issues, so `page.evaluate(() => fetch("/api/…"))` rejects with a
+`RawApiRequestError` (and files a crash report).
+
+- **`pageFetch(page, path, init?)`** (`e2e/page-fetch.ts`) — the request the
+  page would have made, from the script's side: Playwright's `page.request`,
+  i.e. the page's BROWSER CONTEXT (its cookies and its context-wide
+  `extraHTTPHeaders`, so the agent-origin provenance — or an `--attach`ed
+  session's — rides along exactly as before). `path` resolves against the
+  page's current URL; `init` is `{ method, headers, body }` (body already
+  serialized); the answer is a standard fetch `Response`, so `res.ok` /
+  `res.json()` stay as they were. Seeding rows, reading what the server holds.
+- **`agentFetch(path, init?)`** — the script's own identity, for a script with
+  no page (or a call that is not the page's).
+
+`agent-origin-safety/no-unmarked-app-fetch` flags both holes: an absolute
+Node-side `fetch` (→ `agentFetch`) and a relative in-page one (→ `pageFetch`).
+
 ## Main is read-only for a run
 
 A run against main (`--url http://equin.localhost:9000`) can read and

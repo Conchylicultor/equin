@@ -27,7 +27,9 @@ export function useSongPlaying(song: Song): boolean {
  * playing. Drawn for its placement — `primary`, the round filled button over a
  * card's cover or a list thumbnail; `cluster`, an icon button among the row's
  * other actions (the table). The click never activates the row
- * (stopPropagation), so it won't open the full player.
+ * (stopPropagation), so it won't open the full player. It only asks: the
+ * surface's background-play host plays the song once its sources answered,
+ * whether or not this row is still mounted.
  */
 export function PlaySongAction({ row, placement }: ItemActionProps<Song>) {
   const { togglePlaySong, currentSongId, isPlaying } = useSonataPlayback();

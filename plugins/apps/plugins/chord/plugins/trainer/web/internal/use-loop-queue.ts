@@ -1,14 +1,17 @@
-import { useEffect, useRef, useState } from "react";
-import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import {
-  findLoopsEndpoint,
-  type ChordToken,
-  type FindLoopsBody,
-  type IndexStatus,
-  type LoopCandidate,
-  type LoopExtras,
+import { useEffect, useState } from "react";
+import { useLive } from "@plugins/network/plugins/live/web";
+import type {
+  ChordLoopsAnswer,
+  ChordToken,
+  IndexStatus,
+  LoopCandidate,
+  LoopExtras,
 } from "@plugins/apps/plugins/chord/plugins/song-index/core";
-import type { Blanks } from "@plugins/apps/plugins/chord/plugins/curriculum/core";
+import {
+  chordCurriculumLoops,
+  type Blanks,
+  type CurriculumLoopsQueryInput,
+} from "@plugins/apps/plugins/chord/plugins/curriculum/core";
 import {
   useEventCallback,
   useLatestRef,
@@ -79,6 +82,21 @@ type Fetch =
 const IDLE: Fetch = { kind: "idle" };
 
 /**
+ * One refill, frozen when it is asked: the palette it was found for and its
+ * finds (`chord.curriculum.loops` questions — over the learner's stored
+ * selection, which the server reads, so a question never carries the chords),
+ * each carrying the refill's own `round` nonce — the answer is a random sample, so the next refill must be a new
+ * tuple, never a cached answer to the same question.
+ */
+type Request = {
+  palette: string;
+  queries: readonly CurriculumLoopsQueryInput[];
+};
+
+/** No refill out: the list read reads nothing. */
+const NO_QUERIES: readonly CurriculumLoopsQueryInput[] = [];
+
+/**
  * What a pool was drawn for, as one comparable string: the chords a loop may
  * hold, the practised ones, and how many other chords it may hold. Compared by
  * value, so a render that rebuilds the same sets changes nothing.
@@ -97,12 +115,14 @@ function paletteKey(
 
 /** Everything the queue holds, in one value so each move is one transition. */
 type Queue = {
-  /** The palette `loops` and `fetch` were found for. */
+  /** The palette `loops`, `fetch` and `request` were found for. */
   palette: string;
   /** The round on screen, dealt once. Survives a palette change. */
   current: DealtLoop | null;
   loops: readonly LoopCandidate[];
   fetch: Fetch;
+  /** The refill out, read until every find answers: one at a time. */
+  request: Request | null;
   /** The chords of the loops dealt this visit, oldest first (the last `SHARE_HISTORY`). */
   history: readonly (readonly ChordToken[])[];
   /** Sections of the loops moved past this visit, most recent last. */
@@ -113,13 +133,15 @@ type Queue = {
  * The pool as it stands for the palette in force. **A new palette empties
  * it**: its loops were found for the chords the learner had on before, so
  * every one behind the round goes, and so does the last refill's outcome (a
- * palette that just grew may have loops the old one had none of). The round on
- * screen stays. Derived, never written: no render can show a stale loop.
+ * palette that just grew may have loops the old one had none of) and the
+ * refill still out (found for the old chords: it is dropped unread, and the
+ * new palette asks its own). The round on screen stays. Derived, never
+ * written: no render can show a stale loop.
  */
 function live(queue: Queue, palette: string): Queue {
   return queue.palette === palette
     ? queue
-    : { ...queue, palette, loops: [], fetch: IDLE };
+    : { ...queue, palette, loops: [], fetch: IDLE, request: null };
 }
 
 /** The dealing context: what a loop is dealt with when it comes up. */
@@ -191,7 +213,6 @@ export function useLoopQueue(opts: {
   desired: ResourceResult<DesiredShares>;
 }): LoopQueue {
   const { playable, practised, extras, blanks } = opts;
-  const fetchEndpoint = useFetchEndpoint();
   // Nothing is asked or dealt until each chord's share is known: while the
   // progress loads, or after its read failed (the panel shows that failure).
   const desired = foldResource(opts.desired, {
@@ -212,14 +233,13 @@ export function useLoopQueue(opts: {
     current: null,
     loops: [],
     fetch: IDLE,
+    request: null,
     history: [],
     played: [],
   }));
-  /** The palette a refill is out for: one at a time. */
-  const inFlight = useRef<string | null>(null);
 
   const queue = live(stored, palette);
-  const { played, loops, current, history } = queue;
+  const { played, loops, current, history, request } = queue;
 
   /** Change the queue as it stands for the palette in force now. */
   const update = useEventCallback((fn: (q: Queue) => Queue) =>
@@ -232,10 +252,12 @@ export function useLoopQueue(opts: {
     practised.length > 0 &&
     desired !== null;
 
+  // Ask: freeze one refill when the pool runs low and none is out. Its nonce
+  // and the rare chord a focused find picks are drawn here, once, never in
+  // render.
   useEffect(() => {
-    if (!wantsMore || desired === null || inFlight.current === palette) return;
-    const askedFor = palette;
-    inFlight.current = askedFor;
+    // `wantsMore` holds only with `desired` known (tsc narrows it through).
+    if (!wantsMore || request !== null) return;
     const exclude = [
       ...new Set([
         ...played.slice(-RECENT_SECTIONS),
@@ -243,11 +265,13 @@ export function useLoopQueue(opts: {
         ...(current === null ? [] : [current.candidate.sectionId]),
       ]),
     ];
-    const base: Omit<FindLoopsBody, "limit" | "focus"> = {
-      playable: [...playable],
-      practised: [...practised],
-      extras,
+    const round = crypto.randomUUID();
+    // The chords are not asked: the server reads them from the stored
+    // selection this palette was drawn from (a selection that moves since
+    // moves the palette, which drops this refill).
+    const base: Omit<CurriculumLoopsQueryInput, "limit" | "focus"> = {
       shape: "phrase",
+      round,
       ...(exclude.length > 0 ? { excludeSectionIds: exclude } : {}),
     };
     // The chords furthest below their share get a batch of their own. The
@@ -260,84 +284,55 @@ export function useLoopQueue(opts: {
         return rare[Math.floor(Math.random() * rare.length)] ?? null;
       })
       .filter((token): token is ChordToken => token !== null);
-    const bodies: FindLoopsBody[] = [
-      { ...base, limit: BATCH },
-      ...focus.map((token) => ({
-        ...base,
-        focus: token,
-        limit: FOCUSED_BATCH,
-      })),
-    ];
-    const settle = (fn: (q: Queue) => Queue) => {
-      if (inFlight.current === askedFor) inFlight.current = null;
-      // Found for a palette no longer in force: stale. The effect has already
-      // asked again for the new one (it re-ran when the palette moved).
-      if (paletteRef.current !== askedFor) return;
-      update(fn);
-    };
-    void Promise.all(
-      bodies.map((body) => fetchEndpoint(findLoopsEndpoint, {}, { body })),
-    ).then(
-      (answers) =>
-        settle((q) => {
-          for (const answer of answers) {
-            if (answer.kind === "not-ready") {
-              return {
-                ...q,
-                fetch: { kind: "not-ready", status: answer.status },
-              };
-            }
-          }
-          const known = new Set(q.loops.map(loopKey));
-          if (q.current !== null) known.add(loopKey(q.current.candidate));
-          const fresh: LoopCandidate[] = [];
-          for (const answer of answers) {
-            if (answer.kind !== "ready") continue;
-            for (const loop of answer.candidates) {
-              if (known.has(loopKey(loop))) continue;
-              known.add(loopKey(loop));
-              fresh.push(loop);
-            }
-          }
-          const filled: Queue = {
-            ...q,
-            loops: [...q.loops, ...fresh],
-            fetch: fresh.length === 0 ? { kind: "exhausted" } : q.fetch,
-          };
-          // Nothing on screen yet (the first loops, or the round ran out
-          // while the pool was empty): deal at once.
-          const deal = dealRef.current;
-          return filled.current === null && deal !== null
-            ? dealNext(filled, deal)
-            : filled;
-        }),
-      (err: unknown) =>
-        settle((q) => ({
-          ...q,
-          fetch: {
-            kind: "error",
-            message: err instanceof Error ? err.message : String(err),
-          },
+    const asked: Request = {
+      palette,
+      queries: [
+        { ...base, limit: BATCH },
+        ...focus.map((token) => ({
+          ...base,
+          focus: token,
+          limit: FOCUSED_BATCH,
         })),
+      ],
+    };
+    // Applied to the queue as it stands for the palette in force NOW: a
+    // refill frozen for a palette that has since moved is dropped (the effect
+    // re-runs for the new one).
+    update((q) =>
+      q.palette === asked.palette &&
+      q.request === null &&
+      q.fetch.kind === "idle"
+        ? { ...q, request: asked }
+        : q,
     );
-    // `inFlight` gates a second refill while one is out; the pool growing (or
-    // its fetch leaving `idle`) turns `wantsMore` off when it lands.
   }, [
-    fetchEndpoint,
     wantsMore,
+    request,
     desired,
     palette,
-    paletteRef,
-    dealRef,
     played,
     loops,
     current,
     history,
-    playable,
-    practised,
-    extras,
     update,
   ]);
+
+  // Read: every find of the refill out, as one list read (nothing when none
+  // is out).
+  const answers = useLive(chordCurriculumLoops, request?.queries ?? NO_QUERIES);
+
+  // Land: once every find has answered (or one failed), fold the answers into
+  // the pool and clear the request — the read then drops its tuples.
+  useEffect(() => {
+    if (request === null) return;
+    const outcome = refillOutcome(answers);
+    if (outcome.kind === "pending") return;
+    update((q) =>
+      // Only the refill this read was for: a palette change has already
+      // dropped it (`live`), and a second landing of the same one is a no-op.
+      q.request !== request ? q : land(q, outcome, dealRef.current),
+    );
+  }, [answers, request, update, dealRef]);
 
   /** Move past the round on screen: deal the next one from the pool, or wait for the refill. */
   const moveOn = (keep: (loop: LoopCandidate) => boolean) =>
@@ -360,6 +355,83 @@ export function useLoopQueue(opts: {
         ? { kind: "nothing-practised" }
         : stateOf(queue.fetch);
   return { state, next, skipVideo, retry };
+}
+
+/** Where a refill's reads stand, all finds together. */
+type RefillOutcome =
+  /** A find has not answered yet. */
+  | { kind: "pending" }
+  /** A find failed (or was refused): the refill is an error. */
+  | { kind: "error"; message: string }
+  /** Every find answered. */
+  | { kind: "answered"; answers: readonly ChordLoopsAnswer[] };
+
+function refillOutcome(
+  results: readonly ResourceResult<ChordLoopsAnswer>[],
+): RefillOutcome {
+  const answers: ChordLoopsAnswer[] = [];
+  let pending = false;
+  for (const result of results) {
+    switch (result.status) {
+      // One failed find fails the refill at once: waiting for the others
+      // would only delay the error the learner can retry.
+      case "error":
+        return { kind: "error", message: result.error.message };
+      case "loading":
+        pending = true;
+        break;
+      case "ready":
+        answers.push(result.data);
+        break;
+    }
+  }
+  return pending ? { kind: "pending" } : { kind: "answered", answers };
+}
+
+/**
+ * Land a refill: a `not-ready` answer wins; otherwise the loops not already
+ * pooled or on screen (by `loopKey`) join the pool — none new means the
+ * chords are exhausted — and an empty screen is dealt at once. Clears the
+ * request either way.
+ */
+function land(
+  q: Queue,
+  outcome: Exclude<RefillOutcome, { kind: "pending" }>,
+  deal: Deal | null,
+): Queue {
+  const settled = { ...q, request: null };
+  if (outcome.kind === "error") {
+    return { ...settled, fetch: { kind: "error", message: outcome.message } };
+  }
+  for (const answer of outcome.answers) {
+    if (answer.kind === "not-ready") {
+      return {
+        ...settled,
+        fetch: { kind: "not-ready", status: answer.status },
+      };
+    }
+  }
+  const known = new Set(q.loops.map(loopKey));
+  if (q.current !== null) known.add(loopKey(q.current.candidate));
+  const fresh: LoopCandidate[] = [];
+  for (const answer of outcome.answers) {
+    if (answer.kind !== "ready") continue;
+    for (const loop of answer.candidates) {
+      if (known.has(loopKey(loop))) continue;
+      known.add(loopKey(loop));
+      fresh.push(loop);
+    }
+  }
+  const filled: Queue = {
+    ...settled,
+    loops: [...q.loops, ...fresh],
+    fetch: fresh.length === 0 ? { kind: "exhausted" } : q.fetch,
+  };
+  // Nothing on screen yet (the first loops, or the round ran out while the
+  // pool was empty): deal at once.
+  return filled.current === null && deal !== null
+    ? dealNext(filled, deal)
+    : filled;
 }
 
 function stateOf(fetchState: Fetch): LoopQueueState {

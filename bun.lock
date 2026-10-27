@@ -5550,6 +5550,10 @@
       "name": "@equin/plugin-primitives-networking-page-transport",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/networking/plugins/request-guard": {
+      "name": "@equin/plugin-primitives-networking-request-guard",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/optimistic-mutation": {
       "name": "@equin/plugin-primitives-optimistic-mutation",
       "version": "0.0.1",
@@ -9384,6 +9388,8 @@
     "@equin/plugin-primitives-networking": ["@equin/plugin-primitives-networking@workspace:plugins/primitives/plugins/networking"],
 
     "@equin/plugin-primitives-networking-page-transport": ["@equin/plugin-primitives-networking-page-transport@workspace:plugins/primitives/plugins/networking/plugins/page-transport"],
+
+    "@equin/plugin-primitives-networking-request-guard": ["@equin/plugin-primitives-networking-request-guard@workspace:plugins/primitives/plugins/networking/plugins/request-guard"],
 
     "@equin/plugin-primitives-optimistic-mutation": ["@equin/plugin-primitives-optimistic-mutation@workspace:plugins/primitives/plugins/optimistic-mutation"],
 

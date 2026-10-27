@@ -11,6 +11,7 @@ import type {
   EndpointRequestOpts,
   MachineEndpointDef,
   MachineResult,
+  WriteEndpoint,
 } from "../../core";
 import {
   EndpointAgentWriteRefusedError,
@@ -80,15 +81,22 @@ type Answer<TResponse> = EndpointAnswer<TResponse>;
  * the value, or — when the transport has no computer behind it
  * (`transport.machine` false: an in-browser server) — `unavailable` with the
  * sentence to show, without making a request.
+ *
+ * It sends WRITES only (`& WriteEndpoint`): a GET def is a tsc error carrying
+ * the `ReadMarker` sentence, and throws it if a cast gets one past tsc. A
+ * browser read is a live value, read with `useLive` (`useLiveReader` in an
+ * event handler).
  */
 export interface FetchEndpoint {
   <Route extends string, TParams, TBody, TResponse, TQuery>(
-    endpoint: MachineEndpointDef<Route, TParams, TBody, TResponse, TQuery>,
+    endpoint: MachineEndpointDef<Route, TParams, TBody, TResponse, TQuery> &
+      WriteEndpoint,
     params: TParams,
     opts?: FetchOpts<TBody, TQuery>,
   ): Promise<MachineResult<Answer<TResponse>>>;
   <Route extends string, TParams, TBody, TResponse, TQuery>(
-    endpoint: EndpointDef<Route, TParams, TBody, TResponse, TQuery>,
+    endpoint: EndpointDef<Route, TParams, TBody, TResponse, TQuery> &
+      WriteEndpoint,
     params: TParams,
     opts?: FetchOpts<TBody, TQuery>,
   ): Promise<Answer<TResponse>>;
@@ -106,6 +114,10 @@ async function call<Route extends string, TParams, TBody, TResponse, TQuery>(
   params: TParams,
   opts?: FetchOpts<TBody, TQuery>,
 ): Promise<Answer<TResponse> | MachineResult<Answer<TResponse>>> {
+  // tsc refuses a read def; this catches one a cast let through.
+  if (endpoint.read !== undefined) {
+    throw new Error(`${endpoint.route}: ${endpoint.read}`);
+  }
   if (endpoint.needsMachine === undefined) {
     return request(transport, endpoint, params, opts);
   }

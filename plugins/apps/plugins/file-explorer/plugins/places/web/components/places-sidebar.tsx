@@ -257,7 +257,7 @@ function PlacesList({
   // order FIRST, then pins them (a pin already there just moves). Under a
   // sort there is no gap to keep, so they are pinned at the end. The drop's
   // data is read before anything is awaited.
-  const { lookUp, pin } = useFavorites();
+  const { pinsOf, pin } = useFavorites();
   const rowDrop = useMemo<RowDropConfig<PlaceRow>>(() => {
     const pinDrop = (dt: DataTransfer, ctx: RowDropContext) => {
       const read = readHostPaths(dt);
@@ -267,14 +267,12 @@ function PlacesList({
           `file-explorer places: malformed host-paths drop: ${read.error}`,
         );
       }
+      const pins = pinsOf(read.entries);
       const place = async () => {
-        const pins = await lookUp(read.paths);
-        if (pins.length === 0) return;
         if (ctx.order) await ctx.order.insert(pins.map(pinRowKey));
         pin(pins);
       };
-      // A failed lookup or order write is already shown by the endpoint
-      // error toast.
+      // A failed order write is already shown by the endpoint error toast.
       void place().catch((err: unknown) => {
         if (err instanceof EndpointError) return;
         throw err;
@@ -291,7 +289,7 @@ function PlacesList({
       },
       dropEffect: "link",
     };
-  }, [lookUp, pin]);
+  }, [pinsOf, pin]);
 
   return (
     // The block padding sits on an inner box, never on the `Scroll`: a sticky

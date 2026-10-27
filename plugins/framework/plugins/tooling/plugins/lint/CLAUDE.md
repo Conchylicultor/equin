@@ -44,7 +44,10 @@ does not define fails the config build loudly, so a typo can't silently leave a
 rule off.
 
 Type the barrel `satisfies LintContribution`. A rule owner declares only
-scope: `outOfScope: { "<rule>": FileCategory[] }` and `closed: ["<rule>"]`.
+scope: `outOfScope: { "<rule>": FileCategory[] }`, `closed: ["<rule>"]` (no
+exemption at all) and `noDebt: ["<rule>"]` (sanctioned exemptions only — a
+`kind: "debt"` entry is refused). Each names a rule the barrel defines, and a
+rule may not be both `closed` and `noDebt`; either mistake fails the load.
 Which files may violate a rule is declared by the plugin owning them, in its
 own `exempt/index.ts` — see [`tooling/exempt`](../exempt/CLAUDE.md). The
 owner-side `ignores` key no longer exists: a barrel carrying it is a tsc error and fails at load.

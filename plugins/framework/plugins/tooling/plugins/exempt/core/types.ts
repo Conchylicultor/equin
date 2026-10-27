@@ -1,4 +1,4 @@
-import type { ExemptableRuleId } from "./rule-ids.generated";
+import type { DebtableRuleId, ExemptableRuleId } from "./rule-ids.generated";
 
 /**
  * One exemption, as a plugin declares it in its own `exempt/index.ts`: these
@@ -27,6 +27,8 @@ export interface SanctionedExemption extends ExemptionBase {
 /** A violation that should not exist and is tracked for removal. */
 export interface DebtExemption extends ExemptionBase {
   kind: "debt";
+  /** Any exemptable id but one its owner declares `noDebt` (sanctioned-only). */
+  rule: DebtableRuleId;
   /** The task that removes it. */
   task: string;
 }

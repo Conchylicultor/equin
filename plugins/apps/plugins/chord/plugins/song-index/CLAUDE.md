@@ -17,10 +17,17 @@ POST /api/chord/index/ensure                → IndexStatus
 // Loops holding at least one `practised` chord, every other chord `playable`
 // — or up to `extras` (0 | 1 | 2 | "any") outside it —, holding `focus` when
 // named (random order), on a video not known to be unplayable. At most
-// `limit` — possibly fewer. `practised` ⊆ `playable`, `focus` ∈ `practised`.
-POST /api/chord/loops/find  { playable, practised, extras, focus?, shape?="phrase",
-                              requireFeatures?, forbidFeatures?, excludeSectionIds?, limit ≤ 50 }
-  → { kind: "not-ready", status } | { kind: "ready", candidates: LoopCandidate[] }
+// `limit` — possibly fewer. A typed-query live value (`chordLoops`, core),
+// on-demand and fixed per tuple; `round` is a nonce per ask, so asking again
+// is a new tuple and a new random sample, never a cached one. Refused
+// `invalid-query` unless `practised` ⊆ `playable` and `focus` ∈ `practised`.
+// The question carries every chord, so it is for a SMALL explicit set (the
+// e2e flows): the trainer asks curriculum's `chord.curriculum.loops`, whose
+// server reads the selection and answers through `answerLoopFind` (server
+// barrel) — the same answer, with `LoopFindOptionsSchema` as its question.
+useLive(chordLoops, [{ playable, practised, extras, focus?, shape?="phrase",
+  requireFeatures?, forbidFeatures?, excludeSectionIds? (≤ 40), limit ≤ 50, round }, …])
+  → { kind: "not-ready", status } | { kind: "ready", candidates: LoopCandidate[] (≤ 50) }
 
 // For each chord outside `unlocked`: how many windows unlocking it adds, split
 // by the key mode of the window. Biggest single mode first.
@@ -72,7 +79,7 @@ barrel): it calls `ensure` on mount, shows the phases ("Waiting to start…",
 "Downloading songs…", "Preparing songs…", "Loading songs 12,000 / 26,175" with
 a bar) or the failure with Retry, and renders its children once `ready`.
 
-Both reads answer `not-ready` until the status is `ready` — never an empty list,
+The find and both counts answer `not-ready` until the status is `ready` — never an empty list,
 which would read as "no song fits". A `LoopCandidate` carries the section's
 display names, `videoId`, `videoDurationSeconds`, `videoStatus` (`ok`, or
 `unknown` when nobody could tell yet), `alignment`, the window's fields and the
@@ -258,7 +265,7 @@ sample is every song whose slugs hash into bucket 0 of 20, plus
 
 ## Plugin reference
 
-- Description: The song index's web half: the settings registration for its load scope, and SongIndexGate — opens the index on mount and shows the load's progress (or its failure, with Retry) until the index is ready, then its children. The chord app's song index: the Sheet Sage download and snapshot build, the supervised load job, the ensure endpoint, the live load status, the loop queries, the snapshot's backup source, and the `hooktheory` song-video source (the videos transcribers synced a song to, by slug).
+- Description: The song index's web half: the settings registration for its load scope, and SongIndexGate — opens the index on mount and shows the load's progress (or its failure, with Retry) until the index is ready, then its children. The chord app's song index: the Sheet Sage download and snapshot build, the supervised load job, the ensure endpoint, the live load status, the live loop find (chord.loops), the loop counts, the snapshot's backup source, and the `hooktheory` song-video source (the videos transcribers synced a song to, by slug).
 - Web:
   - Contributes: `ConfigV2.WebRegister` "config"
   - Uses:
@@ -278,6 +285,7 @@ sample is every song whose slugs hash into bucket 0 of 20, plus
   - Contributes:
     - `ConfigV2.Register` "config"
     - `resource.declare` "chord.index-status"
+    - `resource.declare` "chord.loops"
     - `song-videos.source` "hooktheory"
     - `backup.source` "Chord song index snapshot"
     - `fork-data-exclusion` "chord_index_state"
@@ -311,16 +319,18 @@ sample is every song whose slugs hash into bucket 0 of 20, plus
     - `_chordIndexRequest`
     - `_chordIndexState`
     - `_chordLoopWindows`
+    - `answerLoopFind`
     - `countLoopsByNextChord`
     - `countLoopsInSet`
     - `countTokenSets`
     - `loadIndexStatus`
     - `loadReadyIndexIdentity`
   - Register: `defineSupervisedJob('chord.song-index.load')`
-  - Resources: `chord.index-status` (push)
+  - Resources:
+    - `chord.index-status` (push)
+    - `chord.loops` (invalidate, fixed, capped: FIND_LOOPS_MAX_LIMIT, whole: the chords of one loop window: a few bars' worth, whole: one section's beat grid: a point per beat of the section, whole: one loop window's distinct chords or spelling features)
   - Routes:
     - `POST /api/chord/index/ensure`
-    - `POST /api/chord/loops/find`
     - `POST /api/chord/loops/next-chords`
     - `POST /api/chord/loops/count-in-set`
 - Core:
@@ -341,15 +351,21 @@ sample is every song whose slugs hash into bucket 0 of 20, plus
     - `integrations/hooktheory.hookpadTonicPc`
     - `integrations/hooktheory.TheorytabSectionIdSchema`
     - `network/live.liveValue`
+    - `packages/list-bound.cappedList`
+    - `packages/list-bound.wholeList`
   - Exports (types):
     - `BeatTimesAlignment`
     - `ChordFeature`
+    - `ChordLoopsAnswer`
     - `ChordToken`
     - `ChordTokenParts`
     - `CountLoopsInSetBody`
     - `DerivedSection`
     - `DeriveSectionInput`
-    - `FindLoopsBody`
+    - `FindLoops`
+    - `FindLoopsInput`
+    - `FindLoopsQuery`
+    - `FindLoopsQueryInput`
     - `IndexedChord`
     - `IndexLoadPhase`
     - `IndexPhase`
@@ -359,6 +375,7 @@ sample is every song whose slugs hash into bucket 0 of 20, plus
     - `LoopCandidate`
     - `LoopChord`
     - `LoopExtras`
+    - `LoopFindOptions`
     - `LoopSectionInput`
     - `LoopShape`
     - `LoopShapeId`
@@ -386,9 +403,12 @@ sample is every song whose slugs hash into bucket 0 of 20, plus
     - `beatTimesAlignment`
     - `beatToSeconds`
     - `bestModeWindows`
+    - `checkFindLoops`
     - `CHORD_FEATURES`
     - `chordFeatures`
     - `chordIndexStatus`
+    - `chordLoops`
+    - `ChordLoopsAnswerSchema`
     - `chordOverlapsWindow`
     - `chordToken`
     - `chordTokenFromParts`
@@ -400,8 +420,11 @@ sample is every song whose slugs hash into bucket 0 of 20, plus
     - `deriveSection`
     - `ensureChordIndexEndpoint`
     - `expandChord`
+    - `FIND_LOOPS_MAX_EXCLUDED`
     - `FIND_LOOPS_MAX_LIMIT`
-    - `findLoopsEndpoint`
+    - `FIND_LOOPS_ROUND_MAX`
+    - `FindLoopsQuerySchema`
+    - `FindLoopsSchema`
     - `fnv1a32`
     - `INDEX_DERIVATION_VERSION`
     - `INDEX_LOAD_PHASES`
@@ -415,8 +438,8 @@ sample is every song whose slugs hash into bucket 0 of 20, plus
     - `LOOP_EXTRAS`
     - `LOOP_SHAPE_IDS`
     - `LOOP_SHAPES`
-    - `LoopCandidateSchema`
     - `LoopExtrasSchema`
+    - `LoopFindOptionsSchema`
     - `LoopWindowFieldsSchema`
     - `NEXT_CHORDS_MAX_LIMIT`
     - `NextChordCountSchema`
@@ -463,7 +486,11 @@ sample is every song whose slugs hash into bucket 0 of 20, plus
     - `apps/chord/vocabulary`
 - Exemptions:
   - Exempts itself from:
+    - `no-db-backed-notify` — `server/internal/loops-resource.ts` (sanctioned)
     - `ids:pk-declared` — `server/internal/tables.ts` (debt)
     - `boundaries/no-platform-api` — `server/internal/backup-source.ts`, `server/internal/load-job.ts`, `server/internal/snapshot.ts` (debt)
+- Test helpers:
+  - Core: `@plugins/apps/plugins/chord/plugins/song-index/core/testing`
+    - `LoopCandidateSchema`
 
 <!-- AUTOGENERATED:END -->

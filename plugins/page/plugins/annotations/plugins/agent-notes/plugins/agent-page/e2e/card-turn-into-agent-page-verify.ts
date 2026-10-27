@@ -15,6 +15,7 @@
 //          [--out /tmp/card-agent-page]
 import type { Page } from "playwright";
 import {
+  pageFetch,
   arg,
   report,
   snap,
@@ -39,12 +40,9 @@ interface Row {
 
 /** The live rows of one page's content, as the server holds them. */
 async function rowsOf(page: Page, pageId: string): Promise<Row[]> {
-  return page.evaluate(async (id: string) => {
-    const res = await fetch(`/api/pages/${id}/blocks`);
-    if (!res.ok)
-      throw new Error(`GET blocks ${res.status}: ${await res.text()}`);
-    return (await res.json()) as Row[];
-  }, pageId);
+  const res = await pageFetch(page, `/api/pages/${pageId}/blocks`);
+  if (!res.ok) throw new Error(`GET blocks ${res.status}: ${await res.text()}`);
+  return (await res.json()) as Row[];
 }
 
 const textOf = (row: Row): string =>
@@ -70,33 +68,28 @@ await withBrowser(async (h) => {
   const doc = await openBlankPage(page, { settleMs: 800 });
   const pageId = pageIdFromUrl(doc.pageUrl);
 
-  const seeded = await page.evaluate(
-    async ({ pageId, title, body }) => {
-      const post = async (b: unknown) => {
-        const res = await fetch("/api/blocks", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify(b),
-        });
-        if (!res.ok)
-          throw new Error(
-            `POST /api/blocks ${res.status}: ${await res.text()}`,
-          );
-        return (await res.json()) as { id: string };
-      };
-      const card = await post({
-        parentId: pageId,
-        type: "agent-note",
-        data: {},
+  const seeded = await (async (title: string, body: string) => {
+    const post = async (b: unknown) => {
+      const res = await pageFetch(page, "/api/blocks", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(b),
       });
-      const text = (parentId: string, t: string) =>
-        post({ parentId, type: "text", data: { text: [{ text: t }] } });
-      const first = await text(card.id, title);
-      const second = await text(card.id, body);
-      return { card: card.id, first: first.id, second: second.id };
-    },
-    { pageId, title: TITLE_LINE, body: BODY_LINE },
-  );
+      if (!res.ok)
+        throw new Error(`POST /api/blocks ${res.status}: ${await res.text()}`);
+      return (await res.json()) as { id: string };
+    };
+    const card = await post({
+      parentId: pageId,
+      type: "agent-note",
+      data: {},
+    });
+    const text = (parentId: string, t: string) =>
+      post({ parentId, type: "text", data: { text: [{ text: t }] } });
+    const first = await text(card.id, title);
+    const second = await text(card.id, body);
+    return { card: card.id, first: first.id, second: second.id };
+  })(TITLE_LINE, BODY_LINE);
   console.log("seeded:", JSON.stringify(seeded));
 
   await page.reload({ waitUntil: "domcontentloaded" });

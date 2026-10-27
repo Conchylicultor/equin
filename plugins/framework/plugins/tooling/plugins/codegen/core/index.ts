@@ -251,7 +251,7 @@ export { formatGenerated, writeGenerated } from "./write-generated";
 // before any install can see a stale or duplicate workspace name.
 export { withPackageName } from "./package-names";
 export {
-  collectExemptableRuleIds,
+  collectExemptRuleIds,
   EXEMPT_RULE_IDS_REL_PATH,
   exemptRuleIdsPath,
   generateExemptRuleIds,

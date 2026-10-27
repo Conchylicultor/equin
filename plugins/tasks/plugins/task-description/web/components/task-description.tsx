@@ -9,12 +9,10 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { LaunchControl } from "@plugins/primitives/plugins/launch/web";
 import { patchTask, useTask } from "@plugins/tasks/web";
-import { getTask as getTaskEndpoint } from "@plugins/tasks/core";
 import {
   taskDescriptions,
   type TaskListItem,
 } from "@plugins/tasks/plugins/tasks-core/core";
-import { buildTaskPrompt } from "@plugins/tasks/plugins/tasks-core/core";
 import {
   useFlushAll,
   useRegisterFlush,
@@ -40,18 +38,12 @@ function TaskDescriptionInner({
   });
   useRegisterFlush(descField.flush);
 
+  // Every pending edit is saved first; the server then builds the prompt from
+  // the task as saved (`{ from: "task" }`), so the launch carries what was typed.
   const buildLaunchRequest = useCallback(async () => {
     await flushAll();
-    /* eslint-disable promise-safety/no-absorbed-failure -- best-effort fresh-task refetch before launch; null falls back to the live row and its live description (`fresh ?? { ...task, description }`), a deliberate stale-but-present degradation, not a lost result */
-    const fresh = await fetchEndpoint(getTaskEndpoint, { id: taskId }).catch(
-      () => null,
-    );
-    /* eslint-enable promise-safety/no-absorbed-failure */
-    return {
-      taskId,
-      prompt: buildTaskPrompt(fresh ?? { ...task, description }),
-    };
-  }, [taskId, task, description, flushAll, fetchEndpoint]);
+    return { taskId, prompt: { from: "task" as const } };
+  }, [taskId, flushAll]);
 
   return (
     <Stack gap="md">

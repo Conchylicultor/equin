@@ -1,7 +1,5 @@
-import type {
-  BackgroundWork,
-  RewindPreview,
-} from "@plugins/conversations/core";
+import type { BackgroundWork } from "@plugins/conversations/core";
+import type { RewindCutPreview } from "../../core";
 
 export type RewindMode = "rewind" | "fork";
 
@@ -17,7 +15,7 @@ const named = (work: BackgroundWork): string =>
  * believe about background work.
  */
 export function describeLosses(
-  preview: Extract<RewindPreview, { ok: true }>,
+  preview: RewindCutPreview,
   mode: RewindMode,
 ): string[] {
   const { losses } = preview;

@@ -57,9 +57,13 @@ thread subject, read off page 0):
   that message only — or, on a host without the computer, says the image proxy
   is unavailable instead.
 - **Inline `cid:` images** (`internal/use-resolve-cid.ts`): `MailHtml`'s
-  `resolveCid` maps a Content-ID to the matching attachment, lazily downloading it
-  (via the `attachments` plugin's `useMailAttachment`) and returning the URL once
-  resolved (`undefined` until then — `MailHtml` re-renders on change).
+  `resolveCid` is a pure read of the live attachment rows the body value carries —
+  `mailAttachmentUrl(storedAttachmentId)`, or `undefined` while the bytes are not
+  stored. `MailHtml`'s `onUnresolvedCids` (an effect) fires the `attachments`
+  plugin's `materialise` write for each waiting cid an attachment carries; the
+  write stamps `storedAttachmentId`, the change feed recomputes
+  `mail.message-body` (it reads `mail_attachments`), and the image fills in. No
+  URL is held in component state.
 - **Attachments**: non-inline attachments render as `AttachmentChip`s below the
   body.
 

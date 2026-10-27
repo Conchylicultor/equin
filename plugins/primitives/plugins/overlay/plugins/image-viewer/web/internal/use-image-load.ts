@@ -1,5 +1,9 @@
 import { useEffect, useState, type SyntheticEvent } from "react";
-import { probeUrlStatus } from "@plugins/primitives/plugins/networking/web";
+import {
+  probeUrlStatus,
+  useTransport,
+  type Transport,
+} from "@plugins/primitives/plugins/networking/web";
 import type { Size } from "../../core";
 
 /**
@@ -42,10 +46,13 @@ const PENDING: ImageLoad = { kind: "pending" };
 /** A 404 or 410 means the file itself is gone. */
 const GONE_STATUSES = new Set([404, 410]);
 
-async function failureOf(src: string): Promise<"gone" | "unreadable"> {
+async function failureOf(
+  transport: Transport,
+  src: string,
+): Promise<"gone" | "unreadable"> {
   // A data: / blob: URI has no server to ask: it failed on its own bytes.
   if (src.startsWith("data:") || src.startsWith("blob:")) return "unreadable";
-  const answer = await probeUrlStatus(src);
+  const answer = await probeUrlStatus(transport, src);
   return answer.kind === "status" && GONE_STATUSES.has(answer.status)
     ? "gone"
     : "unreadable";
@@ -60,6 +67,7 @@ async function failureOf(src: string): Promise<"gone" | "unreadable"> {
  * older attempt is dropped.
  */
 export function useImageLoad(src: string): ImageLoadState {
+  const transport = useTransport();
   const [state, setState] = useState<State>({ src, attempt: 0, load: PENDING });
   // Derived, not synced in an effect: a new src is pending from its first render.
   const current: State =
@@ -85,7 +93,7 @@ export function useImageLoad(src: string): ImageLoadState {
         }),
       onError: () => {
         settle({ kind: "failed", reason: "probing" });
-        void failureOf(src).then((reason) =>
+        void failureOf(transport, src).then((reason) =>
           settle({ kind: "failed", reason }),
         );
       },
@@ -107,6 +115,7 @@ export interface ImageProbeState {
  * an image diff deciding between added, deleted and side by side.
  */
 export function useImageProbe(src: string): ImageProbeState {
+  const transport = useTransport();
   const [state, setState] = useState<State>({ src, attempt: 0, load: PENDING });
   // Derived, not synced in an effect: a new src is pending from its first render.
   const current: State =
@@ -126,7 +135,9 @@ export function useImageProbe(src: string): ImageProbeState {
       });
     img.onerror = () => {
       settle({ kind: "failed", reason: "probing" });
-      void failureOf(src).then((reason) => settle({ kind: "failed", reason }));
+      void failureOf(transport, src).then((reason) =>
+        settle({ kind: "failed", reason }),
+      );
     };
     img.src = src;
     return () => {
@@ -134,7 +145,7 @@ export function useImageProbe(src: string): ImageProbeState {
       img.onload = null;
       img.onerror = null;
     };
-  }, [src, attempt]);
+  }, [transport, src, attempt]);
 
   return {
     load: current.load,

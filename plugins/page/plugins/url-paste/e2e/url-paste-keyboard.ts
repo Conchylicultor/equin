@@ -23,6 +23,7 @@
 // Exits non-zero on the first failed assertion, after dumping a screenshot.
 import type { Locator } from "playwright";
 import {
+  pageFetch,
   arg,
   boot,
   pathUrl,
@@ -61,9 +62,9 @@ await withBrowser(async (h) => {
     timeoutMs: 90_000,
   });
 
-  const pageId = await page.evaluate(async (title: string): Promise<string> => {
+  const pageId = await (async (title: string): Promise<string> => {
     const create = async (body: unknown): Promise<string> => {
-      const res = await fetch("/api/blocks", {
+      const res = await pageFetch(page, "/api/blocks", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(body),
@@ -83,14 +84,13 @@ await withBrowser(async (h) => {
     // every case pastes into. Deleting the page cascades it away.
     await create({ parentId: id, type: "text", data: { text: [] } });
     return id;
-  }, SCRATCH_TITLE);
+  })(SCRATCH_TITLE);
   console.log(`scratch page: ${pageId}`);
 
   async function destroyScratchPage(): Promise<void> {
-    const status = await page.evaluate(async (id: string): Promise<number> => {
-      const res = await fetch(`/api/blocks/${id}`, { method: "DELETE" });
-      return res.status;
-    }, pageId);
+    const { status } = await pageFetch(page, `/api/blocks/${pageId}`, {
+      method: "DELETE",
+    });
     console.log(`\nscratch page deleted (HTTP ${status})`);
   }
 

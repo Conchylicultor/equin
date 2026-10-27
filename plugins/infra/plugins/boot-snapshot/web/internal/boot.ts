@@ -1,5 +1,8 @@
 import { Core } from "@plugins/framework/plugins/web-sdk/core";
-import { fetchEndpointOver } from "@plugins/infra/plugins/endpoints/web";
+import {
+  endpointRequest,
+  readEndpointResponse,
+} from "@plugins/infra/plugins/endpoints/core";
 import { pageTransport } from "@plugins/primitives/plugins/networking/plugins/page-transport/web";
 import {
   hydrateResource,
@@ -8,9 +11,6 @@ import {
 import { recordBootSpan } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/web";
 import { report } from "@plugins/reports/web";
 import { bootSnapshot } from "../../core";
-
-// Boot belongs to the page: the snapshot always hydrates from the page's own server.
-const fetchEndpoint = fetchEndpointOver(pageTransport);
 
 // Boot-readiness task: fetch every boot-critical resource in ONE request and seed the
 // live-state cache before first paint (no `pending` flash, no WS round-trip).
@@ -24,7 +24,15 @@ const fetchEndpoint = fetchEndpointOver(pageTransport);
 // in the eager web import graph — a real bug, surfaced loudly rather than silently lost.
 export async function runBootSnapshot(): Promise<void> {
   const reqStart = performance.now();
-  const { resources, tuples, timings } = await fetchEndpoint(bootSnapshot, {});
+  // Boot belongs to the page: the snapshot always hydrates from the page's own
+  // server. A substrate read of live itself (it seeds the cache `useLive`
+  // reads), so it is the transport's raw fetch, kept on the contract: the
+  // request built and the reply decoded by the endpoint's own codec.
+  const { path, init } = endpointRequest(bootSnapshot, {});
+  const { resources, tuples, timings } = await readEndpointResponse(
+    bootSnapshot,
+    await pageTransport.fetch(path, init),
+  );
   const reqMs = performance.now() - reqStart;
   recordBootSpan({
     id: "boot-snapshot",

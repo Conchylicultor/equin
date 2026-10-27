@@ -40,6 +40,7 @@
 //
 // Usage: bun plugins/page/plugins/container/e2e/container-selection-verify.ts [--url <deploy>] [--out /tmp/container-selection]
 import {
+  pageFetch,
   arg,
   report,
   snap,
@@ -107,12 +108,9 @@ async function editableIndexOf(page: Page, blockId: string): Promise<number> {
  * paste was persisted rather than merely rendered.
  */
 async function rows(page: Page, pageId: string): Promise<Row[]> {
-  return page.evaluate(async (id: string) => {
-    const res = await fetch(`/api/pages/${id}/blocks`);
-    if (!res.ok)
-      throw new Error(`GET blocks ${res.status}: ${await res.text()}`);
-    return (await res.json()) as Row[];
-  }, pageId);
+  const res = await pageFetch(page, `/api/pages/${pageId}/blocks`);
+  if (!res.ok) throw new Error(`GET blocks ${res.status}: ${await res.text()}`);
+  return (await res.json()) as Row[];
 }
 
 await withBrowser(async (h) => {
@@ -129,41 +127,36 @@ await withBrowser(async (h) => {
   // A callout with THREE children — enough that "two of them" is a genuinely
   // partial cover — plus one block after the box, which is what a paste landing
   // OUTSIDE the card can be told apart against.
-  const seeded = await page.evaluate(
-    async ({ pageId }: { pageId: string }) => {
-      const post = async (body: unknown) => {
-        const res = await fetch("/api/blocks", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify(body),
-        });
-        if (!res.ok)
-          throw new Error(
-            `POST /api/blocks ${res.status}: ${await res.text()}`,
-          );
-        return (await res.json()) as { id: string };
-      };
-      const box = await post({
-        parentId: pageId,
-        type: "callout",
-        data: { icon: null, color: "info" },
+  const seeded = await (async () => {
+    const post = async (body: unknown) => {
+      const res = await pageFetch(page, "/api/blocks", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
       });
-      const text = (parentId: string, body: string) =>
-        post({ parentId, type: "text", data: { text: [{ text: body }] } });
-      const first = await text(box.id, "first line");
-      const second = await text(box.id, "second line");
-      const third = await text(box.id, "third line");
-      const after = await text(pageId, "after the box");
-      return {
-        box: box.id,
-        first: first.id,
-        second: second.id,
-        third: third.id,
-        after: after.id,
-      };
-    },
-    { pageId },
-  );
+      if (!res.ok)
+        throw new Error(`POST /api/blocks ${res.status}: ${await res.text()}`);
+      return (await res.json()) as { id: string };
+    };
+    const box = await post({
+      parentId: pageId,
+      type: "callout",
+      data: { icon: null, color: "info" },
+    });
+    const text = (parentId: string, body: string) =>
+      post({ parentId, type: "text", data: { text: [{ text: body }] } });
+    const first = await text(box.id, "first line");
+    const second = await text(box.id, "second line");
+    const third = await text(box.id, "third line");
+    const after = await text(pageId, "after the box");
+    return {
+      box: box.id,
+      first: first.id,
+      second: second.id,
+      third: third.id,
+      after: after.id,
+    };
+  })();
   console.log("seeded:", JSON.stringify(seeded));
 
   await page.reload({ waitUntil: "domcontentloaded" });

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 
 // ── Where a section's beats sit in its recording ─────────────────────────────
 //
@@ -35,14 +36,18 @@ export type VideoFractionAlignment = {
 export type Alignment =
   BeatTimesAlignment | VideoFractionAlignment | { kind: "none" };
 
+/** A beat-times alignment's points: one per beat of one section, loaded whole. */
+const BEAT_GRID_REASON =
+  "one section's beat grid: a point per beat of the section";
+
 /** An alignment on the wire or in a jsonb column. Checked only for shape: `beatTimesAlignment` checks the reading rules. */
 export const AlignmentSchema: ZodParser<Alignment> = z.discriminatedUnion(
   "kind",
   [
     z.object({
       kind: z.literal("beat-times"),
-      beats: z.array(z.number()),
-      times: z.array(z.number()),
+      beats: wholeList(z.number(), { reason: BEAT_GRID_REASON }),
+      times: wholeList(z.number(), { reason: BEAT_GRID_REASON }),
     }),
     z.object({
       kind: z.literal("video-fraction"),

@@ -23,11 +23,8 @@ import {
   useForcedCaretQuery,
 } from "@plugins/primitives/plugins/text-editor/plugins/caret-trigger/web";
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
-import {
-  EndpointError,
-  getEndpointErrorMessage,
-  useFetchEndpoint,
-} from "@plugins/infra/plugins/endpoints/web";
+import { useLiveReader } from "@plugins/network/plugins/live/web";
+import { ResourceError } from "@plugins/primitives/plugins/live-state/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import {
   $setLinkText,
@@ -35,10 +32,7 @@ import {
   useBlockEditor,
   type BlockTextPluginProps,
 } from "@plugins/page/plugins/editor/web";
-import {
-  BOOKMARK_TYPE,
-  linkMetaEndpoint,
-} from "@plugins/page/plugins/bookmark/core";
+import { BOOKMARK_TYPE, linkMeta } from "@plugins/page/plugins/bookmark/core";
 import { EMBED_TYPE } from "@plugins/page/plugins/embed/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
@@ -176,7 +170,8 @@ function discreteUpdate<T>(
  *
  * ## Mention
  *
- * Closes the menu and asks `bookmark`'s `/api/link-meta` for the page title.
+ * Closes the menu and reads `bookmark`'s `bookmark.link-meta` value (the page's
+ * title) with `useLiveReader`.
  * Until it answers the link shows its URL, which is its true state. When the
  * title arrives, the link is re-found BY KEY and retitled as its own undo step
  * ("Mention link") — but only while it still exists with the same URL and the
@@ -202,7 +197,7 @@ function discreteUpdate<T>(
 export function UrlPastePlugin({ block, editor }: BlockTextPluginProps) {
   const [lexical] = useLexicalComposerContext();
   const { recordDocEdit, serverSync } = useBlockEditor();
-  const fetchEndpoint = useFetchEndpoint();
+  const read = useLiveReader();
 
   // The React copy drives the render; the ref is what the update listener reads.
   // Written together (only in `setMenu`), so a text change landing between the
@@ -351,32 +346,36 @@ export function UrlPastePlugin({ block, editor }: BlockTextPluginProps) {
 
   /** Retitle the pasted link with its page's title, if it is still untouched. */
   const mention = useEventCallback(async (url: string, linkKey: NodeKey) => {
-    let title: string | undefined;
+    let answer;
     try {
-      const answer = await fetchEndpoint(
-        linkMetaEndpoint,
-        {},
-        // A dead or unreachable page is an expected answer about the user's
-        // link, not an app defect — the toast below is where it goes, so it
-        // files no endpoint-error report.
-        { query: { url }, report: false },
-      );
-      // No computer behind the app to fetch the page: the link keeps its URL.
-      if (answer.kind === "unavailable") {
-        showToast({ description: answer.message, variant: "info" });
-        return;
-      }
-      ({ title } = answer.value);
+      answer = await read(linkMeta, { url });
     } catch (err) {
-      if (!(err instanceof EndpointError)) throw err;
+      // Already reported by the reader; the user still learns the link
+      // keeps its URL.
+      if (!(err instanceof ResourceError)) throw err;
       showToast({
         title: "Couldn't fetch the page title",
-        description: getEndpointErrorMessage(err),
+        description: err.message,
         variant: "error",
       });
       return;
     }
-    title = title?.trim();
+    // No computer behind the app to fetch the page: the link keeps its URL.
+    if (answer.status === "unavailable") {
+      showToast({ description: answer.message, variant: "info" });
+      return;
+    }
+    // A blocked or dead link is an expected answer about the user's link, not
+    // an app defect: a toast, and the link keeps its URL.
+    if (answer.status === "refused") {
+      showToast({
+        title: "Couldn't fetch the page title",
+        description: answer.message,
+        variant: "error",
+      });
+      return;
+    }
+    const title = answer.data.title?.trim();
     if (!title) {
       showToast({
         description: "That page has no title, so the link keeps its URL.",

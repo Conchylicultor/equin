@@ -39,8 +39,9 @@ import {
   CRUMBS,
   commitTarget,
   editText,
+  highlightedIn,
   pathBarReducer,
-  readyItems,
+  shownItems,
   splitSuggestion,
 } from "./path-bar-machine";
 import type { PathBarSource, PathTarget } from "./types";
@@ -89,7 +90,8 @@ export interface PathBarProps {
  *   folds into a menu). A press on empty space or the current crumb, the pencil,
  *   or ⌘L flips to the field.
  * - **Field** — mono, pre-filled with the path plus a separator and selected,
- *   with a combobox of the source's completions (max 8, the typed stem bold):
+ *   with a combobox of the source's live completions of the text in it
+ *   (`source.useComplete`; max 8, the typed stem bold):
  *   ↑ / ↓ move, Tab completes the highlighted (or first) one plus a separator,
  *   Enter commits the highlighted one or the typed text, Esc and blur revert.
  *   A commit that does not resolve stays in the field, marked invalid with the
@@ -144,8 +146,10 @@ export function PathBar({
   useSurfaceShortcuts(shortcuts);
 
   const editing = state.mode === "editing";
-  const text = editing ? state.text : null;
-  const pending = editing && state.suggestions.kind === "pending";
+  // The completions of the text now in the field — read live by the source,
+  // nothing while the crumbs show.
+  const suggestions = source.useComplete(editing ? state.text : null);
+  const items = shownItems(suggestions);
 
   // Entering the field: focus it with the whole text selected, so typing
   // replaces the path and an arrow key keeps it.
@@ -156,29 +160,6 @@ export function PathBar({
     input.focus();
     input.select();
   }, [editing]);
-
-  // Completions for the text in the field. Keyed by the text they were asked
-  // for (the reducer drops an answer to an older keystroke), so no request
-  // needs cancelling.
-  useEffect(() => {
-    if (text === null || !pending) return;
-    const forText = text;
-    // completion fetch: the source's completions for the typed text are external data, requested whenever the field's text changes; the reducer discards an answer to stale text
-    source.complete(forText).then(
-      (items) =>
-        dispatch({
-          type: "suggestions",
-          forText,
-          result: { kind: "ready", items },
-        }),
-      (err: unknown) =>
-        dispatch({
-          type: "suggestions",
-          forText,
-          result: { kind: "failed", message: errorMessage(err) },
-        }),
-    );
-  }, [text, pending, source]);
 
   const commit = useEventCallback((target: string) => {
     const mine = session.current;
@@ -209,23 +190,26 @@ export function PathBar({
 
   const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (state.mode !== "editing") return;
-    const items = readyItems(state);
     switch (e.key) {
       case "ArrowDown":
       case "ArrowUp":
         if (items.length === 0) return;
         e.preventDefault();
-        dispatch({ type: "move", delta: e.key === "ArrowDown" ? 1 : -1 });
+        dispatch({
+          type: "move",
+          delta: e.key === "ArrowDown" ? 1 : -1,
+          items,
+        });
         return;
       case "Tab":
         if (e.shiftKey || items.length === 0) return;
         e.preventDefault();
-        dispatch({ type: "complete", separator });
+        dispatch({ type: "complete", separator, items });
         return;
       case "Enter": {
         e.preventDefault();
         if (state.validating) return;
-        const target = commitTarget(state, separator);
+        const target = commitTarget(state, items, separator);
         if (target) commit(target);
         return;
       }
@@ -286,13 +270,10 @@ export function PathBar({
     );
   }
 
-  const items = readyItems(state);
-  const activeId =
-    state.highlighted >= 0 ? `${listId}-${state.highlighted}` : undefined;
+  const highlighted = highlightedIn(state, items);
+  const activeId = highlighted >= 0 ? `${listId}-${highlighted}` : undefined;
   const showPanel =
-    items.length > 0 ||
-    state.suggestions.kind === "failed" ||
-    state.invalid !== null;
+    items.length > 0 || suggestions.kind === "failed" || state.invalid !== null;
 
   return (
     <div
@@ -335,21 +316,21 @@ export function PathBar({
             {state.invalid.reason}
           </Text>
         )}
-        {state.suggestions.kind === "failed" && (
+        {suggestions.kind === "failed" && (
           <Text
             as="div"
             variant="caption"
             tone="muted"
             className="px-xs py-2xs"
           >
-            No suggestions: {state.suggestions.message}
+            No suggestions: {suggestions.message}
           </Text>
         )}
         {items.length > 0 && (
           <Stack gap="none" role="listbox" id={listId} aria-label="Suggestions">
             {items.map((item, i) => {
               const parts = splitSuggestion(item, state.text, separator);
-              const active = i === state.highlighted;
+              const active = i === highlighted;
               return (
                 <button
                   key={item}

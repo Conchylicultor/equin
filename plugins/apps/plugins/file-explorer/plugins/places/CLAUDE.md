@@ -20,13 +20,13 @@
     - `ConfigV2.WebRegister` "config"
     - `row-actions` "remove-favorite" → `RemoveFavoriteAction`
     - `FileBrowserSlots.RowActions` "add-to-favorites" → `AddToFavoritesAction`
-  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×6
     - `apps/file-explorer/browser` ×4
     - `apps/file-explorer/shell` ×3
     - `config_v2` ×3
-    - `infra/endpoints` ×2
     - `primitives/css/ui-kit` ×2
+    - `infra/endpoints.EndpointError`
     - `network/live.useLive`
     - `primitives/css/clip.Clip`
     - `primitives/css/scroll.Scroll`
@@ -34,7 +34,6 @@
     - `primitives/css/text.Text`
     - `primitives/icon-button.IconButton`
     - `primitives/live-state.foldResource`
-    - `shell/toast.showToast`
     - `ui/icons.Icon`
 - Server:
   - Contributes:

@@ -1,33 +1,48 @@
 import { z } from "zod";
 import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
+import { HostFsEntryKindSchema } from "./endpoints";
 
 /**
  * The drag-and-drop MIME type carrying host paths between surfaces (a file
  * browser row dragged onto a folder, onto a Favorites sidebar, …): JSON
- * `{ paths: string[] }`, every path absolute.
+ * `{ entries: { path, kind }[] }`, every path absolute.
  */
 export const HOST_PATHS_MIME = `${LEGACY_IDS.mimePrefix}host-paths+json`;
 
-const HostPathsPayloadSchema = z.object({
-  paths: z.array(z.string()).min(1),
+const DraggedHostPathSchema = z.object({
+  path: z.string(),
+  kind: HostFsEntryKindSchema,
 });
 
-/** Put `paths` on a drag (in `dragstart`). */
+/**
+ * One dragged host path, with the kind of entry it is as the surface it was
+ * dragged from listed it — so a drop that needs the kind (pinning a folder vs
+ * a file) has it without reading the disk again.
+ */
+export type DraggedHostPath = z.infer<typeof DraggedHostPathSchema>;
+
+const HostPathsPayloadSchema = z.object({
+  entries: z.array(DraggedHostPathSchema).min(1),
+});
+
+/** Put `entries` on a drag (in `dragstart`). */
 export function writeHostPaths(
   dt: Pick<DataTransfer, "setData">,
-  paths: readonly string[],
+  entries: readonly DraggedHostPath[],
 ): void {
-  if (paths.length === 0) throw new Error("writeHostPaths: no paths to drag");
-  dt.setData(HOST_PATHS_MIME, JSON.stringify({ paths }));
+  if (entries.length === 0) {
+    throw new Error("writeHostPaths: no paths to drag");
+  }
+  dt.setData(HOST_PATHS_MIME, JSON.stringify({ entries }));
 }
 
 /**
- * What a drop carries: `paths` (non-empty), `absent` when the drag holds no
- * host paths (a link, text, files from outside the app), or `malformed` when
- * it claims to but the payload does not decode.
+ * What a drop carries: `paths` (non-empty entries), `absent` when the drag
+ * holds no host paths (a link, text, files from outside the app), or
+ * `malformed` when it claims to but the payload does not decode.
  */
 export type ReadHostPathsResult =
-  | { kind: "paths"; paths: string[] }
+  | { kind: "paths"; entries: DraggedHostPath[] }
   | { kind: "absent" }
   | { kind: "malformed"; error: string };
 
@@ -50,7 +65,7 @@ export function readHostPaths(
   if (!parsed.success) {
     return { kind: "malformed", error: parsed.error.message };
   }
-  return { kind: "paths", paths: parsed.data.paths };
+  return { kind: "paths", entries: parsed.data.entries };
 }
 
 /**

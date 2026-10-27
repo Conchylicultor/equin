@@ -2,10 +2,15 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   cleanup,
   fireEvent,
-  render,
+  render as renderBare,
   screen,
   waitFor,
 } from "@testing-library/react";
+import type { ReactElement } from "react";
+import {
+  testTransport,
+  transportWrapper,
+} from "@plugins/primitives/plugins/networking/web/testing";
 import {
   ImageGallery,
   ViewerThumbnail,
@@ -14,6 +19,11 @@ import {
 } from "../index";
 
 afterEach(cleanup);
+
+// A failed image asks its server why over the subtree's transport, whose
+// `fetch` reads the (stubbed) global at call time.
+const render = (ui: ReactElement) =>
+  renderBare(ui, { wrapper: transportWrapper(testTransport()) });
 
 // jsdom has no HTMLImageElement.decode(); the viewer decodes the next images
 // ahead. Like jsdom's loads, these decodes never finish.

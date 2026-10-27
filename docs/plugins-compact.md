@@ -10,7 +10,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
   - Plugins:
     - **`agent-manager`** [5 sub-plugins] — Agent manager app shell and layout.
     - **`browser`** [exempt] [9 sub-plugins] — Web browser app: each tab is a page in a real Chromium on the machine (persistent profile, so logins stick), streamed to a canvas with input sent back.
-    - **`chord`** [exempt] [8 sub-plugins] — Chord — a chord ear trainer that plays loops of real songs whose chords you have turned on, asks you to name each chord, and keeps track of how well you know each one.
+    - **`chord`** [test helpers] [exempt] [8 sub-plugins] — Chord — a chord ear trainer that plays loops of real songs whose chords you have turned on, asks you to name each chord, and keeps track of how well you know each one.
     - **`debug`** [1 sub-plugin] — Debug app.
     - **`demo`** — Demo — a temporary sandbox app hosting the in-app demo (the Agent Manager on made-up data) while it is prototyped, before it ships on the website.
       - Plugins:
@@ -258,7 +258,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`relocate`** [exempt] — `./equin plugin move <from> <to>` — relocate or rename a plugin (and every descendant) in one step: git mv the folder and its config dir, then rewrite every reference the plugin-refs locator finds…
     - **`token-usage`** [exempt] — Which theme tokens a plugin's source uses, and which plugin owns each one: the static defineTokenGroup reader (owner + CSS vars) and the token-usage scanner (literal var(--x) plus Tailwind classes…
 
-- **`primitives`** [test helpers] [exempt] [212 sub-plugins] — Umbrella for cross-cutting client-side primitives used by feature plugins: pane router, tree, live state, networking, editable fields, syntax highlighting, launch buttons.
+- **`primitives`** [test helpers] [exempt] [213 sub-plugins] — Umbrella for cross-cutting client-side primitives used by feature plugins: pane router, tree, live state, networking, editable fields, syntax highlighting, launch buttons.
 
 - **`release`** [exempt] [3 sub-plugins] — Release engine web presence: eagerly registers the boot-critical release.previews live value so boot-snapshot can hydrate it before first paint, independent of the (lazy) Studio release UI. Local…
 

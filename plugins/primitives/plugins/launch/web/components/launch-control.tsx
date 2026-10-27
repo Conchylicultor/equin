@@ -15,7 +15,10 @@ import {
 } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { type Conversation } from "@plugins/tasks/plugins/tasks-core/core";
-import { createConversation } from "@plugins/conversations/core";
+import {
+  createConversation,
+  type CreateConversationBody,
+} from "@plugins/conversations/core";
 import {
   useFetchEndpoint,
   useMachineAvailability,
@@ -40,7 +43,12 @@ const playArrowIcon = symbol("play-arrow");
 const keyboardArrowDownIcon = symbol("keyboard-arrow-down");
 
 export type LaunchRequest = {
-  prompt?: string;
+  /**
+   * The first message: text, or `{ from: "task" }` — the launching task's own
+   * title and description, built by the server when the launch arrives (so a
+   * caller that just saved the description launches with it).
+   */
+  prompt?: CreateConversationBody["prompt"];
   taskId?: string;
   attemptId?: string;
   forkFromConversationId?: string;

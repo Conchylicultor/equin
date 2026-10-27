@@ -26,6 +26,12 @@ export interface MailHtmlProps {
    * attachments hydrate.
    */
   resolveCid?: (cid: string) => string | undefined;
+  /**
+   * Called after render with the bare Content-IDs of the `cid:` images
+   * `resolveCid` had no URL for (empty when none) — lets the owner fetch what
+   * the body is waiting on, from an effect rather than from inside the walk.
+   */
+  onUnresolvedCids?: (cids: readonly string[]) => void;
 }
 
 /**
@@ -39,6 +45,7 @@ export function MailHtml({
   showRemoteImages,
   onRemoteImagesDetected,
   resolveCid,
+  onUnresolvedCids,
 }: MailHtmlProps): ReactElement {
   const transport = useTransport();
   const processed = useMemo(() => {
@@ -61,6 +68,10 @@ export function MailHtml({
   useEffect(() => {
     onRemoteImagesDetected?.(processed.hadRemoteImage);
   }, [processed.hadRemoteImage, onRemoteImagesDetected]);
+
+  useEffect(() => {
+    onUnresolvedCids?.(processed.unresolvedCids);
+  }, [processed.unresolvedCids, onUnresolvedCids]);
 
   return (
     <div className="mail-html-body">

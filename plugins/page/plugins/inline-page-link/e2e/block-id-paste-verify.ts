@@ -16,6 +16,7 @@
 //   ./equin run plugins/page/plugins/inline-page-link/e2e/block-id-paste-verify.ts [--url <deploy>] [--headed]
 import type { Locator, Page } from "playwright";
 import {
+  pageFetch,
   arg,
   boot,
   pathUrl,
@@ -77,11 +78,9 @@ async function pasteText(
 }
 
 async function fetchRows(page: Page, pageId: string): Promise<Row[]> {
-  return page.evaluate(async (id: string) => {
-    const res = await fetch(`/api/pages/${id}/blocks`);
-    if (!res.ok) throw new Error(`GET blocks failed: ${res.status}`);
-    return (await res.json()) as Row[];
-  }, pageId);
+  const res = await pageFetch(page, `/api/pages/${pageId}/blocks`);
+  if (!res.ok) throw new Error(`GET blocks failed: ${res.status}`);
+  return (await res.json()) as Row[];
 }
 
 await withBrowser(async (h) => {
@@ -94,37 +93,40 @@ await withBrowser(async (h) => {
     timeoutMs: 90_000,
   });
 
-  const created = await page.evaluate(
-    async ({ title, target }: { title: string; target: string }) => {
-      const create = async (body: unknown): Promise<string> => {
-        const res = await fetch("/api/blocks", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify(body),
-        });
-        if (!res.ok)
-          throw new Error(`create failed: ${res.status} ${await res.text()}`);
-        return ((await res.json()) as { id: string }).id;
-      };
-      const targetId = await create({
-        parentId: null,
-        type: "page",
-        data: { title: target, icon: null },
+  const created = await (async ({
+    title,
+    target,
+  }: {
+    title: string;
+    target: string;
+  }) => {
+    const create = async (body: unknown): Promise<string> => {
+      const res = await pageFetch(page, "/api/blocks", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
       });
-      const pageId = await create({
-        parentId: null,
-        type: "page",
-        data: { title, icon: null },
-      });
-      const blockIds: string[] = [];
-      for (let i = 0; i < 2; i++)
-        blockIds.push(
-          await create({ parentId: pageId, type: "text", data: { text: [] } }),
-        );
-      return { pageId, targetId, blockIds };
-    },
-    { title: SCRATCH_TITLE, target: TARGET_TITLE },
-  );
+      if (!res.ok)
+        throw new Error(`create failed: ${res.status} ${await res.text()}`);
+      return ((await res.json()) as { id: string }).id;
+    };
+    const targetId = await create({
+      parentId: null,
+      type: "page",
+      data: { title: target, icon: null },
+    });
+    const pageId = await create({
+      parentId: null,
+      type: "page",
+      data: { title, icon: null },
+    });
+    const blockIds: string[] = [];
+    for (let i = 0; i < 2; i++)
+      blockIds.push(
+        await create({ parentId: pageId, type: "text", data: { text: [] } }),
+      );
+    return { pageId, targetId, blockIds };
+  })({ title: SCRATCH_TITLE, target: TARGET_TITLE });
   const { pageId, targetId } = created;
   const [aId, bId] = created.blockIds as [string, string];
   console.log(`scratch page: ${pageId}, target: ${targetId}`);
@@ -173,13 +175,8 @@ await withBrowser(async (h) => {
 
     await snap(page, OUT, "final");
   } finally {
-    await page.evaluate(
-      async (ids: string[]) => {
-        for (const id of ids)
-          await fetch(`/api/blocks/${id}`, { method: "DELETE" });
-      },
-      [pageId, targetId],
-    );
+    for (const id of [pageId, targetId])
+      await pageFetch(page, `/api/blocks/${id}`, { method: "DELETE" });
     console.log("\nscratch pages deleted");
   }
 

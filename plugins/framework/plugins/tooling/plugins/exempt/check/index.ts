@@ -89,14 +89,14 @@ async function manifestProblems(ctx: CheckContext): Promise<string[]> {
     ...lint.known,
     ...checks.flatMap((c) => Object.keys(c.exemptable ?? {})),
   ]);
-  problems.push(...ruleIdProblems(exemptions, { known, closed: lint.closed }));
+  problems.push(...ruleIdProblems(exemptions, { ...lint, known }));
   return problems;
 }
 
 const manifestsValid: Check = {
   id: "exempt:manifests-valid",
   description:
-    "Every exempt/index.ts entry is valid: a reasoned (and, for debt, tasked) entry naming a live, non-closed rule, for an existing path inside its own plugin, declared once",
+    "Every exempt/index.ts entry is valid: a reasoned (and, for debt, tasked) entry naming a live, non-closed rule (and, for debt, one not declared noDebt), for an existing path inside its own plugin, declared once",
   async run(ctx: CheckContext): Promise<CheckResult> {
     const problems = await manifestProblems(ctx);
     if (problems.length === 0) return { ok: true };

@@ -32,6 +32,8 @@ await taskAttachments.add(taskId, ids);   // append-only union (race-free, atomi
 const rows = await taskAttachments.list(taskId);  // joined Attachment[]
 ```
 
+The browser reads an attachment's bytes live too — `useLive(attachmentBytes, { id })` (core): a `bytes: true` value, served `immutable` (an upload always mints a new id), refused `missing` when the row or its bytes are gone — for a reader that decodes the file itself (a Sonata song's MIDI / MusicXML). An `<img>` / link still loads `GET /api/attachments/:id` as an asset (`assetPath(getAttachmentFile, …)`).
+
 The browser reads one owner's attachments live: `useLive(attachmentsByOwner, { ownerType: "tasks", id })` (core) — a `db` value over the link table joined with `attachments`, so a link or attachment write recomputes it; an owner type no plugin linked is refused `unknown-owner-type`.
 
 `set` reconciles the link set to exactly match `ids` — used when the source of truth is replaceable (e.g. a markdown column). `add` is the atomic append-only union, used when the source grows monotonically (turns in a conversation). They lower to different SQL plans and are not parameter variants of each other.
@@ -65,6 +67,7 @@ The handle does expose `.table` — but only as a same-plugin escape for live-st
 - Server:
   - Contributes:
     - `resource.declare` "attachments.by-owner"
+    - `resource.declare` "attachments.bytes"
     - `resource.declare` "attachments.file"
     - `host-service:attachments.blobs` "attachments.blobs"
   - Uses:
@@ -91,6 +94,7 @@ The handle does expose `.table` — but only as a same-plugin escape for live-st
   - Register: `defineJob('attachments.orphan-sweep')`
   - Resources:
     - `attachments.by-owner` (push, whole: one owner's attachments — the files a person attached to one task or block, a handful, never a growing log)
+    - `attachments.bytes` (invalidate, immutable)
     - `attachments.file` (push)
   - Routes:
     - `POST /api/attachments`
@@ -108,6 +112,7 @@ The handle does expose `.table` — but only as a same-plugin escape for live-st
     - `Attachment`
     - `AttachmentFile`
   - Exports (values):
+    - `attachmentBytes`
     - `attachmentFile`
     - `AttachmentFileSchema`
     - `attachmentsByOwner`
@@ -136,6 +141,7 @@ The handle does expose `.table` — but only as a same-plugin escape for live-st
     - `tasks/tasks-core`
 - Exemptions:
   - Exempts itself from:
+    - `no-db-backed-notify` — `server/internal/bytes.ts` (sanctioned)
     - `paths:no-hardcoded-paths` — `server/index.ts` (sanctioned)
     - `ids:pk-declared` — `server/internal/tables.ts` (debt)
 - Web:

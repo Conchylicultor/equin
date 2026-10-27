@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import { ResumeBlockedReasonSchema } from "./resume-outcome";
 
 /** Background work (a subagent or a background shell) the model launched. */
@@ -26,13 +27,19 @@ export const CutLossesSchema = z.object({
   /** The user's own messages after the chosen one. */
   laterUserTurns: z.number().int(),
   /** Launched before the cut, reported after it: the report is lost. */
-  lostReports: z.array(BackgroundWorkSchema),
+  lostReports: wholeList(BackgroundWorkSchema, {
+    reason:
+      "the background work one conversation launched before the cut — a handful, and the dialog names each",
+  }),
   /**
    * Launched before the cut and never reported. Whether it is still running is
    * a fact about the live pane, not the transcript; if it is, restarting the
    * pane stops it.
    */
-  unreported: z.array(BackgroundWorkSchema),
+  unreported: wholeList(BackgroundWorkSchema, {
+    reason:
+      "the background work one conversation launched before the cut — a handful, and the dialog names each",
+  }),
 });
 export type CutLosses = z.infer<typeof CutLossesSchema>;
 

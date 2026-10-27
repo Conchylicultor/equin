@@ -29,18 +29,6 @@ export const createMidiSong = defineEndpoint({
 });
 
 /**
- * Fetch one song's MIDI data (or `null` if this song carries no MIDI). Used by
- * the source's `hydrate` to resolve the attachment to fetch — a one-shot read in
- * a non-hook context (the library rows carry only the `midi` columns it lists).
- */
-export const getSongMidi = defineEndpoint({
-  route: "GET /api/sonata/songs/:id/midi",
-  response: z
-    .object({ attachmentId: z.string(), trackCount: z.number() })
-    .nullable(),
-});
-
-/**
  * One song's cover: a falling-notes SVG of its busiest bars, drawn on the
  * server from the song's own MIDI (`covers` renders and caches it). Raw — it
  * answers SVG bytes. The last segment is `<version>.svg`, the version the row's

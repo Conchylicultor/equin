@@ -28,9 +28,11 @@
     - `assertResolvesPublic`
     - `buildPinnedDial`
     - `isPrivateIp`
+    - `isUnreachableError`
     - `parsePublicUrl`
     - `safeFetch`
     - `SsrfError`
+    - `TooManyRedirectsError`
 - Sub-plugins:
   - **`browser-fetch`** — Browser-backed page read for URLs a plain HTTP client cannot read: launch-per-call headless Chromium pinned to one validated IP via --host-resolver-rules (MAP <host> <ip>,MAP * ~NOTFOUND), every…
 

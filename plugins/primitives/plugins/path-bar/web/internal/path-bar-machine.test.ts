@@ -4,8 +4,9 @@ import {
   MAX_SUGGESTIONS,
   commitTarget,
   editText,
+  highlightedIn,
   pathBarReducer,
-  readyItems,
+  shownItems,
   splitSuggestion,
   type PathBarAction,
   type PathBarState,
@@ -13,12 +14,6 @@ import {
 
 const run = (actions: PathBarAction[], from: PathBarState = CRUMBS) =>
   actions.reduce(pathBarReducer, from);
-
-const ready = (forText: string, items: string[]): PathBarAction => ({
-  type: "suggestions",
-  forText,
-  result: { kind: "ready", items },
-});
 
 describe("path-bar machine", () => {
   it("opens on the path plus one separator", () => {
@@ -28,54 +23,48 @@ describe("path-bar machine", () => {
     expect(s).toMatchObject({ mode: "editing", text: "/vol/me/" });
   });
 
-  it("drops an answer to text no longer in the field", () => {
-    const s = run([
-      { type: "start", text: "/a/" },
-      { type: "input", text: "/a/b" },
-      ready("/a/", ["/a/old"]),
-    ]);
-    expect(readyItems(s)).toEqual([]);
-    expect(readyItems(pathBarReducer(s, ready("/a/b", ["/a/bin"])))).toEqual([
-      "/a/bin",
-    ]);
-  });
-
-  it("caps the list", () => {
+  it("shows the first few of a ready answer, none while pending or failed", () => {
     const many = Array.from({ length: 20 }, (_, i) => `/x/d${i}`);
-    const s = run([{ type: "start", text: "/x/" }, ready("/x/", many)]);
-    expect(readyItems(s)).toHaveLength(MAX_SUGGESTIONS);
+    expect(shownItems({ kind: "ready", items: many })).toHaveLength(
+      MAX_SUGGESTIONS,
+    );
+    expect(shownItems({ kind: "pending" })).toEqual([]);
+    expect(shownItems({ kind: "failed", message: "no" })).toEqual([]);
   });
 
   it("moves the highlight round the list", () => {
-    let s = run([
-      { type: "start", text: "/x/" },
-      ready("/x/", ["/x/a", "/x/b", "/x/c"]),
-    ]);
-    s = pathBarReducer(s, { type: "move", delta: 1 });
+    const items = ["/x/a", "/x/b", "/x/c"];
+    let s = run([{ type: "start", text: "/x/" }]);
+    s = pathBarReducer(s, { type: "move", delta: 1, items });
     expect(s).toMatchObject({ highlighted: 0 });
-    s = pathBarReducer(s, { type: "move", delta: -1 });
+    s = pathBarReducer(s, { type: "move", delta: -1, items });
     expect(s).toMatchObject({ highlighted: 2 });
-    s = pathBarReducer(s, { type: "move", delta: 1 });
+    s = pathBarReducer(s, { type: "move", delta: 1, items });
     expect(s).toMatchObject({ highlighted: 0 });
+    expect(pathBarReducer(s, { type: "move", delta: 1, items: [] })).toBe(s);
+  });
+
+  it("a highlight past a list that shrank under it highlights nothing", () => {
+    const s = run([
+      { type: "start", text: "/x/" },
+      { type: "move", delta: -1, items: ["/x/a", "/x/b", "/x/c"] },
+    ]);
+    expect(highlightedIn(s, ["/x/a", "/x/b", "/x/c"])).toBe(2);
+    expect(highlightedIn(s, ["/x/a"])).toBe(-1);
+    expect(commitTarget(s, ["/x/a"], "/")).toBe("/x");
   });
 
   it("Tab completes the highlighted one, else the first, plus a separator", () => {
-    const base = run([
-      { type: "start", text: "/x/" },
-      ready("/x/", ["/x/a", "/x/b"]),
-    ]);
+    const items = ["/x/a", "/x/b"];
+    const base = run([{ type: "start", text: "/x/" }]);
     expect(
-      pathBarReducer(base, { type: "complete", separator: "/" }),
-    ).toMatchObject({
-      text: "/x/a/",
-      highlighted: -1,
-      suggestions: { kind: "pending" },
-    });
+      pathBarReducer(base, { type: "complete", separator: "/", items }),
+    ).toMatchObject({ text: "/x/a/", highlighted: -1 });
     const moved = run(
       [
-        { type: "move", delta: 1 },
-        { type: "move", delta: 1 },
-        { type: "complete", separator: "/" },
+        { type: "move", delta: 1, items },
+        { type: "move", delta: 1, items },
+        { type: "complete", separator: "/", items },
       ],
       base,
     );
@@ -84,13 +73,13 @@ describe("path-bar machine", () => {
 
   it("commits the highlighted one, else the typed text without its trailing separator", () => {
     const typed = run([{ type: "start", text: "/x/y/" }]);
-    expect(commitTarget(typed, "/")).toBe("/x/y");
-    expect(commitTarget(run([{ type: "start", text: "/" }]), "/")).toBe("/");
-    const picked = run(
-      [ready("/x/y/", ["/x/y/z"]), { type: "move", delta: 1 }],
-      typed,
+    expect(commitTarget(typed, [], "/")).toBe("/x/y");
+    expect(commitTarget(run([{ type: "start", text: "/" }]), [], "/")).toBe(
+      "/",
     );
-    expect(commitTarget(picked, "/")).toBe("/x/y/z");
+    const items = ["/x/y/z"];
+    const picked = run([{ type: "move", delta: 1, items }], typed);
+    expect(commitTarget(picked, items, "/")).toBe("/x/y/z");
   });
 
   it("an invalid commit stays editing, marked bad, until the text changes", () => {

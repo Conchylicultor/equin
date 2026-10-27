@@ -82,6 +82,8 @@ value is ~72 KB of JSON.
 ```ts
 chordCurriculum;                       // liveValue "chord.curriculum": Selection
 chordCatalog;                          // liveValue "chord.catalog": { kind: "not-ready" } | { kind: "ready", catalog }
+chordCurriculumLoops;                  // liveValue "chord.curriculum.loops", query { focus?, shape, features?, excludeSectionIds?, limit, round }
+                                       //   → song-index's ChordLoopsAnswer, over the STORED selection
 POST /api/chord/curriculum/chords      // { changes: { token, state }[] } — a chip, a section, a rare group, Clear, Undo
 POST /api/chord/curriculum/blanks      // { blanks }
 POST /api/chord/curriculum/extras      // { extras }
@@ -104,6 +106,14 @@ loadListedChords() → Promise<{ kind: "not-ready" } | { kind: "ready", listed }
   the catalog with one `countTokenSets` scan, single-flight and memoized by
   that identity (snapshot, scope, derivation version, window count). The
   change feed on `chord_index_state` pushes it when a load finishes.
+- `chordCurriculumLoops` (`server/internal/loops-resource.ts`) is the
+  trainer's loop find: the question carries only the find's options and the
+  refill's `round` nonce; the loader reads the stored selection (practised,
+  heard, extras) and answers through song-index's `answerLoopFind`. The
+  selection is never in the question — it has no bound, and a typed query is
+  capped at `LIVE_QUERY_MAX_BYTES` (a large selection used to throw at
+  encode, in render). Fixed per tuple; refused `invalid-query` when nothing is
+  practised or the focus is not practised (the trainer's copy lagged).
 - `isListedChord` reads the same memo; it throws while the index is not ready
   (a round being judged came from a ready index). `loadListedChords` hands
   out the memo's whole listed set (or `not-ready`): progress pools every chord
@@ -201,15 +211,17 @@ A round nothing was typed into reads exactly like the next one, so after
 
 ## Plugin reference
 
-- Description: The curriculum's browser half: useCurriculum (the live chord.curriculum selection — each chord practised, heard or off, the blanks, how many other chords a loop may hold), useCatalog (the live chord.catalog), useCurriculumWrites (chords, blanks, extras; refusals as toasts), and <ChordsSection> — the trainer side panel's collapsible Chords section: Clear / Undo clear, the Blanks and Other-chords-per-loop pills, and every chord of the song index in tracks and sections, each chip cycling off → hear → practise, one chip per section's rare chords, and a footer giving the exact numbers of the chip under the pointer. The Chord trainer's curriculum, server side: the chord_curriculum row (each chord practised, heard or off; how much of a loop is blank; how many other chords a loop may hold), the live chord.curriculum resource and its three writes — chords, blanks, extras —, and the live chord.catalog: every chord of the song index in tracks and sections, built once per loaded index.
+- Description: The curriculum's browser half: useCurriculum (the live chord.curriculum selection — each chord practised, heard or off, the blanks, how many other chords a loop may hold), useCatalog (the live chord.catalog), useCurriculumWrites (chords, blanks, extras; refusals as toasts), and <ChordsSection> — the trainer side panel's collapsible Chords section: Clear / Undo clear, the Blanks and Other-chords-per-loop pills, and every chord of the song index in tracks and sections, each chip cycling off → hear → practise, one chip per section's rare chords, and a footer giving the exact numbers of the chip under the pointer. The Chord trainer's curriculum, server side: the chord_curriculum row (each chord practised, heard or off; how much of a loop is blank; how many other chords a loop may hold), the live chord.curriculum resource and its three writes — chords, blanks, extras —, the live chord.catalog: every chord of the song index in tracks and sections, built once per loaded index, and the live chord.curriculum.loops: the trainer's loop find over the stored selection.
 - Server:
   - Contributes:
     - `resource.declare` "chord.catalog"
     - `resource.declare` "chord.curriculum"
+    - `resource.declare` "chord.curriculum.loops"
   - Uses:
     - `apps/chord/song-index._chordIndexRequest`
     - `apps/chord/song-index._chordIndexState`
     - `apps/chord/song-index._chordLoopWindows`
+    - `apps/chord/song-index.answerLoopFind`
     - `apps/chord/song-index.countTokenSets`
     - `apps/chord/song-index.loadReadyIndexIdentity`
     - `database.db`
@@ -226,6 +238,7 @@ A round nothing was typed into reads exactly like the next one, so after
   - Resources:
     - `chord.catalog` (push, whole: one loaded song index's catalog, read entire — its distinct chords (1,808 on the full index), built once per index, whole: a subset of Hookpad's key modes — seven at most)
     - `chord.curriculum` (push, whole: the chords the learner turned on — a subset of the catalog's chords)
+    - `chord.curriculum.loops` (invalidate, fixed)
   - Routes:
     - `POST /api/chord/curriculum/chords`
     - `POST /api/chord/curriculum/blanks`
@@ -266,11 +279,14 @@ A round nothing was typed into reads exactly like the next one, so after
     - `useCurriculumWrites`
 - Core:
   - Uses:
+    - `apps/chord/song-index.ChordLoopsAnswerSchema`
     - `apps/chord/song-index.ChordToken`
     - `apps/chord/song-index.chordTokenFromParts`
     - `apps/chord/song-index.ChordTokenSchema`
+    - `apps/chord/song-index.FIND_LOOPS_ROUND_MAX`
     - `apps/chord/song-index.LoopExtras`
     - `apps/chord/song-index.LoopExtrasSchema`
+    - `apps/chord/song-index.LoopFindOptionsSchema`
     - `apps/chord/song-index.parseChordToken`
     - `apps/chord/song-index.repeatPeriod`
     - `apps/chord/song-index.TokenSetCount`
@@ -294,6 +310,7 @@ A round nothing was typed into reads exactly like the next one, so after
     - `ChordChange`
     - `ChordPlace`
     - `ChordState`
+    - `CurriculumLoopsQueryInput`
     - `RareGroup`
     - `RecordedBlanks`
     - `SectionKind`
@@ -317,9 +334,11 @@ A round nothing was typed into reads exactly like the next one, so after
     - `chordCatalog`
     - `ChordChangeSchema`
     - `chordCurriculum`
+    - `chordCurriculumLoops`
     - `chordPlaces`
     - `chordState`
     - `ChordStateSchema`
+    - `CurriculumLoopsQuerySchema`
     - `firstSelection`
     - `groupState`
     - `isListed`
@@ -364,6 +383,8 @@ A round nothing was typed into reads exactly like the next one, so after
     - `apps/chord/progress`
     - `apps/chord/trainer`
 - Exemptions:
-  - Exempts itself from: `ids:pk-declared` — `server/internal/tables.ts` (debt)
+  - Exempts itself from:
+    - `no-db-backed-notify` — `server/internal/loops-resource.ts` (sanctioned)
+    - `ids:pk-declared` — `server/internal/tables.ts` (debt)
 
 <!-- AUTOGENERATED:END -->

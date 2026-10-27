@@ -71,6 +71,10 @@ export function fakeFetchEndpoint(
     params: unknown,
     opts?: FetchOpts<unknown, unknown>,
   ) => {
+    // As the real fetcher: a read def a cast got past tsc throws.
+    if (endpoint.read !== undefined) {
+      throw new Error(`${endpoint.route}: ${endpoint.read}`);
+    }
     if (endpoint.needsMachine !== undefined && !machine) {
       return {
         kind: "unavailable",

@@ -73,12 +73,19 @@ prev, next)` between two playhead reads — a forward move finishes every box
   what this learner chose.
 - **The loop queue** (`useLoopQueue`) holds the round on screen and a
   **pool**. When the pool holds 3 loops or fewer it is refilled in parallel:
-  one unfocused `find` (every chord on as `playable`, the practised ones, the
-  `extras`, the `phrase` shape — 4 or 8 bars, rich progressions first; see
+  one unfocused `find` (over the learner's stored selection — every chord on
+  as `playable`, the practised ones, the `extras`, read by the server, never
+  sent — the `phrase` shape — 4 or 8 bars, rich progressions first; see
   song-index; 10 loops) plus one focused `find` (5 loops) for each of the at most
   2 chords furthest below their share (`shareDeficits`; for the pooled rare
   chords, one of them at random). The sections of the last 20 loops moved
-  past, of the round and of the pool are left out. Each next loop is
+  past, of the round and of the pool are left out. A refill is frozen in the
+  queue's state when it is asked (its finds, each carrying the refill's
+  `round` nonce) and read as one list read of curriculum's
+  `chord.curriculum.loops` live value (its question carries no chords, so it
+  stays small however many are on);
+  once every find answers it is folded into the pool (deduped by `loopKey`)
+  and cleared. A palette change drops a refill still out. Each next loop is
   `pickNext(pool, history, desired)` — `desired` from each practised chord's
   standing (`desiredShare`), the history the chords of the last 20 dealt loops
   — and the other windows of its song section leave the pool. Nothing is asked
@@ -244,7 +251,7 @@ piano.
   - Slots: `chord-trainer.actions`
   - Slot contributors: `chord-trainer.actions` ← `primitives.pane`
   - Contributes: `Pane.Register` "chord-trainer"
-  - Uses: 53 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 52 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `integrations/youtube` ×5
     - `apps/chord/curriculum` ×4
     - `apps/chord/piano` ×4
@@ -252,12 +259,12 @@ piano.
     - `primitives/css/coords` ×3
     - `primitives/pane` ×3
     - `apps/chord/vocabulary` ×2
-    - `infra/endpoints` ×2
     - `music/chord-box` ×2
     - `primitives/css/spacing` ×2
     - `primitives/css/ui-kit` ×2
     - `primitives/latest-ref` ×2
     - `apps/chord/song-index.SongIndexGate`
+    - `infra/endpoints.useEndpointMutation`
     - `network/live.useLive`
     - `primitives/css/card.Card`
     - `primitives/css/center.Center`

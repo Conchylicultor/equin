@@ -35,6 +35,7 @@
 //
 // Usage: bun plugins/page/plugins/editor/e2e/convert-in-place-verify.ts [--url <deploy>] [--out /tmp/convert]
 import {
+  pageFetch,
   arg,
   report,
   snap,
@@ -128,13 +129,11 @@ async function turnInto(
   return true;
 }
 
-/** Fetch the page's rows from inside the app (same origin, same session). */
+/** Fetch the page's rows through the page's browser context (same session). */
 async function fetchRows(page: Page, pageId: string): Promise<Row[]> {
-  return page.evaluate(async (id: string) => {
-    const res = await fetch(`/api/pages/${id}/blocks`);
-    if (!res.ok) throw new Error(`GET blocks failed: ${res.status}`);
-    return (await res.json()) as Row[];
-  }, pageId);
+  const res = await pageFetch(page, `/api/pages/${pageId}/blocks`);
+  if (!res.ok) throw new Error(`GET blocks failed: ${res.status}`);
+  return (await res.json()) as Row[];
 }
 
 /**

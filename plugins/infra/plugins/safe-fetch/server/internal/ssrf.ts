@@ -23,6 +23,62 @@ export class SsrfError extends Error {
   }
 }
 
+/** Thrown by {@link safeFetch} when a target redirects more than `maxRedirects` times. */
+export class TooManyRedirectsError extends Error {
+  constructor(maxRedirects: number) {
+    super(`Too many redirects (>${maxRedirects})`);
+    this.name = "TooManyRedirectsError";
+  }
+}
+
+/**
+ * The error codes of a target that cannot be reached: `node:dns`'s for a name
+ * with no usable answer, and the socket ones Bun's fetch puts on the
+ * `TypeError` it throws for a failed dial (`ECONNREFUSED`, `ENOTFOUND`, …).
+ */
+const UNREACHABLE_CODES = new Set([
+  "ENOTFOUND",
+  "EAI_AGAIN",
+  "EAI_NONAME",
+  "EAI_FAIL",
+  "ENODATA",
+  "ESERVFAIL",
+  "ETIMEOUT",
+  "ECONNREFUSED",
+  "ECONNRESET",
+  "ECONNABORTED",
+  "EHOSTUNREACH",
+  "ENETUNREACH",
+  "ETIMEDOUT",
+  "EPIPE",
+  "ConnectionRefused",
+  "ConnectionClosed",
+  "FailedToOpenSocket",
+  "UNABLE_TO_VERIFY_LEAF_SIGNATURE",
+  "DEPTH_ZERO_SELF_SIGNED_CERT",
+  "SELF_SIGNED_CERT_IN_CHAIN",
+  "CERT_HAS_EXPIRED",
+  "ERR_TLS_CERT_ALTNAME_INVALID",
+]);
+
+/**
+ * Whether `err` — thrown by {@link safeFetch} — says the target could not be
+ * reached, an ordinary answer about the URL rather than a bug: its name did not
+ * resolve or the dial failed (an error carrying one of the network codes —
+ * Bun's fetch throws a `TypeError` with `code: "ECONNREFUSED"` /
+ * `"ENOTFOUND"`), the request timed out or was aborted (`TimeoutError` /
+ * `AbortError`), or it redirected too often ({@link TooManyRedirectsError}). A
+ * code-less `TypeError` is a programming error and does NOT count. A blocked
+ * target is an {@link SsrfError}, classified apart; anything else — rethrow it.
+ */
+export function isUnreachableError(err: unknown): boolean {
+  if (err instanceof TooManyRedirectsError) return true;
+  if (!(err instanceof Error)) return false;
+  if (err.name === "TimeoutError" || err.name === "AbortError") return true;
+  const code = (err as { code?: unknown }).code;
+  return typeof code === "string" && UNREACHABLE_CODES.has(code);
+}
+
 const DEFAULT_TIMEOUT_MS = 20_000;
 const DEFAULT_MAX_REDIRECTS = 8;
 
@@ -295,8 +351,10 @@ function headersWithHost(
  *
  * - `timeoutMs` (default 20s) bounds the whole request via `AbortSignal.timeout`.
  * - `signal` is honored in addition to the timeout (whichever fires first).
- * - Throws {@link SsrfError} on a blocked target/redirect, or a plain Error on
- *   too many redirects.
+ * - Throws {@link SsrfError} on a blocked target/redirect, a
+ *   {@link TooManyRedirectsError} on too many redirects, and fetch's / DNS's own
+ *   errors otherwise — {@link isUnreachableError} tells the reachability ones
+ *   apart.
  */
 export async function safeFetch(
   target: string | URL,
@@ -351,7 +409,7 @@ export async function safeFetch(
     ip = await assertResolvesPublic(logicalUrl);
   }
 
-  throw new Error(`Too many redirects (>${maxRedirects})`);
+  throw new TooManyRedirectsError(maxRedirects);
 }
 
 /** Combine the timeout signal with an optional caller signal (first to abort wins). */

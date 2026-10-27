@@ -22,4 +22,11 @@ export default [
     reason:
       "The page root: it mounts the page's transport (<TransportProvider transport={pageTransport}>) above everything, and hoists that transport's live-state pipeline at boot.",
   },
+  {
+    rule: "networking/no-request-guard-capability",
+    paths: ["web/install-request-guard.ts"],
+    kind: "sanctioned",
+    reason:
+      "The app entry installs the page request guard before anything else evaluates, and registers the asset mirror's prefix (a sampler loads its samples from it by URL, with no transport to resolve an asset base over).",
+  },
 ] satisfies Exemptions;

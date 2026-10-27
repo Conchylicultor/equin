@@ -21,3 +21,6 @@ export type {
   LiveStateHarness,
   LiveStateHarnessOptions,
 } from "./live-state-harness";
+// What the notifications client files to `resourceErrorReportSink`, for a test
+// that registers the sink and asserts the reports a failing read files.
+export type { ResourceErrorInfo } from "../resource-error-reporter";

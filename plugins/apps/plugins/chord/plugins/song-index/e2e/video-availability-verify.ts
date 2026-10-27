@@ -22,10 +22,13 @@ import {
   numArg,
   report,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
-import type { LoopCandidate } from "@plugins/apps/plugins/chord/plugins/song-index/core";
+import type {
+  FindLoopsInput,
+  LoopCandidate,
+} from "@plugins/apps/plugins/chord/plugins/song-index/core";
 import { VideoStatusSchema } from "@plugins/apps/plugins/chord/plugins/video-availability/core";
 import { z } from "zod";
-import { FindResponseSchema, ensureReady, major, postJson } from "./flows";
+import { ensureReady, findLoops, major, postJson } from "./flows";
 
 const r = report("chord video availability");
 const timeoutMs = numArg("timeout-min", 15) * 60_000;
@@ -33,13 +36,16 @@ const timeoutMs = numArg("timeout-min", 15) * 60_000;
 const I = major(0);
 const IV = major(5);
 const V = major(7);
-const FIND = { playable: [I, IV, V], practised: [IV], extras: 0, limit: 50 };
+const FIND: FindLoopsInput = {
+  playable: [I, IV, V],
+  practised: [IV],
+  extras: 0,
+  limit: 50,
+};
 
 async function find(): Promise<{ candidates: LoopCandidate[]; ms: number }> {
   const t0 = performance.now();
-  const res = FindResponseSchema.parse(
-    await postJson("/api/chord/loops/find", FIND),
-  );
+  const res = await findLoops(FIND);
   const ms = performance.now() - t0;
   if (res.kind !== "ready") {
     r.fail("find answers ready once the status is ready", JSON.stringify(res));
