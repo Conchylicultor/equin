@@ -300,8 +300,8 @@ export function KeyboardPlugin({
       return execute(intent, event, caret);
     }
 
-    const reg = (
-      cmd: LexicalCommand<KeyboardEvent | null>,
+    const reg = <P extends KeyboardEvent | null>(
+      cmd: LexicalCommand<P>,
       key: KeystrokeKey,
     ) =>
       lexicalEditor.registerCommand(
@@ -333,11 +333,11 @@ export function KeyboardPlugin({
       reg(KEY_ARROW_RIGHT_COMMAND, "ArrowRight"),
       // Escape leaves text editing and selects the whole block — not a caret move,
       // so it stays a direct handler rather than flowing through the resolver.
-      lexicalEditor.registerCommand<KeyboardEvent | null>(
+      lexicalEditor.registerCommand(
         KEY_ESCAPE_COMMAND,
         (event) => {
           if (!selectionRef.current) return false;
-          event?.preventDefault();
+          event.preventDefault();
           selectionRef.current.enterSelectionMode(blockIdRef.current);
           return true;
         },

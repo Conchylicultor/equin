@@ -39,6 +39,18 @@ export const yAxisFormatter = (v: number) => compactFormatter.format(v);
 const numberFormatter = new Intl.NumberFormat();
 export const tooltipNumberFormatter = (v: number) => numberFormatter.format(v);
 
+/**
+ * A recharts Tooltip `formatter` over the numeric series these charts plot:
+ * recharts types the value it hands over as `number | string | array` and the
+ * name as `string | number`, so `format` receives them as the number and the
+ * series name they are here.
+ */
+export function numericTooltip<R>(
+  format: (value: number, name: string) => R,
+): (value: unknown, name: unknown) => R {
+  return (value, name) => format(Number(value), String(name));
+}
+
 export const tooltipContentStyle = {
   background: "var(--popover)",
   border: "1px solid var(--border)",

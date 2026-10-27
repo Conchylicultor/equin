@@ -33,6 +33,7 @@
     - `gridProps`
     - `lineCursor`
     - `LiveChart`
+    - `numericTooltip`
     - `tooltipContentStyle`
     - `tooltipLabelStyle`
     - `tooltipNumberFormatter`

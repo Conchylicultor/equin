@@ -27,6 +27,7 @@ import {
   tooltipLabelStyle,
   tooltipNumberFormatter,
   yAxisFormatter,
+  numericTooltip,
 } from "./chart-primitives";
 
 const BUCKETS: { id: CommitBucket; label: string }[] = [
@@ -96,10 +97,10 @@ function CommitsRateBody({
                 contentStyle={tooltipContentStyle}
                 labelStyle={tooltipLabelStyle}
                 cursor={barCursor}
-                formatter={(value: number) => [
+          formatter={numericTooltip((value) => [
                   tooltipNumberFormatter(value),
                   valueLabel,
-                ]}
+          ])}
               />
               <Bar
                 dataKey="count"

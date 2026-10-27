@@ -21,6 +21,7 @@ import {
   tooltipLabelStyle,
   tooltipNumberFormatter,
   yAxisFormatter,
+  numericTooltip,
 } from "@plugins/stats/plugins/commits/web";
 import { useShowEmptyDays } from "@plugins/stats/web";
 import { useLive } from "@plugins/network/plugins/live/web";
@@ -112,10 +113,10 @@ function VelocityChart({ days }: { days: readonly TaskHistoryDay[] }) {
               contentStyle={tooltipContentStyle}
               labelStyle={tooltipLabelStyle}
               cursor={barCursor}
-              formatter={(value: number, name: string) => [
+            formatter={numericTooltip((value, name) => [
                 tooltipNumberFormatter(value),
                 name,
-              ]}
+            ])}
             />
             <Legend
               wrapperStyle={{ fontSize: 12 }}

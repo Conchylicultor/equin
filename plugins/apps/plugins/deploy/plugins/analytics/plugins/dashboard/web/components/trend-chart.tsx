@@ -76,9 +76,9 @@ export function TrendChart({
             isAnimationActive={false}
             contentStyle={tooltipContentStyle}
             cursor={lineCursor}
-            formatter={(value: number) => kpi.format(value)}
+            formatter={(value) => kpi.format(Number(value))}
             // Stacked, the parts are the series: the total joins the label.
-            labelFormatter={(label: string, payload) => {
+            labelFormatter={(label, payload) => {
               const total = (payload[0]?.payload as ChartPoint | undefined)
                 ?.current;
               return stack && total != null

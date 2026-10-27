@@ -62,6 +62,7 @@ These are interim values: metrics P2/P3 replace them.
     - `stats/commits.fillGaps`
     - `stats/commits.gridProps`
     - `stats/commits.LiveChart`
+    - `stats/commits.numericTooltip`
     - `stats/commits.tooltipContentStyle`
     - `stats/commits.tooltipLabelStyle`
     - `stats/commits.tooltipNumberFormatter`

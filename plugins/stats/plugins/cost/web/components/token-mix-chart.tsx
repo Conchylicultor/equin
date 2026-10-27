@@ -18,6 +18,7 @@ import {
   tooltipContentStyle,
   tooltipLabelStyle,
   yAxisFormatter,
+  numericTooltip,
 } from "@plugins/stats/plugins/commits/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { costDaily, type CostDay } from "../../shared/values";
@@ -88,42 +89,42 @@ function TokenMixBody({ days }: { days: readonly CostDay[] }) {
 
   return (
     <>
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart
-            data={points}
-            margin={{ top: 8, right: 16, bottom: 8, left: 0 }}
-          >
-            <CartesianGrid {...gridProps} />
-            <XAxis dataKey="date" {...axisProps} minTickGap={32} />
-            <YAxis {...axisProps} width={56} tickFormatter={yAxisFormatter} />
-            <Tooltip
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart
+          data={points}
+          margin={{ top: 8, right: 16, bottom: 8, left: 0 }}
+        >
+          <CartesianGrid {...gridProps} />
+          <XAxis dataKey="date" {...axisProps} minTickGap={32} />
+          <YAxis {...axisProps} width={56} tickFormatter={yAxisFormatter} />
+          <Tooltip
+            isAnimationActive={false}
+            contentStyle={tooltipContentStyle}
+            labelStyle={tooltipLabelStyle}
+            cursor={barCursor}
+            formatter={numericTooltip((value, name) => [
+              formatTokens(value),
+              name,
+            ])}
+          />
+          <Legend
+            wrapperStyle={{ fontSize: 12 }}
+            onClick={handleLegendClick}
+            formatter={legendFormatter}
+          />
+          {SERIES.map((s) => (
+            <Bar
+              key={s.key}
+              dataKey={s.key}
+              name={s.name}
+              stackId="tokens"
+              fill={s.color}
               isAnimationActive={false}
-              contentStyle={tooltipContentStyle}
-              labelStyle={tooltipLabelStyle}
-              cursor={barCursor}
-              formatter={(value: number, name: string) => [
-                formatTokens(value),
-                name,
-              ]}
+              hide={hidden[s.key] ?? false}
             />
-            <Legend
-              wrapperStyle={{ fontSize: 12 }}
-              onClick={handleLegendClick}
-              formatter={legendFormatter}
-            />
-            {SERIES.map((s) => (
-              <Bar
-                key={s.key}
-                dataKey={s.key}
-                name={s.name}
-                stackId="tokens"
-                fill={s.color}
-                isAnimationActive={false}
-                hide={hidden[s.key] ?? false}
-              />
-            ))}
-          </BarChart>
-        </ResponsiveContainer>
+          ))}
+        </BarChart>
+      </ResponsiveContainer>
     </>
   );
 }

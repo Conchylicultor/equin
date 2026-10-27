@@ -21,6 +21,7 @@ import {
   tooltipLabelStyle,
   tooltipNumberFormatter,
   yAxisFormatter,
+  numericTooltip,
 } from "./chart-primitives";
 
 interface Point {
@@ -73,10 +74,10 @@ function CumulativeCommitsBody({ rawPoints }: { rawPoints: Point[] }) {
               contentStyle={tooltipContentStyle}
               labelStyle={tooltipLabelStyle}
               cursor={lineCursor}
-              formatter={(value: number) => [
+          formatter={numericTooltip((value) => [
                 tooltipNumberFormatter(value),
                 valueLabel,
-              ]}
+          ])}
             />
             <Line
               type="monotone"

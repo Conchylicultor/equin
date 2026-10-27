@@ -11,6 +11,7 @@ export {
   yAxisFormatter,
   tooltipNumberFormatter,
   tooltipContentStyle,
+  numericTooltip,
   tooltipLabelStyle,
   lineCursor,
   barCursor,

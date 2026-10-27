@@ -19,6 +19,7 @@ import {
   tooltipLabelStyle,
   tooltipNumberFormatter,
   yAxisFormatter,
+  numericTooltip,
 } from "@plugins/stats/plugins/commits/web";
 
 export function ThroughputChart({ bucket }: { bucket: PushBucket }) {
@@ -50,10 +51,10 @@ export function ThroughputChart({ bucket }: { bucket: PushBucket }) {
               contentStyle={tooltipContentStyle}
               labelStyle={tooltipLabelStyle}
               cursor={barCursor}
-              formatter={(value: number, name: string) => [
+              formatter={numericTooltip((value, name) => [
                 tooltipNumberFormatter(value),
                 name === "success" ? "Success" : "Failed",
-              ]}
+              ])}
             />
             <Legend
               formatter={(value: string) =>

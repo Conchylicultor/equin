@@ -18,6 +18,7 @@ import {
   tooltipContentStyle,
   tooltipLabelStyle,
   yAxisFormatter,
+  numericTooltip,
 } from "@plugins/stats/plugins/commits/web";
 
 const STEP_COLORS: Record<string, string> = {
@@ -67,10 +68,10 @@ export function StepBreakdownChart({ bucket }: { bucket: PushBucket }) {
               contentStyle={tooltipContentStyle}
               labelStyle={tooltipLabelStyle}
               cursor={barCursor}
-              formatter={(value: number, name: string) => [
+              formatter={numericTooltip((value, name) => [
                 `${value}s`,
                 STEP_LABELS[name] ?? name,
-              ]}
+              ])}
             />
             <Legend
               formatter={(value: string) => STEP_LABELS[value] ?? value}

@@ -214,8 +214,8 @@ it survives, the snapshot fills in where it does not.
     - `Stats.Chart` "Average cost per conversation" → `AvgCostPerConversationChart`
     - `Stats.Chart` "Cost distribution per conversation" → `CostDistributionChart`
     - `Stats.Chart` "Top conversations by cost" → `TopConversationsTable`
-  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `stats/commits` ×9
+  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `stats/commits` ×10
     - `config_v2` ×3
     - `primitives/data-view` ×3
     - `stats` ×2

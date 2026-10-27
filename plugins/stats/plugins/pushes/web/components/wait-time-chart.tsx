@@ -18,6 +18,7 @@ import {
   tooltipContentStyle,
   tooltipLabelStyle,
   yAxisFormatter,
+  numericTooltip,
 } from "@plugins/stats/plugins/commits/web";
 
 export function WaitTimeChart({ bucket }: { bucket: PushBucket }) {
@@ -49,10 +50,10 @@ export function WaitTimeChart({ bucket }: { bucket: PushBucket }) {
               contentStyle={tooltipContentStyle}
               labelStyle={tooltipLabelStyle}
               cursor={barCursor}
-              formatter={(value: number, name: string) => [
+              formatter={numericTooltip((value, name) => [
                 `${value}s`,
                 name === "avg" ? "Avg wait" : "Max wait",
-              ]}
+              ])}
             />
             <Legend
               formatter={(value: string) =>

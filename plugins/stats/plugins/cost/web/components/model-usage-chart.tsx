@@ -17,6 +17,7 @@ import {
   gridProps,
   tooltipContentStyle,
   tooltipLabelStyle,
+  numericTooltip,
 } from "@plugins/stats/plugins/commits/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { costSessionsDaily, type CostSessionDay } from "../../shared/values";
@@ -88,10 +89,10 @@ function ModelUsageBody({
             contentStyle={tooltipContentStyle}
             labelStyle={tooltipLabelStyle}
             cursor={barCursor}
-            formatter={(value: number, name: string) => [
+            formatter={numericTooltip((value, name) => [
               `${value} sessions`,
               name,
-            ]}
+            ])}
           />
           <Legend wrapperStyle={{ fontSize: 12 }} />
           {families.map((f, i) => (

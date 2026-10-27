@@ -35,6 +35,7 @@ import {
   tooltipLabelStyle,
   tooltipNumberFormatter,
   yAxisFormatter,
+  numericTooltip,
 } from "./chart-primitives";
 
 // Tailwind -400 shades as hex, matching the avatar swatch colors
@@ -198,10 +199,10 @@ function CumulativeCommitsCategoryBody({
               contentStyle={tooltipContentStyle}
               labelStyle={tooltipLabelStyle}
               cursor={lineCursor}
-              formatter={(value: number, name: string) => [
+          formatter={numericTooltip((value, name) => [
                 tooltipNumberFormatter(value),
                 name,
-              ]}
+          ])}
             />
             <Legend
               wrapperStyle={{ fontSize: 12, cursor: "pointer" }}
@@ -312,10 +313,10 @@ function CommitsRateCategoryBody({
                 contentStyle={tooltipContentStyle}
                 labelStyle={tooltipLabelStyle}
                 cursor={barCursor}
-                formatter={(value: number, name: string) => [
+          formatter={numericTooltip((value, name) => [
                   tooltipNumberFormatter(value),
                   name,
-                ]}
+          ])}
               />
               <Legend
                 wrapperStyle={{ fontSize: 12, cursor: "pointer" }}

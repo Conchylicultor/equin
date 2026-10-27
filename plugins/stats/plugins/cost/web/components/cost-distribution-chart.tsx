@@ -14,6 +14,7 @@ import {
   gridProps,
   tooltipContentStyle,
   tooltipLabelStyle,
+  numericTooltip,
 } from "@plugins/stats/plugins/commits/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { costDistribution } from "../../shared/values";
@@ -44,7 +45,7 @@ export function CostDistributionChart() {
                 contentStyle={tooltipContentStyle}
                 labelStyle={tooltipLabelStyle}
                 cursor={barCursor}
-                formatter={(value: number) => [value, "conversations"]}
+                formatter={numericTooltip((value) => [value, "conversations"])}
               />
               <Bar
                 dataKey="count"

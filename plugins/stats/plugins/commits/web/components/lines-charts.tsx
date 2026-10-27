@@ -41,6 +41,7 @@ import {
   tooltipLabelStyle,
   tooltipNumberFormatter,
   yAxisFormatter,
+  numericTooltip,
 } from "./chart-primitives";
 import { ExcludedPathToggles } from "./excluded-path-toggles";
 
@@ -154,10 +155,10 @@ function CumulativeLinesBody({ rawPoints }: { rawPoints: LinesPoint[] }) {
               contentStyle={tooltipContentStyle}
               labelStyle={tooltipLabelStyle}
               cursor={lineCursor}
-              formatter={(value: number, name: string) => [
+          formatter={numericTooltip((value, name) => [
                 tooltipNumberFormatter(Math.abs(value)),
                 name,
-              ]}
+          ])}
             />
             <Legend
               wrapperStyle={{ fontSize: 12 }}
@@ -270,10 +271,10 @@ function LinesRateBody({
               contentStyle={tooltipContentStyle}
               labelStyle={tooltipLabelStyle}
               cursor={barCursor}
-              formatter={(value: number, name: string) => [
+          formatter={numericTooltip((value, name) => [
                 tooltipNumberFormatter(Math.abs(value)),
                 name,
-              ]}
+          ])}
             />
             <Legend
               wrapperStyle={{ fontSize: 12 }}
@@ -405,10 +406,10 @@ function CumulativeLinesBreakdownBody({ points }: { points: ByExtPoint[] }) {
               contentStyle={tooltipContentStyle}
               labelStyle={tooltipLabelStyle}
               cursor={lineCursor}
-              formatter={(value: number, name: string) => [
+          formatter={numericTooltip((value, name) => [
                 tooltipNumberFormatter(value),
                 name,
-              ]}
+          ])}
             />
             <Legend wrapperStyle={{ fontSize: 12 }} />
             {allKeys.map((ext) => (
@@ -495,10 +496,10 @@ function LinesRateBreakdownBody({
               contentStyle={tooltipContentStyle}
               labelStyle={tooltipLabelStyle}
               cursor={barCursor}
-              formatter={(value: number, name: string) => [
+          formatter={numericTooltip((value, name) => [
                 tooltipNumberFormatter(value),
                 name,
-              ]}
+          ])}
             />
             <Legend wrapperStyle={{ fontSize: 12 }} />
             {allKeys.map((ext) => (

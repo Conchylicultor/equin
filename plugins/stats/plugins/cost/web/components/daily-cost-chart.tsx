@@ -17,6 +17,7 @@ import {
   gridProps,
   tooltipContentStyle,
   tooltipLabelStyle,
+  numericTooltip,
 } from "@plugins/stats/plugins/commits/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { costDaily, type CostDay } from "../../shared/values";
@@ -80,37 +81,37 @@ function DailyCostBody({
 
   return (
     <>
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart
-            data={rows}
-            margin={{ top: 8, right: 16, bottom: 8, left: 0 }}
-          >
-            <CartesianGrid {...gridProps} />
-            <XAxis dataKey="date" {...axisProps} minTickGap={32} />
-            <YAxis {...axisProps} width={56} tickFormatter={formatUsdCompact} />
-            <Tooltip
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart
+          data={rows}
+          margin={{ top: 8, right: 16, bottom: 8, left: 0 }}
+        >
+          <CartesianGrid {...gridProps} />
+          <XAxis dataKey="date" {...axisProps} minTickGap={32} />
+          <YAxis {...axisProps} width={56} tickFormatter={formatUsdCompact} />
+          <Tooltip
+            isAnimationActive={false}
+            contentStyle={tooltipContentStyle}
+            labelStyle={tooltipLabelStyle}
+            cursor={barCursor}
+            formatter={numericTooltip((value, name) => [
+              formatUsd(value),
+              name,
+            ])}
+          />
+          <Legend wrapperStyle={{ fontSize: 12 }} />
+          {models.map((m, i) => (
+            <Bar
+              key={m}
+              dataKey={m}
+              name={m}
+              stackId="cost"
+              fill={colorFor(m, i)}
               isAnimationActive={false}
-              contentStyle={tooltipContentStyle}
-              labelStyle={tooltipLabelStyle}
-              cursor={barCursor}
-              formatter={(value: number, name: string) => [
-                formatUsd(value),
-                name,
-              ]}
             />
-            <Legend wrapperStyle={{ fontSize: 12 }} />
-            {models.map((m, i) => (
-              <Bar
-                key={m}
-                dataKey={m}
-                name={m}
-                stackId="cost"
-                fill={colorFor(m, i)}
-                isAnimationActive={false}
-              />
-            ))}
-          </BarChart>
-        </ResponsiveContainer>
+          ))}
+        </BarChart>
+      </ResponsiveContainer>
     </>
   );
 }

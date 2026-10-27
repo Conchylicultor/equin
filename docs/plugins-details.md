@@ -48151,6 +48151,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `gridProps`
           - `lineCursor`
           - `LiveChart`
+          - `numericTooltip`
           - `tooltipContentStyle`
           - `tooltipLabelStyle`
           - `tooltipNumberFormatter`
@@ -48210,8 +48211,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Stats.Chart` "Average cost per conversation" → `AvgCostPerConversationChart`
           - `Stats.Chart` "Cost distribution per conversation" → `CostDistributionChart`
           - `Stats.Chart` "Top conversations by cost" → `TopConversationsTable`
-        - Uses: 25 symbols — full list in [`plugins/stats/plugins/cost/REFERENCE.md`](../plugins/stats/plugins/cost/REFERENCE.md)
-          - `stats/commits` ×9
+        - Uses: 26 symbols — full list in [`plugins/stats/plugins/cost/REFERENCE.md`](../plugins/stats/plugins/cost/REFERENCE.md)
+          - `stats/commits` ×10
           - `config_v2` ×3
           - `primitives/data-view` ×3
           - `stats` ×2
@@ -48328,6 +48329,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `stats/commits.fillGaps`
           - `stats/commits.gridProps`
           - `stats/commits.LiveChart`
+          - `stats/commits.numericTooltip`
           - `stats/commits.tooltipContentStyle`
           - `stats/commits.tooltipLabelStyle`
           - `stats/commits.tooltipNumberFormatter`
@@ -48402,6 +48404,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `stats/commits.gridProps`
           - `stats/commits.lineCursor`
           - `stats/commits.LiveChart`
+          - `stats/commits.numericTooltip`
           - `stats/commits.tooltipContentStyle`
           - `stats/commits.tooltipLabelStyle`
           - `stats/commits.tooltipNumberFormatter`

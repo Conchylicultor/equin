@@ -16,6 +16,7 @@ import {
   lineCursor,
   tooltipContentStyle,
   tooltipLabelStyle,
+  numericTooltip,
 } from "@plugins/stats/plugins/commits/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { costDaily, type CostDay } from "../../shared/values";
@@ -49,32 +50,35 @@ function CumulativeCostBody({ days }: { days: readonly CostDay[] }) {
   }, [days, showEmptyDays]);
   return (
     <>
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart
-            data={points}
-            margin={{ top: 8, right: 16, bottom: 8, left: 0 }}
-          >
-            <CartesianGrid {...gridProps} />
-            <XAxis dataKey="date" {...axisProps} minTickGap={32} />
-            <YAxis {...axisProps} width={56} tickFormatter={formatUsdCompact} />
-            <Tooltip
-              isAnimationActive={false}
-              contentStyle={tooltipContentStyle}
-              labelStyle={tooltipLabelStyle}
-              cursor={lineCursor}
-              formatter={(value: number) => [formatUsd(value), "Cumulative"]}
-            />
-            <Line
-              type="monotone"
-              dataKey="cost"
-              stroke="var(--primary)"
-              strokeWidth={2}
-              dot={false}
-              activeDot={{ r: 4 }}
-              isAnimationActive={false}
-            />
-          </LineChart>
-        </ResponsiveContainer>
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart
+          data={points}
+          margin={{ top: 8, right: 16, bottom: 8, left: 0 }}
+        >
+          <CartesianGrid {...gridProps} />
+          <XAxis dataKey="date" {...axisProps} minTickGap={32} />
+          <YAxis {...axisProps} width={56} tickFormatter={formatUsdCompact} />
+          <Tooltip
+            isAnimationActive={false}
+            contentStyle={tooltipContentStyle}
+            labelStyle={tooltipLabelStyle}
+            cursor={lineCursor}
+            formatter={numericTooltip((value) => [
+              formatUsd(value),
+              "Cumulative",
+            ])}
+          />
+          <Line
+            type="monotone"
+            dataKey="cost"
+            stroke="var(--primary)"
+            strokeWidth={2}
+            dot={false}
+            activeDot={{ r: 4 }}
+            isAnimationActive={false}
+          />
+        </LineChart>
+      </ResponsiveContainer>
     </>
   );
 }

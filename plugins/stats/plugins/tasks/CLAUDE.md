@@ -19,6 +19,7 @@
     - `stats/commits.gridProps`
     - `stats/commits.lineCursor`
     - `stats/commits.LiveChart`
+    - `stats/commits.numericTooltip`
     - `stats/commits.tooltipContentStyle`
     - `stats/commits.tooltipLabelStyle`
     - `stats/commits.tooltipNumberFormatter`

@@ -17,6 +17,7 @@ import {
   tooltipContentStyle,
   tooltipLabelStyle,
   yAxisFormatter,
+  numericTooltip,
 } from "@plugins/stats/plugins/commits/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -137,13 +138,13 @@ function AvgCostBody({
                   contentStyle={tooltipContentStyle}
                   labelStyle={tooltipLabelStyle}
                   cursor={barCursor}
-                  formatter={(value: number, name: string) => {
+                  formatter={numericTooltip((value, name) => {
                     if (name === "rolling7Cost")
                       return [formatUsd(value), "total 7d avg"];
                     if (name.endsWith(" 7d avg"))
                       return [formatUsd(value), name];
                     return [formatUsd(value), name];
-                  }}
+                  })}
                 />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
                 {families.map((fam, i) => (
@@ -216,11 +217,11 @@ function AvgCostBody({
                   contentStyle={tooltipContentStyle}
                   labelStyle={tooltipLabelStyle}
                   cursor={barCursor}
-                  formatter={(value: number, name: string) => {
+                  formatter={numericTooltip((value, name) => {
                     if (name === "rolling7Tokens")
                       return [yAxisFormatter(value), "7-day avg"];
                     return [yAxisFormatter(value), name];
-                  }}
+                  })}
                 />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
                 {families.map((fam, i) => (

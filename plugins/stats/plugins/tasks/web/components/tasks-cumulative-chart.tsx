@@ -18,6 +18,7 @@ import {
   tooltipLabelStyle,
   tooltipNumberFormatter,
   yAxisFormatter,
+  numericTooltip,
 } from "@plugins/stats/plugins/commits/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import {
@@ -97,10 +98,10 @@ function CumulativeChart({ days }: { days: readonly TaskHistoryDay[] }) {
               contentStyle={tooltipContentStyle}
               labelStyle={tooltipLabelStyle}
               cursor={lineCursor}
-              formatter={(value: number, name: string) => [
+            formatter={numericTooltip((value, name) => [
                 tooltipNumberFormatter(value),
                 name,
-              ]}
+            ])}
             />
             <Legend
               wrapperStyle={{ fontSize: 12 }}
