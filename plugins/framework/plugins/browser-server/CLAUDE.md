@@ -25,7 +25,8 @@ serveOverPort(port, async () => {
 
 // page — one transport per server, kept for its lifetime
 const { server } = await portBrowserServer(worker);
-<TransportProvider transport={browserServerTransport(server, { telemetry })}>…the unchanged app…</TransportProvider>
+const frames = await attachFrameServing(worker, serviceWorkerUrl); // alongside the boot
+<TransportProvider transport={browserServerTransport(server, { telemetry, frameBase })}>…the unchanged app…</TransportProvider>
 ```
 
 ## core/: the `BrowserServer` interface
@@ -71,13 +72,19 @@ version skew ("App updated — reload"). See `resource-runtime`'s `keySet`.
   a `BrowserServer` over that port, so `browserServerTransport` and the whole
   app path are unchanged. Rejects with `PortHostBootError` when the worker
   reports `failed`.
+- **`attachPort(worker, port)`** hands the worker one more end (`ToHost`'s
+  `attach` arm, the port transferred) that `serveOverPort` answers exactly as
+  its own (requests queue until the graph is up); **`portRequester(end)`** is
+  the requesting half over any such end — what `portBrowserServer` and the
+  frame-serving Service Worker both send requests through.
 
 The worker itself is a plugin's `bin/browser-host.ts`, built by web-artifacts
 (`browser-hosts.ts`) and imported by the page as `@browser-host/<pluginPath>`
-(typed by `core/browser-host.d.ts`: `start(): Worker`).
+(typed by `core/browser-host.d.ts`: `start(): Worker` and
+`serviceWorkerUrl`, the frame-serving Service Worker built beside it).
 
 Tests: `core/internal/port.test.ts` (a real `MessageChannel`: read, sub-ack, a
-boot failure on both ends).
+boot failure on both ends, an attached port answering beside the page's).
 
 ## core/testing: servers for tests
 
@@ -114,21 +121,71 @@ live-state pipeline is keyed by transport identity.
 - `telemetry` — whether the telemetry its traffic raises is reported (to the
   page's own server: a browser server keeps none); the caller passes the
   enclosing page's setting, or `false` to drop it.
+- `frameBase` — where its frame documents load by URL
+  (`attachFrameServing`'s), or `null` where nothing serves them.
 
 Tests: `web/__tests__/browser-server.test.tsx` drives the real
 `NotificationsClient` through `<TransportProvider>` + `<NotificationsProvider>`.
+
+## web/: frame serving — a frame document by URL
+
+An `<iframe>` whose relative sub-resources (`styles.css`, a CSS `url()`) must
+resolve beside it cannot load a blob URL, and no URL reaches a server in a
+worker. So every browser host carries a **Service Worker**
+(`web/frames-sw.ts`, built by web-artifacts as a classic script into the
+host's artifact dir, `frames-sw.js`; exported as the host module's
+`serviceWorkerUrl`) that answers frame documents from the worker:
+
+- **Scope** — the `frames/` dir beside the script,
+  `/artifacts/<host dir>/frames/`: each build has its own, and an
+  uncontrolled request there (a shift-reload, no Service Worker) misses the
+  artifact store, which the gateway answers 404 — never the app.
+- **URL** — `<scope><serverId>/api/…` (`frames-protocol.ts`): the server's own
+  path behind a fresh id per attachment, so two tabs never answer each other's
+  frames. `Transport.frameBase` is the prefix; `frameUrlOver`
+  (`infra/endpoints`) builds the URL.
+- **`attachFrameServing(worker, serviceWorkerUrl)`** (page, run alongside the
+  host boot) → `{ kind: "serving", frameBase, detach }` | `{ kind:
+  "unsupported", reason }` (no Service Worker here: an insecure origin, a
+  private window refusing registration). Registers the script on its scope and
+  waits for `activated` (never `navigator.serviceWorker.ready`: the page is
+  outside the scope, never controlled), drops registrations an earlier build
+  left (`/artifacts/*/frames/`) that no tab holds — a serving page holds a
+  shared Web Lock named by its scope until it detaches, so a tab still on an
+  older build keeps its frames — then hands one end of a channel to the worker
+  (`attachPort`) and the other to the Service Worker. A Service Worker
+  restarted from idle has lost its ports: it asks every window
+  (`need-port`) ONCE per server id however many frames wait, the owning page
+  hands a fresh one (a second port for an id already served is closed, never
+  swapped in under requests in flight), and with no answer in 5 s it answers
+  a loud 503 page.
+- **The Service Worker** answers GET and HEAD only (a HEAD as the GET without
+  its body), routes by server id, refuses a segment decoding to `.`, `..`, a
+  separator or NUL (`%2e%2e`, `%2f` — the URL parser folds only literal dot
+  segments), lets a cross-origin request pass, and answers any other
+  same-origin request of a frame 404 — a frame's absolute `/api` path never
+  reaches the page's server. The page's own elements are never controlled:
+  they keep `useAssetSrc`'s blobs.
+
+Tests: `web/frames-protocol.test.ts` (routing, encoded traversal),
+`demo/scope`'s `demo-scope.test.tsx` (frame base null without a Service
+Worker; with a stubbed one: registration, stale-scope drop, the handed port
+reaching the server, detach on unmount).
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./equin build` -->
 
 ## Plugin reference
 
-- Description: A server that runs in the page's realm or across a worker's port — a third host of the unified live API (core: the BrowserServer interface; runtimeBrowserServer over a resource runtime booted in this realm; serveOverPort / portBrowserServer carrying one across a MessageChannel or a Web Worker). Web: browserServerTransport(server, { telemetry }), the Transport a <TransportProvider> points a subtree at — in-memory sockets to its runtime, requests through its router, an inert central socket.
+- Description: A server that runs in the page's realm or across a worker's port — a third host of the unified live API (core: the BrowserServer interface; runtimeBrowserServer over a resource runtime booted in this realm; serveOverPort / portBrowserServer carrying one across a MessageChannel or a Web Worker). Web: browserServerTransport(server, { telemetry, frameBase }), the Transport a <TransportProvider> points a subtree at — in-memory sockets to its runtime, requests through its router, an inert central socket; attachFrameServing(worker, serviceWorkerUrl) serves the server's frame documents by URL through the host's frame-serving Service Worker (frames-sw.ts), giving the transport its frameBase.
 - Web:
   - Uses:
     - `primitives/networking.publishWsStatus`
     - `primitives/networking.Transport`
     - `primitives/networking.TransportSocket`
-  - Exports (values): `browserServerTransport`
+  - Exports (types): `FrameServing`
+  - Exports (values):
+    - `attachFrameServing`
+    - `browserServerTransport`
 - Cross-plugin:
   - Imported by: `framework/browser-server/demo/scope`
 - Core:
@@ -141,13 +198,15 @@ Tests: `web/__tests__/browser-server.test.tsx` drives the real
     - `PortEnd`
     - `PortServer`
   - Exports (values):
+    - `attachPort`
     - `portBrowserServer`
     - `PortHostBootError`
+    - `portRequester`
     - `runtimeBrowserServer`
     - `serveOverPort`
 - Test helpers:
   - Core: `@plugins/framework/plugins/browser-server/core/testing`
-    - `channelHost` — A host's `start`, as a scenario's `host.start` takes it, whose "worker" is one end of an in-realm `MessageChannel`: the other end runs `serveOverPort` over the server `boot` returns — or, when `boot` throws, reports the failure (`PortHostBootError` on the page side), as a real worker whose graph fails to boot does.
+    - `channelHost` — A host's `start`, as a scenario's `host.start` takes it, whose "worker" is one end of an in-realm `MessageChannel`: the other end runs `serveOverPort` over the server `boot` returns — or, when `boot` throws, reports the failure (`PortHostBootError` on the page side), as a real worker whose graph fails to boot does. `serviceWorkerUrl` is the host module's frame-serving script URL — only a test that stubs `navigator.serviceWorker` registers it.
     - `inRealmServer` — A browser server over a resource runtime in this realm, wired as a browser host is (`bootBrowserHost` + `runtimeBrowserServer`): the served declarations, the given routes and `/api/resources/:key` through the shared router, any other `/api` request the unsupported refusal (`unmatchedApiResponse`).
     - Types: `InRealmServerOptions`
 - Sub-plugins:

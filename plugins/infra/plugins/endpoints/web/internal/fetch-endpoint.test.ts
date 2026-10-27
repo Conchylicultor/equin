@@ -27,6 +27,7 @@ const page: Transport = {
   },
   fetch: (input, init) => globalThis.fetch(input, init),
   servesUrls: true,
+  frameBase: "",
   machine: true,
   telemetry: true,
 };

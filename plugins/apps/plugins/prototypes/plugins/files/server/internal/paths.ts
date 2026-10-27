@@ -1,7 +1,5 @@
-import { statSync } from "node:fs";
-import { resolve, sep } from "node:path";
-import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
-import type { IdOf } from "@plugins/ids/core";
+import { prototypesFiles } from "@plugins/apps/plugins/prototypes/server";
+import { relPath } from "@plugins/infra/plugins/paths/plugins/data-files/core";
 import { protoIdKind } from "../../core";
 
 // A prototype ships whatever it references, so the served set is not just code:
@@ -28,28 +26,9 @@ export function contentTypeForPath(path: string): string {
   return MIME_BY_EXT[ext] ?? "application/octet-stream";
 }
 
-/**
- * Resolve `prototypes/<name>/<rel>` to an absolute path, guarding against
- * traversal. Returns `null` if the resolved path escapes {@link prototypesDir}.
- */
-export function resolvePrototypeFile(name: string, rel: string): string | null {
-  // Read the getter ONCE: the guard below compares against the same root the
-  // path was resolved from, so both must come from a single read.
-  const root = prototypesDir.path;
-  const abs = resolve(root, name, rel);
-  // Must stay strictly under the prototypes dir (not the dir itself, and not a
-  // sibling whose name is a prefix, e.g. `prototypes-evil`).
-  if (abs !== root && !abs.startsWith(root + sep)) {
-    return null;
-  }
-  return abs;
-}
-
 /** A prototype folder exists under this id (a minted `proto-…` name). */
-export function prototypeExists(
-  name: string,
-): name is IdOf<typeof protoIdKind> {
+export async function prototypeExists(name: string): Promise<boolean> {
   if (!protoIdKind.is(name)) return false;
-  const stat = statSync(prototypesDir.file(name), { throwIfNoEntry: false });
-  return stat?.isDirectory() ?? false;
+  const stat = await prototypesFiles.stat(relPath(name));
+  return stat.kind === "found" && stat.entry.kind === "dir";
 }

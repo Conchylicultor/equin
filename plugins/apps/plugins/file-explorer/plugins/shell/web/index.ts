@@ -10,7 +10,9 @@ import { FileExplorer } from "./slots";
 
 export {
   FileExplorer,
+  type FolderPlace,
   type Place,
+  type RoutePlace,
   type PlaceGroup,
   type PlacesSource,
   type PlacesState,

@@ -5,17 +5,20 @@ import { NewTabButton } from "@plugins/primitives/plugins/link-gesture/plugins/n
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import type { PrototypeGalleryRow } from "@plugins/apps/plugins/prototypes/plugins/gallery/web";
 import { presentPath } from "../internal/routes";
+import { useOpensBrowserTab } from "../internal/browser-tab";
 
 /**
  * "Open in a new tab" on a gallery card (a revealed card action): the
  * prototype's live folder as its chromeless present page at the Responsive
  * size — what the canvas's frame A opens with the same action — so the card
  * opens straight into the page, filling the tab at its own width. The shared
- * picks record applies, as on frame A.
+ * picks record applies, as on frame A. Not offered where no browser tab can
+ * show this subtree's app (`useOpensBrowserTab`).
  */
 export function OpenCardNewTabAction({
   row,
-}: ItemActionProps<PrototypeGalleryRow>): ReactElement {
+}: ItemActionProps<PrototypeGalleryRow>): ReactElement | null {
+  if (!useOpensBrowserTab()) return null;
   const href = embedUrl(
     presentPath({
       name: row.name,

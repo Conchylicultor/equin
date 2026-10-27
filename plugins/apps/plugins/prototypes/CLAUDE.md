@@ -24,15 +24,25 @@ It holds the prototype folders and their `_history/`; every sub-plugin that
 touches the tree imports it from `@plugins/apps/plugins/prototypes/data-dirs`,
 and anything new the app must keep durably goes inside it
 (`prototypesDir.subdir("<area>")`), never in a second `apps/*` dir. `shell/core`
-must never import it — the declaration reads `prototypesApp` from there. All
-other content lives in sub-plugins:
+must never import it — the declaration reads `prototypesApp` from there.
+
+The same dir is also declared as a **file root** (`infra/paths/data-files`):
+`server/internal/roots.ts`'s `prototypesFiles` (portable: an id and the dir's
+name, its watch — extensions and catalog name
+`prototypes-files.tree` — and the `prototype-picks` ledger over `_picks/`),
+bound to `prototypesDir` by `machine/index.ts`'s `FileRootLocation`. Server code
+reads and writes the tree through it, so it runs on any host (the disk on the
+desktop, memory in a browser host); only host processes (`machine/`, `cli/`,
+checks) touch the path. The server barrel's task category is its only other
+content. All other content lives in sub-plugins:
 
 - **`files`** — server-side raw file serving out of the data dir, minting new
   prototypes into it from the running checkout's `prototypes/_template/`, the live-state
   list + version resources, and the file-watcher that auto-reloads open iframes
   on edit. Owns the `/api/prototypes` route contract. Also owns each
-  prototype's version history (a private git repo at `_history/<id>.git`
-  inside the data dir), the routes that serve and restore a past version, and
+  prototype's version history (the `PrototypeHistoryStore` host service: a
+  private git repo at `_history/<id>.git` on the desktop, snapshots in a
+  browser host), the routes that serve and restore a past version, and
   the bodies of the `./equin prototype` verbs.
 - **`commands`** — declares the `./equin prototype` group. Its own plugin so
   `list` can read both `files` (the folders) and `state` (which are deleted).
@@ -80,10 +90,22 @@ whose app surface still stands).
 
 ## Plugin reference
 
-- Description: The Prototypes task category: the category tasks filed from the Prototypes gallery, such as creating or improving a prototype, are grouped under.
+- Description: The Prototypes task category: the category tasks filed from the Prototypes gallery, such as creating or improving a prototype, are grouped under. Declares the app's data dir as the prototypesFiles file root (watched, its _picks ledgered).
 - Server:
-  - Contributes: `taskCategory` "prototypes"
-  - Uses: `tasks/task-category.TaskCategory`
+  - Contributes:
+    - `taskCategory` "prototypes"
+    - `data-files.root-location` "apps.prototypes"
+  - Uses:
+    - `infra/paths/data-files.defineFileRoot`
+    - `tasks/task-category.TaskCategory`
+  - Exports (values): `prototypesFiles`
+- Machine:
+  - Uses: `infra/paths/data-files.FileRootLocation`
+- Cross-plugin:
+  - Imported by:
+    - `apps/prototypes/files`
+    - `apps/prototypes/files/snapshot-history`
+    - `apps/prototypes/thumbnails`
 - Core:
   - Exports (values): `PROTOTYPES_CATEGORY_ID`
 - Sub-plugins:
@@ -95,12 +117,16 @@ whose app surface still stands).
       - **`exhibit`** — The exhibit: counterpart kind for the prototype canvas's Real app frame: one real app component, looked up by id (exhibit:<id>) in the exhibit catalog (plugin-meta/exhibits — any plugin's exhibits/…
       - **`route`** — The route: and app: counterpart kinds for the prototype canvas's Real app frame: the running app itself, framed at an in-app path on this deploy's own origin — chromeless for route…
   - **`copy-id`** — Copy prototype ID button in the prototype detail header: copies the open prototype's id (its minted folder name) to the clipboard.
-  - **`files`** [exempt] — Registers the prototype id kind (`proto-…`) in the browser's id-kind registry. Owns the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a…
+  - **`files`** [test helpers] — Registers the prototype id kind (`proto-…`) in the browser's id-kind registry. Serves the prototypes tree (the app's prototypesFiles root over the `apps/prototypes` data dir — the computer's disk on…
+    - Plugins:
+      - **`snapshot-history`** (excluded) — Prototype version history for a host without the computer (the browser composition): provides the PrototypeHistoryStore host service as content-addressed snapshots over the prototypesFiles root…
   - **`gallery`** — Prototypes gallery list pane — one card per prototype over its rendered preview, on the prototype viewer's grid, with a Recently edited list; grouped by its tag as nested sections along the…
   - **`icons`** — Contributes the prototypes icon family (prototypesIcons) to Icons.Family, so a scope whose iconFamily is prototypes — the Prototypes theme's — draws its glyphs.
   - **`present`** — Open in a new tab on every gallery card (its live present page) and two frame actions on every prototype canvas frame: Open in a new tab (the frame's chromeless present page at the Responsive size…
   - **`shell`** — App shell for Prototypes. Registers the /prototypes app entry and renders the gallery + detail panes (the gallery, and the canvas of frames) full-surface: opening a prototype replaces the gallery…
-  - **`state`** [exempt] — Per-instance prototype state, web half: registers the prototype tag id kind (`prtag-…`), and the hooks reading and writing a prototype's pinned / Done / tag state (usePrototypeStates…
-  - **`thumbnails`** [exempt] — The rendered-preview cover for a prototype card: the cached PNG, the caller's fallback while it renders, and a visible 'Preview failed' marker carrying the reason. Rendered PNG previews for the…
+  - **`state`** — Per-instance prototype state, web half: registers the prototype tag id kind (`prtag-…`), and the hooks reading and writing a prototype's pinned / Done / tag state (usePrototypeStates…
+  - **`thumbnails`** — The rendered-preview cover for a prototype card: the cached PNG, the caller's fallback while it renders, and a visible 'Preview failed' marker carrying the reason. Rendered PNG previews for the…
+    - Plugins:
+      - **`no-renderer`** (excluded) — The prototype thumbnails of a host without a browser to render with: provides the ThumbnailRenderer host service as unavailable, so a cache miss is the card's muted 'Preview unavailable' marker and…
 
 <!-- AUTOGENERATED:END -->

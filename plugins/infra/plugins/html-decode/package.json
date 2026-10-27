@@ -1,9 +1,10 @@
 {
   "name": "@equin/plugin-infra-html-decode",
-  "description": "Decode HTML character references in raw markup source: decodeHtmlText for text, readHtmlAttr for an HTMLRewriter attribute read. Bun's HTMLRewriter decodes nothing, so every scraped value needs decoding exactly once.",
+  "description": "Read and edit HTML on every host, every value decoded exactly once: scanHtml (start tags and element text, on htmlparser2), rewriteStartTag / replaceElementText (in-place splices that leave every other byte as written), and decodeHtmlText / readHtmlAttr for a Bun HTMLRewriter read, which decodes nothing.",
   "private": true,
   "version": "0.0.1",
   "dependencies": {
-    "entities": "^8.1.0"
+    "entities": "^8.1.0",
+    "htmlparser2": "^12.0.0"
   }
 }

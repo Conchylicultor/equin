@@ -1,15 +1,12 @@
 import {
-  mkdir,
-  readdir,
-  readFile,
-  rename,
-  rm,
-  writeFile,
-} from "node:fs/promises";
-import { join } from "node:path";
+  readText,
+  relPath,
+  type Mount,
+  type RelPath,
+} from "@plugins/infra/plugins/paths/plugins/data-files/core";
+import type { WriteOrigin } from "@plugins/infra/plugins/request-origin/core";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { protoIdKind } from "../core";
-import { withHistoryLock } from "./history/lock";
 
 // A small JSON record per prototype, kept BESIDE the folders in a `_`-prefixed
 // dir of the data dir: `<prototypes>/_<kind>/<id>.json`. The user's option
@@ -22,27 +19,12 @@ import { withHistoryLock } from "./history/lock";
 // dir is `_`-prefixed, so every reader of the tree skips it the way it skips
 // `_template/` and `_history/` (`listPrototypeDirNames`).
 //
-// Node-only and in `shared/` for the reason `history/store.ts` is: the server
-// serves and writes the records, and `./equin prototype …` reads the same
-// files with no backend running.
+// Over a `Mount`, in `shared/`: the server serves and writes the records
+// through the `prototypesFiles` root, and `./equin prototype …` reads the same
+// files with no backend running, through a disk mount of the data dir.
 
 /** A record file's extension — the one the watcher's extension filter passes. */
 export const RECORD_FILE_EXT = ".json";
-
-/** A record file's state. `present: false` is "no file" — the empty record — not "empty". */
-export type RecordFileSnapshot =
-  { present: false } | { present: true; bytes: string };
-
-/**
- * Callbacks run INSIDE the prototype's lock, around the one write a change
- * makes — so what they read of the file is exactly what this write replaced
- * and what it left, with no other writer in between. Neither runs when the
- * change changes nothing.
- */
-export interface RecordWriteHooks {
-  beforeWrite?: () => void;
-  afterWrite?: () => void;
-}
 
 /** What one kind of record is. */
 export interface RecordKind<R, C> {
@@ -60,8 +42,8 @@ export interface RecordKind<R, C> {
 }
 
 export interface RecordStore<R, C> {
-  /** The absolute path of a prototype's record file (present or not). */
-  fileOf(id: string): string;
+  /** A prototype's record file inside the tree (present or not). */
+  fileOf(id: string): RelPath;
   /** The stored record; `empty` when there is no file. A malformed file throws. */
   read(id: string): Promise<R>;
   /**
@@ -72,43 +54,33 @@ export interface RecordStore<R, C> {
   /**
    * Apply one change under the prototype's lock (read → fold → write), and
    * answer with the record it left. A change leaving `empty` removes the file.
-   * A change that changes nothing writes nothing.
+   * A change that changes nothing writes nothing. `writer` is who asked: the
+   * root ledgers an automated session's write (`prototypesFiles`' ledger), so
+   * its harness can put the file back.
    */
-  write(id: string, change: C, hooks?: RecordWriteHooks): Promise<R>;
-  /** Put the file back to exactly `snapshot` (its bytes, or no file), under the lock. */
-  restore(id: string, snapshot: RecordFileSnapshot): Promise<void>;
+  write(id: string, change: C, writer: WriteOrigin): Promise<R>;
 }
 
 /**
- * The store of one record kind over a prototypes tree at `root` — resolved by
- * the caller (`prototypesDir.path`, per call; the tests pass a temp dir), like
- * `openHistoryStore`.
+ * The store of one record kind over a prototypes tree — the `prototypesFiles`
+ * root on a server, a disk mount of the data dir in the CLI, a temp dir or a
+ * memory root in a test.
  */
 export function openRecordStore<R, C>(
-  root: string,
+  mount: Mount,
   kind: RecordKind<R, C>,
 ): RecordStore<R, C> {
-  const dir = join(root, kind.dirName);
-  const fileOf = (id: string) =>
-    join(dir, `${assertPrototypeId(id)}${RECORD_FILE_EXT}`);
-  // One flock per prototype, never unlinked (see `withHistoryLock`). Its
-  // extension is not one the watcher passes.
-  const lockOf = (id: string) => join(dir, `${assertPrototypeId(id)}.lock`);
-
-  async function readFileState(id: string): Promise<RecordFileSnapshot> {
-    try {
-      return { present: true, bytes: await readFile(fileOf(id), "utf8") };
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code === "ENOENT") {
-        return { present: false };
-      }
-      throw err;
-    }
-  }
+  const fileOf = (id: string): RelPath =>
+    relPath(kind.dirName, `${assertPrototypeId(id)}${RECORD_FILE_EXT}`);
+  // One lock per prototype — on disk the flock `_<kind>/<id>.lock`, never
+  // unlinked, the same file every backend and the CLI take. Its extension is
+  // not one the watch passes.
+  const lockOf = (id: string): RelPath =>
+    relPath(kind.dirName, assertPrototypeId(id));
 
   async function read(id: string): Promise<R> {
-    const state = await readFileState(id);
-    return state.present ? parse(fileOf(id), state.bytes) : kind.empty;
+    const state = await readText(mount, fileOf(id));
+    return state.kind === "text" ? parse(fileOf(id), state.text) : kind.empty;
   }
 
   /**
@@ -117,7 +89,7 @@ export function openRecordStore<R, C>(
    * the empty state while claiming it is the user's choice — then the next
    * write would overwrite the file and lose whatever was in it.
    */
-  function parse(path: string, bytes: string): R {
+  function parse(path: RelPath, bytes: string): R {
     let json: unknown;
     try {
       json = JSON.parse(bytes);
@@ -133,37 +105,20 @@ export function openRecordStore<R, C>(
     return parsed.data;
   }
 
-  async function writeBytes(id: string, bytes: string): Promise<void> {
-    const path = fileOf(id);
-    // `.tmp`, not `.json`: the watcher's extension filter must not pass the
-    // temp — the same rule as the history's `latest.json` stamp.
-    const temp = `${path}.tmp`;
-    await writeFile(temp, bytes);
-    await rename(temp, path);
-  }
-
-  async function locked<T>(id: string, fn: () => Promise<T>): Promise<T> {
-    await mkdir(dir, { recursive: true });
-    return withHistoryLock(lockOf(id), fn);
-  }
-
   return {
     fileOf,
     read,
 
     async readAll() {
-      let names: string[];
-      try {
-        names = await readdir(dir);
-      } catch (err) {
-        // No dir yet: nobody has written a record of this kind.
-        if ((err as NodeJS.ErrnoException).code === "ENOENT") return {};
-        throw err;
-      }
+      const listed = await mount.list(relPath(kind.dirName));
+      // No dir yet: nobody has written a record of this kind.
+      if (listed.kind === "missing") return {};
       const records: Record<string, R> = {};
-      for (const name of names) {
-        if (!name.endsWith(RECORD_FILE_EXT)) continue;
-        const id = name.slice(0, -RECORD_FILE_EXT.length);
+      for (const entry of listed.entries) {
+        if (entry.kind !== "file" || !entry.name.endsWith(RECORD_FILE_EXT)) {
+          continue;
+        }
+        const id = entry.name.slice(0, -RECORD_FILE_EXT.length);
         // A file the store could not have written (a hand-made name) names no
         // prototype, so it holds no record of one.
         if (!protoIdKind.is(id)) continue;
@@ -172,36 +127,30 @@ export function openRecordStore<R, C>(
       return records;
     },
 
-    write(id, change, hooks = {}) {
-      return locked(id, async () => {
+    write(id, change, writer) {
+      return mount.withLock(lockOf(id), async () => {
         const before = await read(id);
         const after = kind.apply(before, change);
         if (kind.equal(before, after)) return before;
 
-        hooks.beforeWrite?.();
         if (kind.equal(after, kind.empty)) {
-          await rm(fileOf(id), { force: true });
+          await mount.remove(fileOf(id), { writer, recursive: false });
         } else {
-          // Pretty JSON, so a person can read it too.
-          await writeBytes(id, `${JSON.stringify(after, null, 2)}\n`);
+          // Pretty JSON, so a person can read it too. Atomic: the mount writes
+          // a temp file (an extension the watch does not pass) and renames it.
+          await mount.write(fileOf(id), `${JSON.stringify(after, null, 2)}\n`, {
+            writer,
+          });
         }
-        hooks.afterWrite?.();
         return after;
-      });
-    },
-
-    restore(id, snapshot) {
-      return locked(id, async () => {
-        if (snapshot.present) await writeBytes(id, snapshot.bytes);
-        else await rm(fileOf(id), { force: true });
       });
     },
   };
 }
 
-// Every id becomes a path, so it is checked before it touches the filesystem:
-// a route answers 404 for a name that is not an id before it gets here, so past
-// that a bad id is a caller bug, and the store throws.
+// Every id becomes a path, so it is checked before it touches the tree: a route
+// answers 404 for a name that is not an id before it gets here, so past that a
+// bad id is a caller bug, and the store throws.
 function assertPrototypeId(id: string): string {
   if (!protoIdKind.is(id)) {
     throw new Error(`not a prototype id: ${JSON.stringify(id)}`);

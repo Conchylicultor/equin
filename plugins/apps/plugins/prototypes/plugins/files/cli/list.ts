@@ -1,5 +1,4 @@
 import { PROTOTYPES_DIR_DISPLAY } from "@plugins/infra/plugins/paths/plugins/display/core";
-import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
 import {
   pickedColor,
   protoIdKind,
@@ -9,6 +8,7 @@ import {
 import { listPrototypeMetas } from "../shared/list-metas";
 import { openPicksStore, type PicksStore } from "../shared/picks";
 import { prototypeUrlFormatter } from "./prototype-url";
+import { cliFiles } from "./tree";
 
 /**
  * What `prototype list` knows about deletion — the caller reads it (the
@@ -44,7 +44,8 @@ export type DeletedPrototypeIds =
 export async function printPrototypeList(
   deleted: DeletedPrototypeIds,
 ): Promise<void> {
-  const all = await listPrototypeMetas();
+  const files = cliFiles();
+  const all = await listPrototypeMetas(files);
   const metas =
     deleted.kind === "read" ? all.filter((m) => !deleted.ids.has(m.name)) : all;
   const hidden = all.length - metas.length;
@@ -59,7 +60,7 @@ export async function printPrototypeList(
   }
 
   const url = await prototypeUrlFormatter();
-  const picksStore = openPicksStore(prototypesDir.path);
+  const picksStore = openPicksStore(files);
   const width = Math.max(...metas.map((m) => m.name.length));
   for (const meta of metas) {
     console.log(`${meta.name.padEnd(width)}  ${meta.title}`);

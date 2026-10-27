@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-prototypes-files-snapshot-history",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Prototype version history for a host without the computer: provides the PrototypeHistoryStore host service as content-addressed snapshots over the prototypesFiles root (a log, blobs by sha256, the same latest.json stamp the watcher hears). Never booted by the desktop."
+}

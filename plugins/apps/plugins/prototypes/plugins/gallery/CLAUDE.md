@@ -129,6 +129,12 @@ running. So no agent is handed a prompt naming a folder that is not there. The
 rejection also escapes to `window.onunhandledrejection`, which files a crash
 report — deliberate, and why the toast is not a `catch` that ends there.
 
+Minting needs the computer: `createPrototype` is `needsMachine` (it copies the
+checkout's template, and exists to launch an agent). The button reads
+`useMachineAvailability(createPrototype)` and, without one (the demo), renders
+disabled with the one unavailable sentence as its tooltip — gated before the
+click, never after it.
+
 Accepted consequence: a card appears in the gallery the moment the button is
 clicked, reading "Untitled prototype" until the agent's first save. It is
 honest — the prototype does exist — and it self-corrects.
@@ -162,10 +168,10 @@ honest — the prototype does exist — and it self-corrects.
     - `PrototypeCardActions` "done" → `DoneCardAction`
     - `PrototypeCardActions` "delete" → `DeleteCardAction`
     - `trash-actions` "restore" → `RestoreCardAction`
-  - Uses: 40 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 41 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×8
+    - `infra/endpoints` ×5
     - `apps/prototypes/canvas` ×4
-    - `infra/endpoints` ×4
     - `apps/prototypes/state` ×3
     - `primitives/live-state` ×3
     - `primitives/pane` ×3

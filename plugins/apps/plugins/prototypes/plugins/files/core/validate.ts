@@ -1,8 +1,5 @@
 import { z } from "zod";
-import {
-  decodeHtmlText,
-  readHtmlAttr,
-} from "@plugins/infra/plugins/html-decode/core";
+import { scanHtml } from "@plugins/infra/plugins/html-decode/core";
 import { protoIdKind } from "./id";
 import { mocksProblemDetail, parseMocks } from "./mocks";
 import { parseViewport, viewportProblemDetail } from "./viewport";
@@ -85,19 +82,17 @@ function referencesFolder(text: string, name: string): boolean {
   return new RegExp(`(^|[^A-Za-z0-9_-])${escapeForRegex(name)}/`).test(text);
 }
 
-/** Is there a non-empty `<title>` in this HTML? Same parser `list.ts` uses. */
-async function hasTitle(html: string): Promise<boolean> {
-  const chunks: string[] = [];
-  let done = false;
-  const rewriter = new HTMLRewriter().on("title", {
-    text(chunk) {
-      if (done) return;
-      chunks.push(chunk.text);
-      if (chunk.lastInTextNode) done = true;
+/** Is there a non-empty `<title>` in this HTML? Same reading `list-metas.ts` makes. */
+function hasTitle(html: string): boolean {
+  let title: string | undefined;
+  scanHtml(html, {
+    text: {
+      title(text) {
+        title ??= text;
+      },
     },
   });
-  await rewriter.transform(new Response(html)).text();
-  return decodeHtmlText(chunks.join("")).trim() !== "";
+  return (title ?? "").trim() !== "";
 }
 
 /**
@@ -111,44 +106,43 @@ async function hasTitle(html: string): Promise<boolean> {
  * with no `src`. (A plain non-Babel `<script src="fixtures.js">` is fine —
  * that's an ordinary script load, not XHR.)
  */
-async function loadsExternalBabelScript(html: string): Promise<boolean> {
+function loadsExternalBabelScript(html: string): boolean {
   let found = false;
-  const rewriter = new HTMLRewriter().on("script", {
-    element(el) {
-      const type = readHtmlAttr(el, "type");
-      if (type?.trim().toLowerCase() !== "text/babel") return;
-      if (readHtmlAttr(el, "src") !== undefined) found = true;
+  scanHtml(html, {
+    elements: {
+      script(el) {
+        if (el.attr("type")?.trim().toLowerCase() !== "text/babel") return;
+        if (el.attr("src") !== undefined) found = true;
+      },
     },
   });
-  await rewriter.transform(new Response(html)).text();
   return found;
 }
 
 /**
- * The raw `content` of the first `<meta name="<name>">`, or `undefined` when
- * the tag is absent. Same parser and first-occurrence rule as `list-metas.ts`;
- * the judgement itself is the tag's own parser (`parseMocks`, `parseViewport`),
- * so the validator and the reader can never disagree about what a line means.
+ * The decoded `content` of the first `<meta name="<name>">`, or `undefined`
+ * when the tag is absent. Same scanner and first-occurrence rule as
+ * `list-metas.ts`; the judgement itself is the tag's own parser (`parseMocks`,
+ * `parseViewport`), so the validator and the reader can never disagree about
+ * what a line means.
  */
-async function readMetaContent(
-  html: string,
-  name: string,
-): Promise<string | undefined> {
+function readMetaContent(html: string, name: string): string | undefined {
   let raw: string | undefined;
-  const rewriter = new HTMLRewriter().on("meta", {
-    element(el) {
-      if (readHtmlAttr(el, "name") !== name) return;
-      raw ??= readHtmlAttr(el, "content");
+  scanHtml(html, {
+    elements: {
+      meta(el) {
+        if (el.attr("name") !== name) return;
+        raw ??= el.attr("content");
+      },
     },
   });
-  await rewriter.transform(new Response(html)).text();
   return raw;
 }
 
 /** Every way `folder` fails the contract. Empty ⇒ it is a well-formed prototype. */
-export async function validatePrototypeFolder(
+export function validatePrototypeFolder(
   folder: PrototypeFolder,
-): Promise<PrototypeProblem[]> {
+): PrototypeProblem[] {
   const problems: PrototypeProblem[] = [];
 
   // A folder whose name is not a minted id. Skips `_`-prefixed directories:
@@ -195,14 +189,14 @@ export async function validatePrototypeFolder(
     if (text === undefined) continue;
 
     if (fileName === PROTOTYPE_ENTRY_FILE) {
-      if (!(await hasTitle(text))) {
+      if (!hasTitle(text)) {
         problems.push({
           path: fileName,
           detail:
             'no non-empty <title> — the gallery card, the pane header and every chip would read "Untitled prototype" instead of a name',
         });
       }
-      if (await loadsExternalBabelScript(text)) {
+      if (loadsExternalBabelScript(text)) {
         problems.push({
           path: fileName,
           detail:
@@ -213,7 +207,7 @@ export async function validatePrototypeFolder(
       // ordinary case and never a problem; a mistyped line is, because the
       // Compare stage would otherwise have to explain it on its own, one stage
       // away from where the author is looking.
-      const mocksRaw = await readMetaContent(text, "mocks");
+      const mocksRaw = readMetaContent(text, "mocks");
       const mocks = parseMocks(mocksRaw ?? "");
       if (mocks.kind === "malformed") {
         problems.push({ path: fileName, detail: mocksProblemDetail(mocks) });
@@ -221,7 +215,7 @@ export async function validatePrototypeFolder(
       // A size that is not a preset name, `window` or `responsive` (the retired
       // `WxH` form included): the canvas opens it at This window, so say why here.
       const viewport = parseViewport(
-        await readMetaContent(text, "prototype-viewport"),
+        readMetaContent(text, "prototype-viewport"),
       );
       if (!viewport.ok) {
         problems.push({
@@ -231,7 +225,7 @@ export async function validatePrototypeFolder(
       }
       // Every `prototype-option` line that cannot be an option: it is left out
       // of the app's picker, so the card is where the author learns why.
-      for (const detail of (await readPrototypeOptions(text)).problems) {
+      for (const detail of readPrototypeOptions(text).problems) {
         problems.push({ path: fileName, detail });
       }
     }

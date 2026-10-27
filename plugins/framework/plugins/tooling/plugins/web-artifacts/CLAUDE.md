@@ -112,7 +112,12 @@ Key invariants:
   vite's worker pass bundle the graph whole: no externals (import maps do not
   reach workers), no page preload helper, PGlite's wasm and data as assets. It
   is served as `@browser-host/<pluginPath>` (external to every artifact build,
-  never a vendor). Its address cannot be "its own plugin's files": it is the
+  never a vendor). The stub also exports `serviceWorkerUrl`: the frame-serving
+  Service Worker (`browser-server/web/frames-sw.ts`) that a second vite pass
+  bundles whole into the same dir as the classic script `frames-sw.js` (vite
+  bundles no `navigator.serviceWorker.register(new URL(…))`), its modules
+  recorded into the address like the worker's, its URL spelled off
+  `import.meta.url` so vite leaves it alone. Its address cannot be "its own plugin's files": it is the
   content of every repo file the LAST build loaded (vite's module list, `?raw`
   SQL and config included), every such file's directory listing (a new
   migration re-addresses it), the recursive listing of every

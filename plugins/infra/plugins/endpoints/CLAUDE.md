@@ -185,9 +185,14 @@ return <img src={src.src} />;
   transport, `transportScoped`). A route declared `needsMachine` on a transport
   without the computer: `unavailable`, nothing fetched.
 - `useAssetSrcs(assets)` — the same for a set (a folder's images).
-- **A sink that loads by URL on its own** — an `<iframe>` whose relative
-  sub-resources must resolve, an `<img>` inside an HTML string, a library's
-  own `fetch` — cannot take a blob URL. `useAssetUrl(asset)` /
+- **A frame document** — an `<iframe>` whose relative sub-resources must
+  resolve beside it — reads `frameUrlOver(transport, asset)`: `ready{url}`
+  (the path behind `Transport.frameBase`: the page's own path, or an
+  in-browser server's frames served by its Service Worker), `unavailable`
+  (a `needsMachine` route without the computer) or `unsupported` (nothing
+  serves frames by URL here — no Service Worker).
+- **A sink that loads by URL on its own** — an `<img>` inside an HTML string,
+  a library's own `fetch` — cannot take a blob URL. `useAssetUrl(asset)` /
   `assetUrlOver(transport, asset)` answer `ready{url}` (the path, on a server
   reachable by URL) or `unavailable{message}` (a `needsMachine` route on a
   transport without the computer), and THROW for a portable route on a
@@ -388,7 +393,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
 
 ## Plugin reference
 
-- Description: Typed endpoint contract primitive. useFetchEndpoint (a FetchEndpoint bound to the subtree's transport; fetchEndpointOver(t) for sanctioned page-level code) and useEndpointMutation send writes only — a GET def is a tsc error (the derived read marker; & WriteEndpoint) and throws if cast through (every server read is a live resource, read with useLive, or useLiveReader in an event handler); useAssetSrc turns an AssetPath (a GET endpoint's asset) into what an element loads over the subtree's transport (the path, a blob URL, or unavailable); useAssetUrl / assetUrlOver hand a sink that loads by URL on its own (a library's fetch, an HTML string, an iframe) an AssetPath's or AssetBase's URL, or unavailable. Typed endpoint contract primitive. defineEndpoint declares the contract; implement() creates the server handler; callEndpoint() calls one from off the page (a backend, the CLI) through its contract; useFetchEndpoint / useEndpointMutation consume it on the client.
+- Description: Typed endpoint contract primitive. useFetchEndpoint (a FetchEndpoint bound to the subtree's transport; fetchEndpointOver(t) for sanctioned page-level code) and useEndpointMutation send writes only — a GET def is a tsc error (the derived read marker; & WriteEndpoint) and throws if cast through (every server read is a live resource, read with useLive, or useLiveReader in an event handler); useAssetSrc turns an AssetPath (a GET endpoint's asset) into what an element loads over the subtree's transport (the path, a blob URL, or unavailable); useAssetUrl / assetUrlOver hand a sink that loads by URL on its own (a library's fetch, an HTML string) an AssetPath's or AssetBase's URL, or unavailable; frameUrlOver hands an <iframe> document its URL under the transport's frameBase (the page's own path, or an in-browser server's frames served by its Service Worker), unavailable, or unsupported. Typed endpoint contract primitive. defineEndpoint declares the contract; implement() creates the server handler; callEndpoint() calls one from off the page (a backend, the CLI) through its contract; useFetchEndpoint / useEndpointMutation consume it on the client.
 - Load-bearing: yes
 - Web:
   - Uses:
@@ -404,12 +409,14 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `AssetUrl`
     - `EndpointErrorInfo`
     - `FetchEndpoint`
+    - `FrameUrl`
   - Exports (values):
     - `assetUrlOver`
     - `EndpointAgentWriteRefusedError`
     - `EndpointError`
     - `endpointErrorSink`
     - `fetchEndpointOver`
+    - `frameUrlOver`
     - `getEndpointErrorMessage`
     - `useAssetSrc`
     - `useAssetSrcs`
@@ -471,10 +478,10 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `unmatchedApiResponse`
     - `unsupportedEndpointResponse`
 - Cross-plugin:
-  - Imported by: 228 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 229 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×63
     - `conversations` ×32
-    - `infra` ×20
+    - `infra` ×21
     - `page` ×20
     - `tasks` ×19
     - `debug` ×16

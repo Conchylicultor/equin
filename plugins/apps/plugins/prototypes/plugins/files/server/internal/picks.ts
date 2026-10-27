@@ -1,36 +1,27 @@
-import { statSync } from "node:fs";
+import { prototypesFiles } from "@plugins/apps/plugins/prototypes/server";
 import { serveValue } from "@plugins/network/plugins/live/server";
 import { HttpError, implement } from "@plugins/infra/plugins/endpoints/server";
 import { originOf } from "@plugins/infra/plugins/request-origin/core";
-import { defineAgentWriteLedger } from "@plugins/infra/plugins/request-origin/plugins/agent-write-ledger/server";
-import {
-  protoIdKind,
-  prototypePicks,
-  setPrototypePicks,
-  type PicksChange,
-} from "../../core";
-import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
+import { prototypePicks, setPrototypePicks } from "../../core";
 import { openPicksStore, type PicksStore } from "../../shared/picks";
+import { prototypeExists } from "./paths";
 
 // The server's face of the option-picks store (`shared/picks.ts`): the
-// per-prototype picks resource, the one write endpoint, and the agent-write
-// ledger that puts an automated session's picks back.
+// per-prototype picks resource and the one write endpoint.
 //
 // The writer notifies its own subscribers the moment it writes. Every OTHER
-// backend learns through the one watcher over the tree (`_picks/<id>.json` →
+// backend learns through the one watch over the tree (`_picks/<id>.json` →
 // `picks-recorded`, `tree-path.ts`) — the store is host-global, so a pick made
 // on main has to reach a worktree deploy's open tab, and the reverse.
+//
+// An automated session's write is undone by the root, not here: the
+// `prototypesFiles` root ledgers every agent-origin write under `_picks/`
+// (`prototype-picks`), and the harness's restore is heard through the same
+// watch, like any other writer's.
 
-/** The store over the data dir, resolved per call (the data root is env-overridable). */
+/** The store over the app's file root. */
 function store(): PicksStore {
-  return openPicksStore(prototypesDir.path);
-}
-
-/** A prototype folder exists under this id. */
-function prototypeExists(name: string): boolean {
-  if (!protoIdKind.is(name)) return false;
-  const stat = statSync(prototypesDir.file(name), { throwIfNoEntry: false });
-  return stat?.isDirectory() ?? false;
+  return openPicksStore(prototypesFiles);
 }
 
 /**
@@ -48,7 +39,7 @@ export const prototypePicksServed = serveValue(prototypePicks, {
   source: "external",
   changes: "notified",
   loader: async ({ name }) => {
-    if (!prototypeExists(name)) {
+    if (!(await prototypeExists(name))) {
       throw new Error(`prototypes.picks: no such prototype: ${name}`);
     }
     return store().read(name);
@@ -56,61 +47,19 @@ export const prototypePicksServed = serveValue(prototypePicks, {
 });
 
 /**
- * What an automated browser session did to a prototype's picks, so the e2e
- * harness can put it back at the end of its run: an E2E that clicks the picker
- * must not leave the user looking at another variant. A no-op for every other
- * writer. Keyed by the prototype id; the one file is the picks file.
- */
-const picksLedger = defineAgentWriteLedger<"picks">({
-  id: "prototype-picks",
-  label: "Prototype option picks",
-  restore: async (entry) => {
-    const s = store();
-    // The ledger holds absolute paths; the store derives them from the id. If
-    // the two disagree the data root moved under the ledger, and writing
-    // either one would be a guess.
-    if (entry.paths.picks !== s.fileOf(entry.key)) {
-      throw new Error(
-        `prototype-picks ledger: ${entry.key} was recorded at ${entry.paths.picks}, but its picks file is ${s.fileOf(entry.key)}`,
-      );
-    }
-    await s.restore(entry.key, entry.before.picks);
-    prototypePicksServed.notify({ name: entry.key });
-  },
-});
-
-/** How the ledger names one change. */
-function describeChange(change: PicksChange): string {
-  return change.kind === "reset"
-    ? "reset"
-    : `set ${change.option}=${change.value}`;
-}
-
-/**
  * `PUT /api/prototypes/:name/picks` — apply one change (`set` one option, or
- * `reset` them all). 404 for an unknown prototype. Snapshotted for the
- * agent-write ledger inside the store's lock, around the one write, so its
- * "before" and "after" are exactly what this write replaced and left.
+ * `reset` them all). 404 for an unknown prototype. The writer is the request's
+ * origin, so an agent session's pick is recorded in the root's ledger, inside
+ * the store's lock, around the one write.
  */
 export const handleSetPicks = implement(
   setPrototypePicks,
   async ({ params, body, req }) => {
     const { name } = params;
-    if (!prototypeExists(name)) {
+    if (!(await prototypeExists(name))) {
       throw new HttpError(404, `no such prototype: ${name}`);
     }
-    const writer = originOf(req);
-    const s = store();
-    await s.write(name, body, {
-      beforeWrite: () =>
-        picksLedger.record(
-          writer,
-          name,
-          { picks: s.fileOf(name) },
-          describeChange(body),
-        ),
-      afterWrite: () => picksLedger.noteComplete(writer, name),
-    });
+    await store().write(name, body, originOf(req));
     prototypePicksServed.notify({ name });
   },
 );

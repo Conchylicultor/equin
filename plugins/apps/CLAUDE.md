@@ -20,7 +20,7 @@
   - **`mail`** — Mail — a Gmail-class client.
   - **`pages`** — Notion-like pages app.
   - **`places`** — Places — the places you want to go and have been, on a map: saved Google places organised by one nested tag tree, coloured by their tags.
-  - **`prototypes`** — The Prototypes task category: the category tasks filed from the Prototypes gallery, such as creating or improving a prototype, are grouped under.
+  - **`prototypes`** — The Prototypes task category: the category tasks filed from the Prototypes gallery, such as creating or improving a prototype, are grouped under. Declares the app's data dir as the prototypesFiles…
   - **`settings`** — Settings app.
   - **`sonata`** — Sonata — extensible piano and music app.
   - **`studio`** — Plugin inspection and visualization; home for the plugin graph and contribution tables.

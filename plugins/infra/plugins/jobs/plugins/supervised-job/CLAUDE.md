@@ -730,6 +730,7 @@ construction, and the job and the body it spawns cannot drift apart.
   - Imported by:
     - `apps/chord/song-index`
     - `apps/deploy/deployments`
+    - `apps/prototypes/thumbnails`
     - `apps/sonata/sources/ultimate-guitar/alignment`
     - `backup`
     - `database/fork`

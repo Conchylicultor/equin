@@ -3,17 +3,22 @@ import { classifyRenderOutcome, decideThumbnail } from "./decide";
 
 const KEY = "a".repeat(64);
 const OTHER_KEY = "b".repeat(64);
+const RENDERS = { kind: "renders" } as const;
+const NO_RENDERER = {
+  kind: "unavailable",
+  message: "no browser on this host",
+} as const;
 
 describe("decideThumbnail", () => {
   test("a cached fingerprint is ready and renders nothing", () => {
-    expect(decideThumbnail(KEY, true, undefined)).toEqual({
+    expect(decideThumbnail(KEY, true, undefined, RENDERS)).toEqual({
       state: { status: "ready", key: KEY },
       render: false,
     });
   });
 
   test("an uncached fingerprint renders", () => {
-    expect(decideThumbnail(KEY, false, undefined)).toEqual({
+    expect(decideThumbnail(KEY, false, undefined, RENDERS)).toEqual({
       state: { status: "rendering" },
       render: true,
     });
@@ -21,10 +26,15 @@ describe("decideThumbnail", () => {
 
   test("waiting for the browser is not a verdict: the next sync renders", () => {
     expect(
-      decideThumbnail(KEY, false, {
-        status: "waiting-for-browser",
-        message: "Chromium is being installed",
-      }),
+      decideThumbnail(
+        KEY,
+        false,
+        {
+          status: "waiting-for-browser",
+          message: "Chromium is being installed",
+        },
+        RENDERS,
+      ),
     ).toEqual({ state: { status: "rendering" }, render: true });
   });
 
@@ -36,7 +46,7 @@ describe("decideThumbnail", () => {
       message: "helix rendered an empty page",
     } as const;
 
-    expect(decideThumbnail(KEY, false, failed)).toEqual({
+    expect(decideThumbnail(KEY, false, failed, RENDERS)).toEqual({
       state: failed,
       render: false,
     });
@@ -50,7 +60,7 @@ describe("decideThumbnail", () => {
       message: "helix rendered an empty page",
     } as const;
 
-    expect(decideThumbnail(KEY, false, failed)).toEqual({
+    expect(decideThumbnail(KEY, false, failed, RENDERS)).toEqual({
       state: { status: "rendering" },
       render: true,
     });
@@ -64,9 +74,25 @@ describe("decideThumbnail", () => {
       message: "…",
     } as const;
 
-    expect(decideThumbnail(KEY, true, failed).state).toEqual({
+    expect(decideThumbnail(KEY, true, failed, RENDERS).state).toEqual({
       status: "ready",
       key: KEY,
+    });
+  });
+});
+
+describe("decideThumbnail on a host with no renderer", () => {
+  test("a miss is unavailable, carrying why, and renders nothing", () => {
+    expect(decideThumbnail(KEY, false, undefined, NO_RENDERER)).toEqual({
+      state: { status: "unavailable", message: "no browser on this host" },
+      render: false,
+    });
+  });
+
+  test("a cached fingerprint is still ready — a seeded cache needs no renderer", () => {
+    expect(decideThumbnail(KEY, true, undefined, NO_RENDERER)).toEqual({
+      state: { status: "ready", key: KEY },
+      render: false,
     });
   });
 });

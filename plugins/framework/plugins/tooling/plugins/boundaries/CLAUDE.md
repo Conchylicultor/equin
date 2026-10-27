@@ -93,7 +93,7 @@ readings use it:
 - `platformValueUsesIn(ts, fileName, source)`: the host-only VALUES a module
   uses, which no import names. That covers a platform global read as a value
   (`Buffer.from`, `z.instanceof(Buffer)`, `opts.defer ?? setImmediate`,
-  `process.*`, `Bun.*`, …) and an unguarded `.unref()` (a browser timer is a
+  `process.*`, `Bun.*`, Bun's `HTMLRewriter`, …) and an unguarded `.unref()` (a browser timer is a
   number). It is a TypeScript AST pass, so strings, comments, type positions,
   keys (`{ setImmediate: f } = globalThis`), `typeof` probes, local shadows,
   `process.env.NODE_ENV` and the guarded `.unref?.()` never count. The caller
@@ -159,9 +159,6 @@ readings use it:
     - `apps/events/sources/url-extract` (1 debt)
     - `apps/file-explorer/git` (2 debt)
     - `apps/places/place-details` (1 debt)
-    - `apps/prototypes/files` (12 debt)
-    - `apps/prototypes/state` (1 debt)
-    - `apps/prototypes/thumbnails` (3 debt)
     - `apps/sonata/covers` (1 debt)
     - `apps/sonata/sources/midi` (1 debt)
     - `apps/sonata/sources/midi/folders` (3 debt)

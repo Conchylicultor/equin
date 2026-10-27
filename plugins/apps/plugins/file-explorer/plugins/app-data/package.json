@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-file-explorer-app-data",
+  "description": "The file explorer's App data place: every file root an app declares browsable, read-only, on every host.",
+  "private": true,
+  "version": "0.0.1"
+}

@@ -7,7 +7,7 @@ Chromium is the renderer; this plugin owns the caching around it.
 ```
 edit under prototypes/
   → files' watcher (the ONLY one over that tree) fires onPrototypesChanged(changed)
-  → syncChangedThumbnails(changed): fingerprint those folders, decide, push state, enqueue
+  → syncChangedThumbnails(changed): fingerprint those folders, decide, push state, ask the renderer
   → prototypes.render-thumbnail: chromium → PNG → cache → notify
   → the card's <img> src changes; nothing polled
 ```
@@ -22,16 +22,47 @@ listing), never `listPrototypeMetas` — which reads, validates and parses every
 folder, and was ~2–4 s of every sync before. The render job reads its one
 prototype with `readPrototypeMeta` for the same reason.
 
+## Hosts: what is portable, what the host brings
+
+`server/` is portable: the state map, `syncThumbnails`, the fingerprint (over
+the `prototypesFiles` root; the hash itself is `core`'s pure `fingerprintFiles`,
+so a reader holding a folder's files in hand — the demo's seed check — names
+its picture the same way), the
+cache (its own `thumbnailCache` file root over `cache/prototypes-thumbnails`)
+and the PNG route. The one thing a host brings is the **renderer**, the
+`ThumbnailRenderer` host service (`server/internal/renderer.ts`), a union:
+
+- `renders` — `thumbnails#machine`: headless Chromium through Playwright, the
+  `render-thumbnail` / `sweep-thumbnails` jobs, `requestDep(chromium)` and the
+  `onDepInstallSettled` re-sync; it also binds `thumbnailCache` to the data dir
+  (`FileRootLocation`).
+- `unavailable` — `thumbnails/no-renderer` (base-excluded; the browser host):
+  a cache miss becomes the card's `unavailable` state, carrying why. A hit —
+  a PNG a demo seed wrote under its fingerprint (`thumbnailCache` is exported
+  for that) — is `ready` through the same sync, with no demo branch.
+
+**Rendering another tree.** `./equin prototype thumbnails <tree> --out <dir>`
+(`cli/`, declared by `apps/prototypes/commands`) renders every prototype folder
+under `<tree>` with the same `renderThumbnail` (which takes the folder's path)
+into `<dir>/<fingerprint>.png` — how the agent manager demo's committed
+pictures are made (`agent-manager/demo/scripts/render-demo-thumbnails.ts`).
+
+**Not `needsMachine`, on purpose.** The gallery joins this value with the list
+in `useCombinedResources`, and one unavailable input blanks the whole join —
+so "no picture here" is an arm of the value, never the value being
+unavailable.
+
 ## Decisions that look wrong until you know why
 
 **The change signal is borrowed.** `files` owns the prototypes tree and already
 watches it; a second `@parcel/watcher` over the same tree doubles every event.
-So `files` exports `onPrototypesChanged` / `listPrototypeNames` / `readPrototypeMeta` and this plugin
-listens instead of watching. `prototypesDir` comes from the app root's
-`data-dirs/` (`@plugins/apps/plugins/prototypes/data-dirs`, the app's one
-`apps/prototypes` dir) — imported at its home, never through `files`' barrel,
-which would be a cross-plugin re-export. A data dir is declared exactly once,
-so re-deriving the path here would be the bug.
+So `files` exports `onPrototypesChanged` / `listPrototypeNames` /
+`readPrototypeMeta` and this plugin listens instead of watching. The tree is
+read through the app root's `prototypesFiles` root
+(`@plugins/apps/plugins/prototypes/server`) — imported at its home, never
+through `files`' barrel, which would be a cross-plugin re-export; only the
+Chromium render (machine) opens `prototypesDir`'s `index.html` as a `file://`
+URL.
 
 **The cache is content-addressed and host-global** (a `cache/`-kind data dir,
 `<sha256>.png` per prototype, `asset-mirror`'s shape).
@@ -44,7 +75,9 @@ rejects a subdirectory there.
 
 Hashing **content**, not `(mtime, size)`: a `git checkout` rewrites mtimes
 without changing bytes and must not re-render, and identical bytes across
-worktrees must collide on purpose.
+worktrees must collide on purpose. The digest's byte stream is frozen (name,
+NUL, bytes, NUL per file, sorted) — it names every PNG already cached, and
+`hash-dir.test.ts` pins it to the `node:crypto` value.
 
 **State is in memory, so there is no migration.** Every arm is derivable from
 the filesystem (a fingerprint, plus whether its PNG exists) — a table would be a
@@ -128,7 +161,9 @@ short; if galleries get opened across many worktrees at once the fix is a
 
 ## The card
 
-`<PrototypeThumbnail state fallback />` renders the three arms. `fallback` is the
+`<PrototypeThumbnail state fallback />` renders the arms: the PNG, the
+fallback, and the fallback with a marker — muted for `waiting-for-browser` and
+`unavailable` (nothing wrong with the prototype), a warning for `failed`. `fallback` is the
 **caller's** art (the gallery's `CoverSwatch`) — the gallery already owns what a
 prototype looks like without a picture. The failure marker sits in an
 `Overlay`'s `behind` slot, not `above`: `above` is click-through by design and
@@ -155,21 +190,24 @@ Design: `research/2026-08-16-apps-prototype-gallery-thumbnails.md`.
 
 ## Plugin reference
 
-- Description: The rendered-preview cover for a prototype card: the cached PNG, the caller's fallback while it renders, and a visible 'Preview failed' marker carrying the reason. Rendered PNG previews for the prototypes gallery: a content-addressed disk cache, a headless-chromium render job driven by the files watcher, and the push state resource the cards read; the immutable serving route is the machine/ half's.
+- Description: The rendered-preview cover for a prototype card: the cached PNG, the caller's fallback while it renders, and a visible 'Preview failed' marker carrying the reason. Rendered PNG previews for the prototypes gallery, on every host: the content-addressed cache (the thumbnailCache file root), the fingerprint sync driven by the files watcher, the push state resource the cards read and the immutable serving route. Rendering is the ThumbnailRenderer host service's — a host without one answers a cache miss as `unavailable`.
 - Server:
-  - Contributes: `resource.declare` "prototypes.thumbnails"
+  - Contributes:
+    - `resource.declare` "prototypes.thumbnails"
+    - `host-service:prototypes.thumbnail-renderer` "prototypes.thumbnail-renderer"
+    - `data-files.root-location` "apps.prototypes.thumbnails"
   - Uses:
+    - `apps/prototypes.prototypesFiles`
     - `apps/prototypes/files.listPrototypeNames`
     - `apps/prototypes/files.onPrototypesChanged`
-    - `apps/prototypes/files.readPrototypeMeta`
-    - `infra/deps.onDepInstallSettled`
-    - `infra/deps.requestDep`
-    - `infra/jobs.defineJob`
+    - `infra/endpoints.rawEndpointHandler`
+    - `infra/paths/data-files.defineFileRoot`
     - `network/live.serveValue`
-  - Register:
-    - `defineJob('prototypes.render-thumbnail')`
-    - `defineJob('prototypes.sweep-thumbnails')`
+  - Exports (values):
+    - `thumbnailCache`
+    - `ThumbnailRenderer`
   - Resources: `prototypes.thumbnails` (push, notified, whole: one state per prototype — bounded by the prototype list the gallery holds whole)
+  - Routes: `GET /api/prototype-thumbs/:key`
 - Web:
   - Uses:
     - `infra/endpoints.useAssetSrc`
@@ -184,8 +222,10 @@ Design: `research/2026-08-16-apps-prototype-gallery-thumbnails.md`.
     - `PrototypeThumbnail`
     - `usePrototypeThumbnails`
 - Machine:
-  - Uses: `infra/endpoints.machineHandler`
-  - Routes: `GET /api/prototype-thumbs/:key`
+  - Uses: `infra/paths/data-files.FileRootLocation`
+  - Register:
+    - `defineJob('prototypes.render-thumbnail')`
+    - `defineJob('prototypes.sweep-thumbnails')`
 - Core:
   - Uses:
     - `infra/endpoints.assetPath`
@@ -194,19 +234,30 @@ Design: `research/2026-08-16-apps-prototype-gallery-thumbnails.md`.
     - `infra/endpoints.defineEndpoint`
     - `network/live.liveValue`
     - `packages/list-bound.wholeRecord`
+    - `packages/string-hash.createSha256`
   - Exports (types):
+    - `FingerprintedFile`
     - `ThumbnailFailureKind`
     - `ThumbnailState`
   - Exports (values):
+    - `fingerprintFiles`
     - `getPrototypeThumbnail`
     - `prototypeThumbnailAsset`
     - `prototypeThumbnails`
     - `ThumbnailFailureKindSchema`
     - `ThumbnailStateSchema`
+- Cli:
+  - Uses:
+    - `apps/prototypes/files.prototypeMetasIn`
+    - `infra/jobs/supervised-job.cliExecContext`
+  - Exports (values): `renderThumbnailsAction`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shadow --shadow`
-  - Imported by: `apps/prototypes/gallery`
-- Exemptions:
-  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/cache.ts`, `server/internal/hash-dir.ts`, `server/internal/render.ts` (debt)
+  - Imported by:
+    - `apps/agent-manager/demo`
+    - `apps/prototypes/gallery`
+    - `apps/prototypes/thumbnails/no-renderer`
+- Sub-plugins:
+  - **`no-renderer`** (excluded) — The prototype thumbnails of a host without a browser to render with: provides the ThumbnailRenderer host service as unavailable, so a cache miss is the card's muted 'Preview unavailable' marker and…
 
 <!-- AUTOGENERATED:END -->

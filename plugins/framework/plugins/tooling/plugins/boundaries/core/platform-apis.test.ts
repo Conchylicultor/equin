@@ -74,6 +74,7 @@ describe("platformValueUsesIn", () => {
     ["Buffer.from(bytes)", ["global Buffer"]],
     ["const m = process.memoryUsage();", ["global process"]],
     ["Bun.hash(json)", ["global Bun"]],
+    ["new HTMLRewriter().on('meta', h)", ["global HTMLRewriter"]],
     ["join(__dirname, 'x')", ["global __dirname"]],
     ["setImmediate(fn)", ["global setImmediate"]],
     ["const x = require('fs');", ["global require"]],

@@ -14,8 +14,9 @@ export interface CollectedEntry {
 
 export const checkEntries: CollectedEntry[] = [
   { pluginPath: "active-data", id: "active-data", loader: () => import("@plugins/active-data/check"), dependsOn: ["framework/plugins/tooling/plugins/codegen", "plugin-meta/plugins/facets"] },
+  { pluginPath: "apps/plugins/agent-manager/plugins/demo", id: "apps.agent-manager.demo", loader: () => import("@plugins/apps/plugins/agent-manager/plugins/demo/check"), dependsOn: [] },
   { pluginPath: "apps/plugins/agent-manager/plugins/welcome", id: "apps.agent-manager.welcome", loader: () => import("@plugins/apps/plugins/agent-manager/plugins/welcome/check"), dependsOn: [] },
-  { pluginPath: "apps/plugins/prototypes/plugins/files", id: "apps.prototypes.files", loader: () => import("@plugins/apps/plugins/prototypes/plugins/files/check"), dependsOn: [] },
+  { pluginPath: "apps/plugins/prototypes/plugins/files", id: "apps.prototypes.files", loader: () => import("@plugins/apps/plugins/prototypes/plugins/files/check"), dependsOn: ["infra/plugins/paths/plugins/data-files"] },
   { pluginPath: "config_v2", id: "config_v2", loader: () => import("@plugins/config_v2/check"), dependsOn: ["framework/plugins/tooling/plugins/codegen"] },
   { pluginPath: "conversations/plugins/model-provider", id: "conversations.model-provider", loader: () => import("@plugins/conversations/plugins/model-provider/check"), dependsOn: [] },
   { pluginPath: "database/plugins/change-feed", id: "database.change-feed", loader: () => import("@plugins/database/plugins/change-feed/check"), dependsOn: [] },
@@ -101,6 +102,7 @@ export const checkEntries: CollectedEntry[] = [
   { pluginPath: "infra/plugins/launcher", id: "infra.launcher", loader: () => import("@plugins/infra/plugins/launcher/check"), dependsOn: ["framework/plugins/product-name"] },
   { pluginPath: "infra/plugins/namespace", id: "infra.namespace", loader: () => import("@plugins/infra/plugins/namespace/check"), dependsOn: [] },
   { pluginPath: "infra/plugins/paths", id: "infra.paths", loader: () => import("@plugins/infra/plugins/paths/check"), dependsOn: [] },
+  { pluginPath: "infra/plugins/paths/plugins/data-files", id: "infra.paths.data-files", loader: () => import("@plugins/infra/plugins/paths/plugins/data-files/check"), dependsOn: [] },
   { pluginPath: "network/plugins/live", id: "network.live", loader: () => import("@plugins/network/plugins/live/check"), dependsOn: [] },
   { pluginPath: "page/plugins/annotations", id: "page.annotations", loader: () => import("@plugins/page/plugins/annotations/check"), dependsOn: ["framework/plugins/tooling/plugins/codegen", "page/plugins/editor", "plugin-meta/plugins/facets"] },
   { pluginPath: "page/plugins/editor", id: "page.editor", loader: () => import("@plugins/page/plugins/editor/check"), dependsOn: ["framework/plugins/tooling/plugins/codegen", "plugin-meta/plugins/facets"] },

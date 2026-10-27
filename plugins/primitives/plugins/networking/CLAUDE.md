@@ -55,7 +55,7 @@ others — there is no leader to lose. Design:
 ## `Transport` — where a subtree's server traffic goes
 
 `web/transport.ts`: a `Transport` is `{ socketUrl, openSocket, fetch,
-servesUrls, machine, telemetry }`. **There is no default transport**:
+servesUrls, frameBase, machine, telemetry }`. **There is no default transport**:
 `useTransport()` throws outside every `<TransportProvider>`. The app root
 (`framework/web-core`'s `App.tsx`) mounts the page's own server,
 `pageTransport` (leaf child plugin `plugins/page-transport`: same-origin
@@ -78,6 +78,13 @@ the same URL. `fetchWithRetry` takes the transport's `fetch` as an option.
   `useAssetSrc` fetches an asset through `fetch` and hands out a blob URL,
   ref-counted per transport (`transportScoped`) and revoked with its last
   holder.
+- **`frameBase: string | null`** — where a navigated document (an
+  `<iframe>`, whose relative sub-resources resolve beside it) loads the
+  transport's `/api/…` paths: `""` for the page's own server, a scoped prefix
+  for an in-browser server (its frames served by the host's Service Worker,
+  `framework/browser-server`), `null` where nothing serves them. Never for an
+  element of the page (that is `servesUrls`). Read through `frameUrlOver`
+  (`infra/endpoints`).
 - **`telemetry: boolean`** — whether the telemetry this subtree's server
   traffic raises is reported (to the page's own server, the one receiver).
   A flag, never a transport: nothing in a subtree can reach the page's server
@@ -196,13 +203,13 @@ built on them — see
     - `useTransport`
     - `useTransportScoped`
 - Cross-plugin:
-  - Imported by: 29 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×7
+  - Imported by: 32 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×9
     - `primitives` ×6
     - `conversations` ×5
     - `framework` ×3
+    - `page` ×3
     - `infra` ×2
-    - `page` ×2
     - `debug/worktree-cleanup`
     - `network/live`
     - `shell/notifications`

@@ -1,6 +1,6 @@
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
-import { openHistoryStore } from "../shared/history/store";
+import { cliHistory } from "./tree";
 
 /**
  * `./equin prototype checkpoint <id> [-m <message>]` — record the folder
@@ -15,7 +15,7 @@ export const checkpointPrototypeAction: CliAction<
   [string],
   { message?: string }
 > = async (id, opts) => {
-  const store = openHistoryStore(prototypesDir.path);
+  const store = cliHistory();
   const result = await store.checkpoint(id, {
     kind: "manual",
     subject: opts.message ?? "",

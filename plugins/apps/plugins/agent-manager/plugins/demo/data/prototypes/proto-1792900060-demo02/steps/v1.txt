@@ -1,0 +1,1 @@
+Show the effort beside the model, and a teal file button

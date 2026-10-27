@@ -26,6 +26,8 @@ import { defineCliCommand } from "@plugins/framework/plugins/cli/core";
  */
 /** The verb bodies `files` keeps — loaded only when one of them runs. */
 const filesCli = () => import("./files-verbs");
+/** The verb body `thumbnails` keeps. */
+const thumbnailsCli = () => import("./thumbnails-verbs");
 
 export default defineCliCommand({
   name: "prototype",
@@ -128,6 +130,32 @@ export default defineCliCommand({
       ],
       run: async () => ({
         default: (await filesCli()).restorePrototypeAction,
+      }),
+    }),
+    defineCliCommand<[string], { out: string }>({
+      name: "thumbnails",
+      description:
+        "Render the gallery picture of every prototype folder under <tree> " +
+        "with the gallery's own renderer (headless Chromium, the card's " +
+        "viewport and density), each written to <out>/<fingerprint>.png — the " +
+        "name the thumbnail cache looks it up by. A folder already rendered " +
+        "is skipped. For a tree other than the data dir (a demo's seed); the " +
+        "gallery renders its own. Needs no running backend.",
+      arguments: [
+        {
+          name: "<tree>",
+          description: "a directory of prototype folders",
+        },
+      ],
+      options: [
+        {
+          flags: "--out <dir>",
+          description: "where the PNGs are written",
+          required: true,
+        },
+      ],
+      run: async () => ({
+        default: (await thumbnailsCli()).renderThumbnailsAction,
       }),
     }),
   ],

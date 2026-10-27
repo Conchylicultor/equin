@@ -1,0 +1,22 @@
+// @hash 6ec84829688d
+{
+  // One root folder's entries (app-data/web/components/app-data-browser.tsx):
+  // folders on top (the `kind` enum's order: Folder, File), then by name.
+  "views": [
+    {
+      "id": "list",
+      "name": "List",
+      "icon": "list",
+      "view": {
+        "type": "list",
+        "sort": [
+          { "fieldId": "kind", "direction": "asc" },
+          { "fieldId": "name", "direction": "asc" }
+        ]
+      }
+    }
+  ],
+  "sortPresets": [],
+  "filterPresets": [],
+  "customColumns": []
+}

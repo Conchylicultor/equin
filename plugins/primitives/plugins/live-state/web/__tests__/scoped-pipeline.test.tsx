@@ -108,6 +108,7 @@ function backend(who: string, watermark: string) {
       );
     },
     servesUrls: true,
+    frameBase: "",
     machine: true,
     telemetry: false,
   };

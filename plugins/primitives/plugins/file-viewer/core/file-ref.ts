@@ -13,7 +13,8 @@
  */
 export type FileRef =
   | { source: "host"; path: string }
-  | { source: "workspace"; workspace: string; ref?: string; path: string };
+  | { source: "workspace"; workspace: string; ref?: string; path: string }
+  | { source: "data"; root: string; path: string };
 
 /**
  * How a file stands against its checkout's base — the context that lights up a
@@ -60,7 +61,12 @@ export function fileExtension(path: string): string {
  * resetting per-file state (the active renderer tab) when the file changes.
  */
 export function fileRefKey(file: FileRef): string {
-  return file.source === "host"
-    ? `host:${file.path}`
-    : `workspace:${file.workspace}:${file.ref ?? ""}:${file.path}`;
+  switch (file.source) {
+    case "host":
+      return `host:${file.path}`;
+    case "workspace":
+      return `workspace:${file.workspace}:${file.ref ?? ""}:${file.path}`;
+    case "data":
+      return `data:${file.root}:${file.path}`;
+  }
 }

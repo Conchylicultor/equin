@@ -1,0 +1,2 @@
+Round the cards and lift them off the page
+The board read flat: cards now have rounded corners and a soft shadow.

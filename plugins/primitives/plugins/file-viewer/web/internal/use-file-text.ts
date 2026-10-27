@@ -1,6 +1,7 @@
 import { unavailableMessage } from "@plugins/infra/plugins/endpoints/core";
 import { codeFile } from "@plugins/code-explorer/plugins/code-api/core";
 import { hostFsFileText } from "@plugins/infra/plugins/host-fs/core";
+import { dataFileText } from "@plugins/infra/plugins/paths/plugins/data-files/core";
 import { useLive } from "@plugins/network/plugins/live/web";
 import type { FileRef } from "../../core";
 
@@ -23,15 +24,17 @@ export type FileTextState =
  * A file's text, whichever source holds it — one live read each: a workspace
  * file through code-api's `code.file` (as it is on disk now, or as of the
  * ref's revision when it names one), a host file through host-fs's
- * `host-fs.text`. The server invalidates both while they are read (a watch of
- * the file, or the checkout's git dir for a named ref; a sha never moves), and
- * the text on screen stays until the new one lands. Both reads are declared
- * every render (hooks cannot be conditional) and the one for the other source
- * reads nothing.
+ * `host-fs.text`, a data file through data-files' `data-files.text` (on every
+ * host). The server invalidates each while it is read (a watch of the file,
+ * the checkout's git dir for a named ref — a sha never moves — or the file
+ * root's watch), and the text on screen stays until the new one lands. Every
+ * read is declared every render (hooks cannot be conditional) and the ones for
+ * the other sources read nothing.
  */
 export function useFileText(file: FileRef): FileTextState {
   const ws = file.source === "workspace" ? file : null;
   const host = file.source === "host" ? file : null;
+  const data = file.source === "data" ? file : null;
 
   const wsRead = useLive(
     codeFile,
@@ -47,6 +50,39 @@ export function useFileText(file: FileRef): FileTextState {
     hostFsFileText,
     host === null ? null : { path: host.path },
   );
+  const dataRead = useLive(
+    dataFileText,
+    data === null ? null : { root: data.root, path: data.path },
+  );
+
+  if (data !== null) {
+    // data-files refuses what it will not read: an answer about the file is
+    // `unavailable`; an unknown root, a malformed path or a folder is an error
+    // carrying the server's own words.
+    switch (dataRead.status) {
+      case "loading":
+        return { kind: "loading" };
+      case "ready":
+        return { kind: "ok", content: dataRead.data.content };
+      case "error": {
+        const { error } = dataRead;
+        if (error.kind === "refused") {
+          switch (error.code) {
+            case "too-large":
+            case "binary":
+            case "missing":
+              return { kind: "unavailable", reason: error.code };
+            case "unknown-root":
+            case "invalid-path":
+            case "not-a-file":
+            case undefined:
+              return { kind: "error", message: error.message };
+          }
+        }
+        return { kind: "error", message: error.message };
+      }
+    }
+  }
 
   if (ws !== null) {
     // code-api refuses the cases it will not read: the ones that are an

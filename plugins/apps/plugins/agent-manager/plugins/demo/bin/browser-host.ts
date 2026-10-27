@@ -12,6 +12,7 @@ import { bootBrowserHost } from "@plugins/framework/plugins/server-core/core";
 import { unmatchedApiResponse } from "@plugins/infra/plugins/endpoints/core";
 import { hostEntries } from "./browser-host.generated";
 import { seed } from "./seed";
+import { bundledDemoPrototypes } from "./seed-prototypes";
 
 // A dedicated worker's global scope: the repo's one lib types `self` as a
 // Window, whose `postMessage` takes a target origin.
@@ -20,7 +21,7 @@ const port = self as unknown as PortEnd;
 void serveOverPort(port, async () => {
   const host = await bootBrowserHost({
     entries: hostEntries,
-    seed,
+    seed: () => seed(bundledDemoPrototypes()),
     onUnmatched: unmatchedApiResponse,
   });
   return {

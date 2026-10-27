@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Task composer — quick filing</title>
+<meta name="description" content="The Improve composer with the page it was filed from as a chip, and one line to say what to change." />
+<meta name="mocks" content="exhibit:task-draft/composer" />
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body { font-family: system-ui, sans-serif; background: #1c1d21; color: #e8e8ea; display: grid; place-items: center; }
+  .composer { width: min(480px, 100% - 32px); background: #26272c; border: 1px solid #34363c; border-radius: 12px; padding: 14px; }
+  .chip { display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 999px; background: #33354a; color: #b9bdf5; }
+  .prompt { margin: 12px 0; min-height: 64px; font-size: 14px; color: #9a9ca3; }
+  .row { display: flex; justify-content: space-between; align-items: center; }
+  .pill { font-size: 12px; color: #9a9ca3; }
+  button { font: inherit; font-size: 13px; border: 0; border-radius: 8px; padding: 6px 12px; background: #7c5cff; color: white; }
+</style>
+</head>
+<body>
+<div class="composer">
+  <span class="chip">/agents/c/conv-demo-dark-mode</span>
+  <div class="prompt">What should change on this page?</div>
+  <div class="row">
+    <span class="pill">Model · Sonnet</span>
+    <button type="button">File task</button>
+  </div>
+</div>
+</body>
+</html>

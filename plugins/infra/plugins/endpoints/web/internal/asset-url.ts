@@ -4,7 +4,7 @@ import {
 } from "@plugins/primitives/plugins/networking/web";
 import { allowAssetRoute } from "@plugins/primitives/plugins/networking/plugins/request-guard/web";
 import type { AssetBase, AssetPath } from "../../core";
-// `ASSET_PATH`: with asset-src.ts, this module is the one reader of an asset's path.
+// `ASSET_PATH`: with asset-src.ts and frame-url.ts, this module is the one reader of an asset's path.
 import { ASSET_PATH, unavailableMessage } from "../../core";
 
 /**

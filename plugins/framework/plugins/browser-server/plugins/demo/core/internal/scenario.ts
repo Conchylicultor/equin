@@ -4,12 +4,13 @@ import type { ScopedComposition } from "@plugins/framework/plugins/web-sdk/core"
  * A demo's browser host, as its owner's codegen emits it
  * (`core/browser-host.generated.ts`, `browserHost`): the composition the
  * worker boots — its id, home and web plugins, the scope the page renders the
- * demo's subtree in (`<PluginScope>`) — and the worker's start
- * (`import("@browser-host/<plugin path>")`). One derivation writes both, so
- * the page shows exactly the plugins the worker serves.
+ * demo's subtree in (`<PluginScope>`) — and the host module
+ * (`import("@browser-host/<plugin path>")`): the worker's start and its
+ * frame-serving Service Worker. One derivation writes both, so the page
+ * shows exactly the plugins the worker serves.
  */
 export type DemoHost = ScopedComposition & {
-  start(): Promise<{ start(): Worker }>;
+  start(): Promise<{ start(): Worker; serviceWorkerUrl: string }>;
 };
 
 /**

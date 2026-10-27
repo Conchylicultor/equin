@@ -17,6 +17,11 @@ first one again on every gallery card:
   revealed `PrototypeCardActions` contribution — gallery cards and list rows) —
   the same page for the prototype's live folder, at the Responsive size, with
   the shared picks (frame A's).
+- Both new-tab actions are **not offered** where no browser tab can show this
+  subtree's app (`internal/browser-tab.ts`, `useOpensBrowserTab`: the
+  transport's `servesUrls`). The present page is an address on the page's own
+  origin, so under an in-browser server (the demo) it would open the page's
+  real app on its real data.
 - **Full screen** (`F`, `FullScreenAction`) — a `<ViewportOverlay layer="max">`
   over the whole page, handed to the browser's Fullscreen API. Escape exits
   fullscreen (the browser handles it), and the resulting `fullscreenchange`
@@ -147,7 +152,7 @@ The routes live in `internal/routes.ts`, apart from the panes.
     - `PrototypeFrameActions` "open-new-tab" → `OpenNewTabAction`
     - `PrototypeFrameActions` "full-screen" → `FullScreenAction`
     - `PrototypeCardActions` "open-new-tab" → `OpenCardNewTabAction`
-  - Uses: 54 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 55 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/prototypes/canvas` ×25
     - `primitives/css/ui-kit` ×3
     - `primitives/hover-reveal` ×2
@@ -169,6 +174,7 @@ The routes live in `internal/routes.ts`, apart from the panes.
     - `primitives/link-gesture/new-tab.NewTabButton`
     - `primitives/live-state.matchResource`
     - `primitives/loading.Loading`
+    - `primitives/networking.useTransport`
     - `primitives/overlay/popup-open.PopupOpenScope`
     - `primitives/overlay/portal-host.PortalHost`
     - `primitives/overlay/tooltip.Kbd`

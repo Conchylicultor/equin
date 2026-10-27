@@ -7,27 +7,27 @@ import {
   restorePrototypeVersion,
   type PrototypeVersion,
 } from "../../core";
-import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
 import {
+  PrototypeHistoryStore,
   isVersionSha,
-  openHistoryStore,
   type CheckpointInput,
   type HistoryStore,
-} from "../../shared/history/store";
+} from "./history-store";
 
-// The server's face of the version store (`shared/history/`): the per-prototype
+// The server's face of the version store (`history-store.ts`, provided by the
+// host — git on the desktop, snapshots in a browser host): the per-prototype
 // history resource, the restore endpoint, and `checkpointPrototype` for the
-// `checkpoints` plugin's end-of-turn job. A version's files over HTTP are the
-// machine half's (`machine/internal/version-file.ts`).
+// `checkpoints` plugin's end-of-turn job. A version's files over HTTP are
+// `serve-file.ts`'s.
 //
 // Nothing here notifies the resource after a write. Every write stamps
-// `_history/<id>.git/latest.json`, and the one watcher over the tree turns that
-// stamp into a notify — on EVERY backend, which is the point: the version may
-// have been recorded by main while this backend's tab is the one watching.
+// `_history/<id>.<format>/latest.json`, and the one watch over the tree turns
+// that stamp into a notify — on EVERY backend, which is the point: the version
+// may have been recorded by main while this backend's tab is the one watching.
 
-/** The store over the data dir, resolved per call (the data root is env-overridable). */
+/** The host's history store. */
 function store(): HistoryStore {
-  return openHistoryStore(prototypesDir.path);
+  return PrototypeHistoryStore.get();
 }
 
 /**

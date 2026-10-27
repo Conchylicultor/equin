@@ -40,6 +40,11 @@ seed — so the unchanged app reads demo data through `useLive` /
   `unserved`), terminal, never as skew; an unsupported endpoint is the host's
   409 refusal, thrown and reported like any other endpoint failure. There is
   no "not available in the demo" toast.
+- **Frames by URL**: `attachFrameServing` runs alongside the host boot (the
+  host module's `serviceWorkerUrl`); the scope's transport carries its
+  `frameBase` — `null` where the browser has no Service Worker, so a frame
+  shows `unsupported` (`frameUrlOver`). Unmount detaches it. See
+  `browser-server`'s *frame serving*.
 - **Telemetry** (D3 of `research/2026-10-22-global-demo-scope-sealed.md`):
   the scope's transport inherits the enclosing page's `telemetry` flag, so the
   reports and timings the demo's own traffic raises (endpoint errors, live
@@ -63,7 +68,9 @@ in-realm `MessageChannel` standing in for the worker).
 - Description: <DemoScope scenario>: renders its subtree against the scenario's browser host — real server code in a worker, on the scenario's seed — and scoped to the host's composition (<PluginScope>), so the page shows exactly the plugins the worker serves. Everything inside reaches the host only (the scope's transport): the build's coverage guard holds the host to serving every read, endpoint and config the scope uses, or declaring it needsMachine (answered unavailable); a key or endpoint it still does not serve fails loudly. A host that fails to boot throws to the error boundary.
 - Web:
   - Uses:
+    - `framework/browser-server.attachFrameServing`
     - `framework/browser-server.browserServerTransport`
+    - `framework/browser-server.FrameServing`
     - `primitives/live-state.NotificationsProvider`
     - `primitives/loading.Loading`
     - `primitives/log-channels.clientLog`

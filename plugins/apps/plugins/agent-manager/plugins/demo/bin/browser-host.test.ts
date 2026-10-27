@@ -20,7 +20,9 @@
  * `import.meta.glob`, which Bun cannot evaluate): the migration history
  * (`migrations/bundled-source`) and the committed config layer
  * (`config_v2/bundled-layer`) are provided by the same data read off disk.
- * Every other entry is the graph the worker boots.
+ * Every other entry is the graph the worker boots. The seed's own bundled
+ * input — the demo's prototypes and their thumbnails — is read off disk the
+ * same way (`diskDemoPrototypes` below).
  *
  * Boots in a FRESH bun process (this file re-run as a child with
  * `DEMO_HOST_BOOT_CHILD` set): a boot collects its own host-service providers
@@ -33,7 +35,7 @@
 import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import { beforeAll, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { join, sep } from "node:path";
 import {
   jsonlEvents,
   JSONL_EVENTS_MAX,
@@ -108,8 +110,33 @@ import { conversationTurns } from "@plugins/conversations/plugins/turn-ledger/co
 import { DEMO_CONVERSATION_ID } from "../core/internal/scenario";
 import { hostEntries, hostProviders } from "./browser-host.generated";
 import { seed } from "./seed";
+import { DEMO_PINNED_PROTOTYPE, DEMO_PROTOTYPE_TAGS } from "./seed-prototypes";
+import {
+  demoPrototypeDataOf,
+  demoPrototypeSeed,
+  demoVersionFingerprint,
+  type DemoPrototypeData,
+} from "../core";
+import {
+  createPrototype,
+  type PrototypeHistory,
+  type PrototypeMeta,
+} from "@plugins/apps/plugins/prototypes/plugins/files/core";
+import type { ThumbnailState } from "@plugins/apps/plugins/prototypes/plugins/thumbnails/core";
 
 setDefaultTimeout(300_000);
+
+/** The demo's `data/` folder off disk, as the seed reads it (the worker has it inlined). */
+function diskDemoPrototypes(): DemoPrototypeData {
+  const dir = join(import.meta.dir, "..", "data");
+  const files: Record<string, Uint8Array> = {};
+  for (const rel of readdirSync(dir, { recursive: true }) as string[])
+    if (statSync(join(dir, rel)).isFile())
+      files[rel.split(sep).join("/")] = new Uint8Array(
+        readFileSync(join(dir, rel)),
+      );
+  return demoPrototypeDataOf(files);
+}
 
 type Entry = (typeof hostEntries)[number];
 
@@ -222,13 +249,13 @@ function isFor(frame: Frame, key: string, params: ResourceParams): boolean {
 
 /** Wait (bounded) until `probe` answers something truthy; fail loudly naming `what`. */
 async function until<T>(
-  probe: () => T | undefined | false,
+  probe: () => T | undefined | false | Promise<T | undefined | false>,
   what: string,
   timeoutMs = 10_000,
 ): Promise<T> {
   const deadline = Date.now() + timeoutMs;
   for (;;) {
-    const got = probe();
+    const got = await probe();
     if (got !== undefined && got !== false) return got;
     if (Date.now() > deadline) throw new Error(`timed out waiting for ${what}`);
     await new Promise((r) => setTimeout(r, 20));
@@ -251,7 +278,7 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
     // asserted portable, the resource key set closed.
     host = await bootBrowserHost({
       entries: [...graph, ...Object.values(SWAPS)],
-      seed,
+      seed: () => seed(diskDemoPrototypes()),
       onUnmatched: unmatchedApiResponse,
     });
   });
@@ -806,5 +833,195 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
     expect(await below()).toBeGreaterThan(0);
     await pruneChangelog(db);
     expect(await below()).toBe(0);
+  });
+
+  // ── Prototypes: the tree a memory data-files root, seeded ──────────────────
+  const prototypeSeed = demoPrototypeSeed(diskDemoPrototypes().tree);
+  const request = (method: string, path: string, body?: unknown) =>
+    host.request(
+      new Request(`http://demo.invalid${path}`, {
+        method,
+        ...(body === undefined
+          ? {}
+          : {
+              body: JSON.stringify(body),
+              headers: { "content-type": "application/json" },
+            }),
+      }),
+    );
+
+  test("the gallery lists the seeded prototypes, each read whole and well-formed", async () => {
+    const list = (await loadResourceByKey(
+      "prototypes.list",
+      {},
+    )) as PrototypeMeta[];
+    expect(list.map((m) => m.name).sort()).toEqual(
+      prototypeSeed.prototypes.map((p) => p.id).sort(),
+    );
+    for (const meta of list) expect(meta.problems).toEqual([]);
+    const lumen = list.find((m) => m.name === DEMO_PINNED_PROTOTYPE)!;
+    expect(lumen.options.map((o) => o.name)).toEqual(["density", "accent"]);
+    // One mocks nothing, one an exhibit, one a route (compare's `unresolved` arm here).
+    expect(
+      [...list]
+        .sort((a, b) => (a.name < b.name ? -1 : 1))
+        .map((m) => m.mocks.kind),
+    ).toEqual(["none", "declared", "declared"]);
+  });
+
+  test("a prototype's sibling files are served with their own types", async () => {
+    const css = await request(
+      "GET",
+      `/api/prototypes/${DEMO_PINNED_PROTOTYPE}/styles.css`,
+    );
+    expect(css.status).toBe(200);
+    expect(css.headers.get("content-type")).toContain("text/css");
+    expect(await css.text()).toContain('url("leaf.svg")');
+    const svg = await request(
+      "GET",
+      `/api/prototypes/${DEMO_PINNED_PROTOTYPE}/leaf.svg`,
+    );
+    expect(svg.status).toBe(200);
+    expect(svg.headers.get("content-type")).toContain("image/svg+xml");
+    // The document carries the user's pick, stamped onto its <html>.
+    const doc = await request(
+      "GET",
+      `/api/prototypes/${DEMO_PINNED_PROTOTYPE}/index.html?accent=%2314b8a6`,
+    );
+    expect(doc.status).toBe(200);
+    expect(await doc.text()).toContain("--accent: #14b8a6");
+  });
+
+  test("each seeded history holds its steps, and a version's files are served", async () => {
+    for (const p of prototypeSeed.prototypes) {
+      const history = (await loadResourceByKey("prototypes.history", {
+        name: p.id,
+      })) as PrototypeHistory;
+      expect(history.dirty).toBe(false);
+      expect(history.versions.map((v) => v.subject).slice(1)).toEqual(
+        p.versions.slice(1).map((v) => v.subject),
+      );
+      const first = history.versions[0]!;
+      const res = await request(
+        "GET",
+        `/api/prototypes/${p.id}/versions/${first.sha}/index.html`,
+      );
+      expect(res.status).toBe(200);
+      expect(await res.text()).toBe(p.versions[0]!.files["index.html"] ?? "");
+    }
+    const counts = (await loadResourceByKey(
+      "prototypes.versionCounts",
+      {},
+    )) as Record<string, number>;
+    expect(counts).toEqual(
+      Object.fromEntries(
+        prototypeSeed.prototypes.map((p) => [p.id, p.versions.length]),
+      ),
+    );
+  });
+
+  test("the gallery's rows: the tags, each prototype's tag, the pin", async () => {
+    const rows = await db.execute<{
+      id: string;
+      tag_id: string | null;
+      pinned: boolean;
+    }>(sql`SELECT id, tag_id, pinned FROM prototype_state ORDER BY id`);
+    expect(rows.rows).toEqual(
+      DEMO_PROTOTYPE_TAGS.flatMap((t) =>
+        t.carriers.map((id) => ({
+          id,
+          tag_id: t.id,
+          pinned: id === DEMO_PINNED_PROTOTYPE,
+        })),
+      ).sort((a, b) => (a.id < b.id ? -1 : 1)),
+    );
+  });
+
+  test("every seeded prototype's thumbnail is ready, from the committed PNGs", async () => {
+    const want = Object.fromEntries(
+      prototypeSeed.prototypes.map((p) => [
+        p.id,
+        demoVersionFingerprint(p.versions.at(-1)!),
+      ]),
+    );
+    // The sync runs from onReady, fire-and-forget: wait for its answer.
+    const states = await until(async () => {
+      const read = (await loadResourceByKey(
+        "prototypes.thumbnails",
+        {},
+      )) as Record<string, ThumbnailState>;
+      return Object.keys(want).every((id) => read[id] !== undefined)
+        ? read
+        : undefined;
+    }, "every prototype's thumbnail state");
+    for (const [id, key] of Object.entries(want)) {
+      expect(states[id]).toEqual({ status: "ready", key });
+      const png = await request("GET", `/api/prototype-thumbs/${key}.png`);
+      expect(png.status).toBe(200);
+      expect(png.headers.get("content-type")).toContain("image/png");
+    }
+  });
+
+  test("minting a prototype needs the computer: declared needsMachine, refused here", async () => {
+    expect(createPrototype.needsMachine).toBeDefined();
+    const res = await request("POST", "/api/prototypes", { title: "x" });
+    expect(res.status).toBe(409);
+    expect(await res.json()).toMatchObject({ reason: "unsupported" });
+  });
+
+  test("a pick round-trips: the PUT writes the record, and its subscriber hears it", async () => {
+    const frames: Frame[] = [];
+    const socket = {
+      send(raw: string) {
+        const frame = JSON.parse(raw) as Frame;
+        if (frame.kind !== "ping") frames.push(frame);
+      },
+    };
+    const ws = host.notifications as unknown as {
+      open(ws: unknown): void;
+      message(ws: unknown, raw: string): void;
+      close(ws: unknown, code: number, reason: string): void;
+    };
+    ws.open(socket);
+    const params = { name: DEMO_PINNED_PROTOTYPE };
+    try {
+      ws.message(
+        socket,
+        JSON.stringify({ op: "sub", id: 1, key: "prototypes.picks", params }),
+      );
+      await until(
+        () =>
+          frames.some(
+            (f) => isFor(f, "prototypes.picks", params) && f.kind === "sub-ack",
+          ),
+        "sub-ack prototypes.picks",
+      );
+      expect(await loadResourceByKey("prototypes.picks", params)).toEqual({
+        accent: "#14b8a6",
+      });
+      const res = await request(
+        "PUT",
+        `/api/prototypes/${DEMO_PINNED_PROTOTYPE}/picks`,
+        { kind: "set", option: "density", value: "compact" },
+      );
+      expect(res.status).toBeLessThan(300);
+      const heard = await until(
+        () =>
+          frames.find(
+            (f) =>
+              isFor(f, "prototypes.picks", params) &&
+              (f.kind === "delta" || f.kind === "update") &&
+              JSON.stringify(f).includes("compact"),
+          ),
+        "the pick's frame",
+      );
+      expect(heard).toBeDefined();
+      expect(await loadResourceByKey("prototypes.picks", params)).toEqual({
+        accent: "#14b8a6",
+        density: "compact",
+      });
+    } finally {
+      ws.close(socket, 1000, "test");
+    }
   });
 });

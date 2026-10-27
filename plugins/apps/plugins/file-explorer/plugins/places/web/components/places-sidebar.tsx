@@ -118,7 +118,8 @@ const SIDEBAR_SELECTION = {
 /**
  * The Places sidebar: the places of every `FileExplorer.Places` source as a
  * DataView list in sections — Favorites, Worktrees, Locations (config-authored
- * filters on `group`). The place whose folder the explorer is showing is the active row.
+ * filters on `group`). The place the surface is showing is the active row: a
+ * route place that says so, else the one whose folder the explorer shows.
  * The list grows to fill the sidebar, so the storage meter after it sits at
  * the bottom.
  */
@@ -199,6 +200,7 @@ function placeRows(
           group: source.group,
           icon: state.icon,
           label: state.label,
+          route: null,
           path: null,
           open: null,
           message: state.message,
@@ -213,8 +215,13 @@ function placeRows(
             group: source.group,
             icon: place.icon,
             label: place.label,
-            path: place.path,
-            open: place.open ?? null,
+            ...(place.kind === "folder"
+              ? { route: null, path: place.path, open: place.open ?? null }
+              : {
+                  route: { target: place.target, active: place.active },
+                  path: null,
+                  open: null,
+                }),
             message: null,
           });
         }
@@ -239,6 +246,10 @@ function PlacesList({
       ? { status: "loading" }
       : { status: "ready" };
   const activeId = useMemo(() => {
+    // A route place the surface shows wins: the routed browser then is not
+    // showing any folder (its location reads as Home).
+    const routed = rows.find((r) => r.route?.active === true);
+    if (routed !== undefined) return routed.id;
     if (home.kind !== "ready") return undefined;
     const abs = (p: string) => absolutePath(p, home.home);
     const here = abs(location.dir);
@@ -308,13 +319,17 @@ function PlacesList({
           density="compact"
           selectedRowId={activeId}
           rowActivation={(r) =>
-            r.path === null
-              ? undefined
-              : folderTarget(r.path, r.open ?? undefined)
+            r.route !== null
+              ? r.route.target
+              : r.path === null
+                ? undefined
+                : folderTarget(r.path, r.open ?? undefined)
           }
           itemActions={PlacesSlots.RowActions}
           rowDrop={rowDrop}
-          rowTone={(r) => (r.path === null ? "muted" : "default")}
+          rowTone={(r) =>
+            r.path === null && r.route === null ? "muted" : "default"
+          }
           viewOptions={listOptions(activeId)}
         />
       </div>

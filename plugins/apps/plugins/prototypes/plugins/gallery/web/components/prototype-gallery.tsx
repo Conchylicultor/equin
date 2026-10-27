@@ -12,12 +12,16 @@ import {
 } from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import {
+  useFetchEndpoint,
+  useMachineAvailability,
+} from "@plugins/infra/plugins/endpoints/web";
 import { useToast } from "@plugins/shell/plugins/notifications/web";
 import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
 import type { ThumbnailState } from "@plugins/apps/plugins/prototypes/plugins/thumbnails/core";
 import { PROTOTYPES_CATEGORY_ID } from "@plugins/apps/plugins/prototypes/core";
 import {
+  createPrototype,
   prototypeVersionCounts,
   prototypesList,
   type PrototypeMeta,
@@ -80,11 +84,13 @@ function CoverSwatch({ meta }: { meta: PrototypeMeta }) {
  * id-tinted swatch. Activating a card opens the Focus/Compare detail pane.
  * "New prototype" mints an empty prototype folder and opens the launch-agent
  * popover on it, so the background agent it fires is handed a folder that
- * already exists.
+ * already exists. Minting needs the computer (the template is a checkout
+ * file), so without one the button is disabled and says why.
  */
 export function PrototypeGallery() {
   const fetchEndpoint = useFetchEndpoint();
   const toast = useToast();
+  const mint = useMachineAvailability(createPrototype);
   return (
     <DataViewSwitcher
       storageKey={PROTOTYPES_VIEW}
@@ -94,11 +100,16 @@ export function PrototypeGallery() {
       actions={
         <LaunchAgentPopover
           draftKey="new-prototype"
+          disabled={!mint.available}
           trigger={
             // The DataView's own create button (its part, padding and picked
             // words) as the launch popover's trigger: New prototype opens a
             // panel rather than running a creator.
-            <CreateButton label="New prototype" />
+            <CreateButton
+              label="New prototype"
+              disabled={!mint.available}
+              tooltip={mint.available ? undefined : mint.message}
+            />
           }
           title="New prototype"
           description="Launch an agent to scaffold a new throwaway UI prototype."

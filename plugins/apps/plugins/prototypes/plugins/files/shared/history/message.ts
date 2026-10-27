@@ -52,6 +52,31 @@ export function toSubjectLine(text: string, fallback: string): string {
     : `${line.slice(0, SUBJECT_MAX - 1).trimEnd()}…`;
 }
 
+/**
+ * The message a checkpoint records: its subject's first line (≤ 72), or the
+ * kind's own when it has none; its body with control characters stripped. Every
+ * history provider records a checkpoint through this, so a git version and a
+ * snapshot one read the same.
+ */
+export function checkpointMessage(input: {
+  kind: "turn" | "manual";
+  subject: string;
+  body?: string;
+  conversationId?: string;
+  messageId?: string;
+}): VersionMessage {
+  return {
+    subject: toSubjectLine(
+      input.subject,
+      input.kind === "turn" ? "Agent turn" : "Manual checkpoint",
+    ),
+    body: stripControl(input.body ?? "").trim(),
+    kind: input.kind,
+    conversationId: input.conversationId ?? null,
+    messageId: input.messageId ?? null,
+  };
+}
+
 /** Render a version's commit message. The inverse of {@link parseVersionMessage}. */
 export function formatVersionMessage(message: VersionMessage): string {
   const subject = toSubjectLine(message.subject, "");

@@ -145,6 +145,7 @@ itself) / `fileUrl(file)` — a renderer never branches on the source to read.
   - Uses:
     - `code-explorer/code-api.codeImageUrl`
     - `infra/host-fs.hostFileUrl`
+    - `infra/paths/data-files.dataFileUrl`
     - `network/live.liveValue`
   - Exports (types):
     - `FileGitStatus`
@@ -169,6 +170,7 @@ itself) / `fileUrl(file)` — a renderer never branches on the source to read.
     - `ui/tokens/density --space-xs`
     - `ui/tokens/shape --spacing`
   - Imported by:
+    - `apps/file-explorer/app-data`
     - `apps/file-explorer/browser`
     - `apps/sonata/sources/midi/file-preview`
     - `conversations/conversation-view/code/file-pane`

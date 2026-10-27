@@ -2,7 +2,8 @@
  * A browser server across a real MessageChannel: the page side
  * (`portBrowserServer`) reads, subscribes and gets acks from a server served by
  * the worker side (`serveOverPort`) exactly as it would in-process; a boot that
- * throws rejects the page side with the worker's error.
+ * throws rejects the page side with the worker's error; a port attached to the
+ * worker answers requests too, the page's own sockets untouched.
  */
 
 import { describe, expect, test } from "bun:test";
@@ -14,7 +15,13 @@ import {
 } from "@plugins/packages/plugins/resource-protocol/core";
 import { inRealmServer } from "../testing";
 import type { BrowserServer } from "./browser-server";
-import { PortHostBootError, portBrowserServer, serveOverPort } from "./port";
+import {
+  PortHostBootError,
+  attachPort,
+  portBrowserServer,
+  portRequester,
+  serveOverPort,
+} from "./port";
 
 let seq = 0;
 const key = (name: string) => `test.browser-server-port.${name}.${seq++}`;
@@ -146,5 +153,43 @@ describe("a browser server over a port", () => {
     expect((pageErr as PortHostBootError).message).toContain(
       "migration 42 failed",
     );
+  });
+
+  test("an attached port answers requests beside the page's own port", async () => {
+    const channel = new MessageChannel();
+    channel.port1.start();
+    channel.port2.start();
+    void serveOverPort(channel.port2, async () => ({
+      server: greetingServer("hi"),
+      keys: new Set([greeting.key]),
+      boot: BOOT,
+    }));
+    const { server } = await portBrowserServer(channel.port1);
+    const r = recorder();
+    const socket = server.connect(r.peer);
+    socket.send(sub(1, greeting.key, { who: "page" }));
+    await r.next((f) => f.kind === "sub-ack");
+
+    // Another realm's channel (a frame-serving Service Worker's), handed over.
+    const side = new MessageChannel();
+    attachPort(channel.port1, side.port1);
+    const request = portRequester(side.port2);
+    side.port2.start();
+    const res = await request(
+      new Request(`http://sw/api/resources/${greeting.key}?who=frame`),
+    );
+    expect(((await res.json()) as { value: unknown }).value).toEqual({
+      text: "hi frame",
+    });
+
+    // The page's socket still serves.
+    socket.send(sub(2, greeting.key, { who: "again" }));
+    const again = await r.next(
+      (f) => f.kind === "sub-ack" && JSON.stringify(f).includes("again"),
+    );
+    expect(again).toMatchObject({ value: { text: "hi again" } });
+    socket.close();
+    server.dispose();
+    side.port2.close();
   });
 });

@@ -2419,12 +2419,12 @@ sanctioned entries too.
     - `serveCollectionOn`
     - `serveValueOn`
 - Cross-plugin:
-  - Imported by: 301 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×80
+  - Imported by: 303 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×81
     - `conversations` ×51
     - `debug` ×32
     - `tasks` ×28
-    - `infra` ×18
+    - `infra` ×19
     - `page` ×14
     - `active-data` ×12
     - `build` ×10

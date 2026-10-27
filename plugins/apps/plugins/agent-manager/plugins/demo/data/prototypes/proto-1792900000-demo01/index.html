@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en" data-density="cozy" style="--accent: #7c5cff">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Lumen — notes board</title>
+<meta name="description" content="The notes app's home as a board of cards, each tagged with a coloured edge." />
+<meta name="prototype-option" content="density: cozy | compact" />
+<meta name="prototype-option" content="accent: color violet=#7c5cff | teal=#14b8a6 | amber=#f59e0b" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<header class="bar">
+  <span class="brand">Lumen</span>
+  <span class="count" id="count"></span>
+</header>
+<main id="board" class="board"></main>
+<script src="data.js"></script>
+<script>
+  const board = document.getElementById("board");
+  for (const note of window.NOTES) {
+    const card = document.createElement("article");
+    card.className = "card";
+    card.innerHTML = `<h2></h2><p></p>`;
+    card.querySelector("h2").textContent = note.title;
+    card.querySelector("p").textContent = note.body;
+    board.append(card);
+  }
+  document.getElementById("count").textContent = `${window.NOTES.length} notes`;
+</script>
+</body>
+</html>

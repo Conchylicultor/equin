@@ -26,8 +26,8 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import { useTransport } from "@plugins/primitives/plugins/networking/web";
 import {
-  assetUrlOver,
-  type AssetUrl,
+  frameUrlOver,
+  type FrameUrl,
 } from "@plugins/infra/plugins/endpoints/web";
 import type { AssetPath } from "@plugins/infra/plugins/endpoints/core";
 import {
@@ -490,7 +490,10 @@ export function useStoredPicksOf(): (frame: PrototypeFrame) => StoredPicks {
 /**
  * THE url of a prototype frame's document: its version under its picks, over
  * the subtree's transport — an iframe loads it by URL (its sub-resources
- * too), so it is `unavailable` on a host without the computer.
+ * too), behind the transport's frame base (`frameUrlOver`): the page's own
+ * path on the desktop, an in-browser server's frames through its Service
+ * Worker in the demo; `unavailable` / `unsupported` where neither serves it.
+ * The whole-page probe frame loads the same url.
  *
  * A color pick alone never changes it: colors are painted into the loaded
  * document live (`useFrameColorVars`), so a drag never reloads the frame. The
@@ -501,12 +504,12 @@ export function useStoredPicksOf(): (frame: PrototypeFrame) => StoredPicks {
 export function useFrameSrc(
   frame: PrototypeFrame,
   meta: PrototypeMeta,
-): AssetUrl {
+): FrameUrl {
   const transport = useTransport();
   const stored = useFrameStoredPicks(frame);
   const options = documentOptions(meta, frame.version);
   // What the url depends on: everything but the color picks.
-  const keyed = assetUrlOver(
+  const keyed = frameUrlOver(
     transport,
     prototypeDocumentAsset(
       meta,
@@ -515,7 +518,7 @@ export function useFrameSrc(
     ),
   );
   const key = keyed.kind === "ready" ? keyed.url : null;
-  const src = assetUrlOver(
+  const src = frameUrlOver(
     transport,
     prototypeDocumentAsset(meta, frame.version, stored),
   );

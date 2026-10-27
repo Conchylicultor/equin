@@ -1,4 +1,4 @@
-import { readHtmlAttr } from "@plugins/infra/plugins/html-decode/core";
+import { scanHtml } from "@plugins/infra/plugins/html-decode/core";
 import {
   foldOptions,
   type OptionSource,
@@ -6,10 +6,11 @@ import {
 } from "./options";
 
 /** A page's valid options and the problem detail of every line that is not one. */
-export async function readPrototypeOptions(
-  html: string,
-): Promise<{ options: PrototypeOption[]; problems: string[] }> {
-  return foldOptions(await readOptionSource(html));
+export function readPrototypeOptions(html: string): {
+  options: PrototypeOption[];
+  problems: string[];
+} {
+  return foldOptions(readOptionSource(html));
 }
 
 /**
@@ -21,47 +22,43 @@ export async function readPrototypeOptions(
  * folder validator and the server's stamping all go through it, so none of them
  * can disagree about what a page declares.
  *
- * Decoded exactly once via `html-decode`, like every HTMLRewriter read.
+ * Values come back decoded exactly once, by `html-decode`'s scanner.
  */
-export async function readOptionSource(html: string): Promise<OptionSource> {
+export function readOptionSource(html: string): OptionSource {
   const declarations: string[] = [];
   const groups: { at: number; label: string }[] = [];
   const htmlData: Record<string, string> = {};
   let htmlVars: Record<string, string> = {};
   let sawHtml = false;
 
-  const rewriter = new HTMLRewriter()
-    .on("html", {
-      element(el) {
+  scanHtml(html, {
+    elements: {
+      html(el) {
         // Only the document element: an inline `<svg>` cannot hold one, but a
         // second literal `<html>` in the source is not the page's root.
         if (sawHtml) return;
         sawHtml = true;
-        for (const [attr] of el.attributes) {
+        for (const attr of el.attributeNames) {
           if (!attr.startsWith("data-")) continue;
-          const value = readHtmlAttr(el, attr);
+          const value = el.attr(attr);
           if (value !== undefined) htmlData[attr.slice("data-".length)] = value;
         }
-        const style = readHtmlAttr(el, "style");
+        const style = el.attr("style");
         if (style !== undefined) htmlVars = readCustomProperties(style);
       },
-    })
-    .on("meta", {
-      element(el) {
-        const name = readHtmlAttr(el, "name");
+      meta(el) {
+        const name = el.attr("name");
         if (name === "prototype-option-group") {
           groups.push({
             at: declarations.length,
-            label: readHtmlAttr(el, "content") ?? "",
+            label: el.attr("content") ?? "",
           });
         } else if (name === "prototype-option") {
-          declarations.push(readHtmlAttr(el, "content") ?? "");
+          declarations.push(el.attr("content") ?? "");
         }
       },
-    });
-
-  // The rewriter only runs its handlers as the body is consumed.
-  await rewriter.transform(new Response(html)).text();
+    },
+  });
   return { declarations, groups, htmlData, htmlVars };
 }
 

@@ -64,7 +64,9 @@ import {
   type DemoNode,
   type DemoPage,
   type DemoPageSession,
+  type DemoPrototypeData,
 } from "../core";
+import { seedPrototypes } from "./seed-prototypes";
 
 /**
  * The demo's starting data on the freshly migrated database, one agent per
@@ -76,9 +78,12 @@ import {
  * each story an agent filed. Then the Lumen workspace (`../core`'s pages) with
  * the dark-mode story's origin on it, and the page work that agent did, RUN
  * ({@link seedPages}) — after which each transcript is written, the dark-mode
- * one recording that run.
+ * one recording that run. Last, the Prototypes gallery's prototypes, their
+ * histories and thumbnails ({@link seedPrototypes}), from `prototypes` — the
+ * committed `../data/`, inlined into the worker's bundle or read off disk by
+ * the boot test.
  */
-export async function seed(): Promise<void> {
+export async function seed(prototypes: DemoPrototypeData): Promise<void> {
   assertStoryCategoriesRegistered();
   const now = Date.now();
   const ago = (ms: number) => new Date(now - ms);
@@ -170,6 +175,7 @@ export async function seed(): Promise<void> {
       demoConversationId(story),
       demoTranscriptJsonl(story, now, session),
     );
+  await seedPrototypes(prototypes);
 }
 
 const DARK_MODE = demoStoryByKey("dark-mode");

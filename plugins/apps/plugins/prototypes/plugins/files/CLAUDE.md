@@ -1,7 +1,13 @@
 # files
 
 Server-side file serving for the Prototypes app, plus the live-state resources
-that drive gallery refresh and iframe auto-reload.
+that drive gallery refresh and iframe auto-reload — on every host. The `server/`
+barrel is portable: it reaches the tree only through the app's file root
+(`prototypesFiles`, declared in `apps/prototypes/server`, bound to the data dir
+by `apps/prototypes/machine`; `infra/paths/data-files`) and the version history
+only through the `PrototypeHistoryStore` host service. The desktop's disk and
+git are the `machine/` half's and the CLI's; a browser host gets the memory
+store and `plugins/snapshot-history`.
 
 ## Where the content lives: the `apps/prototypes` data dir (`prototypesDir`)
 
@@ -58,22 +64,20 @@ agent has designed anything — a slug chosen at that moment is a guess, and
 renaming later would change the id. Nothing is lost to a human: every surface
 displays `meta.title`, read out of `<title>`.
 
-`shared/mint.ts` — `mintPrototype({ title? })` → `{ id, dir }` — is the one way a
-prototype comes into existence. It copies the running checkout's
-`prototypes/_template/` (`templateDir()`) into a fresh id, then stamps `<title>`
-when a name was given. It
-lives in `shared/` because it touches `fs` (so not `core/`, which the browser
-imports) and because `./equin prototype new` calls it with no backend
-running (so not `server/`) — the same split `shared/read-folder.ts` makes.
-
-`shared/template.ts` holds `templateDir()` (the running checkout's template;
-throws when it is missing) and `copyFolderOnce()` (temp-then-rename, never
-overwrites, treats a lost rename race as "somebody else got there first"), which
-the mint copies through.
+`machine/internal/mint.ts` — `mintPrototype({ files, history, writer }, { title? })`
+→ `{ id }` — is the one way a prototype comes into existence. It copies the
+running checkout's `prototypes/_template/` (read through `data-files`'
+`diskDirMount`) into a fresh id with `stageThenRename` (built out of sight,
+renamed into place, never over an existing folder — a lost race is a collision
+the mint re-draws around), stamping `<title>` in the staging copy when a name
+was given. In `machine/` because the template is a checkout file — hence
+`createPrototype` is `needsMachine` — and the CLI reaches it there too (a `cli/`
+folder may import `machine`).
 
 Three consequences worth knowing:
 
-- `POST /api/prototypes` (`createPrototype`, body `{ title? }` → `{ id }`) is how
+- `POST /api/prototypes` (`createPrototype`, `needsMachine`, served by
+  `machine/`; body `{ title? }` → `{ id }`) is how
   the gallery mints before it launches an agent, so the agent is handed a folder
   that already exists and is never asked to name anything. It notifies nothing:
   the mint writes into the watched tree, and the watcher is what re-broadcasts
@@ -87,22 +91,39 @@ Three consequences worth knowing:
 
 Design: `research/2026-08-21-global-prototype-ids-and-mint.md`.
 
-## Version history (`shared/history/`)
+## Version history (`PrototypeHistoryStore`)
 
 Every agent turn that changes a prototype is recorded as a version; the detail
 pane steps through them and can restore one; `prototype log -p` is how the next
 agent reads the evolution. Design:
 `research/2026-09-11-apps-prototype-version-history.md`.
 
-**One private bare git repo per prototype, at `_history/<id>.git`, whose work
+The store is a host service: `PrototypeHistoryStore`
+(`server/internal/history-store.ts`, `"prototypes.history"`; not `PrototypeHistory`,
+which is the wire shape in `core/history.ts`) declares the contract —
+`ensureHistory`, `adoptAll`, `checkpoint`, `readHistory`, `readVersionCounts`,
+`readVersionFile`, `restoreVersion` — and every reader (the resource, the
+version-file route, restore, the mint, `checkpointPrototype`) calls it. Two
+providers, held to one suite (`server/testing`'s `describeHistoryContract`):
+the desktop's git store (`machine/internal/history/`, below) and a browser
+host's content-addressed snapshots (`plugins/snapshot-history`, base-excluded).
+Both keep a prototype's history in `_history/<id>.<format>/` and stamp
+`latest.json` there (`historyDirOf` / `historyStampOf`), so the watcher reads
+either format the same way. `checkpointMessage` (`shared/history/message.ts`)
+words a checkpoint for both.
+
+**The desktop's: one private bare git repo per prototype, at `_history/<id>.git`, whose work
 tree is the prototype folder.** Beside the folder, not in it: a prototype is
 flat, and a `.git` inside would churn the signature and the thumbnail
 fingerprint. `_history/` is `_`-prefixed, so `listPrototypeDirNames` skips it
 like `_template/`, and both file routes refuse it (404). Not the `history/engine`
 DB: prototypes are host-global and forever, a worktree DB is neither.
 
-- `store.ts` — `openHistoryStore(root)`; the caller resolves the root
-  (`prototypesDir.path`, per call; the tests pass a temp dir). Ops:
+- `machine/internal/history/store.ts` — `openGitHistoryStore({ dir, files })`;
+  `dir` is the tree's directory, read per call (`prototypesDir.path`; the tests
+  pass a temp dir), `files` the same tree as a mount, which the lock is taken
+  through. The desktop provider (`machine/internal/history-provider.ts`) passes
+  the `prototypesFiles` root; the CLI a disk mount of the data dir. Ops:
   `ensureHistory` (v0 = the folder as it is; built in a staging dir and renamed
   in, so an existing repo always has its baseline), `adoptAll`, `checkpoint`
   (`add -A`, commit only if `diff --cached` moved; a `messageId` already on a
@@ -111,21 +132,23 @@ DB: prototypes are host-global and forever, a worktree DB is neither.
   its own `index.html` declares, read for every not-yet-seen version in ONE
   `git cat-file --batch` and remembered by commit sha, since a commit never
   changes), `readVersionFile` (bytes via
-  `cat-file blob`), `readVersionPatch`, `restoreVersion` ("Before restore" if
+  `cat-file blob`), `readVersionPatch` (git-only, `GitHistoryStore`, for
+  `prototype log -p`), `restoreVersion` ("Before restore" if
   dirty → `read-tree -u --reset <sha>` → "Restored vN"). Every arg that becomes a
   path or a revision is validated first (`protoIdKind.is`, `isVersionSha`,
   `isFlatFileName`).
-- `message.ts` — the commit message format, written and read in one module:
+- `shared/history/message.ts` — the commit message format, written and read in one module:
   subject (≤ 72), body (the request + agent summary), then `Prototype-Kind` /
   `Prototype-Conversation` / `Prototype-Message` trailers. `n` is the commit's
   position, never stored.
-- `git.ts` — hermetic git: the environment is REPLACED (`GIT_CONFIG_GLOBAL=/dev/null`,
+- `machine/internal/history/git.ts` — hermetic git: the environment is REPLACED (`GIT_CONFIG_GLOBAL=/dev/null`,
   `GIT_CONFIG_NOSYSTEM=1`, no leaked `GIT_DIR`/`GIT_INDEX_FILE`), hooks and
   signing off, fixed identity, `GIT_OPTIONAL_LOCKS=0` so a `status` never takes
-  the index lock a write needs. Spelled `git`, not `paths/server`'s `GIT`:
-  `shared/` may not import a `server` barrel.
-- `lock.ts` — one flock per repo (`_history/<id>.lock`, never unlinked); a
-  writer waits ≤ 10 s, then throws `HistoryBusyError` (the job retries).
+  the index lock a write needs.
+- The lock — one per repo, `withLock(_history/<id>)` on the mount: on disk the
+  flock `_history/<id>.lock` (never unlinked), the same file every backend and
+  the CLI take; a writer waits ≤ 10 s, then throws `LockBusyError` (the job
+  retries).
 
 **How a recorded version reaches every backend.** After each commit the store
 writes `_history/<id>.git/latest.json` (`{ n, sha }`, temp-then-rename). Git's
@@ -168,21 +191,23 @@ defaults) and gave each `*.localhost:9000` origin its own picks. Design:
   `core/options.ts`, `v` reserved: a value token, or a color option's
   lowercase `#rrggbb`) — never judged against the live declaration, because a pick can target an option only a recorded version
   declares. Every read still goes through `resolvePicks`, per document.
-- `openPicksStore(root).write(id, change)` — one `set` or `reset` (never the
+- `openPicksStore(mount).write(id, change, writer)` — one `set` or `reset` (never the
   whole record, so two surfaces picking different options cannot clobber each
-  other), read-modify-write under the per-prototype flock (`withHistoryLock`,
-  `_picks/<id>.lock`), temp-then-rename with a `.tmp` suffix the watcher's
-  extension filter skips. A reset unlinks the file; a no-op writes nothing.
+  other), read-modify-write under the per-prototype lock (`withLock(_picks/<id>)`,
+  on disk `_picks/<id>.lock`), written atomically by the mount (its temp file's
+  extension is one the watch skips). A reset unlinks the file; a no-op writes nothing.
   Missing file = `{}`; a malformed file THROWS (never read as "nothing picked").
 - `prototypes.picks` (push, keyed by `name`) + `PUT /api/prototypes/:name/picks`
   (`setPrototypePicks`). The writer notifies at once; every other backend hears
   it through the watcher (`picks-recorded`, `tree-path.ts`), which re-reads
   nothing else — the frames reload because their `src` carries the picks.
-- **Automated sessions are undone.** The PUT records into the
-  `prototype-picks` agent-write ledger
-  (`infra/request-origin/agent-write-ledger`) inside the lock, around the one
-  write, so an E2E that clicks the picker has its picks put back when its run
-  ends. Agents never write picks: there is no CLI setter, and a variant is
+- **Automated sessions are undone.** The PUT writes as the request's origin;
+  the `prototypesFiles` root declares `ledger: { id: "prototype-picks", under:
+  _picks }`, so on the desktop every agent-origin write or remove there is
+  recorded in the agent-write ledger (`infra/request-origin/agent-write-ledger`)
+  inside the lock, around the one write, and an E2E that clicks the picker has
+  its picks put back when its run ends — heard by every backend through the
+  watch, like any write. Agents never write picks: there is no CLI setter, and a variant is
   rendered through its document URL (`?<option>=<value>`), which saves nothing.
 - `_picks/` is `_`-prefixed, so it is never listed as a prototype and never
   enters the reload signature; the file routes refuse it (404) like `_history/`.
@@ -192,10 +217,9 @@ defaults) and gave each `*.localhost:9000` origin its own picks. Design:
 The picks above are one kind of **record**: a small JSON file per prototype in
 a `_`-prefixed dir beside the folders (`_<kind>/<id>.json`), never inside the
 folder (it would churn the reload signature, the thumbnail and the history).
-`openRecordStore(root, kind)` owns everything the kinds share — the id-checked
-path, the per-prototype flock, the temp-then-rename write, "the empty record is
-no file", `readAll()`, snapshot `restore()` for the agent-write ledger, and
-"a malformed file throws". A kind supplies its dir, schema, empty value, fold
+`openRecordStore(mount, kind)` owns everything the kinds share — the id-checked
+path, the per-prototype lock, the atomic write naming its writer, "the empty
+record is no file", `readAll()`, and "a malformed file throws". A kind supplies its dir, schema, empty value, fold
 and equality. A new kind is a `shared/<kind>.ts` of that shape, plus its
 server resource/PUT, a `tree-path.ts` arm, a watcher notify and its dir in
 `isInternalDir`.
@@ -244,20 +268,20 @@ names `state` or its table.
 
 **All of them work with no backend running, and that is the point of having them.** The
 prototypes tree is host-global and outside every checkout, so `new` calls
-`mintPrototype()` straight against the filesystem rather than
+`mintPrototype()` straight against the data dir rather than
 `POST /api/prototypes`, and `list` calls `listPrototypeMetas()` rather than
-fetching `GET /api/prototypes`. Neither verb has an implementation of its own:
+fetching `GET /api/prototypes`. A verb boots no plugin graph, so it reads the
+tree through `cli/tree.ts`: `diskMount(prototypesDir)` (the same operations and
+lock files as the backends' root) and the git store over it. Neither verb has an implementation of its own:
 the endpoint and the CLI share the mint, and the list endpoint, the
 `prototypes.list` resource and `prototype list` share the lister — so a terminal
 answer can never disagree with the gallery.
 
-That sharing is what moved the lister. `listPrototypeMetas()` now lives in
-`shared/list-metas.ts`; `server/internal/list.ts` re-exports it, so
-`handlers.ts`, `resources.ts` and the server barrel (which `thumbnails` reads it
-from) are untouched. Nothing in it was ever server-specific — it reads the data
-dir and parses HTML — and `shared/` is where this plugin already keeps the code
-a CLI process and the server both run (`read-folder.ts`, `mint.ts`,
-`template.ts`).
+That sharing is why the lister is in `shared/list-metas.ts`, over a `Mount`:
+`server/internal/list.ts` calls it with `prototypesFiles` (keeping the server
+barrel's `listPrototypeMetas()` / `readPrototypeTitle(name)`), the CLI with its
+disk mount. `read-folder.ts`, `folder-signature.ts` and `record-store.ts` take a
+`Mount` the same way.
 
 The declaration (`commands/cli/index.ts`) is loaded on every single `./equin`
 invocation, `build` included, because commander needs the names and flags before
@@ -359,8 +383,8 @@ matching discriminated union, also carried by `PrototypeVersion.options`):
   (with a hint when a `data-<name>` was written instead), a default or
   suggestion that is not an opaque color, a duplicate suggestion name.
 
-Parsed with `HTMLRewriter`; every value it yields is decoded once via
-`@plugins/infra/plugins/html-decode/core` — the rewriter decodes nothing.
+Read with `scanHtml` from `@plugins/infra/plugins/html-decode/core` (portable,
+on htmlparser2), which hands every value back decoded exactly once.
 
 Design: `research/2026-08-15-global-prototypes-self-contained.md`.
 
@@ -368,11 +392,12 @@ Design: `research/2026-08-15-global-prototypes-self-contained.md`.
 
 The three raw file routes (`GET /api/prototypes/:name`, `/:name/:file`,
 `/:name/versions/:sha/:file`) are declarations in `core/`
-(`getPrototypeEntry` / `getPrototypeFile` / `getPrototypeVersionFile`,
-`needsMachine`: the tree is on disk) whose raw handlers the `machine/` barrel
-serves through `machineHandler` (`machine/internal/files.ts`,
-`version-file.ts`, with the picks stamping beside them; the path guard is `server/internal/paths.ts`, shared with `prototypeExists`);
-the rest are the `server/` barrel's.
+(`getPrototypeEntry` / `getPrototypeFile` / `getPrototypeVersionFile`) whose
+raw handlers the portable `server/` barrel serves through `rawEndpointHandler`
+(`server/internal/serve-file.ts`, with the picks stamping in
+`picked-document.ts`) — the live files read through `prototypesFiles`, a
+version's through `PrototypeHistoryStore`. Only `POST /api/prototypes` is the
+`machine/` barrel's.
 
 - `GET /api/prototypes` → `PrototypeMeta[]` (every `prototypes/<name>/index.html`,
   skipping `_`-prefixed and dot-dirs; the dir name is the `name`). JSON, so it
@@ -385,14 +410,16 @@ the rest are the `server/` barrel's.
   query across. Only for hand-typed URLs; nothing in the app links here.
 - `GET /api/prototypes/:name/:file` → `prototypes/<name>/<file>` verbatim,
   Content-Type by extension, `Cache-Control: no-store`. Raw handler (custom
-  Content-Type, per-file bytes). Path-traversal-guarded to stay under
-  `prototypes/`; 400 on escape, 404 on missing. **Except** `index.html` asked
+  Content-Type, per-file bytes). Each param must be one `RelPath` segment (no
+  `..`, separator or NUL — the router has already decoded `%2e%2e`); 400
+  otherwise, 404 on missing. **Except** `index.html` asked
   for with option picks (`?palette=azure`, any key but `v`): the picks are
   checked against the page's own declaration and stamped onto `<html>` — a
   choice as `data-*`, a color as `--<name>: #rrggbb` merged into its `style`
   (any earlier declaration of that property dropped, the rest kept; edited
-  decoded and escaped again by `setAttribute`) — the one HTMLRewriter *rewrite* in the repo (every other use only
-  extracts). An undeclared name or value is a **400** rendered in the frame: a
+  decoded and escaped again by `setAttribute`) — `stampPicks` (`core/stamp-picks.ts`),
+  spliced in place by html-decode's `rewriteStartTag`, so every other byte of
+  the page is served as written. An undeclared name or value is a **400** rendered in the frame: a
   broken variant link must say so, not quietly show the default. The file is
   read whole first because `<html>` streams before the `<meta>` tags that say
   what is valid. With no picks the file streams through untouched.
@@ -406,11 +433,11 @@ that works off `file://`.
 the browser keeps the old `styles.css` and an edit looks like it didn't land.
 
 - `GET /api/prototypes/:name/versions/:sha/:file` → that file as recorded in
-  that version, read out of git; `Cache-Control: immutable` (the sha addresses
+  that version, read out of the history store; `Cache-Control: immutable` (the sha addresses
   the content); 404 for anything that does not name a version's file. A path
   prefix per version, so its relative `styles.css` resolves to the same version.
   Its `index.html` takes option picks exactly like the live route (same
-  `machine/internal/picked-document.ts`), judged against the options THAT
+  `server/internal/picked-document.ts`), judged against the options THAT
   version declares. Built by `prototypeVersionDocument(name, sha, { picks })`.
 - `POST /api/prototypes/:name/versions/:sha/restore` → the new `restore`
   version (`restorePrototypeVersion`, via `implement()`).
@@ -445,9 +472,12 @@ list or an empty history.
   one prototype's stored option picks (push, a value per `name`); see Option
   picks.
 
-`onReady` starts the `prototypesTreeWatcher` declaration (`defineFileWatcher`) over `prototypes/`, watching every
-extension a prototype can ship (`.html/.css/.js/.json` plus images and
-`.woff2`); `onShutdown` stops it. No polling.
+`onReady` subscribes to `prototypesFiles.watch` — the root's watch spec carries
+every extension a prototype can ship (`.html/.css/.js/.json` plus images and
+`.woff2`); on the desktop it is a declared file watcher,
+`prototypes-files.tree`, registered by `data-files#machine`; its paths arrive as
+`RelPath`s and `tree-path.ts` classifies them — and `onShutdown` disposes it.
+No polling.
 
 **Nothing re-broadcasts unless the tree really moved.** Every wake-up — a
 watcher event, a dropped-events report (`onLost`) — runs the same gate: re-read
@@ -486,21 +516,23 @@ The `core` barrel exports the shared contracts the web consumes: `PrototypeMeta`
 the live values `prototypesList` / `prototypeHistory` /
 `prototypePicks` (`liveValue` declarations, read with
 `useLive`), the raw file routes (`getPrototypeEntry` / `getPrototypeFile` /
-`getPrototypeVersionFile`: `needsMachine`, served by the `machine/` half) and
+`getPrototypeVersionFile`, served on every host) and
 the frames' document `AssetPath`s (`prototypeDocument()` /
-`prototypeVersionDocument()`, an iframe's src resolved with `useAssetUrl`),
+`prototypeVersionDocument()`, an iframe's src resolved with `frameUrlOver`),
 the `listPrototypes` / `createPrototype` /
 `restorePrototypeVersion` / `setPrototypePicks` endpoints, the picks shapes
 (`StoredPicks`, `PicksChange`, `applyPicksChange`), the version shapes
 (`PrototypeVersion`, `PrototypeHistory`), and the id kind (`protoIdKind`,
-plus `prototypeIdsIn`). The server barrel adds `prototypeExists` (the `state` plugin's 404), `checkpointPrototype`
-for the `checkpoints` plugin's end-of-turn job.
+plus `prototypeIdsIn`). The server barrel adds `prototypeExists` (async — the `state` plugin's 404), `checkpointPrototype`
+for the `checkpoints` plugin's end-of-turn job, and the history contract
+(`PrototypeHistoryStore`, its types, `historyDirOf` / `historyStampOf`,
+`checkpointMessage`) the `snapshot-history` provider implements.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./equin build` -->
 
 ## Plugin reference
 
-- Description: Registers the prototype id kind (`proto-…`) in the browser's id-kind registry. Owns the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), whose raw files and versions' files its machine/ half serves; mints new prototypes into it from the running checkout's prototypes/_template/, declares the list + version live-state resources, watches the dir to auto-reload open iframes on edit, stamps a document's picked options (?<option>=<value>) onto its <html> (data-* for a choice, a --<name> custom property for a color), stores the user's option picks as one shared record per prototype under _picks/ (the prototypes.picks resource and its PUT, undone for automated sessions through the agent-write ledger), and keeps each prototype's version history (a private git repo per prototype under _history/: the per-prototype history resource, restore, and checkpointPrototype).
+- Description: Registers the prototype id kind (`proto-…`) in the browser's id-kind registry. Serves the prototypes tree (the app's prototypesFiles root over the `apps/prototypes` data dir — the computer's disk on the desktop, memory in a browser host) on every host: the raw files and recorded versions' files (picked options ?<option>=<value> stamped onto a document's <html>: data-* for a choice, a --<name> custom property for a color), the list + version live-state resources, a watch over the tree that auto-reloads open iframes on a real edit, the user's option picks as one shared record per prototype under _picks/ (the prototypes.picks resource and its PUT, undone for automated sessions through the root's ledger), and each prototype's version history through the PrototypeHistoryStore host service (the per-prototype history resource, restore, and checkpointPrototype). Minting a prototype from the checkout's template is its machine/ half's.
 - Web:
   - Contributes: `IdKinds.Kind` "proto"
   - Uses: `ids.IdKinds`
@@ -511,23 +543,41 @@ for the `checkpoints` plugin's end-of-turn job.
     - `resource.declare` "prototypes.list"
     - `resource.declare` "prototypes.picks"
     - `resource.declare` "prototypes.versionCounts"
+    - `host-service:prototypes.history` "prototypes.history"
   - Uses:
+    - `apps/prototypes.prototypesFiles`
     - `ids.IdKinds`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
-    - `infra/file-watcher.defineFileWatcher`
-    - `infra/file-watcher.FileWatcher`
-    - `infra/request-origin/agent-write-ledger.defineAgentWriteLedger`
+    - `infra/endpoints.rawEndpointHandler`
     - `network/live.serveValue`
+  - Exports (types):
+    - `CheckpointInput`
+    - `CheckpointResult`
+    - `EnsureHistoryResult`
+    - `HistoryRead`
+    - `HistoryStore`
+    - `RestoreResult`
+    - `VersionEntry`
+    - `VersionFileRead`
   - Exports (values):
+    - `assertFlatFileName`
+    - `assertPrototypeId`
+    - `assertVersionSha`
+    - `checkpointMessage`
     - `checkpointPrototype`
+    - `HISTORY_DIR_NAME`
+    - `historyDirOf`
+    - `historyStampOf`
+    - `LATEST_STAMP_FILE`
+    - `LatestStampSchema`
     - `listPrototypeMetas`
     - `listPrototypeNames`
     - `onPrototypesChanged`
     - `prototypeExists`
+    - `PrototypeHistoryStore`
     - `readPrototypeMeta`
     - `readPrototypeTitle`
-  - Register: `defineFileWatcher('prototypes-files.tree')`
   - Resources:
     - `prototypes.history` (push, notified, whole: one prototype's recorded versions — one per agent turn that changed it, read whole by the version stepper, whole: the options one prototype's index.html declares — a handful of hand-written lines, whole: the values one hand-written <meta name="prototype-option"> line declares — a handful)
     - `prototypes.list` (push, notified, whole: every prototype folder on disk — each made by hand, and the gallery lists, filters and groups them all, whole: the options one prototype's index.html declares — a handful of hand-written lines, whole: the ways one prototype folder breaks the contract — a handful of checks, whole: the values one hand-written <meta name="prototype-option"> line declares — a handful)
@@ -535,15 +585,16 @@ for the `checkpoints` plugin's end-of-turn job.
     - `prototypes.versionCounts` (push, notified, whole: one count per prototype — bounded by the prototype list it annotates, which the gallery holds whole)
   - Routes:
     - `GET /api/prototypes`
-    - `POST /api/prototypes`
     - `POST /api/prototypes/:name/versions/:sha/restore`
     - `PUT /api/prototypes/:name/picks`
-- Machine:
-  - Uses: `infra/endpoints.machineHandler`
-  - Routes:
     - `GET /api/prototypes/:name`
     - `GET /api/prototypes/:name/:file`
     - `GET /api/prototypes/:name/versions/:sha/:file`
+- Machine:
+  - Uses:
+    - `infra/endpoints.implementMachine`
+    - `infra/paths/data-files.diskDirMount`
+  - Routes: `POST /api/prototypes`
 - Core:
   - Uses:
     - `ids.defineIdKind`
@@ -551,8 +602,8 @@ for the `checkpoints` plugin's end-of-turn job.
     - `infra/endpoints.AssetPath`
     - `infra/endpoints.blob`
     - `infra/endpoints.defineEndpoint`
-    - `infra/html-decode.decodeHtmlText`
-    - `infra/html-decode.readHtmlAttr`
+    - `infra/html-decode.rewriteStartTag`
+    - `infra/html-decode.scanHtml`
     - `network/live.liveValue`
     - `packages/list-bound.wholeKeyedRecord`
     - `packages/list-bound.wholeList`
@@ -642,15 +693,15 @@ for the `checkpoints` plugin's end-of-turn job.
 - Cross-plugin:
   - Imported by:
     - `active-data/prototype`
+    - `apps/agent-manager/demo`
     - `apps/prototypes/canvas`
     - `apps/prototypes/checkpoints`
     - `apps/prototypes/commands`
+    - `apps/prototypes/files/snapshot-history`
     - `apps/prototypes/state`
     - `apps/prototypes/thumbnails`
     - `conversations/conversation-view/artifacts/prototype`
     - `page/prototype`
-- Exemptions:
-  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/paths.ts`, `server/internal/picks.ts`, `server/internal/signature.ts`, `server/internal/tree-path.ts`, `shared/folder-signature.ts`, `shared/history/lock.ts`, `shared/history/store.ts`, `shared/list-metas.ts`, `shared/mint.ts`, `shared/read-folder.ts`, `shared/record-store.ts`, `shared/template.ts` (debt)
 - Cli:
   - Exports (types): `DeletedPrototypeIds`
   - Exports (values):
@@ -658,7 +709,14 @@ for the `checkpoints` plugin's end-of-turn job.
     - `newPrototypeAction`
     - `printPrototypeList`
     - `prototypeLogAction`
+    - `prototypeMetasIn`
     - `prototypeOptionsAction`
     - `restorePrototypeAction`
+- Test helpers:
+  - Server: `@plugins/apps/plugins/prototypes/plugins/files/server/testing`
+    - `describeHistoryContract` — The `HistoryStore` contract, against the provider `make` builds. `name` labels the suite (`"git"`, `"snapshots"`).
+    - Types: `HistoryHarness`
+- Sub-plugins:
+  - **`snapshot-history`** (excluded) — Prototype version history for a host without the computer (the browser composition): provides the PrototypeHistoryStore host service as content-addressed snapshots over the prototypesFiles root…
 
 <!-- AUTOGENERATED:END -->

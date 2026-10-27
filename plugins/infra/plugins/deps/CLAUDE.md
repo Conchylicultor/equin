@@ -375,7 +375,6 @@ torch.
     - `ui/tokens/font-family --font-mono`
   - Imported by:
     - `apps/chord/song-index`
-    - `apps/prototypes/thumbnails`
     - `apps/sonata/transcription`
     - `infra/audio-analysis`
     - `infra/codesign`

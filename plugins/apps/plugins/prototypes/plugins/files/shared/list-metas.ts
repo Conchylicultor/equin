@@ -1,19 +1,20 @@
 // Reading the whole prototypes tree into `PrototypeMeta[]` — THE one
 // implementation, for the two processes that need it.
 //
-// `shared/`, not `server/`, for the reason `read-folder.ts` and `mint.ts` are:
-// `./equin prototype list` must answer with no backend running, and a CLI
-// process cannot import a server barrel's boot-time machinery to do it. Nothing
-// in here was ever server-specific — it reads the data dir and parses HTML — so
-// the move is a relocation, not a fork. `server/internal/list.ts` re-exports it,
-// which is why the server barrel's API is unchanged.
+// `shared/`, not `server/`, for the reason `read-folder.ts` is: `./equin
+// prototype list` must answer with no backend running, and a CLI process
+// cannot import a server barrel's boot-time machinery to do it. Over a `Mount`:
+// the server hands it the `prototypesFiles` root (`server/internal/list.ts`,
+// whose wrappers keep the server barrel's API), the CLI a disk mount of the
+// same data dir.
 
-import { readFile, stat } from "node:fs/promises";
-import { join } from "node:path";
 import {
-  decodeHtmlText,
-  readHtmlAttr,
-} from "@plugins/infra/plugins/html-decode/core";
+  InvalidRelPathError,
+  readText,
+  relPath,
+  type Mount,
+} from "@plugins/infra/plugins/paths/plugins/data-files/core";
+import { scanHtml } from "@plugins/infra/plugins/html-decode/core";
 import {
   PROTOTYPE_ENTRY_FILE,
   UNTITLED_PROTOTYPE,
@@ -34,7 +35,6 @@ import {
   revOfSignature,
   signatureOfFiles,
 } from "./folder-signature";
-import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
 
 /** What `index.html` declares about itself, before defaults are folded in. */
 interface HtmlMeta {
@@ -47,51 +47,44 @@ interface HtmlMeta {
 /**
  * Pull `<title>` and the three `<meta>` tags out of a prototype's `index.html`.
  *
- * Streaming-parsed with `HTMLRewriter`, which hands back RAW markup — every
- * value it yields is decoded exactly once through `html-decode` (attributes via
- * `readHtmlAttr`, text accumulated first and decoded at the end, because a
- * character reference can straddle two chunks).
+ * Read with `html-decode`'s scanner, which hands every value back decoded
+ * exactly once.
  *
  * First occurrence wins for each tag: a `<title>` further down the document
  * (inside an inline `<svg>`, say) is not the document's title.
  */
-async function parseHtmlMeta(html: string): Promise<HtmlMeta> {
-  const titleChunks: string[] = [];
-  let titleDone = false;
+function parseHtmlMeta(html: string): HtmlMeta {
+  let titleText: string | undefined;
   let blurbRaw: string | undefined;
   let viewportRaw: string | undefined;
   let mocksRaw: string | undefined;
 
-  const rewriter = new HTMLRewriter()
-    .on("title", {
-      text(chunk) {
-        if (titleDone) return;
-        titleChunks.push(chunk.text);
-        if (chunk.lastInTextNode) titleDone = true;
-      },
-    })
-    .on("meta", {
-      element(el) {
-        const name = readHtmlAttr(el, "name");
+  scanHtml(html, {
+    elements: {
+      meta(el) {
+        const name = el.attr("name");
         if (name === "description") {
-          blurbRaw ??= readHtmlAttr(el, "content");
+          blurbRaw ??= el.attr("content");
         } else if (name === "prototype-viewport") {
-          viewportRaw ??= readHtmlAttr(el, "content");
+          viewportRaw ??= el.attr("content");
         } else if (name === "mocks") {
-          mocksRaw ??= readHtmlAttr(el, "content");
+          mocksRaw ??= el.attr("content");
         }
       },
-    });
-
-  // The rewriter only runs its handlers as the body is consumed.
-  await rewriter.transform(new Response(html)).text();
+    },
+    text: {
+      title(text) {
+        titleText ??= text;
+      },
+    },
+  });
 
   // An unreadable size is also a `problems[]` entry, from the same parser
   // (`validatePrototypeFolder`); here it reads as the default.
   const viewport = parseViewport(viewportRaw);
 
   return {
-    title: decodeHtmlText(titleChunks.join("")).trim(),
+    title: (titleText ?? "").trim(),
     blurb: (blurbRaw ?? "").trim(),
     viewport: viewport.ok ? viewport.viewport : DEFAULT_PROTOTYPE_VIEWPORT,
     // Declaring no counterpart is the ordinary case, so the absent tag parses
@@ -112,12 +105,14 @@ async function parseHtmlMeta(html: string): Promise<HtmlMeta> {
  * the gallery card shows them. Silently dropping it is how an author ends up
  * staring at a gallery that doesn't contain the thing they just wrote.
  */
-export async function listPrototypeMetas(): Promise<PrototypeMeta[]> {
-  const dirNames = await listPrototypeDirNames(prototypesDir.path);
+export async function listPrototypeMetas(
+  mount: Mount,
+): Promise<PrototypeMeta[]> {
+  const dirNames = await listPrototypeDirNames(mount);
 
   const metas: PrototypeMeta[] = [];
   for (const dirName of dirNames) {
-    const meta = await readMeta(dirName, dirNames);
+    const meta = await readMeta(mount, dirName, dirNames);
     // Removed between the listing and its read: it no longer exists to list.
     if (meta !== null) metas.push(meta);
   }
@@ -128,14 +123,15 @@ export async function listPrototypeMetas(): Promise<PrototypeMeta[]> {
  * One prototype's `PrototypeMeta`, read from its own folder alone (the tree is
  * only listed, for the sibling names its validation checks against) — for a
  * caller that names one prototype and must not pay for reading every folder.
- * `null` when no such prototype is on disk.
+ * `null` when no such prototype is in the tree.
  */
 export async function readPrototypeMeta(
+  mount: Mount,
   name: string,
 ): Promise<PrototypeMeta | null> {
-  const dirNames = await listPrototypeDirNames(prototypesDir.path);
+  const dirNames = await listPrototypeDirNames(mount);
   if (!dirNames.includes(name)) return null;
-  return await readMeta(name, dirNames);
+  return await readMeta(mount, name, dirNames);
 }
 
 /**
@@ -146,39 +142,33 @@ export async function readPrototypeMeta(
  * lister's does.
  */
 export async function readPrototypeTitle(
+  mount: Mount,
   name: string,
 ): Promise<{ found: true; title: string } | { found: false }> {
-  let html: string;
+  let entry;
   try {
-    html = await readFile(
-      join(prototypesDir.path, name, PROTOTYPE_ENTRY_FILE),
-      "utf8",
-    );
+    entry = relPath(name, PROTOTYPE_ENTRY_FILE);
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") {
-      return { found: false };
-    }
+    // A name no folder can have (a `/` in it, `..`) names no prototype.
+    if (err instanceof InvalidRelPathError) return { found: false };
     throw err;
   }
-  const { title } = await parseHtmlMeta(html);
+  const read = await readText(mount, entry);
+  if (read.kind === "missing") return { found: false };
+  const { title } = parseHtmlMeta(read.text);
   return { found: true, title: title === "" ? UNTITLED_PROTOTYPE : title };
 }
 
 async function readMeta(
+  mount: Mount,
   dirName: string,
   siblings: string[],
 ): Promise<PrototypeMeta | null> {
-  const dirAbs = join(prototypesDir.path, dirName);
-  let dirStat;
-  try {
-    dirStat = await stat(dirAbs);
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
-    throw err;
-  }
-  const files = await readFolderFiles(dirAbs);
+  const dirStat = await mount.stat(relPath(dirName));
+  if (dirStat.kind === "missing") return null;
+  const files = await readFolderFiles(mount, dirName);
   if (files === null) return null;
-  const createdAt = dirStat.birthtimeMs;
+  const createdAt = dirStat.entry.birthtimeMs;
   const base = {
     name: dirName,
     rev: revOfSignature(signatureOfFiles(files)),
@@ -195,7 +185,7 @@ async function readMeta(
 
   let folder: PrototypeFolder;
   try {
-    folder = await readPrototypeFolder(prototypesDir.path, dirName, siblings);
+    folder = await readPrototypeFolder(mount, dirName, siblings);
   } catch (err) {
     // One unreadable folder must not take the whole gallery down with it — but
     // it is reported on its own card rather than swallowed.
@@ -205,11 +195,11 @@ async function readMeta(
     };
   }
 
-  const problems: PrototypeProblem[] = await validatePrototypeFolder(folder);
+  const problems: PrototypeProblem[] = validatePrototypeFolder(folder);
   const html = folder.texts.get(PROTOTYPE_ENTRY_FILE);
   if (html === undefined) return { ...base, problems };
 
-  const parsed = await parseHtmlMeta(html);
+  const parsed = parseHtmlMeta(html);
   return {
     ...base,
     title: parsed.title === "" ? UNTITLED_PROTOTYPE : parsed.title,
@@ -218,7 +208,7 @@ async function readMeta(
     mocks: parsed.mocks,
     // Valid options only; each broken line is already in `problems`, from the
     // same read (`validatePrototypeFolder` calls `readPrototypeOptions` too).
-    options: (await readPrototypeOptions(html)).options,
+    options: readPrototypeOptions(html).options,
     problems,
   };
 }

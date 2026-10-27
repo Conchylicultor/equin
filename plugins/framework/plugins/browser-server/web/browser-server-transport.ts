@@ -4,6 +4,7 @@ import {
   type Transport,
   type TransportSocket,
 } from "@plugins/primitives/plugins/networking/web";
+import { REQUEST_BASE } from "./frames-protocol";
 
 // The `Transport` over a browser server: what a `<TransportProvider>` points a
 // subtree at so the unchanged app (live-state's `NotificationsProvider`, the
@@ -13,9 +14,6 @@ import {
 
 /** The worktree notifications socket — the one channel a browser server hosts. */
 const NOTIFICATIONS_PATH = "/ws/notifications";
-
-/** The origin a relative request is resolved against: never fetched, only parsed. */
-const REQUEST_BASE = "http://browser-server.invalid";
 
 /** A socket over `server.connect`, shaped like the `SharedWebSocket` a client expects. */
 function connectedSocket(server: BrowserServer, url: string): TransportSocket {
@@ -97,11 +95,13 @@ function inertSocket(url: string): TransportSocket {
  * whether the telemetry its traffic raises is reported (to the page's own
  * server — a browser server has nowhere of its own to keep it): the enclosing
  * page's setting (`useTransport().telemetry` where the scope is mounted), or
- * `false` to drop it.
+ * `false` to drop it. `frameBase` is where a frame document of this server
+ * loads by URL — `attachFrameServing`'s, or `null` where nothing serves its
+ * frames (no Service Worker).
  */
 export function browserServerTransport(
   server: BrowserServer,
-  { telemetry }: { telemetry: boolean },
+  { telemetry, frameBase }: { telemetry: boolean; frameBase: string | null },
 ): Transport {
   const prefix = `browser:${server.id}:`;
   return {
@@ -126,6 +126,9 @@ export function browserServerTransport(
     // No URL reaches a server in the page: an element's asset is fetched
     // through `fetch` above and handed over as a blob URL (`useAssetSrc`).
     servesUrls: false,
+    // A frame document is served apart from the page: through the
+    // frame-serving Service Worker, under its own prefix.
+    frameBase,
     // A server in the page: the computer is not behind it.
     machine: false,
     telemetry,

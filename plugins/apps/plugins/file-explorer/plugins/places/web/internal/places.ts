@@ -26,7 +26,7 @@ function fixedPlace(
 ): () => PlacesState {
   const state: PlacesState = {
     kind: "ready",
-    places: [{ id, label, path, icon }],
+    places: [{ kind: "folder", id, label, path, icon }],
   };
   return function useFixedPlace() {
     return state;
@@ -56,7 +56,13 @@ function useRepoPlace(): PlacesState {
   return {
     kind: "ready",
     places: [
-      { id: LEGACY_IDS.fileExplorerPlace, label, path, icon: folderIcon },
+      {
+        kind: "folder",
+        id: LEGACY_IDS.fileExplorerPlace,
+        label,
+        path,
+        icon: folderIcon,
+      },
     ],
   };
 }
@@ -89,6 +95,7 @@ function useStartupVolumePlace(): PlacesState {
         kind: "ready",
         places: [
           {
+            kind: "folder",
             id: "startup-volume",
             label: volume.data.name,
             path: "/",

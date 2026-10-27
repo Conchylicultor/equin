@@ -57,13 +57,18 @@ export function inRealmServer(opts: InRealmServerOptions = {}): BrowserServer {
  * one end of an in-realm `MessageChannel`: the other end runs `serveOverPort`
  * over the server `boot` returns — or, when `boot` throws, reports the failure
  * (`PortHostBootError` on the page side), as a real worker whose graph fails
- * to boot does.
+ * to boot does. `serviceWorkerUrl` is the host module's frame-serving script
+ * URL — only a test that stubs `navigator.serviceWorker` registers it.
  */
 export function channelHost(
   boot: () => BrowserServer | Promise<BrowserServer>,
-): () => Promise<{ start(): Worker }> {
+  {
+    serviceWorkerUrl = "http://localhost/artifacts/test-host/frames-sw.js",
+  }: { serviceWorkerUrl?: string } = {},
+): () => Promise<{ start(): Worker; serviceWorkerUrl: string }> {
   return () =>
     Promise.resolve({
+      serviceWorkerUrl,
       start: () => {
         const channel = new MessageChannel();
         // `addEventListener` does not start a port; both ends must be.

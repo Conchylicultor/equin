@@ -6,6 +6,10 @@ arrival order; different keys never wait on each other. Each call runs its own
 `fn` exactly once and gets its own result or rejection — a failure never stalls
 the calls queued behind it. A key's entry is deleted by the run that is still
 its queue's tail when it settles, so an idle key holds nothing.
+`run(key, fn, { signal })` bounds the wait: a call still queued when the signal
+aborts rejects with its reason and never runs, while the calls behind it keep
+waiting for the runs ahead (`infra/paths/data-files`' `withLock` arms its
+deadline before the queue this way).
 
 Neighbours, and why they do not fit a mutation that must not interleave:
 

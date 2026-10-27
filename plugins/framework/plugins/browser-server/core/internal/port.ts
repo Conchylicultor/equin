@@ -5,7 +5,9 @@
 // speak the closed message vocabulary below — requests and responses as plain
 // data (bodies as transferred `ArrayBuffer`s, so a bytes resource crosses
 // intact), notifications sockets as numbered connections carrying the
-// resource-protocol frames verbatim.
+// resource-protocol frames verbatim. A page can also hand the worker a second
+// port (`attach`) that it answers requests on the same way — how a frame-serving
+// Service Worker (`web/frames-sw.ts`) reaches the server without the page.
 
 import type {
   BrowserServer,
@@ -41,7 +43,12 @@ type ToHost =
   | { t: "request"; id: number; request: WireRequest }
   | { t: "open"; conn: number }
   | { t: "frame"; conn: number; frame: string }
-  | { t: "close"; conn: number; code: number; reason: string };
+  | { t: "close"; conn: number; code: number; reason: string }
+  /**
+   * Serve `port` too, exactly as the worker's own port: another realm (a
+   * frame-serving Service Worker) sends its requests there.
+   */
+  | { t: "attach"; port: MessagePort };
 
 /** Worker → page. */
 type FromHost =
@@ -86,19 +93,32 @@ export async function serveOverPort(
 ): Promise<void> {
   // Listen first: a message the page sends while the graph boots waits for it.
   const booted = boot();
-  const sockets = new Map<number, BrowserServerSocket>();
-  const post = (msg: FromHost, transfer?: Transferable[]) =>
-    port.postMessage(msg, transfer);
 
-  port.addEventListener("message", (event: MessageEvent) => {
-    const msg = event.data as ToHost;
-    void handle(msg).catch((err: unknown) => {
-      console.error("[browser-server] worker host failed a message:", err);
-      throw err;
+  /** Answer every message `end` sends; its sockets are its own. */
+  function serveEnd(end: PortEnd): void {
+    const sockets = new Map<number, BrowserServerSocket>();
+    const post = (msg: FromHost, transfer?: Transferable[]) =>
+      end.postMessage(msg, transfer);
+    end.addEventListener("message", (event: MessageEvent) => {
+      const msg = event.data as ToHost;
+      void handle(msg, sockets, post).catch((err: unknown) => {
+        console.error("[browser-server] worker host failed a message:", err);
+        throw err;
+      });
     });
-  });
+  }
 
-  async function handle(msg: ToHost): Promise<void> {
+  async function handle(
+    msg: ToHost,
+    sockets: Map<number, BrowserServerSocket>,
+    post: (msg: FromHost, transfer?: Transferable[]) => void,
+  ): Promise<void> {
+    if (msg.t === "attach") {
+      serveEnd(msg.port);
+      // `addEventListener` alone does not start a MessagePort.
+      msg.port.start();
+      return;
+    }
     const { server } = await booted;
     switch (msg.t) {
       case "request": {
@@ -128,6 +148,9 @@ export async function serveOverPort(
         return;
     }
   }
+
+  serveEnd(port);
+  const post = (msg: FromHost) => port.postMessage(msg);
 
   let host: HostBooted;
   try {
@@ -185,32 +208,66 @@ export interface PortServer extends HostBooted {
 }
 
 /**
+ * Requests over `port` (an end a server answers on: a `Worker` running
+ * `serveOverPort`, or a port `attachPort` handed it): each one out as plain
+ * data, its response back. Listens on `port` for the responses itself; the
+ * caller starts a `MessagePort` (`addEventListener` alone does not).
+ */
+export function portRequester(
+  port: PortEnd,
+): (req: Request) => Promise<Response> {
+  let nextId = 0;
+  const pending = new Map<number, (res: Response) => void>();
+  port.addEventListener("message", (event: MessageEvent) => {
+    const msg = event.data as FromHost;
+    if (msg.t !== "response") return;
+    const { status, statusText, headers, body } = msg.response;
+    const settle = pending.get(msg.id);
+    pending.delete(msg.id);
+    settle?.(
+      new Response(status === 204 || status === 304 ? null : body, {
+        status,
+        statusText,
+        headers,
+      }),
+    );
+  });
+  return async (req) => {
+    const id = nextId++;
+    const request = await toWireRequest(req);
+    const answer = new Promise<Response>((resolve) => pending.set(id, resolve));
+    port.postMessage(
+      { t: "request", id, request } satisfies ToHost,
+      request.body === null ? [] : [request.body],
+    );
+    return answer;
+  };
+}
+
+/**
+ * Hand the server behind `worker` (running `serveOverPort`) one more end to
+ * answer on — `port` is transferred; whoever holds its twin (a frame-serving
+ * Service Worker) reaches the server through `portRequester(twin)`.
+ */
+export function attachPort(worker: PortEnd, port: MessagePort): void {
+  worker.postMessage({ t: "attach", port } satisfies ToHost, [port]);
+}
+
+/**
  * The page side: a `BrowserServer` over `port` (a `Worker` running
  * `serveOverPort`), resolved once the worker reports `ready`; rejected with
  * `PortHostBootError` when it reports `failed`. `dispose` closes every socket
  * from the server's side; ending the worker is the caller's.
  */
 export function portBrowserServer(port: PortEnd): Promise<PortServer> {
-  let nextId = 0;
-  const pending = new Map<number, (res: Response) => void>();
+  let nextConn = 0;
   const peers = new Map<number, BrowserServerPeer>();
 
   const server: BrowserServer = {
     id: globalThis.crypto.randomUUID(),
-    async request(req) {
-      const id = nextId++;
-      const request = await toWireRequest(req);
-      const answer = new Promise<Response>((resolve) =>
-        pending.set(id, resolve),
-      );
-      port.postMessage(
-        { t: "request", id, request } satisfies ToHost,
-        request.body === null ? [] : [request.body],
-      );
-      return answer;
-    },
+    request: portRequester(port),
     connect(peer) {
-      const conn = nextId++;
+      const conn = nextConn++;
       peers.set(conn, peer);
       port.postMessage({ t: "open", conn } satisfies ToHost);
       let closed = false;
@@ -258,19 +315,9 @@ export function portBrowserServer(port: PortEnd): Promise<PortServer> {
         case "failed":
           reject(new PortHostBootError(msg.error));
           return;
-        case "response": {
-          const { status, statusText, headers, body } = msg.response;
-          const settle = pending.get(msg.id);
-          pending.delete(msg.id);
-          settle?.(
-            new Response(status === 204 || status === 304 ? null : body, {
-              status,
-              statusText,
-              headers,
-            }),
-          );
+        case "response":
+          // `portRequester`'s.
           return;
-        }
         case "deliver":
           peers.get(msg.conn)?.deliver(msg.frame);
           return;

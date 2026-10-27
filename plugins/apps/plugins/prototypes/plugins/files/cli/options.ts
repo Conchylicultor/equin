@@ -11,6 +11,7 @@ import {
 import { listPrototypeMetas } from "../shared/list-metas";
 import { openPicksStore } from "../shared/picks";
 import { prototypeDocumentUrlFormatter } from "./prototype-url";
+import { cliFiles } from "./tree";
 
 /** The screenshot tool, as the repo's CLAUDE.md names it. */
 const SCREENSHOT_SCRIPT =
@@ -35,11 +36,12 @@ const SCREENSHOT_SCRIPT =
 export const prototypeOptionsAction: CliAction<[string], object> = async (
   id,
 ) => {
-  const metas = await listPrototypeMetas();
+  const files = cliFiles();
+  const metas = await listPrototypeMetas(files);
   const meta = metas.find((m) => m.name === id);
   if (!meta) throw new Error(`no prototype ${id} in ${prototypesDir.path}`);
 
-  const stored = await openPicksStore(prototypesDir.path).read(id);
+  const stored = await openPicksStore(files).read(id);
   const picks = resolvePicks(meta.options, stored);
 
   console.log(`${meta.name}  ${meta.title}`);

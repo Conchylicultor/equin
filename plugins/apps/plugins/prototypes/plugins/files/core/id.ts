@@ -5,7 +5,7 @@ import { defineIdKind } from "@plugins/ids/core";
 // `prototypeIdsIn` all read it from here (`plugins/ids`).
 //
 // A prototype's id IS its directory name, so the filesystem is the uniqueness
-// authority and the mint is a `mkdir` (`shared/mint.ts` re-mints on a
+// authority and the mint is a `mkdir` (`machine/internal/mint.ts` re-mints on a
 // collision): there is no dir↔id map in front of the routes, the watcher, the
 // thumbnail cache or the backup source. It is opaque rather than a slug because
 // the folder is minted BEFORE the agent has designed anything — any name chosen

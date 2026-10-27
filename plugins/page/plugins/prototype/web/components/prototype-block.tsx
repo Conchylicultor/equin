@@ -32,7 +32,8 @@ import {
   matchResource,
 } from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { useAssetUrl } from "@plugins/infra/plugins/endpoints/web";
+import { frameUrlOver } from "@plugins/infra/plugins/endpoints/web";
+import { useTransport } from "@plugins/primitives/plugins/networking/web";
 import {
   useBlockActivate,
   type BlockRendererProps,
@@ -154,7 +155,13 @@ export function PrototypeBlock({ block, editor }: BlockRendererProps) {
  */
 function PrototypeCard({ meta }: { meta: PrototypeMeta }) {
   const openPane = useOpenPane();
-  const url = useAssetUrl(prototypeDocument(meta.name, { v: meta.rev }));
+  // A frame document, behind the transport's frame base (`frameUrlOver`): the
+  // page's own path on the desktop, an in-browser server's frames through its
+  // Service Worker in the demo — so its relative files resolve beside it.
+  const url = frameUrlOver(
+    useTransport(),
+    prototypeDocument(meta.name, { v: meta.rev }),
+  );
   // `push`: the canvas opens as a column to the RIGHT of the page, so the
   // document that links the mock stays on screen beside it.
   const openBeside = openPane.to(

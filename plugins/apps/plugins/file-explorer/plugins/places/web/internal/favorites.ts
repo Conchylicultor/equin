@@ -60,9 +60,16 @@ export function usePinnedPlaces(): PlacesState {
     places: config.data.pinned.map((pin) => {
       const label = baseName(pin.path);
       if (pin.kind === "dir") {
-        return { id: pin.path, label, path: pin.path, icon: folderIcon };
+        return {
+          kind: "folder",
+          id: pin.path,
+          label,
+          path: pin.path,
+          icon: folderIcon,
+        };
       }
       return {
+        kind: "folder",
         id: pin.path,
         label,
         path: parentPath(pin.path, home.home) ?? "/",

@@ -1,17 +1,30 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
+import { rawEndpointHandler } from "@plugins/infra/plugins/endpoints/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { onPrototypesChanged } from "@plugins/apps/plugins/prototypes/plugins/files/server";
-import { onDepInstallSettled } from "@plugins/infra/plugins/deps/server";
-import { chromium } from "@plugins/infra/plugins/safe-fetch/plugins/browser-fetch/deps";
-import { renderThumbnailJob, sweepThumbnailsJob } from "./internal/jobs";
+import { getPrototypeThumbnail } from "../core";
+import { handleThumbnail } from "./internal/serve-thumbnail";
 import { prototypeThumbnailsServed } from "./internal/state";
 import { syncChangedThumbnails, syncThumbnails } from "./internal/sync";
 
+// The renderer is the one thing a host brings: Chromium on the desktop (this
+// plugin's machine/ half), none in a browser host (`thumbnails/no-renderer`).
+export { ThumbnailRenderer } from "./internal/renderer";
+// The cache's file root — for a seed whose PNGs were rendered ahead of time (a
+// browser host renders none): written there, they answer as any cache hit.
+export { thumbnailCache } from "./internal/roots";
+
 export default {
   description:
-    "Rendered PNG previews for the prototypes gallery: a content-addressed disk cache, a headless-chromium render job driven by the files watcher, and the push state resource the cards read; the immutable serving route is the machine/ half's.",
+    "Rendered PNG previews for the prototypes gallery, on every host: the content-addressed cache (the thumbnailCache file root), the fingerprint sync driven by the files watcher, the push state resource the cards read and the immutable serving route. Rendering is the ThumbnailRenderer host service's — a host without one answers a cache miss as `unavailable`.",
+  portable: true,
+  httpRoutes: {
+    [getPrototypeThumbnail.route]: rawEndpointHandler(
+      getPrototypeThumbnail,
+      handleThumbnail,
+    ),
+  },
   contributions: [...prototypeThumbnailsServed.declare],
-  register: [renderThumbnailJob, sweepThumbnailsJob],
   onReady: () => {
     // `files` owns `prototypes/` and already watches it; subscribing to the
     // signal it computes is what keeps a second watcher off the same tree.
@@ -22,17 +35,11 @@ export default {
       );
     });
 
-    // A render that found no browser parked its card in `waiting-for-browser`
-    // and asked for the install; when that install settles, re-sync, which
-    // re-renders those (or leaves them to fail honestly if it failed).
-    onDepInstallSettled(chromium, () => {
-      void runTracked("prototype-thumbnails:sync", () => syncThumbnails());
-    });
-
-    // Reconcile once at boot: the cache is host-global and survives restarts,
-    // so this is usually a few stats that confirm everything is already there.
-    // Fire-and-forget — a failure surfaces as an unhandled rejection (reports
-    // files it) rather than being swallowed into an invisible boot no-op.
+    // Reconcile once at boot: the cache survives restarts on the desktop (and
+    // is seeded in a browser host), so this is usually a few stats that
+    // confirm everything is already there. Fire-and-forget — a failure
+    // surfaces as an unhandled rejection (reports files it) rather than being
+    // swallowed into an invisible boot no-op.
     void runTracked("prototype-thumbnails:sync", () => syncThumbnails());
   },
 } satisfies ServerPluginDefinition;

@@ -1,6 +1,7 @@
 import { eq, sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { HttpError, implement } from "@plugins/infra/plugins/endpoints/server";
+import { protoIdKind } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import { prototypeExists } from "@plugins/apps/plugins/prototypes/plugins/files/server";
 import {
   deletePrototype,
@@ -20,7 +21,7 @@ export const handleSetPrototypeState = implement(
   setPrototypeState,
   async ({ params, body }) => {
     const { name } = params;
-    if (!prototypeExists(name)) {
+    if (!protoIdKind.is(name) || !(await prototypeExists(name))) {
       throw new HttpError(404, `no such prototype: ${name}`);
     }
     const set: Partial<typeof _prototypeState.$inferInsert> = {};
@@ -61,7 +62,7 @@ export const handleDeletePrototype = implement(
   deletePrototype,
   async ({ params }) => {
     const { name } = params;
-    if (!prototypeExists(name)) {
+    if (!protoIdKind.is(name) || !(await prototypeExists(name))) {
       throw new HttpError(404, `no such prototype: ${name}`);
     }
     await db
@@ -81,7 +82,7 @@ export const handleRestorePrototype = implement(
   restorePrototype,
   async ({ params }) => {
     const { name } = params;
-    if (!prototypeExists(name)) {
+    if (!protoIdKind.is(name) || !(await prototypeExists(name))) {
       throw new HttpError(404, `no such prototype: ${name}`);
     }
     // No row = not deleted: nothing to clear.

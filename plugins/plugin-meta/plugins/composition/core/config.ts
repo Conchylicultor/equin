@@ -231,7 +231,8 @@ export const compositionsConfig = defineConfig({
         // memory stores for attachment bytes, logs, the push ledger and
         // transcripts, the migration history bundled as text, the baseline
         // model catalog, the task titles kept as filed, the guest host account,
-        // the in-memory config store and the committed config bundled as text.
+        // the in-memory config store, the committed config bundled as text, the
+        // in-memory data files and the prototypes' snapshot version history.
         // A desktop backend
         // provides each of those services from a machine half
         // (`database#machine`, `jobs#machine`, `config_v2#machine`, …), and a
@@ -257,6 +258,9 @@ export const compositionsConfig = defineConfig({
             "!infra.host-account.guest.**",
             "!config_v2.browser-store.**",
             "!config_v2.bundled-layer.**",
+            "!infra.paths.data-files.memory.**",
+            "!apps.prototypes.files.snapshot-history.**",
+            "!apps.prototypes.thumbnails.no-renderer.**",
           ],
           selectedContributors: [] as string[],
           extends: [] as string[],
@@ -323,10 +327,13 @@ export const compositionsConfig = defineConfig({
         // - the file explorer (`apps.file-explorer.**`, and the conversation's
         //   Explorer tab that embeds it): browses a checkout on disk.
         //
-        // And Prototypes (and, with it, the prototype artifacts and chips): a
-        // prototype is a folder on the computer's disk, so it returns once a
-        // virtual file-system host service exists for file-based apps
-        // (research/2026-10-24-global-demo-pages-and-in-embed-app-switching.md).
+        // Prototypes joins it (`apps.prototypes.**`): its tree is a
+        // `data-files` root, memory in the worker, seeded with the demo's
+        // prototypes (research/2026-10-24-global-data-files-host-service.md).
+        // The prototype chips (`active-data.prototype.**`) stay out: the
+        // agent-manager profile this extends negates them, a negative a
+        // positive here may not contradict (composition-closure), and no
+        // seeded transcript names a prototype.
         // Events, Places and Stats are not in the bundle at all (Stats left
         // with `conversations.usage`'s cost scan, now in its `machine/`), so a
         // negative for them would trim nothing — a dead negative. Debug cannot leave yet: the
@@ -350,7 +357,7 @@ export const compositionsConfig = defineConfig({
             "!tasks.sidequest-autopilot.**",
             "!tasks.outcome-report.**",
             "!apps.file-explorer.**",
-            "!apps.prototypes.**",
+            "apps.prototypes.**",
             // The OS menu-bar panel and its sections: a page the native
             // helper opens on the computer, meaningless in a demo.
             "!menu-bar.**",

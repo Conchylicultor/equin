@@ -8,6 +8,7 @@ import {
 } from "@plugins/primitives/plugins/embed/web";
 import type { EmbedMode } from "@plugins/primitives/plugins/embed/core";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
+import { useTransport } from "@plugins/primitives/plugins/networking/web";
 import type {
   CounterpartKindProps,
   CounterpartResolution,
@@ -48,7 +49,10 @@ function AppCounterpartOf({
 }: CounterpartKindProps & { embed: EmbedMode }): ReactElement {
   const apps = Apps.App.useContributions();
   const deferredComplete = useDeferredLoadComplete();
-  return <>{children(resolve(target, apps, deferredComplete, embed))}</>;
+  const { servesUrls } = useTransport();
+  return (
+    <>{children(resolve(target, apps, deferredComplete, embed, servesUrls))}</>
+  );
 }
 
 function resolve(
@@ -56,7 +60,21 @@ function resolve(
   apps: ReturnType<typeof Apps.App.useContributions>,
   deferredComplete: boolean,
   embed: EmbedMode,
+  servesUrls: boolean,
 ): CounterpartResolution {
+  // The frame loads the app by URL on THIS page's origin — which is this
+  // subtree's app only when its server is the page's own. Under an in-browser
+  // server (the demo) that URL would boot the page's real app on the page's
+  // real data beside a mock of the scoped one, so there is no frame to offer.
+  if (!servesUrls) {
+    return {
+      status: "unresolved",
+      title: "The real app frame needs the app served by URL.",
+      detail:
+        "It loads the running app at its own address, and this version of the app runs in the browser with no address of its own. Open the prototype in Singularity on your computer to compare it with the real screen.",
+    };
+  }
+
   // Framing stops at depth one. This document being a framed app screen means
   // the path in some prototype led back to a prototype canvas — its own
   // (`route:/prototypes/proto/<id>`) or another one that leads back —

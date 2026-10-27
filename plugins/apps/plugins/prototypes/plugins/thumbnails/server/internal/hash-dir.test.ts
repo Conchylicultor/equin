@@ -1,65 +1,109 @@
-import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtemp, mkdir, rm, utimes, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { fingerprintDir } from "./hash-dir";
+import { describe, expect, test } from "bun:test";
+import {
+  parseRelPath,
+  relPath,
+  type FileData,
+  type Mount,
+} from "@plugins/infra/plugins/paths/plugins/data-files/core";
+import { createMemoryDataFiles } from "@plugins/infra/plugins/paths/plugins/data-files/plugins/memory/server/testing";
+import { systemOrigin } from "@plugins/infra/plugins/request-origin/core";
+import { fingerprintFolder } from "./hash-dir";
 
-const dirs: string[] = [];
+const writer = systemOrigin("fingerprint test");
 
-async function makeDir(files: Record<string, string>): Promise<string> {
-  const dir = await mkdtemp(join(tmpdir(), "thumb-fp-"));
-  dirs.push(dir);
-  for (const [name, content] of Object.entries(files)) {
-    await writeFile(join(dir, name), content, "utf8");
-  }
-  return dir;
+// A fresh memory root per call — the same Mount a browser host reads, and the
+// same operations the desktop's disk root answers.
+function freshMount(): Mount {
+  return createMemoryDataFiles().root({
+    id: "thumbnails.fingerprint-test",
+    dir: "cache/fingerprint-test",
+  });
 }
 
-afterEach(async () => {
-  for (const dir of dirs.splice(0))
-    await rm(dir, { recursive: true, force: true });
-});
+async function makeDir(
+  mount: Mount,
+  name: string,
+  files: Record<string, FileData>,
+): Promise<void> {
+  for (const [file, content] of Object.entries(files)) {
+    await mount.write(parseRelPath(`${name}/${file}`), content, { writer });
+  }
+}
 
-describe("fingerprintDir", () => {
+async function keyOf(mount: Mount, name: string): Promise<string> {
+  const fingerprint = await fingerprintFolder(mount, relPath(name));
+  if (fingerprint.kind !== "hashed") throw new Error(`${name} is missing`);
+  return fingerprint.key;
+}
+
+describe("fingerprintFolder", () => {
+  test("the digest is the one every cached PNG is named by", async () => {
+    // Pinned: `createHash("sha256")` (node:crypto) over name, NUL, bytes, NUL
+    // per file in sorted order — the stream the cache keys were made from
+    // before the fingerprint ran on every host. A change here re-renders (and
+    // orphans) every cached thumbnail.
+    const mount = freshMount();
+    await makeDir(mount, "p", {
+      "index.html": "<h1>hi</h1>",
+      "logo.png": new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x00, 0xff]),
+      "app.js": "x",
+    });
+
+    expect(await keyOf(mount, "p")).toBe(
+      "d2dc2895b1f13754514339d1971dcb3e8c3b139e58449288b60ed5dbab092e1c",
+    );
+  });
+
   test("identical content hashes identically across folders", async () => {
-    const a = await makeDir({ "index.html": "<h1>hi</h1>", "app.js": "x" });
-    const b = await makeDir({ "app.js": "x", "index.html": "<h1>hi</h1>" });
+    const mount = freshMount();
+    await makeDir(mount, "a", { "index.html": "<h1>hi</h1>", "app.js": "x" });
+    await makeDir(mount, "b", { "app.js": "x", "index.html": "<h1>hi</h1>" });
 
-    expect(await fingerprintDir(a)).toBe(await fingerprintDir(b));
+    expect(await keyOf(mount, "a")).toBe(await keyOf(mount, "b"));
   });
 
   test("a byte change changes the hash", async () => {
-    const dir = await makeDir({ "index.html": "<h1>hi</h1>" });
-    const before = await fingerprintDir(dir);
+    const mount = freshMount();
+    await makeDir(mount, "p", { "index.html": "<h1>hi</h1>" });
+    const before = await keyOf(mount, "p");
 
-    await writeFile(join(dir, "index.html"), "<h1>hi!</h1>", "utf8");
+    await makeDir(mount, "p", { "index.html": "<h1>hi!</h1>" });
 
-    expect(await fingerprintDir(dir)).not.toBe(before);
+    expect(await keyOf(mount, "p")).not.toBe(before);
   });
 
-  test("a touch that changes no bytes does not change the hash", async () => {
-    const dir = await makeDir({ "index.html": "<h1>hi</h1>" });
-    const before = await fingerprintDir(dir);
+  test("a rewrite that changes no bytes does not change the hash", async () => {
+    const mount = freshMount();
+    await makeDir(mount, "p", { "index.html": "<h1>hi</h1>" });
+    const before = await keyOf(mount, "p");
 
-    const later = new Date(Date.now() + 60_000);
-    await utimes(join(dir, "index.html"), later, later);
+    // A newer mtime, the same bytes — what a `git checkout` does.
+    await makeDir(mount, "p", { "index.html": "<h1>hi</h1>" });
 
-    expect(await fingerprintDir(dir)).toBe(before);
+    expect(await keyOf(mount, "p")).toBe(before);
   });
 
   test("moving content between files changes the hash", async () => {
-    const a = await makeDir({ "one.js": "alpha", "two.js": "beta" });
-    const b = await makeDir({ "one.js": "beta", "two.js": "alpha" });
+    const mount = freshMount();
+    await makeDir(mount, "a", { "one.js": "alpha", "two.js": "beta" });
+    await makeDir(mount, "b", { "one.js": "beta", "two.js": "alpha" });
 
-    expect(await fingerprintDir(a)).not.toBe(await fingerprintDir(b));
+    expect(await keyOf(mount, "a")).not.toBe(await keyOf(mount, "b"));
   });
 
   test("subdirectories are skipped, not hashed as empty names", async () => {
-    const dir = await makeDir({ "index.html": "<h1>hi</h1>" });
-    const before = await fingerprintDir(dir);
+    const mount = freshMount();
+    await makeDir(mount, "p", { "index.html": "<h1>hi</h1>" });
+    const before = await keyOf(mount, "p");
 
-    await mkdir(join(dir, "nested"));
+    await makeDir(mount, "p", { "nested/deep.txt": "x" });
 
-    expect(await fingerprintDir(dir)).toBe(before);
+    expect(await keyOf(mount, "p")).toBe(before);
+  });
+
+  test("a folder that is not there is missing, not an empty hash", async () => {
+    expect(await fingerprintFolder(freshMount(), relPath("gone"))).toEqual({
+      kind: "missing",
+    });
   });
 });

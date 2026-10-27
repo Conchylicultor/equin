@@ -6,15 +6,25 @@ import type {
   AppShellToolbarItem,
 } from "@plugins/primitives/plugins/app-shell/web";
 import type { IconRef } from "@plugins/ui/plugins/icons/core";
+import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
 
 /** Which run of the Places sidebar a place sits in. */
 export type PlaceGroup = "favorites" | "locations";
 
-/** One place the sidebar lists. `path` is in display form (`~/…` under home). */
-export interface Place {
+/** What every place has, wherever it leads. */
+interface PlaceBase {
   /** Unique within its source; the row's key is `<source id>:<place id>`. */
   id: string;
   label: string;
+  icon: IconRef;
+}
+
+/**
+ * A host folder the routed browser opens. `path` is in display form (`~/…`
+ * under home); the sidebar marks it active while the browser shows it.
+ */
+export interface FolderPlace extends PlaceBase {
+  kind: "folder";
   /** The folder it opens. */
   path: string;
   /**
@@ -22,8 +32,22 @@ export interface Place {
    * file opens its folder with the file beside it. Absent for a folder.
    */
   open?: string;
-  icon: IconRef;
 }
+
+/**
+ * A place that is not a host folder — reached by a route of its own (the App
+ * data place: the app's own files, on every host). Its source says where it
+ * leads and whether the surface is showing it.
+ */
+export interface RoutePlace extends PlaceBase {
+  kind: "route";
+  target: LinkTarget;
+  /** The surface shows this place now (the sidebar marks it). */
+  active: boolean;
+}
+
+/** One place the sidebar lists. */
+export type Place = FolderPlace | RoutePlace;
 
 /**
  * What a source of places answers. Its places come from the server or a live

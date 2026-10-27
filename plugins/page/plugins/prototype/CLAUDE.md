@@ -23,14 +23,14 @@ block); a human picks one from the `/prototype` picker.
 - Description: Prototype block type: links a prototype (proto-…) into a page live and interactive in place, its actions (open beside, new tab) revealed on hover. Inserted by /prototype (a picker over every prototype), or written by an agent as <prototype id="proto-…"/>. Prototype block type: registers its `data` schema (the prototype id) at the server write boundary, and supplies the prototype's `<title>` to the `<prototype>` tag an agent reads.
 - Web:
   - Contributes: `Editor.Block` "prototype" → `PrototypeBlock`
-  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 32 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `page/editor` ×3
     - `primitives/css/layer` ×2
     - `primitives/css/ui-kit` ×2
     - `primitives/hover-reveal` ×2
     - `primitives/live-state` ×2
     - `apps/prototypes/canvas.prototypeDetailPane`
-    - `infra/endpoints.useAssetUrl`
+    - `infra/endpoints.frameUrlOver`
     - `network/live.useLive`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
@@ -44,6 +44,7 @@ block); a human picks one from the `/prototype` picker.
     - `primitives/link-gesture/new-tab.NewTabButton`
     - `primitives/link-gesture.activationProps`
     - `primitives/loading.Loading`
+    - `primitives/networking.useTransport`
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/pane.useOpenPane`
     - `primitives/search.SearchInput`

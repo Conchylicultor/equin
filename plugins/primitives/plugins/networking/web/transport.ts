@@ -56,6 +56,18 @@ export interface Transport {
    */
   readonly servesUrls: boolean;
   /**
+   * Where a NAVIGATED document — an `<iframe>`, whose relative sub-resources
+   * must resolve beside it — loads this transport's `/api/…` paths: the path
+   * prefix in front of them. `""` — the page's own server, same origin; a
+   * scoped prefix — an in-browser server's frames, served by the
+   * frame-serving Service Worker (`framework/browser-server`); `null` —
+   * nothing serves its documents by URL here (no Service Worker). Never valid
+   * for an element of the page itself, which no Service Worker controls: that
+   * is {@link servesUrls}. Read through `frameUrlOver` (`infra/endpoints`).
+   * Required, so every transport states it.
+   */
+  readonly frameBase: string | null;
+  /**
    * Whether the computer is behind this transport — the desktop app's own
    * server — so a declaration that needs it (`needsMachine`: an endpoint, a
    * live read) can be asked. `false` (an in-browser server): its clients answer

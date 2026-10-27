@@ -1,0 +1,16 @@
+// @hash 6ec84829688d
+{
+  // The App data landing (app-data/web/components/app-data-roots.tsx): every
+  // browsable file root, one row each, in the order the server declares them.
+  "views": [
+    {
+      "id": "list",
+      "name": "List",
+      "icon": "list",
+      "view": { "type": "list" }
+    }
+  ],
+  "sortPresets": [],
+  "filterPresets": [],
+  "customColumns": []
+}

@@ -1,17 +1,15 @@
-import { join } from "node:path";
+import { prototypesFiles } from "@plugins/apps/plugins/prototypes/server";
 import { listPrototypeDirNames } from "../../shared/read-folder";
 import { readFolderSignature } from "../../shared/folder-signature";
-import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
 
 /**
  * What the prototypes tree looks like right now, one comparable string per
  * prototype folder: every file in it with its size and mtime.
  *
  * This is the answer to "did anything actually change?", and it is what the
- * list re-broadcast is gated on. A watcher event is a hint that something MIGHT
- * have changed — parcel also reports a touch, a chmod, an atomic-save's temp
- * file, and a reconcile tick — and nothing may be re-read for a tree that did
- * not move.
+ * list re-broadcast is gated on. A watch event is a hint that something MIGHT
+ * have changed — the desktop's watcher also reports a touch, a chmod, and a
+ * reconcile tick — and nothing may be re-read for a tree that did not move.
  *
  * Each folder's string is {@link readFolderSignature} — the same one the lister
  * hashes into `PrototypeMeta.rev`, so "the watcher saw this prototype move" and
@@ -22,11 +20,11 @@ import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
  * ({@link changedPrototypes}) is the set whose `dirty` flag may have flipped.
  */
 export async function readPrototypesSignature(): Promise<Map<string, string>> {
-  const dirNames = await listPrototypeDirNames(prototypesDir.path);
+  const dirNames = await listPrototypeDirNames(prototypesFiles);
 
   const signature = new Map<string, string>();
   for (const dirName of dirNames) {
-    const sig = await readFolderSignature(join(prototypesDir.path, dirName));
+    const sig = await readFolderSignature(prototypesFiles, dirName);
     if (sig !== null) signature.set(dirName, sig);
   }
   return signature;

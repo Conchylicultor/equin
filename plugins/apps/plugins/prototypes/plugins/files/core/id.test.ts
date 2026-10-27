@@ -30,7 +30,7 @@ describe("protoIdKind.mint", () => {
 
   test("ids are distinct within one second", () => {
     const ids = new Set(Array.from({ length: 200 }, () => protoIdKind.mint()));
-    // A collision is handled by re-minting in `shared/mint.ts`, not prevented
+    // A collision is handled by re-minting in `machine/internal/mint.ts`, not prevented
     // here; assert only that the mint is random at all.
     expect(ids.size).toBeGreaterThan(195);
   });

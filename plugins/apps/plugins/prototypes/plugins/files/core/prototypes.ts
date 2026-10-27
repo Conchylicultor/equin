@@ -142,14 +142,12 @@ export const prototypesList = liveValue("prototypes.list", {
 });
 
 /**
- * The raw file routes, declared so every reader of them is judged (the
- * browser-host coverage guard reads a literal `route:`) and answered
- * `unavailable` on a host without the computer: the prototypes tree is on
- * disk, so their raw handlers (per-file bytes / html with a custom
- * Content-Type, or a redirect, which `implement()`'s JSON contract does not
- * fit) are served by the plugin's `machine/` half.
+ * The raw file routes, served on every host: the tree is read through the
+ * app's file root (the disk on the desktop, memory in a browser host), so
+ * their raw handlers (per-file bytes / html with a custom Content-Type, or a
+ * redirect, which `implement()`'s JSON contract does not fit) are the plugin's
+ * portable `server/` barrel's.
  */
-const PROTOTYPE_FILES_FEATURE = { feature: "Prototypes" };
 
 /**
  * The query a document is asked for with: `?<option>=<value>` picks (plus `v`,
@@ -164,7 +162,6 @@ const DocumentQuerySchema = z.record(z.string(), z.string());
 export const getPrototypeEntry = defineEndpoint({
   route: "GET /api/prototypes/:name",
   query: DocumentQuerySchema,
-  needsMachine: PROTOTYPE_FILES_FEATURE,
 });
 
 /**
@@ -182,7 +179,6 @@ export const getPrototypeFile = defineEndpoint({
   route: "GET /api/prototypes/:name/:file",
   query: DocumentQuerySchema,
   response: blob(),
-  needsMachine: PROTOTYPE_FILES_FEATURE,
 });
 
 /**
@@ -198,7 +194,6 @@ export const getPrototypeVersionFile = defineEndpoint({
   route: "GET /api/prototypes/:name/versions/:sha/:file",
   query: DocumentQuerySchema,
   response: blob(),
-  needsMachine: PROTOTYPE_FILES_FEATURE,
 });
 
 /**
@@ -228,7 +223,8 @@ export function prototypeDocumentQuery(
 /**
  * The document a frame loads: the prototype's own `index.html`, addressed
  * through the folder so its relative sub-resources resolve. An iframe loads it
- * by URL (its sub-resources too), so its src comes from `useAssetUrl`.
+ * by URL (its sub-resources too), so its src comes from `frameUrlOver` (the
+ * transport's frame base: the page's origin, or a browser host's frame scope).
  */
 export function prototypeDocument(
   name: string,
@@ -271,9 +267,14 @@ export function prototypeVersionDocument(
  *
  * A POST, so it does not share the list route's handler: the keys in
  * `httpRoutes` carry the method.
+ *
+ * Desktop-only (`needsMachine`): a mint copies the running checkout's
+ * `prototypes/_template/` off disk, and exists to hand the folder to an agent
+ * it then launches — neither of which a host without the computer has.
  */
 export const createPrototype = defineEndpoint({
   route: "POST /api/prototypes",
   body: z.object({ title: z.string().optional() }),
   response: z.object({ id: z.string() }),
+  needsMachine: { feature: "New prototype" },
 });

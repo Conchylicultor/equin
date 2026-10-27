@@ -5,7 +5,9 @@ export type {
 } from "./internal/browser-server";
 export {
   PortHostBootError,
+  attachPort,
   portBrowserServer,
+  portRequester,
   serveOverPort,
 } from "./internal/port";
 export type {

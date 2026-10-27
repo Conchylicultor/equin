@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-infra-paths-data-files",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Data files: one host-agnostic file store for app-owned data dirs — the DataFiles host service behind declared file roots (the computer's disk on the desktop, memory in a browser host)."
+}

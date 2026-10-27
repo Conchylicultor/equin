@@ -9,6 +9,10 @@
  * coverage guard missed — nothing hides it); a POST the host serves is
  * answered; a host whose boot throws reaches the error boundary; a page
  * pipeline beside the scope reading the same tuple sees its own backend only.
+ * Frame serving: without a Service Worker the scope's `frameBase` is null;
+ * with one (a stubbed container) the host's script is registered, an earlier
+ * build's frame scope dropped, and the port the Service Worker is handed
+ * reaches the host's server — detached on unmount.
  */
 
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -25,7 +29,10 @@ import {
   type LoadedPlugin,
 } from "@plugins/framework/plugins/web-sdk/core";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
-import type { BrowserServer } from "@plugins/framework/plugins/browser-server/core";
+import {
+  portRequester,
+  type BrowserServer,
+} from "@plugins/framework/plugins/browser-server/core";
 import {
   channelHost,
   inRealmServer,
@@ -57,6 +64,7 @@ import {
 } from "@plugins/primitives/plugins/live-state/web";
 import {
   TransportProvider,
+  useTransport,
   type Transport,
   type TransportSocket,
 } from "@plugins/primitives/plugins/networking/web";
@@ -385,6 +393,197 @@ describe("<DemoScope>", () => {
   });
 });
 
+/** What the stubbed Service Worker was sent, and the registrations it holds. */
+interface FakeServiceWorkers {
+  sent: { t: string; serverId: string; port?: MessagePort }[];
+  registered: { url: string; scope: string }[];
+  unregistered: string[];
+  /** Web Lock names held now — another tab's included. */
+  locks: Set<string>;
+}
+
+/**
+ * Stub `navigator.serviceWorker` and `navigator.locks` (jsdom has neither):
+ * `register` answers an already-activated worker recording what it is posted;
+ * an earlier build's frame scope sits among the registrations, and so does
+ * one another tab still serves through (it holds that scope's lock). Returns
+ * the restore.
+ */
+function stubServiceWorkers(): FakeServiceWorkers & { restore(): void } {
+  const fake: FakeServiceWorkers = {
+    sent: [],
+    registered: [],
+    unregistered: [],
+    locks: new Set([
+      "frames-scope http://localhost/artifacts/live-host/frames/",
+    ]),
+  };
+  const locks = {
+    request(name: string, _opts: unknown, hold: () => Promise<void>) {
+      fake.locks.add(name);
+      return hold().then(() => {
+        fake.locks.delete(name);
+      });
+    },
+    query: () =>
+      Promise.resolve({
+        held: [...fake.locks].map((name) => ({ name })),
+        pending: [],
+      }),
+  };
+  const active = {
+    state: "activated",
+    scriptURL: "",
+    postMessage: (msg: FakeServiceWorkers["sent"][number]) => {
+      fake.sent.push(msg);
+    },
+    addEventListener() {},
+    removeEventListener() {},
+  };
+  const reg = (scope: string) => ({
+    scope,
+    active,
+    waiting: null,
+    installing: null,
+    unregister: () => {
+      fake.unregistered.push(scope);
+      return Promise.resolve(true);
+    },
+  });
+  const container = {
+    register(url: string, { scope }: { scope: string }) {
+      fake.registered.push({ url, scope });
+      return Promise.resolve(reg(scope));
+    },
+    getRegistrations: () =>
+      Promise.resolve([
+        reg("http://localhost/artifacts/old-host/frames/"),
+        reg("http://localhost/artifacts/live-host/frames/"),
+        reg("http://localhost/artifacts/test-host/frames/"),
+        reg("http://localhost/somewhere-else/"),
+      ]),
+    addEventListener() {},
+    removeEventListener() {},
+    startMessages() {},
+  };
+  Object.defineProperty(navigator, "serviceWorker", {
+    value: container,
+    configurable: true,
+  });
+  Object.defineProperty(navigator, "locks", {
+    value: locks,
+    configurable: true,
+  });
+  return {
+    ...fake,
+    restore: () => {
+      Reflect.deleteProperty(navigator, "serviceWorker");
+      Reflect.deleteProperty(navigator, "locks");
+    },
+  };
+}
+
+describe("<DemoScope> frame serving", () => {
+  it("has no frame base where the browser offers no Service Worker", async () => {
+    expect("serviceWorker" in navigator).toBe(false);
+    let frameBase: string | null | undefined;
+    await renderAsync(
+      <PluginProvider plugins={PLUGINS}>
+        <DemoScope scenario={scenarioOf()}>
+          <Probe
+            read={() => useTransport().frameBase}
+            onRead={(b) => (frameBase = b)}
+          />
+        </DemoScope>
+      </PluginProvider>,
+    );
+    await waitFor(() => expect(frameBase).toBeNull());
+  });
+
+  it("has no frame base where the context blocks registration (register resolves nothing)", async () => {
+    // Playwright's `serviceWorkers: "block"` replaces `register` with one
+    // that resolves `undefined`: the agent browser, the thumbnail renderer.
+    Object.defineProperty(navigator, "serviceWorker", {
+      value: { register: () => Promise.resolve(undefined) },
+      configurable: true,
+    });
+    try {
+      let frameBase: string | null | undefined;
+      await renderAsync(
+        <PluginProvider plugins={PLUGINS}>
+          <DemoScope scenario={scenarioOf()}>
+            <Probe
+              read={() => useTransport().frameBase}
+              onRead={(b) => (frameBase = b)}
+            />
+          </DemoScope>
+        </PluginProvider>,
+      );
+      await waitFor(() => expect(frameBase).toBeNull());
+    } finally {
+      Reflect.deleteProperty(navigator, "serviceWorker");
+    }
+  });
+
+  it("serves the host's frames through its Service Worker, under a fresh server id", async () => {
+    const sw = stubServiceWorkers();
+    try {
+      let frameBase: string | null | undefined;
+      const view = await renderAsync(
+        <PluginProvider plugins={PLUGINS}>
+          <DemoScope scenario={scenarioOf()}>
+            <Probe
+              read={() => useTransport().frameBase}
+              onRead={(b) => (frameBase = b)}
+            />
+          </DemoScope>
+        </PluginProvider>,
+      );
+      await waitFor(() => expect(frameBase).toBeTypeOf("string"));
+      expect(sw.registered).toEqual([
+        {
+          url: "http://localhost/artifacts/test-host/frames-sw.js",
+          scope: "http://localhost/artifacts/test-host/frames/",
+        },
+      ]);
+      // An earlier build's frame scope no tab holds is dropped; one another
+      // tab still serves through, this build's and any other registration
+      // are kept — and this page holds its own scope while it serves.
+      expect(sw.unregistered).toEqual([
+        "http://localhost/artifacts/old-host/frames/",
+      ]);
+      const ownLock =
+        "frames-scope http://localhost/artifacts/test-host/frames/";
+      expect(sw.locks.has(ownLock)).toBe(true);
+      const [attach] = sw.sent;
+      expect(attach?.t).toBe("attach");
+      expect(frameBase).toBe(`/artifacts/test-host/frames/${attach!.serverId}`);
+
+      // The handed port reaches the host's server, as the Service Worker's
+      // requests do.
+      const port = attach!.port!;
+      const request = portRequester(port);
+      port.start();
+      const res = await request(
+        new Request(`http://sw/api/resources/${greeting.key}?who=frame`),
+      );
+      expect(((await res.json()) as { value: unknown }).value).toEqual({
+        text: "hello frame (demo)",
+      });
+
+      view.unmount();
+      expect(sw.sent.at(-1)).toEqual({
+        t: "detach",
+        serverId: attach!.serverId,
+      });
+      await waitFor(() => expect(sw.locks.has(ownLock)).toBe(false));
+      port.close();
+    } finally {
+      sw.restore();
+    }
+  });
+});
+
 /** A minimal in-memory backend answering every subscription `{ text: "from the page" }`. */
 function pageBackend(): Transport {
   const value = { text: "from the page" };
@@ -438,6 +637,7 @@ function pageBackend(): Transport {
         }),
       ),
     servesUrls: true,
+    frameBase: "",
     machine: true,
     telemetry: false,
   };

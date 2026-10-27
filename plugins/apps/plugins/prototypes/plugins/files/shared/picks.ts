@@ -4,12 +4,11 @@ import {
   type PicksChange,
   type StoredPicks,
 } from "../core";
+import type { Mount } from "@plugins/infra/plugins/paths/plugins/data-files/core";
 import {
   RECORD_FILE_EXT,
   openRecordStore,
-  type RecordFileSnapshot,
   type RecordStore,
-  type RecordWriteHooks,
 } from "./record-store";
 
 // The option-picks store: ONE JSON file per prototype, `<prototypes>/_picks/<id>.json`,
@@ -29,13 +28,11 @@ export const PICKS_DIR_NAME = "_picks";
 /** A picks file's extension — the one the watcher's extension filter passes. */
 export const PICKS_FILE_EXT = RECORD_FILE_EXT;
 
-export type PicksFileSnapshot = RecordFileSnapshot;
-export type PicksWriteHooks = RecordWriteHooks;
 export type PicksStore = RecordStore<StoredPicks, PicksChange>;
 
-/** The picks store over a prototypes tree at `root`. */
-export function openPicksStore(root: string): PicksStore {
-  return openRecordStore(root, {
+/** The picks store over a prototypes tree. */
+export function openPicksStore(mount: Mount): PicksStore {
+  return openRecordStore(mount, {
     dirName: PICKS_DIR_NAME,
     label: "prototype picks",
     schema: StoredPicksSchema,

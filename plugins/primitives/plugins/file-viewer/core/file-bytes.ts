@@ -12,6 +12,7 @@ const FileRefSchema = z.discriminatedUnion("source", [
     ref: z.string().optional(),
     path: z.string(),
   }),
+  z.object({ source: z.literal("data"), root: z.string(), path: z.string() }),
 ]) satisfies ZodParser<FileRef>;
 
 /** The largest file whose bytes are handed over whole (64 MiB). */

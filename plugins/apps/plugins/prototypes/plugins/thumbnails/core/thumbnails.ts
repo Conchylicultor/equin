@@ -46,6 +46,10 @@ export const ThumbnailStateSchema = z.discriminatedUnion("status", [
   // been requested, and the render is re-enqueued when it settles. Not a
   // failure of the prototype, and not cached as one.
   z.object({ status: z.literal("waiting-for-browser"), message: z.string() }),
+  // This host has nothing to render with (a browser host: no Chromium) and
+  // the cache holds no picture for these bytes. Not a failure of the
+  // prototype; `message` says why there is no picture.
+  z.object({ status: z.literal("unavailable"), message: z.string() }),
   z.object({
     status: z.literal("failed"),
     key: z.string(),
@@ -77,13 +81,13 @@ export const prototypeThumbnails = liveValue("prototypes.thumbnails", {
  * Deliberately NOT under `/api/prototypes/…`: that prefix already owns
  * `GET /api/prototypes/:name/:file`, which matches any two segments, so a
  * thumbnail nested under it would be shadowed by (or shadow) raw file serving.
- * Raw handler (it returns image bytes with its own cache headers) in the
- * `machine/` half: the cache is on disk, so the route is desktop-only.
+ * Raw handler (it returns image bytes with its own cache headers), served on
+ * every host: the cache is a file root, so a browser host answers from what
+ * its seed wrote.
  */
 export const getPrototypeThumbnail = defineEndpoint({
   route: "GET /api/prototype-thumbs/:key",
   response: blob(),
-  needsMachine: { feature: "Prototype previews" },
 });
 
 /**

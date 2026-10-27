@@ -2,9 +2,9 @@ import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
 import {
   isVersionSha,
-  openHistoryStore,
   type HistoryStore,
-} from "../shared/history/store";
+} from "../server/internal/history-store";
+import { cliHistory } from "./tree";
 
 /**
  * `./equin prototype restore <id> <vN|sha>` — the detail pane's Restore
@@ -16,7 +16,7 @@ export const restorePrototypeAction: CliAction<
   [string, string],
   object
 > = async (id, version) => {
-  const store = openHistoryStore(prototypesDir.path);
+  const store = cliHistory();
   const sha = await resolveVersion(store, id, version);
   const result = await store.restoreVersion(id, sha);
   switch (result.kind) {

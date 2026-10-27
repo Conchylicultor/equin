@@ -16,13 +16,13 @@ const computerIcon = symbol("computer");
 /**
  * A prototype's rendered preview, for use as a gallery card's cover.
  *
- * Four arms:
+ * Five arms:
  *
- * - rendered → the cached PNG (its bytes loading → the loading state; on a
- *   host without the computer → the `fallback` plus a muted "Preview
- *   unavailable" marker);
+ * - rendered → the cached PNG (its bytes loading → the loading state);
  * - not rendered yet (or still rendering) → the caller's `fallback`;
  * - waiting for the browser to install → the `fallback` plus a muted marker;
+ * - unavailable (this host has nothing to render with, and nothing cached for
+ *   these bytes) → the `fallback` plus a muted "Preview unavailable" marker;
  * - failed → the `fallback` plus a visible marker saying so, with the reason on
  *   hover. Nothing was cached, so the next edit retries on its own.
  *
@@ -33,7 +33,7 @@ const computerIcon = symbol("computer");
  * It takes the `state`, it does not fetch it — see `usePrototypeThumbnails`.
  * A cover with no pending arm cannot paint a stand-in and then swap in a
  * picture, so the flicker has nowhere left to live: by the time this renders,
- * which of the three arms is true is already known.
+ * which arm is true is already known.
  */
 export function PrototypeThumbnail({
   state,
@@ -63,6 +63,19 @@ export function PrototypeThumbnail({
     );
   }
 
+  if (state?.status === "unavailable") {
+    // Nothing is wrong with the prototype either — this host (a browser host)
+    // has no browser of its own to render it with.
+    return (
+      <MutedMarker
+        fallback={fallback}
+        icon={computerIcon}
+        title="Preview unavailable"
+        message={state.message}
+      />
+    );
+  }
+
   return <>{fallback}</>;
 }
 
@@ -70,9 +83,9 @@ export function PrototypeThumbnail({
  * The cached PNG, over the subtree's transport (`useAssetSrc`). On the page's
  * own server it is the path itself, synchronously — the same frame as the
  * card. Its bytes still loading is the loading state (a shimmer that shows
- * only on a slow load); a host without the computer (the route is
- * desktop-only) is the fallback with a muted marker saying so; a failed load
- * is the failed marker.
+ * only on a slow load); a failed load is the failed marker. The route is
+ * served on every host, so `unavailable` is only the asset contract's arm,
+ * drawn like the state's.
  */
 function ReadyThumbnail({
   thumbKey,

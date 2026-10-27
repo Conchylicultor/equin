@@ -1,5 +1,6 @@
 import { codeImageUrl } from "@plugins/code-explorer/plugins/code-api/core";
 import { hostFileUrl } from "@plugins/infra/plugins/host-fs/core";
+import { dataFileUrl } from "@plugins/infra/plugins/paths/plugins/data-files/core";
 import type { AssetPath } from "@plugins/infra/plugins/endpoints/core";
 import type { FileRef } from "./file-ref";
 
@@ -8,7 +9,8 @@ import type { FileRef } from "./file-ref";
  * `<iframe>`, a download, resolved to a `src` by `useAssetSrc`
  * (`endpoints/web`) over the subtree's transport. Dispatches on where the file
  * lives so a renderer never does: a host file through host-fs's raw route, a
- * workspace file through code-api's (as of `ref` when the ref names one). The
+ * workspace file through code-api's (as of `ref` when the ref names one), a
+ * data file through data-files' raw route (on every host). The
  * workspace route serves image formats only today; a host file is any file.
  */
 export function fileUrl(file: FileRef): AssetPath {
@@ -21,5 +23,7 @@ export function fileUrl(file: FileRef): AssetPath {
         file.path,
         file.ref !== undefined ? { ref: file.ref } : {},
       );
+    case "data":
+      return dataFileUrl(file.root, file.path);
   }
 }

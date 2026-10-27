@@ -61,6 +61,8 @@ export const dataViews: DataViewEntry[] = [
   { id: "events.run-events", pluginId: "apps.events.sources.source-detail.runs.extracted-events" },
   { id: "events.source-runs", pluginId: "apps.events.sources.source-detail.runs" },
   { id: "events.sources", pluginId: "apps.events.sources" },
+  { id: "file-explorer.app-data.folder", pluginId: "apps.file-explorer.app-data" },
+  { id: "file-explorer.app-data.roots", pluginId: "apps.file-explorer.app-data" },
   { id: "file-explorer.places", pluginId: "apps.file-explorer.places" },
   { id: "file-explorer.tree", pluginId: "apps.file-explorer.browser" },
   { id: "google-maps.usage", pluginId: "integrations.google-maps.usage" },

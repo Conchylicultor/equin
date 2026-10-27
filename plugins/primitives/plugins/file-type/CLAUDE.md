@@ -65,6 +65,7 @@ fileTypeOf("src/index.ts");
     - `ui/tokens/file-type-palette --folder`
     - `ui/tokens/shape --spacing`
   - Imported by:
+    - `apps/file-explorer/app-data`
     - `apps/file-explorer/browser`
     - `primitives/file-viewer`
     - `primitives/file-viewer/media`

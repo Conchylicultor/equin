@@ -3,9 +3,11 @@
 // lister (`list-metas.ts`, also run by the CLI) stamps each meta with its `rev`,
 // and the server's watcher compares the same signatures to decide what moved.
 
-import { createHash } from "node:crypto";
-import { readdir, stat } from "node:fs/promises";
-import { join } from "node:path";
+import { sha1Hex } from "@plugins/packages/plugins/string-hash/core";
+import {
+  relPath,
+  type Mount,
+} from "@plugins/infra/plugins/paths/plugins/data-files/core";
 
 /** One file of a prototype folder, as the signature sees it. */
 export interface FolderFile {
@@ -22,30 +24,18 @@ export interface FolderFile {
  * `(size, mtime)` rather than content: prototypes live outside every checkout
  * (nothing ever rewrites their mtimes behind the author's back), a rewrite the
  * author makes always moves the mtime, and the watcher re-reads this on a 30s
- * timer — so it has to stay a handful of stats.
+ * timer — so it has to stay one listing.
  */
 export async function readFolderFiles(
-  dirAbs: string,
+  mount: Mount,
+  dirName: string,
 ): Promise<FolderFile[] | null> {
-  let entries;
-  try {
-    entries = await readdir(dirAbs, { withFileTypes: true });
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
-    throw err;
-  }
-  const files: FolderFile[] = [];
-  for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
-    if (!entry.isFile() || entry.name.startsWith(".")) continue;
-    try {
-      const s = await stat(join(dirAbs, entry.name));
-      files.push({ name: entry.name, size: s.size, mtimeMs: s.mtimeMs });
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code === "ENOENT") continue;
-      throw err;
-    }
-  }
-  return files;
+  const listed = await mount.list(relPath(dirName));
+  if (listed.kind === "missing") return null;
+  return listed.entries
+    .filter((e) => e.kind === "file" && !e.name.startsWith("."))
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map((e) => ({ name: e.name, size: e.size, mtimeMs: e.mtimeMs }));
 }
 
 /** A folder's files as `name:size:mtimeMs`, one per line — its signature. */
@@ -55,9 +45,10 @@ export function signatureOfFiles(files: FolderFile[]): string {
 
 /** {@link readFolderFiles} as its signature string; `null` when the folder is gone. */
 export async function readFolderSignature(
-  dirAbs: string,
+  mount: Mount,
+  dirName: string,
 ): Promise<string | null> {
-  const files = await readFolderFiles(dirAbs);
+  const files = await readFolderFiles(mount, dirName);
   return files === null ? null : signatureOfFiles(files);
 }
 
@@ -67,5 +58,5 @@ export async function readFolderSignature(
  * live frame keyed on it reloads only when ITS files really changed.
  */
 export function revOfSignature(signature: string): string {
-  return createHash("sha1").update(signature).digest("hex").slice(0, 12);
+  return sha1Hex(signature).slice(0, 12);
 }

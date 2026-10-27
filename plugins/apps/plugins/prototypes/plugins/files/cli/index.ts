@@ -10,3 +10,4 @@ export { checkpointPrototypeAction } from "./checkpoint";
 export { restorePrototypeAction } from "./restore";
 export { printPrototypeList } from "./list";
 export type { DeletedPrototypeIds } from "./list";
+export { prototypeMetasIn } from "./metas";

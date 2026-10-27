@@ -1,7 +1,10 @@
 // Browser hosts: a plugin's `bin/browser-host.ts` — a Web Worker booting a
 // portable server graph (`server-core`'s `bootBrowserHost`) — built into ONE
 // artifact of the store and served through the import map as
-// `@browser-host/<pluginPath>`, whose module exports `start(): Worker`.
+// `@browser-host/<pluginPath>`, whose module exports `start(): Worker` and
+// `serviceWorkerUrl` — the frame-serving Service Worker
+// (`framework/browser-server`'s `web/frames-sw.ts`) built beside it as a
+// classic script, so its scope (`frames/` next to it) is this build's own.
 //
 // Unlike every other artifact, a host is a whole-graph bundle: import maps do
 // not reach workers, so the worker inlines every module it loads, across ~50
@@ -47,6 +50,18 @@ import {
 
 /** The host's emitted module: `export function start(): Worker`. */
 export const BROWSER_HOST_FILE = "host.js";
+
+/** The host's frame-serving Service Worker script, beside its module. */
+const FRAMES_SW_FILE = "frames-sw.js";
+
+/**
+ * The frame-serving Service Worker every host carries. One generic script:
+ * vite bundles no `navigator.serviceWorker.register(new URL(…))`, so the host
+ * build bundles it itself (a second pass, below), whole — import maps do not
+ * reach it.
+ */
+const FRAMES_SW_ENTRY_REL =
+  "plugins/framework/plugins/browser-server/web/frames-sw.ts";
 
 /** Where a host's declaration lives inside its plugin. */
 const HOST_ENTRY_REL = join("bin", "browser-host.ts");
@@ -271,10 +286,13 @@ export async function ensureBrowserHost(opts: {
   const tmpDir = artifactTmpDir(`${slug}.browser-host.pending`);
   // The page imports this module; vite's worker pass builds the worker it
   // names whole (no externals, no page preload helper), its assets beside it.
+  // The Service Worker's URL is spelled off `import.meta.url` without
+  // `new URL(…)`, which vite would try to resolve at build time.
   const stub = `${tmpDir}.stub.js`;
   writeFileSync(
     stub,
-    `export function start() {\n  return new Worker(new URL(${JSON.stringify(relative(dirname(stub), plan.entryFile))}, import.meta.url), { type: "module" });\n}\n`,
+    `export function start() {\n  return new Worker(new URL(${JSON.stringify(relative(dirname(stub), plan.entryFile))}, import.meta.url), { type: "module" });\n}\n` +
+      `export const serviceWorkerUrl = import.meta.url.replace(/[^/]*$/, ${JSON.stringify(FRAMES_SW_FILE)});\n`,
   );
   const recorder = moduleRecorder(root);
   const offenders: string[] = [];
@@ -323,6 +341,35 @@ export async function ensureBrowserHost(opts: {
         },
       },
     });
+    // The frame-serving Service Worker, into the same dir: a classic script
+    // (a module Service Worker is not supported everywhere), bundled whole.
+    // Its modules are recorded too, so an edit to it re-addresses the host.
+    await viteBuild({
+      configFile: false,
+      logLevel: "warn",
+      customLogger: logger,
+      root,
+      publicDir: false,
+      resolve: { alias: { "@plugins": join(root, "plugins") } },
+      define: { "process.env.NODE_ENV": JSON.stringify("production") },
+      plugins: [recorder.plugin],
+      build: {
+        outDir: tmpDir,
+        emptyOutDir: false,
+        target: "esnext",
+        minify: opts.minify ? "esbuild" : false,
+        modulePreload: false,
+        reportCompressedSize: false,
+        rollupOptions: {
+          input: { "frames-sw": join(root, FRAMES_SW_ENTRY_REL) },
+          output: {
+            format: "iife",
+            entryFileNames: FRAMES_SW_FILE,
+            inlineDynamicImports: true,
+          },
+        },
+      },
+    });
     if (offenders.length > 0) {
       throw new Error(
         `the worker bundle reaches Node builtins from repo code — a browser host boots portable code only:\n  ${offenders.join("\n  ")}`,
@@ -348,7 +395,8 @@ export async function ensureBrowserHost(opts: {
       kind: "browser-host",
       pluginPath: plan.pluginPath,
       inputsHash: hash,
-      // The page imports nothing from it but `start`; the worker is inlined.
+      // The page imports nothing from it but `start` and `serviceWorkerUrl`;
+      // the worker and the Service Worker are inlined.
       staticImportsByFile: { [BROWSER_HOST_FILE]: [] },
       dynamicImports: [],
       builtAtMs: Date.now(),

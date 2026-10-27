@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Agent queue — focus view</title>
+<meta name="description" content="The agent manager's queue as one column: the agent that needs you first, the rest folded below." />
+<meta name="mocks" content="route:/agents" />
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body { font-family: system-ui, sans-serif; background: #fafafa; color: #18181b; }
+  main { max-width: 640px; margin: 0 auto; padding: 32px 20px; }
+  h1 { font-size: 18px; margin: 0 0 16px; }
+  .first { background: white; border: 1px solid #e4e4e7; border-radius: 12px; padding: 18px; margin-bottom: 16px; }
+  .first strong { display: block; margin-bottom: 6px; }
+  .first p { margin: 0; color: #52525b; font-size: 14px; }
+  ul { list-style: none; margin: 0; padding: 0; }
+  li { display: flex; justify-content: space-between; padding: 10px 4px; border-bottom: 1px solid #f0f0f2; font-size: 14px; }
+  li span { color: #a1a1aa; font-size: 12px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Needs you</h1>
+  <div class="first">
+    <strong>Fix dark mode in the notes app</strong>
+    <p>The agent found the cause and asks which theme a new note should start in.</p>
+  </div>
+  <ul>
+    <li>Sync notes across devices <span>working</span></li>
+    <li>Export a note as Markdown <span>working</span></li>
+    <li>Search inside attachments <span>queued</span></li>
+  </ul>
+</main>
+</body>
+</html>

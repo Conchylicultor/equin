@@ -1,4 +1,4 @@
-// @hash 750e9dffc9a5
+// @hash 89dec9026eca
 {
   "manifests": [
     {
@@ -31,7 +31,10 @@
         "!tasks.task-title.filed-titles.**",
         "!infra.host-account.guest.**",
         "!config_v2.browser-store.**",
-        "!config_v2.bundled-layer.**"
+        "!config_v2.bundled-layer.**",
+        "!infra.paths.data-files.memory.**",
+        "!apps.prototypes.files.snapshot-history.**",
+        "!apps.prototypes.thumbnails.no-renderer.**"
       ],
       "selectedContributors": [],
       "extends": [],
@@ -139,7 +142,7 @@
         "!tasks.sidequest-autopilot.**",
         "!tasks.outcome-report.**",
         "!apps.file-explorer.**",
-        "!apps.prototypes.**",
+        "apps.prototypes.**",
         "!menu-bar.**",
         "!conversations.menu-bar-status.**",
         "!tasks.menu-bar-task.**",

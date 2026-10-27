@@ -1,10 +1,14 @@
-import { readdir, rename, stat, unlink } from "node:fs/promises";
-import { randomUUID } from "node:crypto";
-import { thumbnailCacheDir } from "../../data-dirs";
+import {
+  relPath,
+  type ReadResult,
+  type RelPath,
+} from "@plugins/infra/plugins/paths/plugins/data-files/core";
+import { systemOrigin } from "@plugins/infra/plugins/request-origin/core";
+import { thumbnailCache } from "./roots";
 
-// Where rendered thumbnails live: the `cache/prototypes-thumbnails` data dir this
-// plugin declares — host-global, outside every worktree, exactly like
-// `asset-mirror`'s cache.
+// Where rendered thumbnails live: the `thumbnailCache` root over the
+// `cache/prototypes-thumbnails` data dir this plugin declares — on the desktop
+// host-global, outside every worktree, exactly like `asset-mirror`'s cache.
 //
 // Host-global is safe *because* the filename is the content fingerprint — two
 // worktrees holding a byte-identical prototype address the same PNG and share one
@@ -13,22 +17,26 @@ import { thumbnailCacheDir } from "../../data-dirs";
 // rejects any subdirectory in a prototype folder, and a derived artifact has no
 // business being committed anyway.
 
-function thumbnailPath(key: string): string {
-  return thumbnailCacheDir.file(`${key}.png`);
+/** Every write here is this plugin's own bookkeeping, never a user's or agent's. */
+const writer = systemOrigin("prototype thumbnail cache");
+
+function thumbnailPath(key: string): RelPath {
+  return relPath(`${key}.png`);
 }
 
 /** Is this fingerprint already rendered? */
 export async function hasThumbnail(key: string): Promise<boolean> {
-  return Bun.file(thumbnailPath(key)).exists();
+  const stat = await thumbnailCache.stat(thumbnailPath(key));
+  return stat.kind === "found" && stat.entry.kind === "file";
 }
 
 /** The cached PNG for a fingerprint, for the serving route. */
-export function readThumbnail(key: string): ReturnType<typeof Bun.file> {
-  return Bun.file(thumbnailPath(key));
+export function readThumbnail(key: string): Promise<ReadResult> {
+  return thumbnailCache.read(thumbnailPath(key));
 }
 
 /**
- * Write a rendered PNG under its fingerprint. Temp file + `rename`, so a
+ * Store a rendered PNG under its fingerprint. The root's write is atomic, so a
  * concurrent reader never observes a half-written image — the same atomicity
  * `asset-mirror` relies on.
  */
@@ -36,10 +44,7 @@ export async function writeThumbnail(
   key: string,
   bytes: Uint8Array,
 ): Promise<void> {
-  thumbnailCacheDir.ensure();
-  const tmp = thumbnailCacheDir.file(`.${key}.${randomUUID()}.tmp`);
-  await Bun.write(tmp, bytes);
-  await rename(tmp, thumbnailPath(key));
+  await thumbnailCache.write(thumbnailPath(key), bytes, { writer });
 }
 
 /**
@@ -50,21 +55,17 @@ export async function writeThumbnail(
  */
 export async function sweepThumbnails(maxAgeMs: number): Promise<number> {
   const cutoff = Date.now() - maxAgeMs;
-  let entries;
-  try {
-    entries = await readdir(thumbnailCacheDir.path, { withFileTypes: true });
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") return 0;
-    throw err;
-  }
+  const listed = await thumbnailCache.list(relPath());
+  // Nothing rendered yet on this host.
+  if (listed.kind === "missing") return 0;
 
   let removed = 0;
-  for (const entry of entries) {
-    if (!entry.isFile()) continue;
-    const abs = thumbnailCacheDir.file(entry.name);
-    const info = await stat(abs);
-    if (info.mtimeMs >= cutoff) continue;
-    await unlink(abs);
+  for (const entry of listed.entries) {
+    if (entry.kind !== "file" || entry.mtimeMs >= cutoff) continue;
+    await thumbnailCache.remove(relPath(entry.name), {
+      writer,
+      recursive: false,
+    });
     removed++;
   }
   return removed;

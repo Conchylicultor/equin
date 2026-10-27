@@ -577,6 +577,10 @@
       "name": "@equin/plugin-apps-file-explorer",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/file-explorer/plugins/app-data": {
+      "name": "@equin/plugin-apps-file-explorer-app-data",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/file-explorer/plugins/attachment-preview": {
       "name": "@equin/plugin-apps-file-explorer-attachment-preview",
       "version": "0.0.1",
@@ -824,6 +828,10 @@
       "name": "@equin/plugin-apps-prototypes-files",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/prototypes/plugins/files/plugins/snapshot-history": {
+      "name": "@equin/plugin-apps-prototypes-files-snapshot-history",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/prototypes/plugins/gallery": {
       "name": "@equin/plugin-apps-prototypes-gallery",
       "version": "0.0.1",
@@ -853,6 +861,10 @@
       "dependencies": {
         "playwright": "^1.64.1",
       },
+    },
+    "plugins/apps/plugins/prototypes/plugins/thumbnails/plugins/no-renderer": {
+      "name": "@equin/plugin-apps-prototypes-thumbnails-no-renderer",
+      "version": "0.0.1",
     },
     "plugins/apps/plugins/settings": {
       "name": "@equin/plugin-apps-settings",
@@ -3982,6 +3994,7 @@
       "version": "0.0.1",
       "dependencies": {
         "entities": "^8.1.0",
+        "htmlparser2": "^12.0.0",
       },
     },
     "plugins/infra/plugins/jobs": {
@@ -4045,6 +4058,14 @@
     },
     "plugins/infra/plugins/paths": {
       "name": "@equin/plugin-infra-paths",
+    },
+    "plugins/infra/plugins/paths/plugins/data-files": {
+      "name": "@equin/plugin-infra-paths-data-files",
+      "version": "0.0.1",
+    },
+    "plugins/infra/plugins/paths/plugins/data-files/plugins/memory": {
+      "name": "@equin/plugin-infra-paths-data-files-memory",
+      "version": "0.0.1",
     },
     "plugins/infra/plugins/paths/plugins/display": {
       "name": "@equin/plugin-infra-paths-display",
@@ -7021,6 +7042,8 @@
 
     "@equin/plugin-apps-file-explorer": ["@equin/plugin-apps-file-explorer@workspace:plugins/apps/plugins/file-explorer"],
 
+    "@equin/plugin-apps-file-explorer-app-data": ["@equin/plugin-apps-file-explorer-app-data@workspace:plugins/apps/plugins/file-explorer/plugins/app-data"],
+
     "@equin/plugin-apps-file-explorer-attachment-preview": ["@equin/plugin-apps-file-explorer-attachment-preview@workspace:plugins/apps/plugins/file-explorer/plugins/attachment-preview"],
 
     "@equin/plugin-apps-file-explorer-browser": ["@equin/plugin-apps-file-explorer-browser@workspace:plugins/apps/plugins/file-explorer/plugins/browser"],
@@ -7143,6 +7166,8 @@
 
     "@equin/plugin-apps-prototypes-files": ["@equin/plugin-apps-prototypes-files@workspace:plugins/apps/plugins/prototypes/plugins/files"],
 
+    "@equin/plugin-apps-prototypes-files-snapshot-history": ["@equin/plugin-apps-prototypes-files-snapshot-history@workspace:plugins/apps/plugins/prototypes/plugins/files/plugins/snapshot-history"],
+
     "@equin/plugin-apps-prototypes-gallery": ["@equin/plugin-apps-prototypes-gallery@workspace:plugins/apps/plugins/prototypes/plugins/gallery"],
 
     "@equin/plugin-apps-prototypes-icons": ["@equin/plugin-apps-prototypes-icons@workspace:plugins/apps/plugins/prototypes/plugins/icons"],
@@ -7154,6 +7179,8 @@
     "@equin/plugin-apps-prototypes-state": ["@equin/plugin-apps-prototypes-state@workspace:plugins/apps/plugins/prototypes/plugins/state"],
 
     "@equin/plugin-apps-prototypes-thumbnails": ["@equin/plugin-apps-prototypes-thumbnails@workspace:plugins/apps/plugins/prototypes/plugins/thumbnails"],
+
+    "@equin/plugin-apps-prototypes-thumbnails-no-renderer": ["@equin/plugin-apps-prototypes-thumbnails-no-renderer@workspace:plugins/apps/plugins/prototypes/plugins/thumbnails/plugins/no-renderer"],
 
     "@equin/plugin-apps-settings": ["@equin/plugin-apps-settings@workspace:plugins/apps/plugins/settings"],
 
@@ -8686,6 +8713,10 @@
     "@equin/plugin-infra-ndjson-stream": ["@equin/plugin-infra-ndjson-stream@workspace:plugins/infra/plugins/ndjson-stream"],
 
     "@equin/plugin-infra-paths": ["@equin/plugin-infra-paths@workspace:plugins/infra/plugins/paths"],
+
+    "@equin/plugin-infra-paths-data-files": ["@equin/plugin-infra-paths-data-files@workspace:plugins/infra/plugins/paths/plugins/data-files"],
+
+    "@equin/plugin-infra-paths-data-files-memory": ["@equin/plugin-infra-paths-data-files-memory@workspace:plugins/infra/plugins/paths/plugins/data-files/plugins/memory"],
 
     "@equin/plugin-infra-paths-display": ["@equin/plugin-infra-paths-display@workspace:plugins/infra/plugins/paths/plugins/display"],
 
@@ -10925,7 +10956,15 @@
 
     "dom-accessibility-api": ["dom-accessibility-api@0.5.16", "", {}, "sha512-X7BJ2yElsnOJ30pZF4uIIDfBEVgF4XEBxL9Bxhy6dnrm5hkzqmsWHGTiHqRiITNhMyFLyAiWndIJP7Z1NTteDg=="],
 
+    "dom-serializer": ["dom-serializer@3.1.1", "", { "dependencies": { "domelementtype": "^3.0.0", "domhandler": "^6.0.0", "entities": "^8.0.0" } }, "sha512-4MEa38/QexBob6gFNwu+EGdWvhJ1OKuNwdYY3Y3NyeWDQfnGeDYQUDfIRzWu5B5gsv03so2Uxd28YC6zrsx3Lw=="],
+
+    "domelementtype": ["domelementtype@3.0.0", "", {}, "sha512-umCQid3jKbDmVjx8jGaW7uUykm4DEUeyV21hPxNMo2nV955DhUThwqyOIDtreepP31hl84X7G5U9ZfsWvIB3Pg=="],
+
+    "domhandler": ["domhandler@6.0.1", "", { "dependencies": { "domelementtype": "^3.0.0" } }, "sha512-gYzvtM72ZtxQO0T048kd6HWSbbGCNOUwcnfQ01cqIJ4X2IYKFFHZ5mKvrQETcFXxsRObZulDaKmy//R7TPtsBg=="],
+
     "dompurify": ["dompurify@3.4.17", "", { "optionalDependencies": { "@types/trusted-types": "^2.0.7" } }, "sha512-B/pSlYVHQ58kqISD/yDjuJ1yfzI34m1gF4lAod2bwSRhiN4K5Cl3H8Af7hqB2PmTL911tdEudnnXn5FnhRoz0w=="],
+
+    "domutils": ["domutils@4.0.2", "", { "dependencies": { "dom-serializer": "^3.0.0", "domelementtype": "^3.0.0", "domhandler": "^6.0.0" } }, "sha512-qI4JLRKnSzqFqr7hAlS5xQDusBCjKSEG4t4+7aNrIQMHBcsC2TGEhuyABJdYkgSewL57PNLYEiibY2iPKhKpaA=="],
 
     "dotenv": ["dotenv@17.4.1", "", {}, "sha512-k8DaKGP6r1G30Lx8V4+pCsLzKr8vLmV2paqEj1Y55GdAgJuIqpRp5FfajGF8KtwMxCz9qJc6wUIJnm053d/WCw=="],
 
@@ -11172,6 +11211,8 @@
     "html-url-attributes": ["html-url-attributes@3.0.1", "", {}, "sha512-ol6UPyBWqsrO6EJySPz2O7ZSr856WDrEzM5zMqp+FJJLGMW35cLYmmZnl0vztAZxRUoNZJFTCohfjuIJ8I4QBQ=="],
 
     "html-void-elements": ["html-void-elements@3.0.0", "", {}, "sha512-bEqo66MRXsUGxWHV5IP0PUiAWwoEjba4VCzg0LjFJBpchPaTfyfCKTG6bc5F8ucKec3q5y6qOdGyYTSBEvhCrg=="],
+
+    "htmlparser2": ["htmlparser2@12.0.0", "", { "dependencies": { "domelementtype": "^3.0.0", "domhandler": "^6.0.0", "domutils": "^4.0.2", "entities": "^8.0.0" } }, "sha512-Tz7u1i95/g2x2jz81+x0FBVhBhY5aRTvD3tXXdFaljuNdzDLJ8UGNRrTcj2cgQvAg3iW/h77Fz15nLW0L0CrZw=="],
 
     "http-errors": ["http-errors@2.0.1", "", { "dependencies": { "depd": "~2.0.0", "inherits": "~2.0.4", "setprototypeof": "~1.2.0", "statuses": "~2.0.2", "toidentifier": "~1.0.1" } }, "sha512-4FbRdAX+bSdmo4AUFuS0WNiPz8NgFt+r8ThgNWmlrjQjt1Q7ZR9+zTlce2859x4KSXrwIsaeTqDoKQmtP8pLmQ=="],
 

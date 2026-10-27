@@ -1,6 +1,7 @@
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
-import { openHistoryStore, type VersionEntry } from "../shared/history/store";
+import type { VersionEntry } from "../server/internal/history-store";
+import { cliHistory } from "./tree";
 
 /**
  * `./equin prototype log <id> [-p]` — how a prototype got to where it is,
@@ -16,7 +17,7 @@ export const prototypeLogAction: CliAction<
   [string],
   { patch?: boolean }
 > = async (id, opts) => {
-  const store = openHistoryStore(prototypesDir.path);
+  const store = cliHistory();
   const read = await store.readHistory(id);
   if (read.kind === "no-such-prototype") {
     throw new Error(`no prototype ${id} in ${prototypesDir.path}`);

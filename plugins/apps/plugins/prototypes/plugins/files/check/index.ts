@@ -6,6 +6,7 @@ import type {
   CheckResult,
 } from "@plugins/framework/plugins/tooling/core";
 import { PROTOTYPES_DIR_DISPLAY } from "@plugins/infra/plugins/paths/plugins/display/core";
+import { diskDirMount } from "@plugins/infra/plugins/paths/plugins/data-files/machine";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import { validatePrototypeFolder } from "../core/validate";
 import { readPrototypeFolder } from "../shared/read-folder";
@@ -88,8 +89,12 @@ const check: Check = {
     } else {
       // The seed is held to the contract it seeds: nothing is shared, so it
       // reaches outside itself for nothing either.
-      const folder = await readPrototypeFolder(prototypesDir, TEMPLATE, []);
-      for (const p of await validatePrototypeFolder(folder)) {
+      const folder = await readPrototypeFolder(
+        diskDirMount(prototypesDir),
+        TEMPLATE,
+        [],
+      );
+      for (const p of validatePrototypeFolder(folder)) {
         problems.push({
           path: `prototypes/${TEMPLATE}/${p.path}`,
           detail: p.detail,

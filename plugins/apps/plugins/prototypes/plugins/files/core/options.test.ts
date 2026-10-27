@@ -232,20 +232,20 @@ describe("picksFromQuery", () => {
 });
 
 describe("readOptionSource", () => {
-  test("reads the <html> data attributes and every option line, decoded", async () => {
+  test("reads the <html> data attributes and every option line, decoded", () => {
     const html = `<!doctype html><html lang="en" data-pane="flush" data-palette="azure">
       <head>
         <meta name="prototype-option" content="pane: flush | floating" />
         <meta name="description" content="x" />
         <meta name="prototype-option" content="palette: violet &#124; azure" />
       </head><body></body></html>`;
-    expect(await readOptionSource(html)).toEqual({
+    expect(readOptionSource(html)).toEqual({
       groups: [],
       declarations: ["pane: flush | floating", "palette: violet | azure"],
       htmlData: { pane: "flush", palette: "azure" },
       htmlVars: {},
     });
-    expect((await readPrototypeOptions(html)).options).toEqual([
+    expect(readPrototypeOptions(html).options).toEqual([
       {
         kind: "choice",
         name: "pane",
@@ -263,9 +263,9 @@ describe("readOptionSource", () => {
     ]);
   });
 
-  test("a page with no options declares none", async () => {
+  test("a page with no options declares none", () => {
     expect(
-      await readPrototypeOptions("<html><head><title>x</title></head></html>"),
+      readPrototypeOptions("<html><head><title>x</title></head></html>"),
     ).toEqual({ options: [], problems: [] });
   });
 });
@@ -371,14 +371,14 @@ describe("color defaults", () => {
     expect(problems[0]).toContain("color <suggestion>=<color>");
   });
 
-  test("readOptionSource reads the first <html>'s custom properties", async () => {
+  test("readOptionSource reads the first <html>'s custom properties", () => {
     const html = `<html style="color: red; --accent: #3B82F6; font-family: &quot;a;b&quot;">
       <head><meta name="prototype-option" content="accent: color violet=#7c5cff | azure=#3b82f6" /></head>
       <body><html style="--accent: #000000"></html></body></html>`;
-    expect((await readOptionSource(html)).htmlVars).toEqual({
+    expect(readOptionSource(html).htmlVars).toEqual({
       accent: "#3B82F6",
     });
-    expect((await readPrototypeOptions(html)).options).toEqual([
+    expect(readPrototypeOptions(html).options).toEqual([
       { ...ACCENT, default: "#3b82f6" },
     ]);
   });
@@ -469,8 +469,8 @@ describe("option groups", () => {
 <meta name="prototype-option" content="icons: lucide | material" />
 </html>`;
 
-  test("a group line puts every following option under it", async () => {
-    const { options, problems } = await readPrototypeOptions(html);
+  test("a group line puts every following option under it", () => {
+    const { options, problems } = readPrototypeOptions(html);
     expect(problems).toEqual([]);
     expect(options.map((o) => [o.name, o.group])).toEqual([
       ["pane", null],
@@ -487,8 +487,8 @@ describe("option groups", () => {
     ]);
   });
 
-  test("a grouped option's label drops the group's prefix", async () => {
-    const { options } = await readPrototypeOptions(html);
+  test("a grouped option's label drops the group's prefix", () => {
+    const { options } = readPrototypeOptions(html);
     expect(options.map(optionLabel)).toEqual([
       "Pane",
       "Lead",

@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-prototypes-thumbnails-no-renderer",
+  "private": true,
+  "version": "0.0.1",
+  "description": "The prototype thumbnails of a host without a browser to render with: the ThumbnailRenderer host service as unavailable, so a cache miss is the card's muted 'Preview unavailable' marker and the only previews are the PNGs a seed put in the cache (the browser composition). Never booted by the desktop."
+}

@@ -174,7 +174,10 @@ function setup() {
       };
     },
   };
-  const base = browserServerTransport(observed, { telemetry: false });
+  const base = browserServerTransport(observed, {
+    telemetry: false,
+    frameBase: null,
+  });
   const sockets = new Map<string, TransportSocket>();
   const transport: Transport = {
     ...base,

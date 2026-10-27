@@ -415,6 +415,18 @@
       "parent": null
     },
     {
+      "paneId": "files-data",
+      "segment": "data",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "files-data-at",
+      "segment": "data/:root/:at?",
+      "appIndex": false,
+      "parent": null
+    },
+    {
       "paneId": "files-home",
       "segment": "",
       "appIndex": true,

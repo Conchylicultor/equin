@@ -23,3 +23,15 @@ export type {
   PageSession as DemoPageSession,
   PageToolCall as DemoPageToolCall,
 } from "./internal/transcripts";
+export {
+  demoPrototypeDataOf,
+  demoPrototypeSeed,
+  demoVersionFingerprint,
+} from "./internal/prototypes";
+export type {
+  DemoPrototype,
+  DemoPrototypeData,
+  DemoPrototypeSeed,
+  DemoPrototypeTree,
+  DemoPrototypeVersion,
+} from "./internal/prototypes";

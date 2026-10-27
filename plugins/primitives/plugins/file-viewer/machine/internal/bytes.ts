@@ -13,6 +13,11 @@ import {
   workspaceRootReads,
   type WorkspaceFile,
 } from "@plugins/code-explorer/machine";
+import {
+  browsableFileRevision,
+  readBrowsableFile,
+  watchBrowsableFile,
+} from "@plugins/infra/plugins/paths/plugins/data-files/server";
 import { FILE_BYTES_MAX, fileBytes } from "../../core";
 
 /**
@@ -95,12 +100,37 @@ async function workspaceBytes(file: WorkspaceFile): Promise<ArrayBuffer> {
   }
 }
 
+/** A browsable data root's file's bytes (data-files), or the refusal saying why there are none. */
+async function dataBytes(root: string, path: string): Promise<ArrayBuffer> {
+  const where = `${root}:${path}`;
+  const read = await readBrowsableFile(root, path, FILE_BYTES_MAX);
+  switch (read.kind) {
+    case "file":
+      return read.bytes;
+    case "too-large":
+      throw fileBytes.refuse(
+        "too-large",
+        `${where} is ${read.size} bytes, over the ${FILE_BYTES_MAX}-byte limit`,
+      );
+    case "missing":
+      throw fileBytes.refuse("missing", `No such file: ${where}`);
+    case "unknown-root":
+      throw fileBytes.refuse("missing", `No browsable file root ${root}`);
+    case "not-a-file":
+      throw fileBytes.refuse("unsupported", `Not a file: ${where}`);
+    case "invalid-path":
+      throw fileBytes.refuse("invalid-path", read.message);
+  }
+}
+
 /**
  * A file's bytes, on demand. A host file is read through host-fs (a disk
  * file or an archive member alike) and invalidated from a watch of its folder
  * while read. A workspace file is read through code-explorer (on disk, or as
  * of a ref from the checkout's blob) and invalidated from its watch — the
  * file's entry, or the checkout's refs for a named ref; a sha never moves.
+ * A data file is read through its browsable file root (data-files) and
+ * invalidated from the root's watch.
  * The ETag is the file's revision, probed before the read: an invalidation
  * that moved nothing — a write to the attempts table, which every tuple
  * declares — costs a 304, never a re-read of up to FILE_BYTES_MAX.
@@ -119,6 +149,8 @@ export const fileBytesServed = serveValue(fileBytes, {
       }
       case "workspace":
         return `workspace:${await workspaceFileSignature(file)}`;
+      case "data":
+        return `data:${await browsableFileRevision(file.root, file.path)}`;
     }
   },
   loader: async (file) => {
@@ -127,6 +159,8 @@ export const fileBytesServed = serveValue(fileBytes, {
         return hostBytes(file.path);
       case "workspace":
         return workspaceBytes(file);
+      case "data":
+        return dataBytes(file.root, file.path);
     }
   },
   whileSubscribed: async (file, notify) => {
@@ -139,6 +173,8 @@ export const fileBytesServed = serveValue(fileBytes, {
       }
       case "workspace":
         return watchWorkspaceFile(file, () => notify());
+      case "data":
+        return watchBrowsableFile(file.root, file.path, () => notify());
     }
   },
 });

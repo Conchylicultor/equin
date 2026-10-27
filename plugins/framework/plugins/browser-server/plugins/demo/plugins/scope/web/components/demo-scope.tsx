@@ -6,7 +6,9 @@
 // host — the build's coverage guard (codegen's `browser-host-coverage.ts`)
 // holds the host's graph to it. A key or endpoint it still does not serve is a
 // gap the guard missed, and fails loudly (`loader-failed` naming the key, an
-// `EndpointError` the reports collect), never a toast that hides it.
+// `EndpointError` the reports collect), never a toast that hides it. Its
+// frame documents (a prototype's `<iframe>`) load by URL from the same host,
+// through the host's frame-serving Service Worker (`attachFrameServing`).
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
@@ -14,7 +16,11 @@ import {
   type BrowserServer,
   type PortServer,
 } from "@plugins/framework/plugins/browser-server/core";
-import { browserServerTransport } from "@plugins/framework/plugins/browser-server/web";
+import {
+  attachFrameServing,
+  browserServerTransport,
+  type FrameServing,
+} from "@plugins/framework/plugins/browser-server/web";
 import type { DemoScenario } from "@plugins/framework/plugins/browser-server/plugins/demo/core";
 import { NotificationsProvider } from "@plugins/primitives/plugins/live-state/web";
 import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
@@ -38,46 +44,76 @@ function bootLine(
   scenarioId: string,
   waitedMs: number,
   hosted: PortServer,
+  frames: FrameServing,
 ): string {
   const { boot, readyAtMs } = hosted;
   const stages = boot.stages.map((s) => `${s.name} ${s.ms} ms`).join(", ");
   const slowest = boot.slowest.map((s) => `${s.label} ${s.ms} ms`).join(", ");
+  const framed =
+    frames.kind === "serving"
+      ? `frames at ${frames.frameBase}`
+      : `frames unsupported: ${frames.reason}`;
   return (
     `${scenarioId}: host ready in ${Math.round(waitedMs)} ms ` +
-    `(worker ready at ${readyAtMs} ms: ${stages}; ${boot.plugins} plugins) — slowest: ${slowest}`
+    `(worker ready at ${readyAtMs} ms: ${stages}; ${boot.plugins} plugins; ${framed}) — slowest: ${slowest}`
   );
 }
 
+/** A booted scope host: its server, and where its frame documents load (`Transport.frameBase`). */
+interface ScopeHost {
+  server: BrowserServer;
+  frameBase: string | null;
+}
+
 /**
- * Boot the scenario's host and call `onReady` with its server, or `onFailed`
- * with a host that could not boot; returns the teardown (the server disposed,
- * the worker ended).
+ * Boot the scenario's host — its frame serving attached alongside the boot —
+ * and call `onReady` with it, or `onFailed` with a host that could not boot;
+ * returns the teardown (frame serving detached, the server disposed, the
+ * worker ended).
  */
 function startScopeServer(
   scenario: DemoScenario,
-  onReady: (server: BrowserServer) => void,
+  onReady: (host: ScopeHost) => void,
   onFailed: (err: unknown) => void,
 ): () => void {
   let ended = false;
   let worker: Worker | null = null;
   let served: BrowserServer | null = null;
+  let detachFrames: (() => void) | null = null;
   void (async () => {
     const asked = performance.now();
-    const { start } = await scenario.host.start();
+    const { start, serviceWorkerUrl } = await scenario.host.start();
     if (ended) return;
-    worker = start();
-    const hosted = await portBrowserServer(worker);
+    const started = start();
+    worker = started;
+    const [hosted, frames] = await Promise.all([
+      portBrowserServer(started),
+      attachFrameServing(started, serviceWorkerUrl),
+    ]);
+    if (frames.kind === "serving") {
+      if (ended) frames.detach();
+      else detachFrames = frames.detach;
+    }
     if (ended) return;
-    const line = bootLine(scenario.id, performance.now() - asked, hosted);
+    const line = bootLine(
+      scenario.id,
+      performance.now() - asked,
+      hosted,
+      frames,
+    );
     console.info(`[demo-scope] ${line}`);
     clientLog(BOOT_LOG_CHANNEL, line);
     served = hosted.server;
-    onReady(served);
+    onReady({
+      server: served,
+      frameBase: frames.kind === "serving" ? frames.frameBase : null,
+    });
   })().catch((err: unknown) => {
     if (!ended) onFailed(err);
   });
   return () => {
     ended = true;
+    detachFrames?.();
     served?.dispose();
     worker?.terminate();
   };
@@ -101,28 +137,33 @@ export function DemoScope({
   // enclosing page's setting (D3: a browser server has nowhere of its own to
   // keep it; `false` would drop it at every emission site).
   const { telemetry } = useTransport();
-  const [server, setServer] = useState<BrowserServer | null>(null);
+  const [host, setHost] = useState<ScopeHost | null>(null);
   const [failure, setFailure] = useState<{ error: unknown } | null>(null);
   useEffect(() => {
     // Started here, not in a useState initialiser: the host is a disposable
     // resource owned by this mount, so StrictMode's mount → unmount → mount
     // ends the first and keeps the second (an initialiser would start one a
     // discarded render never ends).
-    const stop = startScopeServer(scenario, setServer, (error) =>
+    const stop = startScopeServer(scenario, setHost, (error) =>
       setFailure({ error }),
     );
     return () => {
       stop();
       // The next server (a host still booting) is not this one.
-      setServer(null);
+      setHost(null);
     };
   }, [scenario]);
   // A host that could not boot reaches the error boundary, never an empty app.
   if (failure !== null) throw failure.error;
   const transport = useMemo(
     () =>
-      server === null ? null : browserServerTransport(server, { telemetry }),
-    [server, telemetry],
+      host === null
+        ? null
+        : browserServerTransport(host.server, {
+            telemetry,
+            frameBase: host.frameBase,
+          }),
+    [host, telemetry],
   );
   if (transport === null) return <Loading />;
   return (

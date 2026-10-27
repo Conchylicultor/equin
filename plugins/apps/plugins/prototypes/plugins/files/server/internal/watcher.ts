@@ -1,11 +1,11 @@
-import {
-  defineFileWatcher,
-  type FileWatcher,
-} from "@plugins/infra/plugins/file-watcher/server";
+import { prototypesFiles } from "@plugins/apps/plugins/prototypes/server";
+import type {
+  DataChange,
+  DataWatch,
+} from "@plugins/infra/plugins/paths/plugins/data-files/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { createCoalescer } from "@plugins/packages/plugins/coalesce/core";
 import { protoIdKind } from "../../core";
-import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
 import {
   adoptPrototypeHistories,
   prototypeHistoryServed,
@@ -16,38 +16,13 @@ import { prototypesListServed } from "./resources";
 import { changedPrototypes, readPrototypesSignature } from "./signature";
 import { classifyTreePath } from "./tree-path";
 
-/**
- * The one watcher over `prototypes/`. Push-based — no polling: a dropped
- * fsevent is reported by the watch (`onLost`), which re-runs the signature
- * gate (one stat per prototype file, nothing notified when it matches).
- */
-export const prototypesTreeWatcher = defineFileWatcher({
-  name: "prototypes-files.tree",
-  description:
-    "Watches the prototypes folder and reloads open prototypes, their history and picks when a file really changes.",
-  // Everything a self-contained prototype can ship. No `.jsx`: JSX lives
-  // inline in index.html, because Babel fetches an external `src` with XHR
-  // and Chrome blocks that over file:// (the `prototypes:self-contained`
-  // check rejects such a script tag, so an external .jsx cannot exist).
-  // `.json` also passes each history's `latest.json` stamp — git's own
-  // files carry no extension, so they never reach `onChange` — and each
-  // `_picks/<id>.json` (its `.lock` and `.json.tmp` do not pass).
-  extensions: [
-    ".html",
-    ".css",
-    ".js",
-    ".json",
-    ".svg",
-    ".png",
-    ".jpg",
-    ".jpeg",
-    ".webp",
-    ".gif",
-    ".woff2",
-  ],
-});
+// The one subscription to the tree's watch (`prototypesFiles.watch`: the
+// extensions are the root's — `apps/prototypes`' `server/internal/roots.ts`).
+// On the desktop that is a declared file watcher over the data dir (its
+// Background-catalog entry `prototypes-files.tree`); in a browser host, the
+// memory store's own change feed.
 
-let watcher: FileWatcher | null = null;
+let subscription: DataWatch | null = null;
 let started = false;
 
 const listeners: ((changed: readonly string[]) => void)[] = [];
@@ -137,12 +112,15 @@ const refreshes = createCoalescer({
  * carries the picks. Anything under a retired dir (`_trash/`) is nothing to react
  * to. Everything else goes through the signature gate.
  */
-function onTreeEvents(paths: string[]): Promise<void> | undefined {
+function onTreeChange(change: DataChange): Promise<void> | undefined {
+  // The watch reported dropped events (`onLost`): re-derive everything —
+  // through the same signature gate, so an unmoved tree costs a few stats.
+  if (change.kind === "rescan") return refreshes.run();
   let treeMoved = false;
   const recorded = new Set<string>();
   const picked = new Set<string>();
-  for (const path of paths) {
-    const kind = classifyTreePath(prototypesDir.path, path);
+  for (const path of change.paths) {
+    const kind = classifyTreePath(path);
     if (kind.kind === "version-recorded") recorded.add(kind.id);
     else if (kind.kind === "picks-recorded") picked.add(kind.id);
     else if (kind.kind === "tree") treeMoved = true;
@@ -156,17 +134,13 @@ function onTreeEvents(paths: string[]): Promise<void> | undefined {
 }
 
 /**
- * Watch `prototypes/` for edits. Push-based — no polling; a dropped fsevent is
- * reported by the watch (`onLost`) and answered by the same signature gate.
+ * Watch the tree for edits. Push-based — no polling; a dropped fsevent is
+ * reported by the watch (`onLost`, delivered as a `rescan`) and answered by the
+ * same signature gate.
  */
 export async function startPrototypesWatcher(): Promise<void> {
   if (started) return;
   started = true;
-
-  // @parcel/watcher errors if the watched dir doesn't exist; the content is
-  // authored separately (and lives outside any checkout), so ensure it exists
-  // before subscribing.
-  prototypesDir.ensure();
 
   // The tree as it stands at boot is the baseline, so the first genuine edit is
   // what re-broadcasts — not the first tick after start.
@@ -180,19 +154,15 @@ export async function startPrototypesWatcher(): Promise<void> {
     adoptPrototypeHistories(),
   );
 
-  watcher = await prototypesTreeWatcher.start({
-    dirs: [prototypesDir.path],
-    onChange: (events) => onTreeEvents(events.map((e) => e.path)),
-    onLost: () => refreshes.run(),
-  });
+  subscription = await prototypesFiles.watch(onTreeChange);
 }
 
 export async function stopPrototypesWatcher(): Promise<void> {
   if (!started) return;
   started = false;
   lastSignature = new Map();
-  if (watcher) {
-    await watcher.stop();
-    watcher = null;
+  if (subscription) {
+    await subscription.dispose();
+    subscription = null;
   }
 }

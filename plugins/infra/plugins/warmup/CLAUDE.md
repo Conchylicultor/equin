@@ -21,7 +21,6 @@
 - Cross-plugin:
   - Imported by:
     - `apps/places/places-core`
-    - `apps/prototypes/state`
     - `apps/sonata/sources/midi/folders`
     - `infra/corpus-index`
     - `infra/warmup/background-arm`

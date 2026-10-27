@@ -117,11 +117,14 @@ export function isPlatformApi(specifier: string): boolean {
  * and Node and are undefined in a browser realm, so an import-clean module
  * using one still throws there at run time — `Buffer.from(…)`,
  * `z.instanceof(Buffer)`, `process.memoryUsage()`, `Bun.hash(…)`,
- * `opts.defer ?? setImmediate`.
+ * `opts.defer ?? setImmediate`. `HTMLRewriter` is Bun's own: a browser has no
+ * such global, and the portable reader is `infra/html-decode`'s `scanHtml` /
+ * `rewriteStartTag`.
  */
 const PLATFORM_GLOBALS: ReadonlySet<string> = new Set([
   "Buffer",
   "Bun",
+  "HTMLRewriter",
   "process",
   "__dirname",
   "__filename",

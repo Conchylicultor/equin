@@ -44,7 +44,9 @@ composition the Agent Manager demo's browser host serves
 so the demo can switch to it — and only subtracts what means nothing without
 the computer — push-and-exit, automations (`tasks.automations.**`, every
 automation and the outcome-report card with it), `stats.**` and the file
-explorer — and, for now, Prototypes (its files live on disk). Its web plugins are the scope the demo page renders in
+explorer — and adds Prototypes back (`apps.prototypes.**`: its files are a
+`data-files` root, memory in the worker; the prototype chips stay negated by the
+agent-manager profile). Its web plugins are the scope the demo page renders in
 (`web-sdk`'s `<PluginScope>`) and its portable server barrels the worker's
 graph, both derived by codegen (`browser-host-gen.ts`). Everything a plugin in
 this scope reads, calls or registers must be served by the worker's graph or

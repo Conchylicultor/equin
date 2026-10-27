@@ -29,7 +29,7 @@ import { Color } from "@plugins/primitives/plugins/css/plugins/color-picker/core
  * outside the page, so a prototype contains no switcher of its own.
  *
  * Pure: the HTML read that feeds `foldOptions` is `readOptionSource`
- * (`option-source.ts`), the one HTMLRewriter pass the list, the validator and
+ * (`option-source.ts`), the one HTML scan the list, the validator and
  * the server share.
  */
 

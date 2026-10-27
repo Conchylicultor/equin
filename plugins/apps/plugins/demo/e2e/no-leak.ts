@@ -11,7 +11,11 @@
  *     mode and preprompt (and its workspace / auto-start when the host offers
  *     them), and pastes an image into its description;
  *  2. opens a conversation, sees the composer say sending is not available,
- *     and tries to send anyway (type + Enter).
+ *     and tries to send anyway (type + Enter);
+ *  3. switches the embed to Prototypes and opens a seeded prototype's canvas:
+ *     its frames load from the host's Service Worker, so every frame `src` is
+ *     under `/artifacts/*\/frames/` and no `/api/prototypes…` request reaches
+ *     the page's origin.
  *
  * And asserts that the demo's own writes RENDER — the worker's change feed
  * recomputes its live reads (research/2026-10-22-global-demo-writes-render-
@@ -57,6 +61,7 @@
  */
 import type { Locator, Page, Request, WebSocket } from "playwright";
 import { tapSharedSocket } from "@plugins/primitives/plugins/networking/e2e";
+import { CANVAS_FRAME_ATTR } from "@plugins/apps/plugins/prototypes/plugins/canvas/core";
 import {
   arg,
   boot,
@@ -179,6 +184,10 @@ async function workerLog(page: Page): Promise<string[]> {
 async function clickButton(page: Page, name: string): Promise<void> {
   await page.getByRole("button", { name, exact: true }).first().click();
 }
+
+/** A seeded prototype (`agent-manager/demo`'s `data/prototypes/`) and where its frames are served from. */
+const PROTOTYPE_TITLE = "Lumen — notes board";
+const FRAMES_RE = /^\/artifacts\/[^/]+\/frames\/[^/]+\/api\/prototypes\//;
 
 /** The seeded task the steps edit (`agent-manager/demo`'s `stories.ts`). */
 const TARGET_TITLE = "Dark mode resets after a reload";
@@ -612,6 +621,51 @@ await withBrowser(async (h) => {
   await page.waitForTimeout(1_500);
   noteSubs("conversation");
   await snap(page, OUT, "conversation");
+
+  // ── 3. Prototypes: frames come from the host, never the page's origin ──
+  await page
+    .locator("[data-app-embed]")
+    .first()
+    .getByRole("button", { name: "All apps" })
+    .first()
+    .hover();
+  const apps = page.locator('[aria-label="Apps"]').last();
+  await apps.waitFor({ timeout: 5_000 });
+  await apps
+    .locator('[data-row-key][role="button"]')
+    .filter({ hasText: /Prototypes/ })
+    .first()
+    .click();
+  await page.keyboard.press("Escape");
+  await page.mouse.move(0, 0);
+  await page
+    .locator("[data-app-embed]")
+    .first()
+    .locator("[data-row-key]")
+    .filter({ hasText: PROTOTYPE_TITLE })
+    .first()
+    .click();
+  const frameSrcs = await waitFor(
+    () =>
+      page
+        .locator(`[${CANVAS_FRAME_ATTR}] iframe`)
+        .evaluateAll((els) =>
+          els.map((el) => el.getAttribute("src") ?? "").filter((s) => s !== ""),
+        ),
+    (srcs) => srcs.length > 0,
+    { timeoutMs: RENDER_TIMEOUT_MS },
+  );
+  const framePaths = frameSrcs.value.map(
+    (src) => new URL(src, page.url()).pathname,
+  );
+  r.ok(
+    "every prototype frame src is under /artifacts/*/frames/",
+    frameSrcs.ok && framePaths.every((p) => FRAMES_RE.test(p)),
+    framePaths.join(", "),
+  );
+  await page.waitForTimeout(1_500);
+  noteSubs("prototypes");
+  await snap(page, OUT, "prototypes");
 
   page.off("request", onRequest);
   page.off("websocket", onSocket);

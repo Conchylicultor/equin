@@ -10,11 +10,20 @@ export function useStableFileRef(file: FileRef): FileRef {
   const { source, path } = file;
   const workspace = file.source === "workspace" ? file.workspace : "";
   const ref = file.source === "workspace" ? file.ref : undefined;
-  return useMemo<FileRef>(
-    () =>
-      source === "host"
-        ? { source, path }
-        : { source, workspace, path, ...(ref !== undefined ? { ref } : {}) },
-    [source, path, workspace, ref],
-  );
+  const root = file.source === "data" ? file.root : "";
+  return useMemo<FileRef>(() => {
+    switch (source) {
+      case "host":
+        return { source, path };
+      case "workspace":
+        return {
+          source,
+          workspace,
+          path,
+          ...(ref !== undefined ? { ref } : {}),
+        };
+      case "data":
+        return { source, root, path };
+    }
+  }, [source, path, workspace, ref, root]);
 }

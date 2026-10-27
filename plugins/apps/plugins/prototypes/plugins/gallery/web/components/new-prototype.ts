@@ -63,8 +63,12 @@ export async function mintPrototypeFolder(
   toast: Toast,
 ): Promise<string> {
   try {
-    const { id } = await fetchEndpoint(createPrototype, {}, { body: {} });
-    return id;
+    const minted = await fetchEndpoint(createPrototype, {}, { body: {} });
+    // A host without the computer cannot mint (the template is a checkout
+    // file); the button is gated before the click (PrototypeGallery), so
+    // reaching here is a failed launch like any other.
+    if (minted.kind === "unavailable") throw new Error(minted.message);
+    return minted.value.id;
   } catch (err) {
     toast({
       type: "prototype",
