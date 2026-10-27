@@ -71,7 +71,7 @@ describe("Machine watcher health row", () => {
     const verdict = machineWatcherVerdict(
       recorded({ state: "running", since: since - 60_000 }, true, {
         since,
-        elevated: ["locksWaiting"],
+        holding: ["locksWaiting"],
       }),
     );
     expect(verdict.state).toBe("attention");
@@ -84,9 +84,9 @@ describe("Machine watcher health row", () => {
 
   it("marks the dot instead of colouring it while CPU or memory holds the duress", () => {
     const running = { state: "running", since: Date.now() } as const;
-    const marksOf = (elevated: SignalKey[]) => {
+    const marksOf = (holding: SignalKey[]) => {
       const verdict = machineWatcherVerdict(
-        recorded(running, true, { since: Date.now(), elevated }),
+        recorded(running, true, { since: Date.now(), holding }),
       );
       expect(verdict.state).toBe("attention");
       return verdict.state === "attention"
@@ -120,7 +120,7 @@ describe("Machine watcher health row", () => {
       recorded(
         running,
         true,
-        { since: Date.now(), elevated: ["loadRatio"] },
+        { since: Date.now(), holding: ["loadRatio"] },
         "filling",
       ),
     );
@@ -139,7 +139,7 @@ describe("Machine watcher health row", () => {
         recorded(
           running,
           true,
-          { since: Date.now(), elevated: ["loadRatio"] },
+          { since: Date.now(), holding: ["loadRatio"] },
           "full-soon",
         ),
       ),
@@ -156,7 +156,7 @@ describe("Machine watcher health row", () => {
     const verdict = machineWatcherVerdict(
       recorded({ state: "stopped", since: Date.now() }, true, {
         since: Date.now(),
-        elevated: ["loadRatio"],
+        holding: ["loadRatio"],
       }),
     );
     expect(verdict.state).toBe("attention");

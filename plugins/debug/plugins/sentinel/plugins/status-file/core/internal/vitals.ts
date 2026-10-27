@@ -45,6 +45,13 @@ export const SentinelVitalsRecordSchema = z.object({
   }),
   /** Signals at or above their limit this tick — each signal at most once. */
   elevated: z.array(SignalKeySchema).max(SIGNAL_KEYS.length),
+  /**
+   * Signals not calm yet this tick (at or above their clear limit): what keeps
+   * a tripped episode going, so it outlives `elevated` once a signal falls
+   * between its clear and trip limits. Defaults to empty so a file written by
+   * a watcher that predates it still parses.
+   */
+  holding: z.array(SignalKeySchema).max(SIGNAL_KEYS.length).default([]),
   /** The detector is mid-episode after this tick. */
   tripped: z.boolean(),
   /** Machine context that cannot trip duress by itself. */

@@ -1,6 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import type { ClusterSample } from "../../core";
-import { createOnsetDetector, type DetectorThresholds } from "./detector";
+import {
+  createOnsetDetector,
+  signalsAt,
+  type DetectorThresholds,
+} from "./detector";
 
 const T: DetectorThresholds = {
   onLoadRatio: 1.5,
@@ -154,5 +158,23 @@ describe("onset detector hysteresis", () => {
     expect(d.feed(calm, T, CADENCE)).toBeNull(); // calm 1/2
     expect(d.feed(calm, T, CADENCE)).toMatchObject({ kind: "clear" });
     expect(d.tripped).toBe(false);
+  });
+});
+
+describe("signalsAt", () => {
+  test("a signal between its clear and trip limits holds the episode without being elevated", () => {
+    // Load per core 1.2: under the 1.5 trip limit, over the 0.9 clear limit.
+    const between = signalsAt(sample({ loadAvg1: 1.2 * 18 }), T);
+    expect(between.elevated).toEqual([]);
+    expect(between.holding).toEqual(["loadRatio"]);
+    expect(between.allCalm).toBe(false);
+
+    const hot = signalsAt(sample({ loadAvg1: 2 * 18 }), T);
+    expect(hot.elevated).toEqual(["loadRatio"]);
+    expect(hot.holding).toEqual(["loadRatio"]);
+
+    const calm = signalsAt(sample({ loadAvg1: 0.5 * 18 }), T);
+    expect(calm.holding).toEqual([]);
+    expect(calm.allCalm).toBe(true);
   });
 });

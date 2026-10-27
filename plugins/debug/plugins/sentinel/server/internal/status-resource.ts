@@ -46,15 +46,15 @@ export function readStatusValue(): SentinelStatusValue {
     duress:
       latch === null
         ? null
-        : { since: latch.setAt, elevated: elevatedFrom(vitals) },
+        : { since: latch.setAt, holding: holdingFrom(vitals) },
     disk: diskAlarmFrom(vitals),
   };
 }
 
-/** The signals over their limit in a reading, when it is the running watcher's. */
-export function elevatedFrom(vitals: SentinelVitals): SignalKey[] {
+/** The signals not calm yet in a reading, when it is the running watcher's. */
+export function holdingFrom(vitals: SentinelVitals): SignalKey[] {
   if (vitals.kind !== "recorded" || !vitals.current) return [];
-  return [...vitals.vitals.elevated];
+  return [...vitals.vitals.holding];
 }
 
 /**
@@ -62,10 +62,7 @@ export function elevatedFrom(vitals: SentinelVitals): SignalKey[] {
  * vitals write re-pushes the status only when this moves.
  */
 function vitalsFactsKey(vitals: SentinelVitals): string {
-  return JSON.stringify([
-    diskAlarmFrom(vitals),
-    [...elevatedFrom(vitals)].sort(),
-  ]);
+  return JSON.stringify([diskAlarmFrom(vitals), holdingFrom(vitals).sort()]);
 }
 
 /** The disk verdict of a reading, when it is the running watcher's and has one. */
@@ -140,7 +137,7 @@ export const sentinelStatusWatcher = defineFileWatcher({
 let watcher: FileWatcher | null = null;
 
 /**
- * The vitals facts (disk verdict, elevated signals) last pushed with the
+ * The vitals facts (disk verdict, signals holding duress) last pushed with the
  * status. A vitals write (every tick) re-pushes the status only when it moves
  * them, so tabs hear about a filling disk or a new duress cause without a 5 s
  * stream of identical statuses.

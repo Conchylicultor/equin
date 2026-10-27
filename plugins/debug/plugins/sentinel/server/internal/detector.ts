@@ -41,14 +41,22 @@ export type DetectorEvent =
   | null;
 
 /**
- * One tick's readings and which signals sit at or above their trip limit — the
- * exact math the trip decision uses. Exported so the worker's vitals file shows
- * the same numbers the detector acted on.
+ * One tick's readings, which signals sit at or above their trip limit
+ * (`elevated`) and which are not calm yet (`holding`: at or above their clear
+ * limit, `offRatio` of the trip limit) — the exact math the trip and clear
+ * decisions use. A tripped detector clears once `holding` stays empty, so
+ * `holding` is what keeps an episode going. Exported so the worker's vitals
+ * file shows the same numbers the detector acted on.
  */
 export function signalsAt(
   sample: ClusterSample,
   t: DetectorThresholds,
-): { readings: SignalReadings; elevated: SignalKey[]; allCalm: boolean } {
+): {
+  readings: SignalReadings;
+  elevated: SignalKey[];
+  holding: SignalKey[];
+  allCalm: boolean;
+} {
   const readings: SignalReadings = {
     loadRatio: sample.cpuCount > 0 ? sample.loadAvg1 / sample.cpuCount : 0,
     // A pg-unreadable tick reads 0 locks: neither elevated nor calm-blocking.
@@ -60,32 +68,27 @@ export function signalsAt(
     // Missing/stale host line — the null-blk-read convention applies.
     decompressionsPerSec: sample.decompressionsPerSec ?? null,
   };
+  // Each signal's reading against its trip limit; a null reading is neither
+  // elevated nor calm-blocking.
+  const against: [SignalKey, number | null, number][] = [
+    ["loadRatio", readings.loadRatio, t.onLoadRatio],
+    ["locksWaiting", readings.locksWaiting, t.onLocksWaiting],
+    ["blkReadDeltaMs", readings.blkReadDeltaMs, t.onBlkReadDeltaMs],
+    ["slowBackends", readings.slowBackends, t.onSlowBackends],
+    [
+      "decompressionsPerSec",
+      readings.decompressionsPerSec,
+      t.onDecompressionsPerSec,
+    ],
+  ];
   const elevated: SignalKey[] = [];
-  if (readings.loadRatio >= t.onLoadRatio) elevated.push("loadRatio");
-  if (readings.locksWaiting >= t.onLocksWaiting) elevated.push("locksWaiting");
-  if (
-    readings.blkReadDeltaMs !== null &&
-    readings.blkReadDeltaMs >= t.onBlkReadDeltaMs
-  )
-    elevated.push("blkReadDeltaMs");
-  if (readings.slowBackends >= t.onSlowBackends) elevated.push("slowBackends");
-  if (
-    readings.decompressionsPerSec !== null &&
-    readings.decompressionsPerSec >= t.onDecompressionsPerSec
-  )
-    elevated.push("decompressionsPerSec");
-
-  const off = (v: number) => v * t.offRatio;
-  const allCalm =
-    readings.loadRatio < off(t.onLoadRatio) &&
-    readings.locksWaiting < off(t.onLocksWaiting) &&
-    (readings.blkReadDeltaMs === null ||
-      readings.blkReadDeltaMs < off(t.onBlkReadDeltaMs)) &&
-    readings.slowBackends < off(t.onSlowBackends) &&
-    (readings.decompressionsPerSec === null ||
-      readings.decompressionsPerSec < off(t.onDecompressionsPerSec));
-
-  return { readings, elevated, allCalm };
+  const holding: SignalKey[] = [];
+  for (const [key, value, on] of against) {
+    if (value === null) continue;
+    if (value >= on) elevated.push(key);
+    if (value >= on * t.offRatio) holding.push(key);
+  }
+  return { readings, elevated, holding, allCalm: holding.length === 0 };
 }
 
 export interface OnsetDetector {

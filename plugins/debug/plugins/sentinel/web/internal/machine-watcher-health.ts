@@ -68,16 +68,16 @@ const SIGNAL_MARK: Record<SignalKey, HealthMark | null> = {
 };
 
 /**
- * The dot's marks for a duress held by `elevated`, or `null` when some signal
+ * The dot's marks for a duress held by `holding`, or `null` when some signal
  * is not the machine's CPU or memory. Duress from CPU or memory is routine —
  * the watcher is already holding builds back — so it marks the dot rather
  * than colouring it. Empty while it waits out its calm dwell.
  */
 export function duressMarks(
-  elevated: readonly SignalKey[],
+  holding: readonly SignalKey[],
 ): HealthMark[] | null {
   const marks: HealthMark[] = [];
-  for (const key of elevated) {
+  for (const key of holding) {
     const mark = SIGNAL_MARK[key];
     if (mark === null) return null;
     if (!marks.some((m) => m.id === mark.id)) marks.push(mark);
@@ -157,7 +157,7 @@ export function machineWatcherVerdict(
         const summary = `Under duress since ${clockTime(duress.since)} · builds held back`;
         // A low or filling disk on top keeps the dot coloured: it would
         // otherwise hide behind a mark that only says the machine is busy.
-        const marks = diskStatus ? null : duressMarks(duress.elevated);
+        const marks = diskStatus ? null : duressMarks(duress.holding);
         return marks === null
           ? { state: "attention", summary }
           : { state: "attention", summary, ambient: marks };

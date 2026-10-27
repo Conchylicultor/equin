@@ -158,7 +158,7 @@ function vitalsRecord(
   t: DetectorThresholds,
   tripped: boolean,
 ): SentinelVitalsRecord {
-  const { readings, elevated } = signalsAt(sample, t);
+  const { readings, elevated, holding } = signalsAt(sample, t);
   return {
     pid: process.pid,
     wall: sample.wall,
@@ -182,6 +182,7 @@ function vitalsRecord(
       slowBackends: { value: readings.slowBackends, limit: t.onSlowBackends },
     },
     elevated,
+    holding,
     tripped,
     context: {
       freeMemMb: sample.freeMemMb ?? null,

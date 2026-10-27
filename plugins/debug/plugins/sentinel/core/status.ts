@@ -34,15 +34,15 @@ export const SentinelStatusValueSchema = z.object({
   watch: SentinelWatchSchema,
   /**
    * The duress latch while its lease is fresh; `null` when the machine is not
-   * under duress. `elevated` is what holds it there now — the signals over
-   * their limit in the running watcher's latest reading (empty while it waits
-   * out its calm dwell, or without a current reading). Re-pushed only when
-   * that set changes, so the row knows CPU from memory without the 5 s vitals.
+   * under duress. `holding` is what keeps it there now — the signals not calm
+   * yet in the running watcher's latest reading (empty while it waits out its
+   * calm dwell, or without a current reading). Re-pushed only when that set
+   * changes, so the row knows CPU from memory without the 5 s vitals.
    */
   duress: z
     .object({
       since: z.number(),
-      elevated: z.array(SignalKeySchema).max(SIGNAL_KEYS.length),
+      holding: z.array(SignalKeySchema).max(SIGNAL_KEYS.length),
     })
     .nullable(),
   /**

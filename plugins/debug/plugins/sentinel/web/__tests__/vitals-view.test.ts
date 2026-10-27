@@ -29,6 +29,7 @@ function vitals(
       slowBackends: { value: 0, limit: 2 },
     },
     elevated: [],
+    holding: [],
     tripped: false,
     context: {
       freeMemMb: 9_626,
