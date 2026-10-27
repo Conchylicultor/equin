@@ -45,7 +45,6 @@ insert popover, and contributes one `ReorderNodes.NodeType(...)` to the
     - `primitives/css/ui-kit.ControlSize`
     - `primitives/css/ui-kit.useControlSize`
     - `primitives/sortable-list/deferred-item.DeferredSortableItem`
-    - `reorder/area.ReorderAreaContext`
     - `reorder/node-types.RemoveNodeButton`
     - `reorder/node-types.ReorderNodes`
 - Cross-plugin:

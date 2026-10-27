@@ -10,7 +10,6 @@
     "apps-core.surface:placement-control",
     "audience.view-option:developer-mode",
     "config_v2.git-defaults-preview:git-defaults-preview",
-    "fullscreen:fullscreen-toggle",
-    "reorder.edit-mode:reorder-pen"
+    "fullscreen:fullscreen-toggle"
   ]
 }

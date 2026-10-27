@@ -149,7 +149,7 @@ those comparisons stay in one currency across passes.
 > need from where the bar is rendered, and every relaying box between it and the
 > row grows because it was asked
 > ([`grow-relay`](../css/plugins/grow-relay/CLAUDE.md)). The `slot-render` cell
-> and the reorder edit-mode wrapper are relays; `Line`/`Row`/`Bar` stop the ask,
+> is a relay; `Line`/`Row`/`Bar` stop the ask,
 > because they are the row it was about. `Fill` is neither: it grows already,
 > and the ask crosses it for free.
 >
@@ -497,11 +497,10 @@ container is docked immediately before its anchor, *wherever the anchor sits*,
 and "still in the row" is asked as "is this container immediately before its own
 anchor" (`isDockedInline`) rather than "is it a child of the root". The root was
 an assumption, and it is false for every host that renders items through a slot:
-between the bar and a contribution rendered by `.Render` sit `slot-render`'s box
-and reorder's `SortableItem` + content wrapper, all three `display: contents`
-outside edit mode. `display: contents` removes a box from LAYOUT but not from the
-DOM TREE, so the container is still a flex item of the row — gap and measurement
-unchanged — while the anchor is two or three levels down.
+between the bar and a contribution rendered by `.Render` sits `slot-render`'s
+`display: contents` box. `display: contents` removes a box from LAYOUT but not
+from the DOM TREE, so the container is still a flex item of the row — gap and
+measurement unchanged — while the anchor is a level or more down.
 
 That is also why **rigidity is declared by each rigid thing rather than by the
 row**. `[&>*]:shrink-0` on the root would stop reaching the containers through
@@ -569,12 +568,6 @@ itself triggers the pass, so "deferred forever" is unrepresentable.
 - **The panel is Tab + Enter + Esc.** No typeahead, no arrow-key roving. A
   regression against a real `DropdownMenu`, and the price of hosting a live
   slider.
-- **Entering or leaving reorder edit mode remounts every occupant.** In edit mode
-  the bar renders everything inline in React's own tree, because dnd-kit handles
-  re-parented out of their `SortableContext` are handles that silently do
-  nothing. Crossing that edge means crossing the portal, and the portal *is* the
-  identity-preserving mechanism — there is no version of this that keeps the
-  instance. It is a deliberate user gesture, not a resize.
 - **A placement change re-renders every occupant.** A rung is React state, so the
   bar must re-render for a widget to change form; there is no way to re-render
   only the one that moved.
@@ -859,7 +852,6 @@ rendered.
     - `primitives/css/viewport-overlay.ViewportOverlay`
     - `primitives/css/yield.yieldClass`
     - `primitives/dom/element-size.useResizeObserver`
-    - `primitives/edit-mode-signal.useEditMode`
     - `primitives/icon-button.IconButton`
     - `primitives/overlay/popup-open.PopupOpenScope`
     - `primitives/slot-render.SlotItemLayout`

@@ -64,7 +64,6 @@ import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { SlotItemLayout } from "@plugins/primitives/plugins/slot-render/web";
 import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { useEditMode } from "@plugins/primitives/plugins/edit-mode-signal/web";
 import { AdaptiveBarItem } from "./bar-item";
 import {
   failLoudly,
@@ -342,8 +341,8 @@ AdaptiveBar.Yield = AdaptiveBarYield;
 /**
  * Which half of the chain a width fault should send the reader to.
  *
- * The ask travels through the boxes this primitive knows (the slot cell, the
- * reorder edit-mode wrapper) and is invisible to the ones it does not (a
+ * The ask travels through the boxes this primitive knows (the slot cell) and
+ * is invisible to the ones it does not (a
  * hand-rolled wrapper `<div>`), so the count separates "nobody above me can
  * give room" from "everyone I can see gave it and something I cannot see took
  * it back".
@@ -526,7 +525,6 @@ function AdaptiveBarShell({
 }): ReactElement {
   const { measure, isRendered } = useMeasureBundle();
   const layoutMeasured = useLayoutMeasured();
-  const editMode = useEditMode();
 
   /**
    * Is there already a bar above this one?
@@ -703,7 +701,6 @@ function AdaptiveBarShell({
 
   const registry = useMemo<BarRegistry>(
     () => ({
-      editMode,
       register(id, container) {
         const entry: BarItemEntry = {
           id,
@@ -833,7 +830,7 @@ function AdaptiveBarShell({
         if (yieldFloorPx(cell) > 0 !== yieldReservedRef.current) bump();
       },
     }),
-    [editMode, bump, putLadder],
+    [bump, putLadder],
   );
 
   /**
@@ -1666,7 +1663,7 @@ function AdaptiveBarShell({
       return observed;
     },
     reconcile,
-    { deps: [reconcile, version, editMode] },
+    { deps: [reconcile, version] },
   );
 
   // ── The two contract-free locks ──────────────────────────────────────────

@@ -3150,10 +3150,7 @@ A type therefore declares `chrome` (`BlockChrome`) and never a `component`:
   `end` have no consumer today, which is the price of actually closing it.
 
 `Editor.Block`'s registration is a union discriminated off the handle's `text`
-lens, so a text-bearing type naming a `component` is a **compile error**, and
-`excludeFromReorder` is on the text-less arm ONLY — `ReorderItemMiddleware` flips
-between `<ReorderItemBox>` and a Fragment on that field, i.e. an element-type
-flip on an ancestor of the composer.
+lens, so a text-bearing type naming a `component` is a **compile error**.
 
 Four constraints that are not stylistic:
 

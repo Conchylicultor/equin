@@ -56,12 +56,6 @@ export interface BarItemEntry {
  * so an item's registration effects never re-run because the bar re-rendered.
  */
 export interface BarRegistry {
-  /**
-   * Edit mode is on: every occupant renders inline, in React's own tree, and
-   * nothing relocates. dnd-kit's handles must stay under their `SortableContext`
-   * — a drag handle re-parented out of it is a drag that silently does nothing.
-   */
-  readonly editMode: boolean;
   register(id: string, container: HTMLDivElement): () => void;
   declare(id: string, ladder: Required<ShrinkLadder>): () => void;
   hold(id: string): () => void;

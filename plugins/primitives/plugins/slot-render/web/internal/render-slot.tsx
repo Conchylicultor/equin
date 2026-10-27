@@ -5,7 +5,6 @@ import {
 import { GrowRelay } from "@plugins/primitives/plugins/css/plugins/grow-relay/web";
 import {
   createElement,
-  Fragment,
   useCallback,
   useLayoutEffect,
   useMemo,
@@ -99,15 +98,22 @@ const defineSlotUnchecked = defineSlot as <Q>(opts?: SlotOptions<Q>) => Slot<Q>;
  *    the box, or the slack around a small widget (most of what there is to point
  *    at when the widget is a 4px bar in a 24px row) answers for nobody.
  *
- * Its element type is stable across the post-measure `horizontal` flip, so React
- * reconciles each contribution subtree in place instead of tearing it down and
- * rebuilding it on every (re)mount.
+ * Its element chain — relay, `div` — is the same whichever way the post-measure
+ * `horizontal` flip goes (only the relay's `active` and the `div`'s classes
+ * change), so React reconciles each contribution subtree in place instead of
+ * tearing it down and rebuilding it on every (re)mount.
  *
  * With no layout role AND nothing to stamp there is no element at all — the
  * paths that draw no cell (`.Mount`, `.Dispatch`) stay exactly as bare as they
  * were before any of this existed.
+ *
+ * 3. **The item middlewares**, folded around the contribution INSIDE the box
+ *    (lowest depth outermost), so an error boundary's fallback keeps the
+ *    cell's layout role. Inline here rather than a component of their own: a
+ *    slot renders inside list rows, so every component per item is paid rows ×
+ *    contributions times.
  */
-function ContributionBox({
+function SlotItem({
   slotId,
   contribution,
   cell,
@@ -119,38 +125,49 @@ function ContributionBox({
   children: ReactNode;
 }) {
   const declared = useSlotItemLayout();
-  // The cell ITSELF when it lays out as a row, so the row branch below needs no
-  // non-null assertion — `isRow` as a bare boolean tells the compiler nothing
-  // about `cell`.
-  const rowCell =
-    cell && (declared !== null ? declared === "row" : cell.horizontal)
-      ? cell
-      : null;
-  const attrs = useSlotItemAttrs({ slotId, contribution, boxless: !rowCell });
-  if (!cell && !attrs) return <>{children}</>;
-  // A `display:contents` box generates none, so it has nothing to grow and stays
-  // out of the chain entirely — an ask crosses it for free (context passes
-  // through), and counting it as a relay would report a link that applied
-  // nothing.
-  if (!rowCell)
-    return (
-      <div className="contents" {...attrs}>
-        {children}
-      </div>
+  const isRow =
+    cell !== undefined &&
+    (declared !== null ? declared === "row" : cell.horizontal);
+  const attrs = useSlotItemAttrs({ slotId, contribution, boxless: !isRow });
+  const itemMws = useSlotItemMiddlewares();
+
+  let node = children;
+  for (let i = itemMws.length - 1; i >= 0; i--) {
+    const Mw = itemMws[i]!.Component;
+    node = (
+      <Mw slotId={slotId} contribution={contribution}>
+        {node}
+      </Mw>
     );
+  }
+
+  if (cell === undefined) {
+    return attrs ? (
+      <div className="contents" {...attrs}>
+        {node}
+      </div>
+    ) : (
+      node
+    );
+  }
+  // A `display:contents` box generates none, so it has nothing to grow: its
+  // relay is inactive and an ask crosses it to the chain above, counted by
+  // nobody. Still rendered, so the measured flip changes props, not elements.
   return (
-    <GrowRelay>
+    <GrowRelay active={isRow}>
       {(asked) => (
         <div
           {...attrs}
           // eslint-disable-next-line layout/no-adhoc-layout -- one box whose DISPLAY flips at runtime between a flex cell and `display:contents`, on a React element type that must stay `div` across the flip (see the docstring: swapping the type tears the contribution subtree down, and <Line>/<Fill> are not `div` to React). No container primitive can express that, and the rigid cell is `min-w-0` WITHOUT `flex-1` on purpose — it relays the shrink-chain but must not grow, so it is not a <Fill>.
           className={
-            rowCell.fill || asked
-              ? "flex min-w-0 flex-1 items-center"
-              : "flex min-w-0 items-center"
+            !isRow
+              ? "contents"
+              : cell.fill || asked
+                ? "flex min-w-0 flex-1 items-center"
+                : "flex min-w-0 items-center"
           }
         >
-          {children}
+          {node}
         </div>
       )}
     </GrowRelay>
@@ -186,57 +203,24 @@ export interface RenderSlotConfig<P> {
 }
 
 /**
- * The contributed item middlewares (`SlotRender.ItemMiddleware`: error-boundary
- * isolation, reorder item handle, …) folded around one contribution, lowest
- * `depth` outermost. A component rather than a loop in `applyItemMiddlewares`
- * because the middlewares are slot contributions, read with a hook — and
- * `applyItemMiddlewares` / `renderIsolated` are plain functions their callers
- * use from anywhere in a render.
- */
-function ItemMiddlewares({
-  slotId,
-  contribution,
-  children,
-}: {
-  slotId: string;
-  contribution: Contribution;
-  children: ReactNode;
-}) {
-  const itemMws = useSlotItemMiddlewares();
-  let node = children;
-  for (let i = itemMws.length - 1; i >= 0; i--) {
-    const Mw = itemMws[i]!.Component;
-    const captured = node;
-    node = (
-      <Mw slotId={slotId} contribution={contribution}>
-        {captured}
-      </Mw>
-    );
-  }
-  return <>{node}</>;
-}
-
-/**
- * Wraps a rendered node in the contributed item middlewares and then in the
- * contribution's own box. Shared by `.Render`, `.Mount` and `.Dispatch`.
- *
- * The box goes OUTSIDE the middlewares and is applied here rather than by the
- * caller, so that every contribution rendered anywhere in the app ends up with
- * exactly one outermost element that the slot owns and that carries its
- * identity. `cell` is that box's layout role, which only `.Render` has.
+ * One contribution as the slot draws it — its box around the contributed item
+ * middlewares around `node` (see {@link SlotItem}). Shared by `.Render`,
+ * `.Mount`, `.Dispatch` and `renderIsolated`, so every contribution rendered
+ * anywhere in the app ends up with exactly one outermost element that the slot
+ * owns and that carries its identity. `cell` is that box's layout role, which
+ * only `.Render` has; `key` keys the item where a caller maps it over a list.
  */
 export function applyItemMiddlewares(
   node: ReactNode,
   slotId: string,
   contribution: Contribution,
   cell?: { horizontal: boolean; fill: boolean },
+  key?: string,
 ): ReactNode {
   return (
-    <ContributionBox slotId={slotId} contribution={contribution} cell={cell}>
-      <ItemMiddlewares slotId={slotId} contribution={contribution}>
-        {node}
-      </ItemMiddlewares>
-    </ContributionBox>
+    <SlotItem key={key} slotId={slotId} contribution={contribution} cell={cell}>
+      {node}
+    </SlotItem>
   );
 }
 
@@ -252,6 +236,7 @@ function renderContributionIsolated(
   contribution: Contribution,
   slotId: string,
   cell?: { horizontal: boolean; fill: boolean },
+  key?: string,
 ): ReactNode {
   const component = (clean as { component?: unknown }).component;
   const node: ReactNode =
@@ -260,7 +245,7 @@ function renderContributionIsolated(
           UNSAFE_unsealSlotComponent(component as unknown as SealedComponent),
         )
       : null;
-  return applyItemMiddlewares(node, slotId, contribution, cell);
+  return applyItemMiddlewares(node, slotId, contribution, cell, key);
 }
 
 interface RenderProps<P> {
@@ -384,27 +369,28 @@ export function defineRenderSlot<P>(
         const clean = cleanById.get(cId as (P & { id: string })["id"]);
         if (!clean) return null;
 
-        // See `ContributionBox`: the measured host orientation (overridable by
+        // See `SlotItem`: the measured host orientation (overridable by
         // a host that relocates contributions elsewhere) plus the
         // contribution's own claim on the row's slack.
         const cell = {
           horizontal,
           fill: (clean as { fill?: boolean }).fill === true,
         };
-        const wrapped = children
+        // Keyed by `pluginId:id` (reorder's entryKey), unique in the slot even
+        // when two plugins contribute the same id — so every caller maps it over
+        // a list as it comes, the reorder list middleware included.
+        const key = contribution._pluginId
+          ? `${contribution._pluginId}:${cId}`
+          : cId;
+        return children
           ? applyItemMiddlewares(
               children(clean as unknown as P & { id: string }),
               slot.id,
               contribution,
               cell,
+              key,
             )
-          : renderContributionIsolated(clean, contribution, slot.id, cell);
-        // The key rides a Fragment rather than the box: the box is minted inside
-        // `applyItemMiddlewares` (it has to sit outside the middlewares), and
-        // `renderItem` returning a KEYED node is relied on by every caller that
-        // maps it over a list — the reorder list middleware's passthrough path
-        // included.
-        return <Fragment key={cId}>{wrapped}</Fragment>;
+          : renderContributionIsolated(clean, contribution, slot.id, cell, key);
       },
       [cleanById, children, horizontal],
     );
@@ -418,6 +404,7 @@ export function defineRenderSlot<P>(
       result = (
         <Mw
           slotId={slot.id}
+          slotMeta={renderSlot.meta}
           contributions={rawContributions}
           renderItem={renderItem}
         >
@@ -527,10 +514,12 @@ export function defineMountSlot<P = {}>(
           if (!cId) return null;
           const clean = cleanById.get(cId);
           if (!clean) return null;
-          return (
-            <Fragment key={cId}>
-              {renderContributionIsolated(clean, contribution, slot.id)}
-            </Fragment>
+          return renderContributionIsolated(
+            clean,
+            contribution,
+            slot.id,
+            undefined,
+            cId,
           );
         })}
       </>

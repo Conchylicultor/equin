@@ -7,7 +7,12 @@ export const dividerNodeType: ReorderNodeType<Record<string, never>> = {
   container: false,
   schema: z.object({}),
   render: (p) => (
-    <DividerBox itemKey={p.id!} editMode={p.editMode} onRemove={p.onRemove} />
+    <DividerBox
+      itemKey={p.id!}
+      orientation={p.orientation}
+      editMode={p.editMode}
+      onRemove={p.onRemove}
+    />
   ),
   insert: {
     label: "Add Divider",

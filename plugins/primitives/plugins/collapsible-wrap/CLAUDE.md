@@ -8,9 +8,7 @@ lines, clamped to `rows` rows by default, with a chevron toggle that reveals the
 This is the complement to `adaptive-bar`. `AdaptiveBar` keeps a single line and
 *relocates* what will not fit into a panel (its predecessor, `ResponsiveOverflow`,
 unmounted it outright). `CollapsibleWrap` instead *wraps* to more rows and *clips*
-via CSS — every child stays mounted, in place — which is exactly what lets it
-compose with the global reorder edit mode: a clipped chip is still a mounted,
-valid drag target. The inner `flex flex-wrap` box's **layout height is
+via CSS — every child stays mounted, in place. The inner `flex flex-wrap` box's **layout height is
 always one clamp** — a computed `max-height` (uniform row height × `rows` + `gap` ×
 (`rows`-1)) — in BOTH collapsed and expanded states. Only `overflow` flips: `hidden` when
 collapsed (clips the extra rows), `visible` when expanded (reveals them). The row height is
@@ -37,34 +35,17 @@ This replaces the earlier portal/`fixed`-overlay approach, which relocated the w
 `document.body` and so structurally moved row 1 between states. Keeping the box in flow makes
 "row 1 doesn't move" true by construction rather than by pixel-chasing a frozen overlay rect.
 
-## The single-`.Render` / single-`SortableContext` invariant
+## The single-`.Render` invariant
 
 `children` is a single `ReactNode` — the one `<Slot.Render>` element — and is **never
-indexed, mapped, or duplicated**. The global reorder middleware renders the slot's items
-inside exactly one `SortableContext`. Rendering the slot twice (e.g. "row 1 here, rows 2+
-in a popover") would create two `SortableContext`s and silently break drag-reorder — which
-is *why* the whole box stays a single element that merely toggles its overflow.
-
-## Force-expand on edit mode
-
-`const editMode = useEditMode()` (from `@plugins/primitives/plugins/edit-mode-signal/web`); `expanded = userExpanded ||
-editMode`. While the global reorder pen is active everything is force-expanded so every chip
-is a reachable drag target, and the chevron is hidden (a toggle would be a no-op).
-
-Force-expand also injects a `ReorderLayout` (from `@plugins/reorder/web`) into the reorder
-middleware via `ReorderLayoutContext.Provider` wrapped around `{children}` **inside** the
-wrap box. The injected layout is `{ flow: "wrap" }`, which the layout editor maps to dnd-kit's
-2-D `rectSortingStrategy`, so chips drag correctly once they spill across wrapped rows (plain data:
-reorder's apply side ships everywhere and imports no drag code). The **spacer is unchanged from
-the 1-D case**: a reorder spacer is `flex-1`, which under `flex-wrap` grows to fill its line,
-pushing following chips right until they wrap — exactly "push right while there's space, then
-collapse". (An earlier revision wrongly swapped it for a `basis-full` line-break spacer.) When
-no `CollapsibleWrap` is present the middleware sees a `null` context and falls back to today's
-single-axis behavior byte-for-byte.
+indexed, mapped, or duplicated**: every chip is mounted once, in place, which is *why* the
+whole box stays a single element that merely toggles its overflow. A reorder spacer is
+`flex-1`, which under `flex-wrap` grows to fill its line, pushing following chips right until
+they wrap.
 
 Overflow detection (`ResizeObserver` on the wrap box, deferred via `requestAnimationFrame`,
 mirroring `adaptive-bar` — no timers, no polling) gates the chevron: it appears only
-when `(overflowing || expanded) && !editMode`.
+when `overflowing || expanded`.
 
 ## Host contract
 
@@ -73,8 +54,7 @@ when `(overflowing || expanded) && !editMode`.
   the parent's flex direction) keeps working.
 - The host must give the expanded rows somewhere to spill: **no `overflow-hidden` ancestor**
   between the wrap box and where the rows should drop. Without it, the expanded rows are
-  clipped (the collapsed/edit affordances still work, but expanding reveals nothing below
-  row 1).
+  clipped (expanding reveals nothing below row 1).
 - Under `flex-wrap`, slot-render wraps each chip in a `min-w-0` cell, which lets the *last*
   chip on a line shrink instead of wrapping — but only if its content is shrinkable
   (e.g. a `<Text>` title in a line container). Chips that must **not** shrink (badges, buttons) should

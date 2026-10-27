@@ -145,17 +145,27 @@ export function useRequestGrow(active: boolean): GrowGrant {
  * (`display: contents`) should stay out of the chain, or it inflates `relays`
  * with a link that applied nothing.
  *
+ * A box whose role flips at runtime between a real box and `display: contents`
+ * (slot-render's cell, which learns its host's flow after mounting) passes
+ * `active={false}` while it is the latter: the relay then hands down the chain
+ * above it unchanged — transparent, counting for nothing — while its element
+ * stays put, so the flip remounts nothing under it.
+ *
  * Nothing here is measured, so nothing can oscillate: `growing` counts MOUNTED
  * requesters, and no answer the requester computes from its new width can add
  * or remove one.
  */
 export function GrowRelay({
+  active = true,
   children,
 }: {
+  /** False: this box generates none right now, so it relays nothing. */
+  active?: boolean;
   children: (growing: boolean) => ReactNode;
 }): ReactNode {
+  const above = useContext(GrowRelayContext);
   const [count, setCount] = useState(0);
-  const growing = count > 0;
+  const growing = active && count > 0;
 
   // The relay is a requester too — this is the whole transitive half.
   const parent = useRequestGrow(growing);
@@ -171,15 +181,21 @@ export function GrowRelay({
   );
 
   const value = useMemo<GrowRelayValue>(
-    () => ({
-      sink,
-      // Granted all the way up, or not granted: composing it here is what makes
-      // the requester's single boolean mean "every box between me and my row
-      // has applied the grow" rather than "the nearest one did".
-      granted: growing && parent.granted,
-      relays: parent.relays + 1,
-    }),
-    [sink, growing, parent.granted, parent.relays],
+    () =>
+      active
+        ? {
+            sink,
+            // Granted all the way up, or not granted: composing it here is what
+            // makes the requester's single boolean mean "every box between me
+            // and my row has applied the grow" rather than "the nearest one
+            // did".
+            granted: growing && parent.granted,
+            relays: parent.relays + 1,
+          }
+        : // Inactive: a descendant's ask goes straight to the chain above (its
+          // registration effect is keyed on the sink, so a flip moves it).
+          above,
+    [active, above, sink, growing, parent.granted, parent.relays],
   );
 
   return (

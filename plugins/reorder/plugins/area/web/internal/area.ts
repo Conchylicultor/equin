@@ -5,11 +5,9 @@ import {
   type RefObject,
 } from "react";
 
-// What a reorder area draws, shared by the side that applies a layout (`reorder`,
-// in every bundle) and the side that edits one (`reorder.editor`,
-// `reorder.edit-mode`, opt-in). A leaf: `reorder` reaches the editor's other
-// consumer (`fields.reorder-tree.config`) through its own imports, so neither
-// side may import the other's barrel for these.
+// What a reorder area in the layout editor draws: the Config pane's reorder-tree
+// field (`fields.reorder-tree.config`) over `reorder.editor`. A leaf, so both
+// import it without a cycle.
 
 /**
  * A top-level row of an area. `id` is BOTH the sortable id and the key passed

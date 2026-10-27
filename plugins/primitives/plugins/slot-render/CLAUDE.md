@@ -6,7 +6,8 @@ Two constructors for "render all contributions, each error-boundary-isolated",
 distinguished by whether the contributions are *visible*:
 
 - **`defineRenderSlot(id, config?)`** — a **visible** slot. `.Render` paints
-  every contribution (item middlewares + the list/reorder middleware). Always
+  every contribution (item middlewares + the list middlewares, reorder's
+  layout among them). Always
   **reorderable** — there is no opt-out. Every render slot appears in the
   reorder manifest and gets an authored config override.
 
@@ -159,7 +160,8 @@ What every slot renders through is three declared slots this plugin owns —
 `SlotRender.ItemMiddleware` (wraps each contribution, on every path) and
 `SlotRender.ItemAttrs` (stamps the box, below) — read with hooks at render
 time, lowest `depth` outermost (a wrapping depth, not a position — a number
-named for its meaning). They replaced an imperative module registry
+named for its meaning). A list middleware is handed the slot's `slotMeta` too
+(the pane title guard reads `partOfComponent`). They replaced an imperative module registry
 (`registerSlot*Middleware`), which no tool could see: `reorder` registered its
 layout middleware there, nothing imported it, and served compositions shipped
 without it — every slot in raw registration order.
@@ -174,7 +176,7 @@ needs a `PluginProvider` — so does every slot.
 ## The contribution box, and stamping it
 
 Every contribution rendered by any path gets at most ONE element the slot owns —
-its **box** (`ContributionBox`). On `.Render` that box is the layout cell
+its **box** (`SlotItem`). On `.Render` that box is the layout cell
 described above; `.Mount` / `.Dispatch` draw no cell, so their box exists only if
 something is stamped on it, and otherwise no element is emitted at all.
 
@@ -197,11 +199,25 @@ or a real cell), because walks that look for the nearest *authored* element have
 to step through the layout-neutral ones. The slot knows; the consumer never
 guesses.
 
-Item middlewares are unchanged and unconditional — they always wrap the
-contribution's content, inside the box, so an error boundary's fallback keeps the
-cell's layout role. `applyItemMiddlewares` mints the box itself (it has to be
-outermost), so `renderItem` returns a Fragment carrying the React key, which
-every caller mapping it over a list relies on.
+Item middlewares are unconditional — they always wrap the contribution's
+content, inside the box, so an error boundary's fallback keeps the cell's layout
+role.
+
+### Per-item cost is the hot path
+
+A slot renders inside list rows, so whatever it adds per contribution is paid
+rows × contributions times (a transcript open mounts ~300 contributions, a
+DataView group unfold ~560). So `SlotItem` is ONE component that reads the
+layout, attrs and middlewares with hooks and folds the middlewares inline, keyed
+directly by `renderItem` (`pluginId:id`, reorder's entryKey — unique in the slot,
+so callers map it as it comes); and each middleware is one fiber (the error
+boundary is a class contributed as the middleware itself, the picker provides
+through `usePortalForward`). The cell's chain — `GrowRelay` (`active` only for a
+row cell) around one `div` — is the same element chain whichever way the
+host measure flips, so the flip never remounts a contribution. A check that is
+about the slot rather than its items (the pane title guard) is a LIST
+middleware: once per `.Render`. Measure with
+`plugins/debug/plugins/render-profiler/e2e/mount-cost.ts`.
 
 ## `Core.Root` renders here too: `<RenderCoreRoot/>`
 

@@ -12,7 +12,13 @@ export interface ReorderNodeRenderProps<P = unknown> {
   payload: P;
   /** Structural addressing id (lazy uuid). Leaf node types rely on it. */
   id?: string;
+  /**
+   * Drawn in the Config pane's layout editor (a draggable placeholder); an area
+   * in the app always draws at rest.
+   */
   editMode: boolean;
+  /** Which way the area's items run (a divider turns its rule to it). */
+  orientation: "horizontal" | "vertical";
   /** Pre-rendered members — present only for container node types. */
   children?: ReactNode;
   /** Write payload back, addressed by `id` (shallow-merged into the node). */

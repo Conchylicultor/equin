@@ -7,6 +7,7 @@ export type {
   ProfilerReport,
   ProfilerStartOptions,
   CommitSample,
+  MountStat,
 } from "./types";
 export { RENDER_PROFILER_CHANNEL, RENDER_PROFILER_GLOBAL } from "./constants";
 export type { RenderProfilerGlobal, RenderProfilerWindow } from "./global-api";

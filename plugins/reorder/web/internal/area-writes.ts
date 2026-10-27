@@ -4,64 +4,20 @@ import type {
   ReorderTree,
 } from "@plugins/fields/plugins/reorder-tree/core";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
-import type { ReorderAreaWrites } from "./editor-contract";
-import {
-  contributionKey,
-  entryKey,
-  isNodeData,
-  type ReorderNodeData,
-  type ReorderState,
-  type TopLevelEntry,
-} from "./sorting";
+import { isNodeData, type ReorderNodeData, type ReorderState } from "./sorting";
 
-// The write half of an area. It lives with the apply side, not the editor,
-// because one write is live at rest: a header's collapse toggle (`patchNode`).
-// The editor receives these through `ReorderAreaEditorProps.writes`.
+// The writes an area's nodes make at rest: a header's collapse toggle
+// (`patchNode`) and a node's own removal. Ordering, hiding and inserting are the
+// Config pane's reorder-tree field, which writes the whole tree itself.
 
 /**
- * Serialize one top-level entry to a `ReorderNode`:
- *  - a live `Contribution` → its bare `entryKey` string (terse item);
- *  - a node (`ReorderNodeData`) → its `rawNode` VERBATIM (a container rides
- *    along with its members/payload unchanged; a leaf node keeps its `id`/payload).
+ * An area's node writes, each materializing a fresh `items` tree into the slot's
+ * user config layer. Stable identities: they read the latest state when they
+ * fire.
  */
-function entryToNode(entry: TopLevelEntry): ReorderNode {
-  return isNodeData(entry) ? entry.rawNode : entryKey(entry);
-}
-
-/**
- * Materialize the current top-level order into a fresh `ReorderTree`:
- * contributions become bare strings, node entries re-emit their raw subtree
- * verbatim, and the hidden set is appended last as `{ item, hidden: true }`
- * nodes so a reorder/insert write never un-hides. Containers ride along at
- * their array positions (they are not top-level draggable).
- *
- * `hideKey`/`restoreKey` flip a single contribution to/from hidden.
- */
-function materializeTree(
-  entries: TopLevelEntry[],
-  hiddenKeys: string[],
-  opts?: { hideKey?: string; restoreKey?: string },
-): ReorderTree {
-  const tree: ReorderNode[] = [];
-  for (const e of entries) {
-    if (!isNodeData(e)) {
-      const key = entryKey(e);
-      if (key === opts?.hideKey) {
-        tree.push({ item: key, hidden: true });
-        continue;
-      }
-    }
-    tree.push(entryToNode(e));
-  }
-  for (const key of hiddenKeys) {
-    if (key === opts?.hideKey) continue;
-    if (key === opts?.restoreKey) {
-      tree.push(key);
-    } else {
-      tree.push({ item: key, hidden: true });
-    }
-  }
-  return tree;
+export interface ReorderAreaWrites {
+  removeNode: (id: string) => void;
+  patchNode: (renderId: string, partial: Record<string, unknown>) => void;
 }
 
 /**
@@ -137,69 +93,11 @@ export function useAreaWrites(
   // `itemsRef` feeds the verbatim raw-tree maps (remove/patch by id) — the same
   // tree `entriesRef` is derived from.
   const itemsRef = useLatestRef(items);
-  const hiddenKeysRef = useLatestRef(
-    useMemo(() => state.hidden.map((c) => contributionKey(c)!), [state.hidden]),
-  );
   const setConfigRef = useLatestRef(setConfig);
 
   return useMemo<ReorderAreaWrites>(() => {
     const commit = (tree: ReorderTree) => setConfigRef.current("items", tree);
     return {
-      hide(key) {
-        if (hiddenKeysRef.current.includes(key)) return;
-        commit(
-          materializeTree(entriesRef.current, hiddenKeysRef.current, {
-            hideKey: key,
-          }),
-        );
-      },
-
-      restore(key) {
-        if (!hiddenKeysRef.current.includes(key)) return;
-        commit(
-          materializeTree(entriesRef.current, hiddenKeysRef.current, {
-            restoreKey: key,
-          }),
-        );
-      },
-
-      drop(draggedKey, overKey) {
-        if (draggedKey === overKey) return;
-        const list = entriesRef.current;
-
-        const idOf = (e: TopLevelEntry): string =>
-          isNodeData(e) ? (e.id ?? "") : entryKey(e);
-        const excludedOf = (e: TopLevelEntry): boolean =>
-          !isNodeData(e) && !!(e as Record<string, unknown>).excludeFromReorder;
-
-        const dragged = list.find((x) => idOf(x) === draggedKey);
-        const target = list.find((x) => idOf(x) === overKey);
-        if (!dragged || !target) return;
-        // Containers are not top-level draggable; only items move.
-        if (isNodeData(dragged) && dragged.members) return;
-        if (excludedOf(dragged) || excludedOf(target)) return;
-
-        // Reorder over the non-excluded slice, then materialize the full order.
-        const reorderable = list.filter((x) => !excludedOf(x));
-        const fromIdx = reorderable.findIndex((x) => idOf(x) === draggedKey);
-        const toIdx = reorderable.findIndex((x) => idOf(x) === overKey);
-        if (fromIdx < 0 || toIdx < 0) return;
-
-        const next = reorderable.slice();
-        const [moved] = next.splice(fromIdx, 1);
-        next.splice(toIdx, 0, moved!);
-
-        // Re-append the excluded tail (pinned last) so it isn't dropped.
-        const tail = list.filter((x) => excludedOf(x));
-        commit(materializeTree([...next, ...tail], hiddenKeysRef.current));
-      },
-
-      insert(create) {
-        const tree = materializeTree(entriesRef.current, hiddenKeysRef.current);
-        tree.push(create());
-        commit(tree);
-      },
-
       removeNode(id) {
         commit(mapNodeById(itemsRef.current, id, () => null));
       },

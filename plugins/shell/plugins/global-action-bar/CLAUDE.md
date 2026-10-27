@@ -21,7 +21,7 @@ that information. The docked strip
 renders neither: its items are always visible. The bar names no contributor.
 
 One gear button (`ViewOptionsButton`) opens a control-panel popover: the
-`ActionBar.ViewOption` rows (surface mode, browser fullscreen, edit layout —
+`ActionBar.ViewOption` rows (surface mode, browser fullscreen —
 whatever is contributed).
 Options about how the app is shown are set once and left alone, so they share
 that one button rather than each taking a slot in the bar. The gear is itself

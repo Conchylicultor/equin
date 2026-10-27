@@ -22,6 +22,8 @@ export interface SlotListMiddleware {
   depth: number;
   Component: ComponentType<{
     slotId: string;
+    /** The slot's own description (kind, `partOfComponent`, …). */
+    slotMeta: SlotHandle["meta"];
     contributions: readonly Contribution[];
     renderItem: (contribution: Contribution) => ReactNode;
     children: ReactNode;

@@ -57,13 +57,12 @@ export interface AdaptiveBarItemProps {
  *   a primitive nobody composes, and a host that wraps its actions in
  *   `AdaptiveBar.Item` unconditionally (a pane header does) must render the
  *   same thing outside a bar.
- * - **edit mode** — transparent, for the reason in {@link BarRegistry.editMode}.
  * - **otherwise** — the portalled host below.
  *
  * Crossing between transparent and portalled remounts the widget. That is not
  * avoidable and not hidden: the portal IS the identity-preserving mechanism, so
  * there is no version of "stop portalling" that keeps the instance. It only
- * happens on the edit-mode edge, which is a deliberate user gesture.
+ * happens when the bar above appears or goes.
  */
 export function AdaptiveBarItem({
   id,
@@ -71,7 +70,7 @@ export function AdaptiveBarItem({
   children,
 }: AdaptiveBarItemProps): ReactElement {
   const registry = useContext(BarRegistryContext);
-  if (registry === null || registry.editMode) return <>{children}</>;
+  if (registry === null) return <>{children}</>;
   return (
     <PortaledBarItem registry={registry} id={id} className={className}>
       {children}

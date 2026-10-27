@@ -2,25 +2,10 @@ import { describe, it, expect, afterEach } from "vitest";
 import { act, cleanup, render } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import {
-  ReorderAreaContext,
-  type ReorderAreaCtxValue,
-} from "@plugins/reorder/plugins/area/web";
 import { ItemBindingProvider } from "@plugins/primitives/plugins/sortable-list/plugins/deferred-item/web";
 import { DividerBox } from "../components/divider-box";
 
 afterEach(cleanup);
-
-function area(
-  orientation: ReorderAreaCtxValue["orientation"],
-): ReorderAreaCtxValue {
-  return {
-    orientation,
-    onHide: () => {},
-    onRemoveNode: () => {},
-    ItemChrome: null,
-  };
-}
 
 /** An item drawn on either side, so the divider has something to separate. */
 function Between({ children }: { children: ReactNode }) {
@@ -36,11 +21,14 @@ function Between({ children }: { children: ReactNode }) {
 describe("a divider turns its rule to the area's flow", () => {
   it("draws a flat rule on the rail in a vertical area", () => {
     const { getByRole } = render(
-      <ReorderAreaContext.Provider value={area("vertical")}>
-        <Between>
-          <DividerBox itemKey="d" editMode={false} onRemove={() => {}} />
-        </Between>
-      </ReorderAreaContext.Provider>,
+      <Between>
+        <DividerBox
+          itemKey="d"
+          orientation="vertical"
+          editMode={false}
+          onRemove={() => {}}
+        />
+      </Between>,
     );
     const sep = getByRole("separator");
     expect(sep.getAttribute("aria-orientation")).toBeNull();
@@ -48,26 +36,18 @@ describe("a divider turns its rule to the area's flow", () => {
     expect(sep.firstElementChild!.className).toContain("border-t");
   });
 
-  it("defaults to the flat rule outside any area", () => {
-    const { getByRole } = render(
-      <Between>
-        <DividerBox itemKey="d" editMode={false} onRemove={() => {}} />
-      </Between>,
-    );
-    expect(getByRole("separator").firstElementChild!.className).toContain(
-      "border-t",
-    );
-  });
-
   it("draws an upright rule sized from the row's control height in a horizontal area", () => {
     const { getByRole } = render(
-      <ReorderAreaContext.Provider value={area("horizontal")}>
-        <ControlSizeProvider size="md">
-          <Between>
-            <DividerBox itemKey="d" editMode={false} onRemove={() => {}} />
-          </Between>
-        </ControlSizeProvider>
-      </ReorderAreaContext.Provider>,
+      <ControlSizeProvider size="md">
+        <Between>
+          <DividerBox
+            itemKey="d"
+            orientation="horizontal"
+            editMode={false}
+            onRemove={() => {}}
+          />
+        </Between>
+      </ControlSizeProvider>,
     );
     const sep = getByRole("separator");
     expect(sep.getAttribute("aria-orientation")).toBe("vertical");
@@ -83,7 +63,14 @@ function Item({ children }: { children?: ReactNode }) {
 }
 
 function Rule() {
-  return <DividerBox itemKey="d" editMode={false} onRemove={() => {}} />;
+  return (
+    <DividerBox
+      itemKey="d"
+      orientation="vertical"
+      editMode={false}
+      onRemove={() => {}}
+    />
+  );
 }
 
 /** Each separator's shown state, top to bottom. */
@@ -165,7 +152,12 @@ describe("a divider with nothing to separate hides itself", () => {
     const { container } = render(
       <ItemBindingProvider>
         <div>
-          <DividerBox itemKey="d" editMode onRemove={() => {}} />
+          <DividerBox
+            itemKey="d"
+            orientation="vertical"
+            editMode
+            onRemove={() => {}}
+          />
         </div>
       </ItemBindingProvider>,
     );

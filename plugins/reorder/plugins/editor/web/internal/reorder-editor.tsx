@@ -27,9 +27,8 @@ export function sortableIdsOf(entries: readonly ReorderEntry[]): string[] {
 
 /**
  * Presentational drag-and-drop reorder editor: a self-contained area (its own
- * list, area context and item chrome) for surfaces that are an editor
- * outright — the Config pane's reorder-tree field and the in-app popover
- * regime. Owns the `SortableList`, the move
+ * list, area context and item chrome) behind the Config pane's reorder-tree
+ * field. Owns the `SortableList`, the move
  * dispatch, the flat `sortableIds`, the hidden/insert affordances, and the area
  * context. It knows NOTHING about config_v2, the live contribution catalog, the
  * node-type registry, or the `ReorderTree` storage format — the consumer maps its

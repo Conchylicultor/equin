@@ -1,23 +1,14 @@
 # reorder
 
-Generic reorder primitive integrated into `RenderSlot.Render` via middleware. Every `defineRenderSlot()` is automatically and unconditionally reorderable — there is no opt-out flag. A slot that should *not* be reorderable is a headless slot: declare it with `defineMountSlot()` (its contributions render nothing, so order is meaningless) — mount slots are absent from the reorder manifest. DnD is applied through the middleware pipeline. Persists slot layout as a **config_v2 `items` tree** (JSONC files on disk, agent-editable, committable to git); iOS-style edit mode (the "Edit layout" switch in the action bar's gear popover) toggles drag affordances globally.
+Generic reorder primitive integrated into `RenderSlot.Render` via a list middleware. Every `defineRenderSlot()` is automatically and unconditionally reorderable — there is no opt-out flag. A slot that should *not* be reorderable is a headless slot: declare it with `defineMountSlot()` (its contributions render nothing, so order is meaningless) — mount slots are absent from the reorder manifest. Persists slot layout as a **config_v2 `items` tree** (JSONC files on disk, agent-editable, committable to git). A layout is edited in that file or in the Config pane's reorder-tree field; there is no in-app drag mode (removed: it cost every slot item app-wide ~10 wrapper fibers to keep its toggle remount-free — `research/2026-10-24-global-slot-item-wrapper-cost.md`).
 
 ## Public API (web)
 
-`ReorderLayoutContext` / `ReorderLayout` (host-injected layout for the
-middleware, closed data: `{ flow: "wrap" }`), `useReorderedEntries` + `isNodeData`
-(see below), the entry types, and the apply/edit seam: `ReorderSlots.AreaEditor`
-and the editor contract types. What an area DRAWS — `ReorderAreaContext`,
-`ReorderItemBox`, the entry and item-chrome types — is the leaf `reorder/area`,
-shared with the editor (which may not import this barrel: `reorder` reaches it
-back through `fields/reorder-tree/config`).
+`useReorderedEntries` + `isNodeData` (see below), `entryKey`, `contributionLabel`
+and the entry types. What the layout EDITOR draws — `ReorderAreaContext`,
+`ReorderItemBox`, the entry and item-chrome types — is the leaf `reorder/area`.
 
-**Edit mode is NOT here.** `setEditMode` / `getEditMode` / `useEditMode` live in
-the leaf `@plugins/primitives/plugins/edit-mode-signal/web` — reorder consumes
-it like everyone else. Read that plugin's CLAUDE.md before moving it back: a
-primitive must not take on `reorder/web` just to read a boolean.
-
-Hosts just use `<MySlot.Render>{(item) => ...}</MySlot.Render>` — the reorder list and item middlewares handle sorting, registry-driven node types (spacers, container groups) and, where `reorder/edit-mode` ships, edit-mode affordances automatically. No configuration needed.
+Hosts just use `<MySlot.Render>{(item) => ...}</MySlot.Render>` — the reorder list middleware handles ordering, hiding and registry-driven node types (spacers, dividers, header and overflow groups) automatically. No configuration needed.
 
 ### `useReorderedEntries` — data-level layout read
 
@@ -38,39 +29,32 @@ The data-level counterpart to `<Slot.Render>` for consumers that draw their **ow
 - **Position is a node, not a slot.** To push some of a slot's items to the far end of its row, put a `{ "type": "spacer", "id": "…" }` node before them in the slot's order file — never define a second slot rendered beside the first (`spacer/no-split-slot-row` flags two slots sharing one row). Every committed order file carries the node forms in a build-maintained `// @legend` block (`overrideLegend` on the directive descriptor), so the answer is in the file you edit.
 - All `RenderSlot` contributions must provide `id: string` (enforced by the type).
 - Hosts use `<Slot.Render>`, not `slot.useContributions()`.
-- `excludeFromReorder: true` opts a single contribution out (used by the edit-layout switch itself).
+- `excludeFromReorder: true` opts a single contribution out: pinned last, never hidden.
 
-## Architecture — apply here, edit opt-in
+## Architecture — apply here, edit in config
 
-Two capabilities, two shipping rules:
+- **Applying** a committed layout is this plugin. Its list middleware is a
+  companion of `slot-render` (via `reorder/slot-middleware`), so it ships
+  wherever slots render. It never wraps a contribution — there is no item
+  middleware — and imports no drag code.
+- **Editing** one is the Config pane's `reorder-tree` field over
+  `reorder/editor` (dnd-kit). `reorder:apply-is-lean` fails if `slot-render`'s
+  closure reaches the editor.
 
-- **Applying** a committed layout is this plugin. Its middlewares are companions
-  of `slot-render` (via `reorder/slot-middleware`), so they ship wherever slots
-  render. It imports no drag code: no `reorder/editor`, no
-  `primitives/sortable-list` (only its dnd-free `deferred-item`).
-- **Editing** one is `reorder/edit-mode`, opt-in (main's `**` selects it, no app
-  does). It contributes the one `ReorderSlots.AreaEditor` — `{ Area, ItemChrome }`
-  — together with the Edit layout switch, the only `setEditMode(true)` caller.
-  Edit mode with no editor registered throws (`list-middleware.tsx`).
-  `reorder:apply-is-lean` fails if `slot-render`'s closure reaches the editor.
-  (dnd-kit itself still ships everywhere — `config_v2 → fields/list/config` and
-  data-view import `sortable-list` — but no longer because of reorder.)
-
-1. **`ReorderListMiddleware`** (list, priority 0) — reads the slot's `items` tree via `useConfig(descriptor)`, applies it over the live catalog (`applyTree()`), and draws the area's **frame**: `ReorderAreaContext` > `ItemBindingProvider` (`sortable-list/deferred-item`, dnd-free) > the entries (claimed items, node-type nodes) — and, while edit mode is on, `<editor.Area>` **beside** them. No descriptor (runtime-only render slot or an unresolved id) → natural order, nothing applied.
-2. **`ReorderItemMiddleware`** (item, priority 50) — wraps each claimed contribution in `ReorderItemBox` (`reorder/area`): a `DeferredSortableItem` around a content wrapper, both `display: contents` at rest. Editable, the box mounts the area's `ItemChrome` **ahead of** its content and wears the classes it publishes (ring, `pointer-events-none`, fill bound).
-
-**Toggling edit mode remounts no contribution (vertical areas).** Nothing an editor adds is an ancestor of a contribution: the drag host (`DeferredSortableHost`) binds the boxes from beside them, the chrome is a sibling of the content. Horizontal areas change shape in edit mode (the `editor-wrap` div, the `popover` regime) and remount there, as they always have. Outside edit mode an area mounts no drag machinery, and the list middleware measures its host only while something reads it — edit mode, or nodes drawn at rest (a divider's upright rule).
-
-The writes (`area-writes.ts`: hide, restore, drop, insert, removeNode, patchNode) live here, not in the editor, because one is live at rest — a header's collapse toggle. The editor receives them as `ReorderAreaEditorProps.writes`. Node types render both their forms themselves (`editMode` prop); the leaf ones' draggable form is a `DeferredSortableItem` the editor's host binds.
+**`ReorderListMiddleware`** (list, priority 0) runs on every render slot,
+several per list row, so it pays only for what a slot's layout uses: no
+descriptor (runtime-only render slot or an unresolved id) → natural order; a
+layout of items only → one config read (`useReorderTree`) + `applyTree()` + a
+keyed list; a layout with nodes → also the node registry, the writes a header's
+collapse toggle makes (`area-writes.ts`: `patchNode`, `removeNode`), and the
+host's measured flow (a divider's rule stands upright in a row — `orientation`
+on the node's render props).
 
 ### Shared presentational editor (`plugins/editor`)
 
 `<ReorderEditor>` is a self-contained area (its own `DeferredSortableList`, area
-context and item chrome) for surfaces that are an editor outright: the
-`reorder-tree` field in the Config pane and the in-app `popover` regime. It knows
-nothing about config_v2, the live catalog or the `ReorderTree` format. It also
-exports `ReorderItemChrome` (the chrome the in-app editor contributes),
-`RestoreButton` and `sortableIdsOf`.
+context and item chrome) behind the `reorder-tree` field in the Config pane. It
+knows nothing about config_v2, the live catalog or the `ReorderTree` format.
 
 ## Storage — config_v2 `items` tree (materialized)
 
@@ -112,16 +96,13 @@ The `reorderable-slots-in-sync` check fails if the manifest drifts; rebuild to r
 
 ### Write path
 
-Every edit **materializes** the top-level order into a fresh `items` tree (`materializeTree` in `area-writes.ts`) and `setConfig("items", tree)`. Container subtrees are re-emitted **verbatim** from the raw tree (members/payload preserved) — in-app editing rewrites only the loose top-level items/spacers around them:
-
-- **Drag reorder:** the new top-level order — contributions as bare strings, leaf/container nodes verbatim; the existing hidden set is appended as `{ item, hidden: true }` so a reorder never un-hides.
-- **Hide / restore:** materialize, flipping the target to/from `{ item, hidden: true }`.
-- **Insert (registry-driven):** node types declaring `insert` (e.g. spacer's "Add Spacer") append `insert.create()`. **Remove:** `onRemoveNode(id)` drops the node by id (top-level or inside a container).
-- **Patch:** `onPatch(id, partial)` shallow-merges into the addressed node's payload (e.g. the header collapse toggle). Containers are addressed by `id`; a hand-authored container without one gets a `crypto.randomUUID()` assigned on its first in-app write (reads never mutate config).
-
-config_v2's set-field endpoint + watcher drive the live update across tabs. An
-in-app drag writes the **user layer only** (`setConfig("items", tree)`); changing
-a committed default means editing `config/<plugin>/<slot>.jsonc` in a worktree.
+The Config pane's field writes the whole tree (`setConfig("items", tree)`, the
+user layer). The only in-app writes an area makes are its nodes': **patch**
+(`onPatch(partial)` shallow-merges into the addressed node's payload — the header
+collapse toggle; a hand-authored container without an `id` gets a
+`crypto.randomUUID()` on its first write, reads never mutate config) and
+**remove**. Changing a committed default means editing
+`config/<plugin>/<slot>.jsonc` in a worktree.
 
 ### Staleness / reconciliation semantics
 
@@ -136,22 +117,7 @@ Because the origin default is the materialized catalog, adding/removing a contri
 - **subId collapses to slot scope.** The config layout is keyed by the base `slotId` only — subIds aren't known at build. Sub-instances of one render slot therefore **share a single layout**. Intended.
 - **Per-row reorderable slots need no wrapper.** A reorderable slot rendered once per row in a list (e.g. `JsonlRowActions.Item` per message row) subscribes per render site, but the underlying config subscription is **shared and kept alive at the live-state layer** (one cache entry + one kept-alive WS sub across all rows). No manual hoisting provider is required — just render `<Slot.Render>` per row as usual.
 - **Node types are extensible (registry-driven).** Spacer and the `header` container are just the first built-ins; add a node type by dropping a sub-plugin under `plugins/reorder/plugins/node-types/plugins/` that contributes `ReorderNodes.NodeType({ …, companion: true })` (a companion: a committed layout may name any node type, so each ships wherever the registry does) — no edits to the core format, the editor, or the consumers. Agents hand-author nodes via the `{ "type": … }` shapes shown in each origin file's comment legend.
-- **Groups (containers) are config-only this pass.** In-app edit mode reorders loose items/spacers, hides/restores, adds spacers, and toggles a container's `collapsed` — but does **not** create/destroy containers or change their membership/order (author that in the JSONC). Containers are not top-level draggable yet (no drag handle/rank). The old DB-backed `groups` sub-plugin (Postgres tables + `Rank` + endpoints) was **deleted**.
-
-## Edit mode
-
-Module-level signal in `@plugins/primitives/plugins/edit-mode-signal/web` (no React Context). The edit-layout switch (`reorder/edit-mode`) toggles it; middlewares read it via `useSyncExternalStore`. Esc exits edit mode (a registered shortcut in `reorder/edit-mode`).
-
-## Constrained-space regimes (horizontal areas)
-
-Edit mode inflates every item with chrome (ring, ×-badge, empty-item placeholder, trailing `+Add`), which overflows a narrow horizontal band. The list middleware (`list-middleware.tsx`) measures the host width (ResizeObserver + rAF on the sentinel's parent, no timers) and picks a regime:
-
-- **host-wrap** — a `CollapsibleWrap` host already owns wrapping (detected via the injected `ReorderLayoutContext`). Rendered exactly as before; the editor adds no wrapper (an interposed div would break CollapsibleWrap's child-measurement).
-- **passthrough** — vertical orientation or not in edit mode. Vertical rows already stack `w-full`; outside edit mode there's no chrome. Unchanged render.
-- **editor-wrap** — horizontal, edit mode, width ≥ `POPOVER_WIDTH_THRESHOLD` (280px). The frame wraps items in a `flex-wrap` div and the editor drags with `rectSortingStrategy`. Also the default before the first width measurement (wrapping never overlaps).
-- **popover** — horizontal, edit mode, width < threshold. The inline row renders the live contributions **display-only** (clean, not draggable) and the editor renders a `tune` button opening a roomy **vertical** `ReorderEditor` popover hosting the full list (visible + hidden + spacers + groups). The popover is the only drag surface, so each id is registered once.
-
-**Effective edit mode.** The frame always wraps its items in `ReorderEffectiveEditModeContext` (`web/internal/effective-edit-mode.tsx`, internal): `null` → read the global signal; `false` (popover regime) → display-only. The editor is rendered OUTSIDE that provider, so the popover's items read the global `true` and drag normally. All regimes share the same writes — only the dispatching surface differs.
+- **Groups (containers) are authored in the JSONC.** The only in-app container write is toggling a header's `collapsed`.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./equin build` -->
 

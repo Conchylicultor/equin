@@ -523,11 +523,10 @@ describe("AdaptiveBar.Collapsed — the authored bucket", () => {
 describe("docking through a display:contents wrapper chain", () => {
   /**
    * What sits between a bar and a contribution rendered through `.Render`:
-   * `slot-render`'s `ContributionBox` and reorder's `SortableItem` + content
-   * wrapper. Outside edit mode all of them are `display: contents`, which
-   * removes a box from LAYOUT but not from the DOM TREE — so the anchor is two
-   * or three levels below the bar root while its container is still, correctly,
-   * a flex item of the row.
+   * `slot-render`'s box, and whatever `display: contents` wrappers a host
+   * adds. `display: contents` removes a box from LAYOUT but not from the DOM
+   * TREE — so the anchor is levels below the bar root while its container is
+   * still, correctly, a flex item of the row.
    *
    * An inline `style` rather than a class because jsdom applies no stylesheet:
    * this way `getComputedStyle` reports `contents` for real, which is what the

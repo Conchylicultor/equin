@@ -14,6 +14,6 @@ export type { ReorderItemBoxProps } from "./internal/item-box";
 
 export default {
   description:
-    "What a reorder area draws, shared by applying a slot layout (reorder) and editing one (reorder/editor, reorder/edit-mode): the area context, the entry types, and ReorderItemBox — an item box at rest display: contents, which wears the item chrome an editor publishes into it. A leaf library both sides import, imports no drag code.",
+    "What a reorder area in the layout editor draws (the Config pane's reorder-tree field over reorder/editor): the area context, the entry types, and ReorderItemBox — an item box wearing the item chrome the editor publishes into it. A leaf library, imports no drag code.",
   contributions: [],
 } satisfies PluginDefinition;

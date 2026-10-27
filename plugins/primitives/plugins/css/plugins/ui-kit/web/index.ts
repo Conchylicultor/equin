@@ -81,9 +81,12 @@ export {
 } from "./components/portal-theme-scope";
 export {
   PortalForwardProvider,
+  PortalForwardScope,
+  usePortalForward,
   usePortalForwardedAttrs,
   useRegionForwardedAttrs,
   type PortalForwardedAttrs,
+  type PortalForwardScopeValue,
 } from "./components/portal-forward";
 export {
   OverlayPanel,

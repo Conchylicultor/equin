@@ -86,7 +86,7 @@ export function formatProfilerReport(
   if (opts.commits === true) {
     lines.push("");
     lines.push(
-      `commits${report.commitLogTruncated === true ? " (log truncated)" : ""} — ms, fibers rendered, initiators:`,
+      `commits${report.commitLogTruncated === true ? " (log truncated)" : ""} — ms, fibers rendered, mounted, tree size, initiators:`,
     );
     for (const c of report.commits) {
       const who = c.initiators
@@ -96,9 +96,18 @@ export function formatProfilerReport(
       const more =
         c.initiators.length > 4 ? ` +${c.initiators.length - 4}` : "";
       lines.push(
-        `${c.atMs.toFixed(0).padStart(7)}  ${c.rendered.toString().padStart(6)}  ${who}${more}`,
+        `${c.atMs.toFixed(0).padStart(7)}  ${c.rendered.toString().padStart(6)}  ${c.mounted.toString().padStart(6)}  ${c.treeSize.toString().padStart(7)}  ${who}${more}`,
       );
     }
+  }
+
+  const mounts = report.mounts.slice(0, top);
+  if (mounts.length > 0) {
+    const total = report.mounts.reduce((n, m) => n + m.count, 0);
+    lines.push("");
+    lines.push(`fibers mounted (${total} in all), by name:`);
+    for (const m of mounts)
+      lines.push(`${m.count.toString().padStart(7)}  ${m.name}`);
   }
 
   const remounts = (report.remounts ?? []).slice(0, top);

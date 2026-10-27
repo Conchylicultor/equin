@@ -63,6 +63,10 @@ export interface CommitSample {
   atMs: number;
   /** Component fibers that rendered this commit. */
   rendered: number;
+  /** Fibers of every kind created this commit (a mounted subtree counts whole). */
+  mounted: number;
+  /** Fibers in the committed tree after this commit. */
+  treeSize: number;
   /** The commit's initiators, largest render first: name and fibers rendered under it. */
   initiators: { name: string; rendered: number }[];
 }
@@ -89,6 +93,12 @@ export interface RemountStat {
   count: number;
 }
 
+/** Fibers of one display name created over a session. */
+export interface MountStat {
+  name: string;
+  count: number;
+}
+
 /** The ranked snapshot the pane and headless callers read. */
 export interface ProfilerReport {
   running: boolean;
@@ -99,6 +109,11 @@ export interface ProfilerReport {
   initiators: InitiatorStat[];
   /** Remounting positions ranked by count desc. */
   remounts: RemountStat[];
+  /**
+   * Fibers created over the session, by display name (components, providers,
+   * fragments, host elements), ranked by count desc — what a mount was made of.
+   */
+  mounts: MountStat[];
   /** Every commit in order (the first `COMMIT_LOG_CAP`; `commitLogTruncated` past it). */
   commits: CommitSample[];
   commitLogTruncated?: boolean;

@@ -353,8 +353,7 @@ export function BlockRow({
         {/* The caret host is a function of the block TYPE alone and must never
             flip on state: it is an element-type change on an ANCESTOR of the
             block's renderer, so flipping it would remount the block (and any
-            Lexical instance below it) mid-interaction — the same hazard
-            `excludeFromReorder` documents on the reorder middleware. */}
+            Lexical instance below it) mid-interaction. */}
         {editorHoldsCaret ? (
           <BlockCaretHost
             blockId={block.id}

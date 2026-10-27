@@ -19,7 +19,6 @@ half) is mounted beside them only by the layout editor, where it ships.
 - Cross-plugin:
   - Imported by:
     - `primitives/sortable-list`
-    - `reorder`
     - `reorder/area`
     - `reorder/node-types/divider`
     - `reorder/node-types/spacer`

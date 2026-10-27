@@ -1,4 +1,10 @@
-import { createContext, useContext, useMemo, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useMemo,
+  type Provider,
+  type ReactNode,
+} from "react";
 
 /** A bag of `data-*` attributes to re-stamp onto portaled content.
  *
@@ -27,10 +33,19 @@ interface ForwardedBags {
   popup: PortalForwardedAttrs;
 }
 
-const PortalForwardContext = createContext<ForwardedBags>({
+declare const FORWARD_SCOPE: unique symbol;
+
+/** The forwarded bags as {@link usePortalForward} merged them — the only value
+ *  {@link PortalForwardScope} accepts, so a scope can only ever extend the one
+ *  above it, never replace it with a hand-built bag. */
+export type PortalForwardScopeValue = ForwardedBags & {
+  readonly [FORWARD_SCOPE]: true;
+};
+
+const PortalForwardContext = createContext<PortalForwardScopeValue>({
   region: {},
   popup: {},
-});
+} as unknown as PortalForwardScopeValue);
 
 /** The merged `data-*` attributes a POPUP re-stamps onto its portaled
  *  positioner/root — a popover, menu, dialog, tooltip or overlay opened from
@@ -58,6 +73,35 @@ export function useRegionForwardedAttrs(): PortalForwardedAttrs {
  *    app's header, while the grid it opens is chrome. */
 export type ForwardReach = "all" | "region" | "popups";
 
+/** The bags below a forwarded `data-*` attribute: the inherited ones with
+ *  `name` merged in (nearest wins per key); an `undefined` value is a no-op so
+ *  callers forward conditionally without branching. Provide the result with
+ *  {@link PortalForwardScope}. The hook form is for a component that is a
+ *  provider among other things (a slot item middleware), so forwarding costs it
+ *  one fiber — {@link PortalForwardProvider} is the plain one. */
+export function usePortalForward(
+  name: string,
+  value: string | undefined,
+  reach: ForwardReach = "all",
+): PortalForwardScopeValue {
+  const parent = useContext(PortalForwardContext);
+  return useMemo(() => {
+    if (value === undefined) return parent;
+    return {
+      region:
+        reach === "popups"
+          ? parent.region
+          : { ...parent.region, [name]: value },
+      popup:
+        reach === "region" ? parent.popup : { ...parent.popup, [name]: value },
+    } as PortalForwardScopeValue;
+  }, [parent, name, value, reach]);
+}
+
+/** Provides what {@link usePortalForward} merged. */
+export const PortalForwardScope: Provider<PortalForwardScopeValue> =
+  PortalForwardContext.Provider;
+
 /** Register one forwarded `data-*` attribute for portaled descendants. Merges
  *  into the inherited bag (nearest provider wins per key); an `undefined` value
  *  is a no-op so callers forward conditionally without branching. */
@@ -72,18 +116,7 @@ export function PortalForwardProvider({
   reach?: ForwardReach;
   children: ReactNode;
 }) {
-  const parent = useContext(PortalForwardContext);
-  const merged = useMemo(() => {
-    if (value === undefined) return parent;
-    return {
-      region:
-        reach === "popups"
-          ? parent.region
-          : { ...parent.region, [name]: value },
-      popup:
-        reach === "region" ? parent.popup : { ...parent.popup, [name]: value },
-    };
-  }, [parent, name, value, reach]);
+  const merged = usePortalForward(name, value, reach);
   return (
     <PortalForwardContext.Provider value={merged}>
       {children}

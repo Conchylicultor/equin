@@ -2,7 +2,7 @@ import { createElement } from "react";
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { SlotRender } from "@plugins/primitives/plugins/slot-render/web";
 import { registerOverlayFallback } from "@plugins/primitives/plugins/overlay/plugins/overlay-boundary/web";
-import { ErrorBoundaryMiddleware } from "./internal/error-boundary-middleware";
+import { SlotItemErrorBoundary } from "./components/plugin-error-boundary";
 import { CrashFallback } from "./components/crash-fallback";
 import { ErrorBoundary } from "./slots";
 
@@ -43,7 +43,7 @@ export default {
     // contained to its own box rather than take the surface down with it.
     SlotRender.ItemMiddleware({
       depth: 100,
-      Component: ErrorBoundaryMiddleware,
+      Component: SlotItemErrorBoundary,
       companion: true,
     }),
   ],

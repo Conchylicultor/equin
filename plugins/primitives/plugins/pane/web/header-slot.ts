@@ -96,7 +96,7 @@ export const paneHeaderContributions: Contribution[] = [];
 // same live array, first, because that array IS this plugin's contributions.
 // Not a companion of slot-render: the guard only matters where panes exist,
 // and it ships with them.
-const titleGuard = SlotRender.ItemMiddleware(paneTitleSlotGuard);
+const titleGuard = SlotRender.ListMiddleware(paneTitleSlotGuard);
 
 const titleItems = new Map<PaneHeaderSlot, Contribution>();
 

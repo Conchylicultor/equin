@@ -25,7 +25,6 @@ import {
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
-import { setEditMode } from "@plugins/reorder/plugins/edit-mode/e2e";
 
 const PAGE_ID = requireArg(
   "page",
@@ -106,11 +105,10 @@ await withBrowser(async (h) => {
   await snap(page, OUT, "3-action-bar-open");
 
   for (const [i, name] of names.entries()) {
-    // Two items are global MODE switches rather than surfaces, and both break
-    // the rest of the sweep if left on: the pin re-hosts the bar into the tab
-    // bar (invalidating every locator), and the reorder pen wraps each item in
-    // a drag handle that swallows pointer events. They get their own pass below.
-    if (/pin action bar|reorder/i.test(name)) continue;
+    // The pin is a global MODE switch rather than a surface, and breaks the
+    // rest of the sweep if left on: it re-hosts the bar into the tab bar
+    // (invalidating every locator).
+    if (/pin action bar/i.test(name)) continue;
     await barHost.hover();
     await page.waitForTimeout(400);
     const btn = buttons.nth(i);
@@ -165,20 +163,6 @@ await withBrowser(async (h) => {
     );
     await snap(page, OUT, `4-${app}`);
   }
-
-  // ---- 4. reorder edit mode, last ---------------------------------------
-  // Deliberately the final step: edit mode wraps every reorderable contribution
-  // in a drag handle that swallows pointer events, so anything clicked after it
-  // would fail for reasons that have nothing to do with the route.
-  await page.goto(pathUrl(`/agents/c/${CONV_ID}`));
-  await page.waitForTimeout(waitMs);
-  await setEditMode(page, true);
-  await page.waitForTimeout(1200);
-  r.ok(
-    "reorder edit mode engages without a crash",
-    (await crashCount(page)) === 0,
-  );
-  await snap(page, OUT, "5-reorder-edit-mode");
 
   r.ok(
     "no uncaught page errors",

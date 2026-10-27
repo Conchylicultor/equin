@@ -12,6 +12,7 @@ import {
 import type { DevtoolsWindow, Fiber, FiberRoot } from "./react-types";
 import {
   collectCommit,
+  findFiberRoot,
   getComponentName,
   type PositionOccupant,
 } from "./fiber-walk";
@@ -30,6 +31,8 @@ const stats = new Map<string, InitiatorStat>();
 // Remount aggregation, keyed by positionKey (a different identity space from the
 // initiator signature — a position with a from→to type, not a single component).
 const remounts = new Map<string, RemountStat>();
+// Fibers created over the session, by display name.
+const mounts = new Map<string, number>();
 // Previous commit's recorded position occupants; diffed against each commit's
 // positions to detect remounts. Swapped EVERY commit (not on the throttled
 // flush) or the diff goes stale and reports phantom remounts.
@@ -38,10 +41,12 @@ let prevPositions = new Map<string, PositionOccupant>();
 // it can tell a genuine render from a stale PerformedWork flag on a persisted
 // (bailed/skipped) fiber. Swapped EVERY commit, like prevPositions.
 let prevSeen = new WeakSet<Fiber>();
-// The first observed commit only seeds the baselines (prevSeen / prevPositions):
-// with no prior tree we cannot tell a genuine render from a fiber that already
-// carried PerformedWork before the session started, so we attribute nothing for
-// it and report accurately from the second commit on.
+// The baselines (prevSeen / prevPositions) are seeded at start from the live
+// root when the page exposes it (`findFiberRoot`), so the session's FIRST commit
+// is measured too — the one an action-driven measurement is about. Without a
+// root, the first observed commit only seeds them: with no prior tree we cannot
+// tell a genuine render from a fiber that already carried PerformedWork before
+// the session started, so it is attributed nothing.
 let primed = false;
 let remountTruncated = false;
 let totalCommits = 0;
@@ -69,6 +74,7 @@ function emptyReport(): ProfilerReport {
     commitsPerSec: 0,
     initiators: [],
     remounts: [],
+    mounts: [],
     commits: [],
   };
 }
@@ -121,6 +127,9 @@ function computeReport(): ProfilerReport {
     commitsPerSec: totalCommits / secs,
     initiators,
     remounts: remountStats,
+    mounts: Array.from(mounts, ([name, count]) => ({ name, count })).sort(
+      (a, b) => b.count - a.count,
+    ),
     remountTruncated: remountTruncated || undefined,
     commits: commitLog.slice(),
     commitLogTruncated: commitLogTruncated || undefined,
@@ -160,6 +169,9 @@ function onCommit(root: FiberRoot): void {
     remounts: detected,
     truncated,
     rendered,
+    mounted,
+    mountedByName,
+    treeSize,
     currentSeen,
   } = collectCommit(root, prevPositions, prevSeen);
 
@@ -177,6 +189,8 @@ function onCommit(root: FiberRoot): void {
   // One commit per onCommit call — the headline "commits/s" rate.
   totalCommits += 1;
   if (truncated) remountTruncated = true;
+  for (const [name, n] of mountedByName)
+    mounts.set(name, (mounts.get(name) ?? 0) + n);
 
   // Dedupe by signature WITHIN this commit: a repeated list row (e.g. 180
   // SortableItem fibers) shares one signature and must count as ONE commit for
@@ -212,6 +226,8 @@ function onCommit(root: FiberRoot): void {
     commitLog.push({
       atMs: now,
       rendered,
+      mounted,
+      treeSize,
       initiators: [...perCommit.values()]
         .map((i) => ({ name: i.componentName, rendered: i.rendered }))
         .sort((a, b) => b.rendered - a.rendered),
@@ -284,6 +300,7 @@ export function startSession(opts?: ProfilerStartOptions): void {
   if (running) return;
   stats.clear();
   remounts.clear();
+  mounts.clear();
   prevPositions = new Map();
   prevSeen = new WeakSet();
   primed = false;
@@ -296,6 +313,14 @@ export function startSession(opts?: ProfilerStartOptions): void {
   startedAtMs = performance.now();
   lastFlushMs = 0;
   running = true;
+
+  const root = findFiberRoot();
+  if (root) {
+    const seed = collectCommit(root, prevPositions, prevSeen);
+    prevSeen = seed.currentSeen;
+    prevPositions = seed.currentPositions;
+    primed = true;
+  }
 
   const subs = bridgeSubscribers();
   if (subs) {

@@ -16,7 +16,6 @@ import {
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
-import { setEditMode } from "@plugins/reorder/plugins/edit-mode/e2e";
 
 const OUT = arg("out") ?? "/tmp/pages-overflow";
 
@@ -186,21 +185,6 @@ await withBrowser(async (h) => {
   );
 
   await page.keyboard.press("Escape");
-
-  // --- Edit mode: the bucket must not hide its members behind a menu ------
-  // A closed dropdown would suppress drag and hide what is being authored, so
-  // the container renders its inline form in edit mode instead.
-  await page.locator('button[data-tooltip="Pages"]').click();
-
-  await setEditMode(page, true);
-
-  await page.locator('[data-ui-owner^="TreeRowChrome"]').first().hover();
-  await snap(page, OUT, "edit-mode");
-  r.ok(
-    "entered edit mode",
-    (await page.locator('[aria-roledescription="sortable"]').count()) > 0,
-    "no sortables on the page",
-  );
 
   const errors = [
     ...captured.pageErrors,

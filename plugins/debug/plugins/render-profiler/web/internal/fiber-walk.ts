@@ -10,6 +10,7 @@ import {
   MemoComponent,
   HostComponent,
   Fragment,
+  ContextProvider,
 } from "./react-types";
 
 /** Cap on how many ancestor names we keep for disambiguation (nearest-last). */
@@ -36,6 +37,9 @@ export function getComponentName(fiber: Fiber): string {
   // A fragment's `type` is `Symbol(react.fragment)` — give it a real name so it
   // surfaces as `Fragment` (not `Unknown#7`) in element-type remount causes.
   if (fiber.tag === Fragment) return "Fragment";
+  // React 19: a provider fiber's `type` is the context object itself.
+  if (fiber.tag === ContextProvider)
+    return `${type?.displayName ?? "Context"}.Provider`;
   if (typeof type === "function" || typeof type === "object") {
     const name = type?.displayName ?? type?.name;
     if (typeof name === "string" && name.length > 0) return name;
@@ -165,7 +169,18 @@ export interface CommitWalkResult {
   /** Component fibers that rendered this commit, across every initiator. */
   rendered: number;
   /**
-   * Every component fiber visited this commit, by object identity. Threaded back
+   * Fibers of every kind (components, providers, fragments, host elements)
+   * created this commit — a brand-new fiber (`alternate === null`) not present
+   * last commit. Counts each fiber of a freshly inserted subtree, which
+   * `Placement` (set on the subtree's root only) does not.
+   */
+  mounted: number;
+  /** `mounted`, split by fiber display name. */
+  mountedByName: Map<string, number>;
+  /** Every fiber in the committed tree. */
+  treeSize: number;
+  /**
+   * Every fiber visited this commit, by object identity. Threaded back
    * in as `prevSeen` next commit so `fiberRenderedThisCommit` can tell a genuine
    * render (a freshly-swapped fiber object) from a stale `PerformedWork` flag on
    * a bailed/skipped fiber (the same object as last commit).
@@ -211,7 +226,7 @@ function siblingHasKey(fiber: Fiber, key: string): boolean {
  *    "Rendered" is `fiberRenderedThisCommit` — `PerformedWork` set AND a fiber
  *    object not seen last commit (`prevSeen`), so a stable subtree carrying a
  *    stale `PerformedWork` flag is NOT mistaken for a re-render (see that fn).
- *    Every component fiber visited is added to `currentSeen` for next commit.
+ *    Every fiber visited is added to `currentSeen` for next commit.
  *
  * 2. **Remounts.** Every fiber gets a purely **index-based** `positionKey`
  *    (`parent + "/i:" + fiber.index`) — React's authoritative per-parent slot.
@@ -242,6 +257,9 @@ export function collectCommit(
   const currentSeen = new WeakSet<Fiber>();
   let truncated = false;
   let rendered = 0;
+  let mounted = 0;
+  const mountedByName = new Map<string, number>();
+  let treeSize = 0;
 
   const start = root?.current;
   if (!start) {
@@ -251,6 +269,9 @@ export function collectCommit(
       remounts,
       truncated,
       rendered,
+      mounted,
+      mountedByName,
+      treeSize,
       currentSeen,
     };
   }
@@ -281,10 +302,18 @@ export function collectCommit(
     let childAncestorRendered = ancestorRendered;
     let childPath = path;
 
+    // Every fiber's object identity, so next commit can recognize it as
+    // persisted: a component carrying a stale PerformedWork flag did not
+    // re-render, and a fiber whose `alternate` is still null did not mount.
+    treeSize += 1;
+    if (fiber.alternate === null && !prevSeen.has(fiber)) {
+      mounted += 1;
+      const name = getComponentName(fiber);
+      mountedByName.set(name, (mountedByName.get(name) ?? 0) + 1);
+    }
+    currentSeen.add(fiber);
+
     if (isComponentFiber(fiber)) {
-      // Record this fiber's object identity so next commit can recognize it as
-      // persisted (not re-rendered) if it carries a stale PerformedWork flag.
-      currentSeen.add(fiber);
       const name = getComponentName(fiber);
       if (fiberRenderedThisCommit(fiber, prevSeen)) {
         // First rendered component on this path is the initiator; deeper renders
@@ -369,6 +398,28 @@ export function collectCommit(
     remounts,
     truncated,
     rendered,
+    mounted,
+    mountedByName,
+    treeSize,
     currentSeen,
   };
+}
+
+/**
+ * The page's React root, read off the container element `createRoot` marks
+ * (`__reactContainer$<random>` → the HostRoot fiber, whose `stateNode` is the
+ * FiberRoot). `null` when no direct child of `<body>` carries it.
+ */
+export function findFiberRoot(): FiberRoot | null {
+  for (const el of Array.from(document.body.children)) {
+    for (const key of Object.keys(el)) {
+      if (!key.startsWith("__reactContainer$")) continue;
+      const hostRoot = (el as unknown as Record<string, Fiber | undefined>)[
+        key
+      ];
+      const root = hostRoot?.stateNode as FiberRoot | undefined;
+      if (root?.current) return root;
+    }
+  }
+  return null;
 }

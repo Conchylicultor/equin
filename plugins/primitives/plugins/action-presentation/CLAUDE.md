@@ -44,8 +44,8 @@ rendering an `IconButton` in plain chrome are untouched.
 ## Why report-up
 
 The ladder flows *up*; context only flows down. DOM data-attributes were rejected
-for this case: between a bar and a contributed widget sit `renderIsolated`'s
-error boundary, the reorder item middleware and `.Render`'s own wrapper, so there
+for this case: between a bar and a contributed widget sit `.Render`'s box and
+the contributed item middlewares (error boundary, lineage), so there
 is no "the widget's root element" to attribute. Static contribution metadata
 fails too — eagerness is per-instance and dynamic: every tab is the same
 component, and only the *focused* one says `yields: "never"`. So: an effect-time

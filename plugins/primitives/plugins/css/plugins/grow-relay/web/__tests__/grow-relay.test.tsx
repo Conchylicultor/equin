@@ -23,9 +23,17 @@ function Asker({ active = true }: { active?: boolean }) {
 }
 
 /** A relay box, tagged so the test can read whether it grew. */
-function Box({ name, children }: { name: string; children: ReactNode }) {
+function Box({
+  name,
+  active,
+  children,
+}: {
+  name: string;
+  active?: boolean;
+  children: ReactNode;
+}) {
   return (
-    <GrowRelay>
+    <GrowRelay active={active}>
       {(growing) => (
         <div data-testid={name} data-growing={String(growing)}>
           {children}
@@ -88,6 +96,48 @@ describe("the ask travels", () => {
       </Box>,
     );
     expect(grew(getByTestId("cell"))).toBe("true");
+  });
+});
+
+describe("an inactive relay", () => {
+  it("is transparent: the box above grows, it does not, and it is not counted", () => {
+    const { getByTestId } = render(
+      <Box name="cell">
+        <Box name="contents" active={false}>
+          <Asker />
+        </Box>
+      </Box>,
+    );
+    expect(grew(getByTestId("cell"))).toBe("true");
+    expect(grew(getByTestId("contents"))).toBe("false");
+    expect(getByTestId("relays").textContent).toBe("1");
+  });
+
+  it("moves the ask when it flips, remounting nothing under it", () => {
+    let mounts = 0;
+    function Counted() {
+      useEffect(() => {
+        mounts += 1;
+      }, []);
+      return <Asker />;
+    }
+    const tree = (active: boolean) => (
+      <Box name="cell">
+        <Box name="flip" active={active}>
+          <Counted />
+        </Box>
+      </Box>
+    );
+    const { getByTestId, rerender } = render(tree(false));
+    expect(grew(getByTestId("flip"))).toBe("false");
+    rerender(tree(true));
+    expect(grew(getByTestId("flip"))).toBe("true");
+    expect(grew(getByTestId("cell"))).toBe("true");
+    expect(getByTestId("relays").textContent).toBe("2");
+    rerender(tree(false));
+    expect(grew(getByTestId("flip"))).toBe("false");
+    expect(grew(getByTestId("cell"))).toBe("true");
+    expect(mounts).toBe(1);
   });
 });
 

@@ -3,15 +3,12 @@ import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { Presence } from "@plugins/primitives/plugins/css/plugins/motion/web";
 import {
   useCallback,
-  useMemo,
   useRef,
   useState,
   type CSSProperties,
   type ReactNode,
 } from "react";
 import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
-import { useEditMode } from "@plugins/primitives/plugins/edit-mode-signal/web";
-import { ReorderLayoutContext, type ReorderLayout } from "@plugins/reorder/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
@@ -74,17 +71,7 @@ export function CollapsibleWrap({
   const [overflowing, setOverflowing] = useState(false);
   const [clampHeight, setClampHeight] = useState<number | null>(null);
   const [contentHeight, setContentHeight] = useState(0);
-  const [userExpanded, setUserExpanded] = useState(false);
-
-  const editMode = useEditMode();
-  const expanded = userExpanded || editMode;
-
-  // Tell the reorder middleware this row wraps: its layout editor then drags
-  // in 2-D, so cross-row drag works once chips spill onto multiple rows. Stable
-  // identity so the middleware's context consumer doesn't churn. The spacer is
-  // unchanged from the 1-D case — a `flex-1` push element behaves identically
-  // under wrap (it grows to fill its line, pushing chips right until they wrap).
-  const wrapLayout = useMemo<ReorderLayout>(() => ({ flow: "wrap" }), []);
+  const [expanded, setExpanded] = useState(false);
 
   // --- Overflow + clamp-height detection ------------------------------------
   // Mirror adaptive-bar: ResizeObserver on the wrap box, deferred via
@@ -96,9 +83,9 @@ export function CollapsibleWrap({
     () => {
       const wrap = wrapRef.current;
       if (!wrap) return;
-      // The reorder middleware wraps each contribution; in view mode those
-      // wrappers are `display:contents` (offsetHeight 0). Walk through them to
-      // the real boxes and take a uniform (global-max) row height.
+      // A slot wraps each contribution in a `display:contents` box
+      // (offsetHeight 0). Walk through them to the real boxes and take a
+      // uniform (global-max) row height.
       const rowHeight = uniformRowHeight(wrap);
       if (rowHeight === 0) {
         setOverflowing(false);
@@ -114,8 +101,8 @@ export function CollapsibleWrap({
     { deps: [rows, gap, expanded] },
   );
 
-  const collapse = useCallback(() => setUserExpanded(false), []);
-  const expand = useCallback(() => setUserExpanded(true), []);
+  const collapse = useCallback(() => setExpanded(false), []);
+  const expand = useCallback(() => setExpanded(true), []);
 
   // --- Layout: in-flow in both states, row 1 never moves --------------------
   // The box's LAYOUT height is `clampHeight` (one row) in BOTH collapsed and
@@ -170,14 +157,12 @@ export function CollapsibleWrap({
         className={cn("flex flex-wrap content-start min-w-0", className)}
         style={style}
       >
-        <ReorderLayoutContext.Provider value={wrapLayout}>
-          {children}
-        </ReorderLayoutContext.Provider>
+        {children}
       </div>
     </div>
   );
 
-  const showChevron = (overflowing || expanded) && !editMode;
+  const showChevron = overflowing || expanded;
 
   return (
     <>

@@ -2,7 +2,8 @@ import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import type { ReactNode } from "react";
 import type { SlotItemAttrsFn } from "@plugins/primitives/plugins/slot-render/web";
 import {
-  PortalForwardProvider,
+  PortalForwardScope,
+  usePortalForward,
   usePortalForwardedAttrs,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { ContributionNode } from "@plugins/primitives/plugins/ui-context/core";
@@ -61,7 +62,8 @@ export const markerAttrs: SlotItemAttrsFn = ({
  * is re-stamped on the portaled positioner as {@link LINEAGE_ATTR}.
  *
  * A middleware because a provider has to wrap the children it serves. It renders
- * no element of its own.
+ * no element of its own, and provides through the hook form so a contribution
+ * pays one provider for it, not a provider component as well.
  */
 export function PluginMarkerMiddleware({
   slotId,
@@ -77,9 +79,6 @@ export function PluginMarkerMiddleware({
     inheritedLineage,
     contributionNode(slotId, contribution),
   );
-  return (
-    <PortalForwardProvider name={LINEAGE_ATTR} value={lineage}>
-      {children}
-    </PortalForwardProvider>
-  );
+  const scope = usePortalForward(LINEAGE_ATTR, lineage);
+  return <PortalForwardScope value={scope}>{children}</PortalForwardScope>;
 }

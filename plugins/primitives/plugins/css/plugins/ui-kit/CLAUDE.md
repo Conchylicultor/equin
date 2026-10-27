@@ -92,7 +92,9 @@ The global UI kit — one cohesive design-system unit. It owns:
   reads it (data-table's "Wide tables"). Lives here so `OverlayPanel` can reset
   it without a layer inversion.
 - **The portal-forward bridge** (`web/components/portal-forward.tsx`) —
-  `PortalForwardProvider` / `usePortalForwardedAttrs`. Portals relocate content to
+  `PortalForwardProvider` / `usePortalForwardedAttrs` (and `usePortalForward` +
+  `PortalForwardScope`, the hook form for a component that provides among other
+  things — one fiber, not two). Portals relocate content to
   `document.body`, severing it from the DOM ancestry that carries ancestry-derived
   signals (the scoped theme, the element-picker's plugin lineage, the containing
   pane id). The bridge carries a bag of `data-*` attributes across the portal via

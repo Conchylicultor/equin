@@ -70,7 +70,6 @@ fields.
   - Imported by:
     - `fields/reorder-tree/config`
     - `reorder`
-    - `reorder/edit-mode`
     - `reorder/node-types/divider`
     - `reorder/node-types/header`
     - `reorder/node-types/overflow`

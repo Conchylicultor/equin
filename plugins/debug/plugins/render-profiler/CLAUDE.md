@@ -30,8 +30,10 @@ always-on cost is one empty-`Set` check per commit.
   and the committed fiber is a *new object*, whereas a bailed/skipped fiber is the
   *same object* (with its stale flag). The walk threads `prevSeen` (last commit's
   component fibers) ⇄ `currentSeen`; a fiber still in `prevSeen` did not render.
-  The first observed commit only seeds the baseline (no history), so attribution
-  is accurate from the second commit on.
+  Start seeds the baseline from the live root (`findFiberRoot`: `#root`'s
+  `__reactContainer$` → FiberRoot), so the first commit is measured — an action
+  profiled right after Start lands there. Without a root, the first commit only
+  seeds it.
 - For each initiator it diffs the hook `memoizedState` linked list (and
   `dependencies` contexts) against the fiber's `alternate` to name the changed
   hook(s) — `useSyncExternalStore` (the live-state / `useQuery` culprit),
@@ -83,6 +85,13 @@ always-on cost is one empty-`Set` check per commit.
   **Remounts** section below them; auto-stops after 30s.
 - **Headless** (agents):
   `./equin run plugins/debug/plugins/render-profiler/e2e/render-profile.ts --url http://<wt>.localhost:9000/<route> --seconds 8`
+- **What one action mounts** (agents): `mount-cost.ts` boots a page, then
+  profiles ONE in-app navigation or click and prints commits, fibers mounted
+  (every kind — components, providers, fragments, host elements; a fiber is
+  mounted when it is new this commit: `alternate === null` and not seen last
+  commit), tree size, long-task time and the mount split by fiber name, median
+  over runs:
+  `./equin run plugins/debug/plugins/render-profiler/e2e/mount-cost.ts --path /agents --route /agents/c/<id> --runs 3`
 - **Imperative**: `window.__reactRenderProfiler.start({maxDurationMs})` / `.stop()`
   / `.getReport()` / `.isRunning()`.
 - On stop, the ranked report is dumped to the `render-profiler` JSONL log channel
@@ -136,6 +145,7 @@ React-internals coupling (fiber `flags` / `memoizedState` / `dependencies` /
     - `HookChange`
     - `HookKind`
     - `InitiatorStat`
+    - `MountStat`
     - `ProfilerReport`
     - `ProfilerStartOptions`
     - `RemountCause`

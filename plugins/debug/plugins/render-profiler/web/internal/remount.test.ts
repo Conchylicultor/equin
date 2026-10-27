@@ -45,6 +45,7 @@ function fib(spec: FiberSpec): Fiber {
     flags: (spec.rendered ? PerformedWork : 0) | (placed ? Placement : 0),
     memoizedState: null,
     memoizedProps: null,
+    stateNode: null,
     dependencies: null,
     child: null,
     sibling: null,

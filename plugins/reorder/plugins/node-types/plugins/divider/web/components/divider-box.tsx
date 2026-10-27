@@ -1,4 +1,3 @@
-import { useContext } from "react";
 import {
   cn,
   type ControlSize,
@@ -6,12 +5,11 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { DeferredSortableItem } from "@plugins/primitives/plugins/sortable-list/plugins/deferred-item/web";
 import { RemoveNodeButton } from "@plugins/reorder/plugins/node-types/web";
-import { ReorderAreaContext } from "@plugins/reorder/plugins/area/web";
 import { useOrphanRule } from "../internal/use-orphan-rule";
 
 // A divider renders as a hairline rule between the items either side of it,
-// turned to the area's flow (`ReorderAreaContext.orientation`, which the list
-// middleware measures off the host's flex direction):
+// turned to the area's flow (`orientation`, which the list middleware measures
+// off the host's flex direction):
 //
 // - **Vertical area** (a sidebar's footer rows): a horizontal rule on the
 //   region's rail (`rail-follow`), with a 6px gap above and below.
@@ -41,16 +39,17 @@ function uprightRuleHeight(size: ControlSize): string {
 
 export function DividerBox({
   itemKey,
+  orientation,
   editMode,
   onRemove,
 }: {
   itemKey: string;
+  orientation: "horizontal" | "vertical";
   editMode: boolean;
   onRemove: () => void;
 }) {
-  const ctx = useContext(ReorderAreaContext);
   const controlSize = useControlSize();
-  const upright = ctx?.orientation === "horizontal";
+  const upright = orientation === "horizontal";
   const [orphan, restRef] = useOrphanRule();
 
   // The rule itself — the same element in both modes, so the edit-mode

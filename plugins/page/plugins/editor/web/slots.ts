@@ -158,17 +158,6 @@ type AnchorHandle = TextLessHandle & { anchor: true };
  * - **text-less** (divider, image, code-block, embed, media, sub-page, the
  *   callout anchor, …) → owns its component outright. Converting text → divider
  *   SHOULD tear the editor down; there is no caret on the other side to keep.
- *
- * **`excludeFromReorder` is on the TEXT-LESS arm only**, and that is a real hole
- * being closed rather than hygiene: `ReorderItemMiddleware`
- * (`plugins/reorder/web/internal/item-middleware.tsx`) early-returns
- * `<>{children}</>` where it otherwise renders `<ReorderItemBox>`,
- * discriminating on exactly that field — an element-type flip on an ANCESTOR of
- * the composer, keyed per contribution. A text-bearing type setting it would
- * remount Lexical on every conversion into or out of it: the reported bug,
- * reached through a field the union would otherwise permit. No block sets it
- * today, which is why the shared-renderer fix would otherwise be complete in
- * fact rather than by construction.
  */
 export type BlockRegistration<T = unknown> =
   | (BlockRegistrationBase & {
@@ -177,7 +166,6 @@ export type BlockRegistration<T = unknown> =
       component?: never;
       caret?: never;
       view?: never;
-      excludeFromReorder?: never;
     })
   // A container anchor: no line, so no caret to place. Listed BEFORE the general
   // text-less arm so a container matches it rather than being asked for a

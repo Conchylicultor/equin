@@ -443,10 +443,10 @@ other control in the row is another item of that slot, and which end of the
 row it sits at is a `spacer` in the slot's order file. There is no prop to pass
 header content through (`title` / `extra` / `headerSpill` are gone — each was a
 door a second slot was smuggled through), and a `title.component` may not
-render a slot either: the pane registers a slot-item middleware that **throws**
-when a render-slot contribution mounts inside the title cell ("A render slot
-mounted inside the pane title…"). The throw lands in the offending item's error
-boundary. Plain and dispatch slots painted once inside a title (a breadcrumb's
+render a slot either: the pane registers a slot LIST middleware (once per
+`.Render`, so render slots only) that **throws** when a render slot mounts inside
+the title cell ("A render slot mounted inside the pane title…"). The throw lands
+in the title item's error boundary. Plain and dispatch slots painted once inside a title (a breadcrumb's
 separator) are part of the title and are not caught.
 
 #### Tab / document title ownership (`titleOwner`)

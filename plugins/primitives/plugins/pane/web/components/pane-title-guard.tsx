@@ -1,5 +1,5 @@
-import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
-import type { SlotItemMiddleware } from "@plugins/primitives/plugins/slot-render/web";
+import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
+import type { SlotListMiddleware } from "@plugins/primitives/plugins/slot-render/web";
 import { createContext, useContext, type ReactNode } from "react";
 
 /**
@@ -22,33 +22,34 @@ export const PANE_TITLE_SLOT_ERROR =
  * inside the title would be a row the order file cannot see (the Pages
  * `TitleActions` and conversation `Header` slots both got in this way).
  *
- * Only RENDER slots — a list of cells, i.e. a second header. A plain or
- * dispatch slot painted once inside a title (a breadcrumb's separator, drawn
- * through `renderIsolated`, whose contributions carry no `_slot`) is part of
+ * Only RENDER slots — a list of cells, i.e. a second header — which is exactly
+ * where a list middleware runs, so the check is once per slot render rather
+ * than once per contribution. A plain or dispatch slot painted once inside a
+ * title (a breadcrumb's separator, drawn through `renderIsolated`) is part of
  * the title, not a row. A render slot that is a component's own internal list
  * opts out with `defineRenderSlot({ partOfComponent: true })` — explicit and
  * greppable, so every exception is a declared one.
  *
- * Priority 200: innermost of the item middlewares, so the throw lands in the
- * offending item's own error boundary — loud, and contained to it.
+ * Depth -100: outermost of the list middlewares, so it wraps whatever the
+ * others render (reorder's draws its own items rather than its children). The
+ * throw lands in the error boundary of the title item rendering the slot —
+ * loud, and contained to it.
  */
 function PaneTitleSlotGuard({
-  contribution,
+  slotMeta,
   children,
 }: {
-  slotId: string;
-  contribution: Contribution;
+  slotMeta: SlotHandle["meta"];
   children: ReactNode;
 }): ReactNode {
   const insideTitle = useContext(InsidePaneTitleContext);
-  const meta = contribution._slot?.meta;
-  if (insideTitle && meta?.kind === "render" && meta.partOfComponent !== true) {
+  if (insideTitle && slotMeta.partOfComponent !== true) {
     throw new Error(PANE_TITLE_SLOT_ERROR);
   }
   return children;
 }
 
-export const paneTitleSlotGuard: SlotItemMiddleware = {
-  depth: 200,
+export const paneTitleSlotGuard: SlotListMiddleware = {
+  depth: -100,
   Component: PaneTitleSlotGuard,
 };
