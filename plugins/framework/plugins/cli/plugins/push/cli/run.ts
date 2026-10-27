@@ -172,13 +172,7 @@ async function publishMain(
   // A refusal is either the race above or a question of access. Fetch and
   // ask which: a remote main that is no longer below the branch moved.
   await exec(["git", "fetch", remote, "main"]);
-  const cmd = [
-    "git",
-    "merge-base",
-    "--is-ancestor",
-    `${remote}/main`,
-    branch,
-  ];
+  const cmd = ["git", "merge-base", "--is-ancestor", `${remote}/main`, branch];
   const ancestry = await spawnCaptured(cmd, { timeoutMs: GIT_TIMEOUT_MS });
   if (ancestry.exitCode === 1) {
     console.error(
