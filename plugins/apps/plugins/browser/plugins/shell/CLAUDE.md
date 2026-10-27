@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: App shell for the Browser app. Registers the /browser app entry, owns the per-surface tab store (each tab a page in the engine's Chromium, addressed by key: navigation requests out, host-reported page state in), defines the Browser.* slots, exports the <Favicon> component, and contributes the app's own theme (the mockup's palette in both modes, the system font at 13px, Lucide icons, its control geometry), which the browser app selects.
+- Description: App shell for the Browser app. Registers the /browser app entry, owns the per-surface tab store (each tab a page in the engine's Chromium, addressed by key: navigation requests out, host-reported page state in) over the browser's one tab set, saved in localStorage so tabs and their remote pages come back after a reload and stay in sync between surfaces, defines the Browser.* slots, exports the <Favicon> component, and contributes the app's own theme (the mockup's palette in both modes, the system font at 13px, Lucide icons, its control geometry), which the browser app selects.
 - Web:
   - Slots:
     - `Browser.TabStrip`
@@ -42,6 +42,7 @@
     - `primitives/css/spacing.Stack`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.ControlSizeProvider`
+    - `primitives/dom/web-storage.defineStore`
     - `primitives/scope/scoped-store.defineScopedStore`
     - `primitives/slot-render.defineMountSlot`
     - `primitives/slot-render.defineRenderSlot`

@@ -83,9 +83,9 @@ for an id grammar one primitive owns the lifetime of (app-instance generations).
     - `useStorageUsage`
     - `WebStorageSlots`
 - Cross-plugin:
-  - Imported by: 44 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 45 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives` ×15
-    - `apps` ×11
+    - `apps` ×12
     - `conversations` ×5
     - `apps-core` ×2
     - `reports` ×2

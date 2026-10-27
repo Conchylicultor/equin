@@ -6,12 +6,17 @@ import { z } from "zod";
  * through untouched, so this one schema is spoken end to end.
  *
  * One socket per VIEWED tab: the first client message is `attach`; binary
- * host messages are JPEG screencast frames, text ones are `HostEvent`s.
+ * host messages are JPEG screencast frames, text ones are `HostEvent`s. Binary
+ * client messages are the bytes of an upload a `files` message announced, and
+ * nothing else.
  */
 export const ENGINE_WS_PATH = "/ws/browser/engine";
 
 /** Bump on any change below; the relay refuses a host speaking another one. */
-export const ENGINE_PROTOCOL = 1;
+export const ENGINE_PROTOCOL = 2;
+
+/** Most bytes one binary client message (an upload chunk) carries. */
+export const UPLOAD_CHUNK_BYTES = 256 * 1024;
 
 /** CDP modifier bitmask: Alt=1, Ctrl=2, Meta=4, Shift=8. */
 const Modifiers = z.number().int().min(0).max(15);
@@ -89,6 +94,23 @@ export const ClientMessageSchema = z.discriminatedUnion("t", [
   }),
   /** The option picked in the `select` menu the host reported last. */
   z.object({ t: z.literal("select"), value: z.string().nullable() }),
+  /**
+   * The answer to the pending `fileChooser`: the files picked (`[]` = cancel),
+   * whose bytes follow in this order as binary messages of at most
+   * {@link UPLOAD_CHUNK_BYTES}, each acked by an `upload` event.
+   */
+  z.object({
+    t: z.literal("files"),
+    files: z
+      .array(
+        z.object({
+          name: z.string().min(1),
+          type: z.string(),
+          size: z.number().int().min(0),
+        }),
+      )
+      .max(100),
+  }),
   /** Close the remote page (the app tab was closed). */
   z.object({ t: z.literal("close") }),
 ]);
@@ -137,5 +159,28 @@ export const HostEventSchema = z.discriminatedUnion("t", [
   z.object({ t: z.literal("popup"), key: z.string(), url: z.string() }),
   z.object({ t: z.literal("download"), name: z.string(), path: z.string() }),
   z.object({ t: z.literal("error"), message: z.string() }),
+  /**
+   * The page asks for files (`<input type=file>`): answer with `files`. Its
+   * `accept` attribute, verbatim (`""` = any).
+   */
+  z.object({
+    t: z.literal("fileChooser"),
+    multiple: z.boolean(),
+    accept: z.string(),
+  }),
+  /**
+   * Upload progress, one per chunk the host wrote (the client's flow control):
+   * `received === total` = the page has the files.
+   */
+  z.object({
+    t: z.literal("upload"),
+    received: z.number().int().min(0),
+    total: z.number().int().min(0),
+  }),
+  /**
+   * Another socket attached to this page (another window shows the tab): this
+   * one is closed right after, and does not reconnect on its own.
+   */
+  z.object({ t: z.literal("displaced") }),
 ]);
 export type HostEvent = z.infer<typeof HostEventSchema>;

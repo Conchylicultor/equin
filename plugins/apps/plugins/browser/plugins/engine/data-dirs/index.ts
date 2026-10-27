@@ -30,4 +30,19 @@ export const browserEngineAppDir = defineDataDir({
   reclaim: { kind: "safe" },
 });
 
-export default [browserEngineDir, browserEngineAppDir];
+/**
+ * Files the user picked for a page's file input, copied here for the engine's
+ * Chromium to read (`bin/host-uploads.ts`): one directory per page, removed
+ * with the page, and the whole of it emptied when the host starts. A live
+ * page may still read its files, so it is reclaimed only with the host down.
+ */
+export const browserEngineUploadsDir = defineDataDir({
+  kind: "cache",
+  name: "browser-engine-uploads",
+  owner: "apps/browser/engine",
+  description:
+    "Files picked for a page's upload in the Browser app, held for the engine's Chromium to read while the page lives",
+  reclaim: { kind: "restart" },
+});
+
+export default [browserEngineDir, browserEngineAppDir, browserEngineUploadsDir];

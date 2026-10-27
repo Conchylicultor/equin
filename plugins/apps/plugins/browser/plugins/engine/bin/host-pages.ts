@@ -16,6 +16,7 @@ import type {
   CDPSession,
   Dialog,
   Download,
+  FileChooser,
   Page,
 } from "playwright";
 import { readyNow } from "@plugins/infra/plugins/deps/deps";
@@ -37,6 +38,7 @@ import {
   readSelection,
   type PageReport,
 } from "./page-script";
+import { removeUploads, Upload, uploadsDirFor } from "./host-uploads";
 
 /** A page no socket shows is closed after this (the app tab is gone, or long hidden). */
 export const PAGE_ORPHAN_MS = 30 * 60_000;
@@ -61,6 +63,8 @@ export interface SocketData {
   key: string | null;
   /** Messages are handled one at a time, in arrival order. */
   queue: Promise<void>;
+  /** The upload whose bytes this socket's binary messages carry, while one is open. */
+  upload: Upload | null;
 }
 export type ClientSocket = ServerWebSocket<SocketData>;
 
@@ -89,6 +93,10 @@ interface RemotePage {
   lastState: string;
   /** A dialog the page is blocked on, until the client answers. */
   dialog: Dialog | null;
+  /** The file chooser the page opened, until the client answers with `files`. */
+  chooser: { chooser: FileChooser; multiple: boolean; accept: string } | null;
+  /** Where this page's uploaded files are kept; minted on its first upload. */
+  uploadsDir: string | null;
   frozen: boolean;
   orphanTimer: ReturnType<typeof setTimeout> | null;
   freezeTimer: ReturnType<typeof setTimeout> | null;
@@ -313,6 +321,8 @@ async function register(key: string, page: Page): Promise<RemotePage> {
     favicon: null,
     lastState: "",
     dialog: null,
+    chooser: null,
+    uploadsDir: null,
     frozen: false,
     orphanTimer: null,
     freezeTimer: null,
@@ -359,6 +369,11 @@ function wirePage(rp: RemotePage): void {
     rp.dialog = dialog;
     sendDialog(rp);
   });
+  // Listening is what makes Playwright intercept the chooser: the native
+  // dialog would open in the off-screen window, where nobody can answer it.
+  page.on("filechooser", (chooser) => {
+    void onFileChooser(rp, chooser).catch(ignoreGone(page));
+  });
   page.on("download", (download) => {
     saveDownload(rp, download).catch((err: unknown) => {
       send(rp.client, {
@@ -387,6 +402,7 @@ function forget(rp: RemotePage, why: string): void {
   if (rp.orphanTimer) clearTimeout(rp.orphanTimer);
   if (rp.freezeTimer) clearTimeout(rp.freezeTimer);
   if (lastInput === rp) lastInput = null;
+  if (rp.uploadsDir !== null) void removeUploads(rp.uploadsDir);
   if (rp.client) {
     rp.client.close(1000, why);
     rp.client = null;
@@ -513,6 +529,60 @@ function sendDialog(rp: RemotePage): void {
     message: d.message(),
     defaultValue: d.defaultValue(),
   });
+}
+
+async function onFileChooser(
+  rp: RemotePage,
+  chooser: FileChooser,
+): Promise<void> {
+  const accept = (await chooser.element().getAttribute("accept")) ?? "";
+  // The newest wins: the page asked again (a second click).
+  rp.chooser = { chooser, multiple: chooser.isMultiple(), accept };
+  sendChooser(rp);
+}
+
+function sendChooser(rp: RemotePage): void {
+  const c = rp.chooser;
+  if (!c) return;
+  send(rp.client, { t: "fileChooser", multiple: c.multiple, accept: c.accept });
+}
+
+/** Answer the pending chooser with the files the client is about to stream. */
+async function startUpload(
+  ws: ClientSocket,
+  rp: RemotePage,
+  files: Extract<ClientMessage, { t: "files" }>["files"],
+): Promise<void> {
+  const pending = rp.chooser;
+  if (!pending) throw new Error("the page has no file chooser open");
+  if (ws.data.upload) throw new Error("an upload is already in progress");
+  rp.chooser = null;
+  if (files.length === 0) return;
+  if (!pending.multiple && files.length > 1) {
+    throw new Error("the page takes one file");
+  }
+  rp.uploadsDir ??= uploadsDirFor();
+  const upload = await Upload.start(pending.chooser, files, rp.uploadsDir);
+  send(ws, { t: "upload", ...upload.progress });
+  if (!upload.done) ws.data.upload = upload;
+}
+
+/** One chunk of the open upload; acked with its progress (the client's flow control). */
+async function onUploadChunk(
+  ws: ClientSocket,
+  chunk: Uint8Array,
+): Promise<void> {
+  const upload = ws.data.upload;
+  if (!upload) throw new Error("binary client message with no upload open");
+  try {
+    await upload.write(chunk);
+  } catch (err) {
+    ws.data.upload = null;
+    await upload.abort();
+    throw err;
+  }
+  if (upload.done) ws.data.upload = null;
+  send(ws, { t: "upload", ...upload.progress });
 }
 
 /** A free `~/Downloads/<name>` — `name (1).ext`, `name (2).ext`, … when taken. */
@@ -649,6 +719,9 @@ export function onOpen(ws: ClientSocket): void {
 
 export function onClose(ws: ClientSocket): void {
   sockets.delete(ws);
+  const upload = ws.data.upload;
+  ws.data.upload = null;
+  if (upload) void upload.abort();
   const rp = ws.data.key ? pages.get(ws.data.key) : undefined;
   if (rp && rp.client === ws) {
     rp.client = null;
@@ -665,9 +738,17 @@ export function onClose(ws: ClientSocket): void {
 export function onMessage(ws: ClientSocket, raw: string | Buffer): void {
   ws.data.queue = ws.data.queue.then(async () => {
     if (ws.readyState !== WebSocket.OPEN) return;
+    if (typeof raw !== "string") {
+      try {
+        await onUploadChunk(ws, raw);
+      } catch (err) {
+        console.error("[browser-engine] upload failed:", err);
+        send(ws, { t: "error", message: `Upload failed: ${errorOf(err)}` });
+      }
+      return;
+    }
     let msg: ClientMessage;
     try {
-      if (typeof raw !== "string") throw new Error("binary client message");
       msg = ClientMessageSchema.parse(JSON.parse(raw));
     } catch (err) {
       send(ws, { t: "error", message: `Bad message: ${errorOf(err)}` });
@@ -699,6 +780,7 @@ async function attach(
   }
   // One socket per page: a newer attach (a reload, another window) wins.
   if (rp.client && rp.client !== ws) {
+    send(rp.client, { t: "displaced" });
     rp.client.close(4000, "attached elsewhere");
   }
   rp.client = ws;
@@ -713,6 +795,7 @@ async function attach(
   if (fresh && msg.url !== "") rp.pending = msg.url;
   await pushState(rp, true);
   sendDialog(rp);
+  sendChooser(rp);
   if (fresh && msg.url !== "") navigate(rp, msg.url);
   changed();
 }
@@ -842,6 +925,8 @@ async function handle(ws: ClientSocket, msg: ClientMessage): Promise<void> {
     case "select":
       await rp.page.evaluate(applySelect, msg.value);
       return;
+    case "files":
+      return startUpload(ws, rp, msg.files);
     case "close":
       await rp.page.close({ runBeforeUnload: false });
       return;

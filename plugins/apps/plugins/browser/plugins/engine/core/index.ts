@@ -1,6 +1,7 @@
 export {
   ENGINE_WS_PATH,
   ENGINE_PROTOCOL,
+  UPLOAD_CHUNK_BYTES,
   ClientMessageSchema,
   HostEventSchema,
   PageStateSchema,

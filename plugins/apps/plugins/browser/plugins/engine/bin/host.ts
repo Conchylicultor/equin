@@ -20,6 +20,7 @@ import {
   existsSync,
   openSync,
   renameSync,
+  rmSync,
   unlinkSync,
   writeFileSync,
 } from "node:fs";
@@ -28,7 +29,7 @@ import { flockTry } from "@plugins/packages/plugins/flock/core";
 import { withForegroundPriority } from "@plugins/packages/plugins/spawn-priority/core";
 import { browserDir } from "@plugins/apps/plugins/browser/data-dirs";
 import { ENGINE_PROTOCOL, ENGINE_WS_PATH } from "../core";
-import { browserEngineDir } from "../data-dirs";
+import { browserEngineDir, browserEngineUploadsDir } from "../data-dirs";
 import { hostCodeId } from "../shared/code-id";
 import {
   HOST_FILES,
@@ -75,6 +76,10 @@ if (!flockTry(lockFd)) {
 // cores — ~200 ms from a click to its frame. The body never settles, so the
 // lift is never undone; the process exits instead.
 void withForegroundPriority(() => new Promise<never>(() => {}));
+
+// Holding the lock, uploads left behind are a dead host's pages' — gone with them.
+rmSync(browserEngineUploadsDir.path, { recursive: true, force: true });
+browserEngineUploadsDir.ensure();
 
 // Holding the lock, anything left at the socket path is a dead host's.
 const socketPath = file(HOST_FILES.socket);
@@ -139,7 +144,11 @@ async function route(
 ): Promise<Response | undefined> {
   const { pathname } = new URL(req.url);
   if (pathname === ENGINE_WS_PATH) {
-    if (srv.upgrade(req, { data: { key: null, queue: Promise.resolve() } })) {
+    if (
+      srv.upgrade(req, {
+        data: { key: null, queue: Promise.resolve(), upload: null },
+      })
+    ) {
       return undefined;
     }
     return Response.json(

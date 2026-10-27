@@ -727,6 +727,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ENGINE_WS_PATH`
               - `HostEventSchema`
               - `PageStateSchema`
+              - `UPLOAD_CHUNK_BYTES`
           - Machine:
             - Register:
               - `defineDaemon('browser-engine.host')`
@@ -815,7 +816,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-body`
             - Imported by: `apps/browser/start-page`
-        - **`shell`** — App shell for the Browser app. Registers the /browser app entry, owns the per-surface tab store (each tab a page in the engine's Chromium, addressed by key: navigation requests out, host-reported page state in), defines the Browser.* slots, exports the <Favicon> component, and contributes the app's own theme (the mockup's palette in both modes, the system font at 13px, Lucide icons, its control geometry), which the browser app selects.
+        - **`shell`** — App shell for the Browser app. Registers the /browser app entry, owns the per-surface tab store (each tab a page in the engine's Chromium, addressed by key: navigation requests out, host-reported page state in) over the browser's one tab set, saved in localStorage so tabs and their remote pages come back after a reload and stay in sync between surfaces, defines the Browser.* slots, exports the <Favicon> component, and contributes the app's own theme (the mockup's palette in both modes, the system font at 13px, Lucide icons, its control geometry), which the browser app selects.
           - Web:
             - Slots:
               - `Browser.TabStrip`
@@ -853,6 +854,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/spacing.Stack`
               - `primitives/css/ui-kit.cn`
               - `primitives/css/ui-kit.ControlSizeProvider`
+              - `primitives/dom/web-storage.defineStore`
               - `primitives/scope/scoped-store.defineScopedStore`
               - `primitives/slot-render.defineMountSlot`
               - `primitives/slot-render.defineRenderSlot`
@@ -960,19 +962,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --foreground`
               - `ui/tokens/color-palette --muted-foreground`
               - `ui/tokens/color-palette --ring`
-        - **`webview`** — Browser webview: the active tab's page streamed from the engine's Chromium — JPEG screencast frames drawn on a canvas, mouse / wheel / keyboard / IME / clipboard input sent back over the tab's engine socket, the page's dialogs, <select> menus, popups and downloads rendered with app primitives — with a loading bar, the start page for an empty tab, closed tabs' remote pages closed on the host, plus an open-in-system-browser chrome action.
+        - **`webview`** — Browser webview: the active tab's page streamed from the engine's Chromium — JPEG screencast frames drawn on a canvas, mouse / wheel / keyboard / IME / clipboard input sent back over the tab's engine socket, the page's dialogs, <select> menus, popups, downloads and file choosers (an upload prompt streaming the picked files to the page) rendered with app primitives, and a 'Show it here' state when another window took over the tab — with a loading bar, the start page for an empty tab, closed tabs' remote pages closed on the host, plus an open-in-system-browser chrome action.
           - Web:
             - Contributes:
               - `Browser.Viewport` "Viewport" → `Viewport`
               - `Browser.Actions` "Chrome actions" → `OpenExternal`
-            - Uses: 32 symbols — full list in [`plugins/apps/plugins/browser/plugins/webview/REFERENCE.md`](../plugins/apps/plugins/browser/plugins/webview/REFERENCE.md)
-              - `primitives/css/ui-kit` ×8
+            - Uses: 35 symbols — full list in [`plugins/apps/plugins/browser/plugins/webview/REFERENCE.md`](../plugins/apps/plugins/browser/plugins/webview/REFERENCE.md)
+              - `primitives/css/ui-kit` ×9
               - `apps/browser/shell` ×6
               - `primitives/css/overlay` ×2
               - `primitives/css/spacing` ×2
               - `primitives/networking` ×2
               - `primitives/overlay/cursor-menu` ×2
               - `primitives/css/center.Center`
+              - `primitives/css/clip.Clip`
               - `primitives/css/fill.Fill`
               - `primitives/css/placeholder.Placeholder`
               - `primitives/css/surface.Surface`
@@ -982,10 +985,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/link-gesture/new-tab.NewTabButton`
               - `primitives/log-channels.clientLog`
               - `shell/toast.showToast`
+              - `ui/icons.Icon`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --background`
+              - `ui/tokens/color-palette --border`
+              - `ui/tokens/color-palette --muted`
+              - `ui/tokens/color-palette --muted-foreground`
               - `ui/tokens/color-palette --primary`
+              - `ui/tokens/density --space-lg`
+              - `ui/tokens/density --space-md`
+              - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
     - **`chord`** — Chord — a chord ear trainer that plays loops of real songs whose chords you have turned on, asks you to name each chord, and keeps track of how well you know each one.
       - Plugins:
@@ -38654,8 +38664,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `clipClasses`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --radius`
-            - Imported by: 68 plugins — full list in [`plugins/primitives/plugins/css/plugins/clip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/clip/REFERENCE.md)
-              - `apps` ×22
+            - Imported by: 69 plugins — full list in [`plugins/primitives/plugins/css/plugins/clip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/clip/REFERENCE.md)
+              - `apps` ×23
               - `primitives` ×10
               - `conversations` ×8
               - `debug` ×8
@@ -41600,9 +41610,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useStorageUsage`
               - `WebStorageSlots`
           - Cross-plugin:
-            - Imported by: 44 plugins — full list in [`plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md)
+            - Imported by: 45 plugins — full list in [`plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md)
               - `primitives` ×15
-              - `apps` ×11
+              - `apps` ×12
               - `conversations` ×5
               - `apps-core` ×2
               - `reports` ×2
@@ -50947,8 +50957,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/shadow --shadow`
           - `ui/tokens/shape --spacing`
-        - Imported by: 344 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
-          - `apps` ×89
+        - Imported by: 345 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+          - `apps` ×90
           - `conversations` ×56
           - `primitives` ×42
           - `page` ×41
@@ -52193,9 +52203,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 333 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+            - Tokens used by: 334 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+              - `apps` ×70
               - `primitives` ×70
-              - `apps` ×69
               - `conversations` ×48
               - `debug` ×28
               - `page` ×21

@@ -14,6 +14,7 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Browser } from "../slots";
 import { BrowserTabsStore } from "../nav-store";
+import { PersistBrowserTabs } from "./persist-tabs";
 import "./browser-layout.css";
 
 /**
@@ -85,13 +86,14 @@ function BrowserInner() {
         <Browser.Viewport.Render />
       </Clip>
       <Browser.Effects.Mount />
+      <PersistBrowserTabs />
     </Stack>
   );
 }
 
 /**
- * The browser app layout. Mounts the per-surface tab store provider; the store
- * is consumed only inside `<BrowserInner/>` (a Provider host cannot read its own
+ * The browser app layout. Mounts the per-surface tab store provider (seeded
+ * from the saved tab set); the store is consumed only inside `<BrowserInner/>` (a Provider host cannot read its own
  * store in its body).
  */
 export function BrowserLayout() {

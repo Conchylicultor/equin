@@ -110,7 +110,8 @@ web: webview <canvas> ──ws /ws/browser/engine──▶ gateway ──▶ bac
 Audio; native context menu; drag out of the page; file drop from the desktop
 (file chooser via `filechooser` event is in if cheap); agents attaching to the
 user's tabs through `browser_*` (the big payoff — the host already holds the
-pages); persisting the app's tab list across page reloads.
+pages). Tab restore and the file chooser landed later:
+`research/2026-10-27-apps-browser-tab-restore-and-uploads.md`.
 
 ## Verification
 

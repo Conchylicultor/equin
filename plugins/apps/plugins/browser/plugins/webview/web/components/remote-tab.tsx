@@ -47,6 +47,12 @@ import {
   wheelPixels,
 } from "../input-map";
 import { FramePainter } from "../internal/frame-painter";
+import { UploadSender } from "../internal/upload-sender";
+import {
+  FileChooserPrompt,
+  type FileChooserEvent,
+  type UploadProgress,
+} from "./file-chooser";
 import { LatencyProbe } from "../internal/latency-probe";
 import { PageDialog, type PageDialogEvent } from "./page-dialog";
 import { SelectMenu, type PageSelectEvent } from "./select-menu";
@@ -77,9 +83,39 @@ function viewportOf(canvas: HTMLCanvasElement): EngineViewport {
  * frames paint on, and a visually-hidden textarea that holds keyboard focus
  * (keys, IME composition, paste). Mounted only for the active tab showing a
  * page; unmounting closes the socket and the host stops streaming — the
- * remote page itself stays alive.
+ * remote page itself stays alive. Another window attaching to the same page
+ * displaces this one (one viewer per page): it then offers to show it here.
  */
 export function RemoteTab({ tab }: { tab: BrowserTab }) {
+  // Bumped by "Show here": a fresh socket, which attaches again.
+  const [attachment, setAttachment] = useState(0);
+  const [displaced, setDisplaced] = useState(false);
+  if (displaced) {
+    return (
+      <Displaced
+        onShowHere={() => {
+          setDisplaced(false);
+          setAttachment((n) => n + 1);
+        }}
+      />
+    );
+  }
+  return (
+    <AttachedTab
+      key={attachment}
+      tab={tab}
+      onDisplaced={() => setDisplaced(true)}
+    />
+  );
+}
+
+function AttachedTab({
+  tab,
+  onDisplaced,
+}: {
+  tab: BrowserTab;
+  onDisplaced(): void;
+}) {
   const { markAttached, markSent, report } = useBrowserRemote();
   const { open: openTab } = useBrowserTabs();
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -102,6 +138,11 @@ export function RemoteTab({ tab }: { tab: BrowserTab }) {
     event: PageSelectEvent;
     anchor: CursorAnchor;
   } | null>(null);
+  const [chooser, setChooser] = useState<{
+    event: FileChooserEvent;
+    progress: UploadProgress | null;
+  } | null>(null);
+  const uploadRef = useRef<UploadSender | null>(null);
 
   const ws = useReconnectingWebSocket({
     path: ENGINE_WS_PATH,
@@ -118,6 +159,10 @@ export function RemoteTab({ tab }: { tab: BrowserTab }) {
         viewport: viewportOf(canvas),
       };
       socket.send(JSON.stringify(attach));
+      // An upload the old socket carried died with it; the host asks again
+      // (a still-pending chooser is resent on attach).
+      uploadRef.current = null;
+      setChooser(null);
       markAttached(id, url);
       setSocketOpen(true);
     },
@@ -175,7 +220,38 @@ export function RemoteTab({ tab }: { tab: BrowserTab }) {
           });
           break;
         case "error":
+          // A failed upload is over: its acks stop.
+          if (uploadRef.current) {
+            uploadRef.current = null;
+            setChooser(null);
+          }
           setError(event.message);
+          break;
+        case "fileChooser":
+          uploadRef.current = null;
+          setChooser({ event, progress: null });
+          break;
+        case "upload": {
+          const upload = uploadRef.current;
+          if (!upload) break;
+          if (event.received >= event.total) {
+            uploadRef.current = null;
+            setChooser(null);
+            break;
+          }
+          upload.onAck();
+          setChooser((c) =>
+            c
+              ? {
+                  ...c,
+                  progress: { received: event.received, total: event.total },
+                }
+              : c,
+          );
+          break;
+        }
+        case "displaced":
+          onDisplaced();
           break;
       }
     },
@@ -376,6 +452,21 @@ export function RemoteTab({ tab }: { tab: BrowserTab }) {
     });
   };
 
+  const pickFiles = (files: File[]) => {
+    const socket = ws.current;
+    if (!socket || !chooser) return;
+    const upload = new UploadSender(files, (data) => socket.send(data));
+    uploadRef.current = upload;
+    const total = files.reduce((n, f) => n + f.size, 0);
+    setChooser({ ...chooser, progress: { received: 0, total } });
+    send(upload.announcement());
+  };
+
+  const cancelFiles = () => {
+    setChooser(null);
+    send({ t: "files", files: [] });
+  };
+
   const answerSelect = (value: string | null) => {
     if (pendingAnswerRef.current !== "select") return;
     pendingAnswerRef.current = null;
@@ -426,6 +517,14 @@ export function RemoteTab({ tab }: { tab: BrowserTab }) {
           onAnswer={answerDialog}
         />
       )}
+      {chooser && (
+        <FileChooserPrompt
+          chooser={chooser.event}
+          progress={chooser.progress}
+          onPick={pickFiles}
+          onCancel={cancelFiles}
+        />
+      )}
       {select && (
         <SelectMenu
           select={select.event}
@@ -434,6 +533,23 @@ export function RemoteTab({ tab }: { tab: BrowserTab }) {
         />
       )}
     </Overlay>
+  );
+}
+
+/** Another window shows this tab's page now; it streams to one viewer at a time. */
+function Displaced({ onShowHere }: { onShowHere(): void }) {
+  return (
+    <Center axis="both" className="h-full w-full">
+      <Stack direction="col" gap="sm" align="center" className="text-center">
+        <Text variant="subheading">This tab is open in another window</Text>
+        <Text variant="body" tone="muted">
+          A page streams to one window at a time.
+        </Text>
+        <Button variant="outline" onClick={onShowHere}>
+          Show it here
+        </Button>
+      </Stack>
+    </Center>
   );
 }
 

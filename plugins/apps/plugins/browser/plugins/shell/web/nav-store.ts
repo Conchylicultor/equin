@@ -1,6 +1,8 @@
 import { useMemo } from "react";
 import type { PageState } from "@plugins/apps/plugins/browser/plugins/engine/core";
 import { defineScopedStore } from "@plugins/primitives/plugins/scope/plugins/scoped-store/web";
+import { SAVED_TABS_ID, savedTabs } from "./internal/saved-tabs";
+import { restoreState } from "./internal/saved-tabs-model";
 
 /**
  * A navigation command the app asks of a tab's remote page. Recorded by the
@@ -23,12 +25,13 @@ export interface BrowserNavRequest {
 /**
  * Per-surface browser tab state. Each tab is a page in the engine's Chromium,
  * addressed by `key`; the page's navigation history lives there, and the host
- * reports its state back (`report`). The store is dumb — no IO, no URL
- * normalization. Callers pass fully-formed URLs (the omnibox owns
- * normalization).
+ * reports its state back (`report`). The store does no IO and no URL
+ * normalization — callers pass fully-formed URLs (the omnibox owns
+ * normalization). The tab set itself is the browser's, not the surface's: a
+ * surface starts from the saved set, and `PersistBrowserTabs` keeps the two one.
  */
 export interface BrowserTab {
-  /** Stable per-surface id (`tab-<seq>`). */
+  /** The tab's id: its remote page's `key`, the same in every surface. */
   id: string;
   /** The remote page's key on the engine host (a UUID; a popup's is the host's). */
   key: string;
@@ -57,7 +60,7 @@ export interface BrowserTab {
 export type BrowserTabsState = {
   tabs: BrowserTab[];
   activeId: string;
-  /** Monotonic id / request counter — deterministic per surface. */
+  /** Monotonic request counter — deterministic per surface. */
   seq: number;
   /**
    * Keys of closed tabs whose remote page still has to be told to close
@@ -73,11 +76,12 @@ interface FreshTabOptions {
 }
 
 /** A fresh tab pointed at `url` (default: the start page). */
-function freshTab(seq: number, opts: FreshTabOptions = {}): BrowserTab {
+function freshTab(opts: FreshTabOptions = {}): BrowserTab {
   const url = opts.url ?? "";
+  const key = opts.key ?? crypto.randomUUID();
   return {
-    id: `tab-${seq}`,
-    key: opts.key ?? crypto.randomUUID(),
+    id: key,
+    key,
     url,
     pageUrl: url,
     remote: opts.key !== undefined,
@@ -91,14 +95,17 @@ function freshTab(seq: number, opts: FreshTabOptions = {}): BrowserTab {
   };
 }
 
+/** The saved tab set, or — the first time — one start-page tab. */
 function initialState(): BrowserTabsState {
-  const first = freshTab(0);
+  const saved = savedTabs.read(SAVED_TABS_ID);
+  if (saved.kind === "value") return restoreState(saved.value);
+  const first = freshTab();
   return { tabs: [first], activeId: first.id, seq: 1, pendingCloses: [] };
 }
 
 /**
- * Per-surface store (each surface tab gets its own isolated instance). A
- * factory, so every surface's first tab gets its own remote-page key.
+ * Per-surface store (each surface gets its own isolated instance, seeded from
+ * the saved tab set). A factory, so the state is read at each mount.
  */
 export const BrowserTabsStore =
   defineScopedStore<BrowserTabsState>(initialState);
@@ -276,11 +283,17 @@ export function useBrowserTabs(): BrowserTabsApi {
         store.setState((s) => (s.activeId === id ? s : { ...s, activeId: id })),
       open: (url = "", opts?: BrowserOpenOptions) =>
         store.setState((s) => {
-          const tab = freshTab(s.seq, { url, key: opts?.key });
+          // A popup another surface already adopted (the tab sets are shared).
+          if (
+            opts?.key !== undefined &&
+            s.tabs.some((t) => t.key === opts.key)
+          ) {
+            return opts.background ? s : { ...s, activeId: opts.key };
+          }
+          const tab = freshTab({ url, key: opts?.key });
           return {
             ...s,
             tabs: [...s.tabs, tab],
-            seq: s.seq + 1,
             activeId: opts?.background ? s.activeId : tab.id,
           };
         }),
@@ -294,14 +307,8 @@ export function useBrowserTabs(): BrowserTabsApi {
             : s.pendingCloses;
           const remaining = s.tabs.filter((t) => t.id !== id);
           if (remaining.length === 0) {
-            const tab = freshTab(s.seq);
-            return {
-              ...s,
-              tabs: [tab],
-              activeId: tab.id,
-              seq: s.seq + 1,
-              pendingCloses,
-            };
+            const tab = freshTab();
+            return { ...s, tabs: [tab], activeId: tab.id, pendingCloses };
           }
           let { activeId } = s;
           if (activeId === id) {
