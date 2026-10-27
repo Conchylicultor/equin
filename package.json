@@ -59,7 +59,7 @@
     "playwright": "^1.64.1",
     "prettier": "^3.9.10",
     "typescript": "~6.0.3",
-    "vitest": "^4.1.4"
+    "vitest": "^5.0.5"
   },
   "dependencyPolicy": {
     "ownScopes": ["@equin"],
@@ -89,6 +89,20 @@
       }
     ],
     "holds": [
+      {
+        "names": ["vite"],
+        "below": "8.0.0",
+        "reason": "Vite 8 bundles with Rolldown, and the web-artifacts pipeline fails on it: checked 2026-10-27 against 8.3.5, every artifact lacked index.js.map (web-artifacts:no-vendored-state-inlined threw) and the own-folder-barrel resolveId guard rejected database/migrations' lint artifact, which resolves under Rollup. Every check and test passed; only ./equin build showed it. The pipeline migration is task-1793076624-k9ljr5. Lift with it.",
+        "issue": "https://vite.dev/guide/migration",
+        "reviewBy": "2027-01-25"
+      },
+      {
+        "names": ["@vitejs/plugin-react"],
+        "below": "6.0.0",
+        "reason": "plugin-react 6.0 removed every Babel feature, the `babel` option included (vitejs/vite-plugin-react#1123): Babel plugins move to @rolldown/plugin-babel (reactCompilerPreset) or the experimental native compiler. Our React Compiler reaches the build through that option (web-core vite-contributions, web-artifacts vite-builder), so 6.1.2 failed type-check on 2026-10-27; moving changes how every web artifact compiles and is a build-pipeline change of its own (task-1793076072-gwttlf). 6.x also requires Vite 8, itself held (task-1793076624-k9ljr5). Lift with those migrations.",
+        "issue": "https://github.com/vitejs/vite-plugin-react/pull/1123",
+        "reviewBy": "2027-01-25"
+      },
       {
         "names": ["typescript"],
         "below": "7.0.0",
