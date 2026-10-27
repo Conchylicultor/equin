@@ -65,17 +65,14 @@ when `overflowing || expanded`.
 
 ## Plugin reference
 
-- Description: Wraps overflowing children to multiple lines, clamped to N rows by default with a chevron toggle to reveal the rest. Force-expands while reorder edit mode is active.
+- Description: Wraps overflowing children to multiple lines, clamped to N rows by default with a chevron toggle to reveal the rest.
 - Web:
   - Uses:
     - `primitives/css/motion.Presence`
     - `primitives/css/surface.Surface`
     - `primitives/css/ui-kit.cn`
     - `primitives/dom/element-size.useResizeObserver`
-    - `primitives/edit-mode-signal.useEditMode`
     - `primitives/icon-button.IconButton`
-    - `reorder.ReorderLayout`
-    - `reorder.ReorderLayoutContext`
   - Exports (types): `CollapsibleWrapProps`
   - Exports (values): `CollapsibleWrap`
 

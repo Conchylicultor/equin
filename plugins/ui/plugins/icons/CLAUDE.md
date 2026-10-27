@@ -446,7 +446,7 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
   - Uses tokens:
     - `ui/tokens/shadow --shadow`
     - `ui/tokens/shape --spacing`
-  - Imported by: 345 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 344 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×89
     - `conversations` ×56
     - `primitives` ×42
@@ -458,12 +458,12 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `active-data` ×5
     - `audience` ×4
     - `plugin-meta` ×4
-    - `reorder` ×4
     - `review` ×4
     - `apps-core` ×3
     - `build` ×3
     - `config_v2` ×3
     - `hints` ×3
+    - `reorder` ×3
     - `shell` ×3
     - `backup` ×2
     - `infra` ×2

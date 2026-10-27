@@ -22422,6 +22422,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HookChange`
           - `HookKind`
           - `InitiatorStat`
+          - `MountStat`
           - `ProfilerReport`
           - `ProfilerStartOptions`
           - `RemountCause`
@@ -26745,7 +26746,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `framework/tooling/guards.MODULE_EXTENSION`
             - Exports (values): `isE2eScriptPath`
           - Cross-plugin:
-            - Imported by: 173 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+            - Imported by: 172 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
               - `apps` ×51
               - `primitives` ×26
               - `conversations` ×24
@@ -26759,7 +26760,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `shell` ×3
               - `ui` ×3
               - `hints` ×2
-              - `reorder` ×2
               - `reports` ×2
               - `build`
               - `database/admin`
@@ -26768,6 +26768,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `network/live`
               - `plugin-meta/exhibits`
               - `release`
+              - `reorder/node-types`
               - `runs`
               - `wish/element-picker`
           - Exemptions:
@@ -37956,7 +37957,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/viewport-overlay.ViewportOverlay`
           - `primitives/css/yield.yieldClass`
           - `primitives/dom/element-size.useResizeObserver`
-          - `primitives/edit-mode-signal.useEditMode`
           - `primitives/icon-button.IconButton`
           - `primitives/overlay/popup-open.PopupOpenScope`
           - `primitives/slot-render.SlotItemLayout`
@@ -38348,17 +38348,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `FOLD_MS`
           - `foldTiming`
-    - **`collapsible-wrap`** — Wraps overflowing children to multiple lines, clamped to N rows by default with a chevron toggle to reveal the rest. Force-expands while reorder edit mode is active.
+    - **`collapsible-wrap`** — Wraps overflowing children to multiple lines, clamped to N rows by default with a chevron toggle to reveal the rest.
       - Web:
         - Uses:
           - `primitives/css/motion.Presence`
           - `primitives/css/surface.Surface`
           - `primitives/css/ui-kit.cn`
           - `primitives/dom/element-size.useResizeObserver`
-          - `primitives/edit-mode-signal.useEditMode`
           - `primitives/icon-button.IconButton`
-          - `reorder.ReorderLayout`
-          - `reorder.ReorderLayoutContext`
         - Exports (types): `CollapsibleWrapProps`
         - Exports (values): `CollapsibleWrap`
     - **`command-palette`** — Cmd+K command palette primitive. Plugins contribute commands via CommandPalette.Item; the dialog renders them with fuzzy search and keyboard navigation.
@@ -38546,7 +38543,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density` ×6
               - `ui/tokens/shape` ×2
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 173 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
+            - Imported by: 172 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
               - `apps` ×40
               - `debug` ×36
               - `conversations` ×24
@@ -38568,7 +38565,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `hints/ask`
               - `integrations/google-maps/usage`
               - `release/runs-arm`
-              - `reorder/edit-mode`
               - `shell/notifications`
               - `stats/responsiveness`
           - Core:
@@ -38835,7 +38831,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×7
               - `ui/tokens/shape` ×2
               - `ui/tokens/shadow --shadow`
-            - Imported by: 46 plugins — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
+            - Imported by: 45 plugins — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
               - `apps` ×16
               - `page` ×5
               - `primitives` ×4
@@ -38848,7 +38844,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps-core/surface`
               - `conversations/conversation-view/dependencies`
               - `fullscreen`
-              - `reorder/edit-mode`
               - `reports/panel-overflow`
               - `shell/global-action-bar`
           - Exemptions:
@@ -39873,6 +39868,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PopoverPadding`
               - `PopoverWidth`
               - `PortalForwardedAttrs`
+              - `PortalForwardScopeValue`
               - `SidebarToggleGlyph`
               - `SidebarToggleIcons`
               - `SurfaceLevel`
@@ -39929,6 +39925,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PopoverContent`
               - `PopoverTrigger`
               - `PortalForwardProvider`
+              - `PortalForwardScope`
               - `PortalThemeScopeProvider`
               - `ResizableHandle`
               - `ResizablePanel`
@@ -39992,6 +39989,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useHoldPopoverOpen`
               - `useMenuSurface`
               - `usePinOnClick`
+              - `usePortalForward`
               - `usePortalForwardedAttrs`
               - `usePortalThemeScope`
               - `useRegionForwardedAttrs`
@@ -40015,7 +40013,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 441 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 440 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×109
               - `apps` ×101
               - `conversations` ×53
@@ -40026,9 +40024,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fields` ×11
               - `plugin-meta` ×10
               - `apps-core` ×7
-              - `reorder` ×6
               - `build` ×5
               - `infra` ×5
+              - `reorder` ×5
               - `review` ×5
               - `shell` ×5
               - `auth` ×4
@@ -41653,18 +41651,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/dom/web-storage.WebStorageSlots`
                   - `shell/health-report.HealthReport`
                   - `shell/toast.showToast`
-    - **`edit-mode-signal`** — The page-global edit-mode signal — setEditMode / getEditMode / useEditMode — as a leaf primitive whose only import is react. Everything that reorder's edit mode restyles (a bar, a wrapping chip row) reads the signal without importing the reorder feature plugin.
-      - Cross-plugin:
-        - Imported by:
-          - `primitives/adaptive-bar`
-          - `primitives/collapsible-wrap`
-          - `reorder`
-          - `reorder/edit-mode`
-      - Web:
-        - Exports (values):
-          - `getEditMode`
-          - `setEditMode`
-          - `useEditMode`
     - **`editable-field`** — Debounced-autosave field hook with focus tracking, flush-on-blur, and self-echo suppression. Used by task/agent detail forms.
       - Web:
         - Uses:
@@ -43852,16 +43838,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `InlinePopoverProps`
             - Exports (values): `InlinePopover`
           - Cross-plugin:
-            - Imported by: 33 plugins — full list in [`plugins/primitives/plugins/overlay/plugins/popover/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/popover/REFERENCE.md)
+            - Imported by: 32 plugins — full list in [`plugins/primitives/plugins/overlay/plugins/popover/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/popover/REFERENCE.md)
               - `page` ×7
               - `apps` ×6
               - `primitives` ×6
               - `conversations` ×4
               - `fields` ×2
-              - `reorder` ×2
               - `shell` ×2
               - `build`
               - `config_v2/settings`
+              - `reorder/editor`
               - `tag-tree/picker`
               - `tasks/task-draft-form`
         - **`popup-open`** — Typed 'is a popup open inside me' signal: PopupOpenScope aggregates every popup opened under it and hands the boolean to its render-prop child; ui-kit's Root wrappers publish it via useReportPopupOpen. Replaces CSS selectors that named a popup library's own attribute contract. Sits below ui-kit (imports only react) so ui-kit can consume it without a cycle.
@@ -43944,7 +43930,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slot contributors: 92 contributors — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `Pane.Register` ×92
         - Contributes: 119 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
-          - `SlotRender.ItemMiddleware`
+          - `SlotRender.ListMiddleware`
           - `WebsiteHeader` "title" → `PaneTitleItem`
           - `accountPane.Actions` "title" → `PaneTitleItem`
           - `accountsPane.Actions` "title" → `PaneTitleItem`
@@ -44867,7 +44853,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Shortcuts.Shortcut` ← `apps.desktop.switcher`
           - `Shortcuts.Shortcut` ← `apps.desktop.windows`
           - `Shortcuts.Shortcut` ← `hints`
-          - `Shortcuts.Shortcut` ← `reorder.edit-mode`
         - Contributes: `Core.Root` → `ShortcutManager`
         - Uses:
           - `primitives/latest-ref.useLatestRef`
@@ -44886,12 +44871,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `usePlayPauseShortcut`
           - `useSurfaceShortcuts`
       - Cross-plugin:
-        - Imported by: 31 plugins — full list in [`plugins/primitives/plugins/shortcuts/REFERENCE.md`](../plugins/primitives/plugins/shortcuts/REFERENCE.md)
+        - Imported by: 30 plugins — full list in [`plugins/primitives/plugins/shortcuts/REFERENCE.md`](../plugins/primitives/plugins/shortcuts/REFERENCE.md)
           - `apps` ×15
           - `primitives` ×11
           - `apps-core` ×2
           - `hints`
-          - `reorder/edit-mode`
           - `tasks/task-draft-form`
       - Exemptions:
         - Exempts itself from: `shortcuts/no-window-key-listener` — `web/internal/shortcut-manager.tsx` (sanctioned)
@@ -44904,11 +44888,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SlotRender.ItemAttrs`
           - `SlotRender.Order`
         - Slot contributors:
+          - `SlotRender.ListMiddleware` ← `primitives.pane`
           - `SlotRender.ListMiddleware` ← `reorder.slot-middleware`
           - `SlotRender.ItemMiddleware` ← `primitives.error-boundary`
-          - `SlotRender.ItemMiddleware` ← `primitives.pane`
           - `SlotRender.ItemMiddleware` ← `primitives.ui-context.element-picker`
-          - `SlotRender.ItemMiddleware` ← `reorder.slot-middleware`
           - `SlotRender.ItemAttrs` ← `primitives.ui-context.element-picker`
           - `SlotRender.Order` ← `reorder.slot-middleware`
         - Uses:
@@ -45010,7 +44993,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `layouts/miller`
           - `primitives/data-view`
           - `primitives/data-view/view-core`
-          - `reorder/edit-mode`
           - `reorder/editor`
           - `tasks/task-draft-form`
       - Exemptions:
@@ -45026,7 +45008,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `primitives/sortable-list`
-              - `reorder`
               - `reorder/area`
               - `reorder/node-types/divider`
               - `reorder/node-types/spacer`
@@ -45825,9 +45806,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `InlineChip.Tag` "ui-context" → `UiContextTag`
               - `SlotRender.ItemAttrs`
               - `SlotRender.ItemMiddleware`
-            - Uses: 31 symbols — full list in [`plugins/primitives/plugins/ui-context/plugins/element-picker/REFERENCE.md`](../plugins/primitives/plugins/ui-context/plugins/element-picker/REFERENCE.md)
+            - Uses: 32 symbols — full list in [`plugins/primitives/plugins/ui-context/plugins/element-picker/REFERENCE.md`](../plugins/primitives/plugins/ui-context/plugins/element-picker/REFERENCE.md)
+              - `primitives/css/ui-kit` ×5
               - `primitives/ui-context` ×5
-              - `primitives/css/ui-kit` ×4
               - `primitives/css/coords` ×3
               - `primitives/css/fill` ×2
               - `primitives/css/spacing` ×2
@@ -46259,10 +46240,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `server/internal/source-checkout.ts` (debt)
 
-- **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. Applies each slot's committed layout everywhere slots render; editing a layout (drag, hide, insert) is the opt-in ReorderSlots.AreaEditor, mounted beside an area's items only while edit mode is on. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
+- **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. Applies each slot's committed layout (order, hidden items, spacers, dividers, groups) everywhere slots render; a layout is edited in its config file or the Config pane's reorder-tree field. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Slots: `ReorderSlots.AreaEditor`
-    - Slot contributors: `ReorderSlots.AreaEditor` ← `reorder.edit-mode`
     - Contributes: 262 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
       - `ConfigV2.WebRegister` ×262
     - Uses:
@@ -46272,31 +46251,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `primitives/dom/element-size.useResizeObserver`
       - `primitives/dom/layout-host.flowAxis`
       - `primitives/dom/layout-host.layoutHost`
-      - `primitives/edit-mode-signal.useEditMode`
       - `primitives/latest-ref.useLatestRef`
-      - `primitives/sortable-list/deferred-item.ItemBindingProvider`
-      - `reorder/area.ReorderAreaContext`
-      - `reorder/area.ReorderAreaCtxValue`
-      - `reorder/area.ReorderEntry`
-      - `reorder/area.ReorderItemBox`
       - `reorder/node-types.useReorderNodeTypes`
     - Exports (types):
-      - `ReorderAreaEditor`
-      - `ReorderAreaEditorProps`
-      - `ReorderAreaWrites`
-      - `ReorderLayout`
       - `ReorderNodeData`
-      - `ReorderRegime`
       - `ReorderState`
       - `TopLevelEntry`
     - Exports (values):
       - `contributionLabel`
       - `entryKey`
       - `isNodeData`
-      - `ReorderItemMiddleware`
-      - `ReorderLayoutContext`
       - `ReorderListMiddleware`
-      - `ReorderSlots`
       - `useLayoutOrder`
       - `useReorderedEntries`
   - Server:
@@ -46305,14 +46270,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Uses: `config_v2.ConfigV2`
     - Exports (values): `reorderDirectiveDescriptor`
   - Cross-plugin:
-    - Uses tokens: `ui/tokens/density --space-xs`
     - Imported by:
       - `apps-core/app-launcher`
       - `apps/desktop/launcher`
       - `conversations/conversation-view/artifacts`
       - `page/editor`
-      - `primitives/collapsible-wrap`
-      - `reorder/edit-mode`
       - `reorder/slot-middleware`
   - Shared:
     - Exports (types): `ReorderableSlot`
@@ -46320,12 +46282,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `reorderableSlots`
       - `reorderDirectiveDescriptor`
   - Test helpers:
-    - Web: `@plugins/reorder/web/testing`
-      - `ReorderItemClaim` — Stands in for the list middleware's per-`renderItem` claim, so a test can render `ReorderItemMiddleware` as an item of a hand-built area.
     - Server: `@plugins/reorder/server/testing`
       - `reorderableSlots`
   - Plugins:
-    - **`area`** — What a reorder area draws, shared by applying a slot layout (reorder) and editing one (reorder/editor, reorder/edit-mode): the area context, the entry types, and ReorderItemBox — an item box at rest display: contents, which wears the item chrome an editor publishes into it. A leaf library both sides import, imports no drag code.
+    - **`area`** — What a reorder area in the layout editor draws (the Config pane's reorder-tree field over reorder/editor): the area context, the entry types, and ReorderItemBox — an item box wearing the item chrome the editor publishes into it. A leaf library, imports no drag code.
       - Web:
         - Uses:
           - `primitives/css/grow-relay.GrowRelay`
@@ -46344,43 +46304,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by:
           - `fields/reorder-tree/config`
-          - `reorder`
           - `reorder/editor`
-          - `reorder/node-types/divider`
-    - **`edit-mode`** — Slot-layout editing, opt-in: the Edit layout switch in the action bar's view-options popover (Esc exits), and the area editor every reorderable slot mounts beside its items while edit mode is on — the drag host, item chrome, hide/restore/insert and the narrow-row popover. Ships only where a composition selects it, carrying the DnD editor and dnd-kit with it.
-      - Web:
-        - Contributes:
-          - `ActionBar.ViewOption` → `EditLayoutSwitch`
-          - `Shortcuts.Shortcut` "reorder.exit-edit-mode (escape)"
-          - `ReorderSlots.AreaEditor` "area editor"
-        - Uses: 22 symbols — full list in [`plugins/reorder/plugins/edit-mode/REFERENCE.md`](../plugins/reorder/plugins/edit-mode/REFERENCE.md)
-          - `reorder` ×5
-          - `reorder/editor` ×4
-          - `primitives/edit-mode-signal` ×3
-          - `primitives/sortable-list` ×2
-          - `primitives/css/badge.Badge`
-          - `primitives/css/control-panel.ControlPanel`
-          - `primitives/css/ui-kit.Button`
-          - `primitives/overlay/popover.InlinePopover`
-          - `primitives/shortcuts.defineShortcut`
-          - `reorder/node-types.useReorderNodeTypes`
-          - `shell/action-bar.ActionBar`
-          - `ui/icons.Icon`
-      - Cross-plugin:
-        - Uses tokens:
-          - `ui/tokens/color-palette --background`
-          - `ui/tokens/color-palette --border`
-          - `ui/tokens/color-palette --primary`
-          - `ui/tokens/density --space-2xs`
-          - `ui/tokens/density --space-sm`
-          - `ui/tokens/shadow --shadow-lg`
-          - `ui/tokens/shape --radius`
-          - `ui/tokens/shape --spacing`
-        - Imported by:
-          - `apps/pages/page-tree`
-          - `primitives/pane`
-          - `reorder`
-    - **`editor`** — Presentational drag-and-drop reorder editor: a self-contained ReorderEditor (list, hide/restore, inserts), the item chrome that dresses a reorder item box in edit mode, and the restore/insert popover. Display-only — no config_v2, catalog, or tree-format knowledge. Edit side only: the in-app layout editor (reorder.edit-mode) and the Config pane's reorder-tree field.
+    - **`editor`** — Presentational drag-and-drop reorder editor: a self-contained ReorderEditor (list, hide/restore, inserts), the item chrome that dresses a reorder item box in edit mode, and the restore/insert popover. Display-only — no config_v2, catalog, or tree-format knowledge. Behind the Config pane's reorder-tree field.
       - Web:
         - Uses:
           - `primitives/css/inline.Inline`
@@ -46425,9 +46350,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-3xs`
           - `ui/tokens/type-scale --line-height-caption`
-        - Imported by:
-          - `fields/reorder-tree/config`
-          - `reorder/edit-mode`
+        - Imported by: `fields/reorder-tree/config`
       - Exemptions:
         - Exempts itself from: `data-view/no-adhoc-row-list` — `.` (sanctioned)
     - **`node-types`** — Reorder node-type registry: owns the reorder.node-type slot and the useReorderNodeTypes() read hook. Slot owner only — contributes no node types itself.
@@ -46454,7 +46377,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `fields/reorder-tree/config`
           - `reorder`
-          - `reorder/edit-mode`
           - `reorder/node-types/divider`
           - `reorder/node-types/header`
           - `reorder/node-types/overflow`
@@ -46472,7 +46394,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/ui-kit.ControlSize`
               - `primitives/css/ui-kit.useControlSize`
               - `primitives/sortable-list/deferred-item.DeferredSortableItem`
-              - `reorder/area.ReorderAreaContext`
               - `reorder/node-types.RemoveNodeButton`
               - `reorder/node-types.ReorderNodes`
           - Cross-plugin:
@@ -46545,15 +46466,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --line-height-3xs`
           - Exemptions:
             - Exempted by: `apps/browser/shell` (0 debt)
-    - **`slot-middleware`** — Applies every render slot's committed layout: reorder's list and item middleware, contributed to slot-render as companions so they ship wherever slots render. Editing a layout is not here — it is reorder.edit-mode's opt-in area editor.
+    - **`slot-middleware`** — Applies every render slot's committed layout: reorder's list middleware, contributed to slot-render as a companion so it ships wherever slots render.
       - Web:
         - Contributes:
           - `SlotRender.ListMiddleware`
-          - `SlotRender.ItemMiddleware`
           - `SlotRender.Order`
         - Uses:
           - `primitives/slot-render.SlotRender`
-          - `reorder.ReorderItemMiddleware`
           - `reorder.ReorderListMiddleware`
           - `reorder.useLayoutOrder`
 
@@ -47815,7 +47734,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ActionBar.ViewOption` ← `audience.view-option`
           - `ActionBar.ViewOption` ← `config_v2.git-defaults-preview`
           - `ActionBar.ViewOption` ← `fullscreen`
-          - `ActionBar.ViewOption` ← `reorder.edit-mode`
           - `ActionBar.Lead` ← `shell.health-report`
           - `ActionBar.Activity` ← `build`
           - `ActionBar.Glance` ← `build`
@@ -47832,7 +47750,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `config_v2/git-defaults-preview`
           - `fullscreen`
           - `hints/help-menu`
-          - `reorder/edit-mode`
           - `screenshot`
           - `screenshot/draw-on-app`
           - `shell/global-action-bar`
@@ -47900,7 +47817,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps/home/tour`
           - `hints/ask`
-          - `reorder/edit-mode`
           - `shell/notifications`
     - **`health-report`** — Unified health report: one dot merging every HealthReport.Row contribution (critical > attention > unknown > ok, with a count of rows needing a look), opening a popover that lists info rows first, then status rows in the slot's reorder layout order. Owns the slot, and contributes its button as the action bar's leading mark (ActionBar.Lead); knows no contributor.
       - Web:
@@ -51031,7 +50947,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/shadow --shadow`
           - `ui/tokens/shape --spacing`
-        - Imported by: 345 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 344 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×89
           - `conversations` ×56
           - `primitives` ×42
@@ -51043,12 +50959,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `active-data` ×5
           - `audience` ×4
           - `plugin-meta` ×4
-          - `reorder` ×4
           - `review` ×4
           - `apps-core` ×3
           - `build` ×3
           - `config_v2` ×3
           - `hints` ×3
+          - `reorder` ×3
           - `shell` ×3
           - `backup` ×2
           - `infra` ×2
@@ -52158,7 +52074,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `colorPaletteGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Tokens used by: 528 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 527 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×120
               - `conversations` ×88
               - `primitives` ×77
@@ -52170,8 +52086,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `reports` ×13
               - `fields` ×12
               - `active-data` ×7
-              - `reorder` ×7
               - `build` ×6
+              - `reorder` ×6
               - `stats` ×6
               - `apps-core` ×5
               - `infra` ×5
@@ -52277,7 +52193,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 335 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+            - Tokens used by: 333 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
               - `primitives` ×70
               - `apps` ×69
               - `conversations` ×48
@@ -52287,7 +52203,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta` ×13
               - `tasks` ×8
               - `fields` ×7
-              - `reorder` ×7
+              - `reorder` ×5
               - `review` ×5
               - `infra` ×4
               - `shell` ×4
@@ -52605,7 +52521,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-3xs`
               - `ui/tokens/type-scale --line-height-caption`
-            - Tokens used by: 74 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
+            - Tokens used by: 73 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
               - `apps` ×29
               - `primitives` ×18
               - `ui` ×6
@@ -52620,7 +52536,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `map`
               - `menu-bar`
               - `plugin-meta/plugin-tree`
-              - `reorder/edit-mode`
         - **`shape`** — Shape token group (border radius, base spacing) with its customizer section and "Fill from…" shortcuts.
           - Web:
             - Contributes:
@@ -52644,7 +52559,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `shapeGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --radius-chip-compact`
-            - Tokens used by: 431 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+            - Tokens used by: 430 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
               - `conversations` ×91
               - `apps` ×84
               - `primitives` ×71
@@ -52654,7 +52569,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta` ×11
               - `tasks` ×11
               - `fields` ×9
-              - `reorder` ×7
+              - `reorder` ×6
               - `review` ×5
               - `active-data` ×4
               - `apps-core` ×4

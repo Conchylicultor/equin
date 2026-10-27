@@ -22,16 +22,14 @@ keeps out of slot-render's closure.
 
 ## Plugin reference
 
-- Description: Applies every render slot's committed layout: reorder's list and item middleware, contributed to slot-render as companions so they ship wherever slots render. Editing a layout is not here — it is reorder.edit-mode's opt-in area editor.
+- Description: Applies every render slot's committed layout: reorder's list middleware, contributed to slot-render as a companion so it ships wherever slots render.
 - Load-bearing: yes
 - Web:
   - Contributes:
     - `SlotRender.ListMiddleware`
-    - `SlotRender.ItemMiddleware`
     - `SlotRender.Order`
   - Uses:
     - `primitives/slot-render.SlotRender`
-    - `reorder.ReorderItemMiddleware`
     - `reorder.ReorderListMiddleware`
     - `reorder.useLayoutOrder`
 

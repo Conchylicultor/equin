@@ -39,7 +39,6 @@ but not to a button merely left focused (the link that opened the player).
     - `Shortcuts.Shortcut` ← `apps.desktop.switcher`
     - `Shortcuts.Shortcut` ← `apps.desktop.windows`
     - `Shortcuts.Shortcut` ← `hints`
-    - `Shortcuts.Shortcut` ← `reorder.edit-mode`
   - Contributes: `Core.Root` → `ShortcutManager`
   - Uses:
     - `primitives/latest-ref.useLatestRef`
@@ -58,12 +57,11 @@ but not to a button merely left focused (the link that opened the player).
     - `usePlayPauseShortcut`
     - `useSurfaceShortcuts`
 - Cross-plugin:
-  - Imported by: 31 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 30 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×15
     - `primitives` ×11
     - `apps-core` ×2
     - `hints`
-    - `reorder/edit-mode`
     - `tasks/task-draft-form`
 - Exemptions:
   - Exempts itself from: `shortcuts/no-window-key-listener` — `web/internal/shortcut-manager.tsx` (sanctioned)

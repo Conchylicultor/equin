@@ -25,16 +25,16 @@ required `draftKey`.
   - Exports (types): `InlinePopoverProps`
   - Exports (values): `InlinePopover`
 - Cross-plugin:
-  - Imported by: 33 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 32 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `page` ×7
     - `apps` ×6
     - `primitives` ×6
     - `conversations` ×4
     - `fields` ×2
-    - `reorder` ×2
     - `shell` ×2
     - `build`
     - `config_v2/settings`
+    - `reorder/editor`
     - `tag-tree/picker`
     - `tasks/task-draft-form`
 

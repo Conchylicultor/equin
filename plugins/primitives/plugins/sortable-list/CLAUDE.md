@@ -78,7 +78,6 @@ items. Importing this barrel for an item would pull dnd-kit into that bundle.
     - `layouts/miller`
     - `primitives/data-view`
     - `primitives/data-view/view-core`
-    - `reorder/edit-mode`
     - `reorder/editor`
     - `tasks/task-draft-form`
 - Exemptions:

@@ -37,7 +37,6 @@ inherit whichever the host chose, so every item in a host shares one height.
     - `ActionBar.ViewOption` ← `audience.view-option`
     - `ActionBar.ViewOption` ← `config_v2.git-defaults-preview`
     - `ActionBar.ViewOption` ← `fullscreen`
-    - `ActionBar.ViewOption` ← `reorder.edit-mode`
     - `ActionBar.Lead` ← `shell.health-report`
     - `ActionBar.Activity` ← `build`
     - `ActionBar.Glance` ← `build`
@@ -54,7 +53,6 @@ inherit whichever the host chose, so every item in a host shares one height.
     - `config_v2/git-defaults-preview`
     - `fullscreen`
     - `hints/help-menu`
-    - `reorder/edit-mode`
     - `screenshot`
     - `screenshot/draw-on-app`
     - `shell/global-action-bar`

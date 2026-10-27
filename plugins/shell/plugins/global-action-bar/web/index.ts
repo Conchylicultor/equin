@@ -21,10 +21,7 @@ export default {
     Core.Root({ component: FloatingActionBarHost }),
     Apps.TabBarActions({
       id: "global-action-bar",
-      // The docked bar HOSTS the edit-mode controls (pen + Personal/Everyone
-      // scope toggle). Excluding it from reorder keeps it out of the
-      // `pointer-events-none` edit-mode wrapper — otherwise entering edit mode
-      // disables the very buttons used to drive and exit it.
+      // Pinned last in the tab bar's actions, whatever the layout says.
       excludeFromReorder: true,
       component: DockedActionBarHost,
     }),

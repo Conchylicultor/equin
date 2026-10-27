@@ -974,7 +974,7 @@ See "Open questions" in the design doc.
   - Slot contributors: 92 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `Pane.Register` ×92
   - Contributes: 119 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `SlotRender.ItemMiddleware`
+    - `SlotRender.ListMiddleware`
     - `WebsiteHeader` "title" → `PaneTitleItem`
     - `accountPane.Actions` "title" → `PaneTitleItem`
     - `accountsPane.Actions` "title" → `PaneTitleItem`

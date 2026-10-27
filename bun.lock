@@ -5382,10 +5382,6 @@
       "name": "@equin/plugin-primitives-dom-web-storage-health",
       "version": "0.0.1",
     },
-    "plugins/primitives/plugins/edit-mode-signal": {
-      "name": "@equin/plugin-primitives-edit-mode-signal",
-      "version": "0.0.1",
-    },
     "plugins/primitives/plugins/editable-field": {
       "name": "@equin/plugin-primitives-editable-field",
       "version": "0.0.1",
@@ -5926,10 +5922,6 @@
     },
     "plugins/reorder/plugins/area": {
       "name": "@equin/plugin-reorder-area",
-      "version": "0.0.1",
-    },
-    "plugins/reorder/plugins/edit-mode": {
-      "name": "@equin/plugin-reorder-edit-mode",
       "version": "0.0.1",
     },
     "plugins/reorder/plugins/editor": {
@@ -9311,8 +9303,6 @@
 
     "@equin/plugin-primitives-dom-web-storage-health": ["@equin/plugin-primitives-dom-web-storage-health@workspace:plugins/primitives/plugins/dom/plugins/web-storage/plugins/health"],
 
-    "@equin/plugin-primitives-edit-mode-signal": ["@equin/plugin-primitives-edit-mode-signal@workspace:plugins/primitives/plugins/edit-mode-signal"],
-
     "@equin/plugin-primitives-editable-field": ["@equin/plugin-primitives-editable-field@workspace:plugins/primitives/plugins/editable-field"],
 
     "@equin/plugin-primitives-embed": ["@equin/plugin-primitives-embed@workspace:plugins/primitives/plugins/embed"],
@@ -9558,8 +9548,6 @@
     "@equin/plugin-reorder": ["@equin/plugin-reorder@workspace:plugins/reorder"],
 
     "@equin/plugin-reorder-area": ["@equin/plugin-reorder-area@workspace:plugins/reorder/plugins/area"],
-
-    "@equin/plugin-reorder-edit-mode": ["@equin/plugin-reorder-edit-mode@workspace:plugins/reorder/plugins/edit-mode"],
 
     "@equin/plugin-reorder-editor": ["@equin/plugin-reorder-editor@workspace:plugins/reorder/plugins/editor"],
 

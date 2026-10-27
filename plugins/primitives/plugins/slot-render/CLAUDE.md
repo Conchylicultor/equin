@@ -115,11 +115,8 @@ Only the **row** branch is a relay. The `display:contents` branch generates no
 box, so it has nothing to grow — and the ask crosses it for free, because
 context passes through any component that is not a relay.
 
-`fill: true` remains on the contribution for the two things nobody can ask for:
-a contribution that wants the slack with no such widget inside it, and reorder's
-own reading of the flag for its edit-mode wrapper — where it means the **block**
-axis (a bounded flex column so an inner scroll region clamps), a different
-question from the inline grow the cell relays.
+`fill: true` remains on the contribution for what nobody can ask for: a
+contribution that wants the slack with no such widget inside it.
 
 ### Relocating hosts declare their layout
 
@@ -305,11 +302,10 @@ the outcome too, with no separate code path.
     - `SlotRender.ItemAttrs`
     - `SlotRender.Order`
   - Slot contributors:
+    - `SlotRender.ListMiddleware` ← `primitives.pane`
     - `SlotRender.ListMiddleware` ← `reorder.slot-middleware`
     - `SlotRender.ItemMiddleware` ← `primitives.error-boundary`
-    - `SlotRender.ItemMiddleware` ← `primitives.pane`
     - `SlotRender.ItemMiddleware` ← `primitives.ui-context.element-picker`
-    - `SlotRender.ItemMiddleware` ← `reorder.slot-middleware`
     - `SlotRender.ItemAttrs` ← `primitives.ui-context.element-picker`
     - `SlotRender.Order` ← `reorder.slot-middleware`
   - Uses:

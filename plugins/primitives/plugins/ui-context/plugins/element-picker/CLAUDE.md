@@ -108,9 +108,9 @@ every build — including a composition this plugin is not in.
     - `InlineChip.Tag` "ui-context" → `UiContextTag`
     - `SlotRender.ItemAttrs`
     - `SlotRender.ItemMiddleware`
-  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 32 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×5
     - `primitives/ui-context` ×5
-    - `primitives/css/ui-kit` ×4
     - `primitives/css/coords` ×3
     - `primitives/css/fill` ×2
     - `primitives/css/spacing` ×2

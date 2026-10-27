@@ -463,6 +463,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `PopoverPadding`
     - `PopoverWidth`
     - `PortalForwardedAttrs`
+    - `PortalForwardScopeValue`
     - `SidebarToggleGlyph`
     - `SidebarToggleIcons`
     - `SurfaceLevel`
@@ -519,6 +520,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `PopoverContent`
     - `PopoverTrigger`
     - `PortalForwardProvider`
+    - `PortalForwardScope`
     - `PortalThemeScopeProvider`
     - `ResizableHandle`
     - `ResizablePanel`
@@ -582,6 +584,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `useHoldPopoverOpen`
     - `useMenuSurface`
     - `usePinOnClick`
+    - `usePortalForward`
     - `usePortalForwardedAttrs`
     - `usePortalThemeScope`
     - `useRegionForwardedAttrs`
@@ -605,7 +608,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `ui/tokens/chart` ×5
     - `ui/tokens/font-family` ×4
     - `ui/tokens/scrollbar --scrollbar-color`
-  - Imported by: 441 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 440 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives` ×109
     - `apps` ×101
     - `conversations` ×53
@@ -616,9 +619,9 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `fields` ×11
     - `plugin-meta` ×10
     - `apps-core` ×7
-    - `reorder` ×6
     - `build` ×5
     - `infra` ×5
+    - `reorder` ×5
     - `review` ×5
     - `shell` ×5
     - `auth` ×4

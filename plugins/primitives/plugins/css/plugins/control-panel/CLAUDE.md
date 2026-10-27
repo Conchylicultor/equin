@@ -767,7 +767,7 @@ The primitive needs **no** new lint exemptions: it inherits the
     - `ui/tokens/type-scale` ×7
     - `ui/tokens/shape` ×2
     - `ui/tokens/shadow --shadow`
-  - Imported by: 46 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 45 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×16
     - `page` ×5
     - `primitives` ×4
@@ -780,7 +780,6 @@ The primitive needs **no** new lint exemptions: it inherits the
     - `apps-core/surface`
     - `conversations/conversation-view/dependencies`
     - `fullscreen`
-    - `reorder/edit-mode`
     - `reports/panel-overflow`
     - `shell/global-action-bar`
 - Exemptions:

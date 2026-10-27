@@ -88,8 +88,7 @@ const defineSlotUnchecked = defineSlot as <Q>(opts?: SlotOptions<Q>) => Slot<Q>;
  *    files away, for the two to agree.
  *
  *    `fill` remains as the explicit declaration — a contribution that wants the
- *    slack with no such widget inside it, and reorder's own (block-axis) reading
- *    of the same flag for its edit-mode wrapper.
+ *    slack with no such widget inside it.
  *
  * 2. **Identity.** It is where `SlotRender.ItemAttrs` contributors stamp what this
  *    contribution IS. The box is drawn by the slot but belongs to the
