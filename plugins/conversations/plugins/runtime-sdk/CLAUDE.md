@@ -144,6 +144,13 @@ agents without tmux, per-namespace paths, the Claude Code health row:
   secrets store itself and gives it to Claude Code only, as
   `CLAUDE_CODE_OAUTH_TOKEN` in the SDK's `env`. A running agent keeps its
   account until its process restarts.
+- **A token account has no Claude-in-Chrome.** Its `setup-token` token carries
+  no claude.ai sign-in, so Claude Code silently leaves out Claude-in-Chrome
+  and the claude.ai connectors, `--chrome` or not (incident 2026-10-27: agents
+  lost Chrome from the moment a token account became active). An absent tool
+  is nothing an agent can call and fail on, so `bin/agent.ts` appends
+  `TOKEN_ACCOUNT_NOTE` to the system prompt of every token-account session:
+  why, and that only the user's switch to the system account fixes it.
 - Usage limits: every agent turn's `rate_limit_event` carries
   `rate_limit_info.unifiedWindows` (`five_hour`, `seven_day`: utilization and
   reset) — not in the SDK's types, so `core/claude-usage.ts` parses it. The
