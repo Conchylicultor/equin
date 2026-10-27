@@ -537,13 +537,19 @@ cut in two around it. So out of a container the block lands right after the box
 and its followers stay inside. Every outdent path (empty-Enter, Shift+Tab, the
 bulk selection outdent) goes through it, so none of them can split a box.
 
-**Empty-Enter leaves a container only where its flow ends.** On an empty line
-whose parent is an anchor, the ladder's outdent rung fires only for the box's
-LAST line below at least one other (Enter, Enter at the end of a callout steps
-out; `/callout` + Enter on a fresh empty line does not dissolve the box), for
-every block type. Anywhere else in the box the outdent rung is skipped: the
-type escape (`breakOutOnEmptyEnter`) still applies, then an ordinary split mints
-another line inside the box.
+**Empty-Enter leaves a container only after a blank line.** On an empty line
+whose parent is an anchor, the box is left only from its LAST line, and only
+when the line directly above it is blank too (text-bearing, empty by its live
+doc, childless): that press is the `exitContainer` op — the blank line is
+deleted and the caret's line lands right after the box, in ONE op and one undo
+entry. So inside a box one empty line is just a paragraph break (`xxx ⏎ ⏎ yyy`
+keeps the blank between the two), and `⏎ ⏎ ⏎` at the end of the last line
+leaves the box with no stray blank left in it. It holds for every block type;
+`/callout` + Enter on a fresh empty line does not dissolve the box. Everywhere
+else in the box the outdent rung is skipped: the type escape
+(`breakOutOnEmptyEnter`) still applies, then an ordinary split mints another
+line inside the box (an empty bullet at the end becomes text first, then the
+usual two empty lines leave).
 
 ### A container folds to its borrowed line
 
@@ -1467,7 +1473,8 @@ deletion and to escaping structure:
 > **Empty-Enter** escapes one structural level per press: indentation first
 > (outdent, keeping the type), then the type (convertTo), then ordinary split.
 > Inside a container the box is not indentation: it is left only from its last
-> line (see *Empty-Enter leaves a container only where its flow ends*).
+> line below a blank one (see *Empty-Enter leaves a container only after a
+> blank line*).
 >
 > **Enter over a selection REPLACES it** — a native range inside the line (a
 > double / triple click, Shift+Arrow) as a text span across lines: the text goes

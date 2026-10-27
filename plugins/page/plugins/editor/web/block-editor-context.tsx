@@ -71,6 +71,7 @@ import {
   type BlockDocs,
 } from "./internal/collab-session";
 import { useBlockDocs } from "./internal/use-block-docs";
+import { liveRunsOf } from "./internal/live-runs";
 import { spliceOpenBlockDoc } from "./internal/block-text-write";
 import type { ProjectTextFn } from "./internal/doc-sourced-runs";
 import type { RowTruth } from "./internal/row-truth";
@@ -117,6 +118,7 @@ const OP_LABELS: Record<BlockOp["kind"], string> = {
   indent: "Indent blocks",
   outdent: "Outdent blocks",
   unwrap: "Remove block",
+  exitContainer: "Leave box",
   move: "Move block",
   bulkMove: "Move blocks",
   paste: "Paste blocks",
@@ -147,6 +149,9 @@ function opFocusId(
       // first promoted child — the line the user was standing on when Backspace
       // dissolved the box, and the row that now occupies the container's slot.
       return childrenOf(toNodes(before), op.blockId)[0]?.id ?? null;
+    // The blank line goes; the caret's line survives, now below the box.
+    case "exitContainer":
+      return op.blockId;
     case "indent":
     case "outdent":
     // A bulk delete names the whole selection; a single Backspace-delete names
@@ -565,6 +570,12 @@ interface BlockEditorContextValue {
    * on the context rather than on a single block's `BlockEditorAPI`.
    */
   unwrapBlock: (blockId: string) => void;
+  /**
+   * Step `blockId` — a container's empty last line — out of the box, deleting
+   * `blankId`, the blank line above it, in the same op (one undo entry). The
+   * second empty-Enter at the end of a box resolves here.
+   */
+  exitContainer: (blockId: string, blankId: string) => void;
   /** Bulk operations on a set of selected block ids (see server endpoints). */
   bulkDelete: (ids: string[]) => void;
   bulkMove: (args: {
@@ -2103,6 +2114,13 @@ export function BlockEditorProviderInner({
     [dispatchOp],
   );
 
+  const exitContainer = useCallback(
+    (blockId: string, blankId: string) => {
+      dispatchOp({ kind: "exitContainer", blockId, blankId });
+    },
+    [dispatchOp],
+  );
+
   // Overlay-dispatch triplet shared by the split / offscreen-merge executors:
   // snapshot the current rows, compute the after-state with the SAME pure
   // `applyBlockOp` the store applies, dispatch through the store (instant
@@ -2543,6 +2561,7 @@ export function BlockEditorProviderInner({
           from.blockId,
           scope.rootId,
           (type) => blockHandles.get(type),
+          (n) => liveRunsOf(docs, n),
         ),
         joinAt,
         runsLength(joined),
@@ -3209,6 +3228,7 @@ export function BlockEditorProviderInner({
       indentBlocks,
       outdentBlocks,
       unwrapBlock,
+      exitContainer,
       bulkDelete,
       bulkMove,
       bulkDuplicate,
@@ -3258,6 +3278,7 @@ export function BlockEditorProviderInner({
       indentBlocks,
       outdentBlocks,
       unwrapBlock,
+      exitContainer,
       bulkDelete,
       bulkMove,
       bulkDuplicate,

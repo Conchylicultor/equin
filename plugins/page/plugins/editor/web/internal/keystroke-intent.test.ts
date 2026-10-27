@@ -13,6 +13,8 @@ import { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
   applyBlockOp,
   nextVisibleLine,
+  runsLength,
+  runsOfNode,
   type BlockNode,
   type Mark,
 } from "../../core";
@@ -86,6 +88,8 @@ const ANCHOR_CTX = { anchorTypes: ANCHOR_TYPES };
 const TYPE_FACTS = {
   acceptsText: (n: BlockNode) => !VOID_TYPES.has(n.type),
   isAnchor: (n: BlockNode) => ANCHOR_TYPES.has(n.type),
+  // The live-doc read, standing in as the row's own text (no docs here).
+  isBlank: (n: BlockNode) => runsLength(runsOfNode(n)) === 0,
   // Not a type fact, but carried beside them for the same reason: every spec
   // here resolves on the whole page unless it says otherwise (see "zoomed").
   scopeRootId: null,
@@ -994,6 +998,12 @@ function runTrajectory(
         { kind: "unwrap", blockId: intent.blockId },
         ANCHOR_CTX,
       );
+    } else if (intent.type === "exitContainer") {
+      nodes = applyBlockOp(
+        nodes,
+        { kind: "exitContainer", blockId, blankId: intent.blankId },
+        ANCHOR_CTX,
+      );
     } else if (intent.type === "convertTo") {
       nodes = nodes.map((n) =>
         n.id === blockId ? { ...n, type: intent.to } : n,
@@ -1162,20 +1172,34 @@ describe("trajectories", () => {
     ).toEqual(["convertTo", "split"]);
   });
 
-  test("empty-Enter: empty LAST line of a callout → [outdent] lands it right after the box", () => {
+  test("empty-Enter: empty LAST line below TEXT stays in the box → [split]", () => {
+    // `xxx ⏎ ⏎ yyy`: the second Enter is a paragraph break inside the box, so
+    // a blank line between two paragraphs is typeable.
     const nodes = boxed([
       { id: "X1", text: "aaa" },
       { id: "X", text: "" },
     ]);
     expect(runTrajectory(nodes, "X", "Enter", undefined, EMPTY)).toEqual([
-      "outdent",
+      "split",
+    ]);
+  });
+
+  test("empty-Enter: empty LAST line below a BLANK line → [exitContainer] leaves no blank behind", () => {
+    const nodes = boxed([
+      { id: "X1", text: "aaa" },
+      { id: "X0", text: "" },
+      { id: "X", text: "" },
+    ]);
+    expect(runTrajectory(nodes, "X", "Enter", undefined, EMPTY)).toEqual([
+      "exitContainer",
       "split",
     ]);
     const after = applyBlockOp(
       nodes,
-      { kind: "outdent", blockIds: ["X"] },
+      { kind: "exitContainer", blockId: "X", blankId: "X0" },
       ANCHOR_CTX,
     );
+    expect(after.some((n) => n.id === "X0")).toBe(false);
     expect(after.find((n) => n.id === "X")!.parentId).toBe(PAGE);
     expect(after.find((n) => n.id === "X1")!.parentId).toBe("CA");
     expect(
@@ -1184,6 +1208,54 @@ describe("trajectories", () => {
         after.find((n) => n.id === "X1")!,
       )?.id,
     ).toBe("X");
+  });
+
+  test("empty-Enter: the blank line is judged by the LIVE doc, not the lagging row", () => {
+    // The row still says "" but the doc already holds typed text.
+    const nodes = boxed([
+      { id: "X1", text: "aaa" },
+      { id: "X0", text: "" },
+      { id: "X", text: "" },
+    ]);
+    const intent = resolveKeystroke("Enter", NO_SHIFT, caret(EMPTY), {
+      nodes,
+      ...TYPE_FACTS,
+      isBlank: (n) => n.id !== "X0",
+      blockId: "X",
+    });
+    expect(intent.type).toBe("split");
+  });
+
+  test("empty-Enter: an empty bullet at the END of a callout → [convertTo, split]", () => {
+    // The type escape first; the box is left only from a blank line.
+    const nodes = boxed([
+      { id: "X1", text: "aaa", type: "bulleted-list" },
+      { id: "X", text: "", type: "bulleted-list" },
+    ]);
+    expect(
+      runTrajectory(
+        nodes,
+        "X",
+        "Enter",
+        { breakOutOnEmptyEnter: "text" },
+        EMPTY,
+      ),
+    ).toEqual(["convertTo", "split"]);
+  });
+
+  test("exitContainer refuses a blankId that is not the line directly above", () => {
+    const nodes = boxed([
+      { id: "X0", text: "" },
+      { id: "X1", text: "aaa" },
+      { id: "X", text: "" },
+    ]);
+    expect(
+      applyBlockOp(
+        nodes,
+        { kind: "exitContainer", blockId: "X", blankId: "X0" },
+        ANCHOR_CTX,
+      ),
+    ).toEqual(nodes);
   });
 
   test("empty-Enter: a callout's ONLY line stays in the box → [split]", () => {

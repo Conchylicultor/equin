@@ -254,6 +254,8 @@ export function resolveOpOwnerPage(
     // re-ranks its children under the container's OWN parent, all rows of the
     // container's page. So the container's owner is the whole op's owner.
     case "unwrap":
+    // `exitContainer` lands the line right after its box, in the box's page.
+    case "exitContainer":
     case "move":
       return rowOwnerPage(rows, op.blockId);
     // A span is one page's op: `normalizeSpan` widens a span reaching across a

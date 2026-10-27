@@ -158,6 +158,20 @@ export type BlockOp =
    */
   | { kind: "unwrap"; blockId: string }
   /**
+   * Step the caret's EMPTY last line of a container out of the box, and delete
+   * `blankId` — the empty line directly above it — in the same write: the
+   * second consecutive empty-Enter at the end of a box (see `page/editor`'s
+   * *Empty-Enter leaves a container only after a blank line*). One op, because
+   * the blank line exists only as the first half of the gesture; two ops would
+   * leave an undo stop where the box ends in a stray blank line.
+   *
+   * `blankId` must be `blockId`'s previous sibling and childless, else the op
+   * is refused whole — it can never delete a line other than the one the
+   * gesture minted. Whether that line is EMPTY is the caller's (the live doc
+   * knows; the row's `data.text` projection may lag it).
+   */
+  | { kind: "exitContainer"; blockId: string; blankId: string }
+  /**
    * Move ONE block to a position among `parentId`'s children — POSITIONAL
    * intent, never a rank.
    *
@@ -448,6 +462,11 @@ export const BlockOpSchema: ZodParser<BlockOp> = z.discriminatedUnion("kind", [
   }),
   z.object({ kind: z.literal("delete"), blockIds: z.array(z.string()).min(1) }),
   z.object({ kind: z.literal("unwrap"), blockId: z.string() }),
+  z.object({
+    kind: z.literal("exitContainer"),
+    blockId: z.string(),
+    blankId: z.string(),
+  }),
   z.object({
     kind: z.literal("move"),
     blockId: z.string(),
@@ -987,6 +1006,8 @@ export function opNamedIds(op: BlockOp): string[] {
     // the promotion.
     case "unwrap":
       return [op.blockId];
+    case "exitContainer":
+      return [op.blockId, op.blankId];
     case "indent":
     case "outdent":
     case "delete":
@@ -1065,6 +1086,8 @@ function applyOp(
       return applyDelete(blocks, op);
     case "unwrap":
       return applyUnwrap(blocks, op);
+    case "exitContainer":
+      return applyExitContainer(blocks, op, anchorOf(anchorTypes));
     case "move":
       return applyMove(blocks, op);
     case "bulkMove":
@@ -2418,6 +2441,31 @@ function applyUnwrap(
     });
   });
   return remove(next, [block.id]);
+}
+
+/**
+ * Delete the blank line above `blockId` and outdent `blockId` out of its box.
+ * Refused whole unless `blankId` is `blockId`'s childless previous sibling, so
+ * the deletion can only ever take the line the gesture minted. The outdent is
+ * `outdentOne`'s: out of an anchor it lands right after the box, adopting
+ * nothing.
+ */
+function applyExitContainer(
+  blocks: BlockNode[],
+  op: Extract<BlockOp, { kind: "exitContainer" }>,
+  isAnchor: IsAnchor,
+): BlockNode[] {
+  const block = byId(blocks, op.blockId);
+  const blank = byId(blocks, op.blankId);
+  if (!block || !blank || blank.parentId !== block.parentId) return blocks;
+  const parent = block.parentId ? byId(blocks, block.parentId) : undefined;
+  if (!parent || !isAnchor(parent)) return blocks;
+  const siblings = childrenOf(blocks, block.parentId);
+  const idx = siblings.findIndex((s) => s.id === block.id);
+  if (idx < 1 || siblings[idx - 1]!.id !== blank.id) return blocks;
+  if (childrenOf(blocks, blank.id).length > 0) return blocks;
+  const outdented = outdentOne(remove(blocks, [blank.id]), block.id, isAnchor);
+  return outdented ?? blocks;
 }
 
 /**

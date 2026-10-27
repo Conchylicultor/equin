@@ -68,6 +68,9 @@ export type OpEffect =
    * `moves` may legitimately be EMPTY (a childless container unwraps to a plain
    * delete) — unlike `reparent`, that is not vacuous here, because the removal
    * conjunct still has to hold.
+   *
+   * `exitContainer` has the same two-sided shape — its blank line `id` gone AND
+   * the caret's line moved out of the box — so it confirms by this arm too.
    */
   | { kind: "unwrap"; id: string; moves: PredictedMove[] };
 
@@ -672,6 +675,12 @@ function opEffect(
         moves: predictMoves(before, after, promoted),
       };
     }
+    case "exitContainer":
+      return {
+        kind: "unwrap",
+        id: op.blankId,
+        moves: predictMoves(before, after, [op.blockId]),
+      };
     case "indent":
     case "outdent":
     case "move":

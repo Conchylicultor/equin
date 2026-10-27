@@ -42,6 +42,8 @@ import {
 } from "../internal/mark-depth";
 import { toNodes } from "../internal/optimistic-block-ops";
 import { scopeNodes } from "../internal/zoom-scope";
+import { liveRunsOf } from "../internal/live-runs";
+import { useBlockDocs } from "../internal/use-block-docs";
 import {
   intentContextOf,
   resolveKeystroke,
@@ -65,11 +67,19 @@ export function KeyboardPlugin({
   editor: BlockEditorAPI;
 }) {
   const [lexicalEditor] = useLexicalComposerContext();
-  const { rowsRef, unwrapBlock, makeBlockAPI, recordDocEdit, scope } =
-    useBlockEditor();
+  const {
+    rowsRef,
+    unwrapBlock,
+    exitContainer,
+    makeBlockAPI,
+    recordDocEdit,
+    scope,
+  } = useBlockEditor();
+  const docs = useBlockDocs();
   const scopeRootId = scope.rootId;
   const recordDocEditRef = useLatestRef(recordDocEdit);
   const unwrapRef = useLatestRef(unwrapBlock);
+  const exitContainerRef = useLatestRef(exitContainer);
   const makeBlockAPIRef = useLatestRef(makeBlockAPI);
   // The block-type registry: every block's static handle config (incl. the edit
   // policy and split-into-child flag). Resolved here, not prop-drilled.
@@ -147,6 +157,12 @@ export function KeyboardPlugin({
           // editor-wide entry point rather than this block's api.
           event.preventDefault();
           unwrapRef.current(intent.blockId);
+          return true;
+        case "exitContainer":
+          // One op: the blank line above goes and this line steps out of the
+          // box, keeping its id — so this editor (and the caret) survive it.
+          event.preventDefault();
+          exitContainerRef.current(blockIdRef.current, intent.blankId);
           return true;
         case "removeLine":
           // Land the caret on the line above FIRST (this block's editor is
@@ -295,7 +311,9 @@ export function KeyboardPlugin({
         key,
         { shift: event.shiftKey },
         caret,
-        intentContextOf(nodes, blockIdRef.current, scopeRootId, handleOf),
+        intentContextOf(nodes, blockIdRef.current, scopeRootId, handleOf, (n) =>
+          liveRunsOf(docs, n),
+        ),
       );
       return execute(intent, event, caret);
     }
@@ -371,7 +389,7 @@ export function KeyboardPlugin({
     return () => {
       for (const u of unregister) u();
     };
-  }, [lexicalEditor, rowsRef, recordDocEditRef, scopeRootId]);
+  }, [lexicalEditor, rowsRef, recordDocEditRef, scopeRootId, docs]);
 
   // Undo/redo (Cmd+Z / Cmd+Shift+Z / Cmd+Y) is NOT handled per-block. With no
   // Lexical `HistoryPlugin`, nothing here consumes those keystrokes, so the native

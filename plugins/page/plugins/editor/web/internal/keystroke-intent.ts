@@ -22,10 +22,12 @@ import {
   collapsedAnchorAbove,
   nextVisibleLine,
   prevVisibleLine,
+  runsLength,
   visibleChildrenOf,
   type BlockHandle,
   type BlockNode,
   type Mark,
+  type RichText,
 } from "../../core";
 import type { CaretContext } from "./caret-geometry";
 import {
@@ -98,6 +100,13 @@ export type KeyIntent =
    * line of the container — a reordering nobody asked for.
    */
   | { type: "unwrap"; blockId: string }
+  /**
+   * Empty-Enter on a container's empty LAST line right below a blank line:
+   * leave the box, deleting that blank line (`blankId`) in the same op — the
+   * `exitContainer` reducer op. See *Empty-Enter leaves a container only after
+   * a blank line* in `page/editor`'s CLAUDE.md.
+   */
+  | { type: "exitContainer"; blankId: string }
   /**
    * Backspace on an EMPTY line that has no line break above it to delete (the
    * line above is a sub-page row, a divider, an image, or another page's last
@@ -214,6 +223,13 @@ export interface IntentContext {
    */
   isAnchor(node: BlockNode): boolean;
   /**
+   * Does this node hold no text NOW? Read from the block's live content doc
+   * when it has one (`liveRunsOf`), because the row's `data.text` projection
+   * lags typing by ~1 s — a line just typed into would still read blank, and
+   * empty-Enter below it would delete it.
+   */
+  isBlank(node: BlockNode): boolean;
+  /**
    * The current block's declarative edit policy, resolved once at the consumer
    * from the block's handle (no prop drilling). `asChild`/`childType`/`splitInto`
    * cover the Enter-split shape (nest as a child, or mint the split's tail as a
@@ -253,6 +269,7 @@ export function intentContextOf(
   blockId: string,
   scopeRootId: string | null,
   handleOf: (type: string) => BlockHandle<unknown> | undefined,
+  runsOf: (node: BlockNode) => RichText,
 ): IntentContext {
   const node = nodes.find((b) => b.id === blockId);
   const handle = handleOf(node?.type ?? "");
@@ -262,6 +279,7 @@ export function intentContextOf(
     blockId,
     acceptsText: (n) => handleOf(n.type)?.acceptsText === true,
     isAnchor: (n) => handleOf(n.type)?.anchor === true,
+    isBlank: (n) => runsLength(runsOf(n)) === 0,
     // `splitChildWhenExpanded` is render-state-dependent (the live `expanded`
     // flag), so it folds into the same policy here rather than being drilled.
     editPolicy: {
@@ -329,6 +347,18 @@ function containerOf(ctx: IntentContext, node: BlockNode): BlockNode | null {
 function hasPrevSibling(nodes: BlockNode[], node: BlockNode): boolean {
   const siblings = childrenOf(nodes, node.parentId);
   return siblings.findIndex((s) => s.id === node.id) > 0;
+}
+
+/**
+ * The previous sibling of `node` when it is a BLANK line — text-bearing, empty
+ * and childless — else null. The line `exitContainer` deletes: childless
+ * because the reducer refuses to delete anything but the bare line.
+ */
+function blankLineAbove(ctx: IntentContext, node: BlockNode): BlockNode | null {
+  const siblings = childrenOf(ctx.nodes, node.parentId);
+  const prev = siblings[siblings.findIndex((s) => s.id === node.id) - 1];
+  if (!prev || !ctx.acceptsText(prev) || !ctx.isBlank(prev)) return null;
+  return childrenOf(ctx.nodes, prev.id).length === 0 ? prev : null;
 }
 
 function hasNextSibling(nodes: BlockNode[], node: BlockNode): boolean {
@@ -648,21 +678,25 @@ export function resolveKeystroke(
       //
       // A CONTAINER is the one level that is not indentation: its children are
       // the box's content, a flow the user is writing in, so empty-Enter steps
-      // out of it only where that flow ENDS — on the box's last line, below at
-      // least one other (so `/callout` + Enter on a fresh empty line does not
-      // dissolve the box it just made). This rung holds for every type, since
-      // "Enter, Enter leaves the box" is the box's affordance, not the line's.
-      // Anywhere else in the box the outdent rung is skipped: empty-Enter there
-      // is a type escape or an ordinary split, which mints another line inside.
+      // out of it only where that flow ENDS — on the box's last line — and only
+      // once the user has typed a BLANK line there first: an empty last line
+      // right below a blank one leaves the box and takes that blank line with
+      // it (`exitContainer`, one op). So one empty line inside a box is just a
+      // paragraph break (`xxx ⏎ ⏎ yyy` keeps the blank between them), and
+      // `⏎ ⏎ ⏎` after the last line leaves without a stray blank behind. This
+      // rung holds for every type, since leaving is the box's affordance, not
+      // the line's. Anywhere else empty-Enter is a type escape or an ordinary
+      // split, which mints another line inside.
       if (!ranged && caret.atStart && caret.atEnd) {
         const box = containerOf(ctx, node);
         if (box) {
+          const blank = blankLineAbove(ctx, node);
           if (
-            hasPrevSibling(ctx.nodes, node) &&
+            blank &&
             !hasNextSibling(ctx.nodes, node) &&
             !hasVisibleChildren(ctx, node)
           )
-            return { type: "outdent" };
+            return { type: "exitContainer", blankId: blank.id };
           if (p?.breakOutOnEmptyEnter && node.type !== p.breakOutOnEmptyEnter)
             return { type: "convertTo", to: p.breakOutOnEmptyEnter };
         } else if (p?.breakOutOnEmptyEnter) {

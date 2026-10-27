@@ -2,8 +2,8 @@
 //
 // A container (callout, quote, …) is an ANCHOR whose content is its children.
 // Enter on an EMPTY child steps out of the box only when nothing follows it in
-// the box; anywhere else it is an ordinary split that mints another empty line
-// inside the box. The bug this guards: an empty line in the MIDDLE of a callout
+// the box AND the line above it is blank too (the blank goes with it); anywhere
+// else it is an ordinary split that mints another empty line inside the box. The bug this guards: an empty line in the MIDDLE of a callout
 // took the generic empty-Enter outdent rung, whose `outdentOne` adopts the
 // followers — the box ended above the caret and the lines below were re-nested
 // under the escaped line, which painted as a SECOND callout.
@@ -14,7 +14,9 @@
 //     empty-Enter break-out policy, which used to reach the outdent rung. Enter
 //     turns it into text in place, the next Enter splits; neither leaves the box.
 //  3. LAST: callout [aaa], Enter at the end of aaa → [aaa, ∅] inside; Enter
-//     again → ∅ leaves the box as the callout's next sibling, aaa stays inside.
+//     again → [aaa, ∅, ∅] (a blank line between paragraphs is typeable); Enter
+//     a third time → the blank goes and ∅ leaves the box as the callout's next
+//     sibling, aaa alone inside.
 //
 // Usage: ./equin run plugins/page/plugins/container/e2e/container-enter-verify.ts [--out /tmp/container-enter]
 import {
@@ -175,7 +177,7 @@ await withBrowser(async (h) => {
   );
   await snap(page, out, "2-middle-bullet");
 
-  // --- 3. last line: Enter, Enter → out ---------------------------------------
+  // --- 3. last line: Enter, Enter, Enter → out ---------------------------------
   await caretInto(page, seeded.c3Only);
   await enter(page);
   all = await rows(page, pageId);
@@ -187,13 +189,21 @@ await withBrowser(async (h) => {
   );
   await enter(page);
   all = await rows(page, pageId);
+  r.ok(
+    "last: the second Enter mints a second empty line, still INSIDE",
+    JSON.stringify(childLines(all, seeded.c3)) ===
+      JSON.stringify(["text:aaa", "text:", "text:"]),
+    JSON.stringify(childLines(all, seeded.c3)),
+  );
+  await enter(page);
+  all = await rows(page, pageId);
   const top = childLines(all, pageId);
   const c3Index = all
     .filter((b) => b.parentId === pageId)
     .sort((a, b) => (a.rank < b.rank ? -1 : 1))
     .findIndex((b) => b.id === seeded.c3);
   r.ok(
-    "last: the second Enter moves the empty line OUT, right after the callout",
+    "last: the third Enter drops the blank and moves the empty line OUT, right after the callout",
     JSON.stringify(childLines(all, seeded.c3)) ===
       JSON.stringify(["text:aaa"]) && top[c3Index + 1] === "text:",
     `inside=${JSON.stringify(childLines(all, seeded.c3))} top=${JSON.stringify(top)}`,
