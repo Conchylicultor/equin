@@ -4,7 +4,7 @@
   "version": "0.0.1",
   "description": "Inline chips for every text surface: the inlineChip() declaration, its module registry, the one generic Lexical node that renders any declared chip, and the per-surface token extension a Lexical host registers.",
   "dependencies": {
-    "lexical": "^0.44.0",
-    "@lexical/react": "^0.44.0"
+    "lexical": "^0.52.0",
+    "@lexical/react": "^0.52.0"
   }
 }

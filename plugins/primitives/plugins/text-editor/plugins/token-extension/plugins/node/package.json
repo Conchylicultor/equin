@@ -4,10 +4,10 @@
   "version": "0.0.1",
   "description": "The Lexical-valued half of the inline-token primitive: defineInlineTokenNode (the DecoratorNode class factory), the caret/line materializers, and the registry-driven paste. Kept out of the parent so the parent stays synchronously loadable by drizzle-kit.",
   "dependencies": {
-    "lexical": "^0.44.0",
-    "@lexical/react": "^0.44.0"
+    "lexical": "^0.52.0",
+    "@lexical/react": "^0.52.0"
   },
   "devDependencies": {
-    "@lexical/html": "^0.44.0"
+    "@lexical/html": "^0.52.0"
   }
 }

@@ -3,6 +3,6 @@
   "private": true,
   "version": "0.0.1",
   "dependencies": {
-    "recharts": "^2.15.0"
+    "recharts": "^3.10.1"
   }
 }

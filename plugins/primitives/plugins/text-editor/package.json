@@ -4,7 +4,7 @@
   "version": "0.0.1",
   "description": "Generic Lexical-based rich text editor primitive with a Plugin slot for invisible Lexical extensions.",
   "dependencies": {
-    "lexical": "^0.44.0",
-    "@lexical/react": "^0.44.0"
+    "lexical": "^0.52.0",
+    "@lexical/react": "^0.52.0"
   }
 }

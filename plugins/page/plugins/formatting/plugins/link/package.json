@@ -4,8 +4,8 @@
   "private": true,
   "version": "0.0.1",
   "dependencies": {
-    "lexical": "^0.44.0",
-    "@lexical/link": "^0.44.0",
-    "@lexical/react": "^0.44.0"
+    "lexical": "^0.52.0",
+    "@lexical/link": "^0.52.0",
+    "@lexical/react": "^0.52.0"
   }
 }
