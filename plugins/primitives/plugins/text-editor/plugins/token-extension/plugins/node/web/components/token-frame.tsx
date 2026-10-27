@@ -25,10 +25,11 @@ const closeIcon = symbol("close");
  *   Lexical reports the node selected and the whole frame gets a ring. Copying
  *   that selection carries the node itself, so it pastes as the same token in
  *   any other editor.
- * - **Removable.** A hover/focus-revealed × deletes the node.
+ * - **Removable.** A hover/focus-revealed × in its top-right corner deletes
+ *   the node — the same corner on a one-line chip and a tall image.
  * - **Painted inside its own box.** The ring is an inward outline (painted over
  *   the token, unlike an inset shadow its own fill would hide) and the × sits within the
- *   token's right edge: a token on the first line of a scrolling editable whose
+ *   token's corner: a token on the first line of a scrolling editable whose
  *   theme gives the text no padding (the agent manager's composer) would
  *   otherwise have anything drawn past its edges clipped by the scroll box.
  *
@@ -63,7 +64,7 @@ export function TokenFrame({
       data-token-selected={isSelected || undefined}
     >
       {children}
-      <Pin to="right" offset="2xs">
+      <Pin to="top-right" offset="2xs">
         <button
           type="button"
           onClick={(e) => {
