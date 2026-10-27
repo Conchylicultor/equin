@@ -22,15 +22,13 @@
     - `SonataProgress.Describe` ← `apps.sonata.progress.keys`
     - `SonataProgress.Describe` ← `apps.sonata.progress.sections`
   - Contributes: `SonataPlayer.Transport` "progress-bar" → `ProgressBar`
-  - Uses:
+  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/coords` ×4
+    - `primitives/slot-render` ×3
+    - `apps/sonata/session` ×2
+    - `primitives/live-state` ×2
     - `apps/sonata/player.SonataPlayer`
-    - `apps/sonata/session.useCursorApi`
-    - `apps/sonata/session.useSession`
     - `primitives/css/clip.Clip`
-    - `primitives/css/coords.pct`
-    - `primitives/css/coords.Placed`
-    - `primitives/css/coords.placedClasses`
-    - `primitives/css/coords.placedStyle`
     - `primitives/css/fill.fillClasses`
     - `primitives/css/layer.Layer`
     - `primitives/css/line.Line`
@@ -40,9 +38,6 @@
     - `primitives/css/ui-kit.cn`
     - `primitives/hover-reveal.hoverRevealGroup`
     - `primitives/overlay/floating-surface.FloatingSurface`
-    - `primitives/slot-render.defineRenderSlot`
-    - `primitives/slot-render.renderIsolated`
-    - `primitives/slot-render.useSlotOrder`
   - Exports (types):
     - `BeatSpan`
     - `ProgressLabel`

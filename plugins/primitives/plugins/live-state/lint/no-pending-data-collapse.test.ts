@@ -33,6 +33,13 @@ ruleTester.run(
   rule as unknown as Parameters<RuleTester["run"]>[1],
   {
     valid: [
+      // A slot order whose loading arm renders a real loading state.
+      {
+        code: `
+          const order = useSlotOrder(Header.Item);
+          const node = order.status !== "ready" ? renderSkeleton() : order.data.length;
+        `,
+      },
       // Sanctioned select-based point read — the carve-out.
       {
         code: `
@@ -195,6 +202,36 @@ ruleTester.run(
       },
     ],
     invalid: [
+      // A slot's layout order is a read: collapsing its loading arm to the
+      // empty list (or to the raw contributions) is the first-paint flash.
+      {
+        code: `
+          const order = useSlotOrder(Header.Item);
+          const items = order.status !== "ready" ? [] : order.data;
+        `,
+        errors: [{ messageId: "pendingCollapse" }],
+      },
+      {
+        code: `
+          const state = useReorderedEntries("my.slot", contributions);
+          const entries = state.status === "ready" ? state.data : [];
+        `,
+        errors: [{ messageId: "pendingCollapse" }],
+      },
+      {
+        code: `
+          const order = useLayoutOrder(slot, contributions);
+          const xs = order.status !== "ready" ? [] : order.data;
+        `,
+        errors: [{ messageId: "pendingCollapse" }],
+      },
+      {
+        code: `
+          const z = useZStackIndex("toaster");
+          const index = z.status === "ready" ? z.data : 0;
+        `,
+        errors: [{ messageId: "pendingCollapse" }],
+      },
       // The `status` spelling of the same collapse — both branch orders.
       {
         code: `

@@ -101,6 +101,13 @@ quiet ones (`foldQuietRows`). Never by status, so a row keeps its place when it
 turns red (the dot and verdict already say what is wrong). A row carries no
 order number — `defineSlot` would reject one.
 
+The layout order is a read (`useSlotOrder` returns a `ResourceResult`): until
+it is known the open report is a loading state — no verdict (it derives from
+the rows) and no rows, never the rows in raw registration order. A failed
+refresh keeps the last-known order; a first read that fails shows the error
+with Retry. The dot is not gated: the probes are mounted per contribution and
+the merge reads no order.
+
 ## Host mechanics
 
 `HealthReportButton` owns a scoped store (`Record<rowId, HealthStatus>`) and
@@ -147,20 +154,22 @@ probes, is mounted per page.
     - `HealthReport.Row` ← `reports.resource-errors`
     - `HealthReport.Row` ← `tasks.worktree-identity`
   - Contributes: `ActionBar.Lead` → `HealthReportButton`
-  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 32 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/collapsible` ×4
     - `primitives/slot-render` ×4
     - `primitives/css/activity-ring` ×3
     - `primitives/css/ui-kit` ×3
+    - `primitives/css/spacing` ×2
     - `primitives/error-boundary` ×2
     - `primitives/css/center.Center`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/row.Row`
-    - `primitives/css/spacing.Stack`
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/text.Text`
+    - `primitives/live-state.ResourceErrorInline`
+    - `primitives/loading.Loading`
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/row-actions.RowActions`
     - `primitives/scope/scoped-store.defineScopedStore`

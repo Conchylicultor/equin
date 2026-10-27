@@ -241,7 +241,7 @@ function SectionRootPanel(props: {
     actions,
     description,
   } = props;
-  const { controls } = useToolbarControls();
+  const controls = useToolbarControls();
   const close = () => onOpenChange(false);
   return (
     <>

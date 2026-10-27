@@ -3020,11 +3020,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `Desktop.Overlay` "Desktop overlay" → `LauncherOverlay`
               - `Shortcuts.Shortcut` "desktop.launcher (mod+k)"
-            - Uses: 51 symbols — full list in [`plugins/apps/plugins/desktop/plugins/launcher/REFERENCE.md`](../plugins/apps/plugins/desktop/plugins/launcher/REFERENCE.md)
+            - Uses: 52 symbols — full list in [`plugins/apps/plugins/desktop/plugins/launcher/REFERENCE.md`](../plugins/apps/plugins/desktop/plugins/launcher/REFERENCE.md)
               - `apps/desktop/windows` ×11
+              - `primitives/live-state` ×4
               - `apps-core` ×3
               - `primitives/css/ui-kit` ×3
-              - `primitives/live-state` ×3
               - `primitives/shortcuts` ×3
               - `apps-core/tabs` ×2
               - `apps/desktop/shell` ×2
@@ -8274,15 +8274,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `SonataProgress.Describe` ← `apps.sonata.progress.keys`
                   - `SonataProgress.Describe` ← `apps.sonata.progress.sections`
                 - Contributes: `SonataPlayer.Transport` "progress-bar" → `ProgressBar`
-                - Uses:
+                - Uses: 22 symbols — full list in [`plugins/apps/plugins/sonata/plugins/progress/plugins/scrubber/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/progress/plugins/scrubber/REFERENCE.md)
+                  - `primitives/css/coords` ×4
+                  - `primitives/slot-render` ×3
+                  - `apps/sonata/session` ×2
+                  - `primitives/live-state` ×2
                   - `apps/sonata/player.SonataPlayer`
-                  - `apps/sonata/session.useCursorApi`
-                  - `apps/sonata/session.useSession`
                   - `primitives/css/clip.Clip`
-                  - `primitives/css/coords.pct`
-                  - `primitives/css/coords.Placed`
-                  - `primitives/css/coords.placedClasses`
-                  - `primitives/css/coords.placedStyle`
                   - `primitives/css/fill.fillClasses`
                   - `primitives/css/layer.Layer`
                   - `primitives/css/line.Line`
@@ -8292,9 +8290,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/ui-kit.cn`
                   - `primitives/hover-reveal.hoverRevealGroup`
                   - `primitives/overlay/floating-surface.FloatingSurface`
-                  - `primitives/slot-render.defineRenderSlot`
-                  - `primitives/slot-render.renderIsolated`
-                  - `primitives/slot-render.useSlotOrder`
                 - Exports (types):
                   - `BeatSpan`
                   - `ProgressLabel`
@@ -11359,11 +11354,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `AppShell.Brand` "Brand" → `AppBrand`
           - `Apps.Overlay` "Overlay" → `FloatingAppLauncher`
           - `FieldPresentation.Register` "collection:apps.installed-app"
-        - Uses: 41 symbols — full list in [`plugins/apps-core/plugins/app-launcher/REFERENCE.md`](../plugins/apps-core/plugins/app-launcher/REFERENCE.md)
+        - Uses: 42 symbols — full list in [`plugins/apps-core/plugins/app-launcher/REFERENCE.md`](../plugins/apps-core/plugins/app-launcher/REFERENCE.md)
           - `apps-core/tabs` ×5
           - `apps-core` ×5
+          - `primitives/live-state` ×4
           - `primitives/data-view` ×3
-          - `primitives/live-state` ×3
           - `apps-core/app-icon` ×2
           - `audience/developer-mark` ×2
           - `primitives/app-shell` ×2
@@ -11587,8 +11582,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`layout`** — Apps layout: the Core.Root composition wiring the tab bar, rail framing, and surface together, with the default-app redirect and document-title sync.
       - Web:
         - Contributes: `Core.Root` → `AppsLayout`
-        - Uses: 27 symbols — full list in [`plugins/apps-core/plugins/layout/REFERENCE.md`](../plugins/apps-core/plugins/layout/REFERENCE.md)
-          - `apps-core/tabs` ×7
+        - Uses: 29 symbols — full list in [`plugins/apps-core/plugins/layout/REFERENCE.md`](../plugins/apps-core/plugins/layout/REFERENCE.md)
+          - `apps-core/tabs` ×9
           - `apps-core` ×6
           - `primitives/pane` ×4
           - `primitives/css/ui-kit` ×2
@@ -11612,23 +11607,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes:
           - `Apps.Surface` "Surface" → `SurfaceBody`
           - `ActionBar.ViewOption` → `ActionBarPlacementControl`
-        - Uses:
-          - `apps-core.Apps`
+        - Uses: 23 symbols — full list in [`plugins/apps-core/plugins/surface/REFERENCE.md`](../plugins/apps-core/plugins/surface/REFERENCE.md)
+          - `apps-core/tabs` ×5
+          - `primitives/live-state` ×3
+          - `primitives/css/toggle-chip` ×2
+          - `primitives/slot-render` ×2
           - `apps-core/tab-surface.TabSurface`
-          - `apps-core/tabs.registerPlacementCapabilities`
-          - `apps-core/tabs.setSurfaceMode`
-          - `apps-core/tabs.Tab`
-          - `apps-core/tabs.useSurfaceMode`
-          - `apps-core/tabs.useTabs`
+          - `apps-core.Apps`
+          - `primitives/css/center.Center`
           - `primitives/css/clip.Clip`
           - `primitives/css/control-panel.ControlPanel`
           - `primitives/css/theme-boundary.Theme`
-          - `primitives/css/toggle-chip.SegmentedControl`
-          - `primitives/css/toggle-chip.SegmentedOption`
           - `primitives/css/ui-kit.cn`
           - `primitives/css/viewport-overlay.useViewportEscape`
-          - `primitives/slot-render.defineRenderSlot`
-          - `primitives/slot-render.useSlotOrder`
+          - `primitives/loading.Loading`
           - `shell/action-bar.ActionBar`
           - `ui/icons.Icon`
         - Exports (types):
@@ -11640,7 +11632,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Surface`
           - `usePlacementStyle`
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/color-palette --background`
+        - Uses tokens:
+          - `ui/tokens/color-palette --background`
+          - `ui/tokens/shape --spacing`
         - Imported by:
           - `apps-core/surface/docked`
           - `apps-core/surface/solo`
@@ -11689,27 +11683,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shape --spacing`
     - **`tab-surface`** — Per-tab surface render core: TabSurface mounts a tab's PaneSurfaceProvider and reports its leaf title; AppTabsBody is the keep-alive fallback body that stacks every open tab.
       - Web:
-        - Uses:
-          - `apps-core.Apps`
-          - `apps-core.isTabApp`
-          - `apps-core/tabs.appPathFor`
-          - `apps-core/tabs.loadScopePrefixFor`
-          - `apps-core/tabs.Tab`
-          - `apps-core/tabs.useTabs`
+        - Uses: 22 symbols — full list in [`plugins/apps-core/plugins/tab-surface/REFERENCE.md`](../plugins/apps-core/plugins/tab-surface/REFERENCE.md)
+          - `primitives/pane` ×7
+          - `apps-core/tabs` ×6
+          - `apps-core` ×2
+          - `primitives/sync-status` ×2
+          - `primitives/undo-redo` ×2
           - `primitives/css/theme-boundary.Theme`
           - `primitives/overlay/surface-overlay.SurfaceOverlayHost`
-          - `primitives/pane.PaneBasePathContext`
-          - `primitives/pane.PaneStore`
-          - `primitives/pane.PaneSurfaceProvider`
-          - `primitives/pane.useIndexMatch`
-          - `primitives/pane.usePaneTitle`
-          - `primitives/pane.useRoute`
-          - `primitives/pane.useRouteState`
           - `primitives/slot-render.renderIsolated`
-          - `primitives/sync-status.SyncStatusIndicator`
-          - `primitives/sync-status.SyncStatusProvider`
-          - `primitives/undo-redo.UndoRedoProvider`
-          - `primitives/undo-redo.useUndoRedoShortcuts`
         - Exports (values):
           - `AppTabsBody`
           - `SurfaceCore`
@@ -11779,7 +11761,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `menu-bar/app-grid`
           - `tasks/worktree-identity`
           - `ui/theme-engine/quick-theme`
-    - **`theme-scope`** — Theme-scope helpers: the single definition of the focused full-surface app's theme scope, which decides the :root token layer and the document's light/dark (useRootThemeScopeState keeps the not-registered-yet window apart), and useAppSettingsScope — the app:<id> config scope per-app theme settings (variants) are read in: the nearest app theme boundary's (a pane's home app), else the focused app's.
+    - **`theme-scope`** — Theme-scope helpers: the single definition of the focused full-surface app's theme scope, which decides the :root token layer and the document's light/dark (useRootThemeScopeState: a state that keeps the not-registered-yet window apart from 'no app owns the surface'), and useAppSettingsScope — the app:<id> config scope per-app theme settings (variants) are read in: the nearest app theme boundary's (a pane's home app), else the focused app's.
       - Web:
         - Uses:
           - `apps-core.useActiveApp`
@@ -11788,9 +11770,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps-core/tabs.usePlacementCapabilities`
           - `apps-core/tabs.useSurfaceMode`
           - `primitives/css/theme-boundary.useEnclosingAppThemeScope`
+        - Exports (types): `RootThemeScopeState`
         - Exports (values):
           - `useAppSettingsScope`
-          - `useRootThemeScope`
           - `useRootThemeScopeState`
       - Cross-plugin:
         - Imported by:
@@ -15078,8 +15060,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ConversationArtifacts.Kind` ← `conversations.conversation-view.artifacts.skill`
               - `ConversationArtifacts.Kind` ← `debug.browser-recordings`
             - Contributes: `Conversation.ActionBar` → `ArtifactsButton`
-            - Uses: 22 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/artifacts/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/artifacts/REFERENCE.md)
-              - `primitives/live-state` ×3
+            - Uses: 24 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/artifacts/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/artifacts/REFERENCE.md)
+              - `primitives/live-state` ×4
               - `primitives/css/text` ×2
               - `primitives/css/ui-kit` ×2
               - `reorder` ×2
@@ -15092,6 +15074,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/row.Row`
               - `primitives/css/spacing.Stack`
               - `primitives/link-gesture.activationProps`
+              - `primitives/loading.Loading`
               - `primitives/overlay/popover.InlinePopover`
               - `primitives/relative-time.formatRelativeTime`
               - `primitives/slot-render.defineRenderSlot`
@@ -34727,13 +34710,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Editor.TurnInto` ×2
           - `Editor.BlockMenuItem` ← `page.open-as-page`
         - Contributes: `IdKinds.Kind` "block"
-        - Uses: 91 symbols — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
+        - Uses: 93 symbols — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
+          - `primitives/live-state` ×6
           - `primitives/text-editor/caret-trigger` ×5
           - `infra/endpoints` ×4
           - `primitives/css/spacing` ×4
           - `primitives/css/ui-kit` ×4
           - `primitives/dom/dom-selection` ×4
-          - `primitives/live-state` ×4
           - `primitives/networking` ×4
           - `primitives/persistent-draft` ×4
           - `primitives/slot-render` ×4
@@ -38917,14 +38900,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CenterProps`
             - Exports (values): `Center`
           - Cross-plugin:
-            - Imported by: 127 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
+            - Imported by: 128 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
               - `apps` ×40
               - `primitives` ×26
               - `page` ×18
               - `conversations` ×8
               - `debug` ×6
               - `ui` ×5
-              - `apps-core` ×3
+              - `apps-core` ×4
               - `plugin-meta` ×3
               - `tasks` ×3
               - `fields` ×2
@@ -40366,6 +40349,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/z-layers.zLayerClass`
               - `primitives/css/z-layers/stack.useZStackIndex`
               - `primitives/css/z-layers/stack.ZStackLayer`
+              - `primitives/live-state.foldResource`
               - `primitives/overlay/portal-host.PortalHost`
             - Exports (types):
               - `ViewportBlocker`
@@ -40460,6 +40444,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ZStack.Layer` ← `screenshot.draw-on-app`
                   - `ZStack.Layer` ← `shell.toast`
                 - Uses:
+                  - `primitives/live-state.mapResource`
+                  - `primitives/live-state.ResourceResult`
                   - `primitives/slot-render.defineOrderedSlot`
                   - `primitives/slot-render.useSlotOrder`
                 - Exports (types):
@@ -40476,6 +40462,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/viewport-overlay`
                   - `screenshot/draw-on-app`
                   - `shell/toast`
+              - Test helpers:
+                - Web: `@plugins/primitives/plugins/css/plugins/z-layers/plugins/stack/web/testing`
+                  - `ZStack` — The top-layer stack — the open set of app-wide surfaces that paint above the popover layer (hint tips, the Ask card, the draw overlay, toasts…).
     - **`cursor-pagination`** — Cursor-pagination primitive: the error-gated useInfiniteScroll observer + InfiniteScrollFooter (load-more spinner / Retry / sentinel), and the ScrollSentinel component. The pages themselves come from a paged live read (useLive(...).loadMore).
       - Web:
         - Uses:
@@ -42913,22 +42902,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/color-palette --destructive`
           - `ui/tokens/shadow --shadow`
-        - Imported by: 294 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
-          - `apps` ×80
+        - Imported by: 303 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
+          - `apps` ×81
           - `conversations` ×50
           - `debug` ×29
           - `ui` ×25
           - `tasks` ×23
           - `page` ×16
-          - `primitives` ×12
+          - `primitives` ×16
           - `infra` ×8
           - `active-data` ×7
           - `build` ×7
           - `plugin-meta` ×5
           - `auth` ×4
+          - `apps-core` ×3
           - `integrations` ×3
           - `review` ×3
-          - `apps-core` ×2
+          - `shell` ×3
           - `audience` ×2
           - `config_v2` ×2
           - `framework` ×2
@@ -42940,9 +42930,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `history/dialog`
           - `menu-bar/app-grid`
           - `network/live`
+          - `reorder`
           - `screenshot`
           - `search/quick-find`
-          - `shell/notifications`
       - Exemptions:
         - Exempts itself from:
           - `endpoints/no-raw-web-fetch` — `web/use-resource.ts` (sanctioned)
@@ -43010,25 +43000,26 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-body`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-body`
-        - Imported by: 217 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+        - Imported by: 222 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
           - `apps` ×69
-          - `ui` ×22
-          - `conversations` ×19
+          - `ui` ×23
+          - `conversations` ×20
+          - `primitives` ×20
           - `debug` ×19
-          - `primitives` ×19
           - `tasks` ×14
           - `page` ×11
           - `build` ×6
           - `plugin-meta` ×5
           - `review` ×4
+          - `apps-core` ×3
           - `auth` ×3
           - `active-data` ×2
-          - `apps-core` ×2
           - `audience` ×2
           - `infra` ×2
           - `integrations` ×2
           - `map` ×2
           - `menu-bar` ×2
+          - `shell` ×2
           - `backup`
           - `code-explorer/commit-detail`
           - `config_v2/settings`
@@ -43039,7 +43030,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `layouts/route-fallback`
           - `screenshot`
           - `search/quick-find`
-          - `shell/notifications`
           - `tag-tree/picker`
     - **`log-channels`** — Persistent log-channel substrate: clientLog browser emitter that buffers and flushes log lines over plain HTTP to the per-worktree JSONL files. Server barrel owns Log/persist/registry and the /api/logs/emit + /ws/logs routes; debug/logs is the viewer.
       - Server:
@@ -45200,6 +45190,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/ui-kit.ControlSizeProvider`
           - `primitives/dom/layout-host.flowAxis`
           - `primitives/dom/layout-host.layoutHost`
+          - `primitives/live-state.readyResource`
+          - `primitives/live-state.ResourceResult`
         - Exports (types):
           - `DerivedIdRenderSlot`
           - `DispatchContribution`
@@ -45497,6 +45489,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `primitives/css/column.Column`
           - `primitives/css/spacing.Stack`
+          - `primitives/live-state.foldResource`
+          - `primitives/live-state.ResourceErrorInline`
+          - `primitives/loading.Loading`
           - `primitives/slot-render.defineRenderSlot`
           - `primitives/slot-render.renderIsolated`
           - `primitives/slot-render.RenderSlot`
@@ -46546,12 +46541,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ConfigV2.WebRegister` ×264
     - Uses:
       - `config_v2.ConfigV2`
-      - `config_v2.useConfig`
+      - `config_v2.useConfigResult`
       - `config_v2.useSetConfig`
       - `primitives/dom/element-size.useResizeObserver`
       - `primitives/dom/layout-host.flowAxis`
       - `primitives/dom/layout-host.layoutHost`
       - `primitives/latest-ref.useLatestRef`
+      - `primitives/live-state.foldResource`
+      - `primitives/live-state.mapResource`
+      - `primitives/live-state.ResourceResult`
       - `reorder/node-types.useReorderNodeTypes`
     - Exports (types):
       - `ReorderNodeData`
@@ -48133,20 +48131,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HealthReport.Row` ← `reports.resource-errors`
           - `HealthReport.Row` ← `tasks.worktree-identity`
         - Contributes: `ActionBar.Lead` → `HealthReportButton`
-        - Uses: 29 symbols — full list in [`plugins/shell/plugins/health-report/REFERENCE.md`](../plugins/shell/plugins/health-report/REFERENCE.md)
+        - Uses: 32 symbols — full list in [`plugins/shell/plugins/health-report/REFERENCE.md`](../plugins/shell/plugins/health-report/REFERENCE.md)
           - `primitives/collapsible` ×4
           - `primitives/slot-render` ×4
           - `primitives/css/activity-ring` ×3
           - `primitives/css/ui-kit` ×3
+          - `primitives/css/spacing` ×2
           - `primitives/error-boundary` ×2
           - `primitives/css/center.Center`
           - `primitives/css/fill.Fill`
           - `primitives/css/line.Line`
           - `primitives/css/rigid.rigidClass`
           - `primitives/css/row.Row`
-          - `primitives/css/spacing.Stack`
           - `primitives/css/status-dot.StatusDot`
           - `primitives/css/text.Text`
+          - `primitives/live-state.ResourceErrorInline`
+          - `primitives/loading.Loading`
           - `primitives/overlay/popover.InlinePopover`
           - `primitives/row-actions.RowActions`
           - `primitives/scope/scoped-store.defineScopedStore`
@@ -48406,6 +48406,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/z-layers/stack.defineZLayer`
           - `primitives/css/z-layers/stack.useZStackIndex`
           - `primitives/dom/element-size.useElementSize`
+          - `primitives/live-state.foldResource`
           - `primitives/select-scope.ContentScope`
           - `ui/icons.Icon`
         - Exports (types):
@@ -51850,7 +51851,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --space-sm`
               - `ui/tokens/density --space-xs`
               - `ui/tokens/shape --spacing`
-    - **`theme-engine`** — Paints each scope's selected theme: the token-group, theme and theme-source slots, the theme selection config, the injector that resolves one theme per scope into CSS variables, and the document's light/dark: the root scope's effective color mode (the app's declared default from defineApp, the user's per-app override, else the global setting), read and written through useColorModeSetting / useSetColorMode. Registers the theme selection and per-app color-mode configs, and paints the first frame: renders every app's theme CSS into the SPA shell's head (DocumentHead.Fragment) from the generated theme declarations, the ThemeEngine.Source themes, the selections and each app's effective light/dark (its declared default and the user's override), re-rendered when any of them changes.
+    - **`theme-engine`** — Paints each scope's selected theme: the token-group, theme and theme-source slots, the theme selection config, the injector that resolves one theme per scope into CSS variables, and the document's light/dark: the root scope's effective color mode (the app's declared default from defineApp, the user's per-app override, else the global setting), read and written through useColorModeSetting (a state: not known until the surface says which app owns :root). Registers the theme selection and per-app color-mode configs, and paints the first frame: renders every app's theme CSS into the SPA shell's head (DocumentHead.Fragment) from the generated theme declarations, the ThemeEngine.Source themes, the selections and each app's effective light/dark (its declared default and the user's override), re-rendered when any of them changes.
       - Web:
         - Slots:
           - `ThemeEngine.VariantGroup`
@@ -51878,7 +51879,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ThemeEngine.Theme` "Default"
         - Uses:
           - `apps-core.Apps`
-          - `apps-core/theme-scope.useRootThemeScope`
+          - `apps-core/theme-scope.RootThemeScopeState`
           - `apps-core/theme-scope.useRootThemeScopeState`
           - `config_v2.ConfigV2`
           - `config_v2.useConfig`
@@ -51894,6 +51895,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ColorModeSetting`
           - `ConfiguredColorMode`
           - `ResolvedThemeState`
+          - `RootColorModeSetting`
           - `ThemeResolutionFault`
           - `ThemeSelection`
           - `ThemeSelectionsState`
@@ -51915,7 +51917,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useResolvedColorMode`
           - `useResolvedTheme`
           - `useSetAppColorMode`
-          - `useSetColorMode`
           - `useSetGlobalColorMode`
           - `useThemes`
           - `useThemeScopeId`
@@ -52242,13 +52243,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
           - `primitives/css/toggle-chip.SegmentedControl`
+          - `primitives/loading.Loading`
           - `ui/icons.Icon`
           - `ui/theme-engine.ColorModeSetting`
           - `ui/theme-engine.useColorModeSetting`
           - `ui/theme-engine.useColorModeSettingFor`
           - `ui/theme-engine.useResolvedColorMode`
           - `ui/theme-engine.useSetAppColorMode`
-          - `ui/theme-engine.useSetColorMode`
           - `ui/theme-engine.useSetGlobalColorMode`
           - `ui/theme-engine/quick-theme.QuickTheme`
           - `ui/theme-engine/theme-customizer.ThemeCustomizer`
@@ -52613,7 +52614,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Icons.Root` → `IconThemeBridge`
             - Uses:
               - `apps-core.Apps`
-              - `apps-core/theme-scope.useRootThemeScope`
+              - `apps-core/theme-scope.RootThemeScopeState`
+              - `apps-core/theme-scope.useRootThemeScopeState`
               - `config_v2.useScopeMembership`
               - `primitives/css/row.Row`
               - `primitives/css/spacing.Stack`
@@ -52859,7 +52861,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `shapeGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --radius-chip-compact`
-            - Tokens used by: 431 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+            - Tokens used by: 432 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
               - `conversations` ×91
               - `apps` ×85
               - `primitives` ×71
@@ -52870,9 +52872,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks` ×11
               - `fields` ×9
               - `reorder` ×6
+              - `apps-core` ×5
               - `review` ×5
               - `active-data` ×4
-              - `apps-core` ×4
               - `infra` ×4
               - `shell` ×4
               - `build` ×3

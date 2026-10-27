@@ -55,11 +55,11 @@ never draw their own header (the shell places it; see
     - `AppShell.Brand` "Brand" → `AppBrand`
     - `Apps.Overlay` "Overlay" → `FloatingAppLauncher`
     - `FieldPresentation.Register` "collection:apps.installed-app"
-  - Uses: 41 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 42 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps-core/tabs` ×5
     - `apps-core` ×5
+    - `primitives/live-state` ×4
     - `primitives/data-view` ×3
-    - `primitives/live-state` ×3
     - `apps-core/app-icon` ×2
     - `audience/developer-mark` ×2
     - `primitives/app-shell` ×2

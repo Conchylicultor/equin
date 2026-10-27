@@ -4450,13 +4450,13 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `Editor.TurnInto` ×2
     - `Editor.BlockMenuItem` ← `page.open-as-page`
   - Contributes: `IdKinds.Kind` "block"
-  - Uses: 91 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 93 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/live-state` ×6
     - `primitives/text-editor/caret-trigger` ×5
     - `infra/endpoints` ×4
     - `primitives/css/spacing` ×4
     - `primitives/css/ui-kit` ×4
     - `primitives/dom/dom-selection` ×4
-    - `primitives/live-state` ×4
     - `primitives/networking` ×4
     - `primitives/persistent-draft` ×4
     - `primitives/slot-render` ×4

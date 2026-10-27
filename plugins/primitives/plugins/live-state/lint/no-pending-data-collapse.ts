@@ -10,7 +10,8 @@
  *     `status` spelling, `X.status !== "ready"` (or `=== "ready"`, swapped),
  *   - X is a binding initialized from a resource read (`RESOURCE_HOOKS`:
  *     useLive / useResource / useOptimisticResource / combineResources /
- *     useCombinedResources / useConfigResult),
+ *     useCombinedResources / useConfigResult / useLive / useSlotOrder /
+ *     useReorderedEntries / useLayoutOrder / useZStackIndex),
  *   - the pending branch is an empty default ([], {}, null, false, 0, "",
  *     undefined, or a const initialized to one of those),
  *   - the settled branch references `X.data`.
@@ -84,6 +85,14 @@ const RESOURCE_HOOKS = new Set([
   // `useLiveRow` needs no entry — it has no `data` to collapse into: its
   // settled arms are `found: true` (with `row`) and `found: false`.
   "useLive",
+  // A slot's layout order is a read too (`ResourceResult`): `loading` until
+  // the slot's config is known. Collapsing it to `[]` or to the raw
+  // contributions is the first-paint flash the result exists to prevent.
+  "useSlotOrder",
+  "useReorderedEntries",
+  "useLayoutOrder",
+  // The z-stack index derives from the z-layers slot's layout order.
+  "useZStackIndex",
 ]);
 
 type Ctx = Readonly<

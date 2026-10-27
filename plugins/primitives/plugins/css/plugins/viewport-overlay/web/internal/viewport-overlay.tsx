@@ -13,6 +13,7 @@ import {
   useZStackIndex,
   type ZStackLayer,
 } from "@plugins/primitives/plugins/css/plugins/z-layers/plugins/stack/web";
+import { foldResource } from "@plugins/primitives/plugins/live-state/web";
 import { PortalHost } from "@plugins/primitives/plugins/overlay/plugins/portal-host/web";
 import { useViewportEscape } from "./use-viewport-escape";
 
@@ -89,13 +90,25 @@ export function ViewportOverlay({
  * popover layer, BELOW this overlay, so a tooltip inside it would be hidden.
  * The host element is `pointer-events-auto` so popups stay clickable under a
  * `pointer-events-none` overlay root.
+ *
+ * Nothing is drawn until the stack order is known: a guessed z-index would put
+ * the overlay under (or over) the wrong neighbour and then move it. The portal
+ * therefore first mounts once the index is known and is never toggled after —
+ * a refresh that fails keeps the last-known index (`stale`), the same element.
+ * A first read that fails draws nothing; the failed read itself is reported by
+ * live-state.
  */
 function StackOverlay({
   layer,
   children,
   ...props
 }: OverlayBodyProps & { layer: ZStackLayer }) {
-  const zIndex = useZStackIndex(layer);
+  const zIndex = foldResource(useZStackIndex(layer), {
+    loading: () => null,
+    error: (_error, stale) => stale ?? null,
+    ready: (z) => z,
+  });
+  if (zIndex === null) return null;
   return (
     <OverlayRoot name={layer.id} zIndex={zIndex} {...props}>
       <PortalHost className="pointer-events-auto">{children}</PortalHost>

@@ -1611,8 +1611,10 @@ It used to name all three, as `sortControl` / `filterControl` / `fieldsControl`
 ReactNode props built by the host: the collection-consumer rule broken in the most
 literal way, and the reason no plugin could add a fourth control. Now the toolbar
 reads the slot in its layout order (`useSlotOrder` over
-`config/primitives/data-view/control.jsonc`), drops the contributions whose
-`isApplicable` says no, and builds one identical trigger per survivor.
+`config/primitives/data-view/control.jsonc` — a read: no triggers until the
+layout is known, see "A layout not known yet is a state" below), drops the
+contributions whose `isApplicable` says no, and builds one identical trigger
+per survivor.
 
 ```ts
 DataViewSlots.Control({
@@ -1669,6 +1671,31 @@ host reads each contribution's metadata in the slot's layout order
 (`useSlotOrder`) and mounts exactly the one panel that is open
 (`renderIsolated`). The order is the committed reorder layout, never a number on
 a contribution (`defineSlot` rejects one).
+
+### A layout not known yet is a state, never an empty list
+
+`useSlotOrder` is a read (`ResourceResult`): `loading` until the slot's layout
+is known, and on error the last-known layout as `stale` when there was one.
+Every reader here takes it through `slotLayout` (`web/internal/slot-layout.ts`
+→ `known` | `loading` | `failed`; a stale layout is `known` — it is what the
+user last saw — and only a failure with none known is `failed`) and answers
+each state, because the empty list in its place is a claim about the surface
+that then reverses:
+
+| Reader | While loading | Failed, none known |
+|---|---|---|
+| `DataView` / `DataViewSwitcher` (View, and the sources' layout — both) | the shell's not-ready placeholder (`pendingLayoutModel`); the view model is never built — over `[]`, `useOrphanViewTypeGuard` would report every configured row as an orphan | the shell's failure, with Retry |
+| `useToolbarControls` → `SlotLayout<{ controls, activeCount }>` | no control triggers, no badge count (the compact fold keeps its trigger only for the search, and its first page shows a loading block) | no triggers; the fold's first page shows the failure |
+| `SettingsControlPanel` | `Loading`, never "Nothing to configure here." | the failure, with Retry |
+| `RowOrderReader` | reports `pending` → the body's `loading` state (`resolveBodyState`'s `rowOrder`), never rows painted in raw order that then jump | reports `failed` → the body's `error` state |
+
+The row-order report (`ReportedRowOrder`) is `pending` | `known` (`order`,
+`null` when no contributor claimed it) | `failed`; the body is loading while
+the fold is on and has not reported `known` for the active view. The reader is
+mounted in a hidden (`hideWhenEmpty`) section too, so a section hidden while
+the order is pending still ends the wait. A contributor that answers `null`
+while its OWN data loads is not covered (it reads as "no order", and the rows
+paint unsorted until it lands).
 
 `DataViewSlots.Setting` survives unchanged, one level down: a *control* is a
 toolbar affordance, a *setting* is a section inside one control's panel. Flattening

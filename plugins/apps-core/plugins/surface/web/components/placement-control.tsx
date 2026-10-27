@@ -10,6 +10,11 @@ import {
   type SegmentedOption,
 } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { ControlPanel } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
+import {
+  foldResource,
+  mapResource,
+} from "@plugins/primitives/plugins/live-state/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Surface } from "../slots";
 
 /**
@@ -23,33 +28,53 @@ import { Surface } from "../slots";
  * The options are derived from the `Surface.Placement` registry, in the slot's
  * layout order (`useSlotOrder`) — never a hardcoded list — so adding / removing a mode sub-plugin
  * updates the control with zero edits here. With no modes contributed it renders
- * nothing.
+ * nothing. While the order is not known yet the "Layout" row is already there,
+ * a loading block in place of the control (never the modes in raw order); a
+ * failed order with nothing last-known renders nothing.
  */
 export function ActionBarPlacementControl() {
   const defs = useSlotOrder(Surface.Placement);
   const options = useMemo(
     () =>
-      defs.map((d): SegmentedOption<string> => ({
+      mapResource(defs, (list) =>
+        list.map((d): SegmentedOption<string> => ({
           id: d.id,
           icon: <Icon icon={d.icon} />,
           // Icon-only: the mode's label is the radio's tooltip and name.
           tooltip: d.label,
         })),
+      ),
     [defs],
   );
   const mode = useSurfaceMode();
-  if (options.length === 0) return null;
+  // The options to draw: none while loading (a loading block holds the row),
+  // the last-known ones on a failed refresh, nothing on a failure without one.
+  const known: "loading" | readonly SegmentedOption<string>[] | null =
+    foldResource(options, {
+      loading: (): "loading" | readonly SegmentedOption<string>[] | null =>
+        "loading",
+      error: (_error, stale) => stale ?? null,
+      ready: (data) => data,
+    });
+  if (known === null || (known !== "loading" && known.length === 0)) {
+    return null;
+  }
   return (
     <ControlPanel.Setting
       label="Layout"
       fit="inline"
       control={
-        <SegmentedControl<string>
-          options={options}
-          value={mode}
-          onChange={setSurfaceMode}
-          variant="ghost"
-        />
+        known === "loading" ? (
+          // Roughly the segmented control's footprint, so the row does not jump.
+          <Loading variant="block" className="h-7 w-24" />
+        ) : (
+          <SegmentedControl<string>
+            options={known}
+            value={mode}
+            onChange={setSurfaceMode}
+            variant="ghost"
+          />
+        )
       }
     />
   );

@@ -3,6 +3,7 @@ import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { Apps, isTabApp, useAppListing } from "@plugins/apps-core/web";
 import {
   mapResource,
+  combineResources,
   type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
 import { useTabs } from "@plugins/apps-core/plugins/tabs/web";
@@ -37,27 +38,31 @@ export function useLauncherApps(): ResourceResult<LauncherApp[]> {
   const listing = useAppListing();
   // The contributions carry `_pluginId` + `id`, all the reorder key needs; they
   // lack `_slot`, so widen through `unknown` (as the app launcher popover does).
-  const { entries } = useReorderedEntries(
+  // Both are reads: the rail's order is not known until its layout loads, and
+  // the raw registration order never stands in for it.
+  const order = useReorderedEntries(
     Apps.App.id,
     contributions as unknown as Contribution[],
   );
   const counts = useWindowsOfApp();
   return useMemo(
     () =>
-      mapResource(listing, (isListed) =>
-        entries
-          .filter((e) => !isNodeData(e))
-          .map((e) => e as unknown as (typeof contributions)[number])
-          .filter(isTabApp)
-          .filter(isListed)
-          .map((a) => ({
-            id: a.id,
-            name: a.app.name,
-            icon: a.icon,
-            windows: counts.get(a.id)?.length ?? 0,
-          })),
+      mapResource(
+        combineResources({ order, listing }),
+        ({ order: { entries }, listing: isListed }) =>
+          entries
+            .filter((e) => !isNodeData(e))
+            .map((e) => e as unknown as (typeof contributions)[number])
+            .filter(isTabApp)
+            .filter(isListed)
+            .map((a) => ({
+              id: a.id,
+              name: a.app.name,
+              icon: a.icon,
+              windows: counts.get(a.id)?.length ?? 0,
+            })),
       ),
-    [entries, counts, listing],
+    [order, listing, counts],
   );
 }
 

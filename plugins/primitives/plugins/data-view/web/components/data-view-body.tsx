@@ -87,7 +87,11 @@ import {
   CollectClientValues,
 } from "../internal/derived-fields";
 import { CollectFacetOptions } from "../internal/facet-options";
-import { RowOrderReader, type ReportedRowOrder } from "../internal/row-order";
+import {
+  RowOrderReader,
+  type ReportedRowOrder,
+  type RowOrderState,
+} from "../internal/row-order";
 import {
   effectiveFold,
   isTailFolded,
@@ -943,9 +947,35 @@ function DataViewBodyInner<TRow>(
     }),
     [filterUnavailable, foldKeepFilter],
   );
+  // The contributed row order, as the `RowOrderReader` beside the surface
+  // last reported it — only ever for the active view, and only while the fold
+  // is on (a report for another view, or a fold turned off, is no order).
+  // While the fold is on but has not reported KNOWN for this view, the body
+  // is loading: painting the rows meanwhile would show them in their raw
+  // order and then jump when the order lands.
+  const [reportedOrder, setReportedOrder] = useState<ReportedRowOrder | null>(
+    null,
+  );
+  const onRowOrder = useCallback((next: ReportedRowOrder) => {
+    setReportedOrder((prev) =>
+      prev !== null && sameReport(prev, next) ? prev : next,
+    );
+  }, []);
+  const activeReport =
+    rowOrderEnabled && reportedOrder?.viewId === activeViewId
+      ? reportedOrder
+      : null;
+  const contributedRowOrder =
+    activeReport?.state === "known" ? activeReport.order : null;
+  // The fold's standing while it is on (absent when off): not reported yet
+  // for this view is `pending`.
+  const rowOrderState: RowOrderState | undefined = !rowOrderEnabled
+    ? undefined
+    : (activeReport ?? ROW_ORDER_PENDING);
   const bodyState = resolveBodyState({
     server: origin,
     readiness,
+    rowOrder: rowOrderState,
     readFields,
     unavailable,
     deferredComplete,
@@ -1177,22 +1207,6 @@ function DataViewBodyInner<TRow>(
     [paging, declaredSections],
   );
 
-  // The contributed row order, as the `RowOrderReader` beside the surface
-  // last reported it — only ever for the active view, and only while the fold
-  // is on (a report for another view, or a fold turned off, is no order).
-  const [reportedOrder, setReportedOrder] = useState<ReportedRowOrder | null>(
-    null,
-  );
-  const onRowOrder = useCallback((next: ReportedRowOrder) => {
-    setReportedOrder((prev) =>
-      prev?.viewId === next.viewId && prev.order === next.order ? prev : next,
-    );
-  }, []);
-  const contributedRowOrder =
-    rowOrderEnabled && reportedOrder?.viewId === activeViewId
-      ? reportedOrder.order
-      : null;
-
   // The active view's expand-all, as the view last reported it — filed under
   // the instance that reported it, so a report from a view switched away from
   // is never offered for the next one. The toolbar reads the bound form off
@@ -1229,10 +1243,34 @@ function DataViewBodyInner<TRow>(
     [activeExpandAll, viewModel, activeViewId],
   );
 
+  // The row-order fold reports from beside the surface (below) — and from a
+  // hidden section too: a section hidden while the order is pending would
+  // otherwise never mount the fold that ends the wait. First in both
+  // fragments, so hiding or showing the section never remounts it.
+  const rowOrderReader = (
+    <RowOrderReader
+      enabled={rowOrderEnabled}
+      storageKey={storageKey}
+      viewId={activeViewId}
+      rowKey={rowKey as (row: unknown, index: number) => string}
+      rows={effectiveRows}
+      fields={fields as FieldDef<unknown>[]}
+      state={activeState}
+      resolveOperatorSet={filterController.resolveOperatorSet}
+      searchAccessor={searchAccessor as ((row: unknown) => string) | undefined}
+      onOrder={onRowOrder}
+    />
+  );
+
   // A hidden section still runs a sectioned origin's reads: whether it has
   // any section is what those reads answer.
   if (sectionHidden) {
-    return origin?.kind === "sectioned" ? origin.readers : null;
+    return (
+      <>
+        {rowOrderReader}
+        {origin?.kind === "sectioned" ? origin.readers : null}
+      </>
+    );
   }
 
   // The global `RowOrder` slot's fold is a reader BESIDE the surface, never
@@ -1246,20 +1284,7 @@ function DataViewBodyInner<TRow>(
   // server-paginated) an extra `useFlatRows` pass per render for a set it discards.
   return (
     <>
-      <RowOrderReader
-        enabled={rowOrderEnabled}
-        storageKey={storageKey}
-        viewId={activeViewId}
-        rowKey={rowKey as (row: unknown, index: number) => string}
-        rows={effectiveRows}
-        fields={fields as FieldDef<unknown>[]}
-        state={activeState}
-        resolveOperatorSet={filterController.resolveOperatorSet}
-        searchAccessor={
-          searchAccessor as ((row: unknown) => string) | undefined
-        }
-        onOrder={onRowOrder}
-      />
+      {rowOrderReader}
       {(() => {
         // One rule everywhere — the render path never branches on where the order
         // came from. The consumer's domain order outranks any contributor.
@@ -1748,6 +1773,21 @@ const NO_UNAVAILABLE: readonly UnavailableRule[] = [];
 // Every row of a read with no `isPaged` is the read's.
 const ALL_ROWS = (): boolean => true;
 const NOOP = () => {};
+const ROW_ORDER_PENDING: RowOrderState = { state: "pending" };
+
+/** Two row-order reports say the same thing (the host keeps the old object,
+ *  so an unchanged report re-renders nothing). */
+function sameReport(a: ReportedRowOrder, b: ReportedRowOrder): boolean {
+  if (a.viewId !== b.viewId || a.state !== b.state) return false;
+  if (a.state === "known" && b.state === "known") return a.order === b.order;
+  if (a.state === "failed" && b.state === "failed") {
+    return (
+      a.failure.error === b.failure.error &&
+      a.failure.refetch === b.failure.refetch
+    );
+  }
+  return true;
+}
 
 /** The shared "no fold open" set — one identity, so an idle view's `openFolds`
  *  never changes between renders. */

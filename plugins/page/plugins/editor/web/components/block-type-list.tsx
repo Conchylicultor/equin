@@ -2,6 +2,10 @@ import { Icon } from "@plugins/ui/plugins/icons/web";
 import { useMemo } from "react";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { useReorderedEntries } from "@plugins/reorder/web";
+import {
+  mapResource,
+  type ResourceResult,
+} from "@plugins/primitives/plugins/live-state/web";
 import { useRevealOnActive } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -35,16 +39,22 @@ export type {
  * demo's curated text palette), non-listed types drop out — so every picker
  * respects both with no per-menu wiring. Emptied sections are dropped.
  */
-export function useGroupedInsertableBlocks(): BlockSection[] {
+export function useGroupedInsertableBlocks(): ResourceResult<BlockSection[]> {
   const contributions = Editor.Block.useContributions();
   const enabled = useEnabledBlockTypes();
   // The clean contributions carry `_pluginId` + `id`, which is all the reorder
-  // entryKey needs; they lack `_slot`, so widen through `unknown`.
-  const { entries } = useReorderedEntries(
+  // entryKey needs; they lack `_slot`, so widen through `unknown`. A read: the
+  // grouping is not known until the layout loads, and the raw registration
+  // order never stands in for it (it would list hidden types, ungrouped).
+  const order = useReorderedEntries(
     "page.editor.block",
     contributions as unknown as Contribution[],
   );
-  return useMemo(() => entriesToSections(entries, enabled), [entries, enabled]);
+  return useMemo(
+    () =>
+      mapResource(order, ({ entries }) => entriesToSections(entries, enabled)),
+    [order, enabled],
+  );
 }
 
 /**
@@ -52,9 +62,9 @@ export function useGroupedInsertableBlocks(): BlockSection[] {
  * flattened. Shared by the flat consumers (the turn-into menu), which inherit the
  * group ordering for free while ignoring the section boundaries.
  */
-export function useInsertableBlocks(): BlockHandle<unknown>[] {
+export function useInsertableBlocks(): ResourceResult<BlockHandle<unknown>[]> {
   const sections = useGroupedInsertableBlocks();
-  return useMemo(() => flattenSections(sections), [sections]);
+  return useMemo(() => mapResource(sections, flattenSections), [sections]);
 }
 
 const NO_ACTIONS: readonly never[] = [];
@@ -74,14 +84,19 @@ const NO_ACTIONS: readonly never[] = [];
  * actions join the list when the confirming push does — a beat after the
  * block types, never a failed request.
  */
-export function useInsertMenuSections(blockId: string): InsertSection[] {
+export function useInsertMenuSections(
+  blockId: string,
+): ResourceResult<InsertSection[]> {
   const grouped = useGroupedInsertableBlocks();
   const { serverSync, enabledBlockTypes, rowTruthOf } = useBlockEditor();
   const contributed = Editor.InsertAction.useContributions();
   const offered =
     serverSync && !enabledBlockTypes && rowTruthOf(blockId) === "present";
   const actions = offered ? contributed : NO_ACTIONS;
-  return useMemo(() => withInsertActions(grouped, actions), [grouped, actions]);
+  return useMemo(
+    () => mapResource(grouped, (g) => withInsertActions(g, actions)),
+    [grouped, actions],
+  );
 }
 
 /** The words an entry answers to: its menu `label`, then its `aliases`. */

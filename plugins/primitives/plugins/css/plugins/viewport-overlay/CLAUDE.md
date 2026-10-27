@@ -164,6 +164,7 @@ looks equivalent and silently discards the caller's.
     - `primitives/css/z-layers.zLayerClass`
     - `primitives/css/z-layers/stack.useZStackIndex`
     - `primitives/css/z-layers/stack.ZStackLayer`
+    - `primitives/live-state.foldResource`
     - `primitives/overlay/portal-host.PortalHost`
   - Exports (types):
     - `ViewportBlocker`

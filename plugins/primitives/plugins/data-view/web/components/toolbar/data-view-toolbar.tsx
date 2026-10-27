@@ -223,10 +223,10 @@ export function DataViewToolbar({
   );
   useSurfaceShortcuts(shortcuts);
   // Applicability, ordering and the badge count, derived the one way the
-  // hosted trigger derives them too. A non-empty query counts toward the
-  // compact trigger's badge, since the fold hides the search field.
-  const { controls, activeCount: controlsCount } = useToolbarControls();
-  const activeCount = controlsCount + (query.length > 0 ? 1 : 0);
+  // hosted trigger derives them too (a read: no triggers and no badge while
+  // the controls' layout loads). A non-empty query counts toward the compact
+  // trigger's badge, since the fold hides the search field.
+  const controls = useToolbarControls();
 
   // Built once and relocated into whichever branch renders — the toolbar's
   // "each control element is built once" discipline. The compact fold has forms
@@ -375,7 +375,6 @@ export function DataViewToolbar({
             <CompactControls
               search={searchInput}
               controls={controls}
-              activeCount={activeCount}
               searching={query.length > 0}
             />
           </>
@@ -388,7 +387,6 @@ export function DataViewToolbar({
           <CompactControls
             search={searchInput}
             controls={controls}
-            activeCount={activeCount}
             searching={query.length > 0}
             frame={(node, revealClass) => (
               <ToolbarPill
@@ -412,13 +410,18 @@ export function DataViewToolbar({
       switcher={switcher}
       search={searchInput}
       query={query}
-      controls={controls.map((c) => (
-        <ControlTrigger key={c.id} control={c} form={forms.controls} />
-      ))}
+      controls={
+        controls.kind === "known"
+          ? controls.items.controls.map((c) => (
+              <ControlTrigger key={c.id} control={c} form={forms.controls} />
+            ))
+          : // Not known yet (or failed with no layout ever known): no
+            // triggers — never a claim that nothing narrows this view.
+            null
+      }
       foldedControls={
         <CompactControls
           controls={controls}
-          activeCount={controlsCount}
           searching={false}
           revealOnHover={false}
           form={forms.controls}

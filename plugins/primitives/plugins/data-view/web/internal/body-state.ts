@@ -1,6 +1,7 @@
 import type { ResourceReadiness } from "@plugins/primitives/plugins/live-state/core";
 import type { FieldDef, FilterNode, FoldRule, ViewState } from "../../core";
 import type { UnavailableRule } from "./evaluate-filter";
+import type { RowOrderState } from "./row-order";
 import {
   UnavailableFilterRuleError,
   UnavailableSortRuleError,
@@ -44,6 +45,12 @@ import {
  *
  * A live source's own `UnavailableFilterRuleError` / `UnavailableSortRuleError`
  * is that same `rule-error` arm, so both paths offer the same way out.
+ *
+ * `rowOrder`: where the contributed row order (`DataViewSlots.RowOrder`'s
+ * fold) stands, while the fold is on — absent when it is off. Not known yet
+ * is `loading` (the rows would paint in their raw order, then jump when the
+ * order lands); a fold whose slot layout failed with none known is that
+ * failure, ranked with the rows' own read.
  */
 export type BodyState =
   | { kind: "server-error"; error: Error }
@@ -68,6 +75,7 @@ export function resolveBodyState(input: {
     readError: Extract<ResourceReadiness, { status: "error" }> | null;
   } | null;
   readiness: ResourceReadiness | undefined;
+  rowOrder?: RowOrderState;
   readFields: readonly FieldDef<unknown>[];
   unavailable: {
     filter: readonly UnavailableRule[];
@@ -75,8 +83,15 @@ export function resolveBodyState(input: {
   };
   deferredComplete: boolean;
 }): BodyState {
-  const { server, readiness, readFields, unavailable, deferredComplete } =
-    input;
+  const {
+    server,
+    readiness,
+    rowOrder,
+    readFields,
+    unavailable,
+    deferredComplete,
+  } = input;
+  const rowOrderPending = rowOrder?.state === "pending";
   // The rule error the in-memory evaluation found (the filter first: it is
   // the one hiding rows), or `pending` while the deferred tier may still
   // contribute the field.
@@ -114,16 +129,28 @@ export function resolveBodyState(input: {
     }
     if (server.error) return { kind: "server-error", error: server.error };
     if (server.readError) return { kind: "error", error: server.readError };
+    if (rowOrder?.state === "failed") {
+      return { kind: "error", error: rowOrder.failure };
+    }
     if (fieldFailure) return fieldFailure;
     if (local !== null && local !== "pending") return local;
-    return server.loading || fieldPending || local === "pending"
+    return server.loading ||
+      fieldPending ||
+      rowOrderPending ||
+      local === "pending"
       ? { kind: "loading" }
       : { kind: "view" };
   }
   if (readiness?.status === "error") return { kind: "error", error: readiness };
+  if (rowOrder?.state === "failed") {
+    return { kind: "error", error: rowOrder.failure };
+  }
   if (fieldFailure) return fieldFailure;
   if (local !== null && local !== "pending") return local;
-  return readiness?.status === "loading" || fieldPending || local === "pending"
+  return readiness?.status === "loading" ||
+    fieldPending ||
+    rowOrderPending ||
+    local === "pending"
     ? { kind: "loading" }
     : { kind: "view" };
 }

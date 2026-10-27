@@ -4,7 +4,12 @@ import {
 } from "@plugins/primitives/plugins/slot-render/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  Inset,
+  Stack,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { SealContributions } from "@plugins/framework/plugins/web-sdk/core";
@@ -72,9 +77,38 @@ function ContributedRow({
  *
  * Mounted only while the popover is open, which is what keeps an info row's
  * `useInfo` from running while nobody is looking.
+ *
+ * While the rows' layout order is not known yet the whole report — verdict
+ * included, since it derives from the rows — is a loading state, never the
+ * rows in raw registration order (which would show hidden rows and then jump).
  */
 export function HealthReportPanel() {
-  const rows = useSlotOrder(HealthReport.Row);
+  const order = useSlotOrder(HealthReport.Row);
+  switch (order.status) {
+    case "loading":
+      return (
+        <Inset pad="xs">
+          <Loading variant="rows" count={4} />
+        </Inset>
+      );
+    case "error":
+      return order.stale === undefined ? (
+        <ResourceErrorInline
+          error={order.error}
+          refetch={order.refetch}
+          variant="block"
+          subject="the health report"
+        />
+      ) : (
+        <HealthReportPanelReady rows={order.stale} />
+      );
+    case "ready":
+      return <HealthReportPanelReady rows={order.data} />;
+  }
+}
+
+/** The report once its rows' order is known — see {@link HealthReportPanel}. */
+function HealthReportPanelReady({ rows }: { rows: readonly SealedRow[] }) {
   const statuses = HealthStore.useStore();
   const statusList = rows.flatMap((row) =>
     row.kind === "status" ? [statuses[row.id]] : [],

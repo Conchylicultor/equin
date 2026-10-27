@@ -1,6 +1,10 @@
 import { useMemo } from "react";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
+import {
+  mapResource,
+  type ResourceResult,
+} from "@plugins/primitives/plugins/live-state/web";
 import { isNodeData, type TopLevelEntry } from "./sorting";
 import { useReorderedEntries } from "./use-reordered-entries";
 
@@ -20,12 +24,16 @@ function contributionsOf(entries: readonly TopLevelEntry[]): Contribution[] {
  * over its contributions — the same `useReorderedEntries` the list middleware's
  * tree comes from — with hidden contributions dropped, layout nodes (spacers,
  * dividers) dropped, and a header's members in its place. Throws for a slot
- * that is not reorderable.
+ * that is not reorderable. A read, like `useReorderedEntries`: `loading` until
+ * the layout is known.
  */
 export function useLayoutOrder(
   slot: SlotHandle,
   contributions: readonly Contribution[],
-): readonly Contribution[] {
-  const { entries } = useReorderedEntries(slot.id, contributions);
-  return useMemo(() => contributionsOf(entries), [entries]);
+): ResourceResult<readonly Contribution[]> {
+  const state = useReorderedEntries(slot.id, contributions);
+  return useMemo(
+    () => mapResource(state, (s) => contributionsOf(s.entries)),
+    [state],
+  );
 }

@@ -1,5 +1,8 @@
 import { type ReactNode, useMemo } from "react";
-import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
+import type {
+  Contribution,
+  SealContributions,
+} from "@plugins/framework/plugins/web-sdk/core";
 import {
   renderIsolated,
   useSlotOrder,
@@ -15,18 +18,25 @@ import { DataViewSlots, type DataViewContribution } from "../slots";
 import {
   useDataViewModel,
   type ReadyViewModel,
+  type ViewModel,
 } from "../internal/use-data-view-model";
 import type {
   DataViewSourceBundle,
   DataViewShellChrome,
 } from "../internal/body-types";
 import type {
+  DataViewSourceContribution,
   DataViewSources,
   DataViewSourceProps,
 } from "../internal/define-data-view-sources";
 import { DataViewShellFrame } from "./data-view";
 import { DataViewBody } from "./data-view-body";
 import { useOrphanViewTypeGuard } from "../internal/use-orphan-view-type-guard";
+import {
+  bothLayouts,
+  pendingLayoutModel,
+  slotLayout,
+} from "../internal/slot-layout";
 
 /** The surface chrome (`title` / `actions` / `toolbar`) is the part of
  *  `DataViewProps`' union that shows ONE active instance — a hosted toolbar
@@ -66,22 +76,46 @@ interface DataViewSwitcherBaseProps<THostProps> {
 export function DataViewSwitcher<THostProps>(
   props: DataViewSwitcherProps<THostProps>,
 ): ReactNode {
-  const {
-    storageKey,
-    sources,
-    hostProps,
-    title,
-    actions,
-    defaultView,
-    density,
-    toolbar,
-    searchPlaceholder,
-    aside,
-  } = props;
-  const contributions = useSlotOrder(DataViewSlots.View);
-  // The add menu's section order and entry precedence: the source slot's
-  // reorder layout (`config/<plugin>/<slotId>.jsonc`), never a number on a source.
-  const sourceContribs = useSlotOrder(sources);
+  // Two layouts decide the model: the view types' (the add menu, orphan
+  // detection) and the sources' — the add menu's section order and entry
+  // precedence (`config/<plugin>/<slotId>.jsonc`, never a number on a source).
+  // Until BOTH are known the shell shows its not-ready placeholder; the model is
+  // never built over a stand-in empty list (every configured row would read as
+  // an orphan, or as a row of an unknown source).
+  const layout = bothLayouts(
+    slotLayout(useSlotOrder(DataViewSlots.View)),
+    slotLayout(useSlotOrder(props.sources)),
+  );
+  if (layout.kind !== "known") {
+    return (
+      <DataViewSwitcherHost
+        props={props}
+        viewModel={pendingLayoutModel(layout)}
+        sourceContribs={null}
+      />
+    );
+  }
+  return (
+    <DataViewSwitcherWithLayouts
+      props={props}
+      contributions={layout.items.a}
+      sourceContribs={layout.items.b}
+    />
+  );
+}
+
+type SourceContribs<THostProps> = readonly SealContributions<
+  DataViewSourceContribution<THostProps>
+>[];
+
+/** The switcher once both layouts are known: builds the model. */
+function DataViewSwitcherWithLayouts<THostProps>(props: {
+  props: DataViewSwitcherProps<THostProps>;
+  contributions: readonly SealContributions<DataViewContribution>[];
+  sourceContribs: SourceContribs<THostProps>;
+}): ReactNode {
+  const { contributions, sourceContribs } = props;
+  const { storageKey, defaultView } = props.props;
 
   // One `ViewSourceEntry` per contributed source, from static metadata only —
   // no `viewOptions` (code-only options can't exist before the source mounts;
@@ -103,6 +137,36 @@ export function DataViewSwitcher<THostProps>(
   const viewModel = useDataViewModel(storageKey, entries, defaultView);
 
   return (
+    <DataViewSwitcherHost
+      props={props.props}
+      viewModel={viewModel}
+      sourceContribs={sourceContribs}
+    />
+  );
+}
+
+/** The switcher's shell, for any model — the not-ready one the layout gate
+ *  hands it (no sources yet: `null`, and the shell never calls its body on a
+ *  not-ready model) as much as the built one. */
+function DataViewSwitcherHost<THostProps>(hostProps: {
+  props: DataViewSwitcherProps<THostProps>;
+  viewModel: ViewModel;
+  sourceContribs: SourceContribs<THostProps> | null;
+}): ReactNode {
+  const { viewModel, sourceContribs } = hostProps;
+  const {
+    storageKey,
+    sources,
+    hostProps: sourceHostProps,
+    title,
+    actions,
+    density,
+    toolbar,
+    searchPlaceholder,
+    aside,
+  } = hostProps.props;
+
+  return (
     <DataViewShellFrame
       storageKey={storageKey}
       viewModel={viewModel}
@@ -114,6 +178,11 @@ export function DataViewSwitcher<THostProps>(
       aside={aside}
     >
       {(activeInstance, chrome, readyModel) => {
+        if (sourceContribs === null) {
+          throw new Error(
+            `DataViewSwitcher(${storageKey}): a body rendered before the source layout was known`,
+          );
+        }
         // Always found: a row whose `source` matches no contribution never
         // resolves into an instance (`buildInstanceFromRow` fail-softs), so an
         // active instance's source is a live contribution by construction.
@@ -131,7 +200,7 @@ export function DataViewSwitcher<THostProps>(
           sources,
           activeSource as unknown as Contribution,
           {
-            hostProps,
+            hostProps: sourceHostProps,
             view: readyModel.stateFor(activeInstance.instance.id),
             // The host consumes the bundle at `unknown` row space — the same
             // documented cast boundary as field extensions (the contributor keeps

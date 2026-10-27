@@ -12,6 +12,7 @@ import { isNodeData, useReorderedEntries } from "@plugins/reorder/web";
 import {
   foldResource,
   mapResource,
+  combineResources,
   type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
 import {
@@ -92,19 +93,24 @@ function useLaunchableApps(
   const listing = useAppListing();
   // The contributions carry `_pluginId` + `id`, all the reorder key needs; they
   // lack `_slot`, so widen through `unknown`.
-  const { entries } = useReorderedEntries(
+  // Both are reads: the rail's order is not known until its layout loads, and
+  // the raw registration order never stands in for it (it would show hidden
+  // apps, then reshuffle).
+  const order = useReorderedEntries(
     Apps.App.id,
     apps as unknown as Contribution[],
   );
   return useMemo(
     () =>
-      mapResource(listing, (isListed) =>
-        entries
-          .filter((e) => !isNodeData(e))
-          .map((e) => e as unknown as ActiveApp)
-          .filter((a) => a.id !== galleryId && isListed(a)),
+      mapResource(
+        combineResources({ order, listing }),
+        ({ order: { entries }, listing: isListed }) =>
+          entries
+            .filter((e) => !isNodeData(e))
+            .map((e) => e as unknown as ActiveApp)
+            .filter((a) => a.id !== galleryId && isListed(a)),
       ),
-    [entries, galleryId, listing],
+    [order, listing, galleryId],
   );
 }
 

@@ -43,18 +43,18 @@ export {
   useColorModeSettingFor,
   useResolvedColorMode,
   useSetAppColorMode,
-  useSetColorMode,
   useSetGlobalColorMode,
 } from "./use-color-mode";
 export type {
   ColorMode,
   ColorModeSetting,
+  RootColorModeSetting,
   ConfiguredColorMode,
 } from "./use-color-mode";
 
 export default {
   description:
-    "Paints each scope's selected theme: the token-group, theme and theme-source slots, the theme selection config, the injector that resolves one theme per scope into CSS variables, and the document's light/dark: the root scope's effective color mode (the app's declared default from defineApp, the user's per-app override, else the global setting), read and written through useColorModeSetting / useSetColorMode.",
+    "Paints each scope's selected theme: the token-group, theme and theme-source slots, the theme selection config, the injector that resolves one theme per scope into CSS variables, and the document's light/dark: the root scope's effective color mode (the app's declared default from defineApp, the user's per-app override, else the global setting), read and written through useColorModeSetting (a state: not known until the surface says which app owns :root).",
   contributions: [
     Core.Root({ component: ThemeInjector }),
     Core.Root({ component: AppScopeThemes }),

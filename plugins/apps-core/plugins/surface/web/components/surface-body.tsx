@@ -1,4 +1,7 @@
 import { useSlotOrder } from "@plugins/primitives/plugins/slot-render/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import {
   useEffect,
   useMemo,
@@ -78,6 +81,46 @@ const FRAME_CLASS: Record<PlacementFrame, string> = {
  * each `TabSurface` mounted across a mode switch (Chrome-style keep-alive).
  */
 export function SurfaceBody() {
+  // The slot's layout order: the fallback default and "the first other mode".
+  // Not known yet is a state, never the raw registration order: nothing below
+  // — the tabs, and above all the published placement capabilities — exists
+  // until it is. Publishing a capability set derived from a partial order would
+  // make the theme's root scope "known" on a wrong answer.
+  const order = useSlotOrder(Surface.Placement);
+  switch (order.status) {
+    case "loading":
+      return (
+        <Center className="size-full">
+          <Loading variant="spinner" label="Loading…" />
+        </Center>
+      );
+    case "error":
+      // The last-known layout keeps the SAME element as the ready arm, so a
+      // failed refresh never remounts the open tabs.
+      return order.stale === undefined ? (
+        <Center className="size-full">
+          <ResourceErrorInline
+            error={order.error}
+            refetch={order.refetch}
+            variant="block"
+            subject="the surface layout"
+          />
+        </Center>
+      ) : (
+        <SurfaceBodyReady sorted={order.stale} />
+      );
+    case "ready":
+      return <SurfaceBodyReady sorted={order.data} />;
+  }
+}
+
+/** The surface once its placement order is known — see {@link SurfaceBody}. */
+function SurfaceBodyReady({
+  sorted,
+}: {
+  /** The `Surface.Placement` contributions, in the slot's layout order. */
+  sorted: readonly PlacementDef[];
+}) {
   const {
     tabs,
     focusedTabId,
@@ -88,8 +131,6 @@ export function SurfaceBody() {
     titles,
   } = useTabs();
 
-  // The slot's layout order: the fallback default and "the first other mode".
-  const sorted = useSlotOrder(Surface.Placement);
   const byId = useMemo(() => {
     const m = new Map<string, PlacementDef>();
     for (const d of sorted) m.set(d.id, d);

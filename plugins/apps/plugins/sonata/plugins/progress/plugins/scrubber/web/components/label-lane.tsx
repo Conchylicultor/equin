@@ -1,4 +1,8 @@
 import { useSlotOrder } from "@plugins/primitives/plugins/slot-render/web";
+import {
+  foldResource,
+  mapResource,
+} from "@plugins/primitives/plugins/live-state/web";
 import { Fragment, useMemo } from "react";
 import type { ReactNode } from "react";
 import type { Score } from "@plugins/apps/plugins/sonata/plugins/score/core";
@@ -13,7 +17,7 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { hoverRevealGroup } from "@plugins/primitives/plugins/hover-reveal/web";
 import { SonataProgress } from "../slots";
 import { LABEL_LANE_HEIGHT } from "../rail-geometry";
-import { groupLabels, type LaneEntry } from "../lane-layout";
+import { groupLabels, type LaneEntry, type LaneGroup } from "../lane-layout";
 
 type LaneItem = { key: string; node: ReactNode; align?: "end" };
 
@@ -52,20 +56,38 @@ export function LabelLane({
   onHoverBeat: (beat: number | null) => void;
 }) {
   const contributions = useSlotOrder(SonataProgress.Label);
-  const groups = useMemo(() => {
-    const entries: LaneEntry<LaneItem>[] = contributions.flatMap((c, index) =>
-      c.labels(score).map((l) => ({
-        beat: l.beat,
-        contributorIndex: index,
-        item: { key: `${c.id}:${l.key}`, node: l.node, align: l.align },
-      })),
-    );
-    return groupLabels(entries, endBeat);
-  }, [contributions, score, endBeat]);
+  // The contributors' order decides which label leads a same-beat group, so
+  // the lane stays empty (its height still reserved, marked busy) until that
+  // order is known — never drawn in raw registration order and then reshuffled.
+  const groups = useMemo(
+    (): LaneGroup<LaneItem>[] | null =>
+      foldResource(
+        mapResource(contributions, (list) => {
+          const entries: LaneEntry<LaneItem>[] = list.flatMap((c, index) =>
+            c.labels(score).map((l) => ({
+              beat: l.beat,
+              contributorIndex: index,
+              item: { key: `${c.id}:${l.key}`, node: l.node, align: l.align },
+            })),
+          );
+          return groupLabels(entries, endBeat);
+        }),
+        {
+          loading: (): LaneGroup<LaneItem>[] | null => null,
+          error: (_error, stale) => stale ?? null,
+          ready: (g) => g,
+        },
+      ),
+    [contributions, score, endBeat],
+  );
 
   return (
-    <div className="relative" style={{ height: LABEL_LANE_HEIGHT }}>
-      {groups.map((g) => {
+    <div
+      className="relative"
+      style={{ height: LABEL_LANE_HEIGHT }}
+      aria-busy={groups === null ? true : undefined}
+    >
+      {groups?.map((g) => {
         const from = beatToFraction(g.beat);
         const startItems = g.items.filter((it) => it.align !== "end");
         const endItems = g.items.filter((it) => it.align === "end");

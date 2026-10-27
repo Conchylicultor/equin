@@ -15,6 +15,12 @@ import { useBlockEditor } from "../block-editor-context";
 import { useInsertableBlocks, BlockTypeList } from "./block-type-list";
 import { blockEntries } from "../internal/block-sections";
 import { symbol } from "@plugins/ui/plugins/icons/core";
+import {
+  foldResource,
+  mapResource,
+  ResourceErrorInline,
+} from "@plugins/primitives/plugins/live-state/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
 const contentCopyIcon = symbol("content-copy");
@@ -100,15 +106,19 @@ export function BlockActionsMenu({
   // Turn-into stays flat: it keeps its own "Turn into" eyebrow (below), so it
   // passes one label-less section and ignores the config's group boundaries
   // while still inheriting the flattened config order.
+  // A read: the block types' order is not known until the layout loads, and
+  // the list shows a loading state meanwhile, never the raw registration order.
   const sections = useMemo(
     () =>
-      blockEntries([
-        {
-          // A `wrapOnConvert` target mints a container and reparents the block
-          // into it — for the zoom root, a move out of its own view.
-          blocks: isScopeRoot ? blocks.filter((b) => !b.wrapOnConvert) : blocks,
-        },
-      ]),
+      mapResource(blocks, (list) =>
+        blockEntries([
+          {
+            // A `wrapOnConvert` target mints a container and reparents the block
+            // into it — for the zoom root, a move out of its own view.
+            blocks: isScopeRoot ? list.filter((b) => !b.wrapOnConvert) : list,
+          },
+        ]),
+      ),
     [blocks, isScopeRoot],
   );
 
@@ -139,6 +149,25 @@ export function BlockActionsMenu({
     run();
     close();
   };
+
+  const turnIntoList = (
+    listed: ReturnType<typeof blockEntries>,
+  ): ReactElement => (
+    <BlockTypeList
+      sections={listed}
+      activeIndex={activeIndex}
+      onHoverIndex={setActiveIndex}
+      // `target`, not `handle`: the container arm above already binds
+      // `handle` to the OWNER's handle, and a parameter shadowing it here
+      // would read as the same value while being the conversion target.
+      onSelect={({ block: target }) => {
+        // Only the target's NON-text defaults: the block keeps its id,
+        // hence its content doc, so `convertTo` carries its text over.
+        api.convertTo(target.type, target.emptyRowData());
+        close();
+      }}
+    />
+  );
 
   return (
     <ControlPanelPopover
@@ -229,20 +258,21 @@ export function BlockActionsMenu({
         </>
       ) : convertible ? (
         <ControlPanel.Section label="Turn into">
-          <BlockTypeList
-            sections={sections}
-            activeIndex={activeIndex}
-            onHoverIndex={setActiveIndex}
-            // `target`, not `handle`: the container arm above already binds
-            // `handle` to the OWNER's handle, and a parameter shadowing it here
-            // would read as the same value while being the conversion target.
-            onSelect={({ block: target }) => {
-              // Only the target's NON-text defaults: the block keeps its id,
-              // hence its content doc, so `convertTo` carries its text over.
-              api.convertTo(target.type, target.emptyRowData());
-              close();
-            }}
-          />
+          {foldResource(sections, {
+            loading: () => <Loading variant="rows" count={6} />,
+            error: (error, stale) =>
+              stale === undefined ? (
+                <ResourceErrorInline
+                  error={error}
+                  refetch={sections.refetch}
+                  variant="inline"
+                  subject="the block types"
+                />
+              ) : (
+                turnIntoList(stale)
+              ),
+            ready: turnIntoList,
+          })}
           {/* The server-backed targets (`turnIntoZone`): the ones offered on
               every block, and the ones written for this block's type. */}
           {turnIntoZone ? (

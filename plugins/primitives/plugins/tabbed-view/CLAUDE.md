@@ -29,6 +29,9 @@ Post-`unified-view-switcher` roles:
   - Uses:
     - `primitives/css/column.Column`
     - `primitives/css/spacing.Stack`
+    - `primitives/live-state.foldResource`
+    - `primitives/live-state.ResourceErrorInline`
+    - `primitives/loading.Loading`
     - `primitives/slot-render.defineRenderSlot`
     - `primitives/slot-render.renderIsolated`
     - `primitives/slot-render.RenderSlot`

@@ -15,7 +15,7 @@ document also holds the GLOBAL `colorMode`; an app's light/dark is its own
 ## Light/dark: one scheme per document, chosen by the app owning it
 
 `<html>.dark` is one class per page, so a document wears ONE scheme: that of
-the scope owning `:root` — the focused full-surface app (`useRootThemeScope`),
+the scope owning `:root` — the focused full-surface app (`useRootThemeScopeState`),
 or the desktop when no single app fills the surface. What that scope wears is
 `effectiveColorMode` (`core/config.ts`), the one resolution both runtimes call:
 
@@ -27,10 +27,12 @@ or the desktop when no single app fills the surface. What that scope wears is
 3. `global` = the base document's `colorMode` (dark by default).
 
 `system` follows `prefers-color-scheme` live. Readers: `useColorModeSetting`
-(every layer, for the root scope), `useColorModeSettingFor(appId)` (a named
-app — the customizer), `useResolvedColorMode` / `useColorMode` (light|dark —
-prop-themed widgets). Writers: `useSetColorMode` (the root scope: the focused
-app's override, or the global with no app), `useSetAppColorMode(appId)`,
+(every layer, for the root scope, with its writer `setColorMode` — the focused
+app's override, or the global with no app; a state, `{ known: false }` until
+the surface says which app owns `:root`, so no control shows or writes the
+desktop's setting meanwhile), `useColorModeSettingFor(appId)` (a named app —
+the customizer), `useResolvedColorMode` / `useColorMode` (light|dark —
+prop-themed widgets). Other writers: `useSetAppColorMode(appId)`,
 `useSetGlobalColorMode`. The class applier waits while the surface has not yet
 said which app owns `:root` (`useRootThemeScopeState`), so it never paints the
 desktop's answer over the server's first frame. A second app visible at once
@@ -176,10 +178,23 @@ desktop's when nothing is focused or the focus is a floating window).
 visible app with its own theme document, `SubThemeStyles` one sparse
 `[data-theme-scope="sub:<id>"]` block per sub-theme fragment, and
 `FixedThemeStyles` a complete `[data-theme-scope="fixed:<id>"]` block per
-fixed theme. Nothing is
-injected while a resident
-source loads, so the CSS the server painted into the HTML stays up. Picking a
-theme is `theme-gallery`'s job.
+fixed theme. Nothing is injected while a resident source loads, so the CSS
+the server painted into the HTML stays up.
+
+Nor while the root scope is not known (`useRootThemeScopeState` →
+`{ known: false }`: the surface has not registered its placements yet). The
+server rooted `:root` on the app the page opens; guessing the desktop there
+was a visible flash on the website. The `:root` block and every owning app's
+scoped block are mounted **held** — the same `ScopeStyles` element, adopting
+and claiming the server's `<style>` by id but writing nothing, faults
+unreported — and flip to painting in place once the root is known (the root
+app's scoped block then unmounts). Never a different element for held vs
+known: unmounting a `GroupStyle` removes its `<style>`, the server's CSS with
+it. Every surface body registers placements — `apps-core/surface`, the
+`AppTabsBody` fallback (docked only), and AppsLayout's error outcomes (an empty
+set: no app owns the surface) — so the window always closes.
+
+Picking a theme is `theme-gallery`'s job.
 
 ## The first frame is painted by the server
 
@@ -211,7 +226,7 @@ exactly.
 
 ## Plugin reference
 
-- Description: Paints each scope's selected theme: the token-group, theme and theme-source slots, the theme selection config, the injector that resolves one theme per scope into CSS variables, and the document's light/dark: the root scope's effective color mode (the app's declared default from defineApp, the user's per-app override, else the global setting), read and written through useColorModeSetting / useSetColorMode. Registers the theme selection and per-app color-mode configs, and paints the first frame: renders every app's theme CSS into the SPA shell's head (DocumentHead.Fragment) from the generated theme declarations, the ThemeEngine.Source themes, the selections and each app's effective light/dark (its declared default and the user's override), re-rendered when any of them changes.
+- Description: Paints each scope's selected theme: the token-group, theme and theme-source slots, the theme selection config, the injector that resolves one theme per scope into CSS variables, and the document's light/dark: the root scope's effective color mode (the app's declared default from defineApp, the user's per-app override, else the global setting), read and written through useColorModeSetting (a state: not known until the surface says which app owns :root). Registers the theme selection and per-app color-mode configs, and paints the first frame: renders every app's theme CSS into the SPA shell's head (DocumentHead.Fragment) from the generated theme declarations, the ThemeEngine.Source themes, the selections and each app's effective light/dark (its declared default and the user's override), re-rendered when any of them changes.
 - Web:
   - Slots:
     - `ThemeEngine.VariantGroup`
@@ -239,7 +254,7 @@ exactly.
     - `ThemeEngine.Theme` "Default"
   - Uses:
     - `apps-core.Apps`
-    - `apps-core/theme-scope.useRootThemeScope`
+    - `apps-core/theme-scope.RootThemeScopeState`
     - `apps-core/theme-scope.useRootThemeScopeState`
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`
@@ -255,6 +270,7 @@ exactly.
     - `ColorModeSetting`
     - `ConfiguredColorMode`
     - `ResolvedThemeState`
+    - `RootColorModeSetting`
     - `ThemeResolutionFault`
     - `ThemeSelection`
     - `ThemeSelectionsState`
@@ -276,7 +292,6 @@ exactly.
     - `useResolvedColorMode`
     - `useResolvedTheme`
     - `useSetAppColorMode`
-    - `useSetColorMode`
     - `useSetGlobalColorMode`
     - `useThemes`
     - `useThemeScopeId`

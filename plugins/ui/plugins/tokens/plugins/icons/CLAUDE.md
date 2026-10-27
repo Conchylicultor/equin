@@ -42,7 +42,8 @@ primitive.
     - `Icons.Root` → `IconThemeBridge`
   - Uses:
     - `apps-core.Apps`
-    - `apps-core/theme-scope.useRootThemeScope`
+    - `apps-core/theme-scope.RootThemeScopeState`
+    - `apps-core/theme-scope.useRootThemeScopeState`
     - `config_v2.useScopeMembership`
     - `primitives/css/row.Row`
     - `primitives/css/spacing.Stack`

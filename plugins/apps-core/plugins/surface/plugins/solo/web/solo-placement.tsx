@@ -29,7 +29,7 @@ export const soloDef: PlacementDef = {
   default: true,
   frame: "viewport",
   // A single app fills the viewport, so `:root` carries the app's theme (like
-  // docked, unlike floating's multi-window backdrop) — see useRootThemeScope.
+  // docked, unlike floating's multi-window backdrop) — see useRootThemeScopeState.
   themeScope: "app",
   ownsChrome: true,
   // No frame chrome: a fullscreen tab is edge to edge, and its canvas comes from

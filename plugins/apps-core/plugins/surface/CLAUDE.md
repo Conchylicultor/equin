@@ -14,23 +14,20 @@
   - Contributes:
     - `Apps.Surface` "Surface" → `SurfaceBody`
     - `ActionBar.ViewOption` → `ActionBarPlacementControl`
-  - Uses:
-    - `apps-core.Apps`
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps-core/tabs` ×5
+    - `primitives/live-state` ×3
+    - `primitives/css/toggle-chip` ×2
+    - `primitives/slot-render` ×2
     - `apps-core/tab-surface.TabSurface`
-    - `apps-core/tabs.registerPlacementCapabilities`
-    - `apps-core/tabs.setSurfaceMode`
-    - `apps-core/tabs.Tab`
-    - `apps-core/tabs.useSurfaceMode`
-    - `apps-core/tabs.useTabs`
+    - `apps-core.Apps`
+    - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
     - `primitives/css/control-panel.ControlPanel`
     - `primitives/css/theme-boundary.Theme`
-    - `primitives/css/toggle-chip.SegmentedControl`
-    - `primitives/css/toggle-chip.SegmentedOption`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/viewport-overlay.useViewportEscape`
-    - `primitives/slot-render.defineRenderSlot`
-    - `primitives/slot-render.useSlotOrder`
+    - `primitives/loading.Loading`
     - `shell/action-bar.ActionBar`
     - `ui/icons.Icon`
   - Exports (types):
@@ -42,7 +39,9 @@
     - `Surface`
     - `usePlacementStyle`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/color-palette --background`
+  - Uses tokens:
+    - `ui/tokens/color-palette --background`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps-core/surface/docked`
     - `apps-core/surface/solo`

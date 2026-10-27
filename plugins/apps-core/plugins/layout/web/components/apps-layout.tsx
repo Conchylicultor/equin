@@ -37,6 +37,8 @@ import {
   usePlacementCapabilities,
   useSurfaceMode,
   useAppLinkProps,
+  registerPlacementCapabilities,
+  type PlacementCapabilities,
 } from "@plugins/apps-core/plugins/tabs/web";
 import { AppTabsBody } from "@plugins/apps-core/plugins/tab-surface/web";
 import { isChromelessDocument } from "@plugins/primitives/plugins/embed/web";
@@ -216,12 +218,39 @@ export function AppsLayout() {
 }
 
 /**
+ * The placement capabilities of a surface no app fills: no placement at all,
+ * so no app owns `:root` and the page wears the desktop's theme.
+ */
+const NO_PLACEMENTS: PlacementCapabilities = {
+  defaultId: "",
+  ids: new Set(),
+  newTabFollows: new Set(),
+  appThemeScope: new Set(),
+  ownsChrome: new Set(),
+  allowsEmpty: new Set(),
+};
+
+/**
+ * Registers {@link NO_PLACEMENTS} while an error surface (load error, home
+ * missing, not found) stands where the surface body would: without it, which
+ * app owns `:root` would stay unknown and the theme held on the server's first
+ * frame. Not for the `loading` outcome — a deferred app is about to fill the
+ * surface and own `:root`. These surfaces and the body are branches of one
+ * conditional, so only one registration sits at a time (React runs the
+ * outgoing branch's cleanup before the incoming one's effect).
+ */
+function useNoAppOwnsSurface(): void {
+  useEffect(() => registerPlacementCapabilities(NO_PLACEMENTS), []);
+}
+
+/**
  * Shown in the tabs area when the default-app redirect is suppressed because an
  * app shell failed to load (settled + unhealthy). We never destroy the URL in
  * this state, so the user gets a plain Retry (full reload) instead of a silent
  * jump to the homepage. Mirrors the route-fallback plugin's app-load-error copy.
  */
 function AppLoadErrorSurface() {
+  useNoAppOwnsSurface();
   return (
     <Center className="size-full">
       <Stack gap="sm" align="center">
@@ -246,6 +275,7 @@ function AppLoadErrorSurface() {
  * some other app.
  */
 function HomeMissingSurface({ id }: { id: string }) {
+  useNoAppOwnsSurface();
   return (
     <Center className="size-full">
       <Stack gap="sm" align="center" className="max-w-md">
@@ -285,6 +315,7 @@ function NoSuchRouteSurface({
   homePath: string | undefined;
   homeName: string | undefined;
 }) {
+  useNoAppOwnsSurface();
   const inAppLinkProps = useAppLinkProps();
   return (
     <Center className="size-full">

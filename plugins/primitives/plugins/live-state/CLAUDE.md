@@ -1199,22 +1199,23 @@ keeps every row's identity rather than re-minting each moved row.
   - Uses tokens:
     - `ui/tokens/color-palette --destructive`
     - `ui/tokens/shadow --shadow`
-  - Imported by: 294 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×80
+  - Imported by: 303 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×81
     - `conversations` ×50
     - `debug` ×29
     - `ui` ×25
     - `tasks` ×23
     - `page` ×16
-    - `primitives` ×12
+    - `primitives` ×16
     - `infra` ×8
     - `active-data` ×7
     - `build` ×7
     - `plugin-meta` ×5
     - `auth` ×4
+    - `apps-core` ×3
     - `integrations` ×3
     - `review` ×3
-    - `apps-core` ×2
+    - `shell` ×3
     - `audience` ×2
     - `config_v2` ×2
     - `framework` ×2
@@ -1226,9 +1227,9 @@ keeps every row's identity rather than re-minting each moved row.
     - `history/dialog`
     - `menu-bar/app-grid`
     - `network/live`
+    - `reorder`
     - `screenshot`
     - `search/quick-find`
-    - `shell/notifications`
 - Exemptions:
   - Exempts itself from:
     - `endpoints/no-raw-web-fetch` — `web/use-resource.ts` (sanctioned)

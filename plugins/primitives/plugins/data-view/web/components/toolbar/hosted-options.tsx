@@ -27,7 +27,7 @@ export function HostedOptions({
   /** `false`: visible at rest — the frame's `forms.options: "visible"`. */
   revealOnHover?: boolean;
 }): ReactNode {
-  const { controls, activeCount } = useToolbarControls();
+  const controls = useToolbarControls();
   const searching = query.length > 0;
   return (
     <CompactControls
@@ -40,7 +40,6 @@ export function HostedOptions({
         />
       }
       controls={controls}
-      activeCount={activeCount + (searching ? 1 : 0)}
       searching={searching}
       revealOnHover={revealOnHover}
     />

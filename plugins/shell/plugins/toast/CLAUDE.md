@@ -20,6 +20,7 @@
     - `primitives/css/z-layers/stack.defineZLayer`
     - `primitives/css/z-layers/stack.useZStackIndex`
     - `primitives/dom/element-size.useElementSize`
+    - `primitives/live-state.foldResource`
     - `primitives/select-scope.ContentScope`
     - `ui/icons.Icon`
   - Exports (types):

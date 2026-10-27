@@ -1,7 +1,29 @@
 import { appThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
-import { useTabs } from "@plugins/apps-core/plugins/tabs/web";
+import { useEffect } from "react";
+import {
+  registerPlacementCapabilities,
+  useTabs,
+  type PlacementCapabilities,
+} from "@plugins/apps-core/plugins/tabs/web";
 import { TabSurface } from "./tab-surface";
+
+/**
+ * What this body is, in the placement registry's words: one docked, full-area
+ * mode (the id `apps-core/surface/docked` registers too), which wears the
+ * focused app's theme — so the focused app owns `:root`, as the server painted
+ * it. Without a registration nobody could ever say which app owns `:root` in a
+ * composition with no `Apps.Surface` (the website), and the theme would stay
+ * held on the server's first frame for good.
+ */
+const DOCKED_ONLY: PlacementCapabilities = {
+  defaultId: "docked",
+  ids: new Set(["docked"]),
+  newTabFollows: new Set(),
+  appThemeScope: new Set(["docked"]),
+  ownsChrome: new Set(),
+  allowsEmpty: new Set(),
+};
 
 /**
  * The keep-alive tab surface: every open tab mounted at once, only the focused
@@ -10,9 +32,14 @@ import { TabSurface } from "./tab-surface";
  * path, so background tabs hold their route in memory while the focused tab
  * mirrors to the URL. This is the `body` the rail-framing wraps — it sits to the
  * right of the rail, both below the top-level tab bar.
+ *
+ * The built-in fallback `apps-core/layout` renders when no `Apps.Surface` is
+ * contributed, so it registers its own placement capabilities (docked only)
+ * for as long as it is mounted, exactly like the surface body it stands in for.
  */
 export function AppTabsBody() {
   const { tabs, focusedTabId } = useTabs();
+  useEffect(() => registerPlacementCapabilities(DOCKED_ONLY), []);
   return (
     // `transform-gpu` makes this a containing block for `position: fixed`
     // descendants, so an app shell's viewport-pinned sidebar (shadcn
@@ -26,7 +53,7 @@ export function AppTabsBody() {
         return (
           // Each tab is its own theme boundary: its app scope (so a forked app's
           // content is themed by the same central scope block the real surface
-          // uses; unforked apps simply inherit the desktop `:root`), the portal
+          // uses; unforked apps simply inherit `:root`), the portal
           // forward that carries it to popovers opened out of the subtree, and
           // the app's own canvas under it.
           //

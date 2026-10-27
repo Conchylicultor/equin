@@ -18,12 +18,43 @@ import {
 import { runsWithoutSpan } from "../internal/runs-without-span";
 import { flattenEntries, type InsertEntry } from "../internal/block-sections";
 import {
+  foldResource,
+  ResourceErrorInline,
+  type ResourceError,
+} from "@plugins/primitives/plugins/live-state/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
+import {
   BlockTypeList,
   filterInsertEntries,
   useInsertMenuSections,
 } from "./block-type-list";
+import type { InsertSection } from "../internal/block-sections";
 
 const TRIGGER = "/";
+
+const NO_SECTIONS: InsertSection[] = [];
+
+/** What the menu draws: its sections once known (the last-known ones on a failed refresh). */
+type InsertMenuList =
+  | { kind: "loading" }
+  | { kind: "error"; error: ResourceError; refetch: () => Promise<void> }
+  | { kind: "ready"; sections: InsertSection[] };
+
+function useInsertMenuList(blockId: string): InsertMenuList {
+  const result = useInsertMenuSections(blockId);
+  return useMemo(
+    () =>
+      foldResource(result, {
+        loading: (): InsertMenuList => ({ kind: "loading" }),
+        error: (error, stale): InsertMenuList =>
+          stale === undefined
+            ? { kind: "error", error, refetch: result.refetch }
+            : { kind: "ready", sections: stale },
+        ready: (sections): InsertMenuList => ({ kind: "ready", sections }),
+      }),
+    [result],
+  );
+}
 
 /**
  * Unified, Notion-style block menu built on the shared caret-trigger primitive.
@@ -53,7 +84,10 @@ const TRIGGER = "/";
  */
 export function BlockMenuPlugin({ blockId }: { blockId: string }) {
   const [lexicalEditor] = useLexicalComposerContext();
-  const grouped = useInsertMenuSections(blockId);
+  const listed = useInsertMenuList(blockId);
+  // The keyboard's index space: no rows until the list is known, so arrows and
+  // Enter are not the menu's while it loads (see `useCaretMenu`'s gates).
+  const grouped = listed.kind === "ready" ? listed.sections : NO_SECTIONS;
   const flatAll = useMemo(() => flattenEntries(grouped), [grouped]);
   const {
     blockMenuDraftId,
@@ -174,7 +208,9 @@ export function BlockMenuPlugin({ blockId }: { blockId: string }) {
     {
       itemCount: flat.length,
       onCommit: (i) => handleSelect(flat[i]!),
-      surfaceWhen: "interactive",
+      // Known: the surface shows only while a row matches. Loading or failed:
+      // it shows whenever the menu is open, so the state is visible.
+      surfaceWhen: listed.kind === "ready" ? "interactive" : "open",
     },
   );
 
@@ -197,12 +233,23 @@ export function BlockMenuPlugin({ blockId }: { blockId: string }) {
         padding="xs"
         maxHeight="lg"
       >
-        <BlockTypeList
-          sections={sections}
-          activeIndex={activeIndex}
-          onCommit={commit}
-          onHoverIndex={setActiveIndex}
-        />
+        {listed.kind === "loading" ? (
+          <Loading variant="rows" count={6} />
+        ) : listed.kind === "error" ? (
+          <ResourceErrorInline
+            error={listed.error}
+            refetch={listed.refetch}
+            variant="inline"
+            subject="the block types"
+          />
+        ) : (
+          <BlockTypeList
+            sections={sections}
+            activeIndex={activeIndex}
+            onCommit={commit}
+            onHoverIndex={setActiveIndex}
+          />
+        )}
       </CaretTriggerMenu>
     </>
   );

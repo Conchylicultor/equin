@@ -28,6 +28,7 @@ import type { HealthReportRow, HealthStatus, StatusRow } from "../../core";
 import { HealthReport } from "../slots";
 import { HealthReportButton } from "../components/health-report-button";
 import { symbol } from "@plugins/ui/plugins/icons/core";
+import { SlotRender } from "@plugins/primitives/plugins/slot-render/web";
 import type { Activity } from "@plugins/primitives/plugins/css/plugins/activity-ring/web";
 
 const accountTreeIcon = symbol("account-tree");
@@ -39,7 +40,11 @@ afterEach(() => {
   console.error = consoleError;
 });
 
-function renderReport(rows: HealthReportRow[], activities?: Activity[]) {
+function renderReport(
+  rows: HealthReportRow[],
+  activities?: Activity[],
+  extraPlugins: LoadedPlugin[] = [],
+) {
   const plugin = {
     id: "shell.health-report",
     description: "health report fixture",
@@ -49,7 +54,7 @@ function renderReport(rows: HealthReportRow[], activities?: Activity[]) {
     contributions: rows.map((row) => HealthReport.Row(row)),
   } as unknown as LoadedPlugin;
   return render(
-    <PluginProvider plugins={[plugin]}>
+    <PluginProvider plugins={[plugin, ...extraPlugins]}>
       <HealthReportButton activities={activities} />
     </PluginProvider>,
   );
@@ -355,5 +360,31 @@ describe("the report", () => {
     renderReport([info("worktree")]);
     expect(button().dataset.health).toBe("ok");
     expect(button().textContent).toBe("");
+  });
+
+  it("is a loading state — no verdict, no rows — while the row order is not known", async () => {
+    // A layout engine whose order for every slot is still loading.
+    const pendingOrder = {
+      id: "health-report-test-pending-order",
+      description: "a slot order that never settles",
+      contributions: [
+        SlotRender.Order({
+          useOrder: () => ({
+            status: "loading" as const,
+            refetch: () => Promise.resolve(),
+          }),
+        }),
+      ],
+    } as unknown as LoadedPlugin;
+    renderReport(
+      [status("a", { state: "attention", summary: "look-summary" })],
+      undefined,
+      [pendingOrder],
+    );
+    await openReport();
+    const dialog = screen.getByRole("dialog");
+    expect(dialog.querySelector('[aria-busy="true"]')).not.toBeNull();
+    // Neither the verdict (it derives from the rows) nor any row is drawn.
+    expect(screen.queryByText("look-summary")).toBeNull();
   });
 });

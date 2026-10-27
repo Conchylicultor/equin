@@ -6,12 +6,20 @@ import { defineInstallSink } from "@plugins/primitives/plugins/scope/plugins/ins
  * that follow the focused tab on `+` / wear the app theme — without `apps` ever
  * importing the `surface` plugin (which would cycle: `surface` → `apps`).
  *
- * This registry is **owned by `apps` but written by `surface`**: `surface`'s
- * body derives the capabilities from its `Surface.Placement` contributions and
- * calls {@link registerPlacementCapabilities}. The dependency direction stays
- * `surface → apps`. Until the first registration the sink is empty, which every
- * consumer reads as the inert answer (`""` / `false`) — an accepted one-frame
- * seam on the very first commit, before any user interaction.
+ * This registry is **owned by `apps` but written by whichever body fills the
+ * surface**, from an effect, for as long as it is mounted:
+ *
+ * - `surface`'s body derives the capabilities from its `Surface.Placement`
+ *   contributions (the dependency direction stays `surface → apps`);
+ * - `tab-surface`'s `AppTabsBody`, the docked-only fallback when no
+ *   `Apps.Surface` is contributed, registers docked alone;
+ * - `layout`'s error surfaces (load error, home missing, not found) register an
+ *   EMPTY set — no placement, so no app owns the surface.
+ *
+ * They are alternatives in one conditional, so one sits at a time. Until the
+ * first registration the sink is empty (`null`): the predicates read it as the
+ * inert answer (`""` / `false`), and `usePlacementCapabilities` hands it on as
+ * "not known yet" — which app owns `:root` waits for it (`theme-scope`).
  */
 export interface PlacementCapabilities {
   /** The id of the default surface mode (the one the surface boots into). */
@@ -36,7 +44,7 @@ export interface PlacementCapabilities {
  * which wear the app theme), identical across every surface and window — not
  * per-surface state — so it is a sink, not a scoped store.
  *
- * Empty until `surface`'s body registers, which happens in an EFFECT. Chrome
+ * Empty until the surface body registers, which happens in an EFFECT. Chrome
  * mounted in that same commit (the tab bar, the chrome theme scope) therefore
  * asks before the answer exists, which is why the render-path read is the
  * subscribed {@link usePlacementCapabilities} and the predicates below take the
@@ -44,7 +52,7 @@ export interface PlacementCapabilities {
  */
 const placementSink = defineInstallSink<PlacementCapabilities>({
   name: "tabs.placement-capabilities",
-  what: "the placement capabilities (registered by apps-core/surface's body from its Surface.Placement contributions)",
+  what: "the placement capabilities (registered by whichever body fills the surface: apps-core/surface's from its Surface.Placement contributions, tab-surface's docked-only AppTabsBody, or apps-core/layout's error surfaces as an empty set)",
 });
 
 /**

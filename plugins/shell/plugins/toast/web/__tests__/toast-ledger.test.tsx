@@ -174,6 +174,25 @@ describe("the toast ledger is the set of mounted toasts", () => {
     expect(screen.getByText("from an effect")).toBeTruthy();
   });
 
+  it("shows a toast fired before the toaster mounted, once it mounts", async () => {
+    // The host mounts sonner only once its z-layer's place in the stack is
+    // known (toaster-host.tsx), so a toast can be fired while no `<Toaster/>`
+    // exists yet. It must not be lost: sonner 2.0.8's `Observer.subscribe`
+    // replays every still-active toast to a new subscriber. If an upgrade drops
+    // that replay, this fails and the host must hold a queue instead.
+    const { rerender } = render(<Harness toaster={false} />);
+    showToast({ description: "before the host" });
+    await flushToasts();
+    expect(mountedToasts()).toHaveLength(0);
+
+    rerender(<Harness toaster />);
+    await flushToasts();
+
+    expect(mountedToasts()).toHaveLength(1);
+    expect(ledgerCount()).toBe(1);
+    expect(screen.getByText("before the host")).toBeTruthy();
+  });
+
   it("defers the enqueue by exactly one microtask", async () => {
     // The deferral, observed directly at sonner's own boundary rather than
     // through the DOM: nothing reaches `ToastState` inside the caller's stack.

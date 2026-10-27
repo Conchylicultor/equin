@@ -2,7 +2,10 @@ import { useMemo } from "react";
 import { useScopeMembership } from "@plugins/config_v2/web";
 import { foldResource } from "@plugins/primitives/plugins/live-state/web";
 import { Apps } from "@plugins/apps-core/web";
-import { useRootThemeScope } from "@plugins/apps-core/plugins/theme-scope/web";
+import {
+  useRootThemeScopeState,
+  type RootThemeScopeState,
+} from "@plugins/apps-core/plugins/theme-scope/web";
 import {
   appThemeScope,
   fixedThemeScope,
@@ -13,6 +16,7 @@ import {
   themeSelectionConfig,
   type FixedTheme,
   type SubTheme,
+  type TokenGroupFragment,
 } from "@plugins/ui/plugins/theme-engine/core";
 import {
   ThemeEngine,
@@ -39,16 +43,19 @@ import { iconsGroup, readIconTokens } from "../../core";
  *   the website's page, sits over the root.)
  *
  * A scope whose theme is still loading publishes nothing: its icons draw in
- * the global default style meanwhile, the same glyphs in the same box.
+ * the global default style meanwhile, the same glyphs in the same box. So does
+ * the root — and every sub-theme, resolved over it — before the surface has
+ * said which app owns `:root`: publishing the desktop's style meanwhile would
+ * draw the wrong family for a frame on a page an app opens.
  */
 export function IconThemeBridge() {
-  const rootScope = useRootThemeScope();
+  const root = useRootThemeScopeState();
   const apps = Apps.App.useContributions();
   const fixedThemes = ThemeEngine.FixedTheme.useContributions();
   const subThemes = ThemeEngine.SubTheme.useContributions();
   return (
     <>
-      <SelectedScope themeScope={rootScope} publishAs={undefined} />
+      <RootScope root={root} />
       {apps.map((app) => (
         <AppScope key={app.id} appId={app.id} />
       ))}
@@ -56,10 +63,15 @@ export function IconThemeBridge() {
         <FixedScope key={fixed.id} fixed={fixed} />
       ))}
       {subThemes.map((sub) => (
-        <SubScope key={sub.id} sub={sub} rootScope={rootScope} />
+        <SubScope key={sub.id} sub={sub} root={root} />
       ))}
     </>
   );
+}
+
+function RootScope({ root }: { root: RootThemeScopeState }) {
+  if (!root.known) return null;
+  return <SelectedScope themeScope={root.scopeId} publishAs={undefined} />;
 }
 
 function AppScope({ appId }: { appId: string }) {
@@ -111,19 +123,28 @@ function FixedScope({ fixed }: { fixed: FixedTheme }) {
   return <Publish scope={fixedThemeScope(fixed)} values={values} />;
 }
 
-function SubScope({
+function SubScope({ sub, root }: { sub: SubTheme; root: RootThemeScopeState }) {
+  const fragment = sub.fragments.find((f) => f.groupId === iconsGroup.id);
+  if (fragment === undefined || !root.known) return null;
+  return (
+    <KnownSubScope sub={sub} fragment={fragment} rootScope={root.scopeId} />
+  );
+}
+
+function KnownSubScope({
   sub,
+  fragment,
   rootScope,
 }: {
   sub: SubTheme;
+  fragment: TokenGroupFragment;
   rootScope: string | undefined;
 }) {
-  const fragment = sub.fragments.find((f) => f.groupId === iconsGroup.id);
   const mode = useResolvedColorMode();
-  const root = useSelectedIconValues(rootScope);
-  if (fragment === undefined || root === null) return null;
+  const rootValues = useSelectedIconValues(rootScope);
+  if (rootValues === null) return null;
   const own = fragment[mode];
-  const values: Record<string, string> = { ...root };
+  const values: Record<string, string> = { ...rootValues };
   for (const [token, value] of Object.entries(own)) {
     if (value !== undefined) values[token] = value;
   }

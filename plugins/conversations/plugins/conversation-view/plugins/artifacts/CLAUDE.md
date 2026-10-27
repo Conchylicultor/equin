@@ -163,8 +163,8 @@ here.
     - `ConversationArtifacts.Kind` ← `conversations.conversation-view.artifacts.skill`
     - `ConversationArtifacts.Kind` ← `debug.browser-recordings`
   - Contributes: `Conversation.ActionBar` → `ArtifactsButton`
-  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/live-state` ×3
+  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/live-state` ×4
     - `primitives/css/text` ×2
     - `primitives/css/ui-kit` ×2
     - `reorder` ×2
@@ -177,6 +177,7 @@ here.
     - `primitives/css/row.Row`
     - `primitives/css/spacing.Stack`
     - `primitives/link-gesture.activationProps`
+    - `primitives/loading.Loading`
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/relative-time.formatRelativeTime`
     - `primitives/slot-render.defineRenderSlot`

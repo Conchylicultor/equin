@@ -51,13 +51,13 @@ setting. Neither forks the app's theme.
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.SegmentedControl`
+    - `primitives/loading.Loading`
     - `ui/icons.Icon`
     - `ui/theme-engine.ColorModeSetting`
     - `ui/theme-engine.useColorModeSetting`
     - `ui/theme-engine.useColorModeSettingFor`
     - `ui/theme-engine.useResolvedColorMode`
     - `ui/theme-engine.useSetAppColorMode`
-    - `ui/theme-engine.useSetColorMode`
     - `ui/theme-engine.useSetGlobalColorMode`
     - `ui/theme-engine/quick-theme.QuickTheme`
     - `ui/theme-engine/theme-customizer.ThemeCustomizer`

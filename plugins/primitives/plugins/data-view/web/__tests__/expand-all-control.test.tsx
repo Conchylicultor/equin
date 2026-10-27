@@ -58,8 +58,7 @@ function renderToolbar(expandAll: DataViewExpandAll | null) {
 }
 
 function FoldPanel() {
-  const { controls } = useToolbarControls();
-  return <CompactRootPanel controls={controls} />;
+  return <CompactRootPanel controls={useToolbarControls()} />;
 }
 
 afterEach(cleanup);

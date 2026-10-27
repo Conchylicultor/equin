@@ -1,4 +1,5 @@
 import { useSlotOrder } from "@plugins/primitives/plugins/slot-render/web";
+import type { SealContributions } from "@plugins/framework/plugins/web-sdk/core";
 import { type CSSProperties, type ReactNode, useMemo } from "react";
 import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import {
@@ -45,6 +46,7 @@ import { assertSurfaceChrome } from "../internal/surface-chrome-rules";
 import { useViewShortcuts } from "../internal/use-view-shortcuts";
 import { DataViewViewChip } from "./view-list";
 import { useOrphanViewTypeGuard } from "../internal/use-orphan-view-type-guard";
+import { pendingLayoutModel, slotLayout } from "../internal/slot-layout";
 import { hoverRevealGroup } from "@plugins/primitives/plugins/hover-reveal/web";
 import { CreatorsControl, hostedCreators } from "./creators-control";
 import { DataViewBody, DataViewSectionsBody } from "./data-view-body";
@@ -65,30 +67,60 @@ import { subItemsSettings } from "./sub-items-settings";
  * the sort/filter controllers, the toolbar, the view render).
  */
 export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
-  const contributions = useSlotOrder(DataViewSlots.View);
+  // The view types in their layout order. Not known yet (or failed with no
+  // layout ever known) → the shell's own not-ready placeholder: the model is
+  // never built over a stand-in empty list, which would report every
+  // configured row as an orphan type and then rewrite itself.
+  const layout = slotLayout(useSlotOrder(DataViewSlots.View));
+  if (layout.kind !== "known") {
+    return (
+      <DataViewHost props={props} viewModel={pendingLayoutModel(layout)} />
+    );
+  }
+  return <DataViewWithTypes props={props} contributions={layout.items} />;
+}
+
+/** The single-source host once its view types are known. */
+function DataViewWithTypes<TRow>(props: {
+  props: DataViewProps<TRow>;
+  contributions: readonly SealContributions<DataViewContribution>[];
+}): ReactNode {
+  const { contributions } = props;
   // The single-source path is ONE implicit source entry (`id`/`title`
   // undefined): every config row (all source-less) resolves through it, and the
   // add menu stays the flat single-group fast path.
-  const { views, viewOptions } = props;
+  const { views, viewOptions } = props.props;
   const onOrphanType = useOrphanViewTypeGuard(contributions);
   const entries = useMemo<ViewSourceEntry<DataViewContribution>[]>(
     () => [{ contributions, views, viewOptions, onOrphanType }],
     [contributions, views, viewOptions, onOrphanType],
   );
   const viewModel = useDataViewModel(
-    props.storageKey,
+    props.props.storageKey,
     entries,
-    props.defaultView,
-    props.pinnedView,
-    props.viewEdits === undefined
+    props.props.defaultView,
+    props.props.pinnedView,
+    props.props.viewEdits === undefined
       ? undefined
       : {
-          drafts: props.viewEdits.mode === "draft",
-          ...(props.viewEdits.home !== undefined
-            ? { home: props.viewEdits.home }
+          drafts: props.props.viewEdits.mode === "draft",
+          ...(props.props.viewEdits.home !== undefined
+            ? { home: props.props.viewEdits.home }
             : {}),
         },
   );
+  return <DataViewHost props={props.props} viewModel={viewModel} />;
+}
+
+/** `DataView`'s shell around its bodies, for any model — the not-ready one
+ *  the type gate hands it as much as the built one. */
+function DataViewHost<TRow>({
+  props,
+  viewModel,
+}: {
+  props: DataViewProps<TRow>;
+  viewModel: ViewModel;
+}): ReactNode {
   return (
     <DataViewShellFrame
       storageKey={props.storageKey}

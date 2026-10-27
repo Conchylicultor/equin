@@ -5,6 +5,11 @@ import {
   type DataViewPanelControl,
 } from "../../slots";
 import { useDataViewControls } from "../controls/controls-context";
+import {
+  mapLayout,
+  slotLayout,
+  type SlotLayout,
+} from "../../internal/slot-layout";
 
 /**
  * One applicable control, resolved for the active view: a panel control (its
@@ -15,6 +20,12 @@ import { useDataViewControls } from "../controls/controls-context";
 export type ToolbarControl =
   | { kind: "panel"; id: string; control: DataViewPanelControl }
   | { kind: "action"; id: string; action: DataViewControlAction };
+
+/** The applicable controls in layout order, and the badge's count. */
+export interface ToolbarControls {
+  controls: ToolbarControl[];
+  activeCount: number;
+}
 
 /**
  * The toolbar's control list and badge count, derived ONE way for every place
@@ -35,23 +46,28 @@ export type ToolbarControl =
  * here. An action narrows nothing and never counts. It does NOT include the
  * search query — callers that fold search into the same trigger add it.
  */
-export function useToolbarControls(): {
-  controls: ToolbarControl[];
-  activeCount: number;
-} {
+export function useToolbarControls(): SlotLayout<ToolbarControls> {
   const ctx = useDataViewControls();
-  const controls: ToolbarControl[] = [];
-  let activeCount = 0;
-  for (const c of useSlotOrder(DataViewSlots.Control)) {
-    if (c.action) {
-      const action = c.action(ctx);
-      if (action) controls.push({ kind: "action", id: c.id, action });
-      continue;
-    }
-    if (!(c.isApplicable?.(ctx) ?? true)) continue;
-    controls.push({ kind: "panel", id: c.id, control: c });
-    const s = c.summary?.(ctx) ?? null;
-    if (s) activeCount += s.count ?? 1 + (s.more ?? 0);
-  }
-  return { controls, activeCount };
+  // The controls' layout not known yet: a read, not an empty list — a band
+  // that drew no triggers and no badge would claim there is nothing to narrow
+  // by, then grow them.
+  return mapLayout(
+    slotLayout(useSlotOrder(DataViewSlots.Control)),
+    (contributions) => {
+      const controls: ToolbarControl[] = [];
+      let activeCount = 0;
+      for (const c of contributions) {
+        if (c.action) {
+          const action = c.action(ctx);
+          if (action) controls.push({ kind: "action", id: c.id, action });
+          continue;
+        }
+        if (!(c.isApplicable?.(ctx) ?? true)) continue;
+        controls.push({ kind: "panel", id: c.id, control: c });
+        const s = c.summary?.(ctx) ?? null;
+        if (s) activeCount += s.count ?? 1 + (s.more ?? 0);
+      }
+      return { controls, activeCount };
+    },
+  );
 }

@@ -24,6 +24,9 @@ const probe = vi.hoisted(() => ({ mounts: 0, unmounts: 0, minted: 0 }));
 /** The surface mode + tab set `SurfaceBody` reads, driven by the tests. */
 const tabsState = vi.hoisted(() => ({ mode: "docked-ish" }));
 
+/** Every capability set the body publishes (and the disposer it gets back). */
+const registerSpy = vi.hoisted(() => vi.fn((_caps: unknown) => () => {}));
+
 // `TabSurface` stands in for a whole app: it counts its own mounts/unmounts and
 // mints a `useState` instance id, which is only re-minted by a real remount.
 vi.mock("@plugins/apps-core/plugins/tab-surface/web", async () => {
@@ -58,7 +61,7 @@ vi.mock("@plugins/apps-core/plugins/tabs/web", () => ({
     closeTab: () => {},
     exitToPreviousMode: () => {},
   }),
-  registerPlacementCapabilities: () => {},
+  registerPlacementCapabilities: registerSpy,
 }));
 
 import {
@@ -67,6 +70,11 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { SurfaceBody } from "../components/surface-body";
 import { Surface, type PlacementDef } from "../slots";
+import { SlotRender } from "@plugins/primitives/plugins/slot-render/web";
+import {
+  ResourceError,
+  type ResourceResult,
+} from "@plugins/primitives/plugins/live-state/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 const testIcon = symbol("add");
@@ -140,6 +148,7 @@ afterEach(() => {
   probe.unmounts = 0;
   probe.minted = 0;
   tabsState.mode = containedDef.id;
+  registerSpy.mockClear();
 });
 
 describe("a surface-mode switch keeps every tab mounted", () => {
@@ -275,5 +284,69 @@ describe("the frame role resolves to the container mechanics", () => {
   // registered mode. The hardcoded fallback that used to be needed here is gone.
   it("falls back to a pane frame when no placement is registered", () => {
     expect(classForMode("", emptyPlugin)).toBe(`${CANVAS} absolute inset-0`);
+  });
+});
+
+// The placement order is a read. While it is not known, the body publishes NO
+// capability set: one derived from a partial (or raw) order would make the
+// theme's root scope "known" on a wrong answer, and the tabs would mount under
+// a mode that is about to change.
+describe("while the placement order is not known yet", () => {
+  const order = { current: null as ResourceResult<never> | null };
+  const pendingOrderPlugin = {
+    id: "surface-keepalive-test-pending-order",
+    description: "a layout engine whose order is still loading",
+    contributions: [
+      SlotRender.Order({
+        useOrder: (_slot, contributions) =>
+          order.current ?? {
+            status: "ready" as const,
+            data: contributions,
+            refetch: () => Promise.resolve(),
+          },
+      }),
+    ],
+  } as unknown as LoadedPlugin;
+
+  afterEach(() => {
+    order.current = null;
+  });
+
+  function surface() {
+    return (
+      <PluginProvider plugins={[placementsPlugin, pendingOrderPlugin]}>
+        <SurfaceBody />
+      </PluginProvider>
+    );
+  }
+
+  it("publishes no capabilities and mounts no tab, then both once known", () => {
+    order.current = { status: "loading", refetch: () => Promise.resolve() };
+    const { container, rerender } = render(surface());
+
+    expect(registerSpy).not.toHaveBeenCalled();
+    expect(container.querySelector('[data-testid="tab-probe"]')).toBeNull();
+    expect(container.querySelector('[aria-busy="true"]')).not.toBeNull();
+
+    order.current = null;
+    rerender(surface());
+
+    expect(registerSpy).toHaveBeenCalledTimes(1);
+    expect(registerSpy.mock.calls[0]![0]).toMatchObject({
+      defaultId: containedDef.id,
+      ids: new Set([containedDef.id, viewportDef.id, windowDef.id]),
+    });
+    expect(container.querySelector('[data-testid="tab-probe"]')).not.toBeNull();
+  });
+
+  it("publishes nothing on a failed order with no last-known layout", () => {
+    order.current = {
+      status: "error",
+      error: new ResourceError("loader-failed", "boom", null),
+      refetch: () => Promise.resolve(),
+    };
+    const { container } = render(surface());
+    expect(registerSpy).not.toHaveBeenCalled();
+    expect(container.querySelector('[data-testid="tab-probe"]')).toBeNull();
   });
 });

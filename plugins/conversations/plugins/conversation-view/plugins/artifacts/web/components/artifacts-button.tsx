@@ -3,7 +3,13 @@ import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { isNodeData, useReorderedEntries } from "@plugins/reorder/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import {
+  foldResource,
+  mapResource,
+  ResourceErrorInline,
+  type ResourceResult,
+} from "@plugins/primitives/plugins/live-state/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import type { ArtifactItem } from "@plugins/conversations/plugins/conversation-view/plugins/artifacts/core";
@@ -17,6 +23,8 @@ import { Icon } from "@plugins/ui/plugins/icons/web";
 const categoryIcon = symbol("category");
 
 const LABEL = "Artifacts";
+
+const NO_KINDS: readonly MadeKind[] = [];
 
 /**
  * Toolbar button listing everything this conversation made, changed or looked
@@ -81,28 +89,39 @@ export function ArtifactsButton() {
  * The kinds the conversation made something of, in the order the panel lists
  * them — the slot's reorder config, read through the same tree the panel's
  * `Render` applies, so the button and the sections below it cannot disagree.
- * A kind the user hid from the panel is hidden here too.
+ * A kind the user hid from the panel is hidden here too. A read: `loading`
+ * until that order is known — never the kinds in raw registration order,
+ * which would show a hidden kind and then reshuffle.
  */
 function useMadeKinds(
   made: ReadonlyMap<string, number>,
-): { kind: ArtifactKind & { id: string }; n: number }[] {
+): ResourceResult<MadeKind[]> {
   const contributions = ConversationArtifacts.Kind.useContributions();
   // The clean contributions carry `_pluginId` + `id`, which is all the reorder
   // entry key needs; they lack `_slot`, so widen through `unknown`.
-  const { entries } = useReorderedEntries(
+  const order = useReorderedEntries(
     ConversationArtifacts.Kind.id,
     contributions as unknown as Contribution[],
   );
-  return useMemo(() => {
-    const out: { kind: ArtifactKind & { id: string }; n: number }[] = [];
-    for (const entry of entries) {
-      if (isNodeData(entry)) continue;
-      const kind = entry as unknown as ArtifactKind & { id: string };
-      const n = made.get(kind.id);
-      if (n !== undefined) out.push({ kind, n });
-    }
-    return out;
-  }, [entries, made]);
+  return useMemo(
+    () =>
+      mapResource(order, ({ entries }) => {
+        const out: MadeKind[] = [];
+        for (const entry of entries) {
+          if (isNodeData(entry)) continue;
+          const kind = entry as unknown as ArtifactKind & { id: string };
+          const n = made.get(kind.id);
+          if (n !== undefined) out.push({ kind, n });
+        }
+        return out;
+      }),
+    [order, made],
+  );
+}
+
+interface MadeKind {
+  kind: ArtifactKind & { id: string };
+  n: number;
 }
 
 function ArtifactsReady({
@@ -121,7 +140,17 @@ function ArtifactsReady({
   onOpenChange: (open: boolean) => void;
 }) {
   const close = useCallback(() => onOpenChange(false), [onOpenChange]);
-  const madeKinds = useMadeKinds(made);
+  // The kinds' glyphs need the panel's order; until it is known the button
+  // shows a loading block where they go (the count is already known). A
+  // failed order with nothing last-known falls back to the generic glyph.
+  const madeKinds: "loading" | readonly MadeKind[] = foldResource(
+    useMadeKinds(made),
+    {
+      loading: (): "loading" | readonly MadeKind[] => "loading",
+      error: (_error, stale) => stale ?? NO_KINDS,
+      ready: (kinds) => kinds,
+    },
+  );
 
   if (total === 0) {
     return (
@@ -153,7 +182,7 @@ function ArtifactsReady({
           // and splits it by kind — the panel underneath lists more than that,
           // and a reader comparing the two deserves the words.
           tooltip={
-            madeKinds.length > 0
+            madeKinds !== "loading" && madeKinds.length > 0
               ? `${LABEL} — made or changed: ${madeKinds
                   .map(({ kind, n }) => `${kind.label} ${n}`)
                   .join(", ")}`
@@ -163,7 +192,12 @@ function ArtifactsReady({
           aria-pressed={open}
           className="gap-xs"
         >
-          {madeKinds.length === 0 ? (
+          {madeKinds === "loading" ? (
+            <>
+              <Loading variant="block" className="h-4 w-8" />
+              <Text variant="count">{count}</Text>
+            </>
+          ) : madeKinds.length === 0 ? (
             <Icon icon={categoryIcon} />
           ) : (
             <>

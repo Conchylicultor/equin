@@ -6,6 +6,7 @@ import {
 import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
 import { useZStackIndex } from "@plugins/primitives/plugins/css/plugins/z-layers/plugins/stack/web";
+import { foldResource } from "@plugins/primitives/plugins/live-state/web";
 import { DismissAllButton } from "./dismiss-all-button";
 import { useToastsSuppressed } from "../internal/suppress-toasts";
 import { usePublishReaderAudience } from "../internal/reader-audience";
@@ -30,8 +31,22 @@ export function ToasterHost() {
 
 function Toasts() {
   // The stack and its dismiss-all strip share ONE layer, so no other surface
-  // on the stack (the Ask card) can land between them.
-  const zIndex = useZStackIndex(ToastLayer);
+  // on the stack (the Ask card) can land between them. Nothing is mounted
+  // until that layer's place is known — never a guessed z-index the toasts
+  // would then jump off. That loses no toast: sonner (>= 2.0.8) replays every
+  // still-active toast to a `<Toaster>` when it subscribes, so one fired before
+  // the host mounts shows the moment it does (pinned in toast-ledger.test.tsx).
+  // A failed refresh keeps the last-known index, the same element.
+  const zIndex = foldResource(useZStackIndex(ToastLayer), {
+    loading: () => null,
+    error: (_error, stale) => stale ?? null,
+    ready: (z) => z,
+  });
+  if (zIndex === null) return null;
+  return <ToastsAt zIndex={zIndex} />;
+}
+
+function ToastsAt({ zIndex }: { zIndex: number }) {
   const [actionsRef, { height: actionsHeight }] =
     useElementSize<HTMLDivElement>();
 

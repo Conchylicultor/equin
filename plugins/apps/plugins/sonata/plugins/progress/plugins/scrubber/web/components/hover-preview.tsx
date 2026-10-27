@@ -1,4 +1,5 @@
 import { useSlotOrder } from "@plugins/primitives/plugins/slot-render/web";
+import { foldResource } from "@plugins/primitives/plugins/live-state/web";
 import { Fragment, useSyncExternalStore } from "react";
 import type { ReactNode, RefObject } from "react";
 import type {
@@ -81,8 +82,14 @@ export function HoverPreview({
   columnRef: RefObject<HTMLElement | null>;
 }) {
   const point = useSyncExternalStore(store.subscribe, store.get);
-  const describes = useSlotOrder(SonataProgress.Describe);
-  if (!point) return null;
+  // Nothing until the describers' order is known (it orders the lines); a
+  // failed refresh keeps the last-known order.
+  const describes = foldResource(useSlotOrder(SonataProgress.Describe), {
+    loading: () => null,
+    error: (_error, stale) => stale ?? null,
+    ready: (list) => list,
+  });
+  if (!point || !describes) return null;
 
   const lines = describes
     .map((d) => ({

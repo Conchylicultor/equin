@@ -9,7 +9,10 @@ import { hoverRevealTarget } from "@plugins/primitives/plugins/hover-reveal/web"
 import { dataPart, type ToolbarPartForms } from "../../../core";
 import { useDataViewControls } from "../controls/controls-context";
 import { DataViewControlPanel } from "./control-panel-host";
-import type { ToolbarControl } from "./use-toolbar-controls";
+import type { ToolbarControls } from "./use-toolbar-controls";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import type { SlotLayout } from "../../internal/slot-layout";
 import { ROUND_AT_REST } from "./round-form";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
@@ -47,18 +50,23 @@ const tuneIcon = symbol("tune");
  */
 export function CompactControls({
   controls,
-  activeCount,
   searching,
   search,
   revealOnHover = true,
   form = "ghost",
   frame,
 }: {
-  /** The applicable controls, in order — the same list the wide bar renders. */
-  controls: ToolbarControl[];
-  /** Σ of each control's summary count, plus one for a non-empty query. */
-  activeCount: number;
-  /** Whether the search query is non-empty — see `alwaysVisible`. */
+  /**
+   * The applicable controls, in order, and their summed count — the same read
+   * the wide bar renders (`useToolbarControls`). Not known yet: no badge, and
+   * no trigger at all unless there is a search field to reach.
+   */
+  controls: SlotLayout<ToolbarControls>;
+  /**
+   * Whether the search query is non-empty — see `alwaysVisible`. A query also
+   * counts one toward the badge (the fold hides the field); pass `false` where
+   * the search is not folded in (an arrangement's `foldedControls`).
+   */
   searching: boolean;
   /** The search field, rendered full-width at the top of the first page. */
   search?: ReactNode;
@@ -79,7 +87,12 @@ export function CompactControls({
   frame?: (node: ReactNode, revealClass: string | undefined) => ReactNode;
 }): ReactNode {
   const [open, setOpen] = useState(false);
-  if (controls.length === 0 && !search) return null;
+  const known = controls.kind === "known" ? controls.items : null;
+  if (!search && (known === null || known.controls.length === 0)) return null;
+  // The badge sums what the controls narrow by — unknown while their layout
+  // loads, so no number is shown rather than a count that then grows.
+  const activeCount =
+    known === null ? 0 : known.activeCount + (searching ? 1 : 0);
   const active = activeCount > 0;
   // The reveal is suspended in exactly two cases:
   //
@@ -175,7 +188,7 @@ export function CompactRootPanel({
   controls,
   search,
 }: {
-  controls: ToolbarControl[];
+  controls: SlotLayout<ToolbarControls>;
   search?: ReactNode;
 }): ReactNode {
   const ctx = useDataViewControls();
@@ -184,46 +197,57 @@ export function CompactRootPanel({
     <>
       {search ? <ControlPanel.Section>{search}</ControlPanel.Section> : null}
       <ControlPanel.Section>
-        {controls.map((item) => {
-          // An action acts in place: its row carries the action's current
-          // label and glyph, and nothing to push.
-          if (item.kind === "action") {
-            const { action } = item;
+        {controls.kind === "loading" ? (
+          <Loading variant="rows" />
+        ) : controls.kind === "failed" ? (
+          <ResourceErrorInline
+            variant="block"
+            error={controls.failure.error}
+            refetch={controls.failure.refetch}
+            subject="the view controls"
+          />
+        ) : (
+          controls.items.controls.map((item) => {
+            // An action acts in place: its row carries the action's current
+            // label and glyph, and nothing to push.
+            if (item.kind === "action") {
+              const { action } = item;
+              return (
+                <ControlPanel.Row
+                  key={item.id}
+                  icon={<Icon icon={action.icon} />}
+                  onSelect={action.run}
+                >
+                  {action.label}
+                </ControlPanel.Row>
+              );
+            }
+            const { control } = item;
+            // The same pure `summary` the wide bar's trigger reads — so a folded
+            // control says exactly what its unfolded twin would say.
+            const summary = control.summary?.(ctx) ?? null;
             return (
               <ControlPanel.Row
-                key={item.id}
-                icon={<Icon icon={action.icon} />}
-                onSelect={action.run}
+                key={control.id}
+                icon={<Icon icon={control.icon} />}
+                trailing={
+                  summary
+                    ? summary.more
+                      ? `${summary.label} +${summary.more}`
+                      : summary.label
+                    : undefined
+                }
+                push={{
+                  key: control.id,
+                  title: control.label,
+                  render: () => <DataViewControlPanel control={control} />,
+                }}
               >
-                {action.label}
+                {control.label}
               </ControlPanel.Row>
             );
-          }
-          const { control } = item;
-          // The same pure `summary` the wide bar's trigger reads — so a folded
-          // control says exactly what its unfolded twin would say.
-          const summary = control.summary?.(ctx) ?? null;
-          return (
-            <ControlPanel.Row
-              key={control.id}
-              icon={<Icon icon={control.icon} />}
-              trailing={
-                summary
-                  ? summary.more
-                    ? `${summary.label} +${summary.more}`
-                    : summary.label
-                  : undefined
-              }
-              push={{
-                key: control.id,
-                title: control.label,
-                render: () => <DataViewControlPanel control={control} />,
-              }}
-            >
-              {control.label}
-            </ControlPanel.Row>
-          );
-        })}
+          })
+        )}
       </ControlPanel.Section>
     </>
   );

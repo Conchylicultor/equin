@@ -12,13 +12,25 @@ import type {
   ViewState,
 } from "../../core";
 import { useFlatRows } from "./use-flat-rows";
+import { slotLayout, type SlotLayoutFailure } from "./slot-layout";
 import { DataViewSlots, type GlobalRowOrderProps } from "../slots";
 
-/** What the reader reports: the order the contributors resolved for `viewId`. */
-export interface ReportedRowOrder {
-  viewId: string;
-  order: ManualOrderConfig<unknown> | null;
-}
+/**
+ * Where the fold stands for `viewId`: `known` — the order the contributors
+ * resolved (`null`: nobody claimed it); `pending` — not known yet (the slot's
+ * layout is still loading, or the fold has not reported since it mounted), so
+ * the host shows its loading state rather than the rows in an order that then
+ * jumps; `failed` — the slot's layout failed with none ever known.
+ */
+export type RowOrderState =
+  | { state: "pending" }
+  | { state: "known"; order: ManualOrderConfig<unknown> | null }
+  | { state: "failed"; failure: SlotLayoutFailure };
+
+/** What the reader reports: where the fold stands for `viewId`. */
+export type ReportedRowOrder = RowOrderState & { viewId: string };
+
+const PENDING: RowOrderState = { state: "pending" };
 
 /**
  * Host fold for the global `DataViewSlots.RowOrder` slot — the row-order twin of
@@ -76,24 +88,36 @@ export function RowOrderReader(props: {
   return (
     <RowOrderFold
       {...rest}
-      emit={(order) => (
-        <ReportOrder viewId={rest.viewId} order={order} onOrder={onOrder} />
+      emit={(report) => (
+        <ReportOrder viewId={rest.viewId} report={report} onOrder={onOrder} />
       )}
     />
   );
 }
 
-/** The fold's base case: hands the resolved order up (renders nothing). */
-function ReportOrder(
-  props: ReportedRowOrder & {
-    onOrder: (reported: ReportedRowOrder) => void;
-  },
-): ReactNode {
-  const { viewId, order, onOrder } = props;
+/** The fold's base case: hands where it stands up (renders nothing). On
+ *  unmount the order is no longer known for its view: `pending`. Keyed on the
+ *  report's FIELDS, never on its object — a fold level builds a new one per
+ *  render (the host's `sameReport` keeps its state when nothing changed). */
+function ReportOrder(props: {
+  viewId: string;
+  report: RowOrderState;
+  onOrder: (reported: ReportedRowOrder) => void;
+}): ReactNode {
+  const { viewId, report, onOrder } = props;
+  const { state } = report;
+  const order = report.state === "known" ? report.order : null;
+  const failure = report.state === "failed" ? report.failure : null;
   useLayoutEffect(() => {
-    onOrder({ viewId, order });
-    return () => onOrder({ viewId, order: null });
-  }, [viewId, order, onOrder]);
+    onOrder(
+      state === "known"
+        ? { viewId, state, order }
+        : state === "failed" && failure !== null
+          ? { viewId, state, failure }
+          : { viewId, state: "pending" },
+    );
+    return () => onOrder({ viewId, state: "pending" });
+  }, [viewId, state, order, failure, onOrder]);
   return null;
 }
 
@@ -126,7 +150,7 @@ function RowOrderFold(
     state: ViewState;
     resolveOperatorSet: (typeId: string) => FilterOperatorSet | undefined;
     searchAccessor?: (row: unknown) => string;
-    emit: (order: ManualOrderConfig<unknown> | null) => ReactNode;
+    emit: (report: RowOrderState) => ReactNode;
   },
 ): ReactNode {
   const {
@@ -152,15 +176,22 @@ function RowOrderFold(
     resolveOperatorSet,
     searchAccessor,
   );
-  const contributions = useSlotOrder(DataViewSlots.RowOrder);
+  // The contributors' precedence is the slot's layout: not known yet, the
+  // fold reports `pending` (the body's loading state) — mounting them in raw
+  // order could let the wrong one claim the order and the rows jump.
+  const layout = slotLayout(useSlotOrder(DataViewSlots.RowOrder));
+  if (layout.kind === "loading") return <>{emit(PENDING)}</>;
+  if (layout.kind === "failed") {
+    return <>{emit({ state: "failed", failure: layout.failure })}</>;
+  }
   return (
     <RowOrderStep
       {...ids}
       rows={orderedRows}
-      contributions={contributions}
+      contributions={layout.items}
       index={0}
       acc={null}
-      emit={emit}
+      emit={(resolved) => emit({ state: "known", order: resolved })}
     />
   );
 }

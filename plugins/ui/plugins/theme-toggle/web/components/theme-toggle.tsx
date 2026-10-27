@@ -1,8 +1,8 @@
 import { ControlPanel } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   useColorModeSetting,
   useResolvedColorMode,
-  useSetColorMode,
 } from "@plugins/ui/plugins/theme-engine/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
@@ -27,14 +27,19 @@ const systemIcon = symbol("contrast");
  * screen, and one click flips it (to an explicit light / dark, leaving `system`).
  * "Match system" is on while the effective setting is `system`.
  *
+ * Until the surface has said which app owns the document, which scope the
+ * switches would read and write is unknown: they render a loading state rather
+ * than the desktop's setting.
+ *
  * `select="switch"` puts the indicator in the row's TRAILING cell, so the
  * leading icon costs the panel nothing it was not already paying: the footer's
  * ⚙ has the icon column open regardless.
  */
 export function ThemeToggle() {
   const dark = useResolvedColorMode() === "dark";
-  const setting = useColorModeSetting();
-  const setColorMode = useSetColorMode();
+  const root = useColorModeSetting();
+  if (!root.known) return <Loading variant="rows" count={2} />;
+  const { setting, setColorMode } = root;
   const following = setting.effective === "system";
 
   return (

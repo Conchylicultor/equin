@@ -8,6 +8,8 @@ import {
   flowAxis,
   layoutHost,
 } from "@plugins/primitives/plugins/dom/plugins/layout-host/web";
+import { foldResource } from "@plugins/primitives/plugins/live-state/web";
+import type { ReorderTree } from "@plugins/fields/plugins/reorder-tree/core";
 import { reorderDescriptors } from "./descriptors";
 import { useReorderTree } from "./use-reorder-config";
 import {
@@ -59,6 +61,17 @@ export function ReorderListMiddleware({
   );
 }
 
+/**
+ * Per-render-site path: one config read, then the area.
+ *
+ * Renders NOTHING until the slot's layout is known. Drawing the contributions
+ * in raw order meanwhile would show hidden ones and then jump to the layout;
+ * mounting nothing also means no item is mounted and then remounted when the
+ * layout lands (no churn), and no node write can be computed over an empty
+ * tree. A failed read with a last-known layout keeps drawing it — the SAME
+ * `ReorderKnownArea` element as the ready arm, so a transient error remounts
+ * nothing; a failure with nothing known draws nothing.
+ */
 function ReorderArea({
   descriptor,
   contributions,
@@ -68,7 +81,33 @@ function ReorderArea({
   contributions: readonly Contribution[];
   renderItem: (contribution: Contribution) => ReactNode;
 }) {
-  const items = useReorderTree(descriptor);
+  const tree = foldResource(useReorderTree(descriptor), {
+    loading: () => null,
+    error: (_error, stale: ReorderTree | undefined) => stale ?? null,
+    ready: (t: ReorderTree) => t,
+  });
+  if (tree === null) return null;
+  return (
+    <ReorderKnownArea
+      descriptor={descriptor}
+      items={tree}
+      contributions={contributions}
+      renderItem={renderItem}
+    />
+  );
+}
+
+function ReorderKnownArea({
+  descriptor,
+  items,
+  contributions,
+  renderItem,
+}: {
+  descriptor: ConfigDescriptor;
+  items: ReorderTree;
+  contributions: readonly Contribution[];
+  renderItem: (contribution: Contribution) => ReactNode;
+}) {
   const state = useMemo(
     () => applyTree(contributions, items),
     [contributions, items],
@@ -95,7 +134,7 @@ function ReorderNodesArea({
   renderItem,
 }: {
   descriptor: ConfigDescriptor;
-  items: ReturnType<typeof useReorderTree>;
+  items: ReorderTree;
   state: ReorderState;
   renderItem: (contribution: Contribution) => ReactNode;
 }) {

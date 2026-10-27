@@ -50,7 +50,20 @@ box `.Render` gives it, so isolation and element-picker lineage still reach the
 row. The order comes from the one `SlotRender.Order` contribution — reorder's
 (`reorder/slot-middleware`, a companion, beside its list middleware), the
 data-level twin of the middleware that orders `.Render`; without one,
-registration order, as `.Render` without its list middleware. That is the replacement for a numeric `order` on a plain `defineSlot`,
+registration order, as `.Render` without its list middleware.
+
+`useSlotOrder` returns a **read** — `ResourceResult<readonly SealContributions<P>[]>`
+(`primitives/live-state`), never a bare list. The layout lives in config, which
+may not be known on the first render; `loading` is that window, and the host
+renders its loading state (or nothing) — never the contributions in raw order,
+which would show hidden items and then jump (the equin.ai first-paint flash).
+On `error`, `stale` is the last-known order when there was one; without it there
+is no order to draw. With no `SlotRender.Order` contributed the registration
+order is known at once: `readyResource(contributions)`, memoized on the list.
+`SlotRender.Order.useOrder` has the same result type. Collapsing the result to
+`[]` is a lint error (`live-state/no-pending-data-collapse`).
+
+That is the replacement for a numeric `order` on a plain `defineSlot`,
 which `defineSlot` rejects at compile time. `idOf` derives a contribution's id
 from a field it already carries (`DataViewSlots.View`'s `type`), and
 `companions` opens a render slot to companion contributions as on `defineSlot`.
@@ -314,6 +327,8 @@ the outcome too, with no separate code path.
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/dom/layout-host.flowAxis`
     - `primitives/dom/layout-host.layoutHost`
+    - `primitives/live-state.readyResource`
+    - `primitives/live-state.ResourceResult`
   - Exports (types):
     - `DerivedIdRenderSlot`
     - `DispatchContribution`

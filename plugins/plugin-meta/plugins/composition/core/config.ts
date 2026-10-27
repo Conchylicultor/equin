@@ -495,6 +495,12 @@ export const compositionsConfig = defineConfig({
         //   document off the top and shows the `html` loading floor (`Canvas`,
         //   near-black) above the page instead of the page's own top edge.
         //   equin.ai shipped that way.
+        // - the boot snapshot (infra.boot-snapshot): every `boot-and-keep`
+        //   read — config documents above all — hydrated before first paint.
+        //   Left out, each config document arrives by its own request after
+        //   the first render, so every slot's layout (and anything else a
+        //   config decides) is not known on the first frame: equin.ai painted
+        //   its header nav in raw order, then jumped to its layout.
         //
         // What a CAPABILITY needs at runtime is never listed here: it is a
         // derived edge. A plugin that paints with a token group's var gets a hard
@@ -518,6 +524,7 @@ export const compositionsConfig = defineConfig({
             "infra.health.**",
             "ui.theme-engine.**",
             "primitives.dom.overscroll-hint.**",
+            "infra.boot-snapshot.**",
           ],
         }),
 

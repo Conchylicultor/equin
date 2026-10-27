@@ -23,7 +23,7 @@ export type { ConfiguredColorMode };
 // WHO decides light/dark. `<html>.dark` is one class per document, and the
 // `color-scheme` property it drives is a document-level thing, so a document
 // has ONE colour scheme: that of the scope owning `:root` — the focused
-// full-surface app (`useRootThemeScope`), or the desktop when no single app
+// full-surface app (`useRootThemeScopeState`), or the desktop when no single app
 // fills the surface. Every reader below resolves at that scope, the class
 // applier and the prop-themed widgets (sonner, charts, editors) alike, so they
 // cannot render different schemes on one screen. (They once did: each call
@@ -83,10 +83,45 @@ function appIdOf(scopeId: string | undefined): string | undefined {
     : undefined;
 }
 
-/** The setting of the scope that owns this document's light/dark. */
-export function useColorModeSetting(): ColorModeSetting {
+/**
+ * The setting of the scope that owns this document's light/dark, with its
+ * writer — or `{ known: false }` before the surface has said which app owns
+ * `:root`. Not the desktop's setting meanwhile: a control would show (and a
+ * click would write) the global scheme while the page wears an app's.
+ *
+ * `setColorMode` sets that scope's scheme: the focused app's override, or the
+ * global setting when no app fills the surface. It names its scope through the
+ * same state the class is painted from, so it cannot flip a value nothing
+ * paints from — the bug the light/dark switch once had, writing one scope while
+ * the class read another — and there is no writer while the scope is unknown.
+ */
+export type RootColorModeSetting =
+  | { known: false }
+  | {
+      known: true;
+      setting: ColorModeSetting;
+      setColorMode: (mode: ConfiguredColorMode) => void;
+    };
+
+export function useColorModeSetting(): RootColorModeSetting {
   const root = useRootThemeScopeState();
-  return useColorModeSettingFor(root.known ? appIdOf(root.scopeId) : undefined);
+  const setting = useColorModeSettingFor(
+    root.known ? appIdOf(root.scopeId) : undefined,
+  );
+  const app = setting.app;
+  const setGlobal = useSetGlobalColorMode();
+  const setApp = useSetConfig(appColorModeConfig, {
+    scopeId: app === undefined ? undefined : appThemeScope(app.id),
+  });
+  const setColorMode = useCallback(
+    (mode: ConfiguredColorMode) => {
+      if (app === undefined) setGlobal(mode);
+      else setApp("colorMode", mode);
+    },
+    [app, setGlobal, setApp],
+  );
+  if (!root.known) return { known: false };
+  return { known: true, setting, setColorMode };
 }
 
 /** Whether the OS prefers dark, live — subscribed only while `active`. */
@@ -170,27 +205,5 @@ export function useSetGlobalColorMode(): (mode: ConfiguredColorMode) => void {
   return useCallback(
     (mode: ConfiguredColorMode) => set("colorMode", mode),
     [set],
-  );
-}
-
-/**
- * Sets the scheme of the scope that owns this document: the focused app's
- * override, or the global setting when no app fills the surface. The writer
- * names its scope through the same {@link useColorModeSetting} the class is
- * painted from, so it cannot flip a value nothing paints from — the bug the
- * light/dark switch once had, writing one scope while the class read another.
- */
-export function useSetColorMode(): (mode: ConfiguredColorMode) => void {
-  const { app } = useColorModeSetting();
-  const setGlobal = useSetGlobalColorMode();
-  const setApp = useSetConfig(appColorModeConfig, {
-    scopeId: app === undefined ? undefined : appThemeScope(app.id),
-  });
-  return useCallback(
-    (mode: ConfiguredColorMode) => {
-      if (app === undefined) setGlobal(mode);
-      else setApp("colorMode", mode);
-    },
-    [app, setGlobal, setApp],
   );
 }

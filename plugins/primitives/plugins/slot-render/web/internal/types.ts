@@ -1,6 +1,7 @@
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
+import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
 import type { ComponentType, ReactNode } from "react";
 
 /**
@@ -35,14 +36,18 @@ export interface SlotListMiddleware {
  * them itself (`useSlotOrder`): the data-level twin of the list middleware —
  * the same layout, no rendering. Contributed by the plugin that owns layouts
  * (reorder's slot-middleware, a companion), so a host names no layout engine.
- * The hook returns the contributions to draw, in order (hidden ones dropped).
+ * The hook returns the contributions to draw, in order (hidden ones dropped),
+ * as a read: `loading` while the slot's layout is not known yet, never the raw
+ * registration order standing in for it (that would show hidden items and then
+ * jump). The error arm carries the last-known layout as `stale` when there was
+ * one, and never the raw order when there was not.
  */
 export interface SlotOrder {
   useOrder: Hook<
     (
       slot: SlotHandle,
       contributions: readonly Contribution[],
-    ) => readonly Contribution[]
+    ) => ResourceResult<readonly Contribution[]>
   >;
 }
 

@@ -5,7 +5,10 @@ import {
   renderIsolated,
   useSlotOrder,
 } from "@plugins/primitives/plugins/slot-render/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { DataViewSlots } from "../../slots";
+import { slotLayout } from "../../internal/slot-layout";
 import { useDataViewControls } from "../controls/controls-context";
 
 /**
@@ -39,7 +42,21 @@ import { useDataViewControls } from "../controls/controls-context";
 export function SettingsControlPanel(): ReactNode {
   const context = useDataViewControls();
 
-  const settings = useSlotOrder(DataViewSlots.Setting);
+  const layout = slotLayout(useSlotOrder(DataViewSlots.Setting));
+  // The settings' layout not known yet is not "nothing to configure": that
+  // would be a claim about this surface the panel then takes back.
+  if (layout.kind === "loading") return <Loading variant="rows" />;
+  if (layout.kind === "failed") {
+    return (
+      <ResourceErrorInline
+        variant="block"
+        error={layout.failure.error}
+        refetch={layout.failure.refetch}
+        subject="the view settings"
+      />
+    );
+  }
+  const settings = layout.items;
   // Each contribution declares its own applicability (`isApplicable`); the panel
   // stays generic — it never names group-by / properties. A setting filtered out
   // here is the one that would self-hide, so no section ever renders empty.

@@ -33,7 +33,7 @@ the user explicitly approved that specific placement.
   - **`command-palette`** — Cmd+K command palette primitive. Plugins contribute commands via CommandPalette.Item; the dialog renders them with fuzzy search and keyboard navigation.
   - **`commit-list`** [exempt] — Reusable commit row rendering and git log types. Git log parser, `git diff -z` name-status / numstat / raw+numstat parsers, the runGit invocation and commit row types for reuse across plugins.
   - **`copy-to-clipboard`** — useCopyToClipboard hook and CopyButton component for the clipboard write + timeout-reset pattern.
-  - **`css`** [exempt] [52 sub-plugins] — Umbrella for global CSS layout primitives (named-slot rows, grids, clusters, overlays) with the shrink hierarchy baked into one place.
+  - **`css`** [test helpers] [exempt] [52 sub-plugins] — Umbrella for global CSS layout primitives (named-slot rows, grids, clusters, overlays) with the shrink hierarchy baked into one place.
   - **`cursor-pagination`** — Cursor-pagination primitive: the error-gated useInfiniteScroll observer + InfiniteScrollFooter (load-more spinner / Retry / sentinel), and the ScrollSentinel component. The pages themselves come…
   - **`data-table`** — Sortable/filterable flex-layout data table primitive.
   - **`data-view`** [test helpers] [exempt] — Notion-like multi-view data surface: one typed field schema rendered through swappable views with per-view sort/search/filter.

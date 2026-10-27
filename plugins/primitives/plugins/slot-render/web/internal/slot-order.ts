@@ -4,13 +4,19 @@ import type {
   Slot,
 } from "@plugins/framework/plugins/web-sdk/core";
 import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
+import { useMemo } from "react";
+import {
+  readyResource,
+  type ResourceResult,
+} from "@plugins/primitives/plugins/live-state/web";
 import { SlotRender } from "./slots";
 
+/** No layout engine: the registration order IS the order, known at once. */
 function useRegistrationOrder(
   _slot: SlotHandle,
   contributions: readonly Contribution[],
-): readonly Contribution[] {
-  return contributions;
+): ResourceResult<readonly Contribution[]> {
+  return useMemo(() => readyResource(contributions), [contributions]);
 }
 
 /**
@@ -26,10 +32,15 @@ function useRegistrationOrder(
  * out) the contributions keep registration order, as `.Render` does without
  * its list middleware. Draw each one through `renderAsContribution` so its row
  * still gets the item middlewares (isolation, lineage).
+ *
+ * The answer is a read (`ResourceResult`): `loading` until the slot's layout is
+ * known — render a loading state (or nothing), never the contributions in raw
+ * order, which would show hidden items and then jump. On error, `stale` is the
+ * last-known order when there was one.
  */
 export function useSlotOrder<P>(
   slot: Slot<P>,
-): readonly SealContributions<P>[] {
+): ResourceResult<readonly SealContributions<P>[]> {
   const contributions = slot.useContributions();
   const orders = SlotRender.Order.useContributions();
   if (orders.length > 1) {
@@ -45,5 +56,5 @@ export function useSlotOrder<P>(
   return useOrder(
     slot,
     contributions as unknown as readonly Contribution[],
-  ) as unknown as readonly SealContributions<P>[];
+  ) as unknown as ResourceResult<readonly SealContributions<P>[]>;
 }

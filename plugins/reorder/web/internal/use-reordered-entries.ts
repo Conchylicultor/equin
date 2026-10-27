@@ -1,5 +1,9 @@
 import { useMemo } from "react";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
+import {
+  mapResource,
+  type ResourceResult,
+} from "@plugins/primitives/plugins/live-state/web";
 import { reorderDescriptors } from "./descriptors";
 import { useReorderTree } from "./use-reorder-config";
 import { applyTree, type ReorderState } from "./sorting";
@@ -16,13 +20,17 @@ import { applyTree, type ReorderState } from "./sorting";
  * It shares `useReorderTree` (config read) and `applyTree` with the middleware,
  * so the two consumers of a slot's layout can never disagree.
  *
+ * A read: `loading` until the slot's layout is known — never the contributions
+ * in raw order standing in for it (hidden ones would show, then vanish). On
+ * error, `stale` is the last-known layout applied when there was one.
+ *
  * Throws for a non-reorderable slot id (fail loud). The lookup happens BEFORE any
  * hook call, so the throw never violates the rules of hooks.
  */
 export function useReorderedEntries(
   slotId: string,
   contributions: readonly Contribution[],
-): ReorderState {
+): ResourceResult<ReorderState> {
   const descriptor = reorderDescriptors.get(slotId);
   if (!descriptor) {
     throw new Error(
@@ -30,5 +38,8 @@ export function useReorderedEntries(
     );
   }
   const tree = useReorderTree(descriptor);
-  return useMemo(() => applyTree(contributions, tree), [contributions, tree]);
+  return useMemo(
+    () => mapResource(tree, (t) => applyTree(contributions, t)),
+    [contributions, tree],
+  );
 }
