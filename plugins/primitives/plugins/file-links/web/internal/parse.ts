@@ -1,5 +1,5 @@
 // Matches file paths with at least one directory separator, e.g.
-// research/2026-04-26-foo.md, docs/plugins.md, ~/.singularity/worktrees/central.json, ~/.zshrc,
+// research/2026-04-26-foo.md, docs/plugins.md, ~/.equin/worktrees/central.json, ~/.zshrc,
 // /tmp/promo/video.webm
 // Two path shapes:
 //   ~/[dirs/]file  — home-rooted; zero or more extra dir segments after ~/

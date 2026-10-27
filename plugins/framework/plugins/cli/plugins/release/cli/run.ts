@@ -1373,7 +1373,7 @@ const runRelease: CliAction<[], ReleaseOptions> = async (opts) => {
   const compDir = dirname(out);
   claimLatestPointer(compDir, runId, platform);
 
-  // A run dir is a whole staged app; `~/.singularity/state/releases/` has no
+  // A run dir is a whole staged app; `~/.equin/state/releases/` has no
   // other retention. Runs a pointer names are never swept.
   // The dir `out` sits in, never re-derived from `root`: in a pinned release
   // this process runs inside a private checkout whose name is the run id, while

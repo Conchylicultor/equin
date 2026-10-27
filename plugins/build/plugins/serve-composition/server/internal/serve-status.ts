@@ -33,7 +33,7 @@ export async function serveNamespaceOf(
  * writes `composition.json` into the namespace dir before it composes anything,
  * so its presence is what distinguishes a live URL from a config flag nothing
  * has acted on yet. `loadCompositionMarker` reads the shared
- * `~/.singularity/worktrees/` tree, so a backend can answer for a namespace it
+ * `~/.equin/worktrees/` tree, so a backend can answer for a namespace it
  * does not itself serve.
  *
  * The third answer is about this BACKEND rather than the composition:

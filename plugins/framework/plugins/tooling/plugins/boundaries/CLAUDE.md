@@ -259,7 +259,7 @@ readings use it:
     - `infra/jobs/supervised-job` (3 debt)
     - `infra/launcher` (2 debt)
     - `infra/mcp/browser` (2 debt)
-    - `infra/paths` (10 debt)
+    - `infra/paths` (11 debt)
     - `infra/request-origin/agent-write-ledger` (1 debt)
     - `infra/runtime-profiler` (1 debt)
     - `infra/safe-fetch` (1 debt)

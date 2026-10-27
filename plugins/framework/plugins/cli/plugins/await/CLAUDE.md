@@ -42,7 +42,7 @@ Three records, none of them new:
 
 | question | record |
 |---|---|
-| is my op still running? | the op's flocked marker `~/.singularity/worktrees/<slug>/ops/<opId>.json` (`infra/worktree`) |
+| is my op still running? | the op's flocked marker `~/.equin/worktrees/<slug>/ops/<opId>.json` (`infra/worktree`) |
 | what did it decide? | the op log's terminal record for that `opId` (`debug/profiling/op-log`) |
 | what is it blocked on? | `readOpenWait(opId)` — the same feed the build lock prints from |
 | build / test detail | the deploy receipt, and the run's own `test-status-<opId>.json` (a test run that joined an in-flight identical run carries the adopted verdict in its own record) |

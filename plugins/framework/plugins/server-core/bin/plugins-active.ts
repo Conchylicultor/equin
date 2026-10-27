@@ -8,7 +8,7 @@ import { readSpecComposition } from "./spec-composition";
 // `./spec-composition` answers WHICH APP this backend is, and `./select-registry`
 // turns that into a registry path.
 //
-// Which COMPOSITION comes off `~/.singularity/worktrees/<namespace>/spec.json` —
+// Which COMPOSITION comes off `~/.equin/worktrees/<namespace>/spec.json` —
 // the same file the gateway read to spawn this process — rather than from a
 // value the gateway would have to pass. `./equin build` rebuilds this
 // backend but not the Go gateway, so a running gateway is routinely older than

@@ -1,7 +1,7 @@
 # latch
 
 The host-global duress latch — the cross-process "the box is in trouble"
-signal. A single file, `~/.singularity/locks/duress/duress.latch` (JSON `{ setAt, reason }`),
+signal. A single file, `~/.equin/locks/duress/duress.latch` (JSON `{ setAt, reason }`),
 whose **mtime freshness** (< `FRESHNESS_LEASE_MS`, 60 s) carries liveness: the
 sentinel refreshes it every tick while tripped, so a crashed sentinel lapses
 the lease and the fleet self-recovers. Readers gate on the cheap synchronous

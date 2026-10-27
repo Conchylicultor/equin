@@ -197,7 +197,7 @@ step_15_createdb() {
   cat <<'CMD'
 eval "$(/opt/homebrew/bin/brew shellenv)"
 cd ~/singularity
-createdb -h ~/.singularity/postgres/socket -p 5433 -U singularity singularity
+createdb -h ~/.equin/postgres/socket -p 5433 -U singularity singularity
 ./equin apply-migrations
 CMD
 }
@@ -233,7 +233,7 @@ eval "$(/opt/homebrew/bin/brew shellenv)"
 cd ~/singularity
 ./equin start --force
 sleep 20
-psql -h ~/.singularity/postgres/socket -p 5433 -U singularity -d singularity -tAc "select count(*) from information_schema.tables where table_schema = 'public'"
+psql -h ~/.equin/postgres/socket -p 5433 -U singularity -d singularity -tAc "select count(*) from information_schema.tables where table_schema = 'public'"
 CMD
 }
 step_17_gateway_restart_DOC="Nowhere. A guess: a backend applies migrations when it boots, so restarting the gateway once the database exists might seed it."
@@ -263,7 +263,7 @@ step_19_apply_migrations_by_hand() {
   cat <<'CMD'
 eval "$(/opt/homebrew/bin/brew shellenv)"
 cd ~/singularity
-PSQL="psql -h $HOME/.singularity/postgres/socket -p 5433 -U singularity -d singularity -v ON_ERROR_STOP=1 -q"
+PSQL="psql -h $HOME/.equin/postgres/socket -p 5433 -U singularity -d singularity -v ON_ERROR_STOP=1 -q"
 n=0
 for f in plugins/database/plugins/migrations/data/*.sql; do
   base=$(basename "$f")

@@ -58,7 +58,7 @@ as before. This is why origins must reach the build un-edited.
 
 ## Saved settings follow the move
 
-The user's own config (`~/.singularity/state/config/<namespace>/`) is not in
+The user's own config (`~/.equin/state/config/<namespace>/`) is not in
 git, so no commit can carry it — and a hand-run migration is a step that gets
 skipped. Instead every `./equin build` calls `applyPluginMoves` for its
 namespace just before it propagates the git config there

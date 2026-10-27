@@ -4,7 +4,7 @@ import { z } from "zod";
 // verdict every reader draws from it. On 2026-10-15 a background command whose
 // `cat` read its own output file grew it to ~500 GiB over days, and nothing on
 // screen said the disk was filling. The watcher already ticks host-wide, so it
-// also reads the volume holding the user's home (where ~/.singularity, the repo
+// also reads the volume holding the user's home (where ~/.equin, the repo
 // and the temp dirs live) and how fast its free space is falling.
 
 const GIB = 1024 ** 3;

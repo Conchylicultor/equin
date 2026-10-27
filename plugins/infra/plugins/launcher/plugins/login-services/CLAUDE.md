@@ -55,7 +55,7 @@ export default [
   also removes each definition (and so opts it out of following main).
 - A host with no service manager starts none of them, and says so.
 
-(`<gateway-label>` is the gateway's launchd label / systemd unit name, `LEGACY_IDS.launchdLabel` in `framework/product-name`.)
+(`<gateway-label>` is the gateway's launchd label / systemd unit name, `dev.equin.gateway` (`GATEWAY_SERVICE` in `infra/launcher/core`); an install from before the rename keeps `LEGACY_IDS.launchdLabel` until `./equin data-dir migrate` relabels it — the service stays bound to whichever label is installed (`installedAs`).)
 
 ## One reconcile, three policies
 
@@ -89,7 +89,7 @@ that barrel without a launcher ↔ login-services cycle.
 
 Every login service — the gateway too (`launcher`'s `GATEWAY_APP_COMPONENT`,
 installed by `start`) — runs from ONE app bundle,
-`~/.singularity/state/macos-app/equin.app` (`machine/internal/macos-app.ts`):
+`~/.equin/state/macos-app/equin.app` (`machine/internal/macos-app.ts`):
 bundle id `dev.equin`, display name `equin`, `LSUIElement`, the icon the main
 component brings, signed as a whole with the machine's identity
 (`infra/codesign`'s `signBundle`) and registered with LaunchServices. So every

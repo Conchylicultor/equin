@@ -2,7 +2,7 @@
 //
 // A NAMESPACE is the one name that a deployed app answers to. It is the
 // subdomain in `http://<ns>.localhost:9000`, the spec-dir basename under
-// `~/.singularity/worktrees/<ns>/`, the socket stem `<ns>.sock`, the Postgres
+// `~/.equin/worktrees/<ns>/`, the socket stem `<ns>.sock`, the Postgres
 // database, the config dir, and the `--namespace` a backend is spawned with. All
 // of those are the SAME string, which is exactly why there must be
 // only one function that decides what it is.

@@ -476,7 +476,7 @@ async function pushLockFor(
 }
 
 // The push mutex is the `push` host-pool (host-admission): `pushPool.run(fn)`
-// holds its single slot file — `~/.singularity/locks/push/slot-0.lock` — for the
+// holds its single slot file — `~/.equin/locks/push/slot-0.lock` — for the
 // whole critical section, so at most one push runs host-wide. Who holds it and
 // who queues on it is read from the op log (`push-mutex` waits, `granted`). This folds the last hand-rolled
 // FFI flock onto the shared primitive: the size-1 fan-out is a single

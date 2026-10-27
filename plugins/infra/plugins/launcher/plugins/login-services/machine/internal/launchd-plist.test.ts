@@ -11,13 +11,13 @@ const job: LoginServiceSpec = {
   session: "background",
   description: "equin gateway",
   argv: [
-    "/h/me/.singularity/cache/deps/gateway-binary/abc/env/gateway",
+    "/h/me/.equin/cache/deps/gateway-binary/abc/env/gateway",
     "-listen",
     ":9000",
     "-child-env",
     "A,B_*",
   ],
-  cwd: "/h/me/.singularity/cache/deps/gateway-binary/abc/env",
+  cwd: "/h/me/.equin/cache/deps/gateway-binary/abc/env",
   env: { PATH: "/shims:/usr/bin", HOME: "/h/me", Q: `a&b<c>"d"` },
   stdioLog: "/h/me/logs/gateway-stdio.log",
 };
@@ -32,7 +32,7 @@ describe("renderLaunchAgentPlist", () => {
     // strings[0] is the Label; the argv follows it.
     expect(strings.slice(1, 1 + job.argv.length)).toEqual([...job.argv]);
     expect(xml).toContain(
-      "<key>WorkingDirectory</key>\n\t<string>/h/me/.singularity/cache/deps/gateway-binary/abc/env</string>",
+      "<key>WorkingDirectory</key>\n\t<string>/h/me/.equin/cache/deps/gateway-binary/abc/env</string>",
     );
     expect(xml).toContain(
       `<key>StandardErrorPath</key>\n\t<string>${job.stdioLog}</string>`,

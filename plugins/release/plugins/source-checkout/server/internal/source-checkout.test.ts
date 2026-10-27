@@ -31,7 +31,7 @@ import {
 
 // Hermetic: the data root points at a throwaway dir, so no checkout, lock file,
 // scratch namespace dir or host-pool slot file lands under the real
-// `~/.singularity`. The root is read at call time, so setting it here — before
+// `~/.equin`. The root is read at call time, so setting it here — before
 // any test body runs — is enough.
 const ORIGINAL_DATA_ROOT = readEnv("DIR");
 const dataRoot = mkdtempSync(join(tmpdir(), "release-source-checkout-root-"));

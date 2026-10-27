@@ -57,7 +57,7 @@ Each plugin's `web/` barrel (plus every statically or dynamically imported folde
 barrel — `core`, `prewarm`, …) builds into an independent, content-addressed
 ES-module artifact; the browser composes them via an inline import map in
 `dist/index.html`. Only changed plugins rebuild (typical warm step: a few
-seconds). Artifacts are stored in `~/.singularity/cache/web-artifacts/` (`store/`
+seconds). Artifacts are stored in `~/.equin/cache/web-artifacts/` (`store/`
 per-plugin artifacts, `vendors/` npm pre-bundles, `css/` cached global Tailwind
 passes, `fingerprints/` stat caches), shared across all worktrees, pruned by age.
 A **served** dist symlinks into that store; a **release** dist is composed with
@@ -81,7 +81,7 @@ To see what a boot actually costs:
 
 ```bash
 # the eager URL set of a deployed dist
-grep -oE '(src|href)="/artifacts/[^"]*"' ~/.singularity/worktrees/<name>/web/index.html
+grep -oE '(src|href)="/artifacts/[^"]*"' ~/.equin/worktrees/<name>/web/index.html
 ```
 
 - **Debug → Boot Profile** — the request → first-paint timeline with the

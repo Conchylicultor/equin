@@ -16,7 +16,7 @@ import { PER_UNIT_BYTES } from "@plugins/infra/plugins/host/plugins/host-admissi
  * The union program is the old `test` program plus ~2.5 % more files, so the
  * `test` worker's measured peak is the right estimate for it. `7.2e9` is that
  * worker's MEAN peak RSS over every check transcript on this host
- * (`~/.singularity/worktrees/*​/check-*.log`, n ≈ 300, read 2026-09-17): mean
+ * (`~/.equin/worktrees/*​/check-*.log`, n ≈ 300, read 2026-09-17): mean
  * 7.2 GB, p50 7.0 GB, max 16.6 GB.
  *
  * The MEAN, matching what `PER_UNIT_BYTES` itself models — the fleet ceiling

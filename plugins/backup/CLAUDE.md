@@ -157,7 +157,7 @@ row with a rising count and a new source starting to fail mints its own.
     - `infra/entities.defaultNow`
     - `infra/entities.defineEntity`
     - `infra/jobs/supervised-job.defineSupervisedJob`
-    - `infra/paths.BACKUPS_DIR`
+    - `infra/paths.backupsDir`
     - `primitives/log-channels.Log`
     - `reports.ReportKind`
     - `reports/engine.recordReport`

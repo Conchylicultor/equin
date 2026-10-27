@@ -160,7 +160,7 @@ For a checkout cloned from someone else's repo, that repo is **upstream** (read-
 ## Ports
 
 - The gateway listens on **port 9000** for all browser traffic, routed by subdomain (`<name>.localhost:9000`). The main namespace (agent manager app, served from `main`) is always at `equin.localhost:9000` — its public host label (`NAMESPACE_HOST_LABELS` in `plugins/infra/plugins/namespace`); the namespace itself keeps its internal name (`MAIN_WORKTREE_NAME`), and its old address keeps answering as an alias.
-- Backends do **not** listen on TCP. The gateway hands each backend a per-worktree Unix domain socket at `~/.singularity/sockets/<name>.sock` and dials it directly. There is no backend port range to allocate.
+- Backends do **not** listen on TCP. The gateway hands each backend a per-worktree Unix domain socket at `~/.equin/sockets/<name>.sock` and dials it directly. There is no backend port range to allocate.
 
 ## Driving the app (screenshots & E2E)
 
@@ -200,7 +200,7 @@ Flags: `--path <route>`, `--viewport 1280x900`, `--wait <ms>`, `--color-scheme d
 
 ## Debugging
 
-Browser/server logs persist to `~/.singularity/worktrees/<wt>/logs/<channel>.jsonl` (one JSON `{t,stream,line}` per line). Emit from the browser via `clientLog(channel, line)`. Read them by `tail`/`cat` on the file. See [`plugins/debug/plugins/logs/CLAUDE.md`](plugins/debug/plugins/logs/CLAUDE.md).
+Browser/server logs persist to `~/.equin/worktrees/<wt>/logs/<channel>.jsonl` (one JSON `{t,stream,line}` per line). Emit from the browser via `clientLog(channel, line)`. Read them by `tail`/`cat` on the file. See [`plugins/debug/plugins/logs/CLAUDE.md`](plugins/debug/plugins/logs/CLAUDE.md).
 
 ## Sidequests
 
@@ -216,7 +216,7 @@ Independent projects that live in `sidequests/`, not directly related to equin. 
 - Most features need a design phase first: use the project `plan` SKILL (it puts the plan doc in the right place). Do NOT use `EnterPlanMode`.
 - New features are plugins in `plugins/` — see [`plugins/framework/plugins/web-sdk/CLAUDE.md`](plugins/framework/plugins/web-sdk/CLAUDE.md).
 - Read the matching SKILL first: `create-app` (new top-level app), `debug` (before debugging — logs, profiling, crashes, DB, queues), `theme` (tokens, tweakcn, per-app config, typography/radius/z-index), `css` (layout mental model — containers share space, leaves truncate — and the layout-primitive index).
-- Before writing or editing a prototype, or implementing one in the app (the default is pixel-perfect), read [`prototypes/CLAUDE.md`](prototypes/CLAUDE.md). Prototypes live outside the repo in `~/.singularity/apps/prototypes/<name>/`, shared by every worktree and live at `http://equin.localhost:9000` with no build or commit. Design from the blank `_template/`. Do not open other prototypes for inspiration.
+- Before writing or editing a prototype, or implementing one in the app (the default is pixel-perfect), read [`prototypes/CLAUDE.md`](prototypes/CLAUDE.md). Prototypes live outside the repo in `~/.equin/apps/prototypes/<name>/`, shared by every worktree and live at `http://equin.localhost:9000` with no build or commit. Design from the blank `_template/`. Do not open other prototypes for inspiration.
 - Always edit files in your worktree, not the main branch.
 - **No unbounded `find`** — it has crashed macOS (65k DIR FDs via the bfs shim). Use `rg --files -g '<glob>'` or `fd '<regex>'`; `find` only with `-maxdepth` / `-prune`.
 - **Run scripts with `./equin run <file>.ts`, never bare `bun <file>.ts`** — bare `bun` resolves dependencies by walking UP, so a worktree without `node_modules` runs against main's (or a mid-install npm state). `./equin run` installs this worktree's lock first. The `bun-script` guard blocks the bare form (machine-launched scripts importing no npm package stay bare).

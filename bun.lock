@@ -4050,6 +4050,10 @@
       "name": "@equin/plugin-infra-paths-display",
       "version": "0.0.1",
     },
+    "plugins/infra/plugins/paths/plugins/root-migration": {
+      "name": "@equin/plugin-infra-paths-root-migration",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/query-resource": {
       "name": "@equin/plugin-infra-query-resource",
       "version": "0.0.1",
@@ -8688,6 +8692,8 @@
     "@equin/plugin-infra-paths": ["@equin/plugin-infra-paths@workspace:plugins/infra/plugins/paths"],
 
     "@equin/plugin-infra-paths-display": ["@equin/plugin-infra-paths-display@workspace:plugins/infra/plugins/paths/plugins/display"],
+
+    "@equin/plugin-infra-paths-root-migration": ["@equin/plugin-infra-paths-root-migration@workspace:plugins/infra/plugins/paths/plugins/root-migration"],
 
     "@equin/plugin-infra-query-resource": ["@equin/plugin-infra-query-resource@workspace:plugins/infra/plugins/query-resource"],
 

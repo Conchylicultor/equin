@@ -117,7 +117,7 @@ serve shortcut) asks once and hands the same snapshot to the panel.
 Once a composition is served, the panel also shows a destructive **Reset** button
 next to the serve-URL chip. It opens a confirm dialog and, on confirm, `POST`s
 `resetCompositionData` (`/api/build/serve/reset`), which wipes *only that one
-namespace's* Postgres DB and config dir `~/.singularity/state/config/<ns>/` back
+namespace's* Postgres DB and config dir `~/.equin/state/config/<ns>/` back
 to exactly what a serve build provisions on a fresh serve, then restarts its
 backend — so the author sees the genuine new-user experience. It is a
 **narrower `reapAttempt`**: the spec + dist + code are kept (the app stays
@@ -151,7 +151,7 @@ throws `CompositionResetError` (nothing touched) if any fails:
 - **In scope:** the namespace's DB and its config dir. Both are named by the
   namespace, so the reset is provably confined to that one namespace.
 - **Out of scope (deliberately ignored):** central secrets / auth tokens. They
-  live in one global encrypted store (`~/.singularity/state/secrets/secrets.json.enc`) shared by
+  live in one global encrypted store (`~/.equin/state/secrets/secrets.json.enc`) shared by
   every namespace under the single-instance-per-user architecture
   ([ADR](../../../../research/2026-07-02-global-adr-single-instance-per-user.md)),
   carry no per-composition dimension, and are not part of this reset. Documented,
@@ -194,7 +194,7 @@ drift:
 and four config dirs, and deleting the composition strands all four. The
 inventory is a marker scan across every namespace on the host
 (`namespacesOwnedByComposition`), and one backend can reclaim namespaces composed
-by other checkouts because all of it lives in the shared `~/.singularity/` tree.
+by other checkouts because all of it lives in the shared `~/.equin/` tree.
 
 **Per-namespace outcomes, never a tally.** Each namespace comes back as
 `reclaimed` / `refused` (a guard rejected it, nothing touched) / `failed` (it

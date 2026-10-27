@@ -1,7 +1,7 @@
 # Prototypes
 
 A prototype is a throwaway UI mockup: one flat folder in
-`~/.singularity/apps/prototypes/<id>/`, with an `index.html`. It is **not in
+`~/.equin/apps/prototypes/<id>/`, with an `index.html`. It is **not in
 the repo**: write there directly and commit nothing. That folder is shared by
 every worktree and main and shows at `http://equin.localhost:9000` as
 soon as you save. No build is needed. Its pin, Done mark, tag and deletion are not in
@@ -34,7 +34,7 @@ read how it got there:
 ```
 
 The history is a bare git repo per prototype,
-`~/.singularity/apps/prototypes/_history/<id>.git`; plain `git --git-dir …` may
+`~/.equin/apps/prototypes/_history/<id>.git`; plain `git --git-dir …` may
 **read** it (`log -S`, `show <sha>:index.html`). Never write to `_history/`, and
 never create a `.git` inside a prototype folder.
 

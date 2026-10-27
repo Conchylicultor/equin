@@ -99,7 +99,7 @@ live in `shell/core/routes.ts`.
 `newPrototypeText()` is the only instruction guaranteed to
 reach a prototype agent — it is always in its first user turn, unlike a
 `CLAUDE.md` it may never open. So it carries the rules that decide whether the
-result is an original design: **write to `~/.singularity/apps/prototypes/` and commit
+result is an original design: **write to `~/.equin/apps/prototypes/` and commit
 nothing, edit the blank template in place, never open another prototype's
 folder, never read `plugins/`**, keep the folder self-contained — and
 **declare variants as options instead of building a switcher into the page**

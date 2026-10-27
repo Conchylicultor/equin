@@ -38,7 +38,7 @@ import { generateClaudeSettings } from "./claude-settings-gen";
  * Out of scope (NOT repo-tree codegen, handled by their own steps in build):
  *   - DB migrations (`generateMigration`) — stateful, build-only.
  *   - `writeCentralRoutesManifest`, `central.json`, `propagateConfigToUser` —
- *     these write under `~/.singularity/`, not the repo tree.
+ *     these write under `~/.equin/`, not the repo tree.
  *   - `seedAuthoredOverrides` (authored-override-seed.ts) — repo-tree, but
  *     **deliberately build-only**, and this exception is load-bearing: it mints
  *     `@review` markers, and `regen-generated` runs inside push's merge-driver

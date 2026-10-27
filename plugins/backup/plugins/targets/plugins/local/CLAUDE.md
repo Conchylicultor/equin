@@ -16,7 +16,7 @@
     - `backup.BackupTarget`
     - `config_v2.ConfigV2`
     - `config_v2.getConfig`
-    - `infra/paths.BACKUPS_DIR`
+    - `infra/paths.backupsDir`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/run-local-target.ts` (debt)
 

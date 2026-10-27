@@ -29,7 +29,7 @@ export {
   DEV_GATEWAY_PORT,
   devGatewayLaunchOptions,
 } from "./internal/dev-launch";
-export { GATEWAY_SERVICE, gatewayServiceJob } from "./internal/gateway-service";
+export { gatewayServiceJob } from "./internal/gateway-service";
 export {
   LOOPBACK_BIND,
   resolveListenAddress,

@@ -23,14 +23,14 @@
  * No trailing slash: consumers that want one write `${PROTOTYPES_DIR_DISPLAY}/`,
  * which is also how a `<slug>` or `_template` gets appended.
  */
-export const PROTOTYPES_DIR_DISPLAY = "~/.singularity/apps/prototypes";
+export const PROTOTYPES_DIR_DISPLAY = "~/.equin/apps/prototypes";
 
 /**
  * Where the encrypted secrets blob lives, as prose — the prose twin of the
  * `state/secrets` data dir (`secrets.json.enc` plus the `.key` fallback).
  *
  * Used by the Accounts pane, which tells the user where their connected-service
- * tokens are kept. That copy used to name `~/.singularity/auth/` as a hardcoded
+ * tokens are kept. That copy used to name `~/.equin/auth/` as a hardcoded
  * literal, and it had been wrong since the secrets plugin took ownership:
  * `migrateLegacyAuthTokens` moves the legacy blob into the secrets store, so
  * `auth/` holds nothing but a stale key file. Naming the directory in one place
@@ -39,7 +39,7 @@ export const PROTOTYPES_DIR_DISPLAY = "~/.singularity/apps/prototypes";
  *
  * No trailing slash, same convention as above.
  */
-export const SECRETS_DIR_DISPLAY = "~/.singularity/state/secrets";
+export const SECRETS_DIR_DISPLAY = "~/.equin/state/secrets";
 
 /**
  * Where the user layer of the three-layer config model lives, as prose — the
@@ -55,7 +55,7 @@ export const SECRETS_DIR_DISPLAY = "~/.singularity/state/secrets";
  *
  * No trailing slash, same convention as above.
  */
-export const USER_CONFIG_DIR_DISPLAY = "~/.singularity/state/config";
+export const USER_CONFIG_DIR_DISPLAY = "~/.equin/state/config";
 
 /**
  * Where each namespace's per-worktree state lives, as prose — the prose twin of
@@ -70,4 +70,4 @@ export const USER_CONFIG_DIR_DISPLAY = "~/.singularity/state/config";
  *
  * No trailing slash, same convention as above.
  */
-export const WORKTREES_DIR_DISPLAY = "~/.singularity/worktrees";
+export const WORKTREES_DIR_DISPLAY = "~/.equin/worktrees";

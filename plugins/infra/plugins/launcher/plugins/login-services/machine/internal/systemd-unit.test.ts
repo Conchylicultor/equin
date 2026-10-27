@@ -7,7 +7,7 @@ const job: LoginServiceSpec = {
   session: "background",
   description: "equin gateway",
   argv: [
-    "/h/me/.singularity/cache/deps/gateway-binary/abc/env/gateway",
+    "/h/me/.equin/cache/deps/gateway-binary/abc/env/gateway",
     "-listen",
     "127.0.0.1:9000",
     "-child-env",

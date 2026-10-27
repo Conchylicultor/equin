@@ -2,7 +2,7 @@
 
 Generic server-side mirror for remote binary assets. A plugin declares a remote
 source; the primitive lazily downloads each requested file once, caches it under
-`~/.singularity/cache/asset-mirror/<id>/`, and serves it same-origin thereafter. After
+`~/.equin/cache/asset-mirror/<id>/`, and serves it same-origin thereafter. After
 one online warm-up the assets are fully offline and the external source is never
 touched again. The disk cache lives outside any worktree, so the download
 happens at most once per machine regardless of how many worktrees are running.

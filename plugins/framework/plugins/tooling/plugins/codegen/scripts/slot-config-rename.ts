@@ -6,7 +6,7 @@
  *
  * The git layer was migrated in the same commit that dropped the `id` parameter
  * from the slot constructors. THIS script remains for the USER layer
- * (`~/.singularity/config/<worktree>/…`), which no commit can carry — run it
+ * (`~/.equin/config/<worktree>/…`), which no commit can carry — run it
  * once, by hand, at land time:
  *
  *   bun <this file>            # dry run over every worktree's user config

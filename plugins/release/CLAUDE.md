@@ -307,7 +307,7 @@ the two endpoints that selected it).
 For agent-run / standalone CLI releases, the **canonical filesystem path is the
 registry** — there is no DB query. To find releases:
 
-1. List `~/.singularity/state/releases/<worktree>/` — one `<comp>-<target>/` dir per
+1. List `~/.equin/state/releases/<worktree>/` — one `<comp>-<target>/` dir per
    composition+target, each holding versioned `<run-id>/` dirs plus one
    `latest-<platform>` symlink per platform ever packed.
 2. Follow `<comp>-<target>/latest-<platform>` → the current packed `<run-id>/`.

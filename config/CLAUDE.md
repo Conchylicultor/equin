@@ -1,6 +1,6 @@
 # config/
 
-Git-committed config defaults and overrides. Structure mirrors `~/.singularity/state/config/` by plugin hierarchy.
+Git-committed config defaults and overrides. Structure mirrors `~/.equin/state/config/` by plugin hierarchy.
 
 ## File layout
 
@@ -41,4 +41,4 @@ If `defineConfig` defaults change, build regenerates `.origin.jsonc` with a new 
 
 ## What happens downstream
 
-On server start, `propagate()` copies the resolved config here (override if present, else origin) to `~/.singularity/state/config/` where users can further override via the UI. See `plugins/config_v2/CLAUDE.md` for the full three-layer model.
+On server start, `propagate()` copies the resolved config here (override if present, else origin) to `~/.equin/state/config/` where users can further override via the UI. See `plugins/config_v2/CLAUDE.md` for the full three-layer model.

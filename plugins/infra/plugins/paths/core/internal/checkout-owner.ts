@@ -8,7 +8,7 @@ import { worktreeArtifacts } from "./paths";
 // Which checkout a namespace's data dir belongs to, written down by the CLI that
 // acts as it.
 //
-// `~/.singularity/worktrees/<ns>/` is created by whatever first writes into it —
+// `~/.equin/worktrees/<ns>/` is created by whatever first writes into it —
 // a check log, an op marker, a test status — and nothing recorded WHO. The
 // reaper can still reclaim the namespaces it can name from elsewhere (an attempt
 // row, a composition marker, a spec's `server` path), but a checkout outside all

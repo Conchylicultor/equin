@@ -15,7 +15,7 @@ import {
 } from "./store";
 
 // The version store against a throwaway prototypes tree. The store takes its
-// root as an argument, so nothing here touches `~/.singularity/apps/prototypes`.
+// root as an argument, so nothing here touches `~/.equin/apps/prototypes`.
 
 const ID = "proto-1789000000-abcd";
 

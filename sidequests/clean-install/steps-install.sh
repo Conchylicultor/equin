@@ -54,7 +54,7 @@ step_02_one_command_TAG="from-docs"
 
 step_03_new_terminal() {
   cat <<'CMD'
-zsh -l -i -c 'for t in mise bun go; do printf "%-5s %s\n" "$t" "$(command -v $t || echo MISSING)"; done; command -v bun >/dev/null && cd ~/singularity && ./equin --help >/dev/null && echo "./equin runs"'
+zsh -l -i -c 'for t in mise bun go; do printf "%-5s %s\n" "$t" "$(command -v $t || echo MISSING)"; done; command -v bun >/dev/null && cd ~/equin && ./equin --help >/dev/null && echo "./equin runs"'
 CMD
 }
 step_03_new_terminal_DOC="README.md: open a new terminal and ./equin works there (install.sh's closing line says so)."
@@ -64,8 +64,8 @@ step_04_app_answers() {
   cat <<'CMD'
 code=$(curl -sS -o /dev/null -w '%{http_code}' http://equin.localhost:9000/)
 echo "http $code"
-cat ~/.singularity/worktrees/singularity/build-status.json
-[ "$code" = 200 ] && grep -q '"status": *"ok"' ~/.singularity/worktrees/singularity/build-status.json
+cat ~/.equin/worktrees/singularity/build-status.json
+[ "$code" = 200 ] && grep -q '"status": *"ok"' ~/.equin/worktrees/singularity/build-status.json
 CMD
 }
 step_04_app_answers_DOC="README.md: the app is left at http://equin.localhost:9000."
@@ -73,7 +73,7 @@ step_04_app_answers_TAG="from-docs"
 
 step_05_screenshot() {
   cat <<'CMD'
-zsh -l -i -c 'cd ~/singularity && ./equin run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts --out /tmp/clean-install-shot' && ls -la /tmp/clean-install-shot*
+zsh -l -i -c 'cd ~/equin && ./equin run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts --out /tmp/clean-install-shot' && ls -la /tmp/clean-install-shot*
 CMD
 }
 step_05_screenshot_DOC="README.md: the app renders, not only answers."
@@ -96,7 +96,7 @@ for i in $(seq 1 100); do
   sleep 3
 done
 echo "http ${code:-none} — the app did not come back"
-launchctl print "gui/$(id -u)/dev.singularity.gateway" 2>&1 | head -20
+launchctl print "gui/$(id -u)/dev.equin.gateway" 2>&1 | head -20
 exit 1
 CMD
 }
@@ -105,7 +105,7 @@ step_07_app_after_reboot_TAG="from-docs"
 
 step_08_doctor() {
   cat <<'CMD'
-zsh -l -i -c 'cd ~/singularity && mise run doctor'
+zsh -l -i -c 'cd ~/equin && mise run doctor'
 CMD
 }
 step_08_doctor_DOC="docs/setup.md: \`mise run doctor\` says all required present; Claude Code is named as recommended until signed in."

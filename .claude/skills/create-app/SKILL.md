@@ -19,7 +19,7 @@ description: >
 
 ## Files on disk: one data dir per app
 
-An app's durable host-global files (content the user made, state that is the only copy) live in its **one** data dir, `~/.singularity/apps/<name>/` — never in a second `apps/*` dir, and never in `state/` from inside the app.
+An app's durable host-global files (content the user made, state that is the only copy) live in its **one** data dir, `~/.equin/apps/<name>/` — never in a second `apps/*` dir, and never in `state/` from inside the app.
 
 - Declare it at the app root, `plugins/apps/plugins/<name>/data-dirs/index.ts`, from the shell's `AppRef`:
 

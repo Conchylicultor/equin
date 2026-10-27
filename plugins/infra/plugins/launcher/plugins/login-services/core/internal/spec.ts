@@ -15,9 +15,18 @@ export type LoginServiceSession = "background" | "graphical";
 
 /** Which service a manager is asked about: what `stop` knows without ensuring anything. */
 export interface LoginServiceId {
-  /** The service label (launchd `Label`, systemd unit name stem), e.g. the gateway's (`LEGACY_IDS.launchdLabel`). */
+  /** The service label (launchd `Label`, systemd unit name stem), e.g. the gateway's `dev.equin.gateway`. */
   label: string;
   session: LoginServiceSession;
+  /**
+   * Labels the service was installed under before it was renamed. While the
+   * definition of one of them is still installed, the manager binds the
+   * service to THAT label (its `id.label` reads it): an installed service is
+   * renamed only by whoever moves it over — `./equin data-dir migrate` for the
+   * gateway — never by new code that happens to spell a new name, which would
+   * register a second copy of the service beside the running one.
+   */
+  installedAs?: readonly string[];
 }
 
 /** What the service runs — computed only once its binary is ensured. */

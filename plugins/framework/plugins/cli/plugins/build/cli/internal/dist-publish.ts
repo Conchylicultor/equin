@@ -8,7 +8,7 @@
 // back-compat.)
 //
 // Three publishers share this machinery, and all three publish under
-// `~/.singularity/worktrees/`: a checkout's served dist (`<name>/web`), each
+// `~/.equin/worktrees/`: a checkout's served dist (`<name>/web`), each
 // auto-served composition's (`<id>/web` — the same arm, a namespace either way),
 // and a release's scratch dist at `<wt>/release-web/<composition>`.
 // Which one a build publishes is an IDENTITY it names, not a path it spells —

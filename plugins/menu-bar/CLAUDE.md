@@ -21,8 +21,9 @@ namespaces and URLs, never an app.
   under the icon on macOS, top-right on Linux. When nothing answers on :9000
   (probed at start and on every show) it shows the bundled `frontend/index.html`
   instead, whose Start runs `launchctl kickstart -k gui/$UID/<gateway-label>`
-  / `systemctl --user start <gateway-label>.service` and loads the panel
-  once the port answers.
+  / `systemctl --user start <gateway-label>.service` (the label its job carries in
+  `EQUIN_GATEWAY_LABEL`, written by `login-services/index.ts` from the bound
+  gateway service) and loads the panel once the port answers.
 - **Window mode** — an installed app's process (`rust/src/window.rs`): on macOS
   the binary inside a shim bundle whose Info.plist has `EquinAppId` (its
   arguments then only carry an optional in-scope `--url`, a hand-off); on
@@ -69,7 +70,7 @@ namespaces and URLs, never an app.
 - Iterate on the crate with `cargo build --release` in `rust/` (its own
   `target/`, gitignored); the deps install uses the shared cargo-target cache.
 
-(`<gateway-label>` is the gateway's launchd label / systemd unit name, `LEGACY_IDS.launchdLabel` in `framework/product-name`.)
+(`<gateway-label>` is the gateway's launchd label / systemd unit name, `dev.equin.gateway` (`GATEWAY_SERVICE` in `infra/launcher/core`); an install from before the rename keeps `LEGACY_IDS.launchdLabel` until `./equin data-dir migrate` relabels it — the service stays bound to whichever label is installed (`installedAs`).)
 
 ## Installed apps (`machine/`)
 

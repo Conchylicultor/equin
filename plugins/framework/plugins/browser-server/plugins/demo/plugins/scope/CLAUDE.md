@@ -48,7 +48,7 @@ seed — so the unchanged app reads demo data through `useLive` /
   handlers (`window.onerror`, boot, the UI's observers) are the page's either
   way.
 - **Boot time** — every host boot writes one line to the `demo-host-boot` client log
-  (`~/.singularity/worktrees/<wt>/logs/demo-host-boot.jsonl`, also the page console): the wait
+  (`~/.equin/worktrees/<wt>/logs/demo-host-boot.jsonl`, also the page console): the wait
   the page saw, the worker's ready instant on its own clock, its stages (`graph`: load →
   ready barrier with migrations; `seed`), the plugin count and the slowest boot spans.
 

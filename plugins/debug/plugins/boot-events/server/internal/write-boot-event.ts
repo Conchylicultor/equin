@@ -5,7 +5,7 @@ import type { Registration } from "@plugins/framework/plugins/server-core/core";
 import type { BootLine } from "./schema";
 
 // Writes the per-boot lines to the persisted `boot` log channel →
-// ~/.singularity/worktrees/<wt>/logs/boot.jsonl: one `start` line at the
+// ~/.equin/worktrees/<wt>/logs/boot.jsonl: one `start` line at the
 // register phase, one `ready` line from `onReady`. The two pair by
 // processStartedAt (readBootEvents), so a backend that wedges during
 // migrations / onReadyBlocking leaves an unpaired start — visible on the

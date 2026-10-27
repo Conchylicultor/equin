@@ -21,7 +21,7 @@
 // first-launch config, not a code-default approximation.
 //
 // OUT OF SCOPE — central secrets / auth tokens: they live in one global encrypted
-// store (~/.singularity/state/secrets/) shared by every namespace by the
+// store (~/.equin/state/secrets/) shared by every namespace by the
 // single-instance-per-user architecture, carry no per-composition dimension, and
 // are deliberately untouched here (see research/2026-07-02-global-adr-single-
 // instance-per-user.md).

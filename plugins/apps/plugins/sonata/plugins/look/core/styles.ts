@@ -192,7 +192,7 @@ const DIGITAL_ROLL: Omit<SonataLookStyle, "keys"> = {
  * the keys — nobody inherits another look's constants by omission.
  *
  * The `sketch` numbers are the prototype's settled defaults
- * (`~/.singularity/apps/prototypes/sketch-roll`), not fresh guesses.
+ * (`~/.equin/apps/prototypes/sketch-roll`), not fresh guesses.
  */
 export const SONATA_LOOK_STYLES: Record<SonataLook, SonataLookStyle> = {
   // The immersive player's night (proto-1792113547-2qr6g7, `roll: immersive`):

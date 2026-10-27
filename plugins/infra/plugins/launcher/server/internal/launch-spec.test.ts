@@ -13,8 +13,7 @@ import { LOOPBACK_BIND } from "./listen";
 
 describe("gatewayLaunchSpec", () => {
   // The installed gateway as the deps cache names it: a path per identity.
-  const dir =
-    "/h/me/.singularity/cache/deps/gateway-binary/0123456789abcdef/env";
+  const dir = "/h/me/.equin/cache/deps/gateway-binary/0123456789abcdef/env";
   const ready = readyForTests(gatewayBinary, dir, "0123456789abcdef");
   const checkout = "/h/me/src/equin";
   const executable = unbundledExecutable(gatewayBuild(ready));
@@ -58,7 +57,7 @@ describe("gatewayLaunchSpec", () => {
 
   test("a bundled gateway runs from the app, its build named in the job's environment", () => {
     const inApp = {
-      path: "/h/me/.singularity/state/macos-app/equin.app/Contents/MacOS/gateway",
+      path: "/h/me/.equin/state/macos-app/equin.app/Contents/MacOS/gateway",
       identity: gatewayBuild(ready).identity,
       bundled: true,
     };
@@ -72,7 +71,7 @@ describe("gatewayLaunchSpec", () => {
       logLevel: "info",
     });
     expect(bundled.argv[0]).toBe(
-      "/h/me/.singularity/state/macos-app/equin.app/Contents/MacOS/gateway",
+      "/h/me/.equin/state/macos-app/equin.app/Contents/MacOS/gateway",
     );
     expect(bundled.env).toMatchObject(added);
     // Not one of the names the gateway hands its children.

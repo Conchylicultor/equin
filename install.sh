@@ -5,7 +5,7 @@
 #   ./install.sh                  # from inside a clone or fork you already have
 #
 # Options (after `bash -s --` when piped):
-#   --dir <path>     where to clone (default ~/singularity; ignored inside a checkout)
+#   --dir <path>     where to clone (default ~/equin; ignored inside a checkout)
 #   --repo <url>     what to clone (default the canonical repo — pass your fork)
 #   --no-shell-rc    do not add the `mise activate` line to your shell rc
 #
@@ -19,6 +19,17 @@
 
 set -euo pipefail
 
+# The data root, by paths/core's rule (data-root-layout.ts): the legacy dir
+# while an install not yet migrated has it (`./equin data-dir migrate` moves
+# it), else ~/.equin.
+data_root() {
+  if { [ -e "$HOME/.singularity" ] || [ -L "$HOME/.singularity" ]; } && ! [ "$HOME/.singularity" -ef "$HOME/.equin" ]; then
+    printf '%s\n' "$HOME/.singularity"
+  else
+    printf '%s\n' "$HOME/.equin"
+  fi
+}
+
 # Everything is inside main(), called on the last line: under `curl | bash`,
 # bash reads the script from the same pipe the commands below inherit as stdin,
 # so a command that reads stdin could otherwise swallow the rest of the script.
@@ -26,7 +37,7 @@ set -euo pipefail
 main() {
 
   REPO_URL="https://github.com/Conchylicultor/singularity"
-  INSTALL_DIR="$HOME/singularity"
+  INSTALL_DIR="$HOME/equin"
   EDIT_RC=1
 
   while [ $# -gt 0 ]; do
@@ -179,7 +190,7 @@ EOF
   say "Starting the gateway and its Postgres"
   ./equin start
 
-  STATUS="$HOME/.singularity/worktrees/singularity/build-status.json"
+  STATUS="$(data_root)/worktrees/singularity/build-status.json"
   before="$(grep -o '"buildId": *"[^"]*"' "$STATUS" 2>/dev/null || true)"
   say "Building the app (the long step)"
   # --skip-checks: this deploys main, whose tree already passed the full check

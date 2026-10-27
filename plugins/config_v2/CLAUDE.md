@@ -74,7 +74,7 @@ itself its own `source` value.
 Config flows through three layers, each with a human-editable override mechanism:
 
 ```
-Code (defineConfig)  →  git config/  →  ~/.singularity/state/config/
+Code (defineConfig)  →  git config/  →  ~/.equin/state/config/
    defaults + schema      repo defaults     user config
 ```
 
@@ -88,9 +88,9 @@ Code (defineConfig)  →  git config/  →  ~/.singularity/state/config/
 
 ### Layer 2: git → user (build-time)
 
-`./equin build` propagates the resolved git config (override if present, else origin) to `~/.singularity/state/config/<plugin-tree>/<name>.origin.jsonc` with a hash of the source content. The server reads from this directory at startup without re-propagating.
+`./equin build` propagates the resolved git config (override if present, else origin) to `~/.equin/state/config/<plugin-tree>/<name>.origin.jsonc` with a hash of the source content. The server reads from this directory at startup without re-propagating.
 
-**User overrides:** UI `setConfig` or manual edits create `~/.singularity/state/config/<plugin-tree>/<name>.jsonc` with the origin's content hash.
+**User overrides:** UI `setConfig` or manual edits create `~/.equin/state/config/<plugin-tree>/<name>.jsonc` with the origin's content hash.
 
 **Conflict detection:** When git config changes, the propagated origin hash updates, and a user override still carrying the old hash becomes a **conflict**: the new git value takes effect, and the settings UI surfaces the conflict (Keep / Accept / Merge) — see [Conflict precedence](#conflict-precedence-origin-wins-until-reconciled). A user override therefore never silently masks a committed change; it only wins while the git value it was written against is unchanged.
 
@@ -103,7 +103,7 @@ A descriptor's config can be customized **per app** straight from version contro
 1. Create `config/<plugin-tree>/@app/<id>/<name>.jsonc`.
 2. Put **only the fields that differ** for that app, e.g. `{ "captureUrlByDefault": false }` (a partial delta — schema default-backfill fills the rest).
 3. Line 1: `// @hash <hash>` copied from the **base** origin `config/<plugin-tree>/<name>.origin.jsonc`. A scoped override anchors to the base origin — **no scoped origin is ever committed**.
-4. `./equin build`. Propagation resolves the scope as `baseEffective ⊕ scopedDelta` and writes it to `~/.singularity/state/config/<wt>/<plugin-tree>/@app/<id>/<name>.origin.jsonc`.
+4. `./equin build`. Propagation resolves the scope as `baseEffective ⊕ scopedDelta` and writes it to `~/.equin/state/config/<wt>/<plugin-tree>/@app/<id>/<name>.origin.jsonc`.
 5. `./equin check config-origins-in-sync` validates the `@hash` against the base origin and the document against the schema.
 
 This is the base-override workflow (Layer 1) one path segment deeper. Any registered descriptor can be git-scoped — it does **not** need `scope: "app"` (that marker only governs the theme "Customize for app" fork-all-descriptors UX).
@@ -299,7 +299,7 @@ with the document through the registry's `onDocumentChange`. The machine half im
 
 - **`mapConfigLists` (`core/internal/collections.ts`) — THE walk over every `listField` instance in a document**, at any depth (through `itemFields` and `subFields`). A config document is recursive; every consumer that walked it one level deep drifted. Used by `normalizeCollectionItems` (id seeding), the `config-stable-list-ids` check, and `diffNormalForm` (the layer-comparison normal form behind the tiers/modified attribution). It visits a list **before** recursing into its rows, because a row's `auto-` id hashes that row's content — seeding nested ids first would re-mint every enclosing id.
 - **`jsoncConfigProxy`** (`machine/internal/jsonc-proxy.ts`) — synchronous read/write with `// @hash` header tracking: the file store's `proxy`.
-- **`ConfigWatcher`** (`machine/internal/config-watcher.ts`) — `@parcel/watcher` file-change detection on `~/.singularity/state/config/`, behind the file store's `watch`. Debounce (100ms) + ceiling (1s); no reconcile timer (the file-watcher engine has none) — the blanket 30s reconcile it once had re-fired every watched path (2 per descriptor) into a full conflicts recompute, an O(N²) idle re-read storm with nothing changed. Callbacks are `() => void`; the registry re-reads through the store on notification.
+- **`ConfigWatcher`** (`machine/internal/config-watcher.ts`) — `@parcel/watcher` file-change detection on `~/.equin/state/config/`, behind the file store's `watch`. Debounce (100ms) + ceiling (1s); no reconcile timer (the file-watcher engine has none) — the blanket 30s reconcile it once had re-fired every watched path (2 per descriptor) into a full conflicts recompute, an O(N²) idle re-read storm with nothing changed. Callbacks are `() => void`; the registry re-reads through the store on notification.
 
   These events are a **push-latency** mechanism, not a correctness one — an event can be missed (an out-of-band writer parcel doesn't observe, a dropped fsevent, a path no `CacheEntry` registered). **Never treat "no event" as "no change"**: derived state must be founded on the disk, per the fingerprint memo below.
 

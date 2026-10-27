@@ -25,8 +25,8 @@ function failureVerdict(steps: Verdict["steps"], viteOnly = false): Verdict {
       viteOnly ? "The frontend compiled, but the artifact was discarded." : "",
     ].filter(Boolean),
     pointers: [
-      "Full output: /home/x/.singularity/worktrees/att-x/build.log",
-      "Check logs:  /home/x/.singularity/worktrees/att-x/check.log",
+      "Full output: /home/x/.equin/worktrees/att-x/build.log",
+      "Check logs:  /home/x/.equin/worktrees/att-x/check.log",
     ],
     steps,
   };
@@ -164,7 +164,7 @@ describe("renderVerdict — success", () => {
 describe("fallbackVerdict", () => {
   const ctx = {
     urls: [URL],
-    buildLogPath: "/home/x/.singularity/worktrees/att-x/build.log",
+    buildLogPath: "/home/x/.equin/worktrees/att-x/build.log",
   };
 
   // Narrows Verdict | null and fails loudly instead of papering over with `!`.
@@ -231,7 +231,7 @@ describe("fallbackVerdict", () => {
 describe("runVerdictGuard — the pointer and the file it names", () => {
   const ctx = {
     urls: [URL],
-    buildLogPath: "/home/x/.singularity/worktrees/att-x/build.log",
+    buildLogPath: "/home/x/.equin/worktrees/att-x/build.log",
   };
 
   test("every fallback carrying the pointer has a write behind it", () => {
@@ -294,7 +294,7 @@ describe("runVerdictGuard — the pointer and the file it names", () => {
 describe("fallbackVerdict — terminated from outside", () => {
   const ctx = {
     urls: [URL],
-    buildLogPath: "/home/x/.singularity/worktrees/att-x/build.log",
+    buildLogPath: "/home/x/.equin/worktrees/att-x/build.log",
   };
 
   test("(no verdict, exit 143, SIGTERM) → BUILD ABORTED, not BUILD FAILED", () => {

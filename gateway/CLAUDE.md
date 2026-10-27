@@ -9,9 +9,9 @@ See the top-level [`CLAUDE.md`](../CLAUDE.md) for overall architecture and [`ser
 - Listens on loopback port 9000 (`-listen loopback:9000`: one listener on `127.0.0.1:9000`, one on `[::1]:9000`, one `http.Server`), routes `<name>.localhost:9000` → that worktree's backend
 - Serves each worktree's `web/dist` as static files directly (no backend spawn needed for page loads)
 - Lazy-spawns the backend on a page load (in the background, beside the SPA shell) or the first `/api/*` or `/ws/*` request; tears it down after 10 minutes idle
-- Hands each backend a Unix domain socket at `~/.singularity/sockets/<name>.sock` as `--socket <path>` on its argv. Gateway dials the socket directly — no TCP between gateway and backend.
+- Hands each backend a Unix domain socket at `~/.equin/sockets/<name>.sock` as `--socket <path>` on its argv. Gateway dials the socket directly — no TCP between gateway and backend.
 - Starts every child (backends, supervised services) from a **declared** environment, never its own: see "Backend Contract", item 2.
-- Discovers worktrees from `~/.singularity/worktrees/<name>/spec.json`
+- Discovers worktrees from `~/.equin/worktrees/<name>/spec.json`
 - Exposes `/gateway/*` on every host as an API for apps to query gateway state
 - **Supervises configured services** (e.g. embedded Postgres) via a generic process supervisor. See "Service supervision" below.
 
@@ -61,7 +61,7 @@ the shell is `no-cache`.
 
 ## Worktree Registry
 
-Location: `~/.singularity/worktrees/<name>/spec.json`. Directory name = worktree identifier = subdomain.
+Location: `~/.equin/worktrees/<name>/spec.json`. Directory name = worktree identifier = subdomain.
 
 ```json
 {
@@ -100,7 +100,7 @@ When a change applies (see `UpdateSpec`'s docblock): `web` on the **next request
 
 ### Self-healing stale registrations (dead `spec.Server`)
 
-The registry subdir (`~/.singularity/worktrees/<name>/`, holding `spec.json` + logs) is a *different* path from `spec.Server` (the git worktree's server dir, e.g. `<repo>/.claude/worktrees/<name>/plugins/.../server-core`). The subdir can outlive the worktree it points at — `worktree-cleanup` or a manual `git worktree remove` can delete the git worktree while leaving the registry subdir behind. Such a registration is born-dead: it can only ever fail to spawn (`cmd.Dir = spec.Server` does not exist).
+The registry subdir (`~/.equin/worktrees/<name>/`, holding `spec.json` + logs) is a *different* path from `spec.Server` (the git worktree's server dir, e.g. `<repo>/.claude/worktrees/<name>/plugins/.../server-core`). The subdir can outlive the worktree it points at — `worktree-cleanup` or a manual `git worktree remove` can delete the git worktree while leaving the registry subdir behind. Such a registration is born-dead: it can only ever fail to spawn (`cmd.Dir = spec.Server` does not exist).
 
 `registry.go` evicts these defensively (`serverPathMissing`, ENOENT-only so a transient stat error never evicts a live worktree):
 
@@ -159,7 +159,7 @@ Every `Ensure` names a `StartReason`, which sets the spawn's priority:
 
 The gateway includes a generic service supervisor (`supervisor.go`) that manages long-lived daemons defined in the `-db-config` file. The gateway knows nothing about what services are — it just executes start commands, probes readiness, and runs watchdogs.
 
-### Config file: `-db-config` (default `~/.singularity/state/db-config/database.json`)
+### Config file: `-db-config` (default `~/.equin/state/db-config/database.json`)
 
 Auto-generated on first `./equin start`. Contains two sections:
 - `connection` — database host/port/user, read by the server and CLI (not by the gateway)
@@ -195,7 +195,7 @@ If `database.json` is missing or has an empty `services` array, the supervisor d
 
 ## Logging
 
-Each channel gets its own size-rotated file under `-log-dir` (default `~/.singularity/logs/gateway/`), so one channel's volume can't bury another:
+Each channel gets its own size-rotated file under `-log-dir` (default `~/.equin/logs/gateway/`), so one channel's volume can't bury another:
 
 - `gateway.log` — the gateway's own `slog` output (lifecycle, routing, supervisor). Written directly by the Go process via a rotating writer.
 - `<name>.log` — one file per worktree, holding that backend's stdout/stderr (`central.log`, `<worktree>.log`, …). Each line is `<RFC3339> [stdout|stderr] <line>`. Backend output never lands in `gateway.log`. This is the durable counterpart to the in-memory `logRing` that feeds the live UI.
@@ -207,7 +207,7 @@ Rotation (`logwriter.go`, `rotatingWriter`) is size-based: at `maxLogBytes` (50 
 
 The machine's gateway binary is the `gateway-binary` dependency
 (`plugins/infra/plugins/launcher/deps`, an `infra/deps` `build` kind): built from
-this directory's Go source into `~/.singularity/cache/deps/gateway-binary/<identity>/env/gateway`
+this directory's Go source into `~/.equin/cache/deps/gateway-binary/<identity>/env/gateway`
 by `./equin start` (or `./equin deps install gateway-binary`), rebuilt
 whenever a `.go` file, `go.mod`/`go.sum` or Go itself changes, and sealed into
 every release bundle (`deps/gateway-binary/gateway`, cross-compiled for its
@@ -215,7 +215,7 @@ platform). By hand, for a debugger:
 
 ```sh
 go build -o /tmp/gateway .
-/tmp/gateway -child-env HOME,USER,PATH                   # minimal hand-run; defaults: loopback:9000, ~/.singularity/worktrees/
+/tmp/gateway -child-env HOME,USER,PATH                   # minimal hand-run; defaults: loopback:9000, ~/.equin/worktrees/
 /tmp/gateway -child-env HOME,USER,PATH -listen loopback:8080 -idle-timeout 5m -log-level debug
 ```
 
@@ -249,9 +249,9 @@ The backend's own ppid-poll escape hatch (`server-core/bin/index.ts` — self-ex
 
 ## Path-length limit
 
-macOS `sun_path` is 104 bytes. With the standard prefix (`/Users/<user>/.singularity/sockets/`) and `.next.sock` suffix (the longer of the two per-worktree sockets), worktree names up to ~62 chars fit. If a worktree's name produces an overlong path, `NewWorktree` returns an error and the worktree is rejected at registration. Rename or shorten the worktree to recover.
+macOS `sun_path` is 104 bytes. With the standard prefix (`/Users/<user>/.equin/sockets/`) and `.next.sock` suffix (the longer of the two per-worktree sockets), worktree names up to ~62 chars fit. If a worktree's name produces an overlong path, `NewWorktree` returns an error and the worktree is rejected at registration. Rename or shorten the worktree to recover.
 
-This ~62-char budget applies to the dev `~/.singularity/sockets/` prefix. A packaged release stages its data root at a deep versioned path (`releases/<wt>/<comp>-<target>/<run-id>/data`) that would blow the cap, so `launch.ts` reroots the sockets dir to a short `/tmp` path via `EQUIN_SOCKETS_DIR` (the env override read by `-sockets-dir`'s default) — a deep release data root therefore does not constrain worktree names. The dev limit itself is unchanged.
+This ~62-char budget applies to the dev `~/.equin/sockets/` prefix. A packaged release stages its data root at a deep versioned path (`releases/<wt>/<comp>-<target>/<run-id>/data`) that would blow the cap, so `launch.ts` reroots the sockets dir to a short `/tmp` path via `EQUIN_SOCKETS_DIR` (the env override read by `-sockets-dir`'s default) — a deep release data root therefore does not constrain worktree names. The dev limit itself is unchanged.
 
 ## File permissions
 

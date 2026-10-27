@@ -43,12 +43,12 @@ describe("distNames (path arithmetic)", () => {
   });
 
   test("a composition's web dir gets its own prefix family", () => {
-    const names = distNames("/home/u/.singularity/worktrees/sonata/web", 7);
-    expect(names.parent).toBe("/home/u/.singularity/worktrees/sonata");
+    const names = distNames("/home/u/.equin/worktrees/sonata/web", 7);
+    expect(names.parent).toBe("/home/u/.equin/worktrees/sonata");
     expect(names.releaseName).toBe("web.live.7");
-    expect(
-      distStagingPath("/home/u/.singularity/worktrees/sonata/web", 7),
-    ).toBe("/home/u/.singularity/worktrees/sonata/web.staging.7");
+    expect(distStagingPath("/home/u/.equin/worktrees/sonata/web", 7)).toBe(
+      "/home/u/.equin/worktrees/sonata/web.staging.7",
+    );
   });
 });
 

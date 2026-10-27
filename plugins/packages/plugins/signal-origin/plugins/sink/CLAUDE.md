@@ -1,6 +1,6 @@
 # sink
 
-The **contract** for `~/.singularity/logs/signal-origin/signal-origin.jsonl` — the host-global
+The **contract** for `~/.equin/logs/signal-origin/signal-origin.jsonl` — the host-global
 record of who killed a `./equin build|check|push`: the path, the line
 shape, and the bounded read. One JSONL line per catchable fatal signal, plus one
 when the native tap could not be armed.

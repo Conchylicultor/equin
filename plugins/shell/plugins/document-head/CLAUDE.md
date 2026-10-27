@@ -12,7 +12,7 @@ theme's CSS (`ui/theme-engine/server`), instead of a copy kept in browser storag
   combines sources: each key gets every source's own longest match, in source
   order.
 - **`machine/`** — the desktop half. At `onReady` it renders every source and
-  writes `~/.singularity/worktrees/<ns>/document-head.json`
+  writes `~/.equin/worktrees/<ns>/document-head.json`
   (`worktreeArtifacts.documentHead`, `{ v: 1, entries }`, temp + rename), then
   re-renders, coalesced, on each source's change. A failed render is loud and
   leaves the last good file.

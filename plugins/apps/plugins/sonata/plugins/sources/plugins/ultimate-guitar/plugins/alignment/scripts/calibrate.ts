@@ -5,7 +5,7 @@
 //   ./equin run …/calibrate.ts --set [--fetch http://<namespace>.localhost:9000]
 //
 // <features.json>: a cached BeatFeatures file
-//   (~/.singularity/cache/beat-features/v<N>/<settingsKey>/<videoId>.json).
+//   (~/.equin/cache/beat-features/v<N>/<settingsKey>/<videoId>.json).
 // <ug-tab.json>: a UgTab, e.g. the `value` the live read
 //   `GET /api/resources/sonata.ultimate-guitar.tab?url=<tab url>` answers.
 //   Each file is recognised by its shape, in any order.

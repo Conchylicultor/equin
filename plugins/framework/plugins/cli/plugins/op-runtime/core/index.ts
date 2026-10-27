@@ -1,4 +1,4 @@
-// The deploy receipt: `~/.singularity/worktrees/<ns>/build-status.json`, the
+// The deploy receipt: `~/.equin/worktrees/<ns>/build-status.json`, the
 // only record of what a build became, and the grammar for reading it back.
 //
 // It lives in `core/` rather than beside the op commands that write it because

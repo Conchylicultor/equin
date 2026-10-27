@@ -19,7 +19,7 @@ exactly the ones that kill it, restart it, or happen while it is down.
   (an absolute path into the user's checkout, under `sidequests/monitors/<name>/`), never at a
   worktree. So a monitor only picks up an edit once it is merged to main, and a
   worktree being deleted can never take a monitor down with it.
-- **Logs go to `~/.singularity/logs/monitors/<name>.log|.jsonl`**, in their own
+- **Logs go to `~/.equin/logs/monitors/<name>.log|.jsonl`**, in their own
   declared corner of the app's log kind, so one place holds every trail. (This
   subtree runs outside the build, so it can declare nothing itself — `debug`
   owns the `logs/monitors` data dir on the monitors' behalf.)

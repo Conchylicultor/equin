@@ -199,12 +199,12 @@ Two rules that look wrong and are not:
   decide ownership. Do not reintroduce a `kill(pid, 0)` probe or a heartbeat: a
   heartbeat proves the event loop turns, not that the build is progressing, so a
   build wedged on a hung child looked healthy under the old scheme. "What is the
-  holder stuck in?" is answered instead from `~/.singularity/logs/build-progress/build-progress.jsonl`,
+  holder stuck in?" is answered instead from `~/.equin/logs/build-progress/build-progress.jsonl`,
   which records the actual span.
 
 ## The deploy receipt (`plugins/op-runtime/core/internal/build-receipt.ts`)
 
-`~/.singularity/worktrees/<wt>/build-status.json` — `running` once the build lock
+`~/.equin/worktrees/<wt>/build-status.json` — `running` once the build lock
 is granted, rewritten `ok` / `failed` / `superseded` in `finalizeBuild`. **One
 fixed path, deliberately with no `<buildId>` variant**: every other build artifact
 is per-run, so "did my build land?" could only be asked of them through
@@ -335,7 +335,7 @@ Two consequences worth knowing before editing:
 - **Every filtered registry is per-composition**
   (`<dir>.composition.<id>.generated.ts`) and `plugins-active.ts` selects one
   only under a matching `composition` — the field the backend reads back off its
-  own `~/.singularity/worktrees/<namespace>/spec.json`, the same file the gateway
+  own `~/.equin/worktrees/<namespace>/spec.json`, the same file the gateway
   read to spawn it (`plugins/framework/plugins/server-core/bin/spec-composition.ts`; deliberately not an env var,
   because `build` does not rebuild the Go gateway and a dropped variable would
   boot the full app under a composition's namespace) — so a file on disk cannot
@@ -392,7 +392,7 @@ through it too). Two consequences that look wrong and are not:
   the same dist by construction.
 
 **No dist lives in a checkout.** Both arms resolve under
-`~/.singularity/worktrees/` — served at `<name>/web`, release scratch at
+`~/.equin/worktrees/` — served at `<name>/web`, release scratch at
 `<wt>/release-web/<id>` — so a checkout carries no build output. The backend-side
 twin is `webDistDir()` (`infra/paths`), which is per-NAMESPACE and must stay a
 function, not a const. The pre-S4 in-checkout tree is reclaimed by

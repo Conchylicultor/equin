@@ -1,6 +1,6 @@
 import { readdir, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
-import { BACKUPS_DIR } from "@plugins/infra/plugins/paths/server";
+import { backupsDir } from "@plugins/infra/plugins/paths/server";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { hasLiveBackup } from "./run-state";
 
@@ -42,12 +42,12 @@ async function exists(path: string): Promise<boolean> {
  * a live run's `staging/` is mid-write, and deleting it would kill the backup
  * that survived the restart just as surely as failing its row would.
  *
- * Host-global BACKUPS_DIR + main-only lifecycle: callers gate on isMain().
+ * Host-global backupsDir() + main-only lifecycle: callers gate on isMain().
  */
 export async function reconcileBackups(): Promise<void> {
   let entries: string[];
   try {
-    entries = await readdir(BACKUPS_DIR);
+    entries = await readdir(backupsDir());
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
     entries = [];
@@ -68,7 +68,7 @@ export async function reconcileBackups(): Promise<void> {
   for (const entry of entries) {
     if (!TIMESTAMP_RE.test(entry)) continue;
 
-    const runDir = join(BACKUPS_DIR, entry);
+    const runDir = join(backupsDir(), entry);
     const archivePath = join(runDir, "archive.tar.gz");
     const stagingDir = join(runDir, "staging");
     const partialPath = `${archivePath}.partial`;

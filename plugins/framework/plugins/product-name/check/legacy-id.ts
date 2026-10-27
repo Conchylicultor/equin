@@ -17,16 +17,10 @@ const RULE = "product-name:legacy-id";
 const OLD_NAME = /singularity/i;
 
 /**
- * Spellings still allowed outside the owner, each because a later step of the
- * rename moves it (and then deletes its line here) or because it names
- * something outside the repo's control.
+ * Spellings still allowed outside the owner, because they name something
+ * outside the repo's control.
  */
 const ALLOWED: ReadonlyArray<{ pattern: RegExp; why: string }> = [
-  // Step 7 moves the data dir to ~/.equin with a user-run migration.
-  {
-    pattern: /\.singularity(?=$|[/"'`\s,;:)\]}>*]|\.(?:\s|$))/g,
-    why: "the data dir (step 7)",
-  },
   // The repository keeps its name; a URL to it is the remote's, not ours.
   {
     pattern: /(?:github|gitlab)(?:usercontent)?\.com[/:][\w.-]+\/singularity/gi,
@@ -101,7 +95,7 @@ const legacyIdCheck: Check = {
         `A name the same build produces and reads (a package scope, a key, an identifier, a temp prefix) is renamed — derive it from \`PRODUCT_NAME\` ("${PRODUCT_NAME}"). ` +
         'A kept stored id or cross-version contract is read from `LEGACY_IDS` (`@plugins/framework/plugins/product-name/core`), never spelled; prose names the concept ("the main namespace", "the push trailer"). ' +
         "A file that cannot import it (Go, Rust, shell) is listed in that id's `mirrors` in `legacy-ids.ts`. " +
-        `Still allowed until their step lands: ${ALLOWED.map((a) => a.why).join(", ")}.`,
+        `Also allowed: ${ALLOWED.map((a) => a.why).join(", ")}.`,
     };
   },
 };

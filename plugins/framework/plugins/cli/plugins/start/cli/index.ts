@@ -1,5 +1,6 @@
 import { defineCliCommand } from "@plugins/framework/plugins/cli/core";
 import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
+import { GATEWAY_SERVICE } from "@plugins/infra/plugins/launcher/core";
 
 /**
  * The one command that deliberately leaves something running after it exits —
@@ -25,7 +26,7 @@ export default defineCliCommand<
     { flags: "--force", description: "Restart even if already running" },
     {
       flags: "--only <ids>",
-      description: `Comma-separated services to start (the gateway's ${LEGACY_IDS.launchdLabel}, or a declared login service id); with --force, restarts only those`,
+      description: `Comma-separated services to start (the gateway's ${GATEWAY_SERVICE.label} — ${LEGACY_IDS.launchdLabel} on an install data-dir migrate has not moved yet — or a declared login service id); with --force, restarts only those`,
     },
     {
       flags: "--log-level <level>",

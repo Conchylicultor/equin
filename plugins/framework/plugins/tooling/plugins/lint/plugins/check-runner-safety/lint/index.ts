@@ -14,7 +14,7 @@ export default {
    * outside. This rule is not that: it guards a durable, cross-process side
    * effect. A `*.test.ts` that drives `runChecks()` runs in a process that
    * imported whatever the suite imported, and it writes PASS entries into the
-   * SAME global cache (`~/.singularity/check-cache/`) that a later `push` reads
+   * SAME global cache (`~/.equin/check-cache/`) that a later `push` reads
    * and trusts without re-running anything. A test harness is INSIDE this blast
    * radius, not outside it — so the rule is opted back in everywhere via
    * `enforceEverywhere`, the same way `promise-safety` keeps its bug-catching

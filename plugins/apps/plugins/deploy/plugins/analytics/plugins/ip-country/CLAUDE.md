@@ -35,7 +35,7 @@ file, and `buildSnapshot(csv, yyyymm)` makes one from a small CSV fixture.
   ascends without overlap (a binary search answers wrong silently on unordered
   input) and yields to the event loop between chunks. A load is zero-copy
   typed-array views; a wrong magic, version or length throws.
-- **Lookup.** `lookup.ts` reads `~/.singularity/cache/ip-country/ip-country.bin`
+- **Lookup.** `lookup.ts` reads `~/.equin/cache/ip-country/ip-country.bin`
   lazily on the FIRST lookup (one synchronous ~16 MB read), so a backend that
   never looks anything up never pays for it. `reloadIpCountry()` drops the held
   copy; the refresh job calls it in-process after writing — no watcher, no

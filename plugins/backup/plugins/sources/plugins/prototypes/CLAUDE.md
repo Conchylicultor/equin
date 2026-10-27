@@ -1,6 +1,6 @@
 # prototypes
 
-Backs up `~/.singularity/apps/prototypes/` — the throwaway UI mockups the Prototypes
+Backs up `~/.equin/apps/prototypes/` — the throwaway UI mockups the Prototypes
 app serves.
 
 Prototypes are deliberately **not** in git: keeping them out of the repo is what

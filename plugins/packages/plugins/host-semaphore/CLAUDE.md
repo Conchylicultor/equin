@@ -25,7 +25,7 @@ primitive).
 the caller. This primitive derives no path of its own — and that is a deliberate
 correction, not a style choice. It used to do
 ``join(EQUIN_DIR, `${name}-slots`)`` itself, which meant one primitive
-silently minted a top-level directory in `~/.singularity/` per pool: ten existed on
+silently minted a top-level directory in `~/.equin/` per pool: ten existed on
 disk, only seven had a live `defineHostPool`, and nothing in the repo could
 enumerate any of them because the paths existed only as a template literal inside a
 function.

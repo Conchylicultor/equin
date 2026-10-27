@@ -33,6 +33,7 @@ export default [
       "core/internal/checkout-owner.ts",
       "core/internal/checkout-ref.ts",
       "core/internal/data-dir.ts",
+      "core/internal/data-root-layout.ts",
       "core/internal/data-dirs-manifest.ts",
       "core/internal/paths.ts",
       "core/internal/prune-artifacts.ts",

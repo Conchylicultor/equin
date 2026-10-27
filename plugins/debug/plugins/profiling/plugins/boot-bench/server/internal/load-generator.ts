@@ -27,7 +27,7 @@ export interface HostGateLoad {
  * Occupants run on the LIVE `heavy-read` pool handle — `defineHostPool` is a
  * per-id registry, so occupying `"heavy-read"` returns the very pool
  * `host-read-pool` defined, contending for the IDENTICAL physical flock slot
- * files (`~/.singularity/locks/heavy-read/slot-N.lock`), not a separate gate.
+ * files (`~/.equin/locks/heavy-read/slot-N.lock`), not a separate gate.
  * Each occupant CYCLES: acquire a slot, hold it for
  * `OCCUPANT_HOLD_MS`, release, immediately re-acquire — looping until stopped.
  * Cycling (rather than holding continuously until stop) is essential: the

@@ -34,7 +34,7 @@ export interface WorktreeDirIndex {
 // ONE readdir of the git worktree parent (`<root>/.claude/worktrees`), returning
 // both the membership set and the canonical list. A missing parent dir (ENOENT)
 // yields empty halves; any other error is surfaced loudly. Reads the GIT worktree
-// parent, NOT the `~/.singularity` registry that `readRegistryNames` walks.
+// parent, NOT the `~/.equin` registry that `readRegistryNames` walks.
 //
 // One readdir answers "does this dir exist" for every id at once, which is what
 // lets the reaper classify thousands of attempt rows without a stat each.

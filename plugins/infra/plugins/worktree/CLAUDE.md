@@ -88,7 +88,7 @@ bound them instead.
 ## Op liveness markers (`server/internal/worktree-op.ts`)
 
 `markWorktreeOpStart(slug, kind, opId)` publishes
-`~/.singularity/worktrees/<slug>/ops/<opId>.json` = `{v:2, kind, opId, pid,
+`~/.equin/worktrees/<slug>/ops/<opId>.json` = `{v:2, kind, opId, pid,
 startedAt}` and returns a handle whose `release()` unlinks it. The file is
 written to a `.tmp` sibling, `flock`ed, then renamed into place, and the lock is
 held for the op's life. **The lock is the liveness**: the kernel drops it when

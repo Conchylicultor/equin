@@ -24,8 +24,10 @@ export const LEGACY_IDS = {
   keychainService: "singularity",
   /** The gateway's code-signing identifier (TCC grants are keyed on it). */
   codesignIdentifier: "dev.singularity.gateway",
-  /** The gateway's launchd / systemd label. */
+  /** The gateway's launchd / systemd label before the data-dir migration (`./equin data-dir migrate`). */
   launchdLabel: "dev.singularity.gateway",
+  /** The data root's dir name under the home dir before the data-dir migration (`~/<dir>`). */
+  dataDirName: ".singularity",
   /** The trailer naming the conversation a commit came from. */
   conversationTrailer: "Singularity-Conversation",
   /** The trailer naming the push a commit landed with. */
@@ -100,6 +102,7 @@ export const LEGACY_ID_NOTES: Readonly<Record<LegacyIdKey, LegacyIdNote>> = {
     mirrors: [
       "gateway/proxy.go",
       "gateway/worktree.go",
+      "install.sh",
       "plugins/menu-bar/rust/src/cli.rs",
       "sidequests/claude-web/session-picker.sh",
       "sidequests/clean-install/steps.sh",
@@ -127,10 +130,16 @@ export const LEGACY_ID_NOTES: Readonly<Record<LegacyIdKey, LegacyIdNote>> = {
     kept: "TCC grants are keyed on it; renaming re-prompts every permission",
   },
   launchdLabel: {
-    kept: "the installed service; relabelled with the data-dir migration (step 7)",
+    kept: "the installed service of an install not yet migrated; the gateway's login service stays bound to it while its definition is installed, until `./equin data-dir migrate` relabels it",
+  },
+  dataDirName: {
+    kept: "the data root of an install not yet migrated; it is used while it exists, until `./equin data-dir migrate` moves it (paths/core dataRootLayout)",
     mirrors: [
-      "plugins/menu-bar/rust/src/gateway.rs",
-      "sidequests/clean-install/steps-install.sh",
+      "gateway/dataroot.go",
+      "install.sh",
+      "sidequests/monitors/fd/fd-monitor.sh",
+      "sidequests/clean-install/run.sh",
+      "sidequests/clean-install/steps-migrate.sh",
     ],
   },
   conversationTrailer: {
@@ -192,19 +201,18 @@ export const LEGACY_ID_NOTES: Readonly<Record<LegacyIdKey, LegacyIdNote>> = {
     mirrors: ["plugins/framework/plugins/cli/package.json"],
   },
   defaultCheckoutDir: {
-    kept: "existing installs' checkout dir; new installs move with the data dir (step 7)",
+    kept: "existing installs' checkout dir, which is never moved (git worktrees store absolute gitdirs); install.sh clones new installs to ~/equin",
     mirrors: [
-      "install.sh",
       ".vscode/settings.json",
       "sidequests/claude-web/com.epot.claude-new.plist",
       "sidequests/claude-web/com.epot.claude-picker.plist",
       "sidequests/monitors/fd/com.epot.fd-monitor.plist",
       "sidequests/clean-install/steps.sh",
-      "sidequests/clean-install/steps-install.sh",
+      "sidequests/clean-install/steps-migrate.sh",
     ],
   },
   backupsDirName: {
-    kept: "existing local backups; moves with the data dir (step 7)",
+    kept: "the local backups of an install not yet migrated; used while it exists, until `./equin data-dir migrate` moves it (paths/core backupsDir)",
   },
   envPrefix: {
     kept: "installed plists, older gateways and backends, agent hooks and operators' dotfiles still set or read the old names; both are read and written until a later step drops them (research/2026-10-25-global-equin-env-vars.md)",

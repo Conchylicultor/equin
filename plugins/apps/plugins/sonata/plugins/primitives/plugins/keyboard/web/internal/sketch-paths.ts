@@ -3,7 +3,7 @@
  * random source, a key outline that wobbles, and the loose rule the keys hang
  * from. No React, no DOM, no colours — just path strings.
  *
- * Ported from the prototype at `~/.singularity/apps/prototypes/sketch-roll`
+ * Ported from the prototype at `~/.equin/apps/prototypes/sketch-roll`
  * (`keyRng` / `drawnKeyPath` / `drawnLine`), which is where the numbers were
  * settled. The arithmetic is unchanged; only the 8-positional-number signature
  * became an options object.

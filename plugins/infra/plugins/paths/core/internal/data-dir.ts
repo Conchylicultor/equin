@@ -16,7 +16,7 @@ import {
   resolveDataRoot,
 } from "./paths";
 
-// The declared-directory registry for `~/.singularity/`.
+// The declared-directory registry for `~/.equin/`.
 //
 // The root used to be a shared mutable namespace with no owner and no reader:
 // `EQUIN_DIR` was a plain string and ~37 call sites across ~30 plugins

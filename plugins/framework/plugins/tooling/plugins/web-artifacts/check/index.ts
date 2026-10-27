@@ -1,8 +1,8 @@
 // Contributed checks guarding the per-plugin web-artifact composition.
 //
 // BOTH are `scope: "deploy"`: their subject is the local deployment `build`
-// produces — this checkout's served dist (`~/.singularity/worktrees/<name>/web`)
-// and the `~/.singularity/cache/web-artifacts` store, both outside any repo — not the
+// produces — this checkout's served dist (`~/.equin/worktrees/<name>/web`)
+// and the `~/.equin/cache/web-artifacts` store, both outside any repo — not the
 // tree. So neither is in the push payload,
 // and `push` (which asks for `--scope tree`) does not run them; `build`, a
 // standalone `./equin check`, and main's post-push auto-build do. Each

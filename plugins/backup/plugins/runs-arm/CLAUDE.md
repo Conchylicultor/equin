@@ -18,7 +18,7 @@ status yields `NULL` and throws the whole page; folding the branches out of a
 
 ## The two base columns that read `null`
 
-- **`namespace`** — a backup is host-global; it archives `~/.singularity`, not a
+- **`namespace`** — a backup is host-global; it archives `~/.equin`, not a
   checkout. Naming the worktree whose backend ran the job would be a fact about
   scheduling dressed as a fact about the backup. The table _does_ have a
   `namespace` column and this is still the right projection — see below.

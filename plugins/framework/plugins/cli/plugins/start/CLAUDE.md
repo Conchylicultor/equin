@@ -18,7 +18,7 @@ of a fresh install looked exactly like the install had broken — and relaunches
 it when it exits non-zero. Everything else follows from the gateway: its
 supervisor brings Postgres / PgBouncer back up, and backends spawn on demand.
 
-(`<gateway-label>` is the gateway's launchd label / systemd unit name, `LEGACY_IDS.launchdLabel` in `framework/product-name`.)
+(`<gateway-label>` is the gateway's launchd label / systemd unit name, `dev.equin.gateway` (`GATEWAY_SERVICE` in `infra/launcher/core`); an install from before the rename keeps `LEGACY_IDS.launchdLabel` until `./equin data-dir migrate` relabels it — the service stays bound to whichever label is installed (`installedAs`).)
 
 A LaunchAgent (login) rather than a boot-time LaunchDaemon because the secrets
 master key is in the login keychain, locked until the user logs in.
@@ -104,7 +104,7 @@ The binary is the `gateway-binary` dependency (`infra/launcher/deps`, a `build`
 kind of `infra/deps`): `start` runs `ensureDep(gatewayBinary, cliExecContext(),
 { root: <main checkout> })`. Its identity is main's Go source + `go version` +
 the platform, so a Go change is built on the next `start` (no flag) into
-`~/.singularity/cache/deps/gateway-binary/<identity>/env/gateway`, and an
+`~/.equin/cache/deps/gateway-binary/<identity>/env/gateway`, and an
 unchanged one costs a hash. It does NOT reach a running gateway: with the
 gateway already running under the manager and no `--force`, `start` only asks
 `LoginService.isCurrent(job)` and, when the written job differs, prints a stale
@@ -119,7 +119,7 @@ deletes the binary launchd will relaunch, however long main has moved on; the
 next `start` moves the hold to the new build. On macOS the plist does not
 name the cache path: `start` installs the build into the equin app bundle
 (`installServiceExecutable`, `infra/launcher/login-services`) and the plist runs
-`~/.singularity/state/macos-app/equin.app/Contents/MacOS/gateway`, its build
+`~/.equin/state/macos-app/equin.app/Contents/MacOS/gateway`, its build
 named in the job's `EQUIN_APP_COMPONENT` — so macOS asks for, grants and resets
 the gateway's permissions as one app, "equin" (`dev.equin`). The install is a
 no-op when the bundle already holds that build signed by this machine's

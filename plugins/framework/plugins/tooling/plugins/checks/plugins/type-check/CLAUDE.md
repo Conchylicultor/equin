@@ -696,7 +696,7 @@ generated files are in the program.
 
 ## Reading the transcript
 
-`~/.singularity/worktrees/<wt>/check-<runId>.log` carries a handful of greppable
+`~/.equin/worktrees/<wt>/check-<runId>.log` carries a handful of greppable
 lines per run, and they are the instrument every claim about this check is made on:
 
 - `type-check: lint 412/11455 files (61 whole, 351 partial; syntactic 20,

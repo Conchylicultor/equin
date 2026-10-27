@@ -12,7 +12,7 @@ import { PIANO_MIRROR_ID } from "../shared/mirror";
  *
  * Samples are served same-origin via the asset-mirror primitive: smplr fetches
  * `<mirror>/<sample>.<format>`, the server lazily downloads each file from the
- * CDN on first request, caches it under `~/.singularity/cache/asset-mirror/`, and serves it from
+ * CDN on first request, caches it under `~/.equin/cache/asset-mirror/`, and serves it from
  * disk thereafter. So the piano needs network exactly once (first online play),
  * then sounds fully offline — the browser never talks to the external CDN.
  * smplr's loader picks the format per browser (ogg on Chromium/Firefox, m4a on

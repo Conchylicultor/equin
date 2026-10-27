@@ -1,9 +1,6 @@
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
-import {
-  readPid,
-  isRunning,
-  GATEWAY_SERVICE,
-} from "@plugins/infra/plugins/launcher/server";
+import { readPid, isRunning } from "@plugins/infra/plugins/launcher/server";
+import { GATEWAY_SERVICE } from "@plugins/infra/plugins/launcher/core";
 import {
   awaitProcessGone,
   declaredLoginServices,

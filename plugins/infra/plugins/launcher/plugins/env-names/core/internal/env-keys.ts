@@ -123,6 +123,8 @@ export const RUNTIME_WITHHELD_ENV = {
     "a launcher input; the launcher reads it and passes the gateway -listen",
   APP_COMPONENT:
     "the bundled component a login-service job runs as, written into that job's own definition by login-services (app-component.ts); never inherited from a starter",
+  GATEWAY_LABEL:
+    "the gateway's login-service label, written into the menu-bar helper's own job by its login-service declaration (menu-bar/login-services) for its Start button; never inherited from a starter",
   RELEASE_DIR:
     "the release self-extractor's cache root, set by the systemd unit and read before the launcher runs (release/cli self-extractor); no runtime reads it",
 } as const satisfies Record<string, string>;
@@ -133,6 +135,7 @@ export const RUNTIME_WITHHELD_ENV = {
  */
 const NEW_NAME_ONLY: ReadonlySet<string> = new Set<WithheldKey>([
   "APP_COMPONENT",
+  "GATEWAY_LABEL",
   "RELEASE_DIR",
 ]);
 

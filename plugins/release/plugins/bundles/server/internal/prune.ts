@@ -33,7 +33,7 @@ function runIdMs(runId: string): number {
  * release runs inside a private checkout whose name is not the namespace the
  * run was filed under, so re-deriving the namespace there names the wrong dir.
  *
- * `~/.singularity/state/releases/` had no retention policy at all, and a run dir
+ * `~/.equin/state/releases/` had no retention policy at all, and a run dir
  * is a whole staged app — hundreds of megabytes. This is the only thing that
  * bounds it: a release's own supervised-run transcript is capped separately, by
  * the shared per-kind run prune, and reaping a transcript reclaims kilobytes.

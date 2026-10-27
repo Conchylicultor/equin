@@ -7,7 +7,7 @@ interface GatewayWorktree {
 
 // The gateway's live view of the fleet: worktree name → its lifecycle state
 // string. A worktree is PRESENT in this list exactly while its
-// `~/.singularity/worktrees/<name>/spec.json` is registered — the gateway
+// `~/.equin/worktrees/<name>/spec.json` is registered — the gateway
 // unregisters a worktree the instant its spec dir/file vanishes (teardown). So
 // for the wedged-boot question, presence — regardless of the state STRING — is
 // the discriminator we want:

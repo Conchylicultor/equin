@@ -37,7 +37,7 @@ const SYSTEM_PG_DEFAULTS: DatabaseConfig = {
 let cached: DatabaseConfig | null = null;
 
 /**
- * THE reader for `~/.singularity/state/db-config/database.json`. Memoized for
+ * THE reader for `~/.equin/state/db-config/database.json`. Memoized for
  * the process lifetime; `CONFIG_PATH` is resolved at module load from the
  * `state/db-config` declaration (and so from `EQUIN_DIR`), so a process
  * that wants a different location must set `EQUIN_DIR` in its own

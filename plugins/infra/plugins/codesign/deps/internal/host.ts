@@ -38,7 +38,7 @@ export interface CommandResult {
 export interface CodesignHost {
   readonly platform: NodeJS.Platform;
   readonly env: Readonly<Record<string, string | undefined>>;
-  /** The codesign data dir (`~/.singularity/state/codesign`). */
+  /** The codesign data dir (`~/.equin/state/codesign`). */
   readonly dir: string;
   /** Run one command to completion. A non-zero exit is a result, not a throw. */
   run(argv: readonly string[]): Promise<CommandResult>;

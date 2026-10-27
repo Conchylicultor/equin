@@ -4,7 +4,12 @@
 // and relaunched if it dies. `graphical`: it needs the desktop session.
 import { userInfo } from "node:os";
 import { HOME_DIR } from "@plugins/infra/plugins/paths/core";
-import { defineLoginService } from "@plugins/infra/plugins/launcher/plugins/login-services/machine";
+import {
+  defineLoginService,
+  loginService,
+} from "@plugins/infra/plugins/launcher/plugins/login-services/machine";
+import { GATEWAY_SERVICE } from "@plugins/infra/plugins/launcher/core";
+import { envEntries } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { cargoBinary } from "@plugins/infra/plugins/deps/plugins/rust/deps";
 import { componentIdentity } from "@plugins/infra/plugins/launcher/plugins/login-services/core";
 import { menuBarHelper, menuBarHelperIcon } from "../deps";
@@ -17,6 +22,13 @@ function trayEnv(): Record<string, string> {
     USER: userInfo().username,
     // `open` / `xdg-open` (openUrl) and `launchctl` / `systemctl` (Start).
     PATH: "/usr/bin:/bin:/usr/sbin:/sbin",
+    // Start kicks the gateway's service by the label it is bound to here —
+    // the old one until `./equin data-dir migrate` relabels it — so a
+    // relabel rewrites (and reloads) this job too.
+    ...envEntries({
+      GATEWAY_LABEL:
+        loginService(GATEWAY_SERVICE)?.id.label ?? GATEWAY_SERVICE.label,
+    }),
   };
   // A graphical systemd unit inherits the session's display from the user
   // manager's environment; these carry it when `start` itself has them.

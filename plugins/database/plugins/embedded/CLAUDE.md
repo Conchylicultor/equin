@@ -5,15 +5,15 @@ Embedded Postgres for the host. One cluster per machine, multiple databases insi
 This plugin ships:
 
 - The `@embedded-postgres/<platform>` binary as an optionalDependency in `package.json` so `bun install` lands the binaries.
-- `scripts/start.ts` — standalone lifecycle script that handles binary resolution, dylib symlinks, initdb, pg_ctl start, and the base database. Invoked by the gateway's generic service supervisor via `~/.singularity/state/db-config/database.json`.
+- `scripts/start.ts` — standalone lifecycle script that handles binary resolution, dylib symlinks, initdb, pg_ctl start, and the base database. Invoked by the gateway's generic service supervisor via `~/.equin/state/db-config/database.json`.
 - `shared/` constants (PG_PORT, PG_SOCKET_DIR, PG_USER, PG_DATA_DIR, ...) reused by worktree backends, the CLI, and the start script.
 - `server/` cluster-level DDL helpers (`dropDatabase`, `databaseExists`) for plugins that manage the worktree DB lifecycle.
 
 ## Topology
 
-- **Single embedded cluster, supervised by the gateway.** The gateway's generic service supervisor invokes `scripts/start.ts`, which runs `initdb` on first start (writing to `~/.singularity/postgres/data-pg18/`), `pg_ctl start -w` to launch PG, and then `CREATE DATABASE` for the base database if the cluster does not have it. `pg_ctl` daemonizes PG (forks + setsid), so the spawned process exits as soon as PG is ready, leaving PG running with no parent. PG listens on a Unix socket at `~/.singularity/postgres/socket/.s.PGSQL.5433`.
+- **Single embedded cluster, supervised by the gateway.** The gateway's generic service supervisor invokes `scripts/start.ts`, which runs `initdb` on first start (writing to `~/.equin/postgres/data-pg18/`), `pg_ctl start -w` to launch PG, and then `CREATE DATABASE` for the base database if the cluster does not have it. `pg_ctl` daemonizes PG (forks + setsid), so the spawned process exits as soon as PG is ready, leaving PG running with no parent. PG listens on a Unix socket at `~/.equin/postgres/socket/.s.PGSQL.5433`.
 - **The base database is born with the cluster.** The base database is the one that is nobody's copy — every other database in the app is minted from it — so the script that brings the cluster up creates it, empty, on every start (reattach included, so a dropped one comes back). Its schema is not this plugin's business: the first backend to boot against it runs the migrations. Before this, nothing anywhere created it, and a fresh clone's first build waited 60s for a fork of a database that did not exist.
-- **Cluster shared by every worktree backend.** Isolation comes from per-worktree databases inside the cluster, not separate clusters. Worktree backends connect via `~/.singularity/postgres/socket` on port 5433 (see `server/src/db/client.ts`).
+- **Cluster shared by every worktree backend.** Isolation comes from per-worktree databases inside the cluster, not separate clusters. Worktree backends connect via `~/.equin/postgres/socket` on port 5433 (see `server/src/db/client.ts`).
 - **PG outlives gateway and central restarts.** Because PG is detached, both `./equin build` (which restarts central) and `./equin start` (which rebuilds + relaunches the gateway) leave PG untouched. Worktree backends keep their pools alive across both blips. A reattach check (pidfile + socket dial) lets a freshly-started gateway pick up an already-running PG instead of trying to spawn a duplicate.
 - **Binaries from `embedded-postgres` npm.** The package vendors PG 18 binaries per platform via `@embedded-postgres/<platform>` optionalDependencies. The package only ships `postgres`, `initdb`, and `pg_ctl`. Client tools (`pg_isready`, `psql`) are replaced with `pg.Client` calls / `net.Dial` socket pings; `pg_dump`/`pg_restore` are vendored by the sibling [`client-tools`](../client-tools/CLAUDE.md) plugin, built from the same Postgres release — the `postgres-release` lockstep group (in client-tools' `package.json`) makes the npm updater move both together, and `deps-npm:groups-coherent` fails when the lock disagrees.
 - **Lazy `dylib` symlinks.** The platform tarballs ship versioned dylibs (e.g. `libicudata.77.1.dylib`) but PG's runtime loader expects unversioned aliases. The start script reads the package's `pg-symlinks.json` manifest and creates the missing symlinks on first use.
@@ -21,7 +21,7 @@ This plugin ships:
 
 ## Connection routing (server-side)
 
-Worktree backends read connection params from `~/.singularity/state/db-config/database.json` (auto-generated on first `./equin start`). The default config points at the embedded cluster's Unix socket on port 5433. To use system PG instead, edit the config file — see [`docs/setup.md`](../../../../docs/setup.md).
+Worktree backends read connection params from `~/.equin/state/db-config/database.json` (auto-generated on first `./equin start`). The default config points at the embedded cluster's Unix socket on port 5433. To use system PG instead, edit the config file — see [`docs/setup.md`](../../../../docs/setup.md).
 
 `db-fork.ts` and the build's `waitForDatabase` explicitly set `PGHOST`/`PGPORT` in subprocess env so libpq tools find the correct instance.
 

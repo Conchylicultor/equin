@@ -12178,7 +12178,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `infra/entities.defaultNow`
       - `infra/entities.defineEntity`
       - `infra/jobs/supervised-job.defineSupervisedJob`
-      - `infra/paths.BACKUPS_DIR`
+      - `infra/paths.backupsDir`
       - `primitives/log-channels.Log`
       - `reports.ReportKind`
       - `reports/engine.recordReport`
@@ -12494,7 +12494,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `backup.BackupTarget`
               - `config_v2.ConfigV2`
               - `config_v2.getConfig`
-              - `infra/paths.BACKUPS_DIR`
+              - `infra/paths.backupsDir`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/run-local-target.ts` (debt)
 
@@ -25767,6 +25767,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/endpoints`
           - `infra/git/remotes`
           - `infra/host-fs`
+          - `infra/launcher`
           - `infra/launcher/env-names`
           - `infra/namespace`
           - `infra/paths`
@@ -26247,7 +26248,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/jobs/supervised-job` (3 debt)
               - `infra/launcher` (2 debt)
               - `infra/mcp/browser` (2 debt)
-              - `infra/paths` (10 debt)
+              - `infra/paths` (11 debt)
               - `infra/request-origin/agent-write-ledger` (1 debt)
               - `infra/runtime-profiler` (1 debt)
               - `infra/safe-fetch` (1 debt)
@@ -27885,7 +27886,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineAssetMirror`
           - `runAssetMirrorPrewarm`
           - `seedAssetMirrorCache`
-    - **`attachments`** — Polymorphic file attachments. Exposes uploadAttachment() helper; storage/serve on the server plugin. Attachments: rows plus bytes in the host's blob store (AttachmentBlobs — on the desktop UUID-named files under ~/.singularity/state/attachments/). Consumers declare ownership with Attachments.defineLink(ownerTable); orphan sweep reclaims unreferenced rows past TTL. holdAttachments keeps an attachment an unsent draft references alive for the draft's lifetime.
+    - **`attachments`** — Polymorphic file attachments. Exposes uploadAttachment() helper; storage/serve on the server plugin. Attachments: rows plus bytes in the host's blob store (AttachmentBlobs — on the desktop UUID-named files under ~/.equin/state/attachments/). Consumers declare ownership with Attachments.defineLink(ownerTable); orphan sweep reclaims unreferenced rows past TTL. holdAttachments keeps an attachment an unsent draft references alive for the draft's lifetime.
       - Server:
         - Contributes:
           - `resource.declare` "attachments.by-owner"
@@ -30461,7 +30462,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DEV_GATEWAY_PORT`
           - `devGatewayLaunchOptions`
           - `ensureDatabaseConfig`
-          - `GATEWAY_SERVICE`
           - `gatewayLaunchFlags`
           - `gatewayLaunchSpec`
           - `gatewayPidFile`
@@ -30483,6 +30483,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Register: `defineDaemon('launcher.gateway')`
       - Core:
         - Uses:
+          - `framework/product-name.LEGACY_IDS`
+          - `framework/product-name.PRODUCT_NAME`
           - `infra/launcher/env-names.EnvKey`
           - `infra/launcher/env-names.envKeyOf`
           - `infra/launcher/env-names.envNames`
@@ -30490,6 +30492,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/launcher/env-names.RUNTIME_FORWARDED_ENV`
           - `infra/launcher/env-names.RUNTIME_FORWARDED_PREFIXES`
         - Exports (values):
+          - `GATEWAY_SERVICE`
           - `isRuntimeEnvName`
           - `pickHostEnv`
           - `pickRuntimeEnv`
@@ -30846,6 +30849,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Core:
         - Uses:
           - `framework/product-name.LEGACY_IDS`
+          - `framework/product-name.PRODUCT_NAME`
           - `framework/tooling/collected-dir.defineCollectedDir`
           - `infra/launcher/env-names.readEnv`
           - `infra/launcher/env-names.setEnv`
@@ -30871,6 +30875,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataDirKind`
           - `DataDirRef`
           - `DataDirSpec`
+          - `DataRootLayout`
           - `LegacyMove`
           - `MigrationStep`
           - `MovedFrom`
@@ -30878,7 +30883,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ReleaseIdentity`
         - Exports (values):
           - `actAsCheckoutNamespace`
-          - `BACKUPS_DIR`
+          - `backupsDir`
+          - `backupsDirs`
           - `CHECK_ARTIFACTS_RETENTION`
           - `checkoutNamespace`
           - `checkoutRef`
@@ -30888,12 +30894,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CLAUDE_SESSIONS_DIR`
           - `CLAUDE_USER_CONFIG`
           - `DATA_DIR_KINDS`
+          - `DATA_DIR_NAME`
           - `dataRoot`
+          - `dataRootLayout`
+          - `DataRootSplitError`
           - `defineAppDataDir`
           - `defineDataDir`
           - `deploysForCheckout`
           - `getDataDirs`
           - `HOME_DIR`
+          - `homeDataRoots`
           - `isHostSingleton`
           - `isRelease`
           - `LEGACY_LAYOUT`
@@ -30903,6 +30913,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `pruneWorktreeCheckArtifacts`
           - `pruneWorktreeTestArtifacts`
           - `readCheckoutOwner`
+          - `readHomeDataRootLayout`
           - `relativeToDataRoot`
           - `releaseIdentity`
           - `REPO_ROOT`
@@ -30937,7 +30948,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `paths:no-hardcoded-paths` — `check/index.ts`, `core/internal/paths.ts`, `server/internal/bins.ts` (sanctioned)
           - `paths:no-inlined-worktree-artifacts` — `.` (sanctioned)
           - `paths:data-root-not-joined` — `.` (sanctioned)
-          - `boundaries/no-platform-api` — `core/internal/checkout-deploys.ts`, `core/internal/checkout-owner.ts`, `core/internal/checkout-ref.ts`, `core/internal/data-dir.ts`, `core/internal/data-dirs-manifest.ts`, `core/internal/paths.ts`, `core/internal/prune-artifacts.ts`, `core/internal/toolchain-pin.ts`, `core/internal/worktree-dirs.ts`, `server/internal/bins.ts` (debt)
+          - `boundaries/no-platform-api` — `core/internal/checkout-deploys.ts`, `core/internal/checkout-owner.ts`, `core/internal/checkout-ref.ts`, `core/internal/data-dir.ts`, `core/internal/data-root-layout.ts`, `core/internal/data-dirs-manifest.ts`, `core/internal/paths.ts`, `core/internal/prune-artifacts.ts`, `core/internal/toolchain-pin.ts`, `core/internal/worktree-dirs.ts`, `server/internal/bins.ts` (debt)
       - Server:
         - Exports (types):
           - `AppIdentity`
@@ -30953,7 +30964,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ReleaseIdentity`
         - Exports (values):
           - `actAsCheckoutNamespace`
-          - `BACKUPS_DIR`
+          - `backupsDir`
           - `BUILD_ARTIFACTS_RETENTION`
           - `CHECK_ARTIFACTS_RETENTION`
           - `checkoutNamespace`
@@ -30965,6 +30976,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CLAUDE_SESSIONS_DIR`
           - `DATA_DIR_KINDS`
           - `dataRoot`
+          - `dataRootLayout`
           - `defineAppDataDir`
           - `defineDataDir`
           - `getDataDirs`
@@ -31007,6 +31019,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SECRETS_DIR_DISPLAY`
               - `USER_CONFIG_DIR_DISPLAY`
               - `WORKTREES_DIR_DISPLAY`
+        - **`root-migration`** — `./equin data-dir migrate`: moves an install's data root from the legacy home dir to ~/.equin (and its local backups beside it) in one run, with every other process of the app stopped — rewrites every stored copy of the old path (each database in the cluster, the files under the root, Claude Code's transcript dirs), drops the cache entries that hold it, removes the legacy name once a scan finds none left, and relabels the gateway's login service dev.equin.gateway. A dry run by default; --apply executes.
     - **`query-resource`** — Declarative SQL query→resource compiler: one drizzle-based declaration derives the loader, scoped loader, scope policy (the routes the change router serves it by, for a bounded window / point set, a whole ordered set declared `all` — compileAllCollection, grouped CTEs over rollup / children / closure joins — and a grouping), and client keyOf for live-state resources.
       - Server:
         - Uses:
@@ -31367,7 +31380,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `HeaderReader`
               - `HeaderSource`
             - Exports (values): `detectBotMitigation`
-    - **`secrets`** — Encrypted key-value primitive. AES-256-GCM blob at ~/.singularity/state/secrets/secrets.json.enc with the master key in the OS keychain (fallback to the .key beside it). Hosted on the central runtime; consumers (auth, config) call /api/secrets/* via the gateway.
+    - **`secrets`** — Encrypted key-value primitive. AES-256-GCM blob at ~/.equin/state/secrets/secrets.json.enc with the master key in the OS keychain (fallback to the .key beside it). Hosted on the central runtime; consumers (auth, config) call /api/secrets/* via the gateway.
       - Server:
         - Uses: `infra/endpoints.callEndpoint`
         - Exports (types):

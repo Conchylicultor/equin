@@ -15,11 +15,11 @@ import {
 import {
   DEV_GATEWAY_LOG_LEVEL,
   devGatewayLaunchOptions,
-  GATEWAY_SERVICE,
   gatewayLaunchFlags,
   isRunning,
   readPid,
 } from "@plugins/infra/plugins/launcher/server";
+import { GATEWAY_SERVICE } from "@plugins/infra/plugins/launcher/core";
 import { componentIdentity } from "@plugins/infra/plugins/launcher/plugins/login-services/core";
 import {
   APP_BUNDLE_ID,

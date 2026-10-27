@@ -78,7 +78,7 @@ file; fork from it instead).
 
 ## Backups
 
-`~/.singularity/state/conversation-rewinds/<conversationId>.<epochMs>.jsonl` is
+`~/.equin/state/conversation-rewinds/<conversationId>.<epochMs>.jsonl` is
 the full transcript as it stood before each rewind — the only copy of what the
 rewind dropped. A nightly job deletes files older than 30 days. The folder must
 share a filesystem with `~/.claude` (the move is a rename); a cross-device

@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { listChannelsInDir, readTail } from "./persist";
 
 // Hermetic: everything runs in an isolated temp dir. We never touch the real
-// ~/.singularity logs. The WRITE/rotation path moved to file-sink (its own tests
+// ~/.equin logs. The WRITE/rotation path moved to file-sink (its own tests
 // cover rotation/keep/dup-id), so here we only exercise the READ path — seeding
 // fixture files directly on disk with the `{t,stream,line}` JSONL envelope.
 

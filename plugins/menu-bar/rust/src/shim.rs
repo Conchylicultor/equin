@@ -352,11 +352,11 @@ mod tests {
     #[cfg(target_os = "linux")]
     #[test]
     fn reads_a_desktop_entry() {
-        let text = "[Desktop Entry]\nType=Application\nName=Mail\nExec=\"/home/u/.singularity/state/menu-bar/equin desktop\" window --app mail --url http://equin.localhost:9000/mail\nStartupWMClass=equin-mail\n";
+        let text = "[Desktop Entry]\nType=Application\nName=Mail\nExec=\"/home/u/.equin/state/menu-bar/equin desktop\" window --app mail --url http://equin.localhost:9000/mail\nStartupWMClass=equin-mail\n";
         let shim = platform::read_desktop(std::path::Path::new("/x/equin-mail.desktop"), text).unwrap();
         assert_eq!(shim.app_id, "mail");
         assert_eq!(shim.name, "Mail");
-        assert_eq!(shim.program.as_deref(), Some("/home/u/.singularity/state/menu-bar/equin desktop"));
+        assert_eq!(shim.program.as_deref(), Some("/home/u/.equin/state/menu-bar/equin desktop"));
         assert!(platform::read_desktop(std::path::Path::new("/x/equin-other.desktop"), text).is_none());
     }
 }

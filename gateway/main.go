@@ -49,7 +49,8 @@ type Config struct {
 	ChildEnv ChildEnv
 }
 
-// dataRoot resolves the equin data root (`~/.singularity` by default).
+// dataRoot resolves the equin data root: the DIR override, else the home
+// root by the rule in homeDataRoot (dataroot.go).
 //
 // It exists ONLY to derive the defaults of the path flags below. Every path the
 // gateway uses is a flag, so the launcher can hand it fully-resolved locations
@@ -59,8 +60,17 @@ func dataRoot() string {
 	if dir := mustReadEnv("DIR"); dir != "" {
 		return dir
 	}
-	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".singularity")
+	home, err := os.UserHomeDir()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "gateway: no home dir to derive the data root from: %v\n", err)
+		os.Exit(2)
+	}
+	root, err := homeDataRoot(home)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "gateway: %v\n", err)
+		os.Exit(2)
+	}
+	return root
 }
 
 // parseFlags parses the command line into a Config, and returns the raw

@@ -7,7 +7,7 @@
 // Why a fresh process, and not a function call:
 //
 //   • A passing check writes a durable entry to the GLOBAL cache at
-//     `~/.singularity/check-cache/`, keyed on the working-tree hash and carrying
+//     `~/.equin/check-cache/`, keyed on the working-tree hash and carrying
 //     no provenance. A later push looks that hash up and returns ✓ without
 //     running anything — so a recorded PASS is a TRANSFERABLE claim, and it is
 //     only honest if the process that produced it did nothing but run checks.
@@ -39,7 +39,7 @@
 //     that *can* assert `deploy`, because it is the one producing the dist. It
 //     names both scopes rather than dropping the filter: "every scope" is not
 //     the claim it is making, and while it WAS spelled that way build silently
-//     took on `host` too — asserting the shared `~/.singularity` data root, and
+//     took on `host` too — asserting the shared `~/.equin` data root, and
 //     so failing a deploy over a directory another agent's unmerged branch had
 //     just declared.
 //   • `build --skip-checks` — `alwaysRun: true`, the cheap structural subset.

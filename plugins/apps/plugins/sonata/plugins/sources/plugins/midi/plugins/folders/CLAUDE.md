@@ -69,7 +69,7 @@ round-trip is gone: reconcile loads the whole folder-imported set once with
   is the authority on what is genuinely new. Keying re-import off the two
   conflated re-imported all 19 MIDI files on every worktree boot.
 - **`scope: "host"`** — the corpus is a host-global user folder, so ONE shared
-  index lives in the Sonata app's one data dir, `~/.singularity/apps/sonata/`
+  index lives in the Sonata app's one data dir, `~/.equin/apps/sonata/`
   (`sonataDir`, declared at the app root, not here), and only main persists it. A
   per-worktree index would make every freshly-forked worktree re-walk from
   scratch. The DB is still per-worktree, so `reconcile()` runs on every backend,

@@ -7,7 +7,7 @@ interval bars** on cross-worktree timelines — including a backend that
 `research/2026-07-11-global-observability-freeze-blind-spots.md`, Stage 7).
 
 Both lines go to the persisted `boot` log channel →
-`~/.singularity/worktrees/<wt>/logs/boot.jsonl`:
+`~/.equin/worktrees/<wt>/logs/boot.jsonl`:
 
 - **`phase: "start"`** — written from the plugin's **register phase**, the
   earliest per-process hook, before migrations and any `onReadyBlocking` work.

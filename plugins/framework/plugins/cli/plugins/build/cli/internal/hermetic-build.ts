@@ -334,7 +334,7 @@ export async function runHermeticBuild(opts: {
       minify: opts.minify,
       // Self-contained dist: `release` copies this tree into the shippable
       // bundle, so every artifact must be REAL bytes, not a symlink into
-      // this host's `~/.singularity/cache/web-artifacts/` store.
+      // this host's `~/.equin/cache/web-artifacts/` store.
       materialize: true,
       // A release artifact is never experimental — it is the shipped app.
       experimental: false,

@@ -8,3 +8,4 @@ export {
   runtimeShimsDir,
   runtimeEnvNames,
 } from "./internal/runtime-env";
+export { GATEWAY_SERVICE } from "./internal/gateway-service";

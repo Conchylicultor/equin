@@ -8,7 +8,7 @@ by the sibling `piano` plugin, which also stays the default fallback). Each
 timbre is a smplr `Soundfont` bound to one GM patch, with samples served
 same-origin through the asset-mirror primitive: the first online play of an
 instrument downloads its gleitz soundfont file via
-`/api/asset-mirror/gm-soundfont/…`, caches it under `~/.singularity/cache/asset-mirror/`, and serves
+`/api/asset-mirror/gm-soundfont/…`, caches it under `~/.equin/cache/asset-mirror/`, and serves
 it from disk thereafter — so every instrument sounds fully offline after one
 warm-up.
 

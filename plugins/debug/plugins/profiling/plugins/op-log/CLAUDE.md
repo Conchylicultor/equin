@@ -159,7 +159,7 @@ type error.
 
 ## Storage
 
-`~/.singularity/logs/op-log/op-log.jsonl`, append-only. Append (never rewrite) is load-bearing
+`~/.equin/logs/op-log/op-log.jsonl`, append-only. Append (never rewrite) is load-bearing
 even in the reconciler: concurrent CLI processes are writing the same file.
 
 A malformed final line is tolerated (a torn partial append), and **only** that:

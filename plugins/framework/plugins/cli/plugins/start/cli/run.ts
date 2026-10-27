@@ -15,6 +15,7 @@ import {
   gatewayBuild,
 } from "@plugins/infra/plugins/launcher/deps";
 import { gatewayLogs } from "@plugins/infra/plugins/launcher/data-dirs";
+import { GATEWAY_SERVICE } from "@plugins/infra/plugins/launcher/core";
 import {
   MAIN_WORKTREE_NAME,
   namespaceUrl,
@@ -30,7 +31,6 @@ import {
   awaitGatewayReady,
   DEV_GATEWAY_PORT,
   devGatewayLaunchOptions,
-  GATEWAY_SERVICE,
   gatewayServiceJob,
   type GatewayLaunchOptions,
 } from "@plugins/infra/plugins/launcher/server";
@@ -59,7 +59,12 @@ const run: CliAction<[], Opts> = async (opts) => {
   // `--only` is resolved first: a typo fails before anything is installed,
   // built or restarted.
   const declared = await declaredLoginServices();
-  const selected = selectServices(opts.only, declared);
+  const manager = loginServiceManager();
+  // The label the gateway's service is bound to on this machine — the old one
+  // until `./equin data-dir migrate` relabels it (`installedAs`).
+  const gatewayLabel =
+    manager?.service(GATEWAY_SERVICE).id.label ?? GATEWAY_SERVICE.label;
+  const selected = selectServices(opts.only, gatewayLabel, declared);
   // The releases mise.lock records, installed if a lock arrived without them
   // (a clone, a pull, an upstream merge) — before the doctor, which would
   // otherwise only report them missing.
@@ -72,10 +77,9 @@ const run: CliAction<[], Opts> = async (opts) => {
   // the same embedded cluster, so the same machine facts have to hold.
   assertSupportedHost();
 
-  const manager = loginServiceManager();
   // The equin app bundle every service runs from on macOS (a no-op elsewhere).
   const app = machineMacosAppHost({ exec: cliExecContext() }, console.log);
-  if (selected(GATEWAY_SERVICE.label)) {
+  if (selected(gatewayLabel)) {
     if (manager)
       await startAsLoginService(manager.service(GATEWAY_SERVICE), opts, app);
     else await startDetached(opts, app);
@@ -98,10 +102,11 @@ const run: CliAction<[], Opts> = async (opts) => {
  */
 function selectServices(
   only: string | undefined,
+  gatewayLabel: string,
   declared: readonly LoginServiceDeclaration[],
 ): (id: string) => boolean {
   if (only === undefined) return () => true;
-  const known = [GATEWAY_SERVICE.label, ...declared.map((d) => d.id)];
+  const known = [gatewayLabel, ...declared.map((d) => d.id)];
   const ids = only
     .split(",")
     .map((id) => id.trim())
@@ -161,7 +166,7 @@ async function startAsLoginService(
   const spec = gatewayLaunchSpec(launch);
   const written = loginService.write(gatewayServiceJob(spec));
   console.log(
-    `Registered ${GATEWAY_SERVICE.label} with ${manager} (${written.path})`,
+    `Registered ${loginService.id.label} with ${manager} (${written.path})`,
   );
 
   if (legacyPid !== null) {
@@ -169,7 +174,7 @@ async function startAsLoginService(
       // Registering is enough for the next login/boot; swapping the live
       // gateway restarts every backend, which only an explicit --force asks for.
       console.log(
-        `The running gateway (PID ${legacyPid}) was started before it was a ${manager} service. It keeps running now, and ${manager} starts it from the next ${loginService.startsAt} on. Run \`./equin start --only ${GATEWAY_SERVICE.label} --force\` to hand it to ${manager} now.`,
+        `The running gateway (PID ${legacyPid}) was started before it was a ${manager} service. It keeps running now, and ${manager} starts it from the next ${loginService.startsAt} on. Run \`./equin start --only ${loginService.id.label} --force\` to hand it to ${manager} now.`,
       );
       return;
     }
@@ -213,7 +218,7 @@ async function reportStaleGateway(
   if (loginService.isCurrent(gatewayServiceJob(gatewayLaunchSpec(launch))))
     return;
   console.log(
-    `  Stale:   the gateway's job changed since the running gateway started (main's gateway binary is now ${gateway.dir}, identity ${gateway.identity}). It keeps running the old one; \`./equin start --only ${GATEWAY_SERVICE.label} --force\` swaps it (restarts every backend).`,
+    `  Stale:   the gateway's job changed since the running gateway started (main's gateway binary is now ${gateway.dir}, identity ${gateway.identity}). It keeps running the old one; \`./equin start --only ${loginService.id.label} --force\` swaps it (restarts every backend).`,
   );
 }
 

@@ -56,7 +56,7 @@ Not just the ban — the two right answers:
   `@plugins/infra/plugins/paths/core` reads it off the registry on disk, where
   it was recorded at mint time, instead of re-deriving it from a name.
 
-For a directory listed under `~/.singularity/worktrees`, the entry name *is* a
+For a directory listed under `~/.equin/worktrees`, the entry name *is* a
 namespace — but the read there is `isNamespace`, whose non-throwing answer lets
 one stray directory be skipped rather than take a whole scan down with it.
 

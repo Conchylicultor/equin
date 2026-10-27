@@ -7,7 +7,7 @@ originSessionId: ec7e9cc8-9807-4392-abc3-3c6ac653d93e
 The gateway is a reverse proxy on port 9000 that routes to multiple app instances, one per agent worktree.
 
 In v1, the architecture was:
-- `.singularity build` compiled web+server and wrote output paths to `.singularity/worktrees/<worktree>/paths.json`
+- `.equin build` compiled web+server and wrote output paths to `.equin/worktrees/<worktree>/paths.json`
 - Gateway watched those files and assigned ports internally
 - URLs: `localhost:9000/head/` (stable), `localhost:9000/<worktree>/` (agent work)
 - Gateway rewrote `localhost:9000/<worktree>/api/todos` → `localhost:<internal-port>/api/todos`

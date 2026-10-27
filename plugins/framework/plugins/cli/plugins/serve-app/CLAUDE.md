@@ -7,7 +7,7 @@ isolated data root, and stay up serving it.
 This is a **release** entry point, not a development one. It refuses to run
 without `EQUIN_DIR` set in its environment, because that variable re-roots
 the entire install: unset, `dataRoot()` answers with the developer's
-`~/.singularity` and the command would quietly pour a release cluster, spec and
+`~/.equin` and the command would quietly pour a release cluster, spec and
 registry into it. `--web` is required for the same reason — every derivable dist
 path resolves inside the isolated root, which holds no dist because nothing ever
 built into it.

@@ -49,7 +49,7 @@ const PATTERNS = [
   "/opt/" + "homebrew",
   "/usr/" + "bin/",
   "/" + "Users/",
-  "~/" + ".singularity",
+  "~/" + ".equin",
 ];
 
 const noHardcodedPathsCheck: Check = {
@@ -203,7 +203,7 @@ const noInlinedWorktreeArtifactsCheck: Check = {
     return {
       ok: false,
       message: `inlined worktree-artifact path found in ${offenders.length} place(s):\n    ${offenders.join("\n    ")}`,
-      hint: "Import `worktreeDataDir` / `worktreeArtifacts` / `WORKTREE_SPEC_FILE` from `@plugins/infra/plugins/paths/core` (or `/server`) instead of reconstructing the ~/.singularity/worktrees/<name> dir or hardcoding a per-worktree filename (spec.json, build-profile*.json, build-logs*.json, build*.log, check*.log). Note: the git-checkout `.claude/worktrees` path (plugins/infra/plugins/worktree) is a different concept and intentionally out of scope.",
+      hint: "Import `worktreeDataDir` / `worktreeArtifacts` / `WORKTREE_SPEC_FILE` from `@plugins/infra/plugins/paths/core` (or `/server`) instead of reconstructing the ~/.equin/worktrees/<name> dir or hardcoding a per-worktree filename (spec.json, build-profile*.json, build-logs*.json, build*.log, check*.log). Note: the git-checkout `.claude/worktrees` path (plugins/infra/plugins/worktree) is a different concept and intentionally out of scope.",
     };
   },
 };
@@ -211,7 +211,7 @@ const noInlinedWorktreeArtifactsCheck: Check = {
 // ── no-undeclared-data-dirs ─────────────────────────────────────────────────
 //
 // The check that reads the data root AS A WHOLE. Nothing ever did, which is why
-// `~/.singularity/` accreted 60-odd top-level entries — nine of them orphans
+// `~/.equin/` accreted 60-odd top-level entries — nine of them orphans
 // with zero references left in the repo, ~1 GB, discovered a year late by a
 // hand audit rather than by anything that runs.
 //
@@ -926,7 +926,7 @@ const DATA_ROOT_PATTERNS: { pattern: RegExp; grepArg: string }[] = [
  * manifest exempts the whole plugin). Tests are out of scope categorically, not
  * by name: a test that points the root at a temp dir is being hermetic — the
  * correct thing for a test to do, and the alternative (running against the
- * developer's real `~/.singularity`) is the actual bug. Files that legitimately
+ * developer's real `~/.equin`) is the actual bug. Files that legitimately
  * read `EQUIN_DIR` declare it in their own plugin's manifest; entries
  * LEAVE it the moment their read does (a stale one fails this check).
  */

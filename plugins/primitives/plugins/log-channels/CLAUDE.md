@@ -65,7 +65,7 @@ channel either declares a durable file sink or it doesn't.
   one file write** (a 500-line batch used to be ~2000 blocking syscalls on the
   event loop) and there is no singular entry point left for a handler to loop over.
 
-Durable channels append to `~/.singularity/worktrees/<wt>/logs/<channel>.jsonl`,
+Durable channels append to `~/.equin/worktrees/<wt>/logs/<channel>.jsonl`,
 one JSON object per line: `{"t":<ms>,"stream":"stdout"|"stderr","line":"..."}`. The
 file survives the backend restart that `./equin build` performs mid-build;
 the in-memory ring buffer only backs the live UI pane.

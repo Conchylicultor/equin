@@ -6,7 +6,7 @@ const WINDOW = 50;
  * Dev readout of input → frame latency: the time from a mouse press sent to
  * the next screencast frame received, kept as a rolling median over the last
  * {@link WINDOW} samples and logged to the `browser-engine` client-log channel
- * (`~/.singularity/worktrees/<wt>/logs/browser-engine.jsonl`). No UI.
+ * (`~/.equin/worktrees/<wt>/logs/browser-engine.jsonl`). No UI.
  *
  * The next frame after a press is not guaranteed to be caused by it (an
  * animating page streams frames anyway), so this is an upper-bound-ish

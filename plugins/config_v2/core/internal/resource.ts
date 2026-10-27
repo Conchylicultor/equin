@@ -217,7 +217,7 @@ export const configModifiedCounts = liveValue("config-v2.modified-counts", {
 });
 
 // The raw text of one config document's four layered files: the user layer
-// (~/.singularity/state/config/<wt>/) override + origin (what the running app
+// (~/.equin/state/config/<wt>/) override + origin (what the running app
 // resolves to), and the git layer (<repo>/config/) override + origin (the
 // defaults). The settings raw view surfaces them as User → Git → Origin, and the
 // conflict / invalid diffs compare two of them. `*Path` is the on-disk location,

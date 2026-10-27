@@ -19,7 +19,7 @@ import { readPrototypeOptions } from "./option-source";
 // server serves it, and that it reaches outside itself for nothing.
 //
 // Two callers, one rule set. Prototypes themselves are user content living in
-// `~/.singularity/apps/prototypes/`, so their problems surface in the gallery, on the
+// `~/.equin/apps/prototypes/`, so their problems surface in the gallery, on the
 // card, where the author is looking. The `_template/` seed IS code, ships in the
 // repo, and is checked by `prototypes:self-contained` at push time.
 

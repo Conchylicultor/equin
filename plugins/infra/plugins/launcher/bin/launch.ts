@@ -46,7 +46,7 @@ const bundleRoot = dirname(process.execPath);
 // goes on that list too; the `launcher:runtime-env-declared` check makes you
 // decide.
 // Re-root the entire install under the bundle (data, logs, the PG cluster, the
-// registry, the pid file) so a release never touches the dev `~/.singularity`.
+// registry, the pid file) so a release never touches the dev `~/.equin`.
 // `??=` lets an operator override the data root (e.g. point at a persistent
 // volume) without editing the binary.
 setEnvDefault("DIR", join(bundleRoot, "data"));
@@ -92,7 +92,7 @@ setEnvDefault("SENTINEL_WORKER_JS", join(bundleRoot, "sentinel", "worker.js"));
 // into the compiled binary's virtual FS, so point these at the vendored tree.
 setEnvDefault("REPO_CONFIG_DIR", join(bundleRoot, "config"));
 // The served frontend. In dev this derives from the namespace
-// (`~/.singularity/worktrees/<name>/web`); a release ships one bundle whose web
+// (`~/.equin/worktrees/<name>/web`); a release ships one bundle whose web
 // tree is vendored at `<bundleRoot>/web` (already carrying `.build-graph` /
 // `.build-commit` / `.build-id`, copied by release.ts), so point the backend's
 // readers — the stale-tab graph pin, the build-commit base, the producing run —

@@ -25,7 +25,7 @@ beforeAll(async () => {
   root = mkdtempSync(join(tmpdir(), "no-hardcoded-paths-test-"));
   const fixture = [
     "/*", // L1 — start of a block comment
-    ` * legacy default was ${NEEDLE}alice/.singularity`, // L2 — inside block comment
+    ` * legacy default was ${NEEDLE}alice/.equin`, // L2 — inside block comment
     " */", // L3
     `const real = "${NEEDLE}bob/data";`, // L4 — real code (string), the only match
   ].join("\n");

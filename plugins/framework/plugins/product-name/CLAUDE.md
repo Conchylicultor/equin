@@ -27,8 +27,8 @@ plist) is listed in its id's `mirrors`.
 - `product-name:legacy-id` fails on the old name, in any case, in any tracked
   file outside this plugin — except a mirror's line holding its value, committed
   migrations (`database/migrations` exempts them as history), `research/` and
-  generated files. One spelling stays allowed until its step of the rename
-  lands: the `~/.singularity` data dir (step 7). The old env-var prefix is
+  generated files. The legacy data dir's name is `dataDirName`, spelled by
+  `infra/paths`' data-root layout and its mirrors only. The old env-var prefix is
   `envPrefix`, spelled by the env-name registry (`infra/launcher/env-names`) and its
   mirrors only. Repository URLs are allowed too, because the repo keeps its name.
 - `product-name:legacy-ids-in-sync` fails when a mirror stops spelling its value.
@@ -55,6 +55,7 @@ A leaf with no imports, so a browser bundle, a server or a script can import it.
     - `infra/endpoints`
     - `infra/git/remotes`
     - `infra/host-fs`
+    - `infra/launcher`
     - `infra/launcher/env-names`
     - `infra/namespace`
     - `infra/paths`

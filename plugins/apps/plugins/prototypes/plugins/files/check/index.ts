@@ -13,7 +13,7 @@ import { readPrototypeFolder } from "../shared/read-folder";
 // The `prototypes:self-contained` check.
 //
 // Prototypes themselves are NOT checked in: they are throwaway user content
-// living in `~/.singularity/apps/prototypes/`, shared by every worktree, backed up by
+// living in `~/.equin/apps/prototypes/`, shared by every worktree, backed up by
 // the `prototypes` backup source, and validated at read time so their problems
 // land on the gallery card instead of blocking somebody's code push.
 //

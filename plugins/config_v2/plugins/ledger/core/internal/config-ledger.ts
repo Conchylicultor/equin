@@ -1,6 +1,6 @@
 // The generic "rewrite a namespace's saved config once" ledger.
 //
-// A namespace's USER-layer config (`~/.singularity/state/config/<ns>/`) is not
+// A namespace's USER-layer config (`~/.equin/state/config/<ns>/`) is not
 // in git, so no commit can carry a change to it — and a hand-run migration is a
 // step that gets skipped. Instead `./equin build` replays committed,
 // keyed entries onto the namespace dir right before it propagates the git

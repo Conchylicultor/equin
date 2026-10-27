@@ -27,7 +27,7 @@ export interface DurableLogChannel {
  * How this host keeps log lines past the in-memory ring. The channel registry,
  * the envelope format and the live tail are portable; durability is the
  * host's. The desktop's provider (`log-channels#machine`) appends to
- * `~/.singularity/worktrees/<wt>/logs/<channel>.jsonl` through bounded,
+ * `~/.equin/worktrees/<wt>/logs/<channel>.jsonl` through bounded,
  * rotating file sinks; a host without a filesystem keeps memory only.
  */
 export interface LogPersistenceImpl {

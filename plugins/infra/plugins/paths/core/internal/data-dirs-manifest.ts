@@ -20,7 +20,7 @@ import { worktreeArtifacts, worktreesDir } from "./paths";
 
 // What each namespace on this machine DECLARES under the shared data root.
 //
-// `~/.singularity/` is host-global: every namespace on the box writes into it,
+// `~/.equin/` is host-global: every namespace on the box writes into it,
 // so it holds the union of every branch that has ever run here. A checkout's
 // `defineDataDir` registry is one branch's view of that root. The two have
 // different lifetimes, and comparing them directly is what made

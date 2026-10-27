@@ -11,7 +11,7 @@
 #             steps-install.sh is the one-command installer's run.
 # --name      VM name. Must start with "si-clean" (safety check below).
 #             Default: si-clean-<YYYYmmdd-HHMMSS>
-# --out       Where logs/summary go. Must NOT be under ~/.singularity.
+# --out       Where logs/summary go. Must NOT be under the data root.
 #             Default: ~/.equin-clean-install/<name>
 # --gui       Open the VM in a window instead of --no-graphics (needed once,
 #             for the interactive Claude Code login — see CLAUDE.md).
@@ -87,7 +87,7 @@ if [[ -z "$OUT_DIR" ]]; then
 fi
 
 # ---- safety assertions -------------------------------------------------
-# This harness must never touch the author's real ~/.singularity (gateway on
+# This harness must never touch the author's real data root (gateway on
 # 9000, embedded Postgres, secrets) or the machine's own VM fleet outside
 # this convention. See "Why the running main instance is untouched" in
 # CLAUDE.md.
@@ -100,13 +100,28 @@ case "$VM_NAME" in
     ;;
 esac
 
-DATA_ROOT_RESOLVED="$(cd "$HOME" && printf '%s/.singularity/' "$PWD")"
+# The data root, by paths/core's rule (data-root-layout.ts): the legacy dir
+# while an install not yet migrated has it (`./equin data-dir migrate` moves
+# it), else ~/.equin.
+data_root() {
+  if { [ -e "$HOME/.singularity" ] || [ -L "$HOME/.singularity" ]; } && ! [ "$HOME/.singularity" -ef "$HOME/.equin" ]; then
+    printf '%s\n' "$HOME/.singularity"
+  else
+    printf '%s\n' "$HOME/.equin"
+  fi
+}
+DATA_ROOT="$(data_root)"
+if [ -d "$DATA_ROOT" ]; then
+  DATA_ROOT_RESOLVED="$(cd "$DATA_ROOT" && pwd -P)/"
+else
+  DATA_ROOT_RESOLVED="$DATA_ROOT/"
+fi
 OUT_DIR_PARENT="$(dirname "$OUT_DIR")"
 mkdir -p "$OUT_DIR_PARENT"
-OUT_DIR_RESOLVED="$(cd "$OUT_DIR_PARENT" && printf '%s/%s/' "$PWD" "$(basename "$OUT_DIR")")"
+OUT_DIR_RESOLVED="$(cd "$OUT_DIR_PARENT" && printf '%s/%s/' "$(pwd -P)" "$(basename "$OUT_DIR")")"
 case "$OUT_DIR_RESOLVED" in
   "$DATA_ROOT_RESOLVED"*)
-    echo "Refusing: --out '$OUT_DIR' resolves inside ~/.singularity. This harness must never write there — pick a different --out." >&2
+    echo "Refusing: --out '$OUT_DIR' resolves inside the data root ($DATA_ROOT). This harness must never write there — pick a different --out." >&2
     exit 1
     ;;
 esac

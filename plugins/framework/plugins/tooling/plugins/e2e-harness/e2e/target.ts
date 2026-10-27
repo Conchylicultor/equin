@@ -53,7 +53,7 @@
  * every run reverted the user's live documents before doing anything.
  *
  * So the target is no longer computed at all. Every deploy RECORDS itself: the
- * build writes `~/.singularity/worktrees/<ns>/spec.json` naming the absolute
+ * build writes `~/.equin/worktrees/<ns>/spec.json` naming the absolute
  * path of the checkout whose backend answers that namespace, and
  * `resolveCheckoutDeploy(REPO_ROOT)` reads that registry back. A checkout that
  * has published nothing resolves to nothing and the run REFUSES — which is the

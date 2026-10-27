@@ -22,7 +22,7 @@ async function countFilesAndSize(
 }
 
 /**
- * Back up the throwaway UI mockups in `~/.singularity/apps/prototypes/`.
+ * Back up the throwaway UI mockups in `~/.equin/apps/prototypes/`.
  *
  * They are deliberately NOT in git — a prototype is user content, and keeping it
  * out of the repo is what lets every worktree and main serve the same set with

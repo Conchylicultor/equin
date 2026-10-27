@@ -39,7 +39,7 @@ instead of receiving it from the rebase's `--exec`.
 Everything from the fetch onward runs inside `withPushLock`. The mutex is scoped
 to the repository whose `main` it guards (`pushLockFor`): for the repository this
 machine's main app is served from, it is the single slot of the `push` host pool
-— `~/.singularity/locks/push/slot-0.lock` — and who holds it and who queues on it
+— `~/.equin/locks/push/slot-0.lock` — and who holds it and who queues on it
 is read from the op log (the push's `push-mutex` wait and its `granted`), not
 from the lock file. Any other repository (a second clone, an e2e's temp repo)
 locks in its own git dir (`<common-dir>/<git lock dir>/push/`), so its push

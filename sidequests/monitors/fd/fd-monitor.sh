@@ -34,8 +34,19 @@
 # Dumps have per-pid and system-wide cooldowns. lsof is sanity-checked before
 # incident detection so truncated output doesn't produce garbage forensics.
 
-LOG="$HOME/.singularity/logs/monitors/fd-monitor.log"
-INCIDENTS="$HOME/.singularity/logs/monitors/fd-monitor-incidents"
+# The data root, by paths/core's rule (data-root-layout.ts): the legacy dir
+# while an install not yet migrated has it (`./equin data-dir migrate` moves
+# it), else ~/.equin.
+data_root() {
+  if { [ -e "$HOME/.singularity" ] || [ -L "$HOME/.singularity" ]; } && ! [ "$HOME/.singularity" -ef "$HOME/.equin" ]; then
+    printf '%s\n' "$HOME/.singularity"
+  else
+    printf '%s\n' "$HOME/.equin"
+  fi
+}
+DATA_ROOT="$(data_root)"
+LOG="$DATA_ROOT/logs/monitors/fd-monitor.log"
+INCIDENTS="$DATA_ROOT/logs/monitors/fd-monitor-incidents"
 MAX_LINES=200000  # rough rotation threshold for the main log
 
 # Heavy-tick / dump thresholds.
@@ -165,7 +176,7 @@ HOLDERS=$(awk 'NR>1 {print $1":"$2}' "$LSOF_TMP" | sort | uniq -c | sort -rn)
   echo "tmux_sessions=$(/opt/homebrew/bin/tmux list-sessions 2>/dev/null | wc -l | tr -d ' ')"
   echo "claude_cli_procs=$(pgrep -af '/claude($| )' 2>/dev/null | wc -l | tr -d ' ')"
   echo "postgres_backends=$(ps -axo user,command 2>/dev/null | grep -E '^admin +postgres:' | wc -l | tr -d ' ')"
-  echo "worktree_jsons=$(ls "$HOME/.singularity/worktrees/"*.json 2>/dev/null | wc -l | tr -d ' ')"
+  echo "worktree_jsons=$(ls "$DATA_ROOT/worktrees/"*.json 2>/dev/null | wc -l | tr -d ' ')"
   echo
 } >> "$LOG" 2>&1
 

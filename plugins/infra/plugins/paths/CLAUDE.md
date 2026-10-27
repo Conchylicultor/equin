@@ -2,16 +2,48 @@
 
 The single source of truth for **where things are on this machine**: the repo
 root, the user's home, the Claude corpus, the per-worktree artifact layout, and
-the data root (`~/.singularity/`).
+the data root (`~/.equin/`).
 
 `core/` here means **runtime-neutral Node, not web-safe** — it reaches
 `node:os` / `node:fs` / `node:path` and must never be imported from `web/`. A
 browser that needs to *name* a directory reads the string literals in the
 `display` sub-plugin instead.
 
+## Where the root is
+
+`EQUIN_DIR` when set (a release bundle, a preview, a VM). Otherwise it is
+decided by what is **installed**, not by the code's version
+(`core/internal/data-root-layout.ts`, `dataRootLayout()`):
+
+| on disk | root |
+|---|---|
+| no legacy dir (`LEGACY_IDS.dataDirName`) | `~/.equin` — a fresh install, or a migrated one |
+| the legacy dir is a link to `~/.equin` | `~/.equin` (a migration whose leftover scan kept the link) |
+| the legacy dir (or a link elsewhere), no `~/.equin` | the legacy dir — an install not yet migrated |
+| both, separate | `DataRootSplitError`, loudly: a human decides |
+
+Deciding by version would point new code at an empty `~/.equin` on every
+machine that has not migrated. The same rule is mirrored in `gateway/dataroot.go`
+(with the same test cases), `install.sh` and the host scripts listed as
+`dataDirName` mirrors. The home layout is read once per process; only
+`./equin data-dir migrate` changes it, with the app stopped. The local
+backups dir (`backupsDir()`, outside the root) follows the same layout.
+
+**Moving an install over:** `./equin data-dir migrate` (the `root-migration`
+sub-plugin) — dry run by default, `--apply` executes. It refuses while any
+op or agent runs. With `--apply`, it stops the app, renames the root (and the
+backups dir) and leaves a link back while it rewrites every stored copy of the
+old path, by one rule: a stored value that STARTS with the old prefix is a path.
+That covers every database in the cluster, the text files under the root,
+links, and Claude Code's transcript dirs. History (logs, agent events,
+`*.jsonl`, run transcripts) is never rewritten, because it is read by byte
+offset. Cache entries holding the old path are dropped. The link is removed
+once a scan finds nothing left. Finally it relabels the gateway's service and
+starts the app.
+
 ## Three questions that look alike
 
-`~/.singularity/worktrees/` is host-global, so "which namespace?" has three
+`~/.equin/worktrees/` is host-global, so "which namespace?" has three
 different right answers depending on who is asking:
 
 | question | answer | who may ask |
@@ -45,7 +77,7 @@ machine.
 
 ## The data root is a registry, not a string
 
-Everything under `~/.singularity/` is a **declared directory with an owner**.
+Everything under `~/.equin/` is a **declared directory with an owner**.
 Nothing joins the root by hand — that is how it accreted 60+ entries nobody
 could classify, of which nine were orphans with no reference left in the repo.
 
@@ -245,6 +277,7 @@ run everywhere.
 - Core:
   - Uses:
     - `framework/product-name.LEGACY_IDS`
+    - `framework/product-name.PRODUCT_NAME`
     - `framework/tooling/collected-dir.defineCollectedDir`
     - `infra/launcher/env-names.readEnv`
     - `infra/launcher/env-names.setEnv`
@@ -270,6 +303,7 @@ run everywhere.
     - `DataDirKind`
     - `DataDirRef`
     - `DataDirSpec`
+    - `DataRootLayout`
     - `LegacyMove`
     - `MigrationStep`
     - `MovedFrom`
@@ -277,7 +311,8 @@ run everywhere.
     - `ReleaseIdentity`
   - Exports (values):
     - `actAsCheckoutNamespace`
-    - `BACKUPS_DIR`
+    - `backupsDir`
+    - `backupsDirs`
     - `CHECK_ARTIFACTS_RETENTION`
     - `checkoutNamespace`
     - `checkoutRef`
@@ -287,12 +322,16 @@ run everywhere.
     - `CLAUDE_SESSIONS_DIR`
     - `CLAUDE_USER_CONFIG`
     - `DATA_DIR_KINDS`
+    - `DATA_DIR_NAME`
     - `dataRoot`
+    - `dataRootLayout`
+    - `DataRootSplitError`
     - `defineAppDataDir`
     - `defineDataDir`
     - `deploysForCheckout`
     - `getDataDirs`
     - `HOME_DIR`
+    - `homeDataRoots`
     - `isHostSingleton`
     - `isRelease`
     - `LEGACY_LAYOUT`
@@ -302,6 +341,7 @@ run everywhere.
     - `pruneWorktreeCheckArtifacts`
     - `pruneWorktreeTestArtifacts`
     - `readCheckoutOwner`
+    - `readHomeDataRootLayout`
     - `relativeToDataRoot`
     - `releaseIdentity`
     - `REPO_ROOT`
@@ -336,7 +376,7 @@ run everywhere.
     - `paths:no-hardcoded-paths` — `check/index.ts`, `core/internal/paths.ts`, `server/internal/bins.ts` (sanctioned)
     - `paths:no-inlined-worktree-artifacts` — `.` (sanctioned)
     - `paths:data-root-not-joined` — `.` (sanctioned)
-    - `boundaries/no-platform-api` — `core/internal/checkout-deploys.ts`, `core/internal/checkout-owner.ts`, `core/internal/checkout-ref.ts`, `core/internal/data-dir.ts`, `core/internal/data-dirs-manifest.ts`, `core/internal/paths.ts`, `core/internal/prune-artifacts.ts`, `core/internal/toolchain-pin.ts`, `core/internal/worktree-dirs.ts`, `server/internal/bins.ts` (debt)
+    - `boundaries/no-platform-api` — `core/internal/checkout-deploys.ts`, `core/internal/checkout-owner.ts`, `core/internal/checkout-ref.ts`, `core/internal/data-dir.ts`, `core/internal/data-root-layout.ts`, `core/internal/data-dirs-manifest.ts`, `core/internal/paths.ts`, `core/internal/prune-artifacts.ts`, `core/internal/toolchain-pin.ts`, `core/internal/worktree-dirs.ts`, `server/internal/bins.ts` (debt)
 - Server:
   - Exports (types):
     - `AppIdentity`
@@ -352,7 +392,7 @@ run everywhere.
     - `ReleaseIdentity`
   - Exports (values):
     - `actAsCheckoutNamespace`
-    - `BACKUPS_DIR`
+    - `backupsDir`
     - `BUILD_ARTIFACTS_RETENTION`
     - `CHECK_ARTIFACTS_RETENTION`
     - `checkoutNamespace`
@@ -364,6 +404,7 @@ run everywhere.
     - `CLAUDE_SESSIONS_DIR`
     - `DATA_DIR_KINDS`
     - `dataRoot`
+    - `dataRootLayout`
     - `defineAppDataDir`
     - `defineDataDir`
     - `getDataDirs`
@@ -398,5 +439,6 @@ run everywhere.
     - `worktreesDir`
 - Sub-plugins:
   - **`display`** — The human-facing spelling of the data dirs (the `~/…` form a message, an empty state, or an agent prompt writes). Web-safe by construction: string literals only, no node:* and no homedir() — so the…
+  - **`root-migration`** — `./equin data-dir migrate`: moves an install's data root from the legacy home dir to ~/.equin (and its local backups beside it) in one run, with every other process of the app stopped — rewrites…
 
 <!-- AUTOGENERATED:END -->

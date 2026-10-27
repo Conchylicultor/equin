@@ -107,7 +107,7 @@ function fileStamp(path: string): string {
 
 /**
  * The desktop's user layer: the namespace's config dir
- * (`~/.singularity/state/config/<namespace>/`), one JSONC file per document
+ * (`~/.equin/state/config/<namespace>/`), one JSONC file per document
  * file, watched by the config-files watcher, with every agent-origin write
  * ledgered.
  */

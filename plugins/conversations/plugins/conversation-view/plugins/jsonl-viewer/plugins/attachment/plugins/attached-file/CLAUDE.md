@@ -17,7 +17,7 @@ the answer differs by kind:
   card.
 
 **The image row deliberately shows no path.** An attached image lives at
-`~/.singularity/state/attachments/<uuid>.png` (`apps/attachments/` in older
+`~/.equin/state/attachments/<uuid>.png` (`apps/attachments/` in older
 transcripts — every one of the 60 in the sample) — so its name identifies
 nothing a reader can use, and the path is not
 reachable from the file-peek pane either. The picture is its own identity. The

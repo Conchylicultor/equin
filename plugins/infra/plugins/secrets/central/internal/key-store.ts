@@ -101,7 +101,7 @@ function readOrCreateKeyFile(): Buffer {
  *
  * macOS / Windows: the OS keychain via `@napi-rs/keyring`, cached in-memory
  * after first read so the OS only prompts once per process lifetime. Fallback:
- * `~/.singularity/state/secrets/.key` (mode 0600), when the native module is
+ * `~/.equin/state/secrets/.key` (mode 0600), when the native module is
  * unavailable (CI) or fails at runtime. Linux: that file only (`keySource`).
  *
  * The key a blob was written with is the only one that reads it, so the source

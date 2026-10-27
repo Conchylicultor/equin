@@ -397,7 +397,7 @@ func (r *Registry) loadFile(path string) {
 		return
 	}
 	// Never register a spec whose backing worktree is already gone — the
-	// build creates ~/.singularity/worktrees/<name> (logs, spec.json) at a
+	// build creates ~/.equin/worktrees/<name> (logs, spec.json) at a
 	// different location than spec.Server (the git worktree's server dir), so
 	// the registry subdir can outlive the worktree it points at. A born-dead
 	// registration would only ever fail to spawn. Skip at Debug: the reconcile

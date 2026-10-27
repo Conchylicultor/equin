@@ -123,7 +123,7 @@ emission log, and active triggers; dead / backlogged / slot-hog jobs also file
 reports (STEP 0). → [`plugins/debug/plugins/queue/CLAUDE.md`](../../../plugins/debug/plugins/queue/CLAUDE.md)
 
 ## Cross-cutting tools (reach for these inside any branch)
-- **Logs** — per-worktree `~/.singularity/worktrees/<wt>/logs/<channel>.jsonl`
+- **Logs** — per-worktree `~/.equin/worktrees/<wt>/logs/<channel>.jsonl`
   (survives restarts). `clientLog(channel, line)` to emit; `tail`/`cat` to read.
   → [`plugins/debug/plugins/logs/CLAUDE.md`](../../../plugins/debug/plugins/logs/CLAUDE.md)
 - **Query DB** — `query_db` MCP, read-only SQL (`database` for another worktree /

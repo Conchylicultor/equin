@@ -59,7 +59,7 @@ func (s State) String() string {
 	}
 }
 
-// Spec is the on-disk schema parsed from ~/.singularity/worktrees/<name>/spec.json.
+// Spec is the on-disk schema parsed from ~/.equin/worktrees/<name>/spec.json.
 type Spec struct {
 	Server  string   `json:"server"`            // absolute path to the backend's working directory (cwd)
 	Web     string   `json:"web"`               // absolute path to web/dist

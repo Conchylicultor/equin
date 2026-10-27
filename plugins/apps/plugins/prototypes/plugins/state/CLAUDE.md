@@ -7,7 +7,7 @@ and the prototypes' tag tree, as rows in the instance's DB. Design:
 ## Mental model
 
 - **Files are host-global; state is per-instance.** The prototype folders
-  under `~/.singularity/apps/prototypes/` are shared by main and every
+  under `~/.equin/apps/prototypes/` are shared by main and every
   worktree. This state is not: `prototype_state` and `prototype_tags` live in
   the instance's own DB, so a worktree (or an E2E run in it) changes them in
   its DB fork without touching main's. Intended — no agent-write ledger.

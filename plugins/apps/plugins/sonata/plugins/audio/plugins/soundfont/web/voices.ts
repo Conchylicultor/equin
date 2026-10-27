@@ -31,7 +31,7 @@ import { SOUNDFONT_MIRROR_ID } from "../shared/mirror";
  * Samples are served same-origin via the asset-mirror primitive: we point smplr's
  * `instrumentUrl` at `/api/asset-mirror/gm-soundfont/<gleitz>-mp3.js`; the server
  * lazily downloads that file from the gleitz soundfont CDN on first request,
- * caches it under `~/.singularity/cache/asset-mirror/`, and serves it from disk thereafter. So each
+ * caches it under `~/.equin/cache/asset-mirror/`, and serves it from disk thereafter. So each
  * timbre needs network exactly once (first online play), then sounds fully offline
  * — the browser never talks to the external CDN. Format is fixed to `mp3` (the
  * gleitz CDN's universally-supported encoding), so there is no per-browser format

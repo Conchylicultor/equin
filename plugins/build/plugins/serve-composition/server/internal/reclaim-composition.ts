@@ -12,7 +12,7 @@
 // — `sonata` from main and `sonata.att-x` from three worktrees are four
 // namespaces, four databases and four config dirs. `namespacesOwnedByComposition`
 // is a marker scan across every namespace on the host, and it can be: all of it
-// lives in the shared `~/.singularity/` tree, so one backend reclaims namespaces
+// lives in the shared `~/.equin/` tree, so one backend reclaims namespaces
 // composed by other checkouts.
 
 import { databaseExists } from "@plugins/database/plugins/admin/server";

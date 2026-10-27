@@ -4,7 +4,7 @@ import { defineHostService } from "@plugins/framework/plugins/server-core/core";
  * Where attachment BYTES live. The rows (`attachments`, the owner links, the
  * holds) are portable tables; the bytes are the host's: the desktop's provider
  * (`attachments#machine`) writes one UUID-named file per attachment under
- * `~/.singularity/state/attachments/`, a host without a filesystem keeps them
+ * `~/.equin/state/attachments/`, a host without a filesystem keeps them
  * in memory. A row records the key its blob was stored under (`disk_path`).
  */
 export interface AttachmentBlobsImpl {

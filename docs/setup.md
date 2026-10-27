@@ -9,7 +9,7 @@ curl -fsSL https://raw.githubusercontent.com/Conchylicultor/singularity/main/ins
 ```
 
 Or `./install.sh` from inside a clone or fork you already have. Options:
-`--dir <path>` (default `~/` + `LEGACY_IDS.defaultCheckoutDir`), `--repo <url>` (your fork),
+`--dir <path>` (default `~/equin`), `--repo <url>` (your fork),
 `--no-shell-rc`; piped, pass them after `bash -s --`. It runs the steps
 below (the Claude Code sign-in last, offered once the app is up), skipping
 whatever is already done, so re-running it resumes
@@ -76,7 +76,20 @@ which `install.sh` enables). The gateway listens on loopback only
 every interface. Elsewhere (no launchd, no systemd)
 the gateway does not survive a reboot: run `./equin start` again after one.
 
-(`<gateway-label>` is the gateway's launchd label / systemd unit name, `LEGACY_IDS.launchdLabel` in `framework/product-name`.)
+(`<gateway-label>` is the gateway's launchd label / systemd unit name, `dev.equin.gateway` (`GATEWAY_SERVICE` in `infra/launcher/core`; an install from before the rename keeps `LEGACY_IDS.launchdLabel` until it migrates, below).)
+
+**An install from before the rename** keeps its data in the legacy home dir
+(`LEGACY_IDS.dataDirName`) and its gateway under the old label: everything
+keeps working on them, and a fresh install gets `~/.equin` and
+`dev.equin.gateway`. To move over, run `./equin data-dir migrate` from your
+checkout (a dry run that prints the plan), then `./equin data-dir migrate --apply`
+while no build, push, test or agent is running. It stops the app, moves the
+data dir to `~/.equin` (and `~/.backups/<legacy>` to `~/.backups/equin`),
+rewrites every stored copy of the old path (every database, the files under
+the dir, Claude Code's transcript dirs), drops the cache entries that hold
+one (they are rebuilt on demand, so the next `start` takes a few minutes),
+removes the old dir once a scan finds nothing left, relabels the gateway and
+starts the app again.
 
 **Chromium is not part of the install.** It is an on-demand dependency
 ([`infra/deps`](../plugins/infra/plugins/deps/CLAUDE.md)), installed (~600 MB)
@@ -90,7 +103,7 @@ one root command that installs them (Playwright's own `install-deps chromium`).
 
 ## Postgres
 
-equin ships an embedded Postgres 18 cluster, supervised by the gateway — see [`plugins/database/`](../plugins/database/CLAUDE.md). Binaries come from `@embedded-postgres/<platform>` (installed via `bun install`); `initdb` runs on first start, the cluster lives in `~/.singularity/postgres/data-pg18/`, and `postgres` listens on a Unix socket at `~/.singularity/postgres/socket` on port `5433`.
+equin ships an embedded Postgres 18 cluster, supervised by the gateway — see [`plugins/database/`](../plugins/database/CLAUDE.md). Binaries come from `@embedded-postgres/<platform>` (installed via `bun install`); `initdb` runs on first start, the cluster lives in `~/.equin/postgres/data-pg18/`, and `postgres` listens on a Unix socket at `~/.equin/postgres/socket` on port `5433`.
 
 The base database (`LEGACY_IDS.pgBaseDatabase`) is created by the script that starts the cluster — empty, on every start, so you never create it yourself and a deleted one comes back. The first backend to boot against it applies the migrations.
 
@@ -98,7 +111,7 @@ Each conversation (worktree) gets its own database inside the same cluster, fork
 
 ### Using system PG instead of embedded
 
-Edit `~/.singularity/state/db-config/database.json` (auto-generated on first `./equin start`):
+Edit `~/.equin/state/db-config/database.json` (auto-generated on first `./equin start`):
 
 ```json
 {

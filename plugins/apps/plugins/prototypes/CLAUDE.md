@@ -1,7 +1,7 @@
 # prototypes
 
 Prototypes app — a surface to browse, compare (variants, versions, the real
-app) and iterate on throwaway UI design mockups. The mockups live in `~/.singularity/apps/prototypes/` —
+app) and iterate on throwaway UI design mockups. The mockups live in `~/.equin/apps/prototypes/` —
 host-global, shared by every worktree and main, and deliberately **not** in git,
 so a mock is live with no build and nothing to commit (the `prototypes` backup
 source is what makes it recoverable). Authored separately from this plugin:

@@ -447,7 +447,7 @@ export async function generateMigration(opts: {
       // is a pure snapshot diff against ./data and opens no connection, and
       // drizzle.config.ts reads no database config — passing libpqEnv() here is
       // what made this step ENOENT on a host with no
-      // ~/.singularity/state/db-config/database.json. The worktree name used to be
+      // ~/.equin/state/db-config/database.json. The worktree name used to be
       // passed too; the schema files never needed it (no schema-glob file resolves
       // a namespace at module eval, and the database client defers its identity to
       // the first query), and a namespace in an environment is inherited by

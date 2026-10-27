@@ -46,7 +46,7 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// to the singleton central backend regardless of which host the request
 	// arrived on (including bare localhost). The manifest is written by the
 	// central runtime itself on boot, from the routes it registered
-	// (central-core/bin/routes-manifest.ts), to ~/.singularity/state/gateway/central-routes.json and watched
+	// (central-core/bin/routes-manifest.ts), to ~/.equin/state/gateway/central-routes.json and watched
 	// for changes — see central_routes.go. Auth's `/api/auth/{start,callback}/*`
 	// callbacks (which Google requires on bare-localhost) reach central through
 	// this same mechanism since auth migrated to the central runtime.

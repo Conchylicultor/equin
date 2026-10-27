@@ -4,7 +4,7 @@ Host-global duress latch — the cross-process "the box is in trouble" signal fo
 the congestion-observability stack
 (`research/2026-07-10-global-congestion-observability.md`, Phase B/C).
 
-The latch is a single file, `~/.singularity/locks/duress/duress.latch` (JSON
+The latch is a single file, `~/.equin/locks/duress/duress.latch` (JSON
 `{ setAt, reason }`), derived from `EQUIN_DIR` in `infra/paths`. A file is
 the channel on purpose: it needs no DB, no sockets, and no cooperating event
 loop, so it stays writable and readable precisely when everything else on the

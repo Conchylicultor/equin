@@ -355,7 +355,7 @@ export function createOwnerTally(roots: readonly string[]): OwnerTally {
  * sample; a stall record carries both.
  *
  * Every name below was read off real stalls
- * (`~/.singularity/logs/check-progress/check-progress.jsonl`, `owners[].example`)
+ * (`~/.equin/logs/check-progress/check-progress.jsonl`, `owners[].example`)
  * on 2026-09-15. An unrecognized name is never dropped — it falls through to
  * `cpu` (it has a source file) or `native` (it doesn't), and the stall's
  * `leaves` tally keeps its raw name visible either way.

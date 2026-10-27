@@ -2,21 +2,21 @@
 
 Host tooling, not part of the app (same spirit as
 [`sidequests/monitors`](../monitors/CLAUDE.md)). Answers: if someone with no
-Homebrew/Bun/Go/Postgres/`~/.singularity` follows `docs/setup.md` exactly as
+Homebrew/Bun/Go/Postgres/`~/.equin` follows `docs/setup.md` exactly as
 written, where do they get stuck, and how long does each step take?
 
 ## Why a VM
 
 This Mac already runs a real equin instance: gateway on the hardcoded
-port 9000, embedded Postgres, state under `~/.singularity`. A second macOS
+port 9000, embedded Postgres, state under `~/.equin`. A second macOS
 user account would still see this Mac's Homebrew and would collide on port
 9000, so it isn't clean. Instead this runs inside a throwaway VM via
 [Tart](https://github.com/cirruslabs/tart) (`~/.local/bin/tart`), cloned
 fresh each time from `ghcr.io/cirruslabs/macos-tahoe-vanilla` (no
 Homebrew/Xcode CLT/Bun/Go/Postgres/Claude Code — just an `admin` user with
 remote login on). The VM has its own network/disk and a capped 6 core /
-12 GB, so its port 9000, `~/.singularity` and Postgres are its own; nothing
-under this Mac's `~/.singularity` is ever touched.
+12 GB, so its port 9000, `~/.equin` and Postgres are its own; nothing
+under this Mac's `~/.equin` is ever touched.
 
 ## Running it
 
@@ -63,9 +63,18 @@ A step may set `<fn>_REBOOT=1`: `run.sh` reboots the guest (`sudo shutdown -r
 now`) and records the time until ssh answers again, instead of running the
 step's text.
 
-`run.sh` refuses to run if its output dir would land under `~/.singularity`,
+`run.sh` refuses to run if its output dir would land under `~/.equin`,
 or if the VM name doesn't start with `si-clean` — both so a mistake here
 can't reach the real instance.
+
+## `steps-migrate.sh` — the data-dir migration
+
+Installs a tree from before the move to `~/.equin` (a bundle of a pre-move
+commit), seeds a stored path and a Claude transcript dir, checks out the tree
+under test (a second bundle), and runs `./equin data-dir migrate --apply`.
+Then it checks that the legacy dir and label are gone, the app answers, the
+stored paths moved, a second run has nothing to do, and the app comes back after
+a reboot. Usage is in the file's header. Every step is `harness-only`.
 
 ## `steps.sh`
 

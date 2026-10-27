@@ -273,7 +273,7 @@ export interface ScheduleSpec {
    * `false` — schedules are main-only.
    *
    * Leave this off (the default) for any job that touches shared/global state
-   * — external uploads, the shared `~/.singularity` filesystem, secrets — or
+   * — external uploads, the shared `~/.equin` filesystem, secrets — or
    * canonical data that lives in the main DB. Running such a job per-worktree
    * duplicates the work once per live worktree (e.g. N backup uploads) or
    * races on the shared resource.

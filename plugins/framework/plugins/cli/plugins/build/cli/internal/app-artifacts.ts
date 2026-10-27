@@ -105,7 +105,7 @@ import {
  *   - the per-namespace deploy sequence (`./deploy-namespace.ts`): the
  *     `composition.json` provenance marker, the database, the spec, the restart.
  *   - `propagateConfigToUser` — same function, different sink per caller (build
- *     targets `~/.singularity/state/config/<worktree>`, a release targets its own
+ *     targets `~/.equin/state/config/<worktree>`, a release targets its own
  *     `config-seed`), so the sink IS the parameterization. Mirrors
  *     regen-pipeline.ts's own out-of-scope note.
  *   - `sweepDistLeftovers` — the caller sweeps its own dist dir right after
@@ -798,7 +798,7 @@ export type WebDistTarget =
  * about to be published is precisely the drift this seam exists to prevent, so
  * the caller resolves its `target` through here rather than spelling a path.
  *
- * Both arms live under `~/.singularity/worktrees/`: no dist is written into a
+ * Both arms live under `~/.equin/worktrees/`: no dist is written into a
  * checkout any more, so a checkout carries no build output and the served tree
  * survives operations on the checkout (a `git clean`, a worktree re-checkout).
  * It takes no checkout path at all — a build's `webDir` is the `.build.lock`'s
@@ -853,7 +853,7 @@ export interface BuildWebDistOptions {
    * Copy each artifact out of the shared content-addressed store instead of
    * symlinking it, so the produced dist is SELF-CONTAINED. Only the release
    * path (`build --hermetic`) wants this: its dist is `cpSync`'d into a
-   * shippable bundle, and symlinks into `~/.singularity/cache/web-artifacts/`
+   * shippable bundle, and symlinks into `~/.equin/cache/web-artifacts/`
    * would
    * ship as dangling links on any other machine.
    *

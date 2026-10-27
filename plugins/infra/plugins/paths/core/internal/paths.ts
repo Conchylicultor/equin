@@ -17,7 +17,14 @@ import {
   isMain,
   runtimeNamespace,
 } from "@plugins/infra/plugins/runtime-identity/core";
-import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
+import {
+  LEGACY_IDS,
+  PRODUCT_NAME,
+} from "@plugins/framework/plugins/product-name/core";
+import {
+  readHomeDataRootLayout,
+  type DataRootLayout,
+} from "./data-root-layout";
 
 export const REPO_ROOT = resolve(
   import.meta.dir,
@@ -220,17 +227,51 @@ export const HOME_DIR = resolve(homedir());
  * function and `DataDir.path` a getter. See `webDistDir`'s docblock below.
  */
 export function resolveDataRoot(): string {
-  return readEnv("DIR") ?? join(HOME_DIR, ".singularity");
+  return dataRootLayout().root;
 }
 
-// OUTSIDE the data root on purpose (`~/.backups/…`), which is why it
-// is a plain constant here rather than a `defineDataDir` declaration: a backup
-// that lived inside the tree it backs up would be reclaimed by the same sweep.
-export const BACKUPS_DIR = join(
-  HOME_DIR,
-  ".backups",
-  LEGACY_IDS.backupsDirName,
-);
+/**
+ * Where the root is, and why: named by the environment (`custom`), an install
+ * not yet migrated (`legacy`, `LEGACY_IDS.dataDirName`), or the current
+ * `~/.equin` (`data-root-layout.ts`).
+ *
+ * The home-relative half reads the disk, so it is decided once per process:
+ * an install changes layout only through `./equin data-dir migrate`, which
+ * runs with every other process of the app stopped and starts the gateway it
+ * restores as a fresh process. The environment is still read on every call,
+ * for the reason in {@link resolveDataRoot}.
+ */
+export function dataRootLayout(): DataRootLayout {
+  const dir = readEnv("DIR");
+  if (dir !== undefined) return { kind: "custom", root: dir };
+  homeLayout ??= readHomeDataRootLayout(HOME_DIR);
+  return homeLayout;
+}
+let homeLayout: DataRootLayout | undefined;
+
+/**
+ * The local backups' dir — OUTSIDE the data root on purpose (`~/.backups/…`),
+ * which is why it is spelled here rather than declared with `defineDataDir`: a
+ * backup that lived inside the tree it backs up would be reclaimed by the same
+ * sweep.
+ *
+ * It follows the root's layout: an install not yet migrated keeps
+ * `~/.backups/<LEGACY_IDS.backupsDirName>` (the migration moves it with the root), every other
+ * install uses `~/.backups/equin`. A function for the same reason as
+ * {@link dataRootLayout}.
+ */
+export function backupsDir(): string {
+  const dirs = backupsDirs();
+  return dataRootLayout().kind === "legacy" ? dirs.legacy : dirs.current;
+}
+
+/** Both home-relative backups dirs, current first. */
+export function backupsDirs(): { current: string; legacy: string } {
+  return {
+    current: join(HOME_DIR, ".backups", PRODUCT_NAME),
+    legacy: join(HOME_DIR, ".backups", LEGACY_IDS.backupsDirName),
+  };
+}
 
 // Everything else under the data root is a DECLARATION, not a constant here.
 // This module used to carry a second spelling of nine of those directories
@@ -520,7 +561,7 @@ export const worktreeArtifacts = {
    * variant: a namespace has exactly one declared set, and this file's whole job
    * is to be found at a fixed path by an audit running in a DIFFERENT checkout.
    *
-   * That cross-checkout read is the point. `~/.singularity/` is host-global —
+   * That cross-checkout read is the point. `~/.equin/` is host-global —
    * every namespace on this box writes into it — while a checkout's declarations
    * are one branch's view, so `paths:no-undeclared-data-dirs` used to report a
    * directory another live worktree had just declared as an orphan. Each

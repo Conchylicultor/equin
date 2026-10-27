@@ -1,4 +1,4 @@
-// Content-addressed artifact store at `~/.singularity/cache/web-artifacts/`, shared
+// Content-addressed artifact store at `~/.equin/cache/web-artifacts/`, shared
 // across worktrees: a dir per artifact keyed by its inputs hash. Reuse bumps the
 // dir's mtime so live artifacts never age out; pruning follows the
 // `checks/core/cache.ts` shape (age + count bounds).

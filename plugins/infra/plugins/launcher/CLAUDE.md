@@ -23,7 +23,7 @@ writes it too, so a gateway that dies before getting that far still leaves its
 dead pid for a preview's reaper. Design:
 [`research/2026-09-25-global-gateway-survives-reboot.md`](../../../../research/2026-09-25-global-gateway-survives-reboot.md).
 
-(`<gateway-label>` is the gateway's launchd label / systemd unit name, `LEGACY_IDS.launchdLabel` in `framework/product-name`.)
+(`<gateway-label>` is the gateway's launchd label / systemd unit name, `dev.equin.gateway` (`GATEWAY_SERVICE` in `infra/launcher/core`); an install from before the rename keeps `LEGACY_IDS.launchdLabel` until `./equin data-dir migrate` relabels it — the service stays bound to whichever label is installed (`installedAs`).)
 
 ## Login services: the gateway's mechanism, for any plugin
 
@@ -60,7 +60,7 @@ asks for `./equin start --force`. Both derive "main's launch" from the same
 
 `gateway-binary` (`deps/index.ts`) is an `infra/deps` `build` dependency: `go
 build` of `gateway/` (every `.go` file + `go.mod` / `go.sum`, `go version`, the
-target), cached at `~/.singularity/cache/deps/gateway-binary/<identity>/env/gateway`.
+target), cached at `~/.equin/cache/deps/gateway-binary/<identity>/env/gateway`.
 There is no `<repo>/gateway/gateway` any more. `bootSelfContainedApp({ gateway })`
 takes its `Ready`, so a launch that never ensured the binary does not compile;
 `GatewayLaunchOptions.executable` is the executable made from one: where the
@@ -259,7 +259,7 @@ spawns would run its boot-time Bun, so a `mise.lock` bump could never pass
 `bun-runtime` and restart it (2026-10-12). mise reads
 the global config and the `mise.lock` beside it only when the walk finds no
 local config, so inside a checkout nothing changes, and anything the backend
-spawns from `/tmp` or `~/.singularity/…` gets that checkout's locked release. The
+spawns from `/tmp` or `~/.equin/…` gets that checkout's locked release. The
 starter's own `MISE_*` never travels. A release has no checkout and pins nothing
 (it spawns no mise tool). `toolchain:resolved` re-measures the pin from a temp
 dir on every build, since it rests on mise's semantics rather than ours.
@@ -333,7 +333,6 @@ Design: [`research/2026-09-15-global-declared-runtime-environment.md`](../../../
     - `DEV_GATEWAY_PORT`
     - `devGatewayLaunchOptions`
     - `ensureDatabaseConfig`
-    - `GATEWAY_SERVICE`
     - `gatewayLaunchFlags`
     - `gatewayLaunchSpec`
     - `gatewayPidFile`
@@ -355,6 +354,8 @@ Design: [`research/2026-09-15-global-declared-runtime-environment.md`](../../../
   - Register: `defineDaemon('launcher.gateway')`
 - Core:
   - Uses:
+    - `framework/product-name.LEGACY_IDS`
+    - `framework/product-name.PRODUCT_NAME`
     - `infra/launcher/env-names.EnvKey`
     - `infra/launcher/env-names.envKeyOf`
     - `infra/launcher/env-names.envNames`
@@ -362,6 +363,7 @@ Design: [`research/2026-09-15-global-declared-runtime-environment.md`](../../../
     - `infra/launcher/env-names.RUNTIME_FORWARDED_ENV`
     - `infra/launcher/env-names.RUNTIME_FORWARDED_PREFIXES`
   - Exports (values):
+    - `GATEWAY_SERVICE`
     - `isRuntimeEnvName`
     - `pickHostEnv`
     - `pickRuntimeEnv`

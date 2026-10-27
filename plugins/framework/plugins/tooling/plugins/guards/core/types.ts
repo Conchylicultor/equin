@@ -87,7 +87,7 @@ export interface GuardContext {
    * and this is the whole point of the field. A data dir's absolute path is
    * only reachable from its owner's `data-dirs/index.ts`, which the boundary
    * rules keep out of `core/` — so a guard that wanted to name one had no
-   * choice but to hardcode `~/.singularity/…`, and that literal would go
+   * choice but to hardcode `~/.equin/…`, and that literal would go
    * silently wrong the next time the data root moves (it already has once, in
    * the `apps/` layout migration). Passing the RESOLVED paths in means the
    * guard compares against wherever the declaration says the directory is

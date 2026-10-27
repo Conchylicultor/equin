@@ -11,6 +11,7 @@ import {
   removeDefinition,
   writeDefinition,
 } from "./definition-file";
+import { bindInstalledLabel } from "./installed-label";
 import { parseSystemdUserUnit, renderSystemdUserUnit } from "./systemd-unit";
 import type {
   LoginService,
@@ -56,12 +57,15 @@ async function assertLingering(): Promise<void> {
   }
 }
 
+/** Where the user unit of `label` lives. */
+function systemdUnitPath(label: string): string {
+  const configHome = process.env.XDG_CONFIG_HOME || join(HOME_DIR, ".config");
+  return join(configHome, "systemd", "user", `${label}.service`);
+}
+
 function systemdService(id: LoginServiceId): LoginService {
   const unit = `${id.label}.service`;
-  const unitPath = () => {
-    const configHome = process.env.XDG_CONFIG_HOME || join(HOME_DIR, ".config");
-    return join(configHome, "systemd", "user", unit);
-  };
+  const unitPath = () => systemdUnitPath(id.label);
 
   async function unitProps(): Promise<Record<string, string>> {
     const res = await spawnExpectOk(
@@ -186,5 +190,5 @@ function systemdService(id: LoginServiceId): LoginService {
 
 export const systemdManager: LoginServiceManager = {
   manager: "systemd",
-  service: systemdService,
+  service: (id) => systemdService(bindInstalledLabel(id, systemdUnitPath)),
 };

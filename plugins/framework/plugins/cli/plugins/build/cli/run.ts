@@ -233,7 +233,7 @@ async function databaseReady(name: string): Promise<boolean> {
  *
  * INTENTIONAL BEHAVIOR DELTA (recorded, not accidental): this used to call the
  * CLI's own ENOENT-throwing copy of `readDatabaseConfig`, so a missing
- * `~/.singularity/state/db-config/database.json` crashed HERE with a bare filesystem error.
+ * `~/.equin/state/db-config/database.json` crashed HERE with a bare filesystem error.
  * Against the single tolerant reader it now falls through the
  * `services.length === 0` branch above ("externally managed DB") and the real,
  * actionable error comes from `waitForWorktreeDatabase` further down — which
@@ -593,7 +593,7 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
   // Open the durable, crash-safe build-progress log now that `name` (the same
   // namespace key the op marker and writeBuildProfile use) is known. Every
   // buildProfilerStart span from here on records an enter/leave + RSS to
-  // ~/.singularity/logs/build-progress/build-progress.jsonl, so a wedged build names its phase and
+  // ~/.equin/logs/build-progress/build-progress.jsonl, so a wedged build names its phase and
   // heap trend even after SIGKILL. See research/2026-07-21-global-cli-op-wedge-gc-sink.md.
   //
   // ONE progress run per PROCESS, keyed on the checkout's namespace: the
@@ -1233,7 +1233,7 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
   }
 
   // 4c. Config propagation is PER TARGET now — each namespace gets its own
-  //     `~/.singularity/state/config/<namespace>/` — so it lives inside
+  //     `~/.equin/state/config/<namespace>/` — so it lives inside
   //     `deployNamespace` rather than here. It still runs after the
   //     freshly-seeded git layer above, because every target's deploy does.
 
@@ -1288,7 +1288,7 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
     // the process that produces the dist those checks inspect.
     //
     // It does NOT assert `host`. That scope is about the machine: the shared
-    // `~/.singularity` data root, which every checkout on the box writes to and
+    // `~/.equin` data root, which every checkout on the box writes to and
     // which runs ahead of any one branch. A build observing it sees state some
     // other live worktree created — state it did not cause and cannot repair.
     // This used to be spelled as NO filter at all, which is a different claim

@@ -10,7 +10,7 @@ caller spawns that command instead.
 ## Why
 
 A passing check does not just print a ✓. It writes a durable entry to the
-**global** cache at `~/.singularity/check-cache/`, keyed on
+**global** cache at `~/.equin/check-cache/`, keyed on
 `(treeHash, checkId, sha256(signature))` and carrying no provenance — just
 `{checkId, treeHash, recordedAt}`. A **later, different** process looks that key
 up and returns ✓ without running anything.

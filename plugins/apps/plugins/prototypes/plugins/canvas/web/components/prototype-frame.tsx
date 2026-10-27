@@ -135,7 +135,7 @@ export function PrototypeFrame({
             // prototype that fetch()es one of its own flat files works here
             // exactly as it does off disk. Safe: prototypes are first-party
             // files, authored on this machine and served from the user's own
-            // ~/.singularity/apps/prototypes/.
+            // ~/.equin/apps/prototypes/.
             sandbox="allow-scripts allow-same-origin"
             width={width}
             height={docHeight}

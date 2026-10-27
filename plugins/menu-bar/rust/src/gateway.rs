@@ -1,6 +1,8 @@
 //! The gateway, seen from outside: whether anything answers on its port, and
-//! starting its login service (`infra/launcher`: launchd label / systemd unit
-//! `dev.singularity.gateway`).
+//! starting its login service (`infra/launcher`'s `GATEWAY_SERVICE`), whose
+//! launchd label / systemd unit the helper's own job carries in
+//! `EQUIN_GATEWAY_LABEL` — the label the service is bound to on this machine,
+//! which an install not yet migrated keeps from before the rename.
 
 use std::net::{SocketAddr, TcpStream};
 use std::process::Command;
@@ -8,7 +10,9 @@ use std::time::{Duration, Instant};
 
 /// The gateway's port (`infra/namespace`'s GATEWAY_PORT).
 pub const PORT: u16 = 9000;
-const LABEL: &str = "dev.singularity.gateway";
+/// What the helper's login-service job sets to the gateway's label
+/// (`menu-bar/login-services`).
+const LABEL_ENV: &str = "EQUIN_GATEWAY_LABEL";
 
 /// Whether something accepts connections on the gateway's port.
 pub fn up() -> bool {
@@ -16,7 +20,15 @@ pub fn up() -> bool {
     TcpStream::connect_timeout(&addr, Duration::from_millis(300)).is_ok()
 }
 
-fn start_argv() -> Vec<String> {
+fn label() -> Result<String, String> {
+    std::env::var(LABEL_ENV).ok().filter(|l| !l.is_empty()).ok_or_else(|| {
+        format!(
+            "{LABEL_ENV} is not set, so the helper does not know the gateway's service — restart it with ./equin start --only dev.equin.menu-bar --force"
+        )
+    })
+}
+
+fn start_argv(label: &str) -> Vec<String> {
     if cfg!(target_os = "macos") {
         // SAFETY: getuid has no preconditions and cannot fail.
         let uid = unsafe { getuid() };
@@ -24,14 +36,14 @@ fn start_argv() -> Vec<String> {
             "launchctl".into(),
             "kickstart".into(),
             "-k".into(),
-            format!("gui/{uid}/{LABEL}"),
+            format!("gui/{uid}/{label}"),
         ]
     } else {
         vec![
             "systemctl".into(),
             "--user".into(),
             "start".into(),
-            format!("{LABEL}.service"),
+            format!("{label}.service"),
         ]
     }
 }
@@ -47,7 +59,7 @@ extern "C" {
 /// (a refused connection is the only one), so the helper connects every
 /// 250 ms for at most 30 s and then reports failure.
 pub fn start() -> Result<(), String> {
-    let argv = start_argv();
+    let argv = start_argv(&label()?);
     let out = Command::new(&argv[0])
         .args(&argv[1..])
         .output()

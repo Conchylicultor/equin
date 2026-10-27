@@ -26,22 +26,18 @@ describe("offendingLine", () => {
     ).toBe(false);
   });
 
-  test("leaves the data dir and repo URLs to their own steps", () => {
-    expect(offendingLine(`~/.${OLD}/worktrees/x`, [])).toBe(false);
-    expect(offendingLine(`"$HOME/.${OLD}"`, [])).toBe(false);
+  test("leaves repo URLs alone", () => {
     expect(offendingLine(`https://github.com/Owner/${OLD}/pull/1`, [])).toBe(
       false,
     );
   });
 
-  test("a data-dir lookalike that is not the dir itself is still flagged", () => {
-    expect(offendingLine(`node_modules/.${OLD}-deps`, [])).toBe(true);
+  test("the legacy data dir is flagged outside the mirrors that spell it", () => {
+    const dir = LEGACY_IDS.dataDirName;
+    expect(offendingLine(`~/${dir}/worktrees/x`, [])).toBe(true);
+    expect(offendingLine(`"$HOME/${dir}"`, [])).toBe(true);
+    expect(offendingLine(`legacy="$HOME/${dir}"`, [dir])).toBe(false);
     expect(offendingLine(`label: "dev.${OLD}.gateway"`, [])).toBe(true);
-    expect(offendingLine(`lives in ~/.${OLD}.`, [])).toBe(false);
-  });
-
-  test("an allowed span does not hide a second mention on the same line", () => {
-    expect(offendingLine(`~/.${OLD}/worktrees/${OLD}`, [])).toBe(true);
   });
 
   test("a mirror may spell the values it declares, and only those", () => {

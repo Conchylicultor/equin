@@ -24,7 +24,7 @@ tint). The editor names neither this plugin nor conversations.
 fields carrying a decision, clips any serialized value past 200 chars, and asks
 for the `defineConfig` descriptor's recent history and a source-level fix. It
 also states that the user's config layer is forked per worktree
-(`~/.singularity/state/config/<worktree>/…`, spelled via `paths/display`) —
+(`~/.equin/state/config/<worktree>/…`, spelled via `paths/display`) —
 without that, an agent "fixes" the conflict in its own fork and reports success
 on a change the user never receives.
 

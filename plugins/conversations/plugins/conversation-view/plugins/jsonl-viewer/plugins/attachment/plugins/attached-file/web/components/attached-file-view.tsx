@@ -83,7 +83,7 @@ function noteOf(parts: (string | null)[]): string | undefined {
  * everywhere else in this transcript (`user-image`), and a picture hidden
  * behind a chevron is a picture the reader never sees. The path is deliberately
  * absent from the image row: an attached image lives at
- * `~/.singularity/state/attachments/<uuid>.png`, a name that identifies nothing
+ * `~/.equin/state/attachments/<uuid>.png`, a name that identifies nothing
  * the reader can use — the image itself is the identity.
  */
 export function AttachedFileView({ event }: AttachmentRendererProps) {

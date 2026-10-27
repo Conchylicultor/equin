@@ -218,15 +218,15 @@ export interface Check {
    *     .gitignore). Whatever that hash covers is exactly what a push carries,
    *     so the check is in the push payload and every caller can assert it.
    *   - "deploy" → the check verifies the local deployment that
-   *     `./equin build` produces (`~/.singularity/worktrees/<name>/web`,
-   *     the `~/.singularity/cache/web-artifacts` store). That artifact NEVER lands on
+   *     `./equin build` produces (`~/.equin/worktrees/<name>/web`,
+   *     the `~/.equin/cache/web-artifacts` store). That artifact NEVER lands on
    *     main, and `push`'s own internal rebase invalidates it by construction
    *     (the tree moves past the deployed dist), so push cannot meaningfully
    *     assert it — no matter how it is scheduled. Its real homes are `build`
    *     (which deploys, then verifies), a standalone `./equin check`, and
    *     main's post-push auto-build.
    *   - "host" → the verdict is about this MACHINE: the shared data root
-   *     (`~/.singularity/`), host-global services, state no checkout owns. It is
+   *     (`~/.equin/`), host-global services, state no checkout owns. It is
    *     a function of neither the tree nor the artifact a build produces, and —
    *     unlike the two above — NO per-worktree caller can assert it. The subject
    *     is shared with every other checkout on the box and is AHEAD of any one

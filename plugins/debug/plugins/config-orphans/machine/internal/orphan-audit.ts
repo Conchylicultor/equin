@@ -63,7 +63,7 @@ async function dirExists(dir: string): Promise<boolean> {
 }
 
 /**
- * Read-only audit of the USER-layer config dir (`~/.singularity/state/config/<worktree>`):
+ * Read-only audit of the USER-layer config dir (`~/.equin/state/config/<worktree>`):
  * every on-disk config file whose owning `defineConfig` descriptor is no longer
  * live is an orphan. Unlike the git layer (`pruneOrphanedConfigFiles`), user-layer
  * files are unversioned so we never delete — we classify:

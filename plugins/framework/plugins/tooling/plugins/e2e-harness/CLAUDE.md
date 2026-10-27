@@ -22,7 +22,7 @@ and `support/runs.ts` resolve their own target.
 
 Pass no target flag and the script drives the deploy **this checkout
 published** — `resolveCheckoutDeploy(REPO_ROOT)` reads every
-`~/.singularity/worktrees/<ns>/spec.json` and keeps the namespaces whose
+`~/.equin/worktrees/<ns>/spec.json` and keeps the namespaces whose
 `server` path is this checkout's backend. Nothing is derived from a directory
 name, and no environment variable has any spelling in this runtime.
 

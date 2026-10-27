@@ -4,7 +4,9 @@ export {
   PLUGINS_DIR,
   SERVER_CORE_RELATIVE,
   HOME_DIR,
-  BACKUPS_DIR,
+  backupsDir,
+  backupsDirs,
+  dataRootLayout,
   worktreesDir,
   worktreeDataDir,
   worktreeArtifacts,
@@ -20,6 +22,17 @@ export {
   checkoutWorktreeName,
 } from "./internal/paths";
 export type { ReleaseIdentity } from "./internal/paths";
+// Where the root is when the environment does not say — decided by what is
+// installed (`~/.equin`, or the legacy dir until `./equin data-dir migrate`
+// moves it). `dataRootLayout()` (above) is this process's answer; the migration
+// reads the disk afresh, since it is the one thing that changes it.
+export {
+  DATA_DIR_NAME,
+  DataRootSplitError,
+  homeDataRoots,
+  readHomeDataRootLayout,
+} from "./internal/data-root-layout";
+export type { DataRootLayout } from "./internal/data-root-layout";
 // The toolchain a process belongs to: its own checkout's locked mise tools,
 // whatever cwd a shim runs in. Applied by each backend and central at boot.
 export { toolchainPin } from "./internal/toolchain-pin";

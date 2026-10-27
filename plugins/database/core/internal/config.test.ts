@@ -14,7 +14,7 @@ import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
  * That is a real constraint, not an accident: every consumer in a backend or a
  * CLI process wants one stable answer. It does mean an in-process test cannot
  * point the reader at a different directory — by the time a `bun test` file
- * runs, that const has already captured the developer's real `~/.singularity`,
+ * runs, that const has already captured the developer's real `~/.equin`,
  * which on any dev host DOES contain `database.json`. The tolerant no-file
  * fallback would then never be exercised. (The capture is this module's own:
  * `paths` itself resolves the root lazily on every call.)

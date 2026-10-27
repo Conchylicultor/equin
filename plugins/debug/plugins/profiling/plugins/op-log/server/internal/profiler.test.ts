@@ -9,7 +9,7 @@ import type { SleepClockReading } from "@plugins/packages/plugins/sleep-clock/co
 import { createOpProfiler, type OpProfiler } from "./profiler";
 
 // These tests drive `createOpProfiler` against an in-memory sink instead of the
-// real `~/.singularity/logs/op-log/op-log.jsonl`, so the profiler's record shape — its
+// real `~/.equin/logs/op-log/op-log.jsonl`, so the profiler's record shape — its
 // step clock and its sleep stamps — has a regression test that never touches
 // the user's real op log.
 

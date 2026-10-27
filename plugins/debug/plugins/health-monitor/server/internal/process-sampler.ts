@@ -27,7 +27,7 @@ import { publishSleepReading } from "@plugins/infra/plugins/host/plugins/machine
 // Per-backend health sampler. Installed in the server plugin's `onReady` and
 // torn down in `onShutdown`. It samples this process's own event-loop lag, GC
 // pressure, and memory every SAMPLE_INTERVAL_MS and appends one JSONL line to
-// ~/.singularity/worktrees/<wt>/logs/health.jsonl (durable, read from disk by
+// ~/.equin/worktrees/<wt>/logs/health.jsonl (durable, read from disk by
 // the main backend's pane endpoint).
 //
 // Why a timer (an in-process interval) and NOT a defineJob / graphile cron task: the sampler is

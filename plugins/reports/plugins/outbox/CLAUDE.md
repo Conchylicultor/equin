@@ -14,7 +14,7 @@ stalls file reports").
 await fileReportFromProcess({ kind, message, data, code? });
 ```
 
-- **One JSON file per report**, in `~/.singularity/state/report-outbox/`
+- **One JSON file per report**, in `~/.equin/state/report-outbox/`
   (`data-dirs/`). Written under a dot-prefixed temp name, then renamed, so the
   reader never sees half a file.
 - **Never throws, never rejects.** Its callers are diagnostics next to real work

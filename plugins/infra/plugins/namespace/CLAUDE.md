@@ -4,7 +4,7 @@ The one owner of what a deployed app is CALLED.
 
 A namespace is a single string that is simultaneously the subdomain in
 `http://<ns>.localhost:9000`, the spec-dir basename under
-`~/.singularity/worktrees/<ns>/`, the socket stem, the Postgres database, the
+`~/.equin/worktrees/<ns>/`, the socket stem, the Postgres database, the
 config dir, and the `--namespace` a backend is spawned with. Because it
 is all of those at once, it gets exactly one minter: `namespaceFor(composition,
 checkout)`.

@@ -13,6 +13,7 @@ import {
   removeDefinition,
   writeDefinition,
 } from "./definition-file";
+import { bindInstalledLabel } from "./installed-label";
 import { parseLaunchAgentPlist, renderLaunchAgentPlist } from "./launchd-plist";
 import type {
   LoginService,
@@ -45,9 +46,13 @@ function domain(): string {
   return `gui/${uid}`;
 }
 
+/** Where the LaunchAgent plist of `label` lives. */
+function launchdPlistPath(label: string): string {
+  return join(HOME_DIR, "Library", "LaunchAgents", `${label}.plist`);
+}
+
 function launchdService(id: LoginServiceId): LoginService {
-  const plistPath = () =>
-    join(HOME_DIR, "Library", "LaunchAgents", `${id.label}.plist`);
+  const plistPath = () => launchdPlistPath(id.label);
   const target = () => `${domain()}/${id.label}`;
 
   /** What launchd currently holds for the label. */
@@ -141,5 +146,5 @@ function launchdService(id: LoginServiceId): LoginService {
 
 export const launchdManager: LoginServiceManager = {
   manager: "launchd",
-  service: launchdService,
+  service: (id) => launchdService(bindInstalledLabel(id, launchdPlistPath)),
 };

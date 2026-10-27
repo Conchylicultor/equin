@@ -39,7 +39,7 @@ const run: CliAction<
   // be set in the environment, because it re-roots the whole install. The
   // check is on the ENV rather than on `dataRoot()` precisely because
   // `dataRoot()` cannot express "explicitly set" — unset, it answers with
-  // the dev ~/.singularity, and silently defaulting to that would pollute
+  // the dev ~/.equin, and silently defaulting to that would pollute
   // the developer's data root with a release cluster, spec, and registry.
   if (!readEnv("DIR")) {
     console.error(

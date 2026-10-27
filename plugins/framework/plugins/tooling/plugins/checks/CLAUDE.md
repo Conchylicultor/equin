@@ -30,7 +30,7 @@ gate. Both ask git for tracked + untracked-not-ignored — the same universe
 ## A `scope: "tree"` verdict must not depend on the process that produced it
 
 A passing check writes an entry to the shared cache under
-`~/.singularity/check-cache/`, and a later run in a different process (usually
+`~/.equin/check-cache/`, and a later run in a different process (usually
 `./equin push`) returns ✓ off that entry without running anything. So a
 recorded PASS must be **transferable**: the process that reads it has to be able
 to reproduce it.

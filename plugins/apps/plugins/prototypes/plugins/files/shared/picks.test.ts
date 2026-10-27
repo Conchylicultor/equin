@@ -7,7 +7,7 @@ import { PicksChangeSchema } from "../core/picks";
 import { PICKS_DIR_NAME, openPicksStore, type PicksStore } from "./picks";
 
 // The picks store against a throwaway prototypes tree. The store takes its root
-// as an argument, so nothing here touches `~/.singularity/apps/prototypes`.
+// as an argument, so nothing here touches `~/.equin/apps/prototypes`.
 
 const ID = "proto-1789000000-abcd";
 
