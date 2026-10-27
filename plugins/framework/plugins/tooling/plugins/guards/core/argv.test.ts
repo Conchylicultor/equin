@@ -101,6 +101,16 @@ describe("parseArgv", () => {
       expect(files("ln -sf a b")).toEqual(["a", "b"]);
     });
 
+    test("ln's targets are link-targets with no path; only the link is local", () => {
+      expect(argv("ln -sf a b").files.map((f) => f.kind)).toEqual([
+        "link-target",
+        "local",
+      ]);
+      expect(paths("ln -s a b c")).toEqual([`${WT}/c`]);
+      expect(paths("ln -s -t d a b")).toEqual([]);
+      expect(paths("ln -s ../x/y")).toEqual([`${WT}/y`]);
+    });
+
     test("an attached letter takes the cluster tail and ends the cluster", () => {
       const a = argv("sed -ie 's/a/b/' f");
       expect(a.files.map((f) => f.raw)).toEqual(["f"]);

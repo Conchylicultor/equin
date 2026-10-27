@@ -200,6 +200,44 @@ describe("main-writes guard", () => {
     });
   });
 
+  // `ln` writes only the link: a target is never written, and a relative `-s`
+  // target resolves from the link's folder. Reading every operand as a write
+  // resolved against cwd blocked `cd <main> && ln -s .equin ~/<legacy data dir>`.
+  describe("ln writes only the link", () => {
+    test("a relative target while the shell sits in main is not a write", () => {
+      expect(blocks(`cd ${REPO} && ln -s .equin /tmp/home/.legacy`, WT)).toBe(
+        false,
+      );
+    });
+
+    test("a link created inside main is still blocked", () => {
+      expect(blocks(`ln -s x ${REPO}/foo`, WT)).toBe(true);
+    });
+
+    test("a link created in a main directory (`ln T... DIR`) is blocked", () => {
+      expect(blocks(`ln -s a b ${REPO}/dir`, WT)).toBe(true);
+    });
+
+    test("the single-operand form writes <cwd>/basename(T): blocked inside main", () => {
+      expect(blocks(`cd ${REPO}/plugins && ln -s /tmp/x/target`, WT)).toBe(
+        true,
+      );
+    });
+
+    test("the single-operand form from the worktree is allowed", () => {
+      expect(blocks(`ln -s ${REPO}/plugins/x`, WT)).toBe(false);
+    });
+
+    test("`-t DIR` writes DIR: blocked when DIR is in main", () => {
+      expect(blocks(`ln -s -t ${REPO}/dir a b`, WT)).toBe(true);
+      expect(blocks(`ln --target-directory=${REPO} a`, WT)).toBe(true);
+    });
+
+    test("`-t DIR` outside main, with targets in main, is allowed", () => {
+      expect(blocks(`ln -s -t /tmp/d ${REPO}/a ${REPO}/b`, WT)).toBe(false);
+    });
+  });
+
   describe("documented residual gap", () => {
     test("BSD sed -i with a NON-EMPTY separate suffix over-blocks a worktree file", () => {
       // BSD spells the backup suffix as its own token (`-i .bak`), so `.bak`

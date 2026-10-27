@@ -129,6 +129,7 @@ pid liveness.
     - `CompositionMarker`
     - `NamespaceClaimant`
     - `NamespaceProbe`
+    - `WorktreeEntry`
     - `WorktreeOp`
     - `WorktreeOpInfo`
     - `WorktreeOpMarker`
@@ -146,6 +147,7 @@ pid liveness.
     - `isCompositionMarkerPath`
     - `isWorktreeOpActive`
     - `listActiveWorktreeOps`
+    - `listWorktreeEntries`
     - `listWorktreeOps`
     - `listWorktreePaths`
     - `loadCompositionMarker`

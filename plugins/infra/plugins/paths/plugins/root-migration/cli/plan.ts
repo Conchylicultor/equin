@@ -21,6 +21,13 @@ export interface LiveAgent extends LiveWork {
   pid: number;
 }
 
+/** A checkout of this repo whose code predates the move (see `staleCheckouts`). */
+export interface StaleCheckout {
+  path: string;
+  /** The commit it has checked out. */
+  head: string;
+}
+
 export interface MigrationFacts {
   /** The home-relative layout, read from disk now (never this process's memo). */
   layout: DataRootLayout | { kind: "split"; message: string };
@@ -48,11 +55,30 @@ export interface MigrationFacts {
   liveAgents: readonly LiveAgent[];
   /** `--stop-agents`: the user asked for the agents to be stopped rather than waited for. */
   stopAgents: boolean;
+  /**
+   * Checkouts of this repo whose code still predates the move: it resolves the
+   * legacy names unconditionally (no environment variable the gateway passes
+   * overrides them). While any exists, removing a legacy link would let its
+   * `./equin`, guard hooks, backend or a relaunched agent create a real legacy
+   * dir beside the current one — a split every later start refuses
+   * (`DataRootSplitError`). So the links stay until none is left.
+   */
+  staleCheckouts: readonly StaleCheckout[];
+}
+
+/** Legacy names kept as links to their new homes because pre-move code can still run. */
+export interface KeptLinks {
+  links: string[];
+  staleCheckouts: readonly StaleCheckout[];
 }
 
 export type MigrationPlan =
   | { kind: "refuse"; reasons: string[] }
-  | { kind: "done" }
+  | {
+      kind: "done";
+      /** A legacy link left in place for stale checkouts: the one thing still pending. */
+      keptLinks: KeptLinks | null;
+    }
   | {
       kind: "migrate";
       /** The data root's move; null when it already sits at the current root. */
@@ -70,6 +96,8 @@ export type MigrationPlan =
        * runs, removed once the leftover scan is clean.
        */
       dropLinks: string[];
+      /** The legacy names that stay links whatever the scan finds (stale checkouts). */
+      keptLinks: KeptLinks | null;
       /** Remove the gateway's old-label service definition and install the new one. */
       relabel: boolean;
       /** Agent processes to stop (SIGTERM, their clean exit) with the app. */
@@ -118,6 +146,14 @@ export function planRootMigration(facts: MigrationFacts): MigrationPlan {
   const backupsMove: Move | null = backups.legacyExists
     ? { from: backups.legacy, to: backups.current }
     : null;
+  const stale = facts.staleCheckouts;
+  /** Split the legacy links into those removed once clean and those kept for stale checkouts. */
+  const links = (
+    names: string[],
+  ): { dropLinks: string[]; keptLinks: KeptLinks | null } =>
+    stale.length === 0 || names.length === 0
+      ? { dropLinks: names, keptLinks: null }
+      : { dropLinks: [], keptLinks: { links: names, staleCheckouts: stale } };
   if (layout.kind === "legacy") {
     const root = { from: layout.root, to: layout.current };
     return {
@@ -125,34 +161,41 @@ export function planRootMigration(facts: MigrationFacts): MigrationPlan {
       root,
       backups: backupsMove,
       rewrite: [root, ...(backupsMove ? [backupsMove] : [])],
-      dropLinks: [root.from, ...(backupsMove ? [backupsMove.from] : [])],
+      ...links([root.from, ...(backupsMove ? [backupsMove.from] : [])]),
       relabel: facts.oldLabelInstalled,
       stopAgents: [...facts.liveAgents],
     };
   }
   // On the current root already: finish what an earlier run left — the legacy
   // link its leftover scan kept, a backups dir it did not move, the old label.
+  // A link that stays for stale checkouts is not finished by a rerun: their
+  // code goes on writing legacy paths through it, so its rewrite waits for the
+  // run that can also remove it.
   const backupsLinked = backups.legacyIsLink;
-  if (
-    !layout.legacyLink &&
-    backupsMove === null &&
-    !backupsLinked &&
-    !facts.oldLabelInstalled
-  ) {
-    return { kind: "done" };
-  }
+  const kept: string[] = [];
   const rewrite: Move[] = [];
   const dropLinks: string[] = [];
   if (layout.legacyLink) {
-    rewrite.push({ from: layout.legacy, to: layout.root });
-    dropLinks.push(layout.legacy);
+    if (stale.length > 0) kept.push(layout.legacy);
+    else {
+      rewrite.push({ from: layout.legacy, to: layout.root });
+      dropLinks.push(layout.legacy);
+    }
   }
   if (backupsMove) {
     rewrite.push(backupsMove);
-    dropLinks.push(backupsMove.from);
+    (stale.length > 0 ? kept : dropLinks).push(backupsMove.from);
   } else if (backupsLinked) {
-    rewrite.push({ from: backups.legacy, to: backups.current });
-    dropLinks.push(backups.legacy);
+    if (stale.length > 0) kept.push(backups.legacy);
+    else {
+      rewrite.push({ from: backups.legacy, to: backups.current });
+      dropLinks.push(backups.legacy);
+    }
+  }
+  const keptLinks: KeptLinks | null =
+    kept.length > 0 ? { links: kept, staleCheckouts: stale } : null;
+  if (rewrite.length === 0 && !facts.oldLabelInstalled) {
+    return { kind: "done", keptLinks };
   }
   return {
     kind: "migrate",
@@ -160,9 +203,27 @@ export function planRootMigration(facts: MigrationFacts): MigrationPlan {
     backups: backupsMove,
     rewrite,
     dropLinks,
+    keptLinks,
     relabel: facts.oldLabelInstalled,
     stopAgents: [...facts.liveAgents],
   };
+}
+
+/** How many stale checkouts `describePlan` names before summarising the rest. */
+const STALE_SAMPLE = 5;
+
+function describeKeptLinks(kept: KeptLinks): string {
+  const { links, staleCheckouts } = kept;
+  const sample = staleCheckouts
+    .slice(0, STALE_SAMPLE)
+    .map((c) => `       - ${c.path} (at ${c.head.slice(0, 10)})`);
+  const more = staleCheckouts.length - sample.length;
+  return [
+    `Keep ${links.join(" and ")} as ${links.length > 1 ? "links" : "a link"} to ${links.length > 1 ? "their" : "its"} new home: ${staleCheckouts.length} checkout(s) of this repo still run code from before the move, which uses the legacy name${links.length > 1 ? "s" : ""} unconditionally — without the link, the first command, hook, backend or agent from one would create a second, real data root that every start then refuses (DataRootSplitError).`,
+    ...sample,
+    ...(more > 0 ? [`       - …and ${more} more`] : []),
+    `     Clear each one — rebase it onto main and \`./equin build\`, or delete the worktree (\`git worktree remove <path>\`) — then rerun \`./equin data-dir migrate\`: once none is left it rewrites what still names the old path and removes the link.`,
+  ].join("\n");
 }
 
 /** The plan as the dry run prints it. */
@@ -171,7 +232,9 @@ export function describePlan(plan: MigrationPlan): string {
     case "refuse":
       return `Refusing to migrate:\n${plan.reasons.map((r) => `  - ${r}`).join("\n")}`;
     case "done":
-      return "Nothing to do: this install is on the current data root and its gateway runs under the new label.";
+      return plan.keptLinks === null
+        ? "Nothing to do: this install is on the current data root and its gateway runs under the new label."
+        : `Nothing to do yet: this install is on the current data root and its gateway runs under the new label.\n  1. ${describeKeptLinks(plan.keptLinks)}`;
     case "migrate": {
       const lines = [
         `Stop the app: login services, the gateway (and every backend), PgBouncer, Postgres${plan.stopAgents.length > 0 ? `, and ${plan.stopAgents.length} agent process(es)` : ""}.`,
@@ -186,9 +249,12 @@ export function describePlan(plan: MigrationPlan): string {
         const prefixes = plan.rewrite.map((m) => `${m.from}/`).join(", ");
         lines.push(
           `Rewrite every stored path under ${prefixes}: every database in the cluster, text files under the root, Claude Code's transcript dirs; drop the cache entries that hold one.`,
-          `Scan for leftovers; if none, remove ${plan.dropLinks.join(" and ")} (otherwise keep ${plan.dropLinks.length > 1 ? "them as links" : "it as a link"} and list what is left).`,
+          plan.dropLinks.length > 0
+            ? `Scan for leftovers; if none, remove ${plan.dropLinks.join(" and ")} (otherwise keep ${plan.dropLinks.length > 1 ? "them as links" : "it as a link"} and list what is left).`
+            : "Scan for leftovers and list what is left.",
         );
       }
+      if (plan.keptLinks) lines.push(describeKeptLinks(plan.keptLinks));
       if (plan.relabel)
         lines.push(
           "Remove the gateway's old-label service; `./equin start` installs it as dev.equin.gateway.",

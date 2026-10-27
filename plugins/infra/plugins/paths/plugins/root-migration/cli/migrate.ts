@@ -57,6 +57,7 @@ import {
 import { visitFiles } from "./files";
 import { moveClaudeProjects } from "./claude-projects";
 import { rewriteDbValue } from "./rewrite";
+import { staleCheckouts } from "./checkouts";
 
 // `./equin data-dir migrate`: the effects of the plan `./plan.ts` decides.
 // Design: research/2026-10-26-global-equin-data-dir-migration-v2.md
@@ -158,8 +159,12 @@ async function gatherFacts(stopAgents: boolean): Promise<MigrationFacts> {
       root !== null && inside(process.cwd(), root) ? process.cwd() : null,
     // Only the home layouts move anything; a refused plan needs no scan.
     ...(layout.kind === "legacy" || layout.kind === "current"
-      ? { liveWork: await liveOps(), liveAgents: liveAgents() }
-      : { liveWork: [], liveAgents: [] }),
+      ? {
+          liveWork: await liveOps(),
+          liveAgents: liveAgents(),
+          staleCheckouts: await staleCheckouts(await getWorktreeRoot()),
+        }
+      : { liveWork: [], liveAgents: [], staleCheckouts: [] }),
     stopAgents,
   };
 }
@@ -386,7 +391,14 @@ async function applyStopped(
         `Binaries naming an old path (build-path strings; not editable, not used to find anything):\n${left.binaries.map((b) => `  - ${b}`).join("\n")}`,
       );
     }
-    if (leftovers.length === 0) {
+    if (plan.dropLinks.length === 0) {
+      // Kept for stale checkouts (plan.keptLinks): the scan only reports.
+      console.log(
+        leftovers.length === 0
+          ? "Clean."
+          : `Still naming an old path:\n${leftovers.map((l) => `  - ${l}`).join("\n")}`,
+      );
+    } else if (leftovers.length === 0) {
       for (const link of plan.dropLinks) unlinkSync(link);
       console.log(`Clean: removed ${plan.dropLinks.join(" and ")}.`);
     } else {

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { planRootMigration, type MigrationFacts } from "./plan";
+import { describePlan, planRootMigration, type MigrationFacts } from "./plan";
 
 const H = "/home/u";
 const LEGACY = `${H}/.old`;
@@ -22,6 +22,7 @@ function facts(over: Partial<MigrationFacts>): MigrationFacts {
     liveWork: [],
     liveAgents: [],
     stopAgents: false,
+    staleCheckouts: [],
     ...over,
   };
 }
@@ -34,6 +35,7 @@ describe("planRootMigration", () => {
       backups: null,
       rewrite: [{ from: LEGACY, to: CURRENT }],
       dropLinks: [LEGACY],
+      keptLinks: null,
       relabel: true,
       stopAgents: [],
     });
@@ -77,6 +79,7 @@ describe("planRootMigration", () => {
       backups: null,
       rewrite: [{ from: LEGACY, to: CURRENT }],
       dropLinks: [LEGACY],
+      keptLinks: null,
       relabel: false,
       stopAgents: [],
     });
@@ -114,7 +117,89 @@ describe("planRootMigration", () => {
           oldLabelInstalled: false,
         }),
       ),
-    ).toEqual({ kind: "done" });
+    ).toEqual({ kind: "done", keptLinks: null });
+  });
+
+  describe("while checkouts still run code from before the move", () => {
+    const stale = Array.from({ length: 7 }, (_, i) => ({
+      path: `/r/repo/.claude/worktrees/att-${i}`,
+      head: `${i}`.repeat(40),
+    }));
+    const linked = {
+      kind: "current" as const,
+      root: CURRENT,
+      legacy: LEGACY,
+      legacyLink: true,
+    };
+
+    test("an install not yet migrated moves, but keeps every legacy link", () => {
+      const plan = planRootMigration(
+        facts({
+          staleCheckouts: stale,
+          backups: { ...BACKUPS, legacyExists: true },
+        }),
+      );
+      expect(plan).toMatchObject({
+        kind: "migrate",
+        root: { from: LEGACY, to: CURRENT },
+        dropLinks: [],
+        keptLinks: { links: [LEGACY, BACKUPS.legacy], staleCheckouts: stale },
+      });
+    });
+
+    test("none left: the link is dropped", () => {
+      expect(
+        planRootMigration(facts({ layout: linked, oldLabelInstalled: false })),
+      ).toMatchObject({ dropLinks: [LEGACY], keptLinks: null });
+    });
+
+    test("migrated with the link: nothing is rewritten or dropped", () => {
+      const plan = planRootMigration(
+        facts({
+          layout: linked,
+          oldLabelInstalled: false,
+          staleCheckouts: stale,
+          backups: { ...BACKUPS, legacyIsLink: true },
+        }),
+      );
+      expect(plan).toEqual({
+        kind: "done",
+        keptLinks: { links: [LEGACY, BACKUPS.legacy], staleCheckouts: stale },
+      });
+    });
+
+    test("migrated with the link and the old label: only the relabel", () => {
+      expect(
+        planRootMigration(facts({ layout: linked, staleCheckouts: stale })),
+      ).toEqual({
+        kind: "migrate",
+        root: null,
+        backups: null,
+        rewrite: [],
+        dropLinks: [],
+        keptLinks: { links: [LEGACY], staleCheckouts: stale },
+        relabel: true,
+        stopAgents: [],
+      });
+    });
+
+    test("the plan says why, names a sample and how to clear them", () => {
+      const text = describePlan(
+        planRootMigration(
+          facts({
+            layout: linked,
+            oldLabelInstalled: false,
+            staleCheckouts: stale,
+          }),
+        ),
+      );
+      expect(text).toContain(`Keep ${LEGACY} as a link`);
+      expect(text).toContain("7 checkout(s)");
+      expect(text).toContain(stale[4]!.path);
+      expect(text).not.toContain(stale[5]!.path);
+      expect(text).toContain("…and 2 more");
+      expect(text).toContain("./equin build");
+    });
   });
 
   test("refuses, with every reason at once", () => {

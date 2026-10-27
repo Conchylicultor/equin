@@ -86,10 +86,14 @@ export class WorktreeGitTimeoutError extends Error {
 
 // One registered worktree, as `git worktree list --porcelain` describes it.
 // `locked` is the lock reason ("" for a bare `locked`), null when unlocked.
+// `head` is the commit checked out (null for a bare repo); `prunable` is git's
+// mark for a worktree whose directory is gone.
 export interface WorktreeEntry {
   path: string;
+  head: string | null;
   detached: boolean;
   locked: string | null;
+  prunable: boolean;
 }
 
 // Parse `git worktree list --porcelain`: one blank-line-separated block per
@@ -101,10 +105,16 @@ function parseWorktreePorcelain(stdout: string): WorktreeEntry[] {
     if (line.startsWith("worktree ")) {
       cur = {
         path: line.slice("worktree ".length).trim(),
+        head: null,
         detached: false,
         locked: null,
+        prunable: false,
       };
       entries.push(cur);
+    } else if (cur && line.startsWith("HEAD ")) {
+      cur.head = line.slice("HEAD ".length).trim();
+    } else if (cur && (line === "prunable" || line.startsWith("prunable "))) {
+      cur.prunable = true;
     } else if (cur && line === "detached") {
       cur.detached = true;
     } else if (cur && (line === "locked" || line.startsWith("locked "))) {

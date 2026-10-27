@@ -25,7 +25,6 @@ const ALL_ARGS_CMDS = new Set<Policed>([
   "chgrp",
   "truncate",
   "shred",
-  "ln",
   "unlink",
 ]);
 const INPLACE_CMDS = new Set<Policed>(["sed", "perl"]);
@@ -72,6 +71,12 @@ export function writeTargets(call: ShellCall): string[] {
     return argv.files.length >= 2 && dest ? localPaths([dest]) : [];
   }
   if (ALL_ARGS_CMDS.has(name)) return localPaths(argv.files);
+  // `ln` writes only the link. The grammar already turned every target operand
+  // into a `link-target` (no path, so `localPaths` drops it), leaving the one
+  // place the link is created: `-t DIR`, else the last operand (a link, or a
+  // dir it lands in), else `<cwd>/basename(T)` for a lone target.
+  if (name === "ln")
+    return localPaths(argv.targetDir ? [argv.targetDir] : argv.files);
   if (INPLACE_CMDS.has(name)) {
     // Read the flag SET, never `startsWith("-i")`: that probe missed `perl -pi`
     // and `sed --in-place`, and matched an `-i` that was another flag's value.

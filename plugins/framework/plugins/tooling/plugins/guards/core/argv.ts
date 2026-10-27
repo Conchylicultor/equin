@@ -1,4 +1,4 @@
-import { resolve } from "node:path";
+import { basename, resolve } from "node:path";
 import type { ShellCall } from "./parse-shell";
 
 /**
@@ -46,7 +46,15 @@ export type FileOperand =
   /** A path on this machine, already resolved against the call's cwd. */
   | { kind: "local"; raw: string; path: string }
   /** An `[user@]host:path` spec (rsync/scp): nothing local is touched. */
-  | { kind: "remote"; raw: string };
+  | { kind: "remote"; raw: string }
+  /**
+   * What a link will POINT AT (`ln`'s target operands): never opened, never
+   * written, and deliberately unresolved — a relative `ln -s` target is read
+   * from the LINK's folder, not the cwd, so a `path` here would be wrong as
+   * well as irrelevant. Having none is what keeps `cd <main> && ln -s .equin
+   * ~/.x` from reading as a write to `<main>/.equin`.
+   */
+  | { kind: "link-target"; raw: string };
 
 export interface ParsedArgv {
   /** Positional operands that name a file, in argv order. */
@@ -96,6 +104,13 @@ interface CommandGrammar {
   leadingPattern?: RegExp;
   /** `[user@]host:path` operands are remote specs, not local paths. */
   remoteSpecs?: true;
+  /**
+   * `ln`'s operand shape: every operand is a link target except the one place
+   * the link is created — none under a `dir` flag (`ln -t DIR T...`), else the
+   * last (`ln T LINK`, `ln T... DIR`). A lone operand (`ln T`) creates
+   * `<cwd>/basename(T)`, which is added as the destination.
+   */
+  links?: true;
 }
 
 const COMMAND_GRAMMAR = {
@@ -251,6 +266,7 @@ const COMMAND_GRAMMAR = {
   ln: {
     short: { t: "dir", S: "consumed" },
     long: { "target-directory": "dir", suffix: "consumed", backup: "attached" },
+    links: true,
   },
   unlink: {},
   // `-i` is `attached` so that BOTH spellings of in-place parse: BSD wants a
@@ -478,7 +494,38 @@ export function parseArgv(call: ShellCall): ParsedArgv {
     addOperand(tok);
   }
 
-  return { files, targetDir, leading, flags };
+  return {
+    files: grammar.links ? linkOperands(files, targetDir, call.cwd) : files,
+    targetDir,
+    leading,
+    flags,
+  };
+}
+
+/**
+ * Re-shape a `links` grammar's operands (see `CommandGrammar.links`): the
+ * targets become `link-target`, so no consumer can resolve or police them, and
+ * the one operand that names where the link is created stays `local`.
+ */
+function linkOperands(
+  operands: readonly FileOperand[],
+  targetDir: FileOperand | undefined,
+  cwd: string,
+): FileOperand[] {
+  const asTarget = (o: FileOperand): FileOperand => ({
+    kind: "link-target",
+    raw: o.raw,
+  });
+  if (targetDir) return operands.map(asTarget);
+  const [only] = operands;
+  if (operands.length === 1 && only) {
+    const name = basename(only.raw);
+    return [
+      asTarget(only),
+      { kind: "local", raw: name, path: resolve(cwd, name) },
+    ];
+  }
+  return operands.map((o, i) => (i < operands.length - 1 ? asTarget(o) : o));
 }
 
 /**

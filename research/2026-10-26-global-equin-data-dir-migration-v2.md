@@ -177,6 +177,21 @@ file-scan filter are pure functions in `root-migration/core`, unit-tested beside
   `*.worktree_path`) and in `database.json` make any future move of the root a rewrite. Storing them
   relative to the root would make a move a plain rename.
 - `teardownSelfContainedApp` stops Postgres with SIGQUIT (immediate, so crash recovery runs on the next boot).
+- **Done (2026-10-27): the legacy links outlive pre-move checkouts.** On the first real run the leftover
+  scan was clean, so `~/.singularity` was removed — while 215 of 230 worktrees still had code from before
+  the move, whose `resolveDataRoot()` is `SINGULARITY_DIR ?? ~/.singularity` (the gateway passes neither).
+  Any `./equin`, guard hook, backend or relaunched agent from one would have created a real
+  `~/.singularity`, and every later start would refuse it as a split; the link was recreated by hand.
+  The planner now takes a `staleCheckouts` fact: every `git worktree list` entry (bare and prunable
+  skipped) whose HEAD lacks `paths/core`'s data-root-layout module, probed in one
+  `git cat-file --batch-check`. A capability probe rather than an ancestry test against the commit, which
+  holds only for this repo's own history; every checkout rather than the deploy registry, because a
+  worktree's verbs, hooks and backend run its source whether it built or not. While any is stale, every
+  legacy link (the root's and `~/.backups/singularity`'s — old code hardcodes both) is kept: an unmigrated
+  install still moves, rewrites and keeps them; a migrated one with its link does nothing about it (its
+  rewrite would be undone by the stale code writing through the link) beyond a pending relabel. The plan
+  lists a sample of the stale checkouts and how to clear them (rebase + `./equin build`, or delete the
+  worktree); a rerun once none is left rewrites and removes the links.
 
 ## Critical files
 

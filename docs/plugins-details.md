@@ -31293,7 +31293,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SECRETS_DIR_DISPLAY`
               - `USER_CONFIG_DIR_DISPLAY`
               - `WORKTREES_DIR_DISPLAY`
-        - **`root-migration`** — `./equin data-dir migrate`: moves an install's data root from the legacy home dir to ~/.equin (and its local backups beside it) in one run, with every other process of the app stopped — rewrites every stored copy of the old path (each database in the cluster, the files under the root, Claude Code's transcript dirs), drops the cache entries that hold it, removes the legacy name once a scan finds none left, and relabels the gateway's login service dev.equin.gateway. A dry run by default; --apply executes.
+        - **`root-migration`** — `./equin data-dir migrate`: moves an install's data root from the legacy home dir to ~/.equin (and its local backups beside it) in one run, with every other process of the app stopped — rewrites every stored copy of the old path (each database in the cluster, the files under the root, Claude Code's transcript dirs), drops the cache entries that hold it, removes the legacy name once a scan finds none left and no checkout of the repo still runs code from before the move (otherwise keeps it as a link and names those checkouts), and relabels the gateway's login service dev.equin.gateway. A dry run by default; --apply executes.
     - **`query-resource`** — Declarative SQL query→resource compiler: one drizzle-based declaration derives the loader, scoped loader, scope policy (the routes the change router serves it by, for a bounded window / point set, a whole ordered set declared `all` — compileAllCollection, grouped CTEs over rollup / children / closure joins — and a grouping), and client keyOf for live-state resources.
       - Server:
         - Uses:
@@ -31984,6 +31984,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CompositionMarker`
           - `NamespaceClaimant`
           - `NamespaceProbe`
+          - `WorktreeEntry`
           - `WorktreeOp`
           - `WorktreeOpInfo`
           - `WorktreeOpMarker`
@@ -32001,6 +32002,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `isCompositionMarkerPath`
           - `isWorktreeOpActive`
           - `listActiveWorktreeOps`
+          - `listWorktreeEntries`
           - `listWorktreeOps`
           - `listWorktreePaths`
           - `loadCompositionMarker`
