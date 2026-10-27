@@ -175,6 +175,7 @@ function FloatingActionPanel({
   const chromeRef = useRef<{ width: number; height: number } | null>(null);
   const { open, rootProps } = useDisclosureIntent(
     wrapperRef,
+    panelRef,
     closeDelay,
     held,
     suppressed,

@@ -92,6 +92,16 @@ promises; nothing animating reveals at once; a close cancels them and never
 reveals). The wrapper carries `data-revealed` then — what an e2e script waits
 for before clicking an item, never `data-open`.
 
+## Hover has reach: drifting off the bar is not leaving it
+
+A long bar's far items are reached by sweeping along it, and a hand drifts a
+few px off a thin pill on the way. So leaving the wrapper's DOM box does not
+close the panel by itself: it closes (after the grace delay, 300 ms) only once
+the pointer is out of **reach** — more than `REACH_MARGIN` (24 px) from the
+open panel's drawn box. Moving back within reach before the delay ends cancels
+the close; leaving the window closes it. A box with no area (not laid out, as
+in jsdom) reaches nothing, so only DOM containment counts there.
+
 ## Hover is the DOM box, focus is the keyboard
 
 Hover is read from native `pointerenter` / `pointerleave` on the wrapper, plus

@@ -9,7 +9,15 @@ import {
 } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 
-const DEFAULT_CLOSE_DELAY = 150;
+const DEFAULT_CLOSE_DELAY = 300;
+
+/**
+ * How far (px) the pointer may stray outside the open panel and still be
+ * "on" it. A long bar's far items are reached by sweeping along it; a hand
+ * drifting a few px off a thin pill on the way must not fold it up before it
+ * arrives.
+ */
+const REACH_MARGIN = 24;
 
 export interface DisclosureIntentProps {
   tabIndex: 0;
@@ -30,8 +38,11 @@ export interface DisclosureIntent {
  *
  * Four independent open sources, OR-ed together, so no single source can
  * suppress another:
- *   - hover    — opens on pointer-enter, closes on pointer-leave after a grace
- *                delay. Re-entry ALWAYS cancels the pending close, so returning
+ *   - hover    — opens on pointer-enter, closes after a grace delay once the
+ *                pointer is out of REACH: outside the root's DOM box AND more
+ *                than REACH_MARGIN px from the open panel's drawn box, so a
+ *                pointer sweeping along a thin bar towards its far end may
+ *                drift off it without folding it up under the hand. Re-entry ALWAYS cancels the pending close, so returning
  *                to the trigger reliably reopens — there is no timer "lock" that
  *                swallows a genuine re-entry (the dead-zone bug this replaces).
  *                Hover is the pointer being over the root's DOM box, read from
@@ -78,6 +89,7 @@ export interface DisclosureIntent {
  */
 export function useDisclosureIntent(
   rootRef: RefObject<HTMLElement | null>,
+  panelRef: RefObject<HTMLElement | null>,
   closeDelay = DEFAULT_CLOSE_DELAY,
   held = false,
   suppressed = false,
@@ -119,6 +131,23 @@ export function useDisclosureIntent(
     }, closeDelay);
   }, [closeDelay]);
 
+  // Within REACH_MARGIN of the root's or the panel's drawn box. A box with no
+  // area (not laid out) reaches nothing, so only DOM containment counts then.
+  const nearPanel = useCallback(
+    (e: PointerEvent) =>
+      [rootRef.current, panelRef.current].some((el) => {
+        const r = el?.getBoundingClientRect();
+        if (!r || r.width === 0 || r.height === 0) return false;
+        return (
+          e.clientX >= r.left - REACH_MARGIN &&
+          e.clientX <= r.right + REACH_MARGIN &&
+          e.clientY >= r.top - REACH_MARGIN &&
+          e.clientY <= r.bottom + REACH_MARGIN
+        );
+      }),
+    [rootRef, panelRef],
+  );
+
   useEffect(() => {
     const root = rootRef.current;
     if (!root) return;
@@ -127,27 +156,45 @@ export function useDisclosureIntent(
       cancelClose();
       setHovered(true);
     };
+    // Leaving the box but still within reach is not leaving: the document
+    // move check below takes over and closes once the pointer goes further.
+    const leave = (e: PointerEvent) => {
+      if (!nearPanel(e)) scheduleClose();
+    };
     root.addEventListener("pointerenter", enter);
-    root.addEventListener("pointerleave", scheduleClose);
+    root.addEventListener("pointerleave", leave);
     return () => {
       root.removeEventListener("pointerenter", enter);
-      root.removeEventListener("pointerleave", scheduleClose);
+      root.removeEventListener("pointerleave", leave);
     };
-  }, [rootRef, cancelClose, scheduleClose, suppressedRef]);
+  }, [rootRef, cancelClose, scheduleClose, nearPanel, suppressedRef]);
 
   // An element removed from under the cursor (a portaled overlay closing)
   // fires no leave on the root, and focus restored to the trigger by a closing
   // popover arrives with the pointer already outside — so while open by hover
-  // or focus, re-check containment on every move: the first move that lands
-  // outside the root starts the close (which ends both).
+  // or focus, re-check reach on every move: the first move that lands out of
+  // reach starts the close (which ends both), and coming back within reach
+  // before it fires cancels it. The pointer leaving the window from within
+  // reach moves nothing more here, so that is out of reach too.
   useEffect(() => {
     if (!hovered && !focused) return;
     const onDocPointerMove = (e: PointerEvent) => {
-      if (!rootRef.current?.contains(e.target as Node)) scheduleClose();
+      if (rootRef.current?.contains(e.target as Node) || nearPanel(e)) {
+        cancelClose();
+      } else {
+        scheduleClose();
+      }
+    };
+    const onDocPointerOut = (e: PointerEvent) => {
+      if (e.relatedTarget === null) scheduleClose();
     };
     document.addEventListener("pointermove", onDocPointerMove);
-    return () => document.removeEventListener("pointermove", onDocPointerMove);
-  }, [hovered, focused, rootRef, scheduleClose]);
+    document.addEventListener("pointerout", onDocPointerOut);
+    return () => {
+      document.removeEventListener("pointermove", onDocPointerMove);
+      document.removeEventListener("pointerout", onDocPointerOut);
+    };
+  }, [hovered, focused, rootRef, nearPanel, cancelClose, scheduleClose]);
 
   const onPointerDown = useCallback(() => {
     // Touch has no hover: the first press on a closed control opens it. While
