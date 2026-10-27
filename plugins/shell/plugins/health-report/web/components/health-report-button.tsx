@@ -103,6 +103,9 @@ function HealthReportTrigger({
               />
             </ActivityRing>
           </ControlSizeProvider>
+          {needsLook ? (
+            <span className="font-semibold tabular-nums">{view.count}</span>
+          ) : null}
           {view.marks.map((mark) => (
             <Icon
               key={mark.id}
@@ -111,9 +114,6 @@ function HealthReportTrigger({
               className="size-4 text-muted-foreground"
             />
           ))}
-          {needsLook ? (
-            <span className="font-semibold tabular-nums">{view.count}</span>
-          ) : null}
         </Button>
       }
     >
