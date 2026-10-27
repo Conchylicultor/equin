@@ -87,6 +87,95 @@
         }
       })();
     </script>
+    <!-- Boot-failure screen. Plain DOM, NO plugin/React/theme dependency: it
+         must work exactly when the entry module could not load. The bundle is
+         an ES module graph; when any module in its STATIC import closure 404s
+         (artifacts pruned from the shared cache, a half-written dist) the
+         browser fails the whole graph - the entry never evaluates, nothing
+         throws in JS, `#root` stays empty and the page is a blank screen with
+         only "Failed to load resource" in the console. The one signal is the
+         `error` event on the module <script> (capture phase: it does not
+         bubble), so that is what this listens to - no timers. Failed URLs come
+         from Resource Timing (the event itself does not name the dependency).
+         Not for lazy plugin imports: App.tsx catches those (loadPlugins). -->
+    <script id="boot-failure">
+      (function () {
+        var shown = false;
+        function failedUrls(target) {
+          var urls = [];
+          performance.getEntriesByType("resource").forEach(function (r) {
+            // responseStatus 0 with no body = network failure / blocked.
+            if (r.responseStatus >= 400 || (r.responseStatus === 0 && r.decodedBodySize === 0 && r.transferSize === 0 && /\.(js|mjs)(\?|$)/.test(r.name))) {
+              if (urls.indexOf(r.name) < 0) urls.push(r.name);
+            }
+          });
+          if (urls.length === 0 && target.src) urls.push(target.src);
+          return urls;
+        }
+        function show(urls) {
+          var root = document.getElementById("root");
+          var box = document.createElement("div");
+          box.id = "boot-failure-screen";
+          box.setAttribute("role", "alert");
+          box.style.cssText =
+            "position:fixed;inset:0;overflow:auto;padding:32px;box-sizing:border-box;" +
+            "background:#1a0b0b;color:#f5e6e6;font:14px/1.5 system-ui,sans-serif;z-index:2147483647";
+          var h = document.createElement("h1");
+          h.style.cssText = "font-size:20px;margin:0 0 12px";
+          h.textContent = "equin could not start: files of this build are missing";
+          var p = document.createElement("p");
+          p.style.cssText = "margin:0 0 12px;max-width:60em";
+          p.textContent =
+            urls.length + " module file" + (urls.length === 1 ? "" : "s") +
+            " could not be loaded (the server answered 404 or the request failed), so the app cannot run. " +
+            "The build's artifacts were most likely removed. Rebuild this worktree with ./equin build, then reload.";
+          var ul = document.createElement("ul");
+          ul.style.cssText = "margin:0;padding-left:20px;font:12px/1.6 ui-monospace,monospace;word-break:break-all";
+          urls.slice(0, 20).forEach(function (u) {
+            var li = document.createElement("li");
+            li.textContent = u;
+            ul.appendChild(li);
+          });
+          box.appendChild(h);
+          box.appendChild(p);
+          box.appendChild(ul);
+          if (urls.length > 20) {
+            var more = document.createElement("p");
+            more.textContent = "... and " + (urls.length - 20) + " more.";
+            box.appendChild(more);
+          }
+          (root && root.parentNode ? root.parentNode : document.body).appendChild(box);
+        }
+        window.addEventListener(
+          "error",
+          function (e) {
+            var t = e.target;
+            if (shown || !t || t.tagName !== "SCRIPT" || t.type !== "module") return;
+            shown = true;
+            var urls = failedUrls(t);
+            console.error("[boot] module graph failed to load:", urls);
+            show(urls);
+            // Same alert funnel as plugin-load failures (reports/plugin-load-errors).
+            fetch("/api/reports", {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              keepalive: true,
+              body: JSON.stringify({
+                kind: "crash",
+                source: "plugin-load",
+                message: "boot: " + urls.length + " module file(s) failed to load: " + urls.slice(0, 5).join(", "),
+                url: location.href,
+                userAgent: navigator.userAgent,
+                data: { errorType: "BootModuleLoadFailed", stack: null, urls: urls.slice(0, 50) },
+              }),
+            }).catch(function (err) {
+              console.warn("[boot] failure report not delivered:", err);
+            });
+          },
+          true,
+        );
+      })();
+    </script>
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />
     <link rel="icon" type="image/png" sizes="32x32" href="/icon_32x32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/icon_16x16.png" />

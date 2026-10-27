@@ -26221,7 +26221,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/guards` (10 debt)
               - `framework/tooling/import-closure` (1 debt)
               - `framework/tooling/lint` (2 debt)
-              - `framework/tooling/web-artifacts` (15 debt)
+              - `framework/tooling/web-artifacts` (16 debt)
               - `framework/web-core` (1 debt)
               - `infra/asset-mirror` (3 debt)
               - `infra/audio-analysis` (4 debt)
@@ -27171,6 +27171,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/web-core.findViteContributions`
               - `framework/web-core.loadBabelContributions`
               - `infra/namespace.MAIN_COMPOSITION_ID`
+              - `infra/paths.worktreesDir`
               - `packages/semaphore.createSemaphore`
             - Exports (types):
               - `ArtifactKind`
@@ -27217,7 +27218,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Exemptions:
             - Exempts itself from:
               - `repo-walk-safety/no-adhoc-repo-walk` — `core/internal/global-css.ts` (sanctioned)
-              - `boundaries/no-platform-api` — `core/hash.ts`, `core/internal/browser-hosts.ts`, `core/internal/compose.ts`, `core/internal/expected.ts`, `core/internal/global-css.ts`, `core/internal/identity.ts`, `core/internal/own-files.ts`, `core/internal/pipeline.ts`, `core/internal/plan.ts`, `core/internal/precompress.ts`, `core/internal/staged-verify.ts`, `core/internal/store.ts`, `core/internal/vendor-cache.ts`, `core/internal/vendors.ts`, `core/internal/vite-builder.ts` (debt)
+              - `boundaries/no-platform-api` — `core/hash.ts`, `core/internal/browser-hosts.ts`, `core/internal/compose.ts`, `core/internal/expected.ts`, `core/internal/global-css.ts`, `core/internal/identity.ts`, `core/internal/own-files.ts`, `core/internal/pipeline.ts`, `core/internal/plan.ts`, `core/internal/precompress.ts`, `core/internal/served-dists.ts`, `core/internal/staged-verify.ts`, `core/internal/store.ts`, `core/internal/vendor-cache.ts`, `core/internal/vendors.ts`, `core/internal/vite-builder.ts` (debt)
           - Cli:
             - Exports (types): `CarryForwardResult`
             - Exports (values): `carryForwardServedEntries`
@@ -30927,11 +30928,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreeDataDir`
           - `worktreesDir`
       - Cross-plugin:
-        - Imported by: 40 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+        - Imported by: 41 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
           - `debug` ×8
           - `infra` ×7
+          - `framework` ×5
           - `backup` ×4
-          - `framework` ×4
           - `release` ×3
           - `build` ×2
           - `conversations` ×2

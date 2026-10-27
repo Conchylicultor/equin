@@ -27,7 +27,8 @@ import { init as cjsInit, parse as cjsParse } from "cjs-module-lexer";
 import { init as esInit, parse as esParse } from "es-module-lexer/minimal";
 import * as esbuild from "esbuild";
 import { sha256Hex } from "../hash";
-import { publishDir, WEB_ARTIFACTS_DIR } from "./store";
+import { publishDir, pruneCacheDir, WEB_ARTIFACTS_DIR } from "./store";
+import { servedDistTargets } from "./served-dists";
 import {
   computeVendorCacheGate,
   loadVendorResolutionCache,
@@ -580,34 +581,15 @@ const VENDORS_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
 const VENDORS_MAX_ENTRIES = 48;
 const VENDORS_TRIM_TO = 32;
 
-/** Prune aged vendor sets, then cap total count (same policy as the artifact store). */
-export function pruneVendorSets(): void {
-  if (!existsSync(VENDORS_ROOT)) return;
-  const now = Date.now();
-  const live: { path: string; mtimeMs: number }[] = [];
-  for (const name of readdirSync(VENDORS_ROOT)) {
-    const p = join(VENDORS_ROOT, name);
-    let mtimeMs: number;
-    try {
-      mtimeMs = statSync(p).mtimeMs;
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
-      continue;
-    }
-    // Leftover temp dirs from crashed builds age out at 1h regardless.
-    const maxAge = name.startsWith(".tmp.")
-      ? 60 * 60 * 1000
-      : VENDORS_MAX_AGE_MS;
-    if (now - mtimeMs > maxAge) {
-      rmSync(p, { recursive: true, force: true });
-    } else if (!name.startsWith(".tmp.")) {
-      live.push({ path: p, mtimeMs });
-    }
-  }
-  if (live.length > VENDORS_MAX_ENTRIES) {
-    live.sort((a, b) => a.mtimeMs - b.mtimeMs); // oldest first
-    for (const { path } of live.slice(0, live.length - VENDORS_TRIM_TO)) {
-      rmSync(path, { recursive: true, force: true });
-    }
-  }
+/** Prune aged vendor sets, then cap total count — never one a served dist links. */
+export function pruneVendorSets(
+  referenced: ReadonlySet<string> = servedDistTargets(),
+): void {
+  pruneCacheDir({
+    root: VENDORS_ROOT,
+    maxAgeMs: VENDORS_MAX_AGE_MS,
+    maxEntries: VENDORS_MAX_ENTRIES,
+    trimTo: VENDORS_TRIM_TO,
+    referenced,
+  });
 }

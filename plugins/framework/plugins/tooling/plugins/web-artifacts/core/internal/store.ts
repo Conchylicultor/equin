@@ -17,6 +17,7 @@ import {
 import { join } from "node:path";
 import { webArtifactsDir } from "../../data-dirs";
 import { precompressDir } from "./precompress";
+import { servedDistTargets } from "./served-dists";
 
 // Read off the declaration in this plugin's `data-dirs/index.ts` rather than
 // joining the data root by hand. These stay module-level consts, exactly as
@@ -30,8 +31,9 @@ export const WEB_ARTIFACTS_STORE_DIR = webArtifactsDir.file("store");
 const STORE_DIR = WEB_ARTIFACTS_STORE_DIR;
 const FINGERPRINTS_DIR = webArtifactsDir.file("fingerprints");
 
-// Pruning bounds. An artifact dir is small (one module + map); the fleet is
-// ~700 per builder identity, so these allow a handful of live identities.
+// Pruning bounds. An artifact dir is small (one module + map); one build links
+// ~1600 of them, so these bound the UNREFERENCED population only — an entry a
+// live served dist links is a root and is never pruned (see `pruneCacheDir`).
 const MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
 const MAX_ENTRIES = 8000;
 const TRIM_TO = 6000;
@@ -156,19 +158,50 @@ export function artifactTmpDir(dirName: string): string {
 }
 
 /** Opportunistic prune: age-out stale artifact dirs, then cap total count. */
-export function pruneStore(): void {
+export function pruneStore(
+  referenced: ReadonlySet<string> = servedDistTargets(),
+): void {
   ensureStoreDirs();
+  pruneCacheDir({
+    root: STORE_DIR,
+    maxAgeMs: MAX_AGE_MS,
+    maxEntries: MAX_ENTRIES,
+    trimTo: TRIM_TO,
+    referenced,
+  });
+}
+
+/**
+ * The ONE prune policy of every write-once cache dir (artifact store, vendor
+ * sets, CSS cache): age out entries older than `maxAgeMs` (leftover `.tmp.*`
+ * dirs from crashed builds after an hour), then, past `maxEntries`, trim the
+ * oldest down to `trimTo`.
+ *
+ * `referenced` are absolute entry paths a live served dist links to
+ * (`servedDistTargets`). They are roots: never deleted, neither by age nor by
+ * the count cap, and they do not count toward the cap's victims — a served dist
+ * must keep resolving every link it has, however long the fleet has built since.
+ * If referenced entries alone exceed the cap, they are all kept.
+ */
+export function pruneCacheDir(opts: {
+  root: string;
+  maxAgeMs: number;
+  maxEntries: number;
+  trimTo: number;
+  referenced: ReadonlySet<string>;
+}): void {
   let names: string[];
   try {
-    names = readdirSync(STORE_DIR);
+    names = readdirSync(opts.root);
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
     return;
   }
   const now = Date.now();
-  const live: { path: string; mtimeMs: number }[] = [];
+  const candidates: { path: string; mtimeMs: number }[] = [];
   for (const name of names) {
-    const path = join(STORE_DIR, name);
+    const path = join(opts.root, name);
+    if (opts.referenced.has(path)) continue;
     let mtimeMs: number;
     try {
       mtimeMs = statSync(path).mtimeMs;
@@ -176,19 +209,26 @@ export function pruneStore(): void {
       if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
       continue; // vanished underneath us — nothing to prune
     }
-    // Leftover temp dirs from crashed builds age out like artifacts.
-    if (
-      now - mtimeMs > MAX_AGE_MS ||
-      (name.startsWith(".tmp.") && now - mtimeMs > 60 * 60 * 1000)
-    ) {
+    const isTmp = name.startsWith(".tmp.");
+    if (now - mtimeMs > (isTmp ? 60 * 60 * 1000 : opts.maxAgeMs)) {
       rmSync(path, { recursive: true, force: true });
-    } else if (!name.startsWith(".tmp.")) {
-      live.push({ path, mtimeMs });
+    } else if (!isTmp) {
+      candidates.push({ path, mtimeMs });
     }
   }
-  if (live.length > MAX_ENTRIES) {
-    live.sort((a, b) => a.mtimeMs - b.mtimeMs); // oldest first
-    for (const { path } of live.slice(0, live.length - TRIM_TO)) {
+  // Referenced entries count toward the population the cap bounds, but are
+  // never victims: only unreferenced ones are trimmed.
+  const referencedHere = names.filter((n) =>
+    opts.referenced.has(join(opts.root, n)),
+  ).length;
+  const total = candidates.length + referencedHere;
+  if (total > opts.maxEntries) {
+    candidates.sort((a, b) => a.mtimeMs - b.mtimeMs); // oldest first
+    const excess = Math.min(
+      candidates.length,
+      Math.max(0, total - opts.trimTo),
+    );
+    for (const { path } of candidates.slice(0, excess)) {
       rmSync(path, { recursive: true, force: true });
     }
   }

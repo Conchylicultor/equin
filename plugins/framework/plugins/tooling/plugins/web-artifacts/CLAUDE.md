@@ -196,6 +196,15 @@ Key invariants:
   inline; a second publish of an address is discarded), so an old tab gets
   exactly the files it was built with and cannot reach a newer build's. The set
   is bounded by the cache's own pruning; carrying never bumps a target's mtime.
+  **Pruning never breaks a served dist.** `pruneStore` / `pruneVendorSets` /
+  `pruneGlobalCssCache` (one `pruneCacheDir` policy: 14-day age-out, then an
+  oldest-first count trim) treat every `artifacts/<name>` link target of every
+  dist under the worktrees dir (`web`, `web.live.*`, `web.staging.*`, release
+  scratch dists — `core/internal/served-dists.ts`) as a root: never deleted by
+  age or by the cap, even when the referenced entries alone exceed it. Only
+  unreferenced entries age out. (Before this, an idle worktree lost its modules
+  to the fleet's builds and never booted again.) Dead dists release their
+  entries when their worktree is reaped.
   Accepted race, deliberately unlocked: another worktree's prune may remove a
   target between the check and the swap — that one address 404s until the next
   publish. It lives in `cli/`, not `core/`, because `builderSourceDigest` hashes
@@ -216,6 +225,7 @@ Key invariants:
     - `framework/web-core.findViteContributions`
     - `framework/web-core.loadBabelContributions`
     - `infra/namespace.MAIN_COMPOSITION_ID`
+    - `infra/paths.worktreesDir`
     - `packages/semaphore.createSemaphore`
   - Exports (types):
     - `ArtifactKind`
@@ -262,7 +272,7 @@ Key invariants:
 - Exemptions:
   - Exempts itself from:
     - `repo-walk-safety/no-adhoc-repo-walk` — `core/internal/global-css.ts` (sanctioned)
-    - `boundaries/no-platform-api` — `core/hash.ts`, `core/internal/browser-hosts.ts`, `core/internal/compose.ts`, `core/internal/expected.ts`, `core/internal/global-css.ts`, `core/internal/identity.ts`, `core/internal/own-files.ts`, `core/internal/pipeline.ts`, `core/internal/plan.ts`, `core/internal/precompress.ts`, `core/internal/staged-verify.ts`, `core/internal/store.ts`, `core/internal/vendor-cache.ts`, `core/internal/vendors.ts`, `core/internal/vite-builder.ts` (debt)
+    - `boundaries/no-platform-api` — `core/hash.ts`, `core/internal/browser-hosts.ts`, `core/internal/compose.ts`, `core/internal/expected.ts`, `core/internal/global-css.ts`, `core/internal/identity.ts`, `core/internal/own-files.ts`, `core/internal/pipeline.ts`, `core/internal/plan.ts`, `core/internal/precompress.ts`, `core/internal/served-dists.ts`, `core/internal/staged-verify.ts`, `core/internal/store.ts`, `core/internal/vendor-cache.ts`, `core/internal/vendors.ts`, `core/internal/vite-builder.ts` (debt)
 - Cli:
   - Exports (types): `CarryForwardResult`
   - Exports (values): `carryForwardServedEntries`

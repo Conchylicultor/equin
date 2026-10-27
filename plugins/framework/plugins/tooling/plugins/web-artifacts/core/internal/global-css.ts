@@ -37,7 +37,6 @@ import {
   readdirSync,
   readFileSync,
   rmSync,
-  statSync,
   utimesSync,
   writeFileSync,
 } from "node:fs";
@@ -47,7 +46,13 @@ import { BUILDER_VERSION, packageNameOf } from "../constants";
 import { computeIdentityHash, sha256Hex } from "../hash";
 import { packageVersion } from "./identity";
 import { cachedAggregateHash } from "./own-files";
-import { publishDir, WEB_ARTIFACTS_DIR, type FingerprintCache } from "./store";
+import {
+  publishDir,
+  pruneCacheDir,
+  WEB_ARTIFACTS_DIR,
+  type FingerprintCache,
+} from "./store";
+import { servedDistTargets } from "./served-dists";
 
 const CSS_ROOT = join(WEB_ARTIFACTS_DIR, "css");
 
@@ -312,31 +317,14 @@ const CSS_MAX_ENTRIES = 600;
 const CSS_TRIM_TO = 450;
 
 /** Prune aged css cache entries, then cap total count (same policy as the vendor sets). */
-export function pruneGlobalCssCache(): void {
-  if (!existsSync(CSS_ROOT)) return;
-  const now = Date.now();
-  const live: { path: string; mtimeMs: number }[] = [];
-  for (const name of readdirSync(CSS_ROOT)) {
-    const p = join(CSS_ROOT, name);
-    let mtimeMs: number;
-    try {
-      mtimeMs = statSync(p).mtimeMs;
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
-      continue;
-    }
-    // Leftover temp dirs from crashed builds age out at 1h regardless.
-    const maxAge = name.startsWith(".tmp.") ? 60 * 60 * 1000 : CSS_MAX_AGE_MS;
-    if (now - mtimeMs > maxAge) {
-      rmSync(p, { recursive: true, force: true });
-    } else if (!name.startsWith(".tmp.")) {
-      live.push({ path: p, mtimeMs });
-    }
-  }
-  if (live.length > CSS_MAX_ENTRIES) {
-    live.sort((a, b) => a.mtimeMs - b.mtimeMs); // oldest first
-    for (const { path } of live.slice(0, live.length - CSS_TRIM_TO)) {
-      rmSync(path, { recursive: true, force: true });
-    }
-  }
+export function pruneGlobalCssCache(
+  referenced: ReadonlySet<string> = servedDistTargets(),
+): void {
+  pruneCacheDir({
+    root: CSS_ROOT,
+    maxAgeMs: CSS_MAX_AGE_MS,
+    maxEntries: CSS_MAX_ENTRIES,
+    trimTo: CSS_TRIM_TO,
+    referenced,
+  });
 }
