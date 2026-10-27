@@ -11,6 +11,7 @@
     - `Shell.Sidebar`
     - `Shell.Toolbar`
   - Slot contributors:
+    - `Shell.Sidebar` ← `apps.agent-manager.welcome`
     - `Shell.Sidebar` ← `conversations.agents`
     - `Shell.Sidebar` ← `conversations.all-conversations`
     - `Shell.Sidebar` ← `conversations.conversations-view`
@@ -22,6 +23,7 @@
 - Cross-plugin:
   - Imported by:
     - `apps/agent-manager/shell`
+    - `apps/agent-manager/welcome`
     - `conversations/agents`
     - `conversations/all-conversations`
     - `conversations/conversations-view`

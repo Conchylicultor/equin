@@ -605,18 +605,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `agentManagerApp`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --radius`
-        - **`welcome`** — Landing pane (agent-manager index) shown at `/agents`.
+        - **`welcome`** — Landing pane (agent-manager index) shown at `/agents`, and the sidebar's New conversation entry, which opens it — its one prompt is where a conversation starts.
           - Web:
             - Slots: `welcomePane.Actions`
             - Slot contributors: `welcomePane.Actions` ← `primitives.pane`
-            - Contributes: `Pane.Register` "welcome"
-            - Uses: 24 symbols — full list in [`plugins/apps/plugins/agent-manager/plugins/welcome/REFERENCE.md`](../plugins/apps/plugins/agent-manager/plugins/welcome/REFERENCE.md)
+            - Contributes:
+              - `Pane.Register` "welcome"
+              - `Shell.Sidebar` "New conversation"
+            - Uses: 26 symbols — full list in [`plugins/apps/plugins/agent-manager/plugins/welcome/REFERENCE.md`](../plugins/apps/plugins/agent-manager/plugins/welcome/REFERENCE.md)
               - `primitives/pane` ×3
               - `primitives/persistent-draft` ×3
               - `primitives/live-state` ×2
               - `tasks/launch-options` ×2
               - `conversations.useConversations`
               - `infra/claude-cli/availability.useClaudeCodeLaunchBlock`
+              - `primitives/app-shell.opensPane`
               - `primitives/css/fill.Fill`
               - `primitives/css/line.Line`
               - `primitives/css/scroll.Scroll`
@@ -628,6 +631,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/icon-button.IconButton`
               - `primitives/launch.useTaskLaunch`
               - `primitives/text-editor/composer.ComposerField`
+              - `shell.Shell`
               - `ui/ambient-field.AmbientField`
             - Exports (values): `welcomePane`
           - Cross-plugin:
@@ -38389,8 +38393,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/sidebar-palette --sidebar-accent`
           - `ui/tokens/sidebar-palette --sidebar-foreground`
           - `ui/tokens/sidebar-palette --sidebar-icon`
-        - Imported by: 25 plugins — full list in [`plugins/primitives/plugins/app-shell/REFERENCE.md`](../plugins/primitives/plugins/app-shell/REFERENCE.md)
-          - `apps` ×18
+        - Imported by: 26 plugins — full list in [`plugins/primitives/plugins/app-shell/REFERENCE.md`](../plugins/primitives/plugins/app-shell/REFERENCE.md)
+          - `apps` ×19
           - `conversations` ×2
           - `tasks` ×2
           - `apps-core/app-launcher`
@@ -47995,6 +47999,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Shell.Sidebar`
       - `Shell.Toolbar`
     - Slot contributors:
+      - `Shell.Sidebar` ← `apps.agent-manager.welcome`
       - `Shell.Sidebar` ← `conversations.agents`
       - `Shell.Sidebar` ← `conversations.all-conversations`
       - `Shell.Sidebar` ← `conversations.conversations-view`
@@ -48006,6 +48011,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
   - Cross-plugin:
     - Imported by:
       - `apps/agent-manager/shell`
+      - `apps/agent-manager/welcome`
       - `conversations/agents`
       - `conversations/all-conversations`
       - `conversations/conversations-view`

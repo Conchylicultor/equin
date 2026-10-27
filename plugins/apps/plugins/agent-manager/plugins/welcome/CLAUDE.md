@@ -4,18 +4,21 @@
 
 ## Plugin reference
 
-- Description: Landing pane (agent-manager index) shown at `/agents`.
+- Description: Landing pane (agent-manager index) shown at `/agents`, and the sidebar's New conversation entry, which opens it — its one prompt is where a conversation starts.
 - Web:
   - Slots: `welcomePane.Actions`
   - Slot contributors: `welcomePane.Actions` ← `primitives.pane`
-  - Contributes: `Pane.Register` "welcome"
-  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Contributes:
+    - `Pane.Register` "welcome"
+    - `Shell.Sidebar` "New conversation"
+  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×3
     - `primitives/persistent-draft` ×3
     - `primitives/live-state` ×2
     - `tasks/launch-options` ×2
     - `conversations.useConversations`
     - `infra/claude-cli/availability.useClaudeCodeLaunchBlock`
+    - `primitives/app-shell.opensPane`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
     - `primitives/css/scroll.Scroll`
@@ -27,6 +30,7 @@
     - `primitives/icon-button.IconButton`
     - `primitives/launch.useTaskLaunch`
     - `primitives/text-editor/composer.ComposerField`
+    - `shell.Shell`
     - `ui/ambient-field.AmbientField`
   - Exports (values): `welcomePane`
 - Cross-plugin:
