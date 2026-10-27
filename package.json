@@ -23,7 +23,7 @@
     "dagre": "^0.8.5",
     "drizzle-orm": "^0.36.0",
     "jsonc-parser": "^3.3.1",
-    "drizzle-zod": "^0.5.1",
+    "drizzle-zod": "^0.8.3",
     "pg": "^8.23.1",
     "fractional-indexing": "^4.0.0",
     "react": "^19.3.1",
@@ -89,6 +89,20 @@
       }
     ],
     "holds": [
+      {
+        "names": ["drizzle-orm"],
+        "below": "0.44.0",
+        "reason": "drizzle-orm 0.44 wraps every driver error in DrizzleQueryError (the Postgres error under .cause), and ~21 production files classify Postgres errors by err.code / message, which would then silently misclassify: checked 2026-10-27 against 0.45.4, six tests failed (err.code undefined where 42P01 was expected; a trigger's message replaced by 'Failed query: ...') plus a type error in infra/retention define-retention.ts. Fix on our side first: one reader of the Postgres error behind a throw (task-1793083762-bu58fd). Lift with it.",
+        "issue": "https://github.com/drizzle-team/drizzle-orm/releases/tag/0.44.0",
+        "reviewBy": "2027-01-25"
+      },
+      {
+        "names": ["zod"],
+        "below": "4.0.0",
+        "reason": "zod 4 is a codebase migration, not a lock move: 1,116 files import the v3 API, and our own primitives read zod 3 internals (list-bound tags _def, zod-parser's no-narrow-zodtype reasons about ZodType<T>'s parameters, sql-column / sql-projection derive column types from schemas), while zod 4 moves them under _zod and reshapes its type parameters. Checked 2026-10-27 against 4.6.7; zod 3.25 already ships the v4 API as zod/v4 for an incremental path. Migration task-1793079250-84skjw; drizzle-zod 0.8 still accepts ^3.25. Lift with it.",
+        "issue": "https://zod.dev/v4/changelog",
+        "reviewBy": "2027-01-25"
+      },
       {
         "names": ["vite"],
         "below": "8.0.0",

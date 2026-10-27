@@ -3,6 +3,6 @@
   "private": true,
   "version": "0.0.1",
   "dependencies": {
-    "drizzle-kit": "^0.28.0"
+    "drizzle-kit": "^0.31.11"
   }
 }
