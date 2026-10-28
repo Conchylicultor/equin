@@ -83,6 +83,14 @@ export function NotificationBody({ n }: { n: Notification }): ReactElement {
           {n.description}
         </Text>
       )}
+      {n.detail !== null && (
+        <Line className="gap-xs">
+          <DeveloperMark />
+          <Text variant="caption" tone="faint">
+            {n.detail}
+          </Text>
+        </Line>
+      )}
       {/* eslint-disable-next-line spacing/no-adhoc-spacing -- small top offset separating the metadata row from the description above */}
       <Stack direction="row" gap="sm" align="center" className="mt-0.5">
         <RelativeTime
@@ -100,6 +108,7 @@ export function NotificationBody({ n }: { n: Notification }): ReactElement {
         {n.type && (
           <span className="text-3xs text-muted-foreground">{n.type}</span>
         )}
+        <span className="text-3xs text-muted-foreground">{n.category}</span>
         {clientId != null && (
           <span className="text-3xs text-muted-foreground">
             {clientId === getTabId() ? "this tab" : "another tab"}

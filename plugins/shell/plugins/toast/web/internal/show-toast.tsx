@@ -2,6 +2,8 @@ import { useEffect, useRef } from "react";
 import { toast as sonnerToast } from "sonner";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
 import { DeveloperMark } from "@plugins/audience/plugins/developer-mark/web";
+import type { ReactNode } from "react";
+import type { Audience } from "@plugins/audience/core";
 import type { ToastArgs } from "../../core";
 import { trackToast, untrackToast } from "./live-toasts";
 import { toastReachesReader } from "./reader-audience";
@@ -25,6 +27,17 @@ import { toastReachesReader } from "./reader-audience";
  */
 const SESSION = Math.random().toString(36).slice(2, 8);
 let seq = 0;
+
+/** What counts as a control: a click inside one is never the toast's own. */
+const CONTROL_SELECTOR =
+  "button, a[href], input, select, textarea, [role='button'], [role='link']";
+
+/** Whether `event` landed on a control inside the toast's `li`. */
+function isControlClick(event: MouseEvent, li: HTMLElement): boolean {
+  if (!(event.target instanceof Element)) return false;
+  const control = event.target.closest(CONTROL_SELECTOR);
+  return control !== null && li.contains(control);
+}
 
 /**
  * The part of a toast that we render, and therefore the plugin's one point of
@@ -56,12 +69,18 @@ function ToastBody({ id, children }: { id: string; children: React.ReactNode }) 
   }, [id]);
 
   // Dismiss the whole toast on click, while still allowing the user to select /
-  // drag the text: a click that ends an active text selection is ignored.
+  // drag the text: a click that ends an active text selection is ignored. A
+  // click on a control inside the toast (its action button, a custom toast's
+  // ×, a popover trigger) is the control's own — it acts (and dismisses, if
+  // it means to) itself. Checked here rather than by the control stopping
+  // propagation: this listener is native on the `<li>`, below React's root
+  // listener, so a React `stopPropagation` would come too late.
   useEffect(() => {
     const li = anchorRef.current?.closest<HTMLElement>("[data-sonner-toast]");
     if (!li) return;
     li.style.cursor = "pointer";
-    const onClick = () => {
+    const onClick = (event: MouseEvent) => {
+      if (isControlClick(event, li)) return;
       const selection = window.getSelection();
       if (selection && !selection.isCollapsed && selection.toString().trim().length > 0) return;
       sonnerToast.dismiss(id);
@@ -78,22 +97,64 @@ function ToastBody({ id, children }: { id: string; children: React.ReactNode }) 
 }
 
 /**
+ * A toast whose whole content the caller draws (a notification's own view),
+ * shown for `duration` ms — `Infinity` keeps it until dismissed or acted on.
+ * The host adds nothing around it: the content paints its own surface.
+ */
+export interface CustomToastArgs {
+  /** The toast's content, handed the toast's own `dismiss` (a × of its own). */
+  render: (toast: { dismiss: () => void }) => ReactNode;
+  duration: number;
+  /** Who it is for — a `developer` toast is shown only in Developer mode. */
+  audience?: Audience;
+}
+
+/**
  * Fire a global toast. Backed by sonner's global imperative API — callable from
  * anywhere; if no `<ToasterHost/>` is mounted the enqueue simply has no renderer
  * (a silent no-op, never a throw). Deprecates the former `shell.toast` command.
  * A toast declaring `audience: "developer"` is dropped unless the reader is in
  * Developer mode.
+ *
+ * Two shapes: the text toast (`ToastArgs` — sonner draws the card around a
+ * title and description), and the custom toast (`{ render, duration }` — the
+ * caller's node IS the toast, e.g. a notification's own view, so the toast
+ * and the bell's row are one component).
  */
-export function showToast({
-  title,
-  description,
-  variant,
-  audience,
-  action,
-}: ToastArgs): void {
+export function showToast(args: ToastArgs | CustomToastArgs): void {
   // A developer toast is shown only to a developer (Developer mode on).
-  if (!toastReachesReader(audience)) return;
+  if (!toastReachesReader(args.audience)) return;
   const id = `shell-toast-${SESSION}-${++seq}`;
+  if ("render" in args) {
+    showCustomToast(id, args);
+    return;
+  }
+  showTextToast(id, args);
+}
+
+function showCustomToast(id: string, { render, duration }: CustomToastArgs) {
+  // Built eagerly, like the text toast's body (see below). Sonner's `custom`
+  // renders the node unstyled inside its `[data-sonner-toast]` `<li>`, so the
+  // body's click-to-dismiss and ledger registration work as for a text toast.
+  const body = (
+    <ToastBody id={id}>
+      <ContentScope fill={false}>
+        {render({
+          dismiss: () => {
+            sonnerToast.dismiss(id);
+          },
+        })}
+      </ContentScope>
+    </ToastBody>
+  );
+  // Same one-microtask deferral as the text toast — see `showTextToast`.
+  queueMicrotask(() => sonnerToast.custom(() => body, { id, duration }));
+}
+
+function showTextToast(
+  id: string,
+  { title, description, variant, audience, action }: ToastArgs,
+): void {
   // `||`, not `??`: `title: ""` is a caller saying "no title", and `??` would
   // render an empty headline and drop the description entirely.
   const rawMessage = title || description;

@@ -1,6 +1,9 @@
 import { useCallback, useRef } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
-import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
+import {
+  conversationName,
+  type Conversation as ConversationRecord,
+} from "@plugins/tasks/plugins/tasks-core/core";
 import {
   isDraftEmpty,
   useRegisterPromptComposer,
@@ -105,9 +108,14 @@ export function PromptInput({
       onError={(msg) =>
         toast({
           type: "conversation",
-          title: "Editor error",
-          description: msg,
+          category: "conversations",
+          title: "Message editor crashed",
+          description: "",
+          subjectId: conversation.id,
+          subjectName: conversationName(conversation),
+          detail: msg,
           variant: "error",
+          action: { kind: "reload", payload: {} },
         })
       }
       insertRef={insertRef}

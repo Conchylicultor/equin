@@ -296,7 +296,8 @@ A trigger on `tasks.statusChanged` (`automations.task-status`):
     - `Shell.Sidebar` "Automations"
     - `FieldPresentation.Register` "exposure:tasks_ext_launch_decision"
     - `FieldPresentation.Register` "exposure:tasks_ext_origin"
-  - Uses: 60 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Notifications.Action` "review-automation"
+  - Uses: 62 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×7
     - `network/live` ×6
     - `primitives/live-state` ×6
@@ -308,6 +309,7 @@ A trigger on `tasks.statusChanged` (`automations.task-status`):
     - `conversations/model-provider` ×2
     - `infra/background/catalog` ×2
     - `primitives/css/control-panel` ×2
+    - `apps-core/tabs.useAppLink`
     - `fields/dynamic-enum/config.DynamicEnum`
     - `primitives/app-shell.opensPane`
     - `primitives/css/badge.Badge`
@@ -321,6 +323,7 @@ A trigger on `tasks.statusChanged` (`automations.task-status`):
     - `primitives/loading.Loading`
     - `primitives/relative-time.RelativeTime`
     - `primitives/slot-render.defineRenderSlot`
+    - `shell/notifications.Notifications`
     - `shell.Shell`
     - `tasks/task-detail.taskDetailPane`
     - `tasks.useTasksById`

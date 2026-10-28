@@ -34,6 +34,7 @@ export function ScreenshotButton() {
       if (!blob) {
         toast({
           type: "screenshot",
+          category: "other",
           title: "Screenshot failed",
           description: "Capture returned no image",
           variant: "error",
@@ -63,6 +64,7 @@ export function ScreenshotButton() {
     } catch (err) {
       toast({
         type: "screenshot",
+        category: "other",
         title: "Screenshot failed",
         description: (err as Error).message,
         variant: "error",
@@ -109,6 +111,7 @@ async function upload(
     if (err instanceof EndpointError) {
       toast({
         type: "screenshot",
+        category: "other",
         title: "Screenshot upload failed",
         description: `Server responded ${err.status}`,
         variant: "error",
@@ -116,6 +119,7 @@ async function upload(
     } else {
       toast({
         type: "screenshot",
+        category: "other",
         title: "Screenshot upload failed",
         description: (err as Error).message,
         variant: "error",

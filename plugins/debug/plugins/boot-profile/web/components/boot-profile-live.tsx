@@ -40,6 +40,7 @@ export function BootProfileLive(): ReactElement {
     await navigator.clipboard.writeText(url);
     toast({
       type: "debug",
+      category: "other",
       title: "Permalink copied",
       description: url,
     });

@@ -4,7 +4,7 @@ import { db } from "@plugins/database/server";
 import type { UnfinishedRun } from "@plugins/infra/plugins/jobs/plugins/supervised-job/server";
 import type { RunTerminal } from "@plugins/infra/plugins/jobs/plugins/supervised-job/core";
 import { recordNotification } from "@plugins/shell/plugins/notifications/server";
-import { buildDetailRoute, isMainCompositionBuild } from "@plugins/build/core";
+import { buildDetailRoute } from "@plugins/build/core";
 import {
   buildStatusOf,
   killedSignalName,
@@ -15,6 +15,9 @@ import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/she
 import { deploymentServed } from "@plugins/build/plugins/deployment/machine";
 import { reconcileDeployment } from "./reconcile";
 import { announceRunTerminal } from "./run-terminal";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const updatedIcon = symbol("update");
 import {
   buildRunIdKind,
   type BuildRunId,
@@ -160,38 +163,6 @@ export async function closeBuildRow(
 }
 
 /**
- * An auto-build has claimed the slot — ring the "started" bell.
- *
- * Rung at the CLAIM rather than after the spawn, which is where it used to be:
- * the supervised job's spawn step is the wrapper's, and the claim is the last
- * moment this plugin owns before the child exists. The claim is also what the
- * bell is really about — it is the point at which this backend committed to
- * running a build and no other one can start.
- *
- * Only `auto`. A manual build already has the button that started it as its
- * feedback; a bell would be telling the user what they just did.
- */
-export async function notifyBuildStarted(
-  buildId: string,
-  targets: string[],
-): Promise<void> {
-  // An auto-run is no longer always a push rebuilding this checkout's own app:
-  // a served composition drifting past its rate limit mints one too, and a bell
-  // that said "triggered by a new push" for a weekly cadence would be a lie.
-  // The distinction is `isMainCompositionBuild`, never a literal.
-  const plain = isMainCompositionBuild(targets);
-  await recordNotification({
-    type: "build",
-    title: plain ? "Auto-build started" : "Auto-rebuild started",
-    description: plain
-      ? `Triggered by a new push (${buildId})`
-      : `Rebuilding ${targets.join(", ")} (${buildId})`,
-    variant: "info",
-    dedupeKey: `build-start:${buildId}`,
-  });
-}
-
-/**
  * A build has ended — THE terminal edge, and everything that is not the row's
  * own outcome stamp.
  *
@@ -282,24 +253,37 @@ async function notifyBuildFinished(
   );
   const dedupeKey = `build-finish:${buildId}`;
   const status = buildStatusOf(row);
+  // TODO(§6, research/2026-10-25-global-notifications-in-user-terms.md): the
+  // subject is the conversation(s) whose pushes this build contains (their
+  // commit trailers over prev..commitHash). Until that attribution lands,
+  // "equin was updated" and "Build failed" carry no subject.
   if (status === "success") {
     await recordNotification({
       type: "build",
-      title: "Build succeeded",
-      description: `Completed in ${seconds}s`,
+      category: "updates",
+      icon: updatedIcon,
+      title: "equin was updated",
+      description: "",
+      detail: `${buildId} · ${row.commitHash?.slice(0, 9) ?? "no commit"} · ${seconds}s`,
       variant: "success",
+      action: { kind: "reload", payload: {} },
       linkTo,
       dedupeKey,
     });
     return;
   }
+  // Not a verdict about the code, so not the user's news: `superseded` (the
+  // tree moved under it — the next update reports instead), `killed` (a
+  // signal from outside) and `interrupted` (its process vanished without
+  // recording an outcome). Kept for a developer, each in its own sentence.
   if (status === "superseded") {
-    // Not a failure and not an alarm: the tree moved under this build, so it had
-    // nothing left to be a verdict about. The reconcile mints the rebuild.
     await recordNotification({
       type: "build",
+      category: "updates",
+      audience: "developer",
       title: "Build superseded",
       description: `${row.commitHash?.slice(0, 9) ?? "the built commit"} was replaced mid-build — rebuilding`,
+      detail: buildId,
       variant: "info",
       linkTo,
       dedupeKey,
@@ -311,12 +295,13 @@ async function notifyBuildFinished(
   // because `killedSignalName` takes a number and a `?? 0` default here would
   // name a signal nobody sent.
   if (status === "killed" && row.exitCode !== null) {
-    // Also not a failure: a signal arrived from outside the build — a human, a
-    // supervisor, another agent — which says nothing about the code.
     await recordNotification({
       type: "build",
+      category: "updates",
+      audience: "developer",
       title: "Build ended from outside",
       description: `${killedSignalName(row.exitCode)} arrived after ${seconds}s — see the run for who sent it`,
+      detail: buildId,
       variant: "info",
       linkTo,
       dedupeKey,
@@ -326,13 +311,14 @@ async function notifyBuildFinished(
   if (status === "interrupted") {
     // The supervised-run hard-kill sentinel: no exit marker at all, which only a
     // SIGKILL (or the machine going down) can produce, since every other death
-    // runs the shim's trap. It never refused and never reported a failure, so it
-    // is not an alarm either — but unlike `killed` there is no signal anyone
-    // observed, and the sentence must not name one.
+    // runs the shim's trap — and the sentence must not name a signal.
     await recordNotification({
       type: "build",
+      category: "updates",
+      audience: "developer",
       title: "Build interrupted",
       description: `The build's process disappeared after ${seconds}s without recording an outcome`,
+      detail: buildId,
       variant: "info",
       linkTo,
       dedupeKey,
@@ -341,9 +327,13 @@ async function notifyBuildFinished(
   }
   await recordNotification({
     type: "build",
+    category: "updates",
     title: "Build failed",
-    description: `Exited with code ${row.exitCode} after ${seconds}s`,
+    description: "",
+    detail: `${buildId} · exited with code ${row.exitCode} after ${seconds}s`,
     variant: "error",
+    // Fix: the build-fix plugin's investigate launch for this run.
+    action: { kind: "fix-build", payload: { runId: buildId } },
     linkTo,
     dedupeKey,
   });

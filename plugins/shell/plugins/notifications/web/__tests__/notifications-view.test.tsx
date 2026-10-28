@@ -92,7 +92,13 @@ const note = (over: Partial<Notification> = {}): Notification => ({
   read: false,
   muted: false,
   audience: "user",
+  category: "other",
   linkTo: null,
+  subjectId: null,
+  subjectName: null,
+  detail: null,
+  action: null,
+  icon: null,
   metadata: null,
   count: 1,
   $columns: {},
@@ -127,6 +133,7 @@ describe("the field schema over the notifications source", () => {
     expect([...p.columnOf.keys()].sort()).toEqual(
       [
         "audience",
+        "category",
         "createdAt",
         "muted",
         "read",
@@ -137,7 +144,15 @@ describe("the field schema over the notifications source", () => {
     );
     expect(p.sortFields.map((f) => f.id)).toEqual(["createdAt"]);
     expect(p.filterFields.map((f) => f.id).sort()).toEqual(
-      ["audience", "muted", "read", "title", "type", "variant"].sort(),
+      [
+        "audience",
+        "category",
+        "muted",
+        "read",
+        "title",
+        "type",
+        "variant",
+      ].sort(),
     );
   });
 
@@ -150,11 +165,25 @@ describe("the field schema over the notifications source", () => {
   it("type / variant are facets, so their fields declare no options", () => {
     expect([...notificationsSource.facets].sort()).toEqual(["type", "variant"]);
     expect(notificationsSource.searchable).toEqual(["title"]);
-    for (const id of ["type", "variant"]) {
+    // Every facet's field: a declared `options` on a facet throws at render
+    // (data-view's facetFieldColumns), so pin it over the whole facet list.
+    for (const id of notificationsSource.facets) {
       const f = fields.find((x) => x.id === id)!;
       expect(f.options).toBeUndefined();
       expect(f.filterable).not.toBe(false);
     }
+  });
+
+  it("category is a closed list: its field declares its labelled options, filterable", () => {
+    const f = fields.find((x) => x.id === "category")!;
+    expect(f.options?.map((o) => o.label)).toEqual([
+      "Conversations",
+      "Updates",
+      "Automations",
+      "Reports",
+      "Other",
+    ]);
+    expect(f.filterable).not.toBe(false);
   });
 });
 

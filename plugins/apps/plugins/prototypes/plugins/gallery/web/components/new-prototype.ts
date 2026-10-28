@@ -72,6 +72,7 @@ export async function mintPrototypeFolder(
   } catch (err) {
     toast({
       type: "prototype",
+      category: "other",
       title: "Could not create the prototype",
       description: getEndpointErrorMessage(err),
       variant: "error",

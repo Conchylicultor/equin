@@ -42,6 +42,7 @@ export function PasswordSignInForm({
       const who = identity.email ?? identity.displayName;
       toast({
         type: "auth",
+        category: "other",
         title: "Signed in",
         description: who ? `${providerName} (${who})` : providerName,
         variant: "success",

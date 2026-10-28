@@ -33,6 +33,7 @@ export function ConnectButton({
             onConnected?.(result.identity);
             toast({
               type: "auth",
+              category: "other",
               title: "Connected",
               description: `${result.identity.email ?? result.identity.accountId}`,
               variant: "success",
@@ -40,6 +41,7 @@ export function ConnectButton({
           } else if (result.message && result.message !== "cancelled") {
             toast({
               type: "auth",
+              category: "other",
               title: "Connect failed",
               description: result.message,
               variant: "error",
@@ -48,6 +50,7 @@ export function ConnectButton({
         } catch (err) {
           toast({
             type: "auth",
+            category: "other",
             title: "Connect failed",
             description: err instanceof Error ? err.message : String(err),
             variant: "error",

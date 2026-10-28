@@ -12,6 +12,8 @@ import {
   originPresentation,
 } from "./internal/presentation";
 import { Automations } from "./internal/slots";
+import { reviewAutomationAction } from "./internal/review-action";
+import { Notifications } from "@plugins/shell/plugins/notifications/web";
 
 export { Automations, automationConfigContributions } from "./internal/slots";
 export { PromptTemplateBlock } from "./components/prompt-section";
@@ -39,6 +41,8 @@ export default {
     originPresentation,
     // The exposed `approval` field (a person's launch decision on a task).
     approvalPresentation,
+    // "Review" on a notification that an automation's task waits for you.
+    Notifications.Action(reviewAutomationAction),
   ],
   slots: {
     "automation-config": Automations.Config,

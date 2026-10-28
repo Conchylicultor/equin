@@ -66,12 +66,14 @@ export function LaunchPromptsButton({
       if (result.kind === "unavailable") throw new Error(result.message);
       toast({
         type: "conversation",
+        category: "conversations",
         title: "Conversation launched",
         description: `Launched: ${item.title}`,
       });
     } catch (err) {
       toast({
         type: "conversation",
+        category: "conversations",
         title: "Failed to launch",
         description: getEndpointErrorMessage(err),
         variant: "error",

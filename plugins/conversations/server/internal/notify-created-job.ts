@@ -1,13 +1,18 @@
 import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
-import { getTask } from "@plugins/tasks/plugins/tasks-core/server";
-import { recordNotification } from "@plugins/shell/plugins/notifications/server";
-import { conversationRoute } from "@plugins/conversations/core";
-import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
+import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
 import {
   modelMeta,
   normalizeModel,
 } from "@plugins/conversations/plugins/model-provider/core";
+import { conversationName } from "@plugins/tasks/plugins/tasks-core/core";
+import { recordNotification } from "@plugins/shell/plugins/notifications/server";
+import { conversationRoute } from "@plugins/conversations/core";
+import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const startedIcon = symbol("forum");
+const unblockedIcon = symbol("lock-open");
 
 // spawnedBy values that mean "a conversation was launched on the user's behalf"
 // and should surface a one-time notification. Mirrors the old client-side
@@ -41,26 +46,35 @@ export const notifyConversationCreatedJob = defineJob({
     if (!event) return;
     if (!CAUSALITY_VALUES.has(event.spawnedBy)) return;
 
-    const model = modelMeta(normalizeModel(event.model)).label;
-    const task = await getTask(event.taskId);
-    const taskTitle = task?.title ?? "";
-    const title =
-      event.spawnedBy === "dep-resolved"
-        ? "Task unblocked"
-        : "Conversation started";
-    const description = taskTitle ? `${taskTitle} · ${model}` : model;
-
+    // The launcher already shows it (an opened pane, an embedded thread):
+    // the notification would only cover what the user is looking at — and
+    // since the bell is exactly the toasts sent, it is not recorded at all.
+    if (event.shownByLauncher === true) return;
+    // TODO(§4, research/2026-10-25-global-notifications-in-user-terms.md):
+    // "Conversation started" is sent only while the user is not watching
+    // the conversation (`unlessWatching`). Until the watching presence lands
+    // it is sent always.
+    const conversation = await getConversation(event.conversationId);
+    if (conversation === null) return; // deleted since the emit
+    const unblocked = event.spawnedBy === "dep-resolved";
     await recordNotification({
-      type: "task",
-      title,
-      description,
+      type: "conversation",
+      category: "conversations",
+      icon: unblocked ? unblockedIcon : startedIcon,
+      title: unblocked ? "Conversation unblocked" : "Conversation started",
+      description: "",
+      subjectId: conversation.id,
+      subjectName: conversationName(conversation),
+      detail: `${modelMeta(normalizeModel(event.model)).label} · ${event.spawnedBy}`,
       variant: "info",
-      // The launcher already shows it (an opened pane, an embedded thread): a
-      // toast would only cover what the user is looking at. Still in the bell.
-      muted: event.shownByLauncher === true,
-      linkTo: conversationRoute.link(agentManagerApp, {
-        convId: event.conversationId,
-      }),
+      action: {
+        kind: "open",
+        payload: {
+          to: conversationRoute.link(agentManagerApp, {
+            convId: event.conversationId,
+          }),
+        },
+      },
       dedupeKey: `conversation-created:${event.conversationId}`,
     });
   },

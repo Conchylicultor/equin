@@ -53,9 +53,9 @@ export function useReachingNotifications(where?: NotificationsWhere) {
 }
 
 /** {@link useReachingNotifications}, as a grouping on one column. */
-export function useReachingNotificationGroups<G extends "type" | "variant">(
-  groupBy: G,
-) {
+export function useReachingNotificationGroups<
+  G extends "type" | "variant" | "category",
+>(groupBy: G) {
   const { where, gate } = useScopedWhere(undefined);
   const result = useLive(
     notifications,

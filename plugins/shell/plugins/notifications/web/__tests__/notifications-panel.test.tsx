@@ -1,5 +1,5 @@
 /**
- * The bell popover's chip row over `createLiveStateHarness` (a real client and its QueryClient)
+ * The bell popover's chip row (by category) over `createLiveStateHarness` (a real client and its QueryClient)
  * (the live `use-live.test.tsx` harness): groupings are driven with
  * `client.setQueryData` on the exact tuple the codec encodes.
  */
@@ -45,7 +45,7 @@ function mount(live: LiveStateHarness) {
   );
 }
 
-const groupsKey = (groupBy: "type" | "variant") =>
+const groupsKey = (groupBy: "category" | "variant") =>
   queryKeyFor(
     `${notifications.key}:groups`,
     notifications.groups.groups.encode({
@@ -64,12 +64,12 @@ describe("NotificationsPanel — chip row", () => {
     expect(within(chips).queryAllByRole("button")).toHaveLength(0);
   });
 
-  it("renders a chip per server group, plus Errors when an error group exists", async () => {
+  it("chips are the user's categories (Reports / Other only when non-empty), with server counts", async () => {
     const live = createLiveStateHarness();
     const client = live.queryClient;
-    client.setQueryData(groupsKey("type"), [
-      { value: "build", count: 3 },
-      { value: "old-type", count: 2 },
+    client.setQueryData(groupsKey("category"), [
+      { value: "conversations", count: 3 },
+      { value: "other", count: 2 },
     ]);
     client.setQueryData(groupsKey("variant"), [
       { value: "info", count: 4 },
@@ -82,7 +82,14 @@ describe("NotificationsPanel — chip row", () => {
         within(chips)
           .getAllByRole("button")
           .map((b) => b.textContent),
-      ).toEqual(["All", "Errors", "Build 3", "Old-type 2"]);
+      ).toEqual([
+        "All",
+        "Errors 1",
+        "Conversations 3",
+        "Updates 0",
+        "Automations 0",
+        "Other 2",
+      ]);
     });
   });
 });

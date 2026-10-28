@@ -115,6 +115,7 @@ export function VersionHistoryDialog({
     onSuccess: () => {
       toast({
         type: "history",
+        category: "other",
         title: "Version restored",
         description:
           pendingRestore?.label || "The selected version is now live.",

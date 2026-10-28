@@ -130,6 +130,7 @@ export function useGoBackToMessage({
 function refused(toast: Toast, message: string): void {
   toast({
     type: "conversation",
+    category: "conversations",
     title: "Cannot go back to this message",
     description: message,
     variant: "error",

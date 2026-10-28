@@ -289,6 +289,7 @@ function LiveLogs(): ReactElement {
       onError={(error) =>
         toast({
           type: "build",
+          category: "updates",
           title: "Build log error",
           description: error,
           variant: "error",

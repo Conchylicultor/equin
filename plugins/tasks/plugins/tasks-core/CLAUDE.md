@@ -375,6 +375,7 @@ serves them.
     - `createTask`
     - `deleteAttempt`
     - `deleteConversationRow`
+    - `DependencyCycleError`
     - `dropTaskIfNoActiveSibling`
     - `dropTaskTreeIfNoActiveSibling`
     - `findNextRankInFolder`
@@ -503,6 +504,7 @@ serves them.
     - `buildTaskPrompt`
     - `CONVERSATION_TRAILER_KEY`
     - `ConversationKindSchema`
+    - `conversationName`
     - `conversationsActive`
     - `conversationsById`
     - `ConversationSchema`

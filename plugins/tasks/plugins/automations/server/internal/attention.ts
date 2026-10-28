@@ -19,10 +19,12 @@ import { registeredAutomation } from "./registry";
 // agent asked something, stopped without landing, or was held.
 const NEEDS_PERSON = new Set(["need_action", "attempted", "held"]);
 
-const STATUS_WORDS: Record<string, string> = {
-  need_action: "is waiting for you",
-  attempted: "stopped without landing",
-  held: "was held",
+// The headline, in the user's words, per waiting status. The automation is
+// the subject (line 2); the task's own title is the developer detail.
+const STATUS_HEADLINE: Record<string, string> = {
+  need_action: "Waiting for you",
+  attempted: "Stopped before finishing",
+  held: "Held for you",
 };
 
 const SETTLES_SLOT: ReadonlySet<string> = new Set(SLOT_SETTLED_STATUSES);
@@ -98,11 +100,23 @@ export const automationTaskStatusJob = defineJob({
     const task = await getTask(event.taskId);
     if (task === null) return; // deleted since the emit — nothing to look at
     const label = automation?.spec.label ?? automationId;
+    // `rings` admits only the statuses STATUS_HEADLINE names.
+    const headline = STATUS_HEADLINE[event.status];
+    if (headline === undefined) {
+      throw new Error(`[automations] no headline for status ${event.status}`);
+    }
     await recordNotification({
       type: "automation-task",
+      category: "automations",
+      icon: automation?.spec.icon ?? null,
       variant: "warning",
-      title: `${label}: task ${STATUS_WORDS[event.status]}`,
-      description: task.title,
+      title: headline,
+      description: "",
+      // The automation is what the user knows; it has no id kind of its own,
+      // so the chip carries its name only.
+      subjectName: label,
+      detail: `${task.title} (${task.id}, ${event.status})`,
+      action: { kind: "review-automation", payload: { automationId } },
       linkTo: automationDetailRoute.link(agentManagerApp, { automationId }),
       metadata: { automationId, taskId: task.id, status: event.status },
       dedupeKey: `automation-task:${task.id}`,

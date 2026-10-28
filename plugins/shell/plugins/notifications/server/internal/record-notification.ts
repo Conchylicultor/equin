@@ -4,7 +4,13 @@ import { db } from "@plugins/database/server";
 import { _notifications } from "./tables";
 import type { NotificationVariant } from "../../shared/schema";
 import type { Audience } from "@plugins/audience/core";
-import { notificationIdKind, type NotificationId } from "../../core";
+import type { SymbolRef } from "@plugins/ui/plugins/icons/core";
+import {
+  notificationIdKind,
+  type NotificationAction,
+  type NotificationCategory,
+  type NotificationId,
+} from "../../core";
 
 // Every column a notification write can set, with no rule tying `variant` to
 // `linkTo`. Internal: only this plugin writes through it directly — the browser
@@ -17,6 +23,26 @@ export interface NotificationWrite {
   variant: NotificationVariant;
   linkTo?: string | null;
   metadata?: Record<string, unknown> | null;
+  /**
+   * What it is about, in the user's words — the bell's chips. Defaults to
+   * `other`.
+   */
+  category?: NotificationCategory;
+  /**
+   * What it is about (a `conv-…` / `task-…` id) and its name as shown now — a
+   * snapshot the bell shows exactly as the toast did (the view's line 2).
+   */
+  subjectId?: string | null;
+  subjectName?: string | null;
+  /** Developer-only internals (build id, exit code, HTTP status, raw error). */
+  detail?: string | null;
+  /** The one action, resolved in the browser by `kind` (`Notifications.Action`). */
+  action?: NotificationAction | null;
+  /**
+   * The event's own glyph (`symbol("forum")`); without one the view draws the
+   * variant's or the category's.
+   */
+  icon?: SymbolRef | null;
   /**
    * Quiet notification: keeps its variant color but is dimmed in the bell list,
    * excluded from the unread badge, and never pops a toast. Defaults to false.
@@ -31,7 +57,7 @@ export interface NotificationWrite {
   /**
    * Deterministic key that collapses duplicate writes to a single row via a
    * UNIQUE index: a second write with the same key updates the existing row's
-   * display fields (title/description/variant/linkTo/metadata/muted) in place
+   * display fields (title/description/variant/linkTo/metadata/muted/category/subject/detail/action/icon) in place
    * rather than inserting a new row — so a deduped notification always reflects
    * its latest state (e.g. a crash whose noise classification flipped between
    * occurrences). The row's identity, creation time, and read/dismissed state
@@ -129,6 +155,12 @@ export async function writeNotification(
       metadata: input.metadata ?? null,
       muted: input.muted ?? false,
       audience: input.audience ?? "user",
+      category: input.category ?? "other",
+      subjectId: input.subjectId ?? null,
+      subjectName: input.subjectName ?? null,
+      detail: input.detail ?? null,
+      action: input.action ?? null,
+      icon: input.icon ?? null,
       dedupKey,
     })
     // null never conflicts, so a plain insert happens when no dedupeKey is set;
@@ -148,6 +180,12 @@ export async function writeNotification(
         metadata: input.metadata ?? null,
         muted: input.muted ?? false,
         audience: input.audience ?? "user",
+        category: input.category ?? "other",
+        subjectId: input.subjectId ?? null,
+        subjectName: input.subjectName ?? null,
+        detail: input.detail ?? null,
+        action: input.action ?? null,
+        icon: input.icon ?? null,
         count: sql`${_notifications.count} + 1`,
         lastSeenAt: now,
         read: sql`CASE WHEN ${resurfaced} THEN false ELSE ${_notifications.read} END`,

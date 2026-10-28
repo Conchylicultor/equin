@@ -125,7 +125,7 @@ it is handed and knows no tour.
   - Slots: `TaskDraftFormSlots.Action`
   - Slot contributors: `TaskDraftFormSlots.Action` ← `wish.element-picker`
   - Contributes: `ConfigV2.WebRegister` "config"
-  - Uses: 44 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 45 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `tasks/launch-options` ×5
     - `infra/endpoints` ×3
     - `primitives/css/ui-kit` ×3
@@ -135,6 +135,7 @@ it is handed and knows no tour.
     - `config_v2` ×2
     - `primitives/overlay/tooltip` ×2
     - `primitives/shortcuts` ×2
+    - `shell/notifications` ×2
     - `apps-core.useCurrentAppId`
     - `hints.useHintAnchor`
     - `network/live.useLive`
@@ -151,7 +152,6 @@ it is handed and knows no tour.
     - `primitives/slot-render.defineRenderSlot`
     - `primitives/text-editor/composer/picker-pill.PickerPill`
     - `primitives/text-editor/paste-images.extractAttachmentIds`
-    - `shell/notifications.useToast`
     - `ui/icons.Icon`
   - Exports (types):
     - `ActiveRelateContext`

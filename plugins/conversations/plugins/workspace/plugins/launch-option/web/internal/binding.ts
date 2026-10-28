@@ -36,6 +36,7 @@ export function useTaskWorkspaceBinding(
         (err: unknown) => {
           toast({
             type: "task",
+            category: "other",
             title: "Failed to set workspace",
             description: err instanceof Error ? err.message : String(err),
             variant: "error",

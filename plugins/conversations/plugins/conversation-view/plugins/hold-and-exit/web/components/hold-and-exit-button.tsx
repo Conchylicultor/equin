@@ -1,6 +1,9 @@
 import { DropdownMenuItem } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
-import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
+import {
+  conversationName,
+  type Conversation as ConversationRecord,
+} from "@plugins/tasks/plugins/tasks-core/core";
 import { useLiveConversation } from "@plugins/conversations/web";
 import { useToast } from "@plugins/shell/plugins/notifications/web";
 import { holdAndExit } from "../../shared";
@@ -16,19 +19,17 @@ export function HoldAndExitItem({
 }) {
   const live = useLiveConversation(conversation);
   const toast = useToast();
+  // No success notification: the user saw it held and closed.
   const close = useEndpointMutation(holdAndExit, {
-    onSuccess: () =>
-      toast({
-        type: "conversation",
-        title: "Task held",
-        description: "Task held and conversation closed",
-        variant: "success",
-      }),
     onError: (err) =>
       toast({
         type: "conversation",
+        category: "conversations",
         title: "Hold & Close failed",
-        description: err.message,
+        description: "",
+        subjectId: conversation.id,
+        subjectName: conversationName(conversation),
+        detail: err.message,
         variant: "error",
       }),
   });

@@ -5,7 +5,6 @@ import {
 import { useRef, useState } from "react";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { showToast } from "@plugins/shell/plugins/toast/web";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import {
@@ -19,6 +18,7 @@ import { useReachingNotifications } from "../internal/use-reaching-notifications
 import { notificationsUnread } from "../../shared/resources";
 import { markAllNotificationsRead } from "../../shared/endpoints";
 import { NotificationsPanel } from "./notifications-panel";
+import { toastNotification } from "./notification-view";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 const notificationsIcon = symbol("notifications");
@@ -37,15 +37,9 @@ export function BellButton() {
   const unreadResult = useLive(notificationsUnread);
   const audience = useAudience();
 
-  // A toast for each notification that arrives while the bell is mounted.
-  useNotificationArrivals((n) =>
-    showToast({
-      title: n.title,
-      description: n.description,
-      variant: n.variant,
-      audience: n.audience,
-    }),
-  );
+  // A toast for each notification that arrives while the bell is mounted —
+  // the same view its row in the popover draws (the bell mirrors the toasts).
+  useNotificationArrivals(toastNotification);
 
   const hadUnreadRef = useRef(false);
 

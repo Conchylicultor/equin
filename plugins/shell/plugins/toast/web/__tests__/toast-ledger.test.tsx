@@ -375,3 +375,56 @@ describe("the toast ledger is the set of mounted toasts", () => {
     expect(ledgerCount()).toBe(1);
   });
 });
+
+describe("click-to-dismiss", () => {
+  /** A custom toast with words and one control of its own. */
+  async function showCustom(onControl: () => void): Promise<void> {
+    render(
+      <>
+        <LedgerProbe />
+        <Toaster />
+      </>,
+    );
+    showToast({
+      duration: Infinity,
+      render: () => (
+        <div>
+          <p>the body</p>
+          <button type="button" onClick={onControl}>
+            Act
+          </button>
+        </div>
+      ),
+    });
+    await flushToasts();
+    expect(ledgerCount()).toBe(1);
+  }
+
+  it("a click on the toast's body dismisses it", async () => {
+    await showCustom(() => {});
+    expect(mountedToasts()[0]!.style.cursor).toBe("pointer");
+    await act(async () => {
+      fireEvent.click(screen.getByText("the body"));
+    });
+    // The dismissal hops through a (faked) animation frame before the exit.
+    await flushToasts(50);
+    expect(
+      mountedToasts().map((li) => li.getAttribute("data-removed")),
+    ).toEqual(["true"]);
+    await flushToasts(TIME_BEFORE_UNMOUNT + 50);
+    expect(mountedToasts()).toHaveLength(0);
+    expect(ledgerCount()).toBe(0);
+  });
+
+  it("a click on a control inside the toast is the control's, not a dismiss", async () => {
+    const onControl = vi.fn();
+    await showCustom(onControl);
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Act" }));
+    });
+    await flushToasts(50);
+    await flushToasts(TIME_BEFORE_UNMOUNT + 50);
+    expect(onControl).toHaveBeenCalledTimes(1);
+    expect(mountedToasts()).toHaveLength(1);
+  });
+});

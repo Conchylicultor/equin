@@ -14,8 +14,8 @@ import { NotificationsUnreadSchema } from "./schema";
 // in-place upsert. `preload: "boot"` hydrates the default window (`{ limit:
 // "200" }`) in the boot snapshot — the bell is always mounted.
 //
-// The bell's chips group on `type` / `variant` (`useLive(notifications, {
-// groupBy })`) and a picked chip reads a filtered window, so a type seen only in
+// The bell's chips group on `category` / `variant` (`useLive(notifications, {
+// groupBy })`) and a picked chip reads a filtered window, so a category seen only in
 // older rows still has a chip and lists all of its rows.
 //
 // Declared by FIELDS over the `notifications` entity: the listed fields carry
@@ -31,13 +31,27 @@ import { NotificationsUnreadSchema } from "./schema";
 // read only what reaches the user (`audience-scope.ts`).
 export const notifications = liveCollection("notifications", {
   from: notificationsEntityRef,
-  pick: ["type", "title", "variant", "read", "muted", "audience", "createdAt"],
+  pick: [
+    "type",
+    "title",
+    "variant",
+    "read",
+    "muted",
+    "audience",
+    "category",
+    "createdAt",
+  ],
   carry: {
     pick: [
       "id",
       "description",
       "dismissed",
       "linkTo",
+      "subjectId",
+      "subjectName",
+      "detail",
+      "action",
+      "icon",
       "metadata",
       "count",
       "lastSeenAt",

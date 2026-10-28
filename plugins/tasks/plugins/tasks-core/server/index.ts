@@ -149,6 +149,7 @@ export {
   updateTask,
   updateTaskTitle,
   addTaskDependency,
+  DependencyCycleError,
   removeTaskDependency,
 } from "./internal/mutations/tasks";
 export type {

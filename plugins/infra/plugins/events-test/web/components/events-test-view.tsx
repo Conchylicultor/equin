@@ -66,7 +66,13 @@ function userIdFilter(t: TriggerRow): string | null {
 
 function toastErr(toast: Toast, e: unknown, prefix: string) {
   const msg = e instanceof Error ? e.message : String(e);
-  toast({ type: "debug", title: prefix, description: msg, variant: "error" });
+  toast({
+    type: "debug",
+    category: "other",
+    title: prefix,
+    description: msg,
+    variant: "error",
+  });
 }
 
 export function EventsTestView() {
@@ -119,6 +125,7 @@ export function EventsTestView() {
     if (!subLabel.trim()) {
       toast({
         type: "debug",
+        category: "other",
         title: "Missing field",
         description: "label is required",
         variant: "warning",
@@ -141,6 +148,7 @@ export function EventsTestView() {
       flashTrigger(id);
       toast({
         type: "debug",
+        category: "other",
         title: "Subscribed",
         description: `${subUserId.trim() || "match-any"}, ${subOneShot ? "one-shot" : "recurring"}`,
         variant: "success",
@@ -156,6 +164,7 @@ export function EventsTestView() {
     if (!emitUserId.trim()) {
       toast({
         type: "debug",
+        category: "other",
         title: "Missing field",
         description: "userId is required",
         variant: "warning",
@@ -176,6 +185,7 @@ export function EventsTestView() {
       );
       toast({
         type: "debug",
+        category: "other",
         title: "Event emitted",
         description: `pinged(userId="${emitUserId.trim()}")`,
         variant: "info",
@@ -192,6 +202,7 @@ export function EventsTestView() {
       await fetchEndpoint(deleteEventsTestTrigger, { id });
       toast({
         type: "debug",
+        category: "other",
         title: "Trigger deleted",
         description: `Trigger ${id}`,
         variant: "success",
@@ -205,6 +216,7 @@ export function EventsTestView() {
     if (!dtLabel.trim()) {
       toast({
         type: "debug",
+        category: "other",
         title: "Missing field",
         description: "label is required",
         variant: "warning",
@@ -222,6 +234,7 @@ export function EventsTestView() {
       );
       toast({
         type: "debug",
+        category: "other",
         title: "Triggers swept",
         description: `label="${dtLabel.trim()}"`,
         variant: "success",
@@ -238,6 +251,7 @@ export function EventsTestView() {
     if (!deLabel.trim()) {
       toast({
         type: "debug",
+        category: "other",
         title: "Missing field",
         description: "label is required",
         variant: "warning",
@@ -257,6 +271,7 @@ export function EventsTestView() {
       );
       toast({
         type: "debug",
+        category: "other",
         title: "Job enqueued",
         description: `Job ${jobId}`,
         variant: "success",
@@ -273,6 +288,7 @@ export function EventsTestView() {
       await fetchEndpoint(resetEventsTest, {});
       toast({
         type: "debug",
+        category: "other",
         title: "Log cleared",
         description: "Events test log reset",
       });

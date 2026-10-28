@@ -1,17 +1,22 @@
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { useState } from "react";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
-import { matchesFilter } from "@plugins/network/plugins/live/plugins/filter/core";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { useAppLink } from "@plugins/apps-core/plugins/tabs/web";
 import { afterOpen } from "@plugins/primitives/plugins/link-gesture/core";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  Inset,
+  Stack,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
-import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   InfiniteScrollFooter,
@@ -22,86 +27,102 @@ import {
   useReachingNotificationGroups,
   useReachingNotifications,
 } from "../internal/use-reaching-notifications";
-import { countedUnread, countedUnreadFilterable } from "../../shared/unread";
+import { markAllNotificationsRead } from "../../shared/endpoints";
 import {
-  dismissNotification,
-  dismissAllNotifications,
-} from "../../shared/endpoints";
-import { notificationsRoute } from "../../core";
-import { NotificationBody, notificationLink } from "./notification-body";
+  NOTIFICATION_CATEGORIES,
+  NOTIFICATION_CATEGORY_LABELS,
+  notificationsRoute,
+  type NotificationCategory,
+} from "../../core";
+import { NotificationView } from "./notification-view";
 
-const VARIANT_BORDER: Record<Notification["variant"], string> = {
-  error: "border-l-destructive",
-  warning: "border-l-warning",
-  info: "border-l-info",
-  success: "border-l-success",
-};
+const markAllReadIcon = symbol("done-all");
 
-const VARIANT_BORDER_MUTED: Record<Notification["variant"], string> = {
-  error: "border-l-destructive/40",
-  warning: "border-l-warning/40",
-  info: "border-l-info/40",
-  success: "border-l-success/40",
-};
-
-/** The popover's row: the shared body inside its accent border, the row's link, and × dismiss. */
+/**
+ * The popover's row: the shared view (the toast's own) with its time and the
+ * unread dot. Opening it — the row itself, or its action — closes the popover.
+ */
 function NotificationRow({
   n,
-  dismiss,
   onClose,
 }: {
   n: Notification;
-  dismiss: (id: string) => void;
   onClose: () => void;
 }) {
-  const inAppLink = useAppLink();
-  const link = notificationLink(n);
   return (
-    <Stack
-      as="li"
-      direction="row"
-      gap="sm"
-      className={`px-md py-sm border-l-2 ${n.muted ? VARIANT_BORDER_MUTED[n.variant] : VARIANT_BORDER[n.variant]} hover:bg-muted/50 ${link !== undefined ? "cursor-pointer" : ""}`}
-      {...activationProps(
-        link !== undefined ? afterOpen(inAppLink(link), onClose) : undefined,
-      )}
-    >
-      <NotificationBody n={n} />
-      <Text
-        as="button"
-        variant="body"
-        // eslint-disable-next-line text/no-adhoc-typography -- tight line-height centers the × glyph in the button
-        className={cn(
-          rigidClass(),
-          "text-muted-foreground hover:text-foreground leading-none",
-        )}
-        onClick={(e) => {
-          e.stopPropagation();
-          dismiss(n.id);
-        }}
-        aria-label="Dismiss"
-      >
-        &times;
-      </Text>
-    </Stack>
+    <li>
+      <NotificationView
+        n={n}
+        surface="bell"
+        when={n.createdAt}
+        unread={!n.read}
+        onActed={onClose}
+        className="rounded-control py-sm pl-md pr-sm hover:bg-hover-fill"
+      />
+    </li>
   );
 }
 
 /** Which slice of the collection the list shows. */
 type Filter =
-  { kind: "all" } | { kind: "errors" } | { kind: "type"; type: string };
+  | { kind: "all" }
+  | { kind: "errors" }
+  | { kind: "category"; category: NotificationCategory };
 
-const isCountedUnread = (n: Notification) =>
-  matchesFilter(n, countedUnread, countedUnreadFilterable);
+/** Always offered, even at 0: the user's own vocabulary for the bell. */
+const PRIMARY_CATEGORIES: readonly NotificationCategory[] = [
+  "conversations",
+  "updates",
+  "automations",
+];
 
-const chipLabel = (type: string) =>
-  type.charAt(0).toUpperCase() + type.slice(1);
+function Chip({
+  active,
+  onPick,
+  label,
+  count,
+  hot = false,
+  category,
+}: {
+  active: boolean;
+  onPick: () => void;
+  label: string;
+  count?: number;
+  hot?: boolean;
+  category?: NotificationCategory;
+}) {
+  return (
+    <ToggleChip
+      variant="ghost"
+      active={active}
+      onClick={onPick}
+      data-category={category}
+      // eslint-disable-next-line layout/no-adhoc-layout -- rigid chip in the horizontally-scrolling filter row
+      className="shrink-0"
+    >
+      {label}
+      {count !== undefined && (
+        <>
+          {" "}
+          <Text
+            variant="caption"
+            tone={hot && count > 0 ? "destructive" : "faint"}
+            className="tabular-nums"
+          >
+            {count}
+          </Text>
+        </>
+      )}
+    </ToggleChip>
+  );
+}
 
 /**
- * The chip strip. Chips come from the SERVER's grouping of the whole collection
- * — never from the rows loaded — so a type that appears only in older rows still
- * has one. While the groups load the strip shows a loading state, never an empty
- * row; a "More" chip pages through further types while there are any.
+ * The chip strip: All · Errors · Conversations · Updates · Automations, plus
+ * Reports / Other only while they hold anything. Counts come from the
+ * SERVER's grouping of the whole collection — never from the rows loaded — so
+ * a category that appears only in older rows still counts. While the groups
+ * load the strip shows a loading state, never zeros.
  */
 function FilterChips({
   filter,
@@ -110,13 +131,13 @@ function FilterChips({
   filter: Filter;
   onPick: (next: Filter) => void;
 }) {
-  const types = useReachingNotificationGroups("type");
+  const categories = useReachingNotificationGroups("category");
   const variants = useReachingNotificationGroups("variant");
 
   // Precedence error > loading: one failed read fails the row, even while
   // the other still loads.
-  if (types.status === "error" || variants.status === "error") {
-    const failed = types.status === "error" ? types : variants;
+  if (categories.status === "error" || variants.status === "error") {
+    const failed = categories.status === "error" ? categories : variants;
     return (
       <div className="px-md py-xs border-b" data-testid="notification-chips">
         {failed.status === "error" && (
@@ -130,7 +151,7 @@ function FilterChips({
       </div>
     );
   }
-  if (types.status === "loading" || variants.status === "loading") {
+  if (categories.status === "loading" || variants.status === "loading") {
     return (
       <div className="px-md py-xs border-b" data-testid="notification-chips">
         <Loading label="Loading filters…" />
@@ -138,75 +159,87 @@ function FilterChips({
     );
   }
 
-  const hasErrors = variants.data.some((g) => g.value === "error");
-  const typeChips = types.data.filter(
-    (g): g is { value: string; count: number } => !!g.value,
+  const countOf = (category: NotificationCategory) =>
+    categories.data.find((g) => g.value === category)?.count ?? 0;
+  const errors = variants.data.find((g) => g.value === "error")?.count ?? 0;
+  const shown = NOTIFICATION_CATEGORIES.filter(
+    (c) => PRIMARY_CATEGORIES.includes(c) || countOf(c) > 0,
   );
 
   return (
     <Scroll
       axis="x"
-      className="px-md py-xs border-b"
+      hideScrollbar
+      className="px-sm pb-sm border-b"
       data-testid="notification-chips"
     >
-      <Stack direction="row" gap="xs">
-        <ToggleChip
-          variant="ghost"
-          active={filter.kind === "all"}
-          onClick={() => {
-            onPick({ kind: "all" });
-          }}
-          // eslint-disable-next-line layout/no-adhoc-layout -- rigid chip in the horizontally-scrolling filter row
-          className="shrink-0"
-        >
-          All
-        </ToggleChip>
-        {hasErrors && (
-          <ToggleChip
-            variant="ghost"
+      {/* Compact chips: the five user categories fit the 320px popover. */}
+      <ControlSizeProvider size="xs">
+        <Stack direction="row" gap="2xs">
+          <Chip
+            label="All"
+            active={filter.kind === "all"}
+            onPick={() => {
+              onPick({ kind: "all" });
+            }}
+          />
+          <Chip
+            label="Errors"
+            count={errors}
+            hot
             active={filter.kind === "errors"}
-            onClick={() => {
+            onPick={() => {
               onPick({ kind: "errors" });
             }}
-            // eslint-disable-next-line layout/no-adhoc-layout -- rigid chip in the horizontally-scrolling filter row
-            className="shrink-0"
-          >
-            Errors
-          </ToggleChip>
-        )}
-        {typeChips.map((g) => (
-          <ToggleChip
-            key={g.value}
-            variant="ghost"
-            active={filter.kind === "type" && filter.type === g.value}
-            onClick={() => {
-              onPick({ kind: "type", type: g.value });
-            }}
-            tooltip={`${g.count} ${g.value} notification${g.count === 1 ? "" : "s"}`}
-            data-type={g.value}
-            // eslint-disable-next-line layout/no-adhoc-layout -- rigid chip in the horizontally-scrolling filter row
-            className="shrink-0"
-          >
-            {chipLabel(g.value)}{" "}
-            <span className="text-muted-foreground tabular-nums">
-              {g.count}
-            </span>
-          </ToggleChip>
-        ))}
-        {(types.canGrow || types.growing) && (
-          <ToggleChip
-            variant="ghost"
-            active={false}
-            disabled={types.growing}
-            onClick={types.loadMore}
-            // eslint-disable-next-line layout/no-adhoc-layout -- rigid chip in the horizontally-scrolling filter row
-            className="shrink-0"
-          >
-            {types.growing ? "Loading…" : "More"}
-          </ToggleChip>
-        )}
-      </Stack>
+          />
+          {shown.map((c) => (
+            <Chip
+              key={c}
+              label={NOTIFICATION_CATEGORY_LABELS[c]}
+              count={countOf(c)}
+              category={c}
+              active={filter.kind === "category" && filter.category === c}
+              onPick={() => {
+                onPick({ kind: "category", category: c });
+              }}
+            />
+          ))}
+        </Stack>
+      </ControlSizeProvider>
     </Scroll>
+  );
+}
+
+/** Local midnight today — rows from before it are "Earlier". */
+function startOfToday(): Date {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function Section({
+  title,
+  rows,
+  onClose,
+}: {
+  title: string;
+  rows: Notification[];
+  onClose: () => void;
+}) {
+  if (rows.length === 0) return null;
+  return (
+    <>
+      <Inset x="md" t="sm" b="2xs">
+        <Text variant="group" tone="faint">
+          {title}
+        </Text>
+      </Inset>
+      <Stack as="ul" gap="none" className="px-xs">
+        {rows.map((n) => (
+          <NotificationRow key={n.id} n={n} onClose={onClose} />
+        ))}
+      </Stack>
+    </>
   );
 }
 
@@ -228,7 +261,7 @@ function NotificationList({
       ? undefined
       : filter.kind === "errors"
         ? { variant: "error" }
-        : { type: filter.type },
+        : { category: filter.category },
   );
   // Only a ready window has paging handles; the arms below render the rest.
   const settled =
@@ -242,7 +275,6 @@ function NotificationList({
     },
     rootMargin: "200px",
   });
-  const dismissOne = useEndpointMutation(dismissNotification);
 
   if (result.status === "loading") return <Loading variant="rows" count={4} />;
   if (result.status === "error") {
@@ -269,55 +301,14 @@ function NotificationList({
     );
   }
 
-  function dismiss(id: string) {
-    dismissOne.mutate({ params: { id } });
-  }
-
-  const unread = rows.filter(isCountedUnread);
-  const rest = rows.filter((n) => !isCountedUnread(n));
-  // Match the header color to the most severe unread item shown.
-  const hasUnreadError = unread.some((n) => n.variant === "error");
+  const today = startOfToday();
+  const todays = rows.filter((n) => n.createdAt >= today);
+  const earlier = rows.filter((n) => n.createdAt < today);
 
   return (
-    <Scroll className="max-h-96" data-testid="notification-list">
-      {unread.length > 0 && (
-        <>
-          <div
-            className={`px-md py-xs text-3xs font-semibold uppercase tracking-wider border-b ${hasUnreadError ? "text-destructive bg-destructive/5" : "text-warning bg-warning/5"}`}
-          >
-            Unread ({unread.length})
-          </div>
-          <ul>
-            {unread.map((n) => (
-              <NotificationRow
-                key={n.id}
-                n={n}
-                dismiss={dismiss}
-                onClose={onClose}
-              />
-            ))}
-          </ul>
-        </>
-      )}
-      {rest.length > 0 && (
-        <>
-          {unread.length > 0 && (
-            <div className="px-md py-xs text-3xs font-semibold uppercase tracking-wider text-muted-foreground border-b border-t">
-              Earlier
-            </div>
-          )}
-          <ul>
-            {rest.map((n) => (
-              <NotificationRow
-                key={n.id}
-                n={n}
-                dismiss={dismiss}
-                onClose={onClose}
-              />
-            ))}
-          </ul>
-        </>
-      )}
+    <Scroll className="max-h-120 pb-xs" data-testid="notification-list">
+      <Section title="Today" rows={todays} onClose={onClose} />
+      <Section title="Earlier" rows={earlier} onClose={onClose} />
       <InfiniteScrollFooter handle={scroll} />
     </Scroll>
   );
@@ -338,53 +329,44 @@ export function NotificationsPanel({
 }) {
   const inAppLink = useAppLink();
   const [filter, setFilter] = useState<Filter>({ kind: "all" });
-  const dismissAll = useEndpointMutation(dismissAllNotifications);
+  const markAllRead = useEndpointMutation(markAllNotificationsRead);
 
   return (
     <>
-      <Stack
-        direction="row"
-        gap="sm"
-        align="center"
-        justify="between"
-        className="px-md py-sm border-b"
-      >
-        <Text variant="body" className="font-semibold">
-          Notifications
-        </Text>
-        <Stack direction="row" gap="sm" align="center">
-          {!empty && (
-            <Text
-              as="button"
-              variant="caption"
-              className="text-muted-foreground hover:text-foreground"
-              onClick={() => {
-                dismissAll.mutate({});
-              }}
-            >
-              Clear all
-            </Text>
-          )}
-          {/* The whole collection as a DataView (Debug → Notifications). It
-              leaves through `onClose` — the same way a row's link does — which
-              closes the popover WITHOUT the bell's mark-all-read: that runs
-              only on the popover's own dismissal (`onOpenChange`), and the pane
-              offers its own "Mark all read". */}
-          <Text
-            as="button"
-            variant="caption"
-            className="text-muted-foreground hover:text-foreground"
-            {...activationProps(
-              afterOpen(
-                inAppLink(notificationsRoute.link(debugApp, {})),
-                onClose,
-              ),
-            )}
-          >
-            View all
+      <Line className="gap-xs pl-md pr-sm pt-sm pb-xs">
+        <Fill>
+          <Text variant="body" tone="strong" className="font-semibold">
+            Notifications
           </Text>
-        </Stack>
-      </Stack>
+        </Fill>
+        {!empty && (
+          <IconButton
+            icon={markAllReadIcon}
+            label="Mark all read"
+            onClick={() => {
+              markAllRead.mutate({});
+            }}
+          />
+        )}
+        {/* The whole collection as a DataView (Debug → Notifications). It
+            leaves through `onClose` — the same way an action does — which
+            closes the popover WITHOUT the bell's mark-all-read: that runs only
+            on the popover's own dismissal (`onOpenChange`), and the pane
+            offers its own "Mark all read". */}
+        <Text
+          as="button"
+          variant="caption"
+          className="rounded-control px-xs py-2xs text-muted-foreground hover:bg-hover-fill hover:text-foreground"
+          {...activationProps(
+            afterOpen(
+              inAppLink(notificationsRoute.link(debugApp, {})),
+              onClose,
+            ),
+          )}
+        >
+          View all
+        </Text>
+      </Line>
       {empty ? (
         <Text
           as="p"

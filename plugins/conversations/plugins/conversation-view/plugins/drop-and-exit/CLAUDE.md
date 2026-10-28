@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Exit-menu entry that marks the top task as dropped and closes the conversation. The one exit-drop policy every conversation-close path that can drop a task shares (dropTaskOnExit): the Drop & Close endpoint (its machine half) and the agent-driven exit_clean finalize.
+- Description: Exit-menu entry that marks the top task as dropped and closes the conversation; droppedNotification, the Conversation dropped notification every drop surface sends. The one exit-drop policy every conversation-close path that can drop a task shares (dropTaskOnExit): the Drop & Close endpoint (its machine half) and the agent-driven exit_clean finalize.
 - Web:
   - Contributes: `ExitMenu.Item` "drop-and-exit" → `DropAndExitItem`
   - Uses:
@@ -19,6 +19,7 @@
     - `primitives/live-state.useCombinedResources`
     - `shell/notifications.useToast`
     - `ui/icons.Icon`
+  - Exports (values): `droppedNotification`
 - Server:
   - Uses:
     - `tasks/attempt-work.getAttemptWork`

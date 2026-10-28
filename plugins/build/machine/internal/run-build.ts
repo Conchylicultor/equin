@@ -14,7 +14,6 @@ import {
   claimBuildRun,
   closeBuildRow,
   listUnfinished,
-  notifyBuildStarted,
   onBuildEnded,
   setPid,
 } from "./run-state";
@@ -121,7 +120,8 @@ export const buildJob = defineSupervisedJob({
       ) {
         return null;
       }
-      if (input.trigger === "auto") await notifyBuildStarted(buildId, targets);
+      // No "started" bell: only the result is sent (equin was updated / Build
+      // failed) — research/2026-10-25-global-notifications-in-user-terms.md.
       return buildId;
     },
   },

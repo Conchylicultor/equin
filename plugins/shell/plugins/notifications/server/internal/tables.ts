@@ -20,6 +20,7 @@ const notificationsEntity = defineEntity(
       read: { default: false },
       muted: { default: false },
       audience: { default: "user" },
+      category: { default: "other" },
       count: { default: 1 },
       lastSeenAt: { default: defaultNow() },
       createdAt: { default: defaultNow() },

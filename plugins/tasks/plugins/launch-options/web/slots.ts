@@ -145,8 +145,19 @@ export interface TaskLaunchOption<V> {
    * sync with what the plugin actually implements.
    */
   useTaskBinding?: Hook<(taskId: string) => LaunchBinding<V>>;
-  /** Short value description folded into the post-submit toast. */
+  /**
+   * Short value description, folded into the post-submit notification's
+   * developer detail.
+   */
   summarize?: (value: V) => string | null;
+  /**
+   * Whether this value has the task start a conversation of its own — now, or
+   * once the tasks it runs after are done. A task that starts one is announced
+   * by that conversation ("Conversation started"), so the draft form's own
+   * "Task added" is not sent for it. The host reads no option by name; the
+   * option says what its value does.
+   */
+  startsConversation?: (value: V) => boolean;
 }
 
 /**
@@ -165,6 +176,7 @@ export interface LaunchOptionInfo {
   id: string;
   def: LaunchOptionDef<unknown>;
   summarize?: (value: unknown) => string | null;
+  startsConversation?: (value: unknown) => boolean;
 }
 
 const OptionSlot = defineRenderSlot<TaskLaunchOption<unknown>>({

@@ -12,10 +12,16 @@ import { notificationsPane } from "./panes";
 import { IdKinds } from "@plugins/ids/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { notificationIdKind } from "../core";
+import { Notifications, openAction, reloadAction } from "./internal/actions";
 
 export { useToast, type Toast, type ToastArgs } from "./internal/toast";
 export { useNotificationArrivals } from "./internal/use-notification-arrivals";
 export type { Notification } from "../shared/resources";
+export {
+  Notifications,
+  type NotificationActionControlProps,
+  type NotificationActionKind,
+} from "./internal/actions";
 
 export default {
   description:
@@ -39,9 +45,13 @@ export default {
       id: "dismiss",
       component: DismissNotificationAction,
     }),
+    // The action kinds this plugin owns; others contribute their own.
+    Notifications.Action(openAction),
+    Notifications.Action(reloadAction),
   ],
   slots: {
     notifications: notificationsPane,
     notificationActions: NotificationItemActions,
+    action: Notifications.Action,
   },
 } satisfies PluginDefinition;

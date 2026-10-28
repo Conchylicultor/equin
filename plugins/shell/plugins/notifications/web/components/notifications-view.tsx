@@ -35,7 +35,8 @@ const NOTIFICATIONS_VIEW = defineDataView("shell.notifications");
 // collection the bell reads (its `dismissed = false` base membership is the
 // server's). Search matches the title; `type` / `variant` are facets — their
 // options are read live as groupings of the whole collection, so a type seen
-// only in old rows is still offered.
+// only in old rows is still offered. `category` is NOT a facet: it is a closed
+// list whose options (with their labels) the entity field declares.
 export const notificationsSource = liveDataSource(notifications, {
   searchable: ["title"],
   facets: ["type", "variant"],

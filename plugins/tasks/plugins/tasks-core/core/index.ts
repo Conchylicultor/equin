@@ -33,6 +33,7 @@ export {
   ConversationWorkingOnSchema,
 } from "./conversation-status";
 export { isAdoptedConversation } from "./adopted";
+export { conversationName } from "./conversation-name";
 export type {
   ConversationStatus,
   ConversationWorkingOn,

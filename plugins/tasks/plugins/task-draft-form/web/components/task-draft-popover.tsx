@@ -8,7 +8,10 @@ import {
   useRef,
   useState,
 } from "react";
-import { useToast } from "@plugins/shell/plugins/notifications/web";
+import {
+  useToast,
+  type ToastArgs,
+} from "@plugins/shell/plugins/notifications/web";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { ResourceView } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
@@ -305,29 +308,16 @@ function TaskDraftFormContent({
         options: launchOptions,
       });
       if (!outcome.ok) {
-        toast({
-          type: "task",
-          title: "Task submit failed",
-          description: outcome.errorMessage ?? "Submit failed",
-          variant: "error",
-        });
+        toast(submitFailed(outcome.errorMessage ?? "Submit failed"));
         return;
       }
-      toast({
-        type: "task",
-        ...describeOutcome(outcome, cards, launchOptions),
-        variant: "success",
-      });
+      const notice = describeOutcome(outcome, cards, launchOptions);
+      if (notice !== null) toast(notice);
       onSuccess?.(outcome.taskIds ?? []);
       resetForm();
       closeAfterSubmit();
     } catch (err) {
-      toast({
-        type: "task",
-        title: "Task submit failed",
-        description: (err as Error).message,
-        variant: "error",
-      });
+      toast(submitFailed((err as Error).message));
     } finally {
       setSubmitting(false);
     }
@@ -358,6 +348,18 @@ function TaskDraftFormContent({
       hintAnchors={hintAnchors}
     />
   );
+}
+
+/** A submit the server refused: the reason is the developer detail. */
+function submitFailed(detail: string): ToastArgs {
+  return {
+    type: "task",
+    category: "conversations",
+    title: "Couldn't add task",
+    description: "",
+    detail,
+    variant: "error",
+  };
 }
 
 export function TaskDraftPopover({

@@ -20,6 +20,7 @@ export function useTaskPrepromptBinding(
         (err: unknown) => {
           toast({
             type: "task",
+            category: "other",
             title: "Failed to set preprompt",
             description: err instanceof Error ? err.message : String(err),
             variant: "error",

@@ -9,6 +9,10 @@ import { dropTaskOnExit } from "@plugins/conversations/plugins/conversation-view
 import { recordNotification } from "@plugins/shell/plugins/notifications/server";
 import { conversationRoute } from "@plugins/conversations/core";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
+import { conversationName } from "@plugins/tasks/plugins/tasks-core/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const finishedIcon = symbol("check-circle");
 
 const FINALIZE_TIMEOUT_MS = 60_000;
 
@@ -55,16 +59,35 @@ export const exitCleanFinalizeJob = defineJob({
       // close notification exactly once (the client used to fire this toast
       // from a per-tab effect, duplicating the row per open tab). The copy
       // reflects whether work actually landed.
+      //
+      // TODO(§4, research/2026-10-25-global-notifications-in-user-terms.md):
+      // both are sent only while the user is not watching the conversation
+      // (`unlessWatching`). Until the watching presence lands they are sent
+      // always.
       await recordNotification({
         type: "conversation",
-        title: dropped ? "Closed without pushing" : "Pushed and closed",
-        description: dropped
-          ? "No changes were pushed — task marked as dropped"
-          : "Branch pushed and conversation closed",
-        variant: dropped ? "info" : "success",
-        linkTo: conversationRoute.link(agentManagerApp, {
-          convId: conversationId,
-        }),
+        category: "conversations",
+        icon: finishedIcon,
+        title: dropped ? "Finished without changes" : "Conversation finished",
+        description: "",
+        subjectId: conversationId,
+        subjectName: conversation ? conversationName(conversation) : null,
+        detail: dropped
+          ? "exit_clean with no work landed — task marked dropped"
+          : "exit_clean — branch pushed and conversation closed",
+        variant: "info",
+        // Nothing to open once nothing landed: the conversation is closed and
+        // its task dropped.
+        action: dropped
+          ? null
+          : {
+              kind: "open",
+              payload: {
+                to: conversationRoute.link(agentManagerApp, {
+                  convId: conversationId,
+                }),
+              },
+            },
         dedupeKey: `push-and-exit-clean:${conversationId}`,
       });
     });

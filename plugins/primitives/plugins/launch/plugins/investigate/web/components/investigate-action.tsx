@@ -13,8 +13,13 @@ import { Icon } from "@plugins/ui/plugins/icons/web";
 
 const investigateIcon = symbol("bug-report");
 
-/** Where the action sits: an icon in a row's action cluster, or a labelled button in a pane. */
-export type InvestigatePresentation = "row-action" | "button";
+/**
+ * Where the action sits: an icon in a row's action cluster, a labelled button
+ * in a pane, or a notification's one action (a quiet secondary button, label
+ * only — the notification's own `label`, "Fix").
+ */
+export type InvestigatePresentation =
+  "row-action" | "button" | { notification: string };
 
 interface InvestigateCommon {
   /** What failed, in the copy: "this failed {noun}" ("build", "backup.run job"). */
@@ -77,7 +82,7 @@ function SubjectInvestigate(props: InvestigateSubjectProps) {
       <ResourceErrorInline
         error={read.error}
         refetch={read.refetch}
-        variant={props.presentation === "row-action" ? "icon" : "inline"}
+        variant={props.presentation === "button" ? "inline" : "icon"}
         subject="the investigation task"
       />
     );
@@ -131,7 +136,7 @@ function Launch({
   return (
     <LaunchAgentPopover
       draftKey={draftKey}
-      align={presentation === "row-action" ? "end" : "start"}
+      align={presentation === "button" ? "start" : "end"}
       title={`Investigate this failed ${noun}`}
       description={description}
       placeholder={placeholder}
@@ -153,6 +158,13 @@ function trigger(
   presentation: InvestigatePresentation,
   disabled = false,
 ) {
+  if (typeof presentation === "object") {
+    return (
+      <Button variant="secondary" disabled={disabled}>
+        {presentation.notification}
+      </Button>
+    );
+  }
   if (presentation === "row-action") {
     return (
       <IconButton
@@ -182,6 +194,13 @@ function ViewTask({
 }: InvestigateCommon & { taskId: string }) {
   const appLinkProps = useAppLinkProps();
   const link = appLinkProps(taskDetailRoute.link(agentManagerApp, { taskId }));
+  if (typeof presentation === "object") {
+    return (
+      <Button {...link} variant="secondary">
+        View task
+      </Button>
+    );
+  }
   if (presentation === "row-action") {
     return (
       <IconButton

@@ -1,6 +1,9 @@
 import { DropdownMenuItem } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
-import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
+import {
+  conversationName,
+  type Conversation as ConversationRecord,
+} from "@plugins/tasks/plugins/tasks-core/core";
 import { useLiveConversation } from "@plugins/conversations/web";
 import { useToast } from "@plugins/shell/plugins/notifications/web";
 import { exitConversation } from "../../core";
@@ -16,20 +19,17 @@ export function ExitItem({
 }) {
   const live = useLiveConversation(conversation);
   const toast = useToast();
+  // No success notification: the user saw it close.
   const close = useEndpointMutation(exitConversation, {
-    onSuccess: () =>
-      toast({
-        type: "conversation",
-        title: "Conversation closed",
-        description: "Closed without changing task state",
-        variant: "success",
-        audience: "developer",
-      }),
     onError: (err) =>
       toast({
         type: "conversation",
+        category: "conversations",
         title: "Close failed",
-        description: err.message,
+        description: "",
+        subjectId: conversation.id,
+        subjectName: conversationName(conversation),
+        detail: err.message,
         variant: "error",
       }),
   });

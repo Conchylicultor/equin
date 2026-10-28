@@ -2,7 +2,10 @@ import { Icon } from "@plugins/ui/plugins/icons/web";
 import { DropdownMenuItem } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useMemo } from "react";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
-import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
+import {
+  conversationName,
+  type Conversation as ConversationRecord,
+} from "@plugins/tasks/plugins/tasks-core/core";
 import {
   useLiveConversation,
   useHasActiveSiblings,
@@ -21,6 +24,7 @@ import {
 } from "@plugins/tasks/plugins/attempt-work/core";
 import { dropAndExit, dropsTask } from "../../core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
+import { droppedNotification } from "../internal/dropped-notification";
 
 const checkCircleIcon = symbol("check-circle");
 const deleteForeverIcon = symbol("delete-forever");
@@ -88,27 +92,24 @@ function DropAndExitEntry({
   const landed = standing !== null && !dropsTask(standing, "unless-landed");
 
   const toast = useToast();
+  const subject = {
+    id: conversation.id,
+    name: conversationName(conversation),
+  };
   const close = useEndpointMutation(dropAndExit, {
+    // A close that dropped nothing says nothing: the user saw it happen.
     onSuccess: (data) => {
-      const title = data.dropped ? "Task dropped" : "Conversation closed";
-      const description = data.dropped
-        ? "Task marked dropped and conversation closed"
-        : "Conversation closed without changing task state";
-      toast({
-        type: "conversation",
-        title,
-        description,
-        variant: "success",
-        // Dropping the task is news to everyone; a plain close only to a
-        // developer.
-        audience: data.dropped ? undefined : "developer",
-      });
+      if (data.dropped) toast(droppedNotification(subject));
     },
     onError: (err) =>
       toast({
         type: "conversation",
+        category: "conversations",
         title: `${landed ? "Complete" : "Drop"} & Close failed`,
-        description: err.message,
+        description: "",
+        subjectId: subject.id,
+        subjectName: subject.name,
+        detail: err.message,
         variant: "error",
       }),
   });

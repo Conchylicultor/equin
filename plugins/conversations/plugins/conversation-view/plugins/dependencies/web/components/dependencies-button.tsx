@@ -15,6 +15,7 @@ import {
   isSettled,
   taskRows,
   TaskGraph,
+  conversationName,
   type Conversation as ConversationRecord,
   type TaskListItem,
 } from "@plugins/tasks/plugins/tasks-core/core";
@@ -68,6 +69,7 @@ export function DependenciesButton(): ReactElement | null {
     );
   return (
     <DependenciesButtonInner
+      conversation={conversation}
       taskId={conversation.taskId}
       allTasks={combined.data.tasks}
       active={combined.data.active}
@@ -76,10 +78,12 @@ export function DependenciesButton(): ReactElement | null {
 }
 
 function DependenciesButtonInner({
+  conversation,
   taskId,
   allTasks,
   active,
 }: {
+  conversation: ConversationRecord;
   taskId: string;
   allTasks: TaskListItem[];
   active: ConversationRecord[];
@@ -139,18 +143,25 @@ function DependenciesButtonInner({
         if (!(err instanceof EndpointError)) throw err;
         toast({
           type: "conversation",
-          title: "Failed to update dependencies",
-          description:
-            typeof err.body === "string"
-              ? err.body
-              : `Server responded ${err.status}`,
+          category: "conversations",
+          // 409 is the server's "this link would close a cycle" refusal.
+          title:
+            err.status === 409
+              ? "Circular dependency not added"
+              : "Couldn't update dependencies",
+          description: "",
+          subjectId: conversation.id,
+          subjectName: conversationName(conversation),
+          detail: `HTTP ${err.status}: ${
+            typeof err.body === "string" ? err.body : err.message
+          }`,
           variant: "error",
         });
       } finally {
         setBusy(null);
       }
     },
-    [toast],
+    [toast, conversation],
   );
 
   const up = after.filter((t) => !isSettled(t.status)).length;

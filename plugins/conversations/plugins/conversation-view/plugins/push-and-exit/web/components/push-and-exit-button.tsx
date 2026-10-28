@@ -27,7 +27,6 @@ import {
   useFetchEndpoint,
 } from "@plugins/infra/plugins/endpoints/web";
 import type { MachineResult } from "@plugins/infra/plugins/endpoints/core";
-import type { Audience } from "@plugins/audience/core";
 import {
   conversationPromptDraft,
   useSendConversationTurn,
@@ -38,10 +37,15 @@ import {
 import { useConfig } from "@plugins/config_v2/web";
 import { pushAndExitConfig } from "../../shared";
 import { pushAndExitDelivery } from "../internal/delivery";
-import { resumeConversationEndpoint } from "@plugins/conversations/plugins/conversation-view/plugins/resume/core";
+import { useResumeConversation } from "@plugins/conversations/plugins/conversation-view/plugins/resume/web";
 import { exitConversation } from "@plugins/conversations/plugins/conversation-view/plugins/exit/core";
 import { dropAndExit } from "@plugins/conversations/plugins/conversation-view/plugins/drop-and-exit/core";
-import { useToast } from "@plugins/shell/plugins/notifications/web";
+import { droppedNotification } from "@plugins/conversations/plugins/conversation-view/plugins/drop-and-exit/web";
+import {
+  useToast,
+  type ToastArgs,
+} from "@plugins/shell/plugins/notifications/web";
+import { conversationName } from "@plugins/tasks/plugins/tasks-core/core";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import { combineResources } from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
@@ -68,7 +72,9 @@ const stopIcon = symbol("stop");
 
 // One action per mode: a `run` thunk owning its typed call (so each mode's
 // differing param/body/response types stay encapsulated in its own closure — no
-// `any`), plus the verb for the error toast and an optional success toast. A
+// `any`), plus the verb for the error toast; a run may answer the notification
+// its success is worth (a drop), and says nothing otherwise — the user saw it
+// happen. A
 // single runner (`onClick`) drives all of them, so every action shares the same
 // in-flight guard, double-click protection, and error handling — no per-mode
 // try/toast duplication.
@@ -81,10 +87,7 @@ const stopIcon = symbol("stop");
 // bypassing the optimistic path in the first place.
 type ActionSpec = {
   verb: string;
-  successToast?: string;
-  /** Who the success toast is for (default everyone). */
-  successAudience?: Audience;
-  run: () => void | Promise<void>;
+  run: () => void | Promise<ToastArgs | void>;
 };
 
 // Every action here drives the agent, which needs the computer
@@ -191,6 +194,7 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
   const machine = useTurnSendAvailability();
   const fetchEndpoint = useFetchEndpoint();
   const toast = useToast();
+  const resume = useResumeConversation();
   const awaitingStart = useTurnAwaitingStart(convId);
 
   // Restore / Send / Stop work in every workspace; the edited-files read feeds
@@ -299,17 +303,15 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
         provisional ||
         (sendsATurn && sendInFlight));
 
+  const subject = { id: convId, name: conversationName(conversation) };
+
   function specFor(m: Mode): ActionSpec | null {
     switch (m) {
       case "restore":
         return {
           verb: "Resume",
-          successToast: "Resuming conversation…",
-          run: async () => {
-            machineValue(
-              await fetchEndpoint(resumeConversationEndpoint, { id: convId }),
-            );
-          },
+          // Its failure is the resume plugin's own notification (Retry).
+          run: () => resume(subject),
         };
       case "send":
       case "queue": {
@@ -365,8 +367,6 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
       case "exit-sibling":
         return {
           verb: "Close",
-          successToast: "Conversation closed",
-          successAudience: "developer",
           run: async () => {
             machineValue(await fetchEndpoint(exitConversation, { id: convId }));
           },
@@ -374,9 +374,11 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
       case "drop-and-exit":
         return {
           verb: "Drop & Close",
-          successToast: "Task dropped and conversation closed",
           run: async () => {
-            machineValue(await fetchEndpoint(dropAndExit, { id: convId }));
+            const { dropped } = machineValue(
+              await fetchEndpoint(dropAndExit, { id: convId }),
+            );
+            return dropped ? droppedNotification(subject) : undefined;
           },
         };
     }
@@ -388,21 +390,17 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
     if (!spec) return;
     setBusy(true);
     try {
-      await spec.run();
-      if (spec.successToast) {
-        toast({
-          type: "conversation",
-          title: spec.verb,
-          description: spec.successToast,
-          variant: "success",
-          audience: spec.successAudience,
-        });
-      }
+      const notice = await spec.run();
+      if (notice) toast(notice);
     } catch (err) {
       toast({
         type: "conversation",
+        category: "conversations",
         title: `${spec.verb} failed`,
-        description: endpointErrorText(err),
+        description: "",
+        subjectId: subject.id,
+        subjectName: subject.name,
+        detail: endpointErrorText(err),
         variant: "error",
       });
     } finally {

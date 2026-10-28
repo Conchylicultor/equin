@@ -247,6 +247,7 @@ function AccountControls({
       if (result.ok) {
         toast({
           type: "auth",
+          category: "other",
           title: "Connected",
           description: `${provider.name}${
             result.identity?.email ? ` (${result.identity.email})` : ""
@@ -256,6 +257,7 @@ function AccountControls({
       } else if (result.message && result.message !== "cancelled") {
         toast({
           type: "auth",
+          category: "other",
           title: `Failed to connect ${provider.name}`,
           description: result.message,
           variant: "error",
@@ -264,6 +266,7 @@ function AccountControls({
     } catch (err) {
       toast({
         type: "auth",
+        category: "other",
         title: `Failed to connect ${provider.name}`,
         description: err instanceof Error ? err.message : String(err),
         variant: "error",
@@ -279,6 +282,7 @@ function AccountControls({
       await disconnect(fetchEndpoint, providerId);
       toast({
         type: "auth",
+        category: "other",
         title: "Disconnected",
         description: provider.name,
         variant: "success",
@@ -286,6 +290,7 @@ function AccountControls({
     } catch (err) {
       toast({
         type: "auth",
+        category: "other",
         title: "Disconnect failed",
         description: err instanceof Error ? err.message : String(err),
         variant: "error",

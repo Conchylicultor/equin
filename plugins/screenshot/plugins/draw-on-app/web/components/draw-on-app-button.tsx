@@ -49,6 +49,7 @@ export function DrawOnAppButton() {
       if (!blob) {
         toast({
           type: "screenshot",
+          category: "other",
           title: "Capture failed",
           description: "Capture returned no image",
           variant: "error",
@@ -67,6 +68,7 @@ export function DrawOnAppButton() {
     } catch (err) {
       toast({
         type: "screenshot",
+        category: "other",
         title: "Capture failed",
         description: (err as Error).message,
         variant: "error",

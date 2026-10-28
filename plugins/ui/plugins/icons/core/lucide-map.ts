@@ -34,6 +34,7 @@ export const LUCIDE_MAP = {
   "add-link": "link",
   "add-location-alt": "map-pin-plus",
   "add-reaction": MATERIAL_ONLY,
+  "add-task": "list-plus",
   adjust: "circle-dot",
   // The element picker's glyph everywhere: Lucide's mouse-pointer-click reads
   // as "click", not as "pick an element on screen", so it keeps ads_click.
@@ -129,6 +130,7 @@ export const LUCIDE_MAP = {
   difference: "diff",
   "do-not-disturb-on": "circle-minus",
   "dock-to-left": "panel-left",
+  "done-all": "check-check",
   "donut-large": "chart-pie",
   download: "download",
   downloading: "arrow-down-to-line",
@@ -236,6 +238,7 @@ export const LUCIDE_MAP = {
   "location-disabled": "locate-off",
   "location-on": "map-pin",
   lock: "lock",
+  "lock-open": "lock-open",
   logout: "log-out",
   "low-priority": MATERIAL_ONLY,
   lyrics: "mic-vocal",
@@ -366,6 +369,7 @@ export const LUCIDE_MAP = {
   undo: "undo-2",
   "unfold-less": "chevrons-down-up",
   "unfold-more": "chevrons-up-down",
+  update: "history",
   upgrade: "circle-arrow-up",
   upload: "upload",
   "upload-file": "file-up",

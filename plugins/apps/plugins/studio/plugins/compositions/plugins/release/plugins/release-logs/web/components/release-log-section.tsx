@@ -77,6 +77,7 @@ function LiveLogs(): ReactElement {
       onError={(error) =>
         toast({
           type: "release",
+          category: "other",
           title: "Release log error",
           description: error,
           variant: "error",

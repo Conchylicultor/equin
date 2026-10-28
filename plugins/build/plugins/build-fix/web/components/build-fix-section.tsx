@@ -24,6 +24,12 @@ import {
 } from "@plugins/build/plugins/build-logs/core";
 import { BUILD_RUN_KIND } from "@plugins/build/plugins/run-ledger/core";
 import { runSubject } from "@plugins/runs/core";
+import { z } from "zod";
+import type {
+  NotificationActionControlProps,
+  NotificationActionKind,
+} from "@plugins/shell/plugins/notifications/web";
+import type { InvestigatePresentation } from "@plugins/primitives/plugins/launch/plugins/investigate/web";
 
 /**
  * The run, by id: loading (or failed), then found or determinately absent (`found: false`
@@ -71,8 +77,41 @@ export function BuildFixAction({ runId }: { runId: string }) {
   if (run.status === "loading" || run.status === "error" || !run.found) {
     return null;
   }
-  return <BuildFixButton runId={runId} run={run.row} />;
+  return <BuildFixButton runId={runId} run={run.row} presentation="button" />;
 }
+
+const FixPayloadSchema = z.object({ runId: z.string() });
+
+/**
+ * A "Build failed" notification's Fix: the same investigate launch as the
+ * run's own Fix section, drawn as the notification's one action. Nothing
+ * until the run is known (a notification outliving its run's row offers no
+ * Fix: there is nothing left to brief an agent with).
+ */
+function BuildFixNotificationControl({
+  payload,
+  label,
+}: NotificationActionControlProps) {
+  const { runId } = FixPayloadSchema.parse(payload);
+  const run = useBuildRun(runId);
+  if (run.status === "loading" || run.status === "error" || !run.found) {
+    return null;
+  }
+  return (
+    <BuildFixButton
+      runId={runId}
+      run={run.row}
+      presentation={{ notification: label }}
+    />
+  );
+}
+
+/** The `fix-build` notification action kind (`payload: { runId }`). */
+export const fixBuildAction: NotificationActionKind = {
+  kind: "fix-build",
+  label: "Fix",
+  Control: BuildFixNotificationControl,
+};
 
 function formatBuildInfo(run: BuildRun): string {
   const lines: string[] = [];
@@ -162,7 +201,15 @@ function buildOutputOf(
   }
 }
 
-function BuildFixButton({ runId, run }: { runId: string; run: BuildRun }) {
+function BuildFixButton({
+  runId,
+  run,
+  presentation,
+}: {
+  runId: string;
+  run: BuildRun;
+  presentation: InvestigatePresentation;
+}) {
   const meta = useLive(buildRunLogs.meta, { id: runId });
   const tail = useLive(
     buildRunLogs,
@@ -174,7 +221,7 @@ function BuildFixButton({ runId, run }: { runId: string; run: BuildRun }) {
   // two reach one task.
   return (
     <InvestigateAction
-      presentation="button"
+      presentation={presentation}
       noun="build"
       subject={runSubject({ kind: BUILD_RUN_KIND, id: runId })}
       categoryId={BUILD_CATEGORY_ID}

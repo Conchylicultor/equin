@@ -8,6 +8,7 @@
 - Web:
   - Contributes: `Core.Root` → `MutationErrorWatcher`
   - Uses:
+    - `infra/endpoints.EndpointError`
     - `infra/endpoints.getEndpointErrorMessage`
     - `shell/notifications.useToast`
 

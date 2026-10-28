@@ -104,6 +104,7 @@ function BuildLogView({ building }: { building: boolean }) {
       onError={(error) =>
         toast({
           type: "build",
+          category: "updates",
           title: "Build log error",
           description: error,
           variant: "error",
@@ -147,6 +148,7 @@ function BuildPopoverContentInner({
         // why rather than claiming a build started.
         toast({
           type: "build",
+          category: "updates",
           title: "Build failed to start",
           description: result.message,
           variant: "error",
@@ -155,6 +157,7 @@ function BuildPopoverContentInner({
       }
       toast({
         type: "build",
+        category: "updates",
         title: "Build started",
         description: "Running ./equin build",
         variant: "info",
@@ -163,6 +166,7 @@ function BuildPopoverContentInner({
       if (err instanceof EndpointError) {
         toast({
           type: "build",
+          category: "updates",
           title: "Build failed to start",
           description: err.message,
           variant: "error",
@@ -170,6 +174,7 @@ function BuildPopoverContentInner({
       } else {
         toast({
           type: "build",
+          category: "updates",
           title: "Build failed to start",
           description: "Server unreachable",
           variant: "error",

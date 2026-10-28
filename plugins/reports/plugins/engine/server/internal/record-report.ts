@@ -25,6 +25,10 @@ import {
   reportRecordedSignal,
 } from "@plugins/reports/server";
 import { createFanOutGate, type StormSummary } from "./fan-out";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+// An informational report's glyph; an error / warning draws its variant's.
+const infoReportIcon = symbol("info");
 import {
   reportDetailRoute,
   reportIdKind,
@@ -399,6 +403,8 @@ export async function recordReport(
     runWithoutProfiling(() =>
       recordNotification({
         type: "report",
+        category: "reports",
+        icon: spec.meta.variant === "info" ? infoReportIcon : null,
         title: staleOrigin ? `${spec.meta.notif} (stale tab)` : spec.meta.notif,
         description: desc.length > 140 ? `${desc.slice(0, 137)}...` : desc,
         variant: spec.meta.variant,

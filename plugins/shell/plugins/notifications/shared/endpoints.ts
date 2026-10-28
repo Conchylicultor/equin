@@ -2,7 +2,12 @@ import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { AUDIENCES } from "@plugins/audience/core";
 import { NotificationVariantSchema } from "./schema";
-import { notificationIdKind } from "../core";
+import {
+  NOTIFICATION_CATEGORIES,
+  NotificationActionSchema,
+  NotificationIconSchema,
+  notificationIdKind,
+} from "../core";
 
 export const createNotification = defineEndpoint({
   route: "POST /api/notifications",
@@ -13,6 +18,12 @@ export const createNotification = defineEndpoint({
     description: z.string(),
     variant: NotificationVariantSchema,
     linkTo: z.string().nullable().optional(),
+    category: z.enum(NOTIFICATION_CATEGORIES),
+    subjectId: z.string().nullable().optional(),
+    subjectName: z.string().nullable().optional(),
+    detail: z.string().nullable().optional(),
+    action: NotificationActionSchema.nullable().optional(),
+    icon: NotificationIconSchema.nullable().optional(),
     metadata: z.record(z.unknown()).nullable().optional(),
     dedupeKey: z.string().nullable().optional(),
     audience: z.enum(AUDIENCES).optional(),

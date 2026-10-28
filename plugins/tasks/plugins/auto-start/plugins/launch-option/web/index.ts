@@ -37,6 +37,8 @@ export default {
       },
       useTaskBinding: useTaskAutoStartBinding,
       summarize: (model) => (model ? choiceLabel(model) : null),
+      // A model chosen = an agent launches on it (now or once unblocked).
+      startsConversation: (model) => model !== null,
     }),
   ],
 } satisfies PluginDefinition;

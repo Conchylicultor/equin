@@ -8,7 +8,13 @@ import {
   markConversationClosed,
   setConversationHibernated,
 } from "@plugins/tasks/plugins/tasks-core/server";
-import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
+import {
+  conversationName,
+  type Conversation,
+} from "@plugins/tasks/plugins/tasks-core/core";
+import { recordNotification } from "@plugins/shell/plugins/notifications/server";
+import { conversationRoute } from "@plugins/conversations/core";
+import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { recordReport } from "@plugins/reports/plugins/engine/server";
 import { spawnFailures } from "@plugins/conversations/plugins/spawn-failure/server";
 import { describeSpawnFailure } from "@plugins/conversations/plugins/spawn-failure/core";
@@ -297,6 +303,23 @@ async function apply(row: Conversation, plan: UpdatePlan): Promise<void> {
           },
         }).catch((e) => {
           console.error("[conversations.status] recordReport failed", e);
+        });
+        // The user's half: the launch they asked for never came up. Sent
+        // here — the spawn's final failure, once every retry has given up —
+        // never per attempt.
+        await recordNotification({
+          type: "conversation",
+          category: "conversations",
+          title: "Couldn't start conversation",
+          description: "",
+          subjectId: id,
+          subjectName: conversationName(row),
+          detail: failure
+            ? describeSpawnFailure(failure)
+            : `stuck starting for ${stuckFor} with no session`,
+          variant: "error",
+          linkTo: conversationRoute.link(agentManagerApp, { convId: id }),
+          dedupeKey: `conversation-start-failed:${id}`,
         });
       }
       await markConversationGone(id);

@@ -1,21 +1,41 @@
 import { useCallback } from "react";
 import type { Audience } from "@plugins/audience/core";
-import { showToast } from "@plugins/shell/plugins/toast/web";
 import {
   useFetchEndpoint,
   useMachineAvailability,
 } from "@plugins/infra/plugins/endpoints/web";
 import { createNotification } from "../../shared/endpoints";
 import type { NotificationVariant } from "../../shared/schema";
-import { notificationIdKind } from "../../core";
+import {
+  notificationIdKind,
+  type NotificationAction,
+  type NotificationCategory,
+} from "../../core";
+import { getTabId } from "@plugins/primitives/plugins/scope/plugins/tab-id/web";
+import type { SymbolRef } from "@plugins/ui/plugins/icons/core";
+import { toastNotification } from "../components/notification-view";
 
 export interface ToastArgs {
   type: string;
-  /** Headline: states *what happened* (e.g. "Task created"). Always required. */
+  /** Headline: the event, sentence case ("Conversation dropped"). */
   title: string;
-  /** Detail: the specific instance (e.g. "Fix login bug · sonnet"). Always required. */
+  /**
+   * Line 2 when there is no subject — user-safe words only (internals go to
+   * `detail`). `""` when the subject says it all.
+   */
   description: string;
   variant?: NotificationVariant;
+  /** What it is about, in the user's words — the bell's chips. Required. */
+  category: NotificationCategory;
+  /** What it is about (a `conv-…` / `task-…` id) and its name as shown now. */
+  subjectId?: string;
+  subjectName?: string;
+  /** Developer-only internals (HTTP status, raw error). */
+  detail?: string;
+  /** The one action (`Notifications.Action` kind + payload). */
+  action?: NotificationAction;
+  /** The event's own glyph; without one, the variant's or the category's. */
+  icon?: SymbolRef;
   linkTo?: string;
   metadata?: Record<string, unknown>;
   dedupeKey?: string;
@@ -47,12 +67,26 @@ export function useToast(): Toast {
   return useCallback(
     (args: ToastArgs) => {
       const variant = args.variant ?? "info";
+      // Which tab raised it: the view's meta line reads "this tab" / "another
+      // tab" off it.
+      const metadata = { ...args.metadata, clientId: getTabId() };
 
-      showToast({
+      // The same view the bell's row draws, from the same fields.
+      toastNotification({
+        type: args.type,
         title: args.title,
         description: args.description,
         variant,
-        audience: args.audience,
+        category: args.category,
+        audience: args.audience ?? "user",
+        subjectId: args.subjectId ?? null,
+        subjectName: args.subjectName ?? null,
+        detail: args.detail ?? null,
+        action: args.action ?? null,
+        icon: args.icon ?? null,
+        linkTo: args.linkTo ?? null,
+        metadata,
+        count: 1,
       });
       if (!persist) return;
 
@@ -71,7 +105,13 @@ export function useToast(): Toast {
             description: args.description,
             variant,
             linkTo: args.linkTo ?? null,
-            metadata: args.metadata ?? null,
+            category: args.category,
+            subjectId: args.subjectId ?? null,
+            subjectName: args.subjectName ?? null,
+            detail: args.detail ?? null,
+            action: args.action ?? null,
+            icon: args.icon ?? null,
+            metadata,
             dedupeKey: args.dedupeKey ?? null,
             audience: args.audience,
           },

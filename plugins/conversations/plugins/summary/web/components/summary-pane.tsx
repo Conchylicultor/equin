@@ -59,6 +59,7 @@ function SummaryPaneInner({
     onError: (err) =>
       toast({
         type: "summary",
+        category: "other",
         title: "Summarise failed",
         description: getEndpointErrorMessage(err),
         variant: "error",
@@ -84,6 +85,7 @@ function SummaryPaneInner({
       // reasoning even though there is no longer a directive to carry it.
       toast({
         type: "summary",
+        category: "other",
         title: "Summary ready",
         description: "A new conversation summary is available",
         variant: "success",
@@ -100,6 +102,7 @@ function SummaryPaneInner({
       setPendingSince(null);
       toast({
         type: "summary",
+        category: "other",
         title: "Summarisation timed out",
         description: "No summary returned in time",
         variant: "error",
@@ -110,6 +113,7 @@ function SummaryPaneInner({
       setPendingSince(null);
       toast({
         type: "summary",
+        category: "other",
         title: "Summarisation timed out",
         description: "No summary returned in time",
         variant: "error",

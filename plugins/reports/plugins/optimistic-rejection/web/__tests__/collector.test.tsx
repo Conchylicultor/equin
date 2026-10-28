@@ -74,7 +74,9 @@ describe("OptimisticRejectionCollector", () => {
   it("titles an unlabelled surface generically", () => {
     render(<OptimisticRejectionCollector />);
     optimisticRejectionSink.emit({ ...body, label: null, opSummary: null });
-    expect(toastMock.mock.calls[0]![0].title).toBe("Couldn't save edit");
+    expect(toastMock.mock.calls[0]![0]).toMatchObject({
+      title: "Couldn't save edit",
+    });
     expect(reportMock.mock.calls[0]![0].message).toBe(
       "Write rejected with HTTP 400: page.blocks — destination is outside the page",
     );

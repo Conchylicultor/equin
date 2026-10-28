@@ -222,13 +222,25 @@ export async function updateTaskTitle(
   return !!updated;
 }
 
+/**
+ * The dependency edge refused because it would close a cycle (or point a task
+ * at itself). Its own type so an endpoint answers it as a conflict (409),
+ * which the browser names as "Circular dependency not added".
+ */
+export class DependencyCycleError extends Error {
+  constructor(message = "Cycle detected in dependencies") {
+    super(message);
+    this.name = "DependencyCycleError";
+  }
+}
+
 export async function addTaskDependency(
   taskId: string,
   dependsOnTaskId: string,
   exec: DbExecutor = db,
 ): Promise<void> {
   if (dependsOnTaskId === taskId)
-    throw new Error("A task cannot depend on itself");
+    throw new DependencyCycleError("A task cannot depend on itself");
   const [task] = await exec
     .select({ id: _tasks.id })
     .from(_tasks)
@@ -243,7 +255,7 @@ export async function addTaskDependency(
   if (!dep) throw new Error("Dependency task not found");
   // Read the cycle check on `exec` so it sees edges added earlier in the batch.
   if (await taskDependsOn(dependsOnTaskId, taskId, exec)) {
-    throw new Error("Cycle detected in dependencies");
+    throw new DependencyCycleError();
   }
   // THE ORDERING RULE: union at or before the edge write, NEVER after. A
   // committed union whose edge write is lost over-approximates membership —

@@ -52,6 +52,7 @@ export function GrantAccessButton(props: {
       if (result.ok) {
         toast({
           type: "auth",
+          category: "other",
           title: "Access granted",
           description: label,
           variant: "success",
@@ -59,6 +60,7 @@ export function GrantAccessButton(props: {
       } else if (result.message && result.message !== "cancelled") {
         toast({
           type: "auth",
+          category: "other",
           title: "Failed to grant access",
           description: result.message,
           variant: "error",
@@ -67,6 +69,7 @@ export function GrantAccessButton(props: {
     } catch (err) {
       toast({
         type: "auth",
+        category: "other",
         title: "Failed to grant access",
         description: err instanceof Error ? err.message : String(err),
         variant: "error",

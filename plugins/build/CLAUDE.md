@@ -400,7 +400,7 @@ fills to navy and oxblood — see `apps-core/chrome-theme`.
     - `isMainCompositionBuild`
 - Sub-plugins:
   - **`build-commits`** — Commits included since the previous build, shown in the build detail pane.
-  - **`build-fix`** — Launch-agent button in the build detail pane for failed builds.
+  - **`build-fix`** — Launch-agent button in the build detail pane for failed builds, and the same launch as a Build failed notification's Fix (the fix-build notification action).
   - **`build-info`** — Status, trigger, commit hash, and timing section in the build detail pane.
   - **`build-logs`** — Logs section in the build detail pane: the run's persisted steps and lines (build.run-logs, newest first, paged by viewport), else the live log channel.
   - **`build-profiling`** — Per-run build profiling Gantt section in the build detail pane.

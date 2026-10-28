@@ -1,6 +1,6 @@
 {
-  "id": "d3669c1b-4e81-4fe9-9422-951f400977e8",
-  "prevId": "1f1284dd-9acd-4904-8306-9321d36136bb",
+  "id": "3cc2f59b-547f-488d-9a43-971e3d0a385c",
+  "prevId": "d3669c1b-4e81-4fe9-9422-951f400977e8",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -11606,6 +11606,43 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
+        },
+        "subject_id": {
+          "name": "subject_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "subject_name": {
+          "name": "subject_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "detail": {
+          "name": "detail",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "icon": {
+          "name": "icon",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "action": {
+          "name": "action",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "category": {
+          "name": "category",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'other'"
         },
         "metadata": {
           "name": "metadata",

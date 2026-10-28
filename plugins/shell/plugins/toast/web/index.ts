@@ -6,6 +6,7 @@ export { showToast } from "./internal/show-toast";
 export { isInToast } from "./internal/is-in-toast";
 export { useSuppressToasts } from "./internal/suppress-toasts";
 export { type ToastArgs, type ToastVariant } from "../core";
+export type { CustomToastArgs } from "./internal/show-toast";
 
 export default {
   description:

@@ -1,12 +1,90 @@
 # notifications
 
+## One notification, two surfaces
+
+A notification is **icon · one-line headline · line 2 · at most one action**
+(`research/2026-10-25-global-notifications-in-user-terms.md`). Its fields
+(`core/entity.ts`):
+
+- `title` — the headline (the event, sentence case).
+- `subjectId` / `subjectName` — what it is about (a `conv-…` / `task-…` id) and
+  its name **as shown when sent** (a snapshot). Line 2.
+- `description` — line 2 only when there is no subject.
+- `detail` — developer-only internals (build id, exit code, HTTP status, raw
+  error), drawn only for a reader in Developer mode, beside the
+  `DeveloperMark`.
+- `action` — `{ kind, payload }`, resolved through the action registry below.
+- `category` — `conversations | updates | automations | reports | other`
+  (`NOTIFICATION_CATEGORIES`, a closed list in `core/`; default `other`). The
+  bell's chips.
+- `variant` — `error` ⇒ the toast stays until dismissed or acted on.
+- `icon` — the event's own glyph, the `SymbolRef` its producer wrote with
+  `symbol("…")` (so the icon manifest ships it); without one the view draws
+  the variant's (error / warning) else the category's. An error / warning is
+  tinted red / amber whichever glyph it draws.
+
+**What the view draws** (`NotificationView`): the glyph · the headline · line 2
+— the subject's name on a quiet chip (its tooltip the subject id's kind label,
+from the ids registry), else the description · a faint meta line, only when it
+has something: the recurrence `×N` (`99+` cap), the kind (`type`) on a
+developer row, and "this tab" / "another tab" for a failure a browser tab
+raised (`metadata.clientId`, stamped by `useToast`). A **developer row**
+(audience `developer`, e.g. reports) puts its description under the headline in
+line 2's font, wrapped to two lines. `detail` (developer readers only) is in the
+same caption font — nothing in a notification is monospace. The glyph, the
+unread dot and the developer mark are inline `align-middle` boxes in the
+headline's own line box, so they centre on its x-height (baseline + ½ex), not on
+the line box.
+
+**Toast and bell are mirrors**: both draw `NotificationView`
+(`web/components/notification-view.tsx`). An arriving notification
+(`useNotificationArrivals`, in the bell) and a toast this page raises itself
+(`useToast`, which requires a `category`) are shown through
+`toastNotification` — `showToast({ render, duration })`, the toast plugin's
+custom-content path: the view on the overlay surface, 4s, `Infinity` for an
+error. The popover's row is the same view with its time and an unread dot.
+`NotificationBody` (the old type / tab / count body) is Debug → Notifications'
+row only.
+
+**Actions are a registry**: `Notifications.Action({ kind, label, useLink |
+useRun | Control })` (web slot). The view resolves `action.kind` through it and
+**throws on an unknown kind**. A kind is one of three shapes — two hooks called
+once per drawn notification, or a component: `useLink` (the action GOES somewhere — it builds a
+`LinkTarget`; in the bell the whole row opens it too — a real `<button>`
+beside the action, never around it, with ⌘ / middle-click gestures), `useRun` (the action DOES something — only its button
+runs it) or `Control` (the action needs its own UI first — build-fix's Fix opens
+its investigate popover: the kind draws its control from the payload, at the
+compact size, labelled with its `label`). This plugin contributes `open` (`payload.to`, an in-app route, via
+`useAppLink`; a link) and `reload` (a run); a row written before actions
+existed with an in-app `linkTo` gets an implicit `open`. Opening or acting
+closes the popover / dismisses the toast; a toast with no action shows a quiet
+× instead. A kind's owner contributes its own (never a `switch` here): `resume`
+(Retry — `conversation-view/resume`), `fix-build` (Fix — `build/build-fix`),
+`review-automation` (Review — `tasks/automations`).
+
+**What a click does depends on the surface** (`NotificationView`'s required
+`surface: "bell" | "toast"`): in the **bell**, clicking a linked row opens its
+target and closes the popover; in a **toast**, the body never opens anything —
+a click anywhere but its controls only dismisses it (the toast host's
+click-to-dismiss, which leaves clicks on controls to the controls), and its
+action button is the only way to act on it.
+
+**Alignment**: the glyph, the unread dot and the developer mark centre on the
+headline's x-height (see *What the view draws*); every other rigid cell beside
+the text (time, the
+toast's lone button) is exactly one headline line tall (`h-lh text-body`), so
+it centres on the headline's first line in every row.
+
 ## The bell
 
 - **The list** reads the `notifications` collection (`shared/resources.ts`): the
   undismissed rows (`dismissed = false` is the served base `where`), a bounded
   window of the newest 200, preloaded at boot. It drives the toasts and the
   popover's `empty`; the chips are `:groups` groupings and a picked chip reads a
-  server-filtered window. The popover's infinite scroll pages it (`loadMore`
+  server-filtered window. The popover: header (title · Mark all read · View
+  all), chips All · Errors · Conversations · Updates · Automations (Reports /
+  Other only while non-empty; counts over the whole collection, Errors' in
+  red), then Today / Earlier by `createdAt`. The popover's infinite scroll pages it (`loadMore`
   splits off the next key-range page, never reloads), and stops at 400 — the
   last step that fits under `maxLimit` 500; "View all" is the way past it.
 - **The unread badge** reads the `notifications.unread` VALUE (`liveValue`,
@@ -68,7 +146,8 @@ DataView (`web/components/notifications-view.tsx`):
 - **Source**: `liveDataSource(notifications, { searchable: ["title"], facets:
   ["type", "variant"] })` — the bell's own collection, read as live key-range
   pages. Its filterable columns are `countedUnreadFilterable` (`read`, `muted`,
-  `variant`) plus `type` and `title`.
+  `variant`) plus `type`, `title` and `category` (its options declared by the
+  entity field — a closed list — so it is not a facet).
 - **View** (`config/shell/notifications/shell.notifications.jsonc`, the
   authored override): one `list`, grouped on the raw `read` column (`bool`,
   grouping `value` → server sections, unread first, exact counts), newest
@@ -76,8 +155,8 @@ DataView (`web/components/notifications-view.tsx`):
   requires an unmuted error or warning): an unread info row is unread here.
 - **Rows** are the popover's own body (`NotificationBody`,
   `web/components/notification-body.tsx`) via `viewOptions.list.renderRow`, a
-  variant dot in the leading slot; a row with an in-app `linkTo` activates as
-  `appLink(linkTo)`.
+  variant dot in the leading slot, plus the `detail` line; a row with an
+  in-app `linkTo` activates as `appLink(linkTo)`.
 - **Item actions** (`NotificationItemActions`): Open (a linked row) and Dismiss.
   **Toolbar**: Mark all read and Clear all (the existing endpoints). There is no
   per-row mark-read.
@@ -95,9 +174,14 @@ DataView (`web/components/notifications-view.tsx`):
   - Slots:
     - `notifications.actions`
     - `notification-actions`
+    - `Notifications.Action`
   - Slot contributors:
     - `notifications.actions` ← `primitives.pane`
     - `notification-actions` ← `shell.notifications`
+    - `Notifications.Action` ← `build.build-fix`
+    - `Notifications.Action` ← `conversations.conversation-view.resume`
+    - `Notifications.Action` ← `shell.notifications`
+    - `Notifications.Action` ← `tasks.automations`
   - Contributes:
     - `IdKinds.Kind` "notif"
     - `ActionBar.Item` → `BellButton`
@@ -105,11 +189,16 @@ DataView (`web/components/notifications-view.tsx`):
     - `DebugApp.Sidebar` "Notifications"
     - `notification-actions` "open" → `OpenNotificationAction`
     - `notification-actions` "dismiss" → `DismissNotificationAction`
-  - Uses: 44 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Notifications.Action` "open"
+    - `Notifications.Action` "reload"
+  - Uses: 52 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×5
     - `infra/endpoints` ×3
+    - `primitives/css/ui-kit` ×3
+    - `ids` ×2
     - `primitives/css/coords` ×2
-    - `primitives/css/ui-kit` ×2
+    - `primitives/css/fill` ×2
+    - `primitives/css/spacing` ×2
     - `primitives/cursor-pagination` ×2
     - `primitives/live-state` ×2
     - `primitives/pane` ×2
@@ -117,17 +206,17 @@ DataView (`web/components/notifications-view.tsx`):
     - `apps/debug/shell.DebugApp`
     - `audience/developer-mark.DeveloperMark`
     - `audience.useAudience`
-    - `ids.IdKinds`
     - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
-    - `primitives/css/fill.Fill`
     - `primitives/css/inline.Inline`
+    - `primitives/css/layer.Layer`
     - `primitives/css/line.Line`
+    - `primitives/css/pin.Pin`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/scroll.Scroll`
-    - `primitives/css/spacing.Stack`
     - `primitives/css/status-dot.StatusDot`
+    - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.ToggleChip`
     - `primitives/icon-button.IconButton`
@@ -139,11 +228,15 @@ DataView (`web/components/notifications-view.tsx`):
     - `primitives/scope/tab-id.getTabId`
     - `shell/action-bar.ActionBar`
     - `shell/toast.showToast`
+    - `ui/icons.Icon`
   - Exports (types):
     - `Notification`
+    - `NotificationActionControlProps`
+    - `NotificationActionKind`
     - `Toast`
     - `ToastArgs`
   - Exports (values):
+    - `Notifications`
     - `useNotificationArrivals`
     - `useToast`
 - Server:
@@ -201,24 +294,33 @@ DataView (`web/components/notifications-view.tsx`):
     - `infra/entities.entityRef`
     - `packages/list-bound.wholeRecord`
     - `primitives/pane.defineRoute`
-  - Exports (types): `NotificationId`
+    - `ui/icons.symbol`
+    - `ui/icons.SymbolRef`
+  - Exports (types):
+    - `NotificationAction`
+    - `NotificationCategory`
+    - `NotificationId`
   - Exports (values):
+    - `NOTIFICATION_CATEGORIES`
+    - `NOTIFICATION_CATEGORY_LABELS`
     - `NOTIFICATION_VARIANTS`
+    - `NotificationActionSchema`
     - `notificationFields`
+    - `NotificationIconSchema`
     - `notificationIdKind`
     - `notificationsEntityRef`
     - `notificationsRoute`
 - Cross-plugin:
-  - Uses tokens: 23 vars — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ui/tokens/color-palette` ×11
-    - `ui/tokens/type-scale` ×7
-    - `ui/tokens/density` ×4
-    - `ui/tokens/shape --spacing`
-  - Imported by: 32 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses tokens: 30 vars — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui/tokens/color-palette` ×13
+    - `ui/tokens/type-scale` ×10
+    - `ui/tokens/density` ×5
+    - `ui/tokens/shape` ×2
+  - Imported by: 33 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×13
     - `tasks` ×5
+    - `build` ×3
     - `apps` ×2
-    - `build` ×2
     - `reports` ×2
     - `screenshot` ×2
     - `auth`

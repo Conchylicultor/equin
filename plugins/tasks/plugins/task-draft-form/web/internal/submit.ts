@@ -8,6 +8,11 @@ import {
   launchOptionValue,
   type LaunchOptionInfo,
 } from "@plugins/tasks/plugins/launch-options/web";
+import type { ToastArgs } from "@plugins/shell/plugins/notifications/web";
+import { synthesiseTitleFallback } from "@plugins/tasks/plugins/task-title/core";
+import { taskDetailRoute } from "@plugins/tasks/plugins/tasks-core/core";
+import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 import {
   createTaskChain,
   type TaskChainRelate,
@@ -81,13 +86,6 @@ export async function submitChain(
   }
 }
 
-/** First non-empty line of a card's text, trimmed to a notification-friendly length. */
-function cardSummary(text: string): string {
-  const firstLine = text.split("\n").find((l) => l.trim()) ?? "";
-  const trimmed = firstLine.trim();
-  return trimmed.length > 80 ? `${trimmed.slice(0, 79)}…` : trimmed;
-}
-
 /** A card's launch configuration, as the options themselves describe it. */
 function optionSummaries(
   card: CardDraft,
@@ -99,33 +97,62 @@ function optionSummaries(
   });
 }
 
+/** Whether some option's value has this card's task start a conversation. */
+function startsConversation(
+  card: CardDraft,
+  options: readonly LaunchOptionInfo[],
+): boolean {
+  return options.some(
+    (o) => o.startsConversation?.(launchOptionValue(card.options, o)) === true,
+  );
+}
+
+const addedIcon = symbol("add-task");
+
 /**
- * Title + detail for the post-submit notification. The title states the action;
- * the description names the specific task(s) — plus whatever the launch options
- * say about themselves — so the bell entry is self-explanatory rather than a
- * bare verb. The host reads no option by name: it once branched on the
- * auto-start value to say "queued" vs "created", which put one option's
- * vocabulary into generic chrome.
+ * The notification a submitted chain is worth, or null when it is worth
+ * none.
+ *
+ * A task that starts a conversation of its own (a launch option says so —
+ * auto-start, read through `startsConversation`, never by name) is announced
+ * by that conversation, server-side ("Conversation started", once it
+ * exists, so Open lands on it); the form says nothing for it. Every other
+ * task is "Task added" (`N tasks added` for several) about the first of
+ * them, by the title the server gave it, opening it in Tasks — no
+ * conversation exists yet. The launch configuration is the developer detail.
  */
 export function describeOutcome(
   outcome: SubmitOutcome,
   cards: CardDraft[],
   options: readonly LaunchOptionInfo[],
-): { title: string; description: string } {
-  if (cards.length === 1) {
-    const card = cards[0]!;
-    const parts = [cardSummary(card.text), ...optionSummaries(card, options)];
-    return {
-      title: "Task created",
-      description: parts.filter(Boolean).join(" · "),
-    };
-  }
-  const summaries = cards
-    .map((c) => cardSummary(c.text))
+): ToastArgs | null {
+  const added = cards.flatMap((card, i) => {
+    const taskId = outcome.taskIds?.[i];
+    if (taskId === undefined || startsConversation(card, options)) return [];
+    return [{ card, taskId }];
+  });
+  const first = added[0];
+  if (first === undefined) return null;
+  const detail = added
+    .map(({ card }) => optionSummaries(card, options).join(" · "))
     .filter(Boolean)
     .join(" → ");
   return {
-    title: `${outcome.totalCount} tasks created`,
-    description: summaries,
+    type: "task",
+    category: "conversations",
+    icon: addedIcon,
+    title: added.length === 1 ? "Task added" : `${added.length} tasks added`,
+    description: "",
+    subjectId: first.taskId,
+    // The title the server stored for it (Haiku may improve it later).
+    subjectName: synthesiseTitleFallback(first.card.text),
+    detail: detail || undefined,
+    variant: "success",
+    action: {
+      kind: "open",
+      payload: {
+        to: taskDetailRoute.link(agentManagerApp, { taskId: first.taskId }),
+      },
+    },
   };
 }

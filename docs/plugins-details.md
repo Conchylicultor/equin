@@ -11753,18 +11753,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useSurfaceMode`
           - `useTabs`
       - Cross-plugin:
-        - Imported by: 39 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
+        - Imported by: 40 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
           - `apps` ×11
           - `apps-core` ×9
           - `debug` ×7
           - `hints` ×2
           - `primitives` ×2
           - `shell` ×2
+          - `tasks` ×2
           - `active-data/song`
           - `build`
           - `config_v2/config-link`
           - `menu-bar/app-grid`
-          - `tasks/worktree-identity`
           - `ui/theme-engine/quick-theme`
     - **`theme-scope`** — Theme-scope helpers: the single definition of the focused full-surface app's theme scope, which decides the :root token layer and the document's light/dark (useRootThemeScopeState: a state that keeps the not-registered-yet window apart from 'no app owns the surface'), and useAppSettingsScope — the app:<id> config scope per-app theme settings (variants) are read in: the nearest app theme boundary's (a pane's home app), else the focused app's.
       - Web:
@@ -12794,9 +12794,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `buildRunCommits`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/color-palette --primary`
-    - **`build-fix`** — Launch-agent button in the build detail pane for failed builds.
+    - **`build-fix`** — Launch-agent button in the build detail pane for failed builds, and the same launch as a Build failed notification's Fix (the fix-build notification action).
       - Web:
-        - Contributes: `BuildDetailSlots.Section` "Fix"
+        - Contributes:
+          - `BuildDetailSlots.Section` "Fix"
+          - `Notifications.Action` "fix-build"
         - Uses:
           - `build.BuildDetailSlots`
           - `network/live.LiveListResult`
@@ -12805,6 +12807,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live.useLive`
           - `network/live.useLiveRow`
           - `primitives/launch/investigate.InvestigateAction`
+          - `shell/notifications.Notifications`
     - **`build-info`** — Status, trigger, commit hash, and timing section in the build detail pane.
       - Web:
         - Contributes: `BuildDetailSlots.Section` "Info" → `BuildInfo`
@@ -15444,7 +15447,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/badge.Badge`
               - `primitives/live-state.ResourceErrorInline`
               - `tasks.useActiveDependentCount`
-        - **`drop-and-exit`** — Exit-menu entry that marks the top task as dropped and closes the conversation. The one exit-drop policy every conversation-close path that can drop a task shares (dropTaskOnExit): the Drop & Close endpoint (its machine half) and the agent-driven exit_clean finalize.
+        - **`drop-and-exit`** — Exit-menu entry that marks the top task as dropped and closes the conversation; droppedNotification, the Conversation dropped notification every drop surface sends. The one exit-drop policy every conversation-close path that can drop a task shares (dropTaskOnExit): the Drop & Close endpoint (its machine half) and the agent-driven exit_clean finalize.
           - Web:
             - Contributes: `ExitMenu.Item` "drop-and-exit" → `DropAndExitItem`
             - Uses:
@@ -15459,6 +15462,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/live-state.useCombinedResources`
               - `shell/notifications.useToast`
               - `ui/icons.Icon`
+            - Exports (values): `droppedNotification`
           - Server:
             - Uses:
               - `tasks/attempt-work.getAttemptWork`
@@ -18075,7 +18079,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Hints.Hint` "push-and-exit.exit"
               - `Hints.Hint` "push-and-exit.go"
               - `Hints.Hint` "push-and-exit.push-and-exit"
-            - Uses: 28 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/push-and-exit/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/push-and-exit/REFERENCE.md)
+            - Uses: 31 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/push-and-exit/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/push-and-exit/REFERENCE.md)
               - `conversations/conversation-view/pending-turn` ×5
               - `conversations/conversation-view` ×3
               - `hints` ×3
@@ -18083,13 +18087,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `config_v2` ×2
               - `conversations` ×2
               - `primitives/css/ui-kit` ×2
+              - `shell/notifications` ×2
               - `conversations/conversation-view/code.useEditedFiles`
+              - `conversations/conversation-view/drop-and-exit.droppedNotification`
+              - `conversations/conversation-view/resume.useResumeConversation`
               - `network/live.useLive`
               - `primitives/latest-ref.useLatestRef`
               - `primitives/live-state.combineResources`
               - `primitives/persistent-draft.useDraft`
               - `primitives/prompt-editor.PromptEditorSlots`
-              - `shell/notifications.useToast`
               - `ui/icons.Icon`
           - Server:
             - Contributes: `ConfigV2.Register` "config"
@@ -18161,20 +18167,29 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/color-palette --muted-foreground`
               - `ui/tokens/density --space-lg`
-        - **`resume`** — Toolbar button that resumes a gone conversation via `claude --resume <claude-id>`.
+        - **`resume`** — Toolbar button that resumes a gone conversation via `claude --resume <claude-id>`; useResumeConversation (the one browser resume, whose failure is a 'Couldn't resume conversation' notification) and that notification's Retry (the resume action kind).
           - Web:
+            - Contributes: `Notifications.Action` "resume"
             - Uses:
               - `conversations.useLiveConversation`
+              - `infra/endpoints.EndpointError`
               - `infra/endpoints.getEndpointErrorMessage`
-              - `infra/endpoints.useEndpointMutation`
+              - `infra/endpoints.useFetchEndpoint`
+              - `infra/endpoints.useMachineAvailability`
               - `primitives/icon-button.IconButton`
+              - `shell/notifications.NotificationActionKind`
+              - `shell/notifications.Notifications`
               - `shell/notifications.useToast`
+            - Exports (types): `ResumeSubject`
+            - Exports (values): `useResumeConversation`
           - Machine:
             - Uses: `infra/endpoints.implementMachine`
             - Routes: `POST /api/conversations/:id/resume`
           - Core:
             - Uses: `infra/endpoints.defineEndpoint`
             - Exports (values): `resumeConversationEndpoint`
+          - Cross-plugin:
+            - Imported by: `conversations/conversation-view/push-and-exit`
         - **`rewind`** — Row actions on each of the user's own messages: go back to just before it, in this conversation (Rewind to here) or in a new one (Fork from here). Warns first about what cannot be brought back. useGoBackToMessage is the same flow for a surface that stands for a hidden message (e.g. a question's answer), with the caller deciding where the removed text goes.
           - Web:
             - Contributes:
@@ -39311,12 +39326,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Layer`
               - `layerClasses`
           - Cross-plugin:
-            - Imported by: 25 plugins — full list in [`plugins/primitives/plugins/css/plugins/layer/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/layer/REFERENCE.md)
+            - Imported by: 26 plugins — full list in [`plugins/primitives/plugins/css/plugins/layer/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/layer/REFERENCE.md)
               - `apps` ×15
               - `primitives` ×6
               - `page` ×2
               - `integrations/youtube`
               - `map`
+              - `shell/notifications`
         - **`layout-harness`** — Layout-primitive geometry harness, web half: the bare measurer page and the bun:test geometry suite that measure every geometry-gated exhibit across its width sweep.
           - Web:
             - Uses:
@@ -39493,7 +39509,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `pinClasses`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 58 plugins — full list in [`plugins/primitives/plugins/css/plugins/pin/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/pin/REFERENCE.md)
+            - Imported by: 59 plugins — full list in [`plugins/primitives/plugins/css/plugins/pin/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/pin/REFERENCE.md)
               - `primitives` ×18
               - `apps` ×16
               - `page` ×10
@@ -39506,6 +39522,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta/exhibits`
               - `reorder/editor`
               - `screenshot/draw-on-app`
+              - `shell/notifications`
               - `ui/tab-bar`
         - **`placeholder`** — Muted text placeholder for loading, empty, and error states. Props: children, tone (muted | error).
           - Web:
@@ -39950,7 +39967,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/overlay --overlay-enter-duration`
               - `ui/tokens/overlay --overlay-enter-easing`
               - `ui/tokens/shadow --shadow`
-            - Imported by: 35 plugins — full list in [`plugins/primitives/plugins/css/plugins/surface/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/surface/REFERENCE.md)
+            - Imported by: 36 plugins — full list in [`plugins/primitives/plugins/css/plugins/surface/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/surface/REFERENCE.md)
               - `apps` ×14
               - `primitives` ×6
               - `page` ×4
@@ -39961,6 +39978,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fields/json/config`
               - `hints/ask`
               - `menu-bar`
+              - `shell/notifications`
               - `stats`
               - `tasks/menu-bar-task`
           - Exemptions:
@@ -47189,6 +47207,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Web:
         - Contributes: `Core.Root` → `MutationErrorWatcher`
         - Uses:
+          - `infra/endpoints.EndpointError`
           - `infra/endpoints.getEndpointErrorMessage`
           - `shell/notifications.useToast`
     - **`noise-rules`** — Built-in noise classification rules for low-signal crashes (e.g. ResizeObserver loop warnings).
@@ -48247,9 +48266,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots:
           - `notifications.actions`
           - `notification-actions`
+          - `Notifications.Action`
         - Slot contributors:
           - `notifications.actions` ← `primitives.pane`
           - `notification-actions` ← `shell.notifications`
+          - `Notifications.Action` ← `build.build-fix`
+          - `Notifications.Action` ← `conversations.conversation-view.resume`
+          - `Notifications.Action` ← `shell.notifications`
+          - `Notifications.Action` ← `tasks.automations`
         - Contributes:
           - `IdKinds.Kind` "notif"
           - `ActionBar.Item` → `BellButton`
@@ -48257,11 +48281,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DebugApp.Sidebar` "Notifications"
           - `notification-actions` "open" → `OpenNotificationAction`
           - `notification-actions` "dismiss" → `DismissNotificationAction`
-        - Uses: 44 symbols — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
+          - `Notifications.Action` "open"
+          - `Notifications.Action` "reload"
+        - Uses: 52 symbols — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
           - `primitives/data-view` ×5
           - `infra/endpoints` ×3
+          - `primitives/css/ui-kit` ×3
+          - `ids` ×2
           - `primitives/css/coords` ×2
-          - `primitives/css/ui-kit` ×2
+          - `primitives/css/fill` ×2
+          - `primitives/css/spacing` ×2
           - `primitives/cursor-pagination` ×2
           - `primitives/live-state` ×2
           - `primitives/pane` ×2
@@ -48269,17 +48298,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/debug/shell.DebugApp`
           - `audience/developer-mark.DeveloperMark`
           - `audience.useAudience`
-          - `ids.IdKinds`
           - `network/live.useLive`
           - `primitives/css/badge.Badge`
           - `primitives/css/center.Center`
-          - `primitives/css/fill.Fill`
           - `primitives/css/inline.Inline`
+          - `primitives/css/layer.Layer`
           - `primitives/css/line.Line`
+          - `primitives/css/pin.Pin`
           - `primitives/css/rigid.rigidClass`
           - `primitives/css/scroll.Scroll`
-          - `primitives/css/spacing.Stack`
           - `primitives/css/status-dot.StatusDot`
+          - `primitives/css/surface.Surface`
           - `primitives/css/text.Text`
           - `primitives/css/toggle-chip.ToggleChip`
           - `primitives/icon-button.IconButton`
@@ -48291,11 +48320,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/scope/tab-id.getTabId`
           - `shell/action-bar.ActionBar`
           - `shell/toast.showToast`
+          - `ui/icons.Icon`
         - Exports (types):
           - `Notification`
+          - `NotificationActionControlProps`
+          - `NotificationActionKind`
           - `Toast`
           - `ToastArgs`
         - Exports (values):
+          - `Notifications`
           - `useNotificationArrivals`
           - `useToast`
       - Server:
@@ -48353,24 +48386,33 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/entities.entityRef`
           - `packages/list-bound.wholeRecord`
           - `primitives/pane.defineRoute`
-        - Exports (types): `NotificationId`
+          - `ui/icons.symbol`
+          - `ui/icons.SymbolRef`
+        - Exports (types):
+          - `NotificationAction`
+          - `NotificationCategory`
+          - `NotificationId`
         - Exports (values):
+          - `NOTIFICATION_CATEGORIES`
+          - `NOTIFICATION_CATEGORY_LABELS`
           - `NOTIFICATION_VARIANTS`
+          - `NotificationActionSchema`
           - `notificationFields`
+          - `NotificationIconSchema`
           - `notificationIdKind`
           - `notificationsEntityRef`
           - `notificationsRoute`
       - Cross-plugin:
-        - Uses tokens: 23 vars — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
-          - `ui/tokens/color-palette` ×11
-          - `ui/tokens/type-scale` ×7
-          - `ui/tokens/density` ×4
-          - `ui/tokens/shape --spacing`
-        - Imported by: 32 plugins — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
+        - Uses tokens: 30 vars — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
+          - `ui/tokens/color-palette` ×13
+          - `ui/tokens/type-scale` ×10
+          - `ui/tokens/density` ×5
+          - `ui/tokens/shape` ×2
+        - Imported by: 33 plugins — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
           - `conversations` ×13
           - `tasks` ×5
+          - `build` ×3
           - `apps` ×2
-          - `build` ×2
           - `reports` ×2
           - `screenshot` ×2
           - `auth`
@@ -48438,6 +48480,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/select-scope.ContentScope`
           - `ui/icons.Icon`
         - Exports (types):
+          - `CustomToastArgs`
           - `ToastArgs`
           - `ToastVariant`
         - Exports (values):
@@ -48998,8 +49041,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`tasks`** — Nested tasks with attempts linking to conversations. Nested tasks with attempts linking to conversations: the task CRUD, chain, dependency and auto-start routes, portable (arming a task wakes the launcher through the tasks.autoStartArmed trigger event). Launching, the repo info, the add_task MCP tool and the auto-start catch-up are the machine half's.
   - Server:
     - Contributes: `resource.declare` "tasks.repo-info"
-    - Uses: 29 symbols — full list in [`plugins/tasks/REFERENCE.md`](../plugins/tasks/REFERENCE.md)
-      - `tasks/tasks-core` ×15
+    - Uses: 30 symbols — full list in [`plugins/tasks/REFERENCE.md`](../plugins/tasks/REFERENCE.md)
+      - `tasks/tasks-core` ×16
       - `infra/endpoints` ×2
       - `primitives/rank` ×2
       - `tasks/auto-start` ×2
@@ -49368,7 +49411,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Shell.Sidebar` "Automations"
           - `FieldPresentation.Register` "exposure:tasks_ext_launch_decision"
           - `FieldPresentation.Register` "exposure:tasks_ext_origin"
-        - Uses: 60 symbols — full list in [`plugins/tasks/plugins/automations/REFERENCE.md`](../plugins/tasks/plugins/automations/REFERENCE.md)
+          - `Notifications.Action` "review-automation"
+        - Uses: 62 symbols — full list in [`plugins/tasks/plugins/automations/REFERENCE.md`](../plugins/tasks/plugins/automations/REFERENCE.md)
           - `primitives/css/ui-kit` ×7
           - `network/live` ×6
           - `primitives/live-state` ×6
@@ -49380,6 +49424,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/model-provider` ×2
           - `infra/background/catalog` ×2
           - `primitives/css/control-panel` ×2
+          - `apps-core/tabs.useAppLink`
           - `fields/dynamic-enum/config.DynamicEnum`
           - `primitives/app-shell.opensPane`
           - `primitives/css/badge.Badge`
@@ -49393,6 +49438,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/loading.Loading`
           - `primitives/relative-time.RelativeTime`
           - `primitives/slot-render.defineRenderSlot`
+          - `shell/notifications.Notifications`
           - `shell.Shell`
           - `tasks/task-detail.taskDetailPane`
           - `tasks.useTasksById`
@@ -50055,7 +50101,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots: `TaskDraftFormSlots.Action`
         - Slot contributors: `TaskDraftFormSlots.Action` ← `wish.element-picker`
         - Contributes: `ConfigV2.WebRegister` "config"
-        - Uses: 44 symbols — full list in [`plugins/tasks/plugins/task-draft-form/REFERENCE.md`](../plugins/tasks/plugins/task-draft-form/REFERENCE.md)
+        - Uses: 45 symbols — full list in [`plugins/tasks/plugins/task-draft-form/REFERENCE.md`](../plugins/tasks/plugins/task-draft-form/REFERENCE.md)
           - `tasks/launch-options` ×5
           - `infra/endpoints` ×3
           - `primitives/css/ui-kit` ×3
@@ -50065,6 +50111,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `config_v2` ×2
           - `primitives/overlay/tooltip` ×2
           - `primitives/shortcuts` ×2
+          - `shell/notifications` ×2
           - `apps-core.useCurrentAppId`
           - `hints.useHintAnchor`
           - `network/live.useLive`
@@ -50081,7 +50128,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/slot-render.defineRenderSlot`
           - `primitives/text-editor/composer/picker-pill.PickerPill`
           - `primitives/text-editor/paste-images.extractAttachmentIds`
-          - `shell/notifications.useToast`
           - `ui/icons.Icon`
         - Exports (types):
           - `ActiveRelateContext`
@@ -50900,6 +50946,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `createTask`
           - `deleteAttempt`
           - `deleteConversationRow`
+          - `DependencyCycleError`
           - `dropTaskIfNoActiveSibling`
           - `dropTaskTreeIfNoActiveSibling`
           - `findNextRankInFolder`
@@ -51028,6 +51075,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `buildTaskPrompt`
           - `CONVERSATION_TRAILER_KEY`
           - `ConversationKindSchema`
+          - `conversationName`
           - `conversationsActive`
           - `conversationsById`
           - `ConversationSchema`
@@ -51276,7 +51324,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/shadow --shadow`
           - `ui/tokens/shape --spacing`
-        - Imported by: 346 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 347 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×91
           - `conversations` ×56
           - `primitives` ×42
@@ -51289,12 +51337,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `audience` ×4
           - `plugin-meta` ×4
           - `review` ×4
+          - `shell` ×4
           - `apps-core` ×3
           - `build` ×3
           - `config_v2` ×3
           - `hints` ×3
           - `reorder` ×3
-          - `shell` ×3
           - `backup` ×2
           - `infra` ×2
           - `reports` ×2

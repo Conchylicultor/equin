@@ -41,6 +41,7 @@ export function TaskTrackControl({ taskId }: { taskId: string }) {
     setTaskTrackRemote(fetchEndpoint, taskId, next).catch((err: unknown) => {
       toast({
         type: "task",
+        category: "other",
         title: "Failed to change the task's track",
         description: err instanceof Error ? err.message : String(err),
         variant: "error",
