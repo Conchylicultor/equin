@@ -1,298 +1,189 @@
 # control-panel
 
-The vocabulary for a **data-control panel** — the body of a Filter popover, a
-Sort popover, a view-settings menu, a settings pane, a per-field editor. One
-compound namespace (`ControlPanel` plus `.Section` / `.Subhead` / `.Row` /
-`.Setting` / `.Block` / `.Group` / `.RuleList` / `.RuleRow` / `.Field` /
-`.Footer` / `.Empty` / `.Stack`) and three surfaces (`ControlPanelPopover`,
-`ControlPanelPane`, `ControlPanelCard`).
+Rationale (why each rule is so, rejected alternatives): [DESIGN.md](DESIGN.md) — read before changing or removing a rule.
 
-Read the members as a set: **four ways to be one field** — `Row` (the row *is*
-the control), `Setting` (the row *holds* the control), `Block` (the control is
-wider than a row), `Group` (the field is other fields) — plus the builder pair,
-plus the boxes and bands, plus `Subhead`, which names a *run* of rows rather
-than any one field.
+The vocabulary for a **data-control panel** — the body of a Filter / Sort popover,
+a view-settings menu, a settings pane, a per-field editor. One compound namespace
+(`ControlPanel` + `.Section` / `.Subhead` / `.Row` / `.Setting` / `.Block` /
+`.Group` / `.RuleList` / `.RuleRow` / `.Field` / `.Footer` / `.Empty` / `.Stack`)
+and three surfaces (`ControlPanelPopover`, `ControlPanelPane`, `ControlPanelCard`).
+
+Four ways to be one field:
+
+- `Row` — the row *is* the control.
+- `Setting` — the row *holds* the control.
+- `Block` — the control is wider than a row.
+- `Group` — the field is other fields.
+
+Plus the builder pair (`RuleList` / `RuleRow`), the boxes and bands, and
+`Subhead` (names a *run* of rows).
 
 ## The five invariants
 
 1. **One rail.** Every label in every panel starts at the same x.
-2. **One row height**, in every panel, always — with ONE declared exception: a
-   row passing `description` (a visible, wrapping second line under its label)
-   is as tall as its two lines. It is opt-in per row and exclusive with `hint`
-   (the tooltip, which costs no height), for a choice whose meaning must be read
-   before it is picked — the page-kind menu. Everything else keeps `hint`.
-3. **One selection language per meaning** — check, radio, switch. There is no
-   fourth, and the three cannot be mixed on one row.
-4. **Footers are rows**, never ghost buttons pinned to opposite corners — and
-   **a footer action takes a leading `icon`, on every panel.** Uniformly: the
-   alternative produced three treatments of one thing (a trailing upload glyph
-   on one picker, no glyph at all on two others), and the approved prototype
-   showed a leading one. A footer row is still a row, so the glyph does open the
-   panel's icon column — but on the icon rail that costs only the ROW LABELS
-   26px, not every block in the panel, and in a picker whose only row IS the
-   footer it costs nothing at all. The one real price: in a panel that also has
-   ordinary rows (quick-theme's six variant rows) a leading footer glyph still
-   indents their labels by 26px. Exempting footers from the track scan would be
-   a lie about the markup (this invariant says they ARE rows), so the uniformity
-   is a convention — the only one in the vocabulary not held by construction.
-5. **Width is a role, not a measurement — and the CONTENT picks the role.** A
-   panel's width is one of four buckets (menu, described, picker, builder),
-   sized by the theme, chosen by what the showing page renders. It never
-   tracks a measured width, so it does not grow as rows are added.
-
-They hold by construction, not by discipline: the row is a grid so #1 survives a
-row with no icon, `RowProps` is a discriminated union so #3 is a type error, and
-nothing that opens a panel can name a width, so #5 has nothing to override. The one
-exception is the sentence added to #4, and it is marked as such.
+2. **One row height**, always.
+   - Sole exception: a row passing `description` (a visible wrapping second
+     line) is two lines tall.
+   - Opt-in, exclusive with `hint` (tooltip, no height); only for a choice that
+     must be read before picking (the page-kind menu).
+   - Everything else uses `hint`.
+3. **One selection language per meaning** — check, radio, switch. No fourth; never
+   mixed on one row (`RowProps` is a discriminated union).
+4. **Footers are rows**, never ghost buttons in corners, and **a footer action
+   takes a leading `icon`, on every panel.**
+   - This is a convention, not construction: the glyph opens the icon column,
+     so in a panel with ordinary rows it indents their labels by 26px.
+   - Do not exempt footers from the track scan.
+5. **Width is a role, not a measurement, and the CONTENT picks the role** — one of
+   four buckets (see below). Nothing that opens a panel can name a width.
 
 ## The panel paints no surface
 
 `ControlPanel` draws no background, border, shadow, radius, scroll, height clamp
-or **width**. The surface is always an `OverlayPanel` contributed by whatever
-contains the body (a `ControlPanelPopover`, a `DialogContent`, a pushed
-panel-stack entry). Three things follow, and together they are the reason:
+or **width**.
 
-- No double elevation — so the primitive needs no `no-adhoc-surface` exemption.
-- A panel inside a panel is a popover opened from inside a popover, each with its
-  own correctly-clamped surface, rather than an inner box re-deriving the outer
-  one's chrome.
-- Width can be a role: there is no width prop here to default, so the widest row
-  cannot decide how wide the panel is.
+The surface is the `OverlayPanel` of whatever contains it
+(`ControlPanelPopover`, `DialogContent`, a pushed panel-stack entry):
 
-What the body **does** own is geometry: the content inset, the rails, and
-**the hairline between its bands**. That inversion is load-bearing — the
-container separates, so an author never places a divider. A conditionally null
-section leaves no orphan rule, a footer is separated because it is a band rather
-than because it opted in, and the rhythm cannot go ragged one panel at a time.
+- no double elevation;
+- a sub-panel is a push, never a box re-deriving chrome.
+
+The body **does** own geometry: content inset, rails, and **the hairline between
+bands**. The container separates; an author never places a divider (a null
+section leaves no orphan rule).
 
 ## The separator is a band's rule, cancelled by the panel — NEVER a sibling rule
 
-`display: contents` is transparent to **layout** and opaque to **selectors**, and
-`renderIsolated` wraps every contributed panel in exactly such a lineage span (one
-per contribution, nested). So a rule keyed on child adjacency — `> * + *`,
-`:first-child`, `~` — sees one span and matches nothing. Do not reach for one
-here; a `cp-body > * + * { border-top }` is where this vocabulary started and it
-meant no panel in the app drew a single hairline. Key on layout participation
-instead: a flex container lays the bands out as its own real items at any wrapper
-depth.
+`renderIsolated` wraps every contributed panel in `display: contents` lineage
+spans, which are transparent to layout but opaque to selectors — so `> * + *`,
+`:first-child`, `~` match nothing here. Never use adjacency selectors.
 
-- **`cp-body`** — flex column + `gap`. `gap` is the only spacing that exists
-  strictly *between* items, so the first band is never handed a leading gap to
-  take away again.
+The separator is built from three pieces:
+
+- **`cp-body`** — flex column + `gap` (spacing strictly *between* bands).
 - **`cp-band`** (`Section` + `Footer` only) — draws the rule as a `::before` hung
-  `--cp-panel-pad` **above** the band, so the band's box does not grow by it.
-- **`cp-body::after`** — cancels the *first* band's rule (nothing above it to
-  separate from). No selector can name that band, so the panel paints
-  `--chrome-mask` over the one rule landing on its padding-box top edge.
+  `--cp-panel-pad` above the band, adding no height.
+- **`cp-body::after`** — paints `--chrome-mask` over the first band's rule (no
+  selector can name that band).
 
-Four things there are one edit from being wrong:
+One edit from wrong:
 
-- **The rule may not be a `border-top`.** A first band carrying 1px + top padding
-  as real height cannot be cancelled by ink, and the compensating panel padding
-  works out to −1px.
-- **`cp-panel` and `cp-body` stay on ONE element** — the mask's `top: 0` is right
-  only because the same box insets by the same `--cp-panel-pad` the band hangs by.
-  Asserted in the unit test.
-- **`::after`, not `::before`** — rule and mask are both positioned at `z-index:
-  auto`, so they paint in tree order; only `::after` follows the bands.
-- **`ControlPanel.Stack` is `display: contents`** (and so has no `className`), so
-  there is exactly one band container and one mask.
-
-`RuleList`, `Empty` and `Subhead` are deliberately **not** bands: all three are
-used *inside* a section, so marking any of them draws a rule through the middle
-of one — and for a `Subhead`, that rule would land between a heading and the very
-rows it names.
-
-**`--border` is the right colour — do not add a surface-relative separator var.**
-Measured on `--popover`: distance 46 in dark, ≈39 in light. `--popover` and
-`--card` are the same value in both modes and `--border` is the token calibrated
-against `--card`, so an invisible panel separator would mean invisible card
-borders. `--hover-fill` exists because `--muted` genuinely collided with
-`--sidebar`; there is no collision here, and `e2e/hairline-verify.ts` measures the
-rendered contrast, so a preset that ever collides fails loudly.
+- The rule is **not** a `border-top` (real height can't be cancelled by ink).
+- **`cp-panel` and `cp-body` stay on ONE element** — the mask's `top: 0` relies on
+  it (unit-tested).
+- **`::after`, not `::before`** — both paint at `z-index: auto` in tree order.
+- **`ControlPanel.Stack` is `display: contents`** (no `className`) — one band
+  container, one mask.
+- `RuleList`, `Empty`, `Subhead` are **not** bands: they live inside a section, so
+  a rule would cut through it.
+- **`--border` is the right colour** — don't add a surface-relative separator var
+  (`--popover` = `--card`, and `--border` is calibrated against `--card`).
+  `e2e/hairline-verify.ts` measures rendered contrast.
 
 ## The panel is a rail region, and it has exactly one owner
 
-This is where the repo-wide **rail contract** was worked out, and the panel is
-now one instance of it rather than its own rule. Read
-[`primitives/css/rail`](../rail/CLAUDE.md) for the model. In panel terms: **one
-box opens the region — `cp-panel`, as its own padding. Every other participant
-either inherits the rail or cancels it, never both.**
+An instance of the repo-wide rail contract — read
+[`primitives/css/rail`](../rail/CLAUDE.md).
 
-- **Inherits** — a raw `<Input>`, a contributed `FieldRenderer`, a section
-  label, any JSX a caller drops into a `Section`. It lands on the rail by doing
-  *nothing*: no wrapper, no rail class, no opt-in. That is the whole point —
-  content that knows nothing about the vocabulary is still aligned with it.
-- **Cancels** — `cp-row` and `cp-rule`, and only they, and deliberately not
-  `rail-bleed`: they stop `--cp-panel-pad` *short* of the rail's origin (the
-  chrome gap a row's fill keeps from the panel edge) so the row's box reaches
-  the panel's inner edge — that full-width hover / selected fill is what makes a
-  row read as a *row* — then re-apply their own `--cp-row-pad-x`, not the rail,
-  landing the leading cell back on exactly the rail the panel published. Two
-  terms written out with a reason, which the contract allows; what it forbids is
-  reaching for half of `rail-bleed`.
-- **`cp-panel` publishes an *asymmetric* pair** (`--rail-start` ≠ `--rail-end`,
-  below) directly rather than taking a step off the `rail-<step>` ramp — the
-  documented custom-value case. It pays its own rail, so `--rail-owed-*` is
-  `0px` and a `rail-follow` band dropped in a panel insets itself no further.
+**One box opens the region — `cp-panel`, as its own padding. Every other
+participant either inherits the rail or cancels it, never both.**
 
-**The rail is the ICON rail**, and that is v2's correction. It used to be the
-*text* rail — an interior column of the row grid, after the gutter and the icon
-column — which meant a search field, a swatch cluster or a card grid was indented
-26px past everything, the section label alone escaped by hanging back through a
-`cp-rail-icon` class, and the panel padded **62px left against 12px right**.
-Worse, what opened the icon column was not the loose content's business: one
-leading glyph on one footer row moved every block in the panel. Now the panel's
-content box starts where every row's icon, indicator and drag handle begins, so a
-heading, a search field and a swatch grid share ONE left edge with the rows'
-leading column, and only a row's LABEL indents past the icon column that is
-actually there. `cp-rail-icon` was deleted rather than defaulted: it hung a label
-back by `rail-icon − rail-text`, and with the panel's content edge now ON the
-icon rail there is nothing left to hang back from — so this change removes a
-member rather than adding one.
+- **Inherits** — raw `<Input>`, a contributed `FieldRenderer`, a section label, any
+  JSX dropped in a `Section`. Lands on the rail by doing nothing (no wrapper, no
+  class). Never add your own content inset inside a panel.
+- **Cancels** — only `cp-row` and `cp-rule` (deliberately not `rail-bleed`): they
+  bleed out by `--cp-panel-pad` so the hover/selected fill spans the panel's inner
+  edge, then re-apply `--cp-row-pad-x`, landing the leading cell back on the rail.
+- `cp-panel` publishes an **asymmetric** `--rail-start` / `--rail-end` directly
+  (custom-value case) and pays its own rail, so `--rail-owed-*` is `0px`.
 
-**What that trades away, knowingly.** On the text rail the panel's content box
-was exactly a row's **content band** — aligned on BOTH sides, starting where
-every row label starts and ending where a row's trailing cell ends. That was a
-real property and it was not wrong; it answered a different question, namely
-"where does a loose control line up with the row *text* around it?". It bought
-that right-side symmetry by handing loose content an interior column of the row
-grid. We take the left-edge symmetry instead — the heading is the edge — and
-keep the end rail exactly where it was, so the right side is unchanged.
+**The rail is the ICON rail**: the panel's content edge is where every row's
+icon, indicator and drag handle begins.
 
-**The handle-less case is declared on `cp-panel`, never at `:root`.** A custom
-property is substituted where it is *declared*, so a rail published at the root
-freezes on the root's `--cp-rail-icon` — and the derived-track rule below, which
-moves `--cp-rail-icon` on `.cp-panel`, never reaches it. Measured: root-declared,
-a handle-less panel pads 36px left against 12px right; declared on the panel,
-12/12. Both declarations must land on the same element.
+- A heading, a search field and a swatch grid share one left edge with rows'
+  leading column.
+- Only a row's LABEL indents past the icon column (when present).
+- There is no `cp-rail-icon` utility and **no `--cp-rail-text`** — the text rail
+  is interior to the row grid; never hand it to loose content.
 
-Two cancellations have to stay exact, and both are one edit away from being
-wrong:
+**The handle-less case is declared on `cp-panel`, never at `:root`** — a custom
+property is substituted where declared, so a root-declared rail freezes on the
+root's `--cp-rail-icon`. Both declarations must land on the same element.
 
-- `cp-band`'s rule bleeds by the panel's **whole** inset (chrome pad plus content
-  inset). Drop a term and every divider in the app either insets or overhangs.
-  There is no padding to restore — the rule is its own empty box, not a wrapper
-  around the band's content.
-- A row's negative margins are paid back in its `width`
-  (`calc(100% + start + end)`), not left to `width: auto` — a `<button>` host
-  sizes to its content, so `auto` would shrink the row instead of filling it.
+Exact cancellations:
+
+- `cp-band`'s rule bleeds by the panel's **whole** inset (chrome pad + content
+  inset); drop a term and every divider insets or overhangs.
+- A row's negative margins are paid back in `width: calc(100% + start + end)`,
+  never `width: auto` (a `<button>` host would shrink to content).
 
 ## The two leading tracks are derived from the panel's content
 
-A track is reserved only when something in the **panel** occupies it: the gutter
-by a drag handle, the icon column by an icon, a checkbox or a radio mark. **Not
-by a switch** — its indicator is drawn in the *trailing* cell, so its leading
-cell is empty by construction, and a panel of switches (fx-toggle,
-metronome-button) reserved 18px that painted nothing and indented every label in
-it by 26px. Each row marks its own occupants — `data-cp-handle` on the gutter
-cell, `data-cp-icon` on the leading cell when that cell is genuinely occupied —
-and `cp-panel` turns that into one template for every row in it via `:has()`.
+A track exists only when something in the **panel** occupies it:
 
-The marker is **not** derived from whether the leading cell rendered a node: an
-unchecked radio draws nothing yet still owns the column (its mark is *state*, the
-track is not), so reading the node would re-flow the whole panel the first time
-someone ticked a row.
+- the gutter — by a drag handle (`data-cp-handle`);
+- the icon column — by an icon, checkbox or radio mark (`data-cp-icon`). **Not
+  by a switch** — its indicator lives in the trailing cell.
 
-Which is also why `icon` is excluded from *two* of the three selections rather
-than all three. Check and radio own the leading cell; a switch does not, so
-`icon` + `select="switch"` is a legal row — and has to be, or a surface that
-wants a glyph beside a toggle puts it in the LABEL cell and knocks that row's
-text off the rail. `ControlPanelStack`'s `display: contents` does not block the
-scan; the stack renders inside the same `.cp-panel`.
+`cp-panel` turns the markers into one template for every row via `:has()`.
+**Per panel, never per row** (per-row would break invariant #1).
 
-Per **panel**, never per row. Deriving it per row is exactly the conditional
-leading cell invariant #1 exists to delete: a row with an icon would indent its
-label past a row without one.
+- The marker is **declared from props, never derived from the rendered node** — an
+  unchecked radio draws nothing but owns the column.
+- `icon` is excluded from check/radio only; `icon` + `select="switch"` is legal
+  (otherwise the glyph goes in the label cell and knocks text off the rail).
+- `ControlPanel.Stack`'s `display: contents` doesn't block the scan.
 
-Three things about the mechanism are one edit from being wrong:
+One edit from wrong:
 
-- **Each case is its own `grid-template-columns`, never a zeroed width.**
-  Dropping a track must drop the column gap that follows it too; a `0px` track
-  keeps its gap and lands the rail 8px right of the panel's own inset.
-- **The cell that lost its track is `display: none`d.** A row always renders four
-  cells; an unhidden empty one auto-places into the track that took its place and
-  shoves the label a column over.
-- **The rules are nested inside the `@utility` blocks.** Tailwind's utilities
-  layer comes after base, so a `@layer base` rule loses to `cp-row`'s own
-  template however specific it is. `cp-rule` needs *two* handle-less templates
-  (three-cell and `[data-span="field"]`), because a panel-scoped selector
-  out-specifies the bare `&[data-span="field"]`.
+- **Each case is its own `grid-template-columns`, never a zeroed width** — a `0px`
+  track keeps its column gap (rail lands 8px off).
+- **The cell that lost its track is `display: none`d** — a row always renders four
+  cells; an unhidden empty one auto-places into the wrong track.
+- **The rules are nested inside the `@utility` blocks** — a `@layer base` rule
+  loses to `cp-row`'s own template. `cp-rule` needs *two* handle-less templates
+  (three-cell and `[data-span="field"]`).
 
 ## The four field members, and what each of them is not
 
-`Setting` is a **sibling of `RuleRow`**, not a fourth `select` arm and not a
-promoted `Field`. `select` is the *selection-language* axis and invariant #3 says
-there are three; a dropdown is not a fourth way to say "on", it is a control
-inside a cell. And `Row`'s host is inferred from `onSelect`/`href`, so a `Row`
-holding a dropdown would be a `<button>` inside a `<button>` — a `select="value"`
-arm would type that as correct. `RuleRow` already established the construction a
-value row needs: a non-interactive `<div>` box whose *cells* are interactive,
-with `row-actions` composed at `pin={null}` in a reserved track. The two row
-families then differ on exactly one honest axis — who is the click target —
-enforced by disjoint prop sets.
-
-**`Setting` has no `icon`, deliberately.** The leading-track `:has()` scan is per
-*panel*, so one field carrying a type icon would indent **every label in that
-panel**. A config field is contributed into panels its host does not own, so the
-trigger would live in another plugin's descriptor: the quick-theme footer-glyph
-failure documented under invariant #4, with a longer fuse. Excluded at the type
-level, the same way `icon` is already excluded from the check/radio arm.
-
-**`Setting` and `Group` take a drag `handle`, like `Row`** — a member of a
-reorderable list (config lists) whatever row it renders as. A `Setting` (and a
-`Group`'s inline header) has no gutter *track* — its leading tracks are padding
-— so the handle is hung absolutely in that padding at `--cp-row-pad-start`,
-exactly where a `cp-row` starts its gutter cell. It stamps the same
-`data-cp-handle`, so the panel reserves the gutter (and moves every label in it)
-exactly as it does for a `Row`'s handle. A pushing `Group` forwards it to its
-drill row. The bag is `ControlPanelHandleProps`, shared by all three.
-
-**`fit` is required, and it sizes the CONTROL, not the track.** Each row is its
-own grid, so an `auto` value track is as wide as that row's own control — right
-for `fit="inline"` (a swatch, an avatar, a stepper sizes to itself) and useless
-for a field. So `fit="field"` gives the control `--cp-value-col`, and every
-dropdown and input in the panel comes out the same box. Whether the value track
-*exists* is derived per panel from `data-cp-value`, exactly as `data-cp-icon` and
-`data-cp-handle` already work — declared from the prop, never sniffed from the
-rendered node.
-
-**A `Block` label is drawn in a row's label cell — on the TEXT rail, not the
-panel's content edge.** Invariant #1 says every *label* starts at one x, and a
-Block label is a field label, the same rung as a Setting label and a Row label. A
-`Section` label names a band, a different rung, and keeps the panel's content
-edge. In a panel with no icon track the two coincide, which is exactly why this
-is gated by the `block-label-rail` fixture rather than by this paragraph. `Block`
-is also **not** a `Section`: it carries no `cp-band`, so a run of blocks is one
-visual group with no hairline between them — same reason `RuleList` and `Empty`
-are not bands.
-
-`Group` has **no `mode`**: how it presents is the host's answer, read from
-`useControlPanelHost()`. Its `actions` / `mark` / `note` are honoured **only
-under `inline`**, where the header is the same plain `<div>` a `Setting` is built
-from. Under `push` the group is a drill row — a `<button>` — where an action
-would be a nested interactive and a stripe would paint on a different box, so the
-group **throws** rather than dropping them: a silently swallowed reset button is
-a bug nobody finds, and the same policy `useControlPanelHost()` itself takes. A
-host that pushes is a host that adorns nothing, so in practice this fires only
-for a call site that has mixed the two up.
+- **`Setting` is a sibling of `RuleRow`**, not a `select` arm and not a promoted
+  `Field`.
+  - It is a non-interactive `<div>` box whose *cells* are interactive (a `Row`
+    holding a dropdown would nest `<button>`s).
+  - `Row` vs `Setting` differ on one axis — who is the click target — enforced
+    by disjoint prop sets.
+- **`Setting` has no `icon`, deliberately** — the track scan is per panel, so one
+  contributed field's icon would indent every label in a panel its host doesn't
+  own. Excluded at the type level.
+- **`Setting` and `Group` take a drag `handle`, like `Row`** (bag:
+  `ControlPanelHandleProps`).
+  - A `Setting` / inline `Group` header has no gutter track, so the handle hangs
+    absolutely at `--cp-row-pad-start` and stamps the same `data-cp-handle`.
+  - A pushing `Group` forwards it to its drill row.
+- **`fit` is required and sizes the CONTROL, not the track**:
+  - `fit="inline"` sizes to itself (swatch, avatar, stepper);
+  - `fit="field"` gets `--cp-value-col`, so every dropdown/input is the same
+    box.
+  - The value track's existence is derived per panel from `data-cp-value`.
+- **A `Block` label is on the TEXT rail** (a field label, like `Row` / `Setting`
+  labels), not the panel content edge.
+  - `Block` is **not** a `Section`: no `cp-band`, so a run of blocks has no
+    hairlines.
+- **`Group` has no `mode`** — it reads `useControlPanelHost()`.
+  - Its `actions` / `mark` / `note` work **only under `inline`**.
+  - Under `push` (a drill-row `<button>`) it **throws** rather than silently
+    dropping them.
 
 ## The three label rungs, and where each one starts
 
-A label either names the panel's **band** (`Section`'s label), a **run of rows
-inside one band** (`Subhead`) — both the shared menu section label (ui-kit
-`MENU_LABEL_PAINT`: faint caption, semibold, sentence case, the same a dropdown
-section wears) on the panel's content edge — or **one control** (a `Row` / `Setting` /
-`Block` label — drawn in a row's label cell, on the text rail). Invariant #1's
-split is band-and-run versus field, not "heading versus body".
+| rung | member | rail | paint |
+|---|---|---|---|
+| names a band | `Section` label | panel content edge | ui-kit `MENU_LABEL_PAINT` |
+| names a run of rows in a band | `Subhead` | panel content edge (carries no class — inherits) | `MENU_LABEL_PAINT` |
+| names one control | `Row` / `Setting` / `Block` label | text rail (row label cell) | — |
 
-`Subhead` is the middle rung, and it exists because the outer two are both wrong
-for it: a `Section` would rule a hairline between the heading and its own rows,
-and a field label would indent it an icon column past the band label above it. It
-reaches its rail by carrying no class at all — the *inherit* half of the rail
-contract — so it is equally correct in a region that is not a panel. Gated by
-`subhead-rail` (a panel with an icon column, where the two rails are genuinely
-apart).
+Use `Subhead`, not a `Section` (would rule a hairline under its heading) or a
+field label (would indent it).
 
 ## Three surfaces, picked by what the thing IS
 
@@ -302,32 +193,22 @@ apart).
 | `ControlPanelPane` | a settings pane | the menu section label | on the band | the pane's |
 | `ControlPanelCard` | a titled settings card under a gear (an app's own settings) | a **heading** over body prose | on the band | `settings` (density `popoverWidthSettings`) |
 
-**The card exists because the vocabulary had no form for it.** Sonata's settings
-gear was built as a `ControlPanelPopover` — the only "popover of settings" there
-was — and came out a menu: a faint caption label, the 280px `described` wrap,
-caption prose, no title, focus ringing the first row's trash button. Every one
-of those was the popover doing its job. The fix is the missing ROLE, not knobs
-on the popover: a `headingStyle` or `width` prop would reopen exactly the
-escapes this vocabulary removed, and the next author would still pick wrong.
-So the card owns everything that makes it a card, and a call site writes the
-same `<ControlPanel.Section label description>` it writes anywhere:
+Never build an app's settings gear as a `ControlPanelPopover` (it comes out a
+menu), and never add `headingStyle` / `width` knobs to the popover — use the
+card.
 
-- **A required `title`**, drawn in a title row with a close button (above the
-  body, on its rail — not the popover's sticky `header`, whose rule and inset
-  are a menu's), and the panel's accessible name.
-- **`sections: "heading"`** in its host policy: `Section` draws its label as a
-  heading and its description as prose, through the overlay token group's
-  `settingsTitle` / `settingsHeading` / `settingsProse` role picks
-  (`<Text pick>`), so a theme sets the card's type to its mock.
-- **`cp-card`** on the popup: the card inset (density `settingsCardPad`) as
-  `--cp-panel-pad`, so the rail, rows and band rules keep the contract one step
-  roomier; its foot pads by the whole rail.
-- **Initial focus on the title row** when opened by pointer, so no row action
-  opens ringed; a keyboard open lands on the first control.
+`ControlPanelCard`:
 
-It takes no `width`, `padding` or `className`, the same absences as its
-siblings. A `Section` outside any host (a bare `<ControlPanel>` in a dialog)
-draws the label it always did (`useSectionStyle`).
+- **requires `title`** — a title row with close button above the body (not the
+  popover's sticky `header`), and the panel's accessible name;
+- host policy `sections: "heading"` — `Section` label as heading, description as
+  prose, via the overlay token group's `settingsTitle` / `settingsHeading` /
+  `settingsProse` picks (`<Text pick>`);
+- `cp-card` on the popup: `--cp-panel-pad` = density `settingsCardPad`;
+- initial focus on the title row on pointer open (keyboard open → first control).
+
+No surface takes `width`, `padding` or `className`. A `Section` outside any host
+draws its plain label (`useSectionStyle`).
 
 ## The host owns the presentation, and throws when absent
 
@@ -340,370 +221,218 @@ interface ControlPanelHost {
 }
 ```
 
-`ControlPanelPopover` publishes `{ push, 0, hint, label }` — a popover passes field
-subsets precisely because it wants short labels rather than prose, and
-`usePanelStack().push` replacing the whole body is right there. `ControlPanelPane`
-publishes `{ inline, 1, band, label }` (`ControlPanelCard`: `{ inline, 1, band, heading }`) **and still wraps its children in a
-`ControlPanel.Stack`**, so depth ≥ 2 falls back to a push rather than collapsing
-into nothing.
+| surface | host |
+| --- | --- |
+| `ControlPanelPopover` | `{ push, 0, hint, label }` |
+| `ControlPanelPane` | `{ inline, 1, band, label }` |
+| `ControlPanelCard` | `{ inline, 1, band, heading }` |
 
-`useControlPanelHost()` throws when there is no host, the same policy as
-`usePanelStack()` and for the same reason: a `Group` cannot render correctly in a
-host that has not said whether to push or to inline, and a silent default shows
-up as a dead click at depth 2.
+- The pane and the card still wrap children in a `ControlPanel.Stack`, so depth
+  ≥ 2 falls back to a push.
+- `useControlPanelHost()` **throws** with no host (same as `usePanelStack()`).
 
-**An inline group is a nested rail region** (`cp-group`), never a margin and
-never a `border-l` + `pl-lg`. Nesting is shadowing: the group re-declares the
-rail one step deeper and pays it as its own padding, so a nested row's bleed
-reaches the group's edge and everything inside behaves as it does at panel level,
-one step in. The published rail is *not* the bare step — it is
-`panel-pad + rail-icon + step`, because a nested `cp-row` bleeds back by the
-chrome pad and then re-applies **its own** leading padding. That padding is
-`--cp-row-pad-start`, which the group redeclares: the two row grids read a
-region-relative number rather than naming the group. Publish the bare step
-instead and nested loose content lands 12px left of a nested row's leading cell
-(Comfortable) — invariant #1 broken *inside* the group, which reads as fine in a
-screenshot. Gated by `group-nested-rail`, which was falsified against exactly
-that mutation.
+**An inline group is a nested rail region** (`cp-group`) — never a margin, never
+`border-l` + `pl-lg`.
+
+- It republishes the rail as `panel-pad + rail-icon + step` (not the bare step)
+  and redeclares `--cp-row-pad-start`, because a nested `cp-row` bleeds back by
+  the chrome pad and re-applies its own leading padding.
+- Gated by `group-nested-rail`.
 
 ## `ControlPanel.Row` is its own grid, not a composed `Row`
 
-`css/row`'s `Row` is a `<Line>`-based **flex** row whose `icon` is a leading flex
-child — so the label's x depends on whether that row happens to have an icon, and
-flex has no track that occupies width when empty. That dependency *is* the
-misalignment this vocabulary exists to remove. `Row`'s trailing slot is also
-hover-revealed and overlay-pinned; a panel row's trailing cell is in-flow and
-presentational by contract.
+`css/row`'s `Row` is flex (label x depends on the icon; trailing slot is
+hover-revealed/overlay-pinned), so the two stay separate and share **tokens**
+(`--pad-row-x`, `--control-height-md`, hover fill), not code.
 
-Adding a grid mode plus a panel-only geometry axis to a primitive with 50+ call
-sites costs more than eight lines of duplicated element inference, so the two
-stay separate and share **tokens** (`--pad-row-x`, `--control-height-md`, the
-hover fill) rather than code.
+The look is ui-kit's shared menu-row paint — see ui-kit's "Menu rows share one
+definition":
 
-Nor is the row's **look**: it wears the shared menu-row paint from ui-kit
-(`MENU_ROW_PAINT` + `MENU_ROW_CHECKED`, and `hover:menu-row-lit` for its
-highlight; `tone="danger"` stamps `data-variant="destructive"`, the dropdown's
-own tone attribute), so a panel row and a dropdown item are the same row in two
-geometries. Its trailing cell is `MENU_VALUE` and `Subhead` is
-`MENU_LABEL_PAINT`. See ui-kit's "Menu rows share one definition"; only the
-`cp-row` subgrid and the indicator placement are this vocabulary's own.
+- `MENU_ROW_PAINT` + `MENU_ROW_CHECKED`, `hover:menu-row-lit`;
+- `tone="danger"` → `data-variant="destructive"`;
+- trailing cell `MENU_VALUE`.
 
-What is *not* duplicated is the hover-reveal machinery: every trailing cluster in
-this vocabulary — `RuleRow`'s, `Setting`'s and `Row`'s — composes `row-actions`
-at `pin={null}`, in-flow inside a track that already reserves the space,
-borrowing that primitive's reveal coupling and xs density instead of restating
-them.
+Every trailing cluster (`RuleRow`, `Setting`, `Row`) composes `row-actions` at
+`pin={null}` in a reserved track.
 
 ### The row has two constructions, and `actions` picks one
 
-**Without `actions`** the inferred element IS the row box: one node carrying
-`cp-row`, the four cells as its direct children. The trailing cell is then
-presentational by contract — the row is the click target, so a control there
-would be a nested interactive — and `select="switch"` owns that cell outright
-rather than sharing it. This is what ~50 call sites render, and it is unchanged
-byte for byte.
+- **Without `actions`** — the inferred element IS the row box (`cp-row`, four
+  cells as direct children). The trailing cell is presentational (no controls);
+  `select="switch"` owns it.
+- **With `actions`** — the box is a non-interactive `<div>`; the inferred element
+  moves inside as the *selectable region*, a sibling of the action buttons.
+  - The region is a **`subgrid`** (`grid-cols-subgrid col-[1/-2]`): sets **no
+    `gap`** (inherits), spans are **end-relative** (`1/-2`, `-2/-1`) because
+    `cp-row` has 2–4 tracks, and `self-stretch` fills row height.
+  - **Focus ring**: `focus-ring-from` on the box + `data-focus-ring` on the region
+    (direct child). Not `focus-ring-within` (would ring for action focus too).
+  - **`disabled` scopes to the selection**, not the row — actions stay live (a
+    stale preset can't be applied but can be deleted).
+  - The track-dropping rules in `@utility cp-row` write out **both cell depths**
+    (four selectors, not a descendant combinator).
+- `actions` is excluded from `select="switch"` at the type level (switch owns the
+  trailing cell).
 
-**With `actions`** the row splits, exactly as `css/row`'s `Row` splits when it is
-handed both a click target and an action cluster: the box becomes a
-non-interactive `<div>`, and the element the props inferred moves inside it as
-the *selectable region*, a sibling of the action buttons rather than their
-ancestor. That sibling relationship is the whole point — it is the only
-arrangement in which "apply this preset" and "delete this preset" are both legal
-DOM on one row.
+Host element is **inferred, never authored**:
 
-Three things make the split invisible from the outside:
+- `href` → `<a>`;
+- `onSelect` / `disabled` → `<button>`;
+- else `<div>`.
 
-- **The selectable region is a CSS `subgrid`** (`grid-cols-subgrid col-[1/-2]`),
-  so the panel's own tracks pass straight through it and the gutter, icon and
-  label cells land on exactly the rails they land on in the other construction.
-  Invariant #1 never learns that this row is built differently. It sets **no
-  `gap`** — a subgrid inherits the parent's column gap, and restating it is how
-  the leading cells drift off the rail — and its span is written end-relative
-  (`1/-2`, `-2/-1` for the trailing cell) because `cp-row` is a 2-, 3- or
-  4-track grid depending on what the panel occupies, and only the end-relative
-  line is the same line in all three. It also takes `self-stretch` against the
-  row's `align-items: center`, so the click target fills the full row height
-  instead of only its content's.
-- **The focus ring is painted by the box, from the region's focus.**
-  `focus-ring-from` on the row box plus `data-focus-ring` on the region: the
-  utility is `:has(> [data-focus-ring]:focus-visible)` and the region is a direct
-  child, so keyboard focus on the selection rings the whole row, while focus on
-  an action button rings only that button. `focus-ring-within` would light both
-  at once — two indicators for one focus.
-- **`disabled` scopes to the SELECTION, not the row.** With actions it dims and
-  deadens the inner region only; the box stays live so the actions still work.
-  That is the honest meaning of the prop and it is the case that occurs: a saved
-  preset whose fields have all left the schema cannot be applied, and is exactly
-  the one you want to delete. Without actions the two are the same thing and it
-  reads as it always has.
+`ref` is always the row BOX (stable for dnd transforms).
 
-The CSS pays one price, in the two track-dropping rules inside `@utility cp-row`:
-a row's cells are direct children in one construction and one level deeper in the
-other, so **both depths are written out** (four selectors, not a descendant
-combinator that would also reach inside a row's label). Nothing else in that
-utility learns about the second depth — the panel-level `:has([data-cp-icon])`
-scan is already a descendant scan, so it finds an occupancy mark wherever the row
-puts it.
+### Row rules
 
-`actions` is excluded from the `select="switch"` arm at the type level, the same
-way `icon` is excluded from check/radio: the switch is drawn IN the trailing
-cell, so a cluster there would be a second occupant of a cell that already has an
-owner.
-
-Host element is **inferred, never authored**: `href` → `<a>`,
-`onSelect`/`disabled` → `<button>`, else `<div>`. Same rule as `Row`, and the
-same rule on both constructions — it just decides a different node in each.
-`ref` is the row BOX on both paths, deliberately: a ref that changed node the day
-a row grew an action would hand a dnd transform a box that leaves the trailing
-cell behind.
+- **Every row in a panel is a `ControlPanel.Row`**, never `css/row`'s `Row`
+  (`control-panel/no-row-in-panel`).
+  - Rows light with the menu highlight on hover and keyboard focus — no focus
+    ring.
+  - Beside a live caret (block menu) pass `keepFocus`.
+- **Drill:** `ControlPanel.Row push={entry}` — never `onSelect` +
+  `usePanelStack().push`; it draws the trailing `chevron-right`.
+  - The filter builder's sub-pages still push via `useFilterPanelStack`, no
+    chevron yet.
+- **`selected`** (plain arm only) marks the CURRENT row of a single-choice list
+  with the `--selected` fill + `aria-current`; excluded from check/radio/switch.
+- **`indicator="trailing"`** on check/radio draws the mark after the value so the
+  leading cell holds a real `icon`.
+- A row with `description` reads as title (medium, strong) over prose; leading and
+  trailing cells sit on the title line.
 
 ## Geometry: the `--cp-*` tokens
 
-Declared at every theme-scope root in [`ui-kit`'s `app.css`](../ui-kit/web/theme/app.css)
-— not inside the `@utility` block, because a custom property that reads a themed
-var freezes its computed value wherever it is declared. The published
-`--rail-start` is the one exception, and for the same reason read the other way:
-it reads `--cp-rail-icon`, which `cp-panel` itself redeclares, so the two must be
-declared on the same box or the rail freezes on the root's value.
+Declared at every theme-scope root in
+[`ui-kit`'s `app.css`](../ui-kit/web/theme/app.css), not inside `@utility` (a
+custom property reading a themed var freezes where declared).
+
+Exception: `--rail-start` reads `--cp-rail-icon`, which `cp-panel` redeclares,
+so both live on `cp-panel`.
 
 | Token | Value | What it is |
 | --- | --- | --- |
-| `--cp-panel-pad` | `var(--panel-pad)` (density token, default `var(--space-xs)`) | the chrome pad — the gap a row's fill keeps from the panel's edge |
-| `--cp-row-pad-x` | `var(--pad-row-x)` | inline padding inside a row or rule row |
-| `--cp-gutter` | `var(--space-lg)` | leading track that hangs the drag handle — present only in a panel where some row has one |
-| `--cp-icon-gap` | `var(--space-sm)` | **the** column gap — shared by `cp-row` and `cp-rule`, which is what puts a rule's prefix cell on the same rail as a row's icon cell |
-| `--cp-icon-col` | `1.125rem` | the icon / selection-indicator track — present only in a panel where some row has one |
-| `--cp-prefix-col` | `4rem` | the builder's prefix track ("Where", "And", "then by") |
-| `--cp-remove-col` | `1.5rem` | minimum of the builder's trailing track |
-| `--cp-row-h` | `var(--panel-row-h)` (density token, default `var(--control-height-md)`) | one row height (invariant #2) |
-| `--cp-rule-h` | `var(--control-height-lg)` | one builder-row height |
-| `--cp-rail-icon` | `calc(row-pad-x + gutter + icon-gap)`, or `var(--cp-row-pad-x)` in a panel with no handle | THE rail — the left edge of a row's leading cell, and the panel's own content inset |
+| `--cp-panel-pad` | `var(--panel-pad)` (density, default `var(--space-xs)`) | chrome pad — gap a row's fill keeps from the panel edge |
+| `--cp-row-pad-x` | `var(--pad-row-x)` | inline padding inside a row / rule row |
+| `--cp-gutter` | `var(--space-lg)` | drag-handle track (only if some row has a handle) |
+| `--cp-icon-gap` | `var(--space-sm)` | **the** column gap, shared by `cp-row` and `cp-rule` |
+| `--cp-icon-col` | `1.125rem` | icon / indicator track (only if some row has one) |
+| `--cp-prefix-col` | `4rem` | builder prefix track ("Where", "And", "then by") |
+| `--cp-remove-col` | `1.5rem` | min of the builder's trailing track |
+| `--cp-row-h` | `var(--panel-row-h)` (density, default `var(--control-height-md)`) | row height (invariant #2) |
+| `--cp-rule-h` | `var(--control-height-lg)` | builder-row height |
+| `--cp-rail-icon` | `calc(row-pad-x + gutter + icon-gap)`, or `var(--cp-row-pad-x)` with no handle | THE rail — a row's leading-cell edge and the panel's content inset |
 
-The formula includes `--cp-icon-gap` because the grid's column gap *follows* the
-track it names: the icon cell begins one gap after the gutter track ends.
-Dropping that term is the easy way to get a rail that is 8px wrong.
+`--cp-icon-gap` is in the rail formula because the column gap follows the gutter
+track; drop it and the rail is 8px off.
 
-`cp-panel` then publishes that as the **shared** rail — the repo-wide pair, not
-a panel-private one:
+`cp-panel` publishes the shared rail pair — the **whole** padding, chrome pad
+included:
 
-| Published | Value | |
-| --- | --- | --- |
-| `--rail-start` | `calc(panel-pad + rail-icon)` | where loose content lands, chrome pad included |
-| `--rail-end` | `calc(panel-pad + row-pad-x)` | so the content box ends where a row's trailing cell does |
+- `--rail-start: calc(panel-pad + rail-icon)`
+- `--rail-end: calc(panel-pad + row-pad-x)`
 
-The rail is the **whole** padding, not just the content half: a rail means *where
-a child that does nothing lands*, and a bare `<Input>` here lands past both terms.
-Publishing only the content half would advertise a rail 4px short of the real one.
-The chrome pad is recovered by the two cancellers, which stop short of the panel's
-inner edge on purpose.
+Utilities:
 
-**There is no `--cp-rail-text`.** The text rail — where a row's label starts — is
-an interior column of the row grid, reached by the row's own tracks, and nothing
-outside a row has any business naming it; handing it to loose content is the
-defect v2 removed.
+| utility | what it is |
+| --- | --- |
+| `cp-panel` | region owner; leading tracks derived here |
+| `cp-body` + `cp-band` | separator |
+| `cp-row` | gutter \| icon \| label \| trailing |
+| `cp-rule` | six tracks; `[data-span="field"]` drops the operator track |
+| `cp-setting` | label \| value \| status \| actions |
+| `cp-group` | nested region |
 
-`--cp-icon-col` and `--cp-prefix-col` are the only genuinely new numbers — they
-are column widths, which the spacing ramp does not model. Everything else binds
-to the density ramp, so panels tighten under the Compact preset. Row height binds
-to `--control-height-md` so a panel row lines up with every Button, Input and
-ToggleChip in the app, extending the rail past the panel's own edge.
-
-Seven utilities carry them: `cp-panel` (the region owner, and the box the two
-leading tracks are derived on), `cp-body` + `cp-band` (the separator — one
-mechanism, above), `cp-row` (gutter | icon | label | trailing, the first two
-derived), `cp-rule` (six tracks, with `[data-span="field"]` collapsing the
-operator track for a builder that has none and the gutter derived the same way
-as a row's), `cp-setting` (label | value | status | actions, the last three
-derived) and `cp-group` (the nested region). There is no `cp-rail-icon` utility:
-the panel's own rail IS the icon rail, so content reaches it by doing nothing.
-
-**`cp-setting` states its two leading tracks as PADDING, not as tracks**, and
-that is the one thing to know about it. A `Setting` has no `handle` and no `icon`
-in its type, so those cells could only ever be empty spacers — and a spacer is
-padding. Saying so collapses what would otherwise be a 4× multiplier over the
-three trailing cases (32 templates) into ONE extra declaration, because
-`--cp-rail-icon` already carries the gutter case. The arithmetic is `cp-row`'s
-label x written out: the leading *cell* sits at `--cp-rail-icon`, and the label
-one icon column and one gap further on. Four panel shapes, two declarations, and
-`setting-rail` measures the pair against a real `cp-row` rather than trusting
-this paragraph.
-
-The three trailing tracks are floors (`minmax(<token>, auto)`) with the same
-caveat `cp-rule` records for its own trailing track: **keep a panel's `status`
-and `actions` uniform, or the value column steps between rows.**
+- **`cp-setting` states its two leading tracks as PADDING, not tracks** (a
+  `Setting` has no handle/icon), avoiding a 4× template blowup; `setting-rail`
+  measures it against a real `cp-row`.
+- Trailing tracks are `minmax(<token>, auto)` floors: **keep a panel's `status`
+  and `actions` uniform, or the value column steps between rows.**
 
 ## `ControlPanelPopover` has no `width`, `size`, `padding` or `contentClassName`
 
-That absence is the feature — a width prop is how three panels in one toolbar
-ended up 481, 384 and 256px wide, each set by whatever was widest inside it.
-The padding is the body's, and there is nowhere to smuggle a measurement
-through.
+That absence is the feature (a width prop let three toolbar panels end up 481,
+384 and 256px wide). Never add one.
+
+- `maxHeight` exists — a passthrough of `OverlayPanel`'s closed
+  `PopoverMaxHeight` scale that can only make a panel shorter.
+- No `tooltip` prop: the trigger owns it.
+
+Children are wrapped in a `ControlPanel.Stack`, so `usePanelStack()` works in any
+panel — a sub-panel is a push, never a popover from a popover.
+
+The stack is published via **context** and throws when absent (custom-columns'
+per-field editor reaches it with no prop path).
 
 ### The content declares its width; the surface collects it
 
-The width is a **bucket** — `menu` (a list of choices, the baseline),
-`described` (choices that each carry a visible description line), `picker` (a
-body that is a grid), `builder` (a six-track rule row) — each a density token,
-`popoverWidth*`, so a theme sizes them. **The bucket is chosen by the content,
-never by the code that opens the panel** (`width-need.ts`):
+Buckets — each a density token `popoverWidth*`:
 
-- **Members state their own need.** `RuleRow` stamps `data-cp-needs="builder"`;
-  a `Row` with a visible `description` stamps `described`.
-- **Content the vocabulary cannot see into declares it on its band:**
-  `ControlPanel.Section needs="picker"` around an icon / emoji / swatch grid or
-  a calendar; `needs="builder"` on a builder page that has no rule row yet (the
-  empty filter's field picker, Add filter, Add sort), so the panel does not
-  widen under the pointer when the first rule appears. A slot whose
-  contributions render sections carries the need in its contribution
-  (`QuickTheme.Section`'s `needs`).
-- **The surface collects.** `ControlPanelPopover`'s popup is `cp-surface`
-  (`app.css`): CSS `:has()` rules, in rank order menu < described < picker <
-  builder, pick the highest need on the **showing** level (`data-cp-showing`,
-  which `ControlPanelStack` puts on the page on screen — the levels below stay
-  mounted, hidden, and must not count). Rank, not `max()` of pixels:
-  `described` is a wrap width, not a minimum — the default theme draws it
-  narrower than a menu, the Pages theme wider. Pure CSS, so the width is right
-  in the frame the page first paints.
+| bucket | for |
+| --- | --- |
+| `menu` | baseline |
+| `described` | choices with visible descriptions — a wrap width, can be narrower than menu |
+| `picker` | a grid; 320px default |
+| `builder` | six-track rule rows |
 
-**Why not the opener.** The width used to be declared where a panel is opened
-(`ControlPanelPopover size`, then `PanelStackEntry.size`, then a required
-`size` with `"inherit"`). Each one let the opener say a width it only knows by
-convention: the view-settings menu's Fold rows page renders the whole filter
-builder, declared nothing, and drew its rule rows overflowing a menu-wide
-panel. Requiring the field only moved the guess — `"inherit"` type-checked and
-still overflowed. Only the content knows what it needs, so only the content
-says it.
+**The content chooses, never the opener** (`width-need.ts`):
+
+- **Members state their own need**:
+  - `RuleRow` stamps `data-cp-needs="builder"`;
+  - a `Row` with `description` stamps `described`.
+- **Opaque content declares it on its band**:
+  - `ControlPanel.Section needs="picker"` around an icon / emoji / swatch grid
+    or calendar;
+  - `needs="builder"` on a builder page with no rule row yet (empty filter, Add
+    filter, Add sort), so it doesn't widen under the pointer;
+  - a slot whose contributions render sections carries the need in its
+    contribution (`QuickTheme.Section`'s `needs`).
+- **The surface collects**: the popup is `cp-surface` (`app.css`).
+  - `:has()` rules in rank order menu < described < picker < builder pick the
+    highest need on the **showing** level (`data-cp-showing`, set by
+    `ControlPanelStack`; hidden levels don't count).
+  - Rank, not `max()` of pixels. Pure CSS, right on first paint.
+
+Don't move the declaration back to the opener (`size`, `PanelStackEntry.size`,
+`"inherit"` were all tried and overflowed) — only the content knows.
 
 ### The measured backstop: `panel-overflow`
 
-A need nobody declared (a foreign grid in a `Section` without `needs`, a new
-wide control) still leaves content wider than its bucket. `ControlPanel`'s
-overflow guard (`overflow-guard.ts`, on every panel inside a `cp-surface`)
-watches the panel — a `ResizeObserver` plus a subtree `MutationObserver`,
-one measurement per frame, no polling — and when content does not fit while
-the surface is not capped by the viewport, it fails loudly. Content does not
-fit in two shapes, and the guard measures both: past the PANEL's edge
-(`scrollWidth` beyond its width), or out of a grid CELL — the row grids'
-tracks are `min-w-0`, so a builder row in a menu-wide panel does not push the
-panel at all; its tracks squeeze and each control spills over its neighbour
-inside the row (measured: the panel-level check alone reads 0px there). Only a
-cell whose overflow is visible counts — one that clips is truncating on
-purpose. Then: it emits a `PanelOverflowFault` to `panelOverflowReportSink`, which
-`reports/panel-overflow` files as a report (panel label, showing page, the
-needs it declares, both widths, the first element past the edge), and throws in
-dev. The declarations choose the width; the measurement verifies them.
+`overflow-guard.ts` runs on every panel inside a `cp-surface` (`ResizeObserver` +
+subtree `MutationObserver`, once per frame). When content doesn't fit and the
+surface isn't viewport-capped, it fails loudly.
 
-`maxHeight` **is** here, and is not that escape reopened: it is a passthrough of
-`OverlayPanel`'s closed `PopoverMaxHeight` scale, invariant #5 is about *width*,
-and fitting the viewport plus scrolling is already unconditional — so the prop
-can only ever make a panel SHORTER than the space it has (a long Turn-into list
-that would otherwise open as a viewport-tall wall). The three-panels-at-481/384/256px
-failure a `width` prop caused has no height analogue.
-`picker` (320px) exists because three shipped panels — the avatar picker, the
-page icon button, the change-cover popover — arrived at that width
-independently; one panel at a width is a measurement, three unrelated ones is a
-role. Invariant #5 is enforceable because the escape is absent from the type,
-not defaulted in it.
-
-No `tooltip` prop either: the caller's trigger (typically an `IconButton`)
-already owns its tooltip.
-
-A row pushes a page with `ControlPanel.Row push={entry}` — never `onSelect` +
-`usePanelStack().push` — and draws the trailing `chevron-right` that says it
-drills, after its value. One spelling, so a drill row without its chevron is
-unspellable. (The filter builder's own sub-pages still push through
-`useFilterPanelStack`, which re-enters a filter scope around the page; they do
-not have the chevron yet.)
-
-**Every row in a panel is a `ControlPanel.Row`** — never the generic `css/row`
-`Row`, which has its own height, gap and highlight (`control-panel/no-row-in-panel`
-rejects one drawn inside a panel element in the same component). A row lights
-with the shared menu highlight on hover AND on keyboard focus, exactly like a
-dropdown row under the arrow keys — no focus ring. A panel opened beside a live
-caret (the page editor's block menu) passes `keepFocus`: the row selects on
-press without taking focus, and Enter / Space still select.
-
-`Row selected` (the plain arm only — no `select`) marks the CURRENT row of a
-single-choice list with a persistent fill instead of a mark: the `--selected`
-tier `css/row`'s `selected` paints (`bg-selected text-accent-foreground`,
-`aria-current`), which a theme sets apart from `--hover-fill`, so "current"
-and "hovered" stay two looks. It is excluded from the check / radio / switch
-arms at the type level — a row is current by fill or by mark, never both.
-
-One more opt-in shape, default unchanged: `Row indicator="trailing"` on a check / radio row
-draws the mark after the value so the leading cell holds a real `icon` — role
-and `aria-checked` unchanged. A row with a visible `description` reads as a
-title (medium, strong) over its prose, and its leading and trailing cells sit on
-the title line.
-
-Children are wrapped in a `ControlPanel.Stack`, so `usePanelStack()` works inside
-any panel opened this way — a sub-panel is a push, never a popover opened from
-inside a popover. The stack is published through **context** (and throws rather
-than no-ops when absent) because one of its three consumers, custom-columns'
-per-field editor, is a nested contribution with no prop path back to the chrome
-hosting the panel.
+- It measures both overflow past the PANEL edge and out of a grid CELL (tracks
+  are `min-w-0`, so a builder row in a menu panel squeezes without widening the
+  panel).
+- A cell that clips doesn't count.
+- It emits a `PanelOverflowFault` to `panelOverflowReportSink` (filed by
+  `reports/panel-overflow`) and throws in dev.
 
 ## Enforcement
 
-`exhibits/` contributes geometry-gated exhibits to the exhibit catalog,
-swept at every width role (262 / 320 / 500 / 524 — the three popover roles plus
-the config settings PANE, whose geometry was untested until it was added) and
-measured in a real browser by
-`./equin check layout-geometry`: `rail-alignment` (invariant #1, across a
-mixed row set — the panel's own inset against the row grid's leading cell, and
-every row's label against a rail one of them computed), `mixed-content` (the same
-rail, for content that is NOT a row — a bare `<Input>` and a `<Button>` measured
-against a row's leading cell), `derived-tracks` (a panel with neither leading
-track and a panel with only the gutter, so nothing is indented past a column
-nothing paints in), `row-height`, `rule-grid` (both shapes), and `long-label` —
-whose falsification re-renders the historical `absolute right-2` +
-reserved-padding construct and asserts the overlap check genuinely fails on it.
+- **Geometry exhibits** (`exhibits/`), swept at 262 / 320 / 500 / 524 and
+  measured by `./equin check layout-geometry`:
+  - `rail-alignment`, `mixed-content`, `derived-tracks`, `row-height`,
+    `rule-grid`, `long-label`, `setting-rail`, `block-label-rail`,
+    `subhead-rail`, `group-nested-rail`;
+  - plus the region exhibits `region` / `pane-region` (`regionExhibit`, filled
+    from `REGION_CHILDREN`, so a new kit member re-gates the panel
+    automatically).
+- `useRailGuard` (`primitives/css/rail/web`) — same check in dev on the live DOM.
+- The harness compares **widths only**:
+  - invariant #2 rests on `--cp-row-h` + the unit test;
+  - colour rests on `e2e/hairline-verify.ts` (manual; self-falsifying — paints
+    `.cp-band::before` transparent and re-probes).
+- `lint/no-adhoc-panel-body` flags hand-sectioned panel bodies:
+  - a `DropdownMenuSeparator` outside `DropdownMenu*Content`;
+  - a `<Separator>` in a floating surface;
+  - an `h-px` + `bg-border` hairline.
 
-Plus `setting-rail` (the two row grids' labels on one text rail, and the value
-rail across a panel mixing `Row`, `Setting fit="field"`, `Setting fit="inline"`
-and `Block` — the pair that can actually drift), `block-label-rail` and
-`subhead-rail` (the two sides of the label-rung split above — a field label on
-the text rail, a sub-head on the band label's — each gated in a panel with an icon
-column so the two rails are genuinely apart) and `group-nested-rail` (a nested
-group's republished rail against its children).
-
-Plus `region` and `pane-region` — two **region exhibits** (`regionExhibit`), which say only
-"`ControlPanel` / `ControlPanelPane` opens a region" and lets the harness fill it from `REGION_CHILDREN` (bare input, bare
-button, bare prose, a `display: contents` contribution, a `rail-follow` band, a
-`rail-bleed` row). This file used to ask authors to "render something other than
-a `Row`", because rows were the one child kind the gate ever drew and three
-geometry bugs shipped past it; a region fixture has nowhere to say what its
-children are, so the request is now a mechanism. Adding a member to the kit
-re-gates this panel with no edit here.
-
-`useRailGuard` (`primitives/css/rail/web`) is the same check in dev, on the real
-DOM: it names any child of a live panel whose content does not start on the
-published rail.
-
-> The harness oracle compares **widths only**. `rigidIntegrity` on a row pins the
-> row's box, not its height, so invariant #2 rests on `--cp-row-h` plus the unit
-> test — the oracle has no height invariant to express it with. It is likewise
-> structurally blind to COLOUR, which is why the separator needs its own check:
-
-`e2e/hairline-verify.ts` (manual; drives the deployed Tasks toolbar) reads the
-composited pixels in the blank gap between each pair of bands and asserts exactly
-one row there differs from the panel's own rendered background by ≥10 per channel
-— plus none above the first band. It is **self-falsifying**: it then paints
-`.cp-band::before` transparent and re-probes, requiring the same strips to report
-nothing, so a probe aimed at the wrong y cannot pass forever. The background is
-read off the render (the strip's modal colour), not resolved from a token, so a
-wrong `--chrome-mask` is caught as well.
-
-`lint/no-adhoc-panel-body` flags the three ways a panel body sections itself by
-hand: a `DropdownMenuSeparator` with no `DropdownMenu*Content` ancestor, a
-`<Separator>` inside a floating panel surface, and an `h-px` + `bg-border`
-hairline. It closes the *drift* signals, not the whole class — a body built from
-`Stack` + `SectionLabel` + `Button` with no divider is invisible to it, which is
-what the burndown allowlist in `lint/index.ts` is for.
-
-The primitive needs **no** new lint exemptions: it inherits the
-`plugins/primitives/plugins/css/plugins/**` layout glob already in
-`css/lint/index.ts` and stays clean against everything else.
+  A divider-less hand-built body is invisible to it (burndown allowlist in
+  `lint/index.ts`).
+- `control-panel/no-row-in-panel` — see Row rules.
+- No layout-lint exemption needed: covered by the `css/plugins/**` glob in
+  `css/lint/index.ts`.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./equin build` -->
 

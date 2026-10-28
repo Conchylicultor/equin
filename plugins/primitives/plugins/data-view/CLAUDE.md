@@ -1,5 +1,7 @@
 # data-view
 
+Rationale (why each rule is so, rejected alternatives): [DESIGN.md](DESIGN.md) — read before changing or removing a rule.
+
 A Notion-like multi-view data surface. One **data source** — `rows` plus a typed
 `FieldDef[]` schema — rendered through multiple **views** (gallery, table, …), each
 view independently sorted / searched / filtered.
@@ -15,749 +17,508 @@ view independently sorted / searched / filtered.
 
 ## Architecture
 
-- A single **global `DataViewSlots.View` slot** (a plain `defineSlot`, rendered via
+- One **global `DataViewSlots.View` slot** (plain `defineSlot`, rendered via
   `renderIsolated`). Each view type is a child plugin contributing one
-  `DataViewContribution` keyed by its **`type`** id (`"table"`, `"gallery"`, …).
-  This mirrors the `segmented-progress-bar` precedent (one global `Variant` slot,
-  children contribute variants) — the inverse of the `defineTabbedView` factory,
-  which exists because each tab host has a *different* set of tabs. Our views are a
-  *fixed shared vocabulary*.
-- **view-type vs view-instance.** A `DataViewContribution` is a registered
-  view-*type* (the renderer: `type`, `title`, `icon`, `component`, optional
-  `configSchema`). The host renders **view-instances** — a named,
-  individually-configured *use* of a view-type, `{ id, name, type, options }`,
-  authored in config (below); there is **no code-synthesized default mode**. The
-  public `views={[…]}` whitelist is a list of **type** ids, gating the
-  addable-types `+` menu.
-- `<DataView>` is the host: it resolves available views, builds a unified
-  `ViewModel` (active id, per-instance state, instance actions), owns the shared
-  chrome (search input → `state.query`, view switcher), and renders the active
-  view via `renderIsolated`. It passes **raw rows** — each view applies the
-  processing matching its own semantics. Flat views call the exported `useFlatRows`
-  hook (search → filter → sort); the nested table applies the shared `useRowFilter`
-  predicate (subtree-preserving, mirroring search) then feeds the result to the tree
-  primitive's subtree-preserving search + rank ordering — so filter/search/sort
-  behave identically across every view.
+  `DataViewContribution` keyed by its **`type`** (`"table"`, `"gallery"`, …) —
+  views are a fixed shared vocabulary, so a global slot, not a per-host factory.
+- **view-type vs view-instance.** A contribution is a view-*type* (`type`, `title`,
+  `icon`, `component`, optional `configSchema`). The host renders view-*instances*
+  `{ id, name, type, options }`, authored in config — there is **no code-synthesized
+  default**. `views={[…]}` is a whitelist of **type** ids gating the `+` add menu.
+- `<DataView>` is the host: builds the `ViewModel`, owns the shared chrome, and
+  renders the active view with **raw rows**. Flat views call `useFlatRows`
+  (search → filter → sort); the nested table applies `useRowFilter`
+  subtree-preserving, then the tree primitive's search + rank order — so
+  filter/search/sort behave identically across views.
 
 ## Config mode is universal (no default mode)
 
-Every `<DataView>` is config-backed — there is **no per-mount mode branch**, and
-**zero per-consumer registration boilerplate**. This mirrors `reorder` exactly:
-build-time codegen scrapes the markers, the primitive registers one
-`viewsDescriptor` per id under each defining plugin.
+Every `<DataView>` is config-backed, with zero per-consumer registration (mirrors `reorder`):
 
-- **`defineDataView("id")` marker** (`core/internal/define-data-view.ts`) declares
-  a surface id: asserts the grammar `^[a-zA-Z0-9._-]+$` (bans `:` so the id is a
-  filename-safe config name) and brands the string `DataViewId` (the type of
-  `DataViewProps.storageKey`). The brand is the structural guarantee — a consumer
-  cannot pass a raw string, so every id is discoverable.
-- **Codegen** (`framework/tooling/codegen/.../data-views-gen.ts`) scans every
-  plugin's `web/**` for `defineDataView(...)` calls and emits the sorted
-  `{ id, pluginId }` list to `shared/data-views.generated.ts` — `pluginId` being the
-  *defining* plugin, so the config lands in the consuming plugin's tree.
-  `data-views-in-sync` fails on drift; `./equin build` regenerates it.
-- **Registration** (`{web,server}/internal/{descriptors,config-registrations}.ts`)
-  builds one reference-stable `viewsDescriptor` per id and spreads one
-  `ConfigV2.{WebRegister,Register}` per id, **each passing the entry's own
-  `pluginId`** so config_v2 derives `config/<asPath(pluginId)>/<id>.jsonc` (e.g.
-  `config/apps/sonata/library/sonata.library.jsonc`). `useViewsConfig` resolves it
-  via `dataViewDescriptors.get(storageKey)` — reference identity vs the
-  registration, like `reorderDescriptors.get(slotId)`.
+- **`defineDataView("id")`** (`core/internal/define-data-view.ts`) brands the id
+  `DataViewId` (type of `storageKey`; grammar `^[a-zA-Z0-9._-]+$`, no `:`). A raw
+  string cannot be passed, so every id is discoverable.
+- **Codegen** (`data-views-gen.ts`) scans `web/**` for `defineDataView(...)` and emits
+  `{ id, pluginId }` to `shared/data-views.generated.ts` (`data-views-in-sync`;
+  `./equin build` regenerates). The config lands in the **defining** plugin's tree:
+  `config/<asPath(pluginId)>/<id>.jsonc`.
+- **Registration** (`{web,server}/internal/{descriptors,config-registrations}.ts`):
+  one reference-stable `viewsDescriptor` per id; `useViewsConfig` resolves it via
+  `dataViewDescriptors.get(storageKey)`.
 
 ### The rows' own read: `readiness`, never `emptyState` for a failure
 
-Pass the read backing `rows` as `readiness={result}` (any `useLive` /
-`useResource` / combined result — its `status` is all the DataView reads). The
-body's precedence is `server error > failed read > failed field > rule error >
-loading > pending field > the view` (`web/internal/body-state.ts`; the field arms are
-"A field's own read" under Field extensions): `error` renders `errorState` (default
-`<ResourceErrorInline variant="block"/>` — the message with Retry, or Reload for
-an out-of-date tab), `loading` renders `loadingState` (the view's skeleton), and
-only `ready` reaches the view, so `emptyState` can only mean "ready, and zero
-rows". There is no boolean `loading` prop: a boolean cannot say a read failed,
-so a failure would render as a skeleton forever (or, set false, as empty).
-Without `readiness` the rows are taken as ready (a static list). Every server
-read is already a result (`useLive`); there is no endpoint read to adapt.
+Pass the read backing `rows` as `readiness={result}` (any `useLive` / combined
+result). No `readiness` = static, ready rows.
 
-A needsMachine read's `unavailable` arm is taken too: the shell renders its
-`message` in place of every instance (title/actions kept, no view controls), so
-bodies only see the three states. Don't branch on it before a DataView. A
-`DataViewSwitcher` source's bundle cannot carry it (tsc).
+- **Body precedence** (`web/internal/body-state.ts`):
+  `server error > failed read > failed field > rule error > loading > pending field > the view`.
+- `error` → `errorState` (default `<ResourceErrorInline variant="block"/>`).
+- `loading` → `loadingState`.
+- Only `ready` reaches the view — so `emptyState` means only "ready, zero rows".
+- There is **no boolean `loading` prop** (it cannot say a read failed).
+
+A needsMachine read's `unavailable` arm is handled by the shell (its `message`
+replaces every instance); don't branch on it before a DataView. A
+`DataViewSwitcher` source bundle cannot carry it (tsc).
 
 ### Config is the single source of truth (fail by default)
 
-There is **no code synthesis** of default view-instances (view-core owns the
-resolver — see its CLAUDE.md). The displayed instances come **only** from the
-authored `config.views` rows; zero rows → `<DataView>` renders a `Placeholder`
-("No views configured — author `config/<plugin>/<id>.jsonc`") instead of crashing.
-**That placeholder is only reachable once the config is KNOWN.** `useDataViewModel` returns
-a union (`{ ready: false } | (ReadyViewModel & { ready: true })`), and the shell renders a
-`Loading` skeleton on the loading arm — a surface whose config has not arrived has zero
-instances too, and claiming it is unconfigured is a wrong answer the user then watches get
-rewritten.
-The forcing function that an agent compose the views in config rather than rely on
-a code fallback is the views descriptor's config_v2 **`requiresAuthoredOverride`**
-opt-in (in `view-core`'s `views-descriptor.ts`, carrying the authoring guidance as
-prose): `./equin build` **seeds** `config/<plugin>/<id>.jsonc` from its
-origin and stamps a `// @review` marker into it, and the generic
-**`config:overrides-authored`** check (`plugins/config_v2/check/`) fails while that
-marker is present. The marker tests *review* — mere presence is not enough (a
-`{"views": []}` file renders "No views configured" at runtime).
+Displayed instances come **only** from authored `config.views` rows (view-core owns
+the resolver).
+
+- **Zero rows** → a "No views configured" `Placeholder` — but only once the config
+  is **known**: `useDataViewModel` returns
+  `{ ready: false } | ReadyViewModel & { ready: true }` and the shell shows
+  `Loading` on the first arm.
+- **Authoring is required.** The views descriptor opts into config_v2's
+  **`requiresAuthoredOverride`**: `./equin build` seeds
+  `config/<plugin>/<id>.jsonc` with a `// @review` marker and
+  **`config:overrides-authored`** fails until it is removed (review, not mere
+  presence — `{"views": []}` renders "No views configured").
 
 ### The view config row
 
-A row is authored terse (`{ name, view }`); view-core's `normalizeRows` derives
-`id` on read and **array position is the canonical order** (no `rank` field) — see
-view-core's CLAUDE.md. The `view` blob is `{ type, sort?, filter?, …opts }`;
-`sort`/`filter`/`groupBy` are host-injected keys read via `viewFor`/`updateView`.
-So are `nesting` (`"nested" | "flat" | "roots"`, how a view that can nest
-draws a hierarchical source — see "Hierarchy"), `filterScope` (`"rows" |
-"roots"`, what a nested table's filter tests — see the table child's CLAUDE.md
-"Nesting"; a flat table ignores it) — both written by the view settings'
-**Sub-items** section — and two authored-only keys (no control writes them),
-read only by the `sections` chrome: `hideWhenEmpty` and `description` (see
-"Sections toolbar").
-`groupBy` is a `GroupByRule` (`{ fieldId, groupingId }` — see "Grouping is a field-type
-contribution"), with the legacy bare `"<fieldId>"` string migrated on read. `sort` is a
-`SortRule[]` (ordered multi-level; each `{ fieldId, direction }`, priority = list
-order, `[]` = unsorted) and `filter` a `FilterGroup` tree. **Legacy single-`sort`
-is migrated on read** — a persisted `{ fieldId, direction }` object (the old
-`SortState` shape, still on disk in committed configs) coerces to `[obj]`; the file
-is re-serialized to the array shape only when the user edits sort, never
-proactively. The origin default stays `{ "views": [] }` with a stable hash
-(independent of the registered view-types), so adding a view-type never
-invalidates committed configs.
+Authored terse (`{ name, view }`); view-core's `normalizeRows` derives `id`;
+**array position is the order** (no `rank`). `view` =
+`{ type, sort?, filter?, …opts }`.
 
-**Pinned sort rules.** A `SortRule` may carry `pinned: true`: it sorts before
-every unpinned rule and nothing but its own row displaces it — a header click
-cycles the first *user* rule (`cyclePrimarySort`; a click on a pinned field's
-header flips that pin's direction, never removes it), "Clear sort" keeps the
-pins, a saved preset stores only the user rules and applying one puts them
-behind the pins. Pinned rules are a **prefix** of the list, an invariant owned by
-`web/internal/pinned-sort.ts` (`splitPinned` / `normalizeSortRules`) and enforced
-at both config boundaries (`readSortRules` on read, `setSortRules` / `setSort` on
-write). Everything that *applies* a sort (`makeSortComparator`, the nested table's global
-sort, the live `orderBy` lowering) iterates the one list unchanged, so none of it
-can forget a pin; only the editing paths (`useSortController.togglePinned` /
-`move` clamped to its segment / `clear`, the sort panel's per-row pin toggle,
-presets, the table's header arrow = first user rule, `summarizeSort`'s 📌) know
-about pinning. Use it for an ordering the surface always wants first but the
-user may turn off — the file explorer pins `folders` asc (Finder's "Keep folders
-on top") in its committed config.
+**Host-injected keys** (read via `viewFor` / `updateView`):
+
+- `sort` — `SortRule[]`, priority = list order, `[]` = unsorted.
+- `filter` — a `FilterGroup` tree.
+- `groupBy` — a `GroupByRule`.
+- `fold`, `properties`.
+- `nesting` (`"nested" | "flat" | "roots"`) and `filterScope`
+  (`"rows" | "roots"`, nested table only) — both written by the **Sub-items**
+  settings section.
+
+**Authored-only** (read by the `sections` chrome): `hideWhenEmpty`,
+`description`.
+
+**Legacy shapes** (single `{ fieldId, direction }` sort, bare `"<fieldId>"`
+groupBy) migrate **on read**; the file is rewritten only when the user next edits
+that key.
+
+The origin default is `{ "views": [] }` with a stable hash, so adding a view-type
+never invalidates committed configs.
+
+**Pinned sort rules.** `SortRule.pinned: true` sorts before every user rule.
+
+- Pins are a **prefix** of the list (invariant in `web/internal/pinned-sort.ts` —
+  `splitPinned` / `normalizeSortRules`, enforced in `readSortRules` and
+  `setSortRules` / `setSort`).
+- Header click cycles the first *user* rule (`cyclePrimarySort`; on a pinned
+  field it flips the pin's direction).
+- "Clear sort" keeps pins; presets store only user rules.
+- Everything that *applies* a sort iterates the one list unchanged; only editing
+  paths know about pins.
+
+Example: the file explorer pins `folders` asc.
 
 ### Adoption is enforced (`no-adhoc-row-list`)
 
-The complementary forcing function: the `data-view/no-adhoc-row-list` lint rule
-(`lint/no-adhoc-row-list.ts`, `error` repo-wide) bans hand-rolling a data list as
-a `.map()` of `<Row>` in feature code. Genuine transient chrome (menus, pickers,
-tab strips, typeaheads) keeps `Row` with
-`// eslint-disable-next-line data-view/no-adhoc-row-list -- <reason>`; the
-row-rendering machinery itself (this plugin's view children, `primitives/tree`,
-`reorder/editor`) is permanently exempt via its own `exempt/index.ts`. The two checks
-bracket the choice: `no-adhoc-row-list` fires when you avoid DataView,
-`config:overrides-authored` fires until you finish adopting it.
+`data-view/no-adhoc-row-list` (`lint/no-adhoc-row-list.ts`, repo-wide) bans a
+`.map()` of `<Row>` for data lists. Transient chrome (menus, pickers, tab strips)
+keeps `Row` with `// eslint-disable-next-line data-view/no-adhoc-row-list -- <reason>`;
+the row machinery itself (view children, `primitives/tree`, `reorder/editor`) is
+exempt via its own `exempt/index.ts`.
 
 ### The model, and where each piece of state lives
 
-The single model is `useConfigViewModel`: config-authored instances, full
-instance actions (add / rename / duplicate / delete / reorder / options
-sub-form), the `EditableViewSwitcher`, and per-instance sort/filter written
-**back to the config row** (durable, git-promotable). Runtime edits write the
-**user-global layer** (`setConfig` with no `scopeId`, mirroring reorder) — an
-`app:` scopeId would write a scope key the read path ignores until the scope is
-forked, silently dropping edits on reload. The per-id descriptor already scopes
-views to one surface; per-app forking stays a Settings-pane concern.
+`useConfigViewModel`: config-authored instances, instance actions (add / rename /
+duplicate / delete / reorder / options sub-form), the `EditableViewSwitcher`, and
+per-instance sort/filter written **back to the config row**. Runtime edits write the
+**user-global layer** (`setConfig` with no `scopeId`) — an `app:` scopeId would be
+ignored by the read path until forked, silently dropping edits.
 
-**State split** (`web/internal/use-view-ephemeral.ts` → `useViewEphemeral`, Web
-Storage for non-config state):
+**State split** (`web/internal/use-view-ephemeral.ts` → `useViewEphemeral`):
 
 | State | Lives in |
 |---|---|
 | Instance def `{ id, name, view:{ type, sort?, filter?, …opts } }` (array-ordered) | `viewsDescriptor` config row (user-global layer) |
-| Active instance id | the enclosing pane's URL `;view.<storageKey>` (see "Addressable views"), and localStorage `${storageKey}:active-view` (per device — what a bare URL opens) |
-| Tree expand map, collapsed group sections, collapsed view section (`collapsed`, sections chrome) | localStorage `${storageKey}:view-state` (per device) |
-| Search query | **sessionStorage** `${storageKey}:view-query` (per browser tab) |
-| Unsaved edits of a drafted view (`viewEdits`) | **sessionStorage** owner `data-view.view-drafts`, keyed by `storageKey` (per browser tab) — view-core's drafts |
+| Active instance id | the pane URL `;view.<storageKey>` (see "Addressable views"), and localStorage `${storageKey}:active-view` (per device) |
+| Tree expand map, collapsed group sections, collapsed view section (sections chrome) | localStorage `${storageKey}:view-state` (per device) |
+| Search query | **sessionStorage** `${storageKey}:view-query` (per tab) |
+| Unsaved edits of a drafted view (`viewEdits`) | **sessionStorage** owner `data-view.view-drafts`, keyed by `storageKey` — view-core's drafts |
 
-The localStorage reader ignores legacy `sort`/`filter`/`query` keys in a
-`view-state` blob, so no migration is needed.
+- **The search query is per-tab on purpose — do not move it to `localStorage`.** A
+  query surviving a restart leaves a filtered subset that reads as the view's whole
+  contents. Durable narrowings are the config row's. If a query should persist,
+  put it in the URL.
+- **The expand map is the only home for tree collapse state — never a domain
+  entity column.** Collapse is per-`(surface, view-instance, row)`; an entity flag
+  makes two views fight over one value, turns a UI gesture into a DB write + live
+  push + `updatedAt` bump, and expand-all cannot be bounded. `project-rows.ts`
+  resolves `expanded?.[id] ?? defaultExpanded ?? false`; there is no consumer
+  accessor (see `research/2026-07-28-global-tree-collapse-state-as-view-state.md`).
 
-**The search query is per-tab on purpose — do not move it back to
-`localStorage`.** Durable narrowings are the config row's (`sort`/`filter`/
-`groupBy`) and render as visible chips; a query is an ad-hoc gesture that outlives
-its intent if it survives a browser restart, leaving a filtered subset that reads
-as the view's whole contents. `sessionStorage` keeps the only property worth
-persisting (F5 doesn't lose your place). If a query ever *should* survive, put it
-in the URL — shareable, and the back button clears it.
+**Per-instance options sub-form.** A view-type's `configSchema` (`FieldsRecord`)
+drives the settings popover's options sub-form (a `variantField` over
+`actions.variantsFor(id)`, rendered via `FieldRenderer`; reference: map's
+`locationField`). Its type picker is gated like the `+` menu (view-core's
+`usableTypes`).
 
-**The expand map is the home for tree collapse state — do not put it on a domain
-entity.** Collapse is per-`(surface, view-instance, row)` render state, and the
-map above already keys on exactly that triple. Storing it as an entity column
-instead (an `expanded` field on the row's own table) is an anti-pattern with three
-concrete failure modes, all of which the repo has actually hit:
+**Orphan hazard.**
 
-- **One flag cannot serve two views.** Two view instances over the same rows — or
-  a scoped sub-tree of them, or the same tree on two devices — fight over a
-  single value, so collapsing in one silently collapses the other.
-- **It writes the domain.** A collapse becomes a DB write plus a change-feed
-  recompute plus a live-state push to every client, and it stamps the row's
-  `updatedAt` — so a purely local UI gesture rewrites a visible, sortable field.
-- **It does not bound.** Expand-all is inherently `O(nodes-with-children)` and, unlike
-  `view-order`'s ranks, has no invariant to exploit for a bounded write.
-
-The map is the **only** source. `web/internal/hierarchy/project-rows.ts` resolves a
-row's expansion as `expanded?.[id] ?? defaultExpanded ?? false` — there is no
-consumer-supplied accessor left to shadow it, so a collapse simply cannot be
-domain data. See
-`research/2026-07-28-global-tree-collapse-state-as-view-state.md` and
-`research/2026-07-29-global-delete-hierarchy-expand-hooks.md`.
-
-**Per-instance options sub-form.** A view-type's optional `configSchema`
-(`FieldsRecord`) drives the settings popover's options sub-form: the host builds a
-web-side `variantField({ useVariants })` from **that instance's own** addable
-types (`actions.variantsFor(id)` — generic, never names a view child) and renders
-it via `FieldRenderer`. The map's `locationField` is the reference
-`configSchema`. The type picker inside that sub-form is gated exactly like the `+`
-add menu (view-core's `usableTypes`), so a surface can never switch a view to a
-type it could not have created — see the orphan hazard below for what that used
-to do.
-
-**Orphan hazard.** A config row whose `view.type` references a renamed/removed
-view-type **fail-soft skips** in `buildInstanceFromRow` — the same documented hazard as reorder
-node-type ids. The row stays in the config; it just isn't rendered until its
-view-type returns. A type whose renderer the repo DOES provide (a keyed
-companion of `View`) but the bundle lacks is not an orphan: it throws
-`MissingCompanionError` (`onOrphanType` → `useCompanionLookup`), and so does a
-cell, editor, filter, codec, column config or grouping lookup that misses a
-provided field type — a missing companion is never a quiet fallback.
-
-That skip is only safe while nothing the USER can click puts a row into it: the
-settings popover's type picker and the add menu list the same usable types
-(registered contributions ∩ the `views` whitelist), so the skip is reachable only
-by an authoring mistake, never by a click.
+- A row whose `view.type` names a removed view-type is **fail-soft skipped**
+  (`buildInstanceFromRow`) and stays in config — reachable only by an authoring
+  mistake, since every picker lists only usable types.
+- A type the repo DOES provide but the bundle lacks throws
+  `MissingCompanionError`; so does any cell / editor / filter / codec /
+  column-config / grouping lookup that misses a provided field type — a missing
+  companion is never a quiet fallback.
 
 ## Addressable views: the active view is in the URL
 
-A DataView inside a pane puts its active view in that pane's URL, under a key
-derived from its own id — `;view.<storageKey>`, a surface view key every pane
-carries (pane CLAUDE.md): `/sonata;view.sonata.library=all` opens the Sonata
-library on its All table, `/agents/tasks;view.tasks-list=open` the tasks list on
-Open. No consumer wires anything: `useDataViewModel` binds it through the
-pane's `usePaneViewParam(storageKey)` and hands it to view-core as
-`activeViewUrl`. Any number of DataViews in one pane bind side by side — the
-deployment pane's History, Secrets and Messages each have their own key.
+A DataView inside a pane puts its active view in the pane URL under
+`;view.<storageKey>` (`/sonata;view.sonata.library=all`). No wiring:
+`useDataViewModel` binds `usePaneViewParam(storageKey)` as view-core's
+`activeViewUrl`; several DataViews in one pane each get their own key.
 
-- **Which view shows**: pinned → the URL's (if authored) → this device's last
-  pick → `defaultView` → the first (`resolveActiveId`). A stale or unknown id
-  falls through, never to an empty surface.
-- **The URL is derived from the active view** (view-core's `useViewModel`,
-  `activeViewUrlValue`): nothing while the surface shows its static default
-  (`defaultView`, else its first view), the active id otherwise — so a list on
-  its default adds nothing, a view restored from this device is stamped in, a
-  switch back to the default removes the key, and a stale or unknown id is
-  rewritten to the view actually shown. Every write replaces (no history entry
-  per switch). Selecting also writes the device-local store, so a bare URL
-  opens the last view picked here; a view the URL opened is adopted locally
-  too, so the screen does not jump when the address later stops naming it.
-- **Not bound**: a `pinnedView` host, a DataView
-  outside every pane (menu bar, popovers, sidebars, dialogs), and one in a pane
-  with no URL part of its own that is not its app's landing pane.
-- **Tooling**: e2e and the compare tool reach a view by path —
-  `--path "/sonata;view.sonata.library=all"` — instead of clicking its chip.
+- **Which view shows**: pinned → URL (if authored) → device's last pick →
+  `defaultView` → first (`resolveActiveId`). Unknown ids fall through.
+- **The URL is derived** (view-core `activeViewUrlValue`): absent on the static
+  default, the active id otherwise; stale ids are rewritten; every write replaces
+  (no history entry). Selecting also writes the device store.
+- **Not bound**: `pinnedView` hosts, DataViews outside every pane (menu bar,
+  popovers, sidebars, dialogs), and panes with no URL part that are not the app's
+  landing pane.
+- **Tooling**: e2e reaches a view by path — `--path "/sonata;view.sonata.library=all"`.
 
 ## Meta-DataView: one list over sources of different entities
 
-A list whose rows are of several KINDS — builds, releases, deploys and
-backups in one list of runs — is a plain `<DataView>` over a **union
-collection** (`network/live`, *Union collections*): `liveCollection(key, {
-fields, arms: { discriminator } })` in core, one `liveArm(union, kind, {
-label, order, from?, pick?, fields })` per source, served as ONE SQL window
-by `serveUnionCollection` with each source bound by `served.arm(arm, …)`. It
-is not a component of its own, and not `DataViewSwitcher` (below), which
-shows ONE source at a time. What every list of it gets, with no list code:
+A list whose rows are of several KINDS (builds, releases, deploys, backups as runs)
+is a plain `<DataView>` over a **union collection** (`network/live`, *Union
+collections*):
 
-- **Shared fields** — the union's own `fields`: one id across every source,
-  so a filter, a sort, a group-by or a saved view means the same thing on
-  every row (and runs in SQL over every source at once).
-- **Per-source fields** — each arm's (`<arm>.<field>`), listed under the
-  arm's `label` in its own band, in the arms' declared `order`; on another
-  source's row they read nothing, and a filter on one prunes the other
-  sources. An arm declared `from` an entity picks its fields by name, with the
-  entity's labels and options — and lists every field an extension EXPOSES on
-  that entity in the same band (ids `<arm>.<id>`, presented by the exposure's
-  own registration), bound to its column, so a field an extension exposes on
-  a build run filters, sorts and groups the runs list on the server with no
-  code naming it.
-- **The source field** — the discriminator: an enum whose options are the
-  registered arms (value: the kind, label: the arm's), derived by
-  `deriveFields` from the arms' `FieldPresentation.Register` registrations —
-  so it filters, groups and labels its chip with no list code, and offers
-  every installed source, never only the loaded page's. A union declaring
-  options for it, or a presentation reading them, throws.
-- **Per-source row activation** — `DataViewSlots.CollectionRowActivation({
-  owner: arm, useActivation })`: each row is dispatched to its own source's
-  destination (*Row activation is PER ROW*, below).
+- `liveCollection(key, { fields, arms: { discriminator } })`;
+- one `liveArm(union, kind, { label, order, from?, pick?, fields })` per source;
+- served as ONE SQL window by `serveUnionCollection` (`served.arm(arm, …)`).
 
-`runs` (`plugins/runs`) is the reference: its build, release and deploy arms
-are declared from their ledgers' entity refs, picking their stored fields and
-folding any exposure on them; only computed fields (a build's status, every
-arm's label and outcome) are written per arm.
+Not a component of its own, and not `DataViewSwitcher` (one source at a time).
+What it gets for free:
+
+- **Shared fields** — the union's `fields`: one id across sources, filter/sort/group
+  in SQL over every source.
+- **Per-source fields** — `<arm>.<field>`, listed under the arm's `label` in its own
+  band, in arm `order`; empty on other sources' rows. An arm declared `from` an
+  entity picks fields by name and also lists every field an extension EXPOSES on
+  that entity (ids `<arm>.<id>`), server-sortable/filterable with no list code.
+- **The source field** — the discriminator, an enum derived by `deriveFields` from
+  the arms' `FieldPresentation.Register` registrations (all installed sources).
+  Declaring options for it, or a presentation reading them, throws.
+- **Per-source row activation** — `DataViewSlots.CollectionRowActivation({ owner: arm,
+  useActivation })` (see *Row activation is PER ROW*).
+
+Reference: `runs` (`plugins/runs`).
 
 ## Multi-source surfaces (`DataViewSwitcher`)
 
-**A switcher, not a union**: one source's rows at a time — for the same rows
-organised several ways (the task deps tree's Dependencies / Created) or
-several lists of one entity (the conversation sidebar's Queue / History). A
-list mixing rows of several kinds is a Meta-DataView (above).
+One source's rows at a time — the same rows organised several ways, or several lists
+of one entity (Queue / History). Mixed kinds → Meta-DataView.
 
-One surface, N **sources**, one unified switcher: `<DataViewSwitcher storageKey
-sources hostProps title? actions? defaultView?>` renders a single DataView
-surface (**one `storageKey` → one config file → one `EditableViewSwitcher`**)
-whose view-instances each bind to a source via the config row's optional
-`source` key (`{ "id": "queue", "name": "Queue", "source": "queue", "view":
-{ "type": "list" } }`). The sort/filter/search/properties chrome adapts
-automatically because it already derives from the active instance's fields —
-the source axis only decides *which data bundle* feeds the body.
+`<DataViewSwitcher storageKey sources hostProps title? actions? defaultView?>` is
+one surface (**one `storageKey` → one config file → one `EditableViewSwitcher`**).
+Each instance binds to a source via the row's optional `source` key:
 
-- **Sources are contributed components** through the per-consumer
-  `defineDataViewSources<THostProps>(id)` factory (web barrel — the sibling of
-  `defineItemActions`). A contribution is `{ id, title,
-  icon, order?, views?, component }`; the component receives
-  `DataViewSourceProps<THostProps>` = `{ hostProps, render }`, owns its data
-  hooks, and **must always call `render(bundle)`** — pass `{ rows: [], loading:
-  true, … }` while loading; an early `return null` makes the surface chrome
-  vanish. The bundle is `DataViewSourceBundle<TRow>` = `DataViewProps` minus
-  the shell-owned keys (`storageKey`/`title`/`actions`/`defaultView`/`views`).
-- **`views` is STATIC contribution metadata**, not a bundle
-  key, on purpose: the view model must resolve *every* config row (switcher
-  chips, add-menu gating) before any source component
-  mounts — and only the ACTIVE source ever mounts. Everything dynamic (rows,
-  fields, the `hierarchy` accessors, `viewOptions`, `source`, …)
-  stays in the bundle. Code-only `viewOptions`
-  (`renderRow`, `renderBody`, …) reach the view through the body's options
-  re-merge (`{ ...bundle.viewOptions[type], ...instance.options }` — idempotent
-  on the single-source path).
-- **Only the active source mounts** (plain `renderIsolated`, no recursive
-  fold); switching sources remounts the body (`key={source.id}`), so
-  per-source subscriptions/controllers restart cleanly.
-- **Fail-soft on unknown sources.** A row whose `source` matches no live
-  contribution (renamed/removed source id) is kept in config and skipped —
-  the same hazard class as an orphan `view.type`.
-- **Instance ids must be unique ACROSS sources** (one config file = one id
-  namespace). `normalizeRows` would disambiguate a duplicate with an index
-  suffix, silently renaming the row and orphaning its durable
-  `data_view_row_order` rows — author distinct ids per row, as
-  `config-stable-list-ids` already forces.
-- **Presets stay per-surface and fail-soft by design.** Sort/filter presets
-  key off `storageKey` only, so they are shared across sources; a preset
-  referencing a field the active source's schema lacks is simply excluded by
-  the controllers' dangling-fieldId guards. Do not namespace them per source.
-- Single-source `<DataView>` is the same machinery with **one implicit source
-  entry** (`id`/`title` undefined): same model, flat add menu, `source`-less
-  config rows — byte-identical to the pre-source behavior. The engine-side
-  semantics (row model, `ViewSourceEntry`, whitelist-gates-addability) live in
-  view-core — see its CLAUDE.md.
+```json
+{
+  "id": "queue",
+  "name": "Queue",
+  "source": "queue",
+  "view": { "type": "list" }
+}
+```
+
+Chrome adapts from the active instance's fields.
+
+- **Sources are contributed components** via `defineDataViewSources<THostProps>(id)`
+  (web barrel): `{ id, title, icon, order?, views?, component }`. The component gets
+  `{ hostProps, render }`, owns its data hooks, and **must always call
+  `render(bundle)`** (an early `return null` makes the chrome vanish). The bundle is
+  `DataViewSourceBundle<TRow>` = `DataViewProps` minus shell keys
+  (`storageKey`/`title`/`actions`/`defaultView`/`views`/`density`/`aside`…).
+- **`views` is static contribution metadata** — the model resolves every row before
+  any source mounts. Everything dynamic stays in the bundle; code-only `viewOptions`
+  re-merge as `{ ...bundle.viewOptions[type], ...instance.options }`.
+- **Only the active source mounts**; switching remounts the body (`key={source.id}`).
+- **Unknown `source`** → row kept in config, skipped (like an orphan type).
+- **Instance ids must be unique ACROSS sources** — `normalizeRows` would suffix a
+  duplicate, orphaning its `data_view_row_order` rows.
+- **Presets are per-surface** (keyed by `storageKey`); a preset naming a field the
+  active source lacks is excluded by dangling-fieldId guards. Don't namespace them.
+- Single-source `<DataView>` is the same machinery with one implicit source (see
+  view-core's CLAUDE.md).
 
 ## Hierarchy
 
-A data source can declare itself hierarchical by passing `hierarchy` (a
-`HierarchyConfig<TRow>`) to `<DataView>`. Present → the **table nests its rows** (`NestedTableView`; see the table
-child's CLAUDE.md, "Nesting"); absent → the table is flat. No view type is gated
-on the hierarchy: the table is offered on every source and nests only when one is
-present. It says so with `nestsHierarchy: true` on its `DataViewContribution`, so
-over a hierarchical source the host treats it as the tree it draws: no fold (`activeSupportsFold`), no flat manual order
-(`activeSupportsManualOrder` — the `RowOrder` contributor is not even mounted),
-and its `filterScope` decides `hideWhenEmpty` (`rootsScoped`).
+Pass `hierarchy: HierarchyConfig<TRow>` → the **table nests its rows**
+(`NestedTableView`; table child's CLAUDE.md, "Nesting"); absent → flat.
 
-**Tree geometry is density tokens, built for the column disclosure.** A nested
-row's head is `TreeLeading` (primitives/tree): the chevron box
-(`--tree-chevron-w`, 1.25rem — a faint chevron only on a row with children, a
-leaf reserves the space), then the icon, spaced by the row's `--tree-row-gap`.
-The default indent is that chevron box plus the gap, so a child's chevron sits
-under its parent's icon; the default guide (`--tree-guide-x`) is half the
-chevron box, so a level's guide runs under its parent's chevron. The disclosure
-variant is `ui/tree-disclosure` (default `column`; Pages and the file explorer
-pin `merged`, whose box starts where the chevron box would — the guide lands
-on its icon's centre). A theme that sets its own `treeIndent` owns its own
-rhythm. Pinned by `ui/tokens/density/core/tree-geometry.test.ts`.
+The table declares `nestsHierarchy: true`, so over a hierarchy the host applies:
 
-**Nesting is per view (`ViewState.nesting`, Notion's Sub-items).** A view type
-that can nest nests only while its row's `nesting` is `nested` (the default,
-absent). `flat` draws every row as a top-level row and `roots` only the
-top-level rows (the tree's orphan rule: a parent `null` or not among the rows).
-The host makes the ONE decision (`activeNests` in `data-view-body.tsx`) and hands
-the view `hierarchy` **only while it nests** — so a table drawn flat simply is the
-flat table, with the fold and flat manual order (`view-order`) back, one sort
-across every row, and no reparent drag, add-child, aliases or `filterScope`.
-`flat` adds the derived **Parent** field to the schema (`web/internal/flat-hierarchy.ts`:
-reserved id `PARENT_FIELD_ID`, a text field holding the parent row's primary
-label — the parent's id when it is not loaded — sortable, filterable, groupable;
-a consumer field claiming the id throws). A view type that never nests (list,
-gallery) ignores the key and gets no Parent field. The control is the
-**Sub-items** section of the view settings (`web/components/sub-items-settings.tsx`,
-passed to view-core's switchers and `ViewSettingsPopover` as `hostSettings`),
-offered only over a hierarchy and on a view type that nests; it also carries
-`filterScope` while nested. Pinned by `web/__tests__/nesting.test.tsx`.
+- no fold (`activeSupportsFold`);
+- no flat manual order (`activeSupportsManualOrder` — the `RowOrder` contributor
+  is not mounted);
+- and its `filterScope` decides `hideWhenEmpty` (`rootsScoped`).
 
-**One pipeline for nesting.** `useHierarchyTree` (web barrel,
-`web/internal/hierarchy/`) is what the nested table runs:
-`projectRows` (the `ProjectedRow` wrapper, aliases minted) → the view's filter
-under its `filterScope` (`scopeFilterRows`) → a stable global sort (a sort
-within each sibling group, which suspends DnD) → group-by over the roots
-(`partitionIntoSections` + `bucketRowsByRootSection`, every descendant in its
-root's section) → the tree primitive's `TreeModelArgs`, every callback
-alias-aware (an alias id is translated back to its real row before the
-consumer sees it; a just-created row's activation is held until it lands).
-The nested table hands the result to the tree primitive's `useTreeModel` and
-draws the lines as table rows (`presentation: "outline"` gives the sidebar look).
-Old saved `type: "tree"` view rows upgrade through the `tree-view-to-table` config
-migration (`type: "table"` + `presentation: "outline"`).
-`hierarchy` and `paging` are exclusive on the in-memory origin (a type union,
-both keys optional): a tree over a paged prefix orphans the children whose
-parents are not loaded — the same reason a live `source` refuses `hierarchy`. The
-`HierarchyConfig` carries two required accessors (`getParentId`, `getRank`), the
-optional reference-edge accessor (`getAliasParents`, below), and the optional
-mutations (`onMove`, `onCreate`) — so a read-only nav tree supplies just the two
-required accessors.
+`HierarchyConfig`: required `getParentId`, `getRank`; optional `getAliasParents`,
+`onMove`, `onCreate`.
 
-**Expand is not one of them, and never can be.** There is no
-`isExpanded`/`onToggleExpanded` pair: collapse is always the primitive's own
-per-`(surface, view-instance, row)` map (see "State split" above), which makes
-the anti-pattern documented there unrepresentable rather than merely
-discouraged. It also retires the half-wired state the pair admitted — the two
-were independently optional, so supplying one gave a chevron whose write went to
-the view map and whose read came off the row: a silently dead toggle no check
-could catch. The "click a folder to open it" affordance that motivated a
-consumer-side accessor is now the **stateless** `expandOnActivate` predicate on
-the nested table's `options` (see the table child's CLAUDE.md); carrying no state,
-it cannot be half-wired.
+`hierarchy` and `paging` are exclusive on the in-memory origin (a type union), and
+a live `source` refuses `hierarchy` — a tree over a paged prefix orphans children.
 
-**Expand-all is the view's to report, the toolbar's to draw.** A nesting
-view reports its whole-view expand-all up (`reportExpandAll`) and the DataView
-toolbar draws it as an action control — see "Toolbar controls" → "Action
-controls". The toolbar never asks which view type is active.
+- **Nesting is per view (`ViewState.nesting`, Notion's Sub-items).** `nested`
+  (default), `flat` (every row top-level), `roots` (only top-level rows).
+  - The host decides once (`activeNests`, `data-view-body.tsx`) and passes
+    `hierarchy` **only while nesting** — so a flat-drawn table is the flat table
+    (fold, flat manual order, one sort, no reparent/add-child/aliases/`filterScope`).
+  - `flat` adds the derived **Parent** field (`web/internal/flat-hierarchy.ts`,
+    reserved `PARENT_FIELD_ID`; a consumer field claiming it throws).
+  - Control: `web/components/sub-items-settings.tsx`, passed to view-core as
+    `hostSettings`, offered only over a hierarchy on a nesting view type.
+- **One pipeline** — `useHierarchyTree` (web barrel, `web/internal/hierarchy/`):
+  1. `projectRows` (aliases minted);
+  2. filter under `filterScope` (`scopeFilterRows`);
+  3. stable global sort (suspends DnD);
+  4. group-by over roots (descendants follow their root's section);
+  5. `TreeModelArgs`, every callback alias-aware.
 
-The `FieldDef.primary` flag selects the nested table's row label field (shared
-`pickPrimaryField` heuristic). Inline rename of the primary label is no longer a
-hierarchy concern — declare `FieldDef.onEdit` on the primary field and the label
-renders an inline editor (`EditableTreeLabel`) (the same `onEdit` contract the table/gallery/list use).
+  Old `type: "tree"` rows upgrade via the `tree-view-to-table` migration.
+- **Expand is not a `HierarchyConfig` accessor, and never can be** — there is no
+  `isExpanded` / `onToggleExpanded`; collapse is the per-view map (State split).
+  "Click a folder to open it" is the stateless `expandOnActivate` table option.
+- **Expand-all** is reported up by the view (`reportExpandAll`) and drawn by the
+  toolbar as an action control ("Action controls").
+- **Tree geometry is density tokens** (`--tree-chevron-w`, `--tree-row-gap`,
+  `--tree-guide-x`): a child's chevron sits under its parent's icon. Disclosure
+  variant: `ui/tree-disclosure` (default `column`; Pages and file explorer pin
+  `merged`). Pinned by `ui/tokens/density/core/tree-geometry.test.ts`.
+- `FieldDef.primary` picks the row label (`pickPrimaryField`); inline rename is
+  `FieldDef.onEdit` on that field (`EditableTreeLabel`).
+- **Aliases** (`getAliasParents`): the row also appears as a read-only leaf under each
+  returned parent — navigation only; a `child` drop or add-child resolves to the
+  real row.
 
 ### Leading field
 
-`FieldDef.leading: true` marks the row's **leading visual** (its avatar). list,
-gallery and the nested table render that field's cell in their leading slot —
-`Row.icon`, the gallery card's cover frame (when the row has no cover of its own), the tree head's icon slot — and icons draws it as the whole tile
-(inside `AvatarPresentationProvider value="tile"`); all leave it out of the body: never the
-title / label pick, never a list subtitle or trailing term, a gallery card
-line, or a nested-table secondary cell. The gallery's **cover wins**: a row with a
-cover shows its cover, and only a coverless row shows its leading field in the
-frame. The **flat table** has no leading slot, so there it is an ordinary
-column; the **nested table** (a hierarchical source) has one — the tree head's
-icon slot in its first cell — and renders it there.
+`FieldDef.leading: true` marks the row's **leading visual** (avatar), left out of
+the body everywhere and drawn in the view's leading slot:
 
-- **Composition, not replacement.** The field renders **first**, then the view's
-  own per-view option (list `leading`, nested-table `leadingIcon`) — most of
-  those put a status glyph there, not an identity, and a surface can want both
-  (avatar, then status dot). One shared `leadingSlot(...)` (web barrel) renders
-  the pair for every view with a slot, so the order cannot drift; it returns
-  `undefined` when there is neither, so a host slot still sees "no icon".
-- **Resolved from the visible set.** Each view calls `pickLeadingField` over the
-  same `resolveBodyFields(...)` result it already renders from, so hiding the
-  field in Properties hides the avatar.
-- **At most one per schema.** `pickLeadingField` throws when two fields declare
-  it. There is no type-based fallback: data-view names no field type, so only
-  the flag qualifies.
+- list: `Row.icon`;
+- gallery: the cover frame (only when the row has no cover — **cover wins**);
+- nested table: the tree-head icon;
+- icons: the tile.
 
-Beyond the single-parent tree, `getAliasParents` declares optional **reference
-edges**: the row *also* appears as a read-only leaf ("alias") under each
-returned parent id (e.g. the pages sidebar rendering linked pages as children
-of the linking page). Aliases are pure references — navigation only, no
-rename/menu/actions/drag; a `child` drop or add-child on one resolves to the
-real row. See the table child's CLAUDE.md, "Nesting", for the exact semantics.
+The **flat table** has no leading slot: there it is an ordinary column.
+
+- **Composition**: the field renders first, then the view's own option (list
+  `leading`, nested-table `leadingIcon`), via the shared `leadingSlot(...)`
+  (`undefined` when neither).
+- Resolved from the **visible** set (`pickLeadingField` over `resolveBodyFields`),
+  so hiding it in Properties hides the avatar.
+- **At most one per schema** (throws). No type-based fallback.
 
 ## Manual order
 
-Flat rank-based drag reordering — the flat twin of the nested-table-only
-`HierarchyConfig`. It is described by one type:
+Flat rank-based drag reordering — the flat twin of `HierarchyConfig`:
 
 ```ts
 interface ManualOrderConfig<TRow> {
   getRank: (row: TRow) => Rank | null;
-  // within one section
-  onMove: (id: string, dest: {
-    rank: Rank; targetId?: string; zone?: "before" | "after";
-  }) => void | Promise<void>;
-  // across sections — group write + reorder; absent ⇒ such drops are refused
-  onReseat?: (id: string, dest: {
-    groupKey: string | null; targetId: string; zone: "before" | "after";
-  }) => void | Promise<void>;
-  // place keys (present rows, or rows not created yet) as one run next to a row
-  onInsert?: (keys: readonly string[], dest: {
-    targetId: string; zone: "before" | "after";
-  }) => Promise<void>;
+  // within a section
+  onMove: (
+    id: string,
+    dest: { rank: Rank; targetId?: string; zone?: "before" | "after" },
+  ) => void | Promise<void>;
+  // across sections; absent ⇒ refused
+  onReseat?: (
+    id: string,
+    dest: {
+      groupKey: string | null;
+      targetId: string;
+      zone: "before" | "after";
+    },
+  ) => void | Promise<void>;
+  // place keys (may not exist yet)
+  onInsert?: (
+    keys: readonly string[],
+    dest: { targetId: string; zone: "before" | "after" },
+  ) => Promise<void>;
 }
 ```
 
-`onInsert` is what a native `rowDrop` under `placement: "between"` reaches
-(see "Row selection, and native row drag and drop"): a drop from outside the
-view that must land in the gap it was dropped in. Its keys may name rows that
-do not exist yet — view-order ranks them now (`computeInsertWrites`), so the
-consumer writes its data afterwards and the new rows render where they were
-dropped. It rides `usePendingMoveOverlay` untouched (the wrapper spreads the
-config); the overlay only holds `onMove` drops.
+`onInsert` is what a native `rowDrop` under `placement: "between"` reaches:
+view-order ranks the keys now (`computeInsertWrites`), the consumer writes its data
+afterwards.
 
 ### Two sources, one rule
 
-A `ManualOrderConfig` reaches the active view from exactly one of two places:
+1. **`DataViewProps.manualOrder`** — a **domain** order the consumer owns
+   (surface-wide).
+2. **The per-view-instance order** contributed through `DataViewSlots.RowOrder`
+   (scoped to `(storageKey, viewId)`; `view-order`).
 
-1. **`DataViewProps.manualOrder`** — a **domain** order the consumer owns (a rank
-   column on its own rows, e.g. the conversations queue's priority). Surface-wide:
-   every view instance shares it.
-2. **The primitive's own per-view-instance order**, contributed through the global
-   **`DataViewSlots.RowOrder`** slot (see below). Scoped to `(storageKey, viewId)`,
-   so two instances of the same surface hold **different** orders.
-
-**The consumer's wins when both are present.** The host resolves
-`cfg = props.manualOrder ?? contributedRowOrder ?? null` once and never branches on
-provenance again — the render path treats the two identically.
+`cfg = props.manualOrder ?? contributedRowOrder ?? null` — consumer wins; the render
+path never branches on provenance.
 
 ### Manual order is the default; a sort overrides it
 
-Notion's model, and ours: with **no sort set**, a `list`/`table` view renders in
-manual order and rows are draggable; setting a **field sort overrides** it and
-suspends drag (the host simply withholds the config; `useDataViewSections`'s
-`manualRank ⇒ sort: []` rule is untouched); **clearing the sort restores** it.
-Consequently the **Sort control stays visible** in manual mode — it must stay
-reachable to clear the sort. It is also the *only* remaining thing that suspends
-drag, so the sort popover says so in a muted footer line whenever an order exists
-and a sort is shadowing it (`manualOrderOverridden`) — the cause is never silent.
+- No sort → `list`/`table` render in manual order and rows drag.
+- A field sort overrides it and suspends drag; clearing restores it.
 
-When a config is active for the displayed view:
+So the Sort control stays visible, and the sort popover says when it shadows an
+order (`manualOrderOverridden`). While active:
 
-- the section pipeline **skips the field sort** and orders each section's entries
-  by `getRank` (search/filter still run) — like a nested table ignores `ViewState.sort`;
-- rows are sortable via the **`rank-reorder`** primitive (`RankReorderProvider`
-  + `useRankSortableItem`): the dragged row itself follows the pointer
-  (`CSS.Translate`, no floating chip, no drop-indicator lines) and the rows of
-  its section slide out of its way. `icons` passes `layout="grid"`;
-- reordering is **within a section** (`onMove`). A cross-section drop needs the
-  group-by field written, which only the consumer can do, so it is a separate
-  capability expressed by **handler presence**: with `onReseat` the drop is
-  allowed and reported anchor-only (`{ groupKey, targetId, zone }`); without it
-  the provider's collision detection only sees the dragged row's own section, so
-  the drag can neither slide nor land elsewhere — the refusal is **visible**
-  rather than a drop-time no-op (see `rank-reorder`'s CLAUDE.md);
-- **no snap-back on drop.** dnd-kit clears the slide transforms the moment the
-  row is released, so `data-view-body` wraps the effective config through
-  `usePendingMoveOverlay` (`web/internal/use-pending-move-overlay.ts`): `onMove`
-  records the destination rank and `getRank` returns it for that row until the
-  underlying `getRank` changes (the producer's optimistic or server order
-  landed), the row disappears, or a returned `onMove` promise rejects. A
-  producer only needs to return its mutation promise from `onMove`;
-- `list`, `icons` and `table` **window *and* drag**. `rank-reorder` re-measures
-  droppables every frame (`measuringAlways`), `virtual-rows` pins the drag
-  source through `keepMounted`, and `raisedKey` lifts the dragged row's
-  windowed wrapper (its own stacking context) over the rows it crosses — so an
-  in-flight drag survives its source row scrolling out.
-
-The table integration uses `DataTable`'s additive `useRowDecoration` per-row hook
-seam (drag source ref + props + the sortable `style`), composed with the
-windowing measure ref. Windowed table rows use spacers, not transforms, so the
-row's own slide transform leaves the subgrid tracks alone.
+- each section is ordered by `getRank` (search/filter still run);
+- drag via `rank-reorder` (`RankReorderProvider` + `useRankSortableItem`; `icons`
+  uses `layout="grid"`);
+- cross-section drops need `onReseat` (handler presence = capability); without it
+  collision detection sees only the row's own section, so refusal is visible;
+- **no snap-back**: `usePendingMoveOverlay` (`web/internal/use-pending-move-overlay.ts`)
+  holds the dropped rank until the underlying `getRank` changes, the row disappears,
+  or the returned `onMove` promise rejects — a producer only returns its promise;
+- `list`, `icons`, `table` **window and drag** (`measuringAlways`, `keepMounted`,
+  `raisedKey`). The table uses `DataTable.useRowDecoration`.
 
 ### The global `RowOrder` slot (cross-plugin)
 
-The sibling of the global `FieldExtension` slot: a single always-on
-`defineRenderSlot` (`primitives.data-view.row-order`) whose contributors may claim
-a per-view-instance row order for **any** DataView, with the host importing
-nothing. Its props erase the row type (a global slot spans disjoint consumer row
-types) and carry the surface coordinates a contributor needs:
+A `defineRenderSlot` (`primitives.data-view.row-order`) whose contributors may claim
+a row order for **any** DataView:
 
 ```ts
 interface GlobalRowOrderProps {
   storageKey: DataViewId;
-  viewId: string;                  // the ACTIVE view-instance id — the order's scope
+  viewId: string; // the ACTIVE view-instance id
   rowKey: (row: unknown, index: number) => string;
-  rows: readonly unknown[];        // the ordered set (below)
+  // filter-applied, search-EXCLUDED, sort-suppressed
+  rows: readonly unknown[];
   render: (order: ManualOrderConfig<unknown> | null) => ReactNode;
 }
 ```
 
-The host folds it in `RowOrderReader` (`web/internal/row-order.tsx`) — the same
-recursive-component fold as `CollectFieldExtensions` (see Field extensions), but
-resolving a single `ManualOrderConfig | null` on a **first-non-null-wins** rule
-instead of accumulating a `FieldDef[]`, and *gated* rather than unconditional. Each
-contributor mounts error-boundary-isolated (`renderIsolated`), runs its own hooks,
-and hands back a config (or `null` to abstain) through `render`. Because the slot
-is a `defineRenderSlot`, that precedence is a committed reorder override
-(`config/primitives/data-view/primitives.data-view.row-order.jsonc`), not an
-import-order accident.
-
-**The fold is a reader beside the surface, never around it**: it renders
-nothing and reports the order up in a layout effect (applied before paint). A
-fold wrapping the surface makes its contributors ancestors of the band, aside
-and view, so switching list ↔ gallery remounted all of them (a backdrop map
-lost its camera).
-
-**`rows` is the view's ordered set: filter-applied, search-EXCLUDED,
-sort-suppressed** — computed with
-`useFlatRows(effectiveRows, fields, { ...activeState, sort: [], query: "" }, …)`.
-Rows the view filters out never receive a rank. Search only changes what is
-*rendered*, never which rows the order covers, so a drag under an active search
-still resolves against the full ordered set. The contributor nonetheless persists
-only a bounded write set per gesture — see view-order's CLAUDE.md.
+- Folded by `RowOrderReader` (`web/internal/row-order.tsx`), **first-non-null
+  wins** in the committed reorder layout
+  (`config/primitives/data-view/primitives.data-view.row-order.jsonc`).
+- The reader sits **beside** the surface (renders nothing, reports in a layout
+  effect) — wrapping the surface would remount band/aside/view on every view
+  switch.
+- `rows` excludes search so a drag under a search still resolves against the full
+  ordered set.
 
 ### The `rowOrderEnabled` gate
 
-`RowOrderReader` takes an `enabled` prop and short-circuits **before**
-`useContributions()` when false — so an ineligible DataView never mounts a
-contributor and never subscribes to its live resource. Each clause is a structural
-exclusion, not a preference:
+`RowOrderReader enabled={false}` short-circuits before `useContributions()` (no
+contributor, no subscription):
 
 ```ts
 const rowOrderEnabled =
-  activeSupportsManualOrder &&   // list / table only — gallery/icons, and a table nesting a hierarchy, have no flat rank axis
-  manualOrder == null &&         // a consumer's domain order wins
-  props.source == null &&        // a live source is server-sorted ⇒ the client cannot own the order
-  aggregate == null;             // an aggregate representative's rank cannot stand for its members
+  // list / table only; not a table nesting a hierarchy
+  activeSupportsManualOrder &&
+  // domain order wins
+  manualOrder == null &&
+  // a live source is server-sorted
+  props.source == null &&
+  // a representative's rank can't stand for its members
+  aggregate == null;
 ```
 
-**Group-by is deliberately absent too.** It used to be a clause, which is what
-made drag silently stop working under the Pages sidebar's default `groupBy`.
-Within-section reordering is well-defined — the contributed order covers the
-whole *unpartitioned* set (`RowOrderReader` feeds it filter-applied,
-search-excluded rows), so a drop anchored on a same-section neighbour resolves
-globally — and the one unsupported case, a drop into another section, is refused
-per-drop by the view (above), not by suspending the whole order.
-
-**The sort test is deliberately absent here.** It lives in `manualOrderActive`
-(`cfg != null && activeSupportsManualOrder && activeState.sort.length === 0`)
-instead, so toggling a sort off and on does not tear down the contributor's live
-subscription — the host merely withholds the config while a sort is set.
+- **Group-by is deliberately not a clause** — within-section reorder is well-defined
+  (the order covers the unpartitioned set); cross-section drops are refused per-drop.
+- **The sort test is not here either** — it is in `manualOrderActive`
+  (`cfg != null && activeSupportsManualOrder && activeState.sort.length === 0`), so
+  toggling a sort doesn't tear down the contributor's subscription.
 
 ## Grouping is a field-type contribution
 
-**data-view names no field type.** How a field's values partition into sections
-is declared by the field's own TYPE, through `DataViewSlots.Grouping` — the
-sibling of `Cell` / `CellEditor` / `Filter` / `ValueCodec` / `ColumnConfig`, and
-the same shape: a plain `defineSlot` payload keyed by `match` (the type token),
-resolved per type honoring the `extends` chain.
+**data-view names no field type.** How a field's values partition is declared by its
+TYPE via `DataViewSlots.Grouping` (sibling of `Cell` / `CellEditor` / `Filter` /
+`ValueCodec` / `ColumnConfig`; keyed by `match`, honoring `extends`):
 
 ```ts
 DataViewSlots.Grouping({
   match: "date",
-  label: "Group dates by",          // the granularity band's own section label
-  groupings: dateGroupings,          // Smart, Day, Week, Month, Year
+  label: "Group dates by",
+  groupings: dateGroupings,
 });
 ```
-
-The primitive used to spell `type === "enum" || type === "bool"` in three
-places — `isGroupableField`, a `sectionLabel` with an enum-options lookup and a
-`bool → Yes/No` branch, and an "enum sections follow `field.options` order"
-block inside `partitionIntoSections`. A date field could not group at all
-(`String(aDate)` puts every row in its own section), and adding one would have
-meant a fourth branch. Now enum, bool and date each contribute their own
-groupings and the partition is pure mechanism.
 
 ### The contract (`core/internal/grouping.ts`)
 
 ```ts
 interface FieldGrouping {
-  id: string;                       // "smart" | "day" | "value" — persisted
-  label: string;                    // "Smart", "Day", "Value"
+  id: string; // "smart" | "day" | "value" — persisted
+  label: string;
   plan: (ctx: GroupingPlanContext) => (value: FieldValue) => GroupBucket | null;
 }
-interface GroupingPlanContext { now: number; values: readonly FieldValue[]; field: FieldDef<unknown> }
-interface GroupBucket { key: string; label: string; order: number;
-  ancestors?: GroupBucketAncestor[];   // root first — the buckets form a tree (below)
-  icon?: IconRef;                      // the value's glyph — the header's identity chip
-  tint?: ColorTokenRef;                // its colour as a declared token (an enum option's)
-  swatch?: string }                    // its colour as user data (a tag's #rrggbb)
-// icon / tint / swatch reach the section as ONE `DataViewSection.identity`.
-interface GroupByRule { fieldId: string; groupingId: string }
+
+interface GroupingPlanContext {
+  now: number;
+  values: readonly FieldValue[];
+  field: FieldDef<unknown>;
+}
+
+interface GroupBucket {
+  key: string;
+  label: string;
+  order: number;
+  ancestors?: GroupBucketAncestor[];
+  // icon / tint / swatch reach the section as ONE `DataViewSection.identity`.
+  icon?: IconRef;
+  tint?: ColorTokenRef;
+  swatch?: string;
+}
+
+interface GroupByRule {
+  fieldId: string;
+  groupingId: string;
+}
 ```
 
-Three things about it are load-bearing:
-
-- **`plan` is two-phase.** A grouping that must see the whole set before it can
-  order its sections (enum by `options` index, the identity fallback by value
-  order, a future range-derived "Auto") does that work once per render, not once
-  per row.
-- **`now` is injected, never read.** A grouping calling `Date.now()` would be
-  untestable (the precedent is `relativeDayLabel(date, now)`) *and* incorrect
-  here: the partition runs inside a `useMemo`, so a live clock would change the
-  memo key every render. The host reads it once per surface via
-  `useGroupingClock()` — local midnight, quantized, re-armed by ONE `setTimeout`
-  at the next local midnight so a view left open overnight stops saying "Today".
-  That timer is not the banned polling: it fires at the instant the value
-  changes, which the calendar knows in advance, rather than waking to check.
-- **`order` is a plain ascending ordinal**, read from whichever end the view's
-  own sort on the grouped field points (`DataViewRenderProps.groupOrder`) — so
-  `startsAt asc` reads Today → Tomorrow → Later and `startsAt desc` reads newest
-  month first, out of one ordinal with no second config axis. The host derives
-  it from **`activeState.sort`**, not the view's `state.sort`, which a
-  live source zeroes out. The `None` bucket holds no position on the
-  ordinal, so it stays **last in both directions**.
+- **`plan` is two-phase** — whole-set work once per render, then per row.
+- **`now` is injected, never read** (the partition is memoized). The host reads
+  `useGroupingClock()` — local midnight, re-armed by one timer at the next midnight
+  (not polling: the change instant is known).
+- **`order` is a plain ascending ordinal**, read from whichever end the view's sort
+  on the grouped field points (`DataViewRenderProps.groupOrder`, derived from
+  `activeState.sort` — a live source zeroes `state.sort`).
 
 ### There is exactly one "None", and a grouping cannot mint a second
 
-A bucketer returns `GroupBucket | null`. **`null` means "not a value I can
-bucket"** — a string in a date field that does not parse, an enum value of the
-wrong shape — and the row joins the SAME section as a null value: one "None",
-ordered last in both directions, owned by the partition.
+`null` from a bucketer means "not a value I can bucket": the row joins the one
+"None" section, owned by the partition and **last in both directions**.
 
-A grouping must never build its own catch-all, and the type is what stops it.
-The date grouping originally returned a `NO_DATE` bucket keyed `"none"` with
-`order: Number.POSITIVE_INFINITY`, which fails twice: a second section also
-labelled "None" appears beside the real one, and `Infinity - n` is `Infinity`, so
-the catch-all pins last ascending and **first descending** — it jumps to the top
-of the list the moment the view's sort flips. `null` has neither failure mode
-available.
-
-The ordinal is checked too: `order` must be **finite**, or the partition throws
-naming the grouping and the bucket (once per bucket, not per row). Infinity is
-only ever reached for as "put this at the end", which it does not do; that is
-what `null` is for.
+- Never build your own catch-all (a second "None"; `Infinity` order sorts first
+  descending).
+- `order` must be **finite** or the partition throws, naming grouping and bucket.
 
 ### Groupability is derived, not listed
 
-`isGroupableField(field, hasGrouping)` is `field.groupable ?? hasGrouping(type)`
-— a field is groupable because its type says how it buckets. `hasGrouping` comes
-from `useGroupingRegistry().has`; the host resolves it once and publishes it on
-the controls context, because a `Setting` contribution's `isApplicable` is a pure
-function and cannot read a slot. Any field can still opt out with
-`groupable: false`, or in with `groupable: true` — which then uses the fallback:
+`isGroupableField(field, hasGrouping)` = `field.groupable ?? hasGrouping(type)`
+(`useGroupingRegistry().has`, published on the controls context because a
+`Setting`'s `isApplicable` is pure).
 
-**The identity grouping** (`web/internal/identity-grouping.ts`,
-`{ id: "value", label: "Value" }`) is what a type declaring no groupings falls
-back to: one section per distinct value, `String(value)` for both key and label,
-ordered by the value's index in the `compareValues`-sorted value list. It is also
-what the legacy persisted `groupBy: "<fieldId>"` string migrates to —
-`readGroupBy` coerces it to `{ fieldId, groupingId: "value" }`, which is exactly
-what that string always meant. Migration is **on read and never destructive**;
-the config row is re-serialized only when the user next edits group-by. No
-committed `.jsonc` needs touching.
+`groupable: true` on a type without groupings uses **the identity grouping**
+(`web/internal/identity-grouping.ts`, `{ id: "value" }`: one section per distinct
+value, ordered by `compareValues`) — also what a legacy `groupBy: "<fieldId>"`
+reads as (`readGroupBy`).
 
 ### The picker
 
-`GroupByControl` renders the field radio band, then — only when the active
-field's type offers more than one grouping — a **second `ControlPanel.Section`
-labelled from the contribution's own `label`**. Two bands rather than a
-`usePanelStack` push (the `add-sort-affordance.tsx` precedent): the choice is
-small and closed, and seeing granularity next to field is the point. Picking a
-field goes through `controller.setField`, which resolves the granularity itself
-(keeping the current one when the new type still offers it, else that type's
-first), so the persisted `groupingId` is never one the type does not have.
+`GroupByControl`: the field radio band, then — when the field's type offers >1
+grouping — a second `ControlPanel.Section` labelled by the contribution's `label`.
+`controller.setField` resolves the granularity (keep if offered, else the type's
+first), so a persisted `groupingId` is always valid.
 
 ## Grouped sections: one pipeline, one chrome
 
-`useDataViewSections` computes the sections; **`<GroupedSections>`** (web barrel)
-presents them. They are deliberate siblings: a view child's grouped branch renders
-*through* the chrome rather than hand-rolling it.
+`useDataViewSections` computes sections; **`<GroupedSections>`** (web barrel)
+presents them. A view's grouped branch renders through it, never hand-rolled:
 
 ```tsx
 sections.length === 1 && sections[0]!.key === null ? (
-  renderBody(sections[0]!.entries)          // ungrouped: headerless fast-path
+  renderBody(sections[0]!.entries)
 ) : (
   <GroupedSections
     sections={sections}
@@ -769,2410 +530,1344 @@ sections.length === 1 && sections[0]!.key === null ? (
 )
 ```
 
-It owns the whole group-header policy: the shared `<Stack gap="none">` sticky
-containing block, the `<StickyStack>` pinned at the host-published
-`--dv-header-offset`, the DOM-less `<CollapsibleProvider>` per section, and the
-`SectionHeaderRow` (label + count). So group headers **pin, and stack up to 5
-groups, degrading to the swap hand-off above that** — in every view, for free.
-There is **no per-view header-inset axis**: `GroupedSections` puts `rail-follow`
-on each header's sticky band, so every group header sits on the one rail (see
-"The rail" below) — no view passes a `headerClassName`.
+It owns:
+
+- the sticky containing block;
+- `<StickyStack>` at `--dv-header-offset` (stacks up to 5 headers, then swap
+  hand-off);
+- per-section `CollapsibleProvider`;
+- the header.
+
+Headers sit on the rail via `rail-follow` — no per-view header inset.
 
 ### The group header: one rendering, its style a theme token
 
-`DataViewGroupHeader` (web barrel) is the ONE group header — no prop picks a
-treatment. It is one run, `SectionHeaderRow variant="group"
-disclosure="trailing" rule`: the section's identity, the `group` label
-(`groupLabelInk`, muted; faint while collapsed), its count right beside it
-(faint, the `groupCount` pick), the rule's box, then the fold chevron trailing
-the run — shown on hover or keyboard focus and **while the section is
-collapsed** (`SectionHeaderRow`'s trailing disclosure keeps a shut section's
-mark). A section's `headerActions` sit in the trailing cluster, hover-revealed.
+`DataViewGroupHeader` (web barrel) is the ONE group header (no treatment prop):
+`SectionHeaderRow variant="group" disclosure="trailing" rule` — identity, label
+(`groupLabelInk`), count beside it, the rule box, trailing chevron (on hover/focus
+and while collapsed).
 
-The theme's **`groupHeaderStyle`** token (`ui/tokens/data-view`) picks the look
-in CSS, through container style queries on the inherited var — never a prop:
-
-- **`caption`** (default) — the run alone, a caption over the rows ("Queue 6").
-- **`rule`** — the rule's box shows (`ruleClassName` on `SectionHeaderRow`,
-  `hidden` otherwise, so it gives its slack back), a hairline filling the row
-  from the count to the chevron, which then sits at the far end.
-- **`pill`** — the label wears a soft pill (`groupPillFill`, `px-group-pill`),
-  at the foreground ink.
-
-Its label sits on the rows' **text** column, not their pill edge: the sticky
-band pays the rail (`rail-follow` on the `StickyStackItem`; a nested header's
-inside its indent) and the header row keeps its own `p-row`, like a body row.
-Pinned by `web/__tests__/grouped-sections.test.tsx`.
-
-list, gallery, tree and icons draw it through `GroupedSections`, and so does
-the **table** (nested or flat): it composes its own `col-span-full` header rows
-inside `data-table`, but the node in them is the same `DataViewGroupHeader` —
-so the table cannot drift from the flat views. See "Table view options" below.
+- The theme token **`groupHeaderStyle`** (`ui/tokens/data-view`, via container
+  style queries) picks `caption` (default) / `rule` / `pill`.
+- Pinned by `web/__tests__/grouped-sections.test.tsx`.
+- The table draws the same node in its own `col-span-full` rows.
 
 ### `headerActions` — one affordance, scoped to one section
 
-`headerActions?: (section) => ReactNode` renders in the header's trailing
-cluster, after the header's run (the nested table's
-fold-this-group toggle, `groupFoldAction`, today). Return `null` for a section with nothing to
-offer — the wrapper is then skipped too, so a view passing no `headerActions`
-(list, gallery) draws the node it always did.
+`headerActions?: (section) => ReactNode` renders in the header's trailing cluster
+(the nested table's `groupFoldAction`); `null` skips the wrapper.
 
-Count and action want opposite treatments, so they sit apart: the count reads
-at rest in the label's run, the action sits in a nested `<RowActions
-pin={null}>` and reveals on hover (`RowActionsProps` separates `pin` from
-`alwaysVisible`; the nested cluster rides the `group/row-actions` `Row`
-publishes unconditionally).
+- It sits in a nested `<RowActions pin={null}>`, hover-revealed (the count stays
+  at rest).
+- No click guard needed (`RowActions` stops propagation).
+- Not `hover-reveal` (that primitive defers to `row-actions` for row-action
+  clusters).
 
-No click guard is needed even though the header is the collapse trigger:
-`RowActions`' button `Stack` already stops `onClick` and `onPointerDown`. And
-**not** the `hover-reveal` primitive — its own CLAUDE.md says a row-action
-cluster is `row-actions`' job, and the two together compete.
-
-**Why it is shared and not per-view.** Per-view JSX drifts (a view child silently
-forgetting to pin its headers), and a lint rule can't state "a grouped section must
-be wrapped in sticky chrome" — one shared branch makes the divergence
-unrepresentable. See
-`research/2026-07-17-data-view-gallery-sticky-group-headers.md`.
-
-**`table` is the documented exception.** Its group headers are `col-span-full` rows
-of `data-table`'s subgrid — chrome that owned a `<Stack>` would displace them out of
-the grid and break column alignment — so it composes `StickyStack` directly inside
-`data-table`, under the same policy and with `base` offset by its own sticky column
-header (or by nothing, under `columnHeader: "first-group"`, which has no header
-row). The nested table partitions through `useHierarchyTree` (see "Hierarchy": its
-ROOTS partition by the group-by field and every descendant follows its root's
-section) rather than `useDataViewSections`, which resolves the grouping registry
-itself; it draws each section's slice of the ONE flattened tree as a
+**`table` is the documented exception**: its group headers are `col-span-full`
+subgrid rows, so it composes `StickyStack` directly inside `data-table` (offset by
+its own column header, or none under `columnHeader: "first-group"`). The nested
+table partitions via `useHierarchyTree` and draws each section's slice as a
 `DataTableGroup`.
 
 ## Nested sections: a grouping whose buckets form a tree
 
-A field whose `options` are a FOREST (`FieldOption.parent` — a tag tree's
-tags) groups as nested sections: `app ▸ website ▸ homepage`, each header
-counting its whole subtree, a parent's own rows above its child sections, every
-level folding on its own, the one "None" last. Nesting is a property of the
-**buckets**, not of a field type: a grouping returns `GroupBucket.ancestors`
-(root first, each `{ key, label, order, swatch? }`) and data-view does the
-rest, naming no type (`fields/tag`'s grouping is the one that does today —
-`tagFieldOptions` from `tag-tree/engine` makes the forest).
+A field whose `options` form a FOREST (`FieldOption.parent`, a tag tree) groups as
+nested sections (`app ▸ website ▸ homepage`). Nesting is a property of the
+**buckets**: a grouping returns `GroupBucket.ancestors` (root first,
+`{ key, label, order, swatch? }`); data-view names no type (`fields/tag` does it
+today).
 
-- **Partition** (`partitionIntoSections`): if any bucket carries ancestors, the
-  buckets become a key → node forest — an ancestor is a section of its own even
-  with no rows (count 0 of its own), every sibling level is ordered by the
-  usual rule (`(order × dir) || discovery`), and sections come out in tree
-  order (pre-order) with `DataViewSection.nesting = { depth, parentKey }`. A
-  subtree holding no rows is never emitted. "None" stays last, at depth 0, with
-  no `nesting`. Every bucket naming an ancestor must agree on the chain above
-  it, and no chain may cycle — the partition throws naming the grouping.
-- **Flat where order is not ours**: `appearance` sectioning (row order — the
-  server's) and `declared` sections (servers never send ancestors) stay flat,
-  and so does the nested table's group-by over its roots (`flat: true` — its
-  rows already nest by their own hierarchy).
-- **Counts roll up LAST** (`rollUpNestedCounts`, the pipeline's final step,
-  after manual order, aggregate and fold, which all write a section's OWN
-  count): a nested section's `count` is `sumSectionCounts` (core) of its own
-  and every descendant's — exact only when every part is, so one lower bound
-  below makes each ancestor `n+`. `entries` stay the section's own rows.
-- **Render**: `visibleSections(sections, collapsed)` (core) drops every
-  section under a collapsed ancestor; the collapsed section itself keeps its
-  header. `GroupedSections` (list, gallery, icons) renders through it, indents
-  a nested section's header and body `depth` tree steps
-  (`NestedSectionIndent`, web barrel: `--tree-indent` per level, a guide
-  hairline per ancestor level in `--tree-guide` under the parent header's
-  chevron), and draws a section with no rows of its own (no entries, fold or
-  paging) as its header alone. The **table** applies `visibleSections` to its
-  group rows and the indent (no guides) to its group header. Collapse state
-  stays keyed by `section.key`, so each level folds independently.
-- **Header**: `DataViewGroupHeader` draws `section.identity` before the label —
-  the identity chip (glyph on a tile inked by the colour) when it has an
-  `icon`, else a colour dot when it has only a colour (`tint` token, else the
-  `swatch` hex from `FieldOption.swatch`) — and a depth ≥ 1 header's label in
-  medium weight (a root header is semibold).
-- **Sticky**: nested headers stack like flat ones (one `StickyStack` over the
-  visible sections), degrading to the swap hand-off past the stack cap.
-- **Body state**: the paging tail counts as hidden when its section — or any
-  ancestor — is collapsed (`isSectionCollapsed` in `data-view-body.tsx`).
+- **Partition** (`partitionIntoSections`): buckets become a forest; ancestors are
+  sections even with no own rows; siblings ordered `(order × dir) || discovery`;
+  pre-order output with `DataViewSection.nesting = { depth, parentKey }`. Empty
+  subtrees are not emitted; "None" stays last at depth 0. Disagreeing or cyclic
+  chains throw.
+- **Flat where order is not ours**: `appearance` sectioning, `declared` sections and
+  the nested table's group-by over roots (`flat: true`).
+- **Counts roll up LAST** (`rollUpNestedCounts`, after manual order, aggregate,
+  fold): own + descendants via `sumSectionCounts`; one lower bound makes ancestors
+  `n+`. `entries` stay the section's own rows.
+- **Render**: `visibleSections(sections, collapsed)` (core) drops sections under a
+  collapsed ancestor. `GroupedSections` indents by depth (`NestedSectionIndent`:
+  `--tree-indent`, guides in `--tree-guide`); a section with no own rows draws as its
+  header alone. The table applies `visibleSections` and the indent (no guides).
+  Collapse stays keyed by `section.key`.
+- **Header**: `section.identity` before the label (chip with `icon`, else a colour
+  dot from `tint` / `swatch`); depth ≥ 1 labels medium weight.
+- **Body state**: a paging tail counts as hidden when its section or any ancestor is
+  collapsed (`isSectionCollapsed`).
 
-Pinned by `web/internal/use-data-view-sections.test.ts` ("nested buckets",
-`rollUpNestedCounts`, `visibleSections`) and
+Pinned by `web/internal/use-data-view-sections.test.ts` and
 `web/__tests__/grouped-sections.test.tsx` ("nested sections").
 
 ## Aggregating sections (`aggregate`)
 
-Pass `aggregate?: DataViewAggregateConfig<TRow>` to `<DataView>` to collapse rows
-sharing a key into a single **representative row + count badge**:
+`aggregate?: DataViewAggregateConfig<TRow>` collapses rows sharing a key into one
+**representative row + `×N` badge**:
 
 ```ts
 interface DataViewAggregateConfig<TRow> {
-  getKey: (row: TRow) => string | null;            // null = standalone, never collapsed
-  pickRepresentative?: (members: readonly TRow[]) => TRow;  // default: first in current order
+  getKey: (row: TRow) => string | null; // null = never collapsed
+  // default: first in order
+  pickRepresentative?: (members: readonly TRow[]) => TRow;
 }
 ```
 
-It is a **pure pipeline transform**, orthogonal to the `supports*` flags — the
-host threads it to every flat view (`list`/`table`/`gallery`), each running it
-through `useDataViewSections`. The aggregate step runs **after** group-by and
-**after** the manual-order rank sort, **within each section**:
-
-- entries sharing a non-null `getKey` collapse into ONE `DataViewRowEntry` with
-  `row = pickRepresentative(members)`, `aggregateCount = members.length`, and
-  `members` = every collapsed row, keeping the **position and `key` of the first
-  member** (the entry stands for the group, not a single row);
-- a `null` key passes the row through 1:1 (no `aggregateCount`);
-- `section.count` becomes the **post-collapse** entry count (an aggregate counts
-  once, so the header matches the rows shown; a lower bound stays a lower bound).
-
-Each view renders the representative normally and, when `entry.aggregateCount > 1`,
-a `×N` `Badge` (`css/badge`) in its natural trailing spot — list **trailing**,
-table **in the primary cell** (keyed by row identity, since the cell renderer
-gets no index), gallery **top-left card corner** (a `Pin`, clear of the
-hover-revealed top-right actions).
-
-**"Acting on the representative acts on the group" is the consumer's concern.**
-The representative is a real `TRow`, so `onRowActivate`, `itemActions`, and
-`manualOrder.onMove` already fire on it; mapping that to a group mutation (e.g.
-reseating every member) is the consumer's job. The primitive owns only the visual
-collapse + representative selection + count badge.
+- **A pure pipeline step** in `useDataViewSections` for every flat view, **after**
+  group-by and the manual-order sort, **within each section**.
+- **Output**: one `DataViewRowEntry` with `aggregateCount` and `members`, at the
+  first member's position and `key`; `section.count` is the post-collapse count.
+- **Badge**: list trailing, table in the primary cell, gallery top-left `Pin`.
+- Acting on the representative "acts on the group" only if the **consumer** maps
+  it so.
 
 ## Fold: "… N more" per section (`ViewState.fold`)
 
-A **softer filter**: a filter removes rows, a fold keeps them counted and one
-click away. A view's fold rule is `{ keep: FilterGroup }` (`FoldRule`, core),
-persisted in the view config row beside `filter`/`groupBy` (`readFold` /
-`setFold` in `use-data-view-model.ts`, merge-written, key omitted when cleared or
-empty). Rows NOT matching `keep` are pulled out of their section and replaced by
-one **fold line** at its end — `… N more`, or `Show less` while open. `keep` is
-the ordinary filter language, so every field type's operators, the filter
-editor, `summarizeFilter` and the persistence format are shared with `filter`.
+A softer filter: `{ keep: FilterGroup }` (`FoldRule`, core) in the view row
+(`readFold` / `setFold`). Rows NOT matching `keep` are replaced by one **fold line**
+at the section's end (`… N more` / `Show less`). `keep` is the ordinary filter
+language (operators, editor, `summarizeFilter`, persistence shared).
 
 ```jsonc
-"view": { "type": "list", "groupBy": "section", "fold": { "keep": {
-  "kind": "group", "id": "keep", "conjunction": "or", "children": [
-    { "kind": "rule", "id": "recent", "fieldId": "updatedAt", "operatorId": "is-within-past", "value": { "amount": 30, "unit": "day" } }
-  ] } } }
+"view": {
+  "type": "list",
+  "groupBy": "section",
+  "fold": {
+    "keep": {
+      "kind": "group",
+      "id": "keep",
+      "conjunction": "or",
+      "children": [
+        {
+          "kind": "rule",
+          "id": "recent",
+          "fieldId": "updatedAt",
+          "operatorId": "is-within-past",
+          "value": { "amount": 30, "unit": "day" }
+        }
+      ]
+    }
+  }
+}
 ```
 
-The rules, each enforced in exactly one place:
+Rules, each enforced in one place:
 
-1. **Search suspends folding** — `effectiveFold(state)` (`web/internal/fold-sections.ts`)
-   drops the rule while `query.trim()` is non-empty; a match never hides behind "…".
-2. **The selected row is never folded** — `makeFoldKeep` keeps `selectedRowId`
-   (or an aggregate entry holding it as a member).
-3. **A group whose rows are all folded still renders** — header, then the fold
-   line only. Partition runs before the fold, so the section exists.
-4. **Folded rows are pulled from wherever they sort**; the line always sits at the
-   end, and opening it re-inserts them in sorted order.
-5. **Open state is ephemeral** — in memory in `DataViewBodyInner`, keyed by the
-   active view id; a view switch or reload re-closes every fold. Never config.
-6. **Paging stops behind a folded tail** — while a fold is in effect, none is
-   open and the paged read's tail is folded (`isTailFolded`), the body gates
-   the scroll observer's own `hasNextPage` (see *Paging* below). It is a gate,
-   not a hidden footer: unmounting the sentinel behind the observer's back
-   would never re-observe it and paging would stall silently. Opening any fold
-   lifts the hold.
-7. **The fold runs last** — after partition, manual order and aggregation
-   (`foldSections` in `useDataViewSections`), so an aggregate's representative
-   decides. `section.count` stays the total; `section.fold = { hidden, open }` is
-   present only when ≥1 entry fails `keep`.
+1. **Search suspends folding** (`effectiveFold`, `web/internal/fold-sections.ts`).
+2. **The selected row is never folded** (`makeFoldKeep`, incl. aggregate members).
+3. **An all-folded group still renders** (header + fold line).
+4. **The line is always at the section's end**; opening re-inserts rows in order.
+5. **Open state is ephemeral** (in memory per active view id). Never config.
+6. **Paging stops behind a folded tail** (`isTailFolded` gates the observer's
+   `hasNextPage` — a gate, never an unmounted sentinel, which would stall paging).
+7. **The fold runs last** (`foldSections`, after partition / manual order /
+   aggregation); `section.count` stays the total; `section.fold = { hidden, open }`.
 
-**A section's body band draws its fold line.** The host hands views
-`DataViewRenderProps.foldLines` (`{ open, setOpen, summary }`, present exactly
-when a fold is in effect). A view passes `foldLines.open` + `selectedRowId` to
-`useDataViewSections`, and renders each section's entries inside
-`<SectionBody section foldLines className>` (web barrel) — the ONE box that pays
-the rail for that section's content, ending in the section's fold line. There is
-no separate `FoldLine` to place (it is not exported), so a view cannot forget it
-or put it on a different edge than its entries: the line is a plain `Row` in the
-same band, landing on the list rows' text column or the gallery cards' edge
-alike. Its content must not `rail-follow` again (the band paid). In the grouped
-path the view returns its `SectionBody` from `GroupedSections`' `children`
-(inside the collapsible content, so a collapsed group hides it too); the table
-puts a `SectionBody` holding only the line in `DataTable`'s full-span `footer` /
-`DataTableGroup.footer` row. A **nested table** (`nestsHierarchy`) gets no fold: the
-host applies none and hides the setting.
+**A section's body band draws its fold line**: views render entries inside
+`<SectionBody section foldLines className>` (web barrel), which ends in the line
+(no exported `FoldLine`).
 
-**The editor** is the "Fold rows" `view`-scope `Setting` (`fold-control.tsx`):
-the rule in words plus Clear, and the filter builder pushed as a page and pointed
-at `fold.keep` by `FoldFilterScope` — a nested `DataViewControlsProvider`
-overriding only `filter`. Filter presets are off there (they belong to the view's
-filter). Because a pushed page replaces the root's subtree, the builder pushes
-its own sub-pages through `useFilterPanelStack()` (`filter-scope.tsx`), which
-re-enters the current scope component around the page — otherwise a nested
-group opened from the fold editor would edit the view's filter instead.
+- In the grouped path, return it from `GroupedSections`' children.
+- The table puts a line-only `SectionBody` in `DataTable`'s `footer` /
+  `DataTableGroup.footer`.
+- A nested table gets no fold.
 
-"Fold line" / "folded rows" is unrelated to the nested table's fold-children header
-action (which collapses subtrees).
+**The editor** is the "Fold rows" `view`-scope `Setting` (`fold-control.tsx`).
+
+- Its filter builder is pointed at `fold.keep` by `FoldFilterScope` (nested
+  `DataViewControlsProvider` overriding `filter`).
+- Sub-pages must go through `useFilterPanelStack()` (`filter-scope.tsx`) or a
+  nested group would edit the view's filter instead.
 
 ## Paging (`paging`)
 
-A live `source` pages its own read. A consumer that must derive its rows in
-memory from a paged read — the conversation Queue, whose Done section is the
-`conversations-gone` pages merged with ranked/active rows — passes
-`paging={…}` beside `rows` (`DataViewPaging`; `useLivePagesPaging(c, query,
-{ resetKey? })` reads the collection as live pages — `network/live`'s
-`useLive(c, query, { viewport, resetKey })`, with the viewport it mints — and
-hands back the read and its paging together). Both reach the body as one
-`paging`, so the footer (loading-more, Retry, the stop line), the notices, the
-hold and the viewport are one code path. It takes a collection's window (any:
-every window pages; a lookup-only or `all` collection is a tsc error): a
-key-range-paged `liveValue` reads through the same `useLive` pages, but a
-DataView source over one needs the filterable and text-column seams a value
-does not have (task-1791593959-9liyj7).
+A live `source` pages its own read. A consumer deriving rows in memory from a paged
+read (the conversation Queue) passes `paging={…}` beside `rows` (`DataViewPaging`),
+obtained with `useLivePagesPaging(c, query, { resetKey?, narrowBy?, total? })`.
 
-```ts
-const { pages, paging } = useLivePagesPaging(conversationsGone, {}); // data-view web
-// pages: network/live's LivePagesResult; paging: null until it is ready
-<DataView rows={rows} paging={paging === null ? undefined : { ...paging, isPaged }} … />
+- It reads `useLive` pages and mints the viewport together, so a read cannot page
+  by a viewport nothing measures.
+- Any windowed collection works (lookup-only / `all` is a tsc error).
+
+```tsx
+// paging: null until ready
+const { pages, paging } = useLivePagesPaging(conversationsGone, {});
+
+<DataView
+  rows={rows}
+  paging={paging === null ? undefined : { ...paging, isPaged }}
+  …
+/>;
 ```
 
-- **Narrowed by the view (`narrowBy`, `total`).** Rows filtered in memory
-  over a paged read stop at its first page when the filter hides the read's
-  tail (the next page waits on the tail being on screen — the hold below). A
-  merged surface's source receives the active view (`DataViewSourceProps.view`)
-  and hands it to `useLivePagesPaging(c, query, { narrowBy: view })`
-  (`web/internal/narrow-pages.ts`): the view's filter is lowered onto the
-  collection's columns like a live source's, as a WIDENING — a rule no column
-  backs (a list's synthetic field) is dropped, never refused, since the rows
-  are still filtered in memory — and ANDed into `query`. `total: true` also
-  reads the narrowed query's count as `paging.total`, stamped with the view's
-  `filter` tree when no rule was dropped; the body counts with it only while
-  the view's filter is that very tree (by identity: an edited filter is a new
-  tree, whose count is a new read) and no search is typed, so the section
-  count stays exact under that filter. A narrowing naming a contributed
-  column reads no count (a COUNT reads the own and exposed columns only). The
-  search box is not lowered (in memory it matches any searchable field's
-  text). The Queue's Done section is the consumer.
-
-- **The viewport (`paging.viewport`, required).** The body measures which rows
-  it has on screen and reports each paged read's share to its sink, in the
-  read's own order (`DataViewVisibleRows`: the first and last of its rows on
-  screen, or `none`); the internal `usePagesViewport` turns the reports into
-  the branded `VisibleRange` `useLive` keeps its pages live by — the only
-  place one is minted (`live/visible-range-minter` lint; data-view's
-  sanctioned exemption). `useLivePagesPaging` mints the viewport and the
-  paging together, so a read cannot page by a viewport nothing measures: hand
-  its `paging` to the DataView drawing the rows. A read that pages by no
-  viewport passes a sink that discards the report (internal `NO_VIEWPORT`).
-  - **One measurement per DataView** (`web/internal/use-visible-row-keys.ts`):
-    every view marks each row it draws with `data-row-key` (the row key — list
-    `Row` / tree-chrome rows, the nested table's rows (an alias carries
-    none: the real row marks it), gallery `DataCard`, the table's rows, icons'
-    tiles), and one IntersectionObserver (the `in-view` primitive) watches them
-    inside the body's box (`KeepAnchorAcross`'s). A MutationObserver only ENROLLS
-    rows a view mounts later (a windowed list); the observer's entries — one
-    per row it is handed, then one per crossing — drive the settle. The set is
-    published after the rows on screen hold still for 250 ms (`SETTLE_MS`), so
-    a fling does not subscribe every page it crosses, and at most 1 s
-    (`MAX_WAIT_MS`) after the first change it has not published, so a list
-    whose rows never hold still (a busy feed) still updates its viewport.
-  - **A measurement vouches only for the rows it saw.** The body keys it by an
-    EPOCH — the keys of every read's rows — and `useVisibleRowKeys` is
-    `measuring` for a new epoch until a settle that ran after its rows were
-    committed (re-armed in the commit). A settle waits while a row it enrolled
-    has had no entry yet, and with no `[data-row-key]` element drawn at all it
-    stays `measuring` — never an empty set. So a head that lands after the
-    skeleton was measured, or a new query's head, is never reported off screen
-    by the rows it replaced (which would release it the moment it landed). A
-    view type that forgets the marker therefore releases nothing (its pages
-    stay live, never stale) — still, **a new view type must stamp
-    `data-row-key` on its rows**, or its pages are never released.
-  - **Split per read.** A flat origin's paging gets the rows `isPaged` names
-    (all of them, absent); each declared section's paging gets its own
-    section's rows. A folded row, a collapsed section and a section scrolled
-    away are not on screen, so their pages release.
-
-- **Placeholders (`paging.placeholders`, required).** A paged read's pages
-  past its stale budget (`network/live`, *Paged reads*) are
-  `{ before, after }` lists of `DataViewPagePlaceholder` (`{ key, rows }`) —
-  never rows, never between two rows. The body draws them
-  (`web/components/page-placeholders.tsx`): one element per page, through
-  `primitives/loading`'s block, carrying its `key` as
-  `data-row-key` (and `data-page-placeholder`) so the viewport measures it
-  like a row and reports it in the read's order — a placeholder on screen
-  subscribes its page again, and its rows replace it.
-  - **Where.** A flat read's around the whole view — only when every row of
-    the view is the read's: with `isPaged` the read's rows sit among others'
-    (the Queue's Done section), so none is drawn and its far pages simply
-    leave the screen until the read's first or last drawn page nears the
-    viewport (anchored: see *Anchoring*). A declared section's inside its
-    band (`SectionBody`: `before` above the entries, `after` below them; with
-    no entries in the band — all folded, or the table drawing its rows in its
-    grid — only `after`).
-  - **Height: exactly the room its rows took** (`web/internal/placeholder-heights.ts`,
-    `usePlaceholderHeights`, provided as `PlaceholderHeightContext`). Each
-    settle also records every drawn row's ADVANCE (`useVisibleRowKeys`: its
-    top to the next entry of its read's top — a list row's height, a
-    gallery line's height on its last card and 0 on the others), kept for
-    every row still in the reads, drawn or windowed out. A placeholder is
-    sized once, in the render it appears in, from what it replaced: the
-    previous layout's entries between its surviving neighbours, at their
-    advances (several new placeholders between the same neighbours share
-    them row for row). So releasing a page changes no layout at all — the
-    invariant; nothing has to be anchored. A row never measured counts at
-    the mean advance (`rowPitch`), as does a placeholder with nothing
-    measured to replace; a standing placeholder keeps its height whatever
-    the pitch does since.
-  - **Anchoring** — the residue. Rows landing back may differ from their
-    placeholder (they changed while away), and under `isPaged` nothing
-    stands in at all; the body's rows box is `auto-scroll`'s
-    `KeepAnchorAcross`, keyed by every read's placeholders (drawn or not),
-    which keeps the first row on screen where it was (a placeholder only
-    when no row is visible). Its box opts out of browser scroll anchoring
-    (`overflow-anchor: none`): measured on the virtualized table, the
-    browser anchored on a box the window was recycling and scrolled by a
-    released page's height (+3100 px per release, no script write) —
-    whole pages of rows never seen. `virtual-rows` re-measures its
-    `scrollMargin` in the commit that changes its items, and a size it
-    learns while the margin is stale scrolls nothing.
-  - A paging that pages by no viewport passes the empty lists (internal
-    `NO_PLACEHOLDERS`). Pinned by `web/__tests__/page-placeholders.test.tsx`
-    (heights at the released rows' room, no scroll write on a release,
-    anchoring on a landing that changed, none drawn under `isPaged` yet
-    anchored, a live source scrolled deep keeping its drawn rows bounded
-    with every row accounted for), `placeholder-heights.test.ts` (the
-    sizing rules), each view's `paged-conformance.test.tsx` (list, table,
-    gallery, icons — below) and, deployed, `e2e/live-pages-scroll.ts` (every row seen
-    at `--step 0.4` / `0.8`, no row on screen moving on its own, no row
-    changing its x; `--view <type>` picks the view by its switcher chip's
-    `data-view-type`, `--scroller` / `--width` / `--expect-placeholders`
-    for a sidebar list, a gallery's column count, and a run that must
-    release).
-  - **A grid keeps its columns.** A page released mid-line would restart
-    the next card in column 0 and reflow everything below it. The flat
-    read's placeholders reach the view as `DataViewRenderProps.placeholders`
-    (present exactly when the body draws them; a declared section's are on
-    `section.paging`), and a grid view keeps its band's phase through
-    `useGridPhase` (web barrel): it records the absolute cell index each
-    cell was drawn at and, while pages stand above the band, starts it with
-    `index mod columns` empty spacer cells (no `data-row-key`), keyed by
-    absolute line (`line:<n>@<columns>`) so a windowed line survives a
-    release. The gallery and icons views use it; a stacked view needs
-    nothing.
-
-- **The conformance harness** (`web/testing`): `mountPagedDataView({ view,
-  bundle, layout })` mounts ONE view through the real seam
-  (`DataViewShellFrame` around `DataViewBody`, a fake one-instance model)
-  inside a scroller the test drives, with an IntersectionObserver and
-  `getBoundingClientRect` answering from a laid-out page — `"stack"` (rows one
-  below the other) or `{ columns, linePx }` (a lane-aware grid: cells fill
-  lines, `data-grid-pad` spacers take a cell, each grid element starts a line;
-  the gallery's and icons' column probes are stubbed to `columns`).
-  `describePagedConformance({ view, layout, windowAbove? })` is the contract
-  every view runs in its own `paged-conformance.test.tsx`: a released page is
-  one placeholder (`data-row-key` + `data-page-placeholder`, drawn as
-  loading) exactly as tall as the room its rows took, a release writes no
-  scroll, a landing that changed size is anchored; on a grid, a page ending
-  mid-line keeps every card's column (plain and windowed) and a windowed
-  release keeps the mounted lines' DOM. A new view type adds that one file.
-  **Gap:** the grouped table draws no declared section's `before`
-  placeholders (see the table's CLAUDE.md, "Paged").
-- `isPaged(row)` names the rows the read supplies (absent: all). They sit in
-  `rows` in the read's order, so the last one is the **tail**.
-- **The next page loads only while the tail is on screen**: not folded (rule
-  6 above), not in a collapsed section, and — in memory — not hidden by the
-  view's search or filter — and not before any paged row is drawn (the
-  consumer's other reads still loading). Otherwise a sentinel still in view
-  would page the whole read in behind a collapsed header.
-- Counts: until the read is `complete`, `rowsComplete` is `{ growable:
-  isPaged, total }` — only a section holding a paged row can read as a lower
-  bound ("30+"); the others stay exact. **Exact by default when cheap:** a
-  read that knows its total passes `paging.total` (`DataViewPagingTotal`:
-  `{ count, uniform? }`), and the section holding every loaded paged row
-  counts its other rows plus `count` — ungrouped, or grouped by a field in
-  `uniform` (one every row of the read shares, so the unloaded rows land in
-  the same section: the queue's `section`). A live `source` reads it itself
-  when its collection is declared `count: true` (`network/live`'s `:count`),
-  over its scope AND the view's filter — except under a search (a count per
-  keystroke) or a filter naming a contributed column (a COUNT, like a
-  `GROUP BY`, reads the own and exposed columns only). The total is dropped —
-  "N+" again — while the view's search or filter could hide rows of the read
-  (a live source does not read it then), while it is loading, and for a
-  section the read's rows are split across.
+- **`narrowBy: view`** (`web/internal/narrow-pages.ts`) lowers the view's filter
+  onto the collection's columns as a WIDENING (an unbacked rule is dropped, rows are
+  still filtered in memory), ANDed into `query`. `total: true` reads the narrowed
+  count as `paging.total`, used only while the filter is that very tree and no search
+  is typed. A narrowing naming a contributed column reads no count; search is not
+  lowered.
+- **The viewport (`paging.viewport`, required).** The body reports which of each
+  read's rows are on screen (`DataViewVisibleRows`); internal `usePagesViewport`
+  mints the branded `VisibleRange` — the only place one is minted
+  (`live/visible-range-minter` lint; data-view's sanctioned exemption). No viewport →
+  internal `NO_VIEWPORT`.
+  - **One measurement per DataView** (`web/internal/use-visible-row-keys.ts`): one
+    IntersectionObserver over every `[data-row-key]` element; published after rows
+    hold still 250 ms (`SETTLE_MS`), at most 1 s (`MAX_WAIT_MS`).
+  - **A measurement vouches only for the rows it saw** — keyed by an epoch of the
+    reads' keys; `measuring` until a settle after commit; never an empty set with no
+    marked rows drawn.
+  - **A new view type must stamp `data-row-key` on its rows**, or its pages are
+    never released.
+  - Split per read: `isPaged` rows for a flat origin, each declared section's own.
+- **Placeholders (`paging.placeholders`, required).** Released pages are
+  `{ before, after }` lists of `DataViewPagePlaceholder` (`{ key, rows }`), drawn by
+  `web/components/page-placeholders.tsx` with `data-row-key` + `data-page-placeholder`
+  so an on-screen placeholder resubscribes its page.
+  - **Where**: around the whole view only when every row is the read's (not under
+    `isPaged`); a declared section's inside its `SectionBody`.
+  - **Height = exactly the room its rows took** (`placeholder-heights.ts`,
+    `PlaceholderHeightContext`) — so releasing a page changes no layout. Unmeasured
+    rows count at the mean advance.
+  - **Anchoring** the residue: the rows box is `KeepAnchorAcross`, and opts out of
+    browser scroll anchoring (`overflow-anchor: none`) — browser anchoring on
+    recycled virtual rows scrolled whole pages.
+  - **A grid keeps its columns**: grid views use `useGridPhase` (web barrel) to pad
+    `index mod columns` spacer cells while pages stand above.
+  - No viewport → internal `NO_PLACEHOLDERS`.
+- **The conformance harness** (`web/testing`):
+  `mountPagedDataView({ view, bundle, layout })` and
+  `describePagedConformance({ view, layout, windowAbove? })`.
+  - **A new view type adds a `paged-conformance.test.tsx`.**
+  - Deployed check: `e2e/live-pages-scroll.ts` (`--view`, `--step`, `--scroller`,
+    `--width`, `--expect-placeholders`).
+  - Gap: the grouped table draws no declared section's `before` placeholders
+    (table CLAUDE.md, "Paged").
+- `isPaged(row)` names the read's rows (absent: all), in read order — the last is the
+  **tail**.
+- **The next page loads only while the tail is on screen** — not folded, not in a
+  collapsed section, not hidden by search/filter, and not before any paged row is
+  drawn.
+- **Counts**: until `complete`, `rowsComplete = { growable: isPaged, total }` —
+  only a section holding a paged row reads as a lower bound ("30+").
+  - A read knowing its total passes `paging.total` (`{ count, uniform? }`) for
+    exact counts (ungrouped, or grouped by a `uniform` field).
+  - A live source reads it itself when its collection is `count: true` — not
+    under search or a filter naming a contributed column.
+  - The total is dropped while search/filter could hide read rows, while loading,
+    and for a section the read is split across.
 
 ## Create affordances (`creators`)
 
-Pass `creators?: CreateOption[]` to `<DataView>` — typed "make a new row" actions,
-the flat-view counterpart to the nested-table-only parent-scoped `HierarchyConfig.onCreate`.
-`CreateOption` is domain-pure (`{ id, label, icon?, description?, onSelect }`;
-`onSelect` may be async), exported from both the core and web barrels.
+`creators?: CreateOption[]` (`{ id, label, icon?, description?, onSelect, views? }`,
+core + web barrels; `onSelect` may be async) — the flat counterpart of
+`HierarchyConfig.onCreate`.
 
-The host renders them in the toolbar immediately before the view switcher (a
-private `CreatorsControl`, **not** barrel-exported): 0 → nothing; 1 → a labelled
-`Button`; N → a `+` `IconButton` opening a dropdown of icon + label (+ muted
-`description` sub-line) items. `CreatorsControl` owns a single shared **busy**
-flag — each click `await`s `onSelect` in a `try/finally`, disabling the control
-while pending, so no consumer hand-rolls a per-call-site `useState`. The creators
-are also threaded into `DataViewRenderProps.creators` so views can opt into their
-own create UI (the gallery's empty-state CTA).
-
-`CreateOption.views?: string[]` names the view instances whose section header
-offers the creator on a `sections` surface (absent ⇒ every section) — data, so
-the host still builds the one `CreatorsControl`. Every other chrome has one
-create affordance for the whole surface and ignores it.
+- The private `CreatorsControl`: 0 → nothing, 1 → labelled `Button`, N → `+`
+  menu.
+- It owns one shared **busy** flag (awaits `onSelect`), so no consumer hand-rolls
+  one.
+- Also passed as `DataViewRenderProps.creators` (the gallery's empty-state CTA).
+- `views?` names the instances whose section header offers it on a `sections`
+  surface; other chromes ignore it.
 
 ## Toolbar arrangements
 
-The toolbar's **parts** are the host's; their **layout** is an arrangement's.
-`DataViewProps.toolbar?: ToolbarArrangement` (core) is a value the surface
-imports and passes — absent, the host uses its own `barArrangement`. The host
-never names or looks up an arrangement, so adding one is a new plugin (e.g.
-`capsule-toolbar`) and no edit here.
+Parts are the host's; layout is an arrangement's.
+`DataViewProps.toolbar?: ToolbarArrangement` (core) is a value the surface passes
+(default `barArrangement`). The host never names an arrangement — a new one is a
+new plugin (`capsule-toolbar`, `floating-toolbar`).
 
 ### The default: a flat strip (`PillsToolbar`)
 
-Every DataView's toolbar, by default, is ONE flat row:
+```text
+[title] [views: switcher strip, "+" on hover] ··· [tools: search [/] · controls · actions | create]
+```
 
-    [title] [views: switcher strip, "+" on hover] ··· [tools: search [/] · controls · actions | create]
+`PillsToolbar` (`web/components/toolbar/pills-toolbar.tsx`, web barrel);
+`PillsToolbarProps` = `ToolbarParts` + `{ overlay?, className?, style? }`.
 
-`PillsToolbar` (`web/components/toolbar/pills-toolbar.tsx`, web barrel) draws
-it — `barArrangement` in flow, `floating-toolbar` over a canvas (`overlay`:
-each pill opts back into pointer events; the title rides the views pill).
-`PillsToolbarProps` = `ToolbarParts` + `{ overlay?, className?, style? }` (the
-row's inset; default `py-toolbar rail-follow`).
-
-- **Both pills are flat by default.** Each is a `Surface level="float"`
-  whose fill, sheen, border, shadow, blur, corners and padding are cleared
-  under the token `toolbarPillSurface: flat` (style queries on the pill;
-  its hover / mask tones inherit the band's) — so the band reads as one strip
-  of chips and tools; `toolbarPillSurface: float` restores the boxed glass
-  pills (`bg-float-fill`, `backdrop-float`, `rounded-float`; the Prototypes
-  theme pins it). **An overlay pill ignores the token** — over a map it is
-  all the controls stand on, so the floating toolbar keeps its glass. Both
-  sit under ONE `ControlSizeProvider size="sm"` — so chips, icon triggers,
-  the search field and the create button share `control-sm` and are
-  centred on one line at every width.
-- **View chips are icon + name** (`viewChipIcon: always`, `viewChipLabel:
-  always`), the active one on a soft neutral fill (`viewChipActiveFill`, a
-  7% foreground tint) in the foreground ink, 7px corners (`viewChipRadius`).
-  The add-view `+` is revealed with the strip (`viewAddReveal: hover`):
-  opacity 0 until the strip is hovered, holds keyboard focus
-  (`:focus-visible` anywhere in it) or the add menu is open — it keeps its
-  place and stays tabbable; `always` shows it at rest.
-- **The views pill is the one cell that gives**: past its room the strip
-  scrolls sideways inside it (hidden scrollbar); the tools pill is rigid; the
-  row never wraps. A pinned surface (no switcher) draws no views pill.
-- **The search is a quiet well, always visible** (`forms.search: "filled"`,
-  fixed `w-48`, `w-80` with suggestions), with a trailing `/` key hint
-  (`SearchInput keyHint`, a `Kbd`) while empty — dropped below the 720px
-  narrow-search width and by `searchShortcutHint: hide`. **`/` focuses the
-  search in every wide arrangement**: the host binds it
-  (`useSurfaceShortcuts`, surface-scoped, yields to a focused text field);
-  the compact fold has no field to focus and binds nothing. Several banded
-  DataViews on one surface: the first mounted answers.
-- **Create follows a divider** — drawn only when the surface declares
-  creators: `ToolbarParts.creators` is `null` when there are none. One
-  creator is a labelled `Button`; N are a `+` menu — or, given
-  `DataViewProps.createLabel` (`"Add"`), a labelled `Button` (`+` + the label)
-  opening the same menu (the compact fold and the `round` form keep the `+`).
-- **Sizes are the theme's** (`ui/tokens/data-view`; every default is the
-  look above, so a theme that says nothing changes nothing): the row's
-  `py-toolbar` / `gap-toolbar`, a pill's `p-pill` / `gap-pill`, the divider's
-  `h-pill-divider` / `px-pill-divider`, the search lane `w-search`, the bar's
-  `spaceBelow` (`--toolbar-space-below`); the view chip's active
-  fill / ink / ring (`bg-view-chip-active-fill` …) and padding
-  (`viewChipActivePadStart/End`, unset = the chip's own), its icon / label
-  policy (`viewChipIcon` always|never, `viewChipLabel` always|active — style
-  queries on the chip), `viewAddSeparator` (a rule before the add-view `+`);
-  and the type of the view chip, search and create words, picked
-  (`DATA_VIEW_PICKS.viewChip` / `search` / `create` through
-  `rolePickScope` + `rolePickClass` — not `<Text pick>`, whose single-line
-  leaf would add a native `title` to a control's label).
-- **The narrow stage**: below `NARROW_BREAKPOINT` (760, measured beside
-  `COMPACT_BREAKPOINT` on the band) the theme may narrow the search
-  (`searchWidthNarrow`) and drop a labelled create button's words
-  (`narrowCreateLabel: hide`); both unset by default, so the stage is a
-  no-op. Measured, not a CSS `@container`: a size-contained band would lose
-  its intrinsic width in a shrink-to-fit host. (Below 720 the search already
-  narrows to `w-search-narrow`, 8rem unless the theme sets it.)
-- **Parts** (`dataPart`, core `DATA_VIEW_PARTS`): `dv.toolbar` (the band),
-  `dv.views-pill`, `dv.view-chip` / `dv.view-chip-active`, `dv.view-add`,
-  `dv.tools-pill`, `dv.search` (the input), `dv.control` (each control
-  trigger and the fold's), `dv.pill-divider`, `dv.create` — what a mock's
-  selectors map onto for the compare tool's metrics diff.
+- **Pills are flat by default** (`toolbarPillSurface: flat`; `float` restores glass
+  pills). **An overlay pill ignores the token** (keeps its glass). One
+  `ControlSizeProvider size="sm"`.
+- **View chips**: icon + name, active on `viewChipActiveFill`; the add-view `+`
+  reveals with the strip (`viewAddReveal: hover`, still tabbable).
+- **The views pill is the one cell that gives** (scrolls sideways); tools rigid; the
+  row never wraps. Pinned surface → no views pill.
+- **Search always visible**, trailing `/` hint while empty. **`/` focuses search in
+  every wide arrangement** (host binds it via `useSurfaceShortcuts`; yields to text
+  fields; compact binds nothing).
+- **Create follows a divider**, only with creators (`ToolbarParts.creators` is
+  `null` otherwise); `createLabel` makes the N-menu a labelled button.
+- **Sizes and looks are theme tokens** (`ui/tokens/data-view`; defaults = this
+  look). Type picks go through `DATA_VIEW_PICKS` + `rolePickScope` / `rolePickClass`,
+  not `<Text pick>` (which would add a native `title`).
+- **Narrow stage**: below `NARROW_BREAKPOINT` (760, measured, not `@container` — a
+  size-contained band loses intrinsic width) the theme may narrow search / drop
+  create words; no-op by default.
+- **Parts** (`dataPart`, core `DATA_VIEW_PARTS`): `dv.toolbar`, `dv.views-pill`,
+  `dv.view-chip` / `dv.view-chip-active`, `dv.view-add`, `dv.tools-pill`,
+  `dv.search`, `dv.control`, `dv.pill-divider`, `dv.create` — compare-tool selectors.
 
 ```ts
 interface ToolbarArrangement {
   id: string;
-  forms: { search: "field" | "filled" | "bare"; controls: "ghost" | "round"; creators: "labelled" | "round" };
+  forms: {
+    search: "field" | "filled" | "bare";
+    controls: "ghost" | "round";
+    creators: "labelled" | "round";
+  };
   component: ComponentType<ToolbarParts>;
-  spaceBelow?: string; // CSS length between the band and the view; wide layout only
-  overlay?: true;      // the band floats over the view — see "Floating chrome"
+  spaceBelow?: string; // CSS length between band and view; wide layout only
+  overlay?: true; // band floats over the view — see "Floating chrome"
 }
+
 interface ToolbarParts {
-  title; switcher: { strip; chip }; search; query;
-  controls; foldedControls; actions; creators;
-  asideInset: string;  // how far the surface's `aside` reaches from the left edge
+  title;
+  switcher: { strip; chip };
+  search;
+  query;
+  controls;
+  foldedControls;
+  actions;
+  creators;
+  asideInset: string;
 }
 ```
 
-- **`forms` is data, so parts stay host-built.** The host builds each part once,
-  in the form the arrangement asked for (`SearchInput appearance`,
-  `ControlTrigger form`, `CreatorsControl form`); an arrangement places nodes and
-  never re-instantiates one.
-- **`switcher`** carries both forms — `EditableViewSwitcher` (`strip`) and
-  `CollapsedViewSwitcher` (`chip`), built by the shell. Render exactly one; both
-  are `null` on a pinned surface. It is the only way to add/rename/reorder views,
-  so every arrangement renders one.
-- **`search` is always rendered** — a non-empty query must stay visible —
-  and the host binds `/` to focus it, so an arrangement binds nothing.
-  Its placeholder is the surface's (`DataViewProps.searchPlaceholder`, default
-  `"Search…"`), never the arrangement's.
-- **`foldedControls`** is every applicable control behind one always-visible
-  trigger (no search): for an arrangement that runs out of room itself.
-- **What the host keeps:** the `<Sticky>` band (`mask`, `layer="nav"`), its
-  fade (below), its measurement and `--dv-header-offset`, `hoverRevealGroup` on
-  the band, control applicability/order, and the **compact fold** —
-  `density="compact"` or a band under `COMPACT_BREAKPOINT` renders the fold
-  whatever arrangement was passed. An arrangement only chooses the wide layout,
-  so none can break a narrow pane. The arrangement owns its own row box and
-  inset (`rail-follow`).
-- **The fade.** Wide and in flow, content scrolls UNDER the band and dissolves
-  into it: the band stays opaque (`mask`) and its next sibling is a
-  zero-height `<Sticky mask="fade" layer="raised">` pinned at
-  `--dv-header-offset` — the tail. Not the band's own `mask="fade"`: the band
-  is `nav`, so its tail would paint over the group headers pinned right under
-  it and wash their labels out; this tail is `raised` and comes before the
-  view, so a pinned group header (also `raised`, later in the DOM) covers it
-  while rows pass under it. `barArrangement`'s `spaceBelow` is the tail's
-  **runway** (`--sticky-fade-tail` less `sm`), so an unscrolled list's first
-  row starts where the tail has faded out. The compact fold and an overlay
-  band draw no tail.
-- **The compact fold keeps the two pills** (flat or boxed as the token
-  says): the views pill (only with more
-  than one view) and a tools pill holding `actions`, the creators and the one
-  options trigger (`CompactControls`). With neither actions nor creators the
-  pill would be empty at rest, so the PILL is what reveals on hover
-  (`CompactControls frame` moves the reveal class onto the box the trigger
-  sits alone in).
-- **`spaceBelow`** is the room an arrangement wants between itself and the view
-  (the capsule floats apart from its content; the bar sits flush). The host
-  renders it as a sibling AFTER the `<Sticky>` band, so it scrolls away with the
-  content rather than growing the pinned band, and drops it in the compact fold.
-  Views start flush — a view never pads its own top to make room for a toolbar.
+- **`forms` is data**: the host builds each part once in the asked form; an
+  arrangement places nodes, never re-instantiates.
+- **`switcher`**: render exactly one of `strip` / `chip` (both `null` when pinned) —
+  it is the only way to manage views.
+- **`search` is always rendered** (a non-empty query must stay visible); placeholder
+  is `DataViewProps.searchPlaceholder`.
+- **`foldedControls`**: every control behind one trigger, for an arrangement short on
+  room.
+- **The host keeps**: the `<Sticky>` band (`mask`, `layer="nav"`), the fade, the
+  measurement and `--dv-header-offset`, `hoverRevealGroup`, control
+  applicability/order, and the **compact fold** (`density="compact"` or band under
+  `COMPACT_BREAKPOINT` renders it whatever the arrangement). The arrangement owns its
+  row box and `rail-follow`.
+- **The fade**: a zero-height `<Sticky mask="fade" layer="raised">` tail after the
+  band (not the band's own fade — `nav` would wash out pinned group headers).
+  `spaceBelow` is the tail's runway. No tail in compact or overlay.
+- **Compact fold**: views pill (only with >1 view) + tools pill (`actions`, creators,
+  the one options trigger, `CompactControls`); with nothing else the PILL reveals on
+  hover (`CompactControls frame`).
+- **`spaceBelow`** renders as a sibling after the sticky band (scrolls away), dropped
+  in compact. Views never pad their own top for a toolbar.
 
 ### Floating chrome: `overlay` arrangements and the `aside`
 
-For a surface whose view IS its canvas (a full-screen map with the tabs and
-tools floating over it — `floating-toolbar` is the reference arrangement).
+For a surface whose view IS its canvas (a map; reference `floating-toolbar`, Places).
 
-- **`ToolbarArrangement.overlay: true`.** The shell root fills its parent
-  (`relative h-full`) instead of growing to its content; the body renders in a
-  `Scroll fill isolate` of its own (the one exception to "never owns a
-  scroller", since the band must not scroll away); the band is a `Pin
-  to="top" stretch decorative` over it — transparent, `pointer-events: none`,
-  no mask. The arrangement draws its parts as floating cards and wraps each in
-  `Overlay.Interactive`, so the gaps stay click-through to the view. Those
-  cards keep their glass whatever `toolbarPillSurface` says (`ToolbarPill
-  overlay` never wears the flat override): over a canvas there is no band for
-  a flat strip to sit on.
-  `spaceBelow` is ignored. The compact fold floats too — the same two pills,
-  past the aside — so the inset below means the same thing at every width.
-- **`DataViewContribution.fullBleed`.** Under an overlay band a `fullBleed`
-  view (a map) starts at the top-left edge, under the cards, in an `h-full`
-  box. Any other view is inset by the band's measured height
-  (`--dv-header-offset`, where its sticky group headers pin too) and the
-  aside's reach, so its first row clears the cards. No effect beside an
-  in-flow band.
-- **`DataViewProps.backdrop?: string`** — a `fullBleed` view type (`"map"`)
-  kept mounted UNDER every view, at one tree position in `BandSurface`, so a
-  view switch never remounts it (a map keeps its camera). While the active
-  view is of that type it IS the backdrop (its instance options); any other
-  view floats over it as a card (`Layer` + `Surface level="overlay"`: below the
-  band at `--dv-header-offset`, past the aside, a gutter from the bottom), with
-  its own scroller and `--dv-header-offset: 0px` inside so its sticky headers
-  pin at the card's top — and the backdrop draws the active view's render
-  props (rows, search, filter, selection, activation) with
-  `viewOptions[backdrop]`. A body not showing its view (loading, error) keeps
-  its card even over its own backdrop type. **`reserve?: { right }`** is room
-  the surface's own chrome covers on that edge (a detail card); the card stops
-  a gutter short of it (and of the `asideEnd`). Overlay arrangement only,
-  `fullBleed` type only, `reserve` only with `backdrop` or `asideEnd` — each
-  throws otherwise. Places is the
-  reference.
-- **`DataViewProps.aside?: ReactNode`** — a host panel (a facet sidebar) placed
-  by `BandSurface` (`web/components/band-surface.tsx`): beside an overlay band
-  a floating `Surface level="overlay"` card on the left (the panel sizes its own
-  width AND height, capped at the surface's height minus `md` gutters; the card
-  is a flex column, so a panel that scrolls its own body is a `<Column fill>`
-  whose header and footer stay put; the rest of the span is click-through, so a
-  panel folded to its header leaves the view below reachable), measured
-  so the band's `asideInset` is `calc(md + width)`; beside an in-flow band a
-  sticky left column, with `asideInset` `"0px"` (the band already starts past
-  it). It renders inside a `DataViewControlsProvider`, so it reads and edits
-  the active view through `useDataViewControls()` (`filter.setFilter(…)`, …).
-  It is a surface key (carried on `DataViewShellChrome`, omitted from
-  `DataViewSourceBundle`), shown once there is an active view, and only a band
-  chrome takes it — a hosted or sections toolbar throws.
-- **`DataViewProps.asideEnd?: ReactNode`** — the aside's mirror on the right
-  edge, but BELOW the band (the tools card holds the top-right corner): a
-  floating `Surface level="overlay"` card from `--dv-header-offset` to a gutter
-  above the bottom, a gutter in from `reserve.right`, sizing its own width and
-  height (capped at that column). It renders inside the controls provider too,
-  so a panel listing the active view's rows reads them there
-  (`useDataViewControls().rows`, `useFlatRows`). A `backdrop`'s floating view
-  card stops a gutter short of it. Overlay arrangement only — `BandSurface`
-  and the shell both throw otherwise.
+- **`overlay: true`**:
+  - shell root `relative h-full`;
+  - body in its own `Scroll fill isolate` (the one exception to "never owns a
+    scroller");
+  - band is a click-through `Pin to="top"`;
+  - cards wrap in `Overlay.Interactive`;
+  - `spaceBelow` ignored; compact floats too.
+- **`DataViewContribution.fullBleed`**: under an overlay band a fullBleed view starts
+  at the top-left under the cards; others are inset by `--dv-header-offset` and the
+  aside.
+- **`backdrop?: string`** — a fullBleed view type kept mounted UNDER every view (map
+  keeps its camera); other views float over it as a card. **`reserve?: { right }`** —
+  room the surface's own chrome covers.
+- **`aside?: ReactNode`** — a host panel (`web/components/band-surface.tsx`):
+  - a floating left card beside an overlay band (sizes itself;
+    `asideInset = calc(md + width)`);
+  - a sticky left column beside an in-flow band.
 
-All of these chrome rules (`aside` needs a band; `asideEnd` and `backdrop` an
-overlay band; `reserve` a `backdrop` or an `asideEnd`) are checked in ONE
-place, `web/internal/surface-chrome-rules.ts` (`assertSurfaceChrome`), called
-by the shell before anything renders.
+  Rendered inside a `DataViewControlsProvider` (`useDataViewControls()`).
+- **`asideEnd?: ReactNode`** — the right-edge mirror, below the band; overlay only.
+
+All rules are checked in ONE place: `web/internal/surface-chrome-rules.ts`
+(`assertSurfaceChrome`):
+
+- `aside` needs a band;
+- `asideEnd` / `backdrop` need an overlay band;
+- `reserve` needs a `backdrop` or `asideEnd`;
+- `backdrop` needs a fullBleed type.
+
+Hosted / sections toolbars throw on `aside`.
 
 ### View edits: drafts, the home view, and the switcher's form
 
-A surface whose views are SAVED FILTERS (presets) rather than places wants an
-edit to stay an edit until the user keeps it. `viewEdits={{ mode: "draft",
-home? }}` turns that on, through view-core's drafts (see its CLAUDE.md, "Drafts"):
+`viewEdits={{ mode: "draft", home? }}` — for views that are saved filters (view-core
+"Drafts"):
 
-- **Every write to a view's `view` value** — `setFilter`, `setSort*`,
-  `setGroupBy`, `setFold`, `setProperties`, the settings popover's options —
-  lands in the view's per-tab WORKING COPY; renaming, icons, reordering, adding
-  and deleting stay durable. A write equal to the saved value (compared by
-  `canonicalViewValue`: canonical JSON, filter-node ids ignored, since a filter
-  rebuilt to what it was carries fresh ids) drops the copy.
-- **`ReadyViewModel`** carries `dirtyFor` (a `ViewGetter<boolean>`), `drafts`
-  (`save` / `discard` / `restore` / `saveAsNew`, or `null` without drafts),
-  `homeViewId`, and the shared inline-rename state `renamingId` /
-  `setRenamingId`. All of it reaches the band, `aside` and `asideEnd` through
+- **Every write to `view`** (filter, sort, groupBy, fold, properties, options) lands
+  in a per-tab working copy; rename/icon/reorder/add/delete stay durable. A write
+  equal to the saved value (`canonicalViewValue`, filter-node ids ignored) drops it.
+- `ReadyViewModel` carries `dirtyFor`, `drafts` (`save` / `discard` / `restore` /
+  `saveAsNew` | `null`), `homeViewId`, `renamingId` / `setRenamingId` — via
   `useDataViewControls().viewModel`.
-- **Switching views discards** the view being left's copy and shows a toast
-  "<name> reset to its saved filter" whose **Undo** restores the copy and
-  switches back (`useDataViewModel`'s `setActiveView`).
-- **`home`** names the view that is always first: the model refuses to rename
-  or delete it (throws — no list offers it), drops a drag of it and clamps a
-  drop above it to just below it.
+- **Switching discards** the left view's copy, with an Undo toast.
+- **`home`** is always first: rename/delete throw, drags clamp below it.
 
-`switcherForm` picks what the band's arrangement may place:
-`"strip"` (default, unchanged), `"chip"` (`switcher.strip` is `null`, so
-arrangements place the chip — `strip ?? chip`), `"none"` (both `null`: the
-surface lists its views itself). Under drafts the band's chip is
-`DataViewViewChip` (exported; `appearance="title"` for an aside header naming the active view) — the active view's count and dirty dot, opening every view
-as a draggable `ViewList` with no per-view actions.
+`switcherForm`: `"strip"` (default), `"chip"` (`strip` is `null`), `"none"` (the
+surface lists views itself).
 
-Listing the views yourself: **`DataViewViewList({ newLabel, onNew? })`**
-(`web/components/view-list.tsx`) is view-core's `ViewList` over the controls
-context — icon, name, count, dirty dot, ⋯ Rename / Duplicate / Delete (none on
-home), drag to reorder (home pinned), "+ {newLabel}" (default: add a view of the
-active view's type). Its counts are **`useViewRowCounts()`**: each view's FILTER
-(no search) over `useDataViewControls().rows`, one `ViewGetter` per view so an
-edit recounts that view alone; `undefined` while the rows are not in memory
-(`rows` is `null` under a live source, and while the read loads or failed).
-
-**`viewShortcuts`** binds ⌥1–⌥9 to the first nine views
-(`web/internal/use-view-shortcuts.ts`): surface-scoped (`useSurfaceShortcuts`),
-yielding to a focused text field (on macOS ⌥digit types a character there).
+- Under drafts the chip is `DataViewViewChip` (exported; `appearance="title"`).
+- Self-listing: **`DataViewViewList({ newLabel, onNew? })`**
+  (`web/components/view-list.tsx`), counts from **`useViewRowCounts()`** (each
+  view's filter over in-memory rows; `undefined` when rows aren't in memory).
+- **`viewShortcuts`** binds ⌥1–⌥9 (`web/internal/use-view-shortcuts.ts`).
 
 ### Row hover: `hoveredRowId` / `onRowHoverChange`
 
-A surface showing the same rows twice (a list beside a map) highlights one row
-in both. `DataViewProps.hoveredRowId` / `onRowHoverChange` are threaded to the
-views as the render props of the same name: a view reports pointer enter/leave
-of its rows and draws the `hoveredRowId` row in its hovered tone — the list
-holds `Row`'s own hover paint (`bg-hover-fill`), the gallery `Card`'s
-interactive hover, the map its pin's hover. A view that ignores them simply
-does not take part.
+For the same rows shown twice (list + map).
 
-A report is a **claim or a release**, `onRowHoverChange(id, hovered)` — never
-a bare "nothing hovered". Two surfaces report one pointer move (leaving a pin,
-entering a row) in an order nobody controls: React fires the row's
-`onPointerEnter` from the same `pointerout` the map's leave comes from, and a
-lifted pin is a portal whose own container React listens on first. A "none"
-from the surface left would erase the hover the other just claimed; a release
-of its own id cannot. Hold the shared state with the map primitive's
-`useLinkedHover()` (`nextLinkedHover`: a leave clears only the id it names).
+- Views report enter/leave and paint the `hoveredRowId` row hovered.
+- A report is a **claim or a release**, `onRowHoverChange(id, hovered)` — never a
+  bare "nothing hovered", since two surfaces report one pointer move in
+  uncontrolled order.
+- Hold the state with the map primitive's `useLinkedHover()`.
 
 ### Search with suggestions (`search.suggestions`)
 
-A controlled `search` can carry `suggestions: { content, open, onOpenChange }`
-— "search or add": a panel under the search field for what the query matches
-beyond the rows (results to add). The toolbar owns its behaviour
-(`web/components/toolbar/search-suggestions.tsx`): the field widens (`w-80`),
-the panel hangs under it non-modal (focus stays in the field), opens on focus
-or typing, closes on Escape (which also blurs) and on a press outside both the
-field and the panel, and ArrowDown moves into its first control. `open` is the
-host's, so it can open the panel from elsewhere and close it on a pick. The
-panel renders inside the toolbar's controls provider, so it can read the view
-(`useDataViewControls`, `useFlatRows`). Places is the reference.
+A controlled `search` may carry `suggestions: { content, open, onOpenChange }` —
+"search or add". The toolbar owns behaviour
+(`web/components/toolbar/search-suggestions.tsx`: widens, non-modal panel, Escape /
+outside-press close, ArrowDown enters). The panel can read the view
+(`useDataViewControls`). Reference: Places.
 
 ## Hosted toolbar: no band
 
-`toolbar={{ kind: "hosted", frame }}` draws **no toolbar band at all**. For a
-small, fixed list embedded in someone else's chrome (a card of live agents above
-a prompt box), where search/filter/sort in a band of their own would be a strip
-that mostly does nothing. The surface's `frame` component is its own header, and
-the host hands it the parts to place (`HostedToolbarParts`,
-`core/internal/toolbar-arrangement.ts`):
+`toolbar={{ kind: "hosted", frame }}` draws **no band** — for a small list inside
+someone else's chrome. The `frame` component is the header and receives
+`HostedToolbarParts` (`core/internal/toolbar-arrangement.ts`):
 
-- **`options`** — the compact fold's one options trigger (`HostedOptions` →
-  `CompactControls`): search on its first page, one row per applicable control,
-  the same badge (controls + a non-empty query). It is the only way to reach the
-  controls, so the frame renders it. Hover-revealed off the DataView **root**
-  (the shell marks it `hoverRevealGroup` when hosted — there is no band to
-  anchor on), pinned visible while a query is typed. The controls provider wraps
-  this node alone, never the body.
-- **`switcher`** — the collapsed switcher chip when the surface authors more than
-  one view, else `null`.
-- **`creators`** — `creators` in their compact form, or `null`.
-- **`body`** — the rows. Loading and no-views states come through the same
-  frame (`options`/`switcher` `null`), so the card never reflows as config
-  settles.
-- **`stickyRef`** — the shell's header-measurement ref. A frame whose header
-  sticks attaches it to that sticky box, and the shell publishes its height as
-  `--dv-header-offset`, so grouped views pin their section headers below the
-  frame's header instead of under it. A card whose header scrolls away leaves it
-  unattached.
+- **`options`** — the compact fold's trigger (the only way to the controls — render
+  it); hover-revealed off the DataView root, pinned while a query is typed.
+- **`switcher`** — collapsed chip with >1 view, else `null`.
+- **`creators`** — compact form or `null`.
+- **`body`** — the rows; loading / no-views come through the same frame.
+- **`stickyRef`** — attach to a sticky header so its height becomes
+  `--dv-header-offset` (else `0px`).
 
-`forms?: { switcher: "chip" | "row" }` picks the switcher's shape — data, like an
-arrangement's `ToolbarPartForms`; the host still builds it. `chip` (default) is
-the pill a card title wants; `row` is `CollapsedViewSwitcher appearance="row"`, a
-full-width `Row` (the view's icon in the rows' lead column, its name, a chevron
-shown on hover and while the menu is open) for a list that IS the surface, where
-the switcher reads as the list's heading line. Same menu either way. The
-conversation sidebar is the reference: `SIDEBAR_TOOLBAR` in
-`conversations-view/plugins/data-view` — one sticky line
-`[switcher (Fill)] [options]`, `stickyRef` on the `Sticky`.
+Options and rules:
 
-It is **not an arrangement**: an arrangement lays out a band and must render the
-switcher and search inline, and the compact fold ignores it. Hosted has no band,
-so neither applies. `title` / `actions` are a **type error** beside it
-(`DataViewSurfaceChrome` is a union): the frame is the header and renders its own.
-No sticky band means no measured header offset — `--dv-header-offset` is `0px` —
-unless the frame attaches `stickyRef` to a sticky header of its own.
-
-Declare `frame` at module scope: it is a component, and a new identity per render
-remounts the whole card. **Config is unchanged** — a hosted surface still has
-its `defineDataView` id and authored config file like any other.
+- `forms?: { switcher: "chip" | "row" }` (`row` = full-width `Row` heading line;
+  reference `SIDEBAR_TOOLBAR` in `conversations-view/plugins/data-view`).
+- Not an arrangement. `title` / `actions` are a **type error** beside it.
+- **Declare `frame` at module scope** (new identity remounts the card).
+- Config is unchanged.
 
 ## Sections toolbar: every view at once
 
-`toolbar={{ kind: "sections", forms? }}` renders EVERY authored view instance,
-stacked in config order, each under its own collapsible header — a sidebar's
-"Favorites / Private / Scratch" as one surface. There is no active instance and
-no switcher. The Pages sidebar is the reference.
+`toolbar={{ kind: "sections", forms? }}` renders EVERY instance, stacked in config
+order, each under its own collapsible header. No active instance, no switcher.
+Reference: the Pages sidebar.
 
-- **Shell.** `DataViewShellFrame` hands `renderSections(instances, …)` the whole
-  list instead of calling its one-instance child; `DataView` renders
-  `DataViewSectionsBody`, which hoists the field-extension fold above the
-  sections (contributed fields subscribe once per surface) and mounts one
-  `DataViewBodyInner` per instance, keyed by its id. The body needs nothing
-  else: every controller in it is already keyed by view id through the
-  id-parameterised `ReadyViewModel`. The model stays ONE hook in the shell —
-  `useViewEphemeral` is a single `useState` over the whole map, so per-section
-  models would overwrite each other's writes.
-- **Header** (`web/components/view-section.tsx`, `ViewSection`): a
-  `SectionHeaderRow` (`forms.header`: `eyebrow` default, or `group`) with the
-  chevron trailing on hover, inside a DOM-less `CollapsibleProvider`. Its
-  hover-revealed `RowActions` cluster holds `+` (the surface's `creators`
-  narrowed by `CreateOption.views`) and `⋯` — a `ControlPanelPopover` whose
-  first page is the compact fold's own (`CompactRootPanel`: search + one row per
-  applicable control, under a `DataViewControlsProvider` for THAT view), then
-  "Section settings" (view-core's `ViewSettingsPopover`: rename, type/options,
-  duplicate, delete) and "Add section" (a page of the addable types). The
-  cluster stays visible while the panel is open or a query narrows the view.
-- **Sticky.** Each section is its own containing block, so its header pins
-  while the section is on screen and hands off to the next one (not the
-  accumulating `StickyStack` of group headers). Its body re-publishes
-  `--dv-header-offset` as the header's measured height, so a grouped view's
-  group headers pin under the section header. The shell's `stickyRef` is unused.
-- **Collapse** is device-local: a view-level `collapsed` flag beside the view's
-  expand map in `${storageKey}:view-state` — never a key in
-  `collapsedSections`, which holds the view's group-by values.
-- **`hideWhenEmpty`** (view row key): the body decides before the view mounts —
-  hidden while its rows' `readiness` is loading (not-known-yet is never painted
-  as an empty section, nor flashed in and out), hidden once ready with no row
-  surviving the view's filter (the same `useRowFilter` predicate, under the
-  same `filterScope` via the shared `scopeFilterRows` — "any root matches" for
-  a roots-scoped nested table), shown otherwise, a failed read included. A live
-  source reports its own filtered rows.
-- **`description`** (view row key): the header label's tooltip, and the first
-  line of its `⋯` panel.
-- **`selectedRowId` stays surface-level.** It highlights the row in EVERY
-  section that shows it — a starred page is selected in Favorites and in the
-  sidebar tree at once, as in Notion. **The reveal is not**: the sections body records
-  which section a row was activated in (`beforeOpen`, so the record lands with
-  the navigation), and every OTHER section gets
-  `DataViewRenderProps.revealSelection: false` for that row — the tree neither
-  expands to a favourite clicked above it nor scrolls the sidebar away from the
-  click. A selection arriving from outside (a link, a deep link) still reveals
-  everywhere; the tree's own clicks and arrow keys still reveal in the tree.
-- `title` / `actions` / `pinnedView` are type errors beside it (no band; a
-  pinned surface has one instance). `DataViewSwitcher` takes
-  `DataViewActiveChrome`, the union without this arm, so it cannot be spelled
-  there: a merged surface mounts one source at a time. Section reorder is
-  config order; drag-reordering sections is a follow-up.
+- **Shell**: `DataViewSectionsBody` hoists the field-extension fold (one subscription
+  per surface) and mounts one `DataViewBodyInner` per instance. The model stays ONE
+  hook in the shell (per-section models would overwrite each other's ephemeral
+  writes).
+- **Header** (`web/components/view-section.tsx`): `SectionHeaderRow` (`forms.header`:
+  `eyebrow` | `group`), hover cluster with `+` (creators narrowed by
+  `CreateOption.views`) and `⋯` (compact root panel for THAT view, "Section
+  settings", "Add section").
+- **Sticky**: each section is its own containing block; its body re-publishes
+  `--dv-header-offset` as the header height.
+- **Collapse** is a view-level `collapsed` flag in `${storageKey}:view-state` —
+  never in `collapsedSections`.
+- **`hideWhenEmpty`**: hidden while loading (never flashed) and once ready with no
+  row passing the filter (same `useRowFilter` + `scopeFilterRows`); shown on error.
+- **`description`**: header tooltip and first line of `⋯`.
+- **`selectedRowId` is surface-level** (highlights in every section); **the reveal is
+  not** — other sections get `revealSelection: false` for a row activated elsewhere.
+- `title` / `actions` / `pinnedView` are type errors beside it; `DataViewSwitcher`
+  takes `DataViewActiveChrome`, which lacks this arm.
 
 ## Toolbar controls
 
-Every affordance in the toolbar that opens a panel — Filter, Sort, the view
-settings — is a **`DataViewSlots.Control` contribution**. The toolbar names none
-of them.
-
-It used to name all three, as `sortControl` / `filterControl` / `fieldsControl`
-ReactNode props built by the host: the collection-consumer rule broken in the most
-literal way, and the reason no plugin could add a fourth control. Now the toolbar
-reads the slot in its layout order (`useSlotOrder` over
-`config/primitives/data-view/control.jsonc` — a read: no triggers until the
-layout is known, see "A layout not known yet is a state" below), drops the
-contributions whose `isApplicable` says no, and builds one identical trigger
-per survivor.
+Every toolbar affordance that opens a panel — Filter, Sort, View settings — is a
+**`DataViewSlots.Control` contribution**; the toolbar names none. It reads the slot
+in layout order (`useSlotOrder` over `config/primitives/data-view/control.jsonc`),
+drops those whose `isApplicable` says no, and builds one trigger each.
 
 ```ts
 DataViewSlots.Control({
   id: "data-view.filter",
-  label: "Filter",              // tooltip + accessible name, compact-fold row
-  icon: MdFilterList,           // label, and a pushed sub-panel's back title
+  label: "Filter",
+  icon: MdFilterList,
   isApplicable: (ctx) => ctx.filter.filterableFields.length > 0,
-  summary: (ctx) => summarizeFilter(…),   // pure; see below
-  component: FilterControlPanel,           // prop-less; reads useDataViewControls()
+  summary: (ctx) => summarizeFilter(…), // pure
+  component: FilterControlPanel, // prop-less; reads useDataViewControls()
 });
 ```
 
 ### Action controls: a trigger that acts
 
-A control is one of two kinds (`DataViewControlContribution` is a union):
+`DataViewControlContribution` is a union:
 
-- a **panel control** — `label`, `icon`, `isApplicable`, `summary`,
-  `component`: the trigger opens its panel (filter, sort, view settings);
-- an **action control** — `action(ctx) → { label, icon, run } | null`: the
-  trigger acts on click. ONE pure function answers both "does it apply"
-  (`null` → no trigger, no fold row) and "what does it say and do", so the
-  label can follow the state and the two cannot disagree. It narrows nothing:
-  no summary, never `secondary`, never in the fold's badge.
+- a **panel control** — `label`, `icon`, `isApplicable`, `summary`, `component`;
+- an **action control** — `action(ctx) → { label, icon, run } | null`: one pure
+  function answers applicability and content; no summary, never in the badge.
 
-`useToolbarControls` resolves both into `ToolbarControl` (`kind: "panel" |
-"action"`), the one list every renderer reads — the wide bar
-(`ControlTrigger`), the compact fold and a section's `⋯` panel
-(`CompactRootPanel`: an action is a plain `onSelect` row) — so a renderer
-cannot forget the action kind (tsc).
+`useToolbarControls` resolves both into `ToolbarControl`
+(`kind: "panel" | "action"`), read by every renderer (tsc-exhaustive).
 
-**The expand-all is the built-in action control** (`data-view.expand-all`,
-first in the control layout): "Expand all" / "Collapse all" with
-unfold-more / unfold-less, over `useDataViewControls().expandAll`. The view
-settings carry the same capability as a "Rows" section with both rows
-(`data-view.expand-all` Setting). Neither names a view type: the capability
-is **reported up by the active view** — `DataViewRenderProps.reportExpandAll(
-{ allExpanded, changes(next) } | null)` — because only the view knows which
-rows it draws (the nested table's `rootId`, its filter scope). The host files
-each report under the instance that sent it (a report from a view switched
-away from is never offered) and binds `setAll(next)` to
-`viewModel.setExpanded(activeViewId, changes(next))` — the per-(surface,
-view, row) expand map stays the only home of collapse state. A view reports
-only what it can fold (the nested table: under `options.expandAll`, with a
-row in scope that has children), so the control exists exactly while the
-active view nests a hierarchy with something to fold. There is no toolbar
-row above a tree's rows any more.
+**Expand-all is the built-in action control** (`data-view.expand-all`, also a
+"Rows" Setting).
+
+- The active view reports it —
+  `DataViewRenderProps.reportExpandAll({ allExpanded, changes(next) } | null)`.
+- The host binds `setAll` to `viewModel.setExpanded(activeViewId, …)`.
+- Reports from a view switched away from are ignored.
 
 ### A render slot the toolbar never `.Render`s
 
-`.Render` mounts **every** contribution. That would mount every control's panel
-on every DataView on every page — each running `useFilterPresets`, the live
-custom-values resource, and so on — merely to draw a **closed** trigger. So the
-host reads each contribution's metadata in the slot's layout order
-(`useSlotOrder`) and mounts exactly the one panel that is open
-(`renderIsolated`). The order is the committed reorder layout, never a number on
-a contribution (`defineSlot` rejects one).
+`.Render` would mount every control's panel (and its subscriptions) just to draw
+a closed trigger. The host reads metadata in layout order and mounts only the open
+panel (`renderIsolated`). Order is the committed layout, never a number.
 
 ### A layout not known yet is a state, never an empty list
 
-`useSlotOrder` is a read (`ResourceResult`): `loading` until the slot's layout
-is known, and on error the last-known layout as `stale` when there was one.
-Every reader here takes it through `slotLayout` (`web/internal/slot-layout.ts`
-→ `known` | `loading` | `failed`; a stale layout is `known` — it is what the
-user last saw — and only a failure with none known is `failed`) and answers
-each state, because the empty list in its place is a claim about the surface
-that then reverses:
+`useSlotOrder` is a read: `loading`, `stale` on error with a known layout. Every
+reader goes through `slotLayout` (`web/internal/slot-layout.ts` → `known` |
+`loading` | `failed`):
 
 | Reader | While loading | Failed, none known |
 |---|---|---|
-| `DataView` / `DataViewSwitcher` (View, and the sources' layout — both) | the shell's not-ready placeholder (`pendingLayoutModel`); the view model is never built — over `[]`, `useOrphanViewTypeGuard` would report every configured row as an orphan | the shell's failure, with Retry |
-| `useToolbarControls` → `SlotLayout<{ controls, activeCount }>` | no control triggers, no badge count (the compact fold keeps its trigger only for the search, and its first page shows a loading block) | no triggers; the fold's first page shows the failure |
-| `SettingsControlPanel` | `Loading`, never "Nothing to configure here." | the failure, with Retry |
-| `RowOrderReader` | reports `pending` → the body's `loading` state (`resolveBodyState`'s `rowOrder`), never rows painted in raw order that then jump | reports `failed` → the body's `error` state |
+| `DataView` / `DataViewSwitcher` | the shell's not-ready placeholder (`pendingLayoutModel`); never build the model over `[]` (every row would look orphaned) | shell failure, with Retry |
+| `useToolbarControls` | no triggers, no badge (compact keeps its trigger for search; first page shows loading) | no triggers; fold shows the failure |
+| `SettingsControlPanel` | `Loading`, never "Nothing to configure here." | failure, with Retry |
+| `RowOrderReader` | reports `pending` → body `loading` (never raw order that then jumps) | reports `failed` → body `error` |
 
-The row-order report (`ReportedRowOrder`) is `pending` | `known` (`order`,
-`null` when no contributor claimed it) | `failed`; the body is loading while
-the fold is on and has not reported `known` for the active view. The reader is
-mounted in a hidden (`hideWhenEmpty`) section too, so a section hidden while
-the order is pending still ends the wait. A contributor that answers `null`
-while its OWN data loads is not covered (it reads as "no order", and the rows
-paint unsorted until it lands).
+`ReportedRowOrder` = `pending` | `known` (`order` or `null`) | `failed`; the reader
+is mounted in hidden sections too.
 
-`DataViewSlots.Setting` survives unchanged, one level down: a *control* is a
-toolbar affordance, a *setting* is a section inside one control's panel. Flattening
-the two would put Properties / Group by / Fields in competition for the toolbar's
-single line.
+Gap: a contributor answering `null` while its own data loads paints unsorted rows
+until it lands.
+
+`DataViewSlots.Setting` is one level down: a section inside a control's panel (the
+settings control). Don't flatten settings into controls.
 
 ### One merged context
 
-`useDataViewControls()` (`web/components/controls/controls-context.tsx`) is what
-both a control's panel and a `Setting` contribution read — there is one context,
-not a "controls" one and a "settings" one, because the settings menu *is* a
-control. Everything on it is computed once in `DataViewBodyInner` and merely
-re-homed; nothing is derived here. In particular `filter` and `sort` are the same
-controller objects the row pipeline uses, so a summary and what actually filters
-cannot come from two computations.
+`useDataViewControls()` (`web/components/controls/controls-context.tsx`) is read by
+both control panels and `Setting`s.
 
-It is provided around **the toolbar and the surface's `aside`** (two providers
-of one value — see "Floating chrome"), never around the view body: view
-children have a deliberate contract (`DataViewRenderProps`), and an ambient back
-door to `viewModel` would be a second undocumented seam. Popovers portal out of
-the DOM but stay React children, so the context still reaches every panel.
+- Everything is computed once in `DataViewBodyInner`; `filter` / `sort` are the
+  same controllers the row pipeline uses.
+- Provided around **the toolbar and the `aside`** only — never the view body
+  (views use `DataViewRenderProps`; no back door).
 
 ### The trigger is icon-only, everywhere
 
-`ControlTrigger` draws a ghost `IconButton`, `secondary` while the control is
-narrowing what you see. No summary text on the button, no `+N` badge, and **no
-width-dependent form** — a trigger that spelled itself out when wide and shrank to
-a glyph when narrow is the per-surface inconsistency this registry exists to
-remove. (Summary pills were tried and reverted: two of them ate the whole toolbar
-of the agent-manager sidebar, the app's narrowest DataView.)
+`ControlTrigger` = ghost `IconButton`, `secondary` while narrowing. No summary text,
+no `+N` badge, no width-dependent form (summary pills were tried and reverted — they
+ate the narrowest toolbars).
 
 ### The summary is pure, one function — and TEXT, never chrome
 
-A control's closed state still says what it is doing via `summary(ctx)` → one
-`DataViewControlSummary` (`label`, optional `spoken` for a glyph-leaning label,
-`more`, `count`) or `null`, spent where it costs the toolbar no pixels:
+`summary(ctx)` → `DataViewControlSummary` (`label`, `spoken?`, `more`, `count`) |
+`null`, spent on the tooltip, the accessible name, the compact fold's row text, and
+`count` → the fold badge.
 
-- the trigger's **tooltip** — `Filter: Status is none of 2 +1` (the glyph form);
-- the trigger's **accessible name** — `spoken ?? label`, "+N more" spelled out
-  (a bare number beside a phrase is ambiguous with no visual context);
-- the **compact fold's** control rows, as trailing text — a row each to spend;
-- `count` → the fold's aggregate badge on `MdTune`.
-
-**It cannot be a hook.** The trigger has to render without mounting the panel;
-computing N summaries by mounting N panels would make every DataView subscribe to
-every control's data on first paint. So `summarize-filter.ts` / `summarize-sort.ts`
-are plain functions over state, unit-tested next to their source.
-
-**It is one function returning an object, not `summary` + `count`.** Two
-independent functions over the same state can disagree — precisely the bug
-`rule-resolution.ts` exists to close (the summary reading "0 rules" while a
-value-less `bool` rule silently filtered). The summarizers import `isRuleActive`
-(resolves AND `lower(...) !== undefined`) rather than re-deriving it, so the
-summary, the count and the evaluator read the operator's one answer.
-
-Value formatting tries the operator's own optional
-`FilterOperator.summarize(operand, field)` first — the operand's shape is the
-operator's, so only `date · is between` knows it holds a pair of instants — then
-falls back generically, omitting an operand it has no readable form for.
-
-Settings deliberately carries **no** summary: view settings are configuration, not
-a narrowing of what you see. A summary answers "what am I not seeing, and why";
-"Group by: Status" answers neither, and it would still count itself into the
-compact fold's badge as though something were hidden. Sort sits between the two:
-it earns a summary, because its top level is worth reading from a closed
-trigger.
+- **Not a hook** — a closed trigger must not mount its panel
+  (`summarize-filter.ts` / `summarize-sort.ts` are plain functions).
+- **One function, one object** — the summarizers use `isRuleActive` (from
+  `rule-resolution.ts`), so summary, count and evaluator can't disagree.
+- Operand formatting tries `FilterOperator.summarize(operand, field)` first.
+- **Settings carries no summary** (configuration, not narrowing); Sort does.
 
 ### Panel bodies
 
-A control's `component` is **prop-less** and reads the context, which is what lets
-the wide bar and the compact fold mount it through the same
-`DataViewControlPanel({ control })` host with nothing left to diverge on. Panels
-are drawn with the `control-panel` vocabulary
-(`@plugins/primitives/plugins/css/plugins/control-panel/web`) — the panel body
-never paints its own surface, and a control declares no width: its panel is
-as wide as its content needs (filter / sort rule rows, and their empty field
-pickers, state `builder` — see control-panel's "The content declares its
-width").
-
-One capability was traded away: a `Control`'s `isApplicable` is pure and cannot
-read another slot, so the settings control can no longer self-hide when no
-`Setting` applies. It is always applicable and renders `ControlPanel.Empty` in
-that case. In practice nothing changes — custom-columns' "Fields" setting declares
-no `isApplicable`, so the gear was already always visible.
-
-**A `Setting` contribution renders its own `ControlPanel.Section`** — a contract,
-not a convention. The panel body lays its *bands* out itself, so a contribution
-that returned loose rows has no band and no rule, and one that wrapped itself in a
-`div` makes that opaque box the band instead of the sections inside it. (The host
-therefore maps contributions in through a `Fragment`, never a wrapper — see
-`control-panel`'s CLAUDE.md for why `display: contents` matters here.) For the same reason a setting owns
-a section and never the panel's `Footer`: Properties' "Show all fields" is its
-section's last ROW, because a footer placed from inside one section would sit above
-whatever contribution came next.
-
-**A sub-panel is a push, never a second popover.** `usePanelStack()` reaches the
-stack the host mounted — the filter builder's nested groups, "Save as preset",
-custom-columns' per-field editor and the compact fold's per-control pages are all
-pages of the one panel. Note what that costs: a stack entry's `render` closure is
-captured when the row is clicked and the pushed page REPLACES the root's subtree,
-so a page must read its own state through hooks (`useDataViewControls()`,
-`useFilterEditor()`, its own config hook) rather than taking it as a prop. Handing
-data down through the closure looks fine and then silently computes the page's
-second edit against the tree as it was before its first.
+- A control's `component` is **prop-less** and reads the context, mounted by
+  `DataViewControlPanel({ control })` in both the bar and the compact fold. Draw with
+  `control-panel` (`@plugins/primitives/plugins/css/plugins/control-panel/web`); never
+  paint a surface, never declare a width.
+- The settings control is always applicable (pure `isApplicable` can't read the
+  `Setting` slot); renders `ControlPanel.Empty` when nothing applies.
+- **A `Setting` renders its own `ControlPanel.Section`** (contract): no loose rows,
+  no wrapper `div`; the host maps contributions through a `Fragment`. A setting never
+  owns the panel `Footer` (Properties' "Show all fields" is its section's last row).
+- **A sub-panel is a push, never a second popover** (`usePanelStack()`). A pushed
+  page's `render` closure is captured at click time and replaces the root subtree, so
+  **a page reads its state through hooks**, never via closure props (stale on the
+  second edit).
 
 ## An option carries its own presentation
 
-`FieldDef.options` is `FieldOption[]` = `{ value, label, variant?, hint? }`
-(core barrel). One idea — **an option describes how it presents** — rather than a
-value→label map plus a parallel value→variant map that every render site has to
-join by hand (six such pairs were hand-written across Events, trace and timeline
-before this existed).
+`FieldDef.options: FieldOption[]` = `{ value, label, variant?, hint? }` (core) — no
+parallel value→label / value→variant maps.
 
-- `variant` is a `BadgeVariant` (`primitives/css/badge/core`), applied by the
-  read chip; absent ⇒ `"muted"`.
-- `hint` is the chip's tooltip — why this value means what it means ("Empty" =
-  the run succeeded and found nothing).
-- `value` is the value's canonical spelling (`fields/core`'s `optionKey`): an
-  enum over booleans / numbers keeps raw row values and declares
-  `FieldDef.valueDomain`, so the enum filter lowers a picked `"true"` back to
-  `true`; the option `"null"` labels the no-value — its chip, the "None"
-  section's label (`nullGroupLabel`) and a filter chip lowering to `isEmpty`.
+- `variant`: a `BadgeVariant` (`primitives/css/badge/core` — in `core` so data
+  declarations can spell it; don't duplicate it here); absent ⇒ `"muted"`.
+- `hint`: the chip's tooltip.
+- `value`: the canonical spelling (`fields/core`'s `optionKey`); an enum over
+  booleans / numbers declares `FieldDef.valueDomain`; option `"null"` labels
+  no-value (chip, "None" section via `nullGroupLabel`, filter → `isEmpty`).
 
-`BadgeVariant` lives in **`badge/core`** for exactly this reason: a data
-declaration in another plugin's `core` has to be able to spell it, and
-`core → web` is not a legal edge. The `VARIANT_CLASS` map stays in `badge/web`,
-which re-exports the type so no existing import site changed. Duplicating the
-union into `data-view/core` was the alternative and is rejected — one name per
-concept.
+Where the presentation is drawn:
 
-**Deliberate no-ops.** The inline editors and the filter operand input draw
-`ToggleChip`s (`enum-editor`, `tags-editor`, `chip-select-filter-input`) and stay
-untinted: `BadgeVariant` is not `ToggleChip`'s vocabulary.
-
-**The chip is the table's presentation; a row view's is quiet.** Inside a
-row view (`TableCellProps.presentation: "quiet"` — see "Quiet rows and
-common-value elision") the same option draws as `● label` through the shared
-`QuietOption` (web barrel): the dot in the option's `tint` token, else its
-`swatch`, else its `variant`'s ink, else faint; the label in the run's own
-ink, the `hint` its tooltip. A tinted option with no `variant` reads that way
-everywhere (its dot is the whole statement). Group-by section
-labels and the control summaries are text-only. Server-side filter SQL never
-reads `label`/`options`, so a tint never reaches the server. User-authored custom
-enum columns get **no colour picker** — muted is the right default for values
-with no semantics.
+- Inline editors / filter operand inputs (`ToggleChip`) stay untinted.
+- In a row view (`presentation: "quiet"`) an option draws as `● label` via
+  `QuietOption` (dot: `tint` → `swatch` → variant ink → faint).
+- Group labels and summaries are text-only.
+- Custom enum columns get no colour picker.
 
 ### The Cell registry also says whether a type presents as a chip
 
-`DataViewSlots.Cell` contributions carry `chip?: boolean` alongside `component`
-(see `CellContributionMeta` in `web/cell-slot.ts`); `enum` and `tags` declare
-`chip: true`. `useIsChipField()` is `useResolveCell`'s sibling — both walk the
-same `extends` chain through one shared internal lookup, so "which contribution
-owns this field" cannot be answered two ways.
+`DataViewSlots.Cell` contributions carry `chip?: boolean` (`CellContributionMeta`,
+`web/cell-slot.ts`; `enum`, `tags` set it). `useIsChipField()` shares
+`useResolveCell`'s `extends` lookup. It decides:
 
-It exists because ` · ` is punctuation between two pieces of **text**, and is not
-what separates two chips, which already carry their own boundary. The list's
-subtitle run therefore draws ` · ` **only between two adjacent non-chip terms**
-and parts a chip from its neighbour by spacing alone — otherwise a row of three
-enum fields renders `name · [Web page] · [Daily] · [Failed]`, middots glued to
-pills, which is worse than the two-line row a field-driven row replaces. The rule
-covers the title→first-subtitle-term seam too, since on one line the title is
-simply the run's first term.
+- the list subtitle draws ` · ` only **between two non-chip terms** (chips are
+  separated by spacing);
+- which fields a row view may **elide**;
+- trailing-slot alignment (chip start, else end).
 
-The same flag decides two more things, still without naming a type: which
-fields a row view may **elide** (only chip-presenting ones — see "Quiet rows
-and common-value elision"), and how a list's trailing slot aligns its value
-(a chip starts its slot, anything else ends it).
-
-The list names **no** field type to do this: it asks the registry, per the
-collection-consumer rule. The flag is a claim about the field's **TYPE**, not
-about one renderer — a consumer's `FieldDef.cell` override on a chip-typed field
-is taken to render a chip too (which is how Events keeps its "source type no
-longer installed" fallback). An override that renders plain text for a chip-typed
-field loses its middots; cosmetic, and the price of not making every consumer
-re-declare what its type already said.
+No field type is named. A consumer's `FieldDef.cell` override on a chip-typed
+field is assumed to render a chip.
 
 ## Structured display data (`data`)
 
-`FieldDef.value` is the **comparable** projection — sort, filter, search and
-group-by all read it — so it is scalar. `FieldDef.values` is the multi-value
-twin for tags. `FieldDef.data?: (row) => unknown` is the third projection:
-**structured and display-only**, e.g. an avatar spec `{ icon, color }`.
+`FieldDef.value` is the scalar **comparable** projection (sort/filter/search/group);
+`values` its multi-value twin; `FieldDef.data?: (row) => unknown` is **structured,
+display-only** (an avatar spec).
 
-- **Read only by the field type's cell.** `useResolveCell` computes
-  `data: field.data?.(row)` itself and hands it on as `TableCellProps.data`
-  (`unknown` at that boundary, like `raw`), so every read site — `FieldCell` and
-  the nested table's primary label alike — gets it with no signature change. The type's
-  cell asserts the shape it expects.
-- **Inert by construction.** Nothing comparable reads it: `makeSortComparator`
-  drops a rule whose field has no `value`, `isGroupableField` refuses a
-  value-less field whatever `groupable` says, the filter picker lists only types
-  with an operator set, and default search indexes `value`/`values` only. Pair
-  `data` with `value` when a field must also sort or filter. It **does** appear
-  in Properties, where hiding it hides it.
-- **Fails loudly when nothing can draw it.** `FieldCell`'s last-resort
-  `String(value ?? "")` is refused for a `data` field: with no `cell` override
-  and no contributed cell for its type, it throws `MissingDataCellError` naming
-  the field id and type. A blank cell would hide the real mistake — the type's
-  cell plugin missing from the composition.
+- Read only by the type's cell (`useResolveCell` passes `TableCellProps.data`).
+- Inert: nothing comparable reads it (no `value` ⇒ not sortable / groupable /
+  filterable / searched). Pair with `value` if needed. It does appear in Properties.
+- With no `cell` override and no type cell, `FieldCell` throws
+  `MissingDataCellError` (never a blank cell).
 
 ## Row activation is PER ROW
 
-`onRowActivate?: (row) => void` says every row activates. `rowActivation?: (row)
-=> (() => void) | null` says which ones do — the handler's **presence** is the
-fact, so there is no predicate beside it to disagree with. Passing both throws.
+`onRowActivate?: (row) => void` (every row) **or**
+`rowActivation?: (row) => (() => void) | null` (handler presence = activates).
+Both → throws.
 
-The handler is an `Activation` (`link-gesture/core`): a plain `() => void`, or a
-**link** `{ open, href }`. A row that opens a pane returns one —
-`rowActivation={(r) => openPane.to(detailPane, { id: r.id }, { mode: "push" })}`
-— so its middle- and ⌘/Ctrl-click open `href()` in a new browser tab, exactly
-like a link; plain click and Enter run `open()`. The
-`link-gesture/no-click-navigate` lint rule flags an `onRowActivate` whose only
-job is to navigate, and a `rowActivation` resolver handing back `() => openPane(…)`.
+- The handler is an `Activation` (`link-gesture/core`): `() => void` or a
+  **link** `{ open, href }` — return `openPane.to(...)` for a row that opens a
+  pane, so ⌘/middle-click opens a new tab.
+- `link-gesture/no-click-navigate` flags a navigating plain handler.
 
-The host folds either into ONE `DataViewRenderProps.rowActivation: (row) =>
-Activation | undefined`, so a view never sees the two. A view never switches on
-the union: it spreads `activationProps(act)` (`link-gesture/web`) onto the
-clicked element, runs `runActivation(act)` from keyboard / programmatic paths,
-and hands primitives that own their own click (`DataTable.rowHref`,
-`TreeRowChrome.selectHref`) `activationHref(act)`.
+The host folds both into ONE
+`DataViewRenderProps.rowActivation: (row) => Activation | undefined`. Views:
 
-**A view must pass that result straight through — `undefined` and all, never
-wrapped in a closure.** `Row` infers its element from
-`onClick` (`row.tsx`), and a closure is never null, so wrapping makes every row a
-`<button>` with the `renderRow` children nested inside it: invalid DOM for any
-control a row body holds, the outer row eating the press, and a list where
-nothing activates announcing every row as a button. Locked by
-`list/web/__tests__/row-activation.test.tsx`, which asserts the DOM shape — the
-handler fired correctly the whole time this was broken.
+- spread `activationProps(act)`;
+- call `runActivation(act)` for keyboard paths;
+- pass `activationHref(act)` to `DataTable.rowHref` / `TreeRowChrome.selectHref`.
 
-`DataCard` follows the same rule (no `role`/`tabIndex`/key handler without
-`onActivate`). **The table is table-level**, not per-row: `DataTable.onRowClick`
-is a table-wide prop with consumers outside data-view, so a non-activating row
-there is a live-looking row that does nothing rather than a plain container.
-Lifting that means changing `DataTable`.
+**Pass the result straight through — `undefined` and all, never wrapped in a
+closure.** `Row` infers `<button>` from `onClick`; a closure makes every row a
+button with nested controls (invalid DOM).
+
+- Locked by `list/web/__tests__/row-activation.test.tsx`.
+- `DataCard` follows the same rule.
+- The **table is table-level** (`DataTable.onRowClick` is table-wide).
 
 ### Open is a separate gesture (`onRowOpen`)
 
-`DataViewProps.onRowOpen?: (row) => void` — double-click, or Enter on a focused
-row — is threaded to `DataViewRenderProps.onRowOpen` beside activation, never
-folded into it: a file browser's click selects and its double-click descends.
-The **table** maps it to
-`DataTable.onRowOpen` (Enter opens, Space still activates, and the second click
-of a double-click does not activate again). list / gallery / icons ignore it.
+`onRowOpen?: (row) => void` — double-click / Enter — never folded into activation (a
+file browser: click selects, double-click descends). Table maps it to
+`DataTable.onRowOpen`; list / gallery / icons ignore it.
 
 ### The click belongs to the row; the pencil belongs to the field
 
-An editable cell does **not** open its editor when you click its value. The
-value is transparent to the click, so a click anywhere on a row — over a column
-as much as in the gap between two — does the row's own thing. Editing has its
-own target: a small pencil beside each editable field, revealed while the
-pointer is over that field (`primitives/hover-reveal`'s class pair, so no
-render-per-hover), and reachable by keyboard because it is a real button that
-can take focus.
-
-The two used to compete for one gesture, and the row lost: with click-to-edit on
-every cell, the row's primary action survived only in the slivers between
-columns, and a table of editable fields could not be used to open anything.
-Splitting the gesture also gave keyboard users an editor they never had — a
-`div` with an `onClick` was not reachable at all.
-
-`EditableCell` owns this for **every** view (table, list, gallery, and the nested table's
-secondary cells), so the answer is the same wherever a field is rendered. The
-pencil is always mounted and only faded, so revealing it reflows nothing.
-
-The **nested table's primary label** is the one exception and keeps *select-then-edit*
-(first click selects/navigates, a second click on the selected row edits) — it is
-the navigation target itself, so it has no room beside it for a second affordance
+Clicking an editable value does **not** edit: the click does the row's thing; editing
+is a pencil beside each editable field, hover-revealed (`hover-reveal` classes),
+focusable. `EditableCell` owns this for every view; the pencil is always mounted
+(no reflow). Exception: the **nested table's primary label** keeps select-then-edit
 (`EditableTreeLabel`).
 
 ### Where a row goes, declared by its owner (`CollectionRowActivation`)
 
-A collection — or one arm of a union — declares ONCE where its rows go:
-`DataViewSlots.CollectionRowActivation({ id, owner, useActivation })`, a hook
-returning `(row) => Activation | undefined` (a link: `openPane.to(…)`). Every
-DataView listing the owner folds them (`CollectRowActivation`, one hook level
-per contribution — `web/internal/collection-row-activation.tsx`, the pure
-fold `fold-activations.ts`): an arm's answers only its own rows (by the
-union's discriminator); two answering one row throw. The owner's link is the
-navigation, and the list's own `rowActivation` / `onRowActivate` runs AFTER
-it (`afterOpen`) — a host's business with its own chrome (the build popover
-closing itself), never instead of where the row goes. A row no owner sends
-anywhere activates only through the list's own.
+`DataViewSlots.CollectionRowActivation({ id, owner, useActivation })` declares once
+where a collection's (or arm's) rows go; every DataView listing the owner folds them
+(`web/internal/collection-row-activation.tsx`, pure `fold-activations.ts`).
+
+- An arm answers only its rows; two answering one row throws.
+- The list's own `rowActivation` / `onRowActivate` runs **after** (`afterOpen`),
+  never instead.
 
 ## Row selection, and native row drag and drop
 
-Three props, independent of each other and of the checkbox `selection`, for a
-Finder-class surface (the file explorer is the first). All three are generic
-over `TRow` and know nothing about what the rows are.
+Three props for Finder-class surfaces (file explorer), generic over `TRow`,
+independent of checkbox `selection`.
 
 ### `rowSelection` — a set, not a single id
 
 ```ts
 interface RowSelectionConfig {
-  selected: ReadonlySet<string>;   // row keys
-  anchor: string | null;           // what a range grows from
-  onChange(next: { selected: ReadonlySet<string>; anchor: string | null }): void;
+  selected: ReadonlySet<string>; // row keys
+  anchor: string | null;
+  onChange(next: {
+    selected: ReadonlySet<string>;
+    anchor: string | null;
+  }): void;
 }
 ```
 
-Controlled by the consumer. The rows are the gestures: click (that row, the
-new anchor — and the row's usual select / activation still runs), ⌘/Ctrl-click
-(toggle, selection only: it is no longer the new-tab link gesture there;
-middle-click still is), Shift-click (the range from the anchor, replacing the
-set), Shift+↑/↓ (extend from the focused row; focus moves, `onSelect` does
-not run), ⌘/Ctrl+A (every painted row), Escape (clear; the key still
-propagates to the host's own Escape). Every change is the next whole state
-from the tree primitive's ONE reducer, `nextRowSelection` (tree/core), over
-the rows **as painted** — a collapsed folder's children are never in a range.
-`selectedRowId` stays the primary row; with `rowSelection` the highlight and
-`aria-selected` come from the set, and the grid says `aria-multiselectable`.
-Honoured by the nested table (its rows become focusable, so the keys work
-without an `onRowOpen`).
+- **Controlled.** Click, ⌘/Ctrl-click (toggle — not the new-tab gesture here),
+  Shift-click (range), Shift+↑/↓, ⌘/Ctrl+A, Escape — all via the tree primitive's
+  one reducer `nextRowSelection` (tree/core) over rows **as painted**.
+- `selectedRowId` stays the primary row; the grid says `aria-multiselectable`.
+- Honoured by the nested table.
 
 ### `rowDrag` / `rowDrop` — HTML5 drag and drop, not dnd-kit
 
 ```ts
-rowDrag?: { write(rows: readonly TRow[], dt: DataTransfer): void };
-rowDrop?: {
-  accepts(row: TRow, types: readonly string[], edge: RowDropEdge): boolean;
-  onDrop(row: TRow, dt: DataTransfer, edge: RowDropEdge, ctx: RowDropContext): void | Promise<void>;
-  placement?: "into" | "between";         // default "into"
-  background?: {
-    accepts(types: readonly string[], at: { viewId: string; group: string | null }): boolean;
-    onDrop(dt: DataTransfer, at: { viewId: string; group: string | null }, ctx: RowDropContext): void | Promise<void>;
+interface DataViewProps<TRow> {
+  // … (excerpt)
+  rowDrag?: { write(rows: readonly TRow[], dt: DataTransfer): void };
+  rowDrop?: {
+    accepts(row: TRow, types: readonly string[], edge: RowDropEdge): boolean;
+    onDrop(
+      row: TRow,
+      dt: DataTransfer,
+      edge: RowDropEdge,
+      ctx: RowDropContext,
+    ): void | Promise<void>;
+    placement?: "into" | "between"; // default "into"
+    background?: {
+      accepts(
+        types: readonly string[],
+        at: { viewId: string; group: string | null },
+      ): boolean;
+      onDrop(
+        dt: DataTransfer,
+        at: { viewId: string; group: string | null },
+        ctx: RowDropContext,
+      ): void | Promise<void>;
+    };
+    dropEffect?: "move" | "copy" | "link"; // default "move"
+    springOpenMs?: number; // default 700
   };
-  dropEffect?: "move" | "copy" | "link";   // default "move"
-  springOpenMs?: number;                   // default 700 (tree's SPRING_OPEN_MS)
+}
+
+type RowDropEdge = "into" | "before" | "after";
+type RowDropContext = {
+  order: { insert(keys: readonly string[]): Promise<void> } | null;
 };
-// RowDropEdge = "into" | "before" | "after"
-// RowDropContext = { order: { insert(keys: readonly string[]): Promise<void> } | null }
 ```
 
-Native, deliberately, rather than the `rank-reorder` dnd-kit machinery that
-manual order and `hierarchy.onMove` use: it is not a reorder (it carries rows
-somewhere else), it must cross plugins (one DataView's rows dropped on
-another's) — the `DataTransfer` MIME type is the whole contract, no context to
-hoist — it works under any field sort, and it is the path to OS drag-out.
+Native because it:
 
-- **Drag.** The grabbed row carries the `rowSelection` set when it is in it
-  (painted order), else itself; more than one draws an "N items" drag image.
-  Nested table only — and never beside `hierarchy.onMove` (two gestures
-  claiming one row's drag: it throws). A list row's drag is its manual order.
-- **Placement: into, or between.** `"into"` (the folder tree): an accepting
-  row reads highlighted (the drop-into ring, `DROP_TARGET_RING`) and takes
-  the drop, `edge: "into"`. `"between"` (an ordered list a drop is inserted
-  into — the Favorites sidebar): the drop goes in the gap at the nearer half
-  of the row under the pointer, `edge: "before" | "after"`, drawn as the
-  tree's insertion line (`DropInsertLine`), never a ring — a ring there reads
-  as "into this row". `accepts` sees the edge, so a list can refuse a gap.
-  List view takes either; the nested table drops into.
-- **A gap has one spelling.** The gap between two rows is reachable from the
-  lower half of the upper row and the upper half of the lower one; spelled
-  per row, it was two targets drawn on two edges, and the line hopped as the
-  pointer crossed the boundary. So `useRowDnd` resolves every gap to `"after"`
-  the row painted above it (`"before"` only for a section's first row), and
-  the section's empty space to the nearest end's gap when that row accepts:
-  above the first row (the band's top padding) its `"before"`, anywhere else
-  the last row's `"after"` (the band finds its first row by `data-row-key`,
-  `DropBackground firstKey lastKey`) — one store value, one line, one `accepts` / `onDrop` call per
-  gap. The view says what "above" is: `sequence: RowDndSequence`
-  (`above(key)`, `rowOf(key)`, its sections' entries as painted), required
-  under `"between"` (it throws without).
-- **The drop lands where the line was.** Under `"between"`, while the view
-  renders in its manual order (no sort overrides it) and that order has
-  `onInsert`, `ctx.order.insert(keys)` places those row keys, in order, in
-  the drop's gap — beside the row at its edge, or after the section's last
-  row for a background drop. The keys may be rows the consumer creates in
-  response (a pinned favorite): insert first, then write the data. Otherwise
-  (`"into"`, a sort set, no manual order) `ctx.order` is `null` and the
-  consumer places the rows itself — at the end, typically. `useRowDnd` builds
-  it from the view's `order` (`DataViewRenderProps.manualOrder`) and the
-  section's last key (`DropBackground lastKey`).
-- **Fall-through.** A row that does not accept lets the drop fall through to
-  `background`; with nothing accepting, the cursor says no-drop. **Under a
-  hierarchy (nested table)** it goes UP instead: to the nearest accepting
-  ancestor — a file row's drop is its folder's, the folder ringed and its
-  visible rows washed (`DROP_TARGET_WASH`, `useRowDropState` → `"inside"`) —
-  and from the roots to `background` (or, with none, to whatever box around
-  the view takes it, a pane). Under `"between"`, `background` reads as the
-  gap after the section's last row (the insertion line at its foot).
-- **Own rows cancel.** A drag of the view's own rows is no drop over a dragged
-  row, inside one, or (under a hierarchy) onto the parent already holding
-  every dragged row — the background too, for rows that are all roots. Such a
-  drop never reaches `onDrop`; the drag cancels, so dropping a row back where
-  it was does nothing.
-- The data is not readable until the drop, so `accepts` decides by MIME type;
-  read the `DataTransfer` in `onDrop` before its first `await`.
-- **Spring-open (nested table).** A collapsed accepting row with children —
-  or a lazy row that may have some — opens after the drag rests on it
-  `springOpenMs`; when the drag ends, every folder it opened closes again
-  unless the drop landed inside it (`useSpringOpen`, tree/web).
-- **Background.** The view's empty space: the nested table's box around its
-  rows (`group: null`), each list section's band (its group key). The host
-  binds the view instance in (`at.viewId`), so on a `sections` surface the
-  consumer knows which section's empty space took it; a view only receives
-  `ViewRowDropConfig` (its group). It covers the view's own box — a pane's
-  empty area below a short listing is the pane's.
+- carries rows elsewhere (not a reorder);
+- crosses plugins (the MIME type is the contract);
+- works under any sort;
+- leads to OS drag-out.
 
-The plumbing is one hook every view shares (`useRowDnd`, web barrel —
-handlers per row, a per-view store of where the drag is, read per row by
-`useRowDropState` — `into` / `before` / `after` / `inside` / `null` — so a
-moving drag re-renders the rows it leaves and enters, never the list; a
-hierarchical view passes `hierarchy: { parentOf, rowOf }` for the fall-up and
-the cancel rules) and two components (`DropBackground`, `DropInsertLine`). A
-new view honouring the props spreads `dnd.rowProps(key, row)` on its ONE row
-element (a `relative` box, for the line) and wraps a section in
-`DropBackground`.
+Behaviour:
 
-Rows of the nested table and of the tree chrome are `select-none`: a
-press-and-drag across rows is a row gesture, never a text selection (an inline
-editor inside is a form control and keeps its own).
+- **Drag**: carries the `rowSelection` set when the grabbed row is in it. Nested table
+  only, never beside `hierarchy.onMove` (throws).
+- **Placement**: `"into"` rings the accepting row (`DROP_TARGET_RING`); `"between"`
+  draws `DropInsertLine` in the nearer gap, never a ring. List takes either; nested
+  table `into`.
+- **A gap has one spelling**: `useRowDnd` resolves a gap to `"after"` the row above
+  (`"before"` only for a section's first row); empty band space maps to the nearest
+  end's gap. `"between"` requires `sequence: RowDndSequence` (throws without).
+- **The drop lands where the line was**: under `"between"` in manual order with
+  `onInsert`, `ctx.order.insert(keys)` places the keys there (insert first, then
+  write data). Otherwise `ctx.order` is `null`.
+- **Fall-through**: non-accepting row → `background`; under a hierarchy it goes UP to
+  the nearest accepting ancestor (`DROP_TARGET_WASH`, state `"inside"`), then
+  `background`.
+- **Own rows cancel** (onto itself, inside itself, onto the current parent).
+- `accepts` decides by MIME type; read the `DataTransfer` in `onDrop` before the
+  first `await`.
+- **Spring-open** (nested table): `useSpringOpen` (tree/web) opens after
+  `springOpenMs`, recloses what the drop didn't land in.
+- **Background**: the view's own empty box (`group: null` in the nested table, the
+  section key in a list); the host binds `at.viewId`.
+
+Plumbing:
+
+- `useRowDnd` (web barrel; per-view store read per row by `useRowDropState`, so a
+  drag re-renders only the rows it crosses), `DropBackground`, `DropInsertLine`.
+- A new view spreads `dnd.rowProps(key, row)` on its ONE (`relative`) row element
+  and wraps sections in `DropBackground`.
+- Nested-table and tree-chrome rows are `select-none`.
 
 ## Row tone: a row can read as inactive
 
-`DataViewProps.rowTone` is `(row) => "default" | "muted"`. `"muted"` dims the
-row's own title, so a switched-off / archived / finished row reads inactive
-without spending a chip on saying so — the thing three plugins hand-rolled
-before it existed (`SourceRow` muting a disabled source, `ConversationItem`
-muting `gone`/`done`, `ThreadRow` bolding unread).
+`DataViewProps.rowTone: (row) => "default" | "muted"` — `"muted"` dims the row's
+title (switched-off / archived / done).
 
-**It threads like `searchAccessor`, not like `density`.** `density` is a
-declaration *about the surface*, so it takes the chrome path. `rowTone` is a
-**data accessor** closed over row identity, the same shape as `searchAccessor` /
-`onRowActivate` / `hierarchy`, so it flows straight through with no chrome hop:
-
-```
-DataViewProps.rowTone
-  → DataViewSourceBundle          (Omit<DataViewProps, …chrome keys> — free)
-    → DataViewBodyProps
-      → DataViewRenderProps.rowTone   the view child tones its own title
-```
-
-Concretely: `body-types.ts`, `data-view.tsx` and `data-view-switcher.tsx` need no
-change at all, because the bundle is derived from `DataViewProps` and the hosts
-spread it. The only code is the type declarations, one destructure-and-forward in
-`DataViewBodyInner` beside `searchAccessor`, and the barrel exports.
-
-Views never re-spell what `"muted"` looks like: `rowToneClass(tone)` (web barrel)
-is the ONE rendering, returning a class only for the non-default tone so each
-view composes it on top of whatever colour its own title already carries.
+- A data accessor, it flows like `searchAccessor` (bundle → body →
+  `DataViewRenderProps.rowTone`), not the chrome path.
+- Views render it only via `rowToneClass(tone)` (web barrel).
 
 | View | Where |
 |---|---|
-| list | the title `<Text>`, in both the one-line and the stacked shape |
-| gallery | the card title (`CardMeta titleClassName`), and the cover is veiled at rest (`DataCard dimmed`) |
-| nested table | folded into the label class, ahead of `options.labelClassName` so the consumer's own per-row class still wins |
-| flat table | **deliberate no-op** |
+| list | the title `<Text>` (one-line and stacked) |
+| gallery | card title (`CardMeta titleClassName`), cover veiled (`DataCard dimmed`) |
+| nested table | the label class, before `options.labelClassName` |
+| flat table | **deliberate no-op** (its one per-row seam, `useRowDecoration`, is held by drag) |
 
-The flat table is a no-op the way the gallery is a no-op for `density` — stated, not
-forgotten. Its only per-row seam is `DataTableProps.useRowDecoration`, a single
-slot already held by manual-order drag decoration; merging two decorations onto
-one hook is its own change, not a side effect of this one.
-
-The nested table's `labelClassName` / `rowAccent` stay as the escape hatch. `rowTone` is
-the semantic form to reach for first — a tone is a statement about the row, a
-class is a statement about pixels.
+Prefer `rowTone` over the nested table's `labelClassName` / `rowAccent` escape hatch.
 
 ## Density: how much room the surface gives the view
 
-`DataViewProps.density` is `"comfortable"` (the default) or `"compact"`. It is a
-**declaration by the surface**, and it threads through exactly one path, so both
-hosts get it from one place:
+`density`: `"comfortable"` (default) | `"compact"` — a declaration by the surface,
+along one path:
 
-```
-DataViewProps.density  (and DataViewSwitcherProps.density)
-  → DataViewShellFrame prop
-    → DataViewShellChrome.density        (web/internal/body-types.ts)
-      → DataViewBody
-        ├→ DataViewToolbar               the fold rule, below
-        └→ DataViewRenderProps.density   the view child tightens itself
+```text
+DataViewProps.density (and switcher's)
+  → DataViewShellChrome.density (web/internal/body-types.ts)
+    ├→ toolbar (the fold rule)
+    └→ DataViewRenderProps.density
 ```
 
-`DataViewSourceBundle` **omits** `density` alongside `title`/`actions`: it
-describes the surface, not the data, so a source contribution cannot spell a
-value the body would then ignore.
+`DataViewSourceBundle` omits it. What each view tightens:
 
-The **list** child reads it as its default row size — `size = options.size ??
-(density === "compact" ? "sm" : "md")`. The **table** hands it to `DataTable` as
-`density`, whose compact rows pad with `py-row-compact` (the `padRowCompactY`
-density token, by default a third of `--pad-row-y`) instead of `py-row`. The
-**gallery** narrows its card minimum — `var(--gallery-card-min-compact)` instead
-of `var(--gallery-card-min)` — so a compact surface fits more columns; the card
-keeps its one shape.
+- list: default row size `sm` vs `md`;
+- table: `DataTable density` (`py-row-compact`);
+- gallery: narrower card min (`--gallery-card-min-compact`).
 
 ## Table view options
 
-`viewOptions={{ table: { … } }}` is a `TableViewOptions` (the table child's
-`core`):
+`viewOptions={{ table: { … } }}` is `TableViewOptions` (table child's `core`):
 
-- **`columnHeader?: "row" | "first-group"`** — where the column labels sit.
-  `"row"` (default) is the sticky header row, unchanged. `"first-group"` drops
-  that row and puts the labels on the **first group header**: that header's
-  sticky band becomes a subgrid row in which the group label (still
-  collapsible, with its count) spans the leading tracks up to the first
-  labelled column, and each labelled column's header sits in its own track — so
-  it aligns with the cells by construction and keeps sort-on-click. Every other
-  group header is unchanged, and the group headers pin at the toolbar offset (no
-  header row to stack under). Ungrouped, or when the first column is itself
-  labelled, it falls back to `"row"`. For a short sectioned list that wants its
-  labels shown once, as a caption over the first section.
-- **`FieldDef.header?: string | false`** (on the field, read by the table only)
-  — the column's header text, default `label`. `false` leaves the header cell
-  empty (a glyph or position column) while the field keeps `label` in every
-  picker (sort, filter, group-by, Properties); it is still sortable from its
-  empty header. Under `"first-group"`, "has a header" is what decides where the
-  first group's label stops spanning.
-- **`presentation: "soft"`**, **`cover: true`**, **`titleCell: "stacked"`** —
-  the soft table: borderless token-sized rows, a cover-thumbnail column with
-  the primary action over it, a two-line title cell (title + indicators, then
-  the `SubtitleRun`). See the table child's CLAUDE.md.
-- **Column captions** — whether the labels show. The table view-type declares
-  `configSchema: { columnCaptions: enumField("auto" | "shown" | "hidden") }`,
-  so every table view's settings panel carries a **Column captions** choice,
-  stored on the view's config row (merged over the code's
-  `viewOptions.table`). Resolved once (`web/internal/column-captions.ts`,
-  `tableHeaderOption`) for the flat and nested table alike: `shown` / `hidden`
-  win; `auto` (or unset) falls back to `header ?? presentation !== "outline"`
-  (the last step is `DataTable`'s own default). `header` is the code's
-  spelling (an outline file listing passes `true`). It is three-way, not a
-  switch, on purpose: a switch has no "default" position, so it would draw off
-  over a grid table that shows its labels. (The list's `columnCaptions` is a
-  plain switch: its default is off everywhere.)
-- **The labels' look is the theme's**, in every presentation and for every
-  `DataTable` (not only data-view's): the `columnHeader*` tokens of
-  `ui/tokens/data-view` (type pick, `columnHeaderCase`, tracking, ink, the
-  sorted column's `columnHeaderSortedInk`, also a sortable label's hover ink)
-  and `sortIcon` — `hover` (default: the arrow on the sorted column only, an
-  unsorted column's revealed while its label is hovered), `sorted` (never),
-  `always` (faint). The old uppercase look is `columnHeaderCase: upper` +
-  `sortIcon: always`.
-- **An outline's terms present as a row view's**: the nested table under
-  `presentation: "outline"` wraps its body in `FieldPresentationProvider`
-  (quiet chips, the common value elided — terms only, never the label); grid
-  and soft tables never mount it.
-- The surface's `density` (above) is honoured too.
+- **`columnHeader?: "row" | "first-group"`** — `"first-group"` puts the column labels
+  on the first group header (a subgrid row, sort-on-click kept); falls back to
+  `"row"` when ungrouped or the first column is labelled.
+- **`FieldDef.header?: string | false`** — column header text (default `label`);
+  `false` leaves it empty but keeps `label` in pickers.
+- **`presentation: "soft"`, `cover: true`, `titleCell: "stacked"`** — the soft table
+  (table child's CLAUDE.md).
+- **Column captions** —
+  `configSchema: { columnCaptions: "auto" | "shown" | "hidden" }` in every table
+  view's settings.
+  - Resolved once (`web/internal/column-captions.ts`, `tableHeaderOption`):
+    `shown`/`hidden` win, `auto` → `header ?? presentation !== "outline"`.
+  - Three-way on purpose (a switch has no "default" position).
+  - The list's `columnCaptions` is a plain switch (default off).
+- **Label look is the theme's** for every `DataTable`: `columnHeader*` tokens and
+  `sortIcon` (`hover` default / `sorted` / `always`).
+- Under `presentation: "outline"` the nested table mounts `FieldPresentationProvider`
+  (quiet, elided — like a row view); grid and soft tables never do.
+- `density` is honoured.
 
 ### The fold rule
 
 ```ts
-const compact = density === "compact" || (width > 0 && width < COMPACT_BREAKPOINT);
+const compact =
+  density === "compact" || (width > 0 && width < COMPACT_BREAKPOINT);
 ```
 
-The two halves are OR-ed, never substituted. The **measurement** half is
-involuntary: below `COMPACT_BREAKPOINT` (360px) the wide inline row (search + the
-control triggers + the switcher) does not fit, and no declaration makes it fit.
-The **density** half is voluntary: a 672px popover has the room and still wants
-the light form. So density removes the *need* for room; it never asserts there is
-any. A compact surface that also happens to be narrow is still compact, and a
-comfortable surface that is genuinely too narrow still folds — the single reason
-a surface cannot end up wide *and* folded by accident.
+OR-ed, never substituted: below `COMPACT_BREAKPOINT` (360px) the wide row doesn't fit
+whatever the declaration; `compact` asks for the light form even with room.
 
 ### The compact trigger is hover-revealed
 
-The **toolbar row** carries `hoverRevealGroup` and `CompactControls`' trigger
-carries `hoverRevealTarget` (`primitives/hover-reveal/web`) — the **CSS-group**
-half of the primitive, never `useHoverReveal()`. The state hook would re-render
-the whole DataView, every windowed row included, on each pointer enter/leave of
-the surface; the class pair is pure CSS and costs nothing.
-
-The group sits on the **bar**, not the DataView root. The root looks like the
-friendlier target (the compact bar is mostly empty) and is wrong: it makes every
-pass over the list a reveal, so grazing a row flickers a control in the far top
-corner, unrelated to what the user was doing. The trigger answers where it lives.
-
-Two conditions suspend the reveal:
+The **toolbar row** carries `hoverRevealGroup`, the trigger `hoverRevealTarget` (the
+CSS half of `primitives/hover-reveal` — never `useHoverReveal()`, which re-renders
+the whole DataView per hover). The group is on the **bar**, not the root (else
+grazing rows flickers the control).
 
 ```ts
 const alwaysVisible = open || searching;
 ```
 
-- `searching` — the search field holds a query.
-- `open` — its own panel is up. The panel is portaled, so the pointer leaves the
-  hover group the instant it moves into it; without this the trigger would fade
-  out from under the panel it opened.
+**Only the query pins it — filter, sort and group-by do not**: those are durable
+narrowings that define the view; a query is ad-hoc and otherwise leaves no trace.
+(Pinning on `activeCount > 0` never hid; a `hidesRows` summary flag was removed —
+don't re-add either.)
 
-**Only the query pins it — filter, sort and group-by do not.** This is the
-durable/transient split from "State split" above, applied to visibility. Filter,
-sort and group-by are *durable narrowings*: they live on the view instance's
-config row, authored and persisted and git-promotable, and they are part of what
-that named view **is**. A view called "Failed builds" is not a list hiding things
-from you; it is that list, and it has nothing to confess. Pinning its trigger
-open forever reports the view's own definition back as though it were an
-accident.
-
-The query is the other half: an *ad-hoc gesture*, typed and forgotten, which is
-exactly why it lives in per-tab `sessionStorage` rather than the config row. Fold
-the bar away and it leaves no other trace on screen, so the narrowed list reads
-as the view's whole contents. The trigger is what the user follows back to it.
-
-Two earlier attempts got this wrong and are worth naming, because both look
-reasonable. The first pinned on `activeCount > 0`, which counts every control's
-summary — and since surfaces author a default sort in config (the Build popover's
-Recent view authors `startedAt ↓`), the trigger never hid at all. The second
-added a `hidesRows` flag to `DataViewControlSummary` so a control could declare
-it was withholding rows; the filter set it, the sort did not. That flag is now
-**gone**: once a filter stopped pinning the trigger, nothing set it, and a
-contract field with no implementer is speculative generality. The signal is the
-query the toolbar already holds, passed to `CompactControls` as `searching`.
-
-The badge is unaffected and still counts filter and sort — "N things configured"
-is a different and correct statement, and `activeCount` still picks the filled
-`secondary` button form over the ghost one. Only *visibility at rest* asks the
-narrower question.
-
-This is **one fold with one behaviour**: it applies wherever the compact form
-appears, including today's width-folded narrow surfaces — the conversations
-sidebar's options button is hover-revealed too. Two visually different compact
-bars whose difference nothing in the UI explains would be the alternative.
-
-**The bar stays in flow.** Compact is the two-pill row — the views pill (only
-when there is more than one instance) and the tools pill with the hidden
-trigger at its end; it reserves its height even when it looks empty and never
-paints over row content. When the tools pill holds nothing but the trigger, the
-reveal moves onto the pill itself (`CompactControls frame`), so no empty pill
-stands at rest.
+- The badge still counts filter and sort.
+- One fold, one behaviour everywhere.
+- **The bar stays in flow** (reserves its height); with only the trigger, the pill
+  itself reveals (`CompactControls frame`).
 
 ### Single-line list rows are the default
 
-`ListViewOptions.lines` is `1` (default) or `2`. At `1` the title and the subtitle
-are **sibling truncating leaves of the row's own line** — `Row` composes `Line`,
-so the `region-line` + `SingleLineProvider` contract is already there and each
-`<Text>` ellipsizes without asking — with an empty `<Fill>` absorbing the slack
-before the rigid trailing cell (`align: "end"` fields + the `×N` aggregate badge).
-The subtitle's `·` join simply extends to the seam with the title, which on one
-line is the run's first term. At `2` the subtitle stacks under the title in a
-`Stack`, which resets the single-line context, so each `<Text>` asks for its own
-`truncate` — the shape every list had before, unchanged for the surfaces whose
-subtitle is prose rather than chips.
+`ListViewOptions.lines`: `1` (default) | `2`.
 
-What gives first when the line is tight: both leaves shrink at CSS's default
-factor, weighted by content width, so the longer one yields more — and the
-subtitle, being the `·`-joined metadata run, normally is the longer one. That is
-the intent (the title identifies the row) without a shrink-priority primitive
-invented for one call site.
+- At `1` the title and subtitle are sibling truncating leaves of the row's
+  `Line`, an empty `<Fill>` before the rigid trailing cell.
+- At `2` the subtitle stacks (each `<Text>` asks for `truncate`).
+- Both shrink by content width — no shrink-priority primitive.
 
-**Trailing fields sit in aligned slots.** A list has no columns, yet its
-trailing values line up down the list: each trailing field draws in a slot
-whose `min-width` is `var(--list-slot-w-<i>)`, the widest that slot has been on
-any row — measured by one observer over every mounted slot (element-size's
-`useResizeObserverSet`) and written as a CSS variable on the list's box-less
-(`display: contents`) root, so no row re-renders for it. `VirtualRows` positions
-rows absolutely, which rules out a subgrid. The widths only grow (a column that
-shrank as rows scroll away would move every row on screen) and reset when the
-trailing field set changes. Slots are spaced by the `listSlotGap` token; a
-**time-typed** field (its type chain reaches `date`, resolved through the field
-identities like the map's location field) is moved last — the row's right edge
-is its time — and drawn in `listTimeInk`.
+**Trailing fields sit in aligned slots**: each slot's `min-width` is
+`var(--list-slot-w-<i>)`, the widest seen.
 
-**Column captions** (`columnCaptions`, the list's `configSchema` — a switch in
-the view's settings, default off): a caption row over the list, the title
-field's label where the titles start (behind an invisible copy of the first
-row's leading visual) and each trailing field's label in that field's slot —
-the same measured slot, so a label wider than its values widens the column.
+- One `useResizeObserverSet`, written as a CSS var on the `display: contents`
+  root — no row re-renders; no subgrid because `VirtualRows` positions
+  absolutely.
+- Widths only grow; reset when the trailing set changes. Gap: `listSlotGap`.
+- A **time-typed** field (chain reaches `date`) goes last, in `listTimeInk`.
 
-**Blast radius is small**: every high-traffic list surface (the conversations
-sidebar, mail threads, the events list, deploy history) overrides the row body
-wholesale through `viewOptions.list.renderRow` and is untouched. What changes is
-the field-driven default.
+**Column captions** (list `configSchema`, default off): a caption row aligned to the
+same slots.
+
+Surfaces overriding `viewOptions.list.renderRow` are unaffected.
 
 ## Quiet rows and common-value elision
 
-A row view — the list, and the nested table's outline — mounts
-`FieldPresentationProvider({ rows, fields, rowsComplete })` (web barrel,
-`web/internal/field-presentation.tsx`) around its body; the **table never
-does**. Every `FieldCell` inside reads it (the `FieldExtentsContext` pattern:
-computed once per view, one context; outside a provider the constant default —
-chip presentation, nothing elided):
+A row view (list; nested table under `outline`) mounts
+`FieldPresentationProvider({ rows, fields, rowsComplete })`
+(`web/internal/field-presentation.tsx`); the **table never does**. Outside a
+provider: chip presentation, nothing elided.
 
-- **Quiet.** The type's cell is handed `TableCellProps.presentation: "quiet"`:
-  enum and tags draw `● label` (`QuietOption`) instead of a filled chip. A row is
-  a sentence of values, and a row of filled chips reads as a toolbar.
-- **Common-value elision.** A value held by **≥ 60%** of the view's rows says
-  nothing — the default, not information — so the rows holding it leave it out:
-  a scalar draws nothing (in a list slot the slot keeps its width; in the
-  subtitle run the term is dropped, separator and all — `isElidedRead`), a
-  multi-value field draws its other values. Three guards, each in
-  `computeElided`:
-  - **candidates** are the fields the view passes (the row's terms — never its
-    title or leading visual) whose resolved cell presents as a chip (the Cell
-    registry's `chip` flag; data-view names no type), that are not editable (an
-    elided cell would take its pencil with it);
-  - **no row of the view may have the field empty** — beside a blank, an elided
-    cell would read as "no value" too;
-  - **only once the rows are complete** (`rowsComplete === true`) — a paged
-    read's shares move as pages land, and a value would appear and vanish as
-    the reader scrolls. Below 3 rows nothing is elided.
-
-  The population is the view's `rows` (not its search result, so typing does
-  not re-flow which values show). The context value keeps its identity while
-  the answer is unchanged, so a new rows array re-renders no memoized row.
-
-Which field a value belongs to still comes from position alone. A field
-**`role`** model (status → leading glyph, time → right edge, path → low
-priority, declared once per entity field) is the planned follow-up
-(task-1792908417-k0dx5p); the time-last rule above is its first, type-derived
-approximation.
+- **Quiet**: cells get `TableCellProps.presentation: "quiet"` — enum/tags draw
+  `● label` (`QuietOption`).
+- **Common-value elision**: a value held by **≥ 60%** of rows is left out.
+  - A scalar draws nothing — a list slot keeps its width, a subtitle term is
+    dropped with its separator (`isElidedRead`); a multi-value draws its other
+    values.
+  - Guards in `computeElided`: only passed term fields that present as chips and
+    are not editable; no row may have the field empty; only when
+    `rowsComplete === true`; never below 3 rows.
+  - Population = the view's `rows` (not search results).
+  - Context identity is stable while the answer is unchanged.
 
 ## Per-item actions
 
-Per-row actions (delete, expand-all, …) are a **cross-view** concern: contribute
-an action once, every view renders it in its natural trailing affordance (table-row hover-trailing column, a float chip at the gallery card cover's top-right).
+Contribute an action once; every view draws it in its trailing affordance.
 
-The mechanism is the **`defineItemActions<TRow>(id)` factory** (web barrel),
-mirroring the `detail-sections` / `tabbed-view` factory precedent — **not** a
-global slot like `View`. `View` is global because views are a *fixed shared
-vocabulary* with one render-props contract; item actions are the factory case
-because each consumer's row type is disjoint (`Block`, `TaskListItem`, `Agent`).
-A global slot would force `ComponentType<ItemActionProps<unknown>>` and a runtime
-`kind` discriminator to keep one app's Delete off another app's rows;
-per-consumer slots are isolated by construction and keep full `TRow` typing.
-
-Each consumer calls `defineItemActions<Row>("<stable-id>")` once. The result is
-**callable for contributions** (`MyActions({ id, component })`, like any
-`defineRenderSlot`) and carries `.Row` — the `ItemActionsDescriptor`. Pass it to
-`<DataView itemActions={MyActions} />`; the host threads it (plus a derived
-`hasChildren` predicate from `hierarchy.getParentId`) into every view, which
-renders it in its own affordance. Each action component receives
-`ItemActionProps<Row>` (`{ row, hasChildren, placement }`).
+- **Mechanism**: the **`defineItemActions<TRow>(id)` factory** (web barrel) —
+  per-consumer slots, not a global one, because row types are disjoint (a global
+  slot would need `unknown` + a runtime discriminator).
+- The result is callable for contributions (`MyActions({ id, component })`) and
+  carries `.Row`; pass `<DataView itemActions={MyActions} />`.
+- Components receive `ItemActionProps<Row>` = `{ row, hasChildren, placement }`.
 
 ### The zone axis: does this action live at rest?
 
-A contribution declares `zone?: ItemActionZone` — `"revealed"` (default, the
-hover cluster), `"persistent"` (painted at rest where the view has an at-rest
-region) or `"primary"` (THE row's main verb — Sonata's Play; at most one per
-set, a second throws) — and optionally `useActive?: Hook<(row) => boolean>`
-(the action is "on" for this row: pinned, done, playing). Both are properties of
-the **action**, declared once, so every view gives the same answer. Each action
-component receives `placement: "cluster" | "primary"` and draws itself for it.
+`zone?:`
 
-**The rest rule lives in one place** (`web/internal/item-action-rest.ts`,
-`itemActionRests`): `persistent` rests unless it declares `useActive` (then only
-while active); `revealed` / `primary` rest only while active — except a
-`primary` demoted to the cluster (the view has no primary slot), which always
-rests. Each drawn action
-is an `ItemActionCell` that calls its `useActive` and applies the rule, so the
-at-rest and hover arms can never both draw it.
+- `"revealed"` (default) — the hover cluster;
+- `"persistent"` — painted at rest;
+- `"primary"` — THE main verb; at most one per set (a second throws).
 
-Views never branch on zones themselves: they call
-`useItemActionZones(itemActions, { hasPersistentSlot, hasPrimarySlot })` (web
-barrel) once per render — both flags **required**, so a new view type must
-answer them — and get `{ cluster: { atRest, revealed }, primary: { atRest,
-revealed } | null }`, each arm a per-row render function or `null` when no
-contribution can land in it.
+Plus optional `useActive?: Hook<(row) => boolean>`.
+`placement: "cluster" | "primary"`.
 
-- `hasPersistentSlot: false` ⇒ `cluster.atRest` is `null` and `cluster.revealed`
-  draws every cluster action whatever its rest state — demoted, **never dropped**.
-- `hasPrimarySlot: false` ⇒ `primary` is `null` and the primary action joins the
-  cluster and **always rests**, whatever its `useActive` says — the row's main
-  verb has nowhere else to show, so a table keeps Play painted on every row.
+**The rest rule** (`web/internal/item-action-rest.ts`, `itemActionRests`):
+
+- `persistent` rests unless it declares `useActive` (then only while active);
+- `revealed` / `primary` rest only while active — except a `primary` demoted to
+  the cluster, which always rests.
+
+Each action is an `ItemActionCell`.
+
+Views call `useItemActionZones(itemActions, { hasPersistentSlot, hasPrimarySlot })`
+(both **required** — a new view must answer) →
+`{ cluster: { atRest, revealed }, primary: { atRest, revealed } | null }`.
+
+- No persistent slot ⇒ everything in `cluster.revealed` (demoted, **never
+  dropped**).
+- No primary slot ⇒ the primary joins the cluster and always rests.
 
 | View | `hasPersistentSlot` | `hasPrimarySlot` | At-rest placement |
 |---|---|---|---|
-| gallery | `true` | `true` (the round button at the cover's bottom-right) | the cover's top-right float chip: `DataCard.actions.atRest` → `<RowActions pin={null} alwaysVisible chrome="float">`, right of the revealed chip |
-| table | `true` | `false` — `true` with `cover: true` on a covered surface (the action over the cover thumbnail, on hover) | the reserved trailing `auto` track, before the revealed cluster |
+| gallery | `true` | `true` (round button, cover bottom-right) | cover top-right float chip (`DataCard.actions.atRest`) |
+| table | `true` | `false` — `true` with `cover: true` | the reserved trailing `auto` track |
 | nested table | `true` (`false` for `outline`) | `false` | the row's trailing cell |
-| list | `false` | `true` while the row shows a cover thumbnail (the action sits over it, on hover) | — demoted to the hover cluster |
-| icons | `true` | `false` (the tile's click is its main verb) | the tile's top-right float chip, right of the revealed chip (the gallery's shape) |
+| list | `false` (keeps title width in narrow sidebars) | `true` while the row shows a cover thumbnail | — demoted to the hover cluster |
+| icons | `true` | `false` | tile top-right float chip |
 
-List says `false` to a persistent slot on purpose: a reserved trailing region
-would take width from the title in the app's narrowest surfaces (the Pages
-sidebar). A collection's own actions (`CollectionItemAction`) are always
-`revealed`, with no `useActive`.
-
-**`primitives/action-presentation` is a different axis — do not merge them.** It
-answers *what form does this action draw as* (ghost icon button vs labelled menu
-row); `zone` answers *is the cluster painted at rest*. They compose.
+`CollectionItemAction`s are always `revealed`. **`primitives/action-presentation` is
+a different axis** (what form an action draws as) — compose, don't merge.
 
 ## Field extensions
 
-**There is no second per-row render slot — a per-row datum is a `FieldDef`.** The
-field schema is the generic seam (it also buys sort, filter and a table column),
-so a private "extra meta" slot beside it is always a duplicate.
+**There is no second per-row render slot — a per-row datum is a `FieldDef`** (which
+also buys sort, filter, a column).
 
-`FieldDef.value` is a *synchronous* `(row) => FieldValue` and cannot call hooks.
-A field whose values only the browser knows (a git status, a usage summary, a
-release probe) is a **client field** (`network/live`, "Rows that are not
-database data"): declared once in core on a row kind or a collection
-(`clientFields(owner, id, { section?, fields })`) and resolved once by its
-plugin's web (`ClientFields.Resolve({ fields, component })` — a component
-handed the list's rows that renders its values as a read). Every list of the
-owner derives the fields (below) and `CollectClientValues`
-(`web/internal/derived-fields.tsx`) mounts each resolver above the controllers:
-loading → the field is `pending`, failed → its `readError`, ready → its
-values. They filter, sort and group in memory; a live `source` listing an
-owner with client fields throws. A list of rows that are not database data
-names its **row kind** (`rowKind`) as its in-memory `collection`, so its own
-fields are derived too.
-
-The one remaining contributed family is user-defined: **the global
-`DataViewSlots.FieldExtension` slot** (custom-columns), a component per
-contribution typed `ComponentType<FieldExtensionProps<unknown>>`, where
+- **Browser-only values** (git status, usage) are **client fields**
+  (`network/live`, "Rows that are not database data").
+  - Declared in core: `clientFields(owner, id, { section?, fields })`.
+  - Resolved by the plugin's web: `ClientFields.Resolve({ fields, component })`.
+  - `CollectClientValues` (`web/internal/derived-fields.tsx`) mounts the
+    resolvers: loading → `pending`, failed → `readError`.
+  - In-memory only (a live `source` listing such an owner throws).
+  - Non-DB rows name their `rowKind` as the in-memory `collection`.
+- **Per-row data another plugin owns** is an entity-extension exposure
+  (`defineExtensionShape({ exposes })`), derived on every list reaching the entity and
+  server-sortable/filterable.
+- **User-defined** fields: the global **`DataViewSlots.FieldExtension`** slot
+  (custom-columns), plus a registration-level `section: string | null`:
 
 ```ts
 interface FieldExtensionProps<TRow> {
-  storageKey: DataViewId;                              // which surface
-  rowKey: (row: TRow, index: number) => string;        // how to identify a row
-  render: (fields: FieldDef<TRow>[]) => ReactNode;      // hand the host the fields
+  storageKey: DataViewId;
+  rowKey: (row: TRow, index: number) => string;
+  render: (fields: FieldDef<TRow>[]) => ReactNode;
 }
 ```
 
-The registration carries one more thing — **`section: string | null`**, the band
-its fields are listed under (see "Field sections" below). Per-list field slots
-(`defineFieldExtensions`, a `fieldExtensions` prop) no longer exist (fields
-declared once, phase 2b).
+**Derived fields come before the fold, with no contributor.** A list over a
+collection declared by fields (`liveCollection({ from, pick, fields })`,
+`network/live` "Fields") DERIVES its schema (`deriveFields` / `listSchema`), in
+order:
 
-Per-row data another plugin owns is not a field extension at all: the plugin
-exposes it from its entity extension (`defineExtensionShape({ exposes })`), and
-every list whose collection reaches the entity derives the field, bound to its
-exposed column so the server sorts and filters by it (Sonata's play count).
+1. the collection's own fields (enum when options are declared; string array →
+   `values`);
+2. exposed fields of every reached entity (`from`, `related`);
+3. union arm fields (`<arm>.<field>`, under the arm's `label`, in arm `order`);
+4. the owner's client fields;
+5. each presented by its owner's `FieldPresentation.Register`:
+   - `cell`;
+   - `token` → `FieldDef.token`;
+   - `extent: true` → `FieldExtentsContext` `{ min, max }` per view;
+   - `width`, `align`, `visible`, `groupable`;
+   - `useOptions` — a live read makes the field `pending` until options land.
 
-**Derived fields come before the fold, with no contributor.** A list whose
-rows are a collection declared by fields (`liveCollection({ from, pick,
-fields })` — `network/live`, "Fields") DERIVES its schema
-(`web/internal/derived-fields.tsx`, `deriveFields` / `listSchema`), in
-declaration order:
+   A property set by both a picked field's collection and its entity throws;
+6. else the type's `DataViewSlots.Cell`.
 
-1. the collection's own fields (`collection.fields`: picked from its entity,
-   then its own) — id the field key, label / title flag / options from the
-   field declaration, `enum` when it declares options, else its field type, a
-   string array multi-valued (`values`);
-2. the exposed fields of every entity it reaches (`from`, `related`) — id the
-   exposure field's id (`as`, else its key);
-3. a union's arm fields (`liveArm`) — ids `<arm>.<field>`, listed under the
-   arm's `label` (`section`), the arms in their declared `order`;
-3b. the owner's client fields (`clientFields`) — ids their keys, listed under
-   their `section` (or with the owner's own fields), values from their
-   resolver;
-4. each presented by its owner's registration (`FieldPresentation.Register` —
-   the entity, the exposure, the arm, or the collection itself for its listed
-   fields (one property of a picked field set by both it and its entity
-   throws): `cell(value, row, context)`, `token` (minted into
-   `FieldDef.token`: `FieldCell context="token"` resolves `token → cell →
-   type cell`), `extent: true` (`FieldDef.extent`: the body computes the
-   field's `{ min, max }` once per view over its rows — `field-extents.ts`,
-   `FieldExtentsContext` — and `FieldCell` hands it as `context.extent`; no
-   cost for a field without it), `width`, `align`, `visible`, `groupable`, and
-   `useOptions`, folded by `CollectFieldOptions` — a live READ makes the field
-   `pending` (its `optionsResult` loading) until the options land, then they
-   are its `options`; a failure with nothing held is its `readError`; a plain
-   array (a registry, a display-name lookup) is its options at once);
-5. else its type's contributed cell (`DataViewSlots.Cell`: a date is a ticking
-   relative time, an enum a chip wearing its option's variant).
+- **Hand `fields` over DB rows has no spelling** (tsc): rows from `useLive` /
+  `useLiveRow` are `CollectionRow`, refused by the hand-`fields` arm — use
+  `collection=`. Pinned by `core/internal/data-origin-types.test.ts`,
+  `web/internal/body-types.test.ts`.
+- A list then says only what it changes:
+  `overrides={fieldOverrides(collection, { status: { groupable: false } })}`
+  (unknown id: tsc error + throws) and `extraFields`.
+  - Hand `fields` beside a collection throws; neither throws; duplicate ids
+    throw.
+  - Only a live source binds exposed/arm `column`s (exposed groupable columns
+    group as server sections).
 
-**Hand `fields` over DB rows has no spelling** (tsc): the live origin and the
-in-memory `collection` arm say `fields?: never`, and the hand-`fields` arm
-types its rows `NotCollectionRow` — rows read from a collection (`useLive`,
-`useLiveRow` mark them `CollectionRow`, a spread keeps it) are refused there,
-so they are listed with `collection=` and derive their fields. Pinned by
-`core/internal/data-origin-types.test.ts` and `web/internal/body-types.test.ts`.
+**A field's own read: `pending` and `readError`, never a stand-in value.**
 
-A list then says only what it changes, by id — `overrides={fieldOverrides(
-collection, { status: { groupable: false } })}` (typed against the
-collection's field ids: an unknown id is a tsc error, and throws at mount) —
-and what it computes itself, `extraFields` (the Queue's `section`). A hand
-`fields` beside a collection (or row kind) throws, and so does a list with
-neither. An id two fields share throws. The collection is the live
-source's, or — for in-memory rows taken from one (the Queue) — the origin's
-`collection` prop (an in-memory DataView without one needs `fields`, tsc);
-only a live source binds an exposed or arm field's `column`, so an exposed
-groupable column groups as server sections (`LiveGroupColumn.handle` goes to
-the groups read); an own field lowers under its own id. Prefer an exposure (or
-a presentation) over a per-list field-extension slot for a field of an entity
-or its extensions.
+- `pending: true` while loading with nothing held → cells draw loading, and a view
+  that groups / sorts / filters / folds by it (`fieldsReadByView`, the fold IN
+  EFFECT) renders its loading state.
+- `readError` once failed with nothing held → cells draw the failure with Retry; a
+  view laid out by it shows `field-error`.
+- A failure over held values keeps painting them.
 
-**A field's own read: `pending` and `readError`, never a stand-in value.** A
-contributor whose values come from a read of its own states where that read
-is — never folds "not known yet" into a value. `pending: true` while it loads
-with nothing held: each cell draws the loading block, and a view that groups,
-sorts, filters or folds by the field (`fieldsReadByView` — the fold IN
-EFFECT, never the stored one a typed search or a fold-less view suspends) renders its loading
-state, because whatever `value` returns meanwhile would lay the rows out by a
-claim (an enum's `null` is its "None" bucket — every row filed under it).
-`readError` once it failed with nothing held: each cell draws the failure with
-Retry, and a view laid out by the field renders that failure in place of its
-rows (`field-error`, naming the field). A failure over held values keeps
-painting them. The task list's `category` field is the case that needed both.
+(Case: the task list's `category`.)
 
-**One fold.** `CollectFieldExtensions` (internal) folds the global
-`DataViewSlots.FieldExtension` slot, threading `{ storageKey, rowKey }` to every
-contributor — each mounts error-boundary-isolated (`renderIsolated`), runs its
-own hooks, yields its `FieldDef[]`, and recurses; the base case calls
-`children([...base, ...allExtra])`. The fold is a recursive **component**, never
-a `.map` over contributed hooks (which `react-hooks/rules-of-hooks` rejects). It
-wraps the model **before** the sort/filter controllers, so a contributed
-`int`/`date` field shows up in the Sort control, the Filter control, and the
-table columns for free. It runs at `<unknown>` (the global slot spans disjoint
-consumer row types), so `props.fields`/`rowKey` and the merged result cross a
-safe `FieldDef<unknown>`↔`FieldDef<TRow>` cast at the top-level `DataView`
-boundary; the global slot being a `defineRenderSlot`, its fold order is a
-committed reorder override
-(`config/primitives/data-view/primitives.data-view.field-extension.jsonc`).
+**One fold.** `CollectFieldExtensions` (internal) is a recursive **component**
+(never a `.map` over hooks) folding every contributor (`renderIsolated`) into
+`children([...base, ...allExtra])`.
+
+- It wraps the model **before** the sort/filter controllers so contributed fields
+  appear in Sort, Filter and columns.
+- Runs at `<unknown>` (cast at the top-level boundary).
+- Order: committed layout
+  `config/primitives/data-view/primitives.data-view.field-extension.jsonc`.
 
 ### Field sections: a band per contributor
 
-A schema several plugins contributed to is a flat list of forty columns unless
-something says where each came from. `FieldDef.section` is that: the heading a
-field is listed under in **every** "choose a field" surface — the filter and sort
-typeahead, the Properties list, the group-by band. The host's own fields sit
-first under `SHARED_FIELD_SECTION` ("Common"); each contributor's follow under
-its own name, so the merged run surface reads `Common / Build / Backup / Release
-/ Deploy` everywhere instead of one undifferentiated list.
+`FieldDef.section` is the heading a field is listed under in every field picker
+(filter/sort typeahead, Properties, group-by): host fields under
+`SHARED_FIELD_SECTION` ("Common"), contributors under their own names.
 
-**A contributor never authors it per field.** `FieldExtensionContribution.section`
-is declared once on the registration (and a client-fields declaration's
-`section` once on the declaration) and the fold **stamps** it over every field
-that contributor returned (`sectioned()` in `field-extensions.tsx`), so a plugin
-cannot spell its own band two ways across forty columns, forget it on the
-fortieth, or file a column under another plugin's name. Authoring
-`FieldDef.section` by hand is for a HOST splitting its own base schema into
-bands.
-
-It is **required and nullable**, not optional: `null` says "these are ordinary
-fields of the host's own schema" (one `Starred` boolean on the pages sidebar,
-`Category` on tasks) and is a real answer, distinct from an arm that merely
-forgot — which, defaulted, would file its columns under the host's own name with
-nothing to catch it.
-
-Three rules fall out of it, all in one place each:
-
-- **Headings appear only when there is something to tell apart.** `FieldSections`
-  (`web/internal/field-sections.tsx`) is the one component every surface draws its
-  field list through; with a single section it draws no heading at all, so a
-  plain one-plugin schema keeps the flat list it always had. The heading is
-  `ControlPanel.Subhead` — the panel vocabulary's own member, so it follows the
-  panel's label rails and typography instead of being hand-rolled here; carrying
-  no rail class of its own is what also makes it right in the one surface with no
-  panel around it (`field-picker.tsx`'s bare `InlinePopover`), where it lands on
-  that region's own content edge.
-- **The typeahead matches the band's name too** (`fieldSearchText`), so typing
-  "deploy" in the filter picker offers the deploy arm's eight columns whatever
-  they are individually called.
-- **The band order IS the body order.** `orderFieldsBySection` (core) is applied
-  by both `resolveBodyFields` and the Properties controller's item list, and
-  Properties draws one `SortableList` per band — so a drag reorders within its
-  own source, and a column can never sit between two bands in the table while
-  the list that ordered it shows it inside one. The cost is deliberate: columns
-  from two sources cannot be interleaved.
+- **A contributor never authors it per field**: declared once on the registration
+  (or client-fields declaration) and **stamped** by the fold (`sectioned()` in
+  `field-extensions.tsx`). Hand `FieldDef.section` is for a host splitting its own
+  schema.
+- **Required and nullable**: `null` = "ordinary host fields", distinct from forgetting.
+- **Headings only with >1 section** — `FieldSections`
+  (`web/internal/field-sections.tsx`), using `ControlPanel.Subhead`.
+- **The typeahead matches the band's name** (`fieldSearchText`).
+- **Band order IS body order** — `orderFieldsBySection` (core) in both
+  `resolveBodyFields` and Properties (one `SortableList` per band); columns from two
+  sources cannot interleave.
 
 ## Collection-consumer separation
 
-Consumers import **only** `DataView` + the core types from this umbrella and select
-views by **type** id (`views={["gallery", "table"]}` — `DataViewContribution.type`
-ids, not instance ids). They **never** import a view child. Adding a view type is a
-new child plugin with zero consumer changes.
+Consumers import **only** `DataView` + core types and pick views by **type** id
+(`views={["gallery", "table"]}`); they **never** import a view child. A new view type
+is a new child plugin with zero consumer changes.
 
 ## Adding a new view child
 
 1. Create `plugins/primitives/plugins/data-view/plugins/<view>/`.
-2. In its `web/index.ts`, contribute one entry to the slot:
-   `DataViewSlots.View({ type: "<view>", title, icon, order?, hierarchical?, component })`.
-   The `type` is the view-type's registry id (what consumers list in
-   `views={[…]}`).
-   The `component` is a `ComponentType<DataViewRenderProps<unknown>>` — it receives the
-   **raw** `rows`, the `fields`, `rowKey`, the view's `ViewState`, `setSort` /
-   `setFilter` bound to this view, `onRowActivate`, `searchAccessor`, `hierarchy`
-   (present only for hierarchical sources), the opaque `options`
-   (= `viewOptions[viewId]`, cast internally to the view's own typed options), and
-   `emptyState`. The view applies its own row processing (flat views call
-   `useFlatRows`). Re-cast `rows`/`fields`/`options`/`hierarchy` from `unknown` to
-   `TRow` at the component boundary (the documented cast site).
-3. Run `./equin build` — the plugin registry (`web.generated.ts`) is autogenerated
-   from the filesystem, so the new `web/index.ts` is discovered automatically (no manual
-   registration). Done — every existing `<DataView>` consumer can now opt in by id.
+2. In `web/index.ts`:
+   `DataViewSlots.View({ type: "<view>", title, icon, component, … })`.
+   - `component: ComponentType<DataViewRenderProps<unknown>>` receives **raw**
+     `rows`, `fields`, `rowKey`, `ViewState`, bound `setSort` / `setFilter`,
+     activation, `searchAccessor`, `hierarchy` (only while nesting), opaque
+     `options`, `emptyState`, … and applies its own processing (`useFlatRows`).
+   - Re-cast from `unknown` at the component boundary.
+3. Obligations:
+   - stamp `data-row-key` on rows;
+   - answer `useItemActionZones`' two flags;
+   - add a `paged-conformance.test.tsx`;
+   - render grouped sections through `GroupedSections` / `SectionBody`.
+4. `./equin build` — the registry is generated from the filesystem.
 
 ## Filtering
 
-Per-field filtering is driven by `FieldDef.type`: the Filter control's panel
-writes a `FilterGroup` tree to `state.filter`, and every view evaluates it through
-the ONE filter language (`network/live/plugins/filter`, design in
-`research/2026-09-25-global-unified-filter-language.md`):
+`FieldDef.type` drives filtering: the Filter panel writes a `FilterGroup` to
+`state.filter`, evaluated through the ONE filter language (`network/live/plugins/filter`):
 
-- **Operators lower, they do not predicate.** Each field type's
-  `FilterOperatorSet` (resolved via `useResolveOperatorSet`, honouring `extends`)
-  declares its language `domain` (`text` / `number` / `boolean` / `instant` /
-  `stringArray`), and each `FilterOperator.lower(operand, { column, now })`
-  returns the rule as a language `Filter` over `column` (the field id) — or
-  `undefined` for an INCOMPLETE rule (empty operand, open range). That one answer
-  is both the evaluator's no-op gate and the chip counter's `isRuleActive`, so the
-  two cannot disagree. Negative operators lower to the language's complement ops
-  (`ne`, `notIn`, `neCi`, `notContains`, `hasNone`, `isNotEmpty`), so they KEEP a
-  row with no value.
-- **`lowerFilterGroup(group, fields, resolveOperatorSet, now)`** walks the tree:
-  a dangling or incomplete rule is TRUE (dropped from an `and`; it makes an `or`
-  TRUE), an empty group is TRUE, a one-child group is its child. It returns
-  `{ filter, readsClock, unavailable }`; `readsClock` is recorded generically
-  (`ctx.now` is a getter), so a relative date anchor ("Today", "within the past
-  week") marks the filter clock-dependent without data-view naming the date
-  type. Relative time is lowered HERE, on the client, to absolute ISO instants
-  — the language has no clock.
-- **A dangling rule is reported, never silently dropped.** `unavailable` lists
-  every rule whose field or operator does not resolve (by node id), and
-  `useRowFilter` returns a `RowFilter` union — `all` / `match` / `unavailable`
-  — so no caller can mistake "a filter I could not run" for "no filter". The
-  body (`resolveBodyState`) refuses to render the view while the filter (in
-  memory) or the fold IN EFFECT (both paths — a fold always runs over the
-  loaded rows) names one: loading while the deferred plugin tier is still
-  loading (the contributor may not have registered the field YET — measured on
-  the Pages sidebar, whose Favorites listed every page before `starred`
-  registered), then the `rule-error` arm — the rule named, with **Remove**,
-  which prunes it from its tree (`pruneRules`; nothing left → the filter /
-  fold is cleared) and saves the view. A live source's own
-  `UnavailableFilterRuleError` / `UnavailableSortRuleError` is the same arm, so
-  a stale saved view (a deleted custom column, a renamed field id) gets the same
-  way out on either path. A `hideWhenEmpty` section shows the error (only
-  `loading` and an empty `view` hide it). Inside the body, views read the
-  predicate through `bodyRowMatcher` (unavailable ⇒ no predicate, safe only
-  because the body never renders them then); a caller outside the body reads
-  `useRowFilter` and handles `unavailable` (the Places tag sidebar draws no
-  counts).
-- **In memory** (`applyFilter`, `useRowFilter`): lower once, then
-  `matchesFilter` per row over a record of just the columns the filter reads. The
-  row value is `projectFieldValue` coerced to the set's domain by ONE adapter,
-  `coerceToDomain` (text: arrays join with " ", `Date` → ISO, else `String`;
-  number: finite or NULL; boolean: truthiness; instant: `Date` / epoch ms /
-  parseable string → `Date`, else NULL; stringArray: the array or NULL) — the
-  language itself stays strict.
-- **Day rollover**: `useRowFilter` lowers against `useFilterClock(readsClock)` —
-  local midnight, re-armed with one timer at the next local midnight ONLY while
-  the filter reads the clock (the same day clock as `useGroupingClock`).
+- **Operators lower, they do not predicate.**
+  - A type's `FilterOperatorSet` (`useResolveOperatorSet`, honouring `extends`)
+    declares a `domain` (`text` / `number` / `boolean` / `instant` /
+    `stringArray`).
+  - `FilterOperator.lower(operand, { column, now })` returns a language `Filter`,
+    or `undefined` for an INCOMPLETE rule — the one answer both the evaluator and
+    `isRuleActive` read.
+  - Negative operators lower to complement ops, so they KEEP rows with no value.
+- **`lowerFilterGroup(group, fields, resolveOperatorSet, now)`**: dangling/incomplete
+  rules and empty groups are TRUE. Returns `{ filter, readsClock, unavailable }`;
+  relative time is lowered here to ISO instants (the language has no clock).
+- **A dangling rule is reported, never silently dropped.** `useRowFilter` returns
+  `all` | `match` | `unavailable`.
+  - The body refuses to render while the in-memory filter or the fold in effect
+    names one: loading while the deferred plugin tier loads (the contributor may
+    not have registered yet), then the `rule-error` arm with **Remove**
+    (`pruneRules`).
+  - A live source's `UnavailableFilterRuleError` / `UnavailableSortRuleError` is
+    the same arm.
+  - Views read the predicate via `bodyRowMatcher`; callers outside the body
+    handle `unavailable`.
+- **In memory**: lower once, `matchesFilter` per row; values coerced by ONE adapter,
+  `coerceToDomain`.
+- **Day rollover**: `useFilterClock(readsClock)` — midnight timer only while the
+  filter reads the clock.
 
-Flat views apply it inside `useFlatRows` (search → filter → sort); the nested table
-applies it subtree-preserving before handing rows to the tree primitive; the fold
-rule's `keep` tree goes through the same `useRowFilter`. Filter semantics are
-therefore identical across all views.
+The nested table applies it subtree-preserving; the fold's `keep` uses the same
+`useRowFilter`.
 
 ### A source's filter: nothing falls back to the client
 
-A live `source` (below) runs filter / sort / search / paging on the server, so
-the host must never offer a filter the server cannot run, nor drop one on the
-way. `web/internal/live-filter.ts` holds the lowering every such source shares:
+`web/internal/live-filter.ts`:
 
-- **A SAVED rule the source cannot run** — its field's column not filterable or
-  gone, its operator gone — is refused (`UnavailableFilterRuleError`; a sort
-  rule likewise, `UnavailableSortRuleError`) and the surface says which rule,
-  instead of silently running the rest of the filter and showing rows the view
-  claims to hide. (An incomplete rule is not an error: it constrains nothing,
-  as authored.)
-- **`useViewFilter`** lowers the view's `FilterGroup` over field ids against
-  `useFilterClock` (armed only while a rule reads the clock, so "Today"
-  re-queries at local midnight); **`lowerSearch`** lowers the search box to
-  `or(contains(col, q) …)` over the source's `searchable` text columns.
-- **A tree over the language's bounds** (depth 4, 50 clauses, 100 list values)
-  is refused: `canonicalizeFilter` throws `FilterError`, the query is not read,
-  and the surface renders the error in place of the view — never a
-  silently-trimmed filter.
+- **A saved rule the source cannot run** (column not filterable / gone, operator
+  gone) is refused (`UnavailableFilterRuleError`, sort likewise) — never silently
+  run partially. Incomplete rules are not errors.
+- **`useViewFilter`** lowers the view's group against `useFilterClock`;
+  **`lowerSearch`** → `or(contains(col, q) …)` over `searchable` columns.
+- **Over the language's bounds** (depth 4, 50 clauses, 100 list values):
+  `canonicalizeFilter` throws `FilterError` → error in place of the view, never
+  trimmed.
 
-Operator-set tests pin a lowering by its effect on values with
-`lowersToMatch(op, domain, operand, value, now?)` from
-`@plugins/primitives/plugins/data-view/web/testing` — the evaluator's exact path
-for one rule.
+Test an operator lowering with `lowersToMatch(op, domain, operand, value, now?)` from
+`@plugins/primitives/plugins/data-view/web/testing`.
 
-**Filter presets** are the twin of the sort presets: a named, reusable
-`FilterGroup` saved in the sibling `filterPresets` key of the same per-surface
-config doc (via the `presetsExtraFields` seam injected into the views descriptor —
-view-core never names it). The filter panel hosts the saved presets in its top
-section (apply = write the preset's group verbatim into the live filter) plus a
-`Save as preset` footer row, exactly like sort. Both are drawn by the shared
-`web/components/presets/` pieces. Deleting is the row's own hover-revealed trash
-(`ControlPanel.Row`'s `actions` slot, which makes the click target a sibling of
-the button rather than its ancestor); because a lost filter tree cannot be
-reconstructed, the delete raises a toast whose Undo restores the preset at its
-original index. Hook:
-`useFilterPresets(storageKey)`; readers `readFilterPresets` /
-`filterPresetMatchesGroup` live next to the sort readers. A preset's group is
-stored opaquely as a `jsonField<FilterGroup>` (validated whole through
-`FilterGroupSchema` on read), git-promotable like every config row.
+**Filter presets** twin sort presets: named `FilterGroup`s in the `filterPresets`
+key of the same config doc (via the `presetsExtraFields` seam).
+
+- Drawn by `web/components/presets/`; delete raises an Undo toast.
+- Hook `useFilterPresets(storageKey)`; readers `readFilterPresets` /
+  `filterPresetMatchesGroup`.
 
 ### Live sources (`source`): a `network/live` collection as live key-range pages
 
-A DataView's rows come from exactly ONE origin — `DataViewProps` is a union, so a
-stand-in (`rows={[]}` beside a server origin) cannot be spelled:
+`DataViewProps` is a union — exactly ONE origin (no `rows={[]}` stand-in):
 
 - `{ rows; readiness?; rowKey; fields | collection }` — in memory;
-- `{ source }` — a live collection (`liveDataSource`, web; its types are
-  core's), read as
-  `network/live`'s key-range pages (`useLive`), kept live by the rows on
-  screen (*Paging* above). It refuses `rowKey` (the
-  row key is the collection's `id`, the one the runtime keys its deltas by),
-  `hierarchy` (a hierarchy over a paged set orphans children), `manualOrder` (a rank
-  would reorder server-sorted pages) and `searchAccessor` (search is the
-  source's `searchable`); the contributed `RowOrder` stays off too.
-  `DataViewSourceBundle` is a DISTRIBUTIVE `Omit`, so the `DataViewSwitcher` path
-  keeps the union (pinned by `web/internal/body-types.test.ts`).
+- `{ source }` — `liveDataSource` (web), read as `useLive` key-range pages. Refuses
+  `rowKey` (key = collection `id`), `hierarchy`, `manualOrder`, `searchAccessor`
+  (search is `searchable`); `RowOrder` stays off. `DataViewSourceBundle` is a
+  DISTRIBUTIVE `Omit` (pinned by `web/internal/body-types.test.ts`).
 
-```ts
-// web — once, next to the list (any collection with a window)
-export const threadsSource = liveDataSource(mailThreads, { searchable: ["subject", "snippet"] });
-// web
-<DataView<MailThread> storageKey={…} fields={fields} views={["list"]}
-                      source={threadsSource.scoped({ where: { accountId } })} … />
-{ id: "labels", column: mailThreads.column("labelIds"), values: (t) => t.labelIds, … }
+```tsx
+export const threadsSource = liveDataSource(mailThreads, {
+  searchable: ["subject", "snippet"],
+});
+
+const fields = [
+  // a field mapped onto a column
+  {
+    id: "labels",
+    column: mailThreads.column("labelIds"),
+    values: (t) => t.labelIds,
+    …
+  },
+  …
+];
+
+<DataView<MailThread>
+  storageKey={…}
+  fields={fields}
+  views={["list"]}
+  source={threadsSource.scoped({ where: { accountId } })}
+  …
+/>;
 ```
 
-- **`scoped({ where })`** ANDs a base filter into every tuple, before the view's
-  own; its columns must be filterable (the codec checks). While the scope's
-  VALUE is still loading (mail's account, a composition's name), mount the
-  DataView anyway over `source.awaitingScope([columns])`: it reads nothing and
-  shows the list's own loading state with its toolbar already up — one loading
-  state, not a bare skeleton the toolbar then pushes down. The Filter control
-  never offers a field over a column the scope constrains (`resolveLiveFields`
-  leaves it out of `filterFields` — it still sorts), so the user can neither
-  name nor widen the scope: a rule over it could only restate it or contradict
-  it into an empty list.
-- **Facets** (`liveDataSource(c, { searchable, facets: ["kind", "source"] })`):
-  declared `text` columns whose option list is READ, not declared. For each,
-  `CollectFacetOptions` (`web/internal/facet-options.tsx`, inside
-  `CollectBodyFields`) reads `useLive(c, { groupBy, where: scope, limit:
-  groups maxLimit })` and hands the field over that column
-  `optionsResult: FieldOptionsResult` — `ResourceReadiness`'s loading / error
-  arms, or `{ status: "ready", options }`. `FieldDef` takes `options` XOR
-  `optionsResult` (a type union). The filter input renders loading, or the
-  failure with Retry — never an empty grid. Options are value-sorted (never the
-  grouping's count order) and keep their identity across a count change; a
-  grouping full at its max is refused (`refuseResource`) as the error arm —
-  never a silently truncated option set. A field over a facet that declares
-  `options`, or a facet no field reads, throws at mount; an awaited scope reads
-  nothing (the facets stay loading). The reads are sibling components reporting
-  up, so a scope arriving under a mounted body does not remount it.
-- **`FieldDef.column`** maps a field onto a collection column when its id is not
-  that column's name — minted only by `collection.column(name)` or a
-  contributed-column handle's `.column(field)`, carrying its collection's key.
-  Field ids stay the persisted vocabulary. A field without one lowers under its
-  own id; a field bound to no column (a derived value) is display-only. A SCOPED
-  column's ref (`scopedLiveColumns(...).column(member)` — a surface's custom
-  column) names a scope instead of a collection, and resolves only on a source
-  whose collection's `columnScope` is that scope.
-- **A collection with a `columnScope` is listed on that one surface**: the host
-  asserts at mount that it IS the DataView's `storageKey`
-  (`liveColumnScopeOf`), and hands it to every field extension as
-  `FieldExtensionProps.liveColumnScope` (`null` on any other origin) — the
-  custom-columns contributor binds its fields under it, so a custom column sorts
-  and filters on the server like any column.
-- **Checked where declared** (`web/internal/live-fields.ts`): a field bound to a
-  column must resolve — marked `sortable: true` over a column that does not sort
-  throws, a filterable one whose operator set lowers over another domain than its
-  column throws, a ref naming another collection throws. The host's own fields
-  are checked in `DataViewBody`; a `FieldExtension` contributor's inside its own
-  `render(fields)`, so its item boundary contains the crash and the error names
-  it. A `column` on an in-memory DataView throws (it would be ignored).
-- **Lowering** (`web/internal/live-source.ts`, `useLiveSource`): the Filter
-  control offers only fields whose column is filterable, the Sort control only
-  those whose column sorts. The view's `FilterGroup` lowers over field ids
-  (`useViewFilter`, relative dates on the day clock), then each clause's field
-  id is renamed to its column, ANDed after the source's scope with the search box
-  (debounced 200 ms, `or(contains …)` over `searchable`), and canonicalized; a
-  tree over the language's bounds is the error arm. Sort rules map to columns (an
-  empty sort takes the collection default); a duplicate column is dropped. A
-  query naming a custom (scoped) column hands the codec that set's handle.
-- **A saved rule that does not resolve** is PENDING while the deferred plugin
-  tier is still loading (a contributor may not have registered its field yet —
-  the skeleton), and the error arm once it settled
-  (`UnavailableSortRuleError` / `UnavailableFilterRuleError`).
-- **Group-by** lowers per `liveGroupLowering` (`web/internal/live-fields.ts`)
-  — the ONE answer the Group-by control (what it offers, through
-  `DataViewControlsContextValue.offersGrouping` / `groupableField`) and the
-  source (what it reads) both take:
-  - **Server sections** — a `oneBucketPerValue` grouping (identity, enum, bool;
-    never a date bucket) over a **groupable** column: the collection's OWN
-    filterable text / number / boolean column, or an EXPOSED one
-    (`LiveFieldPlan.groupColumns`; what live's `checkGroupBy` accepts — a
-    custom (scoped) column never is). The
-    origin is `SourceView` `kind: "sectioned"` (`useLiveSource` →
-    `useSectionedReads`): ONE `useLive(c, { groupBy, where, limit: LIST_MAX })`
-    over the SAME lowered `scope ∧ filter ∧ search` the rows use lists every
-    section with its exact, live count (`serverSections`,
-    `web/internal/live-sections.tsx`: each group's bucket from the type's own
-    `grouping.plan`, ordered by bucket ordinal × `groupOrder` — never the
-    server's count order — with NULL, and for text a blank value, merged into
-    the one "None", last). Each section reads its own rows — a `SectionRead`
-    paged read over `where ∧ eq(col, value)` (`isEmpty` for None), in the view's
-    sort with no group prefix — only while it is **active**: its footer asked
-    for its first page (it is expanded and came into view) and it is not
-    collapsed; the latch resets when the query (minus search) does. Thirty
-    groups below the fold read nothing. The reads are sibling components the
-    body mounts (`readers`, the `FacetRead` pattern), so a section opening or
-    closing never remounts the body. A search-only change keeps the last
-    ready groups until the new read settles. Full at `LIST_MAX` groups, the
-    body footer says so ("the smallest groups are not listed"); a filter or
-    search naming a custom (scoped) column is the error arm
-    (`UngroupableFilterError` — a `GROUP BY` cannot count it).
-  - **Order prefix** — a `oneBucketPerValue` grouping over a column that only
-    SORTS: it is prepended to the order and its sections follow first
-    appearance (`sectioning: { kind: "appearance" }`).
-  - **Buckets** — any other grouping over a sortable column: partitioned from
-    the loaded rows, in bucket order.
-  - Over neither (a derived value) the grouping is **not offered**: its
-    sections could only say what happens to be loaded.
+- **`scoped({ where })`** ANDs a base filter (filterable columns). While the scope
+  value loads, mount over `source.awaitingScope([columns])` (one loading state,
+  toolbar up). The Filter control never offers a scoped column (`resolveLiveFields`).
+- **Facets** (`facets: ["kind", …]`): text columns whose options are READ
+  (`CollectFacetOptions`, `web/internal/facet-options.tsx`) →
+  `optionsResult: FieldOptionsResult`.
+  - `FieldDef` takes `options` XOR `optionsResult`.
+  - Value-sorted; a full grouping is the error arm (never truncated).
+  - A facet field declaring `options`, or an unread facet, throws.
+- **`FieldDef.column`** maps a field onto a column (minted only by
+  `collection.column(name)` or a contributed handle's `.column(field)`).
+  - Field ids stay the persisted vocabulary; no column ⇒ lowers under its id;
+    derived ⇒ display-only.
+  - Scoped refs (`scopedLiveColumns(...).column(member)`) resolve only on a
+    collection whose `columnScope` matches.
+- **A `columnScope` collection is listed on that one surface** (asserted equal to
+  `storageKey`); passed to extensions as `FieldExtensionProps.liveColumnScope`.
+- **Checked where declared** (`web/internal/live-fields.ts`): `sortable` over a
+  non-sorting column, a domain mismatch, a foreign ref all throw (extensions inside
+  their own `render`). A `column` on an in-memory DataView throws.
+- **Lowering** (`web/internal/live-source.ts`, `useLiveSource`): Filter / Sort offer
+  only filterable / sortable columns; filter → columns, ANDed with scope and search
+  (debounced 200 ms), canonicalized. Empty sort → collection default.
+- **Unresolved saved rule**: pending while the deferred tier loads, then the error arm.
+- **Group-by** per `liveGroupLowering` (`web/internal/live-fields.ts`), the ONE answer
+  for both the control (`offersGrouping` / `groupableField`) and the source:
+  - **Server sections** — a `oneBucketPerValue` grouping over a groupable (own
+    filterable text/number/boolean, or exposed) column:
+    `SourceView kind: "sectioned"`.
+    - One `useLive(c, { groupBy, … })` lists sections with exact live counts
+      (`serverSections`, `web/internal/live-sections.tsx`; ordered by bucket
+      ordinal, NULL/blank merged into "None").
+    - Each section's rows are a `SectionRead` over `where ∧ eq(col, value)`, read
+      only while **active** (expanded and its footer in view).
+    - Readers are sibling components (no body remount).
+    - Full at `LIST_MAX` → footer notice; a filter on a scoped column →
+      `UngroupableFilterError`.
+  - **Order prefix** — over a sort-only column: prepended to the order,
+    `sectioning: { kind: "appearance" }`.
+  - **Buckets** — other groupings over a sortable column: partitioned from loaded
+    rows.
+  - Over neither: **not offered**. Contract: a field's `value` IS its column's value.
+- **Declared sections reach views as data**: `DataViewRenderProps.sectioning` =
+  `{ kind: "bucket" | "appearance" }` | `{ kind: "declared", sections }`; hand it to
+  `useDataViewSections` untouched. `DataViewSection.paging` carries the section's
+  paging; `SectionBody` ends in its footer (`SectionPagingFooter`).
+- **Section counts are a type** (`SectionCount`: `exact` | `atLeast`,
+  `formatSectionCount`: `n` / `n+`).
+- **States**:
+  - skeleton while the head page (or a pending rule) loads;
+  - empty once settled;
+  - unavailable rule / over-bounds filter in place of the view;
+  - a failed head as `SourceView.readError` (same `error` arm as `readiness`);
+  - a paging-blocking failure in the footer (`LivePageError.blocksPaging`);
+  - other page errors as one notice above the rows.
 
-  This rests on the contract every live lowering does (`FieldDef.column`): a
-  field's `value` IS its column's value — a field showing a derived value is
-  offered for none of sort, filter and group-by.
-- **Declared sections reach the views as data.** `DataViewRenderProps.sectioning`
-  is `{ kind: "bucket" | "appearance" }` (partition the rows) or
-  `{ kind: "declared", sections }` (`DataViewDeclaredSection`: key, label,
-  exact count, the section read's rows, its `paging`); a view hands it to
-  `useDataViewSections` untouched. `partitionIntoSections` then emits every
-  declared section — an empty one too — with the server's count, and
-  `DataViewSection.paging` (`DataViewSectionPaging`) carries the section's own
-  paging. `SectionBody` ends in it (`SectionPagingFooter`: the same
-  `useInfiniteScroll` + `InfiniteScrollFooter` the body footer is made of),
-  so rendering a section body IS rendering its footer — list, gallery and
-  icons through `GroupedSections`, the table in `DataTableGroup.footer`. The
-  fold holds a section's paging while its loaded tail is folded (rule 6, per
-  section); an aggregate over a section still paging is a lower bound. The
-  body-level tail hold does not apply (there is no single tail); the body
-  footer shows only the groups read.
-- **Section counts are a type** (`SectionCount`: `exact` | `atLeast`), printed by
-  one formatter (`formatSectionCount`: `n` / `n+`) and derived from loaded rows
-  only: exact when every row is loaded (`DataViewRenderProps.rowsComplete` —
-  always in memory; a live origin once read to its end), or — sections in row order — when a later section has started.
-  A declared section's count is the server's, exact.
-- **States.** The skeleton while the head page (or a pending rule) is pending;
-  the empty state once the head settled with no row; an unavailable rule
-  (or a filter over the bounds) in place of the view, as its message; a head
-  read that failed with nothing to show as `SourceView.readError` — the same
-  `error` arm a `readiness` read fails with (`resolveBodyState` → `errorState`,
-  else `ResourceErrorInline`: Retry, or Reload for an out-of-date tab), so a
-  live list fails exactly as a resource-backed one does; a failure paging stopped on
-  (`LivePageError.blocksPaging` — the last page's, or one holding the read short
-  of its end) in the footer (its own Retry — `useInfiniteScroll`'s `retry`,
-  never the next page); any other page's error as one notice above the rows
-  ("Rows after ‹row› could not refresh — Retry"), keyed by the failing read. A
-  search-only change keeps the previous rows until the new head settles; any
-  other query change starts over — and its loading state holds at least the
-  room the previous rows took (`useHeldHeight`), so a view switch or filter
-  change never shrinks the page under a reader scrolled down (the scroller
-  would clamp them up). A read that cannot page past its last page
-  says so in the footer (`InfiniteScrollFooter`'s `truncated`), in the user's
-  words per `PagesTruncation` kind (`TRUNCATION_HINT`: an over-long sort key);
-  the plan's own wording goes to the `live-pages` log. A page scrolled far away
-  keeps its rows, stale, until it is in view again.
-- **Column headers sort only what the source sorts.** `DataViewRenderProps.sortHeader`
-  carries the Sort control's sortable field ids and the ACTIVE sort (for the
-  arrow — `state.sort` is emptied under a server-ordered origin); the table
-  offers header sort on those fields only, and the host's `setSort` throws for
-  any other, so a click can never persist a rule the source refuses.
+  Search-only changes keep previous rows; other query changes start over with
+  `useHeldHeight`. Truncation → footer (`TRUNCATION_HINT`).
+- **Column headers sort only what the source sorts** (`DataViewRenderProps.sortHeader`;
+  the host's `setSort` throws otherwise).
 
 ### Typed fields are the generic extension point
 
-To make a data-view filterable on a new dimension, **add a typed `FieldDef`** —
-do **not** bolt a bespoke toggle chip onto the toolbar. A field whose `type`
-resolves a `FilterOperatorSet` (`bool`, `enum`, `number`, `date`, `tags`, `text` —
-all already registered; each declares its filter-language `domain`) automatically appears in the "Filter" pill; `enum` fields
-read their choices from `FieldDef.options`. This is also the generic substrate for
-future configurability (saved filters, sort, grouping): they operate on the same
-field schema, so a new typed field unlocks all of them at once with zero chrome code.
+To filter on a new dimension, **add a typed `FieldDef`** — never a bespoke toolbar
+chip. Any type with a `FilterOperatorSet` (`bool`, `enum`, `number`, `date`, `tags`,
+`text`) appears in Filter; `enum` reads `FieldDef.options`.
 
-The **nested table** honors both **filter** (subtree-preserving) and **sort**. It
-**defaults to manual (rank) order** — an empty `ViewState.sort` keeps rows in
-rank order (the DnD-reorderable order) — and when a field sort is picked it
-reorders each **sibling group** by that field (a stable global sort of the flat
-row list, which `buildTree` re-groups per parent), suspending DnD reorder while
-active. The `supportsSort: false` `DataViewContribution` flag (a data-view flag,
-*not* a generic `ViewTypeMeta` key — view-core never knows about sort) exists for a
-view type with no meaningful field-sort axis: the Sort control's `isApplicable`
-then drops it while the Filter control stays. Flag omitted = honors sort.
+- The nested table honours filter (subtree-preserving) and sort (per sibling
+  group, suspending DnD; empty sort = rank order).
+- `supportsSort: false` on a `DataViewContribution` (a data-view flag, not
+  view-core's) hides Sort for a view type with no sort axis.
 
-Body rendering is **show-all by default**, governed per view-instance by
-`properties` (below) and *not* tied to `primary` — so a field is visible in the
-body **and** usable in the filter builder unless a surface explicitly hides it. To
-keep a field **filter-only**, author a `properties` list on that view that does
-not show it (and set
-`filterable: false` to also keep it out of the full-text search accessor) — as the
-settings config nav does (`properties: [{ "id": "label" }, …]` in
-`config/config_v2/settings/config_v2.settings.nav.jsonc`, keeping its `modified` /
-`conflict` / `source` fields as pure filter dimensions), and as the studio explorer
-does with `properties: [{ "id": "name" }]`.
+Body rendering is **show-all by default** (`properties`, not `primary`). For a
+**filter-only** field, set `visible: false` (or author a `properties` list), plus
+`filterable: false` to keep it out of search — e.g.
+`config/config_v2/settings/config_v2.settings.nav.jsonc`.
 
 ## Per-view visible fields (Properties)
 
-Which fields a view renders in its **body**, and in what order, is a per-view-instance
-dimension — the visible-fields twin of `sort` / `filter`, stored in the **same `view`
-blob** as `properties?: PropertyEntry[] | null`, each entry `{ id, hidden?: true }`:
+Body fields and order are per view: `properties?: PropertyEntry[] | null` in the
+`view` blob, entries `{ id, hidden?: true }`.
 
-- **`null` / absent (the default)** → the **schema's own default body set**: every
-  field in schema order except those declaring `FieldDef.visible: false` (below).
-  Newly added fields (including a freshly added custom column) auto-appear with zero
-  user action.
-- **explicit list** → the field order, each entry shown unless `hidden: true`.
-  Order is meaningful — it is the body order (table columns, gallery/list property
-  rows, nested-table secondary cells). A hidden entry **keeps its place**, so
-  hiding then showing a field returns it where it was. A schema field the list
-  does not name is **hidden, at the end of its band** — like Notion, once a view is
-  customized a later-added field arrives hidden until switched on. Nothing flags
-  it for review: the field catalog is code, not config, so adding a field moves no
-  config hash, and arriving hidden changes nothing the view shows.
-
-The first edit writes **every** field (hidden ones with `hidden: true`), so from
-then on each has a stored position. Saved views from before this shape
-(`visibleFields: string[]`, the visible ids only) are rewritten by the
-`visible-fields-to-properties` config migration (`shared/view-migrations.ts`) —
-`["a", "b"]` → `[{ "id": "a" }, { "id": "b" }]` in the same key slot, lossless
-because an unnamed field reads as hidden either way.
+- **`null` / absent** → every field in schema order except `FieldDef.visible: false`;
+  new fields auto-appear.
+- **explicit list** → body order; `hidden` entries keep their place; a schema field
+  the list doesn't name is **hidden, at the end of its band** (Notion parity). The
+  first edit writes every field. Legacy `visibleFields: string[]` migrates via
+  `visible-fields-to-properties` (`shared/view-migrations.ts`).
 
 ### `FieldDef.visible` — a field can be a dimension without being printed
 
-`visible?: boolean` (default `true`) is the **schema's** half of the same
-question: `false` means the field feeds sort / filter / group-by / search only
-and is not in the default body set — the user can still switch it on from
-Properties. It is what a surface reaches for instead of authoring a
-`properties` list purely to hide one field.
+`visible: false` = feeds sort/filter/group/search, not in the default body;
+switchable in Properties.
 
-**Two places hardcoded "show everything", and both read it** — this is the part
-that is easy to half-do:
+**Both "show everything" branches must read it**:
 
-- `web/internal/resolve-body-fields.ts` — the unconfigured branch filters
-  `f.visible !== false`. Without this the flag does nothing at all.
-- `web/internal/use-properties-controller.ts` — the unconfigured branch seeds
-  each item's visibility from `field.visible !== false` rather than a literal
-  `true`. Without *this* the field renders **shown** in the Properties list
-  while the body leaves it out, and the first click on it visibly does nothing.
+- `web/internal/resolve-body-fields.ts` (unconfigured branch filters
+  `f.visible !== false`);
+- `web/internal/use-properties-controller.ts` (seeds visibility from it — else
+  Properties shows it on while the body hides it).
 
-Sort / filter / search are unaffected by construction, not by care: every view
-runs `useDataViewSections` over the full `props.fields` and calls
-`resolveBodyFields` afterwards, on a separate value.
+It is a **default, not enforcement**: under an explicit list it reads hidden;
+"Show all fields" resets to `null`.
 
-**The one semantic to accept.** In a view whose config already holds an explicit
-`properties` list, a `visible: false` field the list does not name reads as hidden
-— indistinguishable from "a field the user never switched on". That is the
-intended Notion-parity behaviour, and it means `visible` is a **default, not an
-enforcement**. For the same reason "Show all fields" resets to `null`, i.e. back
-to the schema default — a `visible: false` field returns to hidden rather than
-appearing.
+`properties` governs **body rendering only** — filter/sort/search use the full
+schema (views run `useDataViewSections` on full `fields`, then
+`resolveBodyFields(fields, properties)`). The title is `pickPrimaryField` over the
+**visible** subset.
 
-Custom columns need nothing: they are folded into `props.fields` before any view
-calls `resolveBodyFields`, and an absent `visible` reads as `true`.
+UI: **"Properties"** in View settings (`MdTune`) "Current view" — a `view`-scope
+`Setting` (`PropertiesControl`):
 
-`properties` governs **body rendering only**. Filter, sort, and search always
-operate on the **full** `FieldDef[]` schema — a hidden field stays filterable and
-sortable. The shared `resolveBodyFields(fields, properties)` helper maps the blob
-to the ordered visible subset each view renders; the primary/title slot in
-gallery/list/nested table is then `pickPrimaryField` over that **visible** subset (so a hidden
-title falls back to the next visible text field).
-
-Users edit this from the **View settings** control (`MdTune`) — the
-**"Properties"** entry in its "Current view" section, a `view`-scope `DataViewSlots.Setting` contribution
-(`PropertiesControl`) sitting alongside "Group by": a sortable list of every field,
-each row toggling it (an eye on the right — `visibility` / `visibility-off`; a hidden
-row stays in place, dimmed), plus a "Show all fields" reset (back to `null`). The setting
-gates itself to surfaces with more than one field (via the contribution's
-`isApplicable`, which the menu reads generically — it never names Properties). Writes
-go to the view's config row exactly like sort/filter (`updateView(id, { properties }, { merge: true })`),
-so the choice is durable and git-promotable. Surfaces wanting a deliberately narrow
-body author `properties` directly in their committed `.jsonc` — see the
-config-nav example under "Filtering".
+- sortable rows with an eye toggle, "Show all fields";
+- applicable with >1 field;
+- writes `updateView(id, { properties }, { merge: true })`.
 
 ### The card partition
 
-A card (gallery card, list row meta) draws the visible fields as three fixed
-lines, partitioned by ONE helper, `partitionCardFields(visibleFields)` (web
-barrel): `title` (`pickPrimaryField`), `leading` (`FieldDef.leading`),
-`indicators` (`FieldDef.indicator: true` — row-state marks on the title line),
-`subtitle` (fields of type `text`, joined with "·") and `tokens` (the rest,
-icon + value — `FieldDef.icon`, else the field type's identity icon). The cover
-field (`FieldDef.cover`, else the first `media` field) is the picture, in no
-line. `<CardMeta>` draws them: a line exists whenever the VIEW has fields for it,
-so every card is the same height; an empty value (`isFieldValueEmpty`) is
-omitted, never drawn as "Empty". The cover comes from `resolveCover(fields,
-DataViewProps.cover)` — accessor → `FieldDef.cover` → first `media` field —
-drawn by `<CoverFrame size="card" | "thumb">` (a coverless row on a covered
-surface gets a blank tinted frame). A gallery card with no cover of its own
-shows its `leading` field in the frame, else a **monogram** of its title (the
-title field's string `value`: its first letter on the `Avatar` tile, tinted by
-the title's auto-colour, at the frame's bottom-left; `coverMonogram: hide`
-keeps the blank frame), else the blank frame. Every size, type pick and ink of
-the card text and the card cover is a `ui/tokens/data-view` token (the
-gallery's CLAUDE.md lists them); token values draw in
-`FieldCell context="token"`.
+`partitionCardFields(visibleFields)` (web barrel), the ONE partition:
+
+| Part | Fields |
+| --- | --- |
+| `title` | `pickPrimaryField` |
+| `leading` | the leading field |
+| `indicators` | `FieldDef.indicator` |
+| `subtitle` | `text` fields joined "·" |
+| `tokens` | the rest, icon + value |
+
+- **Cover**: `resolveCover(fields, DataViewProps.cover)` — accessor →
+  `FieldDef.cover` → first `media` field — drawn by
+  `<CoverFrame size="card" | "thumb">`.
+- `<CardMeta>` draws a line whenever the VIEW has fields for it (every card the
+  same height); empty values are omitted.
+- A coverless gallery card shows `leading`, else a title **monogram**
+  (`coverMonogram: hide` disables), else blank.
+- Sizes/inks are `ui/tokens/data-view` tokens (gallery CLAUDE.md).
 
 ## The rail (the inverted topology)
 
-Every horizontal band the DataView owns — toolbar, view bodies, group headers,
-table rows, loading skeletons — applies `rail-follow`
-(`padding-inline: var(--rail-start, var(--chrome-pad-x))`). Vertical rhythm stays
-on the named spacing ramp.
+Every horizontal band the DataView owns (toolbar, bodies, group headers, table rows,
+skeletons) applies `rail-follow`. **The DataView container itself never pads — its
+bands do** (making `PaneChrome` a region owner would inset full-bleed panes).
 
-**The DataView container itself never pads — its bands do.** That is the inverse
-of the rail contract's normal shape (container pads, children inherit) and it is
-deliberate: flipping it means `PaneChrome` becoming a region owner, which would
-inset every pane in the app including the deliberately full-bleed ones. The two
-consequences you must hold in mind:
-
-- A host that insets a DataView itself **opens a region** — `rail-<step>`, which
-  pads and publishes in one declaration, and so sets `--rail-owed-*` to zero: the
-  owner paid, followers owe nothing. (`detail-sections`' `Host`, `SectionCard`'s
-  body, task-detail's tasks pane.) Never `Inset` + a rail class on one box:
-  `Inset` pads without publishing, so the pair would announce a rail that
-  disagrees with the padding actually applied.
-- A host wanting a **different** rail publishes `--rail-start`/`--rail-end`
-  *without* padding — the app-shell sidebar does, at `--space-sm`, which is why a
-  sidebar DataView's chrome lands on the sidebar's pill rail. Here the follower
-  still owes the rail, and pays it.
+- A host that insets a DataView **opens a region** (`rail-<step>`, pads and publishes,
+  zeroing `--rail-owed-*`). Never `Inset` + a rail class on one box.
+- A host wanting a **different** rail publishes `--rail-start` / `--rail-end` without
+  padding (the app-shell sidebar).
 
 See `research/2026-08-17-global-inset-ownership-rail-contract-v2.md`.
 
 ## Placement: always natural-height, never owns a scroll
 
-`<DataView>` has **no placement mode** — it is **always natural-height** and
-**never owns a scroller**. The root is a plain block box (`<Stack gap="none">` =
-`flex flex-col`, *no* `min-h-0 flex-1`), so the body grows to its natural content
-height and the **enclosing pane owns exactly one scroll**, provided by
-`<PaneScroll>` (`@plugins/primitives/plugins/pane/web`). The single-scroll model
-removes the whole class of nested/severed-scroll bugs.
+`<DataView>` is always natural-height and **never owns a scroller** (root
+`<Stack gap="none">`, no `min-h-0 flex-1`); the enclosing pane owns the one scroll
+(`<PaneScroll>`, `@plugins/primitives/plugins/pane/web`). Exception: overlay
+arrangements.
 
-- **The toolbar is a `<Sticky edge="top" mask>` header.** The `<Stack gap="none">`
-  root is each DataView's own sticky **containing block**, so stacked DataViews
-  hand off automatically — when a section scrolls out its toolbar un-pins with it,
-  no `active` toggling or computed `top` offsets. The `mask` prop paints
-  `bg-chrome-mask` so rows never show through the pinned bar, following the surface
-  the DataView is embedded in (page canvas, sidebar, `<Surface>`) — and so does
-  the fade tail hanging under it (see "Toolbar arrangements"), so an embedded,
-  tinted DataView fades into its own surface.
-- **The pane provides the scroll.** `PaneChrome` routes its body through
-  `<PaneScroll>`, so a DataView rendered as `PaneChrome` children scrolls for free;
-  a non-pane host must supply its own `<PaneScroll>` (or equivalent `overflow-y`
-  scroller) around the DataView.
-- **Sideways too, for a wide table.** A grid table wider than the pane marks
-  its box `data-scrolls-x`; the pane's `Scroll` then scrolls horizontally as
-  well (still the one scroller) and moves only the table: the toolbar band and
-  any pane content beside the DataView stay put (`css/scroll`'s CLAUDE.md). The
-  DataView itself does nothing for it. A DataView in a card or a popover never
-  goes wide (`data-table`'s CLAUDE.md, "Wide tables").
+- **The toolbar is a `<Sticky edge="top" mask>`**; the root is its containing block,
+  so stacked DataViews hand off. `mask` paints `bg-chrome-mask`.
+- **`PaneChrome` provides the scroll**; a non-pane host supplies its own scroller.
+- **Wide tables** mark `data-scrolls-x`; the pane's `Scroll` scrolls sideways too,
+  moving only the table (`css/scroll`, `data-table` "Wide tables").
 
-**Dev-mode structural guards.** On mount `<DataView>` runs two loud-but-non-fatal
-checks (`console.error`, never throw — safe for overlay/SSR edges), after one
-layout frame (`use-dev-guards.ts`):
+**Dev guards** (`use-dev-guards.ts`, `console.error`, never throw):
 
-1. **Single-scroll.** Walks up for the nearest ancestor the content vertically
-   overflows; if that ancestor clips (`overflow-y ∉ {auto, scroll, overlay}`) the
-   pane forgot its `<PaneScroll>` and the view is unscrollable.
-2. **Chrome-mask match.** The sticky toolbar masks with `--chrome-mask`, which
-   must equal the actual painted background behind the DataView. Every `<Surface>`
-   (and the page canvas / sidebar / theme scope) co-publishes `--chrome-mask`
-   alongside its background, so this holds by construction for surfaces built
-   through the primitive. The guard compares the root's computed `--chrome-mask`
-   against the nearest actually-painted ancestor background — catching an **ad-hoc**
-   `bg-muted`/`bg-card` wrapper that paints a surface without co-publishing (a lint
-   can't see it: the surface is a runtime ancestor). Fix: route the wrapper through
-   `<Surface>`.
-
-The band (toolbar, filter bar, view switcher) renders unless the surface passes a
-hosted toolbar — see "Hosted toolbar: no band"; its controls then live behind
-the frame's options trigger, never nowhere.
+1. The nearest overflowing ancestor must scroll (forgot `<PaneScroll>`).
+2. The root's `--chrome-mask` must equal the painted ancestor background — fix an
+   ad-hoc `bg-muted`/`bg-card` wrapper by routing it through `<Surface>`.
 
 ## Row virtualization (`VirtualRows`)
 
-Large views window their rows through the shared `<VirtualRows>` component, which
-lives in its **own leaf primitive** (`primitives/virtual-rows`) — not the data-view
-barrel — so both `data-view/list` and `data-view/table` (and the `primitives/tree` primitive they build on) can consume it without a layering inversion. It wraps
-`@tanstack/react-virtual` with dynamic row measurement (variable heights) behind a
-small API: `items`, `estimateSize`, `getKey`, `itemClassName?`, `overscan?`,
-`scrollToIndex?` (`align: "auto"`, for host-driven selection reveal), plus a
-`children(item, index)` row renderer.
+`<VirtualRows>` lives in its own leaf primitive (`primitives/virtual-rows`) so
+list, table and `primitives/tree` share it.
 
-**It self-discovers the scroll container** — `findScrollParent` walks up to the
-nearest ancestor whose `overflow-y` is `auto`/`scroll`/`overlay` (fallback: the
-document scroller), then measures `scrollMargin` (the list's offset within that
-scroller) so windowing is correct even when a sticky toolbar / tab strip sits above
-the list. Deliberately *not* a threaded-in ref: since the DataView never owns its
-own scroll, windowing binds to the pane's single `<PaneScroll>` (or any outer
-scroller the host provides), and the sticky toolbar's height folds into the
-measured `scrollMargin` automatically.
-
-Every view windows today, each at the threshold its own row shape justifies, and
-always **within** a group section (grouping is the outer structure, windowing the
-inner one — so a section's header is always mounted and `StickyStack` can measure
-it):
+- **API**: `items`, `estimateSize`, `getKey`, `itemClassName?`, `overscan?`,
+  `scrollToIndex?`, `children(item, index)`.
+- It **self-discovers the scroll container** (`findScrollParent`) and measures
+  `scrollMargin` — not a threaded ref, since the DataView never owns its scroll.
+- Windowing is always **within** a group section (headers stay mounted).
 
 | View | Threshold | Notes |
 |---|---|---|
-| **list** | 100 entries | Composes with manual-order drag via `keepMounted` + `raisedKey`. |
-| **gallery** | 60 cards | Lane-aware: each windowed row is one measured row of `columns` cards. |
-| **icons** | 120 tiles | Lane-aware like gallery; the lane count is the probe grid's resolved track count. |
-| **table** | 100 rows (grouped: per section) | Grouped, each section past the threshold windows its own rows while every header stays mounted; grid-flow spacers rather than absolute positioning, so the subgrid's column tracks stay aligned. Nested, it windows the *visible* (expanded) lines at the same 100-row threshold, keeping the drag source and the selected row mounted, and uses `scrollToIndex` for selection reveal. |
-
-Background: `research/2026-06-18-data-view-row-virtualization.md`.
+| **list** | 100 entries | Composes with drag via `keepMounted` + `raisedKey`. |
+| **gallery** | 60 cards | Lane-aware: a windowed row is one line of `columns` cards. |
+| **icons** | 120 tiles | Lane-aware; lanes from the probe grid's track count. |
+| **table** | 100 rows (grouped: per section) | Grid-flow spacers, not absolute positioning (subgrid tracks stay aligned). Nested: windows visible lines, keeps drag source and selected row mounted, `scrollToIndex` for reveal. |
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./equin build` -->
 
