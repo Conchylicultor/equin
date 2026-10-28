@@ -41,8 +41,8 @@ const FORGED = {
   "sec-fetch-site": "cross-site",
   "sec-fetch-mode": "cors",
 };
-const INSTALL_ROUTE = "POST /api/menu-bar/install/:appId";
-const INSTALL_PATH = "/api/menu-bar/install/no-such-app-probe";
+const PIN_ROUTE = "POST /api/menu-bar/pin/:appId";
+const PIN_PATH = "/api/menu-bar/pin/no-such-app-probe";
 
 const r = report("principal: cross-site probe");
 const target = new URL(pathUrl("/"));
@@ -151,8 +151,8 @@ async function legA(): Promise<void> {
   );
 
   r.ok(
-    `F9: ${INSTALL_ROUTE} is in a route table`,
-    all.some((row) => row.route === INSTALL_ROUTE),
+    `F9: ${PIN_ROUTE} is in a route table`,
+    all.some((row) => row.route === PIN_ROUTE),
     "not listed; the F9 probe below still runs",
   );
 
@@ -181,9 +181,9 @@ async function legA(): Promise<void> {
     }
   }
 
-  const f9 = await raw("POST", INSTALL_PATH, FORGED);
+  const f9 = await raw("POST", PIN_PATH, FORGED);
   r.ok(
-    "A F9: POST /api/menu-bar/install/no-such-app-probe cross-site -> 403 cross-site-refused (not the handler's 404)",
+    "A F9: POST /api/menu-bar/pin/no-such-app-probe cross-site -> 403 cross-site-refused (not the handler's 404)",
     refused(f9),
     `got ${f9.status} ${f9.body.slice(0, 120)}`,
   );
@@ -230,10 +230,10 @@ interface Seen {
 const ATTACKER_HTML = (api: string, ws: string): string => `<!doctype html>
 <meta charset="utf-8"><title>attacker</title>
 <iframe name="sink" style="display:none"></iframe>
-<form id="f" method="POST" action="${api}${INSTALL_PATH}" target="sink"></form>
+<form id="f" method="POST" action="${api}${PIN_PATH}" target="sink"></form>
 <script>
   window.__ws = { opened: false, closed: false, errored: false };
-  fetch(${JSON.stringify(api + INSTALL_PATH)}, { method: "POST", mode: "no-cors" })
+  fetch(${JSON.stringify(api + PIN_PATH)}, { method: "POST", mode: "no-cors" })
     .catch(() => {});
   document.getElementById("f").submit();
   const s = new WebSocket(${JSON.stringify(ws)});
@@ -312,18 +312,18 @@ async function legB(): Promise<void> {
             (s) =>
               s.kind.startsWith("response") &&
               s.kind.endsWith(type) &&
-              s.url.includes(INSTALL_PATH),
+              s.url.includes(PIN_PATH),
           )
           .map((s) => s.status ?? 0);
       const fetches = statusOf("fetch");
       const forms = statusOf("document");
       r.ok(
-        "B no-cors fetch POST install -> 403",
+        "B no-cors fetch POST pin -> 403",
         fetches.length > 0 && fetches.every((s) => s === 403),
         `statuses ${JSON.stringify(fetches)}`,
       );
       r.ok(
-        "B form POST install (hidden iframe) -> 403",
+        "B form POST pin (hidden iframe) -> 403",
         forms.length > 0 && forms.every((s) => s === 403),
         `statuses ${JSON.stringify(forms)}`,
       );
