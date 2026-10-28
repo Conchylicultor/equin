@@ -24,8 +24,8 @@ import type { Guard } from "./types";
 export const GUARDS: Guard<any>[] = [
   // Bash
   // Corrective rewriters first: they replace a wrong spelling of what the agent
-  // meant with the right one (pruned `find`, `./equin run`, the merge-base), so
-  // every judging guard below judges the command that will actually run.
+  // meant with the right one (`./equin run`, the merge-base), so every judging
+  // guard below judges the command that will actually run.
   findGuard,
   bunScriptGuard,
   gitDiffMainGuard,

@@ -27068,7 +27068,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Exemptions:
             - Exempts itself from:
               - `guard-path-safety/no-adhoc-path-resolve` — `core/guards/main-edits.ts`, `core/guards/poll-loop.ts` (sanctioned)
-              - `repo-walk-safety/no-adhoc-repo-walk` — `core/guards/find.ts` (sanctioned)
               - `python/no-system-python` — `core` (sanctioned)
               - `boundaries/no-platform-api` — `core/agent-ops.ts`, `core/argv.ts`, `core/context.ts`, `core/git-target.ts`, `core/informed-once.ts`, `core/guards/git-diff-main.ts`, `core/guards/main-edits.ts`, `core/guards/poll-loop.ts`, `core/parse-shell.ts`, `core/stop-guard.ts` (debt)
           - Plugins:
@@ -27223,7 +27222,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exempted by:
                   - `framework/cli/bootstrap` (0 debt)
                   - `framework/tooling/checks` (0 debt)
-                  - `framework/tooling/guards` (0 debt)
                   - `framework/tooling/web-artifacts` (0 debt)
             - **`resize-observer-safety`** — resize-observer-safety lint rule: no-raw-resize-observer
               - Exemptions:

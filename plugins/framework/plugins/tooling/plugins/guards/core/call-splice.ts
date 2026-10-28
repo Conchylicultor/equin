@@ -122,8 +122,8 @@ export function locateCall(call: ShellCall): CallWords | null {
 
 /**
  * Applies `edit` to the first call `isOffending` selects, then the next, until
- * none is left — every offending call, not the first: `find a …; find b …`
- * must not leave `b` unbounded behind a rewritten `a`.
+ * none is left — every offending call, not the first: `bun a.ts && bun b.ts`
+ * must not leave `b` running bare behind a rewritten `a`.
  *
  * Answers the rewritten command, or `null` the moment one call cannot be
  * rewritten with certainty: its text is not found exactly once in the command,

@@ -349,9 +349,8 @@ function denialsFor(call: ToolCall, command: string): string[] {
       ctx as never,
     );
     if (verdict instanceof Promise) continue;
-    // A corrective rewrite (`find`'s prune) intercepts the call just as a
-    // denial did: both are the parser seeing the command, which is what the
-    // floors below measure.
+    // A corrective rewrite intercepts the call just as a denial does: both are
+    // the parser seeing the command, which is what the floors below measure.
     if (verdict.kind === "deny" || verdict.kind === "rewrite")
       denied.push(guard.name);
   }

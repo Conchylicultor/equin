@@ -148,7 +148,7 @@ of another.
 
 Two kinds, placed at opposite ends of the registry:
 
-- **Corrective** (`find`, `bun-script`, `git-diff-main`) — the agent typed a
+- **Corrective** (`bun-script`, `git-diff-main`) — the agent typed a
   wrong spelling of what it meant. They run FIRST, so the judging guards judge
   what will actually run. Each edits one call's own source text through
   `core/call-splice.ts` (`rewriteCalls`): word positions re-scanned from the
@@ -160,26 +160,27 @@ Two kinds, placed at opposite ends of the registry:
   `e2e-tool-use-id`) — run LAST, so the judging guards see what the agent
   typed.
 
-The corrective three were measured on 45 days of Opus 5.5 transcripts before
+The corrective ones were measured on 45 days of Opus 5.5 transcripts before
 they existed (denials → the agent's next call):
 
 - `bun-script`, 31 denials: the retry was `./equin run <same script> <same
   args>` nearly every time. Rewritten only with no bun flag before the script
   and a cwd AT the checkout root — `./equin run` cd's there, so from elsewhere
   the same words name other files.
-- `find`, 20 (plus 117 Sonnet): the retry was `rg --files <same dirs>` — a
-  listing of the repo's own files. Rewritten to prune `node_modules`, `.git`
-  and `.claude/worktrees` (a checkout without them is ~7.6k directories) when
-  every starting point lies in the agent's workspace, none IS a pruned
-  directory, and the walk is not depth-first (`-depth`/`-d`/`-delete`, where
-  `-prune` does nothing). The expression is parenthesised so `-o` and the
-  implicit `-print` keep their meaning.
 - `git-diff-main`, 68: mostly FALSE positives — `git diff X origin/main` and
   `git diff HEAD origin/main` are deliberate, and were re-run unchanged. Only
   the one-revision form (`git diff [opts] main [-- paths]`) is rewritten, to
   the merge-base resolved to a sha by the guard (a `$(git merge-base …)` that
   failed would expand to nothing and diff against the index); `refs/heads/main`
   is the spelling that means the tip on purpose.
+
+`find` was audited too (20 Opus denials, 117 Sonnet; the retry was `rg --files`
+over the same dirs) and deliberately stays a denial. A pruned `find` is only
+bounded by the list of directories it prunes, and a hand-written list misses
+any large gitignored directory `rg` would skip (a Rust `target/`, a `.venv`) —
+the walk's size is the danger, not the command. Translating to `rg` changes
+the result set instead (gitignored and hidden files vanish; `-type d`,
+`-mtime`, `-exec` have no equivalent).
 
 `foreground-deadline` exports the call's cut-off instant
 (`EQUIN_FOREGROUND_DEADLINE`) into a foreground `check` / `test` and raises its
@@ -289,7 +290,6 @@ can blind or deafen all of them at once.
 - Exemptions:
   - Exempts itself from:
     - `guard-path-safety/no-adhoc-path-resolve` — `core/guards/main-edits.ts`, `core/guards/poll-loop.ts` (sanctioned)
-    - `repo-walk-safety/no-adhoc-repo-walk` — `core/guards/find.ts` (sanctioned)
     - `python/no-system-python` — `core` (sanctioned)
     - `boundaries/no-platform-api` — `core/agent-ops.ts`, `core/argv.ts`, `core/context.ts`, `core/git-target.ts`, `core/informed-once.ts`, `core/guards/git-diff-main.ts`, `core/guards/main-edits.ts`, `core/guards/poll-loop.ts`, `core/parse-shell.ts`, `core/stop-guard.ts` (debt)
 - Sub-plugins:
