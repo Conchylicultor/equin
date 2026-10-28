@@ -441,10 +441,15 @@ An event heard there comes from that runner's slots.
   one slot). Its `hold` is the class of the task the row was fetched on, the
   same reading `queryRunningJobs` and `queue-slot-hog` use.
 - `job:complete` and `worker:fatalError` remove it. **These are graphile's
-  events, not a `finally` around `dispatch()`**: `job:complete` fires after
-  graphile has written the outcome back, so the ledger never shows a slot free
-  while its row is still locked. A `finally` in our handler would run before that
-  write.
+  events, not a `finally` around `dispatch()`**: `job:complete` fires once
+  graphile has handed the outcome to its completion batcher, the slot's own
+  last act. The write itself lands one macrotask later (graphile 0.18 never
+  awaits it — `dist/worker.js`), so the ledger can show a slot free for that
+  instant while its row is still locked.
+- **Keep `completeJobBatchDelay` / `failJobBatchDelay` at `0`**, not graphile's
+  `-1`: only batched writes are awaited by `runner.stop()`. Unbatched, a job
+  finishing during a deploy's shutdown lost its outcome, kept its lock, and the
+  next backend's sweeper re-ran it.
 - `stopWorkers` clears it, because a graceful shutdown that times out releases
   jobs with no `job:complete`.
 

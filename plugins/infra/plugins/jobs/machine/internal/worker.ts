@@ -454,6 +454,20 @@ export async function startWorkers(): Promise<Runner[]> {
           // independent shutdown paths racing one another.
           noHandleSignals: true,
           taskList,
+          // A delay of 0, not graphile's default -1, and not for throughput:
+          // it is what makes a graceful stop wait for a job's OUTCOME. Unbatched
+          // (-1), graphile 0.18 starts the `completeJob` / `failJob` write and
+          // does not await it (`dist/worker.js`); the worker resolves at once, so
+          // `runner.stop()` returns, the pool ends and the process exits while
+          // the write is still in flight. A job that finished during a deploy's
+          // shutdown then kept its lock, the stuck-lock sweeper reclaimed it on
+          // the next backend, and it ran a SECOND time (job 2705006 on main,
+          // 2026-10-28). Batched, every write is a pending op of the batcher, and
+          // `terminate()` awaits the batcher's release before `stop()` resolves.
+          // A 0 ms batch adds one macrotask of lock time per job, nothing more.
+          preset: {
+            worker: { completeJobBatchDelay: 0, failJobBatchDelay: 0 },
+          },
         },
         // Hand graphile the live (initially empty) cron-item array; it re-reads
         // this reference each tick. Items are installed after the onAllReady

@@ -13,12 +13,12 @@ import { HOLD_CLASSES, holdForTask, type HoldClass } from "../../core/hold";
 // only place that knowledge is kept.
 //
 // It hooks graphile's events, NOT a `finally` around `dispatch()`, and the reason
-// is ordering. graphile emits `job:complete` only after it has written the
-// outcome back (`completeJob` / `failJob` — `dist/worker.js`), so the row is
-// already unlocked when the slot leaves the ledger. A `finally` in our handler
-// runs BEFORE that write, and would show a slot free while its row is still
-// locked — a window in which the ledger and `queryQueuePulse()` disagree about
-// the same job.
+// is ordering. graphile emits `job:complete` after it has handed the outcome to
+// its completion batcher (`completeJob` / `failJob` — `dist/worker.js`); the
+// write lands one macrotask later (a 0 ms batch, see `startWorkers`). A
+// `finally` in our handler runs before even that hand-off — before graphile's
+// own bookkeeping for the run — so the window in which the ledger and
+// `queryQueuePulse()` disagree about the same job is kept to that one tick.
 //
 // Process state, like `forfeit.ts`: a slot is a fact about this backend's
 // worker pool, and it dies with the process.
