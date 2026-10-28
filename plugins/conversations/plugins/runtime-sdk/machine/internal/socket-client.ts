@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { connect } from "node:net";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import {
@@ -22,8 +23,9 @@ export class AgentNotRunningError extends Error {
 }
 
 /**
- * The agent took the connection but did not reply: it is wedged, or exiting
- * (a reply cut short by its exit). Its state is unknown — never "dead".
+ * The agent took the connection but did not reply: it is wedged, or it ended
+ * without its own exit (a crash, its socket left behind). Its state is
+ * unknown — never "dead".
  */
 export class AgentUnresponsiveError extends Error {
   constructor(
@@ -47,14 +49,52 @@ export class AgentCommandError extends Error {
   }
 }
 
+/**
+ * A connect error as the agent's state. Nobody listening is "not running":
+ * no socket (ENOENT), nothing behind it (ECONNREFUSED), or — before the
+ * connection was ever established — a reset (ECONNRESET), which is the agent
+ * closing its listener as it exits with our connect still in its backlog.
+ * Anything else is itself: the state is unknown, not "dead".
+ */
+function connectFailure(
+  conversationId: string,
+  err: NodeJS.ErrnoException,
+  connected: boolean,
+): Error {
+  if (
+    err.code === "ENOENT" ||
+    err.code === "ECONNREFUSED" ||
+    (err.code === "ECONNRESET" && !connected)
+  )
+    return new AgentNotRunningError(conversationId);
+  return err;
+}
+
+/**
+ * A connection the agent closed before replying, as the agent's state. An
+ * exiting agent removes its socket in the same tick as its exit, and only the
+ * exit closes our connection: no socket left is the agent gone, "not running".
+ * A socket still there is an agent that ended without its exit (a crash) —
+ * unknown, so {@link AgentUnresponsiveError}.
+ */
+function closedFailure(conversationId: string): Error {
+  return existsSync(agentSocketPath(conversationId))
+    ? new AgentUnresponsiveError(
+        conversationId,
+        "closed the connection before replying",
+      )
+    : new AgentNotRunningError(conversationId);
+}
+
 // A command is answered in milliseconds (`hello` never waits on the CLI); the
 // bound only breaks a wedged agent's hold on the caller.
 const COMMAND_TIMEOUT_MS = 10_000;
 
 /**
  * Send `commands` on one connection, in order, and collect one reply per
- * command. ENOENT / ECONNREFUSED — no socket, or nobody listening on it — is
- * {@link AgentNotRunningError}; no reply is {@link AgentUnresponsiveError};
+ * command. Nobody listening ({@link connectFailure}) or an agent that exited
+ * mid-exchange ({@link closedFailure}) is {@link AgentNotRunningError}; no
+ * reply otherwise is {@link AgentUnresponsiveError};
  * anything else throws as itself (the state is unknown, not "dead").
  */
 function exchange(
@@ -65,6 +105,7 @@ function exchange(
     const conn = connect(agentSocketPath(conversationId));
     const replies: unknown[] = [];
     let buf = "";
+    let connected = false;
     let settled = false;
     const finish = (err: Error | null) => {
       if (settled) return;
@@ -85,6 +126,7 @@ function exchange(
       COMMAND_TIMEOUT_MS,
     );
     conn.on("connect", () => {
+      connected = true;
       conn.write(commands.map((c) => JSON.stringify(c) + "\n").join(""));
     });
     conn.on("data", (chunk) => {
@@ -102,19 +144,10 @@ function exchange(
       }
     });
     conn.on("error", (err: NodeJS.ErrnoException) => {
-      finish(
-        err.code === "ENOENT" || err.code === "ECONNREFUSED"
-          ? new AgentNotRunningError(conversationId)
-          : err,
-      );
+      finish(connectFailure(conversationId, err, connected));
     });
     conn.on("close", () => {
-      finish(
-        new AgentUnresponsiveError(
-          conversationId,
-          "closed the connection before replying",
-        ),
-      );
+      finish(closedFailure(conversationId));
     });
   });
 }
@@ -154,7 +187,8 @@ export interface PartialSubscription {
  * called, with the error when the stream broke (a line that did not parse, a
  * frame that does not apply) — the connection is then closed, never left
  * half-read.
- * Rejects like a command: {@link AgentNotRunningError} when nobody listens.
+ * Rejects like a command: {@link AgentNotRunningError} when nobody listens or
+ * the agent exited before replying.
  * Only for an agent whose `hello` advertised `stream`.
  */
 export function subscribeAgent(
@@ -165,6 +199,7 @@ export function subscribeAgent(
   return new Promise((resolve, reject) => {
     const conn = connect(agentSocketPath(conversationId));
     let buf = "";
+    let connected = false;
     let replies = 0;
     let open = false;
     let message: PartialMessage | null = null;
@@ -184,6 +219,7 @@ export function subscribeAgent(
       reject(err);
     }
     conn.on("connect", () => {
+      connected = true;
       conn.write(
         [hello, { type: "subscribe" } satisfies AgentCommand]
           .map((c) => JSON.stringify(c) + "\n")
@@ -242,20 +278,11 @@ export function subscribeAgent(
     });
     conn.on("error", (err: NodeJS.ErrnoException) => {
       if (open) return; // `close` follows, and reports the end
-      fail(
-        err.code === "ENOENT" || err.code === "ECONNREFUSED"
-          ? new AgentNotRunningError(conversationId)
-          : err,
-      );
+      fail(connectFailure(conversationId, err, connected));
     });
     conn.on("close", () => {
       if (open) onClose(broken);
-      else
-        fail(
-          new Error(
-            `SDK agent ${conversationId} closed the connection before replying`,
-          ),
-        );
+      else fail(closedFailure(conversationId));
     });
   });
 }
