@@ -32,15 +32,18 @@ function toTask(r: z.infer<typeof DigestTaskRow>): DigestTask {
 }
 
 /** The database clock, read BEFORE the tasks: a change committed between this
- * read and the next is shown twice, never skipped. */
+ * read and the next is shown twice, never skipped. Read as epoch ms (float8):
+ * a raw `db.execute` returns a `timestamptz` as its text, never a `Date`
+ * (sql-rows' timestamp trap); `Date` truncating the microseconds only moves
+ * the cursor earlier, the safe side. */
 async function clock(): Promise<Date> {
   const [row] = await executeRows(db, {
     label: "tree digest clock",
-    query: sql`SELECT now() AS at`,
-    row: z.object({ at: z.date() }),
+    query: sql`SELECT (extract(epoch FROM now()) * 1000)::float8 AS ms`,
+    row: z.object({ ms: z.number() }),
   });
   if (!row) throw new Error("SELECT now() returned no row");
-  return row.at;
+  return new Date(row.ms);
 }
 
 /** The subtree's tasks (root included) passing `filter` (over `t`, the base
