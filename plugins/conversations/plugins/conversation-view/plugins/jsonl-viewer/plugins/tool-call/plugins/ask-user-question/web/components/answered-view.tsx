@@ -93,6 +93,25 @@ const replyIcon = symbol("comment");
 const noteIcon = symbol("notes");
 
 /**
+ * Text the user typed — an "Other" answer, a note, the reply — drawn as they
+ * wrote it, one style for all three: plain foreground text, never italic (it is
+ * the user's own words, not a placeholder or an aside).
+ */
+function WrittenText({ text }: { text: string }) {
+  return (
+    <Text
+      as="div"
+      variant="caption"
+      className="whitespace-pre-wrap break-words text-foreground"
+    >
+      {/* The agent's record holds attachments as the disk paths it was
+          handed; drawn back as the thumbnails the user pasted. */}
+      <AttachmentText text={attachmentRefsOf(text)} />
+    </Text>
+  );
+}
+
+/**
  * Text the user wrote beside the picks — the reply to the whole question, or a
  * question's note — drawn as a row of the list it answers (the form's comment
  * field sits in the same place): its icon in the indicator column, the text as
@@ -110,15 +129,7 @@ function WrittenRow({
 }) {
   return (
     <FieldRow icon={<Icon icon={icon} className="size-3" title={label} />}>
-      <Text
-        as="div"
-        variant="caption"
-        className="whitespace-pre-wrap break-words text-foreground"
-      >
-        {/* The agent's record holds attachments as the disk paths it was
-            handed; drawn back as the thumbnails the user pasted. */}
-        <AttachmentText text={attachmentRefsOf(text)} />
-      </Text>
+      <WrittenText text={text} />
     </FieldRow>
   );
 }
@@ -182,13 +193,7 @@ export function AnsweredQuestions({
               ))}
               {otherText != null && (
                 <OptionRow selected multi={q.multiSelect}>
-                  <Text
-                    as="div"
-                    variant="caption"
-                    className="whitespace-pre-wrap break-words italic text-foreground"
-                  >
-                    <AttachmentText text={attachmentRefsOf(otherText)} />
-                  </Text>
+                  <WrittenText text={otherText} />
                 </OptionRow>
               )}
               {notes != null && (
