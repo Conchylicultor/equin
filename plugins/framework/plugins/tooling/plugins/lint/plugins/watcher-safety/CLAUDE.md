@@ -28,6 +28,7 @@ command.
 - Description: watcher-safety lint rules: no-direct-parcel-watcher (only the file-watcher engine loads @parcel/watcher), no-raw-fs-watch (no fs.watch / watchFile / fs.promises.watch / chokidar in host-process code — declare a watcher with defineFileWatcher, or watchForCommand in the CLI) and no-detached-watch-reaction (a watch callback returns its async work instead of detaching it with void, so the watch coalesces it to one running plus one pending run)
 - Exemptions:
   - Exempted by:
+    - `framework/cli/foreground-handoff` (0 debt)
     - `framework/cli/op-runtime` (0 debt)
     - `infra/file-watcher` (0 debt)
 

@@ -17,9 +17,11 @@ Agents work in isolated, auto-created git worktrees:
 1. Solve the request.
 2. Deploy with `./equin build` (frontend + server + gateway registration).
 
-   **Use `run_in_background: true` and end your turn** — build/push/check take ~10 min (median), over the 600 s foreground cap. The background task re-invokes you on exit; nothing to wait for or watch. Every backgrounded `./equin` call is rewritten to the 2 h timeout ceiling (the 30 min default would kill it). Guards enforce all three.
+   **Use `run_in_background: true` and end your turn** — build/push take ~10 min (median), over the 600 s foreground cap. The background task re-invokes you on exit; nothing to wait for or watch. Every backgrounded `./equin` call is rewritten to the 2 h timeout ceiling (the 30 min default would kill it). Guards enforce all three.
 
    **A SUBAGENT must not end its turn there** — it is never re-invoked (its completion notification lands in the parent's queue). Background the op, then call `./equin await <op>` in the FOREGROUND: it blocks until the verdict and prints it (exit 0 ok, 1 failed, 70 still running — call again). A stop hook refuses a subagent turn that walks away from its running op.
+
+   **`./equin check` / `./equin test` run in the FOREGROUND** (usually seconds to a few minutes). Near the cap they hand themselves off: the op keeps running detached and the call exits 70 with `./equin await <op>` as the next step — call it, never end your turn waiting (`plugins/framework/plugins/cli/plugins/foreground-handoff`).
 
 3. The app is served at `http://<worktree>.localhost:9000` (always write `http://` so it's clickable).
 

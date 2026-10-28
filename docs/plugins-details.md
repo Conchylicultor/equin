@@ -25632,6 +25632,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/cli/start`
           - Cli:
             - Exports (values): `assertPrerequisites`
+        - **`foreground-handoff`** — Foreground op hand-off: a `check` / `test` an agent runs in the foreground streams its output like any command, and if it would outlive the call's 600 s limit it hands itself off before the cap — detached, still running — and exits 70 naming `./equin await <op>`, so a foreground op can never time out handle-less.
+          - Cross-plugin:
+            - Imported by: `framework/tooling/guards`
+          - Exemptions:
+            - Exempts itself from: `watcher-safety/no-raw-fs-watch` — `cli/handoff.ts` (sanctioned)
+          - Core:
+            - Exports (types): `HandoffOp`
+            - Exports (values):
+              - `FOREGROUND_HANDOFF_OPS`
+              - `foregroundDeadline`
+              - `isHandoffOp`
+          - Cli:
+            - Exports (values): `runHandedOff`
         - **`format`** — `./equin format` — prettier over the .ts/.tsx changed on this branch; the same pass `build` runs, without paying for a build.
         - **`git-artifacts`** — Generated-artifact merge handling that runs inside a CLI command: re-deriving after a merge driver took the cheap side, and installing the drivers.
           - Cross-plugin:
@@ -26978,6 +26991,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/cli/cli-name.CLI_NAME`
               - `framework/cli/cli-name.CLI_NAMES`
               - `framework/cli/cli-name.isCliName`
+              - `framework/cli/foreground-handoff.foregroundDeadline`
+              - `framework/cli/foreground-handoff.isHandoffOp`
               - `framework/plugin-id.PLUGIN_MANIFEST_KEY`
               - `framework/tooling/collected-dir.defineCollectedDir`
               - `framework/tooling/collected-dir.loadCollectedDir`
@@ -27220,6 +27235,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - **`watcher-safety`** — watcher-safety lint rules: no-direct-parcel-watcher (only the file-watcher engine loads @parcel/watcher), no-raw-fs-watch (no fs.watch / watchFile / fs.promises.watch / chokidar in host-process code — declare a watcher with defineFileWatcher, or watchForCommand in the CLI) and no-detached-watch-reaction (a watch callback returns its async work instead of detaching it with void, so the watch coalesces it to one running plus one pending run)
               - Exemptions:
                 - Exempted by:
+                  - `framework/cli/foreground-handoff` (0 debt)
                   - `framework/cli/op-runtime` (0 debt)
                   - `infra/file-watcher` (0 debt)
         - **`provision`** — Install-time provisioning registry + runner: discovers each plugin's provision/index.ts and runs it during postinstall.

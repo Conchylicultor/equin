@@ -105,6 +105,10 @@ export const RUNTIME_WITHHELD_ENV = {
     "the build_runs row a UI-triggered build writes to, set by the backend for the build it spawns (build/server run-build.ts)",
   BUILD_DETACHED:
     "marks a supervised build that must outlive its backend, set by the backend for the build it spawns (build/server run-build.ts)",
+  FOREGROUND_DEADLINE:
+    "the instant (epoch ms) an agent's foreground Bash call is cut off; a PreToolUse guard exports it into that one command, and the op hand-off takes it out of the env of the op it detaches (cli/op-runtime foreground-handoff.ts)",
+  OP_HANDED_OFF:
+    "marks an op detached by the foreground hand-off, meant to outlive the call that started it; set by the hand-off for that one op (cli/op-runtime foreground-handoff.ts), read by its orphan guard",
   BUILD_IN_PROGRESS:
     "marks the check pass a build spawns, set by that build (tooling/checks/core run-context.ts)",
   CHECK_JOBS:

@@ -39,6 +39,10 @@ export function installOrphanGuard(onOrphan: () => void): void {
   // Env rather than a declaration because it is set by the SPAWNER, before this
   // process exists, and so is knowable here in the pre-install phase.
   if (readEnv("BUILD_DETACHED")) return;
+  // Likewise an op the foreground hand-off detached (op-runtime
+  // foreground-handoff.ts): its spawner exits at the agent's deadline BY DESIGN,
+  // and `./equin await` is its handle from then on.
+  if (readEnv("OP_HANDED_OFF")) return;
   if (process.ppid === 1) {
     onOrphan();
     return;

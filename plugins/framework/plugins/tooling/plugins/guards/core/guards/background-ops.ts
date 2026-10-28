@@ -3,6 +3,7 @@ import { defineGuard } from "../define-guard";
 import { parseShell, type ShellParseResult } from "../parse-shell";
 import type { BashInput, GuardContext } from "../types";
 import { CLI_NAME } from "@plugins/framework/plugins/cli/plugins/cli-name/core";
+import { isHandoffOp } from "@plugins/framework/plugins/cli/plugins/foreground-handoff/core";
 
 /**
  * Subcommands that take a host slot and run for minutes. From
@@ -17,15 +18,17 @@ const INSTANT_FLAGS = new Set(["--list", "--help", "-h", "--version", "-V"]);
 /** Shell-level detach: looks like backgrounding, produces no tracked task. */
 const SHELL_DETACH = new Set(["nohup", "setsid", "disown"]);
 
-function longOpIn(parsed: ShellParseResult): string | null {
+/** Every long op the command runs, in order (a chain can run several). */
+export function longOpsIn(parsed: ShellParseResult): string[] {
+  const ops: string[] = [];
   for (const call of parsed.calls) {
     if (call.name !== CLI_NAME) continue;
     const sub = call.args.find((a) => !a.startsWith("-"));
     if (!sub || !LONG_OPS.has(sub)) continue;
     if (call.args.some((a) => INSTANT_FLAGS.has(a))) continue;
-    return sub;
+    ops.push(sub);
   }
-  return null;
+  return ops;
 }
 
 function shellDetachIn(parsed: ShellParseResult): boolean {
@@ -51,6 +54,16 @@ function shellDetachIn(parsed: ShellParseResult): boolean {
  * completes" and lives up to its `timeout` — 30 min by default, 2 h at most,
  * which `background-timeout` sets on every backgrounded `./equin` call.
  * Forcing every long op through it deletes the handle-less state entirely.
+ *
+ * ## Except the ones that hand themselves off
+ *
+ * `check` and `test` are usually short (p50 192 s / 35 s), so a forced
+ * background run cost a turn end and a re-invocation for a result that was
+ * often seconds away — and blocked every other command typed in the same call.
+ * They run in the foreground instead: `foreground-deadline` exports the call's
+ * deadline, and the op hands itself off before it (`cli/foreground-handoff`),
+ * so the handle-less timeout cannot happen to them either. Only the ops that
+ * cannot hand off are held to the background.
  *
  * ## The notification only arrives for the main conversation
  *
@@ -106,8 +119,9 @@ export const backgroundOpsGuard = defineGuard<BashInput>({
     if (!cmd) return null;
 
     const parsed = parseShell(cmd);
-    const op = longOpIn(parsed);
-    if (!op) return null;
+    const ops = longOpsIn(parsed);
+    const op = ops[0];
+    if (op === undefined) return null;
 
     if (input.run_in_background === true) {
       if (!shellDetachIn(parsed)) {
@@ -132,11 +146,20 @@ export const backgroundOpsGuard = defineGuard<BashInput>({
       };
     }
 
+    // Foreground is fine for ops that hand off at the call's deadline; a chain
+    // is held to the background by any op in it that cannot.
+    const pinned = ops.find((o) => !isHandoffOp(o));
+    if (pinned === undefined) {
+      // A hand-off leaves the op running past this call, so the stop hook
+      // must know whose it is, exactly as for a backgrounded one.
+      for (const o of ops) recordOwnership(ctx, o);
+      return null;
+    }
     return {
-      blocked: `\`./equin ${op}\` must run with \`run_in_background: true\`.`,
-      why: `A ${op} takes about 10 minutes at the median and regularly exceeds the 600 s foreground limit. On timeout you get "Command timed out after 10m 0s" — no task id, no notification — while the op keeps running, leaving you with no handle on it.`,
+      blocked: `\`./equin ${pinned}\` must run with \`run_in_background: true\`.`,
+      why: `A ${pinned} takes about 10 minutes at the median and regularly exceeds the 600 s foreground limit. On timeout you get "Command timed out after 10m 0s" — no task id, no notification — while the op keeps running, leaving you with no handle on it.`,
       hint: ctx.agent
-        ? `Re-run the same command with \`run_in_background: true\`, then — WITHOUT ending your turn — call \`./equin await ${op}\`. ${awaitInstead(op)}`
+        ? `Re-run the same command with \`run_in_background: true\`, then — WITHOUT ending your turn — call \`./equin await ${pinned}\`. ${awaitInstead(pinned)}`
         : `Re-run the same command with \`run_in_background: true\`, then END YOUR TURN. The timeout is raised to the 2 h ceiling for you, and you will be re-invoked with the output when it finishes. Do not sit and watch it.`,
     };
   },

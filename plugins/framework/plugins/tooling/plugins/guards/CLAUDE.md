@@ -142,7 +142,15 @@ Code's `updatedInput` replaces the input wholesale), emits it without a
 guard after a rewrite judges the rewritten input. Rewriters sit at the end of
 the registry so the judging guards see what the agent typed.
 
-`pipefail` is the one rewriter: `cmd | tail -20` exits with tail's status, so a
+`foreground-deadline` exports the call's cut-off instant
+(`EQUIN_FOREGROUND_DEADLINE`) into a foreground `check` / `test` and raises its
+timeout to the 600 s ceiling, so the op hands itself off before the harness can
+kill it (`cli/plugins/foreground-handoff`); `background-ops` therefore lets those
+two through in the foreground and holds only `build` / `push` / `release` to the
+background. `background-timeout` raises a backgrounded `./equin` call to the
+2 h ceiling; `e2e-tool-use-id` exports the tool-use id into an e2e run.
+
+`pipefail` rewrites too: `cmd | tail -20` exits with tail's status, so a
 failing `cmd` read as a pass. It prefixes `set -o pipefail; ` when a pipe feeds
 `tail` or `tee`, and backs off when any piped stage may stop reading early
 (`head`, `grep -q/-m/-l`, a `sed` script with `q`, `awk … exit`): pipefail is
@@ -180,6 +188,8 @@ can blind or deafen all of them at once.
     - `framework/cli/cli-name.CLI_NAME`
     - `framework/cli/cli-name.CLI_NAMES`
     - `framework/cli/cli-name.isCliName`
+    - `framework/cli/foreground-handoff.foregroundDeadline`
+    - `framework/cli/foreground-handoff.isHandoffOp`
     - `framework/plugin-id.PLUGIN_MANIFEST_KEY`
     - `framework/tooling/collected-dir.defineCollectedDir`
     - `framework/tooling/collected-dir.loadCollectedDir`

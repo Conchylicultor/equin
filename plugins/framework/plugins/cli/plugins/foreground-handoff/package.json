@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-framework-cli-foreground-handoff",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Foreground op hand-off: a `check` / `test` an agent runs in the foreground streams its output like any command, and if it would outlive the call's 600 s limit it hands itself off before the cap — detached, still running — and exits 70 naming `./equin await <op>`, so a foreground op can never time out handle-less."
+}

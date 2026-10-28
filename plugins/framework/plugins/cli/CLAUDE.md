@@ -458,6 +458,7 @@ ui-kit's `theme/app.css` (JS-sets / CSS-styles split, as with `.dark`).
   - **`db`** — `./equin db` — worktree database operations; today just `db fork`, which gives a hand-made `git worktree add` checkout the DB fork it never got.
   - **`deploy`** — `./equin deploy converge|ship` — converge a host to serve a composition (run user, dirs, env, Caddy, systemd, firewall) and ship release bundles to it behind a health gate.
   - **`doctor`** — The prerequisite doctor: doctor.sh names every missing prerequisite (Xcode CLT/git, mise active, the locked toolchain) in one run, with its fix, and advises on Claude Code (installed and signed in)…
+  - **`foreground-handoff`** [exempt] — Foreground op hand-off: a `check` / `test` an agent runs in the foreground streams its output like any command, and if it would outlive the call's 600 s limit it hands itself off before the cap…
   - **`format`** — `./equin format` — prettier over the .ts/.tsx changed on this branch; the same pass `build` runs, without paying for a build.
   - **`git-artifacts`** — Generated-artifact merge handling that runs inside a CLI command: re-deriving after a merge driver took the cheap side, and installing the drivers.
   - **`migrations`** [exempt] — Drizzle migration generation for the CLI: the generate/rename/journal pipeline and the interactive drizzle-kit prompt driver.

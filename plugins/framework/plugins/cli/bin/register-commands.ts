@@ -1,6 +1,12 @@
 import type { Command } from "commander";
 import type { CliCommand } from "../core";
 import { disarmOrphanGuard } from "@plugins/framework/plugins/cli/plugins/bootstrap/cli";
+import {
+  isHandoffOp,
+  type HandoffOp,
+} from "@plugins/framework/plugins/cli/plugins/foreground-handoff/core";
+import { runHandedOff } from "@plugins/framework/plugins/cli/plugins/foreground-handoff/cli";
+import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 
 /**
  * The ONE translation of a declared {@link CliCommand} into commander calls.
@@ -24,10 +30,31 @@ export function registerCommands(
   program: Command,
   commands: readonly CliCommand[],
 ): void {
-  for (const spec of commands) attach(program, spec);
+  for (const spec of commands) attach(program, spec, true);
 }
 
-function attach(parent: Command, spec: CliCommand): void {
+/**
+ * The foreground deadline an agent's guard exported into this call, when this
+ * command is an op that hands off at one (`foreground-handoff`). Absent for a
+ * human at a terminal, a background call, and the op the hand-off detached —
+ * all of which run the command in place.
+ */
+function handoffOf(
+  spec: CliCommand,
+  topLevel: boolean,
+): { op: HandoffOp; deadline: number } | null {
+  if (!topLevel || !isHandoffOp(spec.name)) return null;
+  const raw = readEnv("FOREGROUND_DEADLINE");
+  if (raw === undefined) return null;
+  const deadline = Number(raw);
+  if (!Number.isFinite(deadline))
+    throw new Error(
+      `The foreground deadline is not an epoch-ms instant: ${JSON.stringify(raw)}.`,
+    );
+  return { op: spec.name, deadline };
+}
+
+function attach(parent: Command, spec: CliCommand, topLevel = false): void {
   const cmd = parent.command(spec.name).description(spec.description);
 
   // A group only routes. The declaration's leaf/group union makes "both" a type
@@ -87,6 +114,11 @@ function attach(parent: Command, spec: CliCommand): void {
     // trailing Command is what makes `CliAction` the real call shape, so an
     // implementation never reaches around its own declaration into commander.
     const args = argv.slice(0, -1);
+
+    // An agent's foreground call: run as a detached op that hands itself off
+    // before the call's limit, instead of in place where the limit would kill it.
+    const handoff = handoffOf(spec, topLevel);
+    if (handoff !== null) await runHandedOff(handoff.op, handoff.deadline);
 
     // The import that the whole declaration/implementation split exists for:
     // this is where a command's body — and its npm dependencies, and the plugin

@@ -3176,6 +3176,10 @@
       "name": "@equin/plugin-framework-cli-doctor",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/cli/plugins/foreground-handoff": {
+      "name": "@equin/plugin-framework-cli-foreground-handoff",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/cli/plugins/format": {
       "name": "@equin/plugin-framework-cli-format",
       "version": "0.0.1",
@@ -8301,6 +8305,8 @@
     "@equin/plugin-framework-cli-deploy": ["@equin/plugin-framework-cli-deploy@workspace:plugins/framework/plugins/cli/plugins/deploy"],
 
     "@equin/plugin-framework-cli-doctor": ["@equin/plugin-framework-cli-doctor@workspace:plugins/framework/plugins/cli/plugins/doctor"],
+
+    "@equin/plugin-framework-cli-foreground-handoff": ["@equin/plugin-framework-cli-foreground-handoff@workspace:plugins/framework/plugins/cli/plugins/foreground-handoff"],
 
     "@equin/plugin-framework-cli-format": ["@equin/plugin-framework-cli-format@workspace:plugins/framework/plugins/cli/plugins/format"],
 

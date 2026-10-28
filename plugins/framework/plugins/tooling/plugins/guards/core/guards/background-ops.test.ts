@@ -51,7 +51,7 @@ const reason = (command: string, bg?: boolean) => {
 
 describe("background-ops guard", () => {
   describe("long ops in the foreground are blocked", () => {
-    for (const op of ["build", "push", "check", "test", "release"]) {
+    for (const op of ["build", "push", "release"]) {
       for (const cli of CLI_NAMES.map((n) => `./${n}`)) {
         test(`${cli} ${op}`, () => {
           expect(blocks(`${cli} ${op}`)).toBe(true);
@@ -129,15 +129,19 @@ describe("background-ops guard", () => {
     });
 
     test("a foreground op still denies, but the hint names both steps", () => {
-      const v = subagentVerdict("./equin test");
+      const v = subagentVerdict("./equin build");
       expect(v.kind).toBe("deny");
       expect(v.kind === "deny" && v.reason).toContain("run_in_background");
-      expect(v.kind === "deny" && v.reason).toContain("./equin await test");
+      expect(v.kind === "deny" && v.reason).toContain("./equin await build");
     });
 
     test("the main conversation's foreground hint still says to end its turn", () => {
-      const v = verdict("./equin test");
+      const v = verdict("./equin build");
       expect(v.kind === "deny" && v.reason).toContain("END YOUR TURN");
+    });
+
+    test("a subagent's foreground hand-off op goes through", () => {
+      expect(subagentVerdict("./equin test plugins/x").kind).toBe("allow");
     });
 
     test("a subagent detaching with & is denied like anyone else", () => {
@@ -205,7 +209,7 @@ describe("background-ops guard", () => {
     });
 
     test("the scanner resumes after a terminator", () => {
-      const cmd = ["python3 - <<'PY'", "print(1)", "PY", S + " check"].join(
+      const cmd = ["python3 - <<'PY'", "print(1)", "PY", S + " build"].join(
         "\n",
       );
       expect(blocks(cmd)).toBe(true);
@@ -214,6 +218,30 @@ describe("background-ops guard", () => {
     test("a body piped into a shell really runs", () => {
       const cmd = ["cat <<'EOF' | bash", S + " build", "EOF"].join("\n");
       expect(blocks(cmd)).toBe(true);
+    });
+  });
+
+  describe("ops that hand off at the call's deadline run in the foreground", () => {
+    for (const op of ["check", "test"]) {
+      for (const cli of CLI_NAMES.map((n) => `./${n}`)) {
+        test(`${cli} ${op}`, () => {
+          expect(blocks(`${cli} ${op}`)).toBe(false);
+        });
+      }
+    }
+
+    test("alongside other commands in one call", () => {
+      expect(blocks("./equin format && ./equin check type-check")).toBe(false);
+    });
+
+    test("… but a chain with an op that cannot hand off is held back", () => {
+      const r = reason("./equin check && ./equin build");
+      expect(r).toContain("./equin build");
+      expect(r).toContain("run_in_background");
+    });
+
+    test("a shell detach is still refused", () => {
+      expect(blocks("./equin test &")).toBe(true);
     });
   });
 
