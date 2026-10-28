@@ -318,8 +318,10 @@ const density = densityGroup.fragment(
     padThreadCardX: "0.8125rem",
     padThreadCardY: "0.625rem",
     padComposer: "0.625rem 0.8125rem 0.5625rem",
-    padComposerText: "0 0 0.5rem",
-    padComposerActions: "0",
+    // The gap above the action row is the row's own padding, not the text's:
+    // a field with no action row (an "Other…" answer) stays balanced.
+    padComposerText: "0",
+    padComposerActions: "0.5rem 0 0",
     padToolBadgeX: "0.5625rem",
     padToolBadgeY: "0.1875rem",
     padCodeX: "0.375rem",

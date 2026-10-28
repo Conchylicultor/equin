@@ -189,7 +189,10 @@ function EditorShell({
   // not "take it whenever this prop turns true".
   const [focusOnMount] = useState(autoFocus && !disabled);
 
-  const minHeight = `${Math.max(minRows, 1) * 1.5}rem`;
+  // `minRows` counts lines of the editor's own text (`lh`), with its padding
+  // outside them (`box-content` on the editable): a fixed rem per row left
+  // dead space under a one-line field whose line is shorter than the rem.
+  const minHeight = `${Math.max(minRows, 1)}lh`;
 
   // The whole box is the drop target, not just the editable: a file dropped on
   // the padding or the bottom bar is dispatched as a drop into the editor, so
@@ -254,7 +257,7 @@ function EditorShell({
               style={{ minHeight, maxHeight }}
               // eslint-disable-next-line layout/no-adhoc-layout -- overflow-y-auto configures the scroll on Lexical's third-party ContentEditable element (its own clamped editor viewport), not a primitive boundary
               className={cn(
-                "min-w-0 p-composer-text text-body outline-none resize-none",
+                "box-content min-w-0 p-composer-text text-body outline-none resize-none",
                 "overflow-y-auto",
                 className,
               )}
