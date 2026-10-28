@@ -12,7 +12,6 @@ import {
 import { idKindField } from "@plugins/ids/core";
 import { AUDIENCES } from "@plugins/audience/core";
 import { entityRef } from "@plugins/infra/plugins/entities/core";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { symbol, type SymbolRef } from "@plugins/ui/plugins/icons/core";
 import { notificationIdKind } from "./id-kind";
 
@@ -66,7 +65,7 @@ export type NotificationAction = z.infer<typeof NotificationActionSchema>;
  * the sprites carry it. The check here is the shape; the name was checked
  * where it was written.
  */
-export const NotificationIconSchema: ZodParser<SymbolRef> = z.custom<SymbolRef>(
+export const NotificationIconSchema: z.ZodType<SymbolRef> = z.custom<SymbolRef>(
   (v) =>
     typeof v === "object" &&
     v !== null &&

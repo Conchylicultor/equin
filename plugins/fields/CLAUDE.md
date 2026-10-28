@@ -131,6 +131,8 @@ tokens, so anything that imports the barrels back would cycle.
 - Core:
   - Exports (types):
     - `DeclaredDefault`
+    - `DefaultedFields`
+    - `DefaultlessFieldDef`
     - `ExactOptions`
     - `FieldDef`
     - `FieldIdentity`
@@ -150,9 +152,13 @@ tokens, so anything that imports the barrels back would cycle.
     - `Unfilterable`
   - Exports (values):
     - `declaredDefault`
+    - `defineDefaultlessField`
+    - `defineField`
     - `defineFieldIdentity`
     - `defineFieldType`
+    - `fieldDefaults`
     - `fieldSchemaWithDefault`
+    - `fieldsToPatchSchema`
     - `fieldsToZodObject`
     - `NULL_OPTION_KEY`
     - `nullable`

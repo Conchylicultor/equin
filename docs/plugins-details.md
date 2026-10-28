@@ -13534,6 +13534,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Register: `defineFileWatcher('config_v2.config-files')`
   - Core:
     - Uses:
+      - `fields.fieldDefaults`
       - `fields.fieldsToZodObject`
       - `fields/list/config.isListFieldDef`
       - `fields/list/config.ListFieldDef`
@@ -20754,7 +20755,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `parsed`
           - `SqlProjectionError`
           - `toMapper`
-    - **`sql-rows`** — Parsed raw-SQL row reads: queryRows / executeRows parse every row against a ZodParser and throw a SqlRowError naming the column, the value and its Postgres type OID — closing the pool.query<T>() assertion hole.
+    - **`sql-rows`** — Parsed raw-SQL row reads: queryRows / executeRows parse every row against a zod schema and throw a SqlRowError naming the column, the value and its Postgres type OID — closing the pool.query<T>() assertion hole.
       - Exemptions:
         - Exempts itself from: `sql-rows/no-unparsed-sql-rows` — `.` (sanctioned)
         - Exempted by: `database/sql-rows` (0 debt)
@@ -23822,6 +23823,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
   - Core:
     - Exports (types):
       - `DeclaredDefault`
+      - `DefaultedFields`
+      - `DefaultlessFieldDef`
       - `ExactOptions`
       - `FieldDef`
       - `FieldIdentity`
@@ -23841,9 +23844,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Unfilterable`
     - Exports (values):
       - `declaredDefault`
+      - `defineDefaultlessField`
+      - `defineField`
       - `defineFieldIdentity`
       - `defineFieldType`
+      - `fieldDefaults`
       - `fieldSchemaWithDefault`
+      - `fieldsToPatchSchema`
       - `fieldsToZodObject`
       - `NULL_OPTION_KEY`
       - `nullable`
@@ -24873,12 +24880,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Core:
             - Uses:
               - `config_v2/fields.fieldSample`
+              - `fields.DefaultlessFieldDef`
+              - `fields.defineDefaultlessField`
+              - `fields.defineField`
               - `fields.FieldDef`
               - `fields.FieldMeta`
               - `fields.Labelled`
               - `fields.pickMeta`
               - `fields/json.jsonFieldType`
-            - Exports (types): `JsonFieldDef`
+            - Exports (types):
+              - `DefaultlessJsonFieldDef`
+              - `JsonFieldDef`
             - Exports (values):
               - `jsonField`
               - `jsonSample`
@@ -24939,6 +24951,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Core:
             - Uses:
               - `config_v2/fields.fieldSample`
+              - `fields.DefaultedFields`
               - `fields.FieldDef`
               - `fields.FieldMeta`
               - `fields.fieldSchemaWithDefault`
@@ -25175,7 +25188,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Core:
             - Uses:
               - `config_v2/fields.fieldSample`
+              - `fields.DefaultedFields`
               - `fields.FieldDef`
+              - `fields.fieldDefaults`
               - `fields.FieldMeta`
               - `fields.fieldSchemaWithDefault`
               - `fields.FieldsRecord`
@@ -25780,13 +25795,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Core:
             - Uses:
               - `fields.declaredDefault`
+              - `fields.DefaultlessFieldDef`
+              - `fields.defineDefaultlessField`
+              - `fields.defineField`
               - `fields.ExactOptions`
               - `fields.FieldDef`
               - `fields.FieldMarks`
               - `fields.FieldMeta`
               - `fields.pickMeta`
               - `fields/uuid.uuidFieldType`
-            - Exports (types): `UuidFieldDef`
+            - Exports (types):
+              - `DefaultlessUuidFieldDef`
+              - `UuidFieldDef`
             - Exports (values): `uuidField`
           - Cross-plugin:
             - Imported by:
@@ -33710,9 +33730,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveValue`
           - `sliceRange`
       - Core:
-        - Uses: 31 symbols — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Uses: 37 symbols — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `network/live/filter` ×7
           - `fields` ×6
+          - `packages/zod-introspect` ×6
           - `primitives/live-state` ×6
           - `infra/endpoints` ×5
           - `packages/list-bound` ×3
@@ -34127,7 +34148,29 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Core:
         - Exports (types): `KeyedMutex`
         - Exports (values): `createKeyedMutex`
-    - **`list-bound`** — A list's bound, declared in its zod schema: cappedList / cappedRecord (a checked max) and wholeList / wholeRecord (loaded whole, with a written reason), tagged in _def so the tag survives zod's clones; listShapeOf walks every array, record, map and set a schema reaches and reports each one's bound and the bare ones, listBoundsOf refuses a bare one.
+    - **`list-bound`** — A list's bound, declared in its zod schema: cappedList / cappedRecord (a checked max) and wholeList / wholeRecord (loaded whole, with a written reason), tagged on the schema itself (zod-introspect's defineSchemaTag, stamped by clone) so the tag survives zod's clones and wrappers; listShapeOf walks (over zod-introspect's SchemaNode) every array, record, map and set a schema reaches and reports each one's bound and the bare ones, listBoundsOf refuses a bare one.
+      - Core:
+        - Uses:
+          - `packages/zod-introspect.defineSchemaTag`
+          - `packages/zod-introspect.inspect`
+          - `packages/zod-introspect.isZodSchema`
+          - `packages/zod-introspect.Schema`
+          - `packages/zod-introspect.SchemaNode`
+        - Exports (types):
+          - `ListBound`
+          - `ListShape`
+          - `ListWalkOptions`
+        - Exports (values):
+          - `BareListError`
+          - `cappedList`
+          - `cappedRecord`
+          - `LIST_ROOT_PATH`
+          - `listBoundsOf`
+          - `listShapeOf`
+          - `wholeKeyedRecord`
+          - `wholeList`
+          - `wholeRecord`
+          - `wholeTuple`
       - Cross-plugin:
         - Imported by: 97 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
           - `apps` ×17
@@ -34155,22 +34198,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `review/plugin-changes`
           - `search/engine`
           - `shell/notifications`
-      - Core:
-        - Exports (types):
-          - `ListBound`
-          - `ListShape`
-          - `ListWalkOptions`
-        - Exports (values):
-          - `BareListError`
-          - `cappedList`
-          - `cappedRecord`
-          - `LIST_ROOT_PATH`
-          - `listBoundsOf`
-          - `listShapeOf`
-          - `wholeKeyedRecord`
-          - `wholeList`
-          - `wholeRecord`
-          - `wholeTuple`
+      - Test helpers:
+        - Core: `@plugins/packages/plugins/list-bound/core/testing`
+          - `withRawListBoundTag` — `schema` tagged with `raw` exactly as given — no marker's checks — for a test proving a malformed tag (`{ reason: "" }`, `{ size: 3 }`) fails loudly where the schema is walked.
     - **`macrotask-yield`** — Macrotask yield: yieldMacrotask() resolves on a later event-loop turn (scheduler.yield, else setImmediate, else setTimeout 0), so due timers and I/O callbacks run first — which a microtask yield never allows; createTurnQueue() gives concurrent callers one turn each, in call order.
       - Cross-plugin:
         - Imported by:
@@ -34453,9 +34483,41 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `WatchedMemo`
           - `WatchedMemoOptions`
         - Exports (values): `createWatchedMemo`
-    - **`zod-parser`** — ZodParser<T> — the type of a schema that parses untrusted input into a T — and its enforcing lint rule (no-narrow-zodtype), which bans the one-argument ZodType<T> whose Input silently defaults to Output.
+    - **`zod-introspect`** — The one owner of zod internals: inspect(schema) reads one level of a zod 4 schema (a zod 3 one is refused and named as such) as a repo-owned SchemaNode union in zod 4's model (refine a check, transform / preprocess a pipe, brand transparent, native enum an enum, passthrough an opaque object), with childrenOf, peel (strip optional / nullable / default / prefault / catch / readonly / nonoptional), valueSide (a pipe's value schema), isUncheckedBase (a bare base with no check), describeSchema (a version-independent description, function-bodied parts marked opaque) and defineSchemaTag (a namespaced tag stamped by clone, never mutation); plus the no-zod-internals and no-zod-subpath lint rules.
+      - Cross-plugin:
+        - Imported by:
+          - `network/live`
+          - `packages/list-bound`
+      - Exemptions:
+        - Exempts itself from: `zod-introspect/no-zod-internals` — `core/internal`, `lint` (sanctioned)
+        - Exempted by: `packages/zod-introspect` (0 debt)
       - Core:
-        - Exports (types): `ZodParser`
+        - Exports (types):
+          - `FormatParam`
+          - `PeelableKind`
+          - `Schema`
+          - `SchemaCheck`
+          - `SchemaChild`
+          - `SchemaDescription`
+          - `SchemaEdge`
+          - `SchemaInnerKind`
+          - `SchemaKind`
+          - `SchemaLeafKind`
+          - `SchemaLiteral`
+          - `SchemaNode`
+          - `SchemaNodeOf`
+          - `SchemaTag`
+          - `UnknownKeys`
+        - Exports (values):
+          - `childrenOf`
+          - `defineSchemaTag`
+          - `describeSchema`
+          - `inspect`
+          - `isUncheckedBase`
+          - `isZodSchema`
+          - `OPAQUE_MARK`
+          - `peel`
+          - `valueSide`
 
 - **`page`** — Block-based page editor.
   - Plugins:

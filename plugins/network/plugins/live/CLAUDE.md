@@ -1157,9 +1157,10 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `serveValue`
     - `sliceRange`
 - Core:
-  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 37 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live/filter` ×7
     - `fields` ×6
+    - `packages/zod-introspect` ×6
     - `primitives/live-state` ×6
     - `infra/endpoints` ×5
     - `packages/list-bound` ×3

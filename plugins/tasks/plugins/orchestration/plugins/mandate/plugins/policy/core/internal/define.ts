@@ -1,5 +1,4 @@
 import { z } from "zod";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 
 /**
  * One grant of a capability: the capability's id and a value its own schema
@@ -22,7 +21,7 @@ export interface Capability<T> {
   /** Stable key: the policy record's key, the registry lookup. */
   readonly id: string;
   /** Parses a stored value. JSON-serializable by construction. */
-  readonly schema: ZodParser<T>;
+  readonly schema: z.ZodType<T>;
   /** What a person reads in the Debug catalog. */
   readonly label: string;
   /** A grant of this capability with `value` — parsed now, so a bad value
@@ -32,7 +31,7 @@ export interface Capability<T> {
 
 export interface CapabilityDef<T> {
   id: string;
-  schema: ZodParser<T>;
+  schema: z.ZodType<T>;
   label: string;
 }
 

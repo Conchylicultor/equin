@@ -170,7 +170,8 @@ export type ExemptableRuleId =
   | "watcher-safety/no-raw-fs-watch"
   | "web-storage/no-raw-web-storage"
   | "z-layers/no-adhoc-zindex"
-  | "zod-parser/no-narrow-zodtype";
+  | "zod-introspect/no-zod-internals"
+  | "zod-introspect/no-zod-subpath";
 
 /** Declared `noDebt` by their owner: a sanctioned exemption only. */
 export type SanctionedOnlyRuleId = 
