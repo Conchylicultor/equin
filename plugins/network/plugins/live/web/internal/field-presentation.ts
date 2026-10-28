@@ -12,7 +12,10 @@ import type {
   FieldsRecord,
   InferFieldValue,
 } from "@plugins/fields/core";
-import type { EntityRef } from "@plugins/infra/plugins/entities/core";
+import type {
+  EntityRef,
+  PresentationReadsOf,
+} from "@plugins/infra/plugins/entities/core";
 import type { EntityExposure } from "@plugins/infra/plugins/entity-extensions/core";
 import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
 import type {
@@ -168,14 +171,17 @@ type OwnerFields<O> =
 
 /**
  * The row a cell is handed: an entity's — its presented field and the
- * registration's declared `reads` (a list carrying fewer throws at mount);
- * an arm's — the union's row; a collection's — its row; an exposure's —
- * nothing beyond its value.
+ * fields its ref declares its presentation reads (`entityRef`'s
+ * `presentationReads`, carried by every collection `from` it); an arm's — the
+ * union's row; a collection's — its row; an exposure's — nothing beyond its
+ * value.
  */
-type OwnerRow<O, K extends string, Rd extends string> =
+type OwnerRow<O, K extends string> =
   O extends EntityRef<string, infer F>
     ? {
-        readonly [P in (K | Rd) & keyof F]: InferFieldValue<F[P]>;
+        readonly [P in (K | PresentationReadsOf<O>) & keyof F]: InferFieldValue<
+          F[P]
+        >;
       }
     : O extends LiveArm<infer Row, FieldsRecord, string, FieldsRecord>
       ? Row
@@ -188,19 +194,17 @@ type OwnerRow<O, K extends string, Rd extends string> =
 /** One registration (see {@link FieldPresentation}). */
 export interface FieldPresentationRegistration<
   O extends PresentationOwner = PresentationOwner,
-  Rd extends string = string,
 > {
-  owner: O;
   /**
-   * An entity owner's OTHER fields its cells read (`["id", "updatedAt"]`) —
-   * every list applying the registration must carry them (asserted at mount).
-   * A collection's cells read its whole row.
+   * What it presents. An entity owner's cells read its presented field and
+   * the ones its ref declares (`entityRef(…, { presentationReads })`) — a new
+   * one is declared there, so every list of the entity carries it.
    */
-  reads?: O extends FieldsCollection ? never : readonly Rd[];
+  owner: O;
   fields?: {
     readonly [K in keyof OwnerFields<O> & string]?: FieldPresentationSpec<
       OwnerFields<O>[K],
-      OwnerRow<O, K, Rd>
+      OwnerRow<O, K>
     >;
   };
 }
@@ -208,7 +212,6 @@ export interface FieldPresentationRegistration<
 /** A registration as the slot stores it (its types erased). */
 export interface StoredFieldPresentation {
   readonly owner: PresentationOwner;
-  readonly reads: readonly string[];
   readonly fields: Readonly<
     Record<string, FieldPresentationSpec<unknown, unknown>>
   >;
@@ -241,22 +244,20 @@ const PresentationSlot = defineSlot<StoredFieldPresentation>({
 });
 
 /**
- * The one erasure: `O` and `Rd` tie each cell to its owner's values and rows,
- * so they must survive to the call site — the slot stores the erased one.
+ * The one erasure: `O` ties each cell to its owner's values and rows, so it
+ * must survive to the call site — the slot stores the erased one.
  */
-function register<
-  const O extends PresentationOwner,
-  const Rd extends string = never,
->(registration: FieldPresentationRegistration<O, Rd>): Contribution {
+function register<const O extends PresentationOwner>(
+  registration: FieldPresentationRegistration<O>,
+): Contribution {
   return PresentationSlot({
     owner: registration.owner,
-    reads: registration.reads ?? [],
     fields: (registration.fields ?? {}) as StoredFieldPresentation["fields"],
   });
 }
 
 /**
- * `FieldPresentation.Register({ owner, reads?, fields? })` — present an
+ * `FieldPresentation.Register({ owner, fields? })` — present an
  * owner's fields in every list that reaches it (a collection: its own
  * fields, in every list of it). An extension's web barrel
  * registers its exposure, a union arm's its arm, even with nothing to present

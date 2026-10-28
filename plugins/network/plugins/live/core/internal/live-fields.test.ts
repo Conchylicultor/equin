@@ -12,7 +12,7 @@ import {
 } from "@plugins/fields/plugins/text/plugins/config/core";
 import { entityRef } from "@plugins/infra/plugins/entities/core";
 import { wholeList } from "@plugins/packages/plugins/list-bound/core";
-import { liveCollection } from "./live-collection";
+import { liveCollection, type LiveRowsCollection } from "./live-collection";
 import { liveArm } from "./live-columns";
 import { LIVE_COLUMNS_KEY } from "./live-columns";
 import { schemaDomain } from "./field-domain";
@@ -153,6 +153,29 @@ describe("liveCollection — the fields spelling", () => {
     expect(c.exposes).toBeNull();
     expect(c.rowKeys).toEqual(["title", "id"]);
     expect(Object.keys(c.row.shape)).not.toContain(LIVE_COLUMNS_KEY);
+  });
+
+  test("carries the fields the entity's presentation reads, whatever the collection names", () => {
+    const presented = entityRef("presented", notes.fields, {
+      presentationReads: ["id", "createdAt", "internal"],
+    });
+    const c = liveCollection("test.live-fields.presented", {
+      from: presented,
+      pick: ["status", "createdAt"],
+      id: "id",
+    });
+    // A picked read stays listed; the others are carried, never listed.
+    expect(c.rowKeys).toEqual(["status", "createdAt", "id", "internal"]);
+    expect(Object.keys(c.fields)).toEqual(["status", "createdAt"]);
+    type Row = typeof c extends LiveRowsCollection<infer R> ? R : never;
+    const typed: (keyof Row)[] = ["status", "createdAt", "id", "internal"];
+    expect(typed).toHaveLength(4);
+    expect(() =>
+      entityRef("presented", notes.fields, {
+        // @ts-expect-error — a read is a field of the entity
+        presentationReads: ["nope"],
+      }),
+    ).toThrow(/presentationReads names "nope"/);
   });
 
   test("a collection over no entity declares only its own fields", () => {

@@ -164,8 +164,8 @@ describe("the base field schema over the runs source", () => {
   it("the kind source field offers the registered arms, in their order — not the loaded page's kinds", () => {
     // Registered release first (plugin load order); the options follow `order`.
     const { fields } = deriveFields(runs, true, [
-      { owner: releaseArm, reads: [], fields: {} },
-      { owner: buildArm, reads: [], fields: {} },
+      { owner: releaseArm, fields: {} },
+      { owner: buildArm, fields: {} },
     ]);
     expect(fields.find((f) => f.id === "kind")?.options).toEqual([
       { value: "build", label: "Build" },

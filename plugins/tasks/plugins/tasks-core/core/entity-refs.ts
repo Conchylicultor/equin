@@ -16,9 +16,22 @@ import {
 // two agree.
 export const tasksEntityRef = entityRef("tasks", taskFields);
 export const attemptsEntityRef = entityRef("attempts", attemptFields);
+// Its presentation's status cell (conversations/all-conversations) reads the
+// row's identity and timestamps beside the status — every list of
+// conversations carries them.
 export const conversationsEntityRef = entityRef(
   "conversations",
   conversationFields,
+  {
+    presentationReads: [
+      "id",
+      "title",
+      "kind",
+      "createdAt",
+      "updatedAt",
+      "statusUnverifiedSince",
+    ],
+  },
 );
 export const taskDependenciesEntityRef = entityRef(
   "task_dependencies",

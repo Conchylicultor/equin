@@ -48,11 +48,10 @@ function UrlCell({ url }: { url: string | null }): ReactNode {
  * `startsAt` is the one date rendered ABSOLUTELY: an events list is mostly
  * forward-looking and the weekday decides whether you go, which the generic
  * relative date cell ("in 3d") cannot say. The cell reads the row's `allDay`
- * beside it (`reads`).
+ * beside it (`eventsEntityRef`'s `presentationReads`).
  */
 export const eventPresentation = FieldPresentation.Register({
   owner: eventsEntityRef,
-  reads: ["allDay"],
   fields: {
     startsAt: {
       cell: (startsAt, e) => (

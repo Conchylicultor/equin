@@ -56,18 +56,12 @@ export function useConversationModelOptions(): LiveFieldOptionsRead {
 /**
  * Every list of conversations (All-conversations, History, the Queue) derives
  * its fields from the entity; this is how two of them present. The status
- * cell reads the row's identity and timestamps beside the status (`reads`).
+ * cell reads the row's identity and timestamps beside the status — declared
+ * on the ref (`conversationsEntityRef`'s `presentationReads`), so every list
+ * of conversations carries them.
  */
 export const conversationPresentation = FieldPresentation.Register({
   owner: conversationsEntityRef,
-  reads: [
-    "id",
-    "title",
-    "kind",
-    "createdAt",
-    "updatedAt",
-    "statusUnverifiedSince",
-  ],
   fields: {
     status: { cell: (_status, conv) => <StatusCell conv={conv} /> },
     model: { useOptions: useConversationModelOptions },

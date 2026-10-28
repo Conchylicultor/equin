@@ -42,7 +42,6 @@ import type {
 
 /** One registered presentation per owner key, its registrations merged. */
 interface OwnerPresentation {
-  readonly reads: ReadonlySet<string>;
   readonly fields: ReadonlyMap<string, FieldPresentationSpec<unknown, unknown>>;
 }
 
@@ -85,15 +84,11 @@ export function mergePresentations(
 ): ReadonlyMap<string, OwnerPresentation> {
   const out = new Map<
     string,
-    {
-      reads: Set<string>;
-      fields: Map<string, FieldPresentationSpec<unknown, unknown>>;
-    }
+    { fields: Map<string, FieldPresentationSpec<unknown, unknown>> }
   >();
   for (const r of registrations) {
     const key = presentationOwnerKey(r.owner);
-    const merged = out.get(key) ?? { reads: new Set(), fields: new Map() };
-    for (const f of r.reads) merged.reads.add(f);
+    const merged = out.get(key) ?? { fields: new Map() };
     for (const [field, spec] of Object.entries(r.fields)) {
       const prior = merged.fields.get(field) ?? {};
       const clash = Object.keys(spec).filter((p) => Object.hasOwn(prior, p));
@@ -306,7 +301,9 @@ export function deriveFields(
 
   // Its own fields, presented by its entity's registration (the picked ones)
   // and by its own (`FieldPresentation.Register({ owner: collection })`, any
-  // listed one — one property of one field set by both throws).
+  // listed one — one property of one field set by both throws). The fields
+  // the entity's cells read beside them are on every row by construction
+  // (`entityRef`'s `presentationReads`, carried by `liveCollection`).
   {
     const entity =
       collection.from === null
@@ -317,13 +314,6 @@ export function deriveFields(
       if (!Object.hasOwn(collection.fields, name)) {
         throw new Error(
           `data-view: a presentation of collection "${collection.key}" names "${name}", which it lists no field of.`,
-        );
-      }
-    }
-    for (const read of entity?.reads ?? []) {
-      if (!collection.rowKeys.includes(read)) {
-        throw new Error(
-          `data-view: the presentation of entity "${collection.from!.name}" reads "${read}", which "${collection.key}" does not carry — pick or carry it.`,
         );
       }
     }

@@ -81,7 +81,7 @@ const row = {
 
 const registration = (
   r: Partial<StoredFieldPresentation> & Pick<StoredFieldPresentation, "owner">,
-): StoredFieldPresentation => ({ reads: [], fields: {}, ...r });
+): StoredFieldPresentation => ({ fields: {}, ...r });
 
 describe("deriveFields", () => {
   test("derives the collection's own fields, in declaration order, then the reached exposures'", () => {
@@ -131,12 +131,11 @@ describe("deriveFields", () => {
     ).not.toContain("n");
   });
 
-  test("applies the owner's presentation: the cell reads the value and the declared reads", () => {
+  test("applies the owner's presentation: the cell reads the value and the row", () => {
     const seen: unknown[] = [];
     const { fields } = deriveFields(notesList, false, [
       registration({
         owner: notes,
-        reads: ["id"],
         fields: {
           status: {
             cell: (value, r) => {
@@ -152,14 +151,6 @@ describe("deriveFields", () => {
     expect(status.width).toBe("4rem");
     expect(status.cell!(row)).toBeNull();
     expect(seen).toEqual([["done", "n1"]]);
-  });
-
-  test("throws when the entity's presentation reads a field the collection does not carry", () => {
-    expect(() =>
-      deriveFields(notesList, false, [
-        registration({ owner: notes, reads: ["nope"] }),
-      ]),
-    ).toThrow(/reads "nope", which "test.derived-fields.notes" does not carry/);
   });
 
   test("two registrations of one owner merge, and clash on one property of one field", () => {

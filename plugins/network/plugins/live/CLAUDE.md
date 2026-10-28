@@ -1078,7 +1078,8 @@ conversationHistory.fields.status;   // { id, key, label, typeId, options, prima
 ```
 
 - **Derived.** The row schema is `fieldsToZodObject` of every row field (pick,
-  own, carried — each field's wire schema with its default backfill), plus
+  own, carried — and the `from` entity ref's `presentationReads`, carried
+  whether or not `carry` names them — each field's wire schema with its default backfill), plus
   `$columns` when the rows reach an entity. Every LISTED field (picked and own)
   whose value has a filter domain is filterable in it — one derivation for every
   owner (`core/internal/field-domain.ts`): at the type level from the field's
@@ -1129,7 +1130,7 @@ conversationHistory.fields.status;   // { id, key, label, typeId, options, prima
   own, so the order is the surface's choice, never plugin load order; the
   runs arms' rationale is in `runs` core) and `listed` (its descriptors, ids
   `<arm>.<field>`). See *Union collections*.
-- **Presentation — `FieldPresentation.Register({ owner, reads?, fields })`**
+- **Presentation — `FieldPresentation.Register({ owner, fields })`**
   (web). What only the browser can say of a field — `cell(value, row,
   context)`, `token(value, row, context)` (its short form on a card's token
   line), `extent: true` (its renderers get `context.extent`, the `{ min, max }`
@@ -1139,9 +1140,11 @@ conversationHistory.fields.status;   // { id, key, label, typeId, options, prima
   `ResourceResult` of options — a live catalog; the field is `pending` until
   it lands — or, for a set that is always known such as a contribution
   registry or a display-name lookup, the plain option array) — registered once per OWNER: an
-  entity (`EntityRef` — its fields in every list whose rows are it; `reads`
-  names the other entity fields its cells read, and a list carrying fewer
-  throws at mount), an exposure (`EntityExposure`), an arm (`LiveArm`) or a
+  entity (`EntityRef` — its fields in every list whose rows are it; the
+  other entity fields its cells read are the ref's `presentationReads`,
+  `entityRef(name, fields, { presentationReads })`, which every
+  `liveCollection({ from: ref })` carries by construction — so a cell is
+  typed against them and no collection can miss one), an exposure (`EntityExposure`), an arm (`LiveArm`) or a
   collection declared by fields (its listed fields, in every list of it — a
   union's base fields, an own field; a picked one's entity may present it
   too, never the same property). Several plugins may present one owner (two

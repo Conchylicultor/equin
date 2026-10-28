@@ -49,12 +49,9 @@ export const errorStoppedConversations = liveCollection(
       stoppedAt: nullable(dateField({ label: "Stopped at" })),
       stopError: nullable(textField({ label: "Error" })),
     },
-    carry: {
-      // The conversations entity's presentation (its status cell) reads
-      // these beside the status, in every list of conversations.
-      pick: ["id", "kind", "createdAt", "updatedAt", "statusUnverifiedSince"],
-      fields: { account: nullable(textField()) },
-    },
+    // The fields the conversations entity's presentation reads (its status
+    // cell: id, timestamps…) ride along by construction (`presentationReads`).
+    carry: { fields: { account: nullable(textField()) } },
     baseExposures: false,
     id: "id",
     sortable: ["stoppedAt"],

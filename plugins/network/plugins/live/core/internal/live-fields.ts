@@ -7,7 +7,10 @@ import {
   type Labelled,
 } from "@plugins/fields/core";
 import type { z } from "zod";
-import type { EntityRef } from "@plugins/infra/plugins/entities/core";
+import type {
+  EntityRef,
+  PresentationReadsOf,
+} from "@plugins/infra/plugins/entities/core";
 import type { AnyExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
 import type {
   FilterColumn,
@@ -23,6 +26,8 @@ import { fieldDomain, type FieldsFilterable } from "./field-domain";
 // fields' wire schemas), the filter domains (`./field-domain`), the labels,
 // types and options every list and the MCP read off `collection.fields`.
 // `carry` puts fields on the row a list does not show (an id, a foreign key).
+// The fields `from`'s presentation reads (`entityRef`'s `presentationReads`)
+// are carried on every row by construction, whether or not `carry` names them.
 // `from` is an entity or an entity EXTENSION's shape (a side table's own
 // field record): a shape's rows carry its whole wire row, and `pick` lists
 // some of its fields.
@@ -117,10 +122,10 @@ export type ListedFields<E, P extends string, OF> = Pick<
 > &
   OF;
 
-/** Every field on the row: the listed ones and the carried ones. */
+/** Every field on the row: the listed ones, the carried ones and the ones `from`'s presentation reads. */
 export type RowFields<E, P extends string, CP extends string, OF, CF> = Pick<
   FromFields<E>,
-  (P | CP) & keyof FromFields<E>
+  (P | CP | PresentationReadsOf<E>) & keyof FromFields<E>
 > &
   OF &
   CF;
@@ -359,6 +364,13 @@ export function resolveFieldsSpec(
   }
   for (const [name, field] of Object.entries(spec.carry?.fields ?? {})) {
     add(carried, name, field, "`carry.fields`");
+  }
+  // What the entity's presentation reads beside the field it presents rides
+  // on every row of it — never restated per collection, so none can miss one.
+  if (shape === undefined && from !== undefined) {
+    for (const name of (from as EntityRef).presentationReads) {
+      if (!seen.has(name)) add(carried, name, fromField(name), "the entity");
+    }
   }
   for (const [name, field] of listed) {
     const label = field.meta.label;

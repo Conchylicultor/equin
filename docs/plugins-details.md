@@ -29304,7 +29304,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `sqlDefault`
       - Core:
         - Uses: `fields.fieldsToZodObject`
-        - Exports (types): `EntityRef`
+        - Exports (types):
+          - `EntityRef`
+          - `PresentationReadsOf`
         - Exports (values):
           - `entityRef`
           - `wireSchema`
