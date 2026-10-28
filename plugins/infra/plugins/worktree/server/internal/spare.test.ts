@@ -12,10 +12,12 @@ import { GIT } from "@plugins/infra/plugins/paths/server";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { createSpareIn, pruneSparesIn } from "./spare";
 import {
+  ADD_IN_PROGRESS_LOCK,
   checkoutAttempt,
+  checkoutState,
   convergeExistingCheckout,
   gitWorktreesDir,
-  isUnfinishedSpareClaim,
+  isUnfinishedCheckout,
   listReadySpares,
   listWorktreeEntries,
 } from "./worktree";
@@ -185,7 +187,7 @@ describe("crash convergence", () => {
     // The claim's first two steps, then a crash before the switch.
     await git(repo, "worktree", "unlock", spare);
     await git(repo, "worktree", "move", spare, wt);
-    expect(await isUnfinishedSpareClaim(repo, wt)).toBe(true);
+    expect(await isUnfinishedCheckout(repo, wt)).toBe(true);
 
     expect(await convergeExistingCheckout(repo, "att-8", wt, noGate)).toEqual({
       source: "fresh",
@@ -195,7 +197,7 @@ describe("crash convergence", () => {
     );
     expect(await git(wt, "status", "--porcelain")).toBe("");
     expect(await lockOf(wt)).toBe(LEGACY_IDS.worktreeLockReason);
-    expect(await isUnfinishedSpareClaim(repo, wt)).toBe(false);
+    expect(await isUnfinishedCheckout(repo, wt)).toBe(false);
   });
 
   test("a switch killed after writing an added file converges to a clean checkout", async () => {
@@ -227,7 +229,7 @@ describe("crash convergence", () => {
     );
     expect(plainSwitch.exitCode).not.toBe(0);
     expect(plainSwitch.stderr).toContain("Untracked working tree file");
-    expect(await isUnfinishedSpareClaim(repo, wt)).toBe(true);
+    expect(await isUnfinishedCheckout(repo, wt)).toBe(true);
 
     expect(
       (await convergeExistingCheckout(repo, "att-10", wt, noGate)).source,
@@ -240,6 +242,39 @@ describe("crash convergence", () => {
     );
     expect(await git(wt, "status", "--porcelain")).toBe("");
     expect(await lockOf(wt)).toBe(LEGACY_IDS.worktreeLockReason);
+  });
+
+  test("an add killed mid-checkout (git's own lock still on) is checked out again and locked", async () => {
+    // The 2026-10-28 launch failure: main's auto-restart killed the cold
+    // `git worktree add` half-way, leaving the attempt's dir with most files
+    // (the CLI among them) unwritten and git's "initializing" lock in place.
+    // Every retry adopted it as finished and failed running `<wt>/equin install`.
+    const wt = wtFor("att-12");
+    await git(
+      repo,
+      "worktree",
+      "add",
+      "--no-checkout",
+      "-b",
+      "claude-web/att-12",
+      wt,
+      "main",
+    );
+    const admin = await git(wt, "rev-parse", "--absolute-git-dir");
+    writeFileSync(join(admin, "locked"), ADD_IN_PROGRESS_LOCK);
+    expect(existsSync(join(wt, "a.txt"))).toBe(false);
+    expect(await isUnfinishedCheckout(repo, wt)).toBe(true);
+
+    expect(
+      (await convergeExistingCheckout(repo, "att-12", wt, noGate)).source,
+    ).not.toBe("existing");
+    expect(existsSync(join(wt, "a.txt"))).toBe(true);
+    expect(await git(wt, "symbolic-ref", "HEAD")).toBe(
+      "refs/heads/claude-web/att-12",
+    );
+    expect(await git(wt, "status", "--porcelain")).toBe("");
+    expect(await lockOf(wt)).toBe(LEGACY_IDS.worktreeLockReason);
+    expect(await isUnfinishedCheckout(repo, wt)).toBe(false);
   });
 
   test("a finished checkout is left in place and only re-locked", async () => {
@@ -261,7 +296,43 @@ describe("crash convergence", () => {
     const wt = wtFor("att-9");
     await checkoutAttempt(repo, "att-9", wt);
     await git(wt, "switch", "--detach", "HEAD");
-    expect(await isUnfinishedSpareClaim(repo, wt)).toBe(false);
+    expect(await isUnfinishedCheckout(repo, wt)).toBe(false);
+  });
+});
+
+describe("checkoutState", () => {
+  test("absent, unfinished (a killed add or claim), complete — and it never discards", async () => {
+    const wt = wtFor("att-20");
+    expect(await checkoutState(repo, wt)).toBe("absent");
+
+    // A cold add killed mid-checkout: git's own lock still on.
+    await git(
+      repo,
+      "worktree",
+      "add",
+      "--no-checkout",
+      "-b",
+      "claude-web/att-20",
+      wt,
+      "main",
+    );
+    const admin = await git(wt, "rev-parse", "--absolute-git-dir");
+    writeFileSync(join(admin, "locked"), ADD_IN_PROGRESS_LOCK);
+    expect(await checkoutState(repo, wt)).toBe("unfinished");
+    // Read-only: the cut-off add is still there, lock and all.
+    expect(existsSync(wt)).toBe(true);
+    expect(await lockOf(wt)).toBe(ADD_IN_PROGRESS_LOCK);
+
+    // A spare moved into place whose switch never ran.
+    const spare = await createSpareIn(repo, noInstall);
+    const claimed = wtFor("att-21");
+    await git(repo, "worktree", "unlock", spare);
+    await git(repo, "worktree", "move", spare, claimed);
+    expect(await checkoutState(repo, claimed)).toBe("unfinished");
+
+    const done = wtFor("att-22");
+    await checkoutAttempt(repo, "att-22", done);
+    expect(await checkoutState(repo, done)).toBe("complete");
   });
 });
 
@@ -286,5 +357,24 @@ describe("pruneSparesIn", () => {
     const later = await pruneSparesIn(repo, Date.now() + 48 * 3600_000, remove);
     expect([...later].sort()).toEqual([ready, debris].sort());
     expect(await lockOf(ready)).toBeNull();
+  });
+
+  test("reclaims a stale spare whose add was killed (git's own lock still on)", async () => {
+    const killed = await createSpareIn(repo, noInstall);
+    await git(repo, "worktree", "unlock", killed);
+    await git(
+      repo,
+      "worktree",
+      "lock",
+      killed,
+      "--reason",
+      ADD_IN_PROGRESS_LOCK,
+    );
+    const remove = async (): Promise<void> => {};
+    // Just now: the add may still be running.
+    expect(await pruneSparesIn(repo, Date.now(), remove)).toEqual([]);
+    expect(await pruneSparesIn(repo, Date.now() + 20 * 60_000, remove)).toEqual(
+      [killed],
+    );
   });
 });

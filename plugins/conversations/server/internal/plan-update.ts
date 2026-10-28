@@ -72,7 +72,8 @@ export interface PlanContext {
   lastSubmitAt: Date | null;
   /**
    * Whether the conversation's `conversations.spawn` job is still coming —
-   * queued, waiting out a retry, or running (`spawnConversationJob.inFlight`,
+   * queued, waiting out a retry, running, or suspended waiting on its
+   * workspace (a worktree checkout) (`spawnConversationJob.inFlight`,
    * read BEFORE the runtime is asked, so a spawn that finished in between is
    * seen live). While it is, a "starting" row with no session is the job's to
    * settle, however long it takes.

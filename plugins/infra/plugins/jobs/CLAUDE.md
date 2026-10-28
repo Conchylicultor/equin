@@ -131,6 +131,12 @@ A job row has two identities (`server/internal/run-identity.ts`):
     collapsing onto the pending row;
   - **resume rows** carry the suspended run's id explicitly.
 
+A keyed job's `inFlight(keys)` answers "is this run still coming?" from both
+halves: a row holding the key (`keysInFlight`), or the run suspended on a
+pending wait (`_jobWaits`, `suspendedRunIds`) — a suspend deletes the row, and
+the trigger or timeout racer re-enqueues it, so a workflow parked on
+`ctx.waitFor` (the spawn waiting on its checkout) is not "gone".
+
 So **"singleton" means at most one PENDING row, not at most one live
 workflow**: an enqueue while a singleton workflow is suspended starts a new run.
 A dead run's log can no longer be replayed by the next run of the job. Dead-job
@@ -754,9 +760,9 @@ connection and every statement on it gives up after 60 s with no reply, and the
 - Cross-plugin:
   - Imported by: 59 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×18
-    - `infra` ×13
+    - `infra` ×12
+    - `conversations` ×7
     - `debug` ×7
-    - `conversations` ×6
     - `tasks` ×4
     - `database` ×3
     - `page` ×3

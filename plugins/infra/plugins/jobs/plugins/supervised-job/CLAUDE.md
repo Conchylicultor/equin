@@ -341,6 +341,19 @@ child is still being spawned (its row still holds the claiming backend's seed
 pid) is stamped but not signalled — `outcome.reason: "not-spawned"`: the child
 runs on, and closes as cancelled only if it fails.
 
+### Waiting on another workflow's run: `latestSupervisedRun(job, input)`
+
+A workflow that REQUESTS a built-in-ledger job (enqueues it) and waits for it —
+the spawn waiting on `worktree.prepare` — reads the run the way the claim named
+it: `latestSupervisedRun(job, input)` answers the newest `supervised_job_runs`
+row for `(job.name, lock(input))` (`{ id, startedAt, open, exitCode,
+errorMessage }`) or `null`, and `job.kind.id` + `id` is what `runEnded` filters
+on (`where: { kindId }` alone wakes on any run of the kind — a null trigger
+filter matches anything). Same contract as `cancelSupervisedJobByLock`: only for
+a built-in-ledger job that declares `lock`, anything else throws. The row says
+whether a run is still going and why one failed; the work's own result (the
+checkout on disk) stays the authority, observed before every wait.
+
 ## Residuals
 
 - **A dead workflow costs its run the side effects, not the ledger.** If the
@@ -687,6 +700,7 @@ construction, and the job and the body it spawns cannot drift apart.
     - `SupervisedJobLedger`
     - `SupervisedJobSpawn`
     - `SupervisedRunContext`
+    - `SupervisedRunRow`
     - `SupervisedStepsContext`
     - `UnfinishedRun`
   - Exports (values):
@@ -695,6 +709,7 @@ construction, and the job and the body it spawns cannot drift apart.
     - `cancelSupervisedJob`
     - `cancelSupervisedJobByLock`
     - `defineSupervisedJob`
+    - `latestSupervisedRun`
     - `onSupervisedRunChange`
     - `runEnded`
   - Register:
@@ -733,6 +748,7 @@ construction, and the job and the body it spawns cannot drift apart.
     - `apps/prototypes/thumbnails`
     - `apps/sonata/sources/ultimate-guitar/alignment`
     - `backup`
+    - `conversations/workspace/worktree`
     - `database/fork`
     - `debug/worktree-cleanup`
     - `framework/cli/op-runtime`
@@ -743,6 +759,7 @@ construction, and the job and the body it spawns cannot drift apart.
     - `infra/audio-analysis`
     - `infra/deps`
     - `infra/events-test`
+    - `infra/worktree/spare-pool`
     - `release`
 - Exemptions:
   - Exempts itself from:

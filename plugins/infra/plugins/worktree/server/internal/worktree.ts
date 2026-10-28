@@ -470,6 +470,17 @@ async function discardPartialCheckout(
   repoRoot: string,
   wtPath: string,
 ): Promise<void> {
+  // A killed add still carries git's own `ADD_IN_PROGRESS_LOCK`, and `prune`
+  // skips a locked registration — so without this the discard would leave the
+  // entry behind and the re-add would refuse ("a missing but locked worktree").
+  // Released only when it is that lock, before the dir goes: one we did not
+  // expect stays loud (the re-add names it). Not signal-bound, like the prune.
+  const entry = (await listWorktreeEntries(repoRoot)).find(
+    (e) => e.path === wtPath,
+  );
+  if (entry?.locked === ADD_IN_PROGRESS_LOCK) {
+    await unlockWorktreeForRemoval(repoRoot, wtPath);
+  }
   await rm(wtPath, { recursive: true, force: true });
   // Deliberately NOT signal-bound. This is the cleanup that keeps a killed
   // checkout from leaving a partial tree the next retry reads as finished, so it
@@ -608,7 +619,7 @@ async function switchToAttemptBranch(
     });
   }
   // Thrown, not absorbed: the dir is at `wtPath` on a detached HEAD, which the
-  // retry's early return recognises (`isUnfinishedSpareClaim`), discards and
+  // retry's early return recognises (`isUnfinishedCheckout`), discards and
   // checks out again.
   if (r.exitCode !== 0) {
     throw new Error(
@@ -682,18 +693,39 @@ async function claimSpare(
 }
 
 /**
- * Whether the checkout at `wtPath` is a claimed spare whose switch never landed
- * (a crash between `move` and `switch`): its admin dir is `spare-*` (kept by the
- * move), its HEAD is detached, and it holds no lock (the claim unlocked it, and
- * only a finished claim re-locks). All three, so a working checkout — even one
- * made from a spare, mid-rebase on a detached HEAD — is never touched: a
- * finished claim is locked.
+ * The lock reason git itself writes while `git worktree add` runs: the admin
+ * dir is locked "initializing" before the checkout is written and unlocked once
+ * it is complete. So a worktree still locked with it is an add that died
+ * mid-checkout (a backend restart kills git with the process group) — or one
+ * still running. git localizes the text; our adds run under the server's own
+ * (English) locale, so this is the reason they leave. We never `add --lock`,
+ * which would write the caller's reason instead.
  */
-export async function isUnfinishedSpareClaim(
+export const ADD_IN_PROGRESS_LOCK = "initializing";
+
+/**
+ * Whether the checkout at `wtPath` was killed before it was finished, so it
+ * must be discarded and checked out again rather than adopted:
+ *
+ * - a cold add that never completed: git's own `ADD_IN_PROGRESS_LOCK` is still
+ *   on it (the tree is partly written — not even the CLI may be there);
+ * - a claimed spare whose switch never landed (a crash between `move` and
+ *   `switch`): its admin dir is `spare-*` (kept by the move), its HEAD is
+ *   detached, and it holds no lock (the claim unlocked it, and only a finished
+ *   claim re-locks). All three, so a working checkout — even one made from a
+ *   spare, mid-rebase on a detached HEAD — is never touched: a finished claim
+ *   is locked.
+ */
+export async function isUnfinishedCheckout(
   repoRoot: string,
   wtPath: string,
   signal?: AbortSignal,
 ): Promise<boolean> {
+  const entry = (await listWorktreeEntries(repoRoot, signal)).find(
+    (e) => e.path === wtPath,
+  );
+  if (entry === undefined) return false;
+  if (entry.locked === ADD_IN_PROGRESS_LOCK) return true;
   let gitFile: string;
   try {
     gitFile = await readFile(join(wtPath, ".git"), "utf8");
@@ -705,10 +737,45 @@ export async function isUnfinishedSpareClaim(
   }
   const gitdir = /^gitdir: (.+)$/m.exec(gitFile)?.[1]?.trim();
   if (!gitdir || !isSpareName(basename(gitdir))) return false;
-  const entry = (await listWorktreeEntries(repoRoot, signal)).find(
-    (e) => e.path === wtPath,
-  );
-  return entry !== undefined && entry.detached && entry.locked === null;
+  return entry.detached && entry.locked === null;
+}
+
+/** Where the checkout at a path stands — see {@link checkoutState}. */
+export type CheckoutState = "absent" | "unfinished" | "complete";
+
+/**
+ * Where the checkout at `wtPath` stands, READ ONLY: `absent` (no dir),
+ * `unfinished` (a cut-off add or spare claim — `isUnfinishedCheckout`), else
+ * `complete`. Unlike `setupWorktree` it never discards or checks anything out:
+ * a caller that only waits for a checkout made elsewhere (the spawn, waiting
+ * on the `worktree.prepare` child) must not converge one that child may still
+ * be writing — only the child converges.
+ */
+export async function checkoutState(
+  repoRoot: string,
+  wtPath: string,
+  signal?: AbortSignal,
+): Promise<CheckoutState> {
+  if (!existsSync(wtPath)) return "absent";
+  return (await isUnfinishedCheckout(repoRoot, wtPath, signal))
+    ? "unfinished"
+    : "complete";
+}
+
+/**
+ * Take over a checkout `checkoutState` reads `complete`: re-assert its lock and
+ * install it — `setupWorktree`'s `existing` path minus the convergence, cheap
+ * enough to run in a backend (~140 ms of freshness check when already
+ * installed). Not frozen: its package.jsons are the agent's own edits (see
+ * `installCheckout`).
+ */
+export async function adoptCompleteCheckout(
+  wtPath: string,
+  signal?: AbortSignal,
+): Promise<void> {
+  const repoRoot = await ensureMainWorktreeRoot(signal);
+  await ensureWorktreeLocked(repoRoot, wtPath, signal);
+  await installCheckout(wtPath, { frozen: false }, signal);
 }
 
 /** Where an attempt's checkout came from: a claimed spare, or a cold add. */
@@ -756,14 +823,14 @@ export interface WorktreeSetup {
 
 /**
  * The early-return body of `setupWorktree` for a checkout that already exists:
- * re-assert the lock — or, for a spare claim a crash interrupted (see
- * `isUnfinishedSpareClaim`), discard the tree and check the attempt out again.
+ * re-assert the lock — or, for an add or a spare claim a crash interrupted (see
+ * `isUnfinishedCheckout`), discard the tree and check the attempt out again.
  *
- * Discarded, never finished in place: the claim may have died anywhere inside
- * its switch (a backend restart kills git with the process group), and a
- * half-applied switch cannot be switched again (see `switchToAttemptBranch`).
- * Nobody has worked in an unfinished claim, so the discard loses nothing, and
- * one rule covers every way the switch can die. Both are checkout writes, so
+ * Discarded, never finished in place: the add or claim may have died anywhere
+ * inside its checkout (a backend restart kills git with the process group), and
+ * a half-applied switch cannot be switched again (see `switchToAttemptBranch`).
+ * Nobody has worked in an unfinished checkout, so the discard loses nothing,
+ * and one rule covers every way the checkout can die. Both are checkout writes, so
  * they take the gate; `gate` is `withWorktreeMutateSlot` in production.
  */
 export async function convergeExistingCheckout(
@@ -773,7 +840,7 @@ export async function convergeExistingCheckout(
   gate: <T>(fn: () => Promise<T>) => Promise<T>,
   signal?: AbortSignal,
 ): Promise<WorktreeSetup> {
-  if (await isUnfinishedSpareClaim(repoRoot, wtPath, signal)) {
+  if (await isUnfinishedCheckout(repoRoot, wtPath, signal)) {
     const source = await gate(async () => {
       await discardPartialCheckout(id, repoRoot, wtPath);
       return checkoutAttempt(repoRoot, id, wtPath, signal);
@@ -816,8 +883,9 @@ export async function setupWorktree(
   // Idempotent: an already-present worktree dir means the checkout already
   // landed, so a durable-job retry (or a caller reusing an existing worktree) is
   // a no-op. `worktreePathFor` derives the path purely from the id, so the dir's
-  // existence is an authoritative "already set up" signal — with one exception
-  // it converges: a spare moved into place whose branch switch never finished.
+  // existence is an authoritative "already set up" signal — except for a
+  // checkout a crash cut short (an add or a spare's switch never finished),
+  // which it converges.
   //
   // The lock is re-asserted rather than skipped: this is the path every reused
   // and every pre-lock worktree takes, so making it the place the lock is

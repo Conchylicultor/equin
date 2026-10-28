@@ -1,5 +1,5 @@
 import type { Registration } from "@plugins/framework/plugins/server-core/core";
-import type { EnqueueTx } from "@plugins/infra/plugins/jobs/server";
+import type { EnqueueTx, JobCtx } from "@plugins/infra/plugins/jobs/server";
 import type { WorkspaceKind, WorkspaceSpec } from "../../core";
 
 /** Where Claude Code reads its settings, memory and CLAUDE.md from. */
@@ -49,6 +49,15 @@ export interface WorkspaceAt<S extends WorkspaceSpec = WorkspaceSpec> {
   spec: S;
 }
 
+/**
+ * What `prepare` gets of the spawn job's context: its dispatch deadline, and
+ * the durable step / wait log — so a kind whose preparation is long work can
+ * hand it to a supervised child and suspend until it ends instead of doing it
+ * in the backend. A suspend (a `waitFor`) leaves `prepare` by throwing the
+ * jobs plugin's suspend signal, which the caller must pass through untouched.
+ */
+export type WorkspacePrepareCtx = Pick<JobCtx, "signal" | "step" | "waitFor">;
+
 /** Whether a conversation's workspace can take a `claude --resume`. */
 export type Resumability =
   { kind: "ok" } | { kind: "missing"; message: string };
@@ -77,9 +86,11 @@ export interface WorkspaceImpl<K extends WorkspaceKind = WorkspaceKind> {
   onCommit(tx: EnqueueTx, at: WorkspaceAt<SpecOf<K>>): Promise<void>;
   /**
    * Makes the workspace exist, before the first session starts in it. Runs in
-   * the durable spawn job, so it must be idempotent.
+   * the durable spawn job, so it must be idempotent — and, since the job's
+   * steps replay across retries, every `ctx.step` / `ctx.waitFor` name it uses
+   * must be deterministic.
    */
-  prepare(at: WorkspaceAt<SpecOf<K>>, signal: AbortSignal): Promise<void>;
+  prepare(at: WorkspaceAt<SpecOf<K>>, ctx: WorkspacePrepareCtx): Promise<void>;
   /** What runs once the launch has committed (fire-and-forget by the caller). */
   onFinish(at: WorkspaceAt<SpecOf<K>>): Promise<void>;
   /** What every session started in this workspace adds to its launch. */

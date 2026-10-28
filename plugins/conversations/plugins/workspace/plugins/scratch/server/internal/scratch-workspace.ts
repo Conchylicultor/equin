@@ -39,7 +39,7 @@ export function createScratchWorkspace(deps: {
     // are (re)written on every prepare — a profile improved since the last
     // launch applies to a retried spawn too. Then the profile's own prepare
     // (inputs, deps, `bin/` wrappers). Idempotent, as the spawn job requires.
-    async prepare({ attemptId, path, spec }, signal) {
+    async prepare({ attemptId, path, spec }, { signal }) {
       // A session in an untrusted dir stops at Claude Code's trust dialog and
       // sits there, `starting`, with nothing reporting why — so refuse here,
       // loudly (the boot step `trustScratchRoot` trusts the scratch root).

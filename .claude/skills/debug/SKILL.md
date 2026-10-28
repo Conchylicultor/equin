@@ -122,6 +122,15 @@ report dumps to `logs/render-profiler.jsonl`; API `window.__reactRenderProfiler`
 emission log, and active triggers; dead / backlogged / slot-hog jobs also file
 reports (STEP 0). → [`plugins/debug/plugins/queue/CLAUDE.md`](../../../plugins/debug/plugins/queue/CLAUDE.md)
 
+**A job failed after a restart** (a `[jobs] reclaimed …` report beside it, or
+its retries fail on state the first run left half-made): a deploy kills every
+in-process `hold: "minutes"` handler mid-run — the gateway signals the whole
+process group, so its git / pg_dump children die too — and the retry runs on the
+debris. Re-read the job's `inProcess` claim (the reclaim report quotes it); if
+the debris disproves it, the fix is `defineSupervisedJob`, a detached child a
+restart does not kill (how backups, builds, releases and DB forks run), not a
+smarter retry. → [`plugins/infra/plugins/jobs/plugins/supervised-job/CLAUDE.md`](../../../plugins/infra/plugins/jobs/plugins/supervised-job/CLAUDE.md)
+
 ## Cross-cutting tools (reach for these inside any branch)
 - **Logs** — per-worktree `~/.equin/worktrees/<wt>/logs/<channel>.jsonl`
   (survives restarts). `clientLog(channel, line)` to emit; `tail`/`cat` to read.

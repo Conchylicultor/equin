@@ -52,8 +52,14 @@ describe("scratchWorkspace.prepare", () => {
         input: { note: "x" },
       },
     };
-    await scratchWorkspace.prepare(at, new AbortController().signal);
-    await scratchWorkspace.prepare(at, new AbortController().signal);
+    // A scratch prepare is in-process work: it never steps or waits.
+    const ctx = {
+      signal: new AbortController().signal,
+      step: () => Promise.reject(new Error("scratch prepare must not step")),
+      waitFor: () => Promise.reject(new Error("scratch prepare must not wait")),
+    };
+    await scratchWorkspace.prepare(at, ctx);
+    await scratchWorkspace.prepare(at, ctx);
     expect(order).toEqual(["# note\nx", "prepare:x", "# note\nx", "prepare:x"]);
     // The trust of the session's cwd is asserted before anything is written.
     expect(trusted).toEqual([path, path]);

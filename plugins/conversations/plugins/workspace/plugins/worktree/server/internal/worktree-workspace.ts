@@ -2,17 +2,18 @@ import { existsSync } from "node:fs";
 import { cp, stat } from "node:fs/promises";
 import type { WorkspaceImpl } from "@plugins/conversations/plugins/workspace/server";
 import { databaseForkJob } from "@plugins/database/plugins/fork/server";
-import { getConfig } from "@plugins/config_v2/server";
 import { configDir } from "@plugins/config_v2/data-dirs";
 import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
 import { attemptBranchName } from "@plugins/infra/plugins/worktree/core";
+import { latestSupervisedRun } from "@plugins/infra/plugins/jobs/plugins/supervised-job/server";
 import {
+  adoptCompleteCheckout,
+  checkoutState,
   ensureMainWorktreeRoot,
   gitWorktreesDir,
-  setupWorktree,
 } from "@plugins/infra/plugins/worktree/server";
-import { spareRefillJob } from "@plugins/infra/plugins/worktree/plugins/spare-pool/server";
-import { compositionsConfig } from "@plugins/plugin-meta/plugins/composition/core";
+import { worktreePrepareJob } from "./prepare-job";
+import { prepareWorktree } from "./prepare-wait";
 
 // The agent's own git checkout of this repo, at `<repo>/.claude/worktrees/<id>`,
 // with a forked DB and config dir of its own.
@@ -40,28 +41,26 @@ export const worktreeWorkspace: WorkspaceImpl<"worktree"> = {
     );
   },
 
-  async prepare({ attemptId, path }, signal) {
-    // A checkout claims the namespace of its own name, so `setupWorktree`
-    // refuses one a composition already holds. The manifest is read through
-    // the config registry (the live view, so a Studio edit counts) here rather
-    // than inside `infra/worktree`, which must stay importable from the CLI —
-    // `config_v2/server` throws at module eval without a worktree identity.
-    //
-    // `signal` is the spawn dispatch's deadline. It reaches the host-wide
-    // `worktree-mutate` gate and every git child underneath, so a checkout that
-    // overruns stops holding one of the box's three worktree slots instead of
-    // blocking checkouts on every other backend until the process restarts
-    // (the 2026-08-17 shape).
-    const { source } = await setupWorktree(
-      attemptId,
-      path,
-      new Set(getConfig(compositionsConfig).manifests.map((m) => m.id)),
-      signal,
-    );
-    // A checkout was made — from a spare (the pool is now one short) or cold
-    // (the pool was empty) — so top the pool back up for the next launch. Off
-    // the launch path: the refill is its own background job.
-    if (source !== "existing") await spareRefillJob.enqueue({});
+  // The checkout is made by the supervised `worktree.prepare` child, which a
+  // backend restart does not kill; this only requests it and waits, durably
+  // (see `prepareWorktree`). A checkout that is already complete — a resume —
+  // is adopted here in process, as fast as before.
+  //
+  // `signal` is the spawn dispatch's deadline. It reaches the in-process
+  // adopt (the lock and the install's freshness check), so an overrun stops
+  // instead of holding the spawn's slot.
+  async prepare({ attemptId, path }, { signal, step, waitFor }) {
+    const input = { attemptId, path };
+    await prepareWorktree({ step, waitFor }, attemptId, {
+      kindId: worktreePrepareJob.kind.id,
+      checkoutState: async () =>
+        checkoutState(await ensureMainWorktreeRoot(signal), path, signal),
+      latestRun: () => latestSupervisedRun(worktreePrepareJob, input),
+      request: async () => {
+        await worktreePrepareJob.enqueue(input);
+      },
+      adopt: () => adoptCompleteCheckout(path, signal),
+    });
   },
 
   // Copy main's config dir for the new worktree — only after commit, so a

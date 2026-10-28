@@ -30,6 +30,7 @@ import {
   recordRunError,
 } from "./builtin-ledger";
 import { cancelSupervisedJobByLock } from "./cancel";
+import { latestSupervisedRun } from "./latest-run";
 import {
   defineSupervisedJob,
   endAttempt,
@@ -316,6 +317,12 @@ describe("cancelSupervisedJobByLock", () => {
     expect(
       (await rejectionOf(cancelSupervisedJobByLock(own, {}))).message,
     ).toContain("declares `lock`");
+    expect(
+      (await rejectionOf(latestSupervisedRun(unlocked, {}))).message,
+    ).toContain("declares `lock`");
+    expect((await rejectionOf(latestSupervisedRun(own, {}))).message).toContain(
+      "declares `lock`",
+    );
   });
 });
 
@@ -433,5 +440,39 @@ describe("the built-in ledger (real DB)", () => {
     expect(
       await cancelSupervisedJobByLock(job, { song: "nobody" }, t.db),
     ).toEqual({ kind: "not-running" });
+  });
+
+  test("latestSupervisedRun reads the newest run under the job's lock", async () => {
+    const job = defineSupervisedJob({
+      name: "supervised-job.test.latest",
+      description: "Test job.",
+      input: z.object({ target: z.string() }),
+      channel: { publishAll: () => {} } as unknown as LogChannel,
+      lock: (input) => input.target,
+      argv: () => ({ argv: ["true"] }),
+    });
+    const ledger = builtinLedgerFor("supervised-job.test.latest", t.db);
+    const meta = { attempt: 1, workflowRunId: "wf" };
+    expect(await latestSupervisedRun(job, { target: "a" }, t.db)).toBeNull();
+
+    const first = await ledger.claim({ ...meta, lockKey: "a" });
+    if (first === null) throw new Error("the claim must win");
+    expect(await latestSupervisedRun(job, { target: "a" }, t.db)).toMatchObject(
+      { id: first, open: true, exitCode: null, errorMessage: null },
+    );
+    await recordRunError(first, new Error("checkout failed"), t.db);
+    await ledger.closeRow(first, ended(1));
+    expect(await latestSupervisedRun(job, { target: "a" }, t.db)).toMatchObject(
+      { id: first, open: false, exitCode: 1, errorMessage: "checkout failed" },
+    );
+
+    // A later run under the same key is the newest; another key's is not.
+    const second = await ledger.claim({ ...meta, lockKey: "a" });
+    if (second === null) throw new Error("the claim must win");
+    await ledger.claim({ ...meta, lockKey: "b" });
+    const latest = await latestSupervisedRun(job, { target: "a" }, t.db);
+    expect(latest?.id).toBe(second);
+    expect(latest?.open).toBe(true);
+    await t.db.execute(sql`DELETE FROM supervised_job_runs`);
   });
 });

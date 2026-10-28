@@ -13950,7 +13950,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `report-kind` "held-turn-undelivered"
       - `resource.declare` "conversations.context-usage"
       - `resource.declare` "conversations.partial-message"
-    - Uses: 85 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
+    - Uses: 86 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
       - `tasks/tasks-core` ×27
       - `conversations/turn-ledger` ×13
       - `conversations/transcript-watcher` ×7
@@ -13963,6 +13963,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `database` ×2
       - `infra/endpoints` ×2
       - `infra/events` ×2
+      - `infra/jobs` ×2
       - `reports` ×2
       - `config_v2.getConfig`
       - `conversations/model-provider/catalog.getModelCatalog`
@@ -13970,7 +13971,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `conversations/workspace/launch-option.getTaskWorkspace`
       - `database/fork-point.databaseForkedAt`
       - `infra/attachments.getAttachment`
-      - `infra/jobs.defineJob`
       - `reports/engine.recordReport`
       - `shell/notifications.recordNotification`
       - `tasks/task-category.setTaskCategory`
@@ -19808,6 +19808,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SettingSource`
           - `WorkspaceAt`
           - `WorkspaceImpl`
+          - `WorkspacePrepareCtx`
         - Exports (values):
           - `defineScratchProfile`
           - `findWorkspaceOfConversation`
@@ -19945,16 +19946,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `withDirTrusted`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `core/claude-trust.ts`, `server/internal/reap-job.ts`, `server/internal/scratch-workspace.ts` (debt)
-        - **`worktree`** — The worktree workspace: a conversation runs in its attempt's git checkout of this repo (`.claude/worktrees/<id>`), with a forked DB and config dir — checked out in the spawn job, resumable while the checkout exists.
+        - **`worktree`** — The worktree workspace: a conversation runs in its attempt's git checkout of this repo (`.claude/worktrees/<id>`), with a forked DB and config dir — checked out by the supervised worktree.prepare job (a detached child a restart does not kill) that the spawn job requests and waits on, resumable while the checkout exists.
           - Server:
             - Uses:
               - `config_v2.getConfig`
               - `conversations/workspace.Workspace`
               - `database/fork.databaseForkJob`
+              - `infra/jobs.JobCtx`
+              - `infra/jobs.NonRetryableError`
+              - `infra/jobs/supervised-job.defineSupervisedJob`
+              - `infra/jobs/supervised-job.latestSupervisedRun`
+              - `infra/jobs/supervised-job.runEnded`
+              - `infra/jobs/supervised-job.RunEndedPayload`
+              - `infra/jobs/supervised-job.SupervisedRunRow`
+              - `infra/worktree.adoptCompleteCheckout`
+              - `infra/worktree.checkoutState`
               - `infra/worktree.ensureMainWorktreeRoot`
               - `infra/worktree.gitWorktreesDir`
               - `infra/worktree.setupWorktree`
               - `infra/worktree/spare-pool.spareRefillJob`
+              - `primitives/log-channels.defineLogSink`
+            - Register: `defineSupervisedJob('worktree.prepare')`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/worktree-workspace.ts` (debt)
           - Test helpers:
@@ -30848,9 +30860,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by: 59 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
           - `apps` ×18
-          - `infra` ×13
+          - `infra` ×12
+          - `conversations` ×7
           - `debug` ×7
-          - `conversations` ×6
           - `tasks` ×4
           - `database` ×3
           - `page` ×3
@@ -30993,6 +31005,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SupervisedJobLedger`
               - `SupervisedJobSpawn`
               - `SupervisedRunContext`
+              - `SupervisedRunRow`
               - `SupervisedStepsContext`
               - `UnfinishedRun`
             - Exports (values):
@@ -31001,6 +31014,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `cancelSupervisedJob`
               - `cancelSupervisedJobByLock`
               - `defineSupervisedJob`
+              - `latestSupervisedRun`
               - `onSupervisedRunChange`
               - `runEnded`
             - Register:
@@ -31039,6 +31053,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/prototypes/thumbnails`
               - `apps/sonata/sources/ultimate-guitar/alignment`
               - `backup`
+              - `conversations/workspace/worktree`
               - `database/fork`
               - `debug/worktree-cleanup`
               - `framework/cli/op-runtime`
@@ -31049,6 +31064,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/audio-analysis`
               - `infra/deps`
               - `infra/events-test`
+              - `infra/worktree/spare-pool`
               - `release`
           - Exemptions:
             - Exempts itself from:
@@ -32459,6 +32475,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `packages/flock.flockTry`
         - Exports (types):
           - `CheckoutSource`
+          - `CheckoutState`
           - `CompositionMarker`
           - `NamespaceClaimant`
           - `NamespaceProbe`
@@ -32469,6 +32486,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `WorktreeSetup`
           - `WorktreeSpec`
         - Exports (values):
+          - `adoptCompleteCheckout`
+          - `checkoutState`
           - `countReadySpares`
           - `createSpareWorktree`
           - `emptyWorktreeTrash`
@@ -32561,14 +32580,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`spare-pool`** — Spare worktree pool: the worktree.spare-refill job (enqueued after every launch's checkout, at main's boot, and daily) keeps one locked, detached checkout of main ready under .claude/worktrees/spare-*, so setupWorktree claims it with a rename and a branch switch instead of a cold git worktree add.
           - Server:
             - Uses:
-              - `infra/jobs.defineJob`
+              - `infra/jobs/supervised-job.defineSupervisedJob`
               - `infra/warmup.defineWarmup`
               - `infra/worktree.countReadySpares`
               - `infra/worktree.createSpareWorktree`
               - `infra/worktree.pruneSpares`
+              - `primitives/log-channels.defineLogSink`
             - Exports (values): `spareRefillJob`
             - Register:
-              - `defineJob('worktree.spare-refill')`
+              - `defineSupervisedJob('worktree.spare-refill')`
               - `defineWarmup('worktree.spare-refill')`
           - Cross-plugin:
             - Imported by: `conversations/workspace/worktree`
@@ -43627,13 +43647,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
-        - Imported by: 55 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
+        - Imported by: 57 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
           - `apps` ×12
           - `debug` ×9
+          - `infra` ×8
           - `database` ×7
-          - `infra` ×7
+          - `conversations` ×3
           - `build` ×2
-          - `conversations` ×2
           - `framework` ×2
           - `primitives` ×2
           - `reports` ×2

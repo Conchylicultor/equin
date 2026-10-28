@@ -26,6 +26,8 @@ export {
   cancelSupervisedJobByLock,
 } from "./internal/cancel";
 export type { CancelByLockResult } from "./internal/cancel";
+export { latestSupervisedRun } from "./internal/latest-run";
+export type { SupervisedRunRow } from "./internal/builtin-ledger";
 // A reader of one run's files (build-logs' persisted log) hears the
 // supervisor's own pumps and settles instead of opening a second watch of the
 // runs dir — read-only, it starts and stops nothing.

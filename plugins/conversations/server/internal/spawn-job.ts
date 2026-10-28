@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { defineJob } from "@plugins/infra/plugins/jobs/server";
+import { defineJob, isSuspendSignal } from "@plugins/infra/plugins/jobs/server";
 import { recordReport } from "@plugins/reports/plugins/engine/server";
 import { WorkspaceSpecSchema } from "@plugins/conversations/plugins/workspace/core";
 import { Workspace } from "@plugins/conversations/plugins/workspace/server";
@@ -16,11 +16,12 @@ import { launchWithHeldTurn } from "./turns";
 
 // Durable, self-healing conversation spawn. Mirrors `databaseForkJob`: the
 // enqueue is a committed graphile-worker row, so an interrupted spawn (backend
-// restart mid-checkout, or a crash between starting the agent and the job
+// restart mid-spawn, or a crash between starting the agent and the job
 // commit) re-runs when the worker reboots instead of leaving the conversation
 // stuck `starting` with no session. Both steps are idempotent — the workspace's
-// `prepare` (`setupWorktree` no-ops once the checkout landed, and redoes a
-// spare claim a kill left unfinished) and
+// `prepare` (a worktree's checkout is made by the supervised `worktree.prepare`
+// child, which a restart does not kill, and is only waited on here — durably,
+// so the spawn resumes in whichever backend is alive when it ends) and
 // `runtime.create` (no-ops once a live session exists) — which is the
 // precondition that makes durable retry safe.
 //
@@ -30,14 +31,17 @@ export const spawnConversationJob = defineJob({
   name: "conversations.spawn",
   description:
     "Prepares the workspace (the git worktree) and starts the agent session for a new conversation.",
-  // minutes: preparing a worktree is a `git worktree add` checkout and
-  // `runtime.create` starts the agent process. Nothing
-  // shorter than the work bounds either.
+  // minutes: what stays in process is still unbounded by anything shorter than
+  // the work — the install of an existing checkout (`./equin install`) and
+  // `runtime.create` starting the agent process. The checkout itself is not
+  // here: the workspace's `prepare` waits for it with `ctx.waitFor`, which
+  // releases the slot.
   hold: "minutes",
   inProcess:
-    "Both steps are idempotent — the workspace's prepare no-ops once the checkout exists " +
-    "and `runtime.create` no-ops once a live session exists — so a spawn killed " +
-    "by a restart simply re-runs and skips whatever already landed.",
+    "The checkout runs in the supervised worktree.prepare child, which a restart does not kill; " +
+    "what stays here is safe under a kill — the install of an existing checkout is guarded by " +
+    "`./equin install`'s own lock and stamp, and `runtime.create` no-ops once a live session exists — " +
+    "so a spawn killed by a restart re-runs and skips whatever already landed.",
   input: z.object({
     conversationId: z.string(),
     attemptId: z.string(),
@@ -68,8 +72,9 @@ export const spawnConversationJob = defineJob({
       runtimeId,
       create,
     },
-    ctx: { signal },
+    ctx,
   }) => {
+    const { signal } = ctx;
     // Closed (or deleted) before its agent started: the user is done with it,
     // so no agent may start for it now — a retry that ran anyway would leave a
     // process working for a conversation nothing shows or reaps.
@@ -85,8 +90,10 @@ export const spawnConversationJob = defineJob({
       // The workspace's `prepare` (git worktree add) MUST precede
       // `runtime.create`: the agent's cwd must exist.
       // Both are idempotent, so a mid-step crash re-runs the whole body safely.
-      // `signal` is this dispatch's deadline, handed down to the work.
-      await workspace.prepare(at, signal);
+      // The job's context goes down whole: its deadline for the work, and its
+      // step / wait log for a kind that waits on a supervised child (which
+      // suspends this job, through the catch below).
+      await workspace.prepare(at, ctx);
       step = "runtime";
       const runtime = Runtime.get(runtimeId);
       // A retry whose earlier attempt already started the session: `create`
@@ -109,6 +116,9 @@ export const spawnConversationJob = defineJob({
       // A session runs: an earlier attempt's failure no longer describes it.
       await clearSpawnFailure(conversationId);
     } catch (err) {
+      // A suspend is the workspace's `prepare` waiting on its checkout, not a
+      // failure: passed through untouched, before anything is recorded.
+      if (isSuspendSignal(err)) throw err;
       // Claude Code went missing between the launch's check and this spawn.
       // Retrying cannot help until the user installs it, so say that — with
       // the fix — and stop. The row stays `starting`, and the status

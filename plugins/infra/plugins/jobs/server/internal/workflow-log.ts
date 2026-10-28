@@ -1,4 +1,4 @@
-import { eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { runInBackgroundLane } from "@plugins/infra/plugins/runtime-profiler/core";
 import { isNonRetryableError } from "./non-retryable";
@@ -49,6 +49,29 @@ export function classifyFailure(opts: {
     collapseBudget,
     workflowDead: collapseBudget || opts.attempt >= opts.maxAttempts,
   };
+}
+
+/**
+ * Of `workflowRunIds`, the ones suspended right now: parked on a `ctx.waitFor`
+ * / `ctx.sleep` whose wait is still pending. Such a run holds no queue row —
+ * the suspend deleted it — yet it is still coming: a trigger or its timeout
+ * racer re-enqueues it. A finished or dead run's log is discarded, so a
+ * pending wait never outlives its workflow.
+ */
+export async function suspendedRunIds(
+  workflowRunIds: readonly string[],
+): Promise<ReadonlySet<string>> {
+  if (workflowRunIds.length === 0) return new Set();
+  const rows = await db
+    .selectDistinct({ id: _jobWaits.workflowRunId })
+    .from(_jobWaits)
+    .where(
+      and(
+        inArray(_jobWaits.workflowRunId, [...workflowRunIds]),
+        eq(_jobWaits.status, "pending"),
+      ),
+    );
+  return new Set(rows.map((r) => r.id));
 }
 
 /**

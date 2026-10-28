@@ -11,6 +11,7 @@ export type {
   SettingSource,
   WorkspaceAt,
   WorkspaceImpl,
+  WorkspacePrepareCtx,
 } from "./internal/registry";
 export {
   ScratchProfile,

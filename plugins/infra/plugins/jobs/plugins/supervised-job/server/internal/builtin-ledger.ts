@@ -1,4 +1,4 @@
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { db } from "@plugins/database/server";
 import {
@@ -65,6 +65,7 @@ export function builtinLedgerFor(
   setPid(runId: string, pid: number): Promise<void>;
   closeRow(runId: string, terminal: RunTerminal): Promise<void>;
   markCancelled(lockKey: string): Promise<string | null>;
+  latest(lockKey: string): Promise<SupervisedRunRow | null>;
 } {
   return {
     /**
@@ -149,7 +150,53 @@ export function builtinLedgerFor(
         .returning({ id: _supervisedJobRuns.id });
       return row?.id ?? null;
     },
+
+    /** The newest run of this job under `lockKey`, open or closed. */
+    async latest(lockKey) {
+      const [row] = await conn
+        .select({
+          id: _supervisedJobRuns.id,
+          startedAt: _supervisedJobRuns.startedAt,
+          finishedAt: _supervisedJobRuns.finishedAt,
+          exitCode: _supervisedJobRuns.exitCode,
+          errorMessage: _supervisedJobRuns.errorMessage,
+        })
+        .from(_supervisedJobRuns)
+        .where(
+          and(
+            eq(_supervisedJobRuns.jobName, jobName),
+            eq(_supervisedJobRuns.lockKey, lockKey),
+          ),
+        )
+        .orderBy(desc(_supervisedJobRuns.startedAt))
+        .limit(1);
+      if (row === undefined) return null;
+      return {
+        id: row.id,
+        startedAt: row.startedAt,
+        open: row.finishedAt === null,
+        exitCode: row.exitCode,
+        errorMessage: row.errorMessage,
+      };
+    },
   };
+}
+
+/**
+ * One built-in-ledger run, as a caller waiting on the job reads it back —
+ * see `latestSupervisedRun`.
+ */
+export interface SupervisedRunRow {
+  /** The run id: what `runEnded` names, with the job's `kind.id`. */
+  readonly id: string;
+  /** When the run was claimed (the database's clock). */
+  readonly startedAt: Date;
+  /** No outcome stamped yet: the child runs, or is being spawned. */
+  readonly open: boolean;
+  /** Null while open; `-1` for a hard kill (no exit marker). */
+  readonly exitCode: number | null;
+  /** What the child's body threw, when it recorded it before exiting. */
+  readonly errorMessage: string | null;
 }
 
 /**

@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { defineJob } from "@plugins/infra/plugins/jobs/server";
+import { defineSupervisedJob } from "@plugins/infra/plugins/jobs/plugins/supervised-job/server";
+import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import { defineWarmup } from "@plugins/infra/plugins/warmup/server";
 import {
   countReadySpares,
@@ -15,30 +16,43 @@ import {
  */
 const SPARE_TARGET = 1;
 
+// The refill's transcript, at `logs/worktree-spare-refill.jsonl` of the backend
+// that supervises it (its only writer, tailing the child's output).
+const refillLog = defineLogSink({
+  id: "worktree-spare-refill",
+  description:
+    "Spare worktree refill transcript: pruning spare debris and writing (and installing) a ready checkout of main.",
+});
+
 /**
  * Tops the spare pool back up: reclaims spare debris (a refill or claim killed
  * mid-way) and over-age spares, then writes spares until `SPARE_TARGET` are
  * ready. Enqueued after every launch's checkout, at main's boot, and daily.
+ *
+ * Supervised, so the checkout and its install run in a detached child
+ * (`./equin supervised-exec worktree.spare-refill`) a backend restart does not
+ * kill — an in-process refill died with every deploy and left a cut-off add
+ * behind. Built-in ledger with no `lock`: one run of the job at a time, so an
+ * enqueue while one runs loses its claim and returns — the running loop tops up
+ * to `SPARE_TARGET` anyway.
  */
-export const spareRefillJob = defineJob({
+export const spareRefillJob = defineSupervisedJob({
   name: "worktree.spare-refill",
   description:
     "Keeps a ready checkout of main on standby, so launching an agent claims it instead of writing a fresh checkout while you wait.",
-  // minutes: one spare is a full `git worktree add` (~5–10 s of 16k file
-  // writes), gated host-wide and demoted to background priority.
-  hold: "minutes",
-  inProcess:
-    "Idempotent top-up: a refill killed mid-add leaves an unlocked spare the next run's prune reclaims, and the lock that marks a spare ready is its last step, so nothing half-written is ever claimed.",
   input: z.object({}),
-  event: z.never(),
-  dedup: "singleton",
+  channel: refillLog,
   // Daily: replaces a spare older than a day, so the one a claim takes is never
   // weeks behind `main`.
   schedule: { cron: "40 4 * * *" },
-  run: async ({ ctx: { signal } }) => {
-    await pruneSpares(signal);
-    while ((await countReadySpares(signal)) < SPARE_TARGET) {
-      await createSpareWorktree(signal);
+  // No signal: the child is bounded by git's own timeouts and install's, and
+  // nothing else holds it.
+  async run(_input, { log }) {
+    const pruned = await pruneSpares();
+    if (pruned.length > 0) log(`pruned ${pruned.join(", ")}`);
+    while ((await countReadySpares()) < SPARE_TARGET) {
+      await createSpareWorktree();
+      log("wrote a ready spare");
     }
   },
 });

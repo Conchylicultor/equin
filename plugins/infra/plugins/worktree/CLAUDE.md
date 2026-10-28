@@ -18,9 +18,16 @@ A launch's checkout is ~16k file writes (5–10 s). To take it off the launch pa
 a **spare** — a detached checkout of `main` at `.claude/worktrees/spare-<ms>-<rand>`
 — is written beforehand, and `setupWorktree` claims it instead of running a cold
 `git worktree add`. It returns `{ source: "spare" | "fresh" | "existing" }`; the
-caller (`conversations.spawn`) refills the pool after a `spare` or `fresh`
-checkout. The refill job, its boot warm-up and its daily cron live in the
-`spare-pool` sub-plugin — this plugin stays job-free, because the CLI imports it.
+caller (the supervised `worktree.prepare` job, `conversations/workspace/worktree`)
+refills the pool after a run that made a checkout. The refill job, its boot
+warm-up and its daily cron live in the `spare-pool` sub-plugin — this plugin
+stays job-free, because the CLI imports it.
+
+A caller that only WAITS for a checkout made elsewhere reads
+`checkoutState(repoRoot, path)` — `absent` | `unfinished` | `complete`, read-only,
+never discarding (only the process making the checkout converges it) — and takes
+a complete one over with `adoptCompleteCheckout(path)` (re-lock + non-frozen
+install: `setupWorktree`'s `existing` path minus the convergence).
 
 - **The lock reason is the readiness marker.** A spare is written
   (`add --detach`, sharing `addCheckout` with the cold path: one
@@ -40,13 +47,15 @@ checkout. The refill job, its boot warm-up and its daily cron live in the
   spare, then the cold add.
 - **Crash convergence.** A crash after `move` leaves the dir in place on a
   detached HEAD — before the switch, or inside it. The early return recognises
-  it by `isUnfinishedSpareClaim`: admin dir `spare-*` (the move keeps it), HEAD
+  it by `isUnfinishedCheckout`: admin dir `spare-*` (the move keeps it), HEAD
   detached, and NO lock — a finished claim is always locked, so a working
   checkout on a detached HEAD (mid-rebase) is never touched. It **discards** the
   tree and checks the attempt out again (another spare, else the cold add); it
   never re-runs the switch in place: a switch killed mid-write leaves the files
   it added untracked under the old HEAD, which blocks any further switch
-  (`--discard-changes` covers tracked changes only).
+  (`--discard-changes` covers tracked changes only). The same check catches a
+  cold add killed mid-checkout — git's own `initializing` lock
+  (`ADD_IN_PROGRESS_LOCK`) still on it — whose discard releases that lock first.
 - **Pruning.** `pruneSpares` removes `spare-*` dirs that are unregistered or
   unlocked and older than 15 minutes (newest of the dir's and its admin dir's
   mtime — an `unlock` touches the admin dir), and ready spares older than a day,
@@ -141,6 +150,7 @@ pid liveness.
     - `packages/flock.flockTry`
   - Exports (types):
     - `CheckoutSource`
+    - `CheckoutState`
     - `CompositionMarker`
     - `NamespaceClaimant`
     - `NamespaceProbe`
@@ -151,6 +161,8 @@ pid liveness.
     - `WorktreeSetup`
     - `WorktreeSpec`
   - Exports (values):
+    - `adoptCompleteCheckout`
+    - `checkoutState`
     - `countReadySpares`
     - `createSpareWorktree`
     - `emptyWorktreeTrash`

@@ -4,11 +4,16 @@ Keeps the spare worktree pool full. The mechanics — what a spare is, how a
 claim takes one, how debris is pruned — live in `infra/worktree` (see its
 "Spare pool" section); this plugin only decides *when* they run.
 
-`worktree.spare-refill` (singleton) prunes spare debris and over-age spares,
-then writes spares until one is ready. It is enqueued:
+`worktree.spare-refill` prunes spare debris and over-age spares, then writes
+spares until one is ready. It is a `defineSupervisedJob` (built-in ledger, no
+`lock` — one run of the job at a time): the work runs in a detached
+`./equin supervised-exec worktree.spare-refill` child a backend restart does not
+kill, its transcript on the `worktree-spare-refill` log channel. An enqueue while
+a run is going loses its claim and returns; the running loop tops up anyway. It
+is enqueued:
 
-- by `conversations.spawn` after every checkout it makes (a claimed spare or a
-  cold add — the pool was used or was empty);
+- by the worktree workspace's `worktree.prepare` job after every run that made a
+  checkout (a claimed spare or a cold add — the pool was used or was empty);
 - at main's boot, by a `host`-scope warm-up, so the first launch after a restart
   already has a spare;
 - daily (cron), which replaces a spare older than a day so it never drifts far
@@ -26,14 +31,15 @@ and `infra/warmup` (DB pool, runtime identity at module eval).
 - Description: Spare worktree pool: the worktree.spare-refill job (enqueued after every launch's checkout, at main's boot, and daily) keeps one locked, detached checkout of main ready under .claude/worktrees/spare-*, so setupWorktree claims it with a rename and a branch switch instead of a cold git worktree add.
 - Server:
   - Uses:
-    - `infra/jobs.defineJob`
+    - `infra/jobs/supervised-job.defineSupervisedJob`
     - `infra/warmup.defineWarmup`
     - `infra/worktree.countReadySpares`
     - `infra/worktree.createSpareWorktree`
     - `infra/worktree.pruneSpares`
+    - `primitives/log-channels.defineLogSink`
   - Exports (values): `spareRefillJob`
   - Register:
-    - `defineJob('worktree.spare-refill')`
+    - `defineSupervisedJob('worktree.spare-refill')`
     - `defineWarmup('worktree.spare-refill')`
 - Cross-plugin:
   - Imported by: `conversations/workspace/worktree`

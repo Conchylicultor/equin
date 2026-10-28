@@ -7,6 +7,7 @@ import { installCheckout } from "./install-checkout";
 import { withWorktreeMutateSlot } from "./mutate-gate";
 import { isSpareName, newSpareName, SPARE_LOCK_REASON } from "./spare-name";
 import {
+  ADD_IN_PROGRESS_LOCK,
   addCheckout,
   ensureMainWorktreeRoot,
   gitWorktreesDir,
@@ -107,7 +108,8 @@ async function adminDirMtime(path: string): Promise<number | null> {
 
 /**
  * The spares in `repoRoot` to reclaim at `now`: `spare-*` dirs that are not
- * ready (unregistered, or registered and unlocked) and older than
+ * ready (unregistered, registered and unlocked, or still under git's own
+ * `ADD_IN_PROGRESS_LOCK` — a refill whose add was killed) and older than
  * `SPARE_DEBRIS_AGE_MS`, plus ready ones older than `SPARE_MAX_AGE_MS`. A spare
  * locked with any OTHER reason is not ours to judge and is left alone.
  *
@@ -140,7 +142,7 @@ export async function pruneSparesIn(
       );
       // A claimer unlocked it first: it is theirs now.
       if (unlocked.timedOut || unlocked.exitCode !== 0) continue;
-    } else if (entry?.locked != null) {
+    } else if (entry?.locked != null && entry.locked !== ADD_IN_PROGRESS_LOCK) {
       continue;
     } else {
       const mtimes = [(await stat(path)).mtimeMs];

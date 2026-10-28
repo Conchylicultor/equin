@@ -9,6 +9,7 @@ import { DEFAULT_MAX_ATTEMPTS } from "./constants";
 import { JobQueue, type JobRowOpts, type QueuedJob } from "./queue";
 import { singletonJobKey } from "./run-identity";
 import type { WaitForOptions } from "./step-ctx";
+import { suspendedRunIds } from "./workflow-log";
 
 export { DEFAULT_MAX_ATTEMPTS } from "./constants";
 
@@ -149,6 +150,10 @@ export interface RegisteredJob {
    * priority a row is inserted on, and by the slow-op pipeline for the class's
    * work-time ceiling. */
   hold: HoldClass;
+  /** A `minutes` job's stated reason for running in process — see the field's
+   * doc on {@link HoldSpec}. Read back by the stuck-lock sweeper, which names
+   * the claim when a restart killed the job mid-run. */
+  inProcess?: string;
   inputSchema: z.ZodType;
   /**
    * Schema for the event payload delivered alongside `input` when the job
@@ -472,7 +477,8 @@ export interface JobFactory<
   /**
    * Of `keys` (this job's `dedup.key` values), the ones whose run is still
    * coming: a row holds it that is queued, waiting out a retry, or running
-   * (`JobQueueImpl.keysInFlight`). Absent = no run will happen for that key
+   * (`JobQueueImpl.keysInFlight`) — or the run is suspended on a pending
+   * `ctx.waitFor` / `ctx.sleep`, holding no row until it resumes. Absent = no run will happen for that key
    * unless something enqueues one — the job finished, dead-lettered, or never
    * existed. Throws for a job without a keyed `dedup`: only a key names a run.
    */
@@ -594,12 +600,18 @@ export function defineJob<
         `[jobs] ${spec.name}: inFlight needs a keyed \`dedup\` — a ${spec.dedup} job's rows name no key`,
       );
     }
-    // The queue key `enqueue` stamps (`${name}:${key}`), mapped back.
+    // The queue key `enqueue` stamps (`${name}:${key}`), mapped back. A keyed
+    // run's id IS that key, so a run suspended on a wait — no queue row
+    // between its suspend and its resume — counts too: it is still coming.
     const prefix = `${spec.name}:`;
-    const held = await JobQueue.get().keysInFlight(
-      keys.map((key) => prefix + key),
+    const queueKeys = keys.map((key) => prefix + key);
+    const [held, suspended] = await Promise.all([
+      JobQueue.get().keysInFlight(queueKeys),
+      suspendedRunIds(queueKeys),
+    ]);
+    return new Set(
+      [...held, ...suspended].map((queueKey) => queueKey.slice(prefix.length)),
     );
-    return new Set([...held].map((queueKey) => queueKey.slice(prefix.length)));
   }
 
   const factory: JobFactory<N, S, E> = {
@@ -637,6 +649,7 @@ export function defineJob<
         internal: spec.internal === true,
         declaredIn: registeringPlugin(),
         hold: spec.hold,
+        inProcess: spec.hold === "minutes" ? spec.inProcess : undefined,
         inputSchema: spec.input,
         eventSchema: spec.event,
         dedup:

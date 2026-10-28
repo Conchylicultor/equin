@@ -6,7 +6,10 @@ import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import { defineTimer } from "@plugins/infra/plugins/background/plugins/timer/server";
 import { jobLockHeldExpr, jobNameExpr, supersededExpr } from "./introspection";
 import { jobsLog } from "./jobs-log";
-import type { EnqueueTx } from "../../server/internal/registry";
+import {
+  type EnqueueTx,
+  UNSAFE_getRegisteredJob,
+} from "../../server/internal/registry";
 import { ownedWorkflowRunIds } from "../../server/internal/run-identity";
 import { emitQueueActivity } from "./slot-ledger";
 import { discardWorkflowLogs } from "../../server/internal/workflow-log";
@@ -15,9 +18,12 @@ import { discardWorkflowLogs } from "../../server/internal/workflow-log";
 // uncleanly (SIGKILL, OOM-killer, kernel panic, `process.exit()` from a
 // buggy handler — anything that bypasses our SIGTERM/SIGINT shutdown path).
 //
-// Clean restarts are already handled: `runner.stop()` waits for in-flight
-// handlers to finish, so locks clear naturally. This sweeper is the
-// safety net for the rest.
+// A clean restart is NOT a drain for long work: `runner.stop()` waits for
+// in-flight handlers, but the gateway's hot restart signals the backend's whole
+// process group (a handler's git / pg_dump child dies at once) and SIGKILLs it
+// after a 5 s grace. So any `minutes` handler is killed mid-run by a deploy and
+// lands here; work that must outlive one is a `defineSupervisedJob`. This
+// sweeper is the recovery floor for all of it.
 //
 // Why we need it at all: graphile-worker 0.16.6 hardcodes the lock-recovery
 // threshold to 4 hours in SQL (`resetLockedAt.js:12`, `sql/000005.sql:124`) and
@@ -222,7 +228,9 @@ export async function sweepOnce(database: EnqueueTx = db): Promise<void> {
   // and a SILENT reclaim is precisely the failure mode that let the age-based
   // sweeper steal live jobs unnoticed for three months.
   for (const row of reclaimed) {
-    const message = `[jobs] reclaimed ${row.job_name} (job ${row.id}) — locked with no live advisory lock holder; its worker died mid-run, re-queueing`;
+    const message =
+      `[jobs] reclaimed ${row.job_name} (job ${row.id}) — locked with no live advisory lock holder; its worker died mid-run, re-queueing` +
+      inProcessNote(row.job_name);
     console.warn(message);
     reportServerError({ message, stack: null });
   }
@@ -283,4 +291,27 @@ export async function sweepOnce(database: EnqueueTx = db): Promise<void> {
   // nothing a reader could see.
   if (dropped.length > 0 || reclaimed.length > 0 || reclaimedQueues.length > 0)
     emitQueueActivity();
+}
+
+/**
+ * For a reclaimed `minutes` job: its own claim that dying mid-run is safe, put
+ * where the evidence lands. A reclaim is exactly when that claim is tested — a
+ * restart killed the handler, and its retry now runs on whatever the dead run
+ * left (a half-written checkout, a partial file) — so whoever debugs the retry's
+ * failure reads the claim, and the supervised alternative, from the report
+ * itself. 2026-10-28: `conversations.spawn` claimed its checkout was idempotent,
+ * a hot restart killed `git worktree add` half-way, and every retry adopted the
+ * half-written tree; the fix was a supervised child, which the debugging agent
+ * did not know existed.
+ */
+function inProcessNote(jobName: string): string {
+  const inProcess = UNSAFE_getRegisteredJob(jobName)?.inProcess;
+  if (inProcess === undefined) return "";
+  return (
+    `. It runs in the backend (hold "minutes"), so a restart killed it mid-run; ` +
+    `its stated reason that this is safe: "${inProcess}". If its retry fails on ` +
+    `what the dead run left behind, that reason is wrong: move the long work to ` +
+    `defineSupervisedJob (plugins/infra/plugins/jobs/plugins/supervised-job), a ` +
+    `detached child a restart does not kill.`
+  );
 }
