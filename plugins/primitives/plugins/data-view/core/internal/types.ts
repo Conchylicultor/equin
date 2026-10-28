@@ -861,8 +861,9 @@ export interface ViewState {
   /**
    * The view's fold rule, or absent = nothing folds. Persisted in the
    * per-instance config row exactly like `filter`/`groupBy` (host-injected,
-   * merge-written). A *softer filter*: rows failing `fold.keep` stay counted and
-   * one click away behind a "… N more" fold line at the end of their section.
+   * merge-written). A *softer filter*: rows failing `fold.keep`, or past each
+   * section's first `fold.limit`, stay counted and one click away behind a
+   * "… N more" fold line at the end of their section.
    * The host suspends it while a search query is typed.
    */
   fold?: FoldRule;
@@ -886,15 +887,32 @@ export interface ViewState {
 }
 
 /**
- * A view's fold rule. Rows NOT matching `keep` fold behind a "… N more" fold
+ * A view's fold rule. Rows the rule does not keep fold behind a "… N more" fold
  * line at the end of their section — a softer filter: a filter removes rows, a
  * fold keeps them counted (`DataViewSection.count` stays the total) and one click
- * away. `keep` is the ordinary `FilterGroup` language, so every field type's
+ * away. Per section, a row is kept when it matches `keep` (absent: every row
+ * does) AND it is among the first `limit` such rows in the order the section is
+ * drawn (absent: no limit). The selected row is always kept.
+ *
+ * `keep` is the ordinary `FilterGroup` language, so every field type's
  * operators, the filter editor, the summary text and the persistence format are
- * shared with `ViewState.filter`.
+ * shared with `ViewState.filter`. A union so a rule folding nothing — neither a
+ * `keep` nor a `limit` — has no spelling.
  */
-export interface FoldRule {
-  keep: FilterGroup;
+export type FoldRule =
+  | { keep: FilterGroup; limit?: FoldLimit }
+  | { keep?: undefined; limit: FoldLimit };
+
+/**
+ * How many rows a fold keeps per section (`FoldRule.limit`): a positive whole
+ * number. Validated where a rule is read (`readFold`) and written (the Fold rows
+ * setting), so a `0` or a fraction never reaches the fold step.
+ */
+export type FoldLimit = number;
+
+/** Whether a value can be a {@link FoldLimit}: a positive whole number. */
+export function isFoldLimit(value: unknown): value is FoldLimit {
+  return typeof value === "number" && Number.isInteger(value) && value > 0;
 }
 
 /**
@@ -941,8 +959,8 @@ export interface DataViewSection<TRow> {
   count: SectionCount;
   entries: DataViewRowEntry<TRow>[];
   /**
-   * Present only when the view's fold is in effect AND ≥1 entry of this section
-   * fails `FoldRule.keep`. `hidden` counts those entries; `open` says whether the
+   * Present only when the view's fold is in effect AND it folds ≥1 entry of
+   * this section (one failing `FoldRule.keep`, or past its `limit`). `hidden` counts those entries; `open` says whether the
    * section's fold line is open. While closed, `entries` holds only the kept
    * entries; while open, every entry in sorted order. A renderer draws the
    * section's entries inside a `SectionBody` (web), which ends in the fold line —

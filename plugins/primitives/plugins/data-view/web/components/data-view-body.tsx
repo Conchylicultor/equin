@@ -24,6 +24,7 @@ import {
   type LiveDataSource,
   type ManualOrderConfig,
   type DataViewFoldLines,
+  type DataViewRowEntry,
   type DataViewPaging,
   type DataViewSectioning,
   type DataViewPageNotice,
@@ -94,6 +95,8 @@ import {
 } from "../internal/row-order";
 import {
   effectiveFold,
+  describeFold,
+  foldRuleOf,
   isTailFolded,
   makeFoldKeep,
 } from "../internal/fold-sections";
@@ -813,45 +816,69 @@ function DataViewBodyInner<TRow>(
   // where nobody can see it, and the sentinel, still in view, would page the
   // whole read in. A gate on `hasNextPage`, not a hidden footer: unmounting
   // the sentinel behind the observer's back would never re-observe it.
-  //  - folded: the fold is closed everywhere and the tail is folded (opening
-  //    any fold lifts the hold);
-  const tailFolded =
-    tail !== null &&
-    isTailFolded([tail.row], {
-      fold,
-      openCount: openFolds.size,
-      isKept: fold
-        ? makeFoldKeep(matchesFoldKeep, {
-            selectedRowId,
-            rowKey: (row) => rowKey(row, 0),
-          })
-        : () => true,
-      rowKey,
-    });
-  //  - in a collapsed section (a sectioned origin has no single tail: each
-  //    section's read stops with it);
-  const tailCollapsed =
+  // The tail's section, partitioned from the loaded rows when a gate below
+  // needs it (a sectioned origin has no single tail: each section's read stops
+  // with it), else every loaded row.
+  const tailGroupBy =
     tail !== null &&
     origin?.kind !== "sectioned" &&
-    activeState.groupBy !== undefined &&
+    (collapsedSections.size > 0 || fold?.limit !== undefined)
+      ? activeState.groupBy
+      : undefined;
+  const resolveGrouping = groupingRegistry.resolve;
+  const tailSections = useMemo(
+    () =>
+      tailGroupBy
+        ? partitionIntoSections(loadedRows, fields, tailGroupBy, rowKey, {
+            resolveGrouping,
+            now,
+            order: groupOrder,
+          })
+        : null,
+    [tailGroupBy, loadedRows, fields, rowKey, resolveGrouping, now, groupOrder],
+  );
+  //  - in a collapsed section;
+  const tailCollapsed =
+    tail !== null &&
+    tailSections !== null &&
     collapsedSections.size > 0 &&
-    isSectionCollapsed(
-      partitionIntoSections(loadedRows, fields, activeState.groupBy, rowKey, {
-        resolveGrouping: groupingRegistry.resolve,
-        now,
-        order: groupOrder,
-      }),
-      tail.key,
-      collapsedSections,
-    );
+    isSectionCollapsed(tailSections, tail.key, collapsedSections);
   //  - hidden by the view's search or filter (in memory: a live source
-  //    already searched and filtered in SQL).
+  //    already searched and filtered in SQL);
   const matchesView = useRowMatcher(
     fields,
     origin ? NO_QUERY : activeState,
     resolveOperatorSet,
     searchAccessor,
   );
+  //  - folded: the fold is closed everywhere and the tail is folded (opening
+  //    any fold lifts the hold). A `limit` decides by position, so it is asked
+  //    about the tail's whole section up to the tail — the loaded rows the view
+  //    shows, in `rows` order; a keep-only fold needs the tail alone.
+  const tailFoldEntries = useMemo((): DataViewRowEntry<TRow>[] => {
+    if (tail === null) return [];
+    if (fold?.limit === undefined) return [tail];
+    const sectionRows = tailSections
+      ? (tailSections.find((s) => s.entries.some((e) => e.key === tail.key))
+          ?.entries ?? [])
+      : loadedRows.map((row, i) => ({ row, key: rowKey(row, i) }));
+    const shown = sectionRows.filter(
+      (e) => matchesView === null || matchesView(e.row),
+    );
+    const end = shown.findIndex((e) => e.key === tail.key);
+    return end < 0 ? [tail] : shown.slice(0, end + 1);
+  }, [tail, fold, tailSections, loadedRows, rowKey, matchesView]);
+  const tailFolded =
+    tail !== null &&
+    isTailFolded(tailFoldEntries, {
+      fold,
+      openCount: openFolds.size,
+      keep: makeFoldKeep(matchesFoldKeep, {
+        limit: fold?.limit,
+        selectedRowId,
+        rowKey: (row) => rowKey(row, 0),
+      }),
+    });
   //  - or not drawn at all: no paged row is on screen yet (the consumer's
   //    other reads still loading), so there is no tail to page past.
   const tailHidden =
@@ -1002,12 +1029,10 @@ function DataViewBodyInner<TRow>(
       }
       // The STORED fold: the one in effect is it, unless a search suspends it
       // (and then no fold rule error is shown).
+      // Pruning `keep` away keeps a `limit`.
       const stored = activeState.fold;
-      const keep = stored ? pruneRules(stored.keep, ids) : null;
-      viewModel.setFold(
-        activeViewId,
-        stored && keep ? { ...stored, keep } : null,
-      );
+      const keep = stored?.keep ? pruneRules(stored.keep, ids) : null;
+      viewModel.setFold(activeViewId, foldRuleOf(keep, stored?.limit));
     },
     [viewModel, activeViewId, activeState],
   );
@@ -1069,7 +1094,7 @@ function DataViewBodyInner<TRow>(
 
   // The fold line's controls, handed to every view — present exactly when a fold
   // is in effect, so a view never draws a line for a rule that is suspended.
-  const foldSummary = fold
+  const foldKeepSummary = fold?.keep
     ? summarizeFilter(
         fold.keep,
         fields as FieldDef<unknown>[],
@@ -1080,11 +1105,9 @@ function DataViewBodyInner<TRow>(
     ? {
         open: openFolds,
         setOpen: setFoldOpen,
-        // The same words the filter control's tooltip uses for a filter tree:
-        // "Folding all but: Updated is within past 30 days +1".
-        summary: foldSummary
-          ? `Folding all but: ${foldSummary.label}${foldSummary.more ? ` +${foldSummary.more}` : ""}`
-          : undefined,
+        // The keep tree in the same words the filter control's tooltip uses:
+        // "Folding all but the first 10 of: Updated is within past 30 days +1".
+        summary: describeFold(fold, foldKeepSummary),
       }
     : undefined;
 

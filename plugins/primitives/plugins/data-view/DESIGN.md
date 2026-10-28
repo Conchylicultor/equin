@@ -333,6 +333,16 @@ of representative and the count badge.
 - **Why a fold rather than a filter.** A filter removes rows. A fold keeps them
   counted and one click away. `keep` reuses the filter language so operators,
   editor, summary and persistence are shared, not duplicated.
+- **Why a row cap is a fold, not its own option.** "Show the first 10" is the
+  same promise as a keep rule: the rest stay counted and one click away behind
+  the same line, suspended by the same search, edited in the same settings
+  section. A separate cap would be a second "… N more" with its own open
+  state, or a filter that silently drops rows. Composing them as "keep, then at
+  most N" keeps one pass deciding every entry.
+- **Why the limit is positional in the pipeline.** "First" is the order the
+  section is drawn in, so the limit runs in the fold step, after partition,
+  manual order and aggregation — the keep pass takes a section's entries, not
+  one entry.
 - **Why search suspends folding.** A match must never hide behind "…".
 - **Why paging uses a gate, not an unmounted sentinel.** Unmounting the
   sentinel behind the observer's back means it is never re-observed, and

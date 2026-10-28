@@ -41,14 +41,18 @@ beforeAll(() => markDeferredLoadComplete());
 type Row = { id: string; tag: string };
 type ViewType = ResolvedViewInstance<DataViewContribution>["viewType"];
 
-/** One line per row the view was handed, so a test can see whether it rendered. */
+/** One line per row the view was handed, so a test can see whether it
+ *  rendered, and the fold line's words when a fold is in effect. */
 function RowsView(props: DataViewRenderProps<unknown>) {
   return (
-    <ul>
-      {(props.rows as Row[]).map((r) => (
-        <li key={r.id}>{r.id}</li>
-      ))}
-    </ul>
+    <>
+      <ul>
+        {(props.rows as Row[]).map((r) => (
+          <li key={r.id}>{r.id}</li>
+        ))}
+      </ul>
+      {props.foldLines?.summary ? <p>{props.foldLines.summary}</p> : null}
+    </>
   );
 }
 
@@ -263,5 +267,20 @@ describe("an unavailable fold rule", () => {
     expect(screen.queryByText("a")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Remove rule" }));
     expect(setFold).toHaveBeenCalledWith("favorites", null);
+  });
+});
+
+describe("a fold limit", () => {
+  it("is in effect, and its fold line says it", () => {
+    renderView({ fold: { limit: 1 } });
+    expect(screen.getByText("Folding all but the first 1")).toBeTruthy();
+  });
+
+  it("removing an unavailable keep rule keeps the limit", () => {
+    const { setFold } = renderView({
+      fold: { keep: and(rule("gone", "deleted-column", "x")), limit: 1 },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Remove rule" }));
+    expect(setFold).toHaveBeenCalledWith("favorites", { limit: 1 });
   });
 });

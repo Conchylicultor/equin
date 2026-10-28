@@ -623,16 +623,24 @@ interface DataViewAggregateConfig<TRow> {
 
 ## Fold: "… N more" per section (`ViewState.fold`)
 
-A softer filter: `{ keep: FilterGroup }` (`FoldRule`, core) in the view row
-(`readFold` / `setFold`). Rows NOT matching `keep` are replaced by one **fold line**
-at the section's end (`… N more` / `Show less`). `keep` is the ordinary filter
-language (operators, editor, `summarizeFilter`, persistence shared).
+A softer filter: `{ keep?: FilterGroup; limit?: number }` (`FoldRule`, core — a
+union, at least one of the two) in the view row (`readFold` / `setFold`; compose
+the halves with `foldRuleOf`). Rows the fold does not keep are replaced by one
+**fold line** at the section's end (`… N more` / `Show less`). `keep` is the
+ordinary filter language (operators, editor, `summarizeFilter`, persistence
+shared). `limit` keeps each section's first N entries in the order it is drawn
+(sort, manual rank, server order).
+
+Per section, an entry is kept when it matches `keep` (absent: every entry does)
+**and** fewer than `limit` entries are kept before it — "the recent ones, at most
+10". An aggregate counts once.
 
 ```jsonc
 "view": {
   "type": "list",
   "groupBy": "section",
   "fold": {
+    "limit": 10,
     "keep": {
       "kind": "group",
       "id": "keep",
@@ -655,11 +663,14 @@ Rules, each enforced in one place:
 
 1. **Search suspends folding** (`effectiveFold`, `web/internal/fold-sections.ts`).
 2. **The selected row is never folded** (`makeFoldKeep`, incl. aggregate members).
+   It takes a `limit` slot; past the limit it shows anyway (`limit + 1`).
 3. **An all-folded group still renders** (header + fold line).
 4. **The line is always at the section's end**; opening re-inserts rows in order.
 5. **Open state is ephemeral** (in memory per active view id). Never config.
 6. **Paging stops behind a folded tail** (`isTailFolded` gates the observer's
    `hasNextPage` — a gate, never an unmounted sentinel, which would stall paging).
+   With a `limit` it is asked about the tail's whole section, so a read stops
+   once a section has loaded past its limit.
 7. **The fold runs last** (`foldSections`, after partition / manual order /
    aggregation); `section.count` stays the total; `section.fold = { hidden, open }`.
 
@@ -672,7 +683,9 @@ Rules, each enforced in one place:
   `DataTableGroup.footer`.
 - A nested table gets no fold.
 
-**The editor** is the "Fold rows" `view`-scope `Setting` (`fold-control.tsx`).
+**The editor** is the "Fold rows" `view`-scope `Setting` (`fold-control.tsx`): a
+Keep row (the filter builder over `fold.keep`) and a "Show first" number field
+(`limit`, empty = none); each writes with the other half kept.
 
 - Its filter builder is pointed at `fold.keep` by `FoldFilterScope` (nested
   `DataViewControlsProvider` overriding `filter`).
@@ -2240,6 +2253,7 @@ list, table and `primitives/tree` share it.
     - `FilterScope`
     - `FilterScopeAccessors`
     - `FilterValueInputProps`
+    - `FoldLimit`
     - `FoldRule`
     - `GroupBucket`
     - `GroupBucketAncestor`
@@ -2301,6 +2315,7 @@ list, table and `primitives/tree` share it.
     - `FilterRuleSchema`
     - `formatSectionCount`
     - `IDENTITY_CODEC`
+    - `isFoldLimit`
     - `isHostedToolbar`
     - `isSectionsToolbar`
     - `optionDescendants`

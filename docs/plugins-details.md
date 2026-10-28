@@ -41513,6 +41513,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `FilterScope`
           - `FilterScopeAccessors`
           - `FilterValueInputProps`
+          - `FoldLimit`
           - `FoldRule`
           - `GroupBucket`
           - `GroupBucketAncestor`
@@ -41574,6 +41575,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `FilterRuleSchema`
           - `formatSectionCount`
           - `IDENTITY_CODEC`
+          - `isFoldLimit`
           - `isHostedToolbar`
           - `isSectionsToolbar`
           - `optionDescendants`

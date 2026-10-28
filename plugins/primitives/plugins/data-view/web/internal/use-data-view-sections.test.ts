@@ -1047,14 +1047,15 @@ describe("declared sections (a server-sectioned live source)", () => {
       rowKey,
       { ...stubOpts<Task>(), sectioning: declared },
     );
-    const keepFirst = (entry: { key: string }) => entry.key === "1";
+    const keepFirst = (entries: readonly { key: string }[]) =>
+      entries.map((entry) => entry.key === "1");
     const [closed] = foldSections(sections, {
-      isKept: keepFirst,
+      keep: keepFirst,
       openKeys: new Set(),
     });
     expect(closed!.paging?.canGrow).toBe(false);
     const [open] = foldSections(sections, {
-      isKept: keepFirst,
+      keep: keepFirst,
       openKeys: new Set(["doing"]),
     });
     expect(open!.paging?.canGrow).toBe(true);
@@ -1324,7 +1325,7 @@ describe("rollUpNestedCounts", () => {
       getKey: (p) => (p.id === "h1" || p.id === "h2" ? "pair" : null),
     });
     sections = foldSections(sections, {
-      isKept: (e) => e.row.id !== "a1",
+      keep: (entries) => entries.map((e) => e.row.id !== "a1"),
       openKeys: new Set(),
     });
     const rolled = rollUpNestedCounts(sections);

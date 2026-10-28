@@ -84,8 +84,8 @@ a flat `list` view, so that is the normal non-tree case, not a failure.
 `config/apps/pages/page-tree/pages-sidebar.jsonc` is on screen at once, stacked
 under its own collapsible header — **Favorites** (a `list` of starred pages),
 **Private** (the tree, `origin is user`), **Recent** (a `list` of the user's
-pages edited in the past week, sorted on the `editedAt` field the sidebar
-declares — the page's edit time over its row AND its content, the same field
+10 most recently edited pages — `fold.limit: 10`, the rest behind "… N more" —
+sorted on the `editedAt` field the sidebar declares — the page's edit time over its row AND its content, the same field
 the Welcome page's Recent pages and the header's "Edited" label read)
 and **Scratch** (the tree, `origin is agent`). Private and Scratch split the
 tree with `filterScope: "roots"`, so a subtree stays whole in one of them;

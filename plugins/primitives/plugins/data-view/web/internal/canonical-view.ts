@@ -14,7 +14,12 @@ export function canonicalViewValue(view: VariantValue): unknown {
     filter: withoutNodeIds(view.filter),
     fold:
       fold !== null && typeof fold === "object"
-        ? { ...fold, keep: withoutNodeIds(fold.keep) }
+        ? {
+            ...fold,
+            ...(fold.keep !== undefined
+              ? { keep: withoutNodeIds(fold.keep) }
+              : {}),
+          }
         : fold,
   };
 }

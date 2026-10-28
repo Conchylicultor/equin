@@ -28,7 +28,11 @@ export {
   FilterRuleSchema,
 } from "./internal/filter-schema";
 
-export { IDENTITY_CODEC, UNGROUPED_FOLD_KEY } from "./internal/types";
+export {
+  IDENTITY_CODEC,
+  UNGROUPED_FOLD_KEY,
+  isFoldLimit,
+} from "./internal/types";
 
 export { compareValues } from "./internal/grouping";
 export { optionDescendants } from "./internal/option-tree";
@@ -100,6 +104,7 @@ export type {
   ViewState,
   PropertyEntry,
   FoldRule,
+  FoldLimit,
   DataViewFoldLines,
   DataViewSection,
   DataViewSectionIdentity,

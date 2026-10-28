@@ -1,6 +1,8 @@
-import { useCallback, type ReactNode } from "react";
+import { useCallback, useState, type ReactNode } from "react";
 import { ControlPanel } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
-import type { FilterGroup } from "../../../core";
+import { Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { isFoldLimit, type FilterGroup, type FoldLimit } from "../../../core";
+import { foldRuleOf } from "../../internal/fold-sections";
 import { useFilterController } from "../../internal/use-filter-controller";
 import { summarizeFilter } from "../../internal/summarize-filter";
 import {
@@ -17,14 +19,16 @@ const unfoldLessIcon = symbol("unfold-less");
 
 /**
  * "Fold rows" setting (a `view`-scope settings contribution, modelled on
- * `GroupByControl`): the view's fold rule — rows NOT matching it fold behind a
- * "… N more" fold line at the end of their section.
+ * `GroupByControl`): the view's fold rule — rows NOT matching its `keep`, or
+ * past each section's first `limit`, fold behind a "… N more" fold line at the
+ * end of their section.
  *
- * The rule is an ordinary `FilterGroup`, so it is edited with the filter
+ * `keep` is an ordinary `FilterGroup`, so it is edited with the filter
  * builder itself, pushed as a page and pointed at `fold.keep` by
- * `FoldFilterScope`. The section's row says the rule in words (the same
- * `summarizeFilter` the filter control's tooltip uses), and a second row clears
- * it.
+ * `FoldFilterScope`. Its row says the rule in words (the same
+ * `summarizeFilter` the filter control's tooltip uses). `limit` is a number
+ * field beside it ("Show first", empty = no limit). Each half is written with
+ * the other kept (`foldRuleOf`), and a last row clears both.
  *
  * Not the tree's fold-children header action — that collapses subtrees; this
  * sets rows aside behind a fold line.
@@ -34,7 +38,7 @@ export function FoldControl(): ReactNode {
     useDataViewControls();
   const fold = activeState.fold;
   const summary = fold
-    ? summarizeFilter(fold.keep, fields, filter.resolveOperatorSet)
+    ? summarizeFilter(fold.keep ?? null, fields, filter.resolveOperatorSet)
     : null;
 
   return (
@@ -53,8 +57,25 @@ export function FoldControl(): ReactNode {
           ),
         }}
       >
-        {summary ? `Keep ${summary.label}` : "Off"}
+        {summary
+          ? `Keep ${summary.label}`
+          : fold?.limit !== undefined
+            ? "Keep every row"
+            : "Off"}
       </ControlPanel.Row>
+      <ControlPanel.Setting
+        label="Show first"
+        hint="Show only each group's first rows, in the view's order; the rest fold behind “… N more”. Empty shows every row."
+        fit="inline"
+        control={
+          <FoldLimitInput
+            value={fold?.limit}
+            onCommit={(limit) =>
+              viewModel.setFold(activeViewId, foldRuleOf(fold?.keep, limit))
+            }
+          />
+        }
+      />
       {fold ? (
         <ControlPanel.Row
           icon={<Icon icon={closeIcon} />}
@@ -84,8 +105,11 @@ function FoldFilterScope({ children }: { children: ReactNode }): ReactNode {
   const { viewModel, activeViewId } = ctx;
   const setKeep = useCallback(
     (keep: FilterGroup | null) =>
-      viewModel.setFold(activeViewId, keep ? { keep } : null),
-    [viewModel, activeViewId],
+      viewModel.setFold(
+        activeViewId,
+        foldRuleOf(keep, ctx.activeState.fold?.limit),
+      ),
+    [viewModel, activeViewId, ctx.activeState.fold?.limit],
   );
   const foldFilter = useFilterController(
     ctx.fields,
@@ -98,5 +122,48 @@ function FoldFilterScope({ children }: { children: ReactNode }): ReactNode {
         {children}
       </FilterScopeProvider>
     </DataViewControlsProvider>
+  );
+}
+
+/**
+ * The fold's row limit, written once the person is done typing (blur / Enter):
+ * a positive whole number, or empty for no limit. Anything else reverts to the
+ * stored value.
+ */
+function FoldLimitInput({
+  value,
+  onCommit,
+}: {
+  value: FoldLimit | undefined;
+  onCommit: (limit: FoldLimit | undefined) => void;
+}): ReactNode {
+  const text = value === undefined ? "" : String(value);
+  const [draft, setDraft] = useState(text);
+  const [shown, setShown] = useState(text);
+  if (shown !== text) {
+    setShown(text);
+    setDraft(text);
+  }
+  const commit = (): void => {
+    const trimmed = draft.trim();
+    const next = trimmed === "" ? undefined : Number(trimmed);
+    if (next !== undefined && !isFoldLimit(next)) setDraft(text);
+    else if (next !== value) onCommit(next);
+  };
+  return (
+    <Input
+      type="number"
+      min={1}
+      step={1}
+      className="w-16 tabular-nums"
+      placeholder="All"
+      value={draft}
+      aria-label="Show only this many rows per group"
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") commit();
+      }}
+    />
   );
 }

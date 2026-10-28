@@ -82,14 +82,16 @@
       }
     },
     {
-      // The pages edited in the past week, most recent first: a flat `list`
-      // (a page on its own, never with its ancestors) sorted on the `editedAt`
-      // field — the page's edit time, its row and its content together, which
-      // the Welcome page's Recent pages and the page header's "Edited" label
-      // also read. A sort overrides the view's manual row order,
-      // so this section is never drag-arranged. Scratch pages stay out (they
-      // have their own section and expire in 24h). `hideWhenEmpty`: nothing
-      // edited this week → no header.
+      // The 10 most recently edited pages: a flat `list` (a page on its own,
+      // never with its ancestors) sorted on the `editedAt` field — the page's
+      // edit time, its row and its content together, which the Welcome page's
+      // Recent pages and the page header's "Edited" label also read. A sort
+      // overrides the view's manual row order, so this section is never
+      // drag-arranged. `fold.limit` keeps it a fixed size whatever was edited
+      // lately: the first 10 in that order, every other page counted and one
+      // click away behind "… N more" (searching the section shows every
+      // match). Scratch pages stay out (they have their own section and expire
+      // in 24h). `hideWhenEmpty`: no user page at all → no header.
       "id": "recent",
       "name": "Recent",
       "view": {
@@ -97,18 +99,12 @@
         "properties": [{ "id": "title" }],
         "hideWhenEmpty": true,
         "sort": [{ "fieldId": "editedAt", "direction": "desc" }],
+        "fold": { "limit": 10 },
         "filter": {
           "kind": "group",
           "id": "recent",
           "conjunction": "and",
           "children": [
-            {
-              "kind": "rule",
-              "id": "recent-edited",
-              "fieldId": "editedAt",
-              "operatorId": "is-within-past",
-              "value": { "amount": 7, "unit": "day" }
-            },
             {
               "kind": "rule",
               "id": "recent-origin",

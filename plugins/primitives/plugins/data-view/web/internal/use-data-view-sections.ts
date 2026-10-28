@@ -657,12 +657,13 @@ export function useDataViewSections<TRow>(
     // Collapse aggregate groups within each (already-ordered) section.
     if (aggregate) sections = aggregateSections(sections, aggregate);
     // Fold after aggregation, so it counts the entries the user sees (an
-    // aggregate's representative decides) and pulls folded rows from wherever
-    // they sort.
+    // aggregate's representative decides, and counts once toward a `limit`)
+    // and pulls folded rows from wherever they sort.
     if (fold) {
       const key = rowKey ?? ((_row: TRow, i: number) => String(i));
       sections = foldSections(sections, {
-        isKept: makeFoldKeep(matchesKeep, {
+        keep: makeFoldKeep(matchesKeep, {
+          limit: fold.limit,
           selectedRowId,
           // A member carries no index of its own; keys that depend on the index
           // cannot identify it, and such a surface has no stable selection anyway.

@@ -32,7 +32,9 @@ import type {
 import type { DataViewContribution } from "../slots";
 import { normalizeSortRules } from "./pinned-sort";
 import { cyclePrimarySort } from "./sort-cycle";
+import { isFoldLimit } from "../../core";
 import { isFilterGroup } from "./filter-shape";
+import { foldRuleOf } from "./fold-sections";
 import { dataViewDescriptors } from "./descriptors";
 import { IDENTITY_GROUPING } from "./identity-grouping";
 import { useViewEphemeral } from "./use-view-ephemeral";
@@ -82,7 +84,8 @@ export interface ReadyViewModel {
   /** Set (or clear with `null`) THIS view's group-by rule (field + grouping). */
   setGroupBy: (id: string, rule: GroupByRule | null) => void;
   /** Set (or clear with `null`) THIS view's fold rule. An empty `keep` group
-   *  clears it too — a rule that keeps everything folds nothing. */
+   *  drops the `keep` (a group that keeps everything folds nothing), and with
+   *  no `limit` either the rule is cleared. */
   setFold: (id: string, fold: FoldRule | null) => void;
   setQuery: (id: string, q: string) => void;
   /** Apply a whole expand/collapse batch to THIS view (one localStorage write). */
@@ -217,16 +220,27 @@ function readGroupBy(view: VariantValue | undefined): GroupByRule | undefined {
 }
 
 /**
- * Read the host-managed fold rule off a row's raw variant value. Only an object
- * whose `keep` is a filter GROUP is a rule; anything else (absent / null / a
- * hand-authored bare rule) reads as "nothing folds". The raw object is returned
- * as-is, so its identity is the config's and stays stable across renders.
+ * Read the host-managed fold rule off a row's raw variant value. A rule is an
+ * object with a `keep` filter GROUP, a `limit` positive whole number, or both;
+ * anything else (absent / null / a hand-authored bare rule / a `0` limit) reads
+ * as "nothing folds", and a malformed half is dropped. The raw object is
+ * returned as-is when both halves are valid, so its identity is the config's and
+ * stays stable across renders.
  */
 function readFold(view: VariantValue | undefined): FoldRule | undefined {
   const raw = view?.fold;
   if (!raw || typeof raw !== "object") return undefined;
-  const { keep } = raw as Partial<FoldRule>;
-  return keep && isFilterGroup(keep) ? (raw as FoldRule) : undefined;
+  const { keep, limit } = raw as { keep?: unknown; limit?: unknown };
+  const validKeep =
+    keep !== undefined && isFilterGroup(keep) ? keep : undefined;
+  const validLimit = isFoldLimit(limit) ? limit : undefined;
+  if (validKeep === keep && validLimit === limit) {
+    return validKeep || validLimit !== undefined
+      ? (raw as FoldRule)
+      : undefined;
+  }
+  if (validKeep) return { keep: validKeep, limit: validLimit };
+  return validLimit !== undefined ? { limit: validLimit } : undefined;
 }
 
 /**
@@ -434,13 +448,14 @@ export function useDataViewModel(
   const setFold = useCallback(
     (id: string, fold: FoldRule | null) => {
       // Clearing omits the key rather than persisting `fold: null`, exactly like
-      // an empty filter/groupBy — and an empty `keep` group is "no fold" too.
-      const isEmpty = fold == null || fold.keep.children.length === 0;
-      core.updateView(
-        id,
-        { fold: isEmpty ? undefined : fold } as unknown as VariantValue,
-        { merge: true },
-      );
+      // an empty filter/groupBy — and an empty `keep` group is no `keep`: the
+      // rule keeps its `limit`, or is no fold at all without one.
+      const next = fold
+        ? (foldRuleOf(fold.keep, fold.limit) ?? undefined)
+        : undefined;
+      core.updateView(id, { fold: next } as unknown as VariantValue, {
+        merge: true,
+      });
     },
     [core],
   );
