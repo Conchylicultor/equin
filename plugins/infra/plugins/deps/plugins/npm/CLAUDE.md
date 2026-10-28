@@ -2,7 +2,9 @@
 
 The `npm` updater of `infra/deps`, and the dependency policy it enforces.
 Design: `research/2026-10-16-global-deps-versions-always-move.md`, upstream of
-self-published wrappers: `research/2026-10-17-global-deps-npm-upstream-of-wrappers.md`.
+self-published wrappers: `research/2026-10-17-global-deps-npm-upstream-of-wrappers.md`,
+self-publishing wrappers and the `awaiting` arm:
+`research/2026-10-28-global-deps-wrappers-auto-publish.md`.
 
 ## The model: nothing is pinned, everything moves
 
@@ -42,12 +44,13 @@ Declared in the `package.json` that owns the dependency, next to it:
     "members": ["@equin/pg-client-darwin-arm64", "…", "@embedded-postgres/darwin-arm64", "…"],
     "agree": "major.minor",            // "version" | "major.minor" | "major"
     "reason": "pg_dump must come from the server's Postgres release",
-    "prerequisite": "publish @equin/pg-client-* for the new release, then upgrade",  // optional
+    "prerequisite": "the daily auto-publish … has not published it: check its run, fix, re-run",  // optional
     "wraps": {                         // optional: a group of wrappers WE publish
       "name": "PostgreSQL",
       "tags": { "repo": "https://github.com/postgres/postgres", "pattern": "^REL_(\\d+)_(\\d+)$" },
       "agree": "major.minor",          // which part of a wrapper version names the upstream release
-      "prerequisite": "publish @equin/pg-client-* for PostgreSQL <version> …"
+      "after": "embedded-postgres",    // optional: a group that must publish the release first
+      "prerequisite": "the daily auto-publish … has not published PostgreSQL <version> …"
     }
   }],
   "ownScopes": ["@equin"],             // root package.json only: the scopes we publish
@@ -63,8 +66,17 @@ Declared in the `package.json` that owns the dependency, next to it:
 
 - **Lockstep group** — members move as ONE move, to the newest versions on
   which every group they share agrees. They never stop moving. A member whose
-  newest release its partners have not published is reported **BLOCKED** with
-  the group's `prerequisite` (the weekly task asks for it), never dropped.
+  newest release its partners cannot follow yet is never dropped: when they
+  have published it and are only inside the cooldown, it is **WAITING**
+  (`awaiting` `{ kind: "cooldown", of, until }`: `until` is the last cooling
+  partner's publish plus the cooldown); when one has not, it is **BLOCKED** with
+  the group's `prerequisite` (the weekly task asks for it), or, for a group
+  without one (Zonky has not published one platform yet), **WAITING** on the
+  lagging partners (`{ kind: "publish", by, release, since }`, `since` = when
+  the leading member published it). A WAITING row rides along in the task text
+  but never files one — until a publish wait passes `AWAIT_MAX_DAYS` (30,
+  `updates/core`), when the detection reports it BLOCKED: add a hold (which
+  makes the row HELD), chase upstream, or replace the dependency.
   `deps-npm:groups-coherent` asserts the lock holds one copy per member and the
   members agree. Today: `typescript-eslint` (root), `embedded-postgres`,
   `pg-client` + `postgres-release` (`database/client-tools`), `pgbouncer`.
@@ -78,22 +90,35 @@ Declared in the `package.json` that owns the dependency, next to it:
   upgrade task; held rows alone never file one.
 - **Wrappers we publish** (`wraps`) — the registry cannot show an upstream
   release nobody has wrapped, because we are who would wrap it. `detect` reads
-  the upstream's release tags (`git ls-remote`, `tagVersions`) and, when the
+  the upstream's release tags (`git ls-remote`, `newestTag`) and, when the
   newest is ahead of every release any member has published (on `wraps.agree`),
-  reports one **BLOCKED** row `<name> (upstream of group …)` with
-  `wraps.prerequisite` (`<version>` filled in) — `upstreamRows`. Once a wrapper
-  is published (cooldown or not), the registry side takes over. A tag pattern
-  matching nothing throws. `deps-npm:wrappers-declared` makes every dependency
-  in a root `ownScopes` scope belong to a group with `wraps`. Today:
-  `pgbouncer` (PgBouncer, `major.minor` — the wrapper's patch numbers are its
-  own) and `pg-client` (PostgreSQL).
+  reports one row `<name> (upstream of group …)` — `upstreamRows`. It is
+  **BLOCKED** with `wraps.prerequisite` (`<version>` filled in): the wrappers
+  publish themselves (a daily CI run in their repo), so a release still
+  unwrapped a detection later means that run failed or GitHub disabled it.
+  With `wraps.after` (a group id, held by `deps-npm:policy`) the wrapper is
+  built from that group's release: while no member of it has published the
+  upstream release either, the row is **WAITING** on them (`since` = the
+  upstream tag's date: the newest tag alone is fetched, depth 1 and no trees, into
+  a throwaway bare repo — the tagger date of an annotated tag, the commit date of
+  a lightweight one like PostgreSQL's); once one has, there
+  is no upstream row — the lockstep group spanning both reports the lag from
+  the registry. Once a wrapper is published (cooldown or not), the registry
+  side takes over. A hold naming a member of the wrapper group and covering the
+  upstream release makes the row HELD. A tag pattern matching nothing throws.
+  `deps-npm:wrappers-declared` makes every dependency in a root `ownScopes`
+  scope belong to a group with `wraps`. Today: `pgbouncer` (PgBouncer,
+  `version` — the wrapper's version is PgBouncer's own) and `pg-client`
+  (PostgreSQL, `after` `embedded-postgres`: its CI smoke test needs the
+  matching server).
 - **Patched packages** (`patchedDependencies`) are BLOCKED on porting the
   patch: it names the exact version it applies to.
 
-Why every newer release ends up moved, held (reviewed at least every 90 days — lifted or renewed) or
-blocked (asked for every cycle): there is no other arm in `planNpm`, no
-spec can opt out (`deps-npm:ranges`), and a release only an upstream of ours has
-made is asked for through `wraps` (`deps-npm:wrappers-declared`).
+Why every newer release ends up moved, held (reviewed at least every 90 days — lifted or renewed),
+blocked (asked for every cycle) or awaiting (listed every cycle, until someone else publishes — at most 30 days
+for a publish, then blocked): there is no
+other arm in `planNpm`, no spec can opt out (`deps-npm:ranges`), and a release only an upstream of ours has
+made is seen through `wraps` (`deps-npm:wrappers-declared`).
 
 ## Checks
 
@@ -118,6 +143,8 @@ functions in `core/internal/coherence.ts` over `readWorkspace(root)`.
     - `infra/deps/updates.HoldSchema`
     - `infra/deps/updates.Move`
     - `infra/deps/updates.Outdated`
+    - `infra/deps/updates.OutdatedWaiting`
+    - `infra/deps/updates.utcDay`
     - `infra/spawn.spawnCaptured`
   - Exports (types):
     - `Packument`
@@ -126,11 +153,11 @@ functions in `core/internal/coherence.ts` over `readWorkspace(root)`.
   - Exports (values):
     - `groupProblems`
     - `installedVersions`
+    - `newestTag`
     - `planNpm`
     - `policyProblems`
     - `rangeAt`
     - `readWorkspace`
-    - `tagVersions`
     - `unrangedSpecs`
     - `upstreamRows`
     - `workspaceManifests`

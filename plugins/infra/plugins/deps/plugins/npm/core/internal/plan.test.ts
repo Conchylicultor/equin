@@ -4,7 +4,8 @@ import type { Hold } from "@plugins/infra/plugins/deps/plugins/updates/core";
 import type { Group } from "./policy";
 
 const OLD = "2026-01-01T00:00:00.000Z";
-const CUTOFF = "2026-10-13T00:00:00.000Z";
+// `now` minus the 3-day cooldown is 2026-10-13: FRESH is inside it.
+const NOW = "2026-10-16T00:00:00.000Z";
 const FRESH = "2026-10-15T00:00:00.000Z";
 
 function pkg(latest: string, versions: Record<string, string>): Packument {
@@ -18,8 +19,8 @@ function input(over: Partial<PlanInput>): PlanInput {
     groups: [],
     holds: [],
     patched: new Map(),
-    cutoff: CUTOFF,
-    today: "2026-10-16",
+    now: NOW,
+    cooldownDays: 3,
     ...over,
   };
 }
@@ -208,6 +209,79 @@ describe("planNpm", () => {
       latest: "18.4.0-beta.1",
       waiting: { kind: "blocked", prerequisite: "publish cli" },
     });
+  });
+
+  test("a partner that has published but is cooling down is awaited, not BLOCKED", () => {
+    const srv = pkg("18.4.0-beta.1", {
+      "18.3.0-beta.17": OLD,
+      "18.4.0-beta.1": OLD,
+    });
+    const plan = planNpm(
+      input({
+        installed: pgInstalled,
+        packuments: new Map([
+          ["cli", pkg("18.4.0", { "18.3.0": OLD, "18.4.0": FRESH })],
+          ["srv-a", srv],
+          ["srv-b", srv],
+        ]),
+        groups: pg,
+      }),
+    );
+    expect(plan.moves).toEqual([]);
+    expect(plan.outdated).toContainEqual({
+      name: "srv-a",
+      current: "18.3.0-beta.17",
+      latest: "18.4.0-beta.1",
+      waiting: {
+        kind: "awaiting",
+        // cli published 18.4.0 at FRESH; its cooldown ends 3 days later.
+        on: {
+          kind: "cooldown",
+          of: ["cli"],
+          until: "2026-10-18T00:00:00.000Z",
+        },
+      },
+    });
+  });
+
+  test("without a prerequisite, a partner that has not published is awaited", () => {
+    const plan = planNpm(
+      input({
+        installed: [
+          { name: "srv-a", current: "18.3.0-beta.17" },
+          { name: "srv-b", current: "18.3.0-beta.17" },
+        ],
+        packuments: new Map([
+          [
+            "srv-a",
+            pkg("18.4.0-beta.1", {
+              "18.3.0-beta.17": OLD,
+              "18.4.0-beta.1": OLD,
+            }),
+          ],
+          ["srv-b", pkg("18.3.0-beta.17", { "18.3.0-beta.17": OLD })],
+        ]),
+        groups: [pg[0]!],
+      }),
+    );
+    expect(plan.moves).toEqual([]);
+    expect(plan.outdated).toEqual([
+      {
+        name: "srv-a",
+        current: "18.3.0-beta.17",
+        latest: "18.4.0-beta.1",
+        waiting: {
+          kind: "awaiting",
+          // Since srv-a published the release srv-b has not.
+          on: {
+            kind: "publish",
+            by: ["srv-b"],
+            release: "18.4.0-beta.1",
+            since: OLD,
+          },
+        },
+      },
+    ]);
   });
 
   test("a patched package's move is BLOCKED on porting the patch", () => {

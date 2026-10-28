@@ -12,6 +12,7 @@ import { _tasks } from "@plugins/tasks/plugins/tasks-core/server";
 import { tasksCategory } from "@plugins/tasks/plugins/task-category/server";
 import { defineAutomation } from "@plugins/tasks/plugins/automations/server";
 import {
+  boundedRows,
   hasUpgradeWork,
   reviewableHolds,
   outdatedSections,
@@ -94,17 +95,19 @@ export const depsUpgradesAutomation = defineAutomation({
   detect: async ({ sources, partialFailure }) => {
     const included = new Set(sources.map((s) => s.id));
     const batch: OutdatedUpdater[] = [];
+    const now = new Date();
     for (const updater of declaredUpdaters()) {
       if (!included.has(updater.id)) continue;
       try {
-        const lapsed = await reviewableHolds(updater, REPO_ROOT, new Date());
+        const lapsed = await reviewableHolds(updater, REPO_ROOT, now);
         const share: OutdatedUpdater = {
           updaterId: updater.id,
-          outdated: await updater.detect(REPO_ROOT),
+          // A wait on someone else's publish past AWAIT_MAX_DAYS is BLOCKED.
+          outdated: boundedRows(await updater.detect(REPO_ROOT), now),
           lapsed,
           holdsFile: updater.holds.file,
         };
-        // Held rows ride along with work but never file a task on their own;
+        // Held and awaiting rows ride along with work but never file a task on their own;
         // a hold past its `reviewBy` does, until someone lifts or renews it.
         if (hasUpgradeWork(share)) batch.push(share);
       } catch (err) {

@@ -1,10 +1,12 @@
-import { describeHold, type Hold } from "./hold";
-import { isActionable, type Outdated } from "./updater";
+import { AWAIT_MAX_DAYS, type BoundedRows } from "./awaiting";
+import { describeHold, utcDay, type Hold } from "./hold";
+import { isActionable, type AwaitingOn, type Outdated } from "./updater";
 
 /** One updater's share of an upgrade task: what it found outdated, and the holds it must review. */
 export interface OutdatedUpdater {
   updaterId: string;
-  outdated: readonly Outdated[];
+  /** What `detect` found, every wait bounded (`boundedRows`): a task never carries an unbounded one. */
+  outdated: BoundedRows;
   /** Holds past their `reviewBy`: work for this task, whether or not a row is outdated. */
   lapsed: readonly Hold[];
   /** Repo-relative file where a hold for this updater is added. */
@@ -32,7 +34,18 @@ export function upgradeTaskTitle(batch: readonly OutdatedUpdater[]): string {
     .join("; ")}`;
 }
 
-function formatOutdated(o: Outdated): string {
+/** Who an awaiting row waits on, in words — the one place `AwaitingOn` becomes text. */
+function formatAwaiting(on: AwaitingOn): string {
+  switch (on.kind) {
+    case "publish":
+      return `WAITING on ${on.by.join(", ")} to publish ${on.release} (since ${utcDay(new Date(on.since))}; nothing to do)`;
+    case "cooldown":
+      return `WAITING for the cooldown of ${on.of.join(", ")} (moves by itself after ${utcDay(new Date(on.until))})`;
+  }
+}
+
+/** One detected row as a line of the task text. */
+export function formatOutdated(o: Outdated): string {
   const move = `${o.name} ${o.current ?? "(new)"} → ${o.latest}`;
   switch (o.waiting?.kind) {
     case undefined:
@@ -43,6 +56,8 @@ function formatOutdated(o: Outdated): string {
         : `${move} — HELD (review by ${o.waiting.reviewBy}): ${o.waiting.reason}`;
     case "blocked":
       return `${move} — BLOCKED, do this first: ${o.waiting.prerequisite}`;
+    case "awaiting":
+      return `${move} — ${formatAwaiting(o.waiting.on)}`;
   }
 }
 
@@ -123,7 +138,9 @@ First, the holds to review (listed above, per updater): \`./equin deps upgrade\`
 A row marked BLOCKED is a release the upgrade cannot move to on its own: do the prerequisite it names (or, when it
 is not doable from this worktree, file it as a task with \`add_task\` and say so), then upgrade again. A row marked
 HELD is listed so a hold is never silent: leave it unless its reason no longer stands, in which case delete the
-hold and let the upgrade move it. Every updater's holds share one shape — \`names\`, one \`version\` or everything
+hold and let the upgrade move it. A row marked WAITING waits on someone else's release: nothing to do, it moves on
+its own once they publish (one still unpublished ${AWAIT_MAX_DAYS} days on is listed BLOCKED instead). Every
+updater's holds share one shape — \`names\`, one \`version\` or everything
 from \`below\` up, a \`reason\`, the upstream \`issue\` URL, and a \`reviewBy\` date at most 90 days out. A hold
 blocks its releases until it is deleted; \`reviewBy\` only says when it must be looked at again.
 

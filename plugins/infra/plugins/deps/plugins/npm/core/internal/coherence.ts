@@ -21,7 +21,7 @@ export function unrangedSpecs(declared: readonly Declared[]): string[] {
 /**
  * Policy problems: unparsable policies, a hold set past its bound
  * (`holdProblems`), a group or hold naming a package nothing declares, two groups
- * with one id.
+ * with one id, a `wraps.after` naming no other declared group.
  */
 export function policyProblems(args: {
   policies: readonly DeclaredPolicy[];
@@ -35,6 +35,9 @@ export function policyProblems(args: {
     (e) => `${e.manifest}: dependencyPolicy does not parse — ${e.message}`,
   );
   const ids = new Map<string, string>();
+  const declaredIds = new Set(
+    policies.flatMap((p) => (p.policy.groups ?? []).map((g) => g.id)),
+  );
   for (const { manifest, policy } of policies) {
     for (const g of policy.groups ?? []) {
       const seen = ids.get(g.id);
@@ -48,6 +51,11 @@ export function policyProblems(args: {
         if (bad !== undefined)
           problems.push(
             `${manifest}: group "${g.id}" wraps.tags.pattern ${bad}`,
+          );
+        const { after } = g.wraps;
+        if (after !== undefined && (after === g.id || !declaredIds.has(after)))
+          problems.push(
+            `${manifest}: group "${g.id}" wraps.after names "${after}", which is not another declared group`,
           );
       }
       for (const m of g.members)

@@ -28998,6 +28998,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/deps/updates.HoldSchema`
               - `infra/deps/updates.Move`
               - `infra/deps/updates.Outdated`
+              - `infra/deps/updates.OutdatedWaiting`
+              - `infra/deps/updates.utcDay`
               - `infra/spawn.spawnCaptured`
             - Exports (types):
               - `Packument`
@@ -29006,11 +29008,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `groupProblems`
               - `installedVersions`
+              - `newestTag`
               - `planNpm`
               - `policyProblems`
               - `rangeAt`
               - `readWorkspace`
-              - `tagVersions`
               - `unrangedSpecs`
               - `upstreamRows`
               - `workspaceManifests`
@@ -29140,6 +29142,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `toolchain`
           - Core:
             - Exports (types):
+              - `AwaitingOn`
               - `GateResult`
               - `Hold`
               - `Move`
@@ -29149,6 +29152,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Updater`
               - `UpdaterSmoke`
             - Exports (values):
+              - `AWAIT_MAX_DAYS`
+              - `boundedRows`
               - `DEPS_UPGRADE_PROMPT`
               - `hasUpgradeWork`
               - `heldBy`

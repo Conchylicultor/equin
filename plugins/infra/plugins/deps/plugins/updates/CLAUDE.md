@@ -12,7 +12,14 @@ before the move stays under the old `deps.detect-outdated` name in Background
 activity). Its `detect` asks every INCLUDED updater for what is newer and
 returns ONE batched filing whose `{{outdated}}` variable fills the config's
 prompt template (default `DEPS_UPGRADE_PROMPT`); `{{pushPolicy}}` carries what
-the Push setting allows (default: push once checks pass). Upgrade tasks filed before origins were stored
+the Push setting allows (default: push once checks pass). Every
+detected row goes through `boundedRows` first (`core/internal/awaiting.ts`):
+an `awaiting` row waits on someone else's publish for at most `AWAIT_MAX_DAYS`
+(30) from its `since`, then becomes BLOCKED on choosing a hold, chasing
+upstream or replacing the dependency; a cooldown wait never escalates.
+`OutdatedUpdater.outdated` only accepts that function's (branded) output, so
+neither an updater nor a consumer can skip it. Updaters report a wait as facts
+(`AwaitingOn`); `formatOutdated` is the one place they become text. Upgrade tasks filed before origins were stored
 (author `deps.*`, Dependencies category) are adopted through `adoptLegacy` —
 delete it once none can be open.
 
@@ -52,6 +59,7 @@ delete it once none can be open.
     - `toolchain`
 - Core:
   - Exports (types):
+    - `AwaitingOn`
     - `GateResult`
     - `Hold`
     - `Move`
@@ -61,6 +69,8 @@ delete it once none can be open.
     - `Updater`
     - `UpdaterSmoke`
   - Exports (values):
+    - `AWAIT_MAX_DAYS`
+    - `boundedRows`
     - `DEPS_UPGRADE_PROMPT`
     - `hasUpgradeWork`
     - `heldBy`

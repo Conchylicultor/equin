@@ -103,6 +103,51 @@ describe("policyProblems", () => {
       }),
     ).toEqual([expect.stringContaining("names zz")]);
   });
+
+  test("wraps.after must name another declared group", () => {
+    const withAfter = (after: string) => ({
+      ...base,
+      declared: [declared("a", "^1.0.0"), declared("b", "^1.0.0")],
+      policies: [
+        {
+          manifest: "package.json",
+          policy: {
+            groups: [
+              {
+                id: "server",
+                members: ["a", "b"],
+                agree: "version" as const,
+                reason: "r",
+              },
+              {
+                id: "client",
+                members: ["a", "b"],
+                agree: "version" as const,
+                reason: "r",
+                wraps: {
+                  name: "Up",
+                  tags: {
+                    repo: "https://example.com/up",
+                    pattern: "^v(\\d+)$",
+                  },
+                  agree: "major" as const,
+                  prerequisite: "publish it",
+                  after,
+                },
+              },
+            ],
+          },
+        },
+      ],
+    });
+    expect(policyProblems(withAfter("server"))).toEqual([]);
+    expect(policyProblems(withAfter("nope"))).toEqual([
+      expect.stringContaining('wraps.after names "nope"'),
+    ]);
+    expect(policyProblems(withAfter("client"))).toEqual([
+      expect.stringContaining('wraps.after names "client"'),
+    ]);
+  });
 });
 
 describe("groupProblems over a lock", () => {

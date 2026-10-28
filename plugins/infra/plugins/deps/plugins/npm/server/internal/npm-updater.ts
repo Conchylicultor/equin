@@ -1,5 +1,6 @@
 import { CLI_NAME } from "@plugins/framework/plugins/cli/plugins/cli-name/core";
-import { readFileSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { z } from "zod";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
@@ -12,9 +13,9 @@ import {
 import {
   installedVersions,
   planNpm,
+  newestTag,
   rangeAt,
   readWorkspace,
-  tagVersions,
   upstreamRows,
   workspaceManifests,
   type Packument,
@@ -23,7 +24,6 @@ import {
 } from "@plugins/infra/plugins/deps/plugins/npm/core";
 
 const MINUTE = 60_000;
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
  * How long a release must have been public before the updater adopts it — the
@@ -71,8 +71,7 @@ async function fetchAll(
 async function fetchTags(repo: string): Promise<string[]> {
   const result = await spawnCaptured(
     ["git", "ls-remote", "--tags", "--refs", repo],
-    // Never a credential prompt: a public remote that asks for one has moved.
-    { timeoutMs: MINUTE, env: { ...process.env, GIT_TERMINAL_PROMPT: "0" } },
+    { timeoutMs: MINUTE, env: GIT_ENV },
   );
   if (result.exitCode !== 0)
     throw new Error(
@@ -84,10 +83,60 @@ async function fetchTags(repo: string): Promise<string[]> {
     .map((l) => l.split("\t")[1]!.replace(/^refs\/tags\//, ""));
 }
 
+/** Git without a credential prompt: a public remote that asks for one has moved. */
+const GIT_ENV = { ...process.env, GIT_TERMINAL_PROMPT: "0" };
+
+/**
+ * When `tag` of `repo` was made (ISO instant): the tagger date of an annotated
+ * tag, the commit date of a lightweight one (PostgreSQL's) — `ls-remote` has
+ * neither. Fetches only that tag's object and commit (depth 1, no trees) into a
+ * throwaway bare repo: one round trip, a few KB.
+ */
+async function fetchTagDate(repo: string, tag: string): Promise<string> {
+  const dir = mkdtempSync(join(tmpdir(), "deps-npm-tag-"));
+  try {
+    const git = async (argv: string[]): Promise<string> => {
+      const r = await spawnCaptured(["git", "-C", dir, ...argv], {
+        timeoutMs: MINUTE,
+        env: GIT_ENV,
+      });
+      if (r.exitCode !== 0)
+        throw new Error(
+          `git ${argv.join(" ")} failed (exit ${r.exitCode}): ${r.stderr.trim()}`,
+        );
+      return r.stdout.trim();
+    };
+    await git(["init", "-q", "--bare"]);
+    const ref = `refs/tags/${tag}`;
+    await git([
+      "fetch",
+      "-q",
+      "--depth",
+      "1",
+      "--filter=tree:0",
+      "--no-tags",
+      repo,
+      `${ref}:${ref}`,
+    ]);
+    const date = await git([
+      "for-each-ref",
+      "--format=%(creatordate:iso-strict)",
+      ref,
+    ]);
+    const t = Date.parse(date);
+    if (Number.isNaN(t))
+      throw new Error(`${repo} tag ${tag}: no creation date (got "${date}").`);
+    return new Date(t).toISOString();
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
 async function planNow(root: string): Promise<{
   plan: Plan;
   ws: Workspace;
   packuments: Map<string, Packument>;
+  now: Date;
 }> {
   const ws = await readWorkspace(root);
   if (ws.policyErrors.length > 0) {
@@ -104,10 +153,10 @@ async function planNow(root: string): Promise<{
     groups: ws.policies.flatMap((p) => p.policy.groups ?? []),
     holds: ws.policies.flatMap((p) => p.policy.holds ?? []),
     patched: ws.lock.patched,
-    cutoff: new Date(now.getTime() - NPM_COOLDOWN_DAYS * DAY_MS).toISOString(),
-    today: utcDay(now),
+    now: now.toISOString(),
+    cooldownDays: NPM_COOLDOWN_DAYS,
   });
-  return { plan, ws, packuments };
+  return { plan, ws, packuments, now };
 }
 
 /** Rewrite one dependency's spec in every package.json that declares it. */
@@ -183,15 +232,21 @@ export const npmUpdater: Updater = {
   // show one nobody has wrapped yet. Only detection asks — an upstream row has
   // no move for `plan` to make.
   async detect(root): Promise<Outdated[]> {
-    const { plan, ws, packuments } = await planNow(root);
+    const { plan, ws, packuments, now } = await planNow(root);
     const groups = ws.policies.flatMap((p) => p.policy.groups ?? []);
-    const upstream = new Map<string, string[]>();
-    for (const g of groups)
-      if (g.wraps !== undefined)
-        upstream.set(
-          g.id,
-          tagVersions(await fetchTags(g.wraps.tags.repo), g.wraps.tags.pattern),
-        );
+    const upstream = new Map<string, { release: string; taggedAt: string }>();
+    for (const g of groups) {
+      if (g.wraps === undefined) continue;
+      const newest = newestTag(
+        g.id,
+        g.wraps,
+        await fetchTags(g.wraps.tags.repo),
+      );
+      upstream.set(g.id, {
+        release: newest.version,
+        taggedAt: await fetchTagDate(g.wraps.tags.repo, newest.tag),
+      });
+    }
     return [
       ...plan.outdated,
       ...upstreamRows({
@@ -201,6 +256,8 @@ export const npmUpdater: Updater = {
           installedVersions(ws).map((i) => [i.name, i.current]),
         ),
         upstream,
+        holds: ws.policies.flatMap((p) => p.policy.holds ?? []),
+        today: utcDay(now),
       }),
     ];
   },

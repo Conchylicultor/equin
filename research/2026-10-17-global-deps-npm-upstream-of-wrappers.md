@@ -1,5 +1,7 @@
 # Self-published wrappers learn about new upstream releases
 
+> **Superseded in part** by `research/2026-10-28-global-deps-wrappers-auto-publish.md`: the wrappers now publish themselves daily, PgBouncer compares `version` (wrapper version = upstream), and a release only someone else can publish is `awaiting` (WAITING, files no task) instead of BLOCKED.
+
 Status: **implemented 2026-10-17.** PgBouncer compares `major.minor`, not `version`: `@equin/pgbouncer` 1.25.7 has no upstream 1.25.7 (the wrapper numbers its own patches). First live detect: PostgreSQL 18.6 and PgBouncer 1.26.1 reported BLOCKED.
 
 ## Context

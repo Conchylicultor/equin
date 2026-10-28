@@ -61,3 +61,10 @@ export function agreeKey(version: string, agree: Agree): string {
       return `${major}`;
   }
 }
+
+/** Who publishes `members`: their npm scopes (`@embedded-postgres`), or their names. */
+export function publishers(members: readonly string[]): string[] {
+  return [
+    ...new Set(members.map((m) => (m.startsWith("@") ? m.split("/")[0]! : m))),
+  ];
+}

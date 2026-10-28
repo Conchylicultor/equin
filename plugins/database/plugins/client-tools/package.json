@@ -28,7 +28,8 @@
             "pattern": "^REL_(\\d+)_(\\d+)$"
           },
           "agree": "major.minor",
-          "prerequisite": "publish @equin/pg-client-* for PostgreSQL <version> from github.com/equinai/pg-client-embedded (bump PG_VERSION in scripts/build.sh and EMBEDDED_POSTGRES_VERSION in the workflow, then tag v<version>; its CI smoke test needs the matching @embedded-postgres release), then upgrade"
+          "after": "embedded-postgres",
+          "prerequisite": "the daily auto-publish of github.com/equinai/pg-client-embedded has not published @equin/pg-client-* for PostgreSQL <version>: check its latest Build and Publish run (`gh run list -R equinai/pg-client-embedded -w 'Build and Publish'`; `gh workflow enable` it if GitHub disabled it after 60 days without activity), fix it and re-run, then upgrade"
         }
       },
       {
@@ -45,7 +46,7 @@
         ],
         "agree": "major.minor",
         "reason": "pg_dump / pg_restore must come from the same Postgres release (major.minor) as the embedded server",
-        "prerequisite": "publish @equin/pg-client-* for the new Postgres release from github.com/equinai/pg-client-embedded (bump PG_VERSION in scripts/build.sh and EMBEDDED_POSTGRES_VERSION in the workflow, then tag v<major>.<minor>.0), then upgrade again — the two move together"
+        "prerequisite": "the daily auto-publish of github.com/equinai/pg-client-embedded has not published @equin/pg-client-* for the new @embedded-postgres release: check its latest Build and Publish run (`gh run list -R equinai/pg-client-embedded -w 'Build and Publish'`; `gh workflow enable` it if GitHub disabled it after 60 days without activity), fix it and re-run, then upgrade again — the two move together"
       }
     ]
   }

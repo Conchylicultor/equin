@@ -24,7 +24,9 @@ export type Agree = (typeof AGREE)[number];
  * The upstream project a group of self-published wrappers builds from: its
  * release tags, read with `git ls-remote`. A release no member has published
  * a wrapper for yet is reported BLOCKED with `prerequisite` — the npm registry
- * alone never shows it, since we are the ones who would publish it.
+ * alone never shows it, since we are the ones who would publish it — unless
+ * the wrapper is built `after` another group: then it is WAITING (awaiting)
+ * while that group has not published the release either.
  */
 export const WrapsSchema = z
   .object({
@@ -46,6 +48,14 @@ export const WrapsSchema = z
     agree: z.enum(AGREE),
     /** The work that publishes the wrapper; `<version>` is the upstream release. */
     prerequisite: z.string().min(1),
+    /**
+     * The id of a group that must publish an upstream release before the
+     * wrapper can be built from it (pg-client's CI smoke test needs the
+     * matching `@embedded-postgres` server). While no member of it has
+     * (compared on `agree`), the release is awaited, not asked for; once one
+     * has, the lockstep group spanning both reports the lag from the registry.
+     */
+    after: z.string().min(1).optional(),
   })
   .strict();
 export type Wraps = z.infer<typeof WrapsSchema>;
@@ -54,7 +64,9 @@ export type Wraps = z.infer<typeof WrapsSchema>;
  * Packages that move together. They never stop moving: the updater moves the
  * group as one, to the newest releases on which every member agrees. When one
  * member has published a release its partners have not, the move is BLOCKED and
- * the upgrade task asks for `prerequisite` (or, without one, waits for upstream).
+ * the upgrade task asks for `prerequisite`; without one — or when the partners
+ * have published it and are only cooling down — it is awaited (WAITING),
+ * which files no task.
  */
 export const GroupSchema = z
   .object({

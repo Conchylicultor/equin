@@ -23,6 +23,25 @@ export interface UpdaterSmoke {
 }
 
 /**
+ * Who a newer release waits on, as facts — never prose: `formatOutdated` is the
+ * one place that writes them as text, and `awaitingOrBlocked` the one place
+ * that decides when a wait has gone on too long.
+ */
+export type AwaitingOn =
+  /**
+   * Someone else must publish `release` first: a lagging lockstep partner, or
+   * the package we build from. `since`: when what we wait to catch up with
+   * became available (ISO instant) — past `AWAIT_MAX_DAYS` of it the
+   * wait is BLOCKED (see `awaitingOrBlocked`).
+   */
+  | { kind: "publish"; by: readonly string[]; release: string; since: string }
+  /**
+   * Published; the partners are inside the cooldown until `until` (ISO
+   * instant). Bounded by construction: it never escalates.
+   */
+  | { kind: "cooldown"; of: readonly string[]; until: string };
+
+/**
  * Why a newer release is reported but not moved to by this upgrade.
  *
  * `held`: a hold covers it — honoured until a diff deletes it, whatever its
@@ -32,11 +51,19 @@ export interface UpdaterSmoke {
  * move the updater cannot make on its own (a lockstep group whose members have
  * not all published the release, a patched package whose patch must be
  * ported) — `prerequisite` is the work that unblocks it, which the upgrade
- * task asks for.
+ * task asks for. `awaiting`: someone else must publish first (a lockstep
+ * partner that has not released it yet, or has and is still in its cooldown;
+ * an upstream release the package we build from has not shipped) — `on` says
+ * who and what, see {@link AwaitingOn}. Nothing for an upgrade task to do: the
+ * row rides along, like a held one, and moves on its own once they have — for
+ * at most `AWAIT_MAX_DAYS` of a publish wait, after which the detection
+ * reports it BLOCKED (`boundedRows`), so a third party that never publishes
+ * cannot pin us silently.
  */
 export type OutdatedWaiting =
   | { kind: "held"; reason: string; reviewBy: string; lapsed: boolean }
-  | { kind: "blocked"; prerequisite: string };
+  | { kind: "blocked"; prerequisite: string }
+  | { kind: "awaiting"; on: AwaitingOn };
 
 /** Something newer than what the lock records, as the scheduled detection sees it. */
 export interface Outdated {
@@ -50,10 +77,11 @@ export interface Outdated {
 
 /**
  * Whether a detected row is work for an upgrade task: a move it makes, or a
- * blocked one whose prerequisite it does. A held row only rides along.
+ * blocked one whose prerequisite it does. A held or awaiting row only rides
+ * along.
  */
 export function isActionable(o: Outdated): boolean {
-  return o.waiting?.kind !== "held";
+  return o.waiting === undefined || o.waiting.kind === "blocked";
 }
 
 /** One input the upgrade moves. `from` is `null` for an input added fresh. */

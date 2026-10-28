@@ -18,4 +18,4 @@ export {
   unrangedSpecs,
   wrappersUndeclared,
 } from "./internal/coherence";
-export { tagVersions, upstreamRows } from "./internal/upstream";
+export { newestTag, upstreamRows } from "./internal/upstream";

@@ -1,15 +1,19 @@
 // The npm updater's decision, pure: given what the workspace declares and
 // resolves, its policies, and what the registry offers, which packages move
-// where, and which newer releases wait (held) or cannot be reached yet
-// (blocked). Every newer release ends up in exactly one of those three, so
-// nothing newer is ever silently skipped.
+// where, and which newer releases wait: on a hold (held), on work an upgrade
+// task can do (blocked — a prerequisite, a patch to port), or on someone else
+// publishing first (awaiting — a lockstep partner that has not released it
+// yet, or has and is cooling down). Every newer release ends up in exactly one
+// of those four, so nothing newer is ever silently skipped.
 
 import {
   heldBy,
   heldWaiting,
+  utcDay,
   type Hold,
   type Move,
   type Outdated,
+  type OutdatedWaiting,
 } from "@plugins/infra/plugins/deps/plugins/updates/core";
 import type { Group } from "./policy";
 import { agreeKey, isPrerelease } from "./spec";
@@ -35,15 +39,17 @@ export interface PlanInput {
   holds: readonly Hold[];
   /** Patched packages (`patchedDependencies`): a move must port the patch first. */
   patched: ReadonlyMap<string, { version: string; patch: string }>;
-  /** A release published after this instant is not adopted yet (the cooldown). */
-  cutoff: string;
-  /** `YYYY-MM-DD`: past a hold's `reviewBy` its HELD row says the review is overdue. */
-  today: string;
+  /** ISO instant the plan is made at: the cooldown and the holds' review are measured from it. */
+  now: string;
+  /** A release published less than this long before `now` is not adopted yet. */
+  cooldownDays: number;
 }
+
+const DAY_MS = 86_400_000;
 
 export interface Plan {
   moves: Move[];
-  /** Every package with something newer: moved, held, or blocked. */
+  /** Every package with something newer: moved, held, blocked, or awaiting. */
   outdated: Outdated[];
 }
 
@@ -54,15 +60,19 @@ function order(a: string, b: string): number {
 /**
  * The releases `name` may move to, newest first, the current one included (so
  * a group can always fall back to standing still): published before the
- * cutoff, no newer than `dist-tags.latest`, no prerelease unless the package's
- * own `latest` is one, never older than what is installed.
+ * cutoff (`null`: whenever), no newer than `dist-tags.latest`, no prerelease
+ * unless the package's own `latest` is one, never older than what is installed.
  */
-function candidates(pkg: Packument, current: string, cutoff: string): string[] {
+function candidates(
+  pkg: Packument,
+  current: string,
+  cutoff: string | null,
+): string[] {
   const pre = isPrerelease(pkg.latest);
   const out = [...pkg.published]
     .filter(
       ([v, at]) =>
-        at <= cutoff &&
+        (cutoff === null || at <= cutoff) &&
         order(v, pkg.latest) <= 0 &&
         order(v, current) >= 0 &&
         (pre || !isPrerelease(v)),
@@ -138,9 +148,99 @@ function assign(
   );
 }
 
+/**
+ * How a member whose own newest allowed release (`target`) is out of its
+ * group's reach waits. `published` is the component's assignment over every
+ * release published so far, cooldown ignored: if it reaches `target`, every
+ * partner has published one that agrees and is only cooling down (awaiting).
+ * Otherwise a partner has not published it: the group's `prerequisite` is the
+ * work that makes it (BLOCKED), and without one it is upstream's to make
+ * (awaiting the lagging partners).
+ */
+function laggingWaiting(args: {
+  m: string;
+  target: string;
+  published: ReadonlyMap<string, string>;
+  /** Per member: every release it may move to, cooldown ignored. */
+  everAllowed: ReadonlyMap<string, readonly string[]>;
+  /** Per member: the releases it may move to now. */
+  allowed: ReadonlyMap<string, readonly string[]>;
+  /** The groups `m` is a member of. */
+  mine: readonly Group[];
+  members: readonly string[];
+  packuments: ReadonlyMap<string, Packument>;
+  cooldownMs: number;
+}): OutdatedWaiting {
+  const { m, target, published, everAllowed, allowed, mine, members } = args;
+  const publishedAt = (name: string, version: string): string => {
+    const at = args.packuments.get(name)!.published.get(version);
+    if (at === undefined)
+      throw new Error(
+        `${name}@${version} has no publish time in its packument.`,
+      );
+    return at;
+  };
+  const partners = [
+    ...new Set(
+      mine.flatMap((g) =>
+        g.members.filter((p) => p !== m && members.includes(p)),
+      ),
+    ),
+  ];
+  if (order(published.get(m)!, target) >= 0) {
+    const cooling = partners.filter(
+      (p) => !allowed.get(p)!.includes(published.get(p)!),
+    );
+    if (cooling.length === 0)
+      throw new Error(
+        `${m}@${target}: every partner has published a release agreeing with it and none is cooling down, yet the group cannot reach it.`,
+      );
+    // The cooldown ends with the last partner's: its publish plus the cooldown.
+    const last = Math.max(
+      ...cooling.map((p) => Date.parse(publishedAt(p, published.get(p)!))),
+    );
+    return {
+      kind: "awaiting",
+      on: {
+        kind: "cooldown",
+        of: cooling,
+        until: new Date(last + args.cooldownMs).toISOString(),
+      },
+    };
+  }
+  const g = mine.find((x) => x.prerequisite !== undefined);
+  if (g?.prerequisite !== undefined)
+    return { kind: "blocked", prerequisite: g.prerequisite };
+  // The partners with no release agreeing with `target` on a group they share.
+  const lagging = partners.filter((p) =>
+    mine.some(
+      (x) =>
+        x.members.includes(p) &&
+        !everAllowed
+          .get(p)!
+          .some((v) => agreeKey(v, x.agree) === agreeKey(target, x.agree)),
+    ),
+  );
+  return {
+    kind: "awaiting",
+    on: {
+      kind: "publish",
+      by: lagging.length > 0 ? lagging : partners,
+      release: target,
+      // Waiting since `m` published the release its partners have not.
+      since: publishedAt(m, target),
+    },
+  };
+}
+
 export function planNpm(input: PlanInput): Plan {
-  const { installed, packuments, groups, holds, patched, cutoff, today } =
-    input;
+  const { installed, packuments, groups, holds, patched } = input;
+  const cooldownMs = input.cooldownDays * DAY_MS;
+  const now = Date.parse(input.now);
+  if (Number.isNaN(now))
+    throw new Error(`planNpm: now is not an instant: ${input.now}`);
+  const cutoff = new Date(now - cooldownMs).toISOString();
+  const today = utcDay(new Date(now));
   const current = new Map(installed.map((i) => [i.name, i.current]));
   const moves: Move[] = [];
   const outdated: Outdated[] = [];
@@ -148,18 +248,22 @@ export function planNpm(input: PlanInput): Plan {
   for (const members of components([...current.keys()].sort(), groups)) {
     const all = new Map<string, string[]>();
     const allowed = new Map<string, string[]>();
+    const everAllowed = new Map<string, string[]>();
+    const unheld = (m: string, vs: readonly string[]): string[] =>
+      vs.filter((v) => v === current.get(m) || !heldBy(holds, m, v, order));
     for (const m of members) {
       const pkg = packuments.get(m);
       if (pkg === undefined)
         throw new Error(`No registry entry fetched for ${m}.`);
       const c = candidates(pkg, current.get(m)!, cutoff);
       all.set(m, c);
-      allowed.set(
-        m,
-        c.filter((v) => v === current.get(m) || !heldBy(holds, m, v, order)),
-      );
+      allowed.set(m, unheld(m, c));
+      everAllowed.set(m, unheld(m, candidates(pkg, current.get(m)!, null)));
     }
     const chosen = assign(members, allowed, groups);
+    // What the component would reach once every cooldown has passed: computed
+    // once, only for a component with a lagging member.
+    let published: Map<string, string> | undefined;
     const memberGroups = groups.filter((g) =>
       g.members.some((m) => members.includes(m)),
     );
@@ -194,18 +298,22 @@ export function planNpm(input: PlanInput): Plan {
       }
       if (order(newestAllowed, to) > 0) {
         // Its own newest release is out of the group's reach: a partner lags.
-        const mine = memberGroups.filter((x) => x.members.includes(m));
-        const g = mine.find((x) => x.prerequisite !== undefined) ?? mine[0];
+        published ??= assign(members, everAllowed, groups);
         outdated.push({
           name: m,
           current: from,
           latest: newestAllowed,
-          waiting: {
-            kind: "blocked",
-            prerequisite:
-              g?.prerequisite ??
-              `group \`${g?.id ?? "?"}\` (${g?.reason ?? ""}) needs every member at ${newestAllowed}; wait for the lagging members to publish it`,
-          },
+          waiting: laggingWaiting({
+            m,
+            target: newestAllowed,
+            published,
+            everAllowed,
+            allowed,
+            mine: memberGroups.filter((x) => x.members.includes(m)),
+            members,
+            packuments,
+            cooldownMs,
+          }),
         });
       } else if (order(newest, newestAllowed) > 0) {
         const hold = heldBy(holds, m, newest, order)!;

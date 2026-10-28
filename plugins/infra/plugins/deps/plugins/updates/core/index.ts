@@ -2,6 +2,7 @@
 // runner itself (gates that spawn `./equin check` / `test`) is CLI
 // machinery, in this plugin's `cli/` barrel.
 export type {
+  AwaitingOn,
   Move,
   Outdated,
   OutdatedWaiting,
@@ -9,6 +10,7 @@ export type {
   UpdaterSmoke,
 } from "./internal/updater";
 export { isActionable } from "./internal/updater";
+export { AWAIT_MAX_DAYS, boundedRows } from "./internal/awaiting";
 export type { Hold } from "./internal/hold";
 export {
   HOLD_MAX_DAYS,

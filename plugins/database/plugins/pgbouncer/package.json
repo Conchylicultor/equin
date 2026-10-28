@@ -27,8 +27,8 @@
             "repo": "https://github.com/pgbouncer/pgbouncer",
             "pattern": "^pgbouncer_(\\d+)_(\\d+)_(\\d+)$"
           },
-          "agree": "major.minor",
-          "prerequisite": "publish @equin/pgbouncer-* for PgBouncer <version> from github.com/equinai/pgbouncer-embedded (bump the PgBouncer version in scripts/build.sh, then tag a release), then upgrade"
+          "agree": "version",
+          "prerequisite": "the daily auto-publish of github.com/equinai/pgbouncer-embedded has not published @equin/pgbouncer-* for PgBouncer <version>: check its latest Build and Publish run (`gh run list -R equinai/pgbouncer-embedded -w 'Build and Publish'`; `gh workflow enable` it if GitHub disabled it after 60 days without activity), fix it and re-run, then upgrade"
         }
       }
     ]
