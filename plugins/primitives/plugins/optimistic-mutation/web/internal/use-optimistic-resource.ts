@@ -28,14 +28,21 @@ import { useReportSync } from "@plugins/primitives/plugins/sync-status/web";
 import {
   clientLatencySink,
   splitPhases,
+  splitReachedPhases,
   type ClientLatencySample,
 } from "@plugins/primitives/plugins/perfs/plugins/latency-signal/core";
 import {
+  armUnconfirmedDeadline,
+  classifyRejection,
+  hiddenSince,
+  enqueueOnSendLane,
   optimisticDivergenceReportSink,
   optimisticRejectionSink,
   REJECTION_MESSAGE_MAX,
-} from "../reporter";
-import { enqueueResourceSend, sendLaneKey } from "./send-lane";
+  resourceSendLaneKey,
+  type UnconfirmedDeadline,
+  type UnconfirmedSample,
+} from "@plugins/network/plugins/live/web";
 import {
   resolveOptimisticSource,
   type OptimisticIdsQuery,
@@ -43,7 +50,6 @@ import {
 } from "./source";
 import {
   ackPass,
-  classifyRejection,
   clearFailure,
   confirmPass,
   markFailed,
@@ -56,7 +62,6 @@ import {
   type PendingOp,
   type ReconcileResult,
 } from "./overlay";
-import { hiddenSince } from "./tab-hidden";
 
 // Canonical params serialization for the ack-edge tuple match — byte-identical
 // to the registries' `paramsKey` (sorted-key JSON), so the subscription fires
@@ -112,6 +117,55 @@ function confirmSample<Vars>(
     }),
     totalMs: confirmedAt - dispatchedAt,
     hidden: hiddenSince(dispatchedAt),
+  };
+}
+
+/**
+ * The CENSORED `confirm` sample of an op still unconfirmed at its deadline
+ * (`armUnconfirmedDeadline`): the phases it reached — `send-lane` once sent,
+ * `retry` once sent, `server-ack` once acked; `confirm-frame` never, it has not
+ * confirmed — and `totalMs` the time since dispatch. The variant says which
+ * part stalled: `unconfirmed/awaiting-send` (still queued behind the lane),
+ * `unconfirmed/awaiting-ack` (sent, no 2xx yet — or failed and awaiting a
+ * retry), `unconfirmed/awaiting-confirm-frame` (acked, no frame reflected it;
+ * the ack watermark, when the endpoint returned one, rides `detail`).
+ */
+function unconfirmedSample<Vars>(
+  op: PendingOp<Vars>,
+  key: string,
+  params: Readonly<Record<string, string>>,
+  now: number,
+): UnconfirmedSample {
+  const { dispatchedAt, firstSentAt, lastSentAt, ackedAt } = op;
+  const stage =
+    firstSentAt === undefined
+      ? "awaiting-send"
+      : ackedAt === undefined
+        ? "awaiting-ack"
+        : "awaiting-confirm-frame";
+  return {
+    signal: "confirm",
+    censored: true,
+    key,
+    params,
+    variant: `unconfirmed/${stage}`,
+    phases: splitReachedPhases("confirm", {
+      "send-lane":
+        firstSentAt === undefined ? undefined : firstSentAt - dispatchedAt,
+      retry:
+        firstSentAt === undefined || lastSentAt === undefined
+          ? undefined
+          : lastSentAt - firstSentAt,
+      "server-ack":
+        ackedAt === undefined || lastSentAt === undefined
+          ? undefined
+          : ackedAt - lastSentAt,
+    }),
+    totalMs: now - dispatchedAt,
+    hidden: hiddenSince(dispatchedAt),
+    ...(op.ackWatermark === undefined
+      ? {}
+      : { detail: { ackWatermark: op.ackWatermark } }),
   };
 }
 
@@ -426,9 +480,31 @@ function useOptimisticCore<Data, Vars>(
   // make the updater effectful (React may invoke it twice). Sequential edges
   // within one tick chain correctly because the ref is written synchronously.
   const pendingRef = useRef<ReadonlyArray<PendingOp<Vars>>>([]);
+  // Each op's unconfirmed deadline (`armUnconfirmedDeadline`), by opId: armed
+  // at dispatch, cleared the moment the op leaves the overlay for ANY reason —
+  // confirmed, permanently rejected, denied — which every edge funnels through
+  // `commitPending`, so no exit route can leave a timer behind.
+  const deadlinesRef = useRef(new Map<string, UnconfirmedDeadline>());
   const commitPending = useCallback((next: ReadonlyArray<PendingOp<Vars>>) => {
     pendingRef.current = next;
     setPending(next);
+    const deadlines = deadlinesRef.current;
+    if (deadlines.size === 0) return;
+    for (const [opId, deadline] of deadlines) {
+      if (next.some((op) => op.opId === opId)) continue;
+      deadline.clear();
+      deadlines.delete(opId);
+    }
+  }, []);
+  // Unmounted with ops still unconfirmed: their deadlines are dropped and
+  // nothing is emitted — the reader no longer watches the tuple, so it cannot
+  // tell an op that confirms a moment later from one that never does.
+  useEffect(() => {
+    const deadlines = deadlinesRef.current;
+    return () => {
+      for (const deadline of deadlines.values()) deadline.clear();
+      deadlines.clear();
+    };
   }, []);
 
   // Latest-value refs so the QueryCache subscription effect can stay mounted for
@@ -453,7 +529,7 @@ function useOptimisticCore<Data, Vars>(
   // lane — ops never outlive their tuple, so a params re-baseline swaps lanes
   // with it.
   const laneKey = useMemo(
-    () => sendLaneKey(resource.key, params),
+    () => resourceSendLaneKey(resource.key, params),
     [resource.key, params],
   );
   const laneKeyRef = useLatestRef(laneKey);
@@ -621,7 +697,7 @@ function useOptimisticCore<Data, Vars>(
   // when the transport is still down.
   //
   // This is the SEND ITSELF and knows nothing about ordering: every caller runs
-  // it inside a send-lane slot (see `send-lane.ts`), so the lane is the one
+  // it inside a send-lane slot (`network/live`'s `enqueueOnSendLane`), so the lane is the one
   // mechanism and classification/`failed`/`retry`/`savedAt` stay untouched by it.
   const runMutate = useCallback(
     (opId: string, vars: Vars): Promise<MutateOutcome> => {
@@ -749,14 +825,45 @@ function useOptimisticCore<Data, Vars>(
           attempts: 0,
         },
       ]);
+      // The unconfirmed deadline — the confirm sample's censored twin, so a
+      // write that never confirms is reported too. Telemetry-gated like it.
+      if (telemetry)
+        deadlinesRef.current.set(
+          opId,
+          armUnconfirmedDeadline({
+            sample: () => {
+              const op = pendingRef.current.find((o) => o.opId === opId);
+              // Cleared on every exit (`commitPending`), so a firing deadline's
+              // op is still in the overlay — anything else is a lifecycle bug.
+              if (!op)
+                throw new Error(
+                  `optimistic-mutation: unconfirmed deadline fired for op ${opId} on ${resource.key}, which left the overlay`,
+                );
+              return unconfirmedSample(
+                op,
+                resource.key,
+                paramsRef.current ?? {},
+                performance.now(),
+              );
+            },
+          }),
+        );
       // Onto the tuple's send lane, never straight at the network: this op's
       // predecessors must reach the server first. Head-of-line blocking is real
       // and deliberately invisible — the overlay above already rendered the op
       // (never-revert), so only its WIRE departure waits.
-      void enqueueResourceSend(laneKeyRef.current, () => runMutate(opId, vars));
+      void enqueueOnSendLane(laneKeyRef.current, () => runMutate(opId, vars));
       return opId;
     },
-    [queryClient, commitPending, runMutate, laneKeyRef],
+    [
+      queryClient,
+      commitPending,
+      runMutate,
+      laneKeyRef,
+      telemetry,
+      resource.key,
+      paramsRef,
+    ],
   );
 
   // Re-fire a failed op IN PLACE: clear its failure and re-run its mutate under
@@ -776,7 +883,7 @@ function useOptimisticCore<Data, Vars>(
   );
   const retry = useCallback(
     (opId: string) => {
-      void enqueueResourceSend(laneKeyRef.current, async () => {
+      void enqueueOnSendLane(laneKeyRef.current, async () => {
         await retryOp(opId);
       });
     },
@@ -808,7 +915,7 @@ function useOptimisticCore<Data, Vars>(
       drainingRef.current = true;
       let stopped = false;
       const attempts = opIds.map((opId) =>
-        enqueueResourceSend(laneKeyRef.current, async () => {
+        enqueueOnSendLane(laneKeyRef.current, async () => {
           if (stopped) return;
           const outcome = await retryOp(opId);
           if (outcome === "network") stopped = true;

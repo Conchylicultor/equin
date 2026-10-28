@@ -24,16 +24,24 @@ export type ClientLatencySignal = keyof typeof CLIENT_LATENCY_SIGNALS;
 export type PhaseOf<S extends ClientLatencySignal> =
   (typeof CLIENT_LATENCY_SIGNALS)[S][number];
 
-/** One signal's sample: every phase of that signal present, no other. */
-interface SampleOf<S extends ClientLatencySignal> {
+/**
+ * The signals that may be sampled CENSORED — before the operation finished,
+ * because it had not finished by a deadline. Only `confirm`: a write that never
+ * confirms would otherwise emit nothing, so its stall would be invisible to
+ * every consumer. Closed plain data, like the table above.
+ */
+export const CENSORABLE_SIGNALS = ["confirm"] as const;
+
+export type CensorableSignal = (typeof CENSORABLE_SIGNALS)[number];
+
+/** What every sample carries, whatever its signal and completeness. */
+interface SampleBase<S extends ClientLatencySignal> {
   readonly signal: S;
   /** The resource key the latency was measured on. */
   readonly key: string;
   readonly params: Readonly<Record<string, string>>;
   /** A free-form sub-kind (e.g. a confirm's `mode/edge`); consumers fall back to the params. */
   readonly variant?: string;
-  /** Each phase's ms, clamped ≥ 0 (see `splitPhases`). */
-  readonly phases: Readonly<Record<PhaseOf<S>, number>>;
   readonly totalMs: number;
   /**
    * The tab was hidden now or at any point since the sample's start stamp — a
@@ -43,10 +51,47 @@ interface SampleOf<S extends ClientLatencySignal> {
   readonly hidden: boolean;
 }
 
-/** A client latency sample, discriminated on `signal`. */
+/** A finished operation's sample: every phase of its signal present, no other. */
+interface CompleteSampleOf<
+  S extends ClientLatencySignal,
+> extends SampleBase<S> {
+  /** Each phase's ms, clamped ≥ 0 (see `splitPhases`). */
+  readonly phases: Readonly<Record<PhaseOf<S>, number>>;
+  readonly censored?: undefined;
+}
+
+/**
+ * A CENSORED sample: the operation had NOT finished when it was taken (a
+ * deadline expired), so `totalMs` is the time elapsed so far — a lower bound —
+ * and `phases` holds only the phases it reached (a phase it was still in, or
+ * never entered, is absent: which one is missing says where it stalled).
+ */
+interface CensoredSampleOf<S extends CensorableSignal> extends SampleBase<S> {
+  readonly phases: Readonly<Partial<Record<PhaseOf<S>, number>>>;
+  readonly censored: true;
+  /**
+   * Bounded evidence of where it stalled that no phase can carry (a confirm's
+   * `ackWatermark`: the commit the server acked, which no frame reflected).
+   * Per-operation, so a consumer never keys a breakdown on it.
+   */
+  readonly detail?: Readonly<Record<string, string>>;
+}
+
+/** One signal's samples: complete, or — for a censorable signal — censored. */
+type SampleOf<S extends ClientLatencySignal> =
+  | CompleteSampleOf<S>
+  | (S extends CensorableSignal ? CensoredSampleOf<S> : never);
+
+/** A client latency sample, discriminated on `signal` (and `censored`). */
 export type ClientLatencySample = {
   [S in ClientLatencySignal]: SampleOf<S>;
 }[ClientLatencySignal];
+
+/** A censored sample of any censorable signal. */
+export type CensoredLatencySample = Extract<
+  ClientLatencySample,
+  { censored: true }
+>;
 
 /** The one channel client latency samples travel on: producers emit, any number of consumers subscribe. */
 export const clientLatencySink = defineObservationSink<ClientLatencySample>();
@@ -65,5 +110,22 @@ export function splitPhases<S extends ClientLatencySignal>(
   const out = {} as Record<PhaseOf<S>, number>;
   for (const name of CLIENT_LATENCY_SIGNALS[signal] as readonly PhaseOf<S>[])
     out[name] = Math.max(0, raw[name]);
+  return out;
+}
+
+/**
+ * `splitPhases` for a CENSORED sample: only the phases the operation reached,
+ * each clamped to ≥ 0, in table order; an absent (or `undefined`) one stays
+ * absent.
+ */
+export function splitReachedPhases<S extends CensorableSignal>(
+  signal: S,
+  raw: Readonly<Partial<Record<PhaseOf<S>, number>>>,
+): Partial<Record<PhaseOf<S>, number>> {
+  const out: Partial<Record<PhaseOf<S>, number>> = {};
+  for (const name of CLIENT_LATENCY_SIGNALS[signal] as readonly PhaseOf<S>[]) {
+    const ms = raw[name];
+    if (ms !== undefined) out[name] = Math.max(0, ms);
+  }
   return out;
 }

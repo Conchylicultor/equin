@@ -9,7 +9,12 @@ import type {
   HttpHandler,
 } from "@plugins/framework/plugins/server-core/core";
 import type { EndpointAccess } from "@plugins/framework/plugins/principal/core";
-import type { EndpointDef, MachineEndpointDef } from "./define-endpoint";
+import type {
+  AnyEndpointDef,
+  EndpointDef,
+  MachineEndpointDef,
+  PredictedEndpointDef,
+} from "./define-endpoint";
 import { agentWriteGate, type AgentWrite } from "./agent-write";
 import { registerRouteSlowThreshold } from "./slow-threshold";
 import { HttpError } from "./http-error";
@@ -52,7 +57,10 @@ export function implement<
   TResponse,
   TQuery,
 >(
-  endpoint: EndpointDef<Route, TParams, TBody, TResponse, TQuery>,
+  endpoint:
+    | EndpointDef<Route, TParams, TBody, TResponse, TQuery>
+    // The server ignores a predicted effect: it is the browser's.
+    | PredictedEndpointDef<Route, TParams, TBody, TResponse, TQuery>,
   handler: EndpointHandler<TParams, TBody, TResponse, TQuery>,
 ): EndpointHttpHandler {
   return endpointHandler(endpoint, handler);
@@ -70,9 +78,7 @@ export function endpointHandler<
   TResponse,
   TQuery,
 >(
-  _endpoint:
-    | EndpointDef<Route, TParams, TBody, TResponse, TQuery>
-    | MachineEndpointDef<Route, TParams, TBody, TResponse, TQuery>,
+  _endpoint: AnyEndpointDef<Route, TParams, TBody, TResponse, TQuery>,
   handler: EndpointHandler<TParams, TBody, TResponse, TQuery>,
 ): EndpointHttpHandler {
   // Per-route gates, built once at registration. `concurrency` caps how many

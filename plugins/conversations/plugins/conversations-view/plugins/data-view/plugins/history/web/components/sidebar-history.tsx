@@ -46,7 +46,7 @@ export function CloseConvAction({
       label="Close conversation"
       onClick={(e) => {
         e.stopPropagation();
-        return onCloseConversation(row.id, e);
+        onCloseConversation(row.id, e);
       }}
     />
   );

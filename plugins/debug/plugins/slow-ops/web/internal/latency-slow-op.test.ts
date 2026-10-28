@@ -97,4 +97,57 @@ describe("latencySlowOp", () => {
       latencySlowOp(update({ totalMs: 60_000, hidden: true }), thresholds, "/"),
     ).toBeNull();
   });
+
+  test("files a censored (never-confirmed) sample as its own operation, with the phases it reached", () => {
+    const censored: ClientLatencySample = {
+      signal: "confirm",
+      censored: true,
+      key: "page.blocks",
+      params: { pageId: "p1" },
+      variant: "unconfirmed/awaiting-confirm-frame",
+      phases: { "send-lane": 0, retry: 0, "server-ack": 80 },
+      totalMs: 10_000.4,
+      hidden: false,
+      detail: { ackWatermark: "123" },
+    };
+    const item = latencySlowOp(censored, thresholds, "/pages");
+    expect(item).toEqual({
+      operationKind: "confirm",
+      operation: "page.blocks (unconfirmed)",
+      durationMs: 10_000,
+      thresholdMs: 2000,
+      caller: { kind: "route", label: "/pages" },
+      detail: {
+        variant: "unconfirmed/awaiting-confirm-frame",
+        censored: true,
+        evidence: { ackWatermark: "123" },
+      },
+      waits: { "send-lane": 0, retry: 0, "server-ack": 80 },
+    });
+    // Distinct from the slow-but-confirmed row (and so its report fingerprint).
+    expect(item?.operation).not.toBe(
+      latencySlowOp(confirm(2500), thresholds, "/")?.operation,
+    );
+  });
+
+  test("a censored sample under the threshold, or hidden, files nothing", () => {
+    const base = {
+      signal: "confirm" as const,
+      censored: true as const,
+      key: "k",
+      params: {},
+      phases: {},
+      hidden: false,
+    };
+    expect(
+      latencySlowOp({ ...base, totalMs: 1500 }, thresholds, "/"),
+    ).toBeNull();
+    expect(
+      latencySlowOp(
+        { ...base, totalMs: 60_000, hidden: true },
+        thresholds,
+        "/",
+      ),
+    ).toBeNull();
+  });
 });

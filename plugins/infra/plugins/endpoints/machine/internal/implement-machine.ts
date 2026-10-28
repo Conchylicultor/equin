@@ -2,7 +2,10 @@ import type {
   HttpHandler,
   MachineEndpointHttpHandler,
 } from "@plugins/framework/plugins/server-core/core";
-import type { MachineEndpointDef } from "../../core/define-endpoint";
+import type {
+  MachineEndpointDef,
+  PredictedMachineEndpointDef,
+} from "../../core/define-endpoint";
 import type { AgentWrite } from "../../core/agent-write";
 import type { EndpointAccess } from "@plugins/framework/plugins/principal/core";
 import {
@@ -25,7 +28,10 @@ export function implementMachine<
   TResponse,
   TQuery,
 >(
-  endpoint: MachineEndpointDef<Route, TParams, TBody, TResponse, TQuery>,
+  endpoint:
+    | MachineEndpointDef<Route, TParams, TBody, TResponse, TQuery>
+    // The server ignores a predicted effect: it is the browser's.
+    | PredictedMachineEndpointDef<Route, TParams, TBody, TResponse, TQuery>,
   handler: EndpointHandler<TParams, TBody, TResponse, TQuery>,
 ): MachineEndpointHttpHandler {
   // The brand is type-only: a machine handler IS a handler.

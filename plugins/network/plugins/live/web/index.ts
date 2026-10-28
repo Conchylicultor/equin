@@ -7,6 +7,31 @@ export { useLiveReader } from "./internal/use-live-reader";
 export type { LiveAnswer, LiveReader } from "./internal/use-live-reader";
 export { mapRow } from "./internal/map-row";
 export {
+  entitySendLaneKey,
+  enqueueOnSendLane,
+  resourceSendLaneKey,
+} from "./internal/send-lane";
+export type { SendLaneKey } from "./internal/send-lane";
+export {
+  optimisticDivergenceReportSink,
+  optimisticRejectionSink,
+  REJECTION_MESSAGE_MAX,
+} from "./internal/write-sinks";
+export { armUnconfirmedDeadline } from "./internal/unconfirmed-deadline";
+export { classifyRejection } from "./internal/write-sinks";
+export { hiddenSince } from "./internal/tab-hidden";
+export { useLiveMutation } from "./internal/use-live-mutation";
+export type {
+  LiveMutation,
+  LiveMutationOptions,
+  LiveMutationRequest,
+} from "./internal/use-live-mutation";
+export type {
+  UnconfirmedDeadline,
+  UnconfirmedDeadlineOptions,
+  UnconfirmedSample,
+} from "./internal/unconfirmed-deadline";
+export {
   collectionPresentationKey,
   FieldPresentation,
   presentationOwnerKey,

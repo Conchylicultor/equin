@@ -11,6 +11,7 @@ import {
   LIVE_ROW_KEY,
   type LivePagedValue,
   type LiveCollection,
+  type LiveRowsCollection,
   type LiveQuery,
   type LiveValueOrigin,
 } from "@plugins/network/plugins/live/core";
@@ -26,6 +27,12 @@ import {
   type PageSource,
 } from "./page-source";
 import type { VisibleRange } from "./visible-range";
+import { predictRows, type PredictRow } from "./predict-overlay";
+import {
+  usePredictedOps,
+  usePredictHolder,
+  usePredictStore,
+} from "./use-predicted";
 import {
   assemble,
   loadMore as loadMorePages,
@@ -221,17 +228,76 @@ export function useViewportPages<Row, F, S extends string, Meta, Q, QIn>(
       "useLive(null, query, { viewport }): a query with no source — pass null for both to read nothing.",
     );
   }
-  return usePages(
-    // Either kind: `pageSourceOf` dispatches on the declaration itself, and
-    // the overloads have already paired each with its own query type.
-    pageSourceOf(source as LiveCollection<Row, F, S> | null),
-    query,
-    {
-      viewport: options.viewport,
-      resetKey: options.resetKey,
-      step: undefined,
-    },
-  ).pages;
+  // Either kind: `pageSourceOf` dispatches on the declaration itself, and
+  // the overloads have already paired each with its own query type.
+  const pageSource = pageSourceOf(source as LiveCollection<Row, F, S> | null);
+  const pages = usePages(pageSource, query, {
+    viewport: options.viewport,
+    resetKey: options.resetKey,
+    step: undefined,
+  }).pages;
+  // The predict overlay applies to a collection's rows (a paged value's
+  // items are no entity's).
+  const collection =
+    source !== null && "from" in source
+      ? (source as LiveCollection<Row, F, S>)
+      : null;
+  const fold = usePredictedFold(
+    collection,
+    collection === null || query === null
+      ? null
+      : `${pageSource.key}|${pageSource.base(query)}`,
+    pages.status === "ready" ? pages.rows : undefined,
+  );
+  return useMemo(() => {
+    if (fold === null || pages.status !== "ready") return pages;
+    const rows = fold(pages.rows);
+    return rows === pages.rows ? pages : { ...pages, rows };
+  }, [fold, pages]);
+}
+
+/**
+ * The predict overlay over a collection window's rows (`predict-overlay.ts`):
+ * holds the read's server rows as `tupleKey`'s, and answers the fold — the
+ * rows with every op still applying to the tuple folded in and the rows a
+ * prediction moved out of the collection's `membership` dropped — or `null`
+ * while no op touches the collection's entity (the rows are the server's,
+ * identity kept). The window's own `where` is not re-checked: it may name
+ * exposed and scoped columns the rows carry under `$columns` / `$scoped`, so
+ * a row a prediction moves out of it alone leaves with the server's frame.
+ */
+function usePredictedFold<Row>(
+  collection: Pick<
+    LiveRowsCollection<Row>,
+    "from" | "id" | "membership"
+  > | null,
+  tupleKey: string | null,
+  serverRows: readonly Row[] | undefined,
+): ((rows: readonly Row[]) => readonly Row[]) | null {
+  const store = usePredictStore();
+  const entity = collection?.from?.name ?? null;
+  const ops = usePredictedOps(store, entity);
+  usePredictHolder(
+    store,
+    entity,
+    tupleKey,
+    collection?.id ?? "id",
+    serverRows as readonly PredictRow[] | undefined,
+  );
+  const idField = collection?.id ?? "id";
+  const membership = collection?.membership;
+  return useMemo(() => {
+    if (entity === null || tupleKey === null || ops.length === 0) return null;
+    return (rows: readonly Row[]) =>
+      predictRows(
+        ops,
+        tupleKey,
+        entity,
+        idField,
+        rows as unknown as readonly PredictRow[],
+        membership,
+      ) as unknown as readonly Row[];
+  }, [entity, tupleKey, ops, idField, membership]);
 }
 
 /**
@@ -251,12 +317,38 @@ export function useAllPages<Row, F, S extends string>(
   query: LiveQuery<F, S> | undefined,
 ): PagedResourceResult<Row> {
   const { limit, ...rest } = query ?? {};
-  const read = usePages(pageSourceOf(collection), rest, {
+  const pageSource = pageSourceOf(collection);
+  const read = usePages(pageSource, rest, {
     viewport: null,
     resetKey: undefined,
     step: limit,
   });
-  return useMemo(() => listResultOf(read), [read]);
+  const list = useMemo(() => listResultOf(read), [read]);
+  const fold = usePredictedFold(
+    collection,
+    `${pageSource.key}|${pageSource.base(rest)}`,
+    list.status === "ready"
+      ? list.data
+      : list.status === "error"
+        ? list.stale
+        : undefined,
+  );
+  return useMemo((): PagedResourceResult<Row> => {
+    if (fold === null) return list;
+    switch (list.status) {
+      case "loading":
+        return list;
+      case "error": {
+        if (list.stale === undefined) return list;
+        const stale = fold(list.stale) as Row[];
+        return stale === list.stale ? list : { ...list, stale };
+      }
+      case "ready": {
+        const data = fold(list.data) as Row[];
+        return data === list.data ? list : { ...list, data };
+      }
+    }
+  }, [fold, list]);
 }
 
 /** `useLive(pagedValue, query, options?)` — a paged value read with no viewport. */

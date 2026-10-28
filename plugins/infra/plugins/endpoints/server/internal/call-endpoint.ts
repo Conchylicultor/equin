@@ -1,8 +1,7 @@
 import type {
+  AnyEndpointDef,
   EndpointAnswer,
-  EndpointDef,
   EndpointRequestOpts,
-  MachineEndpointDef,
 } from "../../core";
 import { endpointRequest, readEndpointResponse } from "../../core";
 
@@ -35,13 +34,18 @@ export async function callEndpoint<
   TResponse,
   TQuery,
 >(
-  endpoint:
-    | EndpointDef<Route, TParams, TBody, TResponse, TQuery>
-    | MachineEndpointDef<Route, TParams, TBody, TResponse, TQuery>,
+  // Any kind — a predicted one's effect is the browser's, ignored here.
+  endpoint: AnyEndpointDef<Route, TParams, TBody, TResponse, TQuery>,
   params: TParams,
   opts: CallOpts<TBody, TQuery>,
 ): Promise<EndpointAnswer<TResponse>> {
-  const { path, init } = endpointRequest(endpoint, params, opts);
+  const { path, init } = endpointRequest<
+    Route,
+    TParams,
+    TBody,
+    TResponse,
+    TQuery
+  >(endpoint, params, opts);
   const url = `${opts.origin}${path}`;
   const res = await fetch(url, init);
   return readEndpointResponse(

@@ -102,6 +102,7 @@ import {
   type ServeAllCollectionOptions,
 } from "./serve-all";
 import { serveOffFeed, type OffFeedOptions } from "./serve-off-feed";
+import { andWhere, membershipSql } from "./membership-sql";
 import {
   assertServesItsRows,
   isEntitySource,
@@ -742,10 +743,14 @@ export function compileCollection<
           c.set
         ]![c.field];
   };
-  const base =
+  // The base membership: the declaration's (`membership`, as data both
+  // runtimes read) ANDed with the serve call's `where`.
+  const base = andWhere(
     typeof opts.where === "function"
       ? opts.where(joins.columns() as JoinColumns<TableOf<T>, J>)
-      : opts.where;
+      : opts.where,
+    membershipSql(collection.membership, sourceColumns, overrides, fail),
+  );
   // Every relation the base predicate reads must be the base or a declared
   // join — checked here, at module eval, for every shape it is ANDed into.
   if (base) joins.columnsIn(base);

@@ -21,7 +21,6 @@ import {
   markResolved,
   markSent,
   OpNoLongerApplies,
-  classifyRejection,
   rejectOp,
   replay,
   resolvePass,
@@ -218,13 +217,6 @@ describe("failure (markFailed / clearFailure) — never a rollback", () => {
     ]);
     const after = rejectOp(pending, "senior");
     expect(confirmPass(after, [1, 9], "999", content).pending).toEqual([]);
-  });
-
-  test("classifyRejection: a 4xx is final, except 401 / 408 / 429; 5xx is transient", () => {
-    for (const status of [400, 403, 404, 409, 410, 422])
-      expect(classifyRejection(status)).toBe("permanent");
-    for (const status of [401, 408, 429, 500, 502, 503])
-      expect(classifyRejection(status)).toBe("transient");
   });
 
   test("failed ops are immune to confirm / denial / miss counting", () => {

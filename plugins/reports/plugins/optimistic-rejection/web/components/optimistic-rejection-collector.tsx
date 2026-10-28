@@ -1,11 +1,12 @@
 import { useEffect } from "react";
-import { optimisticRejectionSink } from "@plugins/primitives/plugins/optimistic-mutation/web";
+import { optimisticRejectionSink } from "@plugins/network/plugins/live/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import { report } from "@plugins/reports/web";
 
-// A Core.Root side-effect component. The optimistic-mutation primitive must not
-// import `reports` or `shell`, so it emits a neutral OptimisticRejectionReport
-// into a module-level sink; this component owns what a rejection means to the
+// A Core.Root side-effect component. The write primitives (optimistic-mutation,
+// the predicted endpoint effects) must not import `reports` or `shell`, so they
+// emit a neutral OptimisticRejectionReport into `network/live`'s module-level
+// sink; this component owns what a rejection means to the
 // user (a toast: the edit is gone, and why) and to the developer (a
 // `kind: "optimistic-rejection"` report). Renders nothing.
 export function OptimisticRejectionCollector() {

@@ -28,7 +28,18 @@ export const SlowOpClientItemSchema = z.object({
   // Which instance of the operation ran, without splitting the row: merged into
   // the row's `variants` breakdown (a latency signal's params, or a confirm's
   // `mode/edge`). The `operation` stays a bounded resource key.
-  detail: z.object({ variant: z.string().optional() }).optional(),
+  detail: z
+    .object({
+      variant: z.string().optional(),
+      // A CENSORED latency sample: the operation had not finished by its
+      // deadline (a write that never confirmed), so `durationMs` is a lower
+      // bound and `waits` holds only the phases it reached.
+      censored: z.literal(true).optional(),
+      // Bounded per-occurrence evidence a censored sample carries (a confirm's
+      // ack watermark) — shown on the trace, never a breakdown dimension.
+      evidence: z.record(z.string(), z.string()).optional(),
+    })
+    .optional(),
   // Additive, backward-compatible cold-start flag for the `element` signal:
   // the notifications transport was not ready when the resource mounted, so
   // the settle reads as transport time-to-first-data, not resource compute.

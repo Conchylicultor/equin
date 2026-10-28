@@ -280,6 +280,46 @@ export const oauthCallback = defineEndpoint({
 - Never read `Origin` / `Sec-Fetch-*` in a handler
   (`principal/no-origin-header-read`).
 
+## Predicted writes — `effect`
+
+A write may declare what it does to live data, so every surface reading that
+data shows it at once (design: `research/2026-10-27-global-predicted-endpoint-effects.md`):
+
+```typescript
+export const exitConversation = defineEndpoint({
+  route: "POST /api/conversations/:id/exit",
+  effect: (on) =>
+    patchRow(on, conversationsEntityRef, ({ params }) => params.id, () => ({
+      set: { status: "done", workingOn: null },     // predicted AND compared
+      approx: { endedAt: new Date() },              // shown, never compared
+    })),
+});   // → PredictedEndpointDef (PredictedMachineEndpointDef with needsMachine)
+```
+
+- **Opaque here.** `EndpointEffect<TParams, TBody>` is declared in this core
+  (this plugin sits below `network/live`), its payload unread; the builders
+  (`patchRow` / `removeRow` / `applyRows` / `effects`) and the one client
+  (`useLiveMutation`) are `network/live`'s — its CLAUDE.md *Predicted writes*
+  has the overlay, per-tuple retirement, failure and timing rules, and when
+  not to declare an effect.
+- **A callback, typed by the route.** `effect` takes `(on) => …`: `on`
+  (`EffectOn`, a phantom) carries the route's params and the body's type to
+  each builder, which infers from it before typing its own callbacks. A bare
+  `effect: patchRow(…)` cannot work — TypeScript checks a nested generic call
+  before the outer `Route` is inferred, so its callbacks would get `params:
+  unknown`. Run once at definition (the builders are pure); a GET declaring
+  one is a tsc error (and throws past a cast).
+- **The type split is the forcing.** `EndpointDef` / `MachineEndpointDef` say
+  `effect?: undefined`, so `useEndpointMutation` and `FetchEndpoint` refuse a
+  predicted def (tsc): it cannot be awaited behind a spinner.
+  `implement` / `implementMachine` / `callEndpoint` take it (the server ignores
+  the effect).
+- **`endpointContractOf(def)`** is the def without its effect (one frozen
+  object per def) — how `useLiveMutation` sends the write through the normal
+  `FetchEndpoint`. It, `brandEndpointEffect` and `endpointEffectPayload` are
+  banned outside `network/live` by `endpoints/no-endpoint-effect-internals`
+  (`noDebt`; live's `exempt/index.ts` holds the sanctioned entry).
+
 ## Writes an agent session's close undoes — `agentReverted`
 
 ```typescript
@@ -465,11 +505,15 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `packages/semaphore.createSemaphore`
   - Exports (types):
     - `AgentWrite`
+    - `AnyEndpointDef`
     - `AssetBase`
     - `AssetPath`
     - `Codec`
+    - `EffectOn`
+    - `EffectRequest`
     - `EndpointAnswer`
     - `EndpointDef`
+    - `EndpointEffect`
     - `EndpointRequestOpts`
     - `ExtractParams`
     - `MachineAvailability`
@@ -477,6 +521,8 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `MachineFeature`
     - `MachineResult`
     - `MachineUnavailable`
+    - `PredictedEndpointDef`
+    - `PredictedMachineEndpointDef`
     - `ReadMarker`
     - `ReadOf`
     - `WriteEndpoint`
@@ -486,9 +532,12 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `assetBase`
     - `assetPath`
     - `blob`
+    - `brandEndpointEffect`
     - `dateString`
     - `defineEndpoint`
     - `EndpointAgentWriteRefusedError`
+    - `endpointContractOf`
+    - `endpointEffectPayload`
     - `EndpointError`
     - `endpointPath`
     - `endpointRequest`
@@ -509,7 +558,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
 - Cross-plugin:
   - Imported by: 229 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×63
-    - `conversations` ×32
+    - `conversations` ×31
     - `infra` ×21
     - `page` ×20
     - `tasks` ×19
@@ -531,6 +580,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `backup`
     - `database/fork`
     - `hints`
+    - `network/live`
     - `release`
     - `search/engine`
     - `shell/notifications`
@@ -550,6 +600,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `infra/health` (0 debt)
     - `infra/mcp/browser` (0 debt)
     - `infra/ndjson-stream` (0 debt)
+    - `network/live` (0 debt)
     - `primitives/live-state` (0 debt)
     - `primitives/networking` (0 debt)
     - `shell/notifications` (0 debt)

@@ -12,15 +12,7 @@ export { OpNoLongerApplies } from "./internal/overlay";
 export {
   enqueueResourceWrite,
   enqueueDetachedWrite,
-} from "./internal/send-lane";
-export {
-  optimisticDivergenceReportSink,
-  optimisticRejectionSink,
-} from "./reporter";
-export type {
-  OptimisticDivergenceReport,
-  OptimisticRejectionReport,
-} from "./reporter";
+} from "./internal/lane-writes";
 
 export default {
   description:

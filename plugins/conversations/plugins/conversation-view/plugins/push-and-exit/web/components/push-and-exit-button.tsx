@@ -26,7 +26,10 @@ import {
   EndpointError,
   useFetchEndpoint,
 } from "@plugins/infra/plugins/endpoints/web";
-import type { MachineResult } from "@plugins/infra/plugins/endpoints/core";
+import type {
+  MachineResult,
+  MachineUnavailable,
+} from "@plugins/infra/plugins/endpoints/core";
 import {
   conversationPromptDraft,
   useSendConversationTurn,
@@ -48,7 +51,7 @@ import {
 import { conversationName } from "@plugins/tasks/plugins/tasks-core/core";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import { combineResources } from "@plugins/primitives/plugins/live-state/web";
-import { useLive } from "@plugins/network/plugins/live/web";
+import { useLive, useLiveMutation } from "@plugins/network/plugins/live/web";
 import { attemptWork } from "@plugins/tasks/plugins/attempt-work/core";
 import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 import type { PromptEditorActionProps } from "@plugins/primitives/plugins/prompt-editor/web";
@@ -97,6 +100,14 @@ type ActionSpec = {
 function machineValue<T>(result: MachineResult<T>): T {
   if (result.kind === "unavailable") throw new Error(result.message);
   return result.value;
+}
+
+/** A predicted write's client, its unavailable arm failing as `machineValue`'s. */
+function available<M extends { kind: "available" }>(
+  mutation: M | MachineUnavailable,
+): M {
+  if (mutation.kind === "unavailable") throw new Error(mutation.message);
+  return mutation as M;
 }
 
 // Resume's handler throws HttpError(409, msg) → the server serializes the bare
@@ -195,6 +206,24 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
   const fetchEndpoint = useFetchEndpoint();
   const toast = useToast();
   const resume = useResumeConversation();
+  // Close and Drop & Close are PREDICTED writes: the conversation reads closed
+  // at once — this button flips to Restore on the click, the sidebar row
+  // leaves Active — so they have no busy state. A close says nothing on
+  // success (the user saw it happen); whether the task dropped is the
+  // server's answer, so the drop notification waits for it. A refusal is the
+  // rejection toast, a transient failure the sync cloud's Retry.
+  const closeConversation = useLiveMutation(exitConversation);
+  const dropConversation = useLiveMutation(dropAndExit, {
+    onSuccess: (data) => {
+      if (data.dropped && conversation)
+        toast(
+          droppedNotification({
+            id: convId,
+            name: conversationName(conversation),
+          }),
+        );
+    },
+  });
   const awaitingStart = useTurnAwaitingStart(convId);
 
   // Restore / Send / Stop work in every workspace; the edited-files read feeds
@@ -367,18 +396,15 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
       case "exit-sibling":
         return {
           verb: "Close",
-          run: async () => {
-            machineValue(await fetchEndpoint(exitConversation, { id: convId }));
+          run: () => {
+            available(closeConversation).mutate({ params: { id: convId } });
           },
         };
       case "drop-and-exit":
         return {
           verb: "Drop & Close",
-          run: async () => {
-            const { dropped } = machineValue(
-              await fetchEndpoint(dropAndExit, { id: convId }),
-            );
-            return dropped ? droppedNotification(subject) : undefined;
+          run: () => {
+            available(dropConversation).mutate({ params: { id: convId } });
           },
         };
     }
@@ -388,9 +414,13 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
     if (busy || disabled) return;
     const spec = specFor(mode);
     if (!spec) return;
-    setBusy(true);
     try {
-      const notice = await spec.run();
+      const ran = spec.run();
+      // A synchronous run (a turn send, a predicted close) has nothing to
+      // wait for: no busy state, so no spinner flashes over it.
+      if (ran === undefined) return;
+      setBusy(true);
+      const notice = await ran;
       if (notice) toast(notice);
     } catch (err) {
       toast({

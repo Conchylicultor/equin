@@ -65,9 +65,9 @@ re-alert every 10 minutes for one known problem.
     - `Core.Root` → `OptimisticDivergenceCollector`
     - `Reports.KindView` → `OptimisticDivergenceKindView`
   - Uses:
+    - `network/live.optimisticDivergenceReportSink`
     - `primitives/css/badge.Badge`
     - `primitives/css/inline.Inline`
-    - `primitives/optimistic-mutation.optimisticDivergenceReportSink`
     - `reports.report`
     - `reports.Reports`
 - Server:

@@ -304,6 +304,14 @@ export const conversationsActive = liveCollection("conversations-active", {
   related: QUEUE_RELATED,
   baseExposures: false,
   id: "id",
+  // Live (not `done`), not machine-spawned. Both columns are NOT NULL, so the
+  // language's `ne` (which keeps NULL) is exactly SQL's `<>` here.
+  membership: {
+    and: [
+      { column: "status", op: "ne", operand: "done" },
+      { column: "kind", op: "ne", operand: "system" },
+    ],
+  } as const,
   all: {
     orderBy: [["createdAt", "desc"]],
     unbounded: {
@@ -323,6 +331,13 @@ export const conversationsSystem = liveCollection("conversations-system", {
   related: QUEUE_RELATED,
   baseExposures: false,
   id: "id",
+  // The live `system` ones (both columns NOT NULL: `ne` is SQL's `<>`).
+  membership: {
+    and: [
+      { column: "kind", op: "eq", operand: "system" },
+      { column: "status", op: "ne", operand: "done" },
+    ],
+  } as const,
   all: {
     orderBy: [["createdAt", "desc"]],
     unbounded: {

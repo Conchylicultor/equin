@@ -14,6 +14,7 @@ vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({
 
 import { renderHook } from "@testing-library/react";
 import { z } from "zod";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import { liveValue } from "@plugins/network/plugins/live/core";
 import { queryKeyFor } from "@plugins/primitives/plugins/live-state/web";
 import {
@@ -26,11 +27,14 @@ import {
   useAwaitResourceWrite,
 } from "../internal/await-resource-write";
 
+const Numbers = wholeList(z.number(), {
+  reason: "a test's handful of numbers",
+});
 const plainValue = liveValue("test.await-write.plain", {
-  schema: z.array(z.number()),
+  schema: Numbers,
 });
 const namedValue = liveValue("test.await-write.named", {
-  schema: z.array(z.number()),
+  schema: Numbers,
   params: ["name"],
 });
 

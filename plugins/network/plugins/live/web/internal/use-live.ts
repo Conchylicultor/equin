@@ -46,6 +46,17 @@ import {
   type LiveValuePagesOptions,
 } from "./use-pages";
 import type { LivePagesQuery } from "./page-source";
+import {
+  predictRow,
+  predictRows,
+  rowPending,
+  type PredictRow,
+} from "./predict-overlay";
+import {
+  usePredictedOps,
+  usePredictHolder,
+  usePredictStore,
+} from "./use-predicted";
 
 // The read half of a `liveCollection`. A consumer asks a QUERY — a window
 // (`where` / `orderBy` / `limit`), a grouping (`groupBy`) or an explicit id set
@@ -157,8 +168,8 @@ export type LiveScopedAllQuery<B extends string> = [B] extends [never]
 
 /**
  * One row by id: loading, failed, found, or determinately absent — `ready`
- * splits on `found`. `pending` is the pre-`status` spelling (see
- * `ResourceResult`), kept while the tree migrates.
+ * splits on `found`, and says whether a predicted write is still unconfirmed
+ * on it (`pending`).
  */
 export type LiveRowResult<Row> =
   | {
@@ -176,11 +187,21 @@ export type LiveRowResult<Row> =
       status: "ready";
       found: true;
       row: Row;
+      /**
+       * A predicted write (`useLiveMutation`) is applied to `row` that this
+       * read's server data has not confirmed yet.
+       */
+      pending: boolean;
       refetch: () => Promise<void>;
     }
   | {
       status: "ready";
       found: false;
+      /**
+       * A predicted write moved the row out of the collection (or removed
+       * it) and this read's server data has not confirmed it yet.
+       */
+      pending: boolean;
       refetch: () => Promise<void>;
     };
 
@@ -666,7 +687,7 @@ export function useLive<Row, F, S extends string>(
       );
     case "all":
       return useAll(
-        (source as LiveAllCollection<Row, string>).all,
+        source as LiveAllCollection<Row, string>,
         (query ?? undefined) as AllQuery<Row> | undefined,
       );
     case "all-pages":
@@ -912,9 +933,10 @@ function useQueryValueList<T, Q, QIn>(
  * shared copy. One unconditional call either way (rules of hooks).
  */
 function useAll<Row>(
-  all: LiveAllCollection<Row, string>["all"],
+  collection: LiveAllCollection<Row, string>,
   query: AllQuery<Row> | undefined,
 ): ResourceResult<unknown> {
+  const { all } = collection;
   // A scoped set (`all: { by }`) is read by its scope, the whole set by none:
   // the overloads pair them, this holds the line for an untyped caller (the
   // server would refuse the tuple as a contract mismatch, far from here).
@@ -930,7 +952,55 @@ function useAll<Row>(
       `useLive("${all.key}"): \`where\` on a set declared without \`all.by\` — it has one tuple, the whole set.`,
     );
   }
-  return useResource(all, where, { gate: true, select: query?.select });
+  // The predict overlay (`predict-overlay.ts`): while a predicted write is in
+  // flight on the collection's entity, the read is the WHOLE set (a selector
+  // reads predicted rows, so it is applied here, after the fold — the
+  // narrowing is the substrate's again once the ops are done); otherwise it
+  // is exactly the plain or selected read above.
+  const store = usePredictStore();
+  const entity = collection.from?.name ?? null;
+  const ops = usePredictedOps(store, entity);
+  const select = query?.select;
+  const touched = ops.length > 0;
+  const read = useResource(all, where, {
+    gate: true,
+    select: touched ? undefined : select,
+  });
+  const tupleKey = `${all.key}|${JSON.stringify(where ?? {})}`;
+  // The tuple's server rows, held only while they are what `read` carries
+  // (a selected read's `data` is its slice).
+  const serverRows =
+    touched || select === undefined ? heldRows(read) : undefined;
+  usePredictHolder(store, entity, tupleKey, collection.id, serverRows);
+  const { membership, id: idField } = collection;
+  return useMemo((): ResourceResult<unknown> => {
+    if (!touched || entity === null) return read;
+    const fold = (rows: readonly PredictRow[]): unknown => {
+      const predicted = predictRows(
+        ops,
+        tupleKey,
+        entity,
+        idField,
+        rows,
+        membership,
+      );
+      return select === undefined
+        ? predicted
+        : select(predicted as unknown as Row[]);
+    };
+    switch (read.status) {
+      case "loading":
+        return read;
+      case "error":
+        return read.stale === undefined
+          ? read
+          : { ...read, stale: fold(read.stale as readonly PredictRow[]) };
+      case "ready": {
+        const data = fold(read.data as readonly PredictRow[]);
+        return data === read.data ? read : { ...read, data };
+      }
+    }
+  }, [touched, entity, read, ops, tupleKey, idField, membership, select]);
 }
 
 /** What `useAll` reads: a scope (a scoped set's), a slice, both or neither. */
@@ -1109,8 +1179,66 @@ function useCollection<Row, F, S extends string>(
     }
   }, [growUnsettled, previous, current, limit, maxLimit, loadMore]);
 
-  if (shape === null) return current as ResourceResult<Row[]>;
+  // An id set (`:rows`) shows the predicted rows like `useLiveRow` does — a
+  // grouping's counts are the server's (never predicted).
+  const store = usePredictStore();
+  const entity = shape === null ? (collection.from?.name ?? null) : null;
+  const ops = usePredictedOps(store, entity);
+  const idsTuple = entity === null ? null : `${collection.rows.key}|${idsKey}`;
+  usePredictHolder(
+    store,
+    entity,
+    idsTuple,
+    collection.id,
+    entity === null ? undefined : heldRows(current),
+  );
+  const { membership, id: idField } = collection;
+  const ids_ = useMemo((): ResourceResult<Row[]> => {
+    const read = current as ResourceResult<Row[]>;
+    if (entity === null || idsTuple === null || ops.length === 0) return read;
+    const fold = (rows: Row[]): Row[] =>
+      predictRows(
+        ops,
+        idsTuple,
+        entity,
+        idField,
+        rows as unknown as readonly PredictRow[],
+        membership,
+      ) as unknown as Row[];
+    switch (read.status) {
+      case "loading":
+        return read;
+      case "error": {
+        if (read.stale === undefined) return read;
+        const stale = fold(read.stale);
+        return stale === read.stale ? read : { ...read, stale };
+      }
+      case "ready": {
+        const data = fold(read.data);
+        return data === read.data ? read : { ...read, data };
+      }
+    }
+  }, [current, entity, idsTuple, ops, idField, membership]);
+
+  if (shape === null) return ids_;
   return list;
+}
+
+/**
+ * The server rows a read holds, for the predict overlay's holder: its value,
+ * or — failed — the last one it held; `undefined` while it has none.
+ */
+function heldRows(
+  read: ResourceResult<unknown>,
+): readonly PredictRow[] | undefined {
+  switch (read.status) {
+    case "loading":
+      return undefined;
+    case "error":
+      return read.stale as readonly PredictRow[] | undefined;
+    case "ready":
+      return read.data as readonly PredictRow[];
+  }
 }
 
 /**
@@ -1120,6 +1248,7 @@ function useCollection<Row, F, S extends string>(
 const NO_ID: LiveRowResult<never> = {
   status: "ready",
   found: false,
+  pending: false,
   refetch: () => Promise.resolve(),
 };
 
@@ -1170,13 +1299,34 @@ export function useLiveRow<Row>(
     [idsKey],
   );
   const result = useResource(collection.rows, params);
+  // The predict overlay: the ops in flight on this collection's entity,
+  // folded over this tuple's server row, and this read held as a tuple of
+  // it (its data-change edge is what confirms an op here).
+  const store = usePredictStore();
+  const entity = collection.from?.name ?? null;
+  const ops = usePredictedOps(store, entity);
+  const tupleKey = idsKey === null ? null : `${collection.rows.key}|${idsKey}`;
+  usePredictHolder(store, entity, tupleKey, collection.id, heldRows(result));
+  const { membership, id: idField } = collection;
   // The result keeps its identity until what it is built from changes, like
   // `useLive`'s list result: consumers memoize on it. `useResource`'s own
   // result changes only with its status / data / error / stale.
   return useMemo((): LiveRowResult<CollectionRow<Row>> | LiveUnavailable => {
     if (unavailableRead !== null) return unavailableRead;
     // Determinate without the server: no (carriable) id names no row.
-    if (absent) return NO_ID;
+    if (absent || tupleKey === null || id === null) return NO_ID;
+    const predicted = (row: CollectionRow<Row> | undefined) =>
+      row === undefined || entity === null
+        ? row
+        : (predictRow(
+            ops,
+            tupleKey,
+            entity,
+            idField,
+            row as PredictRow,
+            membership,
+          ) as CollectionRow<Row> | undefined);
+    const pending = entity !== null && rowPending(ops, tupleKey, entity, id);
     const { refetch } = result;
     switch (result.status) {
       case "loading":
@@ -1184,7 +1334,9 @@ export function useLiveRow<Row>(
       case "error": {
         // A one-id tuple's payload is `[row]` or `[]` — its stale one included.
         // Rows of a collection: the read's own (`CollectionRow`, type-only).
-        const stale = result.stale?.[0] as CollectionRow<Row> | undefined;
+        const stale = predicted(
+          result.stale?.[0] as CollectionRow<Row> | undefined,
+        );
         return stale === undefined
           ? { status: "error", error: result.error, refetch }
           : {
@@ -1195,11 +1347,27 @@ export function useLiveRow<Row>(
             };
       }
       case "ready": {
-        const row = result.data[0] as CollectionRow<Row> | undefined;
+        const server = result.data[0] as CollectionRow<Row> | undefined;
+        const row = predicted(server);
         return row === undefined
-          ? { status: "ready", found: false, refetch }
-          : { status: "ready", found: true, row, refetch };
+          ? {
+              status: "ready",
+              found: false,
+              pending: pending && server !== undefined,
+              refetch,
+            }
+          : { status: "ready", found: true, row, pending, refetch };
       }
     }
-  }, [unavailableRead, absent, result]);
+  }, [
+    unavailableRead,
+    absent,
+    result,
+    ops,
+    tupleKey,
+    entity,
+    idField,
+    membership,
+    id,
+  ]);
 }

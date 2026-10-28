@@ -11,8 +11,8 @@
     - `conversations.useHasActiveSiblings`
     - `conversations.useLiveConversation`
     - `conversations/conversation-view/exit-menu.ExitMenu`
-    - `infra/endpoints.useEndpointMutation`
     - `network/live.useLive`
+    - `network/live.useLiveMutation`
     - `primitives/css/ui-kit.DropdownMenuItem`
     - `primitives/live-state.foldResource`
     - `primitives/live-state.ResourceResult`
@@ -29,7 +29,10 @@
   - Uses: `infra/endpoints.implementMachine`
   - Routes: `POST /api/conversations/:id/drop-and-exit`
 - Core:
-  - Uses: `infra/endpoints.defineEndpoint`
+  - Uses:
+    - `infra/endpoints.defineEndpoint`
+    - `network/live.patchRow`
+    - `tasks/tasks-core.conversationsEntityRef`
   - Exports (types): `DropPolicy`
   - Exports (values):
     - `dropAndExit`

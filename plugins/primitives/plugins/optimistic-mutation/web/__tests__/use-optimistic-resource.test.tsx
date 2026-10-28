@@ -46,18 +46,19 @@ import {
   type OptimisticOptions,
 } from "../internal/use-optimistic-resource";
 import {
-  activeSendLaneCount,
   enqueueDetachedWrite,
   enqueueResourceWrite,
-} from "../internal/send-lane";
+} from "../internal/lane-writes";
 import {
   optimisticDivergenceReportSink,
   optimisticRejectionSink,
-} from "../reporter";
-import type {
-  OptimisticDivergenceReport,
-  OptimisticRejectionReport,
-} from "../reporter";
+} from "@plugins/network/plugins/live/web";
+import {
+  activeSendLaneCount,
+  UNCONFIRMED_MS,
+  type OptimisticDivergenceReport,
+  type OptimisticRejectionReport,
+} from "@plugins/network/plugins/live/web/testing";
 
 const Numbers = wholeList(z.number(), {
   reason: "a test's handful of numbers",
@@ -1524,6 +1525,162 @@ describe("useOptimisticResource — a scoped `all` set ({ where })", () => {
       );
     };
     expect(typeof useTypeOnly).toBe("function");
+  });
+});
+
+describe("useOptimisticResource — the unconfirmed deadline", () => {
+  // Every case reads a key of its own (the tx-ack registry is module-level).
+  const deadlineValue = (name: string) =>
+    liveValue(`test.optimistic-mutation.deadline-${name}`, { schema: Numbers });
+
+  let clock = 0;
+  let samples: ClientLatencySample[] = [];
+  let unsubscribe: () => void = () => {};
+  beforeEach(() => {
+    clock = 0;
+    samples = [];
+    vi.spyOn(performance, "now").mockImplementation(() => clock);
+    unsubscribe = clientLatencySink.subscribe((s) => {
+      samples.push(s);
+    });
+  });
+  afterEach(() => {
+    unsubscribe();
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+  // Only the deadline's own timer is faked, once the read has mounted — the
+  // mount's `waitFor` and React's scheduling keep real time.
+  const fakeDeadlines = () =>
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+
+  it("an op acked but never confirmed emits ONE censored sample at the deadline", async () => {
+    const value = deadlineValue("acked");
+    const live = createLiveStateHarness();
+    const { mutate, release } = deferredMutate();
+    const { rows } = await mountRows(live, mutate, { value }); // coarse
+    fakeDeadlines();
+
+    clock = 100;
+    act(() => {
+      rows().dispatch(2);
+    });
+    clock = 150;
+    await act(async () => {
+      release({ watermark: "777" });
+    });
+    expect(rows().saving).toBe(false); // acked: only confirmation is missing
+
+    clock = 100 + UNCONFIRMED_MS;
+    act(() => {
+      vi.advanceTimersByTime(UNCONFIRMED_MS);
+    });
+    expect(samples).toEqual([
+      {
+        signal: "confirm",
+        censored: true,
+        key: value.key,
+        params: {},
+        variant: "unconfirmed/awaiting-confirm-frame",
+        phases: { "send-lane": 0, retry: 0, "server-ack": 50 },
+        totalMs: UNCONFIRMED_MS,
+        hidden: false,
+        detail: { ackWatermark: "777" },
+      },
+    ]);
+    act(() => {
+      vi.advanceTimersByTime(UNCONFIRMED_MS * 3);
+    });
+    expect(samples).toHaveLength(1); // at most once per op
+  });
+
+  it("an op never acked reports it stalled before the ack: no server-ack phase", async () => {
+    const value = deadlineValue("unacked");
+    const live = createLiveStateHarness();
+    const { mutate } = deferredMutate(); // never released
+    const { rows } = await mountRows(live, mutate, { value });
+    fakeDeadlines();
+
+    clock = 100;
+    act(() => {
+      rows().dispatch(2);
+    });
+    clock = 100 + UNCONFIRMED_MS + 5;
+    act(() => {
+      vi.advanceTimersByTime(UNCONFIRMED_MS);
+    });
+    expect(samples).toHaveLength(1);
+    expect(samples[0]).toMatchObject({
+      censored: true,
+      variant: "unconfirmed/awaiting-ack",
+      phases: { "send-lane": 0, retry: 0 },
+      totalMs: UNCONFIRMED_MS + 5,
+    });
+    expect(samples[0]!.phases).not.toHaveProperty("server-ack");
+    expect(samples[0]).not.toHaveProperty("detail");
+  });
+
+  it("a confirmed op emits its normal sample and no censored one", async () => {
+    const value = deadlineValue("confirmed");
+    const live = createLiveStateHarness();
+    const { mutate, release } = deferredMutate();
+    const { rows } = await mountRows(live, mutate, {
+      contentBased: true,
+      value,
+    });
+    fakeDeadlines();
+
+    clock = 100;
+    act(() => {
+      rows().dispatch(2);
+    });
+    clock = 150;
+    await act(async () => {
+      release();
+    });
+    clock = 180;
+    act(() => {
+      live.queryClient.setQueryData(queryKeyFor(value.key, undefined), [2]);
+    });
+    act(() => {
+      vi.advanceTimersByTime(UNCONFIRMED_MS * 2);
+    });
+    expect(samples).toHaveLength(1);
+    expect(samples[0]!.censored).toBeUndefined();
+  });
+
+  it("a permanently rejected op clears its deadline", async () => {
+    const value = deadlineValue("rejected");
+    const live = createLiveStateHarness();
+    const mutate = vi.fn(() => Promise.reject(new EndpointError(400, "nope")));
+    const { rows } = await mountRows(live, mutate, { value });
+    fakeDeadlines();
+
+    await act(async () => {
+      rows().dispatch(2);
+    });
+    expect(rows().pendingOps).toEqual([]);
+    act(() => {
+      vi.advanceTimersByTime(UNCONFIRMED_MS * 2);
+    });
+    expect(samples).toEqual([]);
+  });
+
+  it("an op unmounted unconfirmed emits nothing", async () => {
+    const value = deadlineValue("unmounted");
+    const live = createLiveStateHarness();
+    const { mutate } = deferredMutate();
+    const { rows, unmount } = await mountRows(live, mutate, { value });
+    fakeDeadlines();
+
+    act(() => {
+      rows().dispatch(2);
+    });
+    unmount();
+    act(() => {
+      vi.advanceTimersByTime(UNCONFIRMED_MS * 2);
+    });
+    expect(samples).toEqual([]);
   });
 });
 

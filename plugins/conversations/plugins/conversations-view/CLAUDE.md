@@ -11,7 +11,7 @@
     - `conversations/conversation-view.conversationPane`
     - `conversations/conversations-view/data-view.ConversationsSidebarDataView`
     - `conversations/pane-restore.loadRouteForConversation`
-    - `infra/endpoints.useFetchEndpoint`
+    - `network/live.useLiveMutation`
     - `primitives/pane.useOpenPane`
     - `primitives/pane.usePaneStore`
     - `shell.Shell`

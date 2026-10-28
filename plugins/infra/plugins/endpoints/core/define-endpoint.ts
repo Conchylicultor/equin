@@ -5,6 +5,11 @@ import { extractMethod, extractPath } from "./route-params";
 import type { MachineFeature } from "./needs-machine";
 import type { AgentWrite } from "./agent-write";
 import type { EndpointAccess } from "@plugins/framework/plugins/principal/core";
+import {
+  EFFECT_ON,
+  type EffectOn,
+  type EndpointEffect,
+} from "./endpoint-effect";
 
 /** The methods a browser may send through `fetchEndpoint` / `useEndpointMutation`. */
 type WriteMethod = "POST" | "PUT" | "PATCH" | "DELETE";
@@ -140,6 +145,8 @@ export interface EndpointDef<
   TQuery,
 > extends EndpointContract<Route, TParams, TBody, TResponse, TQuery> {
   readonly needsMachine?: undefined;
+  /** Unpredicted: a {@link PredictedEndpointDef} is not one (see there). */
+  readonly effect?: undefined;
 }
 
 /**
@@ -156,6 +163,100 @@ export interface MachineEndpointDef<
   TQuery,
 > extends EndpointContract<Route, TParams, TBody, TResponse, TQuery> {
   readonly needsMachine: MachineFeature;
+  /** Unpredicted: a {@link PredictedMachineEndpointDef} is not one. */
+  readonly effect?: undefined;
+}
+
+/**
+ * A portable WRITE endpoint declared with its predicted effect
+ * (`defineEndpoint({ …, effect })` — see {@link EndpointEffect}). Its one
+ * browser client is `network/live`'s `useLiveMutation`, which shows the
+ * effect at once and has no pending state: `useEndpointMutation` and
+ * `FetchEndpoint` refuse it (tsc — their defs say `effect?: undefined`), so
+ * no surface can await it behind a spinner. The server serves it like any
+ * portable endpoint (`implement`), and off the page `callEndpoint` calls it.
+ */
+export interface PredictedEndpointDef<
+  Route extends string,
+  TParams,
+  TBody,
+  TResponse,
+  TQuery,
+> extends EndpointContract<Route, TParams, TBody, TResponse, TQuery> {
+  readonly needsMachine?: undefined;
+  readonly effect: EndpointEffect<TParams, TBody>;
+}
+
+/** {@link PredictedEndpointDef}'s desktop-only twin (`implementMachine`). */
+export interface PredictedMachineEndpointDef<
+  Route extends string,
+  TParams,
+  TBody,
+  TResponse,
+  TQuery,
+> extends EndpointContract<Route, TParams, TBody, TResponse, TQuery> {
+  readonly needsMachine: MachineFeature;
+  readonly effect: EndpointEffect<TParams, TBody>;
+}
+
+/** Every kind of endpoint definition — what a request is built and read from. */
+export type AnyEndpointDef<
+  Route extends string,
+  TParams,
+  TBody,
+  TResponse,
+  TQuery,
+> =
+  | EndpointDef<Route, TParams, TBody, TResponse, TQuery>
+  | MachineEndpointDef<Route, TParams, TBody, TResponse, TQuery>
+  | PredictedEndpointDef<Route, TParams, TBody, TResponse, TQuery>
+  | PredictedMachineEndpointDef<Route, TParams, TBody, TResponse, TQuery>;
+
+const contracts = new WeakMap<object, object>();
+
+/**
+ * A predicted definition as its plain, unpredicted contract (the effect
+ * stripped; one stable object per definition) — so `network/live`'s
+ * predicted-write client sends it through the ordinary `FetchEndpoint` once
+ * it has applied the effect. For `network/live` only (lint
+ * `endpoints/no-endpoint-effect-internals`): anywhere else it is the escape
+ * hatch back to an awaited, spinner-showing call the type split exists to
+ * forbid.
+ */
+export function endpointContractOf<
+  Route extends string,
+  TParams,
+  TBody,
+  TResponse,
+  TQuery,
+>(
+  endpoint: PredictedMachineEndpointDef<
+    Route,
+    TParams,
+    TBody,
+    TResponse,
+    TQuery
+  >,
+): MachineEndpointDef<Route, TParams, TBody, TResponse, TQuery>;
+export function endpointContractOf<
+  Route extends string,
+  TParams,
+  TBody,
+  TResponse,
+  TQuery,
+>(
+  endpoint: PredictedEndpointDef<Route, TParams, TBody, TResponse, TQuery>,
+): EndpointDef<Route, TParams, TBody, TResponse, TQuery>;
+export function endpointContractOf(endpoint: {
+  readonly effect: unknown;
+}): object {
+  let contract = contracts.get(endpoint);
+  if (contract === undefined) {
+    const { effect: _effect, ...rest } = endpoint;
+    contract = Object.freeze(rest);
+    contracts.set(endpoint, contract);
+  }
+  return contract;
 }
 
 /** A body/response spec accepts a bare Zod schema (JSON) or an explicit codec. */
@@ -197,9 +298,28 @@ interface EndpointOptions<Route extends string, B, R, TQuery> {
 }
 
 /**
+ * The predicted effect a WRITE declares, built on the route's typed request
+ * (`effect: (on) => patchRow(on, entity, ({ params }) => params.id, …)` —
+ * see {@link EffectOn} for why a callback). A GET declaring one is a tsc
+ * error.
+ */
+type EffectBuilder<Route extends string, B> = (
+  on: EffectOn<ExtractParams<Route>, SpecType<B>>,
+) => EndpointEffect<ExtractParams<Route>, SpecType<B>>;
+type EffectOption<Route extends string, B> = {
+  effect: Route extends `${"GET" | "HEAD" | "OPTIONS"} ${string}`
+    ? never
+    : EffectBuilder<Route, B>;
+};
+
+/**
  * Declare an endpoint. With `needsMachine: { feature }` it is desktop-only — a
  * {@link MachineEndpointDef}, whose every client handles the "not available"
- * answer (tsc); without it, a portable {@link EndpointDef}.
+ * answer (tsc); without it, a portable {@link EndpointDef}. A write declaring
+ * its `effect` (built by `network/live`'s `patchRow` / `removeRow` /
+ * `applyRows` / `effects`, its request callbacks typed by this route) is a
+ * {@link PredictedEndpointDef} / {@link PredictedMachineEndpointDef}, sent
+ * only through `useLiveMutation`.
  */
 export function defineEndpoint<
   const Route extends string,
@@ -207,7 +327,40 @@ export function defineEndpoint<
   R extends Spec<unknown> = Spec<void>,
   TQuery = void,
 >(
-  opts: EndpointOptions<Route, B, R, TQuery> & { needsMachine: MachineFeature },
+  opts: EndpointOptions<Route, B, R, TQuery> &
+    EffectOption<Route, B> & { needsMachine: MachineFeature },
+): PredictedMachineEndpointDef<
+  Route,
+  ExtractParams<Route>,
+  SpecType<B>,
+  SpecType<R>,
+  TQuery
+>;
+export function defineEndpoint<
+  const Route extends string,
+  B extends Spec<unknown> = Spec<void>,
+  R extends Spec<unknown> = Spec<void>,
+  TQuery = void,
+>(
+  opts: EndpointOptions<Route, B, R, TQuery> &
+    EffectOption<Route, B> & { needsMachine?: undefined },
+): PredictedEndpointDef<
+  Route,
+  ExtractParams<Route>,
+  SpecType<B>,
+  SpecType<R>,
+  TQuery
+>;
+export function defineEndpoint<
+  const Route extends string,
+  B extends Spec<unknown> = Spec<void>,
+  R extends Spec<unknown> = Spec<void>,
+  TQuery = void,
+>(
+  opts: EndpointOptions<Route, B, R, TQuery> & {
+    needsMachine: MachineFeature;
+    effect?: undefined;
+  },
 ): MachineEndpointDef<
   Route,
   ExtractParams<Route>,
@@ -221,7 +374,10 @@ export function defineEndpoint<
   R extends Spec<unknown> = Spec<void>,
   TQuery = void,
 >(
-  opts: EndpointOptions<Route, B, R, TQuery> & { needsMachine?: undefined },
+  opts: EndpointOptions<Route, B, R, TQuery> & {
+    needsMachine?: undefined;
+    effect?: undefined;
+  },
 ): EndpointDef<Route, ExtractParams<Route>, SpecType<B>, SpecType<R>, TQuery>;
 export function defineEndpoint<
   const Route extends string,
@@ -231,16 +387,21 @@ export function defineEndpoint<
 >(
   opts: EndpointOptions<Route, B, R, TQuery> & {
     needsMachine?: MachineFeature;
+    effect?: EffectBuilder<Route, B>;
   },
-):
-  | EndpointDef<Route, ExtractParams<Route>, SpecType<B>, SpecType<R>, TQuery>
-  | MachineEndpointDef<
-      Route,
-      ExtractParams<Route>,
-      SpecType<B>,
-      SpecType<R>,
-      TQuery
-    > {
+): AnyEndpointDef<
+  Route,
+  ExtractParams<Route>,
+  SpecType<B>,
+  SpecType<R>,
+  TQuery
+> {
+  if (opts.effect !== undefined && readMarkerOf(opts.route) !== undefined) {
+    // Typed away (`effect` is `never` on a read); refused against a cast.
+    throw new Error(
+      `defineEndpoint(${opts.route}): \`effect\` on a read — only a write changes live data.`,
+    );
+  }
   const bodyCodec = opts.body
     ? isCodec(opts.body)
       ? opts.body
@@ -268,7 +429,21 @@ export function defineEndpoint<
     ...(opts.needsMachine !== undefined
       ? { needsMachine: opts.needsMachine }
       : {}),
-  };
+    // Built once, here: the builder is pure, and `on` is a phantom.
+    ...(opts.effect !== undefined
+      ? {
+          effect: opts.effect(
+            EFFECT_ON as EffectOn<ExtractParams<Route>, SpecType<B>>,
+          ),
+        }
+      : {}),
+  } as AnyEndpointDef<
+    Route,
+    ExtractParams<Route>,
+    SpecType<B>,
+    SpecType<R>,
+    TQuery
+  >;
 }
 
 /** A declaration's `access`, resolved: absent → `"owner"`. */

@@ -1,9 +1,18 @@
-export { defineEndpoint } from "./define-endpoint";
+export { defineEndpoint, endpointContractOf } from "./define-endpoint";
+export { brandEndpointEffect, endpointEffectPayload } from "./endpoint-effect";
+export type {
+  EffectOn,
+  EffectRequest,
+  EndpointEffect,
+} from "./endpoint-effect";
 export { ASSET_PATH, assetBase, assetPath } from "./asset-path";
 export type { AssetBase, AssetPath } from "./asset-path";
 export type {
+  AnyEndpointDef,
   EndpointDef,
   MachineEndpointDef,
+  PredictedEndpointDef,
+  PredictedMachineEndpointDef,
   ReadMarker,
   ReadOf,
   WriteEndpoint,

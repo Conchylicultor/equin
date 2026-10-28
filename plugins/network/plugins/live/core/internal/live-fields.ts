@@ -13,6 +13,8 @@ import type {
 } from "@plugins/infra/plugins/entities/core";
 import type { AnyExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
 import type {
+  Filter,
+  Filterable,
   FilterColumn,
   FilterDomainId,
 } from "@plugins/network/plugins/live/plugins/filter/core";
@@ -217,11 +219,29 @@ export interface LiveFieldsSpec<
    * to be larger (the queue reads the ranks of every live conversation).
    */
   maxIds?: number;
+  /**
+   * The collection's BASE membership as data — the rows of `from` it holds —
+   * a filter over its listed fields (`and(clause("status", "ne", "done"), …)`).
+   * One declaration both runtimes read: `serveCollection` renders it with the
+   * filter language's `filterSql` (ANDed with the serve call's `where`, if
+   * any), and the browser re-checks a row against it (`matchesFilter`) — a
+   * predicted write (`patchRow`) that moves a row out of it removes the row
+   * at once. Each column it names must bind to the base table's column of
+   * the same name (not through `columns`), so the value the client tests is
+   * the value the SQL tests. Mind the language's semantics: a negative op
+   * (`ne`, `notIn`, …) KEEPS NULL, unlike SQL's `<>`. Not on a union.
+   */
+  // `NoInfer`: checked against the fields, never a source of their types —
+  // so its clause literals stay narrow while `from` / `pick` infer.
+  membership?: NoInfer<MembershipOf<FieldsSpecFilterable<E, P, OF>>>;
   /** The old spelling's — `row` / `filterable` / `exposes` are derived here. */
   row?: never;
   filterable?: never;
   exposes?: never;
 }
+
+/** A membership filter over a spec's filterable columns. */
+export type MembershipOf<F> = F extends Filterable ? Filter<F> : never;
 
 /** What a fields spec derives, for the declaration to mint from. */
 export interface ResolvedFieldsSpec {

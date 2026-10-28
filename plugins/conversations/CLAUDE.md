@@ -169,11 +169,13 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
     - `fields/int/config.intField`
     - `infra/endpoints.defineEndpoint`
     - `network/live.liveValue`
+    - `network/live.patchRow`
     - `packages/list-bound.wholeList`
     - `primitives/pane.defineRoute`
     - `primitives/text-editor/paste-images.attachmentFileMarkdown`
     - `primitives/text-editor/paste-images.attachmentMarkdown`
     - `tasks/tasks-core.ConversationSchema`
+    - `tasks/tasks-core.conversationsEntityRef`
   - Exports (types):
     - `BackgroundWork`
     - `ContextCategory`

@@ -66,31 +66,6 @@ export const DIVERGENCE_REPORT_MISSES = 3;
  */
 export type OpFailure = { kind: "network" } | { kind: "http"; status: number };
 
-/**
- * Is an HTTP failure a FINAL verdict on the op, or one a retry can overturn?
- *
- * - `permanent` — a 4xx the server will answer the same way however often the
- *   op is re-sent (a validation failure, an op that no longer applies, a
- *   missing row). Keeping such an op rendered would show a state the server
- *   has definitively refused to hold, and park every newer same-target op
- *   behind it forever — so the op is REJECTED: dropped from the overlay and
- *   reported (`optimisticRejectionSink`).
- * - `transient` — 5xx (the server failed, not the op), 401 (an expired
- *   session; the same op succeeds after re-auth), 408 and 429 (timing, not
- *   content). The op keeps rendering under never-revert, as `error` + Retry.
- *
- * Never-revert (`research/2026-07-11-global-never-revert-optimistic-edits.md`)
- * protects predictions whose outcome is UNKNOWN; a permanent rejection is a
- * known one, and dropping the op renders server truth for a causal reason,
- * exactly like a `superseded` denial
- * (`research/2026-10-08-global-rejected-optimistic-ops.md`).
- */
-export function classifyRejection(status: number): "permanent" | "transient" {
-  if (status < 400 || status >= 500) return "transient";
-  if (status === 401 || status === 408 || status === 429) return "transient";
-  return "permanent";
-}
-
 /** One pending optimistic op. `vars` is replayed via `apply` on top of base. */
 export interface PendingOp<Vars> {
   opId: string;

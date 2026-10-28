@@ -1,5 +1,5 @@
 import { UNREVERTED_WRITE_HEADER } from "@plugins/infra/plugins/request-origin/core";
-import type { EndpointDef, MachineEndpointDef } from "./define-endpoint";
+import type { AnyEndpointDef as AnyDef } from "./define-endpoint";
 import {
   EndpointAgentWriteRefusedError,
   EndpointError,
@@ -7,10 +7,14 @@ import {
 import { isAgentWriteRefusal, SAFE_METHODS } from "./agent-write";
 import { interpolatePath } from "./route-params";
 
-/** Either kind of endpoint — a request is built and read the same way. */
-type AnyEndpointDef<Route extends string, TParams, TBody, TResponse, TQuery> =
-  | EndpointDef<Route, TParams, TBody, TResponse, TQuery>
-  | MachineEndpointDef<Route, TParams, TBody, TResponse, TQuery>;
+/** Any kind of endpoint — a request is built and read the same way. */
+type AnyEndpointDef<
+  Route extends string,
+  TParams,
+  TBody,
+  TResponse,
+  TQuery,
+> = AnyDef<Route, TParams, TBody, TResponse, TQuery>;
 
 /**
  * What a request to an endpoint carries beyond its params: the body and query

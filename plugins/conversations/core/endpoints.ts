@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
-import { ConversationSchema } from "@plugins/tasks/plugins/tasks-core/core";
+import {
+  ConversationSchema,
+  conversationsEntityRef,
+} from "@plugins/tasks/plugins/tasks-core/core";
+import { patchRow } from "@plugins/network/plugins/live/core";
 import { ModelChoiceSchema } from "@plugins/conversations/plugins/model-provider/core";
 import { WorkspaceSpecSchema } from "@plugins/conversations/plugins/workspace/core";
 import {
@@ -177,6 +181,20 @@ export const listConversationTurns = defineEndpoint({
   }),
 });
 
+/**
+ * Close a conversation (the sidebar's close). Predicted like
+ * `exitConversation` — a near-duplicate of it, to be merged.
+ */
 export const closeConversation = defineEndpoint({
   route: "POST /api/conversations/:id/close",
+  effect: (on) =>
+    patchRow(
+      on,
+      conversationsEntityRef,
+      ({ params }) => params.id,
+      () => ({
+        set: { status: "done", workingOn: null },
+        approx: { endedAt: new Date() },
+      }),
+    ),
 });

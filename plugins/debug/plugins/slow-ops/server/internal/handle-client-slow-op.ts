@@ -57,6 +57,8 @@ export const handleClientSlowOp = implement(
           batchCount,
           waits: item.waits,
           variant: item.detail?.variant,
+          censored: item.detail?.censored,
+          evidence: item.detail?.evidence,
           transportColdStart: item.transportColdStart,
           // The browser's own boot decomposition (page-load only): the
           // client-boot trace class reads it off the trigger detail and

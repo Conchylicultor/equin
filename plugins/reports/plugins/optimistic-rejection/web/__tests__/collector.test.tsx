@@ -5,7 +5,7 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render } from "@testing-library/react";
-import { optimisticRejectionSink } from "@plugins/primitives/plugins/optimistic-mutation/web";
+import { optimisticRejectionSink } from "@plugins/network/plugins/live/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import { report } from "@plugins/reports/web";
 import { OptimisticRejectionCollector } from "../components/optimistic-rejection-collector";

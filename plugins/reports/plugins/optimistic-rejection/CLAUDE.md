@@ -42,9 +42,9 @@ re-arms every 6h, like `optimistic-divergence`.
     - `Core.Root` → `OptimisticRejectionCollector`
     - `Reports.KindView` → `OptimisticRejectionKindView`
   - Uses:
+    - `network/live.optimisticRejectionSink`
     - `primitives/css/badge.Badge`
     - `primitives/css/inline.Inline`
-    - `primitives/optimistic-mutation.optimisticRejectionSink`
     - `reports.report`
     - `reports.Reports`
     - `shell/toast.showToast`

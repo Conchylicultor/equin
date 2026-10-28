@@ -610,6 +610,7 @@ export type AnyCollection = {
   columnScope?: string | null;
   arms?: unknown;
   exposes?: unknown;
+  membership?: unknown;
 };
 
 type ZodSafeParse =
@@ -918,6 +919,13 @@ export function compileExternalCollection(
   if ((collection.columnScope ?? null) !== null) {
     fail(
       "a `columnScope` collection folds scoped column sets from Postgres — it has no external spelling.",
+    );
+  }
+  if (collection.membership !== undefined) {
+    // The source owns its `where`: a declared membership it could silently
+    // ignore is refused until the external arm checks its answers against it.
+    fail(
+      "a collection declaring `membership` renders it as SQL (`filterSql`) — it has no external spelling yet.",
     );
   }
   // A scoped `all` set (`all: { by }`) is typed away (`ExternalAllCollection`

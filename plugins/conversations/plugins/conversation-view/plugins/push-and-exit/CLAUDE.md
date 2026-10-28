@@ -13,19 +13,19 @@
     - `Hints.Hint` "push-and-exit.exit"
     - `Hints.Hint` "push-and-exit.go"
     - `Hints.Hint` "push-and-exit.push-and-exit"
-  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 32 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations/conversation-view/pending-turn` ×5
     - `conversations/conversation-view` ×3
     - `hints` ×3
     - `infra/endpoints` ×3
     - `config_v2` ×2
     - `conversations` ×2
+    - `network/live` ×2
     - `primitives/css/ui-kit` ×2
     - `shell/notifications` ×2
     - `conversations/conversation-view/code.useEditedFiles`
     - `conversations/conversation-view/drop-and-exit.droppedNotification`
     - `conversations/conversation-view/resume.useResumeConversation`
-    - `network/live.useLive`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/live-state.combineResources`
     - `primitives/persistent-draft.useDraft`

@@ -1,10 +1,11 @@
 import { useEffect } from "react";
-import { optimisticDivergenceReportSink } from "@plugins/primitives/plugins/optimistic-mutation/web";
+import { optimisticDivergenceReportSink } from "@plugins/network/plugins/live/web";
 import { report } from "@plugins/reports/web";
 
 // A Core.Root side-effect component. The optimistic-mutation primitive is a
 // primitive and must not import `reports`, so it emits a neutral
-// OptimisticDivergenceReport into a module-level sink; this component owns the
+// OptimisticDivergenceReport into a module-level sink (`network/live`'s, shared
+// by every prediction system); this component owns the
 // mapping from that body to a `kind: "optimistic-divergence"` report — exactly
 // the inversion crash uses for error-boundary's boundaryReportSink. Renders
 // nothing.

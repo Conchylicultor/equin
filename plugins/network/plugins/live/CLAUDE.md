@@ -194,6 +194,14 @@ with no same-named column is bound in `columns: { name: (j) => j.base.col }`
   sqlType, notNull }) }` — filters/sorts/groups like a column; never the id.
 - **`where`** — base membership, ANDed into window, `:rows` and groupings. A
   mutable column is fine (a flip is an exit). Over joins: `(j) => gt(j.x.y, 0)`.
+- **`membership`** (declared on the `liveCollection`, core) — the base
+  membership AS DATA: a `Filter` over listed fields (`as const`). Rendered by
+  `filterSql` and ANDed with `where` on window, `:rows` and `all`; carried as
+  `c.membership` (`{ filter, filterable }`) so a browser re-checks a row with
+  `matchesFilter` (what a predicted write's overlay does). Each column binds
+  to the base column of its name; a negative op KEEPS NULL (equal to SQL `<>`
+  only on a NOT NULL column). Refused beside `arms` and on the external arm.
+  Adopters: `conversations-active` / `-system`.
 - **`defaults`** — `[{ unless: "sourceId", where: (j) => … }]`: ANDed into a
   window/grouping tuple UNLESS its filter names the `unless` column (a default
   the user overrides by asking about the column). Never on `:rows`.
@@ -311,12 +319,68 @@ state or limit change.
   means not in the collection. A `null` id, `""`, or an id containing `,`
   (`isPointId`) is `found: false` from the first render and reads nothing — a
   URL/agent-supplied id renders its not-found state.
+  Ready arms carry `pending`: a predicted write still applies to the row here.
 - **Optimistic reads** are `optimistic-mutation`'s `useOptimisticResource`
   over the same argument shapes (`(value, params?, opts)`, `(c, { ids },
   opts)`, `(c, { where }, opts)` for a scoped `all` set); `loading` until a
   real value lands, `dispatch` only on `ready`.
 - `useLive` is watched by `live-state/no-pending-data-collapse`; both by
   `no-ready-negation` — never `status !== "ready"`.
+
+## Predicted writes — `effect`, `useLiveMutation`, no pending state
+
+Design: `research/2026-10-27-global-predicted-endpoint-effects.md`. A write
+endpoint declares what it does to live data, so every surface reading it shows
+the change at once; it has exactly one browser client, which cannot be awaited.
+
+```ts
+// core/ — on the endpoint (infra/endpoints' `effect`)
+effect: (on) => patchRow(on, conversationsEntityRef, ({ params }) => params.id, () => ({
+  set: { status: "done", workingOn: null },  // shown AND compared
+  approx: { endedAt: new Date() },           // shown, never compared
+})),
+// web/
+const close = useLiveMutation(exitConversation, { onSuccess?, onError?, label? });
+if (close.kind === "available") close.mutate({ params: { id } });   // void
+```
+
+- **Builders** (`core/internal/predict.ts`): `patchRow`, `removeRow`,
+  `applyRows` (free-form reducer, confirmed by the ack), `effects(...)`; each
+  takes `on` first so its callbacks are typed by the route. The target is an
+  ENTITY row (`entityRef` name + id), never a collection.
+- **One overlay per transport, keyed by entity row** (`web/internal/
+  predict-overlay.ts`, `use-predicted.ts`): `useLiveRow`, `{ ids }`, `all` and
+  window reads of any collection `from` the entity fold the ops over their own
+  server rows; a row leaving the collection's `membership` is dropped. Never an
+  insert, a grouping or a count; the window's own `where` is not re-checked. A
+  read no op touches keeps its server data's identity.
+- **Retirement is per tuple.** Each mounted read holds its tuple's rows; on
+  each data change, ack and holder leaving, an op is `confirmed` (row matches
+  `set`, or a removed row is absent — retired there for good), `needs` (held,
+  unconfirmed) or `irrelevant`. DONE once acked and no holder needs it, so a
+  stale list never re-shows a closed row. Push-based, never a timer.
+- **`useLiveMutation`** is the only client (`useEndpointMutation` /
+  `FetchEndpoint` refuse a predicted def — tsc): `{ kind: "available",
+  mutate(req): void } | { kind: "unavailable", message }`. No `isPending`, no
+  promise, so no spinner. `onSuccess(response, req)` for what depends on the
+  answer. The op's lifecycle belongs to the transport's writer: a control
+  that unmounts on click still has its write sent, confirmed and timed. Sent
+  through `endpointContractOf(def)` on `entitySendLaneKey` (one lane registry
+  with `optimistic-mutation`).
+- **Failure — never-revert.** A permanent 4xx removes the op and emits
+  `optimisticRejectionSink` (its collector toasts and reports — `onError` must
+  not toast again); a transient failure keeps it (sync cloud: error + Retry);
+  a network failure keeps it `syncing`, re-sent on reconnect.
+- **Timing.** DONE emits the complete `confirm` sample (`predict/<route>`); an
+  op not done by `confirmWithinMs ?? 10 s` emits a CENSORED one
+  (`…/unconfirmed/awaiting-send | -ack | -confirm-frame`) — both reach
+  `debug/slow-ops`.
+- **Don't declare an effect** when the server mints an id the caller needs,
+  the flow is driven by the response, or the server checks a precondition that
+  can fail (409/400). Predict only what the REQUEST decides.
+- Tests: `web/internal/predict-overlay.test.ts`, `web/__tests__/predicted-
+  writes.test.tsx`. Adopters: `exitConversation`, `dropAndExit`,
+  `closeConversation`.
 
 ## Paged reads — key-range pages through `useLive`
 
@@ -972,20 +1036,14 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
   - Slot contributors: 40 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `FieldPresentation.Register` ×37
     - `ClientFields.Resolve` ×3
-  - Uses:
-    - `primitives/live-state.PagedResourceResult`
-    - `primitives/live-state.ResourceDerivation`
-    - `primitives/live-state.ResourceDescriptor`
-    - `primitives/live-state.ResourceError`
-    - `primitives/live-state.ResourceResult`
-    - `primitives/live-state.ResourceTupleResult`
-    - `primitives/live-state.ResourceUnavailable`
-    - `primitives/live-state.useNotificationsClient`
-    - `primitives/live-state.useResource`
-    - `primitives/live-state.useResources`
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/live-state` ×10
+    - `primitives/networking` ×4
+    - `infra/endpoints` ×3
+    - `primitives/latest-ref.useLatestRef`
     - `primitives/log-channels.clientLog`
-    - `primitives/networking.useTransport`
     - `primitives/slot-render.renderIsolated`
+    - `primitives/sync-status.useReportSync`
   - Exports (types):
     - `ClientFieldReaders`
     - `ClientFieldsResolution`
@@ -1000,6 +1058,9 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `LiveFieldOptionsRead`
     - `LiveIdsQuery`
     - `LiveListResult`
+    - `LiveMutation`
+    - `LiveMutationOptions`
+    - `LiveMutationRequest`
     - `LivePageError`
     - `LivePagePlaceholder`
     - `LivePagesQuery`
@@ -1011,22 +1072,36 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `LiveValuePagesOptions`
     - `PagesTruncation`
     - `PresentationOwner`
+    - `SendLaneKey`
     - `StoredClientFieldsResolution`
     - `StoredFieldPresentation`
+    - `UnconfirmedDeadline`
+    - `UnconfirmedDeadlineOptions`
+    - `UnconfirmedSample`
     - `VisibleRange`
     - `WithMachine`
   - Exports (values):
+    - `armUnconfirmedDeadline`
+    - `classifyRejection`
     - `ClientFields`
     - `clientFieldsKey`
     - `collectionPresentationKey`
+    - `enqueueOnSendLane`
+    - `entitySendLaneKey`
     - `FieldPresentation`
+    - `hiddenSince`
     - `mapRow`
     - `mintVisibleRange`
+    - `optimisticDivergenceReportSink`
+    - `optimisticRejectionSink`
     - `presentationOwnerKey`
+    - `REJECTION_MESSAGE_MAX`
     - `renderClientFieldsResolver`
+    - `resourceSendLaneKey`
     - `useClientFieldsResolvers`
     - `useFieldPresentations`
     - `useLive`
+    - `useLiveMutation`
     - `useLiveReader`
     - `useLiveRow`
 - Server:
@@ -1081,10 +1156,11 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `serveValue`
     - `sliceRange`
 - Core:
-  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `network/live/filter` ×7
     - `fields` ×6
-    - `network/live/filter` ×6
     - `primitives/live-state` ×6
+    - `infra/endpoints` ×5
     - `packages/list-bound` ×3
     - `packages/resource-protocol` ×2
     - `infra/query-resource.KIND_RE`
@@ -1141,6 +1217,8 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `LiveDecodedCountQuery`
     - `LiveDecodedGroupQuery`
     - `LiveDecodedQuery`
+    - `LiveEffect`
+    - `LiveEffectPart`
     - `LiveExposedColumns`
     - `LiveExposes`
     - `LiveField`
@@ -1168,6 +1246,7 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `LiveKeyRange`
     - `LiveLookupCollection`
     - `LiveMachineDecl`
+    - `LiveMembership`
     - `LiveNoWindowCollection`
     - `LiveOrderBy`
     - `LivePageBounds`
@@ -1215,8 +1294,12 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `LiveWindowDescriptor`
     - `LiveWindowParams`
     - `NotCollectionRow`
+    - `PredictOptions`
     - `RequireLabel`
+    - `ResolvedLiveEffect`
+    - `ResolvedLiveTarget`
     - `RowKind`
+    - `RowPatch`
     - `ScopedColumnMember`
     - `ServedExternalAll`
     - `ServedExternalLookup`
@@ -1230,7 +1313,9 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `ServeValueOnOptions`
     - `WithContributedColumns`
   - Exports (values):
+    - `applyRows`
     - `clientFields`
+    - `effects`
     - `exposedColumns`
     - `extentOf`
     - `isPointId`
@@ -1242,25 +1327,29 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `liveArm`
     - `liveCollection`
     - `liveValue`
+    - `patchRow`
+    - `readLiveEffect`
+    - `removeRow`
     - `rowKind`
     - `scopedLiveColumns`
     - `serveCollectionOn`
     - `serveValueOn`
 - Cross-plugin:
-  - Imported by: 304 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 309 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×81
-    - `conversations` ×51
+    - `conversations` ×53
     - `debug` ×32
     - `tasks` ×29
     - `infra` ×19
     - `page` ×14
     - `active-data` ×12
+    - `primitives` ×11
     - `build` ×10
-    - `primitives` ×10
     - `stats` ×5
     - `code-explorer` ×4
     - `plugin-meta` ×4
     - `auth` ×3
+    - `reports` ×3
     - `review` ×3
     - `ui` ×3
     - `apps-core` ×2
@@ -1274,7 +1363,6 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `backup/runs-arm`
     - `database/query-deadline`
     - `fields/secret/config`
-    - `reports`
     - `runs`
     - `screenshot`
     - `shell/notifications`
@@ -1285,6 +1373,7 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `live/no-endpoint-read` — `web` (sanctioned)
     - `no-db-backed-notify` — `server/internal/serve-off-feed.ts` (sanctioned)
     - `no-raw-websocket` — `e2e/narrowing.ts` (sanctioned)
+    - `endpoints/no-endpoint-effect-internals` — `core/internal/predict.ts`, `web` (sanctioned)
   - Exempted by:
     - `framework/central-core` (0 debt)
     - `framework/resource-runtime` (0 debt)
@@ -1308,7 +1397,10 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `sliceRange`
 - Test helpers:
   - Web: `@plugins/network/plugins/live/web/testing`
+    - `activeSendLaneCount` — Occupied lanes.
     - `pageZeroParams` — The tuple a paged read of `collection` subscribes for its first page, asked nothing (`{}`): the page plan's start page, encoded by the collection's page source.
+    - `UNCONFIRMED_MS` — How long a predicted write may stay unconfirmed before it is reported.
+    - Types: `OptimisticDivergenceReport`, `OptimisticRejectionReport`
   - Server: `@plugins/network/plugins/live/server/testing`
     - `checkPagedSource` — Ask `loader` every range over the items' and `cuts`' keys and throw — naming the range, the answer and the expected ids — on the first answer that differs from `sliceRange` or fails the served half's checks.
     - `compileCollection` — Derive the specs for a collection — three, or just `rows` for a lookup-only one.

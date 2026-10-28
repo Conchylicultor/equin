@@ -10,15 +10,17 @@
   - Uses:
     - `conversations.useLiveConversation`
     - `conversations/conversation-view/exit-menu.ExitMenu`
-    - `infra/endpoints.useEndpointMutation`
+    - `network/live.useLiveMutation`
     - `primitives/css/ui-kit.DropdownMenuItem`
-    - `shell/notifications.useToast`
     - `ui/icons.Icon`
 - Machine:
   - Uses: `infra/endpoints.implementMachine`
   - Routes: `POST /api/conversations/:id/exit`
 - Core:
-  - Uses: `infra/endpoints.defineEndpoint`
+  - Uses:
+    - `infra/endpoints.defineEndpoint`
+    - `network/live.patchRow`
+    - `tasks/tasks-core.conversationsEntityRef`
   - Exports (values): `exitConversation`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`

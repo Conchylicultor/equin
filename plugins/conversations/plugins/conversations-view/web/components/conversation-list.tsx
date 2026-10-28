@@ -5,14 +5,15 @@ import {
   useOpenPane,
   usePaneStore,
 } from "@plugins/primitives/plugins/pane/web";
-import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useLiveMutation } from "@plugins/network/plugins/live/web";
 import { closeConversation } from "@plugins/conversations/core";
 import { ConversationsSidebarDataView } from "@plugins/conversations/plugins/conversations-view/plugins/data-view/web";
 
 export function ConversationList() {
   const openPane = useOpenPane();
   const store = usePaneStore();
-  const fetchEndpoint = useFetchEndpoint();
+  // Predicted: the row leaves the active list at once.
+  const close = useLiveMutation(closeConversation);
 
   // Highlight the conversation active in THIS surface's route — not the
   // focused window's URL. A background/secondary visible surface reflects its
@@ -21,9 +22,9 @@ export function ConversationList() {
   const entries = conversationPane.useRouteEntries();
   const activeId = entries[entries.length - 1]?.params.convId ?? null;
 
-  const handleCloseConversation = async (id: string, e: React.MouseEvent) => {
+  const handleCloseConversation = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    await fetchEndpoint(closeConversation, { id });
+    close.mutate({ params: { id } });
   };
 
   // A row is a link: a plain click brings back the conversation's saved

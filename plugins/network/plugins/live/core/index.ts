@@ -113,6 +113,7 @@ export type {
   LiveGroupCodec,
   LiveGroupsDescriptor,
   LiveLookupCollection,
+  LiveMembership,
   LiveNoWindowCollection,
   LivePreload,
   LiveRowsCollection,
@@ -177,3 +178,21 @@ export type {
   LiveWindowBounds,
   LiveWindowParams,
 } from "./internal/query";
+// Predicted writes: what a write endpoint does to live data, declared on the
+// endpoint (`defineEndpoint({ …, effect: patchRow(…) })`); `readLiveEffect`
+// hands the payload to the predicted-write client.
+export {
+  applyRows,
+  effects,
+  patchRow,
+  readLiveEffect,
+  removeRow,
+} from "./internal/predict";
+export type {
+  LiveEffect,
+  LiveEffectPart,
+  PredictOptions,
+  ResolvedLiveEffect,
+  ResolvedLiveTarget,
+  RowPatch,
+} from "./internal/predict";

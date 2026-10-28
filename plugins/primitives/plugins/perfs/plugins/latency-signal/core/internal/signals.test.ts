@@ -3,6 +3,7 @@ import {
   CLIENT_LATENCY_SIGNALS,
   clientLatencySink,
   splitPhases,
+  splitReachedPhases,
   type ClientLatencySample,
 } from "./signals";
 
@@ -67,6 +68,46 @@ describe("splitPhases", () => {
       hidden: false,
     };
     expect(sample.signal).toBe("confirm");
+  });
+});
+
+describe("censored samples", () => {
+  test("splitReachedPhases keeps only the reached phases, clamped, in table order", () => {
+    const phases = splitReachedPhases("confirm", {
+      retry: -1,
+      "send-lane": 4,
+      "server-ack": undefined,
+    });
+    expect(phases).toEqual({ "send-lane": 4, retry: 0 });
+    expect(Object.keys(phases)).toEqual(["send-lane", "retry"]);
+  });
+
+  test("tsc: a censored sample may omit phases; a complete one may not; only confirm censors", () => {
+    const base = { key: "k", params: {}, totalMs: 1, hidden: false };
+    const reached = { "send-lane": 0 };
+    const censoredConfirm = {
+      ...base,
+      signal: "confirm" as const,
+      censored: true as const,
+      phases: reached,
+    };
+    const uncensoredConfirm = {
+      ...base,
+      signal: "confirm" as const,
+      phases: reached,
+    };
+    const censoredUpdate = {
+      ...base,
+      signal: "update" as const,
+      censored: true as const,
+      phases: { "server-notice": 0 },
+    };
+    const censored: ClientLatencySample = censoredConfirm;
+    // @ts-expect-error — an uncensored sample must carry every phase
+    const complete: ClientLatencySample = uncensoredConfirm;
+    // @ts-expect-error — `update` is not a censorable signal
+    const update: ClientLatencySample = censoredUpdate;
+    expect([censored, complete, update].length).toBe(3);
   });
 });
 

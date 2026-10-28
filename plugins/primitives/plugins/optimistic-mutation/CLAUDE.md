@@ -52,8 +52,12 @@ The primitive already asserted it, on its failed-op retry drain:
 > that is merely not committed YET.
 
 …and enforced it there while leaving **first dispatch** racing. Dispatch, `retry`
-and the reconnect drain are now ONE mechanism: the **send lane**
-(`web/internal/send-lane.ts`).
+and the reconnect drain are now ONE mechanism: the **send lane** — which lives in
+`network/live/web` (`enqueueOnSendLane` / `resourceSendLaneKey`,
+`network/live/web/internal/send-lane.ts`), not here, so every prediction system
+(this overlay, its lane-only writes, the predicted endpoint effects) shares ONE
+module-level registry; this plugin's `web/internal/lane-writes.ts` holds only
+`enqueueResourceWrite` / `enqueueDetachedWrite` over it.
 
 - **Per `(resource.key, paramsKey)`, module-level** — NOT a per-hook ref: two
   mounts on one tuple are two writers to one server-side entity, and a
@@ -300,7 +304,8 @@ picks.dispatch(change);                  // the ready arm: data, serverData, err
   `{ watermark }` from `mutate` removes even that window.
 - **Failure model.** A rejected `mutate` is classified once, and only a
   PERMANENT rejection leaves the overlay:
-  - **`rejected`** (`EndpointError` whose status `classifyRejection` calls
+  - **`rejected`** (`EndpointError` whose status `classifyRejection` — in
+    `network/live/web`, shared with the predicted endpoint effects — calls
     `permanent`: any 4xx but 401 / 408 / 429): a FINAL verdict — the server will
     answer the same way however often the op is re-sent. Never-revert protects
     predictions whose outcome is UNKNOWN; this outcome is known, so keeping the
@@ -308,7 +313,7 @@ picks.dispatch(change);                  // the ready arm: data, serverData, err
     juniors forever (a collapse that "does nothing"), and lose the edit silently
     on reload. So `rejectOp` removes it at once — a direct removal, not a
     reconcile verdict, since nothing on the server was folded on top of it — and
-    the hook emits `optimisticRejectionSink` (`web/reporter.ts`; drained by
+    the hook emits `optimisticRejectionSink` (`network/live/web`; drained by
     `reports/optimistic-rejection` into an error toast + a report) and calls
     `onError(err, vars, { opId, rejected: true })`, the consumer's cue to unwind
     side state keyed on the op (the page editor drops the undo entry). Newer ops
@@ -371,7 +376,8 @@ picks.dispatch(change);                  // the ready arm: data, serverData, err
     own write (undo→redo), not a lost race: the drop still happens, the
     `superseded` report is suppressed. Misclassification costs a mis-filed
     report and never a lost edit, which is where a heuristic belongs.
-- **`optimisticDivergenceReportSink`** (`web/reporter.ts`) is the sanctioned sink
+- **`optimisticDivergenceReportSink`** (`network/live/web`, shared with the
+  predicted endpoint effects) is the sanctioned sink
   inversion, mirroring `error-boundary`'s `boundaryReportSink`: this primitive
   must not import `reports`, so `reports/plugins/optimistic-divergence` registers
   the handler at mount and files the report. The payload
@@ -567,11 +573,23 @@ that drops it from the overlay — is emitted on `clientLatencySink`
   the response — `confirm-frame` is 0), `ack` (a standalone ack frame; the ack
   edge calls `reportOutcomes(next, "ack")` like the other two).
 - **Hidden**: tagged when the tab is hidden now or changed visibility at any
-  point since dispatch (`web/internal/tab-hidden.ts` — one side of every
+  point since dispatch (`network/live`'s `hiddenSince` — one side of every
   visibility change is hidden); consumers exclude it.
-- **Nothing is emitted** for an op that never confirms (denied, denied-silent,
+- **No normal sample** for an op that never confirms (denied, denied-silent,
   rejected, stalled, unmounted while pending) — rejections and stalls already
   have their own sinks — nor, wholesale, when the sink has no subscriber.
+- **The unconfirmed deadline.** Each op arms `network/live`'s
+  `armUnconfirmedDeadline` at dispatch (telemetry-gated like the sample): if it
+  has not left the overlay `UNCONFIRMED_MS` (10 s) later, ONE **censored**
+  `confirm` sample is emitted (`censored: true`, `totalMs` = elapsed, only the
+  phases reached — `send-lane` / `retry` once sent, `server-ack` once acked,
+  never `confirm-frame`), variant `unconfirmed/awaiting-send` |
+  `awaiting-ack` | `awaiting-confirm-frame`, the ack watermark in `detail`.
+  slow-ops files it as `<key> (unconfirmed)`, its own report. Every exit from
+  the overlay (confirmed, rejected, denied) clears the op's deadline in
+  `commitPending`; an unmount clears all and emits nothing (the reader no
+  longer watches the tuple, so it cannot tell late from never). A stalled op
+  still in the overlay does fire it.
 - **Write paths NOT covered** (no overlay op to time): a detached
   `enqueueResourceWrite` / `enqueueDetachedWrite`, `useEndpointMutation`
   invalidates, config_v2 writes, Yjs collab text, `editable-field`.
@@ -582,34 +600,22 @@ that drops it from the overlay — is emitted on `clientLatencySink`
 
 - Description: Optimistic-mutation primitive over live-state: useOptimisticResource replays pending ops on server truth (overlay/replay) under the never-revert policy — causal (ack-watermark) and content-based confirmation, denial only under causal proof, keep-rendered transient failures with reconnect auto-retry, and permanent (4xx) rejections dropped and reported.
 - Web:
-  - Uses:
-    - `infra/endpoints.EndpointAgentWriteRefusedError`
-    - `infra/endpoints.EndpointError`
-    - `infra/endpoints.getEndpointErrorMessage`
+  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `network/live` ×10
+    - `primitives/live-state` ×8
+    - `infra/endpoints` ×3
     - `primitives/latest-ref.useLatestRef`
-    - `primitives/live-state.LiveRegistries`
-    - `primitives/live-state.queryKeyFor`
-    - `primitives/live-state.ResourceError`
-    - `primitives/live-state.useLiveRegistries`
-    - `primitives/live-state.useLiveSocketKindOf`
-    - `primitives/live-state.useNotificationsClient`
-    - `primitives/live-state.useResource`
-    - `primitives/live-state.useResourceAcks`
     - `primitives/networking.subscribeWsStatus`
     - `primitives/sync-status.useReportSync`
   - Exports (types):
     - `AwaitResourceWrite`
-    - `OptimisticDivergenceReport`
     - `OptimisticOptions`
-    - `OptimisticRejectionReport`
     - `OptimisticResult`
     - `OptimisticSettled`
   - Exports (values):
     - `enqueueDetachedWrite`
     - `enqueueResourceWrite`
     - `OpNoLongerApplies`
-    - `optimisticDivergenceReportSink`
-    - `optimisticRejectionSink`
     - `useAwaitResourceWrite`
     - `useOptimisticResource`
 - Cross-plugin:
@@ -620,8 +626,6 @@ that drops it from the overlay — is emitted on `clientLatencySink`
     - `conversations/conversations-view/queue`
     - `page/editor`
     - `page/tags`
-    - `reports/optimistic-divergence`
-    - `reports/optimistic-rejection`
     - `ui/theme-engine/saved-themes`
 - Exemptions:
   - Exempts itself from: `live/no-legacy-resource-spelling` — `.` (sanctioned)

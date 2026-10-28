@@ -36,6 +36,7 @@ import {
   type TableOf,
   type WireCheck,
 } from "./collection-source";
+import { andWhere, membershipSql } from "./membership-sql";
 
 // The `all` arm of `serveCollection` (P8 v3 step 16b.6, C4): a collection
 // declared `liveCollection(key, { all })` — every row, in one declared order —
@@ -349,7 +350,23 @@ export function compileAllSpecs<Row, B extends string = never>(
     }
     return out;
   };
-  const where = opts.where;
+  // The base membership: the declaration's (`membership`) ANDed with the
+  // serve call's `where`.
+  const membership = membershipSql(
+    collection.membership,
+    sourceColumns,
+    overrides,
+    fail,
+  );
+  const declaredWhere = opts.where;
+  const where: typeof declaredWhere =
+    membership === undefined
+      ? declaredWhere
+      : declaredWhere === undefined
+        ? membership
+        : typeof declaredWhere === "function"
+          ? (j) => andWhere(declaredWhere(j), membership)!
+          : andWhere(declaredWhere, membership);
   const joins: readonly AllJoinSpec[] = [
     ...(opts.joins ?? []),
     ...folds.map((f) => f.join),
