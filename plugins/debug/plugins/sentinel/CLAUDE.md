@@ -42,8 +42,11 @@ latch owner** — no `setDuress/refreshDuress/clearDuress` call exists on main.
   keeps refreshing), a rapid-failure give-up (5 immediate deaths → status
   `down`, no respawn loop), a supervision status on every transition (see "When
   the watcher dies" below), live threshold push (`sampler.ts` watches config
-  and calls `pushSentinelThresholds`), graceful stop (worker clears the latch,
-  acks, then terminate). Config-free, so a test drives it with any worker.
+  and calls `pushSentinelThresholds`), graceful stop (worker stops ticking,
+  acks, then terminate — it **leaves a tripped latch in place** for the next
+  worker to adopt: clearing on every main restart ended episodes at full load and
+  released every held build at once; a latch nobody adopts lapses with its lease
+  and the next init writes its `lease-lapsed` clear line). Config-free, so a test drives it with any worker.
 - `sampler.ts` / `onset.ts` (main) — **best-effort re-emitters only**: sample
   frames → `cluster` trace ring + `onSentinelSample` listeners; trip frames →
   `captureTrace({kind:"cluster-onset", critical: true})`; log frames → the

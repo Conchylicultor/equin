@@ -132,9 +132,18 @@ export interface ValveDeps {
    */
   waitForWake(signal: AbortSignal): Promise<void>;
   gate: GateLocks;
-  /** The build blocked at the gate; `reason` says on what. */
+  /**
+   * The build is blocked at the gate on `reason` — called again each time what
+   * it waits on changes (the latch cleared, but a build admitted alone still
+   * runs), so every stretch of a hold is its own segment with its own cause.
+   */
   onHoldStart(reason: string | null): void;
   onHoldEnd(result: HoldResult): void;
+  /**
+   * The build got the shared lock but duress had tripped meanwhile: it hands
+   * the lock back and goes round again, to the back of the line.
+   */
+  onRequeue(): void;
 }
 
 /** The hold reason while a calm build waits for an exclusive build to finish. */
@@ -158,14 +167,18 @@ export async function admitThroughGate(
 ): Promise<GateHold | null> {
   if (!opts.gated) return null;
 
-  let holding = false;
+  // What the build is held on right now; `undefined` while not held. A hold
+  // whose cause changes opens a new segment, so the op log shows each stretch
+  // (in line under duress / behind a build running alone / back in line after
+  // a requeue) instead of one opaque wait from the first hold to admission.
+  let heldOn: string | null | undefined;
   const holdStart = (reason: string | null): void => {
-    if (holding) return;
-    holding = true;
+    if (heldOn !== undefined && heldOn === reason) return;
+    heldOn = reason;
     deps.onHoldStart(reason);
   };
   const admitted = (hold: GateHold, result: HoldResult): GateHold => {
-    if (holding) deps.onHoldEnd(result);
+    if (heldOn !== undefined) deps.onHoldEnd(result);
     return hold;
   };
 
@@ -186,6 +199,8 @@ export async function admitThroughGate(
     // after the ones already running — go round as a duress admission.
     if (deps.isUnderDuress()) {
       await shared.release();
+      heldOn = undefined;
+      deps.onRequeue();
       continue;
     }
     return admitted(shared, "cleared");
@@ -268,9 +283,13 @@ export function checkValveGuard(
 
 /** Production deps: the real latch, the gate's flocks, fs.watch wake, span, console. */
 export function createValveDeps(): ValveDeps {
-  // One hold is always closed before the next opens (holds never nest), so a
-  // single slot for the open span suffices.
+  // Holds never nest, so a single slot for the open span suffices; a hold
+  // whose cause changes closes the previous segment's span first.
   let endHoldSpan: (() => void) | undefined;
+  const closeHoldSpan = (): void => {
+    endHoldSpan?.();
+    endHoldSpan = undefined;
+  };
   return {
     isUnderDuress,
     duressGuard: () => duressGuard(readSentinelWatch(sentinelStatusDir.path)),
@@ -278,6 +297,7 @@ export function createValveDeps(): ValveDeps {
     waitForWake: waitForLatchWake,
     gate: createGateLocks(agentBuildGateDir),
     onHoldStart: (reason) => {
+      closeHoldSpan();
       console.log(
         reason === EXCLUSIVE_RUNNING_REASON
           ? `build admission held: ${reason} — waiting for it to finish...`
@@ -286,16 +306,23 @@ export function createValveDeps(): ValveDeps {
       endHoldSpan = buildProfilerStart(
         "duressHold",
         "build:queue",
-        "held: host under duress",
+        reason === EXCLUSIVE_RUNNING_REASON
+          ? `held: ${reason}`
+          : "held: host under duress",
       );
     },
     onHoldEnd: (result) => {
-      endHoldSpan?.();
-      endHoldSpan = undefined;
+      closeHoldSpan();
       console.log(
         result === "acquired"
           ? "build admission released: running alone while the host is under duress"
           : "build admission released: duress cleared",
+      );
+    },
+    onRequeue: () => {
+      closeHoldSpan();
+      console.log(
+        "build admission: duress tripped again before this build started — back in line",
       );
     },
   };

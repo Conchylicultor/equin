@@ -1376,6 +1376,11 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
       baseValveDeps.onHoldEnd(outcome);
       profiler.waitEnd(outcome);
     },
+    // Back in line: a `requeue` event, and the next hold carries the new cycle.
+    onRequeue: () => {
+      baseValveDeps.onRequeue();
+      profiler.requeue();
+    },
   };
 
   // A gated build whose machine watcher is not running cannot be held, so it

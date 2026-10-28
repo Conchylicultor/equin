@@ -88,10 +88,11 @@ function harness(opts: { duress?: boolean } = {}) {
   let duressChecks = 0;
   const wakers = new Set<() => void>();
   const gate = fakeGate();
-  const holds: { start: (string | null)[]; end: HoldResult[] } = {
-    start: [],
-    end: [],
-  };
+  const holds: {
+    start: (string | null)[];
+    end: HoldResult[];
+    requeues: number;
+  } = { start: [], end: [], requeues: 0 };
   const deps: ValveDeps = {
     isUnderDuress: () => {
       duressChecks++;
@@ -115,6 +116,9 @@ function harness(opts: { duress?: boolean } = {}) {
     gate: gate.locks,
     onHoldStart: (reason) => holds.start.push(reason),
     onHoldEnd: (result) => holds.end.push(result),
+    onRequeue: () => {
+      holds.requeues++;
+    },
   };
   return {
     deps,
@@ -193,7 +197,7 @@ describe("admitThroughGate", () => {
     const other = h.gate.take("shared");
     const hold = await admitThroughGate({ gated: true }, h.deps);
     expect(hold?.mode).toBe("shared");
-    expect(h.holds).toEqual({ start: [], end: [] });
+    expect(h.holds).toEqual({ start: [], end: [], requeues: 0 });
     await hold?.release();
     await other.release();
   });
@@ -205,6 +209,7 @@ describe("admitThroughGate", () => {
     expect(h.holds).toEqual({
       start: ["cluster-onset: decompressionsPerSec"],
       end: ["acquired"],
+      requeues: 0,
     });
     await hold?.release();
   });
@@ -238,6 +243,31 @@ describe("admitThroughGate", () => {
     await running.release();
   });
 
+  test("duress clears while a build runs alone: a new hold segment says so", async () => {
+    const h = harness({ duress: true });
+    const alone = h.gate.take("exclusive");
+    const admit = track(admitThroughGate({ gated: true }, h.deps));
+    await tick();
+    expect(h.holds.start).toEqual(["cluster-onset: decompressionsPerSec"]);
+
+    // Calm now, but the build admitted alone still runs: the hold goes on with
+    // a different cause, recorded as its own segment.
+    h.setDuress(false);
+    for (let i = 0; i < 5; i++) await tick();
+    expect(admit.done()).toBe(false);
+    expect(h.holds.start).toEqual([
+      "cluster-onset: decompressionsPerSec",
+      EXCLUSIVE_RUNNING_REASON,
+    ]);
+
+    await alone.release();
+    const hold = await admit.promise;
+    expect(hold?.mode).toBe("shared");
+    expect(h.holds.end).toEqual(["cleared"]);
+    expect(h.holds.requeues).toBe(0);
+    await hold?.release();
+  });
+
   test("calm, but a build admitted under duress runs: wait for it, then go shared", async () => {
     const h = harness();
     const alone = h.gate.take("exclusive");
@@ -262,9 +292,14 @@ describe("admitThroughGate", () => {
     h.setDuress(true);
     await alone.release();
     const hold = await admit.promise;
-    // Got the shared lock, saw duress, released it, came back exclusive.
+    // Got the shared lock, saw duress, released it, came back exclusive — a
+    // requeue, then a new hold segment naming the duress.
     expect(hold?.mode).toBe("exclusive");
-    expect(h.holds.start).toEqual([EXCLUSIVE_RUNNING_REASON]);
+    expect(h.holds.start).toEqual([
+      EXCLUSIVE_RUNNING_REASON,
+      "cluster-onset: decompressionsPerSec",
+    ]);
+    expect(h.holds.requeues).toBe(1);
     expect(h.holds.end).toEqual(["acquired"]);
     expect(h.gate.state()).toEqual({ shared: 0, exclusive: true });
     await hold?.release();

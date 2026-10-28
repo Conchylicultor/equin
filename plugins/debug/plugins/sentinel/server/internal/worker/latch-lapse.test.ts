@@ -7,6 +7,7 @@ import {
   readFileSync,
   rmSync,
   statSync,
+  utimesSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -354,6 +355,78 @@ describe("sentinel worker latch lifecycle", () => {
       expect(clearFrame.elevated).toEqual([]);
       expect(clearFrame.episodeSetAt).toBe(setAt);
     }
+
+    rig.post({ type: "stop" });
+    await rig.waitFor((f) => f.type === "stopped");
+  }, 20_000);
+
+  test("a stopping worker leaves its tripped latch for the next one to adopt", async () => {
+    const dir = newTmpDir();
+    const latchPath = latchPathIn(dir);
+    const init: MainToWorkerFrame = {
+      type: "init",
+      cadenceMs: CADENCE_MS,
+      thresholds: THRESHOLDS,
+      maxEpisodeHoldMs: 600_000,
+    };
+
+    // A main restart mid-episode: the first worker trips, then stops.
+    const first = spawnRig(dir);
+    first.post(init);
+    first.post({ type: "__sample", sample: hot() });
+    await first.waitFor((f) => f.type === "trip");
+    first.post({ type: "stop" });
+    await first.waitFor((f) => f.type === "stopped");
+    expect(first.frames.some((f) => f.type === "clear")).toBe(false);
+    expect(existsSync(latchPath)).toBe(true);
+    expect(readEpisodeLines(dir).map((e) => e.kind)).toEqual(["trip"]);
+
+    // Its successor adopts the episode — no second trip — and owns its clear.
+    const second = spawnRig(dir);
+    second.post(init);
+    second.post({ type: "__sample", sample: calm() });
+    await second.waitFor((f) => f.type === "clear");
+    expect(second.frames.some((f) => f.type === "trip")).toBe(false);
+    expect(existsSync(latchPath)).toBe(false);
+    const episodes = readEpisodeLines(dir);
+    expect(episodes.map((e) => e.kind)).toEqual(["trip", "clear"]);
+    expect(episodes[1]?.episodeSetAt).toBe(episodes[0]?.episodeSetAt);
+
+    second.post({ type: "stop" });
+    await second.waitFor((f) => f.type === "stopped");
+  }, 20_000);
+
+  test("a latch nobody refreshed for a lease is closed at init", async () => {
+    const dir = newTmpDir();
+    const latchPath = latchPathIn(dir);
+    // A worker stopped mid-episode and none took over within the lease.
+    const setAt = Date.now() - 10 * FRESHNESS_LEASE_MS;
+    mkdirSync(dirname(latchPath), { recursive: true });
+    writeFileSync(
+      latchPath,
+      JSON.stringify({ setAt, reason: "cluster-onset: loadRatio" }),
+    );
+    const stale = new Date(Date.now() - 2 * FRESHNESS_LEASE_MS);
+    utimesSync(latchPath, stale, stale);
+
+    const rig = spawnRig(dir);
+    rig.post({
+      type: "init",
+      cadenceMs: CADENCE_MS,
+      thresholds: THRESHOLDS,
+      maxEpisodeHoldMs: 600_000,
+    });
+    rig.post({ type: "__sample", sample: calm() });
+    await rig.waitFor((f) => f.type === "ready");
+
+    expect(existsSync(latchPath)).toBe(false);
+    const episodes = readEpisodeLines(dir);
+    expect(episodes.map((e) => e.kind)).toEqual(["clear"]);
+    expect(episodes[0]?.episodeSetAt).toBe(setAt);
+    expect(episodes[0]?.reason).toBe("lease-lapsed: cluster-onset: loadRatio");
+    // Nothing to adopt: the worker starts calm and emits no clear frame.
+    await nextTick(rig);
+    expect(rig.frames.some((f) => f.type === "clear")).toBe(false);
 
     rig.post({ type: "stop" });
     await rig.waitFor((f) => f.type === "stopped");

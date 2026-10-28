@@ -289,18 +289,24 @@ function handleInit(frame: Extract<MainToWorkerFrame, { type: "init" }>): void {
   pg = createSentinelPg(runtimeNamespace(), log);
   gatherer = createSampleGatherer(pg, log);
 
-  // Adopt a fresh existing latch (this is a respawn mid-episode): seed the
-  // detector tripped so it keeps refreshing the lease and eventually emits
-  // the clear. No trip line — the previous worker already wrote it.
-  if (isUnderDuress()) {
-    const latch = readDuress();
-    if (latch) {
-      detector = createOnsetDetector({ tripped: true });
-      episode = { setAt: latch.setAt, reason: latch.reason, elevated: [] };
-      log(
-        `adopted existing duress latch (setAt=${String(latch.setAt)}, reason=${latch.reason})`,
-      );
-    }
+  // An existing latch is the previous worker's episode (a stop leaves it in
+  // place). Fresh: adopt it — seed the detector tripped so it keeps refreshing
+  // the lease and eventually emits the clear; no trip line, the previous
+  // worker already wrote it. Lapsed (nobody refreshed it for a lease): close
+  // it, so its trip line does not stay open forever.
+  const latch = readDuress();
+  if (latch && isUnderDuress()) {
+    detector = createOnsetDetector({ tripped: true });
+    episode = { setAt: latch.setAt, reason: latch.reason, elevated: [] };
+    log(
+      `adopted existing duress latch (setAt=${String(latch.setAt)}, reason=${latch.reason})`,
+    );
+  } else if (latch) {
+    clearDuress();
+    writeEpisodeLine("clear", `lease-lapsed: ${latch.reason}`, latch.setAt);
+    log(
+      `closed a lapsed duress latch (setAt=${String(latch.setAt)}, reason=${latch.reason})`,
+    );
   }
   detector ??= createOnsetDetector();
 
@@ -315,9 +321,13 @@ async function handleStop(): Promise<void> {
     clearInterval(interval);
     interval = null;
   }
-  // A stopping sentinel must not leave the fleet latched: the lease would
-  // expire in 60s anyway, but an explicit clear removes the window entirely.
-  if (detector?.tripped && episode) endEpisode(false, Date.now());
+  // A stopping sentinel leaves a tripped latch in place. Main restarts on every
+  // deploy, and clearing here ended the episode at full load: the successor
+  // started calm and re-tripped `onTicks` later, and every build held at the
+  // duress gate was let in all at once in between (2026-10-28: 16 of 32 clears
+  // were main restarts, at up to 6x the clear threshold). The successor adopts
+  // the fresh latch at init; with none, the lease lapses on its own and the
+  // next init closes the episode.
   detector = null;
   await pg?.end();
   emit({ type: "stopped" });

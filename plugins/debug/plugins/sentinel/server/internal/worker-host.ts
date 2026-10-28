@@ -193,8 +193,8 @@ export function startSentinelWorker(opts: SentinelWorkerOptions): void {
     onError: (message) => {
       s.handlers.onLog(`sentinel worker error: ${message}`, "stderr");
     },
-    // Graceful stop: the worker clears the latch if tripped (writing the clear
-    // episode line) and acks; the primitive terminates it either way.
+    // Graceful stop: the worker stops ticking (leaving a tripped latch for the
+    // next worker to adopt) and acks; the primitive terminates it either way.
     stop: async (worker) => {
       let ackTimer: ReturnType<typeof setTimeout> | null = null;
       const acked = new Promise<void>((resolve) => {
