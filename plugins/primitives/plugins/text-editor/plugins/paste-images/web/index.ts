@@ -8,6 +8,7 @@ import "./internal/register";
 
 export { AttachmentThumbnail } from "./components/attachment-thumbnail";
 export { AttachmentFileChip } from "./components/attachment-file-chip";
+export { AttachmentText } from "./components/attachment-text";
 export { AttachFilesButton } from "./components/attach-files-button";
 export { AttachmentSlots } from "./slots";
 export type { AttachmentOpener, AttachedFileRef } from "./slots";

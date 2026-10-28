@@ -6,7 +6,9 @@ uploads it as an attachment and inserts an inline node. An image renders as
 (`primitives/overlay/image-viewer`) that opens the full-window viewer. Any other
 file renders as `AttachmentFileChip`, a `LinkChip` that opens through the first
 `AttachmentSlots.Opener` contribution (the Files preview pane), else the raw file
-in a browser tab. The task description's read-only display reuses both.
+in a browser tab. `AttachmentText` draws an editor's markdown read-only the
+same way (text through the inline-text walkers, refs as these two) — the task
+description's display and an answered question's reply.
 
 In an editor both nodes wear `TokenFrame` (`token-extension/node`): selected as
 one object, never as characters, and removed by a hover-revealed ×.
@@ -36,6 +38,7 @@ a hook conditionally inside one component.
     - `primitives/dom/web-storage.defineStore`
     - `primitives/file-type.FileTypeIcon`
     - `primitives/icon-button.IconButton`
+    - `primitives/inline-text.InlineText`
     - `primitives/link-gesture.openInBrowserTab`
     - `primitives/overlay/image-viewer.AssetThumbnail`
     - `primitives/persistent-draft.legacyDraftKeys`
@@ -55,6 +58,7 @@ a hook conditionally inside one component.
     - `attachmentMarkdown`
     - `attachmentRefMarkdown`
     - `AttachmentSlots`
+    - `AttachmentText`
     - `AttachmentThumbnail`
     - `attachmentUrl`
     - `extractAttachmentIds`
@@ -69,6 +73,7 @@ a hook conditionally inside one component.
     - `infra/endpoints.interpolatePath`
     - `primitives/text-editor/token-extension/node.defineInlineTokenNode`
   - Exports (types):
+    - `AttachmentSegment`
     - `FileFields`
     - `ImageFields`
   - Exports (values):
@@ -86,12 +91,15 @@ a hook conditionally inside one component.
     - `isImageMime`
     - `isImageRef`
     - `rewriteAttachmentMarkdown`
+    - `splitAttachmentRefs`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/file-explorer/attachment-preview`
     - `apps/pages/page-tree`
+    - `conversations`
     - `conversations/conversation-view`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
     - `conversations/conversation-view/markdown-extensions`
     - `page/audio`
     - `page/bookmark`

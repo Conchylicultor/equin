@@ -1,11 +1,13 @@
 import { getAttachment } from "@plugins/infra/plugins/attachments/server";
+import { conversationAttachments } from "@plugins/tasks/plugins/tasks-core/server";
+import { attachmentDiskRef } from "../../core/attachment-refs";
 import {
   extractAttachmentIds,
   rewriteAttachmentMarkdown,
 } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/core";
 
 // Convert in-prompt attachment refs (`![alt](/api/attachments/<id>)`) into
-// Claude's disk-path syntax (`@<absolute-path>`). Missing attachments are
+// Claude's disk-path syntax (`attachmentDiskRef`). Missing attachments are
 // stripped — better to drop a dangling ref than to surface a 404 URL into
 // the prompt the agent sees.
 //
@@ -27,14 +29,26 @@ export async function resolveAttachmentRefs(text: string): Promise<{
       if (att) pathById.set(id, att.diskPath);
     }),
   );
-  // Trailing space is load-bearing: two adjacent image nodes serialize as
-  // `![](url1)![](url2)` with no separator. Without the space they'd fuse into
-  // `@path1@path2`, which Claude's `@`-reference expansion (and our transcript
-  // parser) both read as a single bogus path — so only the first image, or
-  // neither, gets attached. The space keeps each `@<path>` a distinct token.
   const rewritten = rewriteAttachmentMarkdown(text, (id) => {
     const path = pathById.get(id);
-    return path ? `@${path} ` : "";
+    return path ? attachmentDiskRef(path) : "";
   });
   return { text: rewritten, attachmentIds: Array.from(pathById.keys()) };
+}
+
+/**
+ * Text the user wrote for a conversation's agent (a turn, a reply to its
+ * question), as the agent reads it: every attachment ref resolved to its disk
+ * path, and the referenced attachments linked to the conversation so the
+ * orphan sweep leaves them alone.
+ */
+export async function resolvePromptAttachments(
+  conversationId: string,
+  text: string,
+): Promise<string> {
+  const { text: resolved, attachmentIds } = await resolveAttachmentRefs(text);
+  if (attachmentIds.length > 0) {
+    await conversationAttachments.add(conversationId, attachmentIds);
+  }
+  return resolved;
 }

@@ -76,10 +76,27 @@ Selection is signalled on exactly **two** channels: the radio/checkbox indicator
   list jitter horizontally as the user arrowed through it.
 - **No left-edge accent bar.** A left bar reads as "this line belongs to a thread"
   (blockquote, active nav item), not "you chose this". Options here are card-shaped
-  (label + description + optional preview) and want full-box containment. The `notes`
-  callout below the list keeps its left bar — there the idiom is correct.
+  (label + description + optional preview) and want full-box containment.
 - **Hover and selected are separate channels** (muted fill vs primary ring), so
   hovering an already-selected row never reads as "about to deselect".
+
+## The reply is the user's own rich text
+
+"Add a comment" opens the prompt's own `TextEditor` (Enter submits, Shift+Enter
+breaks the line): paste or drop an image or file, chips render as in a turn.
+Its markdown travels as the reply; the server resolves its attachment refs to
+disk paths the agent can open, and links them to the conversation, exactly as
+a turn's (`resolvePromptAttachments`, conversations/server) — on both paths,
+the held answer (question-relay) and the marker turn.
+
+The answered card draws the reply — and a question's note — as one more row of
+the list (`WrittenRow`: its icon in the indicator column, like the form's
+comment field), never as a left-barred callout, which reads as quoted or
+agent-authored. The text goes through `AttachmentText` (paste-images) after
+`attachmentRefsOf` (conversations/core) turns the disk paths the agent was
+handed back into attachment refs, so it shows the thumbnails the user pasted,
+before and after the transcript confirms it; *Change answers* restores the
+reply the same way.
 
 ## Changing an answer
 
@@ -123,8 +140,8 @@ ordinary `MarkerAnswerForm` renders with the old answer already in its draft.
     - `JsonlRowActions.Item` "change-answers" → `ChangeAnswersAction`
     - `JsonlViewer.EventFilter` "ask-user-question:suppress-answer-turn"
     - `JsonlViewer.EventFilter` "ask-user-question:suppress-interrupt-turn"
-  - Uses: 37 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/css/ui-kit` ×9
+  - Uses: 38 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×8
     - `primitives/persistent-draft` ×4
     - `conversations/conversation-view/jsonl-viewer/tool-call` ×3
     - `conversations/conversation-view/jsonl-viewer/row-actions` ×2
@@ -143,6 +160,8 @@ ordinary `MarkerAnswerForm` renders with the old answer already in its draft.
     - `primitives/css/text.Text`
     - `primitives/css/working-dots.WorkingText`
     - `primitives/dom/web-storage.defineStore`
+    - `primitives/text-editor/paste-images.AttachmentText`
+    - `primitives/text-editor.TextEditor`
     - `ui/icons.Icon`
   - Exports (types):
     - `AnswerSelections`

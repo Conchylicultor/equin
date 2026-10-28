@@ -7,6 +7,7 @@ export {
 export { conversationRoute } from "./routes";
 export { type ConversationEntry } from "./resources";
 export { hibernationConfig } from "./hibernation-config";
+export { attachmentDiskRef, attachmentRefsOf } from "./attachment-refs";
 
 export {
   ResumeOutcomeSchema,

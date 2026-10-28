@@ -10,7 +10,9 @@ export {
   isImageMime,
   isImageRef,
   rewriteAttachmentMarkdown,
+  splitAttachmentRefs,
   imageNode,
   fileNode,
 } from "../../core";
+export type { AttachmentSegment } from "../../core";
 export type { ImageFields, FileFields } from "../../core";

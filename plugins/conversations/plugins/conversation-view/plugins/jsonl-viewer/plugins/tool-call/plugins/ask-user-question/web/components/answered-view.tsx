@@ -2,7 +2,11 @@ import type { ReactNode } from "react";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { WorkingText } from "@plugins/primitives/plugins/css/plugins/working-dots/web";
-import { OptionBody, OptionRow } from "./option-row";
+import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+import { AttachmentText } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/web";
+import { attachmentRefsOf } from "@plugins/conversations/core";
+import { FieldRow, OptionBody, OptionRow } from "./option-row";
 import { summaryFor } from "./question-card";
 import {
   parseSelectedLabels,
@@ -72,20 +76,37 @@ export function answeredSummary(
   );
 }
 
-function Callout({ label, text }: { label: string; text: string }) {
+const replyIcon = symbol("comment");
+const noteIcon = symbol("notes");
+
+/**
+ * Text the user wrote beside the picks — the reply to the whole question, or a
+ * question's note — drawn as a row of the list it answers (the form's comment
+ * field sits in the same place): its icon in the indicator column, the text as
+ * the user wrote it, attachments and chips included. No callout bar: a left
+ * edge reads as quoted or agent-authored, and this is the user's own answer.
+ */
+function WrittenRow({
+  icon,
+  label,
+  text,
+}: {
+  icon: IconRef;
+  label: string;
+  text: string;
+}) {
   return (
-    <div className="rounded-md border-l-2 border-muted-foreground/30 bg-muted/40 py-xs pl-sm">
-      <p className="text-3xs font-medium tracking-wider text-muted-foreground">
-        {label}
-      </p>
+    <FieldRow icon={<Icon icon={icon} className="size-3" title={label} />}>
       <Text
-        as="p"
+        as="div"
         variant="caption"
         className="whitespace-pre-wrap break-words text-foreground"
       >
-        {text}
+        {/* The agent's record holds attachments as the disk paths it was
+            handed; drawn back as the thumbnails the user pasted. */}
+        <AttachmentText text={attachmentRefsOf(text)} />
       </Text>
-    </div>
+    </FieldRow>
   );
 }
 
@@ -157,12 +178,16 @@ export function AnsweredQuestions({
                   </Text>
                 </OptionRow>
               )}
-              {notes != null && <Callout label="Note" text={notes} />}
+              {notes != null && (
+                <WrittenRow icon={noteIcon} label="Note" text={notes} />
+              )}
             </Stack>
           </div>
         );
       })}
-      {reply != null && <Callout label="Reply" text={reply} />}
+      {reply != null && (
+        <WrittenRow icon={replyIcon} label="Reply" text={reply} />
+      )}
       {footer}
     </Stack>
   );

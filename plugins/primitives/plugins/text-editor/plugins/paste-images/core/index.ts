@@ -11,6 +11,8 @@ export {
   isImageMime,
   isImageRef,
   rewriteAttachmentMarkdown,
+  splitAttachmentRefs,
 } from "./internal/markdown";
 export { imageNode, fileNode } from "./node";
+export type { AttachmentSegment } from "./internal/markdown";
 export type { ImageFields, FileFields } from "./node";

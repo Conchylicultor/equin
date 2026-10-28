@@ -9,14 +9,7 @@ import {
 } from "@plugins/primitives/plugins/hover-reveal/web";
 import { useRef, useState } from "react";
 import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
-import {
-  AttachmentThumbnail,
-  AttachmentFileChip,
-  ATTACHMENT_MARKDOWN_RE,
-  isAttachmentUrl,
-  isImageRef,
-} from "@plugins/primitives/plugins/text-editor/plugins/paste-images/web";
-import { InlineText } from "@plugins/primitives/plugins/inline-text/web";
+import { AttachmentText } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -172,63 +165,14 @@ function resolveRawOffset(
   return base + range.toString().length;
 }
 
-// Render the body as plain text + inline widgets (file-links, active-data
-// chips), with attachment refs replaced by inline thumbnails / file chips. We don't
-// run a full markdown renderer here — task descriptions today are plain text
-// with the occasional pasted image, so this lighter pass keeps the display
-// fast and predictable.
+// Plain text + inline widgets, attachment refs as thumbnails / file chips. No
+// full markdown renderer: task descriptions are plain text with the occasional
+// pasted image. Each run carries its raw start offset (`data-vstart`) so a
+// display drag-selection maps back to source character offsets.
 function DescriptionDisplay({ text }: { text: string }) {
-  const segments: Array<
-    | { kind: "text"; value: string; start: number }
-    | { kind: "image" | "file"; id: string; alt: string; start: number }
-  > = [];
-  let lastIdx = 0;
-  const re = new RegExp(ATTACHMENT_MARKDOWN_RE.source, "g");
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(text)) !== null) {
-    const id = isAttachmentUrl(m[2]!);
-    if (!id) continue;
-    if (m.index > lastIdx) {
-      segments.push({
-        kind: "text",
-        value: text.slice(lastIdx, m.index),
-        start: lastIdx,
-      });
-    }
-    segments.push({
-      kind: isImageRef(m[0]) ? "image" : "file",
-      id,
-      alt: m[1] ?? "",
-      start: m.index,
-    });
-    lastIdx = m.index + m[0].length;
-  }
-  if (lastIdx < text.length) {
-    segments.push({ kind: "text", value: text.slice(lastIdx), start: lastIdx });
-  }
-  if (segments.length === 0) {
-    segments.push({ kind: "text", value: text, start: 0 });
-  }
-
-  // Each segment span carries its raw start offset (`data-vstart`) so a display
-  // drag-selection can be mapped back to source character offsets.
   return (
     <p className="break-words whitespace-pre-wrap">
-      {segments.map((seg, i) =>
-        seg.kind === "text" ? (
-          <span key={i} data-vstart={seg.start}>
-            <InlineText text={seg.value} />
-          </span>
-        ) : (
-          <span key={i} data-vstart={seg.start}>
-            {seg.kind === "image" ? (
-              <AttachmentThumbnail attachmentId={seg.id} alt={seg.alt} />
-            ) : (
-              <AttachmentFileChip attachmentId={seg.id} filename={seg.alt} />
-            )}
-          </span>
-        ),
-      )}
+      <AttachmentText text={text} />
     </p>
   );
 }

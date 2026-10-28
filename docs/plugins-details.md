@@ -13896,8 +13896,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `report-kind` "held-turn-undelivered"
       - `resource.declare` "conversations.context-usage"
       - `resource.declare` "conversations.partial-message"
-    - Uses: 81 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
-      - `tasks/tasks-core` ×25
+    - Uses: 82 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
+      - `tasks/tasks-core` ×26
       - `conversations/turn-ledger` ×13
       - `conversations/transcript-watcher` ×7
       - `conversations/conversation-preprompt` ×3
@@ -13950,6 +13950,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `QuestionHolds`
       - `readConversationTurns`
       - `requestStatusReconcile`
+      - `resolvePromptAttachments`
       - `ResumeBlockedError`
       - `resumeConversation`
       - `rewindConversationAt`
@@ -14019,6 +14020,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `network/live.liveValue`
       - `packages/list-bound.wholeList`
       - `primitives/pane.defineRoute`
+      - `primitives/text-editor/paste-images.attachmentFileMarkdown`
+      - `primitives/text-editor/paste-images.attachmentMarkdown`
       - `tasks/tasks-core.ConversationSchema`
     - Exports (types):
       - `BackgroundWork`
@@ -14041,6 +14044,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `RewindPreview`
       - `RewindRefusal`
     - Exports (values):
+      - `attachmentDiskRef`
+      - `attachmentRefsOf`
       - `BackgroundWorkSchema`
       - `canSendTurn`
       - `closeConversation`
@@ -17057,8 +17062,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `JsonlRowActions.Item` "change-answers" → `ChangeAnswersAction`
                       - `JsonlViewer.EventFilter` "ask-user-question:suppress-answer-turn"
                       - `JsonlViewer.EventFilter` "ask-user-question:suppress-interrupt-turn"
-                    - Uses: 37 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/ask-user-question/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/ask-user-question/REFERENCE.md)
-                      - `primitives/css/ui-kit` ×9
+                    - Uses: 38 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/ask-user-question/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/ask-user-question/REFERENCE.md)
+                      - `primitives/css/ui-kit` ×8
                       - `primitives/persistent-draft` ×4
                       - `conversations/conversation-view/jsonl-viewer/tool-call` ×3
                       - `conversations/conversation-view/jsonl-viewer/row-actions` ×2
@@ -17077,6 +17082,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `primitives/css/text.Text`
                       - `primitives/css/working-dots.WorkingText`
                       - `primitives/dom/web-storage.defineStore`
+                      - `primitives/text-editor/paste-images.AttachmentText`
+                      - `primitives/text-editor.TextEditor`
                       - `ui/icons.Icon`
                     - Exports (types):
                       - `AnswerSelections`
@@ -42628,7 +42635,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/conversation-view/markdown-extensions`
           - `conversations/conversation-view/user-message`
           - `infra/claude-cli`
-          - `tasks/task-description`
+          - `primitives/text-editor/paste-images`
     - **`keyset`** — Field-agnostic keyset pagination machinery: the sort-rule types (core) and a null-aware keyset seek / at-or-before / order-by compiler over drizzle SQL (server). No data-view dependency, so any server-delegated windowed query can reuse it.
       - Cross-plugin:
         - Imported by: `infra/query-resource`
@@ -45614,6 +45621,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/website/improve`
           - `conversations/agent-thread`
           - `conversations/agents`
+          - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
           - `hints/ask`
           - `primitives/prompt-editor`
           - `primitives/text-editor/composer`
@@ -45820,6 +45828,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/dom/web-storage.defineStore`
               - `primitives/file-type.FileTypeIcon`
               - `primitives/icon-button.IconButton`
+              - `primitives/inline-text.InlineText`
               - `primitives/link-gesture.openInBrowserTab`
               - `primitives/overlay/image-viewer.AssetThumbnail`
               - `primitives/persistent-draft.legacyDraftKeys`
@@ -45839,6 +45848,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `attachmentMarkdown`
               - `attachmentRefMarkdown`
               - `AttachmentSlots`
+              - `AttachmentText`
               - `AttachmentThumbnail`
               - `attachmentUrl`
               - `extractAttachmentIds`
@@ -45853,6 +45863,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/endpoints.interpolatePath`
               - `primitives/text-editor/token-extension/node.defineInlineTokenNode`
             - Exports (types):
+              - `AttachmentSegment`
               - `FileFields`
               - `ImageFields`
             - Exports (values):
@@ -45870,12 +45881,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `isImageMime`
               - `isImageRef`
               - `rewriteAttachmentMarkdown`
+              - `splitAttachmentRefs`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by:
               - `apps/file-explorer/attachment-preview`
               - `apps/pages/page-tree`
+              - `conversations`
               - `conversations/conversation-view`
+              - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
               - `conversations/conversation-view/markdown-extensions`
               - `page/audio`
               - `page/bookmark`
@@ -50025,8 +50039,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`task-description`** — Prompt section of the task detail pane: the description editor, the contributed launch options (tasks/launch-options), and the Launch button — everything that feeds the agent's first turn, in one card. Inline file-link parsing routes clicks to the active file-peek context.
       - Web:
         - Contributes: `TaskDetailSlots.Section` "Prompt" → `TaskDescription`
-        - Uses: 35 symbols — full list in [`plugins/tasks/plugins/task-description/REFERENCE.md`](../plugins/tasks/plugins/task-description/REFERENCE.md)
-          - `primitives/text-editor/paste-images` ×5
+        - Uses: 30 symbols — full list in [`plugins/tasks/plugins/task-description/REFERENCE.md`](../plugins/tasks/plugins/task-description/REFERENCE.md)
           - `primitives/live-state` ×4
           - `primitives/css/ui-kit` ×3
           - `tasks/task-detail` ×3
@@ -50040,10 +50053,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/spacing.Stack`
           - `primitives/editable-field.useEditableField`
           - `primitives/icon-button.IconButton`
-          - `primitives/inline-text.InlineText`
           - `primitives/launch.LaunchControl`
           - `primitives/loading.Loading`
           - `primitives/overlay/tooltip.TooltipDoc`
+          - `primitives/text-editor/paste-images.AttachmentText`
           - `primitives/text-editor.TextEditor`
       - Cross-plugin:
         - Uses tokens:

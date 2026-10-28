@@ -100,3 +100,41 @@ export function rewriteAttachmentMarkdown(
 function label(text: string): string {
   return text.replace(/[[\]\n\r]/g, " ");
 }
+
+/** One run of a prompt's text: plain text, or an attachment ref. */
+export type AttachmentSegment =
+  | { kind: "text"; value: string; start: number }
+  | { kind: "image" | "file"; id: string; alt: string; start: number };
+
+/**
+ * A prompt's markdown cut into plain-text runs and attachment refs, each with
+ * its offset in the source — what a read-only display draws (text through the
+ * inline walkers, a ref as its thumbnail or file chip). A link that is not an
+ * attachment stays text.
+ */
+export function splitAttachmentRefs(text: string): AttachmentSegment[] {
+  const segments: AttachmentSegment[] = [];
+  let lastIdx = 0;
+  for (const m of text.matchAll(ATTACHMENT_MARKDOWN_RE)) {
+    const id = isAttachmentUrl(m[2]!);
+    if (!id) continue;
+    if (m.index > lastIdx) {
+      segments.push({
+        kind: "text",
+        value: text.slice(lastIdx, m.index),
+        start: lastIdx,
+      });
+    }
+    segments.push({
+      kind: isImageRef(m[0]) ? "image" : "file",
+      id,
+      alt: m[1] ?? "",
+      start: m.index,
+    });
+    lastIdx = m.index + m[0].length;
+  }
+  if (lastIdx < text.length || segments.length === 0) {
+    segments.push({ kind: "text", value: text.slice(lastIdx), start: lastIdx });
+  }
+  return segments;
+}

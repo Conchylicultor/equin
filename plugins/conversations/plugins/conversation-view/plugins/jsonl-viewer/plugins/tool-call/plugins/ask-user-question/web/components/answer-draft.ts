@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { attachmentRefsOf } from "@plugins/conversations/core";
 import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import {
   DEFAULT_DRAFT_TTL,
@@ -116,7 +117,9 @@ export function restoreAnswerDraft(
   const scope = answerDraftScope(convId, toolUseId);
   const { answers, reply } = parseMarkerAnswer(answerText, questions);
   writeDraft(answerDraftStore, formAnswers(questions, answers), { scope });
-  if (reply !== null) writeDraft(responseDraftStore, reply, { scope });
+  if (reply !== null) {
+    writeDraft(responseDraftStore, attachmentRefsOf(reply), { scope });
+  }
 }
 
 /**
@@ -139,5 +142,7 @@ export function restoreAnswerDraftFromRecord(
     },
   );
   const reply = replyOf(record);
-  if (reply !== undefined) writeDraft(responseDraftStore, reply, { scope });
+  if (reply !== undefined) {
+    writeDraft(responseDraftStore, attachmentRefsOf(reply), { scope });
+  }
 }

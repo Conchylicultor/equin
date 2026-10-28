@@ -1,8 +1,7 @@
-import { conversationAttachments } from "@plugins/tasks/plugins/tasks-core/server";
 import { HttpError } from "@plugins/infra/plugins/endpoints/core";
 import { implementMachine } from "@plugins/infra/plugins/endpoints/machine";
 import { postConversationTurn } from "../../core/endpoints";
-import { resolveAttachmentRefs } from "../../server/internal/resolve-prompt-attachments";
+import { resolvePromptAttachments } from "../../server/internal/resolve-prompt-attachments";
 import { submitTurn } from "../../server/internal/turns";
 
 // JSON: { text, turnId? }. The text is markdown that may contain
@@ -19,16 +18,9 @@ export const handlePostTurn = implementMachine(
       throw new HttpError(400, "invalid id");
     }
 
-    const { text: resolved, attachmentIds } = await resolveAttachmentRefs(
-      body.text,
-    );
-    const finalText = resolved.trim();
+    const finalText = (await resolvePromptAttachments(id, body.text)).trim();
     if (finalText.length === 0) {
       throw new HttpError(400, "text required");
-    }
-
-    if (attachmentIds.length > 0) {
-      await conversationAttachments.add(id, attachmentIds);
     }
 
     // A conversation still `starting` cannot take input yet: the turn is held

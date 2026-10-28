@@ -133,6 +133,7 @@ registry readers are headless.
     - `apps/website/improve`
     - `conversations/agent-thread`
     - `conversations/agents`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
     - `hints/ask`
     - `primitives/prompt-editor`
     - `primitives/text-editor/composer`

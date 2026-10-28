@@ -44,8 +44,8 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
     - `report-kind` "held-turn-undelivered"
     - `resource.declare` "conversations.context-usage"
     - `resource.declare` "conversations.partial-message"
-  - Uses: 81 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `tasks/tasks-core` ×25
+  - Uses: 82 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `tasks/tasks-core` ×26
     - `conversations/turn-ledger` ×13
     - `conversations/transcript-watcher` ×7
     - `conversations/conversation-preprompt` ×3
@@ -98,6 +98,7 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
     - `QuestionHolds`
     - `readConversationTurns`
     - `requestStatusReconcile`
+    - `resolvePromptAttachments`
     - `ResumeBlockedError`
     - `resumeConversation`
     - `rewindConversationAt`
@@ -167,6 +168,8 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
     - `network/live.liveValue`
     - `packages/list-bound.wholeList`
     - `primitives/pane.defineRoute`
+    - `primitives/text-editor/paste-images.attachmentFileMarkdown`
+    - `primitives/text-editor/paste-images.attachmentMarkdown`
     - `tasks/tasks-core.ConversationSchema`
   - Exports (types):
     - `BackgroundWork`
@@ -189,6 +192,8 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
     - `RewindPreview`
     - `RewindRefusal`
   - Exports (values):
+    - `attachmentDiskRef`
+    - `attachmentRefsOf`
     - `BackgroundWorkSchema`
     - `canSendTurn`
     - `closeConversation`

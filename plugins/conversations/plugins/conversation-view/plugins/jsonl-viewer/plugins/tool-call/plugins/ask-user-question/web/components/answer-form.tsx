@@ -3,9 +3,9 @@ import {
   Button,
   ControlSizeProvider,
   Input,
-  Textarea,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
+import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -195,11 +195,17 @@ export function AnswerForm({
     }
   };
 
+  const submitIfReady = () => {
+    if (canSubmit) void handleSubmit();
+  };
+
   // Enter submits once every question is answered, from anywhere in the form
   // (option buttons, the "Other" input, or no focus). Shift+Enter is left alone.
   // While the form is incomplete, Enter falls through so a focused option button
-  // still toggles via its own activation.
+  // still toggles via its own activation. The comment editor handles its own
+  // Enter (`submitIfReady`) and marks the event handled.
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.defaultPrevented) return;
     if (e.key === "Enter" && !e.shiftKey && canSubmit) {
       e.preventDefault();
       void handleSubmit();
@@ -265,16 +271,18 @@ export function AnswerForm({
       })}
       {showReply && (
         <FieldRow icon={<Icon icon={commentIcon} className="size-3" />}>
-          <ControlSizeProvider size="sm">
-            <Textarea
-              value={reply}
-              onChange={(e) => setReply(e.target.value)}
-              autoFocus={replyOpen}
-              rows={2}
-              placeholder="Add a comment…"
-              aria-label="Comment"
-            />
-          </ControlSizeProvider>
+          {/* The prompt's own editor: paste or drop an image or file, chips
+              (`<ui-context>`, ids) render as they do in a turn. */}
+          <TextEditor
+            value={reply}
+            onChange={setReply}
+            onSubmit={submitIfReady}
+            submitMode="enter"
+            autoFocus={replyOpen}
+            minRows={2}
+            placeholder="Add a comment…"
+            namespace="ask-user-question-reply"
+          />
         </FieldRow>
       )}
       <Stack direction="row" gap="sm" justify="between">
