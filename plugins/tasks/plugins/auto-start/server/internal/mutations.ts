@@ -1,4 +1,4 @@
-import { asc, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db, type DbExecutor } from "@plugins/database/server";
 import { _tasks } from "@plugins/tasks/plugins/tasks-core/server";
 import { tasksAutoStart, _tasksAutoStartExt } from "./tables";
@@ -8,20 +8,14 @@ export async function getTaskAutoStart(id: string) {
   return tasksAutoStart.get(id);
 }
 
-// Every task id carrying an auto-start marker, oldest arm first (FIFO: the
-// launch cap's freed slots go to the task that has waited longest).
-// Deliberately unfiltered — it is the input to the boot reconcile, whose whole
-// point is to let `maybeLaunchTaskJob` be the ONE place that decides
-// launchability. Bounded by the marker set, which is small (~180) and shrinks
-// as tasks launch.
+// Every task id carrying an auto-start marker. Deliberately unfiltered — it is
+// the input to the boot reconcile, whose whole point is to let
+// `maybeLaunchTaskJob` be the ONE place that decides launchability. Bounded by
+// the marker set, which is small (~180) and shrinks as tasks launch.
 export async function listArmedTaskIds(): Promise<string[]> {
   const rows = await db
     .select({ taskId: _tasksAutoStartExt.taskId })
-    .from(_tasksAutoStartExt)
-    .orderBy(
-      asc(_tasksAutoStartExt.autoStartAt),
-      asc(_tasksAutoStartExt.taskId),
-    );
+    .from(_tasksAutoStartExt);
   return rows.map((r) => r.taskId);
 }
 

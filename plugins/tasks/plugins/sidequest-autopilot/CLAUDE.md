@@ -98,8 +98,9 @@ and file extras with `add_task` on the sidequest track; stop early when it is
 too big or needs a design choice; never touch migrations, auth or the gateway
 without leaving the push to the person; `{{pushPolicy}}`; finish with ONE
 `submit_outcome_report` (problem and why we care, mental model before → after,
-what changed, caveats, at most one decision question) and do NOT
-`exit_clean` — the conversation stays open in the person's queue.
+what changed, caveats, at most one decision question) and do not
+`exit_clean` on its own — the conversation stays open in the person's queue
+(its mandate grants `exit.clean` only so a person can later ask it to exit).
 `submit_outcome_report` and the slot release on submit belong to the
 outcome-report plugin; this plugin only asks for them.
 

@@ -22,7 +22,6 @@ import {
   maybeLaunchTaskJob,
   maybeLaunchOnArmedJob,
   maybeLaunchOnStatusJob,
-  launchNextArmedJob,
 } from "./internal/auto-start-jobs";
 import { notifyConversationCreatedJob } from "./internal/notify-created-job";
 import { spawnConversationJob } from "./internal/spawn-job";
@@ -128,12 +127,6 @@ export default {
       with: {},
       oneShot: false,
     }),
-    Trigger({
-      on: conversationStatusChanged,
-      do: launchNextArmedJob,
-      with: {},
-      oneShot: false,
-    }),
     conversationSpawnFailedKind,
     claudeCodeUnavailableAtSpawnKind,
     autoStartModelUnavailableKind,
@@ -143,7 +136,6 @@ export default {
     maybeLaunchTaskJob,
     maybeLaunchOnStatusJob,
     maybeLaunchOnArmedJob,
-    launchNextArmedJob,
     notifyConversationCreatedJob,
     turnEmitterReconcileJob,
     spawnConversationJob,

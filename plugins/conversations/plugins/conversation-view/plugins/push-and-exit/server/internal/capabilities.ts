@@ -2,7 +2,7 @@ import { Mandate } from "@plugins/tasks/plugins/orchestration/plugins/mandate/se
 import {
   exitClean,
   flagRaise,
-  PUSH_POLICY_TEXT,
+  MANDATE_PUSH_POLICY_TEXT,
   pushPolicy,
 } from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/plugins/capabilities/core";
 
@@ -10,12 +10,12 @@ import {
 export const pushAndExitCapabilities = [
   Mandate.Capability({
     cap: pushPolicy,
-    describe: (policy) => `Pushing: ${PUSH_POLICY_TEXT[policy]}`,
+    describe: (policy) => `Pushing: ${MANDATE_PUSH_POLICY_TEXT[policy]}`,
   }),
   Mandate.Capability({
     cap: exitClean,
     describe: () =>
-      "You may close this conversation with `exit_clean` once your work landed and there is nothing the user needs to know.",
+      "When the user asks you to wrap up, you may close this conversation with `exit_clean` once your work landed and there is nothing they need to know.",
   }),
   Mandate.Capability({
     cap: flagRaise,

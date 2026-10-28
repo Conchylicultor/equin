@@ -1,5 +1,6 @@
 import { mandatePolicy } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
 import {
+  exitClean,
   flagRaise,
   pushPolicy,
 } from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/plugins/capabilities/core";
@@ -87,9 +88,14 @@ export const reportInvestigationsAutomation = defineAutomation({
   categoryId: REPORTS_CATEGORY_ID,
   config: reportInvestigationsConfig,
   // Its agent may push as far as the Push setting allows and raise a flag for
-  // the person; it never closes its own conversation (no exit.clean).
+  // the person. It finishes with its outcome report, not exit_clean; exit.clean
+  // is granted only so a person who later asks it to push-and-exit can close it.
   mandate: (settings) =>
-    mandatePolicy([pushPolicy.grant(settings.push), flagRaise.grant(true)]),
+    mandatePolicy([
+      pushPolicy.grant(settings.push),
+      flagRaise.grant(true),
+      exitClean.grant(true),
+    ]),
   triggers: {
     kinds: ["event", "schedule"],
     eventLabel: "When a report is filed",

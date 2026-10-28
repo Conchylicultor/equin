@@ -2503,9 +2503,23 @@
     },
     {
       "version": "7",
+      "when": 1793196013000,
+      "tag": "20261028_140013_ef4c9b70__interactive_mandates_push_on_request",
+      "hash": "ef4c9b70",
+      "breakpoints": true
+    },
+    {
+      "version": "7",
       "when": 1793196583000,
       "tag": "20261028_140943_ac8f88dd__merged_20261028_1409",
       "hash": "ac8f88dd",
+      "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1793201007000,
+      "tag": "20261028_152327_331f6f29__automation_mandates_exit_clean",
+      "hash": "331f6f29",
       "breakpoints": true
     }
   ]

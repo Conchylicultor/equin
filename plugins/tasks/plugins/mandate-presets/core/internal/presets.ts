@@ -12,8 +12,8 @@ import {
 /**
  * The mandate of a task a person starts by hand (a new conversation, a task
  * filed from the UI, an agent launched from a page): it may file main-track
- * tasks that run after its own and sidequests a person starts, never pushes on
- * its own, and talks back through `exit_clean` / `flag_raise`. Exactly the
+ * tasks that run after its own and sidequests a person starts, pushes only when
+ * the user asks, and talks back through `exit_clean` / `flag_raise`. Exactly the
  * behaviour every agent had before mandates existed.
  */
 export function interactiveMandate(): MandatePolicy {
@@ -22,7 +22,7 @@ export function interactiveMandate(): MandatePolicy {
       main: { start: ["after"] },
       sidequest: { start: ["manual"] },
     }),
-    pushPolicy.grant("never"),
+    pushPolicy.grant("on-request"),
     exitClean.grant(true),
     flagRaise.grant(true),
   ]);

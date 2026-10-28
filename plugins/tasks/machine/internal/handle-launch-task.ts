@@ -92,8 +92,6 @@ export const handleLaunchTask = implementMachine(
       prompt: body.prompt,
       cause: "user-launch",
       ifAlreadyStarted: "launch",
-      // A human asked for this run: never held behind the auto-start cap.
-      cap: "none",
       shownByLauncher: body.shownByLauncher,
     });
     return result.started

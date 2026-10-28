@@ -226,7 +226,6 @@ export const browserHost = {
     "conversations.conversations-view.queue",
     "conversations.effort-provider",
     "conversations.hibernation",
-    "conversations.launch-cap",
     "conversations.model-provider",
     "conversations.pane-restore",
     "conversations.preprompts",

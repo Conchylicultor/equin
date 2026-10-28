@@ -36,7 +36,6 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
     - `trigger` "conversations.notify-created"
     - `trigger` "conversations.turn-emitter.reconcile"
     - `trigger` "conversations.turn-emitter.reconcile"
-    - `trigger` "tasks.launch-next-armed"
     - `trigger` "tasks.maybe-launch-on-armed"
     - `trigger` "tasks.maybe-launch-on-status"
     - `report-kind` "auto-start-model-unavailable"
@@ -45,22 +44,21 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
     - `report-kind` "held-turn-undelivered"
     - `resource.declare` "conversations.context-usage"
     - `resource.declare` "conversations.partial-message"
-  - Uses: 86 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `tasks/tasks-core` ×27
+  - Uses: 83 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `tasks/tasks-core` ×26
     - `conversations/turn-ledger` ×13
     - `conversations/transcript-watcher` ×7
-    - `tasks/auto-start` ×4
     - `conversations/conversation-preprompt` ×3
     - `conversations/spawn-failure` ×3
     - `conversations/workspace` ×3
     - `infra/claude-cli/availability` ×3
+    - `tasks/auto-start` ×3
     - `conversations/session-chain` ×2
     - `database` ×2
     - `infra/endpoints` ×2
     - `infra/events` ×2
     - `infra/jobs` ×2
     - `reports` ×2
-    - `config_v2.getConfig`
     - `conversations/model-provider/catalog.getModelCatalog`
     - `conversations/preprompts.resolvePrepromptItem`
     - `conversations/workspace/launch-option.getTaskWorkspace`
@@ -111,7 +109,6 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
     - `defineJob('tasks.maybe-launch')`
     - `defineJob('tasks.maybe-launch-on-status')`
     - `defineJob('tasks.maybe-launch-on-armed')`
-    - `defineJob('tasks.launch-next-armed')`
     - `defineJob('conversations.notify-created')`
     - `defineJob('conversations.turn-emitter.reconcile')`
     - `defineJob('conversations.spawn')`
@@ -347,7 +344,7 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
       - **`prompt-templates`** — Template chips inside the prompt editor that prepend text to the draft. A floating icon expands on hover to reveal available templates. Exports the chip bar itself (TemplateChipBar: usage-ranked…
       - **`push-and-exit`** [exempt] — Toolbar button that asks Claude to push the branch and close the conversation; surfaces Claude's flag if it has anything to raise.
         - Plugins:
-          - **`capabilities`** — The push-and-exit mandate capabilities as plain data: push.policy (never | safe | checks — the closed push policy set, its labels and the instruction each becomes), exit.clean (exit_clean) and…
+          - **`capabilities`** — The push-and-exit mandate capabilities as plain data: push.policy (on-request | never | safe | checks — on-request for a task a person drives, the other three the closed automation push policy set…
       - **`push-counter`**
       - **`push-profiling`** — Toolbar button showing the op Gantt scoped to the conversation's worktree.
       - **`resume`** — Toolbar button that resumes a gone conversation via `claude --resume <claude-id>`; useResumeConversation (the one browser resume, whose failure is a 'Couldn't resume conversation' notification) and…
@@ -370,7 +367,6 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
       - **`queue`** — Queue classification + reorder logic (classifyQueue / applyReorder) consumed by the DataView Queue tab. Ranks seeded once on creation (newest first); a user-set pin lifts a waiting task group into…
   - **`effort-provider`** — Registry mapping thinking-mode (effort) levels to Claude CLI delivery (--effort flag / --settings ultracode) and display metadata. Reusable EffortSelect picker.
   - **`hibernation`** — Records conversation selection so idle hibernation can reset the idle timer and transparently resume. Idle-conversation hibernation, portable half: the global hibernation config, and the viewed…
-  - **`launch-cap`** — Web registration of the agent-launch config (the host-wide auto-start cap), for Settings → Config. Registers the agent-launch config (maxConcurrent: the host-wide cap on agents the auto-start queue…
   - **`menu-bar-status`** — The agents' part of the menu-bar panel's status line (MenuBar.Status 'agents'): from useConversations(), partitioned like the agent manager's home — working or starting → 'N agents working', waiting…
   - **`model-provider`** — Model pickers and labels over the live model catalog: useModelCatalog (the pushed, preloaded catalog), useVisibleModels / useModelItems / ModelSelect / ModelChoiceLabel (families with today's…
     - Plugins:

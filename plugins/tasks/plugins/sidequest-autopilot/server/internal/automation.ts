@@ -1,6 +1,7 @@
 import { mandatePolicy } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
 import { tasksFile } from "@plugins/tasks/plugins/tasks-core/core";
 import {
+  exitClean,
   flagRaise,
   pushPolicy,
 } from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/plugins/capabilities/core";
@@ -42,13 +43,15 @@ export const sidequestAutopilotAutomation = defineAutomation({
     "Works through the sidequests you approve: triage reads each one first and proposes it, you approve what may run, and it starts agents on the approved ones, best first, a few at a time up to your cap — each leaves you a report.",
   config: sidequestAutopilotConfig,
   // Its agents may file sidequests a person starts, push as far as the Push
-  // setting allows and raise a flag; they never close their own conversation
-  // (no exit.clean) — the report is how they finish.
+  // setting allows and raise a flag. The report is how they finish, not
+  // exit_clean; exit.clean is granted only so a person who later asks one to
+  // push-and-exit can close it.
   mandate: (settings) =>
     mandatePolicy([
       tasksFile.grant({ sidequest: { start: ["manual"] } }),
       pushPolicy.grant(settings.push),
       flagRaise.grant(true),
+      exitClean.grant(true),
     ]),
   triggers: {
     kinds: ["event"],

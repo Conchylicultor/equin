@@ -27,7 +27,9 @@ import { exitCleanFinalizeJob } from "./exit-clean-finalize-job";
 
 export const exitCleanTool = Mcp.tool({
   name: "exit_clean",
-  // Only a mandate granting `exit.clean` (an automation's never does).
+  // Only a mandate granting `exit.clean` (interactive ones and every
+  // automation's — an automated agent is told to call it only when a person
+  // asks it to exit).
   when: granted(exitClean),
   description: `Signal that the push-and-exit flow finished cleanly: the branch landed and there's nothing the user needs to know about. The conversation will close automatically after this turn ends.
 

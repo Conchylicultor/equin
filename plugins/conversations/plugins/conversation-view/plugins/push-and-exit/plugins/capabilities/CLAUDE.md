@@ -5,12 +5,14 @@ The three mandate capabilities push-and-exit enforces, declared as plain data
 
 | id | value | grants |
 |---|---|---|
-| `push.policy` | `"never" \| "safe" \| "checks"` | instructions only (`PUSH_POLICY_TEXT`) |
+| `push.policy` | `"on-request" \| "never" \| "safe" \| "checks"` (`on-request` is mandate-only; automations pick from the other three) | instructions only (`MANDATE_PUSH_POLICY_TEXT`) |
 | `exit.clean` | `true` | the `exit_clean` tool |
 | `flag.raise` | `true` | the `flag_raise` tool |
 
 The closed push-policy set (`PUSH_POLICIES`, its labels and text) lives here
-too: automations' Push setting and the `push.policy` grant are one vocabulary.
+too: automations' Push setting picks from it, and the `push.policy` grant
+extends it with `on-request` (`MANDATE_PUSH_POLICIES`) — the policy of a task a
+person drives, who says when to push; an automation has nobody to ask.
 
 **Why a leaf.** Every root task states a mandate, and root creators include the
 conversations plugin itself (a new conversation files a root task). Push-and-exit
@@ -22,13 +24,18 @@ push-and-exit's server (`Mandate.Capability`, `granted(cap)`).
 
 ## Plugin reference
 
-- Description: The push-and-exit mandate capabilities as plain data: push.policy (never | safe | checks — the closed push policy set, its labels and the instruction each becomes), exit.clean (exit_clean) and flag.raise (flag_raise). A leaf, so every root creator can grant them without a cycle through push-and-exit, which imports conversations.
+- Description: The push-and-exit mandate capabilities as plain data: push.policy (on-request | never | safe | checks — on-request for a task a person drives, the other three the closed automation push policy set; their labels and the instruction each becomes), exit.clean (exit_clean) and flag.raise (flag_raise). A leaf, so every root creator can grant them without a cycle through push-and-exit, which imports conversations.
 - Core:
   - Uses: `tasks/orchestration/mandate/policy.defineCapability`
-  - Exports (types): `PushPolicy`
+  - Exports (types):
+    - `MandatePushPolicy`
+    - `PushPolicy`
   - Exports (values):
     - `exitClean`
     - `flagRaise`
+    - `MANDATE_PUSH_POLICIES`
+    - `MANDATE_PUSH_POLICY_TEXT`
+    - `MandatePushPolicySchema`
     - `PUSH_POLICIES`
     - `PUSH_POLICY_LABELS`
     - `PUSH_POLICY_TEXT`

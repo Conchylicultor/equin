@@ -29,10 +29,27 @@ export const PUSH_POLICY_TEXT: Record<PushPolicy, string> = {
     '**You are authorized to push this task\'s change without asking** once every check passes and the build is `ok`: `./equin push -m "…"`.',
 };
 
+/**
+ * A mandate's push policy: an automation's three, plus `on-request` — the
+ * policy of a task a person drives, who says when to push. Not an automation
+ * option: an automation runs with nobody there to ask.
+ */
+export const MANDATE_PUSH_POLICIES = ["on-request", ...PUSH_POLICIES] as const;
+export const MandatePushPolicySchema = z.enum(MANDATE_PUSH_POLICIES);
+export type MandatePushPolicy = z.infer<typeof MandatePushPolicySchema>;
+
+/** The instruction each mandate push policy becomes in the mandate
+ * instructions. */
+export const MANDATE_PUSH_POLICY_TEXT: Record<MandatePushPolicy, string> = {
+  "on-request":
+    'Push only when the user asks you to, with `./equin push -m "…"` — never on your own initiative.',
+  ...PUSH_POLICY_TEXT,
+};
+
 /** What the agent may do with its finished work (instructions only). */
-export const pushPolicy = defineCapability<PushPolicy>({
+export const pushPolicy = defineCapability<MandatePushPolicy>({
   id: "push.policy",
-  schema: PushPolicySchema,
+  schema: MandatePushPolicySchema,
   label: "Push policy",
 });
 

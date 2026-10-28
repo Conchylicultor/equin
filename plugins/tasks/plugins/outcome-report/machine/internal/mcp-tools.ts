@@ -40,7 +40,7 @@ export const submitOutcomeReportTool = Mcp.tool({
 
 If the work needs ONE decision from the user (a design choice, a risky change you did not push), put it in \`question\` with up to six short one-click \`answers\`; the user's choice arrives as your next message. Otherwise make the call yourself and leave \`question\` out.
 
-Calling it again replaces the earlier report. Do not close the conversation (no \`exit_clean\`): it stays open for the user to review.`,
+Calling it again replaces the earlier report. Do not call \`exit_clean\` on your own: the conversation stays open for the user to review. Call it only when a person asks you to exit.`,
   inputSchema: {
     body: z
       .string()
@@ -130,6 +130,6 @@ export const outcomeReportInstructions = Mcp.instructions({
     if (!(await isAutomationConversation(ctx))) return null;
     return `## Outcome report
 
-This task was started by an automation; the user is not watching. Never ask questions mid-way — decide, or stop. Always finish by calling \`${TOOL}\` (see its description), then end your turn. Never call \`exit_clean\`: the conversation stays open for review.`;
+This task was started by an automation; the user is not watching. Never ask questions mid-way — decide, or stop. Always finish by calling \`${TOOL}\` (see its description), then end your turn. Do not call \`exit_clean\` on your own — the conversation stays open for review; call it only when a person asks you to exit.`;
   },
 });

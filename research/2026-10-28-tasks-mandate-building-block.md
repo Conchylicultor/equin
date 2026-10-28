@@ -13,7 +13,7 @@ Today nothing states what an agent may do inside a task subtree. The rules are h
 
 This step adds the **Mandate**: a policy on a task that covers its subtree, resolved nearest-wins. The harness grants MCP tools and instructions from it. The step also covers:
 - explicit mandates on every root task, with a backfill
-- the missing host-wide launch cap on auto-start
+- the missing host-wide launch cap on auto-start (later removed — see below)
 - `add_task` start modes (now / after / manual) per the grant
 - the tree digest
 - a draft of the Debug → Mandates prototype
@@ -101,7 +101,7 @@ tsc drives the list once `CreateTaskInput` is a union. The conversation path cha
 |---|---|
 | `handle-create.ts` (root), `handle-create-chain.ts`, `handle-insert-between.ts`, `handle-launch-task.ts` (Home, LaunchAgentPopover), `conversations/machine/handle-create.ts`, `agents/handle-launch.ts`, page prompt / todo task-link, `hints/ask` tool, plugin-health tool, sonata transcription, demo seed | `interactiveMandate()` |
 | `task-triage/dispatch.ts` | interactive (its scratch profile allowlists `exit_clean` / `flag_raise`, and `when` still applies) |
-| Automations: new **required** spec field `mandate: (settings) => MandatePolicy`. `runFiling` passes it to `fileAutomationTask` (root). `runLaunch` writes it as a *nested* mandate on each launched task (`setMandate`, nearest wins). | each of the 4 automations states its own: autopilot `tasks.file {sidequest: manual}` + push + flag; reports-investigation / upstream / deps: push + flag. None grants `exit.clean`, which matches their prompts' "never call exit_clean". |
+| Automations: new **required** spec field `mandate: (settings) => MandatePolicy`. `runFiling` passes it to `fileAutomationTask` (root). `runLaunch` writes it as a *nested* mandate on each launched task (`setMandate`, nearest wins). | each of the 4 automations states its own: autopilot `tasks.file {sidequest: manual}` + push + flag + exit; reports-investigation / upstream / deps: push + flag + exit. All grant `exit.clean` so a person can later ask the agent to push-and-exit; their prompts say not to call `exit_clean` on their own (they end with `submit_outcome_report`) — only when a person asks. |
 
 `setMandate(taskId, policy, tx?)` / `clearMandate` live in tasks-core next to the column and are re-exported by `mandate/server`. They are callable from code only; there is no MCP tool.
 
@@ -111,6 +111,8 @@ tsc drives the list once `CreateTaskInput` is a union. The conversation path cha
 - At implementation, verify that the generated migration orders `ADD COLUMN`, then the backfill, then `ADD CONSTRAINT` (phased expand/backfill/contract per entity-extensions CLAUDE.md). If it does not, split the CHECK into its own migration file.
 
 ## Host-wide launch cap
+
+> **Removed (2026-10-28, user decision).** The cap below shipped and was then taken out: main tasks start as soon as they are unblocked, with no host-wide limit. If a cap returns, it will be an opt-in mandate capability, not a global config. Per-automation concurrency (an automation's "At once" / "In total") is a separate system and is unaffected.
 
 - Config `agent-launch` in `conversations/core`: `maxConcurrent: intField({ default: 6, min: 1 })`. Register it on the server and the web.
 - `maybeLaunchTaskJob` / `launchArmedTask` (`conversations/server/internal/auto-start-jobs.ts`):
@@ -162,7 +164,7 @@ tsc drives the list once `CreateTaskInput` is a union. The conversation path cha
 - Use the blank template; React inline is optional.
 - Four screens per Design §8:
   - Mandates DataView-like list
-  - Mandate detail: capabilities with their describe text, the instructions agents receive, the subtree with effective mandate per task, the launch-cap state
+  - Mandate detail: capabilities with their describe text, the instructions agents receive, the subtree with effective mandate per task
   - Capabilities
   - "Why can't this agent do X"
 - Watches appear as a placeholder section, since they arrive in step 2.
@@ -183,7 +185,6 @@ When done, update the agent card:
   - `grantOf` invalid value throws
   - `add_task` start modes and grant refusals (in-memory ports)
   - digest cursor (full, then delta)
-  - launch cap counting
 - `./equin build` (runs migrations + checks: boundaries, `data-migration-dml-only`, `migration-applies-clean`).
 - `query_db` on the worktree DB:
   - every `folder_id IS NULL` row has a non-null `mandate`

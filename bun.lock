@@ -2237,10 +2237,6 @@
       "name": "@equin/plugin-conversations-hibernation",
       "version": "0.0.1",
     },
-    "plugins/conversations/plugins/launch-cap": {
-      "name": "@equin/plugin-conversations-launch-cap",
-      "version": "0.0.1",
-    },
     "plugins/conversations/plugins/menu-bar-status": {
       "name": "@equin/plugin-conversations-menu-bar-status",
       "version": "0.0.1",
@@ -8029,8 +8025,6 @@
     "@equin/plugin-conversations-effort-provider": ["@equin/plugin-conversations-effort-provider@workspace:plugins/conversations/plugins/effort-provider"],
 
     "@equin/plugin-conversations-hibernation": ["@equin/plugin-conversations-hibernation@workspace:plugins/conversations/plugins/hibernation"],
-
-    "@equin/plugin-conversations-launch-cap": ["@equin/plugin-conversations-launch-cap@workspace:plugins/conversations/plugins/launch-cap"],
 
     "@equin/plugin-conversations-menu-bar-status": ["@equin/plugin-conversations-menu-bar-status@workspace:plugins/conversations/plugins/menu-bar-status"],
 

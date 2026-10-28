@@ -1,6 +1,0 @@
-{
-  "name": "@equin/plugin-conversations-launch-cap",
-  "private": true,
-  "version": "0.0.1",
-  "description": "The agent-launch config: maxConcurrent, the host-wide cap on agents the auto-start queue runs at once (the launcher in conversations/server enforces it). Registered from a portable barrel so every host — the in-browser demo included — serves it."
-}

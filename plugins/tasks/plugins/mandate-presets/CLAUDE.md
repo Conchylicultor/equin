@@ -19,7 +19,7 @@ the orchestration umbrella never does.
 
 ## Plugin reference
 
-- Description: Named mandate compositions — interactiveMandate(): the grants a task a person starts by hand gets (file main tasks after the caller, sidequests manual, never push, exit cleanly, raise a flag). A row always stores the expanded grants, never a preset name.
+- Description: Named mandate compositions — interactiveMandate(): the grants a task a person starts by hand gets (file main tasks after the caller, sidequests manual, push only when the user asks, exit cleanly, raise a flag). A row always stores the expanded grants, never a preset name.
 - Core:
   - Uses:
     - `conversations/conversation-view/push-and-exit/capabilities.exitClean`

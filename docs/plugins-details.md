@@ -13451,8 +13451,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins: the registry over the user-layer store (the ConfigStore host service) and the committed layer (ConfigGitLayer), its live values and the scope routes.
   - Web:
     - Slots: `ConfigV2.WebRegister`
-    - Slot contributors: 93 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×93
+    - Slot contributors: 92 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×92
     - Uses:
       - `infra/endpoints.useEndpointMutation`
       - `network/live.useLive`
@@ -13642,10 +13642,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `validationIssues`
       - `withOverrideLegend`
   - Cross-plugin:
-    - Imported by: 123 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+    - Imported by: 122 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
       - `apps` ×34
-      - `conversations` ×14
       - `backup` ×13
+      - `conversations` ×13
       - `debug` ×12
       - `ui` ×11
       - `auth` ×6
@@ -13941,7 +13941,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `trigger` "conversations.notify-created"
       - `trigger` "conversations.turn-emitter.reconcile"
       - `trigger` "conversations.turn-emitter.reconcile"
-      - `trigger` "tasks.launch-next-armed"
       - `trigger` "tasks.maybe-launch-on-armed"
       - `trigger` "tasks.maybe-launch-on-status"
       - `report-kind` "auto-start-model-unavailable"
@@ -13950,22 +13949,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `report-kind` "held-turn-undelivered"
       - `resource.declare` "conversations.context-usage"
       - `resource.declare` "conversations.partial-message"
-    - Uses: 86 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
-      - `tasks/tasks-core` ×27
+    - Uses: 83 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
+      - `tasks/tasks-core` ×26
       - `conversations/turn-ledger` ×13
       - `conversations/transcript-watcher` ×7
-      - `tasks/auto-start` ×4
       - `conversations/conversation-preprompt` ×3
       - `conversations/spawn-failure` ×3
       - `conversations/workspace` ×3
       - `infra/claude-cli/availability` ×3
+      - `tasks/auto-start` ×3
       - `conversations/session-chain` ×2
       - `database` ×2
       - `infra/endpoints` ×2
       - `infra/events` ×2
       - `infra/jobs` ×2
       - `reports` ×2
-      - `config_v2.getConfig`
       - `conversations/model-provider/catalog.getModelCatalog`
       - `conversations/preprompts.resolvePrepromptItem`
       - `conversations/workspace/launch-option.getTaskWorkspace`
@@ -14016,7 +14014,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `defineJob('tasks.maybe-launch')`
       - `defineJob('tasks.maybe-launch-on-status')`
       - `defineJob('tasks.maybe-launch-on-armed')`
-      - `defineJob('tasks.launch-next-armed')`
       - `defineJob('conversations.notify-created')`
       - `defineJob('conversations.turn-emitter.reconcile')`
       - `defineJob('conversations.spawn')`
@@ -18219,13 +18216,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `pushAndExitConfig`
               - `startPushAndExit`
           - Plugins:
-            - **`capabilities`** — The push-and-exit mandate capabilities as plain data: push.policy (never | safe | checks — the closed push policy set, its labels and the instruction each becomes), exit.clean (exit_clean) and flag.raise (flag_raise). A leaf, so every root creator can grant them without a cycle through push-and-exit, which imports conversations.
+            - **`capabilities`** — The push-and-exit mandate capabilities as plain data: push.policy (on-request | never | safe | checks — on-request for a task a person drives, the other three the closed automation push policy set; their labels and the instruction each becomes), exit.clean (exit_clean) and flag.raise (flag_raise). A leaf, so every root creator can grant them without a cycle through push-and-exit, which imports conversations.
               - Core:
                 - Uses: `tasks/orchestration/mandate/policy.defineCapability`
-                - Exports (types): `PushPolicy`
+                - Exports (types):
+                  - `MandatePushPolicy`
+                  - `PushPolicy`
                 - Exports (values):
                   - `exitClean`
                   - `flagRaise`
+                  - `MANDATE_PUSH_POLICIES`
+                  - `MANDATE_PUSH_POLICY_TEXT`
+                  - `MandatePushPolicySchema`
                   - `PUSH_POLICIES`
                   - `PUSH_POLICY_LABELS`
                   - `PUSH_POLICY_TEXT`
@@ -18828,18 +18830,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `conversations/agent-thread`
           - `conversations/conversation-view`
-    - **`launch-cap`** — Web registration of the agent-launch config (the host-wide auto-start cap), for Settings → Config. Registers the agent-launch config (maxConcurrent: the host-wide cap on agents the auto-start queue runs at once), from a portable barrel so every host serves it.
-      - Web:
-        - Contributes: `ConfigV2.WebRegister` "agent-launch"
-        - Uses: `config_v2.ConfigV2`
-      - Server:
-        - Contributes: `ConfigV2.Register` "agent-launch"
-        - Uses: `config_v2.ConfigV2`
-      - Core:
-        - Uses:
-          - `config_v2.defineConfig`
-          - `fields/int/config.intField`
-        - Exports (values): `agentLaunchConfig`
     - **`menu-bar-status`** — The agents' part of the menu-bar panel's status line (MenuBar.Status 'agents'): from useConversations(), partitioned like the agent manager's home — working or starting → 'N agents working', waiting → 'N need you' — with attention while any agent waits on the user, which lights the menu-bar icon's dot.
       - Web:
         - Contributes: `MenuBar.Status` "Agents"
@@ -24833,11 +24823,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `intField`
               - `intSample`
           - Cross-plugin:
-            - Imported by: 34 plugins — full list in [`plugins/fields/plugins/int/plugins/config/REFERENCE.md`](../plugins/fields/plugins/int/plugins/config/REFERENCE.md)
+            - Imported by: 33 plugins — full list in [`plugins/fields/plugins/int/plugins/config/REFERENCE.md`](../plugins/fields/plugins/int/plugins/config/REFERENCE.md)
               - `debug` ×11
               - `apps` ×8
-              - `conversations` ×3
               - `infra` ×3
+              - `conversations` ×2
               - `backup/runs-arm`
               - `build/run-ledger`
               - `fields/object/config`
@@ -50177,7 +50167,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Core:
         - Exports (types): `LaunchOptionDef`
         - Exports (values): `defineLaunchOption`
-    - **`mandate-presets`** — Named mandate compositions — interactiveMandate(): the grants a task a person starts by hand gets (file main tasks after the caller, sidequests manual, never push, exit cleanly, raise a flag). A row always stores the expanded grants, never a preset name.
+    - **`mandate-presets`** — Named mandate compositions — interactiveMandate(): the grants a task a person starts by hand gets (file main tasks after the caller, sidequests manual, push only when the user asks, exit cleanly, raise a flag). A row always stores the expanded grants, never a preset name.
       - Core:
         - Uses:
           - `conversations/conversation-view/push-and-exit/capabilities.exitClean`

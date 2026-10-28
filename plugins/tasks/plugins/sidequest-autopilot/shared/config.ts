@@ -45,7 +45,7 @@ A read-only reviewer read the code before you and wrote this for the person, who
 
 ## When you are done
 
-Finish by calling the \`submit_outcome_report\` MCP tool **exactly once**, then stop — do NOT call \`exit_clean\`: the conversation stays open so the person can read your report and answer it. Write the report for someone who has no context on this code:
+Finish by calling the \`submit_outcome_report\` MCP tool **exactly once**, then stop — do not call \`exit_clean\` on your own: the conversation stays open so the person can read your report and answer it (call it only when a person asks you to exit). Write the report for someone who has no context on this code:
 
 1. **The problem and why we care** — what was wrong, and what it cost.
 2. **The mental model, before → after** — how this part worked before and how it works now.

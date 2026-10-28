@@ -10,7 +10,7 @@ conversations whose task has an automation origin row (`Mcp.tool`'s `when`:
 `getConversation → automationOfTask`, two PK reads per MCP request). Elsewhere
 it is absent from `tools/list` and uncallable. The `outcome-report`
 `Mcp.instructions` section uses the same gate (null elsewhere) to tell the agent
-to end with it and never `exit_clean`. Both live in `machine/` (an agent's MCP
+to end with it and not `exit_clean` on its own (only when a person asks). Both live in `machine/` (an agent's MCP
 surface exists only on a host that runs agents); the table and the
 `outcome-reports` collection are the portable `server/` half.
 
