@@ -2771,6 +2771,26 @@
       "name": "@equin/plugin-fields-bool-text-cast",
       "version": "0.0.1",
     },
+    "plugins/fields/plugins/byte-size": {
+      "name": "@equin/plugin-fields-byte-size",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/byte-size/plugins/config": {
+      "name": "@equin/plugin-fields-byte-size-config",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/byte-size/plugins/filter": {
+      "name": "@equin/plugin-fields-byte-size-filter",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/byte-size/plugins/storage": {
+      "name": "@equin/plugin-fields-byte-size-storage",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/byte-size/plugins/table": {
+      "name": "@equin/plugin-fields-byte-size-table",
+      "version": "0.0.1",
+    },
     "plugins/fields/plugins/bytes": {
       "name": "@equin/plugin-fields-bytes",
       "version": "0.0.1",
@@ -2839,6 +2859,26 @@
       "name": "@equin/plugin-fields-directory-path-config",
       "version": "0.0.1",
     },
+    "plugins/fields/plugins/duration": {
+      "name": "@equin/plugin-fields-duration",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/duration/plugins/config": {
+      "name": "@equin/plugin-fields-duration-config",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/duration/plugins/filter": {
+      "name": "@equin/plugin-fields-duration-filter",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/duration/plugins/storage": {
+      "name": "@equin/plugin-fields-duration-storage",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/duration/plugins/table": {
+      "name": "@equin/plugin-fields-duration-table",
+      "version": "0.0.1",
+    },
     "plugins/fields/plugins/dynamic-enum": {
       "name": "@equin/plugin-fields-dynamic-enum",
       "version": "0.0.1",
@@ -2903,6 +2943,22 @@
       "name": "@equin/plugin-fields-icon-config",
       "version": "0.0.1",
     },
+    "plugins/fields/plugins/identifier": {
+      "name": "@equin/plugin-fields-identifier",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/identifier/plugins/config": {
+      "name": "@equin/plugin-fields-identifier-config",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/identifier/plugins/storage": {
+      "name": "@equin/plugin-fields-identifier-storage",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/identifier/plugins/table": {
+      "name": "@equin/plugin-fields-identifier-table",
+      "version": "0.0.1",
+    },
     "plugins/fields/plugins/image": {
       "name": "@equin/plugin-fields-image",
       "version": "0.0.1",
@@ -2959,6 +3015,22 @@
       "name": "@equin/plugin-fields-location-table",
       "version": "0.0.1",
     },
+    "plugins/fields/plugins/money": {
+      "name": "@equin/plugin-fields-money",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/money/plugins/config": {
+      "name": "@equin/plugin-fields-money-config",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/money/plugins/storage": {
+      "name": "@equin/plugin-fields-money-storage",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/money/plugins/table": {
+      "name": "@equin/plugin-fields-money-table",
+      "version": "0.0.1",
+    },
     "plugins/fields/plugins/multiline-text": {
       "name": "@equin/plugin-fields-multiline-text",
       "version": "0.0.1",
@@ -2997,6 +3069,38 @@
     },
     "plugins/fields/plugins/object/plugins/config": {
       "name": "@equin/plugin-fields-object-config",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/ordinal": {
+      "name": "@equin/plugin-fields-ordinal",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/ordinal/plugins/config": {
+      "name": "@equin/plugin-fields-ordinal-config",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/ordinal/plugins/storage": {
+      "name": "@equin/plugin-fields-ordinal-storage",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/ordinal/plugins/table": {
+      "name": "@equin/plugin-fields-ordinal-table",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/person": {
+      "name": "@equin/plugin-fields-person",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/person/plugins/config": {
+      "name": "@equin/plugin-fields-person-config",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/person/plugins/storage": {
+      "name": "@equin/plugin-fields-person-storage",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/person/plugins/table": {
+      "name": "@equin/plugin-fields-person-table",
       "version": "0.0.1",
     },
     "plugins/fields/plugins/rank": {
@@ -8178,6 +8282,16 @@
 
     "@equin/plugin-fields-bool-text-cast": ["@equin/plugin-fields-bool-text-cast@workspace:plugins/fields/plugins/bool/plugins/text-cast"],
 
+    "@equin/plugin-fields-byte-size": ["@equin/plugin-fields-byte-size@workspace:plugins/fields/plugins/byte-size"],
+
+    "@equin/plugin-fields-byte-size-config": ["@equin/plugin-fields-byte-size-config@workspace:plugins/fields/plugins/byte-size/plugins/config"],
+
+    "@equin/plugin-fields-byte-size-filter": ["@equin/plugin-fields-byte-size-filter@workspace:plugins/fields/plugins/byte-size/plugins/filter"],
+
+    "@equin/plugin-fields-byte-size-storage": ["@equin/plugin-fields-byte-size-storage@workspace:plugins/fields/plugins/byte-size/plugins/storage"],
+
+    "@equin/plugin-fields-byte-size-table": ["@equin/plugin-fields-byte-size-table@workspace:plugins/fields/plugins/byte-size/plugins/table"],
+
     "@equin/plugin-fields-bytes": ["@equin/plugin-fields-bytes@workspace:plugins/fields/plugins/bytes"],
 
     "@equin/plugin-fields-bytes-config": ["@equin/plugin-fields-bytes-config@workspace:plugins/fields/plugins/bytes/plugins/config"],
@@ -8212,6 +8326,16 @@
 
     "@equin/plugin-fields-directory-path-config": ["@equin/plugin-fields-directory-path-config@workspace:plugins/fields/plugins/directory-path/plugins/config"],
 
+    "@equin/plugin-fields-duration": ["@equin/plugin-fields-duration@workspace:plugins/fields/plugins/duration"],
+
+    "@equin/plugin-fields-duration-config": ["@equin/plugin-fields-duration-config@workspace:plugins/fields/plugins/duration/plugins/config"],
+
+    "@equin/plugin-fields-duration-filter": ["@equin/plugin-fields-duration-filter@workspace:plugins/fields/plugins/duration/plugins/filter"],
+
+    "@equin/plugin-fields-duration-storage": ["@equin/plugin-fields-duration-storage@workspace:plugins/fields/plugins/duration/plugins/storage"],
+
+    "@equin/plugin-fields-duration-table": ["@equin/plugin-fields-duration-table@workspace:plugins/fields/plugins/duration/plugins/table"],
+
     "@equin/plugin-fields-dynamic-enum": ["@equin/plugin-fields-dynamic-enum@workspace:plugins/fields/plugins/dynamic-enum"],
 
     "@equin/plugin-fields-dynamic-enum-config": ["@equin/plugin-fields-dynamic-enum-config@workspace:plugins/fields/plugins/dynamic-enum/plugins/config"],
@@ -8244,6 +8368,14 @@
 
     "@equin/plugin-fields-icon-config": ["@equin/plugin-fields-icon-config@workspace:plugins/fields/plugins/icon/plugins/config"],
 
+    "@equin/plugin-fields-identifier": ["@equin/plugin-fields-identifier@workspace:plugins/fields/plugins/identifier"],
+
+    "@equin/plugin-fields-identifier-config": ["@equin/plugin-fields-identifier-config@workspace:plugins/fields/plugins/identifier/plugins/config"],
+
+    "@equin/plugin-fields-identifier-storage": ["@equin/plugin-fields-identifier-storage@workspace:plugins/fields/plugins/identifier/plugins/storage"],
+
+    "@equin/plugin-fields-identifier-table": ["@equin/plugin-fields-identifier-table@workspace:plugins/fields/plugins/identifier/plugins/table"],
+
     "@equin/plugin-fields-image": ["@equin/plugin-fields-image@workspace:plugins/fields/plugins/image"],
 
     "@equin/plugin-fields-image-table": ["@equin/plugin-fields-image-table@workspace:plugins/fields/plugins/image/plugins/table"],
@@ -8272,6 +8404,14 @@
 
     "@equin/plugin-fields-location-table": ["@equin/plugin-fields-location-table@workspace:plugins/fields/plugins/location/plugins/table"],
 
+    "@equin/plugin-fields-money": ["@equin/plugin-fields-money@workspace:plugins/fields/plugins/money"],
+
+    "@equin/plugin-fields-money-config": ["@equin/plugin-fields-money-config@workspace:plugins/fields/plugins/money/plugins/config"],
+
+    "@equin/plugin-fields-money-storage": ["@equin/plugin-fields-money-storage@workspace:plugins/fields/plugins/money/plugins/storage"],
+
+    "@equin/plugin-fields-money-table": ["@equin/plugin-fields-money-table@workspace:plugins/fields/plugins/money/plugins/table"],
+
     "@equin/plugin-fields-multiline-text": ["@equin/plugin-fields-multiline-text@workspace:plugins/fields/plugins/multiline-text"],
 
     "@equin/plugin-fields-multiline-text-config": ["@equin/plugin-fields-multiline-text-config@workspace:plugins/fields/plugins/multiline-text/plugins/config"],
@@ -8291,6 +8431,22 @@
     "@equin/plugin-fields-object": ["@equin/plugin-fields-object@workspace:plugins/fields/plugins/object"],
 
     "@equin/plugin-fields-object-config": ["@equin/plugin-fields-object-config@workspace:plugins/fields/plugins/object/plugins/config"],
+
+    "@equin/plugin-fields-ordinal": ["@equin/plugin-fields-ordinal@workspace:plugins/fields/plugins/ordinal"],
+
+    "@equin/plugin-fields-ordinal-config": ["@equin/plugin-fields-ordinal-config@workspace:plugins/fields/plugins/ordinal/plugins/config"],
+
+    "@equin/plugin-fields-ordinal-storage": ["@equin/plugin-fields-ordinal-storage@workspace:plugins/fields/plugins/ordinal/plugins/storage"],
+
+    "@equin/plugin-fields-ordinal-table": ["@equin/plugin-fields-ordinal-table@workspace:plugins/fields/plugins/ordinal/plugins/table"],
+
+    "@equin/plugin-fields-person": ["@equin/plugin-fields-person@workspace:plugins/fields/plugins/person"],
+
+    "@equin/plugin-fields-person-config": ["@equin/plugin-fields-person-config@workspace:plugins/fields/plugins/person/plugins/config"],
+
+    "@equin/plugin-fields-person-storage": ["@equin/plugin-fields-person-storage@workspace:plugins/fields/plugins/person/plugins/storage"],
+
+    "@equin/plugin-fields-person-table": ["@equin/plugin-fields-person-table@workspace:plugins/fields/plugins/person/plugins/table"],
 
     "@equin/plugin-fields-rank": ["@equin/plugin-fields-rank@workspace:plugins/fields/plugins/rank"],
 

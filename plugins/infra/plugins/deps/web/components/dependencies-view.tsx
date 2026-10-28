@@ -8,6 +8,7 @@ import {
 } from "@plugins/primitives/plugins/data-view/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
+import { formatByteSize } from "@plugins/fields/plugins/byte-size/core";
 import { depsStates, type DepRow, type DepState } from "../../core";
 import { DepItemActions } from "./dep-item-actions";
 
@@ -30,17 +31,9 @@ const STATE_BADGE = {
   failed: "destructive",
 } as const satisfies Record<DepState["kind"], string>;
 
-function formatBytes(bytes: number): string {
-  if (bytes < 1e6) return `${Math.round(bytes / 1e3)} KB`;
-  if (bytes < 1e9) return `${(bytes / 1e6).toFixed(1)} MB`;
-  return `${(bytes / 1e9).toFixed(2)} GB`;
-}
-
-/** The size column: measured once installed, the declared estimate before. */
-function sizeText(row: DepRow): string {
-  return row.state.kind === "ready"
-    ? formatBytes(row.state.bytes)
-    : row.sizeHint;
+/** The measured size on disk, once installed; unknown (null) before. */
+function sizeBytes(row: DepRow): number | null {
+  return row.state.kind === "ready" ? row.state.bytes : null;
 }
 
 /** The latest line worth showing: the install's log tail, or the failure. */
@@ -126,13 +119,19 @@ export function DependenciesView() {
       {
         id: "size",
         label: "Size",
-        type: "text",
-        value: sizeText,
-        cell: (r) => (
-          <span className="tabular-nums text-muted-foreground">
-            {sizeText(r)}
-          </span>
-        ),
+        type: "byte-size",
+        value: sizeBytes,
+        // Measured once installed; before, the declaration's own estimate
+        // ("≈15 MB"), which sorts and filters as no size.
+        cell: (r) => {
+          const bytes = sizeBytes(r);
+          return (
+            <span className="tabular-nums text-muted-foreground">
+              {bytes === null ? r.sizeHint : formatByteSize(bytes)}
+            </span>
+          );
+        },
+        sortable: true,
         align: "end",
         width: "6rem",
       },

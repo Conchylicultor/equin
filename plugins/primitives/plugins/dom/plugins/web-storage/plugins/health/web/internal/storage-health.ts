@@ -1,6 +1,6 @@
 import type { HealthStatus } from "@plugins/shell/plugins/health-report/core";
 import type { StoreUsage } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
-import { formatBytes } from "./format";
+import { formatByteSize } from "@plugins/fields/plugins/byte-size/core";
 
 /** A `refuse` owner this full is one burst of typing from losing a draft. */
 const NEAR_CAP = 0.8;
@@ -39,6 +39,6 @@ export function storageVerdict(usage: StoreUsage[]): HealthStatus {
   const bytes = touched.reduce((sum, u) => sum + (u.bytes ?? 0), 0);
   return {
     state: "ok",
-    summary: `${formatBytes(bytes)} across ${touched.length} of ${usage.length} owners`,
+    summary: `${formatByteSize(bytes)} across ${touched.length} of ${usage.length} owners`,
   };
 }

@@ -15,7 +15,7 @@ import {
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
-import { formatDuration } from "@plugins/debug/plugins/profiling/web";
+import { formatDuration } from "@plugins/fields/plugins/duration/core";
 import { resetRuntimeProfile } from "../../core";
 import { runtimeProfile } from "../../shared/resources";
 import {
@@ -222,54 +222,54 @@ const RUNTIME_FIELDS: FieldDef<RuntimeRow>[] = [
   },
   {
     id: "avgMs",
-    label: "Avg (ms)",
-    type: "number",
+    label: "Avg",
+    type: "duration",
     value: (r) => r.avgMs,
     align: "end",
     width: "5rem",
   },
   {
     id: "selfMs",
-    label: "Self (ms)",
-    type: "number",
+    label: "Self",
+    type: "duration",
     value: (r) => r.selfMs,
     align: "end",
     width: "5rem",
   },
   {
     id: "childMs",
-    label: "Child (ms)",
-    type: "number",
+    label: "Child",
+    type: "duration",
     value: (r) => r.childMs,
     align: "end",
     width: "5rem",
   },
   {
     id: "recentMaxMs",
-    label: "Recent max (ms)",
-    type: "number",
+    label: "Recent max",
+    type: "duration",
     value: (r) => r.recentMaxMs,
     align: "end",
     width: "6.5rem",
   },
   {
     id: "maxMs",
-    label: "Max (ms)",
-    type: "number",
+    label: "Max",
+    type: "duration",
     value: (r) => r.maxMs,
     align: "end",
     width: "9rem",
     // Since-boot peak with its age alongside, so a stale spike reads as stale.
     cell: (row) => (
       <Text as="span" variant="caption" className="truncate font-mono">
-        {row.maxMs.toLocaleString()} · {formatMsAge(row.maxAgeMs)}
+        {formatDuration(row.maxMs)} · {formatMsAge(row.maxAgeMs)}
       </Text>
     ),
   },
   {
     id: "lastMs",
-    label: "Last (ms)",
-    type: "number",
+    label: "Last",
+    type: "duration",
     value: (r) => r.lastMs,
     align: "end",
     width: "5rem",

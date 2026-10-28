@@ -1,0 +1,9 @@
+{
+  "name": "@equin/plugin-fields-identifier-table",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Identifier field type: data-view table cell (monospace, truncated, the full value in a tooltip, a hover-revealed copy button).",
+  "equin": {
+    "collapsed": true
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "name": "@equin/plugin-fields-duration",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Duration field type: identity only, extends number — a span in milliseconds, drawn compact (`850ms`, `4.2s`, `1m 04s`, `2h 05m`) and filtered by operands typed in units (`30s`, `5m`); sort and grouping inherited from number.",
+  "equin": {
+    "collapsed": true
+  }
+}

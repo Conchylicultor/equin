@@ -8,7 +8,6 @@
 - Web:
   - Contributes: `Profiling.Section` → `RuntimeSection`
   - Uses:
-    - `debug/profiling.formatDuration`
     - `debug/profiling.Profiling`
     - `infra/endpoints.useEndpointMutation`
     - `network/live.useLive`

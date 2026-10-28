@@ -1,0 +1,9 @@
+{
+  "name": "@equin/plugin-fields-person-storage",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Person field type: DB storage capability — a Postgres text column.",
+  "equin": {
+    "collapsed": true
+  }
+}

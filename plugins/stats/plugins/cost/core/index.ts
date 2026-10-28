@@ -7,9 +7,4 @@ export {
   foldUsageEntry,
   resumeUsageBuckets,
 } from "./usage-fold";
-export {
-  formatTokens,
-  formatTokensCompact,
-  formatUsd,
-  formatUsdCompact,
-} from "./format";
+export { formatTokens, formatTokensCompact, formatUsdCompact } from "./format";

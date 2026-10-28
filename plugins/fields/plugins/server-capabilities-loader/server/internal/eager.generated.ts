@@ -11,12 +11,18 @@
 // The `fields-eager-in-sync` check fails on drift.
 
 import "@plugins/fields/plugins/bool/plugins/storage/server";
+import "@plugins/fields/plugins/byte-size/plugins/storage/server";
 import "@plugins/fields/plugins/bytes/plugins/storage/server";
 import "@plugins/fields/plugins/date/plugins/storage/server";
+import "@plugins/fields/plugins/duration/plugins/storage/server";
 import "@plugins/fields/plugins/float/plugins/storage/server";
+import "@plugins/fields/plugins/identifier/plugins/storage/server";
 import "@plugins/fields/plugins/int/plugins/storage/server";
 import "@plugins/fields/plugins/json/plugins/storage/server";
 import "@plugins/fields/plugins/location/plugins/storage/server";
+import "@plugins/fields/plugins/money/plugins/storage/server";
+import "@plugins/fields/plugins/ordinal/plugins/storage/server";
+import "@plugins/fields/plugins/person/plugins/storage/server";
 import "@plugins/fields/plugins/rank/plugins/storage/server";
 import "@plugins/fields/plugins/string-list/plugins/storage/server";
 import "@plugins/fields/plugins/tags/plugins/storage/server";

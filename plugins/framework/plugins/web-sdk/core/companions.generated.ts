@@ -22,12 +22,18 @@ export const companionManifest: Readonly<
     keyed: {
       "avatar": ["fields.avatar.table"],
       "bool": ["fields.bool.table"],
+      "byte-size": ["fields.byte-size.table"],
       "color": ["fields.color.table"],
       "date": ["fields.date.table"],
+      "duration": ["fields.duration.table"],
       "enum": ["fields.enum.table"],
+      "identifier": ["fields.identifier.table"],
       "image": ["fields.image.table"],
       "location": ["fields.location.table"],
+      "money": ["fields.money.table"],
       "number": ["fields.number.table"],
+      "ordinal": ["fields.ordinal.table"],
+      "person": ["fields.person.table"],
       "tags": ["fields.tags.table"],
       "text": ["fields.text.table"],
     },
@@ -50,7 +56,9 @@ export const companionManifest: Readonly<
   "primitives.data-view.filter": {
     keyed: {
       "bool": ["fields.bool.filter"],
+      "byte-size": ["fields.byte-size.filter"],
       "date": ["fields.date.filter"],
+      "duration": ["fields.duration.filter"],
       "enum": ["fields.enum.filter"],
       "location": ["fields.location.filter"],
       "number": ["fields.number.filter"],

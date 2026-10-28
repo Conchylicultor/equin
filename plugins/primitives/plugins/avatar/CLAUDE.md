@@ -171,6 +171,7 @@ color palette.
     - `conversations/runtime-sdk`
     - `fields/avatar/config`
     - `fields/avatar/table`
+    - `fields/person/table`
     - `page/place`
     - `primitives/data-view/gallery`
     - `primitives/data-view/icons`

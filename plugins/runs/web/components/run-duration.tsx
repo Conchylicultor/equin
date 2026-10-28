@@ -1,12 +1,12 @@
 import type { ReactNode } from "react";
 import { useNow } from "@plugins/primitives/plugins/relative-time/web";
 import type { RunRow } from "../../core";
-import { formatDuration } from "../internal/format";
+import { formatDuration } from "@plugins/fields/plugins/duration/core";
 
 /** A running run's elapsed time: ticks once a second from `startedAt`. */
 function Elapsed({ startedAt }: { startedAt: Date }): ReactNode {
   const now = useNow(1000);
-  return formatDuration(now - startedAt.getTime());
+  return formatDuration(Math.max(0, now - startedAt.getTime()));
 }
 
 /**

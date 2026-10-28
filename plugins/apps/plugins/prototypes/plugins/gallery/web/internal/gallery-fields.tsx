@@ -70,7 +70,7 @@ export function galleryFields(
     {
       id: "name",
       label: "Folder",
-      type: "text",
+      type: "identifier",
       value: (p) => p.name,
       visible: false,
     },

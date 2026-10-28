@@ -14,7 +14,7 @@
     - `CopyButton`
     - `useCopyToClipboard`
 - Cross-plugin:
-  - Imported by: 30 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 31 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×9
     - `primitives` ×5
     - `page` ×4
@@ -22,6 +22,7 @@
     - `debug` ×3
     - `review` ×2
     - `build/build-logs`
+    - `fields/identifier/table`
     - `infra/claude-cli`
     - `plugin-meta/exhibits`
     - `tasks/worktree-identity`

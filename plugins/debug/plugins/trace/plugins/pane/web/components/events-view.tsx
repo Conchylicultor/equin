@@ -138,11 +138,6 @@ const overrides = fieldOverrides(traceEvents, {
     width: "minmax(0,1fr)",
   },
   durationMs: {
-    cell: (r) => (
-      <span className="font-mono tabular-nums">
-        {Math.round(r.durationMs)} ms
-      </span>
-    ),
     align: "end",
     width: "6rem",
   },

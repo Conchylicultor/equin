@@ -1,4 +1,4 @@
-import { floatField } from "@plugins/fields/plugins/float/plugins/config/core";
+import { durationField } from "@plugins/fields/plugins/duration/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import {
   liveCollection,
@@ -14,7 +14,8 @@ import { songsEntityRef } from "./schemas";
  *
  * Declared by FIELDS: the list's fields are the songs entity's (`pick`) and
  * two of its columns under the ids the library's saved views name them by
- * (`duration` → `durationSec`, `added` → `createdAt`, bound by the server).
+ * (`duration` → `durationSec` in milliseconds, as the duration type counts,
+ * `added` → `createdAt`, bound by the server).
  * Every field another plugin's extension EXPOSES on the songs entity folds in
  * too — playback-history's play count and last-played, the MIDI source's
  * track count and file-missing flag — sorted and filtered like the library's
@@ -28,7 +29,7 @@ export const songLibrary = liveCollection("sonata.songs", {
   from: songsEntityRef,
   pick: ["title", "composer", "source"],
   fields: {
-    duration: floatField({ label: "Length" }),
+    duration: durationField({ label: "Length" }),
     added: dateField({ label: "Added" }),
   },
   carry: { pick: ["id", "sourcesChangedAt"] },

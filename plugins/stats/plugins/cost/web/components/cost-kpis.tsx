@@ -7,7 +7,8 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { ScopeToggle } from "./scope-toggle";
 import { useScope } from "./use-scope";
 import { useUtcDay } from "./use-utc-day";
-import { formatTokensCompact, formatUsd } from "../../core";
+import { formatUsd } from "@plugins/fields/plugins/money/core";
+import { formatTokensCompact } from "../../core";
 
 export function CostKpis() {
   const { scope } = useScope();

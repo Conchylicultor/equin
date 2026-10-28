@@ -7,6 +7,7 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
+import { formatDuration } from "@plugins/fields/plugins/duration/core";
 import {
   DataView,
   defineDataView,
@@ -72,18 +73,12 @@ function outcomeBadge(run: DeployRunRecord): ReactNode {
 }
 
 /**
- * Wall-clock time a run took, or how long the one in flight has been going.
- *
- * Local because the three formatters in the repo are all plugin-private to debug
- * surfaces; a shared `formatDuration` primitive would retire all four.
+ * Wall-clock milliseconds a run took, or how long the one in flight has been
+ * going (read off this render's clock).
  */
-function durationLabel(run: DeployRunRecord): string {
+function runMs(run: DeployRunRecord): number {
   const end = run.finishedAt ?? new Date();
-  const ms = end.getTime() - run.startedAt.getTime();
-  if (ms < 0) return "—";
-  const s = Math.round(ms / 1000);
-  if (s < 60) return `${s}s`;
-  return `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, "0")}s`;
+  return Math.max(0, end.getTime() - run.startedAt.getTime());
 }
 
 /** The first 7 chars of a sha — what git itself abbreviates to. */
@@ -148,11 +143,8 @@ const extraFields: FieldDef<DeployRunRecord>[] = [
   {
     id: "duration",
     label: "Took",
-    type: "text",
-    value: (r) => durationLabel(r),
-    cell: (r) => (
-      <span className="text-muted-foreground">{durationLabel(r)}</span>
-    ),
+    type: "duration",
+    value: runMs,
     width: "6rem",
   },
 ];
@@ -233,7 +225,7 @@ function HistoryRow({ run }: { run: DeployRunRecord }): ReactNode {
             </Badge>
           )}
           <Text as="span" variant="caption" tone="muted">
-            {durationLabel(run)} · <RelativeTime date={run.startedAt} />
+            {formatDuration(runMs(run))} · <RelativeTime date={run.startedAt} />
           </Text>
         </Cluster>
         {(run.status === "failed" || run.status === "needs-approval") &&

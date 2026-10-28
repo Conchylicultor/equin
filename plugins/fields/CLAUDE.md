@@ -102,12 +102,12 @@ tokens, so anything that imports the barrels back would cycle.
 - Description: Type-dimension registry: owns the fields.identity slot where each field type registers its identity (token, label, icon, extends, coerce).
 - Web:
   - Slots: `Fields.Identity`
-  - Slot contributors: 28 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `Fields.Identity` ×28
+  - Slot contributors: 34 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Fields.Identity` ×34
   - Exports (values): `Fields`
 - Cross-plugin:
-  - Imported by: 106 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `fields` ×51
+  - Imported by: 118 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `fields` ×63
     - `apps` ×13
     - `conversations` ×8
     - `infra` ×5
@@ -162,23 +162,29 @@ tokens, so anything that imports the barrels back would cycle.
 - Sub-plugins:
   - **`avatar`** [2 sub-plugins] — Avatar field type: identity only. The config-render capability and the avatarField factory live in the plugins/config sub-plugin.
   - **`bool`** [test helpers] [8 sub-plugins] — Boolean field type: identity only. The data-view cell (check/cross) and filter (yes/no) capabilities live in the plugins/{table,filter} sub-plugins.
+  - **`byte-size`** [4 sub-plugins] — Byte-size field type: identity only, extends number — a size in bytes, drawn in SI units (`840 B`, `18.4 kB`, `1.5 GB`) and filtered by operands typed in units (`1 GB`, `500kB`); sort and grouping…
   - **`bytes`** [2 sub-plugins] — Bytes field type: identity only — binary data whose wire value is base64. No cell or filter: no list shows a blob.
   - **`color`** [2 sub-plugins] — Color field type: identity only. The read-only swatch cell lives in the plugins/table sub-plugin; color has no filter (sparse).
   - **`date`** [8 sub-plugins] — Date field type: identity only. The data-view cell (relative time) and filter (date range) capabilities live in the plugins/{table,filter} sub-plugins.
   - **`directory-path`** [1 sub-plugin] — Directory-path field type: identity only. The config-render capability (a folder picker) and the dirPathField factory live in the plugins/config sub-plugin.
+  - **`duration`** [4 sub-plugins] — Duration field type: identity only, extends number — a span in milliseconds, drawn compact (`850ms`, `4.2s`, `1m 04s`, `2h 05m`) and filtered by operands typed in units (`30s`, `5m`); sort and…
   - **`dynamic-enum`** [1 sub-plugin] — Dynamic enum (select) field type: identity only. Options are resolved at config-render time via the plugins/config sub-plugin's slot.
   - **`dynamic-flags`** [1 sub-plugin] — Dynamic flags (toggles) field type: identity only. Options and their defaults are resolved at config-render time via the plugins/config sub-plugin's slot.
   - **`enum`** [6 sub-plugins] — Enum (select) field type: identity only. The config-render, table (chip cell), and filter (multi-select) capabilities live in the plugins/{config,table,filter} sub-plugins.
   - **`float`** [2 sub-plugins] — Float field type: identity only, extends number — reuses number's cell and filter via the extends chain.
   - **`icon`** [1 sub-plugin] — Icon field type: identity only. The config-render capability and the iconField factory live in the plugins/config sub-plugin.
+  - **`identifier`** [3 sub-plugins] — Identifier field type (a sha, run id, fingerprint, slug, tool name): extends text — text's sort, filter and editor via the extends chain, its own monospace cell.
   - **`image`** [1 sub-plugin] — Image field type: identity only. The read-only thumbnail cell lives in the plugins/table sub-plugin; image is a data-view-only media type with no filter (sparse).
   - **`int`** [2 sub-plugins] — Integer field type: identity only, extends number — reuses number's cell and filter via the extends chain.
   - **`json`** [2 sub-plugins] — JSON field type: identity only. The config-render capability and the jsonField factory live in the plugins/config sub-plugin.
   - **`list`** [1 sub-plugin] — List field type: identity only. The config-render capability and the listField factory live in the plugins/config sub-plugin.
   - **`location`** [3 sub-plugins] — Location field type: identity only. The read cell lives in the plugins/table sub-plugin, the is-set filter in plugins/filter, the jsonb column in plugins/storage.
+  - **`money`** [3 sub-plugins] — Money field type: identity only, extends float — an amount in US dollars, drawn as currency (`$42.17`); sort, filter and grouping inherited from float → number.
   - **`multiline-text`** [1 sub-plugin] — Long text field type: identity only, extends text — reuses text's cell and filter via the extends chain.
   - **`number`** [5 sub-plugins] — Number field type: identity only. The data-view cell and filter (min/max) capabilities live in the plugins/{table,filter} sub-plugins.
   - **`object`** [1 sub-plugin] — Object field type: identity only. The config-render capability and the objectField factory live in the plugins/config sub-plugin.
+  - **`ordinal`** [3 sub-plugins] — Ordinal field type: identity only, extends int — a position, rank or version number, drawn faint and tabular with no thousands grouping; sort, filter and grouping inherited from int → number.
+  - **`person`** [3 sub-plugins] — Person field type (a person's display name, free text): extends text — text's sort, filter and editor via the extends chain, its own initial-avatar + name cell.
   - **`rank`** [2 sub-plugins] — Rank field type: identity only, extends text — a fractional-indexing string stored in the rank_text (C-collation) domain, reusing text's cell and filter via the extends chain.
   - **`reorder-tree`** [1 sub-plugin] — Reorder-tree field type: identity only. The config-render capability and the reorderTreeField factory live in the plugins/config sub-plugin.
   - **`secret`** [1 sub-plugin] — Secret field type: identity only. The config-render/storage/central capabilities and the secretField factory live in the plugins/config sub-plugin. Registers NO coerce and contributes NO data-view…

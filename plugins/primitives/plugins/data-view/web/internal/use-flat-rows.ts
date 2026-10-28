@@ -1,13 +1,22 @@
 import { useMemo } from "react";
+import { resolveTypeChain, type FieldIdentity } from "@plugins/fields/core";
 import type { FieldDef, FilterOperatorSet, ViewState } from "../../core";
 import { bodyRowMatcher, useRowFilter } from "./use-row-filter";
 import { makeSortComparator } from "./sort-rows";
+import { useFieldIdentities } from "./use-field-identities";
 
-function isSearchable<TRow>(field: FieldDef<TRow>): boolean {
+/** The base types whose values the search box reads; a type extending one (an `identifier`, a `tag`) is searched too. */
+const SEARCHABLE_BASES: ReadonlySet<string> = new Set(["text", "enum", "tags"]);
+
+export function isSearchable<TRow>(
+  field: FieldDef<TRow>,
+  identities: ReadonlyMap<string, FieldIdentity>,
+): boolean {
   if (field.filterable === true) return true;
   if (field.filterable === false) return false;
-  const type = field.type ?? "text";
-  return type === "text" || type === "enum" || type === "tags";
+  return resolveTypeChain(field.type ?? "text", identities).some((t) =>
+    SEARCHABLE_BASES.has(t),
+  );
 }
 
 /**
@@ -26,6 +35,7 @@ export function useRowMatcher<TRow>(
   const matchesFilter = bodyRowMatcher(
     useRowFilter(state.filter, fields, resolveOperatorSet),
   );
+  const identities = useFieldIdentities();
   const query = state.query.trim();
   return useMemo(() => {
     // --- Search (substring, case-insensitive) ---
@@ -33,7 +43,7 @@ export function useRowMatcher<TRow>(
       searchAccessor ??
       ((row: TRow) =>
         fields
-          .filter((f) => isSearchable(f))
+          .filter((f) => isSearchable(f, identities))
           .map((f) =>
             f.values ? f.values(row).join(" ") : String(f.value?.(row) ?? ""),
           )
@@ -46,7 +56,7 @@ export function useRowMatcher<TRow>(
     if (matchesSearch && matchesFilter)
       return (row) => matchesSearch(row) && matchesFilter(row);
     return matchesSearch ?? matchesFilter;
-  }, [query, fields, matchesFilter, searchAccessor]);
+  }, [query, fields, matchesFilter, searchAccessor, identities]);
 }
 
 /**

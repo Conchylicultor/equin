@@ -383,7 +383,9 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `fields.fieldsToZodObject`
     - `fields.nullable`
     - `fields/date/config.dateField`
+    - `fields/duration/config.durationField`
     - `fields/float/config.floatField`
+    - `fields/person/config.personField`
     - `fields/text/config.textField`
     - `ids.defineIdKind`
     - `ids.idKindField`

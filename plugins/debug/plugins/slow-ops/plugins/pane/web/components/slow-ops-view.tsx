@@ -31,8 +31,6 @@ const opsSource = liveDataSource(slowOpsList, {
   facets: ["operationKind"],
 });
 
-const ms = (v: number): string => `${Math.round(v)}`;
-
 // How the derived fields present here (the collection declares their labels,
 // types and filters; every sortable / filterable field's id IS its column).
 const overrides = fieldOverrides(slowOpsList, {
@@ -69,22 +67,18 @@ const overrides = fieldOverrides(slowOpsList, {
   },
   count: { align: "end", width: "4rem" },
   totalMs: {
-    cell: (r) => <span className="tabular-nums">{ms(r.totalMs)}</span>,
     align: "end",
     width: "5.5rem",
   },
   waitMs: {
-    cell: (r) => <span className="tabular-nums">{ms(r.waitMs)}</span>,
     align: "end",
     width: "5.5rem",
   },
   maxMs: {
-    cell: (r) => <span className="tabular-nums">{ms(r.maxMs)}</span>,
     align: "end",
     width: "5rem",
   },
   lastMs: {
-    cell: (r) => <span className="tabular-nums">{ms(r.lastMs)}</span>,
     align: "end",
     width: "5rem",
   },

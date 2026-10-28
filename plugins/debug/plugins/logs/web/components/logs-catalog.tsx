@@ -91,7 +91,7 @@ export function LogsCatalog({
       {
         id: "size",
         label: "Size",
-        type: "number",
+        type: "byte-size",
         value: (e) => bytesOnDisk(e),
         cell: (e) => <SizeMeter entry={e} now={now} />,
         sortable: true,

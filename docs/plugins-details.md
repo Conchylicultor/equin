@@ -2316,6 +2316,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/deploy/servers.serverDetailRoute`
               - `fields.nullable`
               - `fields/date/config.dateField`
+              - `fields/identifier/config.identifierField`
               - `fields/int/config.intField`
               - `fields/string-list/config.stringListField`
               - `fields/text/config.enumTextField`
@@ -3591,7 +3592,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `POST /api/events/sources/:id/refresh`
               - `POST /api/events/sources/refresh-all`
           - Core:
-            - Uses: 23 symbols — full list in [`plugins/apps/plugins/events/plugins/events-core/REFERENCE.md`](../plugins/apps/plugins/events/plugins/events-core/REFERENCE.md)
+            - Uses: 24 symbols — full list in [`plugins/apps/plugins/events/plugins/events-core/REFERENCE.md`](../plugins/apps/plugins/events/plugins/events-core/REFERENCE.md)
               - `fields` ×3
               - `ids` ×3
               - `network/live` ×3
@@ -3600,6 +3601,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fields/text/config` ×2
               - `fields/bool/config.boolField`
               - `fields/date/config.dateField`
+              - `fields/duration/config.durationField`
               - `fields/int/config.intField`
               - `fields/json/config.jsonField`
               - `fields/tags/config.tagsField`
@@ -4640,6 +4642,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `apps-core/app-launcher.installedApp`
               - `fields/date/config.dateField`
+              - `fields/duration/config.durationField`
               - `fields/int/config.intField`
               - `network/live.clientFields`
             - Exports (values): `appUsageFields`
@@ -7515,7 +7518,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fields.fieldsToZodObject`
               - `fields.nullable`
               - `fields/date/config.dateField`
+              - `fields/duration/config.durationField`
               - `fields/float/config.floatField`
+              - `fields/person/config.personField`
               - `fields/text/config.textField`
               - `ids.defineIdKind`
               - `ids.idKindField`
@@ -12370,8 +12375,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Uses:
       - `fields.FieldsRecord`
       - `fields.nullable`
+      - `fields/byte-size/config.byteSizeField`
       - `fields/date/config.dateField`
-      - `fields/int/config.intField`
       - `fields/json/config.jsonField`
       - `fields/text/config.enumTextField`
       - `fields/text/config.textField`
@@ -12466,6 +12471,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `backup.backupRunsEntityRef`
           - `backup.BackupSourceReportsSchema`
           - `fields.nullable`
+          - `fields/byte-size/config.byteSizeField`
           - `fields/int/config.intField`
           - `fields/json/config.jsonField`
           - `network/live.liveArm`
@@ -17919,8 +17925,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `fields.nullable`
               - `fields/bool/config.boolField`
-              - `fields/float/config.floatField`
-              - `fields/int/config.intField`
+              - `fields/duration/config.durationField`
+              - `fields/ordinal/config.ordinalField`
               - `fields/text/config.enumTextField`
               - `fields/text/config.textField`
               - `network/live.rowKind`
@@ -21176,10 +21182,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Pane.Register` "claude-cli-call-detail"
           - `Pane.Register` "claude-cli-calls"
           - `DebugApp.Sidebar` "Claude CLI Calls"
-        - Uses: 24 symbols — full list in [`plugins/debug/plugins/claude-cli-calls/REFERENCE.md`](../plugins/debug/plugins/claude-cli-calls/REFERENCE.md)
+        - Uses: 23 symbols — full list in [`plugins/debug/plugins/claude-cli-calls/REFERENCE.md`](../plugins/debug/plugins/claude-cli-calls/REFERENCE.md)
           - `primitives/pane` ×7
           - `primitives/data-view` ×4
-          - `infra/claude-cli` ×3
+          - `infra/claude-cli` ×2
           - `apps/debug/shell.DebugApp`
           - `conversations/model-provider.familyClass`
           - `network/live.useLiveRow`
@@ -22275,7 +22281,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Web:
             - Contributes: `Profiling.Section` → `RuntimeSection`
             - Uses:
-              - `debug/profiling.formatDuration`
               - `debug/profiling.Profiling`
               - `infra/endpoints.useEndpointMutation`
               - `network/live.useLive`
@@ -23028,7 +23033,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `packages/list-bound` ×2
           - `debug/trace/engine.traceListRoute`
           - `fields/date/config.dateField`
-          - `fields/float/config.floatField`
+          - `fields/duration/config.durationField`
           - `fields/int/config.intField`
           - `fields/json/config.jsonField`
           - `fields/text/config.textField`
@@ -23478,7 +23483,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fields.fieldsToZodObject`
               - `fields/bool/config.boolField`
               - `fields/date/config.dateField`
-              - `fields/float/config.floatField`
+              - `fields/duration/config.durationField`
               - `fields/int/config.intField`
               - `fields/json/config.jsonField`
               - `fields/text/config.textField`
@@ -23778,12 +23783,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`fields`** — Type-dimension registry: owns the fields.identity slot where each field type registers its identity (token, label, icon, extends, coerce).
   - Web:
     - Slots: `Fields.Identity`
-    - Slot contributors: 28 contributors — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
-      - `Fields.Identity` ×28
+    - Slot contributors: 34 contributors — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
+      - `Fields.Identity` ×34
     - Exports (values): `Fields`
   - Cross-plugin:
-    - Imported by: 106 plugins — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
-      - `fields` ×51
+    - Imported by: 118 plugins — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
+      - `fields` ×63
       - `apps` ×13
       - `conversations` ×8
       - `infra` ×5
@@ -24006,6 +24011,56 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Server:
             - Contributes: `fields.value-text-cast` "bool"
             - Uses: `fields/server-capabilities.Fields`
+    - **`byte-size`** — Byte-size field type: identity only, extends number — a size in bytes, drawn in SI units (`840 B`, `18.4 kB`, `1.5 GB`) and filtered by operands typed in units (`1 GB`, `500kB`); sort and grouping inherited from number. (`bytes` is the binary-data type.)
+      - Web:
+        - Contributes: `Fields.Identity` "byte-size"
+        - Uses: `fields.Fields`
+      - Core:
+        - Uses:
+          - `fields.defineFieldIdentity`
+          - `fields.defineFieldType`
+          - `fields/number.numberFieldType`
+          - `ui/icons.symbol`
+        - Exports (values):
+          - `byteSizeFieldType`
+          - `byteSizeIdentity`
+          - `formatByteSize`
+          - `parseByteSize`
+      - Cross-plugin:
+        - Imported by: `fields/byte-size/config`
+      - Plugins:
+        - **`config`** — Byte size field type: the byteSizeField factory for building field records.
+          - Core:
+            - Uses:
+              - `fields.declaredDefault`
+              - `fields.ExactOptions`
+              - `fields.FieldDef`
+              - `fields.FieldMarks`
+              - `fields.FieldMeta`
+              - `fields.pickMeta`
+              - `fields/byte-size.byteSizeFieldType`
+            - Exports (types): `ByteSizeFieldDef`
+            - Exports (values): `byteSizeField`
+          - Cross-plugin:
+            - Imported by:
+              - `backup`
+              - `backup/runs-arm`
+        - **`filter`** — Byte size field type: data-view filter — number's operators, with operands typed in units.
+          - Web:
+            - Contributes: `DataViewSlots.Filter` "byte-size"
+            - Uses:
+              - `fields/number/filter.numberOperatorSetWith`
+              - `primitives/data-view.DataViewSlots`
+        - **`storage`** — Byte size field type: DB storage capability — maps to a Postgres double precision column.
+          - Server:
+            - Contributes: `fields.storage` "byte-size"
+            - Uses: `fields/server-capabilities.Fields`
+          - Cross-plugin:
+            - Imported by: `fields/server-capabilities-loader`
+        - **`table`** — Byte size field type: data-view table cell.
+          - Web:
+            - Contributes: `DataViewSlots.Cell` "byte-size" → `ByteSizeCell`
+            - Uses: `primitives/data-view.DataViewSlots`
     - **`bytes`** — Bytes field type: identity only — binary data whose wire value is base64. No cell or filter: no list shows a blob.
       - Web:
         - Contributes: `Fields.Identity` "bytes"
@@ -24262,6 +24317,63 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `dirPathField`
               - `dirPathSample`
+    - **`duration`** — Duration field type: identity only, extends number — a span in milliseconds, drawn compact (`850ms`, `4.2s`, `1m 04s`, `2h 05m`) and filtered by operands typed in units (`30s`, `5m`); sort and grouping inherited from number.
+      - Web:
+        - Contributes: `Fields.Identity` "duration"
+        - Uses: `fields.Fields`
+      - Core:
+        - Uses:
+          - `fields.defineFieldIdentity`
+          - `fields.defineFieldType`
+          - `fields/number.numberFieldType`
+          - `ui/icons.symbol`
+        - Exports (values):
+          - `durationFieldType`
+          - `durationIdentity`
+          - `formatDuration`
+          - `parseDuration`
+      - Cross-plugin:
+        - Imported by: `fields/duration/config`
+      - Plugins:
+        - **`config`** — Duration field type: the durationField factory for building field records.
+          - Core:
+            - Uses:
+              - `fields.declaredDefault`
+              - `fields.ExactOptions`
+              - `fields.FieldDef`
+              - `fields.FieldMarks`
+              - `fields.FieldMeta`
+              - `fields.pickMeta`
+              - `fields/duration.durationFieldType`
+            - Exports (types): `DurationFieldDef`
+            - Exports (values): `durationField`
+          - Cross-plugin:
+            - Imported by:
+              - `apps/events/events-core`
+              - `apps/home/usage-fields`
+              - `apps/sonata/library`
+              - `conversations/conversation-view/op-status`
+              - `debug/slow-ops`
+              - `debug/trace/engine`
+              - `infra/claude-cli`
+              - `infra/jobs`
+              - `runs`
+        - **`filter`** — Duration field type: data-view filter — number's operators, with operands typed in units.
+          - Web:
+            - Contributes: `DataViewSlots.Filter` "duration"
+            - Uses:
+              - `fields/number/filter.numberOperatorSetWith`
+              - `primitives/data-view.DataViewSlots`
+        - **`storage`** — Duration field type: DB storage capability — maps to a Postgres double precision column.
+          - Server:
+            - Contributes: `fields.storage` "duration"
+            - Uses: `fields/server-capabilities.Fields`
+          - Cross-plugin:
+            - Imported by: `fields/server-capabilities-loader`
+        - **`table`** — Duration field type: data-view table cell.
+          - Web:
+            - Contributes: `DataViewSlots.Cell` "duration" → `DurationCell`
+            - Uses: `primitives/data-view.DataViewSlots`
     - **`dynamic-enum`** — Dynamic enum (select) field type: identity only. Options are resolved at config-render time via the plugins/config sub-plugin's slot.
       - Web:
         - Contributes: `Fields.Identity` "dynamic-enum"
@@ -24499,7 +24611,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `floatFieldType`
           - `floatIdentity`
       - Cross-plugin:
-        - Imported by: `fields/float/config`
+        - Imported by:
+          - `fields/float/config`
+          - `fields/money`
       - Plugins:
         - **`config`** — Float field type: config-render capability (number stepper for config-v2.fields.renderer) plus the floatField factory.
           - Web:
@@ -24529,16 +24643,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `apps/sonata/library`
               - `apps/sonata/track-mixer`
-              - `conversations/conversation-view/op-status`
               - `debug/live-state-churn/monitor`
               - `debug/profiling/op-log/op-store`
               - `debug/queue-health`
               - `debug/sentinel`
-              - `debug/slow-ops`
-              - `debug/trace/engine`
               - `infra/jobs`
               - `primitives/usage-rank`
-              - `runs`
         - **`storage`** — Float field type: DB storage capability — maps to a Postgres double precision column.
           - Server:
             - Contributes: `fields.storage` "float"
@@ -24587,6 +24697,58 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `iconField`
               - `iconSample`
+    - **`identifier`** — Identifier field type (a sha, run id, fingerprint, slug, tool name): extends text — text's sort, filter and editor via the extends chain, its own monospace cell.
+      - Web:
+        - Contributes: `Fields.Identity` "identifier"
+        - Uses: `fields.Fields`
+      - Core:
+        - Uses:
+          - `fields.defineFieldIdentity`
+          - `fields.defineFieldType`
+          - `fields/text.textFieldType`
+          - `ui/icons.symbol`
+        - Exports (values):
+          - `identifierFieldType`
+          - `identifierIdentity`
+      - Cross-plugin:
+        - Imported by: `fields/identifier/config`
+      - Plugins:
+        - **`config`** — Identifier field factory (identifierField) for building field records.
+          - Core:
+            - Uses:
+              - `fields.declaredDefault`
+              - `fields.ExactOptions`
+              - `fields.FieldDef`
+              - `fields.FieldMarks`
+              - `fields.FieldMeta`
+              - `fields.pickMeta`
+              - `fields/identifier.identifierFieldType`
+            - Exports (types): `IdentifierFieldDef`
+            - Exports (values): `identifierField`
+          - Cross-plugin:
+            - Imported by:
+              - `apps/deploy/deployments`
+              - `infra/jobs`
+              - `reports`
+        - **`storage`** — Identifier field type: DB storage capability — a Postgres text column.
+          - Server:
+            - Contributes: `fields.storage` "identifier"
+            - Uses: `fields/server-capabilities.Fields`
+          - Cross-plugin:
+            - Imported by: `fields/server-capabilities-loader`
+        - **`table`** — Identifier field type: data-view table cell (monospace, truncated, the full value in a tooltip, a hover-revealed copy button).
+          - Web:
+            - Contributes: `DataViewSlots.Cell` "identifier" → `IdentifierCell`
+            - Uses:
+              - `primitives/copy-to-clipboard.CopyButton`
+              - `primitives/css/line.Line`
+              - `primitives/css/text.Text`
+              - `primitives/css/yield.yieldClass`
+              - `primitives/data-view.DataViewSlots`
+              - `primitives/hover-reveal.hoverRevealGroup`
+              - `primitives/hover-reveal.hoverRevealTarget`
+          - Cross-plugin:
+            - Uses tokens: `ui/tokens/density --space-2xs`
     - **`image`** — Image field type: identity only. The read-only thumbnail cell lives in the plugins/table sub-plugin; image is a data-view-only media type with no filter (sparse).
       - Web:
         - Contributes: `Fields.Identity` "image"
@@ -24623,7 +24785,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `intFieldType`
           - `intIdentity`
       - Cross-plugin:
-        - Imported by: `fields/int/config`
+        - Imported by:
+          - `fields/int/config`
+          - `fields/ordinal`
       - Plugins:
         - **`config`** — Integer field type: config-render capability (number stepper for config-v2.fields.renderer) plus the intField factory.
           - Web:
@@ -24650,12 +24814,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `intField`
               - `intSample`
           - Cross-plugin:
-            - Imported by: 37 plugins — full list in [`plugins/fields/plugins/int/plugins/config/REFERENCE.md`](../plugins/fields/plugins/int/plugins/config/REFERENCE.md)
+            - Imported by: 34 plugins — full list in [`plugins/fields/plugins/int/plugins/config/REFERENCE.md`](../plugins/fields/plugins/int/plugins/config/REFERENCE.md)
               - `debug` ×11
               - `apps` ×8
-              - `conversations` ×4
-              - `infra` ×4
-              - `backup` ×2
+              - `conversations` ×3
+              - `infra` ×3
+              - `backup/runs-arm`
               - `build/run-ledger`
               - `fields/object/config`
               - `integrations/google-maps/usage`
@@ -24829,6 +24993,45 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `primitives/css/text.Text`
               - `primitives/data-view.DataViewSlots`
+    - **`money`** — Money field type: identity only, extends float — an amount in US dollars, drawn as currency (`$42.17`); sort, filter and grouping inherited from float → number.
+      - Web:
+        - Contributes: `Fields.Identity` "money"
+        - Uses: `fields.Fields`
+      - Core:
+        - Uses:
+          - `fields.defineFieldIdentity`
+          - `fields.defineFieldType`
+          - `fields/float.floatFieldType`
+          - `ui/icons.symbol`
+        - Exports (values):
+          - `formatUsd`
+          - `moneyFieldType`
+          - `moneyIdentity`
+      - Cross-plugin:
+        - Imported by: `fields/money/config`
+      - Plugins:
+        - **`config`** — Money field type: the moneyField factory for building field records.
+          - Core:
+            - Uses:
+              - `fields.declaredDefault`
+              - `fields.ExactOptions`
+              - `fields.FieldDef`
+              - `fields.FieldMarks`
+              - `fields.FieldMeta`
+              - `fields.pickMeta`
+              - `fields/money.moneyFieldType`
+            - Exports (types): `MoneyFieldDef`
+            - Exports (values): `moneyField`
+        - **`storage`** — Money field type: DB storage capability — maps to a Postgres double precision column.
+          - Server:
+            - Contributes: `fields.storage` "money"
+            - Uses: `fields/server-capabilities.Fields`
+          - Cross-plugin:
+            - Imported by: `fields/server-capabilities-loader`
+        - **`table`** — Money field type: data-view table cell.
+          - Web:
+            - Contributes: `DataViewSlots.Cell` "money" → `MoneyCell`
+            - Uses: `primitives/data-view.DataViewSlots`
     - **`multiline-text`** — Long text field type: identity only, extends text — reuses text's cell and filter via the extends chain.
       - Web:
         - Contributes: `Fields.Identity` "multiline-text"
@@ -24898,6 +25101,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `numberIdentity`
       - Cross-plugin:
         - Imported by:
+          - `fields/byte-size`
+          - `fields/duration`
           - `fields/float`
           - `fields/int`
       - Plugins:
@@ -24914,6 +25119,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/data-view.DataViewSlots`
               - `primitives/data-view.FilterValueInput`
               - `primitives/data-view.FilterValueInputProps`
+            - Exports (types): `NumberOperandUnits`
+            - Exports (values): `numberOperatorSetWith`
+          - Cross-plugin:
+            - Imported by:
+              - `fields/byte-size/filter`
+              - `fields/duration/filter`
         - **`inline`** — Number field type: data-view inline cell editor (compact numeric input editor).
           - Web:
             - Contributes: `DataViewSlots.CellEditor` "number" → `NumberEditor`
@@ -24975,6 +25186,97 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `apps/desktop/wallpaper`
               - `config_v2`
+    - **`ordinal`** — Ordinal field type: identity only, extends int — a position, rank or version number, drawn faint and tabular with no thousands grouping; sort, filter and grouping inherited from int → number.
+      - Web:
+        - Contributes: `Fields.Identity` "ordinal"
+        - Uses: `fields.Fields`
+      - Core:
+        - Uses:
+          - `fields.defineFieldIdentity`
+          - `fields.defineFieldType`
+          - `fields/int.intFieldType`
+          - `ui/icons.symbol`
+        - Exports (values):
+          - `formatOrdinal`
+          - `ordinalFieldType`
+          - `ordinalIdentity`
+      - Cross-plugin:
+        - Imported by: `fields/ordinal/config`
+      - Plugins:
+        - **`config`** — Ordinal field type: the ordinalField factory for building field records.
+          - Core:
+            - Uses:
+              - `fields.declaredDefault`
+              - `fields.ExactOptions`
+              - `fields.FieldDef`
+              - `fields.FieldMarks`
+              - `fields.FieldMeta`
+              - `fields.pickMeta`
+              - `fields/ordinal.ordinalFieldType`
+            - Exports (types): `OrdinalFieldDef`
+            - Exports (values): `ordinalField`
+          - Cross-plugin:
+            - Imported by: `conversations/conversation-view/op-status`
+        - **`storage`** — Ordinal field type: DB storage capability — maps to a Postgres integer column.
+          - Server:
+            - Contributes: `fields.storage` "ordinal"
+            - Uses: `fields/server-capabilities.Fields`
+          - Cross-plugin:
+            - Imported by: `fields/server-capabilities-loader`
+        - **`table`** — Ordinal field type: data-view table cell.
+          - Web:
+            - Contributes: `DataViewSlots.Cell` "ordinal" → `OrdinalCell`
+            - Uses: `primitives/data-view.DataViewSlots`
+          - Cross-plugin:
+            - Uses tokens: `ui/tokens/color-palette --muted-foreground`
+    - **`person`** — Person field type (a person's display name, free text): extends text — text's sort, filter and editor via the extends chain, its own initial-avatar + name cell.
+      - Web:
+        - Contributes: `Fields.Identity` "person"
+        - Uses: `fields.Fields`
+      - Core:
+        - Uses:
+          - `fields.defineFieldIdentity`
+          - `fields.defineFieldType`
+          - `fields/text.textFieldType`
+          - `ui/icons.symbol`
+        - Exports (values):
+          - `personFieldType`
+          - `personIdentity`
+      - Cross-plugin:
+        - Imported by: `fields/person/config`
+      - Plugins:
+        - **`config`** — Person field factory (personField) for building field records.
+          - Core:
+            - Uses:
+              - `fields.declaredDefault`
+              - `fields.ExactOptions`
+              - `fields.FieldDef`
+              - `fields.FieldMarks`
+              - `fields.FieldMeta`
+              - `fields.pickMeta`
+              - `fields/person.personFieldType`
+            - Exports (types): `PersonFieldDef`
+            - Exports (values): `personField`
+          - Cross-plugin:
+            - Imported by: `apps/sonata/library`
+        - **`storage`** — Person field type: DB storage capability — a Postgres text column.
+          - Server:
+            - Contributes: `fields.storage` "person"
+            - Uses: `fields/server-capabilities.Fields`
+          - Cross-plugin:
+            - Imported by: `fields/server-capabilities-loader`
+        - **`table`** — Person field type: data-view table cell (a small initial avatar beside the name).
+          - Web:
+            - Contributes: `DataViewSlots.Cell` "person" → `PersonCell`
+            - Uses:
+              - `primitives/avatar.Avatar`
+              - `primitives/css/line.Line`
+              - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.ControlSizeProvider`
+              - `primitives/css/yield.yieldClass`
+              - `primitives/data-view.DataViewSlots`
+          - Cross-plugin:
+            - Uses tokens: `ui/tokens/density --space-xs`
     - **`rank`** — Rank field type: identity only, extends text — a fractional-indexing string stored in the rank_text (C-collation) domain, reusing text's cell and filter via the extends chain.
       - Web:
         - Contributes: `Fields.Identity` "rank"
@@ -25144,22 +25446,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `auth/notion`
     - **`server-capabilities`** — Server-owned field-capability library: the Fields.Storage / Fields.ValueTextCast tokens, their resolvers (resolveFieldStorage / resolveFieldValueTextCast — the latter answering a TEXT-stored value's cast AND the filter-language domain it reads in), and the storage eager self-registering index. A graph sink — never imports a capability barrel.
       - Cross-plugin:
-        - Imported by:
-          - `fields/bool/storage`
-          - `fields/bool/text-cast`
-          - `fields/bytes/storage`
-          - `fields/date/storage`
-          - `fields/date/text-cast`
-          - `fields/float/storage`
-          - `fields/int/storage`
-          - `fields/json/storage`
-          - `fields/location/storage`
-          - `fields/number/text-cast`
-          - `fields/rank/storage`
-          - `fields/string-list/storage`
-          - `fields/tags/storage`
-          - `fields/text/storage`
-          - `fields/uuid/storage`
+        - Imported by: 23 plugins — full list in [`plugins/fields/plugins/server-capabilities/REFERENCE.md`](../plugins/fields/plugins/server-capabilities/REFERENCE.md)
+          - `fields` ×21
           - `infra/entities`
           - `primitives/data-view/custom-columns`
       - Server:
@@ -25178,12 +25466,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Server:
         - Uses:
           - `fields/bool/storage`
+          - `fields/byte-size/storage`
           - `fields/bytes/storage`
           - `fields/date/storage`
+          - `fields/duration/storage`
           - `fields/float/storage`
+          - `fields/identifier/storage`
           - `fields/int/storage`
           - `fields/json/storage`
           - `fields/location/storage`
+          - `fields/money/storage`
+          - `fields/ordinal/storage`
+          - `fields/person/storage`
           - `fields/rank/storage`
           - `fields/string-list/storage`
           - `fields/tags/storage`
@@ -25373,7 +25667,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `textIdentity`
       - Cross-plugin:
         - Imported by:
+          - `fields/identifier`
           - `fields/multiline-text`
+          - `fields/person`
           - `fields/rank`
           - `fields/text/config`
           - `fields/uuid`
@@ -28507,7 +28803,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from:
           - `networking/no-page-transport` — `web/internal/boot.ts` (sanctioned)
           - `endpoints/no-raw-web-fetch` — `web/internal/boot.ts` (sanctioned)
-    - **`claude-cli`** — Consumer half of the claude-cli call log: useClaudeCliCalls({correlationId, occurredAt}) answers 'which model calls produced this record?' as a calls / none / not-retained result, <ClaudeCliCallDetail> is the one rendering of a recorded call (header, meta grid, context with id chips, output or error, prompt, system — each copyable), and formatCallDuration is how a call's duration reads. One-shot Claude CLI helper (`claude --print`) for short, latency-tolerant generations, and runClaudeReadOnly — a print that may only Read / Grep / Glob one directory and answers with a zod-schema'd structured value. Reuses the user's local Claude CLI auth — no API key plumbing.
+    - **`claude-cli`** — Consumer half of the claude-cli call log: useClaudeCliCalls({correlationId, occurredAt}) answers 'which model calls produced this record?' as a calls / none / not-retained result, <ClaudeCliCallDetail> is the one rendering of a recorded call (header, meta grid, context with id chips, output or error, prompt, system — each copyable), and SLOW_CALL_MS is the duration past which a call reads as slow. One-shot Claude CLI helper (`claude --print`) for short, latency-tolerant generations, and runClaudeReadOnly — a print that may only Read / Grep / Glob one directory and answers with a zod-schema'd structured value. Reuses the user's local Claude CLI auth — no API key plumbing.
       - Server:
         - Contributes:
           - `resource.declare` "claude-cli-calls"
@@ -28567,7 +28863,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/relative-time.RelativeTime`
         - Exports (values):
           - `ClaudeCliCallDetail`
-          - `formatCallDuration`
           - `SLOW_CALL_MS`
           - `useClaudeCliCalls`
       - Core:
@@ -28578,7 +28873,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fields.fieldsToZodObject`
           - `fields.nullable`
           - `fields/date/config.dateField`
-          - `fields/int/config.intField`
+          - `fields/duration/config.durationField`
           - `fields/json/config.jsonField`
           - `fields/text/config.enumTextField`
           - `fields/text/config.parsedTextField`
@@ -30476,7 +30771,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fields.nullable`
           - `fields/bool/config.boolField`
           - `fields/date/config.dateField`
+          - `fields/duration/config.durationField`
           - `fields/float/config.floatField`
+          - `fields/identifier/config.identifierField`
           - `fields/int/config.intField`
           - `fields/json/config.jsonField`
           - `fields/text/config.enumTextField`
@@ -38620,6 +38917,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/runtime-sdk`
           - `fields/avatar/config`
           - `fields/avatar/table`
+          - `fields/person/table`
           - `page/place`
           - `primitives/data-view/gallery`
           - `primitives/data-view/icons`
@@ -38918,7 +39216,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CopyButton`
           - `useCopyToClipboard`
       - Cross-plugin:
-        - Imported by: 30 plugins — full list in [`plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md`](../plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md)
+        - Imported by: 31 plugins — full list in [`plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md`](../plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md)
           - `apps` ×9
           - `primitives` ×5
           - `page` ×4
@@ -38926,6 +39224,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug` ×3
           - `review` ×2
           - `build/build-logs`
+          - `fields/identifier/table`
           - `infra/claude-cli`
           - `plugin-meta/exhibits`
           - `tasks/worktree-identity`
@@ -39509,7 +39808,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `LineProps`
             - Exports (values): `Line`
           - Cross-plugin:
-            - Imported by: 123 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
+            - Imported by: 125 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
               - `apps` ×37
               - `primitives` ×18
               - `conversations` ×17
@@ -39522,6 +39821,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `build` ×3
               - `infra` ×3
               - `apps-core` ×2
+              - `fields` ×2
               - `reorder` ×2
               - `shell` ×2
               - `auth`
@@ -40166,7 +40466,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×37
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family` ×2
-            - Imported by: 404 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 406 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×113
               - `conversations` ×73
               - `primitives` ×45
@@ -40175,7 +40475,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui` ×18
               - `plugin-meta` ×15
               - `tasks` ×14
-              - `fields` ×9
+              - `fields` ×11
               - `stats` ×6
               - `build` ×5
               - `infra` ×5
@@ -40459,7 +40759,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 442 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 443 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×110
               - `apps` ×102
               - `conversations` ×53
@@ -40467,7 +40767,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug` ×24
               - `ui` ×21
               - `tasks` ×17
-              - `fields` ×11
+              - `fields` ×12
               - `plugin-meta` ×10
               - `apps-core` ×7
               - `build` ×5
@@ -40574,12 +40874,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/pending-turn`
         - **`yield`** — Yielding-cell layout primitive: yieldClass(axis) is the flex child that falls below its own content width (min-w-0) but never takes slack. The half of <Fill> that gives, without the half that grows.
           - Cross-plugin:
-            - Imported by: 35 plugins — full list in [`plugins/primitives/plugins/css/plugins/yield/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/yield/REFERENCE.md)
+            - Imported by: 37 plugins — full list in [`plugins/primitives/plugins/css/plugins/yield/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/yield/REFERENCE.md)
               - `apps` ×10
               - `primitives` ×8
               - `conversations` ×6
               - `debug` ×4
               - `ui` ×3
+              - `fields` ×2
               - `history/dialog`
               - `infra/claude-cli`
               - `page/sub-page`
@@ -40730,10 +41031,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.ValueCodec`
           - `DataViewSlots.Grouping`
           - `DataViewSlots.ColumnConfig`
-        - Slot contributors: 52 contributors — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `DataViewSlots.Cell` ×10
+        - Slot contributors: 60 contributors — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `DataViewSlots.Cell` ×16
+          - `DataViewSlots.Filter` ×9
           - `DataViewSlots.CollectionItemAction` ×7
-          - `DataViewSlots.Filter` ×7
           - `DataViewSlots.CellEditor` ×6
           - `DataViewSlots.View` ×5
           - `DataViewSlots.CollectionRowActivation` ×4
@@ -41162,8 +41463,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale` ×8
           - `ui/tokens/shadow` ×3
           - `ui/tokens/shape` ×3
-        - Imported by: 114 plugins — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `fields` ×31
+        - Imported by: 122 plugins — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `fields` ×39
           - `apps` ×28
           - `debug` ×15
           - `primitives` ×10
@@ -42631,12 +42932,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `hoverRevealTargetWithGroupFocus`
           - `useHoverReveal`
       - Cross-plugin:
-        - Imported by: 38 plugins — full list in [`plugins/primitives/plugins/hover-reveal/REFERENCE.md`](../plugins/primitives/plugins/hover-reveal/REFERENCE.md)
+        - Imported by: 39 plugins — full list in [`plugins/primitives/plugins/hover-reveal/REFERENCE.md`](../plugins/primitives/plugins/hover-reveal/REFERENCE.md)
           - `apps` ×12
           - `page` ×9
           - `primitives` ×7
           - `ui` ×4
           - `conversations` ×2
+          - `fields/identifier/table`
           - `integrations/youtube`
           - `layouts/miller`
           - `plugin-meta/exhibits`
@@ -47017,6 +47319,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `fields.nullable`
       - `fields/bool/config.boolField`
       - `fields/date/config.dateField`
+      - `fields/identifier/config.identifierField`
       - `fields/int/config.intField`
       - `fields/json/config.jsonField`
       - `fields/text/config.textField`
@@ -47904,7 +48207,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `RunRowProps`
       - `RunsDataViewProps`
     - Exports (values):
-      - `formatDuration`
       - `investigateRuns`
       - `RunDuration`
       - `runLinks`
@@ -47927,7 +48229,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Uses:
       - `fields.nullable`
       - `fields/date/config.dateField`
-      - `fields/float/config.floatField`
+      - `fields/duration/config.durationField`
       - `fields/text/config.enumTextField`
       - `fields/text/config.textField`
       - `infra/query-resource.armKeyCodec`
@@ -48867,7 +49169,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `foldUsageEntry`
           - `formatTokens`
           - `formatTokensCompact`
-          - `formatUsd`
           - `formatUsdCompact`
           - `priceBucket`
           - `resumeUsageBuckets`
@@ -51555,12 +51856,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/shadow --shadow`
           - `ui/tokens/shape --spacing`
-        - Imported by: 347 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 353 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×91
           - `conversations` ×56
           - `primitives` ×42
+          - `fields` ×41
           - `page` ×41
-          - `fields` ×35
           - `debug` ×15
           - `tasks` ×8
           - `ui` ×8
@@ -52683,7 +52984,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `colorPaletteGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Tokens used by: 527 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 528 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×120
               - `conversations` ×88
               - `primitives` ×77
@@ -52692,8 +52993,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta` ×29
               - `ui` ×26
               - `tasks` ×16
+              - `fields` ×13
               - `reports` ×13
-              - `fields` ×12
               - `active-data` ×7
               - `build` ×6
               - `reorder` ×6
@@ -52802,7 +53103,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 334 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+            - Tokens used by: 336 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
               - `apps` ×70
               - `primitives` ×70
               - `conversations` ×48
@@ -52810,8 +53111,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page` ×21
               - `ui` ×18
               - `plugin-meta` ×13
+              - `fields` ×9
               - `tasks` ×8
-              - `fields` ×7
               - `reorder` ×5
               - `review` ×5
               - `infra` ×4

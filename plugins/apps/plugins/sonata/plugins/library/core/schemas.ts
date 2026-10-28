@@ -5,6 +5,7 @@ import {
   type FieldsRecord,
 } from "@plugins/fields/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
+import { personField } from "@plugins/fields/plugins/person/plugins/config/core";
 import { floatField } from "@plugins/fields/plugins/float/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { idKindField } from "@plugins/ids/core";
@@ -32,7 +33,7 @@ import { songIdKind } from "./id-kind";
 export const songFields = {
   id: idKindField(songIdKind),
   title: textField({ label: "Title", primary: true }),
-  composer: nullable(textField({ label: "Composer" })),
+  composer: nullable(personField({ label: "Composer" })),
   durationSec: floatField(),
   endBeat: floatField(),
   createdAt: dateField(),

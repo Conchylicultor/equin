@@ -1,0 +1,9 @@
+{
+  "name": "@equin/plugin-fields-byte-size-table",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Byte size field type: data-view table cell.",
+  "equin": {
+    "collapsed": true
+  }
+}

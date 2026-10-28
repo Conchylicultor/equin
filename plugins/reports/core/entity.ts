@@ -5,6 +5,7 @@ import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
+import { identifierField } from "@plugins/fields/plugins/identifier/plugins/config/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { idKindField } from "@plugins/ids/core";
 import { entityRef } from "@plugins/infra/plugins/entities/core";
@@ -21,7 +22,7 @@ import { reportIdKind } from "./id-kind";
 export const reportFields = {
   id: idKindField(reportIdKind),
   kind: textField({ label: "Kind" }),
-  fingerprint: textField({ label: "Fingerprint" }),
+  fingerprint: identifierField({ label: "Fingerprint" }),
   worktree: textField({ label: "Worktree" }),
   source: textField({ label: "Source" }),
   /** Generic one-line summary shown in lists / notifications. */

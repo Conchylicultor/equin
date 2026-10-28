@@ -1,0 +1,9 @@
+{
+  "name": "@equin/plugin-fields-byte-size-config",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Byte size field type: the byteSizeField factory for building field records.",
+  "equin": {
+    "collapsed": true
+  }
+}

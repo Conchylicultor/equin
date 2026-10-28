@@ -28,7 +28,8 @@ import {
   type AvgPerConversationPoint as Point,
   costDaysNote,
 } from "../../shared/derive";
-import { formatUsd, formatUsdCompact, formatTokensCompact } from "../../core";
+import { formatUsd } from "@plugins/fields/plugins/money/core";
+import { formatUsdCompact, formatTokensCompact } from "../../core";
 import { useScope } from "./use-scope";
 
 const FAMILY_PALETTE: Record<string, string> = {

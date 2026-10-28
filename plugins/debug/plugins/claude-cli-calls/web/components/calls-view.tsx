@@ -3,10 +3,8 @@ import {
   claudeCliCalls,
   type ClaudeCliCallRow,
 } from "@plugins/infra/plugins/claude-cli/core";
-import {
-  formatCallDuration,
-  SLOW_CALL_MS,
-} from "@plugins/infra/plugins/claude-cli/web";
+import { SLOW_CALL_MS } from "@plugins/infra/plugins/claude-cli/web";
+import { formatDuration } from "@plugins/fields/plugins/duration/core";
 import { modelMeta } from "@plugins/conversations/plugins/model-provider/core";
 import { familyClass } from "@plugins/conversations/plugins/model-provider/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
@@ -119,11 +117,11 @@ const overrides = fieldOverrides(claudeCliCalls, {
     cell: (r) =>
       r.durationMs > SLOW_CALL_MS ? (
         <Text className="tabular-nums text-warning">
-          {formatCallDuration(r.durationMs)}
+          {formatDuration(r.durationMs)}
         </Text>
       ) : (
         <Text tone="muted" className="tabular-nums">
-          {formatCallDuration(r.durationMs)}
+          {formatDuration(r.durationMs)}
         </Text>
       ),
     align: "end",

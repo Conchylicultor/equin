@@ -1,0 +1,7 @@
+{
+  "name": "@equin/plugin-fields-identifier-config",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Identifier field factory (identifierField) for building field records.",
+  "equin": { "collapsed": true }
+}

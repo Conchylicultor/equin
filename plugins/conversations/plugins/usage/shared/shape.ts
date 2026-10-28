@@ -1,5 +1,6 @@
 import { floatField } from "@plugins/fields/plugins/float/plugins/config/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
+import { moneyField } from "@plugins/fields/plugins/money/plugins/config/core";
 import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
 import { conversationsEntityRef } from "@plugins/tasks/plugins/tasks-core/core";
 
@@ -26,7 +27,7 @@ import { conversationsEntityRef } from "@plugins/tasks/plugins/tasks-core/core";
 export const conversationUsageShape = defineExtensionShape({
   key: "conversationId",
   fields: {
-    costUsd: floatField({ label: "Cost", default: 0 }),
+    costUsd: moneyField({ label: "Cost", default: 0 }),
     tokens: floatField({ label: "Tokens", default: 0 }),
     cacheReadTokens: floatField({ default: 0 }),
     agentCount: intField({ label: "Agents", default: 0 }),

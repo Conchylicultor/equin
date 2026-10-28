@@ -175,8 +175,8 @@ row with a rising count and a new source starting to fail mints its own.
   - Uses:
     - `fields.FieldsRecord`
     - `fields.nullable`
+    - `fields/byte-size/config.byteSizeField`
     - `fields/date/config.dateField`
-    - `fields/int/config.intField`
     - `fields/json/config.jsonField`
     - `fields/text/config.enumTextField`
     - `fields/text/config.textField`

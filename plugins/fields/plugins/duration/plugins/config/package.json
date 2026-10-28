@@ -1,0 +1,9 @@
+{
+  "name": "@equin/plugin-fields-duration-config",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Duration field type: the durationField factory for building field records.",
+  "equin": {
+    "collapsed": true
+  }
+}

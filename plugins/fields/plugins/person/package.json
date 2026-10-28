@@ -1,0 +1,9 @@
+{
+  "name": "@equin/plugin-fields-person",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Person field type (a person's display name, free text): extends text — text's sort, filter and editor via the extends chain, its own initial-avatar + name cell.",
+  "equin": {
+    "collapsed": true
+  }
+}

@@ -53,7 +53,7 @@ function backupRun(overrides: Record<string, unknown> = {}): RunRow {
     namespace: null,
     message: null,
     "backup.status": "partial",
-    "backup.archiveSize": 5 * 1024 * 1024,
+    "backup.archiveSize": 5_000_000,
     "backup.sourceCount": 2,
     "backup.targetCount": 2,
     "backup.targetResults": [
@@ -301,7 +301,7 @@ describe("backup run detail sections", () => {
     expect(backupArchiveSize(run)).toBeNull();
 
     renderSection(<BackupArchiveSize run={run} />);
-    expect(screen.queryByText(/B$|KB|MB|GB/)).toBeNull();
+    expect(screen.queryByText(/B$|kB|MB|GB/)).toBeNull();
   });
 
   // The header verdicts sit beside the title, so a failure shows while the

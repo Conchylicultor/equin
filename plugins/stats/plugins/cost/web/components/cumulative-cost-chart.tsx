@@ -22,7 +22,8 @@ import { useLive } from "@plugins/network/plugins/live/web";
 import { costDaily, type CostDay } from "../../shared/values";
 import { cumulativeCost, costDaysNote } from "../../shared/derive";
 import { useShowEmptyDays } from "@plugins/stats/web";
-import { formatUsd, formatUsdCompact } from "../../core";
+import { formatUsd } from "@plugins/fields/plugins/money/core";
+import { formatUsdCompact } from "../../core";
 import { useScope } from "./use-scope";
 
 export function CumulativeCostChart() {

@@ -1,0 +1,9 @@
+{
+  "name": "@equin/plugin-fields-money",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Money field type: identity only, extends float — an amount in US dollars, drawn as currency (`$42.17`); sort, filter and grouping inherited from float → number.",
+  "equin": {
+    "collapsed": true
+  }
+}

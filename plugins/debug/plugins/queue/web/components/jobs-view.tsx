@@ -26,7 +26,8 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { useQueueActions } from "../internal/actions";
-import { firstLine, formatDuration } from "../internal/format";
+import { formatDuration } from "@plugins/fields/plugins/duration/core";
+import { firstLine } from "../internal/format";
 import {
   liveKey,
   parseJobKey,

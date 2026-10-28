@@ -251,7 +251,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `POST /api/events/sources/:id/refresh`
     - `POST /api/events/sources/refresh-all`
 - Core:
-  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `fields` ×3
     - `ids` ×3
     - `network/live` ×3
@@ -260,6 +260,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `fields/text/config` ×2
     - `fields/bool/config.boolField`
     - `fields/date/config.dateField`
+    - `fields/duration/config.durationField`
     - `fields/int/config.intField`
     - `fields/json/config.jsonField`
     - `fields/tags/config.tagsField`

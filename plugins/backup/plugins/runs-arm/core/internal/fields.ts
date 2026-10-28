@@ -1,5 +1,6 @@
 import { nullable } from "@plugins/fields/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
+import { byteSizeField } from "@plugins/fields/plugins/byte-size/plugins/config/core";
 import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
 import { liveArm } from "@plugins/network/plugins/live/core";
 import {
@@ -41,7 +42,7 @@ export const backupRunArm = liveArm(runs, BACKUP_RUN_KIND, {
   pick: ["status"],
   fields: {
     /** Archive bytes. Null while the run has not produced an archive yet. */
-    archiveSize: nullable(intField({ label: "Archive size" })),
+    archiveSize: nullable(byteSizeField({ label: "Archive size" })),
     /** Sources that actually went in (skipped ones excluded). Null pre-manifest. */
     sourceCount: nullable(intField({ label: "Sources" })),
     /** Storage targets dispatched to. Null until the run has dispatched. */

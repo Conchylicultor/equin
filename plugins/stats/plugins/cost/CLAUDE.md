@@ -315,7 +315,6 @@ it survives, the snapshot fills in where it does not.
     - `foldUsageEntry`
     - `formatTokens`
     - `formatTokensCompact`
-    - `formatUsd`
     - `formatUsdCompact`
     - `priceBucket`
     - `resumeUsageBuckets`

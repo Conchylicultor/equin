@@ -17,7 +17,7 @@ import {
   backupSources,
   backupTargetResults,
 } from "../internal/payload";
-import { formatBytes } from "../internal/format-bytes";
+import { formatByteSize } from "@plugins/fields/plugins/byte-size/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
@@ -250,7 +250,7 @@ export function BackupArchiveSize({ run }: { run: RunRow }): ReactNode {
   if (bytes === null) return null;
   return (
     <Text as="span" variant="body" tone="muted">
-      {formatBytes(bytes)}
+      {formatByteSize(bytes)}
     </Text>
   );
 }

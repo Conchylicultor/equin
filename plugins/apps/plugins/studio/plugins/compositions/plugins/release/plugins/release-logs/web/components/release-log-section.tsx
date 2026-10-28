@@ -114,7 +114,7 @@ function PersistedLogs({ runId }: { runId: string }): ReactElement {
       {
         id: "n",
         label: "Line",
-        type: "number",
+        type: "ordinal",
         value: (l) => Number(l.n),
         cell: (l) => (
           <Text variant="code" tone="faint" className="tabular-nums">

@@ -8,6 +8,7 @@ import {
 } from "@plugins/primitives/plugins/data-view/web";
 import type { FieldDef } from "@plugins/primitives/plugins/data-view/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
+import { formatByteSize } from "@plugins/fields/plugins/byte-size/core";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -15,22 +16,6 @@ import { configOrphansReport } from "../../shared/report";
 
 // Marker scraped by codegen (data-views.generated.ts). Must live in web/**.
 const ORPHANS_VIEW = defineDataView("debug.config-orphans");
-
-const UNITS = ["B", "KB", "MB", "GB", "TB"] as const;
-
-// Local human-readable byte formatter — mail/attachments' `formatBytes` lives
-// behind a plugin-private path, so a small local copy is the boundary-legal
-// choice for this one call site.
-function formatBytes(bytes: number): string {
-  if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
-  const exp = Math.min(
-    Math.floor(Math.log(bytes) / Math.log(1024)),
-    UNITS.length - 1,
-  );
-  const value = bytes / 1024 ** exp;
-  const text = exp === 0 ? String(Math.round(value)) : value.toFixed(1);
-  return `${text.replace(/\.0$/, "")} ${UNITS[exp]}`;
-}
 
 const NO_ORPHANS: OrphanEntry[] = [];
 
@@ -131,11 +116,11 @@ export function ConfigOrphansPanel() {
       {
         id: "size",
         label: "Size",
-        type: "int",
+        type: "byte-size",
         value: (r) => r.totalBytes,
         cell: (r) => (
           <span className="tabular-nums text-muted-foreground">
-            {formatBytes(r.totalBytes)}
+            {formatByteSize(r.totalBytes)}
           </span>
         ),
         sortable: true,

@@ -1,7 +1,7 @@
 import { nullable } from "@plugins/fields/core";
 import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
-import { floatField } from "@plugins/fields/plugins/float/plugins/config/core";
-import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
+import { durationField } from "@plugins/fields/plugins/duration/plugins/config/core";
+import { ordinalField } from "@plugins/fields/plugins/ordinal/plugins/config/core";
 import {
   enumTextField,
   textField,
@@ -37,12 +37,12 @@ export const opQueueRow = rowKind("op-status.queue-row", {
         queued: { label: "Queued" },
       },
     }),
-    pos: nullable(intField({ label: "Queue position" })),
+    pos: nullable(ordinalField({ label: "Queue position" })),
     title: textField({ label: "Conversation", primary: true }),
     held: nullable(textField({ label: "Held" })),
-    waited: floatField({ label: "Waited" }),
-    worked: floatField({ label: "Worked" }),
-    asleep: floatField({ label: "Asleep" }),
+    waited: durationField({ label: "Waited" }),
+    worked: durationField({ label: "Worked" }),
+    asleep: durationField({ label: "Asleep" }),
   },
   // What the cells read beyond the listed fields: the worktree's slug, whether
   // the row is the open conversation's own, and the op's one state line.

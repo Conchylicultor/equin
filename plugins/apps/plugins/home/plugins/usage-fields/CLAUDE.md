@@ -28,6 +28,7 @@ zeros); an app missing from a ready summary was never used and reads 0 / "—".
   - Uses:
     - `apps-core/app-launcher.installedApp`
     - `fields/date/config.dateField`
+    - `fields/duration/config.durationField`
     - `fields/int/config.intField`
     - `network/live.clientFields`
   - Exports (values): `appUsageFields`

@@ -1,6 +1,6 @@
 import { nullable, type FieldsRecord } from "@plugins/fields/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
-import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
+import { byteSizeField } from "@plugins/fields/plugins/byte-size/plugins/config/core";
 import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
 import {
   enumTextField,
@@ -39,7 +39,7 @@ export const backupRunFields = {
       failed: { label: "failed" },
     },
   }),
-  archiveSizeBytes: nullable(intField({ label: "Size" })),
+  archiveSizeBytes: nullable(byteSizeField({ label: "Size" })),
   /**
    * The wide manifest decoder on purpose — see `BackupManifestSchema`: v1 rows
    * exist, and a column that decodes has to accept what is really there.

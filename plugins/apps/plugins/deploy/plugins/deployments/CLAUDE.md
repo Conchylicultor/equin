@@ -509,6 +509,7 @@ any consumer; extra columns of the row are client fields of the `deployments` co
     - `apps/deploy/servers.serverDetailRoute`
     - `fields.nullable`
     - `fields/date/config.dateField`
+    - `fields/identifier/config.identifierField`
     - `fields/int/config.intField`
     - `fields/string-list/config.stringListField`
     - `fields/text/config.enumTextField`

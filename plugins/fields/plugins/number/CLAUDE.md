@@ -34,6 +34,8 @@ these capabilities via the `extends`-chain fallback.
     - `numberIdentity`
 - Cross-plugin:
   - Imported by:
+    - `fields/byte-size`
+    - `fields/duration`
     - `fields/float`
     - `fields/int`
 - Sub-plugins:

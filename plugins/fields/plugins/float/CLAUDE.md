@@ -27,7 +27,9 @@ Like `int`, it demonstrates the `extends` chain — differing only in that its
     - `floatFieldType`
     - `floatIdentity`
 - Cross-plugin:
-  - Imported by: `fields/float/config`
+  - Imported by:
+    - `fields/float/config`
+    - `fields/money`
 - Sub-plugins:
   - **`config`** — Float field type: config-render capability (number stepper for config-v2.fields.renderer) plus the floatField factory.
   - **`storage`** — Float field type: DB storage capability — maps to a Postgres double precision column.

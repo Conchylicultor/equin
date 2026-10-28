@@ -1,0 +1,9 @@
+{
+  "name": "@equin/plugin-fields-money-config",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Money field type: the moneyField factory for building field records.",
+  "equin": {
+    "collapsed": true
+  }
+}

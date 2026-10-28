@@ -109,6 +109,7 @@ host first.
     - `fields.nullable`
     - `fields/bool/config.boolField`
     - `fields/date/config.dateField`
+    - `fields/identifier/config.identifierField`
     - `fields/int/config.intField`
     - `fields/json/config.jsonField`
     - `fields/text/config.textField`

@@ -145,8 +145,8 @@ spawn / control-file / banner helpers both scripts share are `e2e/synthetic.ts`.
   - Uses:
     - `fields.nullable`
     - `fields/bool/config.boolField`
-    - `fields/float/config.floatField`
-    - `fields/int/config.intField`
+    - `fields/duration/config.durationField`
+    - `fields/ordinal/config.ordinalField`
     - `fields/text/config.enumTextField`
     - `fields/text/config.textField`
     - `network/live.rowKind`

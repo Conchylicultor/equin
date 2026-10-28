@@ -279,6 +279,7 @@ export const LUCIDE_MAP = {
   park: "trees",
   pause: "pause",
   "pause-circle": "circle-pause",
+  payments: "banknote",
   "pending-actions": "clipboard-list",
   person: "user",
   "phone-iphone": "smartphone",

@@ -1,0 +1,9 @@
+{
+  "name": "@equin/plugin-fields-ordinal-config",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Ordinal field type: the ordinalField factory for building field records.",
+  "equin": {
+    "collapsed": true
+  }
+}

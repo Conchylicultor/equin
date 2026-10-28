@@ -1,0 +1,9 @@
+{
+  "name": "@equin/plugin-fields-ordinal",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Ordinal field type: identity only, extends int — a position, rank or version number, drawn faint and tabular with no thousands grouping; sort, filter and grouping inherited from int → number.",
+  "equin": {
+    "collapsed": true
+  }
+}

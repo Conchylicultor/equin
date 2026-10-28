@@ -4,7 +4,8 @@ import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/we
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { useNow } from "@plugins/primitives/plugins/relative-time/web";
 import { HOLD_SPECS, type HoldClass } from "@plugins/infra/plugins/jobs/core";
-import { formatAbsolute, formatDuration, formatWhen } from "../internal/format";
+import { formatDuration } from "@plugins/fields/plugins/duration/core";
+import { formatAbsolute, formatWhen } from "../internal/format";
 import type { JobListStatus, JobProblem } from "../internal/job-rows";
 import { PROBLEM_LABEL, STATUS_META } from "../internal/status";
 
@@ -44,7 +45,7 @@ export function RunningDuration({
   overCeilingAt: number | null;
 }) {
   const now = useNow(1000);
-  const ms = now - since.getTime();
+  const ms = Math.max(0, now - since.getTime());
   const over = overCeilingAt !== null && ms > overCeilingAt;
   return (
     <Text className={over ? "tabular-nums text-warning" : "tabular-nums"}>

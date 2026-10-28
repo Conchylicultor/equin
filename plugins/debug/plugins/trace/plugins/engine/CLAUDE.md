@@ -271,7 +271,7 @@ expandable JSON.
     - `fields.fieldsToZodObject`
     - `fields/bool/config.boolField`
     - `fields/date/config.dateField`
-    - `fields/float/config.floatField`
+    - `fields/duration/config.durationField`
     - `fields/int/config.intField`
     - `fields/json/config.jsonField`
     - `fields/text/config.textField`

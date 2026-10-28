@@ -1,0 +1,9 @@
+{
+  "name": "@equin/plugin-fields-identifier",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Identifier field type (a sha, run id, fingerprint, slug, tool name): extends text — text's sort, filter and editor via the extends chain, its own monospace cell.",
+  "equin": {
+    "collapsed": true
+  }
+}

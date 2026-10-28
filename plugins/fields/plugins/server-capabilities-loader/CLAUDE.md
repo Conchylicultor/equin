@@ -30,12 +30,18 @@ drift. Fix by running `./equin build`.
 - Server:
   - Uses:
     - `fields/bool/storage`
+    - `fields/byte-size/storage`
     - `fields/bytes/storage`
     - `fields/date/storage`
+    - `fields/duration/storage`
     - `fields/float/storage`
+    - `fields/identifier/storage`
     - `fields/int/storage`
     - `fields/json/storage`
     - `fields/location/storage`
+    - `fields/money/storage`
+    - `fields/ordinal/storage`
+    - `fields/person/storage`
     - `fields/rank/storage`
     - `fields/string-list/storage`
     - `fields/tags/storage`

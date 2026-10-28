@@ -81,7 +81,7 @@ export function ToolsView({
       {
         id: "name",
         label: "Tool",
-        type: "text",
+        type: "identifier",
         primary: true,
         value: (t) => t.name,
         sortable: true,

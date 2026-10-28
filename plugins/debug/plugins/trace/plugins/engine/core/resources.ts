@@ -1,4 +1,4 @@
-import { floatField } from "@plugins/fields/plugins/float/plugins/config/core";
+import { durationField } from "@plugins/fields/plugins/duration/plugins/config/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import {
   liveCollection,
@@ -15,7 +15,7 @@ import { tracesEntityRef } from "./fields";
  */
 const TRACE_LIST_CARRIED = {
   wallTime: textField(),
-  windowSpanMs: floatField(),
+  windowSpanMs: durationField(),
 };
 
 /**

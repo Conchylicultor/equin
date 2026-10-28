@@ -9,7 +9,6 @@ export { RunsDataView } from "./components/runs-data-view";
 export type { RunsDataViewProps } from "./components/runs-data-view";
 export { RunDuration } from "./components/run-duration";
 export { useRun } from "./internal/use-run";
-export { formatDuration } from "./internal/format";
 export { RUNS_VIEW } from "./internal/view-id";
 export { investigateRuns } from "./internal/investigate";
 export type { RunInvestigation } from "./internal/investigate";

@@ -177,7 +177,6 @@ row, or on a failed re-read the row as last seen).
     - `RunRowProps`
     - `RunsDataViewProps`
   - Exports (values):
-    - `formatDuration`
     - `investigateRuns`
     - `RunDuration`
     - `runLinks`
@@ -200,7 +199,7 @@ row, or on a failed re-read the row as last seen).
   - Uses:
     - `fields.nullable`
     - `fields/date/config.dateField`
-    - `fields/float/config.floatField`
+    - `fields/duration/config.durationField`
     - `fields/text/config.enumTextField`
     - `fields/text/config.textField`
     - `infra/query-resource.armKeyCodec`

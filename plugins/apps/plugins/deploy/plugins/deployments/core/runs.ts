@@ -7,6 +7,7 @@ import {
   enumTextField,
   textField,
 } from "@plugins/fields/plugins/text/plugins/config/core";
+import { identifierField } from "@plugins/fields/plugins/identifier/plugins/config/core";
 import { entityRef } from "@plugins/infra/plugins/entities/core";
 import { idKindField } from "@plugins/ids/core";
 import { deployRunIdKind } from "./id-kinds";
@@ -266,9 +267,9 @@ export const deployRunFields = {
     },
   }),
   /** The `release_runs.id` this `ship` pinned. Null on a converge, or a bare ship. */
-  releaseRunId: nullable(textField({ label: "Release run" })),
+  releaseRunId: nullable(identifierField({ label: "Release run" })),
   /** The commit the shipped bundle was built from. Null where genuinely unknown. */
-  commitSha: nullable(textField({ label: "Commit" })),
+  commitSha: nullable(identifierField({ label: "Commit" })),
   status: enumTextField(DEPLOY_RUN_STATUSES, {
     label: "Outcome",
     primary: true,

@@ -1,3 +1,5 @@
+import { sql } from "drizzle-orm";
+import { expr } from "@plugins/infra/plugins/query-resource/core";
 import { serveCollection } from "@plugins/network/plugins/live/server";
 import { songLibrary } from "../../core/resources";
 import { _songs } from "./tables";
@@ -10,11 +12,18 @@ import { _songs } from "./tables";
 // one that sorts or filters by them.
 //
 // `duration` and `added` are the library's ids for two columns of the table
-// (the ids its saved views name), bound here.
+// (the ids its saved views name), bound here. `duration` is a duration field —
+// milliseconds — over the score's `durationSec`, so it sorts, filters (`> 3m`)
+// and draws like every other span.
 export const songLibraryServed = serveCollection(songLibrary, {
   from: _songs,
   columns: {
-    duration: (j) => j.base.durationSec,
+    duration: (j) =>
+      expr(sql`${j.base.durationSec} * 1000`, {
+        decoder: Number,
+        sqlType: "float8",
+        notNull: true,
+      }),
     added: (j) => j.base.createdAt,
   },
 });

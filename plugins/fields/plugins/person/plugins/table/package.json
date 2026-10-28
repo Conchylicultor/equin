@@ -1,0 +1,9 @@
+{
+  "name": "@equin/plugin-fields-person-table",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Person field type: data-view table cell (a small initial avatar beside the name).",
+  "equin": {
+    "collapsed": true
+  }
+}

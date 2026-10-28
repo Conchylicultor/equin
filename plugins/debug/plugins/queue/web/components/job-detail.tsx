@@ -10,7 +10,7 @@ import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { useQueueActions } from "../internal/actions";
-import { formatDuration } from "../internal/format";
+import { formatDuration } from "@plugins/fields/plugins/duration/core";
 import {
   isOverCeiling,
   useJobHistory,

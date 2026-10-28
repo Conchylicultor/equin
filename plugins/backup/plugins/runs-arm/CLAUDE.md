@@ -180,6 +180,7 @@ compiler — a real follow-up, and a bigger change than it looks.
     - `backup.backupRunsEntityRef`
     - `backup.BackupSourceReportsSchema`
     - `fields.nullable`
+    - `fields/byte-size/config.byteSizeField`
     - `fields/int/config.intField`
     - `fields/json/config.jsonField`
     - `network/live.liveArm`

@@ -21,10 +21,8 @@ import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import { InlineText } from "@plugins/primitives/plugins/inline-text/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import type { ClaudeCliCall } from "../../core";
-import {
-  formatCallDuration,
-  SLOW_CALL_MS,
-} from "../internal/format-call-duration";
+import { formatDuration } from "@plugins/fields/plugins/duration/core";
+import { SLOW_CALL_MS } from "../internal/format-call-duration";
 
 /**
  * One recorded `claude --print` call, rendered in full: a header (source,
@@ -87,7 +85,7 @@ export function ClaudeCliCallDetail({ call }: { call: ClaudeCliCall }) {
             </MetaCell>
             <MetaCell
               label="Duration"
-              note={isSlow ? `over ${formatCallDuration(SLOW_CALL_MS)}` : null}
+              note={isSlow ? `over ${formatDuration(SLOW_CALL_MS)}` : null}
             >
               {/* A slow call reads in the warning tint, as in the log's column. */}
               <Text
@@ -95,7 +93,7 @@ export function ClaudeCliCallDetail({ call }: { call: ClaudeCliCall }) {
                   isSlow ? "tabular-nums text-warning" : "tabular-nums"
                 }
               >
-                {formatCallDuration(call.durationMs)}
+                {formatDuration(call.durationMs)}
               </Text>
             </MetaCell>
             <MetaCell label="Model id">

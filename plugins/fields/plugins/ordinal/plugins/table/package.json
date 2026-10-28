@@ -1,0 +1,9 @@
+{
+  "name": "@equin/plugin-fields-ordinal-table",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Ordinal field type: data-view table cell.",
+  "equin": {
+    "collapsed": true
+  }
+}

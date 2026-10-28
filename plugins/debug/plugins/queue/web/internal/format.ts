@@ -1,19 +1,3 @@
-/**
- * A duration as the queue reads it: milliseconds under a second, one decimal
- * of seconds under a minute, then `Xm 0Ys`, then `Xh 0Ym`.
- */
-export function formatDuration(ms: number): string {
-  const abs = Math.max(0, ms);
-  if (abs < 1000) return `${Math.round(abs)}ms`;
-  if (abs < 60_000) return `${(abs / 1000).toFixed(1)}s`;
-  if (abs < 3_600_000) {
-    const s = Math.round(abs / 1000);
-    return `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, "0")}s`;
-  }
-  const m = Math.round(abs / 60_000);
-  return `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, "0")}m`;
-}
-
 /** A coarse span (`12s`, `4m`, `3h`, `2d`) for "in …" / "… ago". */
 function span(ms: number): string {
   const s = Math.round(Math.abs(ms) / 1000);

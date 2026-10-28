@@ -1,6 +1,6 @@
 import { nullable } from "@plugins/fields/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
-import { floatField } from "@plugins/fields/plugins/float/plugins/config/core";
+import { durationField } from "@plugins/fields/plugins/duration/plugins/config/core";
 import {
   enumTextField,
   textField,
@@ -47,7 +47,7 @@ const runFields = {
    * `<RunDuration>`, not a value the server would have to re-push every
    * second).
    */
-  duration: nullable(floatField({ label: "Took" })),
+  duration: nullable(durationField({ label: "Took" })),
   startedAt: dateField({ label: "Started" }),
   /** Null exactly while the run is in flight. */
   finishedAt: nullable(dateField({ label: "Finished" })),

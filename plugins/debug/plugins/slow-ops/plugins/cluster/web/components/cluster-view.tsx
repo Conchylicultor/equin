@@ -16,6 +16,7 @@ import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { loadSeverity } from "@plugins/debug/plugins/slow-ops/core";
+import { formatDuration } from "@plugins/fields/plugins/duration/core";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import {
@@ -103,7 +104,8 @@ function AtLeast({
   value,
 }: {
   row: ClusterAggregate;
-  value: number;
+  /** The cell's own rendering of the (lower-bound) value. */
+  value: ReactNode;
 }): ReactElement {
   if (row.maybeUncountedIn.length === 0) return <>{value}</>;
   return (
@@ -221,20 +223,20 @@ function ClusterScanView({
       },
       {
         id: "totalMs",
-        label: "Total (ms)",
-        type: "number",
+        label: "Total",
+        type: "duration",
         width: "7.5rem",
         align: "end",
-        value: (r) => Math.round(r.totalMs),
-        cell: (r) => <AtLeast row={r} value={Math.round(r.totalMs)} />,
+        value: (r) => r.totalMs,
+        cell: (r) => <AtLeast row={r} value={formatDuration(r.totalMs)} />,
       },
       {
         id: "maxMs",
-        label: "Max (ms)",
-        type: "number",
+        label: "Max",
+        type: "duration",
         width: "5rem",
         align: "end",
-        value: (r) => Math.round(r.maxMs),
+        value: (r) => r.maxMs,
       },
       {
         id: "lastSeen",
@@ -314,11 +316,11 @@ function ClusterScanView({
       },
       {
         id: "durationMs",
-        label: "Dur (ms)",
-        type: "number",
+        label: "Duration",
+        type: "duration",
         width: "5rem",
         align: "end",
-        value: (r) => Math.round(r.durationMs),
+        value: (r) => r.durationMs,
       },
       {
         id: "load",

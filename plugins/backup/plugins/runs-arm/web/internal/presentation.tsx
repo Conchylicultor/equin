@@ -3,7 +3,7 @@ import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { FieldPresentation } from "@plugins/network/plugins/live/web";
 import { backupRunArm } from "../../core";
 import { backupArchiveSize } from "./payload";
-import { formatBytes } from "./format-bytes";
+import { formatByteSize } from "@plugins/fields/plugins/byte-size/core";
 
 /** A number column reads as nothing where a run has none, never as zero. */
 function numberCell(
@@ -49,7 +49,7 @@ export const backupRunPresentation = FieldPresentation.Register({
     archiveSize: {
       // The same accessor the detail pane's Archive line reads, so the column
       // and the line cannot disagree about the run's size.
-      cell: (_size, run) => numberCell(backupArchiveSize(run), formatBytes),
+      cell: (_size, run) => numberCell(backupArchiveSize(run), formatByteSize),
       width: "7rem",
     },
     sourceCount: {

@@ -8,13 +8,13 @@ import {
   scanArea,
   useStorageUsage,
 } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
-import { formatBytes } from "../internal/format";
+import { formatByteSize } from "@plugins/fields/plugins/byte-size/core";
 import { storageRows, type StorageRow } from "../internal/storage-rows";
 
 // Marker scraped by codegen (data-views.generated.ts). Must live in web/**.
 const STORAGE_OWNERS_VIEW = defineDataView("web-storage.owners");
 
-const bytesCell = (n: number | null) => (n === null ? "—" : formatBytes(n));
+const bytesCell = (n: number | null) => (n === null ? "—" : formatByteSize(n));
 
 const FIELDS: FieldDef<StorageRow>[] = [
   {
@@ -42,7 +42,7 @@ const FIELDS: FieldDef<StorageRow>[] = [
   {
     id: "bytes",
     label: "Used",
-    type: "number",
+    type: "byte-size",
     value: (r) => r.bytes,
     cell: (r) => bytesCell(r.bytes),
     sortable: true,
@@ -51,7 +51,7 @@ const FIELDS: FieldDef<StorageRow>[] = [
   {
     id: "cap",
     label: "Cap",
-    type: "number",
+    type: "byte-size",
     value: (r) => r.cap,
     cell: (r) => bytesCell(r.cap),
     sortable: true,

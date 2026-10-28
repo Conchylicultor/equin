@@ -10,7 +10,8 @@ import {
 } from "@plugins/primitives/plugins/data-view/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { formatTokensCompact, formatUsd } from "../../core";
+import { formatUsd } from "@plugins/fields/plugins/money/core";
+import { formatTokensCompact } from "../../core";
 import {
   costTopSessions,
   sessionConversations,
@@ -31,10 +32,11 @@ interface TopRow {
   title: string | null;
   /** The live conversation's status; null when it no longer exists. */
   status: string | null;
-  models: string;
+  models: string[];
   cost: number;
   tokens: number;
-  lastActivity: string;
+  /** The local day of the session's latest entry; null when it has none. */
+  lastActivity: Date | null;
 }
 
 const FIELDS: FieldDef<TopRow>[] = [
@@ -65,14 +67,14 @@ const FIELDS: FieldDef<TopRow>[] = [
   {
     id: "models",
     label: "Model(s)",
-    type: "text",
-    value: (r) => r.models,
+    type: "tags",
+    values: (r) => r.models,
     width: "10rem",
   },
   {
     id: "cost",
     label: "Cost",
-    type: "number",
+    type: "money",
     value: (r) => r.cost,
     cell: (r) => (
       <span className="font-mono tabular-nums">{formatUsd(r.cost)}</span>
@@ -96,7 +98,7 @@ const FIELDS: FieldDef<TopRow>[] = [
   {
     id: "lastActivity",
     label: "Last activity",
-    type: "text",
+    type: "date",
     value: (r) => r.lastActivity,
     width: "7rem",
   },
@@ -144,14 +146,17 @@ function TopSessions({ sessions }: { sessions: readonly CostTopSession[] }) {
         conversationId: live?.id ?? s.conversationId,
         title: live?.title ?? s.title,
         status: live?.status ?? null,
-        models: s.modelsUsed.join(", "),
+        models: [...s.modelsUsed],
         cost: s.totalCost,
         tokens:
           s.inputTokens +
           s.outputTokens +
           s.cacheCreationTokens +
           s.cacheReadTokens,
-        lastActivity: s.lastActivity,
+        // A `YYYY-MM-DD` day ("" for none) — read as that day's LOCAL
+        // midnight (no `Z`), so the cell never lands on the day before.
+        lastActivity:
+          s.lastActivity === "" ? null : new Date(`${s.lastActivity}T00:00`),
       };
     });
   }, [sessions, found]);

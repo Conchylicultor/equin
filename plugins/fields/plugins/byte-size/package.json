@@ -1,0 +1,9 @@
+{
+  "name": "@equin/plugin-fields-byte-size",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Byte-size field type: identity only, extends number — a size in bytes, drawn in SI units (`840 B`, `18.4 kB`, `1.5 GB`) and filtered by operands typed in units (`1 GB`, `500kB`); sort and grouping inherited from number. (`bytes` is the binary-data type.)",
+  "equin": {
+    "collapsed": true
+  }
+}

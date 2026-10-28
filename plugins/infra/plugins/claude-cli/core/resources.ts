@@ -19,7 +19,7 @@ import {
   textField,
   parsedTextField,
 } from "@plugins/fields/plugins/text/plugins/config/core";
-import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
+import { durationField } from "@plugins/fields/plugins/duration/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
 import { entityRef } from "@plugins/infra/plugins/entities/core";
@@ -67,7 +67,7 @@ export const claudeCliCallFields = {
   system: nullable(textField()),
   output: nullable(textField({ label: "Output" })),
   error: nullable(textField({ label: "Error" })),
-  durationMs: intField({ label: "Duration" }),
+  durationMs: durationField({ label: "Duration" }),
   // The domain record this call was made FOR — a run id, a task id, whatever row
   // the caller is explaining. Free-form and NOT namespaced by `sourceName`, so it
   // must be a globally unique row id (a UUID); a per-caller counter would collide

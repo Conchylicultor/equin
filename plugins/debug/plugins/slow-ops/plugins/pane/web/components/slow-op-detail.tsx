@@ -29,6 +29,7 @@ import {
   type SpanMeasure,
 } from "@plugins/infra/plugins/runtime-profiler/core";
 import { TraceChip } from "./trace-chip";
+import { formatDuration } from "@plugins/fields/plugins/duration/core";
 
 // Markers scraped by codegen (data-views.generated.ts). Must live in web/**.
 const SLOW_OP_CALLERS = defineDataView("debug.slow-op.callers");
@@ -41,8 +42,6 @@ const callersSource = liveDataSource(slowOpCallers, {
   searchable: ["callerLabel"],
   facets: ["callerKind"],
 });
-
-const ms = (v: number): string => `${Math.round(v)} ms`;
 
 // One slow op, read by id from the `slow-ops.op` lookup: live, so a new
 // occurrence of this op lands within the producer's 2 s window.
@@ -118,7 +117,7 @@ function SlowOpBody({ op }: { op: SlowOp }): ReactElement {
             {op.operation}
           </Text>
           <Text as="div" variant="caption" tone="muted">
-            {`${op.count}× · total ${ms(op.totalMs)} · max ${ms(op.maxMs)} · last ${ms(op.lastMs)} (threshold ${ms(op.thresholdMs)})`}
+            {`${op.count}× · total ${formatDuration(op.totalMs)} · max ${formatDuration(op.maxMs)} · last ${formatDuration(op.lastMs)} (threshold ${formatDuration(op.thresholdMs)})`}
           </Text>
           <Text as="div" variant="caption" tone="muted">
             First seen <RelativeTime date={op.firstSeenAt} /> · last seen{" "}
@@ -188,12 +187,10 @@ const callerOverrides = fieldOverrides(slowOpCallers, {
   },
   count: { align: "end", width: "4rem" },
   totalMs: {
-    cell: (r) => <span className="tabular-nums">{Math.round(r.totalMs)}</span>,
     align: "end",
     width: "5.5rem",
   },
   maxMs: {
-    cell: (r) => <span className="tabular-nums">{Math.round(r.maxMs)}</span>,
     align: "end",
     width: "5rem",
   },
@@ -245,9 +242,8 @@ const sampleFields: FieldDef<SampleRow>[] = [
   {
     id: "durationMs",
     label: "Duration",
-    type: "number",
+    type: "duration",
     value: (r) => r.durationMs,
-    cell: (r) => <span className="tabular-nums">{ms(r.durationMs)}</span>,
     align: "end",
     width: "5.5rem",
   },
@@ -287,7 +283,7 @@ const sampleFields: FieldDef<SampleRow>[] = [
   {
     id: "trace",
     label: "Trace",
-    type: "text",
+    type: "identifier",
     value: (r) => r.traceId ?? "",
     cell: (r) => (r.traceId ? <TraceChip traceId={r.traceId} /> : null),
     width: "5rem",
@@ -328,7 +324,7 @@ function WaitLines({ waits }: { waits: [string, number][] }): ReactElement {
           className="truncate font-mono text-3xs text-muted-foreground"
           title={`${layer}: ${Math.round(total)}ms wait`}
         >
-          ⏳ {layer} {ms(total)}
+          ⏳ {layer} {formatDuration(total)}
         </span>
       ))}
     </Stack>
@@ -350,7 +346,7 @@ function VariantLines({
           className="truncate font-mono text-3xs text-muted-foreground"
           title={v.variant}
         >
-          ◇ {v.variant} ×{v.count} ({ms(v.totalMs)})
+          ◇ {v.variant} ×{v.count} ({formatDuration(v.totalMs)})
         </span>
       ))}
     </Stack>

@@ -3,7 +3,7 @@ import { fieldsToZodObject, type FieldsRecord } from "@plugins/fields/core";
 import { uuidField } from "@plugins/fields/plugins/uuid/plugins/config/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
-import { floatField } from "@plugins/fields/plugins/float/plugins/config/core";
+import { durationField } from "@plugins/fields/plugins/duration/plugins/config/core";
 import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
 import { entityRef } from "@plugins/infra/plugins/entities/core";
 import { TraceSnapshotSchema, type TraceSnapshot } from "./types";
@@ -23,8 +23,8 @@ export const traceFields = {
   worktree: textField(),
   triggerKind: textField({ label: "Trigger" }),
   triggerLabel: textField({ label: "Operation", primary: true }),
-  durationMs: floatField({ label: "Duration" }),
-  thresholdMs: floatField(),
+  durationMs: durationField({ label: "Duration" }),
+  thresholdMs: durationField(),
   snapshot: jsonField<TraceSnapshot>({
     schema: TraceSnapshotSchema,
     default: {} as TraceSnapshot,

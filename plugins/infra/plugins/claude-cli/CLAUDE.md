@@ -111,7 +111,7 @@ block keep taking a plain `ClaudeCliCall`.
 
 ## Plugin reference
 
-- Description: Consumer half of the claude-cli call log: useClaudeCliCalls({correlationId, occurredAt}) answers 'which model calls produced this record?' as a calls / none / not-retained result, <ClaudeCliCallDetail> is the one rendering of a recorded call (header, meta grid, context with id chips, output or error, prompt, system — each copyable), and formatCallDuration is how a call's duration reads. One-shot Claude CLI helper (`claude --print`) for short, latency-tolerant generations, and runClaudeReadOnly — a print that may only Read / Grep / Glob one directory and answers with a zod-schema'd structured value. Reuses the user's local Claude CLI auth — no API key plumbing.
+- Description: Consumer half of the claude-cli call log: useClaudeCliCalls({correlationId, occurredAt}) answers 'which model calls produced this record?' as a calls / none / not-retained result, <ClaudeCliCallDetail> is the one rendering of a recorded call (header, meta grid, context with id chips, output or error, prompt, system — each copyable), and SLOW_CALL_MS is the duration past which a call reads as slow. One-shot Claude CLI helper (`claude --print`) for short, latency-tolerant generations, and runClaudeReadOnly — a print that may only Read / Grep / Glob one directory and answers with a zod-schema'd structured value. Reuses the user's local Claude CLI auth — no API key plumbing.
 - Server:
   - Contributes:
     - `resource.declare` "claude-cli-calls"
@@ -171,7 +171,6 @@ block keep taking a plain `ClaudeCliCall`.
     - `primitives/relative-time.RelativeTime`
   - Exports (values):
     - `ClaudeCliCallDetail`
-    - `formatCallDuration`
     - `SLOW_CALL_MS`
     - `useClaudeCliCalls`
 - Core:
@@ -182,7 +181,7 @@ block keep taking a plain `ClaudeCliCall`.
     - `fields.fieldsToZodObject`
     - `fields.nullable`
     - `fields/date/config.dateField`
-    - `fields/int/config.intField`
+    - `fields/duration/config.durationField`
     - `fields/json/config.jsonField`
     - `fields/text/config.enumTextField`
     - `fields/text/config.parsedTextField`

@@ -1,0 +1,9 @@
+{
+  "name": "@equin/plugin-fields-money-table",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Money field type: data-view table cell.",
+  "equin": {
+    "collapsed": true
+  }
+}

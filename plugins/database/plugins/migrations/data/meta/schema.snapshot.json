@@ -1,6 +1,6 @@
 {
-  "id": "35e0e396-7f2a-48de-aa13-1772d8c11f0f",
-  "prevId": "3cc2f59b-547f-488d-9a43-971e3d0a385c",
+  "id": "a2cae672-1f0c-4924-8dae-9a84acf30632",
+  "prevId": "35e0e396-7f2a-48de-aa13-1772d8c11f0f",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -2503,7 +2503,7 @@
         },
         "duration_ms": {
           "name": "duration_ms",
-          "type": "integer",
+          "type": "double precision",
           "primaryKey": false,
           "notNull": false
         },
@@ -5761,7 +5761,7 @@
         },
         "archive_size_bytes": {
           "name": "archive_size_bytes",
-          "type": "integer",
+          "type": "double precision",
           "primaryKey": false,
           "notNull": false
         },
@@ -8923,7 +8923,7 @@
         },
         "duration_ms": {
           "name": "duration_ms",
-          "type": "integer",
+          "type": "double precision",
           "primaryKey": false,
           "notNull": true
         },
@@ -9470,7 +9470,7 @@
         },
         "duration_ms": {
           "name": "duration_ms",
-          "type": "integer",
+          "type": "double precision",
           "primaryKey": false,
           "notNull": true
         },

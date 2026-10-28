@@ -90,7 +90,7 @@ const FIELDS: FieldDef<PrototypeVersion>[] = [
   {
     id: "n",
     label: "Version",
-    type: "int",
+    type: "ordinal",
     value: (v) => v.n,
     cell: (v) => `v${v.n}`,
   },

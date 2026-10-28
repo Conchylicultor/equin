@@ -122,7 +122,8 @@ export function SongLibrary() {
             });
           },
         },
-        // m:ss over the inherited number cell; the number range filter stays.
+        // m:ss over the duration cell (a player shows a length that way); the
+        // duration filter (`> 3m`) stays.
         // The cell reads in the foreground ink (the length is the row's one
         // value worth reading at a glance); the card token stays quiet.
         duration: {

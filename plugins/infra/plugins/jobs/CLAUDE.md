@@ -695,7 +695,9 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `fields.nullable`
     - `fields/bool/config.boolField`
     - `fields/date/config.dateField`
+    - `fields/duration/config.durationField`
     - `fields/float/config.floatField`
+    - `fields/identifier/config.identifierField`
     - `fields/int/config.intField`
     - `fields/json/config.jsonField`
     - `fields/text/config.enumTextField`

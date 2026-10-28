@@ -253,6 +253,7 @@ export const ICON_MANIFEST: {
     "park",
     "pause",
     "pause-circle",
+    "payments",
     "pending-actions",
     "person",
     "phone-iphone",

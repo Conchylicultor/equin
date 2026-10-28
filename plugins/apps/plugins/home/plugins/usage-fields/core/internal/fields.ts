@@ -1,5 +1,6 @@
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
+import { durationField } from "@plugins/fields/plugins/duration/plugins/config/core";
 import { clientFields } from "@plugins/network/plugins/live/core";
 import { installedApp } from "@plugins/apps-core/plugins/app-launcher/core";
 
@@ -12,9 +13,9 @@ import { installedApp } from "@plugins/apps-core/plugins/app-launcher/core";
  */
 export const appUsageFields = clientFields(installedApp, "usage", {
   fields: {
-    focusedMs7d: intField({ label: "Time · 7d" }),
+    focusedMs7d: durationField({ label: "Time · 7d" }),
     launches7d: intField({ label: "Opens · 7d" }),
-    focusedMsTotal: intField({ label: "Time · all" }),
+    focusedMsTotal: durationField({ label: "Time · all" }),
     launchesTotal: intField({ label: "Opens · all" }),
     lastOpenedAt: dateField({ label: "Last opened" }),
   },

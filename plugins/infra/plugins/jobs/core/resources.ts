@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { fieldsToZodObject, nullable } from "@plugins/fields/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
+import { durationField } from "@plugins/fields/plugins/duration/plugins/config/core";
 import { floatField } from "@plugins/fields/plugins/float/plugins/config/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
@@ -9,6 +10,7 @@ import {
   parsedTextField,
   textField,
 } from "@plugins/fields/plugins/text/plugins/config/core";
+import { identifierField } from "@plugins/fields/plugins/identifier/plugins/config/core";
 import { entityRef } from "@plugins/infra/plugins/entities/core";
 import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import {
@@ -210,9 +212,9 @@ export const jobRunsEntityRef = entityRef("job_runs", {
   finishedAt: dateField({ label: "Finished" }),
   outcome: JOB_RUN_OUTCOME,
   error: nullable(textField({ label: "Error" })),
-  durationMs: intField({ label: "Duration" }),
+  durationMs: durationField({ label: "Duration" }),
   attempt: intField({ label: "Attempt" }),
-  jobId: nullable(textField({ label: "Job id" })),
+  jobId: nullable(identifierField({ label: "Job id" })),
   hold: JOB_RUN_HOLD,
   maxAttempts: nullable(intField({ label: "Max attempts" })),
   queuedAt: nullable(dateField({ label: "Queued" })),
@@ -228,7 +230,7 @@ const JOB_RUN_LISTED = {
    * floored at 0 (the two come from different clocks). Not a stored column —
    * the served collection computes it in SQL. NULL when `queuedAt` is.
    */
-  waitMs: nullable(floatField({ label: "Waited" })),
+  waitMs: nullable(durationField({ label: "Waited" })),
 };
 const JOB_RUN_CARRIED = {
   seq: floatField(),

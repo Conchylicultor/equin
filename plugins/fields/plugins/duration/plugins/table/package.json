@@ -1,0 +1,9 @@
+{
+  "name": "@equin/plugin-fields-duration-table",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Duration field type: data-view table cell.",
+  "equin": {
+    "collapsed": true
+  }
+}

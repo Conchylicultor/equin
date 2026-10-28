@@ -11,6 +11,7 @@ import {
   enumTextField,
 } from "@plugins/fields/plugins/text/plugins/config/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
+import { durationField } from "@plugins/fields/plugins/duration/plugins/config/core";
 import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
@@ -257,7 +258,7 @@ export const eventSourceRunFields = {
   eventsDisappeared: intField({ label: "Gone" }),
   /** The fingerprint this run observed (null when the probe cannot fingerprint). */
   fingerprint: nullable(textField()),
-  durationMs: nullable(intField({ label: "Duration" })),
+  durationMs: nullable(durationField({ label: "Duration" })),
   error: nullable(textField({ label: "Error" })),
   /**
    * What the extractor could not express, one free-text entry per limitation —

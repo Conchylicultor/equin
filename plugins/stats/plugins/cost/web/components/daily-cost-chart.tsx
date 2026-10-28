@@ -23,7 +23,8 @@ import { useLive } from "@plugins/network/plugins/live/web";
 import { costDaily, type CostDay } from "../../shared/values";
 import { costDaysNote } from "../../shared/derive";
 import { useShowEmptyDays } from "@plugins/stats/web";
-import { formatUsd, formatUsdCompact } from "../../core";
+import { formatUsd } from "@plugins/fields/plugins/money/core";
+import { formatUsdCompact } from "../../core";
 import { useScope } from "./use-scope";
 
 // Family-based palette; specific revisions (opus-4-7, sonnet-4-6, …)

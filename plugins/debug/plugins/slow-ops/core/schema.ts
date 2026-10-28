@@ -18,7 +18,7 @@ import { uuidField } from "@plugins/fields/plugins/uuid/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
-import { floatField } from "@plugins/fields/plugins/float/plugins/config/core";
+import { durationField } from "@plugins/fields/plugins/duration/plugins/config/core";
 import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
 import { entityRef } from "@plugins/infra/plugins/entities/core";
 
@@ -102,10 +102,10 @@ export const slowOpFields = {
   operationKind: textField({ label: "Kind" }),
   operation: textField({ label: "Operation", primary: true }),
   count: intField({ label: "Count" }),
-  totalMs: floatField({ label: "Total (ms)" }),
-  maxMs: floatField({ label: "Max (ms)", filterable: false }),
-  lastMs: floatField({ label: "Last (ms)", filterable: false }),
-  thresholdMs: floatField(),
+  totalMs: durationField({ label: "Total" }),
+  maxMs: durationField({ label: "Max", filterable: false }),
+  lastMs: durationField({ label: "Last", filterable: false }),
+  thresholdMs: durationField(),
   waits: jsonField<WaitBreakdown>({ schema: WaitBreakdownSchema, default: {} }),
   variants: jsonField<VariantBreakdown[]>({
     schema: wholeList(VariantBreakdownSchema, {
@@ -142,7 +142,7 @@ export type SlowOp = z.infer<typeof SlowOpSchema>;
 // `waits`) is derived server-side and listed after the picked columns;
 // `lastTraceId` (the newest sample's trace) rides the row, in no list.
 export const SLOW_OP_LIST_OWN = {
-  waitMs: floatField({ label: "Wait (ms)", filterable: false }),
+  waitMs: durationField({ label: "Wait", filterable: false }),
 };
 export const SLOW_OP_LIST_CARRIED = {
   lastTraceId: nullable(textField()),
@@ -164,8 +164,8 @@ export const slowOpCallerFields = {
   callerKind: textField({ label: "Kind" }),
   callerLabel: textField({ label: "Caller", primary: true }),
   count: intField({ label: "Count", filterable: false }),
-  totalMs: floatField({ label: "Total (ms)", filterable: false }),
-  maxMs: floatField({ label: "Max (ms)", filterable: false }),
+  totalMs: durationField({ label: "Total", filterable: false }),
+  maxMs: durationField({ label: "Max", filterable: false }),
   firstSeenAt: dateField(),
   lastSeenAt: dateField({ label: "Last seen", filterable: false }),
 } satisfies FieldsRecord;

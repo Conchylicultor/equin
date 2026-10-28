@@ -32,7 +32,9 @@ reuse these capabilities via the `extends`-chain fallback.
     - `textIdentity`
 - Cross-plugin:
   - Imported by:
+    - `fields/identifier`
     - `fields/multiline-text`
+    - `fields/person`
     - `fields/rank`
     - `fields/text/config`
     - `fields/uuid`

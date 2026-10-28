@@ -1889,10 +1889,10 @@ list, table and `primitives/tree` share it.
     - `DataViewSlots.ValueCodec`
     - `DataViewSlots.Grouping`
     - `DataViewSlots.ColumnConfig`
-  - Slot contributors: 52 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `DataViewSlots.Cell` ×10
+  - Slot contributors: 60 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `DataViewSlots.Cell` ×16
+    - `DataViewSlots.Filter` ×9
     - `DataViewSlots.CollectionItemAction` ×7
-    - `DataViewSlots.Filter` ×7
     - `DataViewSlots.CellEditor` ×6
     - `DataViewSlots.View` ×5
     - `DataViewSlots.CollectionRowActivation` ×4
@@ -2321,8 +2321,8 @@ list, table and `primitives/tree` share it.
     - `ui/tokens/type-scale` ×8
     - `ui/tokens/shadow` ×3
     - `ui/tokens/shape` ×3
-  - Imported by: 114 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `fields` ×31
+  - Imported by: 122 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `fields` ×39
     - `apps` ×28
     - `debug` ×15
     - `primitives` ×10

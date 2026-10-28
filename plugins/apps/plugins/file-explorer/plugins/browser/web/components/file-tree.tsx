@@ -238,12 +238,15 @@ function timeField(
   return {
     id,
     label,
-    type: "number",
+    type: "date",
     width: "96px",
     align: "start",
     ...(visible === undefined ? {} : { visible }),
     ...(dropOrder === undefined ? {} : { dropOrder }),
-    value: (r) => get(r) ?? null,
+    value: (r) => {
+      const ms = get(r);
+      return ms === undefined ? null : new Date(ms);
+    },
     cell: (r) => {
       const ms = get(r);
       if (ms === undefined) return "—";
@@ -464,7 +467,7 @@ export function FileTree({
       {
         id: "size",
         label: "Size",
-        type: "number",
+        type: "byte-size",
         width: "80px",
         align: "end",
         value: (r) => (r.kind === "dir" ? null : r.size),
