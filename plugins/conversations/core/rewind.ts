@@ -48,15 +48,11 @@ export type CutLosses = z.infer<typeof CutLossesSchema>;
  * - `not-found` — no transcript line has this uuid.
  * - `not-a-live-user-prompt` — the line exists but is not a message the user
  *   typed, nor their answer to a question, on the conversation's live path.
- * - `nothing-before` — it is the first message: there is no conversation left
- *   to resume, and `claude --resume` on an empty session fails. Starting over is
- *   a new conversation, not a rewind.
+ *
+ * The first message is no refusal: going back to it starts the agent on a
+ * fresh session (there is nothing to resume).
  */
-export const CutRefusalSchema = z.enum([
-  "not-found",
-  "not-a-live-user-prompt",
-  "nothing-before",
-]);
+export const CutRefusalSchema = z.enum(["not-found", "not-a-live-user-prompt"]);
 export type CutRefusal = z.infer<typeof CutRefusalSchema>;
 
 /**

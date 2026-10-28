@@ -152,11 +152,11 @@ try {
     await api<{ claudeSessionId: string }>(`/api/conversations/${conv.id}`)
   ).claudeSessionId;
 
-  // The first message: nothing would be left to resume.
+  // The first message: nothing is kept, the agent starts a fresh session.
   const first = await previewOf(conv.id, apple.uuid);
   r.ok(
-    "going back to the first message is refused",
-    !first.ok && first.code === "nothing-before",
+    "going back to the first message is offered",
+    first.ok && first.inPlace && first.messageText.includes("APPLE"),
   );
 
   const preview = await previewOf(conv.id, banana.uuid);
@@ -228,6 +228,48 @@ try {
   r.ok(
     "after the rewind the agent never saw BANANA",
     !/banana/i.test(rewoundAnswer),
+  );
+
+  // Fork from the first message: a blank conversation in the same worktree.
+  const blankFork = await post<{ id: string }>("/api/conversations", {
+    forkFromConversationId: conv.id,
+    forkAtMessageUuid: apple.uuid,
+    model: MODEL,
+  });
+  created.push(blankFork.id);
+  const blankForkAnswer = await ask(blankFork.id, RECALL, 1);
+  r.note(
+    `fork from the first message answered: ${JSON.stringify(blankForkAnswer)}`,
+  );
+  r.ok(
+    "a fork from the first message never saw APPLE",
+    !/apple/i.test(blankForkAnswer),
+  );
+
+  // Rewind to the first message: the agent starts a fresh session.
+  const startOver = await post<{ ok: boolean; rewindText?: string }>(
+    `/api/conversations/${conv.id}/rewind`,
+    { uuid: apple.uuid },
+  );
+  r.ok(
+    "rewinding to the first message hands its text back",
+    startOver.ok && !!startOver.rewindText?.includes("APPLE"),
+  );
+  const emptied = await waitFor(
+    () => userRows(conv.id),
+    (rows2) => rows2.length === 0,
+    { timeoutMs: 30_000 },
+  );
+  r.ok("the conversation now shows no message", emptied.ok);
+  const freshAnswer = await ask(conv.id, RECALL, 1);
+  r.note(`started-over conversation answered: ${JSON.stringify(freshAnswer)}`);
+  r.ok(
+    "after starting over the agent never saw APPLE",
+    !/apple/i.test(freshAnswer),
+  );
+  r.ok(
+    "the started-over conversation shows only the new message",
+    (await userRows(conv.id)).length === 1,
   );
 } finally {
   // Close first (so the status reconciler files them as done, not as hibernated work to

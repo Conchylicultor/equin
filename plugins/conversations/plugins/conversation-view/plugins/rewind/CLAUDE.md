@@ -49,6 +49,13 @@ A row offers the action only when its `user-text` event carries a `uuid`, and
 the parser sets that with the same predicate the cut validates with
 (`userPromptText`, `transcript-watcher/core`).
 
+Going back to the **first** message keeps nothing, so there is nothing to
+resume (`claude --resume` on an empty session fails): the cut answers
+`startsOver`, and the agent starts a fresh session instead — a rewind moves the
+session file to the backups and launches without `--resume` (the new session id
+joins the session chain; the moved one, no longer on disk, drops out of the
+transcript), a fork is a blank conversation in the same worktree.
+
 ## What cannot be brought back (and why there is a dialog)
 
 Background work lives in the CLI process, not in the transcript:
@@ -71,7 +78,7 @@ Files in the worktree are never touched.
 
 A refusal is a normal answer — the preview's declared refusal (a
 `RewindRefusal` code + a sentence to show), the rewind's `ok: false` — decided
-before anything is changed: the first message (nothing left to resume), a message no
+before anything is changed: a message no
 longer in the transcript, a conversation whose worktree is gone, and — rewind
 only — a message that predates an earlier fork (it lives in an ancestor session
 file; fork from it instead).

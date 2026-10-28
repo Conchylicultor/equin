@@ -22,8 +22,17 @@ import type { BackgroundWork, CutLosses, CutRefusal } from "../../core/rewind";
 export type CutResult =
   | {
       ok: true;
-      /** The transcript lines to keep, in order. NOT always a plain prefix — see below. */
+      /**
+       * The transcript lines to keep, in order. NOT always a plain prefix — see
+       * below. Empty when {@link startsOver}.
+       */
       keptLines: string[];
+      /**
+       * Nothing of the conversation is left before the message (it is the
+       * first): there is no session to resume — `claude --resume` on an empty
+       * one fails — so the agent starts a fresh session instead.
+       */
+      startsOver: boolean;
       /** Text of the removed message, to hand back to the prompt editor. */
       messageText: string;
       /** When the CLI wrote the removed message, or null when its line has no time. */
@@ -140,14 +149,7 @@ export function cutTranscriptAt(
   if (messageText === null || !active.has(userMessageUuid)) {
     return { ok: false, reason: "not-a-live-user-prompt" };
   }
-  const { cut, conversationLeft } = cutAt(
-    rawLines,
-    parsed,
-    active,
-    target,
-    messageText,
-  );
-  return conversationLeft ? cut : { ok: false, reason: "nothing-before" };
+  return cutAt(rawLines, parsed, active, target, messageText);
 }
 
 function cutAt(
@@ -156,7 +158,7 @@ function cutAt(
   active: ReadonlySet<string>,
   target: ParsedLine,
   messageText: string,
-): { cut: Extract<CutResult, { ok: true }>; conversationLeft: boolean } {
+): Extract<CutResult, { ok: true }> {
   const cutIndex = target.index;
   const byUuid = new Map<string, ParsedLine>();
   for (const p of parsed) if (p.uuid) byUuid.set(p.uuid, p);
@@ -291,7 +293,7 @@ function cutAt(
     (line, index) =>
       index < cutIndex && !dropped.has(index) && line.trim() !== "",
   );
-  const conversationLeft = parsed.some(
+  const startsOver = !parsed.some(
     (p) =>
       p.index < cutIndex &&
       !dropped.has(p.index) &&
@@ -299,13 +301,13 @@ function cutAt(
   );
   const stamp = str(target.obj.timestamp);
   return {
-    cut: {
-      ok: true,
-      keptLines,
-      messageText,
-      messageAt: stamp === null ? null : new Date(stamp),
-      losses: { laterUserTurns, lostReports, unreported },
-    },
-    conversationLeft,
+    ok: true,
+    // Lines with no turn among them (a title, a snapshot) are no conversation
+    // to resume, and a fresh session writes its own.
+    keptLines: startsOver ? [] : keptLines,
+    startsOver,
+    messageText,
+    messageAt: stamp === null ? null : new Date(stamp),
+    losses: { laterUserTurns, lostReports, unreported },
   };
 }

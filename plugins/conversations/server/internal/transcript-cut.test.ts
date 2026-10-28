@@ -114,17 +114,34 @@ describe("cutTranscriptAt", () => {
     );
   });
 
-  test("refuses the first message: nothing would be left to resume", () => {
-    expect(
-      cutTranscriptAt(
-        lines([
-          { type: "ai-title" },
-          user("u1", null, "first"),
-          assistant("a1", "u1", "one"),
-        ]),
-        "u1",
-      ),
-    ).toEqual({ ok: false, reason: "nothing-before" });
+  test("the first message starts over: nothing is kept to resume", () => {
+    const cut = cutTranscriptAt(
+      lines([
+        { type: "ai-title" },
+        user("u1", null, "first"),
+        assistant("a1", "u1", "one"),
+        user("u2", "a1", "second"),
+      ]),
+      "u1",
+    );
+    if (!cut.ok) throw new Error(cut.reason);
+    expect(cut.startsOver).toBe(true);
+    expect(cut.keptLines).toEqual([]);
+    expect(cut.messageText).toBe("first");
+    expect(cut.losses.laterUserTurns).toBe(1);
+  });
+
+  test("a later message does not start over", () => {
+    const cut = cutTranscriptAt(
+      lines([
+        user("u1", null, "first"),
+        assistant("a1", "u1", "one"),
+        user("u2", "a1", "second"),
+      ]),
+      "u2",
+    );
+    if (!cut.ok) throw new Error(cut.reason);
+    expect(cut.startsOver).toBe(false);
   });
 
   test("refuses anything that is not the user's own live message", () => {

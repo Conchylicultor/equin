@@ -285,6 +285,8 @@ export async function prepareConversation(
   let inheritedModel: ConversationModel | undefined;
   let inheritedRuntime: ConversationRuntimeId | undefined;
   let transcriptCopy: TranscriptCopy | undefined;
+  // `--fork-session`: the CLI copies the source's WHOLE history under a new id.
+  let forkSession = false;
   if (opts.forkAtMessageUuid && !opts.forkFromConversationId) {
     throw new Error("forkAtMessageUuid requires forkFromConversationId");
   }
@@ -325,19 +327,27 @@ export async function prepareConversation(
           opts.forkAtMessageUuid,
         );
       }
-      const newSessionId = crypto.randomUUID();
-      transcriptCopy = {
-        destPath: join(dirname(located.path), `${newSessionId}.jsonl`),
-        // Every line names its session (`sessionId` / `session_id`); a copy that
-        // still named the source would be the source's history under a new
-        // filename.
-        content: serializeTranscript(
-          located.cut.keptLines.map((line) =>
-            line.replaceAll(located.sessionId, newSessionId),
+      if (located.cut.startsOver) {
+        // From the first message nothing is kept: a fresh session in the same
+        // worktree, with nothing to resume.
+        resumeSessionId = undefined;
+      } else {
+        const newSessionId = crypto.randomUUID();
+        transcriptCopy = {
+          destPath: join(dirname(located.path), `${newSessionId}.jsonl`),
+          // Every line names its session (`sessionId` / `session_id`); a copy that
+          // still named the source would be the source's history under a new
+          // filename.
+          content: serializeTranscript(
+            located.cut.keptLines.map((line) =>
+              line.replaceAll(located.sessionId, newSessionId),
+            ),
           ),
-        ),
-      };
-      resumeSessionId = newSessionId;
+        };
+        resumeSessionId = newSessionId;
+      }
+    } else {
+      forkSession = true;
     }
   }
   // THE point a model choice becomes the version that runs: a family ("opus")
@@ -450,9 +460,8 @@ export async function prepareConversation(
       model,
       effort,
       resumeSessionId,
-      // `--fork-session` asks the CLI to copy the whole history under a new id.
-      // A fork at a message already has its own (truncated) copy to resume.
-      forkSession: !!opts.forkFromConversationId && !transcriptCopy,
+      // A fork at a message has its own (truncated) copy to resume, or none.
+      forkSession,
     },
   };
 }
@@ -729,7 +738,12 @@ async function preflightResume(
 // Re-runs `preflightResume` as the invariant guard rather than trusting callers:
 // every statement below is destructive (kills the pane, rewrites status), so the
 // check must sit at the mutation, not one frame above it.
-async function respawnResume(row: Conversation): Promise<void> {
+async function respawnResume(
+  row: Conversation,
+  // A rewind to the first message: nothing is left to resume, so the agent
+  // starts a fresh session (a new id the session chain records on launch).
+  { fresh = false }: { fresh?: boolean } = {},
+): Promise<void> {
   const workspace = await workspaceOf(row);
   const preflight = await preflightResume(row, workspace);
   if (preflight.kind === "blocked") {
@@ -763,7 +777,7 @@ async function respawnResume(row: Conversation): Promise<void> {
         conversationId: row.id,
       }),
       {
-        resumeSessionId: row.claudeSessionId!,
+        ...(fresh ? {} : { resumeSessionId: row.claudeSessionId! }),
         // Not in the transcript: the system prompt is given anew on every spawn.
         appendSystemPrompt: systemPromptAppend(
           await getConversationPreprompt(row.id),
@@ -852,8 +866,6 @@ const REWIND_REFUSAL_MESSAGE: Record<LocateCutRefusal | "not-in-tail", string> =
     "not-found": "That message is no longer in the transcript.",
     "not-a-live-user-prompt":
       "A conversation can only be rewound to one of your own messages or answers.",
-    "nothing-before":
-      "This is the first message — there is nothing before it to go back to. Start a new conversation instead.",
     "not-in-tail":
       "This message predates a fork, so the conversation cannot be rewound to it in place. Fork from it instead.",
   };
@@ -939,13 +951,19 @@ export async function rewindConversationAt(
   if (!located.ok) return refuseRewind(located.reason);
   if (!located.isTail) return refuseRewind("not-in-tail");
 
+  const { startsOver } = located.cut;
   await rename(located.path, backupPath);
-  await Bun.write(located.path, serializeTranscript(located.cut.keptLines));
+  // Back to the first message there is nothing to keep: no file, and the agent
+  // starts a fresh session — the moved one drops out of the transcript (a
+  // session with no file on disk is skipped), the new one joins the chain.
+  if (!startsOver) {
+    await Bun.write(located.path, serializeTranscript(located.cut.keptLines));
+  }
   await returnCutTurns(id, located.cut, userMessageUuid);
 
   // Kills the pane — a running turn and any background work with it — and
-  // resumes the same session id on the shortened file.
-  await respawnResume(row);
+  // resumes the same session id on the shortened file, or starts afresh.
+  await respawnResume(row, { fresh: startsOver });
   await setConversationHibernated(id, null);
   // Rewinding a closed conversation re-opens it, exactly like the Resume button.
   if (row.status === "gone" || row.status === "done") {

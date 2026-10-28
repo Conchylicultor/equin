@@ -25,8 +25,8 @@ export type RewindCutPreview = z.infer<typeof RewindCutPreviewSchema>;
  * nothing but the click wants the answer).
  *
  * A message that cannot be gone back to is a refusal carrying the rewind's own
- * reason and a sentence to show (`RewindRefusalSchema`): the first message, a
- * message no longer in the transcript, a conversation with no transcript on
+ * reason and a sentence to show (`RewindRefusalSchema`): a message no longer
+ * in the transcript, a conversation with no transcript on
  * disk.
  */
 export const rewindPreview = liveValue("conversations.rewind-preview", {
