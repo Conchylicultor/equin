@@ -12,7 +12,6 @@ import type { EndpointAccess } from "@plugins/framework/plugins/principal/core";
 import type {
   AnyEndpointDef,
   EndpointDef,
-  MachineEndpointDef,
   PredictedEndpointDef,
 } from "./define-endpoint";
 import { agentWriteGate, type AgentWrite } from "./agent-write";
