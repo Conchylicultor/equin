@@ -69,6 +69,6 @@ export const pipefailGuard = defineGuard<BashInput>({
     if (calls.some((c) => c.pipedIn && stopsReadingEarly(c))) return null;
     // The agent already chose — including choosing `set +o pipefail`.
     if (calls.some(setsPipefail)) return null;
-    return { rewrite: { command: PIPEFAIL_PREFIX + cmd } };
+    return { rewrite: { command: PIPEFAIL_PREFIX + cmd }, note: null };
   },
 });

@@ -43,6 +43,7 @@ export const foregroundDeadlineGuard = defineGuard<BashInput>({
           .map((name) => `${name}=${deadline}`)
           .join(" ")}; ${cmd}`,
       },
+      note: null,
     };
   },
 });

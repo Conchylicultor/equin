@@ -108,8 +108,11 @@ export function createContext(
     inform(context: string): InformVerdict {
       return { kind: "inform", context };
     },
-    rewrite(patch: Readonly<Record<string, unknown>>): RewriteVerdict {
-      return { kind: "rewrite", patch };
+    rewrite(
+      patch: Readonly<Record<string, unknown>>,
+      note: string | null,
+    ): RewriteVerdict {
+      return { kind: "rewrite", patch, note };
     },
   };
 }

@@ -113,6 +113,7 @@ export async function runHook(
     if (verdict.kind === "rewrite") {
       current = { ...current, ...verdict.patch };
       rewritten = true;
+      if (verdict.note !== null) informs.push(verdict.note);
       continue;
     }
     if (verdict.kind === "deny") {

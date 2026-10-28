@@ -22,9 +22,14 @@ export interface Inform {
   inform: string;
 }
 
-/** Let the call through with these fields of its input replaced. */
+/**
+ * Let the call through with these fields of its input replaced, telling the
+ * model why in `note` — or `null` when the change is plumbing it never needs to
+ * know about (see `RewriteVerdict.note`).
+ */
 export interface Rewrite<I> {
   rewrite: Partial<I>;
+  note: string | null;
 }
 
 export interface GuardDef<I> {
@@ -62,7 +67,7 @@ export function defineGuard<I>(def: GuardDef<I>): Guard<I> {
       const result = def.check(input, ctx);
       if (!result) return ctx.allow();
       if ("inform" in result) return ctx.inform(result.inform);
-      if ("rewrite" in result) return ctx.rewrite(result.rewrite);
+      if ("rewrite" in result) return ctx.rewrite(result.rewrite, result.note);
       const message = formatDenyMessage(result, def.bypassToken);
       return result.fatal ? ctx.fatal(message) : ctx.deny(message);
     },

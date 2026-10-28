@@ -23,10 +23,13 @@ import type { Guard } from "./types";
 
 export const GUARDS: Guard<any>[] = [
   // Bash
+  // Corrective rewriters first: they replace a wrong spelling of what the agent
+  // meant with the right one (pruned `find`, `./equin run`, the merge-base), so
+  // every judging guard below judges the command that will actually run.
   findGuard,
   bunScriptGuard,
-  rgReplaceGuard,
   gitDiffMainGuard,
+  rgReplaceGuard,
   gitPushGuard,
   gitResetMainGuard,
   migrationsGuard,
@@ -35,7 +38,8 @@ export const GUARDS: Guard<any>[] = [
   macosAutomationGuard,
   backgroundOpsGuard,
   pollLoopGuard,
-  // Rewrites run after every judging guard, so those see what the agent typed.
+  // Plumbing rewriters run after every judging guard, so those see what the
+  // agent typed (plus any correction above).
   pipefailGuard,
   backgroundTimeoutGuard,
   foregroundDeadlineGuard,

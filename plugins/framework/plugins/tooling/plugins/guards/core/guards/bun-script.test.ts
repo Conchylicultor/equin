@@ -12,8 +12,15 @@ function verdict(command: string, cwd = REPO_ROOT): Verdict {
   return bunScriptGuard.check({ command }, createContext(cwd)) as Verdict;
 }
 
-const blocks = (command: string, cwd?: string) =>
-  verdict(command, cwd).kind === "deny";
+/** Not let through as typed: denied, or rewritten to `./equin run`. */
+const blocks = (command: string, cwd?: string) => {
+  const kind = verdict(command, cwd).kind;
+  return kind === "deny" || kind === "rewrite";
+};
+const rewritten = (command: string, cwd?: string) => {
+  const v = verdict(command, cwd);
+  return v.kind === "rewrite" ? v.patch.command : undefined;
+};
 
 // Absolute-path prefixes for the commands fed to the parser below. They are
 // PARSER INPUT — strings this file hands to a shell parser — never paths it
@@ -243,8 +250,48 @@ describe("bun-script guard", () => {
     });
   });
 
+  describe("a bare script run from the checkout root is rewritten to ./equin run", () => {
+    for (const [typed, ran] of [
+      ["bun x.ts", "./equin run x.ts"],
+      ["bun run x.ts --flag 'a b'", "./equin run x.ts --flag 'a b'"],
+      [
+        "bun scripts/a.ts < in.json > out.txt 2>&1",
+        "./equin run scripts/a.ts < in.json > out.txt 2>&1",
+      ],
+      [
+        "timeout 60 bun x.ts | tail -3",
+        "timeout 60 ./equin run x.ts | tail -3",
+      ],
+      ["bun a.ts && bun b.ts", "./equin run a.ts && ./equin run b.ts"],
+      [`bun ${REPO_ROOT}/x.ts`, `./equin run ${REPO_ROOT}/x.ts`],
+    ]) {
+      test(typed!, () => {
+        expect(rewritten(typed!)).toBe(ran);
+      });
+    }
+
+    test("the note says what ran and why", () => {
+      const v = verdict("bun x.ts");
+      expect(v.kind === "rewrite" && v.note).toContain("./equin run x.ts");
+    });
+  });
+
+  describe("…but not when ./equin run would run something else", () => {
+    test("a bun flag before the script has no ./equin run spelling", () => {
+      expect(verdict("bun --cpu-prof x.ts").kind).toBe("deny");
+    });
+
+    test("from a subdirectory, the paths would resolve from the root", () => {
+      expect(verdict("cd plugins && bun x.ts").kind).toBe("deny");
+    });
+
+    test("one unrewritable call denies the whole command", () => {
+      expect(verdict("bun a.ts; bun --bun b.ts").kind).toBe("deny");
+    });
+  });
+
   describe("the denial says what to do instead", () => {
-    const v = verdict("bun e2e/tabs-verify.ts");
+    const v = verdict("bun --bun e2e/tabs-verify.ts");
     test("names ./equin run with the same path", () => {
       expect(v.kind).toBe("deny");
       expect(v.kind === "deny" && v.reason).toContain(

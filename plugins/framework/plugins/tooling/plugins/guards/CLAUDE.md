@@ -133,14 +133,53 @@ not look" does not.
 
 ## A guard can rewrite, too
 
-Besides allow / deny / inform, a guard may return `{ rewrite: { … } }`: the
-call goes through with those input fields replaced. Use it only when the fix is
-mechanical and changes nothing the agent meant — otherwise deny and let the
-agent retype. The runner merges the patch over the FULL tool input (Claude
+Besides allow / deny / inform, a guard may return `{ rewrite: { … }, note }`:
+the call goes through with those input fields replaced. Use it only when the
+fix is mechanical and changes nothing the agent meant — otherwise deny and let
+the agent retype. The runner merges the patch over the FULL tool input (Claude
 Code's `updatedInput` replaces the input wholesale), emits it without a
 `permissionDecision` so the normal permission flow still applies, and every
-guard after a rewrite judges the rewritten input. Rewriters sit at the end of
-the registry so the judging guards see what the agent typed.
+guard after a rewrite judges the rewritten input.
+
+`note` is required: what the model is told (it lands in `additionalContext`),
+or `null` for plumbing. A rewrite that changes what the command DOES must say
+so, and show what ran — the agent sees the command it typed next to the output
+of another.
+
+Two kinds, placed at opposite ends of the registry:
+
+- **Corrective** (`find`, `bun-script`, `git-diff-main`) — the agent typed a
+  wrong spelling of what it meant. They run FIRST, so the judging guards judge
+  what will actually run. Each edits one call's own source text through
+  `core/call-splice.ts` (`rewriteCalls`): word positions re-scanned from the
+  call's text, quoting kept, every offending call in the command handled, the
+  result re-parsed to check it, and `null` — so the guard falls back to its old
+  denial — the moment anything is uncertain (a `$( … )` or heredoc inside the call's own text, a call text
+  that occurs twice).
+- **Plumbing** (`pipefail`, `foreground-deadline`, `background-timeout`,
+  `e2e-tool-use-id`) — run LAST, so the judging guards see what the agent
+  typed.
+
+The corrective three were measured on 45 days of Opus 5.5 transcripts before
+they existed (denials → the agent's next call):
+
+- `bun-script`, 31 denials: the retry was `./equin run <same script> <same
+  args>` nearly every time. Rewritten only with no bun flag before the script
+  and a cwd AT the checkout root — `./equin run` cd's there, so from elsewhere
+  the same words name other files.
+- `find`, 20 (plus 117 Sonnet): the retry was `rg --files <same dirs>` — a
+  listing of the repo's own files. Rewritten to prune `node_modules`, `.git`
+  and `.claude/worktrees` (a checkout without them is ~7.6k directories) when
+  every starting point lies in the agent's workspace, none IS a pruned
+  directory, and the walk is not depth-first (`-depth`/`-d`/`-delete`, where
+  `-prune` does nothing). The expression is parenthesised so `-o` and the
+  implicit `-print` keep their meaning.
+- `git-diff-main`, 68: mostly FALSE positives — `git diff X origin/main` and
+  `git diff HEAD origin/main` are deliberate, and were re-run unchanged. Only
+  the one-revision form (`git diff [opts] main [-- paths]`) is rewritten, to
+  the merge-base resolved to a sha by the guard (a `$(git merge-base …)` that
+  failed would expand to nothing and diff against the index); `refs/heads/main`
+  is the spelling that means the tip on purpose.
 
 `foreground-deadline` exports the call's cut-off instant
 (`EQUIN_FOREGROUND_DEADLINE`) into a foreground `check` / `test` and raises its
@@ -150,7 +189,7 @@ two through in the foreground and holds only `build` / `push` / `release` to the
 background. `background-timeout` raises a backgrounded `./equin` call to the
 2 h ceiling; `e2e-tool-use-id` exports the tool-use id into an e2e run.
 
-`pipefail` rewrites too: `cmd | tail -20` exits with tail's status, so a
+`pipefail`: `cmd | tail -20` exits with tail's status, so a
 failing `cmd` read as a pass. It prefixes `set -o pipefail; ` when a pipe feeds
 `tail` or `tee`, and backs off when any piped stage may stop reading early
 (`head`, `grep -q/-m/-l`, a `sed` script with `q`, `awk … exit`): pipefail is
@@ -249,7 +288,8 @@ can blind or deafen all of them at once.
     - `framework/tooling/e2e-harness`
 - Exemptions:
   - Exempts itself from:
-    - `guard-path-safety/no-adhoc-path-resolve` — `core/guards/git-diff-main.ts`, `core/guards/main-edits.ts`, `core/guards/poll-loop.ts` (sanctioned)
+    - `guard-path-safety/no-adhoc-path-resolve` — `core/guards/main-edits.ts`, `core/guards/poll-loop.ts` (sanctioned)
+    - `repo-walk-safety/no-adhoc-repo-walk` — `core/guards/find.ts` (sanctioned)
     - `python/no-system-python` — `core` (sanctioned)
     - `boundaries/no-platform-api` — `core/agent-ops.ts`, `core/argv.ts`, `core/context.ts`, `core/git-target.ts`, `core/informed-once.ts`, `core/guards/git-diff-main.ts`, `core/guards/main-edits.ts`, `core/guards/poll-loop.ts`, `core/parse-shell.ts`, `core/stop-guard.ts` (debt)
 - Sub-plugins:

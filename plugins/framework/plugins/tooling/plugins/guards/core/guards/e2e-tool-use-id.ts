@@ -39,6 +39,7 @@ export const e2eToolUseIdGuard = defineGuard<BashInput>({
           .map((name) => `${name}=${ctx.toolUseId}`)
           .join(" ")}; ${cmd}`,
       },
+      note: null,
     };
   },
 });

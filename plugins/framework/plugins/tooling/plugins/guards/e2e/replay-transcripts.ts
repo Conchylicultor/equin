@@ -76,9 +76,10 @@ const FLOOR_HEREDOC_DENIALS = 10;
 /**
  * The Bash guards that decide from the command alone.
  *
- * `poll-loop` (tmpdir session state) and `git-diff-main` (a
- * `.git-diff-main-reminded` marker) WRITE to disk when they run, so replaying
- * them would mutate the machine; the poll rule is the default mode's job anyway.
+ * `poll-loop` (tmpdir session state) WRITES to disk when it runs, so replaying
+ * it would mutate the machine; the poll rule is the default mode's job anyway.
+ * `git-diff-main` asks git about the repo as it is NOW, not as the session saw
+ * it.
  */
 const PURE_GUARDS: Guard<unknown>[] = [
   findGuard,
@@ -348,7 +349,11 @@ function denialsFor(call: ToolCall, command: string): string[] {
       ctx as never,
     );
     if (verdict instanceof Promise) continue;
-    if (verdict.kind === "deny") denied.push(guard.name);
+    // A corrective rewrite (`find`'s prune) intercepts the call just as a
+    // denial did: both are the parser seeing the command, which is what the
+    // floors below measure.
+    if (verdict.kind === "deny" || verdict.kind === "rewrite")
+      denied.push(guard.name);
   }
   return denied;
 }

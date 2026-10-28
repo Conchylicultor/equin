@@ -32,6 +32,6 @@ export const backgroundTimeoutGuard = defineGuard<BashInput>({
     if (!cmd) return null;
     if (!parseShell(cmd).calls.some((c) => c.name === CLI_NAME)) return null;
     if (input.timeout === MAX_BACKGROUND_TIMEOUT_MS) return null;
-    return { rewrite: { timeout: MAX_BACKGROUND_TIMEOUT_MS } };
+    return { rewrite: { timeout: MAX_BACKGROUND_TIMEOUT_MS }, note: null };
   },
 });

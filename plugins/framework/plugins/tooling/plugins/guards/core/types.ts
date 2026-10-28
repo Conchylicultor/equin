@@ -18,10 +18,17 @@ export type InformVerdict = { kind: "inform"; context: string };
  *
  * It does not approve the call: the rewritten input still goes through the
  * normal permission flow.
+ *
+ * `note` is what the model is told about it, or `null` for plumbing it never
+ * needs to know about (a timeout raised, an env var exported). Required, so a
+ * rewrite that changes what the command DOES cannot be silent by omission: the
+ * agent sees the command it typed and the output of another, and without the
+ * note it would read that output as its own command's.
  */
 export type RewriteVerdict = {
   kind: "rewrite";
   patch: Readonly<Record<string, unknown>>;
+  note: string | null;
 };
 export type Verdict =
   AllowVerdict | DenyVerdict | InformVerdict | RewriteVerdict;
@@ -132,7 +139,10 @@ export interface GuardContext {
   deny(reason: string): DenyVerdict;
   fatal(reason: string): DenyVerdict;
   inform(context: string): InformVerdict;
-  rewrite(patch: Readonly<Record<string, unknown>>): RewriteVerdict;
+  rewrite(
+    patch: Readonly<Record<string, unknown>>,
+    note: string | null,
+  ): RewriteVerdict;
 }
 
 export interface BashInput {
