@@ -27339,6 +27339,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Core:
             - Uses:
               - `framework/plugin-id.isTestCodePath`
+              - `framework/plugin-id.LEAF_FOLDERS`
               - `framework/plugin-id.TESTING_FOLDER`
               - `framework/plugin-id.TESTS_DIR`
               - `framework/product-name.LEGACY_IDS`

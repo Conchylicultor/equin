@@ -33,7 +33,9 @@ Key invariants:
   miss. Other dynamic `@plugins/*` folder-barrel imports are composed into
   mapped, lazily-fetched artifacts by the barrel closure — EXCEPT kinds declared
   browser-unreachable (`BROWSER_UNREACHABLE_DYNAMIC_KINDS` in
-  `core/constants.ts`, currently `prewarm`), which are skipped and silent.
+  `core/constants.ts`: every leaf folder but the co-built `exhibits` — `lint`,
+  `facet`, `prewarm`, … — only ever named by a collected-dir registry run
+  Bun-side), which are skipped and silent.
   Any other unmapped dynamic import warns loudly at compose.
   Resolving is not enough: every name a static import binds must actually be
   exported by the target's emitted bytes, or the browser throws `SyntaxError:
@@ -52,7 +54,12 @@ Key invariants:
   own non-inlined folders is rewritten to that folder's external
   `@plugins/<path>/<folder>` barrel (never inlined); vendors are one esbuild
   split build so stateful transitives are shared. Guarded by the
-  `web-artifacts:no-vendored-state-inlined` check.
+  `web-artifacts:no-vendored-state-inlined` check, which reads the `sources`
+  of EVERY module's sourcemap (`index.js`, co-entries, shared and lazy `.mjs`
+  chunks — `core/internal/sourcemaps.ts`). The one module allowed no map is a
+  pure re-export facade (Rolldown emits a multi-entry `index.js` that way when
+  everything it reaches is shared with `exhibits.js`); any other map-less
+  module fails the build of that artifact.
 - **Across own folders, only the barrel is importable.** The rewrite above
   accepts only the barrel spelling (`../core`, `@plugins/<own>/core`) and
   throws on a deep path (`../core/x`). Rewriting a deep path made it mean the
@@ -224,6 +231,7 @@ Key invariants:
 - Core:
   - Uses:
     - `framework/plugin-id.isTestCodePath`
+    - `framework/plugin-id.LEAF_FOLDERS`
     - `framework/plugin-id.TESTING_FOLDER`
     - `framework/plugin-id.TESTS_DIR`
     - `framework/product-name.LEGACY_IDS`

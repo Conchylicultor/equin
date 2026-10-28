@@ -4,6 +4,6 @@
   "private": true,
   "version": "0.0.1",
   "devDependencies": {
-    "vite": "^7.3.7"
+    "vite": "^8.3.5"
   }
 }

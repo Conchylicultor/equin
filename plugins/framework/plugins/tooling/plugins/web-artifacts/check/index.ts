@@ -38,6 +38,7 @@
 import { createHash } from "node:crypto";
 import {
   existsSync,
+  readdirSync,
   readFileSync,
   renameSync,
   statSync,
@@ -58,6 +59,7 @@ import {
   worktreeArtifacts,
 } from "@plugins/infra/plugins/paths/core";
 import { INLINE_PACKAGES } from "../core/constants";
+import { artifactSourcemaps } from "../core/internal/sourcemaps";
 import { diffImportMaps } from "../core/import-map";
 import {
   computeExpectedComposition,
@@ -314,7 +316,7 @@ const mapInSync: Check = {
 
 // ── no-vendored-state-inlined ───────────────────────────────────────
 
-const SCANNER_VERSION = 1;
+const SCANNER_VERSION = 2; // 2: every module's map, not index.js.map alone
 const SCAN_CACHE_FILE = join(WEB_ARTIFACTS_DIR, "vendored-scan.json");
 
 interface VendoredScanCache {
@@ -357,35 +359,32 @@ function saveScanCache(cache: VendoredScanCache): void {
 }
 
 /**
- * Scan one store artifact's sourcemap for inlined node_modules packages. The
- * map is read without blocking: a build that rebuilt many artifacts leaves
- * many multi-MB maps to scan in one pass, on the check runner's shared thread.
+ * Scan every sourcemap of one store artifact (`index.js`, co-entries, shared
+ * and lazy `.mjs` chunks) for inlined node_modules packages. A module without
+ * a map throws unless it is a pure re-export facade (`artifactSourcemaps`) —
+ * a missing map means the scan has no signal, which must be loud, not a silent
+ * pass. Maps are read without blocking: a build that rebuilt many artifacts
+ * leaves many multi-MB maps to scan in one pass, on the check runner's shared
+ * thread.
  */
 async function scanArtifact(dirName: string): Promise<string[]> {
-  const mapFile = join(artifactStorePath(dirName), "index.js.map");
-  const raw = await readMapIfPresent(mapFile);
-  if (raw === null) {
-    // The builder emits sourcemaps unconditionally — a missing map means the
-    // scan has no signal, which must be loud, not a silent pass.
-    throw new Error(
-      `artifact ${dirName} has no index.js.map — cannot verify inlined modules`,
-    );
+  const dir = artifactStorePath(dirName);
+  const maps = await artifactSourcemaps({
+    label: dirName,
+    files: readdirSync(dir),
+    read: (name) => readFileSync(join(dir, name), "utf8"),
+  });
+  const pkgs = new Set<string>();
+  for (const map of maps) {
+    const raw = await readFile(join(dir, map), "utf8");
+    // Fast path: no `node_modules/` substring anywhere ⇒ no npm module inlined
+    // (spares the JSON.parse of multi-MB maps for the overwhelmingly common case).
+    if (!raw.includes("node_modules/")) continue;
+    const parsed = JSON.parse(raw) as { sources?: string[] };
+    for (const pkg of packagesInSourcemapSources(parsed.sources ?? []))
+      pkgs.add(pkg);
   }
-  // Fast path: no `node_modules/` substring anywhere ⇒ no npm module inlined
-  // (spares the JSON.parse of multi-MB maps for the overwhelmingly common case).
-  if (!raw.includes("node_modules/")) return [];
-  const parsed = JSON.parse(raw) as { sources?: string[] };
-  return packagesInSourcemapSources(parsed.sources ?? []);
-}
-
-/** A sourcemap's text, or null when the artifact has none. */
-async function readMapIfPresent(file: string): Promise<string | null> {
-  try {
-    return await readFile(file, "utf8");
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
-    throw err;
-  }
+  return [...pkgs].sort();
 }
 
 const noVendoredStateInlined: Check = {

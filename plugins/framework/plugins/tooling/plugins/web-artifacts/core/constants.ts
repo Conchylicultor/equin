@@ -1,7 +1,9 @@
 // Shared constants of the per-plugin web-artifact engine.
 
+import { LEAF_FOLDERS } from "@plugins/framework/plugins/plugin-id/core";
 import { isBrowserHostSpecifier } from "./browser-host-specifier";
 import { COMPOSITION_SPECIFIERS } from "./composition-modules";
+import { COBUILT_FOLDERS } from "./own-roots";
 
 /**
  * Bump to invalidate EVERY stored artifact fleet-wide (hash input). Use when the
@@ -35,22 +37,26 @@ export const FORCED_VENDOR_SPECS: ReadonlyArray<string> = [
 ];
 
 /**
- * Folder-barrel KINDS whose DYNAMIC imports are declared browser-unreachable.
+ * Folder KINDS whose DYNAMIC imports are browser-unreachable: every LEAF folder
+ * (`LEAF_FOLDERS` — `lint`, `facet`, `check`, `prewarm`, …) except the co-built
+ * ones (`COBUILT_FOLDERS`: `exhibits`, which the browser does load, from its
+ * host artifact). A leaf folder is never an import target — it is found by
+ * discovery — so the one place its specifier appears is a collected-dir
+ * registry's `() => import("@plugins/<p>/<leaf>")` loaders (`lint.generated`,
+ * `facet.generated`, the prewarm registries), run by Bun-side tooling only.
  * The barrel closure follows every other dynamic `@plugins/*` import into a
  * mapped, lazily-fetched artifact (the import-map twin of the monolith's lazy
- * chunk); kinds listed here are skipped and stay silent at compose. Static
- * imports of these kinds still compose normally — the exemption is only about
- * the dynamic edge.
+ * chunk); these are skipped and stay silent at compose. Static imports still
+ * compose normally — the exemption is only about the dynamic edge.
  *
- * - `prewarm` — asset-mirror prewarm registries (`defineAssetMirrorPrewarm`
- *   data). Their loaders are invoked only by the release runner (Bun-side,
- *   via the composition-filtered variant) to bake mirror files into release
- *   bundles; no browser code path ever calls them (`runAssetMirrorPrewarm`
- *   lives in asset-mirror's server barrel).
+ * Derived, not listed: a registry reaching the browser graph used to pull its
+ * leaves in as artifacts, which then refused their own deep imports (Rolldown
+ * folded `load-facets`' variable specifier into a literal, and `facet` →
+ * codegen → `lint.generated` → every `lint/` barrel joined the closure).
  */
-export const BROWSER_UNREACHABLE_DYNAMIC_KINDS: ReadonlySet<string> = new Set([
-  "prewarm",
-]);
+export const BROWSER_UNREACHABLE_DYNAMIC_KINDS: ReadonlySet<string> = new Set(
+  LEAF_FOLDERS.filter((folder) => !(folder in COBUILT_FOLDERS)),
+);
 
 /** The folder-barrel kind of a `@plugins/<path>/<kind>` specifier (its last segment), or null. */
 export function barrelKindOf(specifier: string): string | null {

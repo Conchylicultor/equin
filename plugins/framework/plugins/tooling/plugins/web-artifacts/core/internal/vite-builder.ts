@@ -34,6 +34,7 @@ import { makeArtifactExternal } from "../externals";
 import { inlinedRootsFor } from "../own-roots";
 import { createInlineAudit } from "./inline-audit";
 import { hashedRootsFor } from "./own-files";
+import { artifactSourcemaps } from "./sourcemaps";
 import type { ArtifactMeta } from "./store";
 import { artifactTmpDir, publishArtifact } from "./store";
 
@@ -499,6 +500,13 @@ export async function buildArtifact(
       dirName: target.dirName,
       staticImportsByFile,
       coEntries: target.coEntries,
+    });
+    // The vendored-module scan reads these maps: a module without one would
+    // hide whatever it inlined, so fail on THIS artifact, not later in a check.
+    await artifactSourcemaps({
+      label: target.dirName,
+      files: readdirSync(tmpDir),
+      read: (name) => readFileSync(join(tmpDir, name), "utf8"),
     });
     const meta: ArtifactMeta = {
       specifier: target.specifier,

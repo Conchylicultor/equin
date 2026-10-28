@@ -12,13 +12,15 @@ function isFacet(value: unknown): value is Facet {
 }
 
 export async function loadFacets(): Promise<Facet[]> {
-  // loadFacets is build/server-only (it reads facet/ folders via fs). The
-  // specifier is held in a variable so the frontend bundler cannot statically
-  // follow it into facet.generated → every facet/index.ts → parse-utils (fs/path),
-  // which would break the web build. (A `/* @vite-ignore */` comment is stripped
-  // by esbuild's TS transform, so a non-literal specifier is the reliable form.)
-  // This keeps facets/core safe to import transitively from browser render slices,
-  // which only need the pure defineFacet/getFacet/types. Never runs in the browser.
+  // loadFacets is build/server-only (it reads facet/ folders via fs) and never
+  // runs in the browser. The specifier is held in a variable so the repo's
+  // static import-closure analysis (tooling/import-closure — e.g. the CLI's
+  // codegen-manifests-not-frozen check) does not follow it into
+  // facet.generated → every facet/ barrel → codegen. Rolldown folds the
+  // constant into a literal, so the WEB build does follow it, into a lazy
+  // chunk whose `@plugins/<p>/facet` loaders stay external and are never
+  // built: a leaf folder's dynamic import is browser-unreachable
+  // (web-artifacts' BROWSER_UNREACHABLE_DYNAMIC_KINDS).
   const generatedModule = "./facet.generated";
   const { facetEntries } = await import(generatedModule);
   // Facets are topo-sorted by `dependsOn` so a facet that relates against another

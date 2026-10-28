@@ -124,6 +124,10 @@ describe("exemption predicate helpers", () => {
 
   test("isBrowserUnreachableDynamic matches declared kinds, not substrings", () => {
     expect(isBrowserUnreachableDynamic("@plugins/x/prewarm")).toBe(true);
+    expect(isBrowserUnreachableDynamic("@plugins/x/lint")).toBe(true);
+    expect(isBrowserUnreachableDynamic("@plugins/x/facet")).toBe(true);
+    // A co-built leaf IS a browser load (served from its host artifact).
+    expect(isBrowserUnreachableDynamic("@plugins/x/exhibits")).toBe(false);
     expect(isBrowserUnreachableDynamic("@plugins/x/core")).toBe(false);
     expect(isBrowserUnreachableDynamic("@plugins/prewarm/web")).toBe(false);
     expect(isBrowserUnreachableDynamic("prewarm")).toBe(false);

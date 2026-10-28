@@ -358,8 +358,8 @@ export function closureSpecsOf(meta: ArtifactMeta): string[] {
  * import other cores). Derived from emitted imports — post-tree-shaking and
  * type-stripped, so `import type` edges never force an artifact. Edges are
  * `closureSpecsOf`: statics always, dynamics unless declared
- * browser-unreachable (prewarm registries — release-runner data the browser
- * never fetches).
+ * browser-unreachable (leaf folders: collected-dir registries' loaders that
+ * only Bun-side tooling runs).
  *
  * A co-built folder (`COBUILT_FOLDERS`: `@plugins/<p>/exhibits`) is never an
  * artifact of its own: its specifier resolves to the plugin's HOST-kind
