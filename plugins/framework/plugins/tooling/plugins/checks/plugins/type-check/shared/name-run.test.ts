@@ -841,6 +841,23 @@ test("a signature ignores the order of a type literal's properties and a union's
   expect(canonicalDeclarations(f)).not.toBe(canonicalDeclarations(g));
 });
 
+test("a signature ignores comments, never a triple-slash directive", () => {
+  // Emit reuses an inferred type's nodes and prints the comments at their
+  // positions in whichever file it reads: a JSDoc of an unrelated
+  // declaration can land inside a property, and only in some programs.
+  const clean =
+    '/// <reference types="bun" />\nexport declare function f(): {\n    a?: string | undefined;\n    b: "x" | "y";\n};\n';
+  const spliced =
+    '/// <reference types="bun" />\n/** f. */\nexport declare function f(): {\n    a\n    /**\n     * PATCH a place.\n     */\n    ?: string | undefined;\n    b: /** y */ "y" | "x"; // trailing\n};\n';
+  expect(canonicalDeclarations(spliced)).toBe(canonicalDeclarations(clean));
+  expect(canonicalDeclarations(clean)).toContain(
+    '/// <reference types="bun" />',
+  );
+  expect(canonicalDeclarations(clean)).not.toBe(
+    canonicalDeclarations(clean.replace('/// <reference types="bun" />\n', "")),
+  );
+});
+
 test("a type named through an import binding reads as the import type it names, whichever way emit spelled it", () => {
   // Declaration emit copies `import("s").Rank` from a served `.d.ts`, and
   // prints `Rank` through the local binding when it infers from source.

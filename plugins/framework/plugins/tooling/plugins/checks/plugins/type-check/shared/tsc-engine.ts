@@ -169,6 +169,18 @@ const NOT_ENGINE = new Set([
  * whole program, `import("../../server/internal/registry").JobFactory` in a
  * batch served the barrel's `.d.ts`; 12 of 12.8k files). `declaringOf`
  * returns the spec to spell it by, or undefined to keep `s`.
+ *
+ * And with no comments (triple-slash directives stay: they load
+ * declarations). A comment means nothing to a type, and emit does not keep
+ * the right ones: a type inferred from source is printed by reusing its
+ * nodes, and a reused node takes the comments at its POSITION in whatever
+ * file emit reads them from — so `useSavePlace`'s inferred `{ address?:
+ * string }` came out with the JSDoc of `useUpdatePlace`, the declaration in
+ * its own file at that offset, spliced inside it. Which comment lands there
+ * depends on the program (the declaring file as source or as a served
+ * `.d.ts`), so the name's text moved where nothing had (prediction miss
+ * report-1793151601-6dwk28; backstop signature divergence
+ * report-1792989194-debinz on the same file).
  */
 export function canonicalDeclarations(
   dts: string,
@@ -181,7 +193,7 @@ export function canonicalDeclarations(
     /*setParentNodes*/ true,
     ts.ScriptKind.TS,
   );
-  const printer = ts.createPrinter();
+  const printer = ts.createPrinter({ removeComments: true });
   const nameOf = (m: ts.PropertySignature): string =>
     ts.isIdentifier(m.name) ||
     ts.isStringLiteral(m.name) ||
