@@ -7,9 +7,7 @@
 # (e.g. describing a `---` markdown shortcut) makes interpret-trailers stamp the
 # trailer mid-body, above the `---`, where %(trailers) can't see it — the
 # conversation-trailer check then reports it missing even though it is present.
-# The id travels under both names of the CONVERSATION_ID variable (the current
-# EQUIN_ one first) while the launching backend may be older than this checkout.
-CONVERSATION_ID="${EQUIN_CONVERSATION_ID:-$SINGULARITY_CONVERSATION_ID}"
+CONVERSATION_ID="$EQUIN_CONVERSATION_ID"
 [ -n "$CONVERSATION_ID" ] || exit 0
 
 # "Already stamped" means: in the trailer block (the message's last paragraph),

@@ -9,7 +9,6 @@ import {
   envKeyOf,
   isDeclaredEnvName,
 } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
-import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import { stripComments } from "./internal/strip-comments";
 
 const DECLARATION = "plugins/infra/plugins/launcher/core";
@@ -39,10 +38,9 @@ function isTestFile(path: string): boolean {
 // through the key-typed helpers (`readEnv`, `envEntries`, …), so an undeclared
 // key is a type error. What a type cannot see, this check holds:
 //
-//  1. No TypeScript CODE spells a full name (`EQUIN_<key>`, or the legacy
-//     spelling). A full name written by hand bypasses the declaration, and a
-//     read of it misses the other name of the same variable. Comments may name
-//     one; strings, identifiers and template text may not.
+//  1. No TypeScript CODE spells a full name (`EQUIN_<key>`). A full name
+//     written by hand bypasses the declaration. Comments may name one;
+//     strings, identifiers and template text may not.
 //  2. Every full name ANY tracked file spells — a mirror that cannot import the
 //     keys (the gateway's Go, the git hooks, the desktop shell's Rust, a shell
 //     script, a JSON config), a comment, a doc — is a declared key, so a mirror
@@ -66,7 +64,7 @@ const DECLARATION_FILE = `${ENV_NAMES_CORE}/internal/env-keys.ts`;
 // what leaves out globals like `__EQUIN_SCOPE__` (a menu-bar script
 // placeholder) and the web-artifact globals, which no environment holds.
 const FULL_NAME_RE = new RegExp(
-  `(?<![A-Za-z0-9_])(?:${ENV_PREFIX}|${LEGACY_IDS.envPrefix})[A-Z0-9_]+`,
+  `(?<![A-Za-z0-9_])${ENV_PREFIX}[A-Z0-9_]+`,
   "g",
 );
 
@@ -90,7 +88,7 @@ function namesKey(code: string, key: string): boolean {
 const envNamesCheck: Check = {
   id: ENV_NAMES_RULE,
   description:
-    "The app's environment variables are spelled by key: no full EQUIN_* / legacy name in TypeScript code, every full name a mirror or doc spells is declared in launcher/core, and every declared key is still used",
+    "The app's environment variables are spelled by key: no full EQUIN_* name in TypeScript code, every full name a mirror or doc spells is declared in launcher/core, and every declared key is still used",
   exemptable: {
     [ENV_NAMES_RULE]:
       "spells a full variable name on purpose (a fixture of the rule itself)",
@@ -100,15 +98,13 @@ const envNamesCheck: Check = {
     const root = await getWorktreeRoot();
     const exempt = await ctx.exempt(ENV_NAMES_RULE);
     const byPath = new Map<string, string>();
-    for (const grepArg of [ENV_PREFIX, LEGACY_IDS.envPrefix]) {
-      for (const { rel, src } of await listCandidateSources({
-        root,
-        grepArg,
-        fixed: true,
-        pathspecs: ["."],
-      })) {
-        byPath.set(rel, src);
-      }
+    for (const { rel, src } of await listCandidateSources({
+      root,
+      grepArg: ENV_PREFIX,
+      fixed: true,
+      pathspecs: ["."],
+    })) {
+      byPath.set(rel, src);
     }
 
     const handSpelled: string[] = [];
@@ -194,9 +190,9 @@ const envNamesCheck: Check = {
       ok: false,
       message: problems.join("\n"),
       hint:
-        `In TypeScript, name the KEY through @${ENV_NAMES_CORE}: \`readEnv("LANE")\`, \`{ ...process.env, ...envEntries({ LANE: x }) }\`, \`setEnv\` / \`setEnvDefault\` / \`unsetEnv\`, \`envName("LANE")\` in a message — they read and write both names of the variable while the rename settles. ` +
+        `In TypeScript, name the KEY through @${ENV_NAMES_CORE}: \`readEnv("LANE")\`, \`{ ...process.env, ...envEntries({ LANE: x }) }\`, \`setEnv\` / \`setEnvDefault\` / \`unsetEnv\`, \`envName("LANE")\` in a message. ` +
         `A new variable is a new key in ${DECLARATION_FILE}, answering one question: should a backend inherit this from whoever starts the gateway? Yes → RUNTIME_FORWARDED_ENV (an installation setting every backend must see); no → RUNTIME_WITHHELD_ENV (somebody's own state, delivered some other way), with the one-line reason. ` +
-        "A mirror (Go, shell, Rust, JSON) spells declared names only, and reads both (gateway/env.go readEnv; in shell, the current name defaulting to the legacy one). " +
+        "A mirror (Go, shell, Rust, JSON) spells declared names only (gateway/env.go readEnv in Go). " +
         "A stale key was declared for code that is gone: delete its entry.",
     };
   },

@@ -1,89 +1,53 @@
 import { describe, expect, test } from "bun:test";
-import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
-import {
-  EnvNameConflictError,
-  envEntries,
-  readEnv,
-  setEnv,
-  setEnvDefault,
-  unsetEnv,
-} from "./env";
-import { envName, envNames } from "./env-keys";
+import { envEntries, readEnv, setEnv, setEnvDefault, unsetEnv } from "./env";
+import { ENV_PREFIX, envKeyOf, envName, isDeclaredEnvName } from "./env-keys";
 
-const current = envName("DIR");
-const legacy = `${LEGACY_IDS.envPrefix}DIR`;
+const name = envName("DIR");
 
-describe("envNames", () => {
-  test("current first, then the legacy name", () => {
-    expect(envNames("DIR")).toEqual([current, legacy]);
+describe("names", () => {
+  test("a key's one name is the product prefix + key", () => {
+    expect(name).toBe(`${ENV_PREFIX}DIR`);
+    expect(envKeyOf(name)).toBe("DIR");
+    expect(envKeyOf("HOME")).toBeUndefined();
   });
 
-  test("a key born after the rename has only its current name", () => {
-    expect(envNames("APP_COMPONENT")).toEqual([envName("APP_COMPONENT")]);
+  test("declared keys and prefixes", () => {
+    expect(isDeclaredEnvName(name)).toBe(true);
+    expect(isDeclaredEnvName(envName("AUTH_GOOGLE_CLIENT_ID"))).toBe(true);
+    expect(isDeclaredEnvName(`${name}_NOT_A_KEY`)).toBe(false);
   });
 });
 
 describe("readEnv", () => {
-  test("unset under both names", () => {
+  test("unset", () => {
     expect(readEnv("DIR", {})).toBeUndefined();
   });
 
-  test("the current name", () => {
-    expect(readEnv("DIR", { [current]: "/new" })).toBe("/new");
-  });
-
-  test("falls back to the legacy name — an older writer set only it", () => {
-    expect(readEnv("DIR", { [legacy]: "/old" })).toBe("/old");
-  });
-
-  test("both set and equal", () => {
-    expect(readEnv("DIR", { [current]: "/d", [legacy]: "/d" })).toBe("/d");
-  });
-
-  test("both set and different throws, naming both", () => {
-    expect(() =>
-      readEnv("DIR", { [current]: "/new", [legacy]: "/old" }),
-    ).toThrow(EnvNameConflictError);
-    expect(() =>
-      readEnv("DIR", { [current]: "/new", [legacy]: "/old" }),
-    ).toThrow(new RegExp(`${current}.*${legacy}`));
-  });
-
-  test("a prefixed key reads both names too", () => {
-    expect(
-      readEnv("AUTH_GOOGLE_CLIENT_ID", {
-        [`${LEGACY_IDS.envPrefix}AUTH_GOOGLE_CLIENT_ID`]: "id",
-      }),
-    ).toBe("id");
+  test("set", () => {
+    expect(readEnv("DIR", { [name]: "/d" })).toBe("/d");
   });
 });
 
 describe("writers", () => {
-  test("envEntries sets every name, undefined included", () => {
-    expect(envEntries({ DIR: "/d" })).toEqual({
-      [current]: "/d",
-      [legacy]: "/d",
-    });
-    expect(envEntries({ DIR: undefined })).toEqual({
-      [current]: undefined,
-      [legacy]: undefined,
-    });
+  test("envEntries keys each value by its name, undefined included", () => {
+    expect(envEntries({ DIR: "/d" })).toEqual({ [name]: "/d" });
+    expect(envEntries({ DIR: undefined })).toEqual({ [name]: undefined });
   });
 
-  test("setEnv / unsetEnv write and remove both names", () => {
+  test("setEnv / unsetEnv write and remove the name", () => {
     const env: Record<string, string | undefined> = {};
     setEnv("DIR", "/d", env);
-    expect(env).toEqual({ [current]: "/d", [legacy]: "/d" });
+    expect(env).toEqual({ [name]: "/d" });
     unsetEnv("DIR", env);
     expect(env).toEqual({});
   });
 
-  test("setEnvDefault keeps an existing value and copies it to both names", () => {
-    const env: Record<string, string | undefined> = { [legacy]: "/old" };
-    expect(setEnvDefault("DIR", "/default", env)).toBe("/old");
-    expect(env).toEqual({ [current]: "/old", [legacy]: "/old" });
+  test("setEnvDefault keeps an existing value", () => {
+    const env: Record<string, string | undefined> = { [name]: "/set" };
+    expect(setEnvDefault("DIR", "/default", env)).toBe("/set");
+    expect(env).toEqual({ [name]: "/set" });
     const empty: Record<string, string | undefined> = {};
     expect(setEnvDefault("DIR", "/default", empty)).toBe("/default");
-    expect(empty).toEqual({ [current]: "/default", [legacy]: "/default" });
+    expect(empty).toEqual({ [name]: "/default" });
   });
 });

@@ -1,4 +1,4 @@
-import { envNames } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
+import { envName } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { TOOL_USE_ID_RE } from "../tool-use-id";
 import { defineGuard } from "../define-guard";
 import { parseShell } from "../parse-shell";
@@ -35,9 +35,7 @@ export const e2eToolUseIdGuard = defineGuard<BashInput>({
     if (!runsE2e) return null;
     return {
       rewrite: {
-        command: `export ${envNames("TOOL_USE_ID")
-          .map((name) => `${name}=${ctx.toolUseId}`)
-          .join(" ")}; ${cmd}`,
+        command: `export ${envName("TOOL_USE_ID")}=${ctx.toolUseId}; ${cmd}`,
       },
       note: null,
     };

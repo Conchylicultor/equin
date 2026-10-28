@@ -12,10 +12,8 @@
 // GUARDS_ROOT variable or else `$CLAUDE_PROJECT_DIR`. A human session has no
 // GUARDS_ROOT, so its guards come from the project; an app launch sets it to
 // the checkout its workspace runs the guards of (a worktree: its own, so an
-// agent can edit and test them; scratch: the launching backend's). The shell
-// reads both of its names (EQUIN_GUARDS_ROOT, then the legacy one), since a
-// launching backend may be older than this checkout (`envNames`,
-// infra/launcher). In a worktree both copies are loaded, and Claude Code runs
+// agent can edit and test them; scratch: the launching backend's). In a
+// worktree both copies are loaded, and Claude Code runs
 // identical hook commands once (measured 2026-10-24: identical strings ran
 // once, differing ones twice) — keep them byte-identical.
 //
@@ -23,7 +21,7 @@
 // the boundary `main-edits` / `main-writes` allow writes under; absent in a
 // human session.
 
-import { envNames } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
+import { envName } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 
 /** The guard entry points, relative to a checkout root. */
 export const GUARD_SCRIPTS = {
@@ -49,11 +47,8 @@ export interface AgentPolicySettings {
   permissions: { deny: string[] };
 }
 
-/** `${A:-${B:-$CLAUDE_PROJECT_DIR}}` over every name of GUARDS_ROOT, current first. */
-const ROOT = envNames("GUARDS_ROOT").reduceRight(
-  (fallback, name) => `\${${name}:-${fallback}}`,
-  "$CLAUDE_PROJECT_DIR",
-);
+/** The guards' checkout: GUARDS_ROOT when the launch set it, else the project dir. */
+const ROOT = `\${${envName("GUARDS_ROOT")}:-$CLAUDE_PROJECT_DIR}`;
 
 function script(rel: string): string {
   return `"${ROOT}/${rel}"`;

@@ -28,9 +28,7 @@ plist) is listed in its id's `mirrors`.
   file outside this plugin — except a mirror's line holding its value, committed
   migrations (`database/migrations` exempts them as history), `research/` and
   generated files. The legacy data dir's name is `dataDirName`, spelled by
-  `infra/paths`' data-root layout and its mirrors only. The old env-var prefix is
-  `envPrefix`, spelled by the env-name registry (`infra/launcher/env-names`) and its
-  mirrors only. Repository URLs are allowed too, because the repo keeps its name.
+  `infra/paths`' data-root layout and its mirrors only. Repository URLs are allowed too, because the repo keeps its name.
 - `product-name:legacy-ids-in-sync` fails when a mirror stops spelling its value.
 
 Decision: `research/2026-10-25-global-equin-internal-identifiers.md`.

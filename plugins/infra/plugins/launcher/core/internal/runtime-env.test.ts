@@ -1,10 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import {
   ENV_PREFIX,
   envEntries,
   envName,
-  envNames,
 } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import {
   RUNTIME_FORWARDED_TOOL_ENV,
@@ -16,8 +14,6 @@ import {
   runtimePath,
   runtimeShimsDir,
 } from "./runtime-env";
-
-const legacy = (key: string) => `${LEGACY_IDS.envPrefix}${key}`;
 
 describe("pickRuntimeEnv", () => {
   test("keeps host, forwarded and prefix-matched names", () => {
@@ -39,23 +35,6 @@ describe("pickRuntimeEnv", () => {
         AUTH_GOOGLE_CLIENT_ID: "id",
       }),
     });
-  });
-
-  test("a variable set under ONE of its names travels under both", () => {
-    // An operator's dotfiles may still export the legacy name; a newer one the
-    // current name. Either way the runtime tree sees both.
-    expect(pickRuntimeEnv({ [legacy("DIR")]: "/old" })).toEqual(
-      envEntries({ DIR: "/old" }),
-    );
-    expect(
-      pickRuntimeEnv({ [envName("AUTH_GOOGLE_CLIENT_ID")]: "id" }),
-    ).toEqual(envEntries({ AUTH_GOOGLE_CLIENT_ID: "id" }));
-  });
-
-  test("both names set to different values refuses to guess", () => {
-    expect(() =>
-      pickRuntimeEnv({ [envName("DIR")]: "/new", [legacy("DIR")]: "/old" }),
-    ).toThrow(/disagree/);
   });
 
   test("drops withheld names — the leak this exists to stop", () => {
@@ -80,7 +59,6 @@ describe("pickRuntimeEnv", () => {
       SOCKET_PATH: "/sock",
       PGHOST: "elsewhere",
       [`${ENV_PREFIX}SOMETHING_NEW`]: "x",
-      [legacy("SOMETHING_NEW")]: "x",
       // A prefix match is a prefix of the NAME, not a substring of it.
       [`MY_${envName("AUTH_X")}`]: "y",
     });
@@ -126,7 +104,6 @@ describe("host names", () => {
       ...Object.keys(RUNTIME_FORWARDED_TOOL_ENV),
     ]) {
       expect(name).not.toStartWith(ENV_PREFIX);
-      expect(name).not.toStartWith(LEGACY_IDS.envPrefix);
     }
   });
 });
@@ -135,11 +112,9 @@ describe("runtimeEnvNames", () => {
   test("lists every declared name, and each prefix as <prefix>*", () => {
     const names = runtimeEnvNames();
     expect(names).toContain("HOME");
-    for (const name of envNames("DIR")) expect(names).toContain(name);
-    for (const name of envNames("AUTH_")) expect(names).toContain(`${name}*`);
-    for (const name of envNames("CONVERSATION_ID")) {
-      expect(names).not.toContain(name);
-    }
+    expect(names).toContain(envName("DIR"));
+    expect(names).toContain(`${envName("AUTH_")}*`);
+    expect(names).not.toContain(envName("CONVERSATION_ID"));
     expect(new Set(names).size).toBe(names.length);
   });
 

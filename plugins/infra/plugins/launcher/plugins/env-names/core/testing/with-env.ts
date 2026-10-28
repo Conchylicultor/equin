@@ -1,9 +1,9 @@
-import { envNames, type EnvKey } from "../internal/env-keys";
+import { envName, type EnvKey } from "../internal/env-keys";
 
 /**
- * Runs `fn` with `values` set in `process.env` under every name of each key
- * (undefined = unset under every name), then puts back exactly what was there
- * before — the save / set / restore a test of an env reader needs.
+ * Runs `fn` with `values` set in `process.env` (undefined = unset), then puts
+ * back exactly what was there before — the save / set / restore a test of an
+ * env reader needs.
  */
 export async function withEnv<T>(
   values: Partial<Record<EnvKey, string | undefined>>,
@@ -14,11 +14,10 @@ export async function withEnv<T>(
     EnvKey,
     string | undefined,
   ][]) {
-    for (const name of envNames(key)) {
-      if (!saved.has(name)) saved.set(name, process.env[name]);
-      if (value === undefined) delete process.env[name];
-      else process.env[name] = value;
-    }
+    const name = envName(key);
+    if (!saved.has(name)) saved.set(name, process.env[name]);
+    if (value === undefined) delete process.env[name];
+    else process.env[name] = value;
   }
   try {
     return await fn();

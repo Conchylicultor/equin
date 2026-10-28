@@ -174,41 +174,12 @@ func (c ChildEnv) Command(name string, args ...string) *exec.Cmd {
 
 // ─── the app's own variables, by key ─────────────────────────
 //
-// The Go twin of readEnv in plugins/infra/plugins/launcher/core (env.ts): each
-// of the app's variables has two names while the product's rename settles,
-// EQUIN_<key> and the legacy one, because an installed plist written by an
-// older `./equin start` still sets only the legacy name. Both are read, the
-// current one first; both set to different values is an error rather than a
-// guess. An empty value counts as unset, as os.Getenv always did here.
-// The prefixes must match envName / LEGACY_IDS.envPrefix (the product-name
-// legacy-ids-in-sync check holds this file to the legacy one).
-const (
-	envPrefix       = "EQUIN_"
-	legacyEnvPrefix = "SINGULARITY_"
-)
+// The Go twin of readEnv in plugins/infra/plugins/launcher/plugins/env-names
+// (env.ts): each of the app's variables is named EQUIN_<key>. An empty value
+// counts as unset, as os.Getenv always did here.
+const envPrefix = "EQUIN_"
 
-// readEnv returns the value of the app variable `key` under either name, or ""
-// when neither is set.
-func readEnv(key string) (string, error) {
-	current, legacy := os.Getenv(envPrefix+key), os.Getenv(legacyEnvPrefix+key)
-	switch {
-	case current == "":
-		return legacy, nil
-	case legacy != "" && legacy != current:
-		return "", fmt.Errorf("%s%s=%q and %s%s=%q disagree: both names of one variable are set to different values — unset one (%s%s is the current name)",
-			envPrefix, key, current, legacyEnvPrefix, key, legacy, envPrefix, key)
-	default:
-		return current, nil
-	}
-}
-
-// mustReadEnv is readEnv for flag defaults, read before logging exists: a
-// conflict is printed and exits, like a bad flag.
-func mustReadEnv(key string) string {
-	v, err := readEnv(key)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(2)
-	}
-	return v
+// readEnv returns the value of the app variable `key`, or "" when it is unset.
+func readEnv(key string) string {
+	return os.Getenv(envPrefix + key)
 }

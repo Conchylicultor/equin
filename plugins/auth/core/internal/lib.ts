@@ -14,7 +14,7 @@ export interface AuthIdentity {
   avatarUrl?: string;
 }
 
-/** Reads one of the app's environment variables by key, under both its names. */
+/** Reads one of the app's environment variables by key. */
 export interface AuthEnvAccessor {
   get(key: EnvKey): string | undefined;
 }

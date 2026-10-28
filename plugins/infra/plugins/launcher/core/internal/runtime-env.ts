@@ -50,21 +50,18 @@
 // version frozen into (or missing from) the starter's shell. See `runtimePath`.
 //
 // The app's own variables are declared by KEY in the `env-names` sub-plugin (forwarded,
-// withheld, forwarded prefixes); each key has two names while the product's
-// rename settles, and its `readEnv` / `envEntries` read and write both. `launcher:env-names`
+// withheld, forwarded prefixes), each named `EQUIN_<key>`. `launcher:env-names`
 // keeps the declaration closed: no full name spelled in TypeScript code, no
 // undeclared name in a mirror (Go, shell, JSON) or a doc, no key nothing uses.
 //
 // Design: research/2026-09-15-global-declared-runtime-environment.md,
-// research/2026-10-25-global-equin-env-vars.md (the two names)
+// research/2026-10-25-global-equin-env-vars.md (by key)
 
 import {
   RUNTIME_FORWARDED_ENV,
   RUNTIME_FORWARDED_PREFIXES,
   envKeyOf,
-  envNames,
-  readEnv,
-  type EnvKey,
+  envName,
 } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 
 /**
@@ -111,22 +108,18 @@ const FORWARDED_PREFIXES: readonly string[] = Object.keys(
   RUNTIME_FORWARDED_PREFIXES,
 );
 
-/** The forwarded key `name` spells (under either prefix), or undefined. */
-function forwardedKeyOf(name: string): EnvKey | undefined {
+/** True when `name` is a forwarded key's name, or starts with a forwarded prefix's. */
+function isForwardedName(name: string): boolean {
   const key = envKeyOf(name);
-  if (key === undefined) return undefined;
-  if (
-    FORWARDED_KEYS.has(key) ||
-    FORWARDED_PREFIXES.some((p) => key.startsWith(p))
-  ) {
-    return key as EnvKey;
-  }
-  return undefined;
+  if (key === undefined) return false;
+  return (
+    FORWARDED_KEYS.has(key) || FORWARDED_PREFIXES.some((p) => key.startsWith(p))
+  );
 }
 
 /** True when `name` is part of the declared runtime environment. */
 export function isRuntimeEnvName(name: string): boolean {
-  return HOST_NAMES.has(name) || forwardedKeyOf(name) !== undefined;
+  return HOST_NAMES.has(name) || isForwardedName(name);
 }
 
 /**
@@ -265,14 +258,7 @@ export function pickRuntimeEnv(
       picked[name] = name === "PATH" ? runtimePath(source) : value;
       continue;
     }
-    // An app variable travels under BOTH its names, whichever one the starter
-    // set: an operator's dotfiles may still export the legacy name, and the
-    // runtime tree may still hold readers of either.
-    const key = forwardedKeyOf(name);
-    if (key === undefined) continue;
-    const resolved = readEnv(key, source);
-    if (resolved === undefined) continue;
-    for (const n of envNames(key)) picked[n] = resolved;
+    if (isForwardedName(name)) picked[name] = value;
   }
   return picked;
 }
@@ -312,10 +298,10 @@ export function runtimeEnvNames(): string[] {
       Object.keys(
         RUNTIME_FORWARDED_ENV,
       ) as (keyof typeof RUNTIME_FORWARDED_ENV)[]
-    ).flatMap(envNames),
+    ).map(envName),
     ...Object.keys(RUNTIME_FORWARDED_TOOL_ENV),
-    ...(
-      FORWARDED_PREFIXES as (keyof typeof RUNTIME_FORWARDED_PREFIXES)[]
-    ).flatMap((prefix) => envNames(prefix).map((name) => `${name}*`)),
+    ...(FORWARDED_PREFIXES as (keyof typeof RUNTIME_FORWARDED_PREFIXES)[]).map(
+      (prefix) => `${envName(prefix)}*`,
+    ),
   ];
 }

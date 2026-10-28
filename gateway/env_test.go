@@ -133,33 +133,15 @@ func TestCommandSetsEnv(t *testing.T) {
 	}
 }
 
-// TestReadEnvBothNames: the current name wins, the legacy one is the fallback
-// (an installed plist from an older `./equin start` sets only it), and the two
-// set to different values is an error, never a guess.
-func TestReadEnvBothNames(t *testing.T) {
+// TestReadEnv: the app variable's EQUIN_ name, empty meaning unset.
+func TestReadEnv(t *testing.T) {
 	const key = "TEST_READ_ENV"
-	current, legacy := envPrefix+key, legacyEnvPrefix+key
-	cases := []struct {
-		name, current, legacy, want string
-		wantErr                     bool
-	}{
-		{"neither", "", "", "", false},
-		{"current only", "a", "", "a", false},
-		{"legacy only", "", "b", "b", false},
-		{"both equal", "a", "a", "a", false},
-		{"both differ", "a", "b", "", true},
+	t.Setenv(envPrefix+key, "")
+	if got := readEnv(key); got != "" {
+		t.Fatalf("unset: readEnv = %q, want empty", got)
 	}
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			t.Setenv(current, c.current)
-			t.Setenv(legacy, c.legacy)
-			got, err := readEnv(key)
-			if (err != nil) != c.wantErr {
-				t.Fatalf("readEnv err = %v, wantErr %v", err, c.wantErr)
-			}
-			if got != c.want {
-				t.Fatalf("readEnv = %q, want %q", got, c.want)
-			}
-		})
+	t.Setenv(envPrefix+key, "a")
+	if got := readEnv(key); got != "a" {
+		t.Fatalf("set: readEnv = %q, want %q", got, "a")
 	}
 }

@@ -1,18 +1,16 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import {
-  envNames,
+  readEnv,
   setEnv,
   unsetEnv,
 } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { LOOPBACK_BIND, listenFlag, resolveListenAddress } from "./listen";
 
 describe("resolveListenAddress", () => {
-  const saved = envNames("LISTEN").map((name) => [name, process.env[name]]);
+  const saved = readEnv("LISTEN");
   afterEach(() => {
-    for (const [name, value] of saved) {
-      if (value === undefined) delete process.env[name!];
-      else process.env[name!] = value;
-    }
+    if (saved === undefined) unsetEnv("LISTEN");
+    else setEnv("LISTEN", saved);
   });
 
   function resolveWith(value: string | undefined, manifestPort = 9000) {

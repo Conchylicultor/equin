@@ -57,7 +57,7 @@ type Config struct {
 // and the root never has to be re-derived anywhere else in the process — which
 // is what let two independently-drifting copies of this fallback exist before.
 func dataRoot() string {
-	if dir := mustReadEnv("DIR"); dir != "" {
+	if dir := readEnv("DIR"); dir != "" {
 		return dir
 	}
 	home, err := os.UserHomeDir()
@@ -101,7 +101,7 @@ func parseFlags() (Config, string) {
 	flag.StringVar(&cfg.LogDir, "log-dir", defaultLogDir, "directory for the gateway and per-worktree log files")
 	defaultRegistry := filepath.Join(dataDir, "worktrees")
 	flag.StringVar(&cfg.RegistryDir, "registry-dir", defaultRegistry, "directory of worktree JSON files")
-	defaultSockets := mustReadEnv("SOCKETS_DIR")
+	defaultSockets := readEnv("SOCKETS_DIR")
 	if defaultSockets == "" {
 		defaultSockets = filepath.Join(dataDir, "sockets")
 	}

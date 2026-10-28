@@ -5,19 +5,14 @@
 // must never inherit (withheld); `runtime-env.ts` says why the split exists and
 // how the gateway enforces it.
 //
-// A key has two NAMES while the product's rename settles: `EQUIN_<key>` and
-// the legacy name, `LEGACY_IDS.envPrefix` + key. An installed plist, a gateway built from an
-// older main, a backend on an older checkout and an operator's dotfiles all
-// still speak the legacy one, so every reader tries both and every writer sets
-// both (`env.ts`). Code spells only the key: an undeclared one is a type error,
-// and `launcher:env-names` rejects a full name in TypeScript code.
+// A key's one name is `EQUIN_<key>` (`envName`). Code spells only the key
+// (`env.ts`): an undeclared one is a type error, and `launcher:env-names`
+// rejects a full name in TypeScript code.
 //
-// Design: research/2026-10-25-global-equin-env-vars.md
+// Design: research/2026-10-25-global-equin-env-vars.md,
+// research/2026-10-28-global-equin-env-vars-drop-legacy.md
 
-import {
-  LEGACY_IDS,
-  PRODUCT_NAME,
-} from "@plugins/framework/plugins/product-name/core";
+import { PRODUCT_NAME } from "@plugins/framework/plugins/product-name/core";
 
 /**
  * Installation settings that must reach the runtime, each with the reason it
@@ -133,16 +128,6 @@ export const RUNTIME_WITHHELD_ENV = {
     "the release self-extractor's cache root, set by the systemd unit and read before the launcher runs (release/cli self-extractor); no runtime reads it",
 } as const satisfies Record<string, string>;
 
-/**
- * Keys born after the rename: `EQUIN_<key>` is their only name, so there is no
- * legacy spelling to read or write.
- */
-const NEW_NAME_ONLY: ReadonlySet<string> = new Set<WithheldKey>([
-  "APP_COMPONENT",
-  "GATEWAY_LABEL",
-  "RELEASE_DIR",
-]);
-
 type ForwardedKey = keyof typeof RUNTIME_FORWARDED_ENV;
 type WithheldKey = keyof typeof RUNTIME_WITHHELD_ENV;
 type PrefixKey = keyof typeof RUNTIME_FORWARDED_PREFIXES;
@@ -153,35 +138,19 @@ type PrefixKey = keyof typeof RUNTIME_FORWARDED_PREFIXES;
  */
 export type EnvKey = ForwardedKey | WithheldKey | `${PrefixKey}${string}`;
 
-/** What every current name of the app's own variables starts with. */
+/** What every name of the app's own variables starts with. */
 export const ENV_PREFIX = `${PRODUCT_NAME.toUpperCase()}_`;
 
-/** What every name of the app's variables started with before the rename. */
-const LEGACY_ENV_PREFIX: string = LEGACY_IDS.envPrefix;
-
-/** The current name of a key: `EQUIN_<key>`. */
+/** The name of a key: `EQUIN_<key>`. */
 export function envName(key: EnvKey): string {
   return `${ENV_PREFIX}${key}`;
 }
 
-/**
- * Every name of a key, current first: `[EQUIN_<key>, <legacy prefix><key>]`, or
- * just the current one for a key born after the rename. Both are read and both
- * are written until the legacy names are dropped.
- */
-export function envNames(
-  key: EnvKey,
-): readonly [string] | readonly [string, string] {
-  if (NEW_NAME_ONLY.has(key)) return [envName(key)];
-  return [envName(key), `${LEGACY_ENV_PREFIX}${key}`];
-}
-
-/** The key a full name spells under either prefix, or undefined when it is not one of the app's. */
+/** The key a full name spells, or undefined when it is not one of the app's. */
 export function envKeyOf(name: string): string | undefined {
-  for (const prefix of [ENV_PREFIX, LEGACY_ENV_PREFIX]) {
-    if (name.startsWith(prefix)) return name.slice(prefix.length);
-  }
-  return undefined;
+  return name.startsWith(ENV_PREFIX)
+    ? name.slice(ENV_PREFIX.length)
+    : undefined;
 }
 
 /** Every declared key, then every declared prefix — what `launcher:env-names` checks names against. */
@@ -193,12 +162,10 @@ export const DECLARED_ENV_PREFIXES: readonly string[] = Object.keys(
   RUNTIME_FORWARDED_PREFIXES,
 );
 
-/** True when `name` (under either prefix) is a declared key or starts with a declared prefix. */
+/** True when `name` is a declared key's name, or starts with a declared prefix's. */
 export function isDeclaredEnvName(name: string): boolean {
   const key = envKeyOf(name);
   if (key === undefined) return false;
-  if (DECLARED_ENV_KEYS.includes(key)) {
-    return name.startsWith(ENV_PREFIX) || !NEW_NAME_ONLY.has(key);
-  }
+  if (DECLARED_ENV_KEYS.includes(key)) return true;
   return DECLARED_ENV_PREFIXES.some((p) => key.startsWith(p));
 }

@@ -11,9 +11,8 @@ copy:
   whatever the workspace — a scratch dir outside the repo loads no project
   settings, so this is its only source.
 
-Each hook command reads `${EQUIN_GUARDS_ROOT:-${<legacy name>:-$CLAUDE_PROJECT_DIR}}`
-(both names of the `GUARDS_ROOT` key, `envNames` in `infra/launcher/env-names`,
-since the launching backend may be older than the checkout): a human session
+Each hook command reads `${EQUIN_GUARDS_ROOT:-$CLAUDE_PROJECT_DIR}`
+(the `GUARDS_ROOT` key, `envName` in `infra/launcher/env-names`): a human session
 uses its project; an app launch names the workspace's guards
 checkout (a worktree's own, so an agent can edit and test its guards; scratch:
 the launching backend's). A worktree loads both copies, and Claude Code runs
@@ -29,7 +28,7 @@ portable `agent-launch` server barrel imports it.
 
 - Description: The protections every agent runs with — the guard and stop-guard hooks and the deny rules — declared once as data: `.claude/settings.json`'s protection keys are generated from it (guards:claude-settings-in-sync) and every app launch carries it, whatever its workspace, so an agent outside the repo (a scratch workspace) is guarded too.
 - Core:
-  - Uses: `infra/launcher/env-names.envNames`
+  - Uses: `infra/launcher/env-names.envName`
   - Exports (types):
     - `AgentPolicySettings`
     - `PolicyHookCommand`

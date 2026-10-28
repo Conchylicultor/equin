@@ -1,5 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import {
   ENV_PREFIX,
   RUNTIME_FORWARDED_ENV,
@@ -25,7 +24,6 @@ describe("the declaration", () => {
   test("a key is a bare suffix: it never carries a name prefix itself", () => {
     for (const key of [...forwarded, ...withheld, ...prefixes]) {
       expect(key).not.toStartWith(ENV_PREFIX);
-      expect(key).not.toStartWith(LEGACY_IDS.envPrefix);
       expect(key).toMatch(/^[A-Z][A-Z0-9_]*$/);
     }
   });

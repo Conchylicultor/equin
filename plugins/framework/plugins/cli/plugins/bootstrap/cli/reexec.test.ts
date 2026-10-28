@@ -5,7 +5,7 @@ import { dirname, join } from "node:path";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import {
   envEntries,
-  envNames,
+  envName,
   readEnv,
 } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { reexecAfterInstall, takeReexecBudget } from "./reexec";
@@ -118,7 +118,7 @@ test("taking the budget removes it from the environment descendants inherit", ()
     ...envEntries({ DEPS_REEXEC: "1" }),
   };
   expect(takeReexecBudget(env).prior).toBe(1);
-  expect(envNames("DEPS_REEXEC").some((name) => name in env)).toBe(false);
+  expect(envName("DEPS_REEXEC") in env).toBe(false);
   expect(env.PATH).toBe("/usr/bin");
   // A second read — what a nested `./equin` would see — starts fresh.
   expect(takeReexecBudget(env).prior).toBe(0);

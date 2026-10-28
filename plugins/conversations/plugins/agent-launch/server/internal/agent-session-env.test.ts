@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import {
+  ENV_PREFIX,
   envEntries,
-  envNames,
+  envName,
 } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import {
@@ -18,7 +18,7 @@ import {
 // The namespace variable a backend's environment used to leak into agents. Spelled
 // from its parts so the identifier itself stays out of the tree: the rule that
 // bans it does not need an exception for the test that proves it is gone.
-const LEAKED_NAMESPACE_VAR = `${LEGACY_IDS.envPrefix}${["WORK", "TREE"].join("")}`;
+const LEAKED_NAMESPACE_VAR = `${ENV_PREFIX}${["WORK", "TREE"].join("")}`;
 
 // Every `NAME=` word the wrapper hands to `env -i`, in order.
 function assignedNames(wrapper: string): string[] {
@@ -207,12 +207,8 @@ describe.each(LOGIN_SHELLS)("the wrapper, executed under %s", (loginShell) => {
     expect(res.stdout).toContain(`PROMPT<${prompt}>`);
 
     // The agent keeps what it was given...
-    for (const name of envNames("CONVERSATION_ID")) {
-      expect(res.stdout).toContain(`${name}=conv-test`);
-    }
-    for (const name of envNames("PARENT_HOST")) {
-      expect(res.stdout).toContain(`${name}=att-test-w6l1`);
-    }
+    expect(res.stdout).toContain(`${envName("CONVERSATION_ID")}=conv-test`);
+    expect(res.stdout).toContain(`${envName("PARENT_HOST")}=att-test-w6l1`);
     // ...including the toolchain on PATH, whatever the login profile does...
     expect(res.stdout).toMatch(/^PATH=.*\/fixture\/shims/m);
     // ...and nothing it was not.

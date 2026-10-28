@@ -6,12 +6,10 @@ export {
   RUNTIME_FORWARDED_PREFIXES,
   envKeyOf,
   envName,
-  envNames,
   isDeclaredEnvName,
 } from "./internal/env-keys";
 export type { EnvKey } from "./internal/env-keys";
 export {
-  EnvNameConflictError,
   envEntries,
   readEnv,
   setEnv,

@@ -9,7 +9,7 @@ import {
   writeFileSync,
 } from "fs";
 import { tmpdir } from "os";
-import { envNames } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
+import { envName } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { join } from "path";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 
@@ -219,7 +219,7 @@ describe("doctor.sh", () => {
     ].map(([, p]) => p!.replace(/^\$\{[^}]*\}/, "$HOME"));
     expect(candidates.length).toBeGreaterThan(0);
     const script = readFileSync(DOCTOR, "utf8");
-    for (const name of envNames("CLAUDE_BIN")) expect(script).toContain(name);
+    expect(script).toContain(envName("CLAUDE_BIN"));
     for (const p of candidates) expect(script).toContain(`"${p}"`);
   });
 });

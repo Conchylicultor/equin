@@ -105,7 +105,7 @@ const rigs: WorkerRig[] = [];
 function spawnRig(dir: string): WorkerRig {
   const frames: WorkerToMainFrame[] = [];
   const waiters: (() => void)[] = [];
-  // A Worker takes only set values; the data root under both its names.
+  // A Worker takes only set values; the data root under its name.
   const env: Record<string, string> = {};
   for (const [name, value] of Object.entries({
     ...process.env,

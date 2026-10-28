@@ -1,7 +1,7 @@
 import { runtimeShimsDir } from "@plugins/infra/plugins/launcher/core";
 import {
   envEntries,
-  envNames,
+  envName,
 } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 
@@ -48,11 +48,11 @@ import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
  *   bounded too).
  */
 export const AGENT_SESSION_DELIVERED_ENV: readonly string[] = [
-  ...envNames("CONVERSATION_ID"),
-  ...envNames("PARENT_HOST"),
+  envName("CONVERSATION_ID"),
+  envName("PARENT_HOST"),
   "CLAUDE_CODE_DISABLE_AGENT_VIEW",
-  ...envNames("GUARDS_ROOT"),
-  ...envNames("WORKSPACE_ROOT"),
+  envName("GUARDS_ROOT"),
+  envName("WORKSPACE_ROOT"),
 ];
 
 /** The values one agent session is launched with, by full variable name. */

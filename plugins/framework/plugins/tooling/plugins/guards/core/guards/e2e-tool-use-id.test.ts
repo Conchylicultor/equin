@@ -1,13 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { envNames } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
+import { envName } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { createContext } from "../context";
 import type { BashInput, Verdict } from "../types";
 import { e2eToolUseIdGuard } from "./e2e-tool-use-id";
 
 const ID = "toolu_01ABCdef";
-const EXPORT = `export ${envNames("TOOL_USE_ID")
-  .map((name) => `${name}=${ID}`)
-  .join(" ")};`;
+const EXPORT = `export ${envName("TOOL_USE_ID")}=${ID};`;
 
 function rewritten(input: BashInput, toolUseId: string | null = ID) {
   const v = e2eToolUseIdGuard.check(

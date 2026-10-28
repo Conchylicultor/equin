@@ -178,36 +178,22 @@ who delivers it instead (`RUNTIME_WITHHELD_ENV`). Host facts
 allowlist on purpose: what a starting shell may carry is an open set, so a list
 of bad names only catches the last leak found.
 
-### Two names per variable, while the rename settles
+### One name per variable
 
-Each key has two names: `EQUIN_<key>` and the legacy one
-(`LEGACY_IDS.envPrefix` + key). An installed plist written by an older
-`start`, a gateway built from an older main, a backend on a checkout not yet
-rebased and an operator's dotfiles all still speak the legacy name, so
-(`env-names` `core/internal/env.ts`):
-
-- **every read tries both** — `readEnv(key, env?)`, current name first;
-- **every write sets both** — `envEntries({ KEY: v })` for a child's env,
-  `setEnv` / `setEnvDefault` (the `??=` form) / `unsetEnv` in-process;
-- **both set to different values throws** (`EnvNameConflictError`): current
-  code always writes both, so a mismatch is an older writer overriding one name
-  under a newer ancestor, or an operator exporting both — not knowable here.
-
-`envName(key)` spells the current name for a message; `envNames(key)` lists
-both, for an allowlist. Keys born after the rename (`APP_COMPONENT`,
-`RELEASE_DIR`) have only the current name. Mirrors that cannot import the keys
-read both too: `gateway/env.go` `readEnv` (same rule), the git hooks and
-`doctor.sh` with `${EQUIN_<key>:-$<legacy name>}`, the generated hook commands
-(`guards/agent-policy`). `.mcp.json` alone still reads only the legacy names
-(Claude Code's `${VAR:-default}` is not documented to nest); every launcher
-sets both, so it resolves. Dropping the legacy names is a later step, once
-every install has restarted on this code (`./equin start --force`).
-Design: [`research/2026-10-25-global-equin-env-vars.md`](../../../../research/2026-10-25-global-equin-env-vars.md).
+Each key's one name is `EQUIN_<key>` (`env-names` `core/internal/env.ts`):
+`readEnv(key, env?)` reads it; `envEntries({ KEY: v })` builds a child's env;
+`setEnv` / `setEnvDefault` (the `??=` form) / `unsetEnv` change it in-process;
+`envName(key)` spells it for a message or an allowlist. Mirrors that cannot
+import the keys spell the full name: `gateway/env.go` `readEnv`, the git hooks,
+`doctor.sh`, `.mcp.json` and the generated hook commands
+(`guards/agent-policy`). The pre-rename names were read and written beside
+these for a while, then dropped; `product-name:legacy-id` keeps them out.
+Design: [`research/2026-10-25-global-equin-env-vars.md`](../../../../research/2026-10-25-global-equin-env-vars.md), [`research/2026-10-28-global-equin-env-vars-drop-legacy.md`](../../../../research/2026-10-28-global-equin-env-vars-drop-legacy.md).
 
 Two boundaries, one declaration:
 
 1. **Starter → gateway.** `gatewayLaunchSpec` sets
-   `pickRuntimeEnv(process.env)` (each forwarded variable under both its names, whichever one the starter set) — for the detached spawn, and baked into the
+   `pickRuntimeEnv(process.env)` — for the detached spawn, and baked into the
    launchd plist on macOS dev hosts (so a change reaches that gateway on the
    next `start --force`). It filters the **live** `process.env`, so the
    release launcher's mutations (`launch.ts`'s relocation variables, the release
@@ -216,7 +202,7 @@ Two boundaries, one declaration:
    and through it the desktop app, the preview manager, systemd) goes through
    this one function.
 2. **Gateway → every child.** It also passes the required
-   `-child-env <runtimeEnvNames().join(",")>` (both names of every forwarded
+   `-child-env <runtimeEnvNames().join(",")>` (the name of every forwarded
    key; prefixes spelled `NAME_*`). The
    gateway holds no list of its own; it forwards only those names, plus its
    per-child additions. A backend's socket path is
@@ -271,7 +257,7 @@ The yes case is the one that bites: a relocation variable set in `launch.ts` but
 not forwarded silently never reaches the backend, which reads its dev default in
 a release only. Then read it with `readEnv("KEY")`: an undeclared key is a type
 error. `launcher:env-names` holds what a type cannot see — no full
-`EQUIN_*` / legacy name spelled in TypeScript code (comments may name one),
+`EQUIN_*` name spelled in TypeScript code (comments may name one),
 every full name a mirror (Go, shell, Rust, JSON), a comment or a doc spells is a
 declared key (tests excepted), and every declared key is still used (a dead one
 is deleted). A third-party variable goes in `RUNTIME_FORWARDED_TOOL_ENV`; nothing
@@ -356,10 +342,8 @@ Design: [`research/2026-09-15-global-declared-runtime-environment.md`](../../../
   - Uses:
     - `framework/product-name.LEGACY_IDS`
     - `framework/product-name.PRODUCT_NAME`
-    - `infra/launcher/env-names.EnvKey`
     - `infra/launcher/env-names.envKeyOf`
-    - `infra/launcher/env-names.envNames`
-    - `infra/launcher/env-names.readEnv`
+    - `infra/launcher/env-names.envName`
     - `infra/launcher/env-names.RUNTIME_FORWARDED_ENV`
     - `infra/launcher/env-names.RUNTIME_FORWARDED_PREFIXES`
   - Exports (values):
