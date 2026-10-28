@@ -57,6 +57,7 @@ export type {
   UnfedRead,
 } from "./routing";
 export { diffKeyedScopedMembership, retainSnapEncoder } from "./keyed-diff";
+export { ResourceGuardError } from "./guard-error";
 export type {
   KeyedDiff,
   KeyedMembershipInput,

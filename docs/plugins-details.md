@@ -26103,6 +26103,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `diffKeyedScopedMembership`
           - `mintReachPlan`
           - `mintRoutePlan`
+          - `ResourceGuardError`
           - `retainSnapEncoder`
           - `tableLayoutRequirements`
       - Cross-plugin:
@@ -26137,6 +26138,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/plugin-loader.computeLoadWaves`
           - `framework/plugin-loader.topoSortPlugins`
           - `framework/resource-runtime.createResourceRuntime`
+          - `framework/resource-runtime.ResourceGuardError`
           - `framework/tooling/collected-dir.defineCollectedDir`
           - `packages/resource-protocol.RESOURCE_HTTP_ROUTE`
           - `packages/string-hash.hash64`

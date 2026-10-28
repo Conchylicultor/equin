@@ -1,5 +1,8 @@
 import { hash64 } from "@plugins/packages/plugins/string-hash/core";
-import { createResourceRuntime } from "@plugins/framework/plugins/resource-runtime/core";
+import {
+  createResourceRuntime,
+  ResourceGuardError,
+} from "@plugins/framework/plugins/resource-runtime/core";
 import type {
   Resource as RtResource,
   ExternalResource as RtExternalResource,
@@ -320,12 +323,20 @@ export function closeResourceKeySet(): void {
   keySet = "closed";
 }
 
+// A guard error's stack is the guard's, the same for every resource it fires
+// on: its identity (guard + key) is the error type, so the report fingerprint
+// keeps one row per resource instead of one per guard.
 function errorReport(context: string, err: unknown): ServerErrorReport {
   const e = err instanceof Error ? err : new Error(String(err));
   return {
     message: `[resources] ${context}: ${e.message}`,
     stack: e.stack ?? null,
-    errorType: e.constructor.name !== "Error" ? e.constructor.name : null,
+    errorType:
+      e instanceof ResourceGuardError
+        ? e.identity
+        : e.constructor.name !== "Error"
+          ? e.constructor.name
+          : null,
   };
 }
 

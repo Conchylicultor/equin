@@ -1339,6 +1339,7 @@ and those plugins' `CLAUDE.md`.
     - `diffKeyedScopedMembership`
     - `mintReachPlan`
     - `mintRoutePlan`
+    - `ResourceGuardError`
     - `retainSnapEncoder`
     - `tableLayoutRequirements`
 - Cross-plugin:

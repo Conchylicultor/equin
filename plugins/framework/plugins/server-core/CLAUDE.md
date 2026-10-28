@@ -385,6 +385,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `framework/plugin-loader.computeLoadWaves`
     - `framework/plugin-loader.topoSortPlugins`
     - `framework/resource-runtime.createResourceRuntime`
+    - `framework/resource-runtime.ResourceGuardError`
     - `framework/tooling/collected-dir.defineCollectedDir`
     - `packages/resource-protocol.RESOURCE_HTTP_ROUTE`
     - `packages/string-hash.hash64`

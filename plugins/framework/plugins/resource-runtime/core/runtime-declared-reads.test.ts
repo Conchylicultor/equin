@@ -20,6 +20,7 @@ import { z } from "zod";
 import { ResourceContractError } from "@plugins/packages/plugins/resource-protocol/core";
 import { mintReachPlan, mintRoutePlan, type RelationRead } from "./routing";
 import { createHarness, tick, type Harness } from "./test-support";
+import { ResourceGuardError } from "./guard-error";
 import type {
   PersistMeta,
   ResourceParams,
@@ -792,6 +793,25 @@ describe("D5 — the undeclared-read guard on externals", () => {
       ["ok", "sub-ack"],
       ["half", "sub-error"],
     ]);
+  });
+
+  test("a drift report carries its resource as identity — the guard's stack is the same for every resource", async () => {
+    const errs: unknown[] = [];
+    const h = createHarness({
+      reportError: (_ctx, err) => errs.push(err),
+      lastReadSet: () => ["conversations"],
+      strictRoutes: false,
+    });
+    for (const key of ["a", "b"]) {
+      h.runtime.defineExternalResource(
+        { key, schema: z.number(), validateParams: () => {} },
+        { mode: "push", reach: wholeReads([]), loader: () => 1 },
+      );
+      await h.subscribe(key, {});
+    }
+    expect(
+      errs.map((e) => (e instanceof ResourceGuardError ? e.identity : e)),
+    ).toEqual(["RouteDrift a", "RouteDrift b"]);
   });
 
   test("a keyed external window fails open into a FULL re-read of the tuple", async () => {

@@ -34,6 +34,7 @@ import {
   type SnapEncoder,
   type SnapEntry,
 } from "./keyed-diff";
+import { ResourceGuardError } from "./guard-error";
 import {
   isMintedPlan,
   routeTuple,
@@ -2611,7 +2612,9 @@ export function createResourceRuntime(
       nonCanonicalReported.add(key);
       reportLoaderError(
         `non-canonical params for ${key}`,
-        new Error(
+        new ResourceGuardError(
+          "NonCanonicalParams",
+          key,
           `a client subscribed ${JSON.stringify(params)}; the runtime keys (and echoes) ${JSON.stringify(canonical)} — canonicalize with canonicalParams before sending`,
         ),
       );
@@ -2673,7 +2676,9 @@ export function createResourceRuntime(
     }
     reportLoaderError(
       `unserved key ${key}`,
-      new Error(
+      new ResourceGuardError(
+        "UnservedKey",
+        key,
         `${key} is not served by this host: its key set is closed (it ships with its only client), so a read of a key it does not register is a bug, not skew`,
       ),
     );
@@ -2933,7 +2938,9 @@ export function createResourceRuntime(
       if (unrouted.length === 0) return value;
       const tables = unrouted.map((t) => `"${t}"`).join(", ");
       const outsideTag = unrouted.filter((t) => entry.routing?.tagged.has(t));
-      const err = new Error(
+      const err = new ResourceGuardError(
+        "RouteDrift",
+        entry.key,
         outsideTag.length > 0
           ? `resource "${entry.key}" read ${outsideTag.map((t) => `"${t}"`).join(", ")} outside the tagged queries that cover it (${outsideTag.map((t) => `"${t}": ${[...entry.routing!.tagged.get(t)!].map((tag) => `"${tag}"`).join(" | ")}`).join("; ")}) — its route's columns gate only what those queries read, so a write to another column would never reach it. Read the table through that lookup, or declare it whole.`
           : entry.routing && entry.routing.plan !== NO_ROUTES
