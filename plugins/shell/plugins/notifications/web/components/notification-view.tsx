@@ -102,16 +102,20 @@ export function recurrenceLabel(count: number): string | null {
  * Which tab raised it, for a notification a browser tab wrote (its
  * `metadata.clientId`): "this tab" or "another tab"; null for one the server
  * raised. Said of a failure only — where it happened is part of what went
- * wrong; a confirmation needs no origin.
+ * wrong; a confirmation needs no origin. A toast says only "another tab": one
+ * this tab raised pops up under the action that caused it, so its origin is
+ * plain; the bell's list, read later, names both.
  */
 export function raisedByTab(
   n: Pick<NotificationContent, "metadata" | "variant">,
   tabId: string,
+  surface: NotificationSurface,
 ): string | null {
   if (n.variant !== "error" && n.variant !== "warning") return null;
   const clientId = n.metadata?.clientId;
   if (typeof clientId !== "string") return null;
-  return clientId === tabId ? "this tab" : "another tab";
+  if (clientId !== tabId) return "another tab";
+  return surface === "bell" ? "this tab" : null;
 }
 
 /**
@@ -366,6 +370,7 @@ const HEADLINE_LINE = "h-lh text-body";
  */
 function NotificationLayout({
   n,
+  surface,
   when,
   unread = false,
   onDismiss,
@@ -394,7 +399,7 @@ function NotificationLayout({
   const meta = [
     recurrenceLabel(n.count),
     developerRow && n.type ? n.type : null,
-    raisedByTab(n, getTabId()),
+    raisedByTab(n, getTabId(), surface),
   ];
 
   const content = (

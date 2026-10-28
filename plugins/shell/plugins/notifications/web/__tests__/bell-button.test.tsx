@@ -559,10 +559,21 @@ describe("NotificationView — what a notification says", () => {
 
   it("which tab: only for a failure a tab raised", () => {
     const by = (clientId: unknown, variant: Notification["variant"]) =>
-      raisedByTab({ metadata: { clientId }, variant }, "tab-a");
+      raisedByTab({ metadata: { clientId }, variant }, "tab-a", "bell");
     expect(by("tab-a", "error")).toBe("this tab");
     expect(by("tab-b", "warning")).toBe("another tab");
     expect(by("tab-a", "success")).toBeNull();
     expect(by(undefined, "error")).toBeNull();
+  });
+
+  it("which tab: a toast names only another tab", () => {
+    const by = (clientId: string) =>
+      raisedByTab(
+        { metadata: { clientId }, variant: "error" },
+        "tab-a",
+        "toast",
+      );
+    expect(by("tab-a")).toBeNull();
+    expect(by("tab-b")).toBe("another tab");
   });
 });
