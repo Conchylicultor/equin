@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
@@ -19,6 +19,7 @@ import {
   hoverRevealGroup,
   hoverRevealTarget,
 } from "@plugins/primitives/plugins/hover-reveal/web";
+import { useDragGesture } from "@plugins/primitives/plugins/dom/plugins/movable/web";
 import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { NewTabButton } from "@plugins/primitives/plugins/link-gesture/plugins/new-tab/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
@@ -66,7 +67,7 @@ const PICKER_LIMIT = 50;
  * id the list does not carry is a prototype that is not here.
  */
 export function PrototypeBlock({ block, editor }: BlockRendererProps) {
-  const { prototypeId } = prototypeBlock.parse(block.data);
+  const { prototypeId, width, height } = prototypeBlock.parse(block.data);
   const prototypes = useLive(prototypesList);
   const [pickerOpen, setPickerOpen] = useState(false);
   const select = (id: string) => editor.update({ prototypeId: id });
@@ -136,16 +137,40 @@ export function PrototypeBlock({ block, editor }: BlockRendererProps) {
           </Row>,
         );
       }
-      return <PrototypeCard meta={meta} />;
+      return (
+        <PrototypeCard
+          meta={meta}
+          size={{ width, height }}
+          onResize={(size) => editor.update({ prototypeId, ...size })}
+        />
+      );
     },
   });
 }
 
+/** The frame's size in px; an absent side is the default (full width, 16:9). */
+interface FrameSize {
+  width?: number;
+  height?: number;
+}
+
+/** Which sides a resize handle drags. */
+type ResizeAxes = "x" | "y" | "xy";
+
+/** The smallest box a resize leaves a prototype, in px. */
+const PROTOTYPE_MIN_WIDTH = 160;
+const PROTOTYPE_MIN_HEIGHT = 90;
+
+/** A width dragged to within this many px of the lane snaps back to fluid. */
+const FILL_SNAP_PX = 8;
+
 /**
  * The prototype itself, live and interactive, at the block's own width
- * (prototypes are fluid). No chrome at rest: hovering the block reveals its
- * actions in the top-right corner — Open beside, and a new browser tab in the
- * Prototypes app.
+ * (prototypes are fluid) and 16:9 — or at the size the user dragged it to:
+ * its right edge, bottom edge and bottom-right corner resize it, and a
+ * double-click on one returns that side to its default. No chrome at rest:
+ * hovering the block reveals the grips and, in the top-right corner, its
+ * actions — Open beside, and a new browser tab in the Prototypes app.
  *
  * The url carries `meta.rev`, a hash of this prototype's files, so an agent's
  * edit reloads it and nothing else does. Sandboxed exactly as the canvas frames
@@ -153,7 +178,15 @@ export function PrototypeBlock({ block, editor }: BlockRendererProps) {
  * working — they are first-party files from the user's own prototypes dir.
  * `loading="lazy"`: a page holding many mocks only boots the ones scrolled to.
  */
-function PrototypeCard({ meta }: { meta: PrototypeMeta }) {
+function PrototypeCard({
+  meta,
+  size,
+  onResize,
+}: {
+  meta: PrototypeMeta;
+  size: FrameSize;
+  onResize: (size: FrameSize) => void;
+}) {
   const openPane = useOpenPane();
   // A frame document, behind the transport's frame base (`frameUrlOver`): the
   // page's own path on the desktop, an in-browser server's frames through its
@@ -170,59 +203,189 @@ function PrototypeCard({ meta }: { meta: PrototypeMeta }) {
     { mode: "push" },
   );
 
+  // The lane is the width the block offers; the box is the frame itself.
+  const laneRef = useRef<HTMLDivElement>(null);
+  const boxRef = useRef<HTMLDivElement>(null);
+  // The size while a drag is live, committed to the block on release.
+  const [dragged, setDragged] = useState<FrameSize | null>(null);
+  const shown = dragged ?? size;
+
+  const frame = { laneRef, boxRef, size, onResize, onDrag: setDragged };
+  const resizeX = useResizeHandle("x", frame);
+  const resizeY = useResizeHandle("y", frame);
+  const resizeXY = useResizeHandle("xy", frame);
+
   return (
     <div className="px-md py-xs">
-      <Clip
-        className={cn(
-          hoverRevealGroup,
-          "relative w-full aspect-video rounded-md border border-border bg-background",
-        )}
-      >
-        {url.kind === "ready" ? (
-          <iframe
-            title={meta.title}
-            src={url.url}
-            loading="lazy"
-            sandbox="allow-scripts allow-same-origin"
-            className={cn(layerClasses(), "h-full w-full border-0")}
-          />
-        ) : (
-          <Layer>
-            <Center className="h-full w-full p-md">
-              <Text variant="caption" tone="muted">
-                {url.message}
-              </Text>
-            </Center>
-          </Layer>
-        )}
-        <Pin to="top-right" offset="xs" layer="raised">
-          <Stack
-            direction="row"
-            gap="2xs"
-            align="center"
-            className={cn(
-              hoverRevealTarget,
-              "rounded-md border border-border bg-background/80 p-2xs shadow-sm backdrop-blur",
+      <div ref={laneRef}>
+        <div
+          ref={boxRef}
+          className={cn(
+            hoverRevealGroup,
+            "relative max-w-full",
+            shown.height === undefined && "aspect-video",
+          )}
+          style={{ width: shown.width ?? "100%", height: shown.height }}
+        >
+          <Clip className="relative h-full w-full rounded-md border border-border bg-background">
+            {url.kind === "ready" ? (
+              <iframe
+                title={meta.title}
+                src={url.url}
+                loading="lazy"
+                sandbox="allow-scripts allow-same-origin"
+                className={cn(
+                  layerClasses(),
+                  "h-full w-full border-0",
+                  // A live drag must keep its moves when the pointer crosses
+                  // the frame.
+                  dragged !== null && "pointer-events-none",
+                )}
+              />
+            ) : (
+              <Layer>
+                <Center className="h-full w-full p-md">
+                  <Text variant="caption" tone="muted">
+                    {url.message}
+                  </Text>
+                </Center>
+              </Layer>
             )}
+            <Pin to="top-right" offset="xs" layer="raised">
+              <Stack
+                direction="row"
+                gap="2xs"
+                align="center"
+                className={cn(
+                  hoverRevealTarget,
+                  "rounded-md border border-border bg-background/80 p-2xs shadow-sm backdrop-blur",
+                )}
+              >
+                <ControlSizeProvider size="xs">
+                  <IconButton
+                    icon={navIcons.sidePane}
+                    label={`Open ${meta.title} beside`}
+                    {...activationProps(openBeside)}
+                  />
+                  <NewTabButton
+                    variant="ghost"
+                    href={prototypeDetailRoute.link(prototypesApp, {
+                      name: meta.name,
+                    })}
+                  />
+                </ControlSizeProvider>
+              </Stack>
+            </Pin>
+          </Clip>
+          <Pin
+            to="right"
+            stretch
+            layer="raised"
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Resize prototype width"
+            {...resizeX}
+            className="w-2 cursor-ew-resize touch-none"
           >
-            <ControlSizeProvider size="xs">
-              <IconButton
-                icon={navIcons.sidePane}
-                label={`Open ${meta.title} beside`}
-                {...activationProps(openBeside)}
-              />
-              <NewTabButton
-                variant="ghost"
-                href={prototypeDetailRoute.link(prototypesApp, {
-                  name: meta.name,
-                })}
-              />
-            </ControlSizeProvider>
-          </Stack>
-        </Pin>
-      </Clip>
+            {/* eslint-disable-next-line layout/no-adhoc-layout -- fractional right-0.5 inset + vertical-center on the drag-grip bar is off the spacing ramp */}
+            <div className="pointer-events-none absolute top-1/2 right-0.5 h-8 w-1 -translate-y-1/2 rounded-md bg-foreground/30 opacity-0 transition-opacity group-hover/hover-reveal:opacity-100" />
+          </Pin>
+          <Pin
+            to="bottom"
+            stretch
+            layer="raised"
+            role="separator"
+            aria-orientation="horizontal"
+            aria-label="Resize prototype height"
+            {...resizeY}
+            className="h-2 cursor-ns-resize touch-none"
+          >
+            {/* eslint-disable-next-line layout/no-adhoc-layout -- fractional bottom-0.5 inset + horizontal-center on the drag-grip bar is off the spacing ramp */}
+            <div className="pointer-events-none absolute left-1/2 bottom-0.5 h-1 w-8 -translate-x-1/2 rounded-md bg-foreground/30 opacity-0 transition-opacity group-hover/hover-reveal:opacity-100" />
+          </Pin>
+          <Pin
+            to="bottom-right"
+            layer="raised"
+            role="separator"
+            aria-label="Resize prototype"
+            {...resizeXY}
+            className="size-3 cursor-nwse-resize touch-none"
+          />
+        </div>
+      </div>
     </div>
   );
+}
+
+/**
+ * One resize grip's handlers: dragging it sizes the frame along `axes` (live
+ * through `onDrag`, committed through `onResize` on release) — clamped to the
+ * minimum and to the lane, a width dragged to the lane's edge returning to
+ * fluid — and a double-click returns those sides to their default.
+ */
+function useResizeHandle(
+  axes: ResizeAxes,
+  {
+    laneRef,
+    boxRef,
+    size,
+    onResize,
+    onDrag,
+  }: {
+    laneRef: React.RefObject<HTMLDivElement | null>;
+    boxRef: React.RefObject<HTMLDivElement | null>;
+    size: FrameSize;
+    onResize: (size: FrameSize) => void;
+    onDrag: (size: FrameSize | null) => void;
+  },
+) {
+  const drag = useRef({ width: 0, height: 0, lane: 0, last: size });
+  const gesture = useDragGesture({
+    onStart: () => {
+      const box = boxRef.current?.getBoundingClientRect();
+      const lane = laneRef.current?.getBoundingClientRect();
+      if (box === undefined || lane === undefined) {
+        throw new Error("prototype block: resized before it was mounted");
+      }
+      drag.current = {
+        width: box.width,
+        height: box.height,
+        lane: lane.width,
+        last: size,
+      };
+    },
+    onMove: ({ dx, dy }) => {
+      const d = drag.current;
+      const next: FrameSize = { ...size };
+      if (axes !== "y") {
+        const w = Math.round(
+          Math.min(Math.max(d.width + dx, PROTOTYPE_MIN_WIDTH), d.lane),
+        );
+        next.width = w >= d.lane - FILL_SNAP_PX ? undefined : w;
+      }
+      if (axes !== "x") {
+        next.height = Math.round(Math.max(d.height + dy, PROTOTYPE_MIN_HEIGHT));
+      }
+      d.last = next;
+      onDrag(next);
+    },
+    onEnd: () => {
+      onDrag(null);
+      onResize(drag.current.last);
+    },
+  });
+  return {
+    // The editor's own press (block selection) must not start under a grip.
+    onPointerDown: (e: React.PointerEvent<HTMLElement>) => {
+      e.stopPropagation();
+      gesture(e);
+    },
+    onDoubleClick: () =>
+      onResize({
+        width: axes === "y" ? size.width : undefined,
+        height: axes === "x" ? size.height : undefined,
+      }),
+  };
 }
 
 /**

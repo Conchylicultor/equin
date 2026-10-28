@@ -5,7 +5,7 @@ import { PrototypeBlock } from "./components/prototype-block";
 
 export default {
   description:
-    'Prototype block type: links a prototype (proto-…) into a page live and interactive in place, its actions (open beside, new tab) revealed on hover. Inserted by /prototype (a picker over every prototype), or written by an agent as <prototype id="proto-…"/>.',
+    'Prototype block type: links a prototype (proto-…) into a page live and interactive in place, its actions (open beside, new tab) revealed on hover, resizable by its right edge, bottom edge and corner. Inserted by /prototype (a picker over every prototype), or written by an agent as <prototype id="proto-…"/>.',
   contributions: [
     Editor.Block({
       id: prototypeBlock.type,

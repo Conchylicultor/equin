@@ -6,10 +6,29 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 /** The Prototypes app's own mark: the block opens that app's canvas. */
 export const PROTOTYPE_BLOCK_ICON = symbol("dashboard-customize");
 
+/** A `width` / `height` attribute: a whole number of px, or absent. */
+function sizeAttr(raw: string | undefined, name: string): number | undefined {
+  if (raw === undefined || raw === "") return undefined;
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value <= 0) {
+    throw new Error(
+      `markdown: <prototype ${name}="${raw}"/> — \`${name}\` must be a positive whole number of px.`,
+    );
+  }
+  return value;
+}
+
 export const prototypeBlock = defineBlock({
   type: "prototype",
   // `""` is the freshly inserted block, still asking which prototype it shows.
-  schema: z.object({ prototypeId: z.string() }),
+  // `width` / `height` are the frame's size in px, set by dragging its edges:
+  // without a width it fills the block, without a height it is 16:9 of its
+  // width.
+  schema: z.object({
+    prototypeId: z.string(),
+    width: z.number().int().positive().optional(),
+    height: z.number().int().positive().optional(),
+  }),
   label: "Prototype",
   icon: PROTOTYPE_BLOCK_ICON,
   aliases: ["mock", "mockup", "design", "proto"],
@@ -27,7 +46,11 @@ export const prototypeBlock = defineBlock({
       name: "prototype",
       body: "none",
       annotated: ["title"],
-      attrs: (data) => ({ id: data.prototypeId }),
+      attrs: (data) => ({
+        id: data.prototypeId,
+        width: data.width,
+        height: data.height,
+      }),
       parseAttrs: (attrs) => {
         const id = attrs.id;
         if (id === undefined || id === "") {
@@ -40,7 +63,13 @@ export const prototypeBlock = defineBlock({
             `markdown: <prototype id="${id}"/> — \`id\` must be a prototype id (\`proto-…\`, as \`./equin prototype new\` prints it).`,
           );
         }
-        return { prototypeId: id };
+        const width = sizeAttr(attrs.width, "width");
+        const height = sizeAttr(attrs.height, "height");
+        return {
+          prototypeId: id,
+          ...(width === undefined ? {} : { width }),
+          ...(height === undefined ? {} : { height }),
+        };
       },
     },
   },

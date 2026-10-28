@@ -26996,11 +26996,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `framework/tooling/guards.MODULE_EXTENSION`
             - Exports (values): `isE2eScriptPath`
           - Cross-plugin:
-            - Imported by: 173 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+            - Imported by: 174 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
               - `apps` ×51
               - `primitives` ×26
+              - `page` ×25
               - `conversations` ×24
-              - `page` ×24
               - `debug` ×8
               - `apps-core` ×5
               - `tasks` ×5
@@ -36373,10 +36373,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `createPromptBlockTask`
               - `promptBlockTasks`
               - `PromptTaskLinkSchema`
-    - **`prototype`** — Prototype block type: links a prototype (proto-…) into a page live and interactive in place, its actions (open beside, new tab) revealed on hover. Inserted by /prototype (a picker over every prototype), or written by an agent as <prototype id="proto-…"/>. Prototype block type: registers its `data` schema (the prototype id) at the server write boundary, and supplies the prototype's `<title>` to the `<prototype>` tag an agent reads.
+    - **`prototype`** — Prototype block type: links a prototype (proto-…) into a page live and interactive in place, its actions (open beside, new tab) revealed on hover, resizable by its right edge, bottom edge and corner. Inserted by /prototype (a picker over every prototype), or written by an agent as <prototype id="proto-…"/>. Prototype block type: registers its `data` schema (the prototype id and the frame size) at the server write boundary, and supplies the prototype's `<title>` to the `<prototype>` tag an agent reads.
       - Web:
         - Contributes: `Editor.Block` "prototype" → `PrototypeBlock`
-        - Uses: 32 symbols — full list in [`plugins/page/plugins/prototype/REFERENCE.md`](../plugins/page/plugins/prototype/REFERENCE.md)
+        - Uses: 33 symbols — full list in [`plugins/page/plugins/prototype/REFERENCE.md`](../plugins/page/plugins/prototype/REFERENCE.md)
           - `page/editor` ×3
           - `primitives/css/layer` ×2
           - `primitives/css/ui-kit` ×2
@@ -36393,6 +36393,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/scroll.Scroll`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
+          - `primitives/dom/movable.useDragGesture`
           - `primitives/icon-button.IconButton`
           - `primitives/link-gesture/new-tab.NewTabButton`
           - `primitives/link-gesture.activationProps`
@@ -36422,6 +36423,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/color-palette --background`
           - `ui/tokens/color-palette --border`
+          - `ui/tokens/color-palette --foreground`
           - `ui/tokens/color-palette --muted-foreground`
           - `ui/tokens/density --space-2xs`
           - `ui/tokens/density --space-md`
@@ -41949,6 +41951,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `apps/prototypes/present`
               - `hints/ask`
+              - `page/prototype`
               - `shell/global-action-bar`
         - **`overscroll-hint`** — Wasted-scroll hint: a single invisible global controller (mounted via Core.Root) that plays a small native-feeling rubber-band bounce on a surface when a wheel/trackpad/touch gesture scrolls nothing (not scrollable, or already at the edge). Detects 'wasted' gestures by checking whether a real scroll event fired within one animation frame of the gesture.
           - Web:

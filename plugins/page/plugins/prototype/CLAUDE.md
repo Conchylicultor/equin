@@ -9,7 +9,14 @@ block); a human picks one from the `/prototype` picker.
   width (16:9, the canvas's sandbox, lazy-loaded), interactive in place. No
   chrome at rest; hovering reveals, top right, Open beside (the canvas as a
   column to the right of the page) and a new-tab arrow into the Prototypes app.
-- **Markdown**: `<prototype id="…" title="…"/>`, body-less. `title` is annotated
+- **Resizable**: its right edge, bottom edge and bottom-right corner drag the
+  frame's `width` / `height` (px, in block data); a double-click on a grip
+  returns that side to its default (full width; 16:9 of the width). A width
+  dragged to the lane's edge goes back to fluid. The drag is
+  `dom/movable`'s `useDragGesture` (pointer captured, so it follows over the
+  iframe).
+- **Markdown**: `<prototype id="…" width="…" height="…" title="…"/>`, body-less
+  (`width` / `height` optional, positive whole px). `title` is annotated
   (read-only, from the prototype's `<title>` via `Editor.BlockAnnotation`), so
   an agent reading the page can tell mocks apart; it is dropped on parse. A
   non-`proto-` id is rejected loudly.
@@ -20,10 +27,10 @@ block); a human picks one from the `/prototype` picker.
 
 ## Plugin reference
 
-- Description: Prototype block type: links a prototype (proto-…) into a page live and interactive in place, its actions (open beside, new tab) revealed on hover. Inserted by /prototype (a picker over every prototype), or written by an agent as <prototype id="proto-…"/>. Prototype block type: registers its `data` schema (the prototype id) at the server write boundary, and supplies the prototype's `<title>` to the `<prototype>` tag an agent reads.
+- Description: Prototype block type: links a prototype (proto-…) into a page live and interactive in place, its actions (open beside, new tab) revealed on hover, resizable by its right edge, bottom edge and corner. Inserted by /prototype (a picker over every prototype), or written by an agent as <prototype id="proto-…"/>. Prototype block type: registers its `data` schema (the prototype id and the frame size) at the server write boundary, and supplies the prototype's `<title>` to the `<prototype>` tag an agent reads.
 - Web:
   - Contributes: `Editor.Block` "prototype" → `PrototypeBlock`
-  - Uses: 32 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `page/editor` ×3
     - `primitives/css/layer` ×2
     - `primitives/css/ui-kit` ×2
@@ -40,6 +47,7 @@ block); a human picks one from the `/prototype` picker.
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
+    - `primitives/dom/movable.useDragGesture`
     - `primitives/icon-button.IconButton`
     - `primitives/link-gesture/new-tab.NewTabButton`
     - `primitives/link-gesture.activationProps`
@@ -69,6 +77,7 @@ block); a human picks one from the `/prototype` picker.
   - Uses tokens:
     - `ui/tokens/color-palette --background`
     - `ui/tokens/color-palette --border`
+    - `ui/tokens/color-palette --foreground`
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/density --space-2xs`
     - `ui/tokens/density --space-md`
