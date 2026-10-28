@@ -14,6 +14,8 @@ use std::path::Path;
 
 use resvg::{tiny_skia, usvg};
 
+include!("src/command_table.rs");
+
 fn render(svg: &str, size: u32, out: &Path) {
     let tree = usvg::Tree::from_str(svg, &usvg::Options::default())
         .unwrap_or_else(|e| panic!("icon svg does not parse: {e}"));
@@ -52,20 +54,15 @@ fn main() {
         render(&light, 48, &Path::new(&out_dir).join(format!("tray-light{name}.png")));
     }
 
-    tauri_build::try_build(tauri_build::Attributes::new().app_manifest(
-        // An app manifest makes every command below ACL-gated: a command runs
-        // only for a window and origin a capability grants it to
-        // (capabilities/*.json) — nothing is callable by default.
-        tauri_build::AppManifest::new().commands(&[
-            "host_info",
-            "set_attention",
-            "notify",
-            "open_url",
-            "launch_app",
-            "hide_panel",
-            "set_panel_height",
-            "start_gateway",
-        ]),
-    ))
+    // An app manifest makes every command ACL-gated: a command runs only for a
+    // window and origin a capability grants it to (the panel's, granted at
+    // runtime from the pinned URL — src/panel.rs; the offline page's,
+    // capabilities/panel-offline.json) — nothing is callable by default.
+    println!("cargo:rerun-if-changed=src/command_table.rs");
+    let commands: Vec<&'static str> = PANEL_COMMANDS.iter().chain(OFFLINE_COMMANDS).copied().collect();
+    tauri_build::try_build(
+        tauri_build::Attributes::new()
+            .app_manifest(tauri_build::AppManifest::new().commands(Vec::leak(commands))),
+    )
     .expect("tauri-build failed");
 }

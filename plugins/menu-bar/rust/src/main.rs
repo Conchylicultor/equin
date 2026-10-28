@@ -4,6 +4,7 @@
 //! ```text
 //! equin-desktop tray [--namespace <ns>]        the menu-bar / top-bar icon and its panel
 //! equin-desktop window --app <id> --url <url>  one app's own window (an installed app's process)
+//! equin-desktop probe --namespace <ns>         the panel's bridge, attacked and judged (src/probe.rs)
 //! ```
 //!
 //! On macOS the binary is also every installed app's shim executable: inside a
@@ -11,10 +12,12 @@
 //! window, whatever its arguments.
 
 mod cli;
+mod command_table;
 mod commands;
 mod gateway;
 mod instance;
 mod panel;
+mod probe;
 mod shim;
 mod tray;
 mod window;
@@ -29,6 +32,7 @@ fn main() {
     match cli::parse(&args) {
         Ok(cli::Mode::Tray { namespace }) => tray::run(namespace),
         Ok(cli::Mode::Window { app, url }) => window::run(window_launch(app, url)),
+        Ok(cli::Mode::Probe { namespace, other }) => probe::run(namespace, other),
         Err(message) => {
             eprintln!("equin-desktop: {message}\n\n{}", cli::USAGE);
             std::process::exit(2);

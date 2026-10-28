@@ -137,7 +137,7 @@ pub fn run(namespace: String) {
     eprintln!("equin-desktop: tray mode, namespace {namespace}");
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_notification::init())
-        .manage(panel::Panel::new(&namespace))
+        .manage(panel::Panel::new(panel::Pin::for_namespace(&namespace), panel::open_in_browser))
         .invoke_handler(commands::handler())
         .setup(|app| {
             #[cfg(target_os = "macos")]
@@ -151,7 +151,8 @@ pub fn run(namespace: String) {
                 }
             };
             app.manage(icon);
-            panel::create(&handle)?;
+            app.add_capability(handle.state::<panel::Panel>().pin().capability())?;
+            panel::create(&handle, None)?;
             eprintln!("equin-desktop: tray ready; panel {}", handle.state::<panel::Panel>().url());
             Ok(())
         })

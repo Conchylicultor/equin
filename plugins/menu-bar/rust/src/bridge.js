@@ -1,12 +1,15 @@
 // window.equinNative — the panel's bridge to equin-desktop. Injected into the
 // "panel" window's main frame only (never an app window, never a sub-frame),
-// and defined only on an equin page (http://<namespace>.localhost:9000); the
-// commands are ACL-gated to that same window and origin
-// (capabilities/panel-bridge.json), so a page this guard missed still could
-// not call them. The contract the web side codes against (menu-bar/web's
-// useNativeHost) — bump `version` in host_info on any breaking change.
+// and defined only on the pinned panel page (`__EQUIN_PIN__` = { origin, path },
+// filled by src/panel.rs). This guard is a courtesy: the helper enforces the
+// pin natively — the ACL grants the commands to that exact origin, the window
+// loads no other page and no frame, and every command checks the page the
+// panel shows when it is called (src/commands.rs). The contract the web side
+// codes against (menu-bar/web's useNativeHost) — bump `version` in host_info
+// on any breaking change.
 (function () {
-  if (!/^http:\/\/[a-z0-9-]+\.localhost:9000$/.test(window.location.origin)) return;
+  var pin = __EQUIN_PIN__;
+  if (window.location.origin !== pin.origin) return;
   if (window.top !== window) return;
   function invoke(cmd, args) {
     // Read at call time: Tauri's own IPC script defines it.

@@ -5,7 +5,12 @@ use url::Url;
 
 pub const USAGE: &str = "usage:
   equin-desktop tray [--namespace <ns>]
-  equin-desktop window --app <id> --url <url>";
+  equin-desktop window --app <id> --url <url>
+  equin-desktop probe --namespace <ns> [--other <ns>]";
+
+/// The probe's "elsewhere" when none is given: a namespace nothing serves —
+/// the panel must refuse it before any load, so it need not exist.
+pub const PROBE_OTHER: &str = "equin-probe-elsewhere";
 
 /// The main checkout's namespace (`infra/namespace`'s MAIN_WORKTREE_NAME);
 /// `equin.localhost` is only a host alias of it, so the canonical host is used.
@@ -15,6 +20,7 @@ pub const MAIN_NAMESPACE: &str = "singularity";
 pub enum Mode {
     Tray { namespace: String },
     Window { app: String, url: Url },
+    Probe { namespace: String, other: String },
 }
 
 /// A namespace as it may appear as a `.localhost` subdomain.
@@ -78,6 +84,20 @@ pub fn parse(args: &[String]) -> Result<Mode, String> {
                 return Err(format!("--url {raw:?} must be http(s)"));
             }
             Ok(Mode::Window { app, url })
+        }
+        "probe" => {
+            let f = flags(rest, &["--namespace", "--other"])?;
+            let namespace = get(&f, "--namespace").ok_or("probe needs --namespace <ns>")?;
+            let other = get(&f, "--other").unwrap_or_else(|| PROBE_OTHER.to_string());
+            for ns in [&namespace, &other] {
+                if !valid_namespace(ns) {
+                    return Err(format!("{ns:?} is not a namespace"));
+                }
+            }
+            if namespace == other {
+                return Err("--other must be another namespace".into());
+            }
+            Ok(Mode::Probe { namespace, other })
         }
         other => Err(format!("unknown mode {other:?}")),
     }

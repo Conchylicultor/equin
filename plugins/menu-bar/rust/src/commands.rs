@@ -1,12 +1,17 @@
 //! The bridge's commands (`window.equinNative`, src/bridge.js) and the offline
-//! page's Start. Each is ACL-gated by capabilities/*.json — the bridge to the
-//! panel window on an equin origin, `start_gateway` to the panel's bundled page.
+//! page's Start. Each is ACL-gated — the bridge to the panel window on the
+//! pinned origin (granted at runtime, `panel::Pin::capability`),
+//! `start_gateway` to the panel's bundled page (capabilities/panel-offline.json)
+//! — and then gated again here (`handler`) on the page the calling window
+//! shows right now, by its row in src/command_table.rs.
 
 use serde::Serialize;
+use tauri::ipc::Invoke;
 use tauri::{AppHandle, Manager, WebviewWindow};
 use tauri_plugin_notification::NotificationExt;
 use url::Url;
 
+use crate::command_table::{OFFLINE_COMMANDS, PANEL_COMMANDS};
 use crate::{gateway, panel, shim, tray};
 
 /// Bump on a breaking change of the bridge; the web side reads it.
@@ -51,7 +56,8 @@ fn host_info() -> HostInfo {
 
 #[tauri::command]
 fn set_attention(app: AppHandle, on: bool) -> Result<(), String> {
-    app.state::<tray::Icon>().set_attention(on)
+    // None in probe mode, which draws no icon.
+    app.try_state::<tray::Icon>().ok_or("no tray icon")?.set_attention(on)
 }
 
 #[tauri::command]
@@ -108,8 +114,28 @@ async fn start_gateway(app: AppHandle) -> Result<(), String> {
     Ok(())
 }
 
-pub fn handler() -> impl Fn(tauri::ipc::Invoke) -> bool + Send + Sync + 'static {
-    tauri::generate_handler![
+/// May a window showing `shown` call `command`? The bridge's commands: only
+/// the pinned panel page (its current URL — after an in-document route change
+/// too); `start_gateway`: only the bundled offline page; anything else: no.
+pub fn admitted(pin: &panel::Pin, command: &str, shown: &Url) -> Result<(), String> {
+    let ok = if PANEL_COMMANDS.contains(&command) {
+        pin.admits(shown)
+    } else if OFFLINE_COMMANDS.contains(&command) {
+        panel::is_offline_page(shown)
+    } else {
+        false
+    };
+    if ok {
+        Ok(())
+    } else {
+        Err(format!("{command} is not available to {shown}"))
+    }
+}
+
+/// Every command, behind `admitted`: one gate ahead of the dispatch, not a
+/// check each command must remember.
+pub fn handler() -> impl Fn(Invoke) -> bool + Send + Sync + 'static {
+    let dispatch: fn(Invoke) -> bool = tauri::generate_handler![
         host_info,
         set_attention,
         notify,
@@ -118,5 +144,50 @@ pub fn handler() -> impl Fn(tauri::ipc::Invoke) -> bool + Send + Sync + 'static 
         hide_panel,
         set_panel_height,
         start_gateway
-    ]
+    ];
+    move |invoke: Invoke| {
+        let webview = invoke.message.webview();
+        let command = invoke.message.command().to_string();
+        let verdict = match webview.url() {
+            Ok(shown) => admitted(webview.app_handle().state::<panel::Panel>().pin(), &command, &shown),
+            Err(e) => Err(format!("{command}: the calling page's URL is unknown ({e})")),
+        };
+        match verdict {
+            Ok(()) => dispatch(invoke),
+            Err(why) => {
+                eprintln!("equin-desktop: refused {why}");
+                invoke.resolver.reject(why);
+                true
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn u(s: &str) -> Url {
+        Url::parse(s).unwrap()
+    }
+
+    #[test]
+    fn the_bridge_answers_the_pinned_page_only() {
+        let pin = panel::Pin::for_namespace("equin");
+        assert!(admitted(&pin, "host_info", &u("http://equin.localhost:9000/home/menu-bar?embed=1")).is_ok());
+        assert!(admitted(&pin, "notify", &u("http://equin.localhost:9000/home/menu-bar/x")).is_ok());
+        // An in-document route change away from the panel.
+        assert!(admitted(&pin, "host_info", &u("http://equin.localhost:9000/agents")).is_err());
+        assert!(admitted(&pin, "host_info", &u("http://equin.localhost:9000/home/menu-barx")).is_err());
+        // Another namespace, scheme or port.
+        assert!(admitted(&pin, "host_info", &u("http://other.localhost:9000/home/menu-bar")).is_err());
+        assert!(admitted(&pin, "host_info", &u("https://equin.localhost:9000/home/menu-bar")).is_err());
+        assert!(admitted(&pin, "host_info", &u("http://equin.localhost:9001/home/menu-bar")).is_err());
+        // The offline page gets Start only; the panel page never gets Start.
+        assert!(admitted(&pin, "host_info", &u("tauri://localhost/index.html")).is_err());
+        assert!(admitted(&pin, "start_gateway", &u("tauri://localhost/index.html")).is_ok());
+        assert!(admitted(&pin, "start_gateway", &u("http://equin.localhost:9000/home/menu-bar")).is_err());
+        // A command outside the table.
+        assert!(admitted(&pin, "unknown", &u("http://equin.localhost:9000/home/menu-bar")).is_err());
+    }
 }

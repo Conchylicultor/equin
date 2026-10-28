@@ -52,18 +52,45 @@ namespaces and URLs, never an app.
   WKWebView never loads `http://*.localhost` — the equin app bundle and every shim carry it.
 - **Bridge** (`rust/src/bridge.js`, the contract `core/` mirrors): an
   initialization script on the panel's main frame defines `window.equinNative`
-  only on `http://<ns>.localhost:9000` — `hostInfo()` (`{ version: 1, platform,
+  — `hostInfo()` (`{ version: 1, platform,
   capabilities: { notify, attention, launchApp: true, openUrl } }`),
   `setAttention(on)`, `notify({ title, body?, tag? })`, `openUrl(url)` (http(s),
   default browser), `launchApp(appId)` (the installed app's running window comes forward, else
   its shim launches — macOS `open <bundle>`, Linux `gtk-launch equin-<id>`;
   rejects `"not-installed"` without a shim), `hidePanel()`,
-  `setPanelHeight(px)` (clamped 200–720). Every command is ACL-gated
-  (`build.rs`'s app manifest): `capabilities/panel-bridge.json` grants the
-  bridge to window `panel` on remote `http://*.localhost:9000/*` only (not
-  local), `panel-offline.json` grants only `start_gateway` to the bundled page.
-  A new command = the Rust fn, its name in `build.rs`, a capability grant, the
-  `bridge.js` method, and the web side's `core/` contract.
+  `setPanelHeight(px)` (clamped 200–720).
+  **The bridge answers ONE page: the pin** (`panel::Pin`, `rust/src/panel.rs`
+  — the panel app's route `/home/menu-bar` at the configured instance's exact
+  origin, `http://<ns>.localhost:9000`). Tauri's ACL sees only the caller's
+  origin (the IPC fetch's `Origin` header), and a same-origin frame calling
+  `top`'s `invoke` is indistinguishable from the page, so the pin is held at
+  three native points, all reading the pin:
+  - **ACL** — the bridge's capability is granted at runtime
+    (`Pin::capability`, `add_capability`) to window `panel` on that one origin,
+    never a pattern over namespaces (so the invoke key Tauri logs on a bad call
+    is useless elsewhere); `capabilities/panel-offline.json` grants only
+    `start_gateway` to the bundled page.
+  - **Navigation** — the panel's `on_navigation` admits the pin and the
+    bundled offline page and refuses every other load before it happens
+    (`panel refused <url>` in the log). The callback sees every frame's loads,
+    so this also keeps every frame out of the panel (a prototype, `srcdoc`,
+    `<object>`, another namespace): the panel route can render none. A
+    new-window request (`target=_blank`) goes to the default browser; the
+    panel's own ways out are `openUrl` / `launchApp`.
+  - **Command gate** — `commands::handler` checks, before dispatch, the page
+    the calling window shows NOW against the command's row in
+    `rust/src/command_table.rs` (bridge commands: the pin; `start_gateway`: the
+    offline page) — which also catches a `pushState` to another route.
+  `bridge.js`'s own origin guard (the pin's origin, injected) is a courtesy.
+  A new command = the Rust fn (in `generate_handler!`), its row in
+  `command_table.rs` (which feeds `build.rs`'s ACL manifest and the runtime
+  grant), the `bridge.js` method, and the web side's `core/` contract.
+  **Probe**: `equin-desktop probe --namespace <ns>` builds the real panel with
+  no tray icon, runs `rust/src/probe.js` natively in its main frame and judges
+  the matrix (frames of every kind, another namespace, `pushState`,
+  `window.open`, a navigated panel); `./equin run
+  plugins/menu-bar/e2e/bridge-probe.ts` runs it on this checkout's helper and
+  deploy.
 - Icons: `rust/icons/*.svg` are the source; `build.rs` renders them (resvg)
   into the tray PNGs (`OUT_DIR`) and `icons/icon.png` (gitignored — Tauri's
   codegen requires it; `deps/`'s macOS step makes the `.icns` from it).
