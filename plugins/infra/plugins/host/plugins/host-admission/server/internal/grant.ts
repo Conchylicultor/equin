@@ -12,7 +12,7 @@ import {
   type Priority,
 } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import { withForegroundPriority } from "@plugins/packages/plugins/spawn-priority/server";
-import { defineHostPool } from "./pool";
+import { defineHostPool, type HostPool } from "./pool";
 
 // The laned host CPU pool + the grant that subdivides it. This is where the fleet
 // ceiling `B` — host cores vs. how many worker-sized resident sets fit under the
@@ -104,7 +104,22 @@ export async function withHostGrant<T>(
   opts: { lane: Lane; priority: Priority; max: number; hooks?: GrantHooks },
   fn: (grant: Grant) => Promise<T>,
 ): Promise<T> {
-  const share = await cpuPool.acquireShare(opts.max, {
+  return withPoolGrant(cpuPool, opts, fn);
+}
+
+/**
+ * `withHostGrant` over any pool's `acquireShare` — the grant logic without the
+ * real host `cpu` pool, so a test can drive it against a share it controls. A
+ * test that acquired the real pool instead waited on whatever the host's
+ * background lane was running (a build holds its slots for tens of minutes),
+ * and its pass/fail tracked host occupancy rather than the code.
+ */
+export async function withPoolGrant<T>(
+  pool: Pick<HostPool, "acquireShare">,
+  opts: { lane: Lane; priority: Priority; max: number; hooks?: GrantHooks },
+  fn: (grant: Grant) => Promise<T>,
+): Promise<T> {
+  const share = await pool.acquireShare(opts.max, {
     ...opts.hooks,
     lane: opts.lane,
     priority: opts.priority,

@@ -199,6 +199,11 @@ withHostGrant({ lane, max }, (grant) => { … })   // acquire, run, release
 inheritedGrant(): Grant | undefined              // the parent's grant, via env
 ```
 
+`withHostGrant` is `withPoolGrant(cpuPool, …)`: the grant logic over any
+`acquireShare`, so a test drives it against a share it controls. A test never
+acquires the real `cpu` pool — its result would track what the rest of the box
+holds (a build keeps background-lane slots for tens of minutes), not the code.
+
 `withHostGrant` calls the laned `cpu` pool's `acquireShare(max, { lane })`, wraps
 the returned `slots` in an in-process `createSemaphore(slots)`
 (`packages/semaphore`), and hands the caller a `Grant`:

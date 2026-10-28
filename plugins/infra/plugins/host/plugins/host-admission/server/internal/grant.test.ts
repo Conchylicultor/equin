@@ -1,26 +1,68 @@
 import { test, expect } from "bun:test";
-import {
-  withHostGrant,
-  inheritedGrant,
-} from "@plugins/infra/plugins/host/plugins/host-admission/server";
+import { inheritedGrant } from "@plugins/infra/plugins/host/plugins/host-admission/server";
 import { envEntries } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { withEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core/testing";
+import { withPoolGrant } from "./grant";
 
-// `withHostGrant` touches the real host `cpu` pool (flock slot files), so keep
-// its footprint minimal — request a single slot on the background lane. Its only
-// job here is to prove `units >= 1` and that `run` executes `fn`. The grant
+// Nothing here touches the real host `cpu` pool: its result would depend on
+// what the rest of the box holds (a build keeps background-lane slots for tens
+// of minutes), not on this code. `withPoolGrant` — `withHostGrant`'s body over
+// any `acquireShare` — runs against a fake share; the flock acquire itself is
+// host-semaphore's to test, on its own throwaway slot dirs. The grant
 // arithmetic (concurrency bound, env round-trip, env parsing) is exercised
-// through `inheritedGrant`, which is pure in-process and touches NO flock.
+// through `inheritedGrant`, which is pure in-process.
 
-test("withHostGrant grants at least one unit and runs fn", async () => {
-  const result = await withHostGrant(
-    { lane: "background", priority: "normal", max: 1 },
+// A pool whose share is `slots` wide, recording what was asked and released.
+function fakePool(slots: number) {
+  const calls = { max: [] as number[], lanes: [] as unknown[], released: 0 };
+  return {
+    calls,
+    acquireShare: async (max: number, hooks?: { lane?: unknown }) => {
+      calls.max.push(max);
+      calls.lanes.push(hooks?.lane);
+      return {
+        slots,
+        release: async () => {
+          calls.released++;
+        },
+        releaseSlots: () => {},
+      };
+    },
+  };
+}
+
+test("withPoolGrant grants the share's units, runs fn and releases the share", async () => {
+  const pool = fakePool(2);
+  const result = await withPoolGrant(
+    pool,
+    { lane: "background", priority: "normal", max: 3 },
     async (g) => {
-      expect(g.units).toBeGreaterThanOrEqual(1);
+      expect(g.units).toBe(2);
+      expect(g.lane).toBe("background");
+      expect(g.env()).toEqual(
+        envEntries({ HOST_GRANT: "2", LANE: "background" }),
+      );
       return g.run(async () => 42);
     },
   );
   expect(result).toBe(42);
+  expect(pool.calls.max).toEqual([3]);
+  expect(pool.calls.lanes).toEqual(["background"]);
+  expect(pool.calls.released).toBe(1);
+});
+
+test("withPoolGrant releases the share when fn throws", async () => {
+  const pool = fakePool(1);
+  await expect(
+    withPoolGrant(
+      pool,
+      { lane: "background", priority: "normal", max: 1 },
+      async () => {
+        throw new Error("boom");
+      },
+    ),
+  ).rejects.toThrow("boom");
+  expect(pool.calls.released).toBe(1);
 });
 
 test("inheritedGrant reads the HOST_GRANT key and bounds grant.run to units", async () => {
