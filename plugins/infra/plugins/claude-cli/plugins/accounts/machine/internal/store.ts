@@ -11,6 +11,7 @@ import { claudeAccountsDir } from "../../data-dirs";
 import {
   deleteClaudeAccountCredential,
   saveClaudeAccountCredential,
+  type ActiveClaudeAccountImpl,
 } from "../../server";
 
 // The accounts file (the credentials are the server half's, in the secrets store). Every write
@@ -90,3 +91,8 @@ export function setClaudeAccountsAutoSwitch(enabled: boolean): void {
   if (state.autoSwitch !== enabled)
     writeClaudeAccounts({ ...state, autoSwitch: enabled });
 }
+
+/** The ActiveClaudeAccount host service on the desktop: the file's choice, read now. */
+export const activeAccountFromFile: ActiveClaudeAccountImpl = {
+  id: () => readClaudeAccounts().active,
+};

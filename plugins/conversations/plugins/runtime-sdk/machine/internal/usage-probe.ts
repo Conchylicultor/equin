@@ -1,14 +1,14 @@
 import { tmpdir } from "node:os";
-import { query } from "@anthropic-ai/claude-agent-sdk";
-import { claudeAccountCredential } from "@plugins/infra/plugins/claude-cli/plugins/accounts/server";
-import { claudeCredentialEnv } from "@plugins/infra/plugins/claude-cli/plugins/accounts/core";
+import {
+  claudeQuery,
+  claudeSessionEnv,
+} from "@plugins/infra/plugins/claude-cli/plugins/sdk/server";
 import {
   onClaudeCodeProbed,
   requireClaudeBin,
 } from "@plugins/infra/plugins/claude-cli/plugins/availability/server";
-import { readClaudeAccounts } from "@plugins/infra/plugins/claude-cli/plugins/accounts/machine";
+import { activeClaudeAccountId } from "@plugins/infra/plugins/claude-cli/plugins/accounts/server";
 import { implementMachine } from "@plugins/infra/plugins/endpoints/machine";
-import { pickHostEnv } from "@plugins/infra/plugins/launcher/core";
 import { createInflight } from "@plugins/packages/plugins/inflight/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { recordReport } from "@plugins/reports/plugins/engine/server";
@@ -30,8 +30,6 @@ import { claudeUsagePath } from "./paths";
 const USAGE_READ_TIMEOUT_MS = 60_000;
 
 async function readUsageReply(accountId: string): Promise<unknown> {
-  // The system account (null) is Claude Code's own sign-in.
-  const credential = await claudeAccountCredential(accountId);
   const abortController = new AbortController();
   const timeout = setTimeout(
     () => abortController.abort(),
@@ -44,16 +42,14 @@ async function readUsageReply(accountId: string): Promise<unknown> {
   async function* noPrompt(): AsyncGenerator<never> {
     await released;
   }
-  const session = query({
+  // The same closed host environment as every session, on this account (the
+  // system account is Claude Code's own sign-in).
+  const session = claudeQuery({
+    env: await claudeSessionEnv(accountId),
+    bin: requireClaudeBin(),
     prompt: noPrompt(),
     options: {
       cwd: tmpdir(),
-      pathToClaudeCodeExecutable: requireClaudeBin(),
-      // Same closed host environment as an agent's (the user's own overrides),
-      // with only this account's credential added.
-      env: credential
-        ? claudeCredentialEnv(pickHostEnv(process.env), credential)
-        : pickHostEnv(process.env),
       settingSources: [],
       strictMcpConfig: true,
       persistSession: false,
@@ -109,7 +105,7 @@ let unsubscribe: (() => void) | null = null;
 export function startUsageOnProbe(): void {
   unsubscribe ??= onClaudeCodeProbed((status) => {
     if (status.kind !== "ready") return;
-    const accountId = readClaudeAccounts().active;
+    const accountId = activeClaudeAccountId();
     void runTracked("runtime-sdk.usage-on-probe", async () => {
       try {
         await refreshClaudeUsageNow(accountId);

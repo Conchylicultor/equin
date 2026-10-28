@@ -6,26 +6,23 @@ import {
   ConversationModelSchema,
   cliFlagFor,
 } from "@plugins/conversations/plugins/model-provider/core";
-import { parseInitializeOutput, type CliModel } from "./cli-models";
+import { parseInitializeModels, type CliModel } from "./cli-models";
 import { readMenu } from "./menu";
 
 const id = (raw: string) => ConversationModelSchema.parse(raw);
 // A CLI model name spelled from the id, as everything outside the registry must.
 const cliName = (raw: string) => cliFlagFor(id(raw));
 
-const RECORDED = parseInitializeOutput({
-  stdout: JSON.stringify(
+const RECORDED = parseInitializeModels(
+  (
     JSON.parse(
       readFileSync(
         join(import.meta.dir, "initialize-response.fixture.json"),
         "utf8",
       ),
-    ),
-  ),
-  stderr: "",
-  exitCode: 0,
-  timedOut: false,
-});
+    ) as { response: { response: { models: unknown } } }
+  ).response.response.models,
+);
 
 const alias = (value: string, resolved: string): CliModel => ({
   value,

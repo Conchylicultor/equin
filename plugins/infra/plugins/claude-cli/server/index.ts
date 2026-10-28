@@ -18,7 +18,7 @@ export { listCallsFor } from "./internal/list-calls";
 
 export default {
   description:
-    "One-shot Claude CLI helper (`claude --print`) for short, latency-tolerant generations, and runClaudeReadOnly — a print that may only Read / Grep / Glob one directory and answers with a zod-schema'd structured value. Reuses the user's local Claude CLI auth — no API key plumbing.",
+    "One-shot Claude generations for short, latency-tolerant work (runClaudePrint), and runClaudeReadOnly — a turn that may only Read / Grep / Glob one directory and answers with a zod-schema'd structured value. Each is one Agent SDK turn (infra/claude-cli/sdk) on the active Claude account — the one new agents launch on — recorded in the call log.",
   contributions: [
     ...claudeCliCallsServed.declare,
     ...claudeCliCallsForServed.declare,

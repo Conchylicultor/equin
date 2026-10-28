@@ -1,96 +1,80 @@
-import { z } from "zod";
-import { pickHostEnv } from "@plugins/infra/plugins/launcher/core";
+import type { SDKControlInitializeResponse } from "@anthropic-ai/claude-agent-sdk";
+import { SYSTEM_ACCOUNT_ID } from "@plugins/infra/plugins/claude-cli/plugins/accounts/core";
 import { resolveClaudeBin } from "@plugins/infra/plugins/paths/server";
-import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+import {
+  claudeSessionEnv,
+  readClaudeInitialize,
+} from "@plugins/infra/plugins/claude-cli/plugins/sdk/server";
 import type { ClaudeCodeStatus } from "../../core";
 
-/** Each probe starts a Node process (~0.5 s); this is a ceiling, not an estimate. */
+/** CLI start-up plus its `initialize` answer; a ceiling, not an estimate. */
 const PROBE_TIMEOUT_MS = 20_000;
 
 /**
- * The fields of `claude auth status --json` this reads. Signed in (Claude Code
- * 2.1.282): `{"loggedIn":true,"authMethod":"claude.ai",…,"email":"…"}`.
+ * What one `initialize` says about the computer's sign-in. Signed in (Claude
+ * Code 2.1.308): `account: {email, organization, subscriptionType: "Claude
+ * Max", apiProvider: "firstParty"}`; signed out: `account: {tokenSource:
+ * "none", apiProvider: "firstParty"}`. A third-party provider (Bedrock,
+ * Vertex, …) signs in outside Claude Code, so it counts as signed in.
  */
-const AuthStatusSchema = z.object({
-  loggedIn: z.boolean(),
-  authMethod: z.string().optional(),
-  email: z.string().optional(),
-});
-
-/**
- * Run the probes with the same closed host environment an agent pane and a
- * one-shot `claude --print` get (`pickHostEnv`), so the answer is about the
- * account THEY would use — not whatever this backend happened to inherit.
- */
-const env = pickHostEnv(process.env);
-
-async function run(bin: string, args: string[]) {
-  return spawnCaptured([bin, ...args], {
-    cwd: "/tmp",
-    env,
-    timeoutMs: PROBE_TIMEOUT_MS,
-  });
-}
-
-function failure(what: string, r: Awaited<ReturnType<typeof run>>): string {
-  if (r.timedOut)
-    return `\`${what}\` did not answer within ${PROBE_TIMEOUT_MS / 1000}s`;
-  const detail = (r.stderr.trim() || r.stdout.trim() || "no output").slice(
-    0,
-    300,
-  );
-  return `\`${what}\` exited ${r.exitCode}: ${detail}`;
+export function statusOfInitialize(
+  init: Pick<SDKControlInitializeResponse, "account" | "claude_code_version">,
+): ClaudeCodeStatus {
+  const version = init.claude_code_version;
+  if (version === undefined)
+    return {
+      kind: "unreadable",
+      error: "Claude Code's initialize answer carried no version",
+    };
+  const { account } = init;
+  const has = (source: string | undefined) =>
+    source !== undefined && source !== "none";
+  const signedIn =
+    (account.apiProvider !== undefined &&
+      account.apiProvider !== "firstParty") ||
+    account.email !== undefined ||
+    has(account.tokenSource) ||
+    has(account.apiKeySource);
+  if (!signedIn) return { kind: "signed-out", version };
+  const authMethod =
+    account.subscriptionType ??
+    [account.tokenSource, account.apiKeySource].find(has) ??
+    (account.apiProvider !== "firstParty" ? account.apiProvider : undefined);
+  return {
+    kind: "ready",
+    version,
+    authMethod: authMethod ?? null,
+    email: account.email ?? null,
+  };
 }
 
 /**
  * Ask the machine, now: is Claude Code installed, and is it signed in?
  *
- * Never throws for a Claude Code problem — every way the answer can come out is
- * an arm of {@link ClaudeCodeStatus}. `claude auth status` is read for its
- * JSON whatever its exit code, since a signed-out CLI may exit non-zero.
+ * One Agent SDK session on the computer's own login (the system account),
+ * under the host facts alone — the account the status is about — that reads
+ * its `initialize` answer and closes. Never throws for a Claude Code problem:
+ * every way the answer can come out is an arm of {@link ClaudeCodeStatus}.
  */
 export async function probeClaudeCode(): Promise<ClaudeCodeStatus> {
   const bin = resolveClaudeBin();
   if (bin.kind === "missing")
     return { kind: "missing", searched: bin.searched };
-
-  const [version, auth] = await Promise.all([
-    run(bin.path, ["--version"]),
-    run(bin.path, ["auth", "status", "--json"]),
-  ]);
-
-  if (version.timedOut || version.exitCode !== 0) {
-    return { kind: "unreadable", error: failure("claude --version", version) };
-  }
-  // "2.1.282 (Claude Code)" → "2.1.282".
-  const versionText = version.stdout.trim().split(/\s+/)[0] ?? "";
-
-  if (auth.timedOut) {
-    return { kind: "unreadable", error: failure("claude auth status", auth) };
-  }
-  let json: unknown;
   try {
-    json = JSON.parse(auth.stdout);
+    return statusOfInitialize(
+      await readClaudeInitialize({
+        env: await claudeSessionEnv(SYSTEM_ACCOUNT_ID),
+        bin: bin.path,
+        cwd: "/tmp",
+        timeoutMs: PROBE_TIMEOUT_MS,
+      }),
+    );
   } catch (err) {
-    if (!(err instanceof SyntaxError)) throw err;
+    // The check itself failed (timed out, the CLI crashed): not a verdict.
+    if (!(err instanceof Error)) throw err;
     return {
       kind: "unreadable",
-      error: failure("claude auth status --json", auth),
+      error: `Claude Code's initialize failed: ${err.message.slice(0, 300)}`,
     };
   }
-  const parsed = AuthStatusSchema.safeParse(json);
-  if (!parsed.success) {
-    return {
-      kind: "unreadable",
-      error: `\`claude auth status --json\` printed an unexpected shape: ${parsed.error.issues[0]?.message ?? "invalid"}`,
-    };
-  }
-  if (!parsed.data.loggedIn)
-    return { kind: "signed-out", version: versionText };
-  return {
-    kind: "ready",
-    version: versionText,
-    authMethod: parsed.data.authMethod ?? null,
-    email: parsed.data.email ?? null,
-  };
 }

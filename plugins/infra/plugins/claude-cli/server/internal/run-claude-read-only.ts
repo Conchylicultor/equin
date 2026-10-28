@@ -1,6 +1,6 @@
 import { z } from "zod";
+import type { ClaudeQueryInput } from "@plugins/infra/plugins/claude-cli/plugins/sdk/server";
 import {
-  cliFlagFor,
   requireModel,
   type ModelTier,
 } from "@plugins/conversations/plugins/model-provider/core";
@@ -25,7 +25,7 @@ export interface RunClaudeReadOnlyInput<T> {
   /** The directory it may read (its working directory, and the only one). */
   readDir: string;
   /**
-   * What it answers with: the CLI is handed this schema as `--json-schema`,
+   * What it answers with: the session is handed this schema as its output format,
    * and the answer is parsed with the same schema — one declaration, so the
    * two cannot disagree.
    */
@@ -34,53 +34,39 @@ export interface RunClaudeReadOnlyInput<T> {
   source: RunClaudePrintInput["source"];
 }
 
-/** The tail of `--output-format json`: the run's result record. */
-const ResultRecordSchema = z.object({
-  type: z.literal("result"),
-  subtype: z.string(),
-  is_error: z.boolean(),
-  structured_output: z.unknown().optional(),
-  result: z.string().optional(),
-});
-
 /**
- * The CLI's arguments for a read-only structured run — exported so a test can
+ * The session options of a read-only structured run — exported so a test can
  * pin that no tool beyond `READ_ONLY_TOOLS` is reachable.
  */
-export function readOnlyArgs(
-  cliFlag: string,
+export function readOnlyOptions(
+  readDir: string,
   output: z.ZodType<unknown, unknown>,
   system: string | undefined,
-): string[] {
-  const args = [
-    "--print",
-    "--model",
-    cliFlag,
+): ClaudeQueryInput["options"] {
+  return {
+    cwd: readDir,
     // The built-in tool set, exactly; `--restricted` drops anything that runs
     // code and confines file tools to the working directory, and ignores the
     // user/project settings (so no allow-list widens it); no MCP server loads;
     // anything that would prompt is denied.
-    "--tools",
-    READ_ONLY_TOOLS.join(","),
-    "--restricted",
-    "--strict-mcp-config",
-    "--permission-mode",
-    "dontAsk",
-    "--no-session-persistence",
-    "--output-format",
-    "json",
-    "--json-schema",
-    // Draft-07, not zod's default 2020-12: the CLI validates the schema with
-    // a validator that only knows draft-07, and refuses any other `$schema`
-    // ("no schema with key or ref …/draft/2020-12/schema").
-    JSON.stringify(z.toJSONSchema(output, { target: "draft-7" })),
-  ];
-  if (system) args.push("--system-prompt", system);
-  return args;
+    tools: [...READ_ONLY_TOOLS],
+    extraArgs: { restricted: null },
+    settingSources: [],
+    strictMcpConfig: true,
+    permissionMode: "dontAsk",
+    outputFormat: {
+      type: "json_schema",
+      // Draft-07, not zod's default 2020-12: the CLI validates the schema with
+      // a validator that only knows draft-07, and refuses any other `$schema`
+      // ("no schema with key or ref …/draft/2020-12/schema").
+      schema: z.toJSONSchema(output, { target: "draft-7" }),
+    },
+    ...(system ? { systemPrompt: system } : {}),
+  };
 }
 
 /**
- * One `claude --print` that may READ `readDir` (Read / Grep / Glob, nothing
+ * One Claude Code turn that may READ `readDir` (Read / Grep / Glob, nothing
  * else) and answers with a value of `output` — for a background judgement
  * over the code (triage, classification) that needs to look around but must
  * never change anything. Throws `ClaudeCliError` on a refusal, timeout, an
@@ -90,9 +76,8 @@ export async function runClaudeReadOnly<T>(
   input: RunClaudeReadOnlyInput<T>,
 ): Promise<T> {
   const resolvedModel = requireModel(input.tier, getModelCatalog());
-  const stdout = await invokeClaude({
-    args: readOnlyArgs(cliFlagFor(resolvedModel), input.output, input.system),
-    cwd: input.readDir,
+  return invokeClaude({
+    options: readOnlyOptions(input.readDir, input.output, input.system),
     input: {
       tier: input.tier,
       prompt: input.prompt,
@@ -101,44 +86,24 @@ export async function runClaudeReadOnly<T>(
     },
     timeoutMs: input.timeoutMs,
     resolvedModel,
+    answerOf: (result) =>
+      parseStructuredOutput(result.structured_output, input.output),
   });
-  return parseStructuredResult(stdout, input.output);
 }
 
-/**
- * The structured answer out of `--output-format json` stdout: one result
- * object, or (some CLI versions) the whole message stream as an array ending
- * with it.
- */
-export function parseStructuredResult<T>(
-  stdout: string,
+/** The structured answer of a successful result, checked against `output`. */
+export function parseStructuredOutput<T>(
+  structured: unknown,
   output: z.ZodType<T, unknown>,
 ): T {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(stdout);
-  } catch (err) {
-    if (!(err instanceof SyntaxError)) throw err;
+  if (structured === undefined)
     throw new ClaudeCliError(
-      `claude --print returned no JSON: ${stdout.slice(0, 500)}`,
+      "Claude Code ended its turn without a structured answer",
     );
-  }
-  const record = Array.isArray(parsed) ? parsed.at(-1) : parsed;
-  const result = ResultRecordSchema.safeParse(record);
-  if (!result.success) {
-    throw new ClaudeCliError(
-      `claude --print returned no result record: ${stdout.slice(0, 500)}`,
-    );
-  }
-  if (result.data.is_error || result.data.structured_output === undefined) {
-    throw new ClaudeCliError(
-      `claude --print ended ${result.data.subtype} without a structured answer: ${(result.data.result ?? "").slice(0, 500)}`,
-    );
-  }
-  const answer = output.safeParse(result.data.structured_output);
+  const answer = output.safeParse(structured);
   if (!answer.success) {
     throw new ClaudeCliError(
-      `claude --print answered outside its schema: ${answer.error.message}`,
+      `Claude Code answered outside its schema: ${answer.error.message}`,
     );
   }
   return answer.data;

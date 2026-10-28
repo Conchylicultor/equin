@@ -16,12 +16,11 @@
 // from its cursor. Started detached (its own session and process group), so a
 // backend restart or crash does not reach it. It exits through `shutdown`, or
 // SIGTERM — and that exit always happens (see `shutdown`).
-import {
-  query,
-  type CanUseTool,
-  type PermissionResult,
-  type SDKMessage,
-  type SDKUserMessage,
+import type {
+  CanUseTool,
+  PermissionResult,
+  SDKMessage,
+  SDKUserMessage,
 } from "@anthropic-ai/claude-agent-sdk";
 import { spawn, spawnSync, type ChildProcessByStdio } from "node:child_process";
 import {
@@ -38,8 +37,10 @@ import { SAMPLE } from "@plugins/infra/plugins/paths/server";
 import { basename, dirname, join } from "node:path";
 import { parseArgs } from "node:util";
 import { ZodError, z } from "zod";
-import { claudeAccountCredential } from "@plugins/infra/plugins/claude-cli/plugins/accounts/server";
-import { claudeCredentialEnv } from "@plugins/infra/plugins/claude-cli/plugins/accounts/core";
+import {
+  claudeQuery,
+  claudeSessionEnv,
+} from "@plugins/infra/plugins/claude-cli/plugins/sdk/server";
 import { disclaimArgv } from "@plugins/packages/plugins/spawn-disclaim/core";
 import {
   AGENT_EVENTS_FILE,
@@ -89,12 +90,12 @@ const usagePath = args["usage-file"];
 const options = AgentLaunchOptionsSchema.parse(
   JSON.parse(readFileSync(join(dir, AGENT_OPTIONS_FILE), "utf8")),
 );
-// The account's credential (a plan token or an API key), fetched by the agent
-// itself from the secrets store, so it never sits in an argv, the options file
-// or the login shell's environment. Only Claude Code's own process gets it
-// (`env` below), in the variable its kind uses; the system account (null) is
-// Claude Code's own login.
-const credential = await claudeAccountCredential(args.account);
+// The account's environment: this process's own (the agent session's closed
+// list) plus the account's token, fetched by the agent itself from the secrets
+// store, so it never sits in an argv, the options file or the login shell's
+// environment. Only Claude Code's own process gets it (the session below); the
+// system account adds nothing — Claude Code's own login.
+const sessionEnv = await claudeSessionEnv(args.account, process.env);
 
 // ── events.jsonl ──────────────────────────────────────────────────────────
 // Resumes numbering from the file (or, right after a rotation, its newest
@@ -388,7 +389,11 @@ const canUseTool: CanUseTool = async (
 // its handle: a CLI running a background task keeps going after its stdin
 // closes (2026-10-20), so it would outlive an agent that SIGKILLs itself.
 let cli: ChildProcessByStdio<Writable, Readable, null> | null = null;
-const session = query({
+const session = claudeQuery({
+  env: sessionEnv,
+  // The conversation-named hardlink when the backend made one (so macOS
+  // names this agent in a permission prompt), else the CLI itself.
+  bin: options.namedClaudeBin ?? options.claudeBin,
   prompt: inputStream(),
   options: {
     cwd: options.cwd,
@@ -413,9 +418,6 @@ const session = query({
     // message); they are folded here and never written to events.jsonl.
     includePartialMessages: true,
     enableFileCheckpointing: true,
-    // The conversation-named hardlink when the backend made one (so macOS
-    // names this agent in a permission prompt), else the CLI itself.
-    pathToClaudeCodeExecutable: options.namedClaudeBin ?? options.claudeBin,
     ...(options.model ? { model: options.model } : {}),
     // Thinking text is requested explicitly: under the SDK the CLI ignores
     // the `showThinkingSummaries` setting (the interactive CLI honours it), so
@@ -441,9 +443,6 @@ const session = query({
     // `resume`).
     ...(options.resume === null || options.fork
       ? { sessionId: options.sessionId }
-      : {}),
-    ...(credential
-      ? { env: claudeCredentialEnv(process.env, credential) }
       : {}),
     // Same argv, cwd, env and abort signal the SDK would spawn with — run
     // through `disclaim-exec` when the backend resolved it, which execs the

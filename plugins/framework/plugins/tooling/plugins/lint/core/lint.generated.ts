@@ -67,6 +67,7 @@ export const lintEntries: CollectedEntry[] = [
   { pluginPath: "framework/plugins/tooling/plugins/lint/plugins/watcher-safety", id: "framework.tooling.lint.watcher-safety", loader: () => import("@plugins/framework/plugins/tooling/plugins/lint/plugins/watcher-safety/lint"), dependsOn: [] },
   { pluginPath: "framework/plugins/web-core", id: "framework.web-core", loader: () => import("@plugins/framework/plugins/web-core/lint"), dependsOn: [] },
   { pluginPath: "infra/plugins/background/plugins/timer", id: "infra.background.timer", loader: () => import("@plugins/infra/plugins/background/plugins/timer/lint"), dependsOn: [] },
+  { pluginPath: "infra/plugins/claude-cli/plugins/sdk", id: "infra.claude-cli.sdk", loader: () => import("@plugins/infra/plugins/claude-cli/plugins/sdk/lint"), dependsOn: [] },
   { pluginPath: "infra/plugins/deps/plugins/python", id: "infra.deps.python", loader: () => import("@plugins/infra/plugins/deps/plugins/python/lint"), dependsOn: [] },
   { pluginPath: "infra/plugins/deps/plugins/rust", id: "infra.deps.rust", loader: () => import("@plugins/infra/plugins/deps/plugins/rust/lint"), dependsOn: [] },
   { pluginPath: "infra/plugins/endpoints", id: "infra.endpoints", loader: () => import("@plugins/infra/plugins/endpoints/lint"), dependsOn: [] },

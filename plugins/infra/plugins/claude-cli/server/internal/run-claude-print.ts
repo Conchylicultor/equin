@@ -1,11 +1,17 @@
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
-import { pickHostEnv } from "@plugins/infra/plugins/launcher/core";
+import { activeClaudeAccountId } from "@plugins/infra/plugins/claude-cli/plugins/accounts/server";
 import {
   ClaudeCodeUnavailableError,
   noteClaudeCodeFailure,
   requireClaudeBin,
 } from "@plugins/infra/plugins/claude-cli/plugins/availability/server";
-import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+import {
+  ClaudeTurnError,
+  claudeSessionEnv,
+  runClaudeTurn,
+  type ClaudeQueryInput,
+  type ClaudeTurnResult,
+} from "@plugins/infra/plugins/claude-cli/plugins/sdk/server";
 import {
   cliFlagFor,
   requireModel,
@@ -14,20 +20,12 @@ import {
 import { getModelCatalog } from "@plugins/conversations/plugins/model-provider/plugins/catalog/server";
 import { recordClaudeCliCall } from "./record-call";
 
-// A one-shot `claude --print` starts from the host facts alone (HOME, USER,
-// PATH, locale — `pickHostEnv`), never from this process's environment.
-//
-// It used to copy that environment minus every CLAUDE_CODE_* name, because a
-// backend started from an agent shell carried the shell's Claude session
-// variables, and one of them (CLAUDE_CODE_EXTRA_BODY with adaptive thinking)
-// broke Haiku calls outright. A denylist only catches the names somebody
-// already noticed, and what a process may have inherited is an open set — so
-// the list is closed instead. It is also right whatever the backend was
-// started with, including by a gateway that predates the declared runtime
-// environment. Agent panes run `claude` the same way (`env -i` over a closed
-// list, runtime-tmux's agent-session-env.ts), which is the evidence that
-// its login and keychain access need nothing beyond these.
-const claudeEnv = pickHostEnv(process.env);
+// A one-shot generation is one Agent SDK turn (infra/claude-cli/sdk) on the
+// ACTIVE Claude account — the one new agents launch on — under the host facts
+// alone (`claudeSessionEnv`'s default base), never this process's environment.
+// It used to spawn `claude --print` by hand with no account at all, so it
+// always ran on the computer's own login: a switched account never reached a
+// task title, and a full system account failed every background generation.
 
 export interface RunClaudePrintInput {
   tier: ModelTier;
@@ -65,95 +63,95 @@ export async function runClaudePrint(
   const timeoutMs = input.timeoutMs ?? 15_000;
   // A family always resolves (to its current version in the live catalog).
   const resolvedModel = requireModel(input.tier, getModelCatalog());
-  const cliFlag = cliFlagFor(resolvedModel);
-  // `--tools ""` disables every tool so the model can't go off and plan/edit;
-  // `--system-prompt` replaces (not appends) the default system prompt so the
+  // `tools: []` disables every tool so the model can't go off and plan/edit;
+  // `systemPrompt` replaces (not appends) the default system prompt so the
   // project's CLAUDE.md context doesn't leak in and bias output away from the
-  // requested format; `--no-session-persistence` avoids polluting the user's
-  // resume list with throwaway one-shot calls.
-  const args = [
-    "--print",
-    "--model",
-    cliFlag,
-    "--tools",
-    "",
-    "--no-session-persistence",
-  ];
-  if (input.system) args.push("--system-prompt", input.system);
-  return invokeClaude({ args, cwd: "/tmp", input, timeoutMs, resolvedModel });
+  // requested format; `persistSession: false` avoids polluting the user's
+  // resume list with throwaway one-shot calls. `cwd: "/tmp"` so claude doesn't
+  // auto-discover project CLAUDE.md files (defensive — the system prompt
+  // replacement should already cover this).
+  const result = await invokeClaude({
+    options: {
+      cwd: "/tmp",
+      tools: [],
+      ...(input.system ? { systemPrompt: input.system } : {}),
+    },
+    input,
+    timeoutMs,
+    resolvedModel,
+    answerOf: (r) => r.result,
+  });
+  return result;
 }
 
 /**
- * Spawn `claude` with `args` once, feeding `input.prompt` on stdin, and return
- * its stdout — recording the call in the log either way.
+ * Run `input.prompt` as one turn with `options` on the active account and
+ * return `answerOf` its successful result — recording the call in the log
+ * either way. An error result (a usage limit, max turns), a timeout or a CLI
+ * that died throws {@link ClaudeCliError} with Claude Code's own words.
  */
-export async function invokeClaude({
-  args,
-  cwd,
+export async function invokeClaude<T>({
+  options,
   input,
   timeoutMs,
   resolvedModel,
+  answerOf,
 }: {
-  args: readonly string[];
-  cwd: string;
+  options: ClaudeQueryInput["options"];
   input: RunClaudePrintInput;
   timeoutMs: number;
   resolvedModel: ReturnType<typeof requireModel>;
-}): Promise<string> {
+  answerOf: (result: Extract<ClaudeTurnResult, { subtype: "success" }>) => T;
+}): Promise<T> {
   const startedAt = performance.now();
   let output: string | undefined;
   let caughtError: Error | undefined;
   try {
-    // `spawnCaptured`, NOT a raw `Bun.spawn` with piped stdio — and this is a
-    // correctness requirement, not a style preference.
-    //
-    // What this used to be: `Bun.spawn({ stdout: "pipe", stderr: "pipe" })` plus
-    // `Promise.all([new Response(proc.stdout).text(), …, proc.exited])`, with a
-    // `setTimeout(() => proc.kill(), timeoutMs)` as the only ceiling. That shape
-    // hits bun 1.3.13's exit-during-stream-pull race: when the child exits while
-    // a JS stream pull is pending, the pull promise NEVER settles. Observed in a
-    // live backend on 2026-08-08 — an `events.refresh-source` job parked for over
-    // two hours with the child long gone, no `claude_cli_calls` row (the row is
-    // written in the `finally` below, which never ran), and nothing on screen but
-    // a source stuck on "running". The `proc.kill()` cannot rescue it: the child
-    // is already dead, so there is nothing left to signal.
-    //
-    // `spawnCaptured` redirects the child's stdio to temp-file fds — a kernel
-    // dup2, with no JS stream in either direction — and delivers stdin as a whole
-    // buffer the same way, so the race has nothing to wedge. `timeoutMs` becomes a
-    // REAL ceiling (SIGTERM, then SIGKILL) reported as `timedOut` on the result
-    // rather than inferred from a signal anyone could have sent.
-    //
-    // `cwd: "/tmp"` for a plain print so claude doesn't auto-discover project
-    // CLAUDE.md files even with --system-prompt set (defensive — the system
-    // prompt replacement should already cover this).
-    const result = await spawnCaptured([requireClaudeBin(), ...args], {
-      cwd,
-      env: claudeEnv,
-      stdin: input.prompt,
-      timeoutMs,
-    });
-
-    if (result.timedOut) {
-      // Distinct from a non-zero exit on purpose: "the model took too long" is a
-      // different fact from "the CLI refused", and only one of them is worth
-      // retrying with the same prompt.
-      throw new ClaudeCliError(
-        `claude --print did not finish within ${timeoutMs}ms and was killed.`,
-      );
-    }
-    if (result.exitCode !== 0) {
-      // A refusal can be Claude Code itself (signed out since the last check),
-      // so the status the app shows is re-checked against this evidence.
+    let result: ClaudeTurnResult;
+    try {
+      result = await runClaudeTurn({
+        env: await claudeSessionEnv(activeClaudeAccountId()),
+        bin: requireClaudeBin(),
+        prompt: input.prompt,
+        options: {
+          // What `claude --print` loaded: the user's own settings and env
+          // overrides, so a generation runs as their Claude Code does (a
+          // caller may narrow it).
+          settingSources: ["user"],
+          ...options,
+          model: cliFlagFor(resolvedModel),
+          persistSession: false,
+        },
+        timeoutMs,
+      });
+    } catch (err) {
+      if (err instanceof ClaudeTurnError) {
+        // A timeout is a different fact from a refusal ("the model took too
+        // long" vs "the CLI refused") and only one is worth retrying with the
+        // same prompt; a CLI that died may be Claude Code itself.
+        if (!err.timedOut) noteClaudeCodeFailure();
+        throw new ClaudeCliError(err.message);
+      }
+      if (err instanceof ClaudeCodeUnavailableError) throw err;
+      // The SDK's own failures — "Claude Code process exited with code N" —
+      // may be Claude Code itself (signed out since the last check), so the
+      // status the app shows is re-checked against this evidence.
       noteClaudeCodeFailure();
-      const detail =
-        result.stderr.trim() || result.stdout.trim() || "<no output>";
       throw new ClaudeCliError(
-        `claude --print exited ${result.exitCode}: ${detail}`,
+        err instanceof Error ? err.message : String(err),
       );
     }
-    output = result.stdout;
-    return result.stdout;
+    if (result.subtype !== "success" || result.is_error) {
+      const detail =
+        result.subtype === "success"
+          ? result.result
+          : result.errors.join("; ") || result.subtype;
+      throw new ClaudeCliError(
+        `Claude Code answered an error (${result.subtype}): ${detail.trim() || "<no output>"}`,
+      );
+    }
+    output = result.result;
+    return answerOf(result);
   } catch (err) {
     caughtError = err instanceof Error ? err : new Error(String(err));
     throw err;

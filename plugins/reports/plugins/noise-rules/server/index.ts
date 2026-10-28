@@ -11,15 +11,15 @@ export default {
         message.toLowerCase().includes("resizeobserver") ||
         (errorType?.toLowerCase().includes("resizeobserver") ?? false),
     }),
-    // A one-shot `claude --print` exiting 143/137 means the subprocess was
-    // killed by a signal (SIGTERM/SIGKILL) — server restart during build, or
-    // our own timeout `proc.kill()`. Not a real failure, just an interrupted
-    // throwaway generation. Mute so shutdowns don't spam crash tasks.
+    // A one-shot generation whose Claude Code exited 143/137 was killed by a
+    // signal (SIGTERM/SIGKILL) — a server restart during build. Not a real
+    // failure, just an interrupted throwaway generation. Mute so shutdowns
+    // don't spam crash tasks.
     ReportNoiseRule({
       id: "claude-cli-signal-kill",
       matches: ({ errorType, message }) =>
         errorType === "ClaudeCliError" &&
-        /claude --print exited (?:143|137)\b/.test(message),
+        /Claude Code process exited with code (?:143|137)\b/.test(message),
     }),
     // A crash whose originating frontend tab is running an obsolete bundle
     // (build id mismatch). Benign version-skew during a rollout, not a live bug

@@ -47,7 +47,7 @@ The backup run detail pane shows a stale target list after Grant access — the 
 </conversation>`,
   system: null,
   output: null,
-  error: "claude --print exited 143: <no output>",
+  error: "Claude Code process exited with code 143",
   durationMs: 11400,
   correlationId: null,
 };

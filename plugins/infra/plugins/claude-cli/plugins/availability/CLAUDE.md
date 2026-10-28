@@ -1,8 +1,8 @@
 # claude-cli/availability
 
-Can this machine run an agent right now? Every agent pane and every one-shot
-`claude --print` runs on the user's own Claude Code, so the answer is whether
-that CLI is **installed** and **signed in**. This plugin owns that answer inside
+Can this machine run an agent right now? Every agent and every one-shot
+generation is an Agent SDK session (`infra/claude-cli/sdk`) on the user's own
+Claude Code, so the answer is whether it is **installed** and **signed in**. This plugin owns that answer inside
 the running app; `framework/cli/plugins/doctor` asks the same thing at install
 and build time.
 
@@ -12,10 +12,11 @@ and build time.
 `unreadable` means the check itself failed (timeout, crash, unexpected output):
 it is rendered as "can't tell", never as a verdict.
 
-The probe (`server/internal/probe.ts`) runs `claude --version` and
-`claude auth status --json` (zod-parsed, read whatever the exit code) under
-`pickHostEnv` — the same closed environment agent panes and `runClaudePrint`
-use, so it answers for the account they would run as.
+The probe (`server/internal/probe.ts`) opens one Agent SDK session on the
+system account (the computer's own login) that reads its `initialize` answer —
+the version and the signed-in account — and closes (`readClaudeInitialize`;
+no turn, nothing billed). It runs under `claudeSessionEnv`'s host facts, the
+same closed environment every session gets.
 
 ## Freshness — no polling
 
@@ -74,7 +75,7 @@ The fix commands (`CLAUDE_CODE_FIX`) are the same two lines doctor.sh prints;
 
 ## Plugin reference
 
-- Description: Claude Code availability, shown: the pieces of the health report's Claude Code row (useClaudeCodeHealth — critical while the CLI is missing or signed out — ClaudeCodeDetail with the install / sign-in commands, ClaudeCodeActions' Check again; the row itself is the sdk runtime's, which adds the Agent SDK and the running agents), useClaudeCodeLaunchBlock() for launch controls to disable themselves with the fix, and a re-check when the user returns to the window while it is blocked. Claude Code availability: probes whether the user's Claude Code CLI is installed and signed in (`claude --version` + `claude auth status --json`, under the agent panes' host env; the machine half serves the answer as the claude-code-status push value and POST /api/claude-code/recheck) and gives every launch path assertClaudeCodeReady() and requireClaudeBin() — so an agent that cannot run is refused up front with the fix, never started as `command not found`. onClaudeCodeProbed hands every fresh answer to work keyed off the installed CLI's version.
+- Description: Claude Code availability, shown: the pieces of the health report's Claude Code row (useClaudeCodeHealth — critical while the CLI is missing or signed out — ClaudeCodeDetail with the install / sign-in commands, ClaudeCodeActions' Check again; the row itself is the sdk runtime's, which adds the Agent SDK and the running agents), useClaudeCodeLaunchBlock() for launch controls to disable themselves with the fix, and a re-check when the user returns to the window while it is blocked. Claude Code availability: probes whether the user's Claude Code is installed and signed in (one Agent SDK session on the computer's own login reading its initialize answer — version and account, no turn; the machine half serves the answer as the claude-code-status push value and POST /api/claude-code/recheck) and gives every launch path assertClaudeCodeReady() and requireClaudeBin() — so an agent that cannot run is refused up front with the fix, never started as `command not found`. onClaudeCodeProbed hands every fresh answer to work keyed off the installed CLI's version.
 - Web:
   - Contributes: `Core.Root` → `RecheckOnReturn`
   - Uses:
@@ -97,7 +98,10 @@ The fix commands (`CLAUDE_CODE_FIX`) are the same two lines doctor.sh prints;
     - `useClaudeCodeStatus`
 - Server:
   - Contributes: `resource.declare` "claude-code-status"
-  - Uses: `infra/paths.resolveClaudeBin`
+  - Uses:
+    - `infra/claude-cli/sdk.claudeSessionEnv`
+    - `infra/claude-cli/sdk.readClaudeInitialize`
+    - `infra/paths.resolveClaudeBin`
   - Exports (values):
     - `assertClaudeCodeReady`
     - `checkClaudeCode`

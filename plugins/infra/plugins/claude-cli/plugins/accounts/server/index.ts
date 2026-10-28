@@ -5,6 +5,8 @@ export {
   deleteClaudeAccountCredential,
   saveClaudeAccountCredential,
 } from "./internal/tokens";
+export { ActiveClaudeAccount, activeClaudeAccountId } from "./internal/active";
+export type { ActiveClaudeAccountImpl } from "./internal/active";
 
 export default {
   description:

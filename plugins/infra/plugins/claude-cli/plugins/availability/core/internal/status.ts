@@ -3,11 +3,11 @@ import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 
 /**
  * Can this machine run an agent right now? Every agent — and every one-shot
- * `claude --print` — runs on the user's own Claude Code, so the answer is
- * whether that CLI is installed and signed in.
+ * generation — is an Agent SDK session on the user's own Claude Code, so the
+ * answer is whether it is installed and signed in.
  *
  * - `ready`      — installed and signed in.
- * - `signed-out` — installed, but `claude auth status` says no account.
+ * - `signed-out` — installed, but its initialize answer names no credential.
  * - `missing`    — no executable where it is looked for (`searched`).
  * - `unreadable` — the check itself failed (timed out, crashed, printed
  *                  something that is not its JSON). Not a verdict on Claude
@@ -17,7 +17,7 @@ export const ClaudeCodeStatusSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("ready"),
     version: z.string(),
-    /** `claude.ai`, `console`, … as `claude auth status` names it. */
+    /** How it is signed in: the subscription (`Claude Max`), or the token / API key source. */
     authMethod: z.string().nullable(),
     email: z.string().nullable(),
   }),

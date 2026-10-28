@@ -1,33 +1,15 @@
 import { tmpdir } from "node:os";
 import { z } from "zod";
-import { pickHostEnv } from "@plugins/infra/plugins/launcher/core";
-import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+import { SYSTEM_ACCOUNT_ID } from "@plugins/infra/plugins/claude-cli/plugins/accounts/core";
+import {
+  claudeSessionEnv,
+  readClaudeInitialize,
+} from "@plugins/infra/plugins/claude-cli/plugins/sdk/server";
 
-// The Claude CLI's model menu, read through the Agent SDK's control protocol:
-// one `initialize` control request on stdin, answered by one `control_response`
-// line on stdout. The CLI answers it locally — no model is called, nothing is
-// billed — and exits once stdin closes.
-
-const REQUEST_ID = "init-1";
-
-/** The control request, as the Agent SDK sends it. */
-export const INITIALIZE_REQUEST = `${JSON.stringify({
-  type: "control_request",
-  request_id: REQUEST_ID,
-  request: { subtype: "initialize" },
-})}\n`;
-
-/** The argv after the binary: stream-json both ways, nothing loaded or saved that the answer does not need. */
-export const INITIALIZE_ARGS = [
-  "-p",
-  "--input-format",
-  "stream-json",
-  "--output-format",
-  "stream-json",
-  "--verbose",
-  "--strict-mcp-config",
-  "--no-session-persistence",
-] as const;
+// The Claude CLI's model menu, read through the Agent SDK: one session that
+// sends no prompt and reads the menu off its `initialize` answer
+// (`readClaudeInitialize`). Answered locally — no model is called, nothing is
+// billed.
 
 /**
  * One entry of the menu — only the fields this reads. Recorded (Claude Code
@@ -44,26 +26,8 @@ const CliModelSchema = z.object({
 });
 export type CliModel = z.infer<typeof CliModelSchema>;
 
-/**
- * The `control_response` line. The menu sits in the INNER response (the outer
- * one is the control envelope). Unknown fields — the account, commands,
- * agents — are stripped, never read.
- */
-const InitializeResponseSchema = z.object({
-  type: z.literal("control_response"),
-  response: z.discriminatedUnion("subtype", [
-    z.object({
-      subtype: z.literal("success"),
-      request_id: z.literal(REQUEST_ID),
-      response: z.object({ models: z.array(CliModelSchema) }),
-    }),
-    z.object({
-      subtype: z.literal("error"),
-      request_id: z.literal(REQUEST_ID),
-      error: z.string(),
-    }),
-  ]),
-});
+/** The menu, as `initialize` answers it. Unknown fields are stripped, never read. */
+const MenuSchema = z.array(CliModelSchema);
 
 /** The CLI did not answer with a menu this code can read: a failed run or a changed protocol. Never papered over. */
 export class CliModelsError extends Error {
@@ -73,47 +37,17 @@ export class CliModelsError extends Error {
   }
 }
 
-export interface InitializeOutput {
-  stdout: string;
-  stderr: string;
-  exitCode: number | null;
-  timedOut: boolean;
-}
-
-/** The menu in one `initialize` run's output. Pure, so a recorded response can drive it. Throws {@link CliModelsError}. */
-export function parseInitializeOutput(output: InitializeOutput): CliModel[] {
-  if (output.timedOut)
-    throw new CliModelsError(
-      `no answer within ${INITIALIZE_TIMEOUT_MS / 1000}s`,
-    );
-  const line = output.stdout
-    .split("\n")
-    .find((l) => l.includes('"control_response"'));
-  if (line === undefined)
-    throw new CliModelsError(
-      `exited ${output.exitCode} with no control_response: ${(output.stderr.trim() || output.stdout.trim() || "no output").slice(0, 300)}`,
-    );
-  let json: unknown;
-  try {
-    json = JSON.parse(line);
-  } catch (err) {
-    if (!(err instanceof SyntaxError)) throw err;
-    throw new CliModelsError(
-      `the control_response is not JSON: ${err.message}`,
-    );
-  }
-  const parsed = InitializeResponseSchema.safeParse(json);
+/** The menu out of `initialize`'s `models`. Pure, so a recorded answer can drive it. Throws {@link CliModelsError}. */
+export function parseInitializeModels(models: unknown): CliModel[] {
+  const parsed = MenuSchema.safeParse(models);
   if (!parsed.success)
     throw new CliModelsError(
-      `the control_response changed shape (${parsed.error.issues
+      `the menu changed shape (${parsed.error.issues
         .slice(0, 3)
         .map((i) => `${i.path.join(".")}: ${i.message}`)
         .join("; ")})`,
     );
-  const { response } = parsed.data;
-  if (response.subtype === "error")
-    throw new CliModelsError(`the CLI refused initialize: ${response.error}`);
-  return response.response.models;
+  return parsed.data;
 }
 
 /** CLI start-up (~1–3 s measured); a ceiling, not an estimate. */
@@ -121,20 +55,26 @@ const INITIALIZE_TIMEOUT_MS = 60_000;
 
 /**
  * Ask the installed Claude CLI which models it offers: every family alias with
- * the version it resolves to, and every older version it still runs. Same
- * closed host environment an agent pane gets (`pickHostEnv`), so the answer
- * honours the user's own settings and env overrides.
+ * the version it resolves to, and every older version it still runs. On the
+ * computer's own login (a token account's menu is narrower — it carries no
+ * claude.ai sign-in), under the user's own settings and env overrides.
  */
 export async function readCliModels(
   bin: string,
   signal: AbortSignal,
 ): Promise<CliModel[]> {
-  const r = await spawnCaptured([bin, ...INITIALIZE_ARGS], {
-    cwd: tmpdir(),
-    env: pickHostEnv(process.env),
-    stdin: INITIALIZE_REQUEST,
-    timeoutMs: INITIALIZE_TIMEOUT_MS,
-    signal,
-  });
-  return parseInitializeOutput(r);
+  let init;
+  try {
+    init = await readClaudeInitialize({
+      env: await claudeSessionEnv(SYSTEM_ACCOUNT_ID),
+      bin,
+      cwd: tmpdir(),
+      timeoutMs: INITIALIZE_TIMEOUT_MS,
+      signal,
+    });
+  } catch (err) {
+    if (!(err instanceof Error)) throw err;
+    throw new CliModelsError(err.message);
+  }
+  return parseInitializeModels(init.models);
 }
