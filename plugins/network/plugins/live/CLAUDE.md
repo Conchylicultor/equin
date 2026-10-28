@@ -2422,11 +2422,11 @@ sanctioned entries too.
     - `serveCollectionOn`
     - `serveValueOn`
 - Cross-plugin:
-  - Imported by: 303 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 304 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×81
     - `conversations` ×51
     - `debug` ×32
-    - `tasks` ×28
+    - `tasks` ×29
     - `infra` ×19
     - `page` ×14
     - `active-data` ×12

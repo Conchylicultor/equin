@@ -1,3 +1,4 @@
+import { interactiveMandate } from "@plugins/tasks/plugins/mandate-presets/core";
 import { db } from "@plugins/database/server";
 import {
   setTaskCategory,
@@ -103,6 +104,7 @@ export async function seed(prototypes: PrototypeFixtureData): Promise<void> {
       title: story.task,
       titleAuto: false,
       ...(story.prompt === undefined ? {} : { description: story.prompt }),
+      mandate: interactiveMandate(),
     });
     if (story.category !== undefined)
       await setTaskCategory(taskId, story.category);

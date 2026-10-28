@@ -1,5 +1,6 @@
--- singularity:snapshot id=a79ad933-7bc7-48cf-8710-710f3f5f0823 parents=3cc2f59b-547f-488d-9a43-971e3d0a385c
--- singularity:supersedes a00b9498 84804f51
+-- singularity:snapshot id=35e0e396-7f2a-48de-aa13-1772d8c11f0f parents=3cc2f59b-547f-488d-9a43-971e3d0a385c
+-- singularity:supersedes 07e4a58d
+-- singularity:supersedes 07e4a58d <- a00b9498 84804f51
 -- singularity:phase expand
 CREATE TABLE "digest_cursors" (
 	"conversation_id" text NOT NULL,
