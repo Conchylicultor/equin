@@ -44,7 +44,8 @@ export interface McpTool<T extends z.ZodRawShape = z.ZodRawShape> {
    * them — typically once, at connect. For facts an agent needs while using the
    * tool that live in the database (a vocabulary to pick from), where a fixed
    * string would go stale. `null` (or blank) contributes nothing. A render that
-   * throws fails the listing — loud, never a silently missing section.
+   * throws is reported, and the tool is listed with a notice in place of the
+   * section — never a silently missing section, never a failed listing.
    */
   liveDescription?: (ctx: McpToolContext) => Promise<string | null>;
   inputSchema: T;
@@ -52,7 +53,7 @@ export interface McpTool<T extends z.ZodRawShape = z.ZodRawShape> {
    * Whether this conversation sees the tool. Evaluated on every MCP request
    * (keep it to a cheap lookup); when false the tool is neither listed in
    * `tools/list` nor callable for that request. Omitted: always visible. A
-   * `when` that throws fails the request.
+   * `when` that throws is reported and hides only this tool (fail closed).
    */
   when?: (ctx: McpToolContext) => boolean | Promise<boolean>;
   /**
@@ -89,7 +90,8 @@ export type McpScopeResolver = (ctx: McpToolContext) => Promise<McpScope>;
  * A section of the server-level instructions an MCP client receives once, in
  * the `initialize` result, at connect. Rendered per connection with the
  * connecting conversation's context; return `null` to contribute nothing for
- * that conversation. A render that throws fails the `initialize` request.
+ * that conversation. A render that throws is reported and replaced by a notice
+ * that the section is missing; the connect and every other section go through.
  */
 export interface McpInstructions {
   /** Unique id. Sections are joined in id order. */

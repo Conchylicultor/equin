@@ -7,6 +7,7 @@ import {
   renderInstructions,
 } from "./instructions";
 import { MCP_SERVER_NAME } from "../../core";
+import { runContribution } from "./isolate";
 import type { McpTool, McpToolCallContext, McpToolContext } from "./mcp";
 import { registry, scopeRegistry } from "./registry";
 import { toolsInScope } from "./scope";
@@ -28,7 +29,8 @@ export async function handleMcpRequest(
     : { kind: "default" as const };
 
   // Server instructions only ride the initialize result, so only initialize
-  // pays for rendering them. A throwing contribution fails initialize loudly.
+  // pays for rendering them. A throwing contribution fails only its own
+  // section (reported, and replaced by a notice the agent reads).
   // A profile-scoped conversation gets none: the sections describe this app
   // to its own agents, and a profile's agent carries only its profile's
   // context.
@@ -48,10 +50,18 @@ export async function handleMcpRequest(
   // Per-conversation visibility: first the scope, then each tool's own `when`.
   // A tool either says no to is never registered on this request's server, so
   // it is absent from tools/list and a call to it is an unknown-tool error. The
-  // gates run in parallel.
+  // gates run in parallel. A gate that throws hides only its own tool (fail
+  // closed) and is reported; every other tool is unaffected.
   const tools = toolsInScope(registry, scope);
   const visible = await Promise.all(
-    tools.map(async (tool) => (tool.when ? tool.when(ctx) : true)),
+    tools.map(async (tool) => {
+      const when = tool.when;
+      if (!when) return true;
+      const outcome = await runContribution(`tool "${tool.name}" when`, () =>
+        when(ctx),
+      );
+      return outcome.ok && outcome.value;
+    }),
   );
 
   for (const [i, tool] of tools.entries()) {
@@ -121,7 +131,8 @@ function toolUseIdOf(meta: unknown): string | null {
 /**
  * Every tool's description with its live section appended — keyed by tool
  * name, for the tools that declare one. Rendered in parallel; a throwing
- * render rejects the listing.
+ * render fails only its own tool's section — reported, and the tool listed
+ * with a notice that its live section is missing.
  */
 async function renderDescriptions(
   ctx: McpToolContext,
@@ -130,7 +141,17 @@ async function renderDescriptions(
     (t): t is McpTool & Required<Pick<McpTool, "liveDescription">> =>
       t.liveDescription !== undefined,
   );
-  const sections = await Promise.all(live.map((t) => t.liveDescription(ctx)));
+  const sections = await Promise.all(
+    live.map(async (t) => {
+      const outcome = await runContribution(
+        `tool "${t.name}" live description`,
+        () => t.liveDescription(ctx),
+      );
+      return outcome.ok
+        ? outcome.value
+        : `(This tool's live section failed to render (${outcome.message}) and has been reported.)`;
+    }),
+  );
   const out = new Map<string, string>();
   live.forEach((tool, i) => {
     const section = sections[i];

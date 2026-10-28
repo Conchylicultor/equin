@@ -8,6 +8,7 @@
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { z } from "zod";
+import { setErrorReporter } from "@plugins/framework/plugins/server-core/core";
 import { handleMcpRequest } from "./handle-mcp";
 import { Mcp, type McpToolContext } from "./mcp";
 import { instructionsRegistry, registry } from "./registry";
@@ -51,8 +52,12 @@ const initialize = {
   },
 };
 
+let reported: string[] = [];
+
 beforeEach(() => {
   renders = [];
+  reported = [];
+  setErrorReporter((report) => reported.push(report.message));
   instructionsRegistry.clear();
   registry.clear();
   void Mcp.tool({
@@ -127,16 +132,24 @@ describe("Mcp.instructions", () => {
     expect(renders).toEqual([]);
   });
 
-  test("a throwing contribution fails initialize loudly", async () => {
+  test("a throwing contribution fails only its own section, reported", async () => {
+    contribute("a-first", "First section.");
     void Mcp.instructions({
       id: "boom",
       render: () => Promise.reject(new Error("render failed")),
     }).register();
-    const outcome = await post(initialize).then(
-      () => "resolved",
-      (err: unknown) => (err instanceof Error ? err.message : String(err)),
-    );
-    expect(outcome).toBe("render failed");
+    contribute("z-last", "Last section.");
+    const res = await post(initialize);
+    expect(res.status).toBe(200);
+    const json = (await res.json()) as { result: { instructions?: string } };
+    const text = json.result.instructions ?? "";
+    expect(text).toStartWith("First section.\n\n");
+    expect(text).toEndWith("\n\nLast section.");
+    expect(text).toContain('Instructions section "boom" unavailable');
+    expect(text).toContain("render failed");
+    expect(reported).toEqual([
+      'MCP instructions section "boom" failed: render failed',
+    ]);
   });
 
   test("duplicate ids throw at register", () => {
@@ -183,6 +196,23 @@ describe("Mcp.tool liveDescription", () => {
   test("a null section leaves the fixed description", async () => {
     liveTool("live", null);
     expect((await listed()).get("live")).toBe("Fixed.");
+  });
+
+  test("a throwing section keeps the tool listed with a notice, reported", async () => {
+    void Mcp.tool({
+      name: "live",
+      description: "Fixed.",
+      liveDescription: () => Promise.reject(new Error("db down")),
+      inputSchema: {},
+      handler: () => ({ content: [{ type: "text", text: "ok" }] }),
+    }).register();
+    const tools = await listed();
+    expect(tools.get("live")).toStartWith("Fixed.\n\n");
+    expect(tools.get("live")).toContain("db down");
+    expect(tools.get("echo")).toBe("Echo");
+    expect(reported).toEqual([
+      'MCP tool "live" live description failed: db down',
+    ]);
   });
 
   test("only tools/list renders it", async () => {
@@ -259,6 +289,13 @@ describe("Mcp.tool when", () => {
       (json.result?.isError === true &&
         json.result.content[0]?.text !== "hidden");
     expect(refused).toBe(true);
+  });
+
+  test("a throwing when hides only its own tool, reported", async () => {
+    gate("shown", true);
+    gate("broken", Promise.reject(new Error("gate failed")));
+    expect((await listed()).sort()).toEqual(["echo", "shown"]);
+    expect(reported).toEqual(['MCP tool "broken" when failed: gate failed']);
   });
 
   test("a visible gated tool is callable", async () => {
