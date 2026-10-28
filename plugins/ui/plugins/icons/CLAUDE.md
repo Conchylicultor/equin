@@ -38,8 +38,9 @@ const tsIcon = seti("typescript");         // { kind: "seti",   name: "typescrip
   resolved drawing and `<Icon>` has no fallback of its own; `symbolBody` (the
   release CLI's app icon) applies the same rule. `BrandName` is a Simple Icons slug;
   `LucideName` is a visible Lucide icon or alias. All three are generated into
-  `core/symbol-names.generated.ts` by `scripts/gen-symbol-names.ts`; rerun it
-  after upgrading an `@iconify-json/*` package (`icons:symbol-names-in-sync`).
+  `core/symbol-names.generated.ts` by `./equin build` / `regen-generated`
+  (`plugins/icon-sets` derives them from the installed `@iconify-json/*`
+  sets), so an icon-set upgrade regenerates them (`icons:symbol-names-in-sync`).
 - **Literal names only.** `symbol("…")` / `brand("…")` / `seti("…")` take a string literal,
   imported under their own name and only ever called
   (lint `icons/literal-icon-name`). The build scans those literals into the
@@ -478,9 +479,7 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `tag-tree/picker`
     - `wish`
 - Exemptions:
-  - Exempts itself from:
-    - `icons/reserved-nav-icon` — `core/nav-icons.ts` (sanctioned)
-    - `boundaries/no-platform-api` — `shared/symbol-names.ts` (debt)
+  - Exempts itself from: `icons/reserved-nav-icon` — `core/nav-icons.ts` (sanctioned)
   - Exempted by: `ui/icons` (0 debt)
 - Server:
   - Exports (types):
@@ -568,33 +567,20 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `symbol`
     - `symbolId`
 - Shared:
-  - Exports (types): `SymbolNameList`
   - Exports (values):
-    - `brandNames`
     - `buildSetiSet`
-    - `ICON_SET_PACKAGES`
-    - `installedSetVersions`
-    - `lucideNames`
     - `normalizeSetiSvg`
-    - `readIconSet`
-    - `readInputsHash`
-    - `readListInputsHash`
     - `readSetiIdentity`
     - `renderSetiNames`
-    - `renderSymbolNameList`
-    - `renderSymbolNames`
     - `SETI_JSON_REL_PATH`
     - `SETI_LICENSE_REL_PATH`
     - `SETI_NAMES_REL_PATH`
     - `SETI_NORMALIZER_VERSION`
     - `SETI_SOURCE`
     - `setiIdentity`
-    - `SYMBOL_NAME_LIST_REL_PATH`
-    - `SYMBOL_NAMES_REL_PATH`
-    - `symbolBaseNames`
-    - `symbolNamesInputsHash`
 - Sub-plugins:
   - **`emoji`** — The <EmojiPicker>: a searchable, categorized emoji grid over frimousse whose emojibase data is served same-origin by the asset mirror; onSelect hands back a parsed Emoji. Plus <EmojiGlyph>, which…
+  - **`icon-sets`** — The installed @iconify-json sets, host-side: read one (readIconSet), their versions, and the SymbolName / BrandName / LucideName unions and the saved-names runtime list derived from them — rendered…
   - **`saved-names`** — The membership-checked SavedSymbolName: a user-picked Material Symbols name, parsed against the installed sets before anything stores it.
   - **`saved-sources`** — The saved-icon source registry: defineSavedIconSource registers a place that stores user-picked icons (its tables, its names, a watch for a non-DB store), and savedIconSources lists them for the…
   - **`sprites`** — Mounts the page's icon sprites inline: the resident default-style sprites from the boot snapshot (present at first paint) plus, on demand, the sprite of every other style a theme scope picks.

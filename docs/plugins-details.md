@@ -26456,7 +26456,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `review/plugin-changes` (2 debt)
               - `stats/cost` (3 debt)
               - `toolchain` (1 debt)
-              - `ui/icons` (1 debt)
+              - `ui/icons/icon-sets` (1 debt)
         - **`checks`** — Check runner and built-in checks for ./equin check
           - Core:
             - Uses: 49 symbols — full list in [`plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md)
@@ -26674,7 +26674,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Register: `defineSupervisedJob('type-check.backstop')`
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
-            - Uses: 113 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
+            - Uses: 114 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
               - `plugin-meta/parse-utils` ×17
               - `config_v2` ×15
               - `framework/plugin-id` ×14
@@ -26702,6 +26702,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta/facets/exemptions.exemptionsFacetDef`
               - `plugin-meta/facets/slots.slotsFacetDef`
               - `primitives/css/ui-kit.APP_STYLESHEET_PATH`
+              - `ui/icons/icon-sets.renderSymbolNameFiles`
               - `ui/icons.isIconRefModule`
             - Exports (types):
               - `AuthoredOverrideSeedResult`
@@ -51355,9 +51356,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tag-tree/picker`
           - `wish`
       - Exemptions:
-        - Exempts itself from:
-          - `icons/reserved-nav-icon` — `core/nav-icons.ts` (sanctioned)
-          - `boundaries/no-platform-api` — `shared/symbol-names.ts` (debt)
+        - Exempts itself from: `icons/reserved-nav-icon` — `core/nav-icons.ts` (sanctioned)
         - Exempted by: `ui/icons` (0 debt)
       - Server:
         - Exports (types):
@@ -51445,31 +51444,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `symbol`
           - `symbolId`
       - Shared:
-        - Exports (types): `SymbolNameList`
         - Exports (values):
-          - `brandNames`
           - `buildSetiSet`
-          - `ICON_SET_PACKAGES`
-          - `installedSetVersions`
-          - `lucideNames`
           - `normalizeSetiSvg`
-          - `readIconSet`
-          - `readInputsHash`
-          - `readListInputsHash`
           - `readSetiIdentity`
           - `renderSetiNames`
-          - `renderSymbolNameList`
-          - `renderSymbolNames`
           - `SETI_JSON_REL_PATH`
           - `SETI_LICENSE_REL_PATH`
           - `SETI_NAMES_REL_PATH`
           - `SETI_NORMALIZER_VERSION`
           - `SETI_SOURCE`
           - `setiIdentity`
-          - `SYMBOL_NAME_LIST_REL_PATH`
-          - `SYMBOL_NAMES_REL_PATH`
-          - `symbolBaseNames`
-          - `symbolNamesInputsHash`
       - Plugins:
         - **`emoji`** — The <EmojiPicker>: a searchable, categorized emoji grid over frimousse whose emojibase data is served same-origin by the asset mirror; onSelect hands back a parsed Emoji. Plus <EmojiGlyph>, which draws an emoji in an icon's box (sized by the same size-* class). The page icon picker and <PageIcon> compose them. Registers the emojibase data mirror so the emoji picker's data is served same-origin (offline-capable after one warm-up) rather than fetched from the CDN by the browser.
           - Web:
@@ -51507,6 +51492,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `EmojiSchema`
               - `isEmoji`
+        - **`icon-sets`** — The installed @iconify-json sets, host-side: read one (readIconSet), their versions, and the SymbolName / BrandName / LucideName unions and the saved-names runtime list derived from them — rendered by `./equin build` / `regen-generated`, so an icon-set upgrade regenerates its own names.
+          - Cross-plugin:
+            - Imported by: `framework/tooling/codegen`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `core/internal/symbol-names.ts` (debt)
+          - Core:
+            - Exports (types): `SymbolNameList`
+            - Exports (values):
+              - `ICON_SET_PACKAGES`
+              - `installedSetVersions`
+              - `readIconSet`
+              - `readInputsHash`
+              - `readListInputsHash`
+              - `renderSymbolNameFiles`
+              - `SYMBOL_NAME_LIST_REL_PATH`
+              - `SYMBOL_NAMES_REL_PATH`
+              - `symbolNamesInputsHash`
         - **`saved-names`** — The membership-checked SavedSymbolName: a user-picked Material Symbols name, parsed against the installed sets before anything stores it.
           - Cross-plugin:
             - Imported by:

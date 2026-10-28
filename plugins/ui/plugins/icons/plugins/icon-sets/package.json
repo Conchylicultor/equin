@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-ui-icons-icon-sets",
+  "private": true,
+  "version": "0.0.1",
+  "description": "The installed @iconify-json sets, host-side: read one (readIconSet), their versions, and the SymbolName / BrandName / LucideName unions and the saved-names runtime list derived from them — rendered by `./equin build` / `regen-generated`, so an icon-set upgrade regenerates its own names."
+}

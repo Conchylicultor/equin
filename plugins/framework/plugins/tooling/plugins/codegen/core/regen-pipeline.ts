@@ -22,6 +22,7 @@ import { assertSlotsDeclared } from "./slot-declaration-guard";
 import { syncPluginPackageNames } from "./package-names";
 import { generateExemptRuleIds } from "./exempt-rule-ids-gen";
 import { generateClaudeSettings } from "./claude-settings-gen";
+import { generateSymbolNames } from "./symbol-names-gen";
 
 /**
  * Single source of truth for the ordered, non-migration **repo-tree** codegen
@@ -137,10 +138,17 @@ export async function regenerateRegistryCodegen({
 }
 
 /**
- * Manifest-level repo-tree codegen: pre-barrel manifests → the slot declaration
- * guard → post-web manifests → plugin docs → token-group-vars → config-origins.
+ * Manifest-level repo-tree codegen: icon symbol names → pre-barrel manifests →
+ * the slot declaration guard → post-web manifests → plugin docs →
+ * token-group-vars → config-origins.
  *
  * Ordering constraints (load-bearing — do not reorder):
+ *   - icon SYMBOL NAMES first — a function of the installed `@iconify-json/*`
+ *     sets, read from disk (no barrel). Of its two files only the saved-names
+ *     JSON is loaded at runtime (through `saved-names/core`); writing both
+ *     before any barrel import means no process of this pipeline can hold a
+ *     stale copy, without registering a non-`*.generated.ts` file as a
+ *     pre-barrel manifest.
  *   - PRE-BARREL manifests FIRST — the set is now defined by `preBarrelManifests`
  *     (codegen/core/pre-barrel-manifests.ts), not hand-listed here. These are
  *     generated source files that plugin barrels import at module-load (directly
@@ -194,6 +202,10 @@ export async function regenerateManifestCodegen({
   root,
   onStep = runInline,
 }: RegenCodegenOptions): Promise<void> {
+  await onStep("symbolNames", "icon symbol names", () =>
+    generateSymbolNames({ root }),
+  );
+
   // Pre-barrel phase: regenerate every barrel-reachable manifest before any
   // barrel import freezes the ESM cache. Set defined by `preBarrelManifests`.
   for (const m of preBarrelManifests) {

@@ -11,7 +11,7 @@ import {
   type StyleKey,
   type SymbolName,
 } from "../../core";
-import { readIconSet } from "../../shared";
+import { readIconSet } from "@plugins/ui/plugins/icons/plugins/icon-sets/core";
 
 /** The drawable part of one Iconify icon. */
 export interface IconBody {

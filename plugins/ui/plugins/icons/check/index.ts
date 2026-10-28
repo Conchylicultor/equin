@@ -9,24 +9,26 @@ import {
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import type { IconifyJSON } from "@iconify/types";
+import {
+  SYMBOL_NAMES_REL_PATH,
+  SYMBOL_NAME_LIST_REL_PATH,
+  installedSetVersions,
+  readInputsHash,
+  readListInputsHash,
+  symbolNamesInputsHash,
+} from "@plugins/ui/plugins/icons/plugins/icon-sets/core";
 import { LUCIDE_MAP } from "../core";
 import {
   SETI_JSON_REL_PATH,
   SETI_LICENSE_REL_PATH,
   SETI_NAMES_REL_PATH,
-  SYMBOL_NAMES_REL_PATH,
-  SYMBOL_NAME_LIST_REL_PATH,
-  installedSetVersions,
-  readListInputsHash,
-  readInputsHash,
   readSetiIdentity,
   renderSetiNames,
   setiIdentity,
-  symbolNamesInputsHash,
 } from "../shared";
 
 const REGEN_NAMES =
-  "Run `./equin run plugins/ui/plugins/icons/scripts/gen-symbol-names.ts` and commit the result.";
+  "Run `./equin regen-generated` (or `./equin build`) and commit the result.";
 
 const symbolNamesInSync: Check = {
   id: "icons:symbol-names-in-sync",

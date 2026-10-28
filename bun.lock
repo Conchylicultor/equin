@@ -6413,6 +6413,10 @@
         "frimousse": "^0.4.0",
       },
     },
+    "plugins/ui/plugins/icons/plugins/icon-sets": {
+      "name": "@equin/plugin-ui-icons-icon-sets",
+      "version": "0.0.1",
+    },
     "plugins/ui/plugins/icons/plugins/saved-names": {
       "name": "@equin/plugin-ui-icons-saved-names",
       "version": "0.0.1",
@@ -9829,6 +9833,8 @@
     "@equin/plugin-ui-icons": ["@equin/plugin-ui-icons@workspace:plugins/ui/plugins/icons"],
 
     "@equin/plugin-ui-icons-emoji": ["@equin/plugin-ui-icons-emoji@workspace:plugins/ui/plugins/icons/plugins/emoji"],
+
+    "@equin/plugin-ui-icons-icon-sets": ["@equin/plugin-ui-icons-icon-sets@workspace:plugins/ui/plugins/icons/plugins/icon-sets"],
 
     "@equin/plugin-ui-icons-saved-names": ["@equin/plugin-ui-icons-saved-names@workspace:plugins/ui/plugins/icons/plugins/saved-names"],
 

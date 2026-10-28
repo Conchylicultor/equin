@@ -12,9 +12,11 @@ export default defineCliCommand({
   description:
     "Regenerate all non-migration repo-tree codegen artifacts: barrel stubs, " +
     "plugin registries, plugin docs (compact/details/CLAUDE.md autogen blocks), " +
-    "the reorderable-slots / data-views / token-group-vars manifests, and config " +
-    "origins. This is the SAME ordered repo-tree pipeline `./equin build` " +
-    "runs (shared via codegen core), so a full build immediately after is a no-op. " +
+    "the reorderable-slots / data-views / token-group-vars manifests, the icon " +
+    "names derived from the installed @iconify-json sets, and config origins. " +
+    "This is the SAME ordered repo-tree pipeline `./equin build` runs " +
+    "(shared via codegen core), " +
+    "so a full build immediately after is a no-op. " +
     "Used by the post-rebase normalize step in `push`. Idempotent.",
   run: () => import("./run"),
 });

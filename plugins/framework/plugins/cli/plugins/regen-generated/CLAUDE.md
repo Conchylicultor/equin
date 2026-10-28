@@ -3,16 +3,19 @@
 `./equin regen-generated` — re-derives every non-migration generated file
 in the repo tree: barrel stubs, the plugin registries, the plugin docs
 (`plugins-compact.md`, `plugins-details.md`, per-plugin `CLAUDE.md` autogen
-blocks), the reorderable-slots / data-views / token-group-vars manifests, and
-config origins.
+blocks), the reorderable-slots / data-views / token-group-vars manifests, the icon
+name unions derived from the installed `@iconify-json/*` sets, and config
+origins.
 
 It owns no pipeline of its own. It calls the same `regenerateRegistryCodegen` +
 `regenerateManifestCodegen` that `./equin build` calls, in the same order,
 so a build immediately afterwards is a no-op — there is one repo-tree codegen
 pipeline, and two commands that reach it.
 
-`push` is the real caller: after a rebase, a merge driver may have auto-resolved
-a generated file to a side that no longer matches the merged sources, and
+`push` is the real caller (the npm updater is the other: it runs this after
+every package move, so a move whose generated files are a function of the
+installed package — the icon names — lands with them regenerated): after a
+rebase, a merge driver may have auto-resolved a generated file to a side that no longer matches the merged sources, and
 regenerating is the repair. Paying for a whole build there would mean a build
 lock, a Postgres wait and a DB fork for a pass that only rewrites tree files.
 
