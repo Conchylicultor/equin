@@ -52,6 +52,7 @@ export {
   weekRoom,
 } from "./usage-limits";
 export type {
+  LaunchCandidate,
   UsageLevel,
   UsageWindowId,
   UsageWindowView,

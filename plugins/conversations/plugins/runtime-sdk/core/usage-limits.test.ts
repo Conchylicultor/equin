@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { ClaudeUsage } from "./claude-usage";
 import {
+  type LaunchCandidate,
   launchAccount,
   limitReached,
   roomiestAccount,
@@ -71,6 +72,10 @@ describe("weekRoom", () => {
   });
 });
 
+const plan = (...ids: string[]): LaunchCandidate[] =>
+  ids.map((id) => ({ id, metered: false }));
+const KEY: LaunchCandidate = { id: "key", metered: true };
+
 describe("roomiestAccount", () => {
   test("most weekly room, skipping limited accounts, unknown last", () => {
     const byAccount = {
@@ -78,19 +83,26 @@ describe("roomiestAccount", () => {
       b: usage(0.9, 0.2),
       c: usage(1, 0.0),
     };
-    expect(roomiestAccount(["a", "b", "c", "d"], byAccount, NOW)).toBe("b");
-    expect(roomiestAccount(["c", "d"], byAccount, NOW)).toBe("d");
-    expect(roomiestAccount(["c"], byAccount, NOW)).toBeNull();
+    expect(roomiestAccount(plan("a", "b", "c", "d"), byAccount, NOW)).toBe("b");
+    expect(roomiestAccount(plan("c", "d"), byAccount, NOW)).toBe("d");
+    expect(roomiestAccount(plan("c"), byAccount, NOW)).toBeNull();
+  });
+  test("a metered account only when no plan account can run", () => {
+    const byAccount = { a: usage(0.1, 0.99), c: usage(1, 0.0) };
+    expect(roomiestAccount([KEY, ...plan("a", "c")], byAccount, NOW)).toBe("a");
+    // A plan account never reported on still comes before the key.
+    expect(roomiestAccount([KEY, ...plan("c", "d")], byAccount, NOW)).toBe("d");
+    expect(roomiestAccount([...plan("c"), KEY], byAccount, NOW)).toBe("key");
   });
 });
 
 describe("launchAccount", () => {
   const byAccount = { system: usage(1, 0.5), work: usage(0.1, 0.3) };
-  const ids = ["system", "work"];
+  const accounts = plan("system", "work");
   test("the active account, unless auto-switch moves off a reached limit", () => {
     expect(
       launchAccount({
-        ids,
+        accounts,
         active: "system",
         autoSwitch: false,
         byAccount,
@@ -99,7 +111,7 @@ describe("launchAccount", () => {
     ).toBe("system");
     expect(
       launchAccount({
-        ids,
+        accounts,
         active: "system",
         autoSwitch: true,
         byAccount,
@@ -108,7 +120,7 @@ describe("launchAccount", () => {
     ).toBe("work");
     expect(
       launchAccount({
-        ids,
+        accounts,
         active: "work",
         autoSwitch: true,
         byAccount,
@@ -119,12 +131,55 @@ describe("launchAccount", () => {
   test("nowhere to go: stays", () => {
     expect(
       launchAccount({
-        ids,
+        accounts,
         active: "system",
         autoSwitch: true,
         byAccount: { ...byAccount, work: usage(0.2, 1) },
         now: NOW,
       }),
     ).toBe("system");
+  });
+  test("an API key is the overflow: used while every plan is full, left once one has room", () => {
+    const withKey = [...accounts, KEY];
+    const full = { system: usage(1, 0.5), work: usage(0.2, 1) };
+    expect(
+      launchAccount({
+        accounts: withKey,
+        active: "system",
+        autoSwitch: true,
+        byAccount: full,
+        now: NOW,
+      }),
+    ).toBe("key");
+    // Still full: stays on the key.
+    expect(
+      launchAccount({
+        accounts: withKey,
+        active: "key",
+        autoSwitch: true,
+        byAccount: full,
+        now: NOW,
+      }),
+    ).toBe("key");
+    // A plan has room again: back to it.
+    expect(
+      launchAccount({
+        accounts: withKey,
+        active: "key",
+        autoSwitch: true,
+        byAccount,
+        now: NOW,
+      }),
+    ).toBe("work");
+    // Auto-switch off: the user's pick, whatever it is.
+    expect(
+      launchAccount({
+        accounts: withKey,
+        active: "key",
+        autoSwitch: false,
+        byAccount,
+        now: NOW,
+      }),
+    ).toBe("key");
   });
 });

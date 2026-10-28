@@ -1,15 +1,24 @@
 export {
   addClaudeAccount,
   claudeAccountIds,
+  claudeAccountRefs,
   claudeAccounts,
-  CLAUDE_TOKEN_ENV,
+  CLAUDE_CREDENTIAL_ENVS,
+  CLAUDE_CREDENTIALS,
+  claudeCredentialEnv,
+  claudeCredentialKind,
   ClaudeAccountSchema,
   ClaudeAccountsSchema,
-  ClaudeTokenSchema,
+  ClaudeCredentialSchema,
   NO_CLAUDE_ACCOUNTS,
   removeClaudeAccount,
   selectClaudeAccount,
   setClaudeAccountAutoSwitch,
   SYSTEM_ACCOUNT_ID,
 } from "./internal/accounts";
-export type { ClaudeAccount, ClaudeAccounts } from "./internal/accounts";
+export type {
+  ClaudeAccount,
+  ClaudeAccounts,
+  ClaudeCredential,
+  ClaudeCredentialKind,
+} from "./internal/accounts";

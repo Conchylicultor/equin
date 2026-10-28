@@ -21,7 +21,7 @@ import {
   type DaemonInstance,
 } from "@plugins/infra/plugins/spawn/plugins/daemon/server";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
-import { claudeAccountIds } from "@plugins/infra/plugins/claude-cli/plugins/accounts/core";
+import { claudeAccountRefs } from "@plugins/infra/plugins/claude-cli/plugins/accounts/core";
 import {
   readClaudeAccounts,
   selectClaudeAccountById,
@@ -115,7 +115,7 @@ function chooseLaunchAccount(): string {
 export function nextLaunchAccount(): string {
   const state = readClaudeAccounts();
   return launchAccount({
-    ids: claudeAccountIds(state),
+    accounts: claudeAccountRefs(state),
     active: state.active,
     autoSwitch: state.autoSwitch,
     byAccount: readClaudeUsage().byAccount,

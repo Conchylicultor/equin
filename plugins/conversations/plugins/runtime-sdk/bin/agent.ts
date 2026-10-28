@@ -38,8 +38,8 @@ import { SAMPLE } from "@plugins/infra/plugins/paths/server";
 import { basename, dirname, join } from "node:path";
 import { parseArgs } from "node:util";
 import { ZodError, z } from "zod";
-import { claudeAccountToken } from "@plugins/infra/plugins/claude-cli/plugins/accounts/server";
-import { CLAUDE_TOKEN_ENV } from "@plugins/infra/plugins/claude-cli/plugins/accounts/core";
+import { claudeAccountCredential } from "@plugins/infra/plugins/claude-cli/plugins/accounts/server";
+import { claudeCredentialEnv } from "@plugins/infra/plugins/claude-cli/plugins/accounts/core";
 import { disclaimArgv } from "@plugins/packages/plugins/spawn-disclaim/core";
 import {
   AGENT_EVENTS_FILE,
@@ -89,11 +89,12 @@ const usagePath = args["usage-file"];
 const options = AgentLaunchOptionsSchema.parse(
   JSON.parse(readFileSync(join(dir, AGENT_OPTIONS_FILE), "utf8")),
 );
-// The account's token, fetched by the agent itself from the secrets store, so
-// it never sits in an argv, the options file or the login shell's
-// environment. Only Claude Code's own process gets it (`env` below); the
-// system account (null) is Claude Code's own login.
-const oauthToken = await claudeAccountToken(args.account);
+// The account's credential (a plan token or an API key), fetched by the agent
+// itself from the secrets store, so it never sits in an argv, the options file
+// or the login shell's environment. Only Claude Code's own process gets it
+// (`env` below), in the variable its kind uses; the system account (null) is
+// Claude Code's own login.
+const credential = await claudeAccountCredential(args.account);
 
 // ── events.jsonl ──────────────────────────────────────────────────────────
 // Resumes numbering from the file (or, right after a rotation, its newest
@@ -441,8 +442,8 @@ const session = query({
     ...(options.resume === null || options.fork
       ? { sessionId: options.sessionId }
       : {}),
-    ...(oauthToken
-      ? { env: { ...process.env, [CLAUDE_TOKEN_ENV]: oauthToken } }
+    ...(credential
+      ? { env: claudeCredentialEnv(process.env, credential) }
       : {}),
     // Same argv, cwd, env and abort signal the SDK would spawn with — run
     // through `disclaim-exec` when the backend resolved it, which execs the

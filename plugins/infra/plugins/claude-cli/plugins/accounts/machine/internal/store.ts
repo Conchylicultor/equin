@@ -1,5 +1,6 @@
 import { readFileSync, renameSync, writeFileSync } from "node:fs";
 import {
+  claudeCredentialKind,
   ClaudeAccountsSchema,
   NO_CLAUDE_ACCOUNTS,
   SYSTEM_ACCOUNT_ID,
@@ -7,9 +8,12 @@ import {
   type ClaudeAccounts,
 } from "../../core";
 import { claudeAccountsDir } from "../../data-dirs";
-import { deleteClaudeAccountToken, saveClaudeAccountToken } from "../../server";
+import {
+  deleteClaudeAccountCredential,
+  saveClaudeAccountCredential,
+} from "../../server";
 
-// The accounts file (the tokens are the server half's, in the secrets store). Every write
+// The accounts file (the credentials are the server half's, in the secrets store). Every write
 // replaces the file whole through a rename, so a reader (another worktree's
 // launch, the live value's watch) never sees half of it.
 
@@ -45,17 +49,18 @@ function assertKnown(state: ClaudeAccounts, id: string): void {
     throw new Error(`No Claude account "${id}"`);
 }
 
-export async function addClaudeAccountWithToken(
+export async function addClaudeAccountWithCredential(
   name: string,
-  token: string,
+  credential: string,
 ): Promise<ClaudeAccount> {
   const account: ClaudeAccount = {
     id: `acct-${crypto.randomUUID().slice(0, 8)}`,
     name,
     addedAt: Date.now(),
+    kind: claudeCredentialKind(credential),
   };
-  // The token first: an account in the list always has one.
-  await saveClaudeAccountToken(account.id, token);
+  // The credential first: an account in the list always has one.
+  await saveClaudeAccountCredential(account.id, credential);
   const state = readClaudeAccounts();
   writeClaudeAccounts({ ...state, accounts: [...state.accounts, account] });
   return account;
@@ -71,7 +76,7 @@ export async function removeClaudeAccountById(id: string): Promise<void> {
     accounts: state.accounts.filter((a) => a.id !== id),
     active: state.active === id ? SYSTEM_ACCOUNT_ID : state.active,
   });
-  await deleteClaudeAccountToken(id);
+  await deleteClaudeAccountCredential(id);
 }
 
 export function selectClaudeAccountById(id: string): void {

@@ -19201,11 +19201,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`runtime-sdk`** — The health report's Claude Code row: Claude Code itself (critical while missing or signed out, with the install / sign-in commands and Check again), attention when it differs in major.minor from the CLI version the pinned Agent SDK was built for, the agent processes running — here, and in every other worktree (each as its task's chip) — the active Claude account's usage limits as meters (the week collapsed, the session too expanded; attention while its limit is reached), and the Claude account picker (each account's weekly room, add / remove / switch, auto-switch, Continue on another account when the active one is limited). The sdk runtime's portable half: the conversations_ext_sdk_agent side table (each agent's event cursor and the projection of its events — session id, busy/idle, the open question, the last turn and its rewind anchor), the pure event reducer, and the mapping of a launch onto the agent's options file; the runtime-sdk.error-stopped collection (active conversations whose agent's turn an API error stopped — a usage limit, a server error, a lost connection — with the CLI's kind of failure).
       - Web:
         - Contributes: `HealthReport.Row` "Claude Code" → `ClaudeCodeRowDetail`
-        - Uses: 37 symbols — full list in [`plugins/conversations/plugins/runtime-sdk/REFERENCE.md`](../plugins/conversations/plugins/runtime-sdk/REFERENCE.md)
+        - Uses: 38 symbols — full list in [`plugins/conversations/plugins/runtime-sdk/REFERENCE.md`](../plugins/conversations/plugins/runtime-sdk/REFERENCE.md)
+          - `primitives/setup-steps` ×5
           - `infra/claude-cli/availability` ×4
           - `infra/endpoints` ×4
           - `primitives/css/ui-kit` ×4
-          - `primitives/setup-steps` ×4
           - `primitives/data-view` ×3
           - `conversations/conversation-view.conversationPane`
           - `network/live.useLive`
@@ -19301,6 +19301,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CommandReply`
           - `ErrorStoppedConversation`
           - `HelloReply`
+          - `LaunchCandidate`
           - `OpenRequest`
           - `PartialFrame`
           - `PartialMessage`
@@ -29027,7 +29028,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ids:pk-declared` — `server/internal/tables.ts` (debt)
           - `investigate:failures-registered` — `core/resources.ts` (sanctioned)
       - Plugins:
-        - **`accounts`** — The Claude accounts' tokens, every host's half: each token account's token in the secrets store — saved, deleted, and read by the agent at its start (claudeAccountToken: null for the computer's own Claude Code login, a loud error when a token account's secret is gone).
+        - **`accounts`** — The Claude accounts' credentials, every host's half: each added account's plan token or API key in the secrets store — saved, deleted, and read by the agent at its start (claudeAccountCredential: its kind derived from the secret, null for the computer's own Claude Code login, a loud error when an added account's secret is gone).
           - Server:
             - Contributes: `resource.declare` "claude-accounts"
             - Uses:
@@ -29035,9 +29036,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/secrets.getSecret`
               - `infra/secrets.setSecret`
             - Exports (values):
-              - `claudeAccountToken`
-              - `deleteClaudeAccountToken`
-              - `saveClaudeAccountToken`
+              - `claudeAccountCredential`
+              - `deleteClaudeAccountCredential`
+              - `saveClaudeAccountCredential`
             - Resources: `claude-accounts` (push, notified, whole: the Claude accounts the user added by hand — a handful)
           - Machine:
             - Uses:
@@ -29059,14 +29060,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types):
               - `ClaudeAccount`
               - `ClaudeAccounts`
+              - `ClaudeCredential`
+              - `ClaudeCredentialKind`
             - Exports (values):
               - `addClaudeAccount`
-              - `CLAUDE_TOKEN_ENV`
+              - `CLAUDE_CREDENTIAL_ENVS`
+              - `CLAUDE_CREDENTIALS`
               - `claudeAccountIds`
+              - `claudeAccountRefs`
               - `claudeAccounts`
               - `ClaudeAccountSchema`
               - `ClaudeAccountsSchema`
-              - `ClaudeTokenSchema`
+              - `claudeCredentialEnv`
+              - `claudeCredentialKind`
+              - `ClaudeCredentialSchema`
               - `NO_CLAUDE_ACCOUNTS`
               - `removeClaudeAccount`
               - `selectClaudeAccount`

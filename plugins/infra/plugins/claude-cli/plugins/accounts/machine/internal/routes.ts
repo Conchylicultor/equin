@@ -6,14 +6,14 @@ import {
   setClaudeAccountAutoSwitch,
 } from "../../core";
 import {
-  addClaudeAccountWithToken,
+  addClaudeAccountWithCredential,
   removeClaudeAccountById,
   selectClaudeAccountById,
   setClaudeAccountsAutoSwitch,
 } from "./store";
 
 export const handleAdd = implementMachine(addClaudeAccount, ({ body }) =>
-  addClaudeAccountWithToken(body.name, body.token),
+  addClaudeAccountWithCredential(body.name, body.credential),
 );
 
 export const handleRemove = implementMachine(removeClaudeAccount, ({ body }) =>

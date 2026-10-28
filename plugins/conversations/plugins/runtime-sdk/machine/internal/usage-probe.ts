@@ -1,6 +1,7 @@
 import { tmpdir } from "node:os";
 import { query } from "@anthropic-ai/claude-agent-sdk";
-import { claudeAccountToken } from "@plugins/infra/plugins/claude-cli/plugins/accounts/server";
+import { claudeAccountCredential } from "@plugins/infra/plugins/claude-cli/plugins/accounts/server";
+import { claudeCredentialEnv } from "@plugins/infra/plugins/claude-cli/plugins/accounts/core";
 import {
   onClaudeCodeProbed,
   requireClaudeBin,
@@ -30,7 +31,7 @@ const USAGE_READ_TIMEOUT_MS = 60_000;
 
 async function readUsageReply(accountId: string): Promise<unknown> {
   // The system account (null) is Claude Code's own sign-in.
-  const token = await claudeAccountToken(accountId);
+  const credential = await claudeAccountCredential(accountId);
   const abortController = new AbortController();
   const timeout = setTimeout(
     () => abortController.abort(),
@@ -49,11 +50,10 @@ async function readUsageReply(accountId: string): Promise<unknown> {
       cwd: tmpdir(),
       pathToClaudeCodeExecutable: requireClaudeBin(),
       // Same closed host environment as an agent's (the user's own overrides),
-      // with only this account's token added.
-      env: {
-        ...pickHostEnv(process.env),
-        ...(token ? { CLAUDE_CODE_OAUTH_TOKEN: token } : {}),
-      },
+      // with only this account's credential added.
+      env: credential
+        ? claudeCredentialEnv(pickHostEnv(process.env), credential)
+        : pickHostEnv(process.env),
       settingSources: [],
       strictMcpConfig: true,
       persistSession: false,

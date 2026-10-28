@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import {
   EndpointError,
   getEndpointErrorMessage,
@@ -8,11 +8,13 @@ import {
 import {
   addClaudeAccount,
   claudeAccountIds,
+  claudeAccountRefs,
   removeClaudeAccount,
   selectClaudeAccount,
   setClaudeAccountAutoSwitch,
   SYSTEM_ACCOUNT_ID,
   type ClaudeAccounts,
+  type ClaudeCredentialKind,
 } from "@plugins/infra/plugins/claude-cli/plugins/accounts/core";
 import type { ClaudeCodeStatus } from "@plugins/infra/plugins/claude-cli/plugins/availability/core";
 import { Avatar } from "@plugins/primitives/plugins/avatar/web";
@@ -34,6 +36,7 @@ import {
   StepAction,
   StepActions,
   StepCommand,
+  StepLink,
   StepNote,
 } from "@plugins/primitives/plugins/setup-steps/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -56,7 +59,9 @@ import { ErrorStoppedBanner } from "./error-stopped";
 // Each account shows its weekly room only — the 5-hour session resets too
 // often to choose an account by. Picking one switches; agents already running
 // keep theirs until their process restarts. Adding or picking one reads its
-// limits at once (no agent turn needed), so its room shows straight away.
+// limits at once (no agent turn needed), so its room shows straight away. An
+// API-key account has no plan limits: it is billed to its Console org (e.g.
+// the plan's monthly API credit), and auto-switch uses it only as overflow.
 
 const addIcon = symbol("add");
 const removeIcon = symbol("close");
@@ -67,6 +72,8 @@ interface AccountView {
   id: string;
   name: string;
   detail: string;
+  /** Billed per use (an API key): no plan limits to read or show. */
+  metered: boolean;
 }
 
 /** The accounts in display order: the computer's own login first. */
@@ -79,11 +86,17 @@ function accountViews(
       ? (claude.email ?? claude.authMethod ?? "Claude Code's sign-in")
       : "Claude Code's sign-in";
   return [
-    { id: SYSTEM_ACCOUNT_ID, name: "This computer", detail: login },
+    {
+      id: SYSTEM_ACCOUNT_ID,
+      name: "This computer",
+      detail: login,
+      metered: false,
+    },
     ...accounts.accounts.map((a) => ({
       id: a.id,
       name: a.name,
-      detail: "Token",
+      detail: a.kind === "api-key" ? "API key" : "Token",
+      metered: a.kind === "api-key",
     })),
   ];
 }
@@ -99,17 +112,27 @@ type UsageRead =
 
 /** One account's weekly room, as words and a bar. */
 function WeekRoomGlance({
-  accountId,
+  account,
   usage,
   read,
   now,
 }: {
-  accountId: string;
+  account: AccountView;
   usage: ClaudeUsageRead;
   read: UsageRead;
   now: number;
 }) {
-  const reading = usage.byAccount[accountId];
+  if (account.metered)
+    return (
+      <Text
+        variant="caption"
+        tone="muted"
+        title="An API key has no plan limits: each request is billed to its Console organization — its monthly API credit first"
+      >
+        Billed to API credit
+      </Text>
+    );
+  const reading = usage.byAccount[account.id];
   const room = weekRoom(reading, now);
   if (room.kind === "unknown") {
     switch (read.kind) {
@@ -169,7 +192,7 @@ function LimitBanner({
   const reached = limitReached(usage.byAccount[active.id], now);
   if (!reached) return null;
   const nextId = roomiestAccount(
-    views.filter((v) => v.id !== active.id).map((v) => v.id),
+    views.filter((v) => v.id !== active.id),
     usage.byAccount,
     now,
   );
@@ -189,7 +212,11 @@ function LimitBanner({
           <Fill />
           <Button onClick={() => onSwitch(next.id)}>
             Continue on {next.name}
-            {room?.kind === "known" ? ` · ${percent(room.left)} left` : ""}
+            {next.metered
+              ? " · API credit"
+              : room?.kind === "known"
+                ? ` · ${percent(room.left)} left`
+                : ""}
           </Button>
         </Line>
       ) : null}
@@ -197,15 +224,63 @@ function LimitBanner({
   );
 }
 
-/** Add a token account: `claude setup-token` in a terminal, then paste. */
+/** Where an API key's spend is claimed and keys are made. */
+const PLAN_BILLING_URL = "https://claude.ai/settings/billing";
+const CONSOLE_KEYS_URL = "https://platform.claude.com/settings/keys";
+
+/** The steps that produce a credential of `kind`, ending at its paste box. */
+function CredentialSteps({
+  kind,
+  input,
+}: {
+  kind: ClaudeCredentialKind;
+  input: ReactNode;
+}) {
+  switch (kind) {
+    case "token":
+      return (
+        <StepActions>
+          <StepAction
+            detail={
+              <StepCommand text="claude setup-token" title="Copy command" />
+            }
+          >
+            Sign in to the other account in a terminal
+          </StepAction>
+          <StepAction detail={input}>Paste the token it prints</StepAction>
+        </StepActions>
+      );
+    case "api-key":
+      return (
+        <StepActions>
+          <StepAction
+            detail={<StepLink href={PLAN_BILLING_URL} label="Open billing" />}
+          >
+            On a Max or Team plan, claim its monthly API credit: link a Console
+            organization under API credits
+          </StepAction>
+          <StepAction
+            detail={<StepLink href={CONSOLE_KEYS_URL} label="Open API keys" />}
+          >
+            Create an API key in that organization
+          </StepAction>
+          <StepAction detail={input}>Paste the key</StepAction>
+        </StepActions>
+      );
+  }
+}
+
+/** Add an account of `kind`: get its credential, then paste it with a name. */
 function AddAccountForm({
+  kind,
   onAdded,
   onCancel,
 }: {
-  onAdded: (id: string) => void;
+  kind: ClaudeCredentialKind;
+  onAdded: (id: string, metered: boolean) => void;
   onCancel: () => void;
 }) {
-  const [token, setToken] = useState("");
+  const [credential, setCredential] = useState("");
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const fetchEndpoint = useFetchEndpoint();
@@ -216,50 +291,46 @@ function AddAccountForm({
       added = await fetchEndpoint(
         addClaudeAccount,
         {},
-        { body: { name: name.trim(), token: token.trim() } },
+        { body: { name: name.trim(), credential: credential.trim() } },
       );
     } catch (err) {
-      // A refused token or name is the user's to fix: shown under the form.
+      // A refused credential or name is the user's to fix: shown under the form.
       if (!(err instanceof EndpointError)) throw err;
       setError(getEndpointErrorMessage(err));
       return;
     }
     // The form renders only where the account endpoints are available.
     if (added.kind !== "ok") throw new Error(added.message);
-    onAdded(added.value.id);
+    onAdded(added.value.id, added.value.kind === "api-key");
   };
   return (
     <Stack gap="sm" className="rounded-md border p-sm">
-      <StepActions>
-        <StepAction
-          detail={
-            <StepCommand text="claude setup-token" title="Copy command" />
-          }
-        >
-          Sign in to the other account in a terminal
-        </StepAction>
-        <StepAction
-          detail={
-            <Stack gap="xs">
-              <Input
-                type="password"
-                autoComplete="off"
-                placeholder="sk-ant-oat01-…"
-                value={token}
-                onChange={(e) => setToken(e.target.value)}
-                className="font-mono"
-              />
-              <Input
-                placeholder="Name — e.g. Work"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
-            </Stack>
-          }
-        >
-          Paste the token it prints
-        </StepAction>
-      </StepActions>
+      <CredentialSteps
+        kind={kind}
+        input={
+          <Stack gap="xs">
+            <Input
+              type="password"
+              autoComplete="off"
+              placeholder={
+                kind === "api-key" ? "sk-ant-api03-…" : "sk-ant-oat01-…"
+              }
+              value={credential}
+              onChange={(e) => setCredential(e.target.value)}
+              className="font-mono"
+            />
+            <Input
+              placeholder={
+                kind === "api-key"
+                  ? "Name — e.g. API credit"
+                  : "Name — e.g. Work"
+              }
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </Stack>
+        }
+      />
       {error ? (
         <Text variant="caption" tone="destructive">
           {error}
@@ -270,8 +341,8 @@ function AddAccountForm({
         <Button variant="ghost" onClick={onCancel}>
           Cancel
         </Button>
-        <Button disabled={!token.trim() || !name.trim()} onClick={add}>
-          Add account
+        <Button disabled={!credential.trim() || !name.trim()} onClick={add}>
+          {kind === "api-key" ? "Add API key" : "Add account"}
         </Button>
       </Line>
     </Stack>
@@ -297,7 +368,7 @@ export function ClaudeAccountsSection({
   stopped: readonly ErrorStoppedConversation[];
   now: number;
 }) {
-  const [adding, setAdding] = useState(false);
+  const [adding, setAdding] = useState<ClaudeCredentialKind | null>(null);
   // The account this tab switched to: running agents stay where they were.
   const [switchedTo, setSwitchedTo] = useState<string | null>(null);
   const selectAccount = useEndpointMutation(selectClaudeAccount);
@@ -350,7 +421,7 @@ export function ClaudeAccountsSection({
   };
   // Where a resumed agent restarts: the launch's own choice.
   const launchId = launchAccount({
-    ids: claudeAccountIds(accounts),
+    accounts: claudeAccountRefs(accounts),
     active: accounts.active,
     autoSwitch: accounts.autoSwitch,
     byAccount: usage.byAccount,
@@ -363,7 +434,8 @@ export function ClaudeAccountsSection({
       {
         onSuccess: () => {
           setSwitchedTo(id);
-          readUsage(id);
+          // An API key has no plan limits to read.
+          if (!views.find((v) => v.id === id)?.metered) readUsage(id);
         },
       },
     );
@@ -423,7 +495,7 @@ export function ClaudeAccountsSection({
               </Fill>
               <Rigid>
                 <WeekRoomGlance
-                  accountId={v.id}
+                  account={v}
                   usage={usage}
                   read={usageRead(v.id)}
                   now={now}
@@ -433,28 +505,44 @@ export function ClaudeAccountsSection({
           ))}
           {adding ? (
             <AddAccountForm
-              onAdded={(id) => {
-                setAdding(false);
-                readUsage(id);
+              kind={adding}
+              onAdded={(id, metered) => {
+                setAdding(null);
+                if (!metered) readUsage(id);
               }}
-              onCancel={() => setAdding(false)}
+              onCancel={() => setAdding(null)}
             />
           ) : (
-            <Row
-              size="sm"
-              onClick={() => setAdding(true)}
-              icon={<Icon icon={addIcon} />}
-            >
-              <Text variant="caption" tone="muted">
-                Add account
-              </Text>
-            </Row>
+            <>
+              <Row
+                size="sm"
+                onClick={() => setAdding("token")}
+                icon={<Icon icon={addIcon} />}
+              >
+                <Text variant="caption" tone="muted">
+                  Add plan account
+                </Text>
+              </Row>
+              <Row
+                size="sm"
+                onClick={() => setAdding("api-key")}
+                icon={<Icon icon={addIcon} />}
+                title="Run agents on an API key — e.g. the monthly API credit a Max or Team plan includes"
+              >
+                <Text variant="caption" tone="muted">
+                  Add API key
+                </Text>
+              </Row>
+            </>
           )}
         </Stack>
         <Line className="gap-sm">
           <Fill>
             <Text variant="caption" tone="muted">
               Switch to the next account when one hits its limit
+              {views.some((v) => v.metered)
+                ? " — an API key only while every plan account has"
+                : ""}
             </Text>
           </Fill>
           <Rigid>
@@ -469,8 +557,10 @@ export function ClaudeAccountsSection({
         </Line>
         {switchedTo === active.id ? (
           <StepNote>
-            New agents launch on {active.name}. Agents already running keep
-            their account until they restart.
+            {active.metered && accounts.autoSwitch
+              ? `With auto-switch on, new agents launch on ${active.name} only while every plan account is at its limit.`
+              : `New agents launch on ${active.name}.`}{" "}
+            Agents already running keep their account until they restart.
           </StepNote>
         ) : null}
       </Stack>
