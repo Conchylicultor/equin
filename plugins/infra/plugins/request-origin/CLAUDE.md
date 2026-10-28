@@ -79,6 +79,18 @@ header.
   its own rule: `agentFetch` in the e2e harness, enforced by
   `agent-origin-safety/no-unmarked-app-fetch`.
 
+## Not the principal
+
+Provenance (`user` / `agent`) is a different question from **who may call at
+all** — the principal (`owner` / `anonymous`) the gateway stamps on every
+request and the socket hosts gate every route on
+([`framework/principal`](../../../framework/plugins/principal/CLAUDE.md)).
+An agent session's browser is same-origin, so it is the owner; this plugin then
+says which owner-side actor wrote. The two stay separate for now — the agent
+gate is an accident guard on main, the principal is a security boundary — and
+fold together in Hosted, where an agent becomes a principal of its own
+(`research/2026-10-28-global-http-edge-principal.md`).
+
 ## Leaf by contract
 
 String literals and one `Request` header read — no `node:*`, no db. That is what

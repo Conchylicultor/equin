@@ -60,3 +60,20 @@ describe("implementMachine", () => {
     expect(Object.keys(machine)).toEqual([ping.route]);
   });
 });
+
+describe("access on machine handlers", () => {
+  test("implementMachine and machineHandler carry the route's access", () => {
+    const pub = defineEndpoint({
+      route: "GET /api/m",
+      access: { public: "why" },
+      needsMachine: { feature: "X" },
+    });
+    expect(implementMachine(pub, () => undefined).access).toEqual({
+      public: "why",
+    });
+    expect(machineHandler(pub, () => new Response("x")).access).toEqual({
+      public: "why",
+    });
+    expect(implementMachine(launch, () => ({ ok: true })).access).toBe("owner");
+  });
+});

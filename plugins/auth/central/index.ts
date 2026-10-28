@@ -8,6 +8,7 @@ import { handleGetState } from "./internal/handlers/state";
 import { handleGetToken } from "./internal/handlers/token";
 import { authStateServed } from "./internal/auth-resource";
 import { onReady } from "./internal/boot";
+import { rawEndpointHandler } from "@plugins/infra/plugins/endpoints/core";
 import { authRefreshTimer } from "./internal/refresh-loop";
 import {
   oauthStart,
@@ -57,8 +58,13 @@ export default {
   description:
     "Centralized OAuth/API-key/password-sign-in infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.",
   httpRoutes: {
-    [oauthStart.route]: handleOAuthStart,
-    [oauthCallback.route]: handleOAuthCallback,
+    // Raw (HTML / redirects), behind their declarations: the callback's
+    // `access: { public }` must ride on its handler for the principal gate.
+    [oauthStart.route]: rawEndpointHandler(oauthStart, handleOAuthStart),
+    [oauthCallback.route]: rawEndpointHandler(
+      oauthCallback,
+      handleOAuthCallback,
+    ),
     [disconnect.route]: handleDisconnect,
     [setApiKey.route]: handleSetApiKey,
     [signIn.route]: handleSignIn,

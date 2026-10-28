@@ -817,8 +817,15 @@ func (w *Worktree) demotes(reason StartReason) bool {
 // and every process a backend started knew the backend's own socket (read by
 // runtime-identity's readServingSocket —
 // research/2026-09-15-global-backend-env-leak-followups.md).
+//
+// The last one, principalStampedFlag, is a declaration, not a value: "this
+// gateway stamps X-Equin-Principal on every request it proxies". A backend
+// enforces the principal fail-closed only when told so (framework/principal's
+// readPrincipalStamp). A gateway older than the stamp passes no flag, and its
+// backends serve ungated rather than refuse everything — its own readiness
+// probe included — until it is restarted (./equin start).
 func backendLaunch(name, socketPath string) []string {
-	return []string{"--namespace", name, "--socket", socketPath}
+	return []string{"--namespace", name, "--socket", socketPath, principalStampedFlag}
 }
 
 // startBackend builds and starts a backend process on the given socketPath, at
@@ -1032,7 +1039,12 @@ func waitReady(socketPath string, base, extension time.Duration, demoted bool, o
 	deadline := time.Now().Add(base)
 	responded, escalated := false, false
 	for {
-		resp, err := client.Get("http://backend/api/health/ready")
+		readyReq, err := http.NewRequest(http.MethodGet, "http://backend/api/health/ready", nil)
+		if err != nil {
+			return err
+		}
+		readyReq.Header.Set(principalHeader, principalOwner)
+		resp, err := client.Do(readyReq)
 		if err == nil {
 			status := resp.StatusCode
 			_, _ = io.Copy(io.Discard, resp.Body)
@@ -1095,7 +1107,14 @@ func postBootReport(socketPath string, stats bootStats) {
 			},
 		},
 	}
-	resp, err := client.Post("http://backend/api/boot/gateway-report", "application/json", bytes.NewReader(body))
+	reportReq, err := http.NewRequest(http.MethodPost, "http://backend/api/boot/gateway-report", bytes.NewReader(body))
+	if err != nil {
+		slog.Warn("boot report: build request failed", "socket", socketPath, "err", err)
+		return
+	}
+	reportReq.Header.Set("Content-Type", "application/json")
+	reportReq.Header.Set(principalHeader, principalOwner)
+	resp, err := client.Do(reportReq)
 	if err != nil {
 		slog.Warn("boot report: post failed", "socket", socketPath, "err", err)
 		return

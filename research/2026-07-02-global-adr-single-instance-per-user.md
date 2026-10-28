@@ -122,6 +122,19 @@ ADR that explicitly supersedes this one; it is a different deployment model,
 not a patch). Absent one of those triggers, the couplings above are settled and
 not open questions.
 
+## Addendum 2026-10-28 — socket requests carry a principal
+
+The gateway now stamps every request it proxies to a backend socket (HTTP and
+WebSocket) with `X-Equin-Principal: owner | anonymous`, after deleting any
+client-sent value: same-origin pages, typed URLs and local tools are the owner;
+another site, a sibling namespace, an opaque origin or a DNS-rebound Host is
+anonymous. Both socket hosts refuse an anonymous caller of any route not
+declared `access: { public: "<reason>" }`, and every anonymous WebSocket. Still
+single-tenant: this is the "who is the owner" seam (the first slice of the
+Hosted Principal), not multi-user auth. Design:
+[`2026-10-28-global-http-edge-principal.md`](./2026-10-28-global-http-edge-principal.md);
+code: `plugins/framework/plugins/principal`.
+
 ## Links
 
 - [Communications audit — overview](./2026-07-02-comms-audit/00-overview.md)

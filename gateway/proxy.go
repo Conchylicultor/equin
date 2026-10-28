@@ -27,6 +27,9 @@ type Proxy struct {
 	// single-app build (desktop/Tauri, single-origin web) so a webview with no
 	// `<name>.localhost` subdomain still reaches the backend.
 	defaultNamespace string
+	// publicHosts are the hostnames a deployed site is served under (Caddy
+	// forwards them unchanged); principalOf counts them as equin hosts.
+	publicHosts map[string]bool
 }
 
 func NewProxy(reg *Registry, routes *CentralRoutesStore, sup *Supervisor, defaultNamespace string) *Proxy {
@@ -34,6 +37,23 @@ func NewProxy(reg *Registry, routes *CentralRoutesStore, sup *Supervisor, defaul
 }
 
 func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// Who is calling, decided once, before anything is dispatched. The stamp
+	// overwrites whatever the client sent, and rides both the reverse proxy and
+	// the WebSocket replay (r.Write) — see principal.go.
+	principal := principalOf(r, p.publicHosts)
+	r.Header.Del(principalHeader)
+	r.Header.Set(principalHeader, principal)
+	if principal == principalAnonymous {
+		if strings.HasPrefix(r.URL.Path, "/gateway/") && r.Method != http.MethodGet && r.Method != http.MethodHead {
+			writeCrossSiteRefusal(w, r)
+			return
+		}
+		if isWebSocketUpgrade(r) {
+			writeCrossSiteRefusal(w, r)
+			return
+		}
+	}
+
 	worktreeName := parseWorktree(r.Host)
 
 	// /gateway/* is reserved on every host, including the no-subdomain root.
@@ -476,18 +496,7 @@ func streamBackendLogs(w http.ResponseWriter, r *http.Request, wt *Worktree) {
 // Returns "" for loopback hostnames or anything not matching <name>.localhost.
 // <name> may carry dots (`sonata.att-XXX`); see nameRegex in registry.go.
 func parseWorktree(host string) string {
-	h := host
-	// IPv6 with brackets: [::1]:9000
-	if strings.HasPrefix(h, "[") {
-		if end := strings.Index(h, "]"); end >= 0 {
-			h = h[1:end]
-		}
-	} else if i := strings.LastIndex(h, ":"); i > 0 {
-		// Strip port for v4 / hostnames
-		h = h[:i]
-	}
-	h = strings.ToLower(h)
-	h = strings.TrimSuffix(h, ".")
+	h := hostOnly(host)
 	switch h {
 	case "localhost", "127.0.0.1", "::1":
 		return ""

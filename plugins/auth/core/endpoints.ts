@@ -50,13 +50,25 @@ export const GetTokenBodySchema = z.object({
 });
 export type GetTokenBody = z.infer<typeof GetTokenBodySchema>;
 
-// OAuth start/callback return HTML/redirects — defined for route key only, NOT wrapped in implement()
+// OAuth start/callback return HTML/redirects — raw handlers
+// (`rawEndpointHandler`), not implement(), so the declaration (the callback's
+// `access`) still rides on the handler.
+
+/** Owner-only: the popup opens it at the page's own origin (same-origin). */
 export const oauthStart = defineEndpoint({
   route: "GET /api/auth/start/:provider",
 });
 
+/**
+ * Public: the provider redirects the popup here — a cross-site navigation,
+ * so the gateway's verdict is anonymous. It acts only on a `state` nonce that
+ * an owner request to {@link oauthStart} minted (and consumes it once).
+ */
 export const oauthCallback = defineEndpoint({
   route: "GET /api/auth/callback/:provider",
+  access: {
+    public: "authenticated by the OAuth state nonce an owner request minted",
+  },
 });
 
 export const disconnect = defineEndpoint({

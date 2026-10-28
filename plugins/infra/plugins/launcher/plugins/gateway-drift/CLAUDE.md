@@ -20,6 +20,7 @@ whichever checkout runs it — derived exactly as `start` derives it
 | cwd | the definition's `WorkingDirectory` | main's checkout |
 | signature | `gatewaySignature(argv[0])` (`launcher/deps`; reads the identity, never mints one) | signed as `GATEWAY_CODESIGN_IDENTIFIER` by this machine's identity |
 | running | the pidfile's process command line (`/proc/<pid>/cmdline`, else `ps -ww -o args=`) | the installed argv, space-joined |
+| principal stamp | whether this backend was launched with `--principal-stamped` (`principalStamp()`, `framework/principal`) | stamped — a gateway older than the principal stamp leaves every route ungated |
 
 The installed definition is read back through `LoginService.installedJob()`
 (`login-services`: the pure inverses of the plist / unit renderers).

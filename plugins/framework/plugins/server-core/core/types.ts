@@ -1,4 +1,5 @@
 import type { ServerWebSocket } from "bun";
+import type { EndpointAccess } from "@plugins/framework/plugins/principal/core";
 
 export interface WsData {
   path: string;
@@ -53,10 +54,14 @@ declare const endpointHandlerBrand: unique symbol;
  * endpoint's declaration before the handler runs — the agent-write gate that
  * refuses an agent session's write on main among it
  * (`research/2026-10-22-global-main-read-only-for-agent-sessions.md`). Minted
- * only by `infra/endpoints`; the brand is type-only.
+ * only by `infra/endpoints`; the brand is type-only, `access` is real: the
+ * route's resolved access (`"owner"` unless declared `{ public }`), which the
+ * socket hosts' principal gate reads off the handler (`gateByPrincipal`,
+ * `framework/principal`).
  */
 export type EndpointHttpHandler = HttpHandler & {
   readonly [endpointHandlerBrand]: true;
+  readonly access: EndpointAccess;
 };
 
 /** What `implementMachine` (and the machine barrel's raw `machineHandler`) mints. */

@@ -34,6 +34,7 @@ type Config struct {
 	CentralRoutesFile string
 	DbConfigFile      string
 	DefaultNamespace  string
+	PublicHosts       string
 	PidFile           string
 
 	// Taskpolicy is the macOS priority tool background boots are demoted and
@@ -115,6 +116,10 @@ func parseFlags() (Config, string) {
 	// web) sets it to the app's name so a bare-localhost webview reaches the
 	// backend. The launcher passes it as this flag; the flag is the contract.
 	flag.StringVar(&cfg.DefaultNamespace, "default-namespace", "", "fallback namespace for requests with no subdomain")
+	// The public hostnames a deployed site is served under (comma-separated).
+	// Caddy forwards the visitor's Host unchanged, so without this every visitor
+	// would fail principalOf's equin-host test and be anonymous.
+	flag.StringVar(&cfg.PublicHosts, "public-hosts", "", "comma-separated public hostnames this gateway serves as its own (deployed site)")
 	// Where the gateway records its own pid. The gateway writes it itself because
 	// under launchd (./equin start on macOS) no launcher sees the spawn: a
 	// gateway launchd relaunches at login or after a crash would otherwise leave
@@ -291,8 +296,10 @@ func main() {
 		fatal(fmt.Sprintf("gateway: fatal: %v", err), "listen failed", err)
 	}
 
+	proxy := NewProxy(reg, routes, sup, cfg.DefaultNamespace)
+	proxy.publicHosts = parsePublicHosts(cfg.PublicHosts)
 	srv := &http.Server{
-		Handler:           NewProxy(reg, routes, sup, cfg.DefaultNamespace),
+		Handler:           proxy,
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 

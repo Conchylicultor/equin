@@ -11,6 +11,10 @@ import {
 } from "@plugins/framework/plugins/central-core/core";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { createRequestHandler } from "@plugins/framework/plugins/http-router/core";
+import {
+  CENTRAL_HOST_ROUTES_ROUTE,
+  hostGateFromArgv,
+} from "@plugins/framework/plugins/principal/core";
 import { CENTRAL_RESOURCE_HTTP_ROUTE } from "@plugins/packages/plugins/resource-protocol/core";
 import { centralEntries } from "../core/central.generated";
 import {
@@ -218,8 +222,20 @@ const socketPath = readServingSocket(process.argv);
 // Central had no try/catch around handler dispatch — a throw surfaced as Bun's
 // default 500 with no log line. The shared router's 500 now carries every host;
 // central has no reportServerError hook, so the console line is the parity floor.
+// Every route behind the principal gate (an anonymous caller — the gateway's
+// verdict — reaches only a route whose handler carries `access: { public }`;
+// a plain central handler is owner), plus central's own route table. Gated
+// only when the gateway declared it stamps the principal
+// (`--principal-stamped`); behind an older gateway, ungated and loudly so.
+const gate = hostGateFromArgv(process.argv);
+const gatedRoutes = gate.routes({
+  tableRoute: CENTRAL_HOST_ROUTES_ROUTE,
+  http: httpRoutes,
+  wsPaths: Object.keys(wsRoutes),
+});
+
 const handleHttp = createRequestHandler({
-  routes: httpRoutes,
+  routes: gatedRoutes,
   onError: (errObj, req, pathname) => {
     console.error(
       `[http] ${req.method} ${pathname}: ${errObj.message}`,
@@ -236,6 +252,9 @@ const server = Bun.serve<WsData>({
     if (req.headers.get("upgrade") === "websocket") {
       const handler = wsRoutes[url.pathname];
       if (handler) {
+        // No socket is public (behind the gateway's own refusal).
+        const refused = gate.refuseUpgrade(req, url.pathname);
+        if (refused) return refused;
         server.upgrade(req, { data: { path: url.pathname } });
         return;
       }
@@ -264,7 +283,7 @@ const server = Bun.serve<WsData>({
 // code this process runs — whichever checkout last built cannot change it.
 writeCentralRoutesManifest(
   centralRoutePrefixes(
-    httpRoutes.map(([key]) => key),
+    gatedRoutes.map(([key]) => key),
     Object.keys(wsRoutes),
   ),
 );

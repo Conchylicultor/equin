@@ -228,6 +228,12 @@ async function main(): Promise<void> {
     web: join(bundleRoot, "web"),
     port,
     bindHost,
+    // A deployed site's own public hostnames (the converge env file); unset
+    // everywhere else.
+    publicHosts: (readEnv("PUBLIC_HOSTS") ?? "")
+      .split(",")
+      .map((h) => h.trim())
+      .filter((h) => h !== ""),
     repoRoot: bundleRoot,
     log: console.log,
   });

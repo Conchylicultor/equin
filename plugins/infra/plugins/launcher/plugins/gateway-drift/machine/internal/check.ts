@@ -20,6 +20,7 @@ import {
   readPid,
 } from "@plugins/infra/plugins/launcher/server";
 import { GATEWAY_SERVICE } from "@plugins/infra/plugins/launcher/core";
+import { principalStamp } from "@plugins/framework/plugins/principal/core";
 import { componentIdentity } from "@plugins/infra/plugins/launcher/plugins/login-services/core";
 import {
   APP_BUNDLE_ID,
@@ -110,6 +111,14 @@ export async function checkGatewayDrift(): Promise<GatewayDrift> {
     );
   } else if (signature === "no-identity") {
     differences.push("no stable signing identity on this machine yet");
+  }
+  // The running gateway's own declaration, as this backend received it: no
+  // --principal-stamped means it predates the principal stamp, so this
+  // backend serves every route ungated (framework/principal, core/stamp.ts).
+  if (principalStamp() === "unstamped") {
+    differences.push(
+      "the running gateway does not stamp the principal: cross-site requests are not refused",
+    );
   }
   const running = await runningCommand();
   if (running !== null && running !== installed.argv.join(" ")) {

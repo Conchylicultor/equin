@@ -3262,6 +3262,10 @@
       "name": "@equin/plugin-framework-plugin-loader",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/principal": {
+      "name": "@equin/plugin-framework-principal",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/product-name": {
       "name": "@equin/plugin-framework-product-name",
       "version": "0.0.1",
@@ -8369,6 +8373,8 @@
     "@equin/plugin-framework-plugin-id": ["@equin/plugin-framework-plugin-id@workspace:plugins/framework/plugins/plugin-id"],
 
     "@equin/plugin-framework-plugin-loader": ["@equin/plugin-framework-plugin-loader@workspace:plugins/framework/plugins/plugin-loader"],
+
+    "@equin/plugin-framework-principal": ["@equin/plugin-framework-principal@workspace:plugins/framework/plugins/principal"],
 
     "@equin/plugin-framework-product-name": ["@equin/plugin-framework-product-name@workspace:plugins/framework/plugins/product-name"],
 

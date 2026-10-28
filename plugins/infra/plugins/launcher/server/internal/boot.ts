@@ -441,6 +441,12 @@ export interface GatewayLaunchOptions {
    * requests 404, today's behavior).
    */
   defaultNamespace?: string;
+  /**
+   * Hostnames a deployed site is served under, passed as `-public-hosts` so the
+   * gateway treats them as its own (a reverse proxy forwards the visitor's Host
+   * unchanged). Omitted for a deployment with none.
+   */
+  publicHosts?: string[];
 }
 
 /**
@@ -506,44 +512,47 @@ export function gatewayLaunchFlags(
   gatewayState.ensure();
   gatewayLocks.ensure();
   return [
-      "-listen",
-      listenFlag({ host: opts.bindHost, port: opts.port }),
-      "-log-level",
-      opts.logLevel,
-      // EVERY path the gateway reads or writes is passed explicitly, from the
-      // declaration that owns it. The Go side has its own defaults derived from
+    "-listen",
+    listenFlag({ host: opts.bindHost, port: opts.port }),
+    "-log-level",
+    opts.logLevel,
+    // EVERY path the gateway reads or writes is passed explicitly, from the
+    // declaration that owns it. The Go side has its own defaults derived from
     // the inherited EQUIN_DIR, and they are kept in step (gateway/main.go)
-      // — but a default is a SECOND derivation of this layout, and a second
-      // derivation is what silently keeps writing to the old spot when the
-      // layout moves. Passing them means the declaration is the only authority.
-      "-log-dir",
-      logsDir,
-      "-registry-dir",
-      worktreesDir(),
-      "-sockets-dir",
-      // The one flag with an env arm: a release stages its data root at a long
-      // versioned path, which would blow the 104-byte AF_UNIX cap, so `launch.ts`
-      // reroots the backend sockets onto a short /tmp dir via this var. Reading
-      // it here keeps that escape hatch working now that the flag is explicit —
-      // passing the declaration unconditionally would override it.
+    // — but a default is a SECOND derivation of this layout, and a second
+    // derivation is what silently keeps writing to the old spot when the
+    // layout moves. Passing them means the declaration is the only authority.
+    "-log-dir",
+    logsDir,
+    "-registry-dir",
+    worktreesDir(),
+    "-sockets-dir",
+    // The one flag with an env arm: a release stages its data root at a long
+    // versioned path, which would blow the 104-byte AF_UNIX cap, so `launch.ts`
+    // reroots the backend sockets onto a short /tmp dir via this var. Reading
+    // it here keeps that escape hatch working now that the flag is explicit —
+    // passing the declaration unconditionally would override it.
     readEnv("SOCKETS_DIR") ?? socketsDir.path,
-      "-central-routes-file",
-      gatewayState.file(CENTRAL_ROUTES_FILENAME),
-      "-db-config",
-      DATABASE_CONFIG_PATH,
-      // The gateway records its own pid: under launchd no launcher sees the
-      // spawn, and a generation launchd relaunched would otherwise leave the
-      // file naming a dead one.
-      "-pid-file",
-      pidFile(),
-      ...(opts.defaultNamespace
-        ? ["-default-namespace", opts.defaultNamespace]
-        : []),
-      // Which of its own variables the gateway may hand its children. Required
-      // by the gateway, and the same declaration as `env` below, so the two
-      // boundaries (us → gateway, gateway → child) cannot disagree.
-      "-child-env",
-      runtimeEnvNames().join(","),
+    "-central-routes-file",
+    gatewayState.file(CENTRAL_ROUTES_FILENAME),
+    "-db-config",
+    DATABASE_CONFIG_PATH,
+    // The gateway records its own pid: under launchd no launcher sees the
+    // spawn, and a generation launchd relaunched would otherwise leave the
+    // file naming a dead one.
+    "-pid-file",
+    pidFile(),
+    ...(opts.defaultNamespace
+      ? ["-default-namespace", opts.defaultNamespace]
+      : []),
+    ...(opts.publicHosts?.length
+      ? ["-public-hosts", opts.publicHosts.join(",")]
+      : []),
+    // Which of its own variables the gateway may hand its children. Required
+    // by the gateway, and the same declaration as `env` below, so the two
+    // boundaries (us → gateway, gateway → child) cannot disagree.
+    "-child-env",
+    runtimeEnvNames().join(","),
   ];
 }
 
@@ -789,6 +798,8 @@ export async function bootSelfContainedApp(opts: {
   port: number;
   /** Gateway bind host; null is a wildcard bind. See `GatewayLaunchOptions.bindHost`. */
   bindHost: string | null;
+  /** Public hostnames of a deployed site; see `GatewayLaunchOptions.publicHosts`. */
+  publicHosts?: string[];
   /**
    * Which build this is (from the bundle's `RELEASE.json`), stamped into the env
    * before the gateway spawn so it reaches the backend and `/api/health` can
@@ -839,6 +850,7 @@ export async function bootSelfContainedApp(opts: {
     bindHost,
     logLevel,
     defaultNamespace: name,
+    publicHosts: opts.publicHosts,
   });
   const pid = gateway.pid;
   log(`Gateway started (PID ${pid}); waiting for it to serve...`);

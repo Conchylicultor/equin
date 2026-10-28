@@ -4,6 +4,7 @@ import type {
 } from "@plugins/framework/plugins/server-core/core";
 import type { MachineEndpointDef } from "../../core/define-endpoint";
 import type { AgentWrite } from "../../core/agent-write";
+import type { EndpointAccess } from "@plugins/framework/plugins/principal/core";
 import {
   endpointHandler,
   rawEndpointHandler,
@@ -39,12 +40,18 @@ export function implementMachine<
  * A route a client calls through a typed endpoint is `implementMachine`'s, so
  * its callers get the unavailable arm; this one has no client contract to give.
  *
- * It still takes the route's declaration (`route`, `method`, `agentWrite`):
- * a write route runs the agent-write gate first (`rawEndpointHandler`), so a
- * raw machine write is refused to an agent session on main like any other.
+ * It still takes the route's declaration (`route`, `method`, `agentWrite`,
+ * `access`): a write route runs the agent-write gate first
+ * (`rawEndpointHandler`), so a raw machine write is refused to an agent session
+ * on main like any other, and the route's access rides on the handler.
  */
 export function machineHandler(
-  endpoint: { route: string; method: string; agentWrite?: AgentWrite },
+  endpoint: {
+    route: string;
+    method: string;
+    agentWrite?: AgentWrite;
+    access?: EndpointAccess;
+  },
   handler: HttpHandler,
 ): MachineEndpointHttpHandler {
   // The brand is type-only: a machine handler IS a handler.

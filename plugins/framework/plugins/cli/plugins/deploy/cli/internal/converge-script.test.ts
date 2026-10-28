@@ -24,6 +24,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { deriveInstall } from "@plugins/apps/plugins/deploy/plugins/deployments/core";
+import { envName } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { HOST_ONLY_PREFIX } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/host-only/core";
 import {
   PUT_HELPER_SH,
@@ -116,6 +117,15 @@ describe("convergeScript (idempotence contract)", () => {
     ]) {
       expect(text).toContain(`if put "${target}"`);
     }
+  });
+
+  test("the env file names the deployment's public hostnames, none when it has none", () => {
+    const envBlock = (hosts: string[]) =>
+      /\(\n {2}umask 077[\s\S]*?"\$ENV_FILE\.new"\n\)/.exec(script(hosts))?.[0];
+    expect(envBlock(["equin.ai", "www.equin.ai"])).toContain(
+      `echo "${envName("PUBLIC_HOSTS")}=equin.ai,www.equin.ai"`,
+    );
+    expect(envBlock([])).not.toContain("PUBLIC_HOSTS");
   });
 
   test("no secret is written into the env file", () => {

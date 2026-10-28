@@ -126,6 +126,8 @@ export const RUNTIME_WITHHELD_ENV = {
     "the bundled component a login-service job runs as, written into that job's own definition by login-services (app-component.ts); never inherited from a starter",
   GATEWAY_LABEL:
     "the gateway's login-service label, written into the menu-bar helper's own job by its login-service declaration (menu-bar/login-services) for its Start button; never inherited from a starter",
+  PUBLIC_HOSTS:
+    "a deployed site's public hostnames, comma-separated, written into the install's env file by `deploy converge`; the release launcher reads it and passes the gateway -public-hosts, so the gateway counts them as its own hosts (gateway/principal.go)",
   RELEASE_DIR:
     "the release self-extractor's cache root, set by the systemd unit and read before the launcher runs (release/cli self-extractor); no runtime reads it",
 } as const satisfies Record<string, string>;

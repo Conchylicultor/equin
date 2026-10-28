@@ -16,6 +16,10 @@ export const collectEndpoint = defineEndpoint({
   route: "POST /api/analytics/collect",
   body: CollectBodySchema,
   response: CollectResponseSchema,
+  access: {
+    public:
+      "a deployed site's visitors send its beacons — anonymous by design, bounded by the body cap and schema",
+  },
 });
 
 /**

@@ -25927,6 +25927,31 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `computeLoadWaves`
           - `topoSortPlugins`
+    - **`principal`** — Who a request is: the principal (owner | anonymous) the gateway stamps on every proxied request (X-Equin-Principal), read fail-closed by principalOf; EndpointAccess (owner by default, { public: reason } opt-in); gateByPrincipal — the socket hosts' per-route gate, on only when the gateway declares it stamps (--principal-stamped on the backend's argv; ungated and loudly so behind an older gateway), answering an anonymous caller of an owner route 403 cross-site-refused before the handler runs — the anonymous WebSocket refusal, and each host's route table. Plus the Go↔TS header sync check and the lint rule that keeps origin / Sec-Fetch-* reads out of handlers.
+      - Core:
+        - Exports (types):
+          - `EndpointAccess`
+          - `GatedRouteHandler`
+          - `HostGate`
+          - `HostRoute`
+          - `HostRouteTable`
+          - `Principal`
+          - `PrincipalStamp`
+        - Exports (values):
+          - `CENTRAL_HOST_ROUTES_ROUTE`
+          - `CROSS_SITE_REFUSED_MESSAGE`
+          - `crossSiteRefusedResponse`
+          - `gateByPrincipal`
+          - `HOST_ROUTES_ROUTE`
+          - `hostGateFromArgv`
+          - `HostRouteSchema`
+          - `HostRouteTableSchema`
+          - `isBrowserRequest`
+          - `isCrossSiteRefusal`
+          - `PRINCIPAL_HEADER`
+          - `principalOf`
+          - `principalStamp`
+          - `UNSTAMPED_GATEWAY_WARNING`
     - **`product-name`** — The product's own name, as data: PRODUCT_NAME (`equin`, always lowercase — what every person and agent reads) and LEGACY_PRODUCT_NAMES (the names it went by before, never written again), enforced by the product-name:legacy check over every tracked file; and LEGACY_IDS, the identifiers built from the old name that are kept for good (stored state, cross-version contracts), the one place they are spelled — enforced by product-name:legacy-id (and its mirrors by product-name:legacy-ids-in-sync). A dependency-free leaf, so a browser bundle, a server or a script can import it.
       - Cross-plugin:
         - Imported by:
@@ -26917,7 +26942,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `framework/tooling/guards.MODULE_EXTENSION`
             - Exports (values): `isE2eScriptPath`
           - Cross-plugin:
-            - Imported by: 172 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+            - Imported by: 173 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
               - `apps` ×51
               - `primitives` ×26
               - `conversations` ×24
@@ -26934,6 +26959,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `reports` ×2
               - `build`
               - `database/admin`
+              - `framework/principal`
               - `map/google`
               - `menu-bar`
               - `network/live`

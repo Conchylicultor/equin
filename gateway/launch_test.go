@@ -8,10 +8,11 @@ import (
 )
 
 // The namespace and the socket both travel on argv: in the environment, every
-// process the backend starts would inherit them.
+// process the backend starts would inherit them. The bare --principal-stamped
+// declares that this gateway stamps the principal header.
 func TestBackendLaunch(t *testing.T) {
 	args := backendLaunch("att-1", "/s/att-1.sock")
-	if want := []string{"--namespace", "att-1", "--socket", "/s/att-1.sock"}; !reflect.DeepEqual(args, want) {
+	if want := []string{"--namespace", "att-1", "--socket", "/s/att-1.sock", "--principal-stamped"}; !reflect.DeepEqual(args, want) {
 		t.Fatalf("args = %v, want %v", args, want)
 	}
 }

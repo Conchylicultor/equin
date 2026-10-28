@@ -8,6 +8,7 @@ import type {
   EndpointHttpHandler,
   HttpHandler,
 } from "@plugins/framework/plugins/server-core/core";
+import type { EndpointAccess } from "@plugins/framework/plugins/principal/core";
 import type { EndpointDef, MachineEndpointDef } from "./define-endpoint";
 import { agentWriteGate, type AgentWrite } from "./agent-write";
 import { registerRouteSlowThreshold } from "./slow-threshold";
@@ -98,88 +99,91 @@ export function endpointHandler<
   // Main is read-only for agent sessions: refused before the body is even
   // decoded. `null` (decided once) everywhere it cannot refuse.
   const agentGate = agentWriteGate(_endpoint);
-  return brand(async (req: Request, params: Record<string, string>) => {
-    if (agentGate) {
-      const refused = agentGate(req);
-      if (refused) return refused;
-    }
-    try {
-      // Decode body via codec if one exists. The codec throws HttpError(400)
-      // on a bad payload, handled by the catch below.
-      let body: TBody = undefined as TBody;
-      if (_endpoint.bodyCodec) {
-        body = await _endpoint.bodyCodec.decodeRequest(req);
+  return brand(
+    _endpoint.access,
+    async (req: Request, params: Record<string, string>) => {
+      if (agentGate) {
+        const refused = agentGate(req);
+        if (refused) return refused;
       }
-
-      // Parse query if schema exists
-      let query: TQuery = undefined as TQuery;
-      if (_endpoint.querySchema) {
-        const url = new URL(req.url, "http://localhost");
-        const raw: Record<string, string> = {};
-        for (const [key, value] of url.searchParams.entries()) {
-          raw[key] = value;
+      try {
+        // Decode body via codec if one exists. The codec throws HttpError(400)
+        // on a bad payload, handled by the catch below.
+        let body: TBody = undefined as TBody;
+        if (_endpoint.bodyCodec) {
+          body = await _endpoint.bodyCodec.decodeRequest(req);
         }
-        const result = _endpoint.querySchema.safeParse(raw);
-        if (!result.success) {
-          return Response.json(
-            { error: "Query validation failed", issues: result.error.issues },
-            { status: 400 },
-          );
-        }
-        query = result.data;
-      }
 
-      // Records an `http` span and establishes the ambient parent context so
-      // nested DB/loader spans attribute to this route. The entry span
-      // ENCLOSES the gates — dedupe (outermost, so duplicates never even take
-      // a concurrency slot) → concurrency gate → handler — so the http span's
-      // wall matches client-observed latency and queue-wait is attributed to
-      // it by name (`endpoint-dedupe` / `endpoint-concurrency` waits) instead
-      // of hiding outside the span. Deduped callers share one `result` object
-      // (read-only JSON-safe data) and each encodes its own Response below.
-      // Records in `finally`, so a throwing handler's duration is captured too.
-      const result = await recordEntrySpan(
-        "http",
-        _endpoint.route,
-        async () => {
-          const runHandler = async (): Promise<JsonCompat<TResponse>> =>
-            handler({
-              params: params as TParams,
-              body,
-              query,
-              req,
-            });
-          const gated = gate
-            ? () =>
-                gate.run(runHandler, {
-                  onWait: (ms) => chargeWait("endpoint-concurrency", ms),
+        // Parse query if schema exists
+        let query: TQuery = undefined as TQuery;
+        if (_endpoint.querySchema) {
+          const url = new URL(req.url, "http://localhost");
+          const raw: Record<string, string> = {};
+          for (const [key, value] of url.searchParams.entries()) {
+            raw[key] = value;
+          }
+          const result = _endpoint.querySchema.safeParse(raw);
+          if (!result.success) {
+            return Response.json(
+              { error: "Query validation failed", issues: result.error.issues },
+              { status: 400 },
+            );
+          }
+          query = result.data;
+        }
+
+        // Records an `http` span and establishes the ambient parent context so
+        // nested DB/loader spans attribute to this route. The entry span
+        // ENCLOSES the gates — dedupe (outermost, so duplicates never even take
+        // a concurrency slot) → concurrency gate → handler — so the http span's
+        // wall matches client-observed latency and queue-wait is attributed to
+        // it by name (`endpoint-dedupe` / `endpoint-concurrency` waits) instead
+        // of hiding outside the span. Deduped callers share one `result` object
+        // (read-only JSON-safe data) and each encodes its own Response below.
+        // Records in `finally`, so a throwing handler's duration is captured too.
+        const result = await recordEntrySpan(
+          "http",
+          _endpoint.route,
+          async () => {
+            const runHandler = async (): Promise<JsonCompat<TResponse>> =>
+              handler({
+                params: params as TParams,
+                body,
+                query,
+                req,
+              });
+            const gated = gate
+              ? () =>
+                  gate.run(runHandler, {
+                    onWait: (ms) => chargeWait("endpoint-concurrency", ms),
+                  })
+              : runHandler;
+            return dedupe
+              ? dedupe.run(dedupeKey(req), gated, {
+                  onWait: (ms) => chargeWait("endpoint-dedupe", ms),
                 })
-            : runHandler;
-          return dedupe
-            ? dedupe.run(dedupeKey(req), gated, {
-                onWait: (ms) => chargeWait("endpoint-dedupe", ms),
-              })
-            : gated();
-        },
-      );
+              : gated();
+          },
+        );
 
-      // void/undefined → 204. `null` is a value (a `.nullable()` response),
-      // not an absence: it goes out as JSON `null` so the client decodes it
-      // through the response schema — a 204 reads back as `undefined`.
-      if (result === undefined) {
-        return new Response(null, { status: 204 });
-      }
+        // void/undefined → 204. `null` is a value (a `.nullable()` response),
+        // not an absence: it goes out as JSON `null` so the client decodes it
+        // through the response schema — a 204 reads back as `undefined`.
+        if (result === undefined) {
+          return new Response(null, { status: 204 });
+        }
 
-      return _endpoint.responseCodec
-        ? _endpoint.responseCodec.encodeResponse(result as TResponse)
-        : Response.json(result);
-    } catch (err) {
-      if (err instanceof HttpError) {
-        return new Response(err.message, { status: err.status });
+        return _endpoint.responseCodec
+          ? _endpoint.responseCodec.encodeResponse(result as TResponse)
+          : Response.json(result);
+      } catch (err) {
+        if (err instanceof HttpError) {
+          return new Response(err.message, { status: err.status });
+        }
+        throw err;
       }
-      throw err;
-    }
-  });
+    },
+  );
 }
 
 /**
@@ -187,21 +191,34 @@ export function endpointHandler<
  * declaration: for a route whose answer `implement` cannot build (a binary or
  * streamed body, custom headers or status) but which may still write. It runs
  * the same agent-write gate first — the reason a write route takes only an
- * `EndpointHttpHandler` (server-core's `HttpRoutes`) — and nothing else:
- * decoding is the handler's.
+ * `EndpointHttpHandler` (server-core's `HttpRoutes`) — and carries the route's
+ * `access` (absent = owner) for the socket hosts' principal gate; nothing
+ * else: decoding is the handler's.
  */
 export function rawEndpointHandler(
-  endpoint: { route: string; method: string; agentWrite?: AgentWrite },
+  endpoint: {
+    route: string;
+    method: string;
+    agentWrite?: AgentWrite;
+    access?: EndpointAccess;
+  },
   handler: HttpHandler,
 ): EndpointHttpHandler {
+  const access = endpoint.access ?? "owner";
   const agentGate = agentWriteGate(endpoint);
-  if (!agentGate) return brand(handler);
-  return brand((req, params) => agentGate(req) ?? handler(req, params));
+  if (!agentGate) return brand(access, (req, params) => handler(req, params));
+  return brand(access, (req, params) => agentGate(req) ?? handler(req, params));
 }
 
-// The brand is type-only: an endpoint handler IS a handler. Minted here alone.
-function brand(handler: HttpHandler): EndpointHttpHandler {
-  return handler as EndpointHttpHandler;
+// Minted here alone. The brand is type-only; `access` is real — the socket
+// hosts' principal gate reads it off the handler (`gateByPrincipal`). Always a
+// fresh function, so one raw handler served on two routes never shares one
+// route's access.
+function brand(
+  access: EndpointAccess,
+  handler: HttpHandler,
+): EndpointHttpHandler {
+  return Object.assign(handler, { access }) as EndpointHttpHandler;
 }
 
 // Identity of a GET for dedup: method + path + query string. Two requests with

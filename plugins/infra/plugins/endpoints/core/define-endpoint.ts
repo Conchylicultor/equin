@@ -4,6 +4,7 @@ import type { ExtractParams } from "./route-params";
 import { extractMethod, extractPath } from "./route-params";
 import type { MachineFeature } from "./needs-machine";
 import type { AgentWrite } from "./agent-write";
+import type { EndpointAccess } from "@plugins/framework/plugins/principal/core";
 
 /** The methods a browser may send through `fetchEndpoint` / `useEndpointMutation`. */
 type WriteMethod = "POST" | "PUT" | "PATCH" | "DELETE";
@@ -113,6 +114,14 @@ interface EndpointContract<
    * only — `implement` throws for a GET.
    */
   readonly agentReverted?: true;
+  /**
+   * Who may call this route, resolved: `"owner"` unless the declaration said
+   * `access: { public: "<reason>" }`. The socket hosts refuse an anonymous
+   * caller (the gateway's `X-Equin-Principal` verdict) of an owner route with
+   * `403 cross-site-refused` before the handler runs (`framework/principal`'s
+   * `gateByPrincipal`, reading the `access` `implement` attaches to the handler).
+   */
+  readonly access: EndpointAccess;
   /** Phantom field to carry the params type. Never set at runtime. */
   readonly __params?: TParams;
 }
@@ -178,6 +187,13 @@ interface EndpointOptions<Route extends string, B, R, TQuery> {
   agentReverted?: Route extends `${"GET" | "HEAD" | "OPTIONS"} ${string}`
     ? never
     : true;
+  /**
+   * Opens the route to an anonymous caller — another site, a cross-site
+   * navigation — and says why (`{ public: "<reason>" }`). Absent = owner-only,
+   * the default; `"owner"` has no spelling here, so the safe answer is the one
+   * a forgotten field gives.
+   */
+  access?: { public: string };
 }
 
 /**
@@ -248,8 +264,31 @@ export function defineEndpoint<
     slowThresholdMs: opts.slowThresholdMs,
     agentWrite: opts.agentWrite,
     agentReverted: opts.agentReverted,
+    access: resolveAccess(opts.route, opts.access),
     ...(opts.needsMachine !== undefined
       ? { needsMachine: opts.needsMachine }
       : {}),
   };
+}
+
+/** A declaration's `access`, resolved: absent → `"owner"`. */
+function resolveAccess(
+  route: string,
+  access: { public: string } | undefined,
+): EndpointAccess {
+  if (access === undefined) return "owner";
+  // A cast past tsc (`access: "owner"`) is refused by name, not by a TypeError.
+  if (typeof access !== "object" || typeof access.public !== "string") {
+    throw new Error(
+      `defineEndpoint(${route}): access is { public: "<reason>" } or absent (owner) — got ${JSON.stringify(access)}`,
+    );
+  }
+  if (access.public.trim() === "") {
+    // Fail loudly at declaration: the reason is the review surface of a
+    // public route; an empty one hides that the route is open.
+    throw new Error(
+      `defineEndpoint(${route}): access.public needs a reason — why may an anonymous caller reach it?`,
+    );
+  }
+  return { public: access.public };
 }

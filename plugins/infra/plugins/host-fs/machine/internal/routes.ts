@@ -6,7 +6,7 @@ import {
 import { hostFsExtract, hostFsMove, hostFsOpen, hostFsRaw } from "../../core";
 import { extractHostArchive } from "../../server/internal/extract";
 import { moveHostPaths } from "../../server/internal/move";
-import { isAppOrigin, openHostPath } from "../../server/internal/open";
+import { openHostPath } from "../../server/internal/open";
 import { resolveHostPath } from "../../server/internal/path";
 import { handleRaw as rawBytes } from "../../server/internal/raw";
 
@@ -15,17 +15,14 @@ import { handleRaw as rawBytes } from "../../server/internal/raw";
 // computer (the in-browser demo) answers it unavailable without a request.
 // The reads a surface makes (stat, complete, …) are live values (`./reads.ts`,
 // `./complete.ts`); `raw` stays a route because a byte URL is an asset.
+// Who may call them is the socket host's principal gate, not a per-route
+// Origin check: every route here is owner-only (no `access: { public }`), so a
+// foreign site is refused before a handler runs (`framework/principal`).
 
 /** The bytes: a raw handler (its own status and headers — 200 / 206 / 416). */
 export const handleRaw = machineHandler(hostFsRaw, rawBytes);
 
-export const handleOpen = implementMachine(hostFsOpen, ({ body, req }) => {
-  if (!isAppOrigin(req.headers.get("origin"))) {
-    throw new HttpError(
-      403,
-      "Open is only accepted from the app's own *.localhost origin",
-    );
-  }
+export const handleOpen = implementMachine(hostFsOpen, ({ body }) => {
   if (process.platform !== "darwin") {
     throw new HttpError(
       501,
@@ -35,26 +32,11 @@ export const handleOpen = implementMachine(hostFsOpen, ({ body, req }) => {
   return openHostPath(resolveHostPath(body.path), body.reveal ?? false);
 });
 
-export const handleExtract = implementMachine(
-  hostFsExtract,
-  ({ body, req }) => {
-    if (!isAppOrigin(req.headers.get("origin"))) {
-      throw new HttpError(
-        403,
-        "Extract is only accepted from the app's own *.localhost origin",
-      );
-    }
-    return extractHostArchive(resolveHostPath(body.path));
-  },
+export const handleExtract = implementMachine(hostFsExtract, ({ body }) =>
+  extractHostArchive(resolveHostPath(body.path)),
 );
 
-export const handleMove = implementMachine(hostFsMove, ({ body, req }) => {
-  if (!isAppOrigin(req.headers.get("origin"))) {
-    throw new HttpError(
-      403,
-      "Move is only accepted from the app's own *.localhost origin",
-    );
-  }
+export const handleMove = implementMachine(hostFsMove, ({ body }) => {
   const resolutions = new Map(
     Object.entries(body.resolutions ?? {}).map(
       ([source, resolution]) => [resolveHostPath(source), resolution] as const,

@@ -12,7 +12,7 @@ import { join } from "node:path";
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { completeHostDir, splitPrefix } from "./complete";
 import { listHostDir } from "./list";
-import { isAppOrigin, openArgv } from "./open";
+import { openArgv } from "./open";
 import { peekHostDir } from "./peek";
 import { classifyFsError, expandTilde, resolveHostPath } from "./path";
 import { parseRange, serveHostFile } from "./raw";
@@ -334,15 +334,6 @@ describe("raw", () => {
 });
 
 describe("open", () => {
-  test("only the app's own *.localhost origins", () => {
-    expect(isAppOrigin("http://equin.localhost:9000")).toBe(true);
-    expect(isAppOrigin("http://sonata.att-1.localhost:9000")).toBe(true);
-    expect(isAppOrigin("http://localhost:9000")).toBe(false);
-    expect(isAppOrigin("https://evil.com")).toBe(false);
-    expect(isAppOrigin("http://localhost.evil.com")).toBe(false);
-    expect(isAppOrigin("null")).toBe(false);
-    expect(isAppOrigin(null)).toBe(false);
-  });
   test("argv never goes through a shell", () => {
     expect(openArgv("/a b/c;rm -rf", false)).toEqual(["open", "/a b/c;rm -rf"]);
     expect(openArgv("/x", true)).toEqual(["open", "-R", "/x"]);

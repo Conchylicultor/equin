@@ -3,7 +3,11 @@ import {
   EndpointError,
   type FetchEndpoint,
 } from "@plugins/infra/plugins/endpoints/web";
-import { disconnect as disconnectEndpoint } from "@plugins/auth/core";
+import { endpointPath } from "@plugins/infra/plugins/endpoints/core";
+import {
+  disconnect as disconnectEndpoint,
+  oauthStart,
+} from "@plugins/auth/core";
 import {
   MAIN_COMPOSITION_ID,
   namespaceFromHost,
@@ -13,8 +17,11 @@ import {
  * Open the OAuth popup. Returns a promise that resolves on the auth-complete
  * postMessage from the popup, or rejects on cancellation/timeout.
  *
- * The popup loads `http://localhost:9000/api/auth/start/<provider>` (bare
- * localhost — see plan §G/M for why).
+ * The popup loads `/api/auth/start/<provider>` on this page's own origin —
+ * central's routes are served on every host, and only a same-origin request
+ * is the owner (the gateway's principal; the start route is owner-only). The
+ * provider then redirects it to the callback on bare localhost (the
+ * registered, host-independent `redirect_uri`), which posts the result back.
  */
 export interface ConnectArgs {
   providerId: string;
@@ -30,12 +37,17 @@ export interface ConnectResult {
 
 const POPUP_FEATURES = "width=600,height=720";
 const POPUP_NAME = LEGACY_IDS.authPopupName;
-const MAIN_ORIGIN = "http://localhost:9000";
+/**
+ * The callback page's origin — the registered `redirect_uri`'s host (auth
+ * central's `REDIRECT_HOST`), where the popup ends and posts from.
+ */
+const CALLBACK_ORIGIN = "http://localhost:9000";
 const POPUP_TIMEOUT_MS = 5 * 60 * 1000;
 
 export function startConnectFlow(args: ConnectArgs): Promise<ConnectResult> {
   const url = new URL(
-    `${MAIN_ORIGIN}/api/auth/start/${encodeURIComponent(args.providerId)}`,
+    endpointPath(oauthStart, { provider: args.providerId }),
+    window.location.origin,
   );
   url.searchParams.set("worktree", args.worktree);
   // Where the result is posted back: this page's own origin, since a namespace
@@ -59,7 +71,7 @@ export function startConnectFlow(args: ConnectArgs): Promise<ConnectResult> {
     };
 
     function onMessage(event: MessageEvent) {
-      if (event.origin !== MAIN_ORIGIN) return;
+      if (event.origin !== CALLBACK_ORIGIN) return;
       const data = event.data as {
         type?: string;
         ok?: boolean;

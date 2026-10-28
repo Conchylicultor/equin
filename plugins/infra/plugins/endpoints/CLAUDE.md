@@ -251,6 +251,35 @@ export const emitLogs = defineEndpoint({
   main's), and clients that do not send the agent headers (raw `curl`, page JS
   overriding them) — the gate prevents accidents, it is not a security boundary.
 
+## Who may call — `access`
+
+Every endpoint is **owner-only** unless its declaration opens it:
+
+```typescript
+export const oauthCallback = defineEndpoint({
+  route: "GET /api/auth/callback/:provider",
+  access: { public: "authenticated by the OAuth state nonce an owner request minted" },
+});
+```
+
+- The gateway stamps each request's principal (`owner` / `anonymous`); the
+  socket hosts refuse an anonymous caller of an owner route with
+  `403 { reason: "cross-site-refused", route, message }` before the handler
+  runs — GETs and writes alike (`framework/principal`'s `gateByPrincipal`).
+- `access?: { public: string }` is the only spelling; absent is `"owner"`
+  (`EndpointContract.access`, resolved). An empty reason throws at declaration.
+  Declare it only for a caller that is genuinely not the owner: a cross-site
+  navigation back into the app (the OAuth callback), a deployed site's public
+  visitors (`analytics/collect`, `site-messages/intake`). A local tool (CLI,
+  MCP, a script) sends no browser headers and is already the owner.
+- `implement`, `implementMachine`, `rawEndpointHandler` and `machineHandler`
+  attach the resolved `access` to the handler (`EndpointHttpHandler.access`,
+  real at runtime, unlike the brand). A raw handler not built here is owner —
+  so a public raw route goes through `rawEndpointHandler(decl, handler)`, even
+  on central.
+- Never read `Origin` / `Sec-Fetch-*` in a handler
+  (`principal/no-origin-header-read`).
+
 ## Writes an agent session's close undoes — `agentReverted`
 
 ```typescript

@@ -1,5 +1,4 @@
 import { stat } from "node:fs/promises";
-import { namespaceFromHost } from "@plugins/infra/plugins/namespace/core";
 import { spawnExpectOk } from "@plugins/infra/plugins/spawn/core";
 import type { HostFsOpenResult } from "../../core";
 import { locateHostPath } from "./archive/locate";
@@ -8,17 +7,6 @@ import { classifyFsError } from "./path";
 // `open` hands the path to LaunchServices and returns at once; ten seconds is
 // far past any healthy answer, so only a wedged child reaches it.
 const OPEN_TIMEOUT_MS = 10_000;
-
-/**
- * Whether a request's `Origin` is one of the app's own: a namespace the gateway
- * serves (`<namespace>.localhost`, read with the gateway's own grammar). A missing or
- * `null` Origin is refused too — every browser sends Origin on a POST, so
- * its absence never means "the app".
- */
-export function isAppOrigin(origin: string | null): boolean {
-  if (origin === null || !URL.canParse(origin)) return false;
-  return namespaceFromHost(new URL(origin).host) !== null;
-}
 
 /** The argv that opens `path` with its default app, or reveals it in the Finder. */
 export function openArgv(path: string, reveal: boolean): string[] {

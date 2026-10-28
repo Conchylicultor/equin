@@ -19,7 +19,7 @@ See the top-level [`CLAUDE.md`](../CLAUDE.md) for overall architecture and [`ser
 
 - **Subdomain routing, not path-prefix** — each instance thinks it's at `/`, so no base-path rewriting. `*.localhost` resolves natively in Chrome and Firefox
 - **Gateway serves statics, backend serves API/WS** — separating the cheap thing (files) from the expensive thing (process) means page loads are instant and backends only exist when needed. A page load still *starts* the backend (without waiting on it), so its boot overlaps the browser loading the app instead of following it
-- **Gateway owns backend lifecycles** — backends are spawned, supervised, and killed by the gateway. They never know the gateway exists. The convention is `bun bin/index.ts --namespace <name> --socket <path>` in the `server` directory, with the declared runtime environment and nothing else (`backendLaunch` in `worktree.go`)
+- **Gateway owns backend lifecycles** — backends are spawned, supervised, and killed by the gateway. They never know the gateway exists. The convention is `bun bin/index.ts --namespace <name> --socket <path> --principal-stamped` in the `server` directory, with the declared runtime environment and nothing else (`backendLaunch` in `worktree.go`)
 - **Children get a declared environment, not an inherited one** — the gateway used to hand every child its own environment, i.e. whatever its starter carried. Started from an agent shell, that put the shell's `EQUIN_CONVERSATION_ID`, `TMUX` and `CLAUDE_*` into every backend on the host. Now the launcher declares the names (`-child-env`), `env.go` captures that subset once at boot, and `env.go` is the only file allowed to call `os.Environ()` or `exec.Command` (the `launcher:gateway-env-explicit` check) — so no exec site can fall back to Go's nil-`Env` "inherit everything"
 - **Unix domain sockets, not TCP loopback** — eliminates the IPv4/IPv6 bind-shape asymmetry that allowed unrelated processes to silently steal traffic on macOS (an IPv4-loopback squatter could coexist with a dual-stack listener on the same port). UDS scopes the gateway↔backend channel by filesystem path, removes the port allocator entirely, and removes any LAN-exposure surface.
 - **Loopback front door, both families** — the gateway's own port binds `127.0.0.1` and `[::1]` as two listeners (`listenAddrs` in `main.go`), never one dual-stack wildcard, so it is unreachable off-box (and trips no macOS incoming-connections prompt) and no IPv4- or IPv6-loopback squatter can coexist with it on the port: `[::1]` in use is fatal, like `127.0.0.1`; only `[::1]` *unavailable* (no IPv6) degrades to IPv4 with a warning. Every interface is the explicit `-listen :<port>` (`EQUIN_LISTEN=:<port>`).
@@ -59,6 +59,20 @@ body, the head-spliced shell, is gzipped on the fly (`serveBytes`; its ETag gets
 a `-gzip` suffix). `/artifacts/*` is additionally `immutable` (content-addressed);
 the shell is `no-cache`.
 
+## Principal (who a request is)
+
+`principal.go` turns every request into `owner` or `anonymous` (`principalOf`) and `Proxy.ServeHTTP` stamps it as `X-Equin-Principal` first thing, deleting any client-sent value (the HTTP reverse proxy and the WebSocket `r.Write` replay both carry it). The gateway's own direct-socket calls (`/api/health/ready`, `/api/boot/gateway-report`) stamp `owner`. The backends enforce per-route access from the header; the gateway itself refuses two things, `403 {"reason":"cross-site-refused",...}`: an anonymous non-GET/HEAD `/gateway/*` call, and any anonymous WebSocket upgrade. Same-origin, not same-site:
+
+1. Host not an equin host (no namespace, not `localhost`/`127.0.0.1`/`::1`, not in `-public-hosts`) -> anonymous (DNS rebinding). `-public-hosts` (comma-separated) is how a deployed site, whose Caddy forwards the public Host unchanged, names its own hostnames; the launcher passes it from `EQUIN_PUBLIC_HOSTS`.
+2. `Sec-Fetch-Site` `same-origin` or `none` -> owner.
+3. No `Sec-Fetch-Site` and no `Origin` -> owner (local tools).
+4. No `Sec-Fetch-Site`, `Origin` == `http://<Host>` or `https://<Host>` -> owner (old browsers).
+5. Otherwise anonymous (cross-site, sibling namespace, `Origin: null`).
+
+**The handshake.** Every backend (central included) gets the bare `--principal-stamped` at the end of its argv (`principalStampedFlag`, `backendLaunch`): "this gateway stamps the header". A backend enforces fail-closed — a missing header is anonymous — only when it sees the flag (`readPrincipalStamp`, `plugins/framework/plugins/principal`). The gateway binary is a shared dependency `./equin build` neither rebuilds nor restarts, so a backend can boot behind a gateway older than the stamp; without the handshake it would refuse everything, this gateway's own readiness probe included, and every namespace would stay down. Behind such a gateway the backend serves ungated (the pre-principal status quo), logs `[principal] this gateway predates the principal stamp …` at boot, and the health report's Gateway row turns stale. **The protection takes effect only once the gateway is restarted: `./equin start --force`.** The flag and the Go constant are pinned to the TS one by `principal:header-in-sync`.
+
+Design: [`research/2026-10-28-global-http-edge-principal.md`](../research/2026-10-28-global-http-edge-principal.md).
+
 ## Worktree Registry
 
 Location: `~/.equin/worktrees/<name>/spec.json`. Directory name = worktree identifier = subdomain.
@@ -70,7 +84,7 @@ Location: `~/.equin/worktrees/<name>/spec.json`. Directory name = worktree ident
 }
 ```
 
-`server` is required and absolute; `web` is absolute when present (central has none). The gateway hardcodes the launch convention (`bun bin/index.ts --namespace <name> --socket <path>`, escalating readiness timeout — see "Backend Contract"). No per-worktree overrides in v1. Other per-worktree files (build logs, profiling data) also live in the same subdirectory.
+`server` is required and absolute; `web` is absolute when present (central has none). The gateway hardcodes the launch convention (`bun bin/index.ts --namespace <name> --socket <path> --principal-stamped`, escalating readiness timeout — see "Backend Contract"). No per-worktree overrides in v1. Other per-worktree files (build logs, profiling data) also live in the same subdirectory.
 
 Composition namespaces (`http://<composition>.<checkout>.localhost:9000`, or `http://<composition>.localhost:9000` when the checkout is main — `./equin build --composition <name>`) are ordinary spec dirs written by the build: `server` points at the checkout that built it, `web` at a composed dist, plus a `composition.json` provenance marker the gateway ignores. No gateway changes; namespace identity flows the same way (dir name → the backend's `--namespace`). The `composition` field on the spec is carried through the gateway's round-trip but never interpreted or forwarded — the backend reads it back off the same file.
 
@@ -122,6 +136,7 @@ gateway/
 ├── supervisor.go  # Generic service supervisor: start commands, readiness probes, watchdog
 ├── document_head.go # The backend-rendered <head> fragment spliced into the SPA shell
 ├── encoding.go    # Content-encoding of statics: precompressed-sidecar negotiation, on-the-fly gzip of the spliced shell
+├── principal.go   # principalOf: owner/anonymous verdict, X-Equin-Principal stamp, cross-site refusal
 └── proxy.go       # http.Handler: routing, static serving, HTTP/WS proxy, /gateway API
 ```
 
@@ -232,6 +247,7 @@ The gateway expects backends to:
    **Wedge detection is progress-aware and escalates before it kills.** The base deadline (`-ready-timeout`, load-adaptive up to `-ready-timeout-max`) is only the wedge *threshold*: when it expires but the backend has answered HTTP at all (even `503`), or was spawned darwinbg-demoted (an E-core boot legitimately exceeds base under host load — even to first socket bind), the gateway lifts the demotion (`taskpolicy -B`) and extends the wait by `-ready-timeout-max` instead of SIGKILLing near-complete boot work. Only a silent, never-demoted backend is declared wedged at base; a crashed backend is always caught instantly via its exit channel. This closes the 2026-07-07 spawn-kill loop, where healthy demoted boots were killed at 15s four times in a row under load, turning a slow cold start into a ~2-minute outage.
 4. Use relative redirects (gateway does not rewrite `Location` headers)
 5. Handle `/api/*` and `/ws/*` routes
+6. Gate routes on `X-Equin-Principal` only when given `--principal-stamped` (see "Principal" → the handshake); without it, serve ungated and say so.
 
 In Bun: `Bun.serve({ unix: readServingSocket(), fetch, websocket })`. There is no standalone dev mode — the backend is always spawned by the gateway.
 

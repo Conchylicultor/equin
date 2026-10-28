@@ -37,6 +37,11 @@ import {
 } from "@plugins/infra/plugins/runtime-identity/core";
 import { drainWarmups } from "@plugins/infra/plugins/warmup/server";
 import { createRequestHandler } from "@plugins/framework/plugins/http-router/core";
+import {
+  HOST_ROUTES_ROUTE,
+  hostGateFromArgv,
+  type HostGate,
+} from "@plugins/framework/plugins/principal/core";
 
 // ── QoS boost (main backend only) ───────────────────────────────
 // Raise the event-loop thread to user-interactive QoS BEFORE any boot work, so
@@ -72,6 +77,7 @@ const wsRoutes: Record<string, WsHandler> = {};
 
 function populateRoutes(
   ordered: LoadedServerPlugin[],
+  gate: HostGate,
 ): (req: Request) => Promise<Response> {
   const end = profilerStart(
     "routePopulation",
@@ -86,8 +92,18 @@ function populateRoutes(
   wsRoutes["/ws/notifications"] = notificationsWsHandler;
 
   const handle = createRequestHandler({
-    // Plugin routes + the live-state read: the table the browser host mounts too.
-    routes: hostHttpRoutes(ordered),
+    // Plugin routes + the live-state read (the table the browser host mounts
+    // too), plus this socket's own route table (`GET /api/host/routes`) — each
+    // behind the principal gate: an anonymous caller (the gateway's verdict)
+    // reaches only a route declared `access: { public }` — when the gateway
+    // declared it stamps the principal (`--principal-stamped`; ungated, and
+    // loudly so, behind an older gateway). Not the browser host: its only
+    // caller is the page itself.
+    routes: gate.routes({
+      tableRoute: HOST_ROUTES_ROUTE,
+      http: hostHttpRoutes(ordered),
+      wsPaths: Object.keys(wsRoutes),
+    }),
     onError: (errObj, req, pathname) => {
       // Fail loudly: always emit a durable log line (captured by the gateway into
       // the per-worktree backend log) BEFORE returning a generic 500. The crash
@@ -123,7 +139,10 @@ function populateRoutes(
 // (runtime-identity's readServingSocket, which also records it for code that
 // must reach this backend over HTTP).
 function bindSocket(ordered: LoadedServerPlugin[]): void {
-  const handleHttp = populateRoutes(ordered);
+  // Does the gateway stamp the principal? Its `--principal-stamped` on argv
+  // says so; without it the gate is off (see principal's `core/stamp.ts`).
+  const gate = hostGateFromArgv(process.argv);
+  const handleHttp = populateRoutes(ordered, gate);
 
   const socketPath = readServingSocket(process.argv);
 
@@ -149,6 +168,10 @@ function bindSocket(ordered: LoadedServerPlugin[]): void {
       if (req.headers.get("upgrade") === "websocket") {
         const handler = wsRoutes[url.pathname];
         if (handler) {
+          // No socket is public: an anonymous upgrade is refused here too,
+          // behind the gateway's own refusal.
+          const refused = gate.refuseUpgrade(req, url.pathname);
+          if (refused) return refused;
           server.upgrade(req, { data: { path: url.pathname } });
           return;
         }

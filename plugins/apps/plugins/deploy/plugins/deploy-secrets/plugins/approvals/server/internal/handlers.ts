@@ -1,3 +1,4 @@
+import { isBrowserRequest } from "@plugins/framework/plugins/principal/core";
 import { sql } from "drizzle-orm";
 import { _deployDeployments } from "@plugins/apps/plugins/deploy/plugins/deployments/server";
 import { db } from "@plugins/database/server";
@@ -84,20 +85,6 @@ export const handleApprove = implement(
 );
 
 /**
- * True when the request came from a browser. Every browser sends a
- * `Sec-Fetch-Site` (and an `Origin` on a POST); `callEndpoint` from the CLI
- * sends neither. The approved env is the one response carrying secret values,
- * and no page — this app's or another — has any business reading it.
- */
-function fromBrowser(req: Request): boolean {
-  return (
-    req.headers.has("sec-fetch-site") ||
-    req.headers.has("sec-fetch-mode") ||
-    req.headers.has("origin")
-  );
-}
-
-/**
  * The approved env for converge: every required key's current value, provided
  * EVERY one is approved — otherwise the same `needs-approval` the gate gives.
  * Re-checked here rather than trusted from the run's gate, because a value can
@@ -107,7 +94,12 @@ function fromBrowser(req: Request): boolean {
 export const handleDeliver = implement(
   deliverDeploySecrets,
   async ({ params, req }) => {
-    if (fromBrowser(req)) {
+    // The approved env is the one response carrying secret values, and no
+    // page — this app's own included — has any business reading it: refused
+    // to any browser, owner or not (`callEndpoint` from the CLI sends no
+    // browser headers). Narrower than the principal gate, which lets the
+    // owner's own page in.
+    if (isBrowserRequest(req)) {
       throw new HttpError(
         403,
         "The approved deploy env is read only by `./equin deploy converge`, never by a browser.",
