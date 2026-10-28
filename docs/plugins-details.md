@@ -22195,14 +22195,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exempts itself from:
                   - `timer/no-unlisted-timer` — `server/internal/service.ts` (sanctioned)
                   - `boundaries/no-platform-api` — `server/internal/ingest.ts`, `server/internal/service.ts` (debt)
-        - **`ops`** — Op contention profiling for the Gantt debug pane: the Profiling section hosting the unified build/push/check/test/e2e Gantt over the live op-store history (last 24 h), the per-worktree Gantt (its ops ± 20 min of everything around them), and the op detail pane — all computed client-side from opsHistory rows.
+        - **`ops`** — Op contention profiling for the Gantt debug pane: the Profiling section hosting the unified build/push/check/test/e2e Gantt over the live op-store history (last 24 h), the per-worktree Gantt (its ops ± 20 min of everything around them), and the op detail pane (with every op in the repo around it) — all computed client-side from opsHistory rows.
           - Web:
             - Slots: `opDetailPane.Actions`
             - Slot contributors: `opDetailPane.Actions` ← `primitives.pane`
             - Contributes:
               - `Profiling.Section` → `OpSection`
               - `Pane.Register` "debug-profiling-op-detail"
-            - Uses: 39 symbols — full list in [`plugins/debug/plugins/profiling/plugins/ops/REFERENCE.md`](../plugins/debug/plugins/profiling/plugins/ops/REFERENCE.md)
+            - Uses: 40 symbols — full list in [`plugins/debug/plugins/profiling/plugins/ops/REFERENCE.md`](../plugins/debug/plugins/profiling/plugins/ops/REFERENCE.md)
               - `debug/profiling` ×8
               - `debug/profiling/ops/op-gantt` ×6
               - `primitives/pane` ×4
@@ -22217,6 +22217,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/clip.Clip`
               - `primitives/css/cluster.Cluster`
               - `primitives/css/placeholder.Placeholder`
+              - `primitives/css/toggle-chip.SegmentedControl`
               - `primitives/css/ui-kit.cn`
               - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
@@ -40629,11 +40630,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette` ×12
               - `ui/tokens/density` ×7
               - `ui/tokens/type-scale` ×6
-            - Imported by: 50 plugins — full list in [`plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md)
+            - Imported by: 51 plugins — full list in [`plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md)
               - `apps` ×19
               - `primitives` ×7
+              - `debug` ×5
               - `stats` ×5
-              - `debug` ×4
               - `fields` ×3
               - `config_v2` ×2
               - `page` ×2

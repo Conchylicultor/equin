@@ -50,7 +50,10 @@ import {
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { opDetailPane } from "../panes";
+import { TWENTY_MINUTES, windowOf, worktreeOf } from "../internal/op-groups";
+import { WindowOpGantt } from "./window-op-gantt";
 
 function outcomeVariant(
   outcome: string,
@@ -211,6 +214,57 @@ function OpStepsGantt({
   );
 }
 
+const AROUND_PADS = {
+  "20m": TWENTY_MINUTES,
+  "1h": 60 * 60 * 1000,
+  "6h": 6 * 60 * 60 * 1000,
+} as const;
+type AroundPad = keyof typeof AROUND_PADS;
+const AROUND_OPTIONS = [
+  { id: "20m", label: "± 20 min" },
+  { id: "1h", label: "± 1 h" },
+  { id: "6h", label: "± 6 h" },
+] as const satisfies readonly { id: AroundPad; label: string }[];
+
+/**
+ * Every op in the repo that ran around this one — builds, pushes, checks,
+ * tests, e2e runs of every worktree — on one Gantt, this op ringed and its
+ * worktree's row highlighted, so what it contended with (and the history of
+ * what landed before and after it) reads at a glance. The span is the op's own
+ * ± the picked pad; an in-flight op's is open-ended, following it.
+ */
+function OpsAroundOp({ row }: { row: OpRow }): ReactElement {
+  const [pad, setPad] = useState<AroundPad>("20m");
+  const span = windowOf([row], AROUND_PADS[pad]);
+  return (
+    <Stack gap="xs">
+      <Cluster gap="sm" justify="between">
+        <SectionLabel as="span">Around this op</SectionLabel>
+        <SegmentedControl
+          label="Time around this op"
+          variant="ghost"
+          options={AROUND_OPTIONS}
+          value={pad}
+          onChange={setPad}
+        />
+      </Cluster>
+      <Clip className="rounded-md border">
+        {span && (
+          <WindowOpGantt
+            span={span}
+            highlightWorktree={worktreeOf(row)}
+            highlightOpId={row.opId}
+            subject="the ops around this op"
+            empty={
+              <Placeholder tone="muted">No ops around this one.</Placeholder>
+            }
+          />
+        )}
+      </Clip>
+    </Stack>
+  );
+}
+
 export function OpDetailBody(): ReactElement {
   const { opId } = opDetailPane.useParams();
   const result = useLiveRow(opsHistory, opId);
@@ -310,6 +364,8 @@ function OpDetailView({
       </div>
 
       <OpTimeline op={data} />
+
+      <OpsAroundOp row={row} />
 
       <Stack gap="xs">
         <SectionLabel as="span">Waits</SectionLabel>

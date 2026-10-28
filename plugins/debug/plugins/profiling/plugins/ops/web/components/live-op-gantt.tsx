@@ -13,21 +13,18 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { useOpActivation } from "../internal/use-op-activation";
 import {
   OPS_READ_LIMIT,
+  type OpWindow,
   groupOps,
   overlapping,
   recordsAt,
 } from "../internal/op-groups";
 
-/** A span to clip the ops to (worktree mode), in epoch ms; `endMs` null = open-ended. */
-export interface OpWindow {
-  startMs: number;
-  endMs: number | null;
-}
-
 interface LiveOpGanttProps {
   rows: readonly OpRow[];
   span?: OpWindow;
   highlightWorktree?: string;
+  /** One op to single out on the chart (the op a detail pane is about). */
+  highlightOpId?: string;
   /** What to show when no op falls in the span. */
   empty: ReactNode;
   /**
@@ -56,6 +53,7 @@ function GanttAt({
   rows,
   span,
   highlightWorktree,
+  highlightOpId,
   empty,
   now,
   sleepNow,
@@ -79,6 +77,7 @@ function GanttAt({
       groups={data.groups}
       totalMs={data.totalMs}
       highlightWorktree={highlightWorktree}
+      highlightOpId={highlightOpId}
       opActivation={opActivation}
       worktreeActivation={(worktree, conversationId) => {
         if (conversationId != null) {

@@ -91,6 +91,8 @@ export interface OpGanttProps {
   totalMs: number;
   title?: string;
   highlightWorktree?: string;
+  /** One op to single out (ringed, never dimmed): the op a detail pane is about. */
+  highlightOpId?: string;
   /**
    * What activating a worktree row does, given the conversation it ran under
    * when every op on the row shares one (else `null`). A `LinkTarget` makes
@@ -279,6 +281,7 @@ export function OpGantt({
   totalMs,
   title = "Ops",
   highlightWorktree,
+  highlightOpId,
   worktreeActivation,
   opActivation,
 }: OpGanttProps): ReactElement {
@@ -295,6 +298,7 @@ export function OpGantt({
               hovered={hovered}
               setHovered={setHovered}
               highlighted={group.worktree === highlightWorktree}
+              highlightOpId={highlightOpId}
               worktreeActivation={worktreeActivation}
               opActivation={opActivation}
             />
@@ -382,6 +386,7 @@ function OpRow({
   hovered,
   setHovered,
   highlighted,
+  highlightOpId,
   worktreeActivation,
   opActivation,
 }: {
@@ -389,6 +394,7 @@ function OpRow({
   hovered: Span | null;
   setHovered: (span: Span | null) => void;
   highlighted: boolean;
+  highlightOpId?: string;
   worktreeActivation?: (
     worktree: string,
     conversationId: string | null,
@@ -456,6 +462,7 @@ function OpRow({
             worktree={group.worktree}
             hovered={hovered}
             setHovered={setHovered}
+            singledOut={op.opId === highlightOpId}
             opActivation={opActivation}
           />
         ))}
@@ -474,12 +481,15 @@ function OpBar({
   worktree,
   hovered,
   setHovered,
+  singledOut,
   opActivation,
 }: {
   op: OpEntry;
   worktree: string;
   hovered: Span | null;
   setHovered: (span: Span | null) => void;
+  /** The op the host singled out: ringed in primary and drawn at full opacity. */
+  singledOut: boolean;
   opActivation?: (op: OpEntry, worktree: string) => Activation;
 }): ReactElement {
   const { toLeftFraction, toWidthFraction, totalMs } =
@@ -526,7 +536,10 @@ function OpBar({
           "rounded-md transition-opacity",
           TYPE_FILL[op.kind],
           STATUS_TREATMENT[status],
-          hovered?.id === markerSpan.id ? "opacity-100" : "opacity-70",
+          hovered?.id === markerSpan.id || singledOut
+            ? "opacity-100"
+            : "opacity-70",
+          singledOut && "ring-2 ring-inset ring-primary",
           clickable && "cursor-pointer",
         )}
         onMouseEnter={() => setHovered(markerSpan)}
@@ -562,7 +575,12 @@ function OpBar({
           "rounded-md transition-opacity",
           TYPE_FILL[op.kind],
           STATUS_TREATMENT[status],
-          hovered?.id === baseSpan.id ? "opacity-100" : "opacity-50",
+          hovered?.id === baseSpan.id || singledOut
+            ? "opacity-100"
+            : "opacity-50",
+          // After the status treatment, so the single-out ring wins over a
+          // failed op's red one — its failure still reads in the detail above.
+          singledOut && "ring-2 ring-inset ring-primary",
           clickable && "cursor-pointer",
         )}
         onMouseEnter={() => setHovered(baseSpan)}

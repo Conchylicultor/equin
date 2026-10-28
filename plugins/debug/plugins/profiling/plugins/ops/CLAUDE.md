@@ -37,7 +37,12 @@ than as work. A closed op's sleeps are stored on its row, so it takes `null`.
   four reconcile exactly, off the fold's one breakdown), the timeline with every
   wait and every nap (hatched, titled `Asleep 3h 40m`, or `… (position
   approximate)` when no wake instant placed it), every wait's reason, requeue
-  cycle and result, every step, the lane.
+  cycle and result, every step, the lane — and **Around this op**: every op
+  in the repo (any worktree, any kind) overlapping the op's span ± 20 min /
+  1 h / 6 h (`windowOf`, the same read as the worktree Gantt's second step,
+  shared as `WindowOpGantt`), the op ringed (`OpGantt`'s `highlightOpId`) and
+  its worktree's row highlighted, so what it contended with and what landed
+  around it read at a glance.
 
 ## The render model
 
@@ -75,14 +80,14 @@ The orphan reconciler lives in `op-log/plugins/op-store` (`reconcile.ts`).
 
 ## Plugin reference
 
-- Description: Op contention profiling for the Gantt debug pane: the Profiling section hosting the unified build/push/check/test/e2e Gantt over the live op-store history (last 24 h), the per-worktree Gantt (its ops ± 20 min of everything around them), and the op detail pane — all computed client-side from opsHistory rows.
+- Description: Op contention profiling for the Gantt debug pane: the Profiling section hosting the unified build/push/check/test/e2e Gantt over the live op-store history (last 24 h), the per-worktree Gantt (its ops ± 20 min of everything around them), and the op detail pane (with every op in the repo around it) — all computed client-side from opsHistory rows.
 - Web:
   - Slots: `opDetailPane.Actions`
   - Slot contributors: `opDetailPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Profiling.Section` → `OpSection`
     - `Pane.Register` "debug-profiling-op-detail"
-  - Uses: 39 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 40 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `debug/profiling` ×8
     - `debug/profiling/ops/op-gantt` ×6
     - `primitives/pane` ×4
@@ -97,6 +102,7 @@ The orphan reconciler lives in `op-log/plugins/op-store` (`reconcile.ts`).
     - `primitives/css/clip.Clip`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/placeholder.Placeholder`
+    - `primitives/css/toggle-chip.SegmentedControl`
     - `primitives/css/ui-kit.cn`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`

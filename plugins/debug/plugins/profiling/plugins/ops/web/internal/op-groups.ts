@@ -43,6 +43,38 @@ export function ceilTo(ms: number, step: number): number {
   return Math.ceil(ms / step) * step;
 }
 
+/** A span to clip the ops to, in epoch ms; `endMs` null = open-ended. */
+export interface OpWindow {
+  startMs: number;
+  endMs: number | null;
+}
+
+/**
+ * The span of `rows` ± `padMs`, floored / ceiled to 5 min so a query keyed on
+ * it is a stable tuple. While one of the rows is still in flight its end grows
+ * with `now`, so the span is left open-ended rather than re-keyed every tick.
+ * Null when there are no rows.
+ */
+export function windowOf(
+  rows: readonly Pick<OpRow, "requestedAt" | "totalMs" | "closedBy">[],
+  padMs: number,
+): OpWindow | null {
+  let startMs = Infinity;
+  let endMs = -Infinity;
+  let open = false;
+  for (const r of rows) {
+    const requested = r.requestedAt.getTime();
+    startMs = Math.min(startMs, requested);
+    if (r.closedBy === null) open = true;
+    else endMs = Math.max(endMs, requested + r.totalMs);
+  }
+  if (startMs === Infinity) return null;
+  return {
+    startMs: floorTo(startMs - padMs, FIVE_MINUTES),
+    endMs: open ? null : ceilTo(Math.max(endMs, startMs) + padMs, FIVE_MINUTES),
+  };
+}
+
 /**
  * The checkout an op ran in: its `opSlug` (the basename of the git root the
  * writing CLI derived), so every kind lands on one row. A line that carried no
