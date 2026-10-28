@@ -147,6 +147,7 @@ describe("agentsPhrase", () => {
         kind: "agent",
         createdAt: new Date(NOW),
         updatedAt: new Date(NOW),
+        statusUnverifiedSince: null,
         account: "acct-a",
         stoppedAt: new Date(NOW),
         stopError: "server_error",
