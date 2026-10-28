@@ -7,6 +7,7 @@ import {
   rmSync,
 } from "node:fs";
 import { join } from "node:path";
+import { dlopen } from "bun:ffi";
 import { flockTry, waitForFlock } from "@plugins/packages/plugins/flock/core";
 
 // A first-come-first-served line across processes, built from nothing but files
@@ -14,8 +15,9 @@ import { flockTry, waitForFlock } from "@plugins/packages/plugins/flock/core";
 // itself, and nobody consults a pid.
 //
 // - A TICKET is one file, `t-<monotonic ns>-<pid>-<seq>.lock`. Its name is its
-//   place: the machine's monotonic clock is shared by every process, the name is
-//   zero-padded so string order IS arrival order, and no name is ever reused.
+//   place: the machine's monotonic clock (libc `clock_gettime`, see machineNs)
+//   is shared by every process, the name is zero-padded so string order IS
+//   arrival order, and no name is ever reused.
 //   It is created under a temp name, flocked exclusive in-process, and only then
 //   renamed into place, so a visible ticket is always held by a live owner.
 // - A waiter blocks on the ticket JUST AHEAD of it (one `waitForFlock` child),
@@ -60,8 +62,38 @@ const TICKET = /^t-\d{20}-\d{10}-\d{6}\.lock$/;
 // Distinguishes two tickets one process takes within one clock tick.
 let seq = 0;
 
+// CLOCK_MONOTONIC in <time.h>: 6 on darwin (keeps running through sleep), 1 on
+// Linux. Either is one clock for every process on the box, which is all the
+// order needs.
+const CLOCK_MONOTONIC = process.platform === "darwin" ? 6 : 1;
+
+let clockGettime: ((id: number, ts: BigInt64Array) => number) | null = null;
+
+/**
+ * The machine-wide monotonic clock, in ns. NOT `process.hrtime`: under Bun it
+ * counts from the process's own start, so ordering tickets by it put every
+ * process that had waited longest at the BACK of the line — a build held for two
+ * hours under duress was overtaken by every build started after it. libc is
+ * dlopen'd lazily, like packages/flock.
+ */
+function machineNs(): bigint {
+  if (clockGettime === null) {
+    const { symbols } = dlopen(
+      process.platform === "darwin" ? "libc.dylib" : "libc.so.6",
+      { clock_gettime: { args: ["i32", "ptr"], returns: "i32" } },
+    );
+    clockGettime = (id, ts) => symbols.clock_gettime(id, ts);
+  }
+  // struct timespec on LP64 (darwin and Linux): i64 tv_sec, i64 tv_nsec.
+  const ts = new BigInt64Array(2);
+  if (clockGettime(CLOCK_MONOTONIC, ts) !== 0) {
+    throw new Error("ticket-line: clock_gettime(CLOCK_MONOTONIC) failed");
+  }
+  return (ts[0] ?? 0n) * 1_000_000_000n + (ts[1] ?? 0n);
+}
+
 function ticketName(): string {
-  const ns = process.hrtime.bigint().toString().padStart(20, "0");
+  const ns = machineNs().toString().padStart(20, "0");
   const pid = String(process.pid).padStart(10, "0");
   const n = String(seq++ % 1_000_000).padStart(6, "0");
   return `t-${ns}-${pid}-${n}.lock`;

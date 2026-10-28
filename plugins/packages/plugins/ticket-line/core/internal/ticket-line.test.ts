@@ -132,6 +132,45 @@ describe("createTicketLine", () => {
     expect(tickets()).toEqual([]);
   });
 
+  test("a younger process that joins later still queues behind", async () => {
+    // Make this process clearly older than the child will be when it joins: a
+    // per-process clock (Bun's process.hrtime) would name the child's ticket
+    // below ours and let it jump the line.
+    await Bun.sleep(Math.max(0, 1500 - process.uptime() * 1000));
+    const line = createTicketLine(dir);
+    const mine = await line.join();
+
+    const child = Bun.spawn(
+      [
+        process.execPath,
+        "-e",
+        `const { createTicketLine } = await import(process.env.TL_MODULE);
+         console.log("joining");
+         (await createTicketLine(process.env.TL_DIR).join()).leave();
+         console.log("head");`,
+      ],
+      {
+        env: { ...process.env, TL_MODULE: MODULE, TL_DIR: dir },
+        stdout: "pipe",
+      },
+    );
+    let out = "";
+    const drained = (async () => {
+      for await (const chunk of child.stdout) {
+        out += new TextDecoder().decode(chunk);
+      }
+    })();
+    while (!out.includes("joining")) await settle();
+    await settle();
+    expect(out).not.toContain("head");
+
+    mine.leave();
+    await child.exited;
+    await drained;
+    expect(out).toContain("head");
+    expect(tickets()).toEqual([]);
+  });
+
   test("isEmpty reaps a ticket nobody holds", async () => {
     const line = createTicketLine(dir);
     const t = await line.join();

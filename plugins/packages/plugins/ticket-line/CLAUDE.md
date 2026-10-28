@@ -24,8 +24,10 @@ duress gate (`cli/op-runtime`) need arrival order instead.
 ## How
 
 - **A ticket is a file** `t-<monotonic ns>-<pid>-<seq>.lock`. Its name is its
-  place: `process.hrtime` is the machine-wide monotonic clock, the fields are
-  zero-padded so string order is arrival order, and a name is never reused. It
+  place: libc `clock_gettime(CLOCK_MONOTONIC)` is the machine-wide monotonic
+  clock, the fields are zero-padded so string order is arrival order, and a name
+  is never reused. Never `process.hrtime`: under Bun it counts from the process's
+  own start, which ordered the line by process age — the longest waiter last. It
   is created under a temp name, flocked exclusive in-process, and only then
   renamed into place — so a visible ticket is always held by a live owner.
 - **A waiter blocks on the ticket just ahead of it** (one `waitForFlock` child,
