@@ -28,25 +28,16 @@ page's own prose.
   - Contributes:
     - `Editor.Block` "page" → `SubPageBlock`
     - `Editor.BlockFrame` "page" → `SubPageFrame`
-  - Uses:
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `page/editor` ×5
+    - `page/page-reference` ×5
+    - `primitives/css/row` ×2
+    - `primitives/css/spacing` ×2
     - `page/container.ContainerBackdrop`
-    - `page/editor.BlockRendererProps`
-    - `page/editor.Editor`
-    - `page/editor.PageIcon`
-    - `page/editor.useCaretEscape`
-    - `page/editor.useVoidCaret`
-    - `page/page-reference.PageReferenceTrailing`
-    - `page/page-reference.usePageNavigation`
-    - `page/page-reference.usePageReferenceActions`
-    - `page/page-reference.usePageReferenceDecoration`
-    - `page/page-reference.usePageReferenceTint`
     - `primitives/css/center.Center`
-    - `primitives/css/row.Row`
-    - `primitives/css/row.RowFocus`
-    - `primitives/css/spacing.Inset`
-    - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
+    - `primitives/css/yield.yieldClass`
     - `primitives/link-gesture.activationProps`
     - `primitives/row-actions.RowActions`
   - Exports (values): `subPageBlock`

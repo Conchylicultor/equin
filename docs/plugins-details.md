@@ -36419,25 +36419,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes:
           - `Editor.Block` "page" → `SubPageBlock`
           - `Editor.BlockFrame` "page" → `SubPageFrame`
-        - Uses:
+        - Uses: 21 symbols — full list in [`plugins/page/plugins/sub-page/REFERENCE.md`](../plugins/page/plugins/sub-page/REFERENCE.md)
+          - `page/editor` ×5
+          - `page/page-reference` ×5
+          - `primitives/css/row` ×2
+          - `primitives/css/spacing` ×2
           - `page/container.ContainerBackdrop`
-          - `page/editor.BlockRendererProps`
-          - `page/editor.Editor`
-          - `page/editor.PageIcon`
-          - `page/editor.useCaretEscape`
-          - `page/editor.useVoidCaret`
-          - `page/page-reference.PageReferenceTrailing`
-          - `page/page-reference.usePageNavigation`
-          - `page/page-reference.usePageReferenceActions`
-          - `page/page-reference.usePageReferenceDecoration`
-          - `page/page-reference.usePageReferenceTint`
           - `primitives/css/center.Center`
-          - `primitives/css/row.Row`
-          - `primitives/css/row.RowFocus`
-          - `primitives/css/spacing.Inset`
-          - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.cn`
+          - `primitives/css/yield.yieldClass`
           - `primitives/link-gesture.activationProps`
           - `primitives/row-actions.RowActions`
         - Exports (values): `subPageBlock`
@@ -40449,7 +40440,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/pending-turn`
         - **`yield`** — Yielding-cell layout primitive: yieldClass(axis) is the flex child that falls below its own content width (min-w-0) but never takes slack. The half of <Fill> that gives, without the half that grows.
           - Cross-plugin:
-            - Imported by: 34 plugins — full list in [`plugins/primitives/plugins/css/plugins/yield/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/yield/REFERENCE.md)
+            - Imported by: 35 plugins — full list in [`plugins/primitives/plugins/css/plugins/yield/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/yield/REFERENCE.md)
               - `apps` ×10
               - `primitives` ×8
               - `conversations` ×6
@@ -40457,6 +40448,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui` ×3
               - `history/dialog`
               - `infra/claude-cli`
+              - `page/sub-page`
               - `search/quick-find`
           - Web:
             - Exports (types): `YieldAxis`

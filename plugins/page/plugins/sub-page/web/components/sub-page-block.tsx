@@ -11,6 +11,7 @@ import {
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { RowActions } from "@plugins/primitives/plugins/row-actions/web";
+import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { pageData } from "@plugins/page/plugins/editor/core";
 import {
@@ -106,13 +107,26 @@ export function SubPageBlock({ block, isFocused, editor }: BlockRendererProps) {
   // like before. Inline rather than pinned is the price: the pinned cluster
   // overlays the row's trailing edge, which is exactly where the chip sits.
   // Rows with no chip keep the plain pinned cluster, untouched.
+  //
+  // The chip is capped: `Row` keeps an always-visible cluster at its full
+  // content width (`shrink-0`) and its title cell is `flex-1` from a zero
+  // basis, so an uncapped chip naming a long run takes the whole row and
+  // crushes the page's own title to nothing. Capped, the chip truncates (its
+  // tooltip still names the run in full) and the title keeps the rest.
   const chip = decoration?.chip ?? null;
   const trailing =
     chip === null ? (
       actions
     ) : (
       <Stack direction="row" gap="xs" align="center">
-        {chip}
+        <Stack
+          direction="row"
+          gap="none"
+          align="center"
+          className={cn(yieldClass("x"), "max-w-48")}
+        >
+          {chip}
+        </Stack>
         {actions === null ? null : (
           <RowActions pin={null}>{actions}</RowActions>
         )}
