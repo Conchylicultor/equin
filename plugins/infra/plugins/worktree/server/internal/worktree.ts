@@ -9,6 +9,7 @@ import {
 } from "@plugins/infra/plugins/spawn/core";
 import { attemptBranchName, attemptBranchRef } from "../../core";
 import { namespaceCollision, probeNamespace } from "./composition-namespace";
+import { installCheckout } from "./install-checkout";
 import { withWorktreeMutateSlot } from "./mutate-gate";
 import { isSpareName, SPARE_LOCK_REASON } from "./spare-name";
 import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
@@ -823,13 +824,19 @@ export async function setupWorktree(
   // guaranteed means a checkout cannot stay unlocked just because it predates
   // this code or something released its lock.
   if (existsSync(wtPath)) {
-    return convergeExistingCheckout(
+    const setup = await convergeExistingCheckout(
       repoRoot,
       id,
       wtPath,
       (fn) => withWorktreeMutateSlot(fn, signal),
       signal,
     );
+    // Every path ends installed — this one too: it covers a checkout made
+    // before checkouts installed themselves, and a retry whose install failed.
+    // ~140 ms of freshness check when already installed. Not frozen: its
+    // package.jsons are the agent's own edits (see installCheckout).
+    await installCheckout(wtPath, { frozen: false }, signal);
+    return setup;
   }
 
   // A checkout's namespace is its own name (the main composition's prefix
@@ -858,6 +865,12 @@ export async function setupWorktree(
     () => checkoutAttempt(repoRoot, id, wtPath, signal),
     signal,
   );
+  // Outside the gate: it serialises git mutations host-wide, and the install is
+  // guarded by the checkout's own `.install.lock`. A claimed spare is already
+  // installed, but its switch may have moved `bun.lock` (a frozen re-install);
+  // a fresh add installs from scratch. Thrown, so the launch fails loudly with
+  // install's own output.
+  await installCheckout(wtPath, { frozen: true }, signal);
   return { source };
 }
 

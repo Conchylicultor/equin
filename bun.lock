@@ -13,7 +13,6 @@
         "@iconify-json/material-symbols-light": "^1.2.97",
         "@iconify-json/simple-icons": "^1.2.100",
         "@iconify/types": "^2.0.0",
-        "@noble/hashes": "^2.4.0",
         "@parcel/watcher": "^2.6.0",
         "@tanstack/react-query": "^5.104.5",
         "@xyflow/react": "^12.12.0",
@@ -3188,6 +3187,10 @@
       "name": "@equin/plugin-framework-cli-git-artifacts",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/cli/plugins/install": {
+      "name": "@equin/plugin-framework-cli-install",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/cli/plugins/migrations": {
       "name": "@equin/plugin-framework-cli-migrations",
       "version": "0.0.1",
@@ -4375,6 +4378,9 @@
     "plugins/packages/plugins/string-hash": {
       "name": "@equin/plugin-packages-string-hash",
       "version": "0.0.1",
+      "dependencies": {
+        "@noble/hashes": "^2.4.0",
+      },
     },
     "plugins/packages/plugins/ticket-line": {
       "name": "@equin/plugin-packages-ticket-line",
@@ -8323,6 +8329,8 @@
     "@equin/plugin-framework-cli-format": ["@equin/plugin-framework-cli-format@workspace:plugins/framework/plugins/cli/plugins/format"],
 
     "@equin/plugin-framework-cli-git-artifacts": ["@equin/plugin-framework-cli-git-artifacts@workspace:plugins/framework/plugins/cli/plugins/git-artifacts"],
+
+    "@equin/plugin-framework-cli-install": ["@equin/plugin-framework-cli-install@workspace:plugins/framework/plugins/cli/plugins/install"],
 
     "@equin/plugin-framework-cli-migrations": ["@equin/plugin-framework-cli-migrations@workspace:plugins/framework/plugins/cli/plugins/migrations"],
 

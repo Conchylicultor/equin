@@ -4,6 +4,7 @@
 // See "The guard survives a broken checkout" in ../CLAUDE.md.
 
 import { spawn } from "node:child_process";
+import { existsSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 
 /** What the bootstrap prints and how it exits. */
@@ -24,7 +25,52 @@ export interface Fallback {
 
 const MAX_ERROR_CHARS = 2000;
 
+/**
+ * The install stamp `ensureDeps` writes (its `STAMP_REL`), relative to the
+ * checkout root. A copy, because this file may import nothing from the repo;
+ * `bootstrap.test.ts` asserts the two are equal.
+ */
+export const INSTALL_STAMP_REL = join("node_modules", ".equin-deps");
+
+/** A checkout with no install stamp: its own guard would resolve npm packages from main's tree. */
+export class CheckoutNotInstalledError extends Error {
+  constructor(root: string) {
+    super(
+      `this checkout is not installed (no ${INSTALL_STAMP_REL} in ${root}) — run any ./equin command`,
+    );
+    this.name = "CheckoutNotInstalledError";
+  }
+}
+
+/**
+ * The checkout holding `script`: the nearest directory above it with a `.git`
+ * (a dir in main, a file in a linked worktree). Read from disk, not git, so the
+ * live path costs a few stats.
+ */
+export function checkoutRootOf(script: string): string {
+  for (let dir = dirname(script); ; dir = dirname(dir)) {
+    if (existsSync(join(dir, ".git"))) return dir;
+    if (dirname(dir) === dir)
+      throw new Error(`no checkout (.git) above ${script}`);
+  }
+}
+
+/**
+ * Throws {@link CheckoutNotInstalledError} when the checkout holding `script`
+ * has no install stamp. Presence only, not freshness: a stale install is still
+ * the checkout's own, while an absent one makes Bun walk up out of the checkout
+ * into main's `node_modules` — a cryptic `Cannot find package` at best, a guard
+ * running on main's copy of a package at worst.
+ */
+export function assertCheckoutInstalled(script: string): void {
+  const root = checkoutRootOf(script);
+  if (!existsSync(join(root, INSTALL_STAMP_REL)))
+    throw new CheckoutNotInstalledError(root);
+}
+
 function describeError(err: unknown): string {
+  // Its message is the whole story; a stack would only name this file.
+  if (err instanceof CheckoutNotInstalledError) return err.message;
   const text = err instanceof Error ? (err.stack ?? err.message) : String(err);
   return text.length > MAX_ERROR_CHARS
     ? `${text.slice(0, MAX_ERROR_CHARS)}…`

@@ -1,5 +1,22 @@
-import { describe, expect, test } from "bun:test";
-import { runGuardWithFallback, withNotice, type Fallback } from "./bootstrap";
+import { afterEach, describe, expect, test } from "bun:test";
+import {
+  mkdirSync,
+  mkdtempSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { STAMP_REL } from "@plugins/framework/plugins/cli/plugins/bootstrap/cli";
+import {
+  assertCheckoutInstalled,
+  CheckoutNotInstalledError,
+  INSTALL_STAMP_REL,
+  runGuardWithFallback,
+  withNotice,
+  type Fallback,
+} from "./bootstrap";
 
 const DENY = JSON.stringify({
   hookSpecificOutput: {
@@ -106,5 +123,54 @@ describe("withNotice", () => {
       updatedInput: { command: "x" },
       additionalContext: "fact\n\nnote",
     });
+  });
+});
+
+describe("assertCheckoutInstalled", () => {
+  let base = "";
+  afterEach(() => {
+    if (base) rmSync(base, { recursive: true, force: true });
+  });
+
+  // A checkout with a `.git` file (a linked worktree) and the guard's own path.
+  function checkout(): { root: string; script: string } {
+    base = realpathSync(mkdtempSync(join(tmpdir(), "guard-install-")));
+    const root = join(base, "wt");
+    const bin = join(root, "plugins", "guards", "bin");
+    mkdirSync(bin, { recursive: true });
+    writeFileSync(join(root, ".git"), "gitdir: /nowhere\n");
+    return { root, script: join(bin, "guard.ts") };
+  }
+
+  test("the stamp it looks for is the one ensureDeps writes", () => {
+    expect(INSTALL_STAMP_REL).toBe(STAMP_REL);
+  });
+
+  test("no stamp is a named failure, so main's guard runs with the reason", async () => {
+    const { root, script } = checkout();
+    expect(() => assertCheckoutInstalled(script)).toThrow(
+      CheckoutNotInstalledError,
+    );
+    const result = await runGuardWithFallback({
+      live: async () => {
+        assertCheckoutInstalled(script);
+        return DENY;
+      },
+      fallback: fallback(async () => ({ ok: true, stdout: "" })),
+    });
+    if (!result.ok) throw new Error(result.stderr);
+    const context = JSON.parse(result.stdout).hookSpecificOutput
+      .additionalContext as string;
+    expect(context).toContain(
+      `this checkout is not installed (no ${STAMP_REL} in ${root})`,
+    );
+    expect(context).not.toContain("at assertCheckoutInstalled");
+  });
+
+  test("a stamped checkout passes", () => {
+    const { root, script } = checkout();
+    mkdirSync(join(root, "node_modules"));
+    writeFileSync(join(root, STAMP_REL), "{}");
+    expect(() => assertCheckoutInstalled(script)).not.toThrow();
   });
 });

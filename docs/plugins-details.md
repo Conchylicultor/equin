@@ -25583,6 +25583,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `framework/cli/build`
+              - `framework/cli/install`
               - `framework/cli/push`
           - Exemptions:
             - Exempts itself from: `repo-walk-safety/no-adhoc-repo-walk` — `cli/ensure-deps.ts` (sanctioned)
@@ -25608,6 +25609,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ORPHAN_EXIT_CODE`
               - `reexecAfterInstall`
               - `reexecUnderLockedBun`
+              - `STAMP_REL`
               - `takeReexecBudget`
         - **`build`** — `./equin build` — the deploy command: codegen, migrations, web dist and backend restart for this checkout, or a composition's hermetic artifact set.
           - Cli:
@@ -25671,6 +25673,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `normalizeGeneratedArtifacts`
               - `registerMergeDrivers`
+        - **`install`** — `./equin install` — install this checkout's node_modules from its own bun.lock and nothing else; what creating a worktree runs in the new checkout (frozen, through EQUIN_FROZEN_LOCKFILE), so every checkout is installed before anything runs in it.
+          - Cli:
+            - Uses: `framework/cli/bootstrap.STAMP_REL`
         - **`migrations`** — Drizzle migration generation for the CLI: the generate/rename/journal pipeline and the interactive drizzle-kit prompt driver.
           - Cross-plugin:
             - Imported by:
@@ -26422,7 +26427,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/spawn/daemon` (1 debt)
               - `infra/ssh` (2 debt)
               - `infra/stack-sampler` (1 debt)
-              - `infra/worktree` (6 debt)
+              - `infra/worktree` (7 debt)
               - `infra/worktree/reclaim` (2 debt)
               - `integrations/google-maps` (2 debt)
               - `integrations/youtube/audio-fetch` (3 debt)
@@ -32073,7 +32078,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/attempt-work`
           - `tasks/task-triage`
       - Exemptions:
-        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/composition-namespace.ts`, `server/internal/spare-name.ts`, `server/internal/spare.ts`, `server/internal/spec.ts`, `server/internal/worktree-op.ts`, `server/internal/worktree.ts` (debt)
+        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/composition-namespace.ts`, `server/internal/install-checkout.ts`, `server/internal/spare-name.ts`, `server/internal/spare.ts`, `server/internal/spec.ts`, `server/internal/worktree-op.ts`, `server/internal/worktree.ts` (debt)
       - Core:
         - Exports (types):
           - `OpKind`

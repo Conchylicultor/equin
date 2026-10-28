@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-framework-cli-install",
+  "private": true,
+  "version": "0.0.1",
+  "description": "`./equin install` — install this checkout's node_modules from its own bun.lock and nothing else; what creating a worktree runs in the new checkout (frozen, through EQUIN_FROZEN_LOCKFILE), so every checkout is installed before anything runs in it."
+}

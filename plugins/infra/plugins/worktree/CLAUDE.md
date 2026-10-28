@@ -24,9 +24,11 @@ checkout. The refill job, its boot warm-up and its daily cron live in the
 
 - **The lock reason is the readiness marker.** A spare is written
   (`add --detach`, sharing `addCheckout` with the cold path: one
-  `checkout.workers=0`, one timeout, one partial-tree cleanup) and only then
-  locked with reason `SPARE_LOCK_REASON` (`LEGACY_IDS.spareLockReason`). `listReadySpares` lists only spares
-  locked that way, so a half-written one is never claimed. The lock also keeps
+  `checkout.workers=0`, one timeout, one partial-tree cleanup), **installed**
+  (`installCheckout`, below), and only then locked with reason
+  `SPARE_LOCK_REASON` (`LEGACY_IDS.spareLockReason`). `listReadySpares` lists only spares
+  locked that way, so a half-written or uninstalled one is never claimed; a
+  failed install leaves it unlocked for the prune. The lock also keeps
   Claude Code's own `.claude/worktrees` sweep away from it.
 - **`spare-*` is non-canonical on purpose.** It fails `isCanonicalWorktreeName` (not an attempt id), so the
   reaper, the namespace passes and the registry filters ignore it. Do not widen
@@ -49,6 +51,19 @@ checkout. The refill job, its boot warm-up and its daily cron live in the
   unlocked and older than 15 minutes (newest of the dir's and its admin dir's
   mtime — an `unlock` touches the admin dir), and ready spares older than a day,
   taken by `unlock` first so a concurrent claim wins.
+
+## Every checkout is installed (`server/internal/install-checkout.ts`)
+
+`installCheckout(path, signal?)` runs the checkout's OWN CLI, `<path>/equin
+install`, with `EQUIN_FROZEN_LOCKFILE=1` (so creation never rewrites `bun.lock`),
+background tier, output captured into the thrown error. Its own CLI because
+`server` may not import `cli`, and the checkout's copy is the install code and
+lock that belong to it. `createSpareIn` runs it before the lock (the installer is
+a required parameter, so a test passes its own); `setupWorktree` runs it after
+every path settles (fresh add, claimed spare — whose switch may move `bun.lock`
+— and `existing`, which covers checkouts made before this), outside the mutate
+gate. Without it, a checkout's first program (the guard hook, not `./equin`)
+resolved npm packages by walking up into main's `node_modules`.
 
 ## Removal is a rename (`removeWorktree`)
 
@@ -187,7 +202,7 @@ pid liveness.
     - `tasks/attempt-work`
     - `tasks/task-triage`
 - Exemptions:
-  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/composition-namespace.ts`, `server/internal/spare-name.ts`, `server/internal/spare.ts`, `server/internal/spec.ts`, `server/internal/worktree-op.ts`, `server/internal/worktree.ts` (debt)
+  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/composition-namespace.ts`, `server/internal/install-checkout.ts`, `server/internal/spare-name.ts`, `server/internal/spare.ts`, `server/internal/spec.ts`, `server/internal/worktree-op.ts`, `server/internal/worktree.ts` (debt)
 - Core:
   - Exports (types):
     - `OpKind`

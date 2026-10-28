@@ -114,6 +114,8 @@ export const RUNTIME_WITHHELD_ENV = {
     "shadow-mode switch for one check run, typed by whoever runs it; reaches that run's subprocesses, never a backend",
   DEPS_REEXEC:
     "re-exec budget the CLI carries across its own dependency-install re-exec; taken out of the env by the bootstrap, so it never reaches a descendant (cli/bootstrap reexec.ts)",
+  FROZEN_LOCKFILE:
+    "asks the CLI bootstrap's dependency install for `bun install --frozen-lockfile`, set by infra/worktree for the `./equin install` it runs in a checkout it just created (worktree/server install-checkout.ts, cli/bin/index.ts)",
   LOCKED_BUN_REEXEC:
     "marks the CLI's own re-exec under the mise.lock Bun so it never re-execs twice; taken out of the env by the bootstrap, so it never reaches a descendant (cli/bootstrap locked-bun.ts)",
   SKIP_POST_REWRITE:

@@ -63,6 +63,7 @@ build's eight-file pipeline is build-private, and `converge-script` is deploy's.
 | `regen-generated` / `regen-migrations` | The repo-tree codegen and migration-generation pipelines as standalone commands (used by the normalize pass). |
 | `normalize-generated` | Marker-gated repair of generated artifacts a merge driver auto-resolved. Invoked by the `post-rewrite` hook; rarely run by hand. |
 | `serve-app` | Runtime entrypoint a released bundle's launcher invokes. |
+| `install` | Install this checkout's `node_modules` and exit — the bootstrap's install, named. `infra/worktree` runs it in every checkout it creates, frozen through `EQUIN_FROZEN_LOCKFILE` (env, because the install runs before argv is parsed). |
 | `db` / `start` / `stop` | DB fork/list/drop admin; the one-time gateway bring-up (a launchd service on macOS, so it comes back after a reboot) and its stop. |
 
 The **orphan guard** (`plugins/bootstrap/cli/orphan-guard.ts`) is armed by `bin/index.ts` for
@@ -147,7 +148,9 @@ serialized on `.install.lock`, and **loud** — it runs `bun install` with outpu
 passed through and throws a message naming the phase on failure. Every install
 site routes through it: the `bin/index.ts` bootstrap, `mise.toml`'s setup task,
 `app-artifacts.ts` stage 1, and `push`'s post-rebase install (`frozenLockfile:
-true`, so a mid-push tree is never re-resolved). No bare `bun install` remains:
+true`, so a mid-push tree is never re-resolved). The bootstrap's own call is
+frozen when the spawner sets `EQUIN_FROZEN_LOCKFILE=1` — what `infra/worktree`
+does for the `./equin install` it runs in a new checkout. No bare `bun install` remains:
 one skipping the lock races `clonefileat`, one skipping the stamp makes the next
 process reinstall from scratch.
 
@@ -461,6 +464,7 @@ ui-kit's `theme/app.css` (JS-sets / CSS-styles split, as with `.dark`).
   - **`foreground-handoff`** [exempt] — Foreground op hand-off: a `check` / `test` an agent runs in the foreground streams its output like any command, and if it would outlive the call's 600 s limit it hands itself off before the cap…
   - **`format`** — `./equin format` — prettier over the .ts/.tsx changed on this branch; the same pass `build` runs, without paying for a build.
   - **`git-artifacts`** — Generated-artifact merge handling that runs inside a CLI command: re-deriving after a merge driver took the cheap side, and installing the drivers.
+  - **`install`** — `./equin install` — install this checkout's node_modules from its own bun.lock and nothing else; what creating a worktree runs in the new checkout (frozen, through EQUIN_FROZEN_LOCKFILE), so every…
   - **`migrations`** [exempt] — Drizzle migration generation for the CLI: the generate/rename/journal pipeline and the interactive drizzle-kit prompt driver.
   - **`normalize-generated`** — `./equin normalize-generated` — re-derive the generated artifacts a merge driver auto-resolved during a merge or rebase and amend the head commit; the `post-rewrite` git hook's entry point.
   - **`op-runtime`** [exempt] — Shared machinery of the op commands (build / check / test / push / run <e2e>): broadcasts, deploy receipt, fatal-signal exits, lane, op profiler, progress log, admission valve, nested check, build…

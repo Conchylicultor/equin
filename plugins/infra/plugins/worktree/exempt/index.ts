@@ -5,6 +5,7 @@ export default [
     rule: "boundaries/no-platform-api",
     paths: [
       "server/internal/composition-namespace.ts",
+      "server/internal/install-checkout.ts",
       "server/internal/spare-name.ts",
       "server/internal/spare.ts",
       "server/internal/spec.ts",

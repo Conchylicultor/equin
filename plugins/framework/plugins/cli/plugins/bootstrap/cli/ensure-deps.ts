@@ -61,7 +61,7 @@ import { acquireCheckoutLock } from "./checkout-lock";
  * outlive the thing it describes, so `rm -rf node_modules` always forces a real
  * install. (Already gitignored, being under `node_modules/`.)
  */
-const STAMP_REL = join("node_modules", ".equin-deps");
+export const STAMP_REL = join("node_modules", ".equin-deps");
 
 /**
  * Bumped when the stamp's shape or the signature's inputs change; an older

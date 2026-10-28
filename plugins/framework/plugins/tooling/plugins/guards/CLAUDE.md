@@ -37,14 +37,18 @@ itself, or when main's guard fails too, the hook exits non-zero and the hook
 command blocks. A mistake in the bootstrap files themselves still locks the
 checkout out — keep them tiny.
 
-A fresh worktree runs its guard before anything installs its `node_modules`,
-so the guard's npm imports resolve by walking up into main's root
-`node_modules` — which holds only the ROOT `package.json`'s dependencies. A
-plugin-local dependency anywhere in the guard's closure (contributed `guard/`
-folders included) sends every fresh worktree to main's guard;
-`guards:closure-root-deps-only` keeps the closure to root-declared packages.
+**An uninstalled checkout counts as broken.** Before the dynamic import, the
+bootstrap checks for the install stamp (`node_modules/.equin-deps`, a literal
+`bootstrap.test.ts` pins to `ensureDeps`'s `STAMP_REL`); without it, Bun would
+resolve the guard's npm packages by walking up into main's `node_modules`. So a
+missing stamp is a live failure with that reason, and main's guard runs.
+Checkouts install at creation (`infra/worktree`), so this is the backstop.
+`bin/stop-guard.ts` is the same shape — stamp check, then `import("./stop-hook")`
+— but fails open: no stamp, exit 0 with the reason on stderr. The check measures
+both entry points.
 
-Plan: `research/2026-10-26-framework-guard-survives-broken-worktree.md`.
+Plans: `research/2026-10-26-framework-guard-survives-broken-worktree.md`,
+`research/2026-10-28-global-checkout-installed-before-it-runs.md`.
 
 ## The stop guard, and why a subagent needs one
 

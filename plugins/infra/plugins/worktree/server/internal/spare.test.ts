@@ -44,6 +44,7 @@ async function commit(file: string, content: string): Promise<string> {
 
 const wtFor = (id: string) => join(gitWorktreesDir(repo), id);
 const noGate = <T>(fn: () => Promise<T>) => fn();
+const noInstall = async (): Promise<void> => {};
 
 async function lockOf(path: string): Promise<string | null | undefined> {
   return (await listWorktreeEntries(repo)).find((e) => e.path === path)?.locked;
@@ -68,7 +69,7 @@ afterEach(() => {
 
 describe("spare claim", () => {
   test("a claim takes a ready spare: on the attempt branch, at main, locked", async () => {
-    const spare = await createSpareIn(repo);
+    const spare = await createSpareIn(repo, noInstall);
     expect(await listReadySpares(repo)).toEqual([spare]);
 
     const wt = wtFor("att-1");
@@ -86,8 +87,36 @@ describe("spare claim", () => {
     expect(await listReadySpares(repo)).toEqual([]);
   });
 
+  test("a spare is installed before it is locked: ready means installed", async () => {
+    const seen: { path: string; lock: string | null | undefined }[] = [];
+    const spare = await createSpareIn(repo, async (path) => {
+      seen.push({ path, lock: await lockOf(path) });
+    });
+    expect(seen).toEqual([{ path: spare, lock: null }]);
+    expect(await listReadySpares(repo)).toEqual([spare]);
+  });
+
+  test("a spare whose install fails throws and is never ready", async () => {
+    let path = "";
+    // `expect(p).rejects` is typed `void` under bun:test; await the rejection for real.
+    let thrown: unknown;
+    try {
+      await createSpareIn(repo, async (p) => {
+        path = p;
+        throw new Error("bun install exited 1");
+      });
+    } catch (err) {
+      thrown = err;
+    }
+    expect(thrown).toBeInstanceOf(Error);
+    expect((thrown as Error).message).toBe("bun install exited 1");
+    expect(existsSync(path)).toBe(true);
+    expect(await lockOf(path)).toBeNull();
+    expect(await listReadySpares(repo)).toEqual([]);
+  });
+
   test("an unlocked (half-written) spare is skipped", async () => {
-    const spare = await createSpareIn(repo);
+    const spare = await createSpareIn(repo, noInstall);
     await git(repo, "worktree", "unlock", spare);
     expect(await listReadySpares(repo)).toEqual([]);
 
@@ -109,7 +138,7 @@ describe("spare claim", () => {
   });
 
   test("two concurrent claims of one spare: one wins, the other falls back", async () => {
-    await createSpareIn(repo);
+    await createSpareIn(repo, noInstall);
     const sources = await Promise.all([
       checkoutAttempt(repo, "att-4", wtFor("att-4")),
       checkoutAttempt(repo, "att-5", wtFor("att-5")),
@@ -124,7 +153,7 @@ describe("spare claim", () => {
   });
 
   test("a spare made at an older main ends at the current main", async () => {
-    await createSpareIn(repo);
+    await createSpareIn(repo, noInstall);
     const head = await commit("b.txt", "two");
 
     const wt = wtFor("att-6");
@@ -135,7 +164,7 @@ describe("spare claim", () => {
   });
 
   test("an existing attempt branch is checked out, not re-created", async () => {
-    await createSpareIn(repo);
+    await createSpareIn(repo, noInstall);
     await git(repo, "branch", "claude-web/att-7", "main");
     const branchHead = await git(repo, "rev-parse", "claude-web/att-7");
     await commit("c.txt", "three");
@@ -151,7 +180,7 @@ describe("spare claim", () => {
 
 describe("crash convergence", () => {
   test("a spare moved into place but still detached is checked out again and locked", async () => {
-    const spare = await createSpareIn(repo);
+    const spare = await createSpareIn(repo, noInstall);
     const wt = wtFor("att-8");
     // The claim's first two steps, then a crash before the switch.
     await git(repo, "worktree", "unlock", spare);
@@ -174,7 +203,7 @@ describe("crash convergence", () => {
     // after it had written main's new files but before it moved HEAD or the
     // index, so every added file was left untracked and every later switch
     // refused with "untracked working tree file would be overwritten".
-    const spare = await createSpareIn(repo);
+    const spare = await createSpareIn(repo, noInstall);
     await commit("added.txt", "new on main");
     await commit("a.txt", "changed on main");
     const wt = wtFor("att-10");
@@ -214,7 +243,7 @@ describe("crash convergence", () => {
   });
 
   test("a finished checkout is left in place and only re-locked", async () => {
-    await createSpareIn(repo);
+    await createSpareIn(repo, noInstall);
     const wt = wtFor("att-11");
     await checkoutAttempt(repo, "att-11", wt);
     writeFileSync(join(wt, "work.txt"), "the agent's work");
@@ -228,7 +257,7 @@ describe("crash convergence", () => {
   });
 
   test("a finished checkout on a detached HEAD (e.g. mid-rebase) is left alone", async () => {
-    await createSpareIn(repo);
+    await createSpareIn(repo, noInstall);
     const wt = wtFor("att-9");
     await checkoutAttempt(repo, "att-9", wt);
     await git(wt, "switch", "--detach", "HEAD");
@@ -238,8 +267,8 @@ describe("crash convergence", () => {
 
 describe("pruneSparesIn", () => {
   test("reclaims stale unlocked spares and over-age ready ones, keeps fresh ready ones", async () => {
-    const ready = await createSpareIn(repo);
-    const debris = await createSpareIn(repo);
+    const ready = await createSpareIn(repo, noInstall);
+    const debris = await createSpareIn(repo, noInstall);
     await git(repo, "worktree", "unlock", debris);
 
     const removed: string[] = [];

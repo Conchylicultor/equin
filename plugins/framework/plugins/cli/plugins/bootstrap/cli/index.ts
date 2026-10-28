@@ -24,7 +24,7 @@
  * does not exist.
  */
 
-export { ensureDeps } from "./ensure-deps";
+export { ensureDeps, STAMP_REL } from "./ensure-deps";
 export type {
   EnsureDepsOptions,
   EnsureDepsResult,

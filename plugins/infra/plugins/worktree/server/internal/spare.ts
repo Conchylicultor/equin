@@ -3,6 +3,7 @@ import { readdir, readFile, stat } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { GIT } from "@plugins/infra/plugins/paths/server";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+import { installCheckout } from "./install-checkout";
 import { withWorktreeMutateSlot } from "./mutate-gate";
 import { isSpareName, newSpareName, SPARE_LOCK_REASON } from "./spare-name";
 import {
@@ -36,13 +37,18 @@ const SPARE_MAX_AGE_MS = 24 * 60 * 60_000;
 
 /**
  * Write one spare: a detached checkout of `main` at
- * `.claude/worktrees/spare-<ms>-<rand>`, then lock it with `SPARE_LOCK_REASON`
- * — the readiness marker, so it is claimable only once fully written. Shares
- * `addCheckout` (one `checkout.workers=0`, one timeout, one partial-tree
- * cleanup) with the cold path. Call inside a mutate-gate hold.
+ * `.claude/worktrees/spare-<ms>-<rand>`, `install` it, then lock it with
+ * `SPARE_LOCK_REASON` — the readiness marker, so it is claimable only once fully
+ * written AND installed. Shares `addCheckout` (one `checkout.workers=0`, one
+ * timeout, one partial-tree cleanup) with the cold path. Call inside a
+ * mutate-gate hold.
+ *
+ * @param install `installCheckout` in production; required so no caller can
+ * make a ready spare that is not installed. Tests pass their own.
  */
 export async function createSpareIn(
   repoRoot: string,
+  install: (path: string, signal?: AbortSignal) => Promise<void>,
   signal?: AbortSignal,
 ): Promise<string> {
   const path = join(gitWorktreesDir(repoRoot), newSpareName());
@@ -53,6 +59,9 @@ export async function createSpareIn(
     ["--detach", path, "main"],
     signal,
   );
+  // Before the lock, so ready == installed. A failed install throws and leaves
+  // an unlocked spare: not ready, and the prune reclaims it.
+  await install(path, signal);
   // Thrown, unlike an agent checkout's lock: an unlocked spare is not ready,
   // and the prune reclaims it.
   const r = await lockWorktree(repoRoot, path, SPARE_LOCK_REASON, signal);
@@ -70,7 +79,15 @@ export async function createSpareWorktree(
   signal?: AbortSignal,
 ): Promise<string> {
   const repoRoot = await ensureMainWorktreeRoot(signal);
-  return withWorktreeMutateSlot(() => createSpareIn(repoRoot, signal), signal);
+  return withWorktreeMutateSlot(
+    () =>
+      createSpareIn(
+        repoRoot,
+        (path, sig) => installCheckout(path, { frozen: true }, sig),
+        signal,
+      ),
+    signal,
+  );
 }
 
 // The mtime of the spare's admin dir (`.git/worktrees/spare-…`), read through

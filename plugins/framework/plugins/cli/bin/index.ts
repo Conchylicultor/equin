@@ -7,6 +7,7 @@ import {
   reexecUnderLockedBun,
   takeReexecBudget,
 } from "@plugins/framework/plugins/cli/plugins/bootstrap/cli";
+import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 
 /**
  * `./equin`'s entrypoint — and deliberately NOT the CLI. Four ordered
@@ -99,9 +100,18 @@ if (lockedBun.kind === "mismatch") console.error(`equin: ${lockedBun.reason}`);
 // failure it throws a message written to be the entire story — which phase
 // failed, the likely cause, and what to do — so print the message and stop.
 // Deliberately no stack: the stack would name this bootstrap, not the problem.
+//
+// Frozen when the SPAWNER asks (EQUIN_FROZEN_LOCKFILE): infra/worktree sets it
+// for the `./equin install` it runs in a checkout it just created, so creation
+// installs exactly the committed `bun.lock` and a lock that disagrees with its
+// `package.json`s fails there instead of being rewritten. Env, not argv, for the
+// orphan guard's reason: this line runs before the install, so it cannot load
+// the command declarations that would say what `install` means.
 let deps: EnsureDepsResult;
 try {
-  deps = await ensureDeps();
+  deps = await ensureDeps({
+    frozenLockfile: readEnv("FROZEN_LOCKFILE") === "1",
+  });
 } catch (err) {
   console.error(err instanceof Error ? err.message : String(err));
   process.exit(1);
