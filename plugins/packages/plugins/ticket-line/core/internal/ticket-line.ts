@@ -26,12 +26,29 @@ import { flockTry, waitForFlock } from "@plugins/packages/plugins/flock/core";
 // - A ticket whose lock can be taken has no owner (it left, or died): whoever
 //   finds it reaps the file and looks again.
 //
+// - A PLACE is a ticket name's arrival part (`<ns>-<pid>`). A waiter that has
+//   to step out of the line (the line it waits in stops applying for a while)
+//   keeps its place and joins again AT it (`join({ place })`), ahead of everyone
+//   who arrived after it — instead of at the back. Mint one with `arrive()`.
+//   Waiters already blocked behind it re-scan when their predecessor leaves and
+//   find it ahead. The one exception is a ticket that is ALREADY at the head:
+//   it was granted while the rejoiner was out, so both are at the head at once.
+//
 // One accepted fuzz: two callers that read the clock within the same few
 // microseconds (between the clock read and the rename) can each see no
 // predecessor. Their relative order is then arbitrary; nothing else is.
 
+/**
+ * Where a caller stands in a line: the moment it first arrived, on the
+ * machine-wide clock, plus its pid. Opaque — compare places only through a
+ * line.
+ */
+export type TicketPlace = string & { readonly __brand: "TicketPlace" };
+
 /** A place in a `TicketLine`, held until `leave()` (or process death). */
 export interface Ticket {
+  /** Where this ticket stands — pass it to a later `join` to rejoin here. */
+  readonly place: TicketPlace;
   /**
    * Leave the line: the next waiter becomes the head. Synchronous and
    * idempotent — the instant it returns, the ticket's lock is gone.
@@ -47,8 +64,12 @@ export interface TicketLine {
    *
    * `signal` abandons the wait: the ticket is removed, the call throws
    * `signal.reason`, and the waiter behind it moves up.
+   *
+   * `place` (from `arrive()` or an earlier ticket) joins at that place rather
+   * than at the back: behind every live ticket that arrived earlier, ahead of
+   * every one that arrived later. Without it the place is now.
    */
-  join(opts?: { signal?: AbortSignal }): Promise<Ticket>;
+  join(opts?: { signal?: AbortSignal; place?: TicketPlace }): Promise<Ticket>;
   /**
    * No live ticket in the line — nobody is waiting. Reaps the files of tickets
    * whose owner is gone. A caller deciding whether it may skip the line
@@ -92,11 +113,24 @@ function machineNs(): bigint {
   return (ts[0] ?? 0n) * 1_000_000_000n + (ts[1] ?? 0n);
 }
 
-function ticketName(): string {
+const PLACE = /^\d{20}-\d{10}$/;
+
+/** Arrive now: a place in any line, to join at later (`join({ place })`). */
+export function arrive(): TicketPlace {
   const ns = machineNs().toString().padStart(20, "0");
   const pid = String(process.pid).padStart(10, "0");
+  return `${ns}-${pid}` as TicketPlace;
+}
+
+/** A fresh ticket name at `place`; the sequence number keeps it unique. */
+function ticketName(place: TicketPlace): string {
+  if (!PLACE.test(place)) {
+    throw new Error(
+      `ticket-line: not a ticket place: ${JSON.stringify(place)}`,
+    );
+  }
   const n = String(seq++ % 1_000_000).padStart(6, "0");
-  return `t-${ns}-${pid}-${n}.lock`;
+  return `t-${place}-${n}.lock`;
 }
 
 /** Live tickets in `dir`, oldest first. Unowned ones are reaped on the way. */
@@ -150,7 +184,8 @@ export function createTicketLine(dir: string): TicketLine {
       signal?.throwIfAborted();
       mkdirSync(dir, { recursive: true });
 
-      const name = ticketName();
+      const place = opts.place ?? arrive();
+      const name = ticketName(place);
       const path = join(dir, name);
       const tmp = join(dir, `.${name}.tmp`);
       const fd = openSync(tmp, "wx");
@@ -163,6 +198,7 @@ export function createTicketLine(dir: string): TicketLine {
 
       let left = false;
       const ticket: Ticket = {
+        place,
         leave() {
           if (left) return;
           left = true;

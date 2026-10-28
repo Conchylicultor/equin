@@ -3,6 +3,10 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type {
+  Ticket,
+  TicketPlace,
+} from "@plugins/packages/plugins/ticket-line/core";
 import {
   admitThroughGate,
   checkValveGuard,
@@ -23,8 +27,62 @@ import {
 
 const tick = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
 
+/**
+ * An in-memory ticket line: a ticket is at the head once no live ticket has an
+ * earlier place (so, like the real line, a rejoin at an old place cannot unseat
+ * a ticket already granted the head). Places are minted in call order.
+ */
+function fakeLine() {
+  let arrivals = 0;
+  const live: {
+    place: TicketPlace;
+    granted: boolean;
+    grant: () => void;
+  }[] = [];
+  const pump = (): void => {
+    for (const t of live) {
+      if (!t.granted && !live.some((o) => o.place < t.place)) {
+        t.granted = true;
+        t.grant();
+      }
+    }
+  };
+  return {
+    arrive: (): TicketPlace =>
+      String(++arrivals).padStart(6, "0") as TicketPlace,
+    joinLine: (place: TicketPlace, signal: AbortSignal): Promise<Ticket> =>
+      new Promise((resolve, reject) => {
+        signal.throwIfAborted();
+        const entry = {
+          place,
+          granted: false,
+          grant: () => resolve(ticket),
+        };
+        const leave = (): void => {
+          const i = live.indexOf(entry);
+          if (i >= 0) live.splice(i, 1);
+          pump();
+        };
+        const ticket: Ticket = { place, leave };
+        live.push(entry);
+        signal.addEventListener(
+          "abort",
+          () => {
+            if (entry.granted) return;
+            leave();
+            reject(signal.reason as Error);
+          },
+          { once: true },
+        );
+        pump();
+      }),
+    places: () => live.map((t) => t.place),
+  };
+}
+
 /** An in-memory readers/writer lock with the GateLocks contract. */
 function fakeGate() {
+  const line = fakeLine();
   let shared = 0;
   let exclusive = false;
   const pending: {
@@ -75,12 +133,15 @@ function fakeGate() {
           { once: true },
         );
       }),
-    joinLine: (signal) => {
-      signal.throwIfAborted();
-      return Promise.resolve({ leave: () => undefined });
-    },
+    arrive: line.arrive,
+    joinLine: line.joinLine,
   };
-  return { locks, take, state: () => ({ shared, exclusive }) };
+  return {
+    locks,
+    take,
+    state: () => ({ shared, exclusive }),
+    line: () => line.places(),
+  };
 }
 
 function harness(opts: { duress?: boolean } = {}) {
@@ -302,6 +363,97 @@ describe("admitThroughGate", () => {
     expect(h.holds.requeues).toBe(1);
     expect(h.holds.end).toEqual(["acquired"]);
     expect(h.gate.state()).toEqual({ shared: 0, exclusive: true });
+    await hold?.release();
+  });
+});
+
+// The latch flaps: 73 episodes on 2026-10-28, with a calm gap of 1.4 min
+// (median) between them. A held build keeps its place through every flap.
+describe("arrival order across a flapping latch", () => {
+  /** Resolves admissions in the order they happen. */
+  function admitAll(h: ReturnType<typeof harness>, names: string[]) {
+    const order: string[] = [];
+    const holds = new Map<string, GateHold>();
+    const admit = (name: string, place?: TicketPlace) =>
+      void admitThroughGate({ gated: true, place }, h.deps).then((hold) => {
+        if (!hold) throw new Error("expected a hold");
+        order.push(name);
+        holds.set(name, hold);
+      });
+    for (const name of names) admit(name);
+    return { order, holds, admit };
+  }
+  const settle = async (): Promise<void> => {
+    for (let i = 0; i < 20; i++) await tick();
+  };
+
+  test("a clear and a re-trip do not send the oldest waiters to the back", async () => {
+    const h = harness({ duress: true });
+    const running = h.gate.take("exclusive"); // admitted alone, still running
+    const run = admitAll(h, []);
+    run.admit("A");
+    await settle();
+    run.admit("B");
+    await settle();
+    expect(h.gate.line()).toHaveLength(2);
+
+    // The latch clears: A and B wait for the shared lock behind the running
+    // build — still in line. Then it trips again and C arrives.
+    h.setDuress(false);
+    await settle();
+    expect(h.gate.line()).toHaveLength(2);
+    h.setDuress(true);
+    await settle();
+    run.admit("C");
+    await settle();
+    expect(run.order).toEqual([]);
+
+    await running.release();
+    await settle();
+    expect(run.order).toEqual(["A"]);
+    for (const next of ["B", "C"]) {
+      const last = run.order.at(-1) ?? "";
+      await run.holds.get(last)?.release();
+      await settle();
+      expect(run.order.at(-1)).toBe(next);
+    }
+    expect(run.order).toEqual(["A", "B", "C"]);
+    await run.holds.get("C")?.release();
+    expect(h.gate.line()).toEqual([]);
+    expect(h.gate.state()).toEqual({ shared: 0, exclusive: false });
+  });
+
+  test("a requeued build rejoins at the place it first arrived", async () => {
+    const h = harness({ duress: true });
+    const running = h.gate.take("exclusive");
+    const run = admitAll(h, []);
+    run.admit("A");
+    await settle();
+    // R reached the gate before B and C, was admitted shared while calm, and
+    // is requeued now that duress tripped while it queued for its grant.
+    const requeuedAt = h.deps.gate.arrive();
+    run.admit("B");
+    await settle();
+    run.admit("C");
+    await settle();
+    run.admit("R", requeuedAt);
+    await settle();
+
+    await running.release();
+    await settle();
+    for (const next of ["A", "R", "B", "C"]) {
+      expect(run.order.at(-1)).toBe(next);
+      await run.holds.get(next)?.release();
+      await settle();
+    }
+    expect(run.order).toEqual(["A", "R", "B", "C"]);
+  });
+
+  test("an admission carries its place; a calm one never touches the line", async () => {
+    const h = harness();
+    const hold = await admitThroughGate({ gated: true }, h.deps);
+    expect(hold?.place).toBe("000001" as TicketPlace);
+    expect(h.gate.line()).toEqual([]);
     await hold?.release();
   });
 });

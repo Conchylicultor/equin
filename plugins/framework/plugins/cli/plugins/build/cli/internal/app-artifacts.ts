@@ -48,6 +48,7 @@ import {
   type Priority,
 } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import { isUnderDuress } from "@plugins/infra/plugins/host/plugins/duress/plugins/latch/server";
+import type { TicketPlace } from "@plugins/packages/plugins/ticket-line/core";
 import {
   acquireCheckoutLock,
   ensureDeps,
@@ -1058,11 +1059,15 @@ export async function buildAndPublishWebDist(
       "build:setup",
       "wait for host CPU grant",
     );
+    // The build's place at the gate, kept across requeues: a requeued build
+    // rejoins the line where it first arrived, not at the back.
+    let place: TicketPlace | undefined;
     for (let cycle = 0; ;) {
       const gate = await admitThroughGate(
-        { gated: opts.admission.gated },
+        { gated: opts.admission.gated, place },
         opts.admission.deps,
       );
+      place = gate?.place;
       let result: StepResult[] | typeof REQUEUE;
       try {
         result = await withHostGrant<StepResult[] | typeof REQUEUE>(

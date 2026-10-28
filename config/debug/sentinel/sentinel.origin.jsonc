@@ -1,11 +1,9 @@
-// @hash 35dbdcd7836f
+// @hash 4c7b06654dd5
 {
   // When off, the cluster sentinel sampler does not run (main backend, restart to apply).
   "enabled": true,
   // How often the sentinel samples cluster vitals (restart to apply). The 'cluster' trace ring holds 720 samples (1h at 5s).
   "cadenceMs": 5000,
-  // Trip signal: 1-minute load average divided by CPU count at or above this.
-  "onLoadRatio": 1.5,
   // Trip signal: this many ungranted Postgres locks cluster-wide.
   "onLocksWaiting": 5,
   // Trip signal: Postgres block-read time burned across the cluster in one tick.

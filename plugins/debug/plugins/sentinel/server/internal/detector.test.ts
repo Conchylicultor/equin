@@ -7,7 +7,6 @@ import {
 } from "./detector";
 
 const T: DetectorThresholds = {
-  onLoadRatio: 1.5,
   onLocksWaiting: 5,
   onBlkReadDeltaMs: 2000,
   onBackendP99Ms: 1000,
@@ -43,15 +42,15 @@ function sample(overrides: Partial<ClusterSample> = {}): ClusterSample {
 }
 
 const calm = sample();
-const hotLoad = sample({ loadAvg1: 30 }); // ratio 1.67 ≥ 1.5
+const hot = sample({ pgLocksWaiting: 6 }); // ≥ 5 ungranted locks
 
 describe("onset detector hysteresis", () => {
   test("trips only after onTicks consecutive elevated ticks", () => {
     const d = createOnsetDetector();
-    expect(d.feed(hotLoad, T, CADENCE)).toBeNull();
-    expect(d.feed(hotLoad, T, CADENCE)).toBeNull();
-    const event = d.feed(hotLoad, T, CADENCE);
-    expect(event).toMatchObject({ kind: "trip", elevated: ["loadRatio"] });
+    expect(d.feed(hot, T, CADENCE)).toBeNull();
+    expect(d.feed(hot, T, CADENCE)).toBeNull();
+    const event = d.feed(hot, T, CADENCE);
+    expect(event).toMatchObject({ kind: "trip", elevated: ["locksWaiting"] });
     if (event?.kind !== "trip") throw new Error("expected trip");
     expect(event.runUpMs).toBe(3 * CADENCE);
     expect(d.tripped).toBe(true);
@@ -59,22 +58,22 @@ describe("onset detector hysteresis", () => {
 
   test("a calm tick resets the elevation dwell", () => {
     const d = createOnsetDetector();
-    d.feed(hotLoad, T, CADENCE);
-    d.feed(hotLoad, T, CADENCE);
+    d.feed(hot, T, CADENCE);
+    d.feed(hot, T, CADENCE);
     d.feed(calm, T, CADENCE); // resets
-    d.feed(hotLoad, T, CADENCE);
-    d.feed(hotLoad, T, CADENCE);
+    d.feed(hot, T, CADENCE);
+    d.feed(hot, T, CADENCE);
     expect(d.tripped).toBe(false);
   });
 
   test("clears only after offTicks consecutive fully-calm ticks; one trip per episode", () => {
     const d = createOnsetDetector();
-    d.feed(hotLoad, T, CADENCE);
-    d.feed(hotLoad, T, CADENCE);
-    d.feed(hotLoad, T, CADENCE); // trip
+    d.feed(hot, T, CADENCE);
+    d.feed(hot, T, CADENCE);
+    d.feed(hot, T, CADENCE); // trip
     // Still elevated: no second trip event.
-    expect(d.feed(hotLoad, T, CADENCE)).toBeNull();
-    // loadRatio 4/18=0.22 < 0.9 (off), but locks at 4 ≥ 3 (off = 5×0.6) → NOT calm.
+    expect(d.feed(hot, T, CADENCE)).toBeNull();
+    // Locks at 4: under the trip limit, but ≥ 3 (off = 5×0.6) → NOT calm.
     expect(d.feed(sample({ pgLocksWaiting: 4 }), T, CADENCE)).toBeNull();
     expect(d.feed(calm, T, CADENCE)).toBeNull(); // calm 1/2
     // A hot tick mid-cooldown resets the calm dwell.
@@ -90,9 +89,9 @@ describe("onset detector hysteresis", () => {
     expect(d.feed(nullDelta, T, CADENCE)).toBeNull();
     expect(d.tripped).toBe(false);
     // And during cooldown a null delta counts as calm on that axis.
-    d.feed(hotLoad, T, CADENCE);
-    d.feed(hotLoad, T, CADENCE);
-    d.feed(hotLoad, T, CADENCE); // trip
+    d.feed(hot, T, CADENCE);
+    d.feed(hot, T, CADENCE);
+    d.feed(hot, T, CADENCE); // trip
     expect(d.feed(nullDelta, T, CADENCE)).toBeNull(); // calm 1/2
     expect(d.feed(nullDelta, T, CADENCE)).toMatchObject({ kind: "clear" });
   });
@@ -138,9 +137,9 @@ describe("onset detector hysteresis", () => {
 
   test("a pg-unreadable tick (null locks) is calm on the locks axis", () => {
     const d = createOnsetDetector();
-    d.feed(hotLoad, T, CADENCE);
-    d.feed(hotLoad, T, CADENCE);
-    d.feed(hotLoad, T, CADENCE); // trip
+    d.feed(hot, T, CADENCE);
+    d.feed(hot, T, CADENCE);
+    d.feed(hot, T, CADENCE); // trip
     const pgDown = sample({
       pgLocksWaiting: null,
       pgActiveBackends: null,
@@ -150,6 +149,18 @@ describe("onset detector hysteresis", () => {
     });
     expect(d.feed(pgDown, T, CADENCE)).toBeNull(); // calm 1/2
     expect(d.feed(pgDown, T, CADENCE)).toMatchObject({ kind: "clear" });
+  });
+
+  test("load alone never trips: it is context, not a duress signal", () => {
+    // Load per core 3 — twice the old 1.5 limit — with every real signal calm.
+    const d = createOnsetDetector();
+    const load = sample({ loadAvg1: 3 * 18 });
+    for (let i = 0; i < 10; i++) expect(d.feed(load, T, CADENCE)).toBeNull();
+    expect(d.tripped).toBe(false);
+    const at = signalsAt(load, T);
+    expect(at.readings.loadRatio).toBe(3);
+    expect(at.elevated).toEqual([]);
+    expect(at.allCalm).toBe(true);
   });
 
   test("seeded-tripped detector (latch adoption) clears without ever tripping", () => {
@@ -163,17 +174,17 @@ describe("onset detector hysteresis", () => {
 
 describe("signalsAt", () => {
   test("a signal between its clear and trip limits holds the episode without being elevated", () => {
-    // Load per core 1.2: under the 1.5 trip limit, over the 0.9 clear limit.
-    const between = signalsAt(sample({ loadAvg1: 1.2 * 18 }), T);
+    // 4 ungranted locks: under the 5 trip limit, at least the 3 clear limit.
+    const between = signalsAt(sample({ pgLocksWaiting: 4 }), T);
     expect(between.elevated).toEqual([]);
-    expect(between.holding).toEqual(["loadRatio"]);
+    expect(between.holding).toEqual(["locksWaiting"]);
     expect(between.allCalm).toBe(false);
 
-    const hot = signalsAt(sample({ loadAvg1: 2 * 18 }), T);
-    expect(hot.elevated).toEqual(["loadRatio"]);
-    expect(hot.holding).toEqual(["loadRatio"]);
+    const hotAt = signalsAt(sample({ pgLocksWaiting: 8 }), T);
+    expect(hotAt.elevated).toEqual(["locksWaiting"]);
+    expect(hotAt.holding).toEqual(["locksWaiting"]);
 
-    const calm = signalsAt(sample({ loadAvg1: 0.5 * 18 }), T);
+    const calm = signalsAt(sample({ pgLocksWaiting: 1 }), T);
     expect(calm.holding).toEqual([]);
     expect(calm.allCalm).toBe(true);
   });

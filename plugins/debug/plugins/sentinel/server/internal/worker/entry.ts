@@ -164,7 +164,6 @@ function vitalsRecord(
     wall: sample.wall,
     cadenceMs,
     signals: {
-      loadRatio: { value: readings.loadRatio, limit: t.onLoadRatio },
       decompressionsPerSec: {
         value: readings.decompressionsPerSec,
         limit: t.onDecompressionsPerSec,
@@ -185,6 +184,7 @@ function vitalsRecord(
     holding,
     tripped,
     context: {
+      loadRatio: readings.loadRatio,
       freeMemMb: sample.freeMemMb ?? null,
       inFlightBuilds: sample.inFlightBuilds,
       runningBackends: sample.runningBackends,

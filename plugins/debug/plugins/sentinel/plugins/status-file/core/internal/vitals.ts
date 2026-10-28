@@ -11,9 +11,14 @@ import { DiskReadingSchema } from "./disk";
 /**
  * The signals that can trip duress — the detector's own names, a closed set.
  * Adding a detector signal is a type error at every site that maps the set.
+ *
+ * Each one measures real trouble: memory thrash, database pressure, or slow
+ * backends. The load average is not one of them. It counts runnable threads,
+ * throttled background ones included, so it read 2× the core count with the
+ * CPU half idle and main's event loop at 4 ms. It is context only
+ * (research/2026-10-28-global-duress-trip-on-real-trouble.md).
  */
 export const SignalKeySchema = z.enum([
-  "loadRatio",
   "decompressionsPerSec",
   "locksWaiting",
   "blkReadDeltaMs",
@@ -37,7 +42,6 @@ export const SentinelVitalsRecordSchema = z.object({
   /** The tick interval, so a reader can tell a late reading from a stale one. */
   cadenceMs: z.number(),
   signals: z.object({
-    loadRatio: SignalVitalSchema,
     decompressionsPerSec: SignalVitalSchema,
     locksWaiting: SignalVitalSchema,
     blkReadDeltaMs: SignalVitalSchema,
@@ -56,6 +60,11 @@ export const SentinelVitalsRecordSchema = z.object({
   tripped: z.boolean(),
   /** Machine context that cannot trip duress by itself. */
   context: z.object({
+    /**
+     * 1-minute load average ÷ CPU count. Defaults to null so a file written
+     * by a watcher that predates the reading still parses.
+     */
+    loadRatio: z.number().nullable().default(null),
     freeMemMb: z.number().nullable(),
     inFlightBuilds: z.number().nullable(),
     runningBackends: z.number().nullable(),

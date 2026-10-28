@@ -45,7 +45,6 @@ let configWatch: { dispose(): void } | null = null;
 // extra config fields (enabled, cadenceMs, …) off the wire frame.
 function pickThresholds(cfg: DetectorThresholds): DetectorThresholds {
   return {
-    onLoadRatio: cfg.onLoadRatio,
     onLocksWaiting: cfg.onLocksWaiting,
     onBlkReadDeltaMs: cfg.onBlkReadDeltaMs,
     onBackendP99Ms: cfg.onBackendP99Ms,

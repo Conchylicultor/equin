@@ -23,8 +23,10 @@ import {
   waitForFlock,
 } from "@plugins/packages/plugins/flock/core";
 import {
+  arrive,
   createTicketLine,
   type Ticket,
+  type TicketPlace,
 } from "@plugins/packages/plugins/ticket-line/core";
 import type { Lane } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import { agentBuildGateDir } from "../data-dirs";
@@ -34,7 +36,9 @@ import { buildProfilerStart } from "./profiler";
 // (research/2026-10-21-cli-duress-admission-one-at-a-time-v2.md).
 //
 // While the host duress latch is fresh (the cluster sentinel declared "the box
-// is in trouble": compressor thrash, pg pressure, load), agent builds run ONE AT
+// is in trouble": compressor thrash, pg pressure, slow backends — never the bare
+// load average, research/2026-10-28-global-duress-trip-on-real-trouble.md),
+// agent builds run ONE AT
 // A TIME: a build is admitted only once no other agent build is running, in
 // arrival order. While calm, any number run together. No timeout anywhere: some
 // build always holds the gate and finishes, so the line always moves.
@@ -46,7 +50,12 @@ import { buildProfilerStart } from "./profiler";
 //    finishes;
 //  - duress waiters queue for the exclusive lock in a first-come-first-served
 //    `ticket-line`, so they are admitted in arrival order (a bare flock wakes an
-//    arbitrary waiter).
+//    arbitrary waiter). A build's place is the moment it first reached the gate,
+//    and it keeps it: a held build stays in line for its whole hold, through a
+//    latch that clears and trips again, and a build requeued after its grant
+//    rejoins AT its place, not at the back. Before, a waiter left the line on
+//    every clear; with the latch flapping every few minutes the oldest waiters
+//    fell behind every newer one, and builds waited 2 h.
 // The kernel releases a flock with its holder's process, so a killed build never
 // strands the gate.
 //
@@ -99,6 +108,14 @@ export interface GateHold {
 }
 
 /**
+ * An admission: the gate held, and the build's place in line — pass it back on
+ * a requeue (`admitThroughGate({ place })`) so the build keeps it.
+ */
+export interface GateAdmission extends GateHold {
+  readonly place: TicketPlace;
+}
+
+/**
  * Why a hold ended: `cleared` — admitted beside other calm builds (duress
  * cleared, or the exclusive build it waited for finished); `acquired` —
  * admitted alone under duress. Both are op-log `WaitResult`s.
@@ -111,8 +128,10 @@ export interface GateLocks {
   tryLock(mode: GateMode): GateHold | null;
   /** Wait for the gate (push-based); throws `signal.reason` on abort. */
   waitLock(mode: GateMode, signal?: AbortSignal): Promise<GateHold>;
-  /** Join the line of exclusive waiters; resolves at its head. */
-  joinLine(signal: AbortSignal): Promise<Ticket>;
+  /** Arrive at the gate now: a place in its line. */
+  arrive(): TicketPlace;
+  /** Join the line of exclusive waiters at `place`; resolves at its head. */
+  joinLine(place: TicketPlace, signal: AbortSignal): Promise<Ticket>;
 }
 
 /**
@@ -141,7 +160,7 @@ export interface ValveDeps {
   onHoldEnd(result: HoldResult): void;
   /**
    * The build got the shared lock but duress had tripped meanwhile: it hands
-   * the lock back and goes round again, to the back of the line.
+   * the lock back and goes round again, keeping its place in line.
    */
   onRequeue(): void;
 }
@@ -160,12 +179,17 @@ class DuressCleared extends Error {
  * Admit a gated build to its heavy section: returns the gate, held, or `null`
  * when the build is not gated (nothing to hold). Blocks while duress keeps
  * another agent build running, in arrival order. Never times out.
+ *
+ * `place`: the build's place from an earlier admission of the same heavy
+ * section (a requeue). Without it the build arrives now.
  */
 export async function admitThroughGate(
-  opts: { gated: boolean },
+  opts: { gated: boolean; place?: TicketPlace },
   deps: ValveDeps = createValveDeps(),
-): Promise<GateHold | null> {
+): Promise<GateAdmission | null> {
   if (!opts.gated) return null;
+  const place = opts.place ?? deps.gate.arrive();
+  const line = placeInLine(deps.gate, place);
 
   // What the build is held on right now; `undefined` while not held. A hold
   // whose cause changes opens a new segment, so the op log shows each stretch
@@ -177,44 +201,99 @@ export async function admitThroughGate(
     heldOn = reason;
     deps.onHoldStart(reason);
   };
-  const admitted = (hold: GateHold, result: HoldResult): GateHold => {
+  const admitted = (hold: GateHold, result: HoldResult): GateAdmission => {
     if (heldOn !== undefined) deps.onHoldEnd(result);
-    return hold;
+    return { mode: hold.mode, release: () => hold.release(), place };
   };
 
-  for (;;) {
-    if (deps.isUnderDuress()) {
-      holdStart(deps.duressReason());
-      const alone = await exclusiveUnlessCleared(deps);
-      if (alone) return admitted(alone, "acquired");
-      continue;
+  try {
+    for (;;) {
+      if (deps.isUnderDuress()) {
+        holdStart(deps.duressReason());
+        const alone = await exclusiveUnlessCleared(deps, line);
+        if (alone) return admitted(alone, "acquired");
+        continue;
+      }
+      let shared = deps.gate.tryLock("shared");
+      if (!shared) {
+        // A build admitted under duress is running: wait for it to finish,
+        // in line, so a re-trip meanwhile finds this build where it arrived.
+        holdStart(EXCLUSIVE_RUNNING_REASON);
+        line.enter();
+        shared = await deps.gate.waitLock("shared");
+      }
+      // Duress may have tripped while we waited: then this build runs alone,
+      // after the ones already running — go round as a duress admission.
+      if (deps.isUnderDuress()) {
+        await shared.release();
+        heldOn = undefined;
+        deps.onRequeue();
+        continue;
+      }
+      return admitted(shared, "cleared");
     }
-    let shared = deps.gate.tryLock("shared");
-    if (!shared) {
-      // A build admitted under duress is running: wait for it to finish.
-      holdStart(EXCLUSIVE_RUNNING_REASON);
-      shared = await deps.gate.waitLock("shared");
-    }
-    // Duress may have tripped while we waited: then this build runs alone,
-    // after the ones already running — go round as a duress admission.
-    if (deps.isUnderDuress()) {
-      await shared.release();
-      heldOn = undefined;
-      deps.onRequeue();
-      continue;
-    }
-    return admitted(shared, "cleared");
+  } finally {
+    line.leave();
+  }
+}
+
+/** Why a held build's line ticket was withdrawn: it was admitted. */
+class LeftLine extends Error {
+  constructor() {
+    super("admitted: left the line");
   }
 }
 
 /**
- * Under duress: wait in line, then for the exclusive lock — unless the latch
- * clears first (`null`: the caller goes round and is admitted shared).
+ * A held build's ticket in the gate's line, taken on first need and kept for
+ * the whole hold — across a latch that clears and trips again — so the order
+ * among waiters is the order they reached the gate. `enter` takes the ticket
+ * (idempotent); `head` resolves once it is at the head (the same promise every
+ * time); `leave` withdraws it, at the head or not.
+ */
+function placeInLine(gate: GateLocks, place: TicketPlace) {
+  let atHead: Promise<Ticket> | null = null;
+  let ticket: Ticket | null = null;
+  const withdraw = new AbortController();
+  const head = (): Promise<Ticket> => {
+    if (atHead === null) {
+      atHead = gate.joinLine(place, withdraw.signal).then((t) => {
+        ticket = t;
+        return t;
+      });
+      // A withdrawn wait rejects with LeftLine, which nobody awaits; any other
+      // failure reaches whoever awaits the head, or stays loud.
+      void atHead.catch((err: unknown) => {
+        if (!(err instanceof LeftLine)) throw err;
+      });
+    }
+    return atHead;
+  };
+  return {
+    enter(): void {
+      // Only the place matters here; the wait for the head runs on its own.
+      void head();
+    },
+    head,
+    leave(): void {
+      if (ticket) ticket.leave();
+      else withdraw.abort(new LeftLine());
+    },
+  };
+}
+
+/**
+ * Under duress: wait for the head of the line, then for the exclusive lock —
+ * unless the latch clears first (`null`: the caller goes round, still in line).
  */
 async function exclusiveUnlessCleared(
   deps: ValveDeps,
+  line: ReturnType<typeof placeInLine>,
 ): Promise<GateHold | null> {
   const clear = new AbortController();
+  const cleared = new Promise<null>((resolve) => {
+    clear.signal.addEventListener("abort", () => resolve(null), { once: true });
+  });
   const stopWatching = new AbortController();
   const watching = (async () => {
     while (!stopWatching.signal.aborted) {
@@ -226,15 +305,11 @@ async function exclusiveUnlessCleared(
     }
   })();
   try {
-    const ticket = await deps.gate.joinLine(clear.signal);
-    try {
-      return (
-        deps.gate.tryLock("exclusive") ??
-        (await deps.gate.waitLock("exclusive", clear.signal))
-      );
-    } finally {
-      ticket.leave();
-    }
+    if ((await Promise.race([line.head(), cleared])) === null) return null;
+    return (
+      deps.gate.tryLock("exclusive") ??
+      (await deps.gate.waitLock("exclusive", clear.signal))
+    );
   } catch (err) {
     if (err instanceof DuressCleared) return null;
     throw err;
@@ -362,7 +437,9 @@ export function createGateLocks(dir: GateDir): GateLocks {
       });
       return hold(mode, () => held.release());
     },
-    joinLine: (signal) => createTicketLine(dir.file("line")).join({ signal }),
+    arrive,
+    joinLine: (place, signal) =>
+      createTicketLine(dir.file("line")).join({ place, signal }),
   };
 }
 

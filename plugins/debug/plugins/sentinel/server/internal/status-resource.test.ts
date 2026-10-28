@@ -35,7 +35,6 @@ function record(
     wall: Date.now(),
     cadenceMs: 5_000,
     signals: {
-      loadRatio: { value: 0.3, limit: 1.5 },
       decompressionsPerSec: { value: 0, limit: 50_000 },
       locksWaiting: { value: 0, limit: 5 },
       blkReadDeltaMs: { value: 0, limit: 2_000 },
@@ -45,6 +44,7 @@ function record(
     holding: [],
     tripped: false,
     context: {
+      loadRatio: 0.3,
       freeMemMb: 8_000,
       inFlightBuilds: 0,
       runningBackends: 3,

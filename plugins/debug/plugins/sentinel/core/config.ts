@@ -32,12 +32,6 @@ export const sentinelConfig = defineConfig({
       description:
         "How often the sentinel samples cluster vitals (restart to apply). The 'cluster' trace ring holds 720 samples (1h at 5s).",
     }),
-    onLoadRatio: floatField({
-      default: 1.5,
-      label: "Onset: load ratio",
-      description:
-        "Trip signal: 1-minute load average divided by CPU count at or above this.",
-    }),
     onLocksWaiting: intField({
       default: 5,
       min: 0,

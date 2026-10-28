@@ -51,7 +51,6 @@ const WORKTREE = runtimeNamespace();
 const CADENCE_MS = 100;
 
 const THRESHOLDS: DetectorThresholds = {
-  onLoadRatio: 1.5,
   onLocksWaiting: 5,
   onBlkReadDeltaMs: 2_000,
   onBackendP99Ms: 1_000,
@@ -257,15 +256,12 @@ describe("sentinel worker latch lifecycle", () => {
       value: 300_000,
       limit: THRESHOLDS.onDecompressionsPerSec,
     });
-    expect(hotVitals.signals.loadRatio).toEqual({
-      value: 4 / 18,
-      limit: THRESHOLDS.onLoadRatio,
-    });
     expect(hotVitals.signals.locksWaiting).toEqual({
       value: 0,
       limit: THRESHOLDS.onLocksWaiting,
     });
     expect(hotVitals.context).toEqual({
+      loadRatio: 4 / 18,
       freeMemMb: 8_000,
       inFlightBuilds: 0,
       runningBackends: 3,

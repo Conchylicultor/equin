@@ -63,7 +63,10 @@ Cost: one `flock-wait` child (~37 MB, `bun --smol`) per queued waiter.
   - Exports (types):
     - `Ticket`
     - `TicketLine`
-  - Exports (values): `createTicketLine`
+    - `TicketPlace`
+  - Exports (values):
+    - `arrive`
+    - `createTicketLine`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `core/internal/ticket-line.ts` (debt)
 

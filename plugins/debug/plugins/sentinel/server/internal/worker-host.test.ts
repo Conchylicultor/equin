@@ -26,7 +26,6 @@ import {
 // read the runtime namespace before the worker had declared it).
 
 const THRESHOLDS: DetectorThresholds = {
-  onLoadRatio: 1.5,
   onLocksWaiting: 5,
   onBlkReadDeltaMs: 2_000,
   onBackendP99Ms: 1_000,

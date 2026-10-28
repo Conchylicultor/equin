@@ -166,7 +166,7 @@ proto-1789664064-nr56).
   `critical` (outranks duress — it needs you), `filling` / `low` → `attention`
   (after duress). The glance shows "N GB disk free", with the fall per minute
   while filling.
-- **Web**: the row's `glance` (load per core · memory free · disk free · builds, plus a banner
+- **Web**: the row's `glance` (load per core — context, never coloured — · memory free · disk free · builds, plus a banner
   naming what tripped it or saying the numbers are old) and `component` (one
   line per signal with a bar and "X of LIMIT", amber from ⅔ of the limit, red at
   it; then "N worktrees running · Updated 3s ago") read `sentinel.vitals`, so
@@ -228,10 +228,16 @@ health-monitor's host sampler; only the expensive vm_stat read is deduped. See
 `server/internal/detector.ts` is the pure state machine (dual-threshold,
 dual-dwell hysteresis; one trip event per episode; a null reading — blk-read
 delta, pg-down locks, stale compressor line — is neither elevated nor
-calm-blocking). Signals: load ratio, pg locks, blk-read delta, slow backends,
+calm-blocking). Signals: pg locks, blk-read delta, slow backends,
 and `decompressionsPerSec ≥ onDecompressionsPerSec` (default 50 k/s — the
 07-11 freezes ran 240k–442k/s; same latch, same hysteresis machinery, no new
-mechanism). The worker feeds it per tick: on **trip**, `setDuress(reason)` +
+mechanism). Each measures real trouble. **The load ratio is not a signal**: it
+is in the vitals' `context`, shown, never tripping. macOS's load average counts
+runnable threads, throttled darwinbg ones included, so it read 2× the core count
+with the CPU half idle and main's event loop at 4 ms. It tripped 2,630 min of
+duress in 14 days and held agent builds at the gate for 58 % of their wall time
+(research/2026-10-28-global-duress-trip-on-real-trouble.md). CPU contention is
+the host CPU grant's job. The worker feeds it per tick: on **trip**, `setDuress(reason)` +
 a trip frame (main mirrors it into `captureTrace`); **every tripped tick**,
 `refreshDuress()`; on **clear**, `clearDuress()` + a clear frame. Phase C's
 shedding gates on that latch. **Max-episode-hold** (config, default 30 min)

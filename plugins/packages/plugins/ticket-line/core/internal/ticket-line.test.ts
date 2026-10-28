@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createTicketLine, type Ticket } from "./ticket-line";
+import { arrive, createTicketLine, type Ticket } from "./ticket-line";
 
 // The line is cross-process by construction (flocks are per open file
 // description, so two tickets of ONE process exclude each other exactly as two
@@ -98,6 +98,44 @@ describe("createTicketLine", () => {
     expect(c.state()).toBe("head");
     (await c.ticket).leave();
     expect(tickets()).toEqual([]);
+  });
+
+  test("a waiter that steps out and rejoins at its place stays ahead of later arrivals", async () => {
+    const line = createTicketLine(dir);
+    const a = await line.join();
+    const place = arrive();
+    const out = new AbortController();
+    const b = line.join({ signal: out.signal, place });
+    await settle();
+    const c = track(line.join());
+    await settle();
+
+    // B steps out (the line stopped applying to it for a while), C stays.
+    out.abort(new Error("stepped out"));
+    expect(await rejection(b)).toBe("stepped out");
+    // B comes back at the place it first arrived at, behind A, ahead of C.
+    const back = track(line.join({ place }));
+    await settle();
+    expect([back.state(), c.state()]).toEqual(["waiting", "waiting"]);
+
+    a.leave();
+    await settle();
+    expect([back.state(), c.state()]).toEqual(["head", "waiting"]);
+    const bt = await back.ticket;
+    expect(bt.place).toBe(place);
+    bt.leave();
+    await settle();
+    expect(c.state()).toBe("head");
+    (await c.ticket).leave();
+    expect(tickets()).toEqual([]);
+  });
+
+  test("a join without a place stands at now", async () => {
+    const line = createTicketLine(dir);
+    const before = arrive();
+    const t = await line.join();
+    expect(t.place > before).toBe(true);
+    t.leave();
   });
 
   test("a SIGKILLed head frees its place; its file is reaped", async () => {

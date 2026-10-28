@@ -22,7 +22,6 @@ function vitals(
     wall: WALL,
     cadenceMs: 5_000,
     signals: {
-      loadRatio: { value: 0.26, limit: 1.5 },
       decompressionsPerSec: { value: 18_400, limit: 50_000 },
       locksWaiting: { value: 0, limit: 5 },
       blkReadDeltaMs: { value: 1_400, limit: 2_000 },
@@ -32,6 +31,7 @@ function vitals(
     holding: [],
     tripped: false,
     context: {
+      loadRatio: 0.26,
       freeMemMb: 9_626,
       inFlightBuilds: 1,
       runningBackends: 11,
@@ -61,17 +61,11 @@ describe("vitalsView", () => {
   it("writes each signal as 'X of LIMIT' in the mock's units, in the fixed order", () => {
     const view = vitalsView(vitals(), true, WALL + 3_000);
     expect(view.signals.map((s) => s.label)).toEqual([
-      "Load per core",
       "Memory compression",
       "Waiting database locks",
       "Database disk reads",
       "Slow worktrees",
     ]);
-    expect(line(view, "loadRatio")).toMatchObject({
-      valueText: "0.26",
-      limitText: "1.50",
-      tone: "neutral",
-    });
     expect(line(view, "decompressionsPerSec")).toMatchObject({
       valueText: "18k/s",
       limitText: "50k/s",
@@ -81,7 +75,9 @@ describe("vitalsView", () => {
       limitText: "2.0 s",
       tone: "warn",
     });
-    expect(line(view, "loadRatio").fraction).toBeCloseTo(0.26 / 1.5);
+    expect(line(view, "decompressionsPerSec").fraction).toBeCloseTo(
+      18_400 / 50_000,
+    );
     expect(view.stale).toBe(false);
     expect(view.banner).toBeNull();
     expect(view.footer).toBe("11 worktrees running · Updated 3s ago");
@@ -117,6 +113,8 @@ describe("vitalsView", () => {
     const low = vitalsView(
       vitals({
         context: {
+          // Load is context with no limit: never coloured, however high.
+          loadRatio: 3,
           freeMemMb: 400,
           inFlightBuilds: 6,
           runningBackends: 13,
@@ -143,6 +141,7 @@ describe("vitalsView", () => {
     const filling = vitalsView(
       vitals({
         context: {
+          loadRatio: 0.26,
           freeMemMb: 9_626,
           inFlightBuilds: 1,
           runningBackends: 11,
@@ -164,6 +163,7 @@ describe("vitalsView", () => {
     const unread = vitalsView(
       vitals({
         context: {
+          loadRatio: 0.26,
           freeMemMb: 9_626,
           inFlightBuilds: 1,
           runningBackends: 11,
@@ -181,32 +181,32 @@ describe("vitalsView", () => {
       vitals({
         tripped: true,
         // Out of display order on purpose: the banner follows the lines' order.
-        elevated: ["decompressionsPerSec", "loadRatio"],
+        elevated: ["slowBackends", "decompressionsPerSec"],
       }),
       true,
       WALL,
     );
     expect(view.banner).toEqual({
       kind: "tripped",
-      text: "Tripped by load and memory compression",
+      text: "Tripped by memory compression and slow worktrees",
     });
     const three = vitalsView(
       vitals({
         tripped: true,
-        elevated: ["slowBackends", "locksWaiting", "loadRatio"],
+        elevated: ["slowBackends", "locksWaiting", "decompressionsPerSec"],
       }),
       true,
       WALL,
     );
     expect(three.banner?.text).toBe(
-      "Tripped by load, waiting database locks and slow worktrees",
+      "Tripped by memory compression, waiting database locks and slow worktrees",
     );
   });
 
   it("is stale past three ticks without a new reading, and says how old", () => {
     expect(vitalsView(vitals(), true, WALL + 15_000).stale).toBe(false);
     const view = vitalsView(
-      vitals({ tripped: true, elevated: ["loadRatio"] }),
+      vitals({ tripped: true, elevated: ["decompressionsPerSec"] }),
       true,
       WALL + 120_000,
     );

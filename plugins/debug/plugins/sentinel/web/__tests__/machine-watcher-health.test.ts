@@ -82,7 +82,7 @@ describe("Machine watcher health row", () => {
     );
   });
 
-  it("marks the dot instead of colouring it while CPU or memory holds the duress", () => {
+  it("marks the dot instead of colouring it while memory holds the duress", () => {
     const running = { state: "running", since: Date.now() } as const;
     const marksOf = (holding: SignalKey[]) => {
       const verdict = machineWatcherVerdict(
@@ -93,16 +93,11 @@ describe("Machine watcher health row", () => {
         ? verdict.ambient?.map((m) => m.id)
         : undefined;
     };
-    expect(marksOf(["loadRatio"])).toEqual(["cpu"]);
     expect(marksOf(["decompressionsPerSec"])).toEqual(["memory"]);
-    expect(marksOf(["decompressionsPerSec", "loadRatio"])).toEqual([
-      "cpu",
-      "memory",
-    ]);
     // Waiting out its calm dwell: still ambient, nothing to mark.
     expect(marksOf([])).toEqual([]);
-    // Anything beyond the machine's CPU or memory still colours the dot.
-    expect(marksOf(["loadRatio", "slowBackends"])).toBeUndefined();
+    // Anything beyond the machine's memory still colours the dot.
+    expect(marksOf(["decompressionsPerSec", "slowBackends"])).toBeUndefined();
   });
 
   it("asks for attention while the disk is low or filling fast, after duress", () => {
@@ -120,7 +115,7 @@ describe("Machine watcher health row", () => {
       recorded(
         running,
         true,
-        { since: Date.now(), holding: ["loadRatio"] },
+        { since: Date.now(), holding: ["decompressionsPerSec"] },
         "filling",
       ),
     );
@@ -139,7 +134,7 @@ describe("Machine watcher health row", () => {
         recorded(
           running,
           true,
-          { since: Date.now(), holding: ["loadRatio"] },
+          { since: Date.now(), holding: ["decompressionsPerSec"] },
           "full-soon",
         ),
       ),
@@ -156,7 +151,7 @@ describe("Machine watcher health row", () => {
     const verdict = machineWatcherVerdict(
       recorded({ state: "stopped", since: Date.now() }, true, {
         since: Date.now(),
-        holding: ["loadRatio"],
+        holding: ["decompressionsPerSec"],
       }),
     );
     expect(verdict.state).toBe("attention");

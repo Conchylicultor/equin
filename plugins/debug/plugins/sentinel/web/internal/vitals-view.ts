@@ -45,11 +45,6 @@ function milliseconds(n: number): string {
 }
 
 const SIGNALS: Record<SignalKey, SignalSpec> = {
-  loadRatio: {
-    label: "Load per core",
-    cause: "load",
-    format: (v) => v.toFixed(2),
-  },
   decompressionsPerSec: {
     label: "Memory compression",
     cause: "memory compression",
@@ -219,16 +214,16 @@ function diskFigure(
 }
 
 function glanceOf(vitals: SentinelVitalsRecord): GlanceFigureView[] {
-  const load = vitals.signals.loadRatio;
-  const { freeMemMb, inFlightBuilds } = vitals.context;
+  const { loadRatio, freeMemMb, inFlightBuilds } = vitals.context;
   return [
     {
+      // Context, not a duress signal (it counts throttled threads, not CPU
+      // saturation), so it has no limit to colour against.
       key: "load",
       before: "Load ",
-      value:
-        load.value === null ? MISSING : SIGNALS.loadRatio.format(load.value),
+      value: loadRatio === null ? MISSING : loadRatio.toFixed(2),
       after: " per core",
-      tone: toneOf(load.value, load.limit),
+      tone: "neutral",
     },
     {
       key: "free",

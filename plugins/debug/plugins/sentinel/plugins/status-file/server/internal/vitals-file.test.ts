@@ -25,7 +25,6 @@ const RECORD: SentinelVitalsRecord = {
   wall: 1_789_700_000_000,
   cadenceMs: 5_000,
   signals: {
-    loadRatio: { value: 0.26, limit: 1.5 },
     decompressionsPerSec: { value: null, limit: 50_000 },
     locksWaiting: { value: 0, limit: 5 },
     blkReadDeltaMs: { value: 40, limit: 2_000 },
@@ -35,6 +34,7 @@ const RECORD: SentinelVitalsRecord = {
   holding: [],
   tripped: false,
   context: {
+    loadRatio: 0.26,
     freeMemMb: 9_600,
     inFlightBuilds: 1,
     runningBackends: 7,

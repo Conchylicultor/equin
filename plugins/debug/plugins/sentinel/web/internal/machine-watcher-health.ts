@@ -48,15 +48,10 @@ const DISK_STATUS: Record<DiskAlarm, HealthStatus | null> = {
 
 /**
  * The machine resource each duress signal measures, and the mark the dot shows
- * while it holds builds back. `null`: not the machine's own CPU or memory (the
+ * while it holds builds back. `null`: not the machine's own memory (the
  * database, a slow worktree) — duress from one of those still colours the dot.
  */
 const SIGNAL_MARK: Record<SignalKey, HealthMark | null> = {
-  loadRatio: {
-    id: "cpu",
-    icon: symbol("speed"),
-    label: "Builds held back: the CPU is busy",
-  },
   decompressionsPerSec: {
     id: "memory",
     icon: symbol("stacks"),
@@ -69,7 +64,7 @@ const SIGNAL_MARK: Record<SignalKey, HealthMark | null> = {
 
 /**
  * The dot's marks for a duress held by `holding`, or `null` when some signal
- * is not the machine's CPU or memory. Duress from CPU or memory is routine —
+ * is not the machine's memory. Duress from memory is routine —
  * the watcher is already holding builds back — so it marks the dot rather
  * than colouring it. Empty while it waits out its calm dwell.
  */
@@ -103,8 +98,8 @@ export function clockTime(at: number): string {
  *   pulsing; `running` → `ok`, or steady `attention` while the duress latch is
  *   up. Red means the watcher is broken and needs you; duress is the machine
  *   under load with the watcher already handling it (builds held back), so it
- *   asks for a look, not an intervention. Duress held by CPU or memory alone is
- *   ambient: the dot stays green with a CPU / memory mark (`duressMarks`).
+ *   asks for a look, not an intervention. Duress held by memory alone is
+ *   ambient: the dot stays green with a memory mark (`duressMarks`).
  * - while running, the disk verdict: `critical` when it is (nearly) full or
  *   will be within the hour — that needs you, and outranks duress —, else
  *   `attention` when it is low or filling fast (after duress).

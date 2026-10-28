@@ -34524,7 +34524,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types):
           - `Ticket`
           - `TicketLine`
-        - Exports (values): `createTicketLine`
+          - `TicketPlace`
+        - Exports (values):
+          - `arrive`
+          - `createTicketLine`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `core/internal/ticket-line.ts` (debt)
     - **`value-patch`** — A JSON value's change as what changed: diffValue(prev, next) → set / append / push ops at paths (null when the root itself changed), applyValuePatch(base, ops) → the next value, copy-on-write so every untouched subtree keeps its identity. What a pushed live value declared `patches: true` ships instead of its whole value.

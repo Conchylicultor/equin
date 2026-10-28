@@ -9,7 +9,6 @@ import type { ClusterSample } from "../../core";
 // `offTicks` consecutive ticks. One trip event per episode.
 
 export interface DetectorThresholds {
-  onLoadRatio: number;
   onLocksWaiting: number;
   onBlkReadDeltaMs: number;
   onBackendP99Ms: number;
@@ -22,6 +21,7 @@ export interface DetectorThresholds {
 
 /** Signal values at a tick, for the trip trace's detail payload. */
 export interface SignalReadings {
+  /** Context, never a trip signal: see `SignalKeySchema`. */
   loadRatio: number;
   locksWaiting: number;
   blkReadDeltaMs: number | null;
@@ -71,7 +71,6 @@ export function signalsAt(
   // Each signal's reading against its trip limit; a null reading is neither
   // elevated nor calm-blocking.
   const against: [SignalKey, number | null, number][] = [
-    ["loadRatio", readings.loadRatio, t.onLoadRatio],
     ["locksWaiting", readings.locksWaiting, t.onLocksWaiting],
     ["blkReadDeltaMs", readings.blkReadDeltaMs, t.onBlkReadDeltaMs],
     ["slowBackends", readings.slowBackends, t.onSlowBackends],
