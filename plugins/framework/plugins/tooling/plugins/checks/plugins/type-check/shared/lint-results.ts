@@ -78,7 +78,7 @@ const entrySchema = z.object({
    */
   typed: z.array(z.string()),
   /** Only the non-empty results, by key. */
-  messages: z.record(z.array(messageSchema)),
+  messages: z.record(z.string(), z.array(messageSchema)),
 });
 
 export type LintEntry = z.infer<typeof entrySchema>;

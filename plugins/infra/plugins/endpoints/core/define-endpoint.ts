@@ -1,4 +1,4 @@
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
+import type { z } from "zod";
 import { type Codec, isCodec, json } from "./codec";
 import type { ExtractParams } from "./route-params";
 import { extractMethod, extractPath } from "./route-params";
@@ -77,7 +77,7 @@ interface EndpointContract<
   readonly read: ReadOf<Route>;
   readonly bodyCodec?: Codec<TBody>;
   readonly responseCodec?: Codec<TResponse>;
-  readonly querySchema?: ZodParser<TQuery>;
+  readonly querySchema?: z.ZodType<TQuery>;
   /**
    * Bound how many handler bodies run concurrently for this route (a per-route
    * semaphore in `implement`). Use for CPU/IO-heavy handlers — e.g. ones that
@@ -260,23 +260,23 @@ export function endpointContractOf(endpoint: {
 }
 
 /** A body/response spec accepts a bare Zod schema (JSON) or an explicit codec. */
-type Spec<T> = ZodParser<T> | Codec<T>;
+type Spec<T> = z.ZodType<T> | Codec<T>;
 
 /**
  * Extracts the payload type from a spec. Inferring `B`/`R` as the *spec object*
  * type and extracting via this conditional avoids the union-variance inference
- * regression a direct `ZodParser<T> | Codec<T>` parameter would cause (`Codec<T>`
+ * regression a direct `z.ZodType<T> | Codec<T>` parameter would cause (`Codec<T>`
  * is invariant in `T`).
  */
 type SpecType<S> =
-  S extends Codec<infer U> ? U : S extends ZodParser<infer U> ? U : void;
+  S extends Codec<infer U> ? U : S extends z.ZodType<infer U> ? U : void;
 
 /** What `defineEndpoint` takes, whichever host serves it. */
 interface EndpointOptions<Route extends string, B, R, TQuery> {
   route: Route;
   body?: B;
   response?: R;
-  query?: ZodParser<TQuery>;
+  query?: z.ZodType<TQuery>;
   concurrency?: number;
   dedupe?: boolean;
   slowThresholdMs?: number;
@@ -405,12 +405,12 @@ export function defineEndpoint<
   const bodyCodec = opts.body
     ? isCodec(opts.body)
       ? opts.body
-      : json(opts.body as ZodParser<unknown>)
+      : json(opts.body as z.ZodType<unknown>)
     : undefined;
   const responseCodec = opts.response
     ? isCodec(opts.response)
       ? opts.response
-      : json(opts.response as ZodParser<unknown>)
+      : json(opts.response as z.ZodType<unknown>)
     : undefined;
   return {
     route: opts.route,

@@ -1,8 +1,8 @@
+import type { z } from "zod";
 import { join } from "node:path";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import type { Ready } from "@plugins/infra/plugins/deps/deps";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import type { PythonEnvSource } from "./python-env";
 
 /** A Python entry point exited non-zero, or did not print one JSON document. */
@@ -29,7 +29,7 @@ export type RunPythonOptions<T> = RunBound & {
   /** Sent as ONE JSON document on stdin. */
   input: unknown;
   /** Parses the ONE JSON document the module prints on stdout — never a cast. */
-  output: ZodParser<T>;
+  output: z.ZodType<T>;
   /** Where the module's stderr goes, line by line (its progress and warnings). */
   log?: (line: string) => void;
 };

@@ -1,8 +1,8 @@
+import type { z } from "zod";
 import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
 import { listWorktreeDirsAsync } from "@plugins/infra/plugins/paths/server";
 import { readChannelJsonAsync } from "@plugins/primitives/plugins/log-channels/plugins/log-files/server";
 import { readSlowOpMarkers } from "@plugins/debug/plugins/slow-ops/server";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import {
   MAX_HEALTH_SAMPLES,
   HealthSampleSchema,
@@ -17,7 +17,7 @@ import {
 async function parseSamples<T>(
   worktree: string,
   channel: string,
-  schema: ZodParser<T>,
+  schema: z.ZodType<T>,
   cutoff: number,
   sampledAt: (v: T) => number,
 ): Promise<T[]> {

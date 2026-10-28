@@ -226,19 +226,19 @@ describe("useLive(value, [p1, p2, …])", () => {
   it("refuses a question schema that is itself a list (it would read as one)", () => {
     expect(() =>
       liveValue(key(), { schema: Result, query: z.array(z.string()) }),
-    ).toThrow(/may be a list \(ZodArray\)/);
+    ).toThrow(/may be a list \(array\)/);
     expect(() =>
       liveValue(key(), {
         schema: Result,
         query: z.union([z.object({ a: z.string() }), z.tuple([z.string()])]),
       }),
-    ).toThrow(/may be a list \(ZodTuple\)/);
+    ).toThrow(/may be a list \(tuple\)/);
     expect(() =>
       liveValue(key(), {
         schema: Result,
         query: z.array(z.string()).optional(),
       }),
-    ).toThrow(/ZodArray/);
+    ).toThrow(/may be a list \(array\)/);
   });
 
   it("types: a list in, a list of the single read's results out", () => {

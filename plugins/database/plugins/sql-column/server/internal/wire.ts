@@ -23,12 +23,12 @@
  * recorded against the built column, which is what {@link columnWireCodec}
  * reads.
  */
+import type { z } from "zod";
 import type { PgColumn, PgColumnBuilderBase } from "drizzle-orm/pg-core";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 
 export interface WireCodec<Data, Wire> {
   /** Parses the wire form — the schema a row schema's field for this column is. */
-  schema: ZodParser<Wire>;
+  schema: z.ZodType<Wire>;
   /** Stored value → wire value. Never handed `null`: a NULL stays `null` on the wire. */
   encode: (value: Data) => Wire;
 }

@@ -1,5 +1,5 @@
+import type { z } from "zod";
 import { useCallback, useMemo } from "react";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { useLive } from "@plugins/network/plugins/live/web";
 import {
   mapResource,
@@ -49,7 +49,7 @@ export interface ActiveDataBindingHandle<T> {
 }
 
 export function useActiveDataBinding<T>(
-  schema: ZodParser<T>,
+  schema: z.ZodType<T>,
 ): ActiveDataBindingHandle<T> {
   const fetchEndpoint = useFetchEndpoint();
   const identity = useActiveDataIdentity();

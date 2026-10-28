@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import * as z4 from "zod/v4";
+import { z } from "zod";
 import {
   parseStructuredResult,
   READ_ONLY_TOOLS,
@@ -7,7 +7,7 @@ import {
 } from "./run-claude-read-only";
 
 describe("readOnlyArgs", () => {
-  const args = readOnlyArgs("sonnet", z4.object({ a: z4.string() }), "sys");
+  const args = readOnlyArgs("sonnet", z.object({ a: z.string() }), "sys");
   const after = (flag: string) => args[args.indexOf(flag) + 1];
 
   test("hands the CLI a draft-07 schema, the only dialect it validates", () => {
@@ -41,7 +41,7 @@ describe("readOnlyArgs", () => {
 });
 
 describe("parseStructuredResult", () => {
-  const schema = z4.object({ n: z4.number() });
+  const schema = z.object({ n: z.number() });
   const record = (extra: object) =>
     JSON.stringify({
       type: "result",

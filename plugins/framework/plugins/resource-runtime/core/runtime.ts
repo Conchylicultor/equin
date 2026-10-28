@@ -1,4 +1,4 @@
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
+import type { z } from "zod";
 import { hashHex } from "@plugins/packages/plugins/string-hash/core";
 import { createInflight } from "@plugins/packages/plugins/inflight/core";
 import { canonicalParams } from "@plugins/packages/plugins/canonical-params/core";
@@ -74,7 +74,7 @@ import {
 // The runtime is acyclic and HOST-AGNOSTIC: besides `zod` it imports only the
 // `packages/…` leaves (globally-allowed utility code, so no cycle — inflight for
 // read-path single-flight coalescing, semaphore for the read-admission gate,
-// zod-parser for the `ZodParser` alias, string-hash for ETags and the default
+// string-hash for ETags and the default
 // snapshot hash). No `bun`, no `node:*`, no `Bun.*`: the Bun server, central
 // and a browser page all host it, each injecting what it does better through
 // `ResourceRuntimeOptions` (the Bun hosts' `snapHash`). It declares its own
@@ -328,7 +328,7 @@ export interface ResourceDefinition<
    * browser re-parses before the value lands in the TanStack cache. See
    * research/2026-06-08-global-mandatory-resource-schema-server-validation.md.
    */
-  schema: ZodParser<T>;
+  schema: z.ZodType<T>;
   /**
    * Row identity for `mode: "keyed"` resources. Required (and only meaningful)
    * when `mode === "keyed"`: the loader's `T` must be an array, and `keyOf`
@@ -763,7 +763,7 @@ export interface ResourceContract<
   P extends ResourceParams = ResourceParams,
 > {
   key: string;
-  schema: ZodParser<T>;
+  schema: z.ZodType<T>;
   keyed?: { keyOf: (row: unknown) => string };
   /**
    * Preload marker, declared once on the shared client descriptor. Threaded
@@ -961,7 +961,7 @@ function contractToDefinition<T, P extends ResourceParams>(
 export interface Resource<T, P extends ResourceParams = ResourceParams> {
   key: string;
   mode: ResourceMode;
-  schema: ZodParser<T>;
+  schema: z.ZodType<T>;
   /**
    * Preload marker, derived from the shared client descriptor (via the
    * two-arg `defineResource`/`defineExternalResource` form). `Resource.Declare`
@@ -1296,7 +1296,7 @@ interface RegistryEntry {
   /** Declared list shape (`ResourceDefinition.shape`) — surfaced in `_debug`. */
   shape?: ResourceListShape;
   /** Payload schema. The loader output is parsed against it in `timedLoad`. */
-  schema: ZodParser<unknown>;
+  schema: z.ZodType<unknown>;
   loader: (
     params: ResourceParams,
     ctx?: { affectedIds: readonly string[] },
@@ -3722,9 +3722,9 @@ export function createResourceRuntime(
   // either way.
   // A9: route ids must be unique within the resource — `usesOf` names routes by
   // id, so a duplicate would make a tuple's read-set ambiguous.
-  function routingRecordFor(
+  function routingRecordFor<T, P extends ResourceParams>(
     def: Pick<
-      ResourceDefinition<unknown, ResourceParams>,
+      ResourceDefinition<T, P>,
       "key" | "mode" | "routes" | "reach" | "dependsOn"
     >,
     membershipField: "membership" | "scopedMembership" | null,
@@ -3997,14 +3997,14 @@ export function createResourceRuntime(
     return {
       key: entry.key,
       mode: entry.mode,
-      schema: entry.schema as ZodParser<T>,
+      schema: entry.schema as z.ZodType<T>,
       preload: entry.preload,
       async load(params: P): Promise<T> {
         // Parse here too: this handle method is the one load path that bypasses
         // `timedLoad`, so it must validate to keep the guarantee total — and
         // canonicalize, as every entry point does. The entry's loader, read at
         // call time: a deferred entry gets its loader at bind.
-        return (entry.schema as ZodParser<T>).parse(
+        return (entry.schema as z.ZodType<T>).parse(
           await entry.loader(canonicalTuple(entry, params)),
         );
       },
@@ -4130,11 +4130,7 @@ export function createResourceRuntime(
       }
     }
 
-    const routing = routingRecordFor(
-      def as ResourceDefinition<unknown, ResourceParams>,
-      membershipField,
-      externalSource,
-    );
+    const routing = routingRecordFor(def, membershipField, externalSource);
     // The external keyed arm (`ExternalKeyedPolicy`) — never routed: its
     // routes were refused above. The types allow only a bounded window or a
     // point set; this holds the line for a cast.
@@ -4358,7 +4354,7 @@ export function createResourceRuntime(
       externalSource,
       ...(def.freshness !== undefined ? { freshness: def.freshness } : {}),
       ...(def.shape !== undefined ? { shape: def.shape } : {}),
-      schema: def.schema as ZodParser<unknown>,
+      schema: def.schema as z.ZodType<unknown>,
       loader: def.loader as (
         params: ResourceParams,
         ctx?: { affectedIds: readonly string[] },

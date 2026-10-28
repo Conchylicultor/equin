@@ -13,7 +13,7 @@ import { RelayQuestionsSchema } from "./schemas";
 export const pendingQuestionFields = {
   toolUseId: textField(),
   conversationId: textField({ label: "Conversation" }),
-  questions: jsonField({ schema: RelayQuestionsSchema, default: [] }),
+  questions: jsonField({ schema: RelayQuestionsSchema }),
   createdAt: dateField(),
 } satisfies FieldsRecord;
 

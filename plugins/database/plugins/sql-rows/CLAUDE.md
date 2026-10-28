@@ -169,17 +169,13 @@ say.
 
 `core/` rather than `server/`, because the callers span three runtimes: server
 plugins, `check/` files, and `cli/`. `core` is the only barrel all three may
-import. It stays a leaf: `zod`, `ZodParser`, and **structural** interfaces only —
+import. It stays a leaf: `zod` and **structural** interfaces only —
 no `import { Pool } from "pg"`, no drizzle import, not even type-only.
 `SqlQueryable` / `SqlExecutable` / `SqlResult` are satisfied by the real types
 with no cast at any call site.
 
-`ZodParser<T>` comes from `@plugins/packages/plugins/zod-parser/core` — the
-canonical "a schema that parses **untrusted** input into a `T`" type. Using
-`z.ZodType<T>` here would make the parse a second assertion, since its `Input`
-defaults to `Output`.
-
-`row` is required, and a `ZodParser<T>` cannot be produced by writing a type
+`row` is a `z.ZodType<T>` — a schema that parses **untrusted** input (its
+`Input` is `unknown`) into a `T` — and is required: a schema cannot be produced by writing a type
 argument — so `queryRows<Row>(…)` with no schema does not typecheck. Through this
 door the wrong thing has no spelling; `lint/no-unparsed-sql-rows` closes the
 other doors.
@@ -188,7 +184,7 @@ other doors.
 
 ## Plugin reference
 
-- Description: Parsed raw-SQL row reads: queryRows / executeRows parse every row against a ZodParser and throw a SqlRowError naming the column, the value and its Postgres type OID — closing the pool.query<T>() assertion hole.
+- Description: Parsed raw-SQL row reads: queryRows / executeRows parse every row against a zod schema and throw a SqlRowError naming the column, the value and its Postgres type OID — closing the pool.query<T>() assertion hole.
 - Exemptions:
   - Exempts itself from: `sql-rows/no-unparsed-sql-rows` — `.` (sanctioned)
   - Exempted by: `database/sql-rows` (0 debt)

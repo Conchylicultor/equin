@@ -28,7 +28,6 @@ import {
   type ArmKeyCodec,
   type JoinSpec,
 } from "@plugins/infra/plugins/query-resource/core";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { SQL_TYPE_RE } from "../../core/internal/expr";
 import { routedReads, type TupleReads } from "./arm-plan";
 import { armKeySql } from "./arm-key-sql";
@@ -456,14 +455,14 @@ export function compileUnionCollection<
   // ── Rows ──────────────────────────────────────────────────────────────────
   /** Each arm's row parser, over its aliases (+ the row-key parts). */
   const parserOf = (projected: readonly OuterColumn[], parts: number) => {
-    const byKind = new Map<string, ZodParser<Record<string, unknown>>>();
+    const byKind = new Map<string, z.ZodType<Record<string, unknown>>>();
     for (const arm of arms) {
       const projection: Record<string, SqlDecoderLike> = {};
       for (const col of projected) projection[col.alias] = arm.decoderOf(col);
       for (let i = 0; i < parts; i++) projection[`__p${i}`] = nullable(String);
       byKind.set(
         arm.kind,
-        decodedRow(projection) as ZodParser<Record<string, unknown>>,
+        decodedRow(projection) as z.ZodType<Record<string, unknown>>,
       );
     }
     return z.unknown().transform((raw, ctx): Record<string, unknown> => {
@@ -471,7 +470,7 @@ export function compileUnionCollection<
       const parser = typeof kind === "string" ? byKind.get(kind) : undefined;
       if (parser === undefined) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: "custom",
           path: ["__kind"],
           message: `a union row of no registered arm (${String(kind)})`,
         });
@@ -482,13 +481,13 @@ export function compileUnionCollection<
         for (const issue of out.error.issues)
           ctx.addIssue({
             ...issue,
-            code: z.ZodIssueCode.custom,
+            code: "custom",
             message: `${kind}: ${issue.message}`,
           });
         return z.NEVER;
       }
       return out.data;
-    }) as unknown as ZodParser<Record<string, unknown>>;
+    }) as unknown as z.ZodType<Record<string, unknown>>;
   };
   const allColumns = [KIND, KEY, ...columns];
   const encode = (row: Record<string, unknown>): Row =>

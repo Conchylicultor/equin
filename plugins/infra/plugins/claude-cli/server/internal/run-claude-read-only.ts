@@ -1,4 +1,4 @@
-import * as z4 from "zod/v4";
+import { z } from "zod";
 import {
   cliFlagFor,
   requireModel,
@@ -29,18 +29,18 @@ export interface RunClaudeReadOnlyInput<T> {
    * and the answer is parsed with the same schema — one declaration, so the
    * two cannot disagree.
    */
-  output: z4.ZodType<T, unknown>;
+  output: z.ZodType<T, unknown>;
   timeoutMs: number;
   source: RunClaudePrintInput["source"];
 }
 
 /** The tail of `--output-format json`: the run's result record. */
-const ResultRecordSchema = z4.object({
-  type: z4.literal("result"),
-  subtype: z4.string(),
-  is_error: z4.boolean(),
-  structured_output: z4.unknown().optional(),
-  result: z4.string().optional(),
+const ResultRecordSchema = z.object({
+  type: z.literal("result"),
+  subtype: z.string(),
+  is_error: z.boolean(),
+  structured_output: z.unknown().optional(),
+  result: z.string().optional(),
 });
 
 /**
@@ -49,7 +49,7 @@ const ResultRecordSchema = z4.object({
  */
 export function readOnlyArgs(
   cliFlag: string,
-  output: z4.ZodType<unknown, unknown>,
+  output: z.ZodType<unknown, unknown>,
   system: string | undefined,
 ): string[] {
   const args = [
@@ -73,7 +73,7 @@ export function readOnlyArgs(
     // Draft-07, not zod's default 2020-12: the CLI validates the schema with
     // a validator that only knows draft-07, and refuses any other `$schema`
     // ("no schema with key or ref …/draft/2020-12/schema").
-    JSON.stringify(z4.toJSONSchema(output, { target: "draft-7" })),
+    JSON.stringify(z.toJSONSchema(output, { target: "draft-7" })),
   ];
   if (system) args.push("--system-prompt", system);
   return args;
@@ -112,7 +112,7 @@ export async function runClaudeReadOnly<T>(
  */
 export function parseStructuredResult<T>(
   stdout: string,
-  output: z4.ZodType<T, unknown>,
+  output: z.ZodType<T, unknown>,
 ): T {
   let parsed: unknown;
   try {

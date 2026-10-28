@@ -617,7 +617,7 @@ type ZodSafeParse =
   | { success: true }
   | {
       success: false;
-      error: { issues: { path: (string | number)[]; message: string }[] };
+      error: { issues: { path: PropertyKey[]; message: string }[] };
     };
 
 /** Every external collection form's options, erased. */
@@ -998,7 +998,7 @@ export function compileExternalCollection(
       if (!parsed.success) {
         const issue = parsed.error.issues[0];
         fail(
-          `${what} row ${i}: field "${issue?.path.join(".") ?? "?"}" — ${issue?.message ?? "invalid"}.`,
+          `${what} row ${i}: field "${issue?.path.map(String).join(".") ?? "?"}" — ${issue?.message ?? "invalid"}.`,
         );
       }
       const fields = row as Record<string, unknown>;

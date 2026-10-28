@@ -164,7 +164,7 @@ describe("getTheorytabSection", () => {
     stubFetch({ hooktheory: () => jsonReply({ ID: 1, song: "x" }) });
     const err = await rejection(getTheorytabSection("_NgbRXeYgQA"));
     expect((err as Error).message).toMatch(
-      /Hooktheory \/songs\/public\/_NgbRXeYgQA response did not match the expected shape — jsonData: Required/,
+      /Hooktheory \/songs\/public\/_NgbRXeYgQA response did not match the expected shape — jsonData: /,
     );
   });
 });

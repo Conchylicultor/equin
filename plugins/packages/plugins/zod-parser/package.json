@@ -1,6 +1,0 @@
-{
-  "name": "@equin/plugin-packages-zod-parser",
-  "private": true,
-  "version": "0.0.1",
-  "description": "ZodParser<T> — the type of a schema that parses untrusted input into a T — and its enforcing lint rule (no-narrow-zodtype), which bans the one-argument ZodType<T> whose Input silently defaults to Output."
-}

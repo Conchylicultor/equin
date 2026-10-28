@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { wholeList } from "@plugins/packages/plugins/list-bound/core";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import type { BackupSourceReport, BackupTargetResult } from "./source-report";
 
 // The decoders of `backup_runs`' two jsonb columns — `manifest` and
@@ -24,7 +23,7 @@ const SourceItemSchema = z.object({
  * losslessly. A row carrying neither is malformed and throws — the tolerance
  * here is for a shape this repo really wrote, not for any shape at all.
  */
-export const BackupSourceReportSchema: ZodParser<BackupSourceReport> = z
+export const BackupSourceReportSchema: z.ZodType<BackupSourceReport> = z
   .object({
     id: z.string(),
     name: z.string(),
@@ -96,7 +95,7 @@ export const BackupManifestSchema = z.object({
 });
 
 /** One target's outcome, and the decoder for `backup_runs.target_results`. */
-export const BackupTargetResultSchema: ZodParser<BackupTargetResult> = z.object(
+export const BackupTargetResultSchema: z.ZodType<BackupTargetResult> = z.object(
   {
     targetId: z.string(),
     ok: z.boolean(),

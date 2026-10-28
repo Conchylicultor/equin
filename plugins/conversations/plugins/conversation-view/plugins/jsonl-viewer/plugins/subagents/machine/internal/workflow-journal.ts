@@ -75,9 +75,9 @@ function foldLines(
       if (err instanceof SyntaxError || err instanceof z.ZodError) {
         console.warn(
           `[subagents] skipped an unreadable workflow journal line in ${journalPath}: ${
-            err instanceof SyntaxError
-              ? "not valid JSON"
-              : err.issues[0]?.message
+            err instanceof z.ZodError
+              ? err.issues[0]?.message
+              : "not valid JSON"
           }`,
         );
         continue;

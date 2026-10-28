@@ -262,6 +262,7 @@ const geometrySchema = z.object({
 
 const persistedStoreSchema = z.object({
   windows: z.record(
+    z.string(),
     z.object({
       members: z.array(z.string()),
       activeTabId: z.string().optional(),

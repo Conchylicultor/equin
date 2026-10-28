@@ -1,4 +1,4 @@
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
+import type { z } from "zod";
 import { defineServerContribution } from "@plugins/framework/plugins/server-core/core";
 import type { RecordNotificationInput } from "@plugins/shell/plugins/notifications/server";
 import type { ReportFingerprintContext } from "@plugins/reports/core";
@@ -23,7 +23,7 @@ export interface ReportKindSpec<TData = unknown> {
   // Validates the jsonb payload on ingest. The validated value is what gets
   // persisted into the generic `data` column and handed back to fingerprint /
   // renderTask consumers.
-  schema: ZodParser<TData>;
+  schema: z.ZodType<TData>;
   // Dedup strategy: repeats sharing a fingerprint collapse onto one row. `ctx`
   // carries the occurrence's generic fields (the raw message, the source) for
   // kinds whose payload can arrive carrying no identity of its own — without

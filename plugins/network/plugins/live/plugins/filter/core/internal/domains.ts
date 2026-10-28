@@ -1,5 +1,4 @@
 import { z } from "zod";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { isAsciiBlank, type FilterScalar } from "./scalars";
 
 // The closed set of filter domains. A filterable column declares a DOMAIN,
@@ -43,7 +42,7 @@ interface DomainDef {
   readonly normalize: (raw: unknown, column: string) => FilterValue | null;
   readonly isEmpty: (value: FilterValue | null) => boolean;
   /** Wire schema of one operand (a list operand's element, for list ops). */
-  readonly operand: ZodParser<FilterScalar>;
+  readonly operand: z.ZodType<FilterScalar>;
   /** The one canonical wire spelling of a parsed operand. */
   readonly canonicalOperand: (operand: FilterScalar) => FilterScalar;
   /** A canonical operand → the scalar its tests compare with. */

@@ -1,6 +1,6 @@
 import { arrayMove } from "@plugins/primitives/plugins/sortable-list/web";
 import { defineFieldShape } from "@plugins/config_v2/plugins/fields/web";
-import type { FieldsRecord } from "@plugins/fields/core";
+import { fieldDefaults, type FieldsRecord } from "@plugins/fields/core";
 import {
   listFieldType,
   type ListItem,
@@ -43,12 +43,7 @@ const ListRenderer = defineFieldShape({
           ...value,
           {
             id: crypto.randomUUID(),
-            ...Object.fromEntries(
-              Object.entries(itemFields).map(([key, f]) => [
-                key,
-                f.defaultValue,
-              ]),
-            ),
+            ...fieldDefaults(itemFields, "listField"),
           } as ListItem<FieldsRecord>,
         ]),
       onRemove: (id) => onChange(value.filter((item) => item.id !== id)),

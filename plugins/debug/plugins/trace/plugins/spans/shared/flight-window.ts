@@ -28,7 +28,7 @@ export const FlightSpanSchema = z.object({
   waitMs: z.number(),
   childMs: z.number(),
   selfMs: z.number(),
-  waits: z.record(z.number()).optional(),
+  waits: z.record(z.string(), z.number()).optional(),
   // Positioned wait intervals per layer. OPTIONAL so every pre-band `traces` row
   // still parses as `ok` (not `legacy`, not `invalid`); the bidirectional pin
   // below forces this and the recorder's `FlightSpan.waitBands` to move together.
@@ -71,8 +71,8 @@ export type SpansSection =
 // window whose spans are objects, without asserting anything about their fields.
 const legacyProbeSchema = z.object({
   atMs: z.number(),
-  open: z.array(z.record(z.unknown())),
-  completed: z.array(z.record(z.unknown())),
+  open: z.array(z.record(z.string(), z.unknown())),
+  completed: z.array(z.record(z.string(), z.unknown())),
 });
 
 /** Parse the opaque `snapshot.events.spans` section into an explicit outcome. */

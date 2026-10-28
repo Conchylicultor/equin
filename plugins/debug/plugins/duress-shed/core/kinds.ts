@@ -19,6 +19,7 @@ export const DuressShedPayloadSchema = z.object({
   // is a documented accounting no-op); `dropped` items overflowed the bounded
   // buffer — the item is gone but the count survives.
   byCascade: z.record(
+    z.string(),
     z.object({
       shed: z.number(),
       dropped: z.number(),

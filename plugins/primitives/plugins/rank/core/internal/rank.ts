@@ -1,6 +1,5 @@
 import { generateKeyBetween, generateNKeysBetween } from "fractional-indexing";
 import { z } from "zod";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 
 export class Rank {
   private constructor(private readonly _v: string) {}
@@ -48,7 +47,7 @@ export class Rank {
 
 // Accepts the wire form (a raw string) or an already-wrapped `Rank`, and always
 // outputs a `Rank`.
-export const RankSchema: ZodParser<Rank> = z.preprocess(
+export const RankSchema: z.ZodType<Rank> = z.preprocess(
   (v) => (typeof v === "string" ? Rank.from(v) : v),
   z.custom<Rank>((v) => v instanceof Rank),
 );

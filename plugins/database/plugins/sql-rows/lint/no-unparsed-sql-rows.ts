@@ -44,7 +44,7 @@
  * row-reading subset has to move.
  *
  * NOT type-aware, matching the closest precedents (`no-raw-bun-spawn`,
- * `no-adhoc-file-sink`, `no-narrow-zodtype`) — and self-contained by necessity:
+ * `no-adhoc-file-sink`) — and self-contained by necessity:
  * a contributed rule file is loaded by jiti, which cannot resolve the
  * `@plugins/*` alias, so the rule can name no type from the repo.
  *
@@ -243,7 +243,7 @@ export default createRule({
         "the database fork emitted sixty `pg_dump` patterns matching nothing, copied a whole schema it was meant " +
         "to empty, and reported success. " +
         "Route the read through `queryRows` / `executeRows` / `queryOne` / `executeOne` from " +
-        "`@plugins/database/plugins/sql-rows/core`. They take a `ZodParser` and fail loudly at the boundary, " +
+        "`@plugins/database/plugins/sql-rows/core`. They take a `z.ZodType` and fail loudly at the boundary, " +
         "naming the column, the value that actually arrived and the pg type OID behind it — which turns a " +
         "multi-hour 'why is my fork empty' into a one-line SQL cast. " +
         "DDL/DML that never reads `.rows` is fine and is not what this rule targets: `pool.query(ddl)` and " +

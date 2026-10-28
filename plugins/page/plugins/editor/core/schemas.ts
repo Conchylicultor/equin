@@ -194,7 +194,7 @@ export function withPageKind(
 // Parse a page block's `data` into its typed `{ title, icon }`. Use on rows
 // known to be `type="page"`. Only the `data` field is read, so any row-like
 // value carrying `data` is accepted (raw DB selects, full Blocks, etc.).
-export function pageData(block: Pick<Block, "data">): PageData {
+export function pageData(block: { readonly data?: unknown }): PageData {
   return PageDataSchema.parse(block.data);
 }
 
@@ -361,7 +361,7 @@ export const pageBlockAuthor = {
   refine: (data: PageData, ctx: z.RefinementCtx): void => {
     if (data.instructions === true && data.author !== undefined) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         path: ["instructions"],
         message:
           "a page is an agent-authored page or an instructions page, never both — " +
@@ -370,7 +370,7 @@ export const pageBlockAuthor = {
     }
     if (data.global !== undefined && data.instructions !== true) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         path: ["global"],
         message: "`global` belongs to an instructions page only",
       });

@@ -43,6 +43,7 @@ external keys** (the DataView `views` list is the example — its ids key
 - Core:
   - Uses:
     - `config_v2/fields.fieldSample`
+    - `fields.DefaultedFields`
     - `fields.FieldDef`
     - `fields.FieldMeta`
     - `fields.fieldSchemaWithDefault`

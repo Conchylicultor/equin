@@ -17,13 +17,13 @@ export function wireSchema<F extends FieldsRecord, S extends keyof F & string>(
   serverOnly: readonly S[],
 ): z.ZodObject<{ [K in Exclude<keyof F, S>]: F[K]["schema"] }> {
   // `.omit`'s mask type (zod's `Exactly<>`) is hostile to the generic `keyof F`
-  // shape, so cast the base to the concrete-shaped `z.AnyZodObject` first — its
+  // shape, so cast the base to the loose `z.ZodObject` first — its
   // mask is a plain `Record<string, true>` — then cast the omitted result back
   // to the precise wire type. `serverOnly = []` ⇒ `.omit({})` is a no-op, so an
   // entity with no server-only columns is byte-identical to `fieldsToZodObject`.
   const mask: Record<string, true> = {};
   for (const k of serverOnly) mask[k] = true;
-  const base: z.AnyZodObject = fieldsToZodObject(fields);
+  const base: z.ZodObject = fieldsToZodObject(fields);
   return base.omit(mask) as unknown as z.ZodObject<{
     [K in Exclude<keyof F, S>]: F[K]["schema"];
   }>;

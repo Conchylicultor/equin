@@ -65,7 +65,7 @@ export function hostQueryCurlArgv(
 /** What the SSH layer answered, parsed with `schema` or mapped onto a failure. */
 export function mapSshAnswer<T>(
   result: SshRunResult,
-  schema: z.ZodType<T, z.ZodTypeDef, unknown>,
+  schema: z.ZodType<T>,
 ): { kind: "answer"; value: T } | HostQueryFailure {
   if (!result.ok) {
     // `command-failed` means SSH connected and authenticated and the remote
@@ -126,7 +126,7 @@ export async function queryOverSsh<T>(
   deps: QueryDeps,
   deploymentId: string,
   path: string,
-  schema: z.ZodType<T, z.ZodTypeDef, unknown>,
+  schema: z.ZodType<T>,
 ): Promise<HostQueryAnswer<T>> {
   const resolved = await deps.resolveDeployment(deploymentId);
   if (resolved.kind !== "ready") return resolved;

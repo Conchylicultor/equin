@@ -305,7 +305,7 @@ describe("preloadedKeysIn", () => {
     const src = `
       export function liveValue<T>(
         key: string,
-        spec: { schema: ZodParser<T>; preload?: ResourcePreload },
+        spec: { schema: z.ZodType<T>; preload?: ResourcePreload },
       ): LiveValue<T> { return d; }
     `;
     expect(preloadedKeysIn(src, "descriptor.ts", NOT_OWNER)).toEqual([]);

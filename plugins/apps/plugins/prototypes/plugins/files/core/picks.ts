@@ -2,7 +2,6 @@ import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
 import { wholeKeyedRecord } from "@plugins/packages/plugins/list-bound/core";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { isOptionName, isPickValue } from "./options";
 
 // The wire half of a prototype's option picks: which variant of each option
@@ -41,7 +40,7 @@ export const StoredPicksSchema = wholeKeyedRecord(
   OptionNameSchema,
   PickValueSchema,
   { reason: "one pick per option one prototype declares — a handful" },
-) satisfies ZodParser<StoredPicks>;
+) satisfies z.ZodType<StoredPicks>;
 
 /**
  * One change to a prototype's picks. One change, never the whole record: two

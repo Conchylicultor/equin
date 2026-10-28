@@ -111,7 +111,7 @@ const slowSpanSchema = z.object({
 // One array per span kind, derived from SPAN_KINDS so a new kind cannot drift
 // out of the response schema — defaulted, since an older backend has no list
 // for a kind added after it (it recorded none, which an empty list says).
-const byKind = <T extends z.ZodTypeAny>(list: () => z.ZodArray<T>) =>
+const byKind = <T extends z.ZodType>(list: () => z.ZodArray<T>) =>
   z.object(
     Object.fromEntries(
       SPAN_KINDS.map((k) => [k, list().default([])]),
@@ -155,7 +155,7 @@ export const flightWindowQuerySchema = z.object({
   windowMs: z.coerce
     .number()
     .finite()
-    .default(FLIGHT_WINDOW_MS_DEFAULT)
+    .prefault(FLIGHT_WINDOW_MS_DEFAULT)
     .transform((v) =>
       Math.min(FLIGHT_WINDOW_MS_MAX, Math.max(FLIGHT_WINDOW_MS_MIN, v)),
     ),

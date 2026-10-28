@@ -1,7 +1,7 @@
 import { z } from "zod";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import {
   fieldSchemaWithDefault,
+  type DefaultedFields,
   type FieldDef,
   type FieldMeta,
   type FieldsRecord,
@@ -34,7 +34,9 @@ function pickMeta(opts?: FieldMeta): FieldMeta {
 
 export function listField<const F extends FieldsRecord>(
   opts: FieldMeta & {
-    itemFields: F;
+    // A new item (the list's Add) is seeded from its fields' defaults: each
+    // needs one (tsc).
+    itemFields: F & DefaultedFields<F>;
     // Seeded defaults may carry the list item's stable `id` (optional, exactly
     // as the stored schema permits) so a code-authored default row is editable
     // without waiting for a UI "Add". Order is array position — no `rank`.
@@ -48,7 +50,7 @@ export function listField<const F extends FieldsRecord>(
     stableIdentity?: boolean;
   },
 ): ListFieldDef<F> {
-  const subShape: z.ZodRawShape = {};
+  const subShape: Record<string, z.ZodType> = {};
   for (const [key, field] of Object.entries(opts.itemFields)) {
     // A missing item key (e.g. a field added after items were stored) heals to
     // the field's default instead of failing the whole list's validation.
@@ -74,7 +76,7 @@ export function listField<const F extends FieldsRecord>(
     // `id` is `.optional()` on the wire (legacy documents predate it) but
     // required on `ListItem`, so the output types genuinely differ — a cast the
     // input widening does not remove.
-    schema: schema as unknown as ZodParser<ListItem<F>[]>,
+    schema: schema as unknown as z.ZodType<ListItem<F>[]>,
     defaultValue: (opts.default ?? []) as ListItem<F>[],
     meta: pickMeta(opts),
     itemFields: opts.itemFields,

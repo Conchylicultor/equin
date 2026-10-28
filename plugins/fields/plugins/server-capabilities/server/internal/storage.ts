@@ -1,3 +1,4 @@
+import type { z } from "zod";
 import {
   defineServerContribution,
   type ServerContribution,
@@ -7,7 +8,6 @@ import type { ColumnBuilderBaseConfig, ColumnDataType } from "drizzle-orm";
 import type { PgColumnBuilderBase } from "drizzle-orm/pg-core";
 import type { WithWire } from "@plugins/database/plugins/sql-column/server";
 import type { FieldType } from "@plugins/fields/core";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 
 /** A column builder whose drizzle `data` type is exactly `V` — i.e. the column
  *  really hands back a `V`, rather than being asserted to. This is what pins a
@@ -49,7 +49,7 @@ export type FieldStorageContribution<B = unknown> = { type: FieldType<B> } & (
        *  cannot be chosen independently of what decodes. */
       decode: <V extends B>(
         name: string,
-        valueSchema: ZodParser<V>,
+        valueSchema: z.ZodType<V>,
       ) => StorageColumnFor<V>;
       build?: never;
       stored?: never;

@@ -1,5 +1,4 @@
 import { z } from "zod";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import type { SymbolRef } from "@plugins/ui/plugins/icons/core";
 import {
   cappedList,
@@ -52,7 +51,7 @@ export const PromptVariableSchema = z.object({
 // The icon crosses the wire as the `SymbolRef` the server authored with
 // `symbol("…")` — a tsc-checked literal the icon manifest collected. The check
 // here is the shape; the name was checked where it was written.
-const SymbolRefSchema: ZodParser<SymbolRef> = z.custom<SymbolRef>(
+const SymbolRefSchema: z.ZodType<SymbolRef> = z.custom<SymbolRef>(
   (v) =>
     typeof v === "object" &&
     v !== null &&

@@ -9,7 +9,6 @@ import type {
 } from "@plugins/fields/core";
 import type { EntityRef } from "@plugins/infra/plugins/entities/core";
 import { listBoundsOf } from "@plugins/packages/plugins/list-bound/core";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 
 // An extension EXPOSES fields: it declares, once, which of its own fields every
 // list of its parent entity (or of an entity reaching it) shows, filters and
@@ -166,7 +165,7 @@ export interface ExposedField<W = unknown> {
   /** The field TYPE's id (`fields`' type token: `"text"`, `"int"`, `"date"`, …). */
   readonly typeId: string;
   /** The wire schema: the field's own, nullable when a missing row reads NULL. */
-  readonly wire: ZodParser<W>;
+  readonly wire: z.ZodType<W>;
   /**
    * What a parent with no side row reads — DERIVED: the field's declared
    * default, else NULL (a presence field: `false`, or `values.absent`).
@@ -178,7 +177,7 @@ export interface ExposedField<W = unknown> {
 }
 
 /** A zod OBJECT schema of `R`, its keys readable (what a live column set parses a slice with). */
-export type ExposureRowSchema<R> = ZodParser<R> & {
+export type ExposureRowSchema<R> = z.ZodType<R> & {
   readonly shape: { readonly [K in keyof R]-?: unknown };
 };
 
@@ -229,7 +228,7 @@ export function resolveExposure(
     );
   }
   const resolved: Record<string, ExposedField> = {};
-  const shape: Record<string, z.ZodTypeAny> = {};
+  const shape: Record<string, z.ZodType> = {};
   const ids = new Map<string, string>();
   const claim = (id: string, by: string): void => {
     if (!ID_RE.test(id)) fail(`${by}'s id "${id}" is not a field id.`);
@@ -259,7 +258,7 @@ export function resolveExposure(
     }
     const id = decl.as ?? f;
     claim(id, `field "${f}"`);
-    const own = field.schema as unknown as z.ZodTypeAny;
+    const own = field.schema as unknown as z.ZodType;
     const absent = field.defaultDeclared === true ? field.defaultValue : null;
     if (
       absent !== null &&
@@ -277,7 +276,7 @@ export function resolveExposure(
       id,
       label: label!,
       typeId: field.type.id,
-      wire: wire as ZodParser<unknown>,
+      wire: wire as z.ZodType<unknown>,
       absent: absent as ExposedAbsent,
       options: options === undefined ? null : Object.freeze({ ...options }),
       presence: null,
@@ -314,7 +313,7 @@ export function resolveExposure(
       id: presence.id,
       label: presence.label,
       typeId: values === null ? "bool" : "text",
-      wire: wire as ZodParser<unknown>,
+      wire: wire as z.ZodType<unknown>,
       absent: values === null ? false : values.absent,
       options:
         presence.options === undefined

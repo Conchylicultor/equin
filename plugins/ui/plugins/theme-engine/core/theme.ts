@@ -3,7 +3,6 @@ import {
   wholeList,
   wholeRecord,
 } from "@plugins/packages/plugins/list-bound/core";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import type { TokenGroupFragment } from "./define-token-group";
 
 export type ThemeId = string;
@@ -46,7 +45,7 @@ export const TokenGroupFragmentSchema = z.object({
   meta: wholeRecord(z.unknown(), {
     reason: "one fragment's import metadata — a few keys",
   }).optional(),
-}) satisfies ZodParser<TokenGroupFragment>;
+}) satisfies z.ZodType<TokenGroupFragment>;
 
 /** The group a theme names twice, if any — a theme has at most one fragment per group. */
 export function duplicateGroupId(
@@ -71,7 +70,7 @@ export const TokenGroupFragmentsSchema = wholeList(TokenGroupFragmentSchema, {
     const dup = duplicateGroupId(fragments);
     if (dup !== undefined) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+      code: "custom",
         message: `two fragments for token group "${dup}" — a theme has at most one per group`,
       });
     }

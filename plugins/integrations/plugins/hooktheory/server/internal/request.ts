@@ -4,7 +4,6 @@ import {
   HOOKTHEORY_API_BASE,
   HOOKTHEORY_PROVIDER_ID,
 } from "@plugins/auth/plugins/hooktheory/core";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import {
   HooktheoryApiError,
   HooktheoryNotSignedInError,
@@ -48,7 +47,7 @@ export async function hooktheoryFetch<T>(
   init: {
     auth: boolean;
     query?: Record<string, string>;
-    schema: ZodParser<T>;
+    schema: z.ZodType<T>;
   },
 ): Promise<T> {
   const url = new URL(`${HOOKTHEORY_API_BASE}${path}`);

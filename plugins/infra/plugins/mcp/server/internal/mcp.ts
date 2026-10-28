@@ -64,7 +64,7 @@ export interface McpTool<T extends z.ZodRawShape = z.ZodRawShape> {
    */
   profiles?: readonly string[];
   handler: (
-    args: z.objectOutputType<T, z.ZodTypeAny>,
+    args: z.output<z.ZodObject<T>>,
     ctx: McpToolCallContext,
   ) => Promise<McpToolResult> | McpToolResult;
 }

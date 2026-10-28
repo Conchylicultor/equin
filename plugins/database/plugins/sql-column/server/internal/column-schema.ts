@@ -13,15 +13,15 @@
  * schema is attached to the column it builds whatever the builder chain did in
  * between (`.notNull()`, `.default()` return the same builder).
  */
+import type { z } from "zod";
 import type { PgColumn, PgColumnBuilderBase } from "drizzle-orm/pg-core";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 
-const schemas = new WeakMap<PgColumn, ZodParser<unknown>>();
+const schemas = new WeakMap<PgColumn, z.ZodType<unknown>>();
 
 /** Record `schema` as the decoder of the column `builder` builds. Returns `builder`. */
 export function recordColumnSchema<B extends PgColumnBuilderBase>(
   builder: B,
-  schema: ZodParser<unknown>,
+  schema: z.ZodType<unknown>,
 ): B {
   const target = builder as unknown as { build: (table: unknown) => PgColumn };
   const build = target.build.bind(builder);
@@ -38,6 +38,6 @@ export function recordColumnSchema<B extends PgColumnBuilderBase>(
  * `undefined` for any other column — whose decoder is drizzle's own for its
  * SQL type, the common case, not a failure.
  */
-export function columnSchema(column: PgColumn): ZodParser<unknown> | undefined {
+export function columnSchema(column: PgColumn): z.ZodType<unknown> | undefined {
   return schemas.get(column);
 }

@@ -10,8 +10,7 @@
  * twice is measured behaviour that disagrees with itself later.
  */
 import { Column, getTableName, is } from "drizzle-orm";
-import type { ZodError } from "zod";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
+import type { ZodError, z } from "zod";
 import {
   runtimeTypeOf,
   SqlColumnError,
@@ -29,7 +28,7 @@ import {
 export function crossBoundary<T>(
   self: unknown,
   declaredName: string,
-  schema: ZodParser<T>,
+  schema: z.ZodType<T>,
   value: unknown,
   direction: SqlColumnDirection,
 ): T {

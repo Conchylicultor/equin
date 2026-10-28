@@ -38,7 +38,7 @@
  *
  * ## Strict or tolerant is the author's choice
  *
- * `parsedText` takes any `ZodParser<T>`, so the two policies this repo already
+ * `parsedText` takes any `z.ZodType<T>`, so the two policies this repo already
  * has are both spellable with no new vocabulary:
  *
  * ```ts
@@ -54,8 +54,8 @@
  * what makes it reach the server-side readers too — the wire guard protects the
  * browser and nothing else.
  */
+import type { z } from "zod";
 import { customType } from "drizzle-orm/pg-core";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { recordColumnSchema } from "./column-schema";
 import { crossBoundary } from "./cross-boundary";
 
@@ -76,7 +76,7 @@ import { crossBoundary } from "./cross-boundary";
  */
 export function parsedText<T extends string>(
   name: string,
-  schema: ZodParser<T>,
+  schema: z.ZodType<T>,
 ) {
   const codec = customType<{ data: T; driverData: string }>({
     dataType() {

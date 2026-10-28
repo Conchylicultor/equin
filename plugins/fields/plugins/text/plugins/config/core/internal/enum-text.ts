@@ -10,7 +10,6 @@ import {
   type FieldType,
   pickMeta,
 } from "@plugins/fields/core";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { textFieldType } from "@plugins/fields/plugins/text/core";
 
 // A text column whose values are exactly what `schema` produces — the
@@ -45,7 +44,7 @@ export function parsedTextField<
     default: NoInfer<T>;
   },
 >(
-  schema: ZodParser<T>,
+  schema: z.ZodType<T>,
   opts: ExactOptions<O, FieldMeta & { default: NoInfer<T> }>,
 ): FieldDef<T> & DeclaredDefault & FieldMarks<O> {
   return textOf(schema, opts, opts.default, {
@@ -55,7 +54,7 @@ export function parsedTextField<
 
 /** The one builder: `mark` is the `DeclaredDefault` mark, when the caller chose `defaultValue`. */
 function textOf<T extends string, M extends Partial<DeclaredDefault>>(
-  schema: ZodParser<T>,
+  schema: z.ZodType<T>,
   opts: FieldMeta | undefined,
   defaultValue: T,
   mark: M,
@@ -81,8 +80,9 @@ type EnumTextOptions<V extends string> = Omit<FieldMeta, "optionMeta"> & {
   options?: { readonly [K in V]: FieldOptionMeta };
 };
 
-// The closed-set sugar over `parsedTextField`. Pass a `readonly` tuple of the
-// allowed values (e.g. a `MAIL_LABEL_TYPES` const array). `InferFieldValue` then
+// The closed-set sugar over `parsedTextField`. Pass the allowed values — a
+// `readonly` const array (e.g. `MAIL_LABEL_TYPES`) or a zod enum's `.options`;
+// an empty list throws. `InferFieldValue` then
 // reports the exact union, so a column built from this field and a `z.infer` of
 // the same record agree by construction. `default` defaults to the first value
 // — a declared `default` marks the field (`DeclaredDefault`: see
@@ -90,12 +90,16 @@ type EnumTextOptions<V extends string> = Omit<FieldMeta, "optionMeta"> & {
 // presents each value (`{ main: { label: "Main", variant: "primary" } }`).
 // The options mark the field (`FieldMarks`).
 export function enumTextField<
-  const T extends readonly [string, ...string[]],
+  const T extends readonly string[],
   const O extends EnumTextOptions<T[number]> = Record<never, never>,
 >(
   values: T,
   opts?: ExactOptions<O, EnumTextOptions<T[number]>>,
 ): FieldDef<T[number]> & FieldMarks<O> {
+  const first = values[0];
+  if (first === undefined) {
+    throw new Error("enumTextField: an enum field needs at least one value.");
+  }
   if (opts?.options !== undefined) {
     const extra = Object.keys(opts.options).filter(
       (v) => !(values as readonly string[]).includes(v),
@@ -109,7 +113,7 @@ export function enumTextField<
   return textOf(
     z.enum(values),
     opts === undefined ? undefined : { ...opts, optionMeta: opts.options },
-    opts?.default ?? values[0],
+    opts?.default ?? first,
     declaredDefault(opts),
   ) as FieldDef<T[number]> & FieldMarks<O>;
 }

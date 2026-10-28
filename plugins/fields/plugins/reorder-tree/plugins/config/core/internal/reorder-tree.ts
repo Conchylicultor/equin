@@ -1,5 +1,4 @@
 import { z } from "zod";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { pickMeta, type FieldDef, type FieldMeta } from "@plugins/fields/core";
 import {
   reorderTreeFieldType,
@@ -7,7 +6,7 @@ import {
   type ReorderTree,
 } from "@plugins/fields/plugins/reorder-tree/core";
 
-const nodeSchema: ZodParser<ReorderNode> = z.lazy(() =>
+const nodeSchema: z.ZodType<ReorderNode> = z.lazy(() =>
   z.union([
     z.string(),
     // `{item}` arm MUST precede the typed-node arm so item nodes are never

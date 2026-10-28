@@ -35,7 +35,7 @@ export const OutboxEntrySchema = z.object({
   kind: z.string().min(1),
   message: z.string(),
   /** The kind's payload, validated by the kind's own schema at the drain. */
-  data: z.record(z.unknown()),
+  data: z.record(z.string(), z.unknown()),
   code: OutboxCodeSchema.optional(),
   /** When the reported event happened (epoch ms) — not when main drained it. */
   occurredAt: z.number(),

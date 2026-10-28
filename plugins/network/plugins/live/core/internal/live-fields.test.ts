@@ -15,6 +15,7 @@ import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import { liveCollection, type LiveRowsCollection } from "./live-collection";
 import { liveArm } from "./live-columns";
 import { LIVE_COLUMNS_KEY } from "./live-columns";
+import { tolerantEnum } from "@plugins/primitives/plugins/live-state/core";
 import { schemaDomain } from "./field-domain";
 
 // The fields spelling: a collection names its entity, the fields a list shows
@@ -401,6 +402,12 @@ describe("schemaDomain", () => {
       "text",
     );
     expect(schemaDomain(z.coerce.date())).toBe("instant");
+    expect(schemaDomain(tolerantEnum(z.enum(["a", "b"]), () => "a"))).toBe(
+      "text",
+    );
+    expect(schemaDomain(z.enum({ A: "a", B: "b" }))).toBe("text");
+    expect(schemaDomain(z.string().transform((v) => v.length))).toBe("text");
+    expect(schemaDomain(z.lazy(() => z.number()))).toBe("number");
     expect(schemaDomain(z.number().int().optional())).toBe("number");
     expect(schemaDomain(z.union([z.literal("a"), z.literal("b")]))).toBe(
       "text",

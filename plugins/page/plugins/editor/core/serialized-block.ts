@@ -1,5 +1,4 @@
 import { z } from "zod";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { newBlockId } from "./block-id";
 
 /**
@@ -65,12 +64,12 @@ export interface PageSource {
   cutId?: string;
 }
 
-const PageSourceSchema: ZodParser<PageSource> = z.object({
+const PageSourceSchema: z.ZodType<PageSource> = z.object({
   pageId: z.string(),
   cutId: z.string().optional(),
 });
 
-export const SerializedBlockSchema: ZodParser<SerializedBlock> = z.lazy(() =>
+export const SerializedBlockSchema: z.ZodType<SerializedBlock> = z.lazy(() =>
   z.object({
     type: z.string(),
     data: z.unknown(),
@@ -111,7 +110,7 @@ export interface IdentifiedBlock {
   pageSource?: PageSource;
 }
 
-export const IdentifiedBlockSchema: ZodParser<IdentifiedBlock> = z.lazy(() =>
+export const IdentifiedBlockSchema: z.ZodType<IdentifiedBlock> = z.lazy(() =>
   z.object({
     id: z.string(),
     type: z.string(),

@@ -39,7 +39,6 @@
  */
 import type { Column, GetColumnData, GetDecoderResult } from "drizzle-orm";
 import { z } from "zod";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { admitsNull, toMapper, type SqlDecoderLike } from "./decoders";
 
 /** The row a projection decodes to: a column's data (`| null` unless NOT NULL), else the decoder's result. */
@@ -56,7 +55,7 @@ export type DecodedRow<M extends Readonly<Record<string, SqlDecoderLike>>> = {
  */
 export function decodedRow<
   const M extends Readonly<Record<string, SqlDecoderLike>>,
->(projection: M): ZodParser<DecodedRow<M>> {
+>(projection: M): z.ZodType<DecodedRow<M>> {
   const mappers = Object.entries(projection).map(
     ([key, decoder]) => [key, toMapper(decoder), admitsNull(decoder)] as const,
   );
@@ -64,7 +63,7 @@ export function decodedRow<
   return z.unknown().transform((raw, ctx): DecodedRow<M> => {
     if (raw === null || typeof raw !== "object" || Array.isArray(raw)) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         message: "a row is an object of the projection's fields",
       });
       return z.NEVER;
@@ -73,7 +72,7 @@ export function decodedRow<
     for (const key of Object.keys(row)) {
       if (!keys.has(key)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: "custom",
           path: [key],
           message: `column "${key}" is not in the projection — a raw read's row is exactly its projection's fields (A31)`,
         });
@@ -83,7 +82,7 @@ export function decodedRow<
     for (const [key, map, nullOk] of mappers) {
       if (!(key in row)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: "custom",
           path: [key],
           message: `the row has no column "${key}", which the projection names — a raw read's row is exactly its projection's fields (A31)`,
         });
@@ -92,7 +91,7 @@ export function decodedRow<
       const value = row[key];
       if (value === null && !nullOk) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: "custom",
           path: [key],
           message: `column "${key}" is NULL, but its decoder's type is non-null (a NOT NULL column, or a decoder not wrapped in nullable(…))`,
         });

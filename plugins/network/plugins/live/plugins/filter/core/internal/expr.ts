@@ -1,4 +1,4 @@
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
+import type { z } from "zod";
 import type { FilterDomainId } from "./domains";
 import type { FilterOpId, OperandKindOf, OpsFor } from "./ops";
 
@@ -29,7 +29,7 @@ export type Filterable = { readonly [column: string]: FilterColumn };
 
 /** A text column (enum, uuid, …). The optional schema narrows its `value` / `list` operands in tsc only. */
 export function liveText<S extends string = string>(
-  _narrow?: ZodParser<S>,
+  _narrow?: z.ZodType<S>,
 ): FilterColumn<"text", S> {
   return { domain: "text" };
 }
@@ -50,7 +50,7 @@ export function liveInstant(): FilterColumn<"instant", string> {
 
 /** A jsonb string array (tags, label ids). The optional schema narrows its elements in tsc only. */
 export function liveStringArray<S extends string = string>(
-  _narrow?: ZodParser<S>,
+  _narrow?: z.ZodType<S>,
 ): FilterColumn<"stringArray", S> {
   return { domain: "stringArray" };
 }

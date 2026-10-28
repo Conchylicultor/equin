@@ -7,7 +7,6 @@ import {
   readSync,
 } from "node:fs";
 import { z } from "zod";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { DEP_LOG_TAIL_LINES, type DepState } from "../../core";
 import { isLockHeld } from "./lock";
 import type { InstallPaths } from "./store";
@@ -33,7 +32,7 @@ export const FailedFileSchema = z.object({
   at: z.string(),
 });
 
-export function readJson<T>(path: string, schema: ZodParser<T>): T {
+export function readJson<T>(path: string, schema: z.ZodType<T>): T {
   return schema.parse(JSON.parse(readFileSync(path, "utf8")));
 }
 

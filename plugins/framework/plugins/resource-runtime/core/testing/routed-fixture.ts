@@ -24,7 +24,6 @@
  */
 
 import { z } from "zod";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import {
   mintReachPlan,
   mintRoutePlan,
@@ -150,7 +149,7 @@ interface RoutedTableFields<Row> {
   /** Default: `identityPlan(table)`. */
   plan?: RoutePlan;
   /** Default: an array of anything (the suites assert on frames, not parses). */
-  schema?: ZodParser<Row[]>;
+  schema?: z.ZodType<Row[]>;
   /** Default: `row.id`. */
   keyOf?: (row: unknown) => string;
   preload?: "boot" | "boot-and-keep";
@@ -221,7 +220,7 @@ export function defineRoutedTable<Row>(
     {
       key: spec.key,
       schema:
-        spec.schema ?? (z.array(z.unknown()) as unknown as ZodParser<Row[]>),
+        spec.schema ?? (z.array(z.unknown()) as unknown as z.ZodType<Row[]>),
       keyed: { keyOf },
       validateParams: () => {},
       ...(spec.preload !== undefined ? { preload: spec.preload } : {}),

@@ -90,7 +90,10 @@ export const walkFileSchema = z.object({
   /** Its diagnostics, when any. */
   e: z.array(z.string()).optional(),
   /** Each exported name → [meaning, canonical text hash, name-use edges]. */
-  n: z.record(z.tuple([z.string(), z.string(), z.array(z.string())])),
+  n: z.record(
+    z.string(),
+    z.tuple([z.string(), z.string(), z.array(z.string())]),
+  ),
   /** Its star re-export targets. */
   x: z.array(z.string()).optional(),
   /** What its source uses (name keys). */
@@ -111,11 +114,11 @@ export const walkFileSchema = z.object({
 export type WalkFileState = z.infer<typeof walkFileSchema>;
 
 const shardSchema = z.object({
-  p: z.record(z.string()),
-  f: z.record(walkFileSchema),
-  ir: z.record(z.tuple([z.string(), z.array(z.string())])),
-  id: z.record(z.array(z.string())),
-  if: z.record(z.array(z.string())),
+  p: z.record(z.string(), z.string()),
+  f: z.record(z.string(), walkFileSchema),
+  ir: z.record(z.string(), z.tuple([z.string(), z.array(z.string())])),
+  id: z.record(z.string(), z.array(z.string())),
+  if: z.record(z.string(), z.array(z.string())),
 });
 
 export type WalkShard = z.infer<typeof shardSchema>;
@@ -162,6 +165,7 @@ const rootSchema = z.object({
   global: z.string(),
   globals: z.array(z.string()),
   shards: z.record(
+    z.string(),
     z.tuple([
       z.string(),
       z.string(),

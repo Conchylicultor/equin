@@ -248,7 +248,7 @@ export const AnalyticsQueryParamSchema = z
             throw err;
           }
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: "custom",
             message: "q is not base64url-encoded JSON",
           });
           return z.NEVER;

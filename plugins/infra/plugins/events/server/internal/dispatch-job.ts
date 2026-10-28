@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import { z } from "zod";
+import { inspect } from "@plugins/packages/plugins/zod-introspect/core";
 import {
   defineJob,
   NonRetryableError,
@@ -44,8 +45,8 @@ export const eventsDispatchJob = defineJob({
     eventName: z.string(),
     triggerId: z.string().uuid(),
     jobName: z.string(),
-    jobWith: z.record(z.unknown()),
-    eventPayload: z.record(z.unknown()),
+    jobWith: z.record(z.string(), z.unknown()),
+    eventPayload: z.record(z.string(), z.unknown()),
     oneShot: z.boolean(),
   }),
   event: z.never(),
@@ -69,9 +70,7 @@ export const eventsDispatchJob = defineJob({
     // Validate the event payload before enqueuing. `z.never()` means the
     // target ignores events — pass undefined. The target's input schema is
     // validated inside `enqueue()` itself (via `spec.input.parse()`).
-    const isNeverEvent =
-      // biome-ignore lint/suspicious/noExplicitAny: zod's _def.typeName is private but stable.
-      (target.eventSchema._def as any)?.typeName === "ZodNever";
+    const isNeverEvent = inspect(target.eventSchema).kind === "never";
     let eventArg: unknown = undefined;
     if (!isNeverEvent) {
       const parsedEvent = target.eventSchema.safeParse(p.eventPayload);

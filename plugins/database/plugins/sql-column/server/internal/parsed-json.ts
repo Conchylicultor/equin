@@ -28,7 +28,7 @@
  * A zod parse costs what the **schema's** depth costs, not what the payload's
  * size costs. `traces.snapshot` is the largest jsonb value in the repo (avg
  * 123 KB, max 536 KB), and its schema is eight scalars plus
- * `events: z.record(z.unknown())` — the engine deliberately never names a key.
+ * `events: z.record(z.string(), z.unknown())` — the engine deliberately never names a key.
  * Decoding one ~96 KB snapshot: `JSON.parse` (which pg already pays) 561 µs, the
  * real schema **1.7 µs**, a deep schema fully describing the same bytes 481 µs.
  *
@@ -55,8 +55,8 @@
  * this column is byte-identical in DDL and snapshot to `jsonb("x")` and swapping
  * one for the other generates no migration.
  */
+import type { z } from "zod";
 import { customType } from "drizzle-orm/pg-core";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { recordColumnSchema } from "./column-schema";
 import { crossBoundary } from "./cross-boundary";
 
@@ -77,7 +77,7 @@ import { crossBoundary } from "./cross-boundary";
  * thing to hand it — nullability is declared by leaving `.notNull()` off the
  * builder, and a decoder is never handed a `null` in either direction.
  */
-export function parsedJson<T>(name: string, schema: ZodParser<T>) {
+export function parsedJson<T>(name: string, schema: z.ZodType<T>) {
   const codec = customType<{ data: T; driverData: unknown }>({
     dataType() {
       return "jsonb";

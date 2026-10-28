@@ -1,5 +1,4 @@
 import { z } from "zod";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import type { SavedSymbolName } from "@plugins/ui/plugins/icons/core";
 import symbolNameList from "./symbol-names.json";
 
@@ -22,11 +21,11 @@ export function isSavedSymbolName(name: string): name is SavedSymbolName {
  * request bodies, the DB column, config, page block data — so an unknown or
  * classic (`add_circle_outline`) name cannot be stored or read back.
  */
-export const SavedSymbolNameSchema: ZodParser<SavedSymbolName> = z
+export const SavedSymbolNameSchema: z.ZodType<SavedSymbolName> = z
   .string()
-  .refine(isSavedSymbolName, (name) => ({
-    message: `"${name}" is not a Material Symbols name`,
-  }))
+  .refine(isSavedSymbolName, {
+    error: (iss) => `"${String(iss.input)}" is not a Material Symbols name`,
+  })
   .transform((name) => name as SavedSymbolName);
 
 /** {@link SavedSymbolNameSchema} as a throwing call, for a name read from somewhere with no schema. */

@@ -1,6 +1,6 @@
+import type { z } from "zod";
 import { readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 
 // The two moves every file in the watcher's directory makes: a whole-file JSON
 // read that says what it found (never a guess), and a write-then-rename so a
@@ -18,7 +18,7 @@ export type JsonFileRead<T> =
 /** Read and parse one JSON file: missing → `none`, bad JSON or shape → `unreadable`. */
 export function readJsonFile<T>(
   path: string,
-  schema: ZodParser<T>,
+  schema: z.ZodType<T>,
 ): JsonFileRead<T> {
   let raw: string;
   try {

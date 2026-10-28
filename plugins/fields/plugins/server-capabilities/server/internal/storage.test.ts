@@ -3,7 +3,6 @@ import { z } from "zod";
 import { boolean, integer, text } from "drizzle-orm/pg-core";
 import { collectContributions } from "@plugins/framework/plugins/server-core/core";
 import { defineFieldType } from "@plugins/fields/core";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { Fields, resolveFieldStorage, type StorageColumnFor } from "./storage";
 
 // Throwaway types, defined locally via fields/core, keep this unit test for the
@@ -16,8 +15,8 @@ const build = (name: string): StorageColumnFor<number> => integer(name);
 const decodedType = defineFieldType<string>("__storage_test_decoded__");
 const decode = <V extends string>(
   name: string,
-  _valueSchema: ZodParser<V>,
-  // `as unknown as`: a `ZodParser<V>` for a narrower `V` can never be a plain
+  _valueSchema: z.ZodType<V>,
+  // `as unknown as`: a `z.ZodType<V>` for a narrower `V` can never be a plain
   // text column's type, which is exactly what the real contract forbids — this
   // throwaway builder only needs to BE a decoding arm, not to decode.
 ): StorageColumnFor<V> => text(name) as unknown as StorageColumnFor<V>;

@@ -56,14 +56,16 @@ export interface BlockPatch {
 /**
  * Wire schema for a field-scoped change set. Every key is optional, and a key's
  * PRESENCE — not its value — is what "this patch writes that column" means (see
- * {@link namesField}). `data` uses bare `z.unknown()`, which zod already treats
- * as optional and, crucially, leaves absent in the output when absent from the
- * input — so an update that says nothing about `data` stays that way.
+ * {@link namesField}). `data` is `z.unknown().optional()`, never a bare
+ * `z.unknown()`: zod 4 writes a bare `z.unknown()` key that is absent from the
+ * input into the output as an own `undefined` key, which would make every
+ * update say it writes `data`. `.optional()` leaves it absent on both zod
+ * versions — so an update that says nothing about `data` stays that way.
  */
 export const BlockFieldChangesSchema = z.object({
   parentId: z.string().nullable().optional(),
   type: z.string().optional(),
-  data: z.unknown(),
+  data: z.unknown().optional(),
   rank: RankSchema.optional(),
   expanded: z.boolean().optional(),
 });

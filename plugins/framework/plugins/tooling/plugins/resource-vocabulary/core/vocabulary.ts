@@ -144,7 +144,7 @@ export interface RegisterMarker {
  * (a collection's window, `:rows` and `all` descriptors) satisfy it.
  *
  * Deliberately NOT `ResourceDescriptor<unknown, …>`: `schema` is a
- * `ZodParser<T>`, which is invariant in `T` (zod surfaces `T` in both parameter
+ * `z.ZodType<T>`, which is invariant in `T` (zod surfaces `T` in both parameter
  * and return positions), so a `ResourceDescriptor<Row[]>` is not assignable to
  * `ResourceDescriptor<unknown>` and the filter would silently match nothing —
  * the exact failure mode this file exists to end. Widening the fields

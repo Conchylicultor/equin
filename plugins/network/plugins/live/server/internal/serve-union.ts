@@ -1,6 +1,6 @@
+import type { z } from "zod";
 import { getTableColumns, getTableName, sql, type SQL } from "drizzle-orm";
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import {
   testClause,
   type Filter,
@@ -264,10 +264,10 @@ export function compileUnion<
     shape: Readonly<Record<string, unknown>>,
     name: string,
     what: string,
-  ): ZodParser<unknown> => {
-    const s = shape[name] as Partial<ZodParser<unknown>> | undefined;
+  ): z.ZodType<unknown> => {
+    const s = shape[name] as Partial<z.ZodType<unknown>> | undefined;
     return typeof s?.safeParse === "function"
-      ? (s as ZodParser<unknown>)
+      ? (s as z.ZodType<unknown>)
       : fail(`${what} "${name}" is not a zod schema.`);
   };
   const ownFilterable = collection.filterable as unknown as Filterable;
@@ -422,7 +422,7 @@ export function compileUnion<
     const nullCheck = (
       name: string,
       col: ReadColumn | null,
-      schema: ZodParser<unknown>,
+      schema: z.ZodType<unknown>,
     ) => {
       if (
         (col === null || plan.canBeNull(col)) &&
@@ -589,7 +589,7 @@ export function compileUnion<
   };
   const groupCodec = collection.groups.groups;
   /** A grouped column's field schema: a base field's, or its column set's. */
-  const groupSchema = (name: string): ZodParser<unknown> => {
+  const groupSchema = (name: string): z.ZodType<unknown> => {
     const owner = wireOwner.get(name);
     if (owner === undefined) return schemaOf(rowShape, name, "row field");
     const handle = handles.find((h) => h.name === owner.set)!;

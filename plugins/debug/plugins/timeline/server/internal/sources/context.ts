@@ -1,4 +1,4 @@
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
+import type { z } from "zod";
 import {
   queryRows,
   type SqlQueryable,
@@ -46,7 +46,7 @@ export interface DbSource {
 export function defineDbSource<Row>(spec: {
   source: TimelineSource;
   build: (ctx: DbSourceCtx) => SqlQuery;
-  row: ZodParser<Row>;
+  row: z.ZodType<Row>;
   map: (rows: Row[], ctx: DbSourceCtx) => TimelineEvent[];
 }): DbSource {
   return {

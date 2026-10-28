@@ -1,5 +1,4 @@
 import { z } from "zod";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { liveValue } from "@plugins/network/plugins/live/core";
 import {
   wholeList,
@@ -17,7 +16,7 @@ export const AuthIdentitySchema = z.object({
   email: z.string().optional(),
   displayName: z.string().optional(),
   avatarUrl: z.string().optional(),
-}) satisfies ZodParser<AuthIdentity>;
+}) satisfies z.ZodType<AuthIdentity>;
 
 const AuthAccountStateSchema = z.object({
   connected: z.boolean(),
@@ -32,14 +31,14 @@ const AuthAccountStateSchema = z.object({
   lastRefreshError: z
     .object({ message: z.string(), at: z.number() })
     .optional(),
-}) satisfies ZodParser<AuthAccountState>;
+}) satisfies z.ZodType<AuthAccountState>;
 
 export const AuthStateValueSchema = z.object({
   mainOffline: z.boolean().optional(),
   providers: wholeRecord(AuthAccountStateSchema, {
     reason: "one entry per registered auth provider — tens at most",
   }),
-}) satisfies ZodParser<AuthStateValue>;
+}) satisfies z.ZodType<AuthStateValue>;
 
 /**
  * The shared auth state. `origin: "central"`: auth tokens live on the central

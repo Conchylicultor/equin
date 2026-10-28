@@ -81,7 +81,7 @@ export interface LiveKeyRange {
  * A query schema: parses the caller's question (`QIn`, its input — defaults
  * optional) into the loader's (`Q`, its output). Any JSON-safe zod schema.
  */
-export type LiveQuerySchema<Q, QIn> = z.ZodType<Q, z.ZodTypeDef, QIn>;
+export type LiveQuerySchema<Q, QIn> = z.ZodType<Q, QIn>;
 
 /** A typed-query value's codec (`LiveQueryValue.query`). */
 export interface LiveQueryCodec<Q, QIn> {

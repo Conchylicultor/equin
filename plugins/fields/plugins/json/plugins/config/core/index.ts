@@ -1,2 +1,6 @@
-export { jsonField, type JsonFieldDef } from "./internal/json";
+export {
+  jsonField,
+  type DefaultlessJsonFieldDef,
+  type JsonFieldDef,
+} from "./internal/json";
 export { jsonSample } from "./internal/sample";

@@ -1,5 +1,5 @@
-import { z } from "zod";
 import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
+import { inspect } from "@plugins/packages/plugins/zod-introspect/core";
 import {
   _jobRunStats,
   _jobRuns,
@@ -116,7 +116,7 @@ function groupOf(job: RegisteredJob): string {
 // schema means the events dispatcher can deliver to it. Which events is the
 // events plugin's knowledge (its BackgroundTriggerSource fills `names` in the catalog), so it starts empty here.
 function acceptsEvents(job: RegisteredJob): boolean {
-  return !(job.eventSchema instanceof z.ZodNever);
+  return inspect(job.eventSchema).kind !== "never";
 }
 
 function triggerOf(job: RegisteredJob, now: Date): BackgroundTrigger {

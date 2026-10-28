@@ -1,3 +1,4 @@
+import type { z } from "zod";
 import {
   eq,
   getTableColumns,
@@ -28,7 +29,6 @@ import {
   orderByClauses,
   type SortKey,
 } from "@plugins/primitives/plugins/keyset/server";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import {
   BASE_RELATION,
   type AggregateRef,
@@ -542,7 +542,7 @@ export function compileAllCollection<
     const dec = decoderOfRead(f.read);
     decoders[f.name] = plan.canBeNull(f.read) ? nullable(dec) : dec;
   }
-  const rowParser = decodedRow(decoders) as unknown as ZodParser<
+  const rowParser = decodedRow(decoders) as unknown as z.ZodType<
     Record<string, unknown>
   >;
   if (spec.wire !== undefined && Object.keys(spec.wire.ids).length === 0) {

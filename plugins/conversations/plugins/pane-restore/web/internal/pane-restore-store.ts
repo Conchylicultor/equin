@@ -1,6 +1,5 @@
 import { z } from "zod";
 
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import {
   peekRoute,
@@ -27,7 +26,7 @@ const savedSlotsSchema = z.array(
     params: z.record(z.string(), z.string()),
     options: z.record(z.string(), z.unknown()).optional(),
   }),
-) satisfies ZodParser<SavedSlot[]>;
+) satisfies z.ZodType<SavedSlot[]>;
 
 const paneRoutes = defineStore({
   owner: "conversations.pane-restore",

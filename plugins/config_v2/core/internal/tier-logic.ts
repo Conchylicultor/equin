@@ -301,7 +301,7 @@ export function validationIssues(
     // Keep the zod path as an array so the UI can drill the offending value out
     // of the stored document; readTypedConfig joins it inline only for its log.
     return result.error.issues.map((i) => ({
-      path: [...i.path],
+      path: i.path.map((k) => (typeof k === "symbol" ? String(k) : k)),
       message: i.message,
     }));
   }
@@ -312,7 +312,7 @@ export function validationIssues(
   const result = descriptor.schema.safeParse(originData.content);
   if (result.success) return null;
   return result.error.issues.map((i) => ({
-    path: [...i.path],
+    path: i.path.map((k) => (typeof k === "symbol" ? String(k) : k)),
     message: i.message,
   }));
 }

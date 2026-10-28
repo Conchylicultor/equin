@@ -16,7 +16,7 @@ export const OptimisticDivergencePayloadSchema = z.object({
   // The live-state resource key whose overlay op diverged.
   resourceKey: z.string(),
   // The resource params the diverging consumer subscribed with, if any.
-  params: z.record(z.string()).nullable(),
+  params: z.record(z.string(), z.string()).nullable(),
   // The consumer's `label` ("what is being saved"), if it passed one.
   label: z.string().nullable(),
   // Consecutive authoritative pushes that had failed to confirm the op when the

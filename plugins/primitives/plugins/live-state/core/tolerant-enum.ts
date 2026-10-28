@@ -1,8 +1,7 @@
 import { z } from "zod";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 
 /**
- * A `ZodParser<T>` that accepts a strict enum value OR any unknown string and
+ * A `z.ZodType<T>` that accepts a strict enum value OR any unknown string and
  * normalizes it to a valid `T`. Use for persisted fields backed by an evolving
  * enum (e.g. a model id whose value set changes over time): a legacy/unknown
  * stored value degrades to a concrete `T` instead of rejecting the payload.
@@ -23,12 +22,16 @@ import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
  * `normalize`'s own output is re-validated by `schema`, so a normalizer that
  * returns something outside the enum still fails loudly rather than smuggling
  * an invalid value through.
+ *
+ * Generic over the schema (not over its value type): a branded schema is an
+ * intersection that `z.ZodType<infer T>` reads as its unbranded base, widening
+ * the brand away; `z.output<S>` keeps it.
  */
-export function tolerantEnum<T extends string>(
-  schema: ZodParser<T>,
-  normalize: (raw: string) => T,
+export function tolerantEnum<S extends z.ZodType<string>>(
+  schema: S,
+  normalize: (raw: string) => z.output<S>,
   onFallback?: (raw: unknown) => void,
-): ZodParser<T> {
+): z.ZodType<z.output<S>> {
   return z.preprocess((raw) => {
     if (schema.safeParse(raw).success) return raw;
     onFallback?.(raw);

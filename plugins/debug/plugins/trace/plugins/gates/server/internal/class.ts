@@ -16,7 +16,7 @@ const GateGaugeSchema = z.object({
 const _assertGateGauge: GateGauge = {} as z.infer<typeof GateGaugeSchema>;
 void _assertGateGauge;
 
-const GatesSchema = z.record(GateGaugeSchema);
+const GatesSchema = z.record(z.string(), GateGaugeSchema);
 
 // The gates class: gate occupancy at the trip instant (no enrich, no ring), so
 // saturation joins the same instant as the spans. Persisted under

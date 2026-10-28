@@ -85,7 +85,7 @@ export interface AnyExtensionShape {
   readonly key: string;
   readonly fields: FieldsRecord;
   readonly serverOnly: readonly string[];
-  readonly schema: z.AnyZodObject;
+  readonly schema: z.ZodObject;
   readonly exposure: EntityExposure | null;
 }
 

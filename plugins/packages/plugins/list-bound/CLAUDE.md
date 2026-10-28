@@ -18,25 +18,36 @@ listShapeOf(schema)    // { bounds: [{ path, max } | { path, reason }], bare: [p
 listBoundsOf(schema)   // the bounds; throws BareListError naming every bare list
 ```
 
-- **Why `packages/`.** It imports zod only, so an item schema in any plugin's
-  `core/` can carry its bound without depending on `network/live`.
-- **The tag lives in `_def.listBound`**, not in a side map: zod 3 clones `_def`
-  on `.max()`, `.min()`, `.describe()`, `.nonempty()` and wraps on
-  `.optional()` / `.nullable()` / `.default()`, so the tag survives every one,
-  and survives duplicate module copies across web artifacts.
+- **Why `packages/`.** It imports zod and `packages/zod-introspect` only, so an
+  item schema in any plugin's `core/` can carry its bound without depending on
+  `network/live`.
+- **The tag rides the schema object**, not a side map or a zod registry:
+  zod-introspect's `defineSchemaTag("list-bound")` stamps it on a clone of the
+  schema the marker just built (never the source mutated). zod carries the def
+  over on `.max()`, `.min()`, `.describe()`, `.nonempty()`, `.refine()`,
+  `.brand()`, and a wrapper (`.optional()` / `.nullable()` / `.default()`)
+  holds the tagged schema as its inner one, so the tag survives every one —
+  and, a plain def key, survives duplicate module copies across web artifacts.
+  A test hand-sets a raw (malformed) tag with `withRawListBoundTag`
+  (`core/testing`).
 - **The parse is unchanged** — a whole marker is a plain `z.array` /
   `z.record`; a cap is zod's own `.max(n)` (an array) or a `superRefine` (a
   record). The payload is parsed on every end, so a cap is enforced on the wire
   with no new code.
 - **What counts as capped**: a native `.max(n)` / `.length(n)` on an array,
-  `.max(n)` / `.size(n)` on a set, a record keyed by a finite set (an enum, a
-  native enum, literals — capped at the key count), a `cappedRecord`. A cap
+  `.max(n)` / `.size(n)` on a set or a map, a record keyed by a finite set (an
+  enum, a native enum, literals — capped at the key count; not a
+  `z.looseRecord`, which keeps every other key too), a `cappedRecord`. A cap
   wins over a reason: it is the one the parse enforces.
-- **The walk** reaches every `ZodArray`, `ZodRecord`, `ZodMap` and `ZodSet`
-  through objects (a non-`never` catchall is itself a record), every wrapper
-  (optional, nullable, default, catch, readonly, branded, effects, a
-  pipeline's in AND out, promise), unions and discriminated unions,
-  intersections, tuples (a `.rest()` tuple is a list) and `lazy`. Recursion is
+- **The walk** reads zod-introspect's `SchemaNode` and
+  reaches every array, record, map and set through objects (a schema catchall
+  is itself a record), every wrapper (optional, nullable, default, prefault,
+  catch, readonly, nonoptional, promise; a brand or refinement is no wrapper),
+  a pipe's in AND out (a transform's is the schema it transforms), unions and
+  discriminated unions, intersections, tuples (a `.rest()` tuple is a list)
+  and `lazy`. An object keeping unknown keys as they are (`.passthrough()`, a
+  catchall of `unknown` / `any` — zod 4 spells the first as the second) is
+  opaque, not a record. Recursion is
   cut by the walk's own stack (a list is reported at the first path it is met
   on); a schema shared by several fields is walked once and reported under
   each. `unknown` / `any` are opaque. Paths: object keys dotted, `[]` an
@@ -45,7 +56,7 @@ listBoundsOf(schema)   // the bounds; throws BareListError naming every bare lis
   walked `at: "[]"`).
 - **Fails loudly** on what is no declaration: a malformed marker (a
   non-positive or fractional max, a blank reason) at the marker call and on a
-  hand-set tag, and a node that is not a zod 3 schema or a kind the walk does
+  hand-set tag, and a node that is not a zod schema or a kind the walk does
   not know — an unknown kind would otherwise pass as holding no lists.
 - **Report vs enforce.** `listShapeOf` lists bare lists; `listBoundsOf` throws
   on one. `liveValue`, `liveCollection` and `liveArm` refuse a bare list at

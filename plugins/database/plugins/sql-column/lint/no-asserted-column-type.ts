@@ -52,7 +52,7 @@
  * `fields.storage` capability, where it landed; the call no longer exists.
  *
  * NOT type-aware, matching the closest precedents (`no-asserted-sql-type`,
- * `no-unparsed-sql-rows`, `no-narrow-zodtype`) — and self-contained by necessity:
+ * `no-unparsed-sql-rows`) — and self-contained by necessity:
  * a contributed rule file is loaded by jiti, which cannot resolve the
  * `@plugins/*` alias, so the rule can name no type from the repo.
  *

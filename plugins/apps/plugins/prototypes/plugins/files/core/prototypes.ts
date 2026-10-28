@@ -11,7 +11,6 @@ import {
   type AssetPath,
 } from "@plugins/infra/plugins/endpoints/core";
 import { PROTOTYPE_ENTRY_FILE, PrototypeProblemSchema } from "./validate";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import type { MocksDeclaration } from "./mocks";
 import { PrototypeViewportSchema } from "./viewport";
 import type { OptionPicks, PrototypeOption } from "./options";
@@ -28,7 +27,7 @@ export const MocksDeclarationSchema = z.discriminatedUnion("kind", [
     reason: z.string(),
   }),
   z.object({ kind: z.literal("declared"), tag: z.string(), ref: z.string() }),
-]) satisfies ZodParser<MocksDeclaration>;
+]) satisfies z.ZodType<MocksDeclaration>;
 
 /** Why an option's values are loaded whole. */
 const OPTION_REASON =
@@ -58,7 +57,7 @@ export const PrototypeOptionSchema = z.discriminatedUnion("kind", [
     default: z.string(),
     group: z.string().nullable(),
   }),
-]) satisfies ZodParser<PrototypeOption>;
+]) satisfies z.ZodType<PrototypeOption>;
 
 /**
  * Metadata for a single prototype, parsed out of `<slug>/index.html` under the

@@ -235,7 +235,7 @@ export async function scanDatabase(
         const row = await queryOne(client, {
           sql,
           params,
-          row: z.record(z.number()),
+          row: z.record(z.string(), z.number()),
         });
         table.columns.forEach((column, i) => {
           const rows = row[`c${i}`];

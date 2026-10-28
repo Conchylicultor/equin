@@ -32,7 +32,7 @@ const queryBase = {
   range: RangeSpecSchema,
   tz: z.string().refine(isTimeZone, { message: "unknown time zone" }),
   /** Raw values, parsed server-side against the metric's own ParamSpecs. */
-  params: z.record(z.unknown()),
+  params: z.record(z.string(), z.unknown()),
 };
 
 /**
@@ -151,7 +151,7 @@ export const DetailsSelectorSchema = z
     interval: IntervalSchema,
     /** The split dimension and the one key whose records to list; null = every record. */
     split: z.object({ id: z.string(), key: z.string() }).nullable(),
-    params: z.record(z.unknown()),
+    params: z.record(z.string(), z.unknown()),
   })
   .strict();
 export type DetailsSelector = z.infer<typeof DetailsSelectorSchema>;

@@ -45,7 +45,7 @@ const JOB_FIELDS = {
 const JOB_CARRIED = {
   /** graphile's job id (a bigint), as text. */
   id: textField(),
-  input: nullable(jsonField({ schema: z.unknown(), default: null })),
+  input: nullable(jsonField({ schema: z.unknown() })),
   maxAttempts: intField(),
   lockedAt: nullable(dateField()),
   lockedBy: nullable(textField()),
@@ -119,7 +119,7 @@ export function jobRunAtKeyText(runAt: Date): string {
 // the Dead tab shows (in its order); the rest ride on the row.
 const DEAD_JOB_FIELDS = {
   id: textField(),
-  input: nullable(jsonField({ schema: z.unknown(), default: null })),
+  input: nullable(jsonField({ schema: z.unknown() })),
   maxAttempts: intField(),
   jobName: textField({ label: "Job", primary: true }),
   attempts: intField({ label: "Attempts" }),
@@ -218,7 +218,7 @@ export const jobRunsEntityRef = entityRef("job_runs", {
   hold: JOB_RUN_HOLD,
   maxAttempts: nullable(intField({ label: "Max attempts" })),
   queuedAt: nullable(dateField({ label: "Queued" })),
-  input: nullable(jsonField({ schema: z.unknown(), default: null })),
+  input: nullable(jsonField({ schema: z.unknown() })),
 });
 
 // The run fields the collection declares itself: `waitMs`, which is not

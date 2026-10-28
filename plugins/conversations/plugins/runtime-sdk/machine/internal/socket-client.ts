@@ -1,6 +1,6 @@
+import type { z } from "zod";
 import { existsSync } from "node:fs";
 import { connect } from "node:net";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import {
   CommandReplySchema,
   HelloReplySchema,
@@ -167,7 +167,7 @@ export async function helloAgent(conversationId: string): Promise<HelloReply> {
 export async function commandAgent<T>(
   conversationId: string,
   command: AgentCommand,
-  schema: ZodParser<T>,
+  schema: z.ZodType<T>,
 ): Promise<T> {
   const [, reply] = await exchange(conversationId, [hello, command]);
   return schema.parse(reply);

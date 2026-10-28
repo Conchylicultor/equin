@@ -2,7 +2,7 @@ import { test, expect } from "bun:test";
 import { z } from "zod";
 import { defineFieldType } from "./define";
 import type { FieldDef, FieldsRecord } from "./field-spec";
-import { fieldsToZodObject } from "./schema-builder";
+import { fieldsToPatchSchema, fieldsToZodObject } from "./schema-builder";
 
 const textType = defineFieldType<string>("__sb_text__");
 
@@ -30,7 +30,7 @@ test("fieldsToZodObject returns a STRICT object — unknown keys are NOT passed 
   expect("extra" in parsed).toBe(false);
 });
 
-// The behaviour `ZodParser<T>` exists to permit. `FieldDef.schema` used to be
+// The behaviour `z.ZodType<T>` exists to permit. `FieldDef.schema` used to be
 // `z.ZodType<T>` — input === output — which made a schema carrying an INNER
 // `.default()` unusable as a field schema at all, because `.default()` is
 // precisely a combinator whose input is wider than its output. Callers worked
@@ -60,4 +60,18 @@ test("a field schema may carry an INNER .default(), and it applies through compo
     rule: { freq: "weekly" },
   });
   expect(parsed.rule).toEqual({ freq: "weekly", interval: 1 });
+});
+
+test("fieldsToPatchSchema leaves every key the patch does not name absent — no default-backfill", () => {
+  const record: FieldsRecord = { a: textField("da"), b: textField("db") };
+  const patch = fieldsToPatchSchema(record, ["a", "b"]);
+  expect(patch.parse({})).toEqual({});
+  expect(patch.parse({ a: "x" })).toEqual({ a: "x" });
+  expect("b" in patch.parse({ a: "x" })).toBe(false);
+});
+
+test("fieldsToPatchSchema is strict over the picked keys", () => {
+  const record: FieldsRecord = { a: textField(), b: textField() };
+  const patch = fieldsToPatchSchema(record, ["a"]);
+  expect(patch.safeParse({ b: "y" }).success).toBe(false);
 });

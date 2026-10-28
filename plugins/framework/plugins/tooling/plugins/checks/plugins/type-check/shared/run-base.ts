@@ -79,14 +79,14 @@ export const fileBaseSchema = z.object({
   /** The file's result key R, which keys its typed parts. */
   r: z.string(),
   /** Non-empty syntactic results, by group. */
-  s: z.record(z.array(messageSchema)).optional(),
+  s: z.record(z.string(), z.array(messageSchema)).optional(),
   /** Non-empty typed results, by group (`LINT_GROUP_ALL` for a directive file). */
-  t: z.record(z.array(messageSchema)).optional(),
+  t: z.record(z.string(), z.array(messageSchema)).optional(),
 });
 
 export type FileBase = z.infer<typeof fileBaseSchema>;
 
-const shardSchema = z.object({ files: z.record(fileBaseSchema) });
+const shardSchema = z.object({ files: z.record(z.string(), fileBaseSchema) });
 
 export interface RunBaseShard {
   files: Record<string, FileBase>;
@@ -109,13 +109,14 @@ const rootSchema = z.object({
   format: z.literal(RUN_BASE_FORMAT),
   treeHash: z.string(),
   lint: z.object({
-    fps: z.record(z.string()),
-    typed: z.record(z.string()),
+    fps: z.record(z.string(), z.string()),
+    typed: z.record(z.string(), z.string()),
     allFp: z.string(),
   }),
-  overlay: z.record(z.string()),
+  overlay: z.record(z.string(), z.string()),
   walk: z.string().optional(),
   shards: z.record(
+    z.string(),
     z.tuple([
       z.string(),
       z.string(),

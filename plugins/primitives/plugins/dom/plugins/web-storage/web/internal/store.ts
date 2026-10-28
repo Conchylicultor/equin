@@ -1,4 +1,4 @@
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
+import type { z } from "zod";
 import { defineReportSink } from "@plugins/primitives/plugins/report-sink/core";
 import {
   AREA_BUDGET,
@@ -39,7 +39,7 @@ export interface StoreSpec<T> {
   ttl: number;
   whenFull: WhenFull;
   /** Decodes a stored value; an entry that fails it is corrupt (dropped, reported). */
-  schema: ZodParser<T>;
+  schema: z.ZodType<T>;
   /**
    * Keys this owner wrote before the primitive existed: deleted on the store's
    * first use (drawn as "Legacy" in the health row until then), after `adopt`

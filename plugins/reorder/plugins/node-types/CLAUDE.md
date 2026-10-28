@@ -10,7 +10,7 @@ fields.
 
 - `node-types/core` — **types only** (`ReorderNodeType<P>`,
   `ReorderNodeRenderProps<P>`), browser-safe, no registry values. Each node type
-  is generic over its payload `P` and carries its own `schema: ZodParser<P>`.
+  is generic over its payload `P` and carries its own `schema: z.ZodType<P>`.
 - `node-types/web` — owns the `reorder.node-type` slot (`ReorderNodes.NodeType`)
   and the `useReorderNodeTypes()` read hook (a `Map<string, ReorderNodeType>`).
   Imports only `web-sdk/core` + `node-types/core`, so both consumers (the live

@@ -18,7 +18,10 @@ import {
 } from "@plugins/database/plugins/sql-column/server";
 import { SqlColumnError } from "@plugins/database/plugins/sql-column/server/testing";
 import type { StorageColumnFor } from "@plugins/fields/plugins/server-capabilities/server";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
+import {
+  inspect,
+  isUncheckedBase,
+} from "@plugins/packages/plugins/zod-introspect/core";
 import { defineFieldType } from "@plugins/fields/core";
 import type { FieldDef } from "@plugins/fields/core";
 import { Fields } from "@plugins/fields/plugins/server-capabilities/server";
@@ -43,12 +46,13 @@ const noStorageType = defineFieldType<string>("__ent_no_storage__");
 const decodedTextType = defineFieldType<string>("__ent_decoded_text__");
 const decodeText = <V extends string>(
   n: string,
-  valueSchema: ZodParser<V>,
+  valueSchema: z.ZodType<V>,
 ): StorageColumnFor<V> =>
-  valueSchema instanceof z.ZodString
-    ? // Sound: `ZodString`'s output IS `string`, which is not assignable to any
-      // proper subtype of itself, so a `ZodParser<V>` for a narrower `V` can never
-      // be a `ZodString`. TS cannot narrow a type parameter from an `instanceof`.
+  isUncheckedBase(valueSchema) && inspect(valueSchema).kind === "string"
+    ? // Sound: a bare string schema's output IS `string`, which is not
+      // assignable to any proper subtype of itself, so a `z.ZodType<V>` for a
+      // narrower `V` can never be one. TS cannot narrow a type parameter from a
+      // runtime predicate.
       (text(n) as unknown as StorageColumnFor<V>)
     : parsedText(n, valueSchema);
 
@@ -61,11 +65,11 @@ function jsonType<T>() {
 // defineEntity's arm dispatch rather than a stand-in for it.
 const decodeJson = <V>(
   n: string,
-  valueSchema: ZodParser<V>,
+  valueSchema: z.ZodType<V>,
 ): StorageColumnFor<V> =>
-  valueSchema instanceof z.ZodUnknown
-    ? // Sound for the same reason as the text branch: `ZodUnknown`'s output IS
-      // `unknown`, which no narrower `V` can be, so passing the `instanceof`
+  isUncheckedBase(valueSchema) && inspect(valueSchema).kind === "unknown"
+    ? // Sound for the same reason as the text branch: a bare `z.unknown()`'s
+      // output IS `unknown`, which no narrower `V` can be, so passing the check
       // proves `V` is `unknown`.
       (jsonb(n) as unknown as StorageColumnFor<V>)
     : parsedJson(n, valueSchema);
@@ -257,7 +261,7 @@ test("defineEntity passes through indexes via the third-arg callback", () => {
 test("entity.schema validates a sample row", () => {
   const slowOps = buildSlowOps();
   const row = {
-    id: "11111111-1111-1111-1111-111111111111",
+    id: "11111111-1111-4111-8111-111111111111",
     worktree: "main",
     operationKind: "http",
     operation: "GET /x",

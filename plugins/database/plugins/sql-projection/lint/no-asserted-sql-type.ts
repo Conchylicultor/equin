@@ -35,7 +35,7 @@
  * thing while making it true.
  *
  * NOT type-aware, matching the closest precedents (`no-unparsed-sql-rows`,
- * `no-raw-bun-spawn`, `no-narrow-zodtype`) — and self-contained by necessity: a
+ * `no-raw-bun-spawn`) — and self-contained by necessity: a
  * contributed rule file is loaded by jiti, which cannot resolve the `@plugins/*`
  * alias, so the rule can name no type from the repo.
  *

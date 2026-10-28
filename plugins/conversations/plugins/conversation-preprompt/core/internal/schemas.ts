@@ -1,5 +1,4 @@
 import { z } from "zod";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { liveCollection } from "@plugins/network/plugins/live/core";
 import type { AvatarSpec } from "@plugins/fields/plugins/avatar/core";
 import { SavedSymbolNameSchema } from "@plugins/ui/plugins/icons/plugins/saved-names/core";
@@ -13,9 +12,9 @@ import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/c
 //
 // The TYPE is the canonical `AvatarSpec` — a type-only import, so it is erased
 // and this module never loads the avatar field plugin's runtime. Annotating the
-// schema `ZodParser<AvatarSpec>` is what pins the two together: a shape that
+// schema `z.ZodType<AvatarSpec>` is what pins the two together: a shape that
 // drifts from the interface stops compiling here.
-const AvatarSpecSchema: ZodParser<AvatarSpec> = z.object({
+const AvatarSpecSchema: z.ZodType<AvatarSpec> = z.object({
   icon: SavedSymbolNameSchema.nullable(),
   color: z.string().nullable(),
 });

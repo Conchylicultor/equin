@@ -165,12 +165,13 @@ const fileSnapshotSchema = z.discriminatedUnion("present", [
 const ledgerFileSchema = z.object({
   version: z.literal(1),
   entries: z.record(
+    z.string(),
     z.object({
       ledgerId: z.string(),
       key: z.string(),
-      paths: z.record(z.string()),
-      before: z.record(fileSnapshotSchema),
-      after: z.record(fileSnapshotSchema),
+      paths: z.record(z.string(), z.string()),
+      before: z.record(z.string(), fileSnapshotSchema),
+      after: z.record(z.string(), fileSnapshotSchema),
       source: z.string(),
       operations: z.array(z.string()),
       firstWriteAt: z.string(),

@@ -302,6 +302,17 @@ describe("BlockPatchSchema", () => {
     expect(namesField(changes, "expanded")).toBe(false);
   });
 
+  test("an update that says nothing about data does not name it", () => {
+    // A move/fold/rank write must never read as `data = undefined`: zod 4
+    // writes an absent bare `z.unknown()` key as an own `undefined` key.
+    const parsed = BlockPatchSchema.parse({
+      creates: [],
+      updates: [{ id: "A", changes: { type: "x" } }],
+      deleteIds: [],
+    });
+    expect(namesField(parsed.updates[0]!.changes, "data")).toBe(false);
+  });
+
   test("decodes a rank change back into a Rank instance", () => {
     const parsed = BlockPatchSchema.parse(
       JSON.parse(

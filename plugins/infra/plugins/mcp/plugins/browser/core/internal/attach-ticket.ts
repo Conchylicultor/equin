@@ -1,5 +1,4 @@
 import { z } from "zod";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 
 /**
  * The handoff from a conversation's browser session to an e2e script.
@@ -27,7 +26,7 @@ export interface AttachTicket {
   playwright: string;
 }
 
-const ticketSchema: ZodParser<AttachTicket> = z.object({
+const ticketSchema: z.ZodType<AttachTicket> = z.object({
   v: z.literal(1),
   endpoint: z.string().min(1),
   marker: z.string().min(1),

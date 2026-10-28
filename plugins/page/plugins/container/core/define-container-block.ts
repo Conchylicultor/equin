@@ -1,5 +1,5 @@
 import type { IconRef } from "@plugins/ui/plugins/icons/core";
-import type { AnyZodObject, z } from "zod";
+import type { z, ZodObject } from "zod";
 import {
   defineBlock,
   type BlockHandle,
@@ -31,12 +31,12 @@ import {
  * then reports it properly.
  *
  * A conditional intersection member rather than a constraint on `S`:
- * intersecting `AnyZodObject` with a narrowed `shape` breaks assignability
+ * intersecting `ZodObject` with a narrowed `shape` breaks assignability
  * outright (zod's `keyof()._cache` is derived from the shape, so `Set<"color" |
  * …>` stops being assignable to `Set<never>`) and rejects every schema,
  * including void ones.
  */
-export type RejectTextBearing<S extends AnyZodObject> =
+export type RejectTextBearing<S extends ZodObject> =
   "text" extends keyof S["shape"]
     ? { __void_container_schema_must_not_declare_text: never }
     : unknown;
@@ -57,7 +57,7 @@ export type RejectTextBearing<S extends AnyZodObject> =
  * `breakOutOnEmptyEnter` (no caret can originate in it), `toggle` and
  * `defaultText`.
  */
-export interface ContainerBlockOptions<S extends AnyZodObject> {
+export interface ContainerBlockOptions<S extends ZodObject> {
   /** The block type id, e.g. `"callout"`. */
   type: string;
   /** The container's appearance-only payload. Must not declare `text`. */
@@ -157,7 +157,7 @@ export interface ContainerBlockOptions<S extends AnyZodObject> {
  * land on. Anchorhood is already "you went through this factory"; this makes
  * that provable to a type rather than only to a reader.
  */
-export function defineContainerBlock<S extends AnyZodObject>(
+export function defineContainerBlock<S extends ZodObject>(
   opts: ContainerBlockOptions<S> & RejectTextBearing<S>,
 ): BlockHandle<z.infer<S>> & { text?: undefined; anchor: true } {
   if ("text" in opts.schema.shape) {

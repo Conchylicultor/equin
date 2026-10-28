@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { wholeRecord } from "@plugins/packages/plugins/list-bound/core";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 
 // A block `data` payload that has been validated against its block type's schema.
 // Type-only brand (no runtime shape). The `page_blocks.data` column's type IS
@@ -47,7 +46,7 @@ export function asBlockData(data: Record<string, unknown>): BlockData {
  * object schema here would strip every key it has not heard of — i.e. all of
  * them. `z.record` keeps every key by construction.
  */
-export const StoredBlockDataSchema: ZodParser<BlockData> = wholeRecord(
+export const StoredBlockDataSchema: z.ZodType<BlockData> = wholeRecord(
   z.unknown(),
   { reason: "one block's data — its block type's few named fields" },
 ).transform(asBlockData);

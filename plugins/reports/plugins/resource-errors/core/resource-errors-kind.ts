@@ -12,7 +12,7 @@ export const ResourceErrorPayloadSchema = z.object({
   // The live-resource key whose read failed.
   key: z.string(),
   // The params of the failing tuple.
-  params: z.record(z.string()),
+  params: z.record(z.string(), z.string()),
   // The typed failure kind. Only `loader-failed` and `not-found` are filed —
   // `client-outdated` is the Reload advice's job, `transport` a network blip.
   errorKind: z.enum(["loader-failed", "not-found"]),

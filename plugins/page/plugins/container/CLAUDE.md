@@ -83,7 +83,7 @@ the *shape* rather than the brand is deliberate: the shape is what the runtime
 derivation reads, so the two answers cannot drift.
 
 It is a conditional intersection member rather than a constraint on `S` because
-constraining `S` to `AnyZodObject & { shape: { text?: never } }` rejects
+constraining `S` to `ZodObject & { shape: { text?: never } }` rejects
 **every** schema: zod derives `keyof()._cache` from the shape, so narrowing the
 shape to `{ text?: never }` makes `Set<"color" | …>` un-assignable to
 `Set<never>`. (Measured, not assumed — that constraint was the first attempt.)

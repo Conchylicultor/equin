@@ -1,6 +1,6 @@
+import type { z } from "zod";
 import type { SQL } from "drizzle-orm";
 import type { PgColumn, PgTable, PgView } from "drizzle-orm/pg-core";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import type { SqlExecutable } from "@plugins/database/plugins/sql-rows/core";
 import type {
   JoinFamily,
@@ -21,7 +21,7 @@ export interface EntitySource {
   readonly name: string;
   readonly table: PgTable;
   readonly wireColumns: Record<string, PgColumn>;
-  readonly schema: ZodParser<unknown>;
+  readonly schema: z.ZodType<unknown>;
 }
 
 /**
@@ -53,7 +53,7 @@ export type SelectMap = Record<string, PgColumn | SQL | SQL.Aliased>;
 // Nothing about `Row` is guessed. Every public entry point
 // (`windowQueryResource(contract, spec)`, `compileAllCollection`,
 // `compileUnionCollection`) takes a contract, so a compiled resource's `Row` is
-// pinned to the contract's `ZodParser<Row>` —
+// pinned to the contract's `z.ZodType<Row>` —
 // and the runtime parses EVERY loader output against that same schema before
 // the value is broadcast or cached
 // (`plugins/framework/plugins/resource-runtime/core/runtime.ts`:

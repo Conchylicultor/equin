@@ -4,13 +4,14 @@ import type {
   ConfigSource,
   OriginDefaultsFrom,
 } from "./types";
-import type { FieldsRecord } from "@plugins/fields/core";
+import type { DefaultedFields, FieldsRecord } from "@plugins/fields/core";
 import type { ConfigMigration } from "./config-migration";
-import { fieldsToZodObject } from "@plugins/fields/core";
+import { fieldDefaults, fieldsToZodObject } from "@plugins/fields/core";
 
 interface DefineConfigOpts<F extends FieldsRecord> {
   name?: string;
-  fields: F;
+  // A config is seeded from its fields' defaults: each needs one (tsc).
+  fields: F & DefaultedFields<F>;
   scope?: "app";
   source?: ConfigSource;
   overrideLegend?: readonly string[];
@@ -68,8 +69,9 @@ export function defineConfig<const F extends FieldsRecord>(
   // here, where the old `buildFieldsSchema` used to bake it in.
   const schema = fieldsToZodObject(opts.fields).passthrough();
 
-  const defaults = Object.fromEntries(
-    Object.entries(opts.fields).map(([k, f]) => [k, f.defaultValue]),
+  const defaults = fieldDefaults(
+    opts.fields,
+    `defineConfig("${opts.name ?? "config"}")`,
   ) as ConfigValues<F>;
 
   return Object.freeze({

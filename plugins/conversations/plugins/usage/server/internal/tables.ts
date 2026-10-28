@@ -7,7 +7,6 @@ import {
   primaryKey,
   text,
 } from "drizzle-orm/pg-core";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import {
   parsedJson,
   parsedText,
@@ -38,7 +37,7 @@ export const conversationUsage = defineExtension(
 export const _conversationUsageExt = conversationUsage.table;
 
 const TieredSchema = z.object({ below: z.number(), above: z.number() });
-const DayBucketSchema: ZodParser<DayBucket> = z.object({
+const DayBucketSchema: z.ZodType<DayBucket> = z.object({
   date: z.string(),
   model: z.string(),
   speed: z.enum(["standard", "fast"]),

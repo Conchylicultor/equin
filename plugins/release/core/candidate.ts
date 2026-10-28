@@ -1,5 +1,4 @@
 import { z } from "zod";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { liveValue } from "@plugins/network/plugins/live/core";
 import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import { ReleaseManifestSchema } from "@plugins/release/plugins/bundles/core";
@@ -21,7 +20,7 @@ import { PlatformTagSchema } from "./platforms";
  * with no HTTP anywhere in sight). What lives here is only their *serialization*,
  * which is this plugin's value's business.
  *
- * The `satisfies ZodParser<…>` on each schema is what keeps the two from
+ * The `satisfies z.ZodType<…>` on each schema is what keeps the two from
  * drifting: adding a refusal case, or a field to one, makes THIS file a tsc
  * error rather than a runtime `.parse()` failure in the browser. Never relax it
  * to a cast.
@@ -76,7 +75,7 @@ const BundleRefusalSchema = z.union([
     runId: z.string(),
   }),
   z.object({ kind: z.literal("not-packed"), localPath: z.string() }),
-]) satisfies ZodParser<BundleRefusal>;
+]) satisfies z.ZodType<BundleRefusal>;
 
 export const BundleResolutionSchema = z.union([
   z.object({
@@ -87,14 +86,14 @@ export const BundleResolutionSchema = z.union([
     manifest: ReleaseManifestSchema,
   }),
   z.object({ ok: z.literal(false), refusal: BundleRefusalSchema }),
-]) satisfies ZodParser<BundleResolution>;
+]) satisfies z.ZodType<BundleResolution>;
 
 export const StalenessSchema = z.union([
   z.object({ kind: z.literal("current") }),
   z.object({ kind: z.literal("behind"), commits: z.number().int() }),
   z.object({ kind: z.literal("diverged"), sha: z.string() }),
   z.object({ kind: z.literal("unknown"), reason: z.string() }),
-]) satisfies ZodParser<Staleness>;
+]) satisfies z.ZodType<Staleness>;
 
 /**
  * What `ship` would pick for one `(composition, platform)`, as the

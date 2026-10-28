@@ -15,7 +15,6 @@ import {
   waitForFlock,
   type HeldFlock,
 } from "@plugins/packages/plugins/flock/core";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 
 /** Who ran (or is running) a flight's work. */
 export interface FlightLeader {
@@ -66,7 +65,7 @@ export interface SingleFlightOptions<V> {
    * adopted, so a verdict written by a process running other code (a schema
    * that moved) is never misread — it is simply not adoptable.
    */
-  schema: ZodParser<V>;
+  schema: z.ZodType<V>;
   /**
    * May a joiner take this verdict as its own result? A verdict that is not
    * (a run that was interrupted, or came back inconclusive) makes the joiner

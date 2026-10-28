@@ -35,8 +35,7 @@ import {
   type DriverValueDecoder,
   type GetDecoderResult,
 } from "drizzle-orm";
-import type { ZodError } from "zod";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
+import type { ZodError, z } from "zod";
 import {
   SqlProjectionError,
   runtimeTypeOf,
@@ -86,7 +85,7 @@ const nullableDecoders = new WeakSet<SqlDecoderLike>();
 export type DecoderOrigin =
   | { kind: "column"; column: Column }
   | { kind: "builtin"; name: BuiltinDecoderName }
-  | { kind: "parsed"; schema: ZodParser<unknown>; label: string }
+  | { kind: "parsed"; schema: z.ZodType<unknown>; label: string }
   | { kind: "nullable"; inner: SqlDecoderLike }
   | { kind: "opaque" };
 
@@ -183,7 +182,7 @@ export function admitsNull(decoder: SqlDecoderLike): boolean {
  * `nullable(parsed(schema, label))`.
  */
 export function parsed<T extends NonNullable<unknown>>(
-  schema: ZodParser<T>,
+  schema: z.ZodType<T>,
   label: string,
 ): SqlDecoder<T> {
   const decode: SqlDecoder<T> = (value) => {
@@ -193,7 +192,7 @@ export function parsed<T extends NonNullable<unknown>>(
   };
   decoderOrigins.set(decode, {
     kind: "parsed",
-    schema: schema as ZodParser<unknown>,
+    schema: schema as z.ZodType<unknown>,
     label,
   });
   return decode;
@@ -213,7 +212,8 @@ function sqlProjectionError(
 
   const failure: SqlProjectionFailure = {
     label,
-    path: issue.path,
+    // A JSON value has no symbol key; a symbol is named, never dropped.
+    path: issue.path.map((k) => (typeof k === "symbol" ? String(k) : k)),
     expected: issue.code === "invalid_type" ? issue.expected : undefined,
     receivedType: runtimeTypeOf(received),
     received,

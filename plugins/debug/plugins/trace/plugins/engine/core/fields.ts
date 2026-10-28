@@ -25,10 +25,7 @@ export const traceFields = {
   triggerLabel: textField({ label: "Operation", primary: true }),
   durationMs: durationField({ label: "Duration" }),
   thresholdMs: durationField(),
-  snapshot: jsonField<TraceSnapshot>({
-    schema: TraceSnapshotSchema,
-    default: {} as TraceSnapshot,
-  }),
+  snapshot: jsonField<TraceSnapshot>({ schema: TraceSnapshotSchema }),
   createdAt: dateField({ label: "When" }),
 } satisfies FieldsRecord;
 

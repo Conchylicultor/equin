@@ -34,7 +34,7 @@ export type StorageColumnFor<V> = PgColumnBuilderBase<
 export type FieldStorageContribution<B = unknown> = { type: FieldType<B> } & (
   | { build: (name: string) => StorageColumnFor<B>; decode?: never; stored?: never }
   | {
-      decode: <V extends B>(name: string, valueSchema: ZodParser<V>) => StorageColumnFor<V>;
+      decode: <V extends B>(name: string, valueSchema: z.ZodType<V>) => StorageColumnFor<V>;
       build?: never;
       stored?: never;
     }

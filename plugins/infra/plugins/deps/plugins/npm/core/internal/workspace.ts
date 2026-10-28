@@ -64,19 +64,22 @@ export interface Workspace {
 const ManifestSchema = z
   .object({
     name: z.string().optional(),
-    dependencies: z.record(z.string()).optional(),
-    devDependencies: z.record(z.string()).optional(),
-    optionalDependencies: z.record(z.string()).optional(),
+    dependencies: z.record(z.string(), z.string()).optional(),
+    devDependencies: z.record(z.string(), z.string()).optional(),
+    optionalDependencies: z.record(z.string(), z.string()).optional(),
     [POLICY_KEY]: z.unknown().optional(),
   })
   .passthrough();
 
 const LockSchema = z.object({
-  workspaces: z.record(z.object({ name: z.string().optional() }).passthrough()),
-  patchedDependencies: z.record(z.string()).optional(),
+  workspaces: z.record(
+    z.string(),
+    z.object({ name: z.string().optional() }).passthrough(),
+  ),
+  patchedDependencies: z.record(z.string(), z.string()).optional(),
   // `[ "<name>@<version>", registry, info, integrity ]` (a workspace link is
   // `[ "<name>@workspace:<path>" ]`).
-  packages: z.record(z.array(z.unknown()).min(1)),
+  packages: z.record(z.string(), z.array(z.unknown()).min(1)),
 });
 
 /** Every workspace package.json: the root and each plugin's, tracked or new. */

@@ -1,4 +1,4 @@
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
+import type { z } from "zod";
 
 /** Issues quoted into one message; a wholly different payload has hundreds. */
 const MAX_ISSUES = 8;
@@ -9,7 +9,7 @@ const MAX_ISSUES = 8;
  * change in Hooktheory's payload reads as exactly that, at the boundary.
  */
 export function parseOrThrow<T>(
-  schema: ZodParser<T>,
+  schema: z.ZodType<T>,
   value: unknown,
   what: string,
 ): T {

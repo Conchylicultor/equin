@@ -782,9 +782,10 @@ useLive(folderListing, expanded.map((dir) => ({ dir })));
   (client and server), so `{ path }`, `{ path, scopeId: undefined }` and
   `{ path, scopeId: "" }` are ONE tuple.
 - **Typed params** — `params: { window: z.enum(...) }`: every name required; a
-  parser may only NARROW the wire string (output `string`; no transforms,
-  defaults, catch, `.trim()`/case rewrites, `undefined` — throws). Literal keys
-  only.
+  parser may only NARROW the wire string (output `string`; no transforms or
+  codecs, defaults / prefaults, catch, rewriting checks — `.trim()`, case,
+  `.overwrite()`, `z.url()` — or `undefined` — throws; a `.refine()` is
+  accepted). Literal keys only.
 - **The params gate** (`validateParams`) refuses unknown names, non-strings,
   missing required names → `contract-mismatch`.
 - A param'd preloaded value has no default tuple: its `serveValue` must pass

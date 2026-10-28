@@ -1,8 +1,11 @@
+import type { z } from "zod";
 import { text } from "drizzle-orm/pg-core";
-import { ZodString } from "zod";
 import { parsedText } from "@plugins/database/plugins/sql-column/server";
 import type { StorageColumnFor } from "@plugins/fields/plugins/server-capabilities/server";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
+import {
+  inspect,
+  isUncheckedBase,
+} from "@plugins/packages/plugins/zod-introspect/core";
 
 /**
  * The `text` column, narrowed by whatever the FIELD's own schema says.
@@ -20,23 +23,26 @@ import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
  */
 export const decode = <V extends string>(
   name: string,
-  valueSchema: ZodParser<V>,
+  valueSchema: z.ZodType<V>,
 ): StorageColumnFor<V> =>
-  valueSchema instanceof ZodString
-    ? // `z.string()` — the column already holds exactly this, so a decoder here
-      // would verify nothing at 345 ns/value.
+  isUncheckedBase(valueSchema) && inspect(valueSchema).kind === "string"
+    ? // A bare `z.string()` with no checks at all — the column already holds
+      // exactly this, so a decoder here would verify nothing at 345 ns/value.
+      // A CHECKED string (`.min()`, `.email()`, `.refine()`…) is not bare: it
+      // claims something about the rows, so it decodes on every read and write.
       widestTextColumn<V>(name)
     : parsedText(name, valueSchema);
 
 /**
  * The plain `text` column, for the branch where the schema does not narrow it.
  *
- * The cast is SOUND, not a hope: `ZodString`'s output type IS `string`, and
- * `string` is not assignable to any proper subtype of itself, so a
- * `ZodParser<V>` for a narrower `V` can never actually BE a `ZodString`. Passing
- * the `instanceof` therefore proves `V` is `string`. TypeScript cannot narrow a
- * type parameter from an `instanceof`, so the equality is stated here — once,
- * with its proof — rather than at the branch.
+ * The cast is SOUND, not a hope: an unchecked base schema accepts every value
+ * of its output type and nothing else is added, and for a `z.ZodType<V>` with
+ * `V extends string` that base is a bare string schema, whose output type IS
+ * `string` — no proper subtype of `string` can come out of one. So `V` is
+ * `string` and the plain column holds exactly it. TypeScript cannot narrow a
+ * type parameter from a runtime predicate, so the equality is stated here —
+ * once, with its proof — rather than at the branch.
  */
 const widestTextColumn = <V extends string>(
   name: string,

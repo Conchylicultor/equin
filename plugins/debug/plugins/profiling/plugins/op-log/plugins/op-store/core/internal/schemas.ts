@@ -161,9 +161,7 @@ export const OP_ROW_CARRIED = {
     default: [],
   }),
   /** The wait the op is parked in right now; `null` when working or closed. */
-  openWait: nullable(
-    jsonField({ schema: OpenWaitSchema, default: {} as OpenWait }),
-  ),
+  openWait: nullable(jsonField({ schema: OpenWaitSchema })),
   /** Current (or final) requeue cycle. */
   cycle: intField(),
   /** `sum(waits.durationMs)` — closed waits only. */
@@ -190,9 +188,7 @@ export const OP_ROW_CARRIED = {
     default: [],
   }),
   /** The last sleep stamp applied — where the next sleep's gap starts. */
-  sleepStamp: nullable(
-    jsonField({ schema: OpSleepStampSchema, default: {} as OpSleepStamp }),
-  ),
+  sleepStamp: nullable(jsonField({ schema: OpSleepStampSchema })),
 };
 export const OpRowSchema = fieldsToZodObject({
   ...OP_ROW_CARRIED,

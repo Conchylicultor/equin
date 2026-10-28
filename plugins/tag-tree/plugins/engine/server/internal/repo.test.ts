@@ -256,6 +256,20 @@ describe("update", () => {
       404,
     );
   });
+
+  test("extra: an extra the patch does not name keeps its stored value", async () => {
+    const { id } = await createTagIn(served, database, {
+      name: "kept",
+      extra: { note: "keep me" },
+    });
+    await updateTagIn(served, database, id, { name: "renamed", extra: {} });
+    let row = (await all()).find((r) => r.id === id);
+    expect(row?.name).toBe("renamed");
+    expect(row?.note).toBe("keep me");
+    await updateTagIn(served, database, id, { name: "again" });
+    row = (await all()).find((r) => r.id === id);
+    expect(row?.note).toBe("keep me");
+  });
 });
 
 // ── Move ────────────────────────────────────────────────────────────────

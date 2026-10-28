@@ -23,7 +23,6 @@
     "dagre": "^0.8.5",
     "drizzle-orm": "^0.38.4",
     "jsonc-parser": "^3.3.1",
-    "drizzle-zod": "^0.8.3",
     "pg": "^8.23.1",
     "fractional-indexing": "^4.0.0",
     "react": "^19.3.1",
@@ -35,7 +34,7 @@
     "rehype-raw": "^7.0.0",
     "remark-gfm": "^4.0.0",
     "shiki": "^4.5.0",
-    "zod": "^3.23.8"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/bun": "^1.4.4",
@@ -94,13 +93,6 @@
         "below": "0.39.0",
         "reason": "Two changes need our side first (task-1793083762-bu58fd). 0.39 types select().from(source) as a conditional over the source, which TypeScript cannot resolve for a generic table: infra/retention's sweepExpired (select().from(T) feeding T's rows to beforeDelete) fails type-check on 0.43.1 and 0.45.4, and the cast-free fix needs a typed path for generic tables. 0.44 then wraps every driver error in DrizzleQueryError (the Postgres error under .cause), and ~21 production files classify Postgres errors by err.code / message, which would silently misclassify (0.45.4: six tests failed). Checked 2026-10-27. Lift with that task.",
         "issue": "https://github.com/drizzle-team/drizzle-orm/releases/tag/0.44.0",
-        "reviewBy": "2027-01-25"
-      },
-      {
-        "names": ["zod"],
-        "below": "4.0.0",
-        "reason": "zod 4 is a codebase migration, not a lock move: 1,116 files import the v3 API, and our own primitives read zod 3 internals (list-bound tags _def, zod-parser's no-narrow-zodtype reasons about ZodType<T>'s parameters, sql-column / sql-projection derive column types from schemas), while zod 4 moves them under _zod and reshapes its type parameters. Checked 2026-10-27 against 4.6.7; zod 3.25 already ships the v4 API as zod/v4 for an incremental path. Migration task-1793079250-84skjw; drizzle-zod 0.8 still accepts ^3.25. Lift with it.",
-        "issue": "https://zod.dev/v4/changelog",
         "reviewBy": "2027-01-25"
       },
       {

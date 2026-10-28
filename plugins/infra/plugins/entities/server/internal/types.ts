@@ -24,7 +24,6 @@ import type {
   InferFieldValue,
   InferStoredValue,
 } from "@plugins/fields/core";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import type {
   DerivedUpdatedAtSpec,
   TouchRule,
@@ -327,12 +326,12 @@ export interface Entity<
 //   type SlowOpRow = EntityRow<typeof slowOps>;
 // Inferred from the entity's OWN (already server-only-omitted) schema, so it is
 // the wire row shape regardless of `S`.
-// `ZodParser<infer T>` and not `z.ZodType<infer T>`: the latter recovers the
+// `z.ZodType<infer T>` and not `z.ZodType<infer T>`: the latter recovers the
 // schema's INPUT type, which for a schema carrying `.default()` is the shape
 // where those keys are optional — a row type that disagrees with `.parse()`
 // and errors nowhere. This one recovers the output, i.e. what actually exists
 // at runtime.
-export type EntityRow<E> = E extends { schema: ZodParser<infer T> } ? T : never;
+export type EntityRow<E> = E extends { schema: z.ZodType<infer T> } ? T : never;
 
 // ─── Default-marker constructors ───────────────────────────────────────────
 export function defaultNow(): DbDefault<never> {

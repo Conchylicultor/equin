@@ -12,7 +12,7 @@ const flight = await singleFlight(
     dir,                         // every coalescing process names the same dir
     key,                         // everything that changes the answer is IN it
     id: opId,                    // recorded as the leader if this caller leads
-    schema: VerdictSchema,       // ZodParser<V>: a published verdict is parsed before adoption
+    schema: VerdictSchema,       // z.ZodType<V>: a published verdict is parsed before adoption
     adoptable: (v) => v.outcome !== "interrupted",
     onJoin: (leader) => console.log(`waiting on ${leader?.id ?? "a starting run"}`),
     signal,                      // optional: abandon a pending JOIN wait

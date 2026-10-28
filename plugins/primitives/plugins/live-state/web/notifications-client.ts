@@ -3,7 +3,6 @@ import type {
   QueryCacheNotifyEvent,
   QueryClient,
 } from "@tanstack/react-query";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import {
   SharedWebSocket,
   type TransportSocket,
@@ -2744,7 +2743,7 @@ export class NotificationsClient {
     // Parse each upsert row individually via the array schema's element — never
     // re-parse the whole array (that's the cost this protocol removes).
     // biome-ignore lint/suspicious/noExplicitAny: zod array schemas expose `.element`.
-    const element = (schema as any).element as ZodParser<unknown>;
+    const element = (schema as any).element as z.ZodType<unknown>;
     const upsertMap = new Map<string, unknown>();
     for (const [rowId, row] of upserts)
       upsertMap.set(rowId, element.parse(row));

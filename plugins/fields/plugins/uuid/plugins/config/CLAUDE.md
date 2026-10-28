@@ -8,13 +8,18 @@
 - Core:
   - Uses:
     - `fields.declaredDefault`
+    - `fields.DefaultlessFieldDef`
+    - `fields.defineDefaultlessField`
+    - `fields.defineField`
     - `fields.ExactOptions`
     - `fields.FieldDef`
     - `fields.FieldMarks`
     - `fields.FieldMeta`
     - `fields.pickMeta`
     - `fields/uuid.uuidFieldType`
-  - Exports (types): `UuidFieldDef`
+  - Exports (types):
+    - `DefaultlessUuidFieldDef`
+    - `UuidFieldDef`
   - Exports (values): `uuidField`
 - Cross-plugin:
   - Imported by:

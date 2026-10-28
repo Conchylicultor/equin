@@ -1,5 +1,4 @@
 import { z } from "zod";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import {
   ColorAdjustmentSchema,
   TokenGroupFragmentsSchema,
@@ -35,7 +34,7 @@ export const SavedThemeSchema = z.object({
   extends: z.string().optional(),
   fragments: TokenGroupFragmentsSchema,
   colorAdjust: ColorAdjustmentSchema.optional(),
-}) satisfies ZodParser<Theme>;
+}) satisfies z.ZodType<Theme>;
 export type SavedTheme = z.infer<typeof SavedThemeSchema>;
 
 /**

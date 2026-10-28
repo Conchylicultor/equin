@@ -29,7 +29,9 @@ via `FieldRenderer` — nested `objectField` instances recurse automatically.
 - Core:
   - Uses:
     - `config_v2/fields.fieldSample`
+    - `fields.DefaultedFields`
     - `fields.FieldDef`
+    - `fields.fieldDefaults`
     - `fields.FieldMeta`
     - `fields.fieldSchemaWithDefault`
     - `fields.FieldsRecord`

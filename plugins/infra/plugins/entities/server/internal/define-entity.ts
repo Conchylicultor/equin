@@ -6,6 +6,7 @@ import {
 import type { FieldsRecord } from "@plugins/fields/core";
 import { pgTable, primaryKey, type PgTable } from "drizzle-orm/pg-core";
 import { z } from "zod";
+import { inspect } from "@plugins/packages/plugins/zod-introspect/core";
 import { snakeCase } from "./snake-case";
 import {
   compileFromTable,
@@ -37,15 +38,19 @@ import { isDbDefault } from "./types";
 // `.default()`), so wire and column nullability can never drift either. The
 // unwrap loops because `.optional().nullable()` nests — the same set
 // `isNullableSchema` recognised, now peeled to the bottom.
-function splitNullability(schema: z.ZodTypeAny): {
+function splitNullability(schema: z.ZodType): {
   nullable: boolean;
-  value: z.ZodTypeAny;
+  value: z.ZodType;
 } {
   let value = schema;
   let nullable = false;
-  while (value instanceof z.ZodOptional || value instanceof z.ZodNullable) {
+  for (
+    let node = inspect(value);
+    node.kind === "optional" || node.kind === "nullable";
+    node = inspect(value)
+  ) {
     nullable = true;
-    value = value.unwrap() as z.ZodTypeAny;
+    value = node.inner as z.ZodType;
   }
   return { nullable, value };
 }

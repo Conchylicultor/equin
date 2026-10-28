@@ -1,7 +1,6 @@
 import { and, eq, sql } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import type { z } from "zod";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import type { JobFactory } from "@plugins/infra/plugins/jobs/server";
 import { db } from "@plugins/database/server";
 import type { EventSource } from "./event";
@@ -9,7 +8,7 @@ import { triggerTableRegistry } from "./registry";
 
 export interface TriggerSpec<P, I> {
   on: EventSource<P>;
-  do: JobFactory<string, ZodParser<I>, z.ZodType>;
+  do: JobFactory<string, z.ZodType<I>, z.ZodType>;
   /**
    * The target job's full `input` value. Stored verbatim in the trigger row
    * and passed as `input` to the job's run handler at dispatch time. The

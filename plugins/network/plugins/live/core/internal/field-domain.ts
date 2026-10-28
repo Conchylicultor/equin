@@ -1,4 +1,8 @@
-import { z } from "zod";
+import {
+  peel,
+  valueSide,
+  type SchemaNode,
+} from "@plugins/packages/plugins/zod-introspect/core";
 import type {
   FieldDef,
   InferFieldValue,
@@ -71,28 +75,25 @@ export type FieldsFilterable<F> = {
  * pipeline's output).
  */
 export function schemaDomain(schema: unknown): FilterDomainId | null {
-  const s = unwrap(schema);
-  if (s instanceof z.ZodString || s instanceof z.ZodEnum) return "text";
-  if (s instanceof z.ZodNativeEnum) {
-    const values = Object.values(s.enum as Record<string, unknown>);
-    return values.every((v) => typeof v === "string") ? "text" : null;
+  const node = valueNode(schema);
+  if (node.kind === "string") return "text";
+  if (node.kind === "enum") {
+    return node.values.every((v) => typeof v === "string") ? "text" : null;
   }
-  if (s instanceof z.ZodLiteral) return literalDomain([s.value]);
-  if (s instanceof z.ZodUnion) {
-    const options = (s.options as unknown[]).map(unwrap);
-    if (options.every((o) => o instanceof z.ZodLiteral)) {
-      return literalDomain(
-        options.map((o) => (o as z.ZodLiteral<unknown>).value),
-      );
+  if (node.kind === "literal") return literalDomain(node.values);
+  if (node.kind === "union") {
+    const options = node.options.map(valueNode);
+    if (options.every((o) => o.kind === "literal")) {
+      return literalDomain(options.flatMap((o) => o.values));
     }
-    const domains = new Set(options.map(schemaDomain));
+    const domains = new Set(options.map((o) => schemaDomain(o.schema)));
     return domains.size === 1 ? [...domains][0]! : null;
   }
-  if (s instanceof z.ZodNumber) return "number";
-  if (s instanceof z.ZodBoolean) return "boolean";
-  if (s instanceof z.ZodDate) return "instant";
-  if (s instanceof z.ZodArray) {
-    return schemaDomain(s.element) === "text" ? "stringArray" : null;
+  if (node.kind === "number") return "number";
+  if (node.kind === "boolean") return "boolean";
+  if (node.kind === "date") return "instant";
+  if (node.kind === "array") {
+    return schemaDomain(node.element) === "text" ? "stringArray" : null;
   }
   return null;
 }
@@ -110,28 +111,17 @@ function literalDomain(values: readonly unknown[]): FilterDomainId | null {
   return null;
 }
 
-/** The schema a wrapper's values come from (see {@link schemaDomain}). */
-function unwrap(schema: unknown): unknown {
+/**
+ * The node a schema's values come from (see {@link schemaDomain}): the
+ * value-keeping wrappers peeled, then a pipe's value side or a lazy's target,
+ * repeated until neither applies.
+ */
+function valueNode(schema: unknown): SchemaNode {
   let s = schema;
   for (;;) {
-    if (
-      s instanceof z.ZodNullable ||
-      s instanceof z.ZodOptional ||
-      s instanceof z.ZodReadonly
-    ) {
-      s = s.unwrap();
-    } else if (s instanceof z.ZodDefault || s instanceof z.ZodCatch) {
-      s = s._def.innerType;
-    } else if (s instanceof z.ZodBranded) {
-      s = s.unwrap();
-    } else if (s instanceof z.ZodEffects) {
-      s = s.innerType();
-    } else if (s instanceof z.ZodPipeline) {
-      s = s._def.out;
-    } else if (s instanceof z.ZodLazy) {
-      s = s.schema;
-    } else {
-      return s;
-    }
+    const { node } = peel(s);
+    if (node.kind === "pipe") s = valueSide(node);
+    else if (node.kind === "lazy") s = node.inner;
+    else return node;
   }
 }

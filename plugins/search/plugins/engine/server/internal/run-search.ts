@@ -14,7 +14,7 @@ const SearchRowSchema = z.object({
   entity_id: z.string(),
   title: z.string(),
   route: z.string(),
-  metadata: z.record(z.unknown()),
+  metadata: z.record(z.string(), z.unknown()),
   snippet: z.string(),
 });
 

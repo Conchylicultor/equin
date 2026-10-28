@@ -2,11 +2,14 @@ import { getTableColumns, getTableName, eq } from "drizzle-orm";
 import type { AnyPgColumn, PgTable } from "drizzle-orm/pg-core";
 import type { z } from "zod";
 import type { Db } from "@plugins/database/server";
-import { fieldsToZodObject } from "@plugins/fields/core";
+import {
+  fieldsToPatchSchema,
+  fieldsToZodObject,
+  type InferFieldsObject,
+} from "@plugins/fields/core";
 import { defineServerContribution } from "@plugins/framework/plugins/server-core/core";
 import type { EntityTable } from "@plugins/infra/plugins/entities/server";
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import type {
   AnyTagTreeEntityRef,
   ExtraKeyOf,
@@ -70,9 +73,9 @@ export interface TagTreeStore {
   readonly table: TagTreeTableHandle;
   readonly carriers: readonly TagCarrier[];
   /** The tree's full row (base + extras), as stored — what a read is parsed with. */
-  readonly rowSchema: ZodParser<TagRow & Record<string, unknown>>;
+  readonly rowSchema: z.ZodType<TagRow & Record<string, unknown>>;
   /** What a client's `extra` is parsed with (only `editableExtras`, strict). */
-  readonly extraSchema: ZodParser<Record<string, unknown>>;
+  readonly extraSchema: z.ZodType<Record<string, unknown>>;
   readonly refuseDelete: (
     tag: TagRow & Record<string, unknown>,
   ) => string | null;
@@ -86,9 +89,7 @@ export interface ServedTagTree {
   readonly store: TagTreeStore;
 }
 
-type RowOf<R extends AnyTagTreeEntityRef> = z.infer<
-  ReturnType<typeof fieldsToZodObject<R["fields"]>>
->;
+type RowOf<R extends AnyTagTreeEntityRef> = InferFieldsObject<R["fields"]>;
 
 /**
  * Serve a declared tree: the engine's endpoints write it once it is
@@ -113,9 +114,6 @@ export function serveTagTree<R extends AnyTagTreeEntityRef, Row extends TagRow>(
     );
   }
   const rowSchema = fieldsToZodObject(tree.entity.fields);
-  const editable = Object.fromEntries(
-    (opts.editableExtras ?? []).map((k) => [k, true as const]),
-  );
   const refuse = opts.refuseDelete;
   return Object.freeze({
     tree: { id: tree.id, entity: tree.entity },
@@ -123,9 +121,12 @@ export function serveTagTree<R extends AnyTagTreeEntityRef, Row extends TagRow>(
       table: opts.table,
       carriers: opts.carriers,
       rowSchema: rowSchema as unknown as TagTreeStore["rowSchema"],
-      extraSchema: rowSchema.pick(editable).partial().strict() as ZodParser<
-        Record<string, unknown>
-      >,
+      // No default-backfill: an extra the patch does not name stays absent, so
+      // an update never resets it to its default.
+      extraSchema: fieldsToPatchSchema(
+        tree.entity.fields,
+        opts.editableExtras ?? [],
+      ),
       refuseDelete: refuse
         ? (tag: TagRow & Record<string, unknown>) => refuse(tag as RowOf<R>)
         : () => null,

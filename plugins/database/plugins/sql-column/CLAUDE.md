@@ -38,7 +38,7 @@ typed code as if it matched `T`, and nothing in either direction ever looks.
 
 ## Strict or tolerant — the author picks
 
-`parsedText` takes any `ZodParser<T>`, so both policies this repo already has are
+`parsedText` takes any `z.ZodType<T>`, so both policies this repo already has are
 spellable with nothing new:
 
 | the value set | schema | on an unknown value |

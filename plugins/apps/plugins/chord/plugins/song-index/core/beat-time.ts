@@ -1,5 +1,4 @@
 import { z } from "zod";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 
 // ── Where a section's beats sit in its recording ─────────────────────────────
@@ -41,7 +40,7 @@ const BEAT_GRID_REASON =
   "one section's beat grid: a point per beat of the section";
 
 /** An alignment on the wire or in a jsonb column. Checked only for shape: `beatTimesAlignment` checks the reading rules. */
-export const AlignmentSchema: ZodParser<Alignment> = z.discriminatedUnion(
+export const AlignmentSchema: z.ZodType<Alignment> = z.discriminatedUnion(
   "kind",
   [
     z.object({

@@ -32,7 +32,7 @@ const pathSchema = z.string().superRefine((p, ctx) => {
   const err = manifestPathError(p);
   if (err !== null)
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: "custom",
       message: `path "${p}" ${err}`,
     });
 });

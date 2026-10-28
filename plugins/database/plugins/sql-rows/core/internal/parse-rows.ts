@@ -1,5 +1,4 @@
-import type { ZodError } from "zod";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
+import type { ZodError, z } from "zod";
 import type { SqlResult } from "./types";
 import { SqlRowError, runtimeTypeOf, type SqlRowFailure } from "./errors";
 
@@ -13,14 +12,11 @@ import { SqlRowError, runtimeTypeOf, type SqlRowFailure } from "./errors";
  * string; for a nested `["meta", "a"]` where `meta` itself is a string, the
  * string is what the author needs to see, not `undefined`.
  */
-function valueAtPath(
-  root: unknown,
-  path: readonly (string | number)[],
-): unknown {
+function valueAtPath(root: unknown, path: readonly PropertyKey[]): unknown {
   let current = root;
   for (const segment of path) {
     if (current === null || typeof current !== "object") return current;
-    current = (current as Record<string | number, unknown>)[segment];
+    current = (current as Record<PropertyKey, unknown>)[segment];
   }
   return current;
 }
@@ -37,7 +33,7 @@ function valueAtPath(
  */
 export function parseRows<T>(
   result: SqlResult,
-  row: ZodParser<T>,
+  row: z.ZodType<T>,
   ctx: { sql?: string },
 ): T[] {
   const parsed: T[] = [];

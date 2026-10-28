@@ -1,4 +1,4 @@
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
+import type { z } from "zod";
 
 /**
  * One launch option's value contract — a frozen token BOTH runtimes import by
@@ -9,7 +9,7 @@ export interface LaunchOptionDef<V> {
   /** Stable key: the wire field, the reorder entry id, the server apply lookup. */
   readonly id: string;
   /** Wire + draft value type. JSON-serializable by construction. */
-  readonly schema: ZodParser<V>;
+  readonly schema: z.ZodType<V>;
   /**
    * Seed for a fresh draft card. An EXISTING task never reads this — the detail
    * surface binds to the task's own row (see `useTaskBinding`).

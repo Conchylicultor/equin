@@ -3,7 +3,7 @@ import {
   type ConfigDescriptor,
   type ConfigValues,
 } from "@plugins/config_v2/core";
-import type { FieldsRecord } from "@plugins/fields/core";
+import type { DefaultedFields, FieldsRecord } from "@plugins/fields/core";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import { enumField } from "@plugins/fields/plugins/enum/plugins/config/core";
@@ -199,10 +199,17 @@ export type LaunchAutomationConfigFields = AutomationConfigFields &
  */
 export function defineAutomationConfig<
   const X extends FieldsRecord = Record<never, never>,
->(id: string, defaults: AutomationConfigDefaults, extra?: X) {
-  return defineConfig({
+>(
+  id: string,
+  defaults: AutomationConfigDefaults,
+  extra?: X & DefaultedFields<X>,
+) {
+  const fields = { ...automationFields(defaults), ...(extra ?? ({} as X)) };
+  // Every common field has a default and `extra`'s are checked above; tsc
+  // cannot resolve `DefaultedFields` over the generic merge itself.
+  return defineConfig<typeof fields>({
     name: id,
-    fields: { ...automationFields(defaults), ...(extra ?? ({} as X)) },
+    fields: fields as typeof fields & DefaultedFields<typeof fields>,
   });
 }
 
@@ -214,14 +221,20 @@ export function defineAutomationConfig<
  */
 export function defineLaunchAutomationConfig<
   const X extends FieldsRecord = Record<never, never>,
->(id: string, defaults: LaunchAutomationConfigDefaults, extra?: X) {
-  return defineConfig({
+>(
+  id: string,
+  defaults: LaunchAutomationConfigDefaults,
+  extra?: X & DefaultedFields<X>,
+) {
+  const fields = {
+    ...automationFields(defaults),
+    ...launchFields(defaults),
+    ...(extra ?? ({} as X)),
+  };
+  // As in defineAutomationConfig: `extra`'s defaults are checked above.
+  return defineConfig<typeof fields>({
     name: id,
-    fields: {
-      ...automationFields(defaults),
-      ...launchFields(defaults),
-      ...(extra ?? ({} as X)),
-    },
+    fields: fields as typeof fields & DefaultedFields<typeof fields>,
   });
 }
 

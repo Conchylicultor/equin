@@ -33,9 +33,9 @@
 //
 // Browser-safe: type-only drizzle imports.
 
+import type { z } from "zod";
 import type { DriverValueDecoder, GetDecoderResult, SQL } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 
 /**
  * A Postgres type name, optionally an array of one (`text`, `double
@@ -63,7 +63,7 @@ export type ExprDecoder =
  * `withWire` column's codec; never handed `null`.
  */
 export interface ExprWire<Data, Wire> {
-  schema: ZodParser<Wire>;
+  schema: z.ZodType<Wire>;
   encode: (value: Data) => Wire;
 }
 

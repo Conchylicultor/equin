@@ -1,5 +1,4 @@
 import { z } from "zod";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 
 /**
  * One emoji a user (or a model) picked and something stored — a page icon.
@@ -28,7 +27,9 @@ export function isEmoji(s: string): s is Emoji {
 }
 
 /** THE parse that mints an {@link Emoji}. Every store of an emoji decodes through it. */
-export const EmojiSchema: ZodParser<Emoji> = z
+export const EmojiSchema: z.ZodType<Emoji> = z
   .string()
-  .refine(isEmoji, (s) => ({ message: `"${s}" is not a single emoji` }))
+  .refine(isEmoji, {
+    error: (iss) => `"${String(iss.input)}" is not a single emoji`,
+  })
   .transform((s) => s as Emoji);

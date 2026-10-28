@@ -1,5 +1,4 @@
 import { z } from "zod";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import type { ListShape } from "@plugins/packages/plugins/list-bound/core";
 import {
   registerResourceDescriptor,
@@ -189,7 +188,7 @@ export type LiveCountDescriptor<F> = ResourceDescriptor<
  * projects exactly these keys, which is what keeps a server-only column (a
  * dedup key, a secret) off the wire.
  */
-export type LiveRowSchema<Row> = ZodParser<Row> & {
+export type LiveRowSchema<Row> = z.ZodType<Row> & {
   readonly shape: { readonly [K in keyof NoInfer<Row>]-?: unknown };
 };
 
@@ -1350,16 +1349,16 @@ function fullCollection<Row, F, S extends string>(
   // A scoped collection's window rows carry `$scoped` beside them when the
   // tuple orders by a scoped column (the member values its order signature
   // reads) — declared the same way, split off the same way.
-  const windowKeys: Record<string, z.ZodTypeAny> = {
+  const windowKeys: Record<string, z.ZodType> = {
     [LIVE_ROW_KEY]: z.string().nullable(),
     ...(columnScope !== null
       ? { [LIVE_SCOPED_KEY]: z.record(z.string(), z.unknown()).optional() }
       : {}),
   };
   const windowRow = z.intersection(
-    row as unknown as z.ZodTypeAny,
+    row as unknown as z.ZodType,
     z.object(windowKeys),
-  ) as unknown as ZodParser<Row>;
+  ) as unknown as z.ZodType<Row>;
   const window = Object.assign(
     windowQueryResourceDescriptor(key, windowRow, spec.id, {
       defaultLimit: spec.default.limit,
@@ -1469,7 +1468,7 @@ function withColumnsSchema<Row>(
       `liveCollection("${key}"): "${LIVE_COLUMNS_KEY}" is reserved — the arm or exposed values ride under it`,
     );
   }
-  return (row as unknown as z.AnyZodObject).extend({
+  return (row as unknown as z.ZodObject).extend({
     [LIVE_COLUMNS_KEY]: z.record(z.string(), z.record(z.string(), z.unknown())),
   }) as unknown as LiveRowSchema<Row>;
 }

@@ -1,4 +1,4 @@
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
+import type { z } from "zod";
 
 /**
  * One kind of result an agent thread delivers: the MCP tool its agent calls to
@@ -17,7 +17,7 @@ import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
  */
 export interface ThreadResultDef<T = unknown, O = unknown> {
   readonly tool: string;
-  readonly schema: ZodParser<T>;
+  readonly schema: z.ZodType<T>;
   /**
    * Whether one turn keeps every accepted call of this kind (`true`: each is
    * its own result — tasks filed) or only the last (`false`, the default: a
@@ -31,7 +31,7 @@ export interface ThreadResultDef<T = unknown, O = unknown> {
    * host's card needs something only the tool knows (the id of what it
    * created). Absent: the result carries no output.
    */
-  readonly output?: ZodParser<O>;
+  readonly output?: z.ZodType<O>;
   /**
    * How many things one accepted payload delivers — what the thread's header
    * and a host's pill count ("8 picks" from one call holding eight). Default 1.
@@ -42,7 +42,7 @@ export interface ThreadResultDef<T = unknown, O = unknown> {
 
 interface ThreadResultDecl<T> {
   tool: string;
-  schema: ZodParser<T>;
+  schema: z.ZodType<T>;
   /** See {@link ThreadResultDef.multiple}; default false. */
   multiple?: boolean;
   count?: (payload: T) => number;
@@ -50,13 +50,13 @@ interface ThreadResultDecl<T> {
 
 /** Declare a result kind — see {@link ThreadResultDef}. */
 export function defineThreadResult<T, O>(
-  def: ThreadResultDecl<T> & { output: ZodParser<O> },
-): ThreadResultDef<T, O> & { readonly output: ZodParser<O> };
+  def: ThreadResultDecl<T> & { output: z.ZodType<O> },
+): ThreadResultDef<T, O> & { readonly output: z.ZodType<O> };
 export function defineThreadResult<T>(
   def: ThreadResultDecl<T> & { output?: undefined },
 ): ThreadResultDef<T, undefined>;
 export function defineThreadResult<T, O>(
-  def: ThreadResultDecl<T> & { output?: ZodParser<O> },
+  def: ThreadResultDecl<T> & { output?: z.ZodType<O> },
 ): ThreadResultDef<T, O | undefined> {
   if (def.tool.startsWith("mcp__")) {
     throw new Error(
@@ -89,7 +89,7 @@ export type ThreadResultOutput<D> =
  * Shaped as an MCP tool result: a handler returns it as is.
  */
 export function threadResultReply<O>(
-  def: { readonly tool: string; readonly output: ZodParser<O> },
+  def: { readonly tool: string; readonly output: z.ZodType<O> },
   output: O,
 ): { content: { type: "text"; text: string }[] } {
   const checked = def.output.safeParse(output);
@@ -106,7 +106,7 @@ export function threadResultReply<O>(
  * output, or why it cannot be read (not JSON, or not the schema's shape).
  */
 export function parseThreadResultOutput<O>(
-  schema: ZodParser<O>,
+  schema: z.ZodType<O>,
   content: string,
 ): { ok: true; output: O } | { ok: false; error: string } {
   let json: unknown;

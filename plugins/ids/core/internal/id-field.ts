@@ -8,7 +8,6 @@ import {
   pickMeta,
 } from "@plugins/fields/core";
 import { textFieldType } from "@plugins/fields/plugins/text/core";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import type { AnyIdKind, Id, IdKind, IdShape } from "./id-kind";
 
 // Every stored-id decoder minted, and the kind it decodes. A column built with
@@ -24,8 +23,8 @@ const decoderKinds = new WeakMap<object, AnyIdKind>();
  */
 export function storedIdSchema<P extends string>(
   kind: IdKind<P, IdShape>,
-): ZodParser<Id<P>> {
-  const schema: ZodParser<Id<P>> = z
+): z.ZodType<Id<P>> {
+  const schema: z.ZodType<Id<P>> = z
     .string()
     .transform((value) => value as Id<P>);
   decoderKinds.set(schema, kind as AnyIdKind);
@@ -94,7 +93,7 @@ export function externalIdField(opts: {
   // (`fields/text/storage`), and the decoder is the only thing
   // `ids:pk-declared` can read this declaration back off — a bare string here
   // left every `defineEntity` external id reported as undeclared.
-  const schema: ZodParser<string> = z.string().transform((value) => value);
+  const schema: z.ZodType<string> = z.string().transform((value) => value);
   decoderExternals.set(schema, opts.reason);
   return Object.freeze({
     type: textFieldType,

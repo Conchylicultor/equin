@@ -1,5 +1,4 @@
 import { z } from "zod";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
   isDescendant,
@@ -425,11 +424,11 @@ function anchorOf(anchorTypes: ReadonlySet<string>): IsAnchor {
 
 /**
  * Zod discriminated union mirroring `BlockOp`, for server body validation. The
- * explicit `ZodParser<BlockOp>` annotation pins the inferred output to the full
+ * explicit `z.ZodType<BlockOp>` annotation pins the inferred output to the full
  * union — without it, `defineEndpoint`'s `SpecType<B>` extraction collapses a
  * discriminated union to its last member.
  */
-export const BlockOpSchema: ZodParser<BlockOp> = z.discriminatedUnion("kind", [
+export const BlockOpSchema: z.ZodType<BlockOp> = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("split"),
     blockId: z.string(),

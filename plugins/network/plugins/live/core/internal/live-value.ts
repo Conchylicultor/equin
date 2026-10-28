@@ -1,5 +1,10 @@
 import { z } from "zod";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
+import {
+  childrenOf,
+  inspect,
+  peel,
+  type SchemaKind,
+} from "@plugins/packages/plugins/zod-introspect/core";
 import {
   BareListError,
   listShapeOf,
@@ -66,15 +71,16 @@ export type LiveValueParams<N extends readonly string[]> = Simplify<
  * A TYPED params declaration: each param name → the parser its wire string
  * must pass (`{ window: z.enum(LATENCY_WINDOWS) }`). The parser narrows the
  * string — it never changes it: its output is a `string` (tsc), and at
- * declaration a transforming, refining-by-effect, defaulting or catching
- * parser (`ZodEffects` / `ZodDefault` / `ZodCatch` anywhere in it, or a
- * rewriting string check — `.trim()` / `.toLowerCase()` / `.toUpperCase()`)
- * and one that accepts `undefined` are refused (a throw). So the value the loader
+ * declaration a transforming, defaulting or catching parser (a transform,
+ * `.preprocess()`, `.default()` / `.prefault()` / `.catch()` anywhere in it,
+ * or a rewriting check — `.trim()` / `.toLowerCase()` / `.toUpperCase()`)
+ * and one that accepts `undefined` are refused (a throw); a `.refine()` only
+ * tests the value, so it is accepted. So the value the loader
  * receives IS the wire string the client sent, and the runtime's tuple key is
  * unchanged. Every name is required: an optional typed param has no consumer
  * yet.
  */
-export type LiveValueParamParsers = Readonly<Record<string, ZodParser<string>>>;
+export type LiveValueParamParsers = Readonly<Record<string, z.ZodType<string>>>;
 
 /** The params object a typed declaration derives: each name → its parser's output. */
 export type LiveTypedValueParams<R extends LiveValueParamParsers> = {
@@ -258,7 +264,7 @@ export type LiveSnapshotBrand<L> = [L] extends ["snapshot"]
  * contract mismatch (its bundle does not know the code).
  */
 export type LiveRefusals<C extends string> =
-  z.ZodEnum<[C, ...C[]]> | readonly [C, ...C[]];
+  z.ZodEnum<{ [K in C]: K }> | readonly [C, ...C[]];
 
 /** The `refusals` field every `liveValue` form takes (see {@link LiveRefusals}). */
 export interface LiveRefusalsSpec<C extends string> {
@@ -297,7 +303,7 @@ export interface LiveValueSpec<T, L extends LiveValueLoad = LiveValueLoad> {
   /** A paged value — see {@link LivePagedValueSpec}. */
   paged?: undefined;
   /** The payload's wire schema — every push and HTTP read parses through it. */
-  schema: ZodParser<T>;
+  schema: z.ZodType<T>;
   params?: undefined;
   /**
    * Default `"none"` (see {@link LivePreload}). Never beside `load:
@@ -334,7 +340,7 @@ export interface LiveCentralValueSpec<
   bytes?: undefined;
   /** A paged value — see {@link LivePagedValueSpec}. */
   paged?: undefined;
-  schema: ZodParser<T>;
+  schema: z.ZodType<T>;
   params?: undefined;
   preload?: never;
   /** Default `"push"` (see {@link LiveValueLoad}). */
@@ -365,7 +371,7 @@ export interface LiveParamValueSpec<
   bytes?: undefined;
   /** A paged value — see {@link LivePagedValueSpec}. */
   paged?: undefined;
-  schema: ZodParser<T>;
+  schema: z.ZodType<T>;
   /**
    * The param names — a const tuple; derives `P` (each name → a string; a name
    * ending in `?` → an optional one, see {@link LiveValueParams}).
@@ -394,7 +400,7 @@ export interface LivePreloadedParamValueSpec<T, N extends readonly string[]> {
   bytes?: undefined;
   /** A paged value — see {@link LivePagedValueSpec}. */
   paged?: undefined;
-  schema: ZodParser<T>;
+  schema: z.ZodType<T>;
   /** As on {@link LiveParamValueSpec}. */
   params: N;
   preload: ResourcePreload;
@@ -428,7 +434,7 @@ export interface LiveTypedParamValueSpec<
   bytes?: undefined;
   /** A paged value — see {@link LivePagedValueSpec}. */
   paged?: undefined;
-  schema: ZodParser<T>;
+  schema: z.ZodType<T>;
   /** The param parsers — every name required. */
   params: R;
   preload?: never;
@@ -472,7 +478,7 @@ export interface LiveQueryValueSpec<
    * on-demand / snapshot `load` or a `preload`).
    */
   patches?: true;
-  schema: ZodParser<T>;
+  schema: z.ZodType<T>;
   /** The question's schema — its input is what `useLive` takes, its output what the loader gets. */
   query: LiveQuerySchema<Q, QIn>;
   params?: never;
@@ -527,7 +533,7 @@ export interface LivePagedSpec<Item, Meta> {
   /** The largest page a tuple may ask — at least 2 · `limit` (a page that splits is read at twice the step). */
   maxLimit: number;
   /** The per-question sibling's schema — see {@link LivePagedValue.meta}. */
-  meta?: ZodParser<Meta>;
+  meta?: z.ZodType<Meta>;
 }
 
 /**
@@ -888,7 +894,7 @@ export function liveValue<
 >(
   key: string,
   spec: LivePagedValueSpec<Item, Meta, Q, QIn, O> & {
-    paged: { meta: ZodParser<Meta> };
+    paged: { meta: z.ZodType<Meta> };
   } & LiveRefusalsSpec<C> &
     LiveMachineSpec<NM>,
 ): LivePagedValue<Item, Meta, Q, QIn, O, C, NM>;
@@ -1156,7 +1162,7 @@ type DeclaredValue<T> =
   | LivePagedPages<unknown, unknown, unknown, LiveValueOrigin>;
 
 /** The payload check of every bytes value, on both ends: an `ArrayBuffer` (realm-safe). */
-const LIVE_BYTES_SCHEMA: ZodParser<ArrayBuffer> = z.custom<ArrayBuffer>(
+const LIVE_BYTES_SCHEMA: z.ZodType<ArrayBuffer> = z.custom<ArrayBuffer>(
   (v) => Object.prototype.toString.call(v) === "[object ArrayBuffer]",
   { message: "a bytes value is an ArrayBuffer" },
 );
@@ -1222,7 +1228,7 @@ function bytesSpec<T>(
       ? undefined
       : Array.isArray(spec.refusals)
         ? (spec.refusals as readonly string[])
-        : (spec.refusals as z.ZodEnum<[string, ...string[]]>).options;
+        : (spec.refusals as z.ZodEnum<Record<string, string>>).options;
   // `maxBytes` declares the refusal it is enforced by (once, if also listed).
   const refusals =
     maxBytes === undefined
@@ -1261,7 +1267,7 @@ function refusalFields(
   if (refusals === undefined) return {};
   const codes: readonly string[] = Array.isArray(refusals)
     ? [...(refusals as readonly string[])]
-    : (refusals as z.ZodEnum<[string, ...string[]]>).options;
+    : (refusals as z.ZodEnum<Record<string, string>>).options;
   if (
     codes.length === 0 ||
     codes.some((c) => typeof c !== "string" || c === "") ||
@@ -1458,7 +1464,7 @@ function pagedValue(
   // declared on the wire schema (so the runtime's parse keeps it), and split
   // off by every read before items reach a consumer.
   const row = z.intersection(
-    item as unknown as z.ZodTypeAny,
+    item as unknown as z.ZodType,
     z.object({ [LIVE_ROW_KEY]: z.string().nullable() }),
   );
   return {
@@ -1511,35 +1517,24 @@ function isParamNameList(
 }
 
 /**
- * The zod type names a typed param's parser may not contain anywhere: each one
- * either CHANGES the value (a transform / preprocess — `ZodEffects`, which also
- * carries `.refine`, refused with it rather than told apart by a private
- * `effect.type`) or invents one where the wire had none (`ZodDefault`,
- * `ZodCatch`). Any of them would hand the loader something other than the
- * wire string its tuple is keyed by.
+ * The schema kinds a typed param's parser may not contain anywhere: each one
+ * either CHANGES the value (a transform — `.transform()`, `z.preprocess()`)
+ * or invents one where the wire had none (`.default()`, `.prefault()`,
+ * `.catch()`). Any of them would hand the loader something other than the
+ * wire string its tuple is keyed by. A `.refine()` is none of them: it is a
+ * check that only tests the value.
  */
-const REFUSED_PARSER_KINDS: ReadonlySet<string> = new Set([
-  "ZodEffects",
-  "ZodDefault",
-  "ZodCatch",
-]);
-
-/**
- * The `ZodString` checks that REWRITE the value in place rather than test it:
- * zod implements `.trim()` / `.toLowerCase()` / `.toUpperCase()` as entries in
- * `_def.checks`, not as a `ZodEffects`, so the type-name walk alone would let
- * them through — and `" a"` would reach the loader as `"a"`.
- */
-const REFUSED_STRING_CHECKS: ReadonlySet<string> = new Set([
-  "trim",
-  "toLowerCase",
-  "toUpperCase",
-]);
+const REFUSED_PARSER_KINDS: Readonly<Partial<Record<SchemaKind, string>>> = {
+  transform: "transform",
+  default: ".default()",
+  prefault: ".prefault()",
+  catch: ".catch()",
+};
 
 /**
  * Validate a typed params declaration at declaration time (what tsc cannot
  * see): a non-empty record of non-empty names, none of whose parsers contains a
- * refused kind (walked through every nested schema in its `_def`), and none of
+ * refused kind or a rewriting check (walked through every nested schema), and none of
  * which accepts `undefined` — every typed param is required, so a parser that
  * passes an absent value is a declaration of an optional param in disguise.
  */
@@ -1567,7 +1562,7 @@ function checkParamParsers(
       throw new Error(
         `liveValue("${key}"): param "${name}" is parsed by a ${refused} — a ` +
           `typed param's parser may only narrow the wire string, never ` +
-          `transform, default or catch it (the loader receives the wire ` +
+          `transform, rewrite, default or catch it (the loader receives the wire ` +
           `string itself).`,
       );
     }
@@ -1581,47 +1576,34 @@ function checkParamParsers(
   return parsers;
 }
 
-/** The zod kinds whose input is a JS array. */
-const LIST_KINDS: ReadonlySet<string> = new Set(["ZodArray", "ZodTuple"]);
+/** The schema kinds whose input is a JS array. */
+const LIST_KINDS: ReadonlySet<SchemaKind> = new Set<SchemaKind>([
+  "array",
+  "tuple",
+]);
 
 /**
  * The list kind a question schema's INPUT may take, or undefined: the schema
  * itself, then through every wrapper that passes its input on (optional,
- * nullable, default, catch, effects, branded, readonly, a pipeline's `in`)
- * and every union option. An object's fields are not walked — an object is
- * never an array, whatever it holds.
+ * nullable, default, catch, readonly, …), a pipe's `in` (and its `out` when
+ * `in` is a preprocess's transform, whose input is anything), and every union
+ * option. An object's fields are not walked — an object is never an array,
+ * whatever it holds. A lazy is not followed (never a question's shape).
  */
 function listQuestionKind(
   schema: unknown,
   seen: Set<unknown>,
-): string | undefined {
-  const typeName = zodTypeName(schema);
-  if (typeName === undefined || seen.has(schema)) return undefined;
+): SchemaKind | undefined {
+  if (seen.has(schema)) return undefined;
   seen.add(schema);
-  if (LIST_KINDS.has(typeName)) return typeName;
-  const def = (schema as { _def: Record<string, unknown> })._def;
-  const next: unknown[] = [];
-  switch (typeName) {
-    case "ZodOptional":
-    case "ZodNullable":
-    case "ZodDefault":
-    case "ZodCatch":
-    case "ZodReadonly":
-      next.push(def.innerType);
-      break;
-    case "ZodEffects":
-      next.push(def.schema);
-      break;
-    case "ZodBranded":
-      next.push(def.type);
-      break;
-    case "ZodPipeline":
-      next.push(def.in);
-      break;
-    case "ZodUnion":
-    case "ZodDiscriminatedUnion":
-      next.push(...(def.options as readonly unknown[]));
-      break;
+  const { node } = peel(schema);
+  if (LIST_KINDS.has(node.kind)) return node.kind;
+  let next: readonly unknown[] = [];
+  if (node.kind === "pipe") {
+    next =
+      inspect(node.in).kind === "transform" ? [node.in, node.out] : [node.in];
+  } else if (node.kind === "union") {
+    next = node.options;
   }
   for (const n of next) {
     const found = listQuestionKind(n, seen);
@@ -1630,51 +1612,46 @@ function listQuestionKind(
   return undefined;
 }
 
-/** A schema's zod type name (`_def.typeName`), or undefined for a non-schema. */
-function zodTypeName(node: unknown): string | undefined {
-  if (typeof node !== "object" || node === null || !("_def" in node)) {
-    return undefined;
-  }
-  const def: unknown = node._def;
-  if (typeof def !== "object" || def === null || !("typeName" in def)) {
-    return undefined;
-  }
-  return typeof def.typeName === "string" ? def.typeName : undefined;
-}
-
 /**
- * The first refused zod kind anywhere in `schema`: the schema itself, then
- * every schema (or array of schemas) held in its `_def` — `innerType`,
- * `schema`, `in` / `out`, `options`, `type`, … — so a refused kind cannot hide
- * under `.optional()`, `.pipe()`, `.brand()` or a union. A `ZodLazy` getter is
- * not followed (it is never a string parser's shape).
+ * The first refused part anywhere in `schema`, named for the message: a
+ * refused kind ({@link REFUSED_PARSER_KINDS}), a codec (its decode is a
+ * transform), or a check that REWRITES the value in place (`.trim()` /
+ * `.toLowerCase()` / `.toUpperCase()`, zod 4's `.overwrite()`, a format that
+ * rewrites its value — `z.url()` trims it) — checks, not wrappers, so a kind walk alone would let them
+ * through and `" a"` would reach the loader as `"a"`. Walks the schema
+ * itself, then every child — so nothing hides under `.optional()`, `.pipe()`,
+ * `.brand()` or a union. A value that is not a zod schema throws (`inspect`):
+ * a parser the walk cannot read is refused rather than trusted. A lazy is not
+ * followed (it is never a string parser's shape).
  */
 function findRefusedKind(
   schema: unknown,
   seen: Set<unknown>,
 ): string | undefined {
-  const typeName = zodTypeName(schema);
-  if (typeName === undefined || seen.has(schema)) return undefined;
+  if (seen.has(schema)) return undefined;
   seen.add(schema);
-  if (REFUSED_PARSER_KINDS.has(typeName)) return typeName;
-  const def = (schema as { _def: Record<string, unknown> })._def;
-  if (typeName === "ZodString" && Array.isArray(def.checks)) {
-    for (const check of def.checks as readonly unknown[]) {
-      const kind =
-        typeof check === "object" && check !== null && "kind" in check
-          ? check.kind
-          : undefined;
-      if (typeof kind === "string" && REFUSED_STRING_CHECKS.has(kind)) {
-        return `ZodString .${kind}()`;
-      }
-    }
+  const node = inspect(schema);
+  const refused = REFUSED_PARSER_KINDS[node.kind];
+  if (refused !== undefined) return refused;
+  if (node.kind === "pipe" && node.codec) {
+    return "codec (z.codec / z.stringbool())";
   }
-  for (const child of Object.values(def)) {
-    const children: readonly unknown[] = Array.isArray(child) ? child : [child];
-    for (const c of children) {
-      const found = findRefusedKind(c, seen);
-      if (found !== undefined) return found;
-    }
+  if (node.checks.some((check) => check.kind === "rewrite")) {
+    return (
+      `rewriting ${node.kind} check (.trim() / .toLowerCase() / ` +
+      `.toUpperCase() / .overwrite())`
+    );
+  }
+  const rewritingFormat = node.checks.find(
+    (check) => check.kind === "format" && check.rewrites,
+  );
+  if (rewritingFormat !== undefined && rewritingFormat.kind === "format") {
+    return `rewriting ${rewritingFormat.format} format (it trims or normalises its value)`;
+  }
+  if (node.kind === "lazy") return undefined;
+  for (const child of childrenOf(node)) {
+    const found = findRefusedKind(child.schema, seen);
+    if (found !== undefined) return found;
   }
   return undefined;
 }

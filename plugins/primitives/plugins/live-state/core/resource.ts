@@ -1,4 +1,4 @@
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
+import type { z } from "zod";
 
 // `origin` tells the browser-side NotificationsClient which WS endpoint owns
 // this resource: per-worktree backends serve the default origin, central
@@ -25,7 +25,7 @@ export interface ResourceDescriptor<
    * in — `T` is bound to the schema's parse output, so type and runtime can't
    * drift.
    */
-  schema: ZodParser<T>;
+  schema: z.ZodType<T>;
   /**
    * Marks a row-keyed delta-sync resource (server `mode: "keyed"`). The server
    * ships only changed rows + the id order; the client merges by id. `keyOf`

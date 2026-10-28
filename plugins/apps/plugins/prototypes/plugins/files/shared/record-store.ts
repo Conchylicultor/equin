@@ -1,3 +1,4 @@
+import type { z } from "zod";
 import {
   readText,
   relPath,
@@ -5,7 +6,6 @@ import {
   type RelPath,
 } from "@plugins/infra/plugins/paths/plugins/data-files/core";
 import type { WriteOrigin } from "@plugins/infra/plugins/request-origin/core";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { protoIdKind } from "../core";
 
 // A small JSON record per prototype, kept BESIDE the folders in a `_`-prefixed
@@ -32,7 +32,7 @@ export interface RecordKind<R, C> {
   dirName: string;
   /** How a malformed file is named in its error (`prototype picks`). */
   label: string;
-  schema: ZodParser<R>;
+  schema: z.ZodType<R>;
   /** The record a prototype has when there is no file. Writing it removes the file. */
   empty: R;
   /** `record` with `change` applied — the one fold. */

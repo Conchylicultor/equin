@@ -1,7 +1,7 @@
+import type { z } from "zod";
 import { closeSync, fstatSync, openSync, readdirSync, readSync } from "node:fs";
 import { open } from "node:fs/promises";
 import { join } from "node:path";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { sanitizeChannel } from "@plugins/infra/plugins/file-sink/core";
 import { worktreeDataDir } from "@plugins/infra/plugins/paths/server";
 import { asNamespace } from "@plugins/infra/plugins/namespace/core";
@@ -187,7 +187,7 @@ export function readChannelJson<T>(
   worktree: string,
   channel: string,
   tail: number,
-  schema: ZodParser<T>,
+  schema: z.ZodType<T>,
 ): T[] {
   return parseJsonEntries(readChannelEntries(worktree, channel, tail), schema);
 }
@@ -197,7 +197,7 @@ export async function readChannelJsonAsync<T>(
   worktree: string,
   channel: string,
   tail: number,
-  schema: ZodParser<T>,
+  schema: z.ZodType<T>,
 ): Promise<T[]> {
   return parseJsonEntries(
     await readTailAsync(channelFile(worktree, channel), tail),
@@ -207,7 +207,7 @@ export async function readChannelJsonAsync<T>(
 
 function parseJsonEntries<T>(
   entries: { line: string }[] | null,
-  schema: ZodParser<T>,
+  schema: z.ZodType<T>,
 ): T[] {
   if (!entries) return [];
   const out: T[] = [];

@@ -1,6 +1,6 @@
+import type { z } from "zod";
 import { getTableColumns, type SQL } from "drizzle-orm";
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { columnWireCodec } from "@plugins/database/plugins/sql-column/server";
 import {
   BASE_RELATION,
@@ -262,13 +262,13 @@ export function compileAllSpecs<Row, B extends string = never>(
     }
   }
   const rowShape = collection.row.shape as Readonly<Record<string, unknown>>;
-  const fieldSchema = (name: string): ZodParser<unknown> => {
+  const fieldSchema = (name: string): z.ZodType<unknown> => {
     const schema = (exposedFields.get(name)?.schema ?? rowShape[name]) as
-      Partial<ZodParser<unknown>> | undefined;
+      Partial<z.ZodType<unknown>> | undefined;
     if (typeof schema?.safeParse !== "function") {
       return fail(`row schema field "${name}" is not a zod schema.`);
     }
-    return schema as ZodParser<unknown>;
+    return schema as z.ZodType<unknown>;
   };
   // A wire codec's `encode` is code the L2 definition cannot read (A18): a
   // change to it would serve rows persisted under the old encoding as current.

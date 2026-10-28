@@ -1,1 +1,5 @@
-export { uuidField, type UuidFieldDef } from "./internal/uuid";
+export {
+  uuidField,
+  type DefaultlessUuidFieldDef,
+  type UuidFieldDef,
+} from "./internal/uuid";

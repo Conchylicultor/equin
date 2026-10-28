@@ -1,5 +1,4 @@
 import { z } from "zod";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import {
   wholeList,
@@ -15,7 +14,7 @@ const TREE_REASON =
 // facet's shape lives in its own `core/` and consumers read `facets[id]` directly
 // via a contribution-carried id; modelling every facet here would duplicate those
 // types for no parse-safety benefit.
-const pluginNodeSchema: ZodParser<PluginNode> = z.lazy(() =>
+const pluginNodeSchema: z.ZodType<PluginNode> = z.lazy(() =>
   z.object({
     path: z.string(),
     name: z.string(),
@@ -36,7 +35,7 @@ const pluginNodeSchema: ZodParser<PluginNode> = z.lazy(() =>
   }),
 );
 
-export const pluginTreePayloadSchema: ZodParser<PluginTreePayload> = z.object({
+export const pluginTreePayloadSchema: z.ZodType<PluginTreePayload> = z.object({
   pluginsRoot: z.string(),
   plugins: wholeList(pluginNodeSchema, { reason: TREE_REASON }),
   totals: z.object({

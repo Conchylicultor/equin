@@ -1,4 +1,4 @@
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
+import type { z } from "zod";
 import {
   defineServerContribution,
   type ServerContribution,
@@ -18,7 +18,7 @@ export interface TraceEventClassSpec<T = unknown> {
   /** Stable lane/section id, e.g. "spans", "gates", "contention", "heap". */
   id: string;
   /** Validates this class's section. Persisted under snapshot.events[id]. */
-  schema: ZodParser<T>;
+  schema: z.ZodType<T>;
   /**
    * Phase 1 — runs SYNCHRONOUSLY at the trip instant, in the profiler hot path.
    * Must be cheap (no IO, no heavy allocation) and never throw (the engine

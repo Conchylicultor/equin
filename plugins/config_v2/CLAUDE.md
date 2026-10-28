@@ -487,6 +487,7 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
   - Register: `defineFileWatcher('config_v2.config-files')`
 - Core:
   - Uses:
+    - `fields.fieldDefaults`
     - `fields.fieldsToZodObject`
     - `fields/list/config.isListFieldDef`
     - `fields/list/config.ListFieldDef`

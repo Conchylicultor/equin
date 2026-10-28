@@ -33,7 +33,7 @@ describe("a schema that does not narrow the column", () => {
 
   test("`z.any()` still decodes — `any` would prove nothing", () => {
     const anySchema = pgTable("json_storage_any", {
-      c: decode("c", z.any() as z.ZodType<unknown, z.ZodTypeDef, unknown>),
+      c: decode("c", z.any() as z.ZodType<unknown>),
     });
     expect(is(anySchema.c, PgCustomColumn)).toBe(true);
     // `z.any().parse` is a pass-through: it costs nothing and claims nothing.

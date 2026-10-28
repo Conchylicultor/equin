@@ -1,5 +1,5 @@
+import type { z } from "zod";
 import { notificationsWsHandler } from "@plugins/framework/plugins/server-core/core";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 
 /**
  * What an OLD bundle's tab gets when it subscribes a key the way its own
@@ -28,7 +28,7 @@ export type OldSubscription =
 export interface OldDescriptor {
   key: string;
   /** The old payload schema (`z.array(OldRowSchema)` for a legacy keyed descriptor). */
-  schema: ZodParser<unknown>;
+  schema: z.ZodType<unknown>;
 }
 
 interface WsHandler {

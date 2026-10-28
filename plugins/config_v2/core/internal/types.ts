@@ -44,7 +44,7 @@ export interface ConfigDescriptor<
   O extends OriginDefaultsFrom = OriginDefaultsFrom,
 > {
   readonly name: string;
-  readonly schema: z.ZodObject<Record<string, z.ZodTypeAny>>;
+  readonly schema: z.ZodObject<Record<string, z.ZodType>>;
   readonly fields: F;
   readonly defaults: ConfigValues<F>;
   // Whether `defaults` above IS this descriptor's origin document, or only a

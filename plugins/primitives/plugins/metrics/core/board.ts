@@ -49,7 +49,7 @@ export type BoardSection = z.infer<typeof BoardSectionSchema>;
 export const BoardSpecSchema = z
   .object({
     /** Tab-level param values, keyed `<source>.<param>` — a source's params are shared by all its metrics. */
-    params: z.record(z.unknown()).default({}),
+    params: z.record(z.string(), z.unknown()).default({}),
     sections: z.array(BoardSectionSchema).min(1),
   })
   .strict()
@@ -58,7 +58,7 @@ export const BoardSpecSchema = z
     for (const [i, section] of spec.sections.entries()) {
       if (seen.has(section.id)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: "custom",
           path: ["sections", i, "id"],
           message: `section id "${section.id}" is used twice`,
         });

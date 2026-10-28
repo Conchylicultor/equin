@@ -9,7 +9,7 @@ export const OptimisticRejectionPayloadSchema = z.object({
   // The live-state resource key the rejected write targeted.
   resourceKey: z.string(),
   // The resource params the write was aimed at (the page id, …), if any.
-  params: z.record(z.string()).nullable(),
+  params: z.record(z.string(), z.string()).nullable(),
   // The consumer's `label` ("what is being saved"), if it passed one.
   label: z.string().nullable(),
   // The HTTP status the server answered with.

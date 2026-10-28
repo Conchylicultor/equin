@@ -1,11 +1,11 @@
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
+import type { z } from "zod";
 import { parseRows } from "./parse-rows";
 import type { ParsedResult, SqlExecutable, SqlQueryable } from "./types";
 
 /**
  * The front doors. Each one reads rows AND parses them in the same call, so
  * there is no spelling of any door that hands back an unparsed row: `row` is
- * required, and a `ZodParser<T>` cannot be produced by writing a type argument.
+ * required, and a `z.ZodType<T>` cannot be produced by writing a type argument.
  *
  * `queryResult` / `executeResult` are the widest pair — they surface `fields`
  * and `rowCount` alongside the parsed rows — and the rows-only doors are thin
@@ -54,7 +54,7 @@ function exactlyOne<T>(rows: T[], sql: string | undefined): T {
  */
 export async function queryResult<T>(
   client: SqlQueryable,
-  opts: { sql: string; params?: unknown[]; row: ZodParser<T> },
+  opts: { sql: string; params?: unknown[]; row: z.ZodType<T> },
 ): Promise<ParsedResult<T>> {
   const result = await client.query(opts.sql, opts.params);
   return {
@@ -67,7 +67,7 @@ export async function queryResult<T>(
 /** Run `sql` on a pg-shaped client and parse every row. */
 export async function queryRows<T>(
   client: SqlQueryable,
-  opts: { sql: string; params?: unknown[]; row: ZodParser<T> },
+  opts: { sql: string; params?: unknown[]; row: z.ZodType<T> },
 ): Promise<T[]> {
   return (await queryResult(client, opts)).rows;
 }
@@ -75,7 +75,7 @@ export async function queryRows<T>(
 /** {@link queryRows}, for a query whose contract is exactly one row. */
 export async function queryOne<T>(
   client: SqlQueryable,
-  opts: { sql: string; params?: unknown[]; row: ZodParser<T> },
+  opts: { sql: string; params?: unknown[]; row: z.ZodType<T> },
 ): Promise<T> {
   return exactlyOne(await queryRows(client, opts), opts.sql);
 }
@@ -90,7 +90,7 @@ export async function queryOne<T>(
  */
 export async function executeResult<T, Q>(
   db: SqlExecutable<Q>,
-  opts: { query: Q; row: ZodParser<T>; label?: string },
+  opts: { query: Q; row: z.ZodType<T>; label?: string },
 ): Promise<ParsedResult<T>> {
   const result = await db.execute(opts.query);
   return {
@@ -103,7 +103,7 @@ export async function executeResult<T, Q>(
 /** {@link executeResult}, for a caller that only wants the rows. */
 export async function executeRows<T, Q>(
   db: SqlExecutable<Q>,
-  opts: { query: Q; row: ZodParser<T>; label?: string },
+  opts: { query: Q; row: z.ZodType<T>; label?: string },
 ): Promise<T[]> {
   return (await executeResult(db, opts)).rows;
 }
@@ -111,7 +111,7 @@ export async function executeRows<T, Q>(
 /** {@link executeRows}, for a query whose contract is exactly one row. */
 export async function executeOne<T, Q>(
   db: SqlExecutable<Q>,
-  opts: { query: Q; row: ZodParser<T>; label?: string },
+  opts: { query: Q; row: z.ZodType<T>; label?: string },
 ): Promise<T> {
   return exactlyOne(await executeRows(db, opts), opts.label);
 }

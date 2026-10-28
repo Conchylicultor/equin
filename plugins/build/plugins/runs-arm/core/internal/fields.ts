@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { enumTextField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { liveArm } from "@plugins/network/plugins/live/core";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import {
   BUILD_STATUS_OPTIONS_META,
   type BuildStatus,
@@ -30,7 +29,7 @@ const BUILD_STATUSES = Object.keys(BUILD_STATUS_VALUES) as [
   ...BuildStatus[],
 ];
 
-export const BuildStatusSchema: ZodParser<BuildStatus> = z.enum(BUILD_STATUSES);
+export const BuildStatusSchema: z.ZodType<BuildStatus> = z.enum(BUILD_STATUSES);
 
 /**
  * The fields only a build row has — its slice of the `runs` union

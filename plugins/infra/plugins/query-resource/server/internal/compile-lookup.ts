@@ -1,3 +1,4 @@
+import type { z } from "zod";
 import { sql } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
 import { db as realDb, readTag } from "@plugins/database/server";
@@ -10,7 +11,6 @@ import type {
   ColumnRef,
   JoinSpec,
 } from "@plugins/infra/plugins/query-resource/core";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { planArm } from "./arm-plan";
 import { compileJoins } from "./joins";
 import { BASE_ROUTE_ID, routedBase, tablePrimary } from "./routes";
@@ -106,7 +106,7 @@ export interface LookupSpec<Row> {
   /** The projection: each field a column of the base (`from: "base"`) or of a join (`from: <alias>`). */
   select: Readonly<Record<string, ColumnRef>>;
   /** The row the projection decodes to — every row `run` returns is parsed by it. */
-  row: ZodParser<Row>;
+  row: z.ZodType<Row>;
   /** Test seam. Defaults to the real per-worktree drizzle `db`. */
   db?: QueryDb;
 }

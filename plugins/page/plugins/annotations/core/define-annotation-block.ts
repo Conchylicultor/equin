@@ -1,4 +1,4 @@
-import type { AnyZodObject, z } from "zod";
+import type { z, ZodObject } from "zod";
 import {
   defineContainerBlock,
   type ContainerBlockOptions,
@@ -19,7 +19,7 @@ import type {
  * reaches annotations with no edit here, and the two surfaces cannot drift into
  * disagreeing about what a container may declare.
  */
-export type AnnotationBlockOptions<S extends AnyZodObject> =
+export type AnnotationBlockOptions<S extends ZodObject> =
   ContainerBlockOptions<S> & {
     /**
      * Who may RECEIVE this card's content — `"agent"` for the three cards
@@ -97,7 +97,7 @@ export type AnnotationBlockHandle<T> = BlockHandle<T> & {
  * either field on a handle is exactly the proof that it came through here,
  * because nothing else can set them.
  */
-export function defineAnnotationBlock<S extends AnyZodObject>(
+export function defineAnnotationBlock<S extends ZodObject>(
   opts: AnnotationBlockOptions<S> & RejectTextBearing<S>,
 ): AnnotationBlockHandle<z.infer<S>> {
   // `opts` is passed WHOLE rather than destructured: `RejectTextBearing<S>` is an

@@ -81,7 +81,7 @@ export function commitPointsNote(d: { truncated: boolean }): string | null {
 }
 
 /** The points of a commits series, capped at `COMMIT_POINTS_MAX`. */
-function points<T extends z.ZodTypeAny>(point: T) {
+function points<T extends z.ZodType>(point: T) {
   return cappedList(point, { max: COMMIT_POINTS_MAX });
 }
 

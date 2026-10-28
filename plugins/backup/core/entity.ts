@@ -44,12 +44,8 @@ export const backupRunFields = {
    * The wide manifest decoder on purpose — see `BackupManifestSchema`: v1 rows
    * exist, and a column that decodes has to accept what is really there.
    */
-  manifest: nullable(
-    jsonField({ schema: BackupManifestSchema, default: null }),
-  ),
-  targetResults: nullable(
-    jsonField({ schema: BackupTargetResultsSchema, default: [] }),
-  ),
+  manifest: nullable(jsonField({ schema: BackupManifestSchema })),
+  targetResults: nullable(jsonField({ schema: BackupTargetResultsSchema })),
 } satisfies FieldsRecord;
 
 /** The `backup_runs` entity — every backup run, host-global. */

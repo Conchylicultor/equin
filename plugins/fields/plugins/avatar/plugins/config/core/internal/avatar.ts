@@ -1,5 +1,4 @@
 import { z } from "zod";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { type FieldDef, type FieldMeta, pickMeta } from "@plugins/fields/core";
 import {
   avatarFieldType,
@@ -11,7 +10,7 @@ import { SavedSymbolNameSchema } from "@plugins/ui/plugins/icons/plugins/saved-n
 // A saved config still holding a classic key (`star_outline`) is migrated at
 // build time (the owning config's `migrations`), never decoded here — a classic
 // key fails this parse.
-const avatarSpecSchema: ZodParser<AvatarSpec> = z.object({
+const avatarSpecSchema: z.ZodType<AvatarSpec> = z.object({
   icon: SavedSymbolNameSchema.nullable(),
   color: z.string().nullable(),
 });

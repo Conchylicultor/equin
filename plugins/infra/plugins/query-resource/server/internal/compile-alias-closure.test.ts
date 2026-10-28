@@ -290,8 +290,8 @@ async function drainLog(): Promise<Change[]> {
       seq: z.coerce.number(),
       tbl: z.string(),
       op: z.string(),
-      old: z.record(z.unknown()).nullable(),
-      new: z.record(z.unknown()).nullable(),
+      old: z.record(z.string(), z.unknown()).nullable(),
+      new: z.record(z.string(), z.unknown()).nullable(),
     }),
     label: "log",
   });

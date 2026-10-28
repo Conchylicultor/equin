@@ -28,6 +28,6 @@ export const SearchDocSchema = z.object({
   title: z.string(),
   body: z.string(),
   route: z.string(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 export type SearchDoc = z.infer<typeof SearchDocSchema>;

@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import type { FileRef } from "./file-ref";
 
 /** A {@link FileRef} as a question: where the file's bytes live. */
@@ -13,7 +12,7 @@ const FileRefSchema = z.discriminatedUnion("source", [
     path: z.string(),
   }),
   z.object({ source: z.literal("data"), root: z.string(), path: z.string() }),
-]) satisfies ZodParser<FileRef>;
+]) satisfies z.ZodType<FileRef>;
 
 /** The largest file whose bytes are handed over whole (64 MiB). */
 export const FILE_BYTES_MAX = 64 * 1024 * 1024;

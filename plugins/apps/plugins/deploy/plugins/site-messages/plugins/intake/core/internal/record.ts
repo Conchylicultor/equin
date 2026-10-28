@@ -68,7 +68,7 @@ export const SiteMessagesListQuerySchema = z
       .int()
       .min(1)
       .max(SITE_MESSAGES_PAGE_MAX)
-      .default(SITE_MESSAGES_PAGE_DEFAULT),
+      .prefault(SITE_MESSAGES_PAGE_DEFAULT),
   })
   .strict();
 export type SiteMessagesListQuery = z.input<typeof SiteMessagesListQuerySchema>;

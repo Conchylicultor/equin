@@ -1,4 +1,8 @@
-import { fieldsToZodObject, type FieldsRecord } from "@plugins/fields/core";
+import {
+  fieldDefaults,
+  fieldsToZodObject,
+  type FieldsRecord,
+} from "@plugins/fields/core";
 
 /**
  * A source's `config` blob, resolved against its type's own `configFields`.
@@ -39,7 +43,5 @@ export function readConfigValues(
 export function initialConfigValues(
   fields: FieldsRecord,
 ): Record<string, unknown> {
-  return Object.fromEntries(
-    Object.entries(fields).map(([key, field]) => [key, field.defaultValue]),
-  );
+  return fieldDefaults(fields, "an event source's config");
 }

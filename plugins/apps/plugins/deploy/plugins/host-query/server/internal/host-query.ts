@@ -1,5 +1,5 @@
-import { eq } from "drizzle-orm";
 import type { z } from "zod";
+import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { sshRun } from "@plugins/infra/plugins/ssh/server";
@@ -70,7 +70,7 @@ async function resolveDeployment(
 export function hostOnlyQueryOverSsh<T>(
   deploymentId: string,
   path: string,
-  schema: z.ZodType<T, z.ZodTypeDef, unknown>,
+  schema: z.ZodType<T>,
 ): Promise<HostQueryAnswer<T>> {
   return sshSessions.run(() =>
     queryOverSsh({ resolveDeployment, sshRun }, deploymentId, path, schema),

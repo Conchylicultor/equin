@@ -37,7 +37,7 @@ const CONCURRENCY = 8;
 
 const PackumentSchema = z.object({
   "dist-tags": z.object({ latest: z.string() }).passthrough(),
-  time: z.record(z.string()),
+  time: z.record(z.string(), z.string()),
 });
 
 async function fetchPackument(name: string): Promise<Packument> {

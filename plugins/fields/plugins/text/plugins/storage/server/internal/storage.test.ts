@@ -33,13 +33,16 @@ describe("a schema that does not narrow the column", () => {
       "anything at all",
     );
   });
-
-  test("is recognised through a refinement chain (`.min()` is still a ZodString)", () => {
-    expect(is(t.refined, PgCustomColumn)).toBe(false);
-  });
 });
 
 describe("a schema that narrows the column", () => {
+  test("a checked string (`.min(1)`) decodes — it claims something about the rows", () => {
+    expect(is(t.refined, PgCustomColumn)).toBe(true);
+    expect(t.refined.getSQLType()).toBe("text");
+    expect(t.refined.mapFromDriverValue("ok")).toBe("ok");
+    expect(() => t.refined.mapFromDriverValue("")).toThrow(SqlColumnError);
+  });
+
   test("gets a decoder that really runs, on a column that is still `text`", () => {
     expect(is(t.kind, PgCustomColumn)).toBe(true);
     // `text` in the DDL is what makes adopting this generate no migration.
@@ -47,8 +50,8 @@ describe("a schema that narrows the column", () => {
     expect(t.kind.mapFromDriverValue("agent")).toBe("agent");
   });
 
-  // A tolerant column is a `z.preprocess` — a ZodEffects, not a ZodString — so
-  // it must land on the decoding branch. It is the one arm where a wrong branch
+  // A tolerant column is a `z.preprocess` — a pipe out of a transform, not a
+  // bare string — so it must land on the decoding branch. It is the one arm where a wrong branch
   // would be invisible: the identity branch would accept the legacy value AND
   // hand it on unnormalized, which is the bug the tolerant schema exists to fix.
   test("a tolerant (preprocess) schema decodes, and normalizes on read", () => {

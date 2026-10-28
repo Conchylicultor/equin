@@ -1,11 +1,10 @@
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
+import type { z } from "zod";
 import type { FieldType, FieldMeta } from "./types";
 
 // The canonical field atom: bundles the type token (→ UI via the fields
 // identity registry), the wire zod fragment, a default, and meta. `type`
 // references the local `FieldType`, which fields/core owns; the only import
-// that leaves this plugin is the `ZodParser` alias, a `packages/…` leaf that
-// pulls in nothing but zod's types. Kept named `FieldDef` (established across
+// that leaves this plugin is zod's own types. Kept named `FieldDef` (established across
 // ~40 sites).
 export interface FieldDef<T = unknown> {
   readonly type: FieldType<T>;
@@ -15,13 +14,22 @@ export interface FieldDef<T = unknown> {
    * `.default()`, `.catch()`, `.coerce()` and `.transform()` usable inside a
    * field schema.
    */
-  readonly schema: ZodParser<T>;
+  readonly schema: z.ZodType<T>;
   /**
    * Output-typed on purpose: `defaultValue` is read as a live `T` throughout
    * the repo (it seeds form values, and in config_v2 it *is* the config value).
-   * See the re-parse note on `fieldSchemaWithDefault`.
+   * Always a value the schema accepts: `defineField` and
+   * `fieldSchemaWithDefault` assert `schema.safeParse(defaultValue)`, so an
+   * invalid default fails loudly at definition time, never at a read. A field
+   * with no meaningful default has none ({@link DefaultlessFieldDef}).
    */
   readonly defaultValue: T;
+  /**
+   * `true` on a field that has NO default ({@link DefaultlessFieldDef}): a
+   * missing key fails to parse instead of healing to a stand-in, and its
+   * `defaultValue` throws when read.
+   */
+  readonly defaultless?: true;
   /**
    * `true` when the author DECLARED the default (`intField({ default: 0 })`),
    * absent when `defaultValue` is the factory's implicit backfill (`0`, `""`,
@@ -32,6 +40,18 @@ export interface FieldDef<T = unknown> {
    */
   readonly defaultDeclared?: true;
   readonly meta: FieldMeta;
+}
+
+/**
+ * A field type with no meaningful default (a uuid has no value that is "any
+ * uuid"): built by `defineDefaultlessField`, it carries no stand-in. Its
+ * `defaultValue` is `never` — reading it is a type smell and, at runtime, a
+ * loud throw — and `fieldsToZodObject` leaves its key required. Such a field is
+ * therefore always written (a primary key) or wrapped in `nullable()`.
+ */
+export interface DefaultlessFieldDef<T = unknown> extends FieldDef<T> {
+  readonly defaultValue: never;
+  readonly defaultless: true;
 }
 
 /** A field whose default was declared (see `FieldDef.defaultDeclared`). */

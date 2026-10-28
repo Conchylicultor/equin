@@ -11,7 +11,7 @@ export const LiveStateStaleDropPayloadSchema = z.object({
   // The live-state resource key whose HTTP body was dropped.
   key: z.string(),
   // The resource params the dropped fetch was for.
-  params: z.record(z.string()),
+  params: z.record(z.string(), z.string()),
   // Why the body was dropped: `stale-version` = same-boot strict-`<` guard
   // (body.version < entry.version); `stale-epoch` = the body's boot epoch is the
   // stale one (case 3 of the cross-boot guard matrix).

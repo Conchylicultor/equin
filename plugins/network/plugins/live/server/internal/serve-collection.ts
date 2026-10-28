@@ -1,6 +1,6 @@
+import type { z } from "zod";
 import { and, getTableColumns, getTableName, sql, type SQL } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import {
   filterColumns,
   type Filter,
@@ -637,13 +637,13 @@ export function compileCollection<
     }
   }
   const rowShape = collection.row.shape as Readonly<Record<string, unknown>>;
-  const fieldSchema = (name: string): ZodParser<unknown> => {
+  const fieldSchema = (name: string): z.ZodType<unknown> => {
     const schema = (foldedFields.get(name)?.schema ?? rowShape[name]) as
-      Partial<ZodParser<unknown>> | undefined;
+      Partial<z.ZodType<unknown>> | undefined;
     if (typeof schema?.safeParse !== "function") {
       return fail(`row schema field "${name}" is not a zod schema.`);
     }
-    return schema as ZodParser<unknown>;
+    return schema as z.ZodType<unknown>;
   };
   // A column read through a LEFT join (its own or an ancestor's) is NULL for a
   // host with no joined row, whatever its own NOT NULL says — so its field

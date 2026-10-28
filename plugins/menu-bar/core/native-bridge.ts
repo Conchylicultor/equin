@@ -1,5 +1,4 @@
 import { z } from "zod";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 
 /**
  * What the native helper (`menu-bar/rust`, the `equin-desktop` tray) can do on
@@ -71,7 +70,7 @@ export const BRIDGE_METHODS = [
 ] as const satisfies readonly (keyof EquinNativeBridge)[];
 
 /** Parses `hostInfo()`'s untrusted answer: anything else is a broken bridge. */
-export const NativeHostInfoSchema: ZodParser<NativeHostInfo> = z.object({
+export const NativeHostInfoSchema: z.ZodType<NativeHostInfo> = z.object({
   version: z.literal(1),
   platform: z.enum(["macos", "linux"]),
   capabilities: z.object({

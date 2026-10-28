@@ -9,6 +9,7 @@ import {
   wholeList,
   wholeRecord,
 } from "@plugins/packages/plugins/list-bound/core";
+import { withRawListBoundTag } from "@plugins/packages/plugins/list-bound/core/testing";
 import { liveValue } from "./live-value";
 
 const S = z.object({ n: z.number() });
@@ -207,22 +208,40 @@ describe("liveValue", () => {
       );
     });
 
-    test("a transforming, refining, defaulting or catching parser throws at declaration — wherever it hides", () => {
-      const refused: [string, z.ZodType<string, z.ZodTypeDef, unknown>][] = [
-        ["ZodEffects", z.string().transform((s) => s.toLowerCase())],
-        ["ZodEffects", z.string().refine((s) => s.length > 0)],
-        ["ZodEffects", z.preprocess((x) => String(x), z.string())],
-        ["ZodDefault", z.string().default("1h")],
-        ["ZodCatch", z.string().catch("1h")],
-        ["ZodEffects", z.string().pipe(z.string().transform((s) => s.trim()))],
-        ["ZodDefault", z.union([z.literal("a"), z.string().default("b")])],
-        // String checks that rewrite the value in place (no ZodEffects).
-        ["ZodString \\.trim\\(\\)", z.string().trim()],
-        ["ZodString \\.toLowerCase\\(\\)", z.string().min(1).toLowerCase()],
+    test("a transforming, rewriting, defaulting or catching parser throws at declaration — wherever it hides", () => {
+      const refused: [string, z.ZodType<string>][] = [
+        ["transform", z.string().transform((s) => s.toLowerCase())],
+        ["transform", z.preprocess((x) => String(x), z.string())],
+        ["\\.default\\(\\)", z.string().default("1h")],
+        ["\\.catch\\(\\)", z.string().catch("1h")],
+        ["transform", z.string().pipe(z.string().transform((s) => s.trim()))],
         [
-          "ZodString \\.toUpperCase\\(\\)",
-          z.string().pipe(z.string().toUpperCase()),
+          "\\.default\\(\\)",
+          z.union([z.literal("a"), z.string().default("b")]),
         ],
+        // A transform behind a refinement or a brand is still found.
+        [
+          "transform",
+          z
+            .string()
+            .transform((s) => s.trim())
+            .refine((s) => s.length > 0),
+        ],
+        // String checks that rewrite the value in place (no wrapper).
+        ["rewriting string check", z.string().trim()],
+        ["rewriting string check", z.string().min(1).toLowerCase()],
+        ["rewriting string check", z.string().pipe(z.string().toUpperCase())],
+        ["rewriting string check", z.string().trim().brand<"Id">()],
+        // A codec decodes through a function; a url trims (and may normalise).
+        [
+          "codec",
+          z.codec(z.string(), z.string(), {
+            decode: (s) => s.toUpperCase(),
+            encode: (s) => s,
+          }),
+        ],
+        ["rewriting url format", z.url()],
+        ["rewriting url format", z.url({ normalize: true })],
       ];
       refused.forEach(([kind, parser], i) => {
         expect(() =>
@@ -232,6 +251,44 @@ describe("liveValue", () => {
           }),
         ).toThrow(new RegExp(`parsed by a ${kind}`));
       });
+    });
+
+    test("a refining parser is accepted: a refinement only tests the wire string", () => {
+      const refined = liveValue("test.live-value.typed-refined", {
+        schema: S,
+        params: {
+          id: z.string().refine((s) => s.startsWith("a")),
+          window: z.enum(["1h", "7d"]).superRefine(() => undefined),
+        },
+      });
+      expect(() =>
+        refined.validateParams({ id: "ab", window: "1h" }),
+      ).not.toThrow();
+      expect(() => refined.validateParams({ id: "b", window: "1h" })).toThrow(
+        ResourceContractError,
+      );
+      // Beside it, the same base with a trim(), a transform or a default is not.
+      for (const [i, parser] of [
+        z
+          .string()
+          .refine((s) => s.startsWith("a"))
+          .pipe(z.string().trim()),
+        z
+          .string()
+          .refine((s) => s.startsWith("a"))
+          .transform((s) => s),
+        z
+          .string()
+          .refine((s) => s.startsWith("a"))
+          .default("a"),
+      ].entries()) {
+        expect(() =>
+          liveValue(`test.live-value.typed-refined-refused-${i}`, {
+            schema: S,
+            params: { id: parser },
+          }),
+        ).toThrow(/parsed by a/);
+      }
     });
 
     test("a parser that accepts undefined throws at declaration (every typed param is required)", () => {
@@ -250,36 +307,17 @@ describe("liveValue", () => {
       ).toThrow(/empty params record/);
     });
 
-    test("the backstop: a parser that slips a transform past the walk throws a plain Error at the gate", () => {
-      // A hand-rolled ZodType whose _parse changes the value: no refused kind
-      // in its `_def`, so only the gate's `data !== v` can catch it.
-      class Upper extends z.ZodType<string, z.ZodTypeDef, unknown> {
-        _parse(input: z.ParseInput): z.ParseReturnType<string> {
-          if (typeof input.data === "string") {
-            return z.OK(input.data.toUpperCase());
-          }
-          z.addIssueToContext(this._getOrReturnCtx(input), {
-            code: z.ZodIssueCode.custom,
-            message: "not a string",
-          });
-          return z.INVALID;
-        }
-      }
-      const sneaky = liveValue("test.live-value.typed-backstop", {
-        schema: S,
-        params: { id: new Upper({}) },
-      });
-      let thrown: unknown;
-      try {
-        sneaky.validateParams({ id: "a" });
-      } catch (err) {
-        thrown = err;
-      }
-      expect(thrown).toBeInstanceOf(Error);
-      expect(thrown).not.toBeInstanceOf(ResourceContractError);
-      expect(String(thrown)).toMatch(/must return the wire string unchanged/);
-      // A value it returns unchanged passes.
-      expect(() => sneaky.validateParams({ id: "A" })).not.toThrow();
+    test("a parser the walk cannot read is refused, not trusted", () => {
+      // A hand-rolled parser with no zod kind: nothing to check it against.
+      const opaque = {
+        parse: (v: unknown) => String(v),
+      } as unknown as z.ZodType<string>;
+      expect(() =>
+        liveValue("test.live-value.typed-opaque", {
+          schema: S,
+          params: { id: opaque },
+        }),
+      ).toThrow(/not a zod 4 schema/);
     });
 
     test("types: a parsers record typed with an index signature is refused", () => {
@@ -403,7 +441,7 @@ describe("liveValue — the declared list shape", () => {
   const Row = z.object({
     id: z.string(),
     segments: wholeList(z.string(), { reason: "one row's handful of tags" }),
-    flags: z.record(z.enum(["a", "b"]), z.boolean()),
+    flags: z.partialRecord(z.enum(["a", "b"]), z.boolean()),
   });
 
   test("a plain value's shape is its schema's lists, each with its bound", () => {
@@ -529,7 +567,7 @@ describe("liveValue — the declared list shape", () => {
   });
 
   test("a paged value's bare item list or meta list is refused", () => {
-    const paged = (key: string, item: z.AnyZodObject, meta?: z.ZodTypeAny) =>
+    const paged = (key: string, item: z.ZodObject, meta?: z.ZodType) =>
       liveValue(key, {
         query: z.object({ list: z.string() }),
         paged: {
@@ -551,7 +589,7 @@ describe("liveValue — the declared list shape", () => {
       paged(
         "test.live-value.shape.paged-bare-meta",
         z.object({ id: z.string() }),
-        z.object({ hosts: z.record(z.number()) }),
+        z.object({ hosts: z.record(z.string(), z.number()) }),
       ),
     ).toThrow(/paged-bare-meta.*`hosts`/);
   });
@@ -565,12 +603,13 @@ describe("liveValue — the declared list shape", () => {
   });
 
   test("a malformed marker throws at declaration, naming the key and the path", () => {
-    const xs = z.array(z.string());
-    (xs._def as unknown as Record<string, unknown>).listBound = { reason: "" };
+    const xs = withRawListBoundTag(z.array(z.string()), { reason: "" });
     expect(() =>
       liveValue("test.live-value.shape.malformed", {
         schema: z.object({ xs }),
       }),
-    ).toThrow(/liveValue\("test\.live-value\.shape\.malformed"\).*`xs`/);
+    ).toThrow(
+      /liveValue\("test\.live-value\.shape\.malformed"\).*`xs`.*empty reason/,
+    );
   });
 });

@@ -1,6 +1,6 @@
 import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import type { ClassName } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
-import type { AnyZodObject, z } from "zod";
+import type { z, ZodObject } from "zod";
 import { runsOf, type RichText } from "./rich-text";
 import { rowDataOf, type RowData } from "./row-data";
 import type { TextBearingSchema } from "./text-data";
@@ -36,12 +36,12 @@ export type BlockAuthor = "agent" | "human";
 
 export interface BlockHandle<T> {
   type: string;
-  schema: AnyZodObject;
+  schema: ZodObject;
   parse(data: unknown): T;
   /**
    * Non-throwing twin of `parse`, typed against the block's own data. Defensive
    * readers (data may be transient/empty mid-edit) use this instead of
-   * `schema.safeParse` — the interface erases `schema` to `AnyZodObject`, whose
+   * `schema.safeParse` — the interface erases `schema` to `ZodObject`, whose
    * `safeParse` result is untyped.
    */
   safeParse(
@@ -422,7 +422,7 @@ export interface BlockHandle<T> {
  * gets `text?: undefined`. Keyed on the compile-time brand so the lens is present
  * exactly where the block carries text.
  */
-type TextLens<S extends AnyZodObject> = S extends TextBearingSchema
+type TextLens<S extends ZodObject> = S extends TextBearingSchema
   ? { text(data: z.infer<S>): RichText }
   : { text?: undefined };
 
@@ -433,12 +433,12 @@ type TextLens<S extends AnyZodObject> = S extends TextBearingSchema
  * gets a named, unsatisfiable type rather than a silently inert field.
  * (Containers never see it at all — `ContainerBlockOptions` has no such key.)
  */
-type SemanticsFor<S extends AnyZodObject> = S extends TextBearingSchema
+type SemanticsFor<S extends ZodObject> = S extends TextBearingSchema
   ? BlockSemantics
   : { __semantics_requires_a_text_bearing_schema: never };
 
 export function defineBlock<
-  S extends AnyZodObject,
+  S extends ZodObject,
   // Whether this type is a container ANCHOR, captured as a LITERAL rather than
   // erased to the handle's own `anchor?: true`. The handle's optional field
   // cannot tell "a container" from "anything at all", so `Editor.Block`'s

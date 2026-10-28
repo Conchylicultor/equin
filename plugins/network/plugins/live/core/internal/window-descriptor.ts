@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { ResourceContractError } from "@plugins/packages/plugins/resource-protocol/core";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import {
   registerResourceDescriptor,
   type PointParams,
@@ -67,7 +66,7 @@ function pkKeyOf<Row>(pkField: keyof Row & string): (row: unknown) => string {
 /** A keyed row-array descriptor, registered for boot hydration. */
 function keyedRows<Row, P extends Record<string, string>>(
   key: string,
-  rowSchema: ZodParser<Row>,
+  rowSchema: z.ZodType<Row>,
   pkField: keyof Row & string,
   opts: {
     preload?: ResourcePreload;
@@ -104,7 +103,7 @@ function keyedRows<Row, P extends Record<string, string>>(
  */
 export function windowQueryResourceDescriptor<Row>(
   key: string,
-  rowSchema: ZodParser<Row>,
+  rowSchema: z.ZodType<Row>,
   pkField: keyof Row & string,
   opts: { defaultLimit: number; preload?: ResourcePreload },
 ): WindowQueryResourceContract<Row> {
@@ -160,7 +159,7 @@ export function isPointId(id: string): boolean {
 
 export function pointQueryResourceDescriptor<Row>(
   key: string,
-  rowSchema: ZodParser<Row>,
+  rowSchema: z.ZodType<Row>,
   pkField: keyof Row & string,
   maxIds: number,
 ): PointQueryResourceContract<Row> {
@@ -258,7 +257,7 @@ export function pointQueryResourceDescriptor<Row>(
  */
 export function allResourceDescriptor<Row, B extends string = never>(
   key: string,
-  rowSchema: ZodParser<Row>,
+  rowSchema: z.ZodType<Row>,
   pkField: keyof Row & string,
   opts: {
     all: AllQueryResourceContract<Row, B>["all"];

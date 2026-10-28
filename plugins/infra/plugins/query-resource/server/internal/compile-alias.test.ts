@@ -961,7 +961,7 @@ describe("the definition (A18 / A40)", () => {
   });
 
   test("moves with a parsedText column's schema alone", () => {
-    const onStatus = (schema: z.ZodType<string, z.ZodTypeDef, string>) => {
+    const onStatus = (schema: z.ZodType<string, string>) => {
       const t = pgTable("a_flat", {
         id: text("id").primaryKey(),
         createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
@@ -1180,14 +1180,14 @@ describe("bind-time refusals", () => {
   test("A18: a parsed schema whose output depends on a function body", () => {
     let n = 0;
     for (const [schema, part] of [
-      [z.unknown().transform((v) => v === "t"), "a transform effect"],
-      [z.preprocess((v) => v === "t", z.boolean()), "a preprocess effect"],
+      [z.unknown().transform((v) => v === "t"), "/out: a transform"],
+      [z.preprocess((v) => v === "t", z.boolean()), "/in: a transform"],
+      [z.string().trim(), "a rewrite check"],
       [z.boolean().catch(false), "a catch value"],
       [
         z.boolean().default(() => n++ % 2 === 0),
         "a default that is not one JSON value",
       ],
-      [z.promise(z.boolean()), "an unhandled ZodPromise"],
     ] as const) {
       refuses(
         withAtt({

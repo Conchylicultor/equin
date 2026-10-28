@@ -66,7 +66,7 @@ export const deleteEventsTestTargeting = defineEndpoint({
 // on the triggers over HTTP; the pane reads events' live `event-triggers` value.
 export const listEventsTestTriggers = defineEndpoint({
   route: "GET /api/events-test/triggers",
-  response: z.object({ rows: z.array(z.record(z.unknown())) }),
+  response: z.object({ rows: z.array(z.record(z.string(), z.unknown())) }),
 });
 
 export const waitEventsTestIdle = defineEndpoint({

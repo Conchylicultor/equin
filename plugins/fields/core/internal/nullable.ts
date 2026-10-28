@@ -1,3 +1,4 @@
+import { defineField } from "./define-field";
 import type { FieldDef, InferFieldValue, MetaMarksOf } from "./field-spec";
 import type { FieldType } from "./types";
 
@@ -22,7 +23,7 @@ import type { FieldType } from "./types";
 export function nullable<D extends FieldDef>(
   def: D,
 ): FieldDef<InferFieldValue<D> | null> & MetaMarksOf<D> {
-  return Object.freeze({
+  return defineField({
     type: def.type as unknown as FieldType<InferFieldValue<D> | null>,
     schema: def.schema.nullable(),
     defaultValue: null,

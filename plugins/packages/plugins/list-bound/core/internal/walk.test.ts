@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { defineSchemaTag } from "@plugins/packages/plugins/zod-introspect/core";
 import { z } from "zod";
 import {
   cappedList,
@@ -14,6 +15,7 @@ import {
   listBoundsOf,
   listShapeOf,
 } from "./walk";
+import { withRawListBoundTag } from "../testing";
 
 const Item = z.object({ id: z.string(), n: z.number() });
 
@@ -79,6 +81,39 @@ describe("markers — the tag survives zod's clones", () => {
     ]);
   });
 
+  test.each([
+    ["brand", whole.brand<"X">()],
+    ["refine", whole.refine((xs) => xs.length < 9)],
+    [
+      "brand().refine().optional()",
+      whole
+        .brand<"X">()
+        .refine(() => true)
+        .optional(),
+    ],
+  ] as const)("%s — no wrapper at all", (_, schema) => {
+    expect(listShapeOf(schema).bounds).toEqual([
+      { path: LIST_ROOT_PATH, reason: "a handful" },
+    ]);
+  });
+
+  test("the tag never lands on the schema the marker was handed", () => {
+    const arr = z.array(z.string());
+    expect(listShapeOf(withRawListBoundTag(arr, { reason: "r" })).bare).toEqual(
+      [],
+    );
+    expect(listShapeOf(arr).bare).toEqual([LIST_ROOT_PATH]);
+  });
+
+  test("another copy of the module reads the tag (a plain def key, no registry)", () => {
+    // A web artifact bundling its own list-bound defines its own tag object.
+    const theirs = defineSchemaTag<unknown>("list-bound");
+    expect(theirs.get(whole)).toEqual({ reason: "a handful" });
+    expect(theirs.get(whole.describe("x").min(1))).toEqual({
+      reason: "a handful",
+    });
+  });
+
   test("a capped record keeps its tag under .optional() / .describe()", () => {
     const s = cappedRecord(z.string(), { max: 9 }).optional().describe("x");
     expect(listShapeOf(s).bounds).toEqual([{ path: LIST_ROOT_PATH, max: 9 }]);
@@ -119,7 +154,7 @@ describe("listShapeOf — the walk", () => {
         }),
         { max: 500 },
       ),
-      counts: z.record(z.number()),
+      counts: z.record(z.string(), z.number()),
       truncated: z.boolean(),
     });
     expect(listShapeOf(s)).toEqual({
@@ -158,9 +193,27 @@ describe("listShapeOf — the walk", () => {
       A,
       B,
     }
-    expect(listShapeOf(z.record(z.nativeEnum(Num), z.number())).bounds).toEqual(
-      [{ path: LIST_ROOT_PATH, max: 2 }],
-    );
+    expect(
+      listShapeOf(z.partialRecord(z.enum(Num), z.number())).bounds,
+    ).toEqual([{ path: LIST_ROOT_PATH, max: 2 }]);
+  });
+
+  test("a loose record is not capped by its finite key set", () => {
+    const loose = z.looseRecord(z.enum(["a", "b"]), z.string());
+    expect(listShapeOf(z.object({ m: loose }))).toEqual({
+      bounds: [],
+      bare: ["m"],
+    });
+    expect(() => listBoundsOf(z.object({ m: loose }))).toThrow(BareListError);
+  });
+
+  test("a map's native .max / .size caps it", () => {
+    expect(listBoundsOf(z.map(z.string(), z.number()).max(50))).toEqual([
+      { path: LIST_ROOT_PATH, max: 50 },
+    ]);
+    expect(listBoundsOf(z.map(z.string(), z.number()).size(3))).toEqual([
+      { path: LIST_ROOT_PATH, max: 3 },
+    ]);
   });
 
   test("unions and discriminated unions: every option's lists, deduped by path and bound", () => {
@@ -191,7 +244,7 @@ describe("listShapeOf — the walk", () => {
       rest: z.tuple([z.string()]).rest(z.number()),
       e: z.array(z.string()).transform((xs) => xs.length),
       r: z.array(z.string()).refine((xs) => xs.length > 0),
-      p: z.string().pipe(z.array(z.string()).max(1)),
+      p: z.any().pipe(z.array(z.string()).max(1)),
       br: z.array(z.string()).brand<"X">(),
       c: z.array(z.string()).catch([]),
       pr: z.promise(z.array(z.string())),
@@ -232,6 +285,22 @@ describe("listShapeOf — the walk", () => {
   test("an object catchall is a record", () => {
     const s = z.object({ a: z.string() }).catchall(z.array(z.number()));
     expect(listShapeOf(s).bare).toEqual([LIST_ROOT_PATH, "{}"]);
+    const tagged = wholeRecord(z.number(), { reason: "r" });
+    expect(
+      listShapeOf(z.object({ a: z.string() }).catchall(tagged)).bounds,
+    ).toEqual([{ path: "{}", reason: "r" }]);
+  });
+
+  test("an object keeping unknown keys as they are is no list (zod 4 spells .passthrough() as a catchall of unknown)", () => {
+    const shape = { a: z.string() };
+    for (const s of [
+      z.object(shape).passthrough(),
+      z.object(shape).catchall(z.unknown()),
+      z.object(shape).catchall(z.any()),
+      z.object(shape).strict(),
+    ]) {
+      expect(listShapeOf(s)).toEqual({ bounds: [], bare: [] });
+    }
   });
 
   test("unknown and any are opaque", () => {
@@ -274,10 +343,10 @@ describe("listShapeOf — the walk", () => {
   test("a recursion cut below a shared node does not hide its lists elsewhere", () => {
     // B is reached first under A (where its link back to A is cut), then
     // from the root on its own: there its walk must reach A's lists again.
-    const A: z.ZodTypeAny = z.lazy(() =>
+    const A: z.ZodType = z.lazy(() =>
       z.object({ b: B, as: z.array(z.string()) }),
     );
-    const B: z.ZodTypeAny = z.lazy(() => z.object({ a: A.optional() }));
+    const B: z.ZodType = z.lazy(() => z.object({ a: A.optional() }));
     expect(listShapeOf(z.object({ x: A, y: B })).bare).toEqual([
       "x.as",
       "y.a.as",
@@ -290,17 +359,15 @@ describe("listShapeOf — the walk", () => {
   });
 
   test("a malformed tag set by hand throws, naming the path", () => {
-    const s = z.array(z.string());
-    (s._def as unknown as Record<string, unknown>).listBound = { reason: "" };
+    const s = withRawListBoundTag(z.array(z.string()), { reason: "" });
     expect(() => listShapeOf(z.object({ xs: s }))).toThrow("`xs`");
-    const t = z.array(z.string());
-    (t._def as unknown as Record<string, unknown>).listBound = { size: 3 };
+    const t = withRawListBoundTag(z.array(z.string()), { size: 3 });
     expect(() => listShapeOf(t)).toThrow("malformed tag");
   });
 
-  test("a value that is not a zod 3 schema throws", () => {
-    expect(() => listShapeOf({})).toThrow("not a zod 3 schema");
-    expect(() => listShapeOf(null)).toThrow("not a zod 3 schema");
+  test("a value that is not a zod schema throws", () => {
+    expect(() => listShapeOf({})).toThrow("not a zod schema");
+    expect(() => listShapeOf(null)).toThrow("not a zod schema");
   });
 });
 
@@ -312,7 +379,10 @@ describe("listBoundsOf — enforcing", () => {
   });
 
   test("throws a BareListError naming every bare list", () => {
-    const s = z.object({ a: z.array(z.string()), b: z.record(z.number()) });
+    const s = z.object({
+      a: z.array(z.string()),
+      b: z.record(z.string(), z.number()),
+    });
     let thrown: unknown;
     try {
       listBoundsOf(s, { where: 'liveValue("k")' });

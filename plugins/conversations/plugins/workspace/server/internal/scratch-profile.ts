@@ -1,8 +1,8 @@
+import type { z } from "zod";
 import {
   registeringPlugin,
   type Registration,
 } from "@plugins/framework/plugins/server-core/core";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 
 /**
  * A scratch workspace's profile: everything a scratch agent gets, since it
@@ -18,7 +18,7 @@ export interface ScratchProfileDef<I> {
   label: string;
   description: string;
   /** Validates the launch's `input` when the attempt is created. */
-  inputSchema: ZodParser<I>;
+  inputSchema: z.ZodType<I>;
   /** The agent's whole project context: written to `<dir>/CLAUDE.md`. */
   instructions: (input: I) => string;
   /**

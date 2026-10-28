@@ -1,7 +1,6 @@
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { z } from "zod";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import {
   AnalysisPhaseSchema,
   BeatFeaturesSchema,
@@ -63,7 +62,7 @@ export function stateFromFiles(files: FeatureFiles): BeatFeaturesState {
 
 async function readIfExists<T>(
   path: string,
-  schema: ZodParser<T>,
+  schema: z.ZodType<T>,
 ): Promise<T | null> {
   let text: string;
   try {

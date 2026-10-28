@@ -8,6 +8,7 @@ import {
 } from "@plugins/database/plugins/sql-projection/server";
 import { columnSchema } from "@plugins/database/plugins/sql-column/server";
 import { jsonAggValue } from "@plugins/infra/plugins/query-resource/core";
+import { describeSchema } from "@plugins/packages/plugins/zod-introspect/core";
 
 // The L2 DEFINITION of a persisted compile (A18 of
 // research/2026-10-01-global-scoped-change-routing-p5-p8-v2.md; A40): a
@@ -73,7 +74,8 @@ export function renderQuery(
  * sql-projection's `decoderOrigin`, never a function's identity or source.
  * Any other function is OPAQUE: a change to its body could not move the
  * definition, so a persisted compile refuses it (`fail`, naming `where`) —
- * and so is a `parsed` schema with an opaque part (`describeZodParts`).
+ * and so is a `parsed` schema with an opaque part (`describeSchema`'s
+ * `opaque`).
  */
 export function decoderId(
   decoder: SqlDecoderLike,
@@ -101,10 +103,10 @@ export function decoderId(
     case "builtin":
       return `builtin:${origin.name}`;
     case "parsed": {
-      const { description, opaque } = describeZodParts(origin.schema);
+      const { description, opaque } = describeSchema(origin.schema);
       if (opaque.length > 0) {
         return fail(
-          `${where}'s decoder is \`parsed(…, "${origin.label}")\` over a schema whose output depends on a function body (${opaque.join("; ")}) — the definition of a persisted compile could not move when that body does, so a value the old decoder produced would be served after a deploy (A18). Decode with a schema every part of which is data (a refinement is fine; a transform, preprocess, catch or computed default is not).`,
+          `${where}'s decoder is \`parsed(…, "${origin.label}")\` over a schema whose output depends on a function body (${opaque.join("; ")}) — the definition of a persisted compile could not move when that body does, so a value the old decoder produced would be served after a deploy (A18). Decode with a schema every part of which is data (a refinement is fine; a transform, preprocess, rewrite check such as \`.trim()\`, catch or computed default is not).`,
         );
       }
       return `parsed:${JSON.stringify([origin.label, description])}`;
@@ -118,205 +120,18 @@ export function decoderId(
   }
 }
 
-/** A JSON value a default may be recorded as: a scalar, an array or a plain object of them. */
-function isJsonLiteral(value: unknown): boolean {
-  if (value === null) return true;
-  if (Array.isArray(value)) return value.every(isJsonLiteral);
-  if (typeof value === "object") {
-    return (
-      Object.getPrototypeOf(value) === Object.prototype &&
-      Object.values(value as object).every(isJsonLiteral)
-    );
-  }
-  return (
-    typeof value === "string" ||
-    typeof value === "boolean" ||
-    (typeof value === "number" && Number.isFinite(value))
-  );
-}
-
-/** The marker a part of a schema no description can see into is described as. */
-const OPAQUE = "$opaque";
-
 /**
- * A zod schema as data (zod 3's `_def`), and the parts of it the data cannot
- * pin. FAIL-CLOSED: a part whose OUTPUT depends on a function body — a
- * `transform` / `preprocess`, a `catch`, a `default` that is not one stable
- * JSON value — or a type this walk does not know is described by an
- * `{ $opaque: <what> }` marker and listed in `opaque`, never folded into a
- * description that would stay the same when its body changes. A refinement
- * is NOT opaque: it accepts or refuses a value, it never changes one.
+ * A zod schema as data — zod-introspect's `describeSchema` description, read
+ * off its normalised `SchemaNode`s and never off zod's own def layout, so a zod
+ * upgrade that keeps the `SchemaNode` model cannot move a definition.
+ * FAIL-CLOSED: a part whose output depends on a function body (a transform —
+ * and so a preprocess —, a codec, a rewrite check, a catch, a default that is
+ * not one stable JSON value) is an `{ $opaque }` marker, folded in; a
+ * refinement is data. Throws on anything but a zod 4 schema (a zod 3 one is
+ * refused by name).
  */
-export function describeZodParts(schema: unknown): {
-  description: unknown;
-  opaque: readonly string[];
-} {
-  const opaque: string[] = [];
-  const onStack = new Set<unknown>();
-  const describe = (s: unknown, path: string): unknown => {
-    const def = (s as { _def?: Record<string, unknown> } | null)?._def;
-    const blind = (what: string): unknown => {
-      opaque.push(`${path || "(root)"}: ${what}`);
-      return { [OPAQUE]: what };
-    };
-    if (def === undefined) return blind(`a ${typeof s}, not a zod schema`);
-    if (onStack.has(s)) return { recursive: String(def.typeName) };
-    onStack.add(s);
-    try {
-      return describeDef(def, path, blind);
-    } finally {
-      onStack.delete(s);
-    }
-  };
-  const describeDef = (
-    def: Record<string, unknown>,
-    path: string,
-    blind: (what: string) => unknown,
-  ): unknown => {
-    const typeName = String(def.typeName);
-    const at = (key: string, sub = key): unknown =>
-      describe(def[key], `${path}/${sub}`);
-    switch (typeName) {
-      case "ZodObject": {
-        const shape = (def.shape as () => Record<string, unknown>)();
-        const catchall = def.catchall as { _def?: { typeName?: string } };
-        return {
-          object: Object.entries(shape).map(([k, v]) => [
-            k,
-            describe(v, `${path}/${k}`),
-          ]),
-          unknownKeys: def.unknownKeys ?? null,
-          ...(catchall._def?.typeName === "ZodNever"
-            ? {}
-            : { catchall: at("catchall") }),
-        };
-      }
-      case "ZodArray":
-        return {
-          array: at("type", "[]"),
-          length: [def.minLength, def.maxLength, def.exactLength].map(
-            (l) => (l as { value?: number } | null)?.value ?? null,
-          ),
-        };
-      case "ZodSet":
-        return {
-          set: at("valueType", "[]"),
-          size: [def.minSize, def.maxSize].map(
-            (l) => (l as { value?: number } | null)?.value ?? null,
-          ),
-        };
-      case "ZodMap":
-        return { map: [at("keyType", "key"), at("valueType", "value")] };
-      case "ZodNullable":
-        return { nullable: at("innerType", "?") };
-      case "ZodOptional":
-        return { optional: at("innerType", "?") };
-      case "ZodReadonly":
-        return { readonly: at("innerType", "readonly") };
-      case "ZodBranded":
-        return { branded: at("type", "brand") };
-      case "ZodDefault": {
-        // zod wraps a literal default as `() => value`; call it twice, so a
-        // default that is not one stable JSON value (a `Date`, a counter) is
-        // told apart — and blinded — rather than recorded as one sample.
-        const value = (def.defaultValue as () => unknown)();
-        const again = (def.defaultValue as () => unknown)();
-        const inner = at("innerType", "default");
-        return isJsonLiteral(value) &&
-          JSON.stringify(value) === JSON.stringify(again)
-          ? { default: inner, value }
-          : {
-              default: inner,
-              value: blind("a default that is not one JSON value"),
-            };
-      }
-      case "ZodCatch":
-        // zod wraps a literal catch value and a function reading the failed
-        // input the same way: nothing tells them apart.
-        return {
-          catch: at("innerType", "catch"),
-          value: blind("a catch value (a function of the failed input)"),
-        };
-      case "ZodLazy":
-        return {
-          lazy: describe((def.getter as () => unknown)(), `${path}/lazy`),
-        };
-      case "ZodEffects": {
-        const effect = (def.effect as { type?: string } | undefined)?.type;
-        const inner = at("schema", "effects");
-        return effect === "refinement"
-          ? { refinement: inner }
-          : { effects: inner, fn: blind(`a ${effect ?? "unknown"} effect`) };
-      }
-      case "ZodPipeline":
-        return { pipe: [at("in"), at("out")] };
-      case "ZodUnion":
-      case "ZodDiscriminatedUnion":
-        return {
-          union: [...(def.options as Iterable<unknown>)].map((o, i) =>
-            describe(o, `${path}/|${i}`),
-          ),
-          ...(typeName === "ZodDiscriminatedUnion"
-            ? { discriminator: def.discriminator }
-            : {}),
-        };
-      case "ZodIntersection":
-        return { intersection: [at("left"), at("right")] };
-      case "ZodTuple":
-        return {
-          tuple: (def.items as unknown[]).map((item, i) =>
-            describe(item, `${path}/${i}`),
-          ),
-          ...(def.rest === null || def.rest === undefined
-            ? {}
-            : { rest: at("rest") }),
-        };
-      case "ZodRecord":
-        return { record: [at("keyType", "key"), at("valueType", "value")] };
-      case "ZodEnum":
-        return { enum: def.values };
-      case "ZodNativeEnum":
-        return { nativeEnum: Object.entries(def.values as object) };
-      case "ZodLiteral":
-        return isJsonLiteral(def.value)
-          ? { literal: def.value }
-          : { literal: blind("a literal that is not a JSON value") };
-      case "ZodString":
-      case "ZodNumber":
-      case "ZodBigInt":
-      case "ZodDate":
-        return {
-          [typeName]: (
-            (def.checks as { kind: string }[] | undefined) ?? []
-          ).map((c) =>
-            JSON.stringify(c, (_k, v: unknown) =>
-              v instanceof RegExp ? `/${v.source}/${v.flags}` : v,
-            ),
-          ),
-          coerce: def.coerce === true,
-        };
-      // Fully described by their type name: no parameter, no function.
-      case "ZodBoolean":
-        return { ZodBoolean: [], coerce: def.coerce === true };
-      case "ZodNull":
-      case "ZodUndefined":
-      case "ZodAny":
-      case "ZodUnknown":
-      case "ZodNever":
-      case "ZodVoid":
-      case "ZodNaN":
-      case "ZodSymbol":
-        return typeName;
-      default:
-        return blind(`an unhandled ${typeName}`);
-    }
-  };
-  return { description: describe(schema, ""), opaque };
-}
-
-/** A zod schema as data — {@link describeZodParts}' description, opaque parts marked. */
 export function describeZod(schema: unknown): unknown {
-  return describeZodParts(schema).description;
+  return describeSchema(schema).description;
 }
 
 /** The DDL of a rollup, hashed: its table, and each source's maintain function and triggers. */

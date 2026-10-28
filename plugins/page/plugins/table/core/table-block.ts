@@ -76,14 +76,14 @@ export const tableBlock = defineBlock({
     const width = data.header.length;
     if (width < 1) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         path: ["header"],
         message: "A table has at least one column.",
       });
     }
     if (data.align.length !== width) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         path: ["align"],
         message: `align has ${data.align.length} entries for ${width} column(s).`,
       });
@@ -91,7 +91,7 @@ export const tableBlock = defineBlock({
     data.rows.forEach((row, i) => {
       if (row.length !== width) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: "custom",
           path: ["rows", i],
           message: `row ${i} has ${row.length} cell(s) for ${width} column(s).`,
         });

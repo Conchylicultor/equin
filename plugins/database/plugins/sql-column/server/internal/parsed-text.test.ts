@@ -66,8 +66,8 @@ describe("reading", () => {
     expect(e.message).toContain("job_waits.status");
     expect(e.message).toContain("decoding a value out of Postgres");
     // zod's enum message lists the allowed values — that is the actionable half.
-    expect(e.message).toContain("'pending'");
-    expect(e.message).toContain("'cancelled'");
+    expect(e.message).toContain('"pending"');
+    expect(e.message).toContain('"cancelled"');
     expect(e.message).toContain("tolerantEnum");
     expect(e.cause).toBeInstanceOf(z.ZodError);
   });

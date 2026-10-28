@@ -54,9 +54,7 @@ export const backupRunArm = liveArm(runs, BACKUP_RUN_KIND, {
     // Per-target outcomes, verbatim.
     targetResults: backupRunFields.targetResults,
     /** The manifest's source reports (v2+ array form only). */
-    sources: nullable(
-      jsonField({ schema: BackupSourceReportsSchema, default: [] }),
-    ),
+    sources: nullable(jsonField({ schema: BackupSourceReportsSchema })),
   },
   sortable: ["status", "archiveSize", "sourceCount", "targetCount"],
 });

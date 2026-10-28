@@ -24,7 +24,7 @@ export const createNotification = defineEndpoint({
     detail: z.string().nullable().optional(),
     action: NotificationActionSchema.nullable().optional(),
     icon: NotificationIconSchema.nullable().optional(),
-    metadata: z.record(z.unknown()).nullable().optional(),
+    metadata: z.record(z.string(), z.unknown()).nullable().optional(),
     dedupeKey: z.string().nullable().optional(),
     audience: z.enum(AUDIENCES).optional(),
   }),

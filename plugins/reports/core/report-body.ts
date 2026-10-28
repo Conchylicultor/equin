@@ -20,7 +20,7 @@ export const ReportBodySchema = z.object({
   // The kind's payload, validated server-side by its ReportKindSpec.schema.
   // Every caller sends it (often `{}` for payload-less kinds); the engine never
   // inspects it before handing it to the matching spec.
-  data: z.record(z.unknown()),
+  data: z.record(z.string(), z.unknown()),
   message: z.string().optional(),
   url: z.string().nullable().optional(),
   userAgent: z.string().nullable().optional(),

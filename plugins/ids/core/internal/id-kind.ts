@@ -1,5 +1,4 @@
 import { z } from "zod";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 
 /**
  * An id of kind `P`: a plain string at runtime, branded at compile time so an
@@ -129,7 +128,7 @@ export interface IdKind<P extends string, S extends IdShape = IdShape> {
    */
   parse(value: string): Id<P>;
   /** {@link parse} as a zod schema, for endpoints, route params and config. */
-  readonly schema: ZodParser<Id<P>>;
+  readonly schema: z.ZodType<Id<P>>;
   /**
    * A STORED id of this kind arriving from outside (a route param, a URL, a
    * row of another table) to look a row UP by — branded, not validated. The
@@ -254,13 +253,13 @@ export function defineIdKind<
     shape === "hash" ? mintHash : shape === "uuid" ? mintUuid : mintStamped
   ) as MintFn<P, S>;
 
-  const schema: ZodParser<Id<P>> = z.string().transform((value, ctx) => {
+  const schema: z.ZodType<Id<P>> = z.string().transform((value, ctx) => {
     if (is(value)) return value;
     if (legacyBareUuid && BARE_UUID_RE.test(value)) {
       return `${prefix}-${value}` as Id<P>;
     }
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: "custom",
       message: `not a ${label} id (expected \`${prefix}-<id>\`)`,
     });
     return z.NEVER;

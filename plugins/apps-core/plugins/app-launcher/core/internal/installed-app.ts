@@ -5,12 +5,11 @@ import {
   textField,
 } from "@plugins/fields/plugins/text/plugins/config/core";
 import { rowKind } from "@plugins/network/plugins/live/core";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import type { AppIcon } from "@plugins/apps-core/plugins/app-icon/core";
 import { AUDIENCES } from "@plugins/audience/core";
 
-const AppIconSchema: ZodParser<AppIcon> = z.custom<AppIcon>(
+const AppIconSchema: z.ZodType<AppIcon> = z.custom<AppIcon>(
   (v) => typeof v === "object" && v !== null && "kind" in v,
 );
 

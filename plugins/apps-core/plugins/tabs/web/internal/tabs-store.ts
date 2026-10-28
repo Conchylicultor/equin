@@ -83,7 +83,7 @@ export interface PersistedTabs {
 
 const persistedSlotSchema = z.object({
   paneId: z.string(),
-  params: z.record(z.string()),
+  params: z.record(z.string(), z.string()),
   options: z.custom<PaneOptions>((v) => typeof v === "object" && v !== null),
   uuid: z.string(),
 });

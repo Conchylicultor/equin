@@ -1,5 +1,4 @@
 import { z } from "zod";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 
 /**
  * The size presets a prototype is designed at and viewed at: the device's
@@ -67,7 +66,7 @@ export const PrototypeViewportSchema = z.discriminatedUnion("kind", [
     kind: z.literal("preset"),
     preset: z.custom<PresetName>(isPresetName, "not a size preset"),
   }),
-]) satisfies ZodParser<PrototypeViewport>;
+]) satisfies z.ZodType<PrototypeViewport>;
 
 /** The words the tag accepts: `window`, `responsive`, then each preset lowercased. */
 export const PROTOTYPE_VIEWPORT_WORDS: readonly string[] = [

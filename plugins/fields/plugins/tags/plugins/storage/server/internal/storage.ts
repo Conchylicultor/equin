@@ -1,12 +1,12 @@
+import type { z } from "zod";
 import { parsedJson } from "@plugins/database/plugins/sql-column/server";
 import type { StorageColumnFor } from "@plugins/fields/plugins/server-capabilities/server";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 
 /**
  * The `jsonb` column holding a tags value, decoded by the FIELD's own schema.
  *
  * The `json` sibling's `z.unknown()` branch has no counterpart here: the `tags`
- * token declares `string[]`, so a `ZodParser<V extends string[]>` can never be a
+ * token declares `string[]`, so a `z.ZodType<V extends string[]>` can never be a
  * `ZodUnknown` (its output would have to be `unknown`). Every tags schema
  * narrows the column, so every tags column decodes.
  *
@@ -16,5 +16,5 @@ import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
  */
 export const decode = <V extends string[]>(
   name: string,
-  valueSchema: ZodParser<V>,
+  valueSchema: z.ZodType<V>,
 ): StorageColumnFor<V> => parsedJson(name, valueSchema);

@@ -1,5 +1,4 @@
 import { z } from "zod";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { liveValue } from "@plugins/network/plugins/live/core";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import type {
@@ -24,13 +23,13 @@ const GRAPH_REASON =
 const idList = wholeList(pluginIdSchema, { reason: GRAPH_REASON });
 const adjacency = wholeRecord(idList, { reason: GRAPH_REASON });
 
-const edgeSchema: ZodParser<Edge> = z.object({
+const edgeSchema: z.ZodType<Edge> = z.object({
   from: pluginIdSchema,
   to: pluginIdSchema,
   kind: z.union([z.literal("hard"), z.literal("soft")]),
 });
 
-const usageRuleSchema: ZodParser<UsageRule> = z.object({
+const usageRuleSchema: z.ZodType<UsageRule> = z.object({
   then: pluginIdSchema,
   owner: pluginIdSchema,
   users: idList,
@@ -38,7 +37,7 @@ const usageRuleSchema: ZodParser<UsageRule> = z.object({
   key: z.string(),
 });
 
-const serializedEdgeGraphSchema: ZodParser<SerializedEdgeGraph> = z.object({
+const serializedEdgeGraphSchema: z.ZodType<SerializedEdgeGraph> = z.object({
   hardForward: adjacency,
   hardReverse: adjacency,
   softForward: adjacency,
@@ -53,7 +52,7 @@ export interface CompositionData {
   allIds: PluginId[];
 }
 
-const compositionDataSchema: ZodParser<CompositionData> = z.object({
+const compositionDataSchema: z.ZodType<CompositionData> = z.object({
   graph: serializedEdgeGraphSchema,
   allIds: idList,
 });

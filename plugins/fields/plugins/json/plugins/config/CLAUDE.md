@@ -18,12 +18,17 @@
 - Core:
   - Uses:
     - `config_v2/fields.fieldSample`
+    - `fields.DefaultlessFieldDef`
+    - `fields.defineDefaultlessField`
+    - `fields.defineField`
     - `fields.FieldDef`
     - `fields.FieldMeta`
     - `fields.Labelled`
     - `fields.pickMeta`
     - `fields/json.jsonFieldType`
-  - Exports (types): `JsonFieldDef`
+  - Exports (types):
+    - `DefaultlessJsonFieldDef`
+    - `JsonFieldDef`
   - Exports (values):
     - `jsonField`
     - `jsonSample`

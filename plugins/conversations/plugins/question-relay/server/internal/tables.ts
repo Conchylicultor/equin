@@ -26,9 +26,7 @@ export const pendingQuestionsEntity = defineEntity(
     // terminal killed (Escape, a dead agent or pane) is noticed.
     relayPid: intField(),
     state: parsedTextField(RelayStateSchema, { default: "open" }),
-    answer: nullable(
-      jsonField({ schema: CliAnswerSchema, default: { answers: {} } }),
-    ),
+    answer: nullable(jsonField({ schema: CliAnswerSchema })),
     resolvedAt: nullable(dateField()),
   },
   {

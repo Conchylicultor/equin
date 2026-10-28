@@ -117,21 +117,19 @@ describe("sectionFromHookpadDoc — a malformed document throws, never a partial
       chords[3] = { ...chords[3], root: "six" };
     });
     expect(() => parse(doc)).toThrow(
-      /TheoryTab section _NgbRXeYgQA document did not match the expected shape — chords\.3\.root: Expected number, received string/,
+      /TheoryTab section _NgbRXeYgQA document did not match the expected shape — chords\.3\.root: /,
     );
   });
 
   it("a value that is not a document at all", () => {
-    expect(() => parse(null)).toThrow(
-      /\(root\): Expected object, received null/,
-    );
+    expect(() => parse(null)).toThrow(/\(root\): /);
   });
 
   it("a missing section-level field", () => {
     const doc = withDoc((d) => {
       delete d.youtube;
     });
-    expect(() => parse(doc)).toThrow(/youtube: Required/);
+    expect(() => parse(doc)).toThrow(/youtube: /);
   });
 });
 

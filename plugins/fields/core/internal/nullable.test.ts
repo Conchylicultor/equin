@@ -1,5 +1,6 @@
 import { test, expect } from "bun:test";
 import { z } from "zod";
+import { inspect } from "@plugins/packages/plugins/zod-introspect/core";
 import { nullable } from "./nullable";
 import { fieldsToZodObject } from "./schema-builder";
 import type { FieldDef } from "./field-spec";
@@ -22,7 +23,7 @@ test("nullable() preserves the type token (storage keying is unchanged)", () => 
 
 test("nullable() makes the schema ZodNullable and defaults to null", () => {
   const n = nullable(textDef());
-  expect(n.schema instanceof z.ZodNullable).toBe(true);
+  expect(inspect(n.schema).kind).toBe("nullable");
   expect(n.defaultValue).toBe(null);
   // Accepts both a value and null.
   expect(n.schema.parse("hi")).toBe("hi");

@@ -1,7 +1,7 @@
+import type { z } from "zod";
 import { defineBlock } from "@plugins/page/plugins/editor/core";
 import { PlaceDataSchema } from "./schemas";
 import { PlaceFamilySchema, PlaceKindSchema } from "./kinds";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 const locationOnIcon = symbol("location-on");
@@ -44,7 +44,7 @@ function timestampAttr(raw: string | undefined): number | undefined {
  * the next refresh re-maps it.
  */
 function closedSetAttr<T extends string>(
-  schema: ZodParser<T>,
+  schema: z.ZodType<T>,
   raw: string | undefined,
 ): T | undefined {
   const parsed = schema.safeParse(raw);

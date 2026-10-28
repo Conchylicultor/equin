@@ -16,17 +16,21 @@ column — on every read and every write (`parsedText`,
 ## The one discrimination
 
 ```ts
-valueSchema instanceof ZodString ? text(name) : parsedText(name, valueSchema)
+isUncheckedBase(valueSchema) && inspect(valueSchema).kind === "string"
+  ? text(name)
+  : parsedText(name, valueSchema)
 ```
 
-A plain `textField()` (or one refined with `.min(1)` — still a `ZodString`) keeps
-a bare `text` column and pays nothing. Anything else gets a real decoder.
+(`isUncheckedBase` / `inspect` are `packages/zod-introspect`'s — the one reader
+of zod internals.) Only a bare `z.string()` with NO check of any kind — a plain
+`textField()` — keeps a bare `text` column and pays nothing. Any checked string
+(`.min(1)`, `.email()`, `.refine()`, `.trim()`…) claims something about the
+rows, so it decodes on every read and write like any other narrowed schema.
 
 The branch is on the schema the author actually wrote, not a heuristic about
 intent — and it is not an optimisation detail: decoding a column that is NOT
 narrowed costs the **same** as decoding one that is (345 ns vs 322 ns per value)
-for zero guarantee, so decoding every text column would spend roughly 10× more
-than decoding only the narrowed ones. `internal/storage.test.ts` pins both
+for zero guarantee, so the decoder runs exactly where it checks something. `internal/storage.test.ts` pins both
 branches.
 
 `getSQLType()` is `"text"` either way, so adopting the decoder generates no

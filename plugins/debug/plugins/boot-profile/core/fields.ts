@@ -97,10 +97,7 @@ void _assertBootTrace;
 export const savedBootTraceFields = {
   id: uuidField({ label: "Id", filterable: false }),
   worktree: textField({ label: "Worktree", primary: true }),
-  snapshot: jsonField<BootTrace>({
-    schema: BootTraceSchema,
-    default: {} as BootTrace,
-  }),
+  snapshot: jsonField<BootTrace>({ schema: BootTraceSchema }),
   createdAt: dateField({ label: "When" }),
 } satisfies FieldsRecord;
 

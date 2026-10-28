@@ -378,8 +378,10 @@ Details:
   - Decoder ids come from sql-projection's `decoderOrigin`; **any other
     function decoder is refused at bind** (its body could change without moving
     the definition).
-  - `describeZod` is fail-closed: a function-dependent part is an `{ $opaque }`
-    marker — refused in a `parsed` decoder, folded in (not refused) for a
+  - `describeZod` is zod-introspect's `describeSchema`, read off the normalised
+    `SchemaNode` (never zod's def layout; a zod 3 schema throws). It is
+    fail-closed: a function-dependent part (transform, codec, rewrite check,
+    catch, non-literal default) is an `{ $opaque }` marker — refused in a `parsed` decoder, folded in (not refused) for a
     column or row schema (e.g. `tolerantEnum`).
   - A non-literal param (`Date`) is refused.
   - `:rows` has no definition (never persisted).
