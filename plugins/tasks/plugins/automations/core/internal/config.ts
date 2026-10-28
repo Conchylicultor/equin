@@ -21,18 +21,20 @@ import {
   CADENCE_LABELS,
   CADENCES,
   labeledOptions,
-  PUSH_POLICIES,
-  PUSH_POLICY_LABELS,
   TRIGGER_KIND_LABELS,
   TRIGGER_KINDS,
   WEEKDAY_LABELS,
   WEEKDAYS,
   type AutomationSettings,
   type Cadence,
-  type PushPolicy,
   type TriggerKind,
   type Weekday,
 } from "./settings";
+import {
+  PUSH_POLICIES,
+  PUSH_POLICY_LABELS,
+  type PushPolicy,
+} from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/plugins/capabilities/core";
 
 /**
  * Every automation's config document is stored under this plugin's tree —

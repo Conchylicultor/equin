@@ -12,12 +12,14 @@ import {
   type DbExecutor,
 } from "@plugins/tasks/plugins/tasks-core/server";
 import {
+  ConversationStatusSchema,
   TaskStatusSchema,
   type Conversation,
 } from "@plugins/tasks/plugins/tasks-core/core";
 import {
   claimAutoStart,
   getTaskAutoStart,
+  listArmedTaskIds,
 } from "@plugins/tasks/plugins/auto-start/server";
 import {
   commitConversation,
@@ -30,6 +32,12 @@ import { resolveModel } from "@plugins/conversations/plugins/model-provider/core
 import { getModelCatalog } from "@plugins/conversations/plugins/model-provider/plugins/catalog/server";
 import { reportAutoStartModelUnavailable } from "./auto-start-model-report";
 import { resolveLaunchPrompt } from "./launch-prompt";
+import {
+  hostFreeLaunchSlots,
+  takeHostLaunchSlot,
+  type LaunchCap,
+} from "./launch-cap";
+import { releasedLaunchSlot, takeLaunchable } from "./launch-slots";
 
 // The transactional heart of an auto-launch: claim the marker and commit the
 // launch on ONE transaction. Returns whether this call launched.
@@ -96,8 +104,14 @@ export type LaunchTaskNowResult =
   // auto-start marker (the user picked Off, or it was cancelled or already
   // launched). `claimed-elsewhere`: another runner claimed the marker first, or
   // (`ifAlreadyStarted: "skip"` only) the task already had an attempt — either
-  // way it has its launch, not ours.
-  | { started: false; reason: "not-armed" | "claimed-elsewhere" };
+  // way it has its launch, not ours. `at-capacity` (`cap: "host"` only): the
+  // host already runs `agent-launch.maxConcurrent` busy agents — nothing was
+  // claimed, the task stays armed, and a freed slot wakes it
+  // (`launchNextArmedJob`). A normal wait, not a failure.
+  | {
+      started: false;
+      reason: "not-armed" | "claimed-elsewhere" | "at-capacity";
+    };
 
 // Start an armed task NOW: read the model off its marker, prepare, then claim
 // the marker and commit the launch on one transaction (`launchArmedTask`). THE
@@ -115,12 +129,15 @@ export type LaunchTaskNowResult =
 // the queue must wait on them, while an inline launch the user asked for has
 // nothing to wait for. Likewise `ifAlreadyStarted` (see `launchArmedTask`):
 // required, because the queue and a user launch mean opposite things by it.
+// And `cap` (see `LaunchCap`): required for the same reason — the queue waits
+// under the host-wide cap, a launch a human asked for never does.
 export async function launchTaskNow(
   taskId: string,
   opts: {
     prompt?: string;
     cause: string;
     ifAlreadyStarted: IfAlreadyStarted;
+    cap: LaunchCap;
     /** The launcher shows the conversation itself (see `CreateConversationOpts`). */
     shownByLauncher?: boolean;
   },
@@ -153,12 +170,24 @@ export async function launchTaskNow(
   // throw rolls back with the task still armed; under the queue graphile
   // retries, and if every attempt fails the row dead-letters (reported by queue
   // health) and the next boot's reconcile tries again.
-  const launched = await withTaskStatusBatch((tx) =>
-    launchArmedTask(tx, taskId, prepared, {
-      ifAlreadyStarted: opts.ifAlreadyStarted,
-    }),
+  //
+  // Under `cap: "host"` the slot check runs FIRST on the same transaction,
+  // before the claim: over the cap nothing is claimed and the task stays
+  // armed. The cap lock it takes is held until this transaction commits its
+  // `starting` row, so the next capped runner counts it.
+  const outcome = await withTaskStatusBatch(
+    async (tx): Promise<"launched" | "claimed-elsewhere" | "at-capacity"> => {
+      if (opts.cap === "host" && !(await takeHostLaunchSlot(tx))) {
+        return "at-capacity";
+      }
+      return (await launchArmedTask(tx, taskId, prepared, {
+        ifAlreadyStarted: opts.ifAlreadyStarted,
+      }))
+        ? "launched"
+        : "claimed-elsewhere";
+    },
   );
-  if (!launched) return { started: false, reason: "claimed-elsewhere" };
+  if (outcome !== "launched") return { started: false, reason: outcome };
   await finishConversation(prepared);
 
   // `launchArmedTask` answers only whether THIS call launched; the committed
@@ -255,16 +284,25 @@ export const maybeLaunchTaskJob = defineJob({
       return;
     }
 
+    // At the host-wide cap: a normal wait, not a failure — the task stays
+    // armed and `launchNextArmedJob` wakes it when a busy agent finishes. An
+    // unlocked pre-check so a saturated host does not prepare a launch per
+    // wake-up; the locked check inside `launchTaskNow` is the authority.
+    if ((await hostFreeLaunchSlots(db)) === 0) return;
+
     // `launchTaskNow` reads the marker again for its model and its prompt:
     // one indexed read, and it keeps `not-armed` launchTaskNow's own answer
     // rather than an assumption about its caller. No `prompt` here: the
     // marker's (an automation's) or else the task's own is the right one. A
     // lost claim is the concurrent-runner case this job's header describes —
     // nothing to do. `skip`: an attempt here is a manual start that beat the
-    // queue, so the task already has its launch.
+    // queue, so the task already has its launch. `cap: "host"`: the queue
+    // starts agents on its own, so it waits under the host-wide cap; over it
+    // the task stays armed and `launchNextArmedJob` wakes it when a slot frees.
     await launchTaskNow(taskId, {
       cause,
       ifAlreadyStarted: "skip",
+      cap: "host",
     });
   },
 });
@@ -359,3 +397,58 @@ export const maybeLaunchOnArmedJob = defineJob({
     });
   },
 });
+
+// Static trigger target for `conversation.statusChanged`: when an agent stops
+// being busy (leaves `starting` / `working`), a slot under the host-wide launch
+// cap may have opened, and the armed tasks `maybeLaunchTaskJob` turned away as
+// `at-capacity` have no other event to wake them. Wake the oldest launchable
+// armed tasks, as many as there are free slots — push-based, no polling.
+//
+// Oldest LAUNCHABLE, not oldest: an old armed task still blocked on a
+// dependency (or held, or dropped) would take a freed slot nothing can use and
+// leave it idle until the next event. The checks are cheap indexed reads, made
+// one task at a time and stopped once the slots are filled (`takeLaunchable`).
+// `maybeLaunchTaskJob` re-checks everything and its locked slot check is the
+// authority, so a pick that went stale in between is a safe no-op.
+//
+// Intermediary for the same reason as `maybeLaunchOnStatusJob`: a Trigger's
+// `with` is static and the conversation arrives on the event.
+export const launchNextArmedJob = defineJob({
+  name: "tasks.launch-next-armed",
+  description:
+    "When an agent finishes working, starts the armed tasks that were waiting for a free slot under the concurrent-agent cap, oldest first.",
+  hold: "instant",
+  input: z.object({}),
+  dedup: "none",
+  event: z
+    .object({
+      conversationId: z.string(),
+      status: ConversationStatusSchema,
+      previousStatus: ConversationStatusSchema,
+    })
+    .passthrough(),
+  run: async ({ event }) => {
+    if (!event) return;
+    if (!releasedLaunchSlot(event.previousStatus, event.status)) return;
+    // Main-only, like the launcher it wakes (see `maybeLaunchTaskJob`).
+    if (!isMain()) return;
+    const slots = await hostFreeLaunchSlots(db);
+    if (slots === 0) return;
+    const picked = await takeLaunchable(
+      await listArmedTaskIds(),
+      slots,
+      isQueueLaunchable,
+    );
+    for (const taskId of picked) {
+      await maybeLaunchTaskJob.enqueue({ taskId, cause: "slot-freed" });
+    }
+  },
+});
+
+// The queue gates `maybeLaunchTaskJob` waits on, as a predicate: the task
+// exists, is neither dropped nor held, and nothing blocks it.
+async function isQueueLaunchable(taskId: string): Promise<boolean> {
+  const t = await getTask(taskId);
+  if (!t || t.droppedAt || t.heldAt) return false;
+  return !(await hasBlockingDep(taskId, db));
+}

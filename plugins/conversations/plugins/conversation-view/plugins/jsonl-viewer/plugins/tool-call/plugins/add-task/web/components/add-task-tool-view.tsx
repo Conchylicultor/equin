@@ -25,21 +25,28 @@ type AddTaskInput = {
   /** Absent on calls made before tracks existed — those tasks are main-track. */
   track?: TaskTrack;
   relation?: "followup" | "prerequisite" | "independent";
-  target?: string;
-  autostart: string | null;
+  start?: "now" | "after" | "manual";
+  model?: string;
+  /** Calls made before start modes existed. */
+  autostart?: string | null;
 };
 
 type AddTaskResult = {
   task_id: string;
-  relation: string;
+  relation: string | null;
   group_id?: string | null;
-  autostart: string | null;
+  model?: string | null;
+  /** Results written before start modes existed. */
+  autostart?: string | null;
 };
 
 function parseResult(event: ToolRendererProps["event"]): AddTaskResult | null {
   if (!event.result?.content) return null;
+  // The result is the filing's JSON, then (since the tree digest) a blank
+  // line and the digest text.
+  const [json = ""] = event.result.content.split("\n\n", 1);
   try {
-    return JSON.parse(event.result.content);
+    return JSON.parse(json);
   } catch (err) {
     if (!(err instanceof SyntaxError)) throw err;
     return null;
@@ -50,7 +57,12 @@ export function AddTaskToolView({ event }: ToolRendererProps) {
   const input = event.input as AddTaskInput;
   const result = parseResult(event);
   const taskId = result?.task_id;
-  const autostart = input.autostart ?? result?.autostart ?? null;
+  const autostart =
+    result?.model ??
+    result?.autostart ??
+    (input.start === "manual"
+      ? null
+      : (input.model ?? input.autostart ?? null));
   const track = TRACK_META[input.track ?? DEFAULT_TASK_TRACK];
 
   const tasksResult = useLive(taskRows);

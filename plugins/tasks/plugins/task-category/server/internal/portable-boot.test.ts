@@ -26,6 +26,7 @@
  * Run: `./equin test plugins/tasks/plugins/task-category`.
  */
 
+import { mandatePolicy } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
 import { beforeAll, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -154,9 +155,18 @@ describe.if(IN_CHILD)("task-category's server closure boots portably", () => {
   });
 
   test("seeded categories come back through the real task-categories collection", async () => {
-    const a = await createTask({ title: "portable boot: categorized" });
-    const b = await createTask({ title: "portable boot: also categorized" });
-    await createTask({ title: "portable boot: uncategorized" });
+    const a = await createTask({
+      title: "portable boot: categorized",
+      mandate: mandatePolicy([]),
+    });
+    const b = await createTask({
+      title: "portable boot: also categorized",
+      mandate: mandatePolicy([]),
+    });
+    await createTask({
+      title: "portable boot: uncategorized",
+      mandate: mandatePolicy([]),
+    });
     await setTaskCategory(a.id, "improvements");
     await setTaskCategory(b.id, "deploy");
 

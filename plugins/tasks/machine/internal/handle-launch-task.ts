@@ -1,3 +1,4 @@
+import { interactiveMandate } from "@plugins/tasks/plugins/mandate-presets/core";
 import { createTask, getTask } from "@plugins/tasks/plugins/tasks-core/server";
 import { setTaskCategory } from "@plugins/tasks/plugins/task-category/server";
 import {
@@ -56,6 +57,7 @@ export const handleLaunchTask = implementMachine(
         titleAuto: true,
         description: body.prompt,
         author: "user",
+          mandate: interactiveMandate(),
       });
       await setTaskCategory(task.id, categoryId);
       return task.id;
@@ -90,6 +92,8 @@ export const handleLaunchTask = implementMachine(
       prompt: body.prompt,
       cause: "user-launch",
       ifAlreadyStarted: "launch",
+      // A human asked for this run: never held behind the auto-start cap.
+      cap: "none",
       shownByLauncher: body.shownByLauncher,
     });
     return result.started

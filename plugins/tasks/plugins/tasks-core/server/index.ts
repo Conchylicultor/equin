@@ -112,8 +112,10 @@ export {
   getTaskDependencyIds,
   findNextRankInFolder,
   isDescendant,
+  nearestMandate,
   taskDependsOn,
 } from "./internal/queries/tasks";
+export type { NearestMandate } from "./internal/queries/tasks";
 
 export {
   listAttempts,
@@ -151,6 +153,8 @@ export {
   addTaskDependency,
   DependencyCycleError,
   removeTaskDependency,
+  setMandate,
+  clearMandate,
 } from "./internal/mutations/tasks";
 export type {
   CreateTaskInput,

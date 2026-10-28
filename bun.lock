@@ -2154,6 +2154,10 @@
       "name": "@equin/plugin-conversations-conversation-view-push-and-exit",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversation-view/plugins/push-and-exit/plugins/capabilities": {
+      "name": "@equin/plugin-conversations-conversation-view-push-and-exit-capabilities",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-view/plugins/push-counter": {
       "name": "@equin/plugin-conversations-conversation-view-push-counter",
     },
@@ -2231,6 +2235,10 @@
     },
     "plugins/conversations/plugins/hibernation": {
       "name": "@equin/plugin-conversations-hibernation",
+      "version": "0.0.1",
+    },
+    "plugins/conversations/plugins/launch-cap": {
+      "name": "@equin/plugin-conversations-launch-cap",
       "version": "0.0.1",
     },
     "plugins/conversations/plugins/menu-bar-status": {
@@ -6279,8 +6287,28 @@
       "name": "@equin/plugin-tasks-launch-options",
       "version": "0.0.1",
     },
+    "plugins/tasks/plugins/mandate-presets": {
+      "name": "@equin/plugin-tasks-mandate-presets",
+      "version": "0.0.1",
+    },
     "plugins/tasks/plugins/menu-bar-task": {
       "name": "@equin/plugin-tasks-menu-bar-task",
+      "version": "0.0.1",
+    },
+    "plugins/tasks/plugins/orchestration": {
+      "name": "@equin/plugin-tasks-orchestration",
+      "version": "0.0.1",
+    },
+    "plugins/tasks/plugins/orchestration/plugins/mandate": {
+      "name": "@equin/plugin-tasks-orchestration-mandate",
+      "version": "0.0.1",
+    },
+    "plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy": {
+      "name": "@equin/plugin-tasks-orchestration-mandate-policy",
+      "version": "0.0.1",
+    },
+    "plugins/tasks/plugins/orchestration/plugins/tree-digest": {
+      "name": "@equin/plugin-tasks-orchestration-tree-digest",
       "version": "0.0.1",
     },
     "plugins/tasks/plugins/outcome-report": {
@@ -7856,6 +7884,8 @@
 
     "@equin/plugin-conversations-conversation-view-push-and-exit": ["@equin/plugin-conversations-conversation-view-push-and-exit@workspace:plugins/conversations/plugins/conversation-view/plugins/push-and-exit"],
 
+    "@equin/plugin-conversations-conversation-view-push-and-exit-capabilities": ["@equin/plugin-conversations-conversation-view-push-and-exit-capabilities@workspace:plugins/conversations/plugins/conversation-view/plugins/push-and-exit/plugins/capabilities"],
+
     "@equin/plugin-conversations-conversation-view-push-counter": ["@equin/plugin-conversations-conversation-view-push-counter@workspace:plugins/conversations/plugins/conversation-view/plugins/push-counter"],
 
     "@equin/plugin-conversations-conversation-view-push-profiling": ["@equin/plugin-conversations-conversation-view-push-profiling@workspace:plugins/conversations/plugins/conversation-view/plugins/push-profiling"],
@@ -7895,6 +7925,8 @@
     "@equin/plugin-conversations-effort-provider": ["@equin/plugin-conversations-effort-provider@workspace:plugins/conversations/plugins/effort-provider"],
 
     "@equin/plugin-conversations-hibernation": ["@equin/plugin-conversations-hibernation@workspace:plugins/conversations/plugins/hibernation"],
+
+    "@equin/plugin-conversations-launch-cap": ["@equin/plugin-conversations-launch-cap@workspace:plugins/conversations/plugins/launch-cap"],
 
     "@equin/plugin-conversations-menu-bar-status": ["@equin/plugin-conversations-menu-bar-status@workspace:plugins/conversations/plugins/menu-bar-status"],
 
@@ -9786,7 +9818,17 @@
 
     "@equin/plugin-tasks-launch-options": ["@equin/plugin-tasks-launch-options@workspace:plugins/tasks/plugins/launch-options"],
 
+    "@equin/plugin-tasks-mandate-presets": ["@equin/plugin-tasks-mandate-presets@workspace:plugins/tasks/plugins/mandate-presets"],
+
     "@equin/plugin-tasks-menu-bar-task": ["@equin/plugin-tasks-menu-bar-task@workspace:plugins/tasks/plugins/menu-bar-task"],
+
+    "@equin/plugin-tasks-orchestration": ["@equin/plugin-tasks-orchestration@workspace:plugins/tasks/plugins/orchestration"],
+
+    "@equin/plugin-tasks-orchestration-mandate": ["@equin/plugin-tasks-orchestration-mandate@workspace:plugins/tasks/plugins/orchestration/plugins/mandate"],
+
+    "@equin/plugin-tasks-orchestration-mandate-policy": ["@equin/plugin-tasks-orchestration-mandate-policy@workspace:plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy"],
+
+    "@equin/plugin-tasks-orchestration-tree-digest": ["@equin/plugin-tasks-orchestration-tree-digest@workspace:plugins/tasks/plugins/orchestration/plugins/tree-digest"],
 
     "@equin/plugin-tasks-outcome-report": ["@equin/plugin-tasks-outcome-report@workspace:plugins/tasks/plugins/outcome-report"],
 

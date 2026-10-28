@@ -36,8 +36,8 @@ beforeAll(async () => {
   t = await createTestDb({ prefix: "automations_sets_all" });
   await runMigrations(t.db);
   await t.db.execute(sql`
-    INSERT INTO tasks (id, title, title_auto, rank)
-    SELECT 'at-' || g, 'task ' || g, false, 'a' || lpad(g::text, 6, '0')
+    INSERT INTO tasks (id, title, title_auto, rank, mandate)
+    SELECT 'at-' || g, 'task ' || g, false, 'a' || lpad(g::text, 6, '0'), '{}'::jsonb
     FROM generate_series(1, ${COUNT}) g`);
   const at = new Date();
   await t.db.insert(tasksLaunchDecision.table).values(

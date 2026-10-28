@@ -1,3 +1,4 @@
+import { interactiveMandate } from "@plugins/tasks/plugins/mandate-presets/core";
 import { createTask } from "@plugins/tasks/plugins/tasks-core/server";
 import { setTaskCategory } from "@plugins/tasks/plugins/task-category/server";
 import { scheduleTaskTitleUpdate } from "@plugins/tasks/plugins/task-title/server";
@@ -30,6 +31,7 @@ export async function createTaskFromPromptBlock(
     titleAuto: true,
     description: body.prompt,
     author: "user",
+    mandate: interactiveMandate(),
   });
   scheduleTaskTitleUpdate(task.id, body.prompt, fallbackTitle);
   await setTaskCategory(task.id, PAGES_CATEGORY_ID);

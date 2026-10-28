@@ -1,3 +1,9 @@
+import { mandatePolicy } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
+import { tasksFile } from "@plugins/tasks/plugins/tasks-core/core";
+import {
+  flagRaise,
+  pushPolicy,
+} from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/plugins/capabilities/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { defineAutomation } from "@plugins/tasks/plugins/automations/server";
 import { listSidequestTasks } from "@plugins/tasks/plugins/task-track/server";
@@ -35,6 +41,15 @@ export const sidequestAutopilotAutomation = defineAutomation({
   description:
     "Works through the sidequests you approve: triage reads each one first and proposes it, you approve what may run, and it starts agents on the approved ones, best first, a few at a time up to your cap — each leaves you a report.",
   config: sidequestAutopilotConfig,
+  // Its agents may file sidequests a person starts, push as far as the Push
+  // setting allows and raise a flag; they never close their own conversation
+  // (no exit.clean) — the report is how they finish.
+  mandate: (settings) =>
+    mandatePolicy([
+      tasksFile.grant({ sidequest: { start: ["manual"] } }),
+      pushPolicy.grant(settings.push),
+      flagRaise.grant(true),
+    ]),
   triggers: {
     kinds: ["event"],
     eventLabel: "When a task becomes ready to start",

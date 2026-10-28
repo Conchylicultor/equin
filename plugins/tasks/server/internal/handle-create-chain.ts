@@ -1,3 +1,4 @@
+import { interactivePlacement } from "./placement";
 import {
   taskAttachments,
   addTaskDependency,
@@ -105,7 +106,7 @@ export const handleCreateChain = implement(
 
         const fallbackTitle = synthesiseTitleFallback(card.text);
         const newTask = await createTask({
-          folderId,
+          ...interactivePlacement(folderId),
           groupId,
           title: fallbackTitle,
           // Draft-form titles are always a synthesised summary, upgraded by Haiku.

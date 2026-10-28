@@ -1,3 +1,4 @@
+import { interactiveMandate } from "@plugins/tasks/plugins/mandate-presets/core";
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { HttpError } from "@plugins/infra/plugins/endpoints/core";
@@ -53,6 +54,7 @@ export const handleLaunch = implementMachine(
   const task = await createTask({
     title: `Agent-${agent.name}-${formatLaunchTime(now)}`,
     author: "agents-plugin",
+      mandate: interactiveMandate(),
   });
   await setTaskCategory(task.id, "agents");
 

@@ -9,6 +9,7 @@ import type {
   TriggerKind,
 } from "../../core";
 import type { AutomationFiling } from "./origin";
+import type { MandatePolicy } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
 
 /** What `detect` is handed: only what the person let take part. */
 export interface AutomationDetectCtx<
@@ -95,6 +96,14 @@ interface AutomationSpecBase<F extends AutomationConfigFields> {
    * on top.
    */
   promptVariables: readonly PromptVariable[];
+  /**
+   * What the agents it starts may do — the mandate it states on each task:
+   * the ROOT task it files (file kind), or a nested mandate on each task it
+   * launches (launch kind; nearest wins over the task's own tree). Required:
+   * an automation decides its agents' powers, from its current settings (the
+   * Push setting is `settings.push`).
+   */
+  mandate: (settings: AutomationSettings) => MandatePolicy;
 }
 
 /**

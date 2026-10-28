@@ -32,6 +32,7 @@
  * status-change emits these mutations enqueue no longer depend on a prior boot.
  */
 
+import { mandatePolicy } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
 import {
   describe,
   test,
@@ -72,8 +73,8 @@ type Exec = DbExecutor | NodePgDatabase;
 async function seedTasks(exec: Exec, ids: string[]): Promise<void> {
   for (let i = 0; i < ids.length; i++) {
     await exec.execute(sql`
-      INSERT INTO tasks (id, title, title_auto, rank, dropped_at, created_at, updated_at)
-      VALUES (${ids[i]}, ${ids[i]}, true, ${"a" + i}, now(), now(), now())
+      INSERT INTO tasks (id, title, title_auto, rank, dropped_at, created_at, updated_at, mandate)
+      VALUES (${ids[i]}, ${ids[i]}, true, ${"a" + i}, now(), now(), now(), '{}')
     `);
   }
 }
@@ -363,7 +364,10 @@ describe("union points", () => {
 
   test("createTask with no folder starts as its own singleton (cluster_id NULL)", async () => {
     const raw = await worktreeDbScenario(async (tx) => {
-      const solo = await createTask({ title: "solo" }, tx);
+      const solo = await createTask(
+        { title: "solo", mandate: mandatePolicy([]) },
+        tx,
+      );
       return readRawLabels(tx, [solo.id]);
     });
 

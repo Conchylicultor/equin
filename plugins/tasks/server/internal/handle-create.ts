@@ -1,3 +1,4 @@
+import { interactivePlacement } from "./placement";
 import {
   _tasks,
   taskAttachments,
@@ -49,7 +50,7 @@ export const handleCreate = implement(createTaskEndpoint, async ({ body }) => {
       ? Rank.from(body.rank)
       : undefined;
   const row = await createTask({
-    folderId,
+    ...interactivePlacement(folderId),
     title,
     // A caller-supplied title is human-authored; a synthesised fallback is not.
     titleAuto: !explicitTitle,

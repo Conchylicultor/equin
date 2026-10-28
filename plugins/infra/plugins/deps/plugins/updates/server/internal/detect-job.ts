@@ -1,3 +1,8 @@
+import { mandatePolicy } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
+import {
+  flagRaise,
+  pushPolicy,
+} from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/plugins/capabilities/core";
 import { and, eq, like } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/core";
@@ -71,6 +76,10 @@ export const depsUpgradesAutomation = defineAutomation({
     "Checks each declared updater for a newer release and files one upgrade task covering every outdated one.",
   categoryId: DEPS_CATEGORY_ID,
   config: depsUpgradesConfig,
+  // Its agent may push as far as the Push setting allows and raise a flag for
+  // the person; it never closes its own conversation (no exit.clean).
+  mandate: (settings) =>
+    mandatePolicy([pushPolicy.grant(settings.push), flagRaise.grant(true)]),
   triggers: { kinds: ["schedule"] },
   inProcess:
     "A read-only detection pass (one release query per updater, then at most one task insert) that a restart can abort and the next scheduled tick simply repeats; each query is bounded by its own spawn timeout.",

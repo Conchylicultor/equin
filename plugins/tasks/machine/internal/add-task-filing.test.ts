@@ -11,6 +11,7 @@ import {
   ModelUnavailableError,
 } from "@plugins/conversations/plugins/model-provider/core";
 import type { TaskTrack } from "@plugins/tasks/plugins/task-track/core";
+import type { TasksFileGrant } from "@plugins/tasks/plugins/tasks-core/core";
 import {
   fileAddTask,
   type AddTaskInput,
@@ -29,7 +30,21 @@ const CONV = "conv-1";
 const T = "T"; // the current conversation's task
 const D = "D"; // a task that already waited on T
 
-function makeStore(catalog: ModelCatalog = BASELINE_MODELS) {
+/** Today's interactive grant: main after, sidequest manual. */
+const INTERACTIVE: TasksFileGrant = {
+  main: { start: ["after"] },
+  sidequest: { start: ["manual"] },
+};
+/** Every mode on every track. */
+const ALL: TasksFileGrant = {
+  main: { start: ["now", "after", "manual"] },
+  sidequest: { start: ["now", "after", "manual"] },
+};
+
+function makeStore(
+  catalog: ModelCatalog = BASELINE_MODELS,
+  grant: TasksFileGrant | null = INTERACTIVE,
+) {
   const tasks = new Set<string>([T, D]);
   // "a->b" = a depends on b.
   const edges = new Set<string>([`${D}->${T}`]);
@@ -58,6 +73,7 @@ function makeStore(catalog: ModelCatalog = BASELINE_MODELS) {
   };
 
   const ports: AddTaskPorts = {
+    grant: async (id) => (id === CONV ? grant : null),
     getConversation: async (id) => (id === CONV ? { taskId: T } : null),
     getTask: async (id) => (tasks.has(id) ? { id } : null),
     createTask: async (input) => {
@@ -68,6 +84,9 @@ function makeStore(catalog: ModelCatalog = BASELINE_MODELS) {
     },
     inheritLaunchOptions: async () => {},
     rewire: (opts) => rewireOn(graph, opts),
+    addDependencies: async (taskId, ids) => {
+      for (const id of ids) await graph.add(taskId, id);
+    },
     armAutoStart: async ({ taskId, model }) => {
       armed.set(taskId, model);
     },
@@ -78,9 +97,16 @@ function makeStore(catalog: ModelCatalog = BASELINE_MODELS) {
     modelCatalog: () => catalog,
   };
 
-  const file = (
-    input: Omit<AddTaskInput, "relation"> & Partial<AddTaskInput>,
-  ) => fileAddTask({ relation: "followup", ...input }, CONV, ports);
+  // The interactive defaults: main after, sidequest manual.
+  const file = (input: Omit<AddTaskInput, "start"> & Partial<AddTaskInput>) =>
+    fileAddTask(
+      {
+        start: input.track === "main" ? "after" : "manual",
+        ...input,
+      },
+      CONV,
+      ports,
+    );
 
   return { tasks, edges, armed, tracks, file };
 }
@@ -109,7 +135,7 @@ describe("add_task filing: main track vs sidequest", () => {
     const m2 = await s.file({
       title: "Main 2",
       track: "main",
-      target: m1.task_id,
+      after: [m1.task_id],
     });
 
     const S1 = s1.task_id;
@@ -138,10 +164,17 @@ describe("add_task filing: main track vs sidequest", () => {
       ]),
     );
 
-    expect(s1).toMatchObject({ track: "sidequest", autostart: null });
+    expect(s1).toMatchObject({
+      track: "sidequest",
+      start: "manual",
+      model: null,
+    });
     expect(m1).toMatchObject({
       track: "main",
-      autostart: DEFAULT_MODEL_CHOICE,
+      start: "after",
+      after: [T],
+      relation: "followup",
+      model: DEFAULT_MODEL_CHOICE,
     });
   });
 
@@ -158,24 +191,24 @@ describe("add_task filing: main track vs sidequest", () => {
     );
   });
 
-  test("main track honours an explicit autostart model", async () => {
+  test("main track honours an explicit model", async () => {
     const s = makeStore();
     const m = await s.file({
       title: "Main",
       track: "main",
-      autostart: "sonnet",
+      model: "sonnet",
     });
     expect(s.armed.get(m.task_id)).toBe("sonnet");
   });
 
-  test("a sidequest with autostart throws before anything is written", async () => {
+  test("a manual task with a model throws before anything is written", async () => {
     const s = makeStore();
     const tasksBefore = new Set(s.tasks);
     const edgesBefore = new Set(s.edges);
     const err = await rejection(
-      s.file({ title: "S", track: "sidequest", autostart: "opus" }),
+      s.file({ title: "S", track: "sidequest", model: "opus" }),
     );
-    expect(err.message).toMatch(/never auto-started/);
+    expect(err.message).toMatch(/never armed/);
     expect(s.tasks).toEqual(tasksBefore);
     expect(s.edges).toEqual(edgesBefore);
     expect(s.armed.size).toBe(0);
@@ -193,7 +226,117 @@ describe("add_task filing: main track vs sidequest", () => {
   });
 });
 
-describe("add_task autostart: the id grammar at the schema, the catalog at filing", () => {
+describe("add_task start modes", () => {
+  test("now: under T, no dependency, armed", async () => {
+    const s = makeStore(BASELINE_MODELS, ALL);
+    const r = await s.file({ title: "N", track: "main", start: "now" });
+    expect(s.edges).toEqual(new Set([`${D}->${T}`]));
+    expect(s.armed.get(r.task_id)).toBe(DEFAULT_MODEL_CHOICE);
+    expect(r).toMatchObject({ after: [], relation: null });
+  });
+
+  test("now with `after` is refused", async () => {
+    const s = makeStore(BASELINE_MODELS, ALL);
+    const err = await rejection(
+      s.file({ title: "N", track: "main", start: "now", after: [T] }),
+    );
+    expect(err.message).toMatch(/`after` is meaningless/);
+    expect(s.tasks.size).toBe(2);
+  });
+
+  test("manual main: spliced like after, never armed", async () => {
+    const s = makeStore(BASELINE_MODELS, ALL);
+    const r = await s.file({ title: "M", track: "main", start: "manual" });
+    expect(s.edges).toEqual(
+      new Set([`${r.task_id}->${T}`, `${D}->${r.task_id}`]),
+    );
+    expect(s.armed.size).toBe(0);
+    expect(r.model).toBeNull();
+  });
+
+  test("several afters: a plain join, no splice", async () => {
+    const s = makeStore(BASELINE_MODELS, ALL);
+    const r = await s.file({
+      title: "J",
+      track: "main",
+      start: "after",
+      after: [T, D],
+    });
+    expect(s.edges).toEqual(
+      new Set([`${D}->${T}`, `${r.task_id}->${T}`, `${r.task_id}->${D}`]),
+    );
+    expect(s.armed.get(r.task_id)).toBe(DEFAULT_MODEL_CHOICE);
+    expect(r.relation).toBeNull();
+  });
+
+  test("a relation with several afters is refused", async () => {
+    const s = makeStore(BASELINE_MODELS, ALL);
+    const err = await rejection(
+      s.file({
+        title: "J",
+        track: "main",
+        start: "after",
+        after: [T, D],
+        relation: "prerequisite",
+      }),
+    );
+    expect(err.message).toMatch(/single `after`/);
+  });
+
+  test("an unknown after task is refused before anything is written", async () => {
+    const s = makeStore();
+    const err = await rejection(
+      s.file({ title: "M", track: "main", after: ["nope"] }),
+    );
+    expect(err.message).toMatch(/"nope" not found/);
+    expect(s.tasks.size).toBe(2);
+  });
+
+  test("the grant's model is the default; an explicit one wins", async () => {
+    const s = makeStore(BASELINE_MODELS, {
+      main: { start: ["after"], model: "sonnet" },
+    });
+    const a = await s.file({ title: "A", track: "main" });
+    const b = await s.file({ title: "B", track: "main", model: "opus" });
+    expect(s.armed.get(a.task_id)).toBe("sonnet");
+    expect(s.armed.get(b.task_id)).toBe("opus");
+  });
+});
+
+describe("add_task grant refusals", () => {
+  test("a start mode the grant does not list is refused, listing what it allows", async () => {
+    const s = makeStore();
+    const err = await rejection(
+      s.file({ title: "S", track: "sidequest", start: "now" }),
+    );
+    expect(err.message).toContain(
+      'does not allow filing track "sidequest" with start "now"',
+    );
+    expect(err.message).toContain(
+      'track "main": start "after"; track "sidequest": start "manual"',
+    );
+    expect(s.tasks.size).toBe(2);
+  });
+
+  test("a track the grant does not list is refused", async () => {
+    const s = makeStore(BASELINE_MODELS, { sidequest: { start: ["manual"] } });
+    const err = await rejection(s.file({ title: "M", track: "main" }));
+    expect(err.message).toContain('track "main"');
+    expect(err.message).toContain(
+      'It allows: track "sidequest": start "manual"',
+    );
+    expect(s.tasks.size).toBe(2);
+  });
+
+  test("no grant at all is refused", async () => {
+    const s = makeStore(BASELINE_MODELS, null);
+    const err = await rejection(s.file({ title: "M", track: "main" }));
+    expect(err.message).toMatch(/does not allow filing tasks/);
+    expect(s.tasks.size).toBe(2);
+  });
+});
+
+describe("add_task model: the id grammar at the schema, the catalog at filing", () => {
   // The MCP input schema is fixed when the tool registers, so it can only
   // check the grammar; a release after that must still be accepted.
   test("the schema accepts any well-formed version, known or not", () => {
@@ -210,7 +353,7 @@ describe("add_task autostart: the id grammar at the schema, the catalog at filin
       s.file({
         title: "Main",
         track: "main",
-        autostart: ModelChoiceSchema.parse("sonnet-9"),
+        model: ModelChoiceSchema.parse("sonnet-9"),
       }),
     );
     expect(err).toBeInstanceOf(ModelUnavailableError);
@@ -238,7 +381,7 @@ describe("add_task autostart: the id grammar at the schema, the catalog at filin
     const r = await s.file({
       title: "Main",
       track: "main",
-      autostart: sonnet9,
+      model: sonnet9,
     });
     expect(s.armed.get(r.task_id)).toBe(sonnet9);
   });
@@ -260,7 +403,7 @@ describe("add_task autostart: the id grammar at the schema, the catalog at filin
       s.file({
         title: "Main",
         track: "main",
-        autostart: ModelChoiceSchema.parse("opus-4-6"),
+        model: ModelChoiceSchema.parse("opus-4-6"),
       }),
     );
     expect(err.message).toContain(

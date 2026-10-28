@@ -8,8 +8,9 @@ import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
 import { Log } from "@plugins/primitives/plugins/log-channels/server";
 import { armTaskAutoStart } from "@plugins/tasks/server";
 import { listArmedTaskIds } from "@plugins/tasks/plugins/auto-start/server";
+import { setMandate } from "@plugins/tasks/plugins/tasks-core/server";
+import { PUSH_POLICY_TEXT } from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/plugins/capabilities/core";
 import {
-  PUSH_POLICY_TEXT,
   renderPrompt,
   SETTLE_MAX_WAIT_FACTOR,
   type AutomationConfigFields,
@@ -100,6 +101,7 @@ async function runFiling(
       categoryId: spec.categoryId,
       filing,
       description: prompt,
+      mandate: spec.mandate(settings),
     });
     catalogChanged();
     if (filing.onFiled) await filing.onFiled(taskId);
@@ -179,6 +181,9 @@ async function runLaunch(
     const prompt = fillPrompt(spec, settings, pick.variables);
     // Lost a race to another automation's filing or launch: not ours.
     if (!(await recordLaunch(spec.id, pick.taskId))) continue;
+    // The launched agent works under the automation's mandate, nested on the
+    // task (nearest wins) — the person's own tree above it keeps theirs.
+    await setMandate(pick.taskId, spec.mandate(settings));
     await armTaskAutoStart({
       taskId: pick.taskId,
       model: settings.model,

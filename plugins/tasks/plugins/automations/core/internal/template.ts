@@ -1,5 +1,3 @@
-import type { PushPolicy } from "./settings";
-
 /** A variable an automation fills into its prompt template on every run. */
 export interface PromptVariable {
   name: string;
@@ -15,15 +13,6 @@ export interface PromptVariable {
 export const PUSH_POLICY_VARIABLE: PromptVariable = {
   name: "pushPolicy",
   description: "What the Push setting allows, as an instruction",
-};
-
-/** The paragraph `{{pushPolicy}}` becomes. */
-export const PUSH_POLICY_TEXT: Record<PushPolicy, string> = {
-  never:
-    "Do NOT push. When the build is `ok`, stop and raise a flag so a person reviews the branch — say what changed and why.",
-  safe: 'Push with `./equin push -m "…"` ONLY if the change is uncontroversial: small and local, no behaviour or API a person relies on changes, no design choice is left to make, and every check passes. **You are authorized to push such a change without asking.** Anything else: do NOT push — raise a flag that says what needs a decision.',
-  checks:
-    '**You are authorized to push this task\'s change without asking** once every check passes and the build is `ok`: `./equin push -m "…"`.',
 };
 
 const PLACEHOLDER = /\{\{\s*([A-Za-z_][\w]*)\s*\}\}/g;

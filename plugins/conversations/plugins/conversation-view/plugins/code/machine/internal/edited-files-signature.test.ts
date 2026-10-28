@@ -1,3 +1,4 @@
+import { mandatePolicy } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
 import { afterAll, describe, expect, test } from "bun:test";
 import { mkdir, mkdtemp, rm, unlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -241,7 +242,11 @@ describe("unresolvable worktree — one determinate unresolved state", () => {
     const attemptId = `edited-files-reaped-attempt-${stamp}`;
     const convId = `edited-files-reaped-conv-${stamp}`;
     seededTasks.push(taskId);
-    await createTask({ id: taskId, title: "reaped-worktree fixture" });
+    await createTask({
+      id: taskId,
+      title: "reaped-worktree fixture",
+      mandate: mandatePolicy([]),
+    });
     await createAttempt({
       id: attemptId,
       taskId,

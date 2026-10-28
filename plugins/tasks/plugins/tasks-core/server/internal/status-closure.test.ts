@@ -54,8 +54,8 @@ async function seedTask(
   opts: { dropped?: boolean } = {},
 ): Promise<void> {
   await tx.execute(sql`
-    INSERT INTO tasks (id, title, title_auto, rank, dropped_at, created_at, updated_at)
-    VALUES (${id}, ${id}, true, ${id}, ${opts.dropped ? sql`now()` : null}, now(), now())
+    INSERT INTO tasks (id, title, title_auto, rank, dropped_at, created_at, updated_at, mandate)
+    VALUES (${id}, ${id}, true, ${id}, ${opts.dropped ? sql`now()` : null}, now(), now(), '{}')
   `);
 }
 

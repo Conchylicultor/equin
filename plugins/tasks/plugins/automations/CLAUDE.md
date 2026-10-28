@@ -345,8 +345,8 @@ A trigger on `tasks.statusChanged` (`automations.task-status`):
     - `resource.declare` "automations.tasks:groups"
     - `resource.declare` "automations.tasks:rows"
     - `trigger` "automations.task-status"
-  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `tasks/tasks-core` ×5
+  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `tasks/tasks-core` ×6
     - `config_v2` ×4
     - `database` ×2
     - `infra/endpoints` ×2
@@ -394,8 +394,9 @@ A trigger on `tasks.statusChanged` (`automations.task-status`):
     - `network/live.serveCollection`
     - `network/live.serveValue`
 - Core:
-  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `config_v2` ×3
+    - `conversations/conversation-view/push-and-exit/capabilities` ×3
     - `conversations/model-provider` ×3
     - `fields/text/config` ×2
     - `network/live` ×2
@@ -431,7 +432,6 @@ A trigger on `tasks.statusChanged` (`automations.task-status`):
     - `LaunchDecisionRow`
     - `OriginRole`
     - `PromptVariable`
-    - `PushPolicy`
     - `RenderedPrompt`
     - `ScheduleSettings`
     - `TriggerKind`
@@ -467,9 +467,6 @@ A trigger on `tasks.statusChanged` (`automations.task-status`):
     - `MAX_LAUNCHES`
     - `ORIGIN_ROLES`
     - `PromptVariableSchema`
-    - `PUSH_POLICIES`
-    - `PUSH_POLICY_LABELS`
-    - `PUSH_POLICY_TEXT`
     - `PUSH_POLICY_VARIABLE`
     - `readAutomationSettings`
     - `renderPrompt`

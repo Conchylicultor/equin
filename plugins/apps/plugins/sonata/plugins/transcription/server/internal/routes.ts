@@ -1,3 +1,4 @@
+import { interactiveMandate } from "@plugins/tasks/plugins/mandate-presets/core";
 import {
   createSongRow,
   songAttachments,
@@ -57,6 +58,7 @@ export const handlePrepareTranscription = implement(
       title: `Transcribe: ${title}`,
       description: prompt,
       author: TRANSCRIPTION_AUTHOR,
+      mandate: interactiveMandate(),
     });
     await setTaskCategory(task.id, SONATA_CATEGORY_ID);
     // The task runs in the transcription workspace however it is launched —

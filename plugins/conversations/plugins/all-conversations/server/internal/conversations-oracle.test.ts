@@ -40,6 +40,7 @@
  * Run: `./equin test plugins/conversations/plugins/all-conversations`.
  */
 
+import { mandatePolicy } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { eq, inArray, sql } from "drizzle-orm";
 import {
@@ -357,6 +358,7 @@ async function insertTask(id: string, title: string): Promise<void> {
     title,
     titleAuto: false,
     rank: `r${id}`,
+    mandate: mandatePolicy([]),
   } as typeof _tasks.$inferInsert);
 }
 

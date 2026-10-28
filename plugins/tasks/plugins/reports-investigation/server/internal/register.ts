@@ -1,3 +1,4 @@
+import { interactiveMandate } from "@plugins/tasks/plugins/mandate-presets/core";
 import { createTask, getTask } from "@plugins/tasks/plugins/tasks-core/server";
 import { setTaskCategory } from "@plugins/tasks/plugins/task-category/server";
 import {
@@ -30,6 +31,8 @@ export function registerReportsInvestigation(
         title,
         description,
         author,
+        // A person clicked Investigate: the task is theirs.
+        mandate: interactiveMandate(),
       });
       await setTaskCategory(task.id, REPORTS_CATEGORY_ID);
       return { taskId: task.id };

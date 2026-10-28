@@ -10,12 +10,14 @@ import {
   isLaunchAutomationConfig,
   MAX_LAUNCH_CONCURRENCY,
   MAX_LAUNCHES,
-  PUSH_POLICIES,
-  PUSH_POLICY_LABELS,
   type AutomationEntry,
   type LaunchAutomationConfigFields,
-  type PushPolicy,
 } from "../../core";
+import {
+  PUSH_POLICIES,
+  PUSH_POLICY_LABELS,
+  type PushPolicy,
+} from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/plugins/capabilities/core";
 import { ChoiceSelect } from "./choice-select";
 import type { AutomationSectionProps } from "./section-props";
 

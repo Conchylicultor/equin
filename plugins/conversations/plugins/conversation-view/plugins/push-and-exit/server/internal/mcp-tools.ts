@@ -1,6 +1,11 @@
 import { z } from "zod";
 import { Mcp } from "@plugins/infra/plugins/mcp/server";
 import { updateConversation } from "@plugins/tasks/plugins/tasks-core/server";
+import { granted } from "@plugins/tasks/plugins/orchestration/plugins/mandate/server";
+import {
+  exitClean,
+  flagRaise,
+} from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/plugins/capabilities/core";
 import { exitCleanFinalizeJob } from "./exit-clean-finalize-job";
 
 // `exit_clean` and `flag_raise` are the model-facing terminus of the
@@ -15,11 +20,15 @@ import { exitCleanFinalizeJob } from "./exit-clean-finalize-job";
 // conversation stays open (returns to `waiting`) and the flag text is rendered
 // inline in the transcript by the flag-raise tool-call renderer.
 //
-// Both handlers are callable outside the toolbar-initiated flow so the model
+// Each is visible only to a conversation whose mandate grants it
+// (`exit.clean` / `flag.raise`, the capabilities sub-plugin). Both handlers
+// are callable outside the toolbar-initiated flow so the model
 // can call them in response to an explicit "Exit" instruction.
 
 export const exitCleanTool = Mcp.tool({
   name: "exit_clean",
+  // Only a mandate granting `exit.clean` (an automation's never does).
+  when: granted(exitClean),
   description: `Signal that the push-and-exit flow finished cleanly: the branch landed and there's nothing the user needs to know about. The conversation will close automatically after this turn ends.
 
 Only call this in response to the push-and-exit prompt. If anything went wrong or there's something worth surfacing, call \`flag_raise\` instead.`,
@@ -40,6 +49,7 @@ Only call this in response to the push-and-exit prompt. If anything went wrong o
 
 export const flagRaiseTool = Mcp.tool({
   name: "flag_raise",
+  when: granted(flagRaise),
   description: `Signal that the push-and-exit flow finished but something needs the user's attention — caveats, partial outcomes, follow-ups, skipped work, or the push didn't land. \`reason\` should be a short bullet list of what the user should know. The conversation stays open for the user to review.
 
 Only call this in response to the push-and-exit prompt.`,

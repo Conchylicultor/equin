@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-tasks-orchestration-mandate-policy",
+  "private": true,
+  "version": "0.0.1",
+  "description": "The mandate's value types, as a leaf: defineCapability (a capability's id, schema and label, and grant(value)), the branded MandatePolicy built only by mandatePolicy(grants) — a capability granted twice throws — and MandatePolicySchema, the tasks.mandate column decoder. Imports nothing from tasks, so tasks-core can store a policy and the mandate server can read tasks-core."
+}

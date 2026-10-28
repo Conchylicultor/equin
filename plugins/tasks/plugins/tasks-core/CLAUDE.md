@@ -337,6 +337,7 @@ serves them.
     - `DropTaskTreeResult`
     - `InsertConversationInput`
     - `InsertPushInput`
+    - `NearestMandate`
     - `OrphanedAttempt`
     - `Push`
     - `PushLandedPayload`
@@ -363,6 +364,7 @@ serves them.
     - `addTaskDependency`
     - `AttemptSchema`
     - `AttemptStatusSchema`
+    - `clearMandate`
     - `clusterLabelOf`
     - `conversationAttachments`
     - `conversationCreated`
@@ -406,6 +408,7 @@ serves them.
     - `listTasks`
     - `markConversationClosed`
     - `markConversationGone`
+    - `nearestMandate`
     - `orphanedAttemptSink`
     - `pushes`
     - `pushLanded`
@@ -416,6 +419,7 @@ serves them.
     - `removeTaskDependency`
     - `runtimeOfConversationLookup`
     - `setConversationHibernated`
+    - `setMandate`
     - `taskAttachments`
     - `taskDependsOn`
     - `taskDescriptionChanged`
@@ -461,11 +465,11 @@ serves them.
     - `tasks` (keyed)
     - `tasks:rows` (keyed, point)
 - Core:
-  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations/model-provider` ×3
     - `conversations/workspace` ×3
     - `fields/text/config` ×3
     - `fields` ×3
-    - `conversations/model-provider` ×2
     - `fields/rank/config` ×2
     - `network/live` ×2
     - `fields/bool/config.boolField`
@@ -477,6 +481,7 @@ serves them.
     - `packages/list-bound.wholeList`
     - `primitives/pane.defineRoute`
     - `primitives/rank.RankSchema`
+    - `tasks/orchestration/mandate/policy.defineCapability`
   - Exports (types):
     - `Attempt`
     - `AttemptStatus`
@@ -488,10 +493,13 @@ serves them.
     - `ConversationWorkingOn`
     - `Push`
     - `Task`
+    - `TaskFilingStart`
     - `TaskListItem`
     - `TaskNode`
     - `TaskRow`
+    - `TasksFileGrant`
     - `TaskStatus`
+    - `TrackFilingGrant`
     - `TrailerCommit`
   - Exports (values):
     - `attemptDeliveriesEntityRef`
@@ -524,21 +532,26 @@ serves them.
     - `PushSchema`
     - `RECENT_GONE_LIMIT`
     - `SETTLED_STATUSES`
+    - `TASK_FILING_STARTS`
     - `TASK_STATUS_OPTIONS`
     - `taskDependenciesEntityRef`
     - `taskDescriptions`
     - `taskDetailRoute`
+    - `TaskFilingStartSchema`
     - `TaskGraph`
     - `taskRows`
     - `TaskSchema`
     - `tasksEntityRef`
+    - `tasksFile`
+    - `TasksFileGrantSchema`
     - `tasksRootRoute`
     - `TaskStatusSchema`
+    - `TrackFilingGrantSchema`
     - `TRAILER_LOG_FORMAT`
 - Cross-plugin:
-  - Imported by: 68 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 71 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×26
-    - `tasks` ×18
+    - `tasks` ×21
     - `active-data` ×5
     - `debug` ×4
     - `page` ×3

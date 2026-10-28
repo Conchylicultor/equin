@@ -1,3 +1,4 @@
+import { interactiveMandate } from "@plugins/tasks/plugins/mandate-presets/core";
 import { Mcp } from "@plugins/infra/plugins/mcp/server";
 import { getConfig } from "@plugins/config_v2/server";
 import {
@@ -49,6 +50,7 @@ export const fileTaskTool = Mcp.tool({
       titleAuto: false,
       description,
       author: conversationId,
+      mandate: interactiveMandate(),
     });
     await setTaskCategory(task.id, WISHES_CATEGORY_ID);
     await armTaskAutoStart({ taskId: task.id, model, cause: "help-ask" });

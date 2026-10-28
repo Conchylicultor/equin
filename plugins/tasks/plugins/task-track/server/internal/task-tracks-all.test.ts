@@ -33,8 +33,8 @@ beforeAll(async () => {
   t = await createTestDb({ prefix: "task_tracks_all" });
   await runMigrations(t.db);
   await t.db.execute(sql`
-    INSERT INTO tasks (id, title, title_auto, rank)
-    SELECT 'tt-' || g, 'task ' || g, false, 'a' || lpad(g::text, 6, '0')
+    INSERT INTO tasks (id, title, title_auto, rank, mandate)
+    SELECT 'tt-' || g, 'task ' || g, false, 'a' || lpad(g::text, 6, '0'), '{}'::jsonb
     FROM generate_series(1, ${COUNT}) g`);
   await t.db.insert(tasksTrack.table).values(
     Array.from({ length: COUNT }, (_, i) => ({

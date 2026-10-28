@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-conversations-conversation-view-push-and-exit-capabilities",
+  "private": true,
+  "version": "0.0.1",
+  "description": "The push-and-exit mandate capabilities as plain data: push.policy (never | safe | checks — the closed push policy set, its labels and the instruction each becomes), exit.clean (exit_clean) and flag.raise (flag_raise). A leaf, so every root creator can grant them without a cycle through push-and-exit, which imports conversations."
+}

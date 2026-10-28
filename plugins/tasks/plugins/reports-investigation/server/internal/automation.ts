@@ -1,3 +1,8 @@
+import { mandatePolicy } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
+import {
+  flagRaise,
+  pushPolicy,
+} from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/plugins/capabilities/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { defineAutomation } from "@plugins/tasks/plugins/automations/server";
 import { ReportKind, type ReportRow } from "@plugins/reports/server";
@@ -81,6 +86,10 @@ export const reportInvestigationsAutomation = defineAutomation({
     "Picks up reports nobody has investigated, files one task for the batch and launches an agent to find and fix the root cause.",
   categoryId: REPORTS_CATEGORY_ID,
   config: reportInvestigationsConfig,
+  // Its agent may push as far as the Push setting allows and raise a flag for
+  // the person; it never closes its own conversation (no exit.clean).
+  mandate: (settings) =>
+    mandatePolicy([pushPolicy.grant(settings.push), flagRaise.grant(true)]),
   triggers: {
     kinds: ["event", "schedule"],
     eventLabel: "When a report is filed",

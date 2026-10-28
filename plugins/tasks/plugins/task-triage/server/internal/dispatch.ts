@@ -1,3 +1,4 @@
+import { interactiveMandate } from "@plugins/tasks/plugins/mandate-presets/core";
 import { z } from "zod";
 import { getConfig } from "@plugins/config_v2/server";
 import { createConversation } from "@plugins/conversations/server";
@@ -108,6 +109,9 @@ async function runTaskFor(taskId: string, task: TriagedTask): Promise<string> {
       titleAuto: false,
       description: `Read-only triage of task \`${taskId}\`. Its result is the task's Triage card.`,
       author: TRIAGE_AUTHOR,
+      // Interactive: the triage profile allowlists exit_clean / flag_raise,
+      // and the tool gates still apply on top.
+      mandate: interactiveMandate(),
     });
     await setTaskCategory(created.id, SYSTEM_CATEGORY_ID);
     await setTaskSubject(created.id, subject);

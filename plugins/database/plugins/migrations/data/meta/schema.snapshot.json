@@ -1,6 +1,6 @@
 {
-  "id": "3cc2f59b-547f-488d-9a43-971e3d0a385c",
-  "prevId": "d3669c1b-4e81-4fe9-9422-951f400977e8",
+  "id": "a79ad933-7bc7-48cf-8710-710f3f5f0823",
+  "prevId": "3cc2f59b-547f-488d-9a43-971e3d0a385c",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -12040,6 +12040,72 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.digest_cursors": {
+      "name": "digest_cursors",
+      "schema": "",
+      "columns": {
+        "conversation_id": {
+          "name": "conversation_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "root_task_id": {
+          "name": "root_task_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "seen_at": {
+          "name": "seen_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "digest_cursors_conversation_id_conversations_id_fk": {
+          "name": "digest_cursors_conversation_id_conversations_id_fk",
+          "tableFrom": "digest_cursors",
+          "tableTo": "conversations",
+          "columnsFrom": [
+            "conversation_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "digest_cursors_root_task_id_tasks_id_fk": {
+          "name": "digest_cursors_root_task_id_tasks_id_fk",
+          "tableFrom": "digest_cursors",
+          "tableTo": "tasks",
+          "columnsFrom": [
+            "root_task_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "digest_cursors_conversation_id_root_task_id_pk": {
+          "name": "digest_cursors_conversation_id_root_task_id_pk",
+          "columns": [
+            "conversation_id",
+            "root_task_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.tasks_ext_outcome_report": {
       "name": "tasks_ext_outcome_report",
       "schema": "",
@@ -13286,6 +13352,12 @@
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
+        },
+        "mandate": {
+          "name": "mandate",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -13372,7 +13444,12 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "tasks_root_has_mandate": {
+          "name": "tasks_root_has_mandate",
+          "value": "\"tasks\".\"folder_id\" IS NOT NULL OR \"tasks\".\"mandate\" IS NOT NULL"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.pushes": {

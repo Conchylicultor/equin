@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-tasks-orchestration",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Umbrella for the workflow-agnostic building blocks agents are orchestrated by inside a task subtree: the mandate (what an agent may do, resolved nearest-wins up the folder tree), and later the tree digest and watchers. Names no workflow, automation or track."
+}

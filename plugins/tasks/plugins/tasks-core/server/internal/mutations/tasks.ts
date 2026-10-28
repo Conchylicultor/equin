@@ -8,8 +8,10 @@ import {
   findNextRankInFolder,
   isDescendant,
   listTasks,
+  nearestMandate,
   taskDependsOn,
 } from "../queries/tasks";
+import type { MandatePolicy } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
 import { withTaskStatusChange } from "../status-scope";
 import { taskDescriptionChanged, taskTitleChanged } from "../tables-events";
 import type { EmitTx } from "@plugins/infra/plugins/events/server";
@@ -17,10 +19,8 @@ import { unionTaskClusters } from "./clusters";
 import { withTaskStatusBatch, type DbExecutor } from "../status-batch";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 
-export interface CreateTaskInput {
+interface CreateTaskFields {
   id?: string;
-  // Folder the task is filed under (display-only hierarchy, not a dependency).
-  folderId?: string | null;
   groupId?: string | null;
   title: string;
   // Defaults to true (machine-generated label). Pass false when the title is
@@ -31,12 +31,26 @@ export interface CreateTaskInput {
   description?: string | null;
 }
 
+/**
+ * A task is filed under a folder (display-only hierarchy, not a dependency) —
+ * and inherits that folder's mandate — or it is a root, and states its own
+ * mandate: what an agent may do inside its subtree. There is no root without
+ * one (tsc here, and the `tasks_root_has_mandate` CHECK underneath).
+ */
+export type CreateTaskInput = CreateTaskFields &
+  (
+    | { folderId: string; mandate?: never }
+    | { folderId?: null; mandate: MandatePolicy }
+  );
+
 export interface UpdateTaskPatch {
   title?: string;
   description?: string | null;
   drop?: boolean;
   hold?: boolean;
   // Re-file under a different folder (display-only hierarchy, not a dependency).
+  // Re-filing to the root (`null`) copies the task's effective mandate onto it
+  // when it has none of its own, so it keeps the powers it had.
   // No `rank`: positioning is `handle-move`'s job, which mints against the
   // complete sibling set inside its own transaction. A re-file made here keeps
   // the task's existing rank.
@@ -72,6 +86,7 @@ async function createTaskOn(input: CreateTaskInput, exec: DbExecutor) {
     await exec.insert(_tasks).values({
       id,
       folderId,
+      mandate: input.folderId == null ? input.mandate : null,
       groupId: input.groupId ?? null,
       title: input.title,
       titleAuto: input.titleAuto ?? true,
@@ -157,7 +172,17 @@ async function updateTaskOn(
     ) {
       throw new Error("Cannot file a task into its own descendant");
     }
-    if (patch.folderId !== null) {
+    if (patch.folderId === null) {
+      // A root states its mandate (the CHECK). One with none of its own keeps
+      // the policy it had under its folder — derived, never a new input.
+      const own = await nearestMandate(id, exec);
+      if (own.kind === "none") {
+        throw new Error(
+          `Cannot re-file task ${id} to the root: no mandate up its folder chain`,
+        );
+      }
+      if (own.rootTaskId !== id) dbPatch.mandate = own.policy;
+    } else {
       // Union BEFORE the write, and only after the self/descendant guards — a
       // rejected re-file must not union. On the same executor as the write, so
       // the label and the folder edge commit or roll back together.
@@ -203,6 +228,46 @@ async function updateTaskOn(
     .where(eq(tasks.id, id))
     .limit(1);
   return row ?? null;
+}
+
+/**
+ * States `policy` as the mandate of `taskId`'s subtree — on a nested task it
+ * overrides its ancestors' (nearest wins). Code-only: no endpoint or MCP tool
+ * writes a mandate.
+ */
+export async function setMandate(
+  taskId: string,
+  policy: MandatePolicy,
+  exec: DbExecutor = db,
+): Promise<void> {
+  const [row] = await exec
+    .update(_tasks)
+    .set({ mandate: policy })
+    .where(eq(_tasks.id, taskId))
+    .returning({ id: _tasks.id });
+  if (!row) throw new Error(`setMandate: no task ${taskId}`);
+}
+
+/**
+ * Drops `taskId`'s own mandate, so it inherits its nearest ancestor's again.
+ * Refused on a root: a root always states one.
+ */
+export async function clearMandate(
+  taskId: string,
+  exec: DbExecutor = db,
+): Promise<void> {
+  const [task] = await exec
+    .select({ folderId: _tasks.folderId })
+    .from(_tasks)
+    .where(eq(_tasks.id, taskId))
+    .limit(1);
+  if (!task) throw new Error(`clearMandate: no task ${taskId}`);
+  if (task.folderId === null) {
+    throw new Error(
+      `clearMandate: task ${taskId} is a root — a root always states its mandate`,
+    );
+  }
+  await exec.update(_tasks).set({ mandate: null }).where(eq(_tasks.id, taskId));
 }
 
 export async function updateTaskTitle(

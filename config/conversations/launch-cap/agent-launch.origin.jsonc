@@ -1,0 +1,5 @@
+// @hash cbfe43253f6c
+{
+  // How many agents may be starting or working at once before the auto-start queue waits for one to finish. Caps only tasks that start on their own (armed, automations, follow-ups); a launch you start yourself always runs.
+  "maxConcurrent": 6
+}

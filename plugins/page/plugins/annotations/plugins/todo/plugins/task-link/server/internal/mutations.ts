@@ -1,3 +1,4 @@
+import { interactiveMandate } from "@plugins/tasks/plugins/mandate-presets/core";
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
 import {
   loadBlockScope,
@@ -135,6 +136,7 @@ export async function ensureTodoTask(
     titleAuto: true,
     description: prompt,
     author: "user",
+    mandate: interactiveMandate(),
   });
   scheduleTaskTitleUpdate(task.id, seed, fallbackTitle);
   // The SAME category `/prompt`-launched tasks get, from the plugin that owns

@@ -43,7 +43,7 @@ export async function seedConversations(
   const user = { id: `${taskId}-user`, title: `${taskId} user conv` };
   const system = { id: `${taskId}-system`, title: `${taskId} system conv` };
   await db.query(
-    `INSERT INTO tasks (id, title, title_auto, rank) VALUES ($1, $2, false, $3)`,
+    `INSERT INTO tasks (id, title, title_auto, rank, mandate) VALUES ($1, $2, false, $3, '{}')`,
     [taskId, taskTitle, `zz${tag}`],
   );
   await db.query(

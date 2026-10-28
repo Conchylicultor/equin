@@ -1,3 +1,8 @@
+import { mandatePolicy } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
+import {
+  flagRaise,
+  pushPolicy,
+} from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/plugins/capabilities/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { defineAutomation } from "@plugins/tasks/plugins/automations/server";
@@ -40,6 +45,10 @@ export const upstreamMergeAutomation = defineAutomation({
     "Checks the repository this checkout was cloned from for new commits and files one task that merges them with `./equin upstream merge`.",
   categoryId: UPSTREAM_CATEGORY_ID,
   config: upstreamMergeConfig,
+  // Its agent may push as far as the Push setting allows and raise a flag for
+  // the person; it never closes its own conversation (no exit.clean).
+  mandate: (settings) =>
+    mandatePolicy([pushPolicy.grant(settings.push), flagRaise.grant(true)]),
   triggers: { kinds: ["schedule"] },
   inProcess:
     "A detection pass (one fetch of upstream's main, one rev-list, then at most one task insert) that a restart can abort and the next scheduled tick simply repeats; the fetch is bounded by its own five-minute timeout.",

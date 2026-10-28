@@ -1,3 +1,4 @@
+import { interactiveMandate } from "@plugins/tasks/plugins/mandate-presets/core";
 import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { Mcp } from "@plugins/infra/plugins/mcp/server";
@@ -72,7 +73,11 @@ Good: "Floating promise in sidebar refresh". Bad: "Add await to line 42".`,
       .returning();
 
     const task = await createTask({
-      folderId: currentTaskId,
+      // Filed under the proposing agent's task (inheriting its mandate), or —
+      // a conversation with no task to propose from — a root of its own.
+      ...(currentTaskId
+        ? { folderId: currentTaskId }
+        : { mandate: interactiveMandate() }),
       title,
       description: description ?? null,
       author: conversationId,

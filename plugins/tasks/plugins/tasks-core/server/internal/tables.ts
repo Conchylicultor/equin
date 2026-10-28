@@ -1,4 +1,15 @@
-import { type AnyPgColumn, index, uniqueIndex } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import {
+  type AnyPgColumn,
+  check,
+  index,
+  uniqueIndex,
+} from "drizzle-orm/pg-core";
+import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
+import {
+  MandatePolicySchema,
+  type MandatePolicy,
+} from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
 
 import {
   defineEntity,
@@ -28,7 +39,22 @@ import {
 // cascade / set-null edges, DB defaults, and indexes are declared in the entity
 // meta below, reproducing the previous raw-drizzle DDL byte-for-byte.
 
-const tasksEntity = defineEntity(tasksEntityRef, {
+// Server-only columns of `tasks`: never on the wire (no list shows them, and
+// `tasks_v` leaves them out).
+const taskServerFields = {
+  // The task's mandate (`tasks/orchestration/mandate`): what an agent may do
+  // inside its subtree, resolved nearest-wins up `folderId`. NULL = inherit the
+  // nearest ancestor's. A root task always has one (the CHECK below), so every
+  // task resolves to a policy. Declared as a field of `MandatePolicy | null`
+  // rather than `nullable(jsonField(...))`, which would demand a stand-in
+  // policy as the (discarded) inner default.
+  mandate: jsonField<MandatePolicy | null>({
+    schema: MandatePolicySchema.nullable(),
+    default: null,
+  }),
+};
+
+const tasksEntity = defineEntity(tasksEntityRef, taskServerFields, {
   primaryKey: "id",
   // Which columns move `updatedAt` (derived by a DB trigger; a write to it
   // raises). `clusterId` is a cluster relabel — bookkeeping, not a fact about
@@ -47,6 +73,9 @@ const tasksEntity = defineEntity(tasksEntityRef, {
       titleAuto: false,
       author: false,
       createdAt: false,
+      // Policy, not a fact a list shows; a re-file's mandate copy rides the
+      // `folderId` write, which already counts.
+      mandate: false,
     },
   },
   columns: {
@@ -73,6 +102,11 @@ const tasksEntity = defineEntity(tasksEntityRef, {
     // label is a representative id, not a reference — a cluster's representative
     // can be a dropped task, and an FK would add a cascade we do not want.
     index("tasks_cluster_id_idx").on(t.clusterId),
+    // Every root task states its mandate, so every task resolves to one.
+    check(
+      "tasks_root_has_mandate",
+      sql`${t.folderId} IS NOT NULL OR ${t.mandate} IS NOT NULL`,
+    ),
   ],
 });
 export const _tasks = tasksEntity.table;

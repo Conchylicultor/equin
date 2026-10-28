@@ -83,3 +83,18 @@ export {
 export type { TaskNode } from "./task-graph";
 
 export { tasksRootRoute, taskDetailRoute } from "./routes";
+// The `tasks.file` mandate capability: how an agent may file tasks into its
+// subtree. A leaf here so every root creator (conversations included) can name
+// it through a preset without a cycle through `tasks`.
+export {
+  TASK_FILING_STARTS,
+  TaskFilingStartSchema,
+  TasksFileGrantSchema,
+  TrackFilingGrantSchema,
+  tasksFile,
+} from "./internal/tasks-file";
+export type {
+  TaskFilingStart,
+  TasksFileGrant,
+  TrackFilingGrant,
+} from "./internal/tasks-file";

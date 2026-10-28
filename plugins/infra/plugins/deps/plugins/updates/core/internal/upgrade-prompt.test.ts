@@ -1,8 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import {
-  PUSH_POLICY_TEXT,
-  renderPrompt,
-} from "@plugins/tasks/plugins/automations/core";
+import { renderPrompt } from "@plugins/tasks/plugins/automations/core";
+import { PUSH_POLICY_TEXT } from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/plugins/capabilities/core";
 import {
   DEPS_UPGRADE_PROMPT,
   outdatedSections,

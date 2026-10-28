@@ -36,6 +36,7 @@
  * Run: `./equin test plugins/apps/plugins/website/plugins/demos/plugins/lumen`.
  */
 
+import { mandatePolicy } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
 import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import { beforeAll, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { readdirSync, readFileSync, statSync } from "node:fs";
@@ -783,7 +784,10 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
       await subscribe(taskRows.key, all);
 
       const created = await inTx((tx) =>
-        createTask({ title: "demo write: created" }, tx),
+        createTask(
+          { title: "demo write: created", mandate: mandatePolicy([]) },
+          tx,
+        ),
       );
       const id = created.value.id;
       // The created task reaches the collection's subscriber, acked by its xid.

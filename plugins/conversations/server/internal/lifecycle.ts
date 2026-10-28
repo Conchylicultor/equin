@@ -21,6 +21,7 @@ import {
   type DbExecutor,
 } from "@plugins/tasks/plugins/tasks-core/server";
 import type { EmitTx } from "@plugins/infra/plugins/events/server";
+import type { MandatePolicy } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
 import { Runtime } from "./runtime";
 import {
   DEFAULT_CONVERSATION_RUNTIME,
@@ -109,9 +110,24 @@ async function resolveTaskEffort(
   return (await getTaskEffort(taskId))?.level;
 }
 
-export interface CreateConversationOpts {
+/**
+ * What a launch runs under — exactly one of:
+ * - `taskId`: a new attempt on that task;
+ * - `mandate`: a new root task (titled "Untitled"), stating the mandate its
+ *   agent works under — a root never goes without one;
+ * - `attemptId` / `forkFromConversationId`: an existing attempt's workspace.
+ */
+export type ConversationTarget =
+  | { taskId: string; mandate?: never }
+  | { mandate: MandatePolicy; taskId?: never }
+  | { attemptId: string; taskId?: never; mandate?: never }
+  | { forkFromConversationId: string; taskId?: never; mandate?: never };
+
+export type CreateConversationOpts = CreateConversationFields &
+  ConversationTarget;
+
+interface CreateConversationFields {
   runtimeId?: ConversationRuntimeId;
-  taskId?: string;
   attemptId?: string;
   prompt?: string;
   /** A family ("opus") or a pinned version; resolved to what runs here, once. */
@@ -202,8 +218,13 @@ export interface PreparedConversation {
     // `transcriptCopy` is the "fork from here" case: a session file to write
     // before the spawn, which `create.resumeSessionId` then plain-resumes.
     | { kind: "reuse"; attemptId: string; transcriptCopy?: TranscriptCopy }
-    // Mint a new attempt (and a new task when `taskId` is absent).
-    | { kind: "new"; attemptId: string; taskId: string | undefined };
+    // Mint a new attempt — on an existing task, or on a new root task
+    // stating `mandate`.
+    | {
+        kind: "new";
+        attemptId: string;
+        task: { taskId: string } | { mandate: MandatePolicy };
+      };
 }
 
 // The launching task's selected preprompt, resolved from the library.
@@ -233,12 +254,23 @@ function systemPromptAppend(
   return preprompt ? wrapPreprompt(preprompt.text) : undefined;
 }
 
+// The mandate of the root task a new attempt with no task files. Only the
+// `mandate` arm reaches here (an `attemptId` / fork target reuses an attempt).
+function newRootMandate(opts: CreateConversationOpts): MandatePolicy {
+  if (!opts.mandate) {
+    throw new Error(
+      "prepareConversation: a new attempt needs a taskId or a mandate",
+    );
+  }
+  return opts.mandate;
+}
+
 // Phase 1 of a launch: READS ONLY. Everything slow or off-DB (fork-source
 // lookup, the worktree root, attachment resolution, preprompt/effort lookups)
 // happens here, before any transaction is open — so a hang here holds no lock
 // and has written nothing.
 export async function prepareConversation(
-  opts: CreateConversationOpts = {},
+  opts: CreateConversationOpts,
 ): Promise<PreparedConversation> {
   // An agent that cannot run is refused here, with the fix, before a task,
   // attempt or job exists — not started as a pane that dies on `command not
@@ -369,7 +401,13 @@ export async function prepareConversation(
       path: await Workspace.pathFor(spec.kind, newId),
       spec,
     };
-    target = { kind: "new", attemptId: newId, taskId: opts.taskId };
+    target = {
+      kind: "new",
+      attemptId: newId,
+      task: opts.taskId
+        ? { taskId: opts.taskId }
+        : { mandate: newRootMandate(opts) },
+    };
   }
 
   // Single chokepoint for `![](/api/attachments/<id>)` → `@<disk-path>` rewriting
@@ -437,10 +475,16 @@ export async function commitConversation(
 
   if (p.target.kind === "new") {
     const { attemptId } = p.target;
-    let taskId = p.target.taskId;
-    if (!taskId) {
+    let taskId: string;
+    if ("taskId" in p.target.task) {
+      taskId = p.target.task.taskId;
+    } else {
       const task = await createTask(
-        { title: "Untitled", author: p.spawnedBy },
+        {
+          title: "Untitled",
+          author: p.spawnedBy,
+          mandate: p.target.task.mandate,
+        },
         tx,
       );
       await setTaskCategory(
@@ -594,7 +638,7 @@ export async function finishConversation(
 
 // prepare (reads) → commit (one transaction) → finish (post-commit effects).
 export async function createConversation(
-  opts: CreateConversationOpts = {},
+  opts: CreateConversationOpts,
 ): Promise<Conversation> {
   const prepared = await prepareConversation(opts);
   const conv = await withTaskStatusBatch((tx) =>

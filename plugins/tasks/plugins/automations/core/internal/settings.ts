@@ -1,22 +1,6 @@
 import { z } from "zod";
 import { ModelChoiceSchema } from "@plugins/conversations/plugins/model-provider/core";
-
-/**
- * What the filed task's agent may do with its finished work.
- *
- * - `never` — stop at a ready branch and raise a flag; a person pushes.
- * - `safe` — push only an uncontroversial change (small, local, no behaviour or
- *   API a person relies on, no design choice); otherwise stop and flag what
- *   needs a decision.
- * - `checks` — push as soon as every check passes.
- */
-export const PUSH_POLICIES = ["never", "safe", "checks"] as const;
-export type PushPolicy = (typeof PUSH_POLICIES)[number];
-export const PUSH_POLICY_LABELS: Record<PushPolicy, string> = {
-  never: "Never",
-  safe: "If uncontroversial",
-  checks: "When checks pass",
-};
+import { PUSH_POLICIES } from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/plugins/capabilities/core";
 
 /**
  * What an automation does with the work it finds.

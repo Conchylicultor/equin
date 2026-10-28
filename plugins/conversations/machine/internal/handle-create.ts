@@ -16,7 +16,9 @@ import { getModelCatalog } from "@plugins/conversations/plugins/model-provider/p
 import {
   createConversation,
   TranscriptCutError,
+  type ConversationTarget,
 } from "../../server/internal/lifecycle";
+import { interactiveMandate } from "@plugins/tasks/plugins/mandate-presets/core";
 
 // The launch's first message as text. `{ from: "task" }` is the launching
 // task's own (title + description), read HERE — after the caller's last save
@@ -34,6 +36,21 @@ async function launchPrompt(
   return buildTaskPrompt(task);
 }
 
+// What the launch runs under: an existing attempt (a fork reuses its
+// source's), a task, or — a conversation started from nothing — a new root
+// task under the interactive mandate a person's own conversation gets.
+function launchTarget(body: CreateConversationBody): ConversationTarget {
+  if (body.forkFromConversationId !== undefined) {
+    return {
+      forkFromConversationId: body.forkFromConversationId,
+      attemptId: body.attemptId,
+    };
+  }
+  if (body.attemptId !== undefined) return { attemptId: body.attemptId };
+  if (body.taskId !== undefined) return { taskId: body.taskId };
+  return { mandate: interactiveMandate() };
+}
+
 export const handleCreate = implementMachine(
   createConversationEndpoint,
   async ({ body }) => {
@@ -47,12 +64,10 @@ export const handleCreate = implementMachine(
     let session;
     try {
       session = await createConversation({
-        taskId: body.taskId,
-        attemptId: body.attemptId,
+        ...launchTarget(body),
         prompt,
         runtimeId: body.runtime,
         model: body.model,
-        forkFromConversationId: body.forkFromConversationId,
         forkAtMessageUuid: body.forkAtMessageUuid,
         workspace: body.workspace,
       });

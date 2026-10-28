@@ -302,12 +302,12 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./equin build`. The bui
     - `quotedRelationsIn`
     - `readTag`
 - Cross-plugin:
-  - Imported by: 125 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 127 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×36
     - `page` ×15
     - `infra` ×13
     - `conversations` ×12
-    - `tasks` ×9
+    - `tasks` ×11
     - `active-data` ×8
     - `debug` ×6
     - `database` ×5

@@ -112,6 +112,7 @@ client sees them at connect (Claude Code connects once per conversation).
     - `hints/ask`
     - `infra/mcp/browser`
     - `plugin-meta/plugin-health`
+    - `tasks/orchestration/mandate`
     - `tasks/task-triage`
 - Sub-plugins:
   - **`browser`** — The health report's Agent browser row: whether the machine's agent-browser host runs, its sessions (what each is for — its task's title — its tab count, and how long until it closes if left idle), a…

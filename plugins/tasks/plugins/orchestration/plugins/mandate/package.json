@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-tasks-orchestration-mandate",
+  "private": true,
+  "version": "0.0.1",
+  "description": "The mandate: a policy on a task stating what an agent may do inside its subtree, resolved nearest-wins up the folder tree. Core: the capability catalog value (the policy types are the policy leaf). Server: the Mandate.Capability registry, mandateOf / grantOf, granted(cap) for Mcp.tool.when, the mandate instructions section, and the mandates collection + capability catalog for Debug."
+}

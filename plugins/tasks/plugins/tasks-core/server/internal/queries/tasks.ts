@@ -13,6 +13,52 @@ import { directDepIsBlocking, taskBlocking, tasks } from "../views";
 import type { Task, TaskStatus } from "../schema";
 import { TaskGraph } from "../../../core";
 import type { DbExecutor } from "../status-batch";
+import {
+  MandatePolicySchema,
+  type MandatePolicy,
+} from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
+
+/**
+ * A task's effective mandate: the policy stated on the nearest task up its
+ * folder chain (itself included), and the task that states it — the root of
+ * the subtree the policy covers. `none` only for a task that does not exist:
+ * every root carries one (the `tasks_root_has_mandate` CHECK).
+ */
+export type NearestMandate =
+  | { kind: "found"; rootTaskId: string; policy: MandatePolicy }
+  | { kind: "none" };
+
+/**
+ * Walks `folder_id` up from `taskId` (a recursive CTE, cycle-guarded by depth
+ * order) and takes the first non-null `mandate` — nearest wins.
+ */
+export async function nearestMandate(
+  taskId: string,
+  exec: DbExecutor,
+): Promise<NearestMandate> {
+  const rows = await executeRows(exec, {
+    label: "task nearest mandate",
+    query: sql`WITH RECURSIVE chain(id, folder_id, mandate, depth) AS (
+          SELECT t.id, t.folder_id, t.mandate, 0
+            FROM ${_tasks} t
+           WHERE t.id = ${taskId}
+          UNION ALL
+          SELECT p.id, p.folder_id, p.mandate, c.depth + 1
+            FROM ${_tasks} p
+            JOIN chain c ON p.id = c.folder_id
+           WHERE c.mandate IS NULL
+        )
+        SELECT id, mandate FROM chain
+         WHERE mandate IS NOT NULL
+         ORDER BY depth
+         LIMIT 1`,
+    row: z.object({ id: z.string(), mandate: MandatePolicySchema }),
+  });
+  const [row] = rows;
+  return row
+    ? { kind: "found", rootTaskId: row.id, policy: row.mandate }
+    : { kind: "none" };
+}
 
 export async function listTasks(exec: DbExecutor = db): Promise<Task[]> {
   const rows = await exec
