@@ -3,7 +3,7 @@ import { TIER_THRESHOLD, type DayBucket, type TieredTokens } from "./buckets";
 // ─── What this is ──────────────────────────────────────────────────────────────
 //
 // The ONE reading of a Claude Code transcript line's token usage: which lines
-// count (ccusage's entry-hash dedup), how a counted entry's tokens are split
+// count (ccusage's entry-hash dedup, each message at its largest output), how a counted entry's tokens are split
 // (cache creation by TTL) and how they accumulate into the tier-decomposed
 // `(date, model, speed)` buckets `priceBucket` prices. Pure and incremental — a
 // fold over lines — so a whole-file parse (`parseTranscript`) and an append-only
@@ -67,16 +67,26 @@ function normalizeSpeed(speed: string | null | undefined): "standard" | "fast" {
 }
 
 /**
+ * What the fold remembers of one counted entry: the bucket its tokens went to
+ * (`null` when the entry had no day or model, so it reached no bucket) and the
+ * output it counted — so a later line of the same message can top it up.
+ */
+export interface SeenEntry {
+  bucket: string | null;
+  output: number;
+}
+
+/**
  * A fold's running state: the `(date, model, speed)` buckets (keyed
- * `${date} ${model} ${speed}`) and the entry hashes already counted.
+ * `${date} ${model} ${speed}`) and the entries already counted, by hash.
  */
 export interface UsageBuckets {
   buckets: Map<string, DayBucket>;
-  seen: Set<string>;
+  seen: Map<string, SeenEntry>;
 }
 
 export function emptyUsageBuckets(): UsageBuckets {
-  return { buckets: new Map(), seen: new Set() };
+  return { buckets: new Map(), seen: new Map() };
 }
 
 function bucketKey(b: Pick<DayBucket, "date" | "model" | "speed">): string {
@@ -84,22 +94,28 @@ function bucketKey(b: Pick<DayBucket, "date" | "model" | "speed">): string {
 }
 
 /**
- * A fold resumed from stored state — the buckets an earlier fold produced (deep-
- * copied, so folding on cannot mutate them) and the hashes it had seen — so an
- * append-only reader continues exactly where it stopped.
+ * A fold resumed from stored state — the buckets an earlier fold produced and
+ * the entries it had counted (both copied, so folding on cannot mutate them) —
+ * so an append-only reader continues exactly where it stopped.
  */
 export function resumeUsageBuckets(
   buckets: readonly DayBucket[],
-  seen: Iterable<string>,
+  seen: Iterable<readonly [string, SeenEntry]>,
 ): UsageBuckets {
   return {
     buckets: new Map(buckets.map((b) => [bucketKey(b), structuredClone(b)])),
-    seen: new Set(seen),
+    seen: new Map([...seen].map(([hash, e]) => [hash, { ...e }])),
   };
 }
 
-/** One counted entry's token numbers, as {@link foldUsageEntry} read them. */
+/**
+ * What one line added, as {@link foldUsageEntry} read it: a new entry's token
+ * numbers (`kind: "entry"`), or — for a later line of a message already
+ * counted, carrying more output (`kind: "top-up"`) — the output it adds, every
+ * other number 0.
+ */
 export interface CountedUsage {
+  kind: "entry" | "top-up";
   input: number;
   output: number;
   cacheRead: number;
@@ -112,10 +128,25 @@ export interface CountedUsage {
   hash: string | null;
 }
 
+/** `acc` with `from`'s per-entry tiering of `t` replaced by `to`'s. */
+function retier(acc: TieredTokens, from: number, to: number): void {
+  acc.below += Math.min(to, TIER_THRESHOLD) - Math.min(from, TIER_THRESHOLD);
+  acc.above +=
+    Math.max(0, to - TIER_THRESHOLD) - Math.max(0, from - TIER_THRESHOLD);
+}
+
 /**
- * Fold one parsed transcript line into `fold`. Returns the entry's numbers when
- * it counted, `null` when the line carries no usage or is a duplicate of an
- * entry already counted (same `message.id` + `requestId`).
+ * Fold one parsed transcript line into `fold`. Returns what it added, or
+ * `null` when the line carries no usage or repeats an entry already counted
+ * (same `message.id` + `requestId`) without adding to it.
+ *
+ * Claude Code writes one line per content block of a message (a `thinking`
+ * line, then a `text` or `tool_use` one), each with the message's `usage`:
+ * input and cache counts are the same on every line, but `output_tokens` is
+ * only final on the last — the first line of a thinking message can say 8 where
+ * the last says 3,778. So an entry counts at its LARGEST output (ccusage's
+ * reading too): a repeat with more output tops the counted entry up, in the
+ * bucket the entry went to; nothing else of it is counted twice.
  */
 export function foldUsageEntry(
   fold: UsageBuckets,
@@ -127,13 +158,31 @@ export function foldUsageEntry(
   if (!usage) return null;
 
   const hash = createUniqueHash(obj);
-  if (hash != null) {
-    if (fold.seen.has(hash)) return null; // duplicate record — skip (ccusage parity)
-    fold.seen.add(hash);
+  const output = usage.output_tokens ?? 0;
+  const counted = hash == null ? undefined : fold.seen.get(hash);
+  if (counted !== undefined) {
+    if (output <= counted.output) return null;
+    const bucket =
+      counted.bucket === null ? undefined : fold.buckets.get(counted.bucket);
+    // A bucket this fold does not hold — the entry was counted by an earlier
+    // file of a chain re-read, whose buckets are that file's — keeps its count;
+    // a copied history is copied whole, so its entry is already at its largest.
+    if (bucket) retier(bucket.output, counted.output, output);
+    const added = output - counted.output;
+    counted.output = output;
+    return {
+      kind: "top-up",
+      input: 0,
+      output: added,
+      cacheRead: 0,
+      cacheCreation: 0,
+      day: "",
+      model: undefined,
+      hash,
+    };
   }
 
   const input = usage.input_tokens ?? 0;
-  const output = usage.output_tokens ?? 0;
   const cacheRead = usage.cache_read_input_tokens ?? 0;
   // Cache creation splits by TTL, priced ~1.6× apart. `cache_creation` is
   // present on current transcripts and its two members sum exactly to
@@ -149,10 +198,11 @@ export function foldUsageEntry(
   const day =
     typeof obj.timestamp === "string" ? obj.timestamp.slice(0, 10) : "";
   const model = obj.message?.model;
+  const speed = normalizeSpeed(usage.speed);
+  const key = day && model ? bucketKey({ date: day, model, speed }) : null;
+  if (hash != null) fold.seen.set(hash, { bucket: key, output });
 
-  if (day && model) {
-    const speed = normalizeSpeed(usage.speed);
-    const key = bucketKey({ date: day, model, speed });
+  if (key !== null && day && model) {
     const b = fold.buckets.get(key) ?? {
       date: day,
       model,
@@ -187,5 +237,14 @@ export function foldUsageEntry(
     fold.buckets.set(key, b);
   }
 
-  return { input, output, cacheRead, cacheCreation, day, model, hash };
+  return {
+    kind: "entry",
+    input,
+    output,
+    cacheRead,
+    cacheCreation,
+    day,
+    model,
+    hash,
+  };
 }

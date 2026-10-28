@@ -25,9 +25,10 @@ import {
 // the tier-decomposed token counts (`buckets.ts`) and `rollup` turns them into
 // dollars with today's table, so the archive stays re-priceable forever.
 //
-// Bump `INDEX_VERSION` whenever `FilePartial`'s shape changes: the corpus index
-// treats a version mismatch as empty and rebuilds.
-export const INDEX_VERSION = 3;
+// Bump `INDEX_VERSION` whenever `FilePartial`'s shape — or what the parse counts
+// into it — changes: the corpus index treats a version mismatch as empty and
+// rebuilds. (4: a message counts at its largest output, not its first line's.)
+export const INDEX_VERSION = 4;
 
 /**
  * The per-file token aggregate for one session file. Pricing-free by design:
@@ -108,8 +109,8 @@ export async function parseTranscript(path: string): Promise<FilePartial> {
   let cacheReadTokens = 0;
   let lastActivity = "";
   const models = new Set<string>();
-  // Within-file dedup by ccusage's entry hash (`foldUsageEntry`), matching its
-  // counting. Rare cross-file duplicates are NOT deduped — persisting every hash
+  // Within-file dedup by ccusage's entry hash (`foldUsageEntry`), each message
+  // at its largest output, matching its counting. Rare cross-file duplicates are NOT deduped — persisting every hash
   // would bloat the index by hundreds of MB. Measured divergence: +$56.52 on
   // $13,980.67 (+0.404%), i.e. we over-count. This gap GROWS with
   // `--fork-session`, because a fork copies the parent transcript into a new

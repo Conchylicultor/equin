@@ -64,10 +64,13 @@ export const usageBackfillJob = defineJob({
 
 /**
  * Prices what is still unpriced: the file rows whose tokens a price table could
- * not price when they were counted (a model newer than the table), and the
- * rows counted before costs were frozen. Every other row keeps the cost it was
- * priced at — a price-table refresh never re-prices history — so after an
- * ordinary refresh this finds a handful of conversations, or none.
+ * not price when they were counted (a model newer than the table), the rows
+ * counted before costs were frozen, and the rows counted before a message
+ * counted at its largest output (a legacy tail — `isLegacyScan`; the sync
+ * recounts them, pricing only the output they were missing). Every other row
+ * keeps the cost it was priced at — a price-table refresh never re-prices
+ * history — so after an ordinary refresh this finds a handful of
+ * conversations, or none.
  *
  * One job for the whole batch, syncing each in-process (serialized per
  * conversation with the live recount by `requestUsageSync`), rather than a
@@ -94,7 +97,7 @@ export const usageRepriceJob = defineJob({
       .selectDistinct({ id: _conversationUsageFiles.conversationId })
       .from(_conversationUsageFiles)
       .where(
-        sql`${_conversationUsageFiles.costUsd} is null or ${_conversationUsageFiles.unpricedModels} <> '[]'::jsonb`,
+        sql`${_conversationUsageFiles.costUsd} is null or ${_conversationUsageFiles.unpricedModels} <> '[]'::jsonb or jsonb_typeof(${_conversationUsageFiles.tailHashes} -> 0) = 'string'`,
       );
     for (const { id } of rows) {
       ctx.signal.throwIfAborted();

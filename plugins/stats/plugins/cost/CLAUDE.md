@@ -97,24 +97,26 @@ reduces future exposure between flushes; the archive is what removes the exposur
 
 ## Known divergences from ccusage
 
-Measured 2026-10-28 against ccusage 20.0.45 over 3,807 transcripts (1,097 of
-1,301 projects match to the cent):
+Measured 2026-10-28 against ccusage 20.0.45 over ~3,800 transcripts: −$0.99
+(−0.005%), every token kind within 0.013%, 1,298 of 1,305 projects to the cent
+(the rest are transcripts being written while the two sides read them).
 
 | Divergence | Size | Direction |
 |---|---|---|
-| Output tokens of a multi-block message | −13.4M of 81.0M output tokens (−16.5%), −$254 (−1.4%) | **bug — we under-count** (see below) |
-| Cross-file dedup (ccusage global, we per-file) | lost in the noise (cache read −0.009%) | accepted |
+| Cross-file dedup (ccusage global, we per-file) | lost in the noise | accepted |
 | 1h/5m apportioning of the 200k threshold | $0 today | deliberate |
 
-**Output tokens.** Claude Code writes one transcript line per content block of a
-message (a `thinking` line, then a `text` or `tool_use` line), every line
-carrying the same `message.id` + `requestId` and its own `usage` — identical
-input and cache counts, but an `output_tokens` that is only final on the LAST
-line (8 on the thinking line, 3,778 on the text line after it). We dedupe
-keep-first, so a multi-block message's output is the first block's partial
-count; ccusage 20 keeps the largest, and its total matches that exactly. Fixing
-it touches the fold's persisted dedup state (`UsageBuckets.seen`, resumed by
-`conversations/usage`), so it is its own task (task-1793150177-w0h3ep).
+**A message counts at its largest output.** Claude Code writes one transcript
+line per content block of a message (a `thinking` line, then a `text` or
+`tool_use` line), every line carrying the same `message.id` + `requestId` and
+its own `usage`: identical input and cache counts, but an `output_tokens` that
+is only final on the LAST line (8 on the thinking line, 3,778 on the text line
+after it). `foldUsageEntry` keeps what it counted per hash (`SeenEntry`) and
+tops a repeat's extra output up into the same bucket — ccusage's reading. Until
+2026-10-28 it kept the first line, under-counting output by 16.5% (−1.4% of
+cost); `INDEX_VERSION` 4 re-parses the corpus, the archive takes the grown
+counts (live wins on growth), and conversations/usage recounts its legacy rows.
+History whose transcripts were already deleted stays under-counted.
 
 **The 1h rate.** 1h cache writes are priced ~1.6× the 5m rate. Up to ccusage 18
 its schema omitted the 1h rate (our numbers were ~8% above it on purpose);
@@ -305,6 +307,7 @@ it survives, the snapshot fills in where it does not.
     - `DayBucket`
     - `ModelPrice`
     - `PriceTable`
+    - `SeenEntry`
     - `TieredTokens`
     - `UsageBuckets`
   - Exports (values):

@@ -1,7 +1,7 @@
 export type { DayBucket, TieredTokens } from "./buckets";
 export type { ModelPrice, PriceTable } from "./pricing";
 export { priceBucket } from "./pricing";
-export type { CountedUsage, UsageBuckets } from "./usage-fold";
+export type { CountedUsage, SeenEntry, UsageBuckets } from "./usage-fold";
 export {
   emptyUsageBuckets,
   foldUsageEntry,

@@ -49,6 +49,26 @@ const DayBucketSchema: ZodParser<DayBucket> = z.object({
   cacheCreate1h: TieredSchema,
 });
 
+/**
+ * One counted entry a file row remembers: its dedup hash, the bucket its tokens
+ * went to and the output it counted (stats/cost's `SeenEntry`), so a later line
+ * of the same message — read by the next append — can top its output up.
+ */
+const UsageTailEntrySchema = z.object({
+  hash: z.string(),
+  bucket: z.string().nullable(),
+  output: z.number(),
+});
+export type UsageTailEntry = z.infer<typeof UsageTailEntrySchema>;
+
+/**
+ * A bare hash: a tail written before the fold counted each message at its
+ * largest output (2026-10-28). Its row under-counts output, so the next sync
+ * recounts it from the start (`isLegacyScan`) and writes entries; the
+ * `conversations.usage.reprice` job reaches every such row once.
+ */
+const LegacyTailHashSchema = z.string();
+
 export const UsageFileKindSchema = z.enum(["session", "subagent"]);
 export type UsageFileKind = z.infer<typeof UsageFileKindSchema>;
 
@@ -60,10 +80,10 @@ export type UsageFileKind = z.infer<typeof UsageFileKindSchema>;
 // `cleanupPeriodDays`, and the conversation's totals must not shrink when it
 // does. Rows go only with the conversation (FK CASCADE).
 //
-// `tailHashes` — the last dedup hashes the file counted. The duplicate lines of
-// one assistant message are adjacent, so this bounded tail is all an append
-// read needs to dedupe across a restart (the full seen-set is rebuilt only when
-// a whole chain is re-read).
+// `tailHashes` — the last entries the file counted (hash, bucket, output). The
+// duplicate lines of one assistant message are adjacent, so this bounded tail
+// is all an append read needs to dedupe — and top up — across a restart (the
+// full seen-set is rebuilt only when a whole chain is re-read).
 //
 // `costUsd` — the cost of the counted tokens, priced ONCE, when they were
 // counted, with the price table of that moment: a later price-table refresh
@@ -82,7 +102,10 @@ export const _conversationUsageFiles = pgTable(
     kind: parsedText("kind", UsageFileKindSchema).notNull(),
     offset: bigint("offset", { mode: "number" }).notNull(),
     buckets: parsedJson("buckets", z.array(DayBucketSchema)).notNull(),
-    tailHashes: parsedJson("tail_hashes", z.array(z.string())).notNull(),
+    tailHashes: parsedJson(
+      "tail_hashes",
+      z.array(z.union([UsageTailEntrySchema, LegacyTailHashSchema])),
+    ).notNull(),
     costUsd: doublePrecision("cost_usd"),
     unpricedModels: parsedJson("unpriced_models", z.array(z.string()))
       .notNull()

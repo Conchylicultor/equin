@@ -169,6 +169,23 @@ test("parseTranscript dedups repeated (messageId, requestId) pairs within a file
   expect(partial.outputTokens).toBe(20);
 });
 
+test("parseTranscript counts a multi-block message at its largest output", async () => {
+  // Claude Code writes one line per content block; only the last line's
+  // output_tokens is final (the thinking line's is partial).
+  const partial = await parseInline(
+    "multi-block",
+    entry("r1", "m1", "model-flat", "2026-07-01", [100, 8]) +
+      entry("r1", "m1", "model-flat", "2026-07-01", [100, 3778]) +
+      // A later line with LESS output adds nothing.
+      entry("r1", "m1", "model-flat", "2026-07-01", [100, 50]),
+  );
+  expect(partial.inputTokens).toBe(100);
+  expect(partial.outputTokens).toBe(3778);
+  expect(partial.dayBuckets).toHaveLength(1);
+  expect(partial.dayBuckets[0]!.output).toEqual({ below: 3778, above: 0 });
+  expect(partial.dayBuckets[0]!.input).toEqual({ below: 100, above: 0 });
+});
+
 test('speed normalizes absent / null / "standard" to standard, and "fast" through', async () => {
   const partial = await parseInline(
     "speed",

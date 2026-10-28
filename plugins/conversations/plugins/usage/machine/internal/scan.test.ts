@@ -2,8 +2,14 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { appendFile, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { PriceTable } from "@plugins/stats/plugins/cost/core";
-import { advanceFile, priceFile, totalsOf, type FileScan } from "./scan";
+import type { PriceTable, SeenEntry } from "@plugins/stats/plugins/cost/core";
+import {
+  advanceFile,
+  isLegacyScan,
+  priceFile,
+  totalsOf,
+  type FileScan,
+} from "./scan";
 
 const dirs: string[] = [];
 afterAll(async () => {
@@ -98,6 +104,66 @@ describe("advanceFile", () => {
     expect(totals(second).tokens).toBe(10);
   });
 
+  test("counts a message at its last block's output, even across a resume", async () => {
+    const path = join(await newDir(), "s.jsonl");
+    // The thinking line carries a partial output; the text line the final one.
+    await writeFile(path, line("m1", { input: 3, output: 8 }));
+    const first = await advanceFile(path, "session", undefined);
+    expect(totals(first).tokens).toBe(11);
+    await appendFile(path, line("m1", { input: 3, output: 3778 }));
+    const second = await advanceFile(path, "session", first!);
+    expect(totals(second)).toEqual({
+      costUsd: 3 + 2 * 3778,
+      tokens: 3 + 3778,
+      cacheReadTokens: 0,
+      agentCount: 0,
+    });
+    // Priced incrementally from the first scan, the top-up is the only addition.
+    const priced = priceFile(
+      { ...first!, ...priceFile(undefined, first!.buckets, TABLE) },
+      second!.buckets,
+      TABLE,
+    );
+    expect(priced.costUsd).toBe(3 + 2 * 3778);
+  });
+
+  test("recounts a legacy scan (bare tail hashes) from the start", async () => {
+    const path = join(await newDir(), "s.jsonl");
+    await writeFile(
+      path,
+      line("m1", { output: 8 }) + line("m1", { output: 3778 }),
+    );
+    // What the old fold stored: the first line's output, a bare hash.
+    const current = await advanceFile(path, "session", undefined);
+    const legacy: FileScan = {
+      ...current!,
+      buckets: current!.buckets.map((b) => ({
+        ...b,
+        output: { below: 8, above: 0 },
+      })),
+      tailHashes: ["m1:req-m1"],
+    };
+    expect(isLegacyScan(legacy)).toBe(true);
+    const recounted = await advanceFile(path, "session", legacy);
+    expect(isLegacyScan(recounted!)).toBe(false);
+    expect(totals(recounted).tokens).toBe(3778);
+  });
+
+  test("drops a vanished legacy scan's tail, keeping its tokens", async () => {
+    const path = join(await newDir(), "s.jsonl");
+    const legacy: FileScan = {
+      path,
+      kind: "session",
+      offset: 10,
+      buckets: [],
+      tailHashes: ["m1:req-m1"],
+    };
+    expect(await advanceFile(path, "session", legacy)).toEqual({
+      ...legacy,
+      tailHashes: [],
+    });
+  });
+
   test("leaves a torn last line for the next read", async () => {
     const path = join(await newDir(), "s.jsonl");
     const whole = line("m1", { output: 10 });
@@ -145,7 +211,7 @@ describe("advanceFile", () => {
       newer,
       line("m1", { output: 10 }) + line("m2", { output: 4 }),
     );
-    const seen = new Set<string>();
+    const seen = new Map<string, SeenEntry>();
     const a = await advanceFile(older, "session", undefined, seen);
     const b = await advanceFile(newer, "session", undefined, seen);
     expect(totals(a, b).tokens).toBe(14);

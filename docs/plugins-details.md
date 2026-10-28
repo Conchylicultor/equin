@@ -48718,6 +48718,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DayBucket`
           - `ModelPrice`
           - `PriceTable`
+          - `SeenEntry`
           - `TieredTokens`
           - `UsageBuckets`
         - Exports (values):

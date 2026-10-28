@@ -6,9 +6,11 @@ import {
   subagentDirOf,
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/subagents/machine";
 import { currentPriceTable } from "@plugins/stats/plugins/cost/server";
+import type { SeenEntry } from "@plugins/stats/plugins/cost/core";
 import { _conversations } from "@plugins/tasks/plugins/tasks-core/server";
 import {
   advanceFile,
+  isLegacyScan,
   priceFile,
   totalsOf,
   type FilePricing,
@@ -29,9 +31,10 @@ import {
 //   1. resolve its files — the ANCHORED session chain (never raw session ids:
 //      that derivation is the ownership guard) and every sub-agent below it;
 //   2. fold each file's NEW bytes into its stored scan state (an append read),
-//      or — when a session file joins the chain — re-read every session file
-//      through ONE seen-set, because a resumed / forked session's new file
-//      copies the history before it;
+//      or — when a session file joins the chain, or was counted before a
+//      message counted at its largest output (`isLegacyScan`) — re-read every
+//      session file through ONE seen-set, because a resumed / forked session's
+//      new file copies the history before it;
 //   3. price each file row's newly counted tokens with today's price table —
 //      what was priced before keeps its cost (`priceFile`), so a price change
 //      never re-prices history — and price a model it could not price before
@@ -74,20 +77,37 @@ async function syncConversationUsage(conversationId: string): Promise<void> {
   const advance = async (
     path: string,
     kind: UsageFileKind,
-    chainSeen?: Set<string>,
+    chainSeen?: Map<string, SeenEntry>,
   ): Promise<void> => {
     const prev = byPath.get(path);
     const next = await advanceFile(path, kind, prev, chainSeen);
     if (next !== null && next !== prev) changed.push(next);
   };
 
-  if (sessionPaths.some((p) => !byPath.has(p))) {
-    const chainSeen = new Set<string>();
+  // A session file new to the chain, or one counted by the legacy fold
+  // (`isLegacyScan`), re-reads the whole chain through one seen-set.
+  const recountChain = sessionPaths.some((p) => {
+    const scan = byPath.get(p);
+    return scan === undefined || isLegacyScan(scan);
+  });
+  if (recountChain) {
+    const chainSeen = new Map<string, SeenEntry>();
     for (const path of sessionPaths) await advance(path, "session", chainSeen);
   } else {
     for (const path of sessionPaths) await advance(path, "session");
   }
   for (const agent of agents) await advance(agent.transcriptPath, "subagent");
+  // A legacy row this pass did not reach (a sub-agent whose transcript is gone,
+  // so no longer listed) cannot be recounted: it keeps its tokens and drops its
+  // tail, as `advanceFile` does for a vanished file it is handed.
+  const reached = new Set([
+    ...sessionPaths,
+    ...agents.map((a) => a.transcriptPath),
+  ]);
+  for (const scan of byPath.values()) {
+    if (!reached.has(scan.path) && isLegacyScan(scan))
+      changed.push({ ...scan, tailHashes: [] });
+  }
 
   for (const scan of changed) byPath.set(scan.path, scan);
   const table = await currentPriceTable();

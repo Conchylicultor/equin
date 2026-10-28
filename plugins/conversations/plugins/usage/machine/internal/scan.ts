@@ -6,15 +6,19 @@ import {
   resumeUsageBuckets,
   type DayBucket,
   type PriceTable,
+  type SeenEntry,
 } from "@plugins/stats/plugins/cost/core";
-import type { UsageFileKind } from "../../server/internal/tables";
+import type {
+  UsageFileKind,
+  UsageTailEntry,
+} from "../../server/internal/tables";
 
 // The pure half of the usage sync: advance ONE file's scan state over the bytes
 // appended to it, price what it counted (once — see `priceFile`), and sum a
 // conversation's file rows into totals. No database, so the reading, counting
 // and pricing rules are tested on their own.
 
-/** How many dedup hashes a file row keeps (see `tailHashes` in `tables.ts`). */
+/** How many counted entries a file row keeps (see `tailHashes` in `tables.ts`). */
 const TAIL_HASHES = 64;
 const NEWLINE = 0x0a;
 const decoder = new TextDecoder();
@@ -26,8 +30,21 @@ export interface FileScan {
   /** Byte offset of the first line not yet folded — always a line start. */
   offset: number;
   buckets: DayBucket[];
-  tailHashes: string[];
+  /** A bare string is a legacy hash (see `tables.ts`); a scan never writes one. */
+  tailHashes: (UsageTailEntry | string)[];
 }
+
+/**
+ * Whether `scan` was counted before a message counted at its largest output:
+ * its tail holds bare hashes, and its output is short by every message whose
+ * first line was not its last. Such a row is recounted from the start.
+ */
+export function isLegacyScan(scan: Pick<FileScan, "tailHashes">): boolean {
+  return scan.tailHashes.some((entry) => typeof entry === "string");
+}
+
+const isTailEntry = (e: UsageTailEntry | string): e is UsageTailEntry =>
+  typeof e !== "string";
 
 /** A file's size, or `null` when it does not exist (yet, or any more). */
 async function sizeOf(path: string): Promise<number | null> {
@@ -42,30 +59,46 @@ async function sizeOf(path: string): Promise<number | null> {
 /**
  * `prev` advanced over the complete lines `path` now holds — or read from the
  * start when there is no `prev`, when the file shrank (replaced, not appended
- * to), or when the caller passes `chainSeen` (a whole-chain re-read: the
- * hashes every earlier file of the chain counted). A trailing line with no
- * newline yet is torn (Claude is mid-append) and left for the next read.
+ * to), when `prev` is a legacy scan (`isLegacyScan`), or when the caller passes
+ * `chainSeen` (a whole-chain re-read: the entries every earlier file of the
+ * chain counted). A trailing line with no newline yet is torn (Claude is
+ * mid-append) and left for the next read.
  *
  * Returns `prev` itself when nothing was appended, `null` when the file is
- * gone and there is no `prev` to keep.
+ * gone and there is no `prev` to keep. A legacy `prev` whose file is gone
+ * cannot be recounted: it keeps its tokens and drops its tail, which only an
+ * append would read.
  */
 export async function advanceFile(
   path: string,
   kind: UsageFileKind,
   prev: FileScan | undefined,
-  chainSeen?: Set<string>,
+  chainSeen?: Map<string, SeenEntry>,
 ): Promise<FileScan | null> {
   const size = await sizeOf(path);
-  if (size === null) return prev ?? null;
+  if (size === null) {
+    if (prev !== undefined && isLegacyScan(prev))
+      return { ...prev, tailHashes: [] };
+    return prev ?? null;
+  }
   const restart =
-    prev === undefined || size < prev.offset || chainSeen !== undefined;
+    prev === undefined ||
+    size < prev.offset ||
+    chainSeen !== undefined ||
+    isLegacyScan(prev);
   if (!restart && size === prev.offset) return prev;
 
+  const resumed = restart ? [] : prev.tailHashes.filter(isTailEntry);
   const start = restart ? 0 : prev.offset;
   const fold = restart
     ? { ...emptyUsageBuckets(), ...(chainSeen ? { seen: chainSeen } : {}) }
-    : resumeUsageBuckets(prev.buckets, prev.tailHashes);
-  const tail = restart ? [] : [...prev.tailHashes];
+    : resumeUsageBuckets(
+        prev.buckets,
+        resumed.map(({ hash, ...entry }) => [hash, entry] as const),
+      );
+  // This file's counted hashes, oldest first; the fold's `seen` holds each
+  // one's current output (a top-up updates it in place).
+  const tail = resumed.map((entry) => entry.hash);
 
   const bytes = await Bun.file(path).slice(start, size).bytes();
   const end = bytes.lastIndexOf(NEWLINE);
@@ -82,7 +115,7 @@ export async function advanceFile(
         continue;
       }
       const counted = foldUsageEntry(fold, line);
-      if (counted?.hash) tail.push(counted.hash);
+      if (counted?.kind === "entry" && counted.hash) tail.push(counted.hash);
     }
   }
   return {
@@ -90,7 +123,12 @@ export async function advanceFile(
     kind,
     offset: start + (end >= 0 ? end + 1 : 0),
     buckets: [...fold.buckets.values()],
-    tailHashes: tail.slice(-TAIL_HASHES),
+    tailHashes: tail.slice(-TAIL_HASHES).map((hash) => {
+      const entry = fold.seen.get(hash);
+      if (entry === undefined)
+        throw new Error(`counted hash ${hash} missing from the fold`);
+      return { hash, ...entry };
+    }),
   };
 }
 
