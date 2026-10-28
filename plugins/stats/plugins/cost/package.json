@@ -3,17 +3,6 @@
   "private": true,
   "version": "0.0.1",
   "devDependencies": {
-    "ccusage": "^18.0.11"
-  },
-  "dependencyPolicy": {
-    "holds": [
-      {
-        "names": ["ccusage"],
-        "below": "19.0.0",
-        "reason": "ccusage 19.0.0 dropped its library exports (18.0.11 exports ./data-loader, 19.0.0 only .), and 20.x is a launcher for a native binary (@ccusage/ccusage-<platform>) with a CLI only: no loadSessionData, no mode option, and every detected agent CLI counted by default. scripts/verify-vs-ccusage.ts witnesses our cost figures against loadSessionData({ mode: \"auto\" }), so moving needs that script redesigned onto the CLI's JSON (task-1793045860-iwn03m). Checked 2026-10-26 against 20.0.41. Lift with that rewrite.",
-        "issue": "https://github.com/ryoppippi/ccusage/releases",
-        "reviewBy": "2027-01-24"
-      }
-    ]
+    "ccusage": "^20.0.45"
   }
 }

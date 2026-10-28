@@ -35,7 +35,8 @@ never a silent `$0`, which would be indistinguishable from a genuinely free
 bucket.
 
 `ccusage` stays a **dev-only** dependency for exactly one thing:
-`scripts/verify-vs-ccusage.ts` (see *Verifying*, below).
+`scripts/verify-vs-ccusage.ts` (see *Verifying*, below). It is driven as a CLI
+(`ccusage claude session --json`): 19.0.0 dropped every library export.
 
 ## Tokens are stored, dollars are derived
 
@@ -96,17 +97,28 @@ reduces future exposure between flushes; the archive is what removes the exposur
 
 ## Known divergences from ccusage
 
-| Divergence | Size (2026-08-06) | Direction |
+Measured 2026-10-28 against ccusage 20.0.45 over 3,807 transcripts (1,097 of
+1,301 projects match to the cent):
+
+| Divergence | Size | Direction |
 |---|---|---|
-| 1h cache-creation priced at its real rate | +$1,131 (+7.9%) | **deliberate — we are correct** |
-| Cross-file dedup (ccusage global, we per-file) | +$61 (+0.43%) | accepted — we over-count |
+| Output tokens of a multi-block message | −13.4M of 81.0M output tokens (−16.5%), −$254 (−1.4%) | **bug — we under-count** (see below) |
+| Cross-file dedup (ccusage global, we per-file) | lost in the noise (cache read −0.009%) | accepted |
 | 1h/5m apportioning of the 200k threshold | $0 today | deliberate |
 
-**The 1h rate.** ccusage's valibot schema omits
-`cache_creation_input_token_cost_above_1hr`, so it prices 1h cache writes at the
-5m rate. 261M of 661M cache-creation tokens on this corpus carry a 1h TTL, priced
-~1.6× higher. We price them for real, so our numbers are ~8% above ccusage's on
-purpose.
+**Output tokens.** Claude Code writes one transcript line per content block of a
+message (a `thinking` line, then a `text` or `tool_use` line), every line
+carrying the same `message.id` + `requestId` and its own `usage` — identical
+input and cache counts, but an `output_tokens` that is only final on the LAST
+line (8 on the thinking line, 3,778 on the text line after it). We dedupe
+keep-first, so a multi-block message's output is the first block's partial
+count; ccusage 20 keeps the largest, and its total matches that exactly. Fixing
+it touches the fold's persisted dedup state (`UsageBuckets.seen`, resumed by
+`conversations/usage`), so it is its own task (task-1793150177-w0h3ep).
+
+**The 1h rate.** 1h cache writes are priced ~1.6× the 5m rate. Up to ccusage 18
+its schema omitted the 1h rate (our numbers were ~8% above it on purpose);
+ccusage 20 prices it as we do, so the two now agree.
 
 **Dedup.** We dedupe entry hashes *within* a file; ccusage dedupes globally.
 Persisting every hash would add hundreds of MB to the index, so we over-count the
@@ -160,12 +172,14 @@ Two kinds (`server/internal/cost-report-kinds.ts`), both `warning`:
 ./equin run plugins/stats/plugins/cost/scripts/verify-vs-ccusage.ts
 ```
 
-The regression gate for any pricing change: ~2.5 min, prints ccusage's total, our
-shipped total, and a **5m-only control** (our pass with 1h priced at the 5m rate,
-i.e. ccusage's semantics). The control isolates the dedup gap from the 1h
-correction, so a regression is attributable. Measured 2026-08-06 over 1,770
-transcripts: ccusage $14,180.76, control +0.432%, shipped +8.409%. The dollars
-grow with the corpus — the two percentages are the invariant.
+The regression gate for any pricing or parse change: ~1.5 min, prints our
+shipped totals beside ccusage's, cost and each token kind (input / output /
+cache create / cache read), then the per-project outliers with the token kinds
+that differ. A counting divergence shows in the one kind it touches; a cost
+delta with every kind equal is a rate divergence. Both sides key by the
+top-level project dir (a subagent transcript belongs to its parent's project).
+The dollars grow with the corpus — the per-kind percentages are the invariant
+(see *Known divergences*, above).
 
 ## Charts
 

@@ -174,7 +174,6 @@ export function foldUsageEntry(
     // point is computed on the total and then apportioned across 5m/1h by
     // their share of it. Keeps the decomposition linear, and conserves exactly
     // (the 1h side takes the remainder rather than its own rounded product).
-    // A deliberate divergence from ccusage, which ignores 1h entirely.
     const below = Math.min(cacheCreation, TIER_THRESHOLD);
     const above = Math.max(0, cacheCreation - TIER_THRESHOLD);
     const below5m =
