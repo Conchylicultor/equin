@@ -53,15 +53,18 @@ test("withPoolGrant grants the share's units, runs fn and releases the share", a
 
 test("withPoolGrant releases the share when fn throws", async () => {
   const pool = fakePool(1);
-  await expect(
-    withPoolGrant(
-      pool,
-      { lane: "background", priority: "normal", max: 1 },
-      async () => {
-        throw new Error("boom");
-      },
-    ),
-  ).rejects.toThrow("boom");
+  const err = await withPoolGrant(
+    pool,
+    { lane: "background", priority: "normal", max: 1 },
+    async () => {
+      throw new Error("boom");
+    },
+  ).then(
+    () => undefined,
+    (e: unknown) => e,
+  );
+  expect(err).toBeInstanceOf(Error);
+  expect((err as Error).message).toBe("boom");
   expect(pool.calls.released).toBe(1);
 });
 
