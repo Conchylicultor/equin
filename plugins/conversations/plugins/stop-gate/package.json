@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-conversations-stop-gate",
+  "description": "Whether an app-launched agent may end its turn: a Stop hook asks the backend, which blocks when some StopGate contribution blocks and no StopWaiver waives it — so an agent cannot walk away from work a plugin still requires of it (a report), unless another says it will be woken anyway.",
+  "private": true,
+  "version": "0.0.1"
+}

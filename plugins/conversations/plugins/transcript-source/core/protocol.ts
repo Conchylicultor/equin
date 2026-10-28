@@ -274,6 +274,21 @@ export const JsonlEventSchema = z.discriminatedUnion("kind", [
     text: z.string(),
   }),
   z.object({
+    // An `event` turn the app delivered to a watching agent
+    // (tasks/orchestration/watch): a user-role line whose whole text is the
+    // turn ledger's `<equin-event>` envelope. Not something the user typed —
+    // it draws as a system card, and a rewind never cuts at it.
+    kind: z.literal("event-turn"),
+    at: z.string(),
+    /** The envelope's body: the event lines, then the subtree digest. */
+    text: z.string(),
+    /**
+     * The transcript line's uuid (a queued delivery: its source line's) — what
+     * the turn ledger's confirmation names, so a pending echo retires on it.
+     */
+    uuid: z.string().optional(),
+  }),
+  z.object({
     kind: z.literal("task-notification"),
     at: z.string(),
     taskId: z.string(),

@@ -1,36 +1,21 @@
 import { z } from "zod";
-import { Mcp, type McpToolContext } from "@plugins/infra/plugins/mcp/server";
+import { Mcp } from "@plugins/infra/plugins/mcp/server";
 import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
-import {
-  automationOfTask,
-  releaseLaunchedTask,
-} from "@plugins/tasks/plugins/automations/server";
+import { granted } from "@plugins/tasks/plugins/orchestration/plugins/mandate/server";
+import { reportRequired } from "@plugins/tasks/plugins/outcome-report/plugins/capability/core";
 import { getAttemptWork } from "@plugins/tasks/plugins/attempt-work/server";
 import { standingOf } from "@plugins/tasks/plugins/attempt-work/core";
 import { recordNotification } from "@plugins/shell/plugins/notifications/server";
 import { conversationRoute } from "@plugins/conversations/core";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { taskOutcomeReports } from "../../server/internal/tables";
-
-const TOOL = "submit_outcome_report";
-
-/**
- * Whether this conversation's task was filed or launched by an automation —
- * the only conversations that end with an outcome report. Two primary-key
- * reads, run on every MCP request of every conversation (the `when` gate), so
- * nothing heavier belongs here.
- */
-async function isAutomationConversation({
-  conversationId,
-}: McpToolContext): Promise<boolean> {
-  const conversation = await getConversation(conversationId);
-  if (conversation === null) return false;
-  return (await automationOfTask(conversation.taskId)) !== null;
-}
+import { outcomeReportSubmitted } from "../../server/internal/tables-events";
+import { OUTCOME_REPORT_TOOL as TOOL } from "./capability";
 
 export const submitOutcomeReportTool = Mcp.tool({
   name: TOOL,
-  when: isAutomationConversation,
+  // Only a mandate requiring a report (every automation's does).
+  when: granted(reportRequired),
   description: `Submit the outcome report for this task — the last thing you do. The user reads it later, away from the code and without its context, so write for someone who has never seen this part of the codebase. Cover, in short markdown sections:
 
 - **Problem** — what was wrong or missing, and why we care.
@@ -90,8 +75,15 @@ Calling it again replaces the earlier report. Do not call \`exit_clean\` on your
       answers: answers ?? [],
       submittedAt: new Date(),
     });
-    // Frees the automation slot this task held and wakes its automation.
-    await releaseLaunchedTask(taskId);
+    // Whoever waits on this report (a watcher, the automation whose slot the
+    // task holds) hears it through the event — the tool names none of them.
+    await outcomeReportSubmitted.emit({
+      taskId,
+      conversationId,
+      standing,
+      body,
+      question: question ?? null,
+    });
 
     if (question !== undefined) {
       await recordNotification({
@@ -121,15 +113,5 @@ Calling it again replaces the earlier report. Do not call \`exit_clean\` on your
         },
       ],
     };
-  },
-});
-
-export const outcomeReportInstructions = Mcp.instructions({
-  id: "outcome-report",
-  async render(ctx) {
-    if (!(await isAutomationConversation(ctx))) return null;
-    return `## Outcome report
-
-This task was started by an automation; the user is not watching. Never ask questions mid-way — decide, or stop. Always finish by calling \`${TOOL}\` (see its description), then end your turn. Do not call \`exit_clean\` on your own — the conversation stays open for review; call it only when a person asks you to exit.`;
   },
 });

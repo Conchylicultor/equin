@@ -41,6 +41,25 @@ export const { event: taskStatusChanged, table: _taskStatusChangedTriggers } =
     },
   });
 
+export interface TaskCreatedPayload {
+  taskId: string;
+  folderId: string | null;
+  title: string;
+  /** Who filed it: a conversation id when an agent did, else a person. */
+  author: string | null;
+  [key: string]: unknown;
+}
+
+// Emitted once per task, by `createTaskOn`, on the creating executor (it
+// commits or rolls back with the row). Filterable by folderId.
+export const { event: taskCreated, table: _taskCreatedTriggers } =
+  defineTriggerEvent<TaskCreatedPayload>({
+    name: "tasks.created",
+    filters: {
+      folderId: text("folder_id"),
+    },
+  });
+
 export interface TaskTitleChangedPayload {
   taskId: string;
   title: string;

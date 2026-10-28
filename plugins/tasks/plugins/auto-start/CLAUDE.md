@@ -31,6 +31,7 @@
     - `infra/jobs.defineJob`
     - `network/live.serveCollection`
     - `tasks/tasks-core._tasks`
+    - `tasks/tasks-core.hasBlockingDep`
     - `tasks/tasks-core.taskStatusChanged`
   - DB schema:
     - `plugins/tasks/plugins/auto-start/server/internal/tables-events.ts`
@@ -42,6 +43,7 @@
     - `claimAutoStart`
     - `getTaskAutoStart`
     - `listArmedTaskIds`
+    - `listLaunchableArmedIn`
     - `setTaskAutoStart`
     - `taskAutoStartArmed`
   - Register:
@@ -71,6 +73,7 @@
     - `tasks`
     - `tasks/auto-start/launch-option`
     - `tasks/automations`
+    - `tasks/orchestration/watch`
 - Exemptions:
   - Exempts itself from: `ids:pk-declared` — `server/internal/tables-events.ts` (debt)
 - Machine:

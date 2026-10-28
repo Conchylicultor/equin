@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-tasks-outcome-report-capability",
+  "private": true,
+  "version": "0.0.1",
+  "description": "The report.required mandate capability as plain data: an agent granted it ends its work with an outcome report (submit_outcome_report), and cannot stop before. A leaf, so every mandate author (the automations) can grant it without a cycle through outcome-report."
+}

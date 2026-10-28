@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-tasks-orchestration-watch",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Watch: what happened in a task subtree reaches the nearest live watcher. Core: the watch.children capability and the watcher / event types. Server: the task_watches and watch_inbox tables, watchTask / endWatch / retargetWatch, the WatchSource (watchSource helper) and WatchHandler contributions, the ingest / quiet / deliver jobs, the stop waiver and the capability's describe."
+}

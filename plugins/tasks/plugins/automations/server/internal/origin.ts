@@ -121,15 +121,6 @@ export async function originOfTask(
 }
 
 /**
- * The automation that filed or launched `taskId`, or `null` when none did — a
- * task a person filed and started.
- */
-export async function automationOfTask(taskId: string): Promise<string | null> {
-  const row = await tasksOrigin.get(taskId);
-  return row === undefined ? null : row.automationId;
-}
-
-/**
  * Record that `automationId` launched `taskId` (role `launched`), unless some
  * automation already filed or launched it: a task has ONE origin, and taking
  * over another's would hide it from that automation's dedupe and history.

@@ -24,6 +24,7 @@ import {
   pushLanded,
   taskStatusChanged,
   taskTitleChanged,
+  taskCreated,
   taskDescriptionChanged,
   conversationStatusChanged,
   conversationCreated,
@@ -206,6 +207,10 @@ export {
 } from "./internal/tables-events";
 export type { TaskStatusChangedPayload } from "./internal/tables-events";
 
+// Emitted once when a task row is created. Filterable by folderId.
+export { taskCreated, _taskCreatedTriggers } from "./internal/tables-events";
+export type { TaskCreatedPayload } from "./internal/tables-events";
+
 // Emitted at every write of a task's title (create, edit, the Haiku CAS
 // upgrade). Filterable by taskId.
 export {
@@ -292,6 +297,7 @@ export default {
     pushLanded,
     taskStatusChanged,
     taskTitleChanged,
+    taskCreated,
     taskDescriptionChanged,
     conversationStatusChanged,
     conversationCreated,

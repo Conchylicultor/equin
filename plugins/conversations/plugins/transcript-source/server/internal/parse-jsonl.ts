@@ -1,5 +1,6 @@
 import { XMLParser } from "fast-xml-parser";
 import { z } from "zod";
+import { unwrapEventTurn } from "@plugins/conversations/plugins/turn-ledger/core";
 import {
   extractPreprompt,
   activeLineUuids,
@@ -454,11 +455,20 @@ export async function buildJsonlEvents(
     rawText: string,
     ts: string,
     promptUuid: string | undefined,
+    lineUuid: string | undefined,
   ): Promise<void> => {
     // First, before anything looks for a tag: the CLI wraps whatever it took
     // as a paste, so a relay envelope or a task-notification pasted into the
     // prompt would otherwise stay hidden inside `<pasted_content>`.
     let body = unwrapPastedContent(rawText);
+    // An `event` turn the app delivered is the whole text, in the ledger's
+    // envelope: one event card, never the user's message (`userPromptText`
+    // says the same, so the line carries no rewind cut point).
+    const event = unwrapEventTurn(body);
+    if (event !== null) {
+      events.push({ kind: "event-turn", at: ts, text: event, uuid: lineUuid });
+      return;
+    }
     if (!seenPreprompt) {
       const { preprompt, rest } = extractPreprompt(body);
       if (preprompt) {
@@ -576,7 +586,7 @@ export async function buildJsonlEvents(
         uuid && userPromptText(obj) !== null ? uuid : undefined;
       const content = msg.content;
       if (typeof content === "string") {
-        await processUserText(content, ts, promptUuid);
+        await processUserText(content, ts, promptUuid, uuid ?? undefined);
       } else if (Array.isArray(content)) {
         const questionAnswer = extractQuestionAnswer(
           obj,
@@ -615,7 +625,12 @@ export async function buildJsonlEvents(
             }
             // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; JSON array may contain null/undefined elements
           } else if (block?.type === "text" && typeof block.text === "string") {
-            await processUserText(block.text, ts, promptUuid);
+            await processUserText(
+              block.text,
+              ts,
+              promptUuid,
+              uuid ?? undefined,
+            );
           } else if (
             // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; JSON array may contain null/undefined elements
             block?.type === "image" &&
@@ -803,7 +818,7 @@ export async function buildJsonlEvents(
         if (queued) {
           const prev = events.at(-1)?.at;
           const at = prev && Date.parse(prev) > Date.parse(ts) ? prev : ts;
-          await processUserText(queued.prompt, at, queued.uuid);
+          await processUserText(queued.prompt, at, queued.uuid, queued.uuid);
           continue;
         }
         if (subtype === "prompt_snapshot" && !seenPreprompt) {

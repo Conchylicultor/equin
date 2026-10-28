@@ -33,6 +33,8 @@ import {
   type AddTaskPorts,
 } from "./add-task-filing";
 import { digestFor } from "./tree-digest";
+import { watchTask } from "@plugins/tasks/plugins/orchestration/plugins/watch/server";
+import { watchChildren } from "@plugins/tasks/plugins/orchestration/plugins/watch/core";
 
 // The real mutations behind `add_task`. The filing policy lives in
 // add-task-filing.ts, which a test drives over an in-memory store.
@@ -51,6 +53,11 @@ const ports: AddTaskPorts = {
     ),
   armAutoStart: armTaskAutoStart,
   setTrack: (taskId, track) => setTaskTrack(taskId, track),
+  watchesChildren: async (conversationId) =>
+    (await grantOf(watchChildren, conversationId)) !== null,
+  watch: async (taskId, conversationId) => {
+    await watchTask(taskId, { kind: "conversation", conversationId });
+  },
   modelCatalog: getModelCatalog,
 };
 

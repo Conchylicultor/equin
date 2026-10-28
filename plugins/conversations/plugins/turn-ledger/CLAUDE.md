@@ -284,8 +284,11 @@ withdrawn).
     - `turnIdKind`
     - `TurnKindSchema`
     - `TurnStateSchema`
+    - `unwrapEventTurn`
 - Cross-plugin:
-  - Imported by: `conversations`
+  - Imported by:
+    - `conversations`
+    - `conversations/transcript-source`
 - Exemptions:
   - Exempts itself from: `ids:pk-declared` — `server/internal/tables-user-turn-sent-event.ts` (debt)
 - Machine:

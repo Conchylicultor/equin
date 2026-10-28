@@ -50,7 +50,10 @@ export interface TurnSubmission {
   kind: TurnKind;
   /** What the user wrote, raw. */
   text: string;
-  /** What reaches the CLI (attachment refs resolved). */
+  /**
+   * What reaches the CLI (attachment refs resolved). For an `event`, the raw
+   * body: the ledger types it inside the event envelope itself.
+   */
   typedText: string;
 }
 

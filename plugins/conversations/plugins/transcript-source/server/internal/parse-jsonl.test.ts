@@ -134,6 +134,98 @@ describe("buildJsonlEvents — a turn's line carries its uuid", () => {
   });
 });
 
+// An `event` turn the app delivered to a watching agent is typed inside the
+// turn ledger's envelope (turn-ledger core/event-envelope.ts).
+describe("buildJsonlEvents — an event turn", () => {
+  const ENVELOPE = "<equin-event>\nreported · task-1\n\ndigest\n</equin-event>";
+
+  test("is an event-turn under its line's uuid, not the user's message", async () => {
+    const events = await buildJsonlEvents(
+      [
+        {
+          type: "user",
+          uuid: "turn-uuid",
+          parentUuid: null,
+          timestamp: AT,
+          message: { role: "user", content: ENVELOPE },
+        },
+      ],
+      noImages,
+    );
+    expect(events).toEqual([
+      {
+        kind: "event-turn",
+        at: AT,
+        text: "reported · task-1\n\ndigest",
+        uuid: "turn-uuid",
+      },
+    ]);
+  });
+
+  test("in a text block too", async () => {
+    const events = await buildJsonlEvents(
+      [
+        {
+          type: "user",
+          uuid: "turn-uuid",
+          parentUuid: null,
+          timestamp: AT,
+          message: {
+            role: "user",
+            content: [{ type: "text", text: ENVELOPE }],
+          },
+        },
+      ],
+      noImages,
+    );
+    expect(events.map((e) => e.kind)).toEqual(["event-turn"]);
+  });
+
+  test("folded into a running turn, under its source_uuid", async () => {
+    const events = await buildJsonlEvents(
+      [
+        {
+          type: "attachment",
+          uuid: "att-line",
+          parentUuid: null,
+          timestamp: AT,
+          attachment: {
+            type: "queued_command",
+            prompt: ENVELOPE,
+            source_uuid: "turn-uuid",
+            commandMode: "prompt",
+          },
+        },
+      ],
+      noImages,
+    );
+    expect(events).toEqual([
+      expect.objectContaining({ kind: "event-turn", uuid: "turn-uuid" }),
+    ]);
+  });
+
+  test("a message that only mentions the tag stays the user's", async () => {
+    const events = await buildJsonlEvents(
+      [
+        {
+          type: "user",
+          uuid: "u1",
+          parentUuid: null,
+          timestamp: AT,
+          message: {
+            role: "user",
+            content: "what is <equin-event>x</equin-event>?",
+          },
+        },
+      ],
+      noImages,
+    );
+    expect(events).toEqual([
+      expect.objectContaining({ kind: "user-text", uuid: "u1" }),
+    ]);
+  });
+});
+
 // The launch preprompt is appended to the system prompt; the CLI records the
 // system prompt in a `prompt_snapshot` attachment written after the first turn.
 describe("buildJsonlEvents — the launch preprompt", () => {

@@ -1,4 +1,5 @@
 import { mandatePolicy } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
+import { reportRequired } from "@plugins/tasks/plugins/outcome-report/plugins/capability/core";
 import { tasksFile } from "@plugins/tasks/plugins/tasks-core/core";
 import {
   exitClean,
@@ -52,6 +53,7 @@ export const sidequestAutopilotAutomation = defineAutomation({
       pushPolicy.grant(settings.push),
       flagRaise.grant(true),
       exitClean.grant(true),
+      reportRequired.grant(true),
     ]),
   triggers: {
     kinds: ["event"],

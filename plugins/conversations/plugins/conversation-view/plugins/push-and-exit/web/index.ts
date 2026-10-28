@@ -2,14 +2,22 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { PromptEditorSlots } from "@plugins/primitives/plugins/prompt-editor/web";
 import { ConfigV2 } from "@plugins/config_v2/web";
 import { Hints } from "@plugins/hints/web";
+import { IdKinds } from "@plugins/ids/web";
 import { PushAndExitButton } from "./components/push-and-exit-button";
-import { closeHint, dropAndCloseHint, goHint, pushAndCloseHint } from "../core";
+import {
+  closeHint,
+  conversationFlagIdKind,
+  dropAndCloseHint,
+  goHint,
+  pushAndCloseHint,
+} from "../core";
 import { pushAndExitConfig } from "../shared/config";
 
 export default {
   description:
     "Toolbar button that asks Claude to push the branch and close the conversation; surfaces Claude's flag if it has anything to raise.",
   contributions: [
+    IdKinds.Kind({ kind: conversationFlagIdKind }),
     PromptEditorSlots.FloatingAction({
       id: "push-and-exit",
       // Every workspace: Restore / Send / Stop / Close need no git; the button

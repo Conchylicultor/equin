@@ -170,10 +170,10 @@ insert and the ring's inline prune reach it through the change feed. The
     - `TriggerRowSchema`
     - `TriggersPayloadSchema`
 - Cross-plugin:
-  - Imported by: 25 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 27 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `tasks` ×7
     - `apps` ×6
-    - `tasks` ×6
-    - `conversations` ×4
+    - `conversations` ×5
     - `infra` ×4
     - `page` ×4
     - `wish`

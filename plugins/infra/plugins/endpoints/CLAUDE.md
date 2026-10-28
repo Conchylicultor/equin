@@ -556,9 +556,9 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `unmatchedApiResponse`
     - `unsupportedEndpointResponse`
 - Cross-plugin:
-  - Imported by: 229 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 230 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×63
-    - `conversations` ×31
+    - `conversations` ×32
     - `infra` ×21
     - `page` ×20
     - `tasks` ×19
@@ -595,6 +595,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `apps/sonata/rich/swing` (0 debt)
     - `apps/sonata/transpose` (0 debt)
     - `conversations/compaction-context` (0 debt)
+    - `conversations/stop-gate` (0 debt)
     - `infra/boot-snapshot` (0 debt)
     - `infra/endpoints` (0 debt)
     - `infra/health` (0 debt)

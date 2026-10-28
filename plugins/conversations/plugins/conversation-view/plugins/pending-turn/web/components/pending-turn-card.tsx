@@ -101,11 +101,13 @@ const WAITING_FOR_START = "Waiting for the agent to start…";
  * other echo state is still on its way. While the agent is starting, every
  * echo is waiting for it — the launch message is already `typing` as the agent
  * comes up, which is not "Sending…" to the user. A `typed` turn while a turn
- * runs is queued instead (see `isQueued`).
+ * runs is queued instead (see `isQueued`). An `event` turn says it is one: the
+ * app sent it, not the user.
  */
 function echoCaption(turn: PendingTurn, agentStarting: boolean): string {
-  if (agentStarting || turn.state === "held") return WAITING_FOR_START;
-  return "Sending…";
+  const where =
+    agentStarting || turn.state === "held" ? WAITING_FOR_START : "Sending…";
+  return turn.kind === "event" ? `Event · ${where}` : where;
 }
 
 /**

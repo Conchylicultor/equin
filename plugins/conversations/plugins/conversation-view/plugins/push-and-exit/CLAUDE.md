@@ -7,13 +7,14 @@
 - Description: Toolbar button that asks Claude to push the branch and close the conversation; surfaces Claude's flag if it has anything to raise.
 - Web:
   - Contributes:
+    - `IdKinds.Kind` "cflag"
     - `PromptEditorSlots.FloatingAction` → `PushAndExitButton`
     - `ConfigV2.WebRegister` "config"
     - `Hints.Hint` "push-and-exit.drop-and-exit"
     - `Hints.Hint` "push-and-exit.exit"
     - `Hints.Hint` "push-and-exit.go"
     - `Hints.Hint` "push-and-exit.push-and-exit"
-  - Uses: 32 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations/conversation-view/pending-turn` ×5
     - `conversations/conversation-view` ×3
     - `hints` ×3
@@ -26,6 +27,7 @@
     - `conversations/conversation-view/code.useEditedFiles`
     - `conversations/conversation-view/drop-and-exit.droppedNotification`
     - `conversations/conversation-view/resume.useResumeConversation`
+    - `ids.IdKinds`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/live-state.combineResources`
     - `primitives/persistent-draft.useDraft`
@@ -33,38 +35,45 @@
     - `ui/icons.Icon`
 - Server:
   - Contributes:
+    - `ids.kind` "cflag"
     - `ConfigV2.Register` "config"
     - `mandateCapability` "exit.clean"
     - `mandateCapability` "flag.raise"
     - `mandateCapability` "push.policy"
-  - Uses:
-    - `config_v2.ConfigV2`
-    - `config_v2.getConfig`
-    - `conversations.afterTurn`
-    - `conversations.deleteConversation`
-    - `conversations.submitTurn`
+    - `watchSource` "flag"
+    - `trigger` "watch.ingest"
+  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `tasks/tasks-core` ×5
+    - `conversations` ×3
+    - `config_v2` ×2
+    - `ids` ×2
+    - `infra/endpoints` ×2
+    - `tasks/orchestration/mandate` ×2
     - `conversations/conversation-view/drop-and-exit.dropTaskOnExit`
-    - `infra/endpoints.HttpError`
-    - `infra/endpoints.implement`
+    - `database.db`
+    - `infra/events.defineTriggerEvent`
     - `infra/jobs.defineJob`
     - `infra/mcp.Mcp`
     - `shell/notifications.recordNotification`
-    - `tasks/orchestration/mandate.granted`
-    - `tasks/orchestration/mandate.Mandate`
-    - `tasks/tasks-core.getConversation`
-    - `tasks/tasks-core.markConversationClosed`
-    - `tasks/tasks-core.updateConversation`
+  - DB schema:
+    - `plugins/conversations/plugins/conversation-view/plugins/push-and-exit/server/internal/tables-events.ts`
+    - `plugins/conversations/plugins/conversation-view/plugins/push-and-exit/server/internal/tables.ts`
   - Register:
+    - `defineTriggerEvent('conversation.flagRaised')`
     - `defineJob('push_and_exit.exit_clean_finalize')`
     - `mcpTool('exit_clean')`
     - `mcpTool('flag_raise')`
   - Routes: `POST /api/conversations/:id/push-and-exit`
+- Machine:
+  - Uses: `tasks/orchestration/watch.watchSource`
 - Core:
   - Uses:
     - `hints.defineHint`
     - `hints.defineHintAnchor`
+    - `ids.defineIdKind`
   - Exports (values):
     - `closeHint`
+    - `conversationFlagIdKind`
     - `dropAndCloseHint`
     - `goHint`
     - `mainActionAnchor`
@@ -80,7 +89,9 @@
     - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-weight-control-strong`
 - Exemptions:
-  - Exempts itself from: `turn-send-safety/no-adhoc-turn-send` — `web/internal/delivery.ts` (sanctioned)
+  - Exempts itself from:
+    - `turn-send-safety/no-adhoc-turn-send` — `web/internal/delivery.ts` (sanctioned)
+    - `ids:pk-declared` — `server/internal/tables-events.ts` (debt)
 - Shared:
   - Exports (values):
     - `pushAndExitConfig`

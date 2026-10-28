@@ -14156,6 +14156,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Endpoint callers:
       - `close`
       - `compaction-context`
+      - `stop-gate`
       - `transcript-api`
   - Exemptions:
     - Exempts itself from:
@@ -15673,9 +15674,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `JsonlViewer.ContextRole`
               - `JsonlViewer.Overlay`
               - `JsonlViewer.TranscriptEnd`
-            - Slot contributors: 56 contributors — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
+            - Slot contributors: 57 contributors — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
               - `JsonlViewer.ContextRole` ×31
-              - `JsonlViewer.EventRenderer` ×17
+              - `JsonlViewer.EventRenderer` ×18
               - `JsonlViewer.Overlay` ×4
               - `JsonlViewer.EventFilter` ×2
               - `JsonlViewer.PendingPrompt` ← `conversations.question-relay`
@@ -15811,8 +15812,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density` ×5
               - `ui/tokens/shape` ×2
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 45 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
-              - `conversations` ×43
+            - Imported by: 46 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
+              - `conversations` ×44
               - `apps/places/places-map`
               - `tasks/outcome-report`
           - Exemptions:
@@ -16483,8 +16484,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/type-scale --font-scale`
                   - `ui/tokens/type-scale --font-size-2xs`
                   - `ui/tokens/type-scale --line-height-2xs`
-                - Imported by: 29 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/REFERENCE.md)
-                  - `conversations` ×29
+                - Imported by: 30 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/REFERENCE.md)
+                  - `conversations` ×30
             - **`compaction`** — Renders a context compaction as one thin rule across the transcript — Context compacted · 316k → 12k — folding the summary the agent continues from (as markdown), the files it re-read, and the context the harness re-injected right after.
               - Web:
                 - Contributes: `JsonlViewer.EventRenderer` "compaction" → `CompactionRow`
@@ -16529,6 +16530,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `network/live.useLive`
                   - `primitives/css/text.Text`
                   - `primitives/live-state.ResourceErrorInline`
+            - **`event-turn`** — Renders an event turn the app delivered to a watching agent (the turn ledger's <equin-event> envelope) as a compact system card — its first line in the header, the event lines and subtree digest folded below — never as a message the user wrote.
+              - Web:
+                - Contributes: `JsonlViewer.EventRenderer` "event-turn" → `EventTurnRow`
+                - Uses:
+                  - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
+                  - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
+                  - `primitives/css/text.Text`
+                  - `primitives/markdown.Markdown`
+                  - `ui/icons.Icon`
+              - Cross-plugin:
+                - Uses tokens:
+                  - `ui/tokens/color-palette --muted-foreground`
+                  - `ui/tokens/shape --spacing`
             - **`fields-card`** — Shared appearance for a headline + truncating summary preview + fold-out key/value field list. Used by the queued task-notification card and the native task-notification row so the two never diverge.
               - Web:
                 - Uses:
@@ -18138,13 +18152,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`push-and-exit`** — Toolbar button that asks Claude to push the branch and close the conversation; surfaces Claude's flag if it has anything to raise.
           - Web:
             - Contributes:
+              - `IdKinds.Kind` "cflag"
               - `PromptEditorSlots.FloatingAction` → `PushAndExitButton`
               - `ConfigV2.WebRegister` "config"
               - `Hints.Hint` "push-and-exit.drop-and-exit"
               - `Hints.Hint` "push-and-exit.exit"
               - `Hints.Hint` "push-and-exit.go"
               - `Hints.Hint` "push-and-exit.push-and-exit"
-            - Uses: 32 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/push-and-exit/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/push-and-exit/REFERENCE.md)
+            - Uses: 33 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/push-and-exit/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/push-and-exit/REFERENCE.md)
               - `conversations/conversation-view/pending-turn` ×5
               - `conversations/conversation-view` ×3
               - `hints` ×3
@@ -18157,6 +18172,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/code.useEditedFiles`
               - `conversations/conversation-view/drop-and-exit.droppedNotification`
               - `conversations/conversation-view/resume.useResumeConversation`
+              - `ids.IdKinds`
               - `primitives/latest-ref.useLatestRef`
               - `primitives/live-state.combineResources`
               - `primitives/persistent-draft.useDraft`
@@ -18164,38 +18180,45 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/icons.Icon`
           - Server:
             - Contributes:
+              - `ids.kind` "cflag"
               - `ConfigV2.Register` "config"
               - `mandateCapability` "exit.clean"
               - `mandateCapability` "flag.raise"
               - `mandateCapability` "push.policy"
-            - Uses:
-              - `config_v2.ConfigV2`
-              - `config_v2.getConfig`
-              - `conversations.afterTurn`
-              - `conversations.deleteConversation`
-              - `conversations.submitTurn`
+              - `watchSource` "flag"
+              - `trigger` "watch.ingest"
+            - Uses: 22 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/push-and-exit/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/push-and-exit/REFERENCE.md)
+              - `tasks/tasks-core` ×5
+              - `conversations` ×3
+              - `config_v2` ×2
+              - `ids` ×2
+              - `infra/endpoints` ×2
+              - `tasks/orchestration/mandate` ×2
               - `conversations/conversation-view/drop-and-exit.dropTaskOnExit`
-              - `infra/endpoints.HttpError`
-              - `infra/endpoints.implement`
+              - `database.db`
+              - `infra/events.defineTriggerEvent`
               - `infra/jobs.defineJob`
               - `infra/mcp.Mcp`
               - `shell/notifications.recordNotification`
-              - `tasks/orchestration/mandate.granted`
-              - `tasks/orchestration/mandate.Mandate`
-              - `tasks/tasks-core.getConversation`
-              - `tasks/tasks-core.markConversationClosed`
-              - `tasks/tasks-core.updateConversation`
+            - DB schema:
+              - `plugins/conversations/plugins/conversation-view/plugins/push-and-exit/server/internal/tables-events.ts`
+              - `plugins/conversations/plugins/conversation-view/plugins/push-and-exit/server/internal/tables.ts`
             - Register:
+              - `defineTriggerEvent('conversation.flagRaised')`
               - `defineJob('push_and_exit.exit_clean_finalize')`
               - `mcpTool('exit_clean')`
               - `mcpTool('flag_raise')`
             - Routes: `POST /api/conversations/:id/push-and-exit`
+          - Machine:
+            - Uses: `tasks/orchestration/watch.watchSource`
           - Core:
             - Uses:
               - `hints.defineHint`
               - `hints.defineHintAnchor`
+              - `ids.defineIdKind`
             - Exports (values):
               - `closeHint`
+              - `conversationFlagIdKind`
               - `dropAndCloseHint`
               - `goHint`
               - `mainActionAnchor`
@@ -18211,7 +18234,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shape --spacing`
               - `ui/tokens/type-scale --font-weight-control-strong`
           - Exemptions:
-            - Exempts itself from: `turn-send-safety/no-adhoc-turn-send` — `web/internal/delivery.ts` (sanctioned)
+            - Exempts itself from:
+              - `turn-send-safety/no-adhoc-turn-send` — `web/internal/delivery.ts` (sanctioned)
+              - `ids:pk-declared` — `server/internal/tables-events.ts` (debt)
           - Shared:
             - Exports (values):
               - `pushAndExitConfig`
@@ -19237,6 +19262,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/compaction-context.compactionHookEntry`
           - `conversations/question-relay.holdQuestion`
           - `conversations/question-relay.retireQuestion`
+          - `conversations/stop-gate.stopGateHookEntry`
           - `infra/claude-cli/accounts.readClaudeAccounts`
           - `infra/claude-cli/accounts.selectClaudeAccountById`
           - `infra/endpoints.implementMachine`
@@ -19412,6 +19438,35 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `spawnFailureShape`
       - Cross-plugin:
         - Imported by: `conversations`
+    - **`stop-gate`** — The stop-gate backend: the StopGate contribution (a plugin's check(conversationId) — block the agent's stop while it still owes the plugin something, with the reason it reads) and the StopWaiver contribution (waives(conversationId) — the agent may stop anyway, it will be woken), and the GET /api/conversations/:id/stop-gate endpoint the Stop hook asks: block iff some gate blocks and no waiver waives.
+      - Server:
+        - Uses: `infra/endpoints.implement`
+        - Exports (types):
+          - `StopGateEntry`
+          - `StopVerdict`
+          - `StopWaiverEntry`
+        - Exports (values):
+          - `StopGate`
+          - `StopWaiver`
+        - Routes: `GET /api/conversations/:id/stop-gate`
+      - Core:
+        - Uses: `infra/endpoints.defineEndpoint`
+        - Exports (types):
+          - `StopGateHookEntry`
+          - `StopGateResponse`
+        - Exports (values):
+          - `STOP_GATE_HOOK_TIMEOUT_S`
+          - `stopGate`
+          - `stopGateHook`
+          - `StopGateResponseSchema`
+      - Cross-plugin:
+        - Imported by:
+          - `conversations/runtime-sdk`
+          - `tasks/orchestration/watch`
+      - Exemptions:
+        - Exempts itself from: `endpoints/no-raw-web-fetch` — `shared/client.ts` (sanctioned)
+      - Machine:
+        - Exports (values): `stopGateHookEntry`
     - **`summary`** — Toolbar button that opens a side pane with the Summarise action and the latest structured Sonnet summary (phase, flags, next action). On-demand structured summaries of conversations: phase, flags, next action, served live. Curated by Sonnet via MCP (the tool is the machine half's). Append-only history.
       - Web:
         - Slots: `conv-summary.actions`
@@ -19551,6 +19606,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `wholeBytes`
       - Core:
         - Uses:
+          - `conversations/turn-ledger.unwrapEventTurn`
           - `packages/list-bound.wholeList`
           - `packages/list-bound.wholeRecord`
         - Exports (types):
@@ -19749,8 +19805,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `turnIdKind`
           - `TurnKindSchema`
           - `TurnStateSchema`
+          - `unwrapEventTurn`
       - Cross-plugin:
-        - Imported by: `conversations`
+        - Imported by:
+          - `conversations`
+          - `conversations/transcript-source`
       - Exemptions:
         - Exempts itself from: `ids:pk-declared` — `server/internal/tables-user-turn-sent-event.ts` (debt)
       - Machine:
@@ -19996,12 +20055,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `quotedRelationsIn`
       - `readTag`
   - Cross-plugin:
-    - Imported by: 127 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+    - Imported by: 129 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
       - `apps` ×36
       - `page` ×15
+      - `conversations` ×13
       - `infra` ×13
-      - `conversations` ×12
-      - `tasks` ×11
+      - `tasks` ×12
       - `active-data` ×8
       - `debug` ×6
       - `database` ×5
@@ -20698,7 +20757,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens: `ui/tokens/color-palette --muted-foreground`
     - **`sql-column`** — Decoded columns: `parsedText` / `parsedJson` derive a column's type from a zod schema that really decodes it — on every read and every write — so a column can no longer declare a string-literal union, or a jsonb shape, that nothing verifies. `withWire` declares a column type's JSON wire form (a codec applied in JS by whatever projects the column onto the wire), carried on the built column's type so a row schema must match it.
       - Cross-plugin:
-        - Imported by: 21 plugins — full list in [`plugins/database/plugins/sql-column/REFERENCE.md`](../plugins/database/plugins/sql-column/REFERENCE.md)
+        - Imported by: 22 plugins — full list in [`plugins/database/plugins/sql-column/REFERENCE.md`](../plugins/database/plugins/sql-column/REFERENCE.md)
           - `apps` ×6
           - `fields` ×5
           - `infra` ×3
@@ -20707,6 +20766,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ids`
           - `network/live`
           - `search/engine`
+          - `tasks/orchestration/watch`
           - `ui/theme-engine/saved-themes`
       - Server:
         - DB schema: `plugins/database/plugins/sql-column/server/internal/column-schema.ts`
@@ -28409,8 +28469,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Slots:
       - `IdKinds.Kind`
       - `IdKinds.Presenter`
-    - Slot contributors: 38 contributors — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
-      - `IdKinds.Kind` ×29
+    - Slot contributors: 40 contributors — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
+      - `IdKinds.Kind` ×31
       - `IdKinds.Presenter` ×9
     - Exports (types):
       - `IdPresenter`
@@ -28462,14 +28522,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `parseKindLabel`
       - `storedIdSchema`
   - Cross-plugin:
-    - Imported by: 36 plugins — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
+    - Imported by: 38 plugins — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
       - `apps` ×13
-      - `conversations` ×5
+      - `conversations` ×6
       - `primitives` ×3
+      - `tasks` ×3
       - `build` ×2
       - `page` ×2
       - `release` ×2
-      - `tasks` ×2
       - `active-data/id-chip`
       - `history/engine`
       - `infra/trash`
@@ -29598,9 +29658,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 229 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+        - Imported by: 230 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
           - `apps` ×63
-          - `conversations` ×31
+          - `conversations` ×32
           - `infra` ×21
           - `page` ×20
           - `tasks` ×19
@@ -29637,6 +29697,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/sonata/rich/swing` (0 debt)
           - `apps/sonata/transpose` (0 debt)
           - `conversations/compaction-context` (0 debt)
+          - `conversations/stop-gate` (0 debt)
           - `infra/boot-snapshot` (0 debt)
           - `infra/endpoints` (0 debt)
           - `infra/health` (0 debt)
@@ -29878,10 +29939,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TriggerRowSchema`
           - `TriggersPayloadSchema`
       - Cross-plugin:
-        - Imported by: 25 plugins — full list in [`plugins/infra/plugins/events/REFERENCE.md`](../plugins/infra/plugins/events/REFERENCE.md)
+        - Imported by: 27 plugins — full list in [`plugins/infra/plugins/events/REFERENCE.md`](../plugins/infra/plugins/events/REFERENCE.md)
+          - `tasks` ×7
           - `apps` ×6
-          - `tasks` ×6
-          - `conversations` ×4
+          - `conversations` ×5
           - `infra` ×4
           - `page` ×4
           - `wish`
@@ -40597,9 +40658,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×37
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family` ×2
-            - Imported by: 406 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 407 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×113
-              - `conversations` ×73
+              - `conversations` ×74
               - `primitives` ×45
               - `debug` ×37
               - `page` ×24
@@ -43824,6 +43885,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `active-data`
           - `active-data/go`
           - `conversations/conversation-view/jsonl-viewer/compaction`
+          - `conversations/conversation-view/jsonl-viewer/event-turn`
           - `conversations/conversation-view/jsonl-viewer/request-shape`
           - `conversations/conversation-view/jsonl-viewer/subagents`
           - `conversations/conversation-view/jsonl-viewer/teammate-message`
@@ -49606,6 +49668,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Contributes:
       - `resource.declare` "tasks.repo-info"
       - `mandateCapability` "tasks.file"
+      - `treeDigestAnnotation` "tasks"
+      - `watchSource` "tasks.created"
+      - `watchSource` "tasks.settled"
+      - `watchSource` "tasks.started"
+      - `trigger` "watch.ingest"
+      - `trigger` "watch.ingest"
+      - `trigger` "watch.ingest"
     - Uses: 30 symbols — full list in [`plugins/tasks/REFERENCE.md`](../plugins/tasks/REFERENCE.md)
       - `tasks/tasks-core` ×16
       - `infra/endpoints` ×2
@@ -49652,6 +49721,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Uses:
       - `infra/endpoints.implementMachine`
       - `network/live.serveValue`
+      - `tasks/orchestration/watch.watchSource`
     - Register:
       - `mcpTool('add_task')`
       - `mcpTool('task_tree')`
@@ -49878,6 +49948,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/jobs.defineJob`
           - `network/live.serveCollection`
           - `tasks/tasks-core._tasks`
+          - `tasks/tasks-core.hasBlockingDep`
           - `tasks/tasks-core.taskStatusChanged`
         - DB schema:
           - `plugins/tasks/plugins/auto-start/server/internal/tables-events.ts`
@@ -49889,6 +49960,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `claimAutoStart`
           - `getTaskAutoStart`
           - `listArmedTaskIds`
+          - `listLaunchableArmedIn`
           - `setTaskAutoStart`
           - `taskAutoStartArmed`
         - Register:
@@ -49918,6 +49990,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks`
           - `tasks/auto-start/launch-option`
           - `tasks/automations`
+          - `tasks/orchestration/watch`
       - Exemptions:
         - Exempts itself from: `ids:pk-declared` — `server/internal/tables-events.ts` (debt)
       - Machine:
@@ -49953,7 +50026,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/model-provider.ModelChoiceSchema`
               - `tasks/launch-options.defineLaunchOption`
             - Exports (values): `autoStartLaunchOption`
-    - **`automations`** — Automations in the agent manager: the Automations sidebar entry and list (a DataView over the catalog — trigger in words, next run, on/off, open task), the detail pane (Run now through Background activity; Behavior — enabled, model, push policy; Trigger — schedule presets or custom cron, or the event and its settle wait; the sections an automation contributes through Automations.Section; its sources; the Prompt template with Customized / Reset to default — PromptTemplateBlock, the same editor for any template field an automation declares; and the History of the tasks it filed or started — each row expandable into the Automations.TaskDetail contributions for its task), the presentation of the exposed `origin` Automation field (its options the live catalog) and `approval` Approval field (Approved / Excluded / Not approved) in every list whose rows reach a task, useTaskApproval / useSetTaskApproval — one task's launch decision, read and written from the task, and automationConfigContributions — how a declaring plugin registers its automation's config document (Automations.Config). Automations registry: defineAutomation declares something that files a task and launches its agent on its own (file kind) or launches agents on existing tasks a few at a time (launch kind: candidates, launched ONLY when a person approved them — the tasks_ext_launch_decision side-table, one decision per task whatever automation launches it, written by the decide-launch and task-approval endpoints alone — concurrency slots held until a task settles or releaseLaunchedTask, and a maxLaunches batch per turn-on after which it turns itself off), and owns its job (automation.<id>) — its config document (defineAutomationConfig: enabled, push policy, model, excluded sources, trigger — a schedule re-installed live on change, or an event whose bursts settle into one run — and the prompt template), the one-open-task dedupe, the filled prompt, the filing (task + category + tasks_ext_origin row in one transaction) and the armed launch. Serves the automations.launch-decisions.all set, exposes the filing automation and the launch decision to every list whose rows reach a task (the `origin` and `approval` fields), and notifies the bell when an automated task needs its person. The automations.catalog value and the automations.tasks collection (the origin side-table, an automation's history) are the machine half's.
+    - **`automations`** — Automations in the agent manager: the Automations sidebar entry and list (a DataView over the catalog — trigger in words, next run, on/off, open task), the detail pane (Run now through Background activity; Behavior — enabled, model, push policy; Trigger — schedule presets or custom cron, or the event and its settle wait; the sections an automation contributes through Automations.Section; its sources; the Prompt template with Customized / Reset to default — PromptTemplateBlock, the same editor for any template field an automation declares; and the History of the tasks it filed or started — each row expandable into the Automations.TaskDetail contributions for its task), the presentation of the exposed `origin` Automation field (its options the live catalog) and `approval` Approval field (Approved / Excluded / Not approved) in every list whose rows reach a task, useTaskApproval / useSetTaskApproval — one task's launch decision, read and written from the task, and automationConfigContributions — how a declaring plugin registers its automation's config document (Automations.Config). Automations registry: defineAutomation declares something that files a task and launches its agent on its own (file kind) or launches agents on existing tasks a few at a time (launch kind: candidates, launched ONLY when a person approved them — the tasks_ext_launch_decision side-table, one decision per task whatever automation launches it, written by the decide-launch and task-approval endpoints alone — concurrency slots held until a task settles or its agent reports — the automations.slot code watcher on every launched task, fed the outcome report through the watch plugin —, and a maxLaunches batch per turn-on after which it turns itself off), and owns its job (automation.<id>) — its config document (defineAutomationConfig: enabled, push policy, model, excluded sources, trigger — a schedule re-installed live on change, or an event whose bursts settle into one run — and the prompt template), the one-open-task dedupe, the filled prompt, the filing (task + category + tasks_ext_origin row in one transaction) and the armed launch. Serves the automations.launch-decisions.all set, exposes the filing automation and the launch decision to every list whose rows reach a task (the `origin` and `approval` fields), and notifies the bell when an automated task needs its person. The automations.catalog value and the automations.tasks collection (the origin side-table, an automation's history) are the machine half's.
       - Web:
         - Slots:
           - `Automations.Config`
@@ -50026,10 +50099,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `resource.declare` "automations.tasks"
           - `resource.declare` "automations.tasks:groups"
           - `resource.declare` "automations.tasks:rows"
+          - `watchHandler` "automations.slot"
           - `trigger` "automations.task-status"
-        - Uses: 26 symbols — full list in [`plugins/tasks/plugins/automations/REFERENCE.md`](../plugins/tasks/plugins/automations/REFERENCE.md)
+        - Uses: 29 symbols — full list in [`plugins/tasks/plugins/automations/REFERENCE.md`](../plugins/tasks/plugins/automations/REFERENCE.md)
           - `tasks/tasks-core` ×6
           - `config_v2` ×4
+          - `tasks/orchestration/watch` ×3
           - `database` ×2
           - `infra/endpoints` ×2
           - `infra/jobs` ×2
@@ -50057,9 +50132,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LaunchCandidate`
         - Exports (values):
           - `automationConfigRegistration`
-          - `automationOfTask`
           - `defineAutomation`
-          - `releaseLaunchedTask`
         - Register: `defineJob('automations.task-status')`
         - Resources:
           - `automations.catalog` (push, notified, whole: every registered automation — declared in code, bounded by the composition, whole: the tasks one launch-kind automation holds a slot for — at most its concurrency, whole: what one automation watches — e.g. one per dependency updater, declared in code, whole: one automation's prompt variables — a handful, declared in code, capped: TRIGGER_KINDS.length)
@@ -50287,7 +50360,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-body`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-body`
-    - **`orchestration`** — Umbrella for the workflow-agnostic building blocks agents are orchestrated by inside a task subtree: the mandate (what an agent may do, resolved nearest-wins up the folder tree), and later the tree digest and watchers. Names no workflow, automation or track.
+    - **`orchestration`** — Umbrella for the workflow-agnostic building blocks agents are orchestrated by inside a task subtree: the mandate (what an agent may do, resolved nearest-wins up the folder tree), the tree digest and watchers. Names no workflow, automation or track.
       - Plugins:
         - **`mandate`** — The mandate's server half: the Mandate.Capability registry (each owner contributes how its granted value reads), mandateOf (nearest-wins up the folder tree) and grantOf (per conversation, collapsed per request burst), granted(cap) for Mcp.tool.when, the `## Mandate` MCP instructions section, and the mandate.capabilities catalog value.
           - Server:
@@ -50326,6 +50399,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Imported by:
                   - `conversations/conversation-view/push-and-exit/capabilities`
                   - `tasks/mandate-presets`
+                  - `tasks/orchestration/watch`
+                  - `tasks/outcome-report/capability`
                   - `tasks/tasks-core`
               - Core:
                 - Exports (types):
@@ -50337,7 +50412,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `defineCapability`
                   - `mandatePolicy`
                   - `MandatePolicySchema`
-        - **`tree-digest`** — The tree digest: what an agent is shown of its mandate's task subtree — treeDigest (the whole subtree the first time, then only the tasks created or changed since the conversation's digest_cursors row, capped at 40 lines, advancing the cursor) and taskTree (the whole subtree, read-only). Each line is a task's id, title and derived status plus the words the caller's annotate adds; names no track or workflow.
+        - **`tree-digest`** — The tree digest: what an agent is shown of its mandate's task subtree — treeDigest (the whole subtree the first time, then only the tasks created or changed since the conversation's digest_cursors row, capped at 40 lines, advancing the cursor) and taskTree (the whole subtree, read-only). Each line is a task's id, title and derived status plus the words every TreeDigest.Annotation contribution adds; names no track or workflow.
           - Server:
             - Uses:
               - `database.db`
@@ -50349,14 +50424,82 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks/tasks-core.tasksView`
             - DB schema: `plugins/tasks/plugins/orchestration/plugins/tree-digest/server/internal/tables.ts`
             - Exports (types):
-              - `DigestAnnotate`
+              - `DigestAnnotationEntry`
               - `DigestArgs`
               - `DigestTask`
-              - `TreeDigest`
+              - `TreeDigestResult`
             - Exports (values):
               - `taskTree`
               - `treeDigest`
-    - **`outcome-report`** — The outcome report an automated task's agent submitted: a card at the end of the transcript of the conversation that wrote it (scrolling with it, not pinned over it) (markdown body, pushed / branch-waiting / no-changes standing, and its question as one-click answers sent as the next turn), and OutcomeReportDetail — the same report read-only, shown in an expanded row of an automation's History (Automations.TaskDetail). Outcome reports for automated tasks: owns tasks_ext_outcome_report (one report per task — markdown body, the attempt's git-measured standing, an optional question with one-click answers) and serves the outcome-reports lookup collection. The submit_outcome_report MCP tool that writes it (visible only to conversations whose task an automation filed or launched; it releases the task's automation slot and rings the bell when a question waits) is the machine half.
+              - `TreeDigest`
+        - **`watch`** — Watch, web half: registers the watch and watch-event id kinds, so their ids are recognised in the browser as on the server. Watch, every host's half: task_watches (who watches which task's subtree; live while not ended and its conversation not done) and watch_inbox (routed, not yet delivered events), with their id kinds; watchTask / endWatch / retargetWatch / watchesOf; the WatchSource and WatchHandler contribution kinds; the routing, quiet and delivery policy over the tables; and the stop waiver (a watcher whose subtree still has work running may stop — the next event wakes it). Names no source, handler or workflow.
+          - Web:
+            - Contributes:
+              - `IdKinds.Kind` "watch"
+              - `IdKinds.Kind` "wevt"
+            - Uses: `ids.IdKinds`
+          - Server:
+            - Contributes:
+              - `ids.kind` "watch"
+              - `ids.kind` "wevt"
+              - `conversations.stop-waiver` "watch"
+              - `mandateCapability` "watch.children"
+              - `trigger` "watch.on-conversation-status"
+              - `trigger` "watch.on-task-status"
+            - Uses:
+              - `conversations/stop-gate.StopWaiver`
+              - `database.db`
+              - `database.DbExecutor`
+              - `database/sql-column.parsedJson`
+              - `ids.idColumn`
+              - `ids.IdKinds`
+              - `ids.idRef`
+              - `tasks/auto-start.listLaunchableArmedIn`
+              - `tasks/tasks-core._attempts`
+              - `tasks/tasks-core._conversations`
+              - `tasks/tasks-core._tasks`
+            - DB schema: `plugins/tasks/plugins/orchestration/plugins/watch/server/internal/tables.ts`
+            - Exports (types):
+              - `WatchHandlerCtx`
+              - `WatchHandlerEntry`
+              - `WatchRow`
+            - Exports (values):
+              - `endWatch`
+              - `retargetWatch`
+              - `watchesOf`
+              - `WatchHandler`
+              - `watchTask`
+          - Core:
+            - Uses:
+              - `ids.defineIdKind`
+              - `ids.IdOf`
+              - `tasks/orchestration/mandate/policy.defineCapability`
+            - Exports (types):
+              - `Watcher`
+              - `WatchEvent`
+              - `WatchEventInput`
+              - `WatchId`
+            - Exports (values):
+              - `QUIET_EVENT_KIND`
+              - `watchChildren`
+              - `WatcherSchema`
+              - `watchEventIdKind`
+              - `watchIdKind`
+          - Cross-plugin:
+            - Imported by:
+              - `conversations/conversation-view/push-and-exit`
+              - `tasks`
+              - `tasks/automations`
+              - `tasks/outcome-report`
+          - Machine:
+            - Exports (values): `watchSource`
+            - Register:
+              - `defineJob('watch.ingest')`
+              - `defineJob('watch.quiet')`
+              - `defineJob('watch.deliver')`
+              - `defineJob('watch.on-task-status')`
+              - `defineJob('watch.on-conversation-status')`
+    - **`outcome-report`** — The outcome report an automated task's agent submitted: a card at the end of the transcript of the conversation that wrote it (scrolling with it, not pinned over it) (markdown body, pushed / branch-waiting / no-changes standing, and its question as one-click answers sent as the next turn), and OutcomeReportDetail — the same report read-only, shown in an expanded row of an automation's History (Automations.TaskDetail). Outcome reports: owns tasks_ext_outcome_report (one report per task — markdown body, the attempt's git-measured standing, an optional question with one-click answers), serves the outcome-reports lookup collection, and declares the outcomeReport.submitted event a submit emits. The submit_outcome_report MCP tool that writes it (visible only to conversations whose mandate grants report.required), its stop gate and its watch source are the machine half.
       - Web:
         - Contributes:
           - `JsonlViewer.TranscriptEnd` "outcome-report" → `OutcomeReportCard`
@@ -50381,14 +50524,31 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/automations.Automations`
         - Exports (values): `OutcomeReportDetail`
       - Server:
-        - Contributes: `resource.declare` "outcome-reports:rows"
+        - Contributes:
+          - `resource.declare` "outcome-reports:rows"
+          - `mandateCapability` "report.required"
+          - `conversations.stop-gate` "outcome-report"
+          - `watchSource` "outcome-report"
+          - `trigger` "watch.ingest"
+          - `treeDigestAnnotation` "outcome-report"
         - Uses:
           - `infra/entity-extensions.defineExtension`
+          - `infra/events.defineTriggerEvent`
           - `network/live.serveCollection`
           - `tasks/tasks-core._tasks`
-        - DB schema: `plugins/tasks/plugins/outcome-report/server/internal/tables.ts`
+        - DB schema:
+          - `plugins/tasks/plugins/outcome-report/server/internal/tables-events.ts`
+          - `plugins/tasks/plugins/outcome-report/server/internal/tables.ts`
         - Entity extension of: `tasks/tasks-core` (table `tasks_ext_outcome_report`)
+        - Exports (types): `OutcomeReportSubmittedPayload`
+        - Exports (values):
+          - `_outcomeReportSubmittedTriggers`
+          - `outcomeReportSubmitted`
+        - Register: `defineTriggerEvent('outcomeReport.submitted')`
         - Resources: `outcome-reports:rows` (keyed, point)
+      - Machine:
+        - Uses: `tasks/orchestration/watch.watchSource`
+        - Register: `mcpTool('submit_outcome_report')`
       - Core:
         - Uses:
           - `fields.nullable`
@@ -50407,10 +50567,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `OutcomeReportSchema`
           - `outcomeReportShape`
           - `REPORT_STANDINGS`
-      - Machine:
-        - Register:
-          - `mcpTool('submit_outcome_report')`
-          - `mcpInstructions('outcome-report')`
+      - Exemptions:
+        - Exempts itself from: `ids:pk-declared` — `server/internal/tables-events.ts` (debt)
+      - Plugins:
+        - **`capability`** — The report.required mandate capability as plain data: an agent granted it ends its work with an outcome report (submit_outcome_report), and cannot stop before. A leaf, so every mandate author (the automations) can grant it without a cycle through outcome-report.
+          - Core:
+            - Uses: `tasks/orchestration/mandate/policy.defineCapability`
+            - Exports (values): `reportRequired`
     - **`reports-investigation`** — The Report investigations automation in the Automations pane: registers its config (trigger, push policy, model, prompt, scope) and contributes its Which reports section — severity, recurrence threshold, kind by kind with the uninvestigated reports that match right now. Files reports' investigation tasks: owns the Reports task category, registers the task-creating handler into reports' investigation sink (Investigate), and declares the Report investigations automation (off by default) — woken when a report nobody investigated is recorded (once the burst settles) or on a schedule, it files ONE task for the batch of in-scope reports (severity, recurrence, kind), links them to it, and launches an agent to find and fix the root cause.
       - Web:
         - Contributes:
@@ -51556,6 +51719,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PushLandedPayload`
           - `PushLedgerImpl`
           - `Task`
+          - `TaskCreatedPayload`
           - `TaskDescriptionChangedPayload`
           - `TaskListItem`
           - `TaskStatus`
@@ -51570,6 +51734,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `_conversations`
           - `_conversationStatusChangedTriggers`
           - `_pushLandedTriggers`
+          - `_taskCreatedTriggers`
           - `_taskDescriptionChangedTriggers`
           - `_tasks`
           - `_taskStatusChangedTriggers`
@@ -51634,6 +51799,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `setConversationHibernated`
           - `setMandate`
           - `taskAttachments`
+          - `taskCreated`
           - `taskDependsOn`
           - `taskDescriptionChanged`
           - `TaskListItemSchema`
@@ -51655,6 +51821,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineTriggerEvent('pushes.landed')`
           - `defineTriggerEvent('tasks.statusChanged')`
           - `defineTriggerEvent('tasks.titleChanged')`
+          - `defineTriggerEvent('tasks.created')`
           - `defineTriggerEvent('tasks.descriptionChanged')`
           - `defineTriggerEvent('conversation.statusChanged')`
           - `defineTriggerEvent('conversation.created')`
@@ -51762,9 +51929,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TrackFilingGrantSchema`
           - `TRAILER_LOG_FORMAT`
       - Cross-plugin:
-        - Imported by: 72 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+        - Imported by: 73 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
           - `conversations` ×27
-          - `tasks` ×21
+          - `tasks` ×22
           - `active-data` ×5
           - `debug` ×4
           - `page` ×3
@@ -51979,9 +52146,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/shadow --shadow`
           - `ui/tokens/shape --spacing`
-        - Imported by: 353 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 354 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×91
-          - `conversations` ×56
+          - `conversations` ×57
           - `primitives` ×42
           - `fields` ×41
           - `page` ×41
@@ -53107,9 +53274,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `colorPaletteGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Tokens used by: 528 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 529 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×120
-              - `conversations` ×88
+              - `conversations` ×89
               - `primitives` ×77
               - `debug` ×36
               - `page` ×33
@@ -53593,8 +53760,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `shapeGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --radius-chip-compact`
-            - Tokens used by: 432 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
-              - `conversations` ×91
+            - Tokens used by: 433 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+              - `conversations` ×92
               - `apps` ×85
               - `primitives` ×71
               - `page` ×36

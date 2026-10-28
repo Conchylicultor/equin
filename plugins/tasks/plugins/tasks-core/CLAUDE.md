@@ -343,6 +343,7 @@ serves them.
     - `PushLandedPayload`
     - `PushLedgerImpl`
     - `Task`
+    - `TaskCreatedPayload`
     - `TaskDescriptionChangedPayload`
     - `TaskListItem`
     - `TaskStatus`
@@ -357,6 +358,7 @@ serves them.
     - `_conversations`
     - `_conversationStatusChangedTriggers`
     - `_pushLandedTriggers`
+    - `_taskCreatedTriggers`
     - `_taskDescriptionChangedTriggers`
     - `_tasks`
     - `_taskStatusChangedTriggers`
@@ -421,6 +423,7 @@ serves them.
     - `setConversationHibernated`
     - `setMandate`
     - `taskAttachments`
+    - `taskCreated`
     - `taskDependsOn`
     - `taskDescriptionChanged`
     - `TaskListItemSchema`
@@ -442,6 +445,7 @@ serves them.
     - `defineTriggerEvent('pushes.landed')`
     - `defineTriggerEvent('tasks.statusChanged')`
     - `defineTriggerEvent('tasks.titleChanged')`
+    - `defineTriggerEvent('tasks.created')`
     - `defineTriggerEvent('tasks.descriptionChanged')`
     - `defineTriggerEvent('conversation.statusChanged')`
     - `defineTriggerEvent('conversation.created')`
@@ -549,9 +553,9 @@ serves them.
     - `TrackFilingGrantSchema`
     - `TRAILER_LOG_FORMAT`
 - Cross-plugin:
-  - Imported by: 72 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 73 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×27
-    - `tasks` ×21
+    - `tasks` ×22
     - `active-data` ×5
     - `debug` ×4
     - `page` ×3

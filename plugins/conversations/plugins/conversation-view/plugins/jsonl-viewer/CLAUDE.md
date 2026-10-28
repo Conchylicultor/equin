@@ -160,9 +160,9 @@ back.
     - `JsonlViewer.ContextRole`
     - `JsonlViewer.Overlay`
     - `JsonlViewer.TranscriptEnd`
-  - Slot contributors: 56 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slot contributors: 57 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `JsonlViewer.ContextRole` ×31
-    - `JsonlViewer.EventRenderer` ×17
+    - `JsonlViewer.EventRenderer` ×18
     - `JsonlViewer.Overlay` ×4
     - `JsonlViewer.EventFilter` ×2
     - `JsonlViewer.PendingPrompt` ← `conversations.question-relay`
@@ -298,8 +298,8 @@ back.
     - `ui/tokens/density` ×5
     - `ui/tokens/shape` ×2
     - `ui/tokens/font-family --font-mono`
-  - Imported by: 45 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `conversations` ×43
+  - Imported by: 46 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×44
     - `apps/places/places-map`
     - `tasks/outcome-report`
 - Exemptions:
@@ -315,6 +315,7 @@ back.
   - **`collapsible-card`** — Disclosure-card primitive: the whole header row is the toggle (no chevron; aria-expanded + an Expand/Collapse label carry the state), optional interactive sibling aside (never nested), and a…
   - **`compaction`** — Renders a context compaction as one thin rule across the transcript — Context compacted · 316k → 12k — folding the summary the agent continues from (as markdown), the files it re-read, and the…
   - **`event-counter`** — Displays the total event count in the conversation toolbar.
+  - **`event-turn`** — Renders an event turn the app delivered to a watching agent (the turn ledger's <equin-event> envelope) as a compact system card — its first line in the header, the event lines and subtree digest…
   - **`fields-card`** — Shared appearance for a headline + truncating summary preview + fold-out key/value field list. Used by the queued task-notification card and the native task-notification row so the two never diverge.
   - **`file-checkpoint`** — Renders Claude Code's rewind checkpoints (file-history-delta) in the JSONL viewer as one quiet line: the file a rewind would restore, or remove when the agent created it.
   - **`file-path`** — Clickable file path component with RTL ellipsis, copy button, and file-peek pane integration.

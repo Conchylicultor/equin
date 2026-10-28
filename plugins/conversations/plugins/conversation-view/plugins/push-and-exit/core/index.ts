@@ -5,3 +5,4 @@ export {
   mainActionAnchor,
   pushAndCloseHint,
 } from "./hints";
+export { conversationFlagIdKind } from "./id-kind";

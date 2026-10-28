@@ -25,6 +25,8 @@ by `MandatePolicySchema`), and the mandate's server half resolves it through
   - Imported by:
     - `conversations/conversation-view/push-and-exit/capabilities`
     - `tasks/mandate-presets`
+    - `tasks/orchestration/watch`
+    - `tasks/outcome-report/capability`
     - `tasks/tasks-core`
 - Core:
   - Exports (types):

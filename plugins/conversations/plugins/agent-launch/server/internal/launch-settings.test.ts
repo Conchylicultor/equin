@@ -2,6 +2,7 @@ import { agentPolicySettings } from "@plugins/framework/plugins/tooling/plugins/
 import { describe, expect, test } from "bun:test";
 import { resolveEffortSettings } from "@plugins/conversations/plugins/effort-provider/core";
 import type { CompactionHookEntry } from "@plugins/conversations/plugins/compaction-context/core";
+import type { StopGateHookEntry } from "@plugins/conversations/plugins/stop-gate/core";
 import {
   agentLaunchPolicy,
   LAUNCH_CLI_SETTINGS,
@@ -14,6 +15,13 @@ const COMPACTION: CompactionHookEntry = {
   command: 'bun "/srv/checkout/plugins/c/bin/compaction-context.ts"',
   timeout: 60,
 };
+// The entry as stop-gate builds it (its own tests pin the builder).
+const STOP_GATE: StopGateHookEntry = {
+  type: "command",
+  command: 'bun "/srv/checkout/plugins/c/bin/stop-gate.ts"',
+  timeout: 30,
+};
+const ENTRIES = { compaction: COMPACTION, stopGate: STOP_GATE };
 
 describe("launch settings", () => {
   test("disables prompt suggestions, whose side query can call AskUserQuestion", () => {
@@ -43,14 +51,20 @@ describe("launch settings", () => {
 
 describe("agentLaunchPolicy", () => {
   test("the compaction hook runs on SessionStart's compact source only", () => {
-    expect(
-      agentLaunchPolicy({ compaction: COMPACTION }).hooks.SessionStart,
-    ).toEqual([{ matcher: "compact", hooks: [COMPACTION] }]);
+    expect(agentLaunchPolicy(ENTRIES).hooks.SessionStart).toEqual([
+      { matcher: "compact", hooks: [COMPACTION] },
+    ]);
+  });
+
+  test("the stop gate runs on every Stop", () => {
+    expect(agentLaunchPolicy(ENTRIES).hooks.Stop).toEqual([
+      { hooks: [STOP_GATE] },
+    ]);
   });
 
   test("every launch carries the agent policy's hooks and deny rules", () => {
     const policy = agentPolicySettings();
-    const launch = agentLaunchPolicy({ compaction: COMPACTION });
+    const launch = agentLaunchPolicy(ENTRIES);
     for (const [event, groups] of Object.entries(policy.hooks)) {
       expect(launch.hooks[event]).toEqual(groups);
     }

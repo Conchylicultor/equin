@@ -10,3 +10,4 @@ export {
 } from "./schemas";
 export type { LedgerTurn } from "./entity";
 export type { TurnKind, TurnState } from "./schemas";
+export { unwrapEventTurn } from "./event-envelope";

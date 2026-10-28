@@ -6,6 +6,7 @@ import {
   getConversation,
 } from "@plugins/tasks/plugins/tasks-core/server";
 import { turnIdKind, type TurnId } from "../../core/id-kind";
+import { typedTextOf } from "../../core/event-envelope";
 import type { TurnKind } from "../../core/schemas";
 import { _conversationTurns } from "./tables";
 import { userTurnSent } from "./tables-user-turn-sent-event";
@@ -25,6 +26,7 @@ export interface NewTurn {
   id: TurnId;
   kind: TurnKind;
   text: string;
+  /** What reaches the CLI — for an `event`, its raw body (the accept wraps it). */
   typedText: string;
 }
 
@@ -76,7 +78,9 @@ export async function acceptTurn(
         conversationId,
         kind: turn.kind,
         text: turn.text,
-        typedText: turn.typedText,
+        // An `event` is typed inside its envelope — applied here, the one
+        // door every turn enters by, so no sender can deliver one bare.
+        typedText: typedTextOf(turn.kind, turn.typedText),
         state: held ? "held" : "typing",
       })
       .onConflictDoNothing({ target: _conversationTurns.id })

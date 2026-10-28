@@ -255,6 +255,7 @@ Gotchas the spike hit:
     - `conversations/compaction-context.compactionHookEntry`
     - `conversations/question-relay.holdQuestion`
     - `conversations/question-relay.retireQuestion`
+    - `conversations/stop-gate.stopGateHookEntry`
     - `infra/claude-cli/accounts.readClaudeAccounts`
     - `infra/claude-cli/accounts.selectClaudeAccountById`
     - `infra/endpoints.implementMachine`

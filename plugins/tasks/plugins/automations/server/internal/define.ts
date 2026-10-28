@@ -18,6 +18,7 @@ import {
   type LaunchAutomationConfigFields,
 } from "../../core";
 import { catalogChanged } from "./catalog-changed";
+import { watchLaunchedTask } from "./slot-watch";
 import {
   adoptAutomationTasks,
   fileAutomationTask,
@@ -184,6 +185,9 @@ async function runLaunch(
     // The launched agent works under the automation's mandate, nested on the
     // task (nearest wins) — the person's own tree above it keeps theirs.
     await setMandate(pick.taskId, spec.mandate(settings));
+    // Its slot is held until the agent reports: the automation watches the
+    // task in code (`automations.slot`), before the agent can start.
+    await watchLaunchedTask(pick.taskId, spec.id);
     await armTaskAutoStart({
       taskId: pick.taskId,
       model: settings.model,

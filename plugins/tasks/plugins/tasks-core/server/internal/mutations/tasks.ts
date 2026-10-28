@@ -13,7 +13,11 @@ import {
 } from "../queries/tasks";
 import type { MandatePolicy } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
 import { withTaskStatusChange } from "../status-scope";
-import { taskDescriptionChanged, taskTitleChanged } from "../tables-events";
+import {
+  taskCreated,
+  taskDescriptionChanged,
+  taskTitleChanged,
+} from "../tables-events";
 import type { EmitTx } from "@plugins/infra/plugins/events/server";
 import { unionTaskClusters } from "./clusters";
 import { withTaskStatusBatch, type DbExecutor } from "../status-batch";
@@ -108,6 +112,10 @@ async function createTaskOn(input: CreateTaskInput, exec: DbExecutor) {
   // row. Same PgTransaction ⇄ EmitTx cast as `withTaskStatusChange`'s emit.
   await taskTitleChanged.emit(
     { taskId: id, title: input.title },
+    exec === db ? undefined : { tx: exec as EmitTx },
+  );
+  await taskCreated.emit(
+    { taskId: id, folderId, title: input.title, author: input.author ?? null },
     exec === db ? undefined : { tx: exec as EmitTx },
   );
   // No parent force-expand here: expand/collapse is device-local view state

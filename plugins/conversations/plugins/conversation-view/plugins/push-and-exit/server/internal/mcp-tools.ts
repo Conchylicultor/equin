@@ -1,12 +1,20 @@
 import { z } from "zod";
 import { Mcp } from "@plugins/infra/plugins/mcp/server";
-import { updateConversation } from "@plugins/tasks/plugins/tasks-core/server";
+import { db } from "@plugins/database/server";
+import type { EmitTx } from "@plugins/infra/plugins/events/server";
+import {
+  getConversation,
+  updateConversation,
+} from "@plugins/tasks/plugins/tasks-core/server";
 import { granted } from "@plugins/tasks/plugins/orchestration/plugins/mandate/server";
 import {
   exitClean,
   flagRaise,
 } from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/plugins/capabilities/core";
 import { exitCleanFinalizeJob } from "./exit-clean-finalize-job";
+import { _conversationFlags } from "./tables";
+import { conversationFlagIdKind } from "../../core";
+import { conversationFlagRaised } from "./tables-events";
 
 // `exit_clean` and `flag_raise` are the model-facing terminus of the
 // push-and-exit flow. The toolbar button just fires the wrap-up prompt
@@ -16,9 +24,11 @@ import { exitCleanFinalizeJob } from "./exit-clean-finalize-job";
 // `exit_clean` marks the conversation close-requested and enqueues a finalize
 // job that waits for end_turn before tearing down the runtime — calling
 // `deleteConversation` here would yank the agent process out from under a
-// still-streaming response. `flag_raise` is a pure no-op signal: the
-// conversation stays open (returns to `waiting`) and the flag text is rendered
-// inline in the transcript by the flag-raise tool-call renderer.
+// still-streaming response. `flag_raise` records the flag
+// (`conversation_flags`) and emits `conversation.flagRaised` in one
+// transaction — whoever watches the task hears it; the conversation stays open
+// (returns to `waiting`) and the flag text is still rendered inline in the
+// transcript by the flag-raise tool-call renderer.
 //
 // Each is visible only to a conversation whose mandate grants it
 // (`exit.clean` / `flag.raise`, the capabilities sub-plugin). Both handlers
@@ -52,9 +62,9 @@ Only call this in response to the push-and-exit prompt. If anything went wrong o
 export const flagRaiseTool = Mcp.tool({
   name: "flag_raise",
   when: granted(flagRaise),
-  description: `Signal that the push-and-exit flow finished but something needs the user's attention — caveats, partial outcomes, follow-ups, skipped work, or the push didn't land. \`reason\` should be a short bullet list of what the user should know. The conversation stays open for the user to review.
+  description: `Signal that the push-and-exit flow finished but something needs the user's attention — caveats, partial outcomes, follow-ups, skipped work, or the push didn't land. \`reason\` should be a short bullet list of what the user should know. The conversation stays open for the user to review, and whoever watches your task is told.
 
-Only call this in response to the push-and-exit prompt.`,
+Call it in response to the push-and-exit prompt, or whenever your instructions tell you to raise a flag.`,
   inputSchema: {
     reason: z
       .string()
@@ -63,10 +73,23 @@ Only call this in response to the push-and-exit prompt.`,
         "Short bullets describing what the user should know — caveats, partial outcomes, follow-ups, skipped work, or push failure details.",
       ),
   },
-  async handler({ reason }, _ctx) {
-    // No-op beyond acknowledging: the flag text is already rendered inline in
-    // the conversation transcript by the flag-raise tool-call renderer.
-    void reason;
+  async handler({ reason }, { conversationId }) {
+    const conversation = await getConversation(conversationId);
+    if (conversation === null)
+      throw new Error(`Conversation ${conversationId} not found.`);
+    const { taskId } = conversation;
+    await db.transaction(async (tx) => {
+      await tx.insert(_conversationFlags).values({
+        id: conversationFlagIdKind.mint(),
+        conversationId,
+        taskId,
+        reason,
+      });
+      await conversationFlagRaised.emit(
+        { conversationId, taskId, reason },
+        { tx: tx as unknown as EmitTx },
+      );
+    });
     return {
       content: [{ type: "text", text: JSON.stringify({ ok: true }) }],
     };

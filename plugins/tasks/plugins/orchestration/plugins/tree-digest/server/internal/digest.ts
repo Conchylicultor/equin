@@ -5,8 +5,9 @@
  * store to the database (`store.ts`); a test binds it to memory.
  *
  * Names no workflow or track: what a task's line says beyond its id, title and
- * status comes from the caller's `annotate` (the plugin that owns the track or
- * the auto-start marker knows how to say it).
+ * status comes from `annotate` — in production every `TreeDigest.Annotation`
+ * contribution (the plugin that owns the track, the auto-start marker or the
+ * report knows how to say it); a test passes its own.
  */
 
 /** One task of the digested subtree. */
@@ -43,7 +44,7 @@ export interface DigestStore {
   advance(conversationId: string, rootTaskId: string, at: Date): Promise<void>;
 }
 
-export interface TreeDigest {
+export interface TreeDigestResult {
   text: string;
   /** True when `text` covers the whole subtree, false for a delta. */
   full: boolean;
@@ -101,7 +102,7 @@ async function renderLines(
   return lines;
 }
 
-export interface DigestArgs {
+export interface DigestPolicyArgs {
   conversationId: string;
   annotate: DigestAnnotate;
 }
@@ -114,8 +115,8 @@ export interface DigestArgs {
  */
 export async function treeDigestOn(
   store: DigestStore,
-  args: DigestArgs,
-): Promise<TreeDigest | null> {
+  args: DigestPolicyArgs,
+): Promise<TreeDigestResult | null> {
   const scope = await store.scopeOf(args.conversationId);
   if (scope === null) return null;
   const since = await store.cursorOf(args.conversationId, scope.rootTaskId);
@@ -125,7 +126,7 @@ export async function treeDigestOn(
     annotate: args.annotate,
     cap: DIGEST_LINE_CAP,
   };
-  let digest: TreeDigest;
+  let digest: TreeDigestResult;
   let at: Date;
   if (since === null) {
     const read = await store.subtree(scope.rootTaskId);
@@ -165,7 +166,7 @@ export async function treeDigestOn(
  * lines), read-only: the cursor does not move. `null` without a task. */
 export async function taskTreeOn(
   store: DigestStore,
-  args: DigestArgs,
+  args: DigestPolicyArgs,
 ): Promise<string | null> {
   const scope = await store.scopeOf(args.conversationId);
   if (scope === null) return null;

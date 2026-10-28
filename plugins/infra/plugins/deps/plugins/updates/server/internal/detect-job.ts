@@ -1,4 +1,5 @@
 import { mandatePolicy } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
+import { reportRequired } from "@plugins/tasks/plugins/outcome-report/plugins/capability/core";
 import {
   exitClean,
   flagRaise,
@@ -86,6 +87,7 @@ export const depsUpgradesAutomation = defineAutomation({
       pushPolicy.grant(settings.push),
       flagRaise.grant(true),
       exitClean.grant(true),
+      reportRequired.grant(true),
     ]),
   triggers: { kinds: ["schedule"] },
   inProcess:

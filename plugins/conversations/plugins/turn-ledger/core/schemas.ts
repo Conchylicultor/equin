@@ -7,7 +7,12 @@ import { z } from "zod";
  * - `push-and-exit` — the configured wrap-up prompt;
  * - `launch` — the prompt a conversation was launched with, recorded with the
  *   conversation itself and delivered as its launch message — so it echoes
- *   from the moment the conversation exists, like any held turn.
+ *   from the moment the conversation exists, like any held turn;
+ * - `event` — something that happened elsewhere, delivered to a watching
+ *   agent (tasks/orchestration/watch): the sender hands the raw body and the
+ *   ledger wraps what is typed in the `<equin-event>` envelope
+ *   (`wrapEventTurn`, core/event-envelope.ts), so the transcript draws it as an
+ *   event, never as something the user wrote.
  *
  * Only `turn` rows emit `conversation.userTurnSent` (a launch's prompt is
  * already announced by `conversationCreated`).
@@ -17,6 +22,7 @@ export const TurnKindSchema = z.enum([
   "answer",
   "push-and-exit",
   "launch",
+  "event",
 ]);
 export type TurnKind = z.infer<typeof TurnKindSchema>;
 

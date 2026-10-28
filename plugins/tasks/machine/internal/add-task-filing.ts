@@ -57,6 +57,10 @@ export interface AddTaskPorts {
     cause: string;
   }): Promise<void>;
   setTrack(taskId: string, track: TaskTrack): Promise<void>;
+  /** Whether the caller's mandate grants `watch.children`. */
+  watchesChildren(conversationId: string): Promise<boolean>;
+  /** The caller watches the task it filed (its subtree's events reach it). */
+  watch(taskId: string, conversationId: string): Promise<void>;
   /** The live model catalog the `model` choice is checked against. */
   modelCatalog(): ModelCatalog;
 }
@@ -175,6 +179,11 @@ export async function fileAddTask(
     description: input.description ?? null,
     author: conversationId,
   });
+
+  // A watching caller watches what it files — before anything can launch on
+  // it, so the agent starting is already an event the caller hears.
+  if (await ports.watchesChildren(conversationId))
+    await ports.watch(task.id, conversationId);
 
   // Snapshot the calling task's inheritable launch options (system prompt,
   // thinking mode, …) onto the subtask so it launches configured like the

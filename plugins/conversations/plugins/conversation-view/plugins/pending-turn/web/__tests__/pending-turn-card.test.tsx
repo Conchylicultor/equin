@@ -144,6 +144,19 @@ describe("PendingTurnCard", () => {
     }
   });
 
+  it("says an event turn is one while it is on its way", () => {
+    render(
+      <PendingTurnCard
+        renderEcho={renderEcho}
+        conversationId={CONV}
+        turn={turn("typing", { kind: "event" })}
+        agentStarting={false}
+        turnRunning={false}
+      />,
+    );
+    expect(screen.getByText("Event · Sending…")).toBeTruthy();
+  });
+
   it("offers Retry on a failed row, through the server's retry", async () => {
     render(
       <PendingTurnCard

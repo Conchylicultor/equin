@@ -11,7 +11,7 @@ import {
 import {
   taskTree,
   treeDigest,
-  type DigestAnnotate,
+  TreeDigest,
 } from "@plugins/tasks/plugins/orchestration/plugins/tree-digest/server";
 import { listSidequestIds } from "@plugins/tasks/plugins/task-track/server";
 import { listArmedTaskIds } from "@plugins/tasks/plugins/auto-start/server";
@@ -21,7 +21,9 @@ import { listArmedTaskIds } from "@plugins/tasks/plugins/auto-start/server";
  * digest cannot know: the track, and whether a not-yet-started task will
  * launch on its own (`armed`) or waits for a person (`manual`).
  */
-export const annotateTasks: DigestAnnotate = async (tasks) => {
+export const tasksDigestAnnotation = TreeDigest.Annotation({
+  id: "tasks",
+  annotate: async (tasks) => {
   const ids = tasks.map((t) => t.id);
   const [sidequests, armed] = await Promise.all([
     listSidequestIds(ids),
@@ -37,11 +39,12 @@ export const annotateTasks: DigestAnnotate = async (tasks) => {
       return [t.id, words];
     }),
   );
-};
+  },
+});
 
 /** The digest `add_task` appends to its result. */
 export async function digestFor(conversationId: string): Promise<string> {
-  const digest = await treeDigest({ conversationId, annotate: annotateTasks });
+  const digest = await treeDigest({ conversationId });
   return digest?.text ?? "";
 }
 
@@ -53,7 +56,7 @@ export const taskTreeTool = Mcp.tool({
     "Read the whole task tree your mandate covers: one line per task (id, title, status, track, armed / manual), indented by nesting, your own task marked. Read-only. `add_task` results already carry what changed since you last looked; call this when that digest was cut short, or to re-read the whole tree.",
   inputSchema: {},
   async handler(_input, { conversationId }) {
-    const text = await taskTree({ conversationId, annotate: annotateTasks });
+    const text = await taskTree({ conversationId });
     return {
       content: [
         { type: "text", text: text ?? "This conversation has no task." },
@@ -67,10 +70,7 @@ export const treeDigestInstructions = Mcp.instructions({
   id: "tree-digest",
   render: async ({ conversationId }) => {
     if ((await grantOf(tasksFile, conversationId)) === null) return null;
-    const digest = await treeDigest({
-      conversationId,
-      annotate: annotateTasks,
-    });
+    const digest = await treeDigest({ conversationId });
     return digest === null ? null : `## Task tree\n\n${digest.text}`;
   },
 });

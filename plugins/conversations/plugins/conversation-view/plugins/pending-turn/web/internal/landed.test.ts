@@ -54,6 +54,18 @@ describe("transcriptShows", () => {
     );
   });
 
+  test("an event turn, by the event card the parser makes of its line", () => {
+    const event: JsonlEvent = {
+      kind: "event-turn",
+      at: at(600),
+      text: "reported",
+      uuid: "mine",
+    };
+    expect(
+      transcriptShows(turn("accepted", 500), [line("before", 100), event]),
+    ).toBe(true);
+  });
+
   test("never with no transcript loaded", () => {
     expect(transcriptShows(turn("accepted", 500), [])).toBe(false);
   });

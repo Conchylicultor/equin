@@ -1,6 +1,9 @@
-import { eq } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { db, type DbExecutor } from "@plugins/database/server";
-import { _tasks } from "@plugins/tasks/plugins/tasks-core/server";
+import {
+  _tasks,
+  hasBlockingDep,
+} from "@plugins/tasks/plugins/tasks-core/server";
 import { tasksAutoStart, _tasksAutoStartExt } from "./tables";
 import type { ModelChoice } from "@plugins/conversations/plugins/model-provider/core";
 
@@ -17,6 +20,32 @@ export async function listArmedTaskIds(): Promise<string[]> {
     .select({ taskId: _tasksAutoStartExt.taskId })
     .from(_tasksAutoStartExt);
   return rows.map((r) => r.taskId);
+}
+
+// Of `taskIds`, the armed ones that can launch on their own: neither held nor
+// dropped, and with no blocking prerequisite — what will start an agent without
+// anyone acting. On `exec`, so a caller's transaction sees its own writes.
+export async function listLaunchableArmedIn(
+  taskIds: readonly string[],
+  exec: DbExecutor = db,
+): Promise<string[]> {
+  if (taskIds.length === 0) return [];
+  const armed = await exec
+    .select({ taskId: _tasksAutoStartExt.taskId })
+    .from(_tasksAutoStartExt)
+    .innerJoin(_tasks, eq(_tasks.id, _tasksAutoStartExt.taskId))
+    .where(
+      and(
+        inArray(_tasksAutoStartExt.taskId, [...taskIds]),
+        isNull(_tasks.heldAt),
+        isNull(_tasks.droppedAt),
+      ),
+    );
+  const out: string[] = [];
+  for (const { taskId } of armed) {
+    if (!(await hasBlockingDep(taskId, exec))) out.push(taskId);
+  }
+  return out;
 }
 
 // Arm (or, with `null`, disarm) a task. An arm REPLACES the whole marker:

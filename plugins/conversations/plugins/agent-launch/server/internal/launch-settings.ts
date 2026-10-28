@@ -2,6 +2,7 @@ import {
   COMPACTION_HOOK_MATCHER,
   type CompactionHookEntry,
 } from "@plugins/conversations/plugins/compaction-context/core";
+import type { StopGateHookEntry } from "@plugins/conversations/plugins/stop-gate/core";
 import { agentPolicySettings } from "@plugins/framework/plugins/tooling/plugins/guards/plugins/agent-policy/core";
 
 // The one settings object a launch hands Claude Code — the SDK's `settings`
@@ -51,14 +52,24 @@ export interface LaunchPolicy {
  *   entry is the caller's to build (`compactionHookEntry()`, compaction-context's
  *   machine half): it resolves a script on disk, which a launch — a desktop
  *   act — can do and this portable policy cannot.
+ * - The stop gate (conversations/stop-gate) rides `Stop`: before the agent
+ *   ends a turn it asks the backend whether it may — a plugin can send it back
+ *   to work it still owes (a report). Built the same way
+ *   (`stopGateHookEntry()`, stop-gate's machine half).
  */
 export function agentLaunchPolicy(entries: {
   compaction: CompactionHookEntry;
+  stopGate: StopGateHookEntry;
 }): LaunchPolicy {
   const policy = agentPolicySettings();
   if ("SessionStart" in policy.hooks) {
     throw new Error(
       "agent policy and the compaction hook both set SessionStart — merge them explicitly",
+    );
+  }
+  if ("Stop" in policy.hooks) {
+    throw new Error(
+      "agent policy and the stop gate both set Stop — merge them explicitly",
     );
   }
   return {
@@ -67,6 +78,7 @@ export function agentLaunchPolicy(entries: {
       SessionStart: [
         { matcher: COMPACTION_HOOK_MATCHER, hooks: [entries.compaction] },
       ],
+      Stop: [{ hooks: [entries.stopGate] }],
     },
     permissions: policy.permissions,
   };

@@ -1949,6 +1949,10 @@
       "name": "@equin/plugin-conversations-conversation-view-jsonl-viewer-event-counter",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/event-turn": {
+      "name": "@equin/plugin-conversations-conversation-view-jsonl-viewer-event-turn",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/fields-card": {
       "name": "@equin/plugin-conversations-conversation-view-jsonl-viewer-fields-card",
       "version": "0.0.1",
@@ -2285,6 +2289,10 @@
     },
     "plugins/conversations/plugins/spawn-failure": {
       "name": "@equin/plugin-conversations-spawn-failure",
+      "version": "0.0.1",
+    },
+    "plugins/conversations/plugins/stop-gate": {
+      "name": "@equin/plugin-conversations-stop-gate",
       "version": "0.0.1",
     },
     "plugins/conversations/plugins/summary": {
@@ -6410,8 +6418,16 @@
       "name": "@equin/plugin-tasks-orchestration-tree-digest",
       "version": "0.0.1",
     },
+    "plugins/tasks/plugins/orchestration/plugins/watch": {
+      "name": "@equin/plugin-tasks-orchestration-watch",
+      "version": "0.0.1",
+    },
     "plugins/tasks/plugins/outcome-report": {
       "name": "@equin/plugin-tasks-outcome-report",
+      "version": "0.0.1",
+    },
+    "plugins/tasks/plugins/outcome-report/plugins/capability": {
+      "name": "@equin/plugin-tasks-outcome-report-capability",
       "version": "0.0.1",
     },
     "plugins/tasks/plugins/reports-investigation": {
@@ -7881,6 +7897,8 @@
 
     "@equin/plugin-conversations-conversation-view-jsonl-viewer-event-counter": ["@equin/plugin-conversations-conversation-view-jsonl-viewer-event-counter@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/event-counter"],
 
+    "@equin/plugin-conversations-conversation-view-jsonl-viewer-event-turn": ["@equin/plugin-conversations-conversation-view-jsonl-viewer-event-turn@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/event-turn"],
+
     "@equin/plugin-conversations-conversation-view-jsonl-viewer-fields-card": ["@equin/plugin-conversations-conversation-view-jsonl-viewer-fields-card@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/fields-card"],
 
     "@equin/plugin-conversations-conversation-view-jsonl-viewer-file-checkpoint": ["@equin/plugin-conversations-conversation-view-jsonl-viewer-file-checkpoint@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/file-checkpoint"],
@@ -8048,6 +8066,8 @@
     "@equin/plugin-conversations-session-chain": ["@equin/plugin-conversations-session-chain@workspace:plugins/conversations/plugins/session-chain"],
 
     "@equin/plugin-conversations-spawn-failure": ["@equin/plugin-conversations-spawn-failure@workspace:plugins/conversations/plugins/spawn-failure"],
+
+    "@equin/plugin-conversations-stop-gate": ["@equin/plugin-conversations-stop-gate@workspace:plugins/conversations/plugins/stop-gate"],
 
     "@equin/plugin-conversations-summary": ["@equin/plugin-conversations-summary@workspace:plugins/conversations/plugins/summary"],
 
@@ -9979,7 +9999,11 @@
 
     "@equin/plugin-tasks-orchestration-tree-digest": ["@equin/plugin-tasks-orchestration-tree-digest@workspace:plugins/tasks/plugins/orchestration/plugins/tree-digest"],
 
+    "@equin/plugin-tasks-orchestration-watch": ["@equin/plugin-tasks-orchestration-watch@workspace:plugins/tasks/plugins/orchestration/plugins/watch"],
+
     "@equin/plugin-tasks-outcome-report": ["@equin/plugin-tasks-outcome-report@workspace:plugins/tasks/plugins/outcome-report"],
+
+    "@equin/plugin-tasks-outcome-report-capability": ["@equin/plugin-tasks-outcome-report-capability@workspace:plugins/tasks/plugins/outcome-report/plugins/capability"],
 
     "@equin/plugin-tasks-reports-investigation": ["@equin/plugin-tasks-reports-investigation@workspace:plugins/tasks/plugins/reports-investigation"],
 

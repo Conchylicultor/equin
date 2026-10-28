@@ -30,6 +30,7 @@ import {
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
 import { runMigrations } from "@plugins/database/plugins/migrations/server/testing";
 import { FALLBACK_MODEL } from "@plugins/conversations/plugins/model-provider/core";
+import { wrapEventTurn } from "../../core/event-envelope";
 import { turnIdKind } from "../../core/id-kind";
 import {
   acceptTurn,
@@ -145,6 +146,23 @@ describe("acceptTurn", () => {
     expect(accepted.kind).toBe("send");
     if (accepted.kind === "send") expect(accepted.turn.state).toBe("typing");
     expect(await hasHeldTurns(id, conn)).toBe(false);
+  });
+
+  test("an event is typed inside its envelope; its text stays the raw body", async () => {
+    const id = await seedConversation("waiting");
+    const accepted = await acceptTurn(
+      id,
+      {
+        id: turnIdKind.mint(),
+        kind: "event",
+        text: "reported",
+        typedText: "reported",
+      },
+      conn,
+    );
+    if (accepted.kind !== "send") throw new Error(`not sent: ${accepted.kind}`);
+    expect(accepted.turn.text).toBe("reported");
+    expect(accepted.turn.typedText).toBe(wrapEventTurn("reported"));
   });
 
   test("an unknown conversation is not-found", async () => {

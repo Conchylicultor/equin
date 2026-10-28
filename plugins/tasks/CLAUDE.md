@@ -9,6 +9,13 @@
   - Contributes:
     - `resource.declare` "tasks.repo-info"
     - `mandateCapability` "tasks.file"
+    - `treeDigestAnnotation` "tasks"
+    - `watchSource` "tasks.created"
+    - `watchSource` "tasks.settled"
+    - `watchSource` "tasks.started"
+    - `trigger` "watch.ingest"
+    - `trigger` "watch.ingest"
+    - `trigger` "watch.ingest"
   - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `tasks/tasks-core` ×16
     - `infra/endpoints` ×2
@@ -55,6 +62,7 @@
   - Uses:
     - `infra/endpoints.implementMachine`
     - `network/live.serveValue`
+    - `tasks/orchestration/watch.watchSource`
   - Register:
     - `mcpTool('add_task')`
     - `mcpTool('task_tree')`
@@ -140,7 +148,7 @@
   - **`launch-options`** — Registry of task launch options — the controls that configure HOW an agent launches. Owns the tasks.launch-option slot rendered by BOTH the task detail's Prompt card and the task-draft popover, so…
   - **`mandate-presets`** — Named mandate compositions — interactiveMandate(): the grants a task a person starts by hand gets (file main tasks after the caller, sidequests manual, push only when the user asks, exit cleanly…
   - **`menu-bar-task`** — The menu-bar panel's task field (MenuBar.Section 'task'): an autogrowing textarea (up to six lines, then it scrolls) — Enter files the text as one top-level task through the task-draft form's…
-  - **`orchestration`** — Umbrella for the workflow-agnostic building blocks agents are orchestrated by inside a task subtree: the mandate (what an agent may do, resolved nearest-wins up the folder tree), and later the tree…
+  - **`orchestration`** — Umbrella for the workflow-agnostic building blocks agents are orchestrated by inside a task subtree: the mandate (what an agent may do, resolved nearest-wins up the folder tree), the tree digest and…
   - **`outcome-report`** — The outcome report an automated task's agent submitted: a card at the end of the transcript of the conversation that wrote it (scrolling with it, not pinned over it) (markdown body, pushed /…
   - **`reports-investigation`** — The Report investigations automation in the Automations pane: registers its config (trigger, push policy, model, prompt, scope) and contributes its Which reports section — severity, recurrence…
   - **`sidequest-autopilot`** — The Sidequest autopilot in the Automations pane: registers its config (enabled, at once, in total, push policy, model, prompt, triage) and contributes its sections — Launch list (a DataView of every…

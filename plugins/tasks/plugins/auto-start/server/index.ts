@@ -10,6 +10,7 @@ export {
   claimAutoStart,
   getTaskAutoStart,
   listArmedTaskIds,
+  listLaunchableArmedIn,
 } from "./internal/mutations";
 export {
   taskAutoStartArmed,

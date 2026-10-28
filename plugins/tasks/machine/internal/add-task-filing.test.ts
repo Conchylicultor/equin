@@ -44,7 +44,10 @@ const ALL: TasksFileGrant = {
 function makeStore(
   catalog: ModelCatalog = BASELINE_MODELS,
   grant: TasksFileGrant | null = INTERACTIVE,
+  watchesChildren = false,
 ) {
+  /** taskId → watcher conversation, in filing order. */
+  const watches: [string, string][] = [];
   const tasks = new Set<string>([T, D]);
   // "a->b" = a depends on b.
   const edges = new Set<string>([`${D}->${T}`]);
@@ -94,6 +97,12 @@ function makeStore(
       if (track === "main") tracks.delete(taskId);
       else tracks.set(taskId, track);
     },
+    watchesChildren: async (id) => id === CONV && watchesChildren,
+    watch: async (taskId, conversationId) => {
+      // Before the arm: the agent starting must already be heard.
+      if (armed.has(taskId)) throw new Error("watched after the arm");
+      watches.push([taskId, conversationId]);
+    },
     modelCatalog: () => catalog,
   };
 
@@ -108,7 +117,7 @@ function makeStore(
       ports,
     );
 
-  return { tasks, edges, armed, tracks, file };
+  return { tasks, edges, armed, tracks, watches, file };
 }
 
 /**
@@ -410,5 +419,23 @@ describe("add_task model: the id grammar at the schema, the catalog at filing", 
       "Opus 4.6 is retired (no longer offered by Claude Code 2.2.0)",
     );
     expect(err.message).not.toContain("Opus 4.6,");
+  });
+});
+
+describe("add_task filing: watch.children", () => {
+  test("a caller granted watch.children watches each task it files, before it is armed", async () => {
+    const s = makeStore(BASELINE_MODELS, INTERACTIVE, true);
+    const a = await s.file({ title: "Main", track: "main" });
+    const b = await s.file({ title: "Side", track: "sidequest" });
+    expect(s.watches).toEqual([
+      [a.task_id, CONV],
+      [b.task_id, CONV],
+    ]);
+  });
+
+  test("without the grant nothing is watched", async () => {
+    const s = makeStore();
+    await s.file({ title: "Main", track: "main" });
+    expect(s.watches).toEqual([]);
   });
 });
