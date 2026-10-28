@@ -1,4 +1,4 @@
-import { envNames } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
+import { envName } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import {
   foregroundDeadline,
   isHandoffOp,
@@ -39,9 +39,7 @@ export const foregroundDeadlineGuard = defineGuard<BashInput>({
     return {
       rewrite: {
         timeout: MAX_FOREGROUND_TIMEOUT_MS,
-        command: `export ${envNames("FOREGROUND_DEADLINE")
-          .map((name) => `${name}=${deadline}`)
-          .join(" ")}; ${cmd}`,
+        command: `export ${envName("FOREGROUND_DEADLINE")}=${deadline}; ${cmd}`,
       },
       note: null,
     };

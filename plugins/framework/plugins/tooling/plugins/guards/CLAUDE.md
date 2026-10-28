@@ -235,7 +235,7 @@ can blind or deafen all of them at once.
     - `framework/tooling/collected-dir.loadCollectedDir`
     - `framework/tooling/guards/refusal-format.joinRefusal`
     - `framework/tooling/guards/refusal-format.REFUSAL_HEADER`
-    - `infra/launcher/env-names.envNames`
+    - `infra/launcher/env-names.envName`
     - `infra/launcher/env-names.readEnv`
     - `infra/namespace.asNamespace`
     - `infra/namespace.isNamespace`

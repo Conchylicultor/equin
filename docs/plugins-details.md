@@ -27013,7 +27013,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/collected-dir.loadCollectedDir`
               - `framework/tooling/guards/refusal-format.joinRefusal`
               - `framework/tooling/guards/refusal-format.REFUSAL_HEADER`
-              - `infra/launcher/env-names.envNames`
+              - `infra/launcher/env-names.envName`
               - `infra/launcher/env-names.readEnv`
               - `infra/namespace.asNamespace`
               - `infra/namespace.isNamespace`
@@ -27073,7 +27073,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Plugins:
             - **`agent-policy`** — The protections every agent runs with — the guard and stop-guard hooks and the deny rules — declared once as data: `.claude/settings.json`'s protection keys are generated from it (guards:claude-settings-in-sync) and every app launch carries it, whatever its workspace, so an agent outside the repo (a scratch workspace) is guarded too.
               - Core:
-                - Uses: `infra/launcher/env-names.envNames`
+                - Uses: `infra/launcher/env-names.envName`
                 - Exports (types):
                   - `AgentPolicySettings`
                   - `PolicyHookCommand`
@@ -30666,10 +30666,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `framework/product-name.LEGACY_IDS`
           - `framework/product-name.PRODUCT_NAME`
-          - `infra/launcher/env-names.EnvKey`
           - `infra/launcher/env-names.envKeyOf`
-          - `infra/launcher/env-names.envNames`
-          - `infra/launcher/env-names.readEnv`
+          - `infra/launcher/env-names.envName`
           - `infra/launcher/env-names.RUNTIME_FORWARDED_ENV`
           - `infra/launcher/env-names.RUNTIME_FORWARDED_PREFIXES`
         - Exports (values):
@@ -30708,11 +30706,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `spawn-safety/no-raw-bun-spawn` — `server/internal/boot.ts` (sanctioned)
           - `boundaries/no-platform-api` — `server/internal/boot.ts`, `server/internal/config-propagate.ts` (debt)
       - Plugins:
-        - **`env-names`** — The app's own environment variables, declared by key (forwarded to the runtime tree or withheld from it, with why), and the one way to read and write them: readEnv / envEntries / setEnv / setEnvDefault / unsetEnv, which use both names of each key (EQUIN_<key> and the legacy one) during the rename window, a disagreement between the two throwing. A leaf importing only framework/product-name, so every runtime and the lowest-level packages can import it.
+        - **`env-names`** — The app's own environment variables, declared by key (forwarded to the runtime tree or withheld from it, with why), and the one way to read and write them: readEnv / envEntries / setEnv / setEnvDefault / unsetEnv, each key named EQUIN_<key>. A leaf importing only framework/product-name, so every runtime and the lowest-level packages can import it.
           - Core:
-            - Uses:
-              - `framework/product-name.LEGACY_IDS`
-              - `framework/product-name.PRODUCT_NAME`
+            - Uses: `framework/product-name.PRODUCT_NAME`
             - Exports (types): `EnvKey`
             - Exports (values):
               - `DECLARED_ENV_KEYS`
@@ -30721,8 +30717,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `envEntries`
               - `envKeyOf`
               - `envName`
-              - `EnvNameConflictError`
-              - `envNames`
               - `isDeclaredEnvName`
               - `readEnv`
               - `RUNTIME_FORWARDED_ENV`
@@ -30744,7 +30738,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `packages/spawn-priority`
           - Test helpers:
             - Core: `@plugins/infra/plugins/launcher/plugins/env-names/core/testing`
-              - `withEnv` — Runs `fn` with `values` set in `process.env` under every name of each key (undefined = unset under every name), then puts back exactly what was there before — the save / set / restore a test of an env reader needs.
+              - `withEnv` — Runs `fn` with `values` set in `process.env` (undefined = unset), then puts back exactly what was there before — the save / set / restore a test of an env reader needs.
         - **`gateway-drift`** — Gateway drift, shown: the health report's Gateway row — attention while the machine's login-service gateway (installed or running) differs from what ./equin start --force would install now from main, in one line, with an Update remedy launching an agent briefed with each difference (binary, -listen and the other flags, cwd, signature) to run it; folded with Connection, Database and Live reads while current.
           - Web:
             - Contributes: `HealthReport.Row` "Gateway"

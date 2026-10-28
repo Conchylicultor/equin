@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { envNames } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
+import { envName } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { createContext } from "../context";
 import type { BashInput, Verdict } from "../types";
 import {
@@ -16,9 +16,7 @@ function patch(input: BashInput) {
 }
 
 const EXPORT_RE = new RegExp(
-  `^export ${envNames("FOREGROUND_DEADLINE")
-    .map((name) => `${name}=(\\d+)`)
-    .join(" ")}; `,
+  `^export ${envName("FOREGROUND_DEADLINE")}=(\\d+); `,
 );
 
 describe("foreground-deadline guard", () => {
