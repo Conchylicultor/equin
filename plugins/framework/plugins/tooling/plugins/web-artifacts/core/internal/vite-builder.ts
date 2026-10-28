@@ -1,8 +1,8 @@
 // Per-plugin builder: Vite programmatic `build()` in lib mode, in-process, one
-// Rollup graph per plugin. Reuses today's exact semantics: `@vitejs/plugin-react`
+// Rolldown graph per plugin. Reuses today's exact semantics: `@vitejs/plugin-react`
 // with the discovered babel contributions, CSS imports (local + npm package CSS,
 // injected from JS so styles load atomically with the module), `define`,
-// esbuild `keepNames`. NO `@tailwindcss/vite` here — utilities come from the
+// names kept through minification (`KEEP_NAMES_MINIFY`). NO `@tailwindcss/vite` here — utilities come from the
 // single global pass (see `global-css.ts`).
 
 import {
@@ -138,6 +138,18 @@ const ARTIFACT_DEFINE: Record<string, string> = {
   // first-party or inlined npm code branching on NODE_ENV would crash at
   // runtime. Match the monolith (and the vendor esbuild pass, vendors.ts).
   "process.env.NODE_ENV": JSON.stringify("production"),
+};
+
+/**
+ * Oxc minification that keeps function and class `.name`s (stack traces, code
+ * that reads a constructor's name). Vite merges it into its ES-lib preset
+ * (compress + mangle, whitespace kept) and spreads it over a worker's. Not
+ * Rolldown's `output.keepNames`: that one wraps names in a `__name` helper
+ * emitted as an extra runtime chunk, one more request per split artifact.
+ */
+const KEEP_NAMES_MINIFY = {
+  compress: { keepNames: { function: true, class: true } },
+  mangle: { keepNames: true },
 };
 
 /** Path segments below an own folder that still name its barrel. */
@@ -444,31 +456,36 @@ export async function buildArtifact(
         fileName: () => "index.js",
       };
 
+  const keepNamesOutput = ctx.minify ? { minify: KEEP_NAMES_MINIFY } : {};
   try {
     await viteBuild({
       configFile: false,
       logLevel: "error",
       root: ctx.repoRoot,
       plugins: [...plugins, react({ babel: { plugins: ctx.babelPlugins } })],
-      esbuild: { keepNames: true },
       define: ARTIFACT_DEFINE,
       resolve: { alias: { "@plugins": ctx.pluginsRoot } },
       // Relative: an artifact is served from a content-addressed store dir, so
       // a worker chunk's URL must resolve against `import.meta.url`; the
       // default "/" emitted an origin-absolute `/assets/…` that 404s.
       base: "./",
-      worker: { format: "es", plugins: () => [workerAudit.plugin] },
+      worker: {
+        format: "es",
+        plugins: () => [workerAudit.plugin],
+        rolldownOptions: { output: keepNamesOutput },
+      },
       build: {
         lib,
         outDir: tmpDir,
         emptyOutDir: true,
-        minify: ctx.minify ? "esbuild" : false,
+        minify: ctx.minify ? "oxc" : false,
         // Per-chunk CSS, injected by `chunkCssPlugin`.
         cssCodeSplit: true,
         sourcemap: true,
         reportCompressedSize: false,
-        rollupOptions: {
+        rolldownOptions: {
           external: makeArtifactExternal(target.pluginPath, target.kind),
+          output: keepNamesOutput,
         },
       },
     });

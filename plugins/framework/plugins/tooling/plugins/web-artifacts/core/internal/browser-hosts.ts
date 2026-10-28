@@ -317,10 +317,10 @@ export async function ensureBrowserHost(opts: {
       worker: {
         format: "es",
         plugins: () => [recorder.plugin],
-        rollupOptions: {
+        rolldownOptions: {
           // A host's code may sit beside a scenario naming a browser host (its
           // own, even); a worker never starts one, so the import stays a dead
-          // reference rollup drops with the code that holds it.
+          // reference Rolldown drops with the code that holds it.
           external: isBrowserHostSpecifier,
           output: { inlineDynamicImports: true },
         },
@@ -329,12 +329,12 @@ export async function ensureBrowserHost(opts: {
         outDir: tmpDir,
         emptyOutDir: true,
         target: "esnext",
-        minify: opts.minify ? "esbuild" : false,
+        minify: opts.minify ? "oxc" : false,
         // PGlite's wasm and data are fetched by URL, never inlined.
         assetsInlineLimit: 0,
         modulePreload: false,
         reportCompressedSize: false,
-        rollupOptions: {
+        rolldownOptions: {
           input: { host: stub },
           preserveEntrySignatures: "strict",
           output: { entryFileNames: BROWSER_HOST_FILE },
@@ -357,10 +357,10 @@ export async function ensureBrowserHost(opts: {
         outDir: tmpDir,
         emptyOutDir: false,
         target: "esnext",
-        minify: opts.minify ? "esbuild" : false,
+        minify: opts.minify ? "oxc" : false,
         modulePreload: false,
         reportCompressedSize: false,
-        rollupOptions: {
+        rolldownOptions: {
           input: { "frames-sw": join(root, FRAMES_SW_ENTRY_REL) },
           output: {
             format: "iife",

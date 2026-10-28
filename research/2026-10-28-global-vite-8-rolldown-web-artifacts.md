@@ -93,6 +93,16 @@ Vite is held `<8.0.0` in the root `dependencyPolicy` (task-1793076624-k9ljr5).
    edge from the repo's own static import-closure analysis
    (`cli:codegen-manifests-not-frozen` fails without it).
 
-Config spellings (`esbuild`, `minify: "esbuild"`, `rollupOptions`) are kept:
-Vite 8 still honours them and the emitted bytes keep `keepNames`. plugin-react
-5.2 peers Vite 8, so the Babel/React-Compiler path is unchanged.
+Config spellings, follow-up: every `viteBuild` moved to the Vite 8 names —
+`rolldownOptions`, `minify: "oxc"`, and `esbuild: { keepNames }` replaced by
+the Oxc minifier's own `compress`/`mangle` `keepNames` (main and worker
+passes). Rolldown's `output.keepNames` was tried first: it emits its `__name`
+helper as a separate `rolldown-runtime-*.mjs` chunk (no source, so no map —
+the new sourcemap guard rejected it — and one more request per split
+artifact). Vite's ES-lib preset
+for Oxc is compress + mangle without whitespace, like esbuild's. Compared on
+five real artifacts (adaptive-bar web with exhibits, conversations web, tasks
+web, live core/web): identical imports, dynamic imports and export names;
+4–8 % smaller gzipped; function/class names kept natively (Oxc does not mangle
+them) instead of through esbuild's `defineProperty(fn, "name")` helper.
+plugin-react 5.2 peers Vite 8, so the Babel/React-Compiler path is unchanged.

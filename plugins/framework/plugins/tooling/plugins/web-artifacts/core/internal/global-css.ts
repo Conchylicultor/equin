@@ -264,7 +264,7 @@ export async function ensureGlobalCss(opts: {
         minify: opts.minify,
         cssCodeSplit: false,
         reportCompressedSize: false,
-        rollupOptions: { input: entry },
+        rolldownOptions: { input: entry },
       },
     });
 
