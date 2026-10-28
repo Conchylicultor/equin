@@ -49,6 +49,7 @@ test("the whole data/ directory plus the real derived layer applies from scratch
     inputs,
     {
       commit: true,
+      deferContract: false,
     },
   );
   expect(result.pending).toBeGreaterThan(0);
@@ -71,6 +72,7 @@ test("the whole data/ directory plus the real derived layer applies from scratch
   expect(
     await applySchemaLayer(t.db, listMigrationFiles(MIGRATIONS_DIR), inputs, {
       commit: true,
+      deferContract: false,
     }),
   ).toEqual({
     pending: 0,
@@ -82,5 +84,6 @@ test("the whole data/ directory plus the real derived layer applies from scratch
         definitionChanged: false,
       }))
       .sort((a, b) => a.table.localeCompare(b.table)),
+    deferredContract: null,
   });
 }, 300_000); // Importing every server barrel, then ~270 migrations.

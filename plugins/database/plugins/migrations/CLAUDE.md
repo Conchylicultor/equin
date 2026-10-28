@@ -211,11 +211,47 @@ ALTER TABLE "agents" DROP COLUMN IF EXISTS "icon_svg_nodes";
 ```
 
 The runner applies one push as one group: **expand → the claimed data
-migrations (timestamp order) → contract**. So a data migration sees the schema
+migrations (timestamp order) → contract** (the last group's contract deferred
+past the hot-swap — see below). So a data migration sees the schema
 **after expand and before contract**: every new table and column exists, and
 nothing the push drops or tightens has been dropped or tightened yet. Files
 without the markers (everything written before this, and every data migration)
 are legacy and apply whole at their own timestamp.
+
+### The contract is deferred until the old code is gone
+
+During a hot restart the previous backend keeps serving while the new one boots
+and runs the schema layer — and contract is, by definition, what breaks that
+code (an `ADD CONSTRAINT` refuses its writes, a `DROP COLUMN` fails its reads;
+2026-10-28, `tasks_root_has_mandate` refused two Investigate clicks). So boot
+runs **expand and the claimed data** only, and records the group with
+`contract_pending = true` in the ledger. The serving backend runs the contract
+from the database plugin's `onReady` once no process running older code is
+connected (`completeDeferredContract`), in one transaction that first **re-runs
+the group's claimed data migrations** — the old code kept writing rows the
+backfill never saw — then the contract, clears `contract_pending`, and rebuilds
+the derived layer.
+
+- **Who is old code** — every process that boots the database plugin (serve and
+  exec children) holds a shared session advisory lock on its *schema
+  generation*, its latest migration's sha8 (`database/connection`'s
+  `createSchemaGenerationLocks`, behind `DatabaseDriver.holdSchemaGeneration`).
+  The wait takes the exclusive lock on every held generation that does not know
+  the group (`generationsKnowing`), so it ends when the last such session does —
+  the draining backend, and any child it spawned. A newer deploy never waits on
+  it. PGlite (one process) holds and waits on nothing.
+- **Only the last group defers.** An earlier group's contract must run before a
+  later group's expand (a table one contract drops and the next expand
+  recreates), so a plan with several groups contracts all but the last inline,
+  and a boot that finds an earlier group still `contract_pending` completes it
+  before its own expand.
+- **Claimed data runs twice**, so it must be idempotent (guarded `UPDATE … WHERE`,
+  `ON CONFLICT DO NOTHING`). The dry run plays boot and the deferred run in its
+  one transaction, so `migration-applies-clean` fails a backfill that is not.
+- **A failed deferred contract** is reported (an unhandled rejection) and stays
+  pending; the new code runs on the expanded schema, and the next boot retries.
+
+Plan: `research/2026-10-28-database-deferred-contract-phase.md`.
 
 ### What is expand and what is contract
 
@@ -531,15 +567,19 @@ only agreement that matters.
     - `SchemaLayerInputs`
     - `SchemaLayerResult`
     - `SchemaPlan`
+    - `SchemaPlanOptions`
     - `SchemaStep`
   - Exports (values):
     - `applySchemaLayer`
+    - `completeDeferredContract`
     - `dryRunPendingMigrations`
+    - `generationsKnowing`
     - `isMigrationFileName`
     - `migrationsFrom`
     - `MigrationSource`
     - `migrationsReady`
     - `planSchemaSteps`
+    - `schemaGeneration`
 - Core:
   - Uses:
     - `framework/product-name.LEGACY_IDS`

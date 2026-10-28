@@ -4,7 +4,22 @@ import {
   renderMergeSnapshotMigration,
   renderPhasedMigration,
 } from "@plugins/database/plugins/migrations/core";
-import { planMigrations, planSchemaSteps, type Migration } from "./runner";
+import {
+  generationsKnowing,
+  planMigrations,
+  planSchemaSteps,
+  schemaGeneration,
+  type Migration,
+  type SchemaPlanOptions,
+  type SchemaStep,
+} from "./runner";
+
+// One step as a `<file> <what>` line: order is the subject.
+function stepLine(s: SchemaStep): string {
+  if (s.kind === "apply") return `${s.file} ${s.phase}`;
+  if (s.kind === "complete") return `${s.file} complete ${s.hashes.join(",")}`;
+  return `${s.file} record${s.contractPending ? " contract-pending" : ""}`;
+}
 
 // Build a Migration inline, mirroring listMigrationFiles's shape.
 function mig(
@@ -108,9 +123,13 @@ function phased(
 }
 
 // The plan as `<file> <phase>` / `<file> record` lines: order is the subject.
-function trace(migrations: Migration[], applied: string[] = []): string[] {
-  return planSchemaSteps(migrations, new Set(applied)).steps.map((s) =>
-    s.kind === "record" ? `${s.file} record` : `${s.file} ${s.phase}`,
+function trace(
+  migrations: Migration[],
+  applied: string[] = [],
+  options: SchemaPlanOptions = {},
+): string[] {
+  return planSchemaSteps(migrations, new Set(applied), options).steps.map((s) =>
+    stepLine(s),
   );
 }
 
@@ -165,11 +184,7 @@ describe("planSchemaSteps", () => {
       ),
     );
     const plan = planSchemaSteps([before, d1, other, d2, s], new Set());
-    expect(
-      plan.steps.map((st) =>
-        st.kind === "record" ? `${st.file} record` : `${st.file} ${st.phase}`,
-      ),
-    ).toEqual([
+    expect(plan.steps.map((st) => stepLine(st))).toEqual([
       `${before.file} whole`,
       `${before.file} record`,
       // Unclaimed data stays at its own position.
@@ -522,11 +537,9 @@ describe("planSchemaSteps — supersession", () => {
 
   test("a DB that applied every superseded hash adopts the file: a ledger row, none of its SQL", () => {
     const plan = planSchemaSteps([data, merged], new Set([o1, o2, data.hash]));
-    expect(
-      plan.steps.map((s) =>
-        s.kind === "record" ? `${s.file} record` : `${s.file} ${s.phase}`,
-      ),
-    ).toEqual([`${merged.file} record`]);
+    expect(plan.steps.map((s) => stepLine(s))).toEqual([
+      `${merged.file} record`,
+    ]);
     expect(plan.adopted).toEqual([
       { file: merged.file, via: [o1, o2], by: merged.file },
     ]);
@@ -544,11 +557,7 @@ describe("planSchemaSteps — supersession", () => {
   test("a DB that applied none of them (main, a fresh install) applies the file as usual", () => {
     const plan = planSchemaSteps([data, merged], new Set());
     expect(plan.adopted).toEqual([]);
-    expect(
-      plan.steps.map((s) =>
-        s.kind === "record" ? `${s.file} record` : `${s.file} ${s.phase}`,
-      ),
-    ).toEqual([
+    expect(plan.steps.map((s) => stepLine(s))).toEqual([
       `${merged.file} expand`,
       `${data.file} whole`,
       `${data.file} record`,
@@ -700,5 +709,164 @@ describe("planSchemaSteps — adoption of a published migration", () => {
     expect(() =>
       planSchemaSteps([pData, naming(pData.hash)], new Set()),
     ).toThrow(/not a phased schema migration/);
+  });
+});
+
+describe("planSchemaSteps — the deferred contract", () => {
+  const d = mig(
+    "20261101",
+    "000000",
+    "d0d0d0d0",
+    "backfill",
+    "UPDATE t SET n = o",
+  );
+  const g = mig(
+    "20261102",
+    "000000",
+    "9a9a9a9a",
+    "merged_20261102_0000",
+    phased(
+      'ALTER TABLE "t" ADD COLUMN "n" text;',
+      'ALTER TABLE "t" DROP COLUMN "o";',
+      ["20261101_000000__backfill"],
+    ),
+  );
+  const h = mig(
+    "20261103",
+    "000000",
+    "8b8b8b8b",
+    "merged_20261103_0000",
+    phased(
+      'ALTER TABLE "u" ADD COLUMN "a" text;',
+      'ALTER TABLE "u" DROP COLUMN "b";',
+    ),
+  );
+
+  test("boot defers the last group's contract and records it pending", () => {
+    const plan = planSchemaSteps([d, g], new Set(), { deferContract: true });
+    expect(plan.steps.map(stepLine)).toEqual([
+      `${g.file} expand`,
+      `${d.file} whole`,
+      `${d.file} record`,
+      `${g.file} record contract-pending`,
+    ]);
+    expect(plan.deferredContract).toBe(g.file);
+  });
+
+  test("without deferring, a pending row completes: claimed data again, then the contract", () => {
+    const plan = planSchemaSteps([d, g], new Set([d.hash, g.hash]), {
+      contractPending: new Set([g.hash]),
+    });
+    expect(plan.steps.map(stepLine)).toEqual([
+      `${d.file} reapply`,
+      `${g.file} contract`,
+      `${g.file} complete ${g.hash}`,
+    ]);
+    expect(plan.pendingFiles).toEqual([g.file]);
+    expect(plan.deferredContract).toBeNull();
+  });
+
+  test("a deferring plan keeps deferring a pending last group, with nothing to run", () => {
+    const plan = planSchemaSteps([d, g], new Set([d.hash, g.hash]), {
+      contractPending: new Set([g.hash]),
+      deferContract: true,
+    });
+    expect(plan.steps).toEqual([]);
+    expect(plan.pendingFiles).toEqual([]);
+    expect(plan.deferredContract).toBe(g.file);
+  });
+
+  test("only the last group defers: an earlier pending contract completes before the next expand", () => {
+    expect(
+      trace([d, g, h], [d.hash, g.hash], {
+        contractPending: new Set([g.hash]),
+        deferContract: true,
+      }),
+    ).toEqual([
+      `${d.file} reapply`,
+      `${g.file} contract`,
+      `${g.file} complete ${g.hash}`,
+      `${h.file} expand`,
+      `${h.file} record contract-pending`,
+    ]);
+    // Two groups pending at once (a catch-up deploy): the first contracts inline.
+    expect(trace([d, g, h], [], { deferContract: true })).toEqual([
+      `${g.file} expand`,
+      `${d.file} whole`,
+      `${d.file} record`,
+      `${g.file} contract`,
+      `${g.file} record`,
+      `${h.file} expand`,
+      `${h.file} record contract-pending`,
+    ]);
+  });
+
+  test("an expand-only group records complete and defers nothing", () => {
+    const e = mig(
+      "20261104",
+      "000000",
+      "7c7c7c7c",
+      "merged_20261104_0000",
+      phased('ALTER TABLE "v" ADD COLUMN "a" text;', ""),
+    );
+    const plan = planSchemaSteps([e], new Set(), { deferContract: true });
+    expect(plan.steps.map(stepLine)).toEqual([
+      `${e.file} expand`,
+      `${e.file} record`,
+    ]);
+    expect(plan.deferredContract).toBeNull();
+  });
+
+  test("the last group is the last one with SQL: an empty merge node after it does not stop the deferral", () => {
+    const node = mig("20261105", "000000", "6d6d6d6d", "merge", phased("", ""));
+    const plan = planSchemaSteps([d, g, node], new Set(), {
+      deferContract: true,
+    });
+    expect(plan.deferredContract).toBe(g.file);
+  });
+
+  test("a superseding file adopted over a lineage whose contract is pending inherits it", () => {
+    const authored = "a1a1a1a1";
+    const regen = mig(
+      "20261102",
+      "000000",
+      "5e5e5e5e",
+      "merged_20261102_0000",
+      renderPhasedMigration({
+        expand: 'ALTER TABLE "t" ADD COLUMN "n" text;',
+        contract: 'ALTER TABLE "t" DROP COLUMN "o";',
+        claims: ["20261101_000000__backfill"],
+        supersedes: { direct: [authored], inherited: [] },
+      }),
+    );
+    const applied = new Set([d.hash, authored]);
+    const pending = new Set([authored]);
+    const boot = planSchemaSteps([d, regen], applied, {
+      contractPending: pending,
+      deferContract: true,
+    });
+    expect(boot.steps.map(stepLine)).toEqual([
+      `${regen.file} record contract-pending`,
+    ]);
+    expect(boot.deferredContract).toBe(regen.file);
+    // The deferred run, over the ledger boot left: both rows complete.
+    expect(
+      trace([d, regen], [...applied, regen.hash], {
+        contractPending: new Set([authored, regen.hash]),
+      }),
+    ).toEqual([
+      `${d.file} reapply`,
+      `${regen.file} contract`,
+      `${regen.file} complete ${regen.hash},${authored}`,
+    ]);
+  });
+
+  test("generationsKnowing: the group's file and every later one", () => {
+    expect(generationsKnowing([d, g, h], g.file)).toEqual([
+      schemaGeneration(g),
+      schemaGeneration(h),
+    ]);
+    expect(schemaGeneration(g)).toBe(0x9a9a9a9a);
+    expect(() => generationsKnowing([d], g.file)).toThrow(/no migration file/);
   });
 });

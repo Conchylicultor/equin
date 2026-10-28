@@ -203,18 +203,16 @@ deadline sees it go silent. That needs a heartbeat.
     - `database/admin`
     - `database/query-deadline`
     - `infra/jobs`
-- Exemptions:
-  - Exempts itself from:
-    - `db-connection/no-raw-pg-connection` — `.` (sanctioned)
-    - `boundaries/no-platform-api` — `server/internal/client.ts`, `server/internal/deadline.ts` (debt)
-  - Exempted by: `database/connection` (0 debt)
 - Server:
+  - DB schema: `plugins/database/plugins/connection/server/internal/schema-generation.ts`
   - Exports (types):
     - `CreateDbClientOptions`
     - `CreateDbPoolOptions`
     - `ListenSessionHandlers`
     - `OpenListenSessionOptions`
     - `QueryDeadlineEvent`
+    - `SchemaGenerationLocks`
+    - `SchemaGenerationLocksOptions`
   - Exports (values):
     - `ABANDON_HOLD_CAP`
     - `abandonClient`
@@ -223,6 +221,7 @@ deadline sees it go silent. That needs a heartbeat.
     - `BOOT_DDL_QUERY_DEADLINE_MS`
     - `createDbClient`
     - `createDbPool`
+    - `createSchemaGenerationLocks`
     - `currentQueryDeadline`
     - `formatDeadlineLogLine`
     - `onClientLost`
@@ -231,6 +230,11 @@ deadline sees it go silent. That needs a heartbeat.
     - `queryDeadlineSink`
     - `queryText`
     - `withQueryDeadline`
+- Exemptions:
+  - Exempts itself from:
+    - `db-connection/no-raw-pg-connection` — `.` (sanctioned)
+    - `boundaries/no-platform-api` — `server/internal/client.ts`, `server/internal/deadline.ts` (debt)
+  - Exempted by: `database/connection` (0 debt)
 - Core:
   - Exports (types):
     - `DbCallPhase`

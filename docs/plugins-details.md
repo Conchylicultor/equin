@@ -19973,7 +19973,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `database/derived-updated-at.registeredDerivedUpdatedAt`
       - `database/derived-views.View`
       - `database/migrations.applySchemaLayer`
+      - `database/migrations.completeDeferredContract`
+      - `database/migrations.generationsKnowing`
       - `database/migrations.MigrationSource`
+      - `database/migrations.schemaGeneration`
+      - `database/migrations.SchemaLayerInputs`
       - `primitives/log-channels.defineLogSink`
     - Exports (types):
       - `DatabaseDriverImpl`
@@ -20185,18 +20189,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database/admin`
           - `database/query-deadline`
           - `infra/jobs`
-      - Exemptions:
-        - Exempts itself from:
-          - `db-connection/no-raw-pg-connection` — `.` (sanctioned)
-          - `boundaries/no-platform-api` — `server/internal/client.ts`, `server/internal/deadline.ts` (debt)
-        - Exempted by: `database/connection` (0 debt)
       - Server:
+        - DB schema: `plugins/database/plugins/connection/server/internal/schema-generation.ts`
         - Exports (types):
           - `CreateDbClientOptions`
           - `CreateDbPoolOptions`
           - `ListenSessionHandlers`
           - `OpenListenSessionOptions`
           - `QueryDeadlineEvent`
+          - `SchemaGenerationLocks`
+          - `SchemaGenerationLocksOptions`
         - Exports (values):
           - `ABANDON_HOLD_CAP`
           - `abandonClient`
@@ -20205,6 +20207,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `BOOT_DDL_QUERY_DEADLINE_MS`
           - `createDbClient`
           - `createDbPool`
+          - `createSchemaGenerationLocks`
           - `currentQueryDeadline`
           - `formatDeadlineLogLine`
           - `onClientLost`
@@ -20213,6 +20216,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `queryDeadlineSink`
           - `queryText`
           - `withQueryDeadline`
+      - Exemptions:
+        - Exempts itself from:
+          - `db-connection/no-raw-pg-connection` — `.` (sanctioned)
+          - `boundaries/no-platform-api` — `server/internal/client.ts`, `server/internal/deadline.ts` (debt)
+        - Exempted by: `database/connection` (0 debt)
       - Core:
         - Exports (types):
           - `DbCallPhase`
@@ -20479,15 +20487,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SchemaLayerInputs`
           - `SchemaLayerResult`
           - `SchemaPlan`
+          - `SchemaPlanOptions`
           - `SchemaStep`
         - Exports (values):
           - `applySchemaLayer`
+          - `completeDeferredContract`
           - `dryRunPendingMigrations`
+          - `generationsKnowing`
           - `isMigrationFileName`
           - `migrationsFrom`
           - `MigrationSource`
           - `migrationsReady`
           - `planSchemaSteps`
+          - `schemaGeneration`
       - Core:
         - Uses:
           - `framework/product-name.LEGACY_IDS`

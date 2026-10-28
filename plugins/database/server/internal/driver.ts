@@ -62,6 +62,27 @@ export interface DatabaseDriverImpl {
     channels: readonly string[],
     handlers: ListenHandlers,
   ): Promise<ListenSession>;
+  /**
+   * Hold this process's schema generation (its latest migration's,
+   * `schemaGeneration`) for the rest of its life — how a later deploy's
+   * deferred contract sees that this code is still connected. Called once,
+   * in the boot barrier, before the schema layer.
+   *
+   * The desktop holds a shared advisory lock on a dedicated direct
+   * connection; PGlite, one process with nothing else connected, holds
+   * nothing.
+   */
+  holdSchemaGeneration(generation: number): Promise<void>;
+  /**
+   * Resolves once no other connected process holds a generation outside
+   * `knowing` (the generations whose code knows the group a deferred
+   * contract belongs to, `generationsKnowing`) — a wait, never a poll. The
+   * returned release lets older code connect again; call it once the
+   * contract committed or failed.
+   */
+  awaitGenerationsGone(
+    knowing: readonly number[],
+  ): Promise<() => Promise<void>>;
 }
 
 /** What a LISTEN session (`DatabaseDriverImpl.listen`) reports to its opener. */

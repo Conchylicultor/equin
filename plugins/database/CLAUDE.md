@@ -252,6 +252,12 @@ environment. The throws stay loud in production; only test runs get the default.
 
 ## Bootstrap
 
+Before the schema layer, the barrier takes this process's schema-generation lock
+(`DatabaseDriver.holdSchemaGeneration`), and the schema layer defers the last
+phased group's contract; `onReady` runs it once no older code is connected
+(`server/internal/deferred-contract.ts`; see `migrations/CLAUDE.md`, "The
+contract is deferred until the old code is gone").
+
 `awaitDbReady` + `applySchemaLayer` (migrations and the derived layer — derived `updatedAt` triggers, rollup tables, views — in ONE transaction; see `plugins/database/plugins/derived-views/CLAUDE.md` and `research/2026-09-29-global-phased-migrations.md`) are called in the database plugin's `onReadyBlocking` hook. Derived inputs are read at that call site and passed in, never read inside the layer. `onReadyBlocking` is a hard barrier the framework awaits in full before flipping the server-ready flag and before any plugin's `onReady` runs — so consumers can safely use the DB in their own `onReady`, and the gateway holds its hot-swap until the schema layer has committed. (Previously this lived in `onReady`, where it raced other plugins' `onReady` and the gateway swap until migrations happened to be slow.)
 
 ## Import paths
@@ -283,7 +289,11 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./equin build`. The bui
     - `database/derived-updated-at.registeredDerivedUpdatedAt`
     - `database/derived-views.View`
     - `database/migrations.applySchemaLayer`
+    - `database/migrations.completeDeferredContract`
+    - `database/migrations.generationsKnowing`
     - `database/migrations.MigrationSource`
+    - `database/migrations.schemaGeneration`
+    - `database/migrations.SchemaLayerInputs`
     - `primitives/log-channels.defineLogSink`
   - Exports (types):
     - `DatabaseDriverImpl`

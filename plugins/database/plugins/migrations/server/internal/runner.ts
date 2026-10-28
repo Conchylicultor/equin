@@ -95,11 +95,23 @@ export function migrationsFrom(
 }
 
 // The applied-state ledger (`MIGRATIONS_TABLE_NAME`): hash → the file name it
-// was applied under. Creates the table if absent, so callers can use the
-// result directly.
+// was applied under, and the hashes whose contract is still to run (a phased
+// file recorded at boot with its contract deferred — see `planSchemaSteps`).
+// Creates the table if absent, so callers can use the result directly. Inside
+// the schema layer's transaction (`inLayer`) it also adds the
+// `contract_pending` column older ledgers lack; the dry run's pre-check, which
+// runs against live main outside any transaction, only reads it, treating a
+// missing column as nothing pending. Code from before the column reads only
+// `hash, file`, so it is unaffected by it.
+interface AppliedLedger {
+  files: Map<string, string>;
+  contractPending: Set<string>;
+}
+
 async function getAppliedLedger(
   db: NodePgDatabase | Tx,
-): Promise<Map<string, string>> {
+  { inLayer }: { inLayer: boolean },
+): Promise<AppliedLedger> {
   await db.execute(drizzleSql`
     CREATE TABLE IF NOT EXISTS ${drizzleSql.raw(MIGRATIONS_TABLE_NAME)} (
       hash text PRIMARY KEY,
@@ -107,12 +119,66 @@ async function getAppliedLedger(
       applied_at timestamptz NOT NULL DEFAULT now()
     )
   `);
+  if (inLayer) {
+    await db.execute(drizzleSql`
+      ALTER TABLE ${drizzleSql.raw(MIGRATIONS_TABLE_NAME)}
+        ADD COLUMN IF NOT EXISTS contract_pending boolean NOT NULL DEFAULT false
+    `);
+  }
+  const column = await executeRows(db, {
+    query: drizzleSql`SELECT EXISTS (
+      SELECT 1 FROM information_schema.columns
+       WHERE table_schema = current_schema()
+         AND table_name = ${MIGRATIONS_TABLE_NAME}
+         AND column_name = 'contract_pending'
+    ) AS has`,
+    row: z.object({ has: z.boolean() }),
+    label: "migrations: ledger has contract_pending",
+  });
   const applied = await executeRows(db, {
-    query: drizzleSql`SELECT hash, file FROM ${drizzleSql.raw(MIGRATIONS_TABLE_NAME)}`,
-    row: z.object({ hash: z.string(), file: z.string() }),
+    query:
+      column[0]?.has === true
+        ? drizzleSql`SELECT hash, file, contract_pending FROM ${drizzleSql.raw(MIGRATIONS_TABLE_NAME)}`
+        : drizzleSql`SELECT hash, file, false AS contract_pending FROM ${drizzleSql.raw(MIGRATIONS_TABLE_NAME)}`,
+    row: z.object({
+      hash: z.string(),
+      file: z.string(),
+      contract_pending: z.boolean(),
+    }),
     label: "migrations: read applied ledger",
   });
-  return new Map(applied.map((r) => [r.hash, r.file]));
+  return {
+    files: new Map(applied.map((r) => [r.hash, r.file])),
+    contractPending: new Set(
+      applied.filter((r) => r.contract_pending).map((r) => r.hash),
+    ),
+  };
+}
+
+/**
+ * A migration's schema generation: its sha8 read as an unsigned 32-bit
+ * number. A process's generation is its LATEST file's — what it holds a
+ * shared generation lock on (`DatabaseDriver.holdSchemaGeneration`), so a
+ * deferred contract can wait out every process whose code predates it.
+ */
+export function schemaGeneration(m: Migration): number {
+  return Number.parseInt(m.hash, 16);
+}
+
+/**
+ * The generations that know `file`: its own and every later file's. A
+ * process whose latest migration is outside this set runs code from before
+ * `file`, which its contract may break.
+ */
+export function generationsKnowing(
+  migrations: readonly Migration[],
+  file: string,
+): number[] {
+  const index = migrations.findIndex((m) => m.file === file);
+  if (index < 0) {
+    throw new Error(`generationsKnowing: no migration file ${file}`);
+  }
+  return migrations.slice(index).map(schemaGeneration);
 }
 
 // Every hash a lineage names: its direct entries and every inherited one.
@@ -206,18 +272,22 @@ export function planMigrations(
 
 // One unit of work in the boot schema layer, in the order it runs.
 //   - `apply` runs SQL: a legacy file whole, or one section of a phased schema
-//     migration. An empty section emits no step.
-//   - `record` inserts a file's ledger row, right after that file's LAST step —
-//     so a phased migration is recorded only at its contract, never after its
-//     expand alone, and a phased file with nothing to run still lands its row.
+//     migration. An empty section emits no step. `reapply` is a claimed data
+//     migration run again just before its group's deferred contract.
+//   - `record` inserts a file's ledger row, right after that file's LAST step at
+//     this run — its contract, or, when the contract is deferred, its claimed
+//     data (`contractPending`). A phased file with nothing to run still lands it.
+//   - `complete` clears `contract_pending` on the rows whose deferred contract
+//     just ran: the file's own and any lineage hash it supersedes.
 export type SchemaStep =
   | {
       kind: "apply";
       file: string;
-      phase: "whole" | "expand" | "contract";
+      phase: "whole" | "expand" | "reapply" | "contract";
       sql: string;
     }
-  | { kind: "record"; file: string; hash: string };
+  | { kind: "record"; file: string; hash: string; contractPending: boolean }
+  | { kind: "complete"; file: string; hashes: string[] };
 
 export interface SchemaPlan {
   steps: SchemaStep[];
@@ -232,6 +302,22 @@ export interface SchemaPlan {
   // Every hash some file on disk supersedes (its whole lineage): a ledger row
   // for one of them has no file here on purpose.
   superseded: ReadonlySet<string>;
+  // The phased file whose contract this plan leaves for later
+  // (`deferContract`): it is recorded `contract_pending`, and its contract runs
+  // once no process older than it is left (`generationsKnowing`). Null when
+  // nothing is deferred.
+  deferredContract: string | null;
+}
+
+export interface SchemaPlanOptions {
+  // Ledger hashes whose contract has not run yet (`contract_pending`).
+  contractPending?: ReadonlySet<string>;
+  // Leave the LAST group's contract for later instead of running it. Only the
+  // last: an earlier group's contract must run before a later group's expand
+  // (a table one contract drops and a later expand recreates; an FK a later
+  // expand adds over a unique index an earlier contract creates). Boot passes
+  // true; the dry run, the test helper and the deferred run itself pass false.
+  deferContract?: boolean;
 }
 
 // PURE (exported for unit testing): the ordered steps that bring a database
@@ -263,9 +349,24 @@ export interface SchemaPlan {
 // file on disk, applied or not: a claim naming no file, a file claimed twice,
 // and a claim that does not sort before its claimer all THROW, since each would
 // otherwise apply a contract before the data it was written to follow.
+//
+// THE DEFERRED CONTRACT. A contract is what invalidates the code already
+// deployed, and during a hot-swap that code is still serving. So boot
+// (`deferContract`) records the last group with its contract pending instead
+// of running it; the serving backend runs it once every process older than the
+// group is gone (`completeDeferredContract`). A group still pending in the
+// ledger (`contractPending`) is completed by any later plan that does not
+// defer it: its claimed data migrations run again — the old code kept writing
+// rows the backfill did not see — then its contract, then `complete`. Only the
+// last group with SQL is ever deferred; a pending earlier one completes inline,
+// at its position, before the next group's expand.
 export function planSchemaSteps(
   migrations: Migration[],
   appliedHashes: ReadonlySet<string>,
+  {
+    contractPending = new Set(),
+    deferContract = false,
+  }: SchemaPlanOptions = {},
 ): SchemaPlan {
   const { toApply, skippedDuplicates } = planMigrations(
     migrations,
@@ -387,10 +488,24 @@ export function planSchemaSteps(
   const emitWhole = (m: Migration) => {
     if (!pending.has(m)) return;
     steps.push({ kind: "apply", file: m.file, phase: "whole", sql: m.sqlText });
-    steps.push({ kind: "record", file: m.file, hash: m.hash });
+    steps.push({
+      kind: "record",
+      file: m.file,
+      hash: m.hash,
+      contractPending: false,
+    });
     pendingFiles.push(m.file);
   };
 
+  // The one group a deferring plan may leave its contract to: the last phased
+  // file with SQL of its own (an empty merge node or adoption file after it
+  // changes nothing a contract could be ordered against).
+  const lastGroup = migrations.findLast((m) => {
+    const p = parsed.get(m)!;
+    return p.kind === "phased" && (p.expand !== "" || p.contract !== "");
+  });
+
+  let deferredContract: string | null = null;
   for (const m of migrations) {
     if (claimer.has(m)) continue;
     const p = parsed.get(m)!;
@@ -400,6 +515,21 @@ export function planSchemaSteps(
     }
     const own = pending.has(m);
     const runsSql = own && !adoptedFiles.has(m);
+    // Rows still waiting on this group's contract: its own (recorded at an
+    // earlier boot) and, for a superseding file, any lineage hash that was.
+    const lineagePending =
+      p.supersedes === null
+        ? []
+        : [...lineageHashes(p.supersedes)].filter((h) =>
+            contractPending.has(h),
+          );
+    const ownPending = !own && contractPending.has(m.hash);
+    const contractDue =
+      p.contract !== "" &&
+      (runsSql ||
+        ownPending ||
+        // Adopted (or already recorded) over a lineage whose contract never ran.
+        lineagePending.length > 0);
     if (runsSql && p.expand !== "") {
       steps.push({
         kind: "apply",
@@ -409,24 +539,54 @@ export function planSchemaSteps(
       });
     }
     // Claims in timestamp order, whatever order the claims section lists them.
-    for (const d of migrations) {
-      if (claimer.get(d) === m) emitWhole(d);
-    }
-    if (own) {
-      if (runsSql && p.contract !== "") {
+    const claimed = migrations.filter((d) => claimer.get(d) === m);
+    for (const d of claimed) emitWhole(d);
+    const defer = contractDue && deferContract && m === lastGroup;
+    if (defer) deferredContract = m.file;
+    if (contractDue && !defer) {
+      // Completing a deferred contract: the rows the old code wrote since the
+      // claimed data ran at boot. A group run whole in this plan needs none.
+      for (const d of own ? [] : claimed) {
         steps.push({
           kind: "apply",
-          file: m.file,
-          phase: "contract",
-          sql: p.contract,
+          file: d.file,
+          phase: "reapply",
+          sql: d.sqlText,
         });
       }
-      steps.push({ kind: "record", file: m.file, hash: m.hash });
+      steps.push({
+        kind: "apply",
+        file: m.file,
+        phase: "contract",
+        sql: p.contract,
+      });
+    }
+    if (own) {
+      steps.push({
+        kind: "record",
+        file: m.file,
+        hash: m.hash,
+        contractPending: defer,
+      });
       pendingFiles.push(m.file);
+    }
+    if (contractDue && !defer) {
+      const hashes = [...(ownPending ? [m.hash] : []), ...lineagePending];
+      if (hashes.length > 0) {
+        steps.push({ kind: "complete", file: m.file, hashes });
+        if (!own) pendingFiles.push(m.file);
+      }
     }
   }
 
-  return { steps, pendingFiles, skippedDuplicates, adopted, superseded };
+  return {
+    steps,
+    pendingFiles,
+    skippedDuplicates,
+    adopted,
+    superseded,
+    deferredContract,
+  };
 }
 
 // Everything the boot schema layer derives from source besides the migration
@@ -449,7 +609,7 @@ const ROLLBACK = Symbol("schema-layer-rollback");
 // duplicate-hash skip. All loud, never silent.
 function reportPlan(
   migrations: Migration[],
-  ledger: ReadonlyMap<string, string>,
+  ledger: AppliedLedger,
   plan: SchemaPlan,
 ): void {
   for (const { file, via, by } of plan.adopted) {
@@ -467,10 +627,14 @@ function reportPlan(
   //   - the branch is behind main, whose DB this one was forked from: harmless;
   //   - the branch authored the file and rewrote it with no supersedes header:
   //     the DB keeps its effects, and a pending migration that redoes them fails.
-  for (const [hash, file] of ledger) {
+  for (const [hash, file] of ledger.files) {
     if (onDisk.has(hash) || plan.superseded.has(hash)) continue;
     log.publish(
-      `[migrate] applied migration ${file} (hash ${hash}) has no file on this branch, and no migration here supersedes it. ` +
+      `[migrate] applied migration ${file} (hash ${hash}) has no file on this branch, and no migration here supersedes it` +
+        (ledger.contractPending.has(hash)
+          ? `, and its contract has not run yet — this code never runs it`
+          : "") +
+        `. ` +
         `If it is on main and this branch is behind, rebase (\`git rebase origin/main\`). ` +
         `If this branch authored it and later rewrote it, this database keeps its effects, and a pending migration that redoes them will fail to apply — ${REFORK_HINT}`,
       "stderr",
@@ -485,6 +649,11 @@ function reportPlan(
       "stderr",
     );
   }
+  if (plan.deferredContract !== null) {
+    log.publish(
+      `[migrate] deferring the contract of ${plan.deferredContract}: it runs once no process older than it is left on this database.`,
+    );
+  }
 }
 
 // Plan, report and run the steps on `tx`. A failure — a plan the files refuse
@@ -493,14 +662,18 @@ function reportPlan(
 // its stderr is not where anyone reading this worktree's logs looks.
 //
 // `dropViews` is the boot layer's: the caller rebuilds the views after.
+// `deferContract`: see `SchemaPlanOptions`.
 async function planAndRun(
   tx: Tx,
   migrations: Migration[],
-  { dropViews }: { dropViews: boolean },
-): Promise<{ pending: number }> {
+  { dropViews, deferContract }: { dropViews: boolean; deferContract: boolean },
+): Promise<{ pending: number; deferredContract: string | null }> {
   try {
-    const ledger = await getAppliedLedger(tx);
-    const plan = planSchemaSteps(migrations, new Set(ledger.keys()));
+    const ledger = await getAppliedLedger(tx, { inLayer: true });
+    const plan = planSchemaSteps(migrations, new Set(ledger.files.keys()), {
+      contractPending: ledger.contractPending,
+      deferContract,
+    });
     reportPlan(migrations, ledger, plan);
     // Views never block a migration: a live view reading a column a pending
     // migration drops or retypes would fail it. Drop the whole live layer
@@ -508,7 +681,10 @@ async function planAndRun(
     // no lock window — and the caller rebuilds it, in this same transaction.
     if (dropViews && plan.pendingFiles.length > 0) await dropDerivedViews(tx);
     await runSteps(tx, plan.steps);
-    return { pending: plan.pendingFiles.length };
+    return {
+      pending: plan.pendingFiles.length,
+      deferredContract: plan.deferredContract,
+    };
   } catch (e) {
     log.publish(`[migrate] FAILED: ${(e as Error).message}`, "stderr");
     throw e;
@@ -519,8 +695,18 @@ async function runSteps(tx: Tx, steps: readonly SchemaStep[]): Promise<void> {
   for (const step of steps) {
     if (step.kind === "record") {
       await tx.execute(
-        drizzleSql`INSERT INTO ${drizzleSql.raw(MIGRATIONS_TABLE_NAME)} (hash, file) VALUES (${step.hash}, ${step.file})`,
+        drizzleSql`INSERT INTO ${drizzleSql.raw(MIGRATIONS_TABLE_NAME)} (hash, file, contract_pending) VALUES (${step.hash}, ${step.file}, ${step.contractPending})`,
       );
+      continue;
+    }
+    if (step.kind === "complete") {
+      await tx.execute(
+        drizzleSql`UPDATE ${drizzleSql.raw(MIGRATIONS_TABLE_NAME)} SET contract_pending = false WHERE hash IN (${drizzleSql.join(
+          step.hashes.map((h) => drizzleSql`${h}`),
+          drizzleSql`, `,
+        )})`,
+      );
+      log.publish(`[migrate] contract of ${step.file} complete`);
       continue;
     }
     const label =
@@ -546,18 +732,29 @@ async function runSteps(tx: Tx, steps: readonly SchemaStep[]): Promise<void> {
 // each rollup's reconcile healed (derived-tables). A committing caller
 // publishes `rollups` only after the transaction commits (C13): the dry run
 // computes them too, and rolls them back.
+// `deferredContract` is the file whose contract this run left for later
+// (`completeDeferredContract`), or null.
 export interface SchemaLayerResult {
   pending: number;
   rollups: RollupReconcile[];
+  deferredContract: string | null;
 }
+
+// Serializes committing schema layers on one database: a backend's deferred
+// contract and the next deploy's boot layer may overlap, and each plans from
+// the ledger it reads — two plans over one ledger would both run a contract.
+// A transaction-scoped advisory lock (two-int4 form, so it shares no key with
+// the jobs plugin's bigint job locks), released at commit or rollback.
+const SCHEMA_LAYER_LOCK = drizzleSql`pg_advisory_xact_lock(1835103859, 0)`;
 
 export async function applySchemaLayerFrom(
   db: NodePgDatabase,
   migrations: Migration[],
   inputs: SchemaLayerInputs,
-  { commit }: { commit: boolean },
+  { commit, deferContract }: { commit: boolean; deferContract: boolean },
 ): Promise<SchemaLayerResult> {
   let pending = 0;
+  let deferredContract: string | null = null;
   let rollups: RollupReconcile[] = [];
   try {
     await db.transaction(async (tx) => {
@@ -568,8 +765,22 @@ export async function applySchemaLayerFrom(
         // behind live traffic.
         await tx.execute(drizzleSql`SET LOCAL lock_timeout = '1s'`);
         await tx.execute(drizzleSql`SET LOCAL statement_timeout = '60s'`);
+      } else {
+        await tx.execute(drizzleSql`SELECT ${SCHEMA_LAYER_LOCK}`);
       }
-      ({ pending } = await planAndRun(tx, migrations, { dropViews: true }));
+      ({ pending, deferredContract } = await planAndRun(tx, migrations, {
+        dropViews: true,
+        deferContract,
+      }));
+      if (!commit && deferredContract !== null) {
+        // The dry run plays the deferred run too, on the ledger the boot plan
+        // just wrote: the claimed data again, then the contract — what the
+        // serving backend does once the old code is gone.
+        await planAndRun(tx, migrations, {
+          dropViews: true,
+          deferContract: false,
+        });
+      }
 
       // The derived layer, in dependency order: the updatedAt triggers and the
       // rollup tables need the migrated columns; a view may read a rollup
@@ -583,14 +794,17 @@ export async function applySchemaLayerFrom(
   } catch (e) {
     if (e !== ROLLBACK) throw e;
   }
-  return { pending, rollups };
+  return { pending, rollups, deferredContract };
 }
 
 // The boot schema layer, in ONE transaction:
 //   1. if any migration is pending, drop every live public view;
 //   2. the pending migrations (`planSchemaSteps`: legacy files whole, each
 //      phased schema migration as expand → claimed data → contract), each
-//      file's ledger row right after its last step;
+//      file's ledger row right after its last step — except the LAST group's
+//      contract, which boot defers (`deferContract`): it is what breaks the
+//      previous backend's code, still serving. `completeDeferredContract` runs
+//      it once that code is gone;
 //   3. `installDerivedUpdatedAt`, `rebuildDerivedTables`, `rebuildDerivedViews`.
 //
 // One transaction because the previous backend keeps serving during a hot-swap:
@@ -600,15 +814,16 @@ export async function applySchemaLayerFrom(
 // step takes its skip-when-unchanged path, so no new lock window opens.
 //
 // `commit: false` is the dry run (`dryRunPendingMigrations`): the same code
-// under the live-DB timeouts, always rolled back. Only a committing call settles
-// `migrationsReady`.
+// under the live-DB timeouts, always rolled back, contract included. Only a
+// committing call settles `migrationsReady`.
 export async function applySchemaLayer(
   db: NodePgDatabase,
   migrations: Migration[],
   inputs: SchemaLayerInputs,
-  { commit }: { commit: boolean },
+  { commit, deferContract }: { commit: boolean; deferContract: boolean },
 ): Promise<SchemaLayerResult> {
-  const run = () => applySchemaLayerFrom(db, migrations, inputs, { commit });
+  const run = () =>
+    applySchemaLayerFrom(db, migrations, inputs, { commit, deferContract });
   if (!commit) return run();
   try {
     const result = await run();
@@ -629,7 +844,29 @@ export async function runMigrations(
   migrations: Migration[],
 ): Promise<void> {
   await db.transaction(async (tx) => {
-    await planAndRun(tx, migrations, { dropViews: false });
+    await planAndRun(tx, migrations, {
+      dropViews: false,
+      deferContract: false,
+    });
+  });
+}
+
+// Run the contract boot deferred (`SchemaLayerResult.deferredContract`), once
+// the caller has waited out every process older than it
+// (`DatabaseDriver.awaitGenerationsGone`): the schema layer again, deferring
+// nothing, so it re-runs the group's claimed data migrations (the rows the old
+// code wrote since boot), runs the contract, clears `contract_pending`, and
+// rebuilds the derived layer — one transaction, serialized with any other
+// schema layer on this database. A later deploy's boot that already completed
+// it leaves nothing to do here.
+export async function completeDeferredContract(
+  db: NodePgDatabase,
+  migrations: Migration[],
+  inputs: SchemaLayerInputs,
+): Promise<SchemaLayerResult> {
+  return applySchemaLayerFrom(db, migrations, inputs, {
+    commit: true,
+    deferContract: false,
   });
 }
 
@@ -656,11 +893,19 @@ export async function dryRunPendingMigrations(
   migrations: Migration[],
   inputs: SchemaLayerInputs,
 ): Promise<{ pending: number }> {
-  const ledger = await getAppliedLedger(db);
-  const { pendingFiles } = planSchemaSteps(migrations, new Set(ledger.keys()));
+  const ledger = await getAppliedLedger(db, { inLayer: false });
+  const { pendingFiles } = planSchemaSteps(
+    migrations,
+    new Set(ledger.files.keys()),
+    { contractPending: ledger.contractPending },
+  );
   if (pendingFiles.length === 0) return { pending: 0 };
+  // Boot's plan, then the deferred run (see `applySchemaLayerFrom`): the
+  // contract still gets proved, and the claimed data, which runs at boot and
+  // again before the contract, gets proved idempotent.
   const { pending } = await applySchemaLayer(db, migrations, inputs, {
     commit: false,
+    deferContract: true,
   });
   return { pending };
 }

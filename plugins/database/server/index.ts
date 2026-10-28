@@ -8,13 +8,16 @@ import { loadKnownRelations } from "./internal/read-set-capture";
 import {
   applySchemaLayer,
   MigrationSource,
+  schemaGeneration,
 } from "@plugins/database/plugins/migrations/server";
-import { View } from "@plugins/database/plugins/derived-views/server";
+import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import {
-  DerivedTable,
-  publishReconciledRollups,
-} from "@plugins/database/plugins/derived-tables/server";
-import { registeredDerivedUpdatedAt } from "@plugins/database/plugins/derived-updated-at/server";
+  derivedInputs,
+  runDeferredContract,
+  setDeferredContract,
+  takeDeferredContract,
+} from "./internal/deferred-contract";
+import { publishReconciledRollups } from "@plugins/database/plugins/derived-tables/server";
 
 export {
   afterCommit,
@@ -51,9 +54,20 @@ export default {
     // every frame that fully reconciles a client carries one — whether or not
     // the host boots L2 (which only consumes it, as its persist floor).
     setWatermarkSource(() => snapshotWatermark(db));
+    // This process's code, visible to every later deploy's deferred contract
+    // for as long as it lives — taken before the schema layer, so no window
+    // exists in which it is migrating yet unseen. Its generation is its latest
+    // migration's.
+    const migrations = MigrationSource.get().list();
+    const latest = migrations.at(-1);
+    if (latest !== undefined) {
+      await driver.holdSchemaGeneration(schemaGeneration(latest));
+    }
     // The boot schema layer, in ONE transaction: views out (only when a
     // migration is pending) → pending migrations, each phased schema migration
-    // as expand → claimed data → contract → the derived `updatedAt` triggers →
+    // as expand → claimed data → contract (the LAST group's contract deferred
+    // to `onReady`, below: it is what breaks the code still serving) → the
+    // derived `updatedAt` triggers →
     // the trigger-maintained rollup tables (before the views: `attempts_v` LEFT
     // JOINs them) → the plain views. The previous backend, still serving during a
     // hot-swap, waits on its locks rather than reading missing views, and any
@@ -74,22 +88,17 @@ export default {
     // cycle).
     const layer = await driver.bootDdl(
       () =>
-        applySchemaLayer(
-          db,
-          MigrationSource.get().list(),
-          {
-            views: View.getContributions(),
-            derivedTables: DerivedTable.getContributions(),
-            updatedAtSpecs: registeredDerivedUpdatedAt(),
-          },
-          { commit: true },
-        ),
+        applySchemaLayer(db, migrations, derivedInputs(), {
+          commit: true,
+          deferContract: true,
+        }),
       "boot: schema layer",
     );
     // What each rollup's reconcile healed, published only now that the layer
     // has COMMITTED (C13) — `reconciledRollups()` readers (live-state-snapshot's
     // A20 boot check) run after this barrier, so they see this boot's answer.
     publishReconciledRollups(layer.rollups);
+    setDeferredContract(layer.deferredContract);
     // Last, because every relation a loader can read now exists. This is the
     // snapshot that tells an unquoted table name in a loader's raw SQL apart
     // from a CTE name or a subquery alias, so its read-set records the tables it
@@ -97,5 +106,16 @@ export default {
     // not DDL — it waits on no lock, so it keeps the ordinary query deadline
     // rather than the widened boot one the schema layer above needs.
     await loadKnownRelations(db);
+  },
+  // Only a serving host runs the deferred contract (an exec child skips
+  // `onReady`): after the barrier, so it never holds back readiness — the
+  // gateway swaps to this backend, the previous one drains and exits, and
+  // that exit is what the wait is for.
+  onReady() {
+    const file = takeDeferredContract();
+    if (file === null) return;
+    void runTracked("database:deferred-contract", () =>
+      runDeferredContract(file),
+    );
   },
 } satisfies ServerPluginDefinition;

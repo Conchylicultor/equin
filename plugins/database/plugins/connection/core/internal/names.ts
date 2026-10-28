@@ -23,6 +23,11 @@ export const DB_POOL_NAMES = [
   /** The change-feed LISTEN client. */
   "change-feed",
   /**
+   * The session holding this process's schema-generation lock, on which a
+   * deferred contract waits out older code (`database#machine`).
+   */
+  "schema-generation",
+  /**
    * The events-test harness's stand-in worker sessions: one dedicated client per
    * scenario run, holding a job's advisory lock until the scenario kills its
    * socket to simulate a crash.

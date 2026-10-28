@@ -16,6 +16,13 @@ export {
   type ListenSessionHandlers,
   type OpenListenSessionOptions,
 } from "./internal/listen-session";
+// The session-held schema-generation locks a deferred contract waits on (the
+// desktop's `DatabaseDriver.holdSchemaGeneration` / `awaitGenerationsGone`).
+export {
+  createSchemaGenerationLocks,
+  type SchemaGenerationLocks,
+  type SchemaGenerationLocksOptions,
+} from "./internal/schema-generation";
 // The deadline itself: the bound, its scope, the error, and the seam a missed
 // deadline is announced on.
 export {

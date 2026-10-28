@@ -123,6 +123,7 @@ beforeEach(async () => {
   t = await createTestDb({ prefix: "schema_layer_test" });
   await applySchemaLayerFrom(t.db, [base], withViews(oldView), {
     commit: true,
+    deferContract: false,
   });
 });
 
@@ -141,7 +142,7 @@ describe("applySchemaLayer", () => {
       t.db,
       [base, backfill, push],
       withViews(newView),
-      { commit: true },
+      { commit: true, deferContract: false },
     );
 
     expect(result.pending).toBe(2);
@@ -160,9 +161,10 @@ describe("applySchemaLayer", () => {
         withViews(newView),
         {
           commit: true,
+          deferContract: false,
         },
       ),
-    ).toEqual({ pending: 0, rollups: [] });
+    ).toEqual({ pending: 0, rollups: [], deferredContract: null });
     expect(await viewRows(t)).toHaveLength(2);
   });
 
@@ -180,7 +182,7 @@ describe("applySchemaLayer", () => {
         t.db,
         [base, backfill, push],
         withViews(brokenView),
-        { commit: true },
+        { commit: true, deferContract: false },
       );
     } catch (e) {
       error = e;
@@ -197,14 +199,126 @@ describe("applySchemaLayer", () => {
   });
 
   test("the dry run applies the same layer and leaves the database untouched", async () => {
+    // As `dryRunPendingMigrations` calls it: boot's deferring plan, then the
+    // deferred run, in the one rolled-back transaction.
     const result = await applySchemaLayerFrom(
       t.db,
       [base, backfill, push],
       withViews(newView),
-      { commit: false },
+      { commit: false, deferContract: true },
     );
     expect(result.pending).toBe(2);
     expect(await ledger(t)).toEqual(["0b0b0b0b"]);
     expect(await columns(t)).toEqual(["id", "old_name"]);
+  });
+
+  test("the dry run fails a contract whose claimed data is not idempotent", async () => {
+    // The backfill runs at boot and again before the deferred contract.
+    const once = mig(
+      "20260102_000000",
+      "dddddddd",
+      "backfill_name",
+      `INSERT INTO "sl_widgets" ("id", "old_name", "name") VALUES (3, 'three', 'THREE');`,
+    );
+    let error: unknown;
+    try {
+      await applySchemaLayerFrom(t.db, [base, once, push], withViews(newView), {
+        commit: false,
+        deferContract: true,
+      });
+    } catch (e) {
+      error = e;
+    }
+    expect(String(error)).toContain("duplicate key");
+  });
+});
+
+async function pendingContracts(t: TestDb): Promise<string[]> {
+  const rows = await executeRows(t.db, {
+    query: sql`SELECT hash FROM ${sql.raw(MIGRATIONS_TABLE_NAME)} WHERE contract_pending ORDER BY hash`,
+    row: z.object({ hash: z.string() }),
+    label: "test: pending contracts",
+  });
+  return rows.map((r) => r.hash);
+}
+
+describe("the deferred contract", () => {
+  test("boot leaves the last group's contract pending; the deferred run backfills what the old code wrote, then contracts", async () => {
+    const boot = await applySchemaLayerFrom(
+      t.db,
+      [base, backfill, push],
+      withViews(newView),
+      { commit: true, deferContract: true },
+    );
+    expect(boot.deferredContract).toBe(push.file);
+    // Expanded and backfilled; nothing tightened or dropped.
+    expect(await columns(t)).toEqual(["id", "name", "old_name"]);
+    expect(await ledger(t)).toEqual(["0b0b0b0b", "5a5a5a5a", "dddddddd"]);
+    expect(await pendingContracts(t)).toEqual(["5a5a5a5a"]);
+
+    // The previous backend's code, still serving: it knows only old_name.
+    await t.db.execute(
+      sql`INSERT INTO "sl_widgets" ("id", "old_name") VALUES (3, 'three')`,
+    );
+
+    // A second boot of the same code keeps deferring it.
+    expect(
+      (
+        await applySchemaLayerFrom(
+          t.db,
+          [base, backfill, push],
+          withViews(newView),
+          { commit: true, deferContract: true },
+        )
+      ).deferredContract,
+    ).toBe(push.file);
+
+    const done = await applySchemaLayerFrom(
+      t.db,
+      [base, backfill, push],
+      withViews(newView),
+      { commit: true, deferContract: false },
+    );
+    expect(done).toEqual({ pending: 1, rollups: [], deferredContract: null });
+    expect(await columns(t)).toEqual(["id", "name"]);
+    expect(await pendingContracts(t)).toEqual([]);
+    expect(await viewRows(t)).toEqual([
+      { id: 1, name: "ONE" },
+      { id: 2, name: "TWO" },
+      { id: 3, name: "THREE" },
+    ]);
+  });
+
+  test("a later push's boot completes an earlier pending contract before its own expand", async () => {
+    await applySchemaLayerFrom(
+      t.db,
+      [base, backfill, push],
+      withViews(newView),
+      {
+        commit: true,
+        deferContract: true,
+      },
+    );
+    const next = mig(
+      "20260104_000000",
+      "6b6b6b6b",
+      "merged_20260104_0000",
+      renderPhasedMigration({
+        expand: `ALTER TABLE "sl_widgets" ADD COLUMN "old_name" integer;`,
+        contract: `ALTER TABLE "sl_widgets" ALTER COLUMN "old_name" SET NOT NULL;`,
+        claims: [],
+        supersedes: null,
+      }),
+    );
+    const result = await applySchemaLayerFrom(
+      t.db,
+      [base, backfill, push, next],
+      withViews(newView),
+      { commit: true, deferContract: true },
+    );
+    // `push`'s contract dropped the text old_name, so `next` re-adds it.
+    expect(result.deferredContract).toBe(next.file);
+    expect(await pendingContracts(t)).toEqual(["6b6b6b6b"]);
+    expect(await columns(t)).toEqual(["id", "name", "old_name"]);
   });
 });

@@ -88,6 +88,10 @@ export function createPgliteDriver(
     // One connection, nothing else holding locks: boot DDL needs no wider
     // bound than any other query.
     bootDdl: (fn) => fn(),
+    // One process, nothing else connected: no older code can be holding a
+    // session, so there is nothing to hold and nothing to wait for.
+    holdSchemaGeneration: () => Promise.resolve(),
+    awaitGenerationsGone: () => Promise.resolve(() => Promise.resolve()),
     // LISTEN on the one in-process connection: every NOTIFY a commit sends
     // reaches the root client's `onNotification` (channel and payload, one
     // queue, so the order holds across channels), filtered to this session's

@@ -21,6 +21,7 @@ import {
 import {
   BOOT_DDL_QUERY_DEADLINE_MS,
   createDbPool,
+  createSchemaGenerationLocks,
   onClientLost,
   openListenSession,
   queryText,
@@ -542,6 +543,12 @@ async function warmPool(): Promise<void> {
  * gates, the deadlock retry and read-set capture, every connection bounded by
  * the query deadline (`database/plugins/connection`).
  */
+// The direct socket, like `listen`'s: a session-held lock.
+const generationLocks = createSchemaGenerationLocks({
+  connectionString: () => buildConnectionString(direct, runtimeNamespace()),
+  log: (line) => dbLog.publish(line),
+});
+
 export const pgDriver: DatabaseDriverImpl = {
   db: realDb,
   async ready() {
@@ -568,4 +575,7 @@ export const pgDriver: DatabaseDriverImpl = {
           "stderr",
         ),
     }),
+  holdSchemaGeneration: (generation) => generationLocks.hold(generation),
+  awaitGenerationsGone: (knowing) =>
+    generationLocks.awaitGenerationsGone(knowing),
 };
