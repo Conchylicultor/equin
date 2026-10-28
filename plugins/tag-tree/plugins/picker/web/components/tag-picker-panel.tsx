@@ -74,16 +74,9 @@ export function TagPickerPanel({
   onPick,
 }: TagPickerPanelProps) {
   const [query, setQuery] = useState("");
-  // Open along every selected tag's path, so the pick reads in place.
-  const [expanded, setExpanded] = useState<ReadonlySet<string>>(
-    () =>
-      new Set(
-        selected.flatMap((id) =>
-          tagPath(id, tags)
-            .slice(0, -1)
-            .map((t) => t.id),
-        ),
-      ),
+  // Every tag opens unfolded: the set holds the ones the user folded.
+  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(
+    () => new Set(),
   );
   /** The inline new-tag row: under which parent (null = a root). */
   const [draftParent, setDraftParent] = useState<string | null | undefined>(
@@ -100,7 +93,11 @@ export function TagPickerPanel({
     setRenamingId(null);
     setDraftParent(parentId);
     if (parentId !== null) {
-      setExpanded((s) => new Set(s).add(parentId));
+      setCollapsed((s) => {
+        const next = new Set(s);
+        next.delete(parentId);
+        return next;
+      });
     }
   }, []);
 
@@ -170,8 +167,8 @@ export function TagPickerPanel({
             <TagTreeBody
               tags={tags}
               visible={visible}
-              expanded={expanded}
-              setExpanded={setExpanded}
+              collapsed={collapsed}
+              setCollapsed={setCollapsed}
               draftParent={draftParent}
               renamingId={renamingId}
               selected={selected}
@@ -237,8 +234,8 @@ function findByPath(
 interface TagTreeBodyProps {
   tags: readonly TagRow[];
   visible: Visible;
-  expanded: ReadonlySet<string>;
-  setExpanded: (
+  collapsed: ReadonlySet<string>;
+  setCollapsed: (
     update: (prev: ReadonlySet<string>) => ReadonlySet<string>,
   ) => void;
   draftParent: string | null | undefined;
@@ -256,8 +253,8 @@ interface TagTreeBodyProps {
 function TagTreeBody({
   tags,
   visible,
-  expanded,
-  setExpanded,
+  collapsed,
+  setCollapsed,
   draftParent,
   renamingId,
   selected,
@@ -276,7 +273,7 @@ function TagTreeBody({
         id: t.id,
         parentId: t.parentId,
         rank: Rank.from(t.rank),
-        expanded: expanded.has(t.id),
+        expanded: !collapsed.has(t.id),
         tag: t,
         dimmed: !visible.pickable.has(t.id),
       }));
@@ -298,19 +295,19 @@ function TagTreeBody({
       });
     }
     return out;
-  }, [tags, visible, expanded, draftParent]);
+  }, [tags, visible, collapsed, draftParent]);
 
   const applyExpanded = useCallback(
     (changes: readonly ExpandChange[]) =>
-      setExpanded((prev) => {
+      setCollapsed((prev) => {
         const next = new Set(prev);
         for (const c of changes) {
-          if (c.expanded) next.add(c.id);
-          else next.delete(c.id);
+          if (c.expanded) next.delete(c.id);
+          else next.add(c.id);
         }
         return next;
       }),
-    [setExpanded],
+    [setCollapsed],
   );
 
   const pick = useCallback(

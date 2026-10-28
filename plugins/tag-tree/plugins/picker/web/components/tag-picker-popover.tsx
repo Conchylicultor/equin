@@ -23,7 +23,7 @@ export interface TagPickerPopoverProps<
  * The tag picker in a popover anchored on `trigger`, wired to its tree: the
  * rows live (`useTagTree`), every edit through the tree's endpoints
  * (`useTagTreeActions`). A pick closes it; each open starts fresh (empty
- * query, open along the selected tag's path).
+ * query, every tag unfolded).
  */
 export function TagPickerPopover<Row extends TagRow>({
   tree,

@@ -1,6 +1,6 @@
 /**
- * The pure picker panel over a fixed tree: the tree view (opened along the
- * selection, ✓ on it, "No tag"), the search (path matches, the
+ * The pure picker panel over a fixed tree: the tree view (every tag unfolded,
+ * ✓ on the selection, "No tag"), the search (path matches, the
  * `Create a / b / c` row bolding only the segments to create) and picking —
  * every write is a spy.
  */
@@ -84,7 +84,7 @@ const rowOf = (text: string) => {
 };
 
 describe("the tree (no query)", () => {
-  it("shows the roots, opened along the selected tag's path, ✓ on it", () => {
+  it("shows the whole tree unfolded, ✓ on the selected tag", () => {
     renderPanel({ selected: ["home"] });
     expect(search().getAttribute("placeholder")).toBe("Search or create…");
     for (const name of [
@@ -94,11 +94,10 @@ describe("the tree (no query)", () => {
       "chord",
       "infra",
       "theme",
+      "data-view",
     ]) {
       expect(screen.getByText(name)).toBeTruthy();
     }
-    // infra is closed: its child is not painted.
-    expect(screen.queryByText("data-view")).toBeNull();
     expect(rowOf("homepage").getAttribute("class")).toContain("bg-selected");
     expect(rowOf("chord").getAttribute("class")).not.toContain("bg-selected");
   });
