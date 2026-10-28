@@ -4,7 +4,10 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { WorkingText } from "@plugins/primitives/plugins/css/plugins/working-dots/web";
 import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
-import { AttachmentText } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/web";
+import {
+  AttachmentText,
+  rewriteAttachmentMarkdown,
+} from "@plugins/primitives/plugins/text-editor/plugins/paste-images/web";
 import { attachmentRefsOf } from "@plugins/conversations/core";
 import { FieldRow, OptionBody, OptionRow } from "./option-row";
 import { summaryFor } from "./question-card";
@@ -52,6 +55,16 @@ export function selectionsFromForm(
   });
 }
 
+/**
+ * Typed text as the one-line header summary shows it: attachments dropped (the
+ * body draws them), line breaks as spaces.
+ */
+function summaryText(text: string): string {
+  return rewriteAttachmentMarkdown(attachmentRefsOf(text), () => "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 /** The card header's summary for an answered question: the first answer, or the reply. */
 export function answeredSummary(
   questions: Question[],
@@ -62,7 +75,7 @@ export function answeredSummary(
   const parts = first
     ? [
         ...first.selected,
-        ...(first.otherText ? [first.otherText] : []),
+        ...(first.otherText ? [summaryText(first.otherText)] : []),
         // Fall back to the note when the user attached one without picking an option.
         ...(first.selected.size === 0 && !first.otherText && first.notes
           ? [first.notes]
@@ -170,11 +183,11 @@ export function AnsweredQuestions({
               {otherText != null && (
                 <OptionRow selected multi={q.multiSelect}>
                   <Text
-                    as="p"
+                    as="div"
                     variant="caption"
-                    className="italic text-foreground"
+                    className="whitespace-pre-wrap break-words italic text-foreground"
                   >
-                    {otherText}
+                    <AttachmentText text={attachmentRefsOf(otherText)} />
                   </Text>
                 </OptionRow>
               )}

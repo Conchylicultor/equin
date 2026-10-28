@@ -101,7 +101,8 @@ function formAnswers(
     );
     return {
       selected: [...selected],
-      otherText: otherText ?? "",
+      // Typed text holds attachments as the disk paths the agent was handed.
+      otherText: otherText === null ? "" : attachmentRefsOf(otherText),
       otherActive: !q.multiSelect && otherText != null,
     };
   });

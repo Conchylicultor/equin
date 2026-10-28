@@ -80,7 +80,18 @@ Selection is signalled on exactly **two** channels: the radio/checkbox indicator
 - **Hover and selected are separate channels** (muted fill vs primary ring), so
   hovering an already-selected row never reads as "about to deselect".
 
-## The reply is the user's own rich text
+## "Other" and the reply are the user's own rich text
+
+"Other…" is the prompt's own `TextEditor` too: it grows with the lines typed
+into it, and takes pasted images, files and chips like the reply. In the
+marker turn a multi-line value continues on lines indented by two spaces (a
+markdown list item's continuation) — `serializeMarkerAnswer` /
+`parseMarkerAnswer`, which fold indented lines into the item above, so a
+blank line inside an answer never ends the list; a turn from before reads the
+same. The held answer needs no format: its value is the CLI's own string. Both
+paths resolve each "Other"'s attachments as the reply's (question-relay's
+`withAttachmentsResolved`; the marker turn as a whole).
+
 
 "Add a comment" opens the prompt's own `TextEditor` (Enter submits, Shift+Enter
 breaks the line): paste or drop an image or file, chips render as in a turn.
@@ -140,14 +151,15 @@ ordinary `MarkerAnswerForm` renders with the old answer already in its draft.
     - `JsonlRowActions.Item` "change-answers" → `ChangeAnswersAction`
     - `JsonlViewer.EventFilter` "ask-user-question:suppress-answer-turn"
     - `JsonlViewer.EventFilter` "ask-user-question:suppress-interrupt-turn"
-  - Uses: 38 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/css/ui-kit` ×8
+  - Uses: 37 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×6
     - `primitives/persistent-draft` ×4
     - `conversations/conversation-view/jsonl-viewer/tool-call` ×3
     - `conversations/conversation-view/jsonl-viewer/row-actions` ×2
     - `conversations/conversation-view/jsonl-viewer` ×2
     - `conversations/conversation-view/pending-turn` ×2
     - `primitives/css/selection-indicator` ×2
+    - `primitives/text-editor/paste-images` ×2
     - `conversations/conversation-view/rewind.useGoBackToMessage`
     - `conversations/conversation-view.conversationPane`
     - `conversations.useConversation`
@@ -160,7 +172,6 @@ ordinary `MarkerAnswerForm` renders with the old answer already in its draft.
     - `primitives/css/text.Text`
     - `primitives/css/working-dots.WorkingText`
     - `primitives/dom/web-storage.defineStore`
-    - `primitives/text-editor/paste-images.AttachmentText`
     - `primitives/text-editor.TextEditor`
     - `ui/icons.Icon`
   - Exports (types):

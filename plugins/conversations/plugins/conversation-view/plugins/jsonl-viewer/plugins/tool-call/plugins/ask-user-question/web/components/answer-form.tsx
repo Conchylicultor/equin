@@ -1,9 +1,5 @@
 import { useState, type ReactNode } from "react";
-import {
-  Button,
-  ControlSizeProvider,
-  Input,
-} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -247,23 +243,21 @@ export function AnswerForm({
                   />
                 </OptionRow>
               ))}
-              {/* Not a button — the row's own control is the input it wraps. */}
-              <OptionRow
-                selected={otherActive}
-                multi={q.multiSelect}
-                align="center"
-              >
-                <ControlSizeProvider size="sm">
-                  <Input
+              {/* Not a button — the row's own control is the editor it wraps:
+                  the prompt's own, so the answer can span lines (it grows) and
+                  carry pasted images and chips. Focusing it picks "Other". */}
+              <OptionRow selected={otherActive} multi={q.multiSelect}>
+                <div onFocus={() => focusOther(qi, q.multiSelect)}>
+                  <TextEditor
                     value={answer.otherText}
-                    onChange={(e) =>
-                      setOtherText(qi, e.target.value, q.multiSelect)
-                    }
-                    onFocus={() => focusOther(qi, q.multiSelect)}
+                    onChange={(value) => setOtherText(qi, value, q.multiSelect)}
+                    onSubmit={submitIfReady}
+                    submitMode="enter"
+                    minRows={1}
                     placeholder="Other…"
-                    className="w-full"
+                    namespace="ask-user-question-other"
                   />
-                </ControlSizeProvider>
+                </div>
               </OptionRow>
             </Stack>
           </div>

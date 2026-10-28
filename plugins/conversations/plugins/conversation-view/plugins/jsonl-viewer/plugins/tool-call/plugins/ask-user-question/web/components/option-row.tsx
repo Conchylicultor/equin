@@ -48,7 +48,7 @@ function Indicator({
 }
 
 // "start" aligns the indicator to the first line of a multi-line text block;
-// "center" centres it against a single-line control (the freeform input).
+// "center" centres it against a single-line control.
 type Align = "start" | "center";
 
 export function OptionRow({
@@ -96,7 +96,7 @@ export function OptionRow({
 /**
  * A free-standing field laid out like an option row — same box, same leading
  * column (an icon where the indicator would be) — so its control lines up with
- * the "Other…" input above it. Not a choice: it never shows a selection.
+ * the "Other…" field above it. Not a choice: it never shows a selection.
  */
 export function FieldRow({
   icon,

@@ -138,4 +138,30 @@ describe("serializeMarkerAnswer", () => {
       reply: "Rebase first.\n\nUse as many agents as necessary",
     });
   });
+
+  it("round-trips free text spanning lines, blank lines included", () => {
+    const other = "First line\n\n  indented\nlast";
+    const text = serializeMarkerAnswer(questions, {
+      selections: {
+        "Which scope?": { selected: [], other },
+        "Which extras?": { selected: ["X"], other: "a\nb" },
+      },
+      response: "Then the reply",
+    });
+    expect(text).toBe(
+      `${ANSWER_MARKER}\n\n- Scope: CLI fix: First line\n  \n    indented\n  last\n- Extras: X, a\n  b\n\nThen the reply`,
+    );
+    expect(parseMarkerAnswer(text, questions)).toEqual({
+      answers: {
+        "Which scope?": { answer: other, notes: null },
+        "Which extras?": { answer: "X, a\nb", notes: null },
+      },
+      reply: "Then the reply",
+    });
+  });
+
+  it("reads a turn from before continuation lines the same", () => {
+    const text = `${ANSWER_MARKER}\n\n- Scope: CLI fix: A\n- Extras: X\n\nreply`;
+    expect(parseMarkerAnswer(text, questions).reply).toBe("reply");
+  });
 });

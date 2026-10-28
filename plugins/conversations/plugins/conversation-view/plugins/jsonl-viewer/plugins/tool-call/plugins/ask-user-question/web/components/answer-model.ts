@@ -79,29 +79,38 @@ export function answersFromRecord(
 }
 
 /**
- * The legacy answer text: `ANSWER_MARKER` then one `- <header>: <value>` line
+ * The legacy answer text: `ANSWER_MARKER` then one `- <header>: <value>` item
  * per question, the value being the picked labels and any typed text joined
- * with ", ". A free-text reply follows the lines as its own paragraph (the
- * parser reads only the positional `- ` lines, so it never mistakes it for an
- * answer). The inverse is `parseMarkerAnswer`.
+ * with ", ". A value spanning lines (free text typed into "Other") continues on
+ * lines indented by two spaces — a markdown list item's continuation, so the
+ * model reads it as one answer, and a blank line inside it never ends the
+ * list. A free-text reply follows the items as its own paragraph. The inverse
+ * is `parseMarkerAnswer`.
  */
 export function serializeMarkerAnswer(
   questions: Question[],
   { selections, response }: FormAnswer,
 ): string {
-  const lines = questions.map((q) => {
+  const items = questions.map((q) => {
     const s = selections[q.question];
     const parts = s ? [...s.selected, ...(s.other ? [s.other] : [])] : [];
-    return `- ${q.header}: ${parts.join(", ")}`;
+    const [first, ...rest] = parts.join(", ").split("\n");
+    return [
+      `- ${q.header}: ${first}`,
+      ...rest.map((l) => `${CONTINUATION}${l}`),
+    ].join("\n");
   });
   const reply = response ? `\n\n${response}` : "";
-  return `${ANSWER_MARKER}\n\n${lines.join("\n")}${reply}`;
+  return `${ANSWER_MARKER}\n\n${items.join("\n")}${reply}`;
 }
+
+/** The indent a multi-line value's further lines carry. */
+const CONTINUATION = "  ";
 
 /** A parsed answer turn: one `ParsedAnswer` per question, and the reply. */
 export interface MarkerAnswer {
   answers: Record<string, ParsedAnswer>;
-  /** The free-text reply paragraph after the answer lines, or null when none. */
+  /** The free-text reply paragraph after the answer items, or null when none. */
   reply: string | null;
 }
 
@@ -111,11 +120,12 @@ export interface MarkerAnswer {
  * `Record<questionText, ParsedAnswer>` shape `answersFromRecord` returns, so
  * the answered-view JSX and `parseSelectedLabels` consume it unchanged.
  *
- * The answers are the first paragraph: `- <header>: <value>` lines, one per
- * question in the same order `serializeMarkerAnswer` emits them; everything
- * after it is the reply. We must NOT split each line on its first `": "`: a
- * question `header` can itself contain `": "` (e.g. `"Scope: CLI fix"`), which
- * would mis-key the value and drop the answer. Instead we strip the exact,
+ * The answers are the leading `- <header>: <value>` items, one per question in
+ * the order `serializeMarkerAnswer` emits them, each with its indented
+ * continuation lines; the first other line ends them, and everything from it
+ * on is the reply. We must NOT split an item on its first `": "`: a question
+ * `header` can itself contain `": "` (e.g. `"Scope: CLI fix"`), which would
+ * mis-key the value and drop the answer. Instead we strip the exact,
  * authoritative `"<header>: "` prefix — positionally per question, so
  * duplicate headers are also handled — leaving the delimiter ambiguity
  * irrelevant.
@@ -124,24 +134,25 @@ export function parseMarkerAnswer(
   text: string,
   questions: Question[],
 ): MarkerAnswer {
-  const body = text.trim().slice(ANSWER_MARKER.length).trim();
-  const split = body.indexOf("\n\n");
-  const block = split === -1 ? body : body.slice(0, split);
-  const reply = split === -1 ? "" : body.slice(split).trim();
-
-  const lines = block
-    .split("\n")
-    .map((l) => l.trim())
-    .filter((l) => l.startsWith("- "))
-    .map((l) => l.slice(2));
+  const lines = text.trim().slice(ANSWER_MARKER.length).trim().split("\n");
+  const items: string[] = [];
+  let next = 0;
+  for (; next < lines.length; next++) {
+    const line = lines[next]!;
+    if (line.startsWith("- ")) items.push(line.slice(2));
+    else if (items.length > 0 && line.startsWith(CONTINUATION)) {
+      items[items.length - 1] += `\n${line.slice(CONTINUATION.length)}`;
+    } else break;
+  }
+  const reply = lines.slice(next).join("\n").trim();
 
   const answers: Record<string, ParsedAnswer> = {};
   questions.forEach((q, i) => {
     const prefix = `${q.header}: `;
-    const line = lines[i];
+    const item = items[i];
     const value =
-      line != null && line.startsWith(prefix)
-        ? line.slice(prefix.length).trim() || null
+      item != null && item.startsWith(prefix)
+        ? item.slice(prefix.length).trim() || null
         : null;
     answers[q.question] = { answer: value, notes: null };
   });

@@ -17106,14 +17106,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `JsonlRowActions.Item` "change-answers" → `ChangeAnswersAction`
                       - `JsonlViewer.EventFilter` "ask-user-question:suppress-answer-turn"
                       - `JsonlViewer.EventFilter` "ask-user-question:suppress-interrupt-turn"
-                    - Uses: 38 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/ask-user-question/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/ask-user-question/REFERENCE.md)
-                      - `primitives/css/ui-kit` ×8
+                    - Uses: 37 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/ask-user-question/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/ask-user-question/REFERENCE.md)
+                      - `primitives/css/ui-kit` ×6
                       - `primitives/persistent-draft` ×4
                       - `conversations/conversation-view/jsonl-viewer/tool-call` ×3
                       - `conversations/conversation-view/jsonl-viewer/row-actions` ×2
                       - `conversations/conversation-view/jsonl-viewer` ×2
                       - `conversations/conversation-view/pending-turn` ×2
                       - `primitives/css/selection-indicator` ×2
+                      - `primitives/text-editor/paste-images` ×2
                       - `conversations/conversation-view/rewind.useGoBackToMessage`
                       - `conversations/conversation-view.conversationPane`
                       - `conversations.useConversation`
@@ -17126,7 +17127,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `primitives/css/text.Text`
                       - `primitives/css/working-dots.WorkingText`
                       - `primitives/dom/web-storage.defineStore`
-                      - `primitives/text-editor/paste-images.AttachmentText`
                       - `primitives/text-editor.TextEditor`
                       - `ui/icons.Icon`
                     - Exports (types):
