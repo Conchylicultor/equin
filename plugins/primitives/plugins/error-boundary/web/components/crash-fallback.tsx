@@ -5,6 +5,8 @@ import type { UiContextMeta } from "@plugins/primitives/plugins/ui-context/core"
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { ErrorBoundary } from "../slots";
 import { boundaryReportSink, type BoundaryErrorReport } from "../reporter";
 
@@ -67,10 +69,12 @@ export function CrashFallback({
     // (so actions stay flush-right, replacing ml-auto) AND lets the message
     // <Text> ellipsize under pressure — so a long message can never push the
     // Fix/Retry recovery actions off the clickable area. The full message
-    // stays available via the native title tooltip.
+    // stays available via the native title tooltip. The row sets the caption
+    // role on itself so contributed actions (plain buttons) inherit the same
+    // size as the words beside them instead of the surface's body size.
     <Line
       ref={rootRef}
-      className="gap-sm rounded-md border border-destructive/20 bg-destructive/10 px-md py-sm text-destructive"
+      className="gap-sm rounded-md border border-destructive/20 bg-destructive/10 px-md py-sm text-caption text-destructive"
     >
       <Text variant="caption" className="font-medium">
         {tag || "Plugin"} crashed
@@ -92,7 +96,8 @@ export function CrashFallback({
       <Text
         as="button"
         variant="caption"
-        className="underline hover:no-underline"
+        // A rigid action, not a truncating leaf: only the message <Fill> yields.
+        className={cn(rigidClass(), "underline hover:no-underline")}
         onClick={retry}
       >
         Retry

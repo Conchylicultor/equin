@@ -39631,10 +39631,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --spacing`
-            - Imported by: 135 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
+            - Imported by: 136 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
               - `apps` ×34
               - `conversations` ×23
-              - `primitives` ×17
+              - `primitives` ×18
               - `debug` ×13
               - `tasks` ×8
               - `page` ×7
@@ -40358,8 +40358,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 441 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
-              - `primitives` ×109
+            - Imported by: 442 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+              - `primitives` ×110
               - `apps` ×102
               - `conversations` ×53
               - `page` ×26
@@ -42064,7 +42064,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `primitives/css/fill.Fill`
           - `primitives/css/line.Line`
+          - `primitives/css/rigid.rigidClass`
           - `primitives/css/text.Text`
+          - `primitives/css/ui-kit.cn`
           - `primitives/overlay/overlay-boundary.registerOverlayFallback`
           - `primitives/slot-render.SlotRender`
           - `primitives/ui-context.collectLineageMeta`
@@ -42079,7 +42081,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-md`
           - `ui/tokens/density --space-sm`
           - `ui/tokens/shape --radius`
+          - `ui/tokens/type-scale --font-scale`
+          - `ui/tokens/type-scale --font-size-caption`
           - `ui/tokens/type-scale --font-weight-medium`
+          - `ui/tokens/type-scale --font-weight-normal`
+          - `ui/tokens/type-scale --line-height-caption`
         - Imported by:
           - `apps-core/app-embed`
           - `apps/prototypes/canvas`

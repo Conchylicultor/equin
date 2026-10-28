@@ -61,7 +61,9 @@ barrel.
   - Uses:
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.cn`
     - `primitives/overlay/overlay-boundary.registerOverlayFallback`
     - `primitives/slot-render.SlotRender`
     - `primitives/ui-context.collectLineageMeta`
@@ -76,7 +78,11 @@ barrel.
     - `ui/tokens/density --space-md`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/shape --radius`
+    - `ui/tokens/type-scale --font-scale`
+    - `ui/tokens/type-scale --font-size-caption`
     - `ui/tokens/type-scale --font-weight-medium`
+    - `ui/tokens/type-scale --font-weight-normal`
+    - `ui/tokens/type-scale --line-height-caption`
   - Imported by:
     - `apps-core/app-embed`
     - `apps/prototypes/canvas`
