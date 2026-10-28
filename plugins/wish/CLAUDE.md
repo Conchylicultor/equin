@@ -62,8 +62,8 @@
     - `ui/tokens/color-palette --foreground`
     - `ui/tokens/color-palette --muted-foreground`
   - Imported by:
-    - `apps/agent-manager/demo`
     - `apps/home/tour`
+    - `apps/website/demos/lumen`
     - `hints/ask`
     - `screenshot/draw-on-app`
     - `wish/element-picker`

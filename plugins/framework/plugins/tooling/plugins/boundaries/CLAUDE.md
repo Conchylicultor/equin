@@ -185,7 +185,6 @@ readings use it:
     - `code-explorer` (5 debt)
     - `config_v2/ledger` (1 debt)
     - `conversations` (3 debt)
-    - `conversations/compaction-context` (1 debt)
     - `conversations/conversation-view/code` (2 debt)
     - `conversations/transcript-retention` (1 debt)
     - `conversations/transcript-watcher` (4 debt)

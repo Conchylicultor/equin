@@ -106,8 +106,8 @@ and endpoint contract are consumed by this plugin's own `web` and `server` only.
     - `usePromptTaskLink`
 - Cross-plugin:
   - Imported by:
-    - `apps/agent-manager/demo`
     - `apps/pages/prompt-origin`
+    - `apps/website/demos/lumen`
     - `page/prompt/block`
 - Core:
   - Exports (values): `PAGES_CATEGORY_ID`

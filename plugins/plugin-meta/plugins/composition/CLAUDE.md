@@ -39,7 +39,7 @@ pins both facts).
 
 `agent-manager-demo` (`profile`, `serve: "off"`, home `agent-manager`) is the
 composition the Agent Manager demo's browser host serves
-(`apps/agent-manager/demo/bin/browser-host.composition.ts`): it `extends:
+(`apps/website/demos/lumen/bin/browser-host.composition.ts`): it `extends:
 ["agent-manager", "pages"]` — the agent manager with the Pages app beside it,
 so the demo can switch to it — and only subtracts what means nothing without
 the computer — push-and-exit, automations (`tasks.automations.**`, every

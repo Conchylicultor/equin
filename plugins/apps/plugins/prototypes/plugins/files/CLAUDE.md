@@ -491,6 +491,14 @@ which is not enough of a reason.
 There is no timer: a dropped fsevent is reported by the watch itself
 (`onLost`), and answered by this same gate.
 
+**`settlePrototypesWatcher()`** resolves once the watcher has handled every
+change its watch has delivered (re-broadcast, listeners, adoption) — for a
+writer that relies on what it derives, like `apps/prototypes/fixtures`, which
+writes folders and then asserts their adopted histories. Push-based: it waits
+on the in-flight handlings' own settlement, re-checked a macrotask later. A
+change the watch has not delivered yet is not waited on (the memory store
+delivers in a microtask; the disk watcher after the filesystem's latency).
+
 **This is the only watcher over that tree, so the signal is exported rather than
 re-derived**: `onPrototypesChanged` (plus `listPrototypeMetas`) is what lets
 `thumbnails` react to an edit without a second `@parcel/watcher` subscription
@@ -578,6 +586,7 @@ for the `checkpoints` plugin's end-of-turn job, and the history contract
     - `PrototypeHistoryStore`
     - `readPrototypeMeta`
     - `readPrototypeTitle`
+    - `settlePrototypesWatcher`
   - Resources:
     - `prototypes.history` (push, notified, whole: one prototype's recorded versions — one per agent turn that changed it, read whole by the version stepper, whole: the options one prototype's index.html declares — a handful of hand-written lines, whole: the values one hand-written <meta name="prototype-option"> line declares — a handful)
     - `prototypes.list` (push, notified, whole: every prototype folder on disk — each made by hand, and the gallery lists, filters and groups them all, whole: the options one prototype's index.html declares — a handful of hand-written lines, whole: the ways one prototype folder breaks the contract — a handful of checks, whole: the values one hand-written <meta name="prototype-option"> line declares — a handful)
@@ -693,11 +702,11 @@ for the `checkpoints` plugin's end-of-turn job, and the history contract
 - Cross-plugin:
   - Imported by:
     - `active-data/prototype`
-    - `apps/agent-manager/demo`
     - `apps/prototypes/canvas`
     - `apps/prototypes/checkpoints`
     - `apps/prototypes/commands`
     - `apps/prototypes/files/snapshot-history`
+    - `apps/prototypes/fixtures`
     - `apps/prototypes/state`
     - `apps/prototypes/thumbnails`
     - `conversations/conversation-view/artifacts/prototype`

@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-prototypes-fixtures",
+  "description": "Prototypes fixtures: a prototype tree with its history (PrototypeTreeFixture), its parser and version fingerprints, and its writer through the app's real write path, for demos and tests.",
+  "private": true,
+  "version": "0.0.1"
+}

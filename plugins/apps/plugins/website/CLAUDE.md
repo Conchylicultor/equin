@@ -10,6 +10,9 @@ the claim, show what it looks like, and then get out of the way:
 
 - [`landing`](plugins/landing/CLAUDE.md) — the homepage's bands: the hero, the
   screenshot, the layers, the story link, the contact block.
+- [`demos`](plugins/demos/CLAUDE.md) — the live demos, one plugin each, each owning
+  its data and writing it into its own browser host through the apps' fixture
+  writers (`demos/lumen`: the Agent Manager, Pages and Prototypes on one story).
 - [`pages`](plugins/pages/CLAUDE.md) — the inner pages: the apps gallery
   (`/website/apps`), the download page, the foundations iceberg
   (`/website/foundations`), and the vision, story and guide pages
@@ -68,6 +71,9 @@ everywhere a reader can see it; the old name survives only as an internal identi
 
 - Description: Website — the public-facing site of equin: the homepage's claim, a picture of it and the three layers of the project, a gallery of its apps, placeholder pages for the vision, the foundations and the story, and how to get in touch.
 - Sub-plugins:
+  - **`demos`** — The website's live demos, one plugin each: a demo owns its story and its data (pages, prototypes, agent runs) and writes them into its own browser host through each app's fixture writer.
+    - Plugins:
+      - **`lumen`** — The Lumen demo — the website's live demo of the Agent Manager, Pages and Prototypes on one made-up story (core: lumenDemo — the app, the route /c/conv-demo-dark-mode and its browser host: real…
   - **`improve`** — The website's Improve button: the header's call to action, a popover where a visitor describes a change to the page, watches a scripted replay of what equin would do with it, and files it as a…
   - **`landing`** — Landing-page bands of the public website: the hero, the desktop screenshot, the three layers of equin, the story link, and the contact block.
     - Plugins:

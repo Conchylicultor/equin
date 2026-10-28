@@ -76,7 +76,7 @@ const SANCTIONED: readonly RegExp[] = [
   /^\/api\/health(\/ready)?$/,
 ];
 
-/** The seeded prototypes (`agent-manager/demo`'s `data/prototypes/`). */
+/** The seeded prototypes (`website/demos/lumen`'s `data/prototypes/`). */
 const LUMEN = { id: "proto-1792900000-demo01", title: "Lumen — notes board" };
 const COMPOSER = "Task composer — quick filing";
 const QUEUE = {

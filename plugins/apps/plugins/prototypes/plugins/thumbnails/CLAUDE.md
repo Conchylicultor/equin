@@ -44,8 +44,8 @@ and the PNG route. The one thing a host brings is the **renderer**, the
 **Rendering another tree.** `./equin prototype thumbnails <tree> --out <dir>`
 (`cli/`, declared by `apps/prototypes/commands`) renders every prototype folder
 under `<tree>` with the same `renderThumbnail` (which takes the folder's path)
-into `<dir>/<fingerprint>.png` — how the agent manager demo's committed
-pictures are made (`agent-manager/demo/scripts/render-demo-thumbnails.ts`).
+into `<dir>/<fingerprint>.png` — how a prototype fixture's committed
+pictures are made (`apps/prototypes/fixtures/scripts/render-fixture-thumbnails.ts`).
 
 **Not `needsMachine`, on purpose.** The gallery joins this value with the list
 in `useCombinedResources`, and one unavailable input blanks the whole join —
@@ -254,7 +254,7 @@ Design: `research/2026-08-16-apps-prototype-gallery-thumbnails.md`.
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shadow --shadow`
   - Imported by:
-    - `apps/agent-manager/demo`
+    - `apps/prototypes/fixtures`
     - `apps/prototypes/gallery`
     - `apps/prototypes/thumbnails/no-renderer`
 - Sub-plugins:

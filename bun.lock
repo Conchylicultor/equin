@@ -217,10 +217,6 @@
       "name": "@equin/plugin-apps-agent-manager",
       "version": "0.0.1",
     },
-    "plugins/apps/plugins/agent-manager/plugins/demo": {
-      "name": "@equin/plugin-apps-agent-manager-demo",
-      "version": "0.0.1",
-    },
     "plugins/apps/plugins/agent-manager/plugins/icons": {
       "name": "@equin/plugin-apps-agent-manager-icons",
       "version": "0.0.1",
@@ -712,6 +708,10 @@
       "name": "@equin/plugin-apps-pages-copy-id",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/pages/plugins/fixtures": {
+      "name": "@equin/plugin-apps-pages-fixtures",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/pages/plugins/history": {
       "name": "@equin/plugin-apps-pages-history",
       "version": "0.0.1",
@@ -830,6 +830,10 @@
     },
     "plugins/apps/plugins/prototypes/plugins/files/plugins/snapshot-history": {
       "name": "@equin/plugin-apps-prototypes-files-snapshot-history",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/prototypes/plugins/fixtures": {
+      "name": "@equin/plugin-apps-prototypes-fixtures",
       "version": "0.0.1",
     },
     "plugins/apps/plugins/prototypes/plugins/gallery": {
@@ -1361,6 +1365,14 @@
     },
     "plugins/apps/plugins/website": {
       "name": "@equin/plugin-apps-website",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/website/plugins/demos": {
+      "name": "@equin/plugin-apps-website-demos",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/website/plugins/demos/plugins/lumen": {
+      "name": "@equin/plugin-apps-website-demos-lumen",
       "version": "0.0.1",
     },
     "plugins/apps/plugins/website/plugins/improve": {
@@ -6862,8 +6874,6 @@
 
     "@equin/plugin-apps-agent-manager": ["@equin/plugin-apps-agent-manager@workspace:plugins/apps/plugins/agent-manager"],
 
-    "@equin/plugin-apps-agent-manager-demo": ["@equin/plugin-apps-agent-manager-demo@workspace:plugins/apps/plugins/agent-manager/plugins/demo"],
-
     "@equin/plugin-apps-agent-manager-icons": ["@equin/plugin-apps-agent-manager-icons@workspace:plugins/apps/plugins/agent-manager/plugins/icons"],
 
     "@equin/plugin-apps-agent-manager-pages-nav": ["@equin/plugin-apps-agent-manager-pages-nav@workspace:plugins/apps/plugins/agent-manager/plugins/pages-nav"],
@@ -7140,6 +7150,8 @@
 
     "@equin/plugin-apps-pages-copy-id": ["@equin/plugin-apps-pages-copy-id@workspace:plugins/apps/plugins/pages/plugins/copy-id"],
 
+    "@equin/plugin-apps-pages-fixtures": ["@equin/plugin-apps-pages-fixtures@workspace:plugins/apps/plugins/pages/plugins/fixtures"],
+
     "@equin/plugin-apps-pages-history": ["@equin/plugin-apps-pages-history@workspace:plugins/apps/plugins/pages/plugins/history"],
 
     "@equin/plugin-apps-pages-page-author": ["@equin/plugin-apps-pages-page-author@workspace:plugins/apps/plugins/pages/plugins/page-author"],
@@ -7199,6 +7211,8 @@
     "@equin/plugin-apps-prototypes-files": ["@equin/plugin-apps-prototypes-files@workspace:plugins/apps/plugins/prototypes/plugins/files"],
 
     "@equin/plugin-apps-prototypes-files-snapshot-history": ["@equin/plugin-apps-prototypes-files-snapshot-history@workspace:plugins/apps/plugins/prototypes/plugins/files/plugins/snapshot-history"],
+
+    "@equin/plugin-apps-prototypes-fixtures": ["@equin/plugin-apps-prototypes-fixtures@workspace:plugins/apps/plugins/prototypes/plugins/fixtures"],
 
     "@equin/plugin-apps-prototypes-gallery": ["@equin/plugin-apps-prototypes-gallery@workspace:plugins/apps/plugins/prototypes/plugins/gallery"],
 
@@ -7445,6 +7459,10 @@
     "@equin/plugin-apps-studio-shell": ["@equin/plugin-apps-studio-shell@workspace:plugins/apps/plugins/studio/plugins/shell"],
 
     "@equin/plugin-apps-website": ["@equin/plugin-apps-website@workspace:plugins/apps/plugins/website"],
+
+    "@equin/plugin-apps-website-demos": ["@equin/plugin-apps-website-demos@workspace:plugins/apps/plugins/website/plugins/demos"],
+
+    "@equin/plugin-apps-website-demos-lumen": ["@equin/plugin-apps-website-demos-lumen@workspace:plugins/apps/plugins/website/plugins/demos/plugins/lumen"],
 
     "@equin/plugin-apps-website-improve": ["@equin/plugin-apps-website-improve@workspace:plugins/apps/plugins/website/plugins/improve"],
 

@@ -2,7 +2,7 @@
 
 **Temporary.** A sandbox app at `/demo` that hosts the in-app demo while it is
 prototyped: the real Agent Manager rendered in-process on made-up data —
-`<DemoScope scenario={agentManagerDemo}>` (`framework/browser-server/demo/scope`)
+`<DemoScope scenario={lumenDemo}>` (`framework/browser-server/demo/scope`)
 around `<AppEmbed>` (`apps-core/app-embed`). Every live read and endpoint call
 inside the scope is answered by the scenario's browser worker (the
 `agent-manager-demo` composition's portable server barrels over PGlite), or is

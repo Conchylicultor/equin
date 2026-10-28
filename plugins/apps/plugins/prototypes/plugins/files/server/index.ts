@@ -31,7 +31,8 @@ import {
 // What this plugin knows about the prototypes tree that a sibling cannot
 // re-derive without duplicating it: what is in it, and when it changed.
 // `onPrototypesChanged` in particular is what keeps a second subscription off
-// the same tree. WHERE the tree is is not exported from here: the app declares
+// the same tree; `settlePrototypesWatcher` is when it has caught up with a
+// write (a fixture writer's, before it relies on the adopted histories). WHERE the tree is is not exported from here: the app declares
 // its data dir and its file root at its root (`@plugins/apps/plugins/prototypes/data-dirs`,
 // `@plugins/apps/plugins/prototypes/server`'s `prototypesFiles`).
 export {
@@ -40,7 +41,10 @@ export {
   readPrototypeMeta,
   readPrototypeTitle,
 } from "./internal/list";
-export { onPrototypesChanged } from "./internal/watcher";
+export {
+  onPrototypesChanged,
+  settlePrototypesWatcher,
+} from "./internal/watcher";
 // The version store's one write a sibling needs: the `checkpoints` plugin
 // records a version at the end of every agent turn that touched a prototype.
 export { checkpointPrototype } from "./internal/history";

@@ -9,14 +9,17 @@
 // What `browser` runs: load waves, contributions, the host-service assert,
 // `register`, the deferred bind, the preload assert and the `onReadyBlocking`
 // barrier (migrations and the schema layer on the host's database, the change
-// feed's triggers); then the seed, standing in for data present at boot; then
-// the post-ready phases a serving host runs (`runPostReadyPhases`: the
-// change-feed assertion, `onReady` — the feed's LISTEN, the in-process job
-// queue — and `onAllReady`'s schedules). The same order `serve` runs, the seed
-// in place of the socket bind: a write the page makes recomputes its readers
-// through the same trigger → NOTIFY → listener → router path as on the
-// desktop, and its event-driven effects run. Only `drainWarmups` (desktop
-// warm-ups) is not run.
+// feed's triggers); then the post-ready phases a serving host runs
+// (`runPostReadyPhases`: the change-feed assertion, `onReady` — event trigger
+// sync, the feed's LISTEN, the in-process job queue, the files watchers — and
+// `onAllReady`'s schedules); then the seed; then the handler is returned. The
+// same order `serve` runs, the seed in place of the socket bind, so the seed
+// writes into a LIVE host: its writes fire the real triggers and jobs (a page
+// write derives its links, search doc and history by itself; a file write is
+// adopted by the watcher), exactly as a user's write would — the seed settles
+// what it queued (`settleJobQueue`) rather than calling derivations by hand.
+// The page cannot connect before the handler exists, so nothing is served
+// mid-seed. Only `drainWarmups` (desktop warm-ups) is not run.
 
 import { createRequestHandler } from "@plugins/framework/plugins/http-router/core";
 import {
@@ -36,10 +39,11 @@ export interface BrowserHostOptions {
   /** The host's plugin graph — its generated `browser-host.generated.ts`. */
   entries: ServerRegistryEntry[];
   /**
-   * Fill the freshly migrated database, after the ready barrier and before the
-   * post-ready phases (so their watchers and jobs start on it as on data
-   * present at boot) and anything is served: a demo's seed rows. Absent: the
-   * database starts empty.
+   * Fill the freshly booted host, after the post-ready phases (triggers synced,
+   * the job queue and watchers running, so every write the seed makes derives
+   * what a user's write would) and before anything is served: a demo's seed,
+   * written through the apps' real write paths. Absent: the database starts
+   * empty.
    */
   seed?: () => Promise<void>;
   /**
@@ -68,7 +72,7 @@ export interface BrowserHost {
 export interface BrowserHostBoot {
   /** Graph nodes booted (a plugin's server and machine halves count apart). */
   plugins: number;
-  /** In order: `graph` (load → register → ready barrier, migrations included), `seed`, `ready` (`onReady` → `onAllReady`). */
+  /** In order: `graph` (load → register → ready barrier, migrations included), `ready` (`onReady` → `onAllReady`), `seed`. */
   stages: { name: string; ms: number }[];
   /** The slowest plugin hooks of the boot (`register` / `onReadyBlocking` / `onReady` / `onAllReady`), longest first. */
   slowest: { label: string; ms: number }[];
@@ -105,9 +109,9 @@ export async function bootBrowserHost(
   // its transport opens every other socket path inert (as it does central's).
 
   const t1 = performance.now();
-  await opts.seed?.();
-  const t2 = performance.now();
   await runPostReadyPhases(ordered);
+  const t2 = performance.now();
+  await opts.seed?.();
   const t3 = performance.now();
 
   const request = createRequestHandler({
@@ -128,8 +132,8 @@ export async function bootBrowserHost(
       plugins: ordered.length,
       stages: [
         { name: "graph", ms: Math.round(t1 - t0) },
-        { name: "seed", ms: Math.round(t2 - t1) },
-        { name: "ready", ms: Math.round(t3 - t2) },
+        { name: "ready", ms: Math.round(t2 - t1) },
+        { name: "seed", ms: Math.round(t3 - t2) },
       ],
       // Per-plugin spans only (a phase-wide span would repeat its slowest
       // plugin), and none that took no time.

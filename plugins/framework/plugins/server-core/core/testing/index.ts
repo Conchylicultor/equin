@@ -35,6 +35,11 @@ export { withHostServices } from "../host-service";
 // portable boot test boots task-category's closure on PGlite).
 export { bootPluginGraph } from "../boot-stages";
 
+// …and its post-ready phases (`onReady` → `onAllReady`), for a suite that
+// drives the booted graph the way a serving host has it: watchers, the job
+// queue and the change feed's LISTEN live (a fixture writer's boot test).
+export { runPostReadyPhases } from "../boot-stages";
+
 // The app's server registry (the committed main composition), for a
 // suite that boots a slice of it: each entry's loader and its codegen-derived
 // `dependsOn`, from which a `dependsOn` closure is the graph to boot.

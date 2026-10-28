@@ -119,7 +119,7 @@ Single source of truth for the models an agent can run, and for what the user as
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/shape --spacing`
   - Imported by:
-    - `apps/agent-manager/demo`
+    - `apps/website/demos/lumen`
     - `conversations`
     - `conversations/agents`
     - `conversations/all-conversations`

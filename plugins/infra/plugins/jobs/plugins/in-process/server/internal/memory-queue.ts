@@ -1,16 +1,19 @@
 import { afterCommit } from "@plugins/database/server";
 import {
   answerJobsInMemory,
+  JobQueue,
   listRegisteredJobs,
   resolveJobCron,
   singletonJobKey,
   UNSAFE_runJobRow,
   type JobQueueImpl,
   type JobRowOpts,
+  type JobRowOutcome,
   type JobTaskPayload,
   type QueuedJob,
 } from "@plugins/infra/plugins/jobs/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
+import { yieldMacrotask } from "@plugins/packages/plugins/macrotask-yield/core";
 import {
   nextCronFiring,
   parseCrontab,
@@ -35,6 +38,43 @@ interface MemoryRow {
   timer: ReturnType<typeof setTimeout> | null;
 }
 
+/** How one dequeued row is run — the jobs plugin's portable row runner. */
+type RunRow = (
+  payload: JobTaskPayload,
+  meta: { jobId: string; attempt: number; maxAttempts: number },
+) => Promise<JobRowOutcome>;
+
+/** The in-process queue: the JobQueue host service, plus `settle`. */
+export interface MemoryQueue extends JobQueueImpl {
+  /** See `settleJobQueue`. */
+  settle(): Promise<void>;
+}
+
+// Every in-process queue created, so `settleJobQueue` can tell the active
+// provider is one without knowing how it was registered.
+const memoryQueues = new WeakSet<JobQueueImpl>();
+
+/**
+ * Run the active job queue dry — what a seed calls between its steps, standing
+ * for "time has passed": every row queued so far (those a just-committed
+ * transaction queues included) and every row they queue in turn runs to
+ * completion now, future-dated ones (a debounce, a retry's backoff) fast-
+ * forwarded. Resolves on the activity that empties the queue; REJECTS, naming
+ * each job and its error, once any row is dead (a pre-existing dead row too).
+ *
+ * Only the in-process queue settles: on any other provider this throws. Cron
+ * schedules are timers, not rows — a tick that is not yet due is left alone.
+ */
+export function settleJobQueue(): Promise<void> {
+  const queue = JobQueue.get();
+  if (!memoryQueues.has(queue)) {
+    throw new Error(
+      "[jobs/in-process] settleJobQueue: the active JobQueue is not the in-process queue — only a host running it (a browser host) can settle its jobs.",
+    );
+  }
+  return (queue as MemoryQueue).settle();
+}
+
 // graphile's own retry backoff: exp(min(attempts, 10)) seconds.
 const retryDelayMs = (attempts: number) =>
   Math.exp(Math.min(attempts, 10)) * 1000;
@@ -50,13 +90,18 @@ const retryDelayMs = (attempts: number) =>
  *
  * No slot ladder, no lock, no deadline: rows run as soon as they are due.
  */
-export function createMemoryQueue(): JobQueueImpl {
+export function createMemoryQueue(
+  runRow: RunRow = UNSAFE_runJobRow,
+): MemoryQueue {
   const rows = new Map<string, MemoryRow>();
   const listeners = new Set<() => void>();
   const scheduleTimers = new Map<string, ReturnType<typeof setTimeout>>();
   let started = false;
   let scheduled = false;
   let seq = 0;
+  // How many `settle()` calls are in progress: while any is, a row is armed to
+  // run now whatever its `runAt`.
+  let settling = 0;
 
   const activity = () => {
     for (const listener of listeners) listener();
@@ -64,6 +109,8 @@ export function createMemoryQueue(): JobQueueImpl {
 
   function arm(row: MemoryRow): void {
     if (!started || row.running || row.dead) return;
+    if (settling > 0 && row.runAt.getTime() > Date.now())
+      row.runAt = new Date();
     if (row.timer !== null) clearTimeout(row.timer);
     row.timer = setTimeout(
       () => {
@@ -81,7 +128,7 @@ export function createMemoryQueue(): JobQueueImpl {
     row.attempts += 1;
     row.updatedAt = new Date();
     activity();
-    const outcome = await UNSAFE_runJobRow(row.payload, {
+    const outcome = await runRow(row.payload, {
       jobId: row.id,
       attempt: row.attempts,
       maxAttempts: row.maxAttempts,
@@ -218,7 +265,59 @@ export function createMemoryQueue(): JobQueueImpl {
 
   const answer = () => answerJobsInMemory([...rows.values()].map(toJobRow));
 
-  return {
+  // Where a settle stands: done (the queue is empty), failed (a row is dead,
+  // or nothing will ever run the rows left), or still running.
+  function settledVerdict(): "empty" | "pending" | Error {
+    const dead = [...rows.values()].filter((row) => row.dead);
+    if (dead.length > 0) {
+      const which = dead
+        .map(
+          (row) =>
+            `${row.payload.jobName} (row ${row.id}, attempt ${row.attempts}/${row.maxAttempts}): ${row.lastError ?? "no error recorded"}`,
+        )
+        .join("; ");
+      return new Error(
+        `[jobs/in-process] settle: ${dead.length} job row(s) ended dead — ${which}`,
+      );
+    }
+    if (rows.size === 0) return "empty";
+    if (!started) {
+      return new Error(
+        `[jobs/in-process] settle: the queue is not started, so its ${rows.size} row(s) would never run.`,
+      );
+    }
+    return "pending";
+  }
+
+  async function settle(): Promise<void> {
+    // A transaction's enqueue lands at its commit (`afterCommit`): one
+    // macrotask lets a caller's just-committed rows in before the first look.
+    await yieldMacrotask();
+    settling += 1;
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const check = () => {
+          const verdict = settledVerdict();
+          if (verdict === "pending") return;
+          listeners.delete(check);
+          if (verdict === "empty") resolve();
+          else reject(verdict);
+        };
+        listeners.add(check);
+        // Every waiting row runs now; a row a run queues or re-arms later
+        // (a cascade, a retry) is fast-forwarded by `arm` itself.
+        for (const row of rows.values()) {
+          if (!row.running && !row.dead) arm(row);
+        }
+        check();
+      });
+    } finally {
+      settling -= 1;
+    }
+  }
+
+  const queue: MemoryQueue = {
+    settle,
     async enqueue(job, payload, opts) {
       const id = String(++seq);
       const { tx, ...rest } = opts;
@@ -301,6 +400,10 @@ export function createMemoryQueue(): JobQueueImpl {
       }
       for (const timer of scheduleTimers.values()) clearTimeout(timer);
       scheduleTimers.clear();
+      // A settle in progress fails now rather than wait on rows nothing runs.
+      activity();
     },
   };
+  memoryQueues.add(queue);
+  return queue;
 }

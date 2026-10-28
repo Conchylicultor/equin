@@ -5,6 +5,7 @@ import type {
 } from "@plugins/infra/plugins/paths/plugins/data-files/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { createCoalescer } from "@plugins/packages/plugins/coalesce/core";
+import { yieldMacrotask } from "@plugins/packages/plugins/macrotask-yield/core";
 import { protoIdKind } from "../../core";
 import {
   adoptPrototypeHistories,
@@ -26,6 +27,22 @@ let subscription: DataWatch | null = null;
 let started = false;
 
 const listeners: ((changed: readonly string[]) => void)[] = [];
+
+/**
+ * The watcher's work in flight — each delivered change until its handling
+ * settles, and the boot adoption — and who waits for it to reach zero
+ * ({@link settlePrototypesWatcher}).
+ */
+let busy = 0;
+const idleWaiters: (() => void)[] = [];
+
+function tracked<T>(work: Promise<T>): Promise<T> {
+  busy += 1;
+  return work.finally(() => {
+    busy -= 1;
+    if (busy === 0) for (const resolve of idleWaiters.splice(0)) resolve();
+  });
+}
 
 /** The tree as of the last time it was looked at — see {@link readPrototypesSignature}. */
 let lastSignature = new Map<string, string>();
@@ -113,6 +130,11 @@ const refreshes = createCoalescer({
  * to. Everything else goes through the signature gate.
  */
 function onTreeChange(change: DataChange): Promise<void> | undefined {
+  const work = handleTreeChange(change);
+  return work === undefined ? undefined : tracked(work);
+}
+
+function handleTreeChange(change: DataChange): Promise<void> | undefined {
   // The watch reported dropped events (`onLost`): re-derive everything —
   // through the same signature gate, so an unmoved tree costs a few stats.
   if (change.kind === "rescan") return refreshes.run();
@@ -151,10 +173,37 @@ export async function startPrototypesWatcher(): Promise<void> {
   // hundred milliseconds of git, and every backend on the box races to do it
   // (the store's per-repo lock makes exactly one of them win each prototype).
   void runTracked("prototypes:adopt-histories", () =>
-    adoptPrototypeHistories(),
+    tracked(adoptPrototypeHistories()),
   );
 
   subscription = await prototypesFiles.watch(onTreeChange);
+}
+
+/**
+ * Resolves once the watcher has handled every change its watch has delivered:
+ * the list re-broadcast, the history re-reads, the listeners woken and every
+ * new folder's history adopted — for a writer that puts prototypes in through
+ * the tree and then needs what the watcher derives from them (a fixture
+ * writer, after its `v0`s). Push-based: it waits on the in-flight work's own
+ * settlement, re-checked a macrotask later until a turn passes with nothing in
+ * flight, so a change delivered as the last one settles (the memory store
+ * delivers each batch in a microtask) is waited on too.
+ *
+ * A change the watch has not delivered yet is not waited on: on the desktop
+ * the disk watcher reports after the filesystem's own latency. A failed
+ * handling is not reported here — it surfaces where it always does (an
+ * unhandled rejection) — so a caller asserts what it needs afterwards.
+ */
+export async function settlePrototypesWatcher(): Promise<void> {
+  if (!started)
+    throw new Error(
+      "settlePrototypesWatcher: the prototypes watcher is not running (it starts in files' onReady)",
+    );
+  for (;;) {
+    await yieldMacrotask();
+    if (busy === 0) return;
+    await new Promise<void>((resolve) => idleWaiters.push(resolve));
+  }
 }
 
 export async function stopPrototypesWatcher(): Promise<void> {

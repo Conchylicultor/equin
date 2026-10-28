@@ -520,56 +520,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
   - Plugins:
     - **`agent-manager`** — Agent manager app shell and layout.
       - Plugins:
-        - **`demo`** — The Agent Manager's demo scenario (core: agentManagerDemo — the app, the route /c/conv-demo-dark-mode and its browser host: real server code in a Web Worker on PGlite, seeded with a queue of agents and one conversation fixing a bug, every id carrying `demo`) and its exhibit, the app rendered in-process on that host.
-          - Core:
-            - Uses:
-              - `apps/prototypes/files.protoIdKind`
-              - `apps/prototypes/thumbnails.fingerprintFiles`
-              - `build.BUILD_CATEGORY_ID`
-              - `conversations.CONVERSATIONS_CATEGORY_ID`
-              - `conversations/agents.agentIdKind`
-              - `conversations/agents.agentLaunchIdKind`
-              - `conversations/model-provider.ConversationModelSchema`
-              - `page/editor.blockIdKind`
-              - `page/inline-page-link.pageLinkToken`
-              - `page/prompt/link.PAGES_CATEGORY_ID`
-              - `wish.WISHES_CATEGORY_ID`
-            - Exports (types):
-              - `DemoAgent`
-              - `DemoContentBlock`
-              - `DemoNode`
-              - `DemoPage`
-              - `DemoPageSession`
-              - `DemoPageToolCall`
-              - `DemoPrototype`
-              - `DemoPrototypeData`
-              - `DemoPrototypeSeed`
-              - `DemoPrototypeTree`
-              - `DemoPrototypeVersion`
-              - `DemoStory`
-            - Exports (values):
-              - `agentManagerDemo`
-              - `DARK_MODE_PAGE_WORK`
-              - `DEMO_AGENTS`
-              - `DEMO_PAGE_IDS`
-              - `DEMO_PAGES`
-              - `DEMO_STORIES`
-              - `demoAgentId`
-              - `demoAgentLaunchId`
-              - `demoAttemptId`
-              - `demoConversationId`
-              - `demoPromptOf`
-              - `demoPrototypeDataOf`
-              - `demoPrototypeSeed`
-              - `demoStoryByKey`
-              - `demoTaskId`
-              - `demoTranscriptJsonl`
-              - `demoVersionFingerprint`
-              - `demoWorktreePath`
-          - Cross-plugin:
-            - Uses tokens: `ui/tokens/shadow --shadow`
-          - Structure:
-            - Non-standard folders: `data/`
         - **`icons`** — Contributes the agent icon family (agentIcons) to Icons.Family, so a scope whose iconFamily is agent — the Mist theme's — draws its glyphs.
           - Web:
             - Contributes: `Icons.Family` "Agent"
@@ -5343,7 +5293,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Routes: `POST /api/pages/:pageId/auto-icon/regenerate`
           - Cross-plugin:
             - Imported by: `apps/pages/page-tree`
-        - **`content-search`** — Pages full-text search consumer: contributes the Search button into the Pages sidebar, opening the reusable quick-find dialog scoped to the pages source. Pages full-text search consumer: indexes pages into the search engine, reindexing on blocksChanged, with the backfill job that seeds existing pages (enqueued at boot by the machine half's warm-up); reindexPageSearch derives one page's doc directly.
+        - **`content-search`** — Pages full-text search consumer: contributes the Search button into the Pages sidebar, opening the reusable quick-find dialog scoped to the pages source. Pages full-text search consumer: indexes pages into the search engine, reindexing on blocksChanged, with the backfill job that seeds existing pages (enqueued at boot by the machine half's warm-up).
           - Web:
             - Contributes: `Pages.Sidebar` "Search" → `PagesSearch`
             - Uses:
@@ -5376,9 +5326,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `search/engine.deleteSearchDocs`
               - `search/engine.getSourceDocMetadata`
               - `search/engine.upsertSearchDocs`
-            - Exports (values):
-              - `backfillPagesSearchJob`
-              - `reindexPageSearch`
+            - Exports (values): `backfillPagesSearchJob`
             - Register:
               - `defineJob('pages.search.reindex')`
               - `defineJob('pages.search.backfill')`
@@ -5406,6 +5354,24 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/pages/page-tree.pageDetailPane`
               - `primitives/copy-to-clipboard.useCopyToClipboard`
               - `primitives/icon-button.IconButton`
+        - **`fixtures`** — Pages fixtures, server half: writePageTree writes a PageTreeFixture through the real write path — the forest in one applyPageBlockPatch (so links, search and history derive from blocksChanged), then each page's tags and star. Derives nothing itself.
+          - Server:
+            - Uses:
+              - `apps/pages/starred.setPageStarred`
+              - `page/editor.applyPageBlockPatch`
+              - `page/editor.Block`
+              - `page/editor.PAGE_BLOCK_TYPE`
+              - `page/tags.resolveTagNames`
+              - `page/tags.writeResolvedPageTags`
+            - Exports (values): `writePageTree`
+          - Core:
+            - Uses: `page/editor.PAGE_BLOCK_TYPE`
+            - Exports (types):
+              - `PageFixture`
+              - `PageFixtureBlock`
+              - `PageFixtureNode`
+              - `PageTreeFixture`
+            - Exports (values): `fixturePages`
         - **`history`** — Pages version-history UI: contributes the "Edited 2h ago" label to the page-detail title bar, which opens the reusable version-history dialog with a faithful, diffed read-only preview of each page version. Pages version-history consumer: registers the page history source (serialize/restore via the editor's page-content API), captures time-bucketed snapshots through a debounced two-job pipeline bound to blocksChanged, and drops a page's history on delete.
           - Web:
             - Contributes: `pageDetailPane.Actions` "edited" → `EditedHistoryAction`
@@ -5761,6 +5727,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `pages-starred.all` (keyed)
               - `pages-starred.all:rows` (keyed, point)
             - Routes: `PUT /api/pages/:pageId/starred`
+          - Cross-plugin:
+            - Imported by: `apps/pages/fixtures`
         - **`trash`** — Pages trash consumer: contributes a Trash entry into the Pages sidebar, opening a dialog that lists soft-deleted pages as a live DataView with Restore and Delete permanently row actions.
           - Web:
             - Slots: `item-actions`
@@ -6280,6 +6248,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps/prototypes/files`
           - `apps/prototypes/files/snapshot-history`
+          - `apps/prototypes/fixtures`
           - `apps/prototypes/thumbnails`
       - Core:
         - Exports (values): `PROTOTYPES_CATEGORY_ID`
@@ -6584,6 +6553,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PrototypeHistoryStore`
               - `readPrototypeMeta`
               - `readPrototypeTitle`
+              - `settlePrototypesWatcher`
             - Resources:
               - `prototypes.history` (push, notified, whole: one prototype's recorded versions — one per agent turn that changed it, read whole by the version stepper, whole: the options one prototype's index.html declares — a handful of hand-written lines, whole: the values one hand-written <meta name="prototype-option"> line declares — a handful)
               - `prototypes.list` (push, notified, whole: every prototype folder on disk — each made by hand, and the gallery lists, filters and groups them all, whole: the options one prototype's index.html declares — a handful of hand-written lines, whole: the ways one prototype folder breaks the contract — a handful of checks, whole: the values one hand-written <meta name="prototype-option"> line declares — a handful)
@@ -6699,11 +6669,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `active-data/prototype`
-              - `apps/agent-manager/demo`
               - `apps/prototypes/canvas`
               - `apps/prototypes/checkpoints`
               - `apps/prototypes/commands`
               - `apps/prototypes/files/snapshot-history`
+              - `apps/prototypes/fixtures`
               - `apps/prototypes/state`
               - `apps/prototypes/thumbnails`
               - `conversations/conversation-view/artifacts/prototype`
@@ -6745,6 +6715,42 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/prototypes/files.RestoreResult`
                   - `apps/prototypes/files.VersionEntry`
                   - `apps/prototypes/files.VersionFileRead`
+        - **`fixtures`** — Writes a prototype fixture into a running host through the app's real write path: the thumbnail cache first, each folder's v0 renamed into the prototypesFiles root, the files watcher's own history adoption (settled and asserted), each step as a turn checkpoint, the _picks records, then the tag and state rows. Portable, and contributes nothing: a host boots it for the seed that imports it.
+          - Server:
+            - Uses:
+              - `apps/prototypes.prototypesFiles`
+              - `apps/prototypes/files.PrototypeHistoryStore`
+              - `apps/prototypes/files.settlePrototypesWatcher`
+              - `apps/prototypes/state._prototypeState`
+              - `apps/prototypes/state._prototypeTags`
+              - `apps/prototypes/thumbnails.thumbnailCache`
+              - `database.db`
+            - Exports (values): `writePrototypeFixture`
+          - Core:
+            - Uses:
+              - `apps/prototypes/files.protoIdKind`
+              - `apps/prototypes/state.prototypeTagIdKind`
+              - `apps/prototypes/thumbnails.fingerprintFiles`
+            - Exports (types):
+              - `ParsedPrototypeTree`
+              - `PrototypeFixture`
+              - `PrototypeFixtureData`
+              - `PrototypeFixtureFolder`
+              - `PrototypeFixtureState`
+              - `PrototypeFixtureTag`
+              - `PrototypeFixtureThumbnailsAudit`
+              - `PrototypeFixtureVersion`
+              - `PrototypeTreeFixture`
+            - Exports (values):
+              - `auditPrototypeFixtureThumbnails`
+              - `parsePrototypeTree`
+              - `prototypeFixtureDataOf`
+              - `prototypeFixtureStates`
+              - `prototypeFixtureVersionFingerprint`
+          - Machine:
+            - Exports (values):
+              - `prototypeFixtureThumbnailsCheck`
+              - `readPrototypeFixtureDir`
         - **`gallery`** — Prototypes gallery list pane — one card per prototype over its rendered preview, on the prototype viewer's grid, with a Recently edited list; grouped by its tag as nested sections along the prototypes' tag tree (or by status: Pinned / In progress / Done), with a pin and a Done circle on every card and row (hover actions that stay shown while set; also in the detail pane's header, beside the tag chip opening the shared tag picker), an undoable Delete on every card and in the detail header (deletedAt in the prototype's state — the folder stays), and a Trash view (its own source in the same view bar) listing the deleted ones with Restore — plus New prototype, which mints the folder before launching the agent that designs it.
           - Web:
             - Slots:
@@ -6967,6 +6973,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `apps/prototypes/canvas`
               - `apps/prototypes/commands`
+              - `apps/prototypes/fixtures`
               - `apps/prototypes/gallery`
           - Cli:
             - Exports (types): `DeletedPrototypes`
@@ -7037,7 +7044,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shadow --shadow`
             - Imported by:
-              - `apps/agent-manager/demo`
+              - `apps/prototypes/fixtures`
               - `apps/prototypes/gallery`
               - `apps/prototypes/thumbnails/no-renderer`
           - Plugins:
@@ -10762,6 +10769,46 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/studio/graph`
     - **`website`** — Website — the public-facing site of equin: the homepage's claim, a picture of it and the three layers of the project, a gallery of its apps, placeholder pages for the vision, the foundations and the story, and how to get in touch.
       - Plugins:
+        - **`demos`** — The website's live demos, one plugin each: a demo owns its story and its data (pages, prototypes, agent runs) and writes them into its own browser host through each app's fixture writer.
+          - Plugins:
+            - **`lumen`** — The Lumen demo — the website's live demo of the Agent Manager, Pages and Prototypes on one made-up story (core: lumenDemo — the app, the route /c/conv-demo-dark-mode and its browser host: real server code in a Web Worker on PGlite, seeded with the demo's own data through each app's fixture writer — a queue of agents, one conversation fixing a bug, the Lumen pages and prototypes, every id carrying `demo`) and its exhibit, the app rendered in-process on that host.
+              - Core:
+                - Uses:
+                  - `build.BUILD_CATEGORY_ID`
+                  - `conversations.CONVERSATIONS_CATEGORY_ID`
+                  - `conversations/agents.agentIdKind`
+                  - `conversations/agents.agentLaunchIdKind`
+                  - `conversations/model-provider.ConversationModelSchema`
+                  - `page/editor.blockIdKind`
+                  - `page/inline-page-link.pageLinkToken`
+                  - `page/prompt/link.PAGES_CATEGORY_ID`
+                  - `wish.WISHES_CATEGORY_ID`
+                - Exports (types):
+                  - `DemoAgent`
+                  - `DemoPageSession`
+                  - `DemoPageToolCall`
+                  - `DemoStory`
+                - Exports (values):
+                  - `DARK_MODE_PAGE_WORK`
+                  - `DEMO_AGENTS`
+                  - `DEMO_PAGE_IDS`
+                  - `DEMO_PAGES`
+                  - `DEMO_STORIES`
+                  - `demoAgentId`
+                  - `demoAgentLaunchId`
+                  - `demoAttemptId`
+                  - `demoConversationId`
+                  - `demoPromptOf`
+                  - `demoPrototypeFixture`
+                  - `demoStoryByKey`
+                  - `demoTaskId`
+                  - `demoTranscriptJsonl`
+                  - `demoWorktreePath`
+                  - `lumenDemo`
+              - Cross-plugin:
+                - Uses tokens: `ui/tokens/shadow --shadow`
+              - Structure:
+                - Non-standard folders: `data/`
         - **`improve`** — The website's Improve button: the header's call to action, a popover where a visitor describes a change to the page, watches a scripted replay of what equin would do with it, and files it as a prefilled GitHub issue.
           - Web:
             - Contributes: `WebsiteHeader` "improve" → `ImproveNavItem`
@@ -12754,7 +12801,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ui/tokens/type-scale --font-weight-semibold`
     - Imported by:
       - `active-data/build-run`
-      - `apps/agent-manager/demo`
+      - `apps/website/demos/lumen`
       - `build/build-commits`
       - `build/build-fix`
       - `build/build-info`
@@ -14107,8 +14154,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `boundaries/no-platform-api` — `server/internal/lifecycle.ts`, `server/internal/locate-cut.ts`, `server/internal/status-reconciler.ts` (debt)
   - Plugins:
     - **`agent-launch`** — What every app-launched agent starts with, whatever runtime hosts it: the agent process's allowlisted environment (the env -i wrapper, the values it delivers, its PATH and login shell — agentSessionLaunch), the fixed CLI settings, the policy every runtime launches with (the agent-policy guards and deny rules, the compaction hook) and the one merge of the launch's settings fragments.
+      - Cross-plugin:
+        - Imported by: `conversations/runtime-sdk`
       - Server:
-        - Uses: `conversations/compaction-context.compactionHookEntry`
         - Exports (types):
           - `AgentSessionEnv`
           - `LaunchHooks`
@@ -14119,8 +14167,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `agentSessionLaunch`
           - `LAUNCH_CLI_SETTINGS`
           - `mergeLaunchSettings`
-      - Cross-plugin:
-        - Imported by: `conversations/runtime-sdk`
     - **`agent-thread`** — Agent thread: the embedded conversation view apps host for the background agents they start — <AgentThread> (user bubbles, the agent's tool calls as a live step list labelled through the AgentThreadSlots.StepLabel dispatch, its answer, the host's own result cards, a composer that resumes an ended conversation), EndThreadButton (Close ×: close the conversation and drop its task — always there, so an ended thread still closes), the hooks a host's other surfaces read (useThreadTurns, useThreadProgress, useLatestResult), generic step labels for the common built-in tools, and useThreadRuns (a host's recent runs under its scratch profile). Serves `agent-thread.runs` — the recent conversations launched in a scratch workspace, newest first, filterable by profile — over `_conversations` with the attempt joined (routed: a conversation write refills its own row).
       - Web:
         - Slots: `AgentThreadSlots.StepLabel`
@@ -14476,7 +14522,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-weight-semibold`
           - `ui/tokens/type-scale --line-height-body`
           - `ui/tokens/type-scale --line-height-title`
-        - Imported by: `apps/agent-manager/demo`
+        - Imported by: `apps/website/demos/lumen`
     - **`all-conversations`** — All-conversations app pane: a live DataView over the `conversations.all` collection (filter/sort/search over every conversation, kept fresh by the routed change feed) reachable from the agent-manager sidebar; and how the conversations entity's fields present in every conversation list (the optimistic status cell, the model filter's live catalog options). Serves the two conversation-list collections — `conversations.all` (system conversations hidden by a default scope) and `conversations.history` — over `_conversations` with the owner joins (attempt → task), routed: a conversation, attempt or task write refills only the rows it changes.
       - Web:
         - Slots: `allConversationsPane.Actions`
@@ -14578,9 +14624,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Server:
         - Uses: `infra/endpoints.implement`
         - Exports (types): `CompactionContextSource`
-        - Exports (values):
-          - `CompactionContext`
-          - `compactionHookEntry`
+        - Exports (values): `CompactionContext`
         - Routes: `POST /api/conversations/:id/compaction-context`
       - Core:
         - Uses: `infra/endpoints.defineEndpoint`
@@ -14595,12 +14639,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CompactionContextResponseSchema`
       - Cross-plugin:
         - Imported by:
-          - `conversations/agent-launch`
+          - `conversations/runtime-sdk`
           - `page/annotations/agent-access`
       - Exemptions:
-        - Exempts itself from:
-          - `boundaries/no-platform-api` — `server/internal/hook-entry.ts` (debt)
-          - `endpoints/no-raw-web-fetch` — `shared/client.ts` (sanctioned)
+        - Exempts itself from: `endpoints/no-raw-web-fetch` — `shared/client.ts` (sanctioned)
+      - Machine:
+        - Exports (values): `compactionHookEntry`
     - **`conversation-category`** — Per-conversation categories: the sidebar row avatar painted from the category chosen for it. Auto-classified by Haiku after each turn. The conversation-category assignments, portable half: the categories config, the configured avatars' saved-icon source, the table, the lookup-only conversation-categories collection over it, the cross-plugin per-category item read, and clearing one assignment. The Haiku classifier and setting an item are the machine/ half's.
       - Web:
         - Contributes:
@@ -18852,7 +18896,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --muted-foreground`
           - `ui/tokens/shape --spacing`
         - Imported by:
-          - `apps/agent-manager/demo`
+          - `apps/website/demos/lumen`
           - `conversations`
           - `conversations/agents`
           - `conversations/all-conversations`
@@ -19148,6 +19192,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `runtime-sdk.error-stopped:rows` (keyed, point)
       - Machine:
         - Uses:
+          - `conversations/compaction-context.compactionHookEntry`
           - `conversations/question-relay.holdQuestion`
           - `conversations/question-relay.retireQuestion`
           - `infra/claude-cli/accounts.readClaudeAccounts`
@@ -19893,8 +19938,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `quotedRelationsIn`
       - `readTag`
   - Cross-plugin:
-    - Imported by: 124 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
-      - `apps` ×35
+    - Imported by: 125 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+      - `apps` ×36
       - `page` ×15
       - `infra` ×13
       - `conversations` ×12
@@ -26234,6 +26279,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `clearRelationBases` — Back to "not set" (test support: a suite that set bases must not leak them into the next).
           - `getReadSetIndex` — The whole index as a plain object, each key's tables sorted — every key that ever captured a table, including one a removal emptied (`[]`).
           - `removeReadSetTable` — Remove `table` from the read-set of every key EXCEPT those in `keepKeys` — the one eviction path of an append-only index (a suite isolating its own keys from another's captures).
+          - `runPostReadyPhases` — The post-ready phases of a SERVING host (`serve`, `browser`): `onReady` (graph-driven: each plugin fires as soon as its `dependsOn` parents have resolved), then the `onAllReady` barrier. `exec` never runs them — a short-lived child has no subscribers, so no watcher, job runner or LISTEN belongs in it.
           - `serverEntries`
           - `serverEntryFor` — The registry entry of `pluginPath`'s server barrel, as codegen writes one (`<id>` the dotted path, loaded by its `@plugins/<path>/server` specifier), with the `dependsOn` the caller states.
           - `withHostServices` — Run `fn` with `providers` (each a `Svc.provide(impl)`) answering their services — over the unbooted host's providers and over a collected graph's — and put the previous answers back once it settles, so a suite swapping a service cannot leak it into the suites after it in the same bun process.
@@ -26380,7 +26426,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `code-explorer` (5 debt)
               - `config_v2/ledger` (1 debt)
               - `conversations` (3 debt)
-              - `conversations/compaction-context` (1 debt)
               - `conversations/conversation-view/code` (2 debt)
               - `conversations/transcript-retention` (1 debt)
               - `conversations/transcript-watcher` (4 debt)
@@ -30550,12 +30595,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/jobs.JobQueue`
               - `infra/jobs.JobQueueImpl`
               - `infra/jobs.JobRowOpts`
+              - `infra/jobs.JobRowOutcome`
               - `infra/jobs.JobTaskPayload`
               - `infra/jobs.listRegisteredJobs`
               - `infra/jobs.QueuedJob`
               - `infra/jobs.resolveJobCron`
               - `infra/jobs.singletonJobKey`
               - `infra/jobs.UNSAFE_runJobRow`
+            - Exports (values): `settleJobQueue`
         - **`supervised-job`** — Out-of-process work as an ordinary job: defineSupervisedJob composes defineJob + a supervised-run kind into a handler that claims, spawns detached and SUSPENDS — so no worker slot is held while the child runs — then wakes on the supervisedRun.ended event, re-reads the child's exit marker (the authority; the event is only a wake-up) and records the outcome, surviving any number of backend restarts in between.
           - Server:
             - Contributes: `fork-data-exclusion` "supervised_job_runs"
@@ -30913,7 +30960,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug/timeline`
           - `hints/ask`
           - `infra/mcp/browser`
-          - `page/annotations/agent-access`
           - `plugin-meta/plugin-health`
           - `tasks/task-triage`
       - Plugins:
@@ -31339,19 +31385,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `describeDataFilesConformance` — Register the conformance suite for one provider. `makeHarness` is called once per test.
               - Types: `ConformanceHarness`
           - Plugins:
-            - **`memory`** (excluded) — Data files in memory: provides the DataFiles host service for a host without the computer's disk (the browser composition), every root's tree kept in this process and lost with it — directories made as a write's parents, one monotonic clock, in-process locks, and a watch that hears every mutation as one change per microtask. seedFiles puts a demo's files in. Never booted by the desktop.
+            - **`memory`** (excluded) — Data files in memory: provides the DataFiles host service for a host without the computer's disk (the browser composition), every root's tree kept in this process and lost with it — directories made as a write's parents, one monotonic clock, in-process locks, and a watch that hears every mutation as one change per microtask. Never booted by the desktop.
               - Server:
                 - Contributes: `host-service:data-files.store` "data-files.store"
                 - Uses:
                   - `infra/paths/data-files.assertNotRoot`
                   - `infra/paths/data-files.DataFiles`
                   - `infra/paths/data-files.DataFilesImpl`
-                  - `infra/paths/data-files.FileRoot`
                   - `infra/paths/data-files.FileRootSpec`
                   - `infra/paths/data-files.FileRootStore`
                   - `infra/paths/data-files.requireWatchSpec`
                   - `infra/paths/data-files.watchedPaths`
-                - Exports (values): `seedFiles`
               - Test helpers:
                 - Server: `@plugins/infra/plugins/paths/plugins/data-files/plugins/memory/server/testing`
                   - `createMemoryDataFiles` — Files in memory, lost with the process: a browser host's store (the demo resets on reload).
@@ -34035,21 +34079,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/annotations/private-notes`
           - `page/annotations/todo`
       - Plugins:
-        - **`agent-access`** — The agent-facing tool surface over a page, as the file triple: read_page (human-audience subtrees pruned), write_agent_note (one agent-authored block's whole contents — an <agent-inline> card, or an <agent-page> by its own id) and edit_page (any block, judged by what the diff touched — every write must resolve inside a region an agent authors, so an <agent-inline> card or an <agent-page> admits it and a <human> or <todo> card nested there refuses it; a tagless <agent-page title> mints a sub-page). The policy over page/markdown-apply's audience-and-author-agnostic engine.
+        - **`agent-access`** — The agent-facing tool surface over a page, as the file triple: read_page (human-audience subtrees pruned), write_agent_note (one agent-authored block's whole contents — an <agent-inline> card, or an <agent-page> by its own id) and edit_page (any block, judged by what the diff touched — every write must resolve inside a region an agent authors, so an <agent-inline> card or an <agent-page> admits it and a <human> or <todo> card nested there refuses it; a tagless <agent-page title> mints a sub-page). The policy over page/markdown-apply's audience-and-author-agnostic engine, as portable functions (pageTools.read / edit / writeNote — the exact tool results) that the machine half's MCP tools wrap.
           - Server:
             - Contributes: `conversations.compaction-context` "page-instructions"
-            - Uses: 29 symbols — full list in [`plugins/page/plugins/annotations/plugins/agent-access/REFERENCE.md`](../plugins/page/plugins/annotations/plugins/agent-access/REFERENCE.md)
+            - Uses: 26 symbols — full list in [`plugins/page/plugins/annotations/plugins/agent-access/REFERENCE.md`](../plugins/page/plugins/annotations/plugins/agent-access/REFERENCE.md)
               - `page/annotations/instructions` ×9
               - `page/markdown-apply` ×5
               - `page/editor` ×4
-              - `page/tags` ×3
               - `database` ×2
+              - `page/tags` ×2
               - `conversations/compaction-context.CompactionContext`
               - `infra/endpoints.HttpError`
-              - `infra/mcp.Mcp`
               - `page/annotations/agent-notes/authorship.recordAgentNotesAuthor`
               - `page/annotations.humanAudienceTypes`
-              - `primitives/log-channels.defineLogSink`
+            - Exports (types):
+              - `EditPageInput`
+              - `PageToolCaller`
+              - `PageToolResult`
+              - `ReadPageInput`
+              - `WriteAgentNoteInput`
+            - Exports (values): `pageTools`
+          - Machine:
             - Register:
               - `mcpTool('read_page')`
               - `mcpTool('write_agent_note')`
@@ -35242,9 +35292,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shape` ×2
           - `ui/tokens/font-family --font-mono`
           - `ui/tokens/shadow --shadow`
-        - Imported by: 80 plugins — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
+        - Imported by: 81 plugins — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
           - `page` ×59
-          - `apps` ×9
+          - `apps` ×10
           - `reports` ×4
           - `active-data` ×3
           - `primitives` ×2
@@ -35667,7 +35717,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `scanPageLinkTokens`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: `apps/agent-manager/demo`
+        - Imported by: `apps/website/demos/lumen`
     - **`links`** — Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource. Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource (the boot backfill is the machine half's).
       - Server:
         - Contributes:
@@ -36308,8 +36358,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `usePromptTaskLink`
           - Cross-plugin:
             - Imported by:
-              - `apps/agent-manager/demo`
               - `apps/pages/prompt-origin`
+              - `apps/website/demos/lumen`
               - `page/prompt/block`
           - Core:
             - Exports (values): `PAGES_CATEGORY_ID`
@@ -36668,6 +36718,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-caption`
         - Imported by:
+          - `apps/pages/fixtures`
           - `apps/pages/page-tags`
           - `page/annotations/agent-access`
           - `page/markdown-apply`
@@ -43176,7 +43227,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
-        - Imported by: 56 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
+        - Imported by: 55 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
           - `apps` ×12
           - `debug` ×9
           - `database` ×7
@@ -43192,7 +43243,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `integrations/youtube/audio-fetch`
           - `menu-bar`
           - `network/live`
-          - `page/annotations/agent-access`
           - `release`
           - `stats/cost`
           - `upstream`
@@ -53426,8 +53476,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ui/tokens/color-palette --foreground`
       - `ui/tokens/color-palette --muted-foreground`
     - Imported by:
-      - `apps/agent-manager/demo`
       - `apps/home/tour`
+      - `apps/website/demos/lumen`
       - `hints/ask`
       - `screenshot/draw-on-app`
       - `wish/element-picker`

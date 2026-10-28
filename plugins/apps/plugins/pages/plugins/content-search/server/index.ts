@@ -9,13 +9,12 @@ import {
   restorePagesSearchHook,
 } from "./internal/delete-hook";
 
-export { reindexPageSearch } from "./internal/reindex-page";
 export { backfillPagesSearchJob } from "./internal/backfill-job";
 
 export default {
   portable: true,
   description:
-    "Pages full-text search consumer: indexes pages into the search engine, reindexing on blocksChanged, with the backfill job that seeds existing pages (enqueued at boot by the machine half's warm-up); reindexPageSearch derives one page's doc directly.",
+    "Pages full-text search consumer: indexes pages into the search engine, reindexing on blocksChanged, with the backfill job that seeds existing pages (enqueued at boot by the machine half's warm-up).",
   // The jobs back both the machine half's backfill warm-up and the
   // steady-state reindex trigger.
   register: [reindexPageSearchJob, backfillPagesSearchJob],

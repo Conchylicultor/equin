@@ -14,7 +14,6 @@
 // The `eager-tier-in-sync` check fails on drift.
 
 // App-content plugins pinned EAGER (would otherwise defer), and why:
-//   - apps/plugins/agent-manager/plugins/demo: dependency closure (imported by an eager plugin)
 //   - apps/plugins/deploy/plugins/analytics/plugins/collect: dependency closure (imported by an eager plugin)
 //   - apps/plugins/events/plugins/events-core: dependency closure (imported by an eager plugin)
 //   - apps/plugins/events/plugins/sources: dependency closure (imported by an eager plugin)
@@ -41,6 +40,7 @@
 //   - apps/plugins/studio/plugins/explorer/plugins/membership: dependency closure (imported by an eager plugin)
 //   - apps/plugins/studio/plugins/graph: dependency closure (imported by an eager plugin)
 //   - apps/plugins/studio/plugins/membership-tint: dependency closure (imported by an eager plugin)
+//   - apps/plugins/website/plugins/demos/plugins/lumen: dependency closure (imported by an eager plugin)
 
 export const DEFERRED_PLUGIN_PATHS: ReadonlySet<string> = new Set([
   "apps/plugins/agent-manager/plugins/icons",

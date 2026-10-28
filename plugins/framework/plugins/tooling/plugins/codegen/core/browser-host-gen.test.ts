@@ -28,7 +28,7 @@ import { buildRegistryGenContext } from "./plugin-registry-gen";
 
 setDefaultTimeout(300_000);
 
-const DEMO = "apps/plugins/agent-manager/plugins/demo";
+const DEMO = "apps/plugins/website/plugins/demos/plugins/lumen";
 
 describe("deriveBrowserHostGraph over the repo", () => {
   test("reproduces the committed demo graph, one provider per service", async () => {

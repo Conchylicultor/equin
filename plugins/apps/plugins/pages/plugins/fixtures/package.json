@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-pages-fixtures",
+  "description": "Pages fixtures: a typed page tree (PageTreeFixture) and its writer through the editor's real write path, for demos and tests.",
+  "private": true,
+  "version": "0.0.1"
+}

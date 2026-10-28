@@ -96,18 +96,19 @@ test("the website app seed takes the whole site subtree", () => {
   const m = manifestItemToManifest(site);
   expect(typeof m.name).toBe("string");
   expect(m.name.length).toBeGreaterThan(0);
-  // The site is one subtree and nothing subtracted: `.**` takes it whole. The
-  // negative this used to carry (`!apps.website.demos.editor-toy.**`) named a
-  // plugin that no longer exists, and an entry pattern whose base resolves to
-  // nothing is what `composition-closure` rejects — so "no negatives" is the
-  // guard, not a detail. Whether the bundle really stays clear of worktree infra
+  // The site is one subtree, less its live demos: `.**` takes it whole, and
+  // `!apps.website.demos.**` subtracts the demos — each is the Agent Manager on
+  // made-up data in its own worker composition, so it hard-reaches the agent
+  // runtime the site excludes. An entry pattern whose base resolves to nothing
+  // is what `composition-closure` rejects, so the negative names a real
+  // umbrella. Whether the bundle really stays clear of worktree infra
   // is `excludes: ["agent-runtime"]`'s job, asserted in closure.test.ts against a
   // real plugin tree; here we only assert the grammar.
   //
   // `excludes` is read off the CONFIG ITEM, not off `m`: manifestItemToManifest
   // drops it deliberately (the closure engine never reads it).
   const entries = m.entryPoints.map(String);
-  expect(entries).toEqual(["apps.website.**"]);
+  expect(entries).toEqual(["apps.website.**", "!apps.website.demos.**"]);
   expect(site.excludes).toContain("agent-runtime");
 });
 

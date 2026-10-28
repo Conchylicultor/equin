@@ -1,4 +1,4 @@
-// @hash b6e7aa4de67f
+// @hash 2196517385b4
 {
   "manifests": [
     {
@@ -287,7 +287,8 @@
       "name": "website",
       "category": "app",
       "entryPoints": [
-        "apps.website.**"
+        "apps.website.**",
+        "!apps.website.demos.**"
       ],
       "selectedContributors": [],
       "extends": [

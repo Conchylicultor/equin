@@ -1,6 +1,5 @@
 import {
   isWithinRel,
-  parseRelPath,
   relName,
   relParent,
   type DataChangeHandler,
@@ -13,11 +12,9 @@ import {
   requireWatchSpec,
   watchedPaths,
   type DataFilesImpl,
-  type FileRoot,
   type FileRootSpec,
   type FileRootStore,
 } from "@plugins/infra/plugins/paths/plugins/data-files/server";
-import { systemOrigin } from "@plugins/infra/plugins/request-origin/core";
 import { createCoalescer } from "@plugins/packages/plugins/coalesce/core";
 import { createKeyedMutex } from "@plugins/packages/plugins/keyed-mutex/core";
 
@@ -256,20 +253,3 @@ export function createMemoryDataFiles(): DataFilesImpl {
 
 /** The store this host boots — one per process. */
 export const memoryDataFiles = createMemoryDataFiles();
-
-/**
- * Put files into a root, each path `/`-separated inside it
- * (`"demo-1/index.html"`) — a demo seed's write, through the root's own `write`
- * like any other (watchers hear it), so it lands in whichever store the host
- * booted. Text is UTF-8.
- */
-export async function seedFiles(
-  root: FileRoot,
-  files: Readonly<Record<string, FileData>>,
-): Promise<void> {
-  for (const [path, data] of Object.entries(files)) {
-    await root.write(parseRelPath(path), data, {
-      writer: systemOrigin("data-files seed"),
-    });
-  }
-}

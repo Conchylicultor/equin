@@ -111,7 +111,6 @@ client sees them at connect (Claude Code connects once per conversation).
     - `debug/timeline`
     - `hints/ask`
     - `infra/mcp/browser`
-    - `page/annotations/agent-access`
     - `plugin-meta/plugin-health`
     - `tasks/task-triage`
 - Sub-plugins:

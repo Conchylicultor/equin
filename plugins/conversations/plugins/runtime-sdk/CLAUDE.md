@@ -252,6 +252,7 @@ Gotchas the spike hit:
     - `runtime-sdk.error-stopped:rows` (keyed, point)
 - Machine:
   - Uses:
+    - `conversations/compaction-context.compactionHookEntry`
     - `conversations/question-relay.holdQuestion`
     - `conversations/question-relay.retireQuestion`
     - `infra/claude-cli/accounts.readClaudeAccounts`

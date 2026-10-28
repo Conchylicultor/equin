@@ -2,7 +2,6 @@ import {
   COMPACTION_HOOK_MATCHER,
   type CompactionHookEntry,
 } from "@plugins/conversations/plugins/compaction-context/core";
-import { compactionHookEntry } from "@plugins/conversations/plugins/compaction-context/server";
 import { agentPolicySettings } from "@plugins/framework/plugins/tooling/plugins/guards/plugins/agent-policy/core";
 
 // The one settings object a launch hands Claude Code — the SDK's `settings`
@@ -48,13 +47,14 @@ export interface LaunchPolicy {
  * - The compaction hook (conversations/compaction-context) rides `SessionStart`
  *   on the `compact` source: right after the CLI compacts the agent's context,
  *   it hands back what plugins had given the agent through tool results and
- *   the summary dropped (a page's instructions), as `additionalContext`.
+ *   the summary dropped (a page's instructions), as `additionalContext`. The
+ *   entry is the caller's to build (`compactionHookEntry()`, compaction-context's
+ *   machine half): it resolves a script on disk, which a launch — a desktop
+ *   act — can do and this portable policy cannot.
  */
-export function agentLaunchPolicy(
-  entries: { compaction: CompactionHookEntry } = {
-    compaction: compactionHookEntry(),
-  },
-): LaunchPolicy {
+export function agentLaunchPolicy(entries: {
+  compaction: CompactionHookEntry;
+}): LaunchPolicy {
   const policy = agentPolicySettings();
   if ("SessionStart" in policy.hooks) {
     throw new Error(

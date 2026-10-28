@@ -147,6 +147,7 @@ The pages sidebar filters and groups by it with no tags code of its own.
     - `ui/tokens/type-scale --font-weight-normal`
     - `ui/tokens/type-scale --line-height-caption`
   - Imported by:
+    - `apps/pages/fixtures`
     - `apps/pages/page-tags`
     - `page/annotations/agent-access`
     - `page/markdown-apply`

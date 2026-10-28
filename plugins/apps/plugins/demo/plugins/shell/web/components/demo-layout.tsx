@@ -5,7 +5,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { DemoScope } from "@plugins/framework/plugins/browser-server/plugins/demo/plugins/scope/web";
 import { AppEmbed } from "@plugins/apps-core/plugins/app-embed/web";
-import { agentManagerDemo } from "@plugins/apps/plugins/agent-manager/plugins/demo/core";
+import { lumenDemo } from "@plugins/apps/plugins/website/plugins/demos/plugins/lumen/core";
 import { useIsPhone } from "../hooks/use-is-phone";
 
 const PHONE_NOTICE = "Apps are only available on desktop, not mobile.";
@@ -47,11 +47,8 @@ export function DemoLayout() {
       <div className="flex min-h-0 flex-1 flex-col p-lg">
         {/* eslint-disable-next-line layout/no-adhoc-layout -- the demo's frame: the embedded app fills it */}
         <div className="min-h-0 flex-1 overflow-hidden rounded-lg border">
-          <DemoScope scenario={agentManagerDemo}>
-            <AppEmbed
-              app={agentManagerDemo.app}
-              route={agentManagerDemo.route}
-            />
+          <DemoScope scenario={lumenDemo}>
+            <AppEmbed app={lumenDemo.app} route={lumenDemo.route} />
           </DemoScope>
         </div>
       </div>

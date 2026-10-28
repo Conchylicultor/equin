@@ -14,7 +14,7 @@ export interface CollectedEntry {
 
 export const exhibitsEntries: CollectedEntry[] = [
   { pluginPath: "active-data/plugins/go", id: "active-data.go", loader: () => import("@plugins/active-data/plugins/go/exhibits"), dependsOn: [] },
-  { pluginPath: "apps/plugins/agent-manager/plugins/demo", id: "apps.agent-manager.demo", loader: () => import("@plugins/apps/plugins/agent-manager/plugins/demo/exhibits"), dependsOn: [] },
+  { pluginPath: "apps/plugins/website/plugins/demos/plugins/lumen", id: "apps.website.demos.lumen", loader: () => import("@plugins/apps/plugins/website/plugins/demos/plugins/lumen/exhibits"), dependsOn: [] },
   { pluginPath: "config_v2/plugins/settings", id: "config_v2.settings", loader: () => import("@plugins/config_v2/plugins/settings/exhibits"), dependsOn: ["primitives/plugins/css/plugins/control-panel"] },
   { pluginPath: "conversations/plugins/agent-thread", id: "conversations.agent-thread", loader: () => import("@plugins/conversations/plugins/agent-thread/exhibits"), dependsOn: ["primitives/plugins/css/plugins/text", "primitives/plugins/css/plugins/ui-kit"] },
   { pluginPath: "conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/api-error", id: "conversations.conversation-view.jsonl-viewer.api-error", loader: () => import("@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/api-error/exhibits"), dependsOn: [] },

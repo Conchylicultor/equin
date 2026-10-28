@@ -8,7 +8,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`apps`** — Container for the installed apps (agent-manager, pages, settings, …). The switcher infrastructure lives in apps-core.
   - Plugins:
-    - **`agent-manager`** [5 sub-plugins] — Agent manager app shell and layout.
+    - **`agent-manager`** [4 sub-plugins] — Agent manager app shell and layout.
     - **`browser`** [exempt] [9 sub-plugins] — Web browser app: each tab is a page in a real Chromium on the machine (persistent profile, so logins stick), streamed to a canvas with input sent back.
     - **`chord`** [test helpers] [exempt] [8 sub-plugins] — Chord — a chord ear trainer that plays loops of real songs whose chords you have turned on, asks you to name each chord, and keeps track of how well you know each one.
     - **`debug`** [1 sub-plugin] — Debug app.
@@ -25,13 +25,13 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`party`** — Keyboard Party's stage: every key plays its own animation and sound (letters bring a picture, a word and speech; digits count; space, Enter, arrows, Backspace and modifiers each have their own…
         - **`shell`** — App shell for Keyboard Party: registers the /keyboard-party app entry, whose one page is the party stage.
     - **`mail`** [exempt] [12 sub-plugins] — Mail — a Gmail-class client.
-    - **`pages`** [exempt] [16 sub-plugins] — Notion-like pages app.
+    - **`pages`** [exempt] [17 sub-plugins] — Notion-like pages app.
     - **`places`** [exempt] [7 sub-plugins] — Places — the places you want to go and have been, on a map: saved Google places organised by one nested tag tree, coloured by their tags.
-    - **`prototypes`** [test helpers] [16 sub-plugins] — The Prototypes task category: the category tasks filed from the Prototypes gallery, such as creating or improving a prototype, are grouped under. Declares the app's data dir as the prototypesFiles…
+    - **`prototypes`** [test helpers] [17 sub-plugins] — The Prototypes task category: the category tasks filed from the Prototypes gallery, such as creating or improving a prototype, are grouped under. Declares the app's data dir as the prototypesFiles…
     - **`settings`** [4 sub-plugins] — Settings app.
     - **`sonata`** [test helpers] [exempt] [81 sub-plugins] — Sonata — extensible piano and music app.
     - **`studio`** [exempt] [27 sub-plugins] — Plugin inspection and visualization; home for the plugin graph and contribution tables.
-    - **`website`** [15 sub-plugins] — Website — the public-facing site of equin: the homepage's claim, a picture of it and the three layers of the project, a gallery of its apps, placeholder pages for the vision, the foundations and the…
+    - **`website`** [17 sub-plugins] — Website — the public-facing site of equin: the homepage's claim, a picture of it and the three layers of the project, a gallery of its apps, placeholder pages for the vision, the foundations and the…
 
 - **`apps-core`** [load-bearing] [test helpers] — App switcher rail. Wraps per-app shells; plugins contribute via Apps.App. Every app the browser registers, readable on the server: declaredApps — each Apps.App contribution's whole AppRef (id, name…
   - Plugins:

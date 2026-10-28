@@ -54,7 +54,7 @@ const SANCTIONED: readonly RegExp[] = [
   /^\/api\/health(\/ready)?$/,
 ];
 
-/** The seeded pages (`agent-manager/demo`'s `core/internal/pages.ts`). */
+/** The seeded pages (`website/demos/lumen`'s `core/internal/pages.ts`). */
 const ROOT_PAGES = ["Lumen", "Ideas"] as const;
 const BUGS_PAGE = "Bugs";
 /** The seeded task launched from the Bugs page's prompt block (`stories.ts`). */

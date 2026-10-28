@@ -1,6 +1,7 @@
 # agent-access
 
-The **agent-facing surface of a page**: three MCP tools over
+The **agent-facing surface of a page**: three MCP tools (and the portable
+functions behind them, `pageTools`) over
 [`page/markdown-apply`](../../../markdown-apply/CLAUDE.md)'s engine, shaped as
 the file triple an agent already knows.
 
@@ -25,6 +26,33 @@ page root it started from. Emitting `<agent-inline id="…">` (and the page
 pointers) gives the read an output the write tools take as input, which is the whole reason
 the two sections below reverse what they reverse. Design:
 [`research/2026-08-07-page-agent-note-file-like-tools.md`](../../../../../../research/2026-08-07-page-agent-note-file-like-tools.md).
+
+## Two halves: portable `pageTools`, MCP tools on the machine
+
+The tools' behaviour is plain functions in the **portable** `server/` half
+(`server/internal/page-tools.ts`, `portable: true`), exported as
+
+```ts
+pageTools.read({ block_id }, { conversationId })
+pageTools.edit({ block_id, old_string, new_string, replace_all }, { conversationId })
+pageTools.writeNote({ block_id, content }, { conversationId })
+```
+
+each returning **exactly the MCP tool result** (`{ content: [{ type: "text", text }] }`
+— the same markdown, the same `applySummary` JSON, the same thrown `HttpError`
+refusals), with the same author stamping, redaction, instructions gate and
+inert-paragraph rule. The `Mcp.tool(…)` registrations — names, descriptions
+(`edit_page`'s live tag vocabulary), input schemas — and the
+`page-instructions` server-instructions section live in the `machine/` half
+(`machine/internal/mcp-tools.ts`), each handler one call into `pageTools`: MCP
+serves the agents launched on the computer, so it is desktop-only, while a host
+without the computer (a browser demo writing a page as an agent would) calls the
+same functions. Change behaviour in `page-tools.ts`, never in a wrapper — the
+two would drift. `server/internal/page-tools.test.ts` boots this half's closure
+on PGlite with no machine half and drives `pageTools` there.
+
+The `CompactionContext` contribution stays in `server/`
+(compaction-context's `server/` half is portable too).
 
 ## The database is the SHARED one, and that is the point
 
@@ -431,7 +459,7 @@ agent gets them, in `server/internal/instructions-gate.ts`:
   undelivered, they refuse with a 409 whose message carries the instructions in
   full, and record them as received, so the retry goes through. A refusal
   therefore writes nothing.
-- **At conversation start**, `Mcp.instructions({ id: "page-instructions" })` adds a
+- **At conversation start**, `Mcp.instructions({ id: "page-instructions" })` (machine half) adds a
   section to the MCP server instructions: a fixed paragraph saying all of the
   above, then every GLOBAL card in full (recorded as received) and every global
   page as a pointer. It never returns `null`: the paragraph is useful even with no
@@ -530,21 +558,27 @@ Spec: `e2e/agent-access-verify.ts`.
 
 ## Plugin reference
 
-- Description: The agent-facing tool surface over a page, as the file triple: read_page (human-audience subtrees pruned), write_agent_note (one agent-authored block's whole contents — an <agent-inline> card, or an <agent-page> by its own id) and edit_page (any block, judged by what the diff touched — every write must resolve inside a region an agent authors, so an <agent-inline> card or an <agent-page> admits it and a <human> or <todo> card nested there refuses it; a tagless <agent-page title> mints a sub-page). The policy over page/markdown-apply's audience-and-author-agnostic engine.
+- Description: The agent-facing tool surface over a page, as the file triple: read_page (human-audience subtrees pruned), write_agent_note (one agent-authored block's whole contents — an <agent-inline> card, or an <agent-page> by its own id) and edit_page (any block, judged by what the diff touched — every write must resolve inside a region an agent authors, so an <agent-inline> card or an <agent-page> admits it and a <human> or <todo> card nested there refuses it; a tagless <agent-page title> mints a sub-page). The policy over page/markdown-apply's audience-and-author-agnostic engine, as portable functions (pageTools.read / edit / writeNote — the exact tool results) that the machine half's MCP tools wrap.
 - Server:
   - Contributes: `conversations.compaction-context` "page-instructions"
-  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `page/annotations/instructions` ×9
     - `page/markdown-apply` ×5
     - `page/editor` ×4
-    - `page/tags` ×3
     - `database` ×2
+    - `page/tags` ×2
     - `conversations/compaction-context.CompactionContext`
     - `infra/endpoints.HttpError`
-    - `infra/mcp.Mcp`
     - `page/annotations/agent-notes/authorship.recordAgentNotesAuthor`
     - `page/annotations.humanAudienceTypes`
-    - `primitives/log-channels.defineLogSink`
+  - Exports (types):
+    - `EditPageInput`
+    - `PageToolCaller`
+    - `PageToolResult`
+    - `ReadPageInput`
+    - `WriteAgentNoteInput`
+  - Exports (values): `pageTools`
+- Machine:
   - Register:
     - `mcpTool('read_page')`
     - `mcpTool('write_agent_note')`

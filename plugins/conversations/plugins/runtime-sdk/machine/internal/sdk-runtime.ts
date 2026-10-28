@@ -11,6 +11,7 @@ import type { LaunchFragment } from "@plugins/conversations/plugins/workspace/se
 import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
 import type { EffortLevel } from "@plugins/conversations/plugins/effort-provider/core";
 import { agentLaunchPolicy } from "@plugins/conversations/plugins/agent-launch/server";
+import { compactionHookEntry } from "@plugins/conversations/plugins/compaction-context/machine";
 import { requireClaudeBin } from "@plugins/infra/plugins/claude-cli/plugins/availability/server";
 import { recordReport } from "@plugins/reports/plugins/engine/server";
 import {
@@ -460,7 +461,7 @@ export const sdkRuntime: ConversationRuntime = {
       cwd,
       claudeBin,
       launch,
-      policy: agentLaunchPolicy(),
+      policy: agentLaunchPolicy({ compaction: compactionHookEntry() }),
       model: opts?.model,
       effort: opts?.effort,
       resumeSessionId: opts?.resumeSessionId,

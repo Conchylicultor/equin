@@ -433,8 +433,14 @@ export const compositionsConfig = defineConfig({
         // containment always carries the shared baseline (`apps-core.layout`,
         // `infra.health`, `shell.toast`, the token groups) that every app extends.
         // `excludes` names infra bundles — that is the whole vocabulary.
+        // `!apps.website.demos.**`: a live demo is the Agent Manager on made-up
+        // data, booted in its own worker as its own composition
+        // (`agent-manager-demo`), so it hard-reaches the agent runtime this
+        // site must ship without. The demos live here (each owns its data,
+        // `apps/website/demos`) but are not part of the site's bundle until a
+        // landing band embeds one — the sandbox `/demo` app renders it today.
         app("website", {
-          entryPoints: ["apps.website.**"],
+          entryPoints: ["apps.website.**", "!apps.website.demos.**"],
           excludes: ["agent-runtime", "auth"],
         }),
 

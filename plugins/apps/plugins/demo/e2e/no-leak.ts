@@ -185,11 +185,11 @@ async function clickButton(page: Page, name: string): Promise<void> {
   await page.getByRole("button", { name, exact: true }).first().click();
 }
 
-/** A seeded prototype (`agent-manager/demo`'s `data/prototypes/`) and where its frames are served from. */
+/** A seeded prototype (`website/demos/lumen`'s `data/prototypes/`) and where its frames are served from. */
 const PROTOTYPE_TITLE = "Lumen — notes board";
 const FRAMES_RE = /^\/artifacts\/[^/]+\/frames\/[^/]+\/api\/prototypes\//;
 
-/** The seeded task the steps edit (`agent-manager/demo`'s `stories.ts`). */
+/** The seeded task the steps edit (`website/demos/lumen`'s `stories.ts`). */
 const TARGET_TITLE = "Dark mode resets after a reload";
 const EDITED_TITLE = `${TARGET_TITLE} (edited)`;
 /** How long a write gets to come back through the worker's change feed. */

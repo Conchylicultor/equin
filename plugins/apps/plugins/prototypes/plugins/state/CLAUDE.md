@@ -163,6 +163,7 @@ move-to-trash delete may still run against the shared tree.
   - Imported by:
     - `apps/prototypes/canvas`
     - `apps/prototypes/commands`
+    - `apps/prototypes/fixtures`
     - `apps/prototypes/gallery`
 - Cli:
   - Exports (types): `DeletedPrototypes`

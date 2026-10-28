@@ -72,7 +72,7 @@ const SERVER_BARREL_RE =
 
 /** One host: the plugin declaring it, its entry, and its generated file. */
 export interface BrowserHostDecl {
-  /** The declaring plugin's path (`apps/plugins/agent-manager/plugins/demo`). */
+  /** The declaring plugin's path (`apps/plugins/website/plugins/demos/plugins/lumen`). */
   pluginPath: string;
   /** Repo-relative `bin/browser-host.composition.ts`. */
   declaration: string;

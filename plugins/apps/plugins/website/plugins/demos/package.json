@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-website-demos",
+  "description": "The website's live demos, one plugin each: a demo owns its story and its data (pages, prototypes, agent runs) and writes them into its own browser host through each app's fixture writer.",
+  "private": true,
+  "version": "0.0.1"
+}

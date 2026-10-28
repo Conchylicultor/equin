@@ -30,11 +30,14 @@ there, not in a composition root, unless it is genuinely serve-only.
   plugin's `bin/browser-host.ts`). A SERVING host like `serve`, minus the
   socket: the shared sequence, then it asserts every booted plugin declares
   `portable: true` (plugins' own `wsRoutes` are not served — the page's
-  transport opens any socket but `/ws/notifications` inert), runs `seed` (data
-  present at boot), then the same post-ready phases as `serve` — the change
-  feed's LISTEN, the in-process job queue and schedules start on the seeded
-  database, so a write recomputes its readers as on the desktop — and hands
-  back the request router
+  transport opens any socket but `/ws/notifications` inert), runs the same
+  post-ready phases as `serve` — event trigger sync, the change feed's
+  LISTEN, the in-process job queue, watchers and schedules, so a write
+  recomputes its readers and derives its effects as on the desktop — then
+  `seed`, which therefore writes into a LIVE host through the apps' real write
+  paths (and settles what it queued, `infra/jobs/in-process`'s
+  `settleJobQueue`, never deriving by hand), and only then hands back the
+  request router
   (`hostHttpRoutes`, the one route table `bin/index.ts` mounts too), the
   live-state socket handler and the served keys. `framework/browser-server`'s
   `serveOverPort` carries them to the page. Hosts install no probes: no heap
@@ -48,8 +51,8 @@ there, not in a composition root, unless it is genuinely serve-only.
 | socket bind                                    | yes     | no     | no        |
 | `onReadyBlocking`                              | yes     | yes    | yes       |
 | `markServerReady()`                            | yes     | no     | no        |
-| seed                                           | no      | no     | yes       |
 | change-feed assertion (D3), `onReady` / `onAllReady` | yes | no   | yes       |
+| seed (after the post-ready phases, before serving) | no  | no     | yes       |
 | `drainWarmups`                                 | yes     | no     | no        |
 | QoS boost, signal handlers, orphan-exit poll   | yes     | no     | no        |
 
@@ -102,7 +105,7 @@ whoever spawned it, and read back through `runtimeNamespace()`
   composition it serves. Its worker entry (`bin/browser-host.ts`) imports a
   `declare-namespace` module as its literal first statement (before its seed
   statically loads portable server barrels), e.g.
-  `agent-manager/demo/bin/declare-namespace.ts`. Not `bootBrowserHost`'s job:
+  `website/demos/lumen/bin/declare-namespace.ts`. Not `bootBrowserHost`'s job:
   a suite booting a host in Bun already runs as its checkout (the test preload).
 
 It used to ride in a worktree environment variable, inherited by every
@@ -524,6 +527,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `clearRelationBases` — Back to "not set" (test support: a suite that set bases must not leak them into the next).
     - `getReadSetIndex` — The whole index as a plain object, each key's tables sorted — every key that ever captured a table, including one a removal emptied (`[]`).
     - `removeReadSetTable` — Remove `table` from the read-set of every key EXCEPT those in `keepKeys` — the one eviction path of an append-only index (a suite isolating its own keys from another's captures).
+    - `runPostReadyPhases` — The post-ready phases of a SERVING host (`serve`, `browser`): `onReady` (graph-driven: each plugin fires as soon as its `dependsOn` parents have resolved), then the `onAllReady` barrier. `exec` never runs them — a short-lived child has no subscribers, so no watcher, job runner or LISTEN belongs in it.
     - `serverEntries`
     - `serverEntryFor` — The registry entry of `pluginPath`'s server barrel, as codegen writes one (`<id>` the dotted path, loaded by its `@plugins/<path>/server` specifier), with the `dependsOn` the caller states.
     - `withHostServices` — Run `fn` with `providers` (each a `Svc.provide(impl)`) answering their services — over the unbooted host's providers and over a collected graph's — and put the previous answers back once it settles, so a suite swapping a service cannot leak it into the suites after it in the same bun process.

@@ -85,7 +85,7 @@ App data place (`apps/file-explorer/app-data`) is the browser.
 | host | provider | notes |
 |---|---|---|
 | desktop | `data-files#machine` | single-descriptor reads (a racing remove is `missing`, never ENOENT), temp+rename writes, flock, one `defineFileWatcher` per watching root (named by the root, so the Background catalog lists it; declared in data-files), one ledger per ledgered root |
-| browser | `plugins/memory` (base-excluded) | in-process tree, monotonic clock, keyed-mutex locks, one `changed` per microtask, never `rescan`; `seedFiles(root, files)` |
+| browser | `plugins/memory` (base-excluded) | in-process tree, monotonic clock, keyed-mutex locks, one `changed` per microtask, never `rescan` |
 
 `diskMount(dataDir)` (machine barrel) is the disk operations for a `cli/`
 process, which boots no graph — no watch, no ledger. `diskDirMount(dir)` is the
