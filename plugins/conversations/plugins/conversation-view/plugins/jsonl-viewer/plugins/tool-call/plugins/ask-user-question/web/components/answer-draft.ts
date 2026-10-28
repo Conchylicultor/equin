@@ -76,14 +76,17 @@ export function emptyAnswers(questions: Question[]): QuestionAnswer[] {
 
 /**
  * The form state that re-serializes to `answerText` — the inverse of
- * `serializeAnswers`, used to reopen an answered question with the previous
- * answer already filled in.
+ * `serializeMarkerAnswer`, used to reopen an answered question with the
+ * previous answer already filled in.
  */
 export function answersFromText(
   questions: Question[],
   answerText: string,
 ): QuestionAnswer[] {
-  return formAnswers(questions, parseMarkerAnswer(answerText, questions));
+  return formAnswers(
+    questions,
+    parseMarkerAnswer(answerText, questions).answers,
+  );
 }
 
 function formAnswers(
@@ -110,9 +113,10 @@ export function restoreAnswerDraft(
   questions: Question[],
   answerText: string,
 ): void {
-  writeDraft(answerDraftStore, answersFromText(questions, answerText), {
-    scope: answerDraftScope(convId, toolUseId),
-  });
+  const scope = answerDraftScope(convId, toolUseId);
+  const { answers, reply } = parseMarkerAnswer(answerText, questions);
+  writeDraft(answerDraftStore, formAnswers(questions, answers), { scope });
+  if (reply !== null) writeDraft(responseDraftStore, reply, { scope });
 }
 
 /**

@@ -100,7 +100,12 @@ wherever it lives:
 - **An answer turn** (the marker path, sent after the agent stopped asking):
   hidden from the transcript by this plugin's EventFilter, so the transcript's
   own per-message rewind button never appears for it. `restoreAnswerDraft`
-  refills the form from the parsed text.
+  refills the form from the parsed text, reply included.
+
+Because the answer turn is hidden, the card is the only place its text shows:
+`parseMarkerAnswer` is the full inverse of `serializeMarkerAnswer` — the
+answer lines *and* the free-text reply paragraph after them — so the card draws
+the reply in its Reply callout, exactly as for an answer given as the result.
 
 After the cut the question is orphaned again (the latest call, unresolved —
 the transcript now ends on the call, which the CLI fills in as

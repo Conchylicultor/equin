@@ -23,7 +23,7 @@ describe("parseMarkerAnswer", () => {
     ];
     const text = `${ANSWER_MARKER}\n\n- Scope: CLI fix: Both (Recommended)\n- Scope: kill hardening: Include (Recommended)`;
 
-    const answers = parseMarkerAnswer(text, questions);
+    const { answers } = parseMarkerAnswer(text, questions);
 
     expect(answers["Fix the CLI trigger?"]?.answer).toBe("Both (Recommended)");
     expect(answers["Harden the kill path?"]?.answer).toBe(
@@ -35,7 +35,7 @@ describe("parseMarkerAnswer", () => {
     const questions = [q({ header: "Library", question: "Which library?" })];
     const text = `${ANSWER_MARKER}\n\n- Library: date-fns`;
 
-    const answers = parseMarkerAnswer(text, questions);
+    const { answers } = parseMarkerAnswer(text, questions);
 
     expect(answers["Which library?"]?.answer).toBe("date-fns");
   });
@@ -44,7 +44,7 @@ describe("parseMarkerAnswer", () => {
     const questions = [q({ header: "Features", multiSelect: true })];
     const text = `${ANSWER_MARKER}\n\n- Features: `;
 
-    const answers = parseMarkerAnswer(text, questions);
+    const { answers } = parseMarkerAnswer(text, questions);
 
     expect(answers["Features?"]?.answer).toBeNull();
   });
@@ -56,7 +56,7 @@ describe("parseMarkerAnswer", () => {
     ];
     const text = `${ANSWER_MARKER}\n\n- Scope: first\n- Scope: second`;
 
-    const answers = parseMarkerAnswer(text, questions);
+    const { answers } = parseMarkerAnswer(text, questions);
 
     expect(answers["Q1"]?.answer).toBe("first");
     expect(answers["Q2"]?.answer).toBe("second");
@@ -97,12 +97,15 @@ describe("serializeMarkerAnswer", () => {
       `${ANSWER_MARKER}\n\n- Scope: CLI fix: B\n- Extras: X, Y, Z`,
     );
     expect(parseMarkerAnswer(text, questions)).toEqual({
-      "Which scope?": { answer: "B", notes: null },
-      "Which extras?": { answer: "X, Y, Z", notes: null },
+      answers: {
+        "Which scope?": { answer: "B", notes: null },
+        "Which extras?": { answer: "X, Y, Z", notes: null },
+      },
+      reply: null,
     });
   });
 
-  it("appends a free-text reply after the lines, unread as an answer", () => {
+  it("appends a free-text reply after the lines, read back as the reply", () => {
     const text = serializeMarkerAnswer(questions, {
       selections: { "Which extras?": { selected: ["X"], other: null } },
       response: "- Scope: none of these\nlet's discuss first",
@@ -111,8 +114,28 @@ describe("serializeMarkerAnswer", () => {
       `${ANSWER_MARKER}\n\n- Scope: CLI fix: \n- Extras: X\n\n- Scope: none of these\nlet's discuss first`,
     );
     expect(parseMarkerAnswer(text, questions)).toEqual({
-      "Which scope?": { answer: null, notes: null },
-      "Which extras?": { answer: "X", notes: null },
+      answers: {
+        "Which scope?": { answer: null, notes: null },
+        "Which extras?": { answer: "X", notes: null },
+      },
+      reply: "- Scope: none of these\nlet's discuss first",
+    });
+  });
+
+  it("reads back a reply of several paragraphs beside full answers", () => {
+    const text = serializeMarkerAnswer(questions, {
+      selections: {
+        "Which scope?": { selected: ["A"], other: null },
+        "Which extras?": { selected: ["Y"], other: null },
+      },
+      response: "Rebase first.\n\nUse as many agents as necessary",
+    });
+    expect(parseMarkerAnswer(text, questions)).toEqual({
+      answers: {
+        "Which scope?": { answer: "A", notes: null },
+        "Which extras?": { answer: "Y", notes: null },
+      },
+      reply: "Rebase first.\n\nUse as many agents as necessary",
     });
   });
 });

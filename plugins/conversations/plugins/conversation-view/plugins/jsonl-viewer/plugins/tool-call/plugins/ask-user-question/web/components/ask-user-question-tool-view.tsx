@@ -128,7 +128,10 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
   let reply = answerRecord ? (replyOf(answerRecord) ?? null) : null;
   let answerMap: Record<string, ParsedAnswer> | null = null;
   if (answerTurn != null) {
-    answerMap = parseMarkerAnswer(answerTurn.text, questions);
+    ({ answers: answerMap, reply } = parseMarkerAnswer(
+      answerTurn.text,
+      questions,
+    ));
   } else if (answerRecord != null) {
     answerMap = answersFromRecord(answerRecord);
   }
@@ -143,10 +146,9 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
     reply = sent.answer.response;
   } else if (markerSending !== null) {
     inFlight = true;
-    selections = selectionsFromParsed(
-      questions,
-      parseMarkerAnswer(markerSending, questions),
-    );
+    const sending = parseMarkerAnswer(markerSending, questions);
+    selections = selectionsFromParsed(questions, sending.answers);
+    reply = sending.reply;
   }
 
   return (

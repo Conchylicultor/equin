@@ -98,27 +98,38 @@ export function serializeMarkerAnswer(
   return `${ANSWER_MARKER}\n\n${lines.join("\n")}${reply}`;
 }
 
+/** A parsed answer turn: one `ParsedAnswer` per question, and the reply. */
+export interface MarkerAnswer {
+  answers: Record<string, ParsedAnswer>;
+  /** The free-text reply paragraph after the answer lines, or null when none. */
+  reply: string | null;
+}
+
 /**
  * Parses the follow-up answer turn (the `Answering your questions:` message
- * produced by `serializeAnswers`) into the same `Record<questionText,
- * ParsedAnswer>` shape `answersFromRecord` returns, so the answered-view JSX and
- * `parseSelectedLabels` consume it unchanged.
+ * produced by `serializeMarkerAnswer`) — its inverse. `answers` has the same
+ * `Record<questionText, ParsedAnswer>` shape `answersFromRecord` returns, so
+ * the answered-view JSX and `parseSelectedLabels` consume it unchanged.
  *
- * The turn body is a list of `- <header>: <value>` lines, one per question in
- * the same order `serializeAnswers` emits them. We must NOT split each line on
- * its first `": "`: a question `header` can itself contain `": "` (e.g.
- * `"Scope: CLI fix"`), which would mis-key the value and drop the answer.
- * Instead we strip the exact, authoritative `"<header>: "` prefix — positionally
- * per question, so duplicate headers are also handled — leaving the delimiter
- * ambiguity irrelevant.
+ * The answers are the first paragraph: `- <header>: <value>` lines, one per
+ * question in the same order `serializeMarkerAnswer` emits them; everything
+ * after it is the reply. We must NOT split each line on its first `": "`: a
+ * question `header` can itself contain `": "` (e.g. `"Scope: CLI fix"`), which
+ * would mis-key the value and drop the answer. Instead we strip the exact,
+ * authoritative `"<header>: "` prefix — positionally per question, so
+ * duplicate headers are also handled — leaving the delimiter ambiguity
+ * irrelevant.
  */
 export function parseMarkerAnswer(
   text: string,
   questions: Question[],
-): Record<string, ParsedAnswer> {
-  const body = text.trim().slice(ANSWER_MARKER.length);
+): MarkerAnswer {
+  const body = text.trim().slice(ANSWER_MARKER.length).trim();
+  const split = body.indexOf("\n\n");
+  const block = split === -1 ? body : body.slice(0, split);
+  const reply = split === -1 ? "" : body.slice(split).trim();
 
-  const lines = body
+  const lines = block
     .split("\n")
     .map((l) => l.trim())
     .filter((l) => l.startsWith("- "))
@@ -134,10 +145,10 @@ export function parseMarkerAnswer(
         : null;
     answers[q.question] = { answer: value, notes: null };
   });
-  return answers;
+  return { answers, reply: reply || null };
 }
 
-// Separator the harness (and `serializeAnswers`) joins multi-select parts with.
+// Separator the harness (and `serializeMarkerAnswer`) joins multi-select parts with.
 const SEPARATOR = ", ";
 
 export function parseSelectedLabels(
