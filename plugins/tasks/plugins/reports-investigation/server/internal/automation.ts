@@ -87,6 +87,9 @@ export const reportInvestigationsAutomation = defineAutomation({
   description:
     "Picks up reports nobody has investigated, files one task for the batch and launches an agent to find and fix the root cause.",
   categoryId: REPORTS_CATEGORY_ID,
+  // Its task settling runs it again at once: the next batch of reports goes
+  // out without waiting for the next report or schedule.
+  watch: "refire",
   config: reportInvestigationsConfig,
   // Its agent may push as far as the Push setting allows and raise a flag for
   // the person. It finishes with its outcome report, not exit_clean; exit.clean

@@ -14,6 +14,8 @@
     - `watchSource` "tasks.created"
     - `watchSource` "tasks.settled"
     - `watchSource` "tasks.started"
+    - `watchSource` "tasks.stopped"
+    - `trigger` "watch.ingest"
     - `trigger` "watch.ingest"
     - `trigger` "watch.ingest"
     - `trigger` "watch.ingest"

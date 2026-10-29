@@ -4,7 +4,11 @@ import {
   taskCreated,
   taskStatusChanged,
 } from "@plugins/tasks/plugins/tasks-core/server";
-import { isSettled } from "@plugins/tasks/plugins/tasks-core/core";
+import {
+  isSettled,
+  type TaskStatus,
+} from "@plugins/tasks/plugins/tasks-core/core";
+import type { WatchEventInput } from "@plugins/tasks/plugins/orchestration/plugins/watch/core";
 import { conversationIdKind } from "@plugins/tasks/plugins/task-ids/core";
 
 // What a watcher hears about the tasks themselves. Contributed here, not by
@@ -59,8 +63,43 @@ const settledSource = watchSource({
       : [],
 });
 
+/** A task stopped short of settling: its agent ended without landing
+ * (`stopped`, the task now `attempted`), or a person held it (`held`). Once
+ * per transition into either status. */
+export function stoppedEvents(p: {
+  taskId: string;
+  status: TaskStatus;
+  previousStatus: TaskStatus;
+}): WatchEventInput[] {
+  if (p.status === p.previousStatus) return [];
+  if (p.status === "attempted")
+    return [
+      {
+        kind: "stopped",
+        taskId: p.taskId,
+        summary: `its agent ended without landing (${p.previousStatus} → attempted)`,
+      },
+    ];
+  if (p.status === "held")
+    return [
+      {
+        kind: "held",
+        taskId: p.taskId,
+        summary: `held by a person (${p.previousStatus} → held)`,
+      },
+    ];
+  return [];
+}
+
+const stoppedSource = watchSource({
+  id: "tasks.stopped",
+  on: taskStatusChanged,
+  toEvents: stoppedEvents,
+});
+
 export const tasksWatchSources = [
   ...createdSource,
   ...startedSource,
   ...settledSource,
+  ...stoppedSource,
 ];

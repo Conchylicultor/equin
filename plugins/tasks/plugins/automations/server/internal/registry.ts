@@ -120,6 +120,20 @@ export interface FileAutomationSpec<
   /** The task category the filed tasks are stamped with. */
   categoryId: string;
   /**
+   * What watches each task it files, beside `mandate` — required, so every
+   * file automation states it:
+   * - `"refire"` — the `automations.refire` code watcher: the task settling
+   *   (done or dropped) runs the automation again at once, so the next piece
+   *   of work is filed without waiting for its next event or schedule.
+   * - `null` — nothing; the next scheduled or fired run looks again. Pick it
+   *   when detecting again right after a settle would re-file the same work
+   *   (a dropped upgrade is still outdated).
+   *
+   * A launch-kind automation declares none: the `automations.slot` watcher
+   * on each task it launches is what holds and frees its slots.
+   */
+  watch: "refire" | null;
+  /**
    * Look for work. Runs only while the automation is enabled and has no open
    * task. `null` ⇒ nothing to do.
    */

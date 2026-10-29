@@ -46,6 +46,9 @@ export const upstreamMergeAutomation = defineAutomation({
   description:
     "Checks the repository this checkout was cloned from for new commits and files one task that merges them with `./equin upstream merge`.",
   categoryId: UPSTREAM_CATEGORY_ID,
+  // No re-run on settle: a dropped merge leaves upstream still ahead, and
+  // detecting again at once would re-file it. The next scheduled run looks again.
+  watch: null,
   config: upstreamMergeConfig,
   // Its agent may push as far as the Push setting allows and raise a flag for
   // the person. It finishes with its outcome report, not exit_clean; exit.clean

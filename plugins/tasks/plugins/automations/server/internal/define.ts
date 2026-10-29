@@ -19,6 +19,7 @@ import {
 } from "../../core";
 import { catalogChanged } from "./catalog-changed";
 import { watchLaunchedTask } from "./slot-watch";
+import { watchFiledTask } from "./refire-watch";
 import {
   adoptAutomationTasks,
   fileAutomationTask,
@@ -105,6 +106,8 @@ async function runFiling(
       mandate: spec.mandate(settings),
     });
     catalogChanged();
+    // Watched before its agent can start, so no settle goes unheard.
+    if (spec.watch === "refire") await watchFiledTask(taskId, spec.id);
     if (filing.onFiled) await filing.onFiled(taskId);
     // The prompt IS the task's description here, so the marker needs none of
     // its own: the launch builds the same text from the task.
@@ -185,8 +188,9 @@ async function runLaunch(
     // The launched agent works under the automation's mandate, nested on the
     // task (nearest wins) — the person's own tree above it keeps theirs.
     await setMandate(pick.taskId, spec.mandate(settings));
-    // Its slot is held until the agent reports: the automation watches the
-    // task in code (`automations.slot`), before the agent can start.
+    // Its slot is held until the agent reports or the task stops: the
+    // automation watches the task in code (`automations.slot`), before the
+    // agent can start.
     await watchLaunchedTask(pick.taskId, spec.id);
     await armTaskAutoStart({
       taskId: pick.taskId,
@@ -266,14 +270,17 @@ function adoptLegacyWarmup(spec: FileAutomationSpec, jobName: string) {
  * - **file** (default): every run reads the config, files nothing while
  *   disabled or while a task it filed is open, asks `detect` over the included
  *   sources, fills the config's prompt template, then files ONE task (category
- *   + origin row, one transaction) and arms its launch with the chosen model.
+ *   + origin row, one transaction), watches it when its `watch` is
+ *   `"refire"` (it runs again once that task settles) and arms its launch
+ *   with the chosen model.
  * - **launch** (`kind: "launch"`): every run counts the slots its launched
  *   tasks hold and what is left of its batch (`maxLaunches` since it was
  *   turned on), and while both allow asks `candidates` and launches the first
  *   ones a PERSON APPROVED (`decideLaunchEndpoint`) that fit — origin row role
  *   `launched`, marker armed with the filled prompt. A spent batch turns it
- *   off. Also woken, whatever its trigger, when a task it launched settles
- *   or is released, when its config changes, and at boot.
+ *   off. Also woken, whatever its trigger, when a task it launched settles,
+ *   stops or is held, or reports (its `automations.slot` watcher), when its
+ *   config changes, and at boot.
  *
  * ```ts
  * export const depsUpgradesConfig = defineAutomationConfig("deps-upgrades", { … });

@@ -4,11 +4,7 @@ import { recordNotification } from "@plugins/shell/plugins/notifications/server"
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { getTask } from "@plugins/tasks/plugins/tasks-core/server";
 import { TaskStatusSchema } from "@plugins/tasks/plugins/tasks-core/core";
-import {
-  automationDetailRoute,
-  SLOT_SETTLED_STATUSES,
-  type OriginRole,
-} from "../../core";
+import { automationDetailRoute, type OriginRole } from "../../core";
 import { catalogChanged } from "./catalog-changed";
 import { catalogStatusMoved } from "./catalog-status";
 import { isTaskApproved } from "./decisions";
@@ -26,8 +22,6 @@ const STATUS_HEADLINE: Record<string, string> = {
   attempted: "Stopped before finishing",
   held: "Held for you",
 };
-
-const SETTLES_SLOT: ReadonlySet<string> = new Set(SLOT_SETTLED_STATUSES);
 
 /**
  * Whether a status change of an automated task is worth the bell.
@@ -54,8 +48,8 @@ function rings(
  * The bell is where an automated task asks for its person: nobody watches the
  * task list for tasks they did not file. One row per task (`dedupeKey`),
  * re-surfaced on every transition that rings (`rings`). A launched task
- * settling wakes the automation that launched it, so the next task takes its
- * slot.
+ * settling is not this job's: the automation's `automations.slot` watcher
+ * wakes it (`slot-watch.ts`).
  *
  * It is also how a status change reaches the catalog: `automations.catalog`
  * declares its `tasks_v` read `notified` (never routed through the change
@@ -68,7 +62,7 @@ function rings(
 export const automationTaskStatusJob = defineJob({
   name: "automations.task-status",
   description:
-    "Notifies you when a task an automation filed or launched needs you, starts the next task when one a launch automation started settles, and keeps the Automations list current.",
+    "Notifies you when a task an automation filed or launched needs you, and keeps the Automations list current.",
   hold: "instant",
   input: z.object({}),
   dedup: "none",
@@ -92,9 +86,6 @@ export const automationTaskStatusJob = defineJob({
     const { automationId } = origin;
     if (moved) catalogChanged();
     const automation = registeredAutomation(automationId);
-    if (origin.role === "launched" && SETTLES_SLOT.has(event.status)) {
-      automation?.wake();
-    }
     if (!rings(origin, event.status)) return;
 
     const task = await getTask(event.taskId);

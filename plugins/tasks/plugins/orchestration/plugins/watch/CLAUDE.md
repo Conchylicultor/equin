@@ -15,7 +15,7 @@ an agent (one `event` turn per batch) or code (a `WatchHandler`). Plan:
 - **Sources** — `watchSource({ id, on, toEvents })` returns `[WatchSource,
   Trigger]`; spread it into `contributions`, so a source is never declared
   unfed. Contributed by the plugin that owns the fact (`tasks` — created /
-  started / settled; `outcome-report` — reported / asking; `push-and-exit` —
+  started / settled / stopped / held; `outcome-report` — reported / asking; `push-and-exit` —
   flagged). `kind` is an open string. This plugin names no source.
 - **Routing** (`watch.ingest`) — each event goes to the nearest live watch up
   the folder chain (the task's own first), never one its actor owns, into
