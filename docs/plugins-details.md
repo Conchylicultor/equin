@@ -28930,7 +28930,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from:
           - `networking/no-page-transport` — `web/internal/boot.ts` (sanctioned)
           - `endpoints/no-raw-web-fetch` — `web/internal/boot.ts` (sanctioned)
-    - **`claude-cli`** — Consumer half of the claude-cli call log: useClaudeCliCalls({correlationId, occurredAt}) answers 'which model calls produced this record?' as a calls / none / not-retained result, <ClaudeCliCallDetail> is the one rendering of a recorded call (header, meta grid, context with id chips, output or error, prompt, system — each copyable), and SLOW_CALL_MS is the duration past which a call reads as slow. One-shot Claude CLI helper (`claude --print`) for short, latency-tolerant generations, and runClaudeReadOnly — a print that may only Read / Grep / Glob one directory and answers with a zod-schema'd structured value. Reuses the user's local Claude CLI auth — no API key plumbing.
+    - **`claude-cli`** — Consumer half of the claude-cli call log: useClaudeCliCalls({correlationId, occurredAt}) answers 'which model calls produced this record?' as a calls / none / not-retained result, <ClaudeCliCallDetail> is the one rendering of a recorded call (header, meta grid, context with id chips, output or error, prompt, system — each copyable), and SLOW_CALL_MS is the duration past which a call reads as slow. One-shot Claude generations for short, latency-tolerant work (runClaudePrint), and runClaudeReadOnly — a turn that may only Read / Grep / Glob one directory and answers with a zod-schema'd structured value. Each is one Agent SDK turn (infra/claude-cli/sdk) on the active Claude account — the one new agents launch on — recorded in the call log.
       - Server:
         - Contributes:
           - `resource.declare` "claude-cli-calls"
@@ -28943,9 +28943,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database.db`
           - `database/admin.ExcludeFromFork`
           - `database/sql-projection.parsed`
+          - `infra/claude-cli/accounts.activeClaudeAccountId`
           - `infra/claude-cli/availability.ClaudeCodeUnavailableError`
           - `infra/claude-cli/availability.noteClaudeCodeFailure`
           - `infra/claude-cli/availability.requireClaudeBin`
+          - `infra/claude-cli/sdk.ClaudeQueryInput`
+          - `infra/claude-cli/sdk.claudeSessionEnv`
+          - `infra/claude-cli/sdk.ClaudeTurnError`
+          - `infra/claude-cli/sdk.ClaudeTurnResult`
+          - `infra/claude-cli/sdk.runClaudeTurn`
           - `infra/entities.defaultNow`
           - `infra/entities.defaultRandom`
           - `infra/entities.defineEntity`
@@ -29054,12 +29060,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Plugins:
         - **`accounts`** — The Claude accounts' credentials, every host's half: each added account's plan token or API key in the secrets store — saved, deleted, and read by the agent at its start (claudeAccountCredential: its kind derived from the secret, null for the computer's own Claude Code login, a loud error when an added account's secret is gone).
           - Server:
-            - Contributes: `resource.declare` "claude-accounts"
+            - Contributes:
+              - `resource.declare` "claude-accounts"
+              - `host-service:claude-accounts.active` "claude-accounts.active"
             - Uses:
               - `infra/secrets.deleteSecret`
               - `infra/secrets.getSecret`
               - `infra/secrets.setSecret`
+            - Exports (types): `ActiveClaudeAccountImpl`
             - Exports (values):
+              - `ActiveClaudeAccount`
+              - `activeClaudeAccountId`
               - `claudeAccountCredential`
               - `deleteClaudeAccountCredential`
               - `saveClaudeAccountCredential`
@@ -29104,8 +29115,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `setClaudeAccountAutoSwitch`
               - `SYSTEM_ACCOUNT_ID`
           - Cross-plugin:
-            - Imported by: `conversations/runtime-sdk`
-        - **`availability`** — Claude Code availability, shown: the pieces of the health report's Claude Code row (useClaudeCodeHealth — critical while the CLI is missing or signed out — ClaudeCodeDetail with the install / sign-in commands, ClaudeCodeActions' Check again; the row itself is the sdk runtime's, which adds the Agent SDK and the running agents), useClaudeCodeLaunchBlock() for launch controls to disable themselves with the fix, and a re-check when the user returns to the window while it is blocked. Claude Code availability: probes whether the user's Claude Code CLI is installed and signed in (`claude --version` + `claude auth status --json`, under the agent panes' host env; the machine half serves the answer as the claude-code-status push value and POST /api/claude-code/recheck) and gives every launch path assertClaudeCodeReady() and requireClaudeBin() — so an agent that cannot run is refused up front with the fix, never started as `command not found`. onClaudeCodeProbed hands every fresh answer to work keyed off the installed CLI's version.
+            - Imported by:
+              - `conversations/runtime-sdk`
+              - `infra/claude-cli`
+              - `infra/claude-cli/sdk`
+        - **`availability`** — Claude Code availability, shown: the pieces of the health report's Claude Code row (useClaudeCodeHealth — critical while the CLI is missing or signed out — ClaudeCodeDetail with the install / sign-in commands, ClaudeCodeActions' Check again; the row itself is the sdk runtime's, which adds the Agent SDK and the running agents), useClaudeCodeLaunchBlock() for launch controls to disable themselves with the fix, and a re-check when the user returns to the window while it is blocked. Claude Code availability: probes whether the user's Claude Code is installed and signed in (one Agent SDK session on the computer's own login reading its initialize answer — version and account, no turn; the machine half serves the answer as the claude-code-status push value and POST /api/claude-code/recheck) and gives every launch path assertClaudeCodeReady() and requireClaudeBin() — so an agent that cannot run is refused up front with the fix, never started as `command not found`. onClaudeCodeProbed hands every fresh answer to work keyed off the installed CLI's version.
           - Web:
             - Contributes: `Core.Root` → `RecheckOnReturn`
             - Uses:
@@ -29128,7 +29142,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useClaudeCodeStatus`
           - Server:
             - Contributes: `resource.declare` "claude-code-status"
-            - Uses: `infra/paths.resolveClaudeBin`
+            - Uses:
+              - `infra/claude-cli/sdk.claudeSessionEnv`
+              - `infra/claude-cli/sdk.readClaudeInitialize`
+              - `infra/paths.resolveClaudeBin`
             - Exports (values):
               - `assertClaudeCodeReady`
               - `checkClaudeCode`
@@ -29169,6 +29186,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/claude-cli`
               - `primitives/launch`
               - `tasks/task-triage`
+        - **`sdk`** — The one way a backend opens a Claude Code session: through the Agent SDK, on an account its caller chose. claudeSessionEnv(account) is the environment (the host facts plus an added account's credential, through claudeCredentialEnv; branded, so no session skips the choice), claudeQuery opens the session, runClaudeTurn runs one prompt to its result under a real deadline, readClaudeInitialize reads the version, the signed-in account and the model menu without a turn. Its lint rules reject a direct query() and a spawn of the resolved claude binary anywhere else.
+          - Server:
+            - Uses: `infra/claude-cli/accounts.claudeAccountCredential`
+            - Exports (types):
+              - `ClaudeQueryInput`
+              - `ClaudeSessionEnv`
+              - `ClaudeTurnResult`
+            - Exports (values):
+              - `ClaudeInitializeTimeoutError`
+              - `claudeQuery`
+              - `claudeSessionEnv`
+              - `ClaudeTurnError`
+              - `readClaudeInitialize`
+              - `runClaudeTurn`
+          - Cross-plugin:
+            - Imported by:
+              - `infra/claude-cli`
+              - `infra/claude-cli/availability`
+          - Exemptions:
+            - Exempts itself from: `claude-sdk/no-direct-sdk-query` — `server/internal/session.ts` (sanctioned)
+            - Exempted by: `infra/claude-cli/sdk` (0 debt)
     - **`codesign`** — Stable code signing for the binaries this machine builds (the gateway): signBinary signs with a configured keychain identity (/usr/bin/codesign) or the machine's own self-signed one (PEM under state/codesign, via the pinned rcodesign dependency), so macOS permission grants survive rebuilds.
       - Deps:
         - Uses:
