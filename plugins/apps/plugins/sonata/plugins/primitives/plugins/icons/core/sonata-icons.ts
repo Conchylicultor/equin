@@ -97,8 +97,10 @@ export const sonataIcons = defineIconFamily({
     bars: {
       body: '<rect x="3.5" y="5" width="7.5" height="6" rx="1.5"/><rect x="13" y="5" width="7.5" height="6" rx="1.5"/><rect x="3.5" y="13" width="7.5" height="6" rx="1.5"/><rect x="13" y="13" width="7.5" height="6" rx="1.5"/>',
     },
+    // Four white keys with a black key either side of the middle one, the
+    // black keys filled and hanging inside the frame (never past its edge).
     piano: {
-      body: '<rect x="3.5" y="5" width="17" height="14" rx="2"/><path d="M8 5v14M12 5v14M16 5v14"/><path d="M8 5v8M12 5v8" stroke-width="3.2"/>',
+      body: '<rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M7.75 13v6.5M12 4.5v15M16.25 13v6.5"/><rect x="6.25" y="4.5" width="3" height="8.5" rx=".9" fill="currentColor" stroke="none"/><rect x="14.75" y="4.5" width="3" height="8.5" rx=".9" fill="currentColor" stroke="none"/>',
     },
     eye: {
       body: '<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/>',

@@ -27,7 +27,7 @@ export function isIconFamilyId(value: string): value is IconFamilyId {
  * `currentColor` at the family's stroke width with round caps and joins; a
  * `fill` glyph is filled in `currentColor`. The paint is the sheet's (one
  * `<g>` around the body), so a body carries geometry only — an element may
- * still override a paint attribute (a thicker stroke for a piano's black keys).
+ * still override a paint attribute (a piano's filled black keys).
  *
  * A part that moves carries `data-motion="<kind>"` (`ICON_MOTIONS`), and may add
  * `data-motion-delay="<ms>"` and `data-motion-origin="<x> <y>"` (grid units).
