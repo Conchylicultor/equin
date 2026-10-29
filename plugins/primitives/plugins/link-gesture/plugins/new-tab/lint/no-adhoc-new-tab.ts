@@ -1,5 +1,5 @@
 import { lintRuleCreator } from "@plugins/framework/plugins/tooling/plugins/lint/core";
-import { type TSESTree } from "@typescript-eslint/utils";
+import type { TSESTree } from "@typescript-eslint/utils";
 import { isIconRefModule } from "@plugins/ui/plugins/icons/core";
 
 const createRule = lintRuleCreator(import.meta.url);

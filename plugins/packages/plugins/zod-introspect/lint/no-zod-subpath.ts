@@ -17,11 +17,10 @@
  * type. Self-contained by necessity — the ESLint config loads rule files
  * through jiti, which cannot resolve `@plugins/*`.
  */
-import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
+import { lintRuleCreator } from "@plugins/framework/plugins/tooling/plugins/lint/core";
+import type { TSESTree } from "@typescript-eslint/utils";
 
-const createRule = ESLintUtils.RuleCreator(
-  (name) => `https://github.com/anthropics/singularity/lint/${name}`,
-);
+const createRule = lintRuleCreator(import.meta.url);
 
 /** A `zod/…` specifier: a version (or build) subpath of the zod package. */
 export function isZodSubpath(specifier: string): boolean {

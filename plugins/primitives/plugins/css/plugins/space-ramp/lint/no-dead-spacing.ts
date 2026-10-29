@@ -1,5 +1,5 @@
 import { lintRuleCreator } from "@plugins/framework/plugins/tooling/plugins/lint/core";
-import { type TSESTree } from "@typescript-eslint/utils";
+import type { TSESTree } from "@typescript-eslint/utils";
 import type { LintToolkit } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 // Relative, same-plugin: a lint rule file cannot import a runtime value through
 // an `@plugins/*` specifier (jiti, which loads eslint.config.ts, does not

@@ -60,7 +60,7 @@
  * research/2026-08-26-global-decoded-jsonb-entity-columns.md.
  */
 import { lintRuleCreator } from "@plugins/framework/plugins/tooling/plugins/lint/core";
-import { type TSESTree } from "@typescript-eslint/utils";
+import type { TSESTree } from "@typescript-eslint/utils";
 
 const createRule = lintRuleCreator(import.meta.url);
 

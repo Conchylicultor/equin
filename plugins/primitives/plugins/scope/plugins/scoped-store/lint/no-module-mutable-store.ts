@@ -1,5 +1,5 @@
 import { lintRuleCreator } from "@plugins/framework/plugins/tooling/plugins/lint/core";
-import { type TSESTree } from "@typescript-eslint/utils";
+import type { TSESTree } from "@typescript-eslint/utils";
 
 /**
  * no-module-mutable-store

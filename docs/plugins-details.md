@@ -11224,7 +11224,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `WebsiteSoon`
           - Core:
             - Uses:
-              - `framework/product-name.LEGACY_IDS`
+              - `framework/product-name.SOURCE_REPO`
+              - `framework/product-name.SOURCE_REPO_URL`
               - `infra/namespace.MAIN_WORKTREE_NAME`
               - `infra/namespace.namespaceHost`
               - `infra/namespace.namespaceUrl`
@@ -11237,7 +11238,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ISSUES_URL`
               - `LOCAL_APP_HOST`
               - `LOCAL_APP_URL`
-              - `SOURCE_URL`
               - `websiteApp`
           - Cross-plugin:
             - Uses tokens:
@@ -26451,6 +26451,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/cli`
           - `framework/cli/cli-name`
           - `framework/plugin-id`
+          - `framework/tooling/lint`
           - `framework/tooling/web-artifacts`
           - `infra/endpoints`
           - `infra/git/remotes`
@@ -26473,6 +26474,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LEGACY_IDS`
           - `LEGACY_PRODUCT_NAMES`
           - `PRODUCT_NAME`
+          - `SOURCE_REPO`
+          - `SOURCE_REPO_URL`
     - **`resource-runtime`**
       - Core:
         - Uses: 22 symbols — full list in [`plugins/framework/plugins/resource-runtime/REFERENCE.md`](../plugins/framework/plugins/resource-runtime/REFERENCE.md)
@@ -27636,6 +27639,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`lint`** — Global ESLint rules (promise-safety) and discovery helpers for the ESLint config
           - Core:
             - Uses:
+              - `framework/product-name.SOURCE_REPO_URL`
               - `framework/tooling.loadRepoFiles`
               - `framework/tooling/collected-dir.defineCollectedDir`
               - `framework/tooling/exempt.categoryGlobs`
@@ -27675,6 +27679,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `lintContributionPaths`
               - `lintDataKey`
               - `lintExemptions`
+              - `lintRuleCreator`
               - `lintRuleIds`
               - `loadLintContributions`
               - `typeAwareLintGroups`
@@ -27682,7 +27687,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by: `framework/tooling/codegen`
           - Exemptions:
-            - Exempts itself from: `boundaries/no-platform-api` — `core/declared-utilities.ts`, `core/plugin-dirs.ts` (debt)
+            - Exempts itself from:
+              - `boundaries/no-platform-api` — `core/declared-utilities.ts`, `core/plugin-dirs.ts` (debt)
+              - `rule-kind-safety/no-raw-rule-creator` — `core/rule-creator.ts` (sanctioned)
           - Test helpers:
             - Core: `@plugins/framework/plugins/tooling/plugins/lint/core/testing`
               - `lintToolkit`
@@ -27750,7 +27757,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Exemptions:
                 - Exempted by: `primitives/dom/element-size` (0 debt)
             - **`route-teardown-safety`** — route-teardown-safety lint rule: no-unroute
-            - **`rule-kind-safety`** — rule-kind-safety lint rule: type-aware-rule-declared (a lint rule that reads parser services declares meta.docs.requiresTypeChecking: true)
+            - **`rule-kind-safety`** — rule-kind-safety lint rules: type-aware-rule-declared (a lint rule that reads parser services declares meta.docs.requiresTypeChecking: true), no-raw-rule-creator (every rule is made with lint/core lintRuleCreator, which derives its docs URL and types its meta.docs)
+              - Exemptions:
+                - Exempted by: `framework/tooling/lint` (0 debt)
             - **`runtime-isolation`** — runtime-isolation lint rule: no-deep-own-folder-import
             - **`scroll-safety`** — scroll-safety lint rules: no-adhoc-scroll-into-view, no-adhoc-scroll-write
               - Exemptions:
@@ -30276,6 +30285,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Core:
             - Uses:
               - `framework/product-name.LEGACY_IDS`
+              - `framework/product-name.SOURCE_REPO_URL`
               - `infra/spawn.spawnCaptured`
               - `infra/spawn.spawnExpectOk`
             - Exports (types):
@@ -30286,7 +30296,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `RemoteFailure`
               - `UpstreamRemote`
             - Exports (values):
-              - `CANONICAL_REPO_URL`
               - `classifyRemoteFailure`
               - `describeAutoIdentity`
               - `describePublishTarget`

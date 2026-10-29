@@ -51,7 +51,7 @@
  * See research/2026-08-23-database-parsed-sql-rows.md.
  */
 import { lintRuleCreator } from "@plugins/framework/plugins/tooling/plugins/lint/core";
-import { type TSESLint, type TSESTree } from "@typescript-eslint/utils";
+import type { TSESLint, TSESTree } from "@typescript-eslint/utils";
 
 const createRule = lintRuleCreator(import.meta.url);
 

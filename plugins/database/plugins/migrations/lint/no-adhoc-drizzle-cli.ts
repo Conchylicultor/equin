@@ -1,5 +1,5 @@
 import { lintRuleCreator } from "@plugins/framework/plugins/tooling/plugins/lint/core";
-import { type TSESLint, type TSESTree } from "@typescript-eslint/utils";
+import type { TSESLint, TSESTree } from "@typescript-eslint/utils";
 // Relative, same-plugin: a lint rule file cannot use an `@plugins/*` specifier
 // (jiti, which loads eslint.config.ts, does not resolve the alias). Importing the
 // name rather than retyping it is what keeps the rule and the argv owner from
