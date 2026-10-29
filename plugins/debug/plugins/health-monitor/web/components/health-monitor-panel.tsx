@@ -394,7 +394,11 @@ function HostSection({
           label="Free memory (MB) · swap-out (pages/s)"
           data={rows}
           lines={[
-            { key: "freeMemMb", label: "free MB", color: "var(--success)" },
+            {
+              key: "freeMemMb",
+              label: "available MB",
+              color: "var(--success)",
+            },
             {
               key: "swapOutPagesPerSec",
               label: "swap-out/s",

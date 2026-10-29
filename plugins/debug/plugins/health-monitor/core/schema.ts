@@ -89,6 +89,9 @@ export type HealthSample = z.infer<typeof HealthSampleSchema>;
 // One host-level sample. Sampled only on the main backend (the host is shared).
 export const HostSampleSchema = z.object({
   sampledAt: z.number(),
+  // Memory available without swapping (on macOS free + speculative + inactive
+  // pages, vm_stat), not merely unused pages. Named before it meant that; kept
+  // so the persisted JSONL history still parses.
   freeMemMb: z.number(),
   totalMemMb: z.number(),
   usedMemMb: z.number(),

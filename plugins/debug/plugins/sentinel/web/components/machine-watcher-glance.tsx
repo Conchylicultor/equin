@@ -15,7 +15,7 @@ import {
   type VitalsView,
 } from "../internal/vitals-view";
 
-// The Machine watcher row's glance: load per core, free memory and builds under
+// The Machine watcher row's glance: load per core, available memory and builds under
 // the summary, plus a banner naming what tripped the watcher (or saying the
 // numbers are old). It sits inside the row's click target, so it holds no
 // controls. Subscribes to the per-tick vitals — mounted only while the health

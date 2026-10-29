@@ -3,6 +3,7 @@ import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import {
   countBuildProcesses,
   counterDelta,
+  FILL_MIN_SPAN_MS,
   FILL_WINDOW_MS,
   mapPgStatsRow,
   pushFreeSpace,
@@ -86,18 +87,35 @@ describe("countBuildProcesses", () => {
 });
 
 describe("pushFreeSpace", () => {
-  test("is null until the window spans a minute, then the fall per second", () => {
+  test("is null until the window spans its minimum, then the fall per second", () => {
     const window: FreeSpacePoint[] = [];
-    expect(pushFreeSpace(window, { wall: 0, freeBytes: 1_000_000 })).toBeNull();
+    const half = FILL_MIN_SPAN_MS / 2;
     expect(
-      pushFreeSpace(window, { wall: 30_000, freeBytes: 970_000 }),
+      pushFreeSpace(window, { wall: 0, freeBytes: FILL_MIN_SPAN_MS }),
     ).toBeNull();
-    expect(pushFreeSpace(window, { wall: 60_000, freeBytes: 940_000 })).toBe(
-      1_000,
-    );
+    expect(
+      pushFreeSpace(window, { wall: half, freeBytes: FILL_MIN_SPAN_MS - half }),
+    ).toBeNull();
+    expect(
+      pushFreeSpace(window, { wall: FILL_MIN_SPAN_MS, freeBytes: 0 }),
+    ).toBe(1_000);
   });
 
-  test("measures across the last two minutes only", () => {
+  test("a burst that stops reads as its size spread over the window", () => {
+    const window: FreeSpacePoint[] = [];
+    const GIB = 1024 ** 3;
+    // 5 GiB written in the first two minutes, then nothing.
+    pushFreeSpace(window, { wall: 0, freeBytes: 100 * GIB });
+    pushFreeSpace(window, { wall: 120_000, freeBytes: 95 * GIB });
+    const rate = pushFreeSpace(window, {
+      wall: FILL_WINDOW_MS,
+      freeBytes: 95 * GIB,
+    });
+    expect(rate! * 60).toBeCloseTo((5 * GIB * 60_000) / FILL_WINDOW_MS);
+    expect(rate! * 60).toBeLessThan(GIB);
+  });
+
+  test("measures across the last window only", () => {
     const window: FreeSpacePoint[] = [];
     // A fall long ago, then a flat disk: the old fall leaves the window.
     pushFreeSpace(window, { wall: 0, freeBytes: 2_000_000 });
@@ -116,8 +134,11 @@ describe("pushFreeSpace", () => {
   test("reads negative while space comes back", () => {
     const window: FreeSpacePoint[] = [];
     pushFreeSpace(window, { wall: 0, freeBytes: 0 });
-    expect(pushFreeSpace(window, { wall: 100_000, freeBytes: 100_000 })).toBe(
-      -1_000,
-    );
+    expect(
+      pushFreeSpace(window, {
+        wall: FILL_MIN_SPAN_MS,
+        freeBytes: FILL_MIN_SPAN_MS,
+      }),
+    ).toBe(-1_000);
   });
 });

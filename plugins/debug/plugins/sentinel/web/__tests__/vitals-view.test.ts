@@ -106,7 +106,7 @@ describe("vitalsView", () => {
     const view = vitalsView(vitals(), true, WALL);
     expect(view.glance.map((f) => `${f.before}${f.value}${f.after}`)).toEqual([
       "Load 0.26 per core",
-      "9.4 GB memory free",
+      "9.4 GB memory available",
       "606 GB disk free",
       "1 build",
     ]);

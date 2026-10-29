@@ -7,7 +7,7 @@ footprint → `health.jsonl`), surfaced as **Debug → Health**.
 
 health-monitor's **host** sampler (`host-sampler.ts`, 10 s cadence → the
 persisted `health-host` channel) is the **single source** for the vm_stat host
-series — compressor decompressions/sec, compressor MB, swap, and free memory.
+series — compressor decompressions/sec, compressor MB, swap, and available memory (free + speculative + inactive pages, not `os.freemem()`).
 The sentinel worker does **not** re-run `vm_stat`; it tail-reads this file (with
 a 30 s freshness guard) for those signals. So compressor/swap/freeMem are
 single-sourced here.

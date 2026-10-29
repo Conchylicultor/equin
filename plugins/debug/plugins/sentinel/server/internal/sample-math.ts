@@ -86,10 +86,17 @@ export interface FreeSpacePoint {
   freeBytes: number;
 }
 
-/** The window the fill rate is measured over. */
-export const FILL_WINDOW_MS = 2 * 60 * 1000;
+/**
+ * The window the fill rate is measured over: long enough that a burst which
+ * stops reads as its size spread over ten minutes. A few worktrees created at
+ * once (~1.5 GiB of checkout and node_modules each) wrote ~5 GiB in two
+ * minutes and read as 2.5 GiB/min on a two-minute window; over ten it is
+ * 0.5 GiB/min, under the alarm — while a writer that keeps going still shows
+ * at its full rate.
+ */
+export const FILL_WINDOW_MS = 10 * 60 * 1000;
 /** The rate reads null until the readings span at least this much. */
-export const FILL_MIN_SPAN_MS = 60 * 1000;
+export const FILL_MIN_SPAN_MS = 5 * 60 * 1000;
 
 /**
  * Appends `point` to the rolling free-space window (dropping what is older than

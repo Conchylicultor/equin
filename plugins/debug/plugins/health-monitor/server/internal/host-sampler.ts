@@ -2,7 +2,7 @@ import { freemem, loadavg, totalmem } from "node:os";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import type { HostSample } from "../../core";
-import { parseVmStat, type VmStat } from "./vm-stat";
+import { availableMemBytes, parseVmStat, type VmStat } from "./vm-stat";
 import { detectWallJumpMs } from "./wall-jump";
 import { defineTimer } from "@plugins/infra/plugins/background/plugins/timer/server";
 
@@ -101,7 +101,9 @@ async function tick(): Promise<void> {
       ((vm.map["Pages occupied by compressor"] ?? 0) * vm.pageSize) / 1_048_576;
   }
   const total = totalmem();
-  const free = freemem();
+  // Available, not merely unused: on macOS `os.freemem()` is `Pages free`, near
+  // zero whenever the cache is warm. Elsewhere it already reads MemAvailable.
+  const free = vm ? availableMemBytes(vm) : freemem();
   // This is the persisted host loadavg (10s cadence, health-host channel — the
   // single source for compressor/swap/freeMem, tail-read by the sentinel). The
   // sentinel worker deliberately keeps its OWN fresh loadavg() syscall on its

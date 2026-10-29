@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { parseVmStat } from "./vm-stat";
+import { availableMemBytes, parseVmStat } from "./vm-stat";
 
 // Trimmed real `vm_stat` output (Apple Silicon, 16 KB pages) — every counter
 // the host sampler reads, plus a multi-word key with parentheses to exercise
@@ -7,6 +7,8 @@ import { parseVmStat } from "./vm-stat";
 const FIXTURE = `Mach Virtual Memory Statistics: (page size of 16384 bytes)
 Pages free:                               12862.
 Pages active:                            827392.
+Pages inactive:                          700000.
+Pages speculative:                        18000.
 Pages occupied by compressor:            655360.
 File-backed pages:                       301234.
 Pageins:                               12345678.
@@ -31,5 +33,19 @@ describe("parseVmStat", () => {
     const vm = parseVmStat("Compressions: 10.\n");
     expect(vm.pageSize).toBe(16384);
     expect(vm.map["Compressions"]).toBe(10);
+  });
+});
+
+describe("availableMemBytes", () => {
+  test("counts free, speculative and inactive pages", () => {
+    expect(availableMemBytes(parseVmStat(FIXTURE))).toBe(
+      (12862 + 18000 + 700000) * 16384,
+    );
+  });
+
+  test("throws when a counter is missing", () => {
+    expect(() => availableMemBytes(parseVmStat("Pages free: 10.\n"))).toThrow(
+      /Pages speculative/,
+    );
   });
 });

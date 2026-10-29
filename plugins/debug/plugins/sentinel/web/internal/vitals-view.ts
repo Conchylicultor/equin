@@ -232,7 +232,7 @@ function glanceOf(vitals: SentinelVitalsRecord): GlanceFigureView[] {
         freeMemMb === null
           ? `${MISSING} GB`
           : `${(freeMemMb / 1024).toFixed(1)} GB`,
-      after: " memory free",
+      after: " memory available",
       tone:
         freeMemMb === null
           ? "neutral"
