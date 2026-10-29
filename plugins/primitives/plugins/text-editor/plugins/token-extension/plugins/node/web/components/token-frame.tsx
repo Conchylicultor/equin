@@ -28,14 +28,12 @@ const closeIcon = symbol("close");
  * restate it.
  *
  * - **One object, never characters.** The browser paints no per-character
- *   highlight inside it (`select-none`), so the frame paints its own: a text
- *   selection that spans the token tints the whole token with the theme's
- *   text-selection colour — the same fill as the selected text around it, so it
- *   reads as part of the selection — and a selection of the token alone (a
- *   click, ← / → onto it) adds a ring. Both are drawn ABOVE the content: a
- *   token whose content is a positioned box (an image thumbnail's button) would
- *   cover anything painted on the frame itself. Copying the selection carries
- *   the node itself, so it pastes as the same token in any other editor.
+ *   highlight inside it (`select-none`); when the token is selected — on its
+ *   own, or inside a text selection that spans it — the whole frame gets a
+ *   ring. The ring is drawn on a layer ABOVE the content: a token whose content
+ *   is a positioned box (an image thumbnail's button) would cover anything
+ *   painted on the frame itself. Copying the selection carries the node
+ *   itself, so it pastes as the same token in any other editor.
  * - **Removable.** A hover/focus-revealed × in its top-right corner deletes
  *   the node — the same corner on a one-line chip and a tall image.
  * - **Painted inside its own box.** The ring is an inward outline (painted over
@@ -61,7 +59,7 @@ export function TokenFrame({
   children: ReactNode;
 }) {
   const [editor] = useLexicalComposerContext();
-  const selected = useTokenSelection(editor, nodeKey);
+  const selected = useTokenSelected(editor, nodeKey);
   if (!editor.isEditable()) return <>{children}</>;
   return (
     <Inline
@@ -71,7 +69,7 @@ export function TokenFrame({
         "relative select-none align-middle rounded-md",
       )}
       contentEditable={false}
-      data-token-selected={selected ?? undefined}
+      data-token-selected={selected || undefined}
     >
       {children}
       {selected && (
@@ -81,11 +79,7 @@ export function TokenFrame({
           as="span"
           decorative
           aria-hidden
-          className={cn(
-            "rounded-md bg-text-selection",
-            selected === "node" &&
-              "outline-2 outline-solid outline-ring -outline-offset-2",
-          )}
+          className="rounded-md outline-2 outline-solid outline-ring -outline-offset-2"
         />
       )}
       <Pin to="top-right" offset="2xs">
@@ -113,31 +107,22 @@ export function TokenFrame({
 }
 
 /**
- * How the current selection covers the token: `"node"` when the token itself
- * is the selected object (Lexical's NodeSelection), `"range"` when a
- * non-collapsed text selection spans it, `null` otherwise.
+ * Whether the token is selected: the selected object itself (Lexical's
+ * NodeSelection), or inside a non-collapsed text selection that spans it.
  */
-type TokenSelection = "node" | "range" | null;
-
-function useTokenSelection(
-  editor: LexicalEditor,
-  nodeKey: NodeKey,
-): TokenSelection {
+function useTokenSelected(editor: LexicalEditor, nodeKey: NodeKey): boolean {
   const subscribe = useCallback(
     (onChange: () => void) => editor.registerUpdateListener(onChange),
     [editor],
   );
   const read = useCallback(
     () =>
-      editor.getEditorState().read((): TokenSelection => {
+      editor.getEditorState().read(() => {
         const selection = $getSelection();
-        if ($isNodeSelection(selection))
-          return selection.has(nodeKey) ? "node" : null;
+        if ($isNodeSelection(selection)) return selection.has(nodeKey);
         if ($isRangeSelection(selection) && !selection.isCollapsed())
-          return selection.getNodes().some((n) => n.getKey() === nodeKey)
-            ? "range"
-            : null;
-        return null;
+          return selection.getNodes().some((n) => n.getKey() === nodeKey);
+        return false;
       }),
     [editor, nodeKey],
   );

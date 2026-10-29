@@ -150,7 +150,6 @@
     --color-outline-hover-foreground: var(--outline-hover-foreground);
     --color-code-border: var(--code-border);
     --color-toolbar-foreground: var(--toolbar-foreground);
-    --color-text-selection: var(--text-selection);
     --color-selected: var(--selected);
     --color-selected-foreground: var(--selected-foreground);
     /* A row's secondary text (`text-row-meta`): muted, unless the row publishes

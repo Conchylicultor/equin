@@ -41021,10 +41021,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useSingleLine`
               - `WithTooltip`
           - Cross-plugin:
-            - Uses tokens: 371 vars — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Uses tokens: 370 vars — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `ui/tokens/data-view` ×97
               - `ui/tokens/density` ×82
-              - `ui/tokens/color-palette` ×62
+              - `ui/tokens/color-palette` ×61
               - `ui/tokens/type-scale` ×42
               - `ui/tokens/shape` ×15
               - `ui/tokens/overlay` ×13
@@ -46659,7 +46659,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/color-palette --border`
                   - `ui/tokens/color-palette --foreground`
                   - `ui/tokens/color-palette --ring`
-                  - `ui/tokens/color-palette --text-selection`
                   - `ui/tokens/shadow --shadow`
                   - `ui/tokens/shape --radius`
                   - `ui/tokens/shape --spacing`
