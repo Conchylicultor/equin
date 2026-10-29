@@ -62,6 +62,12 @@ export const setConfigField = defineEndpoint({
     key: z.string(),
     value: z.unknown(),
     scopeId: z.string().optional(),
+    // The value was computed from the user's OVERRIDE document — the settings
+    // editor, which binds to it during a conflict — rather than from the value
+    // the app shows. While the document is in conflict the server accepts only
+    // such a write: anything else was computed from the new defaults the app
+    // shows and would replace the user's parked values with them.
+    fromOverride: z.literal(true).optional(),
   }),
 });
 

@@ -20,6 +20,7 @@
     - `primitives/css/z-layers/stack.defineZLayer`
     - `primitives/css/z-layers/stack.useZStackIndex`
     - `primitives/dom/element-size.useElementSize`
+    - `primitives/link-gesture.linkProps`
     - `primitives/live-state.foldResource`
     - `primitives/select-scope.ContentScope`
     - `ui/icons.Icon`
@@ -37,11 +38,11 @@
     - `ui/tokens/color-palette --popover`
     - `ui/tokens/color-palette --popover-foreground`
     - `ui/tokens/shape --radius`
-  - Imported by: 31 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 32 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×9
+    - `config_v2` ×3
     - `conversations` ×3
     - `primitives` ×3
-    - `config_v2` ×2
     - `debug` ×2
     - `hints` ×2
     - `infra` ×2

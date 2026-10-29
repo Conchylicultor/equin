@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { toast as sonnerToast } from "sonner";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
+import { linkProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { DeveloperMark } from "@plugins/audience/plugins/developer-mark/web";
 import type { ReactNode } from "react";
 import type { Audience } from "@plugins/audience/core";
@@ -208,7 +209,16 @@ function showTextToast(
       // wrapper because sonner passes the click event and `ToastArgs` promises
       // a nullary handler: forwarding it would hand the event to a caller whose
       // first parameter is its own optional argument.
-      action: action ? { label: action.label, onClick: () => action.onClick() } : undefined,
+      // A link action reads the click's modifiers (⌘/Ctrl → a new browser tab).
+      action: action
+        ? {
+            label: action.label,
+            onClick:
+              "link" in action
+                ? (e) => linkProps(action.link).onClick(e)
+                : () => action.onClick(),
+          }
+        : undefined,
     }),
   );
 }

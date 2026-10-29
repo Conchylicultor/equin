@@ -48,11 +48,13 @@ and the editor.
 
 ## Plugin reference
 
-- Description: Deep-link affordances from any config-backed surface to its settings section. useConfigLink() links a descriptor to its config pane; ConfigGearButton and ConfigPopoverHeader surface it as a gear; ConfigSelectContent / ConfigMenuContent bake the gear into Select / DropdownMenu picker chrome.
+- Description: Deep-link affordances from any config-backed surface to its settings section. useConfigLink() links a descriptor to its config pane; ConfigGearButton and ConfigPopoverHeader surface it as a gear; ConfigSelectContent / ConfigMenuContent bake the gear into Select / DropdownMenu picker chrome. At Core.Root, ConflictWriteToast says why a config change was refused while its document is in conflict, with a Resolve link to the config.
 - Web:
+  - Contributes: `Core.Root` → `ConflictWriteToast`
   - Uses:
     - `apps-core.useActiveApp`
     - `apps-core/tabs.useNavigate`
+    - `config_v2.onConfigWriteRefused`
     - `config_v2.useConfigRegistrations`
     - `config_v2/settings.configDetailRoute`
     - `primitives/css/fill.Fill`
@@ -64,6 +66,7 @@ and the editor.
     - `primitives/css/ui-kit.SelectContent`
     - `primitives/icon-button.IconButton`
     - `primitives/link-gesture.activationProps`
+    - `shell/toast.showToast`
   - Exports (types):
     - `ConfigGearButtonProps`
     - `ConfigMenuContentProps`

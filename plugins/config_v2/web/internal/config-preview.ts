@@ -47,25 +47,48 @@ export function setConfigPreview(on: boolean): void {
   }
 }
 
-const refusalListeners = new Set<() => void>();
+/** Why a config write was refused before it was sent. */
+export type ConfigWriteRefusal =
+  // The tab previews the git defaults, which are read-only.
+  | { kind: "preview" }
+  // The document is in conflict: the app shows the new defaults while the
+  // user's own values are parked in the override, so a write computed from
+  // what is shown would replace the parked values with the defaults.
+  | { kind: "conflict"; storePath: string; scopeId?: string };
+
+type RefusalListener<K extends ConfigWriteRefusal["kind"]> = (
+  refusal: Extract<ConfigWriteRefusal, { kind: K }>,
+) => void;
+
+const refusalListeners = new Map<
+  ConfigWriteRefusal["kind"],
+  Set<(refusal: ConfigWriteRefusal) => void>
+>();
 
 /**
- * Listen for config writes the preview refused — the preview's own UI says so
- * (a toast); config_v2 cannot draw one itself (the toast's chrome reads config).
+ * Listen for config writes refused for one reason — the owning UI says so (a
+ * toast); config_v2 cannot draw one itself (the toast's chrome reads config).
  */
-export function onConfigWriteRefused(listener: () => void): () => void {
-  refusalListeners.add(listener);
+export function onConfigWriteRefused<K extends ConfigWriteRefusal["kind"]>(
+  kind: K,
+  listener: RefusalListener<K>,
+): () => void {
+  const set = refusalListeners.get(kind) ?? new Set();
+  refusalListeners.set(kind, set);
+  const entry = listener as (refusal: ConfigWriteRefusal) => void;
+  set.add(entry);
   return () => {
-    refusalListeners.delete(listener);
+    set.delete(entry);
   };
 }
 
-/** Say a write was refused by the preview; throws when nothing can say it. */
-export function announceRefusedWrite(): void {
-  if (refusalListeners.size === 0) {
+/** Say a write was refused; throws when nothing can say it. */
+export function announceRefusedWrite(refusal: ConfigWriteRefusal): void {
+  const set = refusalListeners.get(refusal.kind);
+  if (!set || set.size === 0) {
     throw new Error(
-      "[config-v2] a config write was refused (git-defaults preview is on) and no listener reports it",
+      `[config-v2] a config write was refused (${refusal.kind}) and no listener reports it`,
     );
   }
-  for (const listener of refusalListeners) listener();
+  for (const listener of set) listener(refusal);
 }

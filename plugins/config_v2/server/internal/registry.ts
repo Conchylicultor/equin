@@ -67,6 +67,15 @@ export interface ConfigWriteOpts {
   scopeId?: string;
 }
 
+/**
+ * A field write. `fromOverride`: the value was computed from the user's override
+ * document (the settings conflict editor binds to it), not from the value the
+ * app shows — the only write a document in conflict accepts.
+ */
+export interface SetConfigOpts extends ConfigWriteOpts {
+  fromOverride?: true;
+}
+
 /** The document a cache entry holds, as the store addresses it. */
 function docOf(entry: CacheEntry): ConfigDocRef {
   return { storePath: entry.storePath, scopeId: entry.scopeId };
@@ -488,7 +497,7 @@ export async function setConfig<
   descriptor: ConfigDescriptor<F>,
   key: K,
   value: InferFieldValue<F[K]>,
-  opts: ConfigWriteOpts,
+  opts: SetConfigOpts,
 ): Promise<void> {
   const scopeId = opts.scopeId ?? BASE_SCOPE;
   const entry = scopeId
@@ -527,6 +536,18 @@ export async function setConfig<
   let hash: string | null;
 
   if (userOverwrites.exists()) {
+    // REFUSED WHILE IN CONFLICT. The app resolves to the new origin while the
+    // user's own values sit parked in the override, so a writer computing its
+    // value from what the app shows would replace the parked value of `key`
+    // with the new default's — and a whole list is one key (a DataView's
+    // `views`: one option toggled rewrote every saved view as the defaults).
+    // Only a write computed from the override itself (the settings conflict
+    // editor) may land; every other waits for Keep / Accept / Merge.
+    if (!opts.fromOverride && hasConflict(userOrigin, userOverwrites)) {
+      throw new Error(
+        `[config-v2] "${entry.storePath}"${opts.scopeId ? ` (${opts.scopeId})` : ""} has a conflict — resolve it in Settings → Config first.`,
+      );
+    }
     const ow = userOverwrites.read()!;
     base = { ...(ow.content as Record<string, unknown>) };
     hash = ow.hash;
@@ -579,7 +600,7 @@ export async function setConfigByPath(
   storePath: string,
   key: string,
   value: unknown,
-  opts: ConfigWriteOpts,
+  opts: SetConfigOpts,
 ): Promise<void> {
   const descriptor = getDescriptorByStorePath(storePath);
   if (!descriptor) throw new Error(`No descriptor for "${storePath}"`);

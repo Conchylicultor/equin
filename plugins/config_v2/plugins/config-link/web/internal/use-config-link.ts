@@ -29,11 +29,10 @@ import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
 // nowhere.
 export function useConfigLink(): (descriptor: ConfigDescriptor) => LinkTarget {
   const registrations = useConfigRegistrations();
-  const activeApp = useActiveApp();
-  const go = useNavigate();
+  const pathLink = useConfigPathLink();
   return useCallback(
     (descriptor: ConfigDescriptor) => {
-      const url = () => {
+      const storePath = () => {
         const reg = registrations.find((r) => r.descriptor === descriptor);
         if (!reg) {
           throw new Error(
@@ -41,18 +40,35 @@ export function useConfigLink(): (descriptor: ConfigDescriptor) => LinkTarget {
               "it has no settings section to open.",
           );
         }
-        // configDetailRoute chains under configNavRoute, so `.path()` builds
-        // the full `/config/cd/<configPath>` app-relative URL; prefix the
-        // focused app's base path (root app → "").
+        return reg.storePath;
+      };
+      return {
+        open: () => pathLink(storePath()).open(),
+        href: () => pathLink(storePath()).href(),
+      };
+    },
+    [registrations, pathLink],
+  );
+}
+
+// The same link, from a store path a caller already holds (a refused write
+// names its document by path, not by descriptor).
+export function useConfigPathLink(): (storePath: string) => LinkTarget {
+  const activeApp = useActiveApp();
+  const go = useNavigate();
+  return useCallback(
+    (storePath: string) => {
+      // configDetailRoute chains under configNavRoute, so `.path()` builds the
+      // full `/config/cd/<configPath>` app-relative URL; prefix the focused
+      // app's base path (root app → "").
+      const url = () => {
         const appBase =
           !activeApp || activeApp.app.basePath === "/"
             ? ""
             : activeApp.app.basePath;
         return (
           appBase +
-          configDetailRoute.path({
-            configPath: encodeURIComponent(reg.storePath),
-          })
+          configDetailRoute.path({ configPath: encodeURIComponent(storePath) })
         );
       };
       return {
@@ -60,6 +76,6 @@ export function useConfigLink(): (descriptor: ConfigDescriptor) => LinkTarget {
         href: url,
       };
     },
-    [registrations, activeApp, go],
+    [activeApp, go],
   );
 }

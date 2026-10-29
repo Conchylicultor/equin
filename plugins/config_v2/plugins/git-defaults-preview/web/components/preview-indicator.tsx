@@ -19,7 +19,7 @@ export function PreviewIndicator() {
   const preview = useConfigPreview();
   useEffect(
     () =>
-      onConfigWriteRefused(() =>
+      onConfigWriteRefused("preview", () =>
         showToast({
           variant: "error",
           title: "Config is read-only while previewing the default config",

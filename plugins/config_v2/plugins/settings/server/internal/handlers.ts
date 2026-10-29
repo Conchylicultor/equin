@@ -27,6 +27,7 @@ export const handleSetField = implement(
       await setConfigByPath(body.storePath, body.key, body.value, {
         writer: originOf(req),
         scopeId: body.scopeId,
+        fromOverride: body.fromOverride,
       });
     } catch (err) {
       throw new HttpError(

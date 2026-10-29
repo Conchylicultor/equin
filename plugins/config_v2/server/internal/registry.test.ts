@@ -263,6 +263,41 @@ describe("conflict resolution", () => {
       expect(getConfig(alpha)).toEqual(ALPHA_ORIGIN);
       expect(lastEdits(1)).toEqual(["delete-override"]);
     }));
+
+  test("a write from what the app shows is refused and leaves the parked override", () =>
+    run(async () => {
+      conflict();
+      await reloadConfigDocument(ALPHA, "");
+      const before = read(file(ALPHA, "override"));
+      const editCount = edits.length;
+      // `expect(p).rejects` is typed `void` under bun:test, so the rejection
+      // is caught by hand.
+      const refused = await setConfigByPath(ALPHA, "title", "from-screen", {
+        writer,
+      }).then(
+        () => null,
+        (err: unknown) => err,
+      );
+      expect(refused).toBeInstanceOf(Error);
+      expect((refused as Error).message).toContain("has a conflict");
+      expect(read(file(ALPHA, "override"))).toEqual(before);
+      expect(edits.length).toBe(editCount);
+    }));
+
+  test("a write from the override edits the parked document and keeps the conflict", () =>
+    run(async () => {
+      conflict();
+      await reloadConfigDocument(ALPHA, "");
+      await setConfigByPath(ALPHA, "title", "edited", {
+        writer,
+        fromOverride: true,
+      });
+      expect(read(file(ALPHA, "override"))).toEqual({
+        content: { enabled: false, title: "edited" },
+        hash: computeHash({ enabled: true, title: "old" }),
+      });
+      expect(getConfig(alpha)).toEqual(ALPHA_ORIGIN);
+    }));
 });
 
 describe("scope fork and removal", () => {

@@ -7,6 +7,7 @@ export {
   useConfigPreview,
   setConfigPreview,
   onConfigWriteRefused,
+  type ConfigWriteRefusal,
 } from "./internal/config-preview";
 export { useScopeMembership } from "./internal/use-scope-membership";
 export { useConfigRegistrations } from "./internal/use-config-registrations";

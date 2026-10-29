@@ -13631,7 +13631,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `primitives/live-state.combineResources`
       - `primitives/live-state.foldResource`
       - `primitives/live-state.mapResource`
-    - Exports (types): `ConfigRegistration`
+    - Exports (types):
+      - `ConfigRegistration`
+      - `ConfigWriteRefusal`
     - Exports (values):
       - `ConfigV2`
       - `onConfigWriteRefused`
@@ -13853,11 +13855,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Server:
         - Contributes: `host-service:config-v2.git-layer` "config-v2.git-layer"
         - Uses: `config_v2.ConfigGitLayer`
-    - **`config-link`** — Deep-link affordances from any config-backed surface to its settings section. useConfigLink() links a descriptor to its config pane; ConfigGearButton and ConfigPopoverHeader surface it as a gear; ConfigSelectContent / ConfigMenuContent bake the gear into Select / DropdownMenu picker chrome.
+    - **`config-link`** — Deep-link affordances from any config-backed surface to its settings section. useConfigLink() links a descriptor to its config pane; ConfigGearButton and ConfigPopoverHeader surface it as a gear; ConfigSelectContent / ConfigMenuContent bake the gear into Select / DropdownMenu picker chrome. At Core.Root, ConflictWriteToast says why a config change was refused while its document is in conflict, with a Resolve link to the config.
       - Web:
+        - Contributes: `Core.Root` → `ConflictWriteToast`
         - Uses:
           - `apps-core.useActiveApp`
           - `apps-core/tabs.useNavigate`
+          - `config_v2.onConfigWriteRefused`
           - `config_v2.useConfigRegistrations`
           - `config_v2/settings.configDetailRoute`
           - `primitives/css/fill.Fill`
@@ -13869,6 +13873,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/ui-kit.SelectContent`
           - `primitives/icon-button.IconButton`
           - `primitives/link-gesture.activationProps`
+          - `shell/toast.showToast`
         - Exports (types):
           - `ConfigGearButtonProps`
           - `ConfigMenuContentProps`
@@ -28199,8 +28204,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots:
           - `Core.Root`
           - `Core.Boot`
-        - Slot contributors: 47 contributors — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
-          - `Core.Root` ×46
+        - Slot contributors: 48 contributors — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
+          - `Core.Root` ×47
           - `Core.Boot` ← `infra.boot-snapshot`
       - Core:
         - Uses:
@@ -43904,7 +43909,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `linkProps`
           - `openInBrowserTab`
       - Cross-plugin:
-        - Imported by: 54 plugins — full list in [`plugins/primitives/plugins/link-gesture/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/REFERENCE.md)
+        - Imported by: 55 plugins — full list in [`plugins/primitives/plugins/link-gesture/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/REFERENCE.md)
           - `primitives` ×13
           - `conversations` ×11
           - `apps` ×9
@@ -43913,13 +43918,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks` ×3
           - `debug` ×2
           - `hints` ×2
+          - `shell` ×2
           - `build`
           - `code-explorer/file-resolve`
           - `config_v2/config-link`
           - `infra/claude-cli/sign-in`
           - `integrations/google-maps/usage`
           - `plugin-meta/plugin-view`
-          - `shell/notifications`
       - Core:
         - Exports (types):
           - `Activation`
@@ -49601,6 +49606,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/z-layers/stack.defineZLayer`
           - `primitives/css/z-layers/stack.useZStackIndex`
           - `primitives/dom/element-size.useElementSize`
+          - `primitives/link-gesture.linkProps`
           - `primitives/live-state.foldResource`
           - `primitives/select-scope.ContentScope`
           - `ui/icons.Icon`
@@ -49618,11 +49624,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --popover`
           - `ui/tokens/color-palette --popover-foreground`
           - `ui/tokens/shape --radius`
-        - Imported by: 31 plugins — full list in [`plugins/shell/plugins/toast/REFERENCE.md`](../plugins/shell/plugins/toast/REFERENCE.md)
+        - Imported by: 32 plugins — full list in [`plugins/shell/plugins/toast/REFERENCE.md`](../plugins/shell/plugins/toast/REFERENCE.md)
           - `apps` ×9
+          - `config_v2` ×3
           - `conversations` ×3
           - `primitives` ×3
-          - `config_v2` ×2
           - `debug` ×2
           - `hints` ×2
           - `infra` ×2

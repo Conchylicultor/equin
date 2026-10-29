@@ -48,7 +48,7 @@ boot is unreachable rather than merely rare.
 `configGitValues` (`config-v2.git-values`, `{ path, scopeId? }`), served from
 `ConfigGitLayer.document` and watched through `ConfigGitLayer.watch` — i.e. what a
 brand-new user sees, with no user override or runtime fork. Every `useSetConfig` write
-is refused while it is on — announced through `onConfigWriteRefused` (the preview plugin's action-bar mark toasts it; config_v2 cannot import the toast, whose chrome reads config). Kept in session storage (survives a reload, dies
+is refused while it is on — announced through `onConfigWriteRefused("preview", …)` (the preview plugin's action-bar mark toasts it; config_v2 cannot import the toast, whose chrome reads config). Kept in session storage (survives a reload, dies
 with the tab); `useConfigPreview()` reads it. Server-side `getConfig` reads are not
 affected. The switch is `config_v2/plugins/git-defaults-preview` (View options — "Preview default config",
 developers only — and always while on, since the committed Developer mode is off).
@@ -142,6 +142,8 @@ A three-way merge needs the **base** — the origin the override was written aga
 **Every config file on disk must carry a `// @hash` header** — the anchor conflict detection compares against; a hashless file is corrupt, not a benign "untracked" override. Enforced by throwing at both boundaries: `jsoncConfigProxy.read()` on a hashless file, and `setConfig` rather than fabricating a hashless override when no origin has been propagated. There is no "null hash wins" fallback.
 
 Because the running app resolves to origin during a conflict, the settings editor binds to `conflictEntry.overrideValues` (the user's override document on disk), not to `useConfig` (the resolved value) — otherwise the user could neither see nor fix their pending override.
+
+**A document in conflict refuses every write computed from what the app shows.** The app shows the new origin, so a surface writing back what it shows would replace the user's parked value of that key with the new default — and a whole list is one key (a DataView's `views`: toggling one option rewrote every saved view as the defaults). `setConfig` throws for a document in conflict unless the write is `fromOverride: true` (the `set-field` body's flag), which only the settings editor sends, since it binds to the override. `useSetConfig` reads `config-v2.conflicts` and refuses before sending, announcing `{ kind: "conflict", storePath, scopeId? }` through `onConfigWriteRefused` — `config-link`'s `ConflictWriteToast` (at `Core.Root`) says "Config has a conflict — resolve it first" with a **Resolve** link to the config.
 
 ### Config migrations (saved values after a shape change)
 
@@ -413,7 +415,9 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `primitives/live-state.combineResources`
     - `primitives/live-state.foldResource`
     - `primitives/live-state.mapResource`
-  - Exports (types): `ConfigRegistration`
+  - Exports (types):
+    - `ConfigRegistration`
+    - `ConfigWriteRefusal`
   - Exports (values):
     - `ConfigV2`
     - `onConfigWriteRefused`

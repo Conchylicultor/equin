@@ -92,10 +92,20 @@ export function ConfigField({
   // The write is predicted (`setConfigField`'s effect), so `value` already
   // carries it: a second write built from the rendered value builds on the
   // first, and nothing here overlays the server's echo.
+  //
+  // `fromOverride`: this editor binds to the override document during a
+  // conflict (`conflictEntry.overrideValues`), so its writes edit the user's
+  // parked values — the one write a document in conflict accepts.
   const handleChange = useCallback(
     (newValue: unknown) => {
       setField({
-        body: { storePath, key: fieldKey, value: newValue, scopeId },
+        body: {
+          storePath,
+          key: fieldKey,
+          value: newValue,
+          scopeId,
+          fromOverride: true,
+        },
       });
     },
     [setField, storePath, fieldKey, scopeId],
@@ -107,7 +117,13 @@ export function ConfigField({
 
   const handleAcceptOrigin = useCallback(() => {
     setField({
-      body: { storePath, key: fieldKey, value: originValue, scopeId },
+      body: {
+        storePath,
+        key: fieldKey,
+        value: originValue,
+        scopeId,
+        fromOverride: true,
+      },
     });
   }, [setField, storePath, fieldKey, originValue, scopeId]);
 
