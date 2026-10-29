@@ -1,7 +1,9 @@
 # principal
 
 Who a request is. A **principal** is the edge's verdict on the caller:
-`owner` (the person this instance belongs to) or `anonymous` (anyone else).
+`owner` (the person this instance belongs to), `anonymous` (anyone else), or
+`content` (a request on the content host, `<item>.content.localhost` —
+untrusted content served off every app origin; never the owner).
 Hosted widens it later (a device, an agent, a share link). Design:
 [`research/2026-10-28-global-http-edge-principal.md`](../../../../research/2026-10-28-global-http-edge-principal.md);
 the Trust boundaries track (Phase 1) and the single-instance ADR
@@ -33,10 +35,16 @@ export const oauthCallback = defineEndpoint({
 });
 ```
 
-- `EndpointAccess = "owner" | { public: string }`. A declaration spells only
-  `access: { public: "<reason>" }` (`infra/endpoints`); its absence is
-  `"owner"`, which has no spelling — so a forgotten field is the safe answer,
-  and an empty reason throws at declaration.
+- `EndpointAccess = "owner" | { public: string } | { content: string; item: string }`.
+  A declaration spells `access: { public: "<reason>" }` or (a GET only)
+  `access: { content: "<reason>", item: "<param>" }` (`infra/endpoints`); its
+  absence is `"owner"`, which has no spelling — so a forgotten field is the
+  safe answer, and an empty reason throws at declaration.
+- A **content** route is served only to the `content` principal: asked for on
+  an app origin it answers `403 { reason: "content-only" }` (its document would
+  run as the owner there), anyone else `403 cross-site-refused`. Every other
+  route refuses `content` like `anonymous`. See `primitives/embed/frame`
+  (Trust boundaries, Phase 3).
 - The rule is the same for every method: an anonymous caller reaches public
   routes only — GETs, writes and WebSocket upgrades alike (no socket is
   public). SPA pages are static (served by the gateway), so a pasted app link
@@ -122,6 +130,8 @@ records it once, at bind; `principalStamp()` reads it back
     - `PrincipalStamp`
   - Exports (values):
     - `CENTRAL_HOST_ROUTES_ROUTE`
+    - `CONTENT_ONLY_MESSAGE`
+    - `contentOnlyResponse`
     - `CROSS_SITE_REFUSED_MESSAGE`
     - `crossSiteRefusedResponse`
     - `gateByPrincipal`

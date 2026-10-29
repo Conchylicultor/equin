@@ -20,6 +20,7 @@ import { embedBlock, toEmbedUrl } from "../../core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import { NewTabLink } from "@plugins/primitives/plugins/link-gesture/plugins/new-tab/web";
+import { ForeignFrame } from "@plugins/primitives/plugins/embed/plugins/frame/web";
 
 const smartDisplayIcon = symbol("smart-display");
 
@@ -128,13 +129,27 @@ function FilledEmbedBlock({
           </button>
         </Stack>
         <Overlay fill className="w-full aspect-video">
-          <iframe
-            src={toEmbedUrl(url)}
+          {/* Another site's page, on its own origin. An equin page, this
+              computer or a non-web address is refused, not framed: inside a
+              frame it would run with the owner's authority. */}
+          <ForeignFrame
+            url={toEmbedUrl(url)}
             className="h-full w-full rounded-md border-0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
             allowFullScreen
-            sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-presentation"
             title="Embedded content"
+            refused={(reason) => (
+              <Stack
+                align="center"
+                justify="center"
+                gap="xs"
+                className="h-full w-full rounded-md border border-border p-md"
+              >
+                <Text variant="caption" tone="muted">
+                  {reason}
+                </Text>
+              </Stack>
+            )}
           />
         </Overlay>
       </Stack>

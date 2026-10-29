@@ -6,6 +6,15 @@ two variants, two versions, or the mock and the real app next to each other
 and look. Design: `research/2026-09-23-apps-prototypes-frame-canvas.md`
 (mockup: prototype `proto-1790120832-wtfo`).
 
+## The frames are content
+
+A prototype is untrusted content: each frame is a `ContentFrame`
+(`primitives/embed/frame`) on the prototype's own origin on the content host,
+never the app's. Everything the canvas does to a document — its screen
+height, live colour vars, scroll carry, the extent probe, Whole page heights —
+is a request over the frame's content channel, and every answer is untrusted
+data that only lays the frame out.
+
 ## The model
 
 A frame shows one of two things:
@@ -213,7 +222,7 @@ live folder is cache-busted by its `PrototypeMeta.rev` (a hash of that
 prototype's own files), so an agent's edit reloads it — and nothing else does. A new `src` loads in a second, hidden iframe and replaces the one
 on screen on `load` (`prototype-frame.tsx`), so a frame never blanks while a
 client-rendered prototype boots, and every scroll offset of the outgoing
-document is carried onto the incoming one (auto-scroll's `restoreDocumentScroll`: matched
+document is carried onto the incoming one (the content channel's `captureScroll` / `restoreScroll`: matched
 by id, else by DOM path; re-tried as the new document renders, until reached,
 the reader scrolls, or 5 s), so a reload keeps the reader's place. Script state
 (an open menu, a typed value) is not carried.
@@ -257,19 +266,19 @@ whose fixed row grid has no two-leading-cell form:
   never changes what the page lays out at — only how big it is
   painted (`transform: scale()`).
 - **Whole page** shows each page's entire content instead of one screen: a
-  frame is as tall as its document (measured once loaded,
-  `use-page-height.ts`), all frames as tall as the tallest, and Fit then fits
+  frame is as tall as its document's content (reported by the content
+  channel's `watchHeight` as it changes), all frames as tall as the tallest, and Fit then fits
   that whole height.
 
   Not every page HAS a whole height. A page that sizes something from its
-  window in script (a `resize` handler reading `innerHeight`) grows with its
-  frame, without end. So before a frame is fitted to its page, a hidden twin
-  of the document is probed once (`internal/page-extent.ts`): measured at one
-  screen, doubled so its scripts react, then read again at one screen before
-  any script runs. A taller second read means the page follows its window: the
-  frame stays one screen tall, and with no frame left to show whole, the switch
-  reads off, disabled, "sized to its window". CSS `vh` alone never trips it —
-  it re-lays out synchronously.
+  window (a `resize` handler reading `innerHeight`, or CSS `vh`) grows with
+  its frame, without end. So before a frame is fitted to its page, a hidden
+  twin of the document is probed once (`internal/page-extent.ts`, over its
+  content channel): its content height measured at one screen, then with the
+  frame doubled and its scripts given time to react. Content that grew with the
+  frame means the page follows its window: the frame stays one screen tall, and
+  with no frame left to show whole, the switch reads off, disabled, "sized to
+  its window". A page that fits one screen is one screen.
 
   Every prototype frame tells its document the height of one screen, as
   `--prototype-screen-height` on `<html>` (firing `resize` when it changes). A
@@ -452,13 +461,12 @@ navigation, so it starts from nothing remembered.
     - `primitives/collapsible` ×5
     - `infra/endpoints` ×4
     - `hints` ×3
+    - `primitives/embed/frame` ×3
     - `primitives/hover-reveal` ×3
     - `primitives/persistent-draft` ×3
     - `network/live` ×2
     - `primitives/action-presentation` ×2
     - `primitives/css/spacing` ×2
-    - `primitives/dom/auto-scroll` ×2
-    - `primitives/dom/element-size` ×2
     - `primitives/icon-button` ×2
     - `primitives/latest-ref` ×2
     - `primitives/live-state` ×2
@@ -485,6 +493,7 @@ navigation, so it starts from nothing remembered.
     - `primitives/css/text.Text`
     - `primitives/css/theme-boundary.Theme`
     - `primitives/css/yield.yieldClass`
+    - `primitives/dom/element-size.useElementSize`
     - `primitives/dom/scroll-reveal.useRevealOnActive`
     - `primitives/dom/web-storage.defineStore`
     - `primitives/embed.isEmbeddedDocument`

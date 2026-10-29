@@ -34,10 +34,10 @@ block); a human picks one from the `/prototype` picker.
     - `page/editor` ×3
     - `primitives/css/layer` ×2
     - `primitives/css/ui-kit` ×2
+    - `primitives/embed/frame` ×2
     - `primitives/hover-reveal` ×2
     - `primitives/live-state` ×2
     - `apps/prototypes/canvas.prototypeDetailPane`
-    - `infra/endpoints.frameUrlOver`
     - `network/live.useLive`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
@@ -52,7 +52,6 @@ block); a human picks one from the `/prototype` picker.
     - `primitives/link-gesture/new-tab.NewTabButton`
     - `primitives/link-gesture.activationProps`
     - `primitives/loading.Loading`
-    - `primitives/networking.useTransport`
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/pane.useOpenPane`
     - `primitives/search.SearchInput`

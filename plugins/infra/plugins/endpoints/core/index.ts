@@ -5,8 +5,8 @@ export type {
   EffectRequest,
   EndpointEffect,
 } from "./endpoint-effect";
-export { ASSET_PATH, assetBase, assetPath } from "./asset-path";
-export type { AssetBase, AssetPath } from "./asset-path";
+export { ASSET_PATH, assetBase, assetPath, contentPath } from "./asset-path";
+export type { AssetBase, AssetPath, ContentPath } from "./asset-path";
 export type {
   AnyEndpointDef,
   EndpointDef,

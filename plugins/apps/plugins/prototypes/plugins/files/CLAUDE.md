@@ -526,7 +526,7 @@ the live values `prototypesList` / `prototypeHistory` /
 `useLive`), the raw file routes (`getPrototypeEntry` / `getPrototypeFile` /
 `getPrototypeVersionFile`, served on every host) and
 the frames' document `AssetPath`s (`prototypeDocument()` /
-`prototypeVersionDocument()`, an iframe's src resolved with `frameUrlOver`),
+`prototypeVersionDocument()`, `ContentPath`s a `ContentFrame` frames through `useContentUrl` — the routes are `access: { content }`, served only on the content host),
 the `listPrototypes` / `createPrototype` /
 `restorePrototypeVersion` / `setPrototypePicks` endpoints, the picks shapes
 (`StoredPicks`, `PicksChange`, `applyPicksChange`), the version shapes
@@ -607,9 +607,9 @@ for the `checkpoints` plugin's end-of-turn job, and the history contract
 - Core:
   - Uses:
     - `ids.defineIdKind`
-    - `infra/endpoints.assetPath`
-    - `infra/endpoints.AssetPath`
     - `infra/endpoints.blob`
+    - `infra/endpoints.contentPath`
+    - `infra/endpoints.ContentPath`
     - `infra/endpoints.defineEndpoint`
     - `infra/html-decode.rewriteStartTag`
     - `infra/html-decode.scanHtml`

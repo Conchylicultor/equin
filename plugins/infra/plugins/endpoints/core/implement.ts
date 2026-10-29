@@ -23,6 +23,7 @@ import {
   COMMITS_HEADER,
   commitsHeaderValue,
 } from "./commit-capture";
+import { injectFrameAgent } from "@plugins/primitives/plugins/embed/plugins/frame/plugins/agent/core";
 
 export { HttpError };
 
@@ -246,7 +247,33 @@ function brand(
   access: EndpointAccess,
   handler: HttpHandler,
 ): EndpointHttpHandler {
-  return Object.assign(handler, { access }) as EndpointHttpHandler;
+  const served =
+    typeof access === "object" && "content" in access
+      ? withFrameAgent(handler)
+      : handler;
+  return Object.assign(served, { access }) as EndpointHttpHandler;
+}
+
+/**
+ * A content route's HTML documents carry the frame agent
+ * (`primitives/embed/frame`): the only way the app reaches a document served
+ * off its origin. Injected here, for every `{ content }` route, so no route can
+ * serve a document the parent cannot talk to.
+ */
+function withFrameAgent(handler: HttpHandler): HttpHandler {
+  return async (req, params) => {
+    const res = await handler(req, params);
+    const type = res.headers.get("content-type") ?? "";
+    if (!/^text\/html\b/i.test(type)) return res;
+    const headers = new Headers(res.headers);
+    headers.delete("content-length");
+    headers.delete("etag");
+    return new Response(injectFrameAgent(await res.text()), {
+      status: res.status,
+      statusText: res.statusText,
+      headers,
+    });
+  };
 }
 
 // Identity of a GET for dedup: method + path + query string. Two requests with

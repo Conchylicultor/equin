@@ -55,7 +55,7 @@ others — there is no leader to lose. Design:
 ## `Transport` — where a subtree's server traffic goes
 
 `web/transport.ts`: a `Transport` is `{ socketUrl, openSocket, fetch,
-servesUrls, frameBase, machine, telemetry }`. **There is no default transport**:
+servesUrls, content, machine, telemetry }`. **There is no default transport**:
 `useTransport()` throws outside every `<TransportProvider>`. The app root
 (`framework/web-core`'s `App.tsx`) mounts the page's own server,
 `pageTransport` (leaf child plugin `plugins/page-transport`: same-origin
@@ -78,12 +78,12 @@ the same URL. `fetchWithRetry` takes the transport's `fetch` as an option.
   `useAssetSrc` fetches an asset through `fetch` and hands out a blob URL,
   ref-counted per transport (`transportScoped`) and revoked with its last
   holder.
-- **`frameBase: string | null`** — where a navigated document (an
-  `<iframe>`, whose relative sub-resources resolve beside it) loads the
-  transport's `/api/…` paths: `""` for the page's own server, a scoped prefix
-  for an in-browser server (its frames served by the host's Service Worker,
-  `framework/browser-server`), `null` where nothing serves them. Never for an
-  element of the page (that is `servesUrls`). Read through `frameUrlOver`
+- **`content: ContentServing | null`** — where untrusted content documents
+  (an `access: { content }` route's, framed by `ContentFrame`) load:
+  `content-host` (`<item>.content.localhost/<ns>/…`, off every app origin —
+  the page's own server, derived from `location`), `same-origin` with its
+  declared reason (an in-browser server's frame Service Worker, serving repo
+  fixtures), `null` where nothing serves them. Read through `contentUrlOver`
   (`infra/endpoints`).
 - **`telemetry: boolean`** — whether the telemetry this subtree's server
   traffic raises is reported (to the page's own server, the one receiver).
@@ -171,6 +171,7 @@ built on them — see
     - `primitives/latest-ref.useLatestRef`
     - `primitives/networking/request-guard.nativeWebSocket`
   - Exports (types):
+    - `ContentServing`
     - `FetchWithRetryOptions`
     - `LockManagerLike`
     - `MakeSharedWorker`
@@ -205,11 +206,11 @@ built on them — see
 - Cross-plugin:
   - Imported by: 32 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×9
-    - `primitives` ×6
+    - `primitives` ×7
     - `conversations` ×5
     - `framework` ×3
-    - `page` ×3
     - `infra` ×2
+    - `page` ×2
     - `debug/worktree-cleanup`
     - `network/live`
     - `shell/notifications`

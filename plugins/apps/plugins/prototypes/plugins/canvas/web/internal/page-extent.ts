@@ -1,3 +1,6 @@
+import type { FrameHeights } from "@plugins/primitives/plugins/embed/plugins/frame/plugins/agent/core";
+import type { FrameChannel } from "@plugins/primitives/plugins/embed/plugins/frame/web";
+
 /**
  * What Whole page can show of one prototype document: its full height, or
  * nothing, because the page sizes itself to its window.
@@ -26,72 +29,79 @@ export function sameExtent(
 }
 
 /**
- * The CSS custom property every prototype frame sets on its document's
- * `<html>`: the height of ONE screen, in px. With Whole page on the frame is
- * as tall as the page, so `100vh` and `innerHeight` are the page, not a
- * screen; a prototype that sizes something to the screen reads this instead
- * (see `prototypes/CLAUDE.md`), and so keeps a whole-page height.
+ * The custom property every prototype frame's document is told the height of
+ * ONE screen in (px), on its `<html>` — set by the content frame's agent
+ * (`setScreenHeight`). With Whole page on the frame is as tall as the page, so
+ * `100vh` and `innerHeight` are the page, not a screen; a prototype that sizes
+ * something to the screen reads this instead (see `prototypes/CLAUDE.md`), and
+ * so keeps a whole-page height.
  */
 export const SCREEN_HEIGHT_VAR = "--prototype-screen-height";
 
-/**
- * Set the document's screen height; when it changed, fire `resize` on its
- * window, so a script that sizes to the screen re-reads it even when the
- * frame itself kept its size.
- */
-export function publishScreenHeight(doc: Document, height: number): void {
-  const root = doc.documentElement;
-  const value = `${String(height)}px`;
-  if (root.style.getPropertyValue(SCREEN_HEIGHT_VAR) === value) return;
-  root.style.setProperty(SCREEN_HEIGHT_VAR, value);
-  doc.defaultView?.dispatchEvent(new Event("resize"));
-}
+/** The tallest a Whole page frame grows to — a guard, not a layout rule. */
+export const MAX_PAGE_HEIGHT = 50_000;
 
 /**
  * Probe a loaded document's extent in its own (hidden) frame, at one screen of
- * `screenH`.
+ * `screenH`, over its content channel — the document is on another origin, so
+ * every read is a request and every answer is untrusted data.
  *
  * The page is measured at `screenH`, then its frame is doubled and its scripts
- * are given a few frames to react, then the frame is put back to `screenH` and
- * the page measured again at once — before any script can run. CSS that
- * depends on the viewport (`vh`) re-lays out synchronously, so it reads the
- * same both times; a height a script wrote from the bigger window is still
- * there, so it reads taller: the page follows its window.
+ * are given a few frames to react, then measured again. Its CONTENT height
+ * (how far its content reaches, the frame's own height not counted) staying
+ * put means the page has a height of its own; growing with the frame means it
+ * follows its window — sized in script from `innerHeight`, or in CSS `vh` —
+ * and has none. A page that fits one screen is one screen.
  *
  * A dedicated frame, never the one on screen: the doubling would show, and the
  * frame on screen already carries whatever its scripts wrote at its own size.
  */
 export async function probePageExtent(
   frame: HTMLIFrameElement,
-  doc: Document,
+  channel: FrameChannel,
   screenH: number,
-  cancelled: () => boolean,
-): Promise<PageExtent | null> {
-  const root = doc.documentElement;
+): Promise<PageExtent> {
+  // One screen stays `screenH` while the frame is doubled: the doubling is
+  // what tells a page that follows its window from one that does not.
+  await channel.request({ op: "setScreenHeight", px: screenH });
+  const atScreen = await measureAt(frame, channel, screenH);
+  if (atScreen.contentHeight <= screenH + 1) {
+    return { kind: "page", height: screenH };
+  }
+  await channel.request({ op: "dispatchResize" });
+  const doubled = await measureAt(frame, channel, screenH * 2);
   frame.style.height = `${String(screenH)}px`;
-  publishScreenHeight(doc, screenH);
-  await settle();
-  if (cancelled()) return null;
-  const atScreen = root.scrollHeight;
-
-  frame.style.height = `${String(screenH * 2)}px`;
-  doc.defaultView?.dispatchEvent(new Event("resize"));
-  await settle();
-  if (cancelled()) return null;
-
-  frame.style.height = `${String(screenH)}px`;
-  const again = root.scrollHeight;
-  return Math.abs(again - atScreen) > 1
+  return doubled.contentHeight > atScreen.contentHeight + 1
     ? { kind: "window-sized" }
-    : { kind: "page", height: Math.max(atScreen, screenH) };
+    : {
+        kind: "page",
+        height: Math.min(
+          Math.max(atScreen.contentHeight, screenH),
+          MAX_PAGE_HEIGHT,
+        ),
+      };
 }
 
+/** How many settles a frame resize is given to reach the document. */
+const RESIZE_TRIES = 10;
+
 /**
- * Give the page's scripts time to react: a resize handler runs at once, but a
- * framework re-render it schedules lands a task or two later.
+ * The document's heights once its frame is `height` tall: the resize reaches a
+ * document on another origin asynchronously, so it is measured (after letting
+ * its scripts react) until it sees the new height.
  */
-async function settle(): Promise<void> {
-  for (let i = 0; i < 3; i++) {
-    await new Promise((resolve) => requestAnimationFrame(resolve));
+async function measureAt(
+  frame: HTMLIFrameElement,
+  channel: FrameChannel,
+  height: number,
+): Promise<FrameHeights> {
+  frame.style.height = `${String(height)}px`;
+  for (let i = 0; i < RESIZE_TRIES; i++) {
+    await channel.request({ op: "settle" });
+    const heights = await channel.request({ op: "measure" });
+    if (Math.abs(heights.innerHeight - height) <= 1) return heights;
   }
+  throw new Error(
+    `prototype extent probe: the frame never reached ${String(height)}px (its document still reads its own height as another) — is the frame hidden by display: none?`,
+  );
 }

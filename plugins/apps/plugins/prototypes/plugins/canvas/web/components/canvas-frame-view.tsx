@@ -95,7 +95,7 @@ function PrototypeFrameView({
     >
       {src.kind === "ready" ? (
         <PrototypeFrame
-          src={src.url}
+          src={src}
           title={meta.title}
           width={layout.width}
           height={layout.height}

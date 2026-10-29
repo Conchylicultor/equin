@@ -1,23 +1,24 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { layerClasses } from "@plugins/primitives/plugins/css/plugins/layer/web";
 import {
   useEventCallback,
   useLatestRef,
 } from "@plugins/primitives/plugins/latest-ref/web";
 import {
-  captureDocumentScroll,
-  restoreDocumentScroll,
-} from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
-import { usePageHeight } from "../internal/use-page-height";
-import { publishColorVars } from "../internal/color-vars";
+  ContentFrame,
+  FrameChannelClosedError,
+  type FrameChannel,
+} from "@plugins/primitives/plugins/embed/plugins/frame/web";
+import type { ReadyContentUrl } from "@plugins/infra/plugins/endpoints/web";
 import {
+  MAX_PAGE_HEIGHT,
   probePageExtent,
-  publishScreenHeight,
   type PageExtent,
 } from "../internal/page-extent";
 
 /**
- * A prototype document in a sandboxed iframe, laid out at the canvas's LOGICAL
+ * A prototype document in a content frame — on its own origin on the content
+ * host, never the app's — laid out at the canvas's LOGICAL
  * size (so the page's own media queries run at that width) and shrunk or grown
  * on screen by `scale`.
  *
@@ -32,15 +33,15 @@ import {
  * reload it.
  *
  * **A new `src` keeps the reader's place.** At the swap, every scroll offset of
- * the outgoing document is carried onto the incoming one
- * (`captureDocumentScroll` / `restoreDocumentScroll`, from auto-scroll),
+ * the outgoing document is carried onto the incoming one (the content
+ * channel's `captureScroll` / `restoreScroll`),
  * so an agent's edit reloading a live frame does not throw the reader back to
  * the top. What the page holds in script (an open menu, a typed value) is not
  * carried: that lives in the old document, and only a reload shows the edit.
  *
  * With `wholePage`, the document is first probed (`PageProbe`) for whether it
- * HAS a whole-page height. If it does, the frame is as tall as its own document
- * (measured at the logical `height`, see `usePageHeight`); if the page sizes
+ * HAS a whole-page height. If it does, the frame is as tall as its own
+ * document's content (reported by the channel's `watchHeight`); if the page sizes
  * itself to its window, the frame stays one screen tall. Either answer is
  * reported through `onPageExtent`, so the canvas can fit every frame to the
  * tallest page, and say when there is none. Otherwise the frame is one screen
@@ -51,6 +52,10 @@ import {
  * (`colorVars`, as `--<name>` on its `<html>`) — on the document on screen as
  * they move, and on an incoming one before it is shown — so a color pick or a
  * drag never reloads the frame.
+ *
+ * Every read and write into the document is a request over its content
+ * channel (`ContentFrame`'s `onChannel`): the document is on another origin.
+ * What it answers is untrusted and only ever lays the frame out.
  */
 export function PrototypeFrame({
   src,
@@ -64,7 +69,7 @@ export function PrototypeFrame({
   onPageExtent,
 }: {
   /** The document's URL, from `useFrameSrc` — never built here. */
-  src: string;
+  src: ReadyContentUrl;
   /** The frame's accessible name: the prototype's `<title>`, never its id. */
   title: string;
   width: number;
@@ -78,39 +83,85 @@ export function PrototypeFrame({
   onPageExtent: (extent: PageExtent) => void;
 }) {
   // The document on screen. `src` differing from it means a new one is loading.
-  const [shownSrc, setShownSrc] = useState(src);
-  const frames = shownSrc === src ? [src] : [shownSrc, src];
-  // The document on screen once it has loaded — what Whole page measures.
+  const [shown, setShown] = useState(src);
+  const frames = shown.url === src.url ? [src] : [shown, src];
+  // The document on screen once it has loaded, and its channel.
   const [ready, setReady] = useState<{
     frame: HTMLIFrameElement;
-    doc: Document;
+    channel: FrameChannel;
   } | null>(null);
+  const readyRef = useLatestRef(ready);
   // The probe's answer, for the document it probed. Whether a page follows
   // its window is a property of the document, so a new size never re-probes.
   const [probed, setProbed] = useState<{
-    src: string;
+    url: string;
     extent: PageExtent;
   } | null>(null);
-  const extent = probed?.src === shownSrc ? probed.extent : null;
+  const extent = probed?.url === shown.url ? probed.extent : null;
   const hasPage = wholePage && extent?.kind === "page";
-  usePageHeight(ready, height, hasPage, (h) =>
-    onPageExtent({ kind: "page", height: h }),
-  );
+  const report = useEventCallback(onPageExtent);
+  const heightRef = useLatestRef(height);
+
+  // Whole page: the document's content height, as it changes.
+  useEffect(() => {
+    if (!ready || !hasPage) return;
+    const { channel } = ready;
+    const stop = channel.onHeight((h) =>
+      report({
+        kind: "page",
+        height: Math.min(
+          Math.max(h.contentHeight, heightRef.current),
+          MAX_PAGE_HEIGHT,
+        ),
+      }),
+    );
+    void settled(channel.request({ op: "watchHeight" }));
+    return () => {
+      stop();
+      void settled(channel.request({ op: "unwatchHeight" }));
+    };
+  }, [ready, hasPage, report, heightRef]);
   const docHeight = hasPage && pageHeight !== null ? pageHeight : height;
-  // The in-flight scroll restore into the document on screen, if any.
-  const cancelRestore = useRef<(() => void) | null>(null);
-  useEffect(() => () => cancelRestore.current?.(), []);
 
   useEffect(() => {
-    if (ready) publishScreenHeight(ready.doc, height);
+    if (ready) {
+      void settled(
+        ready.channel.request({ op: "setScreenHeight", px: height }),
+      );
+    }
   }, [ready, height]);
 
-  // Only a property that differs is written, so a re-render that moved no
-  // color writes nothing.
+  // Only a property that differs is written (by the agent), so a re-render
+  // that moved no color changes nothing on screen.
   const latestColors = useLatestRef(colorVars);
   useEffect(() => {
-    if (ready) publishColorVars(ready.doc, colorVars);
+    if (ready) {
+      void settled(ready.channel.request({ op: "setVars", vars: colorVars }));
+    }
   }, [ready, colorVars]);
+
+  // An incoming document is painted (screen height, colors) before it is
+  // shown, and handed the outgoing one's scroll offsets once it is.
+  const promote = async (
+    frameSrc: ReadyContentUrl,
+    frame: HTMLIFrameElement,
+    channel: FrameChannel,
+  ) => {
+    await channel.request({ op: "setScreenHeight", px: heightRef.current });
+    // Its url carries the colors as of when it was asked for; a drag may have
+    // moved them since.
+    await channel.request({ op: "setVars", vars: latestColors.current });
+    const outgoing = readyRef.current;
+    const scroll =
+      outgoing === null
+        ? []
+        : await settled(outgoing.channel.request({ op: "captureScroll" }));
+    setShown(frameSrc);
+    setReady({ frame, channel });
+    if (scroll !== null && scroll.length > 0) {
+      await channel.request({ op: "restoreScroll", scroll });
+    }
+  };
 
   return (
     <div
@@ -125,42 +176,21 @@ export function PrototypeFrame({
       }}
     >
       {frames.map((frameSrc) => {
-        const loading = frameSrc !== shownSrc;
+        const loading = frameSrc.url !== shown.url;
         return (
-          <iframe
-            key={frameSrc}
+          <ContentFrame
+            key={frameSrc.url}
             title={title}
             src={frameSrc}
-            // allow-same-origin keeps the frame on our own origin, so a
-            // prototype that fetch()es one of its own flat files works here
-            // exactly as it does off disk. Safe: prototypes are first-party
-            // files, authored on this machine and served from the user's own
-            // ~/.equin/apps/prototypes/.
-            sandbox="allow-scripts allow-same-origin"
             width={width}
             height={docHeight}
             // The incoming frame is invisible and out of the accessibility
             // tree until it has loaded; `load` then makes it the one shown.
             aria-hidden={loading || undefined}
             tabIndex={loading ? -1 : undefined}
-            onLoad={(e) => {
-              const frame = e.currentTarget;
-              const doc = frame.contentDocument;
-              // allow-same-origin (above) is what makes this readable.
-              if (!doc) throw new Error("prototype frame is not same-origin");
-              if (loading && ready) {
-                cancelRestore.current?.();
-                cancelRestore.current = restoreDocumentScroll(
-                  doc,
-                  captureDocumentScroll(ready.doc),
-                );
-              }
-              // Its url carries the colors as of when it was asked for; a drag
-              // may have moved them since. Painted before it is shown.
-              publishColorVars(doc, latestColors.current);
-              setShownSrc(frameSrc);
-              setReady({ frame, doc });
-            }}
+            onChannel={(channel, frame) =>
+              void settled(promote(frameSrc, frame, channel))
+            }
             // The incoming frame is a layer over the one on screen, and drops
             // back into flow when promoted — a class change, never a remount.
             className={loading ? layerClasses() : undefined}
@@ -176,18 +206,31 @@ export function PrototypeFrame({
       })}
       {wholePage && extent === null ? (
         <PageProbe
-          key={shownSrc}
-          src={shownSrc}
+          key={shown.url}
+          src={shown}
           width={width}
           height={height}
           onExtent={(e) => {
-            setProbed({ src: shownSrc, extent: e });
+            setProbed({ url: shown.url, extent: e });
             onPageExtent(e);
           }}
         />
       ) : null}
     </div>
   );
+}
+
+/**
+ * A request whose frame may be replaced while it waits: a closed channel is
+ * the frame's expected end (`null`), anything else fails loudly.
+ */
+async function settled<T>(work: Promise<T>): Promise<T | null> {
+  try {
+    return await work;
+  } catch (err) {
+    if (err instanceof FrameChannelClosedError) return null;
+    throw err;
+  }
 }
 
 /**
@@ -202,14 +245,14 @@ function PageProbe({
   height,
   onExtent,
 }: {
-  src: string;
+  src: ReadyContentUrl;
   width: number;
   height: number;
   onExtent: (extent: PageExtent) => void;
 }) {
   const [loaded, setLoaded] = useState<{
     frame: HTMLIFrameElement;
-    doc: Document;
+    channel: FrameChannel;
   } | null>(null);
   const report = useEventCallback(onExtent);
   // Read once the document has loaded: a later size does not restart the probe.
@@ -218,13 +261,10 @@ function PageProbe({
   useEffect(() => {
     if (!loaded) return;
     let cancelled = false;
-    void probePageExtent(
-      loaded.frame,
-      loaded.doc,
-      heightRef.current,
-      () => cancelled,
+    void settled(
+      probePageExtent(loaded.frame, loaded.channel, heightRef.current),
     ).then((extent) => {
-      if (extent) report(extent);
+      if (extent && !cancelled) report(extent);
     });
     return () => {
       cancelled = true;
@@ -232,20 +272,14 @@ function PageProbe({
   }, [loaded, heightRef, report]);
 
   return (
-    <iframe
+    <ContentFrame
       src={src}
       title="Whole page probe"
-      sandbox="allow-scripts allow-same-origin"
       width={width}
       height={height}
       aria-hidden
       tabIndex={-1}
-      onLoad={(e) => {
-        const frame = e.currentTarget;
-        const doc = frame.contentDocument;
-        if (!doc) throw new Error("prototype probe frame is not same-origin");
-        setLoaded({ frame, doc });
-      }}
+      onChannel={(channel, frame) => setLoaded({ frame, channel })}
       // Its own width and height win over the layer's inset: it lays out at
       // the logical size, like the frame on screen.
       className={layerClasses({ decorative: true })}

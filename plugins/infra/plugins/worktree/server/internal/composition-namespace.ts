@@ -28,6 +28,7 @@ import { readFile } from "node:fs/promises";
 import { basename, join } from "node:path";
 import {
   isNamespaceHostAlias,
+  isContentReservedNamespace,
   NAMESPACE_HOST_ALIASES,
   type Namespace,
 } from "@plugins/infra/plugins/namespace/core";
@@ -93,6 +94,11 @@ export function namespaceCollision(
   // so a namespace spelled like one could never be reached.
   if (isNamespaceHostAlias(ns)) {
     return `"${ns}" is a host alias of the "${NAMESPACE_HOST_ALIASES[ns]}" namespace — the gateway would never route to it; pick another name.`;
+  }
+  // Both sides: `content` / `<x>.content` hosts are content hosts, which the
+  // gateway reads before any namespace.
+  if (isContentReservedNamespace(ns)) {
+    return `"${ns}" is reserved for the content host (<item>.content.localhost) — the gateway would never route to it; pick another name.`;
   }
   if (claimant.kind === "composition") {
     if (probe.gitWorktreeDirExists) {

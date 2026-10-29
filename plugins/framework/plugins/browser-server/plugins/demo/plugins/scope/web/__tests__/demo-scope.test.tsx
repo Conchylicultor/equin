@@ -491,14 +491,17 @@ function stubServiceWorkers(): FakeServiceWorkers & { restore(): void } {
 }
 
 describe("<DemoScope> frame serving", () => {
-  it("has no frame base where the browser offers no Service Worker", async () => {
+  it("has no content serving where the browser offers no Service Worker", async () => {
     expect("serviceWorker" in navigator).toBe(false);
     let frameBase: string | null | undefined;
     await renderAsync(
       <PluginProvider plugins={PLUGINS}>
         <DemoScope scenario={scenarioOf()}>
           <Probe
-            read={() => useTransport().frameBase}
+            read={() => {
+              const c = useTransport().content;
+              return c === null ? null : c.url("item", "");
+            }}
             onRead={(b) => (frameBase = b)}
           />
         </DemoScope>
@@ -507,7 +510,7 @@ describe("<DemoScope> frame serving", () => {
     await waitFor(() => expect(frameBase).toBeNull());
   });
 
-  it("has no frame base where the context blocks registration (register resolves nothing)", async () => {
+  it("has no content serving where the context blocks registration (register resolves nothing)", async () => {
     // Playwright's `serviceWorkers: "block"` replaces `register` with one
     // that resolves `undefined`: the agent browser, the thumbnail renderer.
     Object.defineProperty(navigator, "serviceWorker", {
@@ -520,7 +523,10 @@ describe("<DemoScope> frame serving", () => {
         <PluginProvider plugins={PLUGINS}>
           <DemoScope scenario={scenarioOf()}>
             <Probe
-              read={() => useTransport().frameBase}
+              read={() => {
+                const c = useTransport().content;
+                return c === null ? null : c.url("item", "");
+              }}
               onRead={(b) => (frameBase = b)}
             />
           </DemoScope>
@@ -540,7 +546,10 @@ describe("<DemoScope> frame serving", () => {
         <PluginProvider plugins={PLUGINS}>
           <DemoScope scenario={scenarioOf()}>
             <Probe
-              read={() => useTransport().frameBase}
+              read={() => {
+                const c = useTransport().content;
+                return c === null ? null : c.url("item", "");
+              }}
               onRead={(b) => (frameBase = b)}
             />
           </DemoScope>
@@ -644,7 +653,7 @@ function pageBackend(): Transport {
         }),
       ),
     servesUrls: true,
-    frameBase: "",
+    content: null,
     machine: true,
     telemetry: false,
   };

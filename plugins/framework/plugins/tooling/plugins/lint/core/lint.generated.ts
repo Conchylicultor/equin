@@ -103,6 +103,7 @@ export const lintEntries: CollectedEntry[] = [
   { pluginPath: "primitives/plugins/data-view", id: "primitives.data-view", loader: () => import("@plugins/primitives/plugins/data-view/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/detail-sections", id: "primitives.detail-sections", loader: () => import("@plugins/primitives/plugins/detail-sections/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/dom/plugins/web-storage", id: "primitives.dom.web-storage", loader: () => import("@plugins/primitives/plugins/dom/plugins/web-storage/lint"), dependsOn: [] },
+  { pluginPath: "primitives/plugins/embed/plugins/frame", id: "primitives.embed.frame", loader: () => import("@plugins/primitives/plugins/embed/plugins/frame/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/icon-button", id: "primitives.icon-button", loader: () => import("@plugins/primitives/plugins/icon-button/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/link-gesture", id: "primitives.link-gesture", loader: () => import("@plugins/primitives/plugins/link-gesture/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/link-gesture/plugins/new-tab", id: "primitives.link-gesture.new-tab", loader: () => import("@plugins/primitives/plugins/link-gesture/plugins/new-tab/lint"), dependsOn: ["ui/plugins/icons"] },

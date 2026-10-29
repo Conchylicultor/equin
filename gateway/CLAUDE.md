@@ -73,6 +73,24 @@ the shell is `no-cache`.
 
 Design: [`research/2026-10-28-global-http-edge-principal.md`](../research/2026-10-28-global-http-edge-principal.md).
 
+## Content host
+
+`content.go`: `http://<item>.content.localhost:<port>/<ns-label>/api/…` is where
+equin serves untrusted CONTENT (an agent-written prototype) off every app
+origin — one origin per `<item>` (one DNS label, not otherwise read), the
+namespace in the first path segment (alias-resolved like a Host). Handled
+first in `ServeHTTP`, before `parseWorktree` and central routes. The gateway
+stamps principal `content` (client value deleted), proxies only `/api/…` (path
+rewritten without the label) to that namespace's backend, sets
+`Content-Security-Policy: frame-ancestors 'self' http://*.localhost:<port>`,
+`Cross-Origin-Resource-Policy: same-origin` and `nosniff`, and refuses
+everything else with `{"reason":"content-refused"}`: the SPA, `/gateway`,
+`/ws` and any WebSocket upgrade, Service Worker scripts. The backend serves
+only routes declared `access: { content }` to that principal. `content` and
+`<x>.content` are reserved namespace names (`namespaceCollision`);
+`contentHostLabel` is pinned to the TS constant by `namespace:grammar-in-sync`.
+Design: [`research/2026-10-29-global-content-isolation.md`](../research/2026-10-29-global-content-isolation.md).
+
 ## Worktree Registry
 
 Location: `~/.equin/worktrees/<name>/spec.json`. Directory name = worktree identifier = subdomain.
@@ -137,6 +155,7 @@ gateway/
 ├── document_head.go # The backend-rendered <head> fragment spliced into the SPA shell
 ├── encoding.go    # Content-encoding of statics: precompressed-sidecar negotiation, on-the-fly gzip of the spliced shell
 ├── principal.go   # principalOf: owner/anonymous verdict, X-Equin-Principal stamp, cross-site refusal
+├── content.go     # the content host: <item>.content.localhost/<ns>/api/… stamped `content`, nothing else served
 └── proxy.go       # http.Handler: routing, static serving, HTTP/WS proxy, /gateway API
 ```
 

@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-primitives-embed-frame-agent",
+  "description": "The content-frame channel's protocol and its frame agent: the script injected into every content document, answering the parent's closed set of requests over a MessagePort.",
+  "private": true,
+  "version": "0.0.1"
+}

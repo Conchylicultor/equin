@@ -6,6 +6,7 @@ import {
 import { fileRefName } from "@plugins/primitives/plugins/file-viewer/core";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
+import { InlineFrame } from "@plugins/primitives/plugins/embed/plugins/frame/web";
 import { isolateHtml } from "../internal/isolate";
 
 /**
@@ -35,10 +36,10 @@ export function HtmlView({ file }: FileRendererProps) {
   }
 
   return (
-    <iframe
+    <InlineFrame
       title={fileRefName(file)}
-      srcDoc={isolateHtml(state.content)}
-      sandbox="allow-scripts allow-popups allow-forms allow-modals"
+      html={isolateHtml(state.content)}
+      allow={["scripts", "popups", "forms", "modals"]}
       className="block h-full w-full border-0 bg-white"
     />
   );

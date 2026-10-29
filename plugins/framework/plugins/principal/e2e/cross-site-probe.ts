@@ -162,7 +162,9 @@ async function legA(): Promise<void> {
     );
   }
 
-  for (const row of all.filter((x) => x.access === "owner")) {
+  // Owner routes and content routes alike refuse an anonymous caller: a
+  // content route answers only the content host's `content` principal.
+  for (const row of all.filter((x) => x.access !== "public")) {
     if (row.kind === "http") {
       const [method = "GET", path = ""] = row.route.split(" ");
       const res = await raw(method, fill(path), FORGED);

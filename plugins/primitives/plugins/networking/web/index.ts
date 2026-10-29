@@ -19,7 +19,7 @@ export type {
   SharedWorkerLike,
 } from "./transport-types";
 export { TransportProvider, useTransport } from "./transport";
-export type { Transport, TransportSocket } from "./transport";
+export type { ContentServing, Transport, TransportSocket } from "./transport";
 export { transportScoped, useTransportScoped } from "./transport-scoped";
 export type { TransportScoped } from "./transport-scoped";
 export { fetchWithRetry } from "./fetch-with-retry";

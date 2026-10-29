@@ -102,7 +102,12 @@ Design: `research/2026-08-18-global-namespace-identity.md`.
   - Exports (values):
     - `asNamespace`
     - `BASE_EXCLUSIONS_ID`
+    - `CONTENT_HOST_LABEL`
+    - `CONTENT_ITEM_RE`
+    - `contentUrl`
     - `GATEWAY_PORT`
+    - `isContentHost`
+    - `isContentReservedNamespace`
     - `isNamespace`
     - `isNamespaceHostAlias`
     - `MAIN_COMPOSITION_ID`
@@ -131,6 +136,7 @@ Design: `research/2026-08-18-global-namespace-identity.md`.
     - `plugin-meta/barrel-import`
     - `plugin-meta/closure`
     - `plugin-meta/composition`
+    - `primitives/embed/frame`
 - Exemptions:
   - Exempts itself from:
     - `namespace:no-hand-built-url` — `core/namespace.ts`, `check/index.ts` (sanctioned)

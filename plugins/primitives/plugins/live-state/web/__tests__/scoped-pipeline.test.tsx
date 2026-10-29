@@ -108,7 +108,7 @@ function backend(who: string, watermark: string) {
       );
     },
     servesUrls: true,
-    frameBase: "",
+    content: null,
     machine: true,
     telemetry: false,
   };

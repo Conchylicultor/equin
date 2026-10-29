@@ -8,7 +8,7 @@
 - Web:
   - Contributes: `FileViewer.Renderer` "PDF" → `PdfView`
   - Uses:
-    - `infra/endpoints.useAssetSrc`
+    - `primitives/embed/frame.PdfFrame`
     - `primitives/file-viewer.FileRendererProps`
     - `primitives/file-viewer.FileViewer`
     - `primitives/file-viewer.UnloadedFile`

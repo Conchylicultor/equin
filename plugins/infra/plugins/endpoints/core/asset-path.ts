@@ -131,3 +131,56 @@ export function assetBase<TParams>(
     needsMachine: endpoint.needsMachine ?? null,
   } as AssetBase;
 }
+
+declare const contentPathBrand: unique symbol;
+
+/**
+ * The address of a piece of untrusted CONTENT a frame shows — a document an
+ * `access: { content }` route serves (an agent-written prototype). Opaque like
+ * {@link AssetPath}; its URL comes only from `contentUrlOver`
+ * (`endpoints/web`), which puts it on the content host
+ * (`<item>.content.localhost`), never on an app origin. Framed only by
+ * `ContentFrame` (`primitives/embed/frame`).
+ *
+ * Built only by {@link contentPath}, from the route's own declaration: `item`
+ * — the content's origin key, one origin per piece of content — is the value
+ * of the param the declaration names, never chosen by a caller.
+ */
+export interface ContentPath {
+  readonly [contentPathBrand]: true;
+  /** The `/api/…` path (and query) the content is served at. */
+  readonly [ASSET_PATH]: string;
+  /** The content's origin key (a DNS label). */
+  readonly item: string;
+  /** The route's `needsMachine` — set when only the desktop app serves it. */
+  readonly needsMachine: MachineFeature | null;
+}
+
+/**
+ * The {@link ContentPath} of what a content `endpoint` serves for `params`
+ * (and `query`). Throws for an endpoint not declared `access: { content }`.
+ */
+export function contentPath<TParams, TQuery>(
+  endpoint: AssetEndpoint<TParams, TQuery>,
+  params: TParams,
+  ...query: [TQuery] extends [void] ? [] : [query: TQuery]
+): ContentPath {
+  const access = endpoint.access;
+  if (typeof access !== "object" || !("content" in access)) {
+    throw new Error(
+      `contentPath(${endpoint.route}): not a content route — declare access: { content, item }`,
+    );
+  }
+  const item = (params as Record<string, string>)[access.item];
+  if (item === undefined) {
+    throw new Error(
+      `contentPath(${endpoint.route}): no value for its item param "${access.item}"`,
+    );
+  }
+  const asset = assetPath(endpoint, params, ...query);
+  return {
+    [ASSET_PATH]: asset[ASSET_PATH],
+    item: item.toLowerCase(),
+    needsMachine: asset.needsMachine,
+  } as ContentPath;
+}

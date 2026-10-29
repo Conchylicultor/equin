@@ -49,6 +49,28 @@ describe("gateByPrincipal", () => {
     expect(calls).toHaveLength(1);
   });
 
+  test("an owner route refuses the content principal", async () => {
+    const { handler, calls } = counting("owner");
+    const gated = only(gateByPrincipal([["GET /api/x", handler]]));
+    const res = await gated(as("content"), {});
+    expect(isCrossSiteRefusal(res.status, await res.json())).toBe(true);
+    expect(calls).toHaveLength(0);
+  });
+
+  test("a content route serves only the content principal", async () => {
+    const { handler, calls } = counting({ content: "untrusted", item: "name" });
+    const gated = only(gateByPrincipal([["GET /api/x/:name", handler]]));
+    expect(await (await gated(as("content"), {})).text()).toBe("ran");
+    const owner = await gated(as("owner"), {});
+    expect(owner.status).toBe(403);
+    expect(((await owner.json()) as { reason: string }).reason).toBe(
+      "content-only",
+    );
+    const anon = await gated(as("anonymous"), {});
+    expect(isCrossSiteRefusal(anon.status, await anon.json())).toBe(true);
+    expect(calls).toHaveLength(1);
+  });
+
   test("a missing header is refused (fail closed)", async () => {
     const { handler, calls } = counting("owner");
     const gated = only(gateByPrincipal([["POST /api/x", handler]]));

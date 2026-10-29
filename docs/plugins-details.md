@@ -6262,13 +6262,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/collapsible` ×5
               - `infra/endpoints` ×4
               - `hints` ×3
+              - `primitives/embed/frame` ×3
               - `primitives/hover-reveal` ×3
               - `primitives/persistent-draft` ×3
               - `network/live` ×2
               - `primitives/action-presentation` ×2
               - `primitives/css/spacing` ×2
-              - `primitives/dom/auto-scroll` ×2
-              - `primitives/dom/element-size` ×2
               - `primitives/icon-button` ×2
               - `primitives/latest-ref` ×2
               - `primitives/live-state` ×2
@@ -6295,6 +6294,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/text.Text`
               - `primitives/css/theme-boundary.Theme`
               - `primitives/css/yield.yieldClass`
+              - `primitives/dom/element-size.useElementSize`
               - `primitives/dom/scroll-reveal.useRevealOnActive`
               - `primitives/dom/web-storage.defineStore`
               - `primitives/embed.isEmbeddedDocument`
@@ -6472,6 +6472,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/badge.Badge`
                   - `primitives/embed.embedUrl`
                   - `primitives/embed.isFramedDocument`
+                  - `primitives/embed/frame.AppFrame`
                   - `primitives/networking.useTransport`
                   - `primitives/pane.parseUrl`
         - **`copy-id`** — Copy prototype ID button in the prototype detail header: copies the open prototype's id (its minted folder name) to the clipboard.
@@ -6549,9 +6550,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Core:
             - Uses:
               - `ids.defineIdKind`
-              - `infra/endpoints.assetPath`
-              - `infra/endpoints.AssetPath`
               - `infra/endpoints.blob`
+              - `infra/endpoints.contentPath`
+              - `infra/endpoints.ContentPath`
               - `infra/endpoints.defineEndpoint`
               - `infra/html-decode.rewriteStartTag`
               - `infra/html-decode.scanHtml`
@@ -6799,7 +6800,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PrototypeFrameActions` "open-new-tab" → `OpenNewTabAction`
               - `PrototypeFrameActions` "full-screen" → `FullScreenAction`
               - `PrototypeCardActions` "open-new-tab" → `OpenCardNewTabAction`
-            - Uses: 55 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/present/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/present/REFERENCE.md)
+            - Uses: 56 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/present/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/present/REFERENCE.md)
               - `apps/prototypes/canvas` ×25
               - `primitives/css/ui-kit` ×3
               - `primitives/hover-reveal` ×2
@@ -6816,6 +6817,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/viewport-overlay.ViewportOverlay`
               - `primitives/dom/element-size.useElementSize`
               - `primitives/dom/movable.Movable`
+              - `primitives/embed/frame.FRAME_ACTIVITY_EVENT`
               - `primitives/embed.embedUrl`
               - `primitives/icon-button.IconButton`
               - `primitives/link-gesture/new-tab.NewTabButton`
@@ -17973,26 +17975,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `app-preview.actions` "reload" → `ReloadAction`
               - `app-preview.actions` "toggle-chrome" → `ToggleChromeAction`
               - `app-preview.actions` "open-in-new-tab" → `OpenInNewTabAction`
-            - Uses:
-              - `config_v2.ConfigV2`
-              - `config_v2.useConfig`
-              - `conversations.useConversationById`
-              - `conversations/conversation-view.conversationPane`
+            - Uses: 21 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/open-app/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/open-app/REFERENCE.md)
+              - `primitives/pane` ×5
+              - `hints` ×3
+              - `config_v2` ×2
+              - `primitives/persistent-draft` ×2
               - `conversations/conversation-view/action-bar.Conversation`
-              - `hints.Hints`
-              - `hints.useHintAnchor`
-              - `hints.useHintMoment`
+              - `conversations/conversation-view.conversationPane`
+              - `conversations.useConversationById`
               - `network/live.useLive`
               - `primitives/dom/web-storage.defineStore`
-              - `primitives/link-gesture.linkGestureProps`
+              - `primitives/embed/frame.AppFrame`
               - `primitives/link-gesture/new-tab.NewTabButton`
-              - `primitives/pane.defineRoute`
-              - `primitives/pane.Pane`
-              - `primitives/pane.PaneChrome`
-              - `primitives/pane.PaneIconAction`
-              - `primitives/pane.useOpenPane`
-              - `primitives/persistent-draft.legacyDraftKeys`
-              - `primitives/persistent-draft.useDraft`
+              - `primitives/link-gesture.linkGestureProps`
               - `tasks/task-source-url.useAttemptSourceUrl`
           - Server:
             - Contributes: `ConfigV2.Register` "config"
@@ -26449,6 +26444,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PrincipalStamp`
         - Exports (values):
           - `CENTRAL_HOST_ROUTES_ROUTE`
+          - `CONTENT_ONLY_MESSAGE`
+          - `contentOnlyResponse`
           - `CROSS_SITE_REFUSED_MESSAGE`
           - `crossSiteRefusedResponse`
           - `gateByPrincipal`
@@ -27458,9 +27455,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `framework/tooling/guards.MODULE_EXTENSION`
             - Exports (values): `isE2eScriptPath`
           - Cross-plugin:
-            - Imported by: 175 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+            - Imported by: 176 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
               - `apps` ×51
-              - `primitives` ×26
+              - `primitives` ×27
               - `page` ×25
               - `conversations` ×24
               - `debug` ×8
@@ -27788,6 +27785,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exempted by:
                   - `primitives/dom/auto-scroll` (0 debt)
                   - `primitives/dom/scroll-reveal` (0 debt)
+                  - `primitives/embed/frame/agent` (0 debt)
             - **`sink-safety`** — sink-safety lint rules: no-adhoc-file-sink, no-adhoc-profiler-seam
               - Exemptions:
                 - Exempted by:
@@ -29637,7 +29635,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `utcDay`
           - Cli:
             - Exports (values): `upgradeThisWorktree`
-    - **`endpoints`** — Typed endpoint contract primitive. useFetchEndpoint (a FetchEndpoint bound to the subtree's transport; fetchEndpointOver(t) for sanctioned page-level code) and useEndpointMutation send writes only — a GET def is a tsc error (the derived read marker; & WriteEndpoint) and throws if cast through (every server read is a live resource, read with useLive, or useLiveReader in an event handler); useAssetSrc turns an AssetPath (a GET endpoint's asset) into what an element loads over the subtree's transport (the path, a blob URL, or unavailable); useAssetUrl / assetUrlOver hand a sink that loads by URL on its own (a library's fetch, an HTML string) an AssetPath's or AssetBase's URL, or unavailable; frameUrlOver hands an <iframe> document its URL under the transport's frameBase (the page's own path, or an in-browser server's frames served by its Service Worker), unavailable, or unsupported. Typed endpoint contract primitive. defineEndpoint declares the contract; implement() creates the server handler; callEndpoint() calls one from off the page (a backend, the CLI) through its contract; useFetchEndpoint / useEndpointMutation consume it on the client.
+    - **`endpoints`** — Typed endpoint contract primitive. useFetchEndpoint (a FetchEndpoint bound to the subtree's transport; fetchEndpointOver(t) for sanctioned page-level code) and useEndpointMutation send writes only — a GET def is a tsc error (the derived read marker; & WriteEndpoint) and throws if cast through (every server read is a live resource, read with useLive, or useLiveReader in an event handler); useAssetSrc turns an AssetPath (a GET endpoint's asset) into what an element loads over the subtree's transport (the path, a blob URL, or unavailable); useAssetUrl / assetUrlOver hand a sink that loads by URL on its own (a library's fetch, an HTML string) an AssetPath's or AssetBase's URL, or unavailable; contentUrlOver hands a content frame a ContentPath's URL on the transport's content serving (the content host, off every app origin, for the page's own server; an in-browser server's frame Service Worker, declared safe), unavailable, or unsupported. Typed endpoint contract primitive. defineEndpoint declares the contract; implement() creates the server handler; callEndpoint() calls one from off the page (a backend, the CLI) through its contract; useFetchEndpoint / useEndpointMutation consume it on the client.
       - Web:
         - Uses:
           - `primitives/networking.fetchWithRetry`
@@ -29650,16 +29648,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types):
           - `AssetSrc`
           - `AssetUrl`
+          - `ContentUrl`
           - `EndpointErrorInfo`
           - `FetchEndpoint`
-          - `FrameUrl`
+          - `ReadyContentUrl`
         - Exports (values):
           - `assetUrlOver`
+          - `contentUrlOver`
           - `EndpointAgentWriteRefusedError`
           - `EndpointError`
           - `endpointErrorSink`
           - `fetchEndpointOver`
-          - `frameUrlOver`
           - `getEndpointErrorMessage`
           - `useAssetSrc`
           - `useAssetSrcs`
@@ -29677,6 +29676,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/runtime-profiler.recordEntrySpan`
           - `packages/inflight.createInflight`
           - `packages/semaphore.createSemaphore`
+          - `primitives/embed/frame/agent.injectFrameAgent`
         - Exports (types):
           - `AgentWrite`
           - `AnyEndpointDef`
@@ -29684,6 +29684,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `AssetPath`
           - `Codec`
           - `CommitCapture`
+          - `ContentPath`
           - `EffectOn`
           - `EffectRequest`
           - `EndpointAnswer`
@@ -29714,6 +29715,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `assetPath`
           - `blob`
           - `brandEndpointEffect`
+          - `contentPath`
           - `dateString`
           - `defineEndpoint`
           - `EndpointAgentWriteRefusedError`
@@ -29740,11 +29742,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 223 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+        - Imported by: 222 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
           - `apps` ×61
           - `conversations` ×32
           - `infra` ×21
-          - `page` ×20
+          - `page` ×19
           - `debug` ×16
           - `tasks` ×16
           - `primitives` ×14
@@ -31626,7 +31628,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `asNamespace`
           - `BASE_EXCLUSIONS_ID`
+          - `CONTENT_HOST_LABEL`
+          - `CONTENT_ITEM_RE`
+          - `contentUrl`
           - `GATEWAY_PORT`
+          - `isContentHost`
+          - `isContentReservedNamespace`
           - `isNamespace`
           - `isNamespaceHostAlias`
           - `MAIN_COMPOSITION_ID`
@@ -31655,6 +31662,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-meta/barrel-import`
           - `plugin-meta/closure`
           - `plugin-meta/composition`
+          - `primitives/embed/frame`
       - Exemptions:
         - Exempts itself from:
           - `namespace:no-hand-built-url` — `core/namespace.ts`, `check/index.ts` (sanctioned)
@@ -36049,6 +36057,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/ui-kit.Button`
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.Input`
+          - `primitives/embed/frame.ForeignFrame`
           - `primitives/hover-reveal.hoverRevealGroup`
           - `primitives/hover-reveal.hoverRevealTarget`
           - `primitives/link-gesture/new-tab.NewTabLink`
@@ -37036,10 +37045,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/editor` ×3
           - `primitives/css/layer` ×2
           - `primitives/css/ui-kit` ×2
+          - `primitives/embed/frame` ×2
           - `primitives/hover-reveal` ×2
           - `primitives/live-state` ×2
           - `apps/prototypes/canvas.prototypeDetailPane`
-          - `infra/endpoints.frameUrlOver`
           - `network/live.useLive`
           - `primitives/css/center.Center`
           - `primitives/css/clip.Clip`
@@ -37054,7 +37063,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/link-gesture/new-tab.NewTabButton`
           - `primitives/link-gesture.activationProps`
           - `primitives/loading.Loading`
-          - `primitives/networking.useTransport`
           - `primitives/overlay/popover.InlinePopover`
           - `primitives/pane.useOpenPane`
           - `primitives/search.SearchInput`
@@ -42457,7 +42465,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `review/plugin-changes/file-changes`
     - **`dom`** — How do I read and drive the real DOM, and where is the one place allowed to do it? — the guarded selection read (dom-selection), element measurement (element-size), on-screen detection (in-view), scroll ownership (auto-scroll), the wasted-scroll bounce (overscroll-hint), reveal-on-activation (scroll-reveal), and copying what an element stands for (copy-source-text).
       - Plugins:
-        - **`auto-scroll`** — The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton; content stamped FOLLOW_MOTION_ATTR is followed frame by frame while it animates), container-scoped scrollToBottom / scrollChildIntoView, gesture-agnostic edge auto-scroll (useEdgeAutoScroll), scroll kept across a wholesale DOM swap (KeepScrollAcross, or restoreScrollOffset from a caller's own snapshot), the reader's anchor kept on screen across a commit that resizes content above it (KeepAnchorAcross), an element kept at its screen position across a re-layout (keepInPlace), scroll carried from one document to the next (captureDocumentScroll / restoreDocumentScroll, for a reloaded same-origin iframe), a deep copy that keeps its scroll offsets (cloneWithScroll, for a stand-in drawn while content leaves), and the shared findScrollParent discovery.
+        - **`auto-scroll`** — The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton; content stamped FOLLOW_MOTION_ATTR is followed frame by frame while it animates), container-scoped scrollToBottom / scrollChildIntoView, gesture-agnostic edge auto-scroll (useEdgeAutoScroll), scroll kept across a wholesale DOM swap (KeepScrollAcross, or restoreScrollOffset from a caller's own snapshot), the reader's anchor kept on screen across a commit that resizes content above it (KeepAnchorAcross), an element kept at its screen position across a re-layout (keepInPlace), a deep copy that keeps its scroll offsets (cloneWithScroll, for a stand-in drawn while content leaves), and the shared findScrollParent discovery.
           - Web:
             - Uses:
               - `primitives/css/ui-kit.Button`
@@ -42469,7 +42477,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/latest-ref.useLatestRef`
               - `ui/icons.Icon`
             - Exports (types):
-              - `DocumentScroll`
               - `EdgeAutoScroll`
               - `EdgeScrollSurface`
               - `FindScrollParentOptions`
@@ -42486,7 +42493,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `UseStickyScrollOptions`
             - Exports (values):
               - `announceNavigation`
-              - `captureDocumentScroll`
               - `cloneWithScroll`
               - `findScrollParent`
               - `FOLLOW_MOTION_ATTR`
@@ -42494,7 +42500,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `KeepAnchorAcross`
               - `keepInPlace`
               - `KeepScrollAcross`
-              - `restoreDocumentScroll`
               - `restoreScrollOffset`
               - `scrollChildIntoView`
               - `scrollToBottom`
@@ -42506,7 +42511,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --space-xs`
               - `ui/tokens/shape --spacing`
             - Imported by:
-              - `apps/prototypes/canvas`
               - `apps/sonata/progress/loop`
               - `apps/sonata/rich/chord-progression`
               - `apps/website/pages/foundations`
@@ -42803,6 +42807,74 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Test helpers:
         - Web: `@plugins/primitives/plugins/embed/web/testing`
           - `resetEmbedForTests` — Drop the memoized read between tests (mirrors resetAppInstanceForTests).
+      - Plugins:
+        - **`frame`** — The one framing primitive — every <iframe> in the app is one of its five frames, and frame/no-raw-frame rejects one anywhere else. ContentFrame: untrusted content (an access: { content } route's document, an agent-written prototype) on the content host (<item>.content.localhost, one origin per piece of content, never an app origin), talked to over the frame agent's channel (FrameChannel: CSS vars, screen height, scroll capture/restore, heights, activity — every reply untrusted data). ForeignFrame: a pasted third-party URL, classified first (an equin page, the content host, this computer or a non-web scheme is refused). InlineFrame: an HTML string in an opaque srcdoc sandbox. PdfFrame: a served PDF asset. AppFrame: the app itself at an in-app path, on this origin or another namespace's.
+          - Web:
+            - Uses:
+              - `infra/endpoints.AssetSrc`
+              - `infra/endpoints.ContentUrl`
+              - `infra/endpoints.contentUrlOver`
+              - `infra/endpoints.ReadyContentUrl`
+              - `infra/endpoints.useAssetSrc`
+              - `primitives/networking.useTransport`
+            - Exports (types):
+              - `FrameChannel`
+              - `InlineFrameAllowance`
+            - Exports (values):
+              - `AppFrame`
+              - `ContentFrame`
+              - `ForeignFrame`
+              - `FRAME_ACTIVITY_EVENT`
+              - `FrameChannelClosedError`
+              - `FrameChannelError`
+              - `InlineFrame`
+              - `PdfFrame`
+              - `useContentUrl`
+          - Core:
+            - Uses:
+              - `infra/namespace.isContentHost`
+              - `infra/namespace.namespaceFromHost`
+            - Exports (types): `FrameUrlClass`
+            - Exports (values): `classifyFrameUrl`
+          - Cross-plugin:
+            - Imported by:
+              - `apps/prototypes/canvas`
+              - `apps/prototypes/compare/route`
+              - `apps/prototypes/present`
+              - `conversations/conversation-view/open-app`
+              - `page/embed`
+              - `page/prototype`
+              - `primitives/file-viewer/html`
+              - `primitives/file-viewer/pdf`
+          - Exemptions:
+            - Exempts itself from:
+              - `frame/no-raw-frame` — `web/components/frames.tsx` (sanctioned)
+              - `namespace:no-hand-built-url` — `core/classify-url.ts` (sanctioned)
+            - Exempted by: `primitives/embed/frame` (0 debt)
+          - Plugins:
+            - **`agent`** — The content-frame channel's protocol and its frame agent: the script injected into every content document, answering the parent's closed set of requests over a MessagePort.
+              - Cross-plugin:
+                - Imported by: `infra/endpoints`
+              - Exemptions:
+                - Exempts itself from: `scroll-safety/no-adhoc-scroll-write` — `core/frame-agent.ts` (sanctioned)
+              - Core:
+                - Exports (types):
+                  - `DocumentScroll`
+                  - `FrameHeights`
+                  - `FrameMessage`
+                  - `FrameOp`
+                  - `FrameReplyValue`
+                  - `FrameRequest`
+                  - `ScrollPlace`
+                - Exports (values):
+                  - `DocumentScrollSchema`
+                  - `FRAME_PROTOCOL`
+                  - `FRAME_REPLY_VALUES`
+                  - `FrameConnectSchema`
+                  - `FrameHeightsSchema`
+                  - `FrameMessageSchema`
+                  - `injectFrameAgent`
+                  - `ScrollPlaceSchema`
     - **`error-boundary`** — Generic React error boundary primitive. Wraps plugin contributions so render errors are contained to one slot, with an ErrorBoundary.Action slot for domain-specific buttons (e.g. crash 'Fix') and a boundaryReportSink for opt-in crash reporting.
       - Web:
         - Slots: `ErrorBoundary.Action`
@@ -43070,6 +43142,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes: `FileViewer.Renderer` "Page" → `HtmlView`
             - Uses:
               - `primitives/css/placeholder.Placeholder`
+              - `primitives/embed/frame.InlineFrame`
               - `primitives/file-viewer.FileRendererProps`
               - `primitives/file-viewer.fileTextUnavailableMessage`
               - `primitives/file-viewer.FileViewer`
@@ -43141,7 +43214,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Web:
             - Contributes: `FileViewer.Renderer` "PDF" → `PdfView`
             - Uses:
-              - `infra/endpoints.useAssetSrc`
+              - `primitives/embed/frame.PdfFrame`
               - `primitives/file-viewer.FileRendererProps`
               - `primitives/file-viewer.FileViewer`
               - `primitives/file-viewer.UnloadedFile`
@@ -44375,6 +44448,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/latest-ref.useLatestRef`
           - `primitives/networking/request-guard.nativeWebSocket`
         - Exports (types):
+          - `ContentServing`
           - `FetchWithRetryOptions`
           - `LockManagerLike`
           - `MakeSharedWorker`
@@ -44409,11 +44483,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by: 32 plugins — full list in [`plugins/primitives/plugins/networking/REFERENCE.md`](../plugins/primitives/plugins/networking/REFERENCE.md)
           - `apps` ×9
-          - `primitives` ×6
+          - `primitives` ×7
           - `conversations` ×5
           - `framework` ×3
-          - `page` ×3
           - `infra` ×2
+          - `page` ×2
           - `debug/worktree-cleanup`
           - `network/live`
           - `shell/notifications`

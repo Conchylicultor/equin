@@ -5,10 +5,10 @@ import {
   wholeTuple,
 } from "@plugins/packages/plugins/list-bound/core";
 import {
-  assetPath,
+  contentPath,
   blob,
   defineEndpoint,
-  type AssetPath,
+  type ContentPath,
 } from "@plugins/infra/plugins/endpoints/core";
 import { PROTOTYPE_ENTRY_FILE, PrototypeProblemSchema } from "./validate";
 import type { MocksDeclaration } from "./mocks";
@@ -161,6 +161,11 @@ const DocumentQuerySchema = z.record(z.string(), z.string());
 export const getPrototypeEntry = defineEndpoint({
   route: "GET /api/prototypes/:name",
   query: DocumentQuerySchema,
+  access: {
+    content:
+      "an agent-written prototype: unreviewed pages that run script, served off every app origin",
+    item: "name",
+  },
 });
 
 /**
@@ -177,6 +182,11 @@ export const getPrototypeEntry = defineEndpoint({
 export const getPrototypeFile = defineEndpoint({
   route: "GET /api/prototypes/:name/:file",
   query: DocumentQuerySchema,
+  access: {
+    content:
+      "an agent-written prototype: unreviewed pages that run script, served off every app origin",
+    item: "name",
+  },
   response: blob(),
 });
 
@@ -192,6 +202,11 @@ export const getPrototypeFile = defineEndpoint({
 export const getPrototypeVersionFile = defineEndpoint({
   route: "GET /api/prototypes/:name/versions/:sha/:file",
   query: DocumentQuerySchema,
+  access: {
+    content:
+      "an agent-written prototype: unreviewed pages that run script, served off every app origin",
+    item: "name",
+  },
   response: blob(),
 });
 
@@ -221,15 +236,15 @@ export function prototypeDocumentQuery(
 
 /**
  * The document a frame loads: the prototype's own `index.html`, addressed
- * through the folder so its relative sub-resources resolve. An iframe loads it
- * by URL (its sub-resources too), so its src comes from `frameUrlOver` (the
- * transport's frame base: the page's origin, or a browser host's frame scope).
+ * through the folder so its relative sub-resources resolve. Untrusted content,
+ * so it is a `ContentPath`: framed by `ContentFrame` on the content host
+ * (`<proto-id>.content.localhost`), one origin per prototype, never the app's.
  */
 export function prototypeDocument(
   name: string,
   opts: { v?: string; picks?: OptionPicks } = {},
-): AssetPath {
-  return assetPath(
+): ContentPath {
+  return contentPath(
     getPrototypeFile,
     { name, file: PROTOTYPE_ENTRY_FILE },
     prototypeDocumentQuery(opts),
@@ -246,8 +261,8 @@ export function prototypeVersionDocument(
   name: string,
   sha: string,
   opts: { picks?: OptionPicks } = {},
-): AssetPath {
-  return assetPath(
+): ContentPath {
+  return contentPath(
     getPrototypeVersionFile,
     { name, sha, file: PROTOTYPE_ENTRY_FILE },
     prototypeDocumentQuery({ picks: opts.picks }),

@@ -16,8 +16,6 @@ that wants it. Today that is six roles:
 - **scroll kept across a wholesale swap** — `KeepScrollAcross` (or
   `restoreScrollOffset`, for a class that already snapshots its offset)
 - **the reader's anchor kept across a resize above it** — `KeepAnchorAcross`
-- **scroll carried to a new document** — `captureDocumentScroll` /
-  `restoreDocumentScroll`
 - **scroll carried to a clone** — `cloneWithScroll` (a stand-in drawn while
   React removes the original, e.g. a miller column fading out)
 - **scroll-container discovery** — `findScrollParent`
@@ -158,16 +156,9 @@ changes, so ordinary updates force no layout. Restoring in the layout phase also
 lands before a child's state-driven follow-up render — `useVirtualRows` attaches
 its virtualizer there and reads the restored offset as its `initialOffset`.
 
-## `captureDocumentScroll` / `restoreDocumentScroll` — a reload keeps the place
-
-For a same-origin iframe whose new document replaces the old one (the prototype
-canvas swaps a loaded twin in on every live edit): capture every scroll offset
-of the outgoing document, restore them into the incoming one, matched by id or
-else DOM path. A client-rendered page is not tall enough at `load`, so the
-restore re-tries on every DOM mutation and sub-resource load until each offset
-is reached, the reader acts (wheel / touch / key / pointer — never `scroll`,
-which our own writes fire), or 5 s pass; the returned function cancels it.
-Script state is not carried — it lives in the old document.
+A reloaded prototype frame keeping its reader's place is not here: the
+document is on another origin (the content host), so the frame primitive's
+agent carries the offsets inside it (`primitives/embed/frame`).
 
 ## `useEdgeAutoScroll` — the gesture contract
 
@@ -208,7 +199,7 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
 
 ## Plugin reference
 
-- Description: The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton; content stamped FOLLOW_MOTION_ATTR is followed frame by frame while it animates), container-scoped scrollToBottom / scrollChildIntoView, gesture-agnostic edge auto-scroll (useEdgeAutoScroll), scroll kept across a wholesale DOM swap (KeepScrollAcross, or restoreScrollOffset from a caller's own snapshot), the reader's anchor kept on screen across a commit that resizes content above it (KeepAnchorAcross), an element kept at its screen position across a re-layout (keepInPlace), scroll carried from one document to the next (captureDocumentScroll / restoreDocumentScroll, for a reloaded same-origin iframe), a deep copy that keeps its scroll offsets (cloneWithScroll, for a stand-in drawn while content leaves), and the shared findScrollParent discovery.
+- Description: The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton; content stamped FOLLOW_MOTION_ATTR is followed frame by frame while it animates), container-scoped scrollToBottom / scrollChildIntoView, gesture-agnostic edge auto-scroll (useEdgeAutoScroll), scroll kept across a wholesale DOM swap (KeepScrollAcross, or restoreScrollOffset from a caller's own snapshot), the reader's anchor kept on screen across a commit that resizes content above it (KeepAnchorAcross), an element kept at its screen position across a re-layout (keepInPlace), a deep copy that keeps its scroll offsets (cloneWithScroll, for a stand-in drawn while content leaves), and the shared findScrollParent discovery.
 - Web:
   - Uses:
     - `primitives/css/ui-kit.Button`
@@ -220,7 +211,6 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
     - `primitives/latest-ref.useLatestRef`
     - `ui/icons.Icon`
   - Exports (types):
-    - `DocumentScroll`
     - `EdgeAutoScroll`
     - `EdgeScrollSurface`
     - `FindScrollParentOptions`
@@ -237,7 +227,6 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
     - `UseStickyScrollOptions`
   - Exports (values):
     - `announceNavigation`
-    - `captureDocumentScroll`
     - `cloneWithScroll`
     - `findScrollParent`
     - `FOLLOW_MOTION_ATTR`
@@ -245,7 +234,6 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
     - `KeepAnchorAcross`
     - `keepInPlace`
     - `KeepScrollAcross`
-    - `restoreDocumentScroll`
     - `restoreScrollOffset`
     - `scrollChildIntoView`
     - `scrollToBottom`
@@ -257,7 +245,6 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
     - `ui/tokens/density --space-xs`
     - `ui/tokens/shape --spacing`
   - Imported by:
-    - `apps/prototypes/canvas`
     - `apps/sonata/progress/loop`
     - `apps/sonata/rich/chord-progression`
     - `apps/website/pages/foundations`

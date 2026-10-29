@@ -1,15 +1,10 @@
 import { prototypesFiles } from "@plugins/apps/plugins/prototypes/server";
-import { interpolatePath } from "@plugins/infra/plugins/endpoints/core";
 import {
   InvalidRelPathError,
   relPath,
   type RelPath,
 } from "@plugins/infra/plugins/paths/plugins/data-files/core";
-import {
-  PROTOTYPE_ENTRY_FILE,
-  getPrototypeFile,
-  protoIdKind,
-} from "../../core";
+import { PROTOTYPE_ENTRY_FILE, protoIdKind } from "../../core";
 import { PICKS_DIR_NAME } from "../../shared/picks";
 import { isRetiredDirName } from "../../shared/retired";
 import {
@@ -45,7 +40,10 @@ export function handlePrototypeFile(
   if (isInternalDir(name)) return notFound();
 
   const { search } = new URL(req.url);
-  const location = `${interpolatePath(getPrototypeFile.path, { name, file: PROTOTYPE_ENTRY_FILE })}${search}`;
+  // RELATIVE (`<name>/index.html`): served on the content host, under its
+  // `/<ns>/` routing prefix the backend never sees — an absolute `/api/…`
+  // would leave it.
+  const location = `${encodeURIComponent(name)}/${PROTOTYPE_ENTRY_FILE}${search}`;
   return new Response(null, { status: 302, headers: { location } });
 }
 

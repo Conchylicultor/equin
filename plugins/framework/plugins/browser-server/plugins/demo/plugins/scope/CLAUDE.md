@@ -43,7 +43,7 @@ seed — so the unchanged app reads demo data through `useLive` /
 - **Frames by URL**: `attachFrameServing` runs alongside the host boot (the
   host module's `serviceWorkerUrl`); the scope's transport carries its
   `frameBase` — `null` where the browser has no Service Worker, so a frame
-  shows `unsupported` (`frameUrlOver`). Unmount detaches it. See
+  shows `unsupported` (`contentUrlOver`). Unmount detaches it. See
   `browser-server`'s *frame serving*.
 - **Telemetry** (D3 of `research/2026-10-22-global-demo-scope-sealed.md`):
   the scope's transport inherits the enclosing page's `telemetry` flag, so the

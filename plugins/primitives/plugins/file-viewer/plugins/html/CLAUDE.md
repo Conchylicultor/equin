@@ -20,6 +20,7 @@ no request at all to the app on `*.localhost`. Relative assets (a sibling
   - Contributes: `FileViewer.Renderer` "Page" → `HtmlView`
   - Uses:
     - `primitives/css/placeholder.Placeholder`
+    - `primitives/embed/frame.InlineFrame`
     - `primitives/file-viewer.FileRendererProps`
     - `primitives/file-viewer.fileTextUnavailableMessage`
     - `primitives/file-viewer.FileViewer`

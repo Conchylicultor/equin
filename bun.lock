@@ -5584,6 +5584,14 @@
       "name": "@equin/plugin-primitives-embed",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/embed/plugins/frame": {
+      "name": "@equin/plugin-primitives-embed-frame",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/embed/plugins/frame/plugins/agent": {
+      "name": "@equin/plugin-primitives-embed-frame-agent",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/error-boundary": {
       "name": "@equin/plugin-primitives-error-boundary",
       "version": "0.0.1",
@@ -9650,6 +9658,10 @@
     "@equin/plugin-primitives-editable-field": ["@equin/plugin-primitives-editable-field@workspace:plugins/primitives/plugins/editable-field"],
 
     "@equin/plugin-primitives-embed": ["@equin/plugin-primitives-embed@workspace:plugins/primitives/plugins/embed"],
+
+    "@equin/plugin-primitives-embed-frame": ["@equin/plugin-primitives-embed-frame@workspace:plugins/primitives/plugins/embed/plugins/frame"],
+
+    "@equin/plugin-primitives-embed-frame-agent": ["@equin/plugin-primitives-embed-frame-agent@workspace:plugins/primitives/plugins/embed/plugins/frame/plugins/agent"],
 
     "@equin/plugin-primitives-error-boundary": ["@equin/plugin-primitives-error-boundary@workspace:plugins/primitives/plugins/error-boundary"],
 

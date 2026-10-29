@@ -20,7 +20,7 @@ export function testTransport(overrides: Partial<Transport> = {}): Transport {
     openSocket: (url, options) => new SharedWebSocket(url, undefined, options),
     fetch: (input, init) => globalThis.fetch(input, init),
     servesUrls: true,
-    frameBase: "",
+    content: null,
     machine: true,
     telemetry: true,
     ...overrides,

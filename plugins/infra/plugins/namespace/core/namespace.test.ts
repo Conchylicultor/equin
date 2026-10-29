@@ -19,6 +19,9 @@ import {
   asNamespace,
   isNamespace,
   namespaceFromHost,
+  contentUrl,
+  isContentHost,
+  isContentReservedNamespace,
   namespaceHost,
   namespaceUrl,
   MAIN_COMPOSITION_ID,
@@ -228,4 +231,31 @@ test("namespaceParts reads back the pair only where the name fixes it", () => {
     kind: "label",
     label: MAIN_COMPOSITION_ID,
   });
+});
+
+test("contentUrl puts the item in the host and the namespace label in the path", () => {
+  expect(
+    contentUrl(
+      "proto-1",
+      MAIN_WORKTREE_NAME,
+      "/api/prototypes/proto-1/index.html",
+    ),
+  ).toBe(
+    "http://proto-1.content.localhost:9000/equin/api/prototypes/proto-1/index.html",
+  );
+  expect(contentUrl("p", asNamespace("sonata.att-x"), "/api/x", 8080)).toBe(
+    "http://p.content.localhost:8080/sonata.att-x/api/x",
+  );
+  expect(() => contentUrl("a.b", MAIN_WORKTREE_NAME, "/api/x")).toThrow();
+  expect(() => contentUrl("p", MAIN_WORKTREE_NAME, "/tasks")).toThrow();
+});
+
+test("a content host is never read as a namespace, and its names are reserved", () => {
+  expect(isContentHost("proto-1.content.localhost:9000")).toBe(true);
+  expect(isContentHost("content.localhost")).toBe(true);
+  expect(isContentHost("equin.localhost:9000")).toBe(false);
+  expect(namespaceFromHost("proto-1.content.localhost:9000")).toBeNull();
+  expect(isContentReservedNamespace("content")).toBe(true);
+  expect(isContentReservedNamespace("sonata.content")).toBe(true);
+  expect(isContentReservedNamespace("content-x")).toBe(false);
 });

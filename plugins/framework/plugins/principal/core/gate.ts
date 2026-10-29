@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+  contentOnlyResponse,
   crossSiteRefusedResponse,
   principalOf,
   type EndpointAccess,
@@ -36,22 +37,34 @@ export function gateByPrincipal(
 ): Array<[string, GatedRouteHandler]> {
   const out: Array<[string, GatedRouteHandler]> = [];
   for (const [route, handler] of routes) {
-    if (typeof accessOf(handler) === "object") {
+    const access = accessOf(handler);
+    if (typeof access === "object" && "public" in access) {
       out.push([route, handler]);
       continue;
     }
-    const gated: GatedRouteHandler = (req, params) =>
-      principalOf(req).kind === "anonymous"
-        ? crossSiteRefusedResponse(route)
-        : handler(req, params);
+    const gated: GatedRouteHandler =
+      typeof access === "object"
+        ? // Content: served only on the content host. On an app origin its
+          // document would run as the owner; anonymous is anyone else.
+          (req, params) => {
+            const kind = principalOf(req).kind;
+            if (kind === "content") return handler(req, params);
+            return kind === "owner"
+              ? contentOnlyResponse(route)
+              : crossSiteRefusedResponse(route);
+          }
+        : (req, params) =>
+            principalOf(req).kind === "owner"
+              ? handler(req, params)
+              : crossSiteRefusedResponse(route);
     out.push([route, gated]);
   }
   return out;
 }
 
 /**
- * A WebSocket upgrade's answer before `server.upgrade`: the refusal for an
- * anonymous request (no socket is public — WebSockets are not bound by the
+ * A WebSocket upgrade's answer before `server.upgrade`: the refusal for a
+ * non-owner request — anonymous, or content (no socket is public — WebSockets are not bound by the
  * same-origin policy, so a foreign page could otherwise read all live state),
  * `null` to proceed. The gateway refuses these first; this is the host's own
  * floor.
@@ -60,17 +73,17 @@ export function refuseAnonymousUpgrade(
   req: Request,
   path: string,
 ): Response | null {
-  return principalOf(req).kind === "anonymous"
-    ? crossSiteRefusedResponse(`WS ${path}`)
-    : null;
+  return principalOf(req).kind === "owner"
+    ? null
+    : crossSiteRefusedResponse(`WS ${path}`);
 }
 
 /** One row of a socket host's route table (`GET /api/host/routes`). */
 export const HostRouteSchema = z.object({
   route: z.string(),
   kind: z.enum(["http", "ws"]),
-  access: z.enum(["owner", "public"]),
-  /** Why the route is public; absent on an owner route. */
+  access: z.enum(["owner", "public", "content"]),
+  /** Why the route is public / content; absent on an owner route. */
   reason: z.string().optional(),
 });
 export type HostRoute = z.infer<typeof HostRouteSchema>;
@@ -104,9 +117,11 @@ export function hostRouteTable(
   for (const [route, handler] of http) {
     const access = accessOf(handler);
     rows.push(
-      typeof access === "object"
-        ? { route, kind: "http", access: "public", reason: access.public }
-        : { route, kind: "http", access: "owner" },
+      typeof access !== "object"
+        ? { route, kind: "http", access: "owner" }
+        : "public" in access
+          ? { route, kind: "http", access: "public", reason: access.public }
+          : { route, kind: "http", access: "content", reason: access.content },
     );
   }
   // No socket is public: every upgrade is refused to an anonymous caller.

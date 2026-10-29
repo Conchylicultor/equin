@@ -25,6 +25,20 @@ export type TransportSocket = Pick<
   | "connection"
 >;
 
+/** How a transport serves content documents — see {@link Transport.content}. */
+export type ContentServing =
+  | {
+      readonly kind: "content-host";
+      /** The URL of `path` (an `/api/…` path) as the content `item`. */
+      url(item: string, path: string): string;
+    }
+  | {
+      readonly kind: "same-origin";
+      /** Why serving content beside the page is safe here. */
+      readonly reason: string;
+      url(item: string, path: string): string;
+    };
+
 /**
  * Where a subtree's server traffic goes: its live sockets, its HTTP requests
  * and the assets its elements load. The page's own server is `pageTransport`
@@ -56,17 +70,18 @@ export interface Transport {
    */
   readonly servesUrls: boolean;
   /**
-   * Where a NAVIGATED document — an `<iframe>`, whose relative sub-resources
-   * must resolve beside it — loads this transport's `/api/…` paths: the path
-   * prefix in front of them. `""` — the page's own server, same origin; a
-   * scoped prefix — an in-browser server's frames, served by the
-   * frame-serving Service Worker (`framework/browser-server`); `null` —
-   * nothing serves its documents by URL here (no Service Worker). Never valid
-   * for an element of the page itself, which no Service Worker controls: that
-   * is {@link servesUrls}. Read through `frameUrlOver` (`infra/endpoints`).
-   * Required, so every transport states it.
+   * Where this transport's untrusted CONTENT documents load — the pages an
+   * `access: { content }` route serves (an agent-written prototype), framed
+   * by `ContentFrame` (`primitives/embed/frame`). Read through `contentUrlOver`
+   * (`infra/endpoints`). Required, so every transport states it:
+   * - `content-host` — on the content host, off every app origin
+   *   (`<item>.content.localhost/<ns>/…`): the page's own server;
+   * - `same-origin` — beside the page, with the reason that is safe (an
+   *   in-browser server's repo fixtures, served by its frame Service Worker,
+   *   where the page holds no owner authority);
+   * - `null` — nothing serves content documents by URL here.
    */
-  readonly frameBase: string | null;
+  readonly content: ContentServing | null;
   /**
    * Whether the computer is behind this transport — the desktop app's own
    * server — so a declaration that needs it (`needsMachine`: an endpoint, a

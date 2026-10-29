@@ -10,6 +10,8 @@ import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 // would name this plugin from inside itself. Same shape as `paths/check`
 // importing `../core/internal/paths`.
 import {
+  CONTENT_HOST_LABEL,
+  CONTENT_ITEM_RE,
   NAMESPACE_HOST_ALIASES,
   NAMESPACE_HOST_LABELS,
   NAMESPACE_HOST_SUFFIX,
@@ -147,6 +149,16 @@ const grammarInSyncCheck: Check = {
         path: "gateway/registry.go",
         expect: `maxNamespaceBytes = ${NAMESPACE_MAX_BYTES}`,
         what: "the namespace byte cap",
+      },
+      {
+        path: "gateway/content.go",
+        expect: `contentHostLabel = "${CONTENT_HOST_LABEL}"`,
+        what: "the content host label",
+      },
+      {
+        path: "gateway/content.go",
+        expect: "`" + CONTENT_ITEM_RE.source + "`",
+        what: "the content item grammar",
       },
       ...Object.entries(NAMESPACE_HOST_ALIASES).map(([alias, target]) => ({
         path: "gateway/proxy.go",

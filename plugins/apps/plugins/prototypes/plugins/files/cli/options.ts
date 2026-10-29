@@ -78,7 +78,7 @@ export const prototypeOptionsAction: CliAction<[string], object> = async (
   console.log(`  ${doc.url(id, picks)}`);
   console.log("Screenshot it:");
   console.log(
-    `  ./equin run ${SCREENSHOT_SCRIPT} --path "${doc.path(id, picks)}"`,
+    `  ./equin run ${SCREENSHOT_SCRIPT} --url "${doc.url(id, picks)}"`,
   );
   if (meta.options.length > 0) {
     console.log(

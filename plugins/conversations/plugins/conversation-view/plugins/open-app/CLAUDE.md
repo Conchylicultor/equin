@@ -18,26 +18,19 @@
     - `app-preview.actions` "reload" → `ReloadAction`
     - `app-preview.actions` "toggle-chrome" → `ToggleChromeAction`
     - `app-preview.actions` "open-in-new-tab" → `OpenInNewTabAction`
-  - Uses:
-    - `config_v2.ConfigV2`
-    - `config_v2.useConfig`
-    - `conversations.useConversationById`
-    - `conversations/conversation-view.conversationPane`
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/pane` ×5
+    - `hints` ×3
+    - `config_v2` ×2
+    - `primitives/persistent-draft` ×2
     - `conversations/conversation-view/action-bar.Conversation`
-    - `hints.Hints`
-    - `hints.useHintAnchor`
-    - `hints.useHintMoment`
+    - `conversations/conversation-view.conversationPane`
+    - `conversations.useConversationById`
     - `network/live.useLive`
     - `primitives/dom/web-storage.defineStore`
-    - `primitives/link-gesture.linkGestureProps`
+    - `primitives/embed/frame.AppFrame`
     - `primitives/link-gesture/new-tab.NewTabButton`
-    - `primitives/pane.defineRoute`
-    - `primitives/pane.Pane`
-    - `primitives/pane.PaneChrome`
-    - `primitives/pane.PaneIconAction`
-    - `primitives/pane.useOpenPane`
-    - `primitives/persistent-draft.legacyDraftKeys`
-    - `primitives/persistent-draft.useDraft`
+    - `primitives/link-gesture.linkGestureProps`
     - `tasks/task-source-url.useAttemptSourceUrl`
 - Server:
   - Contributes: `ConfigV2.Register` "config"

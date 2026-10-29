@@ -53,7 +53,13 @@ never create a `.git` inside a prototype folder.
   the real app, which reflows; a fixed-width mock gets cropped.
 - **Filling one screen:** use `var(--prototype-screen-height, 100vh)` (in JS,
   read that property, falling back to `innerHeight`). With Whole page on, `100vh`
-  is the whole page height.
+  is the whole page height — and a page sized in `vh` or from `innerHeight`
+  follows its window, so it has no whole-page height at all.
+- **It runs as untrusted content, off the app.** The app frames a prototype on
+  its own origin (`http://<id>.content.localhost:9000/<ns>/…`): its own files,
+  `localStorage` and nested frames of its own pages work; the app's API,
+  `window.top` and a Service Worker do not. Never reach for the app from a
+  mock.
 - Make the smallest thing that shows the idea: a button, a card or a full app.
   React is optional.
 - **Implementing one in the app means pixel-perfect**, animations included,

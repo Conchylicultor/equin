@@ -21,10 +21,10 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import { useTransport } from "@plugins/primitives/plugins/networking/web";
 import {
-  frameUrlOver,
-  type FrameUrl,
+  contentUrlOver,
+  type ContentUrl,
 } from "@plugins/infra/plugins/endpoints/web";
-import type { AssetPath } from "@plugins/infra/plugins/endpoints/core";
+import type { ContentPath } from "@plugins/infra/plugins/endpoints/core";
 import {
   prototypeDetailRoute,
   prototypesApp,
@@ -484,10 +484,11 @@ export function useStoredPicksOf(): (frame: PrototypeFrame) => StoredPicks {
 
 /**
  * THE url of a prototype frame's document: its version under its picks, over
- * the subtree's transport — an iframe loads it by URL (its sub-resources
- * too), behind the transport's frame base (`frameUrlOver`): the page's own
- * path on the desktop, an in-browser server's frames through its Service
- * Worker in the demo; `unavailable` / `unsupported` where neither serves it.
+ * the subtree's transport — a `ContentFrame` loads it by URL (its
+ * sub-resources too), on the transport's content serving (`contentUrlOver`):
+ * the prototype's own origin on the content host on the desktop, an in-browser
+ * server's frames through its Service Worker in the demo; `unavailable` /
+ * `unsupported` where neither serves it.
  * The whole-page probe frame loads the same url.
  *
  * A color pick alone never changes it: colors are painted into the loaded
@@ -499,12 +500,12 @@ export function useStoredPicksOf(): (frame: PrototypeFrame) => StoredPicks {
 export function useFrameSrc(
   frame: PrototypeFrame,
   meta: PrototypeMeta,
-): FrameUrl {
+): ContentUrl {
   const transport = useTransport();
   const stored = useFrameStoredPicks(frame);
   const options = documentOptions(meta, frame.version);
   // What the url depends on: everything but the color picks.
-  const keyed = frameUrlOver(
+  const keyed = contentUrlOver(
     transport,
     prototypeDocumentAsset(
       meta,
@@ -513,7 +514,7 @@ export function useFrameSrc(
     ),
   );
   const key = keyed.kind === "ready" ? keyed.url : null;
-  const src = frameUrlOver(
+  const src = contentUrlOver(
     transport,
     prototypeDocumentAsset(meta, frame.version, stored),
   );
@@ -579,7 +580,7 @@ export function prototypeDocumentAsset(
   meta: PrototypeMeta,
   version: PrototypeVersion | null,
   stored: StoredPicks,
-): AssetPath {
+): ContentPath {
   const resolved = resolvePicks(documentOptions(meta, version), stored);
   return version === null
     ? prototypeDocument(meta.name, { v: meta.rev, picks: resolved })

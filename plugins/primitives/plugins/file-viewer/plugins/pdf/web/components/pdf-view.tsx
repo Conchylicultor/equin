@@ -6,7 +6,7 @@ import {
   UnloadedFile,
   type FileRendererProps,
 } from "@plugins/primitives/plugins/file-viewer/web";
-import { useAssetSrc } from "@plugins/infra/plugins/endpoints/web";
+import { PdfFrame } from "@plugins/primitives/plugins/embed/plugins/frame/web";
 
 /**
  * The file in the browser's built-in PDF viewer. host-fs serves a PDF without
@@ -14,11 +14,10 @@ import { useAssetSrc } from "@plugins/infra/plugins/endpoints/web";
  * cannot host the viewer.
  */
 export function PdfView({ file }: FileRendererProps) {
-  const src = useAssetSrc(fileUrl(file));
-  if (src.kind !== "ready") return <UnloadedFile src={src} />;
   return (
-    <iframe
-      src={src.src}
+    <PdfFrame
+      asset={fileUrl(file)}
+      unloaded={(src) => <UnloadedFile src={src} />}
       title={fileRefName(file)}
       className="block size-full border-0"
     />

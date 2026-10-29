@@ -1,11 +1,22 @@
 import { useEffect, useState } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
+import { FRAME_ACTIVITY_EVENT } from "@plugins/primitives/plugins/embed/plugins/frame/web";
 
 /** How long the pointer rests before the presentation's chrome fades out. */
 const IDLE_MS = 800;
 
-/** Activity that wakes the chrome: moving, pressing, scrolling, typing. */
-const ACTIVITY = ["pointermove", "pointerdown", "wheel", "keydown"] as const;
+/**
+ * Activity that wakes the chrome: moving, pressing, scrolling, typing — and
+ * the same inside a prototype's frame, which runs on its own origin, so its
+ * input reaches us only as the frame's `FRAME_ACTIVITY_EVENT`.
+ */
+const ACTIVITY = [
+  "pointermove",
+  "pointerdown",
+  "wheel",
+  "keydown",
+  FRAME_ACTIVITY_EVENT,
+] as const;
 
 /**
  * The chrome itself, as a target the pointer can rest on — the attribute every
@@ -27,14 +38,14 @@ const IN_USE = `[${PRESENT_CHROME_ATTR}]:hover, [${PRESENT_CHROME_ATTR}]:has(:fo
  * what it covers once the user stops moving.
  *
  * The frame is a prototype document in an iframe, and pointer events inside an
- * iframe never reach its parent document. So besides `root`, every same-origin
- * document loaded under it is watched too, at any depth (a prototype that opens
- * a full-page iframe of its own) — found on its `load` (captured at `root` and
- * at every watched document: `load` does not bubble, but it does pass through
+ * iframe never reach its parent document. A prototype runs on its own origin
+ * (the content host), so its activity arrives as the content frame's
+ * `FRAME_ACTIVITY_EVENT`, bubbling to `root`. Besides `root`, every same-origin
+ * document loaded under it is watched too, at any depth (the real app framed
+ * as a source frame) — found on its `load` (captured at `root` and at every
+ * watched document: `load` does not bubble, but it does pass through
  * ancestors' capture phase within one document), which also re-attaches when a
- * frame swaps or reloads its document. A cross-origin frame (a source frame on
- * another origin) cannot be watched; over it the chrome wakes again when the
- * pointer leaves it.
+ * frame swaps or reloads its document.
  *
  * Never idle while `hold` (a popup opened from the chrome is showing) or while
  * the chrome is in use (`IN_USE`); the next activity re-arms the countdown.

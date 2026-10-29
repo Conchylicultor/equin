@@ -10,6 +10,7 @@ import {
   namespaceUrl,
 } from "@plugins/infra/plugins/namespace/core";
 import { withEmbedFlag } from "@plugins/primitives/plugins/embed/core";
+import { AppFrame } from "@plugins/primitives/plugins/embed/plugins/frame/web";
 import {
   legacyDraftKeys,
   useDraft,
@@ -78,8 +79,8 @@ export function appPreviewUrl(attemptId: string, path: string | undefined) {
 
 function AppPreviewPaneBody() {
   const { attemptId, path } = appPreviewPane.useParams();
-  const url = appPreviewUrl(attemptId, path);
-  const origin = new URL(url).origin;
+  const namespace = asNamespace(attemptId);
+  const origin = new URL(appPreviewUrl(attemptId, path)).origin;
   const [showChrome] = useShowChrome();
   // Bumped by the Reload action. The frame is cross-origin, so we cannot call
   // its `location.reload()`; remounting it under a new key is a fresh load of
@@ -89,17 +90,20 @@ function AppPreviewPaneBody() {
   // Chromeless by default: the pane already sits in our own chrome, so the
   // framed app shows just the screen. The embed mode is read once at the
   // framed app's boot, so switching it is a new document (see `key`).
-  const src =
-    origin +
-    withEmbedFlag(path ?? "/", origin, showChrome ? "chrome" : "chromeless");
+  const framed = withEmbedFlag(
+    path ?? "/",
+    origin,
+    showChrome ? "chrome" : "chromeless",
+  );
   return (
     <ReloadFrameContext.Provider value={reload}>
       <PaneChrome pane={appPreviewPane}>
-        <iframe
+        <AppFrame
           // A new route is a new document: remount rather than let the old
           // frame's in-app navigation outlive the URL that named it.
-          key={`${src}#${reloads}`}
-          src={src}
+          key={`${framed}#${reloads}`}
+          namespace={namespace}
+          path={framed}
           title={`App preview — ${attemptId}`}
           className="h-full w-full border-0"
         />

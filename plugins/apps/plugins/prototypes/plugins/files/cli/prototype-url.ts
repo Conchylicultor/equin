@@ -1,4 +1,7 @@
-import { namespaceUrl } from "@plugins/infra/plugins/namespace/core";
+import {
+  contentUrl,
+  namespaceUrl,
+} from "@plugins/infra/plugins/namespace/core";
 import { checkoutNamespace } from "@plugins/infra/plugins/paths/server";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import {
@@ -35,27 +38,30 @@ export async function prototypeUrlFormatter(): Promise<(id: string) => string> {
 }
 
 /**
- * The raw DOCUMENT of one variant of a prototype, on this checkout's origin —
- * `http://<ns>.localhost:9000/api/prototypes/<id>/index.html?palette=azure`.
+ * The raw DOCUMENT of one variant of a prototype, on this checkout's content
+ * host — `http://<id>.content.localhost:9000/<ns>/api/prototypes/<id>/index.html?palette=azure`
+ * (a prototype is untrusted content: it is never served on an app origin).
  * Spelled from the route the frames load (`getPrototypeFile`) with the query
  * they are asked for with (`prototypeDocumentQuery`), so the terminal's link
- * and the pane's frame name a variant the same way. Loading it
- * renders that variant and writes nothing: the server stamps the query onto
- * the page, the user's picks stay as they are.
+ * and the pane's frame name a variant the same way. Loading it renders that
+ * variant and writes nothing: the server stamps the query onto the page, the
+ * user's picks stay as they are.
  */
 export async function prototypeDocumentUrlFormatter(): Promise<{
-  /** The path on the origin — what `screenshot.ts --path` takes. */
-  path: (id: string, picks: OptionPicks) => string;
-  /** The whole URL. */
+  /** The whole URL — what `screenshot.ts --url` takes. */
   url: (id: string, picks: OptionPicks) => string;
 }> {
-  const at = await checkoutUrl();
-  const path = (id: string, picks: OptionPicks) => {
+  const ns = await checkoutNamespace(await getWorktreeRoot());
+  const url = (id: string, picks: OptionPicks) => {
     const qs = new URLSearchParams(prototypeDocumentQuery({ picks }));
     const query = qs.size === 0 ? "" : `?${qs.toString()}`;
-    return `${interpolatePath(getPrototypeFile.path, { name: id, file: PROTOTYPE_ENTRY_FILE })}${query}`;
+    const path = interpolatePath(getPrototypeFile.path, {
+      name: id,
+      file: PROTOTYPE_ENTRY_FILE,
+    });
+    return `${contentUrl(id, ns, path)}${query}`;
   };
-  return { path, url: (id, picks) => at(path(id, picks)) };
+  return { url };
 }
 
 /**

@@ -116,6 +116,7 @@ browser tab of their own and do frame the app — that is depth one.
     - `primitives/css/badge.Badge`
     - `primitives/embed.embedUrl`
     - `primitives/embed.isFramedDocument`
+    - `primitives/embed/frame.AppFrame`
     - `primitives/networking.useTransport`
     - `primitives/pane.parseUrl`
 

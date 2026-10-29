@@ -1,6 +1,8 @@
 export {
   PRINCIPAL_HEADER,
   CROSS_SITE_REFUSED_MESSAGE,
+  CONTENT_ONLY_MESSAGE,
+  contentOnlyResponse,
   principalOf,
   crossSiteRefusedResponse,
   isCrossSiteRefusal,

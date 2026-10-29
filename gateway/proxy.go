@@ -37,6 +37,15 @@ func NewProxy(reg *Registry, routes *CentralRoutesStore, sup *Supervisor, defaul
 }
 
 func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// A content host is a world of its own (content.go): stamped `content`,
+	// routed by path, nothing but declared content routes. Ahead of everything
+	// else — `<item>.content.localhost` would otherwise read as a namespace,
+	// and a central route would match on any host.
+	if item, ok := parseContentHost(r.Host); ok {
+		p.serveContent(w, r, item)
+		return
+	}
+
 	// Who is calling, decided once, before anything is dispatched. The stamp
 	// overwrites whatever the client sent, and rides both the reverse proxy and
 	// the WebSocket replay (r.Write) — see principal.go.

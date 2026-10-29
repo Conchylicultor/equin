@@ -377,6 +377,61 @@ export function namespaceUrl(
 }
 
 /**
+ * The content host's label: `http://<item>.content.localhost:9000/<ns>/…` is
+ * where equin serves CONTENT — pages that run script but are not reviewed app
+ * code (an agent-written prototype) — off every app origin. `<item>` is one
+ * origin per piece of content; the first path segment routes to a namespace's
+ * backend. Trust boundaries, Phase 3:
+ * `research/2026-10-29-global-content-isolation.md`.
+ *
+ * KEEP IN SYNC with `contentHostLabel` in gateway/content.go — enforced by the
+ * `namespace:grammar-in-sync` check.
+ */
+export const CONTENT_HOST_LABEL = "content";
+
+/** One DNS label: what a content item key may be. */
+export const CONTENT_ITEM_RE = /^[a-z0-9][a-z0-9-]{0,62}$/;
+
+/**
+ * Whether `ns` can never be served as an app, because the gateway reads its
+ * host as a content host first: `content` itself and any `<x>.content`.
+ */
+export function isContentReservedNamespace(ns: string): boolean {
+  return ns === CONTENT_HOST_LABEL || ns.endsWith(`.${CONTENT_HOST_LABEL}`);
+}
+
+/**
+ * The URL a piece of content is served at: `http://<item>.content.localhost:<port>/<label><path>`,
+ * where `<label>` is the namespace's host label (main reads `equin`). `path`
+ * must start with `/api/` — the content host serves nothing else.
+ */
+export function contentUrl(
+  item: string,
+  ns: Namespace,
+  path: string,
+  port: number = GATEWAY_PORT,
+): string {
+  if (!CONTENT_ITEM_RE.test(item)) {
+    throw new Error(
+      `contentUrl item must be one DNS label (${CONTENT_ITEM_RE}) — got "${item}".`,
+    );
+  }
+  if (!path.startsWith("/api/")) {
+    throw new Error(`contentUrl path must start with "/api/" — got "${path}".`);
+  }
+  return `http://${item}.${CONTENT_HOST_LABEL}${NAMESPACE_HOST_SUFFIX}:${port}/${namespaceLabel(ns)}${path}`;
+}
+
+/** Whether a browser `location.host` (or any Host header) is a content host. */
+export function isContentHost(host: string): boolean {
+  const h = host.toLowerCase().replace(/:\d+$/, "").replace(/\.$/, "");
+  return (
+    h.endsWith(`.${CONTENT_HOST_LABEL}${NAMESPACE_HOST_SUFFIX}`) ||
+    h === `${CONTENT_HOST_LABEL}${NAMESPACE_HOST_SUFFIX}`
+  );
+}
+
+/**
  * Read a namespace back off a browser `location.host` (or any Host header).
  *
  * The TypeScript mirror of the gateway's `parseWorktree` (`gateway/proxy.go`),
@@ -401,6 +456,8 @@ export function namespaceFromHost(host: string): Namespace | null {
   if (h.endsWith(".")) h = h.slice(0, -1);
   if (h === "localhost" || h === "127.0.0.1" || h === "::1") return null;
   if (!h.endsWith(NAMESPACE_HOST_SUFFIX)) return null;
+  // A content host is never an app namespace — the gateway reads it first.
+  if (isContentHost(h)) return null;
   const name = h.slice(0, -NAMESPACE_HOST_SUFFIX.length);
   const resolved = resolveNamespaceAlias(name);
   return isNamespace(resolved) ? (resolved as Namespace) : null;

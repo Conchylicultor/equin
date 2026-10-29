@@ -9,6 +9,7 @@ import {
 } from "@plugins/primitives/plugins/embed/web";
 import type { EmbedMode } from "@plugins/primitives/plugins/embed/core";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
+import { AppFrame } from "@plugins/primitives/plugins/embed/plugins/frame/web";
 import { useTransport } from "@plugins/primitives/plugins/networking/web";
 import type {
   CounterpartKindProps,
@@ -149,7 +150,12 @@ function resolve(
     badge: target,
     href: embedUrl(target, embed),
     render: (width, height) => (
-      <AppFrame target={target} embed={embed} width={width} height={height} />
+      <RealAppFrame
+        target={target}
+        embed={embed}
+        width={width}
+        height={height}
+      />
     ),
   };
 }
@@ -168,7 +174,7 @@ function resolve(
  * No `?v=` cache-bust either: the counterpart is the live app, not a file on
  * disk, and a prototype edit must not reboot it.
  */
-function AppFrame({
+function RealAppFrame({
   target,
   embed,
   width,
@@ -180,9 +186,9 @@ function AppFrame({
   height: number;
 }): ReactElement {
   return (
-    <iframe
+    <AppFrame
       title={`${TITLES[embed]} at ${target}`}
-      src={embedUrl(target, embed)}
+      path={embedUrl(target, embed)}
       // Inline geometry, not banned className layout utilities: the canvas's
       // logical size — the same box the prototype frames get, which is what
       // makes the two comparable at all.

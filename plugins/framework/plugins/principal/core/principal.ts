@@ -17,27 +17,38 @@ export const PRINCIPAL_HEADER = "x-equin-principal";
  * else — another site, a sibling namespace, an opaque origin, a DNS-rebound
  * host. Hosted widens it (a device, an agent, a share link).
  */
-export type Principal = { kind: "owner" } | { kind: "anonymous" };
+export type Principal =
+  { kind: "owner" } | { kind: "anonymous" } | { kind: "content" };
 
 const OWNER: Principal = { kind: "owner" };
 const ANONYMOUS: Principal = { kind: "anonymous" };
+const CONTENT: Principal = { kind: "content" };
 
 /**
- * The principal a request carries. Exactly `owner` → owner; anything else — a
- * missing header included — is anonymous. Fail closed: a request that did not
- * come through the gateway was not vouched for by it.
+ * The principal a request carries. Exactly `owner` → owner; exactly `content`
+ * → content (a request on the content host, `<item>.content.localhost` — never
+ * the owner); anything else — a missing header included — is anonymous. Fail
+ * closed: a request that did not come through the gateway was not vouched for
+ * by it.
  */
 export function principalOf(req: Request): Principal {
-  return req.headers.get(PRINCIPAL_HEADER) === "owner" ? OWNER : ANONYMOUS;
+  const stamp = req.headers.get(PRINCIPAL_HEADER);
+  if (stamp === "owner") return OWNER;
+  if (stamp === "content") return CONTENT;
+  return ANONYMOUS;
 }
 
 /**
  * Who may call a route. `"owner"` is the default — never written in a
  * declaration, it is what an endpoint without `access` is. `{ public }` lets
  * an anonymous caller in, and says why (the reason is what a reviewer reads):
- * `defineEndpoint({ …, access: { public: "<reason>" } })`.
+ * `defineEndpoint({ …, access: { public: "<reason>" } })`. `{ content }`
+ * serves the route ONLY on the content host (`<item>.content.localhost`), to
+ * untrusted content framed off the app origin — `item` names the route param
+ * whose value is the content's origin key (one origin per piece of content).
  */
-export type EndpointAccess = "owner" | { public: string };
+export type EndpointAccess =
+  "owner" | { public: string } | { content: string; item: string };
 
 const REFUSED_STATUS = 403;
 
@@ -62,6 +73,21 @@ export function crossSiteRefusedResponse(route: string): Response {
       route,
       message: CROSS_SITE_REFUSED_MESSAGE,
     } satisfies z.infer<typeof refusedBody>,
+    { status: REFUSED_STATUS },
+  );
+}
+
+/** The sentence an app-origin caller of a content route reads. */
+export const CONTENT_ONLY_MESSAGE =
+  "This route serves untrusted content; it answers only on its content host (<item>.content.localhost), never on an app origin.";
+
+/**
+ * `403 { reason: "content-only", route, message }` — a content route asked
+ * for on an app origin, where its document would run as the owner.
+ */
+export function contentOnlyResponse(route: string): Response {
+  return Response.json(
+    { reason: "content-only", route, message: CONTENT_ONLY_MESSAGE },
     { status: REFUSED_STATUS },
   );
 }

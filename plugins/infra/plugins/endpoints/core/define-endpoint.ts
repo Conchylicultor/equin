@@ -349,9 +349,24 @@ interface EndpointOptions<Route extends string, B, R, TQuery> {
    * navigation — and says why (`{ public: "<reason>" }`). Absent = owner-only,
    * the default; `"owner"` has no spelling here, so the safe answer is the one
    * a forgotten field gives.
+   *
+   * `{ content: "<reason>", item: "<param>" }` (a GET only) serves untrusted
+   * content — a page that runs script but is not reviewed app code — and ONLY
+   * on the content host (`<item>.content.localhost`), never on an app origin.
+   * `item` names the route param whose value is the content's origin key. Its
+   * HTML documents carry the frame agent; framed with `ContentFrame`
+   * (`primitives/embed/frame`) through `contentPath`.
    */
-  access?: { public: string };
+  access?: Route extends `GET ${string}`
+    ? { public: string } | ContentAccess<Route>
+    : { public: string };
 }
+
+/** `access: { content }` — see {@link EndpointOptions.access}. */
+type ContentAccess<Route extends string> = {
+  content: string;
+  item: keyof ExtractParams<Route> & string;
+};
 
 /**
  * The predicted effect a WRITE declares, built on the route's typed request
@@ -799,13 +814,26 @@ function requireWhy(
 /** A declaration's `access`, resolved: absent → `"owner"`. */
 function resolveAccess(
   route: string,
-  access: { public: string } | undefined,
+  access: { public: string } | { content: string; item: string } | undefined,
 ): EndpointAccess {
   if (access === undefined) return "owner";
+  if (typeof access === "object" && "content" in access) {
+    if (typeof access.content !== "string" || access.content.trim() === "") {
+      throw new Error(
+        `defineEndpoint(${route}): access.content needs a reason — what untrusted content does it serve?`,
+      );
+    }
+    if (!route.startsWith("GET ") || !route.includes(`/:${access.item}`)) {
+      throw new Error(
+        `defineEndpoint(${route}): access.content is for a GET whose item "${access.item}" is one of its params`,
+      );
+    }
+    return { content: access.content, item: access.item };
+  }
   // A cast past tsc (`access: "owner"`) is refused by name, not by a TypeError.
   if (typeof access !== "object" || typeof access.public !== "string") {
     throw new Error(
-      `defineEndpoint(${route}): access is { public: "<reason>" } or absent (owner) — got ${JSON.stringify(access)}`,
+      `defineEndpoint(${route}): access is { public: "<reason>" }, { content, item } or absent (owner) — got ${JSON.stringify(access)}`,
     );
   }
   if (access.public.trim() === "") {

@@ -479,6 +479,7 @@ export const browserHost = {
     "primitives.dom.web-storage.health",
     "primitives.editable-field",
     "primitives.embed",
+    "primitives.embed.frame",
     "primitives.error-boundary",
     "primitives.expandable",
     "primitives.file-links",

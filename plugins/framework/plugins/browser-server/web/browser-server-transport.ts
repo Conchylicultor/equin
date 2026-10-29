@@ -95,7 +95,7 @@ function inertSocket(url: string): TransportSocket {
  * whether the telemetry its traffic raises is reported (to the page's own
  * server — a browser server has nowhere of its own to keep it): the enclosing
  * page's setting (`useTransport().telemetry` where the scope is mounted), or
- * `false` to drop it. `frameBase` is where a frame document of this server
+ * `false` to drop it. `frameBase` is where a content document of this server
  * loads by URL — `attachFrameServing`'s, or `null` where nothing serves its
  * frames (no Service Worker).
  */
@@ -126,9 +126,18 @@ export function browserServerTransport(
     // No URL reaches a server in the page: an element's asset is fetched
     // through `fetch` above and handed over as a blob URL (`useAssetSrc`).
     servesUrls: false,
-    // A frame document is served apart from the page: through the
-    // frame-serving Service Worker, under its own prefix.
-    frameBase,
+    // A content document is served apart from the page's elements: through
+    // the frame-serving Service Worker, under its own prefix — on the page's
+    // origin, which is safe here and only here (below).
+    content:
+      frameBase === null
+        ? null
+        : {
+            kind: "same-origin",
+            reason:
+              "an in-browser server's content is repo fixtures, and the page it runs in holds no owner authority — no server of the owner's is reachable from it",
+            url: (_item, path) => `${frameBase}${path}`,
+          },
     // A server in the page: the computer is not behind it.
     machine: false,
     telemetry,

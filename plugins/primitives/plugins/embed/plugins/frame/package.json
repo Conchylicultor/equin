@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-primitives-embed-frame",
+  "description": "The one framing primitive: every <iframe> in the app is a ContentFrame (untrusted content on its content host), ForeignFrame (a pasted third-party URL), InlineFrame (an opaque srcdoc), PdfFrame or AppFrame (the app itself).",
+  "private": true,
+  "version": "0.0.1"
+}

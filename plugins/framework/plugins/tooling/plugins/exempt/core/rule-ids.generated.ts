@@ -54,6 +54,7 @@ export type ExemptableRuleId =
   | "events/no-raw-events-write"
   | "exempt/no-path-allowlist"
   | "format-safety/no-adhoc-prettier"
+  | "frame/no-raw-frame"
   | "git-grep-safety/no-adhoc-git-grep"
   | "guard-path-safety/no-adhoc-path-resolve"
   | "hook-value/hook-binding-name"
@@ -180,6 +181,7 @@ export type ExemptableRuleId =
 export type SanctionedOnlyRuleId = 
   | "endpoints/no-endpoint-effect-internals"
   | "endpoints/no-raw-web-fetch"
+  | "frame/no-raw-frame"
   | "live/no-endpoint-read"
   | "networking/no-page-transport"
   | "networking/no-request-guard-capability";

@@ -142,7 +142,7 @@ host's artifact dir, `frames-sw.js`; exported as the host module's
   artifact store, which the gateway answers 404 — never the app.
 - **URL** — `<scope><serverId>/api/…` (`frames-protocol.ts`): the server's own
   path behind a fresh id per attachment, so two tabs never answer each other's
-  frames. `Transport.frameBase` is the prefix; `frameUrlOver`
+  frames. `frameBase` is the prefix the transport's `content` serving (`same-origin`, with its reason) puts in front of a content path; `contentUrlOver`
   (`infra/endpoints`) builds the URL.
 - **`attachFrameServing(worker, serviceWorkerUrl)`** (page, run alongside the
   host boot) → `{ kind: "serving", frameBase, detach }` | `{ kind:

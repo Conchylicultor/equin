@@ -33,8 +33,10 @@ import {
   matchResource,
 } from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { frameUrlOver } from "@plugins/infra/plugins/endpoints/web";
-import { useTransport } from "@plugins/primitives/plugins/networking/web";
+import {
+  ContentFrame,
+  useContentUrl,
+} from "@plugins/primitives/plugins/embed/plugins/frame/web";
 import {
   useBlockActivate,
   type BlockRendererProps,
@@ -173,9 +175,9 @@ const FILL_SNAP_PX = 8;
  * actions — Open beside, and a new browser tab in the Prototypes app.
  *
  * The url carries `meta.rev`, a hash of this prototype's files, so an agent's
- * edit reloads it and nothing else does. Sandboxed exactly as the canvas frames
- * it: `allow-same-origin` keeps a prototype fetching its own flat files
- * working — they are first-party files from the user's own prototypes dir.
+ * edit reloads it and nothing else does. Framed exactly as the canvas frames
+ * it: a `ContentFrame`, on the prototype's own content origin — same-origin
+ * with its own flat files, never with the app.
  * `loading="lazy"`: a page holding many mocks only boots the ones scrolled to.
  */
 function PrototypeCard({
@@ -188,13 +190,10 @@ function PrototypeCard({
   onResize: (size: FrameSize) => void;
 }) {
   const openPane = useOpenPane();
-  // A frame document, behind the transport's frame base (`frameUrlOver`): the
-  // page's own path on the desktop, an in-browser server's frames through its
-  // Service Worker in the demo — so its relative files resolve beside it.
-  const url = frameUrlOver(
-    useTransport(),
-    prototypeDocument(meta.name, { v: meta.rev }),
-  );
+  // Untrusted content: on the content host (`<proto-id>.content.localhost`)
+  // on the desktop, an in-browser server's frames through its Service Worker
+  // in the demo — never this page's origin.
+  const url = useContentUrl(prototypeDocument(meta.name, { v: meta.rev }));
   // `push`: the canvas opens as a column to the RIGHT of the page, so the
   // document that links the mock stays on screen beside it.
   const openBeside = openPane.to(
@@ -229,11 +228,10 @@ function PrototypeCard({
         >
           <Clip className="relative h-full w-full rounded-md border border-border bg-background">
             {url.kind === "ready" ? (
-              <iframe
+              <ContentFrame
                 title={meta.title}
-                src={url.url}
+                src={url}
                 loading="lazy"
-                sandbox="allow-scripts allow-same-origin"
                 className={cn(
                   layerClasses(),
                   "h-full w-full border-0",
