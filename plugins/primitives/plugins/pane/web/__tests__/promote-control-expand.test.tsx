@@ -9,6 +9,7 @@ import {
   Pane,
   PaneInstanceContext,
   useSyncPaneRegistry,
+  paneMorphSink,
   type PaneExpandTarget,
   type PaneStore,
 } from "@plugins/primitives/plugins/pane/web";
@@ -89,7 +90,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-function renderPeek(id: string) {
+function renderPeek(id: string, opts: { inBox?: boolean } = {}) {
   store.restoreRoute([
     { paneId: "exp-list", params: {} },
     { paneId: "exp-peek", params: { id } },
@@ -98,7 +99,14 @@ function renderPeek(id: string) {
   return render(
     <TestSurface store={store} plugins={plugins} basePath="/host">
       <PaneInstanceContext.Provider value={peek.instanceId}>
-        <PromoteControl pane={peekPane} ancestorsHidden={false} />
+        {opts.inBox ? (
+          // What PaneBox stamps — the box the morph grows out of.
+          <div data-pane-id="exp-peek" data-testid="box">
+            <PromoteControl pane={peekPane} ancestorsHidden={false} />
+          </div>
+        ) : (
+          <PromoteControl pane={peekPane} ancestorsHidden={false} />
+        )}
       </PaneInstanceContext.Provider>
     </TestSurface>,
   );
@@ -127,5 +135,53 @@ describe("PromoteControl with expand", () => {
     answers.c = { kind: "none" };
     const view = renderPeek("c");
     expect(view.getByRole("button", { name: "Expand pane" })).toBeTruthy();
+  });
+});
+
+describe("PromoteControl morph", () => {
+  const ready = (id: string): PaneExpandTarget => ({
+    kind: "ready",
+    target: { open: () => clicks.push(id), href: () => `/other/${id}` },
+  });
+
+  it("runs a cross-app open as a morph out of the enclosing pane box", () => {
+    answers.m = ready("m");
+    const morphs: HTMLElement[] = [];
+    const uninstall = paneMorphSink.install((from, open) => {
+      morphs.push(from);
+      open();
+    });
+    try {
+      const view = renderPeek("m", { inBox: true });
+      fireEvent.click(view.getByRole("button", { name: "Open in Other" }));
+      expect(morphs).toEqual([view.getByTestId("box")]);
+      expect(clicks).toEqual(["m"]);
+    } finally {
+      uninstall();
+    }
+  });
+
+  it("opens plainly with no morph installed", () => {
+    answers.n = ready("n");
+    const view = renderPeek("n", { inBox: true });
+    fireEvent.click(view.getByRole("button", { name: "Open in Other" }));
+    expect(clicks).toEqual(["n"]);
+  });
+
+  it("opens plainly outside a pane box", () => {
+    answers.o = ready("o");
+    let morphed = false;
+    const uninstall = paneMorphSink.install((_from, open) => {
+      morphed = true;
+      open();
+    });
+    try {
+      const view = renderPeek("o");
+      fireEvent.click(view.getByRole("button", { name: "Open in Other" }));
+      expect(morphed).toBe(false);
+      expect(clicks).toEqual(["o"]);
+    } finally {
+      uninstall();
+    }
   });
 });

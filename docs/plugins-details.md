@@ -11620,6 +11620,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/slot-render.renderIsolated`
       - Exemptions:
         - Exempts itself from: `apps-core/no-raw-history-nav` — `web/components/apps-layout.tsx` (sanctioned)
+    - **`pane-morph`** — The pane → app morph: a pane's cross-app Expand ("Open in <App>") runs as a view transition in which the pane grows from its box into the leaf pane of the app that replaces this one — the old app receding, the new one rising, the two apps' sidebars cross-fading in place and the header title gliding between headers, snapshots cropped and never stretched. Installed into the pane primitive's paneMorphSink at Core.Root; falls back to the plain navigation without View Transitions, under reduced motion or mid-morph.
+      - Web:
+        - Contributes: `Core.Root` → `PaneMorphHost`
+        - Uses:
+          - `primitives/css/motion.prefersReducedMotion`
+          - `primitives/pane.paneMorphSink`
+          - `primitives/pane.peekRoute`
+      - Cross-plugin:
+        - Uses tokens: `ui/tokens/color-palette --background`
     - **`surface`** — Generic surface dispatcher: renders every open tab at once under the ONE surface mode (docked / windows / solo) selected from the Surface.Placement registry, so the modes are mutually exclusive. Owns the surface body and the mode control; each mode (docked / floating / solo) is a self-contained sub-plugin.
       - Web:
         - Slots: `Surface.Placement`
@@ -27418,13 +27427,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `framework/tooling/guards.MODULE_EXTENSION`
             - Exports (values): `isE2eScriptPath`
           - Cross-plugin:
-            - Imported by: 174 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+            - Imported by: 175 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
               - `apps` ×51
               - `primitives` ×26
               - `page` ×25
               - `conversations` ×24
               - `debug` ×8
-              - `apps-core` ×5
+              - `apps-core` ×6
               - `tasks` ×5
               - `active-data` ×3
               - `config_v2` ×3
@@ -27959,8 +27968,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots:
           - `Core.Root`
           - `Core.Boot`
-        - Slot contributors: 45 contributors — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
-          - `Core.Root` ×44
+        - Slot contributors: 46 contributors — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
+          - `Core.Root` ×45
           - `Core.Boot` ← `infra.boot-snapshot`
       - Core:
         - Uses:
@@ -40157,6 +40166,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/overlay --overlay-enter-duration`
               - `ui/tokens/overlay --overlay-enter-easing`
             - Imported by:
+              - `apps-core/pane-morph`
               - `apps/desktop/launcher`
               - `apps/places/places-map`
               - `apps/sonata/library`
@@ -45143,6 +45153,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PaneHistoryState`
           - `PaneInternal`
           - `PaneMatch`
+          - `PaneMorph`
           - `PaneObject`
           - `PaneOpenMode`
           - `PaneOptions`
@@ -45181,6 +45192,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PaneLayoutContext`
           - `PaneLoadScopeContext`
           - `PaneMatchContext`
+          - `paneMorphSink`
           - `paneOwnerFor`
           - `PaneScroll`
           - `PaneStoreContext`
@@ -45231,13 +45243,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-2xs`
           - `ui/tokens/density --space-md`
           - `ui/tokens/shape --spacing`
-        - Imported by: 186 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Imported by: 187 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `apps` ×68
           - `conversations` ×30
           - `debug` ×27
           - `active-data` ×10
           - `tasks` ×9
-          - `apps-core` ×6
+          - `apps-core` ×7
           - `plugin-meta` ×6
           - `layouts` ×4
           - `primitives` ×4
@@ -53374,7 +53386,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `colorPaletteGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Tokens used by: 526 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 527 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×118
               - `conversations` ×89
               - `primitives` ×77
@@ -53386,10 +53398,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fields` ×13
               - `reports` ×13
               - `active-data` ×7
+              - `apps-core` ×6
               - `build` ×6
               - `reorder` ×6
               - `stats` ×6
-              - `apps-core` ×5
               - `review` ×5
               - `shell` ×5
               - `auth` ×4

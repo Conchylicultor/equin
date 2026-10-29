@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { linkProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { navIcons } from "@plugins/ui/plugins/icons/core";
 import type { AnyPane, PaneExpand } from "../pane";
+import { useMorphFromPane } from "../morph-sink";
 import { PaneIconAction } from "./pane-icon-action";
 
 /**
@@ -12,6 +13,9 @@ import { PaneIconAction } from "./pane-icon-action";
  * the default promote ({@link AnyPane.usePromote}): the pane on its own, in its
  * home app. `ancestorsHidden` is the full-pane layout's flag: painted alone, a
  * same-app re-root has nothing on screen to detach from.
+ *
+ * Every cross-app hop runs as a morph out of this pane's box (`morph-sink.ts`):
+ * the pane grows into its place in the app that replaces this one.
  */
 export function PromoteControl({
   pane,
@@ -44,14 +48,16 @@ function ExpandElsewhere({
   ancestorsHidden: boolean;
 }): ReactNode {
   const answer = expand.useTarget(pane.useParams());
+  const { attach, morph } = useMorphFromPane();
   const label = `Open in ${expand.app.name}`;
   switch (answer.kind) {
     case "ready":
       return (
         <PaneIconAction
+          ref={attach}
           label={label}
           icon={navIcons.expand}
-          {...linkProps(answer.target)}
+          {...linkProps(morph(answer.target))}
         />
       );
     case "pending":
@@ -69,17 +75,19 @@ function DefaultPromote({
   ancestorsHidden: boolean;
 }): ReactNode {
   const promote = pane.usePromote();
+  const { attach, morph } = useMorphFromPane();
   if (promote === null) return null;
   if (ancestorsHidden && promote.kind !== "cross-app") return null;
   return (
     <PaneIconAction
+      ref={attach}
       label={
         promote.kind === "cross-app"
           ? `Open in ${promote.app.name}`
           : "Expand pane"
       }
       icon={navIcons.expand}
-      {...linkProps(promote)}
+      {...linkProps(promote.kind === "cross-app" ? morph(promote) : promote)}
     />
   );
 }

@@ -65,6 +65,9 @@ export function AppTabsBody() {
           // real surface does.
           <Theme
             key={tab.tabId}
+            // The element that outlives an app swap in this tab — the pane
+            // morph (apps-core/pane-morph) finds both apps inside it.
+            data-tab-id={tab.tabId}
             name={appThemeScope(tab.appId)}
             surface="canvas"
             // eslint-disable-next-line layout/no-adhoc-layout -- keep-alive: every tab is a full-bleed stacked sibling, only the focused one displayed

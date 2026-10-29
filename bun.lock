@@ -184,6 +184,10 @@
       "name": "@equin/plugin-apps-core-layout",
       "version": "0.0.1",
     },
+    "plugins/apps-core/plugins/pane-morph": {
+      "name": "@equin/plugin-apps-core-pane-morph",
+      "version": "0.0.1",
+    },
     "plugins/apps-core/plugins/surface": {
       "name": "@equin/plugin-apps-core-surface",
       "version": "0.0.1",
@@ -7104,6 +7108,8 @@
     "@equin/plugin-apps-core-chrome-theme": ["@equin/plugin-apps-core-chrome-theme@workspace:plugins/apps-core/plugins/chrome-theme"],
 
     "@equin/plugin-apps-core-layout": ["@equin/plugin-apps-core-layout@workspace:plugins/apps-core/plugins/layout"],
+
+    "@equin/plugin-apps-core-pane-morph": ["@equin/plugin-apps-core-pane-morph@workspace:plugins/apps-core/plugins/pane-morph"],
 
     "@equin/plugin-apps-core-surface": ["@equin/plugin-apps-core-surface@workspace:plugins/apps-core/plugins/surface"],
 

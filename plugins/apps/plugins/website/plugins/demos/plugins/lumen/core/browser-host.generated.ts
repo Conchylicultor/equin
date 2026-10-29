@@ -36,6 +36,7 @@ export const browserHost = {
     "apps-core.app-usage",
     "apps-core.chrome-theme",
     "apps-core.layout",
+    "apps-core.pane-morph",
     "apps-core.surface",
     "apps-core.surface.docked",
     "apps-core.surface.solo",

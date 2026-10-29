@@ -1,0 +1,57 @@
+/* The pane → app morph (morph.ts). Every rule is scoped to html[data-pane-morph],
+   set for the length of one morph, so no other view transition inherits it. */
+
+:root {
+  --pane-morph-duration: 440ms;
+  --pane-morph-easing: cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+html[data-pane-morph]::view-transition-group(*),
+html[data-pane-morph]::view-transition-old(*),
+html[data-pane-morph]::view-transition-new(*) {
+  animation-duration: var(--pane-morph-duration);
+  animation-timing-function: var(--pane-morph-easing);
+}
+
+/* Every snapshot keeps its natural size, pinned top-left and clipped by its
+   moving box — never stretched to the box's aspect. */
+html[data-pane-morph]::view-transition-old(*),
+html[data-pane-morph]::view-transition-new(*) {
+  width: auto;
+  height: auto;
+  inset: 0 auto auto 0;
+  object-fit: none;
+  object-position: left top;
+}
+
+html[data-pane-morph]::view-transition-group(pane-morph) {
+  overflow: clip;
+  background: var(--background);
+}
+
+/* The old picture clears early, so the new app's reflowed layout is not
+   double-exposed for long. */
+html[data-pane-morph]::view-transition-old(pane-morph) {
+  animation-duration: calc(var(--pane-morph-duration) * 0.4);
+}
+
+/* The app behind falls away; the new one rises from it. */
+html[data-pane-morph]::view-transition-old(root) {
+  animation-name: pane-morph-recede;
+}
+html[data-pane-morph]::view-transition-new(root) {
+  animation-name: pane-morph-rise;
+}
+
+@keyframes pane-morph-recede {
+  to {
+    transform: scale(0.96);
+    opacity: 0;
+    filter: blur(2px);
+  }
+}
+@keyframes pane-morph-rise {
+  from {
+    opacity: 0;
+  }
+}
