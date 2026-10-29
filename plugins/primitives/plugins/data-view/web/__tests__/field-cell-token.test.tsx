@@ -35,7 +35,7 @@ function Harness({
   context,
 }: {
   field: FieldDef<Row>;
-  context?: "cell" | "token";
+  context?: "cell" | "token" | "glyph";
 }) {
   const resolveCell = useResolveCell();
   const resolveEditor = useResolveCellEditor();
@@ -59,7 +59,7 @@ const base: FieldDef<Row> = {
 
 function text(
   field: FieldDef<Row>,
-  context?: "cell" | "token",
+  context?: "cell" | "token" | "glyph",
   extents: ReadonlyMap<string, { min: number; max: number } | null> = new Map(),
 ): string {
   const { container } = render(
@@ -120,5 +120,35 @@ describe("FieldCell extent", () => {
 
   it("outside a view (no extent for it): null", () => {
     expect(text({ ...base, extent: true, cell: draw }, "cell")).toBe("none");
+  });
+});
+
+describe("FieldCell glyph", () => {
+  const glyphs = (field: FieldDef<Row>): number => {
+    const { container } = render(
+      <PluginProvider plugins={[plugin]}>
+        <Harness field={field} context="glyph" />
+      </PluginProvider>,
+    );
+    const n = container.querySelectorAll("[data-option-glyph]").length;
+    cleanup();
+    return n;
+  };
+  const enumField = (quiet: boolean): FieldDef<Row> => ({
+    ...base,
+    type: "enum",
+    value: () => "manual",
+    options: [
+      { value: "manual", label: "By hand", ...(quiet ? { quiet: true } : {}) },
+    ],
+  });
+
+  it("a value's option draws as its glyph", () => {
+    expect(glyphs(enumField(false))).toBe(1);
+  });
+
+  it("a quiet option draws no glyph — it labels filters and groups only", () => {
+    expect(glyphs(enumField(true))).toBe(0);
+    expect(text(enumField(true), "glyph")).toBe("");
   });
 });

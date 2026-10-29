@@ -56,8 +56,8 @@ export interface FieldCellProps {
    * (default — a table cell, a list term), `"token"` (a card's token line, a
    * compact meta run), where the field's short form (`FieldDef.token`) wins
    * over its cell, or `"glyph"` (a row's lead), where a value whose option
-   * declares a tint draws as that option's glyph alone (`OptionGlyph`) — a
-   * value without one draws its cell.
+   * declares a tint draws as that option's glyph alone (`OptionGlyph`), a
+   * quiet option draws nothing — a value without one draws its cell.
    */
   context?: "cell" | "token" | "glyph";
 }
@@ -98,6 +98,9 @@ export function FieldCell({
   const value = field.value?.(row);
   if (context === "glyph") {
     const option = optionOf(field, value);
+    // A quiet option labels filters and groups only: no glyph in the lead,
+    // as it draws no chip in a cell ("By hand" beside every row's state).
+    if (option?.quiet === true) return null;
     if (option) return <OptionGlyph option={option} label={option.label} />;
   }
   const values = visibleValues(presentation, field, field.values?.(row));
