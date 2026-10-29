@@ -924,8 +924,12 @@ dependencies = [
 name = "equin-desktop"
 version = "0.1.0"
 dependencies = [
+ "block2",
  "gtk",
  "ksni",
+ "objc2",
+ "objc2-foundation",
+ "objc2-web-kit",
  "plist",
  "resvg",
  "serde",
@@ -934,6 +938,7 @@ dependencies = [
  "tauri-build",
  "tauri-plugin-notification",
  "url",
+ "webkit2gtk",
 ]
 
 [[package]]

@@ -2,32 +2,34 @@
 //! Dock icon (macOS: the shim bundle's identity) or window class (Linux:
 //! `equin-<id>`, the shim's `StartupWMClass`), and ONE window on the app's URL
 //! as the app's own document (never `?embed=`, see `shim::window_url`). The
-//! window gets no IPC — no capability names its label.
+//! window gets no IPC — no capability names its label — and no script is
+//! injected into any page it shows.
 //!
 //! It keeps to its namespace (`window_scope`: the app URL's whole origin, not
 //! its base path), so the app's own ways to other apps — the launcher, a link
-//! into another app — stay in this window. A navigation off the origin is
-//! cancelled and handed to the installed app owning the URL, else the default
-//! browser (`shim::hand_off`). Three catches, since a navigation handler cannot
-//! tell the main frame from an iframe:
-//! - `src/scope.js` (main frame): off-origin link clicks become `window.open`;
-//! - the new-window handler: every `window.open` / `target=_blank` is handed
-//!   off, never a second webview window;
-//! - any other main-frame load that lands off the origin is handed off and
-//!   stepped back from once it has loaded (an iframe may load any origin, so
-//!   only the page-load event — main frame only — can tell).
+//! into another app — stay in this window. The holder decides, before the
+//! fact: a main-frame load off the origin (a link, a form, `location.*`, a
+//! server redirect) is cancelled natively before it loads (`src/main_frame.rs`)
+//! and handed to the installed app owning the URL, else the default browser
+//! (`shim::hand_off`); every `window.open` / `target=_blank` is handed off
+//! the same way, never a second webview window. Frames are untouched: an app
+//! frames content origins and foreign sites. Hand-offs go through one burst
+//! gate (`scope_gate::hand_off`), so a page cannot flood the browser.
 
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 use tauri::webview::{NewWindowResponse, PageLoadEvent};
 use tauri::{AppHandle, Manager, RunEvent, WebviewUrl, WebviewWindow, WebviewWindowBuilder, WindowEvent};
 use url::Url;
 
+use crate::main_frame::{self, FrameKind};
+use crate::scope_gate::{self, admits_main_frame, web};
 use crate::{instance, shim};
 
 const LABEL: &str = "app";
-const SCOPE_JS: &str = include_str!("scope.js");
 const DEFAULT_SIZE: (f64, f64) = (1200.0, 800.0);
 
 /// What a window-mode process opens.
@@ -87,15 +89,6 @@ fn save_frame(window: &WebviewWindow) {
     }
 }
 
-fn web(url: &Url) -> bool {
-    url.scheme() == "http" || url.scheme() == "https"
-}
-
-/// Hand off on a thread: it reads the shims from disk and waits on `open`.
-fn hand_off(url: Url) {
-    std::thread::spawn(move || shim::hand_off(&url));
-}
-
 fn focus(window: &WebviewWindow) {
     let _ = window.unminimize();
     let _ = window.show();
@@ -127,51 +120,98 @@ fn on_handoff(app: &AppHandle, scope: &Url, url: Option<Url>) {
     }
 }
 
-fn scope_script(scope: &Url) -> String {
-    let scope = serde_json::json!({
-        "origin": scope.origin().ascii_serialization(),
-        "base": scope.path().trim_end_matches('/'),
-    });
-    SCOPE_JS.replace("__EQUIN_SCOPE__", &scope.to_string())
+/// What a caller watches on, or swaps in, the window; the real launch passes
+/// `Hooks::default()`.
+pub struct Hooks {
+    /// Where an admitted hand-off goes (`scope_gate::hand_off_to_owner`; the
+    /// probe records).
+    pub hand_off: fn(Url),
+    /// Every decision the main-frame gate made: the URL, its frame, admitted.
+    pub decided: Option<fn(&Url, FrameKind, bool)>,
+    /// A page finished loading in the main frame.
+    pub loaded: Option<fn(&WebviewWindow, &Url)>,
+    /// The page's `document.title` changed.
+    pub title: Option<fn(&WebviewWindow, String)>,
+    pub visible: bool,
 }
 
-fn build_window(app: &AppHandle, launch: &Launch) -> tauri::Result<WebviewWindow> {
+impl Default for Hooks {
+    fn default() -> Self {
+        Self { hand_off: scope_gate::hand_off_to_owner, decided: None, loaded: None, title: None, visible: true }
+    }
+}
+
+/// Whether the main-frame gate is on the window's webview yet.
+pub struct GateInstalled(pub Arc<AtomicBool>);
+
+pub fn build_window(app: &AppHandle, launch: &Launch, hooks: Hooks) -> tauri::Result<WebviewWindow> {
     let scope = window_scope(&launch.base);
     let home = shim::window_url(&launch.base);
+    let sink = hooks.hand_off;
+    let installed = Arc::new(AtomicBool::new(false));
+    app.manage(GateInstalled(installed.clone()));
     let mut builder = WebviewWindowBuilder::new(app, LABEL, WebviewUrl::External(shim::window_url(&launch.url)))
         .title(&launch.name)
         .min_inner_size(480.0, 360.0)
-        .initialization_script(scope_script(&scope))
-        .on_new_window(|url, _features| {
+        .visible(hooks.visible)
+        .on_new_window(move |url, _features| {
             if web(&url) {
-                hand_off(url);
+                scope_gate::hand_off(url, sink);
             }
             NewWindowResponse::Deny
         })
-        .on_page_load(move |window, payload| {
-            if !matches!(payload.event(), PageLoadEvent::Finished) {
-                return;
-            }
-            let url = payload.url();
-            if !web(url) || shim::in_scope(&scope, url) {
-                eprintln!("equin-desktop: loaded {url}");
-                return;
-            }
-            eprintln!("equin-desktop: {url} is outside the namespace; handing it off");
-            hand_off(url.clone());
-            let back = format!(
-                "if (history.length > 1) history.back(); else location.replace({});",
-                serde_json::Value::String(home.to_string())
-            );
-            if let Err(e) = window.eval(back) {
-                eprintln!("equin-desktop: cannot step back into the app: {e}");
+        .on_page_load({
+            let scope = scope.clone();
+            let installed = installed.clone();
+            let loaded = hooks.loaded;
+            move |window, payload| {
+                if !matches!(payload.event(), PageLoadEvent::Finished) {
+                    return;
+                }
+                let url = payload.url();
+                if admits_main_frame(&scope, url) {
+                    eprintln!("equin-desktop: loaded {url}");
+                    assert!(
+                        installed.load(Ordering::SeqCst) || url.as_str() == "about:blank",
+                        "equin-desktop: {url} loaded before the main-frame gate was installed"
+                    );
+                } else {
+                    // The gate cancels every such load before it happens: reaching
+                    // here is a bug. Replace the page natively — never script in it.
+                    eprintln!("equin-desktop: BUG: the main frame reached {url} past the gate; going home");
+                    if let Err(e) = window.navigate(home.clone()) {
+                        eprintln!("equin-desktop: cannot go home to {home}: {e}");
+                    }
+                }
+                if let Some(loaded) = loaded {
+                    loaded(&window, url);
+                }
             }
         });
+    if let Some(title) = hooks.title {
+        builder = builder.on_document_title_changed(move |window, t| title(&window, t));
+    }
     builder = match load_frame(app) {
         Some(f) => builder.inner_size(f.width, f.height).position(f.x, f.y),
         None => builder.inner_size(DEFAULT_SIZE.0, DEFAULT_SIZE.1).center(),
     };
     let window = builder.build()?;
+    let decided = hooks.decided;
+    main_frame::install(
+        &window,
+        Arc::new(move |url, frame| {
+            let admitted = frame == FrameKind::Sub || admits_main_frame(&scope, url);
+            if let Some(decided) = decided {
+                decided(url, frame, admitted);
+            }
+            if !admitted {
+                eprintln!("equin-desktop: {url} is outside the namespace; refused before it loaded, handing it off");
+                scope_gate::hand_off(url.clone(), sink);
+            }
+            admitted
+        }),
+        move || installed.store(true, Ordering::SeqCst),
+    )?;
     let w = window.clone();
     window.on_window_event(move |event| {
         if let WindowEvent::CloseRequested { .. } = event {
@@ -216,7 +256,7 @@ pub fn run(launch: Launch) {
             #[cfg(target_os = "linux")]
             gtk::gdk::set_program_class(&shim::wm_class(&launch.app_id));
             let handle = app.handle().clone();
-            build_window(&handle, &launch)?;
+            build_window(&handle, &launch, Hooks::default())?;
             if let Some(listener) = listener {
                 let scope = window_scope(&launch.base);
                 instance::serve(listener, move |url| {
@@ -251,14 +291,6 @@ pub fn run(launch: Launch) {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn scope_script_is_filled() {
-        let js = scope_script(&window_scope(&Url::parse("http://equin.localhost:9000/mail").unwrap()));
-        assert!(!js.contains("__EQUIN_SCOPE__"));
-        assert!(js.contains(r#""base":"""#));
-        assert!(js.contains(r#""origin":"http://equin.localhost:9000""#));
-    }
 
     #[test]
     fn the_window_roams_its_namespace() {

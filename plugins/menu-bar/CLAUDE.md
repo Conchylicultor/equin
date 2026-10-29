@@ -41,13 +41,26 @@ namespaces and URLs, never an app.
   path: the app's own ways to other apps (the launcher, a link into another
   app) stay in the window. (Routing a launch or hand-off *to* an app still
   uses the app's base path — `shim::in_scope` against the shim URL.)
-  Navigation off the origin goes to the installed app owning the URL (read
-  from the shims on disk — `rust/src/shim.rs`; the shim set is the installed
-  set), else the default browser: `rust/src/scope.js` (main frame) turns
-  off-origin link clicks into `window.open`; every new-window request is
-  handed off and denied; any other main-frame load landing off the origin is
-  handed off and stepped back from (an iframe may load any origin, so only the
-  main-frame page-load event can tell). macOS bundles need an ATS exception for
+  **The holder decides, before the fact** (`rust/src/main_frame.rs`): a
+  main-frame load off the origin — a link, a form, `location.*`, a server
+  redirect — is cancelled natively before it loads (macOS: a per-webview proxy
+  in front of wry's `WKNavigationDelegate` answering from
+  `targetFrame.isMainFrame` and, for redirects, `isForMainFrame`; Linux:
+  WebKitGTK's response decision, `is_main_frame_main_resource`, so the request
+  goes out but nothing renders), and handed to the installed app owning the
+  URL (read from the shims on disk — `rust/src/shim.rs`; the shim set is the
+  installed set), else the default browser; every new-window request is
+  handed off and denied. Tauri's `on_navigation` cannot do this — wry passes
+  it only the URL, not the frame — and frames are untouched (an app frames
+  content origins and foreign sites). No script is injected into any page of
+  the window. Every hand-off goes through one burst gate
+  (`rust/src/scope_gate.rs`: the same URL within 2 s once; 3 at once, then one
+  per 3 s; the rest logged as collapsed). A main frame that still lands off the
+  origin is a bug: logged, and the window goes home natively
+  (`window.navigate`), never by script in that page. **Window probe**:
+  `equin-desktop probe-window --namespace <ns>` builds the real window hidden
+  and judges a navigator script's rows (`rust/src/probe_window.{rs,js}`);
+  `./equin run plugins/menu-bar/e2e/window-probe.ts` runs it. macOS bundles need an ATS exception for
   `localhost` + subdomains (`NSExceptionAllowsInsecureHTTPLoads`), else
   WKWebView never loads `http://*.localhost` — the equin app bundle and every shim carry it.
 - **Bridge** (`rust/src/bridge.js`, the contract `core/` mirrors): an
