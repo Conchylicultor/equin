@@ -1,8 +1,13 @@
 import { useContext, useMemo, type ReactNode } from "react";
 import ReactMarkdownLib from "react-markdown";
 import remarkGfm from "remark-gfm";
+// Its types declare the processor data the micromark extensions ride on.
+import type {} from "remark-parse";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
-import { MarkdownEnhancementContext } from "./enhancement-context";
+import {
+  MarkdownEnhancementContext,
+  type RemarkPlugins,
+} from "./enhancement-context";
 import { buildBaseComponents, stripNodeProp } from "./base-components";
 
 const BASE_REMARK_PLUGINS = [remarkGfm];
@@ -14,6 +19,34 @@ const BASE_REMARK_PLUGINS = [remarkGfm];
 // once, on the first markdown render of the session.
 // An inline render unwraps paragraphs: their words stay, the <p> goes.
 const INLINE_DISALLOWED = ["p"];
+
+// An inline render parses inline syntax only: text that merely starts like a
+// block (`1. …`, `- …`, `# …`, `> …`) stays the words it is, rather than
+// becoming a list, heading or quote that breaks the line it sits in. Turned off
+// at the tokenizer (micromark's `disable.null`, by construct name), so the
+// characters are kept verbatim.
+type RemarkProcessor = ThisParameterType<
+  Extract<RemarkPlugins[number], (...args: never[]) => unknown>
+>;
+const BLOCK_CONSTRUCTS = [
+  "blockQuote",
+  "codeFenced",
+  "codeIndented",
+  "definition",
+  "headingAtx",
+  "htmlFlow",
+  "list",
+  "setextUnderline",
+  "thematicBreak",
+  "table",
+  "gfmFootnoteDefinition",
+];
+function remarkInlineOnly(this: RemarkProcessor) {
+  const data = this.data();
+  (data.micromarkExtensions ??= []).push({
+    disable: { null: BLOCK_CONSTRUCTS },
+  });
+}
 
 export function MarkdownRenderer({
   children,
@@ -62,8 +95,12 @@ export function MarkdownRenderer({
   );
 
   const remarkPlugins = useMemo(
-    () => [...BASE_REMARK_PLUGINS, ...extraRemarkPlugins],
-    [extraRemarkPlugins],
+    () => [
+      ...BASE_REMARK_PLUGINS,
+      ...(inline ? [remarkInlineOnly] : []),
+      ...extraRemarkPlugins,
+    ],
+    [extraRemarkPlugins, inline],
   );
 
   // Memoize the rendered tree on its stable inputs. react-markdown's `Markdown`
