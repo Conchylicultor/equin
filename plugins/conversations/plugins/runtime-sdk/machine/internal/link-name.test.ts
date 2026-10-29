@@ -3,7 +3,9 @@ import { linkName } from "./link-name";
 
 describe("linkName", () => {
   test("equin · id · title", () => {
-    expect(linkName("Fix login bug", "conv-1")).toBe("equin · conv-1 · Fix login bug");
+    expect(linkName("Fix login bug", "conv-1")).toBe(
+      "equin · conv-1 · Fix login bug",
+    );
   });
 
   test("no title is the id alone", () => {
@@ -12,7 +14,9 @@ describe("linkName", () => {
   });
 
   test("path separators, colons and control characters become spaces", () => {
-    expect(linkName("a/b:c\td\n\ne", "conv-1")).toBe("equin · conv-1 · a b c d e");
+    expect(linkName("a/b:c\td\n\ne", "conv-1")).toBe(
+      "equin · conv-1 · a b c d e",
+    );
   });
 
   test("a leading dot in the title stays — the name starts with equin", () => {
