@@ -8,7 +8,7 @@
 //   3. reload → the chip is restored from the draft and renders (no crashed
 //      decorator);
 //   4. select all + copy, paste at the end → a second chip (copied as a node).
-// Then the same attach + click from the Improve popover over Pages.
+// Then the same attach + click from the Wish popover over Pages.
 //
 // Usage: ./equin run plugins/apps/plugins/file-explorer/plugins/attachment-preview/e2e/attach-and-open.ts [--headed]
 import type { Locator, Page } from "playwright";
@@ -139,13 +139,13 @@ await withBrowser(async (h) => {
   await page.keyboard.press("ControlOrMeta+a");
   await page.keyboard.press("Backspace");
 
-  // ── Improve popover over Pages ────────────────────────────────────────
+  // ── Wish popover over Pages ───────────────────────────────────────────
   await page.goto(pathUrl("/pages"), { waitUntil: "domcontentloaded" });
-  const improve = page.getByRole("button", { name: "Improve" }).first();
-  await improve.waitFor({ state: "attached", timeout: 60_000 });
+  const wish = page.getByRole("button", { name: "Wish" }).first();
+  await wish.waitFor({ state: "attached", timeout: 60_000 });
   const bar = page.locator('[data-source*="floating-action"]').first();
   if (await bar.isVisible()) await bar.hover();
-  await improve.click();
+  await wish.click();
   const popover = page.getByRole("dialog").last();
   await popover
     .locator('[contenteditable="true"]')
@@ -164,7 +164,7 @@ await withBrowser(async (h) => {
     .waitFor({ state: "visible", timeout: 30_000 });
   await snap(page, OUT, "pages-opened");
   r.ok(
-    "from Improve over Pages, the preview is appended to the Pages route",
+    "from Wish over Pages, the preview is appended to the Pages route",
     page.url().startsWith(before.replace(/\/$/, "")) &&
       page.url().includes("/attachment/"),
     `${before} → ${page.url()}`,

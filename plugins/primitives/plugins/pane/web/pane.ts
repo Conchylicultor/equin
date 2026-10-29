@@ -730,11 +730,18 @@ export function buildRouteUrl(
  * Settings around it. So the head names the app, and both ways onto a surface —
  * an open ({@link strandedRouteUrl}) and a URL (apps-core's resolver) — send
  * the route to that app.
+ *
+ * A COMPANION head names no app either ({@link PaneInternal.companion}): it is
+ * a guest beside the surface's index pane, not a destination — an attachment
+ * preview opened from the agent manager's home (`/agents/attachment/…`) stays
+ * beside that home rather than being sent to Files.
  */
 export function routeHomeApp(route: readonly PaneSlot[]): AppRef | undefined {
   const head = route[0];
   if (!head) return undefined;
-  return registry.get(head.paneId)?.app;
+  const pane = registry.get(head.paneId);
+  if (pane?.companion) return undefined;
+  return pane?.app;
 }
 
 /**

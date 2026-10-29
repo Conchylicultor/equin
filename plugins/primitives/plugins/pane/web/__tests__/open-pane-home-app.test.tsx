@@ -67,6 +67,16 @@ const guestPane = Pane.define({
   component: () => null,
 });
 
+// A guest that accompanies what is on screen: at the route's head it sits
+// beside the host's index pane, so it names no app of its own.
+const guestCompanion = Pane.define({
+  route: defineRoute({ id: "home-guest-companion", segment: "peek/:id" }),
+  app: guestApp,
+  useResolve: false,
+  companion: true,
+  component: () => null,
+});
+
 // A host pane whose from-scratch parent is the guest's: its Back, at the
 // route's root, opens a route headed by another app's pane.
 const hostUnderGuest = Pane.define({
@@ -88,6 +98,7 @@ const plugins = [
       Pane.Register({ pane: guestParent }),
       Pane.Register({ pane: guestPane }),
       Pane.Register({ pane: hostUnderGuest }),
+      Pane.Register({ pane: guestCompanion }),
     ],
   } as unknown as LoadedPlugin,
 ];
@@ -178,6 +189,26 @@ describe("routeHomeApp", () => {
 
   it("names no app for the empty route", () => {
     expect(routeHomeApp([])).toBeUndefined();
+  });
+
+  it("names no app for a route headed by a companion", () => {
+    store.restoreRoute([
+      { paneId: "home-guest-companion", params: { id: "a" } },
+    ]);
+    expect(routeHomeApp(store.getRoute())).toBeUndefined();
+  });
+});
+
+describe("useOpenPane: a companion opened at the bare root stays here", () => {
+  it("an append from the empty route keeps the companion in this app", () => {
+    store.clearRoute();
+    const button = mount((open) =>
+      open.link(guestCompanion, { id: "a" }, { mode: "append" }),
+    );
+    fireEvent.click(button);
+    expect(navigated).toEqual([]);
+    expect(shape()).toEqual(["home-guest-companion"]);
+    expect(window.location.pathname).toBe("/host/peek/a");
   });
 });
 
