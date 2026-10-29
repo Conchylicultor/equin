@@ -191,15 +191,19 @@ Gotchas the spike hit:
 
 ## Plugin reference
 
-- Description: The health report's Claude Code row: Claude Code itself (critical while missing or signed out, with the install / sign-in commands and Check again), attention when it differs in major.minor from the CLI version the pinned Agent SDK was built for, the agent processes running — here, and in every other worktree (each as its task's chip) — the active Claude account's usage limits as meters (the week collapsed, the session too expanded; attention while its limit is reached), and the Claude account picker (each account's weekly room, add / remove / switch, auto-switch, Continue on another account when the active one is limited). The sdk runtime's portable half: the conversations_ext_sdk_agent side table (each agent's event cursor and the projection of its events — session id, busy/idle, the open question, the last turn and its rewind anchor), the pure event reducer, and the mapping of a launch onto the agent's options file; the runtime-sdk.error-stopped collection (active conversations whose agent's turn an API error stopped — a usage limit, a server error, a lost connection — with the CLI's kind of failure).
+- Description: The health report's Claude Code row: Claude Code itself (critical while missing or signed out, with the install / sign-in commands and Check again), attention when it differs in major.minor from the CLI version the pinned Agent SDK was built for, the agent processes running — here, and in every other worktree (each as its task's chip) — the active Claude account's usage limits as meters (the week collapsed, the session too expanded; attention while its limit is reached), and the Claude account picker (each account's weekly room, add / remove / switch, auto-switch, auto-resume when a limit resets, Continue on another account when the active one is limited). The sdk runtime's portable half: the conversations_ext_sdk_agent side table (each agent's event cursor and the projection of its events — session id, busy/idle, the open question, the last turn and its rewind anchor), the pure event reducer, and the mapping of a launch onto the agent's options file; the runtime-sdk.error-stopped collection (active conversations whose agent's turn an API error stopped — a usage limit, a server error, a lost connection — with the CLI's kind of failure); the auto-resume setting (Resume agents when their usage limit resets).
 - Web:
-  - Contributes: `HealthReport.Row` "Claude Code" → `ClaudeCodeRowDetail`
-  - Uses: 38 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Contributes:
+    - `HealthReport.Row` "Claude Code" → `ClaudeCodeRowDetail`
+    - `ConfigV2.WebRegister` "runtime-sdk-auto-resume"
+  - Uses: 43 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/setup-steps` ×5
     - `infra/claude-cli/availability` ×4
     - `infra/endpoints` ×4
     - `primitives/css/ui-kit` ×4
+    - `config_v2` ×3
     - `primitives/data-view` ×3
+    - `primitives/live-state` ×2
     - `conversations/conversation-view.conversationPane`
     - `network/live.useLive`
     - `primitives/avatar.Avatar`
@@ -212,7 +216,7 @@ Gotchas the spike hit:
     - `primitives/css/switch.Switch`
     - `primitives/css/text.Text`
     - `primitives/icon-button.IconButton`
-    - `primitives/live-state.combineResources`
+    - `primitives/loading.Loading`
     - `primitives/pane.useOpenPane`
     - `primitives/relative-time.useNow`
     - `primitives/text-editor/inline-chip.renderInlineChip`
@@ -226,12 +230,14 @@ Gotchas the spike hit:
     - `resource.declare` "runtime-sdk.error-stopped"
     - `resource.declare` "runtime-sdk.error-stopped:groups"
     - `resource.declare` "runtime-sdk.error-stopped:rows"
+    - `ConfigV2.Register` "runtime-sdk-auto-resume"
     - `trigger` "runtime-sdk.attempt-ended"
     - `report-kind` "sdk-catch-up-overdue"
     - `report-kind` "sdk-consumer-stalled"
     - `report-kind` "turn-unknown-id"
     - `report-kind` "turn-without-id"
   - Uses:
+    - `config_v2.ConfigV2`
     - `conversations/agent-launch.LAUNCH_CLI_SETTINGS`
     - `conversations/agent-launch.mergeLaunchSettings`
     - `database.db`
@@ -264,12 +270,15 @@ Gotchas the spike hit:
     - `defineFileWatcher('runtime-sdk.events')`
     - `defineDaemon('runtime-sdk.agent')`
     - `defineJob('runtime-sdk.attempt-ended')`
+    - `defineJob('runtime-sdk.auto-resume')`
   - Routes:
     - `POST /api/claude-usage/refresh`
     - `POST /api/runtime-sdk/resume-stopped`
 - Core:
   - Uses:
+    - `config_v2.defineConfig`
     - `fields.nullable`
+    - `fields/bool/config.boolField`
     - `fields/date/config.dateField`
     - `fields/text/config.textField`
     - `infra/endpoints.defineEndpoint`
@@ -287,6 +296,7 @@ Gotchas the spike hit:
     - `AgentLaunchPrompt`
     - `AgentLifecycle`
     - `AgentProcesses`
+    - `AutoResumePlan`
     - `ClaudeUsage`
     - `ClaudeUsageRead`
     - `ClaudeUsageRefresh`
@@ -314,6 +324,9 @@ Gotchas the spike hit:
     - `AgentProcessesSchema`
     - `API_ERROR`
     - `applyPartialFrame`
+    - `AUTO_RESUME_MARGIN_MS`
+    - `AUTO_RESUME_RETRY_MS`
+    - `autoResumeConfig`
     - `claudeUsage`
     - `claudeUsageFileName`
     - `claudeUsageOf`
@@ -331,6 +344,7 @@ Gotchas the spike hit:
     - `partialFrameOf`
     - `PartialFrameSchema`
     - `PartialStreamLineSchema`
+    - `planAutoResume`
     - `PROTOCOL_VERSION`
     - `refreshClaudeUsage`
     - `RESUME_TURN_TEXT`

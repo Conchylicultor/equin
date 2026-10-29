@@ -79,3 +79,10 @@ export type {
   ErrorStoppedConversation,
   ResumeStoppedResult,
 } from "./error-stopped";
+export {
+  AUTO_RESUME_MARGIN_MS,
+  AUTO_RESUME_RETRY_MS,
+  autoResumeConfig,
+  planAutoResume,
+} from "./auto-resume";
+export type { AutoResumePlan } from "./auto-resume";

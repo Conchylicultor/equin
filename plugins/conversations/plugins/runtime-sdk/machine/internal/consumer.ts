@@ -22,6 +22,7 @@ import {
 import {
   AGENT_EVENTS_FILE,
   DismissReplySchema,
+  USAGE_LIMIT_ERROR,
   type OpenRequest,
 } from "../../core";
 import {
@@ -35,6 +36,7 @@ import {
   readAgentRow,
   writeProjection,
 } from "../../server/internal/rows";
+import { requestAutoResume } from "./auto-resume";
 import { readAgentEvents, type ReadPosition } from "./event-reader";
 import { runningAgentIds } from "./agent-processes";
 import { agentReady } from "./partial-stream";
@@ -286,6 +288,13 @@ async function catchUp(id: string, progress: CatchUpProgress): Promise<void> {
   }
   progress.stage = "write-projection";
   if (state.cursorSeq !== row.cursorSeq) await writeProjection(id, state);
+  // A usage limit stopped it (written first: the job reads the row).
+  if (
+    state.stopError === USAGE_LIMIT_ERROR &&
+    state.stoppedAt !== null &&
+    state.stoppedAt.getTime() !== projection.stoppedAt?.getTime()
+  )
+    await requestAutoResume();
   progress.stage = "signal";
   positions.set(id, read.position);
   if (read.events.length === 0) return;

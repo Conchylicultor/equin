@@ -17,7 +17,10 @@ import {
   type ClaudeCredentialKind,
 } from "@plugins/infra/plugins/claude-cli/plugins/accounts/core";
 import type { ClaudeCodeStatus } from "@plugins/infra/plugins/claude-cli/plugins/availability/core";
+import { useConfigResult, useSetConfig } from "@plugins/config_v2/web";
 import { Avatar } from "@plugins/primitives/plugins/avatar/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Rigid } from "@plugins/primitives/plugins/css/plugins/rigid/web";
@@ -42,6 +45,7 @@ import {
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import {
+  autoResumeConfig,
   launchAccount,
   limitReached,
   refreshClaudeUsage,
@@ -555,6 +559,7 @@ export function ClaudeAccountsSection({
             />
           </Rigid>
         </Line>
+        <AutoResumeSwitch />
         {switchedTo === active.id ? (
           <StepNote>
             {active.metered && accounts.autoSwitch
@@ -565,5 +570,46 @@ export function ClaudeAccountsSection({
         ) : null}
       </Stack>
     </ControlSizeProvider>
+  );
+}
+
+/**
+ * Resume agents a usage limit stopped once it resets (this backend's agents:
+ * the setting, like the agents, is the namespace's own).
+ */
+function AutoResumeSwitch() {
+  const config = useConfigResult(autoResumeConfig);
+  const set = useSetConfig(autoResumeConfig);
+  switch (config.status) {
+    case "loading":
+      return <Loading variant="rows" />;
+    case "error":
+      return (
+        <ResourceErrorInline
+          variant="block"
+          subject="the auto-resume setting"
+          error={config.error}
+          refetch={config.refetch}
+        />
+      );
+    case "ready":
+      break;
+  }
+  const { enabled } = config.data;
+  return (
+    <Line className="gap-sm">
+      <Fill>
+        <Text variant="caption" tone="muted">
+          Resume stopped agents when their limit resets
+        </Text>
+      </Fill>
+      <Rigid>
+        <Switch
+          checked={enabled}
+          aria-label="Resume stopped agents when their limit resets"
+          onCheckedChange={(next) => set("enabled", next)}
+        />
+      </Rigid>
+    </Line>
   );
 }

@@ -1,10 +1,11 @@
-import { and, eq, inArray, ne } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, ne } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import {
   _attempts,
   _conversations,
   _tasks,
 } from "@plugins/tasks/plugins/tasks-core/server";
+import { USAGE_LIMIT_ERROR } from "../../core";
 import { EMPTY_PROJECTION, type AgentProjection } from "./reducer";
 import { sdkAgents } from "./tables";
 
@@ -81,6 +82,34 @@ export async function conversationDisplayTitle(
     .where(eq(_conversations.id, id))
     .limit(1);
   return row?.own ?? row?.task ?? null;
+}
+
+/**
+ * This DB's active sdk conversations a usage limit stopped and that have run
+ * no turn since — the `runtime-sdk.error-stopped` rows whose error is a usage
+ * limit, with when it stopped them (epoch ms). What auto-resume resumes.
+ */
+export async function usageLimitStoppedConversations(): Promise<
+  { id: string; stoppedAt: number }[]
+> {
+  const rows = await db
+    .select({ id: _conversations.id, stoppedAt: sdkAgents.table.stoppedAt })
+    .from(_conversations)
+    .innerJoin(
+      sdkAgents.table,
+      eq(sdkAgents.table.conversationId, _conversations.id),
+    )
+    .where(
+      and(
+        eq(_conversations.runtime, "sdk"),
+        inArray(_conversations.status, [...LIVE_STATUSES]),
+        isNotNull(sdkAgents.table.stoppedAt),
+        eq(sdkAgents.table.stopError, USAGE_LIMIT_ERROR),
+      ),
+    );
+  return rows.flatMap((r) =>
+    r.stoppedAt ? [{ id: r.id, stoppedAt: r.stoppedAt.getTime() }] : [],
+  );
 }
 
 export interface AgentRow extends AgentProjection {

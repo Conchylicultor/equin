@@ -13463,8 +13463,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins: the registry over the user-layer store (the ConfigStore host service) and the committed layer (ConfigGitLayer), its live values and the scope routes.
   - Web:
     - Slots: `ConfigV2.WebRegister`
-    - Slot contributors: 92 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×92
+    - Slot contributors: 93 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×93
     - Uses:
       - `infra/endpoints.useEndpointMutation`
       - `network/live.useLive`
@@ -13655,10 +13655,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `validationIssues`
       - `withOverrideLegend`
   - Cross-plugin:
-    - Imported by: 122 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+    - Imported by: 123 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
       - `apps` ×34
+      - `conversations` ×14
       - `backup` ×13
-      - `conversations` ×13
       - `debug` ×12
       - `ui` ×11
       - `auth` ×6
@@ -19209,15 +19209,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CONVERSATION_RUNTIMES`
           - `ConversationRuntimeIdSchema`
           - `DEFAULT_CONVERSATION_RUNTIME`
-    - **`runtime-sdk`** — The health report's Claude Code row: Claude Code itself (critical while missing or signed out, with the install / sign-in commands and Check again), attention when it differs in major.minor from the CLI version the pinned Agent SDK was built for, the agent processes running — here, and in every other worktree (each as its task's chip) — the active Claude account's usage limits as meters (the week collapsed, the session too expanded; attention while its limit is reached), and the Claude account picker (each account's weekly room, add / remove / switch, auto-switch, Continue on another account when the active one is limited). The sdk runtime's portable half: the conversations_ext_sdk_agent side table (each agent's event cursor and the projection of its events — session id, busy/idle, the open question, the last turn and its rewind anchor), the pure event reducer, and the mapping of a launch onto the agent's options file; the runtime-sdk.error-stopped collection (active conversations whose agent's turn an API error stopped — a usage limit, a server error, a lost connection — with the CLI's kind of failure).
+    - **`runtime-sdk`** — The health report's Claude Code row: Claude Code itself (critical while missing or signed out, with the install / sign-in commands and Check again), attention when it differs in major.minor from the CLI version the pinned Agent SDK was built for, the agent processes running — here, and in every other worktree (each as its task's chip) — the active Claude account's usage limits as meters (the week collapsed, the session too expanded; attention while its limit is reached), and the Claude account picker (each account's weekly room, add / remove / switch, auto-switch, auto-resume when a limit resets, Continue on another account when the active one is limited). The sdk runtime's portable half: the conversations_ext_sdk_agent side table (each agent's event cursor and the projection of its events — session id, busy/idle, the open question, the last turn and its rewind anchor), the pure event reducer, and the mapping of a launch onto the agent's options file; the runtime-sdk.error-stopped collection (active conversations whose agent's turn an API error stopped — a usage limit, a server error, a lost connection — with the CLI's kind of failure); the auto-resume setting (Resume agents when their usage limit resets).
       - Web:
-        - Contributes: `HealthReport.Row` "Claude Code" → `ClaudeCodeRowDetail`
-        - Uses: 38 symbols — full list in [`plugins/conversations/plugins/runtime-sdk/REFERENCE.md`](../plugins/conversations/plugins/runtime-sdk/REFERENCE.md)
+        - Contributes:
+          - `HealthReport.Row` "Claude Code" → `ClaudeCodeRowDetail`
+          - `ConfigV2.WebRegister` "runtime-sdk-auto-resume"
+        - Uses: 43 symbols — full list in [`plugins/conversations/plugins/runtime-sdk/REFERENCE.md`](../plugins/conversations/plugins/runtime-sdk/REFERENCE.md)
           - `primitives/setup-steps` ×5
           - `infra/claude-cli/availability` ×4
           - `infra/endpoints` ×4
           - `primitives/css/ui-kit` ×4
+          - `config_v2` ×3
           - `primitives/data-view` ×3
+          - `primitives/live-state` ×2
           - `conversations/conversation-view.conversationPane`
           - `network/live.useLive`
           - `primitives/avatar.Avatar`
@@ -19230,7 +19234,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/switch.Switch`
           - `primitives/css/text.Text`
           - `primitives/icon-button.IconButton`
-          - `primitives/live-state.combineResources`
+          - `primitives/loading.Loading`
           - `primitives/pane.useOpenPane`
           - `primitives/relative-time.useNow`
           - `primitives/text-editor/inline-chip.renderInlineChip`
@@ -19244,12 +19248,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `resource.declare` "runtime-sdk.error-stopped"
           - `resource.declare` "runtime-sdk.error-stopped:groups"
           - `resource.declare` "runtime-sdk.error-stopped:rows"
+          - `ConfigV2.Register` "runtime-sdk-auto-resume"
           - `trigger` "runtime-sdk.attempt-ended"
           - `report-kind` "sdk-catch-up-overdue"
           - `report-kind` "sdk-consumer-stalled"
           - `report-kind` "turn-unknown-id"
           - `report-kind` "turn-without-id"
         - Uses:
+          - `config_v2.ConfigV2`
           - `conversations/agent-launch.LAUNCH_CLI_SETTINGS`
           - `conversations/agent-launch.mergeLaunchSettings`
           - `database.db`
@@ -19282,12 +19288,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineFileWatcher('runtime-sdk.events')`
           - `defineDaemon('runtime-sdk.agent')`
           - `defineJob('runtime-sdk.attempt-ended')`
+          - `defineJob('runtime-sdk.auto-resume')`
         - Routes:
           - `POST /api/claude-usage/refresh`
           - `POST /api/runtime-sdk/resume-stopped`
       - Core:
         - Uses:
+          - `config_v2.defineConfig`
           - `fields.nullable`
+          - `fields/bool/config.boolField`
           - `fields/date/config.dateField`
           - `fields/text/config.textField`
           - `infra/endpoints.defineEndpoint`
@@ -19305,6 +19314,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `AgentLaunchPrompt`
           - `AgentLifecycle`
           - `AgentProcesses`
+          - `AutoResumePlan`
           - `ClaudeUsage`
           - `ClaudeUsageRead`
           - `ClaudeUsageRefresh`
@@ -19332,6 +19342,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `AgentProcessesSchema`
           - `API_ERROR`
           - `applyPartialFrame`
+          - `AUTO_RESUME_MARGIN_MS`
+          - `AUTO_RESUME_RETRY_MS`
+          - `autoResumeConfig`
           - `claudeUsage`
           - `claudeUsageFileName`
           - `claudeUsageOf`
@@ -19349,6 +19362,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `partialFrameOf`
           - `PartialFrameSchema`
           - `PartialStreamLineSchema`
+          - `planAutoResume`
           - `PROTOCOL_VERSION`
           - `refreshClaudeUsage`
           - `RESUME_TURN_TEXT`
@@ -24045,10 +24059,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `boolField`
               - `boolSample`
           - Cross-plugin:
-            - Imported by: 32 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
+            - Imported by: 33 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
               - `debug` ×11
               - `apps` ×8
-              - `conversations` ×4
+              - `conversations` ×5
               - `infra` ×2
               - `tasks` ×2
               - `history/engine`
@@ -43759,10 +43773,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-body`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-body`
-        - Imported by: 222 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+        - Imported by: 223 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
           - `apps` ×69
           - `ui` ×23
-          - `conversations` ×20
+          - `conversations` ×21
           - `primitives` ×20
           - `debug` ×19
           - `tasks` ×14
