@@ -72,8 +72,20 @@ describe("parseGo — pick tables", () => {
     expect(body.head).toBeNull();
   });
 
-  test("a table without a header rule is prose", () => {
-    expect(parseGo("| [x] a | b |\n| [ ] c | d |").items).toEqual([]);
+  test("marked rows without a header are a pick table with a blank header", () => {
+    expect(parseGo("| [x] a | b |\n| [ ] c | d | e |")).toEqual({
+      lead: "",
+      items: [
+        { text: "a", checked: true, cells: ["b"] },
+        { text: "c", checked: false, cells: ["d", "e"] },
+      ],
+      head: ["", "", ""],
+      tail: "",
+    });
+  });
+
+  test("an unmarked table without a header rule is prose", () => {
+    expect(parseGo("| A | b |\n| [ ] c | d |").items).toEqual([]);
   });
 
   test("one set of items per Go: a checklist after a pick table is prose", () => {

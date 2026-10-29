@@ -60,16 +60,8 @@ function tableCells(line: string): string[] {
     .map((cell) => cell.trim().replace(/\\\|/g, "|"));
 }
 
-/**
- * A run of table lines as a pick table — a header, its rule, then rows whose
- * first cell each starts with a mark — or null: any other table is prose.
- */
-function parsePickTable(
-  lines: string[],
-): { head: string[]; items: GoItem[] } | null {
-  const [header, rule, ...rows] = lines;
-  if (!header || !rule || !TABLE_RULE_RE.test(rule) || rows.length === 0)
-    return null;
+/** Table rows as items, or null when any row's first cell has no mark. */
+function pickRows(rows: string[]): GoItem[] | null {
   const items: GoItem[] = [];
   for (const row of rows) {
     const [first = "", ...cells] = tableCells(row);
@@ -77,7 +69,29 @@ function parsePickTable(
     if (!m) return null;
     items.push({ text: m[2]!.trim(), checked: m[1] !== " ", cells });
   }
-  return { head: tableCells(header), items };
+  return items;
+}
+
+/**
+ * A run of table lines as a pick table — rows whose first cell each starts
+ * with a mark, under a header and its rule — or null: any other table is
+ * prose. A run of marked rows alone is a pick table too, with a blank header
+ * (still carrying the check-every-row box): without the rule, Markdown would
+ * read the rows as one paragraph of pipes.
+ */
+function parsePickTable(
+  lines: string[],
+): { head: string[]; items: GoItem[] } | null {
+  const [header, rule, ...rows] = lines;
+  if (!header) return null;
+  if (!rule || !TABLE_RULE_RE.test(rule)) {
+    const items = pickRows(lines);
+    if (!items) return null;
+    const width = Math.max(...items.map((item) => item.cells.length)) + 1;
+    return { head: Array<string>(width).fill(""), items };
+  }
+  const items = rows.length ? pickRows(rows) : null;
+  return items ? { head: tableCells(header), items } : null;
 }
 
 export function parseGo(content: string): GoBody {

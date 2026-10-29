@@ -69,8 +69,9 @@ checklist repeating its row names.
 </go>
 ```
 
-A table is a pick table only with a header, its `|---|` rule, and a mark
-leading EVERY row's first cell; any other table in a Go is prose. One set of
+A table is a pick table only with a mark leading EVERY row's first cell; any
+other table in a Go is prose. Write the header and its `|---|` rule; marked
+rows alone still read as a pick table, under a blank header (`parsePickTable`). One set of
 items per Go: a checklist after a pick table (or a table after a checklist) is
 prose too. In the reply (`GoTable`) the whole row is the target, an unpicked
 row is dimmed, and the header's box checks or clears every row. Cells — like
