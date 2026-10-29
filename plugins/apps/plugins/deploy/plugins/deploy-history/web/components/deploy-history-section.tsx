@@ -1,4 +1,8 @@
-import { ApprovalLinks } from "@plugins/apps/plugins/deploy/plugins/deployments/web";
+import {
+  ApprovalLinks,
+  SiteCard,
+  SiteCardBody,
+} from "@plugins/apps/plugins/deploy/plugins/deployments/web";
 import { useMemo, type ReactNode } from "react";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -26,7 +30,7 @@ const DEPLOY_HISTORY_VIEW = defineDataView("deploy.deployment.history");
  * release, the commit and the message.
  */
 const deployHistorySource = liveDataSource(deployRunHistory, {
-  searchable: ["releaseRunId", "commitSha", "message"],
+  searchable: ["releaseRunId", "commitSha", "commitSubject", "message"],
 });
 
 /**
@@ -47,6 +51,7 @@ const overrides = fieldOverrides(deployRunHistory, {
   status: { width: "12rem" },
   verb: { width: "8rem" },
   commitSha: { width: "8rem" },
+  commitSubject: { width: "24rem" },
   releaseRunId: { width: "16rem" },
   startedAt: { width: "8rem" },
   // Filterable and searchable; the row draws it as `detail`.
@@ -134,16 +139,20 @@ export function DeployHistorySection({
   );
 
   return (
-    <DataView<DeployRunRecord>
-      storageKey={DEPLOY_HISTORY_VIEW}
-      overrides={overrides}
-      extraFields={extraFields}
-      views={["list", "table"]}
-      defaultView="list"
-      recipe="ledger"
-      itemActions={DeployRunItemActions}
-      emptyState={<>Nothing has been deployed from here yet.</>}
-      source={source}
-    />
+    <SiteCard title="Deployments">
+      <SiteCardBody>
+        <DataView<DeployRunRecord>
+          storageKey={DEPLOY_HISTORY_VIEW}
+          overrides={overrides}
+          extraFields={extraFields}
+          views={["list", "table"]}
+          defaultView="list"
+          recipe="ledger"
+          itemActions={DeployRunItemActions}
+          emptyState={<>Nothing has been deployed from here yet.</>}
+          source={source}
+        />
+      </SiteCardBody>
+    </SiteCard>
   );
 }

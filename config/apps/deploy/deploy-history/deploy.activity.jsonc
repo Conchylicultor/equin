@@ -1,0 +1,149 @@
+// @hash 6ec84829688d
+{
+  // The Deploy app's Activity page: the merged runs surface (RunsDataView),
+  // scoped to deploy runs. Each pill is an ORDINARY editable filter on the
+  // union's base fields — `kind is deploy`, plus the shared `outcome`
+  // (plugins/runs/plugins/run-outcome; a deploy run's `needs-approval` maps
+  // one-to-one onto the outcome of that name, runs-arm core/internal/status.ts)
+  // — newest first. Base fields only, as in config/runs/runs.jsonc: a wrong
+  // fieldId / operatorId fails SOFT (the rule is dropped), so check a pill
+  // narrows after editing it. Every row carries an explicit bare-slug id.
+  "views": [
+    {
+      "id": "recent",
+      "name": "Recent",
+      "icon": "history",
+      "view": {
+        "type": "list",
+        "sort": [
+          {
+            "fieldId": "startedAt",
+            "direction": "desc"
+          }
+        ],
+        "filter": {
+          "kind": "group",
+          "id": "recent",
+          "conjunction": "and",
+          "children": [
+            {
+              "kind": "rule",
+              "id": "recent-kind",
+              "fieldId": "kind",
+              "operatorId": "is",
+              "value": "deploy"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "running",
+      "name": "Running",
+      "icon": "play-circle",
+      "view": {
+        "type": "list",
+        "sort": [
+          {
+            "fieldId": "startedAt",
+            "direction": "desc"
+          }
+        ],
+        "filter": {
+          "kind": "group",
+          "id": "running",
+          "conjunction": "and",
+          "children": [
+            {
+              "kind": "rule",
+              "id": "running-kind",
+              "fieldId": "kind",
+              "operatorId": "is",
+              "value": "deploy"
+            },
+            {
+              "operatorId": "is",
+              "value": "running",
+              "id": "running-outcome",
+              "kind": "rule",
+              "fieldId": "outcome"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "needs-approval",
+      "name": "Needs approval",
+      "icon": "key",
+      "view": {
+        "type": "list",
+        "sort": [
+          {
+            "fieldId": "startedAt",
+            "direction": "desc"
+          }
+        ],
+        "filter": {
+          "kind": "group",
+          "id": "needs-approval",
+          "conjunction": "and",
+          "children": [
+            {
+              "kind": "rule",
+              "id": "needs-approval-kind",
+              "fieldId": "kind",
+              "operatorId": "is",
+              "value": "deploy"
+            },
+            {
+              "operatorId": "is",
+              "value": "needs-approval",
+              "id": "needs-approval-outcome",
+              "kind": "rule",
+              "fieldId": "outcome"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "failed",
+      "name": "Failed",
+      "icon": "error",
+      "view": {
+        "type": "list",
+        "sort": [
+          {
+            "fieldId": "startedAt",
+            "direction": "desc"
+          }
+        ],
+        "filter": {
+          "kind": "group",
+          "id": "failed",
+          "conjunction": "and",
+          "children": [
+            {
+              "kind": "rule",
+              "id": "failed-kind",
+              "fieldId": "kind",
+              "operatorId": "is",
+              "value": "deploy"
+            },
+            {
+              "operatorId": "is",
+              "value": "failed",
+              "id": "failed-outcome",
+              "kind": "rule",
+              "fieldId": "outcome"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "sortPresets": [],
+  "filterPresets": [],
+  "customColumns": []
+}

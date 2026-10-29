@@ -17,7 +17,7 @@ import { serversRoute, serverDetailRoute } from "../core";
 import { servers, serverSshKey, type Server } from "../shared";
 import { ServersList } from "./components/servers-list";
 import { ServerCreateForm } from "./components/server-create-form";
-import { ServerDetail } from "./slots";
+import { ServerPage } from "./components/server-page";
 
 /**
  * Sentinel `:serverId` for the create state of the unified server pane. Real
@@ -29,11 +29,7 @@ export const serversRootPane = Pane.define({
   title: "Servers",
   route: serversRoute,
   app: deployApp,
-  // The Deploy app's index/landing pane — what its bare root (/deploy)
-  // resolves to. Its route owns no segment, for exactly that reason.
-  appIndex: true,
   component: ServersRoot,
-  width: 320,
 });
 
 function useResolveServer({ serverId }: { serverId: string }): ResolveResult {
@@ -70,7 +66,6 @@ export const serverDetailPane = Pane.define({
   component: ServerDetailBody,
   useResolve: useResolveServer,
   title: { useText: useServerTitle, fallback: "Server" },
-  width: 420,
 });
 
 function ServersRoot() {
@@ -148,11 +143,11 @@ function ExistingServerBody({ serverId }: { serverId: string }) {
   }
 
   const server: Server = { ...row, sshKey: combined.data.sshKey };
-  // The whole pane body is the one section slot: identity, SSH setup and
-  // deployments are peer contributions, and the host owns all of the chrome.
+  // The page body is the header plus the one section slot split into two
+  // columns: identity, health, SSH setup and sites are peer contributions.
   return (
     <PaneChrome pane={serverDetailPane}>
-      <ServerDetail.Host server={server} />
+      <ServerPage server={server} />
     </PaneChrome>
   );
 }

@@ -1,4 +1,4 @@
-// @hash cfc66bbe4a72
+// @hash 83b9ffc219f1
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -10,6 +10,7 @@
     "apps.deploy.deployments:deployments",
     "apps.deploy.health:status",
     "apps.deploy.servers:identity",
+    "apps.deploy.servers:danger-zone",
     "apps.deploy.ssh-setup:ssh-setup"
   ]
 }

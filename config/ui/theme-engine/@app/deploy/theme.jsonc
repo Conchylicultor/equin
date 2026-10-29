@@ -1,0 +1,9 @@
+// @hash 81ba03048557
+{
+  // The Deploy app paints its own designed theme, `deploy-graphite` (the
+  // redesign prototype's dark palette, Inter + JetBrains Mono), contributed by
+  // the deploy shell (`plugins/apps/plugins/deploy/plugins/shell/web/internal/theme.ts`)
+  // — never the desktop's runtime choice. The app is dark only (`colorMode:
+  // "dark"` in its `defineApp`).
+  "theme": "deploy-graphite"
+}

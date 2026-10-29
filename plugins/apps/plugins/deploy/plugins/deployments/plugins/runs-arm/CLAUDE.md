@@ -36,22 +36,17 @@ streams its output. The deploy pane prints the message untruncated and
 unclamped — a paraphrase of "the command refused, and this is what it said" is
 the one thing that must not happen to it.
 
-## A deploy row opens the deployment pane
+## A deploy row opens its site's Deployments tab
 
-`open` needs BOTH `deploy.serverId` and `deploy.deploymentId`, because
-`deploymentDetailPane` nests under the server page. It names both: a pane's
-params are its route's CHAINED set, so the ancestor's `serverId` is nameable
-from a runs row that is nowhere near the server page. Getting the deploy pane
-chain onto routes is what made this row activatable at all. Both columns are
-`NOT NULL`, so `open` throws on a null rather than returning — an impossible
-row, not a case to handle.
-
-Name both ids even though a deploy row is clicked from three hosts (the build
-button's popover, and inside the build and backup panes) and the server pane is
-in none of their routes. An open never discards a param the caller supplied — a
-relative open materializes any declared ancestor the route does not already hold
-and whose params the caller named — so `serverId` is what puts `server/<id>` in
-the URL from all three. Trimming it strands the pane without its ancestor.
+`deployRunLink` opens `sitePane` at `{ deploymentId, tab: "deployments" }` with
+`mode: "root"`. A site is addressed by its own id alone
+(`site/:deploymentId/:tab?`, parented on the app's paramless index), so the row
+needs nothing but `deploy.deploymentId` — whichever host it is clicked from (the
+build button's popover, the build and backup panes, the Activity page). Root,
+as the sidebar opens a site: a site is a top-level page of the Deploy app, never
+a column stacked after the list it was clicked from. `deploymentId` is
+`NOT NULL`, so a row without the deploy slice throws rather than returning — an
+impossible row, not a case to handle.
 
 ## `deploy.releaseRunId` is a plain chip
 
@@ -76,14 +71,14 @@ windows recompute FULL). A subquery over an undeclared table cannot be written
 
 ## Plugin reference
 
-- Description: The deploy arm's presence on the merged run surface: its rows' link into the deployment detail pane on the server the run went to, and the cells of its eight own fields (verb, failed phase, server / deployment / composition / release-run / commit ids, exit code) — real filterable and sortable SQL dimensions, declared by the arm. The deploy arm of the unified run space: binds deploy_runs into the runs union — status folded into the shared outcome vocabulary through a typed map, a label naming the composition and the server it went to, the verb as both the shared trigger and its own enum dimension, and the CLI's refusal text as the shared message. Reads null for namespace: a deploy targets a remote server, not a worktree.
+- Description: The deploy arm's presence on the merged run surface: its rows' link into the site's Deployments tab, and the cells of its eight own fields (verb, failed phase, server / deployment / composition / release-run / commit ids, exit code) — real filterable and sortable SQL dimensions, declared by the arm. The deploy arm of the unified run space: binds deploy_runs into the runs union — status folded into the shared outcome vocabulary through a typed map, a label naming the composition and the server it went to, the verb as both the shared trigger and its own enum dimension, and the CLI's refusal text as the shared message. Reads null for namespace: a deploy targets a remote server, not a worktree.
 - Web:
   - Contributes:
     - `DataViewSlots.CollectionRowActivation` "runs:open"
     - `FieldPresentation.Register` "arm:runs:deploy"
     - `DataViewSlots.CollectionItemAction` "runs:investigate:deploy" → `CollectionInvestigate`
   - Uses:
-    - `apps/deploy/deployments.deploymentDetailPane`
+    - `apps/deploy/deployments.sitePane`
     - `network/live.FieldPresentation`
     - `primitives/css/badge.Badge`
     - `runs.investigateRuns`

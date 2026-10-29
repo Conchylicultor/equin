@@ -4,31 +4,26 @@
 
 ## Plugin reference
 
-- Description: Secrets section of a deployment's page: every deploy secret its composition's closure declares as a DataView (key, requesting plugin, description, status approved / new / value changed / missing value) with per-row Set value (a password dialog) and Approve (no approve-all). Shown only when the composition needs a secret, and open by default while one waits on the user. Deploy-secret approvals on the local machine: values in the secrets store (namespace deploy-secrets), per-deployment grants of a value's HMAC fingerprint (deploy_secret_grants), the deploy gate that ends a run needs-approval while any secret its composition's closure declares is missing, new or changed, the deploy-secrets.status live value behind the Secrets section, and the browser-refusing endpoint converge reads the approved env from.
+- Description: Secrets section of a site's Settings (and the site page's banner while a secret waits on approval): every deploy secret its composition's closure declares as a DataView (key, requesting plugin, description, status approved / new / value changed / missing value) with per-row Set value (a password dialog) and Approve (no approve-all). Shown only when the composition needs a secret. Deploy-secret approvals on the local machine: values in the secrets store (namespace deploy-secrets), per-deployment grants of a value's HMAC fingerprint (deploy_secret_grants), the deploy gate that ends a run needs-approval while any secret its composition's closure declares is missing, new or changed, the deploy-secrets.status live value behind the Secrets section, and the browser-refusing endpoint converge reads the approved env from.
 - Web:
   - Slots: `item-actions`
   - Slot contributors: `item-actions` ← `apps.deploy.deploy-secrets.approvals`
   - Contributes:
     - `DeploymentDetail.Section` "Secrets" → `SecretsSection`
+    - `SiteBanner` "needs-secret"
+    - `SiteCheck` "secrets"
     - `item-actions` "set-value" → `SetValueAction`
     - `item-actions` "approve" → `ApproveAction`
-  - Uses:
-    - `apps/deploy/deployments.DeploymentDetail`
-    - `infra/endpoints.getEndpointErrorMessage`
-    - `infra/endpoints.useEndpointMutation`
+  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps/deploy/deployments` ×9
+    - `primitives/css/ui-kit` ×4
+    - `primitives/data-view` ×4
+    - `infra/endpoints` ×2
     - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.DialogDescription`
-    - `primitives/css/ui-kit.DialogTitle`
-    - `primitives/css/ui-kit.Input`
-    - `primitives/data-view.DataView`
-    - `primitives/data-view.defineDataView`
-    - `primitives/data-view.defineItemActions`
-    - `primitives/data-view.FieldDef`
     - `primitives/icon-button.IconButton`
     - `primitives/live-state.foldResource`
     - `primitives/overlay/imperative-dialog.openDialog`

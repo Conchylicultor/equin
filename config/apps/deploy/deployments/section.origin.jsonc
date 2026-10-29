@@ -1,4 +1,4 @@
-// @hash cac1b7b2282b
+// @hash 79abaa5ad559
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -7,14 +7,10 @@
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
-    "apps.deploy.analytics.dashboard:analytics",
     "apps.deploy.composition:composition",
-    "apps.deploy.deploy-history:history",
     "apps.deploy.deploy-secrets.approvals:secrets",
     "apps.deploy.deployments:overview",
-    "apps.deploy.local-serve:serve",
-    "apps.deploy.remote-deploy:deploy",
-    "apps.deploy.remote-deploy:output",
-    "apps.deploy.site-messages.inbox:messages"
+    "apps.deploy.deployments:install",
+    "apps.deploy.deployments:danger"
   ]
 }

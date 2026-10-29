@@ -75,7 +75,7 @@ and
 - Web:
   - Slots: `SshProvider`
   - Slot contributors: `SshProvider` ← `apps.deploy.ssh-setup.hetzner`
-  - Contributes: `ServerDetail.Section` "Set up SSH access" → `SshSetupSection`
+  - Contributes: `ServerDetail.Section` "SSH key" → `SshSetupSection`
   - Uses: 34 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/setup-steps` ×7
     - `apps/deploy/servers` ×4

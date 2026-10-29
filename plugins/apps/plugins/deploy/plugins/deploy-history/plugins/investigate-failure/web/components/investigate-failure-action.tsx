@@ -1,4 +1,8 @@
-import { Investigate } from "@plugins/primitives/plugins/launch/plugins/investigate/web";
+import type { ReactElement } from "react";
+import {
+  Investigate,
+  InvestigateAction,
+} from "@plugins/primitives/plugins/launch/plugins/investigate/web";
 import { DEPLOY_CATEGORY_ID } from "@plugins/apps/plugins/deploy/core";
 import {
   DEPLOY_LOG_CHANNEL,
@@ -63,8 +67,8 @@ function brief(run: DeployRunRecord, userText: string): string {
     "- `./equin deploy` is the engine — every refusal, host mutation and health",
     "  gate is the CLI's, and the app only launches it. So a wrong verdict is a CLI or",
     "  host-state bug, not a UI one;",
-    "- the deployment pane at Deploy → this server → this deployment shows the record,",
-    "  its derived install and the output panel.",
+    "- the site's page in the Deploy app (Deploy → Sites → this site) shows the record,",
+    "  its Deployments tab and the live log while a run is in flight.",
     "",
     "Find the root cause and say what it is. Fix it if the fix is clearly in this repo;",
     "if it is host state on the remote box, say exactly what is wrong there and what",
@@ -84,15 +88,45 @@ function brief(run: DeployRunRecord, userText: string): string {
  * briefing an agent that one happened would be inventing the outcome the row
  * itself refuses to invent.
  */
+/** The popover's line on what the agent is told — the row action's and the banner's. */
+function description(run: DeployRunRecord): string {
+  return `Launch an agent briefed on this failed ${run.verb} of ${run.compositionId} — the CLI's own message, the run's identity, and where the transcript is.`;
+}
+
+/** The record the investigation is about — the same subject the merged runs
+ *  list files a failed deploy under, so every surface reaches one task. */
+function subject(run: DeployRunRecord) {
+  return runSubject({ kind: DEPLOY_RUN_KIND, id: run.id });
+}
+
 export const investigateDeployFailures = Investigate.Register<DeployRunRecord>({
   owner: deployRunHistory,
   failed: (row) => row.status === "failed",
   noun: "deploy",
   categoryId: DEPLOY_CATEGORY_ID,
-  // The same subject the merged runs list files a failed deploy under, so the
-  // two reach one task.
-  subject: (row) => runSubject({ kind: DEPLOY_RUN_KIND, id: row.id }),
-  description: (row) =>
-    `Launch an agent briefed on this failed ${row.verb} of ${row.compositionId} — the CLI's own message, the run's identity, and where the transcript is.`,
+  subject,
+  description,
   brief,
 });
+
+/**
+ * Investigate one failed run as a labelled button — the site page's failure
+ * banner's action. The same subject, brief and copy as the row action, so the
+ * two reach one task.
+ */
+export function InvestigateRun({
+  run,
+}: {
+  run: DeployRunRecord;
+}): ReactElement {
+  return (
+    <InvestigateAction
+      presentation="button"
+      noun="deploy"
+      subject={subject(run)}
+      categoryId={DEPLOY_CATEGORY_ID}
+      description={description(run)}
+      brief={(userText) => brief(run, userText)}
+    />
+  );
+}

@@ -9,19 +9,11 @@ import {
 } from "@plugins/primitives/plugins/data-view/web";
 import {
   matchResource,
-  ResourceErrorInline,
   useCombinedResources,
 } from "@plugins/primitives/plugins/live-state/web";
-import { useLive, type LiveRowResult } from "@plugins/network/plugins/live/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { openDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Loading } from "@plugins/primitives/plugins/loading/web";
-import {
-  useServerHealth,
-  type ServerHealthRow,
-} from "@plugins/apps/plugins/deploy/plugins/health/web";
 import type { Server } from "@plugins/apps/plugins/deploy/plugins/servers/web";
 import {
   deployments,
@@ -29,15 +21,21 @@ import {
   type Deployment,
   type DeployRun,
 } from "../../core";
-import { RUN_STATE_OPTIONS, runStateOf } from "../internal/deploy-runs";
-import { deploymentDetailPane } from "../panes";
+import { useSiteStatuses, type SiteStatusOf } from "../internal/site-status";
+import { sitePane } from "../panes";
 import { DeploymentItemActions } from "./deployment-item-actions";
 import { AddDeploymentDialog } from "./add-deployment-dialog";
-import { RunCell, RunFailureNotice } from "./run-cell";
+import { RunFailureNotice } from "./run-cell";
+import { SITE_STATUS_OPTIONS, SiteStatusPill } from "./site-status-dot";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
 const addIcon = symbol("add");
+
+/** The not-yet-loaded body renders no rows, so no status is ever asked. */
+const NO_STATUS: SiteStatusOf = (id) => {
+  throw new Error(`site status read before the run map loaded: ${id}`);
+};
 
 const DEPLOYMENTS_VIEW = defineDataView("deploy.deployments");
 
@@ -49,14 +47,14 @@ const DEPLOYMENT_OVERRIDES = fieldOverrides(deployments, {
 });
 
 /**
- * The Deployments section of a server's page: which compositions this server
- * serves, and the two verbs over each.
+ * The "Sites on this server" section of a server's page: which compositions
+ * this server serves — each row a site, opening its page — and its status.
  *
  * A deployment is `(composition × server) → { hostnames, loopbackPort }`, so on
  * this pane the server half is fixed and only the composition and its URL vary.
  * The row carries only what a person scans down the list — the composition, the
  * last run, and (contributed) the release state; the record's editable fields and
- * the derived install names live in the row's own pane, one click away.
+ * the derived install names live on the site's own page, one click away.
  *
  * The list reads this server's rows of the `deployments` collection (`where:
  * { serverId }`), and it is gated together with the run map
@@ -67,13 +65,11 @@ const DEPLOYMENT_OVERRIDES = fieldOverrides(deployments, {
  * Contributed as a `ServerDetail` section, so the card, its "Deployments" title
  * and its collapse state all belong to the host.
  *
- * There is deliberately no log panel here any more. The deployment pane's Output
- * section subscribes to the same `deploy` channel, and a second live
- * subscription to one channel — under a heading, on a page that no longer hosts
- * the actions — was duplication rather than a view. Nothing is lost: the channel
- * replays its ring buffer on subscribe, so the pane shows the last run's tail on
- * open, and `RunFailureNotice` still surfaces a failed run here with the CLI's
- * own words.
+ * There is deliberately no log panel here. The site page's deploying banner
+ * subscribes to the `deploy` channel, and a second live subscription to one
+ * channel — on a page that does not host the actions — would be duplication
+ * rather than a view. `RunFailureNotice` still surfaces a failed run here with
+ * the CLI's own words.
  */
 export function DeploymentsSection({
   server,
@@ -84,15 +80,14 @@ export function DeploymentsSection({
   const loaded = useCombinedResources({
     rows: useLive(deployments, { where: { serverId } }),
     runs: useLive(deployRuns),
+    statusOf: useSiteStatuses(),
   });
-  const health = useServerHealth(serverId);
 
   return (
     // Nothing about the rail here: `detail-sections` opens the region on every
     // section's card body, generically, so a DataView dropped into one is
     // correctly inset with zero per-section code.
-    <Stack gap="md">
-      <PlatformCaption health={health} />
+    <>
       {matchResource(loaded, {
         // The DataView owns the loading and error renders (its own skeleton,
         // the failure with Retry) and keeps its chrome stable, so the "nothing
@@ -103,6 +98,7 @@ export function DeploymentsSection({
             serverId={serverId}
             rows={[]}
             runs={{}}
+            statusOf={NO_STATUS}
             readiness={loaded}
           />
         ),
@@ -111,50 +107,21 @@ export function DeploymentsSection({
             serverId={serverId}
             rows={[]}
             runs={{}}
+            statusOf={NO_STATUS}
             readiness={loaded}
           />
         ),
-        ready: ({ rows, runs }) => (
+        ready: ({ rows, runs, statusOf }) => (
           <DeploymentsBody
             serverId={serverId}
             rows={rows}
             runs={runs}
+            statusOf={statusOf}
             readiness={loaded}
           />
         ),
       })}
-    </Stack>
-  );
-}
-
-/**
- * Which bundles this server takes, as its last probe found. Loading while the
- * verdict loads — "no verified platform yet" is a claim about the server, and
- * a read still in flight cannot make it.
- */
-function PlatformCaption({
-  health,
-}: {
-  health: LiveRowResult<ServerHealthRow>;
-}): ReactNode {
-  if (health.status === "loading") return <Loading />;
-  if (health.status === "error") {
-    return (
-      <ResourceErrorInline
-        variant="inline"
-        subject="the server's platform"
-        error={health.error}
-        refetch={health.refetch}
-      />
-    );
-  }
-  const platform = health.found && health.row.ok ? health.row.platform : null;
-  return (
-    <Text as="p" variant="caption" tone="muted">
-      {platform
-        ? `This server accepts ${platform} bundles.`
-        : "This server has no verified platform yet — run Verify connection above; the platform a deploy needs is discovered by that probe."}
-    </Text>
+    </>
   );
 }
 
@@ -162,17 +129,19 @@ function DeploymentsBody({
   serverId,
   rows,
   runs,
+  statusOf,
   readiness,
 }: {
   serverId: string;
   rows: readonly Deployment[];
   runs: Record<string, DeployRun>;
+  statusOf: SiteStatusOf;
   readiness: ResourceReadiness;
 }): ReactNode {
   const openPane = useOpenPane();
   // The selection is the ROUTE, never local state: the highlighted row and the
   // open column are then the same fact, and a deep link paints correctly.
-  const selectedId = deploymentDetailPane.useRouteEntry()?.params.deploymentId;
+  const selectedId = sitePane.useRouteEntry()?.params.deploymentId;
 
   const extraFields = useMemo<FieldDef<Deployment>[]>(
     () => [
@@ -185,37 +154,37 @@ function DeploymentsBody({
         value: (d) => d.compositionId,
       },
       {
-        id: "run",
-        label: "Last run",
+        id: "status",
+        label: "Status",
         type: "enum",
-        options: RUN_STATE_OPTIONS,
-        value: (d) => runStateOf(runs[d.id]),
-        cell: (d) => <RunCell run={runs[d.id]} />,
+        options: SITE_STATUS_OPTIONS,
+        value: (d) => statusOf(d.id),
+        cell: (d) => <SiteStatusPill status={statusOf(d.id)} />,
+      },
+      {
+        id: "commit",
+        label: "Commit",
+        type: "text",
+        value: (d) => runs[d.id]?.commitSha?.slice(0, 7) ?? "",
       },
       // The `release` column is NOT here: it is a client field of the
       // `deployments` collection (`releaseFields`), declared and resolved by
       // whichever plugin owns the release pipeline, so this list never names
       // that feature.
     ],
-    [runs],
+    [runs, statusOf],
   );
 
   const creators: CreateOption[] = [
     {
       id: "add",
-      label: "Add deployment",
+      label: "Deploy a composition",
       icon: <Icon icon={addIcon} />,
       onSelect: () => {
         // Fire-and-forget: awaiting `openDialog` would hold the toolbar's busy
         // flag for the dialog's whole open lifetime.
         void openDialog(
-          (close) => (
-            <AddDeploymentDialog
-              serverId={serverId}
-              existing={rows}
-              close={close}
-            />
-          ),
+          (close) => <AddDeploymentDialog serverId={serverId} close={close} />,
           { size: "md" },
         );
       },
@@ -240,14 +209,12 @@ function DeploymentsBody({
         itemActions={DeploymentItemActions}
         creators={creators}
         selectedRowId={selectedId}
+        // A site is a page of its own, not a drill-in under its server: the
+        // row opens it as the route root, as the sidebar's Sites row does.
         rowActivation={(d) =>
-          openPane.to(
-            deploymentDetailPane,
-            { serverId, deploymentId: d.id },
-            { mode: "push", side: "right" },
-          )
+          openPane.to(sitePane, { deploymentId: d.id }, { mode: "root" })
         }
-        emptyState="Nothing is deployed on this server yet."
+        emptyState="No sites on this server yet."
       />
     </>
   );

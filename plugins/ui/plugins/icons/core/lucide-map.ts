@@ -329,6 +329,7 @@ export const LUCIDE_MAP = {
   smartphone: "smartphone",
   sort: "arrow-down-wide-narrow",
   south: "arrow-down",
+  "space-dashboard": "layout-dashboard",
   speaker: "speaker",
   speed: "gauge",
   splitscreen: "rows-2",

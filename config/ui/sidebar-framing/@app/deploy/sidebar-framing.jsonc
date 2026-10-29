@@ -1,0 +1,7 @@
+// @hash 3b71fc14a37d
+{
+  // Deploy (proto-1793181461-uvir4e) draws the sidebar and the main area edge
+  // to edge, the seam being the sidebar's own 1px border. Committed per app so
+  // it holds whatever the global framing is.
+  "variant": "flush"
+}

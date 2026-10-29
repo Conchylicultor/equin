@@ -1940,15 +1940,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Test helpers:
                 - Core: `@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core/testing`
                   - `ZERO_METRICS`
-            - **`dashboard`** — Analytics section of a deployment's page, shown only when the deployment's composition ships the collect plugin: range and comparison controls, KPI tiles choosing a trend line with a dashed previous period, ranked Pages / Sources / Locations / Devices / Events panels whose rows filter the whole dashboard (one filter on ranges past the raw window), and what one visit records. Reads the report over SSH on demand, with explicit states for every failure. Reads a deployment's analytics report over SSH through host-query's hostOnlyQueryOverSsh (the install's host-only report, curled through its own gateway on the loopback port) and answers a discriminated result (report, refused, or which of SSH, the request or the answer failed).
+            - **`dashboard`** — Analytics tab of a site's page, shown only when the deployment's composition ships the collect plugin: range and comparison controls, KPI tiles choosing a trend line with a dashed previous period, ranked Pages / Sources / Locations / Devices / Events panels whose rows filter the whole dashboard (one filter on ranges past the raw window), and what one visit records. Reads the report over SSH on demand, with explicit states for every failure. Reads a deployment's analytics report over SSH through host-query's hostOnlyQueryOverSsh (the install's host-only report, curled through its own gateway on the loopback port) and answers a discriminated result (report, refused, or which of SSH, the request or the answer failed).
               - Web:
-                - Contributes: `DeploymentDetail.Section` "Analytics" → `AnalyticsSection`
-                - Uses: 31 symbols — full list in [`plugins/apps/plugins/deploy/plugins/analytics/plugins/dashboard/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/analytics/plugins/dashboard/REFERENCE.md)
+                - Contributes:
+                  - `SiteTabs.View` "Analytics" → `AnalyticsSection`
+                  - `SiteOverview.Card` "traffic" → `TrafficCard`
+                  - `SiteOverview.Card` "top" → `TopCards`
+                - Uses: 38 symbols — full list in [`plugins/apps/plugins/deploy/plugins/analytics/plugins/dashboard/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/analytics/plugins/dashboard/REFERENCE.md)
+                  - `apps/deploy/deployments` ×6
                   - `apps/deploy/host-query` ×5
                   - `primitives/css/coords` ×2
                   - `primitives/css/text` ×2
                   - `primitives/css/ui-kit` ×2
-                  - `apps/deploy/deployments.DeploymentDetail`
                   - `network/live.useLive`
                   - `primitives/collapsible.FoldMotion`
                   - `primitives/css/badge.Badge`
@@ -1965,9 +1968,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/switch.Switch`
                   - `primitives/css/toggle-chip.SegmentedControl`
                   - `primitives/icon-button.IconButton`
+                  - `primitives/link-gesture.linkProps`
                   - `primitives/live-state.ResourceErrorInline`
                   - `primitives/loading.Loading`
                   - `primitives/relative-time.RelativeTime`
+                  - `ui/icons.Icon`
               - Server:
                 - Contributes: `resource.declare` "deploy-analytics.report"
                 - Uses:
@@ -2041,7 +2046,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `buildSnapshot` — Parse a DB-IP `start,end,CC` CSV (no header row) into snapshot bytes.
                   - `createIpCountryLookup` — A lookup over the snapshot file at `snapshotPath()`, read lazily on the first lookup (one synchronous ~16 MB read) and then held in memory.
                   - Types: `IpCountryLookup`
-        - **`composition`** — Composition section of the deployment pane: which composition this deployment builds and ships, the shape of it (category, entry points, what it extends, how many contributors are opted in), and a cross-app link into that composition's Studio detail pane where its membership is actually edited.
+        - **`composition`** — Composition section of the site page's Settings tab: which composition this deployment builds and ships, the shape of it (category, entry points, what it extends, how many contributors are opted in), and a cross-app link into that composition's Studio detail pane where its membership is actually edited.
           - Web:
             - Contributes: `DeploymentDetail.Section` "Composition" → `CompositionSection`
             - Uses:
@@ -2058,27 +2063,73 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
               - `ui/icons.Icon`
-        - **`deploy-history`** — History section of the deployment pane: this deployment's durable run ledger (`deploy_runs`) as a live DataView window (`deployRunHistory`, sortable and filterable by the surface's custom columns) — outcome and the leg a failure died on, verb, short commit, pinned release run, duration and relative time, with a failed run's CLI message verbatim. The record beside the in-memory live view, so what happened here survives a backend restart. Owns the row-action slot its children hang a failed run's next step off.
+        - **`deploy-history`** — The Activity page (/deploy/activity, its sidebar entry): every deploy run across every site as the merged runs surface (RunsDataView) with its own view pills — Recent, Running, Needs approval, Failed. Deployments tab of a site's page: this deployment's durable run ledger (`deploy_runs`) as a live DataView window (`deployRunHistory`, sortable and filterable by the surface's custom columns) — outcome and the leg a failure died on, verb, short commit, pinned release run, duration and relative time, with a failed run's CLI message verbatim. The record beside the in-memory live view, so what happened here survives a backend restart. Owns the row-action slot its children hang a failed run's next step off.
           - Web:
-            - Slots: `DeployRunItemActions`
-            - Contributes: `DeploymentDetail.Section` "History" → `DeployHistorySection`
-            - Uses:
-              - `apps/deploy/deployments.ApprovalLinks`
-              - `apps/deploy/deployments.DeploymentDetail`
-              - `primitives/css/spacing.Stack`
+            - Slots:
+              - `DeployRunItemActions`
+              - `deploy-activity.actions`
+            - Slot contributors:
+              - `DeployRunItemActions` ← `apps.deploy.deploy-history.rollback`
+              - `deploy-activity.actions` ← `primitives.pane`
+            - Contributes:
+              - `Pane.Register` "deploy-activity"
+              - `Deploy.Sidebar` "Activity"
+              - `SiteTabs.View` "Deployments" → `DeployHistorySection`
+              - `SiteOverview.Card` "deployments" → `DeployOverviewCard`
+            - Uses: 35 symbols — full list in [`plugins/apps/plugins/deploy/plugins/deploy-history/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/deploy-history/REFERENCE.md)
+              - `apps/deploy/deployments` ×8
+              - `primitives/data-view` ×6
+              - `primitives/live-state` ×3
+              - `primitives/pane` ×3
+              - `primitives/css/spacing` ×2
+              - `apps/deploy/shell.Deploy`
+              - `network/live.useLive`
+              - `primitives/app-shell.opensPane`
+              - `primitives/css/badge.Badge`
+              - `primitives/css/fill.Fill`
+              - `primitives/css/line.Line`
+              - `primitives/css/status-dot.StatusDot`
               - `primitives/css/text.Text`
-              - `primitives/data-view.DataView`
-              - `primitives/data-view.defineDataView`
-              - `primitives/data-view.defineItemActions`
-              - `primitives/data-view.FieldDef`
-              - `primitives/data-view.fieldOverrides`
-              - `primitives/data-view.liveDataSource`
+              - `primitives/css/ui-kit.Button`
+              - `primitives/link-gesture.linkProps`
+              - `primitives/relative-time.RelativeTime`
+              - `runs.RunsDataView`
+              - `ui/icons.Icon`
             - Exports (values): `DeployRunItemActions`
+          - Cross-plugin:
+            - Uses tokens:
+              - `ui/tokens/color-palette --destructive`
+              - `ui/tokens/color-palette --primary`
+              - `ui/tokens/color-palette --success`
+              - `ui/tokens/color-palette --warning`
+              - `ui/tokens/density --space-2xl`
+              - `ui/tokens/density --space-xl`
+            - Imported by: `apps/deploy/deploy-history/rollback`
           - Plugins:
-            - **`investigate-failure`** — Contributes the investigate row action to every failed run in a deployment's History, launching an agent briefed on that failure — the CLI's own message verbatim, the run's identity and pinned bundle, and where the transcript is.
+            - **`investigate-failure`** — Contributes the site page's failure banner (the newest run failed: its leg, the CLI's message verbatim, what the box still serves, Investigate) and the investigate row action to every failed run in a site's Deployments tab, launching an agent briefed on that failure — the CLI's own message verbatim, the run's identity and pinned bundle, and where the transcript is.
               - Web:
-                - Contributes: `DataViewSlots.CollectionItemAction` "deploy.run-history:investigate" → `CollectionInvestigate`
-                - Uses: `primitives/launch/investigate.Investigate`
+                - Contributes:
+                  - `SiteBanner` "failed"
+                  - `DataViewSlots.CollectionItemAction` "deploy.run-history:investigate" → `CollectionInvestigate`
+                - Uses:
+                  - `apps/deploy/deployments.SiteBanner`
+                  - `network/live.useLive`
+                  - `primitives/launch/investigate.Investigate`
+                  - `primitives/launch/investigate.InvestigateAction`
+                  - `primitives/live-state.foldResource`
+                  - `primitives/live-state.ResourceResult`
+                  - `primitives/relative-time.formatRelativeTime`
+            - **`rollback`** — Contributes the roll-back row action to every succeeded run in a deployment's History: after a confirm, it ships that run's pinned release bundle again (`ship --release <id>`). Disabled, with the reason as its tooltip, on a run that pinned no release, on the run that is live now, and while the server is busy or unverified.
+              - Web:
+                - Contributes: `DeployRunItemActions` "rollback" → `RollbackAction`
+                - Uses:
+                  - `apps/deploy/deploy-history.DeployRunItemActions`
+                  - `apps/deploy/deployments.useBlockedReason`
+                  - `infra/endpoints.useEndpointMutation`
+                  - `network/live.useLive`
+                  - `network/live.useLiveRow`
+                  - `primitives/icon-button.IconButton`
+                  - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
         - **`deploy-secrets`** — readDeploySecret(decl) reads an approved deploy secret on the box, as a set/unset state, through the DeploySecretSource host service (the machine half reads the credential systemd decrypted into the service's credentials directory). The host-only GET /api/host-only/deploy-secrets answers set/unset per named key (never a value) — what ship's health gate asks of the running app.
           - Server:
             - Contributes: `host-service:deploy-secrets.source` "deploy-secrets.source"
@@ -2106,31 +2157,26 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by: `apps/deploy/site-messages/intake`
           - Plugins:
-            - **`approvals`** — Secrets section of a deployment's page: every deploy secret its composition's closure declares as a DataView (key, requesting plugin, description, status approved / new / value changed / missing value) with per-row Set value (a password dialog) and Approve (no approve-all). Shown only when the composition needs a secret, and open by default while one waits on the user. Deploy-secret approvals on the local machine: values in the secrets store (namespace deploy-secrets), per-deployment grants of a value's HMAC fingerprint (deploy_secret_grants), the deploy gate that ends a run needs-approval while any secret its composition's closure declares is missing, new or changed, the deploy-secrets.status live value behind the Secrets section, and the browser-refusing endpoint converge reads the approved env from.
+            - **`approvals`** — Secrets section of a site's Settings (and the site page's banner while a secret waits on approval): every deploy secret its composition's closure declares as a DataView (key, requesting plugin, description, status approved / new / value changed / missing value) with per-row Set value (a password dialog) and Approve (no approve-all). Shown only when the composition needs a secret. Deploy-secret approvals on the local machine: values in the secrets store (namespace deploy-secrets), per-deployment grants of a value's HMAC fingerprint (deploy_secret_grants), the deploy gate that ends a run needs-approval while any secret its composition's closure declares is missing, new or changed, the deploy-secrets.status live value behind the Secrets section, and the browser-refusing endpoint converge reads the approved env from.
               - Web:
                 - Slots: `item-actions`
                 - Slot contributors: `item-actions` ← `apps.deploy.deploy-secrets.approvals`
                 - Contributes:
                   - `DeploymentDetail.Section` "Secrets" → `SecretsSection`
+                  - `SiteBanner` "needs-secret"
+                  - `SiteCheck` "secrets"
                   - `item-actions` "set-value" → `SetValueAction`
                   - `item-actions` "approve" → `ApproveAction`
-                - Uses:
-                  - `apps/deploy/deployments.DeploymentDetail`
-                  - `infra/endpoints.getEndpointErrorMessage`
-                  - `infra/endpoints.useEndpointMutation`
+                - Uses: 27 symbols — full list in [`plugins/apps/plugins/deploy/plugins/deploy-secrets/plugins/approvals/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/deploy-secrets/plugins/approvals/REFERENCE.md)
+                  - `apps/deploy/deployments` ×9
+                  - `primitives/css/ui-kit` ×4
+                  - `primitives/data-view` ×4
+                  - `infra/endpoints` ×2
                   - `network/live.useLive`
                   - `primitives/css/badge.Badge`
                   - `primitives/css/cluster.Cluster`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
-                  - `primitives/css/ui-kit.Button`
-                  - `primitives/css/ui-kit.DialogDescription`
-                  - `primitives/css/ui-kit.DialogTitle`
-                  - `primitives/css/ui-kit.Input`
-                  - `primitives/data-view.DataView`
-                  - `primitives/data-view.defineDataView`
-                  - `primitives/data-view.defineItemActions`
-                  - `primitives/data-view.FieldDef`
                   - `primitives/icon-button.IconButton`
                   - `primitives/live-state.foldResource`
                   - `primitives/overlay/imperative-dialog.openDialog`
@@ -2183,64 +2229,115 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `DeploySecretValueSchema`
                   - `SECRETS_SECTION_ID`
                   - `setDeploySecretValue`
-        - **`deployments`** — Deployments section of a server's page: this server's deployments as a DataView (composition, last run, plus contributed columns), an add affordance whose composition picker reads the compositions config, a Deploy row action that launches the CLI's whole converge-build-ship run, and the per-deployment pane whose sections (overview, plus contributed ones) carry the record, its derived install and the remote-deploy surface. Owns the deploy_deployments table: where a composition is served and under what URL ((composition × server) → { hostnames, loopbackPort }), its live collection, and the CRUD endpoints. Also launches `./equin deploy converge|ship` for a deployment — and orchestrates the `update` sequence (converge → build a candidate unless one is already current → ship that pinned run id) over the awaitable release engine — streaming the CLI's output into the durable `deploy` log channel, each run's phase and outcome into the in-memory `deploy.runs` live view, and every run into the durable `deploy_runs` ledger it serves back as a live history window — the record that survives the restart the live view does not. Before any leg spawns, every DeployGates.Gate contribution is asked; a run one of them refuses ends needs-approval having converged and shipped nothing. The install itself — run user, dir layout, systemd unit, Caddy site — is derived in core/, never stored.
+        - **`deployments`** — Sites — the Deploy app's primary entity, a deployment: the sites index (the app's landing page, a DataView of every deployment with its server and status), the site page (site/:deploymentId/:tab?) — a header (mark, hostname, status pill, hostnames, composition, contributed SiteHeader actions), the production strip (SiteStrip cells, its Server cell this plugin's own) with the first applicable SiteBanner, and the SiteTabs host bound to the URL's :tab?, whose Overview (a two-column host over SiteOverview.Card plus a Checks card over SiteCheck) and Settings (the DeploymentDetail sections — General, Install and a Danger zone of its own — under a left anchor rail) tabs are this plugin's, the sidebar's Overview entry and Sites section (status dot per site from useSiteStatus, + opening the add dialog), and the Deployments section of a server's page (that server's sites as a DataView, an add affordance whose composition picker reads the compositions config, a Deploy row action that launches the CLI's whole converge-build-ship run). Old server/:serverId/dep/:deploymentId links forward to the site. Owns the deploy_deployments table: where a composition is served and under what URL ((composition × server) → { hostnames, loopbackPort }), its live collection, and the CRUD endpoints. Also launches `./equin deploy converge|ship` for a deployment — and orchestrates the `update` sequence (converge → build a candidate unless one is already current → ship that pinned run id) over the awaitable release engine — streaming the CLI's output into the durable `deploy` log channel, each run's phase and outcome into the in-memory `deploy.runs` live view, and every run into the durable `deploy_runs` ledger it serves back as a live history window — the record that survives the restart the live view does not. Before any leg spawns, every DeployGates.Gate contribution is asked; a run one of them refuses ends needs-approval having converged and shipped nothing. The install itself — run user, dir layout, systemd unit, Caddy site — is derived in core/, never stored.
           - Web:
             - Slots:
               - `DeploymentDetail.Section`
+              - `SiteTabs.View`
+              - `SiteHeader.Action`
+              - `SiteStrip.Cell`
+              - `SiteBanner`
+              - `SiteOverview.Card`
+              - `SiteCheck`
               - `DeploymentItemActions`
-              - `deploymentDetailPane.Actions`
-            - Slot contributors:
-              - `DeploymentDetail.Section` ← `apps.deploy.analytics.dashboard`
-              - `DeploymentDetail.Section` ← `apps.deploy.composition`
-              - `DeploymentDetail.Section` ← `apps.deploy.deploy-history`
-              - `DeploymentDetail.Section` ← `apps.deploy.deploy-secrets.approvals`
-              - `DeploymentDetail.Section` ← `apps.deploy.deployments`
-              - `DeploymentDetail.Section` ← `apps.deploy.local-serve`
-              - `DeploymentDetail.Section` ← `apps.deploy.remote-deploy`
-              - `DeploymentDetail.Section` ← `apps.deploy.site-messages.inbox`
-              - `DeploymentItemActions` ← `apps.deploy.deployments`
-              - `DeploymentItemActions` ← `apps.deploy.local-serve`
-              - `deploymentDetailPane.Actions` ← `primitives.pane`
+              - `sitesIndexPane.Actions`
+              - `sitePane.Actions`
+              - `deploy-deployment-detail.actions`
+            - Slot contributors: 25 contributors — full list in [`plugins/apps/plugins/deploy/plugins/deployments/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/deployments/REFERENCE.md)
+              - `SiteTabs.View` ×4
+              - `DeploymentDetail.Section` ×3
+              - `SiteBanner` ×3
+              - `SiteCheck` ×3
+              - `SiteOverview.Card` ×3
+              - `DeploymentItemActions` ×2
+              - `SiteHeader.Action` ×2
+              - `SiteStrip.Cell` ×2
+              - `deploy-deployment-detail.actions` ← `primitives.pane`
+              - `sitePane.Actions` ← `primitives.pane`
+              - `sitesIndexPane.Actions` ← `primitives.pane`
             - Contributes:
               - `IdKinds.Kind` "dpl"
               - `IdKinds.Kind` "drun"
-              - `ServerDetail.Section` "Deployments" → `DeploymentsSection`
+              - `ServerDetail.Section` "Sites on this server" → `DeploymentsSection`
               - `Pane.Register` "deploy-deployment-detail"
-              - `DeploymentDetail.Section` "Overview" → `DeploymentOverview`
+              - `Pane.Register` "deploy-index"
+              - `Pane.Register` "deploy-site"
+              - `Deploy.Sidebar` "Overview"
+              - `Deploy.Sidebar` "Sites" → `SitesSidebarSection`
+              - `SiteTabs.View` "Overview" → `SiteOverviewTab`
+              - `SiteTabs.View` "Settings" → `SiteSettingsTab`
+              - `SiteStrip.Cell` "Server" → `ServerCell`
+              - `SiteCheck` "server"
+              - `DeploymentDetail.Section` "General" → `DeploymentGeneral`
+              - `DeploymentDetail.Section` "Install" → `DeploymentInstall`
+              - `DeploymentDetail.Section` "Danger zone" → `DangerZone`
               - `DeploymentItemActions` "deploy" → `DeployAction`
               - `DeploymentItemActions` "delete" → `DeleteDeploymentAction`
-            - Uses: 51 symbols — full list in [`plugins/apps/plugins/deploy/plugins/deployments/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/deployments/REFERENCE.md)
-              - `primitives/css/ui-kit` ×9
+            - Uses: 83 symbols — full list in [`plugins/apps/plugins/deploy/plugins/deployments/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/deployments/REFERENCE.md)
+              - `primitives/css/ui-kit` ×14
               - `primitives/data-view` ×7
-              - `primitives/pane` ×5
-              - `network/live` ×4
+              - `primitives/live-state` ×6
+              - `primitives/pane` ×6
+              - `apps/deploy/servers` ×5
+              - `primitives/slot-render` ×4
               - `infra/endpoints` ×3
-              - `primitives/live-state` ×3
-              - `apps/deploy/health` ×2
-              - `apps/deploy/servers.ServerDetail`
+              - `network/live` ×3
+              - `primitives/app-shell` ×2
+              - `primitives/css/badge` ×2
+              - `primitives/css/spacing` ×2
+              - `primitives/link-gesture` ×2
+              - `apps/deploy/health.useServerHealth`
+              - `apps/deploy/shell.Deploy`
               - `ids.IdKinds`
               - `plugin-meta/composition.useManifestItems`
-              - `primitives/css/badge.Badge`
+              - `primitives/copy-to-clipboard.CopyButton`
               - `primitives/css/bouncing-dots.BouncingDots`
+              - `primitives/css/center.Center`
               - `primitives/css/cluster.Cluster`
               - `primitives/css/fill.Fill`
+              - `primitives/css/grid.Grid`
+              - `primitives/css/inline.Inline`
+              - `primitives/css/line.Line`
               - `primitives/css/placeholder.Placeholder`
-              - `primitives/css/spacing.Stack`
+              - `primitives/css/rigid.Rigid`
+              - `primitives/css/status-dot.StatusDot`
+              - `primitives/css/sticky.Sticky`
+              - `primitives/css/surface.Surface`
               - `primitives/css/text.Text`
               - `primitives/detail-sections.defineDetailSections`
               - `primitives/editable-field.useEditableField`
               - `primitives/icon-button.IconButton`
-              - `primitives/link-gesture.activationProps`
+              - `primitives/link-gesture/new-tab.NewTabLink`
               - `primitives/loading.Loading`
               - `primitives/overlay/imperative-dialog.openDialog`
               - `primitives/relative-time.RelativeTime`
+              - `primitives/tabbed-view.defineTabbedView`
               - `ui/icons.Icon`
+            - Exports (types):
+              - `SiteBannerAnswer`
+              - `SiteBannerSpec`
+              - `SiteCheckResult`
+              - `SiteProps`
+              - `SiteStatus`
             - Exports (values):
               - `ApprovalLinks`
               - `DeploymentDetail`
-              - `deploymentDetailPane`
               - `DeploymentItemActions`
+              - `SITE_CARD_LIST_TOOLBAR`
+              - `SiteBanner`
+              - `SiteCard`
+              - `SiteCardBody`
+              - `SiteCheck`
+              - `SiteHeader`
+              - `SiteOverview`
+              - `sitePane`
+              - `sitesIndexPane`
+              - `SiteStrip`
+              - `SiteTabs`
               - `useBlockedReason`
+              - `useSetSiteTab`
+              - `useSiteStatus`
+              - `useSiteTabLink`
           - Server:
             - Contributes:
               - `ids.kind` "dpl"
@@ -2252,15 +2349,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `resource.declare` "deploy.run-history:groups"
               - `resource.declare` "deploy.run-history:rows"
               - `resource.declare` "deploy.runs"
-            - Uses: 24 symbols — full list in [`plugins/apps/plugins/deploy/plugins/deployments/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/deployments/REFERENCE.md)
+            - Uses: 26 symbols — full list in [`plugins/apps/plugins/deploy/plugins/deployments/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/deployments/REFERENCE.md)
               - `infra/jobs` ×3
+              - `release/bundles` ×3
+              - `release` ×3
               - `infra/endpoints` ×2
               - `infra/entities` ×2
               - `infra/jobs/supervised-job` ×2
               - `infra/paths` ×2
               - `network/live` ×2
-              - `release/bundles` ×2
-              - `release` ×2
               - `apps/deploy/health.serverHealth`
               - `apps/deploy/servers._deployServers`
               - `config_v2.getConfig`
@@ -2297,7 +2394,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `POST /api/deploy/deployments/:id/run` — unpredicted (server-decided)
           - Core:
             - Uses:
-              - `apps/deploy/servers.serverDetailRoute`
+              - `apps/deploy/shell.deployIndexRoute`
               - `fields.nullable`
               - `fields/date/config.dateField`
               - `fields/identifier/config.identifierField`
@@ -2339,7 +2436,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `DEPLOY_LOG_CHANNEL`
               - `DEPLOY_RUN_STATUSES`
               - `deployDeploymentsEntityRef`
-              - `deploymentDetailRoute`
               - `deploymentFields`
               - `deploymentIdKind`
               - `deployments`
@@ -2366,15 +2462,36 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `REMOTE_SCRIPT_SHEBANG`
               - `runDeployment`
               - `RunDeploymentBodySchema`
+              - `siteRoute`
               - `SYSTEMD_INSTANCE`
               - `UNIT_TEMPLATE_PATH`
               - `updateDeployment`
               - `UpdateDeploymentBodySchema`
           - Cross-plugin:
+            - Uses tokens:
+              - `ui/tokens/color-palette --border`
+              - `ui/tokens/color-palette --destructive`
+              - `ui/tokens/color-palette --foreground`
+              - `ui/tokens/color-palette --muted`
+              - `ui/tokens/color-palette --muted-foreground`
+              - `ui/tokens/color-palette --primary`
+              - `ui/tokens/color-palette --primary-text`
+              - `ui/tokens/color-palette --success`
+              - `ui/tokens/color-palette --warning`
+              - `ui/tokens/density --space-2xl`
+              - `ui/tokens/density --space-md`
+              - `ui/tokens/density --space-sm`
+              - `ui/tokens/density --space-xl`
+              - `ui/tokens/density --space-xs`
+              - `ui/tokens/font-family --font-mono`
+              - `ui/tokens/shape --radius`
+              - `ui/tokens/shape --spacing`
             - Imported by:
               - `apps/deploy/analytics/dashboard`
               - `apps/deploy/composition`
               - `apps/deploy/deploy-history`
+              - `apps/deploy/deploy-history/investigate-failure`
+              - `apps/deploy/deploy-history/rollback`
               - `apps/deploy/deploy-secrets/approvals`
               - `apps/deploy/deployments/runs-arm`
               - `apps/deploy/host-query`
@@ -2386,14 +2503,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `paths:no-hardcoded-paths` — `core/derive.ts` (sanctioned)
               - `boundaries/no-platform-api` — `server/internal/transcript.ts` (debt)
           - Plugins:
-            - **`runs-arm`** — The deploy arm's presence on the merged run surface: its rows' link into the deployment detail pane on the server the run went to, and the cells of its eight own fields (verb, failed phase, server / deployment / composition / release-run / commit ids, exit code) — real filterable and sortable SQL dimensions, declared by the arm. The deploy arm of the unified run space: binds deploy_runs into the runs union — status folded into the shared outcome vocabulary through a typed map, a label naming the composition and the server it went to, the verb as both the shared trigger and its own enum dimension, and the CLI's refusal text as the shared message. Reads null for namespace: a deploy targets a remote server, not a worktree.
+            - **`runs-arm`** — The deploy arm's presence on the merged run surface: its rows' link into the site's Deployments tab, and the cells of its eight own fields (verb, failed phase, server / deployment / composition / release-run / commit ids, exit code) — real filterable and sortable SQL dimensions, declared by the arm. The deploy arm of the unified run space: binds deploy_runs into the runs union — status folded into the shared outcome vocabulary through a typed map, a label naming the composition and the server it went to, the verb as both the shared trigger and its own enum dimension, and the CLI's refusal text as the shared message. Reads null for namespace: a deploy targets a remote server, not a worktree.
               - Web:
                 - Contributes:
                   - `DataViewSlots.CollectionRowActivation` "runs:open"
                   - `FieldPresentation.Register` "arm:runs:deploy"
                   - `DataViewSlots.CollectionItemAction` "runs:investigate:deploy" → `CollectionInvestigate`
                 - Uses:
-                  - `apps/deploy/deployments.deploymentDetailPane`
+                  - `apps/deploy/deployments.sitePane`
                   - `network/live.FieldPresentation`
                   - `primitives/css/badge.Badge`
                   - `runs.investigateRuns`
@@ -2415,30 +2532,32 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `DEPLOY_RUN_KIND`
                   - `DEPLOY_STATUS_OUTCOME`
                   - `deployRunArm`
-        - **`health`** — Server reachability for the deploy app: probes a registered server over SSH, records the classified verdict, and exposes its verdict as the `status` field of every list of servers plus the verify step of the SSH setup flow. Owns the deploy_servers_ext_health side-table: the last SSH reachability verdict per server (ok, classified failure kind, the public key as of the check, and the TOFU-pinned host key), its live collection, its `status` field exposed to every list of servers, and the probe / forget-host-key endpoints.
+        - **`health`** — Server reachability for the deploy app: probes a registered server over SSH, records the classified verdict, and exposes its verdict as the `status` field of every list of servers plus the verify step of the SSH setup flow, and the Deploy sidebar's Servers section (each server with its verdict dot). Owns the deploy_servers_ext_health side-table: the last SSH reachability verdict per server (ok, classified failure kind, the public key as of the check, and the TOFU-pinned host key), its live collection, its `status` field exposed to every list of servers, and the probe / forget-host-key endpoints.
           - Web:
             - Contributes:
               - `FieldPresentation.Register` "exposure:deploy_servers_ext_health"
-              - `ServerDetail.Section` "Status" → `ServerStatusSection`
-            - Uses:
-              - `apps/deploy/servers.ServerDetail`
+              - `ServerDetail.Section` "Health" → `ServerStatusSection`
+              - `ServerHeader.Badge` "status" → `ServerHeaderStatus`
+              - `ServerHeader.Meta` "platform" → `ServerHeaderPlatform`
+              - `ServerHeader.Action` "check-now" → `CheckNowAction`
+              - `Deploy.Sidebar` "Servers" → `ServersSidebarSection`
+            - Uses: 34 symbols — full list in [`plugins/apps/plugins/deploy/plugins/health/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/health/REFERENCE.md)
+              - `apps/deploy/servers` ×6
+              - `primitives/live-state` ×6
+              - `network/live` ×5
+              - `primitives/css/ui-kit` ×4
+              - `primitives/setup-steps` ×2
+              - `apps/deploy/shell.Deploy`
               - `infra/endpoints.useEndpointMutation`
-              - `network/live.FieldPresentation`
-              - `network/live.LiveRowResult`
-              - `network/live.mapRow`
-              - `network/live.useLive`
-              - `network/live.useLiveRow`
+              - `primitives/app-shell.SidebarPaneSection`
               - `primitives/css/spacing.Stack`
               - `primitives/css/status-dot.StatusDot`
               - `primitives/css/text.Text`
-              - `primitives/css/ui-kit.Button`
-              - `primitives/live-state.mapResource`
-              - `primitives/live-state.ResourceErrorInline`
-              - `primitives/live-state.ResourceResult`
+              - `primitives/icon-button.IconButton`
               - `primitives/loading.Loading`
+              - `primitives/pane.useOpenPane`
               - `primitives/relative-time.RelativeTime`
-              - `primitives/setup-steps.StepDone`
-              - `primitives/setup-steps.StepNote`
+              - `ui/icons.Icon`
             - Exports (types):
               - `ServerHealthRow`
               - `ServerStatus`
@@ -2492,6 +2611,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --muted`
               - `ui/tokens/color-palette --muted-foreground`
               - `ui/tokens/color-palette --success`
+              - `ui/tokens/color-palette --warning`
               - `ui/tokens/density --space-sm`
               - `ui/tokens/density --space-xs`
               - `ui/tokens/font-family --font-mono`
@@ -2548,82 +2668,104 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `apps/deploy/analytics/dashboard`
               - `apps/deploy/site-messages/inbox`
-        - **`local-serve`** — Test locally: the deployment pane's section for the composition served on the shared gateway (its live URL and what it does and does not prove), plus the one-button serve/open shortcut on the deployments list row.
+        - **`local-serve`** — Test locally: the site page's header button that serves the site's composition on the shared gateway (opening it once live), plus the same one-button serve/open shortcut on the deployments list row.
           - Web:
             - Contributes:
-              - `DeploymentDetail.Section` "Test locally" → `LocalServeSection`
+              - `SiteHeader.Action` "serve" → `ServeHeaderAction`
               - `DeploymentItemActions` "serve" → `ServeAction`
             - Uses:
-              - `apps/deploy/deployments.DeploymentDetail`
               - `apps/deploy/deployments.DeploymentItemActions`
-              - `build/serve-composition.ServeTargetPanel`
+              - `apps/deploy/deployments.SiteHeader`
               - `build/serve-composition.useServeComposition`
               - `build/serve-composition.useServeStatus`
-              - `network/live.useLiveRow`
               - `plugin-meta/composition.useManifestItemByName`
-              - `primitives/css/placeholder.Placeholder`
-              - `primitives/css/spacing.Stack`
-              - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.Button`
               - `primitives/icon-button.IconButton`
               - `primitives/link-gesture/new-tab.NewTabButton`
-              - `primitives/live-state.ResourceErrorInline`
-              - `primitives/loading.Loading`
-        - **`remote-deploy`** — Deploy one composition to its remote server: a single Deploy button launching the `update` sequence (converge → build a platform-pinned candidate unless one is already current → ship that pinned run id), the three-phase report of the running deploy, what is currently built and how it relates to HEAD, the public URLs to inspect the deployed app, the phase-following deploy/build log output section, and the `Release` client field (`releaseFields`) of the deployments list.
+              - `ui/icons.Icon`
+        - **`remote-deploy`** — Deploy one composition to its remote server, on the site page: the header's Deploy button launching the `update` sequence (converge → build a platform-pinned candidate unless one is already current → ship that pinned run id), labelled by what it would do now (Redeploy / Deploy N commits / Retry deploy / Deploying…); the production strip's Status, Running (sha + subject), Deployed and Bundle cells; the deploying banner (the three legs and the tail of the log the running leg writes) and the behind-main banner; and the `Release` client field (`releaseFields`) of the deployments list. Serves deploy.running-commit: the commit a deployment's newest succeeded ship recorded, its subject, and how many commits the main ref holds that it does not — recomputed when a deploy run lands or main advances.
           - Web:
             - Contributes:
-              - `DeploymentDetail.Section` "Deploy to server" → `RemoteDeploySection`
-              - `DeploymentDetail.Section` "Output" → `OutputSection`
+              - `SiteHeader.Action` "deploy" → `DeployButton`
+              - `SiteStrip.Cell` "Status" → `StatusCell`
+              - `SiteStrip.Cell` "Running" → `RunningCell`
+              - `SiteStrip.Cell` "Deployed" → `DeployedCell`
+              - `SiteStrip.Cell` "Bundle" → `BundleCell`
+              - `SiteBanner` "behind-main"
+              - `SiteBanner` "deploying"
+              - `SiteCheck` "bundle"
               - `ClientFields.Resolve` "client:deploy.deployments:release" → `ReleaseFieldResolver`
               - `FieldPresentation.Register` "client:deploy.deployments:release"
-            - Uses: 36 symbols — full list in [`plugins/apps/plugins/deploy/plugins/remote-deploy/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/remote-deploy/REFERENCE.md)
+            - Uses: 37 symbols — full list in [`plugins/apps/plugins/deploy/plugins/remote-deploy/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/remote-deploy/REFERENCE.md)
+              - `apps/deploy/deployments` ×7
               - `primitives/live-state` ×6
-              - `network/live` ×4
-              - `primitives/setup-steps` ×4
-              - `apps/deploy/deployments` ×3
               - `apps/deploy/health` ×3
-              - `primitives/view-switcher` ×2
+              - `network/live` ×3
+              - `primitives/css/ui-kit` ×3
+              - `primitives/css/spacing` ×2
+              - `primitives/relative-time` ×2
               - `infra/endpoints.useEndpointMutation`
               - `primitives/css/badge.Badge`
               - `primitives/css/bouncing-dots.BouncingDots`
-              - `primitives/css/cluster.Cluster`
-              - `primitives/css/link-chip.LinkChip`
-              - `primitives/css/placeholder.Placeholder`
-              - `primitives/css/spacing.Stack`
+              - `primitives/css/fill.Fill`
+              - `primitives/css/inline.Inline`
+              - `primitives/css/spinner.Spinner`
               - `primitives/css/status-dot.StatusDot`
               - `primitives/css/text.Text`
-              - `primitives/css/ui-kit.Button`
               - `primitives/loading.Loading`
               - `primitives/log-channels.LiveLogChannel`
-              - `primitives/relative-time.RelativeTime`
               - `ui/icons.Icon`
+          - Server:
+            - Contributes: `resource.declare` "deploy.running-commit"
+            - Uses:
+              - `apps/deploy/deployments._deployRuns`
+              - `database.db`
+              - `infra/git/git-watcher.refHeadServed`
+              - `infra/paths.REPO_ROOT`
+              - `network/live.serveValue`
+              - `release/bundles.countCommitsBehind`
+              - `release/bundles.readCommitSubject`
+              - `release/bundles.readRefSha`
+            - Resources: `deploy.running-commit` (push, notified)
           - Core:
             - Uses:
               - `apps/deploy/deployments.deployments`
               - `fields/text/config.enumTextField`
               - `network/live.clientFields`
+              - `network/live.liveValue`
             - Exports (types):
               - `ReleaseState`
               - `ReleaseStateInput`
+              - `RunningCommit`
             - Exports (values):
               - `candidatePredatesLatest`
               - `RELEASE_STATE_OPTIONS`
               - `releaseFields`
               - `releaseStateLabel`
               - `resolveReleaseState`
+              - `runningCommit`
               - `shortSha`
               - `stalenessChipLabel`
               - `stalenessSentence`
           - Cross-plugin:
             - Uses tokens:
+              - `ui/tokens/color-palette --background`
+              - `ui/tokens/color-palette --border`
               - `ui/tokens/color-palette --destructive`
               - `ui/tokens/color-palette --info`
               - `ui/tokens/color-palette --muted-foreground`
+              - `ui/tokens/color-palette --primary`
+              - `ui/tokens/color-palette --primary-text`
               - `ui/tokens/color-palette --success`
               - `ui/tokens/color-palette --warning`
+              - `ui/tokens/shape --spacing`
         - **`servers`** — Server registry for the deployment platform.
           - Web:
             - Slots:
               - `ServerDetail.Section`
+              - `ServerHeader.Badge`
+              - `ServerHeader.Meta`
+              - `ServerHeader.Action`
               - `item-actions`
               - `serversRootPane.Actions`
               - `serverDetailPane.Actions`
@@ -2632,6 +2774,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ServerDetail.Section` ← `apps.deploy.health`
               - `ServerDetail.Section` ← `apps.deploy.servers`
               - `ServerDetail.Section` ← `apps.deploy.ssh-setup`
+              - `ServerHeader.Badge` ← `apps.deploy.health`
+              - `ServerHeader.Meta` ← `apps.deploy.health`
+              - `ServerHeader.Action` ← `apps.deploy.health`
               - `item-actions` ← `apps.deploy.servers`
               - `serversRootPane.Actions` ← `primitives.pane`
               - `serverDetailPane.Actions` ← `primitives.pane`
@@ -2639,27 +2784,36 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `IdKinds.Kind` "srv"
               - `Pane.Register` "deploy-server-detail"
               - `Pane.Register` "deploy-servers"
-              - `ServerDetail.Section` "Server" → `ServerEditForm`
+              - `ServerDetail.Section` "Connection" → `ServerEditForm`
+              - `ServerDetail.Section` "Danger zone" → `ServerDeleteAction`
               - `item-actions` "open-console" → `OpenConsoleAction`
-            - Uses: 31 symbols — full list in [`plugins/apps/plugins/deploy/plugins/servers/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/servers/REFERENCE.md)
+            - Uses: 39 symbols — full list in [`plugins/apps/plugins/deploy/plugins/servers/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/servers/REFERENCE.md)
               - `primitives/pane` ×5
               - `primitives/data-view` ×4
               - `primitives/css/ui-kit` ×3
               - `primitives/live-state` ×3
               - `infra/endpoints` ×2
               - `network/live` ×2
+              - `primitives/copy-to-clipboard` ×2
               - `primitives/css/fill` ×2
+              - `primitives/css/spacing` ×2
               - `primitives/editable-field` ×2
               - `ids.IdKinds`
-              - `primitives/copy-to-clipboard.CopyButton`
-              - `primitives/css/spacing.Stack`
+              - `primitives/css/center.Center`
+              - `primitives/css/inline.Inline`
+              - `primitives/css/rigid.Rigid`
+              - `primitives/css/surface.Surface`
               - `primitives/css/text.Text`
               - `primitives/detail-sections.defineDetailSections`
               - `primitives/link-gesture/new-tab.NewTabButton`
               - `primitives/loading.Loading`
               - `primitives/overlay/imperative-dialog.openDialog`
+              - `primitives/slot-render.defineRenderSlot`
+              - `ui/icons.Icon`
             - Exports (types):
               - `Server`
+              - `ServerDetailColumn`
+              - `ServerHeaderPart`
               - `ServerListRow`
               - `SshKey`
             - Exports (values):
@@ -2668,6 +2822,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `NEW_SERVER_ID`
               - `ServerDetail`
               - `serverDetailPane`
+              - `ServerHeader`
               - `servers`
               - `serversRootPane`
               - `serverSshKey`
@@ -2710,6 +2865,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `POST /api/deploy/servers/:id/ssh-keypair/import` — unpredicted (precondition)
           - Core:
             - Uses:
+              - `apps/deploy/shell.deployIndexRoute`
               - `fields.nullable`
               - `fields/date/config.dateField`
               - `fields/int/config.intField`
@@ -2727,10 +2883,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `serverFields`
               - `serversRoute`
           - Cross-plugin:
-            - Uses tokens: 22 vars — full list in [`plugins/apps/plugins/deploy/plugins/servers/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/servers/REFERENCE.md)
+            - Uses tokens: 23 vars — full list in [`plugins/apps/plugins/deploy/plugins/servers/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/servers/REFERENCE.md)
               - `ui/tokens/type-scale` ×9
               - `ui/tokens/color-palette` ×6
-              - `ui/tokens/density` ×4
+              - `ui/tokens/density` ×5
               - `ui/tokens/shape` ×2
               - `ui/tokens/font-family --font-mono`
             - Imported by:
@@ -2768,26 +2924,52 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `UpdateServerBodySchema`
         - **`shell`** — App shell for the deploy platform.
           - Web:
-            - Contributes: `Apps.App` "Deploy" → `DeployLayout`
+            - Slots: `Deploy.Sidebar`
+            - Slot contributors:
+              - `Deploy.Sidebar` ← `apps.deploy.deploy-history`
+              - `Deploy.Sidebar` ← `apps.deploy.deployments`
+              - `Deploy.Sidebar` ← `apps.deploy.health`
+            - Contributes:
+              - `ThemeEngine.Theme` "Deploy Graphite"
+              - `Apps.App` "Deploy" → `DeployLayout`
             - Uses:
               - `apps-core.Apps`
-              - `layouts/miller.MillerColumns`
+              - `layouts/full-pane.FullPane`
               - `primitives/app-shell.AppShellLayout`
+              - `primitives/slot-render.defineRenderSlot`
+              - `ui/theme-engine.ThemeEngine`
+            - Exports (values): `Deploy`
           - Core:
             - Uses:
               - `primitives/pane.defineApp`
+              - `primitives/pane.defineRoute`
               - `ui/icons.symbol`
-            - Exports (values): `deployApp`
+            - Exports (values):
+              - `deployApp`
+              - `deployIndexRoute`
+          - Cross-plugin:
+            - Uses tokens:
+              - `ui/tokens/shadow --shadow`
+              - `ui/tokens/shadow --shadow-lg`
+              - `ui/tokens/shadow --shadow-md`
+              - `ui/tokens/shadow --shadow-sm`
+            - Imported by:
+              - `apps/deploy/deploy-history`
+              - `apps/deploy/deployments`
+              - `apps/deploy/health`
+              - `apps/deploy/servers`
         - **`site-messages`** — Umbrella for messages a deployed site's visitors send: the intake half that ships inside the site (table, public endpoint, abuse limits, notification email) and the inbox half in the local deploy app (read over SSH).
           - Plugins:
-            - **`inbox`** — Messages section of a deployment's page, shown only when the deployment's composition ships the site-messages intake: the messages visitors sent through the site, read over SSH from the box on demand, as a DataView (received, from as a reply link, the message with its full text on open, verdict, notification state), with explicit states for every way the read can fail. Reads a deployment's stored site messages over SSH through host-query's hostOnlyQueryOverSsh (the intake's host-only list, newest first) and answers a discriminated result: the page, or which of SSH, the request or the answer failed.
+            - **`inbox`** — Messages tab of a site's page, shown only when the deployment's composition ships the site-messages intake: the messages visitors sent through the site, read over SSH from the box on demand, as a DataView (received, from as a reply link, the message with its full text on open, verdict, notification state), with explicit states for every way the read can fail. Reads a deployment's stored site messages over SSH through host-query's hostOnlyQueryOverSsh (the intake's host-only list, newest first) and answers a discriminated result: the page, or which of SSH, the request or the answer failed.
               - Web:
-                - Contributes: `DeploymentDetail.Section` "Messages" → `MessagesSection`
-                - Uses:
-                  - `apps/deploy/deployments.DeploymentDetail`
-                  - `apps/deploy/host-query.HostQueryFailureState`
-                  - `apps/deploy/host-query.HostQuerySubject`
-                  - `apps/deploy/host-query.useDeploymentShips`
+                - Contributes:
+                  - `SiteTabs.View` "Messages" → `MessagesSection`
+                  - `SiteOverview.Card` "messages" → `MessagesCard`
+                - Uses: 27 symbols — full list in [`plugins/apps/plugins/deploy/plugins/site-messages/plugins/inbox/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/site-messages/plugins/inbox/REFERENCE.md)
+                  - `apps/deploy/deployments` ×7
+                  - `apps/deploy/host-query` ×3
+                  - `primitives/data-view` ×3
+                  - `primitives/relative-time` ×2
                   - `network/live.useLive`
                   - `primitives/css/card.Card`
                   - `primitives/css/fill.Fill`
@@ -2795,12 +2977,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
                   - `primitives/css/ui-kit.Button`
-                  - `primitives/data-view.DataView`
-                  - `primitives/data-view.defineDataView`
-                  - `primitives/data-view.FieldDef`
                   - `primitives/icon-button.IconButton`
+                  - `primitives/link-gesture.linkProps`
                   - `primitives/live-state.ResourceErrorInline`
                   - `primitives/loading.Loading`
+                  - `ui/icons.Icon`
               - Server:
                 - Contributes: `resource.declare` "deploy-site-messages.list"
                 - Uses:
@@ -2904,7 +3085,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Web:
             - Slots: `SshProvider`
             - Slot contributors: `SshProvider` ← `apps.deploy.ssh-setup.hetzner`
-            - Contributes: `ServerDetail.Section` "Set up SSH access" → `SshSetupSection`
+            - Contributes: `ServerDetail.Section` "SSH key" → `SshSetupSection`
             - Uses: 34 symbols — full list in [`plugins/apps/plugins/deploy/plugins/ssh-setup/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/ssh-setup/REFERENCE.md)
               - `primitives/setup-steps` ×7
               - `apps/deploy/servers` ×4
@@ -20081,8 +20262,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `quotedRelationsIn`
       - `readTag`
   - Cross-plugin:
-    - Imported by: 130 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
-      - `apps` ×36
+    - Imported by: 131 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+      - `apps` ×37
       - `page` ×15
       - `conversations` ×14
       - `infra` ×13
@@ -20636,6 +20817,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `migrationContentHash`
           - `MIGRATIONS_DATA_DIR`
           - `MIGRATIONS_PLUGIN_DIR`
+          - `MissingSnapshotBodyError`
           - `NULL_SNAPSHOT_ID`
           - `parseMigration`
           - `phaseStatements`
@@ -29815,8 +29997,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 223 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
-          - `apps` ×61
+        - Imported by: 224 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+          - `apps` ×62
           - `conversations` ×32
           - `infra` ×22
           - `page` ×19
@@ -30413,6 +30595,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `RefHeadSchema`
           - Cross-plugin:
             - Imported by:
+              - `apps/deploy/remote-deploy`
               - `plugin-meta/plugin-health`
               - `release`
               - `review/plugin-changes`
@@ -31835,17 +32018,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreeDataDir`
           - `worktreesDir`
       - Cross-plugin:
-        - Imported by: 40 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+        - Imported by: 41 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
           - `debug` ×8
           - `infra` ×6
           - `framework` ×5
           - `backup` ×4
           - `release` ×3
+          - `apps` ×2
           - `build` ×2
           - `conversations` ×2
           - `plugin-meta` ×2
           - `primitives` ×2
-          - `apps/deploy/deployments`
           - `code-explorer`
           - `reports/outbox`
           - `review/plugin-changes`
@@ -33377,6 +33560,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by:
           - `apps/chord/shell`
+          - `apps/deploy/shell`
           - `apps/file-explorer/shell`
           - `apps/home/shell`
           - `apps/places/shell`
@@ -33433,7 +33617,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/agent-manager/shell`
           - `apps/debug/shell`
           - `apps/demo/shell`
-          - `apps/deploy/shell`
           - `apps/events/shell`
           - `apps/keyboard-party/shell`
           - `apps/mail/shell`
@@ -34180,8 +34363,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `upsertRows`
           - `valueSubject`
       - Cross-plugin:
-        - Imported by: 313 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
-          - `apps` ×81
+        - Imported by: 315 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+          - `apps` ×83
           - `conversations` ×54
           - `debug` ×32
           - `tasks` ×29
@@ -39246,8 +39429,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/sidebar-palette --sidebar-accent`
           - `ui/tokens/sidebar-palette --sidebar-foreground`
           - `ui/tokens/sidebar-palette --sidebar-icon`
-        - Imported by: 26 plugins — full list in [`plugins/primitives/plugins/app-shell/REFERENCE.md`](../plugins/primitives/plugins/app-shell/REFERENCE.md)
-          - `apps` ×19
+        - Imported by: 29 plugins — full list in [`plugins/primitives/plugins/app-shell/REFERENCE.md`](../plugins/primitives/plugins/app-shell/REFERENCE.md)
+          - `apps` ×22
           - `conversations` ×2
           - `tasks` ×2
           - `apps-core/app-launcher`
@@ -39615,8 +39798,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CopyButton`
           - `useCopyToClipboard`
       - Cross-plugin:
-        - Imported by: 32 plugins — full list in [`plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md`](../plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md)
-          - `apps` ×9
+        - Imported by: 33 plugins — full list in [`plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md`](../plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md)
+          - `apps` ×10
           - `primitives` ×5
           - `page` ×4
           - `conversations` ×3
@@ -39684,8 +39867,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density` ×6
               - `ui/tokens/shape` ×2
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 167 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
-              - `apps` ×37
+            - Imported by: 168 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
+              - `apps` ×38
               - `debug` ×33
               - `conversations` ×24
               - `reports` ×14
@@ -39763,8 +39946,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CenterProps`
             - Exports (values): `Center`
           - Cross-plugin:
-            - Imported by: 128 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
-              - `apps` ×40
+            - Imported by: 130 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
+              - `apps` ×42
               - `primitives` ×26
               - `page` ×18
               - `conversations` ×8
@@ -39821,8 +40004,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `ClusterProps`
             - Exports (values): `Cluster`
           - Cross-plugin:
-            - Imported by: 66 plugins — full list in [`plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md)
-              - `apps` ×26
+            - Imported by: 65 plugins — full list in [`plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md)
+              - `apps` ×25
               - `debug` ×11
               - `conversations` ×7
               - `plugin-meta` ×6
@@ -40033,9 +40216,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Fill`
               - `fillClasses`
           - Cross-plugin:
-            - Imported by: 174 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
-              - `apps` ×51
-              - `primitives` ×30
+            - Imported by: 177 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
+              - `apps` ×53
+              - `primitives` ×31
               - `conversations` ×24
               - `debug` ×17
               - `page` ×10
@@ -40060,8 +40243,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `GridProps`
             - Exports (values): `Grid`
           - Cross-plugin:
-            - Imported by: 41 plugins — full list in [`plugins/primitives/plugins/css/plugins/grid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/grid/REFERENCE.md)
-              - `apps` ×18
+            - Imported by: 42 plugins — full list in [`plugins/primitives/plugins/css/plugins/grid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/grid/REFERENCE.md)
+              - `apps` ×19
               - `primitives` ×9
               - `ui` ×3
               - `conversations` ×2
@@ -40115,8 +40298,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `InlineProps`
             - Exports (values): `Inline`
           - Cross-plugin:
-            - Imported by: 94 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
-              - `apps` ×18
+            - Imported by: 97 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
+              - `apps` ×21
               - `reports` ×15
               - `debug` ×14
               - `primitives` ×11
@@ -40207,8 +40390,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `LineProps`
             - Exports (values): `Line`
           - Cross-plugin:
-            - Imported by: 122 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
-              - `apps` ×35
+            - Imported by: 124 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
+              - `apps` ×37
               - `primitives` ×20
               - `conversations` ×17
               - `debug` ×7
@@ -40254,11 +40437,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-medium`
               - `ui/tokens/type-scale --line-height-caption`
               - `ui/tokens/type-scale --line-height-label`
-            - Imported by: 32 plugins — full list in [`plugins/primitives/plugins/css/plugins/link-chip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/link-chip/REFERENCE.md)
+            - Imported by: 31 plugins — full list in [`plugins/primitives/plugins/css/plugins/link-chip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/link-chip/REFERENCE.md)
               - `active-data` ×9
-              - `apps` ×5
               - `conversations` ×5
               - `debug` ×5
+              - `apps` ×4
               - `primitives` ×3
               - `page` ×2
               - `plugin-meta` ×2
@@ -40362,8 +40545,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-size-body`
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-body`
-            - Imported by: 92 plugins — full list in [`plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md)
-              - `apps` ×31
+            - Imported by: 90 plugins — full list in [`plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md)
+              - `apps` ×29
               - `debug` ×18
               - `primitives` ×13
               - `page` ×7
@@ -40431,10 +40614,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --spacing`
-            - Imported by: 136 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
-              - `apps` ×34
+            - Imported by: 139 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
+              - `apps` ×36
               - `conversations` ×23
-              - `primitives` ×19
+              - `primitives` ×20
               - `debug` ×13
               - `tasks` ×8
               - `page` ×7
@@ -40626,8 +40809,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `selfClass`
               - `Stack`
           - Cross-plugin:
-            - Imported by: 423 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
-              - `apps` ×109
+            - Imported by: 422 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+              - `apps` ×108
               - `conversations` ×64
               - `primitives` ×54
               - `debug` ×38
@@ -40670,6 +40853,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `apps/browser/tabs`
+              - `apps/deploy/remote-deploy`
               - `apps/mail/attachments`
               - `apps/mail/sync-status`
               - `apps/pages/page-tree`
@@ -40710,8 +40894,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --status-dot-md`
               - `ui/tokens/density --status-dot-sm`
               - `ui/tokens/density --status-dot-xs`
-            - Imported by: 40 plugins — full list in [`plugins/primitives/plugins/css/plugins/status-dot/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/status-dot/REFERENCE.md)
-              - `apps` ×9
+            - Imported by: 42 plugins — full list in [`plugins/primitives/plugins/css/plugins/status-dot/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/status-dot/REFERENCE.md)
+              - `apps` ×11
               - `conversations` ×8
               - `debug` ×8
               - `active-data` ×3
@@ -40743,6 +40927,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --sticky-fade-tail`
             - Imported by:
               - `apps/chord/curriculum`
+              - `apps/deploy/deployments`
               - `code-explorer/commit-detail`
               - `conversations/conversation-view/jsonl-viewer`
               - `conversations/conversations-view/data-view`
@@ -40753,6 +40938,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/data-view`
               - `primitives/multi-select`
               - `primitives/pane`
+              - `primitives/tabbed-view`
               - `review/code-review`
           - Plugins:
             - **`stack`** — Sticky-stack layout primitive: <StickyStack>/<StickyStackItem> pin N sticky siblings sharing one containing block, each below the ones before it (capped; degrades to the swap hand-off).
@@ -40791,9 +40977,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/overlay --overlay-enter-duration`
               - `ui/tokens/overlay --overlay-enter-easing`
               - `ui/tokens/shadow --shadow`
-            - Imported by: 37 plugins — full list in [`plugins/primitives/plugins/css/plugins/surface/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/surface/REFERENCE.md)
-              - `apps` ×14
-              - `primitives` ×6
+            - Imported by: 40 plugins — full list in [`plugins/primitives/plugins/css/plugins/surface/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/surface/REFERENCE.md)
+              - `apps` ×16
+              - `primitives` ×7
               - `page` ×4
               - `infra` ×3
               - `map` ×2
@@ -40867,9 +41053,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family` ×2
             - Imported by: 408 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
-              - `apps` ×112
+              - `apps` ×111
               - `conversations` ×74
-              - `primitives` ×45
+              - `primitives` ×46
               - `debug` ×37
               - `page` ×24
               - `ui` ×18
@@ -40955,24 +41141,28 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Web:
             - Uses:
               - `primitives/css/badge.Badge`
+              - `primitives/css/text.Text`
               - `primitives/css/ui-kit.cn`
               - `primitives/css/ui-kit.ControlSize`
               - `primitives/css/ui-kit.DensityControlled`
               - `primitives/css/ui-kit.Tooltipped`
               - `primitives/css/ui-kit.useControlSize`
+              - `primitives/css/ui-kit.WithTooltip`
             - Exports (types):
               - `SegmentedControlProps`
               - `SegmentedOption`
+              - `SegmentedVariant`
               - `ToggleChipProps`
               - `ToggleChipVariant`
             - Exports (values):
               - `SegmentedControl`
               - `ToggleChip`
           - Cross-plugin:
-            - Uses tokens: 25 vars — full list in [`plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md)
+            - Uses tokens: 33 vars — full list in [`plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md)
+              - `ui/tokens/density` ×14
               - `ui/tokens/color-palette` ×12
-              - `ui/tokens/density` ×7
               - `ui/tokens/type-scale` ×6
+              - `ui/tokens/shape --spacing`
             - Imported by: 51 plugins — full list in [`plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md)
               - `apps` ×19
               - `primitives` ×7
@@ -41159,9 +41349,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 446 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 448 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×110
-              - `apps` ×102
+              - `apps` ×104
               - `conversations` ×53
               - `page` ×26
               - `debug` ×24
@@ -41444,8 +41634,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ← `primitives.data-view`
           - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
           - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
-        - Contributes: 99 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ConfigV2.WebRegister` ×89
+        - Contributes: 103 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ConfigV2.WebRegister` ×93
           - `DataViewSlots.Control` ×4
           - `DataViewSlots.Setting` ×4
           - `IdKinds.Kind` ×2
@@ -41618,6 +41808,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `applyFilter`
           - `cardFieldsOf`
           - `CardMeta`
+          - `CardTokens`
           - `ChipSelectFilterInput`
           - `coverDetailClass`
           - `CoverFrame`
@@ -41707,8 +41898,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useSortController`
           - `useViewRowCounts`
       - Server:
-        - Contributes: 91 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ConfigV2.Register` ×89
+        - Contributes: 95 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ConfigV2.Register` ×93
           - `ids.kind` ×2
         - Uses:
           - `config_v2.getConfig`
@@ -42054,18 +42245,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`gallery`** — Gallery view child for the data-view primitive: a responsive grid of cover cards — the cover is the card, its fields three fixed lines under it, its actions on the cover.
           - Web:
             - Contributes: `DataViewSlots.View` "Gallery" → `GalleryView`
-            - Uses: 43 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/gallery/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/gallery/REFERENCE.md)
-              - `primitives/data-view` ×26
+            - Uses: 48 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/gallery/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/gallery/REFERENCE.md)
+              - `primitives/data-view` ×27
               - `primitives/css/ui-kit` ×3
+              - `primitives/css/spacing` ×2
               - `primitives/row-actions` ×2
               - `primitives/avatar.Avatar`
               - `primitives/css/badge.Badge`
               - `primitives/css/center.Center`
+              - `primitives/css/fill.Fill`
               - `primitives/css/grid.Grid`
               - `primitives/css/inline.Inline`
               - `primitives/css/layer.Layer`
               - `primitives/css/pin.Pin`
-              - `primitives/css/spacing.Stack`
+              - `primitives/css/rigid.rigidClass`
+              - `primitives/css/surface.Surface`
               - `primitives/css/text.Text`
               - `primitives/dom/element-size.useResizeObserver`
               - `primitives/link-gesture.activationProps`
@@ -42073,27 +42267,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types):
               - `DataCardActions`
               - `DataCardProps`
+              - `GalleryViewOptions`
             - Exports (values): `DataCard`
           - Cross-plugin:
-            - Uses tokens:
-              - `ui/tokens/color-palette --background`
-              - `ui/tokens/color-palette --muted-foreground`
-              - `ui/tokens/color-palette --primary`
-              - `ui/tokens/color-palette --ring`
-              - `ui/tokens/data-view --card-meta-pad-top`
-              - `ui/tokens/data-view --card-meta-pad-x`
-              - `ui/tokens/data-view --cover-primary-fill`
-              - `ui/tokens/data-view --cover-primary-ink`
-              - `ui/tokens/data-view --cover-primary-shadow`
-              - `ui/tokens/data-view --cover-primary-size`
-              - `ui/tokens/data-view --gallery-body-pad-y`
-              - `ui/tokens/density --chrome-pad-x`
-              - `ui/tokens/density --gallery-card-min`
-              - `ui/tokens/density --gallery-card-min-compact`
-              - `ui/tokens/density --gallery-gap-x`
-              - `ui/tokens/density --gallery-gap-y`
-              - `ui/tokens/density --space-md`
-              - `ui/tokens/density --space-xl`
+            - Uses tokens: 21 vars — full list in [`plugins/primitives/plugins/data-view/plugins/gallery/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/gallery/REFERENCE.md)
+              - `ui/tokens/data-view` ×7
+              - `ui/tokens/density` ×7
+              - `ui/tokens/color-palette` ×5
               - `ui/tokens/shadow --shadow`
               - `ui/tokens/shape --radius-cover`
         - **`icons`** — Icons view child for the data-view primitive: a centred launcher grid of fixed-size tiles (the row's leading avatar filling a squircle) with the name underneath, drag-to-reorder in manual order.
@@ -43449,8 +43629,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `IconButton`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 128 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
-          - `apps` ×43
+        - Imported by: 130 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
+          - `apps` ×45
           - `primitives` ×21
           - `conversations` ×20
           - `page` ×8
@@ -43701,10 +43881,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `linkProps`
           - `openInBrowserTab`
       - Cross-plugin:
-        - Imported by: 51 plugins — full list in [`plugins/primitives/plugins/link-gesture/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/REFERENCE.md)
+        - Imported by: 54 plugins — full list in [`plugins/primitives/plugins/link-gesture/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/REFERENCE.md)
           - `primitives` ×13
           - `conversations` ×11
-          - `apps` ×6
+          - `apps` ×9
           - `page` ×4
           - `apps-core` ×3
           - `tasks` ×3
@@ -43746,26 +43926,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `NewTabLink`
               - `NewTabMenuItem`
           - Cross-plugin:
-            - Imported by:
-              - `apps/browser/webview`
-              - `apps/deploy/local-serve`
-              - `apps/deploy/servers`
-              - `apps/events/event-list`
-              - `apps/events/sources`
-              - `apps/mail/sync-status`
-              - `apps/places/places-map`
-              - `apps/prototypes/present`
-              - `apps/sonata/sources/ultimate-guitar/alignment`
-              - `apps/studio/compositions/release/release-artifact`
-              - `conversations/commit-conversation`
-              - `conversations/conversation-view/artifacts/prototype`
-              - `conversations/conversation-view/open-app`
+            - Imported by: 21 plugins — full list in [`plugins/primitives/plugins/link-gesture/plugins/new-tab/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/plugins/new-tab/REFERENCE.md)
+              - `apps` ×11
+              - `conversations` ×3
+              - `page` ×2
+              - `primitives` ×2
               - `hints/help-menu`
               - `integrations/youtube`
-              - `page/embed`
-              - `page/prototype`
-              - `primitives/overlay/image-viewer`
-              - `primitives/setup-steps`
               - `tasks/task-events`
     - **`live-state`** — Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's tab-shared /ws/notifications channel. useQueryResource reads a local async load (not a server read — those are live) as a ResourceResult.
       - Web:
@@ -43864,8 +44031,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/color-palette --destructive`
           - `ui/tokens/shadow --shadow`
-        - Imported by: 304 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
-          - `apps` ×81
+        - Imported by: 305 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
+          - `apps` ×82
           - `conversations` ×50
           - `debug` ×29
           - `ui` ×25
@@ -43962,8 +44129,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-body`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-body`
-        - Imported by: 224 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
-          - `apps` ×69
+        - Imported by: 223 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+          - `apps` ×68
           - `ui` ×23
           - `conversations` ×21
           - `primitives` ×20
@@ -45043,6 +45210,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values): `confirmDialog`
               - Cross-plugin:
                 - Imported by:
+                  - `apps/deploy/deploy-history/rollback`
                   - `apps/places/places-map`
                   - `apps/places/tag-manager`
                   - `apps/prototypes/canvas`
@@ -45161,9 +45329,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`pane`** — Unified pane primitive: Pane.define and chrome components.
       - Web:
         - Slots: `Pane.Register`
-        - Slot contributors: 93 contributors — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
-          - `Pane.Register` ×93
-        - Contributes: 121 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Slot contributors: 94 contributors — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+          - `Pane.Register` ×94
+        - Contributes: 124 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `SlotRender.ListMiddleware`
           - `WebsiteHeader` "title" → `PaneTitleItem`
           - `accountPane.Actions` "title" → `PaneTitleItem`
@@ -45208,7 +45376,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug-boot-profile.actions` "title" → `PaneTitleItem`
           - `debug-boot-profiles-list.actions` "title" → `PaneTitleItem`
           - `dependencies.actions` "title" → `PaneTitleItem`
-          - `deploymentDetailPane.Actions` "title" → `PaneTitleItem`
+          - `deploy-activity.actions` "title" → `PaneTitleItem`
+          - `deploy-deployment-detail.actions` "title" → `PaneTitleItem`
           - `eventListPane.Actions` "title" → `PaneTitleItem`
           - `eventSourceDetailPane.Actions` "title" → `PaneTitleItem`
           - `eventSourceRunPane.Actions` "title" → `PaneTitleItem`
@@ -45270,6 +45439,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `settings-config-index.actions` "title" → `PaneTitleItem`
           - `settings-profile.actions` "title" → `PaneTitleItem`
           - `shellOutputPane.Actions` "title" → `PaneTitleItem`
+          - `sitePane.Actions` "title" → `PaneTitleItem`
+          - `sitesIndexPane.Actions` "title" → `PaneTitleItem`
           - `slow-op-detail.actions` "title" → `PaneTitleItem`
           - `slowEventsPane.Actions` "title" → `PaneTitleItem`
           - `sonataLibraryPane.Actions` "title" → `PaneTitleItem`
@@ -45424,8 +45595,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-2xs`
           - `ui/tokens/density --space-md`
           - `ui/tokens/shape --spacing`
-        - Imported by: 187 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
-          - `apps` ×68
+        - Imported by: 189 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+          - `apps` ×70
           - `conversations` ×30
           - `debug` ×27
           - `active-data` ×10
@@ -45765,8 +45936,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `sortable-list/no-raw-dnd-kit` — `web` (sanctioned)
     - **`relative-time`** — Formats a Date as a human-readable relative string (just now, Nm ago, Nh ago, Nd ago — or the short now / Nm / Nh / Nd), and a running duration as a clock (m:ss). Exposes formatRelativeTime(), <RelativeTime date={…} />, formatElapsed(), useNow() and <ElapsedTime since={…} />.
       - Cross-plugin:
-        - Imported by: 62 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
-          - `apps` ×21
+        - Imported by: 65 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
+          - `apps` ×24
           - `debug` ×13
           - `conversations` ×9
           - `infra` ×4
@@ -46079,7 +46250,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-weight-semibold`
         - Imported by:
           - `apps/deploy/health`
-          - `apps/deploy/remote-deploy`
           - `apps/deploy/ssh-setup`
           - `apps/deploy/ssh-setup/hetzner`
           - `auth`
@@ -46187,8 +46357,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useSlotOrder`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/density --control-height-sm`
-        - Imported by: 88 plugins — full list in [`plugins/primitives/plugins/slot-render/REFERENCE.md`](../plugins/primitives/plugins/slot-render/REFERENCE.md)
-          - `apps` ×28
+        - Imported by: 91 plugins — full list in [`plugins/primitives/plugins/slot-render/REFERENCE.md`](../plugins/primitives/plugins/slot-render/REFERENCE.md)
+          - `apps` ×31
           - `primitives` ×14
           - `conversations` ×13
           - `ui` ×5
@@ -46439,11 +46609,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --space-md`
               - `ui/tokens/density --space-sm`
             - Imported by: `apps/sonata/sources/chord-grid`
-    - **`tabbed-view`** — Factory for slot-backed tab-host views with localStorage persistence.
+    - **`tabbed-view`** — Factory for slot-backed tab-host views: per-tab availability gates and count badges, a pill or underline tab strip, and the active tab either device-local (localStorage) or controlled by the caller (a URL param).
       - Web:
         - Uses:
           - `primitives/css/column.Column`
+          - `primitives/css/spacing.Inset`
           - `primitives/css/spacing.Stack`
+          - `primitives/css/sticky.Sticky`
           - `primitives/live-state.foldResource`
           - `primitives/live-state.ResourceErrorInline`
           - `primitives/loading.Loading`
@@ -46454,14 +46626,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/view-switcher.useActiveViewId`
           - `primitives/view-switcher.ViewSwitcher`
         - Exports (types):
+          - `TabBadge`
+          - `TabbedHostProps`
+          - `TabbedHostSelection`
           - `TabbedView`
+          - `TabbedViewOptions`
           - `TabContribution`
+          - `TabStrip`
         - Exports (values): `defineTabbedView`
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/density --space-sm`
           - `ui/tokens/density --space-xs`
-        - Imported by: `debug/trace/pane`
+        - Imported by:
+          - `apps/deploy/deployments`
+          - `debug/trace/pane`
     - **`text-editor`** — Generic Lexical-based rich text editor primitive. Plugins inject behaviors via the Plugin slot and registerNodeExtension.
       - Web:
         - Slots: `TextEditorSlots.Plugin`
@@ -47219,13 +47398,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ActiveViewState`
           - `ViewSwitcherOption`
           - `ViewSwitcherProps`
+          - `ViewSwitcherVariant`
         - Exports (values):
           - `useActiveViewId`
           - `ViewSwitcher`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by:
-          - `apps/deploy/remote-deploy`
           - `page/code-block`
           - `primitives/data-view/view-core`
           - `primitives/markdown`
@@ -47415,6 +47594,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Server:
         - Uses: `infra/paths.GIT`
         - Exports (types):
+          - `CommitLookup`
           - `GitProvenance`
           - `PruneResult`
         - Exports (values):
@@ -47423,13 +47603,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `claimLatestPointer`
           - `compareToHead`
           - `compositionReleaseDir`
+          - `countCommitsBehind`
           - `isPointerName`
           - `latestPointerName`
           - `latestPointerPath`
           - `newReleaseRunId`
           - `pruneReleaseRunDirs`
+          - `readCommitSubject`
           - `readGitProvenance`
           - `readHeadSha`
+          - `readRefSha`
           - `releaseOutDir`
           - `resolveBundle`
       - Core:
@@ -47451,6 +47634,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by:
           - `apps/deploy/deployments`
+          - `apps/deploy/remote-deploy`
           - `release`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `server/internal/claim-pointer.ts`, `server/internal/out-dir.ts`, `server/internal/pointer.ts`, `server/internal/prune.ts`, `server/internal/resolve-bundle.ts` (debt)
@@ -47501,8 +47685,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. Applies each slot's committed layout (order, hidden items, spacers, dividers, groups) everywhere slots render; a layout is edited in its config file or the Config pane's reorder-tree field. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: 264 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×264
+    - Contributes: 277 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×277
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfigResult`
@@ -47527,8 +47711,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `useLayoutOrder`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 263 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×263
+    - Contributes: 276 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×276
     - Uses: `config_v2.ConfigV2`
     - Exports (values): `reorderDirectiveDescriptor`
   - Cross-plugin:
@@ -48723,6 +48907,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
   - Cross-plugin:
     - Uses tokens: `ui/tokens/color-palette --muted-foreground`
     - Imported by:
+      - `apps/deploy/deploy-history`
       - `apps/deploy/deployments/runs-arm`
       - `backup`
       - `backup/runs-arm`
@@ -52483,8 +52668,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/shadow --shadow`
           - `ui/tokens/shape --spacing`
-        - Imported by: 357 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
-          - `apps` ×90
+        - Imported by: 363 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+          - `apps` ×96
           - `conversations` ×57
           - `primitives` ×42
           - `fields` ×41
@@ -53097,9 +53282,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ThemeEngine.SubTheme`
           - `ThemeEngine.FixedTheme`
           - `ThemeEngine.ThemeSource`
-        - Slot contributors: 48 contributors — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
+        - Slot contributors: 49 contributors — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
           - `ThemeEngine.TokenGroup` ×19
-          - `ThemeEngine.Theme` ×13
+          - `ThemeEngine.Theme` ×14
           - `ThemeEngine.SubTheme` ×6
           - `ThemeEngine.VariantGroup` ×6
           - `ThemeEngine.FixedTheme` ×2
@@ -53250,9 +53435,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shape` ×4
           - `ui/tokens/type-scale` ×4
           - `ui/tokens/data-view` ×2
-        - Imported by: 50 plugins — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
+        - Imported by: 51 plugins — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
           - `ui` ×29
-          - `apps` ×16
+          - `apps` ×17
           - `apps-core/chrome-theme`
           - `hints`
           - `menu-bar`
@@ -53618,8 +53803,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `colorPaletteGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Tokens used by: 528 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
-              - `apps` ×118
+            - Tokens used by: 530 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+              - `apps` ×120
               - `conversations` ×89
               - `primitives` ×77
               - `debug` ×36
@@ -53737,9 +53922,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 335 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+            - Tokens used by: 337 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+              - `apps` ×71
               - `primitives` ×70
-              - `apps` ×69
               - `conversations` ×48
               - `debug` ×28
               - `page` ×21
@@ -53817,10 +54002,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `fontFamilyGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Tokens used by: 152 plugins — full list in [`plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md)
+            - Tokens used by: 153 plugins — full list in [`plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md)
               - `conversations` ×36
               - `plugin-meta` ×23
-              - `apps` ×20
+              - `apps` ×21
               - `debug` ×19
               - `primitives` ×16
               - `reports` ×7
@@ -54066,8 +54251,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-3xs`
               - `ui/tokens/type-scale --line-height-caption`
-            - Tokens used by: 73 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
-              - `apps` ×29
+            - Tokens used by: 74 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
+              - `apps` ×30
               - `primitives` ×18
               - `ui` ×6
               - `framework` ×5
@@ -54104,10 +54289,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `shapeGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --radius-chip-compact`
-            - Tokens used by: 435 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+            - Tokens used by: 438 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
               - `conversations` ×92
-              - `apps` ×85
-              - `primitives` ×71
+              - `apps` ×87
+              - `primitives` ×72
               - `page` ×36
               - `ui` ×32
               - `debug` ×28

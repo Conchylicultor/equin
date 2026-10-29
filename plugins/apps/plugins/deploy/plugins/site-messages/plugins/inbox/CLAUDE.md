@@ -1,6 +1,6 @@
 # inbox
 
-The deployment page's **Messages** section: what visitors sent through the
+The site page's **Messages** tab (and the Overview's messages card): what visitors sent through the
 deployed site's contact form ([`intake`](../intake/CLAUDE.md)), read from the
 box. It stores nothing.
 
@@ -27,14 +27,16 @@ box. It stores nothing.
 
 ## Plugin reference
 
-- Description: Messages section of a deployment's page, shown only when the deployment's composition ships the site-messages intake: the messages visitors sent through the site, read over SSH from the box on demand, as a DataView (received, from as a reply link, the message with its full text on open, verdict, notification state), with explicit states for every way the read can fail. Reads a deployment's stored site messages over SSH through host-query's hostOnlyQueryOverSsh (the intake's host-only list, newest first) and answers a discriminated result: the page, or which of SSH, the request or the answer failed.
+- Description: Messages tab of a site's page, shown only when the deployment's composition ships the site-messages intake: the messages visitors sent through the site, read over SSH from the box on demand, as a DataView (received, from as a reply link, the message with its full text on open, verdict, notification state), with explicit states for every way the read can fail. Reads a deployment's stored site messages over SSH through host-query's hostOnlyQueryOverSsh (the intake's host-only list, newest first) and answers a discriminated result: the page, or which of SSH, the request or the answer failed.
 - Web:
-  - Contributes: `DeploymentDetail.Section` "Messages" → `MessagesSection`
-  - Uses:
-    - `apps/deploy/deployments.DeploymentDetail`
-    - `apps/deploy/host-query.HostQueryFailureState`
-    - `apps/deploy/host-query.HostQuerySubject`
-    - `apps/deploy/host-query.useDeploymentShips`
+  - Contributes:
+    - `SiteTabs.View` "Messages" → `MessagesSection`
+    - `SiteOverview.Card` "messages" → `MessagesCard`
+  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps/deploy/deployments` ×7
+    - `apps/deploy/host-query` ×3
+    - `primitives/data-view` ×3
+    - `primitives/relative-time` ×2
     - `network/live.useLive`
     - `primitives/css/card.Card`
     - `primitives/css/fill.Fill`
@@ -42,12 +44,11 @@ box. It stores nothing.
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
-    - `primitives/data-view.DataView`
-    - `primitives/data-view.defineDataView`
-    - `primitives/data-view.FieldDef`
     - `primitives/icon-button.IconButton`
+    - `primitives/link-gesture.linkProps`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
+    - `ui/icons.Icon`
 - Server:
   - Contributes: `resource.declare` "deploy-site-messages.list"
   - Uses:

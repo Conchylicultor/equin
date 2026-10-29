@@ -13,7 +13,11 @@ import { ApprovalLinks } from "./approval-links";
  * is the `title`, and it also appears in full in {@link RunFailureNotice} above
  * the list; the whole transcript is in the row's pane, under Output.
  */
-export function RunCell({ run }: { run: DeployRun | undefined }): ReactElement | null {
+export function RunCell({
+  run,
+}: {
+  run: DeployRun | undefined;
+}): ReactElement | null {
   if (!run) return null;
 
   if (run.status === "running") {
@@ -111,7 +115,12 @@ export function RunFailureNotice({
         )}
       </Text>
       {last.message && (
-        <Text as="p" variant="caption" tone="destructive" className="whitespace-pre-wrap">
+        <Text
+          as="p"
+          variant="caption"
+          tone="destructive"
+          className="whitespace-pre-wrap"
+        >
           {last.message}
         </Text>
       )}

@@ -5,6 +5,7 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export { DataCard } from "./components/data-card";
 export type { DataCardActions, DataCardProps } from "./components/data-card";
+export type { GalleryViewOptions } from "./internal/options";
 
 export default {
   description:

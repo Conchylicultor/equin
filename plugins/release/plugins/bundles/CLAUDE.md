@@ -114,6 +114,7 @@ process can import it.
 - Server:
   - Uses: `infra/paths.GIT`
   - Exports (types):
+    - `CommitLookup`
     - `GitProvenance`
     - `PruneResult`
   - Exports (values):
@@ -122,13 +123,16 @@ process can import it.
     - `claimLatestPointer`
     - `compareToHead`
     - `compositionReleaseDir`
+    - `countCommitsBehind`
     - `isPointerName`
     - `latestPointerName`
     - `latestPointerPath`
     - `newReleaseRunId`
     - `pruneReleaseRunDirs`
+    - `readCommitSubject`
     - `readGitProvenance`
     - `readHeadSha`
+    - `readRefSha`
     - `releaseOutDir`
     - `resolveBundle`
 - Core:
@@ -150,6 +154,7 @@ process can import it.
 - Cross-plugin:
   - Imported by:
     - `apps/deploy/deployments`
+    - `apps/deploy/remote-deploy`
     - `release`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/claim-pointer.ts`, `server/internal/out-dir.ts`, `server/internal/pointer.ts`, `server/internal/prune.ts`, `server/internal/resolve-bundle.ts` (debt)

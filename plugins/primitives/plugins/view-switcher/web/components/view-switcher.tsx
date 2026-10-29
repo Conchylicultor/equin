@@ -7,18 +7,30 @@ export interface ViewSwitcherOption {
   id: string;
   title: string;
   icon: IconRef;
+  /** A count drawn after the title as a filled pill (unread messages). Absent ⇒ none. */
+  count?: number;
 }
+
+/**
+ * The switcher's look: `"pill"` (default) — borderless ghost pills, the Notion
+ * view bar; `"underline"` — a tab strip on a hairline, the selected tab
+ * underlined (a page's section tabs).
+ */
+export type ViewSwitcherVariant = "pill" | "underline";
 
 export interface ViewSwitcherProps {
   options: readonly ViewSwitcherOption[];
   activeId: string;
   onSelect: (id: string) => void;
+  /** Default `"pill"`. */
+  variant?: ViewSwitcherVariant;
   className?: string;
 }
 
 /**
- * Presentational view-switcher chrome: borderless ghost pills (the Notion look),
- * built on `SegmentedControl variant="ghost"`. Pure chrome — no localStorage, no
+ * Presentational view-switcher chrome: borderless ghost pills (the Notion look,
+ * `SegmentedControl variant="ghost"`) or an underline tab strip
+ * (`variant="underline"`). Pure chrome — no localStorage, no
  * slots, no config; selection state stays with the caller. Renders nothing when
  * there is one option or fewer.
  */
@@ -26,6 +38,7 @@ export function ViewSwitcher({
   options,
   activeId,
   onSelect,
+  variant = "pill",
   className,
 }: ViewSwitcherProps): ReactNode {
   if (options.length <= 1) return null;
@@ -42,11 +55,11 @@ export function ViewSwitcher({
             className="size-3.5"
           />
         ),
-        title: opt.title,
+        count: opt.count,
       }))}
       value={activeId}
       onChange={onSelect}
-      variant="ghost"
+      variant={variant === "pill" ? "ghost" : "underline"}
       className={className}
     />
   );

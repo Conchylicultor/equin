@@ -2,8 +2,12 @@
 
 The shared **view-switching primitive**. It offers two things:
 
-- The `<ViewSwitcher>` **component** — borderless ghost-pill `SegmentedControl`
-  chrome mapping `{ id, title, icon }` options to a single-select switcher. It
+- The `<ViewSwitcher>` **component** — `SegmentedControl` chrome mapping
+  `{ id, title, icon, count? }` options to a single-select switcher, in one of
+  two looks (`variant`): `"pill"` (default, borderless ghost pills — the Notion
+  view bar) or `"underline"` (a tab strip on a hairline, the selected tab
+  underlined; a page's section tabs). `count` draws a filled count pill after
+  the title. It
   stays **pure-presentational**: selection state is owned and passed by the
   caller (`activeId` + `onSelect`).
 - The opt-in **`useActiveViewId(storageKey)` hook** — device-local active-id
@@ -30,13 +34,13 @@ The shared **view-switching primitive**. It offers two things:
     - `ActiveViewState`
     - `ViewSwitcherOption`
     - `ViewSwitcherProps`
+    - `ViewSwitcherVariant`
   - Exports (values):
     - `useActiveViewId`
     - `ViewSwitcher`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
-    - `apps/deploy/remote-deploy`
     - `page/code-block`
     - `primitives/data-view/view-core`
     - `primitives/markdown`

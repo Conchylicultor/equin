@@ -90,7 +90,7 @@ export {
   coverDetailClass,
 } from "./components/cover-frame";
 export type { CoverFrameProps } from "./components/cover-frame";
-export { CardMeta } from "./components/card-meta";
+export { CardMeta, CardTokens } from "./components/card-meta";
 export { CreateButton } from "./components/creators-control";
 export type { CardMetaProps } from "./components/card-meta";
 export { resolveCover, pickCoverField } from "./internal/cover";

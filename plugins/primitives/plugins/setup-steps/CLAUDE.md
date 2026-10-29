@@ -45,7 +45,6 @@
     - `ui/tokens/type-scale --font-weight-semibold`
   - Imported by:
     - `apps/deploy/health`
-    - `apps/deploy/remote-deploy`
     - `apps/deploy/ssh-setup`
     - `apps/deploy/ssh-setup/hetzner`
     - `auth`

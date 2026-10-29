@@ -32,15 +32,23 @@ export function DeleteDeploymentDialog({
   return (
     <Stack gap="md">
       <Stack gap="xs">
-        <DialogTitle>Delete the {deployment.compositionId} deployment?</DialogTitle>
+        <DialogTitle>
+          Delete the {deployment.compositionId} deployment?
+        </DialogTitle>
         <DialogDescription>
           This forgets the record only. Nothing on the server changes.
         </DialogDescription>
         <Text as="p" variant="body" tone="muted">
-          The install keeps running: <Text as="code" variant="body">{install.unit}</Text>{" "}
-          stays enabled and <Text as="code" variant="body">{install.installDir}</Text>{" "}
-          stays on disk. There is no de-converge command — tear it down on the host
-          if you want it gone.
+          The install keeps running:{" "}
+          <Text as="code" variant="body">
+            {install.unit}
+          </Text>{" "}
+          stays enabled and{" "}
+          <Text as="code" variant="body">
+            {install.installDir}
+          </Text>{" "}
+          stays on disk. There is no de-converge command — tear it down on the
+          host if you want it gone.
         </Text>
       </Stack>
       <Stack direction="row" align="center" gap="sm">

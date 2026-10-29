@@ -11,3 +11,5 @@ export {
   stalenessSentence,
 } from "./internal/provenance";
 export { releaseFields } from "./internal/release-fields";
+export { runningCommit } from "./internal/running-commit";
+export type { RunningCommit } from "./internal/running-commit";

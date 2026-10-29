@@ -347,6 +347,19 @@ new file then carries DDL the deleted ones never ran) or when the branch carries
 a merge node; the build then warns that a database which applied the deleted
 files must be re-forked (`./equin db fork --replace`).
 
+**The deleted tip's body may be nowhere** — a branch migration that was never
+committed, in a tree whose `schema.snapshot.json` is main's (a stash re-applied
+over a rebase keeps main's tip file). The reset needs no body to drop the files
+and regenerate against main's tip, so this is not a failure:
+`snapshotBodies` throws the typed `MissingSnapshotBodyError`, `readResetPrior`
+catches exactly it and records the deleted files' own statements instead
+(`schema.kind: "ddl"`), and `resetLineage` writes the header when the
+regenerated migration's phases hold exactly those statements, in order (the
+DDL a database that applied them already ran). Anything else — other
+statements, an unphased deleted file — gets no header and the usual re-fork
+warning; a reset that regenerates nothing cannot prove an adoption without the
+body and says so. Every other missing body stays a loud throw.
+
 **A reset that regenerates nothing** — the branch's delta already landed on main
 through someone else's published migration, under another hash — writes an
 **adoption file** instead (`…__adopt_published.sql`, no snapshot header,
@@ -631,6 +644,7 @@ only agreement that matters.
     - `migrationContentHash`
     - `MIGRATIONS_DATA_DIR`
     - `MIGRATIONS_PLUGIN_DIR`
+    - `MissingSnapshotBodyError`
     - `NULL_SNAPSHOT_ID`
     - `parseMigration`
     - `phaseStatements`

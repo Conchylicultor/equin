@@ -49,6 +49,24 @@ import {
 } from "./schema-snapshot";
 import type { Snapshot } from "./snapshot-merge";
 
+/**
+ * No source holds snapshot `id`'s body: not the working tree, not git (an
+ * ordinary header node whose `.sql` was never committed, while the tip file
+ * is another snapshot's). A caller that can do without the body (a reset's
+ * lineage proof, `reset-lineage.ts`) catches exactly this; every other
+ * failure to read one stays a plain throw.
+ */
+export class MissingSnapshotBodyError extends Error {
+  constructor(
+    readonly id: string,
+    readonly file: string,
+    message: string,
+  ) {
+    super(message);
+    this.name = "MissingSnapshotBodyError";
+  }
+}
+
 /** A drizzle snapshot, parsed. */
 export type SnapshotBody = Record<string, unknown>;
 
@@ -177,7 +195,9 @@ export function snapshotBodies(root: string, dataDir: string): SnapshotBodies {
       }
       tried.push(`the tip file at ${seen.size} reflog commit(s)`);
     }
-    throw new Error(
+    throw new MissingSnapshotBodyError(
+      node.id,
+      node.file,
       `no body for snapshot ${node.id} (${node.file}): it is not in the working tree, and git has it nowhere ` +
         `(tried ${tried.join(", ")}).${await shallowHint()} ` +
         "Report it — never hand-write a snapshot.",

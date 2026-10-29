@@ -1,5 +1,5 @@
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
-import { and, eq, isNotNull, isNull } from "drizzle-orm";
+import { and, desc, eq, isNotNull, isNull, or } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import { serveValue } from "@plugins/network/plugins/live/server";
@@ -38,6 +38,44 @@ import {
 } from "./verb-outcome";
 import { _deployRuns } from "./tables";
 import { deployRunIdKind } from "../../core/id-kinds";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/server";
+import { _releaseRuns } from "@plugins/release/server";
+import { readCommitSubject } from "@plugins/release/plugins/bundles/server";
+import { releaseRunIdKind } from "@plugins/release/plugins/bundles/core";
+
+/** The `commit_sha` / `commit_subject` pair a run row is stamped with. */
+interface CommitStamp {
+  readonly commitSha: string | null;
+  readonly commitSubject: string | null;
+}
+
+/**
+ * The commit columns for `sha`: its subject read from git in the same breath,
+ * so the two are always written together. The subject stays null when there is
+ * no sha, or when this repository does not know it (a bundle cut in another
+ * clone) — the sha is still the honest record of what shipped.
+ */
+async function commitOfStamp(sha: string | null): Promise<CommitStamp> {
+  if (sha === null) return { commitSha: null, commitSubject: null };
+  const lookup = await readCommitSubject(sha, REPO_ROOT);
+  return {
+    commitSha: sha,
+    commitSubject: lookup.kind === "known" ? lookup.subject : null,
+  };
+}
+
+/**
+ * The commit a release run was cut from, as its own ledger row records it —
+ * null when the row names none (a run that never wrote a manifest) or when this
+ * namespace has no row for it (a hand-run `./equin release` writes none).
+ */
+async function releaseCommitSha(releaseRunId: string): Promise<string | null> {
+  const [row] = await db
+    .select({ commitSha: _releaseRuns.commitSha })
+    .from(_releaseRuns)
+    .where(eq(_releaseRuns.id, releaseRunIdKind.key(releaseRunId)));
+  return row?.commitSha ?? null;
+}
 
 /** The index the claiming INSERT contends on — see `tables.ts`. */
 const INFLIGHT_UQ = "deploy_runs_server_inflight_uq";
@@ -90,10 +128,21 @@ async function publishLiveRun(
     .from(_deployRuns)
     .where(eq(_deployRuns.id, deployRunIdKind.key(runId)));
   if (!row) throw new Error(`[deploy] no run row for ${runId}`);
+  const run = liveRunOf(row, phase);
+  runs.set(run.deploymentId, run);
+  deployRunsServed.notify();
+  return run;
+}
+
+/** One ledger row as its live-view entry; `phase` applies to an `update` only. */
+function liveRunOf(
+  row: typeof _deployRuns.$inferSelect,
+  phase: DeployPhase,
+): DeployRun {
   // Parsed rather than cast: `verb` and `status` are plain `text` columns, and a
   // value outside the union must fail here rather than reach the client as a
   // shape it will render as nothing.
-  const run = DeployRunSchema.parse({
+  return DeployRunSchema.parse({
     id: row.id,
     deploymentId: row.deploymentId,
     serverId: row.serverId,
@@ -102,6 +151,7 @@ async function publishLiveRun(
     phase: row.verb === "update" ? phase : null,
     release: row.releaseRunId,
     commitSha: row.commitSha,
+    commitSubject: row.commitSubject,
     status: row.status,
     startedAt: row.startedAt.toISOString(),
     finishedAt: row.finishedAt?.toISOString() ?? null,
@@ -109,9 +159,6 @@ async function publishLiveRun(
     message: row.message,
     approvalSections: row.approvalSections,
   });
-  runs.set(run.deploymentId, run);
-  deployRunsServed.notify();
-  return run;
 }
 
 /**
@@ -138,6 +185,10 @@ export async function claimRun(opts: {
 }): Promise<DeployRun> {
   const { deployment, body } = opts;
   const id = deployRunIdKind.mint();
+  const pinnedRelease = body.verb === "ship" ? (body.release ?? null) : null;
+  const pinnedCommit = await commitOfStamp(
+    pinnedRelease === null ? null : await releaseCommitSha(pinnedRelease),
+  );
   try {
     await db.insert(_deployRuns).values({
       id,
@@ -149,9 +200,12 @@ export async function claimRun(opts: {
       // ship that named no run legitimately pinned nothing, and an update has
       // not resolved its bundle yet — `pinShipBundle` writes it just before the
       // ship leg is spawned.
-      releaseRunId: body.verb === "ship" ? (body.release ?? null) : null,
-      // Only knowable once a bundle resolves, which no verb has done yet.
-      commitSha: null,
+      releaseRunId: pinnedRelease,
+      // A ship pinning a release run names its commit through that run's own
+      // record (`release_runs.commit_sha`, read off the same RELEASE.json the
+      // CLI ships). Otherwise only knowable once a bundle resolves, which no
+      // verb has done yet.
+      ...pinnedCommit,
       status: "running",
       startedAt: new Date(),
       launchedFrom: runtimeNamespace(),
@@ -280,9 +334,10 @@ export async function pinShipBundle(
   runId: string,
   pin: { release: string; commitSha: string | null },
 ): Promise<void> {
+  const commit = await commitOfStamp(pin.commitSha);
   await db
     .update(_deployRuns)
-    .set({ releaseRunId: pin.release, commitSha: pin.commitSha })
+    .set({ releaseRunId: pin.release, ...commit })
     .where(
       and(
         eq(_deployRuns.id, deployRunIdKind.key(runId)),
@@ -641,6 +696,7 @@ function reattachRun(legId: string): void {
  * "Building" rather than a ship that has not started.
  */
 export async function reconcileDeployLiveView(): Promise<void> {
+  await seedNewestRuns();
   const rows = await db
     .select({ id: _deployRuns.id, legRunId: _deployRuns.legRunId })
     .from(_deployRuns)
@@ -663,6 +719,54 @@ export async function reconcileDeployLiveView(): Promise<void> {
       });
     }
   }
+}
+
+/**
+ * Put every deployment's newest run back in the live view, at boot —
+ * what makes the map mean what `deployRuns` promises ("every deployment's most
+ * recent run") rather than "the runs this process has seen". Without it a site
+ * deployed before the restart reads "Not deployed" on every surface folding
+ * `runs[id]` (the sites index, the sidebar dots, a server's sites) until its
+ * next run.
+ *
+ * Bounded by construction: `DISTINCT ON (deployment_id)`, one row per
+ * deployment (served by `deploy_runs_deployment_started_idx`). An entry the
+ * ledger's `onReattach` already published is never overwritten, and an open
+ * row this namespace launched is re-published by the open-run pass after this.
+ *
+ * An open row launched by ANOTHER namespace (inherited through the DB fork, or
+ * written before supervision existed) is skipped: no process here will ever
+ * close it, and seeding it as `running` would wedge the UI the way
+ * `deploy_runs_server_inflight_uq` is keyed (launched_from, server_id) to keep
+ * the DB from wedging — `useBlockedReason` would block every deploy on its
+ * server and the site would read "Deploying…" for good. Such a deployment
+ * falls back to its newest FINISHED row. One notify for the whole seed.
+ */
+async function seedNewestRuns(): Promise<void> {
+  const newest = await db
+    .selectDistinctOn([_deployRuns.deploymentId])
+    .from(_deployRuns)
+    .where(
+      or(
+        isNotNull(_deployRuns.finishedAt),
+        eq(_deployRuns.launchedFrom, runtimeNamespace()),
+      ),
+    )
+    .orderBy(_deployRuns.deploymentId, desc(_deployRuns.startedAt));
+  let seeded = false;
+  for (const row of newest) {
+    if (runs.has(row.deploymentId)) continue;
+    // A finished update's phase is the leg it died on, else its last (ship);
+    // an open one's, the leg its row names.
+    const phase =
+      row.finishedAt === null
+        ? phaseOfOpenRow(row.legRunId)
+        : (row.phaseFailed ?? "ship");
+    const run = liveRunOf(row, phase);
+    runs.set(run.deploymentId, run);
+    seeded = true;
+  }
+  if (seeded) deployRunsServed.notify();
 }
 
 /** Which phase an open row is in, from the leg it names and whether it ran. */

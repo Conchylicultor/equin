@@ -92,15 +92,18 @@ Run with `./equin test plugins/apps/plugins/deploy/plugins/analytics/plugins/das
 
 ## Plugin reference
 
-- Description: Analytics section of a deployment's page, shown only when the deployment's composition ships the collect plugin: range and comparison controls, KPI tiles choosing a trend line with a dashed previous period, ranked Pages / Sources / Locations / Devices / Events panels whose rows filter the whole dashboard (one filter on ranges past the raw window), and what one visit records. Reads the report over SSH on demand, with explicit states for every failure. Reads a deployment's analytics report over SSH through host-query's hostOnlyQueryOverSsh (the install's host-only report, curled through its own gateway on the loopback port) and answers a discriminated result (report, refused, or which of SSH, the request or the answer failed).
+- Description: Analytics tab of a site's page, shown only when the deployment's composition ships the collect plugin: range and comparison controls, KPI tiles choosing a trend line with a dashed previous period, ranked Pages / Sources / Locations / Devices / Events panels whose rows filter the whole dashboard (one filter on ranges past the raw window), and what one visit records. Reads the report over SSH on demand, with explicit states for every failure. Reads a deployment's analytics report over SSH through host-query's hostOnlyQueryOverSsh (the install's host-only report, curled through its own gateway on the loopback port) and answers a discriminated result (report, refused, or which of SSH, the request or the answer failed).
 - Web:
-  - Contributes: `DeploymentDetail.Section` "Analytics" → `AnalyticsSection`
-  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Contributes:
+    - `SiteTabs.View` "Analytics" → `AnalyticsSection`
+    - `SiteOverview.Card` "traffic" → `TrafficCard`
+    - `SiteOverview.Card` "top" → `TopCards`
+  - Uses: 38 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps/deploy/deployments` ×6
     - `apps/deploy/host-query` ×5
     - `primitives/css/coords` ×2
     - `primitives/css/text` ×2
     - `primitives/css/ui-kit` ×2
-    - `apps/deploy/deployments.DeploymentDetail`
     - `network/live.useLive`
     - `primitives/collapsible.FoldMotion`
     - `primitives/css/badge.Badge`
@@ -117,9 +120,11 @@ Run with `./equin test plugins/apps/plugins/deploy/plugins/analytics/plugins/das
     - `primitives/css/switch.Switch`
     - `primitives/css/toggle-chip.SegmentedControl`
     - `primitives/icon-button.IconButton`
+    - `primitives/link-gesture.linkProps`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/relative-time.RelativeTime`
+    - `ui/icons.Icon`
 - Server:
   - Contributes: `resource.declare` "deploy-analytics.report"
   - Uses:

@@ -4,9 +4,12 @@
 [`research/2026-08-05-global-deploy-pane-test-locally-and-one-button-deploy.md`](../../../../../../research/2026-08-05-global-deploy-pane-test-locally-and-one-button-deploy.md)
 (Phase C).
 
-One contribution: `DeploymentDetail.Section` "History", a live `DataView` over
-`deployRunHistory` (`source={deployHistorySource.scoped({ where: { deploymentId }
-})}` — the deployment is the scope, stated as data). It owns no state and no
+Contributions: the site page's **Deployments** tab (`SiteTabs.View`), a live
+`DataView` over `deployRunHistory` (`source={deployHistorySource.scoped({ where:
+{ deploymentId } })}` — the deployment is the scope, stated as data); the
+Overview's recent-deployments card (`SiteOverview.Card`); and the app-wide
+**Activity** page (`activityPane`, a `Deploy.Sidebar` entry) over the same
+ledger, unscoped. It owns no state and no
 writes — the ledger is the [`deployments`](../deployments/CLAUDE.md) sibling's
 `deploy_runs` table, written by the same two functions that write the live
 `deploy.runs` map. A run opening, finishing or failing reaches its row through
@@ -16,14 +19,14 @@ window with no cap. The surface's custom columns sort and filter it server-side
 `e2e/history-live-verify.ts` drives a custom value through the API and watches
 the row drop out, come back and move, and a status flip land, without a reload.
 
-## What this section is for
+## What this history is for
 
 `deploy.runs` is in-memory, so a backend restart empties it — which is correct
 for a *live* view (the spawned CLI is not detached; after a restart nothing is
-running) and useless as a record. Before this section the pane simply could not
+running) and useless as a record. Before this history the pane simply could not
 answer *"what is live on this box, and what happened before"* after a reboot, and
 the four-step UI it replaced used to say so in a step note. **The point of this
-section is to make that caveat false, not to restate it.**
+history is to make that caveat false, not to restate it.**
 
 ## Reading the row
 
@@ -34,7 +37,7 @@ section is to make that caveat false, not to restate it.**
   `deploy_runs.message` with nothing rewritten around it. That is also why the
   list view goes through `renderRow`: the field-driven default joins every
   non-primary field into one truncated subtitle, which would clip exactly the
-  sentence this section exists to preserve. The field schema still drives sort /
+  sentence this tab exists to preserve. The field schema still drives sort /
   filter / search and the whole table view;
 - **the commit can be absent, and that is an answer.** It is filled from the
   pinned bundle's own manifest, so an `update` has one and a converge does not;
@@ -65,23 +68,50 @@ with `releaseDetailRoute` and `{ runId }` would make this chip a cross-app link.
 
 ## Plugin reference
 
-- Description: History section of the deployment pane: this deployment's durable run ledger (`deploy_runs`) as a live DataView window (`deployRunHistory`, sortable and filterable by the surface's custom columns) — outcome and the leg a failure died on, verb, short commit, pinned release run, duration and relative time, with a failed run's CLI message verbatim. The record beside the in-memory live view, so what happened here survives a backend restart. Owns the row-action slot its children hang a failed run's next step off.
+- Description: The Activity page (/deploy/activity, its sidebar entry): every deploy run across every site as the merged runs surface (RunsDataView) with its own view pills — Recent, Running, Needs approval, Failed. Deployments tab of a site's page: this deployment's durable run ledger (`deploy_runs`) as a live DataView window (`deployRunHistory`, sortable and filterable by the surface's custom columns) — outcome and the leg a failure died on, verb, short commit, pinned release run, duration and relative time, with a failed run's CLI message verbatim. The record beside the in-memory live view, so what happened here survives a backend restart. Owns the row-action slot its children hang a failed run's next step off.
 - Web:
-  - Slots: `DeployRunItemActions`
-  - Contributes: `DeploymentDetail.Section` "History" → `DeployHistorySection`
-  - Uses:
-    - `apps/deploy/deployments.ApprovalLinks`
-    - `apps/deploy/deployments.DeploymentDetail`
-    - `primitives/css/spacing.Stack`
+  - Slots:
+    - `DeployRunItemActions`
+    - `deploy-activity.actions`
+  - Slot contributors:
+    - `DeployRunItemActions` ← `apps.deploy.deploy-history.rollback`
+    - `deploy-activity.actions` ← `primitives.pane`
+  - Contributes:
+    - `Pane.Register` "deploy-activity"
+    - `Deploy.Sidebar` "Activity"
+    - `SiteTabs.View` "Deployments" → `DeployHistorySection`
+    - `SiteOverview.Card` "deployments" → `DeployOverviewCard`
+  - Uses: 35 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps/deploy/deployments` ×8
+    - `primitives/data-view` ×6
+    - `primitives/live-state` ×3
+    - `primitives/pane` ×3
+    - `primitives/css/spacing` ×2
+    - `apps/deploy/shell.Deploy`
+    - `network/live.useLive`
+    - `primitives/app-shell.opensPane`
+    - `primitives/css/badge.Badge`
+    - `primitives/css/fill.Fill`
+    - `primitives/css/line.Line`
+    - `primitives/css/status-dot.StatusDot`
     - `primitives/css/text.Text`
-    - `primitives/data-view.DataView`
-    - `primitives/data-view.defineDataView`
-    - `primitives/data-view.defineItemActions`
-    - `primitives/data-view.FieldDef`
-    - `primitives/data-view.fieldOverrides`
-    - `primitives/data-view.liveDataSource`
+    - `primitives/css/ui-kit.Button`
+    - `primitives/link-gesture.linkProps`
+    - `primitives/relative-time.RelativeTime`
+    - `runs.RunsDataView`
+    - `ui/icons.Icon`
   - Exports (values): `DeployRunItemActions`
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --destructive`
+    - `ui/tokens/color-palette --primary`
+    - `ui/tokens/color-palette --success`
+    - `ui/tokens/color-palette --warning`
+    - `ui/tokens/density --space-2xl`
+    - `ui/tokens/density --space-xl`
+  - Imported by: `apps/deploy/deploy-history/rollback`
 - Sub-plugins:
-  - **`investigate-failure`** — Contributes the investigate row action to every failed run in a deployment's History, launching an agent briefed on that failure — the CLI's own message verbatim, the run's identity and pinned…
+  - **`investigate-failure`** — Contributes the site page's failure banner (the newest run failed: its leg, the CLI's message verbatim, what the box still serves, Investigate) and the investigate row action to every failed run in…
+  - **`rollback`** — Contributes the roll-back row action to every succeeded run in a deployment's History: after a confirm, it ships that run's pinned release bundle again (`ship --release <id>`). Disabled, with the…
 
 <!-- AUTOGENERATED:END -->

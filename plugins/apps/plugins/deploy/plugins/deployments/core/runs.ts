@@ -145,6 +145,12 @@ export const DeployRunSchema = z.object({
    * plausible wrong answer is worse than an absent one.
    */
   commitSha: z.string().nullable(),
+  /**
+   * That commit's subject line (`git log -1 --format=%s <sha>`), stamped in the
+   * same write as `commitSha`. Null wherever `commitSha` is, on rows written
+   * before the column existed, and when this repository does not know the sha.
+   */
+  commitSubject: z.string().nullable(),
   status: z.enum(DEPLOY_RUN_STATUSES),
   startedAt: z.string(),
   /** Null while `running`. */
@@ -158,7 +164,7 @@ export const DeployRunSchema = z.object({
    */
   message: z.string().nullable(),
   /**
-   * A `needs-approval` run's links: the ids of the deployment pane's sections
+   * A `needs-approval` run's links: the ids of the site Settings tab's sections
    * where what it waits on is approved (`DeployGatesVerdict.resolveIn`). Empty
    * on every other run.
    */
@@ -215,6 +221,8 @@ export const DeployRunRecordSchema = z.object({
   releaseRunId: z.string().nullable(),
   /** The commit that bundle was built from, or null — as on the live run. */
   commitSha: z.string().nullable(),
+  /** That commit's subject line, or null — as on the live run. */
+  commitSubject: z.string().nullable(),
   /**
    * `running` now means running. A backend that died mid-run used to leave the
    * row here forever, because the process that would have stamped the outcome
@@ -270,6 +278,8 @@ export const deployRunFields = {
   releaseRunId: nullable(identifierField({ label: "Release run" })),
   /** The commit the shipped bundle was built from. Null where genuinely unknown. */
   commitSha: nullable(identifierField({ label: "Commit" })),
+  /** The commit's subject line. Null wherever the sha is, and on older rows. */
+  commitSubject: nullable(textField({ label: "Commit subject" })),
   status: enumTextField(DEPLOY_RUN_STATUSES, {
     label: "Outcome",
     primary: true,
@@ -321,7 +331,7 @@ export const deployRunsEntityRef = entityRef("deploy_runs", deployRunFields);
 const DEPLOY_HISTORY_VIEW_ID = "deploy.deployment.history";
 
 /**
- * The `deploy_runs` ledger as a live window — the deployment pane's History
+ * The `deploy_runs` ledger as a live window — the site page's Deployments tab
  * DataView source (research/2026-09-29-global-scoped-change-routing.md P3), the
  * pane scoping it to one deployment (`scoped({ where: { deploymentId } })`).
  * A run opening, finishing or failing reaches the tuples holding it through
@@ -340,6 +350,7 @@ export const deployRunHistory = liveCollection("deploy.run-history", {
     "status",
     "verb",
     "commitSha",
+    "commitSubject",
     "releaseRunId",
     "startedAt",
     "message",

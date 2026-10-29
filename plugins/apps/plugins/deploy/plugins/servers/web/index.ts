@@ -1,7 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { serversRootPane, serverDetailPane } from "./panes";
-import { ServerDetail } from "./slots";
+import { ServerDetail, ServerHeader } from "./slots";
 import { ServerEditForm } from "./components/server-edit-form";
 import { ServerDeleteAction } from "./components/server-delete-action";
 import {
@@ -12,7 +12,8 @@ import { IdKinds } from "@plugins/ids/web";
 import { deployServerIdKind } from "../core";
 
 export { serversRootPane, serverDetailPane, NEW_SERVER_ID } from "./panes";
-export { ServerDetail } from "./slots";
+export { ServerDetail, ServerHeader } from "./slots";
+export type { ServerDetailColumn, ServerHeaderPart } from "./slots";
 export {
   generateSshKeypair,
   importSshPrivateKey,
@@ -39,15 +40,24 @@ export default {
     // once reorder can pin an entry *in place*.
     ServerDetail.Section({
       id: "identity",
-      label: "Server",
+      label: "Connection",
+      column: "main",
       component: ServerEditForm,
-      actions: ServerDeleteAction,
+      useDefaultOpen: () => true,
+    }),
+    // The destructive verb, apart from the fields it used to ride the header of.
+    ServerDetail.Section({
+      id: "danger-zone",
+      label: "Danger zone",
+      column: "main",
+      component: ServerDeleteAction,
       useDefaultOpen: () => true,
     }),
     ServerItemActions({ id: "open-console", component: OpenConsoleAction }),
   ],
   slots: {
     ...ServerDetail,
+    ...ServerHeader,
     itemActions: ServerItemActions,
     "deploy-servers": serversRootPane,
     "deploy-server-detail": serverDetailPane,

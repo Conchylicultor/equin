@@ -781,8 +781,8 @@ Details:
   - Uses tokens:
     - `ui/tokens/color-palette --destructive`
     - `ui/tokens/shadow --shadow`
-  - Imported by: 304 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×81
+  - Imported by: 305 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×82
     - `conversations` ×50
     - `debug` ×29
     - `ui` ×25

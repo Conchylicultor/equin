@@ -4,6 +4,7 @@ export {
   ViewSwitcher,
   type ViewSwitcherProps,
   type ViewSwitcherOption,
+  type ViewSwitcherVariant,
 } from "./components/view-switcher";
 export { useActiveViewId } from "./internal/use-active-view";
 export type { ActiveViewState } from "./internal/use-active-view";

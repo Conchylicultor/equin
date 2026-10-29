@@ -35,7 +35,7 @@ export function SshSetupActions({ server }: { server: Server }) {
       )}
       {key ? (
         <>
-          <Badge mono tooltip={key.fingerprint} className="max-w-[16rem]">
+          <Badge mono tooltip={key.fingerprint} className="max-w-[6rem]">
             {key.fingerprint}
           </Badge>
           <CopyButton text={key.fingerprint} tooltip="Copy fingerprint" />

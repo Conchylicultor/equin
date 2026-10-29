@@ -1,10 +1,10 @@
 # composition
 
-The **Composition** section of the deployment pane: *what* this deployment
-builds. Every other section is about *where* it lands — and all of them are
-downstream of a composition name the pane never stated (`overview` shows the
-install paths derived from it, `remote-deploy` the bundle built for it,
-`deploy-history` the runs of it).
+The **Composition** section of the site page's Settings tab
+(`DeploymentDetail.Section`): *what* this deployment builds. Every other
+surface is about *where* it lands — and all of them are downstream of a
+composition name the page never stated (Install shows the paths derived from
+it, `remote-deploy` the bundle built for it, `deploy-history` the runs of it).
 
 ## It links, it does not edit
 
@@ -35,7 +35,7 @@ the first.
 
 ## Plugin reference
 
-- Description: Composition section of the deployment pane: which composition this deployment builds and ships, the shape of it (category, entry points, what it extends, how many contributors are opted in), and a cross-app link into that composition's Studio detail pane where its membership is actually edited.
+- Description: Composition section of the site page's Settings tab: which composition this deployment builds and ships, the shape of it (category, entry points, what it extends, how many contributors are opted in), and a cross-app link into that composition's Studio detail pane where its membership is actually edited.
 - Web:
   - Contributes: `DeploymentDetail.Section` "Composition" → `CompositionSection`
   - Uses:

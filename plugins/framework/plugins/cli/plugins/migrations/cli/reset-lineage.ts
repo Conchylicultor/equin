@@ -24,19 +24,31 @@
  * that is already there. `resetAdoption` finds the run of published migrations
  * whose combined delta is the deleted one, and the reset writes an adoption
  * file naming them (research/2026-10-21-global-reset-adopts-published-migration.md).
+ *
+ * The deleted tip's BODY may be nowhere: a branch migration that was never
+ * committed, in a tree whose tip file is main's (a stash re-applied over a
+ * rebase, whose generated-file handling keeps main's side). The reset itself
+ * needs no body — it deletes the files and drizzle diffs schema.ts against
+ * main's tip — so that case is not a failure: the lineage proof falls back to
+ * the deleted migrations' own DDL (`kind: "ddl"`). The regenerated migration
+ * supersedes them when it runs exactly their statements, in order, phase for
+ * phase: a database that applied them then holds what it would run.
  */
 import { readdirSync, readFileSync } from "fs";
 import { join } from "path";
 import {
   analyzeSnapshotDag,
+  classifyStatement,
   equivalentSnapshots,
   mergeSnapshots,
+  MissingSnapshotBodyError,
   parseMigration,
   readSnapshotNodes,
   type Snapshot,
   snapshotAncestors,
   type SnapshotBodies,
   type SnapshotNode,
+  splitStatements,
   type Supersession,
 } from "@plugins/database/plugins/migrations/core";
 
@@ -47,6 +59,14 @@ export interface DeletedMigration {
   file: string;
   hash: string;
   supersedes: Supersession | null;
+  /** Its statements, per phase — null for a file that is not phased. */
+  ddl: PhaseDdl | null;
+}
+
+/** A migration's statements per phase, whitespace-normalized, in file order. */
+export interface PhaseDdl {
+  expand: readonly string[];
+  contract: readonly string[];
 }
 
 /** What the reset deletes, read before it does. */
@@ -59,6 +79,12 @@ export interface ResetPrior {
    */
   schema:
     | { kind: "known"; tip: Snapshot; baseId: string }
+    /**
+     * The tip's body is nowhere (`MissingSnapshotBodyError`), but every
+     * deleted file is phased: what they applied, as statements. `reason` says
+     * why the snapshot proof is not available.
+     */
+    | { kind: "ddl"; ddl: PhaseDdl; reason: string }
     | { kind: "unknown"; reason: string };
 }
 
@@ -92,6 +118,13 @@ export async function readResetPrior(
       file: n.file,
       hash: m[3]!,
       supersedes: parsed.kind === "phased" ? parsed.supersedes : null,
+      ddl:
+        parsed.kind === "phased"
+          ? {
+              expand: statementsOf(parsed.expand),
+              contract: statementsOf(parsed.contract),
+            }
+          : null,
     });
   }
   if (deleted.length === 0)
@@ -123,15 +156,64 @@ export async function readResetPrior(
     seen.add(at.id);
     at = own.get(at.prevId)!;
   }
-  return {
-    deleted,
-    schema: {
-      kind: "known",
-      tip: (await bodies.body(tips[0]!)) as Snapshot,
-      baseId: at.prevId,
-    },
-  };
+  let tip: Snapshot;
+  try {
+    tip = (await bodies.body(tips[0]!)) as Snapshot;
+  } catch (err) {
+    if (!(err instanceof MissingSnapshotBodyError)) throw err;
+    const reason = `the deleted tip's snapshot (${err.id}, ${err.file}) is in neither the working tree nor git — it was never committed`;
+    const ddls = deleted.map((d) => d.ddl);
+    if (ddls.some((d) => d === null))
+      return {
+        deleted,
+        schema: {
+          kind: "unknown",
+          reason: `${reason}, and a deleted file is not phased, so its DDL cannot stand in for it`,
+        },
+      };
+    return {
+      deleted,
+      schema: {
+        kind: "ddl",
+        reason,
+        ddl: {
+          expand: ddls.flatMap((d) => d!.expand),
+          contract: ddls.flatMap((d) => d!.contract),
+        },
+      },
+    };
+  }
+  return { deleted, schema: { kind: "known", tip, baseId: at.prevId } };
 }
+
+const normalizeStatement = (s: string): string => s.replace(/\s+/g, " ").trim();
+
+function statementsOf(section: string): string[] {
+  return splitStatements(section).map((st) => normalizeStatement(st.raw));
+}
+
+/**
+ * The phases drizzle's raw SQL lands in, the way `phaseGeneratedMigrations`
+ * splits it — or null when a statement does not classify (generation then
+ * refuses it with its own message; this proof simply does not hold).
+ */
+function phasedDdl(sql: string): PhaseDdl | null {
+  const expand: string[] = [];
+  const contract: string[] = [];
+  for (const st of splitStatements(sql)) {
+    const cls = classifyStatement(st);
+    if (cls.kind === "expand") expand.push(normalizeStatement(st.raw));
+    else if (cls.kind === "contract") contract.push(normalizeStatement(st.raw));
+    else if (cls.kind === "split") {
+      expand.push(normalizeStatement(cls.expand));
+      contract.push(normalizeStatement(cls.contract));
+    } else return null;
+  }
+  return { expand, contract };
+}
+
+const sameStatements = (a: readonly string[], b: readonly string[]) =>
+  a.length === b.length && a.every((s, i) => s === b[i]);
 
 /** The lineage a regenerated migration records, or why it records none. */
 export type ResetLineage =
@@ -140,8 +222,10 @@ export type ResetLineage =
 
 /**
  * The `supersedes` header for the migration this reset just generated (its
- * snapshot `fresh`, as drizzle-kit emitted it), from what the reset deleted
- * (`prior`).
+ * snapshot `fresh` and raw SQL `freshSql`, as drizzle-kit emitted them), from
+ * what the reset deleted (`prior`). Without the deleted tip's body
+ * (`prior.schema.kind === "ddl"`) the proof is the statements: the new file's
+ * phases must be exactly the deleted files' phases.
  *
  * A deleted hash back on disk is not superseded — the reset wrote the same
  * bytes again (a merge node is regenerated byte-identical). `reason` is null
@@ -153,6 +237,7 @@ export async function resetLineage(
   migrationsDir: string,
   prior: ResetPrior,
   fresh: Snapshot,
+  freshSql: string,
   bodies: SnapshotBodies,
 ): Promise<ResetLineage> {
   const onDisk = new Set(
@@ -164,6 +249,19 @@ export async function resetLineage(
   if (gone.length === 0) return { kind: "none", reason: null };
   if (prior.schema.kind === "unknown")
     return { kind: "none", reason: prior.schema.reason };
+  if (prior.schema.kind === "ddl") {
+    const ours = phasedDdl(freshSql);
+    if (
+      ours !== null &&
+      sameStatements(ours.expand, prior.schema.ddl.expand) &&
+      sameStatements(ours.contract, prior.schema.ddl.contract)
+    )
+      return { kind: "supersedes", supersedes: lineageOf(gone) };
+    return {
+      kind: "none",
+      reason: `${prior.schema.reason}, and the regenerated migration's statements differ from the deleted ones'`,
+    };
+  }
 
   const nodes = await readSnapshotNodes(migrationsDir);
   const isNode = (id: string) => nodes.some((n) => n.id === id);
@@ -246,7 +344,7 @@ export async function resetAdoption(
   bodies: SnapshotBodies,
 ): Promise<ResetAdoption> {
   if (prior.deleted.length === 0) return { kind: "none", reason: null };
-  if (prior.schema.kind === "unknown")
+  if (prior.schema.kind !== "known")
     return { kind: "none", reason: prior.schema.reason };
   const { tip: ours, baseId } = prior.schema;
 

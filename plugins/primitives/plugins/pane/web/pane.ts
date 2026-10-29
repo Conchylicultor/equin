@@ -1779,8 +1779,9 @@ function extractOwnParams(
 // all of them. Three of the four open paths nonetheless built their target's
 // slot from `extractOwnParams` alone and never looked at the ancestors, so the
 // half of the argument the caller was FORCED to pass was deleted by the callee.
-// `openPane(deploymentDetailPane, { serverId, deploymentId }, { mode: "push" })`
-// produced `/…/dep/<id>` with no server anywhere in it; Expand on that pane then
+// A push of a pane chained under `server/:serverId` (the old deploy rows; pinned
+// now by `__tests__/open-pane-chained-params.test.tsx`) produced `/…/dep/<id>`
+// with no server anywhere in it; Expand on that pane then
 // walked the DECLARED chain, found nothing supplying `:serverId`, fell back to
 // re-rooting, and threw out of `buildRouteUrl` — after `setRoute` had already
 // committed the route and notified, leaving the store holding an address whose
@@ -1975,6 +1976,8 @@ export interface OpenRequest {
   side?: "left" | "right";
   options?: PaneOptions;
   hint?: PaneHintBag;
+  /** Replace the current history entry instead of pushing one (a redirect). */
+  replace?: boolean;
 }
 
 /** Where an open lands. See {@link computeOpen}. */
@@ -2010,7 +2013,7 @@ export function computeOpen(
 ): OpenComputation {
   const options = opts.options ?? {};
   const hint = opts.hint ?? {};
-  const replace = !target.chrome.history;
+  const replace = opts.replace === true || !target.chrome.history;
   const unchanged: OpenComputation = {
     route: currentRoute,
     replace,
@@ -3561,6 +3564,12 @@ export interface OpenPaneOpts<Options extends object, HintT extends object> {
   side?: "left" | "right";
   options?: Partial<Options>;
   hint?: HintT;
+  /**
+   * Replace the current history entry instead of pushing one — for a redirect
+   * (a legacy URL's pane forwarding to its successor), so Back skips the
+   * address that only ever forwarded.
+   */
+  replace?: boolean;
 }
 
 export function useOpenPane(): OpenPaneFn {

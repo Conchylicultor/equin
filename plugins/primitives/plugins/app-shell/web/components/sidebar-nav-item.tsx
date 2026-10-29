@@ -5,7 +5,10 @@ import {
   SidebarMenuItem,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
-import { useOpenPane, useRoute } from "@plugins/primitives/plugins/pane/web";
+import {
+  useOpenPane,
+  usePaneMatch,
+} from "@plugins/primitives/plugins/pane/web";
 import type {
   AppShellSidebarItem,
   AppShellSidebarNav,
@@ -29,16 +32,26 @@ export function SidebarItem(item: AppShellSidebarItem) {
 
 /**
  * The `opens` arm: opens its pane as the route root, and is active while the
- * route's root pane is that pane. A component of its own so only these rows
+ * surface's root pane is that pane. A component of its own so only these rows
  * read the route (an `onClick` row neither needs it nor re-renders with it).
+ *
+ * Read off the surface's MATCH, not the raw route: at the app's bare root the
+ * route is empty and the match is the app's index pane, so an entry opening
+ * the index is current there. An index pane is the parent of every pane opened
+ * from scratch below it (it owns no URL segment, so it heads their chain), so
+ * its entry is current only while nothing but companions follows it — else the
+ * landing entry would stay lit beside the entry of whatever was opened under it.
  */
 function SidebarNavOpensItem({
   target,
   ...item
 }: AppShellSidebarNav & { target: SidebarNavTarget }) {
-  const route = useRoute();
+  const panes = usePaneMatch()?.panes ?? [];
   const openPane = useOpenPane();
-  const isActive = route?.panes[0]?.pane === target.pane._internal;
+  const root = panes[0]?.pane;
+  const isActive =
+    root === target.pane._internal &&
+    (!root.appIndex || panes.slice(1).every((p) => p.pane.companion));
   return (
     <SidebarNavRow
       {...item}

@@ -647,10 +647,18 @@ export async function generateMigration(opts: {
     }
     let supersedes: Supersession | null = null;
     if (resetPrior !== null) {
+      // drizzle-kit's raw SQL, before phasing: the statements a reset's
+      // DDL proof compares (`resetLineage`).
+      const freshFile = freshSchemaMigration(migrationsDir);
+      if (freshFile === null)
+        throw new Error(
+          "drizzle-kit emitted a snapshot but no schema migration beside it",
+        );
       const lineage = await resetLineage(
         migrationsDir,
         resetPrior,
         JSON.parse(emitted.text) as Snapshot,
+        readFileSync(join(migrationsDir, freshFile), "utf8"),
         bodies,
       );
       if (lineage.kind === "supersedes") {

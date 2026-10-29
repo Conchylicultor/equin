@@ -378,6 +378,10 @@
       "name": "@equin/plugin-apps-deploy-deploy-history-investigate-failure",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/deploy/plugins/deploy-history/plugins/rollback": {
+      "name": "@equin/plugin-apps-deploy-deploy-history-rollback",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/deploy/plugins/deploy-secrets": {
       "name": "@equin/plugin-apps-deploy-deploy-secrets",
       "version": "0.0.1",
@@ -7181,6 +7185,8 @@
     "@equin/plugin-apps-deploy-deploy-history": ["@equin/plugin-apps-deploy-deploy-history@workspace:plugins/apps/plugins/deploy/plugins/deploy-history"],
 
     "@equin/plugin-apps-deploy-deploy-history-investigate-failure": ["@equin/plugin-apps-deploy-deploy-history-investigate-failure@workspace:plugins/apps/plugins/deploy/plugins/deploy-history/plugins/investigate-failure"],
+
+    "@equin/plugin-apps-deploy-deploy-history-rollback": ["@equin/plugin-apps-deploy-deploy-history-rollback@workspace:plugins/apps/plugins/deploy/plugins/deploy-history/plugins/rollback"],
 
     "@equin/plugin-apps-deploy-deploy-secrets": ["@equin/plugin-apps-deploy-deploy-secrets@workspace:plugins/apps/plugins/deploy/plugins/deploy-secrets"],
 

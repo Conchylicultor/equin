@@ -4,8 +4,10 @@ import {
   type DensityControlled,
   type Tooltipped,
   useControlSize,
+  WithTooltip,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type { Passthrough } from "@plugins/primitives/plugins/passthrough/core";
 import type React from "react";
 
@@ -140,7 +142,14 @@ export function ToggleChip({
  * `tooltip` that is both its hover tip and its accessible name (Button's
  * icon-only rule), so a nameless radio has no spelling.
  */
-export type SegmentedOption<T extends string> = { id: T } & (
+export type SegmentedOption<T extends string> = {
+  id: T;
+  /**
+   * A count drawn after the label as a filled pill (a tab's unread messages).
+   * Absent ⇒ no badge; `0` is drawn — a caller with nothing to count omits it.
+   */
+  count?: number;
+} & (
   | {
       label: Exclude<React.ReactNode, undefined | null | boolean>;
       icon?: React.ReactNode;
@@ -165,18 +174,102 @@ function iconOnlyName<T extends string>(
   return undefined;
 }
 
+/**
+ * A segmented control's look: one of the chip colour treatments (each segment a
+ * `ToggleChip`), or `"underline"` — a tab strip: bare segments on one hairline,
+ * the selected one in the foreground over a 2px underline sitting ON that
+ * hairline (a page's section tabs, where pills would read as filters).
+ */
+export type SegmentedVariant = ToggleChipVariant | "underline";
+
 export interface SegmentedControlProps<
   T extends string,
 > extends DensityControlled {
   options: readonly SegmentedOption<T>[];
   value: T;
   onChange: (id: T) => void;
-  /** Forwarded to each chip. Default "solid". */
-  variant?: ToggleChipVariant;
+  /** The segments' look (see {@link SegmentedVariant}). Default "solid". */
+  variant?: SegmentedVariant;
   /** Wrapper override (e.g. spacing). */
   className?: string;
   /** The group's accessible name (its visible heading, when it has one). */
   label?: string;
+}
+
+/** The count pill a segment carries after its label. */
+function CountBadge({ count }: { count: number }) {
+  return (
+    <Badge shape="pill" colorClass="bg-primary text-primary-foreground">
+      {count}
+    </Badge>
+  );
+}
+
+// The underline tab's height sits one notch ABOVE the control scale (a tab strip
+// heads a page section, so it reads taller than the buttons in it): xs → sm,
+// sm → md, md/lg → lg.
+const UNDERLINE_TAB_SIZE: Record<ControlSize, string> = {
+  xs: "control-sm px-control-xs gap-control-xs",
+  sm: "control-md px-control-sm gap-control-sm",
+  md: "control-lg px-control-md gap-control-sm",
+  lg: "control-lg px-control-md gap-control-md",
+};
+
+interface UnderlineTabProps {
+  active: boolean;
+  icon: React.ReactNode;
+  label: React.ReactNode;
+  count: number | undefined;
+  tooltip: React.ReactNode;
+  ariaLabel: string | undefined;
+  onSelect: () => void;
+}
+
+/**
+ * One segment of the underline strip: icon · label · count on one line, muted
+ * until selected; the selected tab's underline is a decorative bar pulled 1px
+ * down onto the strip's hairline (so the two read as one rule), inset from the
+ * tab's edges. A child element, not `::after`: control lint reads a pseudo's
+ * `after:h-* after:rounded-*` as the button's own geometry.
+ */
+function UnderlineTab({
+  active,
+  icon,
+  label,
+  count,
+  tooltip,
+  ariaLabel,
+  onSelect,
+}: UnderlineTabProps) {
+  const density = useControlSize();
+  return (
+    <WithTooltip content={tooltip}>
+      <button
+        type="button"
+        role="radio"
+        aria-checked={active}
+        aria-label={ariaLabel}
+        onClick={onSelect}
+        className={cn(
+          "relative inline-flex shrink-0 items-center whitespace-nowrap transition-colors",
+          UNDERLINE_TAB_SIZE[density],
+          active
+            ? "text-foreground"
+            : "text-muted-foreground hover:text-foreground",
+        )}
+      >
+        {icon}
+        {label != null && <Text variant="control">{label}</Text>}
+        {count !== undefined && <CountBadge count={count} />}
+        {active && (
+          <span
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-foreground"
+          />
+        )}
+      </button>
+    </WithTooltip>
+  );
 }
 
 export function SegmentedControl<T extends string>({
@@ -187,6 +280,31 @@ export function SegmentedControl<T extends string>({
   className,
   label,
 }: SegmentedControlProps<T>) {
+  if (variant === "underline") {
+    return (
+      <div
+        role="radiogroup"
+        aria-label={label}
+        className={cn(
+          "flex shrink-0 flex-nowrap gap-2xs border-b border-border",
+          className,
+        )}
+      >
+        {options.map((opt) => (
+          <UnderlineTab
+            key={opt.id}
+            active={opt.id === value}
+            icon={opt.icon}
+            label={opt.label}
+            count={opt.count}
+            tooltip={opt.tooltip}
+            ariaLabel={iconOnlyName(opt)}
+            onSelect={() => onChange(opt.id)}
+          />
+        ))}
+      </div>
+    );
+  }
   return (
     <div
       role="radiogroup"
@@ -206,6 +324,7 @@ export function SegmentedControl<T extends string>({
           onClick={() => onChange(opt.id)}
         >
           {opt.label ?? null}
+          {opt.count !== undefined && <CountBadge count={opt.count} />}
         </ToggleChip>
       ))}
     </div>

@@ -14,6 +14,7 @@ import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { VirtualRows } from "@plugins/primitives/plugins/virtual-rows/web";
 import {
   CardMeta,
+  CardTokens,
   GroupedSections,
   SectionBody,
   cardFieldsOf,
@@ -42,6 +43,8 @@ import type {
   ViewSlots,
 } from "@plugins/primitives/plugins/data-view/core";
 import { DataCard } from "./data-card";
+import { PanelCard } from "./panel-card";
+import type { GalleryViewOptions } from "../internal/options";
 import { useGridColumns } from "./use-grid-columns";
 
 /** Above this card count the gallery windows its grid (lane-aware: each windowed
@@ -75,6 +78,10 @@ export const GALLERY_SLOTS: ViewSlots = {
   trail: { capacity: 3, form: "token" },
   edge: { capacity: 1, form: "token" },
 };
+
+/** A panel card's cell minimum: the theme's card minimum, but never narrower
+ *  than its head needs — a mark, a title and its marks on one line. */
+const PANEL_MIN = "max(var(--gallery-card-min), 20rem)";
 
 /** The gallery's own gaps (density `galleryGapX/Y`), over the Grid's ramp gap. */
 const GRID_GAP = "gap-x-gallery gap-y-gallery";
@@ -178,22 +185,76 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
     cardFields.lead !== undefined &&
     placement.kinds.get(cardFields.lead.id) === "visual";
   const cardMin = CARD_MIN[props.density ?? "comfortable"];
+  // Documented cast boundary: `options` is `viewOptions.gallery`, opaque to
+  // the host.
+  const options = props.options as GalleryViewOptions | undefined;
+  const panel = options?.card === "panel";
+  const gridMin = panel ? PANEL_MIN : cardMin;
 
   // Single source of cell markup — shared by the plain and windowed branches.
   const renderCell = ({ row, key, aggregateCount }: GalleryCell): ReactNode => {
     const target = { row, hasChildren: props.hasChildren?.(key) ?? false };
     const tone = props.rowTone?.(row);
+    const hoverChange =
+      onRowHoverChange === undefined
+        ? {}
+        : {
+            onHoverChange: (inside: boolean) => onRowHoverChange(key, inside),
+          };
+    if (panel) {
+      // The panel's head mark is the lead slot drawn as its cell (a visual
+      // or a state's own cell), beside the title — never a cover.
+      return (
+        <PanelCard
+          rowKey={key}
+          selected={key === props.selectedRowId}
+          dimmed={tone === "muted"}
+          hovered={key === props.hoveredRowId}
+          {...hoverChange}
+          onActivate={props.rowActivation?.(row)}
+          leading={leadingSlot({
+            field: cardFields.lead,
+            row,
+            resolveCell,
+            resolveEditor,
+            form: "cell",
+            own: undefined,
+          })}
+          head={
+            <CardMeta
+              fields={cardFields}
+              row={row}
+              resolveCell={resolveCell}
+              resolveEditor={resolveEditor}
+              titleClassName={cn(rowToneClass(tone))}
+              omitTokens
+            />
+          }
+          footer={
+            cardFields.trail.length > 0 || cardFields.edge ? (
+              <CardTokens
+                fields={cardFields}
+                row={row}
+                resolveCell={resolveCell}
+                resolveEditor={resolveEditor}
+                spaced={false}
+              />
+            ) : undefined
+          }
+          actions={{
+            atRest: zones.cluster.atRest?.(target),
+            revealed: zones.cluster.revealed?.(target),
+          }}
+        />
+      );
+    }
     return (
       <DataCard
         rowKey={key}
         selected={key === props.selectedRowId}
         dimmed={tone === "muted"}
         hovered={key === props.hoveredRowId}
-        {...(onRowHoverChange === undefined
-          ? {}
-          : {
-              onHoverChange: (inside: boolean) => onRowHoverChange(key, inside),
-            })}
+        {...hoverChange}
         onActivate={props.rowActivation?.(row)}
         cover={coverOf(
           covers.coverOf(row),
@@ -262,7 +323,7 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
           section={section}
           placeholders={props.placeholders}
           cells={cells}
-          cardMin={cardMin}
+          cardMin={gridMin}
           renderCell={renderCell}
         />
       )}

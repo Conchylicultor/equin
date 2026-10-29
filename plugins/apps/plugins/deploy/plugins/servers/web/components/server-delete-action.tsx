@@ -1,14 +1,15 @@
 import { useLiveMutation } from "@plugins/network/plugins/live/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { openDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type { Server } from "../../shared";
 import { deleteServer } from "../../shared/endpoints";
 import { DeleteServerDialog } from "./delete-server-dialog";
 
 /**
- * Delete, as the identity section's header `action` rather than a row inside its
- * body — the destructive verb on a server stays reachable with the card shut,
- * and the body is only the fields.
+ * The Danger zone section's body: the destructive verb on a server, apart from
+ * the Connection fields it used to ride the header of.
  */
 export function ServerDeleteAction({ server }: { server: Server }) {
   const remove = useLiveMutation(deleteServer);
@@ -33,12 +34,13 @@ export function ServerDeleteAction({ server }: { server: Server }) {
   }
 
   return (
-    <Button
-      variant="link"
-      onClick={handleDelete}
-      className="text-destructive hover:text-destructive"
-    >
-      Delete
-    </Button>
+    <Stack gap="sm" align="start">
+      <Text as="p" variant="caption" tone="muted">
+        Removes the server from this app. Its sites must be removed first.
+      </Text>
+      <Button variant="destructive" onClick={handleDelete}>
+        Delete {server.name}
+      </Button>
+    </Stack>
   );
 }

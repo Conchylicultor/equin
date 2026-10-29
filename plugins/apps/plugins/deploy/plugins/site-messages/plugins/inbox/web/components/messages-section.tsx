@@ -26,6 +26,10 @@ import {
   type SiteMessagesPage,
 } from "@plugins/apps/plugins/deploy/plugins/site-messages/plugins/intake/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
+import {
+  SiteCard,
+  SiteCardBody,
+} from "@plugins/apps/plugins/deploy/plugins/deployments/web";
 import { deploymentSiteMessages } from "../../core";
 import { INTAKE_PLUGIN_ID } from "../internal/intake-plugin-id";
 import {
@@ -153,20 +157,19 @@ function MessagesInbox({ deploymentId }: { deploymentId: string }): ReactNode {
   // so nothing re-asks on its own — Refresh (`refresh()`) is the re-ask.
   const answer = useLive(deploymentSiteMessages, { deploymentId });
   return (
-    <Stack gap="md">
-      <Line>
-        <Fill>
-          <Text variant="caption" tone="muted">
-            Read from the server when this page opens.
-          </Text>
-        </Fill>
+    <SiteCard
+      title="Messages"
+      meta="Read from the server when this page opens"
+      trailing={
         <IconButton
           icon={refreshIcon}
           label="Refresh"
           loading={answer.status === "loading"}
           onClick={() => answer.refresh()}
         />
-      </Line>
+      }
+    >
+      <SiteCardBody>
       {answer.status === "loading" ? (
         <Loading variant="rows" count={4} />
       ) : answer.status === "error" ? (
@@ -184,7 +187,8 @@ function MessagesInbox({ deploymentId }: { deploymentId: string }): ReactNode {
           subject={MESSAGES_SUBJECT}
         />
       )}
-    </Stack>
+      </SiteCardBody>
+    </SiteCard>
   );
 }
 

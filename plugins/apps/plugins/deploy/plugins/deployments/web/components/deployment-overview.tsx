@@ -1,13 +1,20 @@
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import type { ReactNode } from "react";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { useLiveRow } from "@plugins/network/plugins/live/web";
+import { useLive, useLiveRow } from "@plugins/network/plugins/live/web";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
 import { Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
+import { Rigid } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
+import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
+import { servers } from "@plugins/apps/plugins/deploy/plugins/servers/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
 import {
   deployments,
   deriveInstall,
@@ -16,18 +23,18 @@ import {
   type UpdateDeploymentBody,
 } from "../../core";
 
+const serverIcon = symbol("dns");
+
 /**
- * The deployment record and the install it implies.
- *
- * This content used to be four read-only columns and two editable ones crowding
- * the list row. Moving it here is what let the row become what a person actually
- * scans — composition, last run, release state — while the URL, the port and the
- * whole derived install stay one click away rather than gone.
+ * Reads the site's row, then renders `body` with it — the one loading / error /
+ * gone fold every Settings section of this plugin shares.
  */
-export function DeploymentOverview({
+export function WithDeployment({
   deploymentId,
+  body: Body,
 }: {
   deploymentId: string;
+  body: (props: { deployment: Deployment }) => ReactNode;
 }): ReactNode {
   const deployment = useLiveRow(deployments, deploymentId);
   if (deployment.status === "loading") return <Loading variant="rows" />;
@@ -46,10 +53,51 @@ export function DeploymentOverview({
       <Placeholder tone="error">This deployment no longer exists.</Placeholder>
     );
   }
-  return <OverviewBody deployment={deployment.row} />;
+  return <Body deployment={deployment.row} />;
 }
 
-function OverviewBody({ deployment }: { deployment: Deployment }): ReactNode {
+/**
+ * One Settings row: the label (with an optional hint under it) in a fixed
+ * column, the value beside it.
+ */
+export function SettingsField({
+  label,
+  hint,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  children: ReactNode;
+}): ReactNode {
+  return (
+    <Stack direction="row" align="center" gap="md">
+      <Rigid className="w-44">
+        <Stack gap="none">
+          <Text as="span" variant="body" tone="muted">
+            {label}
+          </Text>
+          {hint && (
+            <Text as="span" variant="caption" tone="faint">
+              {hint}
+            </Text>
+          )}
+        </Stack>
+      </Rigid>
+      <Fill>{children}</Fill>
+    </Stack>
+  );
+}
+
+/** Settings → General: the record's editable fields and the server it is on. */
+export function DeploymentGeneral({
+  deploymentId,
+}: {
+  deploymentId: string;
+}): ReactNode {
+  return <WithDeployment deploymentId={deploymentId} body={GeneralBody} />;
+}
+
+function GeneralBody({ deployment }: { deployment: Deployment }): ReactNode {
   const fetchEndpoint = useFetchEndpoint();
   const save = async (body: UpdateDeploymentBody): Promise<void> => {
     await fetchEndpoint(updateDeployment, { id: deployment.id }, { body });
@@ -83,14 +131,12 @@ function OverviewBody({ deployment }: { deployment: Deployment }): ReactNode {
     },
   });
 
-  const install = deriveInstall(deployment.compositionId);
-
   return (
-    <Stack gap="lg">
-      <Stack gap="2xs">
-        <Text as="label" variant="caption" tone="muted">
-          Hostnames
-        </Text>
+    <Stack gap="md">
+      <SettingsField
+        label="Hostnames"
+        hint="Comma-separated; Caddy serves and certifies each"
+      >
         <Input
           value={hostnames.value}
           onChange={(e) => hostnames.onChange(e.target.value)}
@@ -98,37 +144,76 @@ function OverviewBody({ deployment }: { deployment: Deployment }): ReactNode {
           onBlur={hostnames.onBlur}
           placeholder="app.example.com, *.example.com"
         />
-        <Text as="p" variant="caption" tone="muted">
-          Comma-separated. Caddy serves these; converge writes them into this
-          install&apos;s site file.
-        </Text>
-      </Stack>
-
-      <Stack gap="2xs">
-        <Text as="label" variant="caption" tone="muted">
-          Loopback port
-        </Text>
+      </SettingsField>
+      <SettingsField label="Loopback port" hint="Unique on this server">
         <Input
           type="number"
+          className="max-w-32 font-mono"
           value={loopbackPort.value}
           onChange={(e) => loopbackPort.onChange(e.target.value)}
           onFocus={loopbackPort.onFocus}
           onBlur={loopbackPort.onBlur}
         />
-      </Stack>
+      </SettingsField>
+      <SettingsField label="Server">
+        <ServerName serverId={deployment.serverId} />
+      </SettingsField>
+    </Stack>
+  );
+}
 
-      {/* ── Derived. None of these is a value anyone gets to choose: `runUser` in
-          particular exists only to be non-root, and a field with a default is a
-          field someone can set back to `root`. They are shown, never edited. */}
-      <Stack gap="sm">
-        <Text as="h3" variant="label" tone="muted">
-          Install (derived from the composition name)
+/** The server a site is on — its name and address, from the registry. */
+export function ServerName({ serverId }: { serverId: string }): ReactNode {
+  const list = useLive(servers);
+  if (list.status === "loading") return <Loading />;
+  if (list.status === "error") {
+    return (
+      <ResourceErrorInline
+        variant="inline"
+        subject="the server"
+        error={list.error}
+        refetch={list.refetch}
+      />
+    );
+  }
+  const server = list.data.find((s) => s.id === serverId);
+  return (
+    <Inline gap="xs">
+      <Icon icon={serverIcon} />
+      <Text as="span" variant="body">
+        {server?.name ?? serverId}
+      </Text>
+      {server && (
+        <Text as="span" variant="code" tone="faint">
+          {server.host}
         </Text>
-        <DerivedValue label="Run user" value={install.runUser} />
-        <DerivedValue label="Install dir" value={install.installDir} />
-        <DerivedValue label="systemd unit" value={install.unit} />
-        <DerivedValue label="Caddy site" value={install.caddySitePath} />
-      </Stack>
+      )}
+    </Inline>
+  );
+}
+
+/**
+ * Settings → Install: the install the composition name implies. None of these
+ * is a value anyone gets to choose — `runUser` in particular exists only to be
+ * non-root, and a field with a default is a field someone can set back to
+ * `root`. They are shown (and copyable), never edited.
+ */
+export function DeploymentInstall({
+  deploymentId,
+}: {
+  deploymentId: string;
+}): ReactNode {
+  return <WithDeployment deploymentId={deploymentId} body={InstallBody} />;
+}
+
+function InstallBody({ deployment }: { deployment: Deployment }): ReactNode {
+  const install = deriveInstall(deployment.compositionId);
+  return (
+    <Stack gap="sm">
+      <DerivedValue label="Run user" value={install.runUser} />
+      <DerivedValue label="Install dir" value={install.installDir} />
+      <DerivedValue label="systemd unit" value={install.unit} />
+      <DerivedValue label="Caddy site" value={install.caddySitePath} />
     </Stack>
   );
 }
@@ -141,13 +226,13 @@ function DerivedValue({
   value: string;
 }): ReactNode {
   return (
-    <Stack gap="2xs">
-      <Text as="span" variant="caption" tone="muted">
-        {label}
-      </Text>
-      <Text as="code" variant="caption" className="break-all">
-        {value}
-      </Text>
-    </Stack>
+    <SettingsField label={label}>
+      <Inline gap="xs">
+        <Text as="code" variant="code" tone="muted" className="break-all">
+          {value}
+        </Text>
+        <CopyButton text={value} tooltip={`Copy ${label.toLowerCase()}`} />
+      </Inline>
+    </SettingsField>
   );
 }

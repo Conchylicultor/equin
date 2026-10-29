@@ -1,20 +1,16 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import {
-  DeploymentDetail,
   DeploymentItemActions,
+  SiteHeader,
 } from "@plugins/apps/plugins/deploy/plugins/deployments/web";
-import { LocalServeSection } from "./components/local-serve-section";
 import { ServeAction } from "./components/serve-action";
+import { ServeHeaderAction } from "./components/serve-header-action";
 
 export default {
   description:
-    "Test locally: the deployment pane's section for the composition served on the shared gateway (its live URL and what it does and does not prove), plus the one-button serve/open shortcut on the deployments list row.",
+    "Test locally: the site page's header button that serves the site's composition on the shared gateway (opening it once live), plus the same one-button serve/open shortcut on the deployments list row.",
   contributions: [
-    DeploymentDetail.Section({
-      id: "serve",
-      label: "Test locally",
-      component: LocalServeSection,
-    }),
+    SiteHeader.Action({ id: "serve", component: ServeHeaderAction }),
     DeploymentItemActions({ id: "serve", component: ServeAction }),
   ],
 } satisfies PluginDefinition;

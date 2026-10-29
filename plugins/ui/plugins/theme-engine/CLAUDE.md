@@ -235,9 +235,9 @@ exactly.
     - `ThemeEngine.SubTheme`
     - `ThemeEngine.FixedTheme`
     - `ThemeEngine.ThemeSource`
-  - Slot contributors: 48 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slot contributors: 49 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `ThemeEngine.TokenGroup` ×19
-    - `ThemeEngine.Theme` ×13
+    - `ThemeEngine.Theme` ×14
     - `ThemeEngine.SubTheme` ×6
     - `ThemeEngine.VariantGroup` ×6
     - `ThemeEngine.FixedTheme` ×2
@@ -388,9 +388,9 @@ exactly.
     - `ui/tokens/shape` ×4
     - `ui/tokens/type-scale` ×4
     - `ui/tokens/data-view` ×2
-  - Imported by: 50 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 51 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui` ×29
-    - `apps` ×16
+    - `apps` ×17
     - `apps-core/chrome-theme`
     - `hints`
     - `menu-bar`

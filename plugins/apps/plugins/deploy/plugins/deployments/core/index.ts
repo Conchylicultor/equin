@@ -56,6 +56,6 @@ export {
   REMOTE_SCRIPT_SHEBANG,
 } from "./derive";
 export type { InstallLayout } from "./derive";
-export { deploymentDetailRoute } from "./routes";
+export { siteRoute } from "./routes";
 export { deploymentIdKind, deployRunIdKind } from "./id-kinds";
 export type { DeploymentId, DeployRunId } from "./id-kinds";

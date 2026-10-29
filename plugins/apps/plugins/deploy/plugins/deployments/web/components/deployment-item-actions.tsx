@@ -39,7 +39,7 @@ export const DeploymentItemActions = defineItemActions<Deployment>();
  * would certainly be refused says so before it is pressed. Every other refusal
  * stays the CLI's, reported after the fact on the row.
  *
- * Exported because the deployment pane's Deploy button gates on the same facts.
+ * Exported because the site header's Deploy button gates on the same facts.
  * Sharing the hook rather than the sentences is the point: a row tooltip and the
  * pane's primary action must never disagree about why something is blocked.
  */

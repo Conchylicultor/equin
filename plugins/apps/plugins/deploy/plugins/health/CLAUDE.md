@@ -30,30 +30,32 @@ verdict is loading, and the SSH-setup card seeds open.
 
 ## Plugin reference
 
-- Description: Server reachability for the deploy app: probes a registered server over SSH, records the classified verdict, and exposes its verdict as the `status` field of every list of servers plus the verify step of the SSH setup flow. Owns the deploy_servers_ext_health side-table: the last SSH reachability verdict per server (ok, classified failure kind, the public key as of the check, and the TOFU-pinned host key), its live collection, its `status` field exposed to every list of servers, and the probe / forget-host-key endpoints.
+- Description: Server reachability for the deploy app: probes a registered server over SSH, records the classified verdict, and exposes its verdict as the `status` field of every list of servers plus the verify step of the SSH setup flow, and the Deploy sidebar's Servers section (each server with its verdict dot). Owns the deploy_servers_ext_health side-table: the last SSH reachability verdict per server (ok, classified failure kind, the public key as of the check, and the TOFU-pinned host key), its live collection, its `status` field exposed to every list of servers, and the probe / forget-host-key endpoints.
 - Web:
   - Contributes:
     - `FieldPresentation.Register` "exposure:deploy_servers_ext_health"
-    - `ServerDetail.Section` "Status" → `ServerStatusSection`
-  - Uses:
-    - `apps/deploy/servers.ServerDetail`
+    - `ServerDetail.Section` "Health" → `ServerStatusSection`
+    - `ServerHeader.Badge` "status" → `ServerHeaderStatus`
+    - `ServerHeader.Meta` "platform" → `ServerHeaderPlatform`
+    - `ServerHeader.Action` "check-now" → `CheckNowAction`
+    - `Deploy.Sidebar` "Servers" → `ServersSidebarSection`
+  - Uses: 34 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps/deploy/servers` ×6
+    - `primitives/live-state` ×6
+    - `network/live` ×5
+    - `primitives/css/ui-kit` ×4
+    - `primitives/setup-steps` ×2
+    - `apps/deploy/shell.Deploy`
     - `infra/endpoints.useEndpointMutation`
-    - `network/live.FieldPresentation`
-    - `network/live.LiveRowResult`
-    - `network/live.mapRow`
-    - `network/live.useLive`
-    - `network/live.useLiveRow`
+    - `primitives/app-shell.SidebarPaneSection`
     - `primitives/css/spacing.Stack`
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/live-state.mapResource`
-    - `primitives/live-state.ResourceErrorInline`
-    - `primitives/live-state.ResourceResult`
+    - `primitives/icon-button.IconButton`
     - `primitives/loading.Loading`
+    - `primitives/pane.useOpenPane`
     - `primitives/relative-time.RelativeTime`
-    - `primitives/setup-steps.StepDone`
-    - `primitives/setup-steps.StepNote`
+    - `ui/icons.Icon`
   - Exports (types):
     - `ServerHealthRow`
     - `ServerStatus`
@@ -107,6 +109,7 @@ verdict is loading, and the SSH-setup card seeds open.
     - `ui/tokens/color-palette --muted`
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/color-palette --success`
+    - `ui/tokens/color-palette --warning`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/density --space-xs`
     - `ui/tokens/font-family --font-mono`

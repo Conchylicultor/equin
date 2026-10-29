@@ -108,6 +108,7 @@ toggle, silently resetting any child component state (e.g. an inner
     - `ui/tokens/density --sticky-fade-tail`
   - Imported by:
     - `apps/chord/curriculum`
+    - `apps/deploy/deployments`
     - `code-explorer/commit-detail`
     - `conversations/conversation-view/jsonl-viewer`
     - `conversations/conversations-view/data-view`
@@ -118,6 +119,7 @@ toggle, silently resetting any child component state (e.g. an inner
     - `primitives/data-view`
     - `primitives/multi-select`
     - `primitives/pane`
+    - `primitives/tabbed-view`
     - `review/code-review`
 - Sub-plugins:
   - **`stack`** — Sticky-stack layout primitive: <StickyStack>/<StickyStackItem> pin N sticky siblings sharing one containing block, each below the ones before it (capped; degrades to the swap hand-off).

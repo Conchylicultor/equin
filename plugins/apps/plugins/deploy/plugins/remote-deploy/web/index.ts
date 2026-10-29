@@ -1,26 +1,41 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { DeploymentDetail } from "@plugins/apps/plugins/deploy/plugins/deployments/web";
+import {
+  SiteBanner,
+  SiteCheck,
+  SiteHeader,
+  SiteStrip,
+} from "@plugins/apps/plugins/deploy/plugins/deployments/web";
 import { ClientFields } from "@plugins/network/plugins/live/web";
 import { releaseFields } from "../core";
-import { RemoteDeploySection } from "./components/remote-deploy-section";
-import { OutputSection } from "./components/output-section";
 import { ReleaseFieldResolver } from "./components/release-field";
+import {
+  BundleCell,
+  DeployButton,
+  DeployedCell,
+  RunningCell,
+  StatusCell,
+  useBehindMainBanner,
+  useDeployingBanner,
+} from "./components/site-parts";
+import { useBundleCheck } from "./internal/bundle-check";
 import { releasePresentation } from "./internal/presentation";
 
 export default {
   description:
-    "Deploy one composition to its remote server: a single Deploy button launching the `update` sequence (converge → build a platform-pinned candidate unless one is already current → ship that pinned run id), the three-phase report of the running deploy, what is currently built and how it relates to HEAD, the public URLs to inspect the deployed app, the phase-following deploy/build log output section, and the `Release` client field (`releaseFields`) of the deployments list.",
+    "Deploy one composition to its remote server, on the site page: the header's Deploy button launching the `update` sequence (converge → build a platform-pinned candidate unless one is already current → ship that pinned run id), labelled by what it would do now (Redeploy / Deploy N commits / Retry deploy / Deploying…); the production strip's Status, Running (sha + subject), Deployed and Bundle cells; the deploying banner (the three legs and the tail of the log the running leg writes) and the behind-main banner; and the `Release` client field (`releaseFields`) of the deployments list.",
   contributions: [
-    DeploymentDetail.Section({
-      id: "deploy",
-      label: "Deploy to server",
-      component: RemoteDeploySection,
+    SiteHeader.Action({ id: "deploy", component: DeployButton }),
+    SiteStrip.Cell({ id: "status", label: "Status", component: StatusCell }),
+    SiteStrip.Cell({ id: "running", label: "Running", component: RunningCell }),
+    SiteStrip.Cell({
+      id: "deployed",
+      label: "Deployed",
+      component: DeployedCell,
     }),
-    DeploymentDetail.Section({
-      id: "output",
-      label: "Output",
-      component: OutputSection,
-    }),
+    SiteStrip.Cell({ id: "bundle", label: "Bundle", component: BundleCell }),
+    SiteBanner({ id: "deploying", useBanner: useDeployingBanner }),
+    SiteBanner({ id: "behind-main", useBanner: useBehindMainBanner }),
+    SiteCheck({ id: "bundle", useCheck: useBundleCheck }),
     ClientFields.Resolve({
       fields: releaseFields,
       component: ReleaseFieldResolver,

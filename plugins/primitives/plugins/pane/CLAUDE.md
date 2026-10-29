@@ -264,6 +264,10 @@ Modes:
 - `"append"` — after the route's LAST pane, replacing it when it's the same
   pane type. The positional open for global chrome (no caller).
 
+`replace: true` writes the open as a history replace rather than a push — a
+redirect: a legacy URL's pane forwarding to its successor, so Back skips the
+address that only ever forwarded.
+
 With no caller pane, `push` / `swap` are **not** `root`: they first look for
 the target in the route —
 
@@ -646,9 +650,9 @@ with an empty route.
 - Load-bearing: yes
 - Web:
   - Slots: `Pane.Register`
-  - Slot contributors: 93 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `Pane.Register` ×93
-  - Contributes: 121 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slot contributors: 94 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Pane.Register` ×94
+  - Contributes: 124 contributions — full list in [REFERENCE.md](./REFERENCE.md)
     - `SlotRender.ListMiddleware`
     - `WebsiteHeader` "title" → `PaneTitleItem`
     - `accountPane.Actions` "title" → `PaneTitleItem`
@@ -693,7 +697,8 @@ with an empty route.
     - `debug-boot-profile.actions` "title" → `PaneTitleItem`
     - `debug-boot-profiles-list.actions` "title" → `PaneTitleItem`
     - `dependencies.actions` "title" → `PaneTitleItem`
-    - `deploymentDetailPane.Actions` "title" → `PaneTitleItem`
+    - `deploy-activity.actions` "title" → `PaneTitleItem`
+    - `deploy-deployment-detail.actions` "title" → `PaneTitleItem`
     - `eventListPane.Actions` "title" → `PaneTitleItem`
     - `eventSourceDetailPane.Actions` "title" → `PaneTitleItem`
     - `eventSourceRunPane.Actions` "title" → `PaneTitleItem`
@@ -755,6 +760,8 @@ with an empty route.
     - `settings-config-index.actions` "title" → `PaneTitleItem`
     - `settings-profile.actions` "title" → `PaneTitleItem`
     - `shellOutputPane.Actions` "title" → `PaneTitleItem`
+    - `sitePane.Actions` "title" → `PaneTitleItem`
+    - `sitesIndexPane.Actions` "title" → `PaneTitleItem`
     - `slow-op-detail.actions` "title" → `PaneTitleItem`
     - `slowEventsPane.Actions` "title" → `PaneTitleItem`
     - `sonataLibraryPane.Actions` "title" → `PaneTitleItem`
@@ -909,8 +916,8 @@ with an empty route.
     - `ui/tokens/density --space-2xs`
     - `ui/tokens/density --space-md`
     - `ui/tokens/shape --spacing`
-  - Imported by: 187 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×68
+  - Imported by: 189 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×70
     - `conversations` ×30
     - `debug` ×27
     - `active-data` ×10

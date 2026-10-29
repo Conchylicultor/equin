@@ -355,17 +355,17 @@ run everywhere.
     - `worktreeDataDir`
     - `worktreesDir`
 - Cross-plugin:
-  - Imported by: 40 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 41 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `debug` ×8
     - `infra` ×6
     - `framework` ×5
     - `backup` ×4
     - `release` ×3
+    - `apps` ×2
     - `build` ×2
     - `conversations` ×2
     - `plugin-meta` ×2
     - `primitives` ×2
-    - `apps/deploy/deployments`
     - `code-explorer`
     - `reports/outbox`
     - `review/plugin-changes`

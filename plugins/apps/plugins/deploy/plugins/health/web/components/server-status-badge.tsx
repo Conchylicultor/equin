@@ -26,6 +26,16 @@ const styles: Record<ServerStatus, { bg: string; label: string }> = {
   unknown: { bg: "bg-muted-foreground", label: "Unknown" },
 };
 
+/** The status as a bare dot, labelled for assistive tech (a sidebar row). */
+export function ServerStatusDot({ status }: { status: ServerStatus }) {
+  const { bg, label } = styles[status];
+  return (
+    <span role="img" aria-label={label} title={label}>
+      <StatusDot colorClass={bg} />
+    </span>
+  );
+}
+
 export function ServerStatusBadge({ status }: { status: ServerStatus }) {
   const { bg, label } = styles[status];
   return (

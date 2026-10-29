@@ -209,6 +209,7 @@ row, or on a failed re-read the row as last seen).
 - Cross-plugin:
   - Uses tokens: `ui/tokens/color-palette --muted-foreground`
   - Imported by:
+    - `apps/deploy/deploy-history`
     - `apps/deploy/deployments/runs-arm`
     - `backup`
     - `backup/runs-arm`

@@ -80,7 +80,10 @@ export {
 export type { Snapshot, SnapshotConflict } from "./internal/snapshot-merge";
 export { foldMergeParents, mergeNodeSnapshotText } from "./internal/merge-node";
 // Historical snapshot bodies, from the working tree, a merge node's parents, or git.
-export { snapshotBodies } from "./internal/snapshot-bodies";
+export {
+  MissingSnapshotBodyError,
+  snapshotBodies,
+} from "./internal/snapshot-bodies";
 export type { SnapshotBodies } from "./internal/snapshot-bodies";
 export {
   stageDrizzleOut,

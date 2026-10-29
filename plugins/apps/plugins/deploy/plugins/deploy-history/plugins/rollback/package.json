@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-deploy-deploy-history-rollback",
+  "description": "Row action on a succeeded deploy run that ships that run's pinned release bundle again — a rollback to it.",
+  "private": true,
+  "version": "0.0.1"
+}

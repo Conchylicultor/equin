@@ -45,6 +45,9 @@ plus `sshKey`.
 - Web:
   - Slots:
     - `ServerDetail.Section`
+    - `ServerHeader.Badge`
+    - `ServerHeader.Meta`
+    - `ServerHeader.Action`
     - `item-actions`
     - `serversRootPane.Actions`
     - `serverDetailPane.Actions`
@@ -53,6 +56,9 @@ plus `sshKey`.
     - `ServerDetail.Section` ← `apps.deploy.health`
     - `ServerDetail.Section` ← `apps.deploy.servers`
     - `ServerDetail.Section` ← `apps.deploy.ssh-setup`
+    - `ServerHeader.Badge` ← `apps.deploy.health`
+    - `ServerHeader.Meta` ← `apps.deploy.health`
+    - `ServerHeader.Action` ← `apps.deploy.health`
     - `item-actions` ← `apps.deploy.servers`
     - `serversRootPane.Actions` ← `primitives.pane`
     - `serverDetailPane.Actions` ← `primitives.pane`
@@ -60,27 +66,36 @@ plus `sshKey`.
     - `IdKinds.Kind` "srv"
     - `Pane.Register` "deploy-server-detail"
     - `Pane.Register` "deploy-servers"
-    - `ServerDetail.Section` "Server" → `ServerEditForm`
+    - `ServerDetail.Section` "Connection" → `ServerEditForm`
+    - `ServerDetail.Section` "Danger zone" → `ServerDeleteAction`
     - `item-actions` "open-console" → `OpenConsoleAction`
-  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 39 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×5
     - `primitives/data-view` ×4
     - `primitives/css/ui-kit` ×3
     - `primitives/live-state` ×3
     - `infra/endpoints` ×2
     - `network/live` ×2
+    - `primitives/copy-to-clipboard` ×2
     - `primitives/css/fill` ×2
+    - `primitives/css/spacing` ×2
     - `primitives/editable-field` ×2
     - `ids.IdKinds`
-    - `primitives/copy-to-clipboard.CopyButton`
-    - `primitives/css/spacing.Stack`
+    - `primitives/css/center.Center`
+    - `primitives/css/inline.Inline`
+    - `primitives/css/rigid.Rigid`
+    - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`
     - `primitives/detail-sections.defineDetailSections`
     - `primitives/link-gesture/new-tab.NewTabButton`
     - `primitives/loading.Loading`
     - `primitives/overlay/imperative-dialog.openDialog`
+    - `primitives/slot-render.defineRenderSlot`
+    - `ui/icons.Icon`
   - Exports (types):
     - `Server`
+    - `ServerDetailColumn`
+    - `ServerHeaderPart`
     - `ServerListRow`
     - `SshKey`
   - Exports (values):
@@ -89,6 +104,7 @@ plus `sshKey`.
     - `NEW_SERVER_ID`
     - `ServerDetail`
     - `serverDetailPane`
+    - `ServerHeader`
     - `servers`
     - `serversRootPane`
     - `serverSshKey`
@@ -131,6 +147,7 @@ plus `sshKey`.
     - `POST /api/deploy/servers/:id/ssh-keypair/import` — unpredicted (precondition)
 - Core:
   - Uses:
+    - `apps/deploy/shell.deployIndexRoute`
     - `fields.nullable`
     - `fields/date/config.dateField`
     - `fields/int/config.intField`
@@ -148,10 +165,10 @@ plus `sshKey`.
     - `serverFields`
     - `serversRoute`
 - Cross-plugin:
-  - Uses tokens: 22 vars — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses tokens: 23 vars — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui/tokens/type-scale` ×9
     - `ui/tokens/color-palette` ×6
-    - `ui/tokens/density` ×4
+    - `ui/tokens/density` ×5
     - `ui/tokens/shape` ×2
     - `ui/tokens/font-family --font-mono`
   - Imported by:

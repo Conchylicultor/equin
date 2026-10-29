@@ -1,13 +1,16 @@
 import { AppShellLayout } from "@plugins/primitives/plugins/app-shell/web";
-import { MillerColumns } from "@plugins/layouts/plugins/miller/web";
+import { FullPane } from "@plugins/layouts/plugins/full-pane/web";
+import { Deploy } from "../slots";
 
+/**
+ * The Deploy app: the sidebar (sites, servers, …) beside one full-surface
+ * page. Every page — the sites index, a site, a server — is its own route, so
+ * `FullPane` paints the current one and back/forward are the browser history.
+ */
 export function DeployLayout() {
-  // No app-level sidebar or toolbar — navigation lives in the first Miller
-  // column — so the shell collapses to its transparent full-surface host,
-  // which supplies the muted `<main>` backdrop the column stack sits on.
   return (
-    <AppShellLayout>
-      <MillerColumns />
+    <AppShellLayout sidebarSlot={Deploy.Sidebar}>
+      <FullPane />
     </AppShellLayout>
   );
 }

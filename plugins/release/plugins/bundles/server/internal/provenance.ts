@@ -137,3 +137,68 @@ export async function compareToHead(
   ).trim();
   return { kind: "behind", commits: Number(count) };
 }
+
+/** A commit looked up by sha: its subject line, or why this repo cannot say. */
+export type CommitLookup =
+  | { readonly kind: "known"; readonly subject: string }
+  | { readonly kind: "unknown"; readonly reason: string };
+
+/**
+ * `sha`'s subject line (`git log -1 --format=%s`), or `unknown` when this
+ * repository has never seen the commit — the same rule 3 as
+ * {@link compareToHead}: a run dir (or a deploy record) can outlive the branch
+ * it was built from, or come from another clone. Any other git failure throws.
+ */
+export async function readCommitSubject(
+  sha: string,
+  cwd: string,
+): Promise<CommitLookup> {
+  const known = await spawnCaptured(
+    [
+      GIT,
+      "--no-optional-locks",
+      "-C",
+      cwd,
+      "cat-file",
+      "-e",
+      `${sha}^{commit}`,
+    ],
+    { timeoutMs: GIT_TIMEOUT_MS },
+  );
+  if (known.exitCode !== 0) {
+    return {
+      kind: "unknown",
+      reason: `commit ${sha} is not known to this repository`,
+    };
+  }
+  const subject = await git(["log", "-1", "--format=%s", sha], cwd);
+  return { kind: "known", subject: subject.replace(/\n$/, "") };
+}
+
+/** The sha `ref` points at (`git rev-parse --verify <ref>^{commit}`). Throws when it does not resolve. */
+export async function readRefSha(ref: string, cwd: string): Promise<string> {
+  return (await git(["rev-parse", "--verify", `${ref}^{commit}`], cwd)).trim();
+}
+
+/**
+ * How many commits reachable from `ref` are not reachable from `sha`
+ * (`git rev-list --count <sha>..<ref>`) — "how far behind `ref` is `sha`",
+ * counted the same way whether `sha` is an ancestor of it or diverged from it.
+ * Throws when git fails or answers something that is not a count.
+ */
+export async function countCommitsBehind(
+  sha: string,
+  ref: string,
+  cwd: string,
+): Promise<number> {
+  const out = (
+    await git(["rev-list", "--count", `${sha}..${ref}`], cwd)
+  ).trim();
+  const count = Number(out);
+  if (!/^\d+$/.test(out) || !Number.isSafeInteger(count)) {
+    throw new Error(
+      `git rev-list --count ${sha}..${ref} printed ${JSON.stringify(out)}, which is not a commit count`,
+    );
+  }
+  return count;
+}

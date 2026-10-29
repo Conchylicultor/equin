@@ -1,10 +1,18 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { ServerDetail } from "@plugins/apps/plugins/deploy/plugins/servers/web";
-import { serverStatusPresentation } from "./internal/status-presentation";
 import {
-  ServerStatusSection,
-  ServerStatusSummary,
-} from "./components/status-section";
+  ServerDetail,
+  ServerHeader,
+} from "@plugins/apps/plugins/deploy/plugins/servers/web";
+import { serverStatusPresentation } from "./internal/status-presentation";
+import { ServerStatusSection } from "./components/status-section";
+import {
+  CheckNowAction,
+  ServerHeaderPlatform,
+  ServerHeaderStatus,
+} from "./components/server-header-parts";
+import { ServersSidebarSection } from "./components/servers-sidebar";
+import { Deploy } from "@plugins/apps/plugins/deploy/plugins/shell/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export {
   useServerHealthMap,
@@ -22,7 +30,7 @@ export type { ServerHealthRow, SshCheckResult } from "../shared";
 
 export default {
   description:
-    "Server reachability for the deploy app: probes a registered server over SSH, records the classified verdict, and exposes its verdict as the `status` field of every list of servers plus the verify step of the SSH setup flow.",
+    "Server reachability for the deploy app: probes a registered server over SSH, records the classified verdict, and exposes its verdict as the `status` field of every list of servers plus the verify step of the SSH setup flow, and the Deploy sidebar's Servers section (each server with its verdict dot).",
   contributions: [
     // The probe verdict as the `status` field of every list of servers.
     serverStatusPresentation,
@@ -38,9 +46,22 @@ export default {
     // registry owns a server's identity, this plugin owns its liveness.
     ServerDetail.Section({
       id: "status",
-      label: "Status",
+      label: "Health",
+      column: "side",
       component: ServerStatusSection,
-      summary: ServerStatusSummary,
+      useDefaultOpen: () => true,
+    }),
+    ServerHeader.Badge({ id: "status", component: ServerHeaderStatus }),
+    ServerHeader.Meta({ id: "platform", component: ServerHeaderPlatform }),
+    ServerHeader.Action({ id: "check-now", component: CheckNowAction }),
+    // The Deploy sidebar's Servers section, each row wearing this plugin's
+    // verdict dot. Here rather than in `servers` for the same reason as the
+    // section above: `servers` cannot import `health`.
+    Deploy.Sidebar({
+      id: "servers",
+      title: "Servers",
+      icon: symbol("dns"),
+      component: ServersSidebarSection,
     }),
   ],
 } satisfies PluginDefinition;

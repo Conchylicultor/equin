@@ -17,11 +17,15 @@ export function KpiTiles({
   report,
   selected,
   onSelect,
+  only,
 }: {
   report: AnalyticsReport;
   selected: KpiId;
   onSelect: (id: KpiId) => void;
+  /** The subset to draw, in `KPIS` order (the Overview's four); absent ⇒ every KPI. */
+  only?: readonly KpiId[];
 }): ReactNode {
+  const kpis = only ? KPIS.filter((k) => only.includes(k.id)) : KPIS;
   return (
     <Grid
       minCellWidth="9rem"
@@ -30,7 +34,7 @@ export function KpiTiles({
       role="radiogroup"
       aria-label="Chart metric"
     >
-      {KPIS.map((kpi) => {
+      {kpis.map((kpi) => {
         const change = report.previous
           ? kpiChange(kpi, report.current.summary, report.previous.summary)
           : null;

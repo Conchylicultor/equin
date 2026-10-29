@@ -2,7 +2,8 @@ import { describe, expect, test } from "bun:test";
 import type { SshKey } from "@plugins/apps/plugins/deploy/plugins/servers/web";
 import { installCommand } from "./install-command";
 
-const BLOB = "AAAAC3NzaC1lZDI1NTE5AAAAIJk1r7Xz2VqQwqRPq1J8v3wKZ6f0Lm9dQxK4tYh2sJ0e";
+const BLOB =
+  "AAAAC3NzaC1lZDI1NTE5AAAAIJk1r7Xz2VqQwqRPq1J8v3wKZ6f0Lm9dQxK4tYh2sJ0e";
 
 function key(comment: string): SshKey {
   return {

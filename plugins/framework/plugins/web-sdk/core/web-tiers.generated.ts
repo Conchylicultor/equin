@@ -62,6 +62,7 @@ export const DEFERRED_PLUGIN_PATHS: ReadonlySet<string> = new Set([
   "apps/plugins/deploy/plugins/composition",
   "apps/plugins/deploy/plugins/deploy-history",
   "apps/plugins/deploy/plugins/deploy-history/plugins/investigate-failure",
+  "apps/plugins/deploy/plugins/deploy-history/plugins/rollback",
   "apps/plugins/deploy/plugins/deploy-secrets/plugins/approvals",
   "apps/plugins/deploy/plugins/deployments",
   "apps/plugins/deploy/plugins/deployments/plugins/runs-arm",

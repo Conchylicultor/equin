@@ -1,6 +1,6 @@
 {
-  "id": "45f8cba3-4d04-4d79-a017-a592b04a52c6",
-  "prevId": "a091aac2-c955-46f2-bc28-188916b4e66e",
+  "id": "3886a0de-61e0-4fbb-9967-fd93a53098c3",
+  "prevId": "45f8cba3-4d04-4d79-a017-a592b04a52c6",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1825,6 +1825,12 @@
         },
         "commit_sha": {
           "name": "commit_sha",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "commit_subject": {
+          "name": "commit_subject",
           "type": "text",
           "primaryKey": false,
           "notNull": false

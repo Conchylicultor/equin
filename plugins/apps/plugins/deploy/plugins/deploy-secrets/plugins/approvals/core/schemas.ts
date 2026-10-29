@@ -2,7 +2,7 @@ import { z } from "zod";
 import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 
 /**
- * The id of the deployment pane's Secrets section — contributed under it
+ * The id of the site Settings tab's Secrets section — contributed under it
  * (`web/`) and named by the deploy gate's refusal (`server/`), which is how a
  * held run links to it. One spelling, here.
  */

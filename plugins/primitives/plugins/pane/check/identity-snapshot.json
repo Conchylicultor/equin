@@ -325,22 +325,40 @@
       "parent": null
     },
     {
+      "paneId": "deploy-activity",
+      "segment": "activity",
+      "appIndex": false,
+      "parent": "deploy-index"
+    },
+    {
       "paneId": "deploy-deployment-detail",
       "segment": "dep/:deploymentId",
       "appIndex": false,
       "parent": "deploy-server-detail"
     },
     {
-      "paneId": "deploy-server-detail",
-      "segment": "server/:serverId",
-      "appIndex": false,
-      "parent": "deploy-servers"
-    },
-    {
-      "paneId": "deploy-servers",
+      "paneId": "deploy-index",
       "segment": "",
       "appIndex": true,
       "parent": null
+    },
+    {
+      "paneId": "deploy-server-detail",
+      "segment": "server/:serverId",
+      "appIndex": false,
+      "parent": "deploy-index"
+    },
+    {
+      "paneId": "deploy-servers",
+      "segment": "servers",
+      "appIndex": false,
+      "parent": "deploy-index"
+    },
+    {
+      "paneId": "deploy-site",
+      "segment": "site/:deploymentId/:tab?",
+      "appIndex": false,
+      "parent": "deploy-index"
     },
     {
       "paneId": "event-list",

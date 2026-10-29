@@ -21,7 +21,8 @@ export default {
       // (`SshSetupActions`), where it reads as a fact about this server rather
       // than as a card whose name changes row to row. Same for the icon — a key
       // names what the section does; the provider's own icon rides its chip.
-      label: "Set up SSH access",
+      label: "SSH key",
+      column: "side",
       icon: symbol("vpn-key"),
       actions: SshSetupActions,
       // Expanded while action is needed; collapsed to one row once the

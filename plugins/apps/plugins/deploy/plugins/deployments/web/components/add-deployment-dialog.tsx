@@ -18,11 +18,15 @@ import {
   useEndpointMutation,
 } from "@plugins/infra/plugins/endpoints/web";
 import { useManifestItems } from "@plugins/plugin-meta/plugins/composition/web";
+import { useLive } from "@plugins/network/plugins/live/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { servers } from "@plugins/apps/plugins/deploy/plugins/servers/web";
 import {
   createDeployment,
   DEFAULT_LOOPBACK_PORT,
+  deployments,
   deriveInstall,
-  type Deployment,
 } from "../../core";
 
 /** One labelled row of the form. Local, tiny, and not chrome worth a primitive. */
@@ -59,21 +63,22 @@ function Field({
  *
  * The composition list comes from `useManifestItems()` — the same hook the
  * Studio compositions pane reads, never `config_v2` directly. Compositions
- * already deployed on this server are omitted: `(composition, server)` is unique,
- * so offering one would only be a way to earn a 409.
+ * already deployed on the chosen server are omitted: `(composition, server)` is
+ * unique, so offering one would only be a way to earn a 409.
+ *
+ * Opened from a server's page the server is fixed (`serverId`); opened from
+ * anywhere else (the sidebar's Sites "+", the sites index) the form starts by
+ * picking it.
  */
 export function AddDeploymentDialog({
-  serverId,
-  existing,
+  serverId: fixedServerId,
   close,
 }: {
-  serverId: string;
-  existing: readonly Deployment[];
+  serverId?: string;
   close: () => void;
 }): ReactElement {
-  const items = useManifestItems();
-  const taken = new Set(existing.map((d) => d.compositionId));
-  const available = items.map((i) => i.name).filter((name) => !taken.has(name));
+  const [pickedServerId, setPickedServerId] = useState("");
+  const serverId = fixedServerId ?? pickedServerId;
 
   const [composition, setComposition] = useState("");
   const [hostnames, setHostnames] = useState("");
@@ -93,7 +98,7 @@ export function AddDeploymentDialog({
 
   function submit(e: React.FormEvent): void {
     e.preventDefault();
-    if (!composition) return;
+    if (!composition || !serverId) return;
     create.mutate({
       body: {
         compositionId: composition,
@@ -109,31 +114,29 @@ export function AddDeploymentDialog({
       <Stack gap="xs">
         <DialogTitle>Add a deployment</DialogTitle>
         <DialogDescription>
-          Where a composition is served on this server, and under what URL.
+          Where a composition is served on a server, and under what URL.
         </DialogDescription>
       </Stack>
 
-      <Field
-        label="Composition"
-        hint={
-          available.length === 0
-            ? "Every composition already has a deployment on this server."
-            : undefined
-        }
-      >
-        <Select value={composition} onValueChange={(v) => setComposition(v ?? "")}>
-          <SelectTrigger>
-            <SelectValue placeholder="Pick a composition" />
-          </SelectTrigger>
-          <SelectContent>
-            {available.map((name) => (
-              <SelectItem key={name} value={name}>
-                {name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </Field>
+      {fixedServerId === undefined && (
+        <Field label="Server">
+          <ServerPicker
+            value={pickedServerId}
+            onChange={(id) => {
+              setPickedServerId(id);
+              setComposition("");
+            }}
+          />
+        </Field>
+      )}
+
+      {serverId !== "" && (
+        <CompositionField
+          serverId={serverId}
+          value={composition}
+          onChange={setComposition}
+        />
+      )}
 
       <Field
         label="Hostnames"
@@ -191,13 +194,119 @@ export function AddDeploymentDialog({
         </Button>
         <Button
           type="submit"
-          disabled={!composition || create.isPending}
+          disabled={!composition || !serverId || create.isPending}
           loading={create.isPending}
         >
           Add deployment
         </Button>
       </Stack>
     </Stack>
+  );
+}
+
+/**
+ * The composition choice for one server: every composition not yet deployed
+ * there. The server's deployments are read live — which compositions it
+ * already serves is a fact about the server, not something the opener hands
+ * in — and the choice waits for them rather than offering a 409.
+ */
+function CompositionField({
+  serverId,
+  value,
+  onChange,
+}: {
+  serverId: string;
+  value: string;
+  onChange: (composition: string) => void;
+}): ReactElement {
+  const items = useManifestItems();
+  const existing = useLive(deployments, { where: { serverId } });
+  switch (existing.status) {
+    case "loading":
+      return <Loading variant="rows" />;
+    case "error":
+      return (
+        <ResourceErrorInline
+          variant="block"
+          subject="the server's deployments"
+          error={existing.error}
+          refetch={existing.refetch}
+        />
+      );
+    case "ready":
+      break;
+  }
+  const taken = new Set(existing.data.map((d) => d.compositionId));
+  const available = items.map((i) => i.name).filter((name) => !taken.has(name));
+  return (
+    <Field
+      label="Composition"
+      hint={
+        available.length === 0
+          ? "Every composition already has a deployment on this server."
+          : undefined
+      }
+    >
+      <Select value={value} onValueChange={(v) => onChange(v ?? "")}>
+        <SelectTrigger>
+          <SelectValue placeholder="Pick a composition" />
+        </SelectTrigger>
+        <SelectContent>
+          {available.map((name) => (
+            <SelectItem key={name} value={name}>
+              {name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </Field>
+  );
+}
+
+/** Every registered server, by name — the dialog's first choice when unfixed. */
+function ServerPicker({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (serverId: string) => void;
+}): ReactElement {
+  const result = useLive(servers);
+  switch (result.status) {
+    case "loading":
+      return <Loading variant="rows" />;
+    case "error":
+      return (
+        <ResourceErrorInline
+          variant="block"
+          subject="the servers"
+          error={result.error}
+          refetch={result.refetch}
+        />
+      );
+    case "ready":
+      break;
+  }
+  if (result.data.length === 0) {
+    return (
+      <Text as="p" variant="caption" tone="muted">
+        No servers registered yet — add one first.
+      </Text>
+    );
+  }
+  return (
+    <Select value={value} onValueChange={(v) => onChange(v ?? "")}>
+      <SelectTrigger>
+        <SelectValue placeholder="Pick a server" />
+      </SelectTrigger>
+      <SelectContent>
+        {result.data.map((s) => (
+          <SelectItem key={s.id} value={s.id}>
+            {s.name}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
 

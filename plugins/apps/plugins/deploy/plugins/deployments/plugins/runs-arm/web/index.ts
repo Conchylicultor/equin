@@ -8,7 +8,7 @@ import { deployRunPresentation } from "./internal/presentation";
 
 export default {
   description:
-    "The deploy arm's presence on the merged run surface: its rows' link into the deployment detail pane on the server the run went to, and the cells of its eight own fields (verb, failed phase, server / deployment / composition / release-run / commit ids, exit code) — real filterable and sortable SQL dimensions, declared by the arm.",
+    "The deploy arm's presence on the merged run surface: its rows' link into the site's Deployments tab, and the cells of its eight own fields (verb, failed phase, server / deployment / composition / release-run / commit ids, exit code) — real filterable and sortable SQL dimensions, declared by the arm.",
   contributions: [
     runLinks(deployRunArm, (run, { openPane }) => deployRunLink(run, openPane)),
     // Its fields' cells; the fields — under their "Deploy" band — are the

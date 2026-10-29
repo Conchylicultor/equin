@@ -110,21 +110,33 @@ function Credit({ credit }: { credit: DataCredit }): ReactNode {
   );
 }
 
-function RankedList({
+/**
+ * A short, read-only excerpt of a ranked list (the site Overview's Top pages /
+ * Top sources): the first `limit` rows and the primary column only, each row
+ * activating — with `openTitle` as its tooltip — instead of filtering.
+ */
+export interface RankedListExcerpt {
+  limit: number;
+  openTitle: string;
+}
+
+export function RankedList({
   tab,
   report,
   source,
   filters,
   onFilterRow,
+  excerpt,
 }: {
   tab: PanelTab;
   report: AnalyticsReport;
   source: ReportSource;
   filters: readonly AnalyticsFilter[];
   onFilterRow: (dimension: Dimension, value: string) => void;
+  excerpt?: RankedListExcerpt;
 }): ReactNode {
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
-  const rows = report.rows[tab.dimension];
+  const rows = report.rows[tab.dimension].slice(0, excerpt?.limit);
   if (rows.length === 0) {
     return <Placeholder>Nothing recorded in this period.</Placeholder>;
   }
@@ -135,7 +147,7 @@ function RankedList({
       if (!next.delete(value)) next.add(value);
       return next;
     });
-  const rowProps = { tab, report, source, filters, onFilterRow };
+  const rowProps = { tab, report, source, filters, onFilterRow, excerpt };
   const list = (
     <Stack gap="none">
       <Line className="px-sm">
@@ -148,7 +160,7 @@ function RankedList({
         <Text variant="eyebrow" tone="muted" className={NUMBER_CELL}>
           {tab.primary.label}
         </Text>
-        {tab.columns.map((c) => (
+        {(excerpt ? [] : tab.columns).map((c) => (
           <Text
             key={c.label}
             variant="eyebrow"
@@ -253,6 +265,7 @@ function RankedRow({
   label,
   share,
   nested,
+  excerpt,
 }: {
   tab: PanelTab;
   report: AnalyticsReport;
@@ -266,6 +279,7 @@ function RankedRow({
   share: number;
   /** A breakdown row, indented under its parent. */
   nested?: true;
+  excerpt?: RankedListExcerpt;
 }): ReactNode {
   const selected = isFilterOn(filters, dimension, row.value);
   const click = clickRow(filters, source, dimension, row.value);
@@ -276,7 +290,9 @@ function RankedRow({
       title={
         click.kind === "blocked"
           ? click.reason
-          : selected
+          : excerpt
+            ? excerpt.openTitle
+            : selected
             ? "Remove this filter"
             : `Filter by ${label}`
       }
@@ -298,7 +314,7 @@ function RankedRow({
       <Text className={`relative ${NUMBER_CELL}`}>
         {formatCount(tab.primary.value(row))}
       </Text>
-      {tab.columns.map((c) => (
+      {(excerpt ? [] : tab.columns).map((c) => (
         <Text key={c.label} tone="muted" className={`relative ${NUMBER_CELL}`}>
           {c.cell(row, report)}
         </Text>

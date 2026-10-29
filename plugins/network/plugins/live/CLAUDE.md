@@ -1420,8 +1420,8 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `upsertRows`
     - `valueSubject`
 - Cross-plugin:
-  - Imported by: 313 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×81
+  - Imported by: 315 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×83
     - `conversations` ×54
     - `debug` ×32
     - `tasks` ×29

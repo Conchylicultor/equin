@@ -8,6 +8,10 @@ A nav entry (`AppShellSidebarNav`) says what a click does in one of two arms:
   the route root AND marks the row active (`SidebarMenuButton isActive`) while
   the route's root pane is that pane, so the current section is highlighted
   with nothing to keep in sync. Prefer it whenever the entry opens a pane.
+  An entry opening the app's index pane (`appIndex`) is active at the bare
+  root, and only while nothing but companion panes follows the index — it
+  heads the chain of every pane parented on it, which would otherwise keep
+  the landing entry lit beside the one actually open.
 - **`onClick`** — anything else. Never highlighted: a callback cannot say where
   it goes.
 
@@ -99,8 +103,8 @@ reads what is on screen rather than a per-app flag.
     - `ui/tokens/sidebar-palette --sidebar-accent`
     - `ui/tokens/sidebar-palette --sidebar-foreground`
     - `ui/tokens/sidebar-palette --sidebar-icon`
-  - Imported by: 26 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×19
+  - Imported by: 29 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×22
     - `conversations` ×2
     - `tasks` ×2
     - `apps-core/app-launcher`

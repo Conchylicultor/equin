@@ -15,6 +15,7 @@ describe("deploy.run-history", () => {
       "status",
       "verb",
       "commitSha",
+      "commitSubject",
       "releaseRunId",
       "startedAt",
       "message",

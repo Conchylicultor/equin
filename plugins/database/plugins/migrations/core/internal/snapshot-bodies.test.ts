@@ -9,7 +9,7 @@ import {
   renderPhasedMigration,
   renderSnapshotHeader,
 } from "./phases";
-import { snapshotBodies } from "./snapshot-bodies";
+import { MissingSnapshotBodyError, snapshotBodies } from "./snapshot-bodies";
 import {
   analyzeSnapshotDag,
   NULL_SNAPSHOT_ID,
@@ -113,9 +113,9 @@ describe("snapshotBodies", () => {
     );
     write("meta/schema.snapshot.json", body(C, B, "c"));
     const fresh = snapshotBodies(root, join(root, DATA));
-    expect(
-      ((await fresh.text(W).catch((e: unknown) => e)) as Error).message,
-    ).toContain(`no body for snapshot ${W}`);
+    const missing = await fresh.text(W).catch((e: unknown) => e);
+    expect(missing).toBeInstanceOf(MissingSnapshotBodyError);
+    expect((missing as Error).message).toContain(`no body for snapshot ${W}`);
     // ...unless the generator handed it over before overwriting the file.
     fresh.remember(W, body(W, C, "w"));
     expect(await fresh.text(W)).toBe(body(W, C, "w"));

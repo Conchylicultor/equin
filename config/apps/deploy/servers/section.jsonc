@@ -1,4 +1,4 @@
-// @hash cfc66bbe4a72
+// @hash 83b9ffc219f1
 // @legend — how to write this file (rewritten by ./equin build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -6,27 +6,24 @@
 //   Divider (rule): { "type": "divider", "id": "<unique-id>" } — a hairline rule between the items either side of it, turned to the slot's flow (flat in a column such as a sidebar's footer rows, upright in a row such as a toolbar).
 //   Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
 //   Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
-// The server pane, read top to bottom: is it reachable, what is it, how do we
-// get in, what does it run.
+// The server page, two columns (each section declares its `column`; this
+// order is read within each column).
 //
-//   status      — liveness first; it is where the old header badge sat, and it
-//                 qualifies everything below it.
-//   identity    — the record itself (name / host / user / port), plus Delete.
-//   ssh-setup   — the key flow. MUST precede deployments: converge and ship
-//                 refuse until a probe succeeds, so a reader who meets
-//                 Deployments first is offered two verbs that cannot work yet.
-//   deployments — what this server actually serves.
-//
-// Registration order (topo-sort) puts deployments ahead of ssh-setup, which is
-// why this file is not just the seeded default.
+//   main: deployments (what this server serves — the reason anyone opens the
+//         page, so it leads), identity (the record: name / host / user / port /
+//         console), danger-zone (Delete, last).
+//   side: status (liveness, qualifying everything else), ssh-setup (the key
+//         flow — converge and ship refuse until a probe succeeds, so it sits
+//         beside the sites from the first read).
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   "items": [
-    "apps.deploy.health:status",
+    "apps.deploy.deployments:deployments",
     "apps.deploy.servers:identity",
+    "apps.deploy.health:status",
     "apps.deploy.ssh-setup:ssh-setup",
-    "apps.deploy.deployments:deployments"
+    "apps.deploy.servers:danger-zone"
   ]
 }

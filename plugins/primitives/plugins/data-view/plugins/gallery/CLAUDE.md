@@ -66,11 +66,25 @@ One card shape, everywhere — `DataCard`, built at ONE site in `GalleryView`:
   `dv.card-title`, `dv.card-subtitle`, `dv.card-tokens`, `dv.card-token`,
   `dv.card-token-icon`.
 
-There are no gallery options. A surface changes what a card shows through its
+A surface changes what a card shows through its
 schema (fields and their types, `FieldDef.cover` / `icon`), its placement
 (`recipe` / `place`), the cover accessor, its item actions and the theme's tokens — never by replacing
 the card or its body, so a card can never drop an affordance the surface
 declared.
+
+The one gallery option (`GalleryViewOptions`, `viewOptions.gallery`) picks the
+card's SHAPE from a closed set, not its body:
+
+- `card: "cover"` (default) — everything above.
+- `card: "panel"` — for records with no picture (the Deploy sites index): a
+  raised `Surface` (`PanelCard`) whose head is the `lead` slot drawn as its
+  cell (the mark) beside `<CardMeta omitTokens>` (title + `afterTitle` marks,
+  then the `line2` subtitle), and whose footer is the tokens line
+  (`<CardTokens>`: `trail`, then `edge` at its far end) under a hairline. Same
+  activation, selection, hover, tone and item-action cluster (pinned
+  top-right); no primary slot and no cover — the schema's cover field is not
+  drawn. Its grid minimum is the theme's card minimum but at least 20rem
+  (`PANEL_MIN`), so the head's one line fits.
 
 ## Grouping + windowing
 
@@ -145,18 +159,21 @@ taking `{song, onOpen}` never trips it.
 - Description: Gallery view child for the data-view primitive: a responsive grid of cover cards — the cover is the card, its fields three fixed lines under it, its actions on the cover.
 - Web:
   - Contributes: `DataViewSlots.View` "Gallery" → `GalleryView`
-  - Uses: 43 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/data-view` ×26
+  - Uses: 48 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/data-view` ×27
     - `primitives/css/ui-kit` ×3
+    - `primitives/css/spacing` ×2
     - `primitives/row-actions` ×2
     - `primitives/avatar.Avatar`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
+    - `primitives/css/fill.Fill`
     - `primitives/css/grid.Grid`
     - `primitives/css/inline.Inline`
     - `primitives/css/layer.Layer`
     - `primitives/css/pin.Pin`
-    - `primitives/css/spacing.Stack`
+    - `primitives/css/rigid.rigidClass`
+    - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`
     - `primitives/dom/element-size.useResizeObserver`
     - `primitives/link-gesture.activationProps`
@@ -164,27 +181,13 @@ taking `{song, onOpen}` never trips it.
   - Exports (types):
     - `DataCardActions`
     - `DataCardProps`
+    - `GalleryViewOptions`
   - Exports (values): `DataCard`
 - Cross-plugin:
-  - Uses tokens:
-    - `ui/tokens/color-palette --background`
-    - `ui/tokens/color-palette --muted-foreground`
-    - `ui/tokens/color-palette --primary`
-    - `ui/tokens/color-palette --ring`
-    - `ui/tokens/data-view --card-meta-pad-top`
-    - `ui/tokens/data-view --card-meta-pad-x`
-    - `ui/tokens/data-view --cover-primary-fill`
-    - `ui/tokens/data-view --cover-primary-ink`
-    - `ui/tokens/data-view --cover-primary-shadow`
-    - `ui/tokens/data-view --cover-primary-size`
-    - `ui/tokens/data-view --gallery-body-pad-y`
-    - `ui/tokens/density --chrome-pad-x`
-    - `ui/tokens/density --gallery-card-min`
-    - `ui/tokens/density --gallery-card-min-compact`
-    - `ui/tokens/density --gallery-gap-x`
-    - `ui/tokens/density --gallery-gap-y`
-    - `ui/tokens/density --space-md`
-    - `ui/tokens/density --space-xl`
+  - Uses tokens: 21 vars — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui/tokens/data-view` ×7
+    - `ui/tokens/density` ×7
+    - `ui/tokens/color-palette` ×5
     - `ui/tokens/shadow --shadow`
     - `ui/tokens/shape --radius-cover`
 

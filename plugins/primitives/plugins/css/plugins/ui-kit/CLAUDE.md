@@ -608,9 +608,9 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `ui/tokens/chart` ×5
     - `ui/tokens/font-family` ×4
     - `ui/tokens/scrollbar --scrollbar-color`
-  - Imported by: 446 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 448 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives` ×110
-    - `apps` ×102
+    - `apps` ×104
     - `conversations` ×53
     - `page` ×26
     - `debug` ×24

@@ -1,18 +1,19 @@
 import { defineRoute } from "@plugins/primitives/plugins/pane/core";
-import { serverDetailRoute } from "@plugins/apps/plugins/deploy/plugins/servers/core";
+import { deployIndexRoute } from "@plugins/apps/plugins/deploy/plugins/shell/core";
 
 /**
- * One deployment, under the server it lives on.
+ * One site — a deployment: a composition served on a server under its
+ * hostnames — as the app's primary page.
  *
- * Segments are GLOBALLY unique across all panes after param-name erasure —
- * `d/:sha` is the diff pane's, so a deployment uses `dep/…`.
+ * The optional trailing `:tab?` is which tab of the site is on screen, so a
+ * tab has an address while bare `site/<id>` stays valid (the Overview).
+ * Parented on the app's index, not on the server it lives on: a site is
+ * reached directly, and only its own id addresses it.
  *
- * Chaining to `serverDetailRoute` is what types the pane's params as the full
- * `{ serverId, deploymentId }`, so a caller with no route context — a row in the
- * merged runs list — can open this pane from anywhere.
+ * Segments are GLOBALLY unique across all panes after param-name erasure.
  */
-export const deploymentDetailRoute = defineRoute({
-  id: "deploy-deployment-detail",
-  segment: "dep/:deploymentId",
-  parent: serverDetailRoute,
+export const siteRoute = defineRoute({
+  id: "deploy-site",
+  segment: "site/:deploymentId/:tab?",
+  parent: deployIndexRoute,
 });

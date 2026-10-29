@@ -210,7 +210,7 @@ beside `failRun` in `run-state.ts`) having converged and shipped nothing, and al
 refusals are reported at once. A refusal also names **where it is resolved**
 (`resolveIn`: a `DeploymentDetail` section id), persisted on the run as
 `approvalSections`; `ApprovalLinks` links there (open the section + scroll to
-it, navigating to the deployment pane when needed) on every surface that shows
+it, navigating to the site's Settings tab when needed) on every surface that shows
 the run — no surface reads the message to find out where. The server list's
 held-run chip stays a plain status: the row's hover actions cover a trailing
 chip, so its link is the failure notice's above the list.
@@ -255,6 +255,13 @@ environment.
   leg of its own. The phase is derived rather than remembered: a named leg with
   no transcript has not spawned, and for an `update` the only leg that is
   named-but-unspawned is `ship`, which means the build is what is running.
+  First, `seedNewestRuns` puts every deployment's NEWEST ledger row
+  back (`DISTINCT ON (deployment_id)`, one per deployment, never overwriting an
+  entry already published), so the map stays "every deployment's most recent
+  run" across a restart and a site deployed before it reads `live` on every
+  surface. Those surfaces read the status through ONE fold —
+  `useSiteStatuses()` (a list: the whole map, one read) / `useSiteStatus(id)`
+  (`web/internal/site-status.ts`); the raw `siteStatusOf` is private.
 - **`deploy_runs`** — the **record**: one row per launched run, so _what is live
   on this box, and what happened before_ survives a restart. Read back as the
   `deployRunHistory` live collection (`deploy.run-history`, a window read as
@@ -367,89 +374,145 @@ described cannot happen any more. That sentence existed because the middle leg
 was an in-process `await runRelease(...)` with nothing durable to resume from.
 An `update` now keeps going across the restart, which was the whole point.
 
-### The row is a list row; the record lives in the pane
+### The site page is a host; every feature contributes
 
-The list row carries only what a person scans — composition, last run, and the
-contributed `Release` state. The record's editable fields (hostnames, loopback
-port) and the derived install names (`runUser` / `installDir` / `unit` /
-`caddySite`, each a pure function of the composition name and therefore never
-editable) live in the `overview` section of the row's own pane
-(`dep/:deploymentId`), which is also where the `remote-deploy` section acts. The
-pane is where a deploy is read and launched; the row's rigid trailing region only
-holds the single-verb shortcuts, so the row navigates instead of growing.
+`sitePane` (`site/:deploymentId/:tab?`) renders `SitePage` over the resolved row.
+It owns the site's identity (mark, primary hostname, `useSiteStatus` pill,
+hostnames, composition) and five slots, all in `web/slots.ts`, named by no
+contributor:
 
-There is deliberately **no log panel on the server page**: the pane's Output
-section subscribes to the same `deploy` channel, and a second live subscription
-to one channel — under a heading, on a page that no longer hosts the actions —
-was duplication rather than a view. The channel replays its ring buffer on
-subscribe, so the pane shows the last run's tail on open.
+| Slot | Shape | Host |
+|---|---|---|
+| `SiteHeader.Action` | `{ id, component({ deployment }) }` | header buttons, slot order |
+| `SiteStrip.Cell` | `{ id, label, component({ deployment }) }` | production strip, one hairline-divided cell each |
+| `SiteBanner` | `{ id, useBanner({ deployment }) → SiteBannerSpec \| null }` | the FIRST non-null in slot order, drawn under the strip |
+| `SiteTabs` | `defineTabbedView<{ deploymentId }>("deploy.site", { strip: "underline" })` | active tab = the URL's `:tab?`, switched in place (`useSetSiteTab`, the pane's `useSetParams`) |
+| `SiteOverview.Card` | `{ id, column: "main" \| "side", component({ deployment }) }` | the Overview tab's two columns; a card paints its own `SiteCard` |
+| `SiteCheck` | `{ id, useCheck({ deployment }) → SiteCheckResult \| null }` | the Overview's Checks card (null = does not apply) |
 
-`DeploymentDetail` (sections) is the slot that makes that pane extensible without this plugin naming
-any consumer; extra columns of the row are client fields of the `deployments` collection
-(`clientFields(deployments, …)`), declared by the plugin owning the value.
+`useSiteTabLink(tab)` is a tab as a `LinkTarget` (a check's Fix, a card's header
+link) — only inside the site page. The Server cell is this plugin's own:
+`health` contributing it would close a cycle (`deployments` already reads
+`health` for `useBlockedReason`).
+
+Settings is `DeploymentDetail` (the slot keeps its name: its id is the persisted
+order key): General and Install (this plugin), Secrets (`approvals`),
+Composition (`composition`), Danger zone (this plugin) — every section open by
+default, a left rail revealing each (`useRevealSection`).
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./equin build` -->
 
 ## Plugin reference
 
-- Description: Deployments section of a server's page: this server's deployments as a DataView (composition, last run, plus contributed columns), an add affordance whose composition picker reads the compositions config, a Deploy row action that launches the CLI's whole converge-build-ship run, and the per-deployment pane whose sections (overview, plus contributed ones) carry the record, its derived install and the remote-deploy surface. Owns the deploy_deployments table: where a composition is served and under what URL ((composition × server) → { hostnames, loopbackPort }), its live collection, and the CRUD endpoints. Also launches `./equin deploy converge|ship` for a deployment — and orchestrates the `update` sequence (converge → build a candidate unless one is already current → ship that pinned run id) over the awaitable release engine — streaming the CLI's output into the durable `deploy` log channel, each run's phase and outcome into the in-memory `deploy.runs` live view, and every run into the durable `deploy_runs` ledger it serves back as a live history window — the record that survives the restart the live view does not. Before any leg spawns, every DeployGates.Gate contribution is asked; a run one of them refuses ends needs-approval having converged and shipped nothing. The install itself — run user, dir layout, systemd unit, Caddy site — is derived in core/, never stored.
+- Description: Sites — the Deploy app's primary entity, a deployment: the sites index (the app's landing page, a DataView of every deployment with its server and status), the site page (site/:deploymentId/:tab?) — a header (mark, hostname, status pill, hostnames, composition, contributed SiteHeader actions), the production strip (SiteStrip cells, its Server cell this plugin's own) with the first applicable SiteBanner, and the SiteTabs host bound to the URL's :tab?, whose Overview (a two-column host over SiteOverview.Card plus a Checks card over SiteCheck) and Settings (the DeploymentDetail sections — General, Install and a Danger zone of its own — under a left anchor rail) tabs are this plugin's, the sidebar's Overview entry and Sites section (status dot per site from useSiteStatus, + opening the add dialog), and the Deployments section of a server's page (that server's sites as a DataView, an add affordance whose composition picker reads the compositions config, a Deploy row action that launches the CLI's whole converge-build-ship run). Old server/:serverId/dep/:deploymentId links forward to the site. Owns the deploy_deployments table: where a composition is served and under what URL ((composition × server) → { hostnames, loopbackPort }), its live collection, and the CRUD endpoints. Also launches `./equin deploy converge|ship` for a deployment — and orchestrates the `update` sequence (converge → build a candidate unless one is already current → ship that pinned run id) over the awaitable release engine — streaming the CLI's output into the durable `deploy` log channel, each run's phase and outcome into the in-memory `deploy.runs` live view, and every run into the durable `deploy_runs` ledger it serves back as a live history window — the record that survives the restart the live view does not. Before any leg spawns, every DeployGates.Gate contribution is asked; a run one of them refuses ends needs-approval having converged and shipped nothing. The install itself — run user, dir layout, systemd unit, Caddy site — is derived in core/, never stored.
 - Web:
   - Slots:
     - `DeploymentDetail.Section`
+    - `SiteTabs.View`
+    - `SiteHeader.Action`
+    - `SiteStrip.Cell`
+    - `SiteBanner`
+    - `SiteOverview.Card`
+    - `SiteCheck`
     - `DeploymentItemActions`
-    - `deploymentDetailPane.Actions`
-  - Slot contributors:
-    - `DeploymentDetail.Section` ← `apps.deploy.analytics.dashboard`
-    - `DeploymentDetail.Section` ← `apps.deploy.composition`
-    - `DeploymentDetail.Section` ← `apps.deploy.deploy-history`
-    - `DeploymentDetail.Section` ← `apps.deploy.deploy-secrets.approvals`
-    - `DeploymentDetail.Section` ← `apps.deploy.deployments`
-    - `DeploymentDetail.Section` ← `apps.deploy.local-serve`
-    - `DeploymentDetail.Section` ← `apps.deploy.remote-deploy`
-    - `DeploymentDetail.Section` ← `apps.deploy.site-messages.inbox`
-    - `DeploymentItemActions` ← `apps.deploy.deployments`
-    - `DeploymentItemActions` ← `apps.deploy.local-serve`
-    - `deploymentDetailPane.Actions` ← `primitives.pane`
+    - `sitesIndexPane.Actions`
+    - `sitePane.Actions`
+    - `deploy-deployment-detail.actions`
+  - Slot contributors: 25 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `SiteTabs.View` ×4
+    - `DeploymentDetail.Section` ×3
+    - `SiteBanner` ×3
+    - `SiteCheck` ×3
+    - `SiteOverview.Card` ×3
+    - `DeploymentItemActions` ×2
+    - `SiteHeader.Action` ×2
+    - `SiteStrip.Cell` ×2
+    - `deploy-deployment-detail.actions` ← `primitives.pane`
+    - `sitePane.Actions` ← `primitives.pane`
+    - `sitesIndexPane.Actions` ← `primitives.pane`
   - Contributes:
     - `IdKinds.Kind` "dpl"
     - `IdKinds.Kind` "drun"
-    - `ServerDetail.Section` "Deployments" → `DeploymentsSection`
+    - `ServerDetail.Section` "Sites on this server" → `DeploymentsSection`
     - `Pane.Register` "deploy-deployment-detail"
-    - `DeploymentDetail.Section` "Overview" → `DeploymentOverview`
+    - `Pane.Register` "deploy-index"
+    - `Pane.Register` "deploy-site"
+    - `Deploy.Sidebar` "Overview"
+    - `Deploy.Sidebar` "Sites" → `SitesSidebarSection`
+    - `SiteTabs.View` "Overview" → `SiteOverviewTab`
+    - `SiteTabs.View` "Settings" → `SiteSettingsTab`
+    - `SiteStrip.Cell` "Server" → `ServerCell`
+    - `SiteCheck` "server"
+    - `DeploymentDetail.Section` "General" → `DeploymentGeneral`
+    - `DeploymentDetail.Section` "Install" → `DeploymentInstall`
+    - `DeploymentDetail.Section` "Danger zone" → `DangerZone`
     - `DeploymentItemActions` "deploy" → `DeployAction`
     - `DeploymentItemActions` "delete" → `DeleteDeploymentAction`
-  - Uses: 51 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/css/ui-kit` ×9
+  - Uses: 83 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×14
     - `primitives/data-view` ×7
-    - `primitives/pane` ×5
-    - `network/live` ×4
+    - `primitives/live-state` ×6
+    - `primitives/pane` ×6
+    - `apps/deploy/servers` ×5
+    - `primitives/slot-render` ×4
     - `infra/endpoints` ×3
-    - `primitives/live-state` ×3
-    - `apps/deploy/health` ×2
-    - `apps/deploy/servers.ServerDetail`
+    - `network/live` ×3
+    - `primitives/app-shell` ×2
+    - `primitives/css/badge` ×2
+    - `primitives/css/spacing` ×2
+    - `primitives/link-gesture` ×2
+    - `apps/deploy/health.useServerHealth`
+    - `apps/deploy/shell.Deploy`
     - `ids.IdKinds`
     - `plugin-meta/composition.useManifestItems`
-    - `primitives/css/badge.Badge`
+    - `primitives/copy-to-clipboard.CopyButton`
     - `primitives/css/bouncing-dots.BouncingDots`
+    - `primitives/css/center.Center`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/fill.Fill`
+    - `primitives/css/grid.Grid`
+    - `primitives/css/inline.Inline`
+    - `primitives/css/line.Line`
     - `primitives/css/placeholder.Placeholder`
-    - `primitives/css/spacing.Stack`
+    - `primitives/css/rigid.Rigid`
+    - `primitives/css/status-dot.StatusDot`
+    - `primitives/css/sticky.Sticky`
+    - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`
     - `primitives/detail-sections.defineDetailSections`
     - `primitives/editable-field.useEditableField`
     - `primitives/icon-button.IconButton`
-    - `primitives/link-gesture.activationProps`
+    - `primitives/link-gesture/new-tab.NewTabLink`
     - `primitives/loading.Loading`
     - `primitives/overlay/imperative-dialog.openDialog`
     - `primitives/relative-time.RelativeTime`
+    - `primitives/tabbed-view.defineTabbedView`
     - `ui/icons.Icon`
+  - Exports (types):
+    - `SiteBannerAnswer`
+    - `SiteBannerSpec`
+    - `SiteCheckResult`
+    - `SiteProps`
+    - `SiteStatus`
   - Exports (values):
     - `ApprovalLinks`
     - `DeploymentDetail`
-    - `deploymentDetailPane`
     - `DeploymentItemActions`
+    - `SITE_CARD_LIST_TOOLBAR`
+    - `SiteBanner`
+    - `SiteCard`
+    - `SiteCardBody`
+    - `SiteCheck`
+    - `SiteHeader`
+    - `SiteOverview`
+    - `sitePane`
+    - `sitesIndexPane`
+    - `SiteStrip`
+    - `SiteTabs`
     - `useBlockedReason`
+    - `useSetSiteTab`
+    - `useSiteStatus`
+    - `useSiteTabLink`
 - Server:
   - Contributes:
     - `ids.kind` "dpl"
@@ -461,15 +524,15 @@ any consumer; extra columns of the row are client fields of the `deployments` co
     - `resource.declare` "deploy.run-history:groups"
     - `resource.declare` "deploy.run-history:rows"
     - `resource.declare` "deploy.runs"
-  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra/jobs` ×3
+    - `release/bundles` ×3
+    - `release` ×3
     - `infra/endpoints` ×2
     - `infra/entities` ×2
     - `infra/jobs/supervised-job` ×2
     - `infra/paths` ×2
     - `network/live` ×2
-    - `release/bundles` ×2
-    - `release` ×2
     - `apps/deploy/health.serverHealth`
     - `apps/deploy/servers._deployServers`
     - `config_v2.getConfig`
@@ -506,7 +569,7 @@ any consumer; extra columns of the row are client fields of the `deployments` co
     - `POST /api/deploy/deployments/:id/run` — unpredicted (server-decided)
 - Core:
   - Uses:
-    - `apps/deploy/servers.serverDetailRoute`
+    - `apps/deploy/shell.deployIndexRoute`
     - `fields.nullable`
     - `fields/date/config.dateField`
     - `fields/identifier/config.identifierField`
@@ -548,7 +611,6 @@ any consumer; extra columns of the row are client fields of the `deployments` co
     - `DEPLOY_LOG_CHANNEL`
     - `DEPLOY_RUN_STATUSES`
     - `deployDeploymentsEntityRef`
-    - `deploymentDetailRoute`
     - `deploymentFields`
     - `deploymentIdKind`
     - `deployments`
@@ -575,15 +637,36 @@ any consumer; extra columns of the row are client fields of the `deployments` co
     - `REMOTE_SCRIPT_SHEBANG`
     - `runDeployment`
     - `RunDeploymentBodySchema`
+    - `siteRoute`
     - `SYSTEMD_INSTANCE`
     - `UNIT_TEMPLATE_PATH`
     - `updateDeployment`
     - `UpdateDeploymentBodySchema`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --border`
+    - `ui/tokens/color-palette --destructive`
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --muted`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --primary`
+    - `ui/tokens/color-palette --primary-text`
+    - `ui/tokens/color-palette --success`
+    - `ui/tokens/color-palette --warning`
+    - `ui/tokens/density --space-2xl`
+    - `ui/tokens/density --space-md`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/density --space-xl`
+    - `ui/tokens/density --space-xs`
+    - `ui/tokens/font-family --font-mono`
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/deploy/analytics/dashboard`
     - `apps/deploy/composition`
     - `apps/deploy/deploy-history`
+    - `apps/deploy/deploy-history/investigate-failure`
+    - `apps/deploy/deploy-history/rollback`
     - `apps/deploy/deploy-secrets/approvals`
     - `apps/deploy/deployments/runs-arm`
     - `apps/deploy/host-query`
@@ -595,6 +678,6 @@ any consumer; extra columns of the row are client fields of the `deployments` co
     - `paths:no-hardcoded-paths` — `core/derive.ts` (sanctioned)
     - `boundaries/no-platform-api` — `server/internal/transcript.ts` (debt)
 - Sub-plugins:
-  - **`runs-arm`** — The deploy arm's presence on the merged run surface: its rows' link into the deployment detail pane on the server the run went to, and the cells of its eight own fields (verb, failed phase, server /…
+  - **`runs-arm`** — The deploy arm's presence on the merged run surface: its rows' link into the site's Deployments tab, and the cells of its eight own fields (verb, failed phase, server / deployment / composition /…
 
 <!-- AUTOGENERATED:END -->

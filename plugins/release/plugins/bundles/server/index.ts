@@ -17,8 +17,11 @@ export {
   readGitProvenance,
   readHeadSha,
   compareToHead,
+  readCommitSubject,
+  readRefSha,
+  countCommitsBehind,
 } from "./internal/provenance";
-export type { GitProvenance } from "./internal/provenance";
+export type { CommitLookup, GitProvenance } from "./internal/provenance";
 export { pruneReleaseRunDirs } from "./internal/prune";
 export type { PruneResult } from "./internal/prune";
 

@@ -31,6 +31,11 @@ export interface CardMetaProps {
   resolveEditor: ReturnType<typeof useResolveCellEditor>;
   /** Extra classes on the title text (the row's tone, `rowToneClass`). */
   titleClassName?: ClassName;
+  /**
+   * Leave the tokens line out — a card that draws it elsewhere (the gallery's
+   * `panel` card puts it in its footer) renders {@link CardTokens} itself.
+   */
+  omitTokens?: boolean;
 }
 
 /**
@@ -89,8 +94,8 @@ export function CardMeta({
   resolveCell,
   resolveEditor,
   titleClassName,
+  omitTokens,
 }: CardMetaProps): ReactNode {
-  const resolveIcon = useResolveFieldIcon();
   const cell = (field: FieldDef<unknown>, context?: "token") => (
     <FieldCell
       field={field}
@@ -105,9 +110,6 @@ export function CardMeta({
     list.filter((f) => !isFieldValueEmpty(f, row));
   const indicators = present(fields.afterTitle);
   const subtitle = present(fields.line2);
-  const tokens = present(fields.trail);
-  const edge =
-    fields.edge && !isFieldValueEmpty(fields.edge, row) ? fields.edge : null;
   const P = DATA_VIEW_PICKS;
 
   return (
@@ -160,57 +162,104 @@ export function CardMeta({
           </Line>
         </PickedLine>
       ) : null}
-      {fields.trail.length > 0 || fields.edge ? (
-        <PickedLine part={P.cardToken} className="pt-card-tokens">
-          <Clip axis="x" className="clip-fade-end">
-            <Line
-              className={cn(
-                "h-card-tokens-line gap-card-token",
-                rolePickClass(P.cardToken.fallback),
-              )}
-              {...dataPart("dv.card-tokens")}
-            >
-              {tokens.map((f) => {
-                const icon = f.icon ?? resolveIcon(f.type ?? "text");
-                const numeric = typeof f.value?.(row) === "number";
-                return (
-                  <Line
-                    key={f.id}
-                    className={cn("gap-card-token-icon", rigidClass())}
-                    {...dataPart("dv.card-token")}
-                  >
-                    {icon ? (
-                      <Icon
-                        icon={icon}
-                        className="size-card-token-icon text-card-token-icon-ink"
-                        {...dataPart("dv.card-token-icon")}
-                      />
-                    ) : null}
-                    <Text
-                      pick={numeric ? P.cardTokenNumeric : P.cardToken}
-                      className="text-card-token-ink"
-                    >
-                      {cell(f, "token")}
-                    </Text>
-                  </Line>
-                );
-              })}
-              {edge ? (
-                <>
-                  <Fill />
-                  <Text
-                    pick={P.cardToken}
-                    className={cn("text-card-token-ink", rigidClass())}
-                    {...dataPart("dv.card-edge")}
-                  >
-                    {cell(edge, "token")}
-                  </Text>
-                </>
-              ) : null}
-            </Line>
-          </Clip>
-        </PickedLine>
-      ) : null}
+      {omitTokens ? null : (
+        <CardTokens
+          fields={fields}
+          row={row}
+          resolveCell={resolveCell}
+          resolveEditor={resolveEditor}
+        />
+      )}
     </Stack>
+  );
+}
+
+/**
+ * A card's tokens line alone: the `trail` slot as icon + value on ONE line
+ * that never wraps and fades out at its end, then the `edge` field at its far
+ * end, each value in the `token` context. Nothing when the view places no
+ * field on either. Drawn by {@link CardMeta} as its third line, or by a card
+ * that places it itself (`omitTokens`).
+ */
+export function CardTokens({
+  fields,
+  row,
+  resolveCell,
+  resolveEditor,
+  spaced = true,
+}: Pick<CardMetaProps, "fields" | "row" | "resolveCell" | "resolveEditor"> & {
+  /** The room above the line (`cardTokensPadTop`) — on under the card's other
+   *  lines, off where the line stands alone (a card's footer). */
+  spaced?: boolean;
+}): ReactNode {
+  const resolveIcon = useResolveFieldIcon();
+  if (fields.trail.length === 0 && !fields.edge) return null;
+  const tokens = fields.trail.filter((f) => !isFieldValueEmpty(f, row));
+  const edge =
+    fields.edge && !isFieldValueEmpty(fields.edge, row) ? fields.edge : null;
+  const P = DATA_VIEW_PICKS;
+  const cell = (field: FieldDef<unknown>) => (
+    <FieldCell
+      field={field}
+      row={row}
+      resolveCell={resolveCell}
+      resolveEditor={resolveEditor}
+      display="inline"
+      context="token"
+    />
+  );
+  return (
+    <PickedLine
+      part={P.cardToken}
+      className={spaced ? "pt-card-tokens" : undefined}
+    >
+      <Clip axis="x" className="clip-fade-end">
+        <Line
+          className={cn(
+            "h-card-tokens-line gap-card-token",
+            rolePickClass(P.cardToken.fallback),
+          )}
+          {...dataPart("dv.card-tokens")}
+        >
+          {tokens.map((f) => {
+            const icon = f.icon ?? resolveIcon(f.type ?? "text");
+            const numeric = typeof f.value?.(row) === "number";
+            return (
+              <Line
+                key={f.id}
+                className={cn("gap-card-token-icon", rigidClass())}
+                {...dataPart("dv.card-token")}
+              >
+                {icon ? (
+                  <Icon
+                    icon={icon}
+                    className="size-card-token-icon text-card-token-icon-ink"
+                    {...dataPart("dv.card-token-icon")}
+                  />
+                ) : null}
+                <Text
+                  pick={numeric ? P.cardTokenNumeric : P.cardToken}
+                  className="text-card-token-ink"
+                >
+                  {cell(f)}
+                </Text>
+              </Line>
+            );
+          })}
+          {edge ? (
+            <>
+              <Fill />
+              <Text
+                pick={P.cardToken}
+                className={cn("text-card-token-ink", rigidClass())}
+                {...dataPart("dv.card-edge")}
+              >
+                {cell(edge)}
+              </Text>
+            </>
+          ) : null}
+        </Line>
+      </Clip>
+    </PickedLine>
   );
 }

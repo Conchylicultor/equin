@@ -1,0 +1,25 @@
+// @hash 6ec84829688d
+// Author "views" as terse { name, view } rows — one per view-type the
+// call site's `views={[…]}` whitelist enables, plus extra named
+// sort/filter views where the domain warrants one.
+// "view" is { type, sort?, filter?, …opts }; "sort" is a list of
+// { fieldId, direction }; "filter" is a FilterGroup tree.
+// Give every row an explicit bare-slug id — it keys the saved per-view
+// row order, so a derived one would orphan it on rename.
+// Worked example: config/apps/sonata/library/sonata.library.jsonc
+{
+  // The Overview tab's Messages card: the newest accepted messages.
+  "views": [
+    {
+      "id": "recent",
+      "name": "Recent",
+      "view": {
+        "type": "list",
+        "sort": [{ "fieldId": "createdAt", "direction": "desc" }]
+      }
+    }
+  ],
+  "sortPresets": [],
+  "filterPresets": [],
+  "customColumns": []
+}

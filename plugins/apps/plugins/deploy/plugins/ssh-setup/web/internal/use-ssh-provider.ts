@@ -24,5 +24,8 @@ export function useSshProvider(server: Server): ResolvedSshProvider {
   const providers = SshProvider.useContributions();
   const raw = server.consoleUrl;
   const url = raw && URL.canParse(raw) ? new URL(raw) : null;
-  return { url, provider: url ? providers.find((p) => p.match(url)) : undefined };
+  return {
+    url,
+    provider: url ? providers.find((p) => p.match(url)) : undefined,
+  };
 }

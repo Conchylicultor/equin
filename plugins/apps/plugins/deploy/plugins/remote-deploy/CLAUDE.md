@@ -5,7 +5,10 @@
 (Phase A). Supersedes the four-step Converge → Build → Rehearse → Ship surface of
 [`2026-08-03-global-deploy-release-candidate-pipeline.md`](../../../../../../research/2026-08-03-global-deploy-release-candidate-pipeline.md).
 
-This plugin contributes `deploy` + `output` into `DeploymentDetail.Section` and
+This plugin contributes to the site page (`deployments`' slots): the header's
+Deploy button (`SiteHeader.Action`), the Status / Running / Deployed / Bundle
+cells (`SiteStrip.Cell`), the deploying and behind-main banners (`SiteBanner`);
+and
 `release` as a client field of the `deployments` collection
 (`releaseFields`, core; resolved by `ReleaseFieldResolver`, web). It owns **no** sequencing: pressing Deploy
 POSTs `{ verb: "update" }` and everything after that is the `deployments`
@@ -79,21 +82,18 @@ finished. Anything else (another platform, a staged or failed run, a hand-run
 CLI release, any other refusal) renders as it stands, so the gate cannot stay
 shut. `release-info-live-verify` drives it end to end.
 
-## The Output tab follows the phase
+## The deploying banner's log follows the phase
 
 An `update`'s middle leg writes to the `release` channel while the two around it
-write to `deploy`. A fixed tab would therefore go silent for the longest part of
-the run, and the user would need to know the channel topology to find the output.
-So the switcher's active tab follows `DeployRun.phase` **until the user picks a
-tab by hand** — after which the choice is theirs for the rest of the mount.
+write to `deploy`. A fixed channel would go silent for the longest part of the
+run, so the banner's log tail is keyed on `DeployRun.phase` (build → `release`,
+else `deploy`) and resubscribes when the leg changes.
 
 ## The inspect links
 
-`publicUrls(deployment.hostnames)` from `deployments/core/derive.ts` — the
-declared owner of remote-host facts — mirrors what the CLI prints at the end of a
-successful ship. A deployment with no hostname renders `loopbackOnlySentence()`
-instead of nothing: "no public URL" is an answer about the deployment, and a
-blank region answers it by implication.
+The site's public URLs are the site page header's own (`deployments`, from
+`publicUrls(deployment.hostnames)` in `deployments/core/derive.ts`, the declared
+owner of remote-host facts) — not this plugin's.
 
 ## The `Release` column states what Deploy would pick up
 
@@ -133,57 +133,81 @@ remote health gate.
 
 ## Plugin reference
 
-- Description: Deploy one composition to its remote server: a single Deploy button launching the `update` sequence (converge → build a platform-pinned candidate unless one is already current → ship that pinned run id), the three-phase report of the running deploy, what is currently built and how it relates to HEAD, the public URLs to inspect the deployed app, the phase-following deploy/build log output section, and the `Release` client field (`releaseFields`) of the deployments list.
+- Description: Deploy one composition to its remote server, on the site page: the header's Deploy button launching the `update` sequence (converge → build a platform-pinned candidate unless one is already current → ship that pinned run id), labelled by what it would do now (Redeploy / Deploy N commits / Retry deploy / Deploying…); the production strip's Status, Running (sha + subject), Deployed and Bundle cells; the deploying banner (the three legs and the tail of the log the running leg writes) and the behind-main banner; and the `Release` client field (`releaseFields`) of the deployments list. Serves deploy.running-commit: the commit a deployment's newest succeeded ship recorded, its subject, and how many commits the main ref holds that it does not — recomputed when a deploy run lands or main advances.
 - Web:
   - Contributes:
-    - `DeploymentDetail.Section` "Deploy to server" → `RemoteDeploySection`
-    - `DeploymentDetail.Section` "Output" → `OutputSection`
+    - `SiteHeader.Action` "deploy" → `DeployButton`
+    - `SiteStrip.Cell` "Status" → `StatusCell`
+    - `SiteStrip.Cell` "Running" → `RunningCell`
+    - `SiteStrip.Cell` "Deployed" → `DeployedCell`
+    - `SiteStrip.Cell` "Bundle" → `BundleCell`
+    - `SiteBanner` "behind-main"
+    - `SiteBanner` "deploying"
+    - `SiteCheck` "bundle"
     - `ClientFields.Resolve` "client:deploy.deployments:release" → `ReleaseFieldResolver`
     - `FieldPresentation.Register` "client:deploy.deployments:release"
-  - Uses: 36 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 37 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps/deploy/deployments` ×7
     - `primitives/live-state` ×6
-    - `network/live` ×4
-    - `primitives/setup-steps` ×4
-    - `apps/deploy/deployments` ×3
     - `apps/deploy/health` ×3
-    - `primitives/view-switcher` ×2
+    - `network/live` ×3
+    - `primitives/css/ui-kit` ×3
+    - `primitives/css/spacing` ×2
+    - `primitives/relative-time` ×2
     - `infra/endpoints.useEndpointMutation`
     - `primitives/css/badge.Badge`
     - `primitives/css/bouncing-dots.BouncingDots`
-    - `primitives/css/cluster.Cluster`
-    - `primitives/css/link-chip.LinkChip`
-    - `primitives/css/placeholder.Placeholder`
-    - `primitives/css/spacing.Stack`
+    - `primitives/css/fill.Fill`
+    - `primitives/css/inline.Inline`
+    - `primitives/css/spinner.Spinner`
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
     - `primitives/loading.Loading`
     - `primitives/log-channels.LiveLogChannel`
-    - `primitives/relative-time.RelativeTime`
     - `ui/icons.Icon`
+- Server:
+  - Contributes: `resource.declare` "deploy.running-commit"
+  - Uses:
+    - `apps/deploy/deployments._deployRuns`
+    - `database.db`
+    - `infra/git/git-watcher.refHeadServed`
+    - `infra/paths.REPO_ROOT`
+    - `network/live.serveValue`
+    - `release/bundles.countCommitsBehind`
+    - `release/bundles.readCommitSubject`
+    - `release/bundles.readRefSha`
+  - Resources: `deploy.running-commit` (push, notified)
 - Core:
   - Uses:
     - `apps/deploy/deployments.deployments`
     - `fields/text/config.enumTextField`
     - `network/live.clientFields`
+    - `network/live.liveValue`
   - Exports (types):
     - `ReleaseState`
     - `ReleaseStateInput`
+    - `RunningCommit`
   - Exports (values):
     - `candidatePredatesLatest`
     - `RELEASE_STATE_OPTIONS`
     - `releaseFields`
     - `releaseStateLabel`
     - `resolveReleaseState`
+    - `runningCommit`
     - `shortSha`
     - `stalenessChipLabel`
     - `stalenessSentence`
 - Cross-plugin:
   - Uses tokens:
+    - `ui/tokens/color-palette --background`
+    - `ui/tokens/color-palette --border`
     - `ui/tokens/color-palette --destructive`
     - `ui/tokens/color-palette --info`
     - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --primary`
+    - `ui/tokens/color-palette --primary-text`
     - `ui/tokens/color-palette --success`
     - `ui/tokens/color-palette --warning`
+    - `ui/tokens/shape --spacing`
 
 <!-- AUTOGENERATED:END -->

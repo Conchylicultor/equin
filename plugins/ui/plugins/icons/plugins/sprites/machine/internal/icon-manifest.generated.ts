@@ -302,6 +302,7 @@ export const ICON_MANIFEST: {
     "smartphone",
     "sort",
     "south",
+    "space-dashboard",
     "speaker",
     "speed",
     "splitscreen",

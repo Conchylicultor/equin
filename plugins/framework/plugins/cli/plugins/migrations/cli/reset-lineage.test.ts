@@ -1,12 +1,24 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  test,
+} from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 import {
+  NULL_SNAPSHOT_ID,
   renderPhasedMigration,
+  renderSnapshotHeader,
+  SCHEMA_SNAPSHOT_FILE,
   type Snapshot,
   snapshotBodies,
 } from "@plugins/database/plugins/migrations/core";
+import { spawnExpectOk } from "@plugins/infra/plugins/spawn/core";
 import {
   readResetPrior as readPrior,
   resetAdoption as adoption,
@@ -43,8 +55,12 @@ beforeEach(() => {
 });
 const readResetPrior = (d: string, published: ReadonlySet<string>) =>
   readPrior(d, published, bodies);
-const resetLineage = (d: string, prior: ResetPrior, fresh: Snapshot) =>
-  lineageOf(d, prior, fresh, bodies);
+const resetLineage = (
+  d: string,
+  prior: ResetPrior,
+  fresh: Snapshot,
+  freshSql = "ALTER TABLE t ADD COLUMN c1 text;",
+) => lineageOf(d, prior, fresh, freshSql, bodies);
 const resetAdoption = (d: string, prior: ResetPrior) =>
   adoption(d, prior, bodies);
 
@@ -283,6 +299,118 @@ describe("reset adoption", () => {
     expect(await resetAdoption(dir, prior)).toEqual({
       kind: "none",
       reason: null,
+    });
+  });
+});
+
+// A branch migration that was never committed, in a tree whose tip file is
+// main's: its snapshot body is nowhere (not the working tree, not git). The
+// state a stash re-applied over a rebase leaves — the stash's generated-file
+// handling keeps main's `schema.snapshot.json` — with main's own newer
+// migration forming the Y-fork the reset exists to undo.
+describe("reset of an uncommitted branch migration whose body is nowhere", () => {
+  const GIT_ENV = ["GIT_CONFIG_GLOBAL", "GIT_CONFIG_NOSYSTEM"] as const;
+  const saved = new Map<string, string | undefined>();
+  beforeAll(() => {
+    for (const k of GIT_ENV) saved.set(k, process.env[k]);
+    process.env.GIT_CONFIG_GLOBAL = "/dev/null";
+    process.env.GIT_CONFIG_NOSYSTEM = "1";
+  });
+  afterAll(() => {
+    for (const [k, v] of saved) {
+      if (v === undefined) delete process.env[k];
+      else process.env[k] = v;
+    }
+  });
+
+  const MAIN_BASE = "20260101_000000_0a0a0a0a__base";
+  const MAIN_NEXT = "20261029_140956_148fdb0b__main_adds_u";
+  const OURS = "20261028_121343_0a785f55__add_c1";
+  const OUR_DDL = 'ALTER TABLE "t" ADD COLUMN "c1" text;';
+
+  const git = async (...args: string[]) =>
+    (
+      await spawnExpectOk(
+        ["git", "-c", "user.name=t", "-c", "user.email=t@t", ...args],
+        { cwd: dir, timeoutMs: 60_000 },
+      )
+    ).stdout;
+  const headed = (id: string, prev: string, expand: string) =>
+    renderSnapshotHeader({ id, parents: [prev] }) +
+    renderPhasedMigration({
+      expand,
+      contract: "",
+      claims: [],
+      supersedes: null,
+    });
+  const tipFile = (body: Snapshot) =>
+    writeFileSync(
+      join(dir, "meta", SCHEMA_SNAPSHOT_FILE),
+      JSON.stringify(body),
+    );
+
+  // main: base (A) → main_adds_u (E), both committed with their tip file;
+  // the branch: add_c1 (B, parent A), uncommitted, tip file still main's E.
+  async function yFork(): Promise<Set<string>> {
+    await git("init", "-q", "-b", "main", dir);
+    writeFileSync(
+      join(dir, `${MAIN_BASE}.sql`),
+      headed(A, NULL_SNAPSHOT_ID, 'ALTER TABLE "t" ADD COLUMN "id" text;'),
+    );
+    tipFile(snapshotBody(A, NULL_SNAPSHOT_ID, { t: [] }));
+    await git("add", "-A");
+    await git("commit", "-q", "-m", "base");
+    writeFileSync(
+      join(dir, `${MAIN_NEXT}.sql`),
+      headed(E, A, 'ALTER TABLE "u" ADD COLUMN "id" text;'),
+    );
+    tipFile(snapshotBody(E, A, { t: [], u: [] }));
+    await git("add", "-A");
+    await git("commit", "-q", "-m", "main adds u");
+    writeFileSync(join(dir, `${OURS}.sql`), headed(B, A, OUR_DDL));
+    return new Set([`${MAIN_BASE}.sql`, `${MAIN_NEXT}.sql`]);
+  }
+
+  test("the reset still reads what it deletes, and the same DDL regenerated supersedes it", async () => {
+    const prior = await readResetPrior(dir, await yFork());
+    expect(prior.deleted.map((d) => d.hash)).toEqual(["0a785f55"]);
+    expect(prior.schema).toMatchObject({
+      kind: "ddl",
+      // One statement per entry, without its `;`.
+      ddl: { expand: [OUR_DDL.slice(0, -1)], contract: [] },
+      reason: expect.stringContaining("never committed"),
+    });
+    rmSync(join(dir, `${OURS}.sql`));
+    // drizzle diffs schema.ts against main's tip E: the branch's one column.
+    const lineage = await resetLineage(
+      dir,
+      prior,
+      snapshotBody(D, E, { t: ["c1"], u: [] }),
+      `ALTER TABLE "t" ADD COLUMN "c1" text;`,
+    );
+    expect(lineage).toEqual({
+      kind: "supersedes",
+      supersedes: { direct: ["0a785f55"], inherited: [] },
+    });
+  });
+
+  test("other DDL regenerated: no header, and the reason names the missing body", async () => {
+    const prior = await readResetPrior(dir, await yFork());
+    rmSync(join(dir, `${OURS}.sql`));
+    const lineage = await resetLineage(
+      dir,
+      prior,
+      snapshotBody(D, E, { t: ["c1", "c2"], u: [] }),
+      `ALTER TABLE "t" ADD COLUMN "c1" text;\n--> statement-breakpoint\nALTER TABLE "t" ADD COLUMN "c2" text;`,
+    );
+    expect(lineage).toEqual({
+      kind: "none",
+      reason: expect.stringContaining("statements differ"),
+    });
+    // Nothing regenerated: no snapshot to prove an adoption against — said.
+    expect(await resetAdoption(dir, prior)).toEqual({
+      kind: "none",
+      reason: expect.stringContaining("never committed"),
     });
   });
 });

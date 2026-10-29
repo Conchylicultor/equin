@@ -25,7 +25,9 @@ discards the generation and exits 1. See `database/migrations/CLAUDE.md` →
 A reset (`--reset-migration`, push's regen) reads what it is about to delete
 first (`readResetPrior`, `reset-lineage.ts`); after generation, `resetLineage`
 decides whether the new file may say it supersedes those hashes — only when the
-deleted tip, carried over main's changes, equals the new snapshot — and
+deleted tip, carried over main's changes, equals the new snapshot (or, when
+that tip's body was never committed, when the new file's statements are the
+deleted files' statements) — and
 `phaseGeneratedMigrations` writes the header. A reset that regenerates nothing
 asks `resetAdoption` for the published run carrying the deleted delta and writes
 an adoption file naming it. See `database/migrations/CLAUDE.md`

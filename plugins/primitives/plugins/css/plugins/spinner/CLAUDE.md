@@ -14,6 +14,7 @@
 - Cross-plugin:
   - Imported by:
     - `apps/browser/tabs`
+    - `apps/deploy/remote-deploy`
     - `apps/mail/attachments`
     - `apps/mail/sync-status`
     - `apps/pages/page-tree`

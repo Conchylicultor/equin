@@ -6,6 +6,7 @@ import {
 } from "@plugins/primitives/plugins/data-view/web";
 import { runRowKey, runs, type RunRow } from "../../core";
 import { RUNS_VIEW } from "../internal/view-id";
+import type { DataViewId } from "@plugins/primitives/plugins/data-view/web";
 
 /**
  * The live source: the `runs` union window, read as live key-range pages.
@@ -58,6 +59,17 @@ export interface RunsDataViewProps {
    * reads its instance and never writes the shared selection.
    */
   pinnedView?: string;
+  /**
+   * The view-instance space this host reads and writes — default `RUNS_VIEW`
+   * (the shared `runs` space: its authored instances, device-local active
+   * instance and saved views).
+   *
+   * A host that wants its own tabs / filters (the Deploy Activity page) brings
+   * its own id, a module-level `defineDataView("…")` in its plugin; its
+   * instances are then authored in that id's own view config, apart from the
+   * shared ones.
+   */
+  storageKey?: DataViewId;
 }
 
 /**
@@ -83,6 +95,7 @@ export function RunsDataView({
   selectedRun,
   onRowActivate,
   pinnedView,
+  storageKey = RUNS_VIEW,
 }: RunsDataViewProps): ReactNode {
   // No `renderRow`: the row body is the list's own, built from the field schema,
   // so it obeys the view's visible fields. The outcome is a state, so the
@@ -92,7 +105,7 @@ export function RunsDataView({
   // own `onRowActivate` runs after the arm's navigation, on every row.
   return (
     <DataView<RunRow>
-      storageKey={RUNS_VIEW}
+      storageKey={storageKey}
       source={runsSource}
       views={views}
       defaultView={defaultView}

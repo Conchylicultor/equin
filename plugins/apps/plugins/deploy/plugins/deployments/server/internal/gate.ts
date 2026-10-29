@@ -8,7 +8,7 @@ export interface DeployGateSubject {
 
 /**
  * A gate's answer. `needs-approval` carries the sentence the run ends with and
- * WHERE it is resolved — `resolveIn`, the id of the deployment pane's
+ * WHERE it is resolved — `resolveIn`, the id of the site Settings tab's
  * `DeploymentDetail` section the user approves in — because the gate is the
  * only party that knows either. The id is persisted on the run
  * (`approvalSections`), so every surface showing the held run links there
