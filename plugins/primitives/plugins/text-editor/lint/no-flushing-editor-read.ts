@@ -1,9 +1,7 @@
+import { lintRuleCreator } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
-import type { LintRuleDocs } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 
-const createRule = ESLintUtils.RuleCreator<LintRuleDocs>(
-  (name) => `https://github.com/anthropics/singularity/lint/${name}`,
-);
+const createRule = lintRuleCreator(import.meta.url);
 
 /**
  * `LexicalEditor.read(fn)` is not a read. It runs `$commitPendingUpdates`

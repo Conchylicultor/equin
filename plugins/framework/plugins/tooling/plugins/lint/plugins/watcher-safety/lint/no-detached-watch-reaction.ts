@@ -1,10 +1,8 @@
+import { lintRuleCreator } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
 import type * as ts from "typescript";
-import type { LintRuleDocs } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 
-const createRule = ESLintUtils.RuleCreator<LintRuleDocs>(
-  (name) => `https://github.com/anthropics/singularity/lint/${name}`,
-);
+const createRule = lintRuleCreator(import.meta.url);
 
 /** The reaction types a watch coalesces (`infra/file-watcher`'s engine). */
 const REACTION_ALIASES = new Set(["WatchReaction", "WatchLost"]);

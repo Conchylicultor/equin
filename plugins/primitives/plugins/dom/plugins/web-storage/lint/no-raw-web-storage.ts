@@ -1,8 +1,7 @@
-import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
+import { lintRuleCreator } from "@plugins/framework/plugins/tooling/plugins/lint/core";
+import { type TSESTree } from "@typescript-eslint/utils";
 
-const createRule = ESLintUtils.RuleCreator(
-  (name) => `https://internal/lint/web-storage/${name}`,
-);
+const createRule = lintRuleCreator(import.meta.url);
 
 const STORAGE_GLOBALS = new Set(["localStorage", "sessionStorage"]);
 const GLOBAL_OBJECTS = new Set(["window", "globalThis", "self"]);

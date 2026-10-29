@@ -134,6 +134,7 @@ export type ExemptableRuleId =
   | "route-teardown-safety/no-unroute"
   | "row/no-adhoc-row"
   | "row/no-row-focus-class"
+  | "rule-kind-safety/no-raw-rule-creator"
   | "rule-kind-safety/type-aware-rule-declared"
   | "runtime-isolation/no-deep-own-folder-import"
   | "rust/no-bare-cargo"

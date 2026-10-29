@@ -1,4 +1,5 @@
-import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
+import { lintRuleCreator } from "@plugins/framework/plugins/tooling/plugins/lint/core";
+import { type TSESTree } from "@typescript-eslint/utils";
 
 /**
  * no-pool-await-in-transaction
@@ -54,9 +55,7 @@ import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
  * research/2026-07-09-global-interactive-lane-under-load.md.
  */
 
-const createRule = ESLintUtils.RuleCreator(
-  (name) => `https://github.com/anthropics/singularity/lint/${name}`,
-);
+const createRule = lintRuleCreator(import.meta.url);
 
 type FunctionLike =
   TSESTree.ArrowFunctionExpression | TSESTree.FunctionExpression;

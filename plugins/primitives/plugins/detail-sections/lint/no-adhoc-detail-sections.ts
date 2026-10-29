@@ -1,4 +1,5 @@
-import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
+import { lintRuleCreator } from "@plugins/framework/plugins/tooling/plugins/lint/core";
+import { type TSESTree } from "@typescript-eslint/utils";
 
 /**
  * no-adhoc-detail-sections
@@ -54,9 +55,7 @@ import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
  * (fails (1)).
  */
 
-const createRule = ESLintUtils.RuleCreator(
-  (name) => `https://github.com/anthropics/singularity/lint/${name}`,
-);
+const createRule = lintRuleCreator(import.meta.url);
 
 /** Card-chrome elements that mark the callback as painting its own section card. */
 const CARD_ELEMENTS = new Set(["Surface", "Card", "SectionCard"]);

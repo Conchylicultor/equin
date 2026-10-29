@@ -3,7 +3,8 @@ import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { insetClass } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { CONTACT_EMAIL, CONTACT_MAILTO, SOURCE_URL } from "../../core";
+import { CONTACT_EMAIL, CONTACT_MAILTO } from "../../core";
+import { SOURCE_REPO_URL } from "@plugins/framework/plugins/product-name/core";
 import { WebsiteBand } from "./website-band";
 import { WordmarkText } from "./website-wordmark";
 import { brand } from "@plugins/ui/plugins/icons/core";
@@ -45,7 +46,7 @@ export function WebsiteFooter() {
               ring bigger than the click target), and `Inset` names no `href` —
               so this is the class-helper half of the own-it/don't rule. */}
           <a
-            href={SOURCE_URL}
+            href={SOURCE_REPO_URL}
             target="_blank"
             rel="noreferrer noopener"
             aria-label="Source on GitHub"

@@ -1,9 +1,7 @@
-import { ESLintUtils } from "@typescript-eslint/utils";
+import { lintRuleCreator } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 import type { LintContribution } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 
-const createRule = ESLintUtils.RuleCreator(
-  (name) => `https://internal/lint/log-channels/${name}`,
-);
+const createRule = lintRuleCreator(import.meta.url);
 
 const noConsoleLog = createRule({
   name: "no-console-log",

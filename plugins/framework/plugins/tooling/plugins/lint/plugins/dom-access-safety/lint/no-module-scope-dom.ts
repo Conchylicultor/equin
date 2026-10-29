@@ -1,8 +1,7 @@
-import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
+import { lintRuleCreator } from "@plugins/framework/plugins/tooling/plugins/lint/core";
+import { type TSESTree } from "@typescript-eslint/utils";
 
-const createRule = ESLintUtils.RuleCreator(
-  (name) => `https://github.com/anthropics/singularity/lint/${name}`,
-);
+const createRule = lintRuleCreator(import.meta.url);
 
 /**
  * Globals that exist only in a browser. Reading any of them while a module is

@@ -1,4 +1,5 @@
-import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
+import { lintRuleCreator } from "@plugins/framework/plugins/tooling/plugins/lint/core";
+import { type TSESTree } from "@typescript-eslint/utils";
 
 /**
  * no-page-transport
@@ -17,9 +18,7 @@ import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
  * pipeline accessors), which reaches the same server without naming it.
  */
 
-const createRule = ESLintUtils.RuleCreator(
-  (name) => `https://github.com/anthropics/singularity/lint/${name}`,
-);
+const createRule = lintRuleCreator(import.meta.url);
 
 const PAGE_TRANSPORT =
   "@plugins/primitives/plugins/networking/plugins/page-transport/web";

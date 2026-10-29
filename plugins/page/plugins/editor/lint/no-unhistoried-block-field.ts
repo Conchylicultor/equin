@@ -1,4 +1,5 @@
-import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
+import { lintRuleCreator } from "@plugins/framework/plugins/tooling/plugins/lint/core";
+import { type TSESTree } from "@typescript-eslint/utils";
 
 /**
  * no-unhistoried-block-field
@@ -59,9 +60,7 @@ import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
  * `plugins/primitives/plugins/undo-redo/web/internal/undo-owner.ts`.
  */
 
-const createRule = ESLintUtils.RuleCreator(
-  (name) => `https://github.com/anthropics/singularity/lint/${name}`,
-);
+const createRule = lintRuleCreator(import.meta.url);
 
 /**
  * The app that renders its fields inside a surface-undo region. Combined with

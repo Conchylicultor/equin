@@ -21,7 +21,7 @@ export {
   resolvePublishTarget,
   PUBLISH_REMOTE,
 } from "./internal/publish-target";
-export { CANONICAL_REPO_URL, resolveUpstreamRemote } from "./internal/upstream";
+export { resolveUpstreamRemote } from "./internal/upstream";
 export {
   gitConfigGet,
   gitConfigSet,

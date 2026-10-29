@@ -1,8 +1,6 @@
-import { ESLintUtils } from "@typescript-eslint/utils";
+import { lintRuleCreator } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 
-const createRule = ESLintUtils.RuleCreator(
-  (name) => `https://github.com/anthropics/singularity/lint/${name}`,
-);
+const createRule = lintRuleCreator(import.meta.url);
 
 // The tell of a hand-rolled marker-binding scanner: a `const … = <call>(`
 // declaration scan. In a regex SOURCE the sequence is the literal word `const`,

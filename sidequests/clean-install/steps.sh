@@ -27,7 +27,7 @@
 # fix as the NEXT step instead, so the run stays a legible diff against
 # docs/setup.md.
 
-REPO_URL="https://github.com/Conchylicultor/singularity"
+REPO_URL="https://github.com/Conchylicultor/equin"
 
 step_01_baseline() {
   cat <<'CMD'

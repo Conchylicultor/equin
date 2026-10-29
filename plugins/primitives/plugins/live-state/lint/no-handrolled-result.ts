@@ -25,11 +25,8 @@
  * `"found"` / `"missing"`) are not results and are not matched. Test code is
  * exempt — a fixture standing in for a read has to spell one.
  */
-import {
-  AST_NODE_TYPES,
-  ESLintUtils,
-  type TSESTree,
-} from "@typescript-eslint/utils";
+import { lintRuleCreator } from "@plugins/framework/plugins/tooling/plugins/lint/core";
+import { AST_NODE_TYPES, type TSESTree } from "@typescript-eslint/utils";
 import { isTestFile } from "./result-binding";
 import {
   RESULT_CONSTRUCTORS,
@@ -37,9 +34,7 @@ import {
   resultConstructorsMessage,
 } from "./result-constructors";
 
-const createRule = ESLintUtils.RuleCreator(
-  (name) => `https://github.com/anthropics/singularity/lint/${name}`,
-);
+const createRule = lintRuleCreator(import.meta.url);
 
 const RESULT_MEMBERS = new Set(["refetch", "stale", "pending"]);
 

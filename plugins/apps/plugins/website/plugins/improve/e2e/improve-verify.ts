@@ -38,16 +38,14 @@ import {
   withBrowser,
   type Report,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
-import {
-  CONTACT_EMAIL,
-  SOURCE_URL,
-} from "@plugins/apps/plugins/website/plugins/shell/core";
+import { CONTACT_EMAIL } from "@plugins/apps/plugins/website/plugins/shell/core";
+import { SOURCE_REPO_URL } from "@plugins/framework/plugins/product-name/core";
 
 const out = arg("out", "/tmp/improve");
 
 const FIRST_LINE = "Show a 20-second demo under the headline";
 const SECOND_LINE = "Muted, looping, no controls.";
-const NEW_ISSUE = `${SOURCE_URL}/issues/new?`;
+const NEW_ISSUE = `${SOURCE_REPO_URL}/issues/new?`;
 // The pick goes between these two, at a caret put there with the arrow keys.
 const BEFORE_PICK = "Make the";
 const AFTER_PICK = " bigger";
@@ -215,7 +213,7 @@ await withBrowser(async (h) => {
         bandEmailText: band?.textContent.includes(email) ?? false,
       };
     },
-    { email: CONTACT_EMAIL, source: SOURCE_URL },
+    { email: CONTACT_EMAIL, source: SOURCE_REPO_URL },
   );
   r.ok("the site header is found", chrome.headerFound);
   r.ok(

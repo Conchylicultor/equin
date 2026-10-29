@@ -41,11 +41,10 @@
  *
  * See research/2026-08-25-database-mapped-sql-projections.md.
  */
-import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
+import { lintRuleCreator } from "@plugins/framework/plugins/tooling/plugins/lint/core";
+import { type TSESTree } from "@typescript-eslint/utils";
 
-const createRule = ESLintUtils.RuleCreator(
-  (name) => `https://github.com/anthropics/singularity/lint/${name}`,
-);
+const createRule = lintRuleCreator(import.meta.url);
 
 /** The tag identifier drizzle's SQL template is spelled with. */
 const SQL_TAG = "sql";

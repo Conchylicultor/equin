@@ -1,4 +1,5 @@
-import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
+import { lintRuleCreator } from "@plugins/framework/plugins/tooling/plugins/lint/core";
+import { type TSESTree } from "@typescript-eslint/utils";
 
 /** A `react-icons` module specifier (`react-icons`, `react-icons/md`, …). */
 function isReactIcons(source: unknown): boolean {
@@ -8,9 +9,7 @@ function isReactIcons(source: unknown): boolean {
   );
 }
 
-const createRule = ESLintUtils.RuleCreator(
-  (name) => `https://github.com/anthropics/singularity/lint/${name}`,
-);
+const createRule = lintRuleCreator(import.meta.url);
 
 /**
  * Icons are data: `symbol("…")` / `brand("…")` from `ui/icons/core`, drawn by

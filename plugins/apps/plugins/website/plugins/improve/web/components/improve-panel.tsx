@@ -19,7 +19,7 @@ import {
   type UiContextMeta,
 } from "@plugins/primitives/plugins/ui-context/core";
 import { ElementPicker } from "@plugins/primitives/plugins/ui-context/plugins/element-picker/web";
-import { SOURCE_URL } from "@plugins/apps/plugins/website/plugins/shell/core";
+import { SOURCE_REPO_URL } from "@plugins/framework/plugins/product-name/core";
 import { track } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/web";
 import { buildIssueUrl } from "../../core";
 import { ReplaySteps, type ReplayRun } from "./replay-steps";
@@ -293,7 +293,7 @@ function ReplayView({
   onFiled: () => void;
 }) {
   const href = buildIssueUrl({
-    repoUrl: SOURCE_URL,
+    repoUrl: SOURCE_REPO_URL,
     text: replay.text,
     pageUrl: replay.pageUrl,
     autoDeploy: replay.autoDeploy,

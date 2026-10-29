@@ -55,9 +55,13 @@ owner-side `ignores` key no longer exists: a barrel carrying it is a tsc error a
 ## Two kinds of rule: syntactic and type-aware
 
 A rule is **type-aware** iff it declares `meta.docs.requiresTypeChecking:
-true` (the typescript-eslint convention; build custom rules with
-`ESLintUtils.RuleCreator<LintRuleDocs>` so the field type-checks). Every other
-rule is **syntactic**. `isTypeAwareRule` in
+true` (the typescript-eslint convention). Every rule is made with
+`lintRuleCreator(import.meta.url)` from `core/`, which types `meta.docs` as
+`LintRuleDocs` (so the field type-checks) and derives the rule's docs URL from
+its own file on the published repository (`SOURCE_REPO_URL`);
+`rule-kind-safety/no-raw-rule-creator` rejects a hand-made
+`ESLintUtils.RuleCreator`. A rule that does not declare the flag is
+**syntactic**. `isTypeAwareRule` in
 [`core/build-lint-config.ts`](core/build-lint-config.ts) is the one
 classifier; `LintRuleSelection.kind` and `typeAwareLintGroups` both read it.
 
@@ -132,6 +136,7 @@ its disable does not cover. Parameters and imports have no in-file value.
 - Description: Global ESLint rules (promise-safety) and discovery helpers for the ESLint config
 - Core:
   - Uses:
+    - `framework/product-name.SOURCE_REPO_URL`
     - `framework/tooling.loadRepoFiles`
     - `framework/tooling/collected-dir.defineCollectedDir`
     - `framework/tooling/exempt.categoryGlobs`
@@ -171,6 +176,7 @@ its disable does not cover. Parameters and imports have no in-file value.
     - `lintContributionPaths`
     - `lintDataKey`
     - `lintExemptions`
+    - `lintRuleCreator`
     - `lintRuleIds`
     - `loadLintContributions`
     - `typeAwareLintGroups`
@@ -178,7 +184,9 @@ its disable does not cover. Parameters and imports have no in-file value.
   - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by: `framework/tooling/codegen`
 - Exemptions:
-  - Exempts itself from: `boundaries/no-platform-api` — `core/declared-utilities.ts`, `core/plugin-dirs.ts` (debt)
+  - Exempts itself from:
+    - `boundaries/no-platform-api` — `core/declared-utilities.ts`, `core/plugin-dirs.ts` (debt)
+    - `rule-kind-safety/no-raw-rule-creator` — `core/rule-creator.ts` (sanctioned)
 - Test helpers:
   - Core: `@plugins/framework/plugins/tooling/plugins/lint/core/testing`
     - `lintToolkit`
@@ -210,7 +218,7 @@ its disable does not cover. Parameters and imports have no in-file value.
   - **`repo-walk-safety`** — repo-walk-safety lint rule: no-adhoc-repo-walk
   - **`resize-observer-safety`** — resize-observer-safety lint rule: no-raw-resize-observer
   - **`route-teardown-safety`** — route-teardown-safety lint rule: no-unroute
-  - **`rule-kind-safety`** — rule-kind-safety lint rule: type-aware-rule-declared (a lint rule that reads parser services declares meta.docs.requiresTypeChecking: true)
+  - **`rule-kind-safety`** — rule-kind-safety lint rules: type-aware-rule-declared (a lint rule that reads parser services declares meta.docs.requiresTypeChecking: true), no-raw-rule-creator (every rule is made with lint/core…
   - **`runtime-isolation`** — runtime-isolation lint rule: no-deep-own-folder-import
   - **`scroll-safety`** — scroll-safety lint rules: no-adhoc-scroll-into-view, no-adhoc-scroll-write
   - **`sink-safety`** — sink-safety lint rules: no-adhoc-file-sink, no-adhoc-profiler-seam

@@ -1,13 +1,11 @@
+import { lintRuleCreator } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 import {
   ESLintUtils,
   type TSESLint,
   type TSESTree,
 } from "@typescript-eslint/utils";
-import type { LintRuleDocs } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 
-const createRule = ESLintUtils.RuleCreator<LintRuleDocs>(
-  (name) => `https://github.com/anthropics/singularity/lint/${name}`,
-);
+const createRule = lintRuleCreator(import.meta.url);
 
 /**
  * A primitive with an open passthrough has promised its callers ONE node:

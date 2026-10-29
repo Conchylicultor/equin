@@ -8,4 +8,11 @@ export default [
     task: "task-1792338443-riwqev",
     reason: "not yet split into server/ + machine/",
   },
+  {
+    rule: "rule-kind-safety/no-raw-rule-creator",
+    paths: ["core/rule-creator.ts"],
+    kind: "sanctioned",
+    reason:
+      "lintRuleCreator itself: the one place ESLintUtils.RuleCreator is called",
+  },
 ] satisfies Exemptions;

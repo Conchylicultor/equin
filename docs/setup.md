@@ -5,7 +5,7 @@ One-time environment setup for developing equin.
 ## Quick install
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/Conchylicultor/singularity/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Conchylicultor/equin/main/install.sh | bash
 ```
 
 Or `./install.sh` from inside a clone or fork you already have. Options:

@@ -1,9 +1,7 @@
-import { ESLintUtils } from "@typescript-eslint/utils";
+import { lintRuleCreator } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 import type { TSESTree } from "@typescript-eslint/utils";
 
-const createRule = ESLintUtils.RuleCreator(
-  (name) => `https://github.com/anthropics/singularity/lint/${name}`,
-);
+const createRule = lintRuleCreator(import.meta.url);
 
 /** `x.registerUpdateListener(...)` — the Lexical editor-update subscription. */
 function isRegisterUpdateListener(node: TSESTree.CallExpression): boolean {

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # One-command install of equin, from a clean machine to a running app.
 #
-#   curl -fsSL https://raw.githubusercontent.com/Conchylicultor/singularity/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/Conchylicultor/equin/main/install.sh | bash
 #   ./install.sh                  # from inside a clone or fork you already have
 #
 # Options (after `bash -s --` when piped):
@@ -36,7 +36,7 @@ data_root() {
 # Parsing main() whole first leaves nothing for them to eat.
 main() {
 
-  REPO_URL="https://github.com/Conchylicultor/singularity"
+  REPO_URL="https://github.com/Conchylicultor/equin"
   INSTALL_DIR="$HOME/equin"
   EDIT_RC=1
 

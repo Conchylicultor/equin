@@ -320,7 +320,7 @@ export function lintExemptions(
 
 /**
  * The rule-docs fields this repo reads, for a rule's `meta.docs` — pass it to
- * `ESLintUtils.RuleCreator<LintRuleDocs>(…)`. `requiresTypeChecking` is the
+ * `lintRuleCreator` (`./rule-creator.ts`). `requiresTypeChecking` is the
  * typescript-eslint convention (its own rules set it): a rule that reads types
  * declares `true`, and the lint rule `rule-kind-safety/type-aware-rule-declared`
  * holds every rule calling `getParserServices` to it.

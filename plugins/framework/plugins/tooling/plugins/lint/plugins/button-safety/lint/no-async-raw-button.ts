@@ -1,10 +1,8 @@
+import { lintRuleCreator } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
 import type { Node as TsNode, Type as TsType, TypeChecker } from "typescript";
-import type { LintRuleDocs } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 
-const createRule = ESLintUtils.RuleCreator<LintRuleDocs>(
-  (name) => `https://github.com/anthropics/singularity/lint/${name}`,
-);
+const createRule = lintRuleCreator(import.meta.url);
 
 /**
  * The shared `Button` primitive

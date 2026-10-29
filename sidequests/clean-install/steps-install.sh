@@ -24,7 +24,7 @@
 # is on macOS, so it sees exactly what install.sh added to ~/.zshrc and
 # nothing the harness set up.
 
-INSTALL_URL="https://raw.githubusercontent.com/Conchylicultor/singularity/main/install.sh"
+INSTALL_URL="https://raw.githubusercontent.com/Conchylicultor/equin/main/install.sh"
 
 step_01_baseline() {
   cat <<'CMD'

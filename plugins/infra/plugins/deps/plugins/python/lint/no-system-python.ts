@@ -1,8 +1,7 @@
-import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
+import { lintRuleCreator } from "@plugins/framework/plugins/tooling/plugins/lint/core";
+import { type TSESTree } from "@typescript-eslint/utils";
 
-const createRule = ESLintUtils.RuleCreator(
-  (name) => `https://github.com/anthropics/singularity/lint/${name}`,
-);
+const createRule = lintRuleCreator(import.meta.url);
 
 /** A command word naming the machine's Python: `python`, `python3`, `/usr/bin/python3.12`. */
 const PYTHON_COMMAND = /^(?:\/usr(?:\/local)?\/bin\/)?python(?:3(?:\.\d+)?)?$/;

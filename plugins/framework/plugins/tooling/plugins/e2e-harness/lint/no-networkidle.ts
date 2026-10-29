@@ -1,10 +1,8 @@
+import { lintRuleCreator } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 import { relative } from "node:path";
-import { ESLintUtils } from "@typescript-eslint/utils";
 import { isE2eScriptPath } from "../core";
 
-const createRule = ESLintUtils.RuleCreator(
-  (name) => `https://github.com/anthropics/singularity/lint/${name}`,
-);
+const createRule = lintRuleCreator(import.meta.url);
 
 /**
  * Bans Playwright's `"networkidle"` in e2e scripts. It never fires on this app:

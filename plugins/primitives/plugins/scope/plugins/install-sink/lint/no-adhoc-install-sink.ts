@@ -1,4 +1,5 @@
-import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
+import { lintRuleCreator } from "@plugins/framework/plugins/tooling/plugins/lint/core";
+import { type TSESTree } from "@typescript-eslint/utils";
 
 /**
  * no-adhoc-install-sink
@@ -66,9 +67,7 @@ import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
  *   // eslint-disable-next-line install-sink/no-adhoc-install-sink -- <reason>
  */
 
-const createRule = ESLintUtils.RuleCreator(
-  (name) => `https://github.com/anthropics/singularity/lint/${name}`,
-);
+const createRule = lintRuleCreator(import.meta.url);
 
 type FunctionNode =
   | TSESTree.FunctionDeclaration

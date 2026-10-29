@@ -1,4 +1,5 @@
-import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
+import { lintRuleCreator } from "@plugins/framework/plugins/tooling/plugins/lint/core";
+import { type TSESTree } from "@typescript-eslint/utils";
 
 /**
  * no-request-guard-capability
@@ -23,9 +24,7 @@ import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
  * flagged as a whole.
  */
 
-const createRule = ESLintUtils.RuleCreator(
-  (name) => `https://github.com/anthropics/singularity/lint/${name}`,
-);
+const createRule = lintRuleCreator(import.meta.url);
 
 const REQUEST_GUARD =
   "@plugins/primitives/plugins/networking/plugins/request-guard/web";

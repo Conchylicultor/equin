@@ -1,4 +1,5 @@
-import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
+import { lintRuleCreator } from "@plugins/framework/plugins/tooling/plugins/lint/core";
+import { type TSESTree } from "@typescript-eslint/utils";
 
 /**
  * no-origin-header-read
@@ -19,9 +20,7 @@ import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
  * obvious spelling.
  */
 
-const createRule = ESLintUtils.RuleCreator(
-  (name) => `https://github.com/anthropics/singularity/lint/${name}`,
-);
+const createRule = lintRuleCreator(import.meta.url);
 
 const READERS = new Set(["get", "has", "getAll"]);
 const BANNED = /^(origin|sec-fetch-[\w-]*)$/i;

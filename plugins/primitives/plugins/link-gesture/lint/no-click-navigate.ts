@@ -50,17 +50,15 @@
  * Closed: a genuine non-link escapes per site with
  * `// eslint-disable-next-line link-gesture/no-click-navigate -- <reason>`.
  */
+import { lintRuleCreator } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 import {
   AST_NODE_TYPES,
   ASTUtils,
-  ESLintUtils,
   type TSESLint,
   type TSESTree,
 } from "@typescript-eslint/utils";
 
-const createRule = ESLintUtils.RuleCreator(
-  (name) => `https://github.com/anthropics/singularity/lint/${name}`,
-);
+const createRule = lintRuleCreator(import.meta.url);
 
 /** Props whose value is a callback run when the control is activated. */
 const HANDLER_PROPS = new Set([

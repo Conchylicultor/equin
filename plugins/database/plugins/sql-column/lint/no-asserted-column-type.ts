@@ -59,11 +59,10 @@
  * See research/2026-08-25-database-decoded-columns.md and
  * research/2026-08-26-global-decoded-jsonb-entity-columns.md.
  */
-import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
+import { lintRuleCreator } from "@plugins/framework/plugins/tooling/plugins/lint/core";
+import { type TSESTree } from "@typescript-eslint/utils";
 
-const createRule = ESLintUtils.RuleCreator(
-  (name) => `https://github.com/anthropics/singularity/lint/${name}`,
-);
+const createRule = lintRuleCreator(import.meta.url);
 
 /**
  * Which decoder a column builder's tier calls for. The two tiers differ only in

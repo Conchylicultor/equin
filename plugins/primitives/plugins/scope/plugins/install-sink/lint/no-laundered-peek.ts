@@ -1,4 +1,5 @@
-import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
+import { lintRuleCreator } from "@plugins/framework/plugins/tooling/plugins/lint/core";
+import { type TSESTree } from "@typescript-eslint/utils";
 import { isPeekCall } from "./no-render-phase-peek";
 
 /**
@@ -52,9 +53,7 @@ import { isPeekCall } from "./no-render-phase-peek";
  * laundering the sample into a value, and is not flagged.
  */
 
-const createRule = ESLintUtils.RuleCreator(
-  (name) => `https://github.com/anthropics/singularity/lint/${name}`,
-);
+const createRule = lintRuleCreator(import.meta.url);
 
 type FunctionNode =
   | TSESTree.FunctionDeclaration

@@ -38,7 +38,7 @@ export type CacheDecision =
  * remote looks like right now.
  *
  * The URL comparison is EXACT text, not the normalised repo identity used
- * against `CANONICAL_REPO_URL`. A user who re-points origin from https to ssh
+ * against `SOURCE_REPO_URL`. A user who re-points origin from https to ssh
  * has changed how they authenticate to it, which is precisely the input to the
  * answer we cached — so the cheap thing to do is re-probe, and treating the two
  * spellings as one would skip that.

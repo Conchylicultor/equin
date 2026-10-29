@@ -2,5 +2,5 @@
   "name": "@equin/plugin-framework-tooling-lint-rule-kind-safety",
   "version": "0.0.1",
   "private": true,
-  "description": "rule-kind-safety lint rule: type-aware-rule-declared (a lint rule that reads parser services declares meta.docs.requiresTypeChecking: true)"
+  "description": "rule-kind-safety lint rules: type-aware-rule-declared (a lint rule that reads parser services declares meta.docs.requiresTypeChecking: true), no-raw-rule-creator (every rule is made with lint/core lintRuleCreator, which derives its docs URL and types its meta.docs)"
 }

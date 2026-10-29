@@ -19,8 +19,8 @@ import {
   INSTALL_COMMAND,
   LOCAL_APP_HOST,
   LOCAL_APP_URL,
-  SOURCE_URL,
 } from "@plugins/apps/plugins/website/plugins/shell/core";
+import { SOURCE_REPO_URL } from "@plugins/framework/plugins/product-name/core";
 import {
   WebsiteArrow,
   WebsiteBand,
@@ -48,7 +48,7 @@ const INSTALLER_STEPS = [
 ];
 
 /** The same install, said to an agent: run the command, repair, report back. */
-const AGENT_PROMPT = `Install equin (${SOURCE_URL}) on this Mac with its installer: ${INSTALL_COMMAND}
+const AGENT_PROMPT = `Install equin (${SOURCE_REPO_URL}) on this Mac with its installer: ${INSTALL_COMMAND}
 If a step fails, fix it and run the installer again. When it is done, give me the link to the app.`;
 
 /**

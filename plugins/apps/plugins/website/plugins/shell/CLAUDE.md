@@ -123,7 +123,8 @@ hover.
     - `WebsiteSoon`
 - Core:
   - Uses:
-    - `framework/product-name.LEGACY_IDS`
+    - `framework/product-name.SOURCE_REPO`
+    - `framework/product-name.SOURCE_REPO_URL`
     - `infra/namespace.MAIN_WORKTREE_NAME`
     - `infra/namespace.namespaceHost`
     - `infra/namespace.namespaceUrl`
@@ -136,7 +137,6 @@ hover.
     - `ISSUES_URL`
     - `LOCAL_APP_HOST`
     - `LOCAL_APP_URL`
-    - `SOURCE_URL`
     - `websiteApp`
 - Cross-plugin:
   - Uses tokens:

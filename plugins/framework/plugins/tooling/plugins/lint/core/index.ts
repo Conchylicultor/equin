@@ -1,4 +1,5 @@
 export { lintCollectedDir } from "./collected-dir";
+export { lintRuleCreator } from "./rule-creator";
 export { findPluginDirs } from "./plugin-dirs";
 export {
   LINT_CONFIG_SOURCE,

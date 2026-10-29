@@ -1,4 +1,5 @@
-import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
+import { lintRuleCreator } from "@plugins/framework/plugins/tooling/plugins/lint/core";
+import { type TSESTree } from "@typescript-eslint/utils";
 
 /**
  * no-raw-history-nav
@@ -23,9 +24,7 @@ import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
  * canonicalization) are exempted through `exempt/index.ts` in the exempted plugins.
  */
 
-const createRule = ESLintUtils.RuleCreator(
-  (name) => `https://github.com/anthropics/singularity/lint/${name}`,
-);
+const createRule = lintRuleCreator(import.meta.url);
 
 /** History API methods that write the URL/history entry. */
 const RAW_HISTORY_METHODS = new Set(["pushState", "replaceState"]);

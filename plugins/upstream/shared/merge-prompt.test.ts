@@ -10,7 +10,7 @@ import {
 
 const base: UpstreamUpdates = {
   ref: "origin/main",
-  url: "https://github.com/Conchylicultor/singularity",
+  url: "https://github.com/Conchylicultor/equin",
   count: 3,
   newest: [
     { sha: "1111111111111111111111111111111111111111", subject: "feat: a" },

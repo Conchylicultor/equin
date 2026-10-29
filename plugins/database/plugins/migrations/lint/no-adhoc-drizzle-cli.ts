@@ -1,17 +1,12 @@
-import {
-  ESLintUtils,
-  type TSESLint,
-  type TSESTree,
-} from "@typescript-eslint/utils";
+import { lintRuleCreator } from "@plugins/framework/plugins/tooling/plugins/lint/core";
+import { type TSESLint, type TSESTree } from "@typescript-eslint/utils";
 // Relative, same-plugin: a lint rule file cannot use an `@plugins/*` specifier
 // (jiti, which loads eslint.config.ts, does not resolve the alias). Importing the
 // name rather than retyping it is what keeps the rule and the argv owner from
 // drifting — the binary is spelled in exactly one file in the repo.
 import { DRIZZLE_KIT_BIN } from "../core/internal/drizzle-cli";
 
-const createRule = ESLintUtils.RuleCreator(
-  (name) => `https://github.com/anthropics/singularity/lint/${name}`,
-);
+const createRule = lintRuleCreator(import.meta.url);
 
 /**
  * Everything in the repo that can start a process. Bare identifiers are the

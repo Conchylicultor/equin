@@ -137,8 +137,8 @@ export function namesPrimitive(messages: string, dir: string): boolean {
 
 /**
  * The rule's user-facing message text: everything between the `messages: {` key
- * and the `defaultOptions` that follows it (both structural landmarks of an
- * `ESLintUtils.RuleCreator` rule), with `//` comment lines dropped — a name
+ * and the `defaultOptions` that follows it (both structural landmarks of a
+ * `createRule({ … })` rule), with `//` comment lines dropped — a name
  * mentioned only in a code comment is not advertised to anyone.
  *
  * Read as TEXT rather than imported: a check under `check/` and a lint rule
@@ -177,7 +177,7 @@ const check: Check = {
       return {
         ok: false,
         message: `${RULE_FILE}: could not locate the rule's \`messages: { … }\` block (expected a \`messages: {\` key followed by \`defaultOptions\`).`,
-        hint: "Keep the rule in the standard ESLintUtils.RuleCreator shape, or update extractMessages() in this check to match.",
+        hint: "Keep the rule in the standard createRule({ … }) shape, or update extractMessages() in this check to match.",
       };
     }
 

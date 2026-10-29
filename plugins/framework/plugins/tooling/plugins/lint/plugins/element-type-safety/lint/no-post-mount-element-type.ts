@@ -1,7 +1,7 @@
+import { lintRuleCreator } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 import {
   ASTUtils,
   AST_NODE_TYPES,
-  ESLintUtils,
   type TSESTree,
 } from "@typescript-eslint/utils";
 import type { Scope, SourceCode } from "@typescript-eslint/utils/ts-eslint";
@@ -50,9 +50,7 @@ import type { Scope, SourceCode } from "@typescript-eslint/utils/ts-eslint";
  * line with a reason.
  */
 
-const createRule = ESLintUtils.RuleCreator(
-  (name) => `https://github.com/anthropics/singularity/lint/${name}`,
-);
+const createRule = lintRuleCreator(import.meta.url);
 
 /** Is this an effect-hook call (useEffect / useLayoutEffect)? */
 function isEffectHookCall(node: TSESTree.CallExpression): boolean {

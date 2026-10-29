@@ -16,18 +16,6 @@ const RULE = "product-name:legacy-id";
 /** The old name, in any case: an identifier, a scope, a key, a path, prose. */
 const OLD_NAME = /singularity/i;
 
-/**
- * Spellings still allowed outside the owner, because they name something
- * outside the repo's control.
- */
-const ALLOWED: ReadonlyArray<{ pattern: RegExp; why: string }> = [
-  // The repository keeps its name; a URL to it is the remote's, not ours.
-  {
-    pattern: /(?:github|gitlab)(?:usercontent)?\.com[/:][\w.-]+\/singularity/gi,
-    why: "a repository URL",
-  },
-];
-
 /** Which kept values each mirror file may spell. */
 const MIRROR_VALUES: ReadonlyMap<string, readonly string[]> = (() => {
   const byFile = new Map<string, string[]>();
@@ -45,10 +33,8 @@ export function offendingLine(
   text: string,
   mirrored: readonly string[],
 ): boolean {
-  let rest = text;
-  for (const { pattern } of ALLOWED) rest = rest.replace(pattern, "");
-  if (!OLD_NAME.test(rest)) return false;
-  return !mirrored.some((value) => rest.includes(value));
+  if (!OLD_NAME.test(text)) return false;
+  return !mirrored.some((value) => text.includes(value));
 }
 
 /**
@@ -94,8 +80,7 @@ const legacyIdCheck: Check = {
       hint:
         `A name the same build produces and reads (a package scope, a key, an identifier, a temp prefix) is renamed — derive it from \`PRODUCT_NAME\` ("${PRODUCT_NAME}"). ` +
         'A kept stored id or cross-version contract is read from `LEGACY_IDS` (`@plugins/framework/plugins/product-name/core`), never spelled; prose names the concept ("the main namespace", "the push trailer"). ' +
-        "A file that cannot import it (Go, Rust, shell) is listed in that id's `mirrors` in `legacy-ids.ts`. " +
-        `Also allowed: ${ALLOWED.map((a) => a.why).join(", ")}.`,
+        "A file that cannot import it (Go, Rust, shell) is listed in that id's `mirrors` in `legacy-ids.ts`.",
     };
   },
 };

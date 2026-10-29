@@ -1,5 +1,5 @@
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { SOURCE_URL } from "../../core";
+import { SOURCE_REPO_URL } from "@plugins/framework/plugins/product-name/core";
 import { brand } from "@plugins/ui/plugins/icons/core";
 
 const githubIcon = brand("github");
@@ -19,7 +19,9 @@ export function WebsiteGithubLink() {
       icon={githubIcon}
       label="equin on GitHub"
       className="text-muted-foreground hover:text-foreground hover:bg-transparent"
-      render={<a href={SOURCE_URL} target="_blank" rel="noreferrer noopener" />}
+      render={
+        <a href={SOURCE_REPO_URL} target="_blank" rel="noreferrer noopener" />
+      }
     />
   );
 }

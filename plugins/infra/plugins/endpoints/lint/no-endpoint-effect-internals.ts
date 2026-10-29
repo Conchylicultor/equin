@@ -1,4 +1,5 @@
-import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
+import { lintRuleCreator } from "@plugins/framework/plugins/tooling/plugins/lint/core";
+import { type TSESTree } from "@typescript-eslint/utils";
 
 /**
  * no-endpoint-effect-internals
@@ -22,9 +23,7 @@ import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
  * `exempt/index.ts`.
  */
 
-const createRule = ESLintUtils.RuleCreator(
-  (name) => `https://github.com/anthropics/singularity/lint/${name}`,
-);
+const createRule = lintRuleCreator(import.meta.url);
 
 const BARREL = "@plugins/infra/plugins/endpoints/core";
 const INTERNALS = new Set([

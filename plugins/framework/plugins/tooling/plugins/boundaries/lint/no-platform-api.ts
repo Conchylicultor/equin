@@ -1,4 +1,5 @@
-import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
+import { lintRuleCreator } from "@plugins/framework/plugins/tooling/plugins/lint/core";
+import { type TSESTree } from "@typescript-eslint/utils";
 import {
   PLUGIN_FOLDERS,
   type PluginFolder,
@@ -27,9 +28,7 @@ import { isPlatformApi } from "../core/platform-apis";
  * `boundaries:portable-closure` check proves transitively.
  */
 
-const createRule = ESLintUtils.RuleCreator(
-  (name) => `https://github.com/anthropics/singularity/lint/${name}`,
-);
+const createRule = lintRuleCreator(import.meta.url);
 
 const FOLDERS: ReadonlySet<string> = new Set(PLUGIN_FOLDERS);
 

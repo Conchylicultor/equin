@@ -1,6 +1,6 @@
+import { lintRuleCreator } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 import {
   AST_NODE_TYPES,
-  ESLintUtils,
   type TSESLint,
   type TSESTree,
 } from "@typescript-eslint/utils";
@@ -41,9 +41,7 @@ type Scope = TSESLint.Scope.Scope;
  * only inline JSX.
  */
 
-const createRule = ESLintUtils.RuleCreator(
-  (name) => `https://github.com/anthropics/singularity/lint/${name}`,
-);
+const createRule = lintRuleCreator(import.meta.url);
 
 /** Stringify a JSX opening-element name (handles member / namespaced forms). */
 function stringifyJSXName(name: TSESTree.JSXTagNameExpression): string {

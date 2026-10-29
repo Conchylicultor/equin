@@ -1,4 +1,5 @@
-import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
+import { lintRuleCreator } from "@plugins/framework/plugins/tooling/plugins/lint/core";
+import { type TSESTree } from "@typescript-eslint/utils";
 import { locate, ownTargetOf, toPosix } from "./own-tree";
 
 /**
@@ -44,9 +45,7 @@ import { locate, ownTargetOf, toPosix } from "./own-tree";
  * the barrel still has to export.
  */
 
-const createRule = ESLintUtils.RuleCreator(
-  (name) => `https://github.com/anthropics/singularity/lint/${name}`,
-);
+const createRule = lintRuleCreator(import.meta.url);
 
 /** Top-level plugin folders whose files are bundled into browser artifacts. */
 const BROWSER_BUILT = new Set(["web", "core", "shared", "exhibits"]);

@@ -1,11 +1,9 @@
+import { lintRuleCreator } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
 import type * as ts from "typescript";
 import { HOOK_NAME, isBranded, keyName, typeMembers } from "./hook-brand";
-import type { LintRuleDocs } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 
-const createRule = ESLintUtils.RuleCreator<LintRuleDocs>(
-  (name) => `https://github.com/anthropics/singularity/lint/${name}`,
-);
+const createRule = lintRuleCreator(import.meta.url);
 
 /**
  * A `use*`-named field of a function type must be declared `Hook<…>`.

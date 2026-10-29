@@ -1,4 +1,5 @@
-import { ASTUtils, ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
+import { lintRuleCreator } from "@plugins/framework/plugins/tooling/plugins/lint/core";
+import { ASTUtils, type TSESTree } from "@typescript-eslint/utils";
 
 /**
  * no-adhoc-doc-write
@@ -38,9 +39,7 @@ import { ASTUtils, ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
  * across plugins.
  */
 
-const createRule = ESLintUtils.RuleCreator(
-  (name) => `https://github.com/anthropics/singularity/lint/${name}`,
-);
+const createRule = lintRuleCreator(import.meta.url);
 
 const APPLY_UPDATE = "applyUpdate";
 /** The registry read that hands back a block's owner (`collab-session.ts`). */

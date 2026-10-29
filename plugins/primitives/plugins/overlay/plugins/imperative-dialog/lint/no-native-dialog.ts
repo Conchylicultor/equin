@@ -1,8 +1,5 @@
-import {
-  AST_NODE_TYPES,
-  ESLintUtils,
-  type TSESTree,
-} from "@typescript-eslint/utils";
+import { lintRuleCreator } from "@plugins/framework/plugins/tooling/plugins/lint/core";
+import { AST_NODE_TYPES, type TSESTree } from "@typescript-eslint/utils";
 import type { TSESLint } from "@typescript-eslint/utils";
 
 /**
@@ -33,9 +30,7 @@ import type { TSESLint } from "@typescript-eslint/utils";
  * Same scope walk as pane/no-hint-fabrication.
  */
 
-const createRule = ESLintUtils.RuleCreator(
-  (name) => `https://github.com/anthropics/singularity/lint/${name}`,
-);
+const createRule = lintRuleCreator(import.meta.url);
 
 const BANNED = new Set(["confirm", "alert", "prompt"]);
 const GLOBAL_OBJECTS = new Set(["window", "globalThis", "self"]);

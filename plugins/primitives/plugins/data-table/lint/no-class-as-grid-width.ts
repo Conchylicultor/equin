@@ -1,11 +1,9 @@
+import { lintRuleCreator } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
 import type * as ts from "typescript";
 import { isGridTrackSize } from "./grid-track";
-import type { LintRuleDocs } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 
-const createRule = ESLintUtils.RuleCreator<LintRuleDocs>(
-  (name) => `https://github.com/anthropics/singularity/lint/${name}`,
-);
+const createRule = lintRuleCreator(import.meta.url);
 
 /**
  * `ColumnDef.width` is fed verbatim into `grid-template-columns` as a single

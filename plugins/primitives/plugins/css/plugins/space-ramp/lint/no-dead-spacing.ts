@@ -1,4 +1,5 @@
-import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
+import { lintRuleCreator } from "@plugins/framework/plugins/tooling/plugins/lint/core";
+import { type TSESTree } from "@typescript-eslint/utils";
 import type { LintToolkit } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 // Relative, same-plugin: a lint rule file cannot import a runtime value through
 // an `@plugins/*` specifier (jiti, which loads eslint.config.ts, does not
@@ -9,9 +10,7 @@ import {
   spacingClassExists,
 } from "../core/internal/spacing-classes";
 
-const createRule = ESLintUtils.RuleCreator(
-  (name) => `https://github.com/anthropics/singularity/lint/${name}`,
-);
+const createRule = lintRuleCreator(import.meta.url);
 
 /**
  * A spacing class must exist.

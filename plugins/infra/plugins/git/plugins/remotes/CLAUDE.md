@@ -103,7 +103,7 @@ It is re-probed when:
   user who re-points origin from https to ssh has changed how they authenticate
   to it, which is the input to the recorded answer — so the cheap thing is to
   ask again. (This exact-text rule is deliberately *not* the normalised repo
-  identity used against `CANONICAL_REPO_URL`.)
+  identity used against `SOURCE_REPO_URL` (`framework/product-name`).)
 - a **real** push is rejected — `recordPushRejection(root)`. That rejection is
   newer evidence than the cache: it is the remote answering the exact question
   the cache holds a guess at. A checkout that loses its write access therefore
@@ -116,7 +116,7 @@ It is re-probed when:
 1. a remote literally named `upstream` — the user has already said so;
 2. else we cannot publish, so the remote we cannot write to **is** upstream (the
    ordinary clone: one remote, read-only);
-3. else we publish somewhere that is not `CANONICAL_REPO_URL`, which is a fork —
+3. else we publish somewhere that is not `SOURCE_REPO_URL` (`framework/product-name`), which is a fork —
    add `upstream` pointing at the canonical repo and use it;
 4. else we publish to the canonical repo, so this is the author's checkout and
    there is nothing above it (`{ kind: "none", reason: "is-publisher" }`).
@@ -124,9 +124,6 @@ It is re-probed when:
 Step 2 deliberately includes `unreachable`: a remote we could not reach today is
 still the remote this checkout came from. That failure belongs to whoever
 fetches, not to a claim that there is no upstream at all.
-
-`CANONICAL_REPO_URL` is also in `CITATION.cff`; deduplicating the two belongs to
-whoever adds the README that reads both.
 
 ## Commit identity is decided at commit time
 
@@ -187,6 +184,7 @@ that fails re-probes and records what comes back.
 - Core:
   - Uses:
     - `framework/product-name.LEGACY_IDS`
+    - `framework/product-name.SOURCE_REPO_URL`
     - `infra/spawn.spawnCaptured`
     - `infra/spawn.spawnExpectOk`
   - Exports (types):
@@ -197,7 +195,6 @@ that fails re-probes and records what comes back.
     - `RemoteFailure`
     - `UpstreamRemote`
   - Exports (values):
-    - `CANONICAL_REPO_URL`
     - `classifyRemoteFailure`
     - `describeAutoIdentity`
     - `describePublishTarget`

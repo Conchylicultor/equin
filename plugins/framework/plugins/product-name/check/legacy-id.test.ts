@@ -26,9 +26,9 @@ describe("offendingLine", () => {
     ).toBe(false);
   });
 
-  test("leaves repo URLs alone", () => {
+  test("flags a repository URL under the old name", () => {
     expect(offendingLine(`https://github.com/Owner/${OLD}/pull/1`, [])).toBe(
-      false,
+      true,
     );
   });
 

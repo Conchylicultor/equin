@@ -6,5 +6,4 @@ export {
   ISSUES_URL,
   LOCAL_APP_HOST,
   LOCAL_APP_URL,
-  SOURCE_URL,
 } from "./site";

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { normalizeRepoUrl, remoteTransport, sameRepoUrl } from "./remote-url";
 
-const CANONICAL = "https://github.com/Conchylicultor/singularity";
+const CANONICAL = "https://github.com/Conchylicultor/equin";
 
 describe("normalizeRepoUrl", () => {
   test("reads scp-like syntax, which is not a URL", () => {
@@ -43,24 +43,24 @@ describe("normalizeRepoUrl", () => {
 describe("sameRepoUrl", () => {
   test("the four spellings of one repo are one repo", () => {
     for (const spelling of [
-      "https://github.com/Conchylicultor/singularity.git",
-      "https://github.com/conchylicultor/singularity/",
-      "git@github.com:Conchylicultor/singularity.git",
-      "ssh://git@github.com/Conchylicultor/singularity",
+      "https://github.com/Conchylicultor/equin.git",
+      "https://github.com/conchylicultor/equin/",
+      "git@github.com:Conchylicultor/equin.git",
+      "ssh://git@github.com/Conchylicultor/equin",
     ]) {
       expect(sameRepoUrl(spelling, CANONICAL)).toBe(true);
     }
   });
 
   test("a fork is not the canonical repo", () => {
-    expect(
-      sameRepoUrl("git@github.com:someone/singularity.git", CANONICAL),
-    ).toBe(false);
+    expect(sameRepoUrl("git@github.com:someone/equin.git", CANONICAL)).toBe(
+      false,
+    );
   });
 
   test("a different host is a different repo", () => {
     expect(
-      sameRepoUrl("https://gitlab.com/Conchylicultor/singularity", CANONICAL),
+      sameRepoUrl("https://gitlab.com/Conchylicultor/equin", CANONICAL),
     ).toBe(false);
   });
 

@@ -50,15 +50,10 @@
  *
  * See research/2026-08-23-database-parsed-sql-rows.md.
  */
-import {
-  ESLintUtils,
-  type TSESLint,
-  type TSESTree,
-} from "@typescript-eslint/utils";
+import { lintRuleCreator } from "@plugins/framework/plugins/tooling/plugins/lint/core";
+import { type TSESLint, type TSESTree } from "@typescript-eslint/utils";
 
-const createRule = ESLintUtils.RuleCreator(
-  (name) => `https://github.com/anthropics/singularity/lint/${name}`,
-);
+const createRule = lintRuleCreator(import.meta.url);
 
 /** Callee property names whose result is a raw SQL result object. */
 const SQL_CALL_NAMES = new Set(["query", "execute"]);

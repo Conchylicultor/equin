@@ -1,4 +1,5 @@
-import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
+import { lintRuleCreator } from "@plugins/framework/plugins/tooling/plugins/lint/core";
+import { type TSESTree } from "@typescript-eslint/utils";
 
 /**
  * no-reactive-server-io
@@ -29,9 +30,7 @@ import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
  *       any use*Resource(s) hook.
  */
 
-const createRule = ESLintUtils.RuleCreator(
-  (name) => `https://github.com/anthropics/singularity/lint/${name}`,
-);
+const createRule = lintRuleCreator(import.meta.url);
 
 /** Callee names that constitute server I/O / a side-effecting sink (condition 1). */
 const SERVER_IO_NAMES = new Set([

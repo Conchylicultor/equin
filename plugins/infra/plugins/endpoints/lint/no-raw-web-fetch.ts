@@ -1,4 +1,5 @@
-import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
+import { lintRuleCreator } from "@plugins/framework/plugins/tooling/plugins/lint/core";
+import { type TSESTree } from "@typescript-eslint/utils";
 
 /**
  * no-raw-web-fetch
@@ -22,9 +23,7 @@ import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
  * hook script), are exempted through `exempt/index.ts` in their own plugins.
  */
 
-const createRule = ESLintUtils.RuleCreator(
-  (name) => `https://github.com/anthropics/singularity/lint/${name}`,
-);
+const createRule = lintRuleCreator(import.meta.url);
 
 /** Callee names that constitute a raw web fetch. */
 const RAW_FETCH_NAMES = new Set(["fetch", "fetchWithRetry", "sendBeacon"]);

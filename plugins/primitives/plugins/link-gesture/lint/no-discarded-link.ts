@@ -42,13 +42,11 @@
  *
  * Closed: there is no legitimate discarded link.
  */
+import { lintRuleCreator } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
 import ts from "typescript";
-import type { LintRuleDocs } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 
-const createRule = ESLintUtils.RuleCreator<LintRuleDocs>(
-  (name) => `https://github.com/anthropics/singularity/lint/${name}`,
-);
+const createRule = lintRuleCreator(import.meta.url);
 
 const FIX =
   "Spread `openPane.link(…)` (or `activationProps(target)`) on the control, pass the target as its `activation`, or — for an open with no gesture to read — call `openPane(…)` itself.";

@@ -76,8 +76,6 @@ export const LEGACY_IDS = {
   defaultCheckoutDir: "singularity",
   /** The backups dir under the home dir (`~/.backups/<dir>`). */
   backupsDirName: "singularity",
-  /** The GitHub repository. */
-  githubRepo: "Conchylicultor/singularity",
 } as const;
 
 export type LegacyIdKey = keyof typeof LEGACY_IDS;
@@ -212,5 +210,4 @@ export const LEGACY_ID_NOTES: Readonly<Record<LegacyIdKey, LegacyIdNote>> = {
   backupsDirName: {
     kept: "the local backups of an install not yet migrated; used while it exists, until `./equin data-dir migrate` moves it (paths/core backupsDir)",
   },
-  githubRepo: { kept: "the repository keeps its name (user decision)" },
 };

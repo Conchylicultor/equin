@@ -1,4 +1,5 @@
-import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
+import { lintRuleCreator } from "@plugins/framework/plugins/tooling/plugins/lint/core";
+import { type TSESTree } from "@typescript-eslint/utils";
 
 /**
  * no-unfiltered-blocks-read
@@ -34,9 +35,7 @@ import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
  * across plugins.
  */
 
-const createRule = ESLintUtils.RuleCreator(
-  (name) => `https://github.com/anthropics/singularity/lint/${name}`,
-);
+const createRule = lintRuleCreator(import.meta.url);
 
 /** The drizzle table binding of `page_blocks`, trashed rows included. */
 const BLOCKS_TABLE = "_blocks";

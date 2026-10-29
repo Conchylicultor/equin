@@ -1,4 +1,5 @@
-import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
+import { lintRuleCreator } from "@plugins/framework/plugins/tooling/plugins/lint/core";
+import { type TSESTree } from "@typescript-eslint/utils";
 
 /**
  * no-split-slot-row
@@ -47,9 +48,7 @@ import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
  *   {/* eslint-disable-next-line spacer/no-split-slot-row -- <reason> *\/}
  */
 
-const createRule = ESLintUtils.RuleCreator(
-  (name) => `https://github.com/anthropics/singularity/lint/${name}`,
-);
+const createRule = lintRuleCreator(import.meta.url);
 
 /** Containers whose children are laid out on one horizontal line. */
 const ROW_CONTAINERS = new Set([

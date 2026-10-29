@@ -5,16 +5,8 @@ import {
   PUBLISH_REMOTE,
 } from "./publish-target";
 import { sameRepoUrl } from "./remote-url";
+import { SOURCE_REPO_URL } from "@plugins/framework/plugins/product-name/core";
 import type { UpstreamRemote } from "./types";
-
-/**
- * The repository this project is published from.
- *
- * Also written in `CITATION.cff`. Deduplicating the two belongs to whoever
- * adds the README that reads both; until then this is the copy code uses.
- */
-export const CANONICAL_REPO_URL =
-  "https://github.com/Conchylicultor/singularity";
 
 /** The remote name a fork's upstream is added under — git's own convention. */
 const UPSTREAM_REMOTE = "upstream";
@@ -59,7 +51,7 @@ export async function resolveUpstreamRemote(
     };
   }
 
-  if (sameRepoUrl(target.url, CANONICAL_REPO_URL)) {
+  if (sameRepoUrl(target.url, SOURCE_REPO_URL)) {
     return { kind: "none", reason: "is-publisher" };
   }
   return await addCanonicalUpstream(root);
@@ -73,14 +65,14 @@ export async function resolveUpstreamRemote(
  */
 async function addCanonicalUpstream(root: string): Promise<UpstreamRemote> {
   const result = await spawnCaptured(
-    ["git", "remote", "add", UPSTREAM_REMOTE, CANONICAL_REPO_URL],
+    ["git", "remote", "add", UPSTREAM_REMOTE, SOURCE_REPO_URL],
     { cwd: root, timeoutMs: REMOTE_ADD_TIMEOUT_MS },
   );
   if (result.exitCode === 0) {
     return {
       kind: "upstream",
       remote: UPSTREAM_REMOTE,
-      url: CANONICAL_REPO_URL,
+      url: SOURCE_REPO_URL,
     };
   }
   const existing = await remoteUrl(UPSTREAM_REMOTE, root);
@@ -88,7 +80,7 @@ async function addCanonicalUpstream(root: string): Promise<UpstreamRemote> {
     return { kind: "upstream", remote: UPSTREAM_REMOTE, url: existing };
   }
   throw new Error(
-    `Could not add the '${UPSTREAM_REMOTE}' remote for ${CANONICAL_REPO_URL} ` +
+    `Could not add the '${UPSTREAM_REMOTE}' remote for ${SOURCE_REPO_URL} ` +
       `(git exited ${result.exitCode}); this checkout can publish to ` +
       `${PUBLISH_REMOTE} but has no upstream to receive from.` +
       (result.stderr.trim() ? `\n${result.stderr.trim()}` : ""),

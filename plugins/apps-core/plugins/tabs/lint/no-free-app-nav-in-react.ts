@@ -36,16 +36,14 @@
  * at module level renders inside React all the same. A namespace import
  * (`tabs.navigate`) is the same reference by another spelling.
  */
+import { lintRuleCreator } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 import {
   AST_NODE_TYPES,
   ASTUtils,
-  ESLintUtils,
   type TSESTree,
 } from "@typescript-eslint/utils";
 
-const createRule = ESLintUtils.RuleCreator(
-  (name) => `https://github.com/anthropics/singularity/lint/${name}`,
-);
+const createRule = lintRuleCreator(import.meta.url);
 
 /** The barrel exporting the free forms. */
 const TABS_BARREL = "@plugins/apps-core/plugins/tabs/web";

@@ -1,8 +1,7 @@
-import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
+import { lintRuleCreator } from "@plugins/framework/plugins/tooling/plugins/lint/core";
+import type { TSESTree } from "@typescript-eslint/utils";
 
-const createRule = ESLintUtils.RuleCreator(
-  (name) => `https://github.com/anthropics/singularity/lint/${name}`,
-);
+const createRule = lintRuleCreator(import.meta.url);
 
 /** Keys that name the parser services: a call's callee, a member, a binding. */
 const SERVICES_CALL = "getParserServices";
@@ -46,7 +45,7 @@ export default createRule({
     schema: [],
     messages: {
       undeclared:
-        "This rule reads type information (`{{via}}`) but its `meta.docs` does not declare `requiresTypeChecking: true`. Declare it (with `ESLintUtils.RuleCreator<LintRuleDocs>` from lint/core): the type-check lint cache keys an undeclared rule's result on the file's own text alone, so its answer would go stale when a declaration it read changes.",
+        "This rule reads type information (`{{via}}`) but its `meta.docs` does not declare `requiresTypeChecking: true`. Declare it (rules made with lintRuleCreator from lint/core type `meta.docs` as `LintRuleDocs`): the type-check lint cache keys an undeclared rule's result on the file's own text alone, so its answer would go stale when a declaration it read changes.",
       noRuleObject:
         "This file reads type information (`{{via}}`) but defines no rule object (`meta: { docs: { … } }`) to declare `requiresTypeChecking: true` on. Read the parser services in the rule's own file, so its kind is declared beside it.",
     },

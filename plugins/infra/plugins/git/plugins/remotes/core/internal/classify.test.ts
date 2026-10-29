@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { classifyRemoteFailure, type RemoteCapture } from "./classify";
-import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
+import { SOURCE_REPO } from "@plugins/framework/plugins/product-name/core";
 
 // Every sample below is real `git push` output, kept verbatim — including the
 // generic `fatal:` tail git appends to causes that mean opposite things, which
@@ -106,8 +106,8 @@ describe("classifyRemoteFailure", () => {
     expect(
       classifyRemoteFailure(
         capture(
-          `remote: Permission to ${LEGACY_IDS.githubRepo}.git denied to someone.\n` +
-            "fatal: unable to access 'https://github.com/Conchylicultor/singularity.git/': The requested URL returned error: 403\n",
+          `remote: Permission to ${SOURCE_REPO}.git denied to someone.\n` +
+            "fatal: unable to access 'https://github.com/Conchylicultor/equin.git/': The requested URL returned error: 403\n",
         ),
       ).kind,
     ).toBe("denied");

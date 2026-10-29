@@ -1,4 +1,5 @@
-import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
+import { lintRuleCreator } from "@plugins/framework/plugins/tooling/plugins/lint/core";
+import { type TSESTree } from "@typescript-eslint/utils";
 
 /**
  * no-raw-actions-slot
@@ -90,9 +91,7 @@ import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
  * it must never get is a path entry as an `exempt/index.ts` path entry.
  */
 
-const createRule = ESLintUtils.RuleCreator(
-  (name) => `https://github.com/anthropics/singularity/lint/${name}`,
-);
+const createRule = lintRuleCreator(import.meta.url);
 
 /** Prop names that denote a trailing action cluster on a row / card / table row. */
 const ACTIONS_PROP_NAMES = new Set(["actions", "rowActions", "itemActions"]);
