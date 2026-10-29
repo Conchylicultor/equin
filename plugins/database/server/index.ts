@@ -1,4 +1,5 @@
 import {
+  getBootMode,
   setWatermarkSource,
   type ServerPluginDefinition,
 } from "@plugins/framework/plugins/server-core/core";
@@ -50,7 +51,10 @@ export default {
   // commits.
   async onReadyBlocking() {
     const driver = DatabaseDriver.get();
-    await driver.ready();
+    // Warm the pool only where something will be served from it: an `exec`
+    // child (a supervised job's body) runs one piece of work and exits, so a
+    // full pool per child only multiplies connections when many boot at once.
+    await driver.ready({ warm: getBootMode() === "serve" });
     // The resource runtime's commit watermark is this database's snapshot xmin:
     // installed on every host with a database, before anything is served, so
     // every frame that fully reconciles a client carries one — whether or not

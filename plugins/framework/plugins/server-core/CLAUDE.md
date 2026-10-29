@@ -24,7 +24,9 @@ there, not in a composition root, unless it is genuinely serve-only.
   exits (`cli/run-exec.ts`, exported as `runExec` from
   `@plugins/framework/plugins/server-core/cli`). Runs load waves,
   `collectContributions`, the host-service assert, `register`, the deferred-resource bind, the preload-declare assert
-  and the `onReadyBlocking` barrier, and nothing else.
+  and the `onReadyBlocking` barrier, and nothing else. A failure exits 1, or the
+  status the caller's `exitCodeFor(err)` picks (a supervised child: EX_TEMPFAIL
+  for a database that refused it for being full).
 - **`browser`** — the portable graph in a page's Web Worker
   (`core/browser-host.ts`, `bootBrowserHost({ entries, seed? })`, called from a
   plugin's `bin/browser-host.ts`). A SERVING host like `serve`, minus the

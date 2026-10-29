@@ -52,11 +52,12 @@ describe("scratchWorkspace.prepare", () => {
         input: { note: "x" },
       },
     };
-    // A scratch prepare is in-process work: it never steps or waits.
+    // A scratch prepare is in-process work: it never steps, waits or sleeps.
     const ctx = {
       signal: new AbortController().signal,
       step: () => Promise.reject(new Error("scratch prepare must not step")),
       waitFor: () => Promise.reject(new Error("scratch prepare must not wait")),
+      sleep: () => Promise.reject(new Error("scratch prepare must not sleep")),
     };
     await scratchWorkspace.prepare(at, ctx);
     await scratchWorkspace.prepare(at, ctx);

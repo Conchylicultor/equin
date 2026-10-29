@@ -34,6 +34,12 @@ export const worktreePrepareJob = defineSupervisedJob({
   input: z.object({ attemptId: z.string(), path: z.string() }),
   channel: prepareLog,
   lock: (input) => input.attemptId,
+  // Each child boots the plugin graph and opens database connections through
+  // the host-wide pgbouncer, and a launch storm requests one per launch at
+  // once: past the pool's size a child waits for a slot BEFORE it boots,
+  // holding nothing. Its row is open meanwhile, so the spawn keeps waiting on
+  // it (`prepareWorktree`) — a queued checkout is not a failed one.
+  admission: "worktree-prepare",
   // No signal: the child is bounded by git's own timeouts and install's, and
   // nothing else holds it.
   async run({ attemptId, path }, { log }) {

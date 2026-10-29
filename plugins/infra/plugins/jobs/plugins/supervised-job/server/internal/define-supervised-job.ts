@@ -8,6 +8,7 @@ import {
   type ScheduleSpec,
 } from "@plugins/infra/plugins/jobs/server";
 import type { LogChannel } from "@plugins/primitives/plugins/log-channels/server";
+import type { HostPoolId } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import type { RunTerminal } from "../../core";
 import {
   applyFailurePolicy,
@@ -199,6 +200,8 @@ interface ArgvBody<S extends z.ZodType> {
     runId: string,
   ): SupervisedJobSpawn | Promise<SupervisedJobSpawn>;
   run?: never;
+  /** Only a `run` body's child is ours to admit before it boots. */
+  admission?: never;
 }
 
 /** A child that runs in-process code — backup, the reaper, the fork. */
@@ -213,6 +216,17 @@ interface RunBody<S extends z.ZodType> {
    * (false for a `NonRetryableError`) on the run's row before the child exits 1.
    */
   run(input: z.infer<S>, ctx: SupervisedRunContext): Promise<void>;
+  /**
+   * A host pool (`host-admission`'s `HOST_POOLS`) the child takes a slot of
+   * BEFORE it boots and holds until it exits. A booted child holds database
+   * connections through the one host-wide pgbouncer and a booted graph's
+   * memory, so a job many runs of which can be requested at once (a launch
+   * storm's checkouts) declares one: the runs past the pool's size wait as
+   * idle processes — their rows open, their waiters waiting — instead of
+   * booting. Use a pool of the job's own: a body that also took a slot of its
+   * admission pool would hold one and wait for another.
+   */
+  admission?: HostPoolId;
   argv?: never;
 }
 
@@ -259,6 +273,7 @@ interface StepsBody<S extends z.ZodType> {
   hold?: "instant" | "seconds";
   argv?: never;
   run?: never;
+  admission?: never;
   lock?: never;
   /** A sequence decides its own retries. */
   runAttempts?: never;
@@ -438,6 +453,7 @@ export function defineSupervisedJob<N extends string, S extends z.ZodType>(
         input: spec.input,
         run: spec.run,
         recordErrors: ledger.builtin,
+        admission: spec.admission,
       });
       task = runTask;
       command = (input, runId, attempt) =>

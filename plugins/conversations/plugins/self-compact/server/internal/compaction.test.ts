@@ -1,8 +1,10 @@
 /**
  * The compaction policy against the REAL worktree DB, inside rolled-back
- * transactions (`worktreeDbScenario`): a request waits while the agent is busy
- * or waiting on the user, is then sent as `/compact` + the continuation, is
- * idempotent across a retry, and a second request replaces the first.
+ * transactions (`worktreeDbScenario`): a request waits while the agent cannot
+ * take an automatic turn, is then sent as `/compact` + the continuation, is
+ * idempotent across a retry, and a second request replaces the first; while
+ * it waits it is a pending turn (other automatic senders hold), and not once
+ * it went out.
  *
  * Needs this worktree's DB as `./equin build` leaves it (the
  * conversation_compactions migration applied).
@@ -16,7 +18,9 @@ import {
   type DbExecutor,
 } from "@plugins/database/plugins/db-test-fixture/plugins/worktree-db/server/testing";
 import { FALLBACK_MODEL } from "@plugins/conversations/plugins/model-provider/core";
+import type { TurnReadiness } from "@plugins/conversations/plugins/automatic-turn/server";
 import {
+  compactionTurn,
   continuationText,
   hasPendingCompaction,
   requestCompaction,
@@ -48,11 +52,11 @@ async function conversation(tx: DbExecutor): Promise<string> {
 
 /** A fake agent recording every submitted turn; a set of seen ids models
  * the ledger's no-op on a known turn id. */
-function fakeAgent(state: { busy: boolean; waitingFor: string | null }) {
+function fakeAgent(state: { readiness: TurnReadiness }) {
   const turns: { kind: string; text: string }[] = [];
   const seen = new Set<string>();
   const ports: CompactionPorts = {
-    conversation: async () => state,
+    readiness: async () => state.readiness,
     submit: async (_id, turn) => {
       if (seen.has(turn.id)) return;
       seen.add(turn.id);
@@ -64,7 +68,7 @@ function fakeAgent(state: { busy: boolean; waitingFor: string | null }) {
 
 describe("self-compact", () => {
   test("held while busy or waiting on the user, then sent once, in order", async () => {
-    const agent = fakeAgent({ busy: true, waitingFor: null });
+    const agent = fakeAgent({ readiness: { kind: "held", reason: "busy" } });
     const got = await worktreeDbScenario(async (tx) => {
       const id = await conversation(tx);
       await requestCompaction(id, { keep: "old", next: "old next" }, tx);
@@ -74,15 +78,25 @@ describe("self-compact", () => {
         tx,
       );
       const busy = await sendCompaction(id, agent.ports, tx);
-      agent.state.busy = false;
-      agent.state.waitingFor = "question";
+      agent.state.readiness = { kind: "held", reason: "waiting-for" };
       const waiting = await sendCompaction(id, agent.ports, tx);
       const pendingBefore = await hasPendingCompaction(id, tx);
-      agent.state.waitingFor = null;
+      const turnPendingBefore = await compactionTurn.pending(id, tx);
+      agent.state.readiness = { kind: "ready" };
       const sent = await sendCompaction(id, agent.ports, tx);
       const again = await sendCompaction(id, agent.ports, tx);
       const pendingAfter = await hasPendingCompaction(id, tx);
-      return { busy, waiting, sent, again, pendingBefore, pendingAfter };
+      const turnPendingAfter = await compactionTurn.pending(id, tx);
+      return {
+        busy,
+        waiting,
+        sent,
+        again,
+        pendingBefore,
+        pendingAfter,
+        turnPendingBefore,
+        turnPendingAfter,
+      };
     });
     expect(got.busy).toEqual({ kind: "held", reason: "busy" });
     expect(got.waiting).toEqual({ kind: "held", reason: "waiting-for" });
@@ -90,6 +104,9 @@ describe("self-compact", () => {
     expect(got.sent).toEqual({ kind: "sent" });
     expect(got.again).toEqual({ kind: "none" });
     expect(got.pendingAfter).toBe(false);
+    // Other automatic senders hold while it waits, and no longer once sent.
+    expect(got.turnPendingBefore).toBe(true);
+    expect(got.turnPendingAfter).toBe(false);
     // The second request replaced the first; the compaction comes first.
     expect(agent.turns).toEqual([
       { kind: "compact", text: "/compact the plan" },

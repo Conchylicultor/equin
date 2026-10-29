@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { HostPoolId } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import { recordRunError } from "./builtin-ledger";
 import {
   mintExecContext,
@@ -60,10 +61,13 @@ export function defineRunBodyTask<S extends z.ZodType>(opts: {
   readonly input: S;
   readonly run: (input: z.infer<S>, ctx: SupervisedRunContext) => Promise<void>;
   readonly recordErrors: boolean;
+  /** See `RunBody.admission` (`define-supervised-job.ts`). */
+  readonly admission: HostPoolId | undefined;
 }): RunBodyTask {
   return defineSupervisedTask({
     id: opts.name,
     payload: RUN_BODY_PAYLOAD,
+    admission: opts.admission,
     run: async ({ runId, input }) => {
       const parsed: z.infer<S> = opts.input.parse(input);
       try {

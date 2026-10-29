@@ -34,7 +34,7 @@ async function writeTxCapturingToken(): Promise<string> {
 
 describe("currentTxId", () => {
   test("returns BigInt-parseable xid8 decimal text", async () => {
-    await DatabaseDriver.get().ready();
+    await DatabaseDriver.get().ready({ warm: false });
     const token = await writeTxCapturingToken();
     expect(token).toMatch(/^\d+$/);
     expect(BigInt(token) > 0n).toBe(true);

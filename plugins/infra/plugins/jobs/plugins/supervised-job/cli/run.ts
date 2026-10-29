@@ -5,6 +5,11 @@ import {
   getSupervisedTask,
   getSupervisedTaskIds,
 } from "../server/internal/task/registry";
+import {
+  admitThenBoot,
+  parseAdmissionPool,
+  supervisedChildExitCode,
+} from "./internal/child-admission";
 
 /**
  * `./equin supervised-exec <taskId> <payloadJson> --namespace <ns>`.
@@ -20,15 +25,32 @@ import {
  * runs — so before boot every id is unknown and after it the set is complete.
  * There is no earlier point at which "unknown task" could be answered honestly.
  */
-const run: CliAction<[string, string], { namespace: string }> = async (
-  taskId,
-  payloadJson,
-  opts,
-) => {
+const run: CliAction<
+  [string, string],
+  { namespace: string; admit?: string }
+> = async (taskId, payloadJson, opts) => {
   // Validated here, at the process boundary where a string off a command line
   // becomes an identity: the namespace goes on to name a database and a
   // directory, so a malformed one must be loud rather than become a path.
-  await runExec(asNamespace(opts.namespace), async () => {
+  const namespace = asNamespace(opts.namespace);
+  const admission =
+    opts.admit === undefined ? undefined : parseAdmissionPool(opts.admit);
+  const boot = () =>
+    runExec(namespace, body, {
+      // A database that refused the connection because it was full exits
+      // EX_TEMPFAIL: the one failure this child cannot write on its row (that
+      // row is in the database that refused it), so the status carries it.
+      exitCodeFor: supervisedChildExitCode,
+    });
+  // The job's admission pool, taken before anything boots (`--admit`). Its
+  // lines go to stdout, which IS the run's transcript.
+  await (admission === undefined
+    ? boot()
+    : admitThenBoot(admission, boot, (line) => {
+        process.stdout.write(`${line}\n`);
+      }));
+
+  async function body(): Promise<void> {
     const task = getSupervisedTask(taskId);
     if (task === undefined) {
       // Loud, immediately, and naming the id. The alternative — returning
@@ -57,7 +79,7 @@ const run: CliAction<[string, string], { namespace: string }> = async (
     // Parse and run in one call: the task owns its schema, so there is no way
     // from here to run a payload it did not accept.
     await task.execute(raw);
-  });
+  }
 };
 
 export default run;

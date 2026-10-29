@@ -2,18 +2,18 @@ import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
 import { ConversationStatusSchema } from "@plugins/tasks/plugins/tasks-core/core";
-import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
 import { isAgentBusy } from "@plugins/conversations/core";
 import { submitTurn } from "@plugins/conversations/server";
-import { sendCompaction, type CompactionPorts } from "./compaction";
+import { automaticTurnReadiness } from "@plugins/conversations/plugins/automatic-turn/server";
+import {
+  compactionTurn,
+  sendCompaction,
+  type CompactionPorts,
+} from "./compaction";
 
 const productionPorts: CompactionPorts = {
-  async conversation(id) {
-    const c = await getConversation(id);
-    return c === null
-      ? null
-      : { busy: isAgentBusy(c.status), waitingFor: c.waitingFor };
-  },
+  readiness: (conversationId, exec) =>
+    automaticTurnReadiness(conversationId, { own: compactionTurn, exec }),
   async submit(conversationId, turn) {
     const out = await submitTurn(conversationId, {
       ...turn,
@@ -27,7 +27,7 @@ const productionPorts: CompactionPorts = {
 export const sendCompactionJob = defineJob({
   name: "self-compact.send",
   description:
-    "When an agent that asked to compact its context stops being busy, sends it /compact with what it said to keep, then what it said to continue with.",
+    "When an agent that asked to compact its context stops being busy (or stops waiting on the user), sends it /compact with what it said to keep, then what it said to continue with.",
   hold: "instant",
   input: z.object({}),
   // Two runs for one conversation at once send the same two turns (their ids

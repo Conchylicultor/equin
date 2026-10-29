@@ -3,6 +3,7 @@ import { sql } from "drizzle-orm";
 import { z } from "zod";
 import { defineHostService } from "@plugins/framework/plugins/server-core/core";
 import { executeOne } from "@plugins/database/plugins/sql-rows/core";
+import { isConnectionCapacityRefusal } from "@plugins/database/plugins/connection/core";
 import { ASSIGNED_XID_SQL, inCommitScope, noteCommit } from "./commit-capture";
 
 /**
@@ -34,9 +35,16 @@ export interface DatabaseDriverImpl {
   /**
    * Resolves once the database answers queries — the boot barrier's first
    * step, before the schema layer runs. The desktop waits out a starting
-   * cluster and pre-opens its pool here.
+   * cluster here.
+   *
+   * `warm`: also pre-open the pool to its full size, so a SERVING host's first
+   * wave of requests and loaders finds live connections. Required, so every
+   * caller decides: a short-lived `exec` child must not — it serves nobody, and
+   * a pool warmed per child is what exhausted pgbouncer's `max_client_conn`
+   * when ten launches booted twenty children at once (2026-10-28: 16
+   * connections each, 318 refusals, three tasks' launches lost).
    */
-  ready(): Promise<void>;
+  ready(opts: { readonly warm: boolean }): Promise<void>;
   /**
    * Run boot DDL (the schema layer, the change feed's trigger rebuild): on the
    * desktop under the widened boot query deadline, since it can wait minutes on
@@ -215,8 +223,16 @@ export function afterCommit(exec: Db | DbTx, fn: () => void): void {
 /** The handle a `db.transaction(…)` callback receives. */
 export type DbTx = Parameters<Parameters<Db["transaction"]>[0]>[0];
 
+/**
+ * A failure that says the database is not answering YET, rather than that
+ * something is wrong: a starting cluster (57P03), a socket not there yet, and
+ * a connect refused because the server side is full
+ * (`isConnectionCapacityRefusal` — pgbouncer's `max_client_conn`, Postgres's
+ * 53300), which clears as holders let go. `awaitDbReady` waits these out.
+ */
 export function isTransientDbError(err: unknown): boolean {
   if (!err || typeof err !== "object") return false;
+  if (isConnectionCapacityRefusal(err)) return true;
   const e = err as { code?: string; errno?: string };
   const code = e.code ?? e.errno;
   return code === "57P03" || code === "ENOENT" || code === "ECONNREFUSED";

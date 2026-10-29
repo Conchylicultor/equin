@@ -104,15 +104,23 @@ export interface ConversationStatusChangedPayload {
   taskId: string | null;
   status: ConversationStatus;
   previousStatus: ConversationStatus;
+  /** What the agent waits on (`"question"`: the user's answer), after and
+   * before the write — the refinement of `waiting` the event also fires on. */
+  waitingFor: string | null;
+  previousWaitingFor: string | null;
   [key: string]: unknown;
 }
 
 // Emitted at the conversation status-write chokepoint whenever a single
 // conversation's `status` column actually changes (working↔waiting, →gone,
-// →done, insert). Finer-grained than `tasks.statusChanged`, which only fires
-// when the parent task's *derived* status flips. No filter columns: the sole
-// consumer (the conversations turn-emitter reconcile) re-reads the row and is
-// idempotent.
+// →done, insert) — OR its `waitingFor` does, the status unchanged (a question
+// answered or withdrawn while the agent stays `waiting`): what the agent waits
+// on is part of its status for whoever holds work until it can take a turn
+// (watch delivery, self-compact). So `status === previousStatus` is a real
+// payload; a subscriber that cares about the status alone compares the two.
+// Finer-grained than `tasks.statusChanged`, which only fires when the parent
+// task's *derived* status flips. No filter columns: subscribers re-read the
+// row and are idempotent.
 export const {
   event: conversationStatusChanged,
   table: _conversationStatusChangedTriggers,

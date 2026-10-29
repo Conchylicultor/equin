@@ -33,7 +33,10 @@ export { cliExecContext } from "./internal/cli-exec-context";
  * behind the deferred `run: () => import(…)`. `cli:command-declarations-light`
  * measures that closure.
  */
-export default defineCliCommand<[string, string], { namespace: string }>({
+export default defineCliCommand<
+  [string, string],
+  { namespace: string; admit?: string }
+>({
   name: SUPERVISED_EXEC_COMMAND,
   description:
     "Run one registered supervised task in a booted `exec` runtime, then exit " +
@@ -62,6 +65,14 @@ export default defineCliCommand<[string, string], { namespace: string }>({
       description:
         "The namespace this exec runtime boots as — its plugin registry and its database",
       required: true,
+    },
+    {
+      // Appended by the job's invocation when it declared an `admission` pool
+      // (`defineSupervisedJob`), never typed by hand: the child waits for a
+      // slot of this host pool BEFORE it boots, and holds it until it exits.
+      flags: "--admit <pool>",
+      description:
+        "A host-admission pool to take a slot of before booting, held until exit",
     },
   ],
   detachable: true,

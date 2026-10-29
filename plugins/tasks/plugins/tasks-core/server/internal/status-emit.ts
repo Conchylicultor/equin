@@ -4,6 +4,7 @@ import type { ConversationStatus } from "../../core/conversation-status";
 import {
   taskStatusChanged,
   conversationStatusChanged,
+  type ConversationStatusChangedPayload,
   type TaskStatusChangedPayload,
 } from "./tables-events";
 import { readTaskStatuses, type TaskStatusRow } from "./queries/tasks";
@@ -63,26 +64,59 @@ export async function flushStatusBatch(batch: StatusBatch): Promise<void> {
   }
 }
 
-// Emit `conversation.statusChanged` when a single conversation's status column
-// actually changes. Callers snapshot the prior status before the write and pass
-// it here after the write commits. No-op when the status is unchanged.
+/** A conversation's status as `conversation.statusChanged` reports it: the
+ * `status` column and what a waiting agent waits on. */
+export interface ConversationStatusState {
+  status: ConversationStatus;
+  waitingFor: string | null;
+}
+
+// The `conversation.statusChanged` payload for a conversation's status —
+// its `status` column or its `waitingFor` — moving from `previous` to `next`,
+// or null when neither moved. Pure, so the emission rule is testable with no
+// DB. A first insert (`previous` null) reports previous = current, matching
+// the task-status convention above.
+export function conversationStatusChange(
+  conversationId: string,
+  taskId: string | null,
+  previous: ConversationStatusState | null,
+  next: ConversationStatusState,
+): ConversationStatusChangedPayload | null {
+  if (
+    previous !== null &&
+    previous.status === next.status &&
+    previous.waitingFor === next.waitingFor
+  )
+    return null;
+  return {
+    conversationId,
+    taskId,
+    status: next.status,
+    previousStatus: previous?.status ?? next.status,
+    waitingFor: next.waitingFor,
+    previousWaitingFor:
+      previous === null ? next.waitingFor : previous.waitingFor,
+  };
+}
+
+// Emit `conversation.statusChanged` when a single conversation's status
+// actually changes (`conversationStatusChange`). Callers snapshot the prior
+// state before the write and pass it here after the write commits.
 //
 // Deliberately NOT part of the task-status scope: this is a fact about one
-// conversation row's own stored column, not about a derived value with a
+// conversation row's own stored columns, not about a derived value with a
 // dependency closure, so there is nothing to walk and nothing to coalesce.
 export async function emitConversationStatusChange(
   conversationId: string,
   taskId: string | null,
-  previousStatus: ConversationStatus | null,
-  nextStatus: ConversationStatus,
+  previous: ConversationStatusState | null,
+  next: ConversationStatusState,
 ): Promise<void> {
-  if (previousStatus === nextStatus) return;
-  await conversationStatusChanged.emit({
+  const payload = conversationStatusChange(
     conversationId,
     taskId,
-    status: nextStatus,
-    // First insert (previous null) reports previousStatus = current, matching
-    // the task-status convention above.
-    previousStatus: previousStatus ?? nextStatus,
-  });
+    previous,
+    next,
+  );
+  if (payload !== null) await conversationStatusChanged.emit(payload);
 }

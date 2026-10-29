@@ -177,8 +177,24 @@ export function hostPoolsFor(host: HostFacts) {
     // measured concurrent-e2e time (3+ at once 1.1 %). A CONSTANT: a browser costs
     // the same on every box, and the size names the slot files.
     e2e: { size: 2 },
+    // One agent checkout being prepared (`worktree.prepare`'s supervised
+    // child), held from BEFORE the child boots until it exits — its
+    // `admission` pool. A child boots the whole plugin graph and opens database
+    // connections through the one host-wide pgbouncer, so unbounded children
+    // are unbounded connections: on 2026-10-28 ten launches at once booted
+    // twenty children (prepare + fork), ran pgbouncer out of `max_client_conn`
+    // (318 refusals) and lost three tasks' launches. Waiting for the slot
+    // before boot means a queued launch holds no connection. Four keeps a
+    // handful of launches in parallel (a checkout is ~2.5 min, mostly its
+    // install; the git step inside is already bounded by `worktree-mutate`). A
+    // CONSTANT: a child's cost is the same on every box, and the size names
+    // the slot files.
+    "worktree-prepare": { size: 4 },
   } as const satisfies Record<string, HostPoolEntry>;
 }
+
+/** A declared host pool's id — a key of the pool table. */
+export type HostPoolId = keyof ReturnType<typeof hostPoolsFor>;
 
 /** The pool table on THIS host — what every pool and its readers size to. */
 export const HOST_POOLS = hostPoolsFor(thisHost());

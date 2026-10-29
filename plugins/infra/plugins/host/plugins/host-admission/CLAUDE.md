@@ -35,6 +35,7 @@ pool says can move any other pool's capacity:
 | `push` | 1 | foreground | the global push mutex |
 | `e2e` | 2 | inherit | concurrent e2e script runs (`./equin run …/e2e/x.ts`) — their own cap, so a 20 s screenshot never queues in `cpu`'s background window behind 40-min builds |
 | `type-check-worker` | 2 | foreground | live repo-program type-check workers (7–14 GB each); laned by its owner (`type-check/server`): background may hold 1 |
+| `worktree-prepare` | 4 | inherit | booted `worktree.prepare` children (an agent checkout being made) — the job's `admission` pool, taken by the child BEFORE it boots and held until it exits, so a launch storm's queued checkouts hold no database connection (2026-10-28: twenty children at once ran pgbouncer out of `max_client_conn`) |
 
 The `holder` column is declared at each `defineHostPool` call (see *A scarce
 slot's holder runs in the foreground* below), not in `HOST_POOLS`. The
@@ -337,6 +338,7 @@ See `research/2026-07-10-global-host-admission-unified-budget.md`.
     - `GrantHooks`
     - `HostFacts`
     - `HostPoolEntry`
+    - `HostPoolId`
     - `Lane`
     - `Priority`
   - Exports (values):

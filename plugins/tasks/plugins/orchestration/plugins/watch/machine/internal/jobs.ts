@@ -7,9 +7,9 @@ import {
   ConversationStatusSchema,
   TaskStatusSchema,
 } from "@plugins/tasks/plugins/tasks-core/core";
-import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
 import { isAgentBusy } from "@plugins/conversations/core";
 import { submitTurn } from "@plugins/conversations/server";
+import { automaticTurnReadiness } from "@plugins/conversations/plugins/automatic-turn/server";
 import { treeDigest } from "@plugins/tasks/plugins/orchestration/plugins/tree-digest/server";
 import {
   grantOf,
@@ -36,12 +36,9 @@ import { _taskWatches, _watchInbox } from "../../server/internal/tables";
 // the same events to the same agents (see `maybeLaunchTaskJob`).
 
 const productionPorts: DeliverPorts = {
-  async conversation(id) {
-    const c = await getConversation(id);
-    return c === null
-      ? null
-      : { busy: isAgentBusy(c.status), waitingFor: c.waitingFor };
-  },
+  // The watch is no PendingTurn contributor: every pending turn holds it.
+  readiness: (conversationId, exec) =>
+    automaticTurnReadiness(conversationId, { exec }),
   async submit(conversationId, turnId, text) {
     const out = await submitTurn(conversationId, {
       id: turnId,
@@ -61,7 +58,7 @@ const productionPorts: DeliverPorts = {
 export const watchDeliverJob = defineJob({
   name: "watch.deliver",
   description:
-    "Delivers the events routed to one watch as a single turn to the watching agent (or one batch to a code watcher), holding them while the agent is busy or waiting on the user.",
+    "Delivers the events routed to one watch as a single turn to the watching agent (or one batch to a code watcher), holding them while the agent is busy, waiting on the user, or has another automatic turn (a compaction) pending.",
   // instant: indexed reads and writes on one transaction; the turn is typed
   // to an agent that is idle by construction (busy ⇒ held).
   hold: "instant",
@@ -152,7 +149,7 @@ export const watchOnTaskStatusJob = defineJob({
 export const watchOnConversationStatusJob = defineJob({
   name: "watch.on-conversation-status",
   description:
-    "When an agent starts or stops being busy, re-checks the watched subtrees above its task and delivers the events its own watches held while it was busy.",
+    "When an agent starts or stops being busy, or stops waiting on the user, re-checks the watched subtrees above its task and delivers the events its own watches held meanwhile.",
   hold: "instant",
   input: z.object({}),
   dedup: "none",
@@ -172,7 +169,11 @@ export const watchOnConversationStatusJob = defineJob({
     if (busyChanged && event.taskId !== null)
       await enqueueQuietForChain(db, event.taskId);
     // Its own open watches holding undelivered events: deliver now (or
-    // re-route, when it just ended). Busy again ⇒ delivery holds anyway.
+    // re-route, when it just ended). Every change that can end a hold lands
+    // here: leaving a busy status, `waitingFor` clearing (the event fires on
+    // it too, the status unchanged), and the end of another plugin's pending
+    // turn (that turn makes the agent busy, then idle again). Still unable to
+    // take a turn ⇒ delivery holds anyway.
     if (isAgentBusy(event.status)) return;
     const holding = await db
       .select({ id: _taskWatches.id })

@@ -6,6 +6,10 @@ import {
 } from "@plugins/conversations/plugins/turn-ledger/core";
 import { _tasks } from "@plugins/tasks/plugins/tasks-core/server";
 import { sha256Hex } from "@plugins/packages/plugins/string-hash/core";
+import type {
+  HeldTurn,
+  TurnReadiness,
+} from "@plugins/conversations/plugins/automatic-turn/server";
 import type { WatchEvent, WatchId } from "../../core";
 import type { WatchHandlerEntry } from "./contributions";
 import { getWatch, isWatchLive, nearestLiveWatch } from "./queries";
@@ -14,10 +18,9 @@ import { _watchInbox } from "./tables";
 /** What delivery reads and does outside the inbox: ports, so a test drives the
  * policy over the real tables with a fake agent. */
 export interface DeliverPorts {
-  /** The watcher conversation's state; null when it does not exist. */
-  conversation(
-    id: string,
-  ): Promise<{ busy: boolean; waitingFor: string | null } | null>;
+  /** Whether an automatic turn may be typed into the watcher conversation
+   * now (conversations/automatic-turn), read on the delivery's transaction. */
+  readiness(conversationId: string, exec: DbExecutor): Promise<TurnReadiness>;
   /** Submit one `event` turn (idempotent on `turnId`). */
   submit(conversationId: string, turnId: TurnId, text: string): Promise<void>;
   /** The tree digest appended to the turn (advances the watcher's cursor). */
@@ -28,8 +31,10 @@ export interface DeliverPorts {
 export type DeliverOutcome =
   | { kind: "not-found" }
   | { kind: "empty" }
-  /** The watcher cannot take a turn now; a status change re-runs delivery. */
-  | { kind: "held"; reason: "busy" | "waiting-for" }
+  /** The watcher cannot take a turn now (busy, waiting on the user, or
+   * another plugin's turn goes first); its next status change re-runs
+   * delivery. */
+  | HeldTurn
   /** The watch is dead: its rows moved to `to` (each needs a delivery). */
   | { kind: "rerouted"; to: WatchId[]; dropped: number }
   | { kind: "delivered"; turnId: string; count: number };
@@ -101,8 +106,11 @@ async function undelivered(
  *
  * - A dead watch (ended, or its conversation `done`) hands its rows to the
  *   next live watch above each row's task; rows no live watch covers drop.
- * - A conversation watcher that is busy or waiting on the user is held: an
- *   event turn would interrupt it, or answer its pending question.
+ * - A conversation watcher that cannot take an automatic turn now is held
+ *   (`ports.readiness`): busy (the turn would be folded into the running
+ *   one), waiting on the user (it would answer their question), or another
+ *   plugin's turn is pending for it (it goes first — typed after ours it
+ *   would reach a busy CLI).
  * - Otherwise every undelivered row is claimed into ONE turn (or ONE code
  *   batch), whose id is derived from the rows.
  */
@@ -140,14 +148,12 @@ export async function deliverOn(
 
   const { watcher } = watch;
   if (watcher.kind === "conversation") {
-    const state = await ports.conversation(watcher.conversationId);
-    if (state === null)
+    const readiness = await ports.readiness(watcher.conversationId, exec);
+    if (readiness.kind === "not-found")
       throw new Error(
         `watch ${watchId}: its conversation ${watcher.conversationId} does not exist`,
       );
-    if (state.busy) return { kind: "held", reason: "busy" };
-    if (state.waitingFor !== null)
-      return { kind: "held", reason: "waiting-for" };
+    if (readiness.kind === "held") return readiness;
   }
 
   const rows = await undelivered(exec, watchId);

@@ -19,7 +19,11 @@ import {
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
 import { runMigrations } from "@plugins/database/plugins/migrations/server/testing";
 import type { LogChannel } from "@plugins/primitives/plugins/log-channels/server";
-import { HARD_KILL_EXIT_CODE, type RunTerminal } from "../../core";
+import {
+  HARD_KILL_EXIT_CODE,
+  SUPERVISED_EXIT_TEMPFAIL,
+  type RunTerminal,
+} from "../../core";
 import {
   applyFailurePolicy,
   builtinKindIdFor,
@@ -202,6 +206,21 @@ describe("applyFailurePolicy", () => {
     expect(err.message).toContain(
       "killed or crashed before recording an error — see the transcript",
     );
+  });
+
+  test("an EX_TEMPFAIL exit with nothing recorded says the database was full", () => {
+    const err = thrown(() =>
+      applyFailurePolicy({
+        ...base,
+        terminal: ended(SUPERVISED_EXIT_TEMPFAIL),
+        attempt: 3,
+        failure: { errorMessage: null, retryable: null, cancelled: false },
+      }),
+    );
+    expect(err).toBeInstanceOf(NonRetryableError);
+    expect(err.message).toContain("exited 75");
+    expect(err.message).toContain("the database refused its connection");
+    expect(err.message).not.toContain("killed or crashed");
   });
 });
 

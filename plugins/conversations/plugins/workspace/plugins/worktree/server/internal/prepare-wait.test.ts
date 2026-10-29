@@ -2,14 +2,21 @@ import { describe, expect, test } from "bun:test";
 import { isNonRetryableError } from "@plugins/infra/plugins/jobs/server";
 import type { SupervisedRunRow } from "@plugins/infra/plugins/jobs/plugins/supervised-job/server";
 import type { CheckoutState } from "@plugins/infra/plugins/worktree/server";
+import { SUPERVISED_EXIT_TEMPFAIL } from "@plugins/infra/plugins/jobs/plugins/supervised-job/core";
 import {
   MAX_PREPARE_REQUESTS,
+  MAX_TEMPFAIL_REQUESTS,
   prepareWorktree,
+  tempfailBackoffMs,
   type PrepareDeps,
 } from "./prepare-wait";
 
-/** What one prepare child does when it runs: make the checkout, or fail. */
-type Outcome = "ok" | { error: string };
+/**
+ * What one prepare child does when it runs: make the checkout, fail, or be
+ * refused a database connection because the database is full (`tempfail`:
+ * EX_TEMPFAIL, nothing recorded — the row is in the database that refused it).
+ */
+type Outcome = "ok" | "tempfail" | { error: string };
 
 /**
  * A fake world for the loop: the checkout on disk, the prepare runs, and the
@@ -46,6 +53,8 @@ function world(opts: {
       if (outcome === "ok") {
         state = "complete";
         run = { ...run, open: false, exitCode: 0 };
+      } else if (outcome === "tempfail") {
+        run = { ...run, open: false, exitCode: SUPERVISED_EXIT_TEMPFAIL };
       } else {
         state = "unfinished";
         run = {
@@ -103,6 +112,10 @@ function world(opts: {
       log.push(`wait:${JSON.stringify(waitOpts?.where)}`);
       advance();
       return Promise.resolve(null);
+    },
+    sleep: (ms: number): Promise<void> => {
+      log.push(`sleep:${String(ms)}`);
+      return Promise.resolve();
     },
   };
   return { deps, ctx, log };
@@ -181,6 +194,7 @@ describe("prepareWorktree", () => {
     let suspended = false;
     const firstCtx = {
       step: w.ctx.step,
+      sleep: w.ctx.sleep,
       waitFor: <T>(
         event: unknown,
         o?: { where?: Partial<T>; name?: string },
@@ -202,5 +216,71 @@ describe("prepareWorktree", () => {
     await prepareWorktree(w.ctx, "att-1", w.deps);
     expect(w.log.filter((l) => l === "request")).toHaveLength(1);
     expect(w.log.at(-1)).toBe("adopt");
+  });
+
+  test("a run refused a database connection (EX_TEMPFAIL) is re-requested after a pause, without spending a request", async () => {
+    const w = world({
+      state: "absent",
+      outcomes: ["tempfail", "tempfail", "ok"],
+    });
+    await prepareWorktree(w.ctx, "att-1", w.deps);
+    expect(w.log.filter((l) => l === "request")).toHaveLength(3);
+    expect(w.log.filter((l) => l.startsWith("sleep:"))).toEqual([
+      `sleep:${String(tempfailBackoffMs(0))}`,
+      `sleep:${String(tempfailBackoffMs(1))}`,
+    ]);
+    expect(w.log.at(-1)).toBe("adopt");
+  });
+
+  test("EX_TEMPFAIL runs do not count against the failure budget", async () => {
+    // The 2026-10-28 shape: a launch storm refuses the first runs; real
+    // failures afterwards still get their full MAX_PREPARE_REQUESTS.
+    const w = world({
+      state: "absent",
+      outcomes: [
+        "tempfail",
+        "tempfail",
+        { error: "a" },
+        { error: "b" },
+        { error: "install failed" },
+      ],
+    });
+    const err = await prepareWorktree(w.ctx, "att-1", w.deps).then(
+      () => null,
+      (e: unknown) => e,
+    );
+    expect(isNonRetryableError(err)).toBe(true);
+    expect((err as Error).message).toContain("install failed");
+    expect(w.log.filter((l) => l === "request")).toHaveLength(
+      MAX_PREPARE_REQUESTS + 2,
+    );
+  });
+
+  test("a database full for longer than the tempfail budget fails loudly, naming it", async () => {
+    const w = world({
+      state: "absent",
+      outcomes: Array.from(
+        { length: MAX_TEMPFAIL_REQUESTS + 1 },
+        () => "tempfail",
+      ),
+    });
+    const err = await prepareWorktree(w.ctx, "att-1", w.deps).then(
+      () => null,
+      (e: unknown) => e,
+    );
+    expect(isNonRetryableError(err)).toBe(true);
+    expect((err as Error).message).toContain("EX_TEMPFAIL");
+    expect(w.log.filter((l) => l.startsWith("sleep:"))).toHaveLength(
+      MAX_TEMPFAIL_REQUESTS,
+    );
+    expect(w.log.filter((l) => l === "request")).toHaveLength(
+      MAX_TEMPFAIL_REQUESTS + 1,
+    );
+  });
+
+  test("the tempfail pause doubles from 15 s and caps at 2 min", () => {
+    expect([0, 1, 2, 3, 4, 7].map(tempfailBackoffMs)).toEqual([
+      15_000, 30_000, 60_000, 120_000, 120_000, 120_000,
+    ]);
   });
 });

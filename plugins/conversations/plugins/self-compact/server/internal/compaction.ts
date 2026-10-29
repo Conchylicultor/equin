@@ -5,15 +5,19 @@ import {
   type TurnId,
   type TurnKind,
 } from "@plugins/conversations/plugins/turn-ledger/core";
+import type {
+  HeldTurn,
+  PendingTurnEntry,
+  TurnReadiness,
+} from "@plugins/conversations/plugins/automatic-turn/server";
 import { _conversationCompactions } from "./tables";
 
 /** What sending a compaction reads and does outside its table: ports, so a
  * test drives the policy over the real table with a fake agent. */
 export interface CompactionPorts {
-  /** The conversation's state; null when it does not exist. */
-  conversation(
-    id: string,
-  ): Promise<{ busy: boolean; waitingFor: string | null } | null>;
+  /** Whether an automatic turn may be typed into the conversation now
+   * (conversations/automatic-turn), our own pending turn excepted. */
+  readiness(conversationId: string, exec: DbExecutor): Promise<TurnReadiness>;
   /** Submit one turn (idempotent on `turnId`). */
   submit(
     conversationId: string,
@@ -24,7 +28,7 @@ export interface CompactionPorts {
 export type CompactionOutcome =
   | { kind: "none" }
   /** The agent cannot take a turn now; its next status change re-runs this. */
-  | { kind: "held"; reason: "busy" | "waiting-for" }
+  | HeldTurn
   | { kind: "sent" };
 
 /** The turn the agent continues with, after the compaction. */
@@ -54,6 +58,17 @@ export async function requestCompaction(
   });
 }
 
+/**
+ * A pending compaction is a turn of ours waiting for the agent: every other
+ * automatic sender (a watch's event delivery) holds until it went out, so
+ * `/compact` is typed into an idle CLI and runs as a command. Contributed as
+ * `PendingTurn`; `sendCompaction`'s readiness passes it as `own`.
+ */
+export const compactionTurn: PendingTurnEntry = {
+  id: "self-compact",
+  pending: (conversationId, exec) => hasPendingCompaction(conversationId, exec),
+};
+
 /** Whether `conversationId` has a compaction waiting to be sent. */
 export async function hasPendingCompaction(
   conversationId: string,
@@ -70,8 +85,10 @@ export async function hasPendingCompaction(
 /**
  * Send `conversationId`'s pending compaction, if it can take a turn: the
  * `/compact` turn, then the continuation, which the agent's CLI queues until
- * the compaction is done. Held while the agent is busy (its own turn is still
- * running) or waiting on the user (a turn would answer their question).
+ * the compaction is done. Held while the agent cannot take an automatic turn
+ * (`ports.readiness`): busy (its own turn is still running), waiting on the
+ * user (a turn would answer their question), or another plugin's turn is
+ * pending for it.
  */
 export async function sendCompaction(
   conversationId: string,
@@ -84,10 +101,9 @@ export async function sendCompaction(
     .where(eq(_conversationCompactions.conversationId, conversationId))
     .limit(1);
   if (row === undefined) return { kind: "none" };
-  const state = await ports.conversation(conversationId);
-  if (state === null) return { kind: "none" };
-  if (state.busy) return { kind: "held", reason: "busy" };
-  if (state.waitingFor !== null) return { kind: "held", reason: "waiting-for" };
+  const readiness = await ports.readiness(conversationId, exec);
+  if (readiness.kind === "not-found") return { kind: "none" };
+  if (readiness.kind === "held") return readiness;
   await ports.submit(conversationId, {
     id: turnIdKind.parse(row.compactTurnId),
     kind: "compact",

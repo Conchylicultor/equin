@@ -18,6 +18,7 @@ defineSupervisedJob({
   // WHERE runs are recorded:
   ledger?: { kindId, claim, listUnfinished, setPid, closeRow, beginStep?, onReattach? },
   lock?:   (input) => string,     // built-in ledger only
+  admission?: HostPoolId,         // `run` body only: a host pool the child waits on before booting
   schedule?, runAttempts?, onEnded?,   // runAttempts / onEnded: single-child only
   hold?: "instant" | "seconds",   // steps only
 });
@@ -662,6 +663,30 @@ refused can never reach the body.
 All of it exits 1, which the shim records and the supervising job reads. A failed
 task is a failed RUN, not a failed job — see "A non-zero exit code is DATA" above.
 
+**One exception: a full database exits 75 (`SUPERVISED_EXIT_TEMPFAIL`,
+EX_TEMPFAIL).** When the boot or the body fails because the database refused a
+connection for being full (`isConnectionCapacityRefusal`, `database/connection`
+— pgbouncer's `max_client_conn`, Postgres's 53300), `run.ts` hands `runExec` an
+`exitCodeFor` that answers 75. It is the one failure the child cannot write on
+its row (the row lives in the database that refused it), so the status carries
+it: a waiter reads it as back-pressure — retry later, not a failed run
+(`worktree.prepare`'s `prepareWorktree`) — and the built-in failure policy names
+it instead of "killed or crashed before recording an error".
+
+### Admission before boot (`admission`)
+
+A booted child holds database connections through the one host-wide pgbouncer
+and a whole plugin graph's memory. A job many runs of which can be requested at
+once declares `admission: "<pool>"` (a `HOST_POOLS` id, `run` bodies only — an
+argv child is not ours to admit): `invoke()` appends `--admit <pool>`, and the
+child takes a slot of that host pool (`child-admission.ts`, `admitThenBoot`)
+before `runExec` boots anything, holding it until it exits (the kernel drops the
+flock however it exits). A child past the pool's size waits as an idle process
+with its row open — whoever waits on the run sees it running and keeps waiting —
+and logs the wait and its admission to the transcript. Give the job a pool of its
+own: a body that also took a slot of its admission pool would hold one and wait
+for another. `worktree.prepare` is the one user (`worktree-prepare`, 4).
+
 ### Why the task is registered by the job, not declared beside it
 
 The child's argv is minted only by the registered task's `invoke`, and the task
@@ -737,6 +762,7 @@ construction, and the job and the body it spawns cannot drift apart.
     - `RUN_TERMINAL_ENV`
     - `RunMarkerError`
     - `SUPERVISED_EXEC_COMMAND`
+    - `SUPERVISED_EXIT_TEMPFAIL`
     - `supervisedArgv`
 - Cli:
   - Uses: `framework/server-core.runExec`

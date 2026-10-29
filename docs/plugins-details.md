@@ -14783,6 +14783,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `conversations/conversations-view/data-view`
           - `conversations/conversations-view/data-view/history`
+    - **`automatic-turn`** — Whether the app may type an automatic turn into a conversation now: automaticTurnReadiness(conversationId, { own? }) — held while the agent is busy, waits on the user (waitingFor), or another plugin's PendingTurn contribution says a turn of its own goes first; ready otherwise. Every automatic sender asks it, so two senders woken by the same status change cannot type into each other's turn. Names no sender.
+      - Server:
+        - Uses:
+          - `database.db`
+          - `database.DbExecutor`
+          - `tasks/tasks-core._conversations`
+        - Exports (types):
+          - `HeldTurn`
+          - `PendingTurnEntry`
+          - `TurnReadiness`
+        - Exports (values):
+          - `automaticTurnReadiness`
+          - `PendingTurn`
+      - Cross-plugin:
+        - Imported by: `conversations/self-compact`
     - **`close`** — Closing a conversation, portable half: POST /api/conversations/:id/close marks it done on every host (markConversationClosed) — the demo's in-browser server included — then runs every CloseTeardown contribution before it returns (the desktop's stops the agent).
       - Server:
         - Contributes:
@@ -19542,14 +19557,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/font-family --font-mono`
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
-    - **`self-compact`** — An agent compacting its own context: the compact_context MCP tool (granted by context.compact) records the request in conversation_compactions; when the agent stops being busy, self-compact.send types `/compact <keep>` then the continuation as an event turn. A pending request waives the stop gate; the capability's describe joins the Mandate section.
+    - **`self-compact`** — An agent compacting its own context: the compact_context MCP tool (granted by context.compact) records the request in conversation_compactions; when the agent can take an automatic turn, self-compact.send types `/compact <keep>` then the continuation as an event turn. A pending request is a PendingTurn (every other automatic sender holds until it went out) and waives the stop gate; the capability's describe joins the Mandate section.
       - Server:
         - Contributes:
           - `mandateCapability` "context.compact"
           - `conversations.stop-waiver` "self-compact"
+          - `conversations.pending-turn` "self-compact"
           - `trigger` "self-compact.send"
         - Uses:
           - `conversations.submitTurn`
+          - `conversations/automatic-turn.automaticTurnReadiness`
+          - `conversations/automatic-turn.PendingTurn`
           - `conversations/stop-gate.StopWaiver`
           - `database.db`
           - `database.DbExecutor`
@@ -19560,7 +19578,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/orchestration/mandate.Mandate`
           - `tasks/tasks-core._conversations`
           - `tasks/tasks-core.conversationStatusChanged`
-          - `tasks/tasks-core.getConversation`
         - DB schema: `plugins/conversations/plugins/self-compact/server/internal/tables.ts`
         - Register:
           - `defineJob('self-compact.send')`
@@ -20262,10 +20279,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `quotedRelationsIn`
       - `readTag`
   - Cross-plugin:
-    - Imported by: 131 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+    - Imported by: 132 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
       - `apps` ×37
+      - `conversations` ×15
       - `page` ×15
-      - `conversations` ×14
       - `infra` ×13
       - `tasks` ×12
       - `active-data` ×8
@@ -20494,6 +20511,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `DB_CALL_PHASES`
           - `DB_POOL_NAMES`
+          - `isConnectionCapacityRefusal`
       - Test helpers:
         - Server: `@plugins/database/plugins/connection/server/testing`
           - `QueryDeadlineExceededError` — A database call got no reply within its deadline.
@@ -30807,6 +30825,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `GrantHooks`
               - `HostFacts`
               - `HostPoolEntry`
+              - `HostPoolId`
               - `Lane`
               - `Priority`
             - Exports (values):
@@ -31465,6 +31484,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `RUN_TERMINAL_ENV`
               - `RunMarkerError`
               - `SUPERVISED_EXEC_COMMAND`
+              - `SUPERVISED_EXIT_TEMPFAIL`
               - `supervisedArgv`
           - Cli:
             - Uses: `framework/server-core.runExec`
@@ -52451,8 +52471,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TrackFilingGrantSchema`
           - `TRAILER_LOG_FORMAT`
       - Cross-plugin:
-        - Imported by: 75 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
-          - `conversations` ×28
+        - Imported by: 76 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+          - `conversations` ×29
           - `tasks` ×23
           - `active-data` ×5
           - `debug` ×4

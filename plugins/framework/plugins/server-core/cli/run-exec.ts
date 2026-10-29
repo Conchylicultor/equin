@@ -99,14 +99,25 @@ import { bootPluginGraph, runShutdownHooks } from "../core/boot-stages";
  * consumer already reads them through its own plugin's barrel.
  *
  * Returns `never`: the process exits 0 when `body` resolves and 1 when it (or
- * boot) throws. A short-lived child that returned to its caller could linger on
- * an open pool or listener, and a supervised run whose child never exits stays
+ * boot) throws — or the status `opts.exitCodeFor` picks for that error. A
+ * short-lived child that returned to its caller could linger on an open pool
+ * or listener, and a supervised run whose child never exits stays
  * in flight forever — so exiting is part of the contract, not the caller's
  * responsibility.
  */
 export async function runExec(
   namespace: Namespace,
   body: () => void | Promise<void>,
+  opts: {
+    /**
+     * The exit status for a failure — of the boot or of `body` — when it is not
+     * plain `1`. The caller's classification, since only the caller knows what
+     * its spawner can do with a distinct status (a supervised child answers
+     * EX_TEMPFAIL for a failure its spawner should retry later). Anything it
+     * does not claim exits 1.
+     */
+    readonly exitCodeFor?: (err: unknown) => number;
+  } = {},
 ): Promise<never> {
   declareRuntimeNamespace(namespace);
   recordMemoryCheckpoint("boot-start");
@@ -129,7 +140,7 @@ export async function runExec(
   } catch (err) {
     console.error("[exec] failed", err);
     if (ordered) await runShutdownHooks(ordered);
-    process.exit(1);
+    process.exit(opts.exitCodeFor?.(err) ?? 1);
   }
   await runShutdownHooks(ordered);
   process.exit(0);

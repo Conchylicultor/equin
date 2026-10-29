@@ -19,7 +19,7 @@ const xidRow = z.object({ xid: z.string() });
 
 describe("dbCommitCapture", () => {
   test("attributes each committed top-level transaction, in commit order", async () => {
-    await DatabaseDriver.get().ready();
+    await DatabaseDriver.get().ready({ warm: false });
     const { value, commits } = await dbCommitCapture.run(async () => {
       expect(inCommitScope()).toBe(true);
       const first = await db.transaction((tx) =>
@@ -35,7 +35,7 @@ describe("dbCommitCapture", () => {
   });
 
   test("attributes an autocommit write, and a full snapshot after it is past it", async () => {
-    await DatabaseDriver.get().ready();
+    await DatabaseDriver.get().ready({ warm: false });
     const { commits } = await dbCommitCapture.run(async () => {
       // A `WITH` is run as a write: its own transaction, its xid read inside.
       await db.execute(
@@ -51,7 +51,7 @@ describe("dbCommitCapture", () => {
   });
 
   test("a rolled-back transaction, a read-only one and one outside the scope are not attributed", async () => {
-    await DatabaseDriver.get().ready();
+    await DatabaseDriver.get().ready({ warm: false });
     const outside = await db.transaction((tx) =>
       executeOne(tx, { query: XID, row: xidRow }),
     );

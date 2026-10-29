@@ -49,9 +49,9 @@ export const worktreeWorkspace: WorkspaceImpl<"worktree"> = {
   // `signal` is the spawn dispatch's deadline. It reaches the in-process
   // adopt (the lock and the install's freshness check), so an overrun stops
   // instead of holding the spawn's slot.
-  async prepare({ attemptId, path }, { signal, step, waitFor }) {
+  async prepare({ attemptId, path }, { signal, step, waitFor, sleep }) {
     const input = { attemptId, path };
-    await prepareWorktree({ step, waitFor }, attemptId, {
+    await prepareWorktree({ step, waitFor, sleep }, attemptId, {
       kindId: worktreePrepareJob.kind.id,
       checkoutState: async () =>
         checkoutState(await ensureMainWorktreeRoot(signal), path, signal),

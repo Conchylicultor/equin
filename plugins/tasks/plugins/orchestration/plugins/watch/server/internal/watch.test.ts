@@ -18,6 +18,7 @@ import {
 } from "@plugins/database/plugins/db-test-fixture/plugins/worktree-db/server/testing";
 import { FALLBACK_MODEL } from "@plugins/conversations/plugins/model-provider/core";
 import type { TurnId } from "@plugins/conversations/plugins/turn-ledger/core";
+import type { TurnReadiness } from "@plugins/conversations/plugins/automatic-turn/server";
 import type { WatchEvent, WatchId } from "../../core";
 import { deliverOn, turnIdFor, type DeliverPorts } from "./deliver";
 import {
@@ -81,15 +82,13 @@ async function inbox(tx: Tx, watchId: WatchId) {
   return tx.select().from(_watchInbox).where(eq(_watchInbox.watchId, watchId));
 }
 
-/** A fake agent: records every submitted turn; state per conversation. */
-function fakePorts(
-  state: Map<string, { busy: boolean; waitingFor: string | null }> = new Map(),
-) {
+/** A fake agent: records every submitted turn; its readiness per
+ * conversation (ready unless set). */
+function fakePorts(state: Map<string, TurnReadiness> = new Map()) {
   const turns: { conversationId: string; turnId: TurnId; text: string }[] = [];
   const batches: WatchEvent[][] = [];
   const ports: DeliverPorts = {
-    conversation: async (id) =>
-      state.get(id) ?? { busy: false, waitingFor: null },
+    readiness: async (id) => state.get(id) ?? { kind: "ready" },
     submit: async (conversationId, turnId, text) => {
       turns.push({ conversationId, turnId, text });
     },
@@ -285,7 +284,7 @@ describe("delivery", () => {
     expect(turnIdFor([...got.ids].reverse())).toBe(turnIdFor(got.ids));
   });
 
-  test("held while the watcher is busy or waits on the user's answer", async () => {
+  test("held while the watcher cannot take an automatic turn, claiming nothing", async () => {
     const fake = fakePorts();
     const got = await worktreeDbScenario(async (tx) => {
       const root = await task(tx, null);
@@ -296,16 +295,33 @@ describe("delivery", () => {
         tx,
       );
       await routeEvents(tx, [{ kind: "flagged", taskId: root, summary: "x" }]);
-      fake.state.set(conv, { busy: true, waitingFor: null });
+      fake.state.set(conv, { kind: "held", reason: "busy" });
       const busy = await deliverOn(tx, w.id, fake.ports);
-      fake.state.set(conv, { busy: false, waitingFor: "question" });
+      fake.state.set(conv, { kind: "held", reason: "waiting-for" });
       const asking = await deliverOn(tx, w.id, fake.ports);
-      fake.state.set(conv, { busy: false, waitingFor: null });
+      // Another plugin's turn (a compaction) goes first: typed after an
+      // event turn it would reach a busy CLI.
+      fake.state.set(conv, {
+        kind: "held",
+        reason: "pending-turn",
+        by: "other",
+      });
+      const pending = await deliverOn(tx, w.id, fake.ports);
+      const unclaimed = (await inbox(tx, w.id)).filter(
+        (r) => r.deliveredInTurn === null,
+      ).length;
+      fake.state.set(conv, { kind: "ready" });
       const idle = await deliverOn(tx, w.id, fake.ports);
-      return { busy, asking, idle };
+      return { busy, asking, pending, unclaimed, idle };
     });
     expect(got.busy).toEqual({ kind: "held", reason: "busy" });
     expect(got.asking).toEqual({ kind: "held", reason: "waiting-for" });
+    expect(got.pending).toEqual({
+      kind: "held",
+      reason: "pending-turn",
+      by: "other",
+    });
+    expect(got.unclaimed).toBe(1);
     expect(got.idle.kind).toBe("delivered");
     expect(fake.turns).toHaveLength(1);
   });

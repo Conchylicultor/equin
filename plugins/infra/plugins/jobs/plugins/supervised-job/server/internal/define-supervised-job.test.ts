@@ -63,6 +63,15 @@ describe("DefineSupervisedJobSpec", () => {
         run,
         schedule: { cron: "0 * * * *" },
       });
+      defineSupervisedJob({
+        name: "a.ok6",
+        description,
+        input,
+        channel,
+        run,
+        lock: (i) => i.target,
+        admission: "worktree-prepare",
+      });
 
       // @ts-expect-error — two bodies
       defineSupervisedJob({
@@ -140,6 +149,25 @@ describe("DefineSupervisedJobSpec", () => {
       });
       // @ts-expect-error — `channel` is required
       defineSupervisedJob({ name: "a.e10", description, input, argv });
+      // `admission` on an argv body (the error lands on the property)
+      defineSupervisedJob({
+        name: "a.e11",
+        description,
+        input,
+        channel,
+        argv,
+        // @ts-expect-error — `admission` on an argv body (not our child to admit)
+        admission: "worktree-prepare",
+      });
+      defineSupervisedJob({
+        name: "a.e12",
+        description,
+        input,
+        channel,
+        run,
+        // @ts-expect-error — `admission` names a declared host pool
+        admission: "no-such-pool",
+      });
     };
     expect(typeof typeOnly).toBe("function");
   });

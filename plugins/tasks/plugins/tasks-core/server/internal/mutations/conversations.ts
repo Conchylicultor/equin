@@ -7,7 +7,10 @@ import type {
 } from "../../../core/conversation-status";
 import { _attempts, _conversations, _tasks } from "../tables";
 import { conversations } from "../views";
-import { emitConversationStatusChange } from "../status-emit";
+import {
+  emitConversationStatusChange,
+  type ConversationStatusState,
+} from "../status-emit";
 import { noteAttributionChanged } from "../push-ledger/attribution";
 import type { DbExecutor } from "../status-batch";
 import { withTaskStatusChange } from "../status-scope";
@@ -43,23 +46,35 @@ export type UpdateConversationPatch = ConversationStatusPatch & {
   closeRequested?: boolean;
 };
 
-// Resolve the owning task id AND the current status of a conversation in one
-// read. `taskId` is null when the conversation/attempt was already deleted (the
-// task FK cascades, so this can happen during teardown); `status` is null in
-// the same case. Callers snapshot the status before a write so they can emit a
-// `conversation.statusChanged` transition afterwards.
-async function conversationContext(
-  conversationId: string,
-): Promise<{ taskId: string | null; status: ConversationStatus | null }> {
+// Resolve the owning task id AND the current status (status + waitingFor) of
+// a conversation in one read. `taskId` is null when the conversation/attempt
+// was already deleted (the task FK cascades, so this can happen during
+// teardown); `state` is null in the same case. Callers snapshot the state
+// before a write so they can emit a `conversation.statusChanged` transition
+// afterwards.
+async function conversationContext(conversationId: string): Promise<{
+  taskId: string | null;
+  state: ConversationStatusState | null;
+}> {
   const [row] = await db
-    .select({ taskId: _attempts.taskId, status: _conversations.status })
+    .select({
+      taskId: _attempts.taskId,
+      status: _conversations.status,
+      waitingFor: _conversations.waitingFor,
+    })
     .from(_conversations)
     .innerJoin(_attempts, eq(_attempts.id, _conversations.attemptId))
     .where(eq(_conversations.id, conversationId))
     .limit(1);
   return {
     taskId: row?.taskId ?? null,
-    status: (row?.status as ConversationStatus | undefined) ?? null,
+    state:
+      row === undefined
+        ? null
+        : {
+            status: row.status as ConversationStatus,
+            waitingFor: row.waitingFor,
+          },
   };
 }
 
@@ -174,7 +189,7 @@ export async function updateConversation(
   id: string,
   patch: UpdateConversationPatch,
 ): Promise<void> {
-  const { taskId, status: prevStatus } = await conversationContext(id);
+  const { taskId, state: prev } = await conversationContext(id);
   // Typed against the table's own insert row, not `Record<string, unknown>`:
   // `status` is a DECODED column now, so its encoder runs on this `.set(...)`.
   // A widened value would otherwise be a runtime throw from inside drizzle;
@@ -205,8 +220,22 @@ export async function updateConversation(
       .set(dbPatch)
       .where(eq(_conversations.id, id));
   });
-  if (patch.status !== undefined)
-    await emitConversationStatusChange(id, taskId, prevStatus, patch.status);
+  // A status or a `waitingFor` write is a status change (`waitingFor` refines
+  // `waiting`: a question answered with the status unchanged must still wake
+  // whoever holds a turn until the agent stops waiting). Neither known
+  // before nor written: nothing to report.
+  const status = patch.status ?? prev?.status;
+  if (
+    status !== undefined &&
+    (patch.status !== undefined || patch.waitingFor !== undefined)
+  )
+    await emitConversationStatusChange(id, taskId, prev, {
+      status,
+      waitingFor:
+        patch.waitingFor !== undefined
+          ? patch.waitingFor
+          : (prev?.waitingFor ?? null),
+    });
 }
 
 // Copies a task's freshly generated title onto its conversations that still
@@ -246,22 +275,25 @@ export async function updateConversationsTitleForTask(
 }
 
 export async function deleteConversationRow(id: string): Promise<void> {
-  const { taskId, status: prevStatus } = await conversationContext(id);
+  const { taskId, state: prev } = await conversationContext(id);
   await withTaskStatusChange(taskId ?? [], db, async () => {
     await db.delete(_conversations).where(eq(_conversations.id, id));
   });
   // A hard delete cascades away the conversation's queue rank row (entity
   // extension, FK CASCADE). Emit a terminal transition so the queue refreshes
   // its ranks and revalidates the pin — the conversation is no longer present.
-  if (prevStatus !== null)
-    await emitConversationStatusChange(id, taskId, prevStatus, "done");
+  if (prev !== null)
+    await emitConversationStatusChange(id, taskId, prev, {
+      status: "done",
+      waitingFor: null,
+    });
 }
 
 // Atomically transition to "gone" only if the current status is still active.
 // Returns true if the row was updated, false if it was already gone/done.
 // Prevents the status reconciler from overwriting a "done" set by the exit_clean flow.
 export async function markConversationGone(id: string): Promise<boolean> {
-  const { taskId, status: prevStatus } = await conversationContext(id);
+  const { taskId, state: prev } = await conversationContext(id);
   const now = new Date();
   const result = await withTaskStatusChange(taskId ?? [], db, async () =>
     db
@@ -282,7 +314,10 @@ export async function markConversationGone(id: string): Promise<boolean> {
       .returning({ id: _conversations.id }),
   );
   if (result.length > 0) {
-    await emitConversationStatusChange(id, taskId, prevStatus, "gone");
+    await emitConversationStatusChange(id, taskId, prev, {
+      status: "gone",
+      waitingFor: null,
+    });
   }
   return result.length > 0;
 }
@@ -317,7 +352,7 @@ export async function markConversationClosed(
   id: string,
   endedAt: Date = new Date(),
 ): Promise<void> {
-  const { taskId, status: prevStatus } = await conversationContext(id);
+  const { taskId, state: prev } = await conversationContext(id);
   await withTaskStatusChange(taskId ?? [], db, async () => {
     await db
       .update(_conversations)
@@ -329,5 +364,9 @@ export async function markConversationClosed(
       })
       .where(eq(_conversations.id, id));
   });
-  await emitConversationStatusChange(id, taskId, prevStatus, "done");
+  // Closing leaves `waitingFor` as it was.
+  await emitConversationStatusChange(id, taskId, prev, {
+    status: "done",
+    waitingFor: prev?.waitingFor ?? null,
+  });
 }

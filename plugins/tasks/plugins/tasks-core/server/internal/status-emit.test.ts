@@ -1,5 +1,5 @@
 import { describe, test, expect } from "bun:test";
-import { computeStatusEmits } from "./status-emit";
+import { computeStatusEmits, conversationStatusChange } from "./status-emit";
 import type { TaskStatus } from "./schema";
 import type { TaskStatusRow } from "./queries/tasks";
 
@@ -67,5 +67,58 @@ describe("computeStatusEmits", () => {
         previousStatus: "new",
       },
     ]);
+  });
+});
+
+// `conversation.statusChanged`: the status column OR `waitingFor` moving is a
+// change — a question answered while the agent stays `waiting` must still wake
+// whoever holds a turn until it stops waiting (watch delivery, self-compact).
+describe("conversationStatusChange", () => {
+  const idle = { status: "waiting", waitingFor: null } as const;
+  const asking = { status: "waiting", waitingFor: "question" } as const;
+
+  test("nothing moved: no event", () => {
+    expect(conversationStatusChange("c", "t", idle, idle)).toBeNull();
+    expect(conversationStatusChange("c", "t", asking, asking)).toBeNull();
+  });
+
+  test("waitingFor cleared, status unchanged: an event saying so", () => {
+    expect(conversationStatusChange("c", "t", asking, idle)).toEqual({
+      conversationId: "c",
+      taskId: "t",
+      status: "waiting",
+      previousStatus: "waiting",
+      waitingFor: null,
+      previousWaitingFor: "question",
+    });
+  });
+
+  test("status moved: an event carrying both readings", () => {
+    expect(
+      conversationStatusChange(
+        "c",
+        null,
+        { status: "working", waitingFor: null },
+        asking,
+      ),
+    ).toEqual({
+      conversationId: "c",
+      taskId: null,
+      status: "waiting",
+      previousStatus: "working",
+      waitingFor: "question",
+      previousWaitingFor: null,
+    });
+  });
+
+  test("first reading (previous null): previous = current", () => {
+    expect(conversationStatusChange("c", "t", null, asking)).toEqual({
+      conversationId: "c",
+      taskId: "t",
+      status: "waiting",
+      previousStatus: "waiting",
+      waitingFor: "question",
+      previousWaitingFor: "question",
+    });
   });
 });

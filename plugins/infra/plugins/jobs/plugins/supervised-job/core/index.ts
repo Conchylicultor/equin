@@ -22,5 +22,6 @@ export type { RunObservation, RunTerminal } from "./internal/terminal";
 export { supervisedArgv, RUN_TERMINAL_ENV } from "./internal/shim";
 export { assertRunKindId, assertRunId, isRunId } from "./internal/ids";
 export { SUPERVISED_EXEC_COMMAND } from "./internal/exec-command";
+export { SUPERVISED_EXIT_TEMPFAIL } from "./internal/exit-status";
 export type { ExecContext } from "./internal/exec-context";
 export type { SupervisedTaskInvocation } from "./internal/exec-command";

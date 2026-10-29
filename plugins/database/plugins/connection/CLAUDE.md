@@ -188,6 +188,18 @@ are opened from CLI and tools code (`paths/scripts/migrate-data-layout.ts` →
 launcher → `database/admin`), and the `tools` type-check target has no DOM lib,
 so the import broke it. The `db` channel lives in `database/server`.
 
+## A connect refused because the database is full
+
+`isConnectionCapacityRefusal(err)` (`core`) recognises exactly two refusals:
+pgbouncer's `FATAL 08P01 no more connections allowed (…)` (its host-wide
+`max_client_conn`; matched on SQLSTATE AND pgbouncer's fixed text, since 08P01
+alone is any protocol violation) and Postgres's `53300 too_many_connections`.
+It walks `cause` and `AggregateError.errors`. Both are back-pressure — the same
+connect succeeds once holders let go — so `database`'s `isTransientDbError`
+counts them, and a supervised child that fails on one exits EX_TEMPFAIL
+(`infra/jobs/supervised-job`) so its waiter retries later instead of counting
+a failure.
+
 ## Not covered
 
 A LISTEN connection with no call pending has nothing waiting for a reply, so no
@@ -242,6 +254,7 @@ deadline sees it go silent. That needs a heartbeat.
   - Exports (values):
     - `DB_CALL_PHASES`
     - `DB_POOL_NAMES`
+    - `isConnectionCapacityRefusal`
 - Test helpers:
   - Server: `@plugins/database/plugins/connection/server/testing`
     - `QueryDeadlineExceededError` — A database call got no reply within its deadline.

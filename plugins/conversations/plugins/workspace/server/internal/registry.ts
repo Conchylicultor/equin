@@ -51,12 +51,15 @@ export interface WorkspaceAt<S extends WorkspaceSpec = WorkspaceSpec> {
 
 /**
  * What `prepare` gets of the spawn job's context: its dispatch deadline, and
- * the durable step / wait log — so a kind whose preparation is long work can
+ * the durable step / wait / sleep log — so a kind whose preparation is long work can
  * hand it to a supervised child and suspend until it ends instead of doing it
  * in the backend. A suspend (a `waitFor`) leaves `prepare` by throwing the
  * jobs plugin's suspend signal, which the caller must pass through untouched.
  */
-export type WorkspacePrepareCtx = Pick<JobCtx, "signal" | "step" | "waitFor">;
+export type WorkspacePrepareCtx = Pick<
+  JobCtx,
+  "signal" | "step" | "waitFor" | "sleep"
+>;
 
 /** Whether a conversation's workspace can take a `claude --resume`. */
 export type Resumability =

@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-conversations-automatic-turn",
+  "description": "Whether the app may type an automatic turn (an event, a compaction) into a conversation now: one readiness every automatic sender asks — held while the agent is busy, waits on the user's question, or another plugin has a turn of its own pending for it (the PendingTurn contribution).",
+  "private": true,
+  "version": "0.0.1"
+}

@@ -523,7 +523,7 @@ function pool(): Pool {
     idleTimeoutMillis: 20_000,
   });
   installQueryWrapper(p);
-  // Built with the pool — at boot (`ready()` warms it) — so it is in place
+  // Built with the pool — at boot (`ready({ warm: true })` warms it) — so it is in place
   // before any request is served.
   installCommitScopeRuntime(alsCommitScopeRuntime());
   poolSingleton = p;
@@ -588,8 +588,10 @@ async function awaitDbReady(): Promise<void> {
 // SELECT 1 on each forces pgbouncer to attach a backend now, not on the first
 // user query. node-postgres `min` does NOT pre-connect — it only avoids
 // destroying idle connections — so this explicit warm step is required. Called
-// from the database plugin's onReady, after awaitDbReady() and before migrations
-// and any other plugin's onReady. awaitDbReady() leaves 1 connection idle, so we
+// from the database plugin's onReadyBlocking (`ready({ warm: true })`), after
+// awaitDbReady() and before migrations — in a SERVING backend only: an `exec`
+// child passes `warm: false`, since a full pool per short-lived child is what
+// ran pgbouncer out of client connections when many launched at once. awaitDbReady() leaves 1 connection idle, so we
 // only open the remainder; self-healing if `max` is small (e.g. 1 in tests).
 async function warmPool(): Promise<void> {
   const p = pool();
@@ -616,9 +618,9 @@ const generationLocks = createSchemaGenerationLocks({
 
 export const pgDriver: DatabaseDriverImpl = {
   db: realDb,
-  async ready() {
+  async ready({ warm }) {
     await awaitDbReady();
-    await warmPool();
+    if (warm) await warmPool();
   },
   // Boot DDL can wait minutes on the previous backend's locks during a
   // hot-swap, so the schema layer widens the query deadline for its own

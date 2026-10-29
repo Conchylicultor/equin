@@ -16,7 +16,11 @@ deploy. So `prepare` never makes it:
   (spare claim or cold add, the convergence of a cut-off one, the frozen
   install). `onEnded` on exit 0 enqueues the spare refill. A failed run
   dead-letters (built-in-ledger policy). Transcript: the `worktree-prepare` log
-  channel.
+  channel. **Bounded host-wide**: `admission: "worktree-prepare"` (a host pool of
+  4) — a child waits for a slot before it boots, so a launch storm queues its
+  checkouts as idle processes instead of booting them all against the shared
+  pgbouncer (2026-10-28: ten launches booted twenty children, 318
+  `max_client_conn` refusals, three launches lost).
 - **`prepare`** (`prepare-wait.ts`, `prepareWorktree`) — a durable
   observe-before-wait loop in the spawn job: a run open → wait on `runEnded`
   (30 s bound); the checkout `complete` (`checkoutState`, read-only) → adopt it
@@ -25,6 +29,12 @@ deploy. So `prepare` never makes it:
   and wait for it. The checkout on disk is the authority, the event only a
   wake-up. Up to 3 requests, then a `NonRetryableError` carrying the last run's
   recorded error, which the spawn records (`conversation-spawn-failed`).
+  A run that exited EX_TEMPFAIL (75: its database connection was refused
+  because the database was full) is back-pressure, not a failure: a durable
+  pause (15 s doubling, capped at 2 min) and a re-request
+  (`prepare:retry:<n>`) from its own budget of 8 (~12 min), never spending one
+  of the 3 — a storm must not use up the launch, whose auto-start marker was
+  already claimed when it committed.
 - While suspended, the spawn holds no queue row; `inFlight` counts a keyed run
   parked on a pending wait, so the status sweep leaves the row `starting`.
 

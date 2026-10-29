@@ -28,9 +28,14 @@ an agent (one `event` turn per batch) or code (a `WatchHandler`). Plan:
   (`listLaunchableArmedIn`: not blocked, held or dropped). Only a false → true
   flip of `task_watches.quiet` raises one `quiet` event.
 - **Delivery** (`watch.deliver`, keyed by watch) — a dead watch re-routes its
-  rows to the next live watch above; a busy watcher, or one with `waitingFor`
-  set (an event turn would answer its question), is held — its own status
-  change re-enqueues delivery. Otherwise every undelivered row is claimed into
+  rows to the next live watch above; a conversation watcher that cannot take
+  an automatic turn (`conversations/automatic-turn`'s readiness: busy,
+  `waitingFor` set — an event turn would answer its question — or another
+  plugin's `PendingTurn`, such as a compaction, goes first) is held. Its own
+  `conversation.statusChanged` re-enqueues delivery — which fires on leaving
+  a busy status AND on `waitingFor` clearing with the status unchanged (a
+  question answered); a pending turn ends by making the agent busy, then
+  idle. Otherwise every undelivered row is claimed into
   ONE turn whose id is derived from the row ids (`turnIdFor`), so a retried
   delivery is the same turn; the turn is the event lines plus the tree digest,
   submitted as kind `event`. A code watcher gets the batch on the claiming

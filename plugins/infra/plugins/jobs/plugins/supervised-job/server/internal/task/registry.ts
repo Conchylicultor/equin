@@ -3,6 +3,7 @@ import type { z } from "zod";
 import type { Registration } from "@plugins/framework/plugins/server-core/core";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/server";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
+import type { HostPoolId } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import {
   SUPERVISED_EXEC_COMMAND,
   type SupervisedTaskInvocation,
@@ -73,6 +74,14 @@ export interface DefineSupervisedTaskSpec<P extends z.ZodType> {
   payload: P;
   /** The work. An ordinary async function, run in a booted `exec` runtime. */
   run(payload: z.infer<P>): Promise<void>;
+  /**
+   * The host pool the child waits on BEFORE it boots, holding the slot until
+   * it exits (`--admit <pool>`, see `cli/run.ts`). Bounds how many of these
+   * children are booted at once, host-wide — and so the database connections
+   * and memory a booted graph costs — while a queued child costs nothing but
+   * an idle process. Absent, the child boots at once.
+   */
+  admission?: HostPoolId;
 }
 
 const tasks = new Map<string, RegisteredSupervisedTask>();
@@ -125,6 +134,7 @@ export function defineSupervisedTask<P extends z.ZodType>(
         // the child's own cwd cannot answer it.
         "--namespace",
         runtimeNamespace(),
+        ...(spec.admission === undefined ? [] : ["--admit", spec.admission]),
       ],
       // `./equin` is a path relative to the checkout root, and the
       // backend's own cwd is its `server-core` directory.

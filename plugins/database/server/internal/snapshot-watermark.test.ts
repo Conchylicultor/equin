@@ -21,7 +21,7 @@ async function committedWrite(): Promise<void> {
 
 describe("snapshotWatermark", () => {
   test("returns BigInt-parseable xid8 decimal text", async () => {
-    await DatabaseDriver.get().ready();
+    await DatabaseDriver.get().ready({ warm: false });
     const wm = await snapshotWatermark(db);
     expect(wm).toMatch(/^\d+$/);
     expect(BigInt(wm) >= 0n).toBe(true);

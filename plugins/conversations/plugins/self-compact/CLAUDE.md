@@ -11,11 +11,16 @@ capability (the `capability` leaf sub-plugin, so mandate presets reached from
   minted up front.
 - Nothing is typed while the agent's turn runs: a turn typed into a busy CLI is
   injected at its next tool boundary, where `/compact` would not run as a
-  command. `self-compact.send` runs on `conversation.statusChanged`; once the
-  agent is neither busy nor waiting on the user, it types `/compact <keep>`
-  (turn kind `compact`) then `next` as an `event` turn, which the CLI queues
-  behind the compaction. The pre-minted ids make a retried or concurrent send
-  a no-op.
+  command. `self-compact.send` runs on `conversation.statusChanged` (leaving
+  busy, or `waitingFor` clearing); once `conversations/automatic-turn` says
+  the agent can take an automatic turn, it types `/compact <keep>` (turn kind
+  `compact`) then `next` as an `event` turn, which the CLI queues behind the
+  compaction. The pre-minted ids make a retried or concurrent send a no-op.
+- **A pending request is a `PendingTurn`** (`compactionTurn`): every other
+  automatic sender (a watch's event delivery, woken by the same status change)
+  holds until it went out — typed first, an event turn would make the agent
+  busy and `/compact` would reach it as plain text. Its own readiness passes
+  the entry as `own`. The held senders re-run when the continuation ends.
 - A pending request waives the stop gate: the agent ends its turn to let the
   compaction run, even when a gate (a required report) would refuse it.
 - Main-only delivery, like `watch.deliver`.
@@ -24,14 +29,17 @@ capability (the `capability` leaf sub-plugin, so mandate presets reached from
 
 ## Plugin reference
 
-- Description: An agent compacting its own context: the compact_context MCP tool (granted by context.compact) records the request in conversation_compactions; when the agent stops being busy, self-compact.send types `/compact <keep>` then the continuation as an event turn. A pending request waives the stop gate; the capability's describe joins the Mandate section.
+- Description: An agent compacting its own context: the compact_context MCP tool (granted by context.compact) records the request in conversation_compactions; when the agent can take an automatic turn, self-compact.send types `/compact <keep>` then the continuation as an event turn. A pending request is a PendingTurn (every other automatic sender holds until it went out) and waives the stop gate; the capability's describe joins the Mandate section.
 - Server:
   - Contributes:
     - `mandateCapability` "context.compact"
     - `conversations.stop-waiver` "self-compact"
+    - `conversations.pending-turn` "self-compact"
     - `trigger` "self-compact.send"
   - Uses:
     - `conversations.submitTurn`
+    - `conversations/automatic-turn.automaticTurnReadiness`
+    - `conversations/automatic-turn.PendingTurn`
     - `conversations/stop-gate.StopWaiver`
     - `database.db`
     - `database.DbExecutor`
@@ -42,7 +50,6 @@ capability (the `capability` leaf sub-plugin, so mandate presets reached from
     - `tasks/orchestration/mandate.Mandate`
     - `tasks/tasks-core._conversations`
     - `tasks/tasks-core.conversationStatusChanged`
-    - `tasks/tasks-core.getConversation`
   - DB schema: `plugins/conversations/plugins/self-compact/server/internal/tables.ts`
   - Register:
     - `defineJob('self-compact.send')`

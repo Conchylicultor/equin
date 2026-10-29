@@ -101,7 +101,7 @@ function drain(): { channel: string; payload: Record<string, unknown> }[] {
 describe.if(IN_CHILD)("the change feed's trigger layer on PGlite", () => {
   beforeAll(async () => {
     const driver = createPgliteDriver();
-    await driver.ready();
+    await driver.ready({ warm: false });
     db = driver.db();
     client = (db as unknown as { $client: PGlite }).$client;
     await db.execute(

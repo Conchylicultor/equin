@@ -5,7 +5,11 @@ import {
   isNonRetryableError,
   NonRetryableError,
 } from "@plugins/infra/plugins/jobs/server";
-import { assertRunKindId, type RunTerminal } from "../../core";
+import {
+  assertRunKindId,
+  SUPERVISED_EXIT_TEMPFAIL,
+  type RunTerminal,
+} from "../../core";
 import type { UnfinishedRun } from "./run/registry";
 import { _supervisedJobRuns, SUPERVISED_JOB_RUNS_INFLIGHT_UQ } from "./tables";
 
@@ -295,7 +299,9 @@ export function applyFailurePolicy(args: {
       : `exited ${terminal.exitCode}`;
   const why =
     args.failure.errorMessage ??
-    "killed or crashed before recording an error — see the transcript";
+    (terminal.exitCode === SUPERVISED_EXIT_TEMPFAIL
+      ? "the database refused its connection because it was full (EX_TEMPFAIL) — a temporary failure, see the transcript"
+      : "killed or crashed before recording an error — see the transcript");
   throw new NonRetryableError(
     `[supervised-job] ${args.jobName}: run ${args.runId} ${ended} on attempt ` +
       `${args.attempt}/${args.runAttempts}` +

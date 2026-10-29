@@ -1682,6 +1682,10 @@
       "name": "@equin/plugin-conversations-all-conversations",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/automatic-turn": {
+      "name": "@equin/plugin-conversations-automatic-turn",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/close": {
       "name": "@equin/plugin-conversations-close",
       "version": "0.0.1",
@@ -7817,6 +7821,8 @@
     "@equin/plugin-conversations-agents": ["@equin/plugin-conversations-agents@workspace:plugins/conversations/plugins/agents"],
 
     "@equin/plugin-conversations-all-conversations": ["@equin/plugin-conversations-all-conversations@workspace:plugins/conversations/plugins/all-conversations"],
+
+    "@equin/plugin-conversations-automatic-turn": ["@equin/plugin-conversations-automatic-turn@workspace:plugins/conversations/plugins/automatic-turn"],
 
     "@equin/plugin-conversations-close": ["@equin/plugin-conversations-close@workspace:plugins/conversations/plugins/close"],
 

@@ -146,6 +146,16 @@ What the app pool (`machine/internal/pg-driver.ts`) adds on top:
 eagerly opens + validates connections up to the pool's `max` so the boot
 thundering herd hits warm connections instead of paying establishment cost.
 node-postgres `min` does **not** pre-connect, so this explicit step is required.
+**Serving backends only**: `DatabaseDriver.ready({ warm })` takes the decision
+as a required option, and the barrier passes `getBootMode() === "serve"`. An
+`exec` child (a supervised job's body) serves nobody, and warming 16
+connections per child is what ran pgbouncer out of `max_client_conn` when a
+launch storm booted twenty children at once (2026-10-28).
+
+`isTransientDbError` — what `awaitDbReady` waits out — includes a connect
+refused because the database is full (`database/connection`'s
+`isConnectionCapacityRefusal`), alongside a starting cluster and a missing
+socket.
 
 ## Connection lanes (interactive vs background)
 
@@ -312,10 +322,10 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./equin build`. The bui
     - `quotedRelationsIn`
     - `readTag`
 - Cross-plugin:
-  - Imported by: 131 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 132 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×37
+    - `conversations` ×15
     - `page` ×15
-    - `conversations` ×14
     - `infra` ×13
     - `tasks` ×12
     - `active-data` ×8

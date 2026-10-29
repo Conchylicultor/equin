@@ -4,6 +4,7 @@ export type {
   HostPoolEntry,
   CpuBudget,
   HostFacts,
+  HostPoolId,
 } from "./internal/budget";
 export {
   PER_UNIT_BYTES,
