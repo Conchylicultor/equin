@@ -23,6 +23,7 @@ import {
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import { MACOS_FILES_AND_FOLDERS_SETTINGS } from "@plugins/infra/plugins/host-fs/core";
 import { midiFoldersConfig } from "../../shared/config";
 import {
   midiFolderSongCount,
@@ -31,7 +32,6 @@ import {
 } from "../../shared/status";
 import {
   deniedByMacOs,
-  FILES_AND_FOLDERS_SETTINGS,
   folderName,
   folderStateIcon,
   unreadableReason,
@@ -161,7 +161,7 @@ function FolderNoticeRow({ folder }: { folder: UnreadableFolder }) {
               shape="pill"
               className={PRIMARY_PILL}
               nativeButton={false}
-              render={<a href={FILES_AND_FOLDERS_SETTINGS} />}
+              render={<a href={MACOS_FILES_AND_FOLDERS_SETTINGS} />}
               tooltip={`Opens System Settings → Privacy & Security → Files & Folders, at equin's ${name} switch`}
             >
               Allow access

@@ -39,6 +39,7 @@ export const hostFsPathStatServed = serveValue(hostFsPathStat, {
       parent: stat.parent,
       entry: stat.entry,
       ...(stat.within !== undefined ? { within: stat.within } : {}),
+      ...(stat.read !== undefined ? { read: stat.read } : {}),
     };
   },
   whileSubscribed: ({ path }, notify) => watchPath(path, () => notify()),

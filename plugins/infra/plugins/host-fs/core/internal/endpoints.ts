@@ -170,6 +170,33 @@ export type HostFsPeekResult = z.infer<typeof HostFsPeekResultSchema>;
 
 // ── stat ─────────────────────────────────────────────────────────────────────
 
+/**
+ * Whether the user account can read a described path's contents (a file's
+ * bytes, a folder's listing — `access(R_OK)`). Describing a path needs only
+ * search permission on its parents, so a path can be described and still be
+ * unreadable: `macos-privacy` (EPERM — macOS keeps equin out of a protected
+ * folder such as ~/Downloads or ~/Desktop until it is allowed in Privacy &
+ * Security → Files & Folders, {@link MACOS_FILES_AND_FOLDERS_SETTINGS}) or
+ * `permissions` (EACCES — the path's own permissions keep the account out).
+ * Always `readable` inside an archive: reading the archive is how the member
+ * was described.
+ */
+export const HostFsReadAccessSchema = z.enum([
+  "readable",
+  "macos-privacy",
+  "permissions",
+]);
+export type HostFsReadAccess = z.infer<typeof HostFsReadAccessSchema>;
+
+/**
+ * Where macOS keeps equin's per-folder switches (Privacy & Security → Files &
+ * Folders): the equin app bundle gets a switch per protected folder there, a
+ * denied one included, so this is where a `macos-privacy` denial is undone.
+ * A page opens it as a link.
+ */
+export const MACOS_FILES_AND_FOLDERS_SETTINGS =
+  "x-apple.systempreferences:com.apple.preference.security?Privacy_FilesAndFolders";
+
 export const HostFsStatResultSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("ok"),
@@ -177,6 +204,8 @@ export const HostFsStatResultSchema = z.discriminatedUnion("kind", [
     parent: z.string().nullable(),
     entry: HostFsEntrySchema,
     within: HostFsWithinSchema.optional(),
+    /** Absent on an unresolvable symlink (`entry.kind` `symlink`): no contents to read. */
+    read: HostFsReadAccessSchema.optional(),
   }),
   Missing,
   Denied,

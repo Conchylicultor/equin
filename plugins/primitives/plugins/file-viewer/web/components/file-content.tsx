@@ -4,6 +4,7 @@ import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import type { FileRef } from "../../core";
 import { FileViewer, type ResolvedRenderer } from "../slots";
+import { HostReadGate } from "./unreadable-host-file";
 
 /** The active renderer's body for one file (no header, no scroll container). */
 export function FileContent({
@@ -21,7 +22,7 @@ export function FileContent({
   // Bespoke tiered selection (resolveRenderers) can't be expressed via
   // .Render/.Dispatch — render the chosen contribution through renderIsolated so
   // it still routes through the error-boundary middleware chain.
-  return (
+  const body = (
     <ContentScope>
       {renderIsolated(
         FileViewer.Renderer,
@@ -35,5 +36,11 @@ export function FileContent({
         },
       )}
     </ContentScope>
+  );
+  // A host file the account cannot read says why, whichever renderer is on.
+  return file.source === "host" ? (
+    <HostReadGate path={file.path}>{body}</HostReadGate>
+  ) : (
+    body
   );
 }

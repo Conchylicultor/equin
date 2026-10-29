@@ -60,6 +60,12 @@ itself) / `fileUrl(file)` — a renderer never branches on the source to read.
 - `FileView` is the self-contained viewer (breadcrumb + tabs over the body).
   Hosts that put the tabs in their own chrome (the conversation file-peek pane)
   compose `useFileRenderers` + `FileTabs` + `FileContent`.
+- **An unreadable host file says why.** `FileContent` reads the file's live
+  `host-fs.stat`; when its `read` is `macos-privacy` (macOS keeps the equin
+  app out of a protected folder such as ~/Downloads) or `permissions`, the body
+  is "equin can't read this file" with Allow access (System Settings → Files &
+  Folders) and Check again, whichever renderer is selected — never a
+  renderer's own reading of the failed load ("No preview", an empty image).
 - `gitStatus` is context the host supplies; the diff renderer is offered only
   for a changed checkout file.
 
@@ -86,6 +92,7 @@ itself) / `fileUrl(file)` — a renderer never branches on the source to read.
     - `primitives/css/center.Center`
     - `primitives/css/column.Column`
     - `primitives/css/fill.Fill`
+    - `primitives/css/inline.Inline`
     - `primitives/css/line.Line`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/scroll.Scroll`

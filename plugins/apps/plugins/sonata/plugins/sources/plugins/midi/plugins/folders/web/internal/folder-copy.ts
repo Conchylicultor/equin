@@ -4,14 +4,6 @@ import type { FolderStatus } from "../../shared/status";
 /** A folder the backend cannot read — every status but `ok`. */
 export type UnreadableFolder = Exclude<FolderStatus, { state: "ok" }>;
 
-/**
- * Where macOS keeps equin's per-folder switches (Privacy & Security → Files &
- * Folders). The equin app bundle gets a switch per folder there, a denied one
- * included, so this is where access is given back.
- */
-export const FILES_AND_FOLDERS_SETTINGS =
-  "x-apple.systempreferences:com.apple.preference.security?Privacy_FilesAndFolders";
-
 export const folderIcon = symbol("folder");
 const lockIcon = symbol("lock");
 const goneIcon = symbol("folder-off");

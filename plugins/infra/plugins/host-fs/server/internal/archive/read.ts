@@ -87,6 +87,8 @@ export function statArchiveMember(
       parent: parentOf(path),
       entry,
       within: withinOf(at),
+      // The archive was read to describe the member.
+      read: "readable",
     };
   });
 }

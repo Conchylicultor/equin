@@ -30671,6 +30671,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HostFsOpenResult`
           - `HostFsPathStat`
           - `HostFsPeekResult`
+          - `HostFsReadAccess`
           - `HostFsStatResult`
           - `HostFsTextResult`
           - `HostFsVolumeInfo`
@@ -30702,6 +30703,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `hostFsVersion`
           - `hostFsVolumeInfo`
           - `isBrowsable`
+          - `MACOS_FILES_AND_FOLDERS_SETTINGS`
           - `readHostPaths`
           - `writeHostPaths`
       - Cross-plugin:
@@ -39926,12 +39928,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `InlineProps`
             - Exports (values): `Inline`
           - Cross-plugin:
-            - Imported by: 92 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
+            - Imported by: 93 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
               - `apps` ×18
               - `reports` ×15
               - `debug` ×14
+              - `primitives` ×10
               - `conversations` ×9
-              - `primitives` ×9
               - `page` ×6
               - `tasks` ×4
               - `build` ×3
@@ -42810,6 +42812,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/center.Center`
           - `primitives/css/column.Column`
           - `primitives/css/fill.Fill`
+          - `primitives/css/inline.Inline`
           - `primitives/css/line.Line`
           - `primitives/css/placeholder.Placeholder`
           - `primitives/css/scroll.Scroll`

@@ -188,19 +188,27 @@ describe("statHostPath", () => {
       kind: "ok",
       parent: root,
       entry: { name: "notes.txt", kind: "file", size: 5 },
+      read: "readable",
     });
     expect(await statHostPath(join(root, "link-to-beta"))).toMatchObject({
       kind: "ok",
       entry: { kind: "dir", symlinkTarget: join(root, "beta") },
     });
-    expect(await statHostPath(join(root, "dangling"))).toMatchObject({
-      kind: "ok",
-      entry: { kind: "symlink" },
-    });
+    const dangling = await statHostPath(join(root, "dangling"));
+    expect(dangling).toMatchObject({ kind: "ok", entry: { kind: "symlink" } });
+    expect(dangling).not.toHaveProperty("read");
     expect(await statHostPath("/")).toMatchObject({
       kind: "ok",
       parent: null,
       entry: { name: "/", kind: "dir" },
+    });
+  });
+  test("a path it can describe but not read says why", async () => {
+    // Describing `locked` needs only its parent; reading it needs its own mode.
+    expect(await statHostPath(join(root, "locked"))).toMatchObject({
+      kind: "ok",
+      entry: { kind: "dir" },
+      read: "permissions",
     });
   });
   test("missing and denied", async () => {

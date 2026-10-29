@@ -19,18 +19,14 @@ import {
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import { MACOS_FILES_AND_FOLDERS_SETTINGS } from "@plugins/infra/plugins/host-fs/core";
 import { midiFoldersConfig } from "../../shared/config";
 import {
   midiFolderSongCount,
   midiFoldersStatus,
   type FolderStatus,
 } from "../../shared/status";
-import {
-  deniedByMacOs,
-  FILES_AND_FOLDERS_SETTINGS,
-  folderStateIcon,
-  shortStatus,
-} from "./folder-copy";
+import { deniedByMacOs, folderStateIcon, shortStatus } from "./folder-copy";
 import { isUnreadable } from "./folder-notice";
 import { useShownPath } from "./folder-path";
 import { useCheckAgain } from "./use-check-again";
@@ -184,7 +180,7 @@ function UnreadableStatus({
             <Button
               variant="link"
               nativeButton={false}
-              render={<a href={FILES_AND_FOLDERS_SETTINGS} />}
+              render={<a href={MACOS_FILES_AND_FOLDERS_SETTINGS} />}
               className="h-auto px-none text-caption text-foreground underline"
             >
               Allow access

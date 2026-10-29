@@ -5,6 +5,7 @@ import {
   HOST_FS_COMPLETE_LIMIT,
   HOST_FS_PEEK_MAX_NAMES,
   HostFsEntrySchema,
+  HostFsReadAccessSchema,
   HostFsWithinSchema,
   type HostFsArchiveReason,
 } from "./endpoints";
@@ -160,6 +161,11 @@ export const HostFsPathStatSchema = z.object({
   parent: z.string().nullable(),
   entry: HostFsEntrySchema,
   within: HostFsWithinSchema.optional(),
+  /**
+   * Whether its contents can be read — a path can be described and still not
+   * be. Absent on an unresolvable symlink: no contents to read.
+   */
+  read: HostFsReadAccessSchema.optional(),
 });
 export type HostFsPathStat = z.infer<typeof HostFsPathStatSchema>;
 

@@ -274,6 +274,7 @@ this plugin implements: [`research/2026-10-02-apps-file-explorer-from-prototype.
     - `HostFsOpenResult`
     - `HostFsPathStat`
     - `HostFsPeekResult`
+    - `HostFsReadAccess`
     - `HostFsStatResult`
     - `HostFsTextResult`
     - `HostFsVolumeInfo`
@@ -305,6 +306,7 @@ this plugin implements: [`research/2026-10-02-apps-file-explorer-from-prototype.
     - `hostFsVersion`
     - `hostFsVolumeInfo`
     - `isBrowsable`
+    - `MACOS_FILES_AND_FOLDERS_SETTINGS`
     - `readHostPaths`
     - `writeHostPaths`
 - Cross-plugin:
