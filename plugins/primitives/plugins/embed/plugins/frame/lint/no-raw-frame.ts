@@ -1,4 +1,5 @@
-import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
+import { lintRuleCreator } from "@plugins/framework/plugins/tooling/plugins/lint/core";
+import type { TSESTree } from "@typescript-eslint/utils";
 
 /**
  * no-raw-frame
@@ -19,9 +20,7 @@ import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
  * primitive's own file is its sanctioned exemption.
  */
 
-const createRule = ESLintUtils.RuleCreator(
-  (name) => `https://github.com/anthropics/singularity/lint/${name}`,
-);
+const createRule = lintRuleCreator(import.meta.url);
 
 const FRAME_TAGS = new Set(["iframe", "frame", "object", "embed"]);
 const FRAME_PROPS = new Set(["srcdoc", "sandbox"]);
