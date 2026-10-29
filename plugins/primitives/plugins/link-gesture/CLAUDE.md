@@ -102,9 +102,9 @@ resolver returning one. Fix: spread `openPane.link(…)`, or pass `openPane.to(�
     - `linkProps`
     - `openInBrowserTab`
 - Cross-plugin:
-  - Imported by: 51 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 50 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives` ×13
-    - `conversations` ×12
+    - `conversations` ×11
     - `apps` ×6
     - `page` ×4
     - `apps-core` ×3

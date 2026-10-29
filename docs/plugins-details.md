@@ -15614,12 +15614,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`explorer`** — Conversation toolbar button opening a side pane that browses the agent's worktree with the file explorer's <FileBrowser/> (wearing the Files theme), rooted at the checkout, its folder and open file carried in the pane's route (;dir / ;open), with Open in Files at that location (git status from the file explorer's git lens).
           - Web:
             - Slots: `conv-file-tree.actions`
-            - Slot contributors:
-              - `conv-file-tree.actions` ← `conversations.conversation-view.explorer`
-              - `conv-file-tree.actions` ← `primitives.pane`
+            - Slot contributors: `conv-file-tree.actions` ← `primitives.pane`
             - Contributes:
               - `Pane.Register` "conv-file-tree"
-              - `conv-file-tree.actions` "open-in-files" → `OpenInFilesAction`
               - `Conversation.ActionBar` → `ConvTreeButton`
             - Uses:
               - `apps/file-explorer/browser.FileBrowser`
@@ -15633,13 +15630,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/action-bar.Conversation`
               - `primitives/css/placeholder.Placeholder`
               - `primitives/icon-button.IconButton`
-              - `primitives/link-gesture.linkProps`
               - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
               - `primitives/pane.defineRoute`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
-              - `primitives/pane.PaneIconAction`
+              - `primitives/pane.PaneExpandTarget`
               - `primitives/pane.useOpenPane`
         - **`fork-conversation`** — Side chat: an icon split under the prompt that opens a new, blank conversation in the same worktree — the icon on the default model, the chevron to pick another.
           - Web:
@@ -43488,9 +43484,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `linkProps`
           - `openInBrowserTab`
       - Cross-plugin:
-        - Imported by: 51 plugins — full list in [`plugins/primitives/plugins/link-gesture/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/REFERENCE.md)
+        - Imported by: 50 plugins — full list in [`plugins/primitives/plugins/link-gesture/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/REFERENCE.md)
           - `primitives` ×13
-          - `conversations` ×12
+          - `conversations` ×11
           - `apps` ×6
           - `page` ×4
           - `apps-core` ×3
