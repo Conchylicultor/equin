@@ -24,7 +24,7 @@
  *
  *   ./equin run plugins/primitives/plugins/embed/plugins/frame/e2e/content-probe.ts [--headed]
  */
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   pageFetch,
@@ -76,8 +76,22 @@ async function attacks(appOrigin) {
   await tryRow("script an app window it opened", async () => {
     const w = window.open(appOrigin + "/", "_blank");
     if (!w) return { denied: true, how: "popup blocked" };
-    try { const t = w.document.title; w.close(); return { denied: false, how: "read " + t }; }
-    finally { try { w.close(); } catch (e) { /* closed */ } }
+    // Until it loads the app, a new window is its initial about:blank, which
+    // shares the opener's origin: wait for the app document, then reach in.
+    const until = Date.now() + 10000;
+    try {
+      while (Date.now() < until) {
+        try {
+          if (w.location.href.startsWith(appOrigin)) {
+            return { denied: false, how: "read " + w.document.title };
+          }
+        } catch (e) {
+          return { denied: true, how: String(e && e.name || e) };
+        }
+        await new Promise((ok) => setTimeout(ok, 100));
+      }
+      return { denied: true, how: "never loaded" };
+    } finally { try { w.close(); } catch (e) { /* closed */ } }
   });
   await tryRow("app storage", async () => {
     const keys = Object.keys(localStorage).filter((k) => k.startsWith("s:"));
@@ -136,16 +150,21 @@ const id = protoIdKind.mint();
 const folder = join(prototypesDir.path, id);
 
 async function main(): Promise<void> {
-  mkdirSync(folder, { recursive: false });
-  writeFileSync(join(folder, "index.html"), hostileHtml(app.origin));
+  // Built out of sight, renamed in whole: the files watcher sees one change,
+  // so the canvas loads the document once (a file-by-file write bumps its
+  // rev, reloading the frame mid-run).
+  const staging = join(prototypesDir.path, `.${id}.staging`);
+  mkdirSync(staging, { recursive: false });
+  writeFileSync(join(staging, "index.html"), hostileHtml(app.origin));
   writeFileSync(
-    join(folder, "probe.css"),
+    join(staging, "probe.css"),
     "p { color: var(--probe-accent); }\n",
   );
   writeFileSync(
-    join(folder, "probe-sw.js"),
+    join(staging, "probe-sw.js"),
     "self.addEventListener('fetch', () => {});\n",
   );
+  renameSync(staging, folder);
   r.note(`hostile prototype ${id} at ${folder}`);
 
   await withBrowser(async (h) => {

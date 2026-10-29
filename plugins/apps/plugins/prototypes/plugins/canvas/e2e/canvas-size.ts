@@ -220,17 +220,18 @@ await withBrowser(async (h) => {
   await openSizeMenu(page);
   await page.getByRole("switch", { name: /Whole page/ }).click();
   await dismiss(page);
-  const whole = await waitFor(
-    () =>
-      screen(page, "A")
-        .locator("iframe:not([aria-hidden])")
-        .evaluate((el) => {
-          const f = el as HTMLIFrameElement;
-          return {
-            frame: Number(f.getAttribute("height")),
-            doc: f.contentDocument?.documentElement.scrollHeight ?? -1,
-          };
-        }),
+  // The document is on the content host (another origin): read through
+  // Playwright's frame, never the parent's `contentDocument`.
+  const whole = await waitFor(async () => {
+    const iframe = screen(page, "A").locator("iframe:not([aria-hidden])");
+    const frame = Number(await iframe.getAttribute("height"));
+    const content = await (await iframe.elementHandle())?.contentFrame();
+    const doc =
+      (await content?.evaluate(
+        () => document.documentElement.scrollHeight,
+      )) ?? -1;
+    return { frame, doc };
+  },
     (v) => v.frame >= 844 && v.doc > 0 && v.doc <= v.frame,
     { timeoutMs: 10_000 },
   );
