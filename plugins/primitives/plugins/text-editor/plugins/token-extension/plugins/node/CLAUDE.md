@@ -68,6 +68,7 @@ side.
   - Uses:
     - `primitives/css/center.Center`
     - `primitives/css/inline.Inline`
+    - `primitives/css/layer.Layer`
     - `primitives/css/pin.Pin`
     - `primitives/css/ui-kit.cn`
     - `primitives/hover-reveal.hoverRevealGroup`
@@ -99,6 +100,7 @@ side.
     - `ui/tokens/color-palette --border`
     - `ui/tokens/color-palette --foreground`
     - `ui/tokens/color-palette --ring`
+    - `ui/tokens/color-palette --text-selection`
     - `ui/tokens/shadow --shadow`
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`

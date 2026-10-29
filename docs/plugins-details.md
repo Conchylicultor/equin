@@ -40027,9 +40027,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Layer`
               - `layerClasses`
           - Cross-plugin:
-            - Imported by: 26 plugins — full list in [`plugins/primitives/plugins/css/plugins/layer/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/layer/REFERENCE.md)
+            - Imported by: 27 plugins — full list in [`plugins/primitives/plugins/css/plugins/layer/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/layer/REFERENCE.md)
               - `apps` ×15
-              - `primitives` ×6
+              - `primitives` ×7
               - `page` ×2
               - `integrations/youtube`
               - `map`
@@ -41021,10 +41021,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useSingleLine`
               - `WithTooltip`
           - Cross-plugin:
-            - Uses tokens: 370 vars — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Uses tokens: 371 vars — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `ui/tokens/data-view` ×97
               - `ui/tokens/density` ×82
-              - `ui/tokens/color-palette` ×61
+              - `ui/tokens/color-palette` ×62
               - `ui/tokens/type-scale` ×42
               - `ui/tokens/shape` ×15
               - `ui/tokens/overlay` ×13
@@ -46627,6 +46627,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Uses:
                   - `primitives/css/center.Center`
                   - `primitives/css/inline.Inline`
+                  - `primitives/css/layer.Layer`
                   - `primitives/css/pin.Pin`
                   - `primitives/css/ui-kit.cn`
                   - `primitives/hover-reveal.hoverRevealGroup`
@@ -46658,6 +46659,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/color-palette --border`
                   - `ui/tokens/color-palette --foreground`
                   - `ui/tokens/color-palette --ring`
+                  - `ui/tokens/color-palette --text-selection`
                   - `ui/tokens/shadow --shadow`
                   - `ui/tokens/shape --radius`
                   - `ui/tokens/shape --spacing`
