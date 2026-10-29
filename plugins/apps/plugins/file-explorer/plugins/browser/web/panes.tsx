@@ -1,5 +1,5 @@
 import { HOME } from "@plugins/infra/plugins/host-account/core";
-import { useMemo, type ReactNode } from "react";
+import { useCallback, useMemo, type ReactNode } from "react";
 import {
   Pane,
   defineRoute,
@@ -53,28 +53,48 @@ function useFolderTitle(params: { dir: string }): string {
   return params.dir === HOME ? "Home" : baseName(params.dir);
 }
 
-/** The URL params of a location. */
-function paramsOf(location: ExplorerLocation): { dir: string; open?: string } {
+/**
+ * A location as route params: the folder, and the open file written relative
+ * to it when it is inside it. The shape of `/files/at/…`, and of any pane
+ * hosting a routed explorer elsewhere (the conversation's Files pane).
+ */
+export interface LocationParams {
+  dir: string;
+  open?: string;
+}
+
+/** The route params of a location. */
+export function locationParams(location: ExplorerLocation): LocationParams {
   return location.open === null
     ? { dir: location.dir }
     : { dir: location.dir, open: encodeOpenParam(location.dir, location.open) };
 }
 
+/** The location route params name. */
+export function locationOf(params: LocationParams): ExplorerLocation {
+  return {
+    dir: params.dir,
+    open:
+      params.open === undefined
+        ? null
+        : decodeOpenParam(params.dir, params.open),
+  };
+}
+
 /**
- * The route navigator: where the explorer is comes from the URL, a folder
- * change opens a new route, and an open-file change rewrites the current one
- * (`setParams`) — or opens one, from the index pane, which has no params.
- * Every move is a link: its `href` is the location's own `/files/at/…` route.
+ * A routed explorer's navigator: where the explorer is comes from its pane's
+ * route, a folder change is `go` (a new history entry — a fresh route or a
+ * swapped slot, the host's call), and an open-file change rewrites the current
+ * instance in place (`setParams`) — or goes, from a pane with no location
+ * params of its own (the index pane). Every move is a link.
  */
-function useRouteNavigator(
+export function useLocationNavigator(
   location: ExplorerLocation,
-  setParams: ((params: { dir: string; open?: string }) => void) | null,
+  go: (next: ExplorerLocation) => LinkTarget,
+  setParams: ((params: LocationParams) => void) | null,
 ): ExplorerNavigator {
-  const openPane = useOpenPane();
   const { canBack, canForward } = useRoutedHistory(location);
   return useMemo(() => {
-    const go = (next: ExplorerLocation): LinkTarget =>
-      openPane.to(filesAtPane, paramsOf(next), { mode: "root" });
     return {
       location,
       to: (dir, open = null) => go({ dir, open }),
@@ -84,36 +104,56 @@ function useRouteNavigator(
         // Same place, reached in place: this instance keeps its scroll and
         // expansion. A new browser tab simply boots the route.
         return {
-          open: () => setParams(paramsOf({ dir: location.dir, open })),
+          open: () => setParams(locationParams({ dir: location.dir, open })),
           href: () => next.href(),
         };
       },
+      // Back / forward are the browser history, whichever pane holds the
+      // location (any pane's back() walks the same history).
       back: () => filesAtPane.back(),
       forward: () => filesAtPane.forward(),
       canBack,
       canForward,
     };
-  }, [location, setParams, openPane, canBack, canForward]);
+  }, [location, go, setParams, canBack, canForward]);
+}
+
+/** The `/files/at/…` navigator: every folder is a fresh route in Files. */
+function useFilesNavigator(
+  location: ExplorerLocation,
+  setParams: ((params: LocationParams) => void) | null,
+): ExplorerNavigator {
+  const openPane = useOpenPane();
+  const go = useCallback(
+    (next: ExplorerLocation): LinkTarget =>
+      openPane.to(filesAtPane, locationParams(next), { mode: "root" }),
+    [openPane],
+  );
+  return useLocationNavigator(location, go, setParams);
+}
+
+/**
+ * The Files app on `location`, as a link — the way out of an explorer hosted
+ * elsewhere (a pane's "Open in Files"). From another app it hands the route
+ * to Files; ⌘/middle-click opens it in a new browser tab.
+ */
+export function useOpenInFiles(location: ExplorerLocation): LinkTarget {
+  const openPane = useOpenPane();
+  return openPane.to(filesAtPane, locationParams(location), { mode: "root" });
 }
 
 const HOME_LOCATION: ExplorerLocation = { dir: HOME, open: null };
 
 function FilesHome(): ReactNode {
-  const navigator = useRouteNavigator(HOME_LOCATION, null);
+  const navigator = useFilesNavigator(HOME_LOCATION, null);
   return <FileBrowser navigator={navigator} />;
 }
 
 function FilesAt(): ReactNode {
   const { dir, open } = filesAtPane.useParams();
   const setParams = filesAtPane.useSetParams();
-  const location = useMemo<ExplorerLocation>(
-    () => ({
-      dir,
-      open: open === undefined ? null : decodeOpenParam(dir, open),
-    }),
-    [dir, open],
-  );
-  const navigator = useRouteNavigator(location, setParams);
+  const location = useMemo(() => locationOf({ dir, open }), [dir, open]);
+  const navigator = useFilesNavigator(location, setParams);
   return <FileBrowser navigator={navigator} />;
 }
 
@@ -125,11 +165,7 @@ function FilesAt(): ReactNode {
 export function useExplorerLocation(): ExplorerLocation {
   const entry = filesAtPane.useRouteEntry();
   if (entry === null) return HOME_LOCATION;
-  const { dir, open } = entry.params;
-  return {
-    dir,
-    open: open === undefined ? null : decodeOpenParam(dir, open),
-  };
+  return locationOf(entry.params);
 }
 
 /**
@@ -143,7 +179,7 @@ export function useExplorerFolderTarget(): (
 ) => LinkTarget {
   const openPane = useOpenPane();
   return (dir, open) =>
-    openPane.to(filesAtPane, paramsOf({ dir, open: open ?? null }), {
+    openPane.to(filesAtPane, locationParams({ dir, open: open ?? null }), {
       mode: "root",
     });
 }

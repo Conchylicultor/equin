@@ -182,7 +182,7 @@
     },
     {
       "paneId": "conv-file-tree",
-      "segment": "files",
+      "segment": "files;dir;open",
       "appIndex": false,
       "parent": null
     },

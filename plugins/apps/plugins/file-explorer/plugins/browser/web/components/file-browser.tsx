@@ -39,6 +39,9 @@ import {
   type PathTarget,
 } from "@plugins/primitives/plugins/path-bar/web";
 import { SurfaceChromeContext } from "@plugins/primitives/plugins/pane/web";
+import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
+import { appThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
+import { fileExplorerApp } from "@plugins/apps/plugins/file-explorer/plugins/shell/core";
 import {
   beforeOpen,
   runActivation,
@@ -144,6 +147,13 @@ export interface FileBrowserProps {
    * of its own: selecting or opening a file activates this instead.
    */
   fileTarget?: (path: string) => Activation;
+  /**
+   * Whether the toolbar is its surface's top edge, so it hosts the surface's
+   * leading control and keeps clear of the floating action bar. Default: when
+   * routed — the Files app paints its browser with no pane header above it. A
+   * pane that wraps the browser in its own header passes `false`.
+   */
+  atSurfaceEdge?: boolean;
 }
 
 /**
@@ -153,6 +163,19 @@ export interface FileBrowserProps {
  * resizable pane beside it.
  */
 export function FileBrowser(props: FileBrowserProps): ReactNode {
+  // The browser IS the Files app, wherever it is drawn: hosted beside a
+  // conversation or inside a plugin's detail it wears Files' theme, not its
+  // host's (in Files itself this is the scope it is already in).
+  return (
+    <Theme name={FILES_SCOPE} surface="canvas" className="h-full">
+      <FileBrowserBody {...props} />
+    </Theme>
+  );
+}
+
+const FILES_SCOPE = appThemeScope(fileExplorerApp.id);
+
+function FileBrowserBody(props: FileBrowserProps): ReactNode {
   const home = useHomeDir();
   if (home.kind === "pending") return <Loading variant="rows" />;
   if (home.kind === "failed") {
@@ -176,6 +199,7 @@ function FileBrowserReady({
   initialPath = HOME,
   root,
   fileTarget,
+  atSurfaceEdge = navigator !== undefined,
   home,
 }: FileBrowserProps & { home: string }): ReactNode {
   const local = useLocalNavigator({ dir: initialPath, open: null });
@@ -183,7 +207,7 @@ function FileBrowserReady({
   const { dir, open } = nav.location;
   const { contentOwnsTopChrome, leadingControl } =
     useContext(SurfaceChromeContext);
-  const atTopEdge = navigator !== undefined && contentOwnsTopChrome;
+  const atTopEdge = atSurfaceEdge && contentOwnsTopChrome;
   const phone = useViewportAtMost(640);
   const narrow = useViewportAtMost(900);
 

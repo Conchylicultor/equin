@@ -17,8 +17,13 @@ export { useExplorerFileTarget } from "./internal/file-target";
 export {
   filesAtPane,
   filesHomePane,
+  locationOf,
+  locationParams,
   useExplorerLocation,
   useExplorerFolderTarget,
+  useLocationNavigator,
+  useOpenInFiles,
+  type LocationParams,
 } from "./panes";
 
 export default {

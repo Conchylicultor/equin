@@ -4272,17 +4272,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ExplorerNavigator`
               - `FileBrowserProps`
               - `HomeDir`
+              - `LocationParams`
             - Exports (values):
               - `FileBrowser`
               - `FileBrowserSlots`
               - `filesAtPane`
               - `filesHomePane`
+              - `locationOf`
+              - `locationParams`
               - `PreviewPane`
               - `useExplorerDir`
               - `useExplorerFileTarget`
               - `useExplorerFolderTarget`
               - `useExplorerLocation`
               - `useHomeDir`
+              - `useLocationNavigator`
+              - `useOpenInFiles`
           - Core:
             - Uses:
               - `fields/text/config.textField`
@@ -15606,25 +15611,36 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/drop-dependents`
               - `conversations/conversation-view/exit`
               - `conversations/conversation-view/hold-and-exit`
-        - **`explorer`** — Conversation toolbar button opening a side pane that browses the agent's worktree with the file explorer's <FileBrowser/>, rooted at the checkout (git status from the file explorer's git lens).
+        - **`explorer`** — Conversation toolbar button opening a side pane that browses the agent's worktree with the file explorer's <FileBrowser/> (wearing the Files theme), rooted at the checkout, its folder and open file carried in the pane's route (;dir / ;open), with Open in Files at that location (git status from the file explorer's git lens).
           - Web:
             - Slots: `conv-file-tree.actions`
-            - Slot contributors: `conv-file-tree.actions` ← `primitives.pane`
+            - Slot contributors:
+              - `conv-file-tree.actions` ← `conversations.conversation-view.explorer`
+              - `conv-file-tree.actions` ← `primitives.pane`
             - Contributes:
               - `Pane.Register` "conv-file-tree"
+              - `conv-file-tree.actions` "open-in-files" → `OpenInFilesAction`
               - `Conversation.ActionBar` → `ConvTreeButton`
             - Uses:
               - `apps/file-explorer/browser.FileBrowser`
+              - `apps/file-explorer/browser.locationOf`
+              - `apps/file-explorer/browser.locationParams`
+              - `apps/file-explorer/browser.useLocationNavigator`
+              - `apps/file-explorer/browser.useOpenInFiles`
               - `conversations.useConversation`
+              - `conversations.useConversationById`
               - `conversations/conversation-view.conversationPane`
               - `conversations/conversation-view/action-bar.Conversation`
               - `primitives/css/placeholder.Placeholder`
               - `primitives/icon-button.IconButton`
+              - `primitives/link-gesture.linkProps`
               - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
               - `primitives/pane.defineRoute`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
+              - `primitives/pane.PaneIconAction`
+              - `primitives/pane.useOpenPane`
         - **`fork-conversation`** — Side chat: an icon split under the prompt that opens a new, blank conversation in the same worktree — the icon on the default model, the chevron to pick another.
           - Web:
             - Contributes: `Conversation.PromptBar` "New" → `ForkConversationButtons`
@@ -43434,9 +43450,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `linkProps`
           - `openInBrowserTab`
       - Cross-plugin:
-        - Imported by: 50 plugins — full list in [`plugins/primitives/plugins/link-gesture/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/REFERENCE.md)
+        - Imported by: 51 plugins — full list in [`plugins/primitives/plugins/link-gesture/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/REFERENCE.md)
           - `primitives` ×13
-          - `conversations` ×11
+          - `conversations` ×12
           - `apps` ×6
           - `page` ×4
           - `apps-core` ×3

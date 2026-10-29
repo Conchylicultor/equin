@@ -63,17 +63,22 @@
     - `ExplorerNavigator`
     - `FileBrowserProps`
     - `HomeDir`
+    - `LocationParams`
   - Exports (values):
     - `FileBrowser`
     - `FileBrowserSlots`
     - `filesAtPane`
     - `filesHomePane`
+    - `locationOf`
+    - `locationParams`
     - `PreviewPane`
     - `useExplorerDir`
     - `useExplorerFileTarget`
     - `useExplorerFolderTarget`
     - `useExplorerLocation`
     - `useHomeDir`
+    - `useLocationNavigator`
+    - `useOpenInFiles`
 - Core:
   - Uses:
     - `fields/text/config.textField`
