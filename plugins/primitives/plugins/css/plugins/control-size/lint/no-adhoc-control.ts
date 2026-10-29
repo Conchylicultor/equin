@@ -53,7 +53,7 @@ const HOST_TAGS = new Set(["button", "a"]);
 
 export default function buildRule({
   collectTokens,
-  baseClass,
+  ownClass,
   CLASS_ATTRS,
 }: LintToolkit) {
   return createRule({
@@ -116,22 +116,21 @@ export default function buildRule({
           // control). Require an intrinsic host tag in {button, a}.
           if (!HOST_TAGS.has(tag.name)) return;
 
-          // Aggregate every class token of this attribute into one Set, stripping
-          // variant prefixes so `hover:rounded-full` etc. count as their base.
-          const tokens = new Set<string>();
-          collectTokens(context.sourceCode, node.value, tokens);
+          // Aggregate every class token of this attribute, keeping only the
+          // utilities on the element's own box: `hover:rounded-full` counts as
+          // `rounded-full`, but `after:h-0.5 after:rounded-full` (an underline
+          // drawn on ::after) is the pseudo-element's shape, not the button's.
+          const raw = new Set<string>();
+          collectTokens(context.sourceCode, node.value, raw);
+          const own = [...raw].flatMap((t) => ownClass(t) ?? []);
 
-          const hasHeight = [...tokens].some((t) => {
-            const c = baseClass(t);
-            return FIXED_HEIGHT.test(c) || FIXED_SIZE.test(c);
-          });
-          const hasPadX = [...tokens].some((t) => {
-            const c = baseClass(t);
-            return PX.test(c) || PL.test(c) || PR.test(c);
-          });
-          const hasRounded = [...tokens].some((t) =>
-            ROUNDED.test(baseClass(t)),
+          const hasHeight = own.some(
+            (c) => FIXED_HEIGHT.test(c) || FIXED_SIZE.test(c),
           );
+          const hasPadX = own.some(
+            (c) => PX.test(c) || PL.test(c) || PR.test(c),
+          );
+          const hasRounded = own.some((c) => ROUNDED.test(c));
 
           // Fingerprint: flag only when ALL THREE co-occur.
           if (!hasHeight || !hasPadX || !hasRounded) return;

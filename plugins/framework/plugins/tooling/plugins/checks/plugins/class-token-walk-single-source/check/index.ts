@@ -31,6 +31,7 @@ const WALK_MODULE =
 const BANNED_DECLARATIONS = [
   "function collectTokens",
   "function baseClass",
+  "function ownClass",
   "const CLASS_ATTRS",
   "const CLASS_BUILDERS",
 ];
@@ -38,7 +39,7 @@ const BANNED_DECLARATIONS = [
 const check: Check = {
   id: "class-token-walk-single-source",
   description:
-    "no lint rule file declares its own class-token walk — collectTokens / baseClass / CLASS_ATTRS / CLASS_BUILDERS come from the injected shared toolkit",
+    "no lint rule file declares its own class-token walk — collectTokens / baseClass / ownClass / CLASS_ATTRS / CLASS_BUILDERS come from the injected shared toolkit",
 
   async run() {
     const offenders: string[] = [];

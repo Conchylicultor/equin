@@ -34,7 +34,7 @@ const TOOLBAR_PAD = "pr-floating-bar";
 
 export default function buildRule({
   collectTokens,
-  baseClass,
+  ownClass,
   CLASS_ATTRS,
   CLASS_BUILDERS,
 }: LintToolkit) {
@@ -81,7 +81,7 @@ export default function buildRule({
     defaultOptions: [],
     create(context) {
       function check(node: TSESTree.Node, tokens: Set<string>) {
-        const bases = new Set([...tokens].map(baseClass));
+        const bases = new Set([...tokens].flatMap((t) => ownClass(t) ?? []));
         if (bases.has(BORDER_BOTTOM) && bases.has(TOOLBAR_PAD)) {
           context.report({ node, messageId: "adhocToolbarBar" });
         }

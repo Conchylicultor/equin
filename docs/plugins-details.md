@@ -27900,9 +27900,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `lintRuleCreator`
               - `lintRuleIds`
               - `loadLintContributions`
+              - `ownClass`
               - `typeAwareLintGroups`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
+            - Uses tokens:
+              - `ui/tokens/shape --radius`
+              - `ui/tokens/shape --spacing`
             - Imported by: `framework/tooling/codegen`
           - Exemptions:
             - Exempts itself from:

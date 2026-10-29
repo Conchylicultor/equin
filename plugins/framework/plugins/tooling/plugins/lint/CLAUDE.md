@@ -105,8 +105,18 @@ so an imported one would be stale (`cli:codegen-manifests-not-frozen`). A file
 a rule reads is listed in `LINT_DATA_FILES`, which the type-check cache treats
 as a global trigger.
 
+**Which box does a token style?** `baseClass(token)` strips every variant —
+right for a rule judging a utility's VALUE wherever it lands (an
+`after:rounded-[3px]` is still an ad-hoc radius). A rule fingerprinting the
+ELEMENT'S OWN shape (height + padding + radius = a hand-rolled button) reads
+`ownClass(token)` instead: the utility when every variant only conditions the
+element (`hover:`, `md:`, `data-[…]:`, `[&:hover]:`), `undefined` when one moves
+it to a pseudo-element or descendant (`after:`, `before:`, `placeholder:`, `*:`,
+`[&>svg]:`, `[&_svg]:`, `[&::after]:`) — so an underline tab's `after:h-0.5
+after:rounded-full` is not the button's height and radius.
+
 `class-token-walk-single-source` fails if a rule file declares `collectTokens` /
-`baseClass` / `CLASS_ATTRS` / `CLASS_BUILDERS` of its own. It replaced a check
+`baseClass` / `ownClass` / `CLASS_ATTRS` / `CLASS_BUILDERS` of its own. It replaced a check
 that held six hand-copied walks byte-identical: eleven *other* rules carried an
 older copy outside its list and had silently drifted, so the copies could not
 see a class string parked in a `const` or a style map.
@@ -179,9 +189,12 @@ its disable does not cover. Parameters and imports have no in-file value.
     - `lintRuleCreator`
     - `lintRuleIds`
     - `loadLintContributions`
+    - `ownClass`
     - `typeAwareLintGroups`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
+  - Uses tokens:
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/shape --spacing`
   - Imported by: `framework/tooling/codegen`
 - Exemptions:
   - Exempts itself from:

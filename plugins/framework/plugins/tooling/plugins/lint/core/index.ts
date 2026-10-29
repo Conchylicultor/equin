@@ -30,6 +30,7 @@ export {
   collectTokens,
   collectTokenNodes,
   baseClass,
+  ownClass,
   CLASS_ATTRS,
   CLASS_BUILDERS,
 } from "./class-token-walk";

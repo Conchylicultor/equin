@@ -43,7 +43,7 @@ const CENTER = new Set(["items-center", "region-line"]);
 
 export default function buildRule({
   collectTokens,
-  baseClass,
+  ownClass,
   CLASS_ATTRS,
   CLASS_BUILDERS,
 }: LintToolkit) {
@@ -88,7 +88,7 @@ export default function buildRule({
     defaultOptions: [],
     create(context) {
       function check(node: TSESTree.Node, tokens: Set<string>) {
-        const bases = new Set([...tokens].map(baseClass));
+        const bases = new Set([...tokens].flatMap((t) => ownClass(t) ?? []));
         let hasChromeHeight = false;
         let hasCenter = false;
         for (const b of bases) {

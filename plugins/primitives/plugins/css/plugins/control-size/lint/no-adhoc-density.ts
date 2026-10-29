@@ -67,7 +67,7 @@ const CONTROL_ICON_SCALE = /^control-icon-(xs|sm|md|lg)$/;
 
 export default function buildRule({
   collectTokens,
-  baseClass,
+  ownClass,
   CLASS_ATTRS,
 }: LintToolkit) {
   return createRule({
@@ -111,12 +111,13 @@ export default function buildRule({
             const tokens = new Set<string>();
             collectTokens(context.sourceCode, node.value, tokens);
             const hasDensityClass = [...tokens].some((t) => {
-              const c = baseClass(t);
+              const c = ownClass(t);
               return (
-                FIXED_HEIGHT.test(c) ||
+                c !== undefined &&
+                (FIXED_HEIGHT.test(c) ||
                 FIXED_SIZE.test(c) ||
                 CONTROL_SCALE.test(c) ||
-                CONTROL_ICON_SCALE.test(c)
+                  CONTROL_ICON_SCALE.test(c))
               );
             });
             if (hasDensityClass)

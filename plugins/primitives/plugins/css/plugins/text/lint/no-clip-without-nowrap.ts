@@ -67,7 +67,7 @@ const WRAP_OK = new Set([
   "items-stretch",
 ]);
 
-export default function buildRule({ collectTokens, baseClass }: LintToolkit) {
+export default function buildRule({ collectTokens, ownClass }: LintToolkit) {
   return createRule({
     name: "no-clip-without-nowrap",
     meta: {
@@ -109,7 +109,10 @@ export default function buildRule({ collectTokens, baseClass }: LintToolkit) {
           const tokens = new Set<string>();
           const raw = new Set<string>();
           collectTokens(context.sourceCode, node.value, raw);
-          for (const t of raw) tokens.add(baseClass(t));
+          for (const t of raw) {
+            const c = ownClass(t);
+            if (c !== undefined) tokens.add(c);
+          }
 
           let hasFlex = false;
           let hasClip = false;

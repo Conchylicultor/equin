@@ -23,7 +23,7 @@ const SHADOW = /^shadow(-(2xs|xs|sm|md|lg|xl|2xl|\[.*\]))?$/;
 
 export default function buildRule({
   collectTokens,
-  baseClass,
+  ownClass,
   CLASS_ATTRS,
 }: LintToolkit) {
   return createRule({
@@ -61,7 +61,7 @@ export default function buildRule({
           const tokens = new Set<string>();
           collectTokens(context.sourceCode, node.value, tokens);
           for (const t of tokens) {
-            if (SHADOW.test(baseClass(t))) {
+            if (SHADOW.test(ownClass(t) ?? "")) {
               context.report({
                 node,
                 messageId: "buttonShadow",

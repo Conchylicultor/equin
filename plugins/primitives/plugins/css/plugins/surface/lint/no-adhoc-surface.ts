@@ -84,7 +84,7 @@ const P_CARD = "p-card";
 
 export default function buildRule({
   collectTokens,
-  baseClass,
+  ownClass,
   CLASS_ATTRS,
 }: LintToolkit) {
   return createRule({
@@ -131,7 +131,7 @@ export default function buildRule({
           // primitive definition files are exempted by a file-glob in lint/index.ts.
           const raw = new Set<string>();
           collectTokens(context.sourceCode, node.value, raw);
-          const tokens = new Set([...raw].map(baseClass));
+          const tokens = new Set([...raw].flatMap((t) => ownClass(t) ?? []));
 
           let hasRounded = false;
           let hasBorder = false;

@@ -81,6 +81,72 @@ export function baseClass(token: string): string {
   return bare.startsWith("-") ? bare.slice(1) : bare;
 }
 
+/**
+ * Named variants that move a utility off the element onto another box: a
+ * pseudo-element (`after:h-0.5` sizes the `::after`, not the element) or the
+ * element's children (`*:`, `**:`).
+ */
+const RETARGETING_VARIANTS = new Set([
+  "before",
+  "after",
+  "placeholder",
+  "file",
+  "marker",
+  "selection",
+  "first-line",
+  "first-letter",
+  "backdrop",
+  "details-content",
+  "*",
+  "**",
+]);
+
+/** A token's variant prefixes, split on the `:`s outside `[…]` / `(…)`. */
+function variantsOf(token: string): string[] {
+  const variants: string[] = [];
+  let depth = 0;
+  let start = 0;
+  for (let i = 0; i < token.length; i++) {
+    const ch = token[i];
+    if (ch === "[" || ch === "(") depth++;
+    else if (ch === "]" || ch === ")") depth--;
+    else if (ch === ":" && depth === 0) {
+      variants.push(token.slice(start, i));
+      start = i + 1;
+    }
+  }
+  return variants;
+}
+
+/**
+ * Does this variant land its utility on another box? A named pseudo-element /
+ * child variant, or an arbitrary `[…]` selector that, after its `&`, descends
+ * (`>`, `+`, `~`, `_` / space) or names a `::` pseudo-element. A selector
+ * BEFORE the `&` (`[.dark_&]`, `[[data-x]+&]`) only conditions the element.
+ */
+function retargets(variant: string): boolean {
+  if (RETARGETING_VARIANTS.has(variant)) return true;
+  if (!variant.startsWith("[") || !variant.endsWith("]")) return false;
+  const amp = variant.indexOf("&");
+  if (amp === -1) return false;
+  return /[>+~_\s]|::/.test(variant.slice(amp + 1, -1));
+}
+
+/**
+ * The utility a token applies to the ELEMENT ITSELF, or `undefined` when a
+ * variant retargets it to a pseudo-element or a descendant. `hover:rounded-md`
+ * and `md:h-7` are the element's own (a condition, same box); `after:h-0.5`,
+ * `*:px-2` and `[&>svg]:size-4` are not.
+ *
+ * Use this — not {@link baseClass} — when a rule fingerprints the element's
+ * own shape (height + padding + radius = a hand-rolled button); keep
+ * `baseClass` when a rule judges the utility's VALUE wherever it lands (an
+ * `after:rounded-[3px]` is still an ad-hoc radius).
+ */
+export function ownClass(token: string): string | undefined {
+  return variantsOf(token).some(retargets) ? undefined : baseClass(token);
+}
+
 type FunctionNode =
   | TSESTree.FunctionDeclaration
   | TSESTree.FunctionExpression
@@ -313,6 +379,7 @@ export interface LintToolkit {
   collectTokens: typeof collectTokens;
   collectTokenNodes: typeof collectTokenNodes;
   baseClass: typeof baseClass;
+  ownClass: typeof ownClass;
   CLASS_ATTRS: typeof CLASS_ATTRS;
   CLASS_BUILDERS: typeof CLASS_BUILDERS;
   /**
@@ -331,6 +398,7 @@ export function createLintToolkit(
     collectTokens,
     collectTokenNodes,
     baseClass,
+    ownClass,
     CLASS_ATTRS,
     CLASS_BUILDERS,
     declaredUtilities,

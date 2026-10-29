@@ -47,7 +47,7 @@ const createRule = lintRuleCreator(import.meta.url);
 
 export default function buildRule({
   collectTokens,
-  baseClass,
+  ownClass,
   CLASS_ATTRS,
   CLASS_BUILDERS,
 }: LintToolkit) {
@@ -75,7 +75,7 @@ export default function buildRule({
     create(context) {
       /** Report `node` when the collected tokens spell the viewport-fill recipe. */
       function checkTokens(node: TSESTree.Node, raw: Set<string>): void {
-        const tokens = new Set([...raw].map(baseClass));
+        const tokens = new Set([...raw].flatMap((t) => ownClass(t) ?? []));
         if (tokens.has("fixed") && tokens.has("inset-0")) {
           context.report({ node, messageId: "adhocViewportOverlay" });
         }
