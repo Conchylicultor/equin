@@ -625,6 +625,7 @@ export const browserHost = {
     "tasks.attempt-view",
     "tasks.auto-start",
     "tasks.auto-start.launch-option",
+    "tasks.autonomous-run",
     "tasks.launch-options",
     "tasks.orchestration.watch",
     "tasks.task-attachments",

@@ -1,4 +1,4 @@
-// @hash 27d233df3d36
+// @hash b0a777b9de0c
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -9,6 +9,7 @@
   "items": [
     "conversations.workspace.launch-option:workspace",
     "tasks.auto-start.launch-option:auto-start",
+    "tasks.autonomous-run:autonomous",
     "tasks.task-effort:effort",
     "tasks.task-preprompt:preprompt"
   ]

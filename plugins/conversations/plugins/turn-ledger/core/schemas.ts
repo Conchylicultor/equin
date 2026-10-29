@@ -12,7 +12,9 @@ import { z } from "zod";
  *   agent (tasks/orchestration/watch): the sender hands the raw body and the
  *   ledger wraps what is typed in the `<equin-event>` envelope
  *   (`wrapEventTurn`, core/event-envelope.ts), so the transcript draws it as an
- *   event, never as something the user wrote.
+ *   event, never as something the user wrote;
+ * - `compact` — the `/compact` an agent asked for itself
+ *   (conversations/self-compact), typed as is once its turn ended.
  *
  * Only `turn` rows emit `conversation.userTurnSent` (a launch's prompt is
  * already announced by `conversationCreated`).
@@ -23,6 +25,7 @@ export const TurnKindSchema = z.enum([
   "push-and-exit",
   "launch",
   "event",
+  "compact",
 ]);
 export type TurnKind = z.infer<typeof TurnKindSchema>;
 

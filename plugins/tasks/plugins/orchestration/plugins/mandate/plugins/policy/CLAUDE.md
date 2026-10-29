@@ -24,8 +24,9 @@ by `MandatePolicySchema`), and the mandate's server half resolves it through
 - Cross-plugin:
   - Imported by:
     - `conversations/conversation-view/push-and-exit/capabilities`
+    - `conversations/self-compact/capability`
     - `tasks/mandate-presets`
-    - `tasks/orchestration/watch`
+    - `tasks/orchestration/watch/capabilities`
     - `tasks/outcome-report/capability`
     - `tasks/tasks-core`
 - Core:

@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-conversations-self-compact",
+  "description": "An agent compacting its own context: the context.compact mandate capability and the compact_context MCP tool — the request waits until the agent's turn ends, then the agent is sent `/compact <what to keep>` and, after it, what to continue with.",
+  "private": true,
+  "version": "0.0.1"
+}

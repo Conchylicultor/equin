@@ -137,6 +137,7 @@ and without it no tool set can be computed.
     - `apps/places/ask`
     - `apps/sonata/transcription`
     - `conversations/conversation-view/push-and-exit`
+    - `conversations/self-compact`
     - `conversations/workspace/scratch`
     - `database/query`
     - `debug/profiling/boot-bench`

@@ -102,12 +102,14 @@ const WAITING_FOR_START = "Waiting for the agent to start…";
  * echo is waiting for it — the launch message is already `typing` as the agent
  * comes up, which is not "Sending…" to the user. A `typed` turn while a turn
  * runs is queued instead (see `isQueued`). An `event` turn says it is one: the
- * app sent it, not the user.
+ * app sent it, not the user — and so does the compaction an agent asked for.
  */
 function echoCaption(turn: PendingTurn, agentStarting: boolean): string {
   const where =
     agentStarting || turn.state === "held" ? WAITING_FOR_START : "Sending…";
-  return turn.kind === "event" ? `Event · ${where}` : where;
+  if (turn.kind === "event") return `Event · ${where}`;
+  if (turn.kind === "compact") return `Compaction · ${where}`;
+  return where;
 }
 
 /**

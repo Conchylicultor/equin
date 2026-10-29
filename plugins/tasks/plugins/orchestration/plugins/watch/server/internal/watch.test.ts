@@ -20,7 +20,12 @@ import { FALLBACK_MODEL } from "@plugins/conversations/plugins/model-provider/co
 import type { TurnId } from "@plugins/conversations/plugins/turn-ledger/core";
 import type { WatchEvent, WatchId } from "../../core";
 import { deliverOn, turnIdFor, type DeliverPorts } from "./deliver";
-import { endWatch, nearestLiveWatch, watchTask } from "./queries";
+import {
+  endWatch,
+  nearestLiveWatch,
+  takeOverTreeWatch,
+  watchTask,
+} from "./queries";
 import { evaluateQuiet } from "./quiet";
 import { routeEvents } from "./route";
 import { _taskWatches, _watchInbox } from "./tables";
@@ -377,5 +382,47 @@ describe("delivery", () => {
       ["asking", "reported"],
     ]);
     expect(got.error).toContain('no WatchHandler "nobody"');
+  });
+});
+
+describe("tree watch", () => {
+  test("the latest conversation on the root takes the agent watch over, leaving a code watch alone", async () => {
+    const got = await worktreeDbScenario(async (tx) => {
+      const root = await task(tx, null);
+      const first = await conversation(tx, root, "waiting");
+      const second = await conversation(tx, root, "starting");
+      const code = await watchTask(
+        root,
+        { kind: "code", handler: "test.handler", key: "k" },
+        tx,
+      );
+      await takeOverTreeWatch(root, first, tx);
+      await takeOverTreeWatch(root, first, tx);
+      const afterFirst = await tx
+        .select()
+        .from(_taskWatches)
+        .where(eq(_taskWatches.taskId, root));
+      await takeOverTreeWatch(root, second, tx);
+      const afterSecond = await tx
+        .select()
+        .from(_taskWatches)
+        .where(eq(_taskWatches.taskId, root));
+      return { code: code.id, afterFirst, afterSecond };
+    });
+    const agentWatches = (rows: typeof got.afterFirst) =>
+      rows.filter((r) => r.id !== got.code);
+    // Idempotent: one agent watch, held by the first conversation.
+    expect(
+      agentWatches(got.afterFirst).map((r) => r.watcherConversationId),
+    ).toEqual([expect.any(String)]);
+    // Handed over (same watch, new owner), not a second watch.
+    const [before] = agentWatches(got.afterFirst);
+    const [after] = agentWatches(got.afterSecond);
+    expect(agentWatches(got.afterSecond)).toHaveLength(1);
+    expect(after!.id).toBe(before!.id);
+    expect(after!.watcherConversationId).not.toBe(
+      before!.watcherConversationId,
+    );
+    expect(got.afterSecond.some((r) => r.id === got.code)).toBe(true);
   });
 });

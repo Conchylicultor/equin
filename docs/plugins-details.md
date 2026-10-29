@@ -14133,8 +14133,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `SYSTEM_CATEGORY_ID`
       - `withdrawConversationTurn`
   - Cross-plugin:
-    - Imported by: 56 plugins — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
-      - `conversations` ×39
+    - Imported by: 57 plugins — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
+      - `conversations` ×40
       - `apps` ×5
       - `review` ×3
       - `tasks` ×3
@@ -19367,6 +19367,36 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/font-family --font-mono`
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
+    - **`self-compact`** — An agent compacting its own context: the compact_context MCP tool (granted by context.compact) records the request in conversation_compactions; when the agent stops being busy, self-compact.send types `/compact <keep>` then the continuation as an event turn. A pending request waives the stop gate; the capability's describe joins the Mandate section.
+      - Server:
+        - Contributes:
+          - `mandateCapability` "context.compact"
+          - `conversations.stop-waiver` "self-compact"
+          - `trigger` "self-compact.send"
+        - Uses:
+          - `conversations.submitTurn`
+          - `conversations/stop-gate.StopWaiver`
+          - `database.db`
+          - `database.DbExecutor`
+          - `infra/events.Trigger`
+          - `infra/jobs.defineJob`
+          - `infra/mcp.Mcp`
+          - `tasks/orchestration/mandate.granted`
+          - `tasks/orchestration/mandate.Mandate`
+          - `tasks/tasks-core._conversations`
+          - `tasks/tasks-core.conversationStatusChanged`
+          - `tasks/tasks-core.getConversation`
+        - DB schema: `plugins/conversations/plugins/self-compact/server/internal/tables.ts`
+        - Register:
+          - `defineJob('self-compact.send')`
+          - `mcpTool('compact_context')`
+      - Plugins:
+        - **`capability`** — The context.compact mandate capability as plain data. A leaf, so a mandate author (mandate-presets, reached from conversations) can grant it without a cycle through self-compact, which imports conversations.
+          - Core:
+            - Uses: `tasks/orchestration/mandate/policy.defineCapability`
+            - Exports (values): `contextCompact`
+          - Cross-plugin:
+            - Imported by: `tasks/mandate-presets`
     - **`session-chain`** — Registers the session-chain row id kind (sess) with the web id registry — the server barrel registers the same kind. Append-only mapping of a conversation to the ordered Claude session ids it has run under. Knows nothing about transcript files.
       - Web:
         - Contributes: `IdKinds.Kind` "sess"
@@ -19464,6 +19494,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by:
           - `conversations/runtime-sdk`
+          - `conversations/self-compact`
           - `tasks/orchestration/watch`
       - Exemptions:
         - Exempts itself from: `endpoints/no-raw-web-fetch` — `shared/client.ts` (sanctioned)
@@ -20056,10 +20087,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `quotedRelationsIn`
       - `readTag`
   - Cross-plugin:
-    - Imported by: 129 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+    - Imported by: 130 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
       - `apps` ×36
       - `page` ×15
-      - `conversations` ×13
+      - `conversations` ×14
       - `infra` ×13
       - `tasks` ×12
       - `active-data` ×8
@@ -29987,10 +30018,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TriggerRowSchema`
           - `TriggersPayloadSchema`
       - Cross-plugin:
-        - Imported by: 27 plugins — full list in [`plugins/infra/plugins/events/REFERENCE.md`](../plugins/infra/plugins/events/REFERENCE.md)
+        - Imported by: 28 plugins — full list in [`plugins/infra/plugins/events/REFERENCE.md`](../plugins/infra/plugins/events/REFERENCE.md)
           - `tasks` ×7
           - `apps` ×6
-          - `conversations` ×5
+          - `conversations` ×6
           - `infra` ×4
           - `page` ×4
           - `wish`
@@ -30992,10 +31023,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `taskFor`
           - `TOTAL_JOB_SLOTS`
       - Cross-plugin:
-        - Imported by: 59 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
+        - Imported by: 60 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
           - `apps` ×18
           - `infra` ×12
-          - `conversations` ×7
+          - `conversations` ×8
           - `debug` ×7
           - `tasks` ×4
           - `database` ×3
@@ -31475,6 +31506,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/places/ask`
           - `apps/sonata/transcription`
           - `conversations/conversation-view/push-and-exit`
+          - `conversations/self-compact`
           - `conversations/workspace/scratch`
           - `database/query`
           - `debug/profiling/boot-bench`
@@ -41046,14 +41078,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 444 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 445 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×110
               - `apps` ×102
               - `conversations` ×53
               - `page` ×26
               - `debug` ×24
               - `ui` ×21
-              - `tasks` ×17
+              - `tasks` ×18
               - `fields` ×12
               - `plugin-meta` ×10
               - `apps-core` ×7
@@ -46454,6 +46486,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `conversations/workspace/launch-option`
                   - `primitives/text-editor/composer`
                   - `tasks/auto-start/launch-option`
+                  - `tasks/autonomous-run`
                   - `tasks/launch-options`
                   - `tasks/task-draft-form`
                   - `tasks/task-effort`
@@ -49779,6 +49812,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `resource.declare` "tasks.repo-info"
       - `mandateCapability` "tasks.file"
       - `treeDigestAnnotation` "tasks"
+      - `conversations.compaction-context` "task-tree"
       - `watchSource` "tasks.created"
       - `watchSource` "tasks.settled"
       - `watchSource` "tasks.started"
@@ -50365,12 +50399,32 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/sidequest-autopilot`
           - `tasks/task-triage`
           - `upstream`
+    - **`autonomous-run`** — The Autonomous launch option on every new-task composer (Home prompt, Make a wish, menu bar): Interactive (unset — the pill rests as its icon) or Autonomous. Draft-only — it decides how a task's tree runs when it is filed. The Autonomous launch option's server half: a task filed with it states the autonomous mandate (autonomousMandate()) as its own, so its subtree runs as an autonomous run. Not inherited: the tasks its agents file are covered by the mandate already (nearest wins).
+      - Web:
+        - Contributes: `TaskLaunch.Option` "Autonomous" → `AutonomousLaunchControl`
+        - Uses:
+          - `primitives/css/ui-kit.Select`
+          - `primitives/css/ui-kit.SelectContent`
+          - `primitives/css/ui-kit.SelectItem`
+          - `primitives/css/ui-kit.SelectTrigger`
+          - `primitives/css/ui-kit.SelectValue`
+          - `primitives/text-editor/composer/picker-pill.PickerPill`
+          - `tasks/launch-options.TaskLaunch`
+      - Server:
+        - Contributes: `taskLaunchServer` "autonomous"
+        - Uses:
+          - `tasks/launch-options.TaskLaunchServer`
+          - `tasks/tasks-core.setMandate`
+      - Core:
+        - Uses: `tasks/launch-options.defineLaunchOption`
+        - Exports (values): `autonomousLaunchOption`
     - **`launch-options`** — Registry of task launch options — the controls that configure HOW an agent launches. Owns the tasks.launch-option slot rendered by BOTH the task detail's Prompt card and the task-draft popover, so an option is one plugin folder and appears on both surfaces. Server half of the task launch-option registry: each option contributes how its value is written onto a task — applied from a draft, and whether it is inherited by a spawned subtask — so the chain endpoint and the task-filing MCP tools stay generic.
       - Web:
         - Slots: `TaskLaunch.Option`
         - Slot contributors:
           - `TaskLaunch.Option` ← `conversations.workspace.launch-option`
           - `TaskLaunch.Option` ← `tasks.auto-start.launch-option`
+          - `TaskLaunch.Option` ← `tasks.autonomous-run`
           - `TaskLaunch.Option` ← `tasks.task-effort`
           - `TaskLaunch.Option` ← `tasks.task-preprompt`
         - Uses:
@@ -50417,6 +50471,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/launch`
           - `tasks`
           - `tasks/auto-start/launch-option`
+          - `tasks/autonomous-run`
           - `tasks/menu-bar-task`
           - `tasks/task-description`
           - `tasks/task-draft-form`
@@ -50431,10 +50486,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/conversation-view/push-and-exit/capabilities.exitClean`
           - `conversations/conversation-view/push-and-exit/capabilities.flagRaise`
           - `conversations/conversation-view/push-and-exit/capabilities.pushPolicy`
+          - `conversations/self-compact/capability.contextCompact`
           - `tasks/orchestration/mandate/policy.mandatePolicy`
           - `tasks/orchestration/mandate/policy.MandatePolicy`
+          - `tasks/orchestration/watch/capabilities.watchChildren`
+          - `tasks/orchestration/watch/capabilities.watchTree`
+          - `tasks/outcome-report/capability.reportRequired`
           - `tasks/tasks-core.tasksFile`
-        - Exports (values): `interactiveMandate`
+        - Exports (values):
+          - `autonomousMandate`
+          - `interactiveMandate`
     - **`menu-bar-task`** — The menu-bar panel's task field (MenuBar.Section 'task'): an autogrowing textarea (up to six lines, then it scrolls) — Enter files the text as one top-level task through the task-draft form's submitChain (POST /api/tasks/chain) with every launch option at its default, so auto-start behaves as in Improve; Shift+Enter adds a line, Escape clears. Its text is the panel's input (usePanelInput): the app grid filters by it as it is typed, and it is kept as a draft across reloads. The field confirms inline ('Filed — …') or shows why the submit failed.
       - Web:
         - Contributes: `MenuBar.Section` "Task" → `MenuBarTaskField`
@@ -50500,14 +50561,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `conversations/conversation-view/push-and-exit`
+              - `conversations/self-compact`
               - `tasks/orchestration/tree-digest`
           - Plugins:
             - **`policy`** — The mandate's value types, as a leaf: defineCapability (a capability's id, schema and label, and grant(value)), the branded MandatePolicy built only by mandatePolicy(grants) — a capability granted twice throws — and MandatePolicySchema, the tasks.mandate column decoder. Imports nothing from tasks, so tasks-core can store a policy and the mandate server can read tasks-core.
               - Cross-plugin:
                 - Imported by:
                   - `conversations/conversation-view/push-and-exit/capabilities`
+                  - `conversations/self-compact/capability`
                   - `tasks/mandate-presets`
-                  - `tasks/orchestration/watch`
+                  - `tasks/orchestration/watch/capabilities`
                   - `tasks/outcome-report/capability`
                   - `tasks/tasks-core`
               - Core:
@@ -50552,6 +50615,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ids.kind` "wevt"
               - `conversations.stop-waiver` "watch"
               - `mandateCapability` "watch.children"
+              - `mandateCapability` "watch.tree"
+              - `trigger` "watch.on-conversation-created"
               - `trigger` "watch.on-conversation-status"
               - `trigger` "watch.on-task-status"
             - Uses:
@@ -50574,6 +50639,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `endWatch`
               - `retargetWatch`
+              - `takeOverTreeWatch`
               - `watchesOf`
               - `WatchHandler`
               - `watchTask`
@@ -50581,7 +50647,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `ids.defineIdKind`
               - `ids.IdOf`
-              - `tasks/orchestration/mandate/policy.defineCapability`
             - Exports (types):
               - `Watcher`
               - `WatchEvent`
@@ -50589,7 +50654,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `WatchId`
             - Exports (values):
               - `QUIET_EVENT_KIND`
-              - `watchChildren`
               - `WatcherSchema`
               - `watchEventIdKind`
               - `watchIdKind`
@@ -50607,6 +50671,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `defineJob('watch.deliver')`
               - `defineJob('watch.on-task-status')`
               - `defineJob('watch.on-conversation-status')`
+              - `defineJob('watch.on-conversation-created')`
+          - Plugins:
+            - **`capabilities`** — The watch.children and watch.tree mandate capabilities as plain data. A leaf, so a mandate author (mandate-presets, reached from conversations) can grant them without a cycle through watch, which imports conversations.
+              - Core:
+                - Uses: `tasks/orchestration/mandate/policy.defineCapability`
+                - Exports (values):
+                  - `watchChildren`
+                  - `watchTree`
+              - Cross-plugin:
+                - Imported by: `tasks/mandate-presets`
     - **`outcome-report`** — The outcome report an automated task's agent submitted: a card at the end of the transcript of the conversation that wrote it (scrolling with it, not pinned over it) (markdown body, pushed / branch-waiting / no-changes standing, and its question as one-click answers sent as the next turn), and OutcomeReportDetail — the same report read-only, shown in an expanded row of an automation's History (Automations.TaskDetail). Outcome reports: owns tasks_ext_outcome_report (one report per task — markdown body, the attempt's git-measured standing, an optional question with one-click answers), serves the outcome-reports lookup collection, and declares the outcomeReport.submitted event a submit emits. The submit_outcome_report MCP tool that writes it (visible only to conversations whose mandate grants report.required), its stop gate and its watch source are the machine half.
       - Web:
         - Contributes:
@@ -50682,6 +50756,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Core:
             - Uses: `tasks/orchestration/mandate/policy.defineCapability`
             - Exports (values): `reportRequired`
+          - Cross-plugin:
+            - Imported by: `tasks/mandate-presets`
     - **`reports-investigation`** — The Report investigations automation in the Automations pane: registers its config (trigger, push policy, model, prompt, scope) and contributes its Which reports section — severity, recurrence threshold, kind by kind with the uninvestigated reports that match right now. Files reports' investigation tasks: owns the Reports task category, registers the task-creating handler into reports' investigation sink (Investigate), and declares the Report investigations automation (off by default) — woken when a report nobody investigated is recorded (once the burst settles) or on a schedule, it files ONE task for the batch of in-scope reports (severity, recurrence, kind), links them to it, and launches an agent to find and fix the root cause.
       - Web:
         - Contributes:
@@ -52034,9 +52110,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TrackFilingGrantSchema`
           - `TRAILER_LOG_FORMAT`
       - Cross-plugin:
-        - Imported by: 73 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
-          - `conversations` ×27
-          - `tasks` ×22
+        - Imported by: 75 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+          - `conversations` ×28
+          - `tasks` ×23
           - `active-data` ×5
           - `debug` ×4
           - `page` ×3

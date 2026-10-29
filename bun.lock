@@ -2291,6 +2291,14 @@
         "@anthropic-ai/claude-agent-sdk": "^0.3.310",
       },
     },
+    "plugins/conversations/plugins/self-compact": {
+      "name": "@equin/plugin-conversations-self-compact",
+      "version": "0.0.1",
+    },
+    "plugins/conversations/plugins/self-compact/plugins/capability": {
+      "name": "@equin/plugin-conversations-self-compact-capability",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/session-chain": {
       "name": "@equin/plugin-conversations-session-chain",
       "version": "0.0.1",
@@ -6412,6 +6420,10 @@
       "name": "@equin/plugin-tasks-automations",
       "version": "0.0.1",
     },
+    "plugins/tasks/plugins/autonomous-run": {
+      "name": "@equin/plugin-tasks-autonomous-run",
+      "version": "0.0.1",
+    },
     "plugins/tasks/plugins/launch-options": {
       "name": "@equin/plugin-tasks-launch-options",
       "version": "0.0.1",
@@ -6442,6 +6454,10 @@
     },
     "plugins/tasks/plugins/orchestration/plugins/watch": {
       "name": "@equin/plugin-tasks-orchestration-watch",
+      "version": "0.0.1",
+    },
+    "plugins/tasks/plugins/orchestration/plugins/watch/plugins/capabilities": {
+      "name": "@equin/plugin-tasks-orchestration-watch-capabilities",
       "version": "0.0.1",
     },
     "plugins/tasks/plugins/outcome-report": {
@@ -8088,6 +8104,10 @@
     "@equin/plugin-conversations-runtime-catalog": ["@equin/plugin-conversations-runtime-catalog@workspace:plugins/conversations/plugins/runtime-catalog"],
 
     "@equin/plugin-conversations-runtime-sdk": ["@equin/plugin-conversations-runtime-sdk@workspace:plugins/conversations/plugins/runtime-sdk"],
+
+    "@equin/plugin-conversations-self-compact": ["@equin/plugin-conversations-self-compact@workspace:plugins/conversations/plugins/self-compact"],
+
+    "@equin/plugin-conversations-self-compact-capability": ["@equin/plugin-conversations-self-compact-capability@workspace:plugins/conversations/plugins/self-compact/plugins/capability"],
 
     "@equin/plugin-conversations-session-chain": ["@equin/plugin-conversations-session-chain@workspace:plugins/conversations/plugins/session-chain"],
 
@@ -10015,6 +10035,8 @@
 
     "@equin/plugin-tasks-automations": ["@equin/plugin-tasks-automations@workspace:plugins/tasks/plugins/automations"],
 
+    "@equin/plugin-tasks-autonomous-run": ["@equin/plugin-tasks-autonomous-run@workspace:plugins/tasks/plugins/autonomous-run"],
+
     "@equin/plugin-tasks-launch-options": ["@equin/plugin-tasks-launch-options@workspace:plugins/tasks/plugins/launch-options"],
 
     "@equin/plugin-tasks-mandate-presets": ["@equin/plugin-tasks-mandate-presets@workspace:plugins/tasks/plugins/mandate-presets"],
@@ -10030,6 +10052,8 @@
     "@equin/plugin-tasks-orchestration-tree-digest": ["@equin/plugin-tasks-orchestration-tree-digest@workspace:plugins/tasks/plugins/orchestration/plugins/tree-digest"],
 
     "@equin/plugin-tasks-orchestration-watch": ["@equin/plugin-tasks-orchestration-watch@workspace:plugins/tasks/plugins/orchestration/plugins/watch"],
+
+    "@equin/plugin-tasks-orchestration-watch-capabilities": ["@equin/plugin-tasks-orchestration-watch-capabilities@workspace:plugins/tasks/plugins/orchestration/plugins/watch/plugins/capabilities"],
 
     "@equin/plugin-tasks-outcome-report": ["@equin/plugin-tasks-outcome-report@workspace:plugins/tasks/plugins/outcome-report"],
 

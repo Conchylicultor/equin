@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-conversations-self-compact-capability",
+  "private": true,
+  "version": "0.0.1",
+  "description": "The context.compact mandate capability as plain data. A leaf, so a mandate author (mandate-presets, reached from conversations) can grant it without a cycle through self-compact, which imports conversations."
+}

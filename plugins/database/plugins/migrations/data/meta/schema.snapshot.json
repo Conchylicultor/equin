@@ -1,6 +1,6 @@
 {
-  "id": "a091aac2-c955-46f2-bc28-188916b4e66e",
-  "prevId": "01ac77b3-0ac7-4676-8098-c8f14fb421cb",
+  "id": "45f8cba3-4d04-4d79-a017-a592b04a52c6",
+  "prevId": "a091aac2-c955-46f2-bc28-188916b4e66e",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -7043,6 +7043,70 @@
           ],
           "onDelete": "cascade",
           "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.conversation_compactions": {
+      "name": "conversation_compactions",
+      "schema": "",
+      "columns": {
+        "conversation_id": {
+          "name": "conversation_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "keep": {
+          "name": "keep",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "next": {
+          "name": "next",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "compact_turn_id": {
+          "name": "compact_turn_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "next_turn_id": {
+          "name": "next_turn_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "requested_at": {
+          "name": "requested_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "conversation_compactions_conversation_id_conversations_id_fk": {
+          "name": "conversation_compactions_conversation_id_conversations_id_fk",
+          "tableFrom": "conversation_compactions",
+          "tableTo": "conversations",
+          "columnsFrom": [
+            "conversation_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},

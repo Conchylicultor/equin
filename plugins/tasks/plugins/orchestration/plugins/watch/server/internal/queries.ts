@@ -1,4 +1,13 @@
-import { and, asc, eq, inArray, isNull, sql, type SQL } from "drizzle-orm";
+import {
+  and,
+  asc,
+  eq,
+  inArray,
+  isNotNull,
+  isNull,
+  sql,
+  type SQL,
+} from "drizzle-orm";
 import { z } from "zod";
 import { db, type DbExecutor } from "@plugins/database/server";
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";
@@ -265,6 +274,35 @@ export async function retargetWatch(
     .where(and(eq(_taskWatches.id, watchId), isNull(_taskWatches.endedAt)))
     .returning({ id: _taskWatches.id });
   if (!row) throw new Error(`retargetWatch: no open watch ${watchId}`);
+}
+
+/**
+ * Make `conversationId` the agent watching `taskId`'s whole tree: an open
+ * agent watch already on the task is handed over to it (its undelivered events
+ * go with it), else a new one is made. Idempotent; a code watch on the task is
+ * left alone.
+ */
+export async function takeOverTreeWatch(
+  taskId: string,
+  conversationId: string,
+  exec: DbExecutor = db,
+): Promise<void> {
+  const [current] = await exec
+    .select()
+    .from(_taskWatches)
+    .where(
+      and(
+        eq(_taskWatches.taskId, taskId),
+        isNotNull(_taskWatches.watcherConversationId),
+        isNull(_taskWatches.endedAt),
+      ),
+    )
+    .orderBy(asc(_taskWatches.createdAt), asc(_taskWatches.id))
+    .limit(1);
+  if (current === undefined)
+    await watchTask(taskId, { kind: "conversation", conversationId }, exec);
+  else if (current.watcherConversationId !== conversationId)
+    await retargetWatch(current.id, conversationId, exec);
 }
 
 /** The open (not ended) watches a conversation owns, oldest first. */

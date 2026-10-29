@@ -11,13 +11,22 @@ import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
 import { isAgentBusy } from "@plugins/conversations/core";
 import { submitTurn } from "@plugins/conversations/server";
 import { treeDigest } from "@plugins/tasks/plugins/orchestration/plugins/tree-digest/server";
+import {
+  grantOf,
+  mandateOf,
+} from "@plugins/tasks/plugins/orchestration/plugins/mandate/server";
+import { watchTree } from "@plugins/tasks/plugins/orchestration/plugins/watch/plugins/capabilities/core";
 import { watchIdKind } from "../../core";
 import {
   watchHandlerById,
   watchSourceById,
 } from "../../server/internal/contributions";
 import { deliverOn, type DeliverPorts } from "../../server/internal/deliver";
-import { enqueueOn, liveWatchesOnChain } from "../../server/internal/queries";
+import {
+  enqueueOn,
+  liveWatchesOnChain,
+  takeOverTreeWatch,
+} from "../../server/internal/queries";
 import { evaluateQuiet } from "../../server/internal/quiet";
 import { routeEvents } from "../../server/internal/route";
 import { _taskWatches, _watchInbox } from "../../server/internal/tables";
@@ -186,5 +195,26 @@ export const watchOnConversationStatusJob = defineJob({
         ),
       );
     for (const w of holding) await watchDeliverJob.enqueue({ watchId: w.id });
+  },
+});
+
+export const watchOnConversationCreatedJob = defineJob({
+  name: "watch.on-conversation-created",
+  description:
+    "When an agent starts on the root task of a mandate granting watch.tree, makes it the one watching the whole tree (taking the watch over from an earlier conversation there).",
+  hold: "instant",
+  input: z.object({}),
+  dedup: "none",
+  event: z
+    .object({ conversationId: z.string(), taskId: z.string() })
+    .passthrough(),
+  // Not main-only: it writes the watch row and delivers nothing, and
+  // `takeOverTreeWatch` is idempotent, so a forked DB replaying it is harmless.
+  run: async ({ event }) => {
+    if (!event) return;
+    const mandate = await mandateOf(event.taskId);
+    if (mandate.kind !== "found" || mandate.rootTaskId !== event.taskId) return;
+    if ((await grantOf(watchTree, event.conversationId)) === null) return;
+    await takeOverTreeWatch(event.taskId, event.conversationId);
   },
 });

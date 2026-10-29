@@ -237,8 +237,8 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
     - `SYSTEM_CATEGORY_ID`
     - `withdrawConversationTurn`
 - Cross-plugin:
-  - Imported by: 56 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `conversations` ×39
+  - Imported by: 57 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×40
     - `apps` ×5
     - `review` ×3
     - `tasks` ×3
@@ -381,6 +381,9 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
   - **`recover`** — Sidebar entry + pane listing recently-closed conversations with restore buttons.
   - **`runtime-catalog`**
   - **`runtime-sdk`** — The health report's Claude Code row: Claude Code itself (critical while missing or signed out, with the install / sign-in commands and Check again), attention when it differs in major.minor from the…
+  - **`self-compact`** — An agent compacting its own context: the compact_context MCP tool (granted by context.compact) records the request in conversation_compactions; when the agent stops being busy, self-compact.send…
+    - Plugins:
+      - **`capability`** — The context.compact mandate capability as plain data. A leaf, so a mandate author (mandate-presets, reached from conversations) can grant it without a cycle through self-compact, which imports…
   - **`session-chain`** — Registers the session-chain row id kind (sess) with the web id registry — the server barrel registers the same kind. Append-only mapping of a conversation to the ordered Claude session ids it has…
   - **`spawn-failure`** — Per-conversation spawn failure: the latest error of a conversation's spawn job (the failed step and its message), stored in conversations_ext_spawn_failure by the job on every failed attempt and…
   - **`stop-gate`** [exempt] — The stop-gate backend: the StopGate contribution (a plugin's check(conversationId) — block the agent's stop while it still owes the plugin something, with the reason it reads) and the StopWaiver…

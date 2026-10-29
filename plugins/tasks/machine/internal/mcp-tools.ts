@@ -34,7 +34,7 @@ import {
 } from "./add-task-filing";
 import { digestFor } from "./tree-digest";
 import { watchTask } from "@plugins/tasks/plugins/orchestration/plugins/watch/server";
-import { watchChildren } from "@plugins/tasks/plugins/orchestration/plugins/watch/core";
+import { watchChildren } from "@plugins/tasks/plugins/orchestration/plugins/watch/plugins/capabilities/core";
 
 // The real mutations behind `add_task`. The filing policy lives in
 // add-task-filing.ts, which a test drives over an in-memory store.

@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-tasks-orchestration-watch-capabilities",
+  "private": true,
+  "version": "0.0.1",
+  "description": "The watch.children and watch.tree mandate capabilities as plain data. A leaf, so a mandate author (mandate-presets, reached from conversations) can grant them without a cycle through watch, which imports conversations."
+}

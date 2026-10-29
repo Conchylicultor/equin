@@ -11,6 +11,7 @@ export type {
 export {
   endWatch,
   retargetWatch,
+  takeOverTreeWatch,
   watchesOf,
   watchTask,
 } from "./internal/queries";

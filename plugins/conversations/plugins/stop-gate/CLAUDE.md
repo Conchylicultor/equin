@@ -65,6 +65,7 @@ This plugin names no contributor.
 - Cross-plugin:
   - Imported by:
     - `conversations/runtime-sdk`
+    - `conversations/self-compact`
     - `tasks/orchestration/watch`
 - Exemptions:
   - Exempts itself from: `endpoints/no-raw-web-fetch` — `shared/client.ts` (sanctioned)

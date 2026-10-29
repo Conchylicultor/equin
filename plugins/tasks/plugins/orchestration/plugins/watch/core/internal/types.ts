@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { defineIdKind, type IdOf } from "@plugins/ids/core";
-import { defineCapability } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
 
 /**
  * Who a watch wakes:
@@ -44,18 +43,6 @@ export interface WatchEvent {
 /** The event kind the watch plugin raises itself: the watched subtree went
  * quiet (no agent busy in it, nothing armed that can launch). */
 export const QUIET_EVENT_KIND = "quiet";
-
-/**
- * May watch the tasks it files: each task this agent files is watched by it,
- * and what happens in that task's subtree (agents starting, reports, flags,
- * the subtree going quiet) arrives as an event turn. `true` only — no grant,
- * no watching.
- */
-export const watchChildren = defineCapability<true>({
-  id: "watch.children",
-  schema: z.literal(true),
-  label: "Watch the tasks it files",
-});
 
 /** One watch (`task_watches.id`). */
 export const watchIdKind = defineIdKind({

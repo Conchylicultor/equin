@@ -1,4 +1,5 @@
 import { Mcp } from "@plugins/infra/plugins/mcp/server";
+import { CompactionContext } from "@plugins/conversations/plugins/compaction-context/server";
 import {
   TaskStatusSchema,
   isBlockedStatus,
@@ -72,5 +73,18 @@ export const treeDigestInstructions = Mcp.instructions({
     if ((await grantOf(tasksFile, conversationId)) === null) return null;
     const digest = await treeDigest({ conversationId });
     return digest === null ? null : `## Task tree\n\n${digest.text}`;
+  },
+});
+
+/**
+ * The tree, handed back after a compaction: the summary folds away every
+ * digest the agent was given, and the tree is its memory of the work around it.
+ */
+export const treeAfterCompaction = CompactionContext({
+  id: "task-tree",
+  restore: async (conversationId) => {
+    if ((await grantOf(tasksFile, conversationId)) === null) return "";
+    const text = await taskTree({ conversationId });
+    return text === null ? "" : `## Task tree\n\n${text}`;
   },
 });

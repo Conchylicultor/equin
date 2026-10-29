@@ -75,6 +75,7 @@ hand-rolled its own checkmarks.
     - `conversations/workspace/launch-option`
     - `primitives/text-editor/composer`
     - `tasks/auto-start/launch-option`
+    - `tasks/autonomous-run`
     - `tasks/launch-options`
     - `tasks/task-draft-form`
     - `tasks/task-effort`
