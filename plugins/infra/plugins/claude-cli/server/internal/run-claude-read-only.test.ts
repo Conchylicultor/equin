@@ -7,11 +7,7 @@ import {
 } from "./run-claude-read-only";
 
 describe("readOnlyOptions", () => {
-  const options = readOnlyOptions(
-    "/repo",
-    z.object({ a: z.string() }),
-    "sys",
-  );
+  const options = readOnlyOptions("/repo", z.object({ a: z.string() }), "sys");
 
   test("hands the CLI a draft-07 schema, the only dialect it validates", () => {
     expect(options.outputFormat).toMatchObject({

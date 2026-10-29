@@ -37,9 +37,7 @@ export type ClaudeSessionEnv = Readonly<Record<string, string | undefined>> & {
  */
 export async function claudeSessionEnv(
   account: string,
-  base: Readonly<Record<string, string | undefined>> = pickHostEnv(
-    process.env,
-  ),
+  base: Readonly<Record<string, string | undefined>> = pickHostEnv(process.env),
 ): Promise<ClaudeSessionEnv> {
   const credential = await claudeAccountCredential(account);
   const env = credential ? claudeCredentialEnv(base, credential) : { ...base };
