@@ -278,8 +278,10 @@ export function StatusRowView({
 }
 
 /**
- * The quiet rows folded into one card (`foldQuietRows`): a green dot, every
- * folded row's title, "All normal" — and, expanded, each row as it would read
+ * The quiet rows folded into one card (`foldQuietRows`): a green dot, one
+ * generic title (never the folded rows' titles: the list grows with every
+ * contributor, and a list of names reads like the problem), "All N normal" —
+ * and, expanded, each row as it would read
  * on its own, indented under the card's title. The rows are passed in already
  * rendered, each in its own boundary.
  */
@@ -305,8 +307,8 @@ export function QuietRowsView({
       <ExpandTrigger actions={null}>
         <RowText
           leading={leading}
-          title={rows.map((row) => row.title).join(", ")}
-          summary="All normal"
+          title="System checks"
+          summary={`All ${rows.length} normal`}
           summaryClassName={SUMMARY_CLASS.ok}
         />
       </ExpandTrigger>

@@ -1,4 +1,5 @@
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
+import { recordMcpContribution } from "./health";
 
 /** One contribution's outcome: its value, or the failure it was confined to. */
 export type ContributionOutcome<T> =
@@ -12,6 +13,9 @@ export type ContributionOutcome<T> =
  * place of the contribution. It never fails the request — every other tool and
  * section of the connection is unaffected.
  *
+ * Either way the outcome is recorded for the health value (`mcp.health`):
+ * a throw lists the contribution as degraded until it next runs cleanly.
+ *
  * `what` names the contribution in the report, e.g. `instructions section
  * "tree-digest"`.
  */
@@ -19,10 +23,12 @@ export async function runContribution<T>(
   what: string,
   run: () => T | Promise<T>,
 ): Promise<ContributionOutcome<T>> {
+  let value: T;
   try {
-    return { ok: true, value: await run() };
+    value = await run();
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
+    recordMcpContribution(what, { ok: false, message });
     console.error(`[mcp] ${what} failed:`, err);
     reportServerError({
       message: `MCP ${what} failed: ${message}`,
@@ -31,4 +37,6 @@ export async function runContribution<T>(
     });
     return { ok: false, message };
   }
+  recordMcpContribution(what, { ok: true });
+  return { ok: true, value };
 }

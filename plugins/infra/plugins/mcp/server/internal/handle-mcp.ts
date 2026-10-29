@@ -9,10 +9,38 @@ import {
 import { MCP_SERVER_NAME } from "../../core";
 import { runContribution } from "./isolate";
 import type { McpTool, McpToolCallContext, McpToolContext } from "./mcp";
+import { recordMcpRequest } from "./health";
 import { registry, scopeRegistry } from "./registry";
 import { toolsInScope } from "./scope";
 
+/**
+ * The MCP route: answers one request, and records its outcome for the health
+ * value (`mcp.health`) — a throw or a 5xx is the server failing its agents.
+ * The throw is rethrown: recording it never absorbs it.
+ */
 export async function handleMcpRequest(
+  req: Request,
+  params: Record<string, string>,
+): Promise<Response> {
+  let res: Response;
+  try {
+    res = await answerMcpRequest(req, params);
+  } catch (err) {
+    recordMcpRequest({
+      ok: false,
+      message: err instanceof Error ? err.message : String(err),
+    });
+    throw err;
+  }
+  recordMcpRequest(
+    res.status >= 500
+      ? { ok: false, message: `Answered HTTP ${res.status}` }
+      : { ok: true },
+  );
+  return res;
+}
+
+async function answerMcpRequest(
   req: Request,
   params: Record<string, string>,
 ): Promise<Response> {

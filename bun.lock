@@ -4197,6 +4197,10 @@
         "playwright": "^1.64.1",
       },
     },
+    "plugins/infra/plugins/mcp/plugins/health": {
+      "name": "@equin/plugin-infra-mcp-health",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/namespace": {
       "name": "@equin/plugin-infra-namespace",
       "version": "0.0.1",
@@ -8976,6 +8980,8 @@
     "@equin/plugin-infra-mcp": ["@equin/plugin-infra-mcp@workspace:plugins/infra/plugins/mcp"],
 
     "@equin/plugin-infra-mcp-browser": ["@equin/plugin-infra-mcp-browser@workspace:plugins/infra/plugins/mcp/plugins/browser"],
+
+    "@equin/plugin-infra-mcp-health": ["@equin/plugin-infra-mcp-health@workspace:plugins/infra/plugins/mcp/plugins/health"],
 
     "@equin/plugin-infra-namespace": ["@equin/plugin-infra-namespace@workspace:plugins/infra/plugins/namespace"],
 

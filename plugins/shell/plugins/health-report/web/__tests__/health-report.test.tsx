@@ -344,11 +344,11 @@ describe("the report", () => {
     await openReport();
     // The row that needs a look stays on its own, outside the card.
     expect(summary("reads-summary")).toBeTruthy();
-    expect(summary("All normal")).toBeTruthy();
+    expect(summary("All 3 normal")).toBeTruthy();
     expect(screen.queryByText("conn-summary")).toBeNull();
 
     const card = screen.getByRole("button", {
-      name: /Connection, Database, Socket/,
+      name: /System checks/,
     });
     fireEvent.click(card);
     expect(summary("conn-summary")).toBeTruthy();

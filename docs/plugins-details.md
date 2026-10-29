@@ -31441,9 +31441,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plannedServiceExecutable`
               - `reconcileLoginService`
               - `terminateProcess`
-    - **`mcp`** — HTTP MCP server endpoint. Hosts tools contributed by other plugins via Mcp.tool, and serves the mcp.catalog live value: every tool, instructions section and the scope resolver with the plugin that declared each, each tool's input schema as tools/list sends it.
+    - **`mcp`** — HTTP MCP server endpoint. Hosts tools contributed by other plugins via Mcp.tool, and serves the mcp.catalog live value: every tool, instructions section and the scope resolver with the plugin that declared each, each tool's input schema as tools/list sends it; and the mcp.health push value: the latest request's outcome (failing on a throw or a 5xx) and every per-connection contribution whose latest run threw.
       - Server:
-        - Contributes: `resource.declare` "mcp.catalog"
+        - Contributes:
+          - `resource.declare` "mcp.catalog"
+          - `resource.declare` "mcp.health"
         - Uses:
           - `infra/endpoints.rawEndpointHandler`
           - `network/live.serveValue`
@@ -31456,25 +31458,34 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `McpToolContext`
           - `McpToolResult`
         - Exports (values): `Mcp`
-        - Resources: `mcp.catalog` (push, fixed, whole: every Mcp.tool the code registers — fixed for the process, a hundred or so, whole: every Mcp.instructions section the code registers — fixed for the process, a handful, whole: the scratch profiles a tool is reserved for — one or two, whole: one JSON Schema object's top-level keywords (type, properties, required, …) — a handful)
+        - Resources:
+          - `mcp.catalog` (push, fixed, whole: every Mcp.tool the code registers — fixed for the process, a hundred or so, whole: every Mcp.instructions section the code registers — fixed for the process, a handful, whole: the scratch profiles a tool is reserved for — one or two, whole: one JSON Schema object's top-level keywords (type, properties, required, …) — a handful)
+          - `mcp.health` (push, notified, capped: MCP_HEALTH_MAX_DEGRADED)
         - Routes: `POST /api/mcp/:conversationId`
       - Core:
         - Uses:
           - `infra/endpoints.defineEndpoint`
           - `network/live.liveValue`
+          - `packages/list-bound.cappedList`
           - `packages/list-bound.wholeList`
           - `packages/list-bound.wholeRecord`
         - Exports (types):
           - `McpCatalog`
           - `McpCatalogInstructions`
           - `McpCatalogTool`
+          - `McpDegraded`
+          - `McpHealth`
         - Exports (values):
           - `agentToolName`
+          - `MCP_HEALTH_MAX_DEGRADED`
           - `MCP_SERVER_NAME`
           - `mcpCatalog`
           - `McpCatalogInstructionsSchema`
           - `McpCatalogSchema`
           - `McpCatalogToolSchema`
+          - `McpDegradedSchema`
+          - `mcpHealth`
+          - `McpHealthSchema`
           - `mcpRequest`
       - Cross-plugin:
         - Imported by:
@@ -31492,6 +31503,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-meta/plugin-health`
           - `tasks/orchestration/mandate`
           - `tasks/task-triage`
+        - Endpoint callers: `health`
       - Plugins:
         - **`browser`** — The health report's Agent browser row: whether the machine's agent-browser host runs, its sessions (what each is for — its task's title — its tab count, and how long until it closes if left idle), a recent failure the host hit on its own, and a host that died without closing them — read from the agent-browser.status push value. Agent browser: MCP tools (browser_navigate, browser_read_page, browser_act, browser_batch, browser_screenshot, browser_console, …) forwarded to one detached host process per machine that owns the shared headless Chromium — an isolated session per conversation targeted at that conversation's own worktree build, tabs that stay open across calls and across backend restarts, frozen between calls — plus the agent-browser.status value (host, sessions, tabs, deadlines) pushed from the host's status file.
           - Web:
@@ -31578,6 +31590,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from:
               - `boundaries/no-platform-api` — `server/internal/host-client.ts`, `shared/code-id.ts` (debt)
               - `endpoints/no-raw-web-fetch` — `shared/revert.ts` (sanctioned)
+        - **`health`** — The health report's MCP server row: critical while the latest MCP request failed (agents launched from here have no equin tools), attention while a per-connection contribution (a tool's gate or live description, an instructions section) keeps throwing, read from the mcp.health push value — with an Investigate remedy launching an agent briefed with what failed.
+          - Web:
+            - Contributes: `HealthReport.Row` "MCP server"
+            - Uses:
+              - `network/live.useLive`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.Button`
+              - `primitives/launch.LaunchAgentPopover`
+              - `shell/health-report.HealthReport`
+              - `ui/icons.Icon`
+          - Cross-plugin:
+            - Uses tokens: `ui/tokens/shape --spacing`
     - **`namespace`** — Canonical namespace identity: the branded Namespace type, the <composition>.<checkout> elision rule that mints one, and the URL/host encodings derived from it.
       - Core:
         - Uses:
@@ -34050,12 +34075,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveCollectionOn`
           - `serveValueOn`
       - Cross-plugin:
-        - Imported by: 309 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 310 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×81
           - `conversations` ×53
           - `debug` ×32
           - `tasks` ×29
-          - `infra` ×19
+          - `infra` ×20
           - `page` ×14
           - `active-data` ×12
           - `primitives` ×11
@@ -40489,7 +40514,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `selfClass`
               - `Stack`
           - Cross-plugin:
-            - Imported by: 423 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 424 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×111
               - `conversations` ×64
               - `primitives` ×54
@@ -40500,9 +40525,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks` ×13
               - `fields` ×9
               - `apps-core` ×6
+              - `infra` ×6
               - `stats` ×6
               - `build` ×5
-              - `infra` ×5
               - `auth` ×4
               - `review` ×4
               - `shell` ×4
@@ -40728,7 +40753,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×37
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family` ×2
-            - Imported by: 407 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 408 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×113
               - `conversations` ×74
               - `primitives` ×45
@@ -40738,9 +40763,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta` ×15
               - `tasks` ×14
               - `fields` ×11
+              - `infra` ×6
               - `stats` ×6
               - `build` ×5
-              - `infra` ×5
               - `auth` ×4
               - `integrations` ×4
               - `review` ×4
@@ -41021,7 +41046,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 443 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 444 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×110
               - `apps` ×102
               - `conversations` ×53
@@ -41032,8 +41057,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fields` ×12
               - `plugin-meta` ×10
               - `apps-core` ×7
+              - `infra` ×6
               - `build` ×5
-              - `infra` ×5
               - `reorder` ×5
               - `review` ×5
               - `shell` ×5
@@ -43399,27 +43424,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-sm`
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --spacing`
-        - Imported by:
+        - Imported by: 21 plugins — full list in [`plugins/primitives/plugins/launch/REFERENCE.md`](../plugins/primitives/plugins/launch/REFERENCE.md)
+          - `apps` ×5
+          - `conversations` ×4
+          - `tasks` ×3
+          - `infra` ×2
+          - `page` ×2
           - `active-data/task`
-          - `apps/agent-manager/welcome`
-          - `apps/home/new-app`
-          - `apps/prototypes/canvas`
-          - `apps/prototypes/gallery`
-          - `apps/sonata/transcription`
           - `config_v2/settings/conflict-agent`
-          - `conversations/agent-thread`
-          - `conversations/conversation-view/fork-conversation`
-          - `conversations/conversation-view/jsonl-viewer/investigate-event`
-          - `conversations/conversation-view/rewind`
-          - `infra/launcher/gateway-drift`
-          - `page/annotations/todo/task-link`
-          - `page/prompt/block`
           - `primitives/launch/investigate`
           - `reports/launch-fix`
           - `screenshot`
-          - `tasks/attempt-view`
-          - `tasks/task-description`
-          - `tasks/task-list`
       - Plugins:
         - **`investigate`** — The one 'launch an agent to investigate this failure' affordance: <InvestigateAction> — a fixed icon, label and popover, briefed by the caller, filed about the failed record (tasks/task-subject) so a second launch reuses its task and the action turns into View task.
           - Web:
@@ -48872,6 +48887,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HealthReport.Row` ← `infra.health`
           - `HealthReport.Row` ← `infra.launcher.gateway-drift`
           - `HealthReport.Row` ← `infra.mcp.browser`
+          - `HealthReport.Row` ← `infra.mcp.health`
           - `HealthReport.Row` ← `primitives.dom.web-storage.health`
           - `HealthReport.Row` ← `reports.resource-errors`
           - `HealthReport.Row` ← `tasks.worktree-identity`
@@ -48929,6 +48945,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/health`
           - `infra/launcher/gateway-drift`
           - `infra/mcp/browser`
+          - `infra/mcp/health`
           - `primitives/dom/web-storage/health`
           - `reports/resource-errors`
           - `tasks/worktree-identity`
@@ -52219,7 +52236,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/shadow --shadow`
           - `ui/tokens/shape --spacing`
-        - Imported by: 354 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 355 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×91
           - `conversations` ×57
           - `primitives` ×42
@@ -52237,9 +52254,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `build` ×3
           - `config_v2` ×3
           - `hints` ×3
+          - `infra` ×3
           - `reorder` ×3
           - `backup` ×2
-          - `infra` ×2
           - `reports` ×2
           - `auth`
           - `framework/tooling/codegen`
@@ -53833,7 +53850,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `shapeGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --radius-chip-compact`
-            - Tokens used by: 433 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+            - Tokens used by: 434 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
               - `conversations` ×92
               - `apps` ×85
               - `primitives` ×71
@@ -53845,9 +53862,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fields` ×9
               - `reorder` ×6
               - `apps-core` ×5
+              - `infra` ×5
               - `review` ×5
               - `active-data` ×4
-              - `infra` ×4
               - `shell` ×4
               - `build` ×3
               - `stats` ×3

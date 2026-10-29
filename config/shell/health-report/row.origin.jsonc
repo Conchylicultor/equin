@@ -1,4 +1,4 @@
-// @hash dd3da4004136
+// @hash 32b53cf952ff
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -14,6 +14,7 @@
     "infra.health:connection",
     "infra.launcher.gateway-drift:gateway",
     "infra.mcp.browser:agent-browser",
+    "infra.mcp.health:mcp-server",
     "primitives.dom.web-storage.health:browser-storage",
     "reports.resource-errors:live-reads",
     "tasks.worktree-identity:worktree"

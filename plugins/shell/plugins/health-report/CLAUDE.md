@@ -85,7 +85,7 @@ is unknown, the verdict gives that reason instead of "Checking…".
 **Quiet rows fold into one card** (`foldQuietRows`, pure, bun-tested): a
 status row with nothing beyond its summary (no `glance`, `component` or
 `actions`; a `remedy` is not drawn while `ok`, so it does not count) that is
-`ok` only says "fine", so two or more of them collapse into one card — their titles, "All normal" — that lists each when expanded. A row
+`ok` only says "fine", so two or more of them collapse into one card — "System checks", "All N normal" (a generic title, never the folded titles: that list grows with every contributor) — that lists each when expanded. A row
 leaves the card the moment it is not `ok`, so a problem is never behind a
 chevron — but it stays beside it (just above), where it sat while fine: every
 plain row, folded or not, sits after every other row, so a row leaving or
@@ -150,6 +150,7 @@ probes, is mounted per page.
     - `HealthReport.Row` ← `infra.health`
     - `HealthReport.Row` ← `infra.launcher.gateway-drift`
     - `HealthReport.Row` ← `infra.mcp.browser`
+    - `HealthReport.Row` ← `infra.mcp.health`
     - `HealthReport.Row` ← `primitives.dom.web-storage.health`
     - `HealthReport.Row` ← `reports.resource-errors`
     - `HealthReport.Row` ← `tasks.worktree-identity`
@@ -207,6 +208,7 @@ probes, is mounted per page.
     - `infra/health`
     - `infra/launcher/gateway-drift`
     - `infra/mcp/browser`
+    - `infra/mcp/health`
     - `primitives/dom/web-storage/health`
     - `reports/resource-errors`
     - `tasks/worktree-identity`

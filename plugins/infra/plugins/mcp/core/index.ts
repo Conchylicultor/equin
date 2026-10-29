@@ -10,6 +10,13 @@ export {
   agentToolName,
   mcpCatalog,
 } from "./internal/catalog";
+export {
+  MCP_HEALTH_MAX_DEGRADED,
+  McpDegradedSchema,
+  McpHealthSchema,
+  mcpHealth,
+} from "./internal/health";
+export type { McpDegraded, McpHealth } from "./internal/health";
 export type {
   McpCatalog,
   McpCatalogInstructions,
