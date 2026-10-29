@@ -15,10 +15,17 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import {
+  workspaceAttemptIds,
+  workspaceRootFrom,
+} from "../../server/internal/resolve-worktree-path";
 import { listCodeDirEntries } from "./dir-value";
-import { loadCodeFile, loadCodeFileDiff } from "./file-values";
-import { readWorkspaceBytes } from "./workspace-bytes";
-import { pinnedRefs } from "./workspace";
+import {
+  loadCodeFile as loadCodeFileIn,
+  loadCodeFileDiff as loadCodeFileDiffIn,
+} from "./file-values";
+import { readWorkspaceBytes as readWorkspaceBytesIn } from "./workspace-bytes";
+import { pinnedRefs, type WorkspaceFile } from "./workspace";
 
 let base: string;
 let repo: string;
@@ -62,6 +69,19 @@ beforeAll(() => {
 afterAll(() => {
   rmSync(base, { recursive: true, force: true });
 });
+
+// The reads under the root their workspace (an absolute path: no attempt row)
+// resolves to, as each value's hooks resolve it from the rows they follow.
+const rootOf = (worktree: string) => workspaceRootFrom(worktree, []);
+async function loadCodeFile(q: Parameters<typeof loadCodeFileIn>[0]) {
+  return loadCodeFileIn(q, await rootOf(q.worktree));
+}
+async function loadCodeFileDiff(q: Parameters<typeof loadCodeFileDiffIn>[0]) {
+  return loadCodeFileDiffIn(q, await rootOf(q.worktree));
+}
+async function readWorkspaceBytes(file: WorkspaceFile, maxBytes: number) {
+  return readWorkspaceBytesIn(file, await rootOf(file.workspace), maxBytes);
+}
 
 /** The code of the refusal `p` rejects with. */
 async function refusalCode(p: Promise<unknown>): Promise<string> {
@@ -235,6 +255,35 @@ describe("readWorkspaceBytes", () => {
     expect(await read("a.txt", undefined, join(base, "plain"))).toEqual({
       kind: "no-workspace",
     });
+  });
+});
+
+describe("workspaceRootFrom", () => {
+  test("an attempt id resolves from the attempt row it follows", async () => {
+    expect(workspaceAttemptIds("att-1")).toEqual(["att-1"]);
+    expect(
+      await workspaceRootFrom("att-1", [
+        { worktreePath: repo, workspace: { kind: "worktree" } },
+      ]),
+    ).toEqual({ path: repo, git: true });
+    expect(
+      await workspaceRootFrom("att-1", [
+        { worktreePath: base, workspace: { kind: "scratch" } },
+      ]),
+    ).toEqual({ path: base, git: false });
+    // No row (not inserted yet, or deleted): no workspace.
+    expect(await workspaceRootFrom("att-1", [])).toBeNull();
+  });
+
+  test("a sentinel or a path follows no attempt", async () => {
+    expect(workspaceAttemptIds("main")).toEqual([]);
+    expect(workspaceAttemptIds("self")).toEqual([]);
+    expect(workspaceAttemptIds(repo)).toEqual([]);
+    expect(await workspaceRootFrom(repo, [])).toEqual({
+      path: repo,
+      git: true,
+    });
+    expect(await workspaceRootFrom(join(base, "plain"), [])).toBeNull();
   });
 });
 

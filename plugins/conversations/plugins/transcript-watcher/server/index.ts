@@ -41,7 +41,13 @@ export { onSessionTranscriptWritten } from "./internal/session-writes";
 // session id — how an accumulator over a conversation's whole tree (its usage
 // totals) hears about a sub-agent's append.
 export { onTranscriptWritten } from "./internal/session-writes";
-export { resolveConversationTranscriptPaths } from "./internal/resolve-chain";
+// A conversation's transcript files: from the chain read from Postgres (a
+// caller outside any live value), or from a chain the caller already holds
+// (a value's followed rows — `transcriptChainFollows`), filesystem only.
+export {
+  resolveConversationTranscriptPaths,
+  resolveTranscriptPathsOf,
+} from "./internal/resolve-chain";
 // The ownership partition itself, for consumers that need the rejected half —
 // a monitor auditing chains, or the status reconciler's adoption gate — rather than just
 // the files to read.

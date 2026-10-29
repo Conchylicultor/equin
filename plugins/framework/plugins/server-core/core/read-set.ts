@@ -18,10 +18,12 @@
 const readSetIndex = new Map<string, Set<string>>();
 
 // Per-loader PER-RUN read-set: the exact tables the MOST RECENT loader run for a
-// key read (replaced each run, never unioned) — what the runtime persists after a
-// FULL recompute so the durable `tables_read` seed sheds a dependency a code
-// change removed. Written only for a run that read ≥1 table, so a run reading
-// nothing never replaces a real set with an empty one.
+// key read (replaced each run, never unioned) — what the drift guard judges and
+// what the runtime persists after a FULL recompute so the durable `tables_read`
+// seed sheds a dependency a code change removed. A run that read nothing
+// records an EMPTY set: the guard must not judge it on an earlier run's reads
+// (a pure follower of collections reads only in their own loader spans), and
+// the persist seam falls back to the route tables for an empty one.
 const lastLoaderReadSet = new Map<string, Set<string>>();
 
 // The same run's read TAGS (table → each read's tag, `null` = untagged),
@@ -43,11 +45,11 @@ export function recordLoaderReadSet(
   tables: ReadonlySet<string>,
   tags?: ReadonlyMap<string, ReadonlySet<string | null>>,
 ): void {
-  if (tables.size === 0) return;
-  recordUnion(key, tables);
   lastLoaderReadSet.set(key, new Set(tables));
-  if (tags === undefined) lastLoaderReadTags.delete(key);
+  if (tags === undefined || tables.size === 0) lastLoaderReadTags.delete(key);
   else lastLoaderReadTags.set(key, tags);
+  // The union lists keys that READ something: an empty run adds no key.
+  if (tables.size > 0) recordUnion(key, tables);
 }
 
 /** The tables `key`'s loader has ever read (sorted), or `[]`. */
@@ -67,8 +69,8 @@ export function getReadSetIndex(): Record<string, string[]> {
 }
 
 /**
- * The tables the MOST RECENT loader run for `key` read (sorted), or `undefined`
- * if none captured any. Read it synchronously right after awaiting the loader,
+ * The tables the MOST RECENT loader run for `key` read (sorted) — `[]` for a
+ * run that read nothing —, or `undefined` if no run of it was captured. Read it synchronously right after awaiting the loader,
  * so the value is that run's own capture and not a concurrent run's.
  */
 export function getLastLoaderReadSet(key: string): string[] | undefined {

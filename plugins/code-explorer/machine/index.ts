@@ -11,17 +11,16 @@ export {
   readWorkspaceBytes,
   workspaceFileSignature,
 } from "./internal/workspace-bytes";
+export { watchCheckout, type WorkspaceFile } from "./internal/workspace";
 export {
-  loadWorkspaceRoot,
-  watchCheckout,
-  watchWorkspaceRoot,
-  workspaceRootReads,
-  type WorkspaceFile,
-} from "./internal/workspace";
+  workspaceAttemptIds,
+  workspaceRootFrom,
+  type WorkspaceRoot,
+} from "../server/internal/resolve-worktree-path";
 
 export default {
   description:
-    "code-explorer's desktop half: a workspace's files as live values — code.file (a file's text, on disk or at a ref), code.file-diff (one file's diff), code.dir (a folder, key-range-paged by name) and the sha-addressed code.commit-info / code.commit-files, and code.workspace-root (where a workspace id lives on disk) — notified while read from a watch of the file or folder (host-fs) or the checkout watch (HEAD and the refs for a read as of a ref; the index too for a diff), never for a read pinned to shas; plus readWorkspaceBytes / workspaceFileSignature / watchWorkspaceFile, the workspace half of file-viewer.bytes, and loadWorkspaceRoot / watchWorkspaceRoot, the root resolve its loaders and watches share. And the raw image route (GET /api/code/:worktree/image, needsMachine): a checkout image's bytes.",
+    "code-explorer's desktop half: a workspace's files as live values — code.file (a file's text, on disk or at a ref), code.file-diff (one file's diff), code.dir (a folder, key-range-paged by name) and the sha-addressed code.commit-info / code.commit-files, and code.workspace-root (where a workspace id lives on disk) — notified while read from a watch of the file or folder (host-fs) or the checkout watch (HEAD and the refs for a read as of a ref; the index too for a diff), never for a read pinned to shas; plus readWorkspaceBytes / workspaceFileSignature / watchWorkspaceFile, the workspace half of file-viewer.bytes, and workspaceAttemptIds / workspaceRootFrom, the root a value resolves from the attempt row it follows (tasks-core's attemptWorkspaces), re-pointing its watch when the row moves. And the raw image route (GET /api/code/:worktree/image, needsMachine): a checkout image's bytes.",
   httpRoutes: {
     [getImageContent.route]: handleImage,
   },

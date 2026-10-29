@@ -34,6 +34,8 @@ export type {
   RuntimeSocket,
   ResourceDelivery,
   ReadTags,
+  RunCapture,
+  FollowReached,
 } from "./runtime";
 export {
   mintReachPlan,
@@ -50,6 +52,7 @@ export type {
   RelationRead,
   Route,
   RoutePlan,
+  RouteVia,
   TableChange,
   TableLayoutRequirement,
   TaggedRead,

@@ -625,7 +625,9 @@ conversationHistory.fields.status;
 ```
 
 - **Derived.** Row schema = every row field, plus the `from` ref's
-  `presentationReads` (carried whether or not `carry` names them), plus
+  `presentationReads` when it `pick`s a field (carried whether or not `carry`
+  names them; a carry-only collection — a follow target — presents nothing and
+  carries exactly what it names), plus
   `$columns` when rows reach an entity. Every LISTED field with a domain is
   filterable (string/enum → text, number, boolean, `Date` → instant, string
   array → stringArray; JSON none) — `core/internal/field-domain.ts`. Opt out with `filterable: false`;
@@ -889,7 +891,8 @@ useLive(folderListing, expanded.map((dir) => ({ dir })));
 `source` is required:
 
 - **`"db"`** — declare **`reads: { tables, reason, outsideFeed? }`** (tsc +
-  throw); a change to any declared table recomputes every subscribed tuple. No
+  throw; optional beside `follows`, then only what the loader reads besides);
+  a change to any declared table recomputes every subscribed tuple. No
   `notify`.
   - Whole tables only — the loader's SQL is hand-written, so a per-row filter
     could silently miss writes (row-level narrowing exists only for compiled
@@ -911,12 +914,78 @@ useLive(folderListing, expanded.map((dir) => ({ dir })));
       `automations.catalog` on `tasks.statusChanged`), never the feed.
     - `reads.lookups` — a by-key read compiled from one declaration
       (query-resource's `compileLookup`), routed per tuple and per column read
-      (`tasks-core`'s `workspaceOfConversationLookup`). A table is in `tables`
-      or a lookup, never both.
+      (`tasks-core`'s `runtimeOfConversationLookup`). A table is in `tables`
+      or a lookup, never both. Rows a served collection holds are FOLLOWED
+      instead: a lookup is for a read no collection serves, or one too hot for
+      a follow's per-call query (`partial-message`).
   - `{ immutable: { reason } }` — a tuple's answer never changes (sha-keyed).
   - `{ fixed: { reason } }` — constant for the process lifetime.
   - `{ snapshot: { reason } }` — paired with `load: "snapshot"`.
   Silent arms have no `notify`.
+- **`follows` — a value computed from a few rows reads them through
+  collection TUPLES** (db, and external `"notified"`, paged included). A value
+  never filters rows by hand: the collection's own plan is copied into its
+  reach.
+
+  ```ts
+  serveValue(attemptWork, {
+    source: "db",
+    follows: (follow) => ({ // BEFORE the hooks: types `followed`
+      attempt: follow(attemptWorkspacesServed, ({ attemptId }) => ({ ids: [attemptId] })),
+      convIds: follow(attemptConversationIdsServed, ({ attemptId }) => ({ where: { attemptId } })),
+    }),
+    loader: (p, { followed }) => workOf(p, followed.attempt, followed.convIds),
+    revalidate: (p, { followed }) => signatureOf(p, followed),
+    whileSubscribed: ({ attemptId }) => () => evict(attemptId), // needs no row
+    whileFollowing: {
+      over: (followed) => followed.attempt[0]?.worktreePath ?? null, // sync, JSON
+      start: (p, { over: path }) => watch(path), // external: { over, notify }
+    },
+  });
+  ```
+
+  - **Targets** are SERVED handles (`serveCollection`'s return,
+    `FOLLOW_SOURCE`), one form each: a lookup-only, window or unscoped `all`
+    collection by `{ ids }` (its `:rows`); a scoped `all` set by `{ where }`,
+    exactly its `by` fields. A value, a descriptor, an off-feed / external
+    collection, a union, the other form or a wrong scope is a tsc error (and a
+    throw). The tuple function takes the SUBJECT (params, or the decoded
+    question).
+  - **`followed[name]`** — the tuple's rows (`readonly Row[]`), read FRESH in
+    each hook's call through the collection's own read (resource-runtime's
+    `loadResourceFresh`). Handed to the loader, `revalidate` (its own read: a
+    revalidate-then-load reads twice), `whileFollowing.over`, a paged value's
+    `loader(q, range, { followed })` and `meta(q, { followed })`. An empty id
+    set reads nothing.
+  - **The reach** (`server/internal/serve-value.ts`): query-resource's
+    `followRead` copies the collection's plan (gates kept, `full`, tagged `via`
+    the follow, matched on the tuple's ids / scope — a re-pointed row reaches
+    its old and new tuple), folded with `reads` by `compiledValueReach`.
+    - Refused: a table read through a follow AND whole / through a lookup (a
+      view read whole over a followed table too, once bases are known).
+    - A follow of a deferred collection defers the value to
+      `bindDeferredResources` (refused for a paged value).
+  - **Drift guard**: the value's OWN capture never covers a followed table — a
+    hand-written query on one in the loader is drift (thrown under a test
+    runner).
+  - **`whileFollowing: { over, start }`** (`followLifecycle`,
+    `core/internal/compile-value.ts`).
+    - `over(followed)` reads, sync, what the start runs over (a JSON value);
+      `start` gets `{ over[, notify] }`, never the rows (tsc).
+    - On a follow route reaching a tracked tuple, the runtime's
+      `onFollowReached` re-reads; only if `over` moved (as JSON) and the tuple
+      is still in its span, the old start stops and a new one starts
+      (`_debug.followRepoints`).
+    - Re-points of one tuple run in order; a reach landing while one is queued
+      joins it.
+    - A FAILED start forgets what it was handed, so the next reach restarts it.
+    - A (re)started watch must notify once open. Untracked reads start nothing.
+    - A start that needs no row stays `whileSubscribed` (never re-started).
+      Both may be declared (`bothLifecycles`; a throwing stop never leaks the
+      other's). `whileFollowing` without `follows` is a tsc error and a throw.
+  - Central: `follows` is a tsc error and a throw (no change feed).
+  - Tests: `core/internal/compile-value-follows.test.ts`,
+    `server/internal/serve-value-follows-oracle.test.ts`.
 - **The bound is the declaration's**: `serveValue` takes no `unbounded`.
 - Returns `ServedValue` (`keys`, `declare` — spread it); `"notified"` adds
   `notify`. `compileValue` derives without registering.
@@ -1176,8 +1245,8 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `useLiveReader`
     - `useLiveRow`
 - Server:
-  - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `infra/query-resource` ×30
+  - Uses: 38 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra/query-resource` ×35
     - `database/sql-column` ×2
     - `network/live/filter.filterSql`
   - Exports (types):
@@ -1190,12 +1259,14 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `CompiledValue`
     - `DeclaredCollection`
     - `DefaultScope`
+    - `FollowBuilder`
     - `LiveValueSource`
     - `LookupCollectionSpecs`
     - `ScopedMemberRead`
     - `ServeAllCollectionOptions`
     - `ServeCollectionOptions`
     - `ServedAllCollection`
+    - `ServedAllResources`
     - `ServedArm`
     - `ServedCollection`
     - `ServedExternalQueryValue`
@@ -1207,6 +1278,7 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `ServedSource`
     - `ServedUnion`
     - `ServedValue`
+    - `ServedWindowCollection`
     - `ServePagedValueOptions`
     - `ServeUnionOptions`
     - `ServeValueOptions`
@@ -1420,9 +1492,9 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `upsertRows`
     - `valueSubject`
 - Cross-plugin:
-  - Imported by: 315 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 316 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×83
-    - `conversations` ×54
+    - `conversations` ×55
     - `debug` ×32
     - `tasks` ×29
     - `infra` ×21

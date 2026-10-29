@@ -1,5 +1,9 @@
 import { listSessionChain } from "@plugins/conversations/plugins/session-chain/server";
 import { getConversationClaudeSessionId } from "@plugins/tasks/plugins/tasks-core/server";
+import {
+  transcriptChainOf,
+  type TranscriptChain,
+} from "@plugins/conversations/plugins/transcript-source/core";
 import { resolveAnchoredChain } from "./anchor";
 import { reportForeignSession } from "./foreign-session-report";
 
@@ -20,15 +24,18 @@ import { reportForeignSession } from "./foreign-session-report";
  * `getConversationClaudeSessionId` → `findTranscriptPath` → `return []`, so a
  * dead database and an empty conversation produced the same rendered answer.
  *
- * The chain ENRICHES a guaranteed floor, it is not the sole source of truth.
- * `conversations.claude_session_id` is always the live tail, and the status reconciler only
- * appends to the chain when it observes a change on a live pane — so a row it
- * never revisits (already `done`, pane reaped, or simply never changing again)
- * can hold a valid session id with no chain row. Falling back to that column
- * keeps such a conversation readable, makes the backfill migration a recovery of
- * *history* rather than a prerequisite for rendering anything at all, and means
- * a chain wiped by hand degrades to today's single-file behaviour instead of a
- * blank pane.
+ * The chain ENRICHES a guaranteed floor, it is not the sole source of truth:
+ * `conversations.claude_session_id` stands in while it is empty
+ * (`transcriptChainOf`, transcript-source core — the one place that rule lives).
+ * That keeps a conversation the status reconciler never revisited readable,
+ * makes the backfill migration a recovery of *history* rather than a
+ * prerequisite for rendering anything at all, and means a chain wiped by hand
+ * degrades to single-file behaviour instead of a blank pane.
+ *
+ * Reads the chain's facts from Postgres itself — for a caller outside any live
+ * value (rewind, backup, retention, the watcher's own rooms). A served value
+ * follows them instead (`transcriptChainFollows`) and resolves the files with
+ * `resolveTranscriptPathsOf`, so the DB read is routed per conversation.
  *
  * **A chain entry from another conversation is dropped, not merged.**
  * `resolveAnchoredChain` anchors the conversation to the projects dir of its
@@ -42,16 +49,41 @@ import { reportForeignSession } from "./foreign-session-report";
 export async function resolveConversationTranscriptPaths(
   conversationId: string,
 ): Promise<string[]> {
-  const chain = await listSessionChain(conversationId);
-  const sessionIds = chain.map((c) => c.claudeSessionId);
+  return resolveTranscriptPathsOf(
+    conversationId,
+    await readTranscriptChain(conversationId),
+  );
+}
 
-  if (sessionIds.length === 0) {
+/** The chain's facts, read from Postgres (see `resolveConversationTranscriptPaths`). */
+async function readTranscriptChain(
+  conversationId: string,
+): Promise<TranscriptChain> {
+  const [sessions, tail] = await Promise.all([
+    listSessionChain(conversationId),
     // `undefined` = no such conversation; `null` = row exists, no session yet.
-    const tail = await getConversationClaudeSessionId(conversationId);
-    if (tail) sessionIds.push(tail);
-  }
+    getConversationClaudeSessionId(conversationId),
+  ]);
+  return transcriptChainOf(
+    sessions,
+    tail === undefined ? undefined : { claudeSessionId: tail },
+  );
+}
 
-  const { anchorDir, kept, foreign } = await resolveAnchoredChain(sessionIds);
+/**
+ * The files a chain's session ids name, oldest → newest — from the
+ * filesystem ALONE (the projects-dir glob, anchored to the conversation's own
+ * directory; a foreign entry dropped and reported). The read every live value
+ * resolves its followed chain through; `resolveConversationTranscriptPaths`
+ * is it over the chain read from Postgres.
+ */
+export async function resolveTranscriptPathsOf(
+  conversationId: string,
+  chain: TranscriptChain,
+): Promise<string[]> {
+  const { anchorDir, kept, foreign } = await resolveAnchoredChain(
+    chain.sessionIds,
+  );
 
   // `foreign` is empty whenever nothing anchored, so this guard never actually
   // skips a report — it is how the compiler sees that `anchorDir` is a string

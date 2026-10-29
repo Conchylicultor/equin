@@ -1,6 +1,5 @@
 import { lstat, readdir } from "node:fs/promises";
 import { z } from "zod";
-import { resolveConversationTranscriptPaths } from "@plugins/conversations/plugins/transcript-watcher/server";
 import { SubagentRequestShapeSchema } from "../../core";
 
 /** Directory Claude Code writes a session's sub-agent transcripts into. */
@@ -92,9 +91,9 @@ export function subagentDirOf(transcriptPath: string): string {
  * The `subagents/` directories of one conversation — **the one place that
  * decides what this plugin may look at.**
  *
- * Derived from the conversation's ALREADY-ANCHORED session files:
- * `resolveConversationTranscriptPaths` returns only what `resolveAnchoredChain`
- * kept. That derivation is the whole ownership story. A session chain is a list
+ * Derived from the conversation's ALREADY-ANCHORED session files — only ever
+ * `resolveTranscriptPathsOf` / `resolveConversationTranscriptPaths` output,
+ * which return only what `resolveAnchoredChain` kept. That derivation is the whole ownership story. A session chain is a list
  * of ids *somebody else* recorded and can name another conversation's session;
  * deriving from the kept entries means a sub-agent directory is unreachable
  * unless its parent transcript already passed the one-conversation-one-projects-
@@ -111,10 +110,13 @@ export function subagentDirOf(transcriptPath: string): string {
  * Existence is NOT checked. The directory of a conversation that has not spawned
  * a sub-agent yet does not exist, and naming it anyway is what lets the watcher
  * notice the moment it does.
+ *
+ * Takes the paths, never a conversation id: the served values resolve them from
+ * the chain they FOLLOW (`resolveTranscriptPathsOf`), so nothing in this plugin
+ * reads Postgres.
  */
-export async function subagentDirs(conversationId: string): Promise<string[]> {
-  const paths = await resolveConversationTranscriptPaths(conversationId);
-  return paths.map(subagentDirOf);
+export function subagentDirsOf(parentPaths: readonly string[]): string[] {
+  return parentPaths.map(subagentDirOf);
 }
 
 /** The agent id inside `agent-<id>.jsonl` / `agent-<id>.meta.json`, or null. */

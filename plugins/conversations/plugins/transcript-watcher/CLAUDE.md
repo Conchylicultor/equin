@@ -10,7 +10,7 @@ session chain on disk — and `machine/` provides `transcript-source`'s
 
 One `parcel.subscribe(CLAUDE_PROJECTS_DIR)` covers all active conversations. A per-conversation room resolves the conversation's **session chain** — every JSONL file it has run under, oldest → newest — and registers all of them in a reverse index for O(1) dispatch. No timer: when the watch reports dropped events (`onLost`), every room re-resolves.
 
-**The chain, not one file.** Claude Code relocates a live session into a new id (a fork copies its ancestor's lines; a fresh daemon-hosted session inherits nothing). `resolveConversationTranscriptPaths(conversationId)` composes the recorded chain ([`session-chain`](../session-chain)) with the projects-dir glob (`findTranscriptPath`) and is the **only** sanctioned way to go from a conversation to its files. It returns `string[]`: empty means "nothing on disk yet"; a DB or glob failure throws. Reads go through `readJsonlEventsFromChain` / `readTurnsFromChain`, which merge the chain and dedup by `uuid`.
+**The chain, not one file.** Claude Code relocates a live session into a new id (a fork copies its ancestor's lines; a fresh daemon-hosted session inherits nothing). `resolveConversationTranscriptPaths(conversationId)` composes the recorded chain ([`session-chain`](../session-chain)) with the projects-dir glob (`findTranscriptPath`) and is the **only** sanctioned way to go from a conversation to its files — for a caller outside any live value. A served value FOLLOWS the chain's facts (transcript-source's `transcriptChainFollows`) and resolves them with `resolveTranscriptPathsOf(conversationId, chain)`, the same anchored glob over the filesystem alone, so its Postgres read is routed per conversation (the desktop `TranscriptSource` provider takes the chain the same way). It returns `string[]`: empty means "nothing on disk yet"; a DB or glob failure throws. Reads go through `readJsonlEventsFromChain` / `readTurnsFromChain`, which merge the chain and dedup by `uuid`.
 
 **Writes go to the tail only.** `paths.at(-1)` is the live file `claude --resume` appends to. Anything destructive (`rewindLastUserTurn`) must target it and nothing else — truncating an ancestor corrupts the history the read path merges.
 
@@ -124,6 +124,7 @@ memo degrades to a full chain re-read on every push.
     - `refreshConversationChain`
     - `resolveAnchoredChain`
     - `resolveConversationTranscriptPaths`
+    - `resolveTranscriptPathsOf`
     - `transcriptChainSignature`
     - `watchPaths`
     - `watchTranscript`
@@ -136,6 +137,7 @@ memo degrades to a full chain re-read on every push.
     - `conversations`
     - `conversations/transcript-api`
     - `conversations/transcript-retention`
+    - `debug/read-set`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/anchor.ts`, `server/internal/chain-signature.ts`, `server/internal/session-writes.ts`, `server/internal/watcher.ts` (debt)
 

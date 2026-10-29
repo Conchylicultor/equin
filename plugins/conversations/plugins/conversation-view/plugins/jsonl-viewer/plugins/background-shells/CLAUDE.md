@@ -46,8 +46,9 @@ last line, the pane says so. The facts (`background-shells.facts`) are a fold
 of the transcript and are served by the portable `server/` half on every host,
 so the band still lists a demo conversation's shells. **The browser never sends
 a path.** The server resolves
-`(conversationId, shellId)` itself — the conversation's anchored chain
-(`resolveConversationTranscriptPaths` → `readJsonlEventsFromChain`) folded
+`(conversationId, shellId)` itself — the conversation's anchored chain (its
+facts followed, `transcriptChainFollows`; resolved to files by
+`resolveTranscriptPathsOf` → `readJsonlEventsFromChain`) folded
 through the same core `shellLaunchesIn` — and `assertShellOutputPath` throws
 unless it is exactly `<tmp root>/claude-<uid>/<x>/<y>/tasks/<shellId>.output`.
 The tmp roots are every spelling this process can see (`/tmp`, `/private/tmp`,
@@ -63,7 +64,8 @@ While subscribed, an instance of the `background-shells.output` file watcher
 (`writesWhileOpen: true`, 150 ms debounce) notifies on writes to that one file.
 `writesWhileOpen` is required: the shell holds its output file open, and macOS
 FSEvents reports only on close. A resolved path is kept for the room's lifetime
-so the chain is read once per subscription, not once per push.
+so the chain is read once per subscription, not once per push. A session
+switch re-starts the watch over the new chain, which notifies once open.
 
 ## Surfaces
 

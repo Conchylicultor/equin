@@ -216,7 +216,14 @@ though every one of its spans is suppressed.
 
 Each `loader` entry captures the tables its DB queries read (`recordReadTables`, from the
 pool chokepoint, matching only `FROM`/`JOIN`) and, in `recordEntrySpan`'s `finally`, hands
-them once to the **installed loader read-set sink** (`installLoaderReadSetSink`). The index
+them once to the **installed loader read-set sink** (`installLoaderReadSetSink`) — an
+EMPTY set for a run that read nothing, so the per-run capture always describes the
+last run (a nested loader entry — a followed collection's fresh read inside a
+follower's loader — captures its own reads, never its parent's). The same
+capture is also handed to the entry's own `onReads` (`recordEntrySpan`'s
+last argument — server-core's `wrapLoad` passes the runtime's `RunCapture`),
+so the drift guard judges each run on its own reads, never on whichever run
+of the key closed last. The index
 it feeds — the per-run capture the runtime's route drift guard (A8 / D5) judges and the L2
 persist seam stores as `tables_read`, plus the append-only union `_debug` shows — is runtime
 state owned by `server-core/core/read-set.ts`, not profile data: no change is routed through

@@ -1,4 +1,5 @@
 import { serveValue } from "@plugins/network/plugins/live/machine";
+import { attemptWorkspacesServed } from "@plugins/tasks/plugins/tasks-core/server";
 import { watchHostPath } from "@plugins/infra/plugins/host-fs/machine";
 import {
   codeFile,
@@ -16,74 +17,92 @@ import { getFileDiff } from "./get-file-diff";
 import { isAllowedRef, resolveRef } from "../../server/internal/resolve-ref";
 import { workspaceFileSignature } from "./workspace-bytes";
 import {
+  workspaceAttemptIds,
+  workspaceRootFrom,
+  type WorkspaceRoot,
+} from "../../server/internal/resolve-worktree-path";
+import {
+  checkoutRootOf,
   gitDirChange,
   noWatch,
   pinnedRefs,
   refChange,
-  resolveCheckoutRootOf,
-  resolveWorkspaceRootOf,
   watchCheckout,
-  watchWorkspaceRoot,
-  workspaceRootReads,
+  workspaceRootOf,
   type WorkspaceFile,
 } from "./workspace";
 
 /**
- * Call `onChange` whenever what a read of `file` answers may have changed,
- * until the returned stop runs. On disk now: a watch of the file's own entry
- * (host-fs's `watchHostPath` — any workspace kind, riding the checkout's watch
- * when one is open). As of a named ref (`HEAD`, `main`): HEAD and the refs
- * in the checkout's git dir, `refs/heads/main` included for `main` — not the
- * index, which `ref:path` never reads. As of a sha, or a tuple the read
- * refuses: nothing — its answer cannot move. A workspace whose root is not
- * there yet is watched once a load sees it (`watchWorkspaceRoot`).
+ * Call `onChange` whenever what a read of `file` under `root` answers may
+ * have changed, until the returned stop runs. On disk now: a watch of the
+ * file's own entry (host-fs's `watchHostPath` — any workspace kind, riding
+ * the checkout's watch when one is open). As of a named ref (`HEAD`,
+ * `main`): HEAD and the refs in the checkout's git dir, `refs/heads/main`
+ * included for `main` — not the index, which `ref:path` never reads. As of a
+ * sha, a tuple the read refuses, or no workspace (`root` null): nothing —
+ * its answer cannot move until the root does, which re-points the watch (the
+ * value follows the attempt row). `onChange` runs once the watch is open, so
+ * a change between the load and the watch — a re-pointed one's — is heard.
  */
 export async function watchWorkspaceFile(
   file: WorkspaceFile,
+  root: WorkspaceRoot | null,
   onChange: () => void,
 ): Promise<() => void> {
   const { ref } = file;
+  if (root === null) return noWatch;
   if (ref !== undefined && pinnedRefs([ref])) return noWatch;
-  return watchWorkspaceRoot(file.workspace, onChange, async (root) => {
-    if (ref !== undefined) {
-      if (!root.git) return noWatch;
-      return watchCheckout(
-        root.path,
-        { main: ref === "main", hears: refChange },
-        onChange,
-      );
-    }
+  let stop: () => void;
+  if (ref !== undefined) {
+    if (!root.git) return noWatch;
+    stop = await watchCheckout(
+      root.path,
+      { main: ref === "main", hears: refChange },
+      onChange,
+    );
+  } else {
     const abs = resolveInsideRoot(root.path, file.path);
     if (abs === null) return noWatch;
-    return watchHostPath(abs, onChange);
-  });
+    stop = await watchHostPath(abs, onChange);
+  }
+  onChange();
+  return stop;
 }
 
-/** The text a `code.file` tuple reads, or its refusal. */
-export async function loadCodeFile({
-  worktree,
-  path,
-  ref,
-}: {
-  worktree: string;
-  path: string;
-  ref?: string;
-}): Promise<CodeFile> {
+/** The text a `code.file` tuple reads under its workspace's `root`, or its refusal. */
+export async function loadCodeFile(
+  {
+    worktree,
+    path,
+    ref,
+  }: {
+    worktree: string;
+    path: string;
+    ref?: string;
+  },
+  root: WorkspaceRoot | null,
+): Promise<CodeFile> {
   let result: FileReadResult;
   if (ref !== undefined) {
     // As of a revision: a git read, so the workspace must be a checkout.
-    const root = await resolveCheckoutRootOf(worktree, codeFile.refuse);
+    const checkout = checkoutRootOf(root, worktree, codeFile.refuse);
     if (!isAllowedRef(ref)) {
       throw codeFile.refuse(
         "invalid-ref",
         `${JSON.stringify(ref)} is not a ref`,
       );
     }
-    result = await getFileContentAtRef(root, path, await resolveRef(root, ref));
+    result = await getFileContentAtRef(
+      checkout,
+      path,
+      await resolveRef(checkout, ref),
+    );
   } else {
     // On disk now: any workspace kind.
-    const root = await resolveWorkspaceRootOf(worktree, codeFile.refuse);
-    result = await getFileContent(root, path);
+    result = await getFileContent(
+      workspaceRootOf(root, worktree, codeFile.refuse),
+      path,
+    );
   }
   const where = `${worktree}:${path}${ref === undefined ? "" : ` at ${ref}`}`;
   switch (result.kind) {
@@ -117,44 +136,68 @@ export async function loadCodeFile({
  * A workspace file's text, on demand: re-read over HTTP by each tab after a
  * watch invalidates it (see {@link watchWorkspaceFile}). Throttled — a commit
  * or a rebase writes many refs at once. The ETag is the file's revision
- * (`workspaceFileSignature`, probed before the read), so an invalidation that
- * moved nothing (a write to the attempts table) costs a 304.
+ * (`workspaceFileSignature`, probed before the read, over the root read in
+ * the same call), so an invalidation that moved nothing costs a 304.
  */
 export const codeFileServed = serveValue(codeFile, {
   source: "external",
   changes: "notified",
-  reads: workspaceRootReads,
+  follows: (follow) => ({
+    ws: follow(attemptWorkspacesServed, ({ worktree }) => ({
+      ids: workspaceAttemptIds(worktree),
+    })),
+  }),
   throttleMs: 500,
-  revalidate: ({ worktree, path, ref }) =>
-    workspaceFileSignature({
-      workspace: worktree,
-      path,
-      ...(ref !== undefined ? { ref } : {}),
-    }),
-  loader: loadCodeFile,
-  whileSubscribed: ({ worktree, path, ref }, notify) =>
-    watchWorkspaceFile(
-      { workspace: worktree, path, ...(ref !== undefined ? { ref } : {}) },
-      () => notify(),
+  loader: async (q, { followed }) =>
+    loadCodeFile(q, await workspaceRootFrom(q.worktree, followed.ws)),
+  revalidate: async (q, { followed }) =>
+    workspaceFileSignature(
+      fileOf(q),
+      await workspaceRootFrom(q.worktree, followed.ws),
     ),
+  whileFollowing: {
+    over: (followed) => followed.ws,
+    start: async (q, { over: ws, notify }) =>
+      watchWorkspaceFile(
+        fileOf(q),
+        await workspaceRootFrom(q.worktree, ws),
+        () => notify(),
+      ),
+  },
 });
 
-/** The diff a `code.file-diff` tuple reads, or its refusal. */
-export async function loadCodeFileDiff({
+/** A `code.file` tuple as the workspace file it reads. */
+function fileOf({
   worktree,
   path,
-  base,
-  head,
-  from,
+  ref,
 }: {
   worktree: string;
   path: string;
-  base?: string;
-  head?: string;
-  from?: string;
-}): Promise<CodeFileDiff> {
-  const root = await resolveCheckoutRootOf(worktree, codeFileDiff.refuse);
-  const result = await getFileDiff(root, path, base ?? "HEAD", head, from);
+  ref?: string;
+}): WorkspaceFile {
+  return { workspace: worktree, path, ...(ref !== undefined ? { ref } : {}) };
+}
+
+/** The diff a `code.file-diff` tuple reads under its workspace's `root`, or its refusal. */
+export async function loadCodeFileDiff(
+  {
+    worktree,
+    path,
+    base,
+    head,
+    from,
+  }: {
+    worktree: string;
+    path: string;
+    base?: string;
+    head?: string;
+    from?: string;
+  },
+  root: WorkspaceRoot | null,
+): Promise<CodeFileDiff> {
+  const checkout = checkoutRootOf(root, worktree, codeFileDiff.refuse);
+  const result = await getFileDiff(checkout, path, base ?? "HEAD", head, from);
   if (result.kind === "ok") return { diff: result.diff };
   switch (result.reason) {
     case "invalid-path":
@@ -171,10 +214,12 @@ export async function loadCodeFileDiff({
 }
 
 /**
- * Hear what can move a diff: the checkout's git dir (HEAD, the index, the
- * own branch, `main` when either side resolves it), and — for a diff against
- * the working tree — the file and its old path. A `base..head` of two shas
- * never moves.
+ * Hear what can move a diff under `root`: the checkout's git dir (HEAD, the
+ * index, the own branch, `main` when either side resolves it), and — for a
+ * diff against the working tree — the file and its old path. A `base..head`
+ * of two shas never moves; no checkout (`root` null or not git) has nothing
+ * to watch until the root moves, which re-points the watch. `onChange` runs
+ * once it is open (see {@link watchWorkspaceFile}).
  */
 async function watchFileDiff(
   q: {
@@ -184,43 +229,54 @@ async function watchFileDiff(
     head?: string;
     from?: string;
   },
+  root: WorkspaceRoot | null,
   onChange: () => void,
 ): Promise<() => void> {
   const base = q.base ?? "HEAD";
   const refs = q.head === undefined ? [base] : [base, q.head];
   if (q.head !== undefined && pinnedRefs(refs)) return noWatch;
   if (!refs.every(isAllowedRef)) return noWatch;
-  return watchWorkspaceRoot(q.worktree, onChange, async (root) => {
-    if (!root.git) return noWatch;
-    const checkout = root.path;
-    const files = new Set<string>();
-    if (q.head === undefined) {
-      for (const rel of [q.path, q.from]) {
-        const abs = rel === undefined ? null : resolveInsideRoot(checkout, rel);
-        if (abs !== null) files.add(abs);
-      }
+  if (root === null || !root.git) return noWatch;
+  const checkout = root.path;
+  const files = new Set<string>();
+  if (q.head === undefined) {
+    for (const rel of [q.path, q.from]) {
+      const abs = rel === undefined ? null : resolveInsideRoot(checkout, rel);
+      if (abs !== null) files.add(abs);
     }
-    return watchCheckout(
-      checkout,
-      {
-        main: refs.includes("main"),
-        hears: (change) => gitDirChange(change) || files.has(change.path),
-      },
-      onChange,
-    );
-  });
+  }
+  const stop = await watchCheckout(
+    checkout,
+    {
+      main: refs.includes("main"),
+      hears: (change) => gitDirChange(change) || files.has(change.path),
+    },
+    onChange,
+  );
+  onChange();
+  return stop;
 }
 
 /**
  * One file's diff, on demand: re-read over HTTP by each tab after the
  * checkout watch invalidates it. Throttled — a commit, a rebase or a save
- * burst writes many git-dir entries at once.
+ * burst writes many git-dir entries at once. Follows the workspace's attempt
+ * row as `code.file` does.
  */
 export const codeFileDiffServed = serveValue(codeFileDiff, {
   source: "external",
   changes: "notified",
-  reads: workspaceRootReads,
+  follows: (follow) => ({
+    ws: follow(attemptWorkspacesServed, ({ worktree }) => ({
+      ids: workspaceAttemptIds(worktree),
+    })),
+  }),
   throttleMs: 500,
-  loader: loadCodeFileDiff,
-  whileSubscribed: (q, notify) => watchFileDiff(q, () => notify()),
+  loader: async (q, { followed }) =>
+    loadCodeFileDiff(q, await workspaceRootFrom(q.worktree, followed.ws)),
+  whileFollowing: {
+    over: (followed) => followed.ws,
+    start: async (q, { over: ws, notify }) =>
+      watchFileDiff(q, await workspaceRootFrom(q.worktree, ws), () => notify()),
+  },
 });

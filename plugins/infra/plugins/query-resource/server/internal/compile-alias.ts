@@ -20,6 +20,7 @@ import type {
   DerivedRead,
   KeyedServerResourceOptions,
   ResourceParams,
+  RoutePlan,
   ScopePolicy,
   TupleUse,
 } from "@plugins/framework/plugins/resource-runtime/core";
@@ -43,6 +44,12 @@ import {
   type RollupJoin,
 } from "@plugins/infra/plugins/query-resource/core";
 import { routedReads } from "./arm-plan";
+import { canonicalTextOf } from "./canonical-text";
+import {
+  followablePoint,
+  followableScope,
+  type FollowablePlan,
+} from "./follow";
 import {
   decoderId,
   describeZod,
@@ -213,6 +220,12 @@ export interface CompiledAllCollection<
   keyField: string;
   /** The L2 definition the `all` plan carries (A18). */
   definition: string;
+  /**
+   * What a follow copies of each half (`./follow`): `rows` by `{ ids }`
+   * always, `all` by `{ where }` only for a scoped set (`null` otherwise —
+   * a whole unscoped set is no tuple of a computed value's).
+   */
+  followable: { all: FollowablePlan | null; rows: FollowablePlan };
 }
 
 /**
@@ -654,6 +667,13 @@ export function compileAllCollection<
     ),
     scopedMembership: { orderOf, orderSignatureOf },
   };
+  // The server's gate: the descriptor's (exactly the scope's keys), then
+  // what only the compile knows — each value the canonical text of its
+  // column's type, the one spelling the feed's `col::text` can equal.
+  const validateScope = (params: ResourceParams) => {
+    contract.validateParams?.(params);
+    for (const s of scope) s.check(key, params[s.field]!);
+  };
   const all = {
     loader: (params: AllParams, ctx?: { affectedIds: readonly string[] }) =>
       ctx
@@ -661,17 +681,7 @@ export function compileAllCollection<
         : load(fullSql(params), "full").then((rows) => capped(rows, "full")),
     ...allPolicy,
     ...(spec.debounceMs != null ? { debounceMs: spec.debounceMs } : {}),
-    // The server's gate: the descriptor's (exactly the scope's keys), then
-    // what only the compile knows — each value the canonical text of its
-    // column's type, the one spelling the feed's `col::text` can equal.
-    ...(scope.length === 0
-      ? {}
-      : {
-          validateParams: (params: ResourceParams) => {
-            contract.validateParams?.(params);
-            for (const s of scope) s.check(key, params[s.field]!);
-          },
-        }),
+    ...(scope.length === 0 ? {} : { validateParams: validateScope }),
   } as KeyedServerResourceOptions<Row[], AllParams> & ScopePolicy<AllParams>;
 
   const point = contracts.rows.point;
@@ -699,6 +709,23 @@ export function compileAllCollection<
     rows,
     keyField,
     definition,
+    followable: {
+      all:
+        scope.length === 0
+          ? null
+          : followableScope(
+              key,
+              allPolicy.routes as unknown as RoutePlan<ResourceParams>,
+              scope.map((s) => ({ field: s.field, column: s.col.name })),
+              validateScope,
+            ),
+      rows: followablePoint(
+        contracts.rows.key,
+        rowsPolicy.routes as unknown as RoutePlan<ResourceParams>,
+        pk,
+        (ids) => point.encode(ids),
+      ),
+    },
   };
 }
 
@@ -708,41 +735,6 @@ interface ScopeField {
   col: PgColumn;
   /** Throws `ResourceContractError` unless `value` is the canonical text of the column's type. */
   check(key: string, value: string): void;
-}
-
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
-const INT_RE = /^(0|-?[1-9][0-9]*)$/;
-const INT_BOUNDS: Readonly<Record<string, readonly [bigint, bigint]>> = {
-  smallint: [-(2n ** 15n), 2n ** 15n - 1n],
-  integer: [-(2n ** 31n), 2n ** 31n - 1n],
-  bigint: [-(2n ** 63n), 2n ** 63n - 1n],
-};
-
-/**
- * The scope types and what their canonical text is: Postgres's own
- * `col::text` of a value, so a param equal to it is the feed's key exactly
- * (`col = $param` ⇔ `col::text = $param`). Any other type is refused: a
- * timestamp's or a float's text depends on settings and rounding.
- */
-function canonicalTextOf(
-  sqlType: string,
-): ((value: string) => string | null) | null {
-  if (/^(text|character varying|varchar)(\(\d+\))?$/.test(sqlType)) {
-    return () => null;
-  }
-  if (sqlType === "uuid") {
-    return (v) =>
-      UUID_RE.test(v) ? null : "a uuid in canonical form (lower-case hex)";
-  }
-  const bounds = INT_BOUNDS[sqlType];
-  if (bounds !== undefined) {
-    return (v) =>
-      INT_RE.test(v) && BigInt(v) >= bounds[0] && BigInt(v) <= bounds[1]
-        ? null
-        : `the canonical decimal text of a ${sqlType}`;
-  }
-  return null;
 }
 
 /**

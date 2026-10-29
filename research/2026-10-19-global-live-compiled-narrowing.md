@@ -149,7 +149,7 @@ Gate on typing: `page_blocks` has a single-column pk, so `unchanged` works. A `d
 - A boot assertion (in `installFeed`): no other deferred trigger exists on a routed table or on the changelog. Such a trigger could queue a notification after the marker.
 - The `burst.ts` header's "a burst split by a later socket read is still routed in two flushes" paragraph becomes the statement of the fix.
 
-### C. `follows`: a value follows collection tuples (session 2)
+### C. `follows`: a value follows collection tuples (session 2) — SUPERSEDED by `2026-10-24-global-live-narrowed-reads.md` (compiled into the reach, no runtime hold edge)
 
 **Spelling** (`network/live/core/internal/compile-value.ts`, `server/internal/serve-value.ts`):
 

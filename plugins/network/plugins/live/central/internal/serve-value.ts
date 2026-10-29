@@ -78,6 +78,13 @@ export type CentralServedPagedValue<Item, Q> = ExternalNotifiedPagedValue<
 export type CentralSilentPagedValue<Item> = ExternalSilentPagedValue<Item>;
 
 /**
+ * Central serves no table-backed collection (it has no change feed), so a
+ * value here follows none — `follows` is refused (tsc, and a throw in
+ * `serveValueOn`).
+ */
+type NoFollowsOnCentral = { follows?: never };
+
+/**
  * Serve a central `liveValue`.
  *
  * ```ts
@@ -100,7 +107,8 @@ export function serveValue<
   K extends string = never,
 >(
   value: LivePagedValue<Item, Meta, Q, QIn, "central", K>,
-  opts: ServePagedValueOptions<NoInfer<Item>, NoInfer<Meta>, NoInfer<Q>, R, C>,
+  opts: ServePagedValueOptions<NoInfer<Item>, NoInfer<Meta>, NoInfer<Q>, R, C> &
+    NoFollowsOnCentral,
 ): ServedFor<
   C,
   CentralServedPagedValue<Item, Q>,
@@ -114,7 +122,8 @@ export function serveValue<
   C extends LiveValueChanges = "notified",
 >(
   value: LiveQueryValue<T, Q, QIn, "central"> & SnapshotPairing<C>,
-  opts: ServeValueOptions<NoInfer<T>, NoInfer<Q>, "external", R, C>,
+  opts: ServeValueOptions<NoInfer<T>, NoInfer<Q>, "external", R, C> &
+    NoFollowsOnCentral,
 ): ServedFor<
   C,
   CentralServedQueryValue<T, LiveQueryParams, Q>,
@@ -129,7 +138,8 @@ export function serveValue<
   value: LiveValue<T, P, "central"> & {
     query?: undefined;
   } & SnapshotPairing<C>,
-  opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, "external", R, C>,
+  opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, "external", R, C> &
+    NoFollowsOnCentral,
 ): ServedFor<C, CentralServedValue<T, P>, CentralSilentValue<T, P>>;
 export function serveValue<T, P extends Record<string, string>>(
   value:

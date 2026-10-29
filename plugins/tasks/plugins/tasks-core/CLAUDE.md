@@ -71,7 +71,11 @@ through the **`PushLedger` host service** (`server/internal/push-ledger/service.
 `{ ensureFresh() }`): the reads that must see a complete ledger
 (`listPushesForAttempt`) and this plugin's `onReady`
 catch-up call `PushLedger.get().ensureFresh()`. The desktop provider is
-`tasks-core#machine` (the memo below, plus the ref reaction in its `register`);
+`tasks-core#machine` (the memo below, plus the ref reaction in its `register`),
+whose `ensureFresh` runs in its own `bg` span (`push-ledger.reconcile`) — so a
+live value's loader that pulls the ledger current (attempt-work, before reading
+its followed `pushIds`) captures none of the reconcile's reads or writes, and the
+reconcile's inserts reach it through the feed like any write;
 a host without git provides `plugins/seeded-push-ledger` — nothing to do, the
 seeded rows ARE the ledger.
 
@@ -243,6 +247,44 @@ serves them.
   read, so `waiting_for` / `last_viewed_at` / `updated_at` reach nothing; a
   push its attempt's (the push rollup's source route — C1: no carrier, no
   FULL); an insert an entrant, a delete an exit.
+- **Follow targets** — the narrow collections a computed value FOLLOWS
+  (network/live's `follows`; `research/2026-10-24-global-live-narrowed-reads.md`
+  §4). Each picks EXACTLY what its followers read: a follow copies the
+  collection's route gate, so a write to a column the row does not carry
+  reaches no follower — which is why the wide rows (`conversationsById`,
+  `attemptRows`) are never followed. Declared in `core/resources.ts`, served
+  in `server/internal/follow-targets.ts` (`attemptWorkspaces` in
+  `resources.ts`); the server barrel exports the SERVED handles a follow
+  names (never the core descriptor). No surface reads them over the wire,
+  except `attemptWorkspaces`.
+  - `attemptWorkspaces` (`attempt-workspaces`, lookup by attempt id:
+    `{ id, workspace, worktreePath, createdAt }`) —
+    `follow(attemptWorkspacesServed, ({ attemptId }) => ({ ids: [attemptId] }))`.
+    The row grew `worktreePath` / `createdAt` additively (C39, pinned in
+    `follow-targets-oracle.test.ts` with `subscribeAsOldDescriptor`).
+  - `attemptConversationIds` (scoped `all` by `attemptId`, `createdAt` asc:
+    `{ id, attemptId, createdAt }`, every kind) —
+    `follow(attemptConversationIdsServed, ({ attemptId }) => ({ where: { attemptId } }))`.
+  - `attemptPushIds` (scoped `all` by `attemptId`: `{ id, attemptId,
+    createdAt }`) — same `{ where: { attemptId } }` form. `pushRows` is a
+    window, which has no per-tuple match.
+  - `attemptDeliveries` (lookup by `attemptId`: `{ attemptId }` — a row is
+    the fact) — `{ ids: [attemptId] }`.
+  - `conversationWorkspaces` (lookup by conversation id: `{ id, attemptId,
+    worktreePath, workspace }`, the attempt joined through
+    `conversationAttemptJoin`, the first of `conversationOwnerJoins`) —
+    `{ ids: [id] }`. Owned here: conversations/workspace cannot import
+    tasks-core (a cycle). An attempt's `worktree_path` / `workspace` write
+    reaches that attempt's conversations through the join's reverse route
+    (no tuple match on the far side). Its followers read the followed rows
+    through `conversationWorkspaceOf(rows)` (core): the one row, or `null`
+    for no row or no checkout path yet — one reading of "no worktree" for
+    edited-files, allow-files and plugin-changes.
+  - `conversationSessionTails` (lookup: `{ id, claudeSessionId }`) and
+    `conversationRuntimes` (lookup: `{ id, runtime, status }`) — `{ ids: [id] }`.
+  - Each gate is pinned per tree step by `follow-targets-oracle.test.ts`: the
+    poller's `viewed` write and a retitle reach none of them; a status flip
+    only `conversationRuntimes`; an insert its own scope, a move both scopes.
 - **A live loader reads a table, not a view** (C36). `getAttemptRow` is the
   `attempts` row alone; commits-graph and attempt-work (git-work loaders) read
   it, and `listConversationIdsForAttempt` reads `conversations`, so a task or
@@ -292,8 +334,8 @@ serves them.
     - `useTaskAttempts`
     - `useTaskConversations`
 - Server:
-  - Contributes: 28 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `resource.declare` ×18
+  - Contributes: 36 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `resource.declare` ×26
     - `derived-view` ×4
     - `ids.kind` ×3
     - `derived-table` ×2
@@ -310,6 +352,7 @@ serves them.
     - `infra/entities.defineEntity`
     - `infra/events.defineTriggerEvent`
     - `infra/query-resource.compileLookup`
+    - `network/live.ColumnOverride`
     - `network/live.serveCollection`
     - `primitives/rank.nextRankUnder`
     - `primitives/rank.RankExecutor`
@@ -364,8 +407,12 @@ serves them.
     - `_taskStatusChangedTriggers`
     - `_taskTitleChangedTriggers`
     - `addTaskDependency`
+    - `attemptConversationIdsServed`
+    - `attemptDeliveriesServed`
+    - `attemptPushIdsServed`
     - `AttemptSchema`
     - `AttemptStatusSchema`
+    - `attemptWorkspacesServed`
     - `clearMandate`
     - `clusterLabelOf`
     - `conversationAttachments`
@@ -373,8 +420,11 @@ serves them.
     - `ConversationKindSchema`
     - `conversationOwnerColumns`
     - `conversationOwnerJoins`
+    - `conversationRuntimesServed`
     - `ConversationSchema`
+    - `conversationSessionTailsServed`
     - `conversationStatusChanged`
+    - `conversationWorkspacesServed`
     - `createAttempt`
     - `createTask`
     - `deleteAttempt`
@@ -410,6 +460,7 @@ serves them.
     - `listTasks`
     - `markConversationClosed`
     - `markConversationGone`
+    - `moveConversationToAttempt`
     - `nearestMandate`
     - `orphanedAttemptSink`
     - `pushes`
@@ -440,7 +491,6 @@ serves them.
     - `updateTaskTitle`
     - `withTaskStatusBatch`
     - `workspaceOfAttemptLookup`
-    - `workspaceOfConversationLookup`
   - Register:
     - `defineTriggerEvent('pushes.landed')`
     - `defineTriggerEvent('tasks.statusChanged')`
@@ -450,9 +500,17 @@ serves them.
     - `defineTriggerEvent('conversation.statusChanged')`
     - `defineTriggerEvent('conversation.created')`
   - Resources:
+    - `attempt-conversation-ids` (keyed)
+    - `attempt-conversation-ids:rows` (keyed, point)
+    - `attempt-deliveries:rows` (keyed, point)
+    - `attempt-push-ids` (keyed)
+    - `attempt-push-ids:rows` (keyed, point)
     - `attempt-workspaces:rows` (keyed, point)
     - `attempts` (keyed)
     - `attempts:rows` (keyed, point)
+    - `conversation-runtimes:rows` (keyed, point)
+    - `conversation-session-tails:rows` (keyed, point)
+    - `conversation-workspaces:rows` (keyed, point)
     - `conversations-active` (keyed)
     - `conversations-active:rows` (keyed, point)
     - `conversations-gone` (keyed, window)
@@ -507,7 +565,10 @@ serves them.
     - `TrackFilingGrant`
     - `TrailerCommit`
   - Exports (values):
+    - `attemptConversationIds`
+    - `attemptDeliveries`
     - `attemptDeliveriesEntityRef`
+    - `attemptPushIds`
     - `attemptRows`
     - `AttemptSchema`
     - `attemptsEntityRef`
@@ -518,15 +579,19 @@ serves them.
     - `CONVERSATION_TRAILER_KEY`
     - `ConversationKindSchema`
     - `conversationName`
+    - `conversationRuntimes`
     - `conversationsActive`
     - `conversationsById`
     - `ConversationSchema`
     - `conversationsEntityRef`
+    - `conversationSessionTails`
     - `conversationsGone`
     - `conversationsSystem`
     - `ConversationStatusSchema`
     - `ConversationSummarySchema`
     - `ConversationWorkingOnSchema`
+    - `conversationWorkspaceOf`
+    - `conversationWorkspaces`
     - `isAdoptedConversation`
     - `isBlockedStatus`
     - `isSettled`
@@ -554,11 +619,11 @@ serves them.
     - `TrackFilingGrantSchema`
     - `TRAILER_LOG_FORMAT`
 - Cross-plugin:
-  - Imported by: 76 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 77 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×29
     - `tasks` ×23
     - `active-data` ×5
-    - `debug` ×4
+    - `debug` ×5
     - `page` ×3
     - `apps` ×2
     - `infra` ×2

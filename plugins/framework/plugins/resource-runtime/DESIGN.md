@@ -263,6 +263,29 @@ why routing never uses the captured read-set:
 - **Off with no capture wired** (central, DB-free harness): routing never
   depends on it.
 
+## Follows — `Route.via`, `onFollowReached`, `loadResourceFresh`
+
+Design: [narrowed reads](../../../../research/2026-10-24-global-live-narrowed-reads.md).
+
+- **Routes copied, not a new edge kind**: the runtime already narrows a `full`
+  reach route per tuple (`use.match`), so a follow is the collection's own routes
+  in the follower's plan, and Rule B holds by construction — the followed reads
+  run inside the follower's flight, after its watermark capture.
+- **A follow owns its tables**: an own read of a followed table beside it would
+  re-widen the narrowing the follow exists for.
+- **A hand read of a followed table is drift**: the follow's routes gate and
+  match only what the collection reads, so a write reaching another read would be
+  missed.
+- **Judged on the run's own capture**: many tuples of one key load in one flush,
+  so a per-key last-run capture read a microtask later could be a sibling's; a
+  pure follower reads nothing in its own span and must be judged on `[]`, not on
+  a stale capture.
+- **`onFollowReached` fires outside any flight** so a re-pointed watch is opened
+  even in invalidate mode, where no load runs.
+- **`loadResourceFresh` never joins a flight**: the follower's flight began after
+  its change, so a joined older flight would be a stale read under a fresh
+  version; it captures no watermark because the follower's flight already did.
+
 ## Deferred resources (`defineDeferredResource` / `bindDeferredResources`)
 
 - Registered at definition so `_debug`, the read-set-gap warning and the D5

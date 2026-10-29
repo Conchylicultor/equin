@@ -30,6 +30,16 @@ export interface RuntimeProfileView {
 export type ProfilerMeasureName =
   "subscribers" | "frameChars" | "ids" | "sinceChangeMs";
 
+/**
+ * One loader entry's own table read-set as its span closes (`[]` included),
+ * with each table's read tags (`undefined` when none was tagged) — the
+ * resource runtime's `RunCapture`, seen through the seam.
+ */
+export type LoaderReadsSink = (
+  tables: ReadonlySet<string>,
+  tags: ReadonlyMap<string, ReadonlySet<string | null>> | undefined,
+) => void;
+
 /** The profiler's `SpanDetail`, seen through the seam. */
 export interface ProfilerSpanDetail {
   variant?: string;
@@ -43,11 +53,13 @@ export interface ProfilerSpanDetail {
  * supplies a matching implementation and owns any casts.
  */
 export interface ProfilerHooks {
+  /** `onReads` (a `loader` entry only): its own capture, as its span closes. */
   recordEntrySpan<T>(
     kind: string,
     label: string,
     fn: () => T | Promise<T>,
     detail?: ProfilerSpanDetail,
+    onReads?: LoaderReadsSink,
   ): Promise<T>;
   runTracked<T>(label: string, fn: () => T | Promise<T>): Promise<T>;
   recordSpan(
@@ -81,9 +93,10 @@ export function recordEntrySpan<T>(
   label: string,
   fn: () => T | Promise<T>,
   detail?: ProfilerSpanDetail,
+  onReads?: LoaderReadsSink,
 ): Promise<T> {
   return hooks
-    ? hooks.recordEntrySpan(kind, label, fn, detail)
+    ? hooks.recordEntrySpan(kind, label, fn, detail, onReads)
     : Promise.resolve(fn());
 }
 

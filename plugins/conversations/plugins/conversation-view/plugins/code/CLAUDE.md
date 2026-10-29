@@ -56,22 +56,29 @@ read) and computes over those same facts on a miss — one status scan per miss.
 The value is pushed, so no ETag is minted beside it; a revalidate would have to
 return the held entry's own signature, never a fresh probe.
 
-## The worktree lookup: gated reads, and a watch parked until the row exists
+## The worktree: a followed row, and a watch that follows it
 
-Every loader and the watch resolve the conversation's worktree through
-tasks-core's compiled `workspaceOfConversationLookup` (`run`), and the pages,
-the meta and the one-file value declare exactly that (`reads.lookups`): a
-conversations/attempts write that touches no column the lookup reads (every
-agent turn's status) re-runs no tuple, and a conversation's insert or delete
-re-runs only its own tuples. Read those tables any other way in a loader and
-the drift guard reports it.
+The pages, the meta and the one-file value each `follows` tasks-core's
+`conversationWorkspaces` collection (`{ ids: [id] }`): every hook (`loader`,
+`meta`, `whileFollowing.over`) is handed the conversation's workspace row
+fresh (`followed.ws`, read through tasks-core's `conversationWorkspaceOf` —
+the worktree path, and the workspace spec whose `git` capability is
+asserted), the watch is started over the path alone, and the value's routes
+are the collection's own. A
+conversations/attempts write that touches no column the row carries (every
+agent turn's status) re-runs no tuple; a conversation's insert, delete or move
+re-runs only its own tuples (an attempt's `worktree_path` / `workspace` write:
+that attempt's conversations). Read those tables any other way in a loader
+and the drift guard reports it.
 
 A conversation subscribed before its row exists has no worktree to watch, so
-its watch parks (`packages/parked-watch`): the load the row's insert re-runs
-opens it, then notifies. The park is taken before the subscribe's own resolve,
-so an insert landing while that resolve is in flight still opens it. A parked
-open that fails is reported (`EditedFilesWatchOpenError`) and parked again, so
-the next resolving load retries it.
+its watch watches nothing; the framework re-starts it over the new path when
+a write moves it (the follow's re-point, `onFollowReached`) — so a worktree
+written, or moved, after the first subscribe is watched. Every start
+notifies once its watch is open, so a change between the load and the watch
+going live is not lost. A (re-)start whose open fails is reported by the
+runtime and retried at the next change reaching the tuple through its follow
+(or the next subscribe), moved row or not.
 `e2e/edited-files-cost.ts` measures all of it on a build.
 
 ## Desktop-only: `needsMachine`

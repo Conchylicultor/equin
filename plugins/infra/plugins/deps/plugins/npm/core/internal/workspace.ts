@@ -82,21 +82,28 @@ const LockSchema = z.object({
   packages: z.record(z.string(), z.array(z.unknown()).min(1)),
 });
 
-/** Every workspace package.json: the root and each plugin's, tracked or new. */
+/**
+ * Every workspace package.json: the root and each plugin's, tracked or new —
+ * as the working tree has them, so one deleted but not yet committed (a plugin
+ * just removed) is not listed: `--cached` alone still names it.
+ */
 export async function workspaceManifests(root: string): Promise<string[]> {
-  const result = await spawnCaptured(
-    [
-      "git",
-      "ls-files",
-      "--cached",
-      "--others",
-      "--exclude-standard",
-      "--",
-      "package.json",
-      ":(glob)plugins/**/package.json",
-    ],
-    { cwd: root, timeoutMs: 60_000 },
-  );
+  const pathspec = ["--", "package.json", ":(glob)plugins/**/package.json"];
+  const listed = await gitLsFiles(root, [
+    "--cached",
+    "--others",
+    "--exclude-standard",
+    ...pathspec,
+  ]);
+  const deleted = new Set(await gitLsFiles(root, ["--deleted", ...pathspec]));
+  return listed.filter((path) => !deleted.has(path));
+}
+
+async function gitLsFiles(root: string, args: string[]): Promise<string[]> {
+  const result = await spawnCaptured(["git", "ls-files", ...args], {
+    cwd: root,
+    timeoutMs: 60_000,
+  });
   if (result.exitCode !== 0) {
     throw new Error(
       `git ls-files failed (exit ${result.exitCode}): ${result.stderr.trim()}`,

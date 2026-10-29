@@ -5,7 +5,8 @@ import { subagentTranscriptServed } from "./internal/transcript-resource";
 // Discovery, for a consumer that accounts over a conversation's whole tree (its
 // usage totals): the sub-agent directory beside each ANCHORED session file, and
 // every agent below those roots. Hand `subagentDirOf` only paths that came from
-// `resolveConversationTranscriptPaths` — that derivation is the ownership guard.
+// `resolveTranscriptPathsOf` / `resolveConversationTranscriptPaths` — that
+// derivation is the ownership guard.
 export { subagentDirOf, listSubagentEntries } from "./internal/discovery";
 
 export default {

@@ -398,12 +398,20 @@ const runtime = createResourceRuntime({
   // The label stays the resource key (one slow-op row per resource, and the key
   // the loader→tables read-set index is built on); WHICH params ran rides as the
   // span's variant, and a scoped refill carries how many ids it read.
-  wrapLoad: (key, info, fn) =>
-    recordEntrySpan("loader", key, fn, {
-      variant: info.variant,
-      measures:
-        info.scopedIds !== undefined ? { ids: info.scopedIds } : undefined,
-    }),
+  // The span hands the run's own capture back (`capture`): the drift guard
+  // judges each run on its own reads, never on the key's last run.
+  wrapLoad: (key, info, fn, capture) =>
+    recordEntrySpan(
+      "loader",
+      key,
+      fn,
+      {
+        variant: info.variant,
+        measures:
+          info.scopedIds !== undefined ? { ids: info.scopedIds } : undefined,
+      },
+      capture,
+    ),
   // The live-state HTTP fallback as an `http` entry, 304s included. It is a raw
   // route (not `implement()`), so nothing else opens one. The label names the
   // resolved key — bounded by the registry, since an unknown key 404s first.
@@ -552,6 +560,9 @@ export const {
   handleResourceHttp,
   withNotifyBatch,
   loadResourceByKey,
+  // One tuple read fresh through its own loader span and drift guard, never
+  // joining a flight — network/live's `follows` reader.
+  loadResourceFresh,
   // Run + time one full first-subscribe lifecycle (onFirstSubscribe + loader read)
   // then tear it down. Sibling to loadResourceByKey; powers the benchmark harness.
   measureSubscribeCycle,

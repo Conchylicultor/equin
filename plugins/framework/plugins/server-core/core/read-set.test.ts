@@ -21,11 +21,17 @@ describe("read-set — union vs per-run capture", () => {
     expect(getLastLoaderReadSet("u-attempts")).toEqual(["attempts_v"]);
   });
 
-  test("a run that read nothing changes neither", () => {
+  test("a run that read nothing keeps the union and empties the per-run capture — never judged on an older run", () => {
     recordLoaderReadSet("u-p", new Set(["p_table"]));
     recordLoaderReadSet("u-p", new Set());
     expect(readSetOf("u-p")).toEqual(["p_table"]);
-    expect(getLastLoaderReadSet("u-p")).toEqual(["p_table"]);
+    expect(getLastLoaderReadSet("u-p")).toEqual([]);
+  });
+
+  test("an empty first run lists no key in the union", () => {
+    recordLoaderReadSet("u-empty", new Set());
+    expect(getLastLoaderReadSet("u-empty")).toEqual([]);
+    expect("u-empty" in getReadSetIndex()).toBe(false);
   });
 
   test("undefined per-run capture and [] read-set for a key no loader ran", () => {

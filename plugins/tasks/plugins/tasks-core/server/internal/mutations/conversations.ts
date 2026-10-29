@@ -274,6 +274,33 @@ export async function updateConversationsTitleForTask(
     );
 }
 
+// Re-points a conversation at another attempt. Both tasks' derived statuses may
+// move (the scope is seeded with both), and the conversation → attempt map the
+// push ledger attributes by moved with it, so the ledger's signature learns it
+// (`push-ledger/attribution.ts`) — as for an insert. Its one caller is debug
+// read-set's narrowing fixture: a move is the write that reaches both the old
+// and the new attempt's live tuples.
+export async function moveConversationToAttempt(
+  id: string,
+  attemptId: string,
+): Promise<void> {
+  const { taskId: fromTaskId } = await conversationContext(id);
+  if (fromTaskId === null) throw new Error(`Unknown conversation "${id}"`);
+  const to = await taskOfAttempt(attemptId);
+  if (to === null) throw new Error(`Unknown attempt "${attemptId}"`);
+  await withTaskStatusChange(
+    [...new Set([fromTaskId, to.taskId])],
+    db,
+    async () => {
+      await db
+        .update(_conversations)
+        .set({ attemptId })
+        .where(eq(_conversations.id, id));
+    },
+  );
+  noteAttributionChanged();
+}
+
 export async function deleteConversationRow(id: string): Promise<void> {
   const { taskId, state: prev } = await conversationContext(id);
   await withTaskStatusChange(taskId ?? [], db, async () => {

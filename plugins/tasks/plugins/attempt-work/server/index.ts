@@ -2,9 +2,8 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 
 export {
   getAttemptWork,
-  readLandedShas,
-  attemptWorkSignature,
-  evictAttemptWork,
+  landedShasFrom,
+  evictLandedShas,
 } from "./internal/work";
 // The pending-side git reads, shared with commits-graph (which measures the same
 // branch for its chip and pane). One home, so "ahead of main" is one question with

@@ -27,6 +27,10 @@ import {
   registerValue,
 } from "../../core/internal/compile-value";
 import { serveValue, valueRuntime } from "./serve-value";
+import {
+  FOLLOW_SOURCE,
+  type FollowIdsTarget,
+} from "../../core/internal/follows";
 
 const Count = z.object({ n: z.number() });
 const counts = pgTable("test_serve_value_counts", {
@@ -353,7 +357,7 @@ describe("serveValue", () => {
         source: "db",
         loader: () => ({ n: 1 }),
       }),
-    ).toThrow(/declares the tables its loader reads/);
+    ).toThrow(/declares what its loader reads/);
     expect(() =>
       untyped(liveValue(key("served-reads-fixed"), { schema: Count }), {
         source: "external",
@@ -397,11 +401,7 @@ describe("serveValue", () => {
       reads: () => ({ tables: [counts], reason: "a registry's tables" }),
       loader: () => ({ n: 7 }),
     };
-    const { resource } = registerValue(
-      valueRuntime(v.key, opts, runtime),
-      v,
-      opts,
-    );
+    const { resource } = registerValue(valueRuntime(v, opts, runtime), v, opts);
     const unbound = await Promise.resolve()
       .then(() => resource.load({}))
       .then(
@@ -435,11 +435,7 @@ describe("serveValue", () => {
       },
       loader: () => ({ n: ++n }),
     };
-    const { resource } = registerValue(
-      valueRuntime(v.key, opts, runtime),
-      v,
-      opts,
-    );
+    const { resource } = registerValue(valueRuntime(v, opts, runtime), v, opts);
     expect("notify" in resource).toBe(true);
     const entry = await debugOf(runtime, v.key);
     expect(entry.policy).toBe("external");
@@ -504,7 +500,7 @@ describe("serveValue", () => {
       meta: () => ({ n: ++metaLoads }),
     };
     const { resource, meta } = registerPagedValue(
-      valueRuntime(v.key, opts, runtime),
+      valueRuntime(v, opts, runtime),
       v,
       opts,
     );
@@ -592,7 +588,7 @@ describe("serveValue", () => {
       },
     };
     const { resource, meta } = registerPagedValue(
-      valueRuntime(v.key, opts, runtime),
+      valueRuntime(v, opts, runtime),
       v,
       opts,
     );
@@ -662,11 +658,7 @@ describe("serveValue", () => {
       reads: () => ({ tables: [counts], reason: "a provider's tables" }),
       loader: () => ({ n: 3 }),
     };
-    const { resource } = registerValue(
-      valueRuntime(v.key, opts, runtime),
-      v,
-      opts,
-    );
+    const { resource } = registerValue(valueRuntime(v, opts, runtime), v, opts);
     expect("notify" in resource).toBe(true);
     const unbound = await debugOf(runtime, v.key);
     expect(unbound.policy).toBe("unbound");
@@ -708,7 +700,7 @@ describe("serveValue", () => {
       reads: () => ({ tables: [counts], reason: "a provider's tables" }),
       loader: () => ({ rows: [] }),
     };
-    registerValue(valueRuntime(v.key, opts, runtime), v, opts);
+    registerValue(valueRuntime(v, opts, runtime), v, opts);
     expect((await debugOf(runtime, v.key)).shape).toEqual(shape);
     runtime.bindDeferredResources();
     expect((await debugOf(runtime, v.key)).shape).toEqual(shape);
@@ -719,7 +711,7 @@ describe("serveValue", () => {
       changes: { fixed: { reason: "a constant" } },
       loader: () => ({ n: 1 }),
     };
-    registerValue(valueRuntime(plain.key, {}, runtime), plain, plainOpts);
+    registerValue(valueRuntime(plain, {}, runtime), plain, plainOpts);
     expect((await debugOf(runtime, plain.key)).shape).toEqual({
       paged: false,
       bounds: [],
@@ -895,5 +887,91 @@ describe("serveValue", () => {
         .every((f) => f.params?.scopeId === undefined),
     ).toBe(true);
     handler.close(ws);
+  });
+});
+
+describe("serveValue — follows on every arm (types)", () => {
+  interface Ws {
+    id: string;
+    path: string;
+  }
+  const rowsTarget: FollowIdsTarget<Ws> = {
+    [FOLLOW_SOURCE]: {
+      form: "ids",
+      collection: "t:rows",
+      read: () => Promise.resolve([]),
+      reach: () => null,
+      deferred: false,
+    },
+  };
+
+  test("db, notified external and paged values take follows; reads is optional beside one; a silent value takes none", () => {
+    const plain = liveValue("test.serve-value.follows-types", {
+      schema: z.object({ n: z.number() }),
+      params: ["id"],
+    });
+    const paged = liveValue("test.serve-value.follows-types-paged", {
+      query: z.object({ id: z.string() }),
+      paged: {
+        item: z.object({ id: z.string() }),
+        id: "id",
+        key: { of: (i: { id: string }) => [i.id], order: ["asc"] as const },
+        limit: 5,
+        maxLimit: 10,
+      },
+    });
+    // Never called — the assertions are the types (and `@ts-expect-error`s).
+    const typeOnly = () => {
+      serveValue(plain, {
+        source: "db",
+        follows: (follow) => ({
+          ws: follow(rowsTarget, ({ id }) => ({ ids: [id] })),
+        }),
+        loader: (_p, { followed }) => ({ n: followed.ws.length }),
+        whileFollowing: {
+          over: (followed) => followed.ws.map((r) => r.path),
+          start: (_p, { over: paths }) => {
+            const typed: readonly string[] = paths;
+            return () => void typed;
+          },
+        },
+      });
+      serveValue(plain, {
+        source: "external",
+        changes: "notified",
+        follows: (follow) => ({
+          ws: follow(rowsTarget, ({ id }) => ({ ids: [id] })),
+        }),
+        loader: (_p, { followed }) => ({ n: followed.ws.length }),
+        whileFollowing: {
+          over: (followed) => followed.ws.length,
+          start: (_p, { over: n, notify }) => {
+            notify();
+            return () => void n;
+          },
+        },
+      });
+      serveValue(paged, {
+        source: "external",
+        changes: "notified",
+        follows: (follow) => ({
+          ws: follow(rowsTarget, ({ id }) => ({ ids: [id] })),
+        }),
+        loader: (_q, _range, { followed }) =>
+          followed.ws.map((r) => ({ id: r.id })),
+      });
+      // @ts-expect-error — a db value without follows declares its reads
+      serveValue(plain, { source: "db", loader: () => ({ n: 0 }) });
+      serveValue(plain, {
+        source: "external",
+        changes: { fixed: { reason: "r" } },
+        // @ts-expect-error — a value with no change signal follows nothing
+        follows: (follow) => ({
+          ws: follow(rowsTarget, ({ id }: { id: string }) => ({ ids: [id] })),
+        }),
+        loader: () => ({ n: 0 }),
+      });
+    };
+    expect(typeof typeOnly).toBe("function");
   });
 });

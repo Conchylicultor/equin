@@ -15,11 +15,18 @@
 // mergeBase is a pure function of (headSha, mainSha) (immutable history), so
 // folding in both tips covers it without spawning `merge-base` here.
 //
-// landedShas needs no separate dimension any more. It used to be a `pushes` DB
-// read that could move on its own, so it had to be folded in. It is now the set
-// of `main` commits carrying this attempt's conversation trailers (attempt-work's
-// `readLandedShas`), and a commit can only join that set by landing on `main` —
-// which advances `mainSha`. So the two tips determine the landed set as well.
-export function graphEtag(headSha: string, mainSha: string): string {
-  return `${headSha}|${mainSha}`;
+// landedShas is the set of `main` commits carrying this attempt's conversation
+// trailers (attempt-work's landed memo, `landedShasFrom`). It moves when a
+// commit lands on `main` — which advances `mainSha` — AND when a conversation
+// joins the attempt (an adoption, a fork) with no ref moving: so the
+// conversation set is its own dimension (sorted: order-independent). The
+// checkout is too: the tips are read in it, and an attempt's `worktree_path`
+// can be re-pointed under an unchanged head.
+export function graphEtag(
+  headSha: string,
+  mainSha: string,
+  convIds: readonly string[],
+  worktreePath: string,
+): string {
+  return `${headSha}|${mainSha}|${[...convIds].sort().join(",")}|${worktreePath}`;
 }

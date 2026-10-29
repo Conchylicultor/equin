@@ -1,5 +1,8 @@
 import { serveValue } from "@plugins/network/plugins/live/server";
-import { transcriptChainReads } from "@plugins/conversations/plugins/transcript-source/server";
+import {
+  followedTranscriptChain,
+  transcriptChainFollows,
+} from "@plugins/conversations/plugins/transcript-source/server";
 import {
   conversationEvents,
   watchConversationEvents,
@@ -19,11 +22,15 @@ export function serveTranscriptFold<S>(fold: TranscriptFold<S>) {
   return serveValue(fold.before, {
     source: "external",
     changes: "notified",
-    // The loader resolves the transcript chain from Postgres; the watch already
-    // follows a session switch, so this only makes the read declared.
-    reads: transcriptChainReads,
-    loader: async ({ id, before }) => {
-      const events = await conversationEvents(id);
+    // The transcript chain's facts, followed: a session recorded on this
+    // conversation recomputes its folds alone; the watch follows the switch
+    // by itself.
+    follows: (follow) => transcriptChainFollows(follow),
+    loader: async ({ id, before }, { followed }) => {
+      const events = await conversationEvents(
+        id,
+        followedTranscriptChain(followed),
+      );
       const next = foldEvents(
         fold,
         fold.init(),

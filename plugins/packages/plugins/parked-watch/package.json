@@ -1,6 +1,0 @@
-{
-  "name": "@equin/plugin-packages-parked-watch",
-  "private": true,
-  "version": "0.0.1",
-  "description": "Watches parked until their target is known: createParkedWatches({ onOpenError }) holds a watch on a key whose target (a conversation's worktree) is not resolvable yet, and opens it from the first load that resolves the target — the park taken before the subscribe's own resolve, so a target found while that resolve is in flight still opens it; a parked open that fails is reported and re-parked, so the next resolving load retries it."
-}

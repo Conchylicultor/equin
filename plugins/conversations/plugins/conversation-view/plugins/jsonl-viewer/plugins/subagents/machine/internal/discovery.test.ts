@@ -3,27 +3,26 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { readJsonlEventsFromChain } from "@plugins/conversations/plugins/transcript-watcher/server";
+import type { SubagentRef } from "../../core";
 
-// The ONE substitution in this plugin's suites, and the only file that makes it:
-// which transcript files the conversation owns.
+// What this plugin is allowed to see: the conversation's ANCHORED transcript
+// files — what `resolveTranscriptPathsOf` hands a served value from the chain it
+// follows (it returns only what `resolveAnchoredChain` KEPT). Every reader takes
+// them as an argument, so a test that sets `keptPaths` controls precisely what
+// the plugin may read — which is the property the last suite below is about.
 //
-// Substituting exactly here is deliberate. `resolveConversationTranscriptPaths`
-// is the anchor guard's output (it returns only what `resolveAnchoredChain`
-// KEPT), so a test that controls it controls precisely what this plugin is
-// allowed to see — which is the property the last suite below is about.
-//
-// A module substitution is process-wide, so the replacement must provide every
-// export the loaded modules actually dereference, and `readJsonlEventsFromChain`
-// is copied out of its live binding first: `mock.module` updates a loaded
-// module's exports IN PLACE, so reading it back afterwards would hand us the
-// substitute instead of the real reader.
+// The transcript watcher's server barrel is substituted so the suite never loads
+// its database-backed modules. A module substitution is process-wide, so the
+// replacement must provide every export the loaded modules actually
+// dereference, and `readJsonlEventsFromChain` is copied out of its live binding
+// first: `mock.module` updates a loaded module's exports IN PLACE, so reading it
+// back afterwards would hand us the substitute instead of the real reader.
 let keptPaths: string[] = [];
 const realReadJsonlEventsFromChain = readJsonlEventsFromChain;
 void mock.module(
   "@plugins/conversations/plugins/transcript-watcher/server",
   () => ({
     readJsonlEventsFromChain: realReadJsonlEventsFromChain,
-    resolveConversationTranscriptPaths: () => Promise.resolve(keptPaths),
   }),
 );
 
@@ -33,20 +32,30 @@ const {
   signaturePathsOf,
   subagentWatchDirs,
   findSubagentIn,
-  subagentDirs,
+  subagentDirsOf,
   subagentDirOf,
   evictMetaCache,
 } = await import("./discovery");
-const { scanActivity, evictActivityScan, resolveActivityTargets } =
+const { scanActivityIn, evictActivityScan, activityTargetsIn } =
   await import("./activity-scan");
-const { readSubagentTranscript, resolveTranscriptTargets } =
+const { readSubagentTranscriptOf, resolveTranscriptTargets } =
   await import("./transcript-read");
 
 const CONV = "conv-1";
 
+/** This conversation's sub-agent roots, under its anchored transcript. */
+const roots = () => subagentDirsOf(keptPaths);
 /** The dir-scoped finder, bound to this conversation's anchored directories. */
-const find = async (toolUseId: string, requestedName?: string) =>
-  findSubagentIn(CONV, await subagentDirs(CONV), { toolUseId, requestedName });
+const find = (toolUseId: string, requestedName?: string) =>
+  findSubagentIn(CONV, roots(), { toolUseId, requestedName });
+/** The activity scan, bound to this conversation's anchored directories. */
+const scanActivity = () => scanActivityIn(CONV, roots());
+/** One sub-agent's transcript, under this conversation's anchored transcript. */
+const readTranscript = (ref: SubagentRef) =>
+  readSubagentTranscriptOf(CONV, ref, keptPaths);
+/** What a sub-agent's room watches, under this conversation's anchored transcript. */
+const transcriptTargets = (ref: SubagentRef) =>
+  resolveTranscriptTargets(CONV, ref, keptPaths);
 const dirs: string[] = [];
 
 async function newProjectsDir(): Promise<string> {
@@ -122,9 +131,7 @@ describe("subagent discovery", () => {
 
     const projects = await newProjectsDir();
     keptPaths = [join(projects, "sess-a.jsonl")];
-    expect(await subagentDirs(CONV)).toEqual([
-      join(projects, "sess-a", "subagents"),
-    ]);
+    expect(roots()).toEqual([join(projects, "sess-a", "subagents")]);
   });
 
   test("both files of a pair name one sub-agent, and either one alone discovers it", async () => {
@@ -136,7 +143,7 @@ describe("subagent discovery", () => {
         { agentId: "ccc", lines: [assistantLine("no meta yet")] },
       ]),
     ];
-    const entries = await listSubagentEntries(await subagentDirs(CONV));
+    const entries = await listSubagentEntries(roots());
     expect(entries.map((e) => e.agentId)).toEqual([
       "aaa",
       "bbb-with-dashes",
@@ -199,7 +206,7 @@ describe("subagent discovery", () => {
         },
       ]),
     ];
-    const rows = await scanActivity(CONV);
+    const rows = await scanActivity();
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({
       kind: "described",
@@ -211,8 +218,8 @@ describe("subagent discovery", () => {
   test("a session the anchor DROPPED never has its subagents/ directory scanned", async () => {
     // Two sessions side by side on disk, each with its own sub-agent. Only one is
     // this conversation's: the other resolved to a different projects dir, so
-    // `resolveAnchoredChain` classified it `foreign` and
-    // `resolveConversationTranscriptPaths` never returned it.
+    // `resolveAnchoredChain` classified it `foreign` and the anchored paths
+    // never held it.
     const projects = await newProjectsDir();
     const mine = await writeSession(projects, "sess-mine", [
       {
@@ -233,11 +240,9 @@ describe("subagent discovery", () => {
     // The derivation is from the KEPT entries and nothing else, so the dropped
     // session's directory is not even a candidate — not filtered out later, never
     // named. Re-resolving from raw session ids is what would reopen this.
-    expect(await subagentDirs(CONV)).toEqual([
-      join(projects, "sess-mine", "subagents"),
-    ]);
+    expect(roots()).toEqual([join(projects, "sess-mine", "subagents")]);
 
-    const rows = await scanActivity(CONV);
+    const rows = await scanActivity();
     expect(rows.map((r) => r.agentId)).toEqual(["mine"]);
     // And the join cannot reach it either: the other agent's tool-use id is a
     // perfectly good id that simply belongs to somebody else.
@@ -258,7 +263,7 @@ describe("one sub-agent's transcript", () => {
       ]),
     ];
 
-    const result = await readSubagentTranscript(CONV, {
+    const result = await readTranscript({
       by: "call",
       key: "toolu_1",
     });
@@ -275,9 +280,7 @@ describe("one sub-agent's transcript", () => {
     keptPaths = [await writeSession(projects, "sess-a", [])];
     // An empty array here would render as "the sub-agent did nothing"; the arm
     // makes that reading impossible.
-    expect(
-      await readSubagentTranscript(CONV, { by: "call", key: "toolu_pending" }),
-    ).toEqual({
+    expect(await readTranscript({ by: "call", key: "toolu_pending" })).toEqual({
       kind: "unlinked",
     });
   });
@@ -289,9 +292,7 @@ describe("one sub-agent's transcript", () => {
 
     // Nothing claims the id yet: routing by a path we do not have would mean the
     // pane never learns the file was created.
-    expect(
-      await resolveTranscriptTargets(CONV, { by: "call", key: "toolu_1" }),
-    ).toEqual({
+    expect(await transcriptTargets({ by: "call", key: "toolu_1" })).toEqual({
       paths: [],
       // The `workflows/` level too: a workflow agent's file is born in a run
       // folder below it, and the watcher routes by exact parent directory.
@@ -305,9 +306,7 @@ describe("one sub-agent's transcript", () => {
     ];
     evictMetaCache(CONV);
     // Identity is now fixed, so a sibling sub-agent's appends stop waking it.
-    expect(
-      await resolveTranscriptTargets(CONV, { by: "call", key: "toolu_1" }),
-    ).toEqual({
+    expect(await transcriptTargets({ by: "call", key: "toolu_1" })).toEqual({
       paths: [join(subagents, "agent-aaa.jsonl")],
     });
   });
@@ -402,7 +401,7 @@ describe("joining a named in-process teammate", () => {
         },
       ]),
     ];
-    expect(await scanActivity(CONV)).toMatchObject([
+    expect(await scanActivity()).toMatchObject([
       { kind: "described", name: "live-probe", toolUseId: undefined },
     ]);
   });
@@ -429,11 +428,11 @@ describe("a sub-agent opened by its own id", () => {
       ]),
     ];
 
-    expect(
-      await readSubagentTranscript(CONV, { by: "call", key: "toolu_lead" }),
-    ).toEqual({ kind: "unlinked" });
+    expect(await readTranscript({ by: "call", key: "toolu_lead" })).toEqual({
+      kind: "unlinked",
+    });
 
-    const result = await readSubagentTranscript(CONV, {
+    const result = await readTranscript({
       by: "agent",
       key: "nested",
     });
@@ -453,7 +452,7 @@ describe("a sub-agent opened by its own id", () => {
         },
       ]),
     ];
-    const result = await readSubagentTranscript(CONV, {
+    const result = await readTranscript({
       by: "agent",
       key: "odd",
     });
@@ -463,9 +462,9 @@ describe("a sub-agent opened by its own id", () => {
   test("an id nothing on disk carries is `unlinked`", async () => {
     const projects = await newProjectsDir();
     keptPaths = [await writeSession(projects, "sess-a", [])];
-    expect(
-      await readSubagentTranscript(CONV, { by: "agent", key: "ghost" }),
-    ).toEqual({ kind: "unlinked" });
+    expect(await readTranscript({ by: "agent", key: "ghost" })).toEqual({
+      kind: "unlinked",
+    });
   });
 });
 
@@ -522,7 +521,7 @@ describe("agents a Workflow run spawned", () => {
     // Not a run folder: ignored rather than walked.
     await mkdir(join(projects, "sess-a", "subagents", "workflows", "scripts"));
 
-    const listing = await listSubagents(await subagentDirs(CONV));
+    const listing = await listSubagents(roots());
     expect(listing.entries).toEqual([
       expect.objectContaining({ agentId: "plain" }),
       {
@@ -537,11 +536,11 @@ describe("agents a Workflow run spawned", () => {
     expect(listing.runs).toEqual([
       { runId: "wf_a", dir: run, journalPath: join(run, "journal.jsonl") },
     ]);
-    expect(
-      (await listSubagentEntries(await subagentDirs(CONV))).map(
-        (e) => e.agentId,
-      ),
-    ).toEqual(["plain", "w1", "w2"]);
+    expect((await listSubagentEntries(roots())).map((e) => e.agentId)).toEqual([
+      "plain",
+      "w1",
+      "w2",
+    ]);
   });
 
   test("every level of the layout is watched, and the journal is signed", async () => {
@@ -561,7 +560,7 @@ describe("agents a Workflow run spawned", () => {
       join(run, "agent-w1.jsonl"),
       join(run, "journal.jsonl"),
     ]);
-    expect(await resolveActivityTargets(CONV)).toEqual({
+    expect(await activityTargetsIn(roots())).toEqual({
       paths: signaturePathsOf(listing),
       dirs: [root, join(root, "workflows"), run],
     });
@@ -582,7 +581,7 @@ describe("agents a Workflow run spawned", () => {
       ],
     );
 
-    const rows = await scanActivity(CONV);
+    const rows = await scanActivity();
     expect(rows.map((r) => [r.agentId, r.workflow])).toEqual([
       ["w1", { runId: "wf_a", reported: true }],
       ["w2", { runId: "wf_a", reported: false }],
@@ -598,7 +597,7 @@ describe("agents a Workflow run spawned", () => {
     const projects = await newProjectsDir();
     keptPaths = [await writeSession(projects, "sess-a", [])];
     await writeRun(projects, "sess-a", "wf_a", ["w1"], []);
-    const result = await readSubagentTranscript(CONV, {
+    const result = await readTranscript({
       by: "agent",
       key: "w1",
     });
@@ -612,7 +611,7 @@ describe("agents a Workflow run spawned", () => {
     await writeRun(projects, "sess-foreign", "wf_theirs", ["theirs"], []);
     keptPaths = [mine];
 
-    expect(await listSubagents(await subagentDirs(CONV))).toEqual({
+    expect(await listSubagents(roots())).toEqual({
       entries: [],
       runs: [],
     });

@@ -4497,10 +4497,6 @@
       "name": "@equin/plugin-packages-macrotask-yield",
       "version": "0.0.1",
     },
-    "plugins/packages/plugins/parked-watch": {
-      "name": "@equin/plugin-packages-parked-watch",
-      "version": "0.0.1",
-    },
     "plugins/packages/plugins/partial-json": {
       "name": "@equin/plugin-packages-partial-json",
       "version": "0.0.1",
@@ -9169,8 +9165,6 @@
     "@equin/plugin-packages-list-bound": ["@equin/plugin-packages-list-bound@workspace:plugins/packages/plugins/list-bound"],
 
     "@equin/plugin-packages-macrotask-yield": ["@equin/plugin-packages-macrotask-yield@workspace:plugins/packages/plugins/macrotask-yield"],
-
-    "@equin/plugin-packages-parked-watch": ["@equin/plugin-packages-parked-watch@workspace:plugins/packages/plugins/parked-watch"],
 
     "@equin/plugin-packages-partial-json": ["@equin/plugin-packages-partial-json@workspace:plugins/packages/plugins/partial-json"],
 

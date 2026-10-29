@@ -25,7 +25,7 @@ void mock.module("./tail-read", () => ({
 // No module substitution beyond that: `scanActivityIn` takes the directories it
 // may read, so this suite hands it a temp dir instead of mocking the chain
 // resolver out from under it. Which directories a CONVERSATION owns is
-// `subagentDirs`' job, and `discovery.test.ts` pins that separately.
+// `subagentDirsOf`' job, and `discovery.test.ts` pins that separately.
 const { scanActivityIn, evictActivityScan } = await import("./activity-scan");
 
 const SCOPE = "scan-scope";

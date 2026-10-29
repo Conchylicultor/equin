@@ -14,6 +14,14 @@ import {
   conversationsGoneServed,
   conversationsByIdServed,
 } from "./internal/resources";
+import {
+  attemptConversationIdsServed,
+  attemptDeliveriesServed,
+  attemptPushIdsServed,
+  conversationRuntimesServed,
+  conversationSessionTailsServed,
+  conversationWorkspacesServed,
+} from "./internal/follow-targets";
 import { attempts, conversations, taskBlocking, tasks } from "./internal/views";
 import {
   attemptIdKind,
@@ -52,14 +60,26 @@ export {
   conversationOwnerJoins,
   conversationOwnerColumns,
 } from "./internal/conversation-owner";
-// Where an attempt / a conversation runs, as compiled lookups: `run(id)` for
-// the read, `read(keyOf)` for a served value's `reads.lookups` — a write
-// reaches only the tuples asking about the row it touched, and only when it
-// touched a column the lookup reads.
+// The served follow targets (core: `attemptWorkspaces` and *Follow targets*
+// in `../core/resources.ts`): what a computed value's `follows` names —
+// `follow(attemptWorkspacesServed, ({ attemptId }) => ({ ids: [attemptId] }))`
+// for a lookup, `follow(attemptConversationIdsServed, ({ attemptId }) =>
+// ({ where: { attemptId } }))` for a scoped set. The handle (never the core
+// descriptor) proves the collection is served on this host.
+export { attemptWorkspacesServed } from "./internal/resources";
 export {
-  workspaceOfAttemptLookup,
-  workspaceOfConversationLookup,
-} from "./internal/workspace-lookups";
+  attemptConversationIdsServed,
+  attemptPushIdsServed,
+  attemptDeliveriesServed,
+  conversationWorkspacesServed,
+  conversationSessionTailsServed,
+  conversationRuntimesServed,
+} from "./internal/follow-targets";
+// Where an attempt runs, as a compiled lookup: `run(id)` for the read,
+// `read(keyOf)` for a served value's `reads.lookups` — a write reaches only
+// the tuples asking about the row it touched, and only when it touched a
+// column the lookup reads.
+export { workspaceOfAttemptLookup } from "./internal/workspace-lookups";
 // Which runtime hosts a conversation and where its turn stands, the same way:
 // a write reaches only the tuple asking about that conversation, and only
 // when it moved `runtime` or `status`.
@@ -179,6 +199,7 @@ export {
   updateConversation,
   updateConversationsTitleForTask,
   deleteConversationRow,
+  moveConversationToAttempt,
   markConversationGone,
   markConversationClosed,
   setConversationHibernated,
@@ -282,6 +303,12 @@ export default {
     ...taskDescriptionsServed.declare,
     ...attemptRowsServed.declare,
     ...attemptWorkspacesServed.declare,
+    ...attemptConversationIdsServed.declare,
+    ...attemptPushIdsServed.declare,
+    ...attemptDeliveriesServed.declare,
+    ...conversationWorkspacesServed.declare,
+    ...conversationSessionTailsServed.declare,
+    ...conversationRuntimesServed.declare,
     ...pushRowsServed.declare,
     ...conversationsActiveServed.declare,
     ...conversationsSystemServed.declare,

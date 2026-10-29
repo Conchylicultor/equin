@@ -124,6 +124,28 @@ export interface Route {
    * recomputes FULL, reported).
    */
   match?: readonly string[];
+  /**
+   * A FOLLOW route (`RouteVia`): one of a followed collection's own routes,
+   * copied into a follower's reach plan. Reach plans only.
+   */
+  via?: RouteVia;
+}
+
+/**
+ * Which follow a reach route belongs to (network/live's `serveValue`
+ * `follows`): a value reading a collection's tuple through that collection's
+ * own read reaches the rows by the collection's own routes, copied into its
+ * plan and tagged with the follow's name and the collection it follows. The
+ * follower's loader reads the table ONLY through that read, which runs in
+ * the collection's own loader span (judged by the collection's own drift
+ * guard) — so a capture of the table in the follower's own span is a read by
+ * hand, i.e. drift (A8: `readCovered` never covers a via table).
+ */
+export interface RouteVia {
+  /** The follow's name — the key of the follower's `followed` record. */
+  name: string;
+  /** The followed collection resource's key (`_debug`'s `follows`). */
+  collection: string;
 }
 
 /**
@@ -453,6 +475,12 @@ export function mintRoutePlan<P extends Record<string, string>>(
 ): RoutePlan<P> {
   const derivedReads = plan.derivedReads ?? [];
   assertDerivedReads(plan.routes, derivedReads);
+  const followed = plan.routes.find((r) => r.via !== undefined);
+  if (followed) {
+    throw new Error(
+      `mintRoutePlan: route "${followed.id}" is a follow route (via "${followed.via!.name}") — a follow is a reach plan's (a served value reading a collection's tuple), never a keyed route plan's.`,
+    );
+  }
   return {
     routes: plan.routes,
     usesOf: plan.usesOf,
@@ -557,6 +585,12 @@ export function mintReachPlan<P extends Record<string, string>>(
     }
     taggedSeen.add(id);
   }
+  assertFollowRoutes(plan.routes, {
+    unfed: seen,
+    relations: relationSeen,
+    notified: notifiedSeen,
+    tagged: new Set(taggedReads.map((t) => t.table)),
+  });
   return {
     routes: plan.routes,
     usesOf: plan.usesOf,
@@ -568,6 +602,70 @@ export function mintReachPlan<P extends Record<string, string>>(
     ...(taggedReads.length > 0 ? { taggedReads } : {}),
     [MINTED]: true,
   };
+}
+
+/**
+ * A reach plan's follow routes (`Route.via`) own their tables: a table one
+ * follow reads is read by nothing else of the plan — no own route (a
+ * whole-table read would reach every write the follow's gate and match skip,
+ * re-widening it), no unfed / relation / notified / tagged read — and two
+ * follows of one name are one follow, which reads one collection. Each
+ * follow route is `full` (`mintReachPlan`'s own routes already are). A
+ * view read whole whose bases include a follow table is refused once the
+ * bases are known (the runtime's `indexRelationReads`).
+ */
+function assertFollowRoutes(
+  routes: readonly Route[],
+  other: {
+    unfed: ReadonlySet<string>;
+    relations: ReadonlySet<string>;
+    notified: ReadonlySet<string>;
+    tagged: ReadonlySet<string>;
+  },
+): void {
+  // Table → the follows reading it, as `"a"` / `"a", "b"` (two may).
+  const followTables = new Map<string, string>();
+  const collectionOf = new Map<string, string>();
+  for (const route of routes) {
+    if (route.via === undefined) continue;
+    const { name, collection } = route.via;
+    if (name.trim() === "" || collection.trim() === "") {
+      throw new Error(
+        `mintReachPlan: follow route "${route.id}" has an empty follow name or collection.`,
+      );
+    }
+    const known = collectionOf.get(name);
+    if (known !== undefined && known !== collection) {
+      throw new Error(
+        `mintReachPlan: the follow "${name}" reads both "${known}" and "${collection}" — one follow reads one collection.`,
+      );
+    }
+    collectionOf.set(name, collection);
+    const onTable = followTables.get(route.table);
+    if (onTable === undefined) followTables.set(route.table, `"${name}"`);
+    else if (!onTable.split(", ").includes(`"${name}"`)) {
+      followTables.set(route.table, `${onTable}, "${name}"`);
+    }
+  }
+  for (const route of routes) {
+    if (route.via !== undefined) continue;
+    const name = followTables.get(route.table);
+    if (name !== undefined) {
+      throw new Error(
+        `mintReachPlan: "${route.table}" is read through the follow ${name} and by the plan's own route "${route.id}" — the own route would reach every write the follow's gate and match skip. Read it in one place.`,
+      );
+    }
+  }
+  for (const [kind, tables] of Object.entries(other)) {
+    for (const table of tables) {
+      const name = followTables.get(table);
+      if (name !== undefined) {
+        throw new Error(
+          `mintReachPlan: "${table}" is read through the follow ${name} and declared a ${kind} read — a followed table is read through its collection only.`,
+        );
+      }
+    }
+  }
 }
 
 /** Whether `plan` came from `mintRoutePlan` / `mintReachPlan` (not a cast literal). */

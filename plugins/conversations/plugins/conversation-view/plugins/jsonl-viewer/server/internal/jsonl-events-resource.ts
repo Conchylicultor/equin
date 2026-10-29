@@ -1,6 +1,9 @@
 import { serveValue, sliceRange } from "@plugins/network/plugins/live/server";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
-import { transcriptChainReads } from "@plugins/conversations/plugins/transcript-source/server";
+import {
+  followedTranscriptChain,
+  transcriptChainFollows,
+} from "@plugins/conversations/plugins/transcript-source/server";
 import {
   jsonlEvents,
   transcriptPrompts,
@@ -62,18 +65,25 @@ export function transcriptMeta(events: readonly JsonlEvent[]): TranscriptMeta {
 // appended line is one row — instead of the whole transcript. Every page and
 // the meta read the conversation's events (conversation-events.ts: one memo,
 // primed by one watch before anything is notified), so the recompute `notify`
-// schedules slices memory.
+// schedules slices memory. The chain's facts are followed
+// (`transcriptChainFollows`): a session recorded on this conversation re-reads
+// its own question's pages alone.
 export const jsonlEventsServed = serveValue(jsonlEvents, {
   source: "external",
   changes: "notified",
-  reads: transcriptChainReads,
-  loader: async ({ id }, range) =>
+  follows: (follow) => transcriptChainFollows(follow),
+  loader: async ({ id }, range, { followed }) =>
     sliceRange(
       jsonlEvents,
-      transcriptRows(await conversationEvents(id)),
+      transcriptRows(
+        await conversationEvents(id, followedTranscriptChain(followed)),
+      ),
       range,
     ),
-  meta: async ({ id }) => transcriptMeta(await conversationEvents(id)),
+  meta: async ({ id }, { followed }) =>
+    transcriptMeta(
+      await conversationEvents(id, followedTranscriptChain(followed)),
+    ),
   // Watch the conversation's transcript while any page of it is on screen
   // (once per question, however its pages split).
   whileSubscribed: (query, notify) => watchConversationEvents(query.id, notify),
@@ -93,10 +103,10 @@ const toolCallKey = (id: string, toolUseId: string) =>
 export const transcriptToolCallServed = serveValue(transcriptToolCall, {
   source: "external",
   changes: "notified",
-  reads: transcriptChainReads,
-  loader: async ({ id, toolUseId }) => {
+  follows: (follow) => transcriptChainFollows(follow),
+  loader: async ({ id, toolUseId }, { followed }) => {
     const call =
-      (await conversationEvents(id)).find(
+      (await conversationEvents(id, followedTranscriptChain(followed))).find(
         (e) => e.kind === "tool-call" && e.toolUseId === toolUseId,
       ) ?? null;
     const key = toolCallKey(id, toolUseId);

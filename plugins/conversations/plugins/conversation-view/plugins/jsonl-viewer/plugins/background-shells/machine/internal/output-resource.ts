@@ -3,10 +3,13 @@ import { basename, dirname } from "node:path";
 import { serveValue } from "@plugins/network/plugins/live/machine";
 import {
   readJsonlEventsFromChain,
-  resolveConversationTranscriptPaths,
+  resolveTranscriptPathsOf,
   transcriptChainSignature,
 } from "@plugins/conversations/plugins/transcript-watcher/server";
-import { transcriptChainReads } from "@plugins/conversations/plugins/transcript-source/server";
+import {
+  followedTranscriptChain,
+  transcriptChainFollows,
+} from "@plugins/conversations/plugins/transcript-source/server";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import { defineFileWatcher } from "@plugins/infra/plugins/file-watcher/server";
 import { createSignedMemo } from "@plugins/infra/plugins/git/plugins/git-read-cache/server";
@@ -74,17 +77,26 @@ const roomPaths = new Map<string, string>();
  * through. `file`: the shell's output file (the room's cached path, else
  * resolved from the transcript). `unknown`: the transcript records no such
  * launch, so the value is a function of the chain itself, signed over its files.
+ *
+ * `chain` is the conversation's transcript files, resolved by the caller from
+ * its followed chain (`resolveTranscriptPathsOf`) — the memo's input, so no
+ * half reads Postgres.
  */
 type OutputTarget =
   { kind: "file"; path: string } | { kind: "unknown"; chain: string[] };
 
-async function resolveTarget(key: string): Promise<OutputTarget> {
+async function resolveTarget(
+  key: string,
+  chain: readonly string[],
+): Promise<OutputTarget> {
   const cached = roomPaths.get(key);
   if (cached !== undefined) return { kind: "file", path: cached };
-  const { id, shellId } = parseMemoKey(key);
-  const chain = await resolveConversationTranscriptPaths(id);
-  const path = outputFileIn(await readJsonlEventsFromChain(chain), shellId);
-  return path === null ? { kind: "unknown", chain } : { kind: "file", path };
+  const { shellId } = parseMemoKey(key);
+  const files = [...chain];
+  const path = outputFileIn(await readJsonlEventsFromChain(files), shellId);
+  return path === null
+    ? { kind: "unknown", chain: files }
+    : { kind: "file", path };
 }
 
 // Signature and compute bound at ONE declaration site, as jsonl-events-cache.ts
@@ -98,16 +110,16 @@ async function resolveTarget(key: string): Promise<OutputTarget> {
 // tail read and a frame. The probe always precedes the compute it labels, so a
 // write landing between them leaves the stored signature OLDER than the value —
 // the next probe misses and recomputes; never a stale value under a fresh one.
-const outputMemo = createSignedMemo<ShellOutput>({
+const outputMemo = createSignedMemo<ShellOutput, readonly string[]>({
   name: "background-shell-output",
-  signature: async (key) => {
-    const target = await resolveTarget(key);
+  signature: async (key, chain) => {
+    const target = await resolveTarget(key, chain);
     return target.kind === "file"
       ? `file|${await transcriptChainSignature([target.path])}`
       : `unknown|${await transcriptChainSignature(target.chain)}`;
   },
-  compute: async (key) => {
-    const target = await resolveTarget(key);
+  compute: async (key, chain) => {
+    const target = await resolveTarget(key, chain);
     return target.kind === "file"
       ? readShellTail(target.path)
       : { kind: "unknown-shell" };
@@ -117,39 +129,64 @@ const outputMemo = createSignedMemo<ShellOutput>({
 export const shellOutputServed = serveValue(shellOutput, {
   source: "external",
   changes: "notified",
-  // Resolving the output file reads the transcript chain from Postgres.
-  reads: transcriptChainReads,
-  loader: ({ id, shellId }) => outputMemo.get(memoKey(id, shellId)),
-  revalidate: ({ id, shellId }) => outputMemo.signature(memoKey(id, shellId)),
+  // The transcript chain's facts, followed: resolving the output file reads
+  // the conversation's transcript, and a session recorded on another
+  // conversation reaches nothing here.
+  follows: (follow) => transcriptChainFollows(follow),
+  loader: async ({ id, shellId }, { followed }) =>
+    outputMemo.get(memoKey(id, shellId), {
+      input: await resolveTranscriptPathsOf(
+        id,
+        followedTranscriptChain(followed),
+      ),
+    }),
+  revalidate: async ({ id, shellId }, { followed }) =>
+    outputMemo.signature(memoKey(id, shellId), {
+      input: await resolveTranscriptPathsOf(
+        id,
+        followedTranscriptChain(followed),
+      ),
+    }),
   // Watch the one file while anyone is looking at it (see shellOutputWatcher).
-  whileSubscribed: async ({ id, shellId }, notify) => {
-    const key = memoKey(id, shellId);
-    const target = await resolveTarget(key);
-    // Unknown shell, or its directory is already gone: nothing to watch, and
-    // the loader answers `unknown-shell` / `gone` on its own. The memo entry
-    // the loader cached for this room still lives exactly as long as the room.
-    if (target.kind === "unknown" || !existsSync(dirname(target.path))) {
-      return () => outputMemo.evict(key);
-    }
-    const outputFile = target.path;
-    const dir = dirname(outputFile);
-    roomPaths.set(key, outputFile);
-    const name = basename(outputFile);
-    const watcher = await shellOutputWatcher.start({
-      dirs: [dir],
-      label: `${id} · ${shellId}`,
-      onChange: (events) => {
-        if (events.some((e) => basename(e.path) === name)) notify();
-      },
-    });
-    return () => {
-      roomPaths.delete(key);
-      outputMemo.evict(key);
-      // The stop contract is synchronous; the unsubscribe runs detached, under
-      // its own span, and a failure still surfaces as an unhandled rejection.
-      void runTracked("background-shell-output:watcher-stop", () =>
-        watcher.stop(),
+  // Re-started over a moved chain (a session switch), which re-resolves it.
+  whileFollowing: {
+    over: (followed) => followedTranscriptChain(followed),
+    start: async ({ id, shellId }, { over: chain, notify }) => {
+      const key = memoKey(id, shellId);
+      const target = await resolveTarget(
+        key,
+        await resolveTranscriptPathsOf(id, chain),
       );
-    };
+      // Unknown shell, or its directory is already gone: nothing to watch, and
+      // the loader answers `unknown-shell` / `gone` on its own. The memo entry
+      // the loader cached for this room still lives exactly as long as the room.
+      if (target.kind === "unknown" || !existsSync(dirname(target.path))) {
+        return () => outputMemo.evict(key);
+      }
+      const outputFile = target.path;
+      const dir = dirname(outputFile);
+      roomPaths.set(key, outputFile);
+      const name = basename(outputFile);
+      const watcher = await shellOutputWatcher.start({
+        dirs: [dir],
+        label: `${id} · ${shellId}`,
+        onChange: (events) => {
+          if (events.some((e) => basename(e.path) === name)) notify();
+        },
+      });
+      // The watch opens after the reads it was resolved from: a write landing in
+      // between (or while a re-start swapped watches) is caught by one recompute
+      // — a stat and a memo hit when nothing moved.
+      notify();
+      return () => {
+        roomPaths.delete(key);
+        outputMemo.evict(key);
+        // The stop contract is synchronous; the unsubscribe runs detached, under
+        // its own span, and a failure still surfaces as an unhandled rejection.
+        void runTracked("background-shell-output:watcher-stop", () =>
+          watcher.stop(),
+        );
+      };
+    },
   },
 });

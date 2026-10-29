@@ -18,6 +18,7 @@ export {
 export type { ServerFatalReport } from "./error-reporter";
 export { setProfilerHooks } from "./profiler-hooks";
 export type {
+  LoaderReadsSink,
   ProfilerHooks,
   ProfilerMeasureName,
   ProfilerSpanDetail,
@@ -67,6 +68,7 @@ export {
   handleResourceHttp,
   installSnapHash,
   loadResourceByKey,
+  loadResourceFresh,
   measureSubscribeCycle,
   notificationsWsHandler,
   notifyStatsFor,

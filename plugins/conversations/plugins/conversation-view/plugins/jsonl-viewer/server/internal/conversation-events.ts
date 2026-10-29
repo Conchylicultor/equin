@@ -1,6 +1,9 @@
 import { createRefcountHub } from "@plugins/packages/plugins/refcount-hub/core";
 import { TranscriptSource } from "@plugins/conversations/plugins/transcript-source/server";
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
+import type {
+  JsonlEvent,
+  TranscriptChain,
+} from "@plugins/conversations/plugins/transcript-source/core";
 import {
   evictJsonlEvents,
   jsonlEventsMemo,
@@ -45,16 +48,23 @@ export function watchConversationEvents(
   return () => hold.release();
 }
 
-/** The conversation's events now (a memory read while it is watched). */
+/**
+ * The conversation's events now (a memory read while it is watched), read
+ * from `chain` — the facts the calling value followed
+ * (`transcriptChainFollows` → `followedTranscriptChain`), so the value's
+ * reach names exactly what the read depends on.
+ */
 export function conversationEvents(
   conversationId: string,
+  chain: TranscriptChain,
 ): Promise<JsonlEvent[]> {
-  return jsonlEventsMemo.get(conversationId);
+  return jsonlEventsMemo.get(conversationId, { input: chain });
 }
 
 /** Moves whenever `conversationEvents` would answer differently — a value's `revalidate`. */
 export function conversationEventsSignature(
   conversationId: string,
+  chain: TranscriptChain,
 ): Promise<string> {
-  return jsonlEventsMemo.signature(conversationId);
+  return jsonlEventsMemo.signature(conversationId, { input: chain });
 }

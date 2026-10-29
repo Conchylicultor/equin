@@ -1,6 +1,9 @@
 import { createSignedMemo } from "@plugins/infra/plugins/git/plugins/git-read-cache/server";
 import { TranscriptSource } from "@plugins/conversations/plugins/transcript-source/server";
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
+import type {
+  JsonlEvent,
+  TranscriptChain,
+} from "@plugins/conversations/plugins/transcript-source/core";
 
 // ONE module-level memo, shared between the served value (jsonl-events-resource.ts —
 // BOTH its `revalidate` and its `loader`) and the transcript source's watch (the
@@ -28,7 +31,13 @@ import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-sourc
 // there is nothing to pass. Push vs on-demand is now a delivery choice, irrelevant to
 // correctness.
 //
-// On the desktop both halves resolve the chain first. A session switch landing between
+// Both halves take the chain's FACTS as the memo's input — the session ids the
+// reading value followed (`transcriptChainFollows`), read fresh in its own
+// call — and resolve them to files from the filesystem alone, so the cached
+// signature fingerprints the chain it was read under: an entry read under
+// another chain is never a hit.
+//
+// On the desktop both halves resolve the chain's files first. A session switch landing between
 // the memo's own signature probe and its own compute leaves the stored signature
 // describing the OLDER chain — the safe direction: the next `get` re-probes, misses, and recomputes,
 // costing one needless read. The dangerous direction (a signature newer than the value
@@ -37,10 +46,10 @@ import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-sourc
 //
 // See research/2026-07-10-conversations-jsonl-events-shared-authority.md and
 // research/2026-07-09-global-etag-value-coproduction.md.
-const memo = createSignedMemo<JsonlEvent[]>({
+const memo = createSignedMemo<JsonlEvent[], TranscriptChain>({
   name: "jsonl-events",
-  signature: (id) => TranscriptSource.get().signature(id),
-  compute: (id) => TranscriptSource.get().events(id),
+  signature: (id, chain) => TranscriptSource.get().signature(id, chain),
+  compute: (id, chain) => TranscriptSource.get().events(id, chain),
 });
 
 export const jsonlEventsMemo = memo;

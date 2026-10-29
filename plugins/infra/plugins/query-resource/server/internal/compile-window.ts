@@ -10,6 +10,7 @@ import type {
   KeyedServerResourceOptions,
   Resource,
   ResourceParams,
+  RoutePlan,
   ScopePolicy,
 } from "@plugins/framework/plugins/resource-runtime/core";
 import type {
@@ -29,6 +30,7 @@ import {
 } from "./arm-plan";
 import type { ReadColumn } from "./joins";
 import { compiledRoutePlan, routedBase } from "./routes";
+import { followablePoint, type FollowablePlan } from "./follow";
 import type {
   BoundedQueryResourceSpec,
   PointQueryResourceSpec,
@@ -92,6 +94,12 @@ import type {
 export interface CompiledWindowQuery<Row, P extends ResourceParams> {
   serverOpts: KeyedServerResourceOptions<Row[], P> & ScopePolicy<P>;
   keyField: string;
+  /**
+   * A point set's plan as a follow copies it (`./follow`: an `{ ids }` tuple
+   * of it, read by a computed value) — minted from the same arm. `null` for a
+   * window: no follow reads one (a window's tuple is a page, not a fact).
+   */
+  followable: FollowablePlan | null;
 }
 
 /**
@@ -145,8 +153,11 @@ interface WindowOuter<P extends ResourceParams> extends AssembleOuter {
 }
 
 interface PointOuter<P extends ResourceParams> extends AssembleOuter {
+  key: string;
   /** The tuple's id set — the membership's `idsOf`. */
   idsOf: (params: P) => string[];
+  /** The tuple naming an id set — the descriptor's `point.encode` (a follow's params). */
+  encode: (ids: readonly string[]) => P;
 }
 
 const encoder =
@@ -293,7 +304,7 @@ export function assembleWindow<Row, P extends ResourceParams>(
       ? { validateParams: outer.validateParams }
       : {}),
   } as KeyedServerResourceOptions<Row[], P> & ScopePolicy<P>;
-  return { serverOpts, keyField: arm.keyField };
+  return { serverOpts, keyField: arm.keyField, followable: null };
 }
 
 /**
@@ -334,7 +345,16 @@ export function assemblePoint<Row, P extends ResourceParams>(
     ...scopePolicy,
     ...(outer.debounceMs != null ? { debounceMs: outer.debounceMs } : {}),
   } as KeyedServerResourceOptions<Row[], P> & ScopePolicy<P>;
-  return { serverOpts, keyField: arm.keyField };
+  return {
+    serverOpts,
+    keyField: arm.keyField,
+    followable: followablePoint(
+      outer.key,
+      scopePolicy.routes as unknown as RoutePlan<ResourceParams>,
+      arm.pkColumn,
+      outer.encode,
+    ),
+  };
 }
 
 /** One bounded spec, planned: its one arm and what assembling it needs. */
@@ -475,8 +495,10 @@ function planBounded<Row, P extends WindowParams | PointParams>(
       kind: "point",
       arm,
       outer: {
+        key,
         // `idsOf` IS the descriptor's pure `point.decode`.
         idsOf: (params) => codec.decode(params),
+        encode: (ids) => codec.encode(ids) as P,
         ...encodeRow,
         ...debounceMs,
       },
@@ -631,6 +653,72 @@ export function deferredWindowQueryResource<Row>(
     assertKeyField(descriptor as AnyWindowContract<unknown>, keyField);
     return serverOpts;
   });
+}
+
+/**
+ * A `:rows` point set registered with what a follow copies of it (`./follow`):
+ * the resource, and its followable — at once for an eager compile, or a
+ * getter that throws until `bindDeferredResources` compiled a deferred one.
+ */
+export interface FollowablePoint<Row> {
+  resource: Resource<Row[], PointParams>;
+  followable: () => FollowablePlan;
+}
+
+/** `windowQueryResource` for a point set, with its followable (see `FollowablePoint`). */
+export function pointQueryResource<Row>(
+  descriptor: PointQueryResourceContract<Row>,
+  spec: PointQueryResourceSpec<PointParams>,
+): FollowablePoint<Row> {
+  const compiled = compileWindowQuery(
+    descriptor as AnyWindowContract<Row, PointParams & WindowParams>,
+    spec as BoundedQueryResourceSpec<PointParams>,
+  );
+  assertKeyField(descriptor as AnyWindowContract<unknown>, compiled.keyField);
+  const followable = pointFollowable(descriptor.key, compiled);
+  return {
+    resource: defineResource(descriptor, compiled.serverOpts),
+    followable: () => followable,
+  };
+}
+
+/** `deferredWindowQueryResource` for a point set, with its followable (see `FollowablePoint`). */
+export function deferredPointQueryResource<Row>(
+  descriptor: PointQueryResourceContract<Row>,
+  specOf: () => PointQueryResourceSpec<PointParams>,
+): FollowablePoint<Row> {
+  let followable: FollowablePlan | undefined;
+  const resource = defineDeferredResource(descriptor, () => {
+    const compiled = compileWindowQuery(
+      descriptor as AnyWindowContract<Row, PointParams & WindowParams>,
+      specOf() as BoundedQueryResourceSpec<PointParams>,
+    );
+    assertKeyField(descriptor as AnyWindowContract<unknown>, compiled.keyField);
+    followable = pointFollowable(descriptor.key, compiled);
+    return compiled.serverOpts;
+  });
+  return {
+    resource,
+    followable: () => {
+      if (followable === undefined) {
+        throw new Error(
+          `pointQueryResource("${descriptor.key}"): followed before bindDeferredResources compiled it — a follower of a deferred collection binds after it.`,
+        );
+      }
+      return followable;
+    },
+  };
+}
+
+function pointFollowable(
+  key: string,
+  compiled: CompiledWindowQuery<unknown, PointParams>,
+): FollowablePlan {
+  if (compiled.followable === null) {
+    // Unreachable: a point descriptor compiles to the point arm.
+    throw new Error(`pointQueryResource("${key}"): compiled no point set.`);
+  }
+  return compiled.followable;
 }
 
 /**

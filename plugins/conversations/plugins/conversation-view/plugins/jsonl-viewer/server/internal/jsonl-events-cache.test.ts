@@ -11,15 +11,16 @@ import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-sourc
 
 // The memo under test is `jsonlEventsMemo` (jsonl-events-cache.ts), whose two halves
 // are `transcriptChainSignature ∘ resolve` and `readJsonlEventsFromChain ∘ resolve`.
-// `resolve` is `resolveConversationTranscriptPaths`, which reads the session-chain
-// table and globs the real `~/.claude/projects` — so calling `jsonlEventsMemo.get(id)`
-// from a unit test would mean writing into the developer's live DB and projects dir.
+// `resolve` is `resolveTranscriptPathsOf` over the followed chain, which globs the
+// real `~/.claude/projects` — so calling `jsonlEventsMemo.get(id, { input })` from a
+// unit test would mean writing into the developer's live projects dir.
 //
 // This suite therefore rebuilds the memo over the SAME signature/compute pair with the
 // chain resolved from a temp-file fixture instead. That is the only substitution: the
 // `lstat` signature, the chain read/parse, and `createSignedMemo`'s probe-then-compare
-// are all the real ones, and they are what the property is about. The DB resolve is
-// covered by session-chain's own real-DB suite.
+// are all the real ones, and they are what the property is about. The chain's facts
+// are the reading value's follows, covered by session-chain's and tasks-core's
+// real-DB suites.
 //
 // The load-bearing case is `prime` under a pre-append signature: the value the watcher
 // hands over is stale by the time it lands, and the read path must notice. The old code

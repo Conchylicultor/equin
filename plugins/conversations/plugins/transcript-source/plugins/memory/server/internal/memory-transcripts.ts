@@ -40,6 +40,8 @@ const memoryImageIo: TranscriptImageIo = {
   readPath: async () => null,
 };
 
+// One transcript per conversation, no session files: the chain names nothing
+// to read here, so both halves ignore it.
 export const memoryTranscripts: TranscriptSourceImpl = {
   signature: async (id) => signatureOf(id),
   events: async (id) => parse(id),

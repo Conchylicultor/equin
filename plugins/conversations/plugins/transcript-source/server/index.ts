@@ -23,10 +23,13 @@ export type {
   TranscriptImageIo,
   TranscriptImageRead,
 } from "./internal/image-key";
-// What resolving a conversation's transcript chain reads from Postgres, as a
-// live value's declared `reads` — every value whose loader reads a transcript
-// passes it.
-export { transcriptChainReads } from "./internal/chain-reads";
+// The transcript chain's facts as a live value's `follows` — every value whose
+// loader reads a transcript follows them, and hands the rows to
+// `followedTranscriptChain` for the chain its source reads.
+export {
+  followedTranscriptChain,
+  transcriptChainFollows,
+} from "./internal/chain-follows";
 
 export default {
   portable: true,

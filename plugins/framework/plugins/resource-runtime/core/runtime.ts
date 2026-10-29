@@ -46,6 +46,7 @@ import {
   type Route,
   type RoutePlan,
   type RoutePlanInput,
+  type RouteVia,
   type TableChange,
   type TableLayoutRequirement,
   type TupleRouting,
@@ -445,6 +446,19 @@ export interface ResourceDefinition<
   onFirstSubscribe?: (params: P) => void | Promise<void>;
   onLastUnsubscribe?: (params: P) => void;
   /**
+   * A change reached a TRACKED tuple through a follow route (`Route.via` — a
+   * followed collection's rows moved), whatever the entry's mode: called
+   * synchronously from the router, outside any flight, wrapped in a `bg`
+   * origin (`wrapOrigin`). network/live's `serveValue` re-reads the tuple's
+   * followed rows here and re-points its `whileFollowing` start when they
+   * moved — so a watch over a followed fact (a worktree path, a session chain)
+   * follows it. Answers whether it re-pointed (`_debug`'s `followRepoints`
+   * counts `"repointed"`); a rejection is reported. Requires follow routes in
+   * the entry's reach plan (a throw at registration / bind otherwise — it
+   * would never fire).
+   */
+  onFollowReached?: (params: P) => Promise<FollowReached>;
+  /**
    * Conditional-revalidation signature (HTTP-ETag / 304 semantics). Optional and
    * opt-in: when present, a cheap "did anything change?" content signature (an
    * ETag) the read path (WS sub-ack + HTTP GET fallback) can compare against the
@@ -825,6 +839,8 @@ interface ServerResourceOptionsBase<
   debounceMs?: number;
   onFirstSubscribe?: ResourceDefinition<T, P>["onFirstSubscribe"];
   onLastUnsubscribe?: ResourceDefinition<T, P>["onLastUnsubscribe"];
+  /** A follow route reached a tracked tuple — see `ResourceDefinition.onFollowReached`. */
+  onFollowReached?: ResourceDefinition<T, P>["onFollowReached"];
   /** Conditional-revalidation ETag signature — see `ResourceDefinition.revalidate`. */
   revalidate?: ResourceDefinition<T, P>["revalidate"];
   /** Deferred subscription-authorization seam — see `ResourceDefinition.authorize`. */
@@ -951,6 +967,9 @@ function contractToDefinition<T, P extends ResourceParams>(
     debounceMs: opts.debounceMs,
     onFirstSubscribe: opts.onFirstSubscribe,
     onLastUnsubscribe: opts.onLastUnsubscribe,
+    ...(opts.onFollowReached !== undefined
+      ? { onFollowReached: opts.onFollowReached }
+      : {}),
     revalidate: opts.revalidate,
     authorize: opts.authorize,
     ...(opts.freshness !== undefined ? { freshness: opts.freshness } : {}),
@@ -1217,6 +1236,14 @@ interface RoutingRecord {
    */
   tagged: ReadonlyMap<string, ReadonlySet<string>>;
   /**
+   * The tables a reach plan reads through follows (`Route.via`), table → every
+   * follow reading it (two follows may read one table): routed by the copied
+   * collection routes, and read ONLY through the collections' own reads, in
+   * their own loader spans — so the entry's own capture never covers one
+   * (`readCovered`: a read of it by hand is drift).
+   */
+  via: ReadonlyMap<string, readonly RouteVia[]>;
+  /**
    * A8: the tables a loader run read that no route names, each reported once
    * and — in a running server — indexed for the router as a FULL read of the
    * entry (see `checkRouteDrift`).
@@ -1447,6 +1474,8 @@ interface RegistryEntry {
   downstream: DownstreamEdge[];
   onFirstSubscribe?: (params: ResourceParams) => void | Promise<void>;
   onLastUnsubscribe?: (params: ResourceParams) => void;
+  /** See `ResourceDefinition.onFollowReached`. */
+  onFollowReached?: (params: ResourceParams) => Promise<FollowReached>;
   /**
    * Conditional-revalidation ETag signature (see `ResourceDefinition.revalidate`).
    * Undefined ⇒ the resource has not opted in and every read path runs the full
@@ -1538,6 +1567,12 @@ interface SocketState {
   subs: Map<string, Map<string, SocketSubRecord>>;
 }
 
+/** One loader run's own read capture, as `RunCapture` handed it (sorted). */
+interface RunReads {
+  tables: readonly string[];
+  tags: ReadTags | undefined;
+}
+
 /** What `wrapLoad` is told about one loader run (see `ResourceRuntimeOptions.wrapLoad`). */
 export interface LoadInfo {
   variant?: string;
@@ -1605,6 +1640,23 @@ function delivery(
  */
 export type ReadTags = ReadonlyMap<string, ReadonlySet<string | null>>;
 
+/**
+ * Hand one loader run's OWN read capture to the runtime: every table its
+ * loader span read (none included) and their tags (`undefined` when none was
+ * tagged). Called by the host's `wrapLoad` as the run's span closes.
+ */
+export type RunCapture = (
+  tables: ReadonlySet<string>,
+  tags: ReadTags | undefined,
+) => void;
+
+/**
+ * What a `ResourceDefinition.onFollowReached` hook did for one tuple: its
+ * `whileFollowing` start re-pointed at the moved followed rows, or nothing
+ * moved that the start reads (or the tuple was released meanwhile).
+ */
+export type FollowReached = "repointed" | "unchanged";
+
 export interface ResourceRuntimeOptions {
   /**
    * The 64-bit content hash a keyed resource's snapshot retains per row (see
@@ -1617,13 +1669,16 @@ export interface ResourceRuntimeOptions {
   /**
    * Wrap each loader call. `info.variant` is the canonical params
    * (`paramsKey`, absent for `{}`); `info.scopedIds` is how many ids a scoped
-   * refill read (absent on a FULL load). server: recordEntrySpan("loader", key,
-   * fn, detail); central: omit (identity).
+   * refill read (absent on a FULL load). `capture` takes THIS run's own read
+   * capture (`RunCapture`) as its span closes — what the drift guard judges
+   * the run on (see `lastReadSet`). server: recordEntrySpan("loader", key,
+   * fn, detail, capture); central: omit (identity).
    */
   wrapLoad?: (
     key: string,
     info: LoadInfo,
     fn: () => Promise<unknown>,
+    capture: RunCapture,
   ) => Promise<unknown>;
   /**
    * Wrap one `GET /api/resources/:key` request after its key resolved to a
@@ -1643,14 +1698,16 @@ export interface ResourceRuntimeOptions {
   /**
    * Wrap an origin-triggered load so child loader spans (and the gate waits they
    * charge) attribute to the originating request class — `sub` (a tab subscribed),
-   * `push` (a drain's load) or `cascade` (a routed entry's reverse-route resolve,
-   * `resolveReverseRoutes`). Without it the loader runs with no entry
-   * context and gets `parent: null`. server: recordEntrySpan(kind, key, fn);
+   * `push` (a drain's load), `cascade` (a routed entry's reverse-route resolve,
+   * `resolveReverseRoutes`) or `bg` (a follow hook's re-read,
+   * `onFollowReached` — background work no reader waits on). Without it the
+   * loader runs with no entry context and gets `parent: null`. server:
+   * recordEntrySpan(kind, key, fn);
    * central: omit (identity). See
    * research/2026-06-19-global-wait-attribution-instrumentation.md.
    */
   wrapOrigin?: <R>(
-    kind: "sub" | "push" | "cascade",
+    kind: "sub" | "push" | "cascade" | "bg",
     key: string,
     fn: () => Promise<R>,
   ) => Promise<R>;
@@ -1762,8 +1819,9 @@ export interface ResourceRuntimeOptions {
   readSet?: (key: string) => string[];
   /**
    * The tables the resource's MOST RECENT loader run read (per-run capture,
-   * REPLACED each run — not the append-only union `readSet` returns), or
-   * `undefined` if none was captured. Used ONLY on the L2 persist seam: after a
+   * REPLACED each run — not the append-only union `readSet` returns; `[]`
+   * for a run that read nothing), or `undefined` if no run was captured. On
+   * the L2 persist seam (an empty one falls back to the route tables): after a
    * FULL recompute, the runtime persists THIS into `tables_read` (replace, not
    * union) so a dependency a code change removed — or a historical mis-attribution
    * baked into the seed — is shed instead of carried forever. It is authoritative
@@ -1772,9 +1830,13 @@ export interface ResourceRuntimeOptions {
    * conditional queries among persisted resources — the safety basis; see
    * research/2026-07-07-global-read-set-self-heal-on-full-recompute.md).
    *
-   * It also feeds the route drift guard (A8 / D5): a captured relation no
-   * route, relation read or unfed declaration covers is drift. server: the
-   * read-set sink's per-run capture;
+   * It also arms the route drift guard (A8 / D5): a captured relation no
+   * route, relation read or unfed declaration covers is drift. The guard
+   * judges a run on its OWN capture, handed back through `wrapLoad`'s
+   * `capture` — a per-key last run may be another run of the key, finished
+   * in between (a pure follower's empty run, a sibling tuple's) — and reads
+   * this only for a run whose host handed none (a test harness without
+   * `wrapLoad`). server: the read-set sink's per-run capture;
    * central: omitted (central persists nothing).
    */
   lastReadSet?: (key: string) => string[] | undefined;
@@ -2062,6 +2124,18 @@ export interface ResourceRuntime {
    */
   loadResourceByKey: (key: string, params?: ResourceParams) => Promise<unknown>;
   /**
+   * Read one tuple of a registered resource FRESH: its own loader, through
+   * `timedLoad` (its own loader span — so the reads are captured under ITS
+   * key and judged by ITS drift guard —, the schema parse), never joining an
+   * in-flight read, capturing no watermark and touching no subscription,
+   * snapshot or version. For a read another resource composes into its own
+   * load (network/live's `follows`): the caller's flight already began after
+   * the change it serves, so a joined older flight would be a stale read under
+   * a fresh version. Throws on an unknown key, an unbound deferred one and a
+   * tuple its params gate refuses.
+   */
+  loadResourceFresh: (key: string, params: ResourceParams) => Promise<unknown>;
+  /**
    * Run one full first-subscribe lifecycle for a registered resource and return
    * its timing, then tear it back down. Mirrors `handleSub`'s 0→1 path
    * byte-for-byte — `onFirstSubscribe` then the loader read through the same
@@ -2329,6 +2403,28 @@ const HEARTBEAT_MS = 20_000;
 // Tunable; surfaced via `get_runtime_profile`'s read-admit wait spans.
 const READ_LOAD_CONCURRENCY = 6;
 
+/** A reach plan's follows by table: every follow (by name) reading each one. */
+function followsByTable(
+  routes: readonly Route[],
+): ReadonlyMap<string, readonly RouteVia[]> {
+  const out = new Map<string, RouteVia[]>();
+  for (const route of routes) {
+    if (route.via === undefined) continue;
+    const vias = out.get(route.table) ?? [];
+    if (!vias.some((v) => v.name === route.via!.name)) vias.push(route.via);
+    out.set(route.table, vias);
+  }
+  return out;
+}
+
+/** `the follow "a" of "x"` / `the follows "a" of "x" and "b" of "y"`, for a message. */
+function namedFollows(vias: readonly RouteVia[]): string {
+  const each = vias.map((v) => `"${v.name}" of "${v.collection}"`);
+  return vias.length === 1
+    ? `the follow ${each[0]}`
+    : `the follows ${each.join(" and ")}`;
+}
+
 // A resource's `revalidate` may return ANY string — long, and with bytes
 // (NUL/newline) that are illegal in an HTTP `ETag` header value and unstorable in
 // Postgres text (a raw signature set as a header throws `TypeError: Header has
@@ -2417,6 +2513,10 @@ export function createResourceRuntime(
   // payload — non-zero means an optimistic op on that key waited for the
   // watermark backstop instead of its exact ack.
   const ackOverflows = new Map<string, number>();
+  // Per-key follow re-points (`onFollowReached` answering `"repointed"`): a
+  // `whileFollowing` start moved to the followed rows a change moved.
+  // Monotonic; surfaced in the `_debug` payload.
+  const followRepoints = new Map<string, number>();
   function recordAckOverflow(key: string): void {
     ackOverflows.set(key, (ackOverflows.get(key) ?? 0) + 1);
   }
@@ -2782,7 +2882,10 @@ export function createResourceRuntime(
   // after awaiting the loader; every persisted resource is param-less (single pk),
   // so no concurrent same-key run can clobber the per-run capture in between.
   function persistReadSet(entry: RegistryEntry): string[] {
-    return opts.lastReadSet?.(entry.key) ?? floorGuardTables(entry);
+    const last = opts.lastReadSet?.(entry.key);
+    return last !== undefined && last.length > 0
+      ? last
+      : floorGuardTables(entry);
   }
 
   // Internal refill primitive — the ONLY place `entry.loader` runs. The loader
@@ -2810,15 +2913,21 @@ export function createResourceRuntime(
       return entry.schema.parse(raw);
     };
     let load: Promise<unknown>;
+    // This run's own capture, once its span closed (see `RunCapture`).
+    let own: RunReads | undefined;
     if (opts.wrapLoad) {
       const info: LoadInfo = {};
       if (Object.keys(params).length > 0) info.variant = paramsKey(params);
       if (ctx) info.scopedIds = ctx.affectedIds.length;
-      load = opts.wrapLoad(entry.key, info, run);
+      load = opts.wrapLoad(entry.key, info, run, (tables, tags) => {
+        own = { tables: [...tables].sort(), tags };
+      });
     } else {
       load = run();
     }
-    return driftGuarded(entry) ? load.then(checkRouteDrift(entry)) : load;
+    return driftGuarded(entry)
+      ? load.then((value) => checkRouteDrift(entry, own)(value))
+      : load;
   }
 
   // The loader, with one rule on what it may throw: a `ResourceRefusal` must
@@ -2899,7 +3008,8 @@ export function createResourceRuntime(
   // Whether a captured `relation` is one the entry's declaration covers — the
   // ONE predicate the drift guard (A8 / D5) and the boot drift seed
   // (`seedRouteDrift`) judge by: routes ∪ derived ∪ unfed ∪ relation reads ∪
-  // already drifted. A tagged route table (`TaggedRead`) is covered only when
+  // already drifted. A followed table (`Route.via`) is never covered by the
+  // entry's own capture. A tagged route table (`TaggedRead`) is covered only when
   // every read of it carried one of its tags — judged from the run's `tags`;
   // `"untracked"` (a persisted `tables_read`, which records no tags) judges
   // it by its name alone, as a route table.
@@ -2910,6 +3020,13 @@ export function createResourceRuntime(
   ): boolean {
     if (routing === undefined) return false;
     if (routing.drifted.has(relation)) return true;
+    // A followed table is read through its collection's own read, in that
+    // collection's loader span — never in this entry's: a capture of it
+    // here is a read by hand, which no route gates. A persisted
+    // `tables_read` ("untracked") cannot tell the spans apart — it may hold
+    // the route tables themselves (`persistReadSet`'s fallback) —, so the
+    // seed judges a followed table by its name, as a route table.
+    if (routing.via.has(relation) && tags !== "untracked") return false;
     const only = routing.tagged.get(relation);
     if (only !== undefined && tags !== "untracked") {
       const seen = tags?.get(relation);
@@ -2927,10 +3044,16 @@ export function createResourceRuntime(
     );
   }
 
-  function checkRouteDrift(entry: RegistryEntry): (value: unknown) => unknown {
+  function checkRouteDrift(
+    entry: RegistryEntry,
+    own: RunReads | undefined,
+  ): (value: unknown) => unknown {
     return (value) => {
-      const captured = opts.lastReadSet!(entry.key) ?? [];
-      const tags = opts.lastReadTags?.(entry.key);
+      // The run's own capture; a host that hands none (a test harness) is
+      // read per key, its reads stated for the key.
+      const captured = own?.tables ?? opts.lastReadSet!(entry.key) ?? [];
+      const tags =
+        own !== undefined ? own.tags : opts.lastReadTags?.(entry.key);
       dropUnreadSeeds(entry, captured);
       const unrouted = captured.filter(
         (table) => !readCovered(entry.routing, table, tags),
@@ -2938,14 +3061,17 @@ export function createResourceRuntime(
       if (unrouted.length === 0) return value;
       const tables = unrouted.map((t) => `"${t}"`).join(", ");
       const outsideTag = unrouted.filter((t) => entry.routing?.tagged.has(t));
+      const byHand = unrouted.filter((t) => entry.routing?.via.has(t));
       const err = new ResourceGuardError(
         "RouteDrift",
         entry.key,
-        outsideTag.length > 0
-          ? `resource "${entry.key}" read ${outsideTag.map((t) => `"${t}"`).join(", ")} outside the tagged queries that cover it (${outsideTag.map((t) => `"${t}": ${[...entry.routing!.tagged.get(t)!].map((tag) => `"${tag}"`).join(" | ")}`).join("; ")}) — its route's columns gate only what those queries read, so a write to another column would never reach it. Read the table through that lookup, or declare it whole.`
-          : entry.routing && entry.routing.plan !== NO_ROUTES
-            ? `routed resource "${entry.key}" read ${tables}, which none of its routes names — a write there never reaches it. Its compiler must emit a route for every table the SQL reads.`
-            : `external resource "${entry.key}" read ${tables}, which it does not declare — a write there never reaches it (only its own notify does). Declare the value's reads, or its freshness if it is never told of a change.`,
+        byHand.length > 0
+          ? `resource "${entry.key}" read ${byHand.map((t) => `"${t}"`).join(", ")} by hand, which it follows (${byHand.map((t) => `"${t}": ${namedFollows(entry.routing!.via.get(t)!)}`).join("; ")}) — the follow's routes gate and match only what that collection reads, so a write reaching this read would be missed. Read it through \`followed\`.`
+          : outsideTag.length > 0
+            ? `resource "${entry.key}" read ${outsideTag.map((t) => `"${t}"`).join(", ")} outside the tagged queries that cover it (${outsideTag.map((t) => `"${t}": ${[...entry.routing!.tagged.get(t)!].map((tag) => `"${tag}"`).join(" | ")}`).join("; ")}) — its route's columns gate only what those queries read, so a write to another column would never reach it. Read the table through that lookup, or declare it whole.`
+            : entry.routing && entry.routing.plan !== NO_ROUTES
+              ? `routed resource "${entry.key}" read ${tables}, which none of its routes names — a write there never reaches it. Its compiler must emit a route for every table the SQL reads.`
+              : `external resource "${entry.key}" read ${tables}, which it does not declare — a write there never reaches it (only its own notify does). Declare the value's reads, or its freshness if it is never told of a change.`,
       );
       if (opts.strictRoutes) throw err;
       failOpenDrift(entry, unrouted);
@@ -3012,8 +3138,15 @@ export function createResourceRuntime(
   ): void {
     for (const base of driftBasesOf(relation)) {
       // A route table is reached through its route — unless the route is
-      // tagged: a read outside its tag may read any column, so it goes FULL.
-      if (routing.byTable.has(base) && !routing.tagged.has(base)) continue;
+      // tagged, or a follow's: a read outside its tag, or by hand beside a
+      // follow, may read any column of any row, so it goes FULL.
+      if (
+        routing.byTable.has(base) &&
+        !routing.tagged.has(base) &&
+        !routing.via.has(base)
+      ) {
+        continue;
+      }
       routing.driftBases.add(base);
       if (!indexedUnder(base, entry)) indexTable(base, entry);
     }
@@ -3035,6 +3168,7 @@ export function createResourceRuntime(
       relations: new Map(),
       notified: new Map(),
       tagged: new Map(),
+      via: new Map(),
       drifted: new Set(),
       relationBases: new Set(),
       driftBases: new Set(),
@@ -3840,6 +3974,8 @@ export function createResourceRuntime(
           ? ((plan as ReachPlan<ResourceParams>).taggedReads ?? [])
           : [],
       ),
+      // `mintRoutePlan` refuses a follow route, so only a reach plan has one.
+      via: followsByTable(plan.routes),
       drifted: new Set(),
       relationBases: new Set(),
       driftBases: new Set(),
@@ -3971,6 +4107,15 @@ export function createResourceRuntime(
     if (!routing) return;
     for (const relation of routing.relations.keys()) {
       for (const base of relationBasesOf(relation)) {
+        const via = routing.via.get(base);
+        if (via !== undefined) {
+          // The other half of `mintReachPlan`'s follow check, known only
+          // once the bases are: a view read whole over a followed table
+          // would reach every write the follow's gate and match skip.
+          throw new Error(
+            `resource "${entry.key}" reads the relation "${relation}" whole, and its base "${base}" through ${namedFollows(via)} — the whole read would re-widen the follow. Read "${base}" through the follow only.`,
+          );
+        }
         if (routing.byTable.has(base)) continue;
         routing.relationBases.add(base);
         if (!indexedUnder(base, entry)) indexTable(base, entry);
@@ -4024,7 +4169,7 @@ export function createResourceRuntime(
     downstream: string,
     upstream: string,
   ): string {
-    return `defineResource: "${downstream}" cascades from the keyed window "${upstream}" — a membership drain cascades nothing (D32), so the edge would never fire; follow what "${upstream}" follows instead`;
+    return `defineResource: "${downstream}" cascades from the keyed window "${upstream}" — a membership drain cascades nothing (D32), so the edge would never fire. To read its rows, follow the collection (\`serveValue\`'s \`follows\`): its routes reach this value, narrowed to the tuple it reads`;
   }
 
   /** T15's refusal: `downstream` cascades from `upstream`, which is DB-backed. */
@@ -4032,7 +4177,7 @@ export function createResourceRuntime(
     downstream: string,
     upstream: string,
   ): string {
-    return `defineResource: "${downstream}" dependsOn "${upstream}", which is DB-backed — its writes reach "${downstream}" through the change feed already (its read-set), so a cascade would serve it twice; only an external upstream (truth outside Postgres) cascades`;
+    return `defineResource: "${downstream}" dependsOn "${upstream}", which is DB-backed — its writes reach "${downstream}" through the change feed already (its read-set), so a cascade would serve it twice; only an external upstream (truth outside Postgres) cascades. To read a collection's rows, follow it (\`serveValue\`'s \`follows\`)`;
   }
 
   /**
@@ -4131,6 +4276,17 @@ export function createResourceRuntime(
     }
 
     const routing = routingRecordFor(def, membershipField, externalSource);
+    // A follow hook fires only through follow routes: without one in the
+    // plan it would never run — a re-point declared and never made.
+    if (
+      !placeholder &&
+      def.onFollowReached !== undefined &&
+      (routing === undefined || routing.via.size === 0)
+    ) {
+      throw new Error(
+        `defineResource: "onFollowReached" on key "${def.key}", whose plan has no follow route (\`Route.via\`) — the hook fires only when a followed collection's rows reach a tracked tuple, so it would never run`,
+      );
+    }
     // The external keyed arm (`ExternalKeyedPolicy`) — never routed: its
     // routes were refused above. The types allow only a bounded window or a
     // point set; this holds the line for a cast.
@@ -4311,7 +4467,7 @@ export function createResourceRuntime(
       }
       if (!upstream.externalSource) {
         throw new Error(
-          `defineResource: "${def.key}" recomputes on "${r.resource.key}", which is DB-backed — a routed entry routes the tables it reads itself; only an external upstream (truth outside Postgres) may recompute it`,
+          `defineResource: "${def.key}" recomputes on "${r.resource.key}", which is DB-backed — a routed entry routes the tables it reads itself; only an external upstream (truth outside Postgres) may recompute it (a served value reads a collection's rows by following it — \`serveValue\`'s \`follows\`)`,
         );
       }
       if (upstream.membership) {
@@ -4379,6 +4535,8 @@ export function createResourceRuntime(
         ((params: ResourceParams) => void | Promise<void>) | undefined,
       onLastUnsubscribe: def.onLastUnsubscribe as
         ((params: ResourceParams) => void) | undefined,
+      onFollowReached: def.onFollowReached as
+        ((params: ResourceParams) => Promise<FollowReached>) | undefined,
       revalidate: def.revalidate as
         ((params: ResourceParams) => Promise<string>) | undefined,
       authorize: def.authorize as
@@ -4520,6 +4678,7 @@ export function createResourceRuntime(
         upstreamKeys: built.entry.upstreamKeys,
         onFirstSubscribe: built.entry.onFirstSubscribe,
         onLastUnsubscribe: built.entry.onLastUnsubscribe,
+        onFollowReached: built.entry.onFollowReached,
         revalidate: built.entry.revalidate,
         authorize: built.entry.authorize,
         validateParams: built.entry.validateParams,
@@ -7720,6 +7879,8 @@ export function createResourceRuntime(
         bases: string[];
       }>;
       notifiedReads: Array<{ relation: string; reason: string }>;
+      follows: Array<{ name: string; collection: string }>;
+      followRepoints: number;
       routeDrifted: string[];
       routeDriftSeeded: string[];
       tuples: number;
@@ -7823,6 +7984,11 @@ export function createResourceRuntime(
               .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
               .map(([relation, reason]) => ({ relation, reason }))
           : [],
+        // A reach plan's follows (`Route.via`): each collection it reads a
+        // tuple of, by follow name, and how many times a followed change
+        // re-pointed its `whileFollowing` start (`onFollowReached`).
+        follows: entry.routing ? followsOf(entry.routing) : [],
+        followRepoints: followRepoints.get(entry.key) ?? 0,
         routeDrifted: entry.routing ? [...entry.routing.drifted].sort() : [],
         // D7: persisted reads seeded as drift at boot that no load has
         // confirmed yet (`seedRouteDrift`) — routed FULL, not reported.
@@ -7903,6 +8069,39 @@ export function createResourceRuntime(
 
   // Load any registered resource by key through the same `timedLoad` path
   // `handleSub` uses (schema parse + profiler span). Throws on an unknown key.
+  // A plan's follows, one per name, sorted (`_debug`).
+  function followsOf(
+    routing: RoutingRecord,
+  ): Array<{ name: string; collection: string }> {
+    const byName = new Map<string, string>();
+    for (const route of routing.plan.routes) {
+      if (route.via) byName.set(route.via.name, route.via.collection);
+    }
+    return [...byName]
+      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+      .map(([name, collection]) => ({ name, collection }));
+  }
+
+  // A tuple's value read FRESH (see the interface): the entry's own loader
+  // through `timedLoad` — its loader span, schema parse and drift guard —
+  // and nothing else: no flight (joining one could hand back a read that
+  // began before the caller's change), no watermark, no tracking state.
+  async function loadResourceFresh(
+    key: string,
+    params: ResourceParams,
+  ): Promise<unknown> {
+    const entry = registry.get(key);
+    if (!entry) throw new Error(`unknown resource key: ${key}`);
+    if (deferred.has(key)) {
+      throw new Error(
+        `loadResourceFresh: "${key}" is deferred and not bound yet — nothing reads it before bindDeferredResources`,
+      );
+    }
+    const tuple = canonicalTuple(entry, params);
+    entry.validateParams(tuple);
+    return timedLoad(entry, tuple);
+  }
+
   async function loadResourceByKey(
     key: string,
     params?: ResourceParams,
@@ -8044,6 +8243,7 @@ export function createResourceRuntime(
 
   function routeEntryChange(entry: RegistryEntry, change: TableChange): void {
     const routing = entry.routing!;
+    reachFollows(entry, routing, change);
     const routes = routing.byTable.get(change.table);
     if (routes === undefined || routing.driftBases.has(change.table)) {
       // A table only the drift guard indexed (A8 fail-open): no route names it
@@ -8086,6 +8286,61 @@ export function createResourceRuntime(
         );
         deliverRouted(entry, pk, params, { kind: "full" }, change);
       }
+    }
+  }
+
+  // A change to a followed table, for the entry's follow hook
+  // (`onFollowReached`): each TRACKED tuple a follow route lets it through to
+  // — its gate, the static rows and the tuple's own match — is handed to the
+  // hook, synchronously and outside any flight, whatever the entry's mode.
+  // A tuple whose read-set is unusable, or a followed table the drift guard
+  // failed open (served FULL), is handed over too: a missed re-point would
+  // leave a watch on a stale target, an extra one costs one re-read. The
+  // hook's own work runs in a `bg` origin; a rejection is reported.
+  function reachFollows(
+    entry: RegistryEntry,
+    routing: RoutingRecord,
+    change: TableChange,
+  ): void {
+    const hook = entry.onFollowReached;
+    if (hook === undefined || !routing.via.has(change.table)) return;
+    const viaRoutes = (routing.byTable.get(change.table) ?? []).filter(
+      (r) => r.via !== undefined,
+    );
+    const drifted = routing.driftBases.has(change.table);
+    for (const [pk, params] of entry.tracked) {
+      let reached = drifted;
+      if (!reached) {
+        try {
+          const uses = usesFor(entry, routing, pk, params);
+          reached =
+            uses === null ||
+            routeTuple(change, viaRoutes, uses).kind !== "untouched";
+        } catch (err) {
+          reportLoaderError(
+            `follow routing failed for ${entry.key} ${pk} (table "${change.table}")`,
+            err,
+          );
+          reached = true;
+        }
+      }
+      if (!reached) continue;
+      const run = () => hook(params);
+      void (opts.wrapOrigin ? opts.wrapOrigin("bg", entry.key, run) : run())
+        .then((outcome) => {
+          if (outcome === "repointed") {
+            followRepoints.set(
+              entry.key,
+              (followRepoints.get(entry.key) ?? 0) + 1,
+            );
+          }
+        })
+        .catch((err: unknown) => {
+          reportLoaderError(
+            `onFollowReached failed for ${entry.key} ${pk}`,
+            err,
+          );
+        });
     }
   }
 
@@ -8451,6 +8706,7 @@ export function createResourceRuntime(
     handleResourceHttp,
     withNotifyBatch,
     loadResourceByKey,
+    loadResourceFresh,
     measureSubscribeCycle,
     triggerResourcePush,
     routeTableChange,

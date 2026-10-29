@@ -5,14 +5,37 @@ A conversation's transcript, independent of the host that stores it.
 - **`core/`** — the transcript format: the `JsonlEvent` protocol the
   conversation view renders and its helpers (branch filter, relay envelopes,
   pasted content, request config / shape, token usage, `TaskStop` times). Moved here from
-  `transcript-watcher`, so the format sits BELOW the file watcher.
+  `transcript-watcher`, so the format sits BELOW the file watcher. Also the
+  chain's FACTS: `TranscriptChain` (the Claude session ids, oldest → newest)
+  and the pure `transcriptChainOf(sessions, tail)` — the one place the
+  `claude_session_id` fallback lives (the tail stands in while the recorded
+  chain is empty).
 - **`server/`** (portable) — the Claude Code JSONL parser
   (`mergeChainLines` merges a session chain's files, `buildJsonlEvents` builds
   the events, prompt images read through the host's `TranscriptImageReader`),
-  `transcriptChainReads` (the session tables a transcript read declares), and
-  the **`TranscriptSource`** host service: `{ signature(id), events(id),
-  watch(id, onChange) }`. `jsonl-viewer`'s `jsonl-events` value reads it, so
-  the transcript view runs on any host.
+  the chain as `follows` (below), and the **`TranscriptSource`** host service:
+  `{ signature(id, chain), events(id, chain), watch(id, onChange) }`.
+  `jsonl-viewer`'s `jsonl-events` value reads it, so the transcript view runs
+  on any host.
+- **A served value reads the chain through `follows`, never by hand.**
+  `transcriptChainFollows` follows the conversation's session chain
+  (`conversationSessionsServed`, `{ where: { conversationId: id } }`) and its
+  tail (`conversationSessionTailsServed`, `{ ids: [id] }`); its subject is
+  anything naming the conversation as `id` (params or a paged question).
+  Spell it `follows: (follow) => transcriptChainFollows(follow)` and hand the
+  hook's `followed` to `followedTranscriptChain` for the chain the source
+  reads — a watch's `whileFollowing.over` too, so it re-starts only when the
+  CHAIN moves (a chain row the tail already named re-starts nothing). So a session recorded on, or a tail written to, one conversation
+  recomputes that conversation's tuples alone, and the poller's `viewed`
+  writes reach none (research/2026-10-24-global-live-narrowed-reads.md §5).
+  Declared by `serveTranscriptValue`, `serveTranscriptFold`, the
+  `jsonl-events` trio, and the machine values `subagent-activity`,
+  `subagent-transcript`, `background-shell-output`. A provider never reads
+  the chain's facts: the desktop's resolves them to files from the
+  filesystem alone (transcript-watcher's `resolveTranscriptPathsOf`); the
+  memory provider ignores them. A caller outside any live value (rewind,
+  backup, retention, the watcher's rooms) reads them from Postgres through
+  `resolveConversationTranscriptPaths(id)`.
 - **Never one block on the thread.** `TranscriptLines.catchUp(file, size,
   read)` and `events()` run one at a time under the lines' own lock (the lines
   track what they consumed, so racing reads of one file cannot decode it
@@ -35,8 +58,8 @@ Design: `research/2026-10-19-global-demo-story-from-browser-worker.md` §3.
 - Description: A conversation's transcript as a host service: TranscriptSource (its events, a signature that moves with them, and a watch), with the Claude Code JSONL parser every provider runs. The desktop's provider reads the session files (transcript-watcher#machine); a host without them provides its own (plugins/memory).
 - Server:
   - Uses:
-    - `conversations/session-chain._conversationSessions`
-    - `tasks/tasks-core._conversations`
+    - `conversations/session-chain.conversationSessionsServed`
+    - `tasks/tasks-core.conversationSessionTailsServed`
   - Exports (types):
     - `TranscriptByteRead`
     - `TranscriptImageIo`
@@ -47,8 +70,9 @@ Design: `research/2026-10-19-global-demo-story-from-browser-worker.md` §3.
   - Exports (values):
     - `buildJsonlEvents`
     - `encodeImageKey`
+    - `followedTranscriptChain`
     - `readImageKey`
-    - `transcriptChainReads`
+    - `transcriptChainFollows`
     - `TranscriptImageKeyError`
     - `TranscriptLines`
     - `TranscriptSource`
@@ -72,6 +96,7 @@ Design: `research/2026-10-19-global-demo-story-from-browser-worker.md` §3.
     - `TeammateMessage`
     - `TokenUsage`
     - `ToolCallResult`
+    - `TranscriptChain`
     - `TranscriptImage`
     - `UserTextSegment`
   - Exports (values):
@@ -95,6 +120,7 @@ Design: `research/2026-10-19-global-demo-story-from-browser-worker.md` §3.
     - `taskStopTimes`
     - `tokenUsageOf`
     - `TokenUsageSchema`
+    - `transcriptChainOf`
     - `TranscriptImageSchema`
     - `unwrapPastedContent`
     - `unwrapRelayEnvelopes`

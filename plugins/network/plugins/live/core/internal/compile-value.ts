@@ -30,6 +30,16 @@ import type {
   LiveQueryParams,
 } from "./query-value";
 import { compareKeyParts, cutParts } from "./key-order";
+import {
+  followsOf,
+  type CompiledFollows,
+  type FollowArgs,
+  type Followed,
+  type FollowMap,
+  type FollowsFn,
+  type HasFollows,
+  type NoFollows,
+} from "./follows";
 
 // The option compilation behind BOTH `serveValue`s — the worktree one
 // (`network/live/server`, on server-core's runtime) and the central one
@@ -55,8 +65,19 @@ import { compareKeyParts, cutParts } from "./key-order";
 //                         `{ value, params }` is a plain per-tuple edge.
 // - `whileSubscribed`   → the runtime's `onFirstSubscribe` / `onLastUnsubscribe`
 //                         pair, owned here so a start without a stop cannot be
-//                         written (see `pairLifecycle`).
+//                         written (see `pairLifecycle`). Handed the subject
+//                         (and `notify`) only, never re-started.
+// - `whileFollowing`    → the same pair for a start over what `over` reads
+//                         off the FOLLOWED rows (`followLifecycle`): handed
+//                         `{ over }`, and the runtime's `onFollowReached`
+//                         re-starts it when a change moves that. Both hooks
+//                         may be declared (`bothLifecycles`).
 // - `revalidate`        → passed through.
+// - `follows`           → `{ followed }` beside the subject in the loader,
+//                         `revalidate`, a paged value's `meta` and
+//                         `whileFollowing.over`, each read fresh in the hook's
+//                         own call (`./follows`). The reach plan the follows
+//                         compile to is the Bun host's.
 //
 // A typed-query value (`liveValue(key, { query })`) and a paged one
 // (`{ query, paged }`) are served by the same options, over their DECODED
@@ -191,49 +212,108 @@ export type RecomputeOn<R extends readonly ExternalServed[], P> = {
 };
 
 /**
+ * The collections a value reads a few rows of, by name — each a served
+ * collection's tuple (`follow(served, tupleOf)`, see `./follows`). Its hooks
+ * then take `{ followed }`: each follow's rows, read fresh in that call. Only
+ * where a change signal reaches the value: a db value, or a `"notified"`
+ * external one (`NoChangeHooks` intersects it away). Declared BEFORE the
+ * hooks (`loader`, …) in the options literal, so their `followed` is typed
+ * from it.
+ */
+interface FollowsOption<S, F> {
+  follows?: FollowsFn<S, F>;
+}
+
+/**
+ * `whileSubscribed`'s arguments beside its subject, per arm: none on a db
+ * value (driven by the change feed alone), `notify` on a `"notified"` one.
+ * The same with or without follows — the rows are `whileFollowing`'s.
+ */
+type StartArgs<Src extends LiveValueSource> = Src extends "db"
+  ? []
+  : [notify: () => void];
+
+/**
+ * `whileFollowing`'s `over` argument: the followed rows (`Followed<F>`) — and,
+ * for a value with no follows, `never` (`FollowingStop` is what refuses the
+ * hook there). A REST whose type is conditional (as the loader's
+ * `FollowArgs`), never a conditional property: tsc types a hook's parameters
+ * from `follows` only through the former.
+ */
+type OverArgs<F> =
+  HasFollows<F> extends true ? [followed: Followed<F>] : [followed: never];
+
+/**
+ * `whileFollowing.start`'s argument beside its subject: `{ over }` (db) or
+ * `{ over, notify }` (`"notified"`) — `over` what `whileFollowing.over` read
+ * off the followed rows, never the rows themselves.
+ */
+type FollowingArgs<Src extends LiveValueSource, W> = Src extends "db"
+  ? [ctx: { readonly over: W }]
+  : [ctx: { readonly over: W; readonly notify: () => void }];
+
+/**
+ * What `whileFollowing.start` returns: its stop — and, for a value with no
+ * follows, `never`. The RETURN refuses it there: a function ignoring its
+ * `never` context would still be assignable through its parameters.
+ */
+type FollowingStop<F> =
+  HasFollows<F> extends true ? StopFn | Promise<StopFn> : never;
+
+/**
+ * `whileFollowing` (a value with `follows` only): a start over what it reads
+ * off the followed rows. `over` reads it — sync, a JSON value (compared as its
+ * JSON) — and `start` is handed THAT, never the rows: a start cannot depend on
+ * a row `over` did not read, so a write moving only rows it ignores (another
+ * conversation joining the attempt, a chain row the tail already named)
+ * re-starts nothing (`followLifecycle`).
+ */
+interface WhileFollowing<S, Src extends LiveValueSource, F, W> {
+  over: (...followed: OverArgs<F>) => W;
+  start: (params: S, ...ctx: FollowingArgs<Src, W>) => FollowingStop<F>;
+}
+
+/**
  * The change-signal options of a db value: driven by the change feed alone, so
  * its `whileSubscribed` takes the params only (a second parameter is a tsc
- * error), and it declares no `changes`.
+ * error; the rows are `whileFollowing`'s), and it declares no `changes`.
  */
 interface DbChangeHooks<S, R extends readonly ExternalServed[]> {
   changes?: never;
   throttleMs?: number;
   recomputeOn?: RecomputeOn<R, S>;
-  /**
-   * Start something for as long as a tuple has a subscriber (a memo's
-   * lifetime); return what stops it. No `notify`: a db value is driven by
-   * the change feed alone.
-   */
-  whileSubscribed?: (params: S) => StopFn | Promise<StopFn>;
+  // `whileSubscribed` (`ServeOptionsBase`): a memo's lifetime — no `notify`,
+  // a db value is driven by the change feed alone; with follows,
+  // `whileFollowing` is handed `{ over }` and re-started when it moves.
 }
 
 /** The change-signal options of a `changes: "notified"` external value. */
 interface NotifiedHooks<S, R extends readonly ExternalServed[]> {
   throttleMs?: number;
   recomputeOn?: RecomputeOn<R, S>;
-  /**
-   * Start something for as long as a tuple has a subscriber (a watcher);
-   * return what stops it. `notify` recomputes THIS tuple. Runs on the
-   * tuple's first subscriber; its stop runs on the last unsubscribe —
-   * after the start resolves, if the unsubscribe comes first.
-   */
-  whileSubscribed?: (params: S, notify: () => void) => StopFn | Promise<StopFn>;
+  // `whileSubscribed` (`ServeOptionsBase`): a watcher, handed `notify`; with
+  // follows, `whileFollowing` is handed `{ over, notify }` and re-started
+  // when `over` moves.
 }
 
 /**
  * An immutable / fixed / snapshot value has no change signal, so nothing that
- * reacts to one may be spelled beside it (tsc; a throw for an untyped caller).
+ * reacts to one may be spelled beside it (tsc; a throw for an untyped caller)
+ * — nor a follow, which reaches the value through the feed.
  */
 interface NoChangeHooks {
   throttleMs?: never;
   recomputeOn?: never;
   whileSubscribed?: never;
+  whileFollowing?: never;
+  follows?: never;
 }
 
 /**
  * `changes` and the hooks it admits, per arm: a db value declares none; an
  * external one must (`C`, inferred from the call), and only `"notified"`
- * admits `whileSubscribed` / `recomputeOn` / `throttleMs`.
+ * admits `whileSubscribed` / `whileFollowing` / `recomputeOn` / `throttleMs`
+ * / `follows`.
  */
 type ChangesArm<
   Src extends LiveValueSource,
@@ -250,8 +330,9 @@ type ChangesArm<
 /**
  * The options every served value takes, over `S` — the SUBJECT its hooks are
  * handed: the params tuple of a plain value, the decoded question of a
- * typed-query or paged one — `L`, its loader, and `C`, its declared
- * `changes` (external arm).
+ * typed-query or paged one — `L`, its loader, `C`, its declared `changes`
+ * (external arm), `F`, its follows (`NoFollows` when it declares none), and
+ * `W`, what its `whileFollowing` reads off them (inferred from `over`).
  */
 type ServeOptionsBase<
   S,
@@ -259,6 +340,8 @@ type ServeOptionsBase<
   R extends readonly ExternalServed[],
   L,
   C extends LiveValueChanges,
+  F,
+  W,
 > = {
   /** Where the value's truth lives (see the header). Required. */
   source: Src;
@@ -270,7 +353,34 @@ type ServeOptionsBase<
    * untyped caller.
    */
   unbounded?: never;
-} & ChangesArm<Src, S, R, C>;
+  /**
+   * Start something for as long as a tuple has a subscriber (a watcher, a
+   * memo's lifetime); return what stops it. A db value's is handed the
+   * subject only; a `"notified"` one's `notify`, which recomputes THIS
+   * tuple; an immutable / fixed / snapshot one has none (`NoChangeHooks`).
+   * Runs on the tuple's first subscriber; its stop runs on the last
+   * unsubscribe — after the start resolves, if the unsubscribe comes first.
+   * Never re-started, follows or not: a start that needs the followed rows is
+   * `whileFollowing`.
+   */
+  whileSubscribed?: (
+    params: S,
+    ...ctx: StartArgs<Src>
+  ) => StopFn | Promise<StopFn>;
+  /**
+   * `whileSubscribed` over the FOLLOWED rows (a value with `follows` only —
+   * `never` without): `over(followed)` reads what the start needs off the
+   * rows read on the subscribe path, and `start` is handed it — `{ over }` /
+   * `{ over, notify }` — and re-started over the new one when a change moves
+   * it (`followLifecycle` — a watch over a worktree path follows the path;
+   * a write moving rows `over` ignores restarts nothing). A re-started watch
+   * must notify once it is open, as a first start does. Declare what needs
+   * no rows (a memo's eviction by the subject) in `whileSubscribed`, which a
+   * moved row never restarts; both may be declared.
+   */
+  whileFollowing?: WhileFollowing<S, Src, F, W>;
+} & FollowsOption<S, F> &
+  ChangesArm<Src, S, R, C>;
 
 export type ServeValueOptions<
   T,
@@ -278,15 +388,28 @@ export type ServeValueOptions<
   Src extends LiveValueSource,
   R extends readonly ExternalServed[] = [],
   C extends LiveValueChanges = "notified",
-> = ServeOptionsBase<P, Src, R, (params: P) => Promise<T> | T, C> & {
+  F extends FollowMap = NoFollows,
+  W = unknown,
+> = ServeOptionsBase<
+  P,
+  Src,
+  R,
+  (params: P, ...ctx: FollowArgs<F>) => Promise<T> | T,
+  C,
+  F,
+  W
+> & {
   /**
    * Conditional-revalidation signature (an ETag): a cheap over-approximation
    * of "did the value change?" the read path compares before running the
    * loader. Read path only. Never on a snapshot: its every read re-measures.
+   * With follows, handed `{ followed }` from the same source as the
+   * loader's — each hook reads its own, fresh in its call (never one shared
+   * read), and the runtime's ETag ordering rules hold for it unchanged.
    */
   revalidate?: IsSnapshot<C> extends true
     ? never
-    : (params: P) => Promise<string>;
+    : (params: P, ...ctx: FollowArgs<F>) => Promise<string>;
 };
 
 /**
@@ -306,20 +429,28 @@ export type ServePagedValueOptions<
   Q,
   R extends readonly ExternalServed[] = [],
   C extends PagedChanges = "notified",
+  F extends FollowMap = NoFollows,
+  W = unknown,
 > = ServeOptionsBase<
   Q,
   "external",
   R,
-  (query: Q, range: LiveKeyRange) => Promise<readonly Item[]> | readonly Item[],
-  C
-> & { revalidate?: never } & MetaOption<Meta, Q>;
+  (
+    query: Q,
+    range: LiveKeyRange,
+    ...ctx: FollowArgs<F>
+  ) => Promise<readonly Item[]> | readonly Item[],
+  C,
+  F,
+  W
+> & { revalidate?: never } & MetaOption<Meta, Q, F>;
 
 /** `meta` exactly when the declaration has `paged.meta`. */
-type MetaOption<Meta, Q> = [Meta] extends [undefined]
+type MetaOption<Meta, Q, F> = [Meta] extends [undefined]
   ? { meta?: never }
   : {
       /** The question's per-question fact (a total), served as `value.meta`. */
-      meta: (query: Q) => Promise<Meta> | Meta;
+      meta: (query: Q, ...ctx: FollowArgs<F>) => Promise<Meta> | Meta;
     };
 
 /** A paged value's `changes`: never a snapshot (a paged value is never `load: "snapshot"`). */
@@ -447,6 +578,248 @@ export function pairLifecycle<P extends Record<string, string>>(
   };
 }
 
+/** A tuple lifecycle the runtime's subscribe hooks run (see `pairLifecycle`, `followLifecycle`). */
+export interface TupleLifecycle<P extends Record<string, string>> {
+  onFirstSubscribe: (params: P) => void | Promise<void>;
+  onLastUnsubscribe: (params: P) => void;
+  /** Only a follower's: re-point the tuple's start (the runtime's `onFollowReached`). */
+  onFollowReached?: (params: P) => Promise<FollowReached>;
+}
+
+/** What a follow re-point did (resource-runtime's `FollowReached`). */
+type FollowReached = "repointed" | "unchanged";
+
+/**
+ * `pairLifecycle` for a value's `whileFollowing` (a start over what `over`
+ * reads off its `follows`' rows): `read` answers that for a tuple, fresh, and
+ * the start is handed it and follows it. One record per tracked tuple — its
+ * tracking span (set by the 0→1 start, dropped by the N→0 stop), the
+ * signature (JSON) of what its start was handed, and the start itself:
+ *
+ * - the 0→1 start reads, then starts — the read is awaited on the subscribe
+ *   path (it is the start's input), the start's own sync-ness is kept: a
+ *   sync start adds no wait, an async one is awaited as ever;
+ * - `onFollowReached` (a change reached the tuple through a follow route —
+ *   the runtime calls it outside any flight, in a `bg` origin) re-reads; only
+ *   if the signature moved AND the tuple is still in the span that read it
+ *   does it stop the old start (once it resolved) and start again over the
+ *   new one — `"repointed"`. Re-points of one tuple run one at a time, in
+ *   order, and a reach arriving while one is queued and not yet reading joins
+ *   it (its read comes after this change too) — answered `"unchanged"`, the
+ *   queued one's own caller answering for it — so the K pages and the meta of
+ *   one question a change reaches re-read once;
+ * - the N→0 stop stops whatever start is current, and no re-point starts
+ *   after it (the replacement is set synchronously after the span check, so
+ *   a stop either precedes it — nothing starts — or stops it);
+ * - an untracked read (HTTP, preload, a fresh load) never reaches here: only
+ *   the subscribe hooks start anything.
+ *
+ * A start (or re-start) that failed has nothing to stop, and started over
+ * nothing: its signature is forgotten, so the next reach starts again even
+ * when nothing moved — a failed watch never sits dead while subscribed.
+ */
+export function followLifecycle<P extends Record<string, string>, W>(
+  start: (params: P, over: W) => StopFn | Promise<StopFn>,
+  read: (params: P) => Promise<W>,
+): Required<TupleLifecycle<P>> {
+  interface Tracked {
+    stopped: boolean;
+    /** What the current start was handed, as JSON — `null` before any read, or once it failed. */
+    signature: string | null;
+    /** The number of the latest start — a failed one forgets its signature only while it is the latest. */
+    attempt: number;
+    current: Promise<Started>;
+    /** The tail of this tuple's re-points (serialized). */
+    queue: Promise<unknown>;
+    /** The re-point queued and not yet reading, which a later reach joins. */
+    queued: Promise<FollowReached> | null;
+  }
+  const running = new Map<string, Tracked>();
+  const settle = (
+    rec: Tracked,
+    attempt: number,
+    started: Promise<StopFn>,
+  ): Promise<Started> =>
+    started.then(
+      (stop): Started => ({ ok: true, stop }),
+      // The runtime reports the rejection (the promise it was handed).
+      (): Started => {
+        if (rec.attempt === attempt) rec.signature = null;
+        return { ok: false };
+      },
+    );
+  return {
+    onFirstSubscribe(params) {
+      const rec: Tracked = {
+        stopped: false,
+        signature: null,
+        attempt: 1,
+        current: Promise.resolve({ ok: false }),
+        queue: Promise.resolve(),
+        queued: null,
+      };
+      running.set(tupleKey(params), rec);
+      const first = read(params).then((over) => {
+        rec.signature = JSON.stringify(over);
+        return start(params, over);
+      });
+      rec.current = settle(rec, 1, first);
+      rec.queue = rec.current;
+      return first.then(() => undefined);
+    },
+    onLastUnsubscribe(params) {
+      const key = tupleKey(params);
+      const rec = running.get(key);
+      running.delete(key);
+      if (rec === undefined) return;
+      rec.stopped = true;
+      void rec.current.then((started) => {
+        if (started.ok) started.stop();
+      });
+    },
+    onFollowReached(params) {
+      const rec = running.get(tupleKey(params));
+      if (rec === undefined) return Promise.resolve("unchanged");
+      if (rec.queued !== null) {
+        // Its caller answers (and the runtime reports) for it.
+        return rec.queued.then(
+          (): FollowReached => "unchanged",
+          (): FollowReached => "unchanged",
+        );
+      }
+      const repoint = rec.queue.then(async (): Promise<FollowReached> => {
+        // Reading from here on: a reach arriving now may come after this
+        // read, so it queues its own.
+        rec.queued = null;
+        if (rec.stopped) return "unchanged";
+        const over = await read(params);
+        const signature = JSON.stringify(over);
+        if (rec.stopped || signature === rec.signature) return "unchanged";
+        rec.signature = signature;
+        const attempt = ++rec.attempt;
+        const restarted = rec.current.then((previous) => {
+          if (previous.ok) previous.stop();
+          return start(params, over);
+        });
+        rec.current = settle(rec, attempt, restarted);
+        await restarted;
+        return "repointed";
+      });
+      rec.queued = repoint;
+      rec.queue = repoint.then(
+        () => undefined,
+        () => undefined,
+      );
+      return repoint;
+    },
+  };
+}
+
+/**
+ * The ONE lifecycle the runtime's subscribe hooks run for a value declaring
+ * `whileSubscribed` (`pairLifecycle`) and/or `whileFollowing`
+ * (`followLifecycle`): each started on 0→1 and stopped on N→0, a sync start
+ * of one never delayed by the other, and only the follower re-pointed. A start
+ * that fails (thrown or rejected) does not keep the other from starting; the
+ * failure is the runtime's to report — both, when both fail.
+ */
+export function bothLifecycles<P extends Record<string, string>>(
+  subscribed: TupleLifecycle<P> | undefined,
+  following: Required<TupleLifecycle<P>> | undefined,
+): TupleLifecycle<P> | undefined {
+  if (subscribed === undefined || following === undefined) {
+    return following ?? subscribed;
+  }
+  // Each start as a promise iff it is async (a sync throw becomes a rejection,
+  // so the other still starts); `undefined` for a sync start.
+  const startEach = (params: P): (Promise<void> | undefined)[] =>
+    [subscribed, following].map((l) => {
+      try {
+        return l.onFirstSubscribe(params) ?? undefined;
+      } catch (err) {
+        return Promise.reject(err as Error);
+      }
+    });
+  return {
+    onFirstSubscribe(params) {
+      const started = startEach(params).filter(
+        (s): s is Promise<void> => s !== undefined,
+      );
+      if (started.length === 0) return;
+      return Promise.allSettled(started).then((settled) => {
+        const failed = settled.flatMap((r) =>
+          r.status === "rejected" ? [r.reason as unknown] : [],
+        );
+        if (failed.length === 1) throw failed[0];
+        if (failed.length > 1) {
+          throw new AggregateError(
+            failed,
+            "whileSubscribed and whileFollowing both failed",
+          );
+        }
+      });
+    },
+    onLastUnsubscribe(params) {
+      // A throwing stop of one never leaks the other's start.
+      try {
+        subscribed.onLastUnsubscribe(params);
+      } finally {
+        following.onLastUnsubscribe(params);
+      }
+    },
+    onFollowReached: following.onFollowReached,
+  };
+}
+
+/**
+ * A value's `whileFollowing`: its start, and the read of what it starts over
+ * (`over` of the follows' fresh rows) — `undefined` when none is declared.
+ * Refused (tsc: its context is `never` without follows) for a value that
+ * follows nothing: there are no rows to start over.
+ */
+function followingHook(
+  key: string,
+  opts: AnyServeOptions,
+  follows: CompiledFollows | null,
+):
+  | {
+      start: (subject: unknown, ctx: unknown) => StopFn | Promise<StopFn>;
+      read: (subject: unknown) => Promise<unknown>;
+    }
+  | undefined {
+  if (opts.whileFollowing === undefined) return undefined;
+  const hook = opts.whileFollowing as {
+    over?: unknown;
+    start?: unknown;
+  } | null;
+  if (
+    typeof hook !== "object" ||
+    hook === null ||
+    typeof hook.over !== "function" ||
+    typeof hook.start !== "function"
+  ) {
+    throw new Error(
+      `serveValue("${key}"): \`whileFollowing\` must be ` +
+        `\`{ over: (followed) => what, start: (subject, { over }) => stop }\`.`,
+    );
+  }
+  if (follows === null) {
+    throw new Error(
+      `serveValue("${key}"): \`whileFollowing\` starts over the followed ` +
+        `rows, and the value declares no \`follows\` — declare ` +
+        `\`whileSubscribed\` instead.`,
+    );
+  }
+  const over = hook.over as (followed: unknown) => unknown;
+  return {
+    start: hook.start as (
+      subject: unknown,
+      ctx: unknown,
+    ) => StopFn | Promise<StopFn>,
+    read: async (subject) => over(await follows.read(subject)),
+  };
+}
+
 /**
  * How a value's wire tuples map to the subject its hooks are handed, per
  * declaration form: a plain value's subject IS its params; a typed-query
@@ -481,17 +854,33 @@ function subjectsOf<P extends Record<string, string>, S>(
  * The runtime loader for a plain or typed-query value: a plain loader is
  * handed the params, a typed-query one the decoded question.
  */
-function loaderOf<T, P extends Record<string, string>>(
-  value: LiveValue<T, P, LiveValueOrigin>,
+function loaderOf<T, P extends Record<string, string>, S>(
+  subjects: Subjects<P, S>,
   loader: (...args: never[]) => unknown,
+  follows: CompiledFollows | null,
 ): (params: P) => Promise<T> | T {
-  const decl = value as unknown as
-    | { query?: undefined }
-    | LiveQueryValue<unknown, unknown, unknown, LiveValueOrigin>;
-  const call = loader as unknown as (...args: unknown[]) => Promise<T> | T;
-  if (decl.query === undefined) return (params) => call(params);
-  const codec = decl.query;
-  return (params) => call(codec.decode(params));
+  return withFollowed(
+    subjects,
+    loader as (...args: unknown[]) => unknown,
+    follows,
+  ) as (params: P) => Promise<T> | T;
+}
+
+/**
+ * A hook over the wire params: handed the subject — and, for a follower,
+ * `{ followed }`, read fresh in this very call (so what it computes and what
+ * the follow routes reach come from one read; each hook reads its own).
+ */
+function withFollowed<P extends Record<string, string>, S>(
+  subjects: Subjects<P, S>,
+  hook: (...args: unknown[]) => unknown,
+  follows: CompiledFollows | null,
+): (params: P) => unknown {
+  if (follows === null) return (params) => hook(subjects.of(params));
+  return async (params) => {
+    const subject = subjects.of(params);
+    return hook(subject, { followed: await follows.read(subject) });
+  };
 }
 
 /** An item of a page as the wire carries it: its fields and its `$key`. */
@@ -659,11 +1048,13 @@ export function compileValue<
   O extends LiveValueOrigin,
   const R extends readonly ExternalServed[] = [],
   C extends LiveValueChanges = "notified",
+  F extends FollowMap = NoFollows,
+  W = unknown,
 >(
   value: LivePlainValue<T, P, O> & SnapshotPairing<C> & BytesPairing<Src>,
   // `NoInfer`: `T` / `P` come from the declaration alone — a loader returning
   // `{}` must not widen `T` past what the declaration says.
-  opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, Src, R, C>,
+  opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, Src, R, C, F, W>,
 ): CompiledValue<T, P> {
   return compileValueOf<T, P, P>(value, opts as AnyServeOptions);
 }
@@ -677,9 +1068,11 @@ export function compileQueryValue<
   O extends LiveValueOrigin,
   const R extends readonly ExternalServed[] = [],
   C extends LiveValueChanges = "notified",
+  F extends FollowMap = NoFollows,
+  W = unknown,
 >(
   value: LiveQueryValue<T, Q, QIn, O> & SnapshotPairing<C> & BytesPairing<Src>,
-  opts: ServeValueOptions<NoInfer<T>, NoInfer<Q>, Src, R, C>,
+  opts: ServeValueOptions<NoInfer<T>, NoInfer<Q>, Src, R, C, F, W>,
 ): CompiledValue<T, LiveQueryParams, Q> {
   return compileValueOf<T, LiveQueryParams, Q>(value, opts as AnyServeOptions);
 }
@@ -707,9 +1100,19 @@ export function compilePagedValue<
   const R extends readonly ExternalServed[] = [],
   C extends PagedChanges = "notified",
   K extends string = never,
+  F extends FollowMap = NoFollows,
+  W = unknown,
 >(
   value: LivePagedValue<Item, Meta, Q, QIn, O, K>,
-  opts: ServePagedValueOptions<NoInfer<Item>, NoInfer<Meta>, NoInfer<Q>, R, C>,
+  opts: ServePagedValueOptions<
+    NoInfer<Item>,
+    NoInfer<Meta>,
+    NoInfer<Q>,
+    R,
+    C,
+    F,
+    W
+  >,
 ): CompiledPagedValue<Item, Meta, Q> {
   return compilePagedOf(
     value as unknown as LivePagedValue<
@@ -751,7 +1154,8 @@ function compilePagedOf(
   }
   const metaValue = value.meta as
     LiveQueryValue<unknown, unknown, unknown, LiveValueOrigin> | undefined;
-  const metaLoader = opts.meta as ((query: unknown) => unknown) | undefined;
+  const metaLoader = opts.meta as
+    ((query: unknown, ...ctx: unknown[]) => unknown) | undefined;
   if ((metaValue === undefined) !== (metaLoader === undefined)) {
     // Unreachable from typed code (`meta` is required exactly with `paged.meta`).
     throw new Error(
@@ -786,15 +1190,37 @@ function compilePagedOf(
     if (metaHeld.has(q)) notifyMeta!(metaKey(q));
   };
 
+  const follows = followsOf(value.key, opts.follows);
   const whileSubscribed = opts.whileSubscribed as
     | ((query: unknown, notify: () => void) => StopFn | Promise<StopFn>)
     | undefined;
-  const questions =
+  const whileFollowing = followingHook(value.key, opts, follows);
+  const questions = bothLifecycles<LiveQueryParams>(
     whileSubscribed === undefined
       ? undefined
       : pairLifecycle<LiveQueryParams>(({ q }) =>
           whileSubscribed(codec.decodeQuery(q), () => notifyQuestion(q)),
-        );
+        ),
+    whileFollowing === undefined
+      ? undefined
+      : followLifecycle<LiveQueryParams, unknown>(
+          ({ q }, over) =>
+            whileFollowing.start(codec.decodeQuery(q), {
+              over,
+              notify: () => notifyQuestion(q),
+            }),
+          ({ q }) => whileFollowing.read(codec.decodeQuery(q)),
+        ),
+  );
+  // A follow route reached a page or meta tuple: the question's start
+  // re-points (once — a second tuple of it finds the rows unmoved).
+  const followReached =
+    questions?.onFollowReached === undefined
+      ? {}
+      : {
+          onFollowReached: (params: { q: string }) =>
+            questions.onFollowReached!(metaKey(params.q)),
+        };
   // A question's async start still resolving. A tuple of it subscribed
   // meanwhile waits for it too, as the first did — the runtime reads a tuple
   // only once its 0→1 hook settles, so no page is loaded before the source
@@ -854,6 +1280,7 @@ function compilePagedOf(
   const loader = opts.loader as (
     query: unknown,
     range: LiveKeyRange,
+    ...ctx: unknown[]
   ) => Promise<readonly unknown[]> | readonly unknown[];
   const pagesDependsOn = compileRecomputeOn(value, recomputeOn, pageSubjects);
   const compiledPages: Omit<
@@ -872,11 +1299,18 @@ function compilePagedOf(
       },
       loader: async (params: LivePagedParams) => {
         const { query, range } = codec.decode(params);
-        return pageRowsOf(value, range, await loader(query, range));
+        const items =
+          follows === null
+            ? await loader(query, range)
+            : await loader(query, range, {
+                followed: await follows.read(query),
+              });
+        return pageRowsOf(value, range, items);
       },
       ...(opts.throttleMs !== undefined ? { debounceMs: opts.throttleMs } : {}),
       ...(pagesDependsOn.length > 0 ? { dependsOn: pagesDependsOn } : {}),
       ...pageLifecycle,
+      ...followReached,
       ...freshness,
     },
     external: true,
@@ -906,8 +1340,12 @@ function compilePagedOf(
     compiledMeta = {
       options: {
         mode: metaValue.load === "on-demand" ? "invalidate" : "push",
-        loader: (params: LiveQueryParams) =>
-          metaLoader(metaValue.query.decode(params)),
+        loader: async (params: LiveQueryParams) => {
+          const query = metaValue.query.decode(params);
+          return follows === null
+            ? metaLoader(query)
+            : metaLoader(query, { followed: await follows.read(query) });
+        },
         ...(opts.throttleMs !== undefined
           ? { debounceMs: opts.throttleMs }
           : {}),
@@ -916,6 +1354,7 @@ function compilePagedOf(
           enter(q, () => metaHeld.add(q)),
         onLastUnsubscribe: ({ q }: LiveQueryParams) =>
           leave(q, () => metaHeld.delete(q)),
+        ...followReached,
         ...freshness,
       },
       external: true,
@@ -956,6 +1395,7 @@ export function compileValueOf<T, P extends Record<string, string>, S>(
     );
   }
   const subjects = subjectsOf<P, S>(value);
+  const follows = followsOf(value.key, opts.follows);
 
   let notify: ((params: P) => void) | undefined;
   const notifyFor = (params: P) => () => {
@@ -967,8 +1407,9 @@ export function compileValueOf<T, P extends Record<string, string>, S>(
     notify(params);
   };
   const whileSubscribed = opts.whileSubscribed as
-    ((subject: S, notify: () => void) => StopFn | Promise<StopFn>) | undefined;
-  const paired =
+    ((subject: S, ...rest: unknown[]) => StopFn | Promise<StopFn>) | undefined;
+  const whileFollowing = followingHook(value.key, opts, follows);
+  const paired = bothLifecycles<P>(
     whileSubscribed === undefined
       ? undefined
       : pairLifecycle<P>((params) =>
@@ -976,10 +1417,19 @@ export function compileValueOf<T, P extends Record<string, string>, S>(
           // never passed to it.
           external
             ? whileSubscribed(subjects.of(params), notifyFor(params))
-            : (whileSubscribed as (subject: S) => StopFn | Promise<StopFn>)(
-                subjects.of(params),
-              ),
-        );
+            : whileSubscribed(subjects.of(params)),
+        ),
+    whileFollowing === undefined
+      ? undefined
+      : followLifecycle<P, unknown>(
+          (params, over) =>
+            whileFollowing.start(
+              subjects.of(params),
+              external ? { over, notify: notifyFor(params) } : { over },
+            ),
+          (params) => whileFollowing.read(subjects.of(params)),
+        ),
+  );
   const lifecycle = paired ?? {};
 
   const dependsOn = compileRecomputeOn<P, S>(
@@ -990,10 +1440,14 @@ export function compileValueOf<T, P extends Record<string, string>, S>(
 
   const loader = boundedBytes(
     value,
-    loaderOf(value, opts.loader as (...args: never[]) => unknown),
+    loaderOf<T, P, S>(
+      subjects,
+      opts.loader as (...args: never[]) => unknown,
+      follows,
+    ),
   );
   const revalidate = opts.revalidate as
-    ((subject: S) => Promise<string>) | undefined;
+    ((...args: unknown[]) => Promise<string>) | undefined;
   return {
     options: {
       // Read off the DECLARATION (`liveValue`'s `load`), never a serve option:
@@ -1006,13 +1460,15 @@ export function compileValueOf<T, P extends Record<string, string>, S>(
       ...(dependsOn.length > 0 ? { dependsOn } : {}),
       ...(revalidate === undefined
         ? {}
-        : (value as { query?: unknown }).query === undefined
-          ? {
-              revalidate: revalidate as unknown as (
-                params: P,
-              ) => Promise<string>,
-            }
-          : { revalidate: (params: P) => revalidate(subjects.of(params)) }),
+        : {
+            // A plain value's own, as is: its subject IS the params.
+            revalidate: (follows === null &&
+            (value as { query?: unknown }).query === undefined
+              ? revalidate
+              : withFollowed(subjects, revalidate, follows)) as (
+              params: P,
+            ) => Promise<string>,
+          }),
       ...lifecycle,
       // A label the runtime's `_debug` payload shows per key (read-set pane).
       ...(changes !== undefined ? { freshness: freshnessOf(changes) } : {}),
@@ -1054,7 +1510,8 @@ function changesKind(
  *
  * - a db value declares none; an external one must;
  * - `{ immutable | fixed | snapshot }` names exactly one arm, with a reason;
- * - only `"notified"` takes `whileSubscribed` / `recomputeOn` / `throttleMs`;
+ * - only `"notified"` takes `whileSubscribed` / `whileFollowing` /
+ *   `recomputeOn` / `throttleMs` / `follows`;
  * - `{ snapshot }` ⇔ the value is declared `load: "snapshot"`, and a snapshot
  *   takes no `revalidate` — its every HTTP read runs the loader.
  */
@@ -1108,7 +1565,13 @@ function checkChanges(
       );
     }
     const hooks = (
-      ["whileSubscribed", "recomputeOn", "throttleMs"] as const
+      [
+        "whileSubscribed",
+        "whileFollowing",
+        "recomputeOn",
+        "throttleMs",
+        "follows",
+      ] as const
     ).filter((h) => opts[h] !== undefined);
     if (hooks.length > 0) {
       throw new Error(
@@ -1145,6 +1608,10 @@ export interface AnyServeOptions {
   recomputeOn?: readonly unknown[];
   revalidate?: unknown;
   whileSubscribed?: unknown;
+  /** A start over the followed rows — only beside `follows` (`followingHook`). */
+  whileFollowing?: unknown;
+  /** The collections the value follows (`./follows`). */
+  follows?: unknown;
   /** Refused (see {@link refuseServedBound}). */
   unbounded?: unknown;
 }
@@ -1210,10 +1677,12 @@ export function registerValue<
   Src extends LiveValueSource,
   const R extends readonly ExternalServed[] = [],
   C extends LiveValueChanges = "notified",
+  F extends FollowMap = NoFollows,
+  W = unknown,
 >(
   runtime: LiveRuntime,
   value: LivePlainValue<T, P, O> & SnapshotPairing<C> & BytesPairing<Src>,
-  opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, Src, R, C>,
+  opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, Src, R, C, F, W>,
 ): Registered<T, P> {
   return registerValueOf<T, P, P>(runtime, value, opts as AnyServeOptions);
 }
@@ -1227,10 +1696,12 @@ export function registerQueryValue<
   Src extends LiveValueSource,
   const R extends readonly ExternalServed[] = [],
   C extends LiveValueChanges = "notified",
+  F extends FollowMap = NoFollows,
+  W = unknown,
 >(
   runtime: LiveRuntime,
   value: LiveQueryValue<T, Q, QIn, O> & SnapshotPairing<C> & BytesPairing<Src>,
-  opts: ServeValueOptions<NoInfer<T>, NoInfer<Q>, Src, R, C>,
+  opts: ServeValueOptions<NoInfer<T>, NoInfer<Q>, Src, R, C, F, W>,
 ): Registered<T, LiveQueryParams, Q> {
   return registerValueOf<T, LiveQueryParams, Q>(
     runtime,
@@ -1249,10 +1720,20 @@ export function registerPagedValue<
   const R extends readonly ExternalServed[] = [],
   C extends PagedChanges = "notified",
   K extends string = never,
+  F extends FollowMap = NoFollows,
+  W = unknown,
 >(
   runtime: LiveRuntime,
   value: LivePagedValue<Item, Meta, Q, QIn, O, K>,
-  opts: ServePagedValueOptions<NoInfer<Item>, NoInfer<Meta>, NoInfer<Q>, R, C>,
+  opts: ServePagedValueOptions<
+    NoInfer<Item>,
+    NoInfer<Meta>,
+    NoInfer<Q>,
+    R,
+    C,
+    F,
+    W
+  >,
 ): RegisteredPaged<Item, Meta, Q> {
   return registerPagedOf(
     runtime,

@@ -1,6 +1,3 @@
-import { reportServerError } from "@plugins/framework/plugins/server-core/core";
-import type { LiveQueryParams } from "@plugins/network/plugins/live/core";
-import { createParkedWatches } from "@plugins/packages/plugins/parked-watch/core";
 import { serveValue } from "@plugins/network/plugins/live/machine";
 import { sliceRange } from "@plugins/network/plugins/live/server";
 import { WorktreeGoneError } from "@plugins/primitives/plugins/commit-list/server";
@@ -9,45 +6,35 @@ import {
   unresolved,
   type Resolvable,
 } from "@plugins/primitives/plugins/live-state/core";
-import { assertCapability } from "@plugins/conversations/plugins/workspace/core";
-import { workspaceOfConversationLookup } from "@plugins/tasks/plugins/tasks-core/server";
+import {
+  assertCapability,
+  type WorkspaceSpec,
+} from "@plugins/conversations/plugins/workspace/core";
+import { conversationWorkspacesServed } from "@plugins/tasks/plugins/tasks-core/server";
+import { conversationWorkspaceOf } from "@plugins/tasks/plugins/tasks-core/core";
 import { editedFile, editedFiles } from "../../core";
 import type { EditedFile, EditedFilesMeta } from "../../core/protocol";
 import { evictEditedFiles } from "../../server/internal/edited-files-cache";
 import { getEditedFiles } from "../../server/internal/get-edited-files";
 import { watchEditedFiles } from "../../server/internal/watch-edited-files";
 
-// The conversation's worktree, through tasks-core's compiled lookup — the
-// one read every loader and the watch make (`PAGED_READS`, `FILE_READS`). A
-// conversation with no git (a scratch workspace) is a caller bug — a surface
-// that reads edited files is gated on the git capability — so it throws
-// rather than reading as "no worktree" or "no changes".
-async function resolveWorktree(conversationId: string): Promise<string | null> {
-  const found = await workspaceOfConversationLookup.run(conversationId);
-  if (!found.found) return null;
-  assertCapability(found.row.spec.kind, "git", "edited-files");
-  return found.row.path;
+/** What the loaders and the watch read of the followed `conversationWorkspaces` row. */
+interface ConversationWorkspace {
+  readonly worktreePath: string;
+  readonly workspace: WorkspaceSpec;
 }
 
-// The watches of a conversation subscribed before its row was written,
-// parked until a load resolves its worktree (`watchConversation`). A parked
-// watch that fails to open is reported and parked again: the next load that
-// resolves the worktree retries it.
-const parked = createParkedWatches<string>({
-  onOpenError: (conversationId, err) =>
-    reportServerError({
-      message: `[edited-files] the worktree watch of conversation ${conversationId} failed to open — its edited files hear no change until a load retries it: ${err instanceof Error ? err.message : String(err)}`,
-      stack: err instanceof Error ? (err.stack ?? null) : null,
-      errorType: "EditedFilesWatchOpenError",
-    }),
-});
-
-// The loaders' resolve: a worktree found opens the watches parked on the
-// conversation, so the load its row's insert re-ran opens the watch too.
-async function worktreeFor(conversationId: string): Promise<string | null> {
-  const wt = await resolveWorktree(conversationId);
-  if (wt !== null) parked.resolved(conversationId, wt);
-  return wt;
+// The conversation's worktree, from its followed workspace row (`followed.ws`,
+// below). No row (a conversation subscribed before it is written), or no
+// path yet, is no worktree. A conversation with no git (a scratch workspace)
+// is a caller bug — a surface that reads edited files is gated on the git
+// capability — so it throws rather than reading as "no worktree" or "no
+// changes".
+function worktreeOf(ws: readonly ConversationWorkspace[]): string | null {
+  const row = conversationWorkspaceOf(ws);
+  if (row === null) return null;
+  assertCapability(row.workspace.kind, "git", "edited-files");
+  return row.worktreePath;
 }
 
 // A conversation whose worktree we cannot resolve — or whose worktree is reaped
@@ -67,11 +54,11 @@ async function worktreeFor(conversationId: string): Promise<string | null> {
 // diverging from that shared shape for a distinction the consumer does not act on
 // (both are "no trustworthy value").
 async function onWorktree<T>(
-  conversationId: string,
+  ws: readonly ConversationWorkspace[],
   gone: T,
   compute: (worktreePath: string) => Promise<T>,
 ): Promise<T> {
-  const wt = await worktreeFor(conversationId);
+  const wt = worktreeOf(ws);
   if (!wt) return gone;
   try {
     return await compute(wt);
@@ -84,14 +71,12 @@ async function onWorktree<T>(
   }
 }
 
-/** The `loader` half, resolved from a conversation id. */
+/** The `loader` half, over the conversation's followed workspace row. */
 export function loadEditedFilesFor(
-  conversationId: string,
+  ws: readonly ConversationWorkspace[],
 ): Promise<Resolvable<EditedFile[]>> {
-  return onWorktree(
-    conversationId,
-    unresolved("worktree unavailable"),
-    async (wt) => resolved(await getEditedFiles(wt)),
+  return onWorktree(ws, unresolved("worktree unavailable"), async (wt) =>
+    resolved(await getEditedFiles(wt)),
   );
 }
 
@@ -109,50 +94,23 @@ export function editedFilesMetaOf(
   return resolved({ count: files.value.length, additions, deletions });
 }
 
-// What every loader reads in Postgres: the conversation's worktree, through
-// the compiled lookup alone (conversations ⋈ attempts by `conversations.id`).
-// A write to a column it does not read (a turn's status) reaches no tuple; a
-// conversation's insert or delete reaches only its own tuples; an attempt's
-// insert or delete every tuple once, at launch rate.
-const READ_REASON =
-  "each tuple resolves its conversation's worktree (conversations → attempts) before reading git; only the lookup's columns can move which worktree it reads";
-
-const PAGED_READS = {
-  tables: [],
-  lookups: [
-    workspaceOfConversationLookup.read<LiveQueryParams>(
-      (p) => editedFiles.query.decodeQuery(p.q).id,
-    ),
-  ],
-  reason: READ_REASON,
-};
-
-const FILE_READS = {
-  tables: [],
-  lookups: [
-    workspaceOfConversationLookup.read<{ id: string; path: string }>(
-      (p) => p.id,
-    ),
-  ],
-  reason: READ_REASON,
-};
-
 // Watch the worktree (and its git dir) while the conversation is on screen. The
 // watch is the memo's, one per worktree (`watchEditedFiles`), so the pages, the
 // meta and a peeked file share one watch and one pass per change. A
-// conversation whose row is not written yet has no worktree to watch: the
-// watch parks, and the load the row's insert re-runs (the lookup's route)
-// opens it — then notifies, so the loaders read the watched list.
+// conversation with no worktree yet (its row not written) watches nothing: the
+// framework re-starts the watch over the new row when a write moves it (its
+// follow re-point), and so when the worktree changes too. Once open, it
+// notifies — a change between the load and the watch going live (a re-point
+// races the load the same write re-ran) is not lost.
 function watchConversation(
-  id: string,
+  wt: string | null,
   notify: () => void,
-): Promise<() => void> {
-  return parked.watch(
-    id,
-    () => resolveWorktree(id),
-    (wt) => watchEditedFiles(wt, notify),
-    notify,
-  );
+): (() => void) | Promise<() => void> {
+  if (wt === null) return () => {};
+  return watchEditedFiles(wt, notify).then((stop) => {
+    notify();
+    return stop;
+  });
 }
 
 // Every page and the meta read ONE authority: `editedFilesMemo`, a watched memo
@@ -166,19 +124,29 @@ function watchConversation(
 // `onWorktree` branch: the meta says `unresolved(…)` and the pages are empty —
 // never a zero count a reader could take for a clean worktree.
 //
-// The pages, the meta and the one-file value all declare the worktree lookup
-// (`PAGED_READS` / `FILE_READS`): only a write the lookup reads re-reads a
-// tuple, and only the tuples asking about that conversation.
+// The pages, the meta and the one-file value each follow the conversation's
+// workspace row — tasks-core's `conversationWorkspaces`, `{ ids: [id] }` — the
+// one Postgres read every hook makes, handed in fresh as `followed.ws`: only a
+// write that moves the row (the conversation's `attempt_id`, its attempt's
+// `worktree_path` / `workspace`) re-reads a tuple, and only the tuples asking
+// about that conversation (an attempt's write: the conversations of that
+// attempt). A conversation's turn (its status) reaches none.
 export const editedFilesServed = serveValue(editedFiles, {
   source: "external",
   changes: "notified",
-  reads: PAGED_READS,
-  loader: async ({ id }, range) => {
-    const files = await loadEditedFilesFor(id);
+  follows: (follow) => ({
+    ws: follow(conversationWorkspacesServed, ({ id }) => ({ ids: [id] })),
+  }),
+  loader: async (_q, range, { followed }) => {
+    const files = await loadEditedFilesFor(followed.ws);
     return files.resolved ? sliceRange(editedFiles, files.value, range) : [];
   },
-  meta: async ({ id }) => editedFilesMetaOf(await loadEditedFilesFor(id)),
-  whileSubscribed: ({ id }, notify) => watchConversation(id, notify),
+  meta: async (_q, { followed }) =>
+    editedFilesMetaOf(await loadEditedFilesFor(followed.ws)),
+  whileFollowing: {
+    over: (followed) => worktreeOf(followed.ws),
+    start: (_q, { over: wt, notify }) => watchConversation(wt, notify),
+  },
 });
 
 // One file of the set, by path, from the same memoized list — the file-peek
@@ -186,11 +154,19 @@ export const editedFilesServed = serveValue(editedFiles, {
 export const editedFileServed = serveValue(editedFile, {
   source: "external",
   changes: "notified",
-  reads: FILE_READS,
-  loader: async ({ id, path }): Promise<Resolvable<EditedFile | null>> => {
-    const files = await loadEditedFilesFor(id);
+  follows: (follow) => ({
+    ws: follow(conversationWorkspacesServed, ({ id }) => ({ ids: [id] })),
+  }),
+  loader: async (
+    { path },
+    { followed },
+  ): Promise<Resolvable<EditedFile | null>> => {
+    const files = await loadEditedFilesFor(followed.ws);
     if (!files.resolved) return files;
     return resolved(files.value.find((f) => f.path === path) ?? null);
   },
-  whileSubscribed: ({ id }, notify) => watchConversation(id, notify),
+  whileFollowing: {
+    over: (followed) => worktreeOf(followed.ws),
+    start: (_p, { over: wt, notify }) => watchConversation(wt, notify),
+  },
 });

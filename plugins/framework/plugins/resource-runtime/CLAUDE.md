@@ -337,6 +337,8 @@ no contributor).
   - **D5**: the same guard arms on externals with a `reach` plan or `notified` /
     undeclared freshness.
   - **D6**: `unroutedResourceKeys()` — change-feed refuses boot on any.
+  - **Follow routes** (`Route.via`): a followed table is never covered by the
+    entry's own capture — see *Follows*.
   - Off when no capture is wired (central, DB-free harness).
 - **`_debug` (A7 / A26)**: each entry gets a `policy` (`unbound` | `external` |
   `routed` | `unrouted`, via `debugPolicyOf`) plus `routes`, `derivedReads`,
@@ -345,6 +347,66 @@ no contributor).
 
 Pinned by `runtime-table-routing.test.ts`, `routing-layout.test.ts`,
 `runtime-declared-reads.test.ts`, `runtime-debug-policy.test.ts`.
+
+## Follows — `Route.via`, `onFollowReached`, `loadResourceFresh`
+
+A served value reading collection TUPLES (network/live's `follows`) carries the
+collections' own routes, copied into its reach plan by query-resource's
+`followRead` and tagged **`via: { name, collection }`** (`RouteVia`). They route
+like any reach route (gate, `rows` ∧ `use.match`, then FULL): no new edge kind.
+
+- **Minting.** A follow owns its tables.
+  - `mintReachPlan` refuses an own route, unfed, relation, notified or tagged
+    read of a followed table, and one follow name reading two collections.
+  - `mintRoutePlan` refuses a follow route (a keyed plan never follows).
+  - Two follows may read one table: `RoutingRecord.via` keeps every follow per
+    table; the drift and relation refusals name them all.
+  - A relation read whole whose BASES include a followed table is refused once
+    the bases are known (`indexEntryRelations`).
+- **A8.** The follow's read runs in the collection's own loader span
+  (`loadResourceFresh`), judged by the collection's drift guard.
+  - The follower's OWN capture never covers a followed table (`readCovered`):
+    a query on one in the follower's loader is a read by hand — reported,
+    thrown under `strictRoutes`, failed open past gate and match
+    (`indexDriftBases` serves it FULL).
+  - The D7 seed (`"untracked"`) judges a followed table by its name.
+- **Each run is judged on its OWN capture** (`wrapLoad`'s `capture`, a
+  `RunCapture` the host calls as the run's loader span closes —
+  runtime-profiler's `onReads`), an empty one included.
+  - `lastReadSet` is read only for a run whose host handed none (a harness
+    without `wrapLoad`), and by `persistReadSet` (param-less persisted entries;
+    an empty run falls back to the route tables).
+- **R1 — paged followers.** An external keyed window / point set takes the same
+  full-only reach: a follow route's per-question match re-reads only that
+  question's live pages (`drainMembershipFull`).
+- **R2 — `onFollowReached(params) → Promise<"repointed" | "unchanged">`**
+  (`ResourceDefinition`, two-arg options).
+  - Called synchronously from `routeEntryChange`, before the change is
+    scheduled and outside any flight, inside `wrapOrigin("bg", key)`, in push
+    and invalidate modes.
+  - For each TRACKED tuple (never a persisted entry's unsubscribed `{}`) a
+    follow route lets the change through to (gate, static rows, the tuple's
+    match); a drift-failed-open followed table or an unusable read-set counts
+    as reached.
+  - network/live re-points the tuple's `whileFollowing` start there
+    (`followLifecycle`).
+  - `"repointed"` is counted per key (`_debug.followRepoints`); a rejection is
+    reported.
+  - Declared with no follow route in the plan, it throws (registration / bind).
+- **`loadResourceFresh(key, params)`** (re-exported by server-core): one tuple
+  read through `timedLoad` (loader span, schema parse, drift guard).
+  - Never joins an in-flight read; captures no watermark; touches no tracking
+    state.
+  - Throws on an unknown key, an unbound deferred one, and a tuple its params
+    gate refuses.
+- **`_debug`**: `follows: [{ name, collection }]` per key (from the plan's `via`
+  routes) and `followRepoints`.
+- **Messages.** D32 / T15 and the routed `recomputeOn` refusals point to
+  `follows`.
+
+Pinned by `core/runtime-follows.test.ts` (minting, A8 and its fail-open, the D7
+seed, the relation refusal, routing and R1, the hook's targets / modes / origin /
+counts / refusal, `loadResourceFresh`).
 
 ## Deferred resources (`defineDeferredResource` / `bindDeferredResources`)
 
@@ -608,6 +670,7 @@ Out of reach at this seam (DB-backed harness instead):
     - `ExternalResource`
     - `ExternalWindowMembership`
     - `ExternalWindowPolicy`
+    - `FollowReached`
     - `FullRoute`
     - `HostMap`
     - `KeyedDiff`
@@ -634,6 +697,8 @@ Out of reach at this seam (DB-backed harness instead):
     - `Route`
     - `RoutedRecomputeOn`
     - `RoutePlan`
+    - `RouteVia`
+    - `RunCapture`
     - `RuntimeSocket`
     - `ScopedResourceTable`
     - `ScopePolicy`

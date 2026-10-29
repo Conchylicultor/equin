@@ -5,11 +5,8 @@ import {
   getEditedFiles,
   watchEditedFiles,
 } from "@plugins/conversations/plugins/conversation-view/plugins/code/server";
-import { findWorkspaceOfConversation } from "@plugins/conversations/plugins/workspace/server";
-import {
-  _attempts,
-  _conversations,
-} from "@plugins/tasks/plugins/tasks-core/server";
+import { conversationWorkspacesServed } from "@plugins/tasks/plugins/tasks-core/server";
+import { conversationWorkspaceOf } from "@plugins/tasks/plugins/tasks-core/core";
 import type { PluginChangesResponse } from "../../core/protocol";
 import { pluginChanges } from "../../shared/resources";
 import { computePluginChanges } from "../../server/internal/compute-plugin-diff";
@@ -19,12 +16,18 @@ import {
   getWorktreePluginTree,
 } from "../../server/internal/plugin-tree-cache";
 
+// The conversation's worktree, from its followed workspace row (`followed.ws`,
+// below) — null for a conversation with no row or no path yet.
+function worktreePathOf(
+  ws: readonly { readonly worktreePath: string }[],
+): string | null {
+  return conversationWorkspaceOf(ws)?.worktreePath ?? null;
+}
+
 async function computeWorktreePluginChanges(
-  conversationId: string,
+  worktreePath: string | null,
 ): Promise<PluginChangesResponse> {
-  const found = await findWorkspaceOfConversation(conversationId);
-  if (!found.found || !found.workspace.path) return { plugins: [] };
-  const worktreePath = found.workspace.path;
+  if (worktreePath === null) return { plugins: [] };
 
   const [worktreeFiles, mainPluginsDir] = await Promise.all([
     getEditedFiles(worktreePath),
@@ -45,7 +48,7 @@ async function computeWorktreePluginChanges(
 }
 
 // External: the truth is the worktree's and main's plugin trees on disk plus
-// git, which no change feed can see. It recomputes on exactly the two things
+// git, which no change feed can see. It recomputes on exactly the three things
 // that move the diff:
 //
 // - **a worktree file edit** — the conversation's worktree watch, the same
@@ -58,28 +61,43 @@ async function computeWorktreePluginChanges(
 //   conversation. git-watcher only tracks `main` + this worktree's own branch,
 //   so a notify already implies a relevant ref moved — no need to inspect the
 //   refName (same reasoning as commits-graph).
+// - **a move of its worktree** — the followed workspace row (below).
 export const pluginChangesServed = serveValue(pluginChanges, {
   source: "external",
   changes: "notified",
-  // Its own reads, not only the edited-files edge: that cascade reaches only
-  // the edited-files tuples someone holds, so a tuple subscribed here with
-  // edited-files unsubscribed would miss a write that moves its worktree.
-  reads: {
-    tables: [_conversations, _attempts],
-    reason:
-      "each tuple resolves its conversation's worktree path (conversations → attempts) before diffing its plugin tree against main's; a write to any conversation or attempt row may move which worktree a tuple diffs — whole-table until the path is a param or a db-served value",
-  },
-  loader: ({ conversationId }) => computeWorktreePluginChanges(conversationId),
+  // The conversation's workspace row — tasks-core's `conversationWorkspaces`,
+  // `{ ids: [id] }` — the one Postgres read the loader and the watch make:
+  // a write that moves it (the conversation's `attempt_id`, its attempt's
+  // `worktree_path`) re-runs that conversation's tuple, and no other. Its own
+  // follow, not only the edited-files watch: that reaches only an edit, so a
+  // tuple subscribed here with edited-files unsubscribed would miss a write
+  // that moves its worktree.
+  follows: (follow) => ({
+    ws: follow(conversationWorkspacesServed, ({ conversationId }) => ({
+      ids: [conversationId],
+    })),
+  }),
+  loader: (_p, { followed }) =>
+    computeWorktreePluginChanges(worktreePathOf(followed.ws)),
   // Coalesce rapid-fire git changes (frequent agent commits): at most one
   // recompute per 3 s window — a trailing window a later change does not
   // re-arm — so a burst costs one heavy buildPluginTree per window, not one per
   // commit.
   throttleMs: 3000,
   recomputeOn: [refHeadServed],
-  whileSubscribed: async ({ conversationId }, notify) => {
-    const found = await findWorkspaceOfConversation(conversationId);
-    // No worktree: the loader answers no plugins, and there is nothing to watch.
-    if (!found.found || !found.workspace.path) return () => {};
-    return watchEditedFiles(found.workspace.path, notify);
+  // The worktree's edited-files watch, over the directory the followed row
+  // names. No worktree: the loader answers no plugins, and there is nothing
+  // to watch — the framework re-starts the watch over the new path when a
+  // write moves it (the follow's re-point), so a worktree checked out after
+  // the first subscribe is watched. Once open it notifies: a change between
+  // the load and the watch going live is not lost.
+  whileFollowing: {
+    over: (followed) => worktreePathOf(followed.ws),
+    start: async (_p, { over: worktreePath, notify }) => {
+      if (worktreePath === null) return () => {};
+      const stop = await watchEditedFiles(worktreePath, notify);
+      notify();
+      return stop;
+    },
   },
 });

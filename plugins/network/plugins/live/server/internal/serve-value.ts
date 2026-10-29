@@ -12,6 +12,7 @@ import type {
 } from "@plugins/framework/plugins/resource-runtime/core";
 import {
   compiledValueReach,
+  type FollowRead,
   type ValueReads,
 } from "@plugins/infra/plugins/query-resource/server";
 import {
@@ -41,6 +42,15 @@ import type {
   ServeValueOptions,
   SnapshotPairing,
 } from "../../core/internal/compile-value";
+import {
+  followReaches,
+  followsDeferred,
+  followsOf,
+  followSubjectOf,
+  type FollowMap,
+  type FollowsFn,
+  type NoFollows,
+} from "../../core/internal/follows";
 
 // `serveValue` — the server half of a worktree `liveValue`. It declares WHERE the
 // value's truth lives (`source`) and how to read it (`loader`), never a delivery
@@ -66,6 +76,15 @@ import type {
 //   paged value's pages take them too (a static list, never a thunk), as
 //   whole relation reads of their keyed windows: a write re-reads every
 //   subscribed page, and its meta sibling recomputes.
+// - `follows` (db, and `"notified"` external, paged included) — the
+//   collection tuples the value reads (`../../core/internal/follows`): each
+//   follow's routes are copied from the collection's own plan into the
+//   value's reach (query-resource's `followRead`, compiled here with
+//   `reads` — optional beside a follow — by `compiledValueReach`), so a write
+//   reaches only the tuples whose followed rows it can move. A follow of a
+//   deferred collection (one folding exposures) binds the value at
+//   `bindDeferredResources` too (never a paged value's: its pages register at
+//   once).
 //
 // The body is the core's `serveValueOn` — the one serving code path every host
 // runs (central and a browser server too) — on server-core's runtime; this
@@ -149,10 +168,24 @@ type DbValueReads<P extends ResourceParams> = ValueReads<P> & {
   notified?: never;
 };
 
-/** The db arm's declaration of what its loader reads. Required. */
+/** The db arm's declaration of what its loader reads. Required (without `follows`). */
 interface DbReadsOption<P extends ResourceParams> {
   /** Every table the loader reads, and why a write to any row may change any tuple. */
   reads: DbValueReads<P> | (() => DbValueReads<P>);
+  follows?: never;
+}
+
+/**
+ * A db value that `follows` collections (see `../../core/internal/follows`):
+ * the follows declare what its loader reads through them, so `reads` is
+ * optional — the tables it reads besides. Its own overloads, ahead of the
+ * plain db ones: a `reads` whose optionality hung off the inferred follows
+ * would hide them from the hooks' contextual types.
+ */
+interface DbFollowsOption<S, P extends ResourceParams, F> {
+  follows: FollowsFn<S, F>;
+  /** Every table the loader reads besides its follows, and why a write to any row may change any tuple. */
+  reads?: DbValueReads<P> | (() => DbValueReads<P>);
 }
 
 /**
@@ -236,6 +269,8 @@ export interface ServeValueOverloads<H> {
     const R extends readonly ExternalServed[] = [],
     C extends PagedChanges = "notified",
     K extends string = never,
+    F extends FollowMap = NoFollows,
+    W = unknown,
   >(
     value: LivePagedValue<Item, Meta, Q, QIn, "worktree", K, PagedMachine<H>>,
     opts: ServePagedValueOptions<
@@ -243,10 +278,27 @@ export interface ServeValueOverloads<H> {
       NoInfer<Meta>,
       NoInfer<Q>,
       R,
-      C
+      C,
+      F,
+      W
     > &
       PagedReadsOption<C>,
   ): ServedFor<C, ServedPagedValue<Item, Q>, ServedSilentPagedValue<Item>>;
+  <
+    T,
+    Q,
+    QIn,
+    const R extends readonly ExternalServed[] = [],
+    F extends FollowMap = NoFollows,
+    W = unknown,
+  >(
+    value: LiveQueryValue<T, Q, QIn> &
+      SnapshotPairing<"notified"> &
+      BytesPairing<"db"> &
+      H,
+    opts: ServeValueOptions<NoInfer<T>, NoInfer<Q>, "db", R, "notified", F, W> &
+      DbFollowsOption<NoInfer<Q>, LiveQueryParams, F>,
+  ): ServedValue<T, LiveQueryParams>;
   <T, Q, QIn, const R extends readonly ExternalServed[] = []>(
     value: LiveQueryValue<T, Q, QIn> &
       SnapshotPairing<"notified"> &
@@ -261,15 +313,29 @@ export interface ServeValueOverloads<H> {
     QIn,
     const R extends readonly ExternalServed[] = [],
     C extends LiveValueChanges = "notified",
+    F extends FollowMap = NoFollows,
+    W = unknown,
   >(
     value: LiveQueryValue<T, Q, QIn> & SnapshotPairing<C> & H,
-    opts: ServeValueOptions<NoInfer<T>, NoInfer<Q>, "external", R, C> &
+    opts: ServeValueOptions<NoInfer<T>, NoInfer<Q>, "external", R, C, F, W> &
       ExternalReadsOption<C, LiveQueryParams>,
   ): ServedFor<
     C,
     ServedExternalQueryValue<T, Q>,
     ServedValue<T, LiveQueryParams>
   >;
+  <
+    T,
+    P extends Record<string, string>,
+    const R extends readonly ExternalServed[] = [],
+    F extends FollowMap = NoFollows,
+    W = unknown,
+  >(
+    value: LivePreloadedParamValue<T, P> & H,
+    opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, "db", R, "notified", F, W> &
+      DbFollowsOption<NoInfer<P>, NoInfer<P>, F> &
+      PreloadParamsOption<NoInfer<P>>,
+  ): ServedValue<T, P>;
   <
     T,
     P extends Record<string, string>,
@@ -285,12 +351,30 @@ export interface ServeValueOverloads<H> {
     P extends Record<string, string>,
     const R extends readonly ExternalServed[] = [],
     C extends LiveValueChanges = "notified",
+    F extends FollowMap = NoFollows,
+    W = unknown,
   >(
     value: LivePreloadedParamValue<T, P> & SnapshotPairing<C> & H,
-    opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, "external", R, C> &
+    opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, "external", R, C, F, W> &
       PreloadParamsOption<NoInfer<P>> &
       ExternalReadsOption<C, NoInfer<P>>,
   ): ServedFor<C, ServedExternalValue<T, P>, ServedValue<T, P>>;
+  <
+    T,
+    P extends Record<string, string>,
+    const R extends readonly ExternalServed[] = [],
+    F extends FollowMap = NoFollows,
+    W = unknown,
+  >(
+    value: PlainValue<T, P> &
+      SnapshotPairing<"notified"> &
+      BytesPairing<"db"> &
+      H,
+    opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, "db", R, "notified", F, W> &
+      DbFollowsOption<NoInfer<P>, NoInfer<P>, F> & {
+        preloadParams?: never;
+      },
+  ): ServedValue<T, P>;
   <
     T,
     P extends Record<string, string>,
@@ -310,9 +394,11 @@ export interface ServeValueOverloads<H> {
     P extends Record<string, string>,
     const R extends readonly ExternalServed[] = [],
     C extends LiveValueChanges = "notified",
+    F extends FollowMap = NoFollows,
+    W = unknown,
   >(
     value: PlainValue<T, P> & SnapshotPairing<C> & H,
-    opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, "external", R, C> &
+    opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, "external", R, C, F, W> &
       ExternalReadsOption<C, NoInfer<P>> & {
         preloadParams?: never;
       },
@@ -410,7 +496,7 @@ export function serveAnyValue<T, P extends Record<string, string>>(
   // Erased: the overloads checked the options against the declaration's
   // form, and the compilation dispatches on the declaration itself.
   const served = serveValueOn<T, P, "db+external">(
-    runtimeFor(value.key, opts),
+    runtimeFor(value as LiveValue<T, P, LiveValueOrigin>, opts),
     value as LiveValue<T, P, LiveValueOrigin>,
     opts,
     { sources: "db+external" },
@@ -472,49 +558,76 @@ const SERVER_HOST: ValueHost = {
 
 /** The runtime a served value registers on: server-core's (see {@link valueRuntime}). */
 function runtimeFor(
-  key: string,
-  opts: { reads?: AnyServedValueReads },
+  value: FollowerDecl,
+  opts: { reads?: AnyServedValueReads; follows?: unknown },
 ): LiveRuntime {
-  return valueRuntime(key, opts, SERVER_HOST);
+  return valueRuntime(value, opts, SERVER_HOST);
 }
+
+/** The declaration of a value whose follows `valueRuntime` compiles: any form. */
+type FollowerDecl =
+  | LiveValue<unknown, Record<string, string>, LiveValueOrigin>
+  | LivePagedValue<unknown, unknown, unknown, unknown, LiveValueOrigin>;
 
 /**
  * The runtime a value registers on: `host`'s, with a value's declared `reads`
- * compiled into the routing plan (`reach`) its registration carries — at once,
- * or at the host's `bindDeferredResources` for a thunk (an external one through
- * the runtime's deferred-external arm, so it is external, with its freshness,
+ * and its `follows` compiled into the routing plan (`reach`) its registration
+ * carries — at once, or at the host's `bindDeferredResources` for a `reads`
+ * thunk or a follow of a deferred collection (an external one through the
+ * runtime's deferred-external arm, so it is external, with its freshness,
  * from definition) — a paged value's keyed pages included (an external keyed
- * window takes a full-only reach plan, D31). Checked when the value registers, after its other
- * options: a db value without `reads`, and `reads` on an external value that
- * is not `"notified"`, are refused (tsc pairs them; this is the untyped
- * caller's check).
+ * window takes a full-only reach plan, D31). Checked when the value
+ * registers, after its other options: a db value with neither `reads` nor
+ * `follows`, and `reads` on an external value that is not `"notified"`, are
+ * refused (tsc pairs them; this is the untyped caller's check).
  */
 export function valueRuntime(
-  key: string,
-  opts: { reads?: AnyServedValueReads },
+  value: FollowerDecl,
+  opts: { reads?: AnyServedValueReads; follows?: unknown },
   host: ValueHost,
 ): LiveRuntime {
   const { defineResource, defineDeferredResource, defineExternalResource } =
     host;
+  const key = value.key;
   const label = `serveValue("${key}")`;
   const { reads } = opts;
-  const routed = (options: object, declared: ValueReads<never>) =>
+  // The follows: compiled once (shared with the serving path's own
+  // compile), their routes copied from each collection's plan when the
+  // value's plan compiles — at its bind, for a deferred collection's.
+  const follows = followsOf(key, opts.follows);
+  const deferredFollows = follows !== null && followsDeferred(follows);
+  const followReads = (): FollowRead<never>[] =>
+    follows === null
+      ? []
+      : (followReaches(
+          key,
+          follows,
+          followSubjectOf(value),
+        ) as FollowRead<never>[]);
+  const routed = (options: object, declared: ValueReads<never> | undefined) =>
     ({
       ...options,
-      reach: compiledValueReach(declared, label) as ReachPlan<ResourceParams>,
+      reach: compiledValueReach(
+        declared,
+        label,
+        followReads(),
+      ) as ReachPlan<ResourceParams>,
     }) as never;
+  const declaredNow = () => (typeof reads === "function" ? reads() : reads);
   const define = (contract: never, options: object) => {
-    if (reads === undefined) {
+    if (reads === undefined && follows === null) {
       throw new Error(
-        `${label}: a database-backed value declares the tables its loader reads (\`reads: { tables, reason }\`).`,
+        `${label}: a database-backed value declares what its loader reads — the tables (\`reads: { tables, reason }\`), or the collections it \`follows\`.`,
       );
     }
-    return typeof reads === "function"
-      ? defineDeferredResource(contract, () => routed(options, reads()))
+    return typeof reads === "function" || deferredFollows
+      ? defineDeferredResource(contract, () => routed(options, declaredNow()))
       : defineResource(contract, routed(options, reads));
   };
   const defineExternal = (contract: never, options: never) => {
-    if (reads === undefined) return defineExternalResource(contract, options);
+    if (reads === undefined && follows === null) {
+      return defineExternalResource(contract, options);
+    }
     const { mode, freshness } = options as ServerResourceOptions<
       unknown,
       ResourceParams
@@ -535,18 +648,27 @@ export function valueRuntime(
           `${label}: a paged value's \`reads\` is a static list — its pages register at once, with no deferred bind for a thunk.`,
         );
       }
+      if (deferredFollows) {
+        throw new Error(
+          `${label}: a paged value follows a collection compiled at boot (one folding exposures) — its pages register at once, with no deferred bind to copy that collection's routes at. Follow a collection compiled at once.`,
+        );
+      }
       return defineExternalResource(contract, routed(options, reads));
     }
-    if (typeof reads !== "function") {
+    if (typeof reads !== "function" && !deferredFollows) {
       return defineExternalResource(contract, routed(options, reads));
     }
     // A deferred EXTERNAL value: external, with its mode and freshness, from
-    // here on; its bind adds the plan once the registry the thunk reads is
-    // complete.
-    return defineDeferredResource(contract, () => routed(options, reads()), {
-      mode: mode as "push" | "invalidate",
-      freshness,
-    });
+    // here on; its bind adds the plan once the registry the thunk reads (or
+    // the deferred collection it follows) is complete.
+    return defineDeferredResource(
+      contract,
+      () => routed(options, declaredNow()),
+      {
+        mode: mode as "push" | "invalidate",
+        freshness,
+      },
+    );
   };
   return {
     defineResource: define as LiveRuntime["defineResource"],
@@ -574,7 +696,7 @@ function servePaged(
     );
   }
   const { meta, ...served } = serveValueOn(
-    runtimeFor(value.key, opts),
+    runtimeFor(value, opts),
     value,
     opts,
     { sources: "db+external" },

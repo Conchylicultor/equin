@@ -27,7 +27,10 @@ import {
   primaryKey,
   text,
 } from "drizzle-orm/pg-core";
-import { withWire } from "@plugins/database/plugins/sql-column/server";
+import {
+  parsedJson,
+  withWire,
+} from "@plugins/database/plugins/sql-column/server";
 import type {
   ExtensionJoin,
   JoinSpec,
@@ -53,6 +56,7 @@ import {
 import { nullable } from "@plugins/fields/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
+import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
 import { compileCollection } from "./serve-collection";
 
 // ── The schema: a host, a 1:1 extension, a chained N:1 lookup, a keyed side ──
@@ -1197,5 +1201,68 @@ describe("serveCollection with joins — a joined column's wire form", () => {
         db: recordingQueryDb().db,
       }),
     ).toThrow(/wire-encoded column/);
+  });
+});
+
+// ── A joined `jsonb` column ─────────────────────────────────────────────────
+//
+// tasks-core's `conversationWorkspaces` carries its attempt's `workspace` — a
+// `jsonb` column decoded by `parsedJson` (a `jsonField`'s storage) — through
+// a REQUIRED lookup join. Pinned here without a database: the joined column
+// is selected as the column itself through the alias (never cast, never an
+// expression — so the driver's row is handed to the column's own decoder),
+// the join is INNER, and its reverse route reads exactly the joined columns.
+// That the decoder then runs on a real row is pinned against Postgres by
+// tasks-core's `follow-targets-oracle.test.ts` (this fake answers rows raw).
+
+describe("serveCollection with joins — a joined jsonb column", () => {
+  const Spec = z.object({ kind: z.enum(["worktree", "scratch"]) });
+  const studios = pgTable("studios", {
+    id: text("id").primaryKey(),
+    path: text("path").notNull(),
+    spec: parsedJson("spec", Spec),
+    // Read by no SQL: never a route column.
+    note: text("note"),
+  });
+  const studioJoin: LookupJoin<"studio", typeof studios> = {
+    kind: "lookup",
+    alias: "studio",
+    table: studios,
+    pk: studios.id,
+    on: { from: "base", col: songs.artistId },
+    required: true,
+  };
+  const STUDIO_FIELDS = {
+    id: textField(),
+    path: textField(),
+    spec: jsonField({ schema: Spec, default: { kind: "worktree" } }),
+  };
+
+  test("is selected as its own column through the alias, and routed by the joined columns only", async () => {
+    const c = liveCollection(`test.live.joins-${seq++}`, {
+      carry: { fields: STUDIO_FIELDS },
+      id: "id",
+    });
+    const recording = recordingQueryDb(() => [
+      { id: "s1", path: "/w/a", spec: { kind: "scratch" } },
+    ]);
+    const specs = compileCollection(c, {
+      from: songs,
+      joins: [studioJoin],
+      columns: {
+        path: (j) => j.studio.path,
+        spec: (j) => j.studio.spec,
+      },
+      db: recording.db,
+    });
+    const rows = compileWindowQuery(c.rows, specs.rows).serverOpts;
+    expect(await rows.loader(c.rows.point.encode(["s1"]))).toEqual([
+      { id: "s1", path: "/w/a", spec: { kind: "scratch" } },
+    ]);
+    expect(recording.calls.at(-1)!.sql).toBe(
+      'select "songs"."id", "studio"."path", "studio"."spec" from "songs" inner join "studios" "studio" on "studio"."id" = "songs"."artist_id" where "songs"."id" = ANY($1::text[])',
+    );
+    const studio = rows.routes!.routes.find((r) => r.table === "studios");
+    expect(studio?.columns).toEqual(["id", "path", "spec"]);
   });
 });

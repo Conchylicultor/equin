@@ -138,6 +138,20 @@ per-key single-flight, `chargeWait` markers, the ≤1-event staleness-sharing of
 mid-flight joiner) is `createGitStateMemo`'s: `createSignedMemo` is a thin binding
 wrapper over exactly one cache implementation.
 
+### Caller-held input — `createSignedMemo<T, I>`
+
+A compute that reads its own inputs (git, the filesystem) takes the key alone.
+One whose caller already **holds** its inputs — a live value's followed rows
+(network/live's `follows`), read fresh in the hook's own call — declares them as
+`I`: `signature(key, input)` / `compute(key, input)` at construction, and the
+caller passes `{ input }` (beside `notBefore`) to `memo.signature` / `memo.get`.
+One value reaches both functions, so the signature cached under is the
+signature of the input computed from; the signature must fingerprint the input
+(an entry computed from other facts is then never a hit). The memo reads nothing
+a second time. A memo without input (`I = void`) takes none (tsc). attempt-work's
+two memos (its standing over `AttemptFacts`, its landed set over the conversation
+set and start) are the consumers.
+
 ### `prime(key, signature, value)` — the ordering contract
 
 The write-through prime for an authoritative external writer (the `set` of the

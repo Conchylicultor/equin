@@ -17,7 +17,8 @@ closed under "after" (every event after a loaded one is loaded), so a forward
 scan from a drawn event is complete (AskUserQuestion finding its answer); a
 whole-conversation fact is a small server-derived value instead:
 `serveTranscriptValue(value, derive)` (server) runs `derive` over every event in
-memory once per change and pushes only when the result changed;
+memory once per change and pushes only when the result changed (its
+`revalidate` is the events' signature);
 `useWholeTranscript(value, derive)` (web) reads it — or derives it locally when
 the view draws a whole transcript (a sub-agent's pane). Owners: the outline's
 turns, the task aggregate, background shells, sub-agent facts, artifacts. A
@@ -27,8 +28,10 @@ everything before the window, the page continues over the loaded rows. One
 tool call by id, from outside the transcript, is `transcriptToolCall`.
 
 **One watch, one memo, per conversation.** Every value served from a
-conversation's events (the pages, the meta, every derived value) reads
-`conversationEvents(id)` and watches through `watchConversationEvents`
+conversation's events (the pages, the meta, every derived value) follows the
+transcript chain's facts (transcript-source's `transcriptChainFollows`), reads
+`conversationEvents(id, followedTranscriptChain(followed))` (the chain is the
+memo's input, so its signature fingerprints the chain read) and watches through `watchConversationEvents`
 (`server/internal/conversation-events.ts`): a refcounted hub over ONE
 `TranscriptSource.watch`, whose snapshot primes the shared `createSignedMemo`
 (`jsonl-events-cache.ts`) before anyone is notified, so every recompute reads
@@ -248,7 +251,8 @@ back.
     - `resource.declare` "jsonl-events.tool-call"
     - `resource.declare` "jsonl-events:meta"
   - Uses:
-    - `conversations/transcript-source.transcriptChainReads`
+    - `conversations/transcript-source.followedTranscriptChain`
+    - `conversations/transcript-source.transcriptChainFollows`
     - `conversations/transcript-source.TranscriptImageKeyError`
     - `conversations/transcript-source.TranscriptSource`
     - `infra/git/git-read-cache.createSignedMemo`

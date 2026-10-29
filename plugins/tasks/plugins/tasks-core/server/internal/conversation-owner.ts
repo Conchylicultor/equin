@@ -3,6 +3,24 @@ import type { ColumnOverride } from "@plugins/network/plugins/live/server";
 import { _attempts, _conversations, _tasks } from "./tables";
 
 /**
+ * A conversation's attempt, as a query-resource lookup join over
+ * `_conversations` — the first of {@link conversationOwnerJoins}, alone for a
+ * collection that reads the attempt and not its task
+ * (`conversationWorkspaces`). REQUIRED (INNER): `conversations.attempt_id`
+ * is a NOT NULL cascade FK, so it drops no conversation. Its route is a
+ * REVERSE route on `attempts.id`, gated on the attempt columns the
+ * collection reads.
+ */
+export const conversationAttemptJoin = {
+  kind: "lookup",
+  alias: "attempt",
+  table: _attempts,
+  pk: _attempts.id,
+  on: { from: "base", col: _conversations.attemptId },
+  required: true,
+} as const satisfies LookupJoin<"attempt", typeof _attempts>;
+
+/**
  * A conversation's owners, as query-resource joins over `_conversations`: its
  * attempt (`base.attemptId`), then that attempt's task (`attempt.taskId`).
  *
@@ -22,14 +40,7 @@ import { _attempts, _conversations, _tasks } from "./tables";
  * lists; the P8 tree reuses them), so the owner shape is spelled once.
  */
 export const conversationOwnerJoins = [
-  {
-    kind: "lookup",
-    alias: "attempt",
-    table: _attempts,
-    pk: _attempts.id,
-    on: { from: "base", col: _conversations.attemptId },
-    required: true,
-  } satisfies LookupJoin<"attempt", typeof _attempts>,
+  conversationAttemptJoin,
   {
     kind: "lookup",
     alias: "task",

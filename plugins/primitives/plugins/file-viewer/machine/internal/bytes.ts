@@ -6,12 +6,15 @@ import {
 } from "@plugins/infra/plugins/host-fs/machine";
 import { openHostFile } from "@plugins/infra/plugins/host-fs/server";
 import { serveValue } from "@plugins/network/plugins/live/machine";
+import { attemptWorkspacesServed } from "@plugins/tasks/plugins/tasks-core/server";
 import {
   readWorkspaceBytes,
   watchWorkspaceFile,
+  workspaceAttemptIds,
   workspaceFileSignature,
-  workspaceRootReads,
+  workspaceRootFrom,
   type WorkspaceFile,
+  type WorkspaceRoot,
 } from "@plugins/code-explorer/machine";
 import {
   browsableFileRevision,
@@ -57,10 +60,13 @@ async function hostBytes(path: string): Promise<ArrayBuffer> {
   }
 }
 
-/** A workspace file's bytes (code-explorer's read), or the refusal saying why there are none. */
-async function workspaceBytes(file: WorkspaceFile): Promise<ArrayBuffer> {
+/** A workspace file's bytes under its `root` (code-explorer's read), or the refusal saying why there are none. */
+async function workspaceBytes(
+  file: WorkspaceFile,
+  root: WorkspaceRoot | null,
+): Promise<ArrayBuffer> {
   const where = `${file.workspace}:${file.path}${file.ref === undefined ? "" : ` at ${file.ref}`}`;
-  const read = await readWorkspaceBytes(file, FILE_BYTES_MAX);
+  const read = await readWorkspaceBytes(file, root, FILE_BYTES_MAX);
   switch (read.kind) {
     case "ok":
       return ownBuffer(read.bytes);
@@ -131,16 +137,36 @@ async function dataBytes(root: string, path: string): Promise<ArrayBuffer> {
  * file's entry, or the checkout's refs for a named ref; a sha never moves.
  * A data file is read through its browsable file root (data-files) and
  * invalidated from the root's watch.
+ * A workspace file's root is its attempt row, FOLLOWED (tasks-core's
+ * `attemptWorkspaces` by the workspace's attempt; a host or data file, a
+ * sentinel or a path workspace follows none): only a write to that
+ * attempt's workspace reaches the tuple, and re-points its watch.
  * The ETag is the file's revision, probed before the read: an invalidation
- * that moved nothing — a write to the attempts table, which every tuple
- * declares — costs a 304, never a re-read of up to FILE_BYTES_MAX.
+ * that moved nothing costs a 304, never a re-read of up to FILE_BYTES_MAX.
  */
 export const fileBytesServed = serveValue(fileBytes, {
   source: "external",
   changes: "notified",
-  // A workspace FileRef's attempt id resolves through its attempt row.
-  reads: workspaceRootReads,
-  revalidate: async (file) => {
+  follows: (follow) => ({
+    ws: follow(attemptWorkspacesServed, (file) => ({
+      ids:
+        file.source === "workspace" ? workspaceAttemptIds(file.workspace) : [],
+    })),
+  }),
+  loader: async (file, { followed }) => {
+    switch (file.source) {
+      case "host":
+        return hostBytes(file.path);
+      case "workspace":
+        return workspaceBytes(
+          file,
+          await workspaceRootFrom(file.workspace, followed.ws),
+        );
+      case "data":
+        return dataBytes(file.root, file.path);
+    }
+  },
+  revalidate: async (file, { followed }) => {
     switch (file.source) {
       case "host": {
         const abs = resolvedOrNull(file.path);
@@ -148,33 +174,33 @@ export const fileBytesServed = serveValue(fileBytes, {
         return `host:${abs}:${(await hostPathVersion(abs)).stamp ?? "none"}`;
       }
       case "workspace":
-        return `workspace:${await workspaceFileSignature(file)}`;
+        return `workspace:${await workspaceFileSignature(
+          file,
+          await workspaceRootFrom(file.workspace, followed.ws),
+        )}`;
       case "data":
         return `data:${await browsableFileRevision(file.root, file.path)}`;
     }
   },
-  loader: async (file) => {
-    switch (file.source) {
-      case "host":
-        return hostBytes(file.path);
-      case "workspace":
-        return workspaceBytes(file);
-      case "data":
-        return dataBytes(file.root, file.path);
-    }
-  },
-  whileSubscribed: async (file, notify) => {
-    switch (file.source) {
-      case "host": {
-        const abs = resolvedOrNull(file.path);
-        // The loader refuses the spelling; there is nothing to watch.
-        if (abs === null) return () => {};
-        return watchHostPath(abs, () => notify());
+  whileFollowing: {
+    over: (followed) => followed.ws,
+    start: async (file, { over: ws, notify }) => {
+      switch (file.source) {
+        case "host": {
+          const abs = resolvedOrNull(file.path);
+          // The loader refuses the spelling; there is nothing to watch.
+          if (abs === null) return () => {};
+          return watchHostPath(abs, () => notify());
+        }
+        case "workspace":
+          return watchWorkspaceFile(
+            file,
+            await workspaceRootFrom(file.workspace, ws),
+            () => notify(),
+          );
+        case "data":
+          return watchBrowsableFile(file.root, file.path, () => notify());
       }
-      case "workspace":
-        return watchWorkspaceFile(file, () => notify());
-      case "data":
-        return watchBrowsableFile(file.root, file.path, () => notify());
-    }
+    },
   },
 });

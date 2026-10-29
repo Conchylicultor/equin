@@ -121,6 +121,57 @@ same point plan as `:rows`, so query and read-set cannot disagree.
   read is refused.
 - Cases: `compile-lookup.test.ts`.
 
+## Follows — `followRead` (`server/internal/follow.ts`)
+
+A computed value (network/live's `serveValue` with `follows`) reading one
+TUPLE of a collection — its `:rows` point set (`{ ids }`) or one scope of a
+scoped `all` set (`{ where }`) — through that collection's own read
+(`research/2026-10-24-global-live-narrowed-reads.md` §2). Nothing about the
+read is restated: the compile that minted the collection's plan mints its
+**followable** beside it — `CompiledWindowQuery.followable` (a point set;
+`null` for a window) and `CompiledAllCollection.followable` (`rows` always,
+`all` for a scoped set) — branded, so no literal spells one. network/live
+registers a `:rows` set through **`pointQueryResource`** /
+**`deferredPointQueryResource`** (`windowQueryResource` plus its followable;
+the deferred one's getter throws until bound).
+
+**`followRead(followable, name, tupleOf)`** → a branded `FollowRead<P>` for a
+follower keyed by `P`:
+
+- **routes** — the collection's own, one per route of its plan (ids
+  `<name>:<route id>`): `columns` (the gate) and static `rows` kept, mapped
+  `full` (a value has no host ids to refill), tagged `via: { name,
+  collection }` (resource-runtime's `RouteVia`). The base route matches on
+  the identity column (`{ ids }`) or the scope columns (`{ where }` — the
+  `all` compile's own `scopeOf` match); the feed carries a match column
+  old ∪ new, so a re-pointed row reaches the tuple it left and the one it
+  joined. A join's far side keeps its gate and has no match (every write
+  to its gated columns reaches every follower).
+- **`usesOf(p)`** — the collection tuple's own uses (`plan.usesOf` of the
+  params the tuple names: the point codec's `encode(ids)`, or the scope,
+  checked by the set's own server gate — a value the column's text cannot
+  equal throws), re-keyed, the base narrowed to the tuple's ids / scope;
+  none for an empty id set. A tuple of the other form throws (the runtime
+  reports it and FULLs that follower tuple).
+- **An `{ ids }` follow is held to the identity's text** as a `{ where }`
+  one is to the scope's (`canonical-text.ts`, shared with `scopeOf`): the
+  base route matches an id against the feed's `col::text`, so an id that
+  is not the column's canonical text (an upper-case uuid, `"007"`) throws
+  in `paramsOf` — the read and the routing alike — and an identity whose
+  text has no one spelling (a timestamp, a float) is refused by
+  `followRead` when the follow is declared. Every shipping target is
+  text-keyed.
+
+**`compiledValueReach(reads | undefined, label, follows)`** folds the follow
+reads beside `reads.tables` / `reads.lookups`: `reads` is optional with a
+follow; a table read through a follow AND whole or through a lookup is
+refused (the other route would reach every write the follow's gate and
+match skip); an unminted follow read and a name twice are refused; a value
+declaring neither is refused. `mintReachPlan` refuses an unfed / relation /
+notified / tagged read of a followed table; the runtime a view read whole
+over one (`indexRelationReads`). Pinned by `server/internal/follow.test.ts`;
+the real-feed oracle is network/live's `serve-value-follows-oracle.test.ts`.
+
 ## Joins: provenance-driven read-sets (`core/internal/joins.ts`, `server/internal/joins.ts`)
 
 Joins are data (`JoinSpec`, in `core/`, type-only so the browser bundle pulls
@@ -641,6 +692,10 @@ query.
     - `CompiledOffFeedQuery`
     - `CompiledUnion`
     - `EntitySource`
+    - `FollowablePlan`
+    - `FollowablePoint`
+    - `FollowRead`
+    - `FollowTuple`
     - `LookupRead`
     - `LookupResult`
     - `LookupSpec`
@@ -667,10 +722,13 @@ query.
     - `compileLookup`
     - `compileOffFeedQuery`
     - `compileUnionCollection`
+    - `deferredPointQueryResource`
     - `deferredWindowQueryResource`
+    - `followRead`
     - `joinRefs`
     - `offFeedReach`
     - `offFeedTablesReach`
+    - `pointQueryResource`
     - `presenceExpr`
     - `windowQueryResource`
 - Cross-plugin:

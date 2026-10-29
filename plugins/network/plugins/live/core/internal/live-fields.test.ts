@@ -179,6 +179,26 @@ describe("liveCollection — the fields spelling", () => {
     ).toThrow(/presentationReads names "nope"/);
   });
 
+  test("a collection presenting none of the entity's fields carries none of its presentation reads", () => {
+    const presented = entityRef("presented", notes.fields, {
+      presentationReads: ["id", "createdAt", "internal"],
+    });
+    // A follow target: it carries exactly its follower's read-set, so a
+    // write to a presentation column never reaches it.
+    const c = liveCollection("test.live-fields.carry-only", {
+      from: presented,
+      carry: { pick: ["id", "status"] },
+      baseExposures: false,
+      id: "id",
+    });
+    expect(c.rowKeys).toEqual(["id", "status"]);
+    type Row = typeof c extends LiveRowsCollection<infer R> ? R : never;
+    const typed: (keyof Row)[] = ["id", "status"];
+    // @ts-expect-error — no presentation read rides a carry-only row
+    const notCarried: (keyof Row)[] = ["createdAt"];
+    expect([typed, notCarried]).toHaveLength(2);
+  });
+
   test("a collection over no entity declares only its own fields", () => {
     const c = liveCollection("test.live-fields.free", {
       fields: { name: textField({ label: "Name" }) },

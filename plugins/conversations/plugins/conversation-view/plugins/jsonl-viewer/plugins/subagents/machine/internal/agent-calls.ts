@@ -2,7 +2,6 @@ import { createSignedMemo } from "@plugins/infra/plugins/git/plugins/git-read-ca
 import { AGENT_TOOL_NAME } from "../../core";
 import {
   readChainLines,
-  resolveConversationTranscriptPaths,
   transcriptChainSignature,
 } from "@plugins/conversations/plugins/transcript-watcher/server";
 
@@ -36,24 +35,25 @@ import {
  * the row opens it by its own agent id instead (`findSubagentByAgentId`), and a
  * nested card rendered inside its parent's own pane still joins, because that
  * surface holds the event and passes the name directly.
+ *
+ * The parent's anchored transcript paths are the memo's INPUT, resolved by the
+ * caller from the chain its value follows (a loader, a watcher room), so
+ * the cached signature fingerprints exactly the files read.
  */
-const memo = createSignedMemo<Map<string, string>>({
+const memo = createSignedMemo<Map<string, string>, readonly string[]>({
   name: "subagent-agent-call-names",
-  signature: async (conversationId) =>
-    transcriptChainSignature(
-      await resolveConversationTranscriptPaths(conversationId),
-    ),
-  compute: async (conversationId) =>
-    scanAgentCallNames(
-      await resolveConversationTranscriptPaths(conversationId),
-    ),
+  signature: (_conversationId, parentPaths) =>
+    transcriptChainSignature(parentPaths),
+  compute: (_conversationId, parentPaths) =>
+    scanAgentCallNames([...parentPaths]),
 });
 
 /** tool-use id → the `name` that `Agent` call requested, for every call that named one. */
 export async function agentCallNames(
   conversationId: string,
+  parentPaths: readonly string[],
 ): Promise<Map<string, string>> {
-  return memo.get(conversationId);
+  return memo.get(conversationId, { input: parentPaths });
 }
 
 export function evictAgentCallNames(conversationId: string): void {
@@ -64,8 +64,9 @@ export function evictAgentCallNames(conversationId: string): void {
 export async function requestedNameFor(
   conversationId: string,
   toolUseId: string,
+  parentPaths: readonly string[],
 ): Promise<string | undefined> {
-  return (await agentCallNames(conversationId)).get(toolUseId);
+  return (await agentCallNames(conversationId, parentPaths)).get(toolUseId);
 }
 
 export async function scanAgentCallNames(

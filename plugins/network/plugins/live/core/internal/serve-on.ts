@@ -158,6 +158,13 @@ export function serveValueOn<T, P extends Record<string, string>>(
   host: LiveHost<LiveHostSources>,
 ): ServedValueOn<T, P> | ServedPagedOn {
   checkHostSource(`serveValue("${value.key}")`, opts.source, host);
+  if (host.sources === "external" && opts.follows !== undefined) {
+    // Unreachable from typed code: no host without a change feed serves a
+    // table-backed collection, so no follow target exists there.
+    throw new Error(
+      `serveValue("${value.key}"): this host has no change feed — a follow is reached through the followed collection's routes, which only a host with one compiles.`,
+    );
+  }
   // A paged value's pages are the one keyed value (a keyed window each).
   if (value.keyed !== undefined) {
     return servePagedOn(

@@ -124,10 +124,20 @@ export type ListedFields<E, P extends string, OF> = Pick<
 > &
   OF;
 
+/**
+ * What `from`'s presentation reads beside a field it presents — only when the
+ * collection presents one (`pick` lists a field of `from`): a collection that
+ * shows none of the entity's fields (a follow target, a carry-only lookup)
+ * carries exactly what it names, so no presentation column widens its gate.
+ */
+type PresentedReads<E, P extends string> = [P] extends [never]
+  ? never
+  : PresentationReadsOf<E>;
+
 /** Every field on the row: the listed ones, the carried ones and the ones `from`'s presentation reads. */
 export type RowFields<E, P extends string, CP extends string, OF, CF> = Pick<
   FromFields<E>,
-  (P | CP | PresentationReadsOf<E>) & keyof FromFields<E>
+  (P | CP | PresentedReads<E, P>) & keyof FromFields<E>
 > &
   OF &
   CF;
@@ -386,8 +396,14 @@ export function resolveFieldsSpec(
     add(carried, name, field, "`carry.fields`");
   }
   // What the entity's presentation reads beside the field it presents rides
-  // on every row of it — never restated per collection, so none can miss one.
-  if (shape === undefined && from !== undefined) {
+  // on every row that presents one — never restated per collection, so none
+  // can miss one. A collection listing none of its fields presents nothing:
+  // it carries exactly what it names (`PresentedReads`).
+  if (
+    shape === undefined &&
+    from !== undefined &&
+    (spec.pick ?? []).length > 0
+  ) {
     for (const name of (from as EntityRef).presentationReads) {
       if (!seen.has(name)) add(carried, name, fromField(name), "the entity");
     }

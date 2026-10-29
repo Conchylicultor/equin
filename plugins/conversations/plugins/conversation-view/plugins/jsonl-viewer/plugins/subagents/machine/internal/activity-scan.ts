@@ -4,7 +4,6 @@ import {
   listSubagents,
   readMeta,
   statIfPresent,
-  subagentDirs,
   signaturePathsOf,
   subagentWatchDirs,
   type SubagentEntry,
@@ -45,14 +44,13 @@ export function evictActivityScan(scope: string): void {
 }
 
 /**
- * The files this conversation's activity signature is taken over, and the dirs
- * to watch — both from ONE walk, so the watched set and the signed set cannot
- * describe different listings.
+ * The files a conversation's activity signature is taken over, and the dirs to
+ * watch, under its sub-agent roots (`subagentDirsOf`) — both from ONE walk, so
+ * the watched set and the signed set cannot describe different listings.
  */
-export async function resolveActivityTargets(
-  conversationId: string,
+export async function activityTargetsIn(
+  roots: readonly string[],
 ): Promise<{ paths: string[]; dirs: string[] }> {
-  const roots = await subagentDirs(conversationId);
   const listing = await listSubagents(roots);
   return {
     paths: signaturePathsOf(listing),
@@ -64,7 +62,7 @@ export async function resolveActivityTargets(
  * Every sub-agent in `dirs`, with what it is doing right now.
  *
  * Takes its directories rather than fetching them, so the set it may read is
- * decided in exactly one place (`subagentDirs`) and cannot be widened here.
+ * decided in exactly one place (`subagentDirsOf`) and cannot be widened here.
  *
  * **One unreadable meta costs one row, never the list.** A sub-agent whose meta
  * the schema rejects becomes an `undescribed` row carrying everything the
@@ -147,13 +145,6 @@ export async function scanActivityIn(
       a.agentId.localeCompare(b.agentId),
   );
   return rows;
-}
-
-/** `scanActivityIn`, bound to a conversation's own anchored directories. */
-export async function scanActivity(
-  conversationId: string,
-): Promise<SubagentActivityRow[]> {
-  return scanActivityIn(conversationId, await subagentDirs(conversationId));
 }
 
 /**

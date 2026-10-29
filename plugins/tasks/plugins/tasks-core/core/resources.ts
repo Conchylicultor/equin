@@ -10,11 +10,13 @@ import {
 } from "./internal/schema";
 import { ConversationSummarySchema } from "./schemas";
 import {
+  attemptDeliveriesEntityRef,
   attemptsEntityRef,
   conversationsEntityRef,
   pushesEntityRef,
   tasksEntityRef,
 } from "./entity-refs";
+import { attemptFields } from "./internal/fields";
 import { nullable } from "@plugins/fields/core";
 import {
   enumTextField,
@@ -182,15 +184,153 @@ export const attemptRows = liveCollection("attempts", {
   preload: "boot",
 });
 // One attempt's workspace (conversations/workspace: a worktree, or a scratch
-// dir and its profile) by attempt id — lookup-only, read with
+// dir and its profile) and checkout by attempt id — lookup-only, read with
 // `useLiveRow(attemptWorkspaces, attemptId)` by the surfaces that gate on
-// what the workspace offers (the conversation pane's git surfaces). Its own
-// key rather than a field of `attempts`, whose row C39 pins. Served over the
-// `attempts` table in `../server/internal/resources.ts`; the column is written
-// once, at insert.
+// what the workspace offers (the conversation pane's git surfaces), and
+// FOLLOWED by `{ ids: [attemptId] }` by the values computed from where an
+// attempt runs (`attemptWorkspacesServed`, `../server`: attempt-work,
+// commits-graph, code-explorer's files). Its own key rather than a field of
+// `attempts`, whose row C39 pins. Served over the `attempts` table in
+// `../server/internal/resources.ts`.
+//
+// The row is EXACTLY what its followers read — the workspace, the checkout
+// path and the attempt's start (attempt-work's trailer-grep floor) — so a
+// write to any other `attempts` column (its task, `updated_at`) is gated out
+// of every follower. `worktreePath` / `createdAt` were added after the key
+// shipped: an additive change, so a tab on a bundle that read `{ id,
+// workspace }` still parses the row (the C39 check in
+// `../server/internal/follow-targets-oracle.test.ts`).
 export const attemptWorkspaces = liveCollection("attempt-workspaces", {
   from: attemptsEntityRef,
-  carry: { pick: ["id", "workspace"] },
+  carry: { pick: ["id", "workspace", "worktreePath", "createdAt"] },
+  baseExposures: false,
+  id: "id",
+});
+
+// ── Follow targets ───────────────────────────────────────────────────────────
+//
+// The narrow collections a computed value FOLLOWS (network/live's `follows`,
+// research/2026-10-24-global-live-narrowed-reads.md §4): each picks exactly
+// the columns its followers read and nothing more, because a follow copies
+// the collection's own route gate — a write to a column the row does not
+// carry reaches no follower. That is why the wide rows (`conversationsById`,
+// `attemptRows`) are not followed: every column they carry would recompute
+// the follower. Served (and their served handles exported) by
+// `../server/internal/follow-targets.ts`; no surface reads them over the wire
+// today.
+
+// One attempt's conversations' ids, every kind — a scoped `all` set followed
+// by `{ where: { attemptId } }` (attempt-work's and commits-graph's trailer
+// filter). A conversation's insert, delete or move between attempts reaches
+// the attempts it left and joined; a write to any other column (its status,
+// the poller's `waiting_for` / `last_viewed_at`) reaches none.
+export const attemptConversationIds = liveCollection(
+  "attempt-conversation-ids",
+  {
+    from: conversationsEntityRef,
+    carry: { pick: ["id", "attemptId", "createdAt"] },
+    baseExposures: false,
+    id: "id",
+    all: {
+      by: ["attemptId"],
+      orderBy: [["createdAt", "asc"]],
+      unbounded: {
+        reason: "one attempt's conversations — a handful each",
+      },
+    },
+  },
+);
+
+// One attempt's pushes' ids — a scoped `all` set followed by
+// `{ where: { attemptId } }` (attempt-work's ledger count). `pushRows` is a
+// window: a window has no per-tuple match to follow by.
+export const attemptPushIds = liveCollection("attempt-push-ids", {
+  from: pushesEntityRef,
+  carry: { pick: ["id", "attemptId", "createdAt"] },
+  baseExposures: false,
+  id: "id",
+  all: {
+    by: ["attemptId"],
+    orderBy: [["createdAt", "asc"]],
+    unbounded: {
+      reason: "one attempt's pushes — at most a handful each",
+    },
+  },
+});
+
+// Whether an attempt recorded a non-push delivery — lookup-only by the
+// attempt's id (`attempt_deliveries` is keyed by it), followed by
+// `{ ids: [attemptId] }` (attempt-work's no-git standing): a row is the fact,
+// its absence the lack of one. Carries the key alone, so a later delivery's
+// summary rewrite reaches no follower.
+export const attemptDeliveries = liveCollection("attempt-deliveries", {
+  from: attemptDeliveriesEntityRef,
+  carry: { pick: ["attemptId"] },
+  baseExposures: false,
+  id: "attemptId",
+});
+
+// Where a conversation runs — its attempt's checkout path and workspace —
+// lookup-only by the conversation's id, followed by `{ ids: [id] }` (the
+// worktree values: edited-files, allow-files, plugin-changes). Over the
+// `conversations` table with its attempt joined (`conversationAttemptJoin`):
+// a conversation's move to another attempt refills it, an attempt's
+// `worktree_path` / `workspace` write reaches the conversations of that
+// attempt. Owned here, not by conversations/workspace (which cannot import
+// tasks-core: a cycle — tasks-core's fields store its spec).
+export const conversationWorkspaces = liveCollection(
+  "conversation-workspaces",
+  {
+    from: conversationsEntityRef,
+    carry: {
+      pick: ["id", "attemptId"],
+      fields: {
+        worktreePath: attemptFields.worktreePath,
+        workspace: attemptFields.workspace,
+      },
+    },
+    baseExposures: false,
+    id: "id",
+  },
+);
+
+/**
+ * The workspace a followed `conversationWorkspaces` tuple names — its one
+ * row — or `null`: no row (a conversation subscribed before its row is
+ * written) or no checkout path yet. The one reading every follower of it
+ * shares, so they cannot disagree on what "no worktree" is.
+ */
+export function conversationWorkspaceOf<
+  R extends { readonly worktreePath: string },
+>(rows: readonly R[]): R | null {
+  if (rows.length > 1) {
+    throw new Error(
+      `conversationWorkspaces: ${rows.length} rows for one conversation id`,
+    );
+  }
+  const row = rows[0];
+  return row === undefined || row.worktreePath === "" ? null : row;
+}
+
+// A conversation's live Claude session id (the chain's tail before the chain
+// records it) — lookup-only, followed by `{ ids: [id] }` (the transcript
+// family's chain, beside session-chain's `conversationSessions`).
+export const conversationSessionTails = liveCollection(
+  "conversation-session-tails",
+  {
+    from: conversationsEntityRef,
+    carry: { pick: ["id", "claudeSessionId"] },
+    baseExposures: false,
+    id: "id",
+  },
+);
+
+// A conversation's runtime and status — lookup-only, followed by
+// `{ ids: [id] }` (conversations' partial-message / context-usage: which
+// agent runtime to ask, and whether it still runs).
+export const conversationRuntimes = liveCollection("conversation-runtimes", {
+  from: conversationsEntityRef,
+  carry: { pick: ["id", "runtime", "status"] },
   baseExposures: false,
   id: "id",
 });

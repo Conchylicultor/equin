@@ -7,11 +7,12 @@ import {
   type SubagentTranscript,
 } from "../../core";
 import {
+  activityTargetsIn,
   evictActivityScan,
-  resolveActivityTargets,
-  scanActivity,
+  scanActivityIn,
 } from "./activity-scan";
-import { transcriptPaths, readSubagentTranscript } from "./transcript-read";
+import { subagentDirsOf } from "./discovery";
+import { transcriptPaths, readSubagentTranscriptOf } from "./transcript-read";
 import { evictAgentCallNames } from "./agent-calls";
 
 // Both memos bind their signature and their compute at construction, exactly as
@@ -29,15 +30,24 @@ import { evictAgentCallNames } from "./agent-calls";
 // sub-ms float) is what makes the watcher's primed signature and the resource's
 // probe byte-identical strings, so a prime is a real hit rather than a silent
 // miss that degrades every push into a full re-read.
+//
+// Both take the parent conversation's anchored transcript paths as their INPUT,
+// resolved from the chain the value follows (`resolveTranscriptPathsOf`) — by
+// the loader, and by the watcher room from the rows its start was handed — so
+// no memo half reads Postgres, an entry read under another chain is never a
+// hit, and the room primes under the very signature the loader probes.
 
-const activityMemo = createSignedMemo<SubagentActivityRow[]>({
-  name: "subagent-activity",
-  signature: async (conversationId) =>
-    transcriptChainSignature(
-      (await resolveActivityTargets(conversationId)).paths,
-    ),
-  compute: (conversationId) => scanActivity(conversationId),
-});
+const activityMemo = createSignedMemo<SubagentActivityRow[], readonly string[]>(
+  {
+    name: "subagent-activity",
+    signature: async (_conversationId, parentPaths) =>
+      transcriptChainSignature(
+        (await activityTargetsIn(subagentDirsOf(parentPaths))).paths,
+      ),
+    compute: (conversationId, parentPaths) =>
+      scanActivityIn(conversationId, subagentDirsOf(parentPaths)),
+  },
+);
 
 export const subagentActivityMemo = activityMemo;
 
@@ -79,15 +89,17 @@ function parseMemoKey(key: string): {
   return { conversationId, ref: ref.data };
 }
 
-const transcriptMemo = createSignedMemo<SubagentTranscript>({
+const transcriptMemo = createSignedMemo<SubagentTranscript, readonly string[]>({
   name: "subagent-transcript",
-  signature: async (key) => {
+  signature: async (key, parentPaths) => {
     const { conversationId, ref } = parseMemoKey(key);
-    return transcriptChainSignature(await transcriptPaths(conversationId, ref));
+    return transcriptChainSignature(
+      await transcriptPaths(conversationId, ref, parentPaths),
+    );
   },
-  compute: (key) => {
+  compute: (key, parentPaths) => {
     const { conversationId, ref } = parseMemoKey(key);
-    return readSubagentTranscript(conversationId, ref);
+    return readSubagentTranscriptOf(conversationId, ref, parentPaths);
   },
 });
 

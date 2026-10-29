@@ -49,11 +49,18 @@ export {
   taskDescriptions,
   attemptRows,
   attemptWorkspaces,
+  attemptConversationIds,
+  attemptPushIds,
+  attemptDeliveries,
+  conversationWorkspaces,
+  conversationSessionTails,
+  conversationRuntimes,
   pushRows,
   conversationsActive,
   conversationsSystem,
   conversationsGone,
   conversationsById,
+  conversationWorkspaceOf,
   RECENT_GONE_LIMIT,
 } from "./resources";
 

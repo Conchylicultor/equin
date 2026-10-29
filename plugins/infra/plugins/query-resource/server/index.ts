@@ -2,10 +2,21 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 
 export {
   compileOffFeedQuery,
+  deferredPointQueryResource,
   deferredWindowQueryResource,
+  pointQueryResource,
   windowQueryResource,
 } from "./internal/compile-window";
-export type { CompiledOffFeedQuery } from "./internal/compile-window";
+export type {
+  CompiledOffFeedQuery,
+  FollowablePoint,
+} from "./internal/compile-window";
+export { followRead } from "./internal/follow";
+export type {
+  FollowablePlan,
+  FollowRead,
+  FollowTuple,
+} from "./internal/follow";
 export { compileGroupsQuery } from "./internal/compile-groups";
 export { compileCountQuery } from "./internal/compile-count";
 export type { CompiledCount } from "./internal/compile-count";

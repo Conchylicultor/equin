@@ -27,6 +27,7 @@ import {
 } from "@plugins/infra/plugins/query-resource/core";
 import type { EntitySource, RoutedSource } from "./spec";
 import { isLookupRead, type LookupRead } from "./compile-lookup";
+import { isFollowRead, type FollowRead } from "./follow";
 
 // The routed half of a compiled read: the `RoutePlan` (or, for a non-keyed
 // aggregate, the `ReachPlan`) the runtime's `routeTableChange` serves the
@@ -329,22 +330,36 @@ export interface ValueReads<P extends ResourceParams = ResourceParams> {
 }
 
 /**
- * A served value's plan from its declared `reads`: one `full` route per
- * table, reading every column (so no update is skipped by the gate — a
- * hand-written loader's columns are unknown), read by every tuple; one
- * relation read per view, with the same reason; and each lookup's own routes
- * — `full`, gated by the columns its SQL reads, matched per tuple — with its
- * tables tagged (covered only by its own statement). The drift guard (A8)
- * holds the loader to it: a captured table outside it is reported and, in a
- * running server, routed FULL from then on. Serves a non-keyed value and an
- * external keyed one (a paged value's pages) alike: every route is `full`.
+ * A served value's plan from its declared `reads` and its `follows`: one
+ * `full` route per table, reading every column (so no update is skipped by
+ * the gate — a hand-written loader's columns are unknown), read by every
+ * tuple; one relation read per view, with the same reason; each lookup's own
+ * routes — `full`, gated by the columns its SQL reads, matched per tuple —
+ * with its tables tagged (covered only by its own statement); and each
+ * follow's routes, copied from the collection it reads (`./follow`) and
+ * tagged `via` it. The drift guard (A8) holds the loader to it: a captured
+ * table outside it — a followed one included — is reported and, in a running
+ * server, routed FULL from then on. Serves a non-keyed value and an external
+ * keyed one (a paged value's pages) alike: every route is `full`.
+ *
+ * `reads` is optional only beside a follow. A table is read in ONE place —
+ * whole (`tables`), through a lookup, or through follows (any number of
+ * them): a whole-table or lookup route beside a follow's would reach every
+ * write the follow's gate and match skip.
  */
 export function compiledValueReach<P extends ResourceParams>(
-  reads: ValueReads<P>,
+  declared: ValueReads<P> | undefined,
   label: string,
+  follows: readonly FollowRead<P>[] = [],
 ): ReachPlan<P> {
   const where = `${label}: reads`;
-  if (reads.reason.trim() === "") {
+  if (declared === undefined && follows.length === 0) {
+    throw new Error(
+      `${label}: a database-backed value declares what its loader reads — \`reads: { tables, reason }\`, or the collections it \`follows\`.`,
+    );
+  }
+  const reads: ValueReads<P> = declared ?? { tables: [], reason: "" };
+  if (declared !== undefined && reads.reason.trim() === "") {
     throw new Error(
       `${where}.reason is empty — say why a write to any row may change any tuple.`,
     );
@@ -401,6 +416,33 @@ export function compiledValueReach<P extends ResourceParams>(
       taggedReads.push({ table: route.table, tag: lookup.label });
     }
   }
+  // The follows: each read's routes join the plan, every table owned by
+  // follows alone (`mintReachPlan` refuses an unfed / relation / notified /
+  // tagged read of one; the runtime a view read whole over one).
+  const followNames = new Set<string>();
+  for (const follow of follows) {
+    // Minted only by `followRead`: its routes are a collection's own.
+    if (!isFollowRead(follow)) {
+      throw new Error(
+        `${label}: follows hold a read followRead did not mint — a follow's routes are its collection's, so only that copy may state them.`,
+      );
+    }
+    if (followNames.has(follow.name)) {
+      throw new Error(`${label}: the follow "${follow.name}" is listed twice.`);
+    }
+    followNames.add(follow.name);
+    for (const route of follow.routes) {
+      if (
+        listed.has(route.table) ||
+        taggedReads.some((t) => t.table === route.table)
+      ) {
+        throw new Error(
+          `${label}: "${route.table}" is read through the follow "${follow.name}" of "${follow.collection}" and ${listed.has(route.table) ? "whole (`reads.tables`)" : "through a lookup (`reads.lookups`)"} — the other read would reach every write the follow's gate and match skip. Read it through the follow only.`,
+        );
+      }
+      routes.push(route);
+    }
+  }
   const outside = reads.outsideFeed;
   if (outside !== undefined && outside.tables.length === 0) {
     throw new Error(`${where}.outsideFeed.tables is empty — omit it.`);
@@ -424,12 +466,15 @@ export function compiledValueReach<P extends ResourceParams>(
     routes.slice(0, whole).map((r) => [r.id, { role: "membership" as const }]),
   );
   const usesOf =
-    lookups.length === 0
+    lookups.length === 0 && follows.length === 0
       ? () => wholeUses
       : (params: P): ReadonlyMap<string, TupleUse> => {
           const uses = new Map(wholeUses);
           for (const lookup of lookups) {
             for (const [id, use] of lookup.usesOf(params)) uses.set(id, use);
+          }
+          for (const follow of follows) {
+            for (const [id, use] of follow.usesOf(params)) uses.set(id, use);
           }
           return uses;
         };

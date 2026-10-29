@@ -17,7 +17,7 @@ export function deltaEtag(headSha: string, mainSha: string): string {
   return `${headSha}|${mainSha}`;
 }
 
-// The whole attempt-work value adds two inputs the tips do NOT determine:
+// The whole attempt-work value adds three inputs the tips do NOT determine:
 //
 // - `convIds` — the attempt's conversation set, which the landed grep filters on.
 //   It GROWS while an attempt runs (a fork, a resume), and a new conversation can
@@ -25,6 +25,10 @@ export function deltaEtag(headSha: string, mainSha: string): string {
 // - `ledgerPushes` — a DB read. A push row can land without any local ref moving
 //   (the ingest job reacting to `main` on another worktree), and the value carries
 //   the count, so head/main alone would certify a stale payload.
+// - `worktreePath` — where the pending half reads from: the checkout (its own
+//   HEAD's branch) or, once cleanup reaped it (`null`), the branch ref. A path
+//   moving with the tips unchanged changes what `pending` says, so an entry
+//   computed from the other path is never a hit.
 //
 // The conversation ids are sorted so the signature is order-independent.
 //
@@ -37,6 +41,7 @@ export function attemptWorkEtag(
   mainSha: string,
   convIds: readonly string[],
   ledgerPushes: number,
+  worktreePath: string | null,
 ): string {
-  return `${deltaEtag(headSha, mainSha)}|${[...convIds].sort().join(",")}|${ledgerPushes}`;
+  return `${deltaEtag(headSha, mainSha)}|${[...convIds].sort().join(",")}|${ledgerPushes}|${worktreePath ?? ""}`;
 }

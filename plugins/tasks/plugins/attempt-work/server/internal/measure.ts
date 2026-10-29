@@ -92,10 +92,17 @@ export async function probeHeadMain(
   // the cache signature (two different failures would collide on the same "|"
   // key). A throw here aborts the memo recompute, retaining the previous entry.
   const headSha = (await runGit(["rev-parse", "HEAD"], worktreePath)).trim();
-  const mainSha =
-    lastKnownMainSha() ??
-    (await runGit(["rev-parse", MAIN], worktreePath)).trim();
+  const mainSha = await readMainSha(worktreePath);
   return { headSha, mainSha };
+}
+
+/**
+ * `main`'s tip: git-watcher's in-memory sha when seeded, else an ungated
+ * `rev-parse main` in `cwd` (any checkout of the repo) — never trust a missing
+ * watcher as "main unchanged". Throws on a failed read.
+ */
+export async function readMainSha(cwd: string): Promise<string> {
+  return lastKnownMainSha() ?? (await runGit(["rev-parse", MAIN], cwd)).trim();
 }
 
 /**
@@ -121,9 +128,7 @@ export async function probeRefMain(
   mainRepoRoot: string,
   ref: string,
 ): Promise<{ headSha: string | null; mainSha: string }> {
-  const mainSha =
-    lastKnownMainSha() ??
-    (await runGit(["rev-parse", MAIN], mainRepoRoot)).trim();
+  const mainSha = await readMainSha(mainRepoRoot);
   if (!(await refExists(mainRepoRoot, ref))) return { headSha: null, mainSha };
   const headSha = (await runGit(["rev-parse", ref], mainRepoRoot)).trim();
   return { headSha, mainSha };

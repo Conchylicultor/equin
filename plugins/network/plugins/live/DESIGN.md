@@ -328,7 +328,26 @@ Why the rules in [CLAUDE.md](CLAUDE.md) are what they are. Read before changing 
   event announces: `automations.catalog` reads only `tasks_v`'s `status`;
   through the feed, every agent turn recomputed it.
 - **`reads.lookups`** gate on the columns the lookup reads, per tuple: a
-  conversation's turn re-reads no `edited-files` page.
+  `viewed` write re-reads no `partial-message` tuple.
+- **`follows` instead of whole-table reads.** A value computed from a few rows
+  that declared whole tables recomputed every subscribed tuple on any write
+  (10 `viewed` writes on other conversations cost every transcript tuple ~14
+  loads). Per-row narrowing comes only from compiled queries, so the value
+  follows a served collection's tuple and its plan is copied into the value's
+  reach: no hand-written row filter can be spelled. The follow's read is the
+  collection's own SQL, so the loader can never read a different row set than
+  its routes cover. Reference:
+  [narrowed reads](../../../../research/2026-10-24-global-live-narrowed-reads.md).
+- **A target is a served handle, never a descriptor**: the handle proves the
+  collection is served on this host.
+- **`followed` is read fresh in each hook**, so the ETag and the value come
+  from one source (the etag/value co-production rule).
+- **`whileFollowing` is handed `over`'s answer, never the rows**, so a start
+  cannot depend on a row its re-point signature does not read. Chosen over
+  naming follows (`{ of: [names] }`): the transcript watch reads both its
+  follows, and only the derived chain decides.
+- **A re-started watch notifies once open**: a change between the routed
+  drain's read and the new watch opening would otherwise be missed.
 - **A thunk `reads` must be pushed**: it compiles at `bindDeferredResources`,
   before the change feed builds triggers.
 - **`throttleMs` is leading-edge**, so an isolated change is never held; and

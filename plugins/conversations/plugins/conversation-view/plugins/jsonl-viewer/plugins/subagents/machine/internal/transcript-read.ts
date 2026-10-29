@@ -5,7 +5,7 @@ import {
   findSubagentByAgentId,
   findSubagentIn,
   listWorkflowRuns,
-  subagentDirs,
+  subagentDirsOf,
   subagentWatchDirs,
   type SubagentLookup,
 } from "./discovery";
@@ -19,16 +19,20 @@ import { requestedNameFor } from "./agent-calls";
  * read back out of the parent's own `Agent` call (`agent-calls.ts`). That lookup
  * is memoized on the parent chain's signature, so it costs one read per parent
  * write, not one per sub-agent append.
+ *
+ * `parentPaths` is the parent's anchored transcript, resolved by the caller
+ * from the chain it follows (`resolveTranscriptPathsOf`).
  */
 async function lookup(
   conversationId: string,
   ref: SubagentRef,
+  parentPaths: readonly string[],
 ): Promise<SubagentLookup> {
-  const dirs = await subagentDirs(conversationId);
+  const dirs = subagentDirsOf(parentPaths);
   if (ref.by === "agent") return findSubagentByAgentId(dirs, ref.key);
   return findSubagentIn(conversationId, dirs, {
     toolUseId: ref.key,
-    requestedName: await requestedNameFor(conversationId, ref.key),
+    requestedName: await requestedNameFor(conversationId, ref.key, parentPaths),
   });
 }
 
@@ -39,8 +43,9 @@ async function lookup(
 export async function transcriptPaths(
   conversationId: string,
   ref: SubagentRef,
+  parentPaths: readonly string[],
 ): Promise<string[]> {
-  const found = await lookup(conversationId, ref);
+  const found = await lookup(conversationId, ref, parentPaths);
   return found.kind === "found" ? [found.entry.transcriptPath] : [];
 }
 
@@ -58,10 +63,11 @@ export async function transcriptPaths(
 export async function resolveTranscriptTargets(
   conversationId: string,
   ref: SubagentRef,
+  parentPaths: readonly string[],
 ): Promise<WatchTargets> {
-  const found = await lookup(conversationId, ref);
+  const found = await lookup(conversationId, ref, parentPaths);
   if (found.kind === "found") return { paths: [found.entry.transcriptPath] };
-  const roots = await subagentDirs(conversationId);
+  const roots = subagentDirsOf(parentPaths);
   return {
     paths: [],
     dirs: subagentWatchDirs(roots, await listWorkflowRuns(roots)),
@@ -92,10 +98,17 @@ export async function readSubagentTranscriptIn(
   };
 }
 
-/** `readSubagentTranscriptIn`, bound to a conversation's own anchored directories. */
-export async function readSubagentTranscript(
+/**
+ * `readSubagentTranscriptIn`, bound to a conversation's own anchored
+ * directories — the parent's transcript the caller resolved from its followed
+ * chain.
+ */
+export async function readSubagentTranscriptOf(
   conversationId: string,
   ref: SubagentRef,
+  parentPaths: readonly string[],
 ): Promise<SubagentTranscript> {
-  return readSubagentTranscriptIn(await lookup(conversationId, ref));
+  return readSubagentTranscriptIn(
+    await lookup(conversationId, ref, parentPaths),
+  );
 }

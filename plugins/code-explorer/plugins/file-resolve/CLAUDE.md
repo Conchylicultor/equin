@@ -17,7 +17,10 @@ git checkout) answers `exact` for a path naming an existing file and
 invalidated while read from a watch of the entry the path names and, in a
 checkout, the checkout watch (a file created or removed, the git dir, a
 `.gitignore` edit — which can un-ignore files no create announces), throttle
-1 s. Refused: `no-workspace`. `useResolvedFile` reads it with `useLive` and
+1 s. The workspace's root is its attempt row, FOLLOWED (tasks-core's
+`attemptWorkspaces`, via code-explorer's `workspaceAttemptIds` /
+`workspaceRootFrom`): only a write to that attempt's workspace reaches the
+tuple, and re-points its watch. Refused: `no-workspace`. `useResolvedFile` reads it with `useLive` and
 maps it onto a `ResolvedFileState`: a failed or refused resolution is its
 `error` arm (carrying the read, so the pane offers Retry) and a host without
 the computer its `unavailable` arm — never collapsed into `not-found`. `FileDisambiguation`
@@ -45,10 +48,10 @@ takes the `total` and says when the list is capped.
     - `useResolvedFile`
 - Machine:
   - Uses:
-    - `code-explorer.loadWorkspaceRoot`
     - `code-explorer.watchCheckout`
-    - `code-explorer.watchWorkspaceRoot`
-    - `code-explorer.workspaceRootReads`
+    - `code-explorer.workspaceAttemptIds`
+    - `code-explorer.WorkspaceRoot`
+    - `code-explorer.workspaceRootFrom`
     - `infra/host-fs.watchHostPath`
     - `network/live.serveValue`
 - Cross-plugin:

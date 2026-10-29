@@ -43,7 +43,8 @@
   - Uses:
     - `conversations/conversation-view/jsonl-viewer.conversationEvents`
     - `conversations/conversation-view/jsonl-viewer.watchConversationEvents`
-    - `conversations/transcript-source.transcriptChainReads`
+    - `conversations/transcript-source.followedTranscriptChain`
+    - `conversations/transcript-source.transcriptChainFollows`
     - `network/live.serveValue`
   - Exports (values): `serveTranscriptFold`
 - Cross-plugin:

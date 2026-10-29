@@ -1,18 +1,8 @@
-import { mandatePolicy } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
 import { afterAll, describe, expect, test } from "bun:test";
 import { mkdir, mkdtemp, rm, unlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { eq } from "drizzle-orm";
 import { runGit } from "@plugins/primitives/plugins/commit-list/server";
-import { db } from "@plugins/database/server";
-import { FALLBACK_MODEL } from "@plugins/conversations/plugins/model-provider/core";
-import {
-  _tasks,
-  createAttempt,
-  createTask,
-  insertConversation,
-} from "@plugins/tasks/plugins/tasks-core/server";
 import {
   editedFilesSignature,
   readEditedFilesFacts,
@@ -32,7 +22,6 @@ import { editedFilesMetaOf, loadEditedFilesFor } from "./edited-files-resource";
 // fake would test nothing.
 
 const repos: string[] = [];
-const seededTasks: string[] = [];
 
 /**
  * A repo with one commit on `main` containing `a.txt`, with a `feature` branch
@@ -62,9 +51,6 @@ function shaPart(signature: string): string {
 
 afterAll(async () => {
   await Promise.all(repos.map((d) => rm(d, { recursive: true, force: true })));
-  // Deleting the task cascades to its attempt + conversation (FK onDelete cascade).
-  for (const id of seededTasks)
-    await db.delete(_tasks).where(eq(_tasks.id, id));
 });
 
 describe("editedFilesSignature", () => {
@@ -222,46 +208,25 @@ describe("unresolvable worktree — one determinate unresolved state", () => {
   // loader SAYS SO (`unresolved`, carried by the value's meta) instead of throwing
   // (the old wedge) or lying with `[]` — which would render a legitimate "no
   // changes" and arm the destructive Drop & Close.
-  const NO_SUCH_CONVERSATION =
-    "edited-files-signature-test-no-such-conversation";
-
+  //
+  // The loader is handed the conversation's followed workspace row
+  // (`conversationWorkspaces`): none for a conversation with no row.
   test("no worktree at all: unresolved, and so is the meta", async () => {
-    const files = await loadEditedFilesFor(NO_SUCH_CONVERSATION);
+    const files = await loadEditedFilesFor([]);
     expect(files.resolved).toBe(false);
     expect(editedFilesMetaOf(files).resolved).toBe(false);
   });
 
   test("worktree reaped mid-compute: the same unresolved state", async () => {
-    // A conversation whose worktreePath resolves in the DB but whose directory is
-    // gone — the reap the `onWorktree` catch handles (git shelled in a vanished
-    // cwd throws WorktreeGoneError), distinct from the never-had-a-worktree branch
-    // above. It collapses to the SAME determinate non-value, not a transient throw.
+    // A conversation whose row names a worktree whose directory is gone — the
+    // reap the `onWorktree` catch handles (git shelled in a vanished cwd throws
+    // WorktreeGoneError), distinct from the never-had-a-worktree branch above.
+    // It collapses to the SAME determinate non-value, not a transient throw.
     const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const goneWorktree = join(tmpdir(), `edited-files-reaped-${stamp}`); // never created
-    const taskId = `edited-files-reaped-task-${stamp}`;
-    const attemptId = `edited-files-reaped-attempt-${stamp}`;
-    const convId = `edited-files-reaped-conv-${stamp}`;
-    seededTasks.push(taskId);
-    await createTask({
-      id: taskId,
-      title: "reaped-worktree fixture",
-      mandate: mandatePolicy([]),
-    });
-    await createAttempt({
-      id: attemptId,
-      taskId,
-      worktreePath: goneWorktree,
-      workspace: { kind: "worktree" },
-    });
-    await insertConversation({
-      id: convId,
-      attemptId,
-      runtime: "sdk",
-      model: FALLBACK_MODEL,
-      spawnedBy: "edited-files-signature-test",
-    });
-
-    const files = await loadEditedFilesFor(convId);
+    const files = await loadEditedFilesFor([
+      { worktreePath: goneWorktree, workspace: { kind: "worktree" } },
+    ]);
     expect(files.resolved).toBe(false);
   });
 });

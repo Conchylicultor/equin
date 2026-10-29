@@ -860,12 +860,12 @@ describe("loader read-set capture — handed to the installed sink", () => {
     ]);
   });
 
-  test("a run that reads no tables flushes nothing; a non-loader entry never flushes", async () => {
+  test("a run that reads no tables flushes an empty capture (the last run read nothing); a non-loader entry never flushes", async () => {
     await recordEntrySpan("loader", "p", () => {});
     await recordEntrySpan("http", "GET /x", () => {
       recordReadTables(["tasks"]);
     });
-    expect(readSetFlushes).toEqual([]);
+    expect(readSetFlushes).toEqual([{ label: "p", tables: [] }]);
   });
 
   // The read-set is runtime state, not profile data: a kill-switched profiler

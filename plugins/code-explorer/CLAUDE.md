@@ -25,23 +25,32 @@ list, push and resolve GET routes are deleted. Only the image route stays — an
 | `code.dir` (`codeDir`) | `{ worktree, dir, ref? }` → pages of `CodeDirEntry` by name (500 / page, ≤ 10 000 without a viewport); meta `{ total }` | `machine/`, paged, notified: `watchHostDir` (on disk) or HEAD and the refs (named ref), throttle 1 s |
 | `code.push-files` (`pushFiles`) | `{ worktree, pushId }` → `{ files, truncated, baseSha, headSha }` (the first `COMMIT_FILES_MAX` = 2000 files by path; `truncated` when the range touched more — `code.commit-files` alike) | `server/`, pushed, notified by its declared reads (`pushRangeReads`: the push's `pushes` rows); the range is `resolvePushRange` — all of the push's rows ordered by git ancestry (tip = `merge-base --independent`, earliest = `merge-base --octopus`), never by commit time or a client window |
 
-- **Workspace resolution.** An attempt id resolves through its attempt row
-  (`loadWorkspaceRoot`, machine barrel), so a plain value serving through it
-  declares `reads: workspaceRootReads`. Its watch opens through
-  `watchWorkspaceRoot`: a workspace whose row is not there yet answers
-  `no-workspace`, and the load the row's insert re-runs opens the watch then,
-  so the loader and the watch read the same root. `code.dir` is paged and declares
-  no `reads` (one would re-read every page on any attempt write): its
-  `whileSubscribed` — awaited before any page — resolves the root once per
-  subscription and the pages read the held one.
+- **Workspace resolution is a follow.** An attempt-id workspace's root is its
+  attempt row's `worktreePath` / workspace kind, and every value reading one
+  (`code.file`, `code.file-diff`, `code.dir`, `code.workspace-root`,
+  `code.resolve-file`, file-viewer's `file-viewer.bytes`) FOLLOWS tasks-core's `attemptWorkspaces`
+  by `{ ids: workspaceAttemptIds(worktree) }` (none for the `main` / `self`
+  sentinels and an absolute path) and resolves the root from the followed
+  rows with `workspaceRootFrom(worktree, followed.ws)` (machine barrel; pure
+  over the row, in `server/internal/resolve-worktree-path.ts`). So only a
+  write to THAT attempt's workspace columns reaches a tuple, the loader, the
+  ETag and the watch read one root, and a row inserted (or rewritten) after
+  the first subscribe re-starts the watch over the new root (network/live's
+  follow re-point: `whileFollowing: { over: (f) => f.ws, start }`, the start
+  resolving the root from `over`) — no waiter, no root held beside the
+  runtime. A watch
+  notifies once it is open, so a change between a re-point's load and its
+  watch is heard. `resolveWorkspaceRoot(id)` (server-internal) reads the row
+  itself, for the image route only.
 - **Refusals** (each value declares the ones it gives): `no-workspace`,
   `not-a-checkout` (a git read of a scratch workspace), `invalid-path`,
   `invalid-ref`, `missing`, and per read `too-large` / `binary` / `denied` /
   `unreadable-archive`; `code.push-files` refuses `missing`, `no-checkout`,
   `no-base` (a root commit).
-- **Workspace bytes.** `readWorkspaceBytes(file, maxBytes)` /
-  `workspaceFileSignature(file)` (the ETag, probed before the read) /
-  `watchWorkspaceFile(file, onChange)` (machine barrel) are the workspace half
+- **Workspace bytes.** `readWorkspaceBytes(file, root, maxBytes)` /
+  `workspaceFileSignature(file, root)` (the ETag, probed before the read) /
+  `watchWorkspaceFile(file, root, onChange)` (machine barrel; `root` from
+  `workspaceRootFrom` over the followed row) are the workspace half
   of file-viewer's `file-viewer.bytes`: on disk through host-fs's
   `openHostFile`, as of a ref from the checkout's blob, the size gated before
   the read.
@@ -81,8 +90,6 @@ list, push and resolve GET routes are deleted. Only the image route stays — an
     - `getRangeFiles`
     - `pushRangeReads`
     - `resolvePushRange`
-    - `resolveWorkspaceRoot`
-    - `resolveWorktreePath`
   - Resources:
     - `code.commit-files` (push, immutable, capped: COMMIT_FILES_MAX)
     - `code.commit-info` (push, immutable)
@@ -99,15 +106,16 @@ list, push and resolve GET routes are deleted. Only the image route stays — an
     - `infra/host-fs.watchHostDir`
     - `infra/host-fs.watchHostPath`
     - `network/live.serveValue`
-  - Exports (types): `WorkspaceFile`
+  - Exports (types):
+    - `WorkspaceFile`
+    - `WorkspaceRoot`
   - Exports (values):
-    - `loadWorkspaceRoot`
     - `readWorkspaceBytes`
     - `watchCheckout`
     - `watchWorkspaceFile`
-    - `watchWorkspaceRoot`
+    - `workspaceAttemptIds`
     - `workspaceFileSignature`
-    - `workspaceRootReads`
+    - `workspaceRootFrom`
 - Cross-plugin:
   - Imported by:
     - `code-explorer/file-resolve`

@@ -9,7 +9,7 @@ import type { ForeignSessionPayload } from "@plugins/conversations/plugins/trans
  * `(conversationId, foreignSessionId)`.
  *
  * The debounce is not cosmetic rate-limiting: the caller is
- * `resolveConversationTranscriptPaths`, which runs on every transcript read and
+ * `resolveTranscriptPathsOf`, which runs on every transcript read and
  * on every live push of an active conversation — several times a second while an
  * agent is talking — and a corrupt chain stays corrupt, so the condition is
  * persistent. `recordReport` is a DB upsert; without a gate in FRONT of it a

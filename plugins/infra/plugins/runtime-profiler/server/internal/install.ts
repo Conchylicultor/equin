@@ -8,6 +8,7 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import {
   recordLoaderReadSet,
   setProfilerHooks,
+  type LoaderReadsSink,
   type ProfilerMeasureName,
   type ProfilerSpanDetail,
 } from "@plugins/framework/plugins/server-core/core";
@@ -99,7 +100,9 @@ setProfilerHooks({
     label: string,
     fn: () => T | Promise<T>,
     detail?: ProfilerSpanDetail,
-  ): Promise<T> => recordEntrySpan(kind as SpanKind, label, fn, detail),
+    onReads?: LoaderReadsSink,
+  ): Promise<T> =>
+    recordEntrySpan(kind as SpanKind, label, fn, detail, onReads),
   runTracked,
   recordSpan: (
     kind: string,

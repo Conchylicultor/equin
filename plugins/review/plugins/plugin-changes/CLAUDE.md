@@ -8,15 +8,18 @@ placeholder: until it loads the review shows its loading state.
 `pluginChangesServed` serves it external (the truth is the plugin trees on
 disk plus git) with `throttleMs: 3000` (a burst of agent commits costs at
 most one tree rebuild per 3 s window). It follows the conversation's worktree
-watch while subscribed (`whileSubscribed`: `watchEditedFiles`, the same
+watch while subscribed (`whileFollowing`: `watchEditedFiles`, the same
 refcounted room `edited-files` reads through — an edit recomputes that
 conversation only; not a `recomputeOn` edge, since the paged `edited-files` is
 a keyed window, which cascades nothing, D32), and `recomputeOn` the bare
 `refHeadServed` (a ref advance recomputes every subscribed conversation).
-It also declares `reads: [_conversations, _attempts]` (the worktree lookup,
-`findWorkspaceOfConversation`): the watch hears only edits, so a write that
-moves a worktree must reach this value on its own
-(`machine/internal/plugin-changes-resource.test.ts`).
+Its worktree comes from a follow of tasks-core's `conversationWorkspaces`
+(`{ ids: [conversationId] }`, read through `conversationWorkspaceOf`): the
+loader is handed the row fresh (`followed.ws`) and the watch its path
+(`whileFollowing.over`), a write that moves it re-runs that conversation's
+tuple only, and the watch is re-started over the new path (the follow's
+re-point) —
+the watch hears only edits, so the move must reach this value on its own.
 A push's review reads `pushPluginChanges` (`review.push-plugin-changes`,
 `params: ["first", "last"]`): the review source carries the push's earliest and
 latest sha from the live `pushes` rows, and `server/internal/push-plugin-changes.ts`

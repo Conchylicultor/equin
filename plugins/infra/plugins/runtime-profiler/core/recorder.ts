@@ -784,6 +784,15 @@ export type LoaderReadSetSink = (
 ) => void;
 let loaderReadSetSink: LoaderReadSetSink | null = null;
 
+/** One loader entry's own capture (`recordEntrySpan`'s `onReads`). */
+export type LoaderReadSetOwnSink = (
+  tables: ReadonlySet<string>,
+  tags: ReadonlyMap<string, ReadonlySet<string | null>> | undefined,
+) => void;
+
+/** A loader run's capture when it read nothing. */
+const NO_TABLES: ReadonlySet<string> = new Set();
+
 export function installLoaderReadSetSink(sink: LoaderReadSetSink): void {
   loaderReadSetSink = sink;
 }
@@ -1571,6 +1580,12 @@ export async function recordEntrySpan<T>(
   label: string,
   fn: () => T | Promise<T>,
   detail?: SpanDetail,
+  /**
+   * A `loader` entry's own read capture, handed as its span closes (beside
+   * the per-key sink): the run's reads alone, whatever other run of the key
+   * closes around it.
+   */
+  onReads?: LoaderReadSetOwnSink,
 ): Promise<T> {
   const cur = contextRuntime.current();
   const parent: SpanRef | null = cur
@@ -1653,11 +1668,15 @@ export async function recordEntrySpan<T>(
       detail,
     );
     // Hand the loader's captured table read-set to the sink, keyed by label
-    // (the resource key). Gating on `loader` kind means a stray table captured
-    // under a non-loader entry is never indexed. Done after `record` so it can
-    // never affect span recording — and whatever `record` decided to keep.
-    if (kind === "loader" && ctx.tables && ctx.tables.size > 0) {
-      loaderReadSetSink?.(label, ctx.tables, ctx.tags);
+    // (the resource key) — an EMPTY one too: the per-run capture describes
+    // the last run, so a run that read nothing (a pure follower, a memo hit)
+    // is never judged on an earlier run's reads. Gating on `loader` kind
+    // means a stray table captured under a non-loader entry is never indexed.
+    // Done after `record` so it can never affect span recording — and
+    // whatever `record` decided to keep.
+    if (kind === "loader") {
+      loaderReadSetSink?.(label, ctx.tables ?? NO_TABLES, ctx.tags);
+      onReads?.(ctx.tables ?? NO_TABLES, ctx.tags);
     }
   }
 }

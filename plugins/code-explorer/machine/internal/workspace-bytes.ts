@@ -5,7 +5,8 @@ import { openHostFile } from "@plugins/infra/plugins/host-fs/server";
 import { hostPathVersion } from "@plugins/infra/plugins/host-fs/machine";
 import { resolveInsideRoot } from "../../server/internal/contained-path";
 import { isAllowedRef, resolveRef } from "../../server/internal/resolve-ref";
-import { loadWorkspaceRoot, type WorkspaceFile } from "./workspace";
+import type { WorkspaceRoot } from "../../server/internal/resolve-worktree-path";
+import type { WorkspaceFile } from "./workspace";
 
 // A local blob read serving an open read; only a wedged child reaches this,
 // and it then fails as a named error (see get-file-content.ts).
@@ -36,16 +37,15 @@ export type WorkspaceBytesResult =
 
 /**
  * The bytes of a workspace file — on disk now (any workspace kind, through
- * host-fs's one file opener) or AS OF `ref` (a checkout's blob). Resolving
- * an attempt-id workspace reads its attempt row: a live value serving
- * through it declares `workspaceRootReads`. Watch it with
- * `watchWorkspaceFile`.
+ * host-fs's one file opener) or AS OF `ref` (a checkout's blob) — under the
+ * workspace's `root` (`workspaceRootFrom` over the attempt row a live value
+ * follows; `null`: no workspace). Watch it with `watchWorkspaceFile`.
  */
 export async function readWorkspaceBytes(
   file: WorkspaceFile,
+  root: WorkspaceRoot | null,
   maxBytes: number,
 ): Promise<WorkspaceBytesResult> {
-  const root = await loadWorkspaceRoot(file.workspace);
   if (root === null) return { kind: "no-workspace" };
   const abs = resolveInsideRoot(root.path, file.path);
   if (abs === null) return { kind: "invalid-path" };
@@ -96,15 +96,16 @@ export async function readWorkspaceBytes(
  * The revision of what a read of `file` answers — the ETag of a value serving
  * it (`revalidate`), probed before the read, so a change landing mid-read
  * leaves the tag older than the bytes and the next probe misses. Covers every
- * input the read has: the workspace's root (its attempt row), and on disk the
+ * input the read has: the workspace's `root` (as `readWorkspaceBytes` takes
+ * it), and on disk the
  * file's own stamp (host-fs's `hostPathVersion` — inode, size, modified time;
  * an archive member's archive), as of a ref the blob the ref names. A tuple
  * the read refuses tags its refusal.
  */
 export async function workspaceFileSignature(
   file: WorkspaceFile,
+  root: WorkspaceRoot | null,
 ): Promise<string> {
-  const root = await loadWorkspaceRoot(file.workspace);
   if (root === null) return "no-workspace";
   const abs = resolveInsideRoot(root.path, file.path);
   if (abs === null) return "invalid-path";

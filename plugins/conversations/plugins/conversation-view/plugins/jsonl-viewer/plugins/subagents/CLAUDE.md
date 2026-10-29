@@ -25,9 +25,13 @@ opens, appends and closes per line — so the existing recursive watcher over
 ## Discovery derives from the anchored chain, and must keep doing so
 
 A sub-agent directory is a kept session transcript's path, minus `.jsonl`, plus
-`/subagents` (`subagentDirs`). The paths come from
-`resolveConversationTranscriptPaths`, which returns only what
-`resolveAnchoredChain` **kept**.
+`/subagents` (`subagentDirsOf`). The paths come from
+`resolveTranscriptPathsOf`, which returns only what `resolveAnchoredChain`
+**kept**, over the chain the served values FOLLOW (transcript-source's
+`transcriptChainFollows`): the loaders, and the watcher rooms from the rows
+their start was handed (a recorded session moves the followed rows, and the
+framework restarts the room over the new chain). The resolved paths are the
+memos' input, so nothing in this plugin reads Postgres.
 
 That is the whole ownership story, and it is load-bearing. A session chain is a
 list of ids *somebody else* recorded, and it can name another conversation's
@@ -74,7 +78,7 @@ from the transcript alone with no running state, the running-agents band and
 stat hide, a task notification is declined, and the sub-agent pane shows the
 message. `server/` keeps the discovery (`subagentDirOf`,
 `listSubagentEntries`) conversations/usage imports. Each
-watches its files only while its tuple has a subscriber: `whileSubscribed` opens
+watches its files only while its tuple has a subscriber: `whileFollowing` opens
 a `watchPaths` room (a synchronous start — the sub-ack is never held behind it),
 primes the memo from the room's `{ value, signature }` pair before calling
 `notify`, and returns the stop that closes the room and evicts the memo.
@@ -361,7 +365,7 @@ A `Workflow` tool call runs its agents somewhere else on disk:
 ```
 
 **Discovered below the same roots, never resolved from elsewhere.**
-`listSubagentEntries` walks `<root>/workflows/wf_*` under each `subagentDirs`
+`listSubagentEntries` walks `<root>/workflows/wf_*` under each `subagentDirsOf`
 root and tags those entries with their `workflowRunId`, so the anchored-chain
 ownership above still holds. The watcher routes by exact parent directory, so
 `subagentWatchDirs` adds `workflows/` and every run folder to the watched set —
@@ -423,10 +427,11 @@ created heals on the next scan.
 
 ## Every reader takes its directories as an argument
 
-`subagentDirs(conversationId)` is the ONE place that decides which directories
-this plugin may look at. `listSubagentEntries`, `scanActivityIn` and
-`findSubagentIn` all take the directory list, and the conversation-level
-functions are thin bindings over them.
+`subagentDirsOf(parentPaths)` — over the anchored paths above — is the ONE
+place that decides which directories this plugin may look at.
+`listSubagentEntries`, `scanActivityIn` and `findSubagentIn` all take the
+directory list, and every reader above them takes the parent's anchored paths,
+never a conversation id it would resolve itself.
 
 That keeps the ownership boundary structural rather than conventional: nothing
 downstream can widen the set, because nothing downstream resolves one.

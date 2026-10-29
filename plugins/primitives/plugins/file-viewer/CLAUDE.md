@@ -42,12 +42,14 @@ itself) / `fileUrl(file)` — a renderer never branches on the source to read.
   machine half (`readWorkspaceBytes`: on disk through the same host-fs opener,
   or as of a ref from the checkout's blob, its size gated before the read) and
   invalidated from `watchWorkspaceFile` (the file's entry; the checkout's HEAD
-  and refs for a named ref; nothing for a sha); resolving an attempt-id
-  workspace reads its attempt row, declared as the value's `reads`
-  (`workspaceRootReads`). Its ETag (`revalidate`) is the file's revision —
+  and refs for a named ref; nothing for a sha); an attempt-id workspace's
+  root is its attempt row, FOLLOWED (tasks-core's `attemptWorkspaces` by
+  code-explorer's `workspaceAttemptIds`, resolved by `workspaceRootFrom`), so
+  only a write to that attempt's workspace reaches the tuple and re-points
+  its watch. Its ETag (`revalidate`) is the file's revision —
   host-fs's `hostPathVersion` stamp, or code-explorer's
   `workspaceFileSignature` — probed before the read, so an invalidation that
-  moved nothing (an attempts-table write) is a 304, not a re-read. Refused: `missing` (the workspace too), `denied`,
+  moved nothing is a 304, not a re-read. Refused: `missing` (the workspace too), `denied`,
   `too-large`, `unsupported` (a folder, an unreadable archive member, a
   revision of a workspace that is not a checkout), `invalid-path` (a malformed
   path or ref).
@@ -140,9 +142,11 @@ itself) / `fileUrl(file)` — a renderer never branches on the source to read.
   - Uses:
     - `code-explorer.readWorkspaceBytes`
     - `code-explorer.watchWorkspaceFile`
+    - `code-explorer.workspaceAttemptIds`
     - `code-explorer.WorkspaceFile`
     - `code-explorer.workspaceFileSignature`
-    - `code-explorer.workspaceRootReads`
+    - `code-explorer.WorkspaceRoot`
+    - `code-explorer.workspaceRootFrom`
     - `infra/host-fs.hostPathVersion`
     - `infra/host-fs.resolvedOrNull`
     - `infra/host-fs.resolveOrRefuse`

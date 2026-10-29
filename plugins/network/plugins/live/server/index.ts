@@ -40,6 +40,9 @@ export type {
   ServePagedValueOptions,
   ServeValueOptions,
 } from "../core/internal/compile-value";
+// The `follow` a value's `follows` is handed — for a helper declaring
+// follows shared by several values (transcript-source's chain follows).
+export type { FollowBuilder } from "../core/internal/follows";
 export type {
   AllCollectionSpecs,
   AllWhereColumns,
@@ -57,8 +60,10 @@ export type {
   LookupCollectionSpecs,
   ServeCollectionOptions,
   ServedAllCollection,
+  ServedAllResources,
   ServedCollection,
   ServedLookupCollection,
+  ServedWindowCollection,
 } from "./internal/serve-collection";
 
 export default {

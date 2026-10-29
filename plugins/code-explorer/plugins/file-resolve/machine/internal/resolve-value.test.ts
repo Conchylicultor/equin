@@ -15,7 +15,13 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { RESOLVE_MAX_MATCHES } from "../../shared/resolved-file";
+import { workspaceRootFrom } from "@plugins/code-explorer/machine";
 import { loadResolvedFile } from "./resolve-value";
+
+/** A tuple's answer, its workspace (an absolute path: no attempt row) resolved as the value does. */
+async function resolve(q: { worktree: string; path: string }) {
+  return loadResolvedFile(q, await workspaceRootFrom(q.worktree, []));
+}
 
 let base: string;
 let repo: string;
@@ -40,10 +46,10 @@ afterAll(() => {
 describe("code.resolve-file", () => {
   test("an existing path is exact; inside the checkout it comes back relative", async () => {
     expect(
-      await loadResolvedFile({ worktree: repo, path: "only/here/unique.ts" }),
+      await resolve({ worktree: repo, path: "only/here/unique.ts" }),
     ).toEqual({ kind: "exact", source: "git", path: "only/here/unique.ts" });
     expect(
-      await loadResolvedFile({
+      await resolve({
         worktree: repo,
         path: join(repo, "only/here/unique.ts"),
       }),
@@ -51,10 +57,12 @@ describe("code.resolve-file", () => {
   });
 
   test("a fuzzy path resolves through ls-files, capped with its total", async () => {
-    expect(
-      await loadResolvedFile({ worktree: repo, path: "here/unique.ts" }),
-    ).toEqual({ kind: "resolved", matches: ["only/here/unique.ts"], total: 1 });
-    const many = await loadResolvedFile({ worktree: repo, path: "index.ts" });
+    expect(await resolve({ worktree: repo, path: "here/unique.ts" })).toEqual({
+      kind: "resolved",
+      matches: ["only/here/unique.ts"],
+      total: 1,
+    });
+    const many = await resolve({ worktree: repo, path: "index.ts" });
     expect(many.kind).toBe("resolved");
     if (many.kind !== "resolved") return;
     expect(many.matches).toHaveLength(RESOLVE_MAX_MATCHES);
@@ -62,15 +70,15 @@ describe("code.resolve-file", () => {
   });
 
   test("nothing matching is not-found; no checkout is refused", async () => {
-    expect(await loadResolvedFile({ worktree: repo, path: "zzz.ts" })).toEqual({
+    expect(await resolve({ worktree: repo, path: "zzz.ts" })).toEqual({
       kind: "not-found",
     });
-    expect(await loadResolvedFile({ worktree: repo, path: "" })).toEqual({
+    expect(await resolve({ worktree: repo, path: "" })).toEqual({
       kind: "not-found",
     });
     let code: string | undefined;
     try {
-      await loadResolvedFile({ worktree: join(base, "plain"), path: "x" });
+      await resolve({ worktree: join(base, "plain"), path: "x" });
     } catch (err) {
       code = (err as { code: string }).code;
     }

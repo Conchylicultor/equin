@@ -14,6 +14,7 @@ import {
   defineResource,
   keptSnapshotValue,
   loadResourceByKey,
+  loadResourceFresh,
   Resource as ResourceContribution,
 } from "@plugins/framework/plugins/server-core/core";
 import type { Resource } from "@plugins/framework/plugins/resource-runtime/core";
@@ -42,9 +43,13 @@ import {
   compileCountQuery,
   compileGroupsQuery,
   compileJoins,
+  deferredPointQueryResource,
   deferredWindowQueryResource,
+  followRead,
   joinRefs,
+  pointQueryResource,
   windowQueryResource,
+  type FollowablePlan,
   type CompiledCount,
   type CompiledGroups,
   type ReadColumn,
@@ -103,6 +108,15 @@ import {
 } from "./serve-all";
 import { serveOffFeed, type OffFeedOptions } from "./serve-off-feed";
 import { andWhere, membershipSql } from "./membership-sql";
+import {
+  FOLLOW_SOURCE,
+  type FollowIds,
+  type FollowIdsSource,
+  type FollowIdsTarget,
+  type FollowWhere,
+  type FollowWhereSource,
+  type FollowWhereTarget,
+} from "../../core/internal/follows";
 import {
   assertServesItsRows,
   isEntitySource,
@@ -282,6 +296,16 @@ export interface CollectionSpecs extends LookupCollectionSpecs {
   count: CompiledCount<LiveCountParams> | null;
 }
 
+/**
+ * A served collection a value follows by `{ ids }` — its `:rows` point set
+ * (`serveValue`'s `follows`; `../../core/internal/follows`).
+ */
+export type ServedRowsTarget<Row> = FollowIdsTarget<Row>;
+
+/** A served window collection: its resources, followed by `{ ids }` (its `:rows`). */
+export type ServedWindowCollection<Row> = ServedCollection<Row> &
+  FollowIdsTarget<Row>;
+
 export interface ServedCollection<Row> {
   /** The window resource (`key`). */
   window: Resource<Row[], LiveWindowParams>;
@@ -299,9 +323,18 @@ export interface ServedCollection<Row> {
 
 /**
  * A collection declared `all`, served: the whole ordered set (`key`) and its
- * `:rows` sibling. `B`: its `by` fields, when scoped.
+ * `:rows` sibling. `B`: its `by` fields, when scoped. A value follows a
+ * scoped set by `{ where }` (one scope), an unscoped one by `{ ids }` (its
+ * `:rows`).
  */
-export interface ServedAllCollection<Row, B extends string = never> {
+export type ServedAllCollection<
+  Row,
+  B extends string = never,
+> = ServedAllResources<Row, B> &
+  ([B] extends [never] ? FollowIdsTarget<Row> : FollowWhereTarget<Row, B>);
+
+/** The resources a collection declared `all` mints (see {@link ServedAllCollection}). */
+export interface ServedAllResources<Row, B extends string = never> {
   /**
    * The whole ordered set (`key`) — keyed; param-less and L2-persisted when
    * preloaded, or one tuple per scope (`{ [K in B]: string }`, never persisted).
@@ -328,8 +361,8 @@ export type DeclaredCollection<S> = S & {
   declare: ReturnType<typeof ResourceContribution.Declare>[];
 };
 
-/** A lookup-only collection, served: its one minted resource, `${key}:rows`. */
-export interface ServedLookupCollection<Row> {
+/** A lookup-only collection, served: its one minted resource, `${key}:rows` — followed by `{ ids }`. */
+export interface ServedLookupCollection<Row> extends FollowIdsTarget<Row> {
   /** The point resource (`${key}:rows`) — the only one a lookup-only collection mints. */
   rows: Resource<Row[], PointParams>;
   /** Every minted key — `[key:rows]`. */
@@ -1146,7 +1179,7 @@ export interface ServeCollectionOverloads<H> {
   >(
     collection: SingleTableCollection<Row, F, S> & H,
     opts: ServeCollectionOptions<T, Row, J, keyof F & string>,
-  ): ServedCollection<Row>;
+  ): ServedWindowCollection<Row>;
   <
     Row,
     T extends ServedSource,
@@ -1213,7 +1246,7 @@ export function serveAnyCollection<
     // inferred per call); the body hands every external form on erased.
     | ServeExternalWindowOptions<Row, F, S, null, LiveCollectionChanges>,
 ):
-  | ServedCollection<Row>
+  | ServedWindowCollection<Row>
   | ServedLookupCollection<Row>
   | ServedAllCollection<Row, string>
   | ServedAllCollection<Row>
@@ -1262,10 +1295,15 @@ export function serveAnyCollection<
     const scoped = collection as LiveAllCollection<Row, string>;
     let all: Resource<Row[], Record<string, string>>;
     let rows: Resource<Row[], PointParams>;
-    if ((collection.exposes ?? null) === null) {
+    // What a follow copies of the set (its plan, from the compile — read
+    // only once bound for a deferred one).
+    let followable: () => AllCollectionSpecs<Row, string>["followable"];
+    const deferred = (collection.exposes ?? null) !== null;
+    if (!deferred) {
       const specs = compileAllSpecs(scoped, allOpts);
       all = defineResource(scoped.all, specs.all);
       rows = defineResource(collection.rows, specs.rows);
+      followable = () => specs.followable;
     } else {
       let specs: AllCollectionSpecs<Row, string> | undefined;
       const compiled = (): AllCollectionSpecs<Row, string> =>
@@ -1276,7 +1314,25 @@ export function serveAnyCollection<
         ));
       all = defineDeferredResource(scoped.all, () => compiled().all);
       rows = defineDeferredResource(collection.rows, () => compiled().rows);
+      followable = () => {
+        if (specs === undefined) {
+          throw new Error(
+            `serveCollection("${collection.key}"): followed before bindDeferredResources compiled it — a follower of a deferred collection binds after it.`,
+          );
+        }
+        return specs.followable;
+      };
     }
+    // A scoped set is followed by its scope, an unscoped one by id (its
+    // `:rows`) — one form per collection, so a follow names no form.
+    const source =
+      (scoped.all as { all: { by?: readonly string[] } }).all.by === undefined
+        ? idsSource(collection, () => followable().rows, deferred)
+        : whereSource(
+            scoped.all.key,
+            () => followable().all ?? scopeMissing(collection.key),
+            deferred,
+          );
     return {
       all,
       rows,
@@ -1285,16 +1341,21 @@ export function serveAnyCollection<
         ResourceContribution.Declare(all),
         ResourceContribution.Declare(rows),
       ],
-    };
+      [FOLLOW_SOURCE]: source,
+    } as ServedAllCollection<Row, string>;
   }
   const opts = served as ServeCollectionOptions<T, Row, J, keyof F & string>;
   if (collection.window === undefined) {
     const specs = compileCollection(collection, opts);
-    const rows = windowQueryResource(collection.rows, specs.rows);
+    const { resource: rows, followable } = pointQueryResource(
+      collection.rows,
+      specs.rows,
+    );
     return {
       rows,
       keys: [rows.key],
       declare: [declareRows(collection, rows, opts.preloadRows)],
+      [FOLLOW_SOURCE]: idsSource(collection, followable, false),
     };
   }
   if (
@@ -1306,13 +1367,73 @@ export function serveAnyCollection<
   }
   const specs = compileCollection(collection, opts);
   const window = windowQueryResource(collection.window, specs.window);
-  const rows = windowQueryResource(collection.rows, specs.rows);
+  const { resource: rows, followable } = pointQueryResource(
+    collection.rows,
+    specs.rows,
+  );
   const groups = defineResource(collection.groups, specs.groups);
   const count =
     collection.count === null || specs.count === null
       ? null
       : defineResource(collection.count, specs.count);
-  return servedWindow(collection, window, rows, groups, count, opts);
+  return {
+    ...servedWindow(collection, window, rows, groups, count, opts),
+    [FOLLOW_SOURCE]: idsSource(collection, followable, false),
+  };
+}
+
+/**
+ * A served collection's `:rows` as a follow reads it (`../../core/internal/follows`):
+ * a tuple's rows read FRESH through the resource's own loader (the runtime's
+ * `loadResourceFresh` — its loader span and drift guard, never a joined
+ * flight), and the follow's routes copied from the plan the compile minted
+ * (query-resource's `followRead`).
+ */
+function idsSource<Row>(
+  collection: {
+    rows: {
+      key: string;
+      point: { encode: (ids: readonly string[]) => PointParams };
+    };
+  },
+  followable: () => FollowablePlan,
+  deferred: boolean,
+): FollowIdsSource<Row> {
+  const key = collection.rows.key;
+  return {
+    form: "ids",
+    collection: key,
+    read: async ({ ids }: FollowIds) =>
+      (await loadResourceFresh(
+        key,
+        collection.rows.point.encode(ids),
+      )) as readonly Row[],
+    reach: (name, tupleOf) => followRead(followable(), name, tupleOf),
+    deferred,
+  };
+}
+
+/** A scoped `all` set's scope as a follow reads it (see `idsSource`). */
+function whereSource<Row>(
+  key: string,
+  followable: () => FollowablePlan,
+  deferred: boolean,
+): FollowWhereSource<Row, string> {
+  return {
+    form: "where",
+    collection: key,
+    read: async ({ where }: FollowWhere<string>) =>
+      (await loadResourceFresh(key, where)) as readonly Row[],
+    reach: (name, tupleOf) => followRead(followable(), name, tupleOf),
+    deferred,
+  };
+}
+
+function scopeMissing(key: string): never {
+  // Unreachable: the compile mints the scope's followable exactly for a scoped set.
+  throw new Error(
+    `serveCollection("${key}"): a scoped \`all\` set compiled no scope to follow.`,
+  );
 }
 
 /**
@@ -1480,7 +1601,7 @@ function serveDeferred<
 >(
   collection: SingleTableCollection<Row, F, S>,
   opts: ServeCollectionOptions<T, Row, J, keyof F & string>,
-): ServedCollection<Row> {
+): ServedWindowCollection<Row> {
   // C4: typed away (`all?: never`); a cast that reached here would be
   // compiled at boot as a window it does not have.
   if ((collection as { all?: unknown }).all !== undefined) {
@@ -1503,7 +1624,7 @@ function serveDeferred<
     collection.window,
     () => compiled().window,
   );
-  const rows = deferredWindowQueryResource(
+  const { resource: rows, followable } = deferredPointQueryResource(
     collection.rows,
     () => compiled().rows,
   );
@@ -1523,5 +1644,8 @@ function serveDeferred<
           }
           return c;
         });
-  return servedWindow(collection, window, rows, groups, count, opts);
+  return {
+    ...servedWindow(collection, window, rows, groups, count, opts),
+    [FOLLOW_SOURCE]: idsSource(collection, followable, true),
+  };
 }

@@ -291,4 +291,84 @@ describe("createSignedMemo", () => {
     memo.prime("k", "S2", { v: "primed" });
     expect(await memo.get("k")).toBe(second);
   });
+
+  describe("a memo over caller-held input", () => {
+    // The input a live value's followed rows hand it: the memo reads nothing
+    // itself, and the signature fingerprints the input.
+    function createInputMemo() {
+      const seen = { signature: [] as string[], compute: [] as string[] };
+      const memo = createSignedMemo<string, { ids: readonly string[] }>({
+        name: "input",
+        signature: async (key, input) => {
+          seen.signature.push(`${key}:${input.ids.join(",")}`);
+          return `${key}|${input.ids.join(",")}`;
+        },
+        compute: async (key, input) => {
+          seen.compute.push(`${key}:${input.ids.join(",")}`);
+          return `${key}=${input.ids.length}`;
+        },
+      });
+      return { seen, memo };
+    }
+
+    test("the probe and the compute are handed the same input", async () => {
+      const { seen, memo } = createInputMemo();
+      expect(await memo.signature("k", { input: { ids: ["a"] } })).toBe("k|a");
+      expect(await memo.get("k", { input: { ids: ["a", "b"] } })).toBe("k=2");
+      // `get` re-probes after its compute (an undone change is never a hit),
+      // with the same input.
+      expect(seen.signature).toEqual(["k:a", "k:a,b", "k:a,b"]);
+      expect(seen.compute).toEqual(["k:a,b"]);
+    });
+
+    test("an unchanged input is a hit; a moved input recomputes", async () => {
+      const { seen, memo } = createInputMemo();
+      const first = await memo.get("k", { input: { ids: ["a"] } });
+      expect(await memo.get("k", { input: { ids: ["a"] } })).toBe(first);
+      expect(seen.compute).toEqual(["k:a"]);
+      expect(await memo.get("k", { input: { ids: ["a", "b"] } })).toBe("k=2");
+      expect(seen.compute).toEqual(["k:a", "k:a,b"]);
+    });
+
+    test("notBefore rides beside the input", async () => {
+      const gate = openGate();
+      let started = 0;
+      const parked = createSignedMemo<string, string>({
+        name: "input-not-before",
+        signature: async (_key, input) => input,
+        compute: async (_key, input) => {
+          started++;
+          await gate.promise;
+          return input;
+        },
+      });
+      const first = parked.get("k", { input: "S" });
+      await Bun.sleep(0);
+      expect(started).toBe(1);
+      // Joins the running compute: same signature, no floor.
+      const joined = parked.get("k", { input: "S" });
+      // Refuses it: the floor is after its start.
+      const fresh = parked.get("k", {
+        input: "S",
+        notBefore: performance.now(),
+      });
+      await Bun.sleep(0);
+      gate.release();
+      expect(await Promise.all([first, joined, fresh])).toEqual([
+        "S",
+        "S",
+        "S",
+      ]);
+      expect(started).toBe(2);
+    });
+
+    test("a memo without input takes none (tsc)", async () => {
+      const { memo } = createFakeAuthority();
+      // @ts-expect-error — a void-input memo is handed no input
+      await memo.signature("k", { input: 1 });
+      const { memo: withInput } = createInputMemo();
+      // @ts-expect-error — an input memo's probe requires its input
+      await rejectionOf(withInput.signature("k"));
+    });
+  });
 });

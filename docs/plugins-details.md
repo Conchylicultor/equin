@@ -13462,8 +13462,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `getRangeFiles`
       - `pushRangeReads`
       - `resolvePushRange`
-      - `resolveWorkspaceRoot`
-      - `resolveWorktreePath`
     - Resources:
       - `code.commit-files` (push, immutable, capped: COMMIT_FILES_MAX)
       - `code.commit-info` (push, immutable)
@@ -13480,15 +13478,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `infra/host-fs.watchHostDir`
       - `infra/host-fs.watchHostPath`
       - `network/live.serveValue`
-    - Exports (types): `WorkspaceFile`
+    - Exports (types):
+      - `WorkspaceFile`
+      - `WorkspaceRoot`
     - Exports (values):
-      - `loadWorkspaceRoot`
       - `readWorkspaceBytes`
       - `watchCheckout`
       - `watchWorkspaceFile`
-      - `watchWorkspaceRoot`
+      - `workspaceAttemptIds`
       - `workspaceFileSignature`
-      - `workspaceRootReads`
+      - `workspaceRootFrom`
   - Cross-plugin:
     - Imported by:
       - `code-explorer/file-resolve`
@@ -13598,10 +13597,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useResolvedFile`
       - Machine:
         - Uses:
-          - `code-explorer.loadWorkspaceRoot`
           - `code-explorer.watchCheckout`
-          - `code-explorer.watchWorkspaceRoot`
-          - `code-explorer.workspaceRootReads`
+          - `code-explorer.workspaceAttemptIds`
+          - `code-explorer.WorkspaceRoot`
+          - `code-explorer.workspaceRootFrom`
           - `infra/host-fs.watchHostPath`
           - `network/live.serveValue`
       - Cross-plugin:
@@ -15953,7 +15952,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `resource.declare` "jsonl-events.tool-call"
               - `resource.declare` "jsonl-events:meta"
             - Uses:
-              - `conversations/transcript-source.transcriptChainReads`
+              - `conversations/transcript-source.followedTranscriptChain`
+              - `conversations/transcript-source.transcriptChainFollows`
               - `conversations/transcript-source.TranscriptImageKeyError`
               - `conversations/transcript-source.TranscriptSource`
               - `infra/git/git-read-cache.createSignedMemo`
@@ -17791,7 +17791,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Uses:
                   - `conversations/conversation-view/jsonl-viewer.conversationEvents`
                   - `conversations/conversation-view/jsonl-viewer.watchConversationEvents`
-                  - `conversations/transcript-source.transcriptChainReads`
+                  - `conversations/transcript-source.followedTranscriptChain`
+                  - `conversations/transcript-source.transcriptChainFollows`
                   - `network/live.serveValue`
                 - Exports (values): `serveTranscriptFold`
               - Cross-plugin:
@@ -19599,23 +19600,31 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes: `IdKinds.Kind` "sess"
         - Uses: `ids.IdKinds`
       - Server:
-        - Contributes: `ids.kind` "sess"
+        - Contributes:
+          - `ids.kind` "sess"
+          - `resource.declare` "conversation-sessions"
+          - `resource.declare` "conversation-sessions:rows"
         - Uses:
           - `database.db`
           - `database/sql-projection.parsed`
           - `ids.IdKinds`
           - `infra/entities.defaultNow`
           - `infra/entities.defineEntity`
+          - `network/live.serveCollection`
         - DB schema: `plugins/conversations/plugins/session-chain/server/internal/tables.ts`
         - Exports (types):
           - `SessionChainEntry`
           - `SharedSessionId`
         - Exports (values):
           - `_conversationSessions`
+          - `conversationSessionsServed`
           - `listConversationsForSessions`
           - `listSessionChain`
           - `listSharedClaudeSessionIds`
           - `recordSessionId`
+        - Resources:
+          - `conversation-sessions` (keyed)
+          - `conversation-sessions:rows` (keyed, point)
       - Core:
         - Uses:
           - `fields.FieldsRecord`
@@ -19625,8 +19634,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ids.idKindField`
           - `ids.IdOf`
           - `infra/entities.entityRef`
+          - `network/live.liveCollection`
         - Exports (types): `SessionLinkId`
         - Exports (values):
+          - `conversationSessions`
           - `conversationSessionsEntityRef`
           - `sessionLinkIdKind`
       - Cross-plugin:
@@ -19634,6 +19645,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations`
           - `conversations/transcript-source`
           - `conversations/transcript-watcher`
+          - `debug/read-set`
     - **`spawn-failure`** — Per-conversation spawn failure: the latest error of a conversation's spawn job (the failed step and its message), stored in conversations_ext_spawn_failure by the job on every failed attempt and deleted once a session starts, served as a lookup-only collection.
       - Server:
         - Contributes: `resource.declare` "conversation-spawn-failures:rows"
@@ -19816,8 +19828,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`transcript-source`** — A conversation's transcript as a host service: TranscriptSource (its events, a signature that moves with them, and a watch), with the Claude Code JSONL parser every provider runs. The desktop's provider reads the session files (transcript-watcher#machine); a host without them provides its own (plugins/memory).
       - Server:
         - Uses:
-          - `conversations/session-chain._conversationSessions`
-          - `tasks/tasks-core._conversations`
+          - `conversations/session-chain.conversationSessionsServed`
+          - `tasks/tasks-core.conversationSessionTailsServed`
         - Exports (types):
           - `TranscriptByteRead`
           - `TranscriptImageIo`
@@ -19828,8 +19840,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `buildJsonlEvents`
           - `encodeImageKey`
+          - `followedTranscriptChain`
           - `readImageKey`
-          - `transcriptChainReads`
+          - `transcriptChainFollows`
           - `TranscriptImageKeyError`
           - `TranscriptLines`
           - `TranscriptSource`
@@ -19853,6 +19866,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TeammateMessage`
           - `TokenUsage`
           - `ToolCallResult`
+          - `TranscriptChain`
           - `TranscriptImage`
           - `UserTextSegment`
         - Exports (values):
@@ -19876,6 +19890,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `taskStopTimes`
           - `tokenUsageOf`
           - `TokenUsageSchema`
+          - `transcriptChainOf`
           - `TranscriptImageSchema`
           - `unwrapPastedContent`
           - `unwrapRelayEnvelopes`
@@ -19944,6 +19959,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `refreshConversationChain`
           - `resolveAnchoredChain`
           - `resolveConversationTranscriptPaths`
+          - `resolveTranscriptPathsOf`
           - `transcriptChainSignature`
           - `watchPaths`
           - `watchTranscript`
@@ -19956,6 +19972,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations`
           - `conversations/transcript-api`
           - `conversations/transcript-retention`
+          - `debug/read-set`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `server/internal/anchor.ts`, `server/internal/chain-signature.ts`, `server/internal/session-writes.ts`, `server/internal/watcher.ts` (debt)
     - **`turn-ledger`** — Registers the turn id kind (turn) with the web id registry — the server barrel registers the same kind. The turn ledger's backend: the conversation_turns table (one row per turn sent to an agent, its state moved only by applyTurnEvent's pure transition), the accept that holds a turn while its conversation starts, confirmTurn (the agent's confirmation that it took a turn, applied to that row by the turn id it echoed, with the transcript line's uuid; resolvePromptSubmit is its temporary equality-matched fallback for an agent started before turn ids), Stop's and rewind's returnTurnByPromptUuid (the turn taken back, by its transcript line), the turn-ledger.turns live collection and the conversation.userTurnSent event (emitted once the agent confirmed a user's turn).
@@ -21399,6 +21416,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-3xs`
           - `ui/tokens/type-scale --line-height-caption`
+        - Endpoint callers: `read-set`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `server/internal/broadcasts-file.ts`, `server/internal/entries-served.ts`, `server/internal/handle-write.ts` (debt)
       - Shared:
@@ -22882,7 +22900,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shape --spacing`
       - Exemptions:
         - Exempts itself from: `timer/no-unlisted-timer` — `machine/internal/watchdog.ts` (sanctioned)
-    - **`read-set`** — Read-set debug pane: the captured loader→table index and the read-set ceiling — every live-state resource under its change policy (routed, external, unrouted, unbound), with its full routes, relation reads and route drift. Serves resources.debug: the resource runtime's per-resource debug payload (policy, read-set, routes, relation reads, drift, subscribers, loader and notify counters, declared freshness) as one snapshot value every live-state debug pane reads.
+    - **`read-set`** — Read-set debug pane: the captured loader→table index and the read-set ceiling — every live-state resource under its change policy (routed, external, unrouted, unbound), with its full routes, relation reads and route drift. Serves resources.debug: the resource runtime's per-resource debug payload (policy, read-set, routes, relation reads, drift, subscribers, loader and notify counters, declared freshness) as one snapshot value every live-state debug pane reads. Also the worktree-only narrowing fixture (POST /api/debug/read-set/narrowing-fixture, refused on main): creates, re-sessions, moves and deletes a fixture conversation — never a real one — for the network/live narrowing measurement.
       - Web:
         - Slots: `readSetPane.Actions`
         - Slot contributors: `readSetPane.Actions` ← `primitives.pane`
@@ -22913,14 +22931,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `readSetPane`
       - Server:
         - Contributes: `resource.declare` "resources.debug"
-        - Uses: `network/live.serveValue`
+        - Uses:
+          - `conversations/session-chain.recordSessionId`
+          - `conversations/transcript-watcher.refreshConversationChain`
+          - `infra/endpoints.HttpError`
+          - `infra/endpoints.implement`
+          - `network/live.serveValue`
+          - `tasks/tasks-core.deleteConversationRow`
+          - `tasks/tasks-core.getConversation`
+          - `tasks/tasks-core.insertConversation`
+          - `tasks/tasks-core.moveConversationToAttempt`
+          - `tasks/tasks-core.updateConversation`
         - Resources: `resources.debug` (invalidate, snapshot, whole: one per resource this backend registered — the declared resource keys, a few hundred, never the rows they serve, whole: the tables one resource reads or is reached through — a handful per resource, whole: one key per params-tuple some open tab subscribes to — what the user's tabs hold, never the data set, whole: the lists one value's schema reaches — a path per array or record it declares)
+        - Routes: `POST /api/debug/read-set/narrowing-fixture` — internal
       - Core:
         - Uses:
+          - `infra/endpoints.defineEndpoint`
           - `network/live.liveValue`
           - `packages/list-bound.wholeList`
           - `packages/list-bound.wholeRecord`
         - Exports (types):
+          - `NarrowingFixtureBody`
           - `NotifyStats`
           - `ResourceDebug`
           - `ResourceFreshness`
@@ -22929,6 +22960,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ResourcesDebug`
           - `ResourceShape`
         - Exports (values):
+          - `NARROWING_FIXTURE_SPAWNED_BY`
+          - `narrowingFixture`
+          - `NarrowingFixtureBodySchema`
           - `resourcesDebug`
           - `resourcesDebugSchema`
       - Cross-plugin:
@@ -26719,6 +26753,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ExternalResource`
           - `ExternalWindowMembership`
           - `ExternalWindowPolicy`
+          - `FollowReached`
           - `FullRoute`
           - `HostMap`
           - `KeyedDiff`
@@ -26745,6 +26780,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Route`
           - `RoutedRecomputeOn`
           - `RoutePlan`
+          - `RouteVia`
+          - `RunCapture`
           - `RuntimeSocket`
           - `ScopedResourceTable`
           - `ScopePolicy`
@@ -26821,6 +26858,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LiveStateSnapshotHooks`
           - `LoadedServerPlugin`
           - `LoaderAggregateView`
+          - `LoaderReadsSink`
           - `MachineEndpointHttpHandler`
           - `MachineHttpHandler`
           - `MachinePluginDefinition`
@@ -26881,6 +26919,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `isServerReady`
           - `keptSnapshotValue`
           - `loadResourceByKey`
+          - `loadResourceFresh`
           - `machineCollectedDir`
           - `markServerReady`
           - `measureSubscribeCycle`
@@ -30023,12 +30062,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 224 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+        - Imported by: 225 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
           - `apps` ×62
           - `conversations` ×32
           - `infra` ×22
           - `page` ×19
-          - `debug` ×16
+          - `debug` ×17
           - `tasks` ×16
           - `primitives` ×14
           - `reports` ×6
@@ -32291,6 +32330,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CompiledOffFeedQuery`
           - `CompiledUnion`
           - `EntitySource`
+          - `FollowablePlan`
+          - `FollowablePoint`
+          - `FollowRead`
+          - `FollowTuple`
           - `LookupRead`
           - `LookupResult`
           - `LookupSpec`
@@ -32317,10 +32360,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `compileLookup`
           - `compileOffFeedQuery`
           - `compileUnionCollection`
+          - `deferredPointQueryResource`
           - `deferredWindowQueryResource`
+          - `followRead`
           - `joinRefs`
           - `offFeedReach`
           - `offFeedTablesReach`
+          - `pointQueryResource`
           - `presenceExpr`
           - `windowQueryResource`
       - Cross-plugin:
@@ -34147,8 +34193,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useLiveReader`
           - `useLiveRow`
       - Server:
-        - Uses: 33 symbols — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
-          - `infra/query-resource` ×30
+        - Uses: 38 symbols — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+          - `infra/query-resource` ×35
           - `database/sql-column` ×2
           - `network/live/filter.filterSql`
         - Exports (types):
@@ -34161,12 +34207,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CompiledValue`
           - `DeclaredCollection`
           - `DefaultScope`
+          - `FollowBuilder`
           - `LiveValueSource`
           - `LookupCollectionSpecs`
           - `ScopedMemberRead`
           - `ServeAllCollectionOptions`
           - `ServeCollectionOptions`
           - `ServedAllCollection`
+          - `ServedAllResources`
           - `ServedArm`
           - `ServedCollection`
           - `ServedExternalQueryValue`
@@ -34178,6 +34226,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ServedSource`
           - `ServedUnion`
           - `ServedValue`
+          - `ServedWindowCollection`
           - `ServePagedValueOptions`
           - `ServeUnionOptions`
           - `ServeValueOptions`
@@ -34391,9 +34440,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `upsertRows`
           - `valueSubject`
       - Cross-plugin:
-        - Imported by: 315 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 316 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×83
-          - `conversations` ×54
+          - `conversations` ×55
           - `debug` ×32
           - `tasks` ×29
           - `infra` ×21
@@ -34698,12 +34747,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `createTimeSlicer`
           - `createTurnQueue`
           - `yieldMacrotask`
-    - **`parked-watch`** — Watches parked until their target is known: createParkedWatches({ onOpenError }) holds a watch on a key whose target (a conversation's worktree) is not resolvable yet, and opens it from the first load that resolves the target — the park taken before the subscribe's own resolve, so a target found while that resolve is in flight still opens it; a parked open that fails is reported and re-parked, so the next resolving load retries it.
-      - Core:
-        - Exports (types):
-          - `ParkedWatches`
-          - `ParkedWatchesOptions`
-        - Exports (values): `createParkedWatches`
     - **`partial-json`** — parsePartialJson: the value a prefix of a JSON document already holds — every container closed, an in-progress string value finished, an in-progress key, number or literal cut — for drawing a document while it is still being written (a streamed tool call's input).
       - Core:
         - Exports (values): `parsePartialJson`
@@ -43345,9 +43388,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `code-explorer.readWorkspaceBytes`
           - `code-explorer.watchWorkspaceFile`
+          - `code-explorer.workspaceAttemptIds`
           - `code-explorer.WorkspaceFile`
           - `code-explorer.workspaceFileSignature`
-          - `code-explorer.workspaceRootReads`
+          - `code-explorer.WorkspaceRoot`
+          - `code-explorer.workspaceRootFrom`
           - `infra/host-fs.hostPathVersion`
           - `infra/host-fs.resolvedOrNull`
           - `infra/host-fs.resolveOrRefuse`
@@ -50391,16 +50436,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/tasks-core.listPushesForAttempt`
         - Exports (values):
           - `attemptWorkEtag`
-          - `attemptWorkSignature`
           - `deltaEtag`
-          - `evictAttemptWork`
+          - `evictLandedShas`
           - `getAttemptWork`
+          - `landedShasFrom`
           - `probeHeadMain`
           - `probeRefMain`
           - `readBranch`
           - `readDeltaCounts`
           - `readLanded`
-          - `readLandedShas`
           - `readMergeBase`
           - `readPendingFromBranchRef`
           - `readPendingInWorktree`
@@ -52220,8 +52264,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useTaskAttempts`
           - `useTaskConversations`
       - Server:
-        - Contributes: 28 contributions — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
-          - `resource.declare` ×18
+        - Contributes: 36 contributions — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+          - `resource.declare` ×26
           - `derived-view` ×4
           - `ids.kind` ×3
           - `derived-table` ×2
@@ -52238,6 +52282,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/entities.defineEntity`
           - `infra/events.defineTriggerEvent`
           - `infra/query-resource.compileLookup`
+          - `network/live.ColumnOverride`
           - `network/live.serveCollection`
           - `primitives/rank.nextRankUnder`
           - `primitives/rank.RankExecutor`
@@ -52292,8 +52337,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `_taskStatusChangedTriggers`
           - `_taskTitleChangedTriggers`
           - `addTaskDependency`
+          - `attemptConversationIdsServed`
+          - `attemptDeliveriesServed`
+          - `attemptPushIdsServed`
           - `AttemptSchema`
           - `AttemptStatusSchema`
+          - `attemptWorkspacesServed`
           - `clearMandate`
           - `clusterLabelOf`
           - `conversationAttachments`
@@ -52301,8 +52350,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ConversationKindSchema`
           - `conversationOwnerColumns`
           - `conversationOwnerJoins`
+          - `conversationRuntimesServed`
           - `ConversationSchema`
+          - `conversationSessionTailsServed`
           - `conversationStatusChanged`
+          - `conversationWorkspacesServed`
           - `createAttempt`
           - `createTask`
           - `deleteAttempt`
@@ -52338,6 +52390,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `listTasks`
           - `markConversationClosed`
           - `markConversationGone`
+          - `moveConversationToAttempt`
           - `nearestMandate`
           - `orphanedAttemptSink`
           - `pushes`
@@ -52368,7 +52421,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `updateTaskTitle`
           - `withTaskStatusBatch`
           - `workspaceOfAttemptLookup`
-          - `workspaceOfConversationLookup`
         - Register:
           - `defineTriggerEvent('pushes.landed')`
           - `defineTriggerEvent('tasks.statusChanged')`
@@ -52378,9 +52430,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineTriggerEvent('conversation.statusChanged')`
           - `defineTriggerEvent('conversation.created')`
         - Resources:
+          - `attempt-conversation-ids` (keyed)
+          - `attempt-conversation-ids:rows` (keyed, point)
+          - `attempt-deliveries:rows` (keyed, point)
+          - `attempt-push-ids` (keyed)
+          - `attempt-push-ids:rows` (keyed, point)
           - `attempt-workspaces:rows` (keyed, point)
           - `attempts` (keyed)
           - `attempts:rows` (keyed, point)
+          - `conversation-runtimes:rows` (keyed, point)
+          - `conversation-session-tails:rows` (keyed, point)
+          - `conversation-workspaces:rows` (keyed, point)
           - `conversations-active` (keyed)
           - `conversations-active:rows` (keyed, point)
           - `conversations-gone` (keyed, window)
@@ -52435,7 +52495,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TrackFilingGrant`
           - `TrailerCommit`
         - Exports (values):
+          - `attemptConversationIds`
+          - `attemptDeliveries`
           - `attemptDeliveriesEntityRef`
+          - `attemptPushIds`
           - `attemptRows`
           - `AttemptSchema`
           - `attemptsEntityRef`
@@ -52446,15 +52509,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CONVERSATION_TRAILER_KEY`
           - `ConversationKindSchema`
           - `conversationName`
+          - `conversationRuntimes`
           - `conversationsActive`
           - `conversationsById`
           - `ConversationSchema`
           - `conversationsEntityRef`
+          - `conversationSessionTails`
           - `conversationsGone`
           - `conversationsSystem`
           - `ConversationStatusSchema`
           - `ConversationSummarySchema`
           - `ConversationWorkingOnSchema`
+          - `conversationWorkspaceOf`
+          - `conversationWorkspaces`
           - `isAdoptedConversation`
           - `isBlockedStatus`
           - `isSettled`
@@ -52482,11 +52549,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TrackFilingGrantSchema`
           - `TRAILER_LOG_FORMAT`
       - Cross-plugin:
-        - Imported by: 76 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+        - Imported by: 77 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
           - `conversations` ×29
           - `tasks` ×23
           - `active-data` ×5
-          - `debug` ×4
+          - `debug` ×5
           - `page` ×3
           - `apps` ×2
           - `infra` ×2
