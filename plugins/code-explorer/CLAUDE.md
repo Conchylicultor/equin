@@ -60,6 +60,7 @@ list, push and resolve GET routes are deleted. Only the image route stays — an
     - `resource.declare` "code.file"
     - `resource.declare` "code.file-diff"
     - `resource.declare` "code.push-files"
+    - `resource.declare` "code.workspace-root"
   - Uses:
     - `database.db`
     - `infra/endpoints.HttpError`
@@ -90,6 +91,7 @@ list, push and resolve GET routes are deleted. Only the image route stays — an
     - `code.file` (invalidate, notified)
     - `code.file-diff` (invalidate, notified)
     - `code.push-files` (push, notified, capped: COMMIT_FILES_MAX)
+    - `code.workspace-root` (push, notified)
 - Machine:
   - Uses:
     - `infra/endpoints.machineHandler`

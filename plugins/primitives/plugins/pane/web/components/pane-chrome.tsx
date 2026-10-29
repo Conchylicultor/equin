@@ -1,4 +1,3 @@
-import { linkProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { Bar } from "@plugins/primitives/plugins/bar/web";
 import { useContext, useMemo, type ReactNode } from "react";
 import { AdaptiveBar } from "@plugins/primitives/plugins/adaptive-bar/web";
@@ -18,6 +17,7 @@ import { hoverRevealGroup } from "@plugins/primitives/plugins/hover-reveal/web";
 import { PaneScroll } from "./pane-scroll";
 import { FloatingHeaderScroll } from "./floating-header-scroll";
 import { PaneIconAction } from "./pane-icon-action";
+import { PromoteControl } from "./promote-control";
 import { PaneHeaderCell, type PaneHeaderItem } from "./pane-header-item";
 import { PaneTitleContext, type PaneTitleValue } from "./pane-title";
 import { InsidePaneTitleContext } from "./pane-title-guard";
@@ -25,7 +25,7 @@ import { usePaneEntry, type AnyPane } from "../pane";
 import { PaneLayoutContext } from "../maximize-context";
 import { SurfaceChromeContext } from "../surface-chrome-context";
 import { useReservesFloatingBar } from "../reserves-floating-bar";
-import { navIcons, symbol } from "@plugins/ui/plugins/icons/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 const closeIcon = symbol("close");
 const arrowBackIcon = symbol("arrow-back");
@@ -194,7 +194,6 @@ export function PaneChrome({
     useContext(SurfaceChromeContext);
   const doClose = pane.useClose();
   const doBack = pane.useBack();
-  const promote = pane.usePromote();
   const titleValue = useMemo<PaneTitleValue>(
     () => ({ pane: pane._internal, entry }),
     [pane, entry],
@@ -207,12 +206,8 @@ export function PaneChrome({
   const reserveEnd = useReservesFloatingBar();
   // Painted alone (full-pane), a child pane's way out is BACK to its parent —
   // leading, like a browser's — not a × closing a column beside it. And a
-  // same-app promote has nothing on screen to detach from.
+  // same-app promote has nothing on screen to detach from (PromoteControl).
   const ancestorsHidden = layoutCtx?.ancestorsHidden === true;
-  const showPromote =
-    chrome.promote &&
-    promote !== null &&
-    (!ancestorsHidden || promote.kind === "cross-app");
   // `atTop` is only ever true for a floating header resting over the top of the
   // body — nothing below it to separate, so the rule goes.
   const header = (atTop: boolean) => (
@@ -251,17 +246,7 @@ export function PaneChrome({
           </pane.Actions.Render>
         </PaneTitleContext.Provider>
       </AdaptiveBar>
-      {showPromote && promote && (
-        <PaneIconAction
-          label={
-            promote.kind === "cross-app"
-              ? `Open in ${promote.app.name}`
-              : "Expand pane"
-          }
-          icon={navIcons.expand}
-          {...linkProps(promote)}
-        />
-      )}
+      <PromoteControl pane={pane} ancestorsHidden={ancestorsHidden} />
       {!ancestorsHidden && chrome.close && doClose && (
         <PaneIconAction label="Close" icon={closeIcon} onClick={doClose} />
       )}
@@ -326,17 +311,7 @@ export function PaneChrome({
                     </pane.Actions.Render>
                   </SlotItemLayout>
                 </PaneTitleContext.Provider>
-                {showPromote && promote && (
-                  <PaneIconAction
-                    label={
-                      promote.kind === "cross-app"
-                        ? `Open in ${promote.app.name}`
-                        : "Expand pane"
-                    }
-                    icon={navIcons.expand}
-                    {...linkProps(promote)}
-                  />
-                )}
+                <PromoteControl pane={pane} ancestorsHidden={ancestorsHidden} />
                 {!ancestorsHidden && chrome.close && doClose && (
                   <PaneIconAction
                     label="Close"

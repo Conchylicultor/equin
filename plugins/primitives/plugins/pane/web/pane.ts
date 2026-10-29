@@ -418,6 +418,8 @@ export interface PaneInternal {
    * index pane has none, so a reload resolves the same arrangement.
    */
   companion: boolean;
+  /** From `Pane.define({ expand })` — see {@link PaneExpand}. */
+  expand?: PaneExpand;
 }
 
 // Populated synchronously via useSyncPaneRegistry (called by MillerColumns).
@@ -2440,6 +2442,32 @@ export type PromoteAction =
   /** Re-root here: drop the ancestors, stay in the app already hosting us. */
   | ({ kind: "re-root" } & LinkTarget);
 
+/**
+ * Where a pane's subject is shown in full when that is ANOTHER app's view of
+ * it, not this pane on its own: a peeked file's fuller view is its folder in
+ * Files with the file previewed beside it. Declared by `Pane.define({ expand })`
+ * and drawn by the pane chrome in place of the default promote ("Open in
+ * <app>"), wherever the pane sits — its home app included.
+ */
+export interface PaneExpand<Params = Record<string, string>> {
+  /** The app the target opens in — names the button before the target is known. */
+  app: AppRef;
+  /** The target for this instance's own params. */
+  useTarget: Hook<(params: Params) => PaneExpandTarget>;
+}
+
+/**
+ * A {@link PaneExpand}'s answer for one instance:
+ * - `ready` — the link;
+ * - `pending` — still being worked out (the button shows, disabled);
+ * - `none` — this instance has no fuller view elsewhere (a file the other app
+ *   cannot reach): Expand falls back to promoting the pane itself.
+ */
+export type PaneExpandTarget =
+  | { kind: "ready"; target: LinkTarget }
+  | { kind: "pending" }
+  | { kind: "none" };
+
 export interface PaneObject<
   FullParams = {},
   OwnParams = FullParams,
@@ -3067,6 +3095,11 @@ type RouteDefineArgs<
    */
   companion?: boolean;
   /**
+   * Where Expand shows this pane's subject in full when that is another app's
+   * view of it rather than this pane re-rooted. See {@link PaneExpand}.
+   */
+  expand?: PaneExpand<Closed<OwnRouteParams<Seg>>>;
+  /**
    * Default column width in pixels. Read by layout renderers (e.g. Miller
    * columns). The leaf column ignores this and flex-grows. Defaults to 400.
    */
@@ -3126,6 +3159,8 @@ function define(
   const actionsSlot = args.actions ?? definePaneHeaderSlot();
 
   const useResolve = args.useResolve as PaneInternal["useResolve"];
+  // Erased like `useResolve`: the hook takes the route's own params.
+  const expand = args.expand as PaneInternal["expand"];
 
   const internal: PaneInternal = {
     id,
@@ -3142,6 +3177,7 @@ function define(
     optionDefaults: args.options ?? {},
     titleOwner: args.titleOwner ?? false,
     companion: args.companion ?? false,
+    ...(expand !== undefined ? { expand } : {}),
   };
 
   return makePaneObject(internal, route);

@@ -13,26 +13,18 @@
   - Contributes:
     - `Pane.Register` "file-peek"
     - `filePeekPane.Actions` "renderer-tabs" → `FilePeekTabs`
-  - Uses:
-    - `code-explorer/file-resolve.FileDisambiguation`
-    - `code-explorer/file-resolve.useResolvedFile`
-    - `conversations/conversation-view.conversationPane`
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/file-viewer` ×5
+    - `primitives/pane` ×5
+    - `code-explorer/file-resolve` ×2
+    - `primitives/live-state` ×2
+    - `apps/file-explorer/browser.useExplorerFileTarget`
     - `conversations/conversation-view/code.useEditedFile`
+    - `conversations/conversation-view.conversationPane`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/text.Text`
     - `primitives/file-links.FileLinksWorkspaceProvider`
-    - `primitives/file-viewer.FileContent`
-    - `primitives/file-viewer.FileRenderersHandle`
-    - `primitives/file-viewer.FileTabs`
-    - `primitives/file-viewer.FileView`
-    - `primitives/file-viewer.useFileRenderers`
     - `primitives/filepath-breadcrumb.FilepathBreadcrumb`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.ResourceErrorInline`
-    - `primitives/pane.defineRoute`
-    - `primitives/pane.Pane`
-    - `primitives/pane.PaneChrome`
-    - `primitives/pane.useOpenPane`
   - Exports (values):
     - `FilePaneView`
     - `filePeekPane`

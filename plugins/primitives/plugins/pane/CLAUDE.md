@@ -568,6 +568,14 @@ Cross-app needs an installed navigator and a buildable URL (a paramful
 ancestor missing from the route ⇒ none); either missing degrades silently to
 the same-app branch.
 
+**`Pane.define({ expand: { app, useTarget } })`** — when the pane's subject has
+a fuller view in ANOTHER app (a peeked file → its folder in Files, the file
+previewed), Expand goes there instead, wherever the pane sits (its home app
+included). `useTarget(ownParams)` is a hook answering a `PaneExpandTarget`:
+`ready` (a `LinkTarget`), `pending` (button shown disabled) or `none` (falls
+back to the default promote). Label "Open in <app>". All chrome draws the
+button through one `PromoteControl` (`web/components/promote-control.tsx`).
+
 ### A route belongs to its root pane's app
 
 A guest is hosted **beside** a host pane, never as the head of the host's
@@ -801,6 +809,8 @@ with an empty route.
     - `MatchEntry`
     - `OpenPaneFn`
     - `PaneChromeConfig`
+    - `PaneExpand`
+    - `PaneExpandTarget`
     - `PaneHeaderAction`
     - `PaneHeaderComponent`
     - `PaneHeaderItem`

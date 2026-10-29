@@ -42,6 +42,7 @@ on the endpoints primitive and `EditedFileSchema` (a pure schema sink in the
     - `CodeFile`
     - `CodeFileDiff`
     - `CommitFiles`
+    - `WorkspaceRootInfo`
   - Exports (values):
     - `CODE_MACHINE`
     - `codeDir`
@@ -54,6 +55,8 @@ on the endpoints primitive and `EditedFileSchema` (a pure schema sink in the
     - `commitInfo`
     - `getImageContent`
     - `pushFiles`
+    - `workspaceRoot`
+    - `WorkspaceRootSchema`
 - Cross-plugin:
   - Imported by: `primitives/file-viewer`
 

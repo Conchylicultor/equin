@@ -15,3 +15,8 @@ export {
   type CodeFile,
   type CodeFileDiff,
 } from "./code-values";
+export {
+  workspaceRoot,
+  WorkspaceRootSchema,
+  type WorkspaceRootInfo,
+} from "./workspace-root";

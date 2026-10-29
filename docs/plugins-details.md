@@ -4213,7 +4213,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/pane.useReservesFloatingBar`
               - `primitives/text-editor/paste-images.AttachmentSlots`
             - Exports (values): `attachmentPreviewPane`
-        - **`browser`** — The file explorer's browser: <FileBrowser/> (toolbar with back / forward / up, the host path bar and a filter; the folder as a lazily-listed DataView tree with Name / Modified / Size; a status bar; the selected file previewed beside it, or handed to fileTarget; its FileBrowserSlots seams — RowActions, a row's hover actions (its own: Extract here on an archive, Copy path in the ⋯ menu), and Lens, hide-rule toggles and a file's git context), and the /files routes it runs under — the home index and /files/at/<folder>[/<open file>], so every location is a link and back / forward are the browser history. Contributes the files-document sub-theme the preview's page wears (28/32/48px inset, 14px on 1.6, a 24px heading).
+        - **`browser`** — The file explorer's browser: <FileBrowser/> (toolbar with back / forward / up, the host path bar and a filter; the folder as a lazily-listed DataView tree with Name / Modified / Size; a status bar; the selected file previewed beside it, or handed to fileTarget; its FileBrowserSlots seams — RowActions, a row's hover actions (its own: Extract here on an archive, Copy path in the ⋯ menu), and Lens, hide-rule toggles and a file's git context), and the /files routes it runs under — the home index and /files/at/<folder>[/<open file>], so every location is a link and back / forward are the browser history; useExplorerFileTarget names any file's place there (its folder, the file previewed) as a pane's Expand target. Contributes the files-document sub-theme the preview's page wears (28/32/48px inset, 14px on 1.6, a 24px heading).
           - Web:
             - Slots:
               - `filesHomePane.Actions`
@@ -4279,6 +4279,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `filesHomePane`
               - `PreviewPane`
               - `useExplorerDir`
+              - `useExplorerFileTarget`
               - `useExplorerFolderTarget`
               - `useExplorerLocation`
               - `useHomeDir`
@@ -4333,6 +4334,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/file-explorer/attachment-preview`
               - `apps/file-explorer/git`
               - `apps/file-explorer/places`
+              - `conversations/conversation-view/code/file-pane`
               - `conversations/conversation-view/explorer`
               - `plugin-meta/plugin-view/file-tree`
         - **`git`** — Git awareness for the file explorer: inside a git checkout the tree gains a git status badge (M / A / D / R / C / ?, a dot on a folder holding changes; pending until the status is known) and a Changed vs main filter field (client fields of the file-entry row kind, empty outside a checkout), ignored files hide behind a Show ignored files toggle, and a changed file's preview gets its git context (the Diff tab). Git awareness for the file explorer, server half: which checkout holds a folder (the file-explorer.git-checkout snapshot value, git rev-parse) and the checkout's status as the file-explorer.git-status live value — each path's status vs HEAD and vs the main merge-base, untracked and ignored folders collapsed — memoized behind a content signature and pushed from the shared checkout watch (infra/git/checkout-watch: working tree + git dir) while subscribed.
@@ -13275,6 +13277,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `resource.declare` "code.file"
       - `resource.declare` "code.file-diff"
       - `resource.declare` "code.push-files"
+      - `resource.declare` "code.workspace-root"
     - Uses:
       - `database.db`
       - `infra/endpoints.HttpError`
@@ -13305,6 +13308,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `code.file` (invalidate, notified)
       - `code.file-diff` (invalidate, notified)
       - `code.push-files` (push, notified, capped: COMMIT_FILES_MAX)
+      - `code.workspace-root` (push, notified)
   - Machine:
     - Uses:
       - `infra/endpoints.machineHandler`
@@ -13345,6 +13349,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CodeFile`
           - `CodeFileDiff`
           - `CommitFiles`
+          - `WorkspaceRootInfo`
         - Exports (values):
           - `CODE_MACHINE`
           - `codeDir`
@@ -13357,6 +13362,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `commitInfo`
           - `getImageContent`
           - `pushFiles`
+          - `workspaceRoot`
+          - `WorkspaceRootSchema`
       - Cross-plugin:
         - Imported by: `primitives/file-viewer`
     - **`commit-detail`** — The one commit-diff pane, parameterized by worktree (commit/:worktree/:sha) rather than derived from an ancestor conversation, so any surface that can name a (worktree, sha) pair opens it. Also exposes useCommitInfo, the four-armed loading / found / not-found / error commit-metadata lookup.
@@ -15387,26 +15394,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Contributes:
                   - `Pane.Register` "file-peek"
                   - `filePeekPane.Actions` "renderer-tabs" → `FilePeekTabs`
-                - Uses:
-                  - `code-explorer/file-resolve.FileDisambiguation`
-                  - `code-explorer/file-resolve.useResolvedFile`
-                  - `conversations/conversation-view.conversationPane`
+                - Uses: 21 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/REFERENCE.md)
+                  - `primitives/file-viewer` ×5
+                  - `primitives/pane` ×5
+                  - `code-explorer/file-resolve` ×2
+                  - `primitives/live-state` ×2
+                  - `apps/file-explorer/browser.useExplorerFileTarget`
                   - `conversations/conversation-view/code.useEditedFile`
+                  - `conversations/conversation-view.conversationPane`
                   - `primitives/css/placeholder.Placeholder`
                   - `primitives/css/text.Text`
                   - `primitives/file-links.FileLinksWorkspaceProvider`
-                  - `primitives/file-viewer.FileContent`
-                  - `primitives/file-viewer.FileRenderersHandle`
-                  - `primitives/file-viewer.FileTabs`
-                  - `primitives/file-viewer.FileView`
-                  - `primitives/file-viewer.useFileRenderers`
                   - `primitives/filepath-breadcrumb.FilepathBreadcrumb`
-                  - `primitives/live-state.foldResource`
-                  - `primitives/live-state.ResourceErrorInline`
-                  - `primitives/pane.defineRoute`
-                  - `primitives/pane.Pane`
-                  - `primitives/pane.PaneChrome`
-                  - `primitives/pane.useOpenPane`
                 - Exports (values):
                   - `FilePaneView`
                   - `filePeekPane`
@@ -45056,6 +45055,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `MatchEntry`
           - `OpenPaneFn`
           - `PaneChromeConfig`
+          - `PaneExpand`
+          - `PaneExpandTarget`
           - `PaneHeaderAction`
           - `PaneHeaderComponent`
           - `PaneHeaderItem`

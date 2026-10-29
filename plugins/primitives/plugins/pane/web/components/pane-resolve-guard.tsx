@@ -1,4 +1,3 @@
-import { linkProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { Bar } from "@plugins/primitives/plugins/bar/web";
 import { useState, type ComponentType, type ReactNode } from "react";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
@@ -11,7 +10,8 @@ import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { segmentRequiredParamNames } from "../../core";
 import { paneObjectFor, type PaneInternal, type ResolveHook } from "../pane";
 import { PaneIconAction } from "./pane-icon-action";
-import { navIcons, symbol } from "@plugins/ui/plugins/icons/core";
+import { PromoteControl } from "./promote-control";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 const closeIcon = symbol("close");
 
@@ -152,7 +152,6 @@ function FallbackChrome({
   const paneObject = paneObjectFor(pane);
   const chrome = pane.chrome;
   const doClose = paneObject.useClose();
-  const promote = paneObject.usePromote();
   return (
     <Column
       className="h-full"
@@ -162,17 +161,7 @@ function FallbackChrome({
             {title}
           </Text>
           <Stack direction="row" align="center" gap="sm" className="ml-auto">
-            {chrome.promote && promote && (
-              <PaneIconAction
-                label={
-                  promote.kind === "cross-app"
-                    ? `Open in ${promote.app.name}`
-                    : "Expand pane"
-                }
-                icon={navIcons.expand}
-                {...linkProps(promote)}
-              />
-            )}
+            <PromoteControl pane={paneObject} ancestorsHidden={false} />
             {chrome.close && doClose && (
               <PaneIconAction
                 label="Close"

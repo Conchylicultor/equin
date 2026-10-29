@@ -4,6 +4,7 @@ import {
   PaneChrome,
   useOpenPane,
   defineRoute,
+  type PaneExpandTarget,
 } from "@plugins/primitives/plugins/pane/web";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -27,10 +28,55 @@ import {
   type FileRef,
 } from "@plugins/primitives/plugins/file-viewer/core";
 import { FileLinksWorkspaceProvider } from "@plugins/primitives/plugins/file-links/web";
+import { fileExplorerApp } from "@plugins/apps/plugins/file-explorer/plugins/shell/core";
+import { useExplorerFileTarget } from "@plugins/apps/plugins/file-explorer/plugins/browser/web";
 import {
   FilePeekHeaderProvider,
   FilePeekTitle,
 } from "./components/file-peek-header";
+
+/** The path as requested and its `:line` suffix, split. */
+function splitLine(rawFilePath: string): { filePath: string; line?: number } {
+  const lineMatch = rawFilePath.match(/:(\d+)$/);
+  return lineMatch
+    ? {
+        filePath: rawFilePath.slice(0, -lineMatch[0]!.length),
+        line: parseInt(lineMatch[1]!, 10),
+      }
+    : { filePath: rawFilePath };
+}
+
+/**
+ * The path's resolution, and the file the pane reads: the resolved one, else
+ * the path as requested (a relative one from the checkout, an absolute or `~`
+ * one from the host).
+ */
+function usePeekedFile(worktree: string, filePath: string) {
+  const resolved = useResolvedFile(worktree, filePath);
+  const file: FileRef =
+    resolved.status === "resolved" || resolved.status === "exact"
+      ? resolved.file
+      : fileRefForPath(worktree, filePath);
+  return { resolved, file };
+}
+
+/**
+ * Expand opens the file in Files — its folder listed, the file previewed —
+ * once the path settles on one file.
+ */
+function useExpandToFiles(params: {
+  worktree: string;
+  filePath: string;
+}): PaneExpandTarget {
+  const { filePath } = splitLine(params.filePath);
+  const { resolved, file } = usePeekedFile(params.worktree, filePath);
+  const target = useExplorerFileTarget(file);
+  if (resolved.status === "loading") return { kind: "pending" };
+  if (resolved.status !== "resolved" && resolved.status !== "exact") {
+    return { kind: "none" };
+  }
+  return target;
+}
 
 /** The file's basename, minus any trailing `:line` suffix. */
 function fileTitle(filePath: string): string {
@@ -53,6 +99,7 @@ export const filePeekPane = Pane.define({
     component: FilePeekTitle,
   },
   chrome: { history: false },
+  expand: { app: fileExplorerApp, useTarget: useExpandToFiles },
   width: 600,
   useResolve: false,
 });
@@ -74,23 +121,14 @@ function FilePeekPaneContent() {
 
   const { worktree, filePath: rawFilePath } = filePeekPane.useParams();
 
-  const lineMatch = rawFilePath.match(/:(\d+)$/);
-  const line = lineMatch ? parseInt(lineMatch[1]!, 10) : undefined;
-  const filePath = lineMatch
-    ? rawFilePath.slice(0, -lineMatch[0]!.length)
-    : rawFilePath;
-
-  const resolved = useResolvedFile(worktree, filePath);
+  const { filePath, line } = splitLine(rawFilePath);
 
   // Read the resolved file directly instead of swapping the pane — a swap
   // re-mounts the component (new URL → new params → new fetches), which
   // destroys in-progress text selection. Until (or unless) it resolves, the
   // path as requested: a relative one from the checkout, an absolute or `~`
   // one from the host, so a miss is reported by whichever source owns it.
-  const file: FileRef =
-    resolved.status === "resolved" || resolved.status === "exact"
-      ? resolved.file
-      : fileRefForPath(worktree, filePath);
+  const { resolved, file } = usePeekedFile(worktree, filePath);
   const effectivePath = file.path;
 
   // This one file's entry in the edited set (`null`: clean), wherever in the

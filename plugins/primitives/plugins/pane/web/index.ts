@@ -52,6 +52,8 @@ export {
 export type {
   PaneObject,
   PromoteAction,
+  PaneExpand,
+  PaneExpandTarget,
   PaneRouteEntry,
   PaneMatch,
   MatchEntry,
