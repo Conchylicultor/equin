@@ -282,6 +282,25 @@ describe("line claims (a paragraph that opens like a list)", () => {
     }
   });
 
+  test("a whitespace-only paragraph is escaped too — a blank line would empty it", () => {
+    // Nobody claims `" "`; the BLANK-LINE rule does, reading it back as an empty
+    // paragraph. On a page, that loss made every `edit_page` refuse: the diff
+    // saw the author's paragraph rewritten from " " to "".
+    for (const text of [" ", "   "]) {
+      const forest = [
+        node("heading-2", { text: runs("A") }),
+        node("text", { text: runs(text) }),
+        node("text", { text: runs("B") }),
+      ];
+      const md = serialize(forest);
+      expect(md).toBe(`## A\n\\${text}\nB`);
+      expect(parse(md)).toEqual(forest);
+      expect(serialize(parse(md))).toBe(md);
+    }
+    // A lone backslash is still just a backslash.
+    expect(parse("\\")).toEqual([node("text", { text: runs("\\") })]);
+  });
+
   test("the decode is unconditional across dialects, like every other decode", () => {
     // Lenient on parse, canonical on serialize. `\- x` means a literal `- x`
     // paragraph in CommonMark too, so a pasted document reads MORE faithfully.

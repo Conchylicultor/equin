@@ -1283,8 +1283,13 @@ function claimSafeLines(
     }
   }
 
+  // A WHITESPACE-ONLY line is claimed by nobody — the parser reads it as a
+  // blank line, an EMPTY paragraph — so a paragraph whose text is only spaces
+  // would come back with its text gone. It takes the same one backslash.
+  const blank =
+    handle === claimers.fallback && first !== "" && first.trim() === "";
   const claimant = claimantOf(first, claimers);
-  if (claimant === handle) return lines;
+  if (claimant === handle && !blank) return lines;
   if (handle !== claimers.fallback) {
     // Unreachable in the clipboard dialect today — but the gate is the same one
     // sentence everywhere in this function, so nobody has to re-derive per
@@ -1696,7 +1701,10 @@ export function parseMarkdownToForest(
     // pasted markdown means a literal `- x` paragraph in CommonMark too.
     if (fallback !== undefined && content.startsWith("\\")) {
       const bare = content.slice(1);
-      if (stealerOf(bare, claimers) !== undefined) {
+      // …or whose text is only whitespace, which no claimer takes but the
+      // blank-line rule above would (see `claimSafeLines`).
+      const blankText = bare !== "" && bare.trim() === "";
+      if (blankText || stealerOf(bare, claimers) !== undefined) {
         flushBlanks(indent);
         tokens.push({
           indent,

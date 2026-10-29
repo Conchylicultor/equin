@@ -1926,8 +1926,7 @@ design).
 ## Markdown is a LOSSLESS PROJECTION of the forest
 
 > Lenient on parse (foreign markdown pastes as it always did), CANONICAL on serialize:
-> anything this codebase emits re-parses to the same forest — with one named exception,
-> a paragraph whose text is only whitespace.
+> anything this codebase emits re-parses to the same forest.
 
 `core/markdown.ts` is the pure orchestrator and never names a block type; its void
 fallback is the generic **`tag`** (`<name attrs>…</name>`, body parsed recursively).
@@ -1962,7 +1961,6 @@ set is asserted equal to the registry's). Design:
   - `read_page`/`edit_page` (`markdown-apply/server/internal/markdown-context.ts`) and the
     planner (`markdown-apply/core/plan.ts`) are `"pinned"` and MUST agree; the clipboard
     (`web/internal/clipboard-write.ts`) and paste sites are `"blank-line"`.
-  - Still unspellable: a whitespace-only paragraph.
 - **A soft line break is the inline escape `\n`** (in `escapeText`, so every run-text
   path inherits it). Dialect `MarkdownContext.softBreaks`, required: `"escaped"` for the
   agent-facing document and planner (MUST agree), `"newline"` for the clipboard; parse
@@ -1980,6 +1978,9 @@ set is asserted equal to the registry's). Design:
   serializer asks `claimersOf` / `claimOf` (the parser's own dispatch: fence, claimers by
   `precedence`, default text); a claimed line gets one leading backslash.
   - The probe reads the left-stripped line; the text keeps its spaces.
+  - **A whitespace-only paragraph is escaped too** (`\ `): no claimer takes it, but the
+    blank-line rule would read it back as an EMPTY paragraph — and `edit_page` would then
+    refuse every edit to the page as a rewrite of the author's block.
   - **Only the default-text type may be escaped**; any other type whose line is claimed
     elsewhere THROWS.
   - **Two asserts, our dialect only**: a `lines`-branch block emits ONE line unless it

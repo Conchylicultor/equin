@@ -2185,8 +2185,11 @@ and
   alignment diffs two. The clipboard stays `"blank-line"`: a human pasting into
   another app must never see a tag, and the internal round trip travels as
   `BLOCKS_MIME` anyway.
-- **Limit:** a whitespace-only paragraph is a blank line to the tokenizer and the
-  tag means *empty*, so no dialect can spell it.
+- **A whitespace-only paragraph** is a blank line to the tokenizer and the tag
+  means *empty*, so it borrows the line-claim escape instead: one leading
+  backslash (`\ `), decoded when the remainder is only whitespace. Left
+  unspelled, it read back empty and made `edit_page` refuse every edit to the
+  page holding it (a "rewrite" of the author's block nobody touched).
 
 **Soft line breaks.**
 
