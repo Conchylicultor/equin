@@ -2,15 +2,15 @@ import { PickerPill } from "@plugins/primitives/plugins/text-editor/plugins/comp
 import type { LaunchControlProps } from "@plugins/tasks/plugins/launch-options/web";
 
 export const INTERACTIVE_LABEL = "Interactive";
-export const AUTONOMOUS_LABEL = "Autonomous";
+export const SUPERVISOR_LABEL = "Supervisor";
 
-/** The pill's text once a run is picked. Never rendered for Interactive. */
-export function AutonomousPillValue(_: { value: true }) {
-  return <>{AUTONOMOUS_LABEL}</>;
+/** The pill's text once Supervisor is picked. Never rendered for Interactive. */
+export function SupervisorPillValue(_: { value: true }) {
+  return <>{SUPERVISOR_LABEL}</>;
 }
 
-/** The menu rows: Interactive, Autonomous. */
-export function AutonomousPillMenu({
+/** The menu rows: Interactive, Supervisor. */
+export function SupervisorPillMenu({
   value,
   onChange,
   disabled,
@@ -29,7 +29,7 @@ export function AutonomousPillMenu({
         onSelect={() => onChange(true)}
         disabled={disabled}
       >
-        {AUTONOMOUS_LABEL}
+        {SUPERVISOR_LABEL}
       </PickerPill.Item>
     </>
   );

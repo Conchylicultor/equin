@@ -18,7 +18,7 @@ export async function renderMandateInstructions(
   );
   const lines: string[] = [];
   for (const entry of entries) {
-    const value = grantIn(entry.cap, mandate.policy);
+    const value = grantIn(entry.cap, mandate.policy, mandate.at);
     if (value !== null) lines.push(`- ${entry.describe(value)}`);
   }
   if (lines.length === 0) return null;

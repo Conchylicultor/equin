@@ -1,1 +1,1 @@
-export { autonomousMandate, interactiveMandate } from "./internal/presets";
+export { interactiveMandate, supervisorMandate } from "./internal/presets";

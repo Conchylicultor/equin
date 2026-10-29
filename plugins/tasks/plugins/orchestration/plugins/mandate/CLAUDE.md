@@ -22,7 +22,8 @@ task resolves to a policy. Plan:
 - **Enforcement** (server):
   - `mandateOf(taskId)` → `{ kind: "found", rootTaskId, policy } | { kind: "none" }`.
   - `grantOf(cap, conversationId)` → the parsed value, or `null` when not
-    granted; a stored value the cap's schema refuses **throws**. Concurrent
+    granted — the whole-tree grant, or the one scoped to where the
+    conversation sits (`root`: on the mandate's own task; `below`: under it); a stored value the cap's schema refuses **throws**. Concurrent
     calls for one conversation collapse (`createInflight`), since every gated
     tool's `when` runs on each MCP request.
   - `granted(cap)` — an `Mcp.tool` `when` gate.

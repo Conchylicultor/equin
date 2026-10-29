@@ -45,7 +45,7 @@ Ordering for both surfaces lives in
   - Slot contributors:
     - `TaskLaunch.Option` ← `conversations.workspace.launch-option`
     - `TaskLaunch.Option` ← `tasks.auto-start.launch-option`
-    - `TaskLaunch.Option` ← `tasks.autonomous-run`
+    - `TaskLaunch.Option` ← `tasks.supervisor-run`
     - `TaskLaunch.Option` ← `tasks.task-effort`
     - `TaskLaunch.Option` ← `tasks.task-preprompt`
   - Uses:
@@ -92,8 +92,8 @@ Ordering for both surfaces lives in
     - `primitives/launch`
     - `tasks`
     - `tasks/auto-start/launch-option`
-    - `tasks/autonomous-run`
     - `tasks/menu-bar-task`
+    - `tasks/supervisor-run`
     - `tasks/task-description`
     - `tasks/task-draft-form`
     - `tasks/task-effort`

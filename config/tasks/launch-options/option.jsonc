@@ -1,4 +1,4 @@
-// @hash b0a777b9de0c
+// @hash 7faf8b0fcb89
 // @legend — how to write this file (rewritten by ./equin build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -8,7 +8,7 @@
 //   Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
 // Launch options, ordered as the launch itself resolves them — WHETHER it
 // starts (auto-start model), WHERE it runs (workspace), WHAT its tree may do
-// on its own (autonomous run), WHAT is prepended to the first turn
+// on its own (supervisor), WHAT is prepended to the first turn
 // (preprompt), then HOW hard it thinks (thinking mode).
 // ONE order, TWO surfaces: the task detail's Prompt card reads it top-down as a
 // vertical stack of label + control rows, and the task-draft popover reads it
@@ -25,7 +25,7 @@
   "items": [
     "tasks.auto-start.launch-option:auto-start",
     "conversations.workspace.launch-option:workspace",
-    "tasks.autonomous-run:autonomous",
+    "tasks.supervisor-run:supervisor",
     "tasks.task-preprompt:preprompt",
     "tasks.task-effort:effort"
   ]

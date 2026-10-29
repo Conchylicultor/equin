@@ -27,6 +27,35 @@ describe("mandatePolicy", () => {
     ).toThrow(/"test\.level" granted twice/);
   });
 
+  test("scoped grants are stored under @root / @below", () => {
+    expect(
+      mandatePolicy([flag.grant(true)], {
+        root: [level.grant("low")],
+        below: [level.grant("high")],
+      }),
+    ).toEqual({
+      "test.flag": true,
+      "@root": { "test.level": "low" },
+      "@below": { "test.level": "high" },
+    } as never);
+  });
+
+  test("a capability granted whole-tree and scoped throws", () => {
+    expect(() =>
+      mandatePolicy([level.grant("low")], { root: [level.grant("high")] }),
+    ).toThrow(/"test\.level" granted twice/);
+  });
+
+  test("a capability id starting with @ is refused", () => {
+    expect(() =>
+      defineCapability<true>({
+        id: "@root",
+        schema: z.literal(true),
+        label: "Bad",
+      }),
+    ).toThrow(/reserved/);
+  });
+
   test("an empty policy grants nothing", () => {
     expect(mandatePolicy([])).toEqual({} as never);
   });

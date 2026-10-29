@@ -1,7 +1,7 @@
 # self-compact
 
 An agent compacting its own context, on purpose, after a major step — so a
-long-running agent (an autonomous run's supervisor) stays small without waiting
+long-running agent (a supervisor) stays small without waiting
 for Claude's automatic compaction. Granted by the `context.compact` mandate
 capability (the `capability` leaf sub-plugin, so mandate presets reached from
 `conversations` can grant it without a cycle); the tool names no workflow.

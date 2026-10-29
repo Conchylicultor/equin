@@ -35,25 +35,35 @@ export function interactiveMandate(): MandatePolicy {
 }
 
 /**
- * The mandate of an autonomous run's root task: its agents start sub-work on
- * their own (main tasks now, after others, or waiting for a person; ideas
- * outside the brief as sidequests a person starts), each ends with a report,
- * watches what it files, and the agent on the root watches the whole tree.
- * They talk back through `flag_raise`; none may close its conversation
- * (`exit.clean` is not granted — a run ends with reports, not exits), and each
- * may compact its own context. No `push.policy`: how a run pushes is the
- * user's to say in the brief or a preprompt, not an instruction of the mode's.
+ * The mandate of a supervisor's root task. The conversation on the root is an
+ * ordinary interactive one (it pushes when the user asks, may close with
+ * `exit_clean`, owes no report) with more powers: it may start sub-work on its
+ * own (main tasks now, after others, or waiting for a person; ideas outside
+ * the brief as sidequests a person starts), watches what it files and the
+ * whole tree, and may compact its own context. The tasks below it are workers:
+ * each ends with a report (`report.required`) instead of an exit, watches what
+ * it files, talks back through `flag_raise` and may compact. Workers get no
+ * `push.policy`: they follow the repo rule (never push unless told) — how a run
+ * pushes is the user's to say in the brief or a preprompt.
  */
-export function autonomousMandate(): MandatePolicy {
-  return mandatePolicy([
-    tasksFile.grant({
-      main: { start: ["now", "after", "manual"] },
-      sidequest: { start: ["manual"] },
-    }),
-    reportRequired.grant(true),
-    watchChildren.grant(true),
-    watchTree.grant(true),
-    flagRaise.grant(true),
-    contextCompact.grant(true),
-  ]);
+export function supervisorMandate(): MandatePolicy {
+  return mandatePolicy(
+    [
+      tasksFile.grant({
+        main: { start: ["now", "after", "manual"] },
+        sidequest: { start: ["manual"] },
+      }),
+      watchChildren.grant(true),
+      flagRaise.grant(true),
+      contextCompact.grant(true),
+    ],
+    {
+      root: [
+        pushPolicy.grant("on-request"),
+        exitClean.grant(true),
+        watchTree.grant(true),
+      ],
+      below: [reportRequired.grant(true)],
+    },
+  );
 }

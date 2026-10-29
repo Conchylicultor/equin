@@ -1,6 +1,0 @@
-{
-  "name": "@equin/plugin-tasks-autonomous-run",
-  "description": "The autonomous-run workflow: the Autonomous launch option, which states the autonomous mandate on the task it files.",
-  "private": true,
-  "version": "0.0.1"
-}

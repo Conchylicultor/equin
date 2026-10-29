@@ -38,5 +38,10 @@
     "at": "2026-10-28T03:20:56.000Z",
     "from": "apps.agent-manager.demo",
     "to": "apps.website.demos.lumen"
+  },
+  {
+    "at": "2026-10-29T15:01:08.459Z",
+    "from": "tasks.autonomous-run",
+    "to": "tasks.supervisor-run"
   }
 ]

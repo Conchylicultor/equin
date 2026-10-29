@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-tasks-supervisor-run",
+  "description": "The supervisor workflow: the Supervisor launch option, which states the supervisor mandate on the task it files.",
+  "private": true,
+  "version": "0.0.1"
+}

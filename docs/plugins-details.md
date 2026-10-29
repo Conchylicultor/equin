@@ -46635,8 +46635,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `conversations/workspace/launch-option`
                   - `primitives/text-editor/composer`
                   - `tasks/auto-start/launch-option`
-                  - `tasks/autonomous-run`
                   - `tasks/launch-options`
+                  - `tasks/supervisor-run`
                   - `tasks/task-draft-form`
                   - `tasks/task-effort`
                   - `tasks/task-preprompt`
@@ -50551,32 +50551,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/sidequest-autopilot`
           - `tasks/task-triage`
           - `upstream`
-    - **`autonomous-run`** — The Autonomous launch option on every new-task composer (Home prompt, Make a wish, menu bar): Interactive (unset — the pill rests as its icon) or Autonomous. Draft-only — it decides how a task's tree runs when it is filed. The Autonomous launch option's server half: a task filed with it states the autonomous mandate (autonomousMandate()) as its own, so its subtree runs as an autonomous run. Not inherited: the tasks its agents file are covered by the mandate already (nearest wins).
-      - Web:
-        - Contributes: `TaskLaunch.Option` "Autonomous" → `AutonomousLaunchControl`
-        - Uses:
-          - `primitives/css/ui-kit.Select`
-          - `primitives/css/ui-kit.SelectContent`
-          - `primitives/css/ui-kit.SelectItem`
-          - `primitives/css/ui-kit.SelectTrigger`
-          - `primitives/css/ui-kit.SelectValue`
-          - `primitives/text-editor/composer/picker-pill.PickerPill`
-          - `tasks/launch-options.TaskLaunch`
-      - Server:
-        - Contributes: `taskLaunchServer` "autonomous"
-        - Uses:
-          - `tasks/launch-options.TaskLaunchServer`
-          - `tasks/tasks-core.setMandate`
-      - Core:
-        - Uses: `tasks/launch-options.defineLaunchOption`
-        - Exports (values): `autonomousLaunchOption`
     - **`launch-options`** — Registry of task launch options — the controls that configure HOW an agent launches. Owns the tasks.launch-option slot rendered by BOTH the task detail's Prompt card and the task-draft popover, so an option is one plugin folder and appears on both surfaces. Server half of the task launch-option registry: each option contributes how its value is written onto a task — applied from a draft, and whether it is inherited by a spawned subtask — so the chain endpoint and the task-filing MCP tools stay generic.
       - Web:
         - Slots: `TaskLaunch.Option`
         - Slot contributors:
           - `TaskLaunch.Option` ← `conversations.workspace.launch-option`
           - `TaskLaunch.Option` ← `tasks.auto-start.launch-option`
-          - `TaskLaunch.Option` ← `tasks.autonomous-run`
+          - `TaskLaunch.Option` ← `tasks.supervisor-run`
           - `TaskLaunch.Option` ← `tasks.task-effort`
           - `TaskLaunch.Option` ← `tasks.task-preprompt`
         - Uses:
@@ -50623,8 +50604,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/launch`
           - `tasks`
           - `tasks/auto-start/launch-option`
-          - `tasks/autonomous-run`
           - `tasks/menu-bar-task`
+          - `tasks/supervisor-run`
           - `tasks/task-description`
           - `tasks/task-draft-form`
           - `tasks/task-effort`
@@ -50646,8 +50627,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/outcome-report/capability.reportRequired`
           - `tasks/tasks-core.tasksFile`
         - Exports (values):
-          - `autonomousMandate`
           - `interactiveMandate`
+          - `supervisorMandate`
     - **`menu-bar-task`** — The menu-bar panel's task field (MenuBar.Section 'task'): an autogrowing textarea (up to six lines, then it scrolls) — Enter files the text as one top-level task through the task-draft form's submitChain (POST /api/tasks/chain) with every launch option at its default, so auto-start behaves as in Improve; Shift+Enter adds a line, Escape clears. Its text is the panel's input (usePanelInput): the app grid filters by it as it is typed, and it is kept as a draft across reloads. The field confirms inline ('Filed — …') or shows why the submit failed.
       - Web:
         - Contributes: `MenuBar.Section` "Task" → `MenuBarTaskField`
@@ -50730,11 +50711,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `Capability`
                   - `CapabilityDef`
                   - `Grant`
+                  - `GrantScope`
                   - `MandatePolicy`
+                  - `ScopedGrants`
                 - Exports (values):
                   - `defineCapability`
+                  - `GRANT_SCOPES`
                   - `mandatePolicy`
                   - `MandatePolicySchema`
+                  - `scopeKey`
         - **`tree-digest`** — The tree digest: what an agent is shown of its mandate's task subtree — treeDigest (the whole subtree the first time, then only the tasks created or changed since the conversation's digest_cursors row, capped at 40 lines, advancing the cursor) and taskTree (the whole subtree, read-only). Each line is a task's id, title and derived status plus the words every TreeDigest.Annotation contribution adds; names no track or workflow.
           - Server:
             - Uses:
@@ -51012,6 +50997,25 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineJob('sidequest-autopilot.triage-on-task')`
           - `defineJob('sidequest-autopilot.triage-backfill')`
           - `defineWarmup('sidequest-autopilot.triage-backfill')`
+    - **`supervisor-run`** — The Supervisor launch option on every new-task composer (Home prompt, Make a wish, menu bar): Interactive (unset — the pill rests as its icon) or Supervisor. Draft-only — it decides how a task's tree runs when it is filed. The Supervisor launch option's server half: a task filed with it states the supervisor mandate (supervisorMandate()) as its own — its conversation an ordinary one with more powers, the tasks it files workers that report. Not inherited: the tasks its agents file are covered by the mandate already (nearest wins).
+      - Web:
+        - Contributes: `TaskLaunch.Option` "Supervisor" → `SupervisorLaunchControl`
+        - Uses:
+          - `primitives/css/ui-kit.Select`
+          - `primitives/css/ui-kit.SelectContent`
+          - `primitives/css/ui-kit.SelectItem`
+          - `primitives/css/ui-kit.SelectTrigger`
+          - `primitives/css/ui-kit.SelectValue`
+          - `primitives/text-editor/composer/picker-pill.PickerPill`
+          - `tasks/launch-options.TaskLaunch`
+      - Server:
+        - Contributes: `taskLaunchServer` "supervisor"
+        - Uses:
+          - `tasks/launch-options.TaskLaunchServer`
+          - `tasks/tasks-core.setMandate`
+      - Core:
+        - Uses: `tasks/launch-options.defineLaunchOption`
+        - Exports (values): `supervisorLaunchOption`
     - **`task-attachments`** — Renders the task's attachments (images, files) in the detail pane.
       - Web:
         - Contributes: `TaskDetailSlots.Section` "Attachments" → `TaskAttachments`

@@ -6433,10 +6433,6 @@
       "name": "@equin/plugin-tasks-automations",
       "version": "0.0.1",
     },
-    "plugins/tasks/plugins/autonomous-run": {
-      "name": "@equin/plugin-tasks-autonomous-run",
-      "version": "0.0.1",
-    },
     "plugins/tasks/plugins/launch-options": {
       "name": "@equin/plugin-tasks-launch-options",
       "version": "0.0.1",
@@ -6487,6 +6483,10 @@
     },
     "plugins/tasks/plugins/sidequest-autopilot": {
       "name": "@equin/plugin-tasks-sidequest-autopilot",
+      "version": "0.0.1",
+    },
+    "plugins/tasks/plugins/supervisor-run": {
+      "name": "@equin/plugin-tasks-supervisor-run",
       "version": "0.0.1",
     },
     "plugins/tasks/plugins/task-attachments": {
@@ -10054,8 +10054,6 @@
 
     "@equin/plugin-tasks-automations": ["@equin/plugin-tasks-automations@workspace:plugins/tasks/plugins/automations"],
 
-    "@equin/plugin-tasks-autonomous-run": ["@equin/plugin-tasks-autonomous-run@workspace:plugins/tasks/plugins/autonomous-run"],
-
     "@equin/plugin-tasks-launch-options": ["@equin/plugin-tasks-launch-options@workspace:plugins/tasks/plugins/launch-options"],
 
     "@equin/plugin-tasks-mandate-presets": ["@equin/plugin-tasks-mandate-presets@workspace:plugins/tasks/plugins/mandate-presets"],
@@ -10081,6 +10079,8 @@
     "@equin/plugin-tasks-reports-investigation": ["@equin/plugin-tasks-reports-investigation@workspace:plugins/tasks/plugins/reports-investigation"],
 
     "@equin/plugin-tasks-sidequest-autopilot": ["@equin/plugin-tasks-sidequest-autopilot@workspace:plugins/tasks/plugins/sidequest-autopilot"],
+
+    "@equin/plugin-tasks-supervisor-run": ["@equin/plugin-tasks-supervisor-run@workspace:plugins/tasks/plugins/supervisor-run"],
 
     "@equin/plugin-tasks-task-attachments": ["@equin/plugin-tasks-task-attachments@workspace:plugins/tasks/plugins/task-attachments"],
 

@@ -2,11 +2,11 @@ import { z } from "zod";
 import { defineLaunchOption } from "@plugins/tasks/plugins/launch-options/core";
 
 /**
- * Whether the task starts an autonomous run. `null` = an ordinary
+ * Whether the task is a supervisor's root. `null` = an ordinary
  * (interactive) task — the unset state, so the pill rests as its icon.
  */
-export const autonomousLaunchOption = defineLaunchOption<true | null>({
-  id: "autonomous",
+export const supervisorLaunchOption = defineLaunchOption<true | null>({
+  id: "supervisor",
   schema: z.literal(true).nullable(),
   defaultValue: null,
 });
