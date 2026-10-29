@@ -11332,9 +11332,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `useInstallRoutePrefixes`
       - `usePathname`
   - Cross-plugin:
-    - Imported by: 56 plugins — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
+    - Imported by: 57 plugins — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
       - `apps` ×27
-      - `apps-core` ×12
+      - `apps-core` ×13
       - `ui` ×6
       - `config_v2` ×2
       - `hints` ×2
@@ -11745,6 +11745,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-2xs`
           - `ui/tokens/density --space-sm`
           - `ui/tokens/shape --spacing`
+    - **`tab-origin`** — Which browser tab raised something, in words: useTabOrigin(stamp) reads a stamped tab id and page URL as this tab, or another one — the app its page belongs to (the menu-bar panel included) and whether that tab is still open (tab-id's presence) — and tabOriginLabel / TabOriginBadge say it ('this tab', 'another Places tab', 'closed Places tab').
+      - Web:
+        - Uses:
+          - `apps-core.Apps`
+          - `apps-core.matchAppForPath`
+          - `primitives/css/badge.Badge`
+          - `primitives/pane/route-prefix.splitRoutePrefix`
+          - `primitives/scope/tab-id.getTabId`
+          - `primitives/scope/tab-id.TabPresence`
+          - `primitives/scope/tab-id.useTabPresence`
+        - Exports (types):
+          - `TabOrigin`
+          - `TabStamp`
+        - Exports (values):
+          - `TabOriginBadge`
+          - `tabOriginLabel`
+          - `useTabOrigin`
+      - Cross-plugin:
+        - Imported by:
+          - `debug/reports`
+          - `shell/notifications`
     - **`tab-surface`** — Per-tab surface render core: TabSurface mounts a tab's PaneSurfaceProvider and reports its leaf title; AppTabsBody is the keep-alive fallback body that stacks every open tab.
       - Web:
         - Uses: 22 symbols — full list in [`plugins/apps-core/plugins/tab-surface/REFERENCE.md`](../plugins/apps-core/plugins/tab-surface/REFERENCE.md)
@@ -22812,10 +22833,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Pane.Register` "report-detail"
           - `Pane.Register` "reports"
           - `DebugApp.Sidebar` "Reports"
-        - Uses: 27 symbols — full list in [`plugins/debug/plugins/reports/REFERENCE.md`](../plugins/debug/plugins/reports/REFERENCE.md)
+        - Uses: 28 symbols — full list in [`plugins/debug/plugins/reports/REFERENCE.md`](../plugins/debug/plugins/reports/REFERENCE.md)
+          - `primitives/data-view` ×5
           - `primitives/pane` ×5
-          - `primitives/data-view` ×4
           - `reports` ×2
+          - `apps-core/tab-origin.TabOriginBadge`
           - `apps/debug/shell.DebugApp`
           - `build.useStaleFrontend`
           - `infra/endpoints.useFetchEndpoint`
@@ -22831,7 +22853,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/live-state.ResourceErrorInline`
           - `primitives/loading.Loading`
           - `primitives/relative-time.RelativeTime`
-          - `primitives/scope/tab-id.getTabId`
         - Exports (values):
           - `reportDetailPane`
           - `reportsPane`
@@ -39586,7 +39607,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density` ×6
               - `ui/tokens/shape` ×2
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 172 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
+            - Imported by: 173 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
               - `apps` ×40
               - `debug` ×36
               - `conversations` ×24
@@ -39599,8 +39620,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fields` ×3
               - `infra` ×3
               - `page` ×3
+              - `apps-core` ×2
               - `runs` ×2
-              - `apps-core/layout`
               - `auth`
               - `backup/runs-arm`
               - `config_v2/settings`
@@ -41346,8 +41367,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ← `primitives.data-view`
           - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
           - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
-        - Contributes: 98 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ConfigV2.WebRegister` ×88
+        - Contributes: 99 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ConfigV2.WebRegister` ×89
           - `DataViewSlots.Control` ×4
           - `DataViewSlots.Setting` ×4
           - `IdKinds.Kind` ×2
@@ -41603,8 +41624,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useSortController`
           - `useViewRowCounts`
       - Server:
-        - Contributes: 90 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ConfigV2.Register` ×88
+        - Contributes: 91 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ConfigV2.Register` ×89
           - `ids.kind` ×2
         - Uses:
           - `config_v2.getConfig`
@@ -45306,6 +45327,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `apps-core`
+              - `apps-core/tab-origin`
               - `apps-core/tabs`
               - `primitives/link-gesture`
               - `primitives/pane`
@@ -45735,13 +45757,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `SurfaceIdContext`
               - `useSurfaceTabId`
-        - **`tab-id`** — Stable per-tab id (sessionStorage-backed) for crash/notification attribution.
+        - **`tab-id`** — Stable per-tab id (sessionStorage-backed) for crash/notification attribution, and whether the tab an id names is still open (useTabPresence: every page holds a shared Web Lock under its id).
           - Web:
             - Uses: `primitives/dom/web-storage.defineStore`
-            - Exports (values): `getTabId`
+            - Exports (types): `TabPresence`
+            - Exports (values):
+              - `getTabId`
+              - `useTabPresence`
           - Cross-plugin:
             - Imported by:
-              - `debug/reports`
+              - `apps-core/tab-origin`
               - `primitives/live-state`
               - `primitives/scope/app-instance`
               - `reports`
@@ -47616,6 +47641,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `infra/endpoints.defineEndpoint`
       - `infra/entities.entityRef`
       - `network/live.liveCollection`
+      - `packages/list-bound.cappedList`
       - `packages/list-bound.wholeRecord`
       - `primitives/pane.defineRoute`
     - Exports (types):
@@ -47624,11 +47650,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ReportFingerprintContext`
       - `ReportId`
       - `ReportInput`
+      - `ReportOccurrence`
       - `ReportResult`
       - `ReportSource`
     - Exports (values):
       - `CLIENT_REPORT_SOURCES`
       - `investigateReport`
+      - `REPORT_RECENT_MAX`
       - `reportDetailRoute`
       - `reportFields`
       - `reportIdKind`
@@ -49012,8 +49040,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `notification-actions` "dismiss" → `DismissNotificationAction`
           - `Notifications.Action` "open"
           - `Notifications.Action` "reload"
-        - Uses: 52 symbols — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
+        - Uses: 56 symbols — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
           - `primitives/data-view` ×5
+          - `apps-core/tab-origin` ×4
           - `infra/endpoints` ×3
           - `primitives/css/ui-kit` ×3
           - `ids` ×2

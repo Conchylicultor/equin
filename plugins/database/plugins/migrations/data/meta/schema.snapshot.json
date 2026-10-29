@@ -1,6 +1,6 @@
 {
-  "id": "01ac77b3-0ac7-4676-8098-c8f14fb421cb",
-  "prevId": "a2cae672-1f0c-4924-8dae-9a84acf30632",
+  "id": "a091aac2-c955-46f2-bc28-188916b4e66e",
+  "prevId": "01ac77b3-0ac7-4676-8098-c8f14fb421cb",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -11424,6 +11424,13 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
+        },
+        "recent": {
+          "name": "recent",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
         },
         "task_id": {
           "name": "task_id",

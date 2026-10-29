@@ -42,6 +42,7 @@ export const dataViews: DataViewEntry[] = [
   { id: "debug.queue.history", pluginId: "debug.queue" },
   { id: "debug.queue.jobs", pluginId: "debug.queue" },
   { id: "debug.queue.triggers", pluginId: "debug.queue" },
+  { id: "debug.report-occurrences", pluginId: "debug.reports" },
   { id: "debug.reports", pluginId: "debug.reports" },
   { id: "debug.slow-op.callers", pluginId: "debug.slow-ops.pane" },
   { id: "debug.slow-op.samples", pluginId: "debug.slow-ops.pane" },

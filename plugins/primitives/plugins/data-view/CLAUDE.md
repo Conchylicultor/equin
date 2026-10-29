@@ -1916,8 +1916,8 @@ list, table and `primitives/tree` share it.
     - `DataViewSlots.Control` ← `primitives.data-view`
     - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
     - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
-  - Contributes: 98 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ConfigV2.WebRegister` ×88
+  - Contributes: 99 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.WebRegister` ×89
     - `DataViewSlots.Control` ×4
     - `DataViewSlots.Setting` ×4
     - `IdKinds.Kind` ×2
@@ -2173,8 +2173,8 @@ list, table and `primitives/tree` share it.
     - `useSortController`
     - `useViewRowCounts`
 - Server:
-  - Contributes: 90 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ConfigV2.Register` ×88
+  - Contributes: 91 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.Register` ×89
     - `ids.kind` ×2
   - Uses:
     - `config_v2.getConfig`

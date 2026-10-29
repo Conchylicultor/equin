@@ -4,7 +4,7 @@ import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web"
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
-import { getTabId } from "@plugins/primitives/plugins/scope/plugins/tab-id/web";
+import { TabOriginBadge } from "@plugins/apps-core/plugins/tab-origin/web";
 import { useStaleFrontend } from "@plugins/build/web";
 import { reportsList, type Report } from "@plugins/reports/core";
 import { Reports, investigate } from "@plugins/reports/web";
@@ -17,6 +17,7 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { InvestigateAction } from "@plugins/primitives/plugins/launch/plugins/investigate/web";
 import { reportDetailPane } from "../panes";
+import { ReportOccurrences } from "./report-occurrences";
 
 export function ReportDetail() {
   const { reportId } = reportDetailPane.useParams();
@@ -90,7 +91,16 @@ export function ReportDetail() {
 
             <Stack gap="xs">
               <Text as="div" variant="label" tone="muted">
-                Details
+                {report.count > report.recent.length
+                  ? `Last ${report.recent.length} of ${report.count} occurrences`
+                  : "Occurrences"}
+              </Text>
+              <ReportOccurrences report={report} />
+            </Stack>
+
+            <Stack gap="xs">
+              <Text as="div" variant="label" tone="muted">
+                Details (latest occurrence)
               </Text>
               {/* Per-kind payload view, dispatched by report.kind. */}
               <Reports.KindView.Dispatch report={report} />
@@ -123,7 +133,6 @@ function HeaderBadges({
   /** The bundle graph this server is serving; `lastBuildId` holds the reporting tab's. */
   serverGraph: string | null;
 }) {
-  const tabId = getTabId();
   return (
     <Cluster>
       <Badge variant="muted" className="font-mono">
@@ -134,12 +143,7 @@ function HeaderBadges({
       </Badge>
       {c.noise && <Badge variant="warning">noise</Badge>}
       {c.rateLimited && <Badge variant="destructive">rate-limited</Badge>}
-      {c.lastClientId != null &&
-        (c.lastClientId === tabId ? (
-          <Badge variant="info">this tab</Badge>
-        ) : (
-          <Badge variant="muted">another tab</Badge>
-        ))}
+      <TabOriginBadge stamp={{ clientId: c.lastClientId, url: c.url }} />
       {c.lastBuildId != null &&
         serverGraph != null &&
         c.lastBuildId !== serverGraph && (

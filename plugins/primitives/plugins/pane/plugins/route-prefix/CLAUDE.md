@@ -27,6 +27,7 @@ read it.
 - Cross-plugin:
   - Imported by:
     - `apps-core`
+    - `apps-core/tab-origin`
     - `apps-core/tabs`
     - `primitives/link-gesture`
     - `primitives/pane`

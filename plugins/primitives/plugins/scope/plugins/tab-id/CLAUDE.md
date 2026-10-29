@@ -9,13 +9,16 @@ and falls back to `"no-tab-id"` if storage is unavailable.
 
 ## Plugin reference
 
-- Description: Stable per-tab id (sessionStorage-backed) for crash/notification attribution.
+- Description: Stable per-tab id (sessionStorage-backed) for crash/notification attribution, and whether the tab an id names is still open (useTabPresence: every page holds a shared Web Lock under its id).
 - Web:
   - Uses: `primitives/dom/web-storage.defineStore`
-  - Exports (values): `getTabId`
+  - Exports (types): `TabPresence`
+  - Exports (values):
+    - `getTabId`
+    - `useTabPresence`
 - Cross-plugin:
   - Imported by:
-    - `debug/reports`
+    - `apps-core/tab-origin`
     - `primitives/live-state`
     - `primitives/scope/app-instance`
     - `reports`

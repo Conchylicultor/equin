@@ -119,6 +119,7 @@ host first.
     - `infra/endpoints.defineEndpoint`
     - `infra/entities.entityRef`
     - `network/live.liveCollection`
+    - `packages/list-bound.cappedList`
     - `packages/list-bound.wholeRecord`
     - `primitives/pane.defineRoute`
   - Exports (types):
@@ -127,11 +128,13 @@ host first.
     - `ReportFingerprintContext`
     - `ReportId`
     - `ReportInput`
+    - `ReportOccurrence`
     - `ReportResult`
     - `ReportSource`
   - Exports (values):
     - `CLIENT_REPORT_SOURCES`
     - `investigateReport`
+    - `REPORT_RECENT_MAX`
     - `reportDetailRoute`
     - `reportFields`
     - `reportIdKind`

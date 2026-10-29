@@ -31,9 +31,11 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 const infoReportIcon = symbol("info");
 import {
   reportDetailRoute,
+  REPORT_RECENT_MAX,
   reportIdKind,
   type ReportId,
   type ReportInput,
+  type ReportOccurrence,
 } from "@plugins/reports/core";
 
 // What became of one recordReport call. A discriminated union so "the engine
@@ -421,6 +423,9 @@ export async function recordReport(
           source: row.source,
           fingerprint: fp,
           clientId: clientId ?? null,
+          // The raising page, so the bell can name the tab (its app) beside
+          // whether it is still open.
+          clientUrl: url ?? null,
           buildId: buildId ?? null,
         },
       }),
@@ -494,6 +499,26 @@ function buildUpsert(
   // (message, data, count, the flags, taskId) really changes, so it is never
   // written here.
   const isNewest = sql`${occurredAt} >= ${t.lastSeenAt}`;
+  // This occurrence as `recent` keeps it. On a repeat it joins the kept ones,
+  // ordered by the occurrence's own instant (so an out-of-order replay lands
+  // where it happened) and cut to the newest REPORT_RECENT_MAX.
+  const occurrence: ReportOccurrence = {
+    at: occurredAt.getTime(),
+    message: v.message,
+    clientId: v.clientId,
+    url: v.url,
+    buildId: v.buildId,
+  };
+  const recent = sql`(
+    select coalesce(jsonb_agg(o order by (o->>'at')::bigint desc), '[]'::jsonb)
+    from (
+      select o from jsonb_array_elements(
+        jsonb_build_array(${JSON.stringify(occurrence)}::jsonb) || ${t.recent}
+      ) o
+      order by (o->>'at')::bigint desc
+      limit ${REPORT_RECENT_MAX}
+    ) kept
+  )`;
   return q
     .insert(t)
     .values({
@@ -506,6 +531,7 @@ function buildUpsert(
       url: v.url,
       userAgent: v.userAgent,
       data: v.data,
+      recent: [occurrence],
       rateLimited: v.limited,
       noise: v.noise,
       lastClientId: v.clientId,
@@ -519,6 +545,8 @@ function buildUpsert(
       // the count, refresh the latest message + payload + attribution.
       set: {
         message: sql`case when ${isNewest} then ${v.message} else ${t.message} end`,
+        url: sql`case when ${isNewest} then ${v.url} else ${t.url} end`,
+        recent,
         // Explicit ::jsonb cast: this rides a raw sql param (not the column's
         // drizzle mapper), so the driver must not guess the wire type.
         data: sql`case when ${isNewest} then ${JSON.stringify(v.data)}::jsonb else ${t.data} end`,

@@ -8,8 +8,13 @@ export type { ReportResult };
 // The caller-supplied portion of a report: the browser picks the kind, the
 // source (client-reportable only — enforced by ReportBodySchema's enum), the
 // generic summary, and the kind's `data` payload; report() stamps
-// clientId/buildId itself.
-export type ClientReportBody = Omit<ReportBody, "clientId" | "buildId">;
+// clientId/buildId itself. `clientId` defaults to this tab; a report filed ON
+// BEHALF of another tab (a main-thread stall a live tab files for the tab that
+// froze) names that tab instead, so its origin reads as the page it is about.
+// `url` defaults to this page's.
+export type ClientReportBody = Omit<ReportBody, "clientId" | "buildId"> & {
+  clientId?: string;
+};
 
 // Shape of the `context` value the reports plugin's boundary reporter returns.
 // Action contributors (e.g. launch-fix) cast `context: unknown` down to this
@@ -45,7 +50,8 @@ export async function report(
   try {
     const stamped = {
       ...body,
-      clientId: getTabId(),
+      url: body.url ?? window.location.href,
+      clientId: body.clientId ?? getTabId(),
       // The ARTIFACT this tab is running — the graph hash baked into the bundle,
       // not the id of the run that produced it. The server compares it against
       // the graph it is currently serving to tell a version-skew report from a

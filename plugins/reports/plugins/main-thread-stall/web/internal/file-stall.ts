@@ -51,6 +51,10 @@ export async function fileStall(
     data: payload,
     message: mainThreadStallSummary(payload),
     url: payload.url,
+    // The tab that froze, not the one filing (the watchdog may hand a stall
+    // to another live tab): the bell then names the frozen page and whether
+    // it is still open.
+    clientId: payload.tabId,
   });
   return res !== null;
 }

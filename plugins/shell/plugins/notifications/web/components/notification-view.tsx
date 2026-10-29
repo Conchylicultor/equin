@@ -10,7 +10,12 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
-import { getTabId } from "@plugins/primitives/plugins/scope/plugins/tab-id/web";
+import {
+  tabOriginLabel,
+  useTabOrigin,
+  type TabOrigin,
+  type TabStamp,
+} from "@plugins/apps-core/plugins/tab-origin/web";
 import { useIdKinds } from "@plugins/ids/web";
 import { Layer } from "@plugins/primitives/plugins/css/plugins/layer/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
@@ -100,22 +105,44 @@ export function recurrenceLabel(count: number): string | null {
 
 /**
  * Which tab raised it, for a notification a browser tab wrote (its
- * `metadata.clientId`): "this tab" or "another tab"; null for one the server
- * raised. Said of a failure only — where it happened is part of what went
- * wrong; a confirmation needs no origin. A toast says only "another tab": one
- * this tab raised pops up under the action that caused it, so its origin is
- * plain; the bell's list, read later, names both.
+ * `metadata.clientId` and `metadata.clientUrl`): "this tab", or the other tab
+ * by its app and whether it is still open ("another Places tab", "closed
+ * Places tab"); null for one the server raised. Said of a failure only — where
+ * it happened is part of what went wrong; a confirmation needs no origin. A
+ * toast names only another tab: one this tab raised pops up under the action
+ * that caused it, so its origin is plain; the bell's list, read later, names
+ * both.
  */
 export function raisedByTab(
-  n: Pick<NotificationContent, "metadata" | "variant">,
-  tabId: string,
+  n: Pick<NotificationContent, "variant">,
+  origin: TabOrigin,
   surface: NotificationSurface,
 ): string | null {
   if (n.variant !== "error" && n.variant !== "warning") return null;
+  if (origin.kind === "this" && surface === "toast") return null;
+  return tabOriginLabel(origin);
+}
+
+/** The stamp a notification carries: who raised it, on which page. */
+function tabStampOf(
+  n: Pick<NotificationContent, "metadata" | "variant">,
+): TabStamp {
+  // Only a failure names its tab — skip the presence read for the rest.
+  const failure = n.variant === "error" || n.variant === "warning";
   const clientId = n.metadata?.clientId;
-  if (typeof clientId !== "string") return null;
-  if (clientId !== tabId) return "another tab";
-  return surface === "bell" ? "this tab" : null;
+  const clientUrl = n.metadata?.clientUrl;
+  return {
+    clientId: failure && typeof clientId === "string" ? clientId : null,
+    url: typeof clientUrl === "string" ? clientUrl : null,
+  };
+}
+
+/** {@link raisedByTab} for a drawn notification: reads its tab's origin. */
+export function useRaisedByTab(
+  n: Pick<NotificationContent, "metadata" | "variant">,
+  surface: NotificationSurface,
+): string | null {
+  return raisedByTab(n, useTabOrigin(tabStampOf(n)), surface);
 }
 
 /**
@@ -396,10 +423,11 @@ function NotificationLayout({
     n.subjectId === null
       ? undefined
       : idKinds.find((k) => k.is(n.subjectId ?? ""));
+  const raisedBy = useRaisedByTab(n, surface);
   const meta = [
     recurrenceLabel(n.count),
     developerRow && n.type ? n.type : null,
-    raisedByTab(n, getTabId(), surface),
+    raisedBy,
   ];
 
   const content = (

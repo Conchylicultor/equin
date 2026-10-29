@@ -191,8 +191,9 @@ DataView (`web/components/notifications-view.tsx`):
     - `notification-actions` "dismiss" → `DismissNotificationAction`
     - `Notifications.Action` "open"
     - `Notifications.Action` "reload"
-  - Uses: 52 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 56 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×5
+    - `apps-core/tab-origin` ×4
     - `infra/endpoints` ×3
     - `primitives/css/ui-kit` ×3
     - `ids` ×2

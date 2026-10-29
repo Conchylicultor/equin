@@ -40,6 +40,7 @@ export const browserHost = {
     "apps-core.surface.docked",
     "apps-core.surface.solo",
     "apps-core.tab-bar",
+    "apps-core.tab-origin",
     "apps-core.tab-surface",
     "apps-core.tabs",
     "apps-core.theme-scope",

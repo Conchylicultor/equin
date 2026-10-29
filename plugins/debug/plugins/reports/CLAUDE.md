@@ -50,10 +50,11 @@ All reports are listed — noise is surfaced via the badge, never filtered out.
     - `Pane.Register` "report-detail"
     - `Pane.Register` "reports"
     - `DebugApp.Sidebar` "Reports"
-  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/data-view` ×5
     - `primitives/pane` ×5
-    - `primitives/data-view` ×4
     - `reports` ×2
+    - `apps-core/tab-origin.TabOriginBadge`
     - `apps/debug/shell.DebugApp`
     - `build.useStaleFrontend`
     - `infra/endpoints.useFetchEndpoint`
@@ -69,7 +70,6 @@ All reports are listed — noise is surfaced via the badge, never filtered out.
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/relative-time.RelativeTime`
-    - `primitives/scope/tab-id.getTabId`
   - Exports (values):
     - `reportDetailPane`
     - `reportsPane`

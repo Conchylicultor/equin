@@ -96,6 +96,7 @@ import {
   recurrenceLabel,
 } from "../components/notification-view";
 import { symbol } from "@plugins/ui/plugins/icons/core";
+import type { TabOrigin } from "@plugins/apps-core/plugins/tab-origin/web";
 import { audienceScope } from "../../shared/audience-scope";
 import { BellButton } from "../components/bell-button";
 
@@ -558,22 +559,31 @@ describe("NotificationView — what a notification says", () => {
   });
 
   it("which tab: only for a failure a tab raised", () => {
-    const by = (clientId: unknown, variant: Notification["variant"]) =>
-      raisedByTab({ metadata: { clientId }, variant }, "tab-a", "bell");
-    expect(by("tab-a", "error")).toBe("this tab");
-    expect(by("tab-b", "warning")).toBe("another tab");
-    expect(by("tab-a", "success")).toBeNull();
-    expect(by(undefined, "error")).toBeNull();
+    const other = {
+      kind: "other" as const,
+      appName: "Places",
+      presence: "open" as const,
+    };
+    const by = (origin: TabOrigin, variant: Notification["variant"]) =>
+      raisedByTab({ variant }, origin, "bell");
+    expect(by({ kind: "this" }, "error")).toBe("this tab");
+    expect(by(other, "warning")).toBe("another Places tab");
+    expect(by({ ...other, presence: "closed" }, "error")).toBe(
+      "closed Places tab",
+    );
+    expect(by({ ...other, appName: null, presence: "loading" }, "error")).toBe(
+      "another tab",
+    );
+    expect(by({ kind: "this" }, "success")).toBeNull();
+    expect(by({ kind: "none" }, "error")).toBeNull();
   });
 
   it("which tab: a toast names only another tab", () => {
-    const by = (clientId: string) =>
-      raisedByTab(
-        { metadata: { clientId }, variant: "error" },
-        "tab-a",
-        "toast",
-      );
-    expect(by("tab-a")).toBeNull();
-    expect(by("tab-b")).toBe("another tab");
+    const by = (origin: TabOrigin) =>
+      raisedByTab({ variant: "error" }, origin, "toast");
+    expect(by({ kind: "this" })).toBeNull();
+    expect(by({ kind: "other", appName: "Menu bar", presence: "closed" })).toBe(
+      "closed Menu bar tab",
+    );
   });
 });

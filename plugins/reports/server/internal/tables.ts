@@ -24,6 +24,7 @@ const reportsEntity = defineEntity(reportsEntityRef, {
   columns: {
     kind: { default: "crash" },
     data: { default: {} },
+    recent: { default: [] },
     count: { default: 1 },
     rateLimited: { default: false },
     noise: { default: false },
@@ -49,6 +50,7 @@ const reportsEntity = defineEntity(reportsEntityRef, {
       source: false,
       lastClientId: false,
       lastBuildId: false,
+      recent: false,
       firstSeenAt: false,
       lastSeenAt: false,
       createdAt: false,

@@ -67,9 +67,13 @@ export function useToast(): Toast {
   return useCallback(
     (args: ToastArgs) => {
       const variant = args.variant ?? "info";
-      // Which tab raised it: the view's meta line reads "this tab" / "another
-      // tab" off it.
-      const metadata = { ...args.metadata, clientId: getTabId() };
+      // Which tab raised it, and on which page: the view's meta line reads
+      // "this tab" / "another Places tab" / "closed Places tab" off it.
+      const metadata = {
+        ...args.metadata,
+        clientId: getTabId(),
+        clientUrl: window.location.href,
+      };
 
       // The same view the bell's row draws, from the same fields.
       toastNotification({

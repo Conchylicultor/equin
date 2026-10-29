@@ -1,0 +1,28 @@
+// @hash 6ec84829688d
+{
+  "views": [
+    {
+      "id": "all",
+      "name": "Occurrences",
+      "icon": "history",
+      // Newest first, as the report keeps them.
+      "view": {
+        "type": "table",
+        "sort": [{ "fieldId": "at", "direction": "desc" }],
+        "properties": [{ "id": "at" }, { "id": "message" }, { "id": "tab" }]
+      }
+    },
+    {
+      "id": "list",
+      "name": "List",
+      "icon": "list",
+      "view": {
+        "type": "list",
+        "sort": [{ "fieldId": "at", "direction": "desc" }]
+      }
+    }
+  ],
+  "sortPresets": [],
+  "filterPresets": [],
+  "customColumns": []
+}

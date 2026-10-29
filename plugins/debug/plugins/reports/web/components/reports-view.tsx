@@ -1,7 +1,7 @@
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
-import { getTabId } from "@plugins/primitives/plugins/scope/plugins/tab-id/web";
+import { TabOriginBadge } from "@plugins/apps-core/plugins/tab-origin/web";
 import { useStaleFrontend } from "@plugins/build/web";
 import { reportsList, REPORTS_SEARCHABLE } from "@plugins/reports/core";
 import type { Report } from "@plugins/reports/core";
@@ -139,16 +139,10 @@ const extraFields: FieldDef<Report>[] = [
  * and cannot call hooks itself.
  */
 function AttributionBadges({ report: c }: { report: Report }) {
-  const tabId = getTabId();
   const { serverGraph } = useStaleFrontend();
   return (
     <>
-      {c.lastClientId != null &&
-        (c.lastClientId === tabId ? (
-          <Badge variant="info">this tab</Badge>
-        ) : (
-          <Badge variant="muted">another tab</Badge>
-        ))}
+      <TabOriginBadge stamp={{ clientId: c.lastClientId, url: c.url }} />
       {c.lastBuildId != null &&
         serverGraph != null &&
         c.lastBuildId !== serverGraph && (

@@ -1,6 +1,9 @@
 import type { ReactElement } from "react";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
-import { getTabId } from "@plugins/primitives/plugins/scope/plugins/tab-id/web";
+import {
+  tabOriginLabel,
+  useTabOrigin,
+} from "@plugins/apps-core/plugins/tab-origin/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -53,6 +56,9 @@ export function notificationLink(n: Notification): string | undefined {
 export function NotificationBody({ n }: { n: Notification }): ReactElement {
   const clientId =
     typeof n.metadata?.clientId === "string" ? n.metadata.clientId : null;
+  const clientUrl =
+    typeof n.metadata?.clientUrl === "string" ? n.metadata.clientUrl : null;
+  const raisedBy = tabOriginLabel(useTabOrigin({ clientId, url: clientUrl }));
   const link = notificationLink(n);
   return (
     <Fill className={cn(n.muted || n.read ? "opacity-60" : undefined)}>
@@ -109,10 +115,8 @@ export function NotificationBody({ n }: { n: Notification }): ReactElement {
           <span className="text-3xs text-muted-foreground">{n.type}</span>
         )}
         <span className="text-3xs text-muted-foreground">{n.category}</span>
-        {clientId != null && (
-          <span className="text-3xs text-muted-foreground">
-            {clientId === getTabId() ? "this tab" : "another tab"}
-          </span>
+        {raisedBy !== null && (
+          <span className="text-3xs text-muted-foreground">{raisedBy}</span>
         )}
         {link !== undefined && (
           <span className="text-3xs text-muted-foreground hover:text-foreground">

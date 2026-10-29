@@ -157,9 +157,9 @@ so ⌘/middle-click opens a desktop in a new browser tab.
     - `useInstallRoutePrefixes`
     - `usePathname`
 - Cross-plugin:
-  - Imported by: 56 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 57 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×27
-    - `apps-core` ×12
+    - `apps-core` ×13
     - `ui` ×6
     - `config_v2` ×2
     - `hints` ×2
@@ -194,6 +194,7 @@ so ⌘/middle-click opens a desktop in a new browser tab.
   - **`layout`** — Apps layout: the Core.Root composition wiring the tab bar, rail framing, and surface together, with the default-app redirect and document-title sync.
   - **`surface`** — Generic surface dispatcher: renders every open tab at once under the ONE surface mode (docked / windows / solo) selected from the Surface.Placement registry, so the modes are mutually exclusive.…
   - **`tab-bar`** — App tab bar: the top tab strip with per-tab titles, overflow collapse, drag reorder/tear-off, and the new-tab/new-window + button.
+  - **`tab-origin`** — Which browser tab raised something, in words: useTabOrigin(stamp) reads a stamped tab id and page URL as this tab, or another one — the app its page belongs to (the menu-bar panel included) and…
   - **`tab-surface`** — Per-tab surface render core: TabSurface mounts a tab's PaneSurfaceProvider and reports its leaf title; AppTabsBody is the keep-alive fallback body that stacks every open tab.
   - **`tabs`** — Tab manager for the app switcher: the open-tab set, focus model, cross-app navigate(), the focused-placement module store, the focused tab's title as a module signal (useFocusedTabTitle, readable…
   - **`theme-scope`** — Theme-scope helpers: the single definition of the focused full-surface app's theme scope, which decides the :root token layer and the document's light/dark (useRootThemeScopeState: a state that…
